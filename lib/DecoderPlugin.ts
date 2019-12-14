@@ -1,5 +1,3 @@
-import { Store } from 'vuex';
-
 import { DecoderPluginInterface } from './DecoderPluginInterface';
 
 export abstract class DecoderPlugin implements DecoderPluginInterface {
@@ -24,8 +22,6 @@ export abstract class DecoderPlugin implements DecoderPluginInterface {
 
   options: Object;
 
-  store!: Store<any>;
-
   constructor(decoder : any, options : any = {}) {
     this.decoder = decoder;
     this.options = options;
@@ -40,9 +36,9 @@ export abstract class DecoderPlugin implements DecoderPluginInterface {
     return true;
   }
 
-  onRegister(store: Store<any>) {
-    this.store = store;
-  }
+  // onRegister(store: Store<any>) {
+  //   this.store = store;
+  // }
 
   qualifiers() : any { // eslint-disable-line class-methods-use-this
     const labels : Array<string> = [];

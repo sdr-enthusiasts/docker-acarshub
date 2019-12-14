@@ -457,7 +457,7 @@ export class MessageDecoder {
   lookupAirportByIata(iata: string) : any {
     const airportsArray : Array<any> = []; // = this.store.state.acarsData.airports;
     // console.log(airportsArray);
-    const airport = airportsArray.find(e => e.iata === iata);
+    const airport = airportsArray.filter((e: any) => e.iata === iata);
 
     return airport;
   }

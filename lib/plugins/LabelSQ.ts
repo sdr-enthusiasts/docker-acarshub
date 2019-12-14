@@ -17,9 +17,9 @@ export class LabelSQ extends DecoderPlugin {
     decodeResult.raw.version = message.text.substring(1, 2);
 
     decodeResult.raw.network = 'Unknown';
-    if (message.text && message.text !== '') {
-      decodeResult.raw.network = this.store.state.acarsData.labels.SQ.decoderHints.brands[message.text[3]]; // eslint-disable-line max-len
-    }
+    // if (message.text && message.text !== '') {
+    //   decodeResult.raw.network = this.store.state.acarsData.labels.SQ.decoderHints.brands[message.text[3]]; // eslint-disable-line max-len
+    // }
 
     if (decodeResult.raw.version === '2') {
       const regex = /0(\d)X(?<org>\w)(?<iata>\w\w\w)(?<icao>\w\w\w\w)(?<station>\d)(?<lat>\d+)(?<latd>[NS])(?<lng>\d+)(?<lngd>[EW])V(?<vfreq>\d+)\/.*/;

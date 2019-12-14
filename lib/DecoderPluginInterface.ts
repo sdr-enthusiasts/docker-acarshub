@@ -1,9 +1,7 @@
-import { Store } from 'vuex';
-
 export interface DecoderPluginInterface {
   decode(message: any) : any;
   meetsStateRequirements() : boolean;
-  onRegister(store: Store<any>) : void;
+  // onRegister(store: Store<any>) : void;
   qualifiers() : any;
 }
 

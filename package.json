@@ -4,8 +4,23 @@
   "description": "ACARS Message Decoder for TypeScript/JavaScript",
   "main": "index.js",
   "scripts": {
+    "build": "tsc",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/airframesio/acars-decoder-typescript.git"
+   },
+  "bugs": {
+    "url": "https://github.com/airframesio/acars-decoder-typescript/issues"
+  },
+  "homepage":"https://github.com/airframesio/acars-decoder-typescript#readme",
   "author": "Kevin Elliott <kevin@welikeinc.com>",
-  "license": "UNLICENSED"
+  "license": "UNLICENSED",
+  "dependencies": {
+
+  },
+  "devDependencies": {
+    "typescript": "^3.7.3"
+  }
 }
