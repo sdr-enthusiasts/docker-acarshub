@@ -1,0 +1,11 @@
+{
+  "name": "@airframes/acars-decoder",
+  "version": "1.0.0",
+  "description": "ACARS Message Decoder for TypeScript/JavaScript",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Kevin Elliott <kevin@welikeinc.com>",
+  "license": "UNLICENSED"
+}
