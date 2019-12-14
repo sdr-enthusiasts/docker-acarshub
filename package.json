@@ -2,7 +2,8 @@
   "name": "@airframes/acars-decoder",
   "version": "1.0.0",
   "description": "ACARS Message Decoder for TypeScript/JavaScript",
-  "main": "index.js",
+  "main": "dist/index.js",
+  "types" : "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
     "test": "echo \"Error: no test specified\" && exit 1"
