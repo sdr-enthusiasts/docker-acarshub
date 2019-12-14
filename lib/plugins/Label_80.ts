@@ -2,7 +2,7 @@ import { DecoderPlugin } from '../DecoderPlugin';
 
 // Airline Defined
 // 3N01 POSRPT
-export class Label80 extends DecoderPlugin {
+export class Label_80 extends DecoderPlugin {
   name = 'label-80';
 
   descriptions: any = {

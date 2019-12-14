@@ -1,6 +1,6 @@
 import { DecoderPlugin } from '../DecoderPlugin';
 
-export class LabelH1_M1BPOS extends DecoderPlugin { // eslint-disable-line camelcase
+export class Label_H1_M1BPOS extends DecoderPlugin { // eslint-disable-line camelcase
   name = 'label-h1-m1bpos';
 
   qualifiers() { // eslint-disable-line class-methods-use-this

@@ -1,7 +1,7 @@
 import { DecoderPlugin } from '../DecoderPlugin';
 
 // General Aviation Position Report
-export class Label15 extends DecoderPlugin {
+export class Label_15 extends DecoderPlugin {
   name = 'label-5z';
 
   qualifiers() { // eslint-disable-line class-methods-use-this

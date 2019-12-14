@@ -8,12 +8,12 @@ export class MessageDecoder {
   constructor() {
     this.plugins = [];
 
-    this.registerPlugin(new Plugins.LabelColonComma(this));
-    this.registerPlugin(new Plugins.Label5Z(this));
-    this.registerPlugin(new Plugins.Label15(this));
-    this.registerPlugin(new Plugins.LabelH1_M1BPOS(this));
-    this.registerPlugin(new Plugins.Label80(this));
-    this.registerPlugin(new Plugins.LabelSQ(this));
+    this.registerPlugin(new Plugins.Label_ColonComma(this));
+    this.registerPlugin(new Plugins.Label_5Z(this));
+    this.registerPlugin(new Plugins.Label_15(this));
+    this.registerPlugin(new Plugins.Label_H1_M1BPOS(this));
+    this.registerPlugin(new Plugins.Label_80(this));
+    this.registerPlugin(new Plugins.Label_SQ(this));
   }
 
   registerPlugin(plugin: DecoderPluginInterface) : boolean {

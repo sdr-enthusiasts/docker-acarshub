@@ -1,9 +1,9 @@
 import { DecoderPlugin } from '../DecoderPlugin';
 
-export class Label5Z extends DecoderPlugin {
+export class Label_H1 extends DecoderPlugin {
   qualifiers() { // eslint-disable-line class-methods-use-this
     return {
-      labels: ['5Z'],
+      labels: ['H1'],
     };
   }
 

@@ -1,6 +1,6 @@
 import { DecoderPlugin } from '../DecoderPlugin';
 
-export class Label5Z extends DecoderPlugin {
+export class Label_5Z extends DecoderPlugin {
   name = 'label-5z';
 
   descriptions: any = {

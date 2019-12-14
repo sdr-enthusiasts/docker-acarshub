@@ -1,6 +1,6 @@
 import { DecoderPlugin } from '../DecoderPlugin';
 
-export class LabelColonComma extends DecoderPlugin {
+export class Label_ColonComma extends DecoderPlugin {
   name = 'label-colon-comma';
 
   qualifiers() { // eslint-disable-line class-methods-use-this

@@ -1,6 +1,6 @@
 import { DecoderPlugin } from '../DecoderPlugin';
 
-export class LabelSQ extends DecoderPlugin {
+export class Label_SQ extends DecoderPlugin {
   name = 'label-sq';
 
   qualifiers() { // eslint-disable-line class-methods-use-this
