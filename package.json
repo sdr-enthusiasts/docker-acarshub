@@ -5,11 +5,12 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
-    "acars-decoder": "./dist/bin/acars-decoder.js"
+    "acars-decoder": "./dist/bin/acars-decoder.js",
+    "acars-decoder-test": "./dist/bin/acars-decoder-test.js"
   },
   "scripts": {
     "build": "tsc",
-    "test": "sudo npm i -g && acars-decoder"
+    "test": "sudo npm i -g && acars-decoder-test"
   },
   "repository": {
     "type": "git",

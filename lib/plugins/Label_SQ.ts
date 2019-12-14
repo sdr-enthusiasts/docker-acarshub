@@ -30,8 +30,10 @@ export class Label_SQ extends DecoderPlugin {
         decodeResult.raw.icaoCode = result.groups.icao;
         decodeResult.raw.stationNumber = result.groups.station;
         decodeResult.raw.airport = this.decoder.lookupAirportByIata(decodeResult.raw.iataCode);
-        decodeResult.raw.latitude = `${Number(result.groups.lat) / 100} ${result.groups.latd}`;
-        decodeResult.raw.longitude = `${Number(result.groups.lng) / 100} ${result.groups.lngd}`;
+        decodeResult.raw.ground_station_position = {
+          latitude: (Number(result.groups.lat) / 100) * (result.groups.latd === 'S' ? -1 : 1),
+          longitude: (Number(result.groups.lng) / 100) * (result.groups.lngd === 'W' ? -1 : 1)
+        }
         decodeResult.raw.vdlFrequency = result.groups.vfreq;
       }
     }
@@ -63,7 +65,7 @@ export class Label_SQ extends DecoderPlugin {
     }
     if (decodeResult.raw.latitude) {
       decodeResult.formatted.items.coordinates = {
-        label: 'Coordinates',
+        label: 'Ground Station Position',
         value: `${decodeResult.raw.latitude}, ${decodeResult.raw.longitude}`,
       };
     }

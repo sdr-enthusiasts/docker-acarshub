@@ -24,8 +24,10 @@ export class Label_H1_M1BPOS extends DecoderPlugin { // eslint-disable-line came
     const results = items[0].match(coordsRegex);
 
     if (results && results.length >= 4) {
-      decodeResult.raw.latitude = results.groups.la / 1000;
-      decodeResult.raw.longitude = results.groups.ln / 1000;
+      decodeResult.raw.aircraft_position = {
+        latitude: (results.groups.la / 1000) * (results.groups.lac === 'S' ? -1 : 1),
+        longitude: (results.groups.ln / 1000) * (results.groups.lnc === 'W' ? -1 : 1),
+      };
 
       let route = items.slice(1).filter((part: any) => !/^\d(.+)$/.test(part));
       route = route.map((hop: any) => hop || '?');
