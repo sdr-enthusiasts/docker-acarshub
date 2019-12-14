@@ -52,40 +52,52 @@ export class Label_5Z extends DecoderPlugin {
       console.log(`DECODER: Matched 'United Airlines 5Z': type = ${type}, remainder = ${remainder}`);
 
       const typeDescription: string = this.descriptions[type] ? this.descriptions[type] : 'Unknown';
-      decodeResult.formatted.items.airline = {
+      decodeResult.raw.airline = 'United Airlines';
+      decodeResult.formatted.items.push({
+        type: 'airline',
         label: 'Airline',
         value: 'United Airlines',
-      };
-      decodeResult.formatted.items.type = {
+      });
+      decodeResult.raw.message_type = type;
+      decodeResult.formatted.items.push({
+        type: 'message_type',
         label: 'Message Type',
         value: `${typeDescription} (${type})`,
-      };
+      });
 
       if (type === 'B3') {
         const rdcRegex = /^(?<from>\w\w\w)(?<to>\w\w\w) (?<unknown1>\d\d) R(?<runway>.+) G(?<unknown2>.+)$/; // eslint-disable-line max-len
         results = remainder.match(rdcRegex);
 
         if (results) {
-          decodeResult.formatted.items.origin = {
+          decodeResult.raw.origin = results.groups.from;
+          decodeResult.formatted.items.push({
+            type: 'origin',
             label: 'Origin',
             value: `${results.groups.from}`,
-          };
-          decodeResult.formatted.items.origin = {
+          });
+          decodeResult.raw.destination = results.groups.to;
+          decodeResult.formatted.items.push({
+            type: 'destination',
             label: 'Destination',
             value: `${results.groups.to}`,
-          };
-          decodeResult.formatted.items.origin = {
+          });
+          decodeResult.formatted.items.push({
+            type: 'unknown1',
             label: 'Unknown Field 1',
             value: `${results.groups.unknown1}`,
-          };
-          decodeResult.formatted.items.origin = {
+          });
+          decodeResult.raw.runway = results.groups.runway;
+          decodeResult.formatted.items.push({
+            type: 'runway',
             label: 'Runway',
             value: `${results.groups.runway}`,
-          };
-          decodeResult.formatted.items.origin = {
+          });
+          decodeResult.formatted.items.push({
+            type: 'unknown2',
             label: 'Unknown Field 2',
             value: `${results.groups.unknown2}`,
-          };
+          });
         } else {
           console.log(`Unkown 5Z RDC format: ${remainder}`);
         }

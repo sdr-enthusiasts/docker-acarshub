@@ -7,7 +7,7 @@ export class Label_80 extends DecoderPlugin {
 
   descriptions: any = {
     ALT: 'Altitude',
-    DWND: 'Unknown',
+    DWND: 'Wind Direction',
     ETA: 'Estimated Time of Arrival',
     FOB: 'Fuel on Board',
     FL: 'Flight Level',
@@ -16,7 +16,7 @@ export class Label_80 extends DecoderPlugin {
     NWYP: 'Next Waypoint',
     POS: 'Aircraft Position',
     SAT: 'Static Air Temperature',
-    SWND: 'Unknown',
+    SWND: 'Window Speed',
     TAS: 'True Airspeed',
     WYP: 'Waypoint',
   }
@@ -102,6 +102,16 @@ export class Label_80 extends DecoderPlugin {
               });
               break;
             }
+            case 'DWND': {
+              decodeResult.raw.wind_direction = Number(match.groups.value);
+              decodeResult.formatted.items.push({
+                type: 'wind_direction',
+                code: 'DWND',
+                label: this.descriptions[match.groups.field],
+                value: decodeResult.raw.wind_direction,
+              });
+              break;
+            }
             case 'FL': {
               decodeResult.raw.flight_level = match.groups.value;
               decodeResult.formatted.items.push({
@@ -166,6 +176,16 @@ export class Label_80 extends DecoderPlugin {
                 code: 'POS',
                 label: this.descriptions[match.groups.field],
                 value: `${(Number(posResult.groups.lat) / 100).toPrecision(5)} ${posResult.groups.latd}, ${(Number(posResult.groups.lng) / 100).toPrecision(5)} ${posResult.groups.lngd}`,
+              });
+              break;
+            }
+            case 'SWND': {
+              decodeResult.raw.wind_speed = Number(match.groups.value);
+              decodeResult.formatted.items.push({
+                type: 'wind_speed',
+                code: 'SWND',
+                label: this.descriptions[match.groups.field],
+                value: decodeResult.raw.wind_speed,
               });
               break;
             }
