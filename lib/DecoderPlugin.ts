@@ -14,7 +14,7 @@ export abstract class DecoderPlugin implements DecoderPluginInterface {
     },
     formatted: <any>{
       description: 'Unknown',
-      items: <any>{},
+      items: <any>[],
     },
     raw: <any>{},
     remaining: <any>{},
