@@ -4,6 +4,9 @@
   "description": "ACARS Message Decoder for TypeScript/JavaScript",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "bin": {
+    "acars-decoder": "./dist/bin/acars-decoder.js"
+  },
   "scripts": {
     "build": "tsc",
     "test": "echo \"Error: no test specified\" && exit 1"
