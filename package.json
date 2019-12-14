@@ -24,6 +24,6 @@
   "license": "UNLICENSED",
   "dependencies": {},
   "devDependencies": {
-    "typescript": "^3.7.3"
+    "typescript": "^3.5.3"
   }
 }

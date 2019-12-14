@@ -1,1 +1,1 @@
-export { MessageDecoder } from './lib/MessageDecoder';
+export * from './lib/MessageDecoder';
