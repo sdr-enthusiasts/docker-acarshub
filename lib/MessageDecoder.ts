@@ -357,13 +357,22 @@ export class MessageDecoder {
       // 2 = VDL Mod 2
       // X = Inmarsat Aero H/H+/I/L
       // I = Iridium Satcom
-      const parts = message.text.split('/');
+      let parts;
+      if (message.text.includes('/')) {
+        parts = message.text.split('/');
+      } else {
+        parts = [message.text]
+      }
       const version = parts[0].text[0];
       const linkState = parts[0].text[1];
       const mediaId = parts[0].text[2];
       const timestamp = parts[0].text.substr(3, 8);
       const availableMedia = parts[0].text.substr(8).split('');
-      const freeText = parts[1];
+
+      let freeText = '';
+      if (parts.length > 1) {
+        freeText = parts[1];
+      }
 
       decodedString += '<div>Media Report</div>';
       decodedString += `<div>Version: ${version}</div>`;
