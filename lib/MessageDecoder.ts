@@ -366,8 +366,8 @@ export class MessageDecoder {
       const version = parts[0].substring(0, 1);
       const linkState = parts[0].substring(1, 2);
       const mediaId = parts[0].substring(2, 3);
-      const timestamp = parts[0].substring(3, 8);
-      const availableMedia = parts[0].substring(8).split('');
+      const timestamp = parts[0].substring(3, 9);
+      const availableMedia = parts[0].substring(9).split('');
 
       let freeText = '';
       if (parts.length > 1) {
