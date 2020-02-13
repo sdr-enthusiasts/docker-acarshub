@@ -32,11 +32,11 @@ export class MessageDecoder {
       if (qualifiers.labels.includes(message.label)) {
         if (qualifiers.preambles && qualifiers.preambles.length > 0) {
           const matching = qualifiers.preambles.filter((preamble: string) => { // eslint-disable-line arrow-body-style,max-len
-            console.log(message.text.substring(0, preamble.length));
-            console.log(preamble);
+            // console.log(message.text.substring(0, preamble.length));
+            // console.log(preamble);
             return message.text.substring(0, preamble.length) === preamble;
           });
-          console.log(matching);
+          // console.log(matching);
           return matching.length >= 1;
         } else { // eslint-disable-line no-else-return
           return true;
@@ -86,7 +86,7 @@ export class MessageDecoder {
       const results = message.text.match(twoZeeRegex);
       if (results) {
         // Style: (2N38111W 82211266 76400-64(Z
-        console.log(`Label 15 Position Report: between = ${results.groups.between}`);
+        // console.log(`Label 15 Position Report: between = ${results.groups.between}`);
       }
     }
 
@@ -100,8 +100,8 @@ export class MessageDecoder {
         // Successful match: United Airlines 5Z message
         const type = results.groups.type.split('/')[0];
         const { remainder } = results.groups;
-        console.log(results);
-        console.log(`DECODER: Matched 'United Airlines 5Z': type = ${type}, remainder = ${remainder}`);
+        // console.log(results);
+        // console.log(`DECODER: Matched 'United Airlines 5Z': type = ${type}, remainder = ${remainder}`);
 
         let typeDescription;
         switch (type) {
@@ -192,14 +192,14 @@ export class MessageDecoder {
             decodedString += `<div>Runway: ${results.groups.runway}</div>`;
             decodedString += `<div>Unknown FIeld 2: ${results.groups.unknown2}</div>`;
           } else {
-            console.log(`Unkown 5Z RDC format: ${remainder}`);
+            console.log(`Decoder: Unkown 5Z RDC format: ${remainder}`);
           }
         } else {
           decodedString += `<div>Remainder: ${remainder} (Will analyze and decode in the future)</div>`;
         }
       } else {
         // Unknown
-        console.log(`Unknown 5Z message: ${message.text}`);
+        console.log(`Decoder: Unknown 5Z message: ${message.text}`);
       }
     }
 
@@ -208,7 +208,7 @@ export class MessageDecoder {
       decodedString += '<div>Airline Defined</div>';
 
       const parts = message.text.split('\n');
-      console.log(parts);
+      // console.log(parts);
 
       if (parts[0].substr(0, 11) === '3N01 POSRPT') {
         // 3N01 POSRPT
@@ -216,7 +216,7 @@ export class MessageDecoder {
         let results = parts[0].match(posRptRegex);
         if (results && results.length > 0) {
           // This implementation with embedded HTML is temporary
-          console.log('DECODER: 3N01 POSRPT match');
+          // console.log('DECODER: 3N01 POSRPT match');
           decodedString += '<div class="mb-2">Position Report</div>';
           decodedString += '<table class="table table-sm table-bordered">';
           decodedString += `<tr><td>Origin</td><td>${results.groups.orig}</td></tr>`;
@@ -231,7 +231,7 @@ export class MessageDecoder {
           const remainingParts = parts.slice(1);
           for (const part of remainingParts) { // eslint-disable-line no-restricted-syntax
             results = part.matchAll(posRptRegex);
-            console.log(results);
+            // console.log(results);
             if (results) {
               for (const result of results) { // eslint-disable-line no-restricted-syntax
                 switch (result.groups.field) {
@@ -289,7 +289,7 @@ export class MessageDecoder {
 
     if (message.label === 'H1') {
       if (message.text.includes('#M1BPOS')) {
-        console.log('DECODER: #M1BPOS detected');
+        // console.log('DECODER: #M1BPOS detected');
         const parts = message.text.replace('#M1BPOS', '').split('/')[0].split(',');
         // console.log(parts);
 
@@ -311,7 +311,7 @@ export class MessageDecoder {
       }
 
       if (message.text.includes('#M1BPRG')) {
-        console.log('DECODER: #M1BPRG detected');
+        // console.log('DECODER: #M1BPRG detected');
         const parts = message.text.split('/');
         for (const part of parts) { // eslint-disable-line no-restricted-syntax
           if (part.includes('#M')) {
@@ -432,7 +432,7 @@ export class MessageDecoder {
         longitude,
         vdlFrequency,
       };
-      console.log(decodedMessage);
+      // console.log(decodedMessage);
 
       decodedString = `
         <div>${decodedMessage.description}</div>

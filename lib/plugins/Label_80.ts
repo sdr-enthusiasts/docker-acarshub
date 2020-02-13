@@ -81,16 +81,16 @@ export class Label_80 extends DecoderPlugin {
       }
 
       posRptRegex = /\/(?<field>\w+)\s(?<value>[\w\+\-:\.]+)\s*/gi; // eslint-disable-line no-useless-escape
-      console.log('Regex:', posRptRegex);
+      // console.log('Regex:', posRptRegex);
       const remainingParts = parts.slice(1);
-      console.log("Remaining Parts:", remainingParts);
+      // console.log("Remaining Parts:", remainingParts);
 
       for (const part of remainingParts) { // eslint-disable-line no-restricted-syntax
-        console.log('Part:', part);
+        // console.log('Part:', part);
         const matches = part.matchAll(posRptRegex);
-        console.log('Matches:', matches);
+        // console.log('Matches:', matches);
         for (const match of matches) { // eslint-disable-line no-restricted-syntax
-          console.log('Match:', match);
+          // console.log('Match:', match);
           switch (match.groups.field) {
             case 'ALT': {
               decodeResult.raw.altitude = match.groups.value;
