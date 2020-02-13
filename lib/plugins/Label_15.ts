@@ -20,7 +20,7 @@ export class Label_15 extends DecoderPlugin {
     const results = message.text.match(twoZeeRegex);
     if (results) {
       // Style: (2N38111W 82211266 76400-64(Z
-      console.log(`Label 15 Position Report: between = ${results.groups.between}`);
+      // console.log(`Label 15 Position Report: between = ${results.groups.between}`);
 
       decodeResult.raw.latitude_direction = results.groups.between.substr(0, 1);
       decodeResult.raw.latitude = Number(results.groups.between.substr(1, 5)) / 1000;

@@ -14,7 +14,7 @@ export class Label_H1_M1BPRG extends DecoderPlugin { // eslint-disable-line came
     const decodeResult: any = this.defaultResult;
     decodeResult.decoder.name = this.name;
 
-    console.log('DECODER: H1 #M1BPRG detected');
+    // console.log('DECODER: H1 #M1BPRG detected');
     const parts = message.text.split('/');
     for (const part of parts) { // eslint-disable-line no-restricted-syntax
       if (part.includes('#M')) {

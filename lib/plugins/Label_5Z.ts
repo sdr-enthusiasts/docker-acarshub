@@ -48,8 +48,8 @@ export class Label_5Z extends DecoderPlugin {
       // Successful match: United Airlines 5Z message
       const type : string = results.groups.type.split('/')[0];
       const { remainder } = results.groups;
-      console.log(results);
-      console.log(`DECODER: Matched 'United Airlines 5Z': type = ${type}, remainder = ${remainder}`);
+      // console.log(results);
+      // console.log(`DECODER: Matched 'United Airlines 5Z': type = ${type}, remainder = ${remainder}`);
 
       const typeDescription: string = this.descriptions[type] ? this.descriptions[type] : 'Unknown';
       decodeResult.raw.airline = 'United Airlines';
@@ -99,7 +99,7 @@ export class Label_5Z extends DecoderPlugin {
             value: `${results.groups.unknown2}`,
           });
         } else {
-          console.log(`Unkown 5Z RDC format: ${remainder}`);
+          console.log(`Decoder: Unkown 5Z RDC format: ${remainder}`);
         }
       } else {
         decodeResult.remaining.text = remainder;
@@ -108,7 +108,7 @@ export class Label_5Z extends DecoderPlugin {
       decodeResult.decoder.decodeLevel = 'partial';
     } else {
       // Unknown
-      console.log(`Unknown 5Z message: ${message.text}`);
+      console.log(`Decoder: Unknown 5Z message: ${message.text}`);
       decodeResult.remaining.text = message.text;
       decodeResult.decoded = false;
       decodeResult.decoder.decodeLevel = 'none';
