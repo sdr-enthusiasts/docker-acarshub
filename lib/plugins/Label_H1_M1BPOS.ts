@@ -14,7 +14,7 @@ export class Label_H1_M1BPOS extends DecoderPlugin { // eslint-disable-line came
     const decodeResult: any = this.defaultResult;
     decodeResult.decoder.name = this.name;
 
-    console.log('DECODER: #M1BPOS detected');
+    // console.log('DECODER: #M1BPOS detected');
     const parts = message.text.replace('#M1BPOS', '').split('/');
     const firstHalf = parts[0];
     const secondHalf = parts[1];
