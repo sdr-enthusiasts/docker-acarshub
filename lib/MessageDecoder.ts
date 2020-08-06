@@ -23,7 +23,7 @@ export class MessageDecoder {
     return true;
   }
 
-  decode(message: any) {
+  decode(message: any, options: any = {}) {
     // console.log('All plugins');
     // console.log(this.plugins);
     const usablePlugins = this.plugins.filter((plugin) => {
@@ -64,8 +64,17 @@ export class MessageDecoder {
       };
     }
 
-    console.log('Result');
-    console.log(result);
+    if (options.debug) {
+      let performDebug = true;
+      if (options.debug.only_decoded) {
+        performDebug = result.decoded;
+      }
+
+      if (performDebug) {
+        console.log('Result');
+        console.log(result);
+      }
+    }
 
     return result;
   }
