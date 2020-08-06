@@ -57,6 +57,7 @@ export class MessageDecoder {
         decoded: false,
         decodeLevel: 'none',
         error: 'No known decoder plugin for this message',
+        message: message,
         remaining: {
           text: message.text,
         },
