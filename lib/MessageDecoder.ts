@@ -24,8 +24,8 @@ export class MessageDecoder {
   }
 
   decode(message: any) {
-    console.log('All plugins');
-    console.log(this.plugins);
+    // console.log('All plugins');
+    // console.log(this.plugins);
     const usablePlugins = this.plugins.filter((plugin) => {
       const qualifiers : any = plugin.qualifiers();
 
@@ -45,8 +45,8 @@ export class MessageDecoder {
 
       return false;
     });
-    console.log('Usable plugins');
-    console.log(usablePlugins);
+    // console.log('Usable plugins');
+    // console.log(usablePlugins);
 
     let result;
     if (usablePlugins.length > 0) {
