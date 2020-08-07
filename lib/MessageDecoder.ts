@@ -11,6 +11,7 @@ export class MessageDecoder {
     this.registerPlugin(new Plugins.Label_ColonComma(this));
     this.registerPlugin(new Plugins.Label_5Z(this));
     this.registerPlugin(new Plugins.Label_15(this));
+    this.registerPlugin(new Plugins.Label_44_POS02(this));
     this.registerPlugin(new Plugins.Label_H1_M1BPOS(this));
     this.registerPlugin(new Plugins.Label_80(this));
     this.registerPlugin(new Plugins.Label_SQ(this));
@@ -45,8 +46,8 @@ export class MessageDecoder {
 
       return false;
     });
-    // console.log('Usable plugins');
-    // console.log(usablePlugins);
+    console.log('Usable plugins');
+    console.log(usablePlugins);
 
     let result;
     if (usablePlugins.length > 0) {

@@ -20,7 +20,7 @@ export class Label_H1_M1BPOS extends DecoderPlugin { // eslint-disable-line came
     const secondHalf = parts[1];
     const items = firstHalf.split(',');
 
-    const coordsRegex = /(?<lac>[NS])(?<la>\d+)(?<lnc>[EW])(?<ln>\d+)/;
+    const coordsRegex = /(?<lac>[NS])(?<la>.+)\s*(?<lnc>[EW])(?<ln>.+)/;
     const results = items[0].match(coordsRegex);
 
     if (results && results.length >= 4) {
