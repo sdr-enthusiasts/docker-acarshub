@@ -45,7 +45,7 @@ export class Label_H1_M1BPOS extends DecoderPlugin { // eslint-disable-line came
         },
       };
       decodeResult.decoded = true;
-      decodeResult.decoder.decodeLevel = 'partial';
+      decodeResult.decodeLevel = 'partial';
     }
     decodeResult.remaining.text = secondHalf;
 

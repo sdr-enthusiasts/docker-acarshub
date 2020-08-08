@@ -3,9 +3,11 @@ import { DecoderPluginInterface } from './DecoderPluginInterface'; // eslint-dis
 import * as Plugins from './plugins/official';
 
 export class MessageDecoder {
+  name : string;
   plugins : Array<DecoderPluginInterface>;
 
   constructor() {
+    this.name = 'acars-decoder-typescript';
     this.plugins = [];
 
     this.registerPlugin(new Plugins.Label_ColonComma(this));
@@ -62,6 +64,8 @@ export class MessageDecoder {
         remaining: {
           text: message.text,
         },
+        raw: {},
+        formatted: {},
       };
     }
 
