@@ -1,28 +1,28 @@
 import { DecoderPlugin } from '../DecoderPlugin';
 
-// General Aviation Position Report
-export class Label_44_POS02 extends DecoderPlugin {
-  name = 'label-44-pos02';
+// In Air Report
+export class Label_44_ETA extends DecoderPlugin {
+  name = 'label-44-eta';
 
   qualifiers() { // eslint-disable-line class-methods-use-this
     return {
       labels: ['44'],
-      preambles: ['POS02'],
+      preambles: ['00ETA01', '00ETA02', '00ETA03', 'ETA01', 'ETA02', 'ETA03'],
     };
   }
 
   decode(message: any) : any {
     const decodeResult: any = this.defaultResult;
     decodeResult.decoder.name = this.name;
-    decodeResult.formatted.description = 'Position Report';
+    decodeResult.formatted.description = 'ETA Report';
     decodeResult.message = message;
 
-    // Style: POS02,N38338W121179,GRD,KMHR,KPDX,0807,0003,0112,005.1
-    // Match: POS02,coords,flight_level_or_ground,departure_icao,arrival_icao,current_date,current_time,eta_time,unknown
-    const regex = /^POS02,(?<unsplit_coords>.*),(?<flight_level_or_ground>.*),(?<departure_icao>.*),(?<arrival_icao>.*),(?<current_date>.*),(?<current_time>.*),(?<eta_time>.*),(?<fuel_in_tons>.*)$/;
+    // Style: IN02,N38338W121179,KMHR,KPDX,0806,2355,005.1
+    // Match: IN02,coords,departure_icao,arrival_icao,current_date,current_time,fuel_in_tons
+    const regex = /^IN02,(?<unsplit_coords>.*),(?<departure_icao>.*),(?<arrival_icao>.*),(?<current_date>.*),(?<current_time>.*),(?<fuel_in_tons>.*)$/;
     const results = message.text.match(regex);
     if (results) {
-      console.log(`Label 44 Position Report: groups`);
+      console.log(`Label 44 ETA Report: groups`);
       console.log(results.groups);
 
       const coordsRegex = /(?<lac>[NS])(?<la>.+)\s*(?<lnc>[EW])(?<ln>.+)/;
@@ -32,7 +32,6 @@ export class Label_44_POS02 extends DecoderPlugin {
       decodeResult.raw.latitude = Number(coordsResults.groups.la) / 1000;
       decodeResult.raw.longitude_direction = coordsResults.groups.lnc;
       decodeResult.raw.longitude = Number(coordsResults.groups.ln) / 1000;
-      decodeResult.raw.flight_level = results.groups.flight_level_or_ground == 'GRD' || results.groups.flight_level_or_ground == '***' ? '0' : Number(results.groups.flight_level_or_ground);
       decodeResult.raw.departure_icao = results.groups.departure_icao;
       decodeResult.raw.arrival_icao = results.groups.arrival_icao;
       decodeResult.raw.current_time = Date.parse(
@@ -41,13 +40,6 @@ export class Label_44_POS02 extends DecoderPlugin {
         results.groups.current_date.substr(2, 2) + "T" +
         results.groups.current_time.substr(0, 2) + ":" +
         results.groups.current_time.substr(2, 2) + ":00Z"
-      );
-      decodeResult.raw.eta_time = Date.parse(
-        new Date().getFullYear() + "-" +
-        results.groups.current_date.substr(0, 2) + "-" +
-        results.groups.current_date.substr(2, 2) + "T" +
-        results.groups.eta_time.substr(0, 2) + ":" +
-        results.groups.eta_time.substr(2, 2) + ":00Z"
       );
 
       if (results.groups.fuel_in_tons != '***' && results.groups.fuel_in_tons != '****') {
@@ -73,13 +65,6 @@ export class Label_44_POS02 extends DecoderPlugin {
         code: 'DST',
         label: 'Destination',
         value: decodeResult.raw.arrival_icao,
-      });
-
-      decodeResult.formatted.items.push({
-        type: 'flight_level',
-        code: 'FL',
-        label: 'Flight Level',
-        value: decodeResult.raw.flight_level,
       });
 
     }
