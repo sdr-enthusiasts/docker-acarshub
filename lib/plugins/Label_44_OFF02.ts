@@ -18,8 +18,8 @@ export class Label_44_OFF02 extends DecoderPlugin {
     decodeResult.message = message;
 
     // Style: OFF02,N38334W121176,KMHR,KPDX,0807,0014,0123,004.9
-    // Match: OFF02,coords,departure_icao,arrival_icao,current_date,current_time,fuel_in_tons
-    const regex = /^ON02,(?<unsplit_coords>.*),(?<departure_icao>.*),(?<arrival_icao>.*),(?<current_date>.*),(?<current_time>.*),(?<fuel_in_tons>.*)$/;
+    // Match: OFF02,coords,departure_icao,arrival_icao,current_date,current_time,eta_time,fuel_in_tons
+    const regex = /^ON02,(?<unsplit_coords>.*),(?<departure_icao>.*),(?<arrival_icao>.*),(?<current_date>.*),(?<current_time>.*),(?<eta_time>.*),(?<fuel_in_tons>.*)$/;
     const results = message.text.match(regex);
     if (results) {
       console.log(`Label 44 Off Runway Report: groups`);
@@ -40,6 +40,13 @@ export class Label_44_OFF02 extends DecoderPlugin {
         results.groups.current_date.substr(2, 2) + "T" +
         results.groups.current_time.substr(0, 2) + ":" +
         results.groups.current_time.substr(2, 2) + ":00Z"
+      );
+      decodeResult.raw.eta_time = Date.parse(
+        new Date().getFullYear() + "-" +
+        results.groups.current_date.substr(0, 2) + "-" +
+        results.groups.current_date.substr(2, 2) + "T" +
+        results.groups.eta_time.substr(0, 2) + ":" +
+        results.groups.eta_time.substr(2, 2) + ":00Z"
       );
 
       if (results.groups.fuel_in_tons != '***' && results.groups.fuel_in_tons != '****') {
