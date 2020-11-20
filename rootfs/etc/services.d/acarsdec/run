@@ -1,0 +1,10 @@
+#!/usr/bin/with-contenv sh
+# shellcheck shell=sh
+
+if [ -n "${ENABLE_ACARS}" ]; then
+	if [ -n "${SERIAL_ACARS}" ]; then
+		s6-setuidgid root acarsdec -v -o 4 -g $GAIN -i $STATION_ID -r 0 $FREQS_ACARS -r $SERIAL_ACARS
+	else
+		s6-setuidgid root acarsdec -v -o 4 -g $GAIN -i $STATION_ID -r 0 $FREQS_ACARS
+	fi
+fi

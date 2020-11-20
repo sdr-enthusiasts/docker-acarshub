@@ -1,0 +1,23 @@
+#!/usr/bin/with-contenv sh
+# shellcheck shell=sh
+
+if [ -n "${STATON_ID}" ]; then
+	echo "Error: No STATION_ID set. Exiting"
+	exit 1
+fi
+
+if [ -n "${ENABLE_ACARS}" ]; then
+	if [ -z "${FREQS_ACARS}" ]; then
+		echo "Error: ACARS enabled with no FREQS_ACARS. Exiting"
+		exit 1
+	fi
+fi
+
+if [ -n "${ENABLE_VDLM}" ]; then
+	if [ -z "${FREQS_VDLM}" ]; then
+		echo "Error: VDLM enabled with no FREQS_VDLM. Exiting"
+		exit 1
+	fi
+fi
+
+exit 0

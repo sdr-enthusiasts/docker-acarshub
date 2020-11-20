@@ -1,0 +1,10 @@
+#!/usr/bin/with-contenv sh
+# shellcheck shell=sh
+
+if [ -n "${ENABLE_VDLM}" ]; then
+	if [ -n "${SERIAL_VDLM}" ]; then
+		s6-setuidgid root vdlm2dec -v -J -G -E -U -g $GAIN -i $STATION_ID -r 0 $FREQS_VDLM -r $SERIAL_VDLM
+	else
+		s6-setuidgid root vdlm2dec -v -J -G -E -U -g $GAIN -i $STATION_ID -r 0 $FREQS_VDLM
+	fi
+fi
