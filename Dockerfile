@@ -9,8 +9,8 @@ ENV BRANCH_RTLSDR="ed0317e6a58c098874ac58b769cf2e609c18d9a5" \
     SERIAL_VDLM="" \
     FREQS_ACARS="" \
     FREQS_VDLM="" \
-    ENABLE_ACARS="true" \
-    ENABLE_VDLM="true" \
+    ENABLE_ACARS="" \
+    ENABLE_VDLM="" \
     GAIN="280"
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
