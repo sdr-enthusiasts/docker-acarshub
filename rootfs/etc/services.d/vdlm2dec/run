@@ -4,15 +4,15 @@
 if [ -n "${ENABLE_VDLM}" ]; then
 	if [ -n "${SERIAL_VDLM}" ]; then
 		if [ -n "${FEED}" ]; then
-			s6-setuidgid root vdlm2dec -v -J -G -E -U -g $GAIN -i $STATION_ID -j feed.acars.io:5550 -r $SERIAL_VDLM $FREQS_VDLM
+			s6-setuidgid root vdlm2dec -v -J -G -E -U -g $GAIN -i $STATION_ID_VDLM -j feed.acars.io:5550 -r $SERIAL_VDLM $FREQS_VDLM
 		else
-			s6-setuidgid root vdlm2dec -v -J -G -E -U -g $GAIN -i $STATION_ID -r $SERIAL_VDLM $FREQS_VDLM
+			s6-setuidgid root vdlm2dec -v -J -G -E -U -g $GAIN -i $STATION_ID_VDLM -r $SERIAL_VDLM $FREQS_VDLM
 		fi
 	else
 		if [ -n "${FEED}" ]; then
-			s6-setuidgid root vdlm2dec -v -J -G -E -U -g $GAIN -i $STATION_ID -j feed.acars.io:5550 -r 0 $FREQS_VDLM
+			s6-setuidgid root vdlm2dec -v -J -G -E -U -g $GAIN -i $STATION_ID_VDLM -j feed.acars.io:5555 -r 0 $FREQS_VDLM
 		else
-			s6-setuidgid root vdlm2dec -v -J -G -E -U -g $GAIN -i $STATION_ID -r 0 $FREQS_VDLM
+			s6-setuidgid root vdlm2dec -v -J -G -E -U -g $GAIN -i $STATION_ID_VDLM -r 0 $FREQS_VDLM
 		fi
 	fi
 fi

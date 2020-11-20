@@ -4,15 +4,15 @@
 if [ -n "${ENABLE_ACARS}" ]; then
 	if [ -n "${SERIAL_ACARS}" ]; then
 		if [ -n "${FEED}" ]; then
-			s6-setuidgid root acarsdec -v -o 4 -g $GAIN -i $STATION_ID -j feed.acars.io:5550 -r $SERIAL_ACARS $FREQS_ACARS
+			s6-setuidgid root acarsdec -v -o 4 -g $GAIN -i $STATION_ID_ACARS -j feed.acars.io:5550 -r $SERIAL_ACARS $FREQS_ACARS
 		else 
-			s6-setuidgid root acarsdec -v -o 4 -g $GAIN -i $STATION_ID -r $SERIAL_ACARS $FREQS_ACARS
+			s6-setuidgid root acarsdec -v -o 4 -g $GAIN -i $STATION_ID_ACARS  -r $SERIAL_ACARS $FREQS_ACARS
 		fi
 	else
 		if [ -n "${FEED}" ]; then
-			s6-setuidgid root acarsdec -v -o 4 -g $GAIN -i $STATION_ID -j feed.acars.io:5550 -r 0 $FREQS_ACARS
+			s6-setuidgid root acarsdec -v -o 4 -g $GAIN -i $STATION_ID_ACARS  -j feed.acars.io:5550 -r 0 $FREQS_ACARS
 		else
-			s6-setuidgid root acarsdec -v -o 4 -g $GAIN -i $STATION_ID -r 0 $FREQS_ACARS
+			s6-setuidgid root acarsdec -v -o 4 -g $GAIN -i $STATION_ID_ACARS  -r 0 $FREQS_ACARS
 		fi
 	fi
 fi
