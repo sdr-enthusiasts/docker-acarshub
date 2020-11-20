@@ -31,8 +31,8 @@ docker run \
  --rm \
  --name acarshub \
  -e STATION_ID_ACARS="YOURIDHERE" \
- -e FREQS_ACARS="130.025 130.450 131.125 131.550"
- -e ENABLE_ACARS="true"
+ -e FREQS_ACARS="130.025 130.450 131.125 131.550" \
+ -e ENABLE_ACARS="true" \
  --device /dev/bus/usb:/dev/bus/usb \
 fredclausen/acarshub
 ```
