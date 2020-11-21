@@ -11,7 +11,8 @@ ENV BRANCH_RTLSDR="ed0317e6a58c098874ac58b769cf2e609c18d9a5" \
     FREQS_VDLM="" \
     ENABLE_ACARS="" \
     ENABLE_VDLM="" \
-    GAIN="280"
+    GAIN="280" \
+    ENABLE_DATABASE=""
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
@@ -39,21 +40,15 @@ RUN set -x && \
     TEMP_PACKAGES+=(libxml2-dev) && \
     KEPT_PACKAGES+=(zlib1g) && \
     KEPT_PACKAGES+=(libxml2) && \
-    # Packages for telegraf
-    TEMP_PACKAGES+=(apt-transport-https) && \
-    KEPT_PACKAGES+=(socat) && \
+    # packages for acarsserv
+    TEMP_PACKAGES+=(libsqlite3-dev) && \
+    KEPT_PACKAGES+=(libsqlite3-0) && \
     # install packages
     apt-get update && \
     apt-get install -y --no-install-recommends \
         ${KEPT_PACKAGES[@]} \
         ${TEMP_PACKAGES[@]} \
         && \
-    # Install telegraf
-    curl --location --silent -o - https://repos.influxdata.com/influxdb.key | apt-key add - && \
-    source /etc/os-release && \ 
-    echo "deb https://repos.influxdata.com/debian $VERSION_CODENAME stable" > /etc/apt/sources.list.d/influxdb.list && \
-    apt-get update && \
-    apt-get install --no-install-recommends -y telegraf && \
     # rtl-sdr
     git clone git://git.osmocom.org/rtl-sdr.git /src/rtl-sdr && \
     pushd /src/rtl-sdr && \
@@ -95,6 +90,16 @@ RUN set -x && \
     cmake .. -Drtl=ON && \
     make && \
     make install && \
+    popd && popd && \
+    # acarsserv
+    git clone git://github.com/TLeconte/acarsserv.git /src/acarsserv && \
+    pushd /src/acarsserv && \
+    git checkout master && \
+    mkdir build && \
+    pushd build && \
+    make -f ../Makefile && \
+    cp acarsserv /usr/bin/ && \
+    mkdir -p /run/acarsserv && \
     popd && popd && \
     # install S6 Overlay
     curl -s https://raw.githubusercontent.com/mikenye/deploy-s6-overlay/master/deploy-s6-overlay.sh | sh && \
