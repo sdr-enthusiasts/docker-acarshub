@@ -39,13 +39,21 @@ RUN set -x && \
     TEMP_PACKAGES+=(libxml2-dev) && \
     KEPT_PACKAGES+=(zlib1g) && \
     KEPT_PACKAGES+=(libxml2) && \
-    # 
+    # Packages for telegraf
+    TEMP_PACKAGES+=(apt-transport-https) && \
+    KEPT_PACKAGES+=(socat) && \
     # install packages
     apt-get update && \
     apt-get install -y --no-install-recommends \
         ${KEPT_PACKAGES[@]} \
         ${TEMP_PACKAGES[@]} \
         && \
+    # Install telegraf
+    curl --location --silent -o - https://repos.influxdata.com/influxdb.key | apt-key add - && \
+    source /etc/os-release && \ 
+    echo "deb https://repos.influxdata.com/debian $VERSION_CODENAME stable" > /etc/apt/sources.list.d/influxdb.list && \
+    apt-get update && \
+    apt-get install --no-install-recommends -y telegraf && \
     # rtl-sdr
     git clone git://git.osmocom.org/rtl-sdr.git /src/rtl-sdr && \
     pushd /src/rtl-sdr && \
