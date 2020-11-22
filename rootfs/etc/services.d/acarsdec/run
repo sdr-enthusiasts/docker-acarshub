@@ -1,18 +1,28 @@
-#!/usr/bin/with-contenv sh
-# shellcheck shell=sh
+#!/usr/bin/with-contenv bash
+#shellcheck shell=bash
+
+ACARS_BIN="/usr/local/bin/acarsdec"
+ACARS_CMD=("-o 4 -g $GAIN -i $STATION_ID_ACARS")
 
 if [ -n "${ENABLE_ACARS}" ]; then
-	if [ -n "${SERIAL_ACARS}" ]; then
-		if [ -n "${FEED}" ]; then
-			s6-setuidgid root acarsdec -v -o 4 -g $GAIN -i $STATION_ID_ACARS -j feed.acars.io:5550 -r $SERIAL_ACARS $FREQS_ACARS
-		else 
-			s6-setuidgid root acarsdec -v -o 4 -g $GAIN -i $STATION_ID_ACARS -r $SERIAL_ACARS $FREQS_ACARS
-		fi
-	else
-		if [ -n "${FEED}" ]; then 
-			s6-setuidgid root acarsdec -v -o 4 -g $GAIN -i $STATION_ID_ACARS  -j feed.acars.io:5550 -r 0 $FREQS_ACARS
-		else
-			s6-setuidgid root acarsdec -v -o 4 -g $GAIN -i $STATION_ID_ACARS -r 0 $FREQS_ACARS
-		fi
+	if [ -n "${VERBOSE}" ]; then
+		ACARS_CMD+=("-l /run/acars/acars.json")
 	fi
+
+	if [ -n "${FEED}" ]; then
+		ACARS_CMD+=("-j feed.acars.io:5550")
+	fi
+
+	if [ -n "${SERIAL_ACARS}" ]; then
+		ACARS_CMD+=("-r $SERIAL_ACARS")
+	else
+		ACARS_CMD+=("-r 0")
+	fi
+
+	ACARS_CMD+=("$FREQS_ACARS")
+
+	set -eo pipefail
+
+	$ACARS_BIN ${ACARS_CMD[@]} \
+	2>&1  | stdbuf -o0 sed --unbuffered '/^$/d' | stdbuf -o0 awk '{print "[acarsdec] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
 fi

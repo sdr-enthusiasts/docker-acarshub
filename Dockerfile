@@ -12,7 +12,7 @@ ENV BRANCH_RTLSDR="ed0317e6a58c098874ac58b769cf2e609c18d9a5" \
     ENABLE_ACARS="" \
     ENABLE_VDLM="" \
     GAIN="280" \
-    ENABLE_DATABASE=""
+    VERBOSE=""
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
@@ -27,6 +27,8 @@ RUN set -x && \
     TEMP_PACKAGES+=(automake) && \
     TEMP_PACKAGES+=(autoconf) && \
     TEMP_PACKAGES+=(wget) && \
+    # logging
+    KEPT_PACKAGES+=(gawk) && \
     # required for S6 overlay
     TEMP_PACKAGES+=(gnupg2) && \
     TEMP_PACKAGES+=(file) && \
@@ -91,16 +93,8 @@ RUN set -x && \
     make && \
     make install && \
     popd && popd && \
-    # acarsserv
-    git clone git://github.com/TLeconte/acarsserv.git /src/acarsserv && \
-    pushd /src/acarsserv && \
-    git checkout master && \
-    mkdir build && \
-    pushd build && \
-    make -f ../Makefile && \
-    cp acarsserv /usr/bin/ && \
-    mkdir -p /run/acarsserv && \
-    popd && popd && \
+    # directory for logging
+    mkdir -p /run/acars && \
     # install S6 Overlay
     curl -s https://raw.githubusercontent.com/mikenye/deploy-s6-overlay/master/deploy-s6-overlay.sh | sh && \
     # Clean up

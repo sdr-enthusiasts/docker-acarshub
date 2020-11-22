@@ -1,6 +1,0 @@
-#!/usr/bin/with-contenv sh
-# shellcheck shell=sh
-
-if [ -n "${ENABLE_DATABASE}" ]; then
-	s6-setuidgid root /usr/bin/acarsserv -N -b /run/acarsserv/acarsserv.sqb
-fi
