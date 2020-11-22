@@ -12,4 +12,4 @@ export DOCKER_CLI_EXPERIMENTAL="enabled"
 docker buildx use default
 
 # Build & push latest
-docker buildx build --no-cache -t "${REPO}/${IMAGE}:test" --compress --push --platform "${PLATFORMS}" .
+docker buildx build -t "${REPO}/${IMAGE}:test" --compress --push --platform "${PLATFORMS}" .
