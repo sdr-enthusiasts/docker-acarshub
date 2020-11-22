@@ -104,7 +104,7 @@ There are quite a few configuration options this container can accept.
 
 ACARS decoding appears to be actively being developed, and as such, I expect a lot of movement in data-visualization and presentation to happen. This container will follow those developments and add in functionality as it appears.
 
-As it stands right now, the easiest way to view the data you are generating will be to follow the docker logs via the command above. 
+As it stands right now, the easiest way to view the data you are generating will be to follow the docker logs via the command above or enable `VERBOSE` to have the ACARS message stored. 
 
 ## Getting Help
 
