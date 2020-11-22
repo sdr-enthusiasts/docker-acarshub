@@ -3,7 +3,7 @@
 
 if [ -n "${ENABLE_ACARS}" ]; then
 	if [ -n "${STATON_ID_ACARS}" ]; then
-		echo "Error: No STATION_ID set. Exiting"
+		echo "Error: ACARS enabled with no STATON_ID_ACARS set. Exiting"
 		exit 1
 	fi
 
@@ -15,7 +15,7 @@ fi
 
 if [ -n "${ENABLE_VDLM}" ]; then
 	if [ -n "${STATON_ID_VDLM}" ]; then
-		echo "Error: No STATION_ID set. Exiting"
+		echo "Error: VDLM enabled with no  STATION_ID_VDLM set. Exiting"
 		exit 1
 	fi
 	if [ -z "${FREQS_VDLM}" ]; then
