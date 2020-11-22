@@ -15,7 +15,7 @@ fi
 
 if [ -n "${ENABLE_VDLM}" ]; then
 	if [ -n "${STATON_ID_VDLM}" ]; then
-		echo "Error: VDLM enabled with no  STATION_ID_VDLM set. Exiting"
+		echo "Error: VDLM enabled with no STATION_ID_VDLM set. Exiting"
 		exit 1
 	fi
 	if [ -z "${FREQS_VDLM}" ]; then
