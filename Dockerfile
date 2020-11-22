@@ -11,7 +11,8 @@ ENV BRANCH_RTLSDR="ed0317e6a58c098874ac58b769cf2e609c18d9a5" \
     FREQS_VDLM="" \
     ENABLE_ACARS="" \
     ENABLE_VDLM="" \
-    GAIN="280"
+    GAIN="280" \
+    VERBOSE=""
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
@@ -26,6 +27,8 @@ RUN set -x && \
     TEMP_PACKAGES+=(automake) && \
     TEMP_PACKAGES+=(autoconf) && \
     TEMP_PACKAGES+=(wget) && \
+    # logging
+    KEPT_PACKAGES+=(gawk) && \
     # required for S6 overlay
     TEMP_PACKAGES+=(gnupg2) && \
     TEMP_PACKAGES+=(file) && \
@@ -39,7 +42,9 @@ RUN set -x && \
     TEMP_PACKAGES+=(libxml2-dev) && \
     KEPT_PACKAGES+=(zlib1g) && \
     KEPT_PACKAGES+=(libxml2) && \
-    # 
+    # packages for acarsserv
+    TEMP_PACKAGES+=(libsqlite3-dev) && \
+    KEPT_PACKAGES+=(libsqlite3-0) && \
     # install packages
     apt-get update && \
     apt-get install -y --no-install-recommends \
@@ -88,6 +93,8 @@ RUN set -x && \
     make && \
     make install && \
     popd && popd && \
+    # directory for logging
+    mkdir -p /run/acars && \
     # install S6 Overlay
     curl -s https://raw.githubusercontent.com/mikenye/deploy-s6-overlay/master/deploy-s6-overlay.sh | sh && \
     # Clean up
