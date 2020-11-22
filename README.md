@@ -64,7 +64,7 @@ No ports are exposed in this container.
 
 ## Volumes
 
-No volumes are needed to run the container.
+No volumes are needed to run the container. However, if you wish to persist the `VERBOSE` data, mount a volume to `/run/acars`.
 
 ## Environment variables
 
@@ -76,6 +76,7 @@ There are quite a few configuration options this container can accept.
 |----------|-------------|---------|--------|
 | GAIN     | Sets the gain for the dongle | No | 280 |
 | FEED     | Used to toggle feeding to [ACARS.io](http://acars.io). If set to any non-blank value feeding will be enabled. | No | Blank |
+| VERBOSE  | If you want to dump a json log file to the disk, set this value to any non-blank value | No | Blank |
 
 ### ACARS
 
@@ -97,7 +98,7 @@ There are quite a few configuration options this container can accept.
 
 ## Logging
 
-* All processes are logged to the container's stdout, and can be viewed with `docker logs [-f] container`.
+* All processes are logged to the container's stdout unless `VERBOSE` is enabled in which case aircraft messages are logged to the disk. General logging can be viewed with `docker logs [-f] container`.
 
 ## Future improvements
 
