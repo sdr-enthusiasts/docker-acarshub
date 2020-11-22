@@ -5,7 +5,7 @@ set -xe
 
 REPO=fredclausen
 IMAGE=acarshub
-PLATFORMS="linux/amd64,linux/arm/v7,linux/arm64"
+PLATFORMS="linux/arm64"
 
 docker context use x86_64
 export DOCKER_CLI_EXPERIMENTAL="enabled"
