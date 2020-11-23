@@ -42,15 +42,15 @@ if (( $aggregate_files > 1 )); then
     if (( $total_lines_agg > 200 )); then
        let lines_to_delete=total_lines_agg-199
        sed -n "${lines_to_delete},${total_lines}p" /run/acars/display_sorted.txt > /run/acars/display_adjusted.txt
-       awk '{a[i++]=$0}END{for(j=i-1;j>=0;j--)print a[j];}' /run/acars/display_adjusted.txt > /run/acars/display.json
+       awk '{a[i++]=$0}END{for(j=i-1;j>=0;j--)print a[j];}' /run/acars/display_adjusted.txt > /var/www/html/display.json
        rm /run/acars/display_adjusted.txt
        rm /run/acars/display_sorted.txt
     else
-       mv /run/acars/display_sorted.txt /run/acars/display.json
+       mv /run/acars/display_sorted.txt /var/www/html/display.json
     fi
 
 elif [ -f "/run/acars/vdlm.json" ]; then
-    mv /run/acars/vdlm_sorted.txt /run/acars/display.json
+    mv /run/acars/vdlm_sorted.txt /var/www/html/display.json
 elif [ -f "/run/acars/acars.json" ]; then
-    mv /run/acars/acars_sorted.txt /run/acars/display.json
+    mv /run/acars/acars_sorted.txt /var/www/html/display.json
 fi
