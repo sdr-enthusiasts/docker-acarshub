@@ -97,6 +97,10 @@ There are quite a few configuration options this container can accept.
 | SERIAL_VDLM  | Serial for the RTLSDR dongle used for VDLM decoding. | Yes, if ENABLE_ACARS and ENABLE_VDLM is enabled | Blank |
 | FREQS_VDLM  | List of frequencies, separaed by spaces, used for VDLM monitoring. | Yes, if ENABLE_VDLM is enabled | Blank |
 
+## Viewing the messages
+
+As it stands right now, this container will show the last 200 received messages via the web server if `VERBOSE` is enabled. No processing of the messages in to a more readable format is done. The messages are viewable at `containerip`.
+
 ## Logging
 
 * All processes are logged to the container's stdout unless `VERBOSE` is enabled in which case aircraft messages are logged to the disk. General logging can be viewed with `docker logs [-f] container`.
@@ -104,8 +108,6 @@ There are quite a few configuration options this container can accept.
 ## Future improvements
 
 ACARS decoding appears to be actively being developed, and as such, I expect a lot of movement in data-visualization and presentation to happen. This container will follow those developments and add in functionality as it appears.
-
-As it stands right now, the easiest way to view the data you are generating will be to follow the docker logs via the command above or enable `VERBOSE` to have the ACARS message stored. 
 
 ## Getting Help
 
