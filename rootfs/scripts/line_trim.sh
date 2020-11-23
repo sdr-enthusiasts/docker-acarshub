@@ -1,6 +1,17 @@
 #!/usr/bin/with-contenv bash
 #shellcheck shell=bash
 
+## This entire file feels like a poor shell scripting joke you'd fine online
+# If you are reading this, yes, I am aware this can be done better
+# If I knew how, I'd have done it :)
+# It does what I want it to, so that is something
+
+# This file creates the output for the webpage to display
+# The goal here is to take the JSON files that acarsdec and vdlm2dec generate
+# trim those files down for the website to a manageable number of entries
+# aggregate vdlm and acars together
+# and trim that down, too
+
 let aggregate_files=0
 
 if [ -f "/run/acars/acars.json" ]; then
