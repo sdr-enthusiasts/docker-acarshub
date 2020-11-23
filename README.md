@@ -109,7 +109,7 @@ The messages are viewable at `containerip`.
 
 ## Future improvements
 
-ACARS decoding appears to be actively being developed, and as such, I expect a lot of movement in data-visualization and presentation to happen. This container will follow those developments and add in functionality as it appears.
+ACARS decoding appears to be in active development, and as such, I expect a lot of movement in data-visualization and presentation to happen. This container will follow those developments and add in functionality as it appears.
 
 ## Getting Help
 
