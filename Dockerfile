@@ -13,7 +13,8 @@ ENV BRANCH_RTLSDR="ed0317e6a58c098874ac58b769cf2e609c18d9a5" \
     ENABLE_VDLM="" \
     GAIN="280" \
     VERBOSE="" \
-    TRIM_LOGS="true"
+    TRIM_LOGS="true" \
+    DISABLE_WEBAPP=""
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
@@ -46,6 +47,8 @@ RUN set -x && \
     # packages for acarsserv
     TEMP_PACKAGES+=(libsqlite3-dev) && \
     KEPT_PACKAGES+=(libsqlite3-0) && \
+    # packages for lighttpd
+    KEPT_PACKAGES+=(lighttpd) && \
     # install packages
     apt-get update && \
     apt-get install -y --no-install-recommends \
@@ -96,6 +99,18 @@ RUN set -x && \
     popd && popd && \
     # directory for logging
     mkdir -p /run/acars && \
+    # lighttpd config
+    mkdir -p "/var/run/lighttpd" && \
+    # lighttpd configuration - mod_compress location + permissions.
+    mkdir -p "/var/cache/lighttpd/compress/script/readsb/backend" && \
+    mkdir -p "/var/cache/lighttpd/compress/css/bootstrap" && \
+    mkdir -p "/var/cache/lighttpd/compress//css/leaflet" && \
+    # lighttpd configuration - remove "unconfigured" conf.
+    rm -v "/etc/lighttpd/conf-enabled/99-unconfigured.conf" && \
+    # lighttpd configuration - change server port (needs to be a high port as this is a rootless container).
+    sed -i 's/^server\.port.*/server.port = 8080/g' /etc/lighttpd/lighttpd.conf && \
+    # lighttpd configuration - remove errorlog, lighttpd runs in the foreground so errors will show in container log.
+    sed -i 's/^server\.errorlog.*//g' /etc/lighttpd/lighttpd.conf && \
     # install S6 Overlay
     curl -s https://raw.githubusercontent.com/mikenye/deploy-s6-overlay/master/deploy-s6-overlay.sh | sh && \
     # Clean up
@@ -107,4 +122,4 @@ COPY rootfs/ /
 
 ENTRYPOINT [ "/init" ]
 
-#EXPOSE 8000
+EXPOSE 80
