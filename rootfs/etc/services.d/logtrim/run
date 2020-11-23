@@ -3,6 +3,7 @@
 
 if [ -n "${TRIM_LOGS}" ]; then
 	/scripts/log_check.sh
+	sleep 3600
+else
+    sleep 86400
 fi
-
-sleep 3600
