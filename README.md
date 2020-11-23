@@ -99,7 +99,9 @@ There are quite a few configuration options this container can accept.
 
 ## Viewing the messages
 
-As it stands right now, this container will show the last 200 received messages via the web server if `VERBOSE` is enabled. No processing of the messages in to a more readable format is done. The messages are viewable at `containerip`.
+As it stands right now, this container will show the last 200 received messages via the web server if `VERBOSE` is enabled. No processing of the messages in to a more readable format is done. It is very ugly, I am not a fan of it, but it is better than nothing (I think...)
+
+The messages are viewable at `containerip`.
 
 ## Logging
 
