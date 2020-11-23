@@ -1,6 +1,6 @@
 # docker-acarshub
 
-Docker container to view and also stream ACARS messages to [ACARS.io](http://acars.io). Uses [libacars](https://github.com/szpajder/libacars), [arcarsdec](https://github.com/TLeconte/acarsdec) and [vdlm2dec](https://github.com/TLeconte/vdlm2dec). Builds and runs on `arm64`. A container is provided for, but not tested, `amd64` and `arm32v7` (see below).
+Docker container to view and also stream ACARS messages to [ACARS.io](http://acars.io). Uses [libacars](https://github.com/szpajder/libacars), [acarsdec](https://github.com/TLeconte/acarsdec) and [vdlm2dec](https://github.com/TLeconte/vdlm2dec). Builds and runs on `arm64`. A container is provided for, but not tested, `amd64` and `arm32v7` (see below).
 
 ## Supported tags and respective Dockerfiles
 
