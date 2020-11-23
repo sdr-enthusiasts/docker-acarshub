@@ -11,7 +11,6 @@ if [ -f "/run/acars/acars.json" ]; then
        sed -n "${lines_to_delete},${total_lines}p" /run/acars/acars.json > /run/acars/acars_adjusted.txt
        awk '{a[i++]=$0}END{for(j=i-1;j>=0;j--)print a[j];}' /run/acars/acars_adjusted.txt > /run/acars/acars_sorted.txt
        rm /run/acars/acars_adjusted.txt
-       rm 200
     fi
 
     let aggregate_files=1
@@ -25,7 +24,6 @@ if [ -f "/run/acars/vdlm.json" ]; then
         sed -n "${lines_to_delete_vdlm},${total_lines_vdlm}p" /run/acars/vdlm.json > /run/acars/vdlm_adjusted.txt
         awk '{a[i++]=$0}END{for(j=i-1;j>=0;j--)print a[j];}' /run/acars/vdlm_adjusted.txt > /run/acars/vdlm_sorted.txt
         rm /run/acars/vdlm_adjusted.txt
-        rm 200
     fi
 
     let aggregate_files+=1
@@ -47,7 +45,6 @@ if (( $aggregate_files > 1 )); then
        awk '{a[i++]=$0}END{for(j=i-1;j>=0;j--)print a[j];}' /run/acars/display_adjusted.txt > /run/acars/display.json
        rm /run/acars/display_adjusted.txt
        rm /run/acars/display_sorted.txt
-       rm 200
     else
        mv /run/acars/display_sorted.txt /run/acars/display.json
     fi
