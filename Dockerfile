@@ -106,8 +106,6 @@ RUN set -x && \
     mkdir -p "/var/cache/lighttpd/compress//css/leaflet" && \
     # lighttpd configuration - remove "unconfigured" conf.
     rm -v "/etc/lighttpd/conf-enabled/99-unconfigured.conf" && \
-    # lighttpd configuration - change server port (needs to be a high port as this is a rootless container).
-    sed -i 's/^server\.port.*/server.port = 8080/g' /etc/lighttpd/lighttpd.conf && \
     # lighttpd configuration - remove errorlog, lighttpd runs in the foreground so errors will show in container log.
     sed -i 's/^server\.errorlog.*//g' /etc/lighttpd/lighttpd.conf && \
     # install S6 Overlay
