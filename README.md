@@ -60,7 +60,7 @@ services:
 
 ## Ports
 
-No ports are exposed in this container.
+No exposed ports are necessary to run the container. However, if you enable `VERBOSE` the built in webserver will be enabled as well, and will be available on port `80`.
 
 ## Volumes
 
@@ -76,7 +76,7 @@ There are quite a few configuration options this container can accept.
 |----------|-------------|---------|--------|
 | GAIN     | Sets the gain for the dongle | No | 280 |
 | FEED     | Used to toggle feeding to [ACARS.io](http://acars.io). If set to any non-blank value feeding will be enabled. | No | Blank |
-| VERBOSE  | If you want to dump a json log file containing the aircraft messages to the disk, set this value to any non-blank value | No | Blank |
+| VERBOSE  | If you want to dump a json log file containing the aircraft messages to the disk, set this value to any non-blank value. This will also enable the web server where you will be able to see the last 200 received messages. | No | Blank |
 | TRIM_LOGS | With VERBOSE enabled, the json files can get very large. If you want to keep ALL received messages, set this value to be blank. Any non-blank value will trim the json files down. | No | true |
 
 ### ACARS
