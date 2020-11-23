@@ -1,0 +1,6 @@
+#!/usr/bin/with-contenv bash
+#shellcheck shell=bash
+
+/scripts/line_trim.sh
+
+sleep 60

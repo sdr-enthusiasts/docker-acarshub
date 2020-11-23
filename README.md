@@ -77,6 +77,7 @@ There are quite a few configuration options this container can accept.
 | GAIN     | Sets the gain for the dongle | No | 280 |
 | FEED     | Used to toggle feeding to [ACARS.io](http://acars.io). If set to any non-blank value feeding will be enabled. | No | Blank |
 | VERBOSE  | If you want to dump a json log file containing the aircraft messages to the disk, set this value to any non-blank value | No | Blank |
+| TRIM_LOGS | With VERBOSE enabled, the json files can get very large. If you want to keep ALL received messages, set this value to be blank. Any non-blank value will trim the json files down. | No | true |
 
 ### ACARS
 
