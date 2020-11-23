@@ -1,6 +1,10 @@
 #!/usr/bin/with-contenv bash
 #shellcheck shell=bash
 
-/scripts/line_trim.sh
+if [[ -n "$VERBOSE" ]]; then
+	/scripts/line_trim.sh
+else
+    sleep 86400
+fi
 
 sleep 60
