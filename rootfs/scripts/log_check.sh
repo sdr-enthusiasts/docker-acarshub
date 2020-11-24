@@ -12,7 +12,8 @@ if [ -f "/run/acars/acars.json" ]; then
 
 	if (( $total_lines > 10000 )); then
 		echo "Trimming acars.json"
-	    sed -i "5000,${total_lines}p" /run/acars/acars.json
+		let index=total_lines-5000
+	    sed -i "${index},${total_lines}!d" /run/acars/acars.json
 	fi
 fi
 
@@ -21,6 +22,7 @@ if [ -f "/run/acars/vdlm.json" ]; then
 
 	if (( $total_lines_vdlm > 10000 )); then
 	   echo "Trimming vdlm.json"
- 	   sed -i "5000,${total_lines_vdlm}p" /run/acars/vdlm.json
+	   let index=total_lines_vdlm-5000
+ 	   sed -i "${index},${total_lines_vdlm}!d" /run/acars/vdlm.json
 	fi
 fi
