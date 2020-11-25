@@ -78,7 +78,9 @@ There are quite a few configuration options this container can accept.
 | GAIN     | Sets the gain for the dongle | No | 280 |
 | FEED     | Used to toggle feeding to [ACARS.io](http://acars.io). If set to any non-blank value feeding will be enabled. | No | Blank |
 | VERBOSE  | If you want to dump a json log file containing the aircraft messages to the disk, set this value to any non-blank value. This will also enable the web server where you will be able to see the last 200 received messages. | No | Blank |
-| TRIM_LOGS | With VERBOSE enabled, the json files can get very large. If you want to keep ALL received messages, set this value to be blank. Any non-blank value will trim the json files down. | No | true |
+| TRIM_LOGS | With VERBOSE enabled, the json files can get very large. If you want to keep ALL received messages, set this value to be blank. Any non-blank value will trim the json files down. SEE NOTE BELOW | No | true |
+
+* `TRIM_LOGS` might cause a problem with `vdlm2dec`/`acarsdec` writing to the log files after a trimming is done. I as of 11/24/20 I altered the scripts because there was a bug in it that duplicated log entries, instead of deleting them. After that, the container quit writing logs until I deleted the file and let it re-create it. I have a theory as to why, but unfortunately, I need to let it collect more messages. I will continue to test this on my hardware and make sure the container operates the way it should, but in the mean time, please treat `TRIM_LOGS` as experimental.
 
 ### ACARS
 
