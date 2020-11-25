@@ -1,6 +1,6 @@
 # docker-acarshub
 
-Docker container to view and also stream ACARS messages to [ACARS.io](http://acars.io). Uses [libacars](https://github.com/szpajder/libacars), [acarsdec](https://github.com/TLeconte/acarsdec) and [vdlm2dec](https://github.com/TLeconte/vdlm2dec). Builds and runs on `arm64`. A container is provided for, but not tested, `amd64` and `arm32v7` (see below).
+Docker container to view and also stream ACARS messages to [ACARS.io](http://acars.io). Uses [libacars](https://github.com/szpajder/libacars), [acarsdec](https://github.com/TLeconte/acarsdec) and [vdlm2dec](https://github.com/TLeconte/vdlm2dec). Builds and runs on `arm64`. A container is provided for, but not tested, `amd64`, `arm32v6` and `arm32v7` (see below).
 
 ## Supported tags and respective Dockerfiles
 
@@ -12,8 +12,8 @@ Docker container to view and also stream ACARS messages to [ACARS.io](http://aca
 Currently, this image should pull and run on the following architectures:
 
 * `amd64`: Linux x86-64 (Builds, untested. If it works for you let me know!)
-* `arm32v7`: ARMv7 32-bit (Odroid HC1/HC2/XU4, RPi 2/3) (Builds, untested. If it works for you let me know!)
 * `arm32v6`: ARMv6 32-bit (Older RPis) (Builds, untested. If it works for you let me know!)
+* `arm32v7`: ARMv7 32-bit (Odroid HC1/HC2/XU4, RPi 2/3) (Builds, untested. If it works for you let me know!)
 * `arm64`: ARMv8 64-bit (RPi 4 64-bit OSes)
 
 ## Thanks
