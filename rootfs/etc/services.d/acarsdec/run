@@ -19,6 +19,7 @@ if [ -n "${ENABLE_ACARS}" ]; then
 		ACARS_CMD+=("-r 0")
 	fi
 
+    FREQS_ACARS=$(echo $FREQS_ACARS | sed 's/;/ /g')
 	ACARS_CMD+=("$FREQS_ACARS")
 
 	set -eo pipefail

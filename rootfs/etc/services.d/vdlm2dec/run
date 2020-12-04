@@ -19,6 +19,7 @@ if [ -n "${ENABLE_VDLM}" ]; then
 		VDLM_CMD+=("-r 0")
 	fi
 	
+	FREQS_VDLM=$(echo $FREQS_VDLM | sed 's/;/ /g')
 	VDLM_CMD+=("$FREQS_VDLM")
 
 	set -eo pipefail
