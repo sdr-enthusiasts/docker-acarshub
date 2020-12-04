@@ -2,8 +2,8 @@
 # shellcheck shell=sh
 
 if [ -n "${ENABLE_ACARS}" ]; then
-	if [ -n "${STATON_ID_ACARS}" ]; then
-		echo "Error: ACARS enabled with no STATON_ID_ACARS set. Exiting"
+	if [ -z "${STATION_ID_ACARS}" ]; then
+		echo "Error: ACARS enabled with no STATION_ID_ACARS set. Exiting"
 		exit 1
 	fi
 
@@ -17,7 +17,7 @@ if [ -n "${ENABLE_ACARS}" ]; then
 fi
 
 if [ -n "${ENABLE_VDLM}" ]; then
-	if [ -n "${STATON_ID_VDLM}" ]; then
+	if [ -z "${STATION_ID_VDLM}" ]; then
 		echo "Error: VDLM enabled with no STATION_ID_VDLM set. Exiting"
 		exit 1
 	fi
