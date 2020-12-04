@@ -54,9 +54,9 @@ services:
     devices:
       - /dev/bus/usb:/dev/bus/usb
     environment:
-      - STATION_ID_ACARS="YOURIDHERE"
+      - STATION_ID_ACARS=YOURIDHERE
       - FREQS_ACARS=130.025;130.450;131.125;131.550
-      - ENABLE_ACARS="true"
+      - ENABLE_ACARS=true
 ```
 
 ## Ports
