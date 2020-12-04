@@ -32,7 +32,7 @@ docker run \
  --rm \
  --name acarshub \
  -e STATION_ID_ACARS="YOURIDHERE" \
- -e FREQS_ACARS="130.025 130.450 131.125 131.550" \
+ -e FREQS_ACARS="130.025;130.450;131.125;131.550" \
  -e ENABLE_ACARS="true" \
  --device /dev/bus/usb:/dev/bus/usb \
 fredclausen/acarshub
@@ -55,7 +55,7 @@ services:
       - /dev/bus/usb:/dev/bus/usb
     environment:
       - STATION_ID_ACARS="YOURIDHERE"
-      - FREQS_ACARS="130.025 130.450 131.125 131.550"
+      - FREQS_ACARS=130.025;130.450;131.125;131.550
       - ENABLE_ACARS="true"
 ```
 
@@ -89,7 +89,7 @@ There are quite a few configuration options this container can accept.
 | ENABLE_ACARS | Toggle ACARS decoding on. If set to any non-blank value ACARS decoding will start | No | Blank |
 | STATON_ID_ACARS | Your unique ID for the ACARS feed. Used on the [ACARS.io](http://acars.io) site. Follow the guide [here](https://app.airframes.io/about) for formatting. | Yes, if ENABLE_ACARS is enabled | Blank |
 | SERIAL_ACARS | Serial for the RTLSDR dongle used for ACARS decoding. | Yes, if ENABLE_ACARS and ENABLE_VDLM is enabled | Blank |
-| FREQS_ACARS | List of frequencies, separaed by spaces, used for ACARS monitoring. | Yes, if ENABLE_ACARS is enabled | Blank |
+| FREQS_ACARS | List of frequencies, separaed by a single `;`, used for ACARS monitoring. | Yes, if ENABLE_ACARS is enabled | Blank |
 
 ### VDLM2
 
@@ -98,7 +98,7 @@ There are quite a few configuration options this container can accept.
 | ENABLE_VDLM | Toggle VDLM decoding on. If set to any non-blank value VDLM decoding will start | No | Blank |
 | STATON_ID_VDLM  | Your unique ID for the VDLM  feed. Used on the [ACARS.io](http://acars.io) site. Follow the guide [here](https://app.airframes.io/about) for formatting. | Yes, if ENABLE_VDLM is enabled | Blank |
 | SERIAL_VDLM  | Serial for the RTLSDR dongle used for VDLM decoding. | Yes, if ENABLE_ACARS and ENABLE_VDLM is enabled | Blank |
-| FREQS_VDLM  | List of frequencies, separaed by spaces, used for VDLM monitoring. | Yes, if ENABLE_VDLM is enabled | Blank |
+| FREQS_VDLM  | List of frequencies, separaed by a single `;`, used for VDLM monitoring. | Yes, if ENABLE_VDLM is enabled | Blank |
 
 ## Viewing the messages
 

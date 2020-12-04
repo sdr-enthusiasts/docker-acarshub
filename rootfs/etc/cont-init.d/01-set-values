@@ -10,6 +10,9 @@ if [ -n "${ENABLE_ACARS}" ]; then
 	if [ -z "${FREQS_ACARS}" ]; then
 		echo "Error: ACARS enabled with no FREQS_ACARS. Exiting"
 		exit 1
+	else
+		FREQS_ACARS=$(echo $FREQS_ACARS | sed 's/;/ /g')
+		echo "Using $FREQS_ACARS for ACARS"
 	fi
 fi
 
@@ -21,6 +24,9 @@ if [ -n "${ENABLE_VDLM}" ]; then
 	if [ -z "${FREQS_VDLM}" ]; then
 		echo "Error: VDLM enabled with no FREQS_VDLM. Exiting"
 		exit 1
+	else
+		FREQS_VDLM=$(echo $FREQS_VDLM | sed 's/;/ /g')
+		echo "Using $FREQS_VDLM for VDLM"
 	fi
 fi
 
