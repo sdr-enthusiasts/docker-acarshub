@@ -88,7 +88,7 @@ There are quite a few configuration options this container can accept.
 |----------|-------------|---------|--------|
 | ENABLE_ACARS | Toggle ACARS decoding on. If set to any non-blank value ACARS decoding will start | No | Blank |
 | STATION_ID_ACARS | Your unique ID for the ACARS feed. Used on the [ACARS.io](http://acars.io) site. Follow the guide [here](https://app.airframes.io/about) for formatting. | Yes, if ENABLE_ACARS is enabled | Blank |
-| SERIAL_ACARS | Serial for the RTLSDR dongle used for ACARS decoding. | Yes, if ENABLE_ACARS and ENABLE_VDLM is enabled | Blank |
+| SERIAL_ACARS | Serial or device index number for the RTLSDR dongle used for ACARS decoding. | Yes, if ENABLE_ACARS and ENABLE_VDLM is enabled | Blank |
 | FREQS_ACARS | List of frequencies, separaed by a single `;`, used for ACARS monitoring. | Yes, if ENABLE_ACARS is enabled | Blank |
 
 ### VDLM2
@@ -97,7 +97,7 @@ There are quite a few configuration options this container can accept.
 |----------|-------------|---------|--------|
 | ENABLE_VDLM | Toggle VDLM decoding on. If set to any non-blank value VDLM decoding will start | No | Blank |
 | STATION_ID_VDLM  | Your unique ID for the VDLM  feed. Used on the [ACARS.io](http://acars.io) site. Follow the guide [here](https://app.airframes.io/about) for formatting. | Yes, if ENABLE_VDLM is enabled | Blank |
-| SERIAL_VDLM  | Serial for the RTLSDR dongle used for VDLM decoding. | Yes, if ENABLE_ACARS and ENABLE_VDLM is enabled | Blank |
+| SERIAL_VDLM  | Serial or device index number for the RTLSDR dongle used for VDLM decoding. | Yes, if ENABLE_ACARS and ENABLE_VDLM is enabled | Blank |
 | FREQS_VDLM  | List of frequencies, separaed by a single `;`, used for VDLM monitoring. | Yes, if ENABLE_VDLM is enabled | Blank |
 
 ## Viewing the messages
@@ -105,6 +105,15 @@ There are quite a few configuration options this container can accept.
 As it stands right now, this container will show the last 200 received messages via the web server if `VERBOSE` is enabled. No processing of the messages in to a more readable format is done. It is very ugly, I am not a fan of it, but it is better than nothing (I think...)
 
 The messages are viewable at `containerip`.
+
+## Which frequencies should you monitor?
+
+The [ACARS.io/Airframes.io](https://app.airframes.io/about) website has a great list of community derived frequencies that aircraft typically will broadcast ACARS/VDLM on, and what regions those are applicable to. The values provided in the example docker-compose/docker run example above are frequencies I have found to be good in the United States, with a decent level of traffic. I imagine the list is not complete, and could be refined better.
+
+Some notes about frequencies:
+
+* acarsdec and vdlm2dec are limited to monitoring 8 frequencies apiece
+* The spread of frequencies for each decoder has to be within 2 Mhz.
 
 ## Logging
 

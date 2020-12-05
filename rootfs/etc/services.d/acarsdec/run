@@ -24,6 +24,8 @@ if [ -n "${ENABLE_ACARS}" ]; then
 
 	set -eo pipefail
 
+	echo "[acarsdec] $ACARS_BIN ${ACARS_CMD[@]}"
+
 	$ACARS_BIN ${ACARS_CMD[@]} \
 	2>&1  | stdbuf -o0 sed --unbuffered '/^$/d' | stdbuf -o0 awk '{print "[acarsdec] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
 else
