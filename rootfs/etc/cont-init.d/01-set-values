@@ -1,6 +1,10 @@
 #!/usr/bin/with-contenv sh
 # shellcheck shell=sh
 
+# create the /run/acars dir
+
+mkdir -p /run/acars/
+
 if [ -n "${ENABLE_ACARS}" ]; then
 	if [ -z "${STATION_ID_ACARS}" ]; then
 		echo "Error: ACARS enabled with no STATION_ID_ACARS set. Exiting"
