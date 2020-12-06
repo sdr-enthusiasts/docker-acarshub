@@ -52,7 +52,7 @@ if [ -n "${ENABLE_VDLM}" ]; then
 
 	set -eo pipefail
 
-	echo "[vdlm2dec] $VDLM_BIN" "${VDLM_CMD[@]}"
+	echo "[vdlm2dec] Starting: '$VDLM_BIN" "${VDLM_CMD[@]}'"
 
 	# shellcheck disable=SC2016
 	"$VDLM_BIN" "${VDLM_CMD[@]}" \

@@ -52,7 +52,7 @@ if [ -n "${ENABLE_ACARS}" ]; then
 
 	set -eo pipefail
 
-	echo "[acarsdec] $ACARS_BIN" "${ACARS_CMD[@]}"
+	echo "[acarsdec] Starting: '$ACARS_BIN" "${ACARS_CMD[@]}'"
 
 	# shellcheck disable=SC2016
 	"$ACARS_BIN" "${ACARS_CMD[@]}" \
