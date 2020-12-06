@@ -16,7 +16,7 @@ if [ -n "${ENABLE_VDLM}" ]; then
 	if [ -n "${SERIAL_VDLM}" ]; then
 
 		# If the length of SERIAL_ACARS is greater than 1, then the user has likely put in a serial number
-		if [[ "${#SERIAL_ACARS}" -gt 1 ]]; then
+		if [[ "${#SERIAL_VDLM}" -gt 1 ]]; then
 
 			# Resolve serial number of SDR into device ids
 			RTL_DEVICE=0
@@ -28,9 +28,9 @@ if [ -n "${ENABLE_VDLM}" ]; then
 			for RTL_DEVICE_NUMBER in $RTL_DEVICES; do
 				RTL_SERIAL=$(rtl_eeprom -d "$RTL_DEVICE_NUMBER" 2>&1 | grep 'Serial number:' | tr -d '\t' | tr -d ' ' | cut -d ':' -f 2)
 				# If the serial number given matches the serial for the device number we're looking at, then set the device number
-				if [[ "$RTL_SERIAL" -eq "$SERIAL_ACARS" ]]; then
+				if [[ "${#RTL_SERIAL}" = "${#SERIAL_VDLM}" ]]; then
 					RTL_DEVICE="$RTL_DEVICE_NUMBER"
-					echo "[acarsdec] Using RTL-SDR device number $RTL_DEVICE_NUMBER with serial number $RTL_SERIAL."
+					echo "[vdlm2dec] Using RTL-SDR device number $RTL_DEVICE_NUMBER with serial number $RTL_SERIAL."
 				fi
 			done
 			VDLM_CMD+=("-r" "$RTL_DEVICE")
