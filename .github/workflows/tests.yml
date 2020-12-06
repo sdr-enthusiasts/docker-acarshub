@@ -15,4 +15,15 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Test Docker Build
-      run: docker build --no-cache . --file Dockerfile
+      run: docker build --no-cache . --file Dockerfile -t acarshub:testing
+
+  test_logtrim:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Test line_trim.sh script
+      run: |
+        time docker run --rm --no-healthcheck --entrypoint /scripts/test_line_trim.sh acarshub:testing
+    
