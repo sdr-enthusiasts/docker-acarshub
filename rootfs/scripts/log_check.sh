@@ -22,6 +22,6 @@ if [[ -f "/run/acars/vdlm.json" ]]; then
 	if (( total_lines_vdlm > MAX_LINES )); then
 	   echo "Trimming vdlm.json"
 	   num_lines_to_trim_vdlm=$((total_lines_vdlm - MAX_LINES))
- 	   sed -i "1,${num_lines_to_trim_vdlm}!d" /run/acars/vdlm.json
+ 	   sed -i "1,${num_lines_to_trim_vdlm}d" /run/acars/vdlm.json
 	fi
 fi
