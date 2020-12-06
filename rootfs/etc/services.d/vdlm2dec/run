@@ -2,7 +2,7 @@
 #shellcheck shell=bash
 
 VDLM_BIN="/usr/local/bin/vdlm2dec"
-VDLM_CMD=("-J -G -E -U -g $GAIN -i $STATION_ID_VDLM")
+VDLM_CMD=("-J" "-G" "-E" "-U" "-g" "$GAIN" "-i" "$STATION_ID_VDLM")
 
 if [ -n "${ENABLE_VDLM}" ]; then
 	if [ -n "${VERBOSE}" ]; then
@@ -43,18 +43,18 @@ if [ -n "${ENABLE_VDLM}" ]; then
 
 	else
 		echo "[vdlm2dec] No serial number set. Using device index 0. If also running ACARS decoding one of these processes will fail. To fix, set SERIAL_ACARS and SERIAL_VDLM"
-		VDLM_CMD+=("-r 0")
+		VDLM_CMD+=("-r" "0")
 	fi
 	
 	# shellcheck disable=SC2001
 	FREQS_VDLM=$(echo "$FREQS_VDLM" | sed 's/;/ /g')
-	VDLM_CMD+=("$FREQS_VDLM")
+	VDLM_CMD+=($FREQS_VDLM)
 
 	set -eo pipefail
 
 	echo "[vdlm2dec] Starting: '$VDLM_BIN" "${VDLM_CMD[@]}'"
 
-	# shellcheck disable=SC2016
+	# shellcheck disable=SC2016,SC2145
 	"$VDLM_BIN" "${VDLM_CMD[@]}" \
 	  2>&1 | stdbuf -o0 sed --unbuffered '/^$/d' | stdbuf -o0 awk '{print "[vdlm2dec] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
 else
