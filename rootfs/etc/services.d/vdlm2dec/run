@@ -5,6 +5,11 @@ VDLM_BIN="/usr/local/bin/vdlm2dec"
 VDLM_CMD=("-J" "-G" "-E" "-U" "-g" "$GAIN" "-i" "$STATION_ID_VDLM")
 
 if [ -n "${ENABLE_VDLM}" ]; then
+	# If the process was killed for a log trimming, wait until the trim is done
+	while [[ -f /run/acars/stoprun.job ]]; do
+		sleep 5
+	done
+
 	if [ -n "${VERBOSE}" ]; then
 		VDLM_CMD+=("-l" "/run/acars/vdlm.json")
 	fi

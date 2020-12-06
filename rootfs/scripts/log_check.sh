@@ -5,23 +5,37 @@
 # Arbitrarily picked 1000 lines as the upper limit.
 
 MAX_LINES=1000
+ACARS_PATH="/run/acars/acars.json" &>/dev/null
+VDLM_PATH="/run/acars/vdlm.json" &>/dev/null
+
+# create semaphore file to keep the process from starting
+touch /run/acars/stoprun.job
+
+# kill the decoders
+echo "Stopping ACARS"
+ps aux | pgrep 'acarsdec' | xargs kill
+echo "Stopping VDLM"
+ps aux | pgrep 'vdlm2dec' | xargs kill 
 
 if [[ -f "/run/acars/acars.json" ]]; then
-	total_lines_acars=$(wc -l < /run/acars/acars.json)
+	total_lines_acars=$(wc -l < $ACARS_PATH)
 
 	if (( total_lines_acars > MAX_LINES )); then
 		echo "Trimming acars.json"
 		num_lines_to_trim_acars=$((total_lines_acars - MAX_LINES))
-	    sed -i "1,${num_lines_to_trim_acars}d" /run/acars/acars.json
+	    sed -i "1,${num_lines_to_trim_acars}d" $ACARS_PATH
 	fi
 fi
 
-if [[ -f "/run/acars/vdlm.json" ]]; then
-	total_lines_vdlm=$(wc -l < /run/acars/vdlm.json)
+if [[ -f $VDLM_PATH ]]; then
+	total_lines_vdlm=$(wc -l < $VDLM_PATH)
 
 	if (( total_lines_vdlm > MAX_LINES )); then
 	   echo "Trimming vdlm.json"
 	   num_lines_to_trim_vdlm=$((total_lines_vdlm - MAX_LINES))
- 	   sed -i "1,${num_lines_to_trim_vdlm}d" /run/acars/vdlm.json
+ 	   sed -i "1,${num_lines_to_trim_vdlm}d" $VDLM_PATH
 	fi
 fi
+
+# remove the semaphore
+rm /run/acars/stoprun.job
