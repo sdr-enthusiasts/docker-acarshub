@@ -2,30 +2,26 @@
 #shellcheck shell=bash
 
 # Script to trim the log files down
-# Arbitrarily picked 10000 lines as the upper limit.
-# Trim half away. I could do maths to only get 5000 lines
-# But I figure removing the first 4999 lines is good enough.
-# I don't know why
+# Arbitrarily picked 1000 lines as the upper limit.
 
 MAX_LINES=1000
-TRIM_TO=500
 
 if [[ -f "/run/acars/acars.json" ]]; then
-	total_lines=$(wc -l /run/acars/acars.json | awk '/[0-9]+/{print $1}')
+	total_lines_acars=$(wc -l < /run/acars/acars.json)
 
-	if (( total_lines > MAX_LINES )); then
+	if (( total_lines_acars > MAX_LINES )); then
 		echo "Trimming acars.json"
-		index=$((total_lines - TRIM_TO))
-	    sed -i "${index},${total_lines}!d" /run/acars/acars.json
+		num_lines_to_trim_acars=$((total_lines_acars - MAX_LINES))
+	    sed -i "1,${num_lines_to_trim_acars}d" /run/acars/acars.json
 	fi
 fi
 
 if [[ -f "/run/acars/vdlm.json" ]]; then
-	total_lines_vdlm=$(wc -l /run/acars/vdlm.json | awk '/[0-9]+/{print $1}')
+	total_lines_vdlm=$(wc -l < /run/acars/vdlm.json)
 
 	if (( total_lines_vdlm > MAX_LINES )); then
 	   echo "Trimming vdlm.json"
-	   index=$((total_lines_vdlm - TRIM_TO))
- 	   sed -i "${index},${total_lines_vdlm}!d" /run/acars/vdlm.json
+	   num_lines_to_trim_vdlm=$((total_lines_vdlm - MAX_LINES))
+ 	   sed -i "${index},${num_lines_to_trim_vdlm}!d" /run/acars/vdlm.json
 	fi
 fi
