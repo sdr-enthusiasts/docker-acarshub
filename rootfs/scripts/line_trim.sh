@@ -22,7 +22,7 @@ if [[ -f "/run/acars/acars.json" ]]; then
     # If file is more that 200 lines, generate a temp file of the last 200 entries (aka most recent)
     # Then, reverse the sorting so most recent is at the top
     if (( total_lines > 200 )); then
-       lines_to_delete=$(total_lines - 199)
+       lines_to_delete=$((total_lines - 199))
        sed -n "${lines_to_delete},${total_lines}p" /run/acars/acars.json > /run/acars/acars_adjusted.txt
        awk '{a[i++]=$0}END{for(j=i-1;j>=0;j--)print a[j];}' /run/acars/acars_adjusted.txt > /run/acars/acars_sorted.txt
        rm /run/acars/acars_adjusted.txt
