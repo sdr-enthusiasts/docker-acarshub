@@ -16,6 +16,7 @@ if [ -n "${ENABLE_VDLM}" ]; then
 	if [ -n "${SERIAL_VDLM}" ]; then
 		VDLM_CMD+=("-r $SERIAL_VDLM")
 	else
+		echo "[vdlm2dec] No serial number set. Using device index 0. If also running ACARS decoding one of these processes will fail. To fix, set SERIAL_ACARS and SERIAL_VDLM"
 		VDLM_CMD+=("-r 0")
 	fi
 	

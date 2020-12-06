@@ -12,11 +12,15 @@
 # aggregate vdlm and acars together
 # and trim that down, too
 
+# variable to track how many files were found
 let aggregate_files=0
 
+# Check to see if ACARS is writing a file
 if [ -f "/run/acars/acars.json" ]; then
     total_lines=$(wc -l /run/acars/acars.json | awk '/[0-9]+/{print $1}')
 
+    # If file is more that 200 lines, generate a temp file of the last 200 entries (aka most recent)
+    # Then, reverse the sorting so most recent is at the top
     if (( $total_lines > 200 )); then
        let lines_to_delete=total_lines-199
        sed -n "${lines_to_delete},${total_lines}p" /run/acars/acars.json > /run/acars/acars_adjusted.txt
@@ -29,9 +33,12 @@ if [ -f "/run/acars/acars.json" ]; then
     let aggregate_files=1
 fi
 
+# Same as above, but with VDLM
 if [ -f "/run/acars/vdlm.json" ]; then
     total_lines_vdlm=$(wc -l /run/acars/vdlm.json | awk '/[0-9]+/{print $1}')
 
+    # If file is more that 200 lines, generate a temp file of the last 200 entries (aka most recent)
+    # Then, reverse the sorting so most recent is at the top
     if (( $total_lines_vdlm > 200 )); then
     	let lines_to_delete_vdlm=total_lines_vdlm-199
         sed -n "${lines_to_delete_vdlm},${total_lines_vdlm}p" /run/acars/vdlm.json > /run/acars/vdlm_adjusted.txt
@@ -45,15 +52,24 @@ if [ -f "/run/acars/vdlm.json" ]; then
 
 fi
 
+# Now we process for display.json
+# If both VDLM and ACARS are processed, we'll combine the files
 if (( $aggregate_files > 1 )); then
+    # combine the files
     cat /run/acars/vdlm_sorted.txt /run/acars/acars_sorted.txt > /run/acars/display.txt
-    sort -V /run/acars/display.txt > /run/acars/display_sorted.txt
+    # sort them by date stamp 
+    sort -V /run/acars/display.txt > /run/acars/display_sorted.txt 
+    
+    # clean up the trash
     rm /run/acars/vdlm_sorted.txt
     rm /run/acars/acars_sorted.txt
     rm /run/acars/display.txt
 
+    # count total lines
     total_lines_agg=$(wc -l /run/acars/display_sorted.txt | awk '/[0-9]+/{print $1}')
 
+    # probably have more than 200 lines
+    # Lets trim that
     if (( $total_lines_agg > 200 )); then
        let lines_to_delete=total_lines_agg-199
        sed -n "${lines_to_delete},${total_lines}p" /run/acars/display_sorted.txt > /run/acars/display_adjusted.txt
