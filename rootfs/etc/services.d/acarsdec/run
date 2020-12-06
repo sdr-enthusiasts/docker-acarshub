@@ -48,13 +48,14 @@ if [ -n "${ENABLE_ACARS}" ]; then
 
 	# shellcheck disable=SC2001
     FREQS_ACARS=$(echo "$FREQS_ACARS" | sed 's/;/ /g')
+	# shellcheck disable=SC2206
 	ACARS_CMD+=($FREQS_ACARS)
 
 	set -eo pipefail
 
-	echo "[acarsdec] Starting: '$ACARS_BIN" "${ACARS_CMD[@]}'"
+	echo "[acarsdec] Starting: '$ACARS_BIN" "${ACARS_CMD[*]}'"
 
-	# shellcheck disable=SC2016,SC2145
+	# shellcheck disable=SC2016
 	"$ACARS_BIN" "${ACARS_CMD[@]}" \
 	2>&1  | stdbuf -o0 sed --unbuffered '/^$/d' | stdbuf -o0 awk '{print "[acarsdec] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
 else
