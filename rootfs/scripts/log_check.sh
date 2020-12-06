@@ -13,14 +13,18 @@ touch /run/acars/stoprun.job
 
 # kill the decoders
 
-if [ pgrep 'acarsdec' ]; then
+
+
+if pgrep -x 'acarsdec' > /dev/null
+then
 	echo "Stopping ACARS"
-	ps aux | pgrep 'acarsdec' | xargs kill
+	ps aux | pgrep -x 'acarsdec' | xargs kill
 fi
 
-if [ pgrep 'vdlm2dec' ]
+if pgrep -x 'vdlm2dec' > /dev/null
+then
 	echo "Stopping VDLM"
-	ps aux | pgrep 'vdlm2dec' | xargs kill 
+	ps aux | pgrep -x 'vdlm2dec' | xargs kill 
 fi
 
 if [[ -f "/run/acars/acars.json" ]]; then
