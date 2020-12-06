@@ -22,7 +22,7 @@ Thanks to [mikenye](https://github.com/mikenye) for his excellent ADSB docker co
 
 ## Required hardware
 
-You will need an RTLSDR dongle, and if you want to feed both VDLM2 and ACARS you will need two dongles with unique serial numbers. 
+You will need an RTLSDR dongle, and if you want to feed both VDLM2 and ACARS you will need two dongles with unique serial numbers.
 
 ## Up-and-Running with `docker run`
 
@@ -69,7 +69,7 @@ No volumes are needed to run the container. However, if you wish to persist the 
 
 ## Environment variables
 
-There are quite a few configuration options this container can accept. 
+There are quite a few configuration options this container can accept.
 
 ### General
 
