@@ -12,10 +12,16 @@ VDLM_PATH="/run/acars/vdlm.json" &>/dev/null
 touch /run/acars/stoprun.job
 
 # kill the decoders
-echo "Stopping ACARS"
-ps aux | pgrep 'acarsdec' | xargs kill
-echo "Stopping VDLM"
-ps aux | pgrep 'vdlm2dec' | xargs kill 
+
+if [ pgrep 'acarsdec' ]; then
+	echo "Stopping ACARS"
+	ps aux | pgrep 'acarsdec' | xargs kill
+fi
+
+if [ pgrep 'vdlm2dec' ]
+	echo "Stopping VDLM"
+	ps aux | pgrep 'vdlm2dec' | xargs kill 
+fi
 
 if [[ -f "/run/acars/acars.json" ]]; then
 	total_lines_acars=$(wc -l < $ACARS_PATH)
