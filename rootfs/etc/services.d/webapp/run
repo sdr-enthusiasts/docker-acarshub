@@ -1,0 +1,13 @@
+#!/usr/bin/with-contenv bash
+#shellcheck shell=bash
+
+# Wait for acarsdec to start up.
+# TODO: implement something better than a sleep...
+sleep 5
+
+pushd /webapp > /dev/null 2>&1
+gunicorn3 \
+    -b "0.0.0.0:80" \
+    -w 1 \
+    application:app \
+  2>&1 | stdbuf -o0 sed --unbuffered '/^$/d' | stdbuf -o0 awk '{print "[webapp] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'

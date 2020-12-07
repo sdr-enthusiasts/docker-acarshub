@@ -14,9 +14,10 @@ if [ -n "${ENABLE_ACARS}" ]; then
 		ACARS_CMD+=("-l" "/run/acars/acars.json")
 	fi
 
-	if [ -n "${FEED}" ]; then
-		ACARS_CMD+=("-j" "feed.acars.io:5550")
-	fi
+	#if [ -n "${FEED}" ]; then
+		# ACARS_CMD+=("-j" "feed.acars.io:5550")
+		ACARS_CMD+=("-j" '127.0.0.1:5550')
+	#fi
 
 	if [ -n "${SERIAL_ACARS}" ]; then
 
