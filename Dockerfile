@@ -12,9 +12,8 @@ ENV BRANCH_RTLSDR="ed0317e6a58c098874ac58b769cf2e609c18d9a5" \
     ENABLE_ACARS="" \
     ENABLE_VDLM="" \
     GAIN="280" \
-    VERBOSE="" \
-    TRIM_LOGS=""
-
+    VERBOSE=""
+    
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 RUN set -x && \

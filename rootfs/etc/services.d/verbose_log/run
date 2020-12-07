@@ -2,8 +2,8 @@
 #shellcheck shell=bash
 
 if [ -n "${VERBOSE}" ]; then
-	/scripts/log_check.sh
-	sleep 3600
+	tail -F "/run/acars/acars.json" "/run/acars/vdlm.json"
+	sleep 10
 else
     sleep 86400
 fi

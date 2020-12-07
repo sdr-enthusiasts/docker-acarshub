@@ -28,4 +28,9 @@ if [ -n "${ENABLE_VDLM}" ]; then
 	fi
 fi
 
+rm "/run/acars/acars.json" > /dev/null 2>&1 || true
+rm "/run/acars/vdlm.json" > /dev/null 2>&1 || true
+touch "/run/acars/acars.json"
+touch "/run/acars/vdlm.json"
+
 exit 0
