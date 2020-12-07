@@ -3,8 +3,12 @@
 
 # Splits the JSON output of acarsdec to the internal webapp, as well as feed.acars.io
 
-if [ -n "${FEED}" ]; then
-    socat -u udp4-listen:5550,fork - | tee >(socat -u - udp-sendto:feed.acars.io:5550) >(socat -u - udp-sendto:127.0.0.1:13155) > /dev/null
+if [ -n "${ENABLE_ACARS}" ]; then
+    if [ -n "${FEED}" ]; then
+        socat -u udp4-listen:5550,fork - | tee >(socat -u - udp-sendto:feed.acars.io:5550) >(socat -u - udp-sendto:127.0.0.1:13155) > /dev/null
+    else
+        socat -u udp4-listen:5550,fork - | socat -u - udp-sendto:127.0.0.1:13155 > /dev/null
+    fi
 else
-    socat -u udp4-listen:5550,fork - | socat -u - udp-sendto:127.0.0.1:13155 > /dev/null
+    sleep 86400
 fi
