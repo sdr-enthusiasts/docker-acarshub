@@ -5,6 +5,11 @@ ACARS_BIN="/usr/local/bin/acarsdec"
 ACARS_CMD=("-o" "4" "-g" "$GAIN" "-i" "$STATION_ID_ACARS")
 
 if [ -n "${ENABLE_ACARS}" ]; then
+	# If the process was killed for a log trimming, wait until the trim is done
+	while [[ -f /run/acars/stoprun.job ]]; do
+		sleep 5
+	done
+	
 	if [ -n "${VERBOSE}" ]; then
 		ACARS_CMD+=("-l" "/run/acars/acars.json")
 	fi

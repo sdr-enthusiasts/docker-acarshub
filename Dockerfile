@@ -48,6 +48,8 @@ RUN set -x && \
     KEPT_PACKAGES+=(libsqlite3-0) && \
     # packages for lighttpd
     KEPT_PACKAGES+=(lighttpd) && \
+    # process management
+    KEPT_PACKAGES+=(procps) && \
     # install packages
     apt-get update && \
     apt-get install -y --no-install-recommends \
