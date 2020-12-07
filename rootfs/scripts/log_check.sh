@@ -16,7 +16,7 @@ touch /run/acars/stoprun.job
 if [[ -f "/run/acars/acars.json" ]]; then
     total_lines_acars=$(wc -l < $ACARS_PATH)
 
-    if (( total_lines_acars > MAX_LINES )); then
+    if (( total_lines_acars >= MAX_LINES )); then
         # Log file too large
         # Kill acarsdec if started
         if pgrep -x 'acarsdec' > /dev/null
@@ -34,7 +34,7 @@ fi
 if [[ -f $VDLM_PATH ]]; then
     total_lines_vdlm=$(wc -l < $VDLM_PATH)
 
-    if (( total_lines_vdlm > MAX_LINES )); then
+    if (( total_lines_vdlm >= MAX_LINES )); then
         # Log file too large
         # Kill vdlmdec if started
         if pgrep -x 'vdlm2dec' > /dev/null
