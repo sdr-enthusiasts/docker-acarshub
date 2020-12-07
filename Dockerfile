@@ -106,7 +106,7 @@ RUN set -x && \
     # directory for logging
     mkdir -p /run/acars && \
     # dependencies for web interface
-    python3 -m pip install \
+    python3 -m pip install --no-cache-dir \
         Flask \
         Flask-SocketIO \
         && \

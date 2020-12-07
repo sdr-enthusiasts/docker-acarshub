@@ -5,7 +5,9 @@
 # TODO: implement something better than a sleep...
 sleep 5
 
-pushd /webapp > /dev/null 2>&1
+pushd /webapp > /dev/null 2>&1 || exit
+
+# shellcheck disable=SC2016
 gunicorn3 \
     -b "0.0.0.0:80" \
     -w 1 \
