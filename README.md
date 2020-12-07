@@ -61,11 +61,11 @@ services:
 
 ## Ports
 
-No exposed ports are necessary to run the container. However, if you enable `VERBOSE` the built in webserver will be enabled as well, and will be available on port `80`.
+No exposed ports are necessary to run the container. However, if you the built in webserver is available on port `80` if you wish the view messages in realtime.
 
 ## Volumes
 
-No volumes are needed to run the container. However, if you wish to persist the `VERBOSE` data, mount a volume to `/run/acars`.
+No volumes are needed to run the container.
 
 ## Environment variables
 
@@ -99,7 +99,7 @@ There are quite a few configuration options this container can accept.
 
 ## Viewing the messages
 
-The container implements a basic web interface, listening on port 80, which will show messages as they are received.
+The container implements a basic web interface, listening on port `80`, which will show messages as they are received.
 
 If `VERBOSE` is enabled, messages are also logged to the container log.
 
