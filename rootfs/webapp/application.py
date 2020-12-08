@@ -264,12 +264,6 @@ def vdlm2Generator():
                     is_onground=vdlm2_json['is_onground'],
                 )
                 remaining_keys.remove('is_onground')
-
-            if "end" in vdlm2_json.keys():
-                html_output += "END: {end} ".format(
-                    end=vdlm2_json['end'],
-                )
-                remaining_keys.remove('end')
             
             if "error" in vdlm2_json.keys():
                 if vdlm2_json['error'] != 0:
@@ -289,6 +283,11 @@ def vdlm2Generator():
             # Send output via socketio
             if DEBUG_LOGGING: print("[acarsGenerator] sending output via socketio.emit")
             socketio.emit('newmsg', {'msghtml': html_output}, namespace='/test')
+
+            # Remove leftover keys that we don't really care about (do we care about these?)
+            if 'channel' in remaining_keys: remaining_keys.remove('channel')
+            if 'level' in remaining_keys: remaining_keys.remove('level')
+            if 'end' in remaining_keys: remaining_keys.remove('end')
 
             # Check to see if any data remains, if so, send some debugging output
             if 'channel' in remaining_keys: remaining_keys.remove('channel')
