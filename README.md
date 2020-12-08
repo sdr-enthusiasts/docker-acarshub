@@ -61,7 +61,7 @@ services:
 
 ## Ports
 
-No exposed ports are necessary to run the container. However, if you the built in webserver is available on port `80` if you wish the view messages in realtime.
+No exposed ports are necessary to run the container. However, the built in webserver is available on port `80` if you wish the view messages in realtime.
 
 ## Volumes
 
