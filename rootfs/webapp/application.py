@@ -254,7 +254,7 @@ def vdlm2Generator():
             socketio.emit('newmsg', {'msghtml': html_output}, namespace='/test')
 
             # Check to see if any data remains, if so, send some debugging output
-            remaining_keys.remove('channel')
+            if 'channel' in remaining_keys: remaining_keys.remove('channel')
             if len(remaining_keys) > 0:
                 print("")
                 print("Non decoded data exists:")
