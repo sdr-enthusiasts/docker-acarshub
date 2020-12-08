@@ -109,6 +109,12 @@ def vdlm2Generator():
                     )
                     remaining_keys.remove('toaddr')
 
+            if "fromaddr" in vdlm2_json.keys():
+                    html_output += "<p>From Address: {fromaddr}</p>".format(
+                        fromaddr=vdlm2_json['fromaddr']
+                    )
+                    remaining_keys.remove('fromaddr')
+
             if "depa" in vdlm2_json.keys():
                     html_output += "<p>Departing: {depa}</p>".format(
                         depa=vdlm2_json['depa']
@@ -233,6 +239,12 @@ def vdlm2Generator():
                     is_onground=vdlm2_json['is_onground'],
                 )
                 remaining_keys.remove('is_onground')
+
+            if "end" in vdlm2_json.keys():
+                html_output += "END: {end} ".format(
+                    end=vdlm2_json['end'],
+                )
+                remaining_keys.remove('end')
             
             if "error" in vdlm2_json.keys():
                 if vdlm2_json['error'] != 0:
