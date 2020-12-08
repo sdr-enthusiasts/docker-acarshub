@@ -61,11 +61,11 @@ services:
 
 ## Ports
 
-No exposed ports are necessary to run the container. However, if you enable `VERBOSE` the built in webserver will be enabled as well, and will be available on port `80`.
+No exposed ports are necessary to run the container. However, the built in webserver is available on port `80` if you wish the view messages in realtime.
 
 ## Volumes
 
-No volumes are needed to run the container. However, if you wish to persist the `VERBOSE` data, mount a volume to `/run/acars`.
+No volumes are needed to run the container.
 
 ## Environment variables
 
@@ -77,8 +77,7 @@ There are quite a few configuration options this container can accept.
 |----------|-------------|---------|--------|
 | GAIN     | Sets the gain for the dongle | No | 280 |
 | FEED     | Used to toggle feeding to [ACARS.io](http://acars.io). If set to any non-blank value feeding will be enabled. | No | Blank |
-| VERBOSE  | If you want to dump a json log file containing the aircraft messages to the disk, set this value to any non-blank value. This will also enable the web server where you will be able to see the last 200 received messages. | No | Blank |
-| TRIM_LOGS | With VERBOSE enabled, the json files can get very large. If you want to keep ALL received messages, set this value to be blank. Any non-blank value will trim the json files down. See [logging](#logging) below for details | No | blank |
+| VERBOSE  | Logs all received ACARS & VDLM2 data to the container log as JSON. | No | Blank |
 
 ### ACARS
 
@@ -100,9 +99,9 @@ There are quite a few configuration options this container can accept.
 
 ## Viewing the messages
 
-As it stands right now, this container will show the last 200 received messages via the web server if `VERBOSE` is enabled. No processing of the messages in to a more readable format is done. It is very ugly, I am not a fan of it, but it is better than nothing (I think...)
+The container implements a basic web interface, listening on port `80`, which will show messages as they are received.
 
-The messages are viewable at `containerip`.
+If `VERBOSE` is enabled, messages are also logged to the container log.
 
 ## Which frequencies should you monitor?
 
@@ -115,9 +114,7 @@ Some notes about frequencies:
 
 ## Logging
 
-* All processes are logged to the container's stdout unless `VERBOSE` is enabled in which case aircraft messages are logged to the disk. General logging can be viewed with `docker logs [-f] container`.
-
-If `TRIM_LOGS` is enabled, every hour the container will check the logs and ensure the logs are less than 1000 lines, otherwise it will trim the excess old messages.
+* All processes are logged to the container's stdout. If `VERBOSE` is enabled, all received messages are logged to the container log as well. General logging can be viewed with `docker logs [-f] container`.
 
 ## Future improvements
 

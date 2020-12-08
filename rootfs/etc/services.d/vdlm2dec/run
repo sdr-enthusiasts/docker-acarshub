@@ -10,14 +10,14 @@ if [ -n "${ENABLE_VDLM}" ]; then
 		sleep 5
 	done
 
-	if [ -n "${VERBOSE}" ]; then
-		VDLM_CMD+=("-l" "/run/acars/vdlm.json")
-	fi
+	# Below no longer needed, as verbose messages are logged to container log via webapp
+	# if [ -n "${VERBOSE}" ]; then
+	# 	VDLM_CMD+=("-l" "/run/acars/vdlm.json")
+	# fi
 
-	if [ -n "${FEED}" ]; then
-		VDLM_CMD+=("-j" "feed.acars.io:5555")
-	fi
-
+	# Send output JSON to acars splitter.
+	VDLM_CMD+=("-j" "127.0.0.1:5555")
+	
 	if [ -n "${SERIAL_VDLM}" ]; then
 
 		# If the length of SERIAL_ACARS is greater than 1, then the user has likely put in a serial number

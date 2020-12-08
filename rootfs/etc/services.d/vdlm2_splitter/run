@@ -1,0 +1,16 @@
+#!/usr/bin/with-contenv bash
+#shellcheck shell=bash
+
+# Splits the JSON output of vdlm2dec to the internal webapp, as well as feed.acars.io (if FEED is enabled)
+
+if [ -n "${ENABLE_VDLM}" ]; then
+    if [ -n "${FEED}" ]; then
+        socat -u udp4-listen:5555,fork - | tee >(socat -u - udp-sendto:feed.acars.io:5555) >(socat -u - udp-sendto:127.0.0.1:13697) > /dev/null
+    else
+        socat -u udp4-listen:5555,fork - | tee >(socat -u - udp-sendto:127.0.0.1:13697) > /dev/null
+    fi
+else
+    sleep 86400
+fi
+
+sleep 10

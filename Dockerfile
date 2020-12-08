@@ -12,9 +12,8 @@ ENV BRANCH_RTLSDR="ed0317e6a58c098874ac58b769cf2e609c18d9a5" \
     ENABLE_ACARS="" \
     ENABLE_VDLM="" \
     GAIN="280" \
-    VERBOSE="" \
-    TRIM_LOGS=""
-
+    VERBOSE=""
+    
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 RUN set -x && \
@@ -34,7 +33,7 @@ RUN set -x && \
     TEMP_PACKAGES+=(gnupg2) && \
     TEMP_PACKAGES+=(file) && \
     TEMP_PACKAGES+=(curl) && \
-    TEMP_PACKAGES+=(ca-certificates) && \
+    KEPT_PACKAGES+=(ca-certificates) && \
     # libusb-1.0-0 + dev - Required for rtl-sdr, libiio (bladeRF/PlutoSDR).
     KEPT_PACKAGES+=(libusb-1.0-0) && \
     TEMP_PACKAGES+=(libusb-1.0-0-dev) && \
@@ -46,8 +45,13 @@ RUN set -x && \
     # packages for acarsserv
     TEMP_PACKAGES+=(libsqlite3-dev) && \
     KEPT_PACKAGES+=(libsqlite3-0) && \
-    # packages for lighttpd
-    KEPT_PACKAGES+=(lighttpd) && \
+    # packages for web interface
+    KEPT_PACKAGES+=(socat) && \
+    KEPT_PACKAGES+=(python3) && \
+    KEPT_PACKAGES+=(python3-pip) && \
+    KEPT_PACKAGES+=(python3-setuptools) && \
+    KEPT_PACKAGES+=(python3-wheel) && \
+    KEPT_PACKAGES+=(gunicorn3) && \
     # process management
     KEPT_PACKAGES+=(procps) && \
     # install packages
@@ -100,16 +104,11 @@ RUN set -x && \
     popd && popd && \
     # directory for logging
     mkdir -p /run/acars && \
-    # lighttpd config
-    mkdir -p "/var/run/lighttpd" && \
-    # lighttpd configuration - mod_compress location + permissions.
-    mkdir -p "/var/cache/lighttpd/compress/script/readsb/backend" && \
-    mkdir -p "/var/cache/lighttpd/compress/css/bootstrap" && \
-    mkdir -p "/var/cache/lighttpd/compress//css/leaflet" && \
-    # lighttpd configuration - remove "unconfigured" conf.
-    rm -v "/etc/lighttpd/conf-enabled/99-unconfigured.conf" && \
-    # lighttpd configuration - remove errorlog, lighttpd runs in the foreground so errors will show in container log.
-    sed -i 's/^server\.errorlog.*//g' /etc/lighttpd/lighttpd.conf && \
+    # dependencies for web interface
+    python3 -m pip install --no-cache-dir \
+        Flask \
+        Flask-SocketIO \
+        && \
     # install S6 Overlay
     curl -s https://raw.githubusercontent.com/mikenye/deploy-s6-overlay/master/deploy-s6-overlay.sh | sh && \
     # Clean up

@@ -16,8 +16,8 @@ jobs:
     - uses: actions/checkout@v2
     - name: Test Docker Build
       run: docker build --no-cache . --file Dockerfile -t acarshub:testing
-    - name: Test line_trim.sh script
-      run: time docker run --rm --no-healthcheck --entrypoint /scripts/test_line_trim.sh acarshub:testing
-    - name: Test log_check.sh script
-      run: time docker run --rm --no-healthcheck --entrypoint /scripts/test_log_check.sh acarshub:testing
+    # - name: Test line_trim.sh script
+    #   run: time docker run --rm --no-healthcheck --entrypoint /scripts/test_line_trim.sh acarshub:testing
+    # - name: Test log_check.sh script
+    #   run: time docker run --rm --no-healthcheck --entrypoint /scripts/test_log_check.sh acarshub:testing
     
