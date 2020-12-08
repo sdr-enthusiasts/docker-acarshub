@@ -117,7 +117,7 @@ def vdlm2Generator():
 
             if "dsta" in vdlm2_json.keys():
                     html_output += "<p>Destination: {dsta}</p>".format(
-                        dsta=vdlm2_json['depa']
+                        dsta=vdlm2_json['dsta']
                     )
                     remaining_keys.remove('dsta')
 
