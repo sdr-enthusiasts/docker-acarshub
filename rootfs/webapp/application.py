@@ -12,7 +12,7 @@ log.setLevel(logging.ERROR)
 
 app = Flask(__name__)
 # app.config['SECRET_KEY'] = 'secret!'
-# app.config['DEBUG'] = True
+#app.config['DEBUG'] = True
 
 #turn the flask app into a socketio app
 socketio = SocketIO(app, async_mode=None, logger=False, engineio_logger=False)
@@ -20,7 +20,8 @@ socketio = SocketIO(app, async_mode=None, logger=False, engineio_logger=False)
 #random number Generator Thread
 thread_acars = Thread()
 thread_vdlm2 = Thread()
-thread_stop_event = Event()
+thread_acars_stop_event = Event()
+thread_vdlm2_stop_event = Event()
 
 def vdlm2Generator():
 
@@ -28,6 +29,10 @@ def vdlm2Generator():
     import socket
     import json
     import pprint
+    import sys
+    import os
+
+    DEBUG_LOGGING=False
 
     # Define vdlm2_receiver
     vdlm2_receiver = socket.socket(
@@ -38,32 +43,39 @@ def vdlm2Generator():
     # Set socket timeout 1 seconds
     vdlm2_receiver.settimeout(1)
 
-    #print("[vdlm2Generator] vdlm2_receiver created")
+    if DEBUG_LOGGING: print("[vdlm2Generator] vdlm2_receiver created")
     
     # Listen on 127.0.0.1:13155 for UDP datagrams from vdlm2dec JSON
     vdlm2_receiver.bind(('127.0.0.1', 13697))
-    #print("[vdlm2Generator] vdlm2_receiver bound to 127.0.0.1:13155")
+    if DEBUG_LOGGING: print("[vdlm2Generator] vdlm2_receiver bound to 127.0.0.1:13697")
 
     # Run while requested...
-    while not thread_stop_event.isSet():
-        #print("[vdlm2Generator] listening for messages to vdlm2_receiver")
+    while not thread_vdlm2_stop_event.isSet():
+        sys.stdout.flush()
+
+        if DEBUG_LOGGING: print("[vdlm2Generator] listening for messages to vdlm2_receiver")
 
         data = None
 
         try:
             data,addr = vdlm2_receiver.recvfrom(1024)
+            if DEBUG_LOGGING: print("[vdlm2Generator] received data")
         except socket.timeout:
+            if DEBUG_LOGGING: print("[vdlm2Generator] timeout")
             pass
 
         if data is not None:
 
-            #print("[vdlm2Generator] received data")
+            if os.getenv("VERBOSE", default=None):
+                print("[vdlm2 data] %s" % (repr(data)))
+
+            if DEBUG_LOGGING: print("[vdlm2Generator] data contains data")
 
             # Decode json
             vdlm2_json = json.loads(data)
 
             # Print json (for debugging)
-            #print(json.dumps(vdlm2_json, indent=4, sort_keys=True))
+            if DEBUG_LOGGING: print(json.dumps(vdlm2_json, indent=4, sort_keys=True))
 
             # Set up list allowing us to track what keys have been decoded
             remaining_keys = list(vdlm2_json.keys())
@@ -90,11 +102,55 @@ def vdlm2Generator():
             # Table content
             html_output += "<tr><td colspan=\"2\">"
 
-            if "text" in vdlm2_json.keys():
-                if "toaddr" in vdlm2_json.keys():
+            if "toaddr" in vdlm2_json.keys():
                     html_output += "<p>To Address: {toaddr}</p>".format(
                         toaddr=vdlm2_json['toaddr']
                     )
+                    remaining_keys.remove('toaddr')
+
+            if "depa" in vdlm2_json.keys():
+                    html_output += "<p>Departing: {depa}</p>".format(
+                        depa=vdlm2_json['depa']
+                    )
+                    remaining_keys.remove('depa')
+
+            if "dsta" in vdlm2_json.keys():
+                    html_output += "<p>Destination: {dsta}</p>".format(
+                        dsta=vdlm2_json['depa']
+                    )
+                    remaining_keys.remove('dsta')
+
+            if "eta" in vdlm2_json.keys():
+                    html_output += "<p>Estimated time of arrival: {eta} hours</p>".format(
+                        eta=vdlm2_json['eta']
+                    )
+                    remaining_keys.remove('eta')
+
+            if "gtout" in vdlm2_json.keys():
+                    html_output += "<p>Pushback from gate: {gtout} hours</p>".format(
+                        gtout=vdlm2_json['gtout']
+                    )
+                    remaining_keys.remove('gtout')
+
+            if "gtin" in vdlm2_json.keys():
+                    html_output += "<p>Arriving at gate: {gtin} hours</p>".format(
+                        gtin=vdlm2_json['gtin']
+                    )
+                    remaining_keys.remove('gtin')
+
+            if "wloff" in vdlm2_json.keys():
+                    html_output += "<p>Wheels off: {wloff} hours</p>".format(
+                        wloff=vdlm2_json['wloff']
+                    )
+                    remaining_keys.remove('wloff')
+
+            if "wlin" in vdlm2_json.keys():
+                    html_output += "<p>Wheels down: {wlin}</p>".format(
+                        wlin=vdlm2_json['wlin']
+                    )
+                    remaining_keys.remove('wlin')
+
+            if "text" in vdlm2_json.keys():
                 html_output += "<p>"
                 html_output += "<pre>{text}</pre>".format(
                     text=vdlm2_json['text'].replace("\r\n","\n"),
@@ -103,17 +159,6 @@ def vdlm2Generator():
                 html_output += "</p>"
             else:
                 html_output += "<p><i>No text</i></p>"
-            
-            # if "libacars" in vdlm2_json.keys():
-            #     html_output += "<p>Decoded:</p>"
-            #     html_output += "<p>"
-            #     html_output += "<pre>{libacars}</pre>".format(
-            #         libacars=pprint.pformat(
-            #             vdlm2_json['libacars'],
-            #             indent=2,
-            #         )
-            #     )
-            #     html_output += "</p>"
 
             html_output += "</td></tr>"
             
@@ -204,12 +249,11 @@ def vdlm2Generator():
             html_output += "</table>"
 
             # Send output via socketio
-            #print("[acarsGenerator] sending output via socketio.emit")
+            if DEBUG_LOGGING: print("[acarsGenerator] sending output via socketio.emit")
             socketio.emit('newmsg', {'msghtml': html_output}, namespace='/test')
 
             # Check to see if any data remains, if so, send some debugging output
             remaining_keys.remove('channel')
-            remaining_keys.remove('level')
             if len(remaining_keys) > 0:
                 print("")
                 print("Non decoded data exists:")
@@ -220,6 +264,7 @@ def vdlm2Generator():
                 print("-----")
 
         else:
+            if DEBUG_LOGGING: print("[vdlm2Generator] sending noop")
             socketio.emit('noop', {'noop': 'noop'}, namespace='/test')
 
 
@@ -229,6 +274,10 @@ def acarsGenerator():
     import socket
     import json
     import pprint
+    import sys
+    import os
+
+    DEBUG_LOGGING=False
 
     # Define acars_receiver
     acars_receiver = socket.socket(
@@ -239,15 +288,16 @@ def acarsGenerator():
     # Set socket timeout 1 seconds
     acars_receiver.settimeout(1)
 
-    #print("[acarsGenerator] acars_receiver created")
+    if DEBUG_LOGGING: print("[acarsGenerator] acars_receiver created")
     
     # Listen on 127.0.0.1:13155 for UDP datagrams from acarsdec JSON
     acars_receiver.bind(('127.0.0.1', 13155))
-    #print("[acarsGenerator] acars_receiver bound to 127.0.0.1:13155")
+    if DEBUG_LOGGING: print("[acarsGenerator] acars_receiver bound to 127.0.0.1:13155")
 
     # Run while requested...
-    while not thread_stop_event.isSet():
-        #print("[acarsGenerator] listening for messages to acars_receiver")
+    while not thread_acars_stop_event.isSet():
+        if DEBUG_LOGGING: print("[acarsGenerator] listening for messages to acars_receiver")
+        sys.stdout.flush()
 
         data = None
 
@@ -258,13 +308,16 @@ def acarsGenerator():
 
         if data is not None:
 
-            #print("[acarsGenerator] received data")
+            if os.getenv("VERBOSE", default=None):
+                print("[acars data] %s" % (repr(data)))
+
+            if DEBUG_LOGGING: print("[acarsGenerator] received data")
 
             # Decode json
             acars_json = json.loads(data)
 
             # Print json (for debugging)
-            #print(json.dumps(acars_json, indent=4, sort_keys=True))
+            if DEBUG_LOGGING: print(json.dumps(acars_json, indent=4, sort_keys=True))
 
             # Set up list allowing us to track what keys have been decoded
             remaining_keys = list(acars_json.keys())
@@ -385,7 +438,7 @@ def acarsGenerator():
             html_output += "</table>"
 
             # Send output via socketio
-            #print("[acarsGenerator] sending output via socketio.emit")
+            if DEBUG_LOGGING: print("[acarsGenerator] sending output via socketio.emit")
             socketio.emit('newmsg', {'msghtml': html_output}, namespace='/test')
 
             # Check to see if any data remains, if so, send some debugging output
@@ -417,9 +470,10 @@ def test_connect():
 
     #Start the acarsGenerator thread only if the thread has not been started before.
     if not thread_acars.isAlive():
-        #print("Starting Thread")
+        #print("Starting acarsGenerator")
         thread_acars = socketio.start_background_task(acarsGenerator)
     if not thread_vdlm2.isAlive():
+        #print("Starting vdlm2Generator")
         thread_vdlm2 = socketio.start_background_task(vdlm2Generator)
 
 @socketio.on('disconnect', namespace='/test')
@@ -428,4 +482,4 @@ def test_disconnect():
     pass
 
 if __name__ == '__main__':
-    socketio.run(app, host='0.0.0.0', port=8080)
+    socketio.run(app, host='0.0.0.0', port=80)
