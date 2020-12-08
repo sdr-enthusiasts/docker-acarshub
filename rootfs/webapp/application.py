@@ -32,7 +32,7 @@ def vdlm2Generator():
     import sys
     import os
 
-    DEBUG_LOGGING=False
+    if os.getenv("DEBUG_LOGGING", default=False): DEBUG_LOGGING=True
 
     # Define vdlm2_receiver
     vdlm2_receiver = socket.socket(
@@ -277,7 +277,7 @@ def acarsGenerator():
     import sys
     import os
 
-    DEBUG_LOGGING=False
+    if os.getenv("DEBUG_LOGGING", default=False): DEBUG_LOGGING=True
 
     # Define acars_receiver
     acars_receiver = socket.socket(
@@ -303,7 +303,9 @@ def acarsGenerator():
 
         try:
             data,addr = acars_receiver.recvfrom(1024)
+            if DEBUG_LOGGING: print("[acarsGenerator] received data")
         except socket.timeout:
+            if DEBUG_LOGGING: print("[acarsGenerator] timeout")
             pass
 
         if data is not None:
@@ -441,9 +443,12 @@ def acarsGenerator():
             if DEBUG_LOGGING: print("[acarsGenerator] sending output via socketio.emit")
             socketio.emit('newmsg', {'msghtml': html_output}, namespace='/test')
 
+            # Remove leftover keys that we don't really care about (do we care about these?)
+            if 'channel' in remaining_keys: remaining_keys.remove('channel')
+            if 'level' in remaining_keys: remaining_keys.remove('level')
+            if 'end' in remaining_keys: remaining_keys.remove('level')
+
             # Check to see if any data remains, if so, send some debugging output
-            remaining_keys.remove('channel')
-            remaining_keys.remove('level')
             if len(remaining_keys) > 0:
                 print("")
                 print("Non decoded data exists:")
@@ -454,6 +459,7 @@ def acarsGenerator():
                 print("-----")
 
         else:
+            if DEBUG_LOGGING: print("[acarsGenerator] sending noop")
             socketio.emit('noop', {'noop': 'noop'}, namespace='/test')
 
 @app.route('/')
