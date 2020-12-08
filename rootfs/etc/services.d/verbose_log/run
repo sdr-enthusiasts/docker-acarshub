@@ -1,9 +1,0 @@
-#!/usr/bin/with-contenv bash
-#shellcheck shell=bash
-
-if [ -n "${VERBOSE}" ]; then
-	tail -F "/run/acars/acars.json" "/run/acars/vdlm.json"
-	sleep 10
-else
-    sleep 86400
-fi
