@@ -385,6 +385,18 @@ def acarsGenerator():
             # Table content
             html_output += "<tr><td colspan=\"2\">"
 
+            if "depa" in acars_json.keys():
+                    html_output += "<p>Departing: {depa}</p>".format(
+                        depa=acars_json['depa']
+                    )
+                    remaining_keys.remove('depa')
+
+            if "dsta" in acars_json.keys():
+                    html_output += "<p>Destination: {dsta}</p>".format(
+                        dsta=acars_json['dsta']
+                    )
+                    remaining_keys.remove('dsta')
+
             if "text" in acars_json.keys():
                 html_output += "<p>"
                 html_output += "<pre>{text}</pre>".format(
