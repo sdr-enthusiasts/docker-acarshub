@@ -289,8 +289,6 @@ def vdlm2Generator():
             if 'level' in remaining_keys: remaining_keys.remove('level')
             if 'end' in remaining_keys: remaining_keys.remove('end')
 
-            # Check to see if any data remains, if so, send some debugging output
-            if 'channel' in remaining_keys: remaining_keys.remove('channel')
             if len(remaining_keys) > 0:
                 print("")
                 print("Non decoded data exists:")
