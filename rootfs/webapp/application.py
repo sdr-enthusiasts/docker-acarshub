@@ -448,7 +448,7 @@ def acarsGenerator():
             # Remove leftover keys that we don't really care about (do we care about these?)
             if 'channel' in remaining_keys: remaining_keys.remove('channel')
             if 'level' in remaining_keys: remaining_keys.remove('level')
-            if 'end' in remaining_keys: remaining_keys.remove('level')
+            if 'end' in remaining_keys: remaining_keys.remove('end')
 
             # Check to see if any data remains, if so, send some debugging output
             if len(remaining_keys) > 0:
