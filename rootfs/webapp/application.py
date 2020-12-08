@@ -157,12 +157,37 @@ def vdlm2Generator():
                     )
                     remaining_keys.remove('wlin')
 
+            if "lat" in vdlm2_json.keys():
+                    html_output += "<p>Latitude: {lat}</p>".format(
+                        lat=vdlm2_json['lat']
+                    )
+                    remaining_keys.remove('lat')
+
+            if "lon" in vdlm2_json.keys():
+                    html_output += "<p>Longitude: {lon}</p>".format(
+                        lon=vdlm2_json['lon']
+                    )
+                    remaining_keys.remove('lon')
+
+            if "alt" in vdlm2_json.keys():
+                    html_output += "<p>Altitude: {alt}</p>".format(
+                        alt=vdlm2_json['alt']
+                    )
+                    remaining_keys.remove('alt')
+
             if "text" in vdlm2_json.keys():
                 html_output += "<p>"
                 html_output += "<pre>{text}</pre>".format(
                     text=vdlm2_json['text'].replace("\r\n","\n"),
                 )
                 remaining_keys.remove('text')
+                html_output += "</p>"
+            elif "data" in vdlm2_json.keys():
+                html_output += "<p>"
+                html_output += "<pre>{data}</pre>".format(
+                    data=vdlm2_json['data'].replace("\r\n","\n"),
+                )
+                remaining_keys.remove('data')
                 html_output += "</p>"
             else:
                 html_output += "<p><i>No text</i></p>"
