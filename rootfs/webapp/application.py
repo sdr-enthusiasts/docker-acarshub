@@ -32,6 +32,7 @@ def vdlm2Generator():
     import sys
     import os
 
+    DEBUG_LOGGING=False
     if os.getenv("DEBUG_LOGGING", default=False): DEBUG_LOGGING=True
 
     # Define vdlm2_receiver
@@ -277,6 +278,7 @@ def acarsGenerator():
     import sys
     import os
 
+    DEBUG_LOGGING=False
     if os.getenv("DEBUG_LOGGING", default=False): DEBUG_LOGGING=True
 
     # Define acars_receiver
