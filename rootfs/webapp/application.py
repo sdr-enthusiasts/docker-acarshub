@@ -384,45 +384,45 @@ def acarsGenerator():
             # Table content
             html_output += "<tr><td colspan=\"2\">"
 
-            if "depa" in vdlm2_json.keys():
+            if "depa" in acars_json.keys():
                     html_output += "<p>Departing: {depa}</p>".format(
-                        depa=vdlm2_json['depa']
+                        depa=acars_json['depa']
                     )
                     remaining_keys.remove('depa')
 
-            if "dsta" in vdlm2_json.keys():
+            if "dsta" in acars_json.keys():
                     html_output += "<p>Destination: {dsta}</p>".format(
-                        dsta=vdlm2_json['dsta']
+                        dsta=acars_json['dsta']
                     )
                     remaining_keys.remove('dsta')
 
-            if "eta" in vdlm2_json.keys():
+            if "eta" in acars_json.keys():
                     html_output += "<p>Estimated time of arrival: {eta} hours</p>".format(
-                        eta=vdlm2_json['eta']
+                        eta=acars_json['eta']
                     )
                     remaining_keys.remove('eta')
 
-            if "gtout" in vdlm2_json.keys():
+            if "gtout" in acars_json.keys():
                     html_output += "<p>Pushback from gate: {gtout} hours</p>".format(
-                        gtout=vdlm2_json['gtout']
+                        gtout=acars_json['gtout']
                     )
                     remaining_keys.remove('gtout')
 
-            if "gtin" in vdlm2_json.keys():
+            if "gtin" in acars_json.keys():
                     html_output += "<p>Arriving at gate: {gtin} hours</p>".format(
-                        gtin=vdlm2_json['gtin']
+                        gtin=acars_json['gtin']
                     )
                     remaining_keys.remove('gtin')
 
-            if "wloff" in vdlm2_json.keys():
+            if "wloff" in acars_json.keys():
                     html_output += "<p>Wheels off: {wloff} hours</p>".format(
-                        wloff=vdlm2_json['wloff']
+                        wloff=acars_json['wloff']
                     )
                     remaining_keys.remove('wloff')
 
-            if "wlin" in vdlm2_json.keys():
+            if "wlin" in acars_json.keys():
                     html_output += "<p>Wheels down: {wlin}</p>".format(
-                        wlin=vdlm2_json['wlin']
+                        wlin=acars_json['wlin']
                     )
                     remaining_keys.remove('wlin')
 
