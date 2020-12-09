@@ -93,6 +93,7 @@ RUN set -x && \
     git clone git://github.com/TLeconte/acarsdec.git /src/acarsdec && \
     pushd /src/acarsdec && \
     git checkout master && \
+    sed -i "s/char pkt[1400]/char pkt[3600]/g" output.c && \
     mkdir build && \
     pushd build && \
     cmake .. -Drtl=ON && \
