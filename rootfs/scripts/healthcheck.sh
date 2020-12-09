@@ -5,6 +5,7 @@
 NETSTAT_ANP=$(netstat -anp)
 
 # Default original codes
+# shellcheck disable=SC2001
 EXITCODE=0
 
 # ============================= VDLM2 CHECKS =============================
@@ -29,9 +30,9 @@ if [ -n "${ENABLE_VDLM}" ]; then
   fi
   vdlm2_pidof_vdlm2_tcp_server=$(ps ax | grep 'ncat -4 --keep-open --listen 127.0.0.1 15555' | grep -v grep | awk '{print $1}')
   if echo "$NETSTAT_ANP" | grep -P "^\s*tcp\s+\d+\s+\d+\s+127\.0\.0\.1:15555\s+0\.0\.0\.0:\*\s+LISTEN\s+${vdlm2_pidof_vdlm2_tcp_server}\/ncat\s*\$" > /dev/null; then
-    echo "vdlm2_server TCP listening on port 15555 (pid $vdlm2_pidof_acars_tcp_server): PASS"
+    echo "vdlm2_server TCP listening on port 15555 (pid $vdlm2_pidof_vdlm2_tcp_server): PASS"
   else
-    echo "vdlm2_server TCP not listening on port 15555 (pid $vdlm2_pidof_acars_tcp_server): FAIL"
+    echo "vdlm2_server TCP not listening on port 15555 (pid $vdlm2_pidof_vdlm2_tcp_server): FAIL"
     EXITCODE=1
   fi
 
