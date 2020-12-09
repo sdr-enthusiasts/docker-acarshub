@@ -29,10 +29,13 @@ RUN set -x && \
     TEMP_PACKAGES+=(wget) && \
     # logging
     KEPT_PACKAGES+=(gawk) && \
+    KEPT_PACKAGES+=(pv) && \
     # required for S6 overlay
+    # curl kept for healthcheck
+    # ca-certificates kept for python
     TEMP_PACKAGES+=(gnupg2) && \
     TEMP_PACKAGES+=(file) && \
-    TEMP_PACKAGES+=(curl) && \
+    KEPT_PACKAGES+=(curl) && \
     KEPT_PACKAGES+=(ca-certificates) && \
     # libusb-1.0-0 + dev - Required for rtl-sdr, libiio (bladeRF/PlutoSDR).
     KEPT_PACKAGES+=(libusb-1.0-0) && \
@@ -45,8 +48,11 @@ RUN set -x && \
     # packages for acarsserv
     TEMP_PACKAGES+=(libsqlite3-dev) && \
     KEPT_PACKAGES+=(libsqlite3-0) && \
-    # packages for web interface
+    # packages for network stuff
     KEPT_PACKAGES+=(socat) && \
+    KEPT_PACKAGES+=(ncat) && \
+    KEPT_PACKAGES+=(net-tools) && \
+    # packages for web interface
     KEPT_PACKAGES+=(python3) && \
     KEPT_PACKAGES+=(python3-pip) && \
     KEPT_PACKAGES+=(python3-setuptools) && \
