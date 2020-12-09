@@ -1,0 +1,31 @@
+#!/usr/bin/with-contenv bash
+# shellcheck shell=bash
+
+if [ -n "${ENABLE_ACARS}" ]; then
+  if [ -n "${FEED}" ]; then
+    
+    set -o pipefail
+
+    # Require that acars_server is running
+    if ! netstat -an | grep -P '^\s*tcp\s+\d+\s+\d+\s+127\.0\.0\.1:15550\s+(?>\d{1,3}\.{0,1}){4}:\*\s+LISTEN\s*$' > /dev/null; then
+      if [ -n "${VERBOSE}" ]; then
+        echo "Waiting for acars_server" | stdbuf -o0 awk '{print "[acars_feeder] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
+      fi
+      sleep 1
+      exit
+    fi
+    if [ -n "${VERBOSE}" ]; then
+      echo "acars_server ready, starting service" | stdbuf -o0 awk '{print "[acars_feeder] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
+    fi
+
+    set -e
+
+    # Start the feed - take JSON messages from TCP port 15550 and send them to feed.acars.io UDP port 5550
+    socat -d TCP:127.0.0.1:15550 UDP-SENDTO:feed.acars.io:5550 2>&1 | stdbuf -o0 awk '{print "[acars_feeder] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
+
+  else
+    sleep 86400
+  fi
+else
+  sleep 86400
+fi
