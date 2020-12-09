@@ -59,7 +59,7 @@ def vdlm2Generator():
         data = None
 
         try:
-            data,addr = vdlm2_receiver.recvfrom(1024)
+            data,addr = vdlm2_receiver.recvfrom(2048)
             if DEBUG_LOGGING: print("[vdlm2Generator] received data")
         except socket.timeout:
             if DEBUG_LOGGING: print("[vdlm2Generator] timeout")
@@ -339,7 +339,7 @@ def acarsGenerator():
         data = None
 
         try:
-            data,addr = acars_receiver.recvfrom(1024)
+            data,addr = acars_receiver.recvfrom(2048)
             if DEBUG_LOGGING: print("[acarsGenerator] received data")
         except socket.timeout:
             if DEBUG_LOGGING: print("[acarsGenerator] timeout")
