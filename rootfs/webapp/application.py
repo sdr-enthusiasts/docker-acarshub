@@ -38,7 +38,7 @@ def vdlm2Generator():
     # Define vdlm2_receiver
     vdlm2_receiver = socket.socket(
         family=socket.AF_INET,
-        type=socket.SOCK_DGRAM,
+        type=socket.SOCK_STREAM,
     )
 
     # Set socket timeout 1 seconds
@@ -46,9 +46,9 @@ def vdlm2Generator():
 
     if DEBUG_LOGGING: print("[vdlm2Generator] vdlm2_receiver created")
     
-    # Listen on 127.0.0.1:13155 for UDP datagrams from vdlm2dec JSON
-    vdlm2_receiver.bind(('127.0.0.1', 13697))
-    if DEBUG_LOGGING: print("[vdlm2Generator] vdlm2_receiver bound to 127.0.0.1:13697")
+    # Connect to 127.0.0.1:15555 for JSON messages vdlm2dec
+    vdlm2_receiver.connect(('127.0.0.1', 15555))    
+    if DEBUG_LOGGING: print("[vdlm2Generator] vdlm2_receiver connected to 127.0.0.1:15555")
 
     # Run while requested...
     while not thread_vdlm2_stop_event.isSet():
@@ -67,7 +67,7 @@ def vdlm2Generator():
 
         if data is not None:
 
-            if os.getenv("VERBOSE", default=None):
+            if os.getenv("DEBUG_LOGGING", default=None):
                 print("[vdlm2 data] %s" % (repr(data)))
                 sys.stdout.flush()
 
@@ -319,7 +319,7 @@ def acarsGenerator():
     # Define acars_receiver
     acars_receiver = socket.socket(
         family=socket.AF_INET,
-        type=socket.SOCK_DGRAM,
+        type=socket.SOCK_STREAM,
     )
 
     # Set socket timeout 1 seconds
@@ -327,9 +327,9 @@ def acarsGenerator():
 
     if DEBUG_LOGGING: print("[acarsGenerator] acars_receiver created")
     
-    # Listen on 127.0.0.1:13155 for UDP datagrams from acarsdec JSON
-    acars_receiver.bind(('127.0.0.1', 13155))
-    if DEBUG_LOGGING: print("[acarsGenerator] acars_receiver bound to 127.0.0.1:13155")
+    # Connect to 127.0.0.1:15550 for JSON messages acarsdec
+    acars_receiver.connect(('127.0.0.1', 15550))
+    if DEBUG_LOGGING: print("[acarsGenerator] acars_receiver connected to 127.0.0.1:15550")
 
     # Run while requested...
     while not thread_acars_stop_event.isSet():
@@ -347,7 +347,7 @@ def acarsGenerator():
 
         if data is not None:
 
-            if os.getenv("VERBOSE", default=None):
+            if os.getenv("DEBUG_LOGGING", default=None):
                 print("[acars data] %s" % (repr(data)))
                 sys.stdout.flush()
 
