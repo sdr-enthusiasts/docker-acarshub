@@ -69,6 +69,7 @@ def vdlm2Generator():
 
             if os.getenv("VERBOSE", default=None):
                 print("[vdlm2 data] %s" % (repr(data)))
+                sys.stdout.flush()
 
             if DEBUG_LOGGING: print("[vdlm2Generator] data contains data")
 
@@ -348,6 +349,7 @@ def acarsGenerator():
 
             if os.getenv("VERBOSE", default=None):
                 print("[acars data] %s" % (repr(data)))
+                sys.stdout.flush()
 
             if DEBUG_LOGGING: print("[acarsGenerator] received data")
 
