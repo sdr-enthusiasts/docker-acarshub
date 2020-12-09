@@ -5,7 +5,7 @@
 NETSTAT_ANP=$(netstat -anp)
 
 # Default original codes
-# shellcheck disable=SC2001
+# shellcheck disable=SC2009
 EXITCODE=0
 
 # ============================= VDLM2 CHECKS =============================
