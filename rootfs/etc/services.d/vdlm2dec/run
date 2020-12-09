@@ -13,6 +13,10 @@ if [ -n "${ENABLE_VDLM}" ]; then
 		VDLM_CMD+=("-v")
 	fi
 
+	if [ -n "${QUIET_LOGS}" ]; then
+		VDLM_CMD+=("-l" "/dev/null")
+	fi
+
 	# Send output JSON to vdlm2_server.
 	VDLM_CMD+=("-j" "127.0.0.1:5555")
 	

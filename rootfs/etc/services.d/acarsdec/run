@@ -11,8 +11,13 @@ if [ -n "${ENABLE_ACARS}" ]; then
 
 	if [ -n "${VERBOSE}" ]; then
 		ACARS_CMD+=("-o" "4")
+		ACARS_CMD+=("-v")
 	else
 		ACARS_CMD+=("-o" "0")
+	fi
+
+	if [ -n "${QUIET_LOGS}" ]; then
+		ACARS_CMD+=("-l" "/dev/null")
 	fi
 
 	# Send output JSON to acars_server
