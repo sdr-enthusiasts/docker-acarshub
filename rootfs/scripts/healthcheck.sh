@@ -25,12 +25,14 @@ if [ -n "${ENABLE_VDLM}" ]; then
     echo "vdlm2_server UDP receiving on port 5555 (pid $vdlm2_pidof_vdlm2_udp_server): PASS"
   else
     echo "vdlm2_server UDP not receiving on port 5555 (pid $vdlm2_pidof_vdlm2_udp_server): FAIL"
+    EXITCODE=1
   fi
   vdlm2_pidof_vdlm2_tcp_server=$(ps ax | grep 'ncat -4 --keep-open --listen 127.0.0.1 15555' | grep -v grep | awk '{print $1}')
   if echo "$NETSTAT_ANP" | grep -P "^\s*tcp\s+\d+\s+\d+\s+127\.0\.0\.1:15555\s+0\.0\.0\.0:\*\s+LISTEN\s+${vdlm2_pidof_vdlm2_tcp_server}\/ncat\s*\$" > /dev/null; then
     echo "vdlm2_server TCP listening on port 15555 (pid $vdlm2_pidof_acars_tcp_server): PASS"
   else
     echo "vdlm2_server TCP not listening on port 15555 (pid $vdlm2_pidof_acars_tcp_server): FAIL"
+    EXITCODE=1
   fi
 
   # Check vdlm2_feeder:
@@ -40,6 +42,7 @@ if [ -n "${ENABLE_VDLM}" ]; then
     echo "vdlm2_feeder sending data to $vdlm2_feeder_dest (pid $vdlm2_pidof_vdlm2_feeder): PASS"
   else
     echo "vdlm2_feeder TCP not sending data (pid $vdlm2_pidof_vdlm2_feeder): FAIL"
+    EXITCODE=1
   fi
 
   # Check vdlm2_stats:
@@ -48,6 +51,7 @@ if [ -n "${ENABLE_VDLM}" ]; then
     echo "vdlm2_stats connected to acars_server (pid $vdlm2_pidof_vdlm2_stats): PASS"
   else
     echo "vdlm2_stats not connected to acars_server (pid $vdlm2_pidof_vdlm2_stats): FAIL"
+    EXITCODE=1
   fi
 
   # Check for activity
@@ -80,12 +84,14 @@ if [ -n "${ENABLE_ACARS}" ]; then
     echo "acars_server UDP receiving on port 5550 (pid $acars_pidof_acars_udp_server): PASS"
   else
     echo "acars_server UDP not receiving on port 5550 (pid $acars_pidof_acars_udp_server): FAIL"
+    EXITCODE=1
   fi
   acars_pidof_acars_tcp_server=$(ps ax | grep 'ncat -4 --keep-open --listen 127.0.0.1 15550' | grep -v grep | awk '{print $1}')
   if echo "$NETSTAT_ANP" | grep -P "^\s*tcp\s+\d+\s+\d+\s+127\.0\.0\.1:15550\s+0\.0\.0\.0:\*\s+LISTEN\s+${acars_pidof_acars_tcp_server}\/ncat\s*\$" > /dev/null; then
     echo "acars_server TCP listening on port 15550 (pid $acars_pidof_acars_tcp_server): PASS"
   else
     echo "acars_server TCP not listening on port 15550 (pid $acars_pidof_acars_tcp_server): FAIL"
+    EXITCODE=1
   fi
 
   # Check acars_feeder:
@@ -95,6 +101,7 @@ if [ -n "${ENABLE_ACARS}" ]; then
     echo "acars_feeder sending data to $acars_feeder_dest (pid $acars_pidof_acars_feeder): PASS"
   else
     echo "acars_server TCP not sending data (pid $acars_pidof_acars_feeder): FAIL"
+    EXITCODE=1
   fi
 
   # Check acars_stats:
@@ -103,6 +110,7 @@ if [ -n "${ENABLE_ACARS}" ]; then
     echo "acars_stats connected to acars_server (pid $acars_pidof_acars_stats): PASS"
   else
     echo "acars_stats not connected to acars_server (pid $acars_pidof_acars_stats): FAIL"
+    EXITCODE=1
   fi
 
   # Check for activity
