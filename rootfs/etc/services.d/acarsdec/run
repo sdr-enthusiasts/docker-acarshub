@@ -9,7 +9,7 @@ if [ -n "${ENABLE_ACARS}" ]; then
 	ACARS_BIN="/usr/local/bin/acarsdec"
 	ACARS_CMD=("-g" "$GAIN" "-i" "$STATION_ID_ACARS")
 
-	if [ -z "${QUIET_LOGS}" ]; then
+	if [ -n "${QUIET_LOGS}" ]; then
 		ACARS_CMD+=("-o" "0")
 		ACARS_CMD+=("-l" "/dev/null")
 	else
