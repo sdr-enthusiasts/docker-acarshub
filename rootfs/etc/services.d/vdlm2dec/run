@@ -1,21 +1,19 @@
 #!/usr/bin/with-contenv bash
 #shellcheck shell=bash
 
-VDLM_BIN="/usr/local/bin/vdlm2dec"
-VDLM_CMD=("-J" "-G" "-E" "-U" "-g" "$GAIN" "-i" "$STATION_ID_VDLM")
+# STARTUP SEQUENCE
+#  - vdlm2dec does not depend on any services and should start immediately
 
 if [ -n "${ENABLE_VDLM}" ]; then
-	# If the process was killed for a log trimming, wait until the trim is done
-	while [[ -f /run/acars/stoprun.job ]]; do
-		sleep 5
-	done
 
-	# Below no longer needed, as verbose messages are logged to container log via webapp
-	# if [ -n "${VERBOSE}" ]; then
-	# 	VDLM_CMD+=("-l" "/run/acars/vdlm.json")
-	# fi
+	VDLM_BIN="/usr/local/bin/vdlm2dec"
+	VDLM_CMD=("-J" "-G" "-E" "-U" "-g" "$GAIN" "-i" "$STATION_ID_VDLM")
 
-	# Send output JSON to acars splitter.
+	if [ -n "${VERBOSE}" ]; then
+		VDLM_CMD+=("-v")
+	fi
+
+	# Send output JSON to vdlm2_server.
 	VDLM_CMD+=("-j" "127.0.0.1:5555")
 	
 	if [ -n "${SERIAL_VDLM}" ]; then
@@ -66,3 +64,5 @@ if [ -n "${ENABLE_VDLM}" ]; then
 else
 	sleep 86400
 fi
+
+sleep 5
