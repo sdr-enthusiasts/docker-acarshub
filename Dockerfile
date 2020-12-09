@@ -127,3 +127,6 @@ COPY rootfs/ /
 ENTRYPOINT [ "/init" ]
 
 EXPOSE 80
+
+# Add healthcheck
+HEALTHCHECK --start-period=3600s --interval=600s CMD /scripts/healthcheck.sh
