@@ -384,7 +384,7 @@ def acarsGenerator():
             # Table content
             html_output += "<tr><td colspan=\"2\">"
 
-                        if "depa" in vdlm2_json.keys():
+            if "depa" in vdlm2_json.keys():
                     html_output += "<p>Departing: {depa}</p>".format(
                         depa=vdlm2_json['depa']
                     )
