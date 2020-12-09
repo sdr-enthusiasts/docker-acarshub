@@ -105,7 +105,7 @@ if [ -n "${ENABLE_ACARS}" ]; then
   fi
 
   # Check acars_stats:
-  acars_pidof_acars_stats=$(pgrep -f 'socat -u TCP:127.0.0.1:15550 CREATE:/run/acars/acars.past5min.json')
+  acars_pidof_acars_stats=$(pgrep -fx 'socat -u TCP:127.0.0.1:15550 CREATE:/run/acars/acars.past5min.json')
   if echo "$NETSTAT_ANP" | grep -P "^\s*tcp\s+\d+\s+\d+\s+\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d{1,5}\s+127\.0\.0\.1:15550\s+ESTABLISHED\s+${acars_pidof_acars_stats}\/socat\s*\$" > /dev/null; then
     echo "acars_stats connected to acars_server (pid $acars_pidof_acars_stats): PASS"
   else
