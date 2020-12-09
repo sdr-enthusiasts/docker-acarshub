@@ -5,7 +5,6 @@
 NETSTAT_ANP=$(netstat -anp)
 
 # Default original codes
-# shellcheck disable=SC2009
 EXITCODE=0
 
 # ============================= VDLM2 CHECKS =============================
@@ -21,14 +20,14 @@ if [ -n "${ENABLE_VDLM}" ]; then
   fi
 
   # Check vdlm2_server:
-  vdlm2_pidof_vdlm2_udp_server=$(ps ax | grep 'ncat -4 -u --wait 1 --listen 127.0.0.1 5555' | grep -v grep | awk '{print $1}')
+  vdlm2_pidof_vdlm2_udp_server=$(pgrep -f 'ncat -4 -u --wait 1 --listen 127.0.0.1 5555')
   if echo "$NETSTAT_ANP" | grep -P "^\s*udp\s+\d+\s+\d+\s+127\.0\.0\.1:5555\s+\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d{1,5}\s+ESTABLISHED\s+${vdlm2_pidof_vdlm2_udp_server}\/ncat\s*\$" > /dev/null; then
     echo "vdlm2_server UDP receiving on port 5555 (pid $vdlm2_pidof_vdlm2_udp_server): PASS"
   else
     echo "vdlm2_server UDP not receiving on port 5555 (pid $vdlm2_pidof_vdlm2_udp_server): FAIL"
     EXITCODE=1
   fi
-  vdlm2_pidof_vdlm2_tcp_server=$(ps ax | grep 'ncat -4 --keep-open --listen 127.0.0.1 15555' | grep -v grep | awk '{print $1}')
+  vdlm2_pidof_vdlm2_tcp_server=$(pgrep -f 'ncat -4 --keep-open --listen 127.0.0.1 15555')
   if echo "$NETSTAT_ANP" | grep -P "^\s*tcp\s+\d+\s+\d+\s+127\.0\.0\.1:15555\s+0\.0\.0\.0:\*\s+LISTEN\s+${vdlm2_pidof_vdlm2_tcp_server}\/ncat\s*\$" > /dev/null; then
     echo "vdlm2_server TCP listening on port 15555 (pid $vdlm2_pidof_vdlm2_tcp_server): PASS"
   else
@@ -37,7 +36,7 @@ if [ -n "${ENABLE_VDLM}" ]; then
   fi
 
   # Check vdlm2_feeder:
-  vdlm2_pidof_vdlm2_feeder=$(ps ax | grep 'socat -d TCP:127.0.0.1:15555 UDP:feed.acars.io:5555' | grep -v grep | awk '{print $1}')
+  vdlm2_pidof_vdlm2_feeder=$(pgrep -f 'socat -d TCP:127.0.0.1:15555 UDP:feed.acars.io:5555')
   if echo "$NETSTAT_ANP" | grep -P "^\s*udp\s+\d+\s+\d+\s+\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d{1,5}\s+\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:5555\s+ESTABLISHED\s+${vdlm2_pidof_vdlm2_feeder}\/socat\s*\$" > /dev/null; then
     vdlm2_feeder_dest=$(echo "$NETSTAT_ANP" | grep -P "^\s*udp\s+\d+\s+\d+\s+\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d{1,5}\s+\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:5555\s+ESTABLISHED\s+${vdlm2_pidof_vdlm2_feeder}\/socat\s*\$" | awk '{print $5}')
     echo "vdlm2_feeder sending data to $vdlm2_feeder_dest (pid $vdlm2_pidof_vdlm2_feeder): PASS"
@@ -47,7 +46,7 @@ if [ -n "${ENABLE_VDLM}" ]; then
   fi
 
   # Check vdlm2_stats:
-  vdlm2_pidof_vdlm2_stats=$(ps ax | grep -P 'socat -u TCP:127.0.0.1:15555 CREATE:/run/acars/vdlm2.past5min.json' | grep -v timeout | grep -v grep | awk '{print $1}')
+  vdlm2_pidof_vdlm2_stats=$(pgrep -fx 'socat -u TCP:127.0.0.1:15555 CREATE:/run/acars/vdlm2.past5min.json')
   if echo "$NETSTAT_ANP" | grep -P "^\s*tcp\s+\d+\s+\d+\s+\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d{1,5}\s+127\.0\.0\.1:15555\s+ESTABLISHED\s+${vdlm2_pidof_vdlm2_stats}\/socat\s*\$" > /dev/null; then
     echo "vdlm2_stats connected to acars_server (pid $vdlm2_pidof_vdlm2_stats): PASS"
   else
@@ -80,14 +79,14 @@ if [ -n "${ENABLE_ACARS}" ]; then
   fi
   
   # Check acars_server:
-  acars_pidof_acars_udp_server=$(ps ax | grep 'ncat -4 -u --wait 1 --listen 127.0.0.1 5550' | grep -v grep | awk '{print $1}')
+  acars_pidof_acars_udp_server=$(pgrep -f 'ncat -4 -u --wait 1 --listen 127.0.0.1 5550')
   if echo "$NETSTAT_ANP" | grep -P "^\s*udp\s+\d+\s+\d+\s+127\.0\.0\.1:5550\s+\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d{1,5}\s+ESTABLISHED\s+${acars_pidof_acars_udp_server}\/ncat\s*\$" > /dev/null; then
     echo "acars_server UDP receiving on port 5550 (pid $acars_pidof_acars_udp_server): PASS"
   else
     echo "acars_server UDP not receiving on port 5550 (pid $acars_pidof_acars_udp_server): FAIL"
     EXITCODE=1
   fi
-  acars_pidof_acars_tcp_server=$(ps ax | grep 'ncat -4 --keep-open --listen 127.0.0.1 15550' | grep -v grep | awk '{print $1}')
+  acars_pidof_acars_tcp_server=$(pgrep -f 'ncat -4 --keep-open --listen 127.0.0.1 15550')
   if echo "$NETSTAT_ANP" | grep -P "^\s*tcp\s+\d+\s+\d+\s+127\.0\.0\.1:15550\s+0\.0\.0\.0:\*\s+LISTEN\s+${acars_pidof_acars_tcp_server}\/ncat\s*\$" > /dev/null; then
     echo "acars_server TCP listening on port 15550 (pid $acars_pidof_acars_tcp_server): PASS"
   else
@@ -96,7 +95,7 @@ if [ -n "${ENABLE_ACARS}" ]; then
   fi
 
   # Check acars_feeder:
-  acars_pidof_acars_feeder=$(ps ax | grep 'socat -d TCP:127.0.0.1:15550 UDP:feed.acars.io:5550' | grep -v grep | awk '{print $1}')
+  acars_pidof_acars_feeder=$(pgrep -f 'socat -d TCP:127.0.0.1:15550 UDP:feed.acars.io:5550')
   if echo "$NETSTAT_ANP" | grep -P "^\s*udp\s+\d+\s+\d+\s+\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d{1,5}\s+\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:5550\s+ESTABLISHED\s+${acars_pidof_acars_feeder}\/socat\s*\$" > /dev/null; then
     acars_feeder_dest=$(echo "$NETSTAT_ANP" | grep -P "^\s*udp\s+\d+\s+\d+\s+\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d{1,5}\s+\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:5550\s+ESTABLISHED\s+${acars_pidof_acars_feeder}\/socat\s*\$" | awk '{print $5}')
     echo "acars_feeder sending data to $acars_feeder_dest (pid $acars_pidof_acars_feeder): PASS"
@@ -106,7 +105,7 @@ if [ -n "${ENABLE_ACARS}" ]; then
   fi
 
   # Check acars_stats:
-  acars_pidof_acars_stats=$(ps ax | grep -P 'socat -u TCP:127.0.0.1:15550 CREATE:/run/acars/acars.past5min.json' | grep -v timeout | grep -v grep | awk '{print $1}')
+  acars_pidof_acars_stats=$(pgrep -f 'socat -u TCP:127.0.0.1:15550 CREATE:/run/acars/acars.past5min.json')
   if echo "$NETSTAT_ANP" | grep -P "^\s*tcp\s+\d+\s+\d+\s+\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d{1,5}\s+127\.0\.0\.1:15550\s+ESTABLISHED\s+${acars_pidof_acars_stats}\/socat\s*\$" > /dev/null; then
     echo "acars_stats connected to acars_server (pid $acars_pidof_acars_stats): PASS"
   else
