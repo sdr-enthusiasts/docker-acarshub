@@ -582,15 +582,18 @@ if __name__ == '__main__':
 
 @socketio.on_error()
 def error_handler(e):
+    import os
     if os.getenv("DEBUG_LOGGING", default=False): print("Server error: %"% (repr(e)))
     pass
 
 @socketio.on_error('/test')
 def error_handler_chat(e):
+    import os
     if os.getenv("DEBUG_LOGGING", default=False): print("Server error: %"% (repr(e)))
     pass
 
 @socketio.on_error_default
 def default_error_handler(e):
+    import os
     if os.getenv("DEBUG_LOGGING", default=False): print("Server error: %"% (repr(e)))
     pass
