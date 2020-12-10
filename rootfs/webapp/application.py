@@ -15,7 +15,7 @@ app = Flask(__name__)
 #app.config['DEBUG'] = True
 
 #turn the flask app into a socketio app
-socketio = SocketIO(app, async_mode=None, logger=False, engineio_logger=False)
+socketio = SocketIO(app, async_mode=None, logger=False, engineio_logger=False, ping_timeout=300)
 
 #random number Generator Thread
 thread_acars = Thread()
@@ -33,7 +33,9 @@ def vdlm2Generator():
     import os
 
     DEBUG_LOGGING=False
+    EXTREME_LOGGING=False
     if os.getenv("DEBUG_LOGGING", default=False): DEBUG_LOGGING=True
+    if os.getenv("EXTREME_LOGGING", default=False): EXTREME_LOGGING=True
 
     # Define vdlm2_receiver
     vdlm2_receiver = socket.socket(
@@ -54,15 +56,15 @@ def vdlm2Generator():
     while not thread_vdlm2_stop_event.isSet():
         sys.stdout.flush()
 
-        if DEBUG_LOGGING: print("[vdlm2Generator] listening for messages to vdlm2_receiver")
+        if EXTREME_LOGGING: print("[vdlm2Generator] listening for messages to vdlm2_receiver")
 
         data = None
 
         try:
             data,addr = vdlm2_receiver.recvfrom(65527, socket.MSG_WAITALL)
-            if DEBUG_LOGGING: print("[vdlm2Generator] received data")
+            if EXTREME_LOGGING: print("[vdlm2Generator] received data")
         except socket.timeout:
-            if DEBUG_LOGGING: print("[vdlm2Generator] timeout")
+            if EXTREME_LOGGING: print("[vdlm2Generator] timeout")
             pass
 
         if data is not None:
@@ -80,7 +82,7 @@ def vdlm2Generator():
                 print("[vdlm2 data] Error with JSON input %s ."% (repr(data)))
             else:
                 # Print json (for debugging)
-                if DEBUG_LOGGING: print(json.dumps(vdlm2_json, indent=4, sort_keys=True))
+                if EXTREME_LOGGING: print(json.dumps(vdlm2_json, indent=4, sort_keys=True))
 
                 # Set up list allowing us to track what keys have been decoded
                 remaining_keys = list(vdlm2_json.keys())
@@ -285,7 +287,7 @@ def vdlm2Generator():
                 html_output += "</table>"
 
                 # Send output via socketio
-                if DEBUG_LOGGING: print("[acarsGenerator] sending output via socketio.emit")
+                if EXTREME_LOGGING: print("[acarsGenerator] sending output via socketio.emit")
                 socketio.emit('newmsg', {'msghtml': html_output}, namespace='/test')
 
                 # Remove leftover keys that we don't really care about (do we care about these?)
@@ -303,7 +305,7 @@ def vdlm2Generator():
                     print("-----")
 
         else:
-            if DEBUG_LOGGING: print("[vdlm2Generator] sending noop")
+            if EXTREME_LOGGING: print("[vdlm2Generator] sending noop")
             socketio.emit('noop', {'noop': 'noop'}, namespace='/test')
 
 
@@ -317,7 +319,9 @@ def acarsGenerator():
     import os
 
     DEBUG_LOGGING=False
+    EXTREME_LOGGING=False
     if os.getenv("DEBUG_LOGGING", default=False): DEBUG_LOGGING=True
+    if os.getenv("EXTREME_LOGGING", default=False): EXTREME_LOGGING=True
 
     # Define acars_receiver
     acars_receiver = socket.socket(
@@ -336,16 +340,16 @@ def acarsGenerator():
 
     # Run while requested...
     while not thread_acars_stop_event.isSet():
-        if DEBUG_LOGGING: print("[acarsGenerator] listening for messages to acars_receiver")
+        if EXTREME_LOGGING: print("[acarsGenerator] listening for messages to acars_receiver")
         sys.stdout.flush()
 
         data = None
 
         try:
             data,addr = acars_receiver.recvfrom(65527, socket.MSG_WAITALL)
-            if DEBUG_LOGGING: print("[acarsGenerator] received data")
+            if EXTREME_LOGGING: print("[acarsGenerator] received data")
         except socket.timeout:
-            if DEBUG_LOGGING: print("[acarsGenerator] timeout")
+            if EXTREME_LOGGING: print("[acarsGenerator] timeout")
             pass
 
         if data is not None:
@@ -354,7 +358,7 @@ def acarsGenerator():
                 print("[acars data] %s" % (repr(data)))
                 sys.stdout.flush()
 
-            if DEBUG_LOGGING: print("[acarsGenerator] received data")
+            if EXTREME_LOGGING: print("[acarsGenerator] received data")
 
             # Decode json
             try:
@@ -363,7 +367,7 @@ def acarsGenerator():
                 print("[acars data] Error with JSON input %s ."% (repr(data)))
             else:                
                 # Print json (for debugging)
-                if DEBUG_LOGGING: print(json.dumps(acars_json, indent=4, sort_keys=True))
+                if EXTREME_LOGGING: print(json.dumps(acars_json, indent=4, sort_keys=True))
 
                 # Set up list allowing us to track what keys have been decoded
                 remaining_keys = list(acars_json.keys())
@@ -526,7 +530,7 @@ def acarsGenerator():
                 html_output += "</table>"
 
                 # Send output via socketio
-                if DEBUG_LOGGING: print("[acarsGenerator] sending output via socketio.emit")
+                if EXTREME_LOGGING: print("[acarsGenerator] sending output via socketio.emit")
                 socketio.emit('newmsg', {'msghtml': html_output}, namespace='/test')
 
                 # Remove leftover keys that we don't really care about (do we care about these?)
@@ -545,7 +549,7 @@ def acarsGenerator():
                     print("-----")
 
         else:
-            if DEBUG_LOGGING: print("[acarsGenerator] sending noop")
+            if EXTREME_LOGGING: print("[acarsGenerator] sending noop")
             socketio.emit('noop', {'noop': 'noop'}, namespace='/test')
 
 @app.route('/')
@@ -575,3 +579,18 @@ def test_disconnect():
 
 if __name__ == '__main__':
     socketio.run(app, host='0.0.0.0', port=80)
+
+@socketio.on_error()
+def error_handler(e):
+    if os.getenv("DEBUG_LOGGING", default=False): print("Server error: %"% (repr(e)))
+    pass
+
+@socketio.on_error('/test')
+def error_handler_chat(e):
+    if os.getenv("DEBUG_LOGGING", default=False): print("Server error: %"% (repr(e)))
+    pass
+
+@socketio.on_error_default
+def default_error_handler(e):
+    if os.getenv("DEBUG_LOGGING", default=False): print("Server error: %"% (repr(e)))
+    pass
