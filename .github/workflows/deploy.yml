@@ -2,10 +2,10 @@ name: Deploy to Docker Hub
 
 on:
 
-  # Build and deploy the image on pushes to master branch
+  # Build and deploy the image on pushes to main branch
   push:
-    #branches: 
-    #  - master
+    branches: 
+      - main
 
   # Build and deploy the image nightly (to ensure we pick up any security updates)
   schedule:
