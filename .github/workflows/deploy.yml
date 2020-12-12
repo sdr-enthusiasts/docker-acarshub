@@ -64,8 +64,7 @@ jobs:
       # Build "latest"
       - 
         name: Build & Push - latest
-        # --push
-        run: docker buildx build --no-cache --progress plain -t "${{ env.REPO }}/${{ env.IMAGE }}:latest" --compress --platform "linux/386,linux/amd64,linux/arm/v7,linux/arm/v6,linux/arm64" .
+        run: docker buildx build --no-cache --progress plain -t "${{ env.REPO }}/${{ env.IMAGE }}:latest" --compress --push --platform "linux/386,linux/amd64,linux/arm/v7,linux/arm/v6,linux/arm64" .
 
       # Get version from "latest"
       -
@@ -77,9 +76,8 @@ jobs:
       # Build version specific
       - 
         name: Build & Push - version specific
-        # --push
         run: |
-          docker buildx build --progress plain -t "${{ env.REPO }}/${{ env.IMAGE }}:${{ env.VERSION_TAG }}" --compress --platform "linux/386,linux/amd64,linux/arm/v7,linux/arm/v6,linux/arm64" .
+          docker buildx build --progress plain -t "${{ env.REPO }}/${{ env.IMAGE }}:${{ env.VERSION_TAG }}" --compress --push --platform "linux/386,linux/amd64,linux/arm/v7,linux/arm/v6,linux/arm64" .
 
       # Patch dockerfile to remove healthcheck
       -
@@ -89,12 +87,10 @@ jobs:
       # Build "latest_nohealthcheck"
       - 
         name: Build & Push - latest nohealthcheck
-        # --push
-        run: docker buildx build -f Dockerfile.nohealthcheck --no-cache --progress plain -t "${{ env.REPO }}/${{ env.IMAGE }}:latest_nohealthcheck" --compress --platform "linux/386,linux/amd64,linux/arm/v7,linux/arm/v6,linux/arm64" .
+        run: docker buildx build -f Dockerfile.nohealthcheck --no-cache --progress plain -t "${{ env.REPO }}/${{ env.IMAGE }}:latest_nohealthcheck" --compress --push --platform "linux/386,linux/amd64,linux/arm/v7,linux/arm/v6,linux/arm64" .
 
       # Build version specific _nohealthcheck
       - 
         name: Build & Push - version specific nohealthcheck
-        # --push
         run: |
-          docker buildx build -f Dockerfile.nohealthcheck --progress plain -t "${{ env.REPO }}/${{ env.IMAGE }}:${{ env.VERSION_TAG }}_nohealthcheck" --compress --platform "linux/386,linux/amd64,linux/arm/v7,linux/arm/v6,linux/arm64" .
+          docker buildx build -f Dockerfile.nohealthcheck --progress plain -t "${{ env.REPO }}/${{ env.IMAGE }}:${{ env.VERSION_TAG }}_nohealthcheck" --compress --push --platform "linux/386,linux/amd64,linux/arm/v7,linux/arm/v6,linux/arm64" .
