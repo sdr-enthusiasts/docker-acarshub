@@ -57,7 +57,7 @@ for RTL_DEVICE_NUMBER in $RTL_DEVICES; do
     RTL_SERIAL=$(rtl_eeprom -d "$RTL_DEVICE_NUMBER" 2>&1 | grep 'Serial number:' | tr -d '\t' | tr -d ' ' | cut -d ':' -f 2)
 
     # Log a warning if we can't find the serial
-    if [[ -z "RTL_SERIAL" ]]; then
+    if [[ -z "$RTL_SERIAL" ]]; then
         log_verbose "WARNING: Could not determine serial for device $RTL_DEVICE_NUMBER. The device may be in use."
         continue
     fi
