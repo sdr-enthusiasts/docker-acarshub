@@ -17,6 +17,8 @@ ENV BRANCH_RTLSDR="ed0317e6a58c098874ac58b769cf2e609c18d9a5" \
     
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
+COPY rootfs/ /
+
 RUN set -x && \
     TEMP_PACKAGES=() && \
     KEPT_PACKAGES=() && \
@@ -114,8 +116,7 @@ RUN set -x && \
     mkdir -p /run/acars && \
     # dependencies for web interface
     python3 -m pip install --no-cache-dir \
-        Flask \
-        Flask-SocketIO \
+        -r /webapp/requirements.txt \
         && \
     # install S6 Overlay
     curl -s https://raw.githubusercontent.com/mikenye/deploy-s6-overlay/master/deploy-s6-overlay.sh | sh && \
@@ -123,8 +124,6 @@ RUN set -x && \
     apt-get remove -y ${TEMP_PACKAGES[@]} && \
     apt-get autoremove -y && \
     rm -rf /src/* /tmp/* /var/lib/apt/lists/* 
-
-COPY rootfs/ /
 
 ENTRYPOINT [ "/init" ]
 
