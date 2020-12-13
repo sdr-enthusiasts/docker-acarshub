@@ -17,6 +17,7 @@ ENV BRANCH_RTLSDR="ed0317e6a58c098874ac58b769cf2e609c18d9a5" \
     
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
+# Copy needs to be prior to any curl/wget so SSL certs from GitHub runner are loaded
 COPY rootfs/ /
 
 RUN set -x && \
