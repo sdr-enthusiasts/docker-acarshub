@@ -99,7 +99,7 @@ RUN set -x && \
     sed -i "s/char pkt\[1400\]/char pkt\[3600\]/g" output.c && \
     mkdir build && \
     pushd build && \
-    cmake .. -Drtl=ON && \
+    cmake .. -Drtl=ON -DCMAKE_C_FLAGS_DEBUG="-O0" && \
     make && \
     make install && \
     popd && popd && \
@@ -109,7 +109,7 @@ RUN set -x && \
     git checkout master && \
     mkdir build && \
     pushd build && \
-    cmake .. -Drtl=ON && \
+    cmake .. -Drtl=ON -DCMAKE_C_FLAGS_DEBUG="-O0" && \
     make && \
     make install && \
     popd && popd && \
