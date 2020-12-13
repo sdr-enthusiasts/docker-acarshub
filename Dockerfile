@@ -12,7 +12,8 @@ ENV BRANCH_RTLSDR="ed0317e6a58c098874ac58b769cf2e609c18d9a5" \
     ENABLE_ACARS="" \
     ENABLE_VDLM="" \
     GAIN="280" \
-    VERBOSE=""
+    ENABLE_WEB="true" \
+    QUIET_LOGS=""
     
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
@@ -32,10 +33,13 @@ RUN set -x && \
     TEMP_PACKAGES+=(wget) && \
     # logging
     KEPT_PACKAGES+=(gawk) && \
+    KEPT_PACKAGES+=(pv) && \
     # required for S6 overlay
+    # curl kept for healthcheck
+    # ca-certificates kept for python
     TEMP_PACKAGES+=(gnupg2) && \
     TEMP_PACKAGES+=(file) && \
-    TEMP_PACKAGES+=(curl) && \
+    KEPT_PACKAGES+=(curl) && \
     KEPT_PACKAGES+=(ca-certificates) && \
     # libusb-1.0-0 + dev - Required for rtl-sdr, libiio (bladeRF/PlutoSDR).
     KEPT_PACKAGES+=(libusb-1.0-0) && \
@@ -48,8 +52,11 @@ RUN set -x && \
     # packages for acarsserv
     TEMP_PACKAGES+=(libsqlite3-dev) && \
     KEPT_PACKAGES+=(libsqlite3-0) && \
-    # packages for web interface
+    # packages for network stuff
     KEPT_PACKAGES+=(socat) && \
+    KEPT_PACKAGES+=(ncat) && \
+    KEPT_PACKAGES+=(net-tools) && \
+    # packages for web interface
     KEPT_PACKAGES+=(python3) && \
     KEPT_PACKAGES+=(python3-pip) && \
     KEPT_PACKAGES+=(python3-setuptools) && \
@@ -89,6 +96,7 @@ RUN set -x && \
     git clone git://github.com/TLeconte/acarsdec.git /src/acarsdec && \
     pushd /src/acarsdec && \
     git checkout master && \
+    sed -i "s/char pkt\[1400\]/char pkt\[3600\]/g" output.c && \
     mkdir build && \
     pushd build && \
     cmake .. -Drtl=ON && \
@@ -109,8 +117,7 @@ RUN set -x && \
     mkdir -p /run/acars && \
     # dependencies for web interface
     python3 -m pip install --no-cache-dir \
-        Flask \
-        Flask-SocketIO \
+        -r /webapp/requirements.txt \
         && \
     # install S6 Overlay
     curl -s https://raw.githubusercontent.com/mikenye/deploy-s6-overlay/master/deploy-s6-overlay.sh | sh && \
@@ -122,3 +129,6 @@ RUN set -x && \
 ENTRYPOINT [ "/init" ]
 
 EXPOSE 80
+
+# Add healthcheck
+HEALTHCHECK --start-period=3600s --interval=600s CMD /scripts/healthcheck.sh

@@ -75,33 +75,34 @@ There are quite a few configuration options this container can accept.
 
 | Variable | Description | Required | Default |
 |----------|-------------|---------|--------|
-| GAIN     | Sets the gain for the dongle | No | 280 |
-| FEED     | Used to toggle feeding to [ACARS.io](http://acars.io). If set to any non-blank value feeding will be enabled. | No | Blank |
-| VERBOSE  | Logs all received ACARS & VDLM2 data to the container log as JSON. | No | Blank |
+| `GAIN`     | Sets the gain for the dongle | No | `280` |
+| `FEED`     | Used to toggle feeding to [ACARS.io](http://acars.io). If set to any non-blank value feeding will be enabled. | No | Blank |
+| `ENABLE_WEB`  | Enable the web server. Set to a blank value to disable the web server. | No | `true` |
+| `QUIET_LOGS` | By default the received ACARS/VDLM messages will be logged to the container's std output. To stop this, set to any non-blank value. | No | Blank |
 
 ### ACARS
 
 | Variable | Description | Required | Default |
 |----------|-------------|---------|--------|
-| ENABLE_ACARS | Toggle ACARS decoding on. If set to any non-blank value ACARS decoding will start | No | Blank |
-| STATION_ID_ACARS | Your unique ID for the ACARS feed. Used on the [ACARS.io](http://acars.io) site. Follow the guide [here](https://app.airframes.io/about) for formatting. | Yes, if ENABLE_ACARS is enabled | Blank |
-| SERIAL_ACARS | Serial or device index number for the RTLSDR dongle used for ACARS decoding. | Yes, if ENABLE_ACARS and ENABLE_VDLM is enabled | Blank |
-| FREQS_ACARS | List of frequencies, separaed by a single `;`, used for ACARS monitoring. | Yes, if ENABLE_ACARS is enabled | Blank |
+| `ENABLE_ACARS` | Toggle ACARS decoding on. If set to any non-blank value ACARS decoding will start | No | Blank |
+| `STATION_ID_ACARS` | Your unique ID for the ACARS feed. Used on the [ACARS.io](http://acars.io) site. Follow the guide [here](https://app.airframes.io/about) for formatting. | Yes, if ENABLE_ACARS is enabled | Blank |
+| `SERIAL_ACARS` | Serial of the RTLSDR dongle used for ACARS decoding. | Yes, if ENABLE_ACARS is enabled | Blank |
+| `FREQS_ACARS` | List of frequencies, separaed by a single `;`, used for ACARS monitoring. | Yes, if ENABLE_ACARS is enabled | Blank |
 
 ### VDLM2
 
 | Variable | Description | Required | Default |
 |----------|-------------|---------|--------|
-| ENABLE_VDLM | Toggle VDLM decoding on. If set to any non-blank value VDLM decoding will start | No | Blank |
-| STATION_ID_VDLM  | Your unique ID for the VDLM  feed. Used on the [ACARS.io](http://acars.io) site. Follow the guide [here](https://app.airframes.io/about) for formatting. | Yes, if ENABLE_VDLM is enabled | Blank |
-| SERIAL_VDLM  | Serial or device index number for the RTLSDR dongle used for VDLM decoding. | Yes, if ENABLE_ACARS and ENABLE_VDLM is enabled | Blank |
-| FREQS_VDLM  | List of frequencies, separaed by a single `;`, used for VDLM monitoring. | Yes, if ENABLE_VDLM is enabled | Blank |
+| `ENABLE_VDLM` | Toggle VDLM decoding on. If set to any non-blank value VDLM decoding will start | No | Blank |
+| `STATION_ID_VDLM`  | Your unique ID for the VDLM  feed. Used on the [ACARS.io](http://acars.io) site. Follow the guide [here](https://app.airframes.io/about) for formatting. | Yes, if ENABLE_VDLM is enabled | Blank |
+| `SERIAL_VDLM`  | Serial of the RTLSDR dongle used for VDLM decoding. | Yes, if ENABLE_VDLM is enabled | Blank |
+| `FREQS_VDLM`  | List of frequencies, separated by a single `;`, used for VDLM monitoring. | Yes, if ENABLE_VDLM is enabled | Blank |
 
 ## Viewing the messages
 
 The container implements a basic web interface, listening on port `80`, which will show messages as they are received.
 
-If `VERBOSE` is enabled, messages are also logged to the container log.
+If `QUIET_LOGS` is disabled, received messages are also logged to the container log.
 
 ## Which frequencies should you monitor?
 
@@ -114,7 +115,7 @@ Some notes about frequencies:
 
 ## Logging
 
-* All processes are logged to the container's stdout. If `VERBOSE` is enabled, all received messages are logged to the container log as well. General logging can be viewed with `docker logs [-f] container`.
+* All processes are logged to the container's stdout. If `QUIET_LOGS` is disabled, all received aircraft messages are logged to the container log as well. General logging can be viewed with `docker logs [-f] container`.
 
 ## Future improvements
 

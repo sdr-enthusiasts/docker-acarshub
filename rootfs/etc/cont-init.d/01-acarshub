@@ -28,4 +28,8 @@ if [ -n "${ENABLE_VDLM}" ]; then
 	fi
 fi
 
+# Ensure stats files are present
+touch /run/acars/vdlm2.past5min.json
+touch /run/acars/acars.past5min.json
+
 exit 0
