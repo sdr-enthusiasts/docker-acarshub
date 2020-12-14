@@ -78,7 +78,7 @@ RUN set -x && \
     mkdir -p /src/rtl-sdr/build && \
     pushd /src/rtl-sdr/build && \
     cmake ../ -DINSTALL_UDEV_RULES=ON -Wno-dev && \
-    make -Wstringop-truncation && \
+    make -j -Wstringop-truncation && \
     make -Wstringop-truncation install && \
     cp -v /src/rtl-sdr/rtl-sdr.rules /etc/udev/rules.d/ && \
     popd && popd && \
@@ -89,33 +89,33 @@ RUN set -x && \
     mkdir build && \
     pushd build && \
     cmake ../ && \
-    make && \
+    make -j && \
     make install && \
     popd && popd && \
     # acarsdec
     git clone git://github.com/TLeconte/acarsdec.git /src/acarsdec && \
     pushd /src/acarsdec && \
     # Adjust compiler options to make binary more portable (see issue #8)
-    sed -i "s/add_compile_options(\s*-Ofast\s*-march=native\s*)/add_compile_options(-O0)/g" CMakeLists.txt && \
+    sed -i "s/add_compile_options(\s*-Ofast\s*-march=native\s*)/add_compile_options(-O2)/g" CMakeLists.txt && \
     git checkout master && \
     # Increase buffer to allow receiving messages longer than ~1400 characters
     sed -i "s/char pkt\[1400\]/char pkt\[3600\]/g" output.c && \
     mkdir build && \
     pushd build && \
     cmake ../ -Drtl=ON && \
-    make && \
+    make -j && \
     make install && \
     popd && popd && \
     # vdlm2dec
     git clone git://github.com/TLeconte/vdlm2dec.git /src/vdlm2dec && \
     pushd /src/vdlm2dec && \
     # Adjust compiler options to make binary more portable (see issue #8)
-    sed -i "s/add_compile_options(\s*-Ofast\s*-march=native\s*)/add_compile_options(-O0)/g" CMakeLists.txt && \
+    sed -i "s/add_compile_options(\s*-Ofast\s*-march=native\s*)/add_compile_options(-O2)/g" CMakeLists.txt && \
     git checkout master && \
     mkdir build && \
     pushd build && \
     cmake ../ -Drtl=ON && \
-    make && \
+    make -j && \
     make install && \
     popd && popd && \
     # directory for logging
