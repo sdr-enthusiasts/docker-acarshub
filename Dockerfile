@@ -78,7 +78,7 @@ RUN set -x && \
     mkdir -p /src/rtl-sdr/build && \
     pushd /src/rtl-sdr/build && \
     cmake ../ -DINSTALL_UDEV_RULES=ON -Wno-dev && \
-    make -j -Wstringop-truncation && \
+    make -Wstringop-truncation && \
     make -Wstringop-truncation install && \
     cp -v /src/rtl-sdr/rtl-sdr.rules /etc/udev/rules.d/ && \
     popd && popd && \
@@ -93,7 +93,7 @@ RUN set -x && \
     make install && \
     popd && popd && \
     # acarsdec
-    git clone git@github.com:fredclausen/acarsdec.git /src/acarsdec && \
+    git clone https://github.com/fredclausen/acarsdec.git /src/acarsdec && \
     pushd /src/acarsdec && \
     git checkout master && \
     mkdir build && \
@@ -103,7 +103,7 @@ RUN set -x && \
     make install && \
     popd && popd && \
     # vdlm2dec
-    git clone git@github.com:fredclausen/vdlm2dec.git /src/vdlm2dec && \
+    git clone https://github.com/fredclausen/vdlm2dec.git /src/vdlm2dec && \
     pushd /src/vdlm2dec && \
     git checkout master && \
     mkdir build && \
