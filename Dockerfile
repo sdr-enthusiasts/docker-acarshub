@@ -88,28 +88,33 @@ RUN set -x && \
     git checkout master && \
     mkdir build && \
     pushd build && \
-    cmake ../ -DCMAKE_BUILD_TYPE=DEBUG -DCMAKE_C_FLAGS_DEBUG="-g -O0" && \
+    cmake ../ && \
     make && \
     make install && \
     popd && popd && \
     # acarsdec
     git clone git://github.com/TLeconte/acarsdec.git /src/acarsdec && \
     pushd /src/acarsdec && \
+    # Adjust compiler options to make binary more portable (see issue #8)
+    sed -i "s/add_compile_options(\s*-Ofast\s*-march=native\s*)/add_compile_options(-O0)/g" CMakeLists.txt && \
     git checkout master && \
-    # sed -i \"s/char pkt\[1400\]/char pkt\[3600\]/g\" output.c && \
+    # Increase buffer to allow receiving messages longer than ~1400 characters
+    sed -i "s/char pkt\[1400\]/char pkt\[3600\]/g" output.c && \
     mkdir build && \
     pushd build && \
-    cmake ../ -Drtl=ON -DCMAKE_BUILD_TYPE=DEBUG -DCMAKE_C_FLAGS_DEBUG="-g -O0" && \
+    cmake ../ -Drtl=ON && \
     make && \
     make install && \
     popd && popd && \
     # vdlm2dec
     git clone git://github.com/TLeconte/vdlm2dec.git /src/vdlm2dec && \
     pushd /src/vdlm2dec && \
+    # Adjust compiler options to make binary more portable (see issue #8)
+    sed -i "s/add_compile_options(\s*-Ofast\s*-march=native\s*)/add_compile_options(-O0)/g" CMakeLists.txt && \
     git checkout master && \
     mkdir build && \
     pushd build && \
-    cmake ../ -Drtl=ON -DCMAKE_BUILD_TYPE=DEBUG -DCMAKE_C_FLAGS_DEBUG="-g -O0" && \
+    cmake ../ -Drtl=ON && \
     make && \
     make install && \
     popd && popd && \
