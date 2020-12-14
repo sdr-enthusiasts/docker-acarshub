@@ -93,23 +93,22 @@ RUN set -x && \
     make install && \
     popd && popd && \
     # acarsdec
-    git clone git://github.com/TLeconte/acarsdec.git /src/acarsdec && \
+    git clone https://github.com/fredclausen/acarsdec.git /src/acarsdec && \
     pushd /src/acarsdec && \
     git checkout master && \
-    sed -i "s/char pkt\[1400\]/char pkt\[3600\]/g" output.c && \
     mkdir build && \
     pushd build && \
-    cmake .. -Drtl=ON && \
+    cmake ../ -Drtl=ON && \
     make && \
     make install && \
     popd && popd && \
     # vdlm2dec
-    git clone git://github.com/TLeconte/vdlm2dec.git /src/vdlm2dec && \
+    git clone https://github.com/fredclausen/vdlm2dec.git /src/vdlm2dec && \
     pushd /src/vdlm2dec && \
     git checkout master && \
     mkdir build && \
     pushd build && \
-    cmake .. -Drtl=ON && \
+    cmake ../ -Drtl=ON && \
     make && \
     make install && \
     popd && popd && \
