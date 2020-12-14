@@ -89,7 +89,7 @@ RUN set -x && \
     mkdir build && \
     pushd build && \
     cmake ../ && \
-    make -j && \
+    make && \
     make install && \
     popd && popd && \
     # acarsdec
@@ -103,7 +103,7 @@ RUN set -x && \
     mkdir build && \
     pushd build && \
     cmake ../ -Drtl=ON && \
-    make -j && \
+    make && \
     make install && \
     popd && popd && \
     # vdlm2dec
@@ -115,7 +115,7 @@ RUN set -x && \
     mkdir build && \
     pushd build && \
     cmake ../ -Drtl=ON && \
-    make -j && \
+    make && \
     make install && \
     popd && popd && \
     # directory for logging
