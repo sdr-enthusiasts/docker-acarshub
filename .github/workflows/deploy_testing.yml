@@ -7,7 +7,7 @@ on:
     branches: 
       - troubleshoot_segfault
 
- jobs:
+jobs:
   deploy_dockerhub:
     name: Deploy to DockerHub
     runs-on: ubuntu-latest
