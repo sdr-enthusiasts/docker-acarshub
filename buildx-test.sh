@@ -13,4 +13,4 @@ docker buildx use cluster
 
 # Build & push latest
 ./generate_local_dockerfile.sh
-docker buildx build -t "${REPO}/${IMAGE}:test" --compress --push --platform "${PLATFORMS}" ./Dockerfile.local
+docker buildx build -f Dockerfile.local -t "${REPO}/${IMAGE}:test" --compress --push --platform "${PLATFORMS}" .

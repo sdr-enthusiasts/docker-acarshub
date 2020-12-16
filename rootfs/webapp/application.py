@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 
+import eventlet
+eventlet.monkey_patch()
+
 from flask_socketio import SocketIO, emit
 from flask import Flask, render_template, url_for, copy_current_request_context
 from random import random
@@ -315,8 +318,9 @@ def vdlm2Generator():
                     print("-----")
 
         else:
-            if EXTREME_LOGGING: print("[vdlm2Generator] sending noop")
-            socketio.emit('noop', {'noop': 'noop'}, namespace='/test')
+            pass
+         #   if EXTREME_LOGGING: print("[vdlm2Generator] sending noop")
+         #   socketio.emit('noop', {'noop': 'noop'}, namespace='/test')
 
 
 def acarsGenerator():
@@ -561,8 +565,9 @@ def acarsGenerator():
                     print("-----")
 
         else:
-            if EXTREME_LOGGING: print("[acarsGenerator] sending noop")
-            socketio.emit('noop', {'noop': 'noop'}, namespace='/test')
+            pass
+        #    if EXTREME_LOGGING: print("[acarsGenerator] sending noop")
+        #    socketio.emit('noop', {'noop': 'noop'}, namespace='/test')
 
 @app.route('/')
 def index():
@@ -571,10 +576,11 @@ def index():
 
 @socketio.on('connect', namespace='/test')
 def test_connect():
+    import os
     # need visibility of the global thread object
     global thread_acars
     global thread_vdlm2
-    #print('Client connected')
+    if os.getenv("DEBUG_LOGGING", default=False): print('Client connected')
 
     #Start the acarsGenerator thread only if the thread has not been started before.
     if not thread_acars.isAlive():
