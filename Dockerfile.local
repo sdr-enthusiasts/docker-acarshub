@@ -18,7 +18,7 @@ ENV BRANCH_RTLSDR="ed0317e6a58c098874ac58b769cf2e609c18d9a5" \
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 # Copy needs to be prior to any curl/wget so SSL certs from GitHub runner are loaded
-COPY rootfs/ /
+
 
 RUN set -x && \
     TEMP_PACKAGES=() && \
@@ -96,7 +96,6 @@ RUN set -x && \
     git clone https://github.com/fredclausen/acarsdec.git /src/acarsdec && \
     pushd /src/acarsdec && \
     git checkout master && \
-    sed -i "s/char pkt\[1400\]/char pkt\[3600\]/g" output.c && \
     mkdir build && \
     pushd build && \
     cmake ../ -Drtl=ON && \
@@ -126,7 +125,9 @@ RUN set -x && \
     apt-get autoremove -y && \
     rm -rf /src/* /tmp/* /var/lib/apt/lists/* 
 
+COPY rootfs/ /
 ENTRYPOINT [ "/init" ]
+
 
 EXPOSE 80
 

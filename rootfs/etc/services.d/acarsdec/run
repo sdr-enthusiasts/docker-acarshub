@@ -22,31 +22,17 @@ if [ -n "${ENABLE_ACARS}" ]; then
 
 	if [ -n "${SERIAL_ACARS}" ]; then
 
-		# If the length of SERIAL_ACARS is greater than 1, then the user has likely put in a serial number
-		if [[ "${#SERIAL_ACARS}" -gt 1 ]]; then
+		set -e
 
-			# Resolve serial number of SDR into device ids
-			RTL_DEVICE=0
-			
-			# Get numbers of available RTL-SDR devices
-			RTL_DEVICES=$(rtl_eeprom 2>&1 | grep -P '^\s+\d+:' | tr -d ' ' | cut -d ':' -f 1)
-			
-			# Resolve each number into serial numbers
-			for RTL_DEVICE_NUMBER in $RTL_DEVICES; do
-				RTL_SERIAL=$(rtl_eeprom -d "$RTL_DEVICE_NUMBER" 2>&1 | grep 'Serial number:' | tr -d '\t' | tr -d ' ' | cut -d ':' -f 2)
-				# If the serial number given matches the serial for the device number we're looking at, then set the device number
-				if [[ ${#RTL_SERIAL} -eq ${#SERIAL_ACARS} ]]; then
-					RTL_DEVICE="$RTL_DEVICE_NUMBER"
-					echo "[acarsdec] Using RTL-SDR device number $RTL_DEVICE_NUMBER with serial number $RTL_SERIAL."
-				fi
-			done
-			ACARS_CMD+=("-r" "$RTL_DEVICE")
-
+		if [ -n "${QUIET_LOGS}" ]; then
+			DEVICE_ID="$(rtl_serial_to_deviceid.sh -s "$SERIAL_ACARS")"
 		else
-
-			ACARS_CMD+=("-r" "$SERIAL_ACARS")
-
+			DEVICE_ID="$(rtl_serial_to_deviceid.sh -v -s "$SERIAL_ACARS")"
 		fi
+
+		set +e
+
+		ACARS_CMD+=("-r" "$DEVICE_ID") 
 
 	else
 		echo "[acarsdec] No serial number set. Using device index 0. If also running VDLM decoding one of these processes will fail. To fix, set SERIAL_ACARS and SERIAL_VDLM"
