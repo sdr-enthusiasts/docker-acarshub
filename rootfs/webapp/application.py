@@ -14,8 +14,16 @@ app = Flask(__name__)
 # app.config['SECRET_KEY'] = 'secret!'
 #app.config['DEBUG'] = True
 
-#turn the flask app into a socketio app
-socketio = SocketIO(app, async_mode=None, logger=False, engineio_logger=False, ping_timeout=300)
+# turn the flask app into a socketio app
+# regarding async_handlers=True, see: https://github.com/miguelgrinberg/Flask-SocketIO/issues/348
+socketio = SocketIO(
+    app,
+    async_mode=None,
+    async_handlers=True,
+    logger=False,
+    engineio_logger=False,
+    ping_timeout=300
+    )
 
 #random number Generator Thread
 thread_acars = Thread()
@@ -25,6 +33,7 @@ thread_vdlm2_stop_event = Event()
 
 def vdlm2Generator():
 
+    import time
     import datetime
     import socket
     import json
@@ -55,6 +64,7 @@ def vdlm2Generator():
     # Run while requested...
     while not thread_vdlm2_stop_event.isSet():
         sys.stdout.flush()
+        time.sleep(0)
 
         if EXTREME_LOGGING: print("[vdlm2Generator] listening for messages to vdlm2_receiver")
 
@@ -311,6 +321,7 @@ def vdlm2Generator():
 
 def acarsGenerator():
 
+    import time
     import datetime
     import socket
     import json
@@ -342,6 +353,7 @@ def acarsGenerator():
     while not thread_acars_stop_event.isSet():
         if EXTREME_LOGGING: print("[acarsGenerator] listening for messages to acars_receiver")
         sys.stdout.flush()
+        time.sleep(0)
 
         data = None
 
