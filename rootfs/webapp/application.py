@@ -30,6 +30,7 @@ socketio = SocketIO(
     )
 
 #random number Generator Thread
+
 thread_acars = Thread()
 thread_vdlm2 = Thread()
 thread_acars_stop_event = Event()
@@ -67,7 +68,7 @@ def acars_listener():
     acars_receiver.settimeout(1)
 
     if DEBUG_LOGGING: print("[acarsGenerator] acars_receiver created")
-    
+
     # Connect to 127.0.0.1:15550 for JSON messages acarsdec
     acars_receiver.connect(('127.0.0.1', 15550))
     if DEBUG_LOGGING: print("[acarsGenerator] acars_receiver connected to 127.0.0.1:15550")
@@ -102,6 +103,7 @@ def acars_listener():
                 if EXTREME_LOGGING: print(json.dumps(acars_json, indent=4, sort_keys=True))
                 if DEBUG_LOGGING: print("[acarsGenerator] appending message")
                 que_acars.append(acars_json)
+
 
 def vdlm_listener():
     import time
@@ -413,6 +415,7 @@ def vdlm2Generator():
         else:
             pass
 
+
 def acarsGenerator():
 
     import time
@@ -463,46 +466,46 @@ def acarsGenerator():
             html_output += "<tr><td colspan=\"2\">"
 
             if "depa" in acars_json.keys():
-                    html_output += "<p>Departing: {depa}</p>".format(
-                        depa=acars_json['depa']
-                    )
-                    remaining_keys.remove('depa')
+                html_output += "<p>Departing: {depa}</p>".format(
+                    depa=acars_json['depa']
+                )
+                remaining_keys.remove('depa')
 
             if "dsta" in acars_json.keys():
-                    html_output += "<p>Destination: {dsta}</p>".format(
-                        dsta=acars_json['dsta']
-                    )
-                    remaining_keys.remove('dsta')
+                html_output += "<p>Destination: {dsta}</p>".format(
+                    dsta=acars_json['dsta']
+                )
+                remaining_keys.remove('dsta')
 
             if "eta" in acars_json.keys():
-                    html_output += "<p>Estimated time of arrival: {eta} hours</p>".format(
-                        eta=acars_json['eta']
-                    )
-                    remaining_keys.remove('eta')
+                html_output += "<p>Estimated time of arrival: {eta} hours</p>".format(
+                    eta=acars_json['eta']
+                )
+                remaining_keys.remove('eta')
 
             if "gtout" in acars_json.keys():
-                    html_output += "<p>Pushback from gate: {gtout} hours</p>".format(
-                        gtout=acars_json['gtout']
-                    )
-                    remaining_keys.remove('gtout')
+                html_output += "<p>Pushback from gate: {gtout} hours</p>".format(
+                    gtout=acars_json['gtout']
+                )
+                remaining_keys.remove('gtout')
 
             if "gtin" in acars_json.keys():
-                    html_output += "<p>Arriving at gate: {gtin} hours</p>".format(
-                        gtin=acars_json['gtin']
-                    )
-                    remaining_keys.remove('gtin')
+                html_output += "<p>Arriving at gate: {gtin} hours</p>".format(
+                    gtin=acars_json['gtin']
+                )
+                remaining_keys.remove('gtin')
 
             if "wloff" in acars_json.keys():
-                    html_output += "<p>Wheels off: {wloff} hours</p>".format(
-                        wloff=acars_json['wloff']
-                    )
-                    remaining_keys.remove('wloff')
+                html_output += "<p>Wheels off: {wloff} hours</p>".format(
+                    wloff=acars_json['wloff']
+                )
+                remaining_keys.remove('wloff')
 
             if "wlin" in acars_json.keys():
-                    html_output += "<p>Wheels down: {wlin}</p>".format(
-                        wlin=acars_json['wlin']
-                    )
-                    remaining_keys.remove('wlin')
+                html_output += "<p>Wheels down: {wlin}</p>".format(
+                    wlin=acars_json['wlin']
+                )
+                remaining_keys.remove('wlin')
 
             if "text" in acars_json.keys():
                 html_output += "<p>"
@@ -513,7 +516,7 @@ def acarsGenerator():
                 html_output += "</p>"
             else:
                 html_output += "<p><i>No text</i></p>"
-            
+
             if "libacars" in acars_json.keys():
                 html_output += "<p>Decoded:</p>"
                 html_output += "<p>"
@@ -542,7 +545,7 @@ def acarsGenerator():
                 )
                 remaining_keys.remove('flight')
             html_output += "</td>"
-            
+
             # Table footer row, metadata
             html_output += "<td style=\"text-align: right\">"
             if "freq" in acars_json.keys():
@@ -569,7 +572,7 @@ def acarsGenerator():
                     label=acars_json['label'],
                 )
                 remaining_keys.remove('label')
-            
+
             if "block_id" in acars_json.keys():
                 html_output += "B: {block_id} ".format(
                     block_id=acars_json['block_id'],
@@ -581,7 +584,7 @@ def acarsGenerator():
                     msgno=acars_json['msgno'],
                 )
                 remaining_keys.remove('msgno')
-            
+
             if "error" in acars_json.keys():
                 if acars_json['error'] != 0:
                     html_output += '<span style="color:red;">'
@@ -593,7 +596,7 @@ def acarsGenerator():
 
             html_output += "</td>"
             html_output += "</tr>"
-            
+
             # Finish table html
             html_output += "</table>"
             # Send output via socketio
@@ -618,6 +621,7 @@ def acarsGenerator():
         else:
             time.sleep(1)
 
+
 def init_listeners():
     import os
     global thread_acars_listener
@@ -637,6 +641,7 @@ def init_listeners():
 
 # Any things we want to have started up in the background
 
+
 init_listeners()
 
 
@@ -644,6 +649,7 @@ init_listeners()
 def index():
     #only by sending this page first will the client be connected to the socketio instance
     return render_template('index.html')
+
 
 @socketio.on('connect', namespace='/test')
 def test_connect():
@@ -661,26 +667,32 @@ def test_connect():
         if os.getenv("DEBUG_LOGGING", default=False):print("Starting vdlm2Generator")
         thread_vdlm2 = socketio.start_background_task(vdlm2Generator)
 
+
 @socketio.on('disconnect', namespace='/test')
 def test_disconnect():
     #print('Client disconnected')
     pass
 
+
 if __name__ == '__main__':
     socketio.run(app, host='0.0.0.0', port=80)
 
 # TODO: Properly enumerate serever errors
+
+
 @socketio.on_error()
 def error_handler(e):
     import os
     if os.getenv("DEBUG_LOGGING", default=False): print("Server error")
     pass
 
+
 @socketio.on_error('/test')
 def error_handler_chat(e):
     import os
     if os.getenv("DEBUG_LOGGING", default=False): print("Server error")
     pass
+
 
 @socketio.on_error_default
 def default_error_handler(e):
