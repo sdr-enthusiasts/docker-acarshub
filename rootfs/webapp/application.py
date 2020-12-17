@@ -99,11 +99,11 @@ def acars_listener():
             except:
                 print("[acars data] Error with JSON input %s ."% (repr(data)))
             else:
+                if EXTREME_LOGGING: print(json.dumps(acars_json, indent=4, sort_keys=True))
                 if DEBUG_LOGGING: print("[acarsGenerator] appending message")
                 que_acars.append(acars_json)
 
-def vdlm2Generator():
-
+def vdlm_listener():
     import time
     import datetime
     import socket
@@ -133,7 +133,7 @@ def vdlm2Generator():
     if DEBUG_LOGGING: print("[vdlm2Generator] vdlm2_receiver connected to 127.0.0.1:15555")
 
     # Run while requested...
-    while not thread_vdlm2_stop_event.isSet():
+    while not thread_vdlm2_listener_stop_event.isSet():
         sys.stdout.flush()
         time.sleep(0)
 
@@ -163,227 +163,252 @@ def vdlm2Generator():
                 print("[vdlm2 data] Error with JSON input %s ."% (repr(data)))
             else:
                 # Print json (for debugging)
+                if DEBUG_LOGGING: print("[vdlm2Generator] appending message")
                 if EXTREME_LOGGING: print(json.dumps(vdlm2_json, indent=4, sort_keys=True))
+                que_vdlm.append(vdlm2_json)
 
-                # Set up list allowing us to track what keys have been decoded
-                remaining_keys = list(vdlm2_json.keys())
 
-                # Prepare Table HTML
-                html_output = str()
-                html_output += "<table>"
+def vdlm2Generator():
+    import time
+    import datetime
+    import socket
+    import json
+    import pprint
+    import sys
+    import os
 
-                # Table header row, message type & from
-                html_output += "<tr>"
-                html_output += "<td>{msgtype} from {station_id}</td>".format(
-                    msgtype="VDL-M2",
-                    station_id=vdlm2_json['station_id'],
+    DEBUG_LOGGING=False
+    EXTREME_LOGGING=False
+    if os.getenv("DEBUG_LOGGING", default=False): DEBUG_LOGGING=True
+    if os.getenv("EXTREME_LOGGING", default=False): EXTREME_LOGGING=True
+
+    # Run while requested...
+    while not thread_vdlm2_listener_stop_event.isSet():
+        sys.stdout.flush()
+        time.sleep(0)
+
+        if len(que_vdlm) is not 0:
+            vdlm2_json = que_vdlm.pop()
+
+            # Set up list allowing us to track what keys have been decoded
+            remaining_keys = list(vdlm2_json.keys())
+
+            # Prepare Table HTML
+            html_output = str()
+            html_output += "<table>"
+
+            # Table header row, message type & from
+            html_output += "<tr>"
+            html_output += "<td>{msgtype} from {station_id}</td>".format(
+                msgtype="VDL-M2",
+                station_id=vdlm2_json['station_id'],
+            )
+            remaining_keys.remove('station_id')
+
+            # Table header row, timestamp
+            html_output += "<td style=\"text-align: right\">{timestamp}</td>".format(
+                timestamp=datetime.datetime.fromtimestamp(vdlm2_json['timestamp']).strftime(r'%Y-%m-%dT-%H:%M:%S:%f')
+            )
+            remaining_keys.remove('timestamp')
+            html_output += "</tr>"
+
+            # Table content
+            html_output += "<tr><td colspan=\"2\">"
+
+            if "toaddr" in vdlm2_json.keys():
+                html_output += "<p>To Address: {toaddr}</p>".format(
+                    toaddr=vdlm2_json['toaddr']
                 )
-                remaining_keys.remove('station_id')
+                remaining_keys.remove('toaddr')
 
-                # Table header row, timestamp
-                html_output += "<td style=\"text-align: right\">{timestamp}</td>".format(
-                    timestamp=datetime.datetime.fromtimestamp(vdlm2_json['timestamp']).strftime(r'%Y-%m-%dT-%H:%M:%S:%f')
+            if "fromaddr" in vdlm2_json.keys():
+                html_output += "<p>From Address: {fromaddr}</p>".format(
+                    fromaddr=vdlm2_json['fromaddr']
                 )
-                remaining_keys.remove('timestamp')
-                html_output += "</tr>"
+                remaining_keys.remove('fromaddr')
 
-                # Table content
-                html_output += "<tr><td colspan=\"2\">"
+            if "depa" in vdlm2_json.keys():
+                html_output += "<p>Departing: {depa}</p>".format(
+                    depa=vdlm2_json['depa']
+                )
+                remaining_keys.remove('depa')
 
-                if "toaddr" in vdlm2_json.keys():
-                        html_output += "<p>To Address: {toaddr}</p>".format(
-                            toaddr=vdlm2_json['toaddr']
-                        )
-                        remaining_keys.remove('toaddr')
+            if "dsta" in vdlm2_json.keys():
+                html_output += "<p>Destination: {dsta}</p>".format(
+                    dsta=vdlm2_json['dsta']
+                )
+                remaining_keys.remove('dsta')
 
-                if "fromaddr" in vdlm2_json.keys():
-                        html_output += "<p>From Address: {fromaddr}</p>".format(
-                            fromaddr=vdlm2_json['fromaddr']
-                        )
-                        remaining_keys.remove('fromaddr')
+            if "eta" in vdlm2_json.keys():
+                html_output += "<p>Estimated time of arrival: {eta} hours</p>".format(
+                    eta=vdlm2_json['eta']
+                )
+                remaining_keys.remove('eta')
 
-                if "depa" in vdlm2_json.keys():
-                        html_output += "<p>Departing: {depa}</p>".format(
-                            depa=vdlm2_json['depa']
-                        )
-                        remaining_keys.remove('depa')
+            if "gtout" in vdlm2_json.keys():
+                html_output += "<p>Pushback from gate: {gtout} hours</p>".format(
+                    gtout=vdlm2_json['gtout']
+                )
+                remaining_keys.remove('gtout')
 
-                if "dsta" in vdlm2_json.keys():
-                        html_output += "<p>Destination: {dsta}</p>".format(
-                            dsta=vdlm2_json['dsta']
-                        )
-                        remaining_keys.remove('dsta')
+            if "gtin" in vdlm2_json.keys():
+                html_output += "<p>Arriving at gate: {gtin} hours</p>".format(
+                    gtin=vdlm2_json['gtin']
+                )
+                remaining_keys.remove('gtin')
 
-                if "eta" in vdlm2_json.keys():
-                        html_output += "<p>Estimated time of arrival: {eta} hours</p>".format(
-                            eta=vdlm2_json['eta']
-                        )
-                        remaining_keys.remove('eta')
+            if "wloff" in vdlm2_json.keys():
+                html_output += "<p>Wheels off: {wloff} hours</p>".format(
+                    wloff=vdlm2_json['wloff']
+                )
+                remaining_keys.remove('wloff')
 
-                if "gtout" in vdlm2_json.keys():
-                        html_output += "<p>Pushback from gate: {gtout} hours</p>".format(
-                            gtout=vdlm2_json['gtout']
-                        )
-                        remaining_keys.remove('gtout')
+            if "wlin" in vdlm2_json.keys():
+                html_output += "<p>Wheels down: {wlin}</p>".format(
+                    wlin=vdlm2_json['wlin']
+                )
+                remaining_keys.remove('wlin')
 
-                if "gtin" in vdlm2_json.keys():
-                        html_output += "<p>Arriving at gate: {gtin} hours</p>".format(
-                            gtin=vdlm2_json['gtin']
-                        )
-                        remaining_keys.remove('gtin')
+            if "lat" in vdlm2_json.keys():
+                html_output += "<p>Latitude: {lat}</p>".format(
+                    lat=vdlm2_json['lat']
+                )
+                remaining_keys.remove('lat')
 
-                if "wloff" in vdlm2_json.keys():
-                        html_output += "<p>Wheels off: {wloff} hours</p>".format(
-                            wloff=vdlm2_json['wloff']
-                        )
-                        remaining_keys.remove('wloff')
+            if "lon" in vdlm2_json.keys():
+                html_output += "<p>Longitude: {lon}</p>".format(
+                    lon=vdlm2_json['lon']
+                )
+                remaining_keys.remove('lon')
 
-                if "wlin" in vdlm2_json.keys():
-                        html_output += "<p>Wheels down: {wlin}</p>".format(
-                            wlin=vdlm2_json['wlin']
-                        )
-                        remaining_keys.remove('wlin')
+            if "alt" in vdlm2_json.keys():
+                html_output += "<p>Altitude: {alt}</p>".format(
+                    alt=vdlm2_json['alt']
+                )
+                remaining_keys.remove('alt')
 
-                if "lat" in vdlm2_json.keys():
-                        html_output += "<p>Latitude: {lat}</p>".format(
-                            lat=vdlm2_json['lat']
-                        )
-                        remaining_keys.remove('lat')
+            if "text" in vdlm2_json.keys():
+                html_output += "<p>"
+                html_output += "<pre>{text}</pre>".format(
+                    text=vdlm2_json['text'].replace("\r\n","\n"),
+                )
+                remaining_keys.remove('text')
+                html_output += "</p>"
+            elif "data" in vdlm2_json.keys():
+                html_output += "<p>"
+                html_output += "<pre>{data}</pre>".format(
+                    data=vdlm2_json['data'].replace("\r\n","\n"),
+                )
+                remaining_keys.remove('data')
+                html_output += "</p>"
+            else:
+                html_output += "<p><i>No text</i></p>"
 
-                if "lon" in vdlm2_json.keys():
-                        html_output += "<p>Longitude: {lon}</p>".format(
-                            lon=vdlm2_json['lon']
-                        )
-                        remaining_keys.remove('lon')
+            html_output += "</td></tr>"
+            
+            # Table footer row, tail & flight info
+            html_output += "<tr>"
+            html_output += "<td>"
+            if "tail" in vdlm2_json.keys():
+                html_output += "Tail: {tail} ".format(
+                    tail=vdlm2_json['tail'],
+                )
+                remaining_keys.remove('tail')
+            if "flight" in vdlm2_json.keys():
+                html_output += "Flight: {flight} ".format(
+                    flight=vdlm2_json['flight'],
+                )
+                remaining_keys.remove('flight')
+            if "icao" in vdlm2_json.keys():
+                html_output += "ICAO: {icao} ".format(
+                    icao=vdlm2_json['icao'],
+                )
+                remaining_keys.remove('icao')
+            html_output += "</td>"
+            
+            # Table footer row, metadata
+            html_output += "<td style=\"text-align: right\">"
+            if "freq" in vdlm2_json.keys():
+                html_output += "F: {freq} ".format(
+                    freq=vdlm2_json['freq'],
+                )
+                remaining_keys.remove('freq')
 
-                if "alt" in vdlm2_json.keys():
-                        html_output += "<p>Altitude: {alt}</p>".format(
-                            alt=vdlm2_json['alt']
-                        )
-                        remaining_keys.remove('alt')
-
-                if "text" in vdlm2_json.keys():
-                    html_output += "<p>"
-                    html_output += "<pre>{text}</pre>".format(
-                        text=vdlm2_json['text'].replace("\r\n","\n"),
+            if "ack" in vdlm2_json.keys():
+                if vdlm2_json['ack'] is not False:
+                    html_output += "A: {ack} ".format(
+                        ack=vdlm2_json['ack'],
                     )
-                    remaining_keys.remove('text')
-                    html_output += "</p>"
-                elif "data" in vdlm2_json.keys():
-                    html_output += "<p>"
-                    html_output += "<pre>{data}</pre>".format(
-                        data=vdlm2_json['data'].replace("\r\n","\n"),
-                    )
-                    remaining_keys.remove('data')
-                    html_output += "</p>"
-                else:
-                    html_output += "<p><i>No text</i></p>"
+                remaining_keys.remove('ack')
 
-                html_output += "</td></tr>"
-                
-                # Table footer row, tail & flight info
-                html_output += "<tr>"
-                html_output += "<td>"
-                if "tail" in vdlm2_json.keys():
-                    html_output += "Tail: {tail} ".format(
-                        tail=vdlm2_json['tail'],
-                    )
-                    remaining_keys.remove('tail')
-                if "flight" in vdlm2_json.keys():
-                    html_output += "Flight: {flight} ".format(
-                        flight=vdlm2_json['flight'],
-                    )
-                    remaining_keys.remove('flight')
-                if "icao" in vdlm2_json.keys():
-                    html_output += "ICAO: {icao} ".format(
-                        icao=vdlm2_json['icao'],
-                    )
-                    remaining_keys.remove('icao')
-                html_output += "</td>"
-                
-                # Table footer row, metadata
-                html_output += "<td style=\"text-align: right\">"
-                if "freq" in vdlm2_json.keys():
-                    html_output += "F: {freq} ".format(
-                        freq=vdlm2_json['freq'],
-                    )
-                    remaining_keys.remove('freq')
+            if "mode" in vdlm2_json.keys():
+                html_output += "M: {mode} ".format(
+                    mode=vdlm2_json['mode'],
+                )
+                remaining_keys.remove('mode')
 
-                if "ack" in vdlm2_json.keys():
-                    if vdlm2_json['ack'] is not False:
-                        html_output += "A: {ack} ".format(
-                            ack=vdlm2_json['ack'],
-                        )
-                    remaining_keys.remove('ack')
+            if "label" in vdlm2_json.keys():
+                html_output += "L: {label} ".format(
+                    label=vdlm2_json['label'],
+                )
+                remaining_keys.remove('label')
+            
+            if "block_id" in vdlm2_json.keys():
+                html_output += "B: {block_id} ".format(
+                    block_id=vdlm2_json['block_id'],
+                )
+                remaining_keys.remove('block_id')
 
-                if "mode" in vdlm2_json.keys():
-                    html_output += "M: {mode} ".format(
-                        mode=vdlm2_json['mode'],
+            if "msgno" in vdlm2_json.keys():
+                html_output += "M#: {msgno} ".format(
+                    msgno=vdlm2_json['msgno'],
+                )
+                remaining_keys.remove('msgno')
+
+            if "is_response" in vdlm2_json.keys():
+                html_output += "R: {is_response} ".format(
+                    is_response=vdlm2_json['is_response'],
+                )
+                remaining_keys.remove('is_response')
+
+            if "is_onground" in vdlm2_json.keys():
+                html_output += "G: {is_onground} ".format(
+                    is_onground=vdlm2_json['is_onground'],
+                )
+                remaining_keys.remove('is_onground')
+            
+            if "error" in vdlm2_json.keys():
+                if vdlm2_json['error'] != 0:
+                    html_output += '<span style="color:red;">'
+                    html_output += "E: {error} ".format(
+                        error=vdlm2_json['error'],
                     )
-                    remaining_keys.remove('mode')
+                    html_output += '</span>'
+                remaining_keys.remove('error')
 
-                if "label" in vdlm2_json.keys():
-                    html_output += "L: {label} ".format(
-                        label=vdlm2_json['label'],
-                    )
-                    remaining_keys.remove('label')
-                
-                if "block_id" in vdlm2_json.keys():
-                    html_output += "B: {block_id} ".format(
-                        block_id=vdlm2_json['block_id'],
-                    )
-                    remaining_keys.remove('block_id')
+            html_output += "</td>"
+            html_output += "</tr>"
+            
+            # Finish table html
+            html_output += "</table>"
 
-                if "msgno" in vdlm2_json.keys():
-                    html_output += "M#: {msgno} ".format(
-                        msgno=vdlm2_json['msgno'],
-                    )
-                    remaining_keys.remove('msgno')
+            # Send output via socketio
+            if EXTREME_LOGGING: print("[acarsGenerator] sending output via socketio.emit")
+            socketio.emit('newmsg', {'msghtml': html_output}, namespace='/test')
 
-                if "is_response" in vdlm2_json.keys():
-                    html_output += "R: {is_response} ".format(
-                        is_response=vdlm2_json['is_response'],
-                    )
-                    remaining_keys.remove('is_response')
+            # Remove leftover keys that we don't really care about (do we care about these?)
+            if 'channel' in remaining_keys: remaining_keys.remove('channel')
+            if 'level' in remaining_keys: remaining_keys.remove('level')
+            if 'end' in remaining_keys: remaining_keys.remove('end')
 
-                if "is_onground" in vdlm2_json.keys():
-                    html_output += "G: {is_onground} ".format(
-                        is_onground=vdlm2_json['is_onground'],
-                    )
-                    remaining_keys.remove('is_onground')
-                
-                if "error" in vdlm2_json.keys():
-                    if vdlm2_json['error'] != 0:
-                        html_output += '<span style="color:red;">'
-                        html_output += "E: {error} ".format(
-                            error=vdlm2_json['error'],
-                        )
-                        html_output += '</span>'
-                    remaining_keys.remove('error')
-
-                html_output += "</td>"
-                html_output += "</tr>"
-                
-                # Finish table html
-                html_output += "</table>"
-
-                # Send output via socketio
-                if EXTREME_LOGGING: print("[acarsGenerator] sending output via socketio.emit")
-                socketio.emit('newmsg', {'msghtml': html_output}, namespace='/test')
-
-                # Remove leftover keys that we don't really care about (do we care about these?)
-                if 'channel' in remaining_keys: remaining_keys.remove('channel')
-                if 'level' in remaining_keys: remaining_keys.remove('level')
-                if 'end' in remaining_keys: remaining_keys.remove('end')
-
-                if len(remaining_keys) > 0:
-                    print("")
-                    print("Non decoded data exists:")
-                    print(repr(remaining_keys))
-                    print("")
-                    print(json.dumps(vdlm2_json, indent=4, sort_keys=True))
-                    print("")
-                    print("-----")
+            if len(remaining_keys) > 0:
+                print("")
+                print("Non decoded data exists:")
+                print(repr(remaining_keys))
+                print("")
+                print(json.dumps(vdlm2_json, indent=4, sort_keys=True))
+                print("")
+                print("-----")
 
         else:
             pass
@@ -408,7 +433,7 @@ def acarsGenerator():
         sys.stdout.flush()
         time.sleep(0)
 
-        if len(que_acars) is not 0:           
+        if len(que_acars) is not 0:
             # Print json (for debugging)
             acars_json = que_acars.pop()
 
@@ -596,6 +621,7 @@ def acarsGenerator():
 def init_listeners():
     import os
     global thread_acars_listener
+    global thread_vdlm2_listener
 
     if os.getenv("DEBUG_LOGGING", default=False): print('Starting data listeners')
 
@@ -603,6 +629,11 @@ def init_listeners():
         if os.getenv("DEBUG_LOGGING", default=False): print('Starting ACARS listener')
         thread_acars_listener = Thread(target=acars_listener)
         thread_acars_listener.start()
+
+    if not thread_vdlm2_listener.isAlive() and os.getenv("ENABLE_VDLM"):
+        if os.getenv("DEBUG_LOGGING", default=False): print('Starting VDLM listener')
+        thread_vdlm2_listener = Thread(target=vdlm_listener)
+        thread_vdlm2_listener.start()
 
 # Any things we want to have started up in the background
 
