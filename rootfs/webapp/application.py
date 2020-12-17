@@ -8,6 +8,7 @@ from flask import Flask, render_template, url_for, copy_current_request_context
 from random import random
 from time import sleep
 from threading import Thread, Event
+from collections import deque
 
 import logging
 log = logging.getLogger('werkzeug')
@@ -33,6 +34,73 @@ thread_acars = Thread()
 thread_vdlm2 = Thread()
 thread_acars_stop_event = Event()
 thread_vdlm2_stop_event = Event()
+
+thread_acars_listener = Thread()
+thread_vdlm2_listener = Thread()
+thread_acars_listener_stop_event = Event()
+thread_vdlm2_listener_stop_event = Event()
+
+que_acars = deque(maxlen=5)
+que_vdlm = deque(maxlen=5)
+
+def acars_listener():
+    import time
+    import datetime
+    import socket
+    import json
+    import pprint
+    import sys
+    import os
+
+    DEBUG_LOGGING=False
+    EXTREME_LOGGING=False
+    if os.getenv("DEBUG_LOGGING", default=False): DEBUG_LOGGING=True
+    if os.getenv("EXTREME_LOGGING", default=False): EXTREME_LOGGING=True
+
+    # Define acars_receiver
+    acars_receiver = socket.socket(
+        family=socket.AF_INET,
+        type=socket.SOCK_STREAM,
+    )
+
+    # Set socket timeout 1 seconds
+    acars_receiver.settimeout(1)
+
+    if DEBUG_LOGGING: print("[acarsGenerator] acars_receiver created")
+    
+    # Connect to 127.0.0.1:15550 for JSON messages acarsdec
+    acars_receiver.connect(('127.0.0.1', 15550))
+    if DEBUG_LOGGING: print("[acarsGenerator] acars_receiver connected to 127.0.0.1:15550")
+
+    while not thread_acars_listener_stop_event.isSet():
+        if EXTREME_LOGGING: print("[acarsGenerator] listening for messages to acars_receiver")
+        sys.stdout.flush()
+        time.sleep(0)
+
+        data = None
+
+        try:
+            data,addr = acars_receiver.recvfrom(65527, socket.MSG_WAITALL)
+            if EXTREME_LOGGING: print("[acarsGenerator] received data")
+        except socket.timeout:
+            if EXTREME_LOGGING: print("[acarsGenerator] timeout")
+            pass
+
+        if data is not None:
+            if os.getenv("DEBUG_LOGGING", default=None):
+                print("[acars data] %s" % (repr(data)))
+                sys.stdout.flush()
+
+            if EXTREME_LOGGING: print("[acarsGenerator] received data")
+
+            # Decode json
+            try:
+                acars_json = json.loads(data)
+            except:
+                print("[acars data] Error with JSON input %s ."% (repr(data)))
+            else:
+                if DEBUG_LOGGING: print("[acarsGenerator] appending message")
+                que_acars.append(acars_json)
 
 def vdlm2Generator():
 
@@ -319,9 +387,6 @@ def vdlm2Generator():
 
         else:
             pass
-         #   if EXTREME_LOGGING: print("[vdlm2Generator] sending noop")
-         #   socketio.emit('noop', {'noop': 'noop'}, namespace='/test')
-
 
 def acarsGenerator():
 
@@ -338,236 +403,211 @@ def acarsGenerator():
     if os.getenv("DEBUG_LOGGING", default=False): DEBUG_LOGGING=True
     if os.getenv("EXTREME_LOGGING", default=False): EXTREME_LOGGING=True
 
-    # Define acars_receiver
-    acars_receiver = socket.socket(
-        family=socket.AF_INET,
-        type=socket.SOCK_STREAM,
-    )
-
-    # Set socket timeout 1 seconds
-    acars_receiver.settimeout(1)
-
-    if DEBUG_LOGGING: print("[acarsGenerator] acars_receiver created")
-    
-    # Connect to 127.0.0.1:15550 for JSON messages acarsdec
-    acars_receiver.connect(('127.0.0.1', 15550))
-    if DEBUG_LOGGING: print("[acarsGenerator] acars_receiver connected to 127.0.0.1:15550")
-
     # Run while requested...
     while not thread_acars_stop_event.isSet():
-        if EXTREME_LOGGING: print("[acarsGenerator] listening for messages to acars_receiver")
         sys.stdout.flush()
         time.sleep(0)
 
-        data = None
+        if len(que_acars) is not 0:           
+            # Print json (for debugging)
+            acars_json = que_acars.pop()
 
-        try:
-            data,addr = acars_receiver.recvfrom(65527, socket.MSG_WAITALL)
-            if EXTREME_LOGGING: print("[acarsGenerator] received data")
-        except socket.timeout:
-            if EXTREME_LOGGING: print("[acarsGenerator] timeout")
-            pass
+            # Set up list allowing us to track what keys have been decoded
+            remaining_keys = list(acars_json.keys())
 
-        if data is not None:
+            # Prepare Table HTML
+            html_output = str()
+            html_output += "<table>"
 
-            if os.getenv("DEBUG_LOGGING", default=None):
-                print("[acars data] %s" % (repr(data)))
-                sys.stdout.flush()
+            # Table header row, message type & from
+            html_output += "<tr>"
+            html_output += "<td>{msgtype} from {station_id}</td>".format(
+                msgtype="ACARS",
+                station_id=acars_json['station_id'],
+            )
+            remaining_keys.remove('station_id')
 
-            if EXTREME_LOGGING: print("[acarsGenerator] received data")
+            # Table header row, timestamp
+            html_output += "<td style=\"text-align: right\">{timestamp}</td>".format(
+                timestamp=datetime.datetime.fromtimestamp(acars_json['timestamp']).strftime(r'%Y-%m-%dT-%H:%M:%S:%f')
+            )
+            remaining_keys.remove('timestamp')
+            html_output += "</tr>"
 
-            # Decode json
-            try:
-                acars_json = json.loads(data)
-            except:
-                print("[acars data] Error with JSON input %s ."% (repr(data)))
-            else:                
-                # Print json (for debugging)
-                if EXTREME_LOGGING: print(json.dumps(acars_json, indent=4, sort_keys=True))
+            # Table content
+            html_output += "<tr><td colspan=\"2\">"
 
-                # Set up list allowing us to track what keys have been decoded
-                remaining_keys = list(acars_json.keys())
+            if "depa" in acars_json.keys():
+                    html_output += "<p>Departing: {depa}</p>".format(
+                        depa=acars_json['depa']
+                    )
+                    remaining_keys.remove('depa')
 
-                # Prepare Table HTML
-                html_output = str()
-                html_output += "<table>"
+            if "dsta" in acars_json.keys():
+                    html_output += "<p>Destination: {dsta}</p>".format(
+                        dsta=acars_json['dsta']
+                    )
+                    remaining_keys.remove('dsta')
 
-                # Table header row, message type & from
-                html_output += "<tr>"
-                html_output += "<td>{msgtype} from {station_id}</td>".format(
-                    msgtype="ACARS",
-                    station_id=acars_json['station_id'],
+            if "eta" in acars_json.keys():
+                    html_output += "<p>Estimated time of arrival: {eta} hours</p>".format(
+                        eta=acars_json['eta']
+                    )
+                    remaining_keys.remove('eta')
+
+            if "gtout" in acars_json.keys():
+                    html_output += "<p>Pushback from gate: {gtout} hours</p>".format(
+                        gtout=acars_json['gtout']
+                    )
+                    remaining_keys.remove('gtout')
+
+            if "gtin" in acars_json.keys():
+                    html_output += "<p>Arriving at gate: {gtin} hours</p>".format(
+                        gtin=acars_json['gtin']
+                    )
+                    remaining_keys.remove('gtin')
+
+            if "wloff" in acars_json.keys():
+                    html_output += "<p>Wheels off: {wloff} hours</p>".format(
+                        wloff=acars_json['wloff']
+                    )
+                    remaining_keys.remove('wloff')
+
+            if "wlin" in acars_json.keys():
+                    html_output += "<p>Wheels down: {wlin}</p>".format(
+                        wlin=acars_json['wlin']
+                    )
+                    remaining_keys.remove('wlin')
+
+            if "text" in acars_json.keys():
+                html_output += "<p>"
+                html_output += "<pre>{text}</pre>".format(
+                    text=acars_json['text'].replace("\r\n","\n"),
                 )
-                remaining_keys.remove('station_id')
-
-                # Table header row, timestamp
-                html_output += "<td style=\"text-align: right\">{timestamp}</td>".format(
-                    timestamp=datetime.datetime.fromtimestamp(acars_json['timestamp']).strftime(r'%Y-%m-%dT-%H:%M:%S:%f')
+                remaining_keys.remove('text')
+                html_output += "</p>"
+            else:
+                html_output += "<p><i>No text</i></p>"
+            
+            if "libacars" in acars_json.keys():
+                html_output += "<p>Decoded:</p>"
+                html_output += "<p>"
+                html_output += "<pre>{libacars}</pre>".format(
+                    libacars=pprint.pformat(
+                        acars_json['libacars'],
+                        indent=2,
+                    )
                 )
-                remaining_keys.remove('timestamp')
-                html_output += "</tr>"
+                remaining_keys.remove('libacars')
+                html_output += "</p>"
 
-                # Table content
-                html_output += "<tr><td colspan=\"2\">"
+            html_output += "</td></tr>"
 
-                if "depa" in acars_json.keys():
-                        html_output += "<p>Departing: {depa}</p>".format(
-                            depa=acars_json['depa']
-                        )
-                        remaining_keys.remove('depa')
+            # Table footer row, tail & flight info
+            html_output += "<tr>"
+            html_output += "<td>"
+            if "tail" in acars_json.keys():
+                html_output += "Tail: {tail} ".format(
+                    tail=acars_json['tail'],
+                )
+                remaining_keys.remove('tail')
+            if "flight" in acars_json.keys():
+                html_output += "Flight: {flight} ".format(
+                    flight=acars_json['flight'],
+                )
+                remaining_keys.remove('flight')
+            html_output += "</td>"
+            
+            # Table footer row, metadata
+            html_output += "<td style=\"text-align: right\">"
+            if "freq" in acars_json.keys():
+                html_output += "F: {freq} ".format(
+                    freq=acars_json['freq'],
+                )
+                remaining_keys.remove('freq')
 
-                if "dsta" in acars_json.keys():
-                        html_output += "<p>Destination: {dsta}</p>".format(
-                            dsta=acars_json['dsta']
-                        )
-                        remaining_keys.remove('dsta')
-
-                if "eta" in acars_json.keys():
-                        html_output += "<p>Estimated time of arrival: {eta} hours</p>".format(
-                            eta=acars_json['eta']
-                        )
-                        remaining_keys.remove('eta')
-
-                if "gtout" in acars_json.keys():
-                        html_output += "<p>Pushback from gate: {gtout} hours</p>".format(
-                            gtout=acars_json['gtout']
-                        )
-                        remaining_keys.remove('gtout')
-
-                if "gtin" in acars_json.keys():
-                        html_output += "<p>Arriving at gate: {gtin} hours</p>".format(
-                            gtin=acars_json['gtin']
-                        )
-                        remaining_keys.remove('gtin')
-
-                if "wloff" in acars_json.keys():
-                        html_output += "<p>Wheels off: {wloff} hours</p>".format(
-                            wloff=acars_json['wloff']
-                        )
-                        remaining_keys.remove('wloff')
-
-                if "wlin" in acars_json.keys():
-                        html_output += "<p>Wheels down: {wlin}</p>".format(
-                            wlin=acars_json['wlin']
-                        )
-                        remaining_keys.remove('wlin')
-
-                if "text" in acars_json.keys():
-                    html_output += "<p>"
-                    html_output += "<pre>{text}</pre>".format(
-                        text=acars_json['text'].replace("\r\n","\n"),
+            if "ack" in acars_json.keys():
+                if acars_json['ack'] is not False:
+                    html_output += "A: {ack} ".format(
+                        ack=acars_json['ack'],
                     )
-                    remaining_keys.remove('text')
-                    html_output += "</p>"
-                else:
-                    html_output += "<p><i>No text</i></p>"
-                
-                if "libacars" in acars_json.keys():
-                    html_output += "<p>Decoded:</p>"
-                    html_output += "<p>"
-                    html_output += "<pre>{libacars}</pre>".format(
-                        libacars=pprint.pformat(
-                            acars_json['libacars'],
-                            indent=2,
-                        )
+                remaining_keys.remove('ack')
+
+            if "mode" in acars_json.keys():
+                html_output += "M: {mode} ".format(
+                    mode=acars_json['mode'],
+                )
+                remaining_keys.remove('mode')
+
+            if "label" in acars_json.keys():
+                html_output += "L: {label} ".format(
+                    label=acars_json['label'],
+                )
+                remaining_keys.remove('label')
+            
+            if "block_id" in acars_json.keys():
+                html_output += "B: {block_id} ".format(
+                    block_id=acars_json['block_id'],
+                )
+                remaining_keys.remove('block_id')
+
+            if "msgno" in acars_json.keys():
+                html_output += "M#: {msgno} ".format(
+                    msgno=acars_json['msgno'],
+                )
+                remaining_keys.remove('msgno')
+            
+            if "error" in acars_json.keys():
+                if acars_json['error'] != 0:
+                    html_output += '<span style="color:red;">'
+                    html_output += "E: {error} ".format(
+                        error=acars_json['error'],
                     )
-                    remaining_keys.remove('libacars')
-                    html_output += "</p>"
+                    html_output += '</span>'
+                remaining_keys.remove('error')
 
-                html_output += "</td></tr>"
+            html_output += "</td>"
+            html_output += "</tr>"
+            
+            # Finish table html
+            html_output += "</table>"
+            # Send output via socketio
+            if EXTREME_LOGGING: print("[acarsGenerator] sending output via socketio.emit")
+            socketio.emit('newmsg', {'msghtml': html_output}, namespace='/test')
 
-                # Table footer row, tail & flight info
-                html_output += "<tr>"
-                html_output += "<td>"
-                if "tail" in acars_json.keys():
-                    html_output += "Tail: {tail} ".format(
-                        tail=acars_json['tail'],
-                    )
-                    remaining_keys.remove('tail')
-                if "flight" in acars_json.keys():
-                    html_output += "Flight: {flight} ".format(
-                        flight=acars_json['flight'],
-                    )
-                    remaining_keys.remove('flight')
-                html_output += "</td>"
-                
-                # Table footer row, metadata
-                html_output += "<td style=\"text-align: right\">"
-                if "freq" in acars_json.keys():
-                    html_output += "F: {freq} ".format(
-                        freq=acars_json['freq'],
-                    )
-                    remaining_keys.remove('freq')
+            # Remove leftover keys that we don't really care about (do we care about these?)
+            if 'channel' in remaining_keys: remaining_keys.remove('channel')
+            if 'level' in remaining_keys: remaining_keys.remove('level')
+            if 'end' in remaining_keys: remaining_keys.remove('end')
 
-                if "ack" in acars_json.keys():
-                    if acars_json['ack'] is not False:
-                        html_output += "A: {ack} ".format(
-                            ack=acars_json['ack'],
-                        )
-                    remaining_keys.remove('ack')
-
-                if "mode" in acars_json.keys():
-                    html_output += "M: {mode} ".format(
-                        mode=acars_json['mode'],
-                    )
-                    remaining_keys.remove('mode')
-
-                if "label" in acars_json.keys():
-                    html_output += "L: {label} ".format(
-                        label=acars_json['label'],
-                    )
-                    remaining_keys.remove('label')
-                
-                if "block_id" in acars_json.keys():
-                    html_output += "B: {block_id} ".format(
-                        block_id=acars_json['block_id'],
-                    )
-                    remaining_keys.remove('block_id')
-
-                if "msgno" in acars_json.keys():
-                    html_output += "M#: {msgno} ".format(
-                        msgno=acars_json['msgno'],
-                    )
-                    remaining_keys.remove('msgno')
-                
-                if "error" in acars_json.keys():
-                    if acars_json['error'] != 0:
-                        html_output += '<span style="color:red;">'
-                        html_output += "E: {error} ".format(
-                            error=acars_json['error'],
-                        )
-                        html_output += '</span>'
-                    remaining_keys.remove('error')
-
-                html_output += "</td>"
-                html_output += "</tr>"
-                
-                # Finish table html
-                html_output += "</table>"
-
-                # Send output via socketio
-                if EXTREME_LOGGING: print("[acarsGenerator] sending output via socketio.emit")
-                socketio.emit('newmsg', {'msghtml': html_output}, namespace='/test')
-
-                # Remove leftover keys that we don't really care about (do we care about these?)
-                if 'channel' in remaining_keys: remaining_keys.remove('channel')
-                if 'level' in remaining_keys: remaining_keys.remove('level')
-                if 'end' in remaining_keys: remaining_keys.remove('end')
-
-                # Check to see if any data remains, if so, send some debugging output
-                if len(remaining_keys) > 0:
-                    print("")
-                    print("Non decoded data exists:")
-                    print(repr(remaining_keys))
-                    print("")
-                    print(json.dumps(acars_json, indent=4, sort_keys=True))
-                    print("")
-                    print("-----")
+            # Check to see if any data remains, if so, send some debugging output
+            if len(remaining_keys) > 0:
+                print("")
+                print("Non decoded data exists:")
+                print(repr(remaining_keys))
+                print("")
+                print(json.dumps(acars_json, indent=4, sort_keys=True))
+                print("")
+                print("-----")
 
         else:
-            pass
-        #    if EXTREME_LOGGING: print("[acarsGenerator] sending noop")
-        #    socketio.emit('noop', {'noop': 'noop'}, namespace='/test')
+            time.sleep(1)
+
+def init_listeners():
+    import os
+    global thread_acars_listener
+
+    if os.getenv("DEBUG_LOGGING", default=False): print('Starting data listeners')
+
+    if not thread_acars_listener.isAlive() and os.getenv("ENABLE_ACARS"):
+        if os.getenv("DEBUG_LOGGING", default=False): print('Starting ACARS listener')
+        thread_acars_listener = Thread(target=acars_listener)
+        thread_acars_listener.start()
+
+# Any things we want to have started up in the background
+
+init_listeners()
+
 
 @app.route('/')
 def index():
@@ -583,11 +623,11 @@ def test_connect():
     if os.getenv("DEBUG_LOGGING", default=False): print('Client connected')
 
     #Start the acarsGenerator thread only if the thread has not been started before.
-    if not thread_acars.isAlive():
-        #print("Starting acarsGenerator")
+    if not thread_acars.isAlive() and os.getenv("ENABLE_ACARS", default=False):
+        if os.getenv("DEBUG_LOGGING", default=False):print("Starting acarsGenerator")
         thread_acars = socketio.start_background_task(acarsGenerator)
-    if not thread_vdlm2.isAlive():
-        #print("Starting vdlm2Generator")
+    if not thread_vdlm2.isAlive() and os.getenv("ENABLE_VDLM", default=False):
+        if os.getenv("DEBUG_LOGGING", default=False):print("Starting vdlm2Generator")
         thread_vdlm2 = socketio.start_background_task(vdlm2Generator)
 
 @socketio.on('disconnect', namespace='/test')
@@ -598,20 +638,21 @@ def test_disconnect():
 if __name__ == '__main__':
     socketio.run(app, host='0.0.0.0', port=80)
 
+# TODO: Properly enumerate serever errors
 @socketio.on_error()
 def error_handler(e):
     import os
-    if os.getenv("DEBUG_LOGGING", default=False): print("Server error: %"% (repr(e)))
+    if os.getenv("DEBUG_LOGGING", default=False): print("Server error")
     pass
 
 @socketio.on_error('/test')
 def error_handler_chat(e):
     import os
-    if os.getenv("DEBUG_LOGGING", default=False): print("Server error: %"% (repr(e)))
+    if os.getenv("DEBUG_LOGGING", default=False): print("Server error")
     pass
 
 @socketio.on_error_default
 def default_error_handler(e):
     import os
-    if os.getenv("DEBUG_LOGGING", default=False): print("Server error: %"% (repr(e)))
+    if os.getenv("DEBUG_LOGGING", default=False): print("Server error")
     pass
