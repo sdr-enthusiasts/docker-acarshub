@@ -9,6 +9,7 @@ from random import random
 from time import sleep
 from threading import Thread, Event
 from collections import deque
+from sqlalchemy import create_engine
 
 import logging
 log = logging.getLogger('werkzeug')
@@ -40,6 +41,13 @@ thread_acars_listener = Thread()
 thread_vdlm2_listener = Thread()
 thread_acars_listener_stop_event = Event()
 thread_vdlm2_listener_stop_event = Event()
+
+database = ""
+
+# maxlen is to keep the que from becoming ginormous
+# the messages will be in the que all the time, even if no one is using the website
+# old messages will automatically be removed
+# the nice thing is once a web page is loaded message should auto-populate
 
 que_acars = deque(maxlen=5)
 que_vdlm = deque(maxlen=5)
@@ -626,16 +634,20 @@ def init_listeners():
     import os
     global thread_acars_listener
     global thread_vdlm2_listener
+    global database
 
-    if os.getenv("DEBUG_LOGGING", default=False): print('Starting data listeners')
+    if os.getenv("DEBUG_LOGGING", default=False): print('[init] Connecting to database')
+    database = create_engine('sqlite:////run/acars/messages.db')
+
+    if os.getenv("DEBUG_LOGGING", default=False): print('[init] Starting data listeners')
 
     if not thread_acars_listener.isAlive() and os.getenv("ENABLE_ACARS"):
-        if os.getenv("DEBUG_LOGGING", default=False): print('Starting ACARS listener')
+        if os.getenv("DEBUG_LOGGING", default=False): print('[init] Starting ACARS listener')
         thread_acars_listener = Thread(target=acars_listener)
         thread_acars_listener.start()
 
     if not thread_vdlm2_listener.isAlive() and os.getenv("ENABLE_VDLM"):
-        if os.getenv("DEBUG_LOGGING", default=False): print('Starting VDLM listener')
+        if os.getenv("DEBUG_LOGGING", default=False): print('[init] Starting VDLM listener')
         thread_vdlm2_listener = Thread(target=vdlm_listener)
         thread_vdlm2_listener.start()
 
