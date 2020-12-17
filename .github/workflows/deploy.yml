@@ -79,6 +79,11 @@ jobs:
         name: Get latest image version
         run: |
           echo "VERSION_TAG=${GITHUB_SHA:1:7}" >> $GITHUB_ENV
+
+      # Show version from "latest"
+      -
+        name: Show latest image version
+        run: |
           echo "${{ env.REPO }}/${{ env.IMAGE }}:latest contains version: ${{ env.VERSION_TAG }}"
 
       # Build version specific
