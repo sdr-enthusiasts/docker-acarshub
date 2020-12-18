@@ -1,14 +1,30 @@
 #!/usr/bin/env python3
 
-from sqlalchemy import Column, String, Integer, Date, Numeric
+from datetime import datetime
+from sqlalchemy import create_engine, Column, Numeric, Integer, String, DateTime, \
+     ForeignKey, event, Text
+from sqlalchemy.orm import scoped_session, sessionmaker, backref, relation
+from sqlalchemy.ext.declarative import declarative_base
 
-class messages(Base):
+database = create_engine('sqlite:////Users/fred/messages.db')
+db_session = scoped_session(sessionmaker(autocommit=False,
+                                         autoflush=False,
+                                         bind=database))
+
+def init_db():
+    Messages.metadata.create_all(bind=database)
+
+
+Messages = declarative_base(name='Messages')
+Messages.query = db_session.query_property()
+
+class messages(Messages):
     __tablename__ = 'messages'
     id=Column(Integer, primary_key=True)
     # ACARS or VDLM
     type=Column('type', String(32))
     # message time
-    time=Column('time', Numeric)
+    message_time=Column('message_time', Numeric)
     station_id=Column('station_id', String(32))
     toaddr=Column('toaddr', String(32))
     fromaddr=Column('fromaddr', String(32))
@@ -22,7 +38,7 @@ class messages(Base):
     lat=Column('lat', Numeric)
     lon=Column('lon', Numeric)
     alt=Column('alt', Numeric)
-    text=Column('text', String(2500))
+    text=Column('text', Text)
     tail=Column('tail', String(32))
     flight=Column('flight', String(32))
     icao=Column('icao', String(32))
@@ -35,4 +51,10 @@ class messages(Base):
     is_response=Column('is_response', String(32))
     is_onground=Column('is_onground', String(32))
     error=Column('error', String(32))
-    
+
+
+def add_message(message):
+    db_session.add(message)
+    db_session.commit()
+
+init_db()

@@ -9,15 +9,21 @@ from random import random
 from time import sleep
 from threading import Thread, Event
 from collections import deque
-from sqlalchemy import create_engine
+from acarshub_db import messages
 
 import logging
+import os
 log = logging.getLogger('werkzeug')
 log.setLevel(logging.ERROR)
 
 app = Flask(__name__)
 # app.config['SECRET_KEY'] = 'secret!'
 #app.config['DEBUG'] = True
+
+# load up the database
+
+if os.getenv("DEBUG_LOGGING", default=False): print('[init] Connecting to database')
+import acarshub_db
 
 # turn the flask app into a socketio app
 # regarding async_handlers=True, see: https://github.com/miguelgrinberg/Flask-SocketIO/issues/348
@@ -42,8 +48,6 @@ thread_vdlm2_listener = Thread()
 thread_acars_listener_stop_event = Event()
 thread_vdlm2_listener_stop_event = Event()
 
-database = ""
-
 # maxlen is to keep the que from becoming ginormous
 # the messages will be in the que all the time, even if no one is using the website
 # old messages will automatically be removed
@@ -60,6 +64,7 @@ def acars_listener():
     import pprint
     import sys
     import os
+    from acarshub_db import messages
 
     DEBUG_LOGGING=False
     EXTREME_LOGGING=False
@@ -121,6 +126,7 @@ def vdlm_listener():
     import pprint
     import sys
     import os
+    from acarshub_db import messages
 
     DEBUG_LOGGING=False
     EXTREME_LOGGING=False
@@ -635,9 +641,6 @@ def init_listeners():
     global thread_acars_listener
     global thread_vdlm2_listener
     global database
-
-    if os.getenv("DEBUG_LOGGING", default=False): print('[init] Connecting to database')
-    database = create_engine('sqlite:////run/acars/messages.db')
 
     if os.getenv("DEBUG_LOGGING", default=False): print('[init] Starting data listeners')
 
