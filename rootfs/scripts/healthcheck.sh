@@ -142,4 +142,17 @@ if [ -n "${ENABLE_ACARS}" ] || [ -n "${ENABLE_VDLM}" ]; then
 
 fi
 
+# Check service death tally
+SERVICES=($(find /run/s6/services -maxdepth 1 -type d -not -name "*s6-*" | tail +2))
+for service in "${SERVICES[@]}"; do
+  SVDT=$(s6-svdt "$service" | grep -cv 'exitcode 0')
+  if [[ "$SVDT" -gt 0 ]]; then
+    echo "abnormal death tally for $(basename "$service") since last check is: $SVDT: FAIL"
+    EXITCODE=1
+  else
+    echo "abnormal death tally for $(basename "$service") since last check is: $SVDT: PASS"
+  fi
+  s6-svdt-clear "$service"
+done
+
 exit "$EXITCODE"
