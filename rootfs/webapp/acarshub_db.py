@@ -53,7 +53,6 @@ class messages(Messages):
 
 def add_message_from_json(message_type, message_from_json):
     print("starting db add")
-    message_type=message_type
     # message time
     time=None
     station_id=None
