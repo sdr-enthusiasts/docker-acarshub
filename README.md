@@ -1,5 +1,11 @@
 # docker-acarshub
 
+[![Build](https://github.com/fredclausen/docker-acarshub/workflows/Deploy%20to%20Docker%20Hub/badge.svg)](https://github.com/fredclausen/docker-acarshub/actions?query=workflow%3A%22Deploy+to+Docker+Hub%22)
+
+[![Docker Pulls](https://img.shields.io/docker/pulls/fredclausen/acarshub.svg)](https://hub.docker.com/r/fredclausen/acarshub)
+
+[![Docker Image Size (tag)](https://img.shields.io/docker/image-size/fredclausen/acarshub/latest)](https://hub.docker.com/r/fredclausen/acarshub)
+
 Docker container to view and also stream ACARS messages to [ACARS.io/Airframes.io](http://acars.io). Uses [libacars](https://github.com/szpajder/libacars), [acarsdec](https://github.com/TLeconte/acarsdec) and [vdlm2dec](https://github.com/TLeconte/vdlm2dec). Builds and runs on `arm64` and `arm32v7`. A container is provided for, but not tested, `amd64`, `arm32v6` (see below).
 
 ## Supported tags and respective Dockerfiles
