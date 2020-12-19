@@ -24,7 +24,7 @@ if [ -n "${ENABLE_ACARS}" ]; then
 
     # Start the feed - take JSON messages from TCP port 15550 and send them to feed.acars.io UDP port 5550
     # shellcheck disable=SC2016
-    socat -d TCP:127.0.0.1:15550 UDP-SEND:feed.acars.io:5550 \
+    socat -d TCP:127.0.0.1:15550 UDP:feed.acars.io:5550 \
       2>&1 | stdbuf -o0 awk '{print "[acars_feeder] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
 
   else

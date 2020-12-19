@@ -24,7 +24,7 @@ if [ -n "${ENABLE_VDLM}" ]; then
 
     # Start the feed - take JSON messages from TCP port 15555 and send them to feed.acars.io UDP port 5555
     # shellcheck disable=SC2016
-    socat -d TCP:127.0.0.1:15555 UDP-SEND:feed.acars.io:5555 \
+    socat -d TCP:127.0.0.1:15555 UDP:feed.acars.io:5555 \
       2>&1 | stdbuf -o0 awk '{print "[vdlm2_feeder] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
 
   else
