@@ -9,7 +9,6 @@ from random import random
 from time import sleep
 from threading import Thread, Event
 from collections import deque
-from acarshub_db import messages
 
 import logging
 import os
@@ -23,7 +22,6 @@ app = Flask(__name__)
 # load up the database
 
 if os.getenv("DEBUG_LOGGING", default=False): print('[init] Connecting to database')
-import acarshub_db
 
 # turn the flask app into a socketio app
 # regarding async_handlers=True, see: https://github.com/miguelgrinberg/Flask-SocketIO/issues/348
@@ -38,15 +36,24 @@ socketio = SocketIO(
 
 #random number Generator Thread
 
+# threads for processing the incoming data
+
 thread_acars = Thread()
 thread_vdlm2 = Thread()
 thread_acars_stop_event = Event()
 thread_vdlm2_stop_event = Event()
 
+# web thread
+
 thread_acars_listener = Thread()
 thread_vdlm2_listener = Thread()
 thread_acars_listener_stop_event = Event()
 thread_vdlm2_listener_stop_event = Event()
+
+# db thread
+
+thread_database = Thread()
+thread_database_stop_event = Event()
 
 # maxlen is to keep the que from becoming ginormous
 # the messages will be in the que all the time, even if no one is using the website
@@ -55,6 +62,20 @@ thread_vdlm2_listener_stop_event = Event()
 
 que_acars = deque(maxlen=5)
 que_vdlm = deque(maxlen=5)
+que_database = deque(maxlen=5)
+
+def database_listener():
+    import acarshub_db
+
+    while not thread_database_stop_event.isSet():
+        sys.stdout.flush()
+        time.sleep(0)
+
+        if len(que_database) is not 0:
+            sys.stdout.flush()
+            acarshub_db.add_message_from_json("test", que_database.pop())
+        else:
+            pass
 
 def acars_listener():
     import time
@@ -64,7 +85,6 @@ def acars_listener():
     import pprint
     import sys
     import os
-    from acarshub_db import messages
 
     DEBUG_LOGGING=False
     EXTREME_LOGGING=False
@@ -89,7 +109,7 @@ def acars_listener():
     while not thread_acars_listener_stop_event.isSet():
         if EXTREME_LOGGING: print("[acarsGenerator] listening for messages to acars_receiver")
         sys.stdout.flush()
-        time.sleep(0)
+        time.sleep(1)
 
         data = None
 
@@ -116,6 +136,8 @@ def acars_listener():
                 if EXTREME_LOGGING: print(json.dumps(acars_json, indent=4, sort_keys=True))
                 if DEBUG_LOGGING: print("[acarsGenerator] appending message")
                 que_acars.append(acars_json)
+                if DEBUG_LOGGING: print("[acarsGenerator] sending off to db")
+                que_database.append(acars_json)
 
 
 def vdlm_listener():
@@ -126,7 +148,6 @@ def vdlm_listener():
     import pprint
     import sys
     import os
-    from acarshub_db import messages
 
     DEBUG_LOGGING=False
     EXTREME_LOGGING=False
@@ -182,6 +203,8 @@ def vdlm_listener():
                 if DEBUG_LOGGING: print("[vdlm2Generator] appending message")
                 if EXTREME_LOGGING: print(json.dumps(vdlm2_json, indent=4, sort_keys=True))
                 que_vdlm.append(vdlm2_json)
+                if DEBUG_LOGGING: print("[vdlm2Generator] sending off to db")
+                que_database.append(vdlm2_json)
 
 
 def vdlm2Generator():
@@ -201,7 +224,7 @@ def vdlm2Generator():
     # Run while requested...
     while not thread_vdlm2_listener_stop_event.isSet():
         sys.stdout.flush()
-        time.sleep(0)
+        time.sleep(1)
 
         if len(que_vdlm) is not 0:
             vdlm2_json = que_vdlm.pop()
@@ -448,7 +471,7 @@ def acarsGenerator():
     # Run while requested...
     while not thread_acars_stop_event.isSet():
         sys.stdout.flush()
-        time.sleep(0)
+        time.sleep(1)
 
         if len(que_acars) is not 0:
             # Print json (for debugging)
@@ -640,7 +663,7 @@ def init_listeners():
     import os
     global thread_acars_listener
     global thread_vdlm2_listener
-    global database
+    global thread_database
 
     if os.getenv("DEBUG_LOGGING", default=False): print('[init] Starting data listeners')
 
@@ -653,6 +676,10 @@ def init_listeners():
         if os.getenv("DEBUG_LOGGING", default=False): print('[init] Starting VDLM listener')
         thread_vdlm2_listener = Thread(target=vdlm_listener)
         thread_vdlm2_listener.start()
+    if not thread_database.isAlive():
+        if os.getenv("DEBUG_LOGGING", default=False): print('[init] Starting Database Thread')
+        thread_database = Thread(target=database_listener)
+        thread_database.start()
 
 # Any things we want to have started up in the background
 
@@ -672,6 +699,7 @@ def test_connect():
     # need visibility of the global thread object
     global thread_acars
     global thread_vdlm2
+
     if os.getenv("DEBUG_LOGGING", default=False): print('Client connected')
 
     #Start the acarsGenerator thread only if the thread has not been started before.
