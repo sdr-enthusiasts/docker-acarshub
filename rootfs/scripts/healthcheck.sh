@@ -35,17 +35,18 @@ if [ -n "${ENABLE_VDLM}" ]; then
     EXITCODE=1
   fi
 
-  if [ -n "$FEED" ]; then
-    # Check vdlm2_feeder:
-    vdlm2_pidof_vdlm2_feeder=$(pgrep -f 'socat -d TCP:127.0.0.1:15555 UDP:feed.acars.io:5555')
-    if echo "$NETSTAT_ANP" | grep -P "^\s*udp\s+\d+\s+\d+\s+\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d{1,5}\s+\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:5555\s+ESTABLISHED\s+${vdlm2_pidof_vdlm2_feeder}\/socat\s*\$" > /dev/null; then
-      vdlm2_feeder_dest=$(echo "$NETSTAT_ANP" | grep -P "^\s*udp\s+\d+\s+\d+\s+\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d{1,5}\s+\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:5555\s+ESTABLISHED\s+${vdlm2_pidof_vdlm2_feeder}\/socat\s*\$" | awk '{print $5}')
-      echo "vdlm2_feeder sending data to $vdlm2_feeder_dest (pid $vdlm2_pidof_vdlm2_feeder): PASS"
-    else
-      echo "vdlm2_feeder TCP not sending data (pid $vdlm2_pidof_vdlm2_feeder): FAIL"
-      EXITCODE=1
-    fi
-  fi
+  # Below is commented out after changing vdlm2_feeder from UDP to UDP-SEND
+  # if [ -n "$FEED" ]; then
+  #   # Check vdlm2_feeder:
+  #   vdlm2_pidof_vdlm2_feeder=$(pgrep -f 'socat -d TCP:127.0.0.1:15555 UDP:feed.acars.io:5555')
+  #   if echo "$NETSTAT_ANP" | grep -P "^\s*udp\s+\d+\s+\d+\s+\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d{1,5}\s+\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:5555\s+ESTABLISHED\s+${vdlm2_pidof_vdlm2_feeder}\/socat\s*\$" > /dev/null; then
+  #     vdlm2_feeder_dest=$(echo "$NETSTAT_ANP" | grep -P "^\s*udp\s+\d+\s+\d+\s+\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d{1,5}\s+\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:5555\s+ESTABLISHED\s+${vdlm2_pidof_vdlm2_feeder}\/socat\s*\$" | awk '{print $5}')
+  #     echo "vdlm2_feeder sending data to $vdlm2_feeder_dest (pid $vdlm2_pidof_vdlm2_feeder): PASS"
+  #   else
+  #     echo "vdlm2_feeder TCP not sending data (pid $vdlm2_pidof_vdlm2_feeder): FAIL"
+  #     EXITCODE=1
+  #   fi
+  # fi
 
   # Check vdlm2_stats:
   vdlm2_pidof_vdlm2_stats=$(pgrep -fx 'socat -u TCP:127.0.0.1:15555 CREATE:/run/acars/vdlm2.past5min.json')
@@ -96,17 +97,18 @@ if [ -n "${ENABLE_ACARS}" ]; then
     EXITCODE=1
   fi
 
-  if [ -n "$FEED" ]; then
-    # Check acars_feeder:
-    acars_pidof_acars_feeder=$(pgrep -f 'socat -d TCP:127.0.0.1:15550 UDP:feed.acars.io:5550')
-    if echo "$NETSTAT_ANP" | grep -P "^\s*udp\s+\d+\s+\d+\s+\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d{1,5}\s+\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:5550\s+ESTABLISHED\s+${acars_pidof_acars_feeder}\/socat\s*\$" > /dev/null; then
-      acars_feeder_dest=$(echo "$NETSTAT_ANP" | grep -P "^\s*udp\s+\d+\s+\d+\s+\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d{1,5}\s+\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:5550\s+ESTABLISHED\s+${acars_pidof_acars_feeder}\/socat\s*\$" | awk '{print $5}')
-      echo "acars_feeder sending data to $acars_feeder_dest (pid $acars_pidof_acars_feeder): PASS"
-    else
-      echo "acars_server TCP not sending data (pid $acars_pidof_acars_feeder): FAIL"
-      EXITCODE=1
-    fi
-  fi
+  # Below is commented out after changing acars_feeder from UDP to UDP-SEND
+  # if [ -n "$FEED" ]; then
+  #   # Check acars_feeder:
+  #   acars_pidof_acars_feeder=$(pgrep -f 'socat -d TCP:127.0.0.1:15550 UDP:feed.acars.io:5550')
+  #   if echo "$NETSTAT_ANP" | grep -P "^\s*udp\s+\d+\s+\d+\s+\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d{1,5}\s+\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:5550\s+ESTABLISHED\s+${acars_pidof_acars_feeder}\/socat\s*\$" > /dev/null; then
+  #     acars_feeder_dest=$(echo "$NETSTAT_ANP" | grep -P "^\s*udp\s+\d+\s+\d+\s+\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d{1,5}\s+\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:5550\s+ESTABLISHED\s+${acars_pidof_acars_feeder}\/socat\s*\$" | awk '{print $5}')
+  #     echo "acars_feeder sending data to $acars_feeder_dest (pid $acars_pidof_acars_feeder): PASS"
+  #   else
+  #     echo "acars_server TCP not sending data (pid $acars_pidof_acars_feeder): FAIL"
+  #     EXITCODE=1
+  #   fi
+  # fi
 
   # Check acars_stats:
   acars_pidof_acars_stats=$(pgrep -fx 'socat -u TCP:127.0.0.1:15550 CREATE:/run/acars/acars.past5min.json')
