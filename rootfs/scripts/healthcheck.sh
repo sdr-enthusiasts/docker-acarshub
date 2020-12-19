@@ -143,7 +143,7 @@ if [ -n "${ENABLE_ACARS}" ] || [ -n "${ENABLE_VDLM}" ]; then
 fi
 
 # Check service death tally
-SERVICES=($(find /run/s6/services -maxdepth 1 -type d -not -name "*s6-*" | tail +2))
+mapfile -t SERVICES < <(find /run/s6/services -maxdepth 1 -type d -not -name "*s6-*" | tail +2)
 for service in "${SERVICES[@]}"; do
   SVDT=$(s6-svdt "$service" | grep -cv 'exitcode 0')
   if [[ "$SVDT" -gt 0 ]]; then
