@@ -106,6 +106,7 @@ def add_message_from_json(message_type, message_from_json):
         elif index == 'lon': lon = message_from_json[index]
         elif index == 'alt': alt = message_from_json[index]
         elif index == 'text': text = message_from_json[index]
+        elif index == 'data': text = message_from_json[index]
         elif index == 'tail': tail = message_from_json[index]
         elif index == 'flight': flight = message_from_json[index]
         elif index == 'icao': icao = message_from_json[index]
