@@ -9,9 +9,7 @@
 # 3 leading slashes required, the fourth is for unix path starting from root
 
 import socket
-import select
 import time
-from threading import Event
 
 spammer_event = Event()
 message='{"timestamp":1608428171.426852,"station_id":"CS-KABQ-ACARS","channel":0,"freq":130.025,"level":-22,"error":0,"mode":"2","label":"81","block_id":"4","ack":false,"tail":"N332FR","flight":"F91275","msgno":"M58A","text":"DISPHAHAHA"}\n'
