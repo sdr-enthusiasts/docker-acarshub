@@ -61,7 +61,6 @@ class messages(Messages):
 
 def add_message_from_json(message_type, message_from_json):
     global database
-    print(message_from_json)
     # message time
     time=None
     station_id=None
@@ -120,8 +119,6 @@ def add_message_from_json(message_type, message_from_json):
         if index == 'is_response': is_response = message_from_json[index]
         if index == 'is_onground': is_onground = message_from_json[index]
         if index == 'error': error = message_from_json[index]
-
-    print("adding db")
 
     # create a session for this thread to write
     session = db_session()
