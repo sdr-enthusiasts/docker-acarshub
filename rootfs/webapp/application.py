@@ -72,7 +72,7 @@ def database_listener():
 
     while not thread_database_stop_event.isSet():
         sys.stdout.flush()
-        time.sleep(0)
+        time.sleep(1)
 
         if len(que_database) is not 0:
             if DEBUG_LOGGING: print("[databaseListener] Dispatching message to database")

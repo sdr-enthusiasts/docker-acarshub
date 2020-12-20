@@ -92,32 +92,39 @@ def add_message_from_json(message_type, message_from_json):
 
     for index in message_from_json:
         if index == 'timestamp': time = message_from_json[index]
-        if index == 'station_id': station_id = message_from_json[index]
-        if index == 'toaddr': toaddr = message_from_json[index]
-        if index == 'fromaddr': fromaddr = message_from_json[index]
-        if index == 'depa': depa = message_from_json[index]
-        if index == 'dsta': dsta = message_from_json[index]
-        if index == 'eta': eta = message_from_json[index]
-        if index == 'gtout': gtout = message_from_json[index]
-        if index == 'gtin': gtin = message_from_json[index]
-        if index == 'wloff': wloff = message_from_json[index]
-        if index == 'wlin': wlin = message_from_json[index]
-        if index == 'lat': lat = message_from_json[index]
-        if index == 'lon': lon = message_from_json[index]
-        if index == 'alt': alt = message_from_json[index]
-        if index == 'text': text = message_from_json[index]
-        if index == 'tail': tail = message_from_json[index]
-        if index == 'flight': flight = message_from_json[index]
-        if index == 'icao': icao = message_from_json[index]
-        if index == 'freq': freq = message_from_json[index]
-        if index == 'ack': ack = message_from_json[index]
-        if index == 'mode': mode = message_from_json[index]
-        if index == 'label': label = message_from_json[index]
-        if index == 'block_id': block_id = message_from_json[index]
-        if index == 'msgno': msgno = message_from_json[index]
-        if index == 'is_response': is_response = message_from_json[index]
-        if index == 'is_onground': is_onground = message_from_json[index]
-        if index == 'error': error = message_from_json[index]
+        elif index == 'station_id': station_id = message_from_json[index]
+        elif index == 'toaddr': toaddr = message_from_json[index]
+        elif index == 'fromaddr': fromaddr = message_from_json[index]
+        elif index == 'depa': depa = message_from_json[index]
+        elif index == 'dsta': dsta = message_from_json[index]
+        elif index == 'eta': eta = message_from_json[index]
+        elif index == 'gtout': gtout = message_from_json[index]
+        elif index == 'gtin': gtin = message_from_json[index]
+        elif index == 'wloff': wloff = message_from_json[index]
+        elif index == 'wlin': wlin = message_from_json[index]
+        elif index == 'lat': lat = message_from_json[index]
+        elif index == 'lon': lon = message_from_json[index]
+        elif index == 'alt': alt = message_from_json[index]
+        elif index == 'text': text = message_from_json[index]
+        elif index == 'tail': tail = message_from_json[index]
+        elif index == 'flight': flight = message_from_json[index]
+        elif index == 'icao': icao = message_from_json[index]
+        elif index == 'freq': freq = message_from_json[index]
+        elif index == 'ack': ack = message_from_json[index]
+        elif index == 'mode': mode = message_from_json[index]
+        elif index == 'label': label = message_from_json[index]
+        elif index == 'block_id': block_id = message_from_json[index]
+        elif index == 'msgno': msgno = message_from_json[index]
+        elif index == 'is_response': is_response = message_from_json[index]
+        elif index == 'is_onground': is_onground = message_from_json[index]
+        elif index == 'error': error = message_from_json[index]
+        # skip these
+        elif index == 'channel': pass
+        elif index == 'level': pass
+        elif index == 'end': pass
+        # We have a key that we aren't saving the database. Log it
+        else:
+            print(f"[database] Unidenitied key: {index}")
 
     # create a session for this thread to write
     session = db_session()
