@@ -61,7 +61,7 @@ No exposed ports are necessary to run the container. However, the built in webse
 
 ## Volumes
 
-No volumes are needed to run the container.
+No volumes are needed to run the container. However, this container does log messages to a database. If you wish to persist this database between container restarts, mount a volume to `/run/acars/`.
 
 ## Environment variables
 
