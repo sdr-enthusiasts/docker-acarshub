@@ -302,7 +302,6 @@ def htmlGenerator():
                 print("")
                 print("-----")
         else:
-            print("passing")
             pass
 
 def database_listener():
