@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+## TODO: slow listener thread loops down to conserve CPU
+
 import eventlet
 eventlet.monkey_patch()
 
@@ -9,7 +11,7 @@ from random import random
 from time import sleep
 from threading import Thread, Event
 from collections import deque
-
+import acarshub_db
 import logging
 import os
 log = logging.getLogger('werkzeug')
@@ -18,10 +20,6 @@ log.setLevel(logging.ERROR)
 app = Flask(__name__)
 # app.config['SECRET_KEY'] = 'secret!'
 #app.config['DEBUG'] = True
-
-# load up the database
-
-if os.getenv("DEBUG_LOGGING", default=False): print('[init] Connecting to database')
 
 # turn the flask app into a socketio app
 # regarding async_handlers=True, see: https://github.com/miguelgrinberg/Flask-SocketIO/issues/348
@@ -65,15 +63,24 @@ que_vdlm = deque(maxlen=5)
 que_database = deque(maxlen=5)
 
 def database_listener():
-    import acarshub_db
+    import sys
+    import os
+    import time
+
+    DEBUG_LOGGING=False
+    if os.getenv("DEBUG_LOGGING", default=False): DEBUG_LOGGING=True
 
     while not thread_database_stop_event.isSet():
         sys.stdout.flush()
         time.sleep(0)
 
         if len(que_database) is not 0:
+            if DEBUG_LOGGING: print("[databaseListener] Dispatching message to database")
             sys.stdout.flush()
-            acarshub_db.add_message_from_json("test", que_database.pop())
+            t, m = que_database.pop()
+            print("popped")
+            acarshub_db.add_message_from_json(message_type=t, message_from_json=m)
+            print("done")
         else:
             pass
 
@@ -90,6 +97,7 @@ def acars_listener():
     EXTREME_LOGGING=False
     if os.getenv("DEBUG_LOGGING", default=False): DEBUG_LOGGING=True
     if os.getenv("EXTREME_LOGGING", default=False): EXTREME_LOGGING=True
+    if os.getenv("SPAM", default=False): SPAM=True
 
     # Define acars_receiver
     acars_receiver = socket.socket(
@@ -126,7 +134,6 @@ def acars_listener():
                 sys.stdout.flush()
 
             if EXTREME_LOGGING: print("[acarsGenerator] received data")
-
             # Decode json
             try:
                 acars_json = json.loads(data)
@@ -137,7 +144,7 @@ def acars_listener():
                 if DEBUG_LOGGING: print("[acarsGenerator] appending message")
                 que_acars.append(acars_json)
                 if DEBUG_LOGGING: print("[acarsGenerator] sending off to db")
-                que_database.append(acars_json)
+                que_database.append(("ACARS", acars_json))
 
 
 def vdlm_listener():
@@ -153,6 +160,7 @@ def vdlm_listener():
     EXTREME_LOGGING=False
     if os.getenv("DEBUG_LOGGING", default=False): DEBUG_LOGGING=True
     if os.getenv("EXTREME_LOGGING", default=False): EXTREME_LOGGING=True
+    if os.getenv("SPAM", default=False): SPAM=True
 
     # Define vdlm2_receiver
     vdlm2_receiver = socket.socket(
@@ -204,7 +212,7 @@ def vdlm_listener():
                 if EXTREME_LOGGING: print(json.dumps(vdlm2_json, indent=4, sort_keys=True))
                 que_vdlm.append(vdlm2_json)
                 if DEBUG_LOGGING: print("[vdlm2Generator] sending off to db")
-                que_database.append(vdlm2_json)
+                que_database.append(("VDLM2", vdlm2_json))
 
 
 def vdlm2Generator():
@@ -661,6 +669,8 @@ def acarsGenerator():
 
 def init_listeners():
     import os
+    import json
+    import time
     global thread_acars_listener
     global thread_vdlm2_listener
     global thread_database

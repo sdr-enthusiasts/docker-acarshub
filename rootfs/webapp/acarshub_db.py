@@ -1,21 +1,29 @@
 #!/usr/bin/env python3
 
+## TODO:
+# 1) Prune old entries (maybe in the add_message_from_json method to keep scheduling simple?)
+# 2) Query the db method. Will need to figure out thread safe/scoped sessions/sessions so the webapp can call when needed
+
 from datetime import datetime
 from sqlalchemy import create_engine, Column, Numeric, Integer, String, DateTime, \
      ForeignKey, event, Text
 from sqlalchemy.orm import scoped_session, sessionmaker, backref, relation
 from sqlalchemy.ext.declarative import declarative_base
 import json
+import sys
+import os
 
-database = create_engine('sqlite:////run/acars/messages.db')
-db_session = scoped_session(sessionmaker(bind=database))
+if os.getenv("ACARS_DB"):
+    db_path=os.getenv("ACARS_DB")
+else:
+    db_path='sqlite:////run/acars/messages.db'
 
-def init_db():
-    Messages.metadata.create_all(bind=database)
 
 
-Messages = declarative_base(name='Messages')
-Messages.query = db_session.query_property()
+database = create_engine(db_path)
+db_session = sessionmaker(bind=database)
+Messages = declarative_base()
+Messages.metadata.create_all(database)
 
 class messages(Messages):
     __tablename__ = 'messages'
@@ -52,7 +60,8 @@ class messages(Messages):
     error=Column('error', String(32))
 
 def add_message_from_json(message_type, message_from_json):
-    print("starting db add")
+    global database
+    print(message_from_json)
     # message time
     time=None
     station_id=None
@@ -83,7 +92,8 @@ def add_message_from_json(message_type, message_from_json):
     error=None
 
     for index in message_from_json:
-        if index == 'time': time = message_from_json[index]
+        print(index)
+        if index == 'timestamp': time = message_from_json[index]
         if index == 'station_id': station_id = message_from_json[index]
         if index == 'toaddr': toaddr = message_from_json[index]
         if index == 'fromaddr': fromaddr = message_from_json[index]
@@ -113,11 +123,14 @@ def add_message_from_json(message_type, message_from_json):
 
     print("adding db")
 
-    db_session.add(messages(message_type=message_type, time=time, station_id=station_id, toaddr=toaddr,
+    # create a session for this thread to write
+    session = db_session()
+    # write the message
+    session.add(messages(message_type=message_type, time=time, station_id=station_id, toaddr=toaddr,
        fromaddr=fromaddr, depa=depa, dsta=dsta, eta=eta, gtout=gtout, gtin=gtin,
        wloff=wloff, wlin=wlin, lat=lat, lon=lon, alt=alt, text=text, tail=tail,
        flight=flight, icao=icao, freq=freq, ack=ack, mode=mode, label=label, block_id=block_id,
        msgno=msgno, is_response=is_response, is_onground=is_onground, error=error))
-    db_session.commit()
-
-init_db()
+    # commit the db change and close the session
+    session.commit()
+    session.close()
