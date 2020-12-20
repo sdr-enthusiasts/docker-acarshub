@@ -78,9 +78,7 @@ def database_listener():
             if DEBUG_LOGGING: print("[databaseListener] Dispatching message to database")
             sys.stdout.flush()
             t, m = que_database.pop()
-            print("popped")
             acarshub_db.add_message_from_json(message_type=t, message_from_json=m)
-            print("done")
         else:
             pass
 

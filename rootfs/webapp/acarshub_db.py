@@ -91,7 +91,6 @@ def add_message_from_json(message_type, message_from_json):
     error=None
 
     for index in message_from_json:
-        print(index)
         if index == 'timestamp': time = message_from_json[index]
         if index == 'station_id': station_id = message_from_json[index]
         if index == 'toaddr': toaddr = message_from_json[index]
