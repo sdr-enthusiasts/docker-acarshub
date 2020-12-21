@@ -66,6 +66,8 @@ def htmlGenerator():
     import sys
     import os
 
+    # TOOLTIPS: <span class="wrapper">visible text<span class="tooltip">tooltip text</span></span>
+
     DEBUG_LOGGING=False
     EXTREME_LOGGING=False
     if os.getenv("DEBUG_LOGGING", default=False): DEBUG_LOGGING=True
@@ -84,7 +86,7 @@ def htmlGenerator():
 
             # Prepare Table HTML
             html_output = str()
-            html_output += "<table>"
+            html_output += "<table id=\"shadow\">"
 
             # Table header row, message type & from
             html_output += "<tr>"
@@ -178,14 +180,14 @@ def htmlGenerator():
 
             if "text" in json_message.keys():
                 html_output += "<p>"
-                html_output += "<pre>{text}</pre>".format(
+                html_output += "<pre id=\"shadow\">{text}</pre>".format(
                     text=json_message['text'].replace("\r\n","\n"),
                 )
                 remaining_keys.remove('text')
                 html_output += "</p>"
             elif "data" in json_message.keys():
                 html_output += "<p>"
-                html_output += "<pre>{data}</pre>".format(
+                html_output += "<pre id=\"shadow\">{data}</pre>".format(
                     data=json_message['data'].replace("\r\n","\n"),
                 )
                 remaining_keys.remove('data')
@@ -196,7 +198,7 @@ def htmlGenerator():
             if "libacars" in json_message.keys():
                     html_output += "<p>Decoded:</p>"
                     html_output += "<p>"
-                    html_output += "<pre>{libacars}</pre>".format(
+                    html_output += "<pre id=\"shadow\">{libacars}</pre>".format(
                         libacars=pprint.pformat(
                             json_message['libacars'],
                             indent=2,
@@ -216,9 +218,10 @@ def htmlGenerator():
                 )
                 remaining_keys.remove('tail')
             if "flight" in json_message.keys():
-                html_output += "Flight: <a href=\"https://flightaware.com/live/flight/{flight}\" target=\"_blank\">{flight}</a> ".format(
-                    flight=acarshub_db.find_airline_code_from_iata(json_message['flight'][:2]) + json_message['flight'][2:],
-                )
+                icao, airline = acarshub_db.find_airline_code_from_iata(json_message['flight'][:2])
+                flight_number = json_message['flight'][2:]
+                flight = icao + flight_number
+                html_output += f"Flight: <span class=\"wrapper\"><a href=\"https://flightaware.com/live/flight/{flight}\" target=\"_blank\">{flight}</a><span class=\"tooltip\">{airline} Flight {flight_number}</span></span> "
                 remaining_keys.remove('flight')
             if "icao" in json_message.keys():
                 html_output += "ICAO: {icao} ".format(
@@ -517,6 +520,16 @@ init_listeners()
 def index():
     #only by sending this page first will the client be connected to the socketio instance
     return render_template('index.html')
+
+
+@app.route('/stats')
+def stats():
+    return render_template('stats.html')
+
+
+@app.route('/search')
+def search():
+    return render_template('search.html')
 
 
 @socketio.on('connect', namespace='/test')

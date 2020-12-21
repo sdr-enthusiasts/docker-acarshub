@@ -176,7 +176,7 @@ def find_airline_code_from_iata(iata):
     session.close()
     if result is not None:
         if os.getenv("DEBUG_LOGGING", default=False): print(f"[database] IATA code {iata} converted to {result.ICAO}")
-        return result.ICAO
+        return (result.ICAO, result.NAME)
     else:
         if os.getenv("DEBUG_LOGGING", default=False): print("[database] IATA code not found")
-        return iata
+        return (iata, "Unknown Airline")
