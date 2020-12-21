@@ -508,8 +508,8 @@ def test_connect():
     #Start the htmlGenerator thread only if the thread has not been started before.
     if not thread_html_generator.isAlive():
         if os.getenv("DEBUG_LOGGING", default=False):print("Starting htmlGenerator")
-        sys.stdout.flush()
-        thread_html_generator = socketio.start_background_task(htmlGenerator)
+            sys.stdout.flush()
+            thread_html_generator = socketio.start_background_task(htmlGenerator)
 
 @socketio.on('disconnect', namespace='/test')
 def test_disconnect():
