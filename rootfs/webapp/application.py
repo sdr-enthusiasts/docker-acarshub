@@ -96,7 +96,7 @@ def htmlGenerator():
 
             # Table header row, timestamp
             html_output += "<td style=\"text-align: right\">{timestamp}</td>".format(
-                timestamp=datetime.datetime.fromtimestamp(json_message['timestamp']).strftime(r'%Y-%m-%dT-%H:%M:%S:%f')
+                timestamp=datetime.datetime.fromtimestamp(json_message['timestamp']).strftime(r'%Y-%m-%d T: %H:%M:%S')
             )
             remaining_keys.remove('timestamp')
             html_output += "</tr>"
@@ -199,12 +199,12 @@ def htmlGenerator():
             html_output += "<tr>"
             html_output += "<td>"
             if "tail" in json_message.keys():
-                html_output += "Tail: {tail} ".format(
+                html_output += "Tail: <a href=\"https://flightaware.com/live/flight/{tail}\" target=\"_blank\">{tail}</a> ".format(
                     tail=json_message['tail'],
                 )
                 remaining_keys.remove('tail')
             if "flight" in json_message.keys():
-                html_output += "Flight: {flight} ".format(
+                html_output += "Flight: <a href=\"https://flightaware.com/live/flight/{flight}\" target=\"_blank\">{flight}</a> ".format(
                     flight=json_message['flight'],
                 )
                 remaining_keys.remove('flight')

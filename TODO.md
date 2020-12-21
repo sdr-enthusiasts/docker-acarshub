@@ -7,3 +7,4 @@ TODO:
 * Stat generator / display on website
 * Maybe tar1090 side by side display w/ messages?
 * Flightaware link for flight
+* Move generator and listener functions in to own module so that application.py passes tasks off
