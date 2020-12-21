@@ -169,4 +169,7 @@ def find_airline_code_from_iata(iata):
     session = airlines_db_session()
     result = session.query(airlines).filter(airlines.IATA == iata).one_or_none()
     session.close()
-    return result.ICAO
+    if result is not None:
+        return result.ICAO
+    else:
+        return iata
