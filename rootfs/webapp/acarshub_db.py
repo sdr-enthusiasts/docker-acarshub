@@ -19,6 +19,11 @@ db_session = sessionmaker(bind=database)
 Messages = declarative_base()
 Messages.metadata.create_all(database)
 
+airlines_database = create_engine('sqlite:///data/airlines.db')
+airlines_db_session = sessionmaker(bind=airlines_database)
+Airlines = declarative_base()
+Airlines.metadata.create_all(airlines_database)
+
 class messages(Messages):
     __tablename__ = 'messages'
     id=Column(Integer, primary_key=True)
@@ -52,6 +57,13 @@ class messages(Messages):
     is_response=Column('is_response', String(32))
     is_onground=Column('is_onground', String(32))
     error=Column('error', String(32))
+
+class airlines(Airlines):
+    __tablename__ = 'airlines'
+    index=Column(Integer, primary_key=True)
+    IATA=Column('IATA', Text)
+    ICAO=Column('ICAO', Text)
+    NAME=Column('NAME', Text)
 
 def add_message_from_json(message_type, message_from_json):
     global database
@@ -152,3 +164,9 @@ def pruneOld():
     session.commit()
     print(f"[database] Pruned database of {result} records")
     session.close()
+
+def find_airline_code_from_iata(iata):
+    session = airlines_db_session()
+    result = session.query(airlines).filter(airlines.IATA == iata).one_or_none()
+    session.close()
+    return result.ICAO

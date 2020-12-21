@@ -205,7 +205,7 @@ def htmlGenerator():
                 remaining_keys.remove('tail')
             if "flight" in json_message.keys():
                 html_output += "Flight: <a href=\"https://flightaware.com/live/flight/{flight}\" target=\"_blank\">{flight}</a> ".format(
-                    flight=json_message['flight'],
+                    flight=acarshub_db.find_airline_code_from_iata(json_message['flight'][:2]) + json_message['flight'][2:],
                 )
                 remaining_keys.remove('flight')
             if "icao" in json_message.keys():
