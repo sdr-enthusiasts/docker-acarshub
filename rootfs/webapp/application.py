@@ -221,7 +221,13 @@ def htmlGenerator():
                 icao, airline = acarshub_db.find_airline_code_from_iata(json_message['flight'][:2])
                 flight_number = json_message['flight'][2:]
                 flight = icao + flight_number
-                html_output += f"Flight: <span class=\"wrapper\"><a href=\"https://flightaware.com/live/flight/{flight}\" target=\"_blank\">{flight}</a><span class=\"tooltip\">{airline} Flight {flight_number}</span></span> "
+
+                # If the iata and icao variables are not equal, airline was found in the database and we'll add in the tool-tip for the decoded airline
+                # Otherwise, no tool-tip and use the IATA code
+                if icao != json_message['flight'][:2]:
+                    html_output += f"Flight: <span class=\"wrapper\"><a href=\"https://flightaware.com/live/flight/{flight}\" target=\"_blank\">{flight}</a><span class=\"tooltip\">{airline} Flight {flight_number}</span></span> "
+                else:
+                    html_output += f"Flight: <a href=\"https://flightaware.com/live/flight/{flight}\" target=\"_blank\">{flight}</a> "
                 remaining_keys.remove('flight')
             if "icao" in json_message.keys():
                 html_output += "ICAO: {icao} ".format(
