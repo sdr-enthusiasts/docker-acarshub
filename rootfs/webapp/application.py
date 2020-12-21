@@ -312,7 +312,7 @@ def database_listener():
     if os.getenv("DEBUG_LOGGING", default=False): DEBUG_LOGGING=True
 
     # Schedule the database pruner
-    schedule.every(1).hour.do(acarshub_db.pruneOld())
+    schedule.every().hour.do(acarshub_db.pruneOld)
 
     while not thread_database_stop_event.isSet():
         sys.stdout.flush()
