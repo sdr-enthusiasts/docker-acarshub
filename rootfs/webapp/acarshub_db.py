@@ -1,9 +1,5 @@
 #!/usr/bin/env python3
 
-## TODO:
-# 1) Prune old entries (maybe in the add_message_from_json method to keep scheduling simple?)
-# 2) Query the db method. Will need to figure out thread safe/scoped sessions/sessions so the webapp can call when needed
-
 from datetime import datetime
 from sqlalchemy import create_engine, Column, Numeric, Integer, String, DateTime, \
      ForeignKey, event, Text
@@ -121,6 +117,7 @@ def add_message_from_json(message_type, message_from_json):
         elif index == 'channel': pass
         elif index == 'level': pass
         elif index == 'end': pass
+        elif index == 'libacars': pass
         # We have a key that we aren't saving the database. Log it
         else:
             print(f"[database] Unidenitied key: {index}")
