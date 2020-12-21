@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 
-## TODO: slow listener thread loops down to conserve CPU
-
 import eventlet
 eventlet.monkey_patch()
 
@@ -308,9 +306,13 @@ def database_listener():
     import sys
     import os
     import time
+    import schedule
 
     DEBUG_LOGGING=False
     if os.getenv("DEBUG_LOGGING", default=False): DEBUG_LOGGING=True
+
+    # Schedule the database pruner
+    schedule.every(1).hour.do(acarshub_db.pruneOld())
 
     while not thread_database_stop_event.isSet():
         sys.stdout.flush()
@@ -323,6 +325,9 @@ def database_listener():
             acarshub_db.add_message_from_json(message_type=t, message_from_json=m)
         else:
             pass
+
+        # Check and see if the db needs pruning
+        schedule.run_pending()
 
 def acars_listener():
     import time
@@ -508,7 +513,7 @@ def test_connect():
 
 @socketio.on('disconnect', namespace='/test')
 def test_disconnect():
-    print('Client disconnected')
+    if os.getenv("DEBUG_LOGGING", default=False): print('Client disconnected')
     pass
 
 

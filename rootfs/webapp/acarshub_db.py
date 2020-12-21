@@ -13,12 +13,10 @@ import json
 import sys
 import os
 
-if os.getenv("ACARS_DB"):
-    db_path=os.getenv("ACARS_DB")
+if os.getenv("ACARSHUB_DB"):
+    db_path=os.getenv("ACARSHUB_DB")
 else:
     db_path='sqlite:////run/acars/messages.db'
-
-
 
 database = create_engine(db_path)
 db_session = sessionmaker(bind=database)
@@ -137,4 +135,23 @@ def add_message_from_json(message_type, message_from_json):
        msgno=msgno, is_response=is_response, is_onground=is_onground, error=error))
     # commit the db change and close the session
     session.commit()
+    session.close()
+
+def pruneOld():
+    from time import mktime
+    import datetime
+
+    # Grab the current time and find 7 days ago
+    dt = datetime.datetime.now()
+    delta = datetime.timedelta(days=7)
+    stale_time = dt - delta
+
+    # Database is storing the timestamps of messages in unix epoch. Convert the expiry time to epoch
+    epoch = stale_time.replace().timestamp()
+
+    # Open session to db, run the query, and close session
+    session = db_session()
+    result = session.query(messages).filter(messages.time <= epoch).delete()
+    session.commit()
+    print(f"[database] Pruned database of {result} records")
     session.close()

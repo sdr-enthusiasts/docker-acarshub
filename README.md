@@ -59,9 +59,11 @@ services:
 
 No exposed ports are necessary to run the container. However, the built in webserver is available on port `80` if you wish the view messages in realtime.
 
-## Volumes
+## Volumes / Database
 
 No volumes are needed to run the container. However, this container does log messages to a database. If you wish to persist this database between container restarts, mount a volume to `/run/acars/`.
+
+The database is used on the website for various functions. It is automatically pruned of data older than 7 days old.
 
 ## Environment variables
 
