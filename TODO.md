@@ -1,5 +1,4 @@
 TODO:
-* Prune old entries (maybe in the add_message_from_json method to keep scheduling simple?)
 * Query the db method. Will need to figure out thread safe/scoped sessions/sessions so the webapp can call when needed
 * Restrict table size for long one line messages
 * DB viewer

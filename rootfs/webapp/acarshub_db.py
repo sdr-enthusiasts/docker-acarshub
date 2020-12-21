@@ -17,12 +17,11 @@ else:
 database = create_engine(db_path)
 db_session = sessionmaker(bind=database)
 Messages = declarative_base()
-Messages.metadata.create_all(database)
+
 
 airlines_database = create_engine('sqlite:///data/airlines.db')
 airlines_db_session = sessionmaker(bind=airlines_database)
 Airlines = declarative_base()
-Airlines.metadata.create_all(airlines_database)
 
 class messages(Messages):
     __tablename__ = 'messages'
@@ -57,6 +56,7 @@ class messages(Messages):
     is_response=Column('is_response', String(32))
     is_onground=Column('is_onground', String(32))
     error=Column('error', String(32))
+    libacars=Column('libacars', Text)
 
 class airlines(Airlines):
     __tablename__ = 'airlines'
@@ -64,6 +64,9 @@ class airlines(Airlines):
     IATA=Column('IATA', Text)
     ICAO=Column('ICAO', Text)
     NAME=Column('NAME', Text)
+
+Messages.metadata.create_all(database)
+Airlines.metadata.create_all(airlines_database)
 
 def add_message_from_json(message_type, message_from_json):
     global database
@@ -95,6 +98,7 @@ def add_message_from_json(message_type, message_from_json):
     is_response=None
     is_onground=None
     error=None
+    libacars=None
 
     for index in message_from_json:
         if index == 'timestamp': time = message_from_json[index]
@@ -125,11 +129,11 @@ def add_message_from_json(message_type, message_from_json):
         elif index == 'is_response': is_response = message_from_json[index]
         elif index == 'is_onground': is_onground = message_from_json[index]
         elif index == 'error': error = message_from_json[index]
+        elif index == 'libacars': libacars = message_from_json[index]
         # skip these
         elif index == 'channel': pass
         elif index == 'level': pass
         elif index == 'end': pass
-        elif index == 'libacars': pass
         # We have a key that we aren't saving the database. Log it
         else:
             print(f"[database] Unidenitied key: {index}")
@@ -141,7 +145,7 @@ def add_message_from_json(message_type, message_from_json):
        fromaddr=fromaddr, depa=depa, dsta=dsta, eta=eta, gtout=gtout, gtin=gtin,
        wloff=wloff, wlin=wlin, lat=lat, lon=lon, alt=alt, text=text, tail=tail,
        flight=flight, icao=icao, freq=freq, ack=ack, mode=mode, label=label, block_id=block_id,
-       msgno=msgno, is_response=is_response, is_onground=is_onground, error=error))
+       msgno=msgno, is_response=is_response, is_onground=is_onground, error=error, libacars=libacars))
     # commit the db change and close the session
     session.commit()
     session.close()
@@ -166,10 +170,13 @@ def pruneOld():
     session.close()
 
 def find_airline_code_from_iata(iata):
+    import os
     session = airlines_db_session()
     result = session.query(airlines).filter(airlines.IATA == iata).one_or_none()
     session.close()
     if result is not None:
+        if os.getenv("DEBUG_LOGGING", default=False): print(f"[database] IATA code {iata} converted to {result.ICAO}")
         return result.ICAO
     else:
+        if os.getenv("DEBUG_LOGGING", default=False): print("[database] IATA code not found")
         return iata

@@ -193,6 +193,18 @@ def htmlGenerator():
             else:
                 html_output += "<p><i>No text</i></p>"
 
+            if "libacars" in json_message.keys():
+                    html_output += "<p>Decoded:</p>"
+                    html_output += "<p>"
+                    html_output += "<pre>{libacars}</pre>".format(
+                        libacars=pprint.pformat(
+                            json_message['libacars'],
+                            indent=2,
+                        )
+                    )
+                    remaining_keys.remove('libacars')
+                    html_output += "</p>"
+
             html_output += "</td></tr>"
             
             # Table footer row, tail & flight info
@@ -281,6 +293,8 @@ def htmlGenerator():
             # Finish table html
             html_output += "</table>"
 
+            if EXTREME_LOGGING: print(html_output)
+
             # Send output via socketio
             if EXTREME_LOGGING: print("[acarsGenerator] sending output via socketio.emit")
             socketio.emit('newmsg', {'msghtml': html_output}, namespace='/test')
@@ -340,9 +354,11 @@ def acars_listener():
 
     DEBUG_LOGGING=False
     EXTREME_LOGGING=False
+    SPAM=False
     if os.getenv("DEBUG_LOGGING", default=False): DEBUG_LOGGING=True
     if os.getenv("EXTREME_LOGGING", default=False): EXTREME_LOGGING=True
     if os.getenv("SPAM", default=False): SPAM=True
+    print(SPAM)
 
     # Define acars_receiver
     acars_receiver = socket.socket(
@@ -367,7 +383,10 @@ def acars_listener():
         data = None
 
         try:
-            data,addr = acars_receiver.recvfrom(65527, socket.MSG_WAITALL)
+            if SPAM is True:
+                data,addr = acars_receiver.recvfrom(65527)
+            else:
+                data,addr = acars_receiver.recvfrom(65527, socket.MSG_WAITALL)
             if EXTREME_LOGGING: print("[acarsGenerator] received data")
         except socket.timeout:
             if EXTREME_LOGGING: print("[acarsGenerator] timeout")
@@ -403,6 +422,7 @@ def vdlm_listener():
 
     DEBUG_LOGGING=False
     EXTREME_LOGGING=False
+    SPAM=False
     if os.getenv("DEBUG_LOGGING", default=False): DEBUG_LOGGING=True
     if os.getenv("EXTREME_LOGGING", default=False): EXTREME_LOGGING=True
     if os.getenv("SPAM", default=False): SPAM=True
@@ -432,7 +452,10 @@ def vdlm_listener():
         data = None
 
         try:
-            data,addr = vdlm2_receiver.recvfrom(65527, socket.MSG_WAITALL)
+            if SPAM is True:
+                data,addr = vdlm2_receiver.recvfrom(65527, socket)
+            else:
+                data,addr = vdlm2_receiver.recvfrom(65527, socket.MSG_WAITALL)
             if EXTREME_LOGGING: print("[vdlm2Generator] received data")
         except socket.timeout:
             if EXTREME_LOGGING: print("[vdlm2Generator] timeout")
@@ -507,9 +530,9 @@ def test_connect():
 
     #Start the htmlGenerator thread only if the thread has not been started before.
     if not thread_html_generator.isAlive():
-        if os.getenv("DEBUG_LOGGING", default=False):print("Starting htmlGenerator")
-            sys.stdout.flush()
-            thread_html_generator = socketio.start_background_task(htmlGenerator)
+        if os.getenv("DEBUG_LOGGING", default=False): print("Starting htmlGenerator")
+        sys.stdout.flush()
+        thread_html_generator = socketio.start_background_task(htmlGenerator)
 
 @socketio.on('disconnect', namespace='/test')
 def test_disconnect():

@@ -10,18 +10,38 @@
         border: 1px solid black;
         border-collapse: collapse;
         width: 90%;
+        table-layout: fixed;
       }
       th, td {
         padding: 4px;
       }
+      hr { 
+        display: block;
+        margin-top: 0.5em;
+        margin-bottom: 0.5em;
+        margin-left: auto;
+        margin-right: auto;
+        border-style: inset;
+        border-width: 1px;
+      }
+      #app {
+      	font-family: Avenir, Helvetica, Arial, sans-serif;
+      }
     </style>
+    <title>ACARS Hub</title>
   </head>
   <body>
-    <div class="container" id="content">
+    <div class="container" id="header">
       <div class="row">
-          <h3>acarshub</h1>
+          <h1>ACARS Hub</h1>
       </div>
     </div>
+    <div class="container" id="links">
+      <div class="row">
+          | <a href="stats.html">ACARS Hub Stats</a> | <a href="search.html">Search Database</a> | <a href="https://github.com/fredclausen/docker-acarshub" target="_blank">Project Github</a> | <a href="https://discord.gg/sTf9uYF"><img src="https://img.shields.io/discord/734090820684349521" alt="discord"></a> |
+      </div>
+    </div>
+    <hr>
     <div class="container" id="content">
       <div class="row">
           <p>Messages will appear here, newest first:</p>
