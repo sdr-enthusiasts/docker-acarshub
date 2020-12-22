@@ -9,7 +9,7 @@
 import socket
 import time
 
-message = '{"timestamp":1608564683.747422,"station_id":"CS-KABQ-ACARS","channel":0,"freq":130.025,"level":-23,"error":0,"mode":"2","label":"H1","block_id":"6","ack":false,"tail":"N972UY","flight":"US1268","msgno":"D04B","text":"73/N11325,1325,3924,0796,0847,0329,10044/N21325,1325,3988,0791,0842,0328,10003/S116925,0623,1635,4144,08801,062/S216660,0616,1585,4075,08782,061/T1097,082,00,026,45,171,06623,N190/T2099,083,00,020,43,207,06","end":true}\n'
+message = '{"timestamp": 1608663465.318815, "station_id": "CS-KABQ-VDLM", "channel": 2, "freq": 136.975, "icao": 10690646, "toaddr": 1053386, "is_response": 0, "is_onground": 0, "mode": "2", "label": "5Z", "block_id": "3", "ack": "!", "tail": "N300LK", "flight": "MQ3331", "msgno": "M77A", "text": "OS KABQ /IR KABQ1901"}'
 
 receiver = socket.socket(
     family=socket.AF_INET,

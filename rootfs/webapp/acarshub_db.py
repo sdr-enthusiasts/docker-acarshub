@@ -160,7 +160,7 @@ def add_message_from_json(message_type, message_from_json):
         elif index == 'error':
             error = message_from_json[index]
         elif index == 'libacars':
-            libacars = message_from_json[index]
+            pass
         # skip these
         elif index == 'channel':
             pass
@@ -177,16 +177,21 @@ def add_message_from_json(message_type, message_from_json):
     # write the message
     if os.getenv("DEBUG_LOGGING", default=False):
         print("[database] writing to the database")
-    session.add(messages(message_type=message_type, time=time, station_id=station_id, toaddr=toaddr,
-                         fromaddr=fromaddr, depa=depa, dsta=dsta, eta=eta, gtout=gtout, gtin=gtin,
-                         wloff=wloff, wlin=wlin, lat=lat, lon=lon, alt=alt, text=text, tail=tail,
-                         flight=flight, icao=icao, freq=freq, ack=ack, mode=mode, label=label, block_id=block_id,
-                         msgno=msgno, is_response=is_response, is_onground=is_onground, error=error, libacars=libacars))
-    # commit the db change and close the session
-    session.commit()
-    session.close()
-    if os.getenv("DEBUG_LOGGING", default=False):
-        print("[database] write to database complete")
+        print(f"[database] writing message: {message_from_json}")
+
+    try:
+        session.add(messages(message_type=message_type, time=time, station_id=station_id, toaddr=toaddr,
+                             fromaddr=fromaddr, depa=depa, dsta=dsta, eta=eta, gtout=gtout, gtin=gtin,
+                             wloff=wloff, wlin=wlin, lat=lat, lon=lon, alt=alt, text=text, tail=tail,
+                             flight=flight, icao=icao, freq=freq, ack=ack, mode=mode, label=label, block_id=block_id,
+                             msgno=msgno, is_response=is_response, is_onground=is_onground, error=error, libacars=libacars))
+        # commit the db change and close the session
+        session.commit()
+        session.close()
+        if os.getenv("DEBUG_LOGGING", default=False):
+            print("[database] write to database complete")
+    except Exception:
+        print("[database] Error writing to the database")
 
 
 def pruneOld():
@@ -201,23 +206,32 @@ def pruneOld():
     epoch = stale_time.replace().timestamp()
 
     # Open session to db, run the query, and close session
-    session = db_session()
-    result = session.query(messages).filter(messages.time <= epoch).delete()
-    session.commit()
-    print(f"[database] Pruned database of {result} records")
-    session.close()
+    try:
+        session = db_session()
+        result = session.query(messages).filter(messages.time <= epoch).delete()
+        session.commit()
+        print(f"[database] Pruned database of {result} records")
+        session.close()
+    except Exception:
+        print("[database] Error with database pruning")
 
 
 def find_airline_code_from_iata(iata):
     import os
-    session = airlines_db_session()
-    result = session.query(airlines).filter(airlines.IATA == iata).one_or_none()
-    session.close()
-    if result is not None:
-        if os.getenv("DEBUG_LOGGING", default=False):
-            print(f"[database] IATA code {iata} converted to {result.ICAO}")
-        return (result.ICAO, result.NAME)
-    else:
-        if os.getenv("DEBUG_LOGGING", default=False):
-            print("[database] IATA code not found")
+    result = None
+
+    try:
+        session = airlines_db_session()
+        result = session.query(airlines).filter(airlines.IATA == iata).first()
+        session.close()
+    except Exception:
+        print(f"[database] caught exception with IATA code {iata} lookup")
         return (iata, "Unknown Airline")
+    else:
+        if result is not None:
+            if os.getenv("DEBUG_LOGGING", default=False):
+                print(f"[database] IATA code {iata} converted to {result.ICAO}")
+            return (result.ICAO, result.NAME)
+        else:
+            print(f"[database] IATA code {iata} not found in database")
+            return (iata, "Unknown Airline")
