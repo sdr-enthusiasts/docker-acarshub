@@ -6,4 +6,4 @@ TODO:
 * Stat generator / display on website
 * Maybe tar1090 side by side display w/ messages?
 * Move generator and listener functions in to own module so that application.py passes tasks off
-* Find better IATA data source. This one I found is error prone
+* Find better IATA data source. This one I found is error prone. Also, some airlines (hello UPS) aren't using their designated IATA code...
