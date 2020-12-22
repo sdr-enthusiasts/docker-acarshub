@@ -225,7 +225,7 @@ def find_airline_code_from_iata(iata):
         result = session.query(airlines).filter(airlines.IATA == iata).first()
         session.close()
     except Exception:
-        print(f"[database] caught exception with IATA code {iata} lookup")
+        print(f"[database] Error in query with IATA code {iata}")
         return (iata, "Unknown Airline")
     else:
         if result is not None:

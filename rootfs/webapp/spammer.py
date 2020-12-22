@@ -5,6 +5,8 @@
 # connect and receive all the data. export SPAM=True to enable application.py to function properly
 # Additionally, for database pathing in testing, export ACARSHUB_DB="sqlite:////path/to/db"
 # 3 leading slashes required, the fourth is for unix path starting from root
+# I use this line to start application.py
+# export ACARSHUB_DB=sqlite:////Users/fred/messages.db && export SPAM=True && export DEBUG_LOGGING=True && export ENABLE_ACARS=True && python3 application.py
 
 import socket
 import time
