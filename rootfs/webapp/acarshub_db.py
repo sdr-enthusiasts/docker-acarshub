@@ -264,7 +264,7 @@ def database_search(field, search_term, page=0):
         print("[database] Done searching")
 
     if result.count() > 0:
-        data = [d.__dict__ for d in result[page:page+10]]
+        data = [d.__dict__ for d in result[page:page+20]]
         return [data, result.count()]
     else:
         return [None, 20]

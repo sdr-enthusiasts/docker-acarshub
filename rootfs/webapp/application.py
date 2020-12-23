@@ -669,7 +669,7 @@ def test_connect():
 def handle_message(message, namespace):
     import time
     html_output = ""
-    current_search_page = 1
+    current_search_page = 0
 
     if message['search_term'] != "":
         if 'results_after' in message:
@@ -681,21 +681,23 @@ def handle_message(message, namespace):
         query_result = search[0]
         if query_result is not None:
             for result in query_result:
-                html_output += "<p>" + htmlGenerator(None, result, True) + "</p>"
+                html_output += "<p>" + htmlGenerator(None, result, True) + "</p> "
 
             html_output += f"<p>Found {search[1]} results. "
             # we have more items found with the search than are displayed
-            
-            num_pages = 1
-            html_output += "Page "
-            for i in range(0, int(search[1] / 20)):
-                if i == current_search_page:
-                    html_output += f"Page {num_pages}"
-                else:
-                    html_output += f"<a href=\"#\" id=\"search_page\" onclick=\"runclick({num_pages})\" value=\"{num_pages}\">{num_pages}</a> "
-                num_pages += 1
-            html_output += f"Page {num_pages}"
 
+            html_output += "Page "
+
+            if current_search_page == 0:
+                html_output += "1 "
+            else:
+                html_output += "<a href=\"#\" id=\"search_page\" onclick=\"runclick(0)\">1</a> "
+
+            for i in range(1, int(search[1] / 20) + 1):
+                if i == current_search_page:
+                    html_output += f"{i+1} "
+                else:
+                    html_output += f"<a href=\"#\" id=\"search_page\" onclick=\"runclick({i})\">{i+1}</a> "
     else:
         html_output += "<p>No results</p>"
     
@@ -708,6 +710,10 @@ def test_disconnect():
         print('Client disconnected')
 
     # Client disconnected, stop the htmlListener
+    # this doesn't work right yet, I don't think.
+    # If only one person is connected this is fine to run
+    # but if multiple connections are established this kills the html feed for everyone
+
     thread_html_generator_event.set()
 
 
