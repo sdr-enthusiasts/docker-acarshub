@@ -4,6 +4,7 @@ from sqlalchemy import create_engine, Column, Numeric, Integer, String, \
     Text
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
+from flask import jsonify
 import os
 
 if os.getenv("ACARSHUB_DB"):
@@ -27,7 +28,7 @@ class messages(Messages):
     # ACARS or VDLM
     message_type = Column('message_type', String(32))
     # message time
-    time = Column('time', Numeric)
+    time = Column('time', String(32))
     station_id = Column('station_id', String(32))
     toaddr = Column('toaddr', String(32))
     fromaddr = Column('fromaddr', String(32))
@@ -38,14 +39,14 @@ class messages(Messages):
     gtin = Column('gtin', String(32))
     wloff = Column('wloff', String(32))
     wlin = Column('wlin', String(32))
-    lat = Column('lat', Numeric)
-    lon = Column('lon', Numeric)
-    alt = Column('alt', Numeric)
+    lat = Column('lat', String(32))
+    lon = Column('lon', String(32))
+    alt = Column('alt', String(32))
     text = Column('text', Text)
     tail = Column('tail', String(32))
     flight = Column('flight', String(32))
     icao = Column('icao', String(32))
-    freq = Column('freq', Numeric)
+    freq = Column('freq', String(32))
     ack = Column('ack', String(32))
     mode = Column('mode', String(32))
     label = Column('label', String(32))
@@ -235,3 +236,23 @@ def find_airline_code_from_iata(iata):
         else:
             print(f"[database] IATA code {iata} not found in database")
             return (iata, "Unknown Airline")
+
+def database_search(field, search_term):
+    import os
+    import json
+    result = None
+
+    try:
+        session = db_session()
+        result = session.query(messages).limit(50)
+        print(result.count())
+        session.close()
+    except Exception:
+        print("[database] Error running search!")
+
+    if result.count() > 0:
+        data = [d.__dict__ for d in result]
+        print(data)
+        return data
+    else:
+        return result

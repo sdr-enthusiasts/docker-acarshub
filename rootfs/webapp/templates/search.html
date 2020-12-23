@@ -3,6 +3,7 @@
   <head>
     <script src="//code.jquery.com/jquery-3.3.1.min.js"></script>
     <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/socket.io/1.3.6/socket.io.min.js"></script>
+    <script src="../static/js/search.js"></script>
     <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
     <style>
       table {
@@ -145,7 +146,19 @@
     <hr>
     <div class="container" id="content">
       <div class="row">
-          <p>Search. Blank for now</p>
+          <p><h3>Search received messages</h3></p>
+          <form>
+          <label>Field:</label>
+          <select name="dbfield" id="dbfield">
+          <option value="flight">Callsign</option>
+          <option value="tail">Tail Number</option>
+          <option value="Time">Time</option>
+          <option value="depa">Departure</option>
+          <option value="dsta">Destination</option>
+          <option value="text">Text</option>
+          <option value="msgno">Message Number</option>
+          </select>
+          <label>Search Term:</label> <input type="text" id="search_term">
           <div id="log">
           </div> <!-- /#log -->
       </div>

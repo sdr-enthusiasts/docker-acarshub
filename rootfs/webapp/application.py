@@ -56,7 +56,300 @@ que_messages = deque(maxlen=15)
 que_database = deque(maxlen=15)
 
 
-def htmlGenerator():
+def htmlGenerator(message_source=None, json_message=None, from_query=False):
+    import time
+    import datetime
+    import json
+    import pprint
+    import sys
+    import os
+
+    DEBUG_LOGGING = False
+    EXTREME_LOGGING = False
+    if os.getenv("DEBUG_LOGGING", default=False):
+        DEBUG_LOGGING = True
+    if os.getenv("EXTREME_LOGGING", default=False):
+        EXTREME_LOGGING = True
+
+    if DEBUG_LOGGING:
+        print("[htmlGenerator] Generating HTML")
+        print(f"[htmlGenerator] Processing this message: {json_message}")
+    # Set up list allowing us to track what keys have been decoded
+
+    # if from_query is set function has been called to decode a message from the DB
+    # We need to massage the data before processing
+
+    if from_query:
+        # Ignoring a couple of DB fields
+        if '_sa_instance_state' in json_message:
+            del json_message['_sa_instance_state']
+        if 'id' in json_message:
+            del json_message['id']
+        if 'message_type' in json_message:
+            message_source = json_message['message_type']
+            del json_message['message_type']
+        if 'time' in json_message:
+            json_message['timestamp'] = float(json_message['time'])
+            del json_message['time']
+            print(json_message['timestamp'])
+
+        delete = [key for key in json_message if json_message[key] == None]
+        for key in delete: del json_message[key]
+    
+    remaining_keys = list(json_message.keys())
+
+    # Prepare Table HTML
+    html_output = str()
+    html_output += "<table id=\"shadow\">"
+
+    # Table header row, message type & from
+    html_output += "<tr>"
+    html_output += "<td><strong>{msgtype}</strong> from <strong>{station_id}</strong></td>".format(
+        msgtype=f"{message_source}",
+        station_id=json_message['station_id'],
+    )
+    remaining_keys.remove('station_id')
+
+    # Table header row, timestamp
+    html_output += "<td style=\"text-align: right\">{timestamp}</td>".format(
+        timestamp=datetime.datetime.fromtimestamp(json_message['timestamp']).strftime(r'%Y-%m-%d T: %H:%M:%S')
+    )
+    remaining_keys.remove('timestamp')
+    html_output += "</tr>"
+
+    # Table content
+    html_output += "<tr><td colspan=\"2\">"
+
+    if "toaddr" in json_message.keys():
+        html_output += "<p>To Address: <strong>{toaddr}</strong></p>".format(
+            toaddr=json_message['toaddr']
+        )
+        remaining_keys.remove('toaddr')
+
+    if "fromaddr" in json_message.keys():
+        html_output += "<p>From Address: <strong>{fromaddr}</strong></p>".format(
+            fromaddr=json_message['fromaddr']
+        )
+        remaining_keys.remove('fromaddr')
+
+    if "depa" in json_message.keys():
+        html_output += "<p>Departing: <strong>{depa}</strong></p>".format(
+            depa=json_message['depa']
+        )
+        remaining_keys.remove('depa')
+
+    if "dsta" in json_message.keys():
+        html_output += "<p>Destination: <strong>{dsta}</strong></p>".format(
+            dsta=json_message['dsta']
+        )
+        remaining_keys.remove('dsta')
+
+    if "eta" in json_message.keys():
+        html_output += "<p>Estimated time of arrival: <strong>{eta}</strong> hours</p>".format(
+            eta=json_message['eta']
+        )
+        remaining_keys.remove('eta')
+
+    if "gtout" in json_message.keys():
+        html_output += "<p>Pushback from gate: <strong>{gtout}</strong> hours</p>".format(
+            gtout=json_message['gtout']
+        )
+        remaining_keys.remove('gtout')
+
+    if "gtin" in json_message.keys():
+        html_output += "<p>Arriving at gate: <strong>{gtin}</strong> hours</p>".format(
+            gtin=json_message['gtin']
+        )
+        remaining_keys.remove('gtin')
+
+    if "wloff" in json_message.keys():
+        html_output += "<p>Wheels off: <strong>{wloff}</strong> hours</p>".format(
+            wloff=json_message['wloff']
+        )
+        remaining_keys.remove('wloff')
+
+    if "wlin" in json_message.keys():
+        html_output += "<p>Wheels down: <strong>{wlin}</strong></p>".format(
+            wlin=json_message['wlin']
+        )
+        remaining_keys.remove('wlin')
+
+    if "lat" in json_message.keys():
+        html_output += "<p>Latitude: <strong>{lat}</strong></p>".format(
+            lat=json_message['lat']
+        )
+        remaining_keys.remove('lat')
+
+    if "lon" in json_message.keys():
+        html_output += "<p>Longitude: <strong>{lon}</strong></p>".format(
+            lon=json_message['lon']
+        )
+        remaining_keys.remove('lon')
+
+    if "alt" in json_message.keys():
+        html_output += "<p>Altitude: <strong>{alt}</strong></p>".format(
+            alt=json_message['alt']
+        )
+        remaining_keys.remove('alt')
+
+    if "text" in json_message.keys():
+        html_output += "<p>"
+        html_output += "<pre id=\"shadow\"><strong>{text}</strong></pre>".format(
+            text=json_message['text'].replace("\r\n", "\n"),
+        )
+        remaining_keys.remove('text')
+        html_output += "</p>"
+    elif "data" in json_message.keys():
+        html_output += "<p>"
+        html_output += "<pre id=\"shadow\"><strong>{data}</strong></pre>".format(
+            data=json_message['data'].replace("\r\n", "\n"),
+        )
+        remaining_keys.remove('data')
+        html_output += "</p>"
+    else:
+        html_output += "<p><pre id=\"shadow\"><i><strong>No text</strong></i></pre></p>"
+
+    if "libacars" in json_message.keys():
+        html_output += "<p>Decoded:</p>"
+        html_output += "<p>"
+        html_output += "<pre id=\"shadow\"><strong>{libacars}<strong></pre>".format(
+            libacars=pprint.pformat(
+                json_message['libacars'],
+                indent=2,
+            )
+        )
+        remaining_keys.remove('libacars')
+        html_output += "</p>"
+
+    html_output += "</td></tr>"
+
+    # Table footer row, tail & flight info
+    html_output += "<tr>"
+    html_output += "<td>"
+    if "tail" in json_message.keys():
+        html_output += "Tail: <strong><a href=\"https://flightaware.com/live/flight/{tail}\" target=\"_blank\">{tail}</a></strong> ".format(
+            tail=json_message['tail'],
+        )
+        remaining_keys.remove('tail')
+    if "flight" in json_message.keys():
+        icao, airline = acarshub_db.find_airline_code_from_iata(json_message['flight'][:2])
+        flight_number = json_message['flight'][2:]
+        flight = icao + flight_number
+
+        # If the iata and icao variables are not equal, airline was found in the database and we'll add in the tool-tip for the decoded airline
+        # Otherwise, no tool-tip, no FA link, and use the IATA code for display
+        if icao != json_message['flight'][:2]:
+            html_output += f"Flight: <span class=\"wrapper\"><strong><a href=\"https://flightaware.com/live/flight/{flight}\" target=\"_blank\">{flight}</a></strong><span class=\"tooltip\">{airline} Flight {flight_number}</span></span> "
+        else:
+            html_output += f"Flight: <strong><a href=\"https://flightaware.com/live/flight/{flight}\" target=\"_blank\">{flight}</a></strong> "
+        remaining_keys.remove('flight')
+    if "icao" in json_message.keys():
+        html_output += "ICAO: <strong>{icao}</strong> ".format(
+            icao=json_message['icao'],
+        )
+        remaining_keys.remove('icao')
+    html_output += "</td>"
+
+    # Table footer row, metadata
+    html_output += "<td style=\"text-align: right\">"
+    if "freq" in json_message.keys():
+        html_output += "<span class=\"wrapper\">F: <strong>{freq}</strong><span class=\"tooltip\">The frequency this message was received on</span></span> ".format(
+            freq=json_message['freq'],
+        )
+        remaining_keys.remove('freq')
+
+    if "ack" in json_message.keys():
+        if json_message['ack'] is not False:
+            html_output += "<span class=\"wrapper\">A: <strong>{ack}</strong><span class=\"tooltip\">Acknolwedgement</span></span> ".format(
+                ack=json_message['ack'],
+            )
+        remaining_keys.remove('ack')
+
+    if "mode" in json_message.keys():
+        html_output += "<span class=\"wrapper\">M: <strong>{mode}</strong><span class=\"tooltip\">Mode</span></span> ".format(
+            mode=json_message['mode'],
+        )
+        remaining_keys.remove('mode')
+
+    if "label" in json_message.keys():
+        html_output += "<span class=\"wrapper\">L: <strong>{label}</strong><span class=\"tooltip\">Label</span></span> ".format(
+            label=json_message['label'],
+        )
+        remaining_keys.remove('label')
+
+    if "block_id" in json_message.keys():
+        html_output += "<span class=\"wrapper\">B: <strong>{block_id}</strong><span class=\"tooltip\">Block ID</span></span> ".format(
+            block_id=json_message['block_id'],
+        )
+        remaining_keys.remove('block_id')
+
+    if "msgno" in json_message.keys():
+        html_output += "<span class=\"wrapper\">M#: <strong>{msgno}</strong><span class=\"tooltip\">Message number. Used for multi-part messages.</span></span> ".format(
+            msgno=json_message['msgno'],
+        )
+        remaining_keys.remove('msgno')
+
+    if "is_response" in json_message.keys():
+        html_output += "<span class=\"wrapper\">R: <strong>{is_response}</strong><span class=\"tooltip\">Response</span></span> ".format(
+            is_response=json_message['is_response'],
+        )
+        remaining_keys.remove('is_response')
+
+    if "is_onground" in json_message.keys():
+        # We need to watch this to make sure I have this right. After spelunking through vdlm2dec source code
+        # Input always appears to be a 0 or 2...for reasons I don't get. I could have this backwards
+        # 0 indicates the plane is airborne
+        # 2 indicates the plane is on the ground
+        # https://github.com/TLeconte/vdlm2dec/blob/1ea300d40d66ecb969f1f463506859e36f62ef5c/out.c#L457
+        # variable naming in vdlm2dec is inconsistent, but "ground" and "gnd" seem to be used
+
+        if json_message['is_onground'] == 0:
+            is_onground = "False"
+        else:
+            is_onground = "True"
+
+        html_output += f"<span class=\"wrapper\">G: <strong>{is_onground}</strong><span class=\"tooltip\">Is on ground?</span></span> "
+        remaining_keys.remove('is_onground')
+
+    if "error" in json_message.keys():
+        if json_message['error'] != 0:
+            html_output += '<span style="color:red;">'
+            html_output += "E: {error} ".format(
+                error=json_message['error'],
+            )
+            html_output += '</span>'
+        remaining_keys.remove('error')
+
+    html_output += "</td>"
+    html_output += "</tr>"
+
+    # Finish table html
+    html_output += "</table>"
+
+    if EXTREME_LOGGING:
+        print(html_output)
+
+    # Remove leftover keys that we don't really care about (do we care about these?)
+    if 'channel' in remaining_keys:
+        remaining_keys.remove('channel')
+    if 'level' in remaining_keys:
+        remaining_keys.remove('level')
+    if 'end' in remaining_keys:
+        remaining_keys.remove('end')
+
+    if len(remaining_keys) > 0:
+        print("")
+        print("Non decoded data exists:")
+        print(repr(remaining_keys))
+        print("")
+        print(json.dumps(json_message, indent=4, sort_keys=True))
+        print("")
+        print("-----")
+
+    return html_output
+
+
+def htmlListener():
     import time
     import datetime
     import json
@@ -80,273 +373,19 @@ def htmlGenerator():
 
         if len(que_messages) != 0:
             message_source, json_message = que_messages.pop()
-            if DEBUG_LOGGING:
-                print("[htmlGenerator] Generating HTML")
-                print(f"[htmlGenerator] Processing this message: {json_message}")
-            # Set up list allowing us to track what keys have been decoded
-            
-            remaining_keys = list(json_message.keys())
-
-            # Prepare Table HTML
-            html_output = str()
-            html_output += "<table id=\"shadow\">"
-
-            # Table header row, message type & from
-            html_output += "<tr>"
-            html_output += "<td><strong>{msgtype}</strong> from <strong>{station_id}</strong></td>".format(
-                msgtype=f"{message_source}",
-                station_id=json_message['station_id'],
-            )
-            remaining_keys.remove('station_id')
-
-            # Table header row, timestamp
-            html_output += "<td style=\"text-align: right\">{timestamp}</td>".format(
-                timestamp=datetime.datetime.fromtimestamp(json_message['timestamp']).strftime(r'%Y-%m-%d T: %H:%M:%S')
-            )
-            remaining_keys.remove('timestamp')
-            html_output += "</tr>"
-
-            # Table content
-            html_output += "<tr><td colspan=\"2\">"
-
-            if "toaddr" in json_message.keys():
-                html_output += "<p>To Address: <strong>{toaddr}</strong></p>".format(
-                    toaddr=json_message['toaddr']
-                )
-                remaining_keys.remove('toaddr')
-
-            if "fromaddr" in json_message.keys():
-                html_output += "<p>From Address: <strong>{fromaddr}</strong></p>".format(
-                    fromaddr=json_message['fromaddr']
-                )
-                remaining_keys.remove('fromaddr')
-
-            if "depa" in json_message.keys():
-                html_output += "<p>Departing: <strong>{depa}</strong></p>".format(
-                    depa=json_message['depa']
-                )
-                remaining_keys.remove('depa')
-
-            if "dsta" in json_message.keys():
-                html_output += "<p>Destination: <strong>{dsta}</strong></p>".format(
-                    dsta=json_message['dsta']
-                )
-                remaining_keys.remove('dsta')
-
-            if "eta" in json_message.keys():
-                html_output += "<p>Estimated time of arrival: <strong>{eta}</strong> hours</p>".format(
-                    eta=json_message['eta']
-                )
-                remaining_keys.remove('eta')
-
-            if "gtout" in json_message.keys():
-                html_output += "<p>Pushback from gate: <strong>{gtout}</strong> hours</p>".format(
-                    gtout=json_message['gtout']
-                )
-                remaining_keys.remove('gtout')
-
-            if "gtin" in json_message.keys():
-                html_output += "<p>Arriving at gate: <strong>{gtin}</strong> hours</p>".format(
-                    gtin=json_message['gtin']
-                )
-                remaining_keys.remove('gtin')
-
-            if "wloff" in json_message.keys():
-                html_output += "<p>Wheels off: <strong>{wloff}</strong> hours</p>".format(
-                    wloff=json_message['wloff']
-                )
-                remaining_keys.remove('wloff')
-
-            if "wlin" in json_message.keys():
-                html_output += "<p>Wheels down: <strong>{wlin}</strong></p>".format(
-                    wlin=json_message['wlin']
-                )
-                remaining_keys.remove('wlin')
-
-            if "lat" in json_message.keys():
-                html_output += "<p>Latitude: <strong>{lat}</strong></p>".format(
-                    lat=json_message['lat']
-                )
-                remaining_keys.remove('lat')
-
-            if "lon" in json_message.keys():
-                html_output += "<p>Longitude: <strong>{lon}</strong></p>".format(
-                    lon=json_message['lon']
-                )
-                remaining_keys.remove('lon')
-
-            if "alt" in json_message.keys():
-                html_output += "<p>Altitude: <strong>{alt}</strong></p>".format(
-                    alt=json_message['alt']
-                )
-                remaining_keys.remove('alt')
-
-            if "text" in json_message.keys():
-                html_output += "<p>"
-                html_output += "<pre id=\"shadow\"><strong>{text}</strong></pre>".format(
-                    text=json_message['text'].replace("\r\n", "\n"),
-                )
-                remaining_keys.remove('text')
-                html_output += "</p>"
-            elif "data" in json_message.keys():
-                html_output += "<p>"
-                html_output += "<pre id=\"shadow\"><strong>{data}</strong></pre>".format(
-                    data=json_message['data'].replace("\r\n", "\n"),
-                )
-                remaining_keys.remove('data')
-                html_output += "</p>"
-            else:
-                html_output += "<p><pre id=\"shadow\"><i><strong>No text</strong></i></pre></p>"
-
-            if "libacars" in json_message.keys():
-                html_output += "<p>Decoded:</p>"
-                html_output += "<p>"
-                html_output += "<pre id=\"shadow\"><strong>{libacars}<strong></pre>".format(
-                    libacars=pprint.pformat(
-                        json_message['libacars'],
-                        indent=2,
-                    )
-                )
-                remaining_keys.remove('libacars')
-                html_output += "</p>"
-
-            html_output += "</td></tr>"
-
-            # Table footer row, tail & flight info
-            html_output += "<tr>"
-            html_output += "<td>"
-            if "tail" in json_message.keys():
-                html_output += "Tail: <strong><a href=\"https://flightaware.com/live/flight/{tail}\" target=\"_blank\">{tail}</a></strong> ".format(
-                    tail=json_message['tail'],
-                )
-                remaining_keys.remove('tail')
-            if "flight" in json_message.keys():
-                icao, airline = acarshub_db.find_airline_code_from_iata(json_message['flight'][:2])
-                flight_number = json_message['flight'][2:]
-                flight = icao + flight_number
-
-                # If the iata and icao variables are not equal, airline was found in the database and we'll add in the tool-tip for the decoded airline
-                # Otherwise, no tool-tip, no FA link, and use the IATA code for display
-                if icao != json_message['flight'][:2]:
-                    html_output += f"Flight: <span class=\"wrapper\"><strong><a href=\"https://flightaware.com/live/flight/{flight}\" target=\"_blank\">{flight}</a></strong><span class=\"tooltip\">{airline} Flight {flight_number}</span></span> "
-                else:
-                    html_output += f"Flight: <strong><a href=\"https://flightaware.com/live/flight/{flight}\" target=\"_blank\">{flight}</a></strong> "
-                remaining_keys.remove('flight')
-            if "icao" in json_message.keys():
-                html_output += "ICAO: <strong>{icao}</strong> ".format(
-                    icao=json_message['icao'],
-                )
-                remaining_keys.remove('icao')
-            html_output += "</td>"
-
-            # Table footer row, metadata
-            html_output += "<td style=\"text-align: right\">"
-            if "freq" in json_message.keys():
-                html_output += "<span class=\"wrapper\">F: <strong>{freq}</strong><span class=\"tooltip\">The frequency this message was received on</span></span> ".format(
-                    freq=json_message['freq'],
-                )
-                remaining_keys.remove('freq')
-
-            if "ack" in json_message.keys():
-                if json_message['ack'] is not False:
-                    html_output += "<span class=\"wrapper\">A: <strong>{ack}</strong><span class=\"tooltip\">Acknolwedgement</span></span> ".format(
-                        ack=json_message['ack'],
-                    )
-                remaining_keys.remove('ack')
-
-            if "mode" in json_message.keys():
-                html_output += "<span class=\"wrapper\">M: <strong>{mode}</strong><span class=\"tooltip\">Mode</span></span> ".format(
-                    mode=json_message['mode'],
-                )
-                remaining_keys.remove('mode')
-
-            if "label" in json_message.keys():
-                html_output += "<span class=\"wrapper\">L: <strong>{label}</strong><span class=\"tooltip\">Label</span></span> ".format(
-                    label=json_message['label'],
-                )
-                remaining_keys.remove('label')
-
-            if "block_id" in json_message.keys():
-                html_output += "<span class=\"wrapper\">B: <strong>{block_id}</strong><span class=\"tooltip\">Block ID</span></span> ".format(
-                    block_id=json_message['block_id'],
-                )
-                remaining_keys.remove('block_id')
-
-            if "msgno" in json_message.keys():
-                html_output += "<span class=\"wrapper\">M#: <strong>{msgno}</strong><span class=\"tooltip\">Message number. Used for multi-part messages.</span></span> ".format(
-                    msgno=json_message['msgno'],
-                )
-                remaining_keys.remove('msgno')
-
-            if "is_response" in json_message.keys():
-                html_output += "<span class=\"wrapper\">R: <strong>{is_response}</strong><span class=\"tooltip\">Response</span></span> ".format(
-                    is_response=json_message['is_response'],
-                )
-                remaining_keys.remove('is_response')
-
-            if "is_onground" in json_message.keys():
-                # We need to watch this to make sure I have this right. After spelunking through vdlm2dec source code
-                # Input always appears to be a 0 or 2...for reasons I don't get. I could have this backwards
-                # 0 indicates the plane is airborne
-                # 2 indicates the plane is on the ground
-                # https://github.com/TLeconte/vdlm2dec/blob/1ea300d40d66ecb969f1f463506859e36f62ef5c/out.c#L457
-                # variable naming in vdlm2dec is inconsistent, but "ground" and "gnd" seem to be used
-
-                if json_message['is_onground'] == 0:
-                    is_onground = "False"
-                else:
-                    is_onground = "True"
-
-                html_output += f"<span class=\"wrapper\">G: <strong>{is_onground}</strong><span class=\"tooltip\">Is on ground?</span></span> "
-                remaining_keys.remove('is_onground')
-
-            if "error" in json_message.keys():
-                if json_message['error'] != 0:
-                    html_output += '<span style="color:red;">'
-                    html_output += "E: {error} ".format(
-                        error=json_message['error'],
-                    )
-                    html_output += '</span>'
-                remaining_keys.remove('error')
-
-            html_output += "</td>"
-            html_output += "</tr>"
-
-            # Finish table html
-            html_output += "</table>"
-
-            if EXTREME_LOGGING:
-                print(html_output)
-
+            html_output = htmlGenerator(message_source, json_message)
             # Send output via socketio
             if DEBUG_LOGGING:
-                print("[htmlGenerator] sending output via socketio.emit")
+                print("[htmlListener] sending output via socketio.emit")
             socketio.emit('newmsg', {'msghtml': html_output}, namespace='/test')
             if DEBUG_LOGGING:
-                print("[htmlGenerator] packet sent via socketio.emit")
-
-            # Remove leftover keys that we don't really care about (do we care about these?)
-            if 'channel' in remaining_keys:
-                remaining_keys.remove('channel')
-            if 'level' in remaining_keys:
-                remaining_keys.remove('level')
-            if 'end' in remaining_keys:
-                remaining_keys.remove('end')
-
-            if len(remaining_keys) > 0:
-                print("")
-                print("Non decoded data exists:")
-                print(repr(remaining_keys))
-                print("")
-                print(json.dumps(json_message, indent=4, sort_keys=True))
-                print("")
-                print("-----")
-
-            if DEBUG_LOGGING:
-                print("[htmlGenerator] Completed with generation")
+                print("[htmlListener] packet sent via socketio.emit")
+                print("[htmlListener] Completed with generation")
         else:
             pass
 
+    if os.getenv("DEBUG_LOGGING", default=False):
+        print("Exiting [htmlListener] thread")
 
 def database_listener():
     import sys
@@ -586,6 +625,8 @@ def stats():
 def search():
     return render_template('search.html')
 
+# The listener for the live message page
+# Ensure the necessary listeners are fired up
 
 @socketio.on('connect', namespace='/test')
 def test_connect():
@@ -600,16 +641,40 @@ def test_connect():
     # Start the htmlGenerator thread only if the thread has not been started before.
     if not thread_html_generator.isAlive():
         if os.getenv("DEBUG_LOGGING", default=False):
-            print("Starting htmlGenerator")
+            print("Starting htmlListener")
         sys.stdout.flush()
-        thread_html_generator = socketio.start_background_task(htmlGenerator)
+        thread_html_generator_event.clear()
+        thread_html_generator = socketio.start_background_task(htmlListener)
+
+@socketio.on('connect', namespace='/search')
+def test_connect():
+    import os
+    import sys
+
+    if os.getenv("DEBUG_LOGGING", default=False):
+        print('Client connected')
+    pass
+
+@socketio.on('query', namespace='/search')
+def handle_message(message, namespace):
+    import time
+
+    if message['search_term'] != "":
+        query_result = acarshub_db.database_search(message['field'], message['search_term'])
+
+        if query_result is not None:
+            for result in query_result:
+                html_output = htmlGenerator(None, result, True)
+                socketio.emit('newmsg', {'msghtml': html_output}, namespace='/search')
 
 
 @socketio.on('disconnect', namespace='/test')
 def test_disconnect():
     if os.getenv("DEBUG_LOGGING", default=False):
         print('Client disconnected')
-    pass
+
+    # Client disconnected, stop the htmlListener
+    thread_html_generator_event.set()
 
 
 if __name__ == '__main__':
