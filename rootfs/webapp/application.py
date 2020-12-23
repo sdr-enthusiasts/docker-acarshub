@@ -88,6 +88,16 @@ def htmlGenerator(message_source=None, json_message=None, from_query=False):
         if 'message_type' in json_message:
             message_source = json_message['message_type']
             del json_message['message_type']
+
+        # converting the time key saved in the db to the expected output timestamp key and format
+        # part of the need for this is because I foolishly didn't name the field in the db the same
+        # as the message's original key, but it turns out, that probably saved some trouble
+        # since the db is saving everything as text (tried numeric, WAY more of a pain...), 
+        # and we need to convert string to float
+        # so the timestamp conversion below works right. Might be worth revisiting the db structure
+        # and renaming the key (I think this conversion will work right if we save it back to the same key?)
+        # but I didn't test, and I didn't want to mess about with my test-db since I have a fair bit of data saved
+
         if 'time' in json_message:
             json_message['timestamp'] = float(json_message['time'])
             del json_message['time']
@@ -658,14 +668,38 @@ def test_connect():
 @socketio.on('query', namespace='/search')
 def handle_message(message, namespace):
     import time
+    html_output = ""
+    current_search_page = 1
 
     if message['search_term'] != "":
-        query_result = acarshub_db.database_search(message['field'], message['search_term'])
+        if 'results_after' in message:
+            search = acarshub_db.database_search(message['field'], message['search_term'], message['results_after'] * 20)
+            current_search_page = message['results_after']
+        else:
+            search = acarshub_db.database_search(message['field'], message['search_term'])
 
+        query_result = search[0]
         if query_result is not None:
             for result in query_result:
-                html_output = htmlGenerator(None, result, True)
-                socketio.emit('newmsg', {'msghtml': html_output}, namespace='/search')
+                html_output += "<p>" + htmlGenerator(None, result, True) + "</p>"
+
+            html_output += f"<p>Found {search[1]} results. "
+            # we have more items found with the search than are displayed
+            
+            num_pages = 1
+            html_output += "Page "
+            for i in range(0, int(search[1] / 20)):
+                if i == current_search_page:
+                    html_output += f"Page {num_pages}"
+                else:
+                    html_output += f"<a href=\"#\" id=\"search_page\" onclick=\"runclick({num_pages})\" value=\"{num_pages}\">{num_pages}</a> "
+                num_pages += 1
+            html_output += f"Page {num_pages}"
+
+    else:
+        html_output += "<p>No results</p>"
+    
+    socketio.emit('newmsg', {'msghtml': html_output}, namespace='/search')
 
 
 @socketio.on('disconnect', namespace='/test')

@@ -237,22 +237,34 @@ def find_airline_code_from_iata(iata):
             print(f"[database] IATA code {iata} not found in database")
             return (iata, "Unknown Airline")
 
-def database_search(field, search_term):
+def database_search(field, search_term, page=0):
     import os
     import json
     result = None
 
     try:
+        if os.getenv("DEBUG_LOGGING", default=False):
+            print(f"[database] Searching database for {search_term} in {field}")
         session = db_session()
-        result = session.query(messages).limit(50)
-        print(result.count())
+        if field == "flight":
+            result = session.query(messages).filter(messages.flight.contains(search_term))
+        elif field == "tail":
+            result = session.query(messages).filter(messages.tail.contains(search_term))
+        elif field == "depa":
+            result = result = session.query(messages).filter(messages.depa.contains(search_term))
+        elif field == "dsta":
+            result = session.query(messages).filter(messages.dsta.contains(search_term))
+        elif field == "text":
+            result = session.query(messages).filter(messages.text.contains(search_term))
         session.close()
     except Exception:
         print("[database] Error running search!")
 
+    if os.getenv("DEBUG_LOGGING", default=False):
+        print("[database] Done searching")
+
     if result.count() > 0:
-        data = [d.__dict__ for d in result]
-        print(data)
-        return data
+        data = [d.__dict__ for d in result[page:page+10]]
+        return [data, result.count()]
     else:
-        return result
+        return [None, 20]

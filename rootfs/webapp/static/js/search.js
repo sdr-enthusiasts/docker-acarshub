@@ -1,15 +1,19 @@
+var socket;
 
 $(document).ready(function(){
     //connect to the socket server.
-    var socket = io.connect('http://' + document.domain + ':' + location.port + '/search');
+    socket = io.connect('http://' + document.domain + ':' + location.port + '/search');
     var msgs_received = [];
 
     //receive details from server
+    // Maintain only the most recent search results
+    // Server sends it as a huge blob
+
     socket.on('newmsg', function(msg) {
         //console.log("Received msg" + msg.msghtml);
         console.log("Received msg");
-        //maintain a list of 50 msgs
-        if (msgs_received.length >= 50){
+        //maintain a list of 1 msgs
+        if (msgs_received.length >= 1){
             msgs_received.shift()
         }            
         msgs_received.push(msg.msghtml);
@@ -21,14 +25,20 @@ $(document).ready(function(){
     });
 
     document.addEventListener("keyup", function(event) {
-        console.log("event");
         var search_term = document.getElementById("search_term").value;
         var field = document.getElementById("dbfield").value;
         socket.emit('query', {'search_term': search_term, 'field': field}, namespace='/search')
-    })
+    });
 
     //noop
     socket.on('noop', function(noop) {
         console.log("Received noop");
     });
 });
+
+function runclick(page) {
+    console.log("updating page");
+    var search_term = document.getElementById("search_term").value;
+    var field = document.getElementById("dbfield").value;
+    socket.emit('query', {'search_term': search_term, 'field': field, 'results_after': page}, namespace='/search')
+}
