@@ -246,7 +246,7 @@ def database_search(field, search_term, page=0):
         if os.getenv("DEBUG_LOGGING", default=False):
             print(f"[database] Searching database for {search_term} in {field}")
         session = db_session()
-        if field == "flight":
+        if field == "flight-iata":
             result = session.query(messages).filter(messages.flight.contains(search_term))
         elif field == "tail":
             result = session.query(messages).filter(messages.tail.contains(search_term))

@@ -6,8 +6,8 @@ import acarshub_db
 import logging
 import os
 
-from flask_socketio import SocketIO, emit
-from flask import Flask, render_template, url_for, copy_current_request_context
+from flask_socketio import SocketIO
+from flask import Flask, render_template
 from threading import Thread, Event
 from collections import deque
 
@@ -60,11 +60,9 @@ que_database = deque(maxlen=15)
 
 
 def htmlGenerator(message_source=None, json_message=None, from_query=False):
-    import time
     import datetime
     import json
     import pprint
-    import sys
     import os
 
     DEBUG_LOGGING = False
@@ -95,7 +93,7 @@ def htmlGenerator(message_source=None, json_message=None, from_query=False):
         # converting the time key saved in the db to the expected output timestamp key and format
         # part of the need for this is because I foolishly didn't name the field in the db the same
         # as the message's original key, but it turns out, that probably saved some trouble
-        # since the db is saving everything as text (tried numeric, WAY more of a pain...), 
+        # since the db is saving everything as text (tried numeric, WAY more of a pain...),
         # and we need to convert string to float
         # so the timestamp conversion below works right. Might be worth revisiting the db structure
         # and renaming the key (I think this conversion will work right if we save it back to the same key?)
@@ -106,9 +104,10 @@ def htmlGenerator(message_source=None, json_message=None, from_query=False):
             del json_message['time']
             print(json_message['timestamp'])
 
-        delete = [key for key in json_message if json_message[key] == None]
-        for key in delete: del json_message[key]
-    
+        delete = [key for key in json_message if json_message[key] is None]
+        for key in delete:
+            del json_message[key]
+
     remaining_keys = list(json_message.keys())
 
     # Prepare Table HTML
@@ -364,20 +363,14 @@ def htmlGenerator(message_source=None, json_message=None, from_query=False):
 
 def htmlListener():
     import time
-    import datetime
-    import json
-    import pprint
     import sys
     import os
 
     # TOOLTIPS: <span class="wrapper">visible text<span class="tooltip">tooltip text</span></span>
 
     DEBUG_LOGGING = False
-    EXTREME_LOGGING = False
     if os.getenv("DEBUG_LOGGING", default=False):
         DEBUG_LOGGING = True
-    if os.getenv("EXTREME_LOGGING", default=False):
-        EXTREME_LOGGING = True
 
     # Run while requested...
     while not thread_html_generator_event.isSet():
@@ -399,6 +392,7 @@ def htmlListener():
 
     if os.getenv("DEBUG_LOGGING", default=False):
         print("Exiting [htmlListener] thread")
+
 
 def database_listener():
     import sys
@@ -587,7 +581,7 @@ def vdlm_listener():
                 que_messages.append(("VDL-M2", vdlm2_json))
                 if DEBUG_LOGGING:
                     print("[vdlm2Generator] sending off to db")
-                que_database.append(("VDLM2", vdlm2_json))
+                que_database.append(("VDL-M2", vdlm2_json))
 
 
 def init_listeners():
@@ -637,8 +631,10 @@ def stats():
 def search():
     return render_template('search.html')
 
+
 # The listener for the live message page
 # Ensure the necessary listeners are fired up
+
 
 @socketio.on('connect', namespace='/test')
 def test_connect():
@@ -661,10 +657,10 @@ def test_connect():
         thread_html_generator_event.clear()
         thread_html_generator = socketio.start_background_task(htmlListener)
 
+
 @socketio.on('connect', namespace='/search')
-def test_connect():
+def search_connect():
     import os
-    import sys
 
     if os.getenv("DEBUG_LOGGING", default=False):
         print('Client connected')
@@ -676,7 +672,6 @@ def test_connect():
 
 @socketio.on('query', namespace='/search')
 def handle_message(message, namespace):
-    import time
     # We are going to send the result over in one blob
     # search.js will only maintain the most recent blob we send over
     html_output = ""
@@ -764,7 +759,7 @@ def error_handler_chat(e):
 
 
 @socketio.on_error('/search')
-def error_handler_chat(e):
+def error_handler_search(e):
     print('[server] An error has occurred: ' + str(e))
 
 
