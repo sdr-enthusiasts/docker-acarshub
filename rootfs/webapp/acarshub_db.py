@@ -247,17 +247,17 @@ def database_search(field, search_term, page=0):
             print(f"[database] Searching database for {search_term} in {field}")
         session = db_session()
         if field == "flight-iata":
-            result = session.query(messages).filter(messages.flight.contains(search_term))
+            result = session.query(messages).filter(messages.flight.contains(search_term)).order_by(messages.time.desc())
         elif field == "tail":
-            result = session.query(messages).filter(messages.tail.contains(search_term))
+            result = session.query(messages).filter(messages.tail.contains(search_term)).order_by(messages.time.desc())
         elif field == "depa":
-            result = result = session.query(messages).filter(messages.depa.contains(search_term))
+            result = result = session.query(messages).filter(messages.depa.contains(search_term)).order_by(messages.time.desc())
         elif field == "dsta":
-            result = session.query(messages).filter(messages.dsta.contains(search_term))
+            result = session.query(messages).filter(messages.dsta.contains(search_term)).order_by(messages.time.desc())
         elif field == "text":
-            result = session.query(messages).filter(messages.text.contains(search_term))
+            result = session.query(messages).filter(messages.text.contains(search_term)).order_by(messages.time.desc())
         elif field == "msgno":
-            result = session.query(messages).filter(messages.msgno.contains(search_term))
+            result = session.query(messages).filter(messages.msgno.contains(search_term)).order_by(messages.time.desc())
         session.close()
     except Exception:
         print("[database] Error running search!")

@@ -102,7 +102,9 @@ def htmlGenerator(message_source=None, json_message=None, from_query=False):
         if 'time' in json_message:
             json_message['timestamp'] = float(json_message['time'])
             del json_message['time']
-            print(json_message['timestamp'])
+
+        # We need to loop through the data and remove all keys without a value set.
+        # The database query returns all columns, irrespective if there is a value set or the field is NULL
 
         delete = [key for key in json_message if json_message[key] is None]
         for key in delete:
@@ -251,7 +253,7 @@ def htmlGenerator(message_source=None, json_message=None, from_query=False):
         # If the iata and icao variables are not equal, airline was found in the database and we'll add in the tool-tip for the decoded airline
         # Otherwise, no tool-tip, no FA link, and use the IATA code for display
         if icao != json_message['flight'][:2]:
-            html_output += f"Flight: <span class=\"wrapper\"><strong><a href=\"https://flightaware.com/live/flight/{flight}\" target=\"_blank\">{flight}</a></strong><span class=\"tooltip\">{airline} Flight {flight_number}</span></span> "
+            html_output += f"Flight: <span class=\"wrapper\"><strong><a href=\"https://flightaware.com/live/flight/{flight}\" target=\"_blank\">{flight}/{json_message['flight']}</a></strong><span class=\"tooltip\">{airline} Flight {flight_number}</span></span> "
         else:
             html_output += f"Flight: <strong><a href=\"https://flightaware.com/live/flight/{flight}\" target=\"_blank\">{flight}</a></strong> "
         remaining_keys.remove('flight')
@@ -718,7 +720,13 @@ def handle_message(message, namespace):
             else:
                 html_output += "<a href=\"#\" id=\"search_page\" onclick=\"runclick(0)\">1</a> "
 
-            for i in range(1, int(search[1] / 20) + 1):
+            # This bit of logic is to check and see if we need to append an extra page
+            if search[1] % 20 != 0:
+                total_pages = int(search[1] / 20) + 1
+            else:
+                total_pages = int(search[1] / 20)
+
+            for i in range(1, total_pages):
                 if i == current_search_page:
                     html_output += f"{i+1} "
                 else:
