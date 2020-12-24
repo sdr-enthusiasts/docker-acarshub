@@ -707,7 +707,7 @@ def handle_message(message, namespace):
             for result in query_result:
                 html_output += "<p>" + htmlGenerator(None, result, True) + "</p> "
 
-            html_output += f"<p>Found {search[1]} results. "
+            html_output += f"<p>Found {search[1]} results.<p>"
             # we have more items found with the search than are displayed
             # We'll set up the list of clickable links for the user
             # So they can click through the results
@@ -715,18 +715,13 @@ def handle_message(message, namespace):
 
             html_output += "Page "
 
-            if current_search_page == 0:
-                html_output += "1 "
-            else:
-                html_output += "<a href=\"#\" id=\"search_page\" onclick=\"runclick(0)\">1</a> "
-
             # This bit of logic is to check and see if we need to append an extra page
             if search[1] % 20 != 0:
                 total_pages = int(search[1] / 20) + 1
             else:
                 total_pages = int(search[1] / 20)
 
-            for i in range(1, total_pages):
+            for i in range(0, total_pages):
                 if i == current_search_page:
                     html_output += f"{i+1} "
                 else:
