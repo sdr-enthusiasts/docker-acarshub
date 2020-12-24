@@ -7,7 +7,7 @@ import logging
 import os
 
 from flask_socketio import SocketIO
-from flask import Flask, render_template
+from flask import Flask, render_template, request
 from threading import Thread, Event
 from collections import deque
 
@@ -730,7 +730,12 @@ def handle_message(message, namespace):
         else:
             html_output += "<p>No results</p>"
 
-    socketio.emit('newmsg', {'msghtml': html_output}, namespace='/search')
+    # grab the socket id for the request
+    # This stops the broadcast of the search results to everyone
+    # in the search namespace.
+
+    requester = request.sid
+    socketio.emit('newmsg', {'msghtml': html_output}, room=requester, namespace='/search')
 
 
 @socketio.on('disconnect', namespace='/test')
