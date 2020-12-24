@@ -665,26 +665,51 @@ def test_connect():
         print('Client connected')
     pass
 
+
+# handle a query request from the browser
+
+
 @socketio.on('query', namespace='/search')
 def handle_message(message, namespace):
     import time
+    # We are going to send the result over in one blob
+    # search.js will only maintain the most recent blob we send over
     html_output = ""
     current_search_page = 0
 
+    # If the user has cleared the search bar, we'll execute the else statement
+    # And the browsers clears the data
+    # otherwise, run the search and format the results
+
     if message['search_term'] != "":
+        # Decide if the user is executing a new search or is clicking on a page of results
+        # search.js appends the "results_after" as the result page index user is requested
+        # Otherwise, we're at the first page
+
         if 'results_after' in message:
+            # ask the database for the results at the user requested index
+            # multiply the selected index by 20 (we have 20 results per page) so the db
+            # knows what result index to send back
             search = acarshub_db.database_search(message['field'], message['search_term'], message['results_after'] * 20)
             current_search_page = message['results_after']
         else:
             search = acarshub_db.database_search(message['field'], message['search_term'])
 
+        # the db returns two values
+        # index zero is the query results in json
+        # the other is the count of total results
+
         query_result = search[0]
         if query_result is not None:
+            # Loop through the results and format html
             for result in query_result:
                 html_output += "<p>" + htmlGenerator(None, result, True) + "</p> "
 
             html_output += f"<p>Found {search[1]} results. "
             # we have more items found with the search than are displayed
+            # We'll set up the list of clickable links for the user
+            # So they can click through the results
+            # The selected page is non-clickable
 
             html_output += "Page "
 
@@ -713,6 +738,7 @@ def test_disconnect():
     # this doesn't work right yet, I don't think.
     # If only one person is connected this is fine to run
     # but if multiple connections are established this kills the html feed for everyone
+    # I don't see the need to endlessly run the htmlgenerator if no one is there to listen
 
     thread_html_generator_event.set()
 
