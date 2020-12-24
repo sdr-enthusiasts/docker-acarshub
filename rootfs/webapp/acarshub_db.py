@@ -256,6 +256,8 @@ def database_search(field, search_term, page=0):
             result = session.query(messages).filter(messages.dsta.contains(search_term))
         elif field == "text":
             result = session.query(messages).filter(messages.text.contains(search_term))
+        elif field == "msgno":
+            result = session.query(messages).filter(messages.msgno.contains(search_term))
         session.close()
     except Exception:
         print("[database] Error running search!")
