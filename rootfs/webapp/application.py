@@ -18,6 +18,9 @@ app = Flask(__name__)
 # app.config['SECRET_KEY'] = 'secret!'
 # app.config['DEBUG'] = True
 
+# Global variable to keep track of connected users in the main namespace
+connected_users = 0
+
 # turn the flask app into a socketio app
 # regarding async_handlers=True, see: https://github.com/miguelgrinberg/Flask-SocketIO/issues/348
 socketio = SocketIO(
@@ -443,7 +446,6 @@ def acars_listener():
         EXTREME_LOGGING = True
     if os.getenv("SPAM", default=False):
         SPAM = True
-    print(SPAM)
 
     # Define acars_receiver
     acars_receiver = socket.socket(
@@ -644,9 +646,12 @@ def test_connect():
     import sys
     # need visibility of the global thread object
     global thread_html_generator
+    global connected_users
+
+    connected_users += 1
 
     if os.getenv("DEBUG_LOGGING", default=False):
-        print('Client connected')
+        print(f'Client connected. Total connected: {connected_users}')
 
     # Start the htmlGenerator thread only if the thread has not been started before.
     if not thread_html_generator.isAlive():
@@ -723,24 +728,25 @@ def handle_message(message, namespace):
                     html_output += f"{i+1} "
                 else:
                     html_output += f"<a href=\"#\" id=\"search_page\" onclick=\"runclick({i})\">{i+1}</a> "
-    else:
-        html_output += "<p>No results</p>"
-    
+
+        else:
+            html_output += "<p>No results</p>"
+
     socketio.emit('newmsg', {'msghtml': html_output}, namespace='/search')
 
 
 @socketio.on('disconnect', namespace='/test')
 def test_disconnect():
+    global connected_users
+
+    connected_users -= 1
     if os.getenv("DEBUG_LOGGING", default=False):
-        print('Client disconnected')
+        print(f'Client disconnected. Total connected: {connected_users}')
 
     # Client disconnected, stop the htmlListener
-    # this doesn't work right yet, I don't think.
-    # If only one person is connected this is fine to run
-    # but if multiple connections are established this kills the html feed for everyone
-    # I don't see the need to endlessly run the htmlgenerator if no one is there to listen
 
-    thread_html_generator_event.set()
+    if connected_users == 0:
+        thread_html_generator_event.set()
 
 
 if __name__ == '__main__':
@@ -753,6 +759,11 @@ def error_handler(e):
 
 
 @socketio.on_error('/test')
+def error_handler_chat(e):
+    print('[server] An error has occurred: ' + str(e))
+
+
+@socketio.on_error('/search')
 def error_handler_chat(e):
     print('[server] An error has occurred: ' + str(e))
 
