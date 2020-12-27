@@ -1,0 +1,51 @@
+#!/usr/bin/with-contenv bash
+#shellcheck shell=bash
+
+RRDLINES=()
+
+while :
+do
+	echo "Generating website graphics" | stdbuf -o0 sed --unbuffered '/^$/d' | stdbuf -o0 awk '{print "[stats-generator] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
+	if [ -n "$ENABLE_ACARS" ]; then
+		RRDLINES+=("DEF:messages-acars=/run/acars/acars.rrd:ACARS:AVERAGE" "LINE2:messages-acars#FF0000:ACARS")
+	fi
+
+	if [ -n "$ENABLE_VDLM" ]; then
+		RRDLINES+=("DEF:messages-vdlm=/run/acars/vdlm.rrd:ACARS:AVERAGE" "LINE2:messages-vdlm#00FF00:VDLM")
+	fi
+
+	# generate the graphs
+
+	DATE=$(date +%s)
+
+	# 1 Hour
+	rrdtool graph /run/acars/1hour.png -a PNG --title="1 Hour" -w 1250 -h 200 --start $((DATE-3600)) --end $(date +%s) --vertical-label Messages "${RRDLINES[@]}" | stdbuf -o0 sed --unbuffered '/^$/d' | stdbuf -o0 awk '{print "[stats-generator] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
+
+	# 6 Hour
+	rrdtool graph /run/acars/6hour.png -a PNG --title="6 Hours" -w 1250 -h 200 --start $((DATE-21600)) --end $(date +%s) --vertical-label Messages "${RRDLINES[@]}" | stdbuf -o0 sed --unbuffered '/^$/d' | stdbuf -o0 awk '{print "[stats-generator] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
+
+	# 12 Hour
+	rrdtool graph /run/acars/6hour.png -a PNG --title="12 Hours" -w 1250 -h 200 --start $((DATE-43200)) --end $(date +%s) --vertical-label Messages "${RRDLINES[@]}" | stdbuf -o0 sed --unbuffered '/^$/d' | stdbuf -o0 awk '{print "[stats-generator] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
+
+	# 1 Day
+
+	rrdtool graph /run/acars/24hours.png -a PNG --title="1 Day" -w 1250 -h 200 --start $((DATE-86400)) --end $(date +%s) --vertical-label Messages "${RRDLINES[@]}" | stdbuf -o0 sed --unbuffered '/^$/d' | stdbuf -o0 awk '{print "[stats-generator] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
+
+	# 1 Week
+
+	rrdtool graph /run/acars/1week.png -a PNG --title="1 Week" -w 1250 -h 200 --start $((DATE-604800)) --end $(date +%s) --vertical-label Messages "${RRDLINES[@]}" | stdbuf -o0 sed --unbuffered '/^$/d' | stdbuf -o0 awk '{print "[stats-generator] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
+
+	# 30 Days
+
+	rrdtool graph /run/acars/30days.png -a PNG --title="30 Days" -w 1250 -h 200 --start $((DATE-2592000)) --end $(date +%s) --vertical-label Messages "${RRDLINES[@]}" | stdbuf -o0 sed --unbuffered '/^$/d' | stdbuf -o0 awk '{print "[stats-generator] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
+
+	# 6 months
+
+	rrdtool graph /run/acars/6months.png -a PNG --title="6 Months" -w 1250 -h 200 --start $((DATE-151552000)) --end $(date +%s) --vertical-label Messages "${RRDLINES[@]}" | stdbuf -o0 sed --unbuffered '/^$/d' | stdbuf -o0 awk '{print "[stats-generator] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
+
+	# 1 Year
+
+	rrdtool graph /run/acars/1year.png -a PNG --title="1 Year" -w 1250 -h 200 --start $((DATE-31536000)) --end $(date +%s) --vertical-label Messages "${RRDLINES[@]}" | stdbuf -o0 sed --unbuffered '/^$/d' | stdbuf -o0 awk '{print "[stats-generator] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
+
+	sleep 300
+done

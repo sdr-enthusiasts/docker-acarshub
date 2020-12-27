@@ -65,6 +65,8 @@ RUN set -x && \
     TEMP_PACKAGES+=(python3-dev) && \
     # process management
     KEPT_PACKAGES+=(procps) && \
+    # stats
+    KEPT_PACKAGES+=(rrdtool) && \
     # install packages
     apt-get update && \
     apt-get install -y --no-install-recommends \
