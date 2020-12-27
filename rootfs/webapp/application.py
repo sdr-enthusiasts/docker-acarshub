@@ -15,6 +15,8 @@ log = logging.getLogger('werkzeug')
 log.setLevel(logging.ERROR)
 
 app = Flask(__name__)
+# Make the browser not cache files
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 # app.config['SECRET_KEY'] = 'secret!'
 # app.config['DEBUG'] = True
 
