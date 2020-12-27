@@ -41,7 +41,7 @@ do
 
     # 6 months
 
-    rrdtool graph /webapp/static/images/6months.png -a PNG --title="6 Months" -w 1000 -h 200 --start $((DATE-151552000)) --end $(date +%s) --vertical-label Messages "${RRDLINES[@]}" | stdbuf -o0 sed --unbuffered '/^$/d' | stdbuf -o0 awk '{print "[stats-generator] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
+    rrdtool graph /webapp/static/images/6months.png -a PNG --title="6 Months" -w 1000 -h 200 --start $((DATE-15552000)) --end $(date +%s) --vertical-label Messages "${RRDLINES[@]}" | stdbuf -o0 sed --unbuffered '/^$/d' | stdbuf -o0 awk '{print "[stats-generator] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
 
     # 1 Year
 
