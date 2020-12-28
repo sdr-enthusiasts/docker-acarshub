@@ -71,8 +71,6 @@ def update_db():
     global vdlm_messages
     global acars_messages
 
-    if os.getenv("DEBUG_LOGGING", default=False):
-        print("rrd update db")
     acarshub_rrd.update_db(vdlm=vdlm_messages, acars=acars_messages)
     vdlm_messages = 0
     acars_messages = 0
