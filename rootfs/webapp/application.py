@@ -3,6 +3,7 @@
 import eventlet
 eventlet.monkey_patch()
 import acarshub_db
+import acarshub_rrd
 import logging
 import os
 
@@ -33,7 +34,10 @@ socketio = SocketIO(
     engineio_logger=False,
     ping_timeout=300)
 
-# random number Generator Thread
+# scheduler thread
+
+thread_scheduler = Thread()
+thread_scheduler_stop_event = Event()
 
 # threads for processing the incoming data
 
@@ -60,6 +64,18 @@ thread_database_stop_event = Event()
 que_messages = deque(maxlen=15)
 que_database = deque(maxlen=15)
 
+vdlm_messages = 0
+acars_messages = 0
+
+def update_db():
+    global vdlm_messages
+    global acars_messages
+
+    if os.getenv("DEBUG_LOGGING", default=False):
+        print("rrd update db")
+    acarshub_rrd.update_db(vdlm=vdlm_messages, acars=acars_messages)
+    vdlm_messages = 0
+    acars_messages = 0
 
 def htmlGenerator(message_source=None, json_message=None, from_query=False):
     import datetime
@@ -397,19 +413,35 @@ def htmlListener():
     if os.getenv("DEBUG_LOGGING", default=False):
         print("Exiting [htmlListener] thread")
 
-
-def database_listener():
-    import sys
-    import os
-    import time
+def scheduled_tasks():
     import schedule
+    import time
 
     DEBUG_LOGGING = False
     if os.getenv("DEBUG_LOGGING", default=False):
         DEBUG_LOGGING = True
 
+    # init the dbs if not already there
+
+    acarshub_rrd.create_db()
+
     # Schedule the database pruner
     schedule.every().hour.do(acarshub_db.pruneOld)
+    schedule.every().minute.at(":00").do(update_db)
+    schedule.every().minute.at(":30").do(acarshub_rrd.update_graphs)
+    while not thread_scheduler_stop_event.isSet():
+        schedule.run_pending()
+        time.sleep(1)
+
+def database_listener():
+    import sys
+    import os
+    import time
+    
+
+    DEBUG_LOGGING = False
+    if os.getenv("DEBUG_LOGGING", default=False):
+        DEBUG_LOGGING = True
 
     while not thread_database_stop_event.isSet():
         sys.stdout.flush()
@@ -424,9 +456,6 @@ def database_listener():
         else:
             pass
 
-        # Check and see if the db needs pruning
-        schedule.run_pending()
-
 
 def acars_listener():
     import time
@@ -434,6 +463,8 @@ def acars_listener():
     import json
     import sys
     import os
+
+    global acars_messages
 
     DEBUG_LOGGING = False
     EXTREME_LOGGING = False
@@ -495,6 +526,7 @@ def acars_listener():
             except Exception:
                 print("[acars data] Error with JSON input %s ." % (repr(data)))
             else:
+                acars_messages+=1
                 if EXTREME_LOGGING:
                     print(json.dumps(acars_json, indent=4, sort_keys=True))
                 if DEBUG_LOGGING:
@@ -511,6 +543,8 @@ def vdlm_listener():
     import json
     import sys
     import os
+
+    global vdlm_messages
 
     DEBUG_LOGGING = False
     EXTREME_LOGGING = False
@@ -577,6 +611,7 @@ def vdlm_listener():
             except Exception:
                 print("[vdlm2 data] Error with JSON input %s ." % (repr(data)))
             else:
+                vdlm_messages+=1
                 # Print json (for debugging)
                 if DEBUG_LOGGING:
                     print("[vdlm2Generator] appending message")
@@ -593,6 +628,7 @@ def init_listeners():
     global thread_acars_listener
     global thread_vdlm2_listener
     global thread_database
+    global thread_scheduler
 
     if os.getenv("DEBUG_LOGGING", default=False):
         print('[init] Starting data listeners')
@@ -613,6 +649,11 @@ def init_listeners():
             print('[init] Starting Database Thread')
         thread_database = Thread(target=database_listener)
         thread_database.start()
+    if not thread_scheduler.isAlive():
+        if os.getenv("DEBUG_LOGGING", default=False):
+            print("[init] starting scheduler")
+        thread_scheduler = Thread(target=scheduled_tasks)
+        thread_scheduler.start()
 
 # Any things we want to have started up in the background
 

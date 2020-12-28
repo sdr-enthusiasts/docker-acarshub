@@ -67,6 +67,7 @@ RUN set -x && \
     KEPT_PACKAGES+=(procps) && \
     # stats
     KEPT_PACKAGES+=(rrdtool) && \
+    TEMP_PACKAGES+=(librrd-dev) && \
     # install packages
     apt-get update && \
     apt-get install -y --no-install-recommends \

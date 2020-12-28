@@ -27,7 +27,6 @@ if [[ -n "${ENABLE_ACARS}" ]]; then
 
     # shellcheck disable=SC2016
     echo "$(wc -l < /run/acars/acars.past5min.json) ACARS messages received in last 5 mins" | stdbuf -o0 awk '{print "[acars_stats] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
-    rrdtool update /run/acars/acars.rrd $(date +%s):$(wc -l /run/acars/acars.past5min.json | awk '/[0-9]+/{print $1}')
 
     # rotate files keeping last 2 hours
     for i in {24..1}; do
