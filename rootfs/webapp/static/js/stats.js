@@ -6,6 +6,9 @@ setInterval(function() {
 	var sixhours = document.getElementById('6hr');
 	sixhours.src = 'static/images/6hour.png?rand=' + Math.random();
 
+	var twelvehours = document.getElementById('12hr');
+	twelvehours.src = 'static/images/12hour.png?rand=' + Math.random();
+
 	var twentyfourhours = document.getElementById('24hr');
 	twentyfourhours.src = 'static/images/24hours.png?rand=' + Math.random();
 

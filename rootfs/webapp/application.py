@@ -422,6 +422,7 @@ def scheduled_tasks():
     # init the dbs if not already there
 
     acarshub_rrd.create_db()
+    acarshub_rrd.update_graphs()
 
     # Schedule the database pruner
     schedule.every().hour.do(acarshub_db.pruneOld)
