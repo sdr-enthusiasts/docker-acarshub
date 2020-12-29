@@ -61,8 +61,8 @@ thread_database_stop_event = Event()
 # old messages will automatically be removed
 # the nice thing is once a web page is loaded message should auto-populate
 
-que_messages = deque(maxlen=15)
-que_database = deque(maxlen=15)
+que_messages = deque(maxlen=50)
+que_database = deque(maxlen=50)
 
 vdlm_messages = 0
 acars_messages = 0
