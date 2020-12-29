@@ -67,6 +67,7 @@ que_database = deque(maxlen=15)
 vdlm_messages = 0
 acars_messages = 0
 
+
 def update_db():
     global vdlm_messages
     global acars_messages
@@ -74,6 +75,7 @@ def update_db():
     acarshub_rrd.update_db(vdlm=vdlm_messages, acars=acars_messages)
     vdlm_messages = 0
     acars_messages = 0
+
 
 def htmlGenerator(message_source=None, json_message=None, from_query=False):
     import datetime
@@ -411,13 +413,10 @@ def htmlListener():
     if os.getenv("DEBUG_LOGGING", default=False):
         print("Exiting [htmlListener] thread")
 
+
 def scheduled_tasks():
     import schedule
     import time
-
-    DEBUG_LOGGING = False
-    if os.getenv("DEBUG_LOGGING", default=False):
-        DEBUG_LOGGING = True
 
     # init the dbs if not already there
 
@@ -432,11 +431,11 @@ def scheduled_tasks():
         schedule.run_pending()
         time.sleep(1)
 
+
 def database_listener():
     import sys
     import os
     import time
-    
 
     DEBUG_LOGGING = False
     if os.getenv("DEBUG_LOGGING", default=False):
@@ -525,7 +524,7 @@ def acars_listener():
             except Exception:
                 print("[acars data] Error with JSON input %s ." % (repr(data)))
             else:
-                acars_messages+=1
+                acars_messages += 1
                 if EXTREME_LOGGING:
                     print(json.dumps(acars_json, indent=4, sort_keys=True))
                 if DEBUG_LOGGING:
@@ -610,7 +609,7 @@ def vdlm_listener():
             except Exception:
                 print("[vdlm2 data] Error with JSON input %s ." % (repr(data)))
             else:
-                vdlm_messages+=1
+                vdlm_messages += 1
                 # Print json (for debugging)
                 if DEBUG_LOGGING:
                     print("[vdlm2Generator] appending message")

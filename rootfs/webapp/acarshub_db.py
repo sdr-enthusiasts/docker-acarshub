@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 
-from sqlalchemy import create_engine, Column, Numeric, Integer, String, \
+from sqlalchemy import create_engine, Column, Integer, String, \
     Text
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
-from flask import jsonify
 import os
 
 if os.getenv("ACARSHUB_DB"):
@@ -237,9 +236,9 @@ def find_airline_code_from_iata(iata):
             print(f"[database] IATA code {iata} not found in database")
             return (iata, "Unknown Airline")
 
+
 def database_search(field, search_term, page=0):
     import os
-    import json
     result = None
 
     try:
@@ -266,7 +265,7 @@ def database_search(field, search_term, page=0):
         print("[database] Done searching")
 
     if result.count() > 0:
-        data = [d.__dict__ for d in result[page:page+20]]
+        data = [d.__dict__ for d in result[page:page + 20]]
         return [data, result.count()]
     else:
         return [None, 20]
