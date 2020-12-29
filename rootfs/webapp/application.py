@@ -60,6 +60,8 @@ thread_database_stop_event = Event()
 # the messages will be in the que all the time, even if no one is using the website
 # old messages will automatically be removed
 # the nice thing is once a web page is loaded message should auto-populate
+# Note on the que: We are adding new messages to the right
+# This means oldest messages are to the left
 
 que_messages = deque(maxlen=50)
 que_database = deque(maxlen=50)
@@ -398,7 +400,7 @@ def htmlListener():
         time.sleep(1)
 
         if len(que_messages) != 0:
-            message_source, json_message = que_messages.pop()
+            message_source, json_message = que_messages.popleft()
             html_output = htmlGenerator(message_source, json_message)
             # Send output via socketio
             if DEBUG_LOGGING:
