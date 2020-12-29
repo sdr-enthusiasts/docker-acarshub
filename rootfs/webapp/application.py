@@ -68,7 +68,7 @@ vdlm_messages = 0
 acars_messages = 0
 
 
-def update_db():
+def update_rrd_db():
     global vdlm_messages
     global acars_messages
 
@@ -425,7 +425,7 @@ def scheduled_tasks():
 
     # Schedule the database pruner
     schedule.every().hour.do(acarshub_db.pruneOld)
-    schedule.every().minute.at(":00").do(update_db)
+    schedule.every().minute.at(":00").do(update_rrd_db)
     schedule.every().minute.at(":30").do(acarshub_rrd.update_graphs)
     while not thread_scheduler_stop_event.isSet():
         schedule.run_pending()

@@ -23,4 +23,4 @@ setInterval(function() {
 
 	var oneyear = document.getElementById('1yr');
 	oneyear.src = 'static/images/1year.png?rand=' + Math.random();
-}, 300000);
+}, 60000);
