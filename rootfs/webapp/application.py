@@ -533,7 +533,7 @@ def acars_listener():
                     split_json = data.decode().split('}')
 
                     for j in split_json:
-                        if len(j) > 0:
+                        if len(j) > 1:
                             acars_json.append(json.loads(j + "}"))
 
             except Exception:
@@ -632,7 +632,7 @@ def vdlm_listener():
                     split_json = data.decode().split('}')
 
                     for j in split_json:
-                        if len(j) > 0:
+                        if len(j) > 1:
                             vdlm_json.append(json.loads(j + "}"))
 
             except Exception:
