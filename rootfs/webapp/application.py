@@ -521,20 +521,34 @@ def acars_listener():
             if EXTREME_LOGGING:
                 print("[acarsGenerator] received data")
             # Decode json
+            # There is a rare condition where we'll receive two messages at once
+            # We will cover this condition off by ensuring each json message is
+            # broken apart and handled individually
+
             try:
-                acars_json = json.loads(data)
+                acars_json = []
+                if data.decode().count('}') == 1:
+                    acars_json.append(json.loads(data))
+                else:
+                    split_json = data.decode().split('}')
+
+                    for j in split_json:
+                        if len(j) > 0:
+                            acars_json.append(json.loads(j + "}"))
+
             except Exception:
                 print("[acars data] Error with JSON input %s ." % (repr(data)))
             else:
-                acars_messages += 1
-                if EXTREME_LOGGING:
-                    print(json.dumps(acars_json, indent=4, sort_keys=True))
-                if DEBUG_LOGGING:
-                    print("[acarsGenerator] appending message")
-                que_messages.append(("ACARS", acars_json))
-                if DEBUG_LOGGING:
-                    print("[acarsGenerator] sending off to db")
-                que_database.append(("ACARS", acars_json))
+                for j in acars_json:
+                    acars_messages += 1
+                    if EXTREME_LOGGING:
+                        print(json.dumps(j, indent=4, sort_keys=True))
+                    if DEBUG_LOGGING:
+                        print("[acarsGenerator] appending message")
+                    que_messages.append(("ACARS", j))
+                    if DEBUG_LOGGING:
+                        print("[acarsGenerator] sending off to db")
+                    que_database.append(("ACARS", j))
 
 
 def vdlm_listener():
@@ -606,21 +620,34 @@ def vdlm_listener():
                 print("[vdlm2Generator] data contains data")
 
             # Decode json
+            # There is a rare condition where we'll receive two messages at once
+            # We will cover this condition off by ensuring each json message is
+            # broken apart and handled individually
+
             try:
-                vdlm2_json = json.loads(data)
+                vdlm_json = []
+                if data.decode().count('}') == 1:
+                    vdlm_json.append(json.loads(data))
+                else:
+                    split_json = data.decode().split('}')
+
+                    for j in split_json:
+                        if len(j) > 0:
+                            vdlm_json.append(json.loads(j + "}"))
+
             except Exception:
                 print("[vdlm2 data] Error with JSON input %s ." % (repr(data)))
             else:
-                vdlm_messages += 1
-                # Print json (for debugging)
-                if DEBUG_LOGGING:
-                    print("[vdlm2Generator] appending message")
-                if EXTREME_LOGGING:
-                    print(json.dumps(vdlm2_json, indent=4, sort_keys=True))
-                que_messages.append(("VDL-M2", vdlm2_json))
-                if DEBUG_LOGGING:
-                    print("[vdlm2Generator] sending off to db")
-                que_database.append(("VDL-M2", vdlm2_json))
+                for j in vdlm_json:
+                    vdlm_messages += 1
+                    if EXTREME_LOGGING:
+                        print(json.dumps(j, indent=4, sort_keys=True))
+                    if DEBUG_LOGGING:
+                        print("[vdlm2Generator] appending message")
+                    que_messages.append(("VDL-M2", j))
+                    if DEBUG_LOGGING:
+                        print("[vdlm2Generator] sending off to db")
+                    que_database.append(("VDL-M2", j))
 
 
 def init_listeners():

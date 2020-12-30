@@ -11,7 +11,7 @@
 import socket
 import time
 
-message = '{"timestamp": 1608663465.318815, "station_id": "CS-KABQ-VDLM", "channel": 2, "freq": 136.975, "icao": 10690646, "toaddr": 1053386, "is_response": 0, "is_onground": 0, "mode": "2", "label": "5Z", "block_id": "3", "ack": "!", "tail": "N300LK", "flight": "MQ3331", "msgno": "M77A", "text": "OS KABQ /IR KABQ1901"}'
+message = '{"timestamp":1609022235.4580381,"station_id":"CS-KABQ-ACARS","channel":0,"freq":130.025,"level":-19,"error":0,"mode":"2","label":"H1","block_id":"6","ack":false,"tail":"N979UY","flight":"AA2320","msgno":"D49B","text":"6349452,-1079358,369,01485,440,0210,1/C70000415,0000039,0889,28480,28598,-50/C80000246,0000027,1040,28782,28238,-52/C90001141,0000023,1027,28896,27838,-52/C00000044,0000020,0974,29097,27558,-52/E10000047,00","end":true}\n{"timestamp":1609022236.7661481,"station_id":"CS-KABQ-ACARS","channel":0,"freq":130.025,"level":-18,"error":0,"mode":"2","label":"5Z","block_id":"5","ack":false,"tail":"N490UA","flight":"UA1603","msgno":"M52A","text":"/B6 ORDPHX PHX R8"}'
 
 receiver = socket.socket(
     family=socket.AF_INET,
