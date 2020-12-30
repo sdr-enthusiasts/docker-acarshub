@@ -41,7 +41,8 @@ def update_graphs():
         print("[rrdtool] Generating graphs")
         sys.stdout.flush()
 
-    args = []
+    args = ["/webapp/static/images/1hour.png", "-a", "PNG", "--title", "1 Hour", "-w", "1000",
+            "-h", "200", "--start", "-1h", "--vertical-label", "Messages"]
 
     if os.getenv("ENABLE_ACARS", default=False):
         args.append("DEF:messages-acars=/run/acars/acarshub.rrd:ACARS:AVERAGE")
@@ -56,77 +57,58 @@ def update_graphs():
         args.append("LINE1:messages-total#0037FA:Total")
 
     try:
-        rrdtool.graph("/webapp/static/images/1hour.png",
-                      "-a", "PNG",
-                      "--title", "1 Hour",
-                      "-w", "1000",
-                      "-h", "200",
-                      "--start", "-1h",
-                      "--vertical-label", "Messages",
-                      *args)
+        # 1 Hour
+        rrdtool.graph(*args)
 
-        rrdtool.graph("/webapp/static/images/6hour.png",
-                      "-a", "PNG",
-                      "--title", "6 Hours",
-                      "-w", "1000",
-                      "-h", "200",
-                      "--start", "-6h",
-                      "--vertical-label", "Messages",
-                      *args)
+        # 6 Hours
+        args[0] = "/webapp/static/images/6hour.png"
+        args[4] = "6 Hours"
+        args[10] = "-6h"
+        rrdtool.graph(*args)
 
-        rrdtool.graph("/webapp/static/images/12hour.png",
-                      "-a", "PNG",
-                      "--title", "12 Hours",
-                      "-w", "1000",
-                      "-h", "200",
-                      "--start", "-12h",
-                      "--vertical-label", "Messages",
-                      *args)
+        # 12 Hours
 
-        rrdtool.graph("/webapp/static/images/24hours.png",
-                      "-a", "PNG",
-                      "--title", "1 Day",
-                      "-w", "1000",
-                      "-h", "200",
-                      "--start", "-1d",
-                      "--vertical-label", "Messages",
-                      *args)
+        args[0] = "/webapp/static/images/12hour.png"
+        args[4] = "12 Hours"
+        args[10] = "-12h"
+        rrdtool.graph(*args)
 
-        rrdtool.graph("/webapp/static/images/1week.png",
-                      "-a", "PNG",
-                      "--title", "1 Week",
-                      "-w", "1000",
-                      "-h", "200",
-                      "--start", "-1w",
-                      "--vertical-label", "Messages",
-                      *args)
+        # 24 Hours
 
-        rrdtool.graph("/webapp/static/images/30days.png",
-                      "-a", "PNG",
-                      "--title", "1 Month",
-                      "-w", "1000",
-                      "-h", "200",
-                      "--start", "-1mon",
-                      "--vertical-label", "Messages",
-                      *args)
+        args[0] = "/webapp/static/images/24hours.png"
+        args[4] = "1 Day"
+        args[10] = "-1d"
+        rrdtool.graph(*args)
 
-        rrdtool.graph("/webapp/static/images/6months.png",
-                      "-a", "PNG",
-                      "--title", "6 Months",
-                      "-w", "1000",
-                      "-h", "200",
-                      "--start", "-6mon",
-                      "--vertical-label", "Messages",
-                      *args)
+        # 1 Week
 
-        rrdtool.graph("/webapp/static/images/1year.png",
-                      "-a", "PNG",
-                      "--title", "1 Year",
-                      "-w", "1000",
-                      "-h", "200",
-                      "--start", "-1yr",
-                      "--vertical-label", "Messages",
-                      *args)
+        args[0] = "/webapp/static/images/1week.png"
+        args[4] = "1 Week"
+        args[10] = "-1w"
+        rrdtool.graph(*args)
+
+        # 30 Days
+
+        args[0] = "/webapp/static/images/30days.png"
+        args[4] = "1 Month"
+        args[10] = "-1mon"
+        rrdtool.graph(*args)
+
+        # 6 Months
+
+        args[0] = "/webapp/static/images/6months.png"
+        args[4] = "6 Months"
+        args[10] = "-6mon"
+        rrdtool.graph(*args)
+
+        # 1 year
+
+        args[0] = "/webapp/static/images/1year.png"
+        args[4] = "1 Year"
+        args[10] = "-1yr"
+
+        rrdtool.graph(*args)
+
     except Exception as e:
         print(e)
 
