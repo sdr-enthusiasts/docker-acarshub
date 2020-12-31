@@ -11,7 +11,7 @@
 import socket
 import time
 
-message = '{"timestamp":1609022235.4580381,"station_id":"CS-KABQ-ACARS","channel":0,"freq":130.025,"level":-19,"error":0,"mode":"2","label":"H1","block_id":"6","ack":false,"tail":"N979UY","flight":"AA2320","msgno":"D49B","text":"6349452,-1079358,369,01485,440,0210,1/C70000415,0000039,0889,28480,28598,-50/C80000246,0000027,1040,28782,28238,-52/C90001141,0000023,1027,28896,27838,-52/C00000044,0000020,0974,29097,27558,-52/E10000047,00","end":true}\n{"timestamp":1609022236.7661481,"station_id":"CS-KABQ-ACARS","channel":0,"freq":130.025,"level":-18,"error":0,"mode":"2","label":"5Z","block_id":"5","ack":false,"tail":"N490UA","flight":"UA1603","msgno":"M52A","text":"/B6 ORDPHX PHX R8"}'
+message = '{"timestamp":1609367438.9092679,"station_id":"CS-KABQ-ACARS","channel":3,"freq":131.550,"level":-16,"error":0,"mode":"2","label":"SA","block_id":"2","ack":false,"tail":"N155QS","flight":"GS0001","msgno":"M49A","text":"0LS223037V","libacars":{"media-adv":{"err":false,"version":0,"current_link":{"code":"S","descr":"Default SATCOM","established":false,"time":{"hour":22,"min":30,"sec":37}},"links_avail":[{"code":"V","descr":"VHF ACARS"}]}}}\n'
 
 receiver = socket.socket(
     family=socket.AF_INET,

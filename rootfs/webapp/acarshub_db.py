@@ -72,6 +72,7 @@ Airlines.metadata.create_all(airlines_database)
 def add_message_from_json(message_type, message_from_json):
     import os
     global database
+    import json
     # message time
     time = None
     station_id = None
@@ -160,7 +161,10 @@ def add_message_from_json(message_type, message_from_json):
         elif index == 'error':
             error = message_from_json[index]
         elif index == 'libacars':
-            pass
+            try:
+                libacars = json.dumps(message_from_json[index])
+            except Exception as e:
+                print(f"[database] Error encoding libacars: {e}")
         # skip these
         elif index == 'channel':
             pass
@@ -190,8 +194,8 @@ def add_message_from_json(message_type, message_from_json):
         session.close()
         if os.getenv("DEBUG_LOGGING", default=False):
             print("[database] write to database complete")
-    except Exception:
-        print("[database] Error writing to the database")
+    except Exception as e:
+        print(f"[database] Error writing to the database: {e}")
 
 
 def pruneOld():

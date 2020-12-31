@@ -527,14 +527,15 @@ def acars_listener():
 
             try:
                 acars_json = []
-                if data.decode().count('}') == 1:
+                print("here")
+                if data.decode().count('}\n') == 1:
                     acars_json.append(json.loads(data))
                 else:
-                    split_json = data.decode().split('}')
+                    split_json = data.decode().split('}\n')
 
                     for j in split_json:
                         if len(j) > 1:
-                            acars_json.append(json.loads(j + "}"))
+                            acars_json.append(json.loads(j + "}\n"))
 
             except Exception:
                 print("[acars data] Error with JSON input %s ." % (repr(data)))
@@ -626,14 +627,14 @@ def vdlm_listener():
 
             try:
                 vdlm_json = []
-                if data.decode().count('}') == 1:
+                if data.decode().count('}\n') == 1:
                     vdlm_json.append(json.loads(data))
                 else:
-                    split_json = data.decode().split('}')
+                    split_json = data.decode().split('}\n')
 
                     for j in split_json:
                         if len(j) > 1:
-                            vdlm_json.append(json.loads(j + "}"))
+                            vdlm_json.append(json.loads(j + "}\n"))
 
             except Exception:
                 print("[vdlm2 data] Error with JSON input %s ." % (repr(data)))
