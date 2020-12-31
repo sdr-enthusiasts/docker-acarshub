@@ -405,7 +405,7 @@ def htmlListener():
             # Send output via socketio
             if DEBUG_LOGGING:
                 print("[htmlListener] sending output via socketio.emit")
-            socketio.emit('newmsg', {'msghtml': html_output}, namespace='/test')
+            socketio.emit('newmsg', {'msghtml': html_output}, namespace='/main')
             if DEBUG_LOGGING:
                 print("[htmlListener] packet sent via socketio.emit")
                 print("[htmlListener] Completed with generation")
@@ -709,8 +709,8 @@ def search():
 # Ensure the necessary listeners are fired up
 
 
-@socketio.on('connect', namespace='/test')
-def test_connect():
+@socketio.on('connect', namespace='/main')
+def main_connect():
     import os
     import sys
     # need visibility of the global thread object
@@ -809,8 +809,8 @@ def handle_message(message, namespace):
     socketio.emit('newmsg', {'msghtml': html_output}, room=requester, namespace='/search')
 
 
-@socketio.on('disconnect', namespace='/test')
-def test_disconnect():
+@socketio.on('disconnect', namespace='/main')
+def main_disconnect():
     global connected_users
 
     connected_users -= 1
@@ -832,8 +832,8 @@ def error_handler(e):
     print('[server] An error has occurred: ' + str(e))
 
 
-@socketio.on_error('/test')
-def error_handler_chat(e):
+@socketio.on_error('/main')
+def error_handler_main(e):
     print('[server] An error has occurred: ' + str(e))
 
 

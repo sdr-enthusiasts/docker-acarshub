@@ -6,7 +6,7 @@ var msgs_received = [];
 
 $(document).ready(function(){
     //connect to the socket server.
-    socket = io.connect('http://' + document.domain + ':' + location.port + '/test');
+    socket = io.connect('http://' + document.domain + ':' + location.port + '/main');
 
     //receive details from server
     socket.on('newmsg', function(msg) {
