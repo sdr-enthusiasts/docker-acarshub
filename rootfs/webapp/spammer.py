@@ -6,26 +6,41 @@
 # Additionally, for database pathing in testing, export ACARSHUB_DB="sqlite:////path/to/db"
 # 3 leading slashes required, the fourth is for unix path starting from root
 # I use this line to start application.py
-# export ACARSHUB_DB=sqlite:////Users/fred/messages.db && export SPAM=True && export DEBUG_LOGGING=True && export ENABLE_ACARS=True && python3 application.py
+# env ACARSHUB_DB=sqlite:////Users/fred/messages.db SPAM=True DEBUG_LOGGING=True ENABLE_ACARS=True python3 application.py
 
 import socket
 import time
+import sys, getopt
+from random import randint
 
-message = '{"timestamp":1609367438.9092679,"station_id":"CS-KABQ-ACARS","channel":3,"freq":131.550,"level":-16,"error":0,"mode":"2","label":"SA","block_id":"2","ack":false,"tail":"N155QS","flight":"GS0001","msgno":"M49A","text":"0LS223037V","libacars":{"media-adv":{"err":false,"version":0,"current_link":{"code":"S","descr":"Default SATCOM","established":false,"time":{"hour":22,"min":30,"sec":37}},"links_avail":[{"code":"V","descr":"VHF ACARS"}]}}}\n'
+try:
+	# load the messages to send
+	message_interval = 0
+	if len(sys.argv) > 0:
+		print("more")
 
-receiver = socket.socket(
-    family=socket.AF_INET,
-    type=socket.SOCK_STREAM)
+	#with open("messages.txt", "r") as lines:
+	#	message = lines.readlines()
+	message = ["test"]
 
-receiver.bind(('127.0.0.1', 15550))
-receiver.listen()
-(clientConnected, clientAddress) = receiver.accept()
-clientConnected.setblocking(0)
-clientConnected.settimeout(1)
-while True:
-    print("sending message")
-    clientConnected.send(message.encode())
-    print("message sent")
-    time.sleep(10)
+	receiver = socket.socket(
+	    family=socket.AF_INET,
+	    type=socket.SOCK_STREAM)
 
-receiver.close()
+	receiver.bind(('127.0.0.1', 15550))
+	receiver.listen()
+	(clientConnected, clientAddress) = receiver.accept()
+	clientConnected.setblocking(0)
+	clientConnected.settimeout(1)
+	while True:
+	    print("sending message")
+	    # we will send a random message
+	    index = randint(0, len(message))
+	    clientConnected.send(message[index].encode())
+	    print("message sent")
+	    time.sleep(10)
+
+	receiver.close()
+
+except Exception as e:
+	print(e)

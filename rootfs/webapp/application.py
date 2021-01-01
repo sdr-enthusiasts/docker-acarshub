@@ -63,8 +63,8 @@ thread_database_stop_event = Event()
 # Note on the que: We are adding new messages to the right
 # This means oldest messages are to the left
 
-que_messages = deque(maxlen=50)
-que_database = deque(maxlen=50)
+que_messages = deque(maxlen=15)
+que_database = deque(maxlen=15)
 
 vdlm_messages = 0
 acars_messages = 0
@@ -544,9 +544,10 @@ def acars_listener():
                     acars_messages += 1
                     if EXTREME_LOGGING:
                         print(json.dumps(j, indent=4, sort_keys=True))
-                    if DEBUG_LOGGING:
-                        print("[acarsGenerator] appending message")
-                    que_messages.append(("ACARS", j))
+                    if connected_users > 0:
+                        if DEBUG_LOGGING:
+                            print("[acarsGenerator] appending message")
+                        que_messages.append(("ACARS", j))
                     if DEBUG_LOGGING:
                         print("[acarsGenerator] sending off to db")
                     que_database.append(("ACARS", j))
@@ -643,9 +644,10 @@ def vdlm_listener():
                     vdlm_messages += 1
                     if EXTREME_LOGGING:
                         print(json.dumps(j, indent=4, sort_keys=True))
-                    if DEBUG_LOGGING:
-                        print("[vdlm2Generator] appending message")
-                    que_messages.append(("VDL-M2", j))
+                    if connected_users > 0:
+                        if DEBUG_LOGGING:
+                            print("[vdlm2Generator] appending message")
+                        que_messages.append(("VDL-M2", j))
                     if DEBUG_LOGGING:
                         print("[vdlm2Generator] sending off to db")
                     que_database.append(("VDL-M2", j))
@@ -821,6 +823,7 @@ def main_disconnect():
 
     if connected_users == 0:
         thread_html_generator_event.set()
+        que_messages.clear()
 
 
 if __name__ == '__main__':
