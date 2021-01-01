@@ -48,8 +48,7 @@ thread_html_generator_event = Event()
 
 thread_acars_listener = Thread()
 thread_vdlm2_listener = Thread()
-thread_acars_listener_stop_event = Event()
-thread_vdlm2_listener_stop_event = Event()
+thread_message_listener_stop_event = Event()
 
 # db thread
 
@@ -457,110 +456,18 @@ def database_listener():
             pass
 
 
-def acars_listener():
+def message_listener(message_type=None, ip='127.0.0.1', port=None):
     import time
     import socket
     import json
     import sys
     import os
 
-    global acars_messages
+    if message_type == "VDLM2":
+        global vdlm_messages
 
-    DEBUG_LOGGING = False
-    EXTREME_LOGGING = False
-    SPAM = False
-    if os.getenv("DEBUG_LOGGING", default=False):
-        DEBUG_LOGGING = True
-    if os.getenv("EXTREME_LOGGING", default=False):
-        EXTREME_LOGGING = True
-    if os.getenv("SPAM", default=False):
-        SPAM = True
-
-    # Define acars_receiver
-    acars_receiver = socket.socket(
-        family=socket.AF_INET,
-        type=socket.SOCK_STREAM,
-    )
-
-    # Set socket timeout 1 seconds
-    acars_receiver.settimeout(1)
-
-    if DEBUG_LOGGING:
-        print("[acarsGenerator] acars_receiver created")
-
-    # Connect to 127.0.0.1:15550 for JSON messages acarsdec
-    acars_receiver.connect(('127.0.0.1', 15550))
-    if DEBUG_LOGGING:
-        print("[acarsGenerator] acars_receiver connected to 127.0.0.1:15550")
-
-    while not thread_acars_listener_stop_event.isSet():
-        if EXTREME_LOGGING:
-            print("[acarsGenerator] listening for messages to acars_receiver")
-        sys.stdout.flush()
-        time.sleep(1)
-
-        data = None
-
-        try:
-            if SPAM is True:
-                data, addr = acars_receiver.recvfrom(65527)
-            else:
-                data, addr = acars_receiver.recvfrom(65527, socket.MSG_WAITALL)
-            if EXTREME_LOGGING:
-                print("[acarsGenerator] received data")
-        except socket.timeout:
-            if EXTREME_LOGGING:
-                print("[acarsGenerator] timeout")
-            pass
-
-        if data is not None:
-            if os.getenv("DEBUG_LOGGING", default=None):
-                print("[acars data] %s" % (repr(data)))
-                sys.stdout.flush()
-
-            if EXTREME_LOGGING:
-                print("[acarsGenerator] received data")
-            # Decode json
-            # There is a rare condition where we'll receive two messages at once
-            # We will cover this condition off by ensuring each json message is
-            # broken apart and handled individually
-
-            try:
-                acars_json = []
-                print("here")
-                if data.decode().count('}\n') == 1:
-                    acars_json.append(json.loads(data))
-                else:
-                    split_json = data.decode().split('}\n')
-
-                    for j in split_json:
-                        if len(j) > 1:
-                            acars_json.append(json.loads(j + "}\n"))
-
-            except Exception:
-                print("[acars data] Error with JSON input %s ." % (repr(data)))
-            else:
-                for j in acars_json:
-                    acars_messages += 1
-                    if EXTREME_LOGGING:
-                        print(json.dumps(j, indent=4, sort_keys=True))
-                    if connected_users > 0:
-                        if DEBUG_LOGGING:
-                            print("[acarsGenerator] appending message")
-                        que_messages.append(("ACARS", j))
-                    if DEBUG_LOGGING:
-                        print("[acarsGenerator] sending off to db")
-                    que_database.append(("ACARS", j))
-
-
-def vdlm_listener():
-    import time
-    import socket
-    import json
-    import sys
-    import os
-
-    global vdlm_messages
+    else:
+        global acars_messages
 
     DEBUG_LOGGING = False
     EXTREME_LOGGING = False
@@ -573,53 +480,53 @@ def vdlm_listener():
         SPAM = True
 
     # Define vdlm2_receiver
-    vdlm2_receiver = socket.socket(
+    receiver = socket.socket(
         family=socket.AF_INET,
         type=socket.SOCK_STREAM,
     )
 
     # Set socket timeout 1 seconds
-    vdlm2_receiver.settimeout(1)
+    receiver.settimeout(1)
 
     if DEBUG_LOGGING:
-        print("[vdlm2Generator] vdlm2_receiver created")
+        print(f"[{message_type.lower()}Generator] {message_type.lower()}_receiver created")
 
     # Connect to 127.0.0.1:15555 for JSON messages vdlm2dec
-    vdlm2_receiver.connect(('127.0.0.1', 15555))
+    receiver.connect((ip, port))
 
     if DEBUG_LOGGING:
-        print("[vdlm2Generator] vdlm2_receiver connected to 127.0.0.1:15555")
+        print(f"[{message_type.lower()}Generator] {message_type.lower()}_receiver connected to 127.0.0.1:15555")
 
     # Run while requested...
-    while not thread_vdlm2_listener_stop_event.isSet():
+    while not thread_message_listener_stop_event.isSet():
         sys.stdout.flush()
         time.sleep(0)
 
         if EXTREME_LOGGING:
-            print("[vdlm2Generator] listening for messages to vdlm2_receiver")
+            print(f"[{message_type.lower()}Generator] listening for messages to {message_type.lower()}_receiver")
 
         data = None
 
         try:
             if SPAM is True:
-                data, addr = vdlm2_receiver.recvfrom(65527, socket)
+                data, addr = receiver.recvfrom(65527, socket)
             else:
-                data, addr = vdlm2_receiver.recvfrom(65527, socket.MSG_WAITALL)
+                data, addr = receiver.recvfrom(65527, socket.MSG_WAITALL)
             if EXTREME_LOGGING:
-                print("[vdlm2Generator] received data")
+                print(f"[{message_type.lower()}Generator] received data")
         except socket.timeout:
             if EXTREME_LOGGING:
-                print("[vdlm2Generator] timeout")
+                print(f"[{message_type.lower()}Generator] timeout")
             pass
 
         if data is not None:
 
             if os.getenv("DEBUG_LOGGING", default=None):
-                print("[vdlm2 data] %s" % (repr(data)))
+                print(f"[{message_type.lower()} data] {repr(data)}")
                 sys.stdout.flush()
 
             if DEBUG_LOGGING:
-                print("[vdlm2Generator] data contains data")
+                print(f"[{message_type.lower()}Generator] data contains data")
 
             # Decode json
             # There is a rare condition where we'll receive two messages at once
@@ -627,30 +534,36 @@ def vdlm_listener():
             # broken apart and handled individually
 
             try:
-                vdlm_json = []
+                message_json = []
                 if data.decode().count('}\n') == 1:
-                    vdlm_json.append(json.loads(data))
+                    message_json.append(json.loads(data))
                 else:
                     split_json = data.decode().split('}\n')
 
                     for j in split_json:
                         if len(j) > 1:
-                            vdlm_json.append(json.loads(j + "}\n"))
+                            message_json.append(json.loads(j + '}\n'))
 
             except Exception:
-                print("[vdlm2 data] Error with JSON input %s ." % (repr(data)))
+                print(f"[{message_type.lower()} data] Error with JSON input {repr(data)} .")
             else:
-                for j in vdlm_json:
-                    vdlm_messages += 1
+                for j in message_json:
+                    if message_type == "VDLM2":
+                        vdlm_messages += 1
+                        que_type = "VDL-M2"
+                    else:
+                        acars_messages += 1
+                        que_type = "ACARS"
+
                     if EXTREME_LOGGING:
                         print(json.dumps(j, indent=4, sort_keys=True))
                     if connected_users > 0:
                         if DEBUG_LOGGING:
-                            print("[vdlm2Generator] appending message")
-                        que_messages.append(("VDL-M2", j))
+                            print(f"[{message_type.lower()}Generator] appending message")
+                        que_messages.append((que_type, j))
                     if DEBUG_LOGGING:
-                        print("[vdlm2Generator] sending off to db")
-                    que_database.append(("VDL-M2", j))
+                        print(f"[{message_type.lower()}Generator] sending off to db")
+                    que_database.append((que_type, j))
 
 
 def init_listeners():
@@ -666,13 +579,13 @@ def init_listeners():
     if not thread_acars_listener.isAlive() and os.getenv("ENABLE_ACARS"):
         if os.getenv("DEBUG_LOGGING", default=False):
             print('[init] Starting ACARS listener')
-        thread_acars_listener = Thread(target=acars_listener)
+        thread_acars_listener = Thread(target=message_listener, args=("ACARS", "127.0.0.1", 15550))
         thread_acars_listener.start()
 
     if not thread_vdlm2_listener.isAlive() and os.getenv("ENABLE_VDLM"):
         if os.getenv("DEBUG_LOGGING", default=False):
             print('[init] Starting VDLM listener')
-        thread_vdlm2_listener = Thread(target=vdlm_listener)
+        thread_vdlm2_listener = Thread(target=message_listener, args=("VDLM2", "127.0.0.1", 15555))
         thread_vdlm2_listener.start()
     if not thread_database.isAlive():
         if os.getenv("DEBUG_LOGGING", default=False):
