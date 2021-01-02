@@ -4,15 +4,15 @@ import rrdtool
 import os
 
 
-def update_db(vdlm=0, acars=0):
+def update_db(vdlm=0, acars=0, error=0):
     import sys
     total = vdlm + acars
 
     if os.getenv("DEBUG_LOGGING", default=False):
-        print(f"[rrdtool] updating VDLM with {vdlm}, ACARS with {acars}")
+        print(f"[rrdtool] updating VDLM with {vdlm}, ACARS with {acars}, Errors with {error}")
         sys.stdout.flush()
     try:
-        rrdtool.update("/run/acars/acarshub.rrd", f"N:{acars}:{vdlm}:{total}")
+        rrdtool.update("/run/acars/acarshub.rrd", f"N:{acars}:{vdlm}:{total}:{error}")
     except Exception as e:
         print(e)
         sys.stdout.flush()
@@ -27,6 +27,7 @@ def create_db():
                        "DS:ACARS:GAUGE:120:U:U",
                        "DS:VDLM:GAUGE:120:U:U",
                        "DS:TOTAL:GAUGE:120:U:U",
+                       "DS:ERROR:GAUGE:120:U:U",
                        "RRA:AVERAGE:0.5:1:1500",  # 25 hours at 1 minute reso
                        "RRA:AVERAGE:0.5:5:8640",  # 1 month at 5 minute reso
                        "RRA:AVERAGE:0.5:60:4320",  # 6 months at 1 hour reso
@@ -46,7 +47,7 @@ def update_graphs():
 
     if os.getenv("ENABLE_ACARS", default=False):
         args.append("DEF:messages-acars=/run/acars/acarshub.rrd:ACARS:AVERAGE")
-        args.append("LINE1:messages-acars#FF0000:ACARS")
+        args.append("LINE1:messages-acars#FF09D2:ACARS")
 
     if os.getenv("ENABLE_VDLM", default=False):
         args.append("DEF:messages-vdlm=/run/acars/acarshub.rrd:VDLM:AVERAGE")
@@ -55,6 +56,9 @@ def update_graphs():
     if os.getenv("ENABLE_ACARS", default=False) and os.getenv("ENABLE_VDLM", default=False):
         args.append("DEF:messages-total=/run/acars/acarshub.rrd:TOTAL:AVERAGE")
         args.append("LINE1:messages-total#0037FA:Total")
+
+    args.append("DEF:messages-error=/run/acars/acarshub.rrd:ERROR:AVERAGE")
+    args.append("LINE1:messages-error#FF0000:Errors")
 
     try:
         # 1 Hour

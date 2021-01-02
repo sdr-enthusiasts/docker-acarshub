@@ -58,7 +58,6 @@ thread_database_stop_event = Event()
 # maxlen is to keep the que from becoming ginormous
 # the messages will be in the que all the time, even if no one is using the website
 # old messages will automatically be removed
-# the nice thing is once a web page is loaded message should auto-populate
 # Note on the que: We are adding new messages to the right
 # This means oldest messages are to the left
 
@@ -67,15 +66,18 @@ que_database = deque(maxlen=15)
 
 vdlm_messages = 0
 acars_messages = 0
+error_messages = 0
 
 
 def update_rrd_db():
     global vdlm_messages
     global acars_messages
+    global error_messages
 
-    acarshub_rrd.update_db(vdlm=vdlm_messages, acars=acars_messages)
+    acarshub_rrd.update_db(vdlm=vdlm_messages, acars=acars_messages, error=error_messages)
     vdlm_messages = 0
     acars_messages = 0
+    error_messages = 0
 
 
 def htmlGenerator(message_source=None, json_message=None, from_query=False):
@@ -463,6 +465,8 @@ def message_listener(message_type=None, ip='127.0.0.1', port=None):
     import sys
     import os
 
+    global error_messages
+
     if message_type == "VDLM2":
         global vdlm_messages
 
@@ -554,6 +558,10 @@ def message_listener(message_type=None, ip='127.0.0.1', port=None):
                     else:
                         acars_messages += 1
                         que_type = "ACARS"
+
+                    if "error" in j:
+                        if j['error'] > 0:
+                            error_messages += j['error']
 
                     if EXTREME_LOGGING:
                         print(json.dumps(j, indent=4, sort_keys=True))
