@@ -119,7 +119,7 @@ Some notes about frequencies:
 
 The database used by the container to convert the airline codes used in the messages from IATA to ICAO was found from public, free sources. The data had some errors in it, some of which was due to the age of the data, and some of it is due to airlines not always using the correct IATA codes.
 
-My observations are US centric, but from what I have seen there are two kinds of "errors" you might notice in the converted callsigns. 
+My observations are US centric, but from what I have seen there are two kinds of "errors" you might notice in the converted callsigns.
 
 * US Airlines that have aquired airlines as part of mergers (for instance, American Airlines/AAL, who has, among others, merged with America West/AWE) would show up as their legacy callsign if the aircraft being picked up was part of the airline that was merged in to the bigger airline. I've selectively fixed some of these errors.
 
