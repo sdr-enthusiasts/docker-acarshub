@@ -91,4 +91,5 @@ roles/archive
 roles/metal-lb/files/metallb.yaml
 roles/metal-lb/files/namespace.yaml
 notes.txt
+Dockerfile.local
 *.db-journal
