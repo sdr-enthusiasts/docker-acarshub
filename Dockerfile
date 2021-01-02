@@ -79,7 +79,11 @@ RUN set -x && \
         -r /webapp/requirements.txt \
         && \
     # Fix for Eventlet issues
-    apt-get -o Dpkg::Options::='--force-confmiss' install --reinstall -y netbase && \
+    apt-get \
+      -o Dpkg::Options::='--force-confmiss' \
+      install --reinstall --no-install-recommends -y \
+      netbase \
+      && \
     # rtl-sdr
     git clone git://git.osmocom.org/rtl-sdr.git /src/rtl-sdr && \
     pushd /src/rtl-sdr && \
