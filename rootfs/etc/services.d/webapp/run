@@ -37,6 +37,7 @@ if [ -n "${ENABLE_WEB}" ]; then
   stdbuf -o0 gunicorn3 \
       -b "0.0.0.0:80" \
       -w 1 \
+      -k eventlet \
       application:app \
     2>&1 | stdbuf -o0 sed --unbuffered '/^$/d' | stdbuf -o0 awk '{print "[webapp] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
 else

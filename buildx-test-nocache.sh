@@ -12,4 +12,5 @@ export DOCKER_CLI_EXPERIMENTAL="enabled"
 docker buildx use cluster
 
 # Build & push latest
-docker buildx build --no-cache -t "${REPO}/${IMAGE}:test" --compress --push --platform "${PLATFORMS}" ./Dockerfile.local
+./generate_local_dockerfile.sh
+docker buildx build -f Dockerfile.local --no-cache -t "${REPO}/${IMAGE}:test" --compress --push --platform "${PLATFORMS}" .

@@ -59,9 +59,11 @@ services:
 
 No exposed ports are necessary to run the container. However, the built in webserver is available on port `80` if you wish the view messages in realtime.
 
-## Volumes
+## Volumes / Database
 
-No volumes are needed to run the container.
+No volumes are needed to run the container. However, this container does log messages to a database. If you wish to persist this database between container restarts, mount a volume to `/run/acars/`.
+
+The database is used on the website for various functions. It is automatically pruned of data older than 7 days old.
 
 ## Environment variables
 
@@ -112,6 +114,22 @@ Some notes about frequencies:
 ## Logging
 
 * All processes are logged to the container's stdout. If `QUIET_LOGS` is disabled, all received aircraft messages are logged to the container log as well. General logging can be viewed with `docker logs [-f] container`.
+
+## A note about data sources used for the web site
+
+The database used by the container to convert the airline codes used in the messages from IATA to ICAO was found from public, free sources. The data had some errors in it, some of which was due to the age of the data, and some of it is due to airlines not always using the correct IATA codes.
+
+My observations are US centric, but from what I have seen there are two kinds of "errors" you might notice in the converted callsigns.
+
+* US Airlines that have aquired airlines as part of mergers (for instance, American Airlines/AAL, who has, among others, merged with America West/AWE) would show up as their legacy callsign if the aircraft being picked up was part of the airline that was merged in to the bigger airline. I've selectively fixed some of these errors.
+
+* Some airlines (UPS and Fedex, particularlly, among other) don't use their designated IATA callsigns period, or seem to be using contracted planes which are using an alternative two letter airline code in their message.
+
+I am hesitant to "fix" too many of these "errors" because in most cases, the IATA code in the data is accurate, and it is the message itself using a bad code. I don't want to replace good data because some airlines aren't using their IATA code and instead are using an internal code.
+
+The end result of this is that in messages where the airline code is improperly mapped the Flight Aware link generated will lead to the wrong flight. The TAIL link generated should be correct.
+
+I am not really sure what the best answer is, but if there are airlines you notice that are wrong because the data used is wrong (IATA codes do change over time as airlines come and go), or airlines that are missing from the database that do have an IATA code, submit a PR above and I'll get it in there!
 
 ## Future improvements
 

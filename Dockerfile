@@ -62,14 +62,28 @@ RUN set -x && \
     KEPT_PACKAGES+=(python3-setuptools) && \
     KEPT_PACKAGES+=(python3-wheel) && \
     KEPT_PACKAGES+=(gunicorn3) && \
+    TEMP_PACKAGES+=(python3-dev) && \
     # process management
     KEPT_PACKAGES+=(procps) && \
+    # stats
+    KEPT_PACKAGES+=(rrdtool) && \
+    TEMP_PACKAGES+=(librrd-dev) && \
     # install packages
     apt-get update && \
     apt-get install -y --no-install-recommends \
         ${KEPT_PACKAGES[@]} \
         ${TEMP_PACKAGES[@]} \
         && \
+    # dependencies for web interface
+    python3 -m pip install --no-cache-dir \
+        -r /webapp/requirements.txt \
+        && \
+    # Fix for Eventlet issues
+    apt-get \
+      -o Dpkg::Options::='--force-confmiss' \
+      install --reinstall --no-install-recommends -y \
+      netbase \
+      && \
     # rtl-sdr
     git clone git://git.osmocom.org/rtl-sdr.git /src/rtl-sdr && \
     pushd /src/rtl-sdr && \
@@ -114,10 +128,6 @@ RUN set -x && \
     popd && popd && \
     # directory for logging
     mkdir -p /run/acars && \
-    # dependencies for web interface
-    python3 -m pip install --no-cache-dir \
-        -r /webapp/requirements.txt \
-        && \
     # install S6 Overlay
     curl -s https://raw.githubusercontent.com/mikenye/deploy-s6-overlay/master/deploy-s6-overlay.sh | sh && \
     # Clean up

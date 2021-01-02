@@ -1,8 +1,12 @@
 
+var pause = false;
+var socket;
+var msgs_received = [];
+
+
 $(document).ready(function(){
     //connect to the socket server.
-    var socket = io.connect('ws://' + document.domain + ':' + location.port + '/test');
-    var msgs_received = [];
+    socket = io.connect('http://' + document.domain + ':' + location.port + '/main');
 
     //receive details from server
     socket.on('newmsg', function(msg) {
@@ -13,11 +17,10 @@ $(document).ready(function(){
             msgs_received.shift()
         }            
         msgs_received.push(msg.msghtml);
-        msgs_string = '';
-        for (var i = 0; i < msgs_received.length; i++){
-            msgs_string = '<p>' + msgs_received[i].toString() + '</p>' + msgs_string;
-        }
-        $('#log').html(msgs_string);
+        if(!pause)
+            display_messages()
+        else
+            console.log("Message received, but updates paused")
     });
 
     //noop
@@ -26,3 +29,30 @@ $(document).ready(function(){
     });
 
 });
+
+function pause_updates() {
+    if(pause) {
+        pause = false;
+        id = document.getElementById("pause_updates");
+        id.innerHTML = "";
+        txt = document.createTextNode("Pause updates");
+        id.appendChild(txt);
+        display_messages()
+    }
+    else {
+        pause = true;
+
+        id = document.getElementById("pause_updates");
+        id.innerHTML = "";
+        txt = document.createTextNode("Updates Paused");
+        id.appendChild(txt);
+    }
+}
+
+function display_messages() {
+    msgs_string = '';
+    for (var i = 0; i < msgs_received.length; i++){
+        msgs_string = '<p>' + msgs_received[i].toString() + '</p>' + msgs_string;
+    }
+    $('#log').html(msgs_string);
+}
