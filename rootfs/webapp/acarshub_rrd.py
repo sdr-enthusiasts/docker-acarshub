@@ -43,19 +43,19 @@ def update_graphs():
         sys.stdout.flush()
 
     args = ["/webapp/static/images/1hour.png", "-a", "PNG", "--title", "1 Hour", "-w", "1000",
-            "-h", "200", "--start", "-1h", "--vertical-label", "Messages"]
+            "-h", "200", "--start", "-1h", "--vertical-label", "Messages", "--slope-mode"]
 
     if os.getenv("ENABLE_ACARS", default=False):
         args.append("DEF:messages-acars=/run/acars/acarshub.rrd:ACARS:AVERAGE")
-        args.append("LINE1:messages-acars#FF09D2:ACARS")
+        args.append("LINE1:messages-acars#660A60:ACARS")
 
     if os.getenv("ENABLE_VDLM", default=False):
         args.append("DEF:messages-vdlm=/run/acars/acarshub.rrd:VDLM:AVERAGE")
-        args.append("LINE1:messages-vdlm#00FF00:VDLM")
+        args.append("LINE1:messages-vdlm#1E73BE:VDLM")
 
     if os.getenv("ENABLE_ACARS", default=False) and os.getenv("ENABLE_VDLM", default=False):
         args.append("DEF:messages-total=/run/acars/acarshub.rrd:TOTAL:AVERAGE")
-        args.append("LINE1:messages-total#0037FA:Total")
+        args.append("LINE1:messages-total#C850B0:Total")
 
     args.append("DEF:messages-error=/run/acars/acarshub.rrd:ERROR:AVERAGE")
     args.append("LINE1:messages-error#FF0000:Errors")
