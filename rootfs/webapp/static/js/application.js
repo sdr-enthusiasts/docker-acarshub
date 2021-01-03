@@ -52,7 +52,7 @@ function pause_updates() {
 function display_messages() {
     var msgs_string = '';
     for (var i = 0; i < msgs_received.length; i++){
-        console.log(msgs_received[i]);
+        //console.log(msgs_received[i]);
         //msgs_string = '<p>' + msgs_received[i].toString() + '</p>' + msgs_string;
         var message = msgs_received[i];
         var html_output = "<p><table id=\"shadow\">";
@@ -95,8 +95,8 @@ function display_messages() {
             timestamp = new Date(message['timestamp'] * 1000);
         else
             timestamp = new Date(message['time'] * 1000);
-        
-        html_output += `<td style=\"text-align: right\">${timestamp}</td>`;
+
+        html_output += `<td style=\"text-align: right\"><strong>${timestamp}</strong></td>`;
         html_output += "</tr>";
         // Table content
         html_output += "<tr><td colspan=\"2\">";
@@ -152,7 +152,7 @@ function display_messages() {
 
         if(message.hasOwnProperty("text")) {
             var text = message['text'];
-            text = text.replace("\r\n", "<br>");
+            text = text.replace("\\r\\n", "<br>");
 
             html_output += "<p>";
             html_output += `<pre id=\"shadow\"><strong>${text}</strong></pre>`;
@@ -161,7 +161,7 @@ function display_messages() {
         }
         else if(message.hasOwnProperty("data")) {
             var data = message['data'];
-            data = data.replace("\r\n", "<br>");
+            data = data.replace("\\r\\n", "<br>");
             html_output += "<p>";
             html_output += `<pre id=\"shadow\"><strong>${data}</strong></pre>`;
             html_output += "</p>";
@@ -187,17 +187,9 @@ function display_messages() {
             html_output += `Tail: <strong><a href=\"https://flightaware.com/live/flight/${message['tail']}\" target=\"_blank\">${message['tail']}</a></strong> `;
         }
 
- /*       if "flight" in json_message.keys():
-            icao, airline = acarshub_db.find_airline_code_from_iata(json_message['flight'][:2])
-            flight_number = json_message['flight'][2:]
-            flight = icao + flight_number
-
-            // If the iata and icao variables are not equal, airline was found in the database and we'll add in the tool-tip for the decoded airline
-            // Otherwise, no tool-tip, no FA link, and use the IATA code for display
-            if icao != json_message['flight'][:2]:
-                html_output += f"Flight: <span class=\"wrapper\"><strong><a href=\"https://flightaware.com/live/flight/{flight}\" target=\"_blank\">{flight}/{json_message['flight']}</a></strong><span class=\"tooltip\">{airline} Flight {flight_number}</span></span> "
-            else:
-                html_output += f"Flight: <strong><a href=\"https://flightaware.com/live/flight/{flight}\" target=\"_blank\">{flight}</a></strong> "*/
+        if(message.hasOwnProperty("flight")) {
+            html_output += message['flight'];
+        }            
 
         if(message.hasOwnProperty("icao")) {
             html_output += `ICAO: <strong>${message['icao']}</strong> `;
@@ -255,11 +247,9 @@ function display_messages() {
 
         if(message.hasOwnProperty("error")) {
             if(message['error'] != 0) {
-                html_output += '<span style="color:red;">'
-                html_output += "E: {error} ".format(
-                    error=json_message['error'],
-                )
-                html_output += '</span>'
+                html_output += '<span style="color:red;">';
+                html_output += `E: ${message['error']} `;
+                html_output += '</span>';
             }
         }
 

@@ -37,7 +37,7 @@ while run:
 		while True:
 		    print("sending message")
 		    # we will send a random message
-		    index = randint(0, len(message))
+		    index = randint(0, len(message) - 1)
 		    clientConnected.send(message[index].encode())
 		    print("message sent")
 		    time.sleep(message_interval)

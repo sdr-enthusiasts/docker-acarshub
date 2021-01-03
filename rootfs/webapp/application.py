@@ -400,12 +400,26 @@ def htmlListener():
         time.sleep(1)
 
         if len(que_messages) != 0:
-            message_source, json_message = que_messages.popleft()
+            message_source, json_message_initial = que_messages.popleft()
+            json_message = json_message_initial # creating a copy so that our changes below aren't made to the object
             html_output = htmlGenerator(message_source, json_message)
             # Send output via socketio
             if DEBUG_LOGGING:
                 print("[htmlListener] sending output via socketio.emit")
             json_message.update({"msgtype": message_source})
+
+            if "flight" in json_message.keys():
+                icao, airline = acarshub_db.find_airline_code_from_iata(json_message['flight'][:2])
+                flight_number = json_message['flight'][2:]
+                flight = icao + flight_number
+
+                # If the iata and icao variables are not equal, airline was found in the database and we'll add in the tool-tip for the decoded airline
+                # Otherwise, no tool-tip, no FA link, and use the IATA code for display
+                if icao != json_message['flight'][:2]:
+                    json_message['flight'] = f"Flight: <span class=\"wrapper\"><strong><a href=\"https://flightaware.com/live/flight/{flight}\" target=\"_blank\">{flight}/{json_message['flight']}</a></strong><span class=\"tooltip\">{airline} Flight {flight_number}</span></span> "
+                else:
+                    json_message['flight'] = f"Flight: <strong><a href=\"https://flightaware.com/live/flight/{flight}\" target=\"_blank\">{flight}</a></strong> "
+
             socketio.emit('newmsg', {'msghtml': json_message}, namespace='/main')
             if DEBUG_LOGGING:
                 print("[htmlListener] packet sent via socketio.emit")
@@ -568,8 +582,8 @@ def message_listener(message_type=None, ip='127.0.0.1', port=None):
                             if len(j) > 1:
                                 message_json.append(json.loads(j + '}\n'))
 
-                except Exception:
-                    print(f"[{message_type.lower()} data] Error with JSON input {repr(data)} .")
+                except Exception as e:
+                    print(f"[{message_type.lower()} data] Error with JSON input {repr(data)} .\n{e}")
                 else:
                     for j in message_json:
                         if message_type == "VDLM2":
