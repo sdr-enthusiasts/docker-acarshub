@@ -5,7 +5,7 @@
 # connect and receive all the data. export SPAM=True to enable application.py to function properly
 # Additionally, for database pathing in testing, export ACARSHUB_DB="sqlite:////path/to/db"
 # 3 leading slashes required, the fourth is for unix path starting from root
-# I use this line to start application.py
+# python3 spammer.py /path/to/messages/file 5
 # env ACARSHUB_DB=sqlite:////Users/fred/messages.db SPAM=True DEBUG_LOGGING=True ENABLE_ACARS=True python3 application.py
 
 import socket
@@ -13,34 +13,39 @@ import time
 import sys, getopt
 from random import randint
 
-try:
-	# load the messages to send
-	message_interval = 0
-	if len(sys.argv) > 0:
-		print("more")
+run = True
 
-	#with open("messages.txt", "r") as lines:
-	#	message = lines.readlines()
-	message = ["test"]
+while run:
+	try:
+		# load the messages to send
+		message_interval = int(sys.argv[2])
 
-	receiver = socket.socket(
-	    family=socket.AF_INET,
-	    type=socket.SOCK_STREAM)
+		with open(sys.argv[1], "r") as lines:
+			message = lines.readlines()
 
-	receiver.bind(('127.0.0.1', 15550))
-	receiver.listen()
-	(clientConnected, clientAddress) = receiver.accept()
-	clientConnected.setblocking(0)
-	clientConnected.settimeout(1)
-	while True:
-	    print("sending message")
-	    # we will send a random message
-	    index = randint(0, len(message))
-	    clientConnected.send(message[index].encode())
-	    print("message sent")
-	    time.sleep(10)
+		receiver = socket.socket(
+		    family=socket.AF_INET,
+		    type=socket.SOCK_STREAM)
 
-	receiver.close()
+		receiver.bind(('127.0.0.1', 15550))
+		receiver.listen()
+		(clientConnected, clientAddress) = receiver.accept()
+		clientConnected.setblocking(0)
+		clientConnected.settimeout(1)
+		while True:
+		    print("sending message")
+		    # we will send a random message
+		    index = randint(0, len(message))
+		    clientConnected.send(message[index].encode())
+		    print("message sent")
+		    time.sleep(5)
 
-except Exception as e:
-	print(e)
+		receiver.close()
+
+	except KeyboardInterrupt:
+		print("Exiting...")
+		receiver.close()
+		run = False
+	except Exception as e:
+		print(e)
+		receiver.close()

@@ -2,10 +2,11 @@
 
 import eventlet
 eventlet.monkey_patch()
-import acarshub_db
-import acarshub_rrd
-import logging
 import os
+import acarshub_db
+if not os.getenv("SPAM", default=False):
+    import acarshub_rrd
+import logging
 
 from flask_socketio import SocketIO
 from flask import Flask, render_template, request
@@ -423,13 +424,14 @@ def scheduled_tasks():
 
     # init the dbs if not already there
 
-    acarshub_rrd.create_db()
-    acarshub_rrd.update_graphs()
+    if not os.getenv("SPAM", default=False):
+        acarshub_rrd.create_db()
+        acarshub_rrd.update_graphs()
+        schedule.every().minute.at(":00").do(update_rrd_db)
+        schedule.every().minute.at(":30").do(acarshub_rrd.update_graphs)
 
     # Schedule the database pruner
     schedule.every().hour.do(acarshub_db.pruneOld)
-    schedule.every().minute.at(":00").do(update_rrd_db)
-    schedule.every().minute.at(":30").do(acarshub_rrd.update_graphs)
     while not thread_scheduler_stop_event.isSet():
         schedule.run_pending()
         time.sleep(1)
@@ -469,9 +471,10 @@ def message_listener(message_type=None, ip='127.0.0.1', port=None):
 
     if message_type == "VDLM2":
         global vdlm_messages
-
     else:
         global acars_messages
+
+    disconnected = True
 
     DEBUG_LOGGING = False
     EXTREME_LOGGING = False
@@ -483,23 +486,10 @@ def message_listener(message_type=None, ip='127.0.0.1', port=None):
     if os.getenv("SPAM", default=False):
         SPAM = True
 
-    # Define vdlm2_receiver
     receiver = socket.socket(
-        family=socket.AF_INET,
-        type=socket.SOCK_STREAM,
-    )
-
-    # Set socket timeout 1 seconds
-    receiver.settimeout(1)
-
-    if DEBUG_LOGGING:
-        print(f"[{message_type.lower()}Generator] {message_type.lower()}_receiver created")
-
-    # Connect to 127.0.0.1:15555 for JSON messages vdlm2dec
-    receiver.connect((ip, port))
-
-    if DEBUG_LOGGING:
-        print(f"[{message_type.lower()}Generator] {message_type.lower()}_receiver connected to 127.0.0.1:15555")
+                    family=socket.AF_INET,
+                    type=socket.SOCK_STREAM,
+                )
 
     # Run while requested...
     while not thread_message_listener_stop_event.isSet():
@@ -508,12 +498,28 @@ def message_listener(message_type=None, ip='127.0.0.1', port=None):
 
         if EXTREME_LOGGING:
             print(f"[{message_type.lower()}Generator] listening for messages to {message_type.lower()}_receiver")
-
-        data = None
-
         try:
+            if disconnected:
+                receiver = socket.socket(
+                    family=socket.AF_INET,
+                    type=socket.SOCK_STREAM,
+                )
+                # Set socket timeout 1 seconds
+                receiver.settimeout(1)
+
+                if DEBUG_LOGGING:
+                    print(f"[{message_type.lower()}Generator] {message_type.lower()}_receiver created")
+
+                # Connect to the sender
+                receiver.connect((ip, port))
+                disconnected = False
+                if DEBUG_LOGGING:
+                    print(f"[{message_type.lower()}Generator] {message_type.lower()}_receiver connected to {ip}:{port}")
+
+            data = None
+
             if SPAM is True:
-                data, addr = receiver.recvfrom(65527, socket)
+                data, addr = receiver.recvfrom(65527)
             else:
                 data, addr = receiver.recvfrom(65527, socket.MSG_WAITALL)
             if EXTREME_LOGGING:
@@ -522,56 +528,71 @@ def message_listener(message_type=None, ip='127.0.0.1', port=None):
             if EXTREME_LOGGING:
                 print(f"[{message_type.lower()}Generator] timeout")
             pass
+        except socket.error as e:
+            print(f"[{message_type.lower()}Generator] Lost connection to {ip}:{port}. Reattemping...")
+            disconnected = True
+            receiver.close()
+            time.sleep(1)
+        except Exception as e:
+            print(f"[{message_type.lower()}Generator] Socket error: {e}")
+            disconnected = True
+            receiver.close()
+            time.sleep(1)
+        else:
+            if data.decode() == '':
+                print("[{message_type.lower()}Generator] Lost connection!")
+                disconnected = True
+                receiver.close()
+                data = None
+            elif data is not None:
 
-        if data is not None:
+                if os.getenv("DEBUG_LOGGING", default=None):
+                    print(f"[{message_type.lower()} data] {repr(data)}")
+                    sys.stdout.flush()
 
-            if os.getenv("DEBUG_LOGGING", default=None):
-                print(f"[{message_type.lower()} data] {repr(data)}")
-                sys.stdout.flush()
+                if DEBUG_LOGGING:
+                    print(f"[{message_type.lower()}Generator] data contains data")
 
-            if DEBUG_LOGGING:
-                print(f"[{message_type.lower()}Generator] data contains data")
+                # Decode json
+                # There is a rare condition where we'll receive two messages at once
+                # We will cover this condition off by ensuring each json message is
+                # broken apart and handled individually
 
-            # Decode json
-            # There is a rare condition where we'll receive two messages at once
-            # We will cover this condition off by ensuring each json message is
-            # broken apart and handled individually
-
-            try:
-                message_json = []
-                if data.decode().count('}\n') == 1:
-                    message_json.append(json.loads(data))
-                else:
-                    split_json = data.decode().split('}\n')
-
-                    for j in split_json:
-                        if len(j) > 1:
-                            message_json.append(json.loads(j + '}\n'))
-
-            except Exception:
-                print(f"[{message_type.lower()} data] Error with JSON input {repr(data)} .")
-            else:
-                for j in message_json:
-                    if message_type == "VDLM2":
-                        vdlm_messages += 1
-                        que_type = "VDL-M2"
+                try:
+                    message_json = []
+                    if data.decode().count('}\n') == 1:
+                        message_json.append(json.loads(data))
                     else:
-                        acars_messages += 1
-                        que_type = "ACARS"
+                        split_json = data.decode().split('}\n')
 
-                    if "error" in j:
-                        if j['error'] > 0:
-                            error_messages += j['error']
+                        for j in split_json:
+                            if len(j) > 1:
+                                message_json.append(json.loads(j + '}\n'))
 
-                    if EXTREME_LOGGING:
-                        print(json.dumps(j, indent=4, sort_keys=True))
-                    if connected_users > 0:
+                except Exception:
+                    print(f"[{message_type.lower()} data] Error with JSON input {repr(data)} .")
+                else:
+                    for j in message_json:
+                        if message_type == "VDLM2":
+                            vdlm_messages += 1
+                            que_type = "VDL-M2"
+                        else:
+                            acars_messages += 1
+                            que_type = "ACARS"
+
+                        if "error" in j:
+                            if j['error'] > 0:
+                                error_messages += j['error']
+
+                        if EXTREME_LOGGING:
+                            print(json.dumps(j, indent=4, sort_keys=True))
+                        if connected_users > 0:
+                            if DEBUG_LOGGING:
+                                print(f"[{message_type.lower()}Generator] appending message")
+                            que_messages.append((que_type, j))
                         if DEBUG_LOGGING:
-                            print(f"[{message_type.lower()}Generator] appending message")
-                        que_messages.append((que_type, j))
-                    if DEBUG_LOGGING:
-                        print(f"[{message_type.lower()}Generator] sending off to db")
-                    que_database.append((que_type, j))
+                            print(f"[{message_type.lower()}Generator] sending off to db")
+                        que_database.append((que_type, j))
 
 
 def init_listeners():
