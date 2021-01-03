@@ -405,7 +405,8 @@ def htmlListener():
             # Send output via socketio
             if DEBUG_LOGGING:
                 print("[htmlListener] sending output via socketio.emit")
-            socketio.emit('newmsg', {'msghtml': html_output}, namespace='/main')
+            json_message.update({"msgtype": message_source})
+            socketio.emit('newmsg', {'msghtml': json_message}, namespace='/main')
             if DEBUG_LOGGING:
                 print("[htmlListener] packet sent via socketio.emit")
                 print("[htmlListener] Completed with generation")
