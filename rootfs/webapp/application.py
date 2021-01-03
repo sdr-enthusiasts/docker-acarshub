@@ -19,8 +19,6 @@ log.setLevel(logging.ERROR)
 app = Flask(__name__)
 # Make the browser not cache files
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
-# app.config['SECRET_KEY'] = 'secret!'
-# app.config['DEBUG'] = True
 
 # Global variable to keep track of connected users in the main namespace
 connected_users = 0
