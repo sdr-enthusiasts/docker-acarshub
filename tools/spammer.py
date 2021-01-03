@@ -28,17 +28,19 @@ while run:
 		    type=socket.SOCK_STREAM)
 
 		receiver.bind(('127.0.0.1', 15550))
+		print("Waiting for connection")
 		receiver.listen()
 		(clientConnected, clientAddress) = receiver.accept()
 		clientConnected.setblocking(0)
 		clientConnected.settimeout(1)
+		print("Connected")
 		while True:
 		    print("sending message")
 		    # we will send a random message
 		    index = randint(0, len(message))
 		    clientConnected.send(message[index].encode())
 		    print("message sent")
-		    time.sleep(5)
+		    time.sleep(message_interval)
 
 		receiver.close()
 
@@ -49,3 +51,4 @@ while run:
 	except Exception as e:
 		print(e)
 		receiver.close()
+		time.sleep(1)
