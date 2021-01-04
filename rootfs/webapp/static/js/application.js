@@ -1,8 +1,11 @@
 
 var pause = false;
+var text_filter = false;
 var socket;
 var msgs_received = [];
 
+var filtered_messages = 0;
+var received_messages = 0;
 
 $(document).ready(function(){
     //connect to the socket server.
@@ -13,12 +16,25 @@ $(document).ready(function(){
         //console.log("Received msg" + msg.msghtml);
         console.log("Received msg");
         //maintain a list of 50 msgs
-        if (msgs_received.length >= 50){
-            msgs_received.shift()
-        }            
-        msgs_received.push(msg.msghtml);
-        if(!pause)
-            display_messages()
+        if(!text_filter || (msg.msghtml.hasOwnProperty('text') || msg.msghtml.hasOwnProperty('data') ||
+            msg.msghtml.hasOwnProperty('libacars') || msg.msghtml.hasOwnProperty('dsta') || msg.msghtml.hasOwnProperty('depa') ||
+            msg.msghtml.hasOwnProperty('eta') || msg.msghtml.hasOwnProperty('gtout') || msg.msghtml.hasOwnProperty('gtin') ||
+            msg.msghtml.hasOwnProperty('wloff') || msg.msghtml.hasOwnProperty('wlin') || msg.msghtml.hasOwnProperty('lat') ||
+            msg.msghtml.hasOwnProperty('lon') || msg.msghtml.hasOwnProperty('alt'))) {
+
+            if (msgs_received.length >= 50){
+                msgs_received.shift()
+            }            
+            msgs_received.push(msg.msghtml);
+        } else {
+            increment_filtered();
+        }
+
+        increment_received();
+
+        if(!pause) {
+            $('#log').html(display_messages(msgs_received));
+        }
         else
             console.log("Message received, but updates paused")
     });
@@ -29,6 +45,22 @@ $(document).ready(function(){
     });
 
 });
+
+function increment_filtered() {
+    id = document.getElementById("filteredmessages");
+    id.innerHTML = "";
+    filtered_messages++;
+    txt = document.createTextNode(filtered_messages);
+    id.appendChild(txt);
+}
+
+function increment_received() {
+    id = document.getElementById("receivedmessages");
+    id.innerHTML = "";
+    received_messages++;
+    txt = document.createTextNode(received_messages);
+    id.appendChild(txt);
+}
 
 function pause_updates() {
     if(pause) {
@@ -49,10 +81,20 @@ function pause_updates() {
     }
 }
 
-function display_messages() {
-    msgs_string = '';
-    for (var i = 0; i < msgs_received.length; i++){
-        msgs_string = '<p>' + msgs_received[i].toString() + '</p>' + msgs_string;
+function filter_notext() {
+    if(text_filter) {
+        text_filter = false;
+        id = document.getElementById("filter_notext");
+        id.innerHTML = "";
+        txt = document.createTextNode("Filter out \"No Text\" messages");
+        id.appendChild(txt);
+    } else {
+        text_filter = true;
+
+        id = document.getElementById("filter_notext");
+        id.innerHTML = "";
+        txt = document.createTextNode("Show \"No Text\" messages");
+        id.appendChild(txt);
     }
-    $('#log').html(msgs_string);
 }
+
