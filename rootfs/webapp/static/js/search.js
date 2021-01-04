@@ -35,12 +35,13 @@ $(document).ready(function(){
     });
 
     document.addEventListener("keyup", function(event) {
+        var old_search = current_search;
         current_search = document.getElementById("search_term").value;
         var field = document.getElementById("dbfield").value;
         current_page = 0;
-        if(current_search != '')
+        if(current_search != '' && current_search != old_search)
             socket.emit('query', {'search_term': current_search, 'field': field}, namespace='/search');
-        else
+        else if(current_search == '')
             $('#log').html('');
     });
 
