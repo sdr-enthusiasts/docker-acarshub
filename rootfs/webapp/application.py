@@ -392,6 +392,23 @@ def search_connect():
     pass
 
 
+@socketio.on('connect', namespace='/stats')
+def stats_connect():
+    import os
+
+    if os.getenv("DEBUG_LOGGING", default=False):
+        print('Client connected stats')
+
+    acars = False
+    vdlm = False
+    if os.getenv("ENABLE_ACARS", default=False):
+        acars = True
+    if os.getenv("ENABLE_VDLM", default=False):
+        vdlm = True
+
+    socketio.emit('newmsg', {"vdlm": vdlm, "acars": acars}, namespace='/stats')
+
+
 # handle a query request from the browser
 
 
