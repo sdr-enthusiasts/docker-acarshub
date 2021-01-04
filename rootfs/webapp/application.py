@@ -79,310 +79,6 @@ def update_rrd_db():
     error_messages = 0
 
 
-def htmlGenerator(message_source=None, json_message=None, from_query=False):
-    import datetime
-    import json
-    import pprint
-    import os
-
-    DEBUG_LOGGING = False
-    EXTREME_LOGGING = False
-    if os.getenv("DEBUG_LOGGING", default=False):
-        DEBUG_LOGGING = True
-    if os.getenv("EXTREME_LOGGING", default=False):
-        EXTREME_LOGGING = True
-
-    if DEBUG_LOGGING:
-        print("[htmlGenerator] Generating HTML")
-        print(f"[htmlGenerator] Processing this message: {json_message}")
-    # Set up list allowing us to track what keys have been decoded
-
-    # if from_query is set function has been called to decode a message from the DB
-    # We need to massage the data before processing
-
-    if from_query:
-        # Ignoring a couple of DB fields
-        if '_sa_instance_state' in json_message:
-            del json_message['_sa_instance_state']
-        if 'id' in json_message:
-            del json_message['id']
-        if 'message_type' in json_message:
-            message_source = json_message['message_type']
-            del json_message['message_type']
-
-        # converting the time key saved in the db to the expected output timestamp key and format
-        # part of the need for this is because I foolishly didn't name the field in the db the same
-        # as the message's original key, but it turns out, that probably saved some trouble
-        # since the db is saving everything as text (tried numeric, WAY more of a pain...),
-        # and we need to convert string to float
-        # so the timestamp conversion below works right. Might be worth revisiting the db structure
-        # and renaming the key (I think this conversion will work right if we save it back to the same key?)
-        # but I didn't test, and I didn't want to mess about with my test-db since I have a fair bit of data saved
-
-        if 'time' in json_message:
-            json_message['timestamp'] = float(json_message['time'])
-            del json_message['time']
-
-        # We need to loop through the data and remove all keys without a value set.
-        # The database query returns all columns, irrespective if there is a value set or the field is NULL
-
-        delete = [key for key in json_message if json_message[key] is None]
-        for key in delete:
-            del json_message[key]
-
-    remaining_keys = list(json_message.keys())
-
-    # Prepare Table HTML
-    html_output = str()
-    html_output += "<table id=\"shadow\">"
-
-    # Table header row, message type & from
-    html_output += "<tr>"
-    html_output += "<td><strong>{msgtype}</strong> from <strong>{station_id}</strong></td>".format(
-        msgtype=f"{message_source}",
-        station_id=json_message['station_id'],
-    )
-    remaining_keys.remove('station_id')
-
-    # Table header row, timestamp
-    html_output += "<td style=\"text-align: right\">{timestamp}</td>".format(
-        timestamp=datetime.datetime.fromtimestamp(json_message['timestamp']).strftime(r'%Y-%m-%d T: %H:%M:%S')
-    )
-    remaining_keys.remove('timestamp')
-    html_output += "</tr>"
-
-    # Table content
-    html_output += "<tr><td colspan=\"2\">"
-
-    if "toaddr" in json_message.keys():
-        html_output += "<p>To Address: <strong>{toaddr}</strong></p>".format(
-            toaddr=json_message['toaddr']
-        )
-        remaining_keys.remove('toaddr')
-
-    if "fromaddr" in json_message.keys():
-        html_output += "<p>From Address: <strong>{fromaddr}</strong></p>".format(
-            fromaddr=json_message['fromaddr']
-        )
-        remaining_keys.remove('fromaddr')
-
-    if "depa" in json_message.keys():
-        html_output += "<p>Departing: <strong>{depa}</strong></p>".format(
-            depa=json_message['depa']
-        )
-        remaining_keys.remove('depa')
-
-    if "dsta" in json_message.keys():
-        html_output += "<p>Destination: <strong>{dsta}</strong></p>".format(
-            dsta=json_message['dsta']
-        )
-        remaining_keys.remove('dsta')
-
-    if "eta" in json_message.keys():
-        html_output += "<p>Estimated time of arrival: <strong>{eta}</strong> hours</p>".format(
-            eta=json_message['eta']
-        )
-        remaining_keys.remove('eta')
-
-    if "gtout" in json_message.keys():
-        html_output += "<p>Pushback from gate: <strong>{gtout}</strong> hours</p>".format(
-            gtout=json_message['gtout']
-        )
-        remaining_keys.remove('gtout')
-
-    if "gtin" in json_message.keys():
-        html_output += "<p>Arriving at gate: <strong>{gtin}</strong> hours</p>".format(
-            gtin=json_message['gtin']
-        )
-        remaining_keys.remove('gtin')
-
-    if "wloff" in json_message.keys():
-        html_output += "<p>Wheels off: <strong>{wloff}</strong> hours</p>".format(
-            wloff=json_message['wloff']
-        )
-        remaining_keys.remove('wloff')
-
-    if "wlin" in json_message.keys():
-        html_output += "<p>Wheels down: <strong>{wlin}</strong></p>".format(
-            wlin=json_message['wlin']
-        )
-        remaining_keys.remove('wlin')
-
-    if "lat" in json_message.keys():
-        html_output += "<p>Latitude: <strong>{lat}</strong></p>".format(
-            lat=json_message['lat']
-        )
-        remaining_keys.remove('lat')
-
-    if "lon" in json_message.keys():
-        html_output += "<p>Longitude: <strong>{lon}</strong></p>".format(
-            lon=json_message['lon']
-        )
-        remaining_keys.remove('lon')
-
-    if "alt" in json_message.keys():
-        html_output += "<p>Altitude: <strong>{alt}</strong></p>".format(
-            alt=json_message['alt']
-        )
-        remaining_keys.remove('alt')
-
-    if "text" in json_message.keys():
-        html_output += "<p>"
-        html_output += "<pre id=\"shadow\"><strong>{text}</strong></pre>".format(
-            text=json_message['text'].replace("\r\n", "\n"),
-        )
-        remaining_keys.remove('text')
-        html_output += "</p>"
-    elif "data" in json_message.keys():
-        html_output += "<p>"
-        html_output += "<pre id=\"shadow\"><strong>{data}</strong></pre>".format(
-            data=json_message['data'].replace("\r\n", "\n"),
-        )
-        remaining_keys.remove('data')
-        html_output += "</p>"
-    else:
-        html_output += "<p><pre id=\"shadow\"><i><strong>No text</strong></i></pre></p>"
-
-    if "libacars" in json_message.keys():
-        html_output += "<p>Decoded:</p>"
-        html_output += "<p>"
-        html_output += "<pre id=\"shadow\"><strong>{libacars}<strong></pre>".format(
-            libacars=pprint.pformat(
-                json_message['libacars'],
-                indent=2,
-            )
-        )
-        remaining_keys.remove('libacars')
-        html_output += "</p>"
-
-    html_output += "</td></tr>"
-
-    # Table footer row, tail & flight info
-    html_output += "<tr>"
-    html_output += "<td>"
-    if "tail" in json_message.keys():
-        html_output += "Tail: <strong><a href=\"https://flightaware.com/live/flight/{tail}\" target=\"_blank\">{tail}</a></strong> ".format(
-            tail=json_message['tail'],
-        )
-        remaining_keys.remove('tail')
-    if "flight" in json_message.keys():
-        icao, airline = acarshub_db.find_airline_code_from_iata(json_message['flight'][:2])
-        flight_number = json_message['flight'][2:]
-        flight = icao + flight_number
-
-        # If the iata and icao variables are not equal, airline was found in the database and we'll add in the tool-tip for the decoded airline
-        # Otherwise, no tool-tip, no FA link, and use the IATA code for display
-        if icao != json_message['flight'][:2]:
-            html_output += f"Flight: <span class=\"wrapper\"><strong><a href=\"https://flightaware.com/live/flight/{flight}\" target=\"_blank\">{flight}/{json_message['flight']}</a></strong><span class=\"tooltip\">{airline} Flight {flight_number}</span></span> "
-        else:
-            html_output += f"Flight: <strong><a href=\"https://flightaware.com/live/flight/{flight}\" target=\"_blank\">{flight}</a></strong> "
-        remaining_keys.remove('flight')
-    if "icao" in json_message.keys():
-        html_output += "ICAO: <strong>{icao}</strong> ".format(
-            icao=json_message['icao'],
-        )
-        remaining_keys.remove('icao')
-    html_output += "</td>"
-
-    # Table footer row, metadata
-    html_output += "<td style=\"text-align: right\">"
-    if "freq" in json_message.keys():
-        html_output += "<span class=\"wrapper\">F: <strong>{freq}</strong><span class=\"tooltip\">The frequency this message was received on</span></span> ".format(
-            freq=json_message['freq'],
-        )
-        remaining_keys.remove('freq')
-
-    if "ack" in json_message.keys():
-        if json_message['ack'] is not False:
-            html_output += "<span class=\"wrapper\">A: <strong>{ack}</strong><span class=\"tooltip\">Acknolwedgement</span></span> ".format(
-                ack=json_message['ack'],
-            )
-        remaining_keys.remove('ack')
-
-    if "mode" in json_message.keys():
-        html_output += "<span class=\"wrapper\">M: <strong>{mode}</strong><span class=\"tooltip\">Mode</span></span> ".format(
-            mode=json_message['mode'],
-        )
-        remaining_keys.remove('mode')
-
-    if "label" in json_message.keys():
-        html_output += "<span class=\"wrapper\">L: <strong>{label}</strong><span class=\"tooltip\">Label</span></span> ".format(
-            label=json_message['label'],
-        )
-        remaining_keys.remove('label')
-
-    if "block_id" in json_message.keys():
-        html_output += "<span class=\"wrapper\">B: <strong>{block_id}</strong><span class=\"tooltip\">Block ID</span></span> ".format(
-            block_id=json_message['block_id'],
-        )
-        remaining_keys.remove('block_id')
-
-    if "msgno" in json_message.keys():
-        html_output += "<span class=\"wrapper\">M#: <strong>{msgno}</strong><span class=\"tooltip\">Message number. Used for multi-part messages.</span></span> ".format(
-            msgno=json_message['msgno'],
-        )
-        remaining_keys.remove('msgno')
-
-    if "is_response" in json_message.keys():
-        html_output += "<span class=\"wrapper\">R: <strong>{is_response}</strong><span class=\"tooltip\">Response</span></span> ".format(
-            is_response=json_message['is_response'],
-        )
-        remaining_keys.remove('is_response')
-
-    if "is_onground" in json_message.keys():
-        # We need to watch this to make sure I have this right. After spelunking through vdlm2dec source code
-        # Input always appears to be a 0 or 2...for reasons I don't get. I could have this backwards
-        # 0 indicates the plane is airborne
-        # 2 indicates the plane is on the ground
-        # https://github.com/TLeconte/vdlm2dec/blob/1ea300d40d66ecb969f1f463506859e36f62ef5c/out.c#L457
-        # variable naming in vdlm2dec is inconsistent, but "ground" and "gnd" seem to be used
-
-        if json_message['is_onground'] == 0:
-            is_onground = "False"
-        else:
-            is_onground = "True"
-
-        html_output += f"<span class=\"wrapper\">G: <strong>{is_onground}</strong><span class=\"tooltip\">Is on ground?</span></span> "
-        remaining_keys.remove('is_onground')
-
-    if "error" in json_message.keys():
-        if json_message['error'] != 0:
-            html_output += '<span style="color:red;">'
-            html_output += "E: {error} ".format(
-                error=json_message['error'],
-            )
-            html_output += '</span>'
-        remaining_keys.remove('error')
-
-    html_output += "</td>"
-    html_output += "</tr>"
-
-    # Finish table html
-    html_output += "</table>"
-
-    if EXTREME_LOGGING:
-        print(html_output)
-
-    # Remove leftover keys that we don't really care about (do we care about these?)
-    if 'channel' in remaining_keys:
-        remaining_keys.remove('channel')
-    if 'level' in remaining_keys:
-        remaining_keys.remove('level')
-    if 'end' in remaining_keys:
-        remaining_keys.remove('end')
-
-    if len(remaining_keys) > 0:
-        print("")
-        print("Non decoded data exists:")
-        print(repr(remaining_keys))
-        print("")
-        print(json.dumps(json_message, indent=4, sort_keys=True))
-        print("")
-        print("-----")
-
-    return html_output
-
-
 def htmlListener():
     import time
     import sys
@@ -401,7 +97,7 @@ def htmlListener():
 
         if len(que_messages) != 0:
             message_source, json_message_initial = que_messages.popleft()
-            json_message = json_message_initial # creating a copy so that our changes below aren't made to the object
+            json_message = json_message_initial  # creating a copy so that our changes below aren't made to the object
             # Send output via socketio
             if DEBUG_LOGGING:
                 print("[htmlListener] sending output via socketio.emit")
@@ -499,9 +195,8 @@ def message_listener(message_type=None, ip='127.0.0.1', port=None):
         SPAM = True
 
     receiver = socket.socket(
-                    family=socket.AF_INET,
-                    type=socket.SOCK_STREAM,
-                )
+        family=socket.AF_INET,
+        type=socket.SOCK_STREAM,)
 
     # Run while requested...
     while not thread_message_listener_stop_event.isSet():
@@ -541,7 +236,7 @@ def message_listener(message_type=None, ip='127.0.0.1', port=None):
                 print(f"[{message_type.lower()}Generator] timeout")
             pass
         except socket.error as e:
-            print(f"[{message_type.lower()}Generator] Lost connection to {ip}:{port}. Reattemping...")
+            print(f"[{message_type.lower()}Generator] Error {e} to {ip}:{port}. Reattemping...")
             disconnected = True
             receiver.close()
             time.sleep(1)
@@ -703,9 +398,8 @@ def search_connect():
 def handle_message(message, namespace):
     # We are going to send the result over in one blob
     # search.js will only maintain the most recent blob we send over
-    html_output = ""
-    current_search_page = 0
-
+    total_results = 0
+    serialized_json = []
     # If the user has cleared the search bar, we'll execute the else statement
     # And the browsers clears the data
     # otherwise, run the search and format the results
@@ -720,7 +414,6 @@ def handle_message(message, namespace):
             # multiply the selected index by 20 (we have 20 results per page) so the db
             # knows what result index to send back
             search = acarshub_db.database_search(message['field'], message['search_term'], message['results_after'] * 20)
-            current_search_page = message['results_after']
         else:
             search = acarshub_db.database_search(message['field'], message['search_term'])
 
@@ -730,39 +423,18 @@ def handle_message(message, namespace):
 
         query_result = search[0]
         if query_result is not None:
+            total_results = search[1]
             # Loop through the results and format html
             for result in query_result:
-                html_output += "<p>" + htmlGenerator(None, result, True) + "</p> "
-
-            html_output += f"<p>Found {search[1]} results.<p>"
-            # we have more items found with the search than are displayed
-            # We'll set up the list of clickable links for the user
-            # So they can click through the results
-            # The selected page is non-clickable
-
-            html_output += "Page "
-
-            # This bit of logic is to check and see if we need to append an extra page
-            if search[1] % 20 != 0:
-                total_pages = int(search[1] / 20) + 1
-            else:
-                total_pages = int(search[1] / 20)
-
-            for i in range(0, total_pages):
-                if i == current_search_page:
-                    html_output += f"{i+1} "
-                else:
-                    html_output += f"<a href=\"#\" id=\"search_page\" onclick=\"runclick({i})\">{i+1}</a> "
-
-        else:
-            html_output += "<p>No results</p>"
+                serialized_json.append(result)
 
     # grab the socket id for the request
     # This stops the broadcast of the search results to everyone
     # in the search namespace.
 
     requester = request.sid
-    socketio.emit('newmsg', {'msghtml': html_output}, room=requester, namespace='/search')
+    socketio.emit('newmsg', {'num_results': total_results, 'msghtml': serialized_json,
+                             'search_term': str(message['search_term'])}, room=requester, namespace='/search')
 
 
 @socketio.on('disconnect', namespace='/main')
