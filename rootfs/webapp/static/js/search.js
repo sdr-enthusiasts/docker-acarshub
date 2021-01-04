@@ -37,7 +37,7 @@ $(document).ready(function(){
     document.addEventListener("keyup", function(event) {
         current_search = document.getElementById("search_term").value;
         var field = document.getElementById("dbfield").value;
-        page = 0;
+        current_page = 0;
         if(current_search != '')
             socket.emit('query', {'search_term': current_search, 'field': field}, namespace='/search');
         else

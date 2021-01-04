@@ -102,7 +102,7 @@ def htmlListener():
             # Send output via socketio
             if DEBUG_LOGGING:
                 print("[htmlListener] sending output via socketio.emit")
-            json_message.update({"msgtype": message_source})
+            json_message.update({"message_type": message_source})
 
             if "flight" in json_message.keys():
                 icao, airline = acarshub_db.find_airline_code_from_iata(json_message['flight'][:2])

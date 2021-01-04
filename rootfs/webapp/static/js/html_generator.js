@@ -39,7 +39,7 @@ function display_messages(msgs_to_process, convert) {
         }
 
         html_output += "<tr>";
-        html_output += `<td><strong>${message['msgtype']}</strong> from <strong>${message['station_id']}</strong></td>`;
+        html_output += `<td><strong>${message['message_type']}</strong> from <strong>${message['station_id']}</strong></td>`;
 
         var timestamp;
 

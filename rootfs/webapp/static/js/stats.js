@@ -3,13 +3,21 @@ $(document).ready(function(){
 	socket = io.connect('http://' + document.domain + ':' + location.port + '/stats');
 	socket.on('newmsg', function(msg) {
 		console.log("message received");
-		var text = "<a href=\"javascript:update_prefix('')\" id=\"pause_updates\">Combined Graphs</a>";
-		if(msg.acars == true) {
-			text += " | <a href=\"javascript:update_prefix('acars')\" id=\"pause_updates\">ACARS Graphs</a>";
+		var text = "";
+		if(msg.acars == true && msg.vdlm == true) {
+			text = "<a href=\"javascript:update_prefix('')\" id=\"pause_updates\">Combined Graphs</a>";
 		}
 
-		if(msg.vdlm == true) {
+		if(msg.acars == true && msg.vdlm == true) {
+			text += " | <a href=\"javascript:update_prefix('acars')\" id=\"pause_updates\">ACARS Graphs</a>";
+		} else if (msg.acars == true) {
+			text += "<a href=\"javascript:update_prefix('acars')\" id=\"pause_updates\">ACARS Graphs</a>";
+		}
+
+		if(msg.vdlm == true && msg.acars == true) {
 			text += " | <a href=\"javascript:update_prefix('vdlm')\" id=\"pause_updates\">VDLM Graphs</a>";
+		} else if (msg.vdlm == true) {
+			text += " <a href=\"javascript:update_prefix('vdlm')\" id=\"pause_updates\">VDLM Graphs</a>";
 		}
 
 		text += " | <a href=\"javascript:update_prefix('error')\" id=\"pause_updates\">Message Error Graphs</a>";
