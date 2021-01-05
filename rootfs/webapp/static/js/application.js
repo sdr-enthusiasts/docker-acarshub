@@ -11,6 +11,11 @@ $(document).ready(function(){
     //connect to the socket server.
     socket = io.connect('http://' + document.domain + ':' + location.port + '/main');
 
+    var filter = Cookies.get("filter");
+    if(filter == "true")
+        filter_notext();
+
+    console.log(filter);
     //receive details from server
     socket.on('newmsg', function(msg) {
         //console.log("Received msg" + msg.msghtml);
@@ -88,6 +93,7 @@ function filter_notext() {
         id.innerHTML = "";
         txt = document.createTextNode("Filter out \"No Text\" messages");
         id.appendChild(txt);
+        Cookies.set('filter', 'false', { expires: 365 });
     } else {
         text_filter = true;
 
@@ -95,6 +101,7 @@ function filter_notext() {
         id.innerHTML = "";
         txt = document.createTextNode("Show \"No Text\" messages");
         id.appendChild(txt);
+        Cookies.set('filter', 'true', { expires: 365 });
     }
 }
 

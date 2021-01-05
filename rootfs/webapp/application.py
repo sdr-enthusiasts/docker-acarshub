@@ -84,6 +84,7 @@ def htmlListener():
     import sys
     import os
     import copy
+    import pprint
 
     # TOOLTIPS: <span class="wrapper">visible text<span class="tooltip">tooltip text</span></span>
 
@@ -103,6 +104,19 @@ def htmlListener():
             if DEBUG_LOGGING:
                 print("[htmlListener] sending output via socketio.emit")
             json_message.update({"message_type": message_source})
+
+            if "libacars" in json_message.keys():
+                    html_output = "<p>Decoded:</p>"
+                    html_output += "<p>"
+                    html_output += "<pre>{libacars}</pre>".format(
+                        libacars=pprint.pformat(
+                            json_message['libacars'],
+                            indent=2,
+                        )
+                    )
+                    html_output += "</p>"
+
+                    json_message['libacars'] = html_output
 
             if "flight" in json_message.keys():
                 icao, airline = acarshub_db.find_airline_code_from_iata(json_message['flight'][:2])
