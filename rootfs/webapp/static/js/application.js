@@ -12,8 +12,12 @@ $(document).ready(function(){
     socket = io.connect('http://' + document.domain + ':' + location.port + '/main');
 
     var filter = Cookies.get("filter");
-    if(filter == "true")
+    if(filter == "true") {
+        Cookies.set('filter', 'true', { expires: 365 });
         filter_notext();
+    } else {
+        Cookies.set('filter', 'false', { expires: 365 });
+    }
 
     console.log(filter);
     //receive details from server
