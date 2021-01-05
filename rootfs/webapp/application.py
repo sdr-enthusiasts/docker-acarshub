@@ -99,7 +99,7 @@ def htmlListener():
 
         if len(que_messages) != 0:
             message_source, json_message_initial = que_messages.popleft()
-            json_message = copy.deepcopy(json_message_initial)  # creating a copy so that our changes below aren't made to the object
+            json_message = copy.deepcopy(json_message_initial)  # creating a copy so that our changes below aren't made to the parent object
             # Send output via socketio
             if DEBUG_LOGGING:
                 print("[htmlListener] sending output via socketio.emit")
