@@ -45,6 +45,7 @@ box-shadow: 2px 2px 2px 1px rgba(0, 0, 0, 0.2);
   -ms-transform: translateY(10px);
   -o-transform: translateY(10px);
   transform: translateY(10px);
+  transform: translateX(-50%);
   -webkit-transition: all .25s ease-out;
   -moz-transition: all .25s ease-out;
   -ms-transition: all .25s ease-out;
@@ -66,6 +67,7 @@ box-shadow: 2px 2px 2px 1px rgba(0, 0, 0, 0.2);
   left: 0;
   position: absolute;
   width: 100%;
+  transform: translateX(-50%);
 }
 
 /* CSS Triangles - see Trevor's post */
@@ -90,6 +92,7 @@ box-shadow: 2px 2px 2px 1px rgba(0, 0, 0, 0.2);
   -ms-transform: translateY(0px);
   -o-transform: translateY(0px);
   transform: translateY(0px);
+  transform: translateX(-50%);
 }
 
 /* IE can just show/hide with no transition */
