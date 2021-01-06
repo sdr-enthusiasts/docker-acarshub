@@ -499,6 +499,7 @@ def handle_message(message, namespace):
 
 @socketio.on('disconnect', namespace='/main')
 def main_disconnect():
+    import time
     global connected_users
 
     connected_users -= 1
@@ -506,7 +507,8 @@ def main_disconnect():
         print(f'Client disconnected. Total connected: {connected_users}')
 
     # Client disconnected, stop the htmlListener
-
+    # We are going to pause for one second in case the user was refreshing the page
+    time.sleep(1)
     if connected_users == 0:
         thread_html_generator_event.set()
         que_messages.clear()
