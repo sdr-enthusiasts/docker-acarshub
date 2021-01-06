@@ -124,10 +124,7 @@ function display_messages(msgs_to_process, convert) {
         }
 
         if(message.hasOwnProperty("libacars")) {
-            html_output += "<p>Decoded:</p>";
-            html_output += "<p>";
-            html_output += `<pre id=\"shadow\"><strong>${message['libacars']}<strong></pre>"`;
-            html_output += "</p>";
+            html_output += message['libacars'];
         }
 
         html_output += "</td></tr>";

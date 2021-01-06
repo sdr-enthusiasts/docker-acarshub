@@ -77,6 +77,7 @@ There are quite a few configuration options this container can accept.
 | `FEED`     | Used to toggle feeding to [ACARS.io](http://acars.io). If set to any non-blank value feeding will be enabled. | No | Blank |
 | `ENABLE_WEB`  | Enable the web server. Set to a blank value to disable the web server. | No | `true` |
 | `QUIET_LOGS` | By default the received ACARS/VDLM messages will be logged to the container's std output. To stop this, set to any non-blank value. | No | Blank |
+| `DB_SAVEALL` | By default the container will save all received messages in to a database, even if the message is a blank message. If you want to increase performance/decrease database size, set this option to blank to only save messages with at least one informationial field. | No | `true` |
 
 ### ACARS
 

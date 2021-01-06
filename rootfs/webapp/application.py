@@ -84,6 +84,7 @@ def htmlListener():
     import sys
     import os
     import copy
+    import pprint
 
     # TOOLTIPS: <span class="wrapper">visible text<span class="tooltip">tooltip text</span></span>
 
@@ -98,11 +99,24 @@ def htmlListener():
 
         if len(que_messages) != 0:
             message_source, json_message_initial = que_messages.popleft()
-            json_message = copy.deepcopy(json_message_initial)  # creating a copy so that our changes below aren't made to the object
+            json_message = copy.deepcopy(json_message_initial)  # creating a copy so that our changes below aren't made to the parent object
             # Send output via socketio
             if DEBUG_LOGGING:
                 print("[htmlListener] sending output via socketio.emit")
             json_message.update({"message_type": message_source})
+
+            if "libacars" in json_message.keys():
+                    html_output = "<p>Decoded:</p>"
+                    html_output += "<p>"
+                    html_output += "<pre>{libacars}</pre>".format(
+                        libacars=pprint.pformat(
+                            json_message['libacars'],
+                            indent=2,
+                        )
+                    )
+                    html_output += "</p>"
+
+                    json_message['libacars'] = html_output
 
             if "flight" in json_message.keys():
                 icao, airline = acarshub_db.find_airline_code_from_iata(json_message['flight'][:2])
@@ -414,6 +428,8 @@ def stats_connect():
 
 @socketio.on('query', namespace='/search')
 def handle_message(message, namespace):
+    import json
+    import pprint
     # We are going to send the result over in one blob
     # search.js will only maintain the most recent blob we send over
     total_results = 0
@@ -444,7 +460,33 @@ def handle_message(message, namespace):
             total_results = search[1]
             # Loop through the results and format html
             for result in query_result:
-                serialized_json.append(result)
+                json_message = json.loads(result)
+                if "libacars" in json_message.keys() and json_message['libacars'] != None:
+                        html_output = "<p>Decoded:</p>"
+                        html_output += "<p>"
+                        html_output += "<pre>{libacars}</pre>".format(
+                            libacars=pprint.pformat(
+                                json_message['libacars'],
+                                indent=2,
+                            )
+                        )
+                        html_output += "</p>"
+
+                        json_message['libacars'] = html_output
+
+                if "flight" in json_message.keys() and json_message['flight'] != None:
+                    icao, airline = acarshub_db.find_airline_code_from_iata(json_message['flight'][:2])
+                    flight_number = json_message['flight'][2:]
+                    flight = icao + flight_number
+
+                    # If the iata and icao variables are not equal, airline was found in the database and we'll add in the tool-tip for the decoded airline
+                    # Otherwise, no tool-tip, no FA link, and use the IATA code for display
+                    if icao != json_message['flight'][:2]:
+                        json_message['flight'] = f"Flight: <span class=\"wrapper\"><strong><a href=\"https://flightaware.com/live/flight/{flight}\" target=\"_blank\">{flight}/{json_message['flight']}</a></strong><span class=\"tooltip\">{airline} Flight {flight_number}</span></span> "
+                    else:
+                        json_message['flight'] = f"Flight: <strong><a href=\"https://flightaware.com/live/flight/{flight}\" target=\"_blank\">{flight}</a></strong> "
+
+                serialized_json.append(json.dumps(json_message))
 
     # grab the socket id for the request
     # This stops the broadcast of the search results to everyone

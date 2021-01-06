@@ -1,6 +1,7 @@
 var socket;
 var current_search = '';
 var current_page = 0;
+var total_pages = 0;
 
 $(document).ready(function(){
     //connect to the socket server.
@@ -32,6 +33,7 @@ $(document).ready(function(){
             }
         }
         $('#log').html(display);
+        window.scrollTo(0, 0);
     });
 
     document.addEventListener("keyup", function(event) {
@@ -60,27 +62,66 @@ function runclick(page) {
     socket.emit('query', {'search_term': current_search, 'field': field, 'results_after': page}, namespace='/search')
 }
 
+function jumppage() {
+    page = document.getElementById("jump").value;
+    if(page > total_pages){
+        $('#error_message').html(`Please enter a value less than ${total_pages}`);
+    } else
+        runclick(parseInt(page)-1);
+}
+
 
 function display_search(html, current, total) {
-    var total_pages = 0;
+    total_pages = 0;
 
     if(total == 0)
         return html + "<p>No results</p>";
-    else
-        html += `<p>Found ${total} results.</p><p>`
 
     if(total % 20 != 0)
         total_pages = ~~(total / 20) + 1;
     else
         total_pages = ~~(total / 20);
 
-    for(var i = 0; i < total_pages; i++) {
+    html += `<p>Found ${total} results in ${total_pages} pages.</p><p>`
+
+    // Determine -/+ range. We want to show -/+ 5 pages from current index
+
+    var low_end = 0;
+    var high_end = current + 6;
+
+    if(current > 5)
+        low_end = current - 5;
+
+    if(high_end > total_pages)
+        high_end = total_pages
+
+    if(low_end > 0) {
+        if(low_end > 5)
+            html += `<a href=\"#\" id=\"search_page\" onclick=\"runclick(${low_end - 5})\"><<</a>`
+        else
+            html += `<a href=\"#\" id=\"search_page\" onclick=\"runclick(0)\"><<</a>`
+    }
+
+    for(var i = low_end; i < high_end; i++) {
         if(i == current) {
             html += `${i+1} `;
         }
         else {
             html += `<a href=\"#\" id=\"search_page\" onclick=\"runclick(${i})\">${i+1}</a> `;
         }
+    }
+
+    if(high_end != total_pages) {
+        if(high_end + 5 < total_pages)
+            html += `<a href=\"#\" id=\"search_page\" onclick=\"runclick(${high_end + 4})\">>></a>`;
+        else
+            html += `<a href=\"#\" id=\"search_page\" onclick=\"runclick(${high_end}\")>>></a>`;
+    }
+
+    if(total_pages > 5) {
+        html += "<p><form><label>Jump to page: </label> <input type=\"text\" id=\"jump\"><p></form>";
+        html += "<a href=\"javascript:void(0);\" id=\"jump_page\" onclick=\"jumppage()\">Submit</a>";
+        html += "<div id=\"error_message\"></div>";
     }
 
     return html;
