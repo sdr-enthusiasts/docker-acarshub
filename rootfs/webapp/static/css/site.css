@@ -5,7 +5,16 @@ table {
   table-layout: fixed;
   background-color: white;
 }
-th, td {
+
+table.search {
+  border: 1px solid black;
+  border-collapse: collapse;
+  width: 30%;
+  table-layout: fixed;
+  background-color: white;
+}
+
+td {
   padding: 7px;
 }
 hr { 
@@ -29,6 +38,21 @@ body {
 
 div#content.container {
   padding-left: 20px;
+}
+
+.search_label {
+  width: 120px;
+}
+
+.search_terms {
+}
+
+select {
+  min-width: 100%;
+}
+
+input {
+  min-width: 100%;
 }
 
 .footer {
