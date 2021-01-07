@@ -161,7 +161,7 @@ def update_graphs():
         if os.getenv("ENABLE_ACARS", default=False) and os.getenv("ENABLE_VDLM", default=False):
             args[0] = "/webapp/static/images/vdlm6months.png"
             rrdtool.graph(*args, *args_vdlm)
-            args[0] = "/webapp/static/images/acars6monthsr.png"
+            args[0] = "/webapp/static/images/acars6months.png"
             rrdtool.graph(*args, *args_acars)
 
         # 1 year
