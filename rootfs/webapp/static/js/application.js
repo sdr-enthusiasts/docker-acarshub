@@ -9,6 +9,7 @@ var received_messages = 0;
 
 $(document).ready(function(){
     //connect to the socket server.
+    generate_menu();
     socket = io.connect('http://' + document.domain + ':' + location.port + '/main');
 
     var filter = Cookies.get("filter");
@@ -78,6 +79,12 @@ function pause_updates() {
         id.innerHTML = "";
         txt = document.createTextNode("Pause updates");
         id.appendChild(txt);
+
+        id_filtered = document.getElementById("received");
+        id_filtered.innerHTML = "";
+        txt_filtered = document.createTextNode("Received messages");
+        id_filtered.appendChild(txt_filtered);
+
         display_messages()
     }
     else {
@@ -87,6 +94,11 @@ function pause_updates() {
         id.innerHTML = "";
         txt = document.createTextNode("Updates Paused");
         id.appendChild(txt);
+
+        id_filtered = document.getElementById("received");
+        id_filtered.innerHTML = "";
+        txt_filtered = document.createTextNode("Received messages (paused)");
+        id_filtered.appendChild(txt_filtered);
     }
 }
 
@@ -98,8 +110,16 @@ function filter_notext() {
         txt = document.createTextNode("Filter out \"No Text\" messages");
         id.appendChild(txt);
         Cookies.set('filter', 'false', { expires: 365 });
+        filtered_messages = 0;
+
+        $('#filtered').html("");
     } else {
         text_filter = true;
+
+        $('#filtered').html("Filtered Messages:&emsp;&ensp;<strong><span id=\"filteredmessages\"></span></strong>");
+        id_filtered = document.getElementById("filteredmessages");
+        txt_filtered = document.createTextNode(filtered_messages);
+        id_filtered.appendChild(txt_filtered);
 
         id = document.getElementById("filter_notext");
         id.innerHTML = "";

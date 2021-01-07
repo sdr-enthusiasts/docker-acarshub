@@ -26,6 +26,11 @@ body {
   margin: 30px auto;
   width: 1200px;
 }
+
+div#content.container {
+  padding-left: 20px;
+}
+
 .footer {
   position: fixed;
   left: 0;
@@ -79,6 +84,7 @@ box-shadow: 2px 2px 2px 1px rgba(0, 0, 0, 0.2);
   -ms-box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.28);
   -o-box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.28);
   box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.28);
+  z-index: 0;
 }
 
 /* This bridges the gap so you can mouse into the tooltip without it disappearing */
@@ -207,12 +213,16 @@ nav {
   box-shadow: 2px 2px 3px #888;
   border-bottom-right-radius: 8px;
   border-bottom-left-radius: 8px;
+  z-index: 10;
 }
 
 /* prime */
 ul.primary li a {
   display: block;
-  padding: 20px 30px;
+  padding-top: 20px;
+  padding-bottom: 10px;
+  padding-right: 20px;
+  padding-left: 20px;
   border-right: 1px solid #3D3D3D;
 }
 
@@ -221,7 +231,6 @@ ul.primary li:last-child a {
 }
 
 ul.primary li a:hover {
-  
   color: #000;
 }
 

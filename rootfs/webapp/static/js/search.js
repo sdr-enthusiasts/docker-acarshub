@@ -5,6 +5,7 @@ var total_pages = 0;
 
 $(document).ready(function(){
     //connect to the socket server.
+    generate_menu();
     socket = io.connect('http://' + document.domain + ':' + location.port + '/search');
     var msgs_received = [];
     var num_results = [];
@@ -14,6 +15,7 @@ $(document).ready(function(){
     socket.on('newmsg', function(msg) {
         //console.log("Received msg" + msg.msghtml);
         console.log("Received msg");
+        console.log(msg);
         //maintain a list of 1 msgs
         if (msgs_received.length >= 1){
             msgs_received.shift();
