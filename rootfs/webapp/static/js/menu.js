@@ -1,0 +1,20 @@
+$(document).ready(function(){
+	html = '<nav>'
+    html += '<ul class="primary">'
+    html +=  '<li>'
+    html += '<a href="">ACARS Hub</a>'
+    html += '<ul class="sub">'
+    html += '<li><a href="/">Live Messages</a></li>'
+    html += '<li><a href="/search">Search Database</a></li>'
+    html += '<li><a href="/stats">Statistics</a></li>'
+    html += '</ul>'
+    html += '</li>'
+    html += '<li>'
+    html += '<a href="">Settings</a>'
+    html += '<ul class="sub">'
+    html += '<li><a href="javascript:pause_updates()" id="pause_updates">Pause updates</a></li>'
+    html += '<li><a href="javascript:filter_notext()" id="filter_notext">Filter out "No Text" messages</a></li>'
+    html += '</ul>'
+    html += '</nav>'
+    $('#links').html(html);
+ });

@@ -6,6 +6,7 @@
     <meta http-equiv=“CACHE-CONTROL” content=”NO-CACHE”>
     <script src="//code.jquery.com/jquery-3.3.1.min.js"></script>
     <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/socket.io/1.3.6/socket.io.min.js"></script>
+    <script src="static/js/menu.js"></script>
     <script src="../static/js/stats.js"></script>
     <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
     <link rel="stylesheet" href="/static/css/site.css">
@@ -13,16 +14,9 @@
   </head>
   <body>
     <div class="container" id="header">
-      <div class="row">
-          <h1>ACARS Hub</h1>
+      <div class="row" id="links">
       </div>
     </div>
-    <div class="container" id="links">
-      <div class="row">
-          | <a href="/">Live Messages</a> | <a href="/stats">ACARS Hub Stats</a> | <a href="/search">Search Database</a> | <a href="https://github.com/fredclausen/docker-acarshub" target="_blank">Project Github</a> | <a href="https://discord.gg/sTf9uYF"><img src="https://img.shields.io/discord/734090820684349521" alt="discord"></a> |
-      </div>
-    </div>
-    <hr>
     <div class="container" id="imageslinks">
       <div class="row" id="image_links">
       </div>
@@ -38,6 +32,9 @@
           <img src="static/images/6months.png" id="6mon"><br>
           <img src="static/images/1year.png" id="1yr"><br>
       </div>
+    </div>
+    <div class="footer">
+      <a href="https://github.com/fredclausen/docker-acarshub" target="_blank">Project Github</a> | <a href="https://discord.gg/sTf9uYF"><img src="https://img.shields.io/discord/734090820684349521" alt="discord"></a> |
     </div>
   </body>
 </html>
