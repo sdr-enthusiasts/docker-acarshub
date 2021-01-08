@@ -24,6 +24,12 @@ function generate_menu(){
     	html += '<span id="stat_menu"></span>';
     	html += '</ul>';
     }
+
+    // Alerts!
+    /*html += '<li class="right_side"><a href="">Alerts</a>';
+    html += '<ul class="sub">';
+    html += '<li>Test</li>';
+    html += '</ul></li>';*/
     html += '</nav>'
     $('#links').html(html);
  }

@@ -205,6 +205,10 @@ ul {
   text-align: left;
 }
 
+.right_side {
+  float: right;
+}
+
 li {
   float: left;
 }
