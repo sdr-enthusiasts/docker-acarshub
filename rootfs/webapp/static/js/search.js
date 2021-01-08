@@ -29,7 +29,6 @@ $(document).ready(function(){
             msgs_received.push(msg.msghtml);
             num_results.push(msg.num_results);
             for (var i = 0; i < msgs_received.length; i++){
-                console.log(msgs_received[i]);
                 display = display_messages(msgs_received[i], true);
                 display_nav_results = display_search(current_page, num_results[i]);
                 //msgs_string = '<p>' + msgs_received[i].toString() + '</p>' + msgs_string;
@@ -53,7 +52,8 @@ $(document).ready(function(){
 
 // In order to help DB responsiveness, I want to make sure the user has quit typing before emitting a query
 // We'll do this by recording the state of the DB search text field, waiting half a second (might could make this less)
-// And then comparing the previous text field with the current text field. If they are the same, we'll send a query out
+// I chose 500ms for the delay because it seems like a reasonable compromise for fast/slow typers
+// Once delay is met, compare the previous text field with the current text field. If they are the same, we'll send a query out
 
 async function delay_query(initial_query) {
     await sleep(500);
