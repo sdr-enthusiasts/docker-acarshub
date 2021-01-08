@@ -42,15 +42,7 @@ $(document).ready(function(){
     });
 
     document.addEventListener("keyup", function(event) {
-        var old_search = current_search;
-        current_search = document.getElementById("search_term").value;
-        var field = document.getElementById("dbfield").value;
-        if(current_search != '' && current_search != old_search) {
-            current_page = 0;
-            socket.emit('query', {'search_term': current_search, 'field': field}, namespace='/search');
-        } else if(current_search == '') {
-            $('#log').html('');
-        }
+        delay_query(document.getElementById("search_term").value);
     });
 
     //noop
@@ -59,6 +51,29 @@ $(document).ready(function(){
     });
 });
 
+// In order to help DB responsiveness, I want to make sure the user has quit typing before emitting a query
+// We'll do this by recording the state of the DB search text field, waiting half a second (might could make this less)
+// And then comparing the previous text field with the current text field. If they are the same, we'll send a query out
+
+async function delay_query(initial_query) {
+    await sleep(500);
+    var old_search = current_search;
+    if(initial_query == document.getElementById("search_term").value) {
+        current_search = document.getElementById("search_term").value;
+        var field = document.getElementById("dbfield").value;
+        if(current_search != '' && current_search != old_search) {
+            current_page = 0;
+            console.log("sending query");
+            socket.emit('query', {'search_term': current_search, 'field': field}, namespace='/search');
+        } else if(current_search == '') {
+            $('#log').html('');
+        }
+    }
+}
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 function runclick(page) {
     console.log("updating page");
