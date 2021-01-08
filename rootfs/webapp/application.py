@@ -486,7 +486,7 @@ def handle_message(message, namespace):
                     else:
                         json_message['flight'] = f"Flight: <strong><a href=\"https://flightaware.com/live/flight/{flight}\" target=\"_blank\">{flight}</a></strong> "
 
-                serialized_json.append(json.dumps(json_message))
+                serialized_json.insert(0, json.dumps(json_message))
 
     # grab the socket id for the request
     # This stops the broadcast of the search results to everyone

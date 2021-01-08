@@ -29,15 +29,16 @@ $(document).ready(function(){
             msgs_received.push(msg.msghtml);
             num_results.push(msg.num_results);
             for (var i = 0; i < msgs_received.length; i++){
+                console.log(msgs_received[i]);
                 display = display_messages(msgs_received[i], true);
                 display_nav_results = display_search(current_page, num_results[i]);
                 //msgs_string = '<p>' + msgs_received[i].toString() + '</p>' + msgs_string;
             }
+
+            $('#log').html(display);
+            $('#num_results').html(display_nav_results);
+            window.scrollTo(0, 0);
         }
-        $('#log').html(display);
-        console.log(display_nav_results);
-        $('#num_results').html(display_nav_results);
-        window.scrollTo(0, 0);
     });
 
     document.addEventListener("keyup", function(event) {
@@ -64,7 +65,10 @@ function runclick(page) {
     current_page = page;
     current_search = document.getElementById("search_term").value;
     var field = document.getElementById("dbfield").value;
-    socket.emit('query', {'search_term': current_search, 'field': field, 'results_after': page}, namespace='/search')
+    if(current_search != '') {
+        $('#log').html('');
+        socket.emit('query', {'search_term': current_search, 'field': field, 'results_after': page}, namespace='/search');
+    }
 }
 
 function jumppage() {
@@ -89,7 +93,7 @@ function display_search(current, total) {
         total_pages = ~~(total / 20);
 
     html += '<table class="search"><thead><th class="search_label"></th><th class="search_term"></th></thead>';
-    html += `<tr><td colspan="2">Found ${total} results in ${total_pages} pages.</td></tr>`;
+    html += `<tr><td colspan="2">Found ${total} result(s) in ${total_pages} page(s).</td></tr>`;
 
     // Determine -/+ range. We want to show -/+ 5 pages from current index
 
