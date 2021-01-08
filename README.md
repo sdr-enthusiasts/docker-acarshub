@@ -39,7 +39,7 @@ You should obviously replace `STATION_ID_ACARS` with a unique ID for your statio
 ## Up-and-Running with Docker Compose
 
 ```yaml
-version: '2.0'
+version: '3.8'
 
 services:
   acarshub:
@@ -64,6 +64,10 @@ No exposed ports are necessary to run the container. However, the built in webse
 No volumes are needed to run the container. However, this container does log messages to a database. If you wish to persist this database between container restarts, mount a volume to `/run/acars/`.
 
 The database is used on the website for various functions. It is automatically pruned of data older than 7 days old.
+
+The reality of running any kind of database on a Pi is that database performance can be lacking. I have found that a database that has seven days worth of data, on a moderately busy site like mine, can reach file sizes of 17Mb and have 112,000+ rows of data. In other words, an awful lot of data, and with database sizes that large you will see a degredation in search performance. Queries might take a few seconds to execute after you type your search terms on the seach page.
+
+If you set `DB_SAVEALL` to a blank value you will gain back a lot of performance because messages with no informational value won't be stored. The trade-off in disabling saving all messages means you won't have all messages logged which may or may not be important to you.
 
 ## Environment variables
 
@@ -109,7 +113,7 @@ The [ACARS.io/Airframes.io](https://app.airframes.io/about) website has a great 
 
 Some notes about frequencies:
 
-* acarsdec and vdlm2dec are limited to monitoring 8 frequencies apiece
+* `acarsdec` and `vdlm2dec` are limited to monitoring 8 frequencies apiece
 * The spread of frequencies for each decoder has to be within 2 Mhz.
 
 ## Logging
