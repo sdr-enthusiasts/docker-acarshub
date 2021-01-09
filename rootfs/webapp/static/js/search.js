@@ -107,8 +107,8 @@ function display_search(current, total) {
     else
         total_pages = ~~(total / 20);
 
-    html += '<div class="fixed_results"><table class="search"><thead><th class="search_label"></th><th class="search_term"></th></thead>';
-    html += `<tr><td colspan="2">Found ${total} result(s) in ${total_pages} page(s).</td></tr></div>`;
+    html += '<table class="search"><thead><th class="search_label"></th><th class="search_term"></th></thead>';
+    html += `<tr><td colspan="2">Found ${total} result(s) in ${total_pages} page(s).</td></tr>`;
 
     // Determine -/+ range. We want to show -/+ 5 pages from current index
 

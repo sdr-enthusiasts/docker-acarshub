@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
+    <meta charset="UTF-8">
     <meta http-equiv=“Pragma” content=”no-cache”>
     <meta http-equiv=“Expires” content=”-1″>
     <meta http-equiv=“CACHE-CONTROL” content=”NO-CACHE”>
@@ -20,36 +21,38 @@
     </div>
     <div class="container" id="content">
       <p><h3>Search received messages</h3>
-      <div class="row" id="right">
-        <table class="search">
-          <tr>
-            <td class="search_label">
-              <label>Field:</label>
-            </td>
-            <td class="search_term">
-              <select name="dbfield" id="dbfield" onchange="javascript:runclick(0)">
-                <option value="flight-iata">Callsign (IATA)</option>
-                <option value="tail">Tail Number</option>
-                <option value="depa">Departure</option>
-                <option value="dsta">Destination</option>
-                <option value="text">Text</option>
-                <option value="msgno">Message Number</option>
-                </select>
-            </td>
-          </tr>
-          <tr class="search_label">
-            <td>
-              <label>Search Term:</label>
-            </td>
-            <td class="search_term">
-              <input type="text" id="search_term">
-            </td>
-          </tr>
-        </table>
-        <div class="row" id="num_results"></div>
-      </div>
-      <div class="left" id="log">
-      </div> <!-- /#log -->
+        <div class="row" id="right">
+          <div class="fixed_results">              
+            <table class="search">
+              <tr>
+                <td class="search_label">
+                  <label>Field:</label>
+                </td>
+                <td class="search_term">
+                  <select name="dbfield" id="dbfield" onchange="javascript:runclick(0)">
+                    <option value="flight-iata">Callsign (IATA)</option>
+                    <option value="tail">Tail Number</option>
+                    <option value="depa">Departure</option>
+                    <option value="dsta">Destination</option>
+                    <option value="text">Text</option>
+                    <option value="msgno">Message Number</option>
+                  </select>
+                </td>
+              </tr>
+              <tr class="search_label">
+                <td>
+                  <label>Search Term:</label>
+                </td>
+                <td class="search_term">
+                  <input type="text" id="search_term">
+                </td>
+              </tr>
+            </table>
+            <div class="row" id="num_results"></div>
+          </div> <!-- /fixed results -->
+        </div> <!-- /right -->
+        <div class="left" id="log">
+        </div> <!-- /#log -->
     </div>
     <div class="footer">
       <strong><a href="https://github.com/fredclausen/docker-acarshub" target="_blank">Project Github</a></strong> | <a href="https://discord.gg/sTf9uYF"><img src="https://img.shields.io/discord/734090820684349521" alt="discord"></a> |

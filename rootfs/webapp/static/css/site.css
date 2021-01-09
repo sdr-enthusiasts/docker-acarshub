@@ -34,6 +34,7 @@ body {
 .container {
   margin: 30px auto;
   width: 1200px;
+  position: relative;
 }
 
 div#content.container {
@@ -41,8 +42,8 @@ div#content.container {
 }
 
 div#right.row {
-  position: fixed;
-  right: 50px;
+  position: absolute;
+  right: 0px;
   width: 360px;
   padding-right: 0px;
   margin-right: 0px;
@@ -51,10 +52,11 @@ div#right.row {
 }
 
 div#num_results.row {
-  position: fixed;
-  right: 50px;
+  position: absolute;
+  right: 0px;
   width: 360px;
   padding-right: 0px;
+  padding-top: 10px;
   margin-right: 0px;
   margin-left: 0px;
 }
@@ -73,7 +75,7 @@ div#log.left {
 
 .fixed_results {
   position: fixed;
-  padding-top: 20px;
+  padding-top: 0px;
   width: 360px;
   margin-right: 0px;
   margin-left: 0px;
