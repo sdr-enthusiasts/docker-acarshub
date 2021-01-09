@@ -67,6 +67,7 @@ async function delay_query(initial_query) {
             socket.emit('query', {'search_term': current_search, 'field': field}, namespace='/search');
         } else if(current_search == '') {
             $('#log').html('');
+            $('#num_results').html('');
         }
     }
 }
