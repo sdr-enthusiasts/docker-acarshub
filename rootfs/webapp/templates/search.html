@@ -17,18 +17,17 @@
     <div class="container" id="header">
       <div class="row" id="links">
       </div>
-      </div>
     </div>
     <div class="container" id="content">
-      <div class="row">
-          <p><h3>Search received messages</h3></p>
-          <table class="search">
-            <tr>
-              <td class="search_label">
-                <label>Field:</label>
-              </td>
-              <td class="search_term">
-                <select name="dbfield" id="dbfield" onchange="javascript:runclick(0)">
+      <p><h3>Search received messages</h3>
+      <div class="row" id="right">
+        <table class="search">
+          <tr>
+            <td class="search_label">
+              <label>Field:</label>
+            </td>
+            <td class="search_term">
+              <select name="dbfield" id="dbfield" onchange="javascript:runclick(0)">
                 <option value="flight-iata">Callsign (IATA)</option>
                 <option value="tail">Tail Number</option>
                 <option value="depa">Departure</option>
@@ -36,21 +35,21 @@
                 <option value="text">Text</option>
                 <option value="msgno">Message Number</option>
                 </select>
-              </td>
-            </tr>
-            <tr class="search_label">
-              <td>
-                <label>Search Term:</label>
-              </td>
-              <td class="search_term">
-                <input type="text" id="search_term">
-              </td>
-            </tr>
-          </table><br>
-          <div id="num_results"></div>
-          <div id="log">
-          </div> <!-- /#log -->
+            </td>
+          </tr>
+          <tr class="search_label">
+            <td>
+              <label>Search Term:</label>
+            </td>
+            <td class="search_term">
+              <input type="text" id="search_term">
+            </td>
+          </tr>
+        </table>
+        <div class="row" id="num_results"></div>
       </div>
+      <div class="left" id="log">
+      </div> <!-- /#log -->
     </div>
     <div class="footer">
       <strong><a href="https://github.com/fredclausen/docker-acarshub" target="_blank">Project Github</a></strong> | <a href="https://discord.gg/sTf9uYF"><img src="https://img.shields.io/discord/734090820684349521" alt="discord"></a> |

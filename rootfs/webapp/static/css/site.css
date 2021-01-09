@@ -9,7 +9,7 @@ table {
 table.search {
   border: 1px solid black;
   border-collapse: collapse;
-  width: 30%;
+  width: 100%;
   table-layout: fixed;
   background-color: white;
 }
@@ -40,11 +40,43 @@ div#content.container {
   padding-left: 20px;
 }
 
+div#right.row {
+  position: fixed;
+  right: 50px;
+  width: 360px;
+  padding-right: 0px;
+  margin-right: 0px;
+  margin-left: 0px;
+  padding-bottom: 5px;
+}
+
+div#num_results.row {
+  position: fixed;
+  right: 50px;
+  width: 360px;
+  padding-right: 0px;
+  margin-right: 0px;
+  margin-left: 0px;
+}
+
+div#log.left {
+  position: : absolute;
+  width: 70%;
+  left: 0;
+  padding-right: 5px;
+  padding-left: 0px;
+}
+
 .search_label {
   width: 120px;
 }
 
-.search_terms {
+.fixed_results {
+  position: fixed;
+  padding-top: 20px;
+  width: 360px;
+  margin-right: 0px;
+  margin-left: 0px;
 }
 
 select {

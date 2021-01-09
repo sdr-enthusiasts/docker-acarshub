@@ -107,8 +107,8 @@ function display_search(current, total) {
     else
         total_pages = ~~(total / 20);
 
-    html += '<table class="search"><thead><th class="search_label"></th><th class="search_term"></th></thead>';
-    html += `<tr><td colspan="2">Found ${total} result(s) in ${total_pages} page(s).</td></tr>`;
+    html += '<div class="fixed_results"><table class="search"><thead><th class="search_label"></th><th class="search_term"></th></thead>';
+    html += `<tr><td colspan="2">Found ${total} result(s) in ${total_pages} page(s).</td></tr></div>`;
 
     // Determine -/+ range. We want to show -/+ 5 pages from current index
 
@@ -151,10 +151,10 @@ function display_search(current, total) {
     if(total_pages > 5) {
         html += "</td></tr><tr><td class=\"search_label\"><label>Jump to page:</label></td><td class=\"search_term\"><input type=\"text\" id=\"jump\"><p></td></tr>";
         html += "<tr><td class=\"search_label\"></td><td class=search_term><a href=\"#\" onclick=\"jumppage()\">Run Search</a></td></tr></table>"
-        html += "<div id=\"error_message\"></div>";
+        html += "<div id=\"error_message\"></div></div>";
     } else {
         html += "</td></tr></table>";
-        html += "<div id=\"error_message\"></div>";
+        html += "<div id=\"error_message\"></div></div>";
     }
 
     return html;
