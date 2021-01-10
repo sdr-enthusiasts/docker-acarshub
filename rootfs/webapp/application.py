@@ -403,7 +403,10 @@ def search_connect():
 
     if os.getenv("DEBUG_LOGGING", default=False):
         print('Client connected')
-    pass
+
+    rows, size = acarshub_db.database_get_row_count()
+    requester = request.sid
+    socketio.emit('database', {"count": rows, "size": size}, room=requester, namespace='/search')
 
 
 @socketio.on('connect', namespace='/stats')
@@ -486,7 +489,7 @@ def handle_message(message, namespace):
                     else:
                         json_message['flight'] = f"Flight: <strong><a href=\"https://flightaware.com/live/flight/{flight}\" target=\"_blank\">{flight}</a></strong> "
 
-                serialized_json.append(json.dumps(json_message))
+                serialized_json.insert(0, json.dumps(json_message))
 
     # grab the socket id for the request
     # This stops the broadcast of the search results to everyone
@@ -499,6 +502,7 @@ def handle_message(message, namespace):
 
 @socketio.on('disconnect', namespace='/main')
 def main_disconnect():
+    import time
     global connected_users
 
     connected_users -= 1
@@ -506,7 +510,8 @@ def main_disconnect():
         print(f'Client disconnected. Total connected: {connected_users}')
 
     # Client disconnected, stop the htmlListener
-
+    # We are going to pause for one second in case the user was refreshing the page
+    time.sleep(1)
     if connected_users == 0:
         thread_html_generator_event.set()
         que_messages.clear()

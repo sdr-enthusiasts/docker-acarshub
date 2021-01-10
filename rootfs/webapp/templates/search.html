@@ -1,12 +1,14 @@
 <!DOCTYPE html>
 <html>
   <head>
+    <meta charset="UTF-8">
     <meta http-equiv=“Pragma” content=”no-cache”>
     <meta http-equiv=“Expires” content=”-1″>
     <meta http-equiv=“CACHE-CONTROL” content=”NO-CACHE”>
     <script src="//code.jquery.com/jquery-3.3.1.min.js"></script>
     <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/socket.io/1.3.6/socket.io.min.js"></script>
     <script src="static/js/html_generator.js"></script>
+    <script src="static/js/menu.js"></script>
     <script src="../static/js/search.js"></script>
     <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
     <link rel="stylesheet" href="/static/css/site.css">
@@ -14,33 +16,62 @@
   </head>
   <body>
     <div class="container" id="header">
-      <div class="row">
-          <h1>ACARS Hub</h1>
+      <div class="row" id="links">
       </div>
     </div>
-    <div class="container" id="links">
-      <div class="row">
-          | <a href="/">Live Messages</a> | <a href="/stats">ACARS Hub Stats</a> | <a href="/search">Search Database</a> | <a href="https://github.com/fredclausen/docker-acarshub" target="_blank">Project Github</a> | <a href="https://discord.gg/sTf9uYF"><img src="https://img.shields.io/discord/734090820684349521" alt="discord"></a> |
-      </div>
-    </div>
-    <hr>
     <div class="container" id="content">
-      <div class="row">
-          <p><h3>Search received messages</h3></p>
-          <form>
-          <label>Field:</label>
-          <select name="dbfield" id="dbfield" onchange="javascript:runclick(0)">
-          <option value="flight-iata">Callsign (IATA)</option>
-          <option value="tail">Tail Number</option>
-          <option value="depa">Departure</option>
-          <option value="dsta">Destination</option>
-          <option value="text">Text</option>
-          <option value="msgno">Message Number</option>
-          </select>
-          <label>Search Term:</label> <input type="text" id="search_term">
-          <div id="log">
-          </div> <!-- /#log -->
-      </div>
+      <p><h3>Search received messages</h3>
+        <div class="row" id="right">
+          <div class="fixed_results">              
+            <table class="search">
+              <tr>
+                <td class="search_label">
+                  <label>Database Row Count:</label>
+                </td>
+                <td class="search_term">
+                  <span id="database"></span> rows
+                </td>
+              </tr>
+              <tr>
+                <td class="search_label">
+                  <label>Database Size:</label>
+                </td>
+                <td class="search_term">
+                  <span id="size"></span>
+                </td>
+              </tr>
+              <tr>
+                <td class="search_label">
+                  <label>Field:</label>
+                </td>
+                <td class="search_term">
+                  <select name="dbfield" id="dbfield" onchange="javascript:runclick(0)">
+                    <option value="flight-iata">Callsign (IATA)</option>
+                    <option value="tail">Tail Number</option>
+                    <option value="depa">Departure</option>
+                    <option value="dsta">Destination</option>
+                    <option value="text">Text</option>
+                    <option value="msgno">Message Number</option>
+                  </select>
+                </td>
+              </tr>
+              <tr class="search_label">
+                <td>
+                  <label>Search Term:</label>
+                </td>
+                <td class="search_term">
+                  <input type="text" id="search_term">
+                </td>
+              </tr>
+            </table>
+            <div class="row" id="num_results"></div>
+          </div> <!-- /fixed results -->
+        </div> <!-- /right -->
+        <div class="left" id="log">
+        </div> <!-- /#log -->
+    </div>
+    <div class="footer">
+      <strong><a href="https://github.com/fredclausen/docker-acarshub" target="_blank">Project Github</a></strong> | <a href="https://discord.gg/sTf9uYF"><img src="https://img.shields.io/discord/734090820684349521" alt="discord"></a> |
     </div>
   </body>
 </html>

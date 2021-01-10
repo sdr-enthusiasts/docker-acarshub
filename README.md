@@ -39,7 +39,7 @@ You should obviously replace `STATION_ID_ACARS` with a unique ID for your statio
 ## Up-and-Running with Docker Compose
 
 ```yaml
-version: '2.0'
+version: '3.8'
 
 services:
   acarshub:
@@ -65,6 +65,10 @@ No volumes are needed to run the container. However, this container does log mes
 
 The database is used on the website for various functions. It is automatically pruned of data older than 7 days old.
 
+The reality of running any kind of database on a Pi is that database performance can be lacking. I have found that a database that has seven days worth of data, on a moderately busy site like mine, can reach file sizes of 17Mb and have 112,000+ rows of data. In other words, an awful lot of data, and with database sizes that large you will see a degredation in search performance. Queries might take a few seconds to execute after you type your search terms on the seach page.
+
+If you set `DB_SAVEALL` to a blank value you will gain back a lot of performance because messages with no informational value won't be stored. The trade-off in disabling saving all messages means you won't have all messages logged which may or may not be important to you.
+
 ## Environment variables
 
 There are quite a few configuration options this container can accept.
@@ -87,6 +91,7 @@ There are quite a few configuration options this container can accept.
 | `STATION_ID_ACARS` | Your unique ID for the ACARS feed. Used on the [ACARS.io](http://acars.io) site. Follow the guide [here](https://app.airframes.io/about) for formatting. | Yes, if ENABLE_ACARS is enabled | Blank |
 | `SERIAL_ACARS` | Serial of the RTLSDR dongle used for ACARS decoding. | Yes, if ENABLE_ACARS is enabled | Blank |
 | `FREQS_ACARS` | List of frequencies, separaed by a single `;`, used for ACARS monitoring. | Yes, if ENABLE_ACARS is enabled | Blank |
+| `ACARS_PPM` | If your SDR requires a PPM correction, set this value | No | Blank |
 
 ### VDLM2
 
@@ -96,6 +101,7 @@ There are quite a few configuration options this container can accept.
 | `STATION_ID_VDLM`  | Your unique ID for the VDLM  feed. Used on the [ACARS.io](http://acars.io) site. Follow the guide [here](https://app.airframes.io/about) for formatting. | Yes, if ENABLE_VDLM is enabled | Blank |
 | `SERIAL_VDLM`  | Serial of the RTLSDR dongle used for VDLM decoding. | Yes, if ENABLE_VDLM is enabled | Blank |
 | `FREQS_VDLM`  | List of frequencies, separated by a single `;`, used for VDLM monitoring. | Yes, if ENABLE_VDLM is enabled | Blank |
+| `VDLM_PPM` | If your SDR requires a PPM correction, set this value | No | Blank |
 
 ## Viewing the messages
 
@@ -109,7 +115,7 @@ The [ACARS.io/Airframes.io](https://app.airframes.io/about) website has a great 
 
 Some notes about frequencies:
 
-* acarsdec and vdlm2dec are limited to monitoring 8 frequencies apiece
+* `acarsdec` and `vdlm2dec` are limited to monitoring 8 frequencies apiece
 * The spread of frequencies for each decoder has to be within 2 Mhz.
 
 ## Logging
