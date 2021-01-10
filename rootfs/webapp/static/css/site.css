@@ -9,9 +9,10 @@ table {
 table.search {
   border: 1px solid black;
   border-collapse: collapse;
-  width: 100%;
+  width: 95%;
   table-layout: fixed;
   background-color: white;
+  margin-right: 10px;
 }
 
 td {
@@ -30,23 +31,26 @@ body {
   background-color: #f6f6f6;
   padding-left: 15px;
   float: left;
+  width: 100%;
 }
 .container {
   margin: 30px auto;
-  width: 1200px;
+  width: 100%;
   position: relative;
+  width: 100%;
 }
 
 div#content.container {
   padding-left: 20px;
+  width: 100%;
 }
 
 div#right.row {
   position: absolute;
   right: 0px;
-  width: 360px;
+  width: 30%;
   padding-right: 0px;
-  margin-right: 0px;
+  margin-right: 10px;
   margin-left: 0px;
   padding-bottom: 5px;
 }
@@ -54,7 +58,7 @@ div#right.row {
 div#num_results.row {
   position: absolute;
   right: 0px;
-  width: 360px;
+  width: 100%;
   padding-right: 0px;
   padding-top: 10px;
   margin-right: 0px;
@@ -69,6 +73,10 @@ div#log.left {
   padding-left: 0px;
 }
 
+#log {
+  margin-right: 5px;
+}
+
 .search_label {
   width: 120px;
 }
@@ -76,9 +84,9 @@ div#log.left {
 .fixed_results {
   position: fixed;
   padding-top: 0px;
-  width: 360px;
-  margin-right: 0px;
-  margin-left: 0px;
+  width: 30%;
+  margin-right: 10px;
+  margin-left: 10px;
 }
 
 select {
@@ -261,7 +269,7 @@ ul:after {
 nav {
   position: fixed;
   top: 0;
-  width: 1200px;
+  width: 100%;
   background: #2B2B2B;
   background-image: -webkit-linear-gradient(bottom, #2B2B2B 7%, #333333 100%);
   background-image: -moz-linear-gradient(bottom, #2B2B2B 7%, #333333 100%);
