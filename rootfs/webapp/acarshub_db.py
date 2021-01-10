@@ -314,8 +314,12 @@ def database_get_row_count():
         session = db_session()
         result = session.query(messages).count()
         session.close()
-        size = os.path.getsize(db_path[10:])
-        print(result)
+
+        try:
+            size = os.path.getsize(db_path[10:])
+        except:
+            size = None
+
         return (result, size)
     except Exception as e:
         print(f"[database] {e}")

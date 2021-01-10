@@ -15,7 +15,11 @@ $(document).ready(function(){
     socket.on('database', function(msg) {
         console.log(msg.count);
         $('#database').html(String(msg.count).trim());
-        $('#size').html(formatSizeUnits(parseInt(msg.size)));
+        if(parseInt(msg.size) > 0){
+            $('#size').html(formatSizeUnits(parseInt(msg.size)));
+        } else {
+            $('#size').html("Error getting DB size");
+        }
     });
 
     socket.on('newmsg', function(msg) {
