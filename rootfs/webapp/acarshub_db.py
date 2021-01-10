@@ -8,6 +8,8 @@ import os
 from sqlalchemy.ext.declarative import DeclarativeMeta
 import json
 
+# DB PATH MUST BE FROM ROOT
+
 if os.getenv("ACARSHUB_DB"):
     db_path = os.getenv("ACARSHUB_DB")
 else:
@@ -302,3 +304,18 @@ def database_search(field, search_term, page=0):
         return [data, result.count()]
     else:
         return [None, 20]
+
+
+def database_get_row_count():
+    import os
+    result = None
+
+    try:
+        session = db_session()
+        result = session.query(messages).count()
+        session.close()
+        size = os.path.getsize(db_path[10:])
+        print(result)
+        return (result, size)
+    except Exception as e:
+        print(f"[database] {e}")

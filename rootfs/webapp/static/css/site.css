@@ -13,6 +13,7 @@ table.search {
   table-layout: fixed;
   background-color: white;
   margin-right: 10px;
+  vertical-align: middle;
 }
 
 td {
@@ -79,6 +80,7 @@ div#log.left {
 
 .search_label {
   width: 120px;
+  vertical-align: middle;
 }
 
 .fixed_results {
@@ -95,6 +97,10 @@ select {
 
 input {
   min-width: 100%;
+}
+
+label {
+  padding-top: 5px;
 }
 
 .footer {

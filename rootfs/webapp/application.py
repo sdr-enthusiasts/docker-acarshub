@@ -403,7 +403,10 @@ def search_connect():
 
     if os.getenv("DEBUG_LOGGING", default=False):
         print('Client connected')
-    pass
+
+    rows, size = acarshub_db.database_get_row_count()
+    requester = request.sid
+    socketio.emit('database', {"count": rows, "size": size}, room=requester, namespace='/search')
 
 
 @socketio.on('connect', namespace='/stats')
