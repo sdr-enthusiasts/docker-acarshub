@@ -9,7 +9,7 @@ if [ -n "${ENABLE_VDLM}" ]; then
 	VDLM_BIN="/usr/local/bin/vdlm2dec"
 	VDLM_CMD=("-J" "-G" "-E" "-U" "-g" "$GAIN" "-i" "$STATION_ID_VDLM")
 
-	if [ -n "$VDLM_PPM" ]; then
+	if [ -n "${VDLM_PPM}" ]; then
 		VDLM_CMD+=("-p" "$VDLM_PPM")
 	fi
 

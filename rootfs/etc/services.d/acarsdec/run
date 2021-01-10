@@ -9,7 +9,7 @@ if [ -n "${ENABLE_ACARS}" ]; then
 	ACARS_BIN="/usr/local/bin/acarsdec"
 	ACARS_CMD=("-g" "$GAIN" "-i" "$STATION_ID_ACARS")
 
-	if [ -n "$ACARS_PPM" ]; then
+	if [ -n "${ACARS_PPM}" ]; then
 		ACARS_CMD+=("-p" "$ACARS_PPM")
 	fi
 
