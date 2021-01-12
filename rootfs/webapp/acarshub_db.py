@@ -39,7 +39,6 @@ if os.getenv("IATA_OVERRIDE", default=False):
         else:
             print(f"[database] error adding in {item} to IATA overrides")
 
-    print(overrides)
 
 class messages(Messages):
     __tablename__ = 'messages'
