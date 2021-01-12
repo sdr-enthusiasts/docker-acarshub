@@ -14,7 +14,7 @@ $(document).ready(function(){
     //receive details from server
 
     socket.on('database', function(msg) {
-        $('#database').html(String(msg.count).trim());
+        $('#database').html(String(msg.count).trim() + " rows");
         if(parseInt(msg.size) > 0){
             $('#size').html(formatSizeUnits(parseInt(msg.size)));
         } else {
@@ -118,8 +118,9 @@ function jumppage() {
     page = document.getElementById("jump").value;
     if(page > total_pages){
         $('#error_message').html(`Please enter a value less than ${total_pages}`);
-    } else
+    } else if(page != 0) {
         runclick(parseInt(page)-1);
+    }
 }
 
 
@@ -136,7 +137,7 @@ function display_search(current, total) {
         total_pages = ~~(total / 20);
 
     html += '<table class="search"><thead><th class="search_label"></th><th class="search_term"></th></thead>';
-    html += `<tr><td colspan="2">Found ${total} result(s) in ${total_pages} page(s).</td></tr>`;
+    html += `<tr><td colspan="2"><span class="menu_non_link">Found <strong>${total}</strong> result(s) in <strong>${total_pages}</strong> page(s).</span></td></tr>`;
 
     // Determine -/+ range. We want to show -/+ 5 pages from current index
 
@@ -161,7 +162,7 @@ function display_search(current, total) {
 
         for(var i = low_end; i < high_end; i++) {
             if(i == current) {
-                html += ` ${i+1} `;
+                html += ` <span class="menu_non_link"><strong>${i+1}</strong></span> `;
             }
             else {
                 html += ` <a href=\"#\" id=\"search_page\" onclick=\"runclick(${i})\">${i+1}</a> `;
@@ -177,8 +178,8 @@ function display_search(current, total) {
     }
 
     if(total_pages > 5) {
-        html += "</td></tr><tr><td class=\"search_label\"><label>Jump to page:</label></td><td class=\"search_term\"><input type=\"text\" id=\"jump\"><p></td></tr>";
-        html += "<tr><td class=\"search_label\"></td><td class=search_term><a href=\"#\" onclick=\"jumppage()\">Run Search</a></td></tr></table>"
+        html += "</td></tr><tr><td class=\"search_label\"><label>Page:</label></td><td class=\"search_term\"><input type=\"text\" id=\"jump\"><p></td></tr>";
+        html += "<tr><td class=\"search_label\"></td><td class=search_term><a href=\"#\" onclick=\"jumppage()\">Jump to page</a></td></tr></table>"
         html += "<div id=\"error_message\"></div></div>";
     } else {
         html += "</td></tr></table>";

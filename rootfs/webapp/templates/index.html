@@ -22,9 +22,16 @@
     <div class="container" id="content">
       <div class="row">
           <p><h3>Messages will appear here, newest first:</h3></p>
-          <span id="received">Received Messages</span>:&nbsp;<strong><span id="receivedmessages">0</span></strong><br>
-          <span id="filtered"></span>
-          <div id="log">
+          <div class="row" id="right">
+            <div class="fixed_results">
+              <a href="javascript:pause_updates()" id="pause_updates" class="spread_text">Pause updates</a><p>
+              <a href="javascript:filter_notext()" id="filter_notext" class="spread_text">Filter out "No Text" messages</a>
+              <hr>
+              <span class="menu_non_link" id="received">Received Messages</span>:&nbsp;<strong><span class="menu_non_link" id="receivedmessages">0</span></strong><br>
+              <span class="menu_non_link" id="filtered"></span>
+            </div> <!-- Fixed results -->
+          </div> <!-- Right -->
+          <div class="left" id="log">
           </div> <!-- /#log -->
       </div>
     </div>

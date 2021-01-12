@@ -11,7 +11,7 @@ table.search {
   border-collapse: collapse;
   width: 95%;
   table-layout: fixed;
-  background-color: white;
+  background-color: transparent;
   margin-right: 10px;
   vertical-align: middle;
 }
@@ -26,7 +26,8 @@ hr {
   margin-left: auto;
   margin-right: auto;
   border-style: inset;
-  border-width: 1px;
+  border-top: .1em solid #3D3D3D;
+  color: #f6f6f6;
 }
 body {
   background-color: #f6f6f6;
@@ -49,18 +50,28 @@ div#content.container {
 div#right.row {
   position: absolute;
   right: 0px;
-  width: 30%;
+  top: 0px;
+  width: 20%;
   padding-right: 0px;
-  margin-right: 10px;
+  margin-right: 0px;
   margin-left: 0px;
   padding-bottom: 5px;
+  background: black;
+  min-height: 100vh;
+  background: #2B2B2B;
+  background-image: -webkit-linear-gradient(bottom, #333333 7%, #2B2B2B 100%);
+  background-image: -moz-linear-gradient(bottom, #333333 7%, #2B2B2B 100%);
+  background-image: -o-linear-gradient(bottom, #333333 7%, #2B2B2B 100%);
+  background-image: linear-gradient(bottom, #333333 7%, #2B2B2B 100%);
+  z-index: 13;
+  box-shadow: -4px -1px 2px -1px #888;
 }
 
 div#num_results.row {
   position: absolute;
   right: 0px;
   width: 100%;
-  padding-right: 0px;
+  padding-right: 10px;
   padding-top: 10px;
   margin-right: 0px;
   margin-left: 0px;
@@ -68,10 +79,18 @@ div#num_results.row {
 
 div#log.left {
   position: : absolute;
-  width: 70%;
+  width: 80%;
   left: 0;
   padding-right: 5px;
   padding-left: 0px;
+}
+
+#size {
+  color: #1496bb;
+}
+
+#database {
+  color: #1496bb;
 }
 
 #log {
@@ -79,16 +98,33 @@ div#log.left {
 }
 
 .search_label {
-  width: 120px;
+  width: 30%;
   vertical-align: middle;
+  color: #1496bb;
+}
+
+.search_term {
+  width: 70%;
+  padding-left: 15px;
 }
 
 .fixed_results {
   position: fixed;
   padding-top: 0px;
-  width: 30%;
+  width: 20%;
   margin-right: 10px;
   margin-left: 10px;
+  padding-right: 10px;
+  padding-top: 10px;
+}
+
+.spread_text {
+  letter-spacing: 1px;
+  padding-left: 4px;
+}
+
+a.spread_text:hover {
+  color: #FFF;
 }
 
 select {
@@ -97,10 +133,16 @@ select {
 
 input {
   min-width: 100%;
+  width: 30px;
+  color: black;
 }
 
 label {
   padding-top: 5px;
+}
+
+.menu_non_link {
+  color: #1496bb;
 }
 
 .footer {
@@ -115,6 +157,7 @@ label {
   padding-left: 15px;
   margin-right: auto;
   margin-left: auto;
+  z-index: 20;
 }
 #shadow {
 box-shadow: 2px 2px 2px 1px rgba(0, 0, 0, 0.2);
@@ -286,12 +329,22 @@ nav {
   text-shadow: 1px 1px 1px #0E0E0E;
   -webkit-box-shadow: 2px 2px 3px #888;
   -moz-box-shadow: 2px 2px 3px #888;
-  box-shadow: 2px 2px 3px #888;
+  box-shadow: 4px 2px 3px #888;
   border-bottom-right-radius: 8px;
   border-bottom-left-radius: 8px;
   z-index: 10;
 }
 
+.nav_text {
+  display: block;
+  padding-top: 20px;
+  padding-bottom: 10px;
+  padding-right: 20px;
+  padding-left: 20px;
+  border-right: 1px solid #3D3D3D;
+  color: #1496bb;
+  text-transform: uppercase;
+}
 /* prime */
 ul.primary li a {
   display: block;
