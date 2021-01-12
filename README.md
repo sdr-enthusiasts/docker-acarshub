@@ -82,7 +82,7 @@ There are quite a few configuration options this container can accept.
 | `ENABLE_WEB`  | Enable the web server. Set to a blank value to disable the web server. | No | `true` |
 | `QUIET_LOGS` | By default the received ACARS/VDLM messages will be logged to the container's std output. To stop this, set to any non-blank value. | No | Blank |
 | `DB_SAVEALL` | By default the container will save all received messages in to a database, even if the message is a blank message. If you want to increase performance/decrease database size, set this option to blank to only save messages with at least one informationial field. | No | `true` |
-| `IATA_OVERRIDE` | Override or add any custom IATA codes. Used for the web front end to show proper callsigns; See [below](#the-fix) on formatting and more details | No | Blank |
+| `IATA_OVERRIDE` | Override or add any custom IATA codes. Used for the web front end to show proper callsigns; See [below](#the-fix) on formatting and [more details](#A-note-about-data-sources-used-for-the-web-site) why this might be necessary.| No | Blank |
 
 ### ACARS
 
