@@ -125,15 +125,25 @@ Some notes about frequencies:
 
 ## A note about data sources used for the web site
 
-The database used by the container to convert the airline codes used in the messages from IATA to ICAO was found from public, free sources. The data had some errors in it, some of which was due to the age of the data, and some of it is due to airlines not always using the correct IATA codes in their broadcoast messages.
+A brief primer on some terms:
+
+* All ACARS/VDLM broadcasts that have a callsign appended to the message will use a two letter airline code
+
+* IATA is a two letter airline identification code. Many airlines don't actually have an IATA code and use their own internal code.
+
+* ICAO is an international standard, unique-across-the-world three letter airline code.
+
+In order to make the website more usable, I have included a database used by the container to convert the two airline codes used in the messages from IATA to ICAO codes. This data was found from public, free sources. The data had some errors in it, some of which was due to the age of the data, and some of it is due to airlines not always using the correct IATA codes in their broadcoast messages.
 
 My observations are US centric, but from what I have seen there are two kinds of "errors" you might notice in the converted callsigns.
 
-* US Airlines that have aquired airlines as part of mergers (for instance, American Airlines/AAL, who has, among others, merged with America West/AWE) would show up as their legacy callsign if the aircraft being picked up was part of the airline that was merged in to the bigger airline. I've selectively fixed some of these errors.
+* US Airlines that have aquired airlines as part of mergers (for instance, American Airlines/AA/AAL, who has, among others, merged with America West/US/AWE) would show up as their legacy callsign if the aircraft being picked up was part of the airline that was merged in to the bigger airline. I've selectively fixed some of these errors because the IATA code of the legacy airline was not in use by anyone else.
 
 * Some airlines (UPS and FedEx, particularlly, among others) don't use their designated IATA callsigns period, or seem to be using contracted planes which are using an alternative two letter airline code in their message.
 
-So what this means is you will see callsigns on the web front end that are wrong. The above mentioned UPS will show up `BHSxxxx/Bahamasair` which is obviously not right. I am hesitant to "fix" too many of these "errors" in the database because this container is being used all around the world.
+* There are three IATA code regions that cover the world. If an airline flies only in one region, and another flies in a separate region, those airlines are allowed to use the same IATA code. The airline code generated from the database might use the wrong IATA code because of this.
+
+So what this means is you will see callsigns on the web front end that are wrong. The above mentioned UPS will show up `BHSxxxx/Bahamasair` which is obviously not right, at least for my part of the world. I am hesitant to "fix" too many of these "errors" in the database because this container is being used all around the world.
 
 The end result of this is that in messages where the airline code is improperly mapped the Flight Aware link generated will lead to the wrong flight. The TAIL link generated should be correct.
 
@@ -155,4 +165,4 @@ ACARS decoding appears to be in active development, and as such, I expect a lot 
 
 ## Getting Help
 
-You can [log an issue](https://github.com/fredclausen/docker-acarshub/issues) on the project's GitHub.
+You can [log an issue](https://github.com/fredclausen/docker-acarshub/issues) on the project's GitHub or visit the [discord](https://discord.gg/sTf9uYF) server.
