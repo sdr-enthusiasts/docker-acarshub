@@ -82,6 +82,7 @@ There are quite a few configuration options this container can accept.
 | `ENABLE_WEB`  | Enable the web server. Set to a blank value to disable the web server. | No | `true` |
 | `QUIET_LOGS` | By default the received ACARS/VDLM messages will be logged to the container's std output. To stop this, set to any non-blank value. | No | Blank |
 | `DB_SAVEALL` | By default the container will save all received messages in to a database, even if the message is a blank message. If you want to increase performance/decrease database size, set this option to blank to only save messages with at least one informationial field. | No | `true` |
+| `IATA_OVERRIDE` | Override or add any custom IATA codes. Used for the web front end to show proper callsigns; See [below](#the-fix) on formatting and more details | No | Blank |
 
 ### ACARS
 
@@ -124,19 +125,29 @@ Some notes about frequencies:
 
 ## A note about data sources used for the web site
 
-The database used by the container to convert the airline codes used in the messages from IATA to ICAO was found from public, free sources. The data had some errors in it, some of which was due to the age of the data, and some of it is due to airlines not always using the correct IATA codes.
+The database used by the container to convert the airline codes used in the messages from IATA to ICAO was found from public, free sources. The data had some errors in it, some of which was due to the age of the data, and some of it is due to airlines not always using the correct IATA codes in their broadcoast messages.
 
 My observations are US centric, but from what I have seen there are two kinds of "errors" you might notice in the converted callsigns.
 
 * US Airlines that have aquired airlines as part of mergers (for instance, American Airlines/AAL, who has, among others, merged with America West/AWE) would show up as their legacy callsign if the aircraft being picked up was part of the airline that was merged in to the bigger airline. I've selectively fixed some of these errors.
 
-* Some airlines (UPS and Fedex, particularlly, among other) don't use their designated IATA callsigns period, or seem to be using contracted planes which are using an alternative two letter airline code in their message.
+* Some airlines (UPS and FedEx, particularlly, among others) don't use their designated IATA callsigns period, or seem to be using contracted planes which are using an alternative two letter airline code in their message.
 
-I am hesitant to "fix" too many of these "errors" because in most cases, the IATA code in the data is accurate, and it is the message itself using a bad code. I don't want to replace good data because some airlines aren't using their IATA code and instead are using an internal code.
+So what this means is you will see callsigns on the web front end that are wrong. The above mentioned UPS will show up `BHSxxxx/Bahamasair` which is obviously not right. I am hesitant to "fix" too many of these "errors" in the database because this container is being used all around the world.
 
 The end result of this is that in messages where the airline code is improperly mapped the Flight Aware link generated will lead to the wrong flight. The TAIL link generated should be correct.
 
-I am not really sure what the best answer is, but if there are airlines you notice that are wrong because the data used is wrong (IATA codes do change over time as airlines come and go), or airlines that are missing from the database that do have an IATA code, submit a PR above and I'll get it in there!
+### The Fix
+
+If you add in the ENV variable `IATA_OVERRIDE` you can change your local web site to display the correct airline for your region.
+
+Formatting is as follows: `IATA|ICAO|Airline Name`
+
+If you have multiple airlines you wish to override, you add in a `;` between them, such as the following: `UP|UPS|United Parcel Service;US|AAL|American Airlines`
+
+For anyone in the US, I suggest adding `IATA_OVERRIDE=UP|UPS|United Parcel Service` to start out with.
+
+If there are airlines you notice that are wrong because the data used is wrong (IATA codes do change over time as airlines come and go), or airlines that are missing from the database that do have an IATA code, submit a PR above and I'll get it in there!
 
 ## Future improvements
 

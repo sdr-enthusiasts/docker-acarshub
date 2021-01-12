@@ -488,7 +488,7 @@ def handle_message(message, namespace):
                         json_message['libacars'] = libacars_formatted(json_message['flight'])
 
                 if "flight" in json_message.keys() and json_message['flight'] != None:
-                        json_message['flight'] = flight_finder(json_message['flight'])
+                        json_message['flight'] = flight_finder(json_message['flight'], float(json_message['time']))
 
                 serialized_json.insert(0, json.dumps(json_message))
 
@@ -524,19 +524,45 @@ if __name__ == '__main__':
 
 @socketio.on_error()
 def error_handler(e):
+    traceback = e.__traceback__
     print('[server] An error has occurred: ' + str(e))
+    while traceback:
+        print("{}: {}".format(traceback.tb_frame.f_code.co_filename,traceback.tb_lineno))
+        traceback = traceback.tb_next
 
 
 @socketio.on_error('/main')
 def error_handler_main(e):
-    print('[server] An error has occurred: ' + str(e))
+    traceback = e.__traceback__
+    print('[server-main] An error has occurred: ' + str(e))
+    while traceback:
+        print("{}: {}".format(traceback.tb_frame.f_code.co_filename,traceback.tb_lineno))
+        traceback = traceback.tb_next
 
 
 @socketio.on_error('/search')
 def error_handler_search(e):
-    print('[server] An error has occurred: ' + str(e))
+    traceback = e.__traceback__
+    print('[server-search] An error has occurred: ' + str(e))
+    while traceback:
+        print("{}: {}".format(traceback.tb_frame.f_code.co_filename,traceback.tb_lineno))
+        traceback = traceback.tb_next
+
+
+@socketio.on_error('/stats')
+def stats_handler_search(e):
+    traceback = e.__traceback__
+    print('[server-stats] An error has occurred: ' + str(e))
+    while traceback:
+        print("{}: {}".format(traceback.tb_frame.f_code.co_filename,traceback.tb_lineno))
+        traceback = traceback.tb_next
 
 
 @socketio.on_error_default
 def default_error_handler(e):
+    traceback = e.__traceback__
     print('[server] An error has occurred: ' + str(e))
+    while traceback:
+        print("{}: {}".format(traceback.tb_frame.f_code.co_filename,traceback.tb_lineno))
+        traceback = traceback.tb_next
+

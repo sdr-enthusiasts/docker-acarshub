@@ -11,7 +11,7 @@ import json
 # DB PATH MUST BE FROM ROOT
 
 if os.getenv("ACARSHUB_DB"):
-    db_path = os.getenv("ACARSHUB_DB")
+    db_path = os.getenv("ACARSHUB_DB", default=False)
 else:
     db_path = 'sqlite:////run/acars/messages.db'
 
@@ -19,11 +19,27 @@ database = create_engine(db_path)
 db_session = sessionmaker(bind=database)
 Messages = declarative_base()
 
+overrides = { }
 
 airlines_database = create_engine('sqlite:///data/airlines.db')
 airlines_db_session = sessionmaker(bind=airlines_database)
 Airlines = declarative_base()
 
+# Set up the override IATA/ICAO callsigns
+# Input format needs to be IATA|ICAO|Airline Name
+# Multiple overrides need to be separated with a ;
+
+if os.getenv("IATA_OVERRIDE", default=False):
+    iata_override = os.getenv("IATA_OVERRIDE").split(";")
+
+    for item in iata_override:
+        override_splits = item.split('|')
+        if(len(override_splits) == 3):
+            overrides[override_splits[0]] = (override_splits[1], override_splits[2])
+        else:
+            print(f"[database] error adding in {item} to IATA overrides")
+
+    print(overrides)
 
 class messages(Messages):
     __tablename__ = 'messages'
@@ -254,6 +270,9 @@ def pruneOld():
 def find_airline_code_from_iata(iata):
     import os
     result = None
+
+    if iata in overrides:
+        return overrides[iata]
 
     try:
         session = airlines_db_session()
