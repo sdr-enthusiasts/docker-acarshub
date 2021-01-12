@@ -48,9 +48,9 @@ div#content.container {
 }
 
 div#right.row {
-  position: absolute;
+  position: fixed;
   right: 0px;
-  top: 0px;
+  top: 60px;
   width: 320px;
   padding-right: 0px;
   margin-right: 0px;
