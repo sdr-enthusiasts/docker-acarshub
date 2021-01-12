@@ -23,6 +23,8 @@ function generate_menu(){
     	html += '<ul class="sub">';
     	html += '<span id="stat_menu"></span>';
     	html += '</ul>';
+    } else if(window.location.pathname == "/search") {
+        html += '<a href="javascript:showall()">Show All Messages</a>';
     }
 
     // Alerts!

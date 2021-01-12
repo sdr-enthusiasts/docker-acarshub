@@ -2,6 +2,7 @@ var socket;
 var current_search = '';
 var current_page = 0;
 var total_pages = 0;
+var show_all = false;
 
 $(document).ready(function(){
     //connect to the socket server.
@@ -13,7 +14,6 @@ $(document).ready(function(){
     //receive details from server
 
     socket.on('database', function(msg) {
-        console.log(msg.count);
         $('#database').html(String(msg.count).trim());
         if(parseInt(msg.size) > 0){
             $('#size').html(formatSizeUnits(parseInt(msg.size)));
@@ -35,7 +35,7 @@ $(document).ready(function(){
         // Lets check and see if the results match the current search string
         var display = '';
         var display_nav_results = '';
-        if(msg.search_term == current_search) {            
+        if(msg.search_term == current_search || show_all) {            
             msgs_received.push(msg.msghtml);
             num_results.push(msg.num_results);
             for (var i = 0; i < msgs_received.length; i++){
@@ -73,13 +73,25 @@ async function delay_query(initial_query) {
         var field = document.getElementById("dbfield").value;
         if(current_search != '' && current_search != old_search) {
             current_page = 0;
+            show_all = false;
             console.log("sending query");
             socket.emit('query', {'search_term': current_search, 'field': field}, namespace='/search');
         } else if(current_search == '') {
+            show_all = false;
             $('#log').html('');
             $('#num_results').html('');
         }
     }
+}
+
+function showall() {
+    socket.emit('query', {'show_all': true}, namespace="/search");
+    $('#log').html('');
+    $('#num_results').html('');
+    const search_box = document.getElementById('search_term');
+    search_box.value = "";
+
+    show_all = true;
 }
 
 function sleep(ms) {
@@ -93,7 +105,12 @@ function runclick(page) {
     var field = document.getElementById("dbfield").value;
     if(current_search != '') {
         $('#log').html('');
-        socket.emit('query', {'search_term': current_search, 'field': field, 'results_after': page}, namespace='/search');
+        $('#num_results').html('');
+        if(!show_all) {
+            socket.emit('query', {'search_term': current_search, 'field': field, 'results_after': page}, namespace='/search');
+        } else {
+            socket.emit('query', {'show_all': true, 'results_after': page}, namespace='/search');
+        }
     }
 }
 

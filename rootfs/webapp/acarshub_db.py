@@ -324,6 +324,28 @@ def database_search(field, search_term, page=0):
         return [None, 20]
 
 
+def show_all(page=0):
+    import os
+    result = None
+
+    try:
+        session = db_session()
+        result = session.query(messages).order_by(messages.time.desc())
+        session.close()
+    except Exception as e:
+        traceback = e.__traceback__
+        print('[database] An error has occurred: ' + str(e))
+        while traceback:
+            print("{}: {}".format(traceback.tb_frame.f_code.co_filename,traceback.tb_lineno))
+            traceback = traceback.tb_next
+
+    if result.count() > 0:
+        data = [json.dumps(d, cls=AlchemyEncoder) for d in result[page:page + 20]]
+        return [data, result.count()]
+    else:
+        return [None, 20]
+
+
 def database_get_row_count():
     import os
     result = None
