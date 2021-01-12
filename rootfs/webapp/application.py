@@ -68,6 +68,40 @@ acars_messages = 0
 error_messages = 0
 
 
+# https://flightaware.com/live/flight/AAY39/history/20210110/2324Z/
+
+def flight_finder(callsign=None, message_time=None):
+    import datetime
+    import pytz
+
+    icao, airline = acarshub_db.find_airline_code_from_iata(callsign[:2])
+    flight_number = callsign[2:]
+    flight = icao + flight_number
+    msg_time = datetime.datetime.fromtimestamp(message_time)
+    msg_time = msg_time.astimezone(pytz.utc)
+    message_zulu = msg_time.strftime('%H%MZ')
+    message_date = msg_time.strftime('%Y%m%d')
+
+    # If the iata and icao variables are not equal, airline was found in the database and we'll add in the tool-tip for the decoded airline
+    # Otherwise, no tool-tip, no FA link, and use the IATA code for display
+    if icao != callsign[:2]:
+        return f"Flight: <span class=\"wrapper\"><strong><a href=\"https://flightaware.com/live/flight/{flight}/history/{message_date}/{message_zulu}/\" target=\"_blank\">{flight}/{callsign}</a></strong><span class=\"tooltip\">{airline} Flight {flight_number}</span></span> "
+    else:
+        return f"Flight: <strong>{flight}</strong> "
+
+def libacars_formatted(libacars=None):
+    html_output = "<p>Decoded:</p>"
+    html_output += "<p>"
+    html_output += "<pre>{libacars}</pre>".format(
+        libacars=pprint.pformat(
+            libacars,
+            indent=2,
+        )
+    )
+    html_output += "</p>"
+
+    return html_output
+
 def update_rrd_db():
     global vdlm_messages
     global acars_messages
@@ -106,29 +140,15 @@ def htmlListener():
             json_message.update({"message_type": message_source})
 
             if "libacars" in json_message.keys():
-                    html_output = "<p>Decoded:</p>"
-                    html_output += "<p>"
-                    html_output += "<pre>{libacars}</pre>".format(
-                        libacars=pprint.pformat(
-                            json_message['libacars'],
-                            indent=2,
-                        )
-                    )
-                    html_output += "</p>"
-
-                    json_message['libacars'] = html_output
+                json_message['libacars'] = libacars_formatted(json_message['libacars'])
 
             if "flight" in json_message.keys():
-                icao, airline = acarshub_db.find_airline_code_from_iata(json_message['flight'][:2])
-                flight_number = json_message['flight'][2:]
-                flight = icao + flight_number
+                if "timestamp" in json_message.keys():
+                    message_time = json_message['timestamp']
+                elif "time" in json_message.keys():
+                    message_time = json_message['time']
 
-                # If the iata and icao variables are not equal, airline was found in the database and we'll add in the tool-tip for the decoded airline
-                # Otherwise, no tool-tip, no FA link, and use the IATA code for display
-                if icao != json_message['flight'][:2]:
-                    json_message['flight'] = f"Flight: <span class=\"wrapper\"><strong><a href=\"https://flightaware.com/live/flight/{flight}\" target=\"_blank\">{flight}/{json_message['flight']}</a></strong><span class=\"tooltip\">{airline} Flight {flight_number}</span></span> "
-                else:
-                    json_message['flight'] = f"Flight: <strong><a href=\"https://flightaware.com/live/flight/{flight}\" target=\"_blank\">{flight}</a></strong> "
+                json_message['flight'] = flight_finder(callsign=json_message['flight'], message_time=message_time)
 
             socketio.emit('newmsg', {'msghtml': json_message}, namespace='/main')
             if DEBUG_LOGGING:
@@ -465,29 +485,10 @@ def handle_message(message, namespace):
             for result in query_result:
                 json_message = json.loads(result)
                 if "libacars" in json_message.keys() and json_message['libacars'] != None:
-                        html_output = "<p>Decoded:</p>"
-                        html_output += "<p>"
-                        html_output += "<pre>{libacars}</pre>".format(
-                            libacars=pprint.pformat(
-                                json_message['libacars'],
-                                indent=2,
-                            )
-                        )
-                        html_output += "</p>"
-
-                        json_message['libacars'] = html_output
+                        json_message['libacars'] = libacars_formatted(json_message['flight'])
 
                 if "flight" in json_message.keys() and json_message['flight'] != None:
-                    icao, airline = acarshub_db.find_airline_code_from_iata(json_message['flight'][:2])
-                    flight_number = json_message['flight'][2:]
-                    flight = icao + flight_number
-
-                    # If the iata and icao variables are not equal, airline was found in the database and we'll add in the tool-tip for the decoded airline
-                    # Otherwise, no tool-tip, no FA link, and use the IATA code for display
-                    if icao != json_message['flight'][:2]:
-                        json_message['flight'] = f"Flight: <span class=\"wrapper\"><strong><a href=\"https://flightaware.com/live/flight/{flight}\" target=\"_blank\">{flight}/{json_message['flight']}</a></strong><span class=\"tooltip\">{airline} Flight {flight_number}</span></span> "
-                    else:
-                        json_message['flight'] = f"Flight: <strong><a href=\"https://flightaware.com/live/flight/{flight}\" target=\"_blank\">{flight}</a></strong> "
+                        json_message['flight'] = flight_finder(json_message['flight'])
 
                 serialized_json.insert(0, json.dumps(json_message))
 
