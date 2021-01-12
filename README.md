@@ -133,7 +133,7 @@ A brief primer on some terms:
 
 * ICAO is an international standard, unique-across-the-world three letter airline code.
 
-In order to make the website more usable, I have included a database used by the container to convert the two airline codes used in the messages from IATA to ICAO codes. This data was found from public, free sources. The data had some errors in it, some of which was due to the age of the data, and some of it is due to airlines not always using the correct IATA codes in their broadcoast messages.
+In order to make the website more usable, I have included a database used by the container to convert the two airline codes used in the messages from IATA to ICAO codes, and to show their long-form name. This data was found from public, free sources. The data had some errors in it, some of which was due to the age of the data, and some of it is due to airlines not always using the correct IATA codes in their broadcoast messages.
 
 My observations are US centric, but from what I have seen there are "errors" you might notice in the converted callsigns.
 
