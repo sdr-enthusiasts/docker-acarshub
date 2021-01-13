@@ -20,7 +20,7 @@ table.search {
   width: 95%;
   table-layout: fixed;
   background-color: transparent;
-  margin-right: 10px;
+  margin-right: 0px;
   vertical-align: middle;
 }
 
@@ -61,7 +61,7 @@ div#right.row {
   right: 0px;
   top: 60px;
   height: calc(100% - 20px);
-  width: 320px;
+  width: 280px;
   padding-right: 0px;
   margin-right: 0px;
   margin-left: 0px;
@@ -81,7 +81,7 @@ div#num_results.row {
   right: 0px;
   width: 100%;
   height: inherit;
-  padding-right: 10px;
+  padding-right: 5px;
   padding-top: 10px;
   margin-right: 0px;
   margin-left: 0px;
@@ -90,7 +90,7 @@ div#num_results.row {
 
 div#log.left {
   position: : absolute;
-  margin-right: 340px;
+  margin-right: 300px;
   left: 0;
   padding-right: 0px;
   padding-left: 0px;
@@ -126,10 +126,10 @@ div#log.left {
   bottom: 30px;
   padding-top: 0px;
   margin-bottom: 10px;
-  width: 320px;
-  margin-right: 10px;
+  width: 280px;
+  margin-right: 5px;
   margin-left: 10px;
-  padding-right: 10px;
+  padding-right: 5px;
   padding-top: 10px;
   overflow-y:auto;
   overflow-x:hidden;
