@@ -27,6 +27,7 @@ docker run \
  -d \
  --rm \
  --name acarshub \
+ -p 80:80 \
  -e STATION_ID_ACARS="YOURIDHERE" \
  -e FREQS_ACARS="130.025;130.450;131.125;131.550" \
  -e ENABLE_ACARS="true" \
@@ -49,6 +50,8 @@ services:
     restart: always
     devices:
       - /dev/bus/usb:/dev/bus/usb
+    ports:
+      - 80:80
     environment:
       - STATION_ID_ACARS=YOURIDHERE
       - FREQS_ACARS=130.025;130.450;131.125;131.550

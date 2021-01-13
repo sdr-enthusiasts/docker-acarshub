@@ -446,6 +446,17 @@ def stats_connect():
     socketio.emit('newmsg', {"vdlm": vdlm, "acars": acars}, namespace='/stats')
 
 
+@socketio.on('freqs', namespace="/stats")
+def request_freqs(message, namespace):
+    requester = request.sid
+    socketio.emit('freqs', {'freqs': acarshub_db.get_freq_count()}, room=requester, namespace="/stats")
+
+
+@socketio.on('count', namespace="/stats")
+def request_count(message, namespace):
+    requester = request.sid
+    socketio.emit('count', {'count': acarshub_db.get_errors()}, room=requester, namespace="/stats")
+
 # handle a query request from the browser
 
 

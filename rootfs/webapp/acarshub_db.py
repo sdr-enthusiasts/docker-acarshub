@@ -20,6 +20,7 @@ db_session = sessionmaker(bind=database)
 Messages = declarative_base()
 
 overrides = { }
+freqs = [ ]
 
 airlines_database = create_engine('sqlite:///data/airlines.db')
 airlines_db_session = sessionmaker(bind=airlines_database)
@@ -38,6 +39,20 @@ if os.getenv("IATA_OVERRIDE", default=False):
             overrides[override_splits[0]] = (override_splits[1], override_splits[2])
         else:
             print(f"[database] error adding in {item} to IATA overrides")
+
+# Grab the freqs
+
+if os.getenv("ENABLE_ACARS", default=False):
+    acars_freqs = os.getenv("FREQS_ACARS").split(";")
+
+    for item in acars_freqs:
+        freqs.append(("ACARS", item))
+
+if os.getenv("ENABLE_VDLM", default=False):
+    vdlm_freqs = os.getenv("FREQS_VDLM").split(";")
+    
+    for item in vdlm_freqs:
+        freqs.append(("VDL-M2", item))
 
 
 class messages(Messages):
@@ -344,6 +359,58 @@ def show_all(page=0):
         return [data, result.count()]
     else:
         return [None, 20]
+
+
+def get_freq_count():
+    result = None
+    freq_count = []
+
+    try:
+        session = db_session()
+
+        for f in freqs:
+            if f[1].endswith("00"):
+                freq = f[1][:-2]
+            elif f[1].endswith(".0"):
+                freq = f[1]
+            elif f[1].endswith("0"):
+                freq = f[1][:-1]
+            else:
+                freq = f[1]
+
+            result = session.query(messages).filter(messages.freq.contains(freq)).count()
+            freq_count.append(f"{f[0]}|{f[1]}|{result}")
+
+        session.close()
+
+        return freq_count
+
+    except Exception as e:
+        traceback = e.__traceback__
+        print('[database] An error has occurred: ' + str(e))
+        while traceback:
+            print("{}: {}".format(traceback.tb_frame.f_code.co_filename,traceback.tb_lineno))
+            traceback = traceback.tb_next
+
+
+def get_errors():
+    result = None
+    message_stats = []
+
+    try:
+        session = db_session()
+        total_messages = session.query(messages).count()
+        total_errors = session.query(messages).filter(messages.error != "0").count()
+        session.close()
+        
+        return (total_messages, total_errors)
+
+    except Exception as e:
+        traceback = e.__traceback__
+        print('[database] An error has occurred: ' + str(e))
+        while traceback:
+            print("{}: {}".format(traceback.tb_frame.f_code.co_filename,traceback.tb_lineno))
+            traceback = traceback.tb_next
 
 
 def database_get_row_count():
