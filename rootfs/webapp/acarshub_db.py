@@ -257,8 +257,7 @@ def add_message_from_json(message_type, message_from_json):
         else:
             count.good += 1
 
-        found_freq = session.query(messagesFreq).filter(messagesFreq.freq == f"{freq}" \
-                     and messagesFreq.freq_type == message_type).first()
+        found_freq = session.query(messagesFreq).filter(messagesFreq.freq == f"{freq}" and messagesFreq.freq_type == message_type).first()
 
         if found_freq is not None:
             found_freq.count += 1
@@ -414,8 +413,7 @@ def get_freq_count():
             else:
                 freq = f[1]
 
-            result = session.query(messagesFreq).filter(messagesFreq.freq).filter(messagesFreq.freq==freq and \
-                     messagesFreq.freq_type==f[0]).first()
+            result = session.query(messagesFreq).filter(messagesFreq.freq).filter(messagesFreq.freq == freq and messagesFreq.freq_type == f[0]).first()
 
             if(result is not None):
                 freq_count.append(f"{f[0]}|{f[1]}|{result.count}")
@@ -424,7 +422,7 @@ def get_freq_count():
                 freq_count.append(f"{f[0]}|{f[1]}|0")
 
         for item in session.query(messagesFreq).all():
-            if not item.freq in found_freq:
+            if item.freq not in found_freq:
                 freq_count.append(f"{item.freq_type}|{item.freq}|{item.count}")
 
         session.close()
@@ -513,8 +511,8 @@ try:
         print("[database] Initializing freq database")
         found_freq = {}
         for item in session.query(messages).all():
-            if not item.freq in found_freq:
-                found_freq[item.freq] = [item.freq, item.message_type, session.query(messages).filter(messages.freq==item.freq).count()]
+            if item.freq not in found_freq:
+                found_freq[item.freq] = [item.freq, item.message_type, session.query(messages).filter(messages.freq == item.freq).count()]
 
         for item in found_freq:
             session.add(messagesFreq(freq=found_freq[item][0], count=found_freq[item][2], freq_type=found_freq[item][1]))
