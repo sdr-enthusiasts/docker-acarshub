@@ -490,6 +490,24 @@ def database_get_row_count():
         print(f"[database] {e}")
 
 
+def grab_most_recent():
+    from sqlalchemy import desc
+    try:
+        session = db_session()
+        result = session.query(messages).order_by(desc('time')).limit(20)
+
+        if result.count() > 0:
+            return [json.dumps(d, cls=AlchemyEncoder) for d in result]
+        else:
+            return None
+    except Exception as e:
+        traceback = e.__traceback__
+        print('[database] An error has occurred: ' + str(e))
+        while traceback:
+            print("{}: {}".format(traceback.tb_frame.f_code.co_filename, traceback.tb_lineno))
+            traceback = traceback.tb_next
+
+
 # We will pre-populate the count table if this is a new db
 # Or the user doesn't have the table already
 

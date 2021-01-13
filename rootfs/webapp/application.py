@@ -430,6 +430,29 @@ def main_connect():
     if os.getenv("DEBUG_LOGGING", default=False):
         print(f'Client connected. Total connected: {connected_users}')
 
+    recent_messages = acarshub_db.grab_most_recent()
+
+    if recent_messages is not None:
+        requester = request.sid
+        import json
+        for item in reversed(recent_messages):
+            json_message = json.loads(item)
+            if "libacars" in json_message.keys() and json_message['libacars'] is not None:
+                json_message['libacars'] = libacars_formatted(json_message['libacars'])
+
+            if "icao" in json_message.keys() and json_message['icao'] is not None:
+                json_message['icao_hex'] = format(int(json_message['icao']), 'X')
+
+            if "flight" in json_message.keys() and json_message['flight'] is not None and 'icao_hex' in json_message.keys():
+                json_message['flight'] = flight_finder(callsign=json_message['flight'], hex_code=json_message['icao_hex'])
+            elif "flight" in json_message.keys() and json_message['flight'] is not None:
+                json_message['flight'] = flight_finder(callsign=json_message['flight'], url=False)
+            elif 'icao_hex' in json_message.keys():
+                json_message['icao_url'] = flight_finder(hex_code=json_message['icao_hex'])
+
+            socketio.emit('newmsg', {'msghtml': json_message}, room=requester, namespace='/main')
+
+
     # Start the htmlGenerator thread only if the thread has not been started before.
     if not thread_html_generator.isAlive():
         if os.getenv("DEBUG_LOGGING", default=False):
