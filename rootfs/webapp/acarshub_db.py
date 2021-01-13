@@ -55,6 +55,14 @@ if os.getenv("ENABLE_VDLM", default=False):
         freqs.append(("VDL-M2", item))
 
 
+class messagesCount(Messages):
+    __tablename__ = 'count'
+    id = Column(Integer, primary_key=True)
+    total = Column('total', Integer)
+    errors = Column('errors', Integer)
+    good = Column('good', Integer)
+
+
 class messages(Messages):
     __tablename__ = 'messages'
     id = Column(Integer, primary_key=True)
@@ -231,30 +239,44 @@ def add_message_from_json(message_type, message_from_json):
         else:
             print(f"[database] Unidenitied key: {index}")
 
-    if os.getenv("DB_SAVEALL", default=False) or text is not None or libacars is not None or \
-       dsta is not None or depa is not None or eta is not None or gtout is not None or \
-       gtin is not None or wloff is not None or wlin is not None or lat is not None or \
-       lon is not None or alt is not None:
-        # create a session for this thread to write
+    try:
         session = db_session()
-        # write the message
-        if os.getenv("DEBUG_LOGGING", default=False):
-            print("[database] writing to the database")
-            print(f"[database] writing message: {message_from_json}")
+        count = session.query(messagesCount).first()
+        count.total += 1
 
-        try:
-            session.add(messages(message_type=message_type, time=time, station_id=station_id, toaddr=toaddr,
-                                 fromaddr=fromaddr, depa=depa, dsta=dsta, eta=eta, gtout=gtout, gtin=gtin,
-                                 wloff=wloff, wlin=wlin, lat=lat, lon=lon, alt=alt, text=text, tail=tail,
-                                 flight=flight, icao=icao, freq=freq, ack=ack, mode=mode, label=label, block_id=block_id,
-                                 msgno=msgno, is_response=is_response, is_onground=is_onground, error=error, libacars=libacars))
-            # commit the db change and close the session
-            session.commit()
-            session.close()
+        if error is not None and error > 0:
+            count.error += 1
+        else:
+            count.good += 1
+
+        if os.getenv("DB_SAVEALL", default=False) or text is not None or libacars is not None or \
+           dsta is not None or depa is not None or eta is not None or gtout is not None or \
+           gtin is not None or wloff is not None or wlin is not None or lat is not None or \
+           lon is not None or alt is not None:
+            # create a session for this thread to write
+            
+            # write the message
             if os.getenv("DEBUG_LOGGING", default=False):
-                print("[database] write to database complete")
-        except Exception as e:
-            print(f"[database] Error writing to the database: {e}")
+                print("[database] writing to the database")
+                print(f"[database] writing message: {message_from_json}")
+
+            
+                
+
+                session.add(messages(message_type=message_type, time=time, station_id=station_id, toaddr=toaddr,
+                                     fromaddr=fromaddr, depa=depa, dsta=dsta, eta=eta, gtout=gtout, gtin=gtin,
+                                     wloff=wloff, wlin=wlin, lat=lat, lon=lon, alt=alt, text=text, tail=tail,
+                                     flight=flight, icao=icao, freq=freq, ack=ack, mode=mode, label=label, block_id=block_id,
+                                     msgno=msgno, is_response=is_response, is_onground=is_onground, error=error, libacars=libacars))
+
+        # commit the db change and close the session
+        session.commit()
+        session.close()
+
+        if os.getenv("DEBUG_LOGGING", default=False):
+            print("[database] write to database complete")
+    except Exception as e:
+        print(f"[database] Error writing to the database: {e}")
     elif os.getenv("DEBUG_LOGGING", default=False):
         print(f"[database] discarding no text message: {message_from_json}")
 
@@ -391,7 +413,7 @@ def get_freq_count():
             traceback = traceback.tb_next
 
 
-def get_errors():
+def get_errors_direct():
     try:
         session = db_session()
         total_messages = session.query(messages).count()
@@ -399,6 +421,22 @@ def get_errors():
         session.close()
 
         return (total_messages, total_errors)
+
+    except Exception as e:
+        traceback = e.__traceback__
+        print('[database] An error has occurred: ' + str(e))
+        while traceback:
+            print("{}: {}".format(traceback.tb_frame.f_code.co_filename, traceback.tb_lineno))
+            traceback = traceback.tb_next
+
+
+def get_errors():
+    try:
+        session = db_session()
+        count = session.query(messagesCount).first()
+        session.close()
+
+        return (count.total, count.errors)
 
     except Exception as e:
         traceback = e.__traceback__
@@ -426,3 +464,26 @@ def database_get_row_count():
         return (result, size)
     except Exception as e:
         print(f"[database] {e}")
+
+
+# We will pre-populate the count table if this is a new db
+# Or the user doesn't have the table already
+
+total_messages, total_errors = get_errors_direct()
+good_msgs = total_messages - total_errors
+
+try:
+    session = db_session()
+    result = session.query(messagesCount).count()
+
+    if result == 0:
+        session.add(messagesCount(total=total_messages, errors=total_errors, good=good_msgs))
+        session.commit()
+        print("[database] Count database initialized")
+    session.close()
+except Exception as e:
+    traceback = e.__traceback__
+    print('[database] An error has occurred: ' + str(e))
+    while traceback:
+        print("{}: {}".format(traceback.tb_frame.f_code.co_filename, traceback.tb_lineno))
+        traceback = traceback.tb_next
