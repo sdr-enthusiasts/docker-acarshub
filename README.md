@@ -89,9 +89,17 @@ There are quite a few configuration options this container can accept.
 |----------|-------------|---------|--------|
 | `ENABLE_ACARS` | Toggle ACARS decoding on. If set to any non-blank value ACARS decoding will start | No | Blank |
 | `STATION_ID_ACARS` | Your unique ID for the ACARS feed. Used on the [ACARS.io](http://acars.io) site. Follow the guide [here](https://app.airframes.io/about) for formatting. | Yes, if ENABLE_ACARS is enabled | Blank |
-| `SERIAL_ACARS` | Serial of the RTLSDR dongle used for ACARS decoding. | Yes, if ENABLE_ACARS is enabled | Blank |
 | `FREQS_ACARS` | List of frequencies, separaed by a single `;`, used for ACARS monitoring. | Yes, if ENABLE_ACARS is enabled | Blank |
 | `ACARS_PPM` | If your SDR requires a PPM correction, set this value | No | Blank |
+
+For RTLSDR device selection, _one_ of the following arguments must also be set if `ENABLE_ACARS` is enabled.
+
+| Variable | Description | Required | Default |
+|----------|-------------|---------|--------|
+| `SERIAL_ACARS` | Serial of the RTLSDR dongle used for ACARS decoding. | Yes, if ENABLE_ACARS is enabled | Blank |
+| `DEVICE_ACARS` | Device number of the RTLSDR dongle used for ACARS decoding. | Yes, if ENABLE_ACARS is enabled | Blank |
+
+It is generally recommended to use `SERIAL_ACARS`, as device numbers can change if devices are added/removed/etc.
 
 ### VDLM2
 
@@ -99,9 +107,17 @@ There are quite a few configuration options this container can accept.
 |----------|-------------|---------|--------|
 | `ENABLE_VDLM` | Toggle VDLM decoding on. If set to any non-blank value VDLM decoding will start | No | Blank |
 | `STATION_ID_VDLM`  | Your unique ID for the VDLM  feed. Used on the [ACARS.io](http://acars.io) site. Follow the guide [here](https://app.airframes.io/about) for formatting. | Yes, if ENABLE_VDLM is enabled | Blank |
-| `SERIAL_VDLM`  | Serial of the RTLSDR dongle used for VDLM decoding. | Yes, if ENABLE_VDLM is enabled | Blank |
 | `FREQS_VDLM`  | List of frequencies, separated by a single `;`, used for VDLM monitoring. | Yes, if ENABLE_VDLM is enabled | Blank |
 | `VDLM_PPM` | If your SDR requires a PPM correction, set this value | No | Blank |
+
+For RTLSDR device selection, _one_ of the following arguments must also be set if `ENABLE_ACARS` is enabled.
+
+| Variable | Description | Required | Default |
+|----------|-------------|---------|--------|
+| `SERIAL_VDLM`  | Serial of the RTLSDR dongle used for VDLM decoding. | Yes, if ENABLE_VDLM is enabled | Blank |
+| `DEVICE_VDLM`  | Device number of the RTLSDR dongle used for VDLM decoding. | Yes, if ENABLE_VDLM is enabled | Blank |
+
+It is generally recommended to use `SERIAL_VDLM`, as device numbers can change if devices are added/removed/etc.
 
 ## Viewing the messages
 

@@ -38,6 +38,10 @@ if [ -n "${ENABLE_ACARS}" ]; then
 
 		ACARS_CMD+=("-r" "$DEVICE_ID") 
 
+	elif [ -n "${DEVICE_ACARS}" ]; then
+
+		ACARS_CMD+=("-r" "$DEVICE_ACARS")
+
 	else
 		echo "[acarsdec] No serial number set. Using device index 0. If also running VDLM decoding one of these processes will fail. To fix, set SERIAL_ACARS and SERIAL_VDLM"
 		ACARS_CMD+=("-r" "0")
