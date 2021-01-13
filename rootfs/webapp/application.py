@@ -526,7 +526,7 @@ def handle_message(message, namespace):
             # Loop through the results and format html
             for result in query_result:
                 json_message = json.loads(result)
-                if "icao" in json_message.keys():
+                if "icao" in json_message.keys() and json_message['icao'] is not None:
                     json_message['icao_hex'] = format(int(json_message['icao']), 'X')
 
                 if "libacars" in json_message.keys() and json_message['libacars'] is not None:
