@@ -150,6 +150,9 @@ def htmlListener():
 
                 json_message['flight'] = flight_finder(callsign=json_message['flight'], message_time=message_time)
 
+            if "icao" in json_message.keys():
+                json_message['icao_hex'] = format(int(json_message['icao']), 'X')            
+
             socketio.emit('newmsg', {'msghtml': json_message}, namespace='/main')
             if DEBUG_LOGGING:
                 print("[htmlListener] packet sent via socketio.emit")
