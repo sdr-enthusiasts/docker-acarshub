@@ -55,6 +55,14 @@ if os.getenv("ENABLE_VDLM", default=False):
         freqs.append(("VDL-M2", item))
 
 
+class messagesFreq(Messages):
+    __tablename__ = 'freqs'
+    it = Column(Integer, primary_key=True)
+    freq = Column('freq', String(32))
+    freq_type = Column('freq_type', String(32))
+    count = Column('count', Integer)
+
+
 class messagesCount(Messages):
     __tablename__ = 'count'
     id = Column(Integer, primary_key=True)
@@ -245,9 +253,17 @@ def add_message_from_json(message_type, message_from_json):
         count.total += 1
 
         if error is not None and error > 0:
-            count.error += 1
+            count.errors += 1
         else:
             count.good += 1
+
+        found_freq = session.query(messagesFreq).filter(messagesFreq.freq == f"{freq}" \
+                     and messagesFreq.freq_type == message_type).first()
+
+        if found_freq is not None:
+            found_freq.count += 1
+        else:
+            session.add(messagesFreq(freq=f"{freq}", freq_type=message_type, count=1))
 
         if os.getenv("DB_SAVEALL", default=False) or text is not None or libacars is not None or \
            dsta is not None or depa is not None or eta is not None or gtout is not None or \
@@ -382,6 +398,8 @@ def get_freq_count():
     result = None
     freq_count = []
 
+    # output: freq_count.append(f"{f[0]}|{f[1]}|{result}")
+
     try:
         session = db_session()
 
@@ -395,8 +413,13 @@ def get_freq_count():
             else:
                 freq = f[1]
 
-            result = session.query(messages).filter(messages.freq.contains(freq)).count()
-            freq_count.append(f"{f[0]}|{f[1]}|{result}")
+            result = session.query(messagesFreq).filter(messagesFreq.freq).filter(messagesFreq.freq==freq and \
+                     messagesFreq.freq_type==f[0]).first()
+
+            if(result is not None):
+                freq_count.append(f"{f[0]}|{f[1]}|{result.count}")
+            else:
+                freq_count.append(f"{f[0]}|{f[1]}|0")
 
         session.close()
 
