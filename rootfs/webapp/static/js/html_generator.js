@@ -141,10 +141,13 @@ function display_messages(msgs_to_process, convert) {
         }            
 
         if(message.hasOwnProperty("icao")) {
-            if(message.hasOwnProperty("icao_hex")) {
+            if (message.hasOwnProperty("icao_hex") && message.hasOwnProperty('icao_url')) {
+                html_output += `ICAO: <strong><a href="${message['icao_url']}">${message['icao']}/${message['icao_hex']}</a></strong>`
+            }
+            else if(message.hasOwnProperty("icao_hex")) {
                 html_output += `ICAO: <strong>${message['icao']}/${message['icao_hex']}</strong> `;    
             } else {
-                html_output += `ICAO: <strong>${message['icao']}/?</strong> `;
+                html_output += `ICAO: <strong>${message['icao']}</strong> `;
             }
         }
 

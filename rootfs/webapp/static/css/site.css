@@ -42,6 +42,7 @@ body {
   padding-left: 15px;
   float: left;
   width: 100%;
+  height: 100%;
 }
 .container {
   margin: 30px auto;
@@ -59,13 +60,13 @@ div#right.row {
   position: fixed;
   right: 0px;
   top: 60px;
+  height: calc(100% - 20px);
   width: 320px;
   padding-right: 0px;
   margin-right: 0px;
   margin-left: 0px;
-  padding-bottom: 5px;
+  margin-bottom: 0px;
   background: black;
-  min-height: 100vh;
   background: #2B2B2B;
   background-image: -webkit-linear-gradient(bottom, #333333 7%, #2B2B2B 100%);
   background-image: -moz-linear-gradient(bottom, #333333 7%, #2B2B2B 100%);
@@ -79,10 +80,12 @@ div#num_results.row {
   position: absolute;
   right: 0px;
   width: 100%;
+  height: inherit;
   padding-right: 10px;
   padding-top: 10px;
   margin-right: 0px;
   margin-left: 0px;
+  margin-bottom: 0px;
 }
 
 div#log.left {
@@ -119,12 +122,17 @@ div#log.left {
 
 .fixed_results {
   position: fixed;
+  top: 60px;
+  bottom: 30px;
   padding-top: 0px;
-  width: 20%;
+  margin-bottom: 10px;
+  width: 320px;
   margin-right: 10px;
   margin-left: 10px;
   padding-right: 10px;
   padding-top: 10px;
+  overflow-y:auto;
+  overflow-x:hidden;
 }
 
 .spread_text {

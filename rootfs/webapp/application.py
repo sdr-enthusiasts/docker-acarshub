@@ -71,23 +71,27 @@ error_messages = 0
 # https://flightaware.com/live/flight/AAY39/history/20210110/2324Z/
 
 def flight_finder(callsign=None, hex_code=None, url=True):
-    import datetime
+    if callsign is None and hex_code is not None:
+        return f'https://globe.adsbexchange.com/?icao={hex_code}'
 
-    icao, airline = acarshub_db.find_airline_code_from_iata(callsign[:2])
-    flight_number = callsign[2:]
-    flight = icao + flight_number
+    if callsign is not None:
+        icao, airline = acarshub_db.find_airline_code_from_iata(callsign[:2])
+        flight_number = callsign[2:]
+        flight = icao + flight_number
 
-    if icao != callsign[:2]:
-        html = f"<span class=\"wrapper\"><strong>{flight}/{callsign}</strong><span class=\"tooltip\">{airline} Flight {flight_number}</span></span> "
-    else:
-        html = f"<strong>{flight}</strong> "
+        if icao != callsign[:2]:
+            html = f"<span class=\"wrapper\"><strong>{flight}/{callsign}</strong><span class=\"tooltip\">{airline} Flight {flight_number}</span></span> "
+        else:
+            html = f"<strong>{flight}</strong> "
 
-    # If the iata and icao variables are not equal, airline was found in the database and we'll add in the tool-tip for the decoded airline
-    # Otherwise, no tool-tip, no FA link, and use the IATA code for display
-    if url:
-        return f"Flight: <span class=\"wrapper\"><strong><a href=\"https://globe.adsbexchange.com/?icao={hex_code}\" target=\"_blank\">{html}</a></strong>"
-    else:
-        return f"Flight: {html}"
+        # If the iata and icao variables are not equal, airline was found in the database and we'll add in the tool-tip for the decoded airline
+        # Otherwise, no tool-tip, no FA link, and use the IATA code for display
+        if url:
+            return f"Flight: <span class=\"wrapper\"><strong><a href=\"https://globe.adsbexchange.com/?icao={hex_code}\" target=\"_blank\">{html}</a></strong>"
+        else:
+            return f"Flight: {html}"
+    else:  #  We should never run in to this condition, I don't think, but we'll add a case for it
+        return "Flight: Error"
 
 
 def libacars_formatted(libacars=None):
@@ -150,6 +154,8 @@ def htmlListener():
                 json_message['flight'] = flight_finder(callsign=json_message['flight'], hex_code=json_message['icao_hex'])
             elif "flight" in json_message.keys():
                 json_message['flight'] = flight_finder(callsign=json_message['flight'], url=False)
+            elif 'icao_hex' in json_message.keys():
+                json_message['icao_url'] =  flight_finder(hex_code=json_message['icao_hex'])
 
             socketio.emit('newmsg', {'msghtml': json_message}, namespace='/main')
             if DEBUG_LOGGING:
@@ -505,11 +511,14 @@ def handle_message(message, namespace):
             # Loop through the results and format html
             for result in query_result:
                 json_message = json.loads(result)
+                if "icao" in json_message.keys():
+                    json_message['icao_hex'] = format(int(json_message['icao']), 'X')
+
                 if "libacars" in json_message.keys() and json_message['libacars'] != None:
-                        json_message['libacars'] = libacars_formatted(json_message['flight'])
+                    json_message['libacars'] = libacars_formatted(json_message['flight'])
 
                 if "flight" in json_message.keys() and json_message['flight'] != None:
-                        json_message['flight'] = flight_finder(callsign=json_message['flight'], url=False)
+                    json_message['flight'] = flight_finder(callsign=json_message['flight'], url=False)
 
                 serialized_json.insert(0, json.dumps(json_message))
 
