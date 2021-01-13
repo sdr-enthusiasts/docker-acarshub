@@ -67,12 +67,24 @@ vdlm_messages = 0
 acars_messages = 0
 error_messages = 0
 
-
-# https://flightaware.com/live/flight/AAY39/history/20210110/2324Z/
+ADSB_URL = ""
 
 def flight_finder(callsign=None, hex_code=None, url=True):
+    global ADSB_URL
+
+    if ADSB_URL == "":
+        import os
+
+        if os.getenv("TAR1090_URL", default=False):
+            if os.getenv("TAR1090_URL").endswith("/"):
+                ADSB_URL = os.getenv("TAR1090_URL") + "?icao="
+            else:
+                ADSB_URL = os.getenv("TAR1090_URL") + "/?icao="
+        else:
+            ADSB_URL = "https://globe.adsbexchange.com/?icao="
+
     if callsign is None and hex_code is not None:
-        return f'https://globe.adsbexchange.com/?icao={hex_code}'
+        return f'{ADSB_URL}{hex_code}'
 
     if callsign is not None:
         icao, airline = acarshub_db.find_airline_code_from_iata(callsign[:2])
@@ -87,7 +99,7 @@ def flight_finder(callsign=None, hex_code=None, url=True):
         # If the iata and icao variables are not equal, airline was found in the database and we'll add in the tool-tip for the decoded airline
         # Otherwise, no tool-tip, no FA link, and use the IATA code for display
         if url:
-            return f"Flight: <span class=\"wrapper\"><strong><a href=\"https://globe.adsbexchange.com/?icao={hex_code}\" target=\"_blank\">{html}</a></strong>"
+            return f"Flight: <span class=\"wrapper\"><strong><a href=\"{ADSB_URL}{hex_code}\" target=\"_blank\">{html}</a></strong>"
         else:
             return f"Flight: {html}"
     else:  #  We should never run in to this condition, I don't think, but we'll add a case for it
