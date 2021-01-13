@@ -70,24 +70,25 @@ error_messages = 0
 
 # https://flightaware.com/live/flight/AAY39/history/20210110/2324Z/
 
-def flight_finder(callsign=None, message_time=None):
+def flight_finder(callsign=None, hex_code=None, url=True):
     import datetime
-    import pytz
 
     icao, airline = acarshub_db.find_airline_code_from_iata(callsign[:2])
     flight_number = callsign[2:]
     flight = icao + flight_number
-    msg_time = datetime.datetime.fromtimestamp(message_time)
-    msg_time = msg_time.astimezone(pytz.utc)
-    message_zulu = msg_time.strftime('%H%MZ')
-    message_date = msg_time.strftime('%Y%m%d')
+
+    if icao != callsign[:2]:
+        html = f"<span class=\"wrapper\"><strong>{flight}/{callsign}</strong><span class=\"tooltip\">{airline} Flight {flight_number}</span></span> "
+    else:
+        html = f"<strong>{flight}</strong> "
 
     # If the iata and icao variables are not equal, airline was found in the database and we'll add in the tool-tip for the decoded airline
     # Otherwise, no tool-tip, no FA link, and use the IATA code for display
-    if icao != callsign[:2]:
-        return f"Flight: <span class=\"wrapper\"><strong><a href=\"https://flightaware.com/live/flight/{flight}/history/{message_date}/{message_zulu}/\" target=\"_blank\">{flight}/{callsign}</a></strong><span class=\"tooltip\">{airline} Flight {flight_number}</span></span> "
+    if url:
+        return f"Flight: <span class=\"wrapper\"><strong><a href=\"https://globe.adsbexchange.com/?icao={hex_code}\" target=\"_blank\">{html}</a></strong>"
     else:
-        return f"Flight: <strong>{flight}</strong> "
+        return f"Flight: {html}"
+
 
 def libacars_formatted(libacars=None):
     html_output = "<p>Decoded:</p>"
@@ -142,16 +143,13 @@ def htmlListener():
             if "libacars" in json_message.keys():
                 json_message['libacars'] = libacars_formatted(json_message['libacars'])
 
-            if "flight" in json_message.keys():
-                if "timestamp" in json_message.keys():
-                    message_time = json_message['timestamp']
-                elif "time" in json_message.keys():
-                    message_time = json_message['time']
-
-                json_message['flight'] = flight_finder(callsign=json_message['flight'], message_time=message_time)
-
             if "icao" in json_message.keys():
-                json_message['icao_hex'] = format(int(json_message['icao']), 'X')            
+                json_message['icao_hex'] = format(int(json_message['icao']), 'X')
+
+            if "flight" in json_message.keys() and 'icao_hex' in json_message.keys():
+                json_message['flight'] = flight_finder(callsign=json_message['flight'], hex_code=json_message['icao_hex'])
+            elif "flight" in json_message.keys():
+                json_message['flight'] = flight_finder(callsign=json_message['flight'], url=False)
 
             socketio.emit('newmsg', {'msghtml': json_message}, namespace='/main')
             if DEBUG_LOGGING:
@@ -511,7 +509,7 @@ def handle_message(message, namespace):
                         json_message['libacars'] = libacars_formatted(json_message['flight'])
 
                 if "flight" in json_message.keys() and json_message['flight'] != None:
-                        json_message['flight'] = flight_finder(json_message['flight'], float(json_message['time']))
+                        json_message['flight'] = flight_finder(callsign=json_message['flight'], url=False)
 
                 serialized_json.insert(0, json.dumps(json_message))
 
