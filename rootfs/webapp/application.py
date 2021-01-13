@@ -69,6 +69,7 @@ error_messages = 0
 
 ADSB_URL = ""
 
+
 def flight_finder(callsign=None, hex_code=None, url=True):
     global ADSB_URL
 
@@ -102,11 +103,13 @@ def flight_finder(callsign=None, hex_code=None, url=True):
             return f"Flight: <span class=\"wrapper\"><strong><a href=\"{ADSB_URL}{hex_code}\" target=\"_blank\">{html}</a></strong>"
         else:
             return f"Flight: {html}"
-    else:  #  We should never run in to this condition, I don't think, but we'll add a case for it
+    else:  # We should never run in to this condition, I don't think, but we'll add a case for it
         return "Flight: Error"
 
 
 def libacars_formatted(libacars=None):
+    import pprint
+
     html_output = "<p>Decoded:</p>"
     html_output += "<p>"
     html_output += "<pre>{libacars}</pre>".format(
@@ -118,6 +121,7 @@ def libacars_formatted(libacars=None):
     html_output += "</p>"
 
     return html_output
+
 
 def update_rrd_db():
     global vdlm_messages
@@ -135,7 +139,6 @@ def htmlListener():
     import sys
     import os
     import copy
-    import pprint
 
     # TOOLTIPS: <span class="wrapper">visible text<span class="tooltip">tooltip text</span></span>
 
@@ -167,7 +170,7 @@ def htmlListener():
             elif "flight" in json_message.keys():
                 json_message['flight'] = flight_finder(callsign=json_message['flight'], url=False)
             elif 'icao_hex' in json_message.keys():
-                json_message['icao_url'] =  flight_finder(hex_code=json_message['icao_hex'])
+                json_message['icao_url'] = flight_finder(hex_code=json_message['icao_hex'])
 
             socketio.emit('newmsg', {'msghtml': json_message}, namespace='/main')
             if DEBUG_LOGGING:
@@ -482,7 +485,7 @@ def request_count(message, namespace):
 @socketio.on('query', namespace='/search')
 def handle_message(message, namespace):
     import json
-    import pprint
+
     # We are going to send the result over in one blob
     # search.js will only maintain the most recent blob we send over
     total_results = 0
@@ -526,10 +529,10 @@ def handle_message(message, namespace):
                 if "icao" in json_message.keys():
                     json_message['icao_hex'] = format(int(json_message['icao']), 'X')
 
-                if "libacars" in json_message.keys() and json_message['libacars'] != None:
+                if "libacars" in json_message.keys() and json_message['libacars'] is not None:
                     json_message['libacars'] = libacars_formatted(json_message['flight'])
 
-                if "flight" in json_message.keys() and json_message['flight'] != None:
+                if "flight" in json_message.keys() and json_message['flight'] is not None:
                     json_message['flight'] = flight_finder(callsign=json_message['flight'], url=False)
 
                 serialized_json.insert(0, json.dumps(json_message))
@@ -569,7 +572,7 @@ def error_handler(e):
     traceback = e.__traceback__
     print('[server] An error has occurred: ' + str(e))
     while traceback:
-        print("{}: {}".format(traceback.tb_frame.f_code.co_filename,traceback.tb_lineno))
+        print("{}: {}".format(traceback.tb_frame.f_code.co_filename, traceback.tb_lineno))
         traceback = traceback.tb_next
 
 
@@ -578,7 +581,7 @@ def error_handler_main(e):
     traceback = e.__traceback__
     print('[server-main] An error has occurred: ' + str(e))
     while traceback:
-        print("{}: {}".format(traceback.tb_frame.f_code.co_filename,traceback.tb_lineno))
+        print("{}: {}".format(traceback.tb_frame.f_code.co_filename, traceback.tb_lineno))
         traceback = traceback.tb_next
 
 
@@ -587,7 +590,7 @@ def error_handler_search(e):
     traceback = e.__traceback__
     print('[server-search] An error has occurred: ' + str(e))
     while traceback:
-        print("{}: {}".format(traceback.tb_frame.f_code.co_filename,traceback.tb_lineno))
+        print("{}: {}".format(traceback.tb_frame.f_code.co_filename, traceback.tb_lineno))
         traceback = traceback.tb_next
 
 
@@ -596,7 +599,7 @@ def stats_handler_search(e):
     traceback = e.__traceback__
     print('[server-stats] An error has occurred: ' + str(e))
     while traceback:
-        print("{}: {}".format(traceback.tb_frame.f_code.co_filename,traceback.tb_lineno))
+        print("{}: {}".format(traceback.tb_frame.f_code.co_filename, traceback.tb_lineno))
         traceback = traceback.tb_next
 
 
@@ -605,6 +608,5 @@ def default_error_handler(e):
     traceback = e.__traceback__
     print('[server] An error has occurred: ' + str(e))
     while traceback:
-        print("{}: {}".format(traceback.tb_frame.f_code.co_filename,traceback.tb_lineno))
+        print("{}: {}".format(traceback.tb_frame.f_code.co_filename, traceback.tb_lineno))
         traceback = traceback.tb_next
-

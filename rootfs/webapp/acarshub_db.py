@@ -19,8 +19,8 @@ database = create_engine(db_path)
 db_session = sessionmaker(bind=database)
 Messages = declarative_base()
 
-overrides = { }
-freqs = [ ]
+overrides = {}
+freqs = []
 
 airlines_database = create_engine('sqlite:///data/airlines.db')
 airlines_db_session = sessionmaker(bind=airlines_database)
@@ -50,7 +50,7 @@ if os.getenv("ENABLE_ACARS", default=False):
 
 if os.getenv("ENABLE_VDLM", default=False):
     vdlm_freqs = os.getenv("FREQS_VDLM").split(";")
-    
+
     for item in vdlm_freqs:
         freqs.append(("VDL-M2", item))
 
@@ -306,7 +306,6 @@ def find_airline_code_from_iata(iata):
 
 
 def database_search(field, search_term, page=0):
-    import os
     result = None
 
     try:
@@ -340,7 +339,6 @@ def database_search(field, search_term, page=0):
 
 
 def show_all(page=0):
-    import os
     result = None
 
     try:
@@ -351,7 +349,7 @@ def show_all(page=0):
         traceback = e.__traceback__
         print('[database] An error has occurred: ' + str(e))
         while traceback:
-            print("{}: {}".format(traceback.tb_frame.f_code.co_filename,traceback.tb_lineno))
+            print("{}: {}".format(traceback.tb_frame.f_code.co_filename, traceback.tb_lineno))
             traceback = traceback.tb_next
 
     if result.count() > 0:
@@ -389,27 +387,24 @@ def get_freq_count():
         traceback = e.__traceback__
         print('[database] An error has occurred: ' + str(e))
         while traceback:
-            print("{}: {}".format(traceback.tb_frame.f_code.co_filename,traceback.tb_lineno))
+            print("{}: {}".format(traceback.tb_frame.f_code.co_filename, traceback.tb_lineno))
             traceback = traceback.tb_next
 
 
 def get_errors():
-    result = None
-    message_stats = []
-
     try:
         session = db_session()
         total_messages = session.query(messages).count()
         total_errors = session.query(messages).filter(messages.error != "0").count()
         session.close()
-        
+
         return (total_messages, total_errors)
 
     except Exception as e:
         traceback = e.__traceback__
         print('[database] An error has occurred: ' + str(e))
         while traceback:
-            print("{}: {}".format(traceback.tb_frame.f_code.co_filename,traceback.tb_lineno))
+            print("{}: {}".format(traceback.tb_frame.f_code.co_filename, traceback.tb_lineno))
             traceback = traceback.tb_next
 
 
@@ -424,7 +419,8 @@ def database_get_row_count():
 
         try:
             size = os.path.getsize(db_path[10:])
-        except:
+        except Exception as e:
+            print(f"[database] Error getting db size: {e}")
             size = None
 
         return (result, size)
