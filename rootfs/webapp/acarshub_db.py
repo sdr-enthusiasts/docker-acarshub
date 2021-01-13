@@ -397,6 +397,7 @@ def show_all(page=0):
 def get_freq_count():
     result = None
     freq_count = []
+    found_freq = []
 
     # output: freq_count.append(f"{f[0]}|{f[1]}|{result}")
 
@@ -418,8 +419,13 @@ def get_freq_count():
 
             if(result is not None):
                 freq_count.append(f"{f[0]}|{f[1]}|{result.count}")
+                found_freq.append(freq)
             else:
                 freq_count.append(f"{f[0]}|{f[1]}|0")
+
+        for item in session.query(messagesFreq).all():
+            if not item.freq in found_freq:
+                freq_count.append(f"{item.freq_type}|{item.freq}|{item.count}")
 
         session.close()
 
@@ -494,12 +500,27 @@ good_msgs = total_messages - total_errors
 
 try:
     session = db_session()
-    result = session.query(messagesCount).count()
 
-    if result == 0:
+    if session.query(messagesCount).count() == 0:
+        print("[database] Initializing count database")
         session.add(messagesCount(total=total_messages, errors=total_errors, good=good_msgs))
         session.commit()
         print("[database] Count database initialized")
+
+    # now we pre-populate the freq db if empty
+
+    if session.query(messagesFreq).count() == 0:
+        print("[database] Initializing freq database")
+        found_freq = {}
+        for item in session.query(messages).all():
+            if not item.freq in found_freq:
+                found_freq[item.freq] = [item.freq, item.message_type, session.query(messages).filter(messages.freq==item.freq).count()]
+
+        for item in found_freq:
+            session.add(messagesFreq(freq=found_freq[item][0], count=found_freq[item][2], freq_type=found_freq[item][1]))
+        session.commit()
+        print("[database] Freq database initialized")
+
     session.close()
 except Exception as e:
     traceback = e.__traceback__
