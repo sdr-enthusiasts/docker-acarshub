@@ -437,6 +437,12 @@ def main_connect():
         import json
         for item in reversed(recent_messages):
             json_message = json.loads(item)
+            stale_keys = []
+            for key in json_message:
+                if json_message[key] == None:
+                    stale_keys.append(key)
+            for key in stale_keys:
+                del json_message[key]
             if "libacars" in json_message.keys() and json_message['libacars'] is not None:
                 json_message['libacars'] = libacars_formatted(json_message['libacars'])
 
