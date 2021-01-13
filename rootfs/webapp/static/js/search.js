@@ -129,7 +129,7 @@ function display_search(current, total) {
     total_pages = 0;
 
     if(total == 0)
-        return html + "No results";
+        return html + '<span class="menu_non_link">No results</span>';
 
     if(total % 20 != 0)
         total_pages = ~~(total / 20) + 1;
