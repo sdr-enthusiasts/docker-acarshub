@@ -1,3 +1,20 @@
+# Firstly, build airframesio/acars-decoder-typescript
+# Done in separate build stage to prevent having to install node + dependencies in final image
+
+FROM node:latest AS acars-decoder-typescript-builder
+
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
+COPY acars-decoder-typescript/ /src/acars-decoder-typescript/
+
+RUN set -x && \
+    pushd /src/acars-decoder-typescript && \
+    yarn install && \
+    yarn build && \
+    yarn pack
+
+# Lastly, build final image
+
 FROM debian:stable-slim
 
 ENV BRANCH_RTLSDR="ed0317e6a58c098874ac58b769cf2e609c18d9a5" \
@@ -21,6 +38,9 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 # Copy needs to be prior to any curl/wget so SSL certs from GitHub runner are loaded
 COPY rootfs/ /
+
+# Copy in acars-decoder-typescript from previous build stage
+COPY --from=acars-decoder-typescript-builder /src/acars-decoder-typescript/*.tgz /src/
 
 RUN set -x && \
     TEMP_PACKAGES=() && \
@@ -130,6 +150,11 @@ RUN set -x && \
     popd && popd && \
     # directory for logging
     mkdir -p /run/acars && \
+    # extract airframes-acars-decoder package to /webapp/static/airframes-acars-decoder
+    mkdir -p /src/airframes-acars-decoder && \
+    find /src -maxdepth 1 -type f -iname "airframes-acars-decoder-*.tgz" -exec tar xvf {} -C /src/airframes-acars-decoder \; && \
+    mkdir -p /webapp/static/airframes-acars-decoder && \ 
+    mv -v /src/airframes-acars-decoder/package/dist/* /webapp/static/airframes-acars-decoder/ && \
     # install S6 Overlay
     curl -s https://raw.githubusercontent.com/mikenye/deploy-s6-overlay/master/deploy-s6-overlay.sh | sh && \
     # Clean up
