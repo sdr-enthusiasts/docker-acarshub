@@ -54,11 +54,19 @@ function display_messages(msgs_to_process, convert) {
         html_output += "<tr><td colspan=\"2\">";
 
         if(message.hasOwnProperty('toaddr')) {
-            html_output += `<p>To Address: <strong>${message['toaddr']}</strong></p>`;
+            if(message.hasOwnProperty('toaddr_hex')) {
+                html_output += `<p>To Address: <strong>${message['toaddr']}/${message['toaddr_hex']}</strong></p>`;
+            } else {
+                html_output += `<p>To Address: <strong>${message['toaddr']}/?</strong></p>`;
+            }
         }
 
         if(message.hasOwnProperty('fromaddr')) {
-            html_output += `<p>From Address: <strong>${message['fromaddr']}</strong></p>`;
+            if(message.hasOwnProperty('fromaddr_hex')) {
+                html_output += `<p>To Address: <strong>${message['fromaddr']}/${message['fromaddr_hex']}</strong></p>`;
+            } else {
+                html_output += `<p>To Address: <strong>${message['fromaddr']}/?</strong></p>`;
+            }
         }
 
         if(message.hasOwnProperty('depa')) {

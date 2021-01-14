@@ -172,6 +172,12 @@ def htmlListener():
             elif 'icao_hex' in json_message.keys():
                 json_message['icao_url'] = flight_finder(hex_code=json_message['icao_hex'])
 
+            if "toaddr" in json_message.keys():
+                json_message['toaddr_hex'] = format(int(json_message['toaddr']), 'X')
+
+            if "fromaddr" in json_message.keys():
+                json_message['fromaddr_hex'] = format(int(json_message['fromaddr']), 'X')
+
             socketio.emit('newmsg', {'msghtml': json_message}, namespace='/main')
             if DEBUG_LOGGING:
                 print("[htmlListener] packet sent via socketio.emit")
@@ -441,8 +447,10 @@ def main_connect():
             for key in json_message:
                 if json_message[key] == None:
                     stale_keys.append(key)
+
             for key in stale_keys:
                 del json_message[key]
+
             if "libacars" in json_message.keys() and json_message['libacars'] is not None:
                 json_message['libacars'] = libacars_formatted(json_message['libacars'])
 
@@ -455,6 +463,12 @@ def main_connect():
                 json_message['flight'] = flight_finder(callsign=json_message['flight'], url=False)
             elif 'icao_hex' in json_message.keys():
                 json_message['icao_url'] = flight_finder(hex_code=json_message['icao_hex'])
+
+            if "toaddr" in json_message.keys():
+                json_message['toaddr_hex'] = format(int(json_message['toaddr']), 'X')
+
+            if "fromaddr" in json_message.keys():
+                json_message['fromaddr_hex'] = format(int(json_message['fromaddr']), 'X')
 
             socketio.emit('newmsg', {'msghtml': json_message}, room=requester, namespace='/main')
 
@@ -563,6 +577,12 @@ def handle_message(message, namespace):
 
                 if "flight" in json_message.keys() and json_message['flight'] is not None:
                     json_message['flight'] = flight_finder(callsign=json_message['flight'], url=False)
+
+                if "toaddr" in json_message.keys() and json_message['toaddr'] is not None:
+                    json_message['toaddr_hex'] = format(int(json_message['toaddr']), 'X')
+
+                if "fromaddr" in json_message.keys() and json_message['fromaddr'] is not None:
+                    json_message['fromaddr_hex'] = format(int(json_message['fromaddr']), 'X')
 
                 serialized_json.insert(0, json.dumps(json_message))
 
