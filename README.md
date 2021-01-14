@@ -87,7 +87,7 @@ There are quite a few configuration options this container can accept.
 | `IATA_OVERRIDE` | Override or add any custom IATA codes. Used for the web front end to show proper callsigns; See [below](#the-fix) on formatting and [more details](#A-note-about-data-sources-used-for-the-web-site) why this might be necessary.| No | Blank |
 | `TAR1090_URL` | Flights where the container is able to, it will generate a link to a tar1090 instance so that you can see the position of the aircraft that generated the message. By default, it will link to [ADSB Exchange](https://www.adsbexchange.com), but if desired, you can set the URL to be a local tar1090 instance. | No | Blank |
 
-Please note that for `TAR1090_URL` the required format is `http[s]://**HOSTNAME**` only. So if your tar1090 instance is at IP address `192.168.31.1.10` with no SSL, the TAR1090_URL would look like `http://192.168.31.1.10`
+Please note that for `TAR1090_URL` the required format is `http[s]://**HOSTNAME**` only. So if your tar1090 instance is at IP address `192.168.31.10` with no SSL, the TAR1090_URL would look like `http://192.168.31.10`
 
 ### ACARS
 

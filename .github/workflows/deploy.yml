@@ -6,6 +6,8 @@ on:
   push:
     branches: 
       - main
+    paths-ignore:
+      - '**.md'
 
   # Build and deploy the image nightly (to ensure we pick up any security updates)
   schedule:
