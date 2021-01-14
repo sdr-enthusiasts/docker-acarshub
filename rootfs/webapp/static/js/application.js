@@ -57,7 +57,7 @@ function pause_updates() {
 
 function filter_notext() {
     if(text_filter) {
-        var text_filter = false;
+        text_filter = false;
         var id = document.getElementById("filter_notext");
         id.innerHTML = "";
         var txt = document.createTextNode("Filter out \"No Text\" messages");
