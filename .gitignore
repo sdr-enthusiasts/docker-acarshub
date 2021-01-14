@@ -93,3 +93,4 @@ roles/metal-lb/files/namespace.yaml
 notes.txt
 Dockerfile.local
 *.db-journal
+webapp/static/airframes-acars-decoder
