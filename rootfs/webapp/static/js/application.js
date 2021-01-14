@@ -101,8 +101,11 @@ $(document).ready(function(){
         //console.log("Received msg" + msg.msghtml);
         console.log("Received msg");
         const md = new MessageDecoder();
-        var test = md.decodeMessage(msg.msghtml);
-        console.log(test);
+        var test = md.decode(msg.msghtml);
+        if(test.decoded == true) {
+            console.log(msg.msghtml);
+            console.log(test);
+        }
         //maintain a list of 50 msgs
         if(!text_filter || (msg.msghtml.hasOwnProperty('text') || msg.msghtml.hasOwnProperty('data') ||
             msg.msghtml.hasOwnProperty('libacars') || msg.msghtml.hasOwnProperty('dsta') || msg.msghtml.hasOwnProperty('depa') ||
