@@ -9,6 +9,10 @@ COPY acars-decoder-typescript/ /src/acars-decoder-typescript/
 
 RUN set -x && \
     pushd /src/acars-decoder-typescript && \
+    # Patch build to run in browser (outside of nodejs)
+    # https://stackoverflow.com/questions/44709031/build-for-both-browser-and-nodejs
+    # https://medium.com/collaborne-engineering/typescript-create-library-for-nodejs-and-browser-fece291d517f
+    sed -i '/"module": "commonjs",/d' tsconfig.json && \
     yarn install && \
     yarn build && \
     yarn pack
@@ -155,6 +159,11 @@ RUN set -x && \
     find /src -maxdepth 1 -type f -iname "airframes-acars-decoder-*.tgz" -exec tar xvf {} -C /src/airframes-acars-decoder \; && \
     mkdir -p /webapp/static/airframes-acars-decoder && \ 
     mv -v /src/airframes-acars-decoder/package/dist/* /webapp/static/airframes-acars-decoder/ && \
+    # patch airframes-acars-decoder package so imports work
+    find /webapp/static/airframes-acars-decoder -type f -iname '*.js' -exec sed -i """/import .* from '.*';/ s/';/.js';/""" {} \; && \
+    find /webapp/static/airframes-acars-decoder -type f -iname '*.js' -exec sed -i """/import .* from \".*\";/ s/\";/.js\";/""" {} \; && \
+    find /webapp/static/airframes-acars-decoder -type f -iname '*.js' -exec sed -i """/export .* from '.*';/ s/';/.js';/""" {} \; && \
+    find /webapp/static/airframes-acars-decoder -type f -iname '*.js' -exec sed -i """/export .* from \".*\";/ s/\";/.js\";/""" {} \; && \
     # install S6 Overlay
     curl -s https://raw.githubusercontent.com/mikenye/deploy-s6-overlay/master/deploy-s6-overlay.sh | sh && \
     # Clean up
