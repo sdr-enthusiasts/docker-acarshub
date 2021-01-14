@@ -7,6 +7,81 @@ var msgs_received = [];
 var filtered_messages = 0;
 var received_messages = 0;
 
+import { MessageDecoder } from '../airframes-acars-decoder/MessageDecoder.js'
+
+function increment_filtered() {
+    var id = document.getElementById("filteredmessages");
+    id.innerHTML = "";
+    filtered_messages++;
+    var txt = document.createTextNode(filtered_messages);
+    id.appendChild(txt);
+}
+
+function increment_received() {
+    var id = document.getElementById("receivedmessages");
+    id.innerHTML = "";
+    received_messages++;
+    var txt = document.createTextNode(received_messages);
+    id.appendChild(txt);
+}
+
+function pause_updates() {
+    if(pause) {
+        pause = false;
+        var id = document.getElementById("pause_updates");
+        id.innerHTML = "";
+        var txt = document.createTextNode("Pause updates");
+        id.appendChild(txt);
+
+        var id_filtered = document.getElementById("received");
+        id_filtered.innerHTML = "";
+        var txt_filtered = document.createTextNode("Received messages");
+        id_filtered.appendChild(txt_filtered);
+
+        display_messages()
+    }
+    else {
+        pause = true;
+
+        var id = document.getElementById("pause_updates");
+        id.innerHTML = "";
+        var txt = document.createTextNode("Updates Paused");
+        id.appendChild(txt);
+
+        var id_filtered = document.getElementById("received");
+        id_filtered.innerHTML = "";
+        var txt_filtered = document.createTextNode("Received messages (paused)");
+        id_filtered.appendChild(txt_filtered);
+    }
+}
+
+function filter_notext() {
+    if(text_filter) {
+        var text_filter = false;
+        var id = document.getElementById("filter_notext");
+        id.innerHTML = "";
+        var txt = document.createTextNode("Filter out \"No Text\" messages");
+        id.appendChild(txt);
+        Cookies.set('filter', 'false', { expires: 365 });
+        filtered_messages = 0;
+
+        $('#filtered').html("");
+    } else {
+        text_filter = true;
+
+        $('#filtered').html("Filtered Messages:&emsp;&ensp;<strong><span id=\"filteredmessages\"></span></strong>");
+        var id_filtered = document.getElementById("filteredmessages");
+        var txt_filtered = document.createTextNode(filtered_messages);
+        id_filtered.appendChild(txt_filtered);
+
+        id = document.getElementById("filter_notext");
+        id.innerHTML = "";
+        var txt = document.createTextNode("Show \"No Text\" messages");
+        id.appendChild(txt);
+        Cookies.set('filter', 'true', { expires: 365 });
+    }
+}
+
 $(document).ready(function(){
     //connect to the socket server.
     generate_menu();
@@ -25,6 +100,9 @@ $(document).ready(function(){
     socket.on('newmsg', function(msg) {
         //console.log("Received msg" + msg.msghtml);
         console.log("Received msg");
+        const md = new MessageDecoder();
+        var test = md.decodeMessage(msg.msghtml);
+        console.log(test);
         //maintain a list of 50 msgs
         if(!text_filter || (msg.msghtml.hasOwnProperty('text') || msg.msghtml.hasOwnProperty('data') ||
             msg.msghtml.hasOwnProperty('libacars') || msg.msghtml.hasOwnProperty('dsta') || msg.msghtml.hasOwnProperty('depa') ||
@@ -55,77 +133,4 @@ $(document).ready(function(){
     });
 
 });
-
-function increment_filtered() {
-    id = document.getElementById("filteredmessages");
-    id.innerHTML = "";
-    filtered_messages++;
-    txt = document.createTextNode(filtered_messages);
-    id.appendChild(txt);
-}
-
-function increment_received() {
-    id = document.getElementById("receivedmessages");
-    id.innerHTML = "";
-    received_messages++;
-    txt = document.createTextNode(received_messages);
-    id.appendChild(txt);
-}
-
-function pause_updates() {
-    if(pause) {
-        pause = false;
-        id = document.getElementById("pause_updates");
-        id.innerHTML = "";
-        txt = document.createTextNode("Pause updates");
-        id.appendChild(txt);
-
-        id_filtered = document.getElementById("received");
-        id_filtered.innerHTML = "";
-        txt_filtered = document.createTextNode("Received messages");
-        id_filtered.appendChild(txt_filtered);
-
-        display_messages()
-    }
-    else {
-        pause = true;
-
-        id = document.getElementById("pause_updates");
-        id.innerHTML = "";
-        txt = document.createTextNode("Updates Paused");
-        id.appendChild(txt);
-
-        id_filtered = document.getElementById("received");
-        id_filtered.innerHTML = "";
-        txt_filtered = document.createTextNode("Received messages (paused)");
-        id_filtered.appendChild(txt_filtered);
-    }
-}
-
-function filter_notext() {
-    if(text_filter) {
-        text_filter = false;
-        id = document.getElementById("filter_notext");
-        id.innerHTML = "";
-        txt = document.createTextNode("Filter out \"No Text\" messages");
-        id.appendChild(txt);
-        Cookies.set('filter', 'false', { expires: 365 });
-        filtered_messages = 0;
-
-        $('#filtered').html("");
-    } else {
-        text_filter = true;
-
-        $('#filtered').html("Filtered Messages:&emsp;&ensp;<strong><span id=\"filteredmessages\"></span></strong>");
-        id_filtered = document.getElementById("filteredmessages");
-        txt_filtered = document.createTextNode(filtered_messages);
-        id_filtered.appendChild(txt_filtered);
-
-        id = document.getElementById("filter_notext");
-        id.innerHTML = "";
-        txt = document.createTextNode("Show \"No Text\" messages");
-        id.appendChild(txt);
-        Cookies.set('filter', 'true', { expires: 365 });
-    }
-}
 
