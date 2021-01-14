@@ -11,7 +11,7 @@ import json
 # DB PATH MUST BE FROM ROOT
 
 if os.getenv("ACARSHUB_DB"):
-    db_path = os.getenv("ACARSHUB_DB")
+    db_path = os.getenv("ACARSHUB_DB", default=False)
 else:
     db_path = 'sqlite:////run/acars/messages.db'
 
@@ -19,10 +19,56 @@ database = create_engine(db_path)
 db_session = sessionmaker(bind=database)
 Messages = declarative_base()
 
+overrides = {}
+freqs = []
 
 airlines_database = create_engine('sqlite:///data/airlines.db')
 airlines_db_session = sessionmaker(bind=airlines_database)
 Airlines = declarative_base()
+
+# Set up the override IATA/ICAO callsigns
+# Input format needs to be IATA|ICAO|Airline Name
+# Multiple overrides need to be separated with a ;
+
+if os.getenv("IATA_OVERRIDE", default=False):
+    iata_override = os.getenv("IATA_OVERRIDE").split(";")
+
+    for item in iata_override:
+        override_splits = item.split('|')
+        if(len(override_splits) == 3):
+            overrides[override_splits[0]] = (override_splits[1], override_splits[2])
+        else:
+            print(f"[database] error adding in {item} to IATA overrides")
+
+# Grab the freqs
+
+if os.getenv("ENABLE_ACARS", default=False):
+    acars_freqs = os.getenv("FREQS_ACARS").split(";")
+
+    for item in acars_freqs:
+        freqs.append(("ACARS", item))
+
+if os.getenv("ENABLE_VDLM", default=False):
+    vdlm_freqs = os.getenv("FREQS_VDLM").split(";")
+
+    for item in vdlm_freqs:
+        freqs.append(("VDL-M2", item))
+
+
+class messagesFreq(Messages):
+    __tablename__ = 'freqs'
+    it = Column(Integer, primary_key=True)
+    freq = Column('freq', String(32))
+    freq_type = Column('freq_type', String(32))
+    count = Column('count', Integer)
+
+
+class messagesCount(Messages):
+    __tablename__ = 'count'
+    id = Column(Integer, primary_key=True)
+    total = Column('total', Integer)
+    errors = Column('errors', Integer)
+    good = Column('good', Integer)
 
 
 class messages(Messages):
@@ -201,32 +247,50 @@ def add_message_from_json(message_type, message_from_json):
         else:
             print(f"[database] Unidenitied key: {index}")
 
-    if os.getenv("DB_SAVEALL", default=False) or text is not None or libacars is not None or \
-       dsta is not None or depa is not None or eta is not None or gtout is not None or \
-       gtin is not None or wloff is not None or wlin is not None or lat is not None or \
-       lon is not None or alt is not None:
-        # create a session for this thread to write
+    try:
         session = db_session()
-        # write the message
-        if os.getenv("DEBUG_LOGGING", default=False):
-            print("[database] writing to the database")
-            print(f"[database] writing message: {message_from_json}")
+        count = session.query(messagesCount).first()
+        count.total += 1
 
-        try:
+        if error is not None and error > 0:
+            count.errors += 1
+        else:
+            count.good += 1
+
+        found_freq = session.query(messagesFreq).filter(messagesFreq.freq == f"{freq}" and messagesFreq.freq_type == message_type).first()
+
+        if found_freq is not None:
+            found_freq.count += 1
+        else:
+            session.add(messagesFreq(freq=f"{freq}", freq_type=message_type, count=1))
+
+        if os.getenv("DB_SAVEALL", default=False) or text is not None or libacars is not None or \
+           dsta is not None or depa is not None or eta is not None or gtout is not None or \
+           gtin is not None or wloff is not None or wlin is not None or lat is not None or \
+           lon is not None or alt is not None:
+            # create a session for this thread to write
+
+            # write the message
+            if os.getenv("DEBUG_LOGGING", default=False):
+                print("[database] writing to the database")
+                print(f"[database] writing message: {message_from_json}")
+
             session.add(messages(message_type=message_type, time=time, station_id=station_id, toaddr=toaddr,
                                  fromaddr=fromaddr, depa=depa, dsta=dsta, eta=eta, gtout=gtout, gtin=gtin,
                                  wloff=wloff, wlin=wlin, lat=lat, lon=lon, alt=alt, text=text, tail=tail,
                                  flight=flight, icao=icao, freq=freq, ack=ack, mode=mode, label=label, block_id=block_id,
                                  msgno=msgno, is_response=is_response, is_onground=is_onground, error=error, libacars=libacars))
-            # commit the db change and close the session
-            session.commit()
-            session.close()
-            if os.getenv("DEBUG_LOGGING", default=False):
-                print("[database] write to database complete")
-        except Exception as e:
-            print(f"[database] Error writing to the database: {e}")
-    elif os.getenv("DEBUG_LOGGING", default=False):
-        print(f"[database] discarding no text message: {message_from_json}")
+        elif os.getenv("DEBUG_LOGGING", default=False):
+            print(f"[database] discarding no text message: {message_from_json}")
+
+        # commit the db change and close the session
+        session.commit()
+        session.close()
+
+        if os.getenv("DEBUG_LOGGING", default=False):
+            print("[database] write to database complete")
+    except Exception as e:
+        print(f"[database] Error writing to the database: {e}")
 
 
 def pruneOld():
@@ -255,6 +319,9 @@ def find_airline_code_from_iata(iata):
     import os
     result = None
 
+    if iata in overrides:
+        return overrides[iata]
+
     try:
         session = airlines_db_session()
         result = session.query(airlines).filter(airlines.IATA == iata).first()
@@ -273,7 +340,6 @@ def find_airline_code_from_iata(iata):
 
 
 def database_search(field, search_term, page=0):
-    import os
     result = None
 
     try:
@@ -306,6 +372,104 @@ def database_search(field, search_term, page=0):
         return [None, 20]
 
 
+def show_all(page=0):
+    result = None
+
+    try:
+        session = db_session()
+        result = session.query(messages).order_by(messages.time.desc())
+        session.close()
+    except Exception as e:
+        traceback = e.__traceback__
+        print('[database] An error has occurred: ' + str(e))
+        while traceback:
+            print("{}: {}".format(traceback.tb_frame.f_code.co_filename, traceback.tb_lineno))
+            traceback = traceback.tb_next
+
+    if result.count() > 0:
+        data = [json.dumps(d, cls=AlchemyEncoder) for d in result[page:page + 20]]
+        return [data, result.count()]
+    else:
+        return [None, 20]
+
+
+def get_freq_count():
+    result = None
+    freq_count = []
+    found_freq = []
+
+    # output: freq_count.append(f"{f[0]}|{f[1]}|{result}")
+
+    try:
+        session = db_session()
+
+        for f in freqs:
+            if f[1].endswith("00"):
+                freq = f[1][:-2]
+            elif f[1].endswith(".0"):
+                freq = f[1]
+            elif f[1].endswith("0"):
+                freq = f[1][:-1]
+            else:
+                freq = f[1]
+
+            result = session.query(messagesFreq).filter(messagesFreq.freq).filter(messagesFreq.freq == freq and messagesFreq.freq_type == f[0]).first()
+
+            if(result is not None):
+                freq_count.append(f"{f[0]}|{f[1]}|{result.count}")
+                found_freq.append(freq)
+            else:
+                freq_count.append(f"{f[0]}|{f[1]}|0")
+
+        for item in session.query(messagesFreq).all():
+            if item.freq not in found_freq:
+                freq_count.append(f"{item.freq_type}|{item.freq}|{item.count}")
+
+        session.close()
+
+        return freq_count
+
+    except Exception as e:
+        traceback = e.__traceback__
+        print('[database] An error has occurred: ' + str(e))
+        while traceback:
+            print("{}: {}".format(traceback.tb_frame.f_code.co_filename, traceback.tb_lineno))
+            traceback = traceback.tb_next
+
+
+def get_errors_direct():
+    try:
+        session = db_session()
+        total_messages = session.query(messages).count()
+        total_errors = session.query(messages).filter(messages.error != "0").count()
+        session.close()
+
+        return (total_messages, total_errors)
+
+    except Exception as e:
+        traceback = e.__traceback__
+        print('[database] An error has occurred: ' + str(e))
+        while traceback:
+            print("{}: {}".format(traceback.tb_frame.f_code.co_filename, traceback.tb_lineno))
+            traceback = traceback.tb_next
+
+
+def get_errors():
+    try:
+        session = db_session()
+        count = session.query(messagesCount).first()
+        session.close()
+
+        return (count.total, count.errors)
+
+    except Exception as e:
+        traceback = e.__traceback__
+        print('[database] An error has occurred: ' + str(e))
+        while traceback:
+            print("{}: {}".format(traceback.tb_frame.f_code.co_filename, traceback.tb_lineno))
+            traceback = traceback.tb_next
+
+
 def database_get_row_count():
     import os
     result = None
@@ -317,9 +481,66 @@ def database_get_row_count():
 
         try:
             size = os.path.getsize(db_path[10:])
-        except:
+        except Exception as e:
+            print(f"[database] Error getting db size: {e}")
             size = None
 
         return (result, size)
     except Exception as e:
         print(f"[database] {e}")
+
+
+def grab_most_recent():
+    from sqlalchemy import desc
+    try:
+        session = db_session()
+        result = session.query(messages).order_by(desc('time')).limit(20)
+
+        if result.count() > 0:
+            return [json.dumps(d, cls=AlchemyEncoder) for d in result]
+        else:
+            return None
+    except Exception as e:
+        traceback = e.__traceback__
+        print('[database] An error has occurred: ' + str(e))
+        while traceback:
+            print("{}: {}".format(traceback.tb_frame.f_code.co_filename, traceback.tb_lineno))
+            traceback = traceback.tb_next
+
+
+# We will pre-populate the count table if this is a new db
+# Or the user doesn't have the table already
+
+total_messages, total_errors = get_errors_direct()
+good_msgs = total_messages - total_errors
+
+try:
+    session = db_session()
+
+    if session.query(messagesCount).count() == 0:
+        print("[database] Initializing count database")
+        session.add(messagesCount(total=total_messages, errors=total_errors, good=good_msgs))
+        session.commit()
+        print("[database] Count database initialized")
+
+    # now we pre-populate the freq db if empty
+
+    if session.query(messagesFreq).count() == 0:
+        print("[database] Initializing freq database")
+        found_freq = {}
+        for item in session.query(messages).all():
+            if item.freq not in found_freq:
+                found_freq[item.freq] = [item.freq, item.message_type, session.query(messages).filter(messages.freq == item.freq).count()]
+
+        for item in found_freq:
+            session.add(messagesFreq(freq=found_freq[item][0], count=found_freq[item][2], freq_type=found_freq[item][1]))
+        session.commit()
+        print("[database] Freq database initialized")
+
+    session.close()
+except Exception as e:
+    traceback = e.__traceback__
+    print('[database] An error has occurred: ' + str(e))
+    while traceback:
+        print("{}: {}".format(traceback.tb_frame.f_code.co_filename, traceback.tb_lineno))
+        traceback = traceback.tb_next

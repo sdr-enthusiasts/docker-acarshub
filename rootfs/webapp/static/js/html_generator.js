@@ -54,11 +54,19 @@ function display_messages(msgs_to_process, convert) {
         html_output += "<tr><td colspan=\"2\">";
 
         if(message.hasOwnProperty('toaddr')) {
-            html_output += `<p>To Address: <strong>${message['toaddr']}</strong></p>`;
+            if(message.hasOwnProperty('toaddr_hex')) {
+                html_output += `<p>To Address: <strong>${message['toaddr']}/${message['toaddr_hex']}</strong></p>`;
+            } else {
+                html_output += `<p>To Address: <strong>${message['toaddr']}/?</strong></p>`;
+            }
         }
 
         if(message.hasOwnProperty('fromaddr')) {
-            html_output += `<p>From Address: <strong>${message['fromaddr']}</strong></p>`;
+            if(message.hasOwnProperty('fromaddr_hex')) {
+                html_output += `<p>To Address: <strong>${message['fromaddr']}/${message['fromaddr_hex']}</strong></p>`;
+            } else {
+                html_output += `<p>To Address: <strong>${message['fromaddr']}/?</strong></p>`;
+            }
         }
 
         if(message.hasOwnProperty('depa')) {
@@ -141,7 +149,14 @@ function display_messages(msgs_to_process, convert) {
         }            
 
         if(message.hasOwnProperty("icao")) {
-            html_output += `ICAO: <strong>${message['icao']}</strong> `;
+            if (message.hasOwnProperty("icao_hex") && message.hasOwnProperty('icao_url')) {
+                html_output += `ICAO: <strong><a href="${message['icao_url']}">${message['icao']}/${message['icao_hex']}</a></strong>`
+            }
+            else if(message.hasOwnProperty("icao_hex")) {
+                html_output += `ICAO: <strong>${message['icao']}/${message['icao_hex']}</strong> `;    
+            } else {
+                html_output += `ICAO: <strong>${message['icao']}</strong> `;
+            }
         }
 
         html_output += "</td>";

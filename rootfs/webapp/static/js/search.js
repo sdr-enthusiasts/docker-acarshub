@@ -2,6 +2,7 @@ var socket;
 var current_search = '';
 var current_page = 0;
 var total_pages = 0;
+var show_all = false;
 
 $(document).ready(function(){
     //connect to the socket server.
@@ -13,8 +14,7 @@ $(document).ready(function(){
     //receive details from server
 
     socket.on('database', function(msg) {
-        console.log(msg.count);
-        $('#database').html(String(msg.count).trim());
+        $('#database').html(String(msg.count).trim() + " rows");
         if(parseInt(msg.size) > 0){
             $('#size').html(formatSizeUnits(parseInt(msg.size)));
         } else {
@@ -35,7 +35,7 @@ $(document).ready(function(){
         // Lets check and see if the results match the current search string
         var display = '';
         var display_nav_results = '';
-        if(msg.search_term == current_search) {            
+        if(msg.search_term == current_search || show_all) {            
             msgs_received.push(msg.msghtml);
             num_results.push(msg.num_results);
             for (var i = 0; i < msgs_received.length; i++){
@@ -73,13 +73,25 @@ async function delay_query(initial_query) {
         var field = document.getElementById("dbfield").value;
         if(current_search != '' && current_search != old_search) {
             current_page = 0;
+            show_all = false;
             console.log("sending query");
             socket.emit('query', {'search_term': current_search, 'field': field}, namespace='/search');
         } else if(current_search == '') {
+            show_all = false;
             $('#log').html('');
             $('#num_results').html('');
         }
     }
+}
+
+function showall() {
+    socket.emit('query', {'show_all': true}, namespace="/search");
+    $('#log').html('');
+    $('#num_results').html('');
+    const search_box = document.getElementById('search_term');
+    search_box.value = "";
+
+    show_all = true;
 }
 
 function sleep(ms) {
@@ -93,7 +105,12 @@ function runclick(page) {
     var field = document.getElementById("dbfield").value;
     if(current_search != '') {
         $('#log').html('');
-        socket.emit('query', {'search_term': current_search, 'field': field, 'results_after': page}, namespace='/search');
+        $('#num_results').html('');
+        if(!show_all) {
+            socket.emit('query', {'search_term': current_search, 'field': field, 'results_after': page}, namespace='/search');
+        } else {
+            socket.emit('query', {'show_all': true, 'results_after': page}, namespace='/search');
+        }
     }
 }
 
@@ -101,8 +118,9 @@ function jumppage() {
     page = document.getElementById("jump").value;
     if(page > total_pages){
         $('#error_message').html(`Please enter a value less than ${total_pages}`);
-    } else
+    } else if(page != 0) {
         runclick(parseInt(page)-1);
+    }
 }
 
 
@@ -111,7 +129,7 @@ function display_search(current, total) {
     total_pages = 0;
 
     if(total == 0)
-        return html + "No results";
+        return html + '<span class="menu_non_link">No results</span>';
 
     if(total % 20 != 0)
         total_pages = ~~(total / 20) + 1;
@@ -119,7 +137,7 @@ function display_search(current, total) {
         total_pages = ~~(total / 20);
 
     html += '<table class="search"><thead><th class="search_label"></th><th class="search_term"></th></thead>';
-    html += `<tr><td colspan="2">Found ${total} result(s) in ${total_pages} page(s).</td></tr>`;
+    html += `<tr><td colspan="2"><span class="menu_non_link">Found <strong>${total}</strong> result(s) in <strong>${total_pages}</strong> page(s).</span></td></tr>`;
 
     // Determine -/+ range. We want to show -/+ 5 pages from current index
 
@@ -144,7 +162,7 @@ function display_search(current, total) {
 
         for(var i = low_end; i < high_end; i++) {
             if(i == current) {
-                html += ` ${i+1} `;
+                html += ` <span class="menu_non_link"><strong>${i+1}</strong></span> `;
             }
             else {
                 html += ` <a href=\"#\" id=\"search_page\" onclick=\"runclick(${i})\">${i+1}</a> `;
@@ -160,8 +178,8 @@ function display_search(current, total) {
     }
 
     if(total_pages > 5) {
-        html += "</td></tr><tr><td class=\"search_label\"><label>Jump to page:</label></td><td class=\"search_term\"><input type=\"text\" id=\"jump\"><p></td></tr>";
-        html += "<tr><td class=\"search_label\"></td><td class=search_term><a href=\"#\" onclick=\"jumppage()\">Run Search</a></td></tr></table>"
+        html += "</td></tr><tr><td class=\"search_label\"><label>Page:</label></td><td class=\"search_term\"><input type=\"text\" id=\"jump\"><p></td></tr>";
+        html += "<tr><td class=\"search_label\"></td><td class=search_term><a href=\"#\" onclick=\"jumppage()\">Jump to page</a></td></tr></table>"
         html += "<div id=\"error_message\"></div></div>";
     } else {
         html += "</td></tr></table>";
