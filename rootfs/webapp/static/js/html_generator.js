@@ -121,11 +121,7 @@ function display_messages(msgs_to_process, convert, ) {
             if(message.hasOwnProperty("decodedText")) {
                 html_output += "<p>";
                 html_output += "<pre id=\"shadow\"><strong>";
-                for (var m in message['decodedText'].raw)
-                {
-                    // cl os to working
-                    console.log(message['decodedText'].raw[m]);
-                }
+                html_output += loop_array(message['decodedText'].raw);
                 //html_output += `${message['decodedText'].raw}`;
                 html_output += "</strong></pre>";
                 html_output += "</p>";
@@ -238,4 +234,20 @@ function display_messages(msgs_to_process, convert, ) {
         msgs_string = html_output + msgs_string;
     }
     return msgs_string;
+}
+
+function loop_array(input) {
+    var html_output = ""
+    for (var m in input)
+    {
+        // close to working
+        console.log(typeof(input[m]));
+        if(typeof(input[m]) === "object") {
+            html_output += loop_array(input[m]);
+        } else {
+            html_output += m + ": " + input[m] + "<br>";
+        }
+    }
+
+    return html_output;
 }
