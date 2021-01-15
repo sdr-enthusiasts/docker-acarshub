@@ -114,18 +114,29 @@ function display_messages(msgs_to_process, convert, ) {
             var text = message['text'];
             text = text.replace("\\r\\n", "<br>");
 
-            html_output += "<p>";
-            html_output += `<pre id=\"shadow\"><strong>${text}</strong></pre>`;
-
-            html_output += "</p>";
+            //html_output += "<p>";
+            html_output += "<table class=\"message\">";
+            
+            //html_output += "</p>";
             if(message.hasOwnProperty("decodedText")) {
-                html_output += "<p>";
+                //html_output += "<p>";
+                html_output += "<td class=\"text_top\">";
+                html_output += "<strong>Decoded text:</strong></p>"
                 html_output += "<pre id=\"shadow\"><strong>";
-                html_output += loop_array(message['decodedText'].raw);
+                html_output += loop_array(message['decodedText'].formatted);
                 //html_output += `${message['decodedText'].raw}`;
                 html_output += "</strong></pre>";
-                html_output += "</p>";
+                html_output += "</td>";
+                //html_output += "</p>";
+            } else {
+                html_output += "<tr>"
             }
+
+            html_output += "<td class=\"text_top\">";
+            html_output += "<strong>Non-decoded text:</strong><p>";
+            html_output += `<pre id=\"shadow\"><strong>${text}</strong></pre>`;
+            html_output += "</td>";
+            html_output += "</tr></table>";
         }
         else if(message.hasOwnProperty("data")) {
             var data = message['data'];
@@ -237,15 +248,21 @@ function display_messages(msgs_to_process, convert, ) {
 }
 
 function loop_array(input) {
-    var html_output = ""
-    for (var m in input)
-    {
+    var html_output = "";
+    
+    for (var m in input) {
         // close to working
-        console.log(typeof(input[m]));
+        //console.log(typeof(input[m]));
         if(typeof(input[m]) === "object") {
             html_output += loop_array(input[m]);
         } else {
-            html_output += m + ": " + input[m] + "<br>";
+            if(m == "label")
+                html_output += input[m] + ": ";
+            else if(m == "value") {
+                html_output += input[m] + "<br>";
+            } else {
+                console.log(`Unknown item ${m}`);
+            }
         }
     }
 

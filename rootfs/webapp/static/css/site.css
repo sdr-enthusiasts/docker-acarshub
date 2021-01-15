@@ -24,6 +24,19 @@ table.search {
   vertical-align: middle;
 }
 
+table.message {
+  border: none;
+  border-collapse: collapse;
+  width: 100%;
+  table-layout: fixed;
+  background-color: white;
+  vertical-align: top;
+}
+
+.text_top {
+  vertical-align: top;
+}
+
 td {
   padding: 7px;
 }
