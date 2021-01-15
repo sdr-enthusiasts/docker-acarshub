@@ -1,4 +1,4 @@
-function display_messages(msgs_to_process, convert) {
+function display_messages(msgs_to_process, convert, ) {
     var msgs_string = '';
     for (var i = 0; i < msgs_to_process.length; i++){
         //msgs_string = '<p>' + msgs_received[i].toString() + '</p>' + msgs_string;
@@ -118,6 +118,18 @@ function display_messages(msgs_to_process, convert) {
             html_output += `<pre id=\"shadow\"><strong>${text}</strong></pre>`;
 
             html_output += "</p>";
+            if(message.hasOwnProperty("decodedText")) {
+                html_output += "<p>";
+                html_output += "<pre id=\"shadow\"><strong>";
+                for (var m in message['decodedText'].raw)
+                {
+                    // cl os to working
+                    console.log(message['decodedText'].raw[m]);
+                }
+                //html_output += `${message['decodedText'].raw}`;
+                html_output += "</strong></pre>";
+                html_output += "</p>";
+            }
         }
         else if(message.hasOwnProperty("data")) {
             var data = message['data'];

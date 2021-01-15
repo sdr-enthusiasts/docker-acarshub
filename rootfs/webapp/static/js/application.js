@@ -8,6 +8,7 @@ var filtered_messages = 0;
 var received_messages = 0;
 
 import { MessageDecoder } from '../airframes-acars-decoder/MessageDecoder.js'
+const md = new MessageDecoder();
 
 function increment_filtered() {
     var id = document.getElementById("filteredmessages");
@@ -95,17 +96,11 @@ $(document).ready(function(){
         Cookies.set('filter', 'false', { expires: 365 });
     }
 
-    console.log(filter);
     //receive details from server
     socket.on('newmsg', function(msg) {
         //console.log("Received msg" + msg.msghtml);
         console.log("Received msg");
-        const md = new MessageDecoder();
-        var test = md.decode(msg.msghtml);
-        if(test.decoded == true) {
-            console.log(msg.msghtml);
-            console.log(test);
-        }
+
         //maintain a list of 50 msgs
         if(!text_filter || (msg.msghtml.hasOwnProperty('text') || msg.msghtml.hasOwnProperty('data') ||
             msg.msghtml.hasOwnProperty('libacars') || msg.msghtml.hasOwnProperty('dsta') || msg.msghtml.hasOwnProperty('depa') ||
@@ -115,7 +110,16 @@ $(document).ready(function(){
 
             if (msgs_received.length >= 50){
                 msgs_received.shift()
-            }            
+            }           
+
+            if(msg.msghtml.hasOwnProperty('text')) {
+                var decoded_msg = md.decode(msg.msghtml);
+                if(decoded_msg.decoded == true) {
+                    msg.msghtml.decodedText = decoded_msg;
+                    console.log(msg.msghtml.decodedText);
+                }
+            }
+
             msgs_received.push(msg.msghtml);
         } else {
             increment_filtered();
