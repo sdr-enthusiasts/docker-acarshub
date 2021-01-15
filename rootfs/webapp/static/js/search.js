@@ -64,7 +64,8 @@ $(document).ready(function(){
     });
 
     document.addEventListener("keyup", function(event) {
-        delay_query(document.getElementById("search_term").value);
+        if(current_search != document.getElementById("search_term").value)
+            delay_query(document.getElementById("search_term").value);
     });
 
     //noop
@@ -128,7 +129,7 @@ window.runclick = function(page) {
 }
 
 window.jumppage = function() {
-    page = document.getElementById("jump").value;
+    var page = document.getElementById("jump").value;
     if(page > total_pages){
         $('#error_message').html(`Please enter a value less than ${total_pages}`);
     } else if(page != 0) {

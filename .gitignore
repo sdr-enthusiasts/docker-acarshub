@@ -94,3 +94,6 @@ notes.txt
 Dockerfile.local
 *.db-journal
 rootfs/webapp/static/airframes-acars-decoder
+rootfs/webapp/static/js/Dockerfile.testing
+Dockerfile.testing
+build-acg.sh
