@@ -26,7 +26,7 @@ function increment_received() {
     id.appendChild(txt);
 }
 
-function pause_updates() {
+window.pause_updates = function() {
     if(pause) {
         pause = false;
         var id = document.getElementById("pause_updates");
@@ -39,7 +39,7 @@ function pause_updates() {
         var txt_filtered = document.createTextNode("Received messages");
         id_filtered.appendChild(txt_filtered);
 
-        display_messages()
+        $('#log').html(display_messages(msgs_received));
     }
     else {
         pause = true;
@@ -56,7 +56,7 @@ function pause_updates() {
     }
 }
 
-function filter_notext() {
+window.filter_notext = function() {
     if(text_filter) {
         text_filter = false;
         var id = document.getElementById("filter_notext");

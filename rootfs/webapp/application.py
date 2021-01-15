@@ -555,6 +555,7 @@ def handle_message(message, namespace):
                 search = acarshub_db.database_search(message['field'], message['search_term'])
         elif 'show_all' in message:
             if 'results_after' in message:
+                print("here")
                 search = acarshub_db.show_all(message['results_after'] * 20)
             else:
                 search = acarshub_db.show_all()

@@ -1,12 +1,8 @@
-function display_messages(msgs_to_process, convert, ) {
+function display_messages(msgs_to_process) {
     var msgs_string = '';
     for (var i = 0; i < msgs_to_process.length; i++){
         //msgs_string = '<p>' + msgs_received[i].toString() + '</p>' + msgs_string;
-        var message;
-        if(convert)
-            message = JSON.parse(msgs_to_process[i]);
-        else
-            message = msgs_to_process[i];
+        var message = msgs_to_process[i];
         var html_output = "<p><table id=\"shadow\">";
 
         // Clean up any useless keys
