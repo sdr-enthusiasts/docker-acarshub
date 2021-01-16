@@ -133,9 +133,11 @@ RUN set -x && \
     make install && \
     popd && popd && \
     # acarsdec
-    git clone https://github.com/fredclausen/acarsdec.git /src/acarsdec && \
+    #git clone https://github.com/fredclausen/acarsdec.git /src/acarsdec && \
+    git clone --single-branch --branch testing https://github.com/airframesio/acarsdec.git /src/acarsdec && \
     pushd /src/acarsdec && \
-    git checkout master && \
+    #git checkout master && \
+    git checkout testing && \
     mkdir build && \
     pushd build && \
     cmake ../ -Drtl=ON && \
