@@ -257,7 +257,7 @@ function loop_array(input) {
             else if(m == "value") {
                 html_output += input[m] + "<br>";
             } else {
-                console.log(`Unknown item ${m}`);
+                console.log(`Unknown item ${m} ${input[m]}`);
             }
         }
     }

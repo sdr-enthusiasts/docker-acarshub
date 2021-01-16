@@ -26,6 +26,10 @@ if [ -n "${ENABLE_ACARS}" ]; then
 		ACARS_CMD+=("-v")
 	fi
 
+	if [ -n "${ACARS_RTLMULT}" ]; then
+		ACARS_CMD+=("-m" "$ACARS_RTLMULT")
+	fi
+
 	# Send output JSON to acars_server
 	ACARS_CMD+=("-j" '127.0.0.1:5550')
 

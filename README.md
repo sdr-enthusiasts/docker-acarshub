@@ -178,7 +178,7 @@ Formatting is as follows: `IATA|ICAO|Airline Name`
 
 If you have multiple airlines you wish to override, you add in a `;` between them, such as the following: `UP|UPS|United Parcel Service;US|AAL|American Airlines`
 
-For anyone in the US, I suggest adding `IATA_OVERRIDE=UP|UPS|United Parcel Service` to start out with.
+For anyone in the US, I suggest adding `IATA_OVERRIDE=UP|UPS|United Parcel Service;GS|FTH|Mountain Aviation (Foothills)` to start out with.
 
 If there are airlines you notice that are wrong because the data used is wrong (IATA codes do change over time as airlines come and go), or airlines that are missing from the database that do have an IATA code, submit a PR above and I'll get it in there!
 
