@@ -175,8 +175,18 @@ def htmlListener():
             if "toaddr" in json_message.keys():
                 json_message['toaddr_hex'] = format(int(json_message['toaddr']), 'X')
 
+                toaddr_icao, toaddr_name = acarshub_db.lookup_groundstation(json_message['toaddr_hex'])
+
+                if toaddr_icao is not None:
+                    json_message['toaddr_decoded'] = f"{toaddr_name} ({toaddr_icao})"
+
             if "fromaddr" in json_message.keys():
                 json_message['fromaddr_hex'] = format(int(json_message['fromaddr']), 'X')
+
+                fromaddr_icao, fromaddr_name = acarshub_db.lookup_groundstation(json_message['fromaddr_hex'])
+
+                if fromaddr_icao is not None:
+                    json_message['fromaddr_decoded'] = f"{fromaddr_name} ({fromaddr_icao})"
 
             socketio.emit('newmsg', {'msghtml': json_message}, namespace='/main')
             if DEBUG_LOGGING:
@@ -464,11 +474,21 @@ def main_connect():
             elif 'icao_hex' in json_message.keys():
                 json_message['icao_url'] = flight_finder(hex_code=json_message['icao_hex'])
 
-            if "toaddr" in json_message.keys():
+            if "toaddr" in json_message.keys() and json_message['toaddr'] is not None:
                 json_message['toaddr_hex'] = format(int(json_message['toaddr']), 'X')
 
-            if "fromaddr" in json_message.keys():
+                toaddr_icao, toaddr_name = acarshub_db.lookup_groundstation(json_message['toaddr_hex'])
+
+                if toaddr_icao is not None:
+                    json_message['toaddr_decoded'] = f"{toaddr_name} ({toaddr_icao})"
+
+            if "fromaddr" in json_message.keys() and json_message['fromaddr'] is not None:
                 json_message['fromaddr_hex'] = format(int(json_message['fromaddr']), 'X')
+
+                fromaddr_icao, fromaddr_name = acarshub_db.lookup_groundstation(json_message['fromaddr_hex'])
+
+                if fromaddr_icao is not None:
+                    json_message['fromaddr_decoded'] = f"{fromaddr_name} ({fromaddr_icao})"
 
             socketio.emit('newmsg', {'msghtml': json_message}, room=requester, namespace='/main')
 
@@ -581,8 +601,18 @@ def handle_message(message, namespace):
                 if "toaddr" in json_message.keys() and json_message['toaddr'] is not None:
                     json_message['toaddr_hex'] = format(int(json_message['toaddr']), 'X')
 
+                    toaddr_icao, toaddr_name = acarshub_db.lookup_groundstation(json_message['toaddr_hex'])
+
+                    if toaddr_icao is not None:
+                        json_message['toaddr_decoded'] = f"{toaddr_name} ({toaddr_icao})"
+
                 if "fromaddr" in json_message.keys() and json_message['fromaddr'] is not None:
                     json_message['fromaddr_hex'] = format(int(json_message['fromaddr']), 'X')
+
+                    fromaddr_icao, fromaddr_name = acarshub_db.lookup_groundstation(json_message['fromaddr_hex'])
+
+                    if fromaddr_icao is not None:
+                        json_message['fromaddr_decoded'] = f"{fromaddr_name} ({fromaddr_icao})"
 
                 serialized_json.insert(0, json.dumps(json_message))
 

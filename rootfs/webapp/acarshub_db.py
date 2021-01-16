@@ -7,6 +7,13 @@ from sqlalchemy.ext.declarative import declarative_base
 import os
 from sqlalchemy.ext.declarative import DeclarativeMeta
 import json
+import urllib.request
+import datetime
+# Download station IDs
+
+with urllib.request.urlopen("https://raw.githubusercontent.com/airframesio/data/master/json/vdl/ground-stations.json") as url:
+    groundStations = json.loads(url.read().decode())
+
 
 # DB PATH MUST BE FROM ROOT
 
@@ -506,6 +513,14 @@ def grab_most_recent():
         while traceback:
             print("{}: {}".format(traceback.tb_frame.f_code.co_filename, traceback.tb_lineno))
             traceback = traceback.tb_next
+
+def lookup_groundstation(lookup_id):
+    for i in range(len(groundStations['ground_stations'])):
+        if 'id' in groundStations['ground_stations'][i]:
+           if groundStations['ground_stations'][i]['id'] == lookup_id:
+               return (groundStations['ground_stations'][i]['airport']['icao'], groundStations['ground_stations'][i]['airport']['name'])
+
+    return (None, None)
 
 
 # We will pre-populate the count table if this is a new db

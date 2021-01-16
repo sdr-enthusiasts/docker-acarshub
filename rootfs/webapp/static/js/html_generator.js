@@ -50,16 +50,24 @@ function display_messages(msgs_to_process) {
         html_output += "<tr><td colspan=\"2\">";
 
         if(message.hasOwnProperty('toaddr')) {
+            var toaddr_decoded = "";
+
+            if(message.hasOwnProperty('toaddr_decoded')) {
+                toaddr_decoded = `<br>To Address Station ID: <strong>${message['toaddr_decoded']}<strong>`;
+            }
             if(message.hasOwnProperty('toaddr_hex')) {
-                html_output += `<p>To Address: <strong>${message['toaddr']}/${message['toaddr_hex']}</strong></p>`;
+                html_output += `<p>To Address: <strong>${message['toaddr']}/${message['toaddr_hex']}</strong>${toaddr_decoded}</p>`;
             } else {
                 html_output += `<p>To Address: <strong>${message['toaddr']}/?</strong></p>`;
             }
         }
 
         if(message.hasOwnProperty('fromaddr')) {
+            if(message.hasOwnProperty('fromaddr_decoded')) {
+                toaddr_decoded = `<br>From Address Station ID: ${message['fromaddr_decoded']}`;
+            }
             if(message.hasOwnProperty('fromaddr_hex')) {
-                html_output += `<p>To Address: <strong>${message['fromaddr']}/${message['fromaddr_hex']}</strong></p>`;
+                html_output += `<p>To Address: <strong>${message['fromaddr']}/${message['fromaddr_hex']}</strong>${fromaddr_decoded}</p>`;
             } else {
                 html_output += `<p>To Address: <strong>${message['fromaddr']}/?</strong></p>`;
             }
