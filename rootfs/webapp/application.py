@@ -70,6 +70,38 @@ error_messages = 0
 ADSB_URL = ""
 
 
+def update_keys(json_message):
+    if "libacars" in json_message.keys() and json_message['libacars'] is not None:
+        json_message['libacars'] = libacars_formatted(json_message['libacars'])
+
+    if "icao" in json_message.keys() and json_message['icao'] is not None:
+        json_message['icao_hex'] = format(int(json_message['icao']), 'X')
+
+    if "flight" in json_message.keys() and json_message['flight'] is not None and 'icao_hex' in json_message.keys():
+        json_message['flight'] = flight_finder(callsign=json_message['flight'], hex_code=json_message['icao_hex'])
+    elif "flight" in json_message.keys() and json_message['flight'] is not None:
+        json_message['flight'] = flight_finder(callsign=json_message['flight'], url=False)
+    elif 'icao_hex' in json_message.keys():
+        json_message['icao_url'] = flight_finder(hex_code=json_message['icao_hex'])
+
+    if "toaddr" in json_message.keys() and json_message['toaddr'] is not None:
+        json_message['toaddr_hex'] = format(int(json_message['toaddr']), 'X')
+
+        toaddr_icao, toaddr_name = acarshub_db.lookup_groundstation(json_message['toaddr_hex'])
+
+        if toaddr_icao is not None:
+            json_message['toaddr_decoded'] = f"{toaddr_name} ({toaddr_icao})"
+
+    if "fromaddr" in json_message.keys() and json_message['fromaddr'] is not None:
+        json_message['fromaddr_hex'] = format(int(json_message['fromaddr']), 'X')
+
+        fromaddr_icao, fromaddr_name = acarshub_db.lookup_groundstation(json_message['fromaddr_hex'])
+
+        if fromaddr_icao is not None:
+            json_message['fromaddr_decoded'] = f"{fromaddr_name} ({fromaddr_icao})"
+
+    return json_message
+
 def flight_finder(callsign=None, hex_code=None, url=True):
     global ADSB_URL
 
@@ -159,34 +191,7 @@ def htmlListener():
                 print("[htmlListener] sending output via socketio.emit")
             json_message.update({"message_type": message_source})
 
-            if "libacars" in json_message.keys():
-                json_message['libacars'] = libacars_formatted(json_message['libacars'])
-
-            if "icao" in json_message.keys():
-                json_message['icao_hex'] = format(int(json_message['icao']), 'X')
-
-            if "flight" in json_message.keys() and 'icao_hex' in json_message.keys():
-                json_message['flight'] = flight_finder(callsign=json_message['flight'], hex_code=json_message['icao_hex'])
-            elif "flight" in json_message.keys():
-                json_message['flight'] = flight_finder(callsign=json_message['flight'], url=False)
-            elif 'icao_hex' in json_message.keys():
-                json_message['icao_url'] = flight_finder(hex_code=json_message['icao_hex'])
-
-            if "toaddr" in json_message.keys():
-                json_message['toaddr_hex'] = format(int(json_message['toaddr']), 'X')
-
-                toaddr_icao, toaddr_name = acarshub_db.lookup_groundstation(json_message['toaddr_hex'])
-
-                if toaddr_icao is not None:
-                    json_message['toaddr_decoded'] = f"{toaddr_name} ({toaddr_icao})"
-
-            if "fromaddr" in json_message.keys():
-                json_message['fromaddr_hex'] = format(int(json_message['fromaddr']), 'X')
-
-                fromaddr_icao, fromaddr_name = acarshub_db.lookup_groundstation(json_message['fromaddr_hex'])
-
-                if fromaddr_icao is not None:
-                    json_message['fromaddr_decoded'] = f"{fromaddr_name} ({fromaddr_icao})"
+            json_message = update_keys(json_message)
 
             socketio.emit('newmsg', {'msghtml': json_message}, namespace='/main')
             if DEBUG_LOGGING:
@@ -461,34 +466,7 @@ def main_connect():
             for key in stale_keys:
                 del json_message[key]
 
-            if "libacars" in json_message.keys() and json_message['libacars'] is not None:
-                json_message['libacars'] = libacars_formatted(json_message['libacars'])
-
-            if "icao" in json_message.keys() and json_message['icao'] is not None:
-                json_message['icao_hex'] = format(int(json_message['icao']), 'X')
-
-            if "flight" in json_message.keys() and json_message['flight'] is not None and 'icao_hex' in json_message.keys():
-                json_message['flight'] = flight_finder(callsign=json_message['flight'], hex_code=json_message['icao_hex'])
-            elif "flight" in json_message.keys() and json_message['flight'] is not None:
-                json_message['flight'] = flight_finder(callsign=json_message['flight'], url=False)
-            elif 'icao_hex' in json_message.keys():
-                json_message['icao_url'] = flight_finder(hex_code=json_message['icao_hex'])
-
-            if "toaddr" in json_message.keys() and json_message['toaddr'] is not None:
-                json_message['toaddr_hex'] = format(int(json_message['toaddr']), 'X')
-
-                toaddr_icao, toaddr_name = acarshub_db.lookup_groundstation(json_message['toaddr_hex'])
-
-                if toaddr_icao is not None:
-                    json_message['toaddr_decoded'] = f"{toaddr_name} ({toaddr_icao})"
-
-            if "fromaddr" in json_message.keys() and json_message['fromaddr'] is not None:
-                json_message['fromaddr_hex'] = format(int(json_message['fromaddr']), 'X')
-
-                fromaddr_icao, fromaddr_name = acarshub_db.lookup_groundstation(json_message['fromaddr_hex'])
-
-                if fromaddr_icao is not None:
-                    json_message['fromaddr_decoded'] = f"{fromaddr_name} ({fromaddr_icao})"
+            json_message = update_keys(json_message)
 
             socketio.emit('newmsg', {'msghtml': json_message}, room=requester, namespace='/main')
 
@@ -588,31 +566,7 @@ def handle_message(message, namespace):
             total_results = search[1]
             # Loop through the results and format html
             for result in query_result:
-                json_message = json.loads(result)
-                if "icao" in json_message.keys() and json_message['icao'] is not None:
-                    json_message['icao_hex'] = format(int(json_message['icao']), 'X')
-
-                if "libacars" in json_message.keys() and json_message['libacars'] is not None:
-                    json_message['libacars'] = libacars_formatted(json_message['flight'])
-
-                if "flight" in json_message.keys() and json_message['flight'] is not None:
-                    json_message['flight'] = flight_finder(callsign=json_message['flight'], url=False)
-
-                if "toaddr" in json_message.keys() and json_message['toaddr'] is not None:
-                    json_message['toaddr_hex'] = format(int(json_message['toaddr']), 'X')
-
-                    toaddr_icao, toaddr_name = acarshub_db.lookup_groundstation(json_message['toaddr_hex'])
-
-                    if toaddr_icao is not None:
-                        json_message['toaddr_decoded'] = f"{toaddr_name} ({toaddr_icao})"
-
-                if "fromaddr" in json_message.keys() and json_message['fromaddr'] is not None:
-                    json_message['fromaddr_hex'] = format(int(json_message['fromaddr']), 'X')
-
-                    fromaddr_icao, fromaddr_name = acarshub_db.lookup_groundstation(json_message['fromaddr_hex'])
-
-                    if fromaddr_icao is not None:
-                        json_message['fromaddr_decoded'] = f"{fromaddr_name} ({fromaddr_icao})"
+                json_message = update_keys(json.loads(result))
 
                 serialized_json.insert(0, json.dumps(json_message))
 
