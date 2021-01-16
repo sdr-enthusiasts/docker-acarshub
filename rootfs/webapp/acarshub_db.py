@@ -11,9 +11,10 @@ import urllib.request
 import datetime
 # Download station IDs
 
+print("[database] Downloading Station IDs")
 with urllib.request.urlopen("https://raw.githubusercontent.com/airframesio/data/master/json/vdl/ground-stations.json") as url:
     groundStations = json.loads(url.read().decode())
-
+print("[database] Completed downloading Station IDs")
 
 # DB PATH MUST BE FROM ROOT
 
