@@ -116,8 +116,11 @@ function display_messages(msgs_to_process) {
             //html_output += "</p>";
             if(message.hasOwnProperty("decodedText")) {
                 //html_output += "<p>";
+                var decodedStatus = "Full";
+                if(message['decodedText'].decoder.decodeLevel != "full")
+                    decodedStatus = "Partial";
                 html_output += "<td class=\"text_top\">";
-                html_output += "<strong>Decoded text:</strong></p>"
+                html_output += `<strong>Decoded Text (${decodedStatus}):</strong></p>`;
                 html_output += "<pre id=\"shadow\"><strong>";
                 html_output += loop_array(message['decodedText'].formatted);
                 //html_output += `${message['decodedText'].raw}`;
@@ -129,7 +132,7 @@ function display_messages(msgs_to_process) {
             }
 
             html_output += "<td class=\"text_top\">";
-            html_output += "<strong>Non-decoded text:</strong><p>";
+            html_output += "<strong>Non-Decoded Text:</strong><p>";
             html_output += `<pre id=\"shadow\"><strong>${text}</strong></pre>`;
             html_output += "</td>";
             html_output += "</tr></table>";
