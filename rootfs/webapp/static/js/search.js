@@ -145,10 +145,10 @@ function display_search(current, total) {
     if(total == 0)
         return html + '<span class="menu_non_link">No results</span>';
 
-    if(total % 20 != 0)
-        total_pages = ~~(total / 20) + 1;
+    if(total % 50 != 0)
+        total_pages = ~~(total / 50) + 1;
     else
-        total_pages = ~~(total / 20);
+        total_pages = ~~(total / 50);
 
     html += '<table class="search"><thead><th class="search_label"></th><th class="search_term"></th></thead>';
     html += `<tr><td colspan="2"><span class="menu_non_link">Found <strong>${total}</strong> result(s) in <strong>${total_pages}</strong> page(s).</span></td></tr>`;

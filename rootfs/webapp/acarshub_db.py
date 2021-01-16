@@ -374,10 +374,10 @@ def database_search(field, search_term, page=0):
         print("[database] Done searching")
 
     if result.count() > 0:
-        data = [json.dumps(d, cls=AlchemyEncoder) for d in result[page:page + 20]]
+        data = [json.dumps(d, cls=AlchemyEncoder) for d in result[page:page + 50]]
         return [data, result.count()]
     else:
-        return [None, 20]
+        return [None, 50]
 
 
 def show_all(page=0):
@@ -395,10 +395,10 @@ def show_all(page=0):
             traceback = traceback.tb_next
 
     if result.count() > 0:
-        data = [json.dumps(d, cls=AlchemyEncoder) for d in result[page:page + 20]]
+        data = [json.dumps(d, cls=AlchemyEncoder) for d in result[page:page + 50]]
         return [data, result.count()]
     else:
-        return [None, 20]
+        return [None, 50]
 
 
 def get_freq_count():

@@ -434,6 +434,11 @@ def search():
     return render_template('search.html')
 
 
+@app.route('/about')
+def about():
+    return render_template('about.html')
+
+
 # The listener for the live message page
 # Ensure the necessary listeners are fired up
 
@@ -553,7 +558,7 @@ def handle_message(message, namespace):
                 search = acarshub_db.database_search(message['field'], message['search_term'])
         elif 'show_all' in message:
             if 'results_after' in message:
-                search = acarshub_db.show_all(message['results_after'] * 20)
+                search = acarshub_db.show_all(message['results_after'] * 50)
             else:
                 search = acarshub_db.show_all()
 
