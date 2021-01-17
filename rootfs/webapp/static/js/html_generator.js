@@ -15,18 +15,6 @@ function display_messages(msgs_to_process) {
             delete message['id'];
         }
 
-        if(message.hasOwnProperty('channel')) {
-            delete message['channel'];
-        }
-
-        if(message.hasOwnProperty('level')) {
-            delete message['level'];
-        }
-
-        if(message.hasOwnProperty('end')) {
-            delete message['end'];
-        }
-
         // iterate over json and remove blank keys
 
         for (var key in message) {
