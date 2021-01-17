@@ -8,8 +8,8 @@ if [ -n "${ENABLE_ACARS}" ]; then
 
 	ACARS_BIN="/usr/local/bin/acarsdec"
 
-	if [ -n "$GAIN" ]; then
-	    GAIN_ACARS="$GAIN"
+	if [ -n "$GAIN_ACARS" ]; then
+	    GAIN_ACARS="-10"
 	fi
 	
 	ACARS_CMD=("-g" "$GAIN_ACARS" "-i" "$STATION_ID_ACARS")

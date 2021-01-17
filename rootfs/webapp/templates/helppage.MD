@@ -34,3 +34,7 @@ We've made an effort to provide a maximum amount of information about the messag
 
 Additionally, some fields include a tool-tip if they include extra information (such as the `Flight` field if the webapp was able to decipher the airline name), or if the field name is abbreviated (such as the `Mode` field), the tool-tip will give the full name of the field.
 
+---
+
+Your feedback has been instrumental in improving this little project from a bare-bones website showing raw data to what it is now, and it is instrumental to guiding future improvements and making it a complete solution for feeding, receiving and viewing ACARS/VDLM data. Please, don't be a stranger on the [Discord](https://discord.gg/sTf9uYF) server and let us know what you think!
+

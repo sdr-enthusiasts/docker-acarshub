@@ -5,6 +5,10 @@
 
 mkdir -p /run/acars/
 
+if [ -n "${GAIN}" ]; then
+	echo "Error. Please use GAIN_ACARS and GAIN_VDLM to set the gain."
+fi
+
 if [ -n "${ENABLE_ACARS}" ]; then
 	if [ -z "${STATION_ID_ACARS}" ]; then
 		echo "Error: ACARS enabled with no STATION_ID_ACARS set. Exiting"
