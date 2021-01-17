@@ -79,6 +79,13 @@ class messagesCount(Messages):
     good = Column('good', Integer)
 
 
+class messagesCountDropped(Messages):
+    __tablename__ = 'nonlogged_count'
+    id = Column(Integer, primary_key=True)
+    nonlogged_errors = Column('errors', Integer)
+    nonlogged_good = Column('good', Integer)
+
+
 class messages(Messages):
     __tablename__ = 'messages'
     id = Column(Integer, primary_key=True)
@@ -257,13 +264,6 @@ def add_message_from_json(message_type, message_from_json):
 
     try:
         session = db_session()
-        count = session.query(messagesCount).first()
-        count.total += 1
-
-        if error is not None and error > 0:
-            count.errors += 1
-        else:
-            count.good += 1
 
         found_freq = session.query(messagesFreq).filter(messagesFreq.freq == f"{freq}" and messagesFreq.freq_type == message_type).first()
 
@@ -276,7 +276,14 @@ def add_message_from_json(message_type, message_from_json):
            dsta is not None or depa is not None or eta is not None or gtout is not None or \
            gtin is not None or wloff is not None or wlin is not None or lat is not None or \
            lon is not None or alt is not None:
-            # create a session for this thread to write
+            
+            count = session.query(messagesCount).first()
+            count.total += 1
+
+            if error is not None and error > 0:
+                count.errors += 1
+            else:
+                count.good += 1
 
             # write the message
             if os.getenv("DEBUG_LOGGING", default=False):
@@ -289,6 +296,12 @@ def add_message_from_json(message_type, message_from_json):
                                  flight=flight, icao=icao, freq=freq, ack=ack, mode=mode, label=label, block_id=block_id,
                                  msgno=msgno, is_response=is_response, is_onground=is_onground, error=error, libacars=libacars))
         elif os.getenv("DEBUG_LOGGING", default=False):
+            count = session.query(messagesCountDropped).first()
+
+            if error is not None and error > 0:
+                count.nonlogged_errors += 1
+            else:
+                count.nonlogged_good += 1
             print(f"[database] discarding no text message: {message_from_json}")
 
         # commit the db change and close the session
@@ -466,9 +479,10 @@ def get_errors():
     try:
         session = db_session()
         count = session.query(messagesCount).first()
+        nonlogged = session.query(messagesCountDropped).first()
         session.close()
 
-        return (count.total, count.errors)
+        return (count.total, count.errors, nonlogged.nonlogged_good, nonlogged.nonlogged_errors)
 
     except Exception as e:
         traceback = e.__traceback__
@@ -538,6 +552,12 @@ try:
         session.add(messagesCount(total=total_messages, errors=total_errors, good=good_msgs))
         session.commit()
         print("[database] Count database initialized")
+
+    if session.query(messagesCountDropped).count() == 0:
+        print("[database] Initializing dropped count database")
+        session.add(messagesCountDropped(nonlogged_good=0, nonlogged_errors=0))
+        session.commit()
+        print("[database] Dropped count database initialized")
 
     # now we pre-populate the freq db if empty
 
