@@ -37,6 +37,10 @@ table.message {
   vertical-align: top;
 }
 
+img {
+  max-width: 100%;
+}
+
 td {
   padding: 7px;
 }

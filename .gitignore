@@ -97,3 +97,11 @@ rootfs/webapp/static/airframes-acars-decoder
 rootfs/webapp/static/js/Dockerfile.testing
 Dockerfile.testing
 build-acg.sh
+rootfs/webapp/static/images/6months.png
+rootfs/webapp/static/images/12hour.png
+rootfs/webapp/static/images/1hour.png
+rootfs/webapp/static/images/1week.png
+rootfs/webapp/static/images/1year.png
+rootfs/webapp/static/images/24hours.png
+rootfs/webapp/static/images/30days.png
+rootfs/webapp/static/images/6hour.png
