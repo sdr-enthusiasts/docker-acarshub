@@ -277,14 +277,6 @@ def add_message_from_json(message_type, message_from_json):
            gtin is not None or wloff is not None or wlin is not None or lat is not None or \
            lon is not None or alt is not None:
             
-            count = session.query(messagesCount).first()
-            count.total += 1
-
-            if error is not None and error > 0:
-                count.errors += 1
-            else:
-                count.good += 1
-
             # write the message
             if os.getenv("DEBUG_LOGGING", default=False):
                 print("[database] writing to the database")
@@ -296,13 +288,30 @@ def add_message_from_json(message_type, message_from_json):
                                  flight=flight, icao=icao, freq=freq, ack=ack, mode=mode, label=label, block_id=block_id,
                                  msgno=msgno, is_response=is_response, is_onground=is_onground, error=error, libacars=libacars))
         elif os.getenv("DEBUG_LOGGING", default=False):
+            print(f"[database] discarding no text message: {message_from_json}")
+
+        # Now lets decide where to log the message count to
+
+        if text is not None or libacars is not None or \
+           dsta is not None or depa is not None or eta is not None or gtout is not None or \
+           gtin is not None or wloff is not None or wlin is not None or lat is not None or \
+           lon is not None or alt is not None:
+
+            count = session.query(messagesCount).first()
+            count.total += 1
+
+            if error is not None and error > 0:
+                count.errors += 1
+            else:
+                count.good += 1
+
+        else:
             count = session.query(messagesCountDropped).first()
 
             if error is not None and error > 0:
                 count.nonlogged_errors += 1
             else:
                 count.nonlogged_good += 1
-            print(f"[database] discarding no text message: {message_from_json}")
 
         # commit the db change and close the session
         session.commit()
