@@ -94,7 +94,7 @@ Please note that for `TAR1090_URL` the required format is `http[s]://**HOSTNAME*
 | Variable | Description | Required | Default |
 |----------|-------------|---------|--------|
 | `ENABLE_ACARS` | Toggle ACARS decoding on. If set to any non-blank value ACARS decoding will start | No | Blank |
-| `GAIN_ACARS`     | Sets the gain for the dongle used for ACARS. See notes blow | No | `28.0` |
+| `GAIN_ACARS`     | Sets the gain for the dongle used for ACARS. See notes blow | No | `-10` (auto-gain) |
 | `STATION_ID_ACARS` | Your unique ID for the ACARS feed. Used on the [ACARS.io](http://acars.io) site. Follow the guide [here](https://app.airframes.io/about) for formatting. | Yes, if ENABLE_ACARS is enabled | Blank |
 | `FREQS_ACARS` | List of frequencies, separaed by a single `;`, used for ACARS monitoring. | Yes, if ENABLE_ACARS is enabled | Blank |
 | `ACARS_PPM` | If your SDR requires a PPM correction, set this value | No | Blank |
