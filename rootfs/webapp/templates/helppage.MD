@@ -1,6 +1,6 @@
-###ACARS Hub About/Help
+### ACARS Hub About/Help
 
-####About
+#### About
 
 ACARS Hub is a collaborative, open source effort to easily enable reception of, feeding to [Airframes.io](airframes.io), and local viewing of VDLM2/ACARS messages.
 
@@ -16,7 +16,7 @@ There are three main pages you can interact with:
 
 ACARS is a pretty cool technology and these planes are sending an awful lot of information in a coded way. We are constantly working, along with the folks at [Airframes.io](airframes.io), to decode the messages in a more refined, human-readable way. This is an on-going project so expect to see both decoded and non-decoded messages.
 
-We've made an effort to provide a maximum amount of information about the message in a compact, yet readable, way. Below is a list of terms/acronyms used throughout the web app and what they represent. 
+We've made an effort to provide a maximum amount of information about the message in a compact, yet readable, way. Below is a list of terms/acronyms used throughout the web app and what they represent.
 
 Not all messages will include every field, but the fields received for that message will be displayed.
 
@@ -40,7 +40,7 @@ Not all messages will include every field, but the fields received for that mess
 
 Additionally, some fields include a tool-tip if they include extra information (such as the `Flight` field if the web app was able to decipher the airline name), or if the field name is abbreviated (such as the `Mode` field), the tool-tip will give the full name of the field.
 
-####Feedback / Help
+#### Feedback / Help
 
 Your feedback has been instrumental in improving this little project from a bare-bones website showing raw data to what it is now, and it is instrumental to guiding future improvements and making it a complete solution for feeding, receiving and viewing ACARS/VDLM data. Please, don't be a stranger on the [Discord](https://discord.gg/sTf9uYF) server and let us know what you think!
 
