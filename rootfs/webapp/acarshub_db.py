@@ -566,7 +566,7 @@ def lookup_label(label):
         if 'Code' in message_labels[i]:
             if message_labels[i]['Code'] == label:
                 return message_labels[i]['Message Type']
-
+    print(f"[database] Unknown message label: {label}")
     return None
 
 
