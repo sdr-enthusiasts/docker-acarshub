@@ -43,3 +43,5 @@ Additionally, some fields include a tool-tip if they include extra information (
 ####Feedback / Help
 
 Your feedback has been instrumental in improving this little project from a bare-bones website showing raw data to what it is now, and it is instrumental to guiding future improvements and making it a complete solution for feeding, receiving and viewing ACARS/VDLM data. Please, don't be a stranger on the [Discord](https://discord.gg/sTf9uYF) server and let us know what you think!
+
+Also the [Discord](https://discord.gg/sTf9uYF) server is a great place to get technical assistance in setting up the container or troubleshooting any issues that you might run in to. No question is too "simple" and there are plenty of folks around to help out.
