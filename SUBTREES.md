@@ -20,12 +20,12 @@ git subtree pull --prefix acars-decoder-typescript https://github.com/airframesi
 **To split changes into a fork:**
 
 1. Create a personal fork of `airframesio/acars-decoder-typescript`
-2. In your local `fredclausen/docker-acarshub` repo:
+1. In your local `fredclausen/docker-acarshub` repo:
 
     `git subtree split --prefix=acars-decoder-typescript --branch <NEW_BRANCH_NAME>`
 
-3. Push changes local `fredclausen/docker-acarshub` into fork:
+1. Push changes local `fredclausen/docker-acarshub` into fork:
 
     `git push <GITHUB_FORK_URL> <NEW_BRANCH_NAME>:<NEW_REMOTE_BRANCH_NAME>`
 
-4. Issue a PR from your personal fork of `acars-decoder-typescript` to `airframesio/acars-decoder-typescript`
+1. Issue a PR from your personal fork of `acars-decoder-typescript` to `airframesio/acars-decoder-typescript`

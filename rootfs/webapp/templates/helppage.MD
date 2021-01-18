@@ -7,8 +7,8 @@ ACARS Hub is a collaborative, open source effort to easily enable reception of, 
 There are three main pages you can interact with:
 
 1. `Live Messages`. This page will show you a rolling, constantly updated, list of up to the 50 most recent live messages as they come in. You can filter out messages that do not contain any information (the `Filter Out 'No Text' Messages/Show 'No Text' Messages` link on the right side), as well as pause the page update so you can catch up with messages.
-2. `Search Database`. If you want to look for interesting messages from the past you can use this page to have a look. On the right side, the `Most Recent Messages` will provide a look at your messages in chronological order, most recent first. Otherwise, you can use the provided search for to select the field you are interested in searching and the term to look for.
-3. `Statistics`. This page will provide an insight in to the data you've collected.
+1. `Search Database`. If you want to look for interesting messages from the past you can use this page to have a look. On the right side, the `Most Recent Messages` will provide a look at your messages in chronological order, most recent first. Otherwise, you can use the provided search for to select the field you are interested in searching and the term to look for.
+1. `Statistics`. This page will provide an insight in to the data you've collected.
 
 ---
 
@@ -19,14 +19,14 @@ We've made an effort to provide a maximum amount of information about the messag
 Not all messages will include every field, but the fields received for that message will be displayed.
 
 1. `To Address` or `From Address`: This is a unique address for the ground station that originated the message (in the case of a `From` message) or the address of the ground station meant to receive the message in the case of an aircraft originated message. If the ground station ID is recognized, we also display the name/location of the station as `To/From Address Station ID`.
-2. `ICAO`: This is a unique address for the aircraft that is sending/receiving the message.
-3. `F`/`Frequency`: This is the frequency that the message was received on.
-4. `M`/`Mode`: A code generally used to indicate the indicated 'country' or intended recipient of the message.
-5. `L`/`Label`: A code used to indicate the contents of the message. The list is really long, but common ones indicate a request for airport ATIS, position report, among many many others.
-6. `B`/`Block ID`: Used to assist the stations in decoding message.
-7. `M#`/`Message Number`: A sequential combination of numbers and letters used to indicate a multi-part message, and what the correct order of the messages is.
-8. `R`/`Response`: Used by the sender/transmitter to indicate if the message was received properly, or if re-transmission is necessary.
-9. `E`/`Error`: The inclusion of this field on the website indicates the decoder successfully decoded part of a message, but there was an error in at least one field that it wasn't able to decode. The parts of the message that were decoded are displayed, but there will be missing fields.
+1. `ICAO`: This is a unique address for the aircraft that is sending/receiving the message.
+1. `F`/`Frequency`: This is the frequency that the message was received on.
+1. `M`/`Mode`: A code generally used to indicate the indicated 'country' or intended recipient of the message.
+1. `L`/`Label`: A code used to indicate the contents of the message. The list is really long, but common ones indicate a request for airport ATIS, position report, among many many others.
+1. `B`/`Block ID`: Used to assist the stations in decoding message.
+1. `M#`/`Message Number`: A sequential combination of numbers and letters used to indicate a multi-part message, and what the correct order of the messages is.
+1. `R`/`Response`: Used by the sender/transmitter to indicate if the message was received properly, or if re-transmission is necessary.
+1. `E`/`Error`: The inclusion of this field on the website indicates the decoder successfully decoded part of a message, but there was an error in at least one field that it wasn't able to decode. The parts of the message that were decoded are displayed, but there will be missing fields.
 
 Additionally, some fields include a tool-tip if they include extra information (such as the `Flight` field if the web app was able to decipher the airline name), or if the field name is abbreviated (such as the `Mode` field), the tool-tip will give the full name of the field.
 
