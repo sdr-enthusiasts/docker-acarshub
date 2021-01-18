@@ -1,24 +1,3 @@
-# Firstly, build airframesio/acars-decoder-typescript
-# Done in separate build stage to prevent having to install node + dependencies in final image
-
-FROM node:latest AS acars-decoder-typescript-builder
-
-SHELL ["/bin/bash", "-o", "pipefail", "-c"]
-
-COPY acars-decoder-typescript/ /src/acars-decoder-typescript/
-
-RUN set -x && \
-    pushd /src/acars-decoder-typescript && \
-    # Patch build to run in browser (outside of nodejs)
-    # https://stackoverflow.com/questions/44709031/build-for-both-browser-and-nodejs
-    # https://medium.com/collaborne-engineering/typescript-create-library-for-nodejs-and-browser-fece291d517f
-    sed -i '/"module": "commonjs",/d' tsconfig.json && \
-    yarn install && \
-    yarn build && \
-    yarn pack
-
-# Lastly, build final image
-
 FROM debian:stable-slim
 
 ENV BRANCH_RTLSDR="ed0317e6a58c098874ac58b769cf2e609c18d9a5" \
@@ -44,7 +23,7 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 COPY rootfs/ /
 
 # Copy in acars-decoder-typescript from previous build stage
-COPY --from=acars-decoder-typescript-builder /src/acars-decoder-typescript/*.tgz /src/
+COPY acars-decoder-typescript.tgz /src/acars-decoder-typescript.tgz
 
 RUN set -x && \
     TEMP_PACKAGES=() && \
@@ -158,7 +137,7 @@ RUN set -x && \
     mkdir -p /run/acars && \
     # extract airframes-acars-decoder package to /webapp/static/airframes-acars-decoder
     mkdir -p /src/airframes-acars-decoder && \
-    find /src -maxdepth 1 -type f -iname "airframes-acars-decoder-*.tgz" -exec tar xvf {} -C /src/airframes-acars-decoder \; && \
+    tar xvf /src/acars-decoder-typescript.tgz -C /src/airframes-acars-decoder \; && \
     mkdir -p /webapp/static/airframes-acars-decoder && \ 
     mv -v /src/airframes-acars-decoder/package/dist/* /webapp/static/airframes-acars-decoder/ && \
     # patch airframes-acars-decoder package so imports work
