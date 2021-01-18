@@ -10,6 +10,7 @@ const md = new MessageDecoder();
 $(document).ready(function(){
     //connect to the socket server.
     generate_menu();
+    generate_footer();
     socket = io.connect('http://' + document.domain + ':' + location.port + '/search');
     var msgs_received = [];
     var num_results = [];

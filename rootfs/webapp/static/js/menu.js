@@ -39,3 +39,8 @@ function generate_menu(){
     text += "<p><span id=\"msgs\"></span></p>";
  	$('#stat_menu').html(text);
  }
+
+ function generate_footer() {
+    var html = '<strong><a href="/about">ACARS Hub Help/About</a> | <a href="https://github.com/fredclausen/docker-acarshub" target="_blank">Project Github</a> | <a href="https://discord.gg/sTf9uYF"><img src="https://img.shields.io/discord/734090820684349521" alt="discord"></a> |</strong>';
+    $('#footer_div').html(html);
+ }

@@ -2,6 +2,7 @@
 var image_prefix = '';
 $(document).ready(function(){
 	generate_menu();
+	generate_footer();
 
 	socket = io.connect('http://' + document.domain + ':' + location.port + '/stats');
 	socket.on('newmsg', function(msg) {

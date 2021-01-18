@@ -86,6 +86,7 @@ window.filter_notext = function() {
 $(document).ready(function(){
     //connect to the socket server.
     generate_menu();
+    generate_footer();
     socket = io.connect('http://' + document.domain + ':' + location.port + '/main');
 
     var filter = Cookies.get("filter");
