@@ -54,7 +54,8 @@ jobs:
       - 
         name: "Patch airframesio/acars-decoder-typescript to run in browser (outside of nodejs)"
         working-directory: ./acars-decoder-typescript
-        run: sed -i '/"module": "commonjs",/d' tsconfig.json
+        run: |
+          sed -i '/"module": "commonjs",/d' tsconfig.json
 
       # Build build airframesio/acars-decoder-typescript
       - 
