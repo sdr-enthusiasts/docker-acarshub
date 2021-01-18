@@ -25,43 +25,57 @@
       </div>
     </div>
       <div class="left" id="log">
-        <p>ACARS Hub About/Help</p>
-        <p>ACARS Hub is a collabrative, open source effort to easily enable reception of, and viewing, VDLM2/ACARS messages</p>
+        <h3>ACARS Hub About/Help</h3>
+        <h4>About</h4>
+        <p>ACARS Hub is a collaborative, open source effort to easily enable reception of, feeding to <a href="airframes.io">Airframes.io</a>, and local viewing of VDLM2/ACARS messages.</p>
         <p>There are three main pages you can interact with:</p>
-        <ul>
-        <li><p><code>Live Messages</code>. This page will show you a rolling, constantly updated, list of up to the 50 most recent live messages as they come in. You can filter out messages that do not contain any information (the <code>Filter Out &#39;No Text&#39; Messages/Show &#39;No Text&#39; Messages</code> link on the right side), as well as pause the page update so you can catch up with messages.</p>
+        <ol>
+        <li>
+        <p><code>Live Messages</code>. This page will show you a rolling, constantly updated, list of up to the 50 most recent live messages as they come in. You can filter out messages that do not contain any information (the <code>Filter Out 'No Text' Messages/Show 'No Text' Messages</code> link on the right side), as well as pause the page update so you can catch up with messages.</p>
         </li>
-        <li><p><code>Search Database</code>. If you want to look for interesting messages from the past you can use this page to have a look. On the right side, the <code>Most Recent Messages</code> will provide a look at your messages in chronological order, most recent first. Otherwise, you can use the provided search for to select the field you are interested in searching and the term to look for.</p>
+        <li>
+        <p><code>Search Database</code>. If you want to look for interesting messages from the past you can use this page to have a look. On the right side, the <code>Most Recent Messages</code> will provide a look at your messages in chronological order, most recent first. Otherwise, you can use the provided search for to select the field you are interested in searching and the term to look for.</p>
         </li>
-        <li><p>Statistics. This page will provide an insight in to the data you&#39;ve collected.</p>
+        <li>
+        <p><code>Statistics</code>. This page will provide an insight in to the data you've collected.</p>
         </li>
-        </ul>
-        <p>ACARS is a pretty cool technology, and these planes are sending an awful lot of information in a coded way. We are constantly working, along with the folks as <a href="airframes.io">Airframes.io</a>, to decode the messages in a more refined, human-readable way. This is an on-going project, so expect to see both decoded and non-decoded messages.</p>
-        <p>We&#39;ve made an effort to provide a maximum amount of information about the message in a compact, yet readable, way. We&#39;ve had to resort to some short-hand to accomplish this. Below is a list of those terms and what they represent. Not all messages will include every field, but the fields received for that message will be displayed.</p>
-        <ul>
-        <li><p><code>To Address</code> or <code>From Address</code>: This is a unique address for the ground station that originated the message (in the case of a <code>From</code> message) or the address of the ground station meant to receive the message in the case of an aircraft originated message. If the ground station ID is recognized, we also display the name/location of the station as <code>To/From Address Station ID</code>.</p>
+        </ol>
+        <hr />
+        <p>ACARS is a pretty cool technology and these planes are sending an awful lot of information in a coded way. We are constantly working, along with the folks at <a href="airframes.io">Airframes.io</a>, to decode the messages in a more refined, human-readable way. This is an on-going project so expect to see both decoded and non-decoded messages.</p>
+        <p>We've made an effort to provide a maximum amount of information about the message in a compact, yet readable, way. Below is a list of terms/acronyms used throughout the web app and what they represent. </p>
+        <p>Not all messages will include every field, but the fields received for that message will be displayed.</p>
+        <ol>
+        <li>
+        <p><code>To Address</code> or <code>From Address</code>: This is a unique address for the ground station that originated the message (in the case of a <code>From</code> message) or the address of the ground station meant to receive the message in the case of an aircraft originated message. If the ground station ID is recognized, we also display the name/location of the station as <code>To/From Address Station ID</code>.</p>
         </li>
-        <li><p><code>ICAO</code>: This is a unique address for the aircraft that is sending/receiving the message.</p>
+        <li>
+        <p><code>ICAO</code>: This is a unique address for the aircraft that is sending/receiving the message.</p>
         </li>
-        <li><p><code>Frequency</code>: This is the frequency that the message was received on.</p>
+        <li>
+        <p><code>F</code>/<code>Frequency</code>: This is the frequency that the message was received on.</p>
         </li>
-        <li><p><code>Mode</code>: A code generally used to indicate the indicated &#39;country&#39; or intended recipient of the message.</p>
+        <li>
+        <p><code>M</code>/<code>Mode</code>: A code generally used to indicate the indicated 'country' or intended recipient of the message.</p>
         </li>
-        <li><p><code>Label</code>: A code used to indicate the contents of the message. The list is really long, but common ones indicate a request for airport ATIS, position report, among many many others.</p>
+        <li>
+        <p><code>L</code>/<code>Label</code>: A code used to indicate the contents of the message. The list is really long, but common ones indicate a request for airport ATIS, position report, among many many others.</p>
         </li>
-        <li><p><code>Block ID</code>: Used to assist the stations in decoding message</p>
+        <li>
+        <p><code>B</code>/<code>Block ID</code>: Used to assist the stations in decoding message.</p>
         </li>
-        <li><p><code>Message Number</code>: A sequential combindation of numbers and letters used to indicate a multi-part message, and what the correct order of the messages is.</p>
+        <li>
+        <p><code>M#</code>/<code>Message Number</code>: A sequential combination of numbers and letters used to indicate a multi-part message, and what the correct order of the messages is.</p>
         </li>
-        <li><p><code>Response</code>: Used by the sender/transmitter to indicate if the message was received properly, or if re-transmission is necessary.</p>
+        <li>
+        <p><code>R</code>/<code>Response</code>: Used by the sender/transmitter to indicate if the message was received properly, or if re-transmission is necessary.</p>
         </li>
-        <li><p><code>Error</code>: The inclusion of this field on the website indicates the decoder successfully decoded part of a message, but there was an error in at least one field that it wasn&#39;t able to decode. The parts of the message that were decoded are displayed, but there will be missing fields.</p>
+        <li>
+        <p><code>E</code>/<code>Error</code>: The inclusion of this field on the website indicates the decoder successfully decoded part of a message, but there was an error in at least one field that it wasn't able to decode. The parts of the message that were decoded are displayed, but there will be missing fields.</p>
         </li>
-        </ul>
-        <p>Additionally, some fields include a tool-tip if they include extra information (such as the <code>Flight</code> field if the webapp was able to decipher the airline name), or if the field name is abbreviated (such as the <code>Mode</code> field), the tool-tip will give the full name of the field.</p>
-        <hr>
-        <p>Your feedback has been instrumental in improving this little project from a bare-bones website showing raw data to what it is now, and it is instrumental to guiding future improvements and making it a complete solution for feeding, receiving and viewing ACARS/VDLM data. Please, don&#39;t be a stranger on the <a href="https://discord.gg/sTf9uYF">Discord</a> server and let us know what you think!</p>
-
+        </ol>
+        <p>Additionally, some fields include a tool-tip if they include extra information (such as the <code>Flight</code> field if the web app was able to decipher the airline name), or if the field name is abbreviated (such as the <code>Mode</code> field), the tool-tip will give the full name of the field.</p>
+        <h4>Feedback / Help</h4>
+        <p>Your feedback has been instrumental in improving this little project from a bare-bones website showing raw data to what it is now, and it is instrumental to guiding future improvements and making it a complete solution for feeding, receiving and viewing ACARS/VDLM data. Please, don't be a stranger on the <a href="https://discord.gg/sTf9uYF">Discord</a> server and let us know what you think!</p>
       </div>
     </div>
     <div class="footer">

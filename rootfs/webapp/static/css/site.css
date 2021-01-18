@@ -41,6 +41,19 @@ img {
   max-width: 100%;
 }
 
+ol {
+  list-style-type:circle;;
+  margin-left:0px;
+  padding-left: 1em;
+  margin-left: 1em;
+}
+
+ol>li {
+  width: 100%;
+  margin-left:0px;
+  padding-left: 0px;
+}
+
 td {
   padding: 7px;
 }
