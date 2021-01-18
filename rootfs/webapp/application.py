@@ -439,6 +439,11 @@ def about():
     return render_template('about.html')
 
 
+@app.route('/aboutmd')
+def aboutmd():
+    return render_template('helppage.MD')
+
+
 # The listener for the live message page
 # Ensure the necessary listeners are fired up
 
