@@ -1,0 +1,18 @@
+# Firstly, build airframesio/acars-decoder-typescript
+# Done in separate build stage to prevent having to install node + dependencies in final image
+
+FROM node:latest AS acars-decoder-typescript-builder
+
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
+COPY acars-decoder-typescript/ /src/acars-decoder-typescript/
+
+RUN set -x && \
+    pushd /src/acars-decoder-typescript && \
+    # Patch build to run in browser (outside of nodejs)
+    # https://stackoverflow.com/questions/44709031/build-for-both-browser-and-nodejs
+    # https://medium.com/collaborne-engineering/typescript-create-library-for-nodejs-and-browser-fece291d517f
+    sed -i '/"module": "commonjs",/d' tsconfig.json && \
+    yarn install && \
+    yarn build && \
+    yarn pack --filename ../acars-decoder-typescript.tgz

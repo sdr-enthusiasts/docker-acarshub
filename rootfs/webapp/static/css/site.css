@@ -24,6 +24,36 @@ table.search {
   vertical-align: middle;
 }
 
+table.message {
+  border: none;
+  border-collapse: collapse;
+  width: 100%;
+  table-layout: fixed;
+  background-color: white;
+  vertical-align: top;
+}
+
+.text_top {
+  vertical-align: top;
+}
+
+img {
+  max-width: 100%;
+}
+
+ol {
+  list-style-type:circle;;
+  margin-left:0px;
+  padding-left: 1em;
+  margin-left: 1em;
+}
+
+ol>li {
+  width: 100%;
+  margin-left:0px;
+  padding-left: 0px;
+}
+
 td {
   padding: 7px;
 }

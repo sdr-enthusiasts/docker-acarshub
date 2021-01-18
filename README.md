@@ -94,10 +94,14 @@ Please note that for `TAR1090_URL` the required format is `http[s]://**HOSTNAME*
 | Variable | Description | Required | Default |
 |----------|-------------|---------|--------|
 | `ENABLE_ACARS` | Toggle ACARS decoding on. If set to any non-blank value ACARS decoding will start | No | Blank |
-| `GAIN_ACARS`     | Sets the gain for the dongle used for ACARS | No | `280` |
+| `GAIN_ACARS`     | Sets the gain for the dongle used for ACARS. See notes blow | No | `-10` (auto-gain) |
 | `STATION_ID_ACARS` | Your unique ID for the ACARS feed. Used on the [ACARS.io](http://acars.io) site. Follow the guide [here](https://app.airframes.io/about) for formatting. | Yes, if ENABLE_ACARS is enabled | Blank |
 | `FREQS_ACARS` | List of frequencies, separaed by a single `;`, used for ACARS monitoring. | Yes, if ENABLE_ACARS is enabled | Blank |
 | `ACARS_PPM` | If your SDR requires a PPM correction, set this value | No | Blank |
+| `ACARS_RTLMULT` | Set the sample rate for the SDR. See notes below | No | 160 |
+
+* The ACARS Decoder supports `AGC/Automatic Gain Control`. To enable, set `GAIN_ACARS` to `-10`. If you want to set the gain manually the format is is in `dB` (ie, `28.0`, `48.6` and not the previous `280` or `486`)
+* For the sample rate, use `192` for `2.4 MS/s` and `160` for `2.0MS/s` (default)
 
 For RTLSDR device selection, _one_ of the following arguments must also be set if `ENABLE_ACARS` is enabled.
 
@@ -178,7 +182,7 @@ Formatting is as follows: `IATA|ICAO|Airline Name`
 
 If you have multiple airlines you wish to override, you add in a `;` between them, such as the following: `UP|UPS|United Parcel Service;US|AAL|American Airlines`
 
-For anyone in the US, I suggest adding `IATA_OVERRIDE=UP|UPS|United Parcel Service` to start out with.
+For anyone in the US, I suggest adding `IATA_OVERRIDE=UP|UPS|United Parcel Service;GS|FTH|Mountain Aviation (Foothills)` to start out with.
 
 If there are airlines you notice that are wrong because the data used is wrong (IATA codes do change over time as airlines come and go), or airlines that are missing from the database that do have an IATA code, submit a PR above and I'll get it in there!
 

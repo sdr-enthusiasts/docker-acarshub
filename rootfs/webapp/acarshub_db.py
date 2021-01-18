@@ -7,6 +7,14 @@ from sqlalchemy.ext.declarative import declarative_base
 import os
 from sqlalchemy.ext.declarative import DeclarativeMeta
 import json
+import urllib.request
+import datetime
+# Download station IDs
+
+print("[database] Downloading Station IDs")
+with urllib.request.urlopen("https://raw.githubusercontent.com/airframesio/data/master/json/vdl/ground-stations.json") as url:
+    groundStations = json.loads(url.read().decode())
+print("[database] Completed downloading Station IDs")
 
 # DB PATH MUST BE FROM ROOT
 
@@ -69,6 +77,13 @@ class messagesCount(Messages):
     total = Column('total', Integer)
     errors = Column('errors', Integer)
     good = Column('good', Integer)
+
+
+class messagesCountDropped(Messages):
+    __tablename__ = 'nonlogged_count'
+    id = Column(Integer, primary_key=True)
+    nonlogged_errors = Column('errors', Integer)
+    nonlogged_good = Column('good', Integer)
 
 
 class messages(Messages):
@@ -249,13 +264,6 @@ def add_message_from_json(message_type, message_from_json):
 
     try:
         session = db_session()
-        count = session.query(messagesCount).first()
-        count.total += 1
-
-        if error is not None and error > 0:
-            count.errors += 1
-        else:
-            count.good += 1
 
         found_freq = session.query(messagesFreq).filter(messagesFreq.freq == f"{freq}" and messagesFreq.freq_type == message_type).first()
 
@@ -268,8 +276,7 @@ def add_message_from_json(message_type, message_from_json):
            dsta is not None or depa is not None or eta is not None or gtout is not None or \
            gtin is not None or wloff is not None or wlin is not None or lat is not None or \
            lon is not None or alt is not None:
-            # create a session for this thread to write
-
+            
             # write the message
             if os.getenv("DEBUG_LOGGING", default=False):
                 print("[database] writing to the database")
@@ -282,6 +289,29 @@ def add_message_from_json(message_type, message_from_json):
                                  msgno=msgno, is_response=is_response, is_onground=is_onground, error=error, libacars=libacars))
         elif os.getenv("DEBUG_LOGGING", default=False):
             print(f"[database] discarding no text message: {message_from_json}")
+
+        # Now lets decide where to log the message count to
+
+        if text is not None or libacars is not None or \
+           dsta is not None or depa is not None or eta is not None or gtout is not None or \
+           gtin is not None or wloff is not None or wlin is not None or lat is not None or \
+           lon is not None or alt is not None:
+
+            count = session.query(messagesCount).first()
+            count.total += 1
+
+            if error is not None and error > 0:
+                count.errors += 1
+            else:
+                count.good += 1
+
+        else:
+            count = session.query(messagesCountDropped).first()
+
+            if error is not None and error > 0:
+                count.nonlogged_errors += 1
+            else:
+                count.nonlogged_good += 1
 
         # commit the db change and close the session
         session.commit()
@@ -366,10 +396,10 @@ def database_search(field, search_term, page=0):
         print("[database] Done searching")
 
     if result.count() > 0:
-        data = [json.dumps(d, cls=AlchemyEncoder) for d in result[page:page + 20]]
+        data = [json.dumps(d, cls=AlchemyEncoder) for d in result[page:page + 50]]
         return [data, result.count()]
     else:
-        return [None, 20]
+        return [None, 50]
 
 
 def show_all(page=0):
@@ -387,10 +417,10 @@ def show_all(page=0):
             traceback = traceback.tb_next
 
     if result.count() > 0:
-        data = [json.dumps(d, cls=AlchemyEncoder) for d in result[page:page + 20]]
+        data = [json.dumps(d, cls=AlchemyEncoder) for d in result[page:page + 50]]
         return [data, result.count()]
     else:
-        return [None, 20]
+        return [None, 50]
 
 
 def get_freq_count():
@@ -458,9 +488,10 @@ def get_errors():
     try:
         session = db_session()
         count = session.query(messagesCount).first()
+        nonlogged = session.query(messagesCountDropped).first()
         session.close()
 
-        return (count.total, count.errors)
+        return (count.total, count.errors, nonlogged.nonlogged_good, nonlogged.nonlogged_errors)
 
     except Exception as e:
         traceback = e.__traceback__
@@ -507,6 +538,14 @@ def grab_most_recent():
             print("{}: {}".format(traceback.tb_frame.f_code.co_filename, traceback.tb_lineno))
             traceback = traceback.tb_next
 
+def lookup_groundstation(lookup_id):
+    for i in range(len(groundStations['ground_stations'])):
+        if 'id' in groundStations['ground_stations'][i]:
+           if groundStations['ground_stations'][i]['id'] == lookup_id:
+               return (groundStations['ground_stations'][i]['airport']['icao'], groundStations['ground_stations'][i]['airport']['name'])
+
+    return (None, None)
+
 
 # We will pre-populate the count table if this is a new db
 # Or the user doesn't have the table already
@@ -522,6 +561,12 @@ try:
         session.add(messagesCount(total=total_messages, errors=total_errors, good=good_msgs))
         session.commit()
         print("[database] Count database initialized")
+
+    if session.query(messagesCountDropped).count() == 0:
+        print("[database] Initializing dropped count database")
+        session.add(messagesCountDropped(nonlogged_good=0, nonlogged_errors=0))
+        session.commit()
+        print("[database] Dropped count database initialized")
 
     # now we pre-populate the freq db if empty
 

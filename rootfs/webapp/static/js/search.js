@@ -4,6 +4,9 @@ var current_page = 0;
 var total_pages = 0;
 var show_all = false;
 
+import { MessageDecoder } from '../airframes-acars-decoder/MessageDecoder.js'
+const md = new MessageDecoder();
+
 $(document).ready(function(){
     //connect to the socket server.
     generate_menu();
@@ -35,23 +38,34 @@ $(document).ready(function(){
         // Lets check and see if the results match the current search string
         var display = '';
         var display_nav_results = '';
+
+        var results = [];
+
         if(msg.search_term == current_search || show_all) {            
             msgs_received.push(msg.msghtml);
             num_results.push(msg.num_results);
             for (var i = 0; i < msgs_received.length; i++){
-                display = display_messages(msgs_received[i], true);
+                for(var j = 0; j < msgs_received[i].length; j++) {
+                    var msg_json = JSON.parse(msgs_received[i][j]);
+                    var decoded_msg = md.decode(msg_json);
+                    if(decoded_msg.decoded == true) {
+                        msg_json.decodedText = decoded_msg;
+                    }
+                    results.push(msg_json);
+                }
+                display = display_messages(results);
                 display_nav_results = display_search(current_page, num_results[i]);
+                $('#log').html(display);
+                $('#num_results').html(display_nav_results);
+                window.scrollTo(0, 0);
                 //msgs_string = '<p>' + msgs_received[i].toString() + '</p>' + msgs_string;
             }
-
-            $('#log').html(display);
-            $('#num_results').html(display_nav_results);
-            window.scrollTo(0, 0);
         }
     });
 
     document.addEventListener("keyup", function(event) {
-        delay_query(document.getElementById("search_term").value);
+        if(current_search != document.getElementById("search_term").value)
+            delay_query(document.getElementById("search_term").value);
     });
 
     //noop
@@ -75,7 +89,7 @@ async function delay_query(initial_query) {
             current_page = 0;
             show_all = false;
             console.log("sending query");
-            socket.emit('query', {'search_term': current_search, 'field': field}, namespace='/search');
+            socket.emit('query', {'search_term': current_search, 'field': field}, '/search');
         } else if(current_search == '') {
             show_all = false;
             $('#log').html('');
@@ -84,13 +98,13 @@ async function delay_query(initial_query) {
     }
 }
 
-function showall() {
-    socket.emit('query', {'show_all': true}, namespace="/search");
+window.showall = function() {
+    socket.emit('query', {'show_all': true}, "/search");
     $('#log').html('');
     $('#num_results').html('');
     const search_box = document.getElementById('search_term');
     search_box.value = "";
-
+    current_page = 0;
     show_all = true;
 }
 
@@ -98,24 +112,24 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-function runclick(page) {
+window.runclick = function(page) {
     console.log("updating page");
     current_page = page;
     current_search = document.getElementById("search_term").value;
     var field = document.getElementById("dbfield").value;
-    if(current_search != '') {
+    if(current_search != '' || show_all) {
         $('#log').html('');
         $('#num_results').html('');
         if(!show_all) {
-            socket.emit('query', {'search_term': current_search, 'field': field, 'results_after': page}, namespace='/search');
+            socket.emit('query', {'search_term': current_search, 'field': field, 'results_after': page}, '/search');
         } else {
-            socket.emit('query', {'show_all': true, 'results_after': page}, namespace='/search');
+            socket.emit('query', {'show_all': true, 'results_after': page}, '/search');
         }
     }
 }
 
-function jumppage() {
-    page = document.getElementById("jump").value;
+window.jumppage = function() {
+    var page = document.getElementById("jump").value;
     if(page > total_pages){
         $('#error_message').html(`Please enter a value less than ${total_pages}`);
     } else if(page != 0) {
@@ -131,10 +145,10 @@ function display_search(current, total) {
     if(total == 0)
         return html + '<span class="menu_non_link">No results</span>';
 
-    if(total % 20 != 0)
-        total_pages = ~~(total / 20) + 1;
+    if(total % 50 != 0)
+        total_pages = ~~(total / 50) + 1;
     else
-        total_pages = ~~(total / 20);
+        total_pages = ~~(total / 50);
 
     html += '<table class="search"><thead><th class="search_label"></th><th class="search_term"></th></thead>';
     html += `<tr><td colspan="2"><span class="menu_non_link">Found <strong>${total}</strong> result(s) in <strong>${total_pages}</strong> page(s).</span></td></tr>`;

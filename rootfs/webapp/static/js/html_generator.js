@@ -1,12 +1,8 @@
-function display_messages(msgs_to_process, convert) {
+function display_messages(msgs_to_process) {
     var msgs_string = '';
     for (var i = 0; i < msgs_to_process.length; i++){
         //msgs_string = '<p>' + msgs_received[i].toString() + '</p>' + msgs_string;
-        var message;
-        if(convert)
-            message = JSON.parse(msgs_to_process[i]);
-        else
-            message = msgs_to_process[i];
+        var message = msgs_to_process[i];
         var html_output = "<p><table id=\"shadow\">";
 
         // Clean up any useless keys
@@ -17,18 +13,6 @@ function display_messages(msgs_to_process, convert) {
 
         if(message.hasOwnProperty('id')) {
             delete message['id'];
-        }
-
-        if(message.hasOwnProperty('channel')) {
-            delete message['channel'];
-        }
-
-        if(message.hasOwnProperty('level')) {
-            delete message['level'];
-        }
-
-        if(message.hasOwnProperty('end')) {
-            delete message['end'];
         }
 
         // iterate over json and remove blank keys
@@ -54,16 +38,24 @@ function display_messages(msgs_to_process, convert) {
         html_output += "<tr><td colspan=\"2\">";
 
         if(message.hasOwnProperty('toaddr')) {
+            var toaddr_decoded = "";
+
+            if(message.hasOwnProperty('toaddr_decoded')) {
+                toaddr_decoded = `<br>To Address Station ID: <strong>${message['toaddr_decoded']}<strong>`;
+            }
             if(message.hasOwnProperty('toaddr_hex')) {
-                html_output += `<p>To Address: <strong>${message['toaddr']}/${message['toaddr_hex']}</strong></p>`;
+                html_output += `<p>To Address: <strong>${message['toaddr']}/${message['toaddr_hex']}</strong>${toaddr_decoded}</p>`;
             } else {
                 html_output += `<p>To Address: <strong>${message['toaddr']}/?</strong></p>`;
             }
         }
 
         if(message.hasOwnProperty('fromaddr')) {
+            if(message.hasOwnProperty('fromaddr_decoded')) {
+                toaddr_decoded = `<br>From Address Station ID: ${message['fromaddr_decoded']}`;
+            }
             if(message.hasOwnProperty('fromaddr_hex')) {
-                html_output += `<p>To Address: <strong>${message['fromaddr']}/${message['fromaddr_hex']}</strong></p>`;
+                html_output += `<p>To Address: <strong>${message['fromaddr']}/${message['fromaddr_hex']}</strong>${fromaddr_decoded}</p>`;
             } else {
                 html_output += `<p>To Address: <strong>${message['fromaddr']}/?</strong></p>`;
             }
@@ -114,10 +106,32 @@ function display_messages(msgs_to_process, convert) {
             var text = message['text'];
             text = text.replace("\\r\\n", "<br>");
 
-            html_output += "<p>";
-            html_output += `<pre id=\"shadow\"><strong>${text}</strong></pre>`;
+            //html_output += "<p>";
+            html_output += "<table class=\"message\">";
+            
+            //html_output += "</p>";
+            if(message.hasOwnProperty("decodedText")) {
+                //html_output += "<p>";
+                var decodedStatus = "Full";
+                if(message['decodedText'].decoder.decodeLevel != "full")
+                    decodedStatus = "Partial";
+                html_output += "<td class=\"text_top\">";
+                html_output += `<strong>Decoded Text (${decodedStatus}):</strong></p>`;
+                html_output += "<pre id=\"shadow\"><strong>";
+                html_output += loop_array(message['decodedText'].formatted);
+                //html_output += `${message['decodedText'].raw}`;
+                html_output += "</strong></pre>";
+                html_output += "</td>";
+                //html_output += "</p>";
+            } else {
+                html_output += "<tr>"
+            }
 
-            html_output += "</p>";
+            html_output += "<td class=\"text_top\">";
+            html_output += "<strong>Non-Decoded Text:</strong><p>";
+            html_output += `<pre id=\"shadow\"><strong>${text}</strong></pre>`;
+            html_output += "</td>";
+            html_output += "</tr></table>";
         }
         else if(message.hasOwnProperty("data")) {
             var data = message['data'];
@@ -150,7 +164,7 @@ function display_messages(msgs_to_process, convert) {
 
         if(message.hasOwnProperty("icao")) {
             if (message.hasOwnProperty("icao_hex") && message.hasOwnProperty('icao_url')) {
-                html_output += `ICAO: <strong><a href="${message['icao_url']}">${message['icao']}/${message['icao_hex']}</a></strong>`
+                html_output += `ICAO: <strong><a href="${message['icao_url']}" target="_blank">${message['icao']}/${message['icao_hex']}</a></strong>`
             }
             else if(message.hasOwnProperty("icao_hex")) {
                 html_output += `ICAO: <strong>${message['icao']}/${message['icao_hex']}</strong> `;    
@@ -226,4 +240,28 @@ function display_messages(msgs_to_process, convert) {
         msgs_string = html_output + msgs_string;
     }
     return msgs_string;
+}
+
+function loop_array(input) {
+    var html_output = "";
+    
+    for (var m in input) {
+        // close to working
+        //console.log(typeof(input[m]));
+        if(typeof(input[m]) === "object") {
+            html_output += loop_array(input[m]);
+        } else {
+            if(m == "label")
+                html_output += input[m] + ": ";
+            else if(m == "value") {
+                html_output += input[m] + "<br>";
+            } else if(m == "description") {
+                html_output += "<p>Description: " + input[m] + "</p>";
+            } else {
+                console.log(`Unknown item ${m} ${input[m]}`);
+            }
+        }
+    }
+
+    return html_output;
 }

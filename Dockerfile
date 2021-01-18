@@ -11,7 +11,7 @@ ENV BRANCH_RTLSDR="ed0317e6a58c098874ac58b769cf2e609c18d9a5" \
     FREQS_VDLM="" \
     ENABLE_ACARS="" \
     ENABLE_VDLM="" \
-    GAIN_ACARS="280" \
+    GAIN_ACARS="-10" \
     GAIN_VDLM="280" \
     ENABLE_WEB="true" \
     QUIET_LOGS="" \
@@ -21,6 +21,9 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 # Copy needs to be prior to any curl/wget so SSL certs from GitHub runner are loaded
 COPY rootfs/ /
+
+# Copy in acars-decoder-typescript from previous build stage
+COPY acars-decoder-typescript.tgz /src/acars-decoder-typescript.tgz
 
 RUN set -x && \
     TEMP_PACKAGES=() && \
@@ -109,9 +112,11 @@ RUN set -x && \
     make install && \
     popd && popd && \
     # acarsdec
-    git clone https://github.com/fredclausen/acarsdec.git /src/acarsdec && \
+    #git clone https://github.com/fredclausen/acarsdec.git /src/acarsdec && \
+    git clone --single-branch --branch testing https://github.com/airframesio/acarsdec.git /src/acarsdec && \
     pushd /src/acarsdec && \
-    git checkout master && \
+    #git checkout master && \
+    git checkout testing && \
     mkdir build && \
     pushd build && \
     cmake ../ -Drtl=ON && \
@@ -130,6 +135,16 @@ RUN set -x && \
     popd && popd && \
     # directory for logging
     mkdir -p /run/acars && \
+    # extract airframes-acars-decoder package to /webapp/static/airframes-acars-decoder
+    mkdir -p /src/airframes-acars-decoder && \
+    tar xvf /src/acars-decoder-typescript.tgz -C /src/airframes-acars-decoder && \
+    mkdir -p /webapp/static/airframes-acars-decoder && \ 
+    mv -v /src/airframes-acars-decoder/package/dist/* /webapp/static/airframes-acars-decoder/ && \
+    # patch airframes-acars-decoder package so imports work
+    find /webapp/static/airframes-acars-decoder -type f -iname '*.js' -exec sed -i """/import .* from '.*';/ s/';/.js';/""" {} \; && \
+    find /webapp/static/airframes-acars-decoder -type f -iname '*.js' -exec sed -i """/import .* from \".*\";/ s/\";/.js\";/""" {} \; && \
+    find /webapp/static/airframes-acars-decoder -type f -iname '*.js' -exec sed -i """/export .* from '.*';/ s/';/.js';/""" {} \; && \
+    find /webapp/static/airframes-acars-decoder -type f -iname '*.js' -exec sed -i """/export .* from \".*\";/ s/\";/.js\";/""" {} \; && \
     # install S6 Overlay
     curl -s https://raw.githubusercontent.com/mikenye/deploy-s6-overlay/master/deploy-s6-overlay.sh | sh && \
     # Clean up

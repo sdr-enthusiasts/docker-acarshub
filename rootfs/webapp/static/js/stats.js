@@ -29,10 +29,17 @@ $(document).ready(function(){
 		var total = msg.count[0];
 		var good_msg = total - error;
 
+		var empty_error = msg.count[3];
+		var empty_good = msg.count[2];
+
 		html = "<table class=\"search\">";
-		html += `<tr><td><span class="menu_non_link">Total Messages: </span></td><td><span class="menu_non_link">${total}</span></td></tr>`;
-		html += `<tr><td><span class="menu_non_link">Non-Error Messages: </span></td><td><span class="menu_non_link">${good_msg}</span></td></tr>`;
-		html += `<tr><td><span class="menu_non_link">Error Messages: </span></td><td><span class="menu_non_link">${error}</span></td></tr>`;
+		html += `<tr><td><span class="menu_non_link">Total Messages (All): </span></td><td><span class="menu_non_link">${total}</span></td><td></td></tr>`;
+		html += `<tr><td><span class="menu_non_link">Messages (No Errors): </span></td><td><span class="menu_non_link">${good_msg}</span></td><td><span class="menu_non_link">${parseFloat((good_msg/total)*100).toFixed(2)}%</span></td></tr>`;
+		html += `<tr><td><span class="menu_non_link">Messages (W/Errors): </span></td><td><span class="menu_non_link">${error}</span></td><td><span class="menu_non_link">${parseFloat((error/total)*100).toFixed(2)}%</span></td></tr>`;
+
+		html += `<tr><td><span class="menu_non_link">Empty Messages (Total): </span></td><td><span class="menu_non_link">${empty_good + empty_error}</span></td><td><span class="menu_non_link">${parseFloat(((empty_good + empty_error)/total)*100).toFixed(2)}%</span></td></tr>`;
+		html += `<tr><td><span class="menu_non_link">Empty Messages (No Errors): </span></td><td><span class="menu_non_link">${empty_good}</span></td><td><span class="menu_non_link">${parseFloat((empty_good/total)*100).toFixed(2)}%</span></td></tr>`;
+		html += `<tr><td><span class="menu_non_link">Empty Messages (W/Errors: </span></td><td><span class="menu_non_link">${empty_error}</span></td><td><span class="menu_non_link">${parseFloat((empty_error/total)*100).toFixed(2)}%</span></td></tr>`;
 		html += "</table>";
 
 		$('#msgs').html(html);
