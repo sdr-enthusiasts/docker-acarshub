@@ -6,7 +6,6 @@ $(document).ready(function(){
     fetch('http://' + document.domain + ':' + location.port + '/aboutmd')
       .then(response => response.text())
       .then((data) => {
-        html = converter.makeHtml(data);
-        $('#log').html(html);
+        $('#log').html(converter.makeHtml(data));
       })
 });
