@@ -62,6 +62,24 @@ jobs:
         id: buildx
         uses: docker/setup-buildx-action@v1
 
+      # Patch airframesio/acars-decoder-typescript to run in browser (outside of nodejs)
+      # https://stackoverflow.com/questions/44709031/build-for-both-browser-and-nodejs
+      # https://medium.com/collaborne-engineering/typescript-create-library-for-nodejs-and-browser-fece291d517f
+      - 
+        name: "Patch airframesio/acars-decoder-typescript to run in browser (outside of nodejs)"
+        working-directory: ./acars-decoder-typescript
+        run: |
+          sed -i '/"module": "commonjs",/d' tsconfig.json
+
+      # Build build airframesio/acars-decoder-typescript
+      - 
+        name: Build airframesio/acars-decoder-typescript
+        working-directory: ./acars-decoder-typescript
+        run: |
+          yarn install
+          yarn build
+          yarn pack --filename ../acars-decoder-typescript.tgz
+
       # Build "latest"
       -
         name: Build & Push - latest
