@@ -137,7 +137,7 @@ RUN set -x && \
     mkdir -p /run/acars && \
     # extract airframes-acars-decoder package to /webapp/static/airframes-acars-decoder
     mkdir -p /src/airframes-acars-decoder && \
-    tar xvf /src/acars-decoder-typescript.tgz -C /src/airframes-acars-decoder \; && \
+    tar xvf /src/acars-decoder-typescript.tgz -C /src/airframes-acars-decoder && \
     mkdir -p /webapp/static/airframes-acars-decoder && \ 
     mv -v /src/airframes-acars-decoder/package/dist/* /webapp/static/airframes-acars-decoder/ && \
     # patch airframes-acars-decoder package so imports work
