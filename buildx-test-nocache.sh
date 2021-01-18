@@ -18,8 +18,8 @@ docker buildx use cluster
 # Copy /src/acars-decoder-typescript.tgz out of image
 docker build --file ./Dockerfile.acars-decoder-typescript -t acars-decoder-typescript:latest .
 id=$(docker create acars-decoder-typescript:latest)
-docker cp $id:/src/acars-decoder-typescript.tgz - > ./acars-decoder-typescript.tgz
-docker rm -v $id
+docker cp "$id":/src/acars-decoder-typescript.tgz - > ./acars-decoder-typescript.tgz
+docker rm -v "$id"
 
 # Build & push latest
 docker buildx build -f Dockerfile.local --no-cache -t "${REPO}/${IMAGE}:test" --compress --push --platform "${PLATFORMS}" .
