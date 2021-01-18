@@ -23,3 +23,6 @@ docker rm -v "$id"
 
 # Build & push latest
 docker buildx build -f Dockerfile.local --no-cache -t "${REPO}/${IMAGE}:test" --compress --push --platform "${PLATFORMS}" .
+
+# Clean up
+rm ./acars-decoder-typescript.tgz
