@@ -37,6 +37,14 @@ function display_messages(msgs_to_process) {
         // Table content
         html_output += "<tr><td colspan=\"2\">";
 
+        if(message.hasOwnProperty("label")) {
+            var label_type = "";
+            if(message.hasOwnProperty("label_type")) {
+                label_type = message['label_type'];
+            }
+            html_output += `<p>Message Label: <strong>(${message['label']}) ${label_type}</strong></p>`;
+        }
+
         if(message.hasOwnProperty('toaddr')) {
             var toaddr_decoded = "";
 
@@ -70,19 +78,19 @@ function display_messages(msgs_to_process) {
         }
 
         if(message.hasOwnProperty('eta')) {
-            html_output += `<p>Estimated time of arrival: <strong>${message['eta']}</strong> hours</p>`;
+            html_output += `<p>Estimated time of arrival: <strong>${message['eta']}</strong> hours</strong></p>`;
         }
 
         if(message.hasOwnProperty('gtout')) {
-            html_output += `<p>Pushback from gate: <strong>${message['gtout']}</strong> hours</p>`;
+            html_output += `<p>Pushback from gate: <strong>${message['gtout']}</strong> hours</strong></p>`;
         }
 
         if(message.hasOwnProperty('gtin')) {
-            html_output += `<p>Arriving at gate: <strong>${message['gtin']}</strong> hours</p>`;
+            html_output += `<p>Arriving at gate: <strong>${message['gtin']}</strong> hours</strong></p>`;
         }
 
         if(message.hasOwnProperty("wloff")) {
-            html_output += `<p>Wheels off: <strong>${message['wloff']}</strong> hours</p>`;
+            html_output += `<p>Wheels off: <strong>${message['wloff']}</strong> hours</strong></p>`;
         }
 
         if(message.hasOwnProperty("wlin")) {
@@ -188,10 +196,6 @@ function display_messages(msgs_to_process) {
 
         if(message.hasOwnProperty("mode")) {
             html_output += `<span class=\"wrapper\">M: <strong>${message['mode']}</strong><span class=\"tooltip\">Mode</span></span> `;
-        }
-
-        if(message.hasOwnProperty("label")) {
-            html_output += `<span class=\"wrapper\">L: <strong>${message['label']}</strong><span class=\"tooltip\">Label</span></span> `;
         }
 
         if(message.hasOwnProperty("block_id")) {

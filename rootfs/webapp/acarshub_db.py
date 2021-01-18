@@ -9,12 +9,26 @@ from sqlalchemy.ext.declarative import DeclarativeMeta
 import json
 import urllib.request
 import datetime
+
 # Download station IDs
 
-print("[database] Downloading Station IDs")
-with urllib.request.urlopen("https://raw.githubusercontent.com/airframesio/data/master/json/vdl/ground-stations.json") as url:
-    groundStations = json.loads(url.read().decode())
-print("[database] Completed downloading Station IDs")
+try:
+    print("[database] Downloading Station IDs")
+    with urllib.request.urlopen("https://raw.githubusercontent.com/airframesio/data/master/json/vdl/ground-stations.json") as url:
+        groundStations = json.loads(url.read().decode())
+    print("[database] Completed downloading Station IDs")
+except Exception as e:
+    print(f"[database] Error ({e}) download Station IDs. Please restart the container")
+
+# Load Message Labels
+
+try:
+    print("[database] Loading message labels")
+    with open('data/labels.json') as text:
+        message_labels = json.load(text)
+    print("[database] Completed loading message labels")
+except Exception as e:
+    print(f"[database] Error ({e})loading message labels JSON")
 
 # DB PATH MUST BE FROM ROOT
 
@@ -545,6 +559,15 @@ def lookup_groundstation(lookup_id):
                return (groundStations['ground_stations'][i]['airport']['icao'], groundStations['ground_stations'][i]['airport']['name'])
 
     return (None, None)
+
+
+def lookup_label(label):
+    for i in range(len(message_labels)):
+        if 'Code' in message_labels[i]:
+            if message_labels[i]['Code'] == label:
+                return message_labels[i]['Message Type']
+
+    return None
 
 
 # We will pre-populate the count table if this is a new db
