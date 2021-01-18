@@ -23,6 +23,7 @@ You will need an RTLSDR dongle, and if you want to feed both VDLM2 and ACARS you
 ## Up-and-Running with `docker run`
 
 ```shell
+docker volume create acarshub &&
 docker run \
  -d \
  --rm \
@@ -31,6 +32,7 @@ docker run \
  -e STATION_ID_ACARS="YOURIDHERE" \
  -e FREQS_ACARS="130.025;130.450;131.125;131.550" \
  -e ENABLE_ACARS="true" \
+ -v acars_data:/run/acars \
  --device /dev/bus/usb:/dev/bus/usb \
 fredclausen/acarshub
 ```
@@ -41,6 +43,9 @@ You should obviously replace `STATION_ID_ACARS` with a unique ID for your statio
 
 ```yaml
 version: '3.8'
+
+volumes:
+  acars_data:
 
 services:
   acarshub:
@@ -56,15 +61,17 @@ services:
       - STATION_ID_ACARS=YOURIDHERE
       - FREQS_ACARS=130.025;130.450;131.125;131.550
       - ENABLE_ACARS=true
+    volumes:
+      - acars_data:/run/acars
 ```
 
 ## Ports
 
-No exposed ports are necessary to run the container. However, the built in webserver is available on port `80` if you wish the view messages in realtime.
+The built in webserver is available on port `80` if you wish the view messages in realtime.
 
 ## Volumes / Database
 
-No volumes are needed to run the container. However, this container does log messages to a database. If you wish to persist this database between container restarts, mount a volume to `/run/acars/`.
+It is recommended to give the container a volume so that database and message data is persisted between container restarts/upgrade. If you wish to persist this database between container restarts, mount a volume to `/run/acars/`.
 
 The database is used on the website for various functions. It is automatically pruned of data older than 7 days old.
 
