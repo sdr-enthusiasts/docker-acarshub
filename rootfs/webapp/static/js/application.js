@@ -45,9 +45,9 @@ window.pause_updates = function() {
         pause = true;
 
         var id = document.getElementById("pause_updates");
-        id.innerHTML = "";
-        var txt = document.createTextNode("Updates Paused");
-        id.appendChild(txt);
+        id.innerHTML = "<span class=\"red\">Unpause Updates</span>";
+        //var txt = document.createTextNode("Unpause Updates");
+        //id.appendChild(txt);
 
         var id_filtered = document.getElementById("received");
         id_filtered.innerHTML = "";
@@ -60,9 +60,9 @@ window.filter_notext = function() {
     if(text_filter) {
         text_filter = false;
         var id = document.getElementById("filter_notext");
-        id.innerHTML = "";
-        var txt = document.createTextNode("Filter out \"No Text\" messages");
-        id.appendChild(txt);
+        id.innerHTML = "Hide Empty Messages";
+        //var txt = document.createTextNode("Hide Empty messages");
+        //id.appendChild(txt);
         Cookies.set('filter', 'false', { expires: 365 });
         filtered_messages = 0;
 
@@ -76,9 +76,9 @@ window.filter_notext = function() {
         id_filtered.appendChild(txt_filtered);
 
         id = document.getElementById("filter_notext");
-        id.innerHTML = "";
-        var txt = document.createTextNode("Show \"No Text\" messages");
-        id.appendChild(txt);
+        id.innerHTML = "<span class=\"red\">Show All Messages</span>";
+        //var txt = document.createTextNode("Show All messages");
+        //id.appendChild(txt);
         Cookies.set('filter', 'true', { expires: 365 });
     }
 }

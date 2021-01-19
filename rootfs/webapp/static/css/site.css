@@ -45,6 +45,14 @@ img {
   max-width: 100%;
 }
 
+.red {
+  color: red;
+}
+
+.red:hover {
+  color: white;
+}
+
 ol {
   list-style-type:circle;;
   margin-left:0px;
