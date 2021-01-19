@@ -86,7 +86,7 @@ class messagesFreq(Messages):
 
 
 class messagesLevel(Messages):
-    __tablename__  = 'level'
+    __tablename__ = 'level'
     id = Column(Integer, primary_key=True)
     level = Column('level', Integer)
     count = Column('count', Integer)
@@ -141,7 +141,7 @@ class messages(Messages):
     is_onground = Column('is_onground', String(32))
     error = Column('error', String(32))
     libacars = Column('libacars', Text)
-    #level = Column('level', String(32)) # Uncomment this line when we're ready to migrate the db
+    # level = Column('level', String(32)) # Uncomment this line when we're ready to migrate the db
 
 
 class airlines(Airlines):
@@ -278,7 +278,7 @@ def add_message_from_json(message_type, message_from_json):
         elif index == 'channel':
             pass
         elif index == 'level':
-            level = message_from_json['level'] 
+            level = message_from_json['level']
             pass
         elif index == 'end':
             pass
@@ -299,7 +299,7 @@ def add_message_from_json(message_type, message_from_json):
         if os.getenv("DB_SAVEALL", default=False) or text is not None or libacars is not None or \
            dsta is not None or depa is not None or eta is not None or gtout is not None or \
            gtin is not None or wloff is not None or wlin is not None or lat is not None or \
-           lon is not None or alt is not None: # add in level here
+           lon is not None or alt is not None:  # add in level here
 
             # write the message
             if os.getenv("DEBUG_LOGGING", default=False):
@@ -374,7 +374,7 @@ def pruneOld():
         session.commit()
         print(f"[database] Pruned database of {result} records")
         session.close()
-    except Exception:
+    except Exception as e:
         acarshub_error.acars_traceback(e, "database")
 
 
