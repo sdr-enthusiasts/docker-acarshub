@@ -361,7 +361,7 @@ def main_connect():
             json_message = json.loads(item)
             stale_keys = []
             for key in json_message:
-                if json_message[key] is not None:
+                if json_message[key] is None:
                     stale_keys.append(key)
 
             for key in stale_keys:
@@ -395,14 +395,7 @@ def stats_connect():
     if acarshub.DEBUG_LOGGING:
         print('Client connected stats')
 
-    acars = False
-    vdlm = False
-    if acarshub.ENABLE_ACARS:
-        acars = True
-    if acarshub.ENABLE_VDLM:
-        vdlm = True
-
-    socketio.emit('newmsg', {"vdlm": vdlm, "acars": acars}, namespace='/stats')
+    socketio.emit('newmsg', {"vdlm": acarshub.ENABLE_VDLM, "acars": acarshub.ENABLE_ACARS}, namespace='/stats')
 
 
 @socketio.on('freqs', namespace="/stats")
@@ -421,50 +414,10 @@ def request_count(message, namespace):
 
 @socketio.on('query', namespace='/search')
 def handle_message(message, namespace):
-    import json
 
     # We are going to send the result over in one blob
     # search.js will only maintain the most recent blob we send over
-    total_results = 0
-    serialized_json = []
-    search_term = ""
-    # If the user has cleared the search bar, we'll execute the else statement
-    # And the browsers clears the data
-    # otherwise, run the search and format the results
-
-    if 'show_all' in message or message['search_term'] != "":
-        # Decide if the user is executing a new search or is clicking on a page of results
-        # search.js appends the "results_after" as the result page index user is requested
-        # Otherwise, we're at the first page
-
-        if 'search_term' in message:
-            search_term = message['search_term']
-
-            if 'results_after' in message:
-                # ask the database for the results at the user requested index
-                # multiply the selected index by 20 (we have 20 results per page) so the db
-                # knows what result index to send back
-                search = acarshub.acarshub_db.database_search(message['field'], message['search_term'], message['results_after'] * 20)
-            else:
-                search = acarshub.acarshub_db.database_search(message['field'], message['search_term'])
-        elif 'show_all' in message:
-            if 'results_after' in message:
-                search = acarshub.acarshub_db.show_all(message['results_after'] * 50)
-            else:
-                search = acarshub.acarshub_db.show_all()
-
-        # the db returns two values
-        # index zero is the query results in json
-        # the other is the count of total results
-
-        query_result = search[0]
-        if query_result is not None:
-            total_results = search[1]
-            # Loop through the results and format html
-            for result in query_result:
-                json_message = acarshub.update_keys(json.loads(result))
-
-                serialized_json.insert(0, json.dumps(json_message))
+    total_results, serialized_json, search_term = acarshub.handle_message(message)
 
     # grab the socket id for the request
     # This stops the broadcast of the search results to everyone
