@@ -460,18 +460,18 @@ def get_freq_count():
             result = session.query(messagesFreq).filter(messagesFreq.freq).filter(messagesFreq.freq == freq and messagesFreq.freq_type == f[0]).first()
 
             if(result is not None):
-                freq_count.append(f"{f[0]}|{f[1]}|{result.count}")
+                freq_count.append({'freq_type':f"{result.freq_type}", 'freq': f"{result.freq}", 'count':result.count})
                 found_freq.append(freq)
             else:
-                freq_count.append(f"{f[0]}|{f[1]}|0")
+                freq_count.append({'freq_type':f"{result.freq_type}", 'freq': f"{result.freq}", 'count':0})
 
         for item in session.query(messagesFreq).all():
             if item.freq not in found_freq:
-                freq_count.append(f"{item.freq_type}|{item.freq}|{item.count}")
+                freq_count.append({'freq_type':f"{item.freq_type}", 'freq': f"{item.freq}", 'count':item.count})
 
         session.close()
 
-        return freq_count
+        return sorted(freq_count, reverse=True, key=lambda freq: (freq['freq_type'], freq['count']))
 
     except Exception as e:
         traceback = e.__traceback__
