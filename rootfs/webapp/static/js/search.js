@@ -10,6 +10,7 @@ const md = new MessageDecoder();
 $(document).ready(function(){
     //connect to the socket server.
     generate_menu();
+    generate_footer();
     socket = io.connect('http://' + document.domain + ':' + location.port + '/search');
     var msgs_received = [];
     var num_results = [];
@@ -89,6 +90,8 @@ async function delay_query(initial_query) {
             current_page = 0;
             show_all = false;
             console.log("sending query");
+            $('#log').html('Searching...');
+            $('#num_results').html('');
             socket.emit('query', {'search_term': current_search, 'field': field}, '/search');
         } else if(current_search == '') {
             show_all = false;
@@ -100,7 +103,7 @@ async function delay_query(initial_query) {
 
 window.showall = function() {
     socket.emit('query', {'show_all': true}, "/search");
-    $('#log').html('');
+    $('#log').html('Updating...');
     $('#num_results').html('');
     const search_box = document.getElementById('search_term');
     search_box.value = "";
@@ -118,7 +121,7 @@ window.runclick = function(page) {
     current_search = document.getElementById("search_term").value;
     var field = document.getElementById("dbfield").value;
     if(current_search != '' || show_all) {
-        $('#log').html('');
+        $('#log').html('Updating results....');
         $('#num_results').html('');
         if(!show_all) {
             socket.emit('query', {'search_term': current_search, 'field': field, 'results_after': page}, '/search');

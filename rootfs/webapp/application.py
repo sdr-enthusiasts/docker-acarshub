@@ -100,6 +100,14 @@ def update_keys(json_message):
         if fromaddr_icao is not None:
             json_message['fromaddr_decoded'] = f"{fromaddr_name} ({fromaddr_icao})"
 
+    if "label" in json_message.keys() and json_message['label'] is not None:
+        label_type = acarshub_db.lookup_label(json_message['label'])
+
+        if label_type is not None:
+            json_message['label_type'] = label_type
+        else:
+            json_message['label_type'] = "Unknown Message Label"
+
     return json_message
 
 def flight_finder(callsign=None, hex_code=None, url=True):
@@ -437,6 +445,11 @@ def search():
 @app.route('/about')
 def about():
     return render_template('about.html')
+
+
+@app.route('/aboutmd')
+def aboutmd():
+    return render_template('helppage.MD')
 
 
 # The listener for the live message page

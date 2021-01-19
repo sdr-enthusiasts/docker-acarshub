@@ -9,12 +9,26 @@ from sqlalchemy.ext.declarative import DeclarativeMeta
 import json
 import urllib.request
 import datetime
+
 # Download station IDs
 
-print("[database] Downloading Station IDs")
-with urllib.request.urlopen("https://raw.githubusercontent.com/airframesio/data/master/json/vdl/ground-stations.json") as url:
-    groundStations = json.loads(url.read().decode())
-print("[database] Completed downloading Station IDs")
+try:
+    print("[database] Downloading Station IDs")
+    with urllib.request.urlopen("https://raw.githubusercontent.com/airframesio/data/master/json/vdl/ground-stations.json") as url:
+        groundStations = json.loads(url.read().decode())
+    print("[database] Completed downloading Station IDs")
+except Exception as e:
+    print(f"[database] Error ({e}) download Station IDs. Please restart the container")
+
+# Load Message Labels
+
+try:
+    print("[database] Loading message labels")
+    with open('data/labels.json') as text:
+        message_labels = json.load(text)
+    print("[database] Completed loading message labels")
+except Exception as e:
+    print(f"[database] Error ({e})loading message labels JSON")
 
 # DB PATH MUST BE FROM ROOT
 
@@ -446,18 +460,18 @@ def get_freq_count():
             result = session.query(messagesFreq).filter(messagesFreq.freq).filter(messagesFreq.freq == freq and messagesFreq.freq_type == f[0]).first()
 
             if(result is not None):
-                freq_count.append(f"{f[0]}|{f[1]}|{result.count}")
+                freq_count.append({'freq_type':f"{result.freq_type}", 'freq': f"{result.freq}", 'count':result.count})
                 found_freq.append(freq)
             else:
-                freq_count.append(f"{f[0]}|{f[1]}|0")
+                freq_count.append({'freq_type':f"{result.freq_type}", 'freq': f"{result.freq}", 'count':0})
 
         for item in session.query(messagesFreq).all():
             if item.freq not in found_freq:
-                freq_count.append(f"{item.freq_type}|{item.freq}|{item.count}")
+                freq_count.append({'freq_type':f"{item.freq_type}", 'freq': f"{item.freq}", 'count':item.count})
 
         session.close()
 
-        return freq_count
+        return sorted(freq_count, reverse=True, key=lambda freq: (freq['freq_type'], freq['count']))
 
     except Exception as e:
         traceback = e.__traceback__
@@ -545,6 +559,15 @@ def lookup_groundstation(lookup_id):
                return (groundStations['ground_stations'][i]['airport']['icao'], groundStations['ground_stations'][i]['airport']['name'])
 
     return (None, None)
+
+
+def lookup_label(label):
+    for i in range(len(message_labels)):
+        if 'Code' in message_labels[i]:
+            if message_labels[i]['Code'] == label:
+                return message_labels[i]['Message Type']
+    print(f"[database] Unknown message label: {label}")
+    return None
 
 
 # We will pre-populate the count table if this is a new db

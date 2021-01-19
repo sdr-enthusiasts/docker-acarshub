@@ -1,0 +1,394 @@
+[
+  {
+    "Code": "00",
+    "Message Type": "Emergency Situation Report"
+  },
+  {
+    "Code": "51",
+    "Message Type": "Ground GMT Report Uplink"
+  },
+  {
+    "Code": "52",
+    "Message Type": "Ground UTC Report Uplink"
+  },
+  {
+    "Code": "54",
+    "Message Type": "Voice Go-Ahead"
+  },
+  {
+    "Code": "57",
+    "Message Type": "Alternate Aircrew Initiated Position"
+  },
+  {
+    "Code": "5D",
+    "Message Type": "ATIS Request"
+  },
+  {
+    "Code": "5P",
+    "Message Type": "Temporary Suspension"
+  },
+  {
+    "Code": "5R",
+    "Message Type": "Aircrew Initiated Position Report"
+  },
+  {
+    "Code": "5U",
+    "Message Type": "Weather Request"
+  },
+  {
+    "Code": "5Y",
+    "Message Type": "Aircrew Revision to Previous"
+  },
+  {
+    "Code": "5Z",
+    "Message Type": "Airline Designated"
+  },
+  {
+    "Code": "7A",
+    "Message Type": "Aircrew Initiated Engine Data/Takeoff"
+  },
+  {
+    "Code": "7B",
+    "Message Type": "Aircrew Entered Miscellaneous Message"
+  },
+  {
+    "Code": "A0",
+    "Message Type": "ATS Facility Notification"
+  },
+  {
+    "Code": "A1",
+    "Message Type": "Oceanic Clearance"
+  },
+  {
+    "Code": "A2",
+    "Message Type": "Unassigned"
+  },
+  {
+    "Code": "A3",
+    "Message Type": "Departure Clearance"
+  },
+  {
+    "Code": "A4",
+    "Message Type": "Flight Systems Message"
+  },
+  {
+    "Code": "A5",
+    "Message Type": "Unassigned"
+  },
+  {
+    "Code": "A6",
+    "Message Type": "Request ADS report"
+  },
+  {
+    "Code": "A7",
+    "Message Type": "Free Text from ATC"
+  },
+  {
+    "Code": "A8",
+    "Message Type": "Deliver Departure Slot"
+  },
+  {
+    "Code": "A9",
+    "Message Type": "ATIS Report"
+  },
+  {
+    "Code": "AA",
+    "Message Type": "ATC Communication"
+  },
+  {
+    "Code": "AB",
+    "Message Type": "Terminal Weather Information for Pilots"
+  },
+  {
+    "Code": "AC",
+    "Message Type": "Pushback Clearance Uplink"
+  },
+  {
+    "Code": "AD",
+    "Message Type": "Expected Taxi Clearance"
+  },
+  {
+    "Code": "AE",
+    "Message Type": "Unassigned"
+  },
+  {
+    "Code": "AF",
+    "Message Type": "CPC Command Response"
+  },
+  {
+    "Code": "B0",
+    "Message Type": "ATS Facility Notification"
+  },
+  {
+    "Code": "B1",
+    "Message Type": "Request Oceanic Clearance"
+  },
+  {
+    "Code": "B2",
+    "Message Type": "Oceanic Clearance Readback"
+  },
+  {
+    "Code": "B3",
+    "Message Type": "Request Departure Clearance"
+  },
+  {
+    "Code": "B4",
+    "Message Type": "Departure Clearance Readback"
+  },
+  {
+    "Code": "B5",
+    "Message Type": "Waypoint Position Report"
+  },
+  {
+    "Code": "B6",
+    "Message Type": "Provide ADS Report"
+  },
+  {
+    "Code": "B7",
+    "Message Type": "Free Text to ATC"
+  },
+  {
+    "Code": "B8",
+    "Message Type": "Request Departure Slot"
+  },
+  {
+    "Code": "B9",
+    "Message Type": "Request ATIS Report"
+  },
+  {
+    "Code": "BA",
+    "Message Type": "ATC Communication"
+  },
+  {
+    "Code": "BB",
+    "Message Type": "Terminal Weather Information for Pilots"
+  },
+  {
+    "Code": "BC",
+    "Message Type": "Pushback Clearance Request"
+  },
+  {
+    "Code": "BD",
+    "Message Type": "Expected Taxi Clearance Request"
+  },
+  {
+    "Code": "BE",
+    "Message Type": "CPC Log-On/Log-Off Request"
+  },
+  {
+    "Code": "BF",
+    "Message Type": "CPC WILCO"
+  },
+  {
+    "Code": "BG",
+    "Message Type": "Unassigned"
+  },
+  {
+    "Code": "CA",
+    "Message Type": "Cockpit Printer Message"
+  },
+  {
+    "Code": "CB",
+    "Message Type": "Printer Busy"
+  },
+  {
+    "Code": "CC",
+    "Message Type": "Printer In Local or Test Mode"
+  },
+  {
+    "Code": "CD",
+    "Message Type": "Printer Out Of Paper"
+  },
+  {
+    "Code": "CE",
+    "Message Type": "Printer Buffer Overrun"
+  },
+  {
+    "Code": "CF",
+    "Message Type": "Printer Initialization Before Completion"
+  },
+  {
+    "Code": "EI",
+    "Message Type": "Internet Email Message"
+  },
+  {
+    "Code": "F3",
+    "Message Type": "Dedicated Transceiver Advisory"
+  },
+  {
+    "Code": "H1",
+    "Message Type": "General Message"
+  },
+  {
+    "Code": "H2",
+    "Message Type": "Meteorological Report"
+  },
+  {
+    "Code": "H3",
+    "Message Type": "Icing Report"
+  },
+  {
+    "Code": "HF",
+    "Message Type": "HFDL Messages"
+  },
+  {
+    "Code": "HX",
+    "Message Type": "Undelivered Uplink Report"
+  },
+  {
+    "Code": "M2",
+    "Message Type": "User Defined Message"
+  },
+  {
+    "Code": "Q0",
+    "Message Type": "Link Test"
+  },
+  {
+    "Code": "Q1",
+    "Message Type": "Departure Report"
+  },
+  {
+    "Code": "Q2",
+    "Message Type": "Estimated Time of Arrival Report"
+  },
+  {
+    "Code": "Q3",
+    "Message Type": "Clock Update Advisory"
+  },
+  {
+    "Code": "Q4",
+    "Message Type": "Voice Circuit Busy"
+  },
+  {
+    "Code": "Q5",
+    "Message Type": "Unable to deliver Uplink Messages"
+  },
+  {
+    "Code": "Q6",
+    "Message Type": "Voice to Data changeover advisory"
+  },
+  {
+    "Code": "Q7",
+    "Message Type": "Delay Message"
+  },
+  {
+    "Code": "QA",
+    "Message Type": "OUT Fuel Report"
+  },
+  {
+    "Code": "QB",
+    "Message Type": "OFF Report"
+  },
+  {
+    "Code": "QC",
+    "Message Type": "On Report"
+  },
+  {
+    "Code": "QD",
+    "Message Type": "In / Fuel Report"
+  },
+  {
+    "Code": "QE",
+    "Message Type": "Out/Fuel/Destination Report"
+  },
+  {
+    "Code": "QF",
+    "Message Type": "OFF/Destination Report"
+  },
+  {
+    "Code": "QG",
+    "Message Type": "Out/Return IN Report"
+  },
+  {
+    "Code": "QH",
+    "Message Type": "OUT Report"
+  },
+  {
+    "Code": "QK",
+    "Message Type": "Landing Report"
+  },
+  {
+    "Code": "QL",
+    "Message Type": "Arrival Report"
+  },
+  {
+    "Code": "QM",
+    "Message Type": "Arrival Information Report"
+  },
+  {
+    "Code": "QN",
+    "Message Type": "Diversion Report"
+  },
+  {
+    "Code": "QP",
+    "Message Type": "OUT Report"
+  },
+  {
+    "Code": "QQ",
+    "Message Type": "OFF Report"
+  },
+  {
+    "Code": "QR",
+    "Message Type": "ON Report"
+  },
+  {
+    "Code": "QS",
+    "Message Type": "IN Report"
+  },
+  {
+    "Code": "QT",
+    "Message Type": "OUT/Return IN Report"
+  },
+  {
+    "Code": "QX",
+    "Message Type": "Intercept/Unable to process"
+  },
+  {
+    "Code": "RA",
+    "Message Type": "Command/Response"
+  },
+  {
+    "Code": "RB",
+    "Message Type": "Command/Response"
+  },
+  {
+    "Code": "REG",
+    "Message Type": "Registration"
+  },
+  {
+    "Code": "S1",
+    "Message Type": "VHF Network Statistics Report"
+  },
+  {
+    "Code": "S2",
+    "Message Type": "VHF Performance Report"
+  },
+  {
+    "Code": "S3",
+    "Message Type": "LRU Configuration Report"
+  },
+  {
+    "Code": "SA",
+    "Message Type": "Media Advisory"
+  },
+  {
+    "Code": "SQ",
+    "Message Type": "Squitter Message"
+  },
+  {
+    "Code": "UP",
+    "Message Type": "Message Acknowledgement"
+  },
+  {
+    "Code": ":;",
+    "Message Type": "Aircraft Transceiver Auto-Tune"
+  },
+  {
+    "Code": "_j",
+    "Message Type": "Reserved"
+  },
+  {
+    "Code": "_DEL",
+    "Message Type": "General Response (Demand Mode)"
+  }
+]

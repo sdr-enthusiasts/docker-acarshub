@@ -37,8 +37,20 @@ table.message {
   vertical-align: top;
 }
 
+.align_right {
+  float: right;
+}
+
 img {
   max-width: 100%;
+}
+
+.red {
+  color: red;
+}
+
+.red:hover {
+  color: white;
 }
 
 ol {

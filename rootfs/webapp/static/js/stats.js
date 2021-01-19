@@ -2,6 +2,7 @@
 var image_prefix = '';
 $(document).ready(function(){
 	generate_menu();
+	generate_footer();
 
 	socket = io.connect('http://' + document.domain + ':' + location.port + '/stats');
 	socket.on('newmsg', function(msg) {
@@ -12,11 +13,14 @@ $(document).ready(function(){
 	socket.on('freqs', function(msg) {
 		var html = "<table class=\"search\">";
 		html += "<thead><th><span class=\"menu_non_link\">Frequency</span></th><th><span class=\"menu_non_link\">Count</span></th><th><span class=\"menu_non_link\">Type</span></th></thead>"
+		for(let i = 0; i < msg.freqs.length; i++) {
+			if(msg.freqs[i].freq_type == "ACARS")
+				html += `<tr><td><span class=\"menu_non_link\">${msg.freqs[i].freq}</span></td><td><span class=\"menu_non_link\">${msg.freqs[i].count}</span></td><td><span class=\"menu_non_link\">${msg.freqs[i].freq_type}</span></td></tr>`;
+		}
 
 		for(let i = 0; i < msg.freqs.length; i++) {
-			var split = msg.freqs[i].split("|");
-
-			html += `<tr><td><span class=\"menu_non_link\">${split[1]}</span></td><td><span class=\"menu_non_link\">${split[2]}</span></td><td><span class=\"menu_non_link\">${split[0]}</span></td></tr>`;
+			if(msg.freqs[i].freq_type == "VDL-M2")
+				html += `<tr><td><span class=\"menu_non_link\">${msg.freqs[i].freq}</span></td><td><span class=\"menu_non_link\">${msg.freqs[i].count}</span></td><td><span class=\"menu_non_link\">${msg.freqs[i].freq_type}</span></td></tr>`;
 		}
 
 		html += "</table>"
@@ -32,14 +36,15 @@ $(document).ready(function(){
 		var empty_error = msg.count[3];
 		var empty_good = msg.count[2];
 
-		html = "<table class=\"search\">";
+		html = "<p><table class=\"search\">";
 		html += `<tr><td><span class="menu_non_link">Total Messages (All): </span></td><td><span class="menu_non_link">${total}</span></td><td></td></tr>`;
 		html += `<tr><td><span class="menu_non_link">Messages (No Errors): </span></td><td><span class="menu_non_link">${good_msg}</span></td><td><span class="menu_non_link">${parseFloat((good_msg/total)*100).toFixed(2)}%</span></td></tr>`;
 		html += `<tr><td><span class="menu_non_link">Messages (W/Errors): </span></td><td><span class="menu_non_link">${error}</span></td><td><span class="menu_non_link">${parseFloat((error/total)*100).toFixed(2)}%</span></td></tr>`;
-
+		html += "</table></p>";
+		html += '<table class="search">'
 		html += `<tr><td><span class="menu_non_link">Empty Messages (Total): </span></td><td><span class="menu_non_link">${empty_good + empty_error}</span></td><td><span class="menu_non_link">${parseFloat(((empty_good + empty_error)/total)*100).toFixed(2)}%</span></td></tr>`;
 		html += `<tr><td><span class="menu_non_link">Empty Messages (No Errors): </span></td><td><span class="menu_non_link">${empty_good}</span></td><td><span class="menu_non_link">${parseFloat((empty_good/total)*100).toFixed(2)}%</span></td></tr>`;
-		html += `<tr><td><span class="menu_non_link">Empty Messages (W/Errors: </span></td><td><span class="menu_non_link">${empty_error}</span></td><td><span class="menu_non_link">${parseFloat((empty_error/total)*100).toFixed(2)}%</span></td></tr>`;
+		html += `<tr><td><span class="menu_non_link">Empty Messages (W/Errors): </span></td><td><span class="menu_non_link">${empty_error}</span></td><td><span class="menu_non_link">${parseFloat((empty_error/total)*100).toFixed(2)}%</span></td></tr>`;
 		html += "</table>";
 
 		$('#msgs').html(html);

@@ -9,6 +9,7 @@
     <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/socket.io/1.3.6/socket.io.min.js"></script>
     <script src="static/js/menu.js"></script>
     <script src="static/js/about.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/1.9.1/showdown.min.js"></script>
     <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
     <link rel="stylesheet" href="/static/css/site.css">
     <title>ACARS Stats</title>
@@ -25,62 +26,10 @@
       </div>
     </div>
       <div class="left" id="log">
-        <h3>ACARS Hub About/Help</h3>
-        <h4>About</h4>
-        <p>ACARS Hub is a collaborative, open source effort to easily enable reception of, feeding to <a href="airframes.io">Airframes.io</a>, and local viewing of VDLM2/ACARS messages.</p>
-        <p>There are three main pages you can interact with:</p>
-        <ol>
-        <li>
-        <p><code>Live Messages</code>. This page will show you a rolling, constantly updated, list of up to the 50 most recent live messages as they come in. You can filter out messages that do not contain any information (the <code>Filter Out 'No Text' Messages/Show 'No Text' Messages</code> link on the right side), as well as pause the page update so you can catch up with messages.</p>
-        </li>
-        <li>
-        <p><code>Search Database</code>. If you want to look for interesting messages from the past you can use this page to have a look. On the right side, the <code>Most Recent Messages</code> will provide a look at your messages in chronological order, most recent first. Otherwise, you can use the provided search for to select the field you are interested in searching and the term to look for.</p>
-        </li>
-        <li>
-        <p><code>Statistics</code>. This page will provide an insight in to the data you've collected.</p>
-        </li>
-        </ol>
-        <hr />
-        <p>ACARS is a pretty cool technology and these planes are sending an awful lot of information in a coded way. We are constantly working, along with the folks at <a href="airframes.io">Airframes.io</a>, to decode the messages in a more refined, human-readable way. This is an on-going project so expect to see both decoded and non-decoded messages.</p>
-        <p>We've made an effort to provide a maximum amount of information about the message in a compact, yet readable, way. Below is a list of terms/acronyms used throughout the web app and what they represent. </p>
-        <p>Not all messages will include every field, but the fields received for that message will be displayed.</p>
-        <ol>
-        <li>
-        <p><code>To Address</code> or <code>From Address</code>: This is a unique address for the ground station that originated the message (in the case of a <code>From</code> message) or the address of the ground station meant to receive the message in the case of an aircraft originated message. If the ground station ID is recognized, we also display the name/location of the station as <code>To/From Address Station ID</code>.</p>
-        </li>
-        <li>
-        <p><code>ICAO</code>: This is a unique address for the aircraft that is sending/receiving the message.</p>
-        </li>
-        <li>
-        <p><code>F</code>/<code>Frequency</code>: This is the frequency that the message was received on.</p>
-        </li>
-        <li>
-        <p><code>M</code>/<code>Mode</code>: A code generally used to indicate the indicated 'country' or intended recipient of the message.</p>
-        </li>
-        <li>
-        <p><code>L</code>/<code>Label</code>: A code used to indicate the contents of the message. The list is really long, but common ones indicate a request for airport ATIS, position report, among many many others.</p>
-        </li>
-        <li>
-        <p><code>B</code>/<code>Block ID</code>: Used to assist the stations in decoding message.</p>
-        </li>
-        <li>
-        <p><code>M#</code>/<code>Message Number</code>: A sequential combination of numbers and letters used to indicate a multi-part message, and what the correct order of the messages is.</p>
-        </li>
-        <li>
-        <p><code>R</code>/<code>Response</code>: Used by the sender/transmitter to indicate if the message was received properly, or if re-transmission is necessary.</p>
-        </li>
-        <li>
-        <p><code>E</code>/<code>Error</code>: The inclusion of this field on the website indicates the decoder successfully decoded part of a message, but there was an error in at least one field that it wasn't able to decode. The parts of the message that were decoded are displayed, but there will be missing fields.</p>
-        </li>
-        </ol>
-        <p>Additionally, some fields include a tool-tip if they include extra information (such as the <code>Flight</code> field if the web app was able to decipher the airline name), or if the field name is abbreviated (such as the <code>Mode</code> field), the tool-tip will give the full name of the field.</p>
-        <h4>Feedback / Help</h4>
-        <p>Your feedback has been instrumental in improving this little project from a bare-bones website showing raw data to what it is now, and it is instrumental to guiding future improvements and making it a complete solution for feeding, receiving and viewing ACARS/VDLM data. Please, don't be a stranger on the <a href="https://discord.gg/sTf9uYF">Discord</a> server and let us know what you think!</p>
-        <p>Also the <a href="https://discord.gg/sTf9uYF">Discord</a> server is a great place to get technical assistance in setting up the container or troubleshooting any issues that you might run in to. No question is too "simple" and there are plenty of folks around to help out.</p>
+        <!-- insert -->
       </div>
     </div>
-    <div class="footer">
-      <strong><a href="/about">ACARS Hub Help/About</a> | <a href="https://github.com/fredclausen/docker-acarshub" target="_blank">Project Github</a> | <a href="https://discord.gg/sTf9uYF"><img src="https://img.shields.io/discord/734090820684349521" alt="discord"></a> |</strong>
+    <div class="footer" id="footer_div">
     </div>
   </body>
 </html>
