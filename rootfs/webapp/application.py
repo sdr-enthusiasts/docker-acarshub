@@ -343,6 +343,7 @@ def aboutmd():
 @socketio.on('connect', namespace='/main')
 def main_connect():
     import sys
+    import json
     # need visibility of the global thread object
     global thread_html_generator
     global connected_users
@@ -352,24 +353,9 @@ def main_connect():
     if acarshub.DEBUG_LOGGING:
         print(f'Client connected. Total connected: {connected_users}')
 
-    recent_messages = acarshub.acarshub_db.grab_most_recent()
-
-    if recent_messages is not None:
-        requester = request.sid
-        import json
-        for item in reversed(recent_messages):
-            json_message = json.loads(item)
-            stale_keys = []
-            for key in json_message:
-                if json_message[key] is None:
-                    stale_keys.append(key)
-
-            for key in stale_keys:
-                del json_message[key]
-
-            json_message = acarshub.update_keys(json_message)
-
-            socketio.emit('newmsg', {'msghtml': json_message}, room=requester, namespace='/main')
+    requester = request.sid
+    for item in reversed(acarshub.acarshub_db.grab_most_recent()):
+        socketio.emit('newmsg', {'msghtml': acarshub.update_keys(json.loads(item))}, room=requester, namespace='/main')
 
     # Start the htmlGenerator thread only if the thread has not been started before.
     if not thread_html_generator.isAlive():
