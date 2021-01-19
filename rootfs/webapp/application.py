@@ -3,8 +3,8 @@
 import eventlet
 eventlet.monkey_patch()
 import os
-import acarshub_db
-if not os.getenv("SPAM", default=False):
+import acarshub
+if not acarshub.SPAM:
     import acarshub_rrd
 import logging
 
@@ -67,101 +67,6 @@ vdlm_messages = 0
 acars_messages = 0
 error_messages = 0
 
-ADSB_URL = ""
-
-
-def update_keys(json_message):
-    if "libacars" in json_message.keys() and json_message['libacars'] is not None:
-        json_message['libacars'] = libacars_formatted(json_message['libacars'])
-
-    if "icao" in json_message.keys() and json_message['icao'] is not None:
-        json_message['icao_hex'] = format(int(json_message['icao']), 'X')
-
-    if "flight" in json_message.keys() and json_message['flight'] is not None and 'icao_hex' in json_message.keys():
-        json_message['flight'] = flight_finder(callsign=json_message['flight'], hex_code=json_message['icao_hex'])
-    elif "flight" in json_message.keys() and json_message['flight'] is not None:
-        json_message['flight'] = flight_finder(callsign=json_message['flight'], url=False)
-    elif 'icao_hex' in json_message.keys():
-        json_message['icao_url'] = flight_finder(hex_code=json_message['icao_hex'])
-
-    if "toaddr" in json_message.keys() and json_message['toaddr'] is not None:
-        json_message['toaddr_hex'] = format(int(json_message['toaddr']), 'X')
-
-        toaddr_icao, toaddr_name = acarshub_db.lookup_groundstation(json_message['toaddr_hex'])
-
-        if toaddr_icao is not None:
-            json_message['toaddr_decoded'] = f"{toaddr_name} ({toaddr_icao})"
-
-    if "fromaddr" in json_message.keys() and json_message['fromaddr'] is not None:
-        json_message['fromaddr_hex'] = format(int(json_message['fromaddr']), 'X')
-
-        fromaddr_icao, fromaddr_name = acarshub_db.lookup_groundstation(json_message['fromaddr_hex'])
-
-        if fromaddr_icao is not None:
-            json_message['fromaddr_decoded'] = f"{fromaddr_name} ({fromaddr_icao})"
-
-    if "label" in json_message.keys() and json_message['label'] is not None:
-        label_type = acarshub_db.lookup_label(json_message['label'])
-
-        if label_type is not None:
-            json_message['label_type'] = label_type
-        else:
-            json_message['label_type'] = "Unknown Message Label"
-
-    return json_message
-
-def flight_finder(callsign=None, hex_code=None, url=True):
-    global ADSB_URL
-
-    if ADSB_URL == "":
-        import os
-
-        if os.getenv("TAR1090_URL", default=False):
-            if os.getenv("TAR1090_URL").endswith("/"):
-                ADSB_URL = os.getenv("TAR1090_URL") + "?icao="
-            else:
-                ADSB_URL = os.getenv("TAR1090_URL") + "/?icao="
-        else:
-            ADSB_URL = "https://globe.adsbexchange.com/?icao="
-
-    if callsign is None and hex_code is not None:
-        return f'{ADSB_URL}{hex_code}'
-
-    if callsign is not None:
-        icao, airline = acarshub_db.find_airline_code_from_iata(callsign[:2])
-        flight_number = callsign[2:]
-        flight = icao + flight_number
-
-        if icao != callsign[:2]:
-            html = f"<span class=\"wrapper\"><strong>{flight}/{callsign}</strong><span class=\"tooltip\">{airline} Flight {flight_number}</span></span> "
-        else:
-            html = f"<strong>{flight}</strong> "
-
-        # If the iata and icao variables are not equal, airline was found in the database and we'll add in the tool-tip for the decoded airline
-        # Otherwise, no tool-tip, no FA link, and use the IATA code for display
-        if url:
-            return f"Flight: <span class=\"wrapper\"><strong><a href=\"{ADSB_URL}{hex_code}\" target=\"_blank\">{html}</a></strong>"
-        else:
-            return f"Flight: {html}"
-    else:  # We should never run in to this condition, I don't think, but we'll add a case for it
-        return "Flight: Error"
-
-
-def libacars_formatted(libacars=None):
-    import pprint
-
-    html_output = "<p>Decoded:</p>"
-    html_output += "<p>"
-    html_output += "<pre>{libacars}</pre>".format(
-        libacars=pprint.pformat(
-            libacars,
-            indent=2,
-        )
-    )
-    html_output += "</p>"
-
-    return html_output
-
 
 def update_rrd_db():
     global vdlm_messages
@@ -177,14 +82,9 @@ def update_rrd_db():
 def htmlListener():
     import time
     import sys
-    import os
     import copy
 
     # TOOLTIPS: <span class="wrapper">visible text<span class="tooltip">tooltip text</span></span>
-
-    DEBUG_LOGGING = False
-    if os.getenv("DEBUG_LOGGING", default=False):
-        DEBUG_LOGGING = True
 
     # Run while requested...
     while not thread_html_generator_event.isSet():
@@ -195,20 +95,20 @@ def htmlListener():
             message_source, json_message_initial = que_messages.popleft()
             json_message = copy.deepcopy(json_message_initial)  # creating a copy so that our changes below aren't made to the parent object
             # Send output via socketio
-            if DEBUG_LOGGING:
+            if acarshub.DEBUG_LOGGING:
                 print("[htmlListener] sending output via socketio.emit")
             json_message.update({"message_type": message_source})
 
-            json_message = update_keys(json_message)
+            json_message = acarshub.update_keys(json_message)
 
             socketio.emit('newmsg', {'msghtml': json_message}, namespace='/main')
-            if DEBUG_LOGGING:
+            if acarshub.DEBUG_LOGGING:
                 print("[htmlListener] packet sent via socketio.emit")
                 print("[htmlListener] Completed with generation")
         else:
             pass
 
-    if os.getenv("DEBUG_LOGGING", default=False):
+    if acarshub.DEBUG_LOGGING:
         print("Exiting [htmlListener] thread")
 
 
@@ -225,7 +125,7 @@ def scheduled_tasks():
         schedule.every().minute.at(":30").do(acarshub_rrd.update_graphs)
 
     # Schedule the database pruner
-    schedule.every().hour.do(acarshub_db.pruneOld)
+    schedule.every().hour.do(acarshub.acarshub_db.pruneOld)
     while not thread_scheduler_stop_event.isSet():
         schedule.run_pending()
         time.sleep(1)
@@ -233,23 +133,18 @@ def scheduled_tasks():
 
 def database_listener():
     import sys
-    import os
     import time
-
-    DEBUG_LOGGING = False
-    if os.getenv("DEBUG_LOGGING", default=False):
-        DEBUG_LOGGING = True
 
     while not thread_database_stop_event.isSet():
         sys.stdout.flush()
         time.sleep(1)
 
         if len(que_database) != 0:
-            if DEBUG_LOGGING:
+            if acarshub.DEBUG_LOGGING:
                 print("[databaseListener] Dispatching message to database")
             sys.stdout.flush()
             t, m = que_database.pop()
-            acarshub_db.add_message_from_json(message_type=t, message_from_json=m)
+            acarshub.acarshub_db.add_message_from_json(message_type=t, message_from_json=m)
         else:
             pass
 
@@ -270,16 +165,6 @@ def message_listener(message_type=None, ip='127.0.0.1', port=None):
 
     disconnected = True
 
-    DEBUG_LOGGING = False
-    EXTREME_LOGGING = False
-    SPAM = False
-    if os.getenv("DEBUG_LOGGING", default=False):
-        DEBUG_LOGGING = True
-    if os.getenv("EXTREME_LOGGING", default=False):
-        EXTREME_LOGGING = True
-    if os.getenv("SPAM", default=False):
-        SPAM = True
-
     receiver = socket.socket(
         family=socket.AF_INET,
         type=socket.SOCK_STREAM,)
@@ -289,7 +174,7 @@ def message_listener(message_type=None, ip='127.0.0.1', port=None):
         sys.stdout.flush()
         time.sleep(0)
 
-        if EXTREME_LOGGING:
+        if acarshub.EXTREME_LOGGING:
             print(f"[{message_type.lower()}Generator] listening for messages to {message_type.lower()}_receiver")
         try:
             if disconnected:
@@ -300,50 +185,52 @@ def message_listener(message_type=None, ip='127.0.0.1', port=None):
                 # Set socket timeout 1 seconds
                 receiver.settimeout(1)
 
-                if DEBUG_LOGGING:
+                if acarshub.DEBUG_LOGGING:
                     print(f"[{message_type.lower()}Generator] {message_type.lower()}_receiver created")
 
                 # Connect to the sender
                 receiver.connect((ip, port))
                 disconnected = False
-                if DEBUG_LOGGING:
+                if acarshub.DEBUG_LOGGING:
                     print(f"[{message_type.lower()}Generator] {message_type.lower()}_receiver connected to {ip}:{port}")
 
             data = None
 
-            if SPAM is True:
+            if acarshub.SPAM is True:
                 data, addr = receiver.recvfrom(65527)
             else:
                 data, addr = receiver.recvfrom(65527, socket.MSG_WAITALL)
-            if EXTREME_LOGGING:
+            if acarshub.EXTREME_LOGGING:
                 print(f"[{message_type.lower()}Generator] received data")
         except socket.timeout:
-            if EXTREME_LOGGING:
+            if acarshub.EXTREME_LOGGING:
                 print(f"[{message_type.lower()}Generator] timeout")
             pass
         except socket.error as e:
-            print(f"[{message_type.lower()}Generator] Error {e} to {ip}:{port}. Reattemping...")
+            print(f"[{message_type.lower()}Generator] Error to {ip}:{port}. Reattemping...")
+            acarshub.acars_traceback(e, f"{message_type.lower()}Generator")
             disconnected = True
             receiver.close()
             time.sleep(1)
         except Exception as e:
             print(f"[{message_type.lower()}Generator] Socket error: {e}")
+            acarshub.acars_traceback(e, f"{message_type.lower()}Generator")
             disconnected = True
             receiver.close()
             time.sleep(1)
         else:
             if data.decode() == '':
-                print("[{message_type.lower()}Generator] Lost connection!")
+                print(f"[{message_type.lower()}Generator] Lost connection!")
                 disconnected = True
                 receiver.close()
                 data = None
             elif data is not None:
 
-                if os.getenv("DEBUG_LOGGING", default=None):
+                if acarshub.DEBUG_LOGGING:
                     print(f"[{message_type.lower()} data] {repr(data)}")
                     sys.stdout.flush()
 
-                if DEBUG_LOGGING:
+                if acarshub.DEBUG_LOGGING:
                     print(f"[{message_type.lower()}Generator] data contains data")
 
                 # Decode json
@@ -377,45 +264,44 @@ def message_listener(message_type=None, ip='127.0.0.1', port=None):
                             if j['error'] > 0:
                                 error_messages += j['error']
 
-                        if EXTREME_LOGGING:
+                        if acarshub.EXTREME_LOGGING:
                             print(json.dumps(j, indent=4, sort_keys=True))
                         if connected_users > 0:
-                            if DEBUG_LOGGING:
+                            if acarshub.DEBUG_LOGGING:
                                 print(f"[{message_type.lower()}Generator] appending message")
                             que_messages.append((que_type, j))
-                        if DEBUG_LOGGING:
+                        if acarshub.DEBUG_LOGGING:
                             print(f"[{message_type.lower()}Generator] sending off to db")
                         que_database.append((que_type, j))
 
 
 def init_listeners():
-    import os
     global thread_acars_listener
     global thread_vdlm2_listener
     global thread_database
     global thread_scheduler
 
-    if os.getenv("DEBUG_LOGGING", default=False):
+    if acarshub.DEBUG_LOGGING:
         print('[init] Starting data listeners')
 
     if not thread_acars_listener.isAlive() and os.getenv("ENABLE_ACARS"):
-        if os.getenv("DEBUG_LOGGING", default=False):
+        if acarshub.DEBUG_LOGGING:
             print('[init] Starting ACARS listener')
         thread_acars_listener = Thread(target=message_listener, args=("ACARS", "127.0.0.1", 15550))
         thread_acars_listener.start()
 
     if not thread_vdlm2_listener.isAlive() and os.getenv("ENABLE_VDLM"):
-        if os.getenv("DEBUG_LOGGING", default=False):
+        if acarshub.DEBUG_LOGGING:
             print('[init] Starting VDLM listener')
         thread_vdlm2_listener = Thread(target=message_listener, args=("VDLM2", "127.0.0.1", 15555))
         thread_vdlm2_listener.start()
     if not thread_database.isAlive():
-        if os.getenv("DEBUG_LOGGING", default=False):
+        if acarshub.DEBUG_LOGGING:
             print('[init] Starting Database Thread')
         thread_database = Thread(target=database_listener)
         thread_database.start()
     if not thread_scheduler.isAlive():
-        if os.getenv("DEBUG_LOGGING", default=False):
+        if acarshub.DEBUG_LOGGING:
             print("[init] starting scheduler")
         thread_scheduler = Thread(target=scheduled_tasks)
         thread_scheduler.start()
@@ -466,10 +352,10 @@ def main_connect():
 
     connected_users += 1
 
-    if os.getenv("DEBUG_LOGGING", default=False):
+    if acarshub.DEBUG_LOGGING:
         print(f'Client connected. Total connected: {connected_users}')
 
-    recent_messages = acarshub_db.grab_most_recent()
+    recent_messages =acarshub.acarshub_db.grab_most_recent()
 
     if recent_messages is not None:
         requester = request.sid
@@ -484,14 +370,14 @@ def main_connect():
             for key in stale_keys:
                 del json_message[key]
 
-            json_message = update_keys(json_message)
+            json_message = acarshub.update_keys(json_message)
 
             socketio.emit('newmsg', {'msghtml': json_message}, room=requester, namespace='/main')
 
 
     # Start the htmlGenerator thread only if the thread has not been started before.
     if not thread_html_generator.isAlive():
-        if os.getenv("DEBUG_LOGGING", default=False):
+        if acarshub.DEBUG_LOGGING:
             print("Starting htmlListener")
         sys.stdout.flush()
         thread_html_generator_event.clear()
@@ -500,21 +386,17 @@ def main_connect():
 
 @socketio.on('connect', namespace='/search')
 def search_connect():
-    import os
-
-    if os.getenv("DEBUG_LOGGING", default=False):
+    if acarshub.DEBUG_LOGGING:
         print('Client connected')
 
-    rows, size = acarshub_db.database_get_row_count()
+    rows, size = acarshub.acarshub_db.database_get_row_count()
     requester = request.sid
     socketio.emit('database', {"count": rows, "size": size}, room=requester, namespace='/search')
 
 
 @socketio.on('connect', namespace='/stats')
 def stats_connect():
-    import os
-
-    if os.getenv("DEBUG_LOGGING", default=False):
+    if acarshub.DEBUG_LOGGING:
         print('Client connected stats')
 
     acars = False
@@ -530,13 +412,13 @@ def stats_connect():
 @socketio.on('freqs', namespace="/stats")
 def request_freqs(message, namespace):
     requester = request.sid
-    socketio.emit('freqs', {'freqs': acarshub_db.get_freq_count()}, room=requester, namespace="/stats")
+    socketio.emit('freqs', {'freqs': acarshub.acarshub_db.get_freq_count()}, room=requester, namespace="/stats")
 
 
 @socketio.on('count', namespace="/stats")
 def request_count(message, namespace):
     requester = request.sid
-    socketio.emit('count', {'count': acarshub_db.get_errors()}, room=requester, namespace="/stats")
+    socketio.emit('count', {'count': acarshub.acarshub_db.get_errors()}, room=requester, namespace="/stats")
 
 # handle a query request from the browser
 
@@ -566,14 +448,14 @@ def handle_message(message, namespace):
                 # ask the database for the results at the user requested index
                 # multiply the selected index by 20 (we have 20 results per page) so the db
                 # knows what result index to send back
-                search = acarshub_db.database_search(message['field'], message['search_term'], message['results_after'] * 20)
+                search = acarshub.acarshub_db.database_search(message['field'], message['search_term'], message['results_after'] * 20)
             else:
-                search = acarshub_db.database_search(message['field'], message['search_term'])
+                search = acarshub.acarshub_db.database_search(message['field'], message['search_term'])
         elif 'show_all' in message:
             if 'results_after' in message:
-                search = acarshub_db.show_all(message['results_after'] * 50)
+                search = acarshub.acarshub_db.show_all(message['results_after'] * 50)
             else:
-                search = acarshub_db.show_all()
+                search = acarshub.acarshub_db.show_all()
 
         # the db returns two values
         # index zero is the query results in json
@@ -584,7 +466,7 @@ def handle_message(message, namespace):
             total_results = search[1]
             # Loop through the results and format html
             for result in query_result:
-                json_message = update_keys(json.loads(result))
+                json_message = acarshub.update_keys(json.loads(result))
 
                 serialized_json.insert(0, json.dumps(json_message))
 
@@ -620,44 +502,24 @@ if __name__ == '__main__':
 
 @socketio.on_error()
 def error_handler(e):
-    traceback = e.__traceback__
-    print('[server] An error has occurred: ' + str(e))
-    while traceback:
-        print("{}: {}".format(traceback.tb_frame.f_code.co_filename, traceback.tb_lineno))
-        traceback = traceback.tb_next
+    acarshub.acars_traceback(e, "server-error")
 
 
 @socketio.on_error('/main')
 def error_handler_main(e):
-    traceback = e.__traceback__
-    print('[server-main] An error has occurred: ' + str(e))
-    while traceback:
-        print("{}: {}".format(traceback.tb_frame.f_code.co_filename, traceback.tb_lineno))
-        traceback = traceback.tb_next
+    acarshub.acars_traceback(e, "server-main")
 
 
 @socketio.on_error('/search')
 def error_handler_search(e):
-    traceback = e.__traceback__
-    print('[server-search] An error has occurred: ' + str(e))
-    while traceback:
-        print("{}: {}".format(traceback.tb_frame.f_code.co_filename, traceback.tb_lineno))
-        traceback = traceback.tb_next
+    acarshub.acars_traceback(e, "server-search")
 
 
 @socketio.on_error('/stats')
 def stats_handler_search(e):
-    traceback = e.__traceback__
-    print('[server-stats] An error has occurred: ' + str(e))
-    while traceback:
-        print("{}: {}".format(traceback.tb_frame.f_code.co_filename, traceback.tb_lineno))
-        traceback = traceback.tb_next
+    acarshub.acars_traceback(e, "server-stats")
 
 
 @socketio.on_error_default
 def default_error_handler(e):
-    traceback = e.__traceback__
-    print('[server] An error has occurred: ' + str(e))
-    while traceback:
-        print("{}: {}".format(traceback.tb_frame.f_code.co_filename, traceback.tb_lineno))
-        traceback = traceback.tb_next
+    acarshub.acars_traceback(e, "server")
