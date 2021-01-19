@@ -28,7 +28,7 @@ export class Label_80 extends DecoderPlugin {
     };
   }
 
-  decode(message: any) : any {
+  decode(message: any, options: any = {}) : any {
     const decodeResult: any = this.defaultResult;
     decodeResult.decoder.name = this.name;
 

@@ -35,7 +35,7 @@ export class Label_5Z extends DecoderPlugin {
     };
   }
 
-  decode(message: any) : any {
+  decode(message: any, options: any = {}) : any {
     const decodeResult: any = this.defaultResult;
     decodeResult.decoder.name = this.name;
 
@@ -99,7 +99,9 @@ export class Label_5Z extends DecoderPlugin {
             value: `${results.groups.unknown2}`,
           });
         } else {
-          console.log(`Decoder: Unkown 5Z RDC format: ${remainder}`);
+          if (options.debug) {
+            console.log(`Decoder: Unkown 5Z RDC format: ${remainder}`);
+          }
         }
       } else {
         decodeResult.remaining.text = remainder;
@@ -108,7 +110,9 @@ export class Label_5Z extends DecoderPlugin {
       decodeResult.decoder.decodeLevel = 'partial';
     } else {
       // Unknown
-      console.log(`Decoder: Unknown 5Z message: ${message.text}`);
+      if (options.debug) {
+        console.log(`Decoder: Unknown 5Z message: ${message.text}`);
+      }
       decodeResult.remaining.text = message.text;
       decodeResult.decoded = false;
       decodeResult.decoder.decodeLevel = 'none';
