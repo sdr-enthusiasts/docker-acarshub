@@ -59,8 +59,10 @@ function display_messages(msgs_to_process) {
         }
 
         if(message.hasOwnProperty('fromaddr')) {
+            var fromaddr_decoded = "";
+
             if(message.hasOwnProperty('fromaddr_decoded')) {
-                toaddr_decoded = `<br>From Address Station ID: ${message['fromaddr_decoded']}`;
+                fromaddr_decoded = `<br>From Address Station ID: ${message['fromaddr_decoded']}`;
             }
             if(message.hasOwnProperty('fromaddr_hex')) {
                 html_output += `<p>To Address: <strong>${message['fromaddr']}/${message['fromaddr_hex']}</strong>${fromaddr_decoded}</p>`;
