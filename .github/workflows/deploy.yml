@@ -2,11 +2,6 @@ name: Deploy to Docker Hub
 
 on:
 
-  # TEMPORARY FOR TESTING - WILL REMOVE PRIOR TO MERGE
-  pull_request:
-    branches: 
-      - main
-
   # Build and deploy the image on pushes to main branch
   push:
     branches: 
@@ -29,8 +24,7 @@ jobs:
     env:
       REPO: fredclausen
       IMAGE: acarshub
-      # TEMPORARY FOR TESTING - WILL SET TO true PRIOR TO MERGE
-      PUSH: false
+      PUSH: true
     steps:
 
       # Check out our code
