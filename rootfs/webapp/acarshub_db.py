@@ -85,6 +85,13 @@ class messagesFreq(Messages):
     count = Column('count', Integer)
 
 
+class messagesLevel(Messages):
+    __tablename__  = 'level'
+    id = Column(Integer, primary_key=True)
+    level = Column('level', Integer)
+    count = Column('count', Integer)
+
+
 class messagesCount(Messages):
     __tablename__ = 'count'
     id = Column(Integer, primary_key=True)
@@ -134,6 +141,7 @@ class messages(Messages):
     is_onground = Column('is_onground', String(32))
     error = Column('error', String(32))
     libacars = Column('libacars', Text)
+    #level = Column('level', String(32)) # Uncomment this line when we're ready to migrate the db
 
 
 class airlines(Airlines):
@@ -202,6 +210,7 @@ def add_message_from_json(message_type, message_from_json):
     is_onground = None
     error = None
     libacars = None
+    level = None
 
     for index in message_from_json:
         if index == 'timestamp':
@@ -269,6 +278,7 @@ def add_message_from_json(message_type, message_from_json):
         elif index == 'channel':
             pass
         elif index == 'level':
+            level = message_from_json['level'] 
             pass
         elif index == 'end':
             pass
@@ -289,7 +299,7 @@ def add_message_from_json(message_type, message_from_json):
         if os.getenv("DB_SAVEALL", default=False) or text is not None or libacars is not None or \
            dsta is not None or depa is not None or eta is not None or gtout is not None or \
            gtin is not None or wloff is not None or wlin is not None or lat is not None or \
-           lon is not None or alt is not None:
+           lon is not None or alt is not None: # add in level here
 
             # write the message
             if os.getenv("DEBUG_LOGGING", default=False):
@@ -326,6 +336,15 @@ def add_message_from_json(message_type, message_from_json):
                 count.nonlogged_errors += 1
             else:
                 count.nonlogged_good += 1
+
+        # Log the level count
+
+        found_level = session.query(messagesLevel).filter(messagesLevel.level == level).first()
+
+        if found_level is not None:
+            found_level.count += 1
+        else:
+            session.add(messagesLevel(level=level, count=1))
 
         # commit the db change and close the session
         session.commit()
@@ -555,31 +574,30 @@ def lookup_label(label):
     return None
 
 
-# We will pre-populate the count table if this is a new db
-# Or the user doesn't have the table already
-
-
 try:
+    # We will pre-populate the count table if this is a new db
+    # Or the user doesn't have the table already
+
     total_messages, total_errors = get_errors_direct()
     good_msgs = total_messages - total_errors
     session = db_session()
 
     if session.query(messagesCount).count() == 0:
-        print("[database] Initializing count database")
+        print("[database] Initializing table database")
         session.add(messagesCount(total=total_messages, errors=total_errors, good=good_msgs))
         session.commit()
-        print("[database] Count database initialized")
+        print("[database] Count table initialized")
 
     if session.query(messagesCountDropped).count() == 0:
         print("[database] Initializing dropped count database")
         session.add(messagesCountDropped(nonlogged_good=0, nonlogged_errors=0))
         session.commit()
-        print("[database] Dropped count database initialized")
+        print("[database] Dropped count table initialized")
 
     # now we pre-populate the freq db if empty
 
     if session.query(messagesFreq).count() == 0:
-        print("[database] Initializing freq database")
+        print("[database] Initializing freq table")
         found_freq = {}
         for item in session.query(messages).all():
             if item.freq not in found_freq:
@@ -588,7 +606,7 @@ try:
         for item in found_freq:
             session.add(messagesFreq(freq=found_freq[item][0], count=found_freq[item][2], freq_type=found_freq[item][1]))
         session.commit()
-        print("[database] Freq database initialized")
+        print("[database] Freq table initialized")
 
     session.close()
 except Exception as e:
