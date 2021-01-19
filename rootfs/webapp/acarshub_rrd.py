@@ -55,9 +55,9 @@ def update_graphs():
 
     if os.getenv("ENABLE_ACARS", default=False):
         args_all.append("DEF:messages-acars=/run/acars/acarshub.rrd:ACARS:AVERAGE")
-        args_all.append("LINE1:messages-acars#770BE3:ACARS")
+        args_all.append("LINE1:messages-acars#000000:ACARS")
         args_acars.append("DEF:messages-acars=/run/acars/acarshub.rrd:ACARS:AVERAGE")
-        args_acars.append("LINE1:messages-acars#770BE3:ACARS")
+        args_acars.append("LINE1:messages-acars#000000:ACARS")
 
     if os.getenv("ENABLE_VDLM", default=False):
         args_all.append("DEF:messages-vdlm=/run/acars/acarshub.rrd:VDLM:AVERAGE")
