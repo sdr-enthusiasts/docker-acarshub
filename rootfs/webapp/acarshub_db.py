@@ -24,8 +24,8 @@ except Exception as e:
 
 try:
     print("[database] Loading message labels")
-    with open('data/labels.json') as text:
-        message_labels = json.load(text)
+    with urllib.request.urlopen("https://raw.githubusercontent.com/airframesio/data/master/json/acars/metadata.json") as url:
+        message_labels = json.loads(url.read().decode())
     print("[database] Completed loading message labels")
 except Exception as e:
     acarshub_error.acars_traceback(e, "database")
@@ -566,10 +566,10 @@ def lookup_groundstation(lookup_id):
 
 
 def lookup_label(label):
-    for i in range(len(message_labels)):
-        if 'Code' in message_labels[i]:
-            if message_labels[i]['Code'] == label:
-                return message_labels[i]['Message Type']
+    if label in message_labels['labels']:
+        return message_labels['labels'][label]['name']
+    #    if message_labels['labels'][i] == label:
+    #        return message_labels['labels'][i]['name']
     print(f"[database] Unknown message label: {label}")
     return None
 
