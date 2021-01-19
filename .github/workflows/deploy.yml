@@ -2,6 +2,11 @@ name: Deploy to Docker Hub
 
 on:
 
+  # TEMPORARY FOR TESTING - WILL REMOVE PRIOR TO MERGE
+  pull_request:
+    branches: 
+      - main
+
   # Build and deploy the image on pushes to main branch
   push:
     branches: 
@@ -24,7 +29,8 @@ jobs:
     env:
       REPO: fredclausen
       IMAGE: acarshub
-      PUSH: true
+      # TEMPORARY FOR TESTING - WILL SET TO true PRIOR TO MERGE
+      PUSH: false
     steps:
 
       # Check out our code
@@ -32,7 +38,7 @@ jobs:
         name: Checkout
         uses: actions/checkout@v2
 
-      # Get version tag for webapp
+      # Get version tag
       # git log -1 : get the latest commit
       # --format="%ct" : committer date, UNIX timestamp
       # Then using `date` to format to YYYYMMDD format
@@ -41,7 +47,13 @@ jobs:
         run: |
           echo "VERSION_TAG=$(git log -1 --format=\"%ct\" | xargs -I{} date -d @{} +%Y%m%d)" >> $GITHUB_ENV
 
-      # Set version tag for webapp
+      # Show version tag
+      - 
+        name: Show version tag
+        run: |
+          echo "ACARS Hub Version: ${{ env.VERSION_TAG }}"
+
+      # Set version tag in webapp
       - 
         name: Patch webapp with VERSION_TAG
         run: |
