@@ -1,7 +1,7 @@
 function generate_menu(){
 	html = '<nav>';
     html += '<ul class="primary">';
-    html +=  '<li>';
+    html += '<li>';
     html += '<span class="nav_text">ACARS Hub</span>';
     html += '<li><a href="/">Live Messages</a></li>';
     html += '<li><a href="/search">Search Database</a></li>';

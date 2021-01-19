@@ -32,6 +32,21 @@ jobs:
         name: Checkout
         uses: actions/checkout@v2
 
+      # Get version tag for webapp
+      # git log -1 : get the latest commit
+      # --format="%ct" : committer date, UNIX timestamp
+      # Then using `date` to format to YYYYMMDD format
+      - 
+        name: Get date of last commit for VERSION_TAG
+        run: |
+          echo "VERSION_TAG=$(git log -1 --format=\"%ct\" | xargs -I{} date -d @{} +%Y%m%d)" >> $GITHUB_ENV
+
+      # Set version tag for webapp
+      - 
+        name: Patch webapp with VERSION_TAG
+        run: |
+          sed -i 's/Pre-Release/ACARS Hub Version: ${{ env.VERSION_TAG }}/' ./rootfs/webapp/static/js/menu.js
+
       # Hit an issue where arm builds would fail with cURL errors regarding intermediary certificates when downloading from github (ie: deploy-s6-overlay).
       # After many hours of troubleshooting, the workaround is to pre-load the image's rootfs with the CA certificates from the runner.
       # This problem may go away in future.
@@ -93,18 +108,6 @@ jobs:
           platforms: linux/386,linux/amd64,linux/arm/v7,linux/arm/v6,linux/arm64
           push: ${{ env.PUSH }}
           tags: ${{ env.REPO }}/${{ env.IMAGE }}:latest
-
-      # Get version from "latest"
-      -
-        name: Get latest image version
-        run: |
-          echo "VERSION_TAG=${GITHUB_SHA:1:7}" >> $GITHUB_ENV
-
-      # Show version from "latest"
-      -
-        name: Show latest image version
-        run: |
-          echo "${{ env.REPO }}/${{ env.IMAGE }}:latest contains version: ${{ env.VERSION_TAG }}"
 
       # Build version specific
       -
