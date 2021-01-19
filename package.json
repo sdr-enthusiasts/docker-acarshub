@@ -10,7 +10,7 @@
   },
   "scripts": {
     "build": "tsc",
-    "test": "sudo npm i -g && acars-decoder-test"
+    "test": "npm i -g && acars-decoder-test"
   },
   "repository": {
     "type": "git",
