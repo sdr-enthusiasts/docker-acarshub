@@ -2,7 +2,6 @@
 
 import eventlet
 eventlet.monkey_patch()
-import os
 import acarshub
 if not acarshub.SPAM:
     import acarshub_rrd
@@ -118,7 +117,7 @@ def scheduled_tasks():
 
     # init the dbs if not already there
 
-    if not os.getenv("SPAM", default=False):
+    if not acarshub.SPAM:
         acarshub_rrd.create_db()
         acarshub_rrd.update_graphs()
         schedule.every().minute.at(":00").do(update_rrd_db)
@@ -154,7 +153,6 @@ def message_listener(message_type=None, ip='127.0.0.1', port=None):
     import socket
     import json
     import sys
-    import os
 
     global error_messages
 
@@ -284,13 +282,13 @@ def init_listeners():
     if acarshub.DEBUG_LOGGING:
         print('[init] Starting data listeners')
 
-    if not thread_acars_listener.isAlive() and os.getenv("ENABLE_ACARS"):
+    if not thread_acars_listener.isAlive() and acarshub.ENABLE_ACARS:
         if acarshub.DEBUG_LOGGING:
             print('[init] Starting ACARS listener')
         thread_acars_listener = Thread(target=message_listener, args=("ACARS", "127.0.0.1", 15550))
         thread_acars_listener.start()
 
-    if not thread_vdlm2_listener.isAlive() and os.getenv("ENABLE_VDLM"):
+    if not thread_vdlm2_listener.isAlive() and acarshub.ENABLE_VDLM:
         if acarshub.DEBUG_LOGGING:
             print('[init] Starting VDLM listener')
         thread_vdlm2_listener = Thread(target=message_listener, args=("VDLM2", "127.0.0.1", 15555))
@@ -344,7 +342,6 @@ def aboutmd():
 
 @socketio.on('connect', namespace='/main')
 def main_connect():
-    import os
     import sys
     # need visibility of the global thread object
     global thread_html_generator
@@ -355,7 +352,7 @@ def main_connect():
     if acarshub.DEBUG_LOGGING:
         print(f'Client connected. Total connected: {connected_users}')
 
-    recent_messages =acarshub.acarshub_db.grab_most_recent()
+    recent_messages = acarshub.acarshub_db.grab_most_recent()
 
     if recent_messages is not None:
         requester = request.sid
@@ -364,7 +361,7 @@ def main_connect():
             json_message = json.loads(item)
             stale_keys = []
             for key in json_message:
-                if json_message[key] == None:
+                if json_message[key] is not None:
                     stale_keys.append(key)
 
             for key in stale_keys:
@@ -373,7 +370,6 @@ def main_connect():
             json_message = acarshub.update_keys(json_message)
 
             socketio.emit('newmsg', {'msghtml': json_message}, room=requester, namespace='/main')
-
 
     # Start the htmlGenerator thread only if the thread has not been started before.
     if not thread_html_generator.isAlive():
@@ -401,9 +397,9 @@ def stats_connect():
 
     acars = False
     vdlm = False
-    if os.getenv("ENABLE_ACARS", default=False):
+    if acarshub.ENABLE_ACARS:
         acars = True
-    if os.getenv("ENABLE_VDLM", default=False):
+    if acarshub.ENABLE_VDLM:
         vdlm = True
 
     socketio.emit('newmsg', {"vdlm": vdlm, "acars": acars}, namespace='/stats')
@@ -485,7 +481,7 @@ def main_disconnect():
     global connected_users
 
     connected_users -= 1
-    if os.getenv("DEBUG_LOGGING", default=False):
+    if acarshub.DEBUG_LOGGING:
         print(f'Client disconnected. Total connected: {connected_users}')
 
     # Client disconnected, stop the htmlListener

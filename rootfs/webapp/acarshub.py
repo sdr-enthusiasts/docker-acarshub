@@ -7,13 +7,22 @@ import acarshub_db
 DEBUG_LOGGING = False
 EXTREME_LOGGING = False
 SPAM = False
+ENABLE_ACARS = False
+ENABLE_VDLM = False
 
 if os.getenv("DEBUG_LOGGING", default=False):
     DEBUG_LOGGING = True
 if os.getenv("EXTREME_LOGGING", default=False):
     EXTREME_LOGGING = True
+
+# Application states
+
 if os.getenv("SPAM", default=False):
     SPAM = True
+if os.getenv("ENABLE_ACARS"):
+    ENABLE_ACARS = True
+if os.getenv("ENABLE_VDLM"):
+    ENABLE_VDLM = True
 
 if os.getenv("TAR1090_URL", default=False):
     if os.getenv("TAR1090_URL").endswith("/"):
@@ -21,15 +30,15 @@ if os.getenv("TAR1090_URL", default=False):
     else:
         ADSB_URL = os.getenv("TAR1090_URL") + "/?icao="
 else:
-        ADSB_URL = "https://globe.adsbexchange.com/?icao="
+    ADSB_URL = "https://globe.adsbexchange.com/?icao="
 
 
 def acars_traceback(e, source):
-	traceback = e.__traceback__
-	print(f"[{source}] An error has occurred: " + str(e))
-	while traceback:
-	    print("{}: {}".format(traceback.tb_frame.f_code.co_filename, traceback.tb_lineno))
-	    traceback = traceback.tb_next
+    traceback = e.__traceback__
+    print(f"[{source}] An error has occurred: " + str(e))
+    while traceback:
+        print("{}: {}".format(traceback.tb_frame.f_code.co_filename, traceback.tb_lineno))
+        traceback = traceback.tb_next
 
 
 def libacars_formatted(libacars=None):

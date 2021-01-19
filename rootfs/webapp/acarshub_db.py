@@ -8,7 +8,6 @@ import os
 from sqlalchemy.ext.declarative import DeclarativeMeta
 import json
 import urllib.request
-import datetime
 
 # Download station IDs
 
@@ -290,7 +289,7 @@ def add_message_from_json(message_type, message_from_json):
            dsta is not None or depa is not None or eta is not None or gtout is not None or \
            gtin is not None or wloff is not None or wlin is not None or lat is not None or \
            lon is not None or alt is not None:
-            
+
             # write the message
             if os.getenv("DEBUG_LOGGING", default=False):
                 print("[database] writing to the database")
@@ -460,14 +459,14 @@ def get_freq_count():
             result = session.query(messagesFreq).filter(messagesFreq.freq).filter(messagesFreq.freq == freq and messagesFreq.freq_type == f[0]).first()
 
             if(result is not None):
-                freq_count.append({'freq_type':f"{result.freq_type}", 'freq': f"{result.freq}", 'count':result.count})
+                freq_count.append({'freq_type': f"{result.freq_type}", 'freq': f"{result.freq}", 'count': result.count})
                 found_freq.append(freq)
             else:
-                freq_count.append({'freq_type':f"{f[0]}", 'freq': f"{f[1]}", 'count':0})
+                freq_count.append({'freq_type': f"{f[0]}", 'freq': f"{f[1]}", 'count': 0})
 
         for item in session.query(messagesFreq).all():
             if item.freq not in found_freq:
-                freq_count.append({'freq_type':f"{item.freq_type}", 'freq': f"{item.freq}", 'count':item.count})
+                freq_count.append({'freq_type': f"{item.freq_type}", 'freq': f"{item.freq}", 'count': item.count})
 
         session.close()
 
@@ -552,11 +551,12 @@ def grab_most_recent():
             print("{}: {}".format(traceback.tb_frame.f_code.co_filename, traceback.tb_lineno))
             traceback = traceback.tb_next
 
+
 def lookup_groundstation(lookup_id):
     for i in range(len(groundStations['ground_stations'])):
         if 'id' in groundStations['ground_stations'][i]:
-           if groundStations['ground_stations'][i]['id'] == lookup_id:
-               return (groundStations['ground_stations'][i]['airport']['icao'], groundStations['ground_stations'][i]['airport']['name'])
+            if groundStations['ground_stations'][i]['id'] == lookup_id:
+                return (groundStations['ground_stations'][i]['airport']['icao'], groundStations['ground_stations'][i]['airport']['name'])
 
     return (None, None)
 
