@@ -8,6 +8,7 @@ import os
 from sqlalchemy.ext.declarative import DeclarativeMeta
 import json
 import urllib.request
+import acarshub_error
 
 # Download station IDs
 
@@ -17,7 +18,7 @@ try:
         groundStations = json.loads(url.read().decode())
     print("[database] Completed downloading Station IDs")
 except Exception as e:
-    print(f"[database] Error ({e}) download Station IDs. Please restart the container")
+    acarshub_error.acars_traceback(e, "database")
 
 # Load Message Labels
 
@@ -27,7 +28,7 @@ try:
         message_labels = json.load(text)
     print("[database] Completed loading message labels")
 except Exception as e:
-    print(f"[database] Error ({e})loading message labels JSON")
+    acarshub_error.acars_traceback(e, "database")
 
 # DB PATH MUST BE FROM ROOT
 
@@ -263,7 +264,7 @@ def add_message_from_json(message_type, message_from_json):
             try:
                 libacars = json.dumps(message_from_json[index])
             except Exception as e:
-                print(f"[database] Error encoding libacars: {e}")
+                acarshub_error.acars_traceback(e, "database")
         # skip these
         elif index == 'channel':
             pass
@@ -333,7 +334,7 @@ def add_message_from_json(message_type, message_from_json):
         if os.getenv("DEBUG_LOGGING", default=False):
             print("[database] write to database complete")
     except Exception as e:
-        print(f"[database] Error writing to the database: {e}")
+        acarshub_error.acars_traceback(e, "database")
 
 
 def pruneOld():
@@ -355,7 +356,7 @@ def pruneOld():
         print(f"[database] Pruned database of {result} records")
         session.close()
     except Exception:
-        print("[database] Error with database pruning")
+        acarshub_error.acars_traceback(e, "database")
 
 
 def find_airline_code_from_iata(iata):
@@ -473,11 +474,7 @@ def get_freq_count():
         return sorted(freq_count, reverse=True, key=lambda freq: (freq['freq_type'], freq['count']))
 
     except Exception as e:
-        traceback = e.__traceback__
-        print('[database] An error has occurred: ' + str(e))
-        while traceback:
-            print("{}: {}".format(traceback.tb_frame.f_code.co_filename, traceback.tb_lineno))
-            traceback = traceback.tb_next
+        acarshub_error.acars_traceback(e, "database")
 
 
 def get_errors_direct():
@@ -490,11 +487,7 @@ def get_errors_direct():
         return (total_messages, total_errors)
 
     except Exception as e:
-        traceback = e.__traceback__
-        print('[database] An error has occurred: ' + str(e))
-        while traceback:
-            print("{}: {}".format(traceback.tb_frame.f_code.co_filename, traceback.tb_lineno))
-            traceback = traceback.tb_next
+        acarshub_error.acars_traceback(e, "database")
 
 
 def get_errors():
@@ -507,11 +500,7 @@ def get_errors():
         return (count.total, count.errors, nonlogged.nonlogged_good, nonlogged.nonlogged_errors)
 
     except Exception as e:
-        traceback = e.__traceback__
-        print('[database] An error has occurred: ' + str(e))
-        while traceback:
-            print("{}: {}".format(traceback.tb_frame.f_code.co_filename, traceback.tb_lineno))
-            traceback = traceback.tb_next
+        acarshub_error.acars_traceback(e, "database")
 
 
 def database_get_row_count():
@@ -526,12 +515,12 @@ def database_get_row_count():
         try:
             size = os.path.getsize(db_path[10:])
         except Exception as e:
-            print(f"[database] Error getting db size: {e}")
+            acarshub_error.acars_traceback(e, "database")
             size = None
 
         return (result, size)
     except Exception as e:
-        print(f"[database] {e}")
+        acarshub_error.acars_traceback(e, "database")
 
 
 def grab_most_recent():
@@ -545,11 +534,7 @@ def grab_most_recent():
         else:
             return None
     except Exception as e:
-        traceback = e.__traceback__
-        print('[database] An error has occurred: ' + str(e))
-        while traceback:
-            print("{}: {}".format(traceback.tb_frame.f_code.co_filename, traceback.tb_lineno))
-            traceback = traceback.tb_next
+        acarshub_error.acars_traceback(e, "database")
 
 
 def lookup_groundstation(lookup_id):
@@ -573,10 +558,10 @@ def lookup_label(label):
 # We will pre-populate the count table if this is a new db
 # Or the user doesn't have the table already
 
-total_messages, total_errors = get_errors_direct()
-good_msgs = total_messages - total_errors
 
 try:
+    total_messages, total_errors = get_errors_direct()
+    good_msgs = total_messages - total_errors
     session = db_session()
 
     if session.query(messagesCount).count() == 0:
@@ -607,8 +592,4 @@ try:
 
     session.close()
 except Exception as e:
-    traceback = e.__traceback__
-    print('[database] An error has occurred: ' + str(e))
-    while traceback:
-        print("{}: {}".format(traceback.tb_frame.f_code.co_filename, traceback.tb_lineno))
-        traceback = traceback.tb_next
+    acarshub_error.acars_traceback(e, "database")

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import rrdtool
+import acarshub_error
 import os
 
 
@@ -14,24 +15,27 @@ def update_db(vdlm=0, acars=0, error=0):
     try:
         rrdtool.update("/run/acars/acarshub.rrd", f"N:{acars}:{vdlm}:{total}:{error}")
     except Exception as e:
-        print(e)
+        acarshub_error.acars_traceback(e, "rrdtool")
         sys.stdout.flush()
 
 
 def create_db():
-    if not os.path.exists("/run/acars/acarshub.rrd"):
-        print("[rrdtool] creating the RRD Database")
-        rrdtool.create("/run/acars/acarshub.rrd",
-                       "--start", "N",
-                       "--step", "60",
-                       "DS:ACARS:GAUGE:120:U:U",
-                       "DS:VDLM:GAUGE:120:U:U",
-                       "DS:TOTAL:GAUGE:120:U:U",
-                       "DS:ERROR:GAUGE:120:U:U",
-                       "RRA:AVERAGE:0.5:1:1500",  # 25 hours at 1 minute reso
-                       "RRA:AVERAGE:0.5:5:8640",  # 1 month at 5 minute reso
-                       "RRA:AVERAGE:0.5:60:4320",  # 6 months at 1 hour reso
-                       "RRA:AVERAGE:0.5:360:4380")  # 3 year at 6 hour reso
+    try:
+        if not os.path.exists("/run/acars/acarshub.rrd"):
+            print("[rrdtool] creating the RRD Database")
+            rrdtool.create("/run/acars/acarshub.rrd",
+                           "--start", "N",
+                           "--step", "60",
+                           "DS:ACARS:GAUGE:120:U:U",
+                           "DS:VDLM:GAUGE:120:U:U",
+                           "DS:TOTAL:GAUGE:120:U:U",
+                           "DS:ERROR:GAUGE:120:U:U",
+                           "RRA:AVERAGE:0.5:1:1500",  # 25 hours at 1 minute reso
+                           "RRA:AVERAGE:0.5:5:8640",  # 1 month at 5 minute reso
+                           "RRA:AVERAGE:0.5:60:4320",  # 6 months at 1 hour reso
+                           "RRA:AVERAGE:0.5:360:4380")  # 3 year at 6 hour reso
+    except Exception as e:
+        acarshub_error.acars_traceback(e, "rrdtool")
     else:
         print("[rrdtool] Database found")
 
@@ -179,7 +183,7 @@ def update_graphs():
             rrdtool.graph(*args, *args_acars)
 
     except Exception as e:
-        print(e)
+        acarshub_error.acars_traceback(e, "rrdtool")
 
     if os.getenv("DEBUG_LOGGING", default=False):
         print("[rrdtool] Generating graphs complete")

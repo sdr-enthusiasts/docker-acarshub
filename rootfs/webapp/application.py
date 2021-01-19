@@ -3,6 +3,7 @@
 import eventlet
 eventlet.monkey_patch()
 import acarshub
+import acarshub_error
 if not acarshub.SPAM:
     import acarshub_rrd
 import logging
@@ -206,13 +207,13 @@ def message_listener(message_type=None, ip='127.0.0.1', port=None):
             pass
         except socket.error as e:
             print(f"[{message_type.lower()}Generator] Error to {ip}:{port}. Reattemping...")
-            acarshub.acars_traceback(e, f"{message_type.lower()}Generator")
+            acarshub_error.acars_traceback(e, f"{message_type.lower()}Generator")
             disconnected = True
             receiver.close()
             time.sleep(1)
         except Exception as e:
             print(f"[{message_type.lower()}Generator] Socket error: {e}")
-            acarshub.acars_traceback(e, f"{message_type.lower()}Generator")
+            acarshub_error.acars_traceback(e, f"{message_type.lower()}Generator")
             disconnected = True
             receiver.close()
             time.sleep(1)
@@ -437,24 +438,24 @@ if __name__ == '__main__':
 
 @socketio.on_error()
 def error_handler(e):
-    acarshub.acars_traceback(e, "server-error")
+    acarshub_error.acars_traceback(e, "server-error")
 
 
 @socketio.on_error('/main')
 def error_handler_main(e):
-    acarshub.acars_traceback(e, "server-main")
+    acarshub_error.acars_traceback(e, "server-main")
 
 
 @socketio.on_error('/search')
 def error_handler_search(e):
-    acarshub.acars_traceback(e, "server-search")
+    acarshub_error.acars_traceback(e, "server-search")
 
 
 @socketio.on_error('/stats')
 def stats_handler_search(e):
-    acarshub.acars_traceback(e, "server-stats")
+    acarshub_error.acars_traceback(e, "server-stats")
 
 
 @socketio.on_error_default
 def default_error_handler(e):
-    acarshub.acars_traceback(e, "server")
+    acarshub_error.acars_traceback(e, "server")

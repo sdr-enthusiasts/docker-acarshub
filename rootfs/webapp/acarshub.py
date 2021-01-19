@@ -33,14 +33,6 @@ else:
     ADSB_URL = "https://globe.adsbexchange.com/?icao="
 
 
-def acars_traceback(e, source):
-    traceback = e.__traceback__
-    print(f"[{source}] An error has occurred: " + str(e))
-    while traceback:
-        print("{}: {}".format(traceback.tb_frame.f_code.co_filename, traceback.tb_lineno))
-        traceback = traceback.tb_next
-
-
 def libacars_formatted(libacars=None):
     import pprint
 
@@ -58,6 +50,14 @@ def libacars_formatted(libacars=None):
 
 
 def update_keys(json_message):
+    stale_keys = []
+    for key in json_message:
+        if json_message[key] is None:
+            stale_keys.append(key)
+
+    for key in stale_keys:
+        del json_message[key]
+
     if "libacars" in json_message.keys() and json_message['libacars'] is not None:
         json_message['libacars'] = libacars_formatted(json_message['libacars'])
 
