@@ -463,7 +463,7 @@ def get_freq_count():
                 freq_count.append({'freq_type':f"{result.freq_type}", 'freq': f"{result.freq}", 'count':result.count})
                 found_freq.append(freq)
             else:
-                freq_count.append({'freq_type':f"{result.freq_type}", 'freq': f"{result.freq}", 'count':0})
+                freq_count.append({'freq_type':f"{f[0]}", 'freq': f"{f[1]}", 'count':0})
 
         for item in session.query(messagesFreq).all():
             if item.freq not in found_freq:
