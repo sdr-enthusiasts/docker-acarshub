@@ -2,7 +2,6 @@
 
 import os
 import acarshub_db
-import acarshub_helpers
 
 if os.getenv("TAR1090_URL", default=False):
     if os.getenv("TAR1090_URL").endswith("/"):

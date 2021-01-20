@@ -4,7 +4,6 @@ from sqlalchemy import create_engine, Column, Integer, String, \
     Text
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
-import os
 from sqlalchemy.ext.declarative import DeclarativeMeta
 import json
 import urllib.request
@@ -174,7 +173,6 @@ class AlchemyEncoder(json.JSONEncoder):
 
 
 def add_message_from_json(message_type, message_from_json):
-    import os
     global database
     import json
     # message time
@@ -375,7 +373,6 @@ def pruneOld():
 
 
 def find_airline_code_from_iata(iata):
-    import os
     result = None
 
     if iata in overrides:

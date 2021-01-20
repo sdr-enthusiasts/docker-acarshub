@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import rrdtool
-import acarshub_error
+import acarshub_helpers
 import os
 
 
@@ -9,13 +9,13 @@ def update_db(vdlm=0, acars=0, error=0):
     import sys
     total = vdlm + acars
 
-    if os.getenv("DEBUG_LOGGING", default=False):
+    if acarshub_helpers.DEBUG_LOGGING:
         print(f"[rrdtool] updating VDLM with {vdlm}, ACARS with {acars}, Errors with {error}")
         sys.stdout.flush()
     try:
         rrdtool.update("/run/acars/acarshub.rrd", f"N:{acars}:{vdlm}:{total}:{error}")
     except Exception as e:
-        acarshub_error.acars_traceback(e, "rrdtool")
+        acarshub_helpers.acars_traceback(e, "rrdtool")
         sys.stdout.flush()
 
 
@@ -35,14 +35,14 @@ def create_db():
                            "RRA:AVERAGE:0.5:60:4320",  # 6 months at 1 hour reso
                            "RRA:AVERAGE:0.5:360:4380")  # 3 year at 6 hour reso
     except Exception as e:
-        acarshub_error.acars_traceback(e, "rrdtool")
+        acarshub_helpers.acars_traceback(e, "rrdtool")
     else:
         print("[rrdtool] Database found")
 
 
 def update_graphs():
     import sys
-    if os.getenv("DEBUG_LOGGING", default=False):
+    if acarshub_helpers.DEBUG_LOGGING:
         print("[rrdtool] Generating graphs")
         sys.stdout.flush()
 
@@ -53,19 +53,19 @@ def update_graphs():
     args_acars = []  # acars graph arguements
     args_error = []  # error graph arguements
 
-    if os.getenv("ENABLE_ACARS", default=False):
+    if acarshub_helpers.ENABLE_ACARS:
         args_all.append("DEF:messages-acars=/run/acars/acarshub.rrd:ACARS:AVERAGE")
         args_all.append("LINE1:messages-acars#000000:ACARS")
         args_acars.append("DEF:messages-acars=/run/acars/acarshub.rrd:ACARS:AVERAGE")
         args_acars.append("LINE1:messages-acars#000000:ACARS")
 
-    if os.getenv("ENABLE_VDLM", default=False):
+    if acarshub_helpers.ENABLE_VDLM:
         args_all.append("DEF:messages-vdlm=/run/acars/acarshub.rrd:VDLM:AVERAGE")
         args_all.append("LINE1:messages-vdlm#0000ff:VDLM")
         args_vdlm.append("DEF:messages-vdlm=/run/acars/acarshub.rrd:VDLM:AVERAGE")
         args_vdlm.append("LINE1:messages-vdlm#0000ff:VDLM")
 
-    if os.getenv("ENABLE_ACARS", default=False) and os.getenv("ENABLE_VDLM", default=False):
+    if acarshub_helpers.ENABLE_ACARS and acarshub_helpers.ENABLE_VDLM:
         args_all.append("DEF:messages-total=/run/acars/acarshub.rrd:TOTAL:AVERAGE")
         args_all.append("LINE1:messages-total#00ff00:Total")
 
@@ -79,7 +79,7 @@ def update_graphs():
         rrdtool.graph(*args, *args_all)
         args[0] = "/webapp/static/images/error1hour.png"
         rrdtool.graph(*args, *args_error)
-        if os.getenv("ENABLE_ACARS", default=False) and os.getenv("ENABLE_VDLM", default=False):
+        if acarshub_helpers.ENABLE_ACARS and acarshub_helpers.ENABLE_VDLM:
             args[0] = "/webapp/static/images/vdlm1hour.png"
             rrdtool.graph(*args, *args_vdlm)
             args[0] = "/webapp/static/images/acars1hour.png"
@@ -92,7 +92,7 @@ def update_graphs():
         rrdtool.graph(*args, *args_all)
         args[0] = "/webapp/static/images/error6hour.png"
         rrdtool.graph(*args, *args_error)
-        if os.getenv("ENABLE_ACARS", default=False) and os.getenv("ENABLE_VDLM", default=False):
+        if acarshub_helpers.ENABLE_ACARS and acarshub_helpers.ENABLE_VDLM:
             args[0] = "/webapp/static/images/vdlm6hour.png"
             rrdtool.graph(*args, *args_vdlm)
             args[0] = "/webapp/static/images/acars6hour.png"
@@ -106,7 +106,7 @@ def update_graphs():
         rrdtool.graph(*args, *args_all)
         args[0] = "/webapp/static/images/error12hour.png"
         rrdtool.graph(*args, *args_error)
-        if os.getenv("ENABLE_ACARS", default=False) and os.getenv("ENABLE_VDLM", default=False):
+        if acarshub_helpers.ENABLE_ACARS and acarshub_helpers.ENABLE_VDLM:
             args[0] = "/webapp/static/images/vdlm12hour.png"
             rrdtool.graph(*args, *args_vdlm)
             args[0] = "/webapp/static/images/acars12hour.png"
@@ -120,7 +120,7 @@ def update_graphs():
         rrdtool.graph(*args, *args_all)
         args[0] = "/webapp/static/images/error24hours.png"
         rrdtool.graph(*args, *args_error)
-        if os.getenv("ENABLE_ACARS", default=False) and os.getenv("ENABLE_VDLM", default=False):
+        if acarshub_helpers.ENABLE_ACARS and acarshub_helpers.ENABLE_VDLM:
             args[0] = "/webapp/static/images/vdlm24hours.png"
             rrdtool.graph(*args, *args_vdlm)
             args[0] = "/webapp/static/images/acars24hours.png"
@@ -134,7 +134,7 @@ def update_graphs():
         rrdtool.graph(*args, *args_all)
         args[0] = "/webapp/static/images/error1week.png"
         rrdtool.graph(*args, *args_error)
-        if os.getenv("ENABLE_ACARS", default=False) and os.getenv("ENABLE_VDLM", default=False):
+        if acarshub_helpers.ENABLE_ACARS and acarshub_helpers.ENABLE_VDLM:
             args[0] = "/webapp/static/images/vdlm1week.png"
             rrdtool.graph(*args, *args_vdlm)
             args[0] = "/webapp/static/images/acars1week.png"
@@ -148,7 +148,7 @@ def update_graphs():
         rrdtool.graph(*args, *args_all)
         args[0] = "/webapp/static/images/error30days.png"
         rrdtool.graph(*args, *args_error)
-        if os.getenv("ENABLE_ACARS", default=False) and os.getenv("ENABLE_VDLM", default=False):
+        if acarshub_helpers.ENABLE_ACARS and acarshub_helpers.ENABLE_VDLM:
             args[0] = "/webapp/static/images/vdlm30days.png"
             rrdtool.graph(*args, *args_vdlm)
             args[0] = "/webapp/static/images/acars30days.png"
@@ -162,7 +162,7 @@ def update_graphs():
         rrdtool.graph(*args, *args_all)
         args[0] = "/webapp/static/images/error6months.png"
         rrdtool.graph(*args, *args_error)
-        if os.getenv("ENABLE_ACARS", default=False) and os.getenv("ENABLE_VDLM", default=False):
+        if acarshub_helpers.ENABLE_ACARS and acarshub_helpers.ENABLE_VDLM:
             args[0] = "/webapp/static/images/vdlm6months.png"
             rrdtool.graph(*args, *args_vdlm)
             args[0] = "/webapp/static/images/acars6months.png"
@@ -176,14 +176,14 @@ def update_graphs():
         rrdtool.graph(*args, *args_all)
         args[0] = "/webapp/static/images/error1year.png"
         rrdtool.graph(*args, *args_error)
-        if os.getenv("ENABLE_ACARS", default=False) and os.getenv("ENABLE_VDLM", default=False):
+        if acarshub_helpers.ENABLE_ACARS and acarshub_helpers.ENABLE_VDLM:
             args[0] = "/webapp/static/images/vdlm1year.png"
             rrdtool.graph(*args, *args_vdlm)
             args[0] = "/webapp/static/images/acars1year.png"
             rrdtool.graph(*args, *args_acars)
 
     except Exception as e:
-        acarshub_error.acars_traceback(e, "rrdtool")
+        acarshub_helpers.acars_traceback(e, "rrdtool")
 
-    if os.getenv("DEBUG_LOGGING", default=False):
+    if acarshub_helpers.DEBUG_LOGGING:
         print("[rrdtool] Generating graphs complete")
