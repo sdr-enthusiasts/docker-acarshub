@@ -55,7 +55,7 @@ jobs:
       # https://medium.com/collaborne-engineering/typescript-create-library-for-nodejs-and-browser-fece291d517f
       - 
         name: "Patch airframesio/acars-decoder-typescript to run in browser (outside of nodejs)"
-        working-directory: ./acars-decoder-typescript
+        working-directory: ./acars-decoder-typescript-clone
         run: |
           git clone https://github.com/airframesio/acars-decoder-typescript.git .
           sed -i '/"module": "commonjs",/d' tsconfig.json
@@ -63,7 +63,7 @@ jobs:
       # Build build airframesio/acars-decoder-typescript
       - 
         name: Build airframesio/acars-decoder-typescript
-        working-directory: ./acars-decoder-typescript
+        working-directory: ./acars-decoder-typescript-clone
         run: |
           yarn install
           yarn build
