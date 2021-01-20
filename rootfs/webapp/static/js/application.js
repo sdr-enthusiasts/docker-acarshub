@@ -92,6 +92,7 @@ window.filter_notext = function() {
 window.toggle_label = function(key) {
     if(exclude.indexOf(key.toString()) == -1) {
         exclude.push(key.toString());
+        document.getElementById(key.toString()).classList.remove("sidebar_link");
         document.getElementById(key.toString()).classList.add("red");
         var exclude_string = "";
         for(var i = 0; i < exclude.length; i++) {
@@ -102,6 +103,7 @@ window.toggle_label = function(key) {
     } else {
         var exclude_string = "";
         document.getElementById(key.toString()).classList.remove("red");
+        document.getElementById(key.toString()).classList.add("sidebar_link");
         for(var i = 0; i < exclude.length; i++) {
             if(exclude[i] != key.toString())
                 exclude_string += exclude[i] + " ";
