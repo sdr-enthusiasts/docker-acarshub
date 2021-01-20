@@ -48,7 +48,7 @@ Airlines = declarative_base()
 # Input format needs to be IATA|ICAO|Airline Name
 # Multiple overrides need to be separated with a ;
 
-iata_override = acarshub_helpers.IATA_OVERRIDE.split()
+iata_override = acarshub_helpers.IATA_OVERRIDE.split(";")
 
 for item in iata_override:
     override_splits = item.split('|')
