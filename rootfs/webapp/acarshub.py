@@ -1,28 +1,8 @@
 #!/usr/bin/env python3
+
 import os
 import acarshub_db
-
-# debug levels
-
-DEBUG_LOGGING = False
-EXTREME_LOGGING = False
-SPAM = False
-ENABLE_ACARS = False
-ENABLE_VDLM = False
-
-if os.getenv("DEBUG_LOGGING", default=False):
-    DEBUG_LOGGING = True
-if os.getenv("EXTREME_LOGGING", default=False):
-    EXTREME_LOGGING = True
-
-# Application states
-
-if os.getenv("SPAM", default=False):
-    SPAM = True
-if os.getenv("ENABLE_ACARS"):
-    ENABLE_ACARS = True
-if os.getenv("ENABLE_VDLM"):
-    ENABLE_VDLM = True
+import acarshub_helpers
 
 if os.getenv("TAR1090_URL", default=False):
     if os.getenv("TAR1090_URL").endswith("/"):

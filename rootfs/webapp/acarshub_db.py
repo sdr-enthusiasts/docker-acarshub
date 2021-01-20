@@ -8,7 +8,7 @@ import os
 from sqlalchemy.ext.declarative import DeclarativeMeta
 import json
 import urllib.request
-import acarshub_error
+import acarshub_helpers
 
 # Download station IDs
 
@@ -18,7 +18,7 @@ try:
         groundStations = json.loads(url.read().decode())
     print("[database] Completed downloading Station IDs")
 except Exception as e:
-    acarshub_error.acars_traceback(e, "database")
+    acarshub_helpers.acars_traceback(e, "database")
 
 # Load Message Labels
 
@@ -28,14 +28,11 @@ try:
         message_labels = json.loads(url.read().decode())
     print("[database] Completed loading message labels")
 except Exception as e:
-    acarshub_error.acars_traceback(e, "database")
+    acarshub_helpers.acars_traceback(e, "database")
 
 # DB PATH MUST BE FROM ROOT
 
-if os.getenv("ACARSHUB_DB"):
-    db_path = os.getenv("ACARSHUB_DB", default=False)
-else:
-    db_path = 'sqlite:////run/acars/messages.db'
+db_path = acarshub_helpers.ACARSHUB_DB
 
 database = create_engine(db_path)
 db_session = sessionmaker(bind=database)
@@ -52,26 +49,25 @@ Airlines = declarative_base()
 # Input format needs to be IATA|ICAO|Airline Name
 # Multiple overrides need to be separated with a ;
 
-if os.getenv("IATA_OVERRIDE", default=False):
-    iata_override = os.getenv("IATA_OVERRIDE").split(";")
+iata_override = acarshub_helpers.IATA_OVERRIDE.split()
 
-    for item in iata_override:
-        override_splits = item.split('|')
-        if(len(override_splits) == 3):
-            overrides[override_splits[0]] = (override_splits[1], override_splits[2])
-        else:
-            print(f"[database] error adding in {item} to IATA overrides")
+for item in iata_override:
+    override_splits = item.split('|')
+    if(len(override_splits) == 3):
+        overrides[override_splits[0]] = (override_splits[1], override_splits[2])
+    else:
+        print(f"[database] error adding in {item} to IATA overrides")
 
 # Grab the freqs
 
-if os.getenv("ENABLE_ACARS", default=False):
-    acars_freqs = os.getenv("FREQS_ACARS").split(";")
+if acarshub_helpers.ENABLE_ACARS:
+    acars_freqs = acarshub_helpers.FREQS_ACARS.split(";")
 
     for item in acars_freqs:
         freqs.append(("ACARS", item))
 
-if os.getenv("ENABLE_VDLM", default=False):
-    vdlm_freqs = os.getenv("FREQS_VDLM").split(";")
+if acarshub_helpers.ENABLE_VDLM:
+    vdlm_freqs = acarshub_helpers.FREQS_VDLM.split(";")
 
     for item in vdlm_freqs:
         freqs.append(("VDL-M2", item))
@@ -273,7 +269,7 @@ def add_message_from_json(message_type, message_from_json):
             try:
                 libacars = json.dumps(message_from_json[index])
             except Exception as e:
-                acarshub_error.acars_traceback(e, "database")
+                acarshub_helpers.acars_traceback(e, "database")
         # skip these
         elif index == 'channel':
             pass
@@ -296,13 +292,13 @@ def add_message_from_json(message_type, message_from_json):
         else:
             session.add(messagesFreq(freq=f"{freq}", freq_type=message_type, count=1))
 
-        if os.getenv("DB_SAVEALL", default=False) or text is not None or libacars is not None or \
+        if acarshub_helpers.DB_SAVEALL or text is not None or libacars is not None or \
            dsta is not None or depa is not None or eta is not None or gtout is not None or \
            gtin is not None or wloff is not None or wlin is not None or lat is not None or \
            lon is not None or alt is not None:  # add in level here
 
             # write the message
-            if os.getenv("DEBUG_LOGGING", default=False):
+            if acarshub_helpers.DEBUG_LOGGING:
                 print("[database] writing to the database")
                 print(f"[database] writing message: {message_from_json}")
 
@@ -311,7 +307,7 @@ def add_message_from_json(message_type, message_from_json):
                                  wloff=wloff, wlin=wlin, lat=lat, lon=lon, alt=alt, text=text, tail=tail,
                                  flight=flight, icao=icao, freq=freq, ack=ack, mode=mode, label=label, block_id=block_id,
                                  msgno=msgno, is_response=is_response, is_onground=is_onground, error=error, libacars=libacars))
-        elif os.getenv("DEBUG_LOGGING", default=False):
+        elif acarshub_helpers.DEBUG_LOGGING:
             print(f"[database] discarding no text message: {message_from_json}")
 
         # Now lets decide where to log the message count to
@@ -350,10 +346,10 @@ def add_message_from_json(message_type, message_from_json):
         session.commit()
         session.close()
 
-        if os.getenv("DEBUG_LOGGING", default=False):
+        if acarshub_helpers.DEBUG_LOGGING:
             print("[database] write to database complete")
     except Exception as e:
-        acarshub_error.acars_traceback(e, "database")
+        acarshub_helpers.acars_traceback(e, "database")
 
 
 def pruneOld():
@@ -375,7 +371,7 @@ def pruneOld():
         print(f"[database] Pruned database of {result} records")
         session.close()
     except Exception as e:
-        acarshub_error.acars_traceback(e, "database")
+        acarshub_helpers.acars_traceback(e, "database")
 
 
 def find_airline_code_from_iata(iata):
@@ -394,7 +390,7 @@ def find_airline_code_from_iata(iata):
         return (iata, "Unknown Airline")
     else:
         if result is not None:
-            if os.getenv("DEBUG_LOGGING", default=False):
+            if acarshub_helpers.DEBUG_LOGGING:
                 print(f"[database] IATA code {iata} converted to {result.ICAO}")
             return (result.ICAO, result.NAME)
         else:
@@ -406,7 +402,7 @@ def database_search(field, search_term, page=0):
     result = None
 
     try:
-        if os.getenv("DEBUG_LOGGING", default=False):
+        if acarshub_helpers.DEBUG_LOGGING:
             print(f"[database] Searching database for {search_term} in {field}")
         session = db_session()
         if field == "flight-iata":
@@ -425,7 +421,7 @@ def database_search(field, search_term, page=0):
     except Exception:
         print("[database] Error running search!")
 
-    if os.getenv("DEBUG_LOGGING", default=False):
+    if acarshub_helpers.DEBUG_LOGGING:
         print("[database] Done searching")
 
     if result.count() > 0:
@@ -443,11 +439,7 @@ def show_all(page=0):
         result = session.query(messages).order_by(messages.time.desc())
         session.close()
     except Exception as e:
-        traceback = e.__traceback__
-        print('[database] An error has occurred: ' + str(e))
-        while traceback:
-            print("{}: {}".format(traceback.tb_frame.f_code.co_filename, traceback.tb_lineno))
-            traceback = traceback.tb_next
+        acarshub_helpers.acars_traceback(e, "database")
 
     if result.count() > 0:
         data = [json.dumps(d, cls=AlchemyEncoder) for d in result[page:page + 50]]
@@ -493,7 +485,7 @@ def get_freq_count():
         return sorted(freq_count, reverse=True, key=lambda freq: (freq['freq_type'], freq['count']))
 
     except Exception as e:
-        acarshub_error.acars_traceback(e, "database")
+        acarshub_helpers.acars_traceback(e, "database")
 
 
 def get_errors_direct():
@@ -506,7 +498,7 @@ def get_errors_direct():
         return (total_messages, total_errors)
 
     except Exception as e:
-        acarshub_error.acars_traceback(e, "database")
+        acarshub_helpers.acars_traceback(e, "database")
 
 
 def get_errors():
@@ -519,7 +511,7 @@ def get_errors():
         return (count.total, count.errors, nonlogged.nonlogged_good, nonlogged.nonlogged_errors)
 
     except Exception as e:
-        acarshub_error.acars_traceback(e, "database")
+        acarshub_helpers.acars_traceback(e, "database")
 
 
 def database_get_row_count():
@@ -534,12 +526,12 @@ def database_get_row_count():
         try:
             size = os.path.getsize(db_path[10:])
         except Exception as e:
-            acarshub_error.acars_traceback(e, "database")
+            acarshub_helpers.acars_traceback(e, "database")
             size = None
 
         return (result, size)
     except Exception as e:
-        acarshub_error.acars_traceback(e, "database")
+        acarshub_helpers.acars_traceback(e, "database")
 
 
 def grab_most_recent():
@@ -553,7 +545,7 @@ def grab_most_recent():
         else:
             return None
     except Exception as e:
-        acarshub_error.acars_traceback(e, "database")
+        acarshub_helpers.acars_traceback(e, "database")
 
 
 def lookup_groundstation(lookup_id):
@@ -610,4 +602,4 @@ try:
 
     session.close()
 except Exception as e:
-    acarshub_error.acars_traceback(e, "database")
+    acarshub_helpers.acars_traceback(e, "database")
