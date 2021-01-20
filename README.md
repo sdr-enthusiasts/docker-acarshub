@@ -5,7 +5,13 @@
 [![Docker Image Size (tag)](https://img.shields.io/docker/image-size/fredclausen/acarshub/latest)](https://hub.docker.com/r/fredclausen/acarshub)
 [![Discord](https://img.shields.io/discord/734090820684349521)](https://discord.gg/sTf9uYF)
 
-Docker container to view and also stream ACARS messages to [ACARS.io/Airframes.io](http://acars.io). Uses [libacars](https://github.com/szpajder/libacars), [acarsdec](https://github.com/TLeconte/acarsdec) and [vdlm2dec](https://github.com/TLeconte/vdlm2dec). Builds and runs on `amd64`, `arm64`, `arm/v7`, `arm/v6` and `386` architectures.
+Docker container to view and also stream ACARS messages to [ACARS.io/Airframes.io](http://acars.io). 
+
+Uses [libacars](https://github.com/szpajder/libacars), the [airframe's fork of acarsdec](https://github.com/airframesio/acarsdec) and [vdlm2dec](https://github.com/TLeconte/vdlm2dec) for SDR side of decoding. 
+
+Also, we make extensive use of the [airframes](https://github.com/airframesio) work to make the message's more 'human-readable'.
+
+Builds and runs on `amd64`, `arm64`, `arm/v7`, `arm/v6` and `386` architectures.
 
 ## Supported tags and respective Dockerfiles
 
@@ -14,7 +20,11 @@ Docker container to view and also stream ACARS messages to [ACARS.io/Airframes.i
 
 ## Thanks
 
-Thanks to [mikenye](https://github.com/mikenye) for his excellent ADSB docker containers from which I shamelessly copied a lot of the ideas for setting up the docker container, as well as his excellent advice and help in getting this thing working.
+Thanks to [mikenye](https://github.com/mikenye) for his excellent ADSB docker containers from which I shamelessly copied a lot of the ideas for setting up the docker container, as well as his excellent work to move this project from its humble beginnings to what it is now.
+
+Also, additional thanks goes to the folks over at [airframes.io](airframes.io) for their tireless work in figuring out what all of these ACARS messages mean and making their work available in usable packages.
+
+I am missing a boat load of people who have provided feed back as this project has progressed, as well as contributed ideas or let me bounce thoughts off of them. You've all molded this project and make it better than I could have done on my own.
 
 ## Required hardware
 
