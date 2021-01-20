@@ -22,9 +22,9 @@ Builds and runs on `amd64`, `arm64`, `arm/v7`, `arm/v6` and `386` architectures.
 
 Thanks to [mikenye](https://github.com/mikenye) for his excellent ADSB docker containers from which I shamelessly copied a lot of the ideas for setting up the docker container, as well as his excellent work to move this project from its humble beginnings to what it is now.
 
-Also, additional thanks goes to the folks over at [airframes.io](airframes.io) for their tireless work in figuring out what all of these ACARS messages mean and making their work available in usable packages.
+Additional thanks goes to the folks over at [airframes.io](airframes.io) for their tireless work in figuring out what all of these ACARS messages mean and making their work available in usable packages.
 
-I am missing a boat load of people who have provided feed back as this project has progressed, as well as contributed ideas or let me bounce thoughts off of them. You've all molded this project and make it better than I could have done on my own.
+I am missing a boat load of people who have provided feed back as this project has progressed, as well as contributed ideas or let me bounce thoughts off of them. You've all molded this project and made it better than I could have done on my own.
 
 ## Required hardware
 

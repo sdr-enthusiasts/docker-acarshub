@@ -519,3 +519,71 @@ ul.primary li:hover > a{
     background: none;
   }
 }
+
+/* Collapse */
+
+input[type='checkbox'] {
+  display: none;
+}
+
+.wrap-collabsible {
+  margin: 1.2rem 0;
+}
+
+.lbl-toggle {
+  display: block;
+  font-size: 1.2rem; 
+  text-transform: uppercase;
+  text-align: left;
+  color: #1496bb; 
+  background: transparent; 
+  cursor: pointer; 
+  transition: all 0.25s 
+  ease-out; 
+}
+
+.lbl-toggle:hover {
+  color: #FFF;
+}
+
+.lbl-toggle::before {
+  content: ' '; 
+  display: inline-block; 
+  border-top: 5px solid transparent; 
+  border-bottom: 5px solid transparent;
+  border-left: 5px solid currentColor;
+  vertical-align: middle;
+  margin-right: .7rem;
+  transform: translateY(-2px);
+  transition: transform .2s ease-out;
+}
+
+.toggle:checked+.lbl-toggle::before {
+    transform: rotate(90deg) translateX(-3px);
+}
+
+.collapsible-content {
+  max-height: 0px;
+  overflow: hidden;
+  transition: max-height .25s ease-in-out;
+}
+
+.toggle:checked + .lbl-toggle + .collapsible-content {
+  max-height: 350px;
+}
+
+.toggle:checked+.lbl-toggle {
+  border-bottom-right-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+.collapsible-content .content-inner {
+  background: transparent;
+  color: #1496bb;
+  padding-right: 10px;
+  padding-left: 10px;
+}
+
+.collapsible-content p { 
+  margin-bottom: 0; 
+}
