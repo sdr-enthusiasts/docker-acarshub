@@ -11,7 +11,6 @@ There are three main pages you can interact with:
 1. `Statistics`. This page will provide an insight in to the data you've collected.
 
 &nbsp;<br>
----
 &nbsp;<br>
 ACARS is a pretty cool technology and these planes are sending an awful lot of information in a coded way. We are constantly working, along with the folks at [Airframes.io](airframes.io), to decode the messages in a more refined, human-readable way. This is an on-going project so expect to see both decoded and non-decoded messages.
 
