@@ -3,6 +3,7 @@ var pause = false;
 var text_filter = false;
 var socket;
 var msgs_received = [];
+var exclude = [];
 
 var filtered_messages = 0;
 var received_messages = 0;
@@ -97,32 +98,45 @@ $(document).ready(function(){
         Cookies.set('filter', 'false', { expires: 365 });
     }
 
+    var exclude_cookie = Cookies.get("exclude");
+    console.log(exclude_cookie);
+    if(exclude_cookie == null) {
+        Cookies.set('exclude', "", { expires: 365 });
+    } else {
+        Cookies.set('exclude', exclude_cookie, {expires: 365});
+        exclude = exclude_cookie.split(" ");
+    }
+
     //receive details from server
     socket.on('newmsg', function(msg) {
         //console.log("Received msg" + msg.msghtml);
         console.log("Received msg");
 
-        //maintain a list of 50 msgs
-        if(!text_filter || (msg.msghtml.hasOwnProperty('text') || msg.msghtml.hasOwnProperty('data') ||
-            msg.msghtml.hasOwnProperty('libacars') || msg.msghtml.hasOwnProperty('dsta') || msg.msghtml.hasOwnProperty('depa') ||
-            msg.msghtml.hasOwnProperty('eta') || msg.msghtml.hasOwnProperty('gtout') || msg.msghtml.hasOwnProperty('gtin') ||
-            msg.msghtml.hasOwnProperty('wloff') || msg.msghtml.hasOwnProperty('wlin') || msg.msghtml.hasOwnProperty('lat') ||
-            msg.msghtml.hasOwnProperty('lon') || msg.msghtml.hasOwnProperty('alt'))) {
+        if(msg.msghtml.hasOwnProperty('label') == false || exclude.indexOf(msg.msghtml.label) == -1) {
+            if(!text_filter || (msg.msghtml.hasOwnProperty('text') || msg.msghtml.hasOwnProperty('data') ||
+                msg.msghtml.hasOwnProperty('libacars') || msg.msghtml.hasOwnProperty('dsta') || msg.msghtml.hasOwnProperty('depa') ||
+                msg.msghtml.hasOwnProperty('eta') || msg.msghtml.hasOwnProperty('gtout') || msg.msghtml.hasOwnProperty('gtin') ||
+                msg.msghtml.hasOwnProperty('wloff') || msg.msghtml.hasOwnProperty('wlin') || msg.msghtml.hasOwnProperty('lat') ||
+                msg.msghtml.hasOwnProperty('lon') || msg.msghtml.hasOwnProperty('alt'))) {
 
-            if (msgs_received.length >= 50){
-                msgs_received.shift()
-            }           
+                if (msgs_received.length >= 50){
+                    msgs_received.shift()
+                }           
 
-            if(msg.msghtml.hasOwnProperty('text')) {
-                var decoded_msg = md.decode(msg.msghtml);
-                if(decoded_msg.decoded == true) {
-                    msg.msghtml.decodedText = decoded_msg;
-                    console.log(msg.msghtml.decodedText);
+                if(msg.msghtml.hasOwnProperty('text')) {
+                    var decoded_msg = md.decode(msg.msghtml);
+                    if(decoded_msg.decoded == true) {
+                        msg.msghtml.decodedText = decoded_msg;
+                        console.log(msg.msghtml.decodedText);
+                    }
                 }
-            }
 
-            msgs_received.push(msg.msghtml);
+                msgs_received.push(msg.msghtml);
+            } else {
+                increment_filtered();
+            }
         } else {
+            console.log("EXCLUDED");
             increment_filtered();
         }
 
