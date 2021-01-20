@@ -128,7 +128,6 @@ $(document).ready(function(){
     }
 
     var exclude_cookie = Cookies.get("exclude");
-    console.log(exclude_cookie);
     if(exclude_cookie == null) {
         Cookies.set('exclude', "", { expires: 365 });
     } else {
@@ -149,9 +148,6 @@ $(document).ready(function(){
 
     //receive details from server
     socket.on('newmsg', function(msg) {
-        //console.log("Received msg" + msg.msghtml);
-        console.log("Received msg");
-
         if(msg.msghtml.hasOwnProperty('label') == false || exclude.indexOf(msg.msghtml.label) == -1) {
             if(!text_filter || (msg.msghtml.hasOwnProperty('text') || msg.msghtml.hasOwnProperty('data') ||
                 msg.msghtml.hasOwnProperty('libacars') || msg.msghtml.hasOwnProperty('dsta') || msg.msghtml.hasOwnProperty('depa') ||
@@ -167,7 +163,7 @@ $(document).ready(function(){
                     var decoded_msg = md.decode(msg.msghtml);
                     if(decoded_msg.decoded == true) {
                         msg.msghtml.decodedText = decoded_msg;
-                        console.log(msg.msghtml.decodedText);
+                        //console.log(msg.msghtml.decodedText);
                     }
                 }
 
@@ -176,7 +172,6 @@ $(document).ready(function(){
                 increment_filtered();
             }
         } else {
-            console.log("EXCLUDED " + msg.msghtml.label);
             if(text_filter)
                 increment_filtered();
         }
@@ -186,8 +181,6 @@ $(document).ready(function(){
         if(!pause) {
             $('#log').html(display_messages(msgs_received));
         }
-        else
-            console.log("Message received, but updates paused")
     });
 
     //noop

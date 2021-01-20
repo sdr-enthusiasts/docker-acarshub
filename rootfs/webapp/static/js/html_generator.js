@@ -281,9 +281,9 @@ function loop_array(input) {
                 html_output += input[m] + "<br>";
             } else if(m == "description") {
                 html_output += "<p>Description: " + input[m] + "</p>";
-            } else {
+            } /*else {
                 console.log(`Unknown item ${m} ${input[m]}`);
-            }
+            }*/
         }
     }
 
