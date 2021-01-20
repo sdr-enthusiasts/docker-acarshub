@@ -88,6 +88,12 @@ jobs:
       # Patch airframesio/acars-decoder-typescript to run in browser (outside of nodejs)
       # https://stackoverflow.com/questions/44709031/build-for-both-browser-and-nodejs
       # https://medium.com/collaborne-engineering/typescript-create-library-for-nodejs-and-browser-fece291d517f
+
+      - name: "Create Working Directory for git clone"
+        working-directory: .
+        run: |
+          mkdir acars-decoder-typescript-clone
+
       - 
         name: "Patch airframesio/acars-decoder-typescript to run in browser (outside of nodejs)"
         working-directory: ./acars-decoder-typescript-clone
