@@ -59,6 +59,14 @@ img {
   color: white;
 }
 
+.sidebar_link {
+  color: #1496bb;
+}
+
+.sidebar_link:hover {
+  color: white;
+}
+
 ol {
   list-style-type:circle;
   margin-left:0px;
@@ -460,6 +468,7 @@ ul.primary li:last-child a {
 
 ul.primary li a:hover {
   color: #000;
+  transition: all 0.25s ease-in; 
 }
 
 /* subs */
@@ -566,14 +575,13 @@ input[type='checkbox'] {
 
 .lbl-toggle {
   display: block;
-  font-size: 1.2rem; 
   text-transform: uppercase;
   text-align: left;
   color: #1496bb; 
   background: transparent; 
   cursor: pointer; 
-  transition: all 0.25s 
-  ease-out; 
+  transition: all 0.25s ease-out;
+  font-weight: normal;
 }
 
 .lbl-toggle:hover {
@@ -601,14 +609,6 @@ input[type='checkbox'] {
   overflow: scroll;
   position: fixed;
   height: calc(100% - 250px);
-  transition: max-height .25s ease-in-out;
-}
-
-.collapsible-content-long {
-  max-height: 0px;
-  overflow: scroll;
-  position: fixed;
-  height: calc(100% - 200px);
   transition: max-height .25s ease-in-out;
 }
 

@@ -139,7 +139,7 @@ $(document).ready(function(){
     socket.on('labels', function(msg) {
         var label_html = "";
         for (var key in msg.labels) {
-            var link_class = ""
+            var link_class = "sidebar_link"
             if(exclude.indexOf(key.toString()) != -1)
                 link_class = "red";
             label_html += `<a href="javascript:toggle_label('${key.toString()}');" id="${key}" class="${link_class}">${key} ${msg.labels[key]['name']}</a><br>`;
@@ -176,8 +176,9 @@ $(document).ready(function(){
                 increment_filtered();
             }
         } else {
-            console.log("EXCLUDED" + msg.msghtml.label);
-            increment_filtered();
+            console.log("EXCLUDED " + msg.msghtml.label);
+            if(text_filter)
+                increment_filtered();
         }
 
         increment_received();
