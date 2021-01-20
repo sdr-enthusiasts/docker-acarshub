@@ -60,6 +60,9 @@ window.pause_updates = function() {
 window.filter_notext = function() {
     if(text_filter) {
         text_filter = false;
+        document.getElementById("fixed_menu").classList.remove("fixed_menu");
+        document.getElementById("fixed_menu").classList.add("fixed_menu_short");
+
         var id = document.getElementById("filter_notext");
         id.innerHTML = "Hide Empty Messages";
         //var txt = document.createTextNode("Hide Empty messages");
@@ -70,6 +73,8 @@ window.filter_notext = function() {
         $('#filtered').html("");
     } else {
         text_filter = true;
+        document.getElementById("fixed_menu").classList.remove("fixed_menu_short");
+        document.getElementById("fixed_menu").classList.add("fixed_menu");
 
         $('#filtered').html("Filtered Messages:&emsp;&ensp;<strong><span id=\"filteredmessages\"></span></strong>");
         var id_filtered = document.getElementById("filteredmessages");
@@ -117,7 +122,9 @@ $(document).ready(function(){
         Cookies.set('filter', 'true', { expires: 365 });
         filter_notext();
     } else {
+        text_filter = true; // temparily flip the value so we can run the filter_notext() function and set the proper CSS
         Cookies.set('filter', 'false', { expires: 365 });
+        filter_notext();
     }
 
     var exclude_cookie = Cookies.get("exclude");

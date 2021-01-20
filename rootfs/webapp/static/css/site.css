@@ -185,15 +185,34 @@ div#log.left {
 
 .fixed_menu {
   position: fixed;
-  top: 160px;
+  top: 170px;
   bottom: 30px;
   padding-top: 0px;
   margin-bottom: 10px;
   width: 280px;
+  margin-top: 0px;
   margin-right: 5px;
   margin-left: 10px;
+  margin-bottom: 30px;
   padding-right: 5px;
-  padding-top: 10px;
+  padding-top: 0px;
+  overflow-y:auto;
+  overflow-x:hidden;
+}
+
+.fixed_menu_short {
+  position: fixed;
+  top: 150px;
+  bottom: 30px;
+  padding-top: 0px;
+  margin-bottom: 10px;
+  width: 280px;
+  margin-top: 0px;
+  margin-right: 5px;
+  margin-left: 10px;
+  margin-bottom: 30px;
+  padding-right: 5px;
+  padding-top: 0px;
   overflow-y:auto;
   overflow-x:hidden;
 }
@@ -542,7 +561,7 @@ input[type='checkbox'] {
 }
 
 .wrap-collabsible {
-  margin: 1.2rem 0;
+  padding-top: 10px;
 }
 
 .lbl-toggle {
@@ -580,7 +599,16 @@ input[type='checkbox'] {
 .collapsible-content {
   max-height: 0px;
   overflow: scroll;
-  position: absolute;
+  position: fixed;
+  height: calc(100% - 250px);
+  transition: max-height .25s ease-in-out;
+}
+
+.collapsible-content-long {
+  max-height: 0px;
+  overflow: scroll;
+  position: fixed;
+  height: calc(100% - 200px);
   transition: max-height .25s ease-in-out;
 }
 
@@ -602,5 +630,5 @@ input[type='checkbox'] {
 }
 
 .collapsible-content p { 
-  margin-bottom: 0; 
+  margin-bottom: 30px; 
 }
