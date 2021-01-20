@@ -22,7 +22,7 @@ Not all messages will include every field, but the fields received for that mess
 1. `ICAO`: This is a unique address for the aircraft that is sending/receiving the message.
 1. `F`/`Frequency`: This is the frequency that the message was received on.
 1. `M`/`Mode`: A code generally used to indicate the indicated 'country' or intended recipient of the message.
-1. `L`/`Label`: A code used to indicate the contents of the message. The list is really long, but common ones indicate a request for airport ATIS, position report, among many many others.
+1. `L`/`Label`: A code used to indicate the contents of the message. The list is really long, but common ones indicate a request for airport ATIS, position report, among many many others. On the `Live Message` page there is a menu under `Filter Message Labels` to exclude certain message labels from being shown.
 1. `B`/`Block ID`: Used to assist the stations in decoding message.
 1. `M#`/`Message Number`: A sequential combination of numbers and letters used to indicate a multi-part message, and what the correct order of the messages is.
 1. `R`/`Response`: Used by the sender/transmitter to indicate if the message was received properly, or if re-transmission is necessary.
