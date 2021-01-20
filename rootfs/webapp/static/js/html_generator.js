@@ -49,7 +49,7 @@ function display_messages(msgs_to_process) {
             var toaddr_decoded = "";
 
             if(message.hasOwnProperty('toaddr_decoded')) {
-                toaddr_decoded = `<br>To Address Station ID: <strong>${message['toaddr_decoded']}<strong>`;
+                toaddr_decoded = `<br>To Address Station ID: <strong>${message['toaddr_decoded']}</strong>`;
             }
             if(message.hasOwnProperty('toaddr_hex')) {
                 html_output += `<p>To Address: <strong>${message['toaddr']}/${message['toaddr_hex']}</strong>${toaddr_decoded}</p>`;
@@ -62,12 +62,12 @@ function display_messages(msgs_to_process) {
             var fromaddr_decoded = "";
 
             if(message.hasOwnProperty('fromaddr_decoded')) {
-                fromaddr_decoded = `<br>From Address Station ID: ${message['fromaddr_decoded']}`;
+                fromaddr_decoded = `<br>From Address Station ID: <strong>${message['fromaddr_decoded']}</strong>`;
             }
             if(message.hasOwnProperty('fromaddr_hex')) {
-                html_output += `<p>To Address: <strong>${message['fromaddr']}/${message['fromaddr_hex']}</strong>${fromaddr_decoded}</p>`;
+                html_output += `<p>From Address: <strong>${message['fromaddr']}/${message['fromaddr_hex']}</strong>${fromaddr_decoded}</p>`;
             } else {
-                html_output += `<p>To Address: <strong>${message['fromaddr']}/?</strong></p>`;
+                html_output += `<p>From Address: <strong>${message['fromaddr']}/?</strong></p>`;
             }
         }
 
@@ -191,6 +191,24 @@ function display_messages(msgs_to_process) {
             html_output += `<span class=\"wrapper\">F: <strong>${message['freq']}</strong><span class=\"tooltip\">The frequency this message was received on</span></span> `;
         }
 
+        if(message.hasOwnProperty("level")) {
+            var level = message["level"];
+            var img = "";
+            if(level >= -6 ) {
+                img = "5bar.png";
+            } else if(level >= -12) {
+                img = "4bar.png";
+            } else if(level >= -18) {
+                img = "3bar.png";
+            } else if(level >= -24) {
+                img = "2bar.png";
+            } else {
+                img = "1bar.png";
+            }
+
+            html_output += `<span class="wrapper">L: <img src="static/images/${img}" class="small_img" alt="${level}""><span class="tooltip">The signal level (${level}) of the received message.</span></span> `;
+        }
+
         if(message.hasOwnProperty("ack")) {
             if(!message['ack'])
                 html_output += `<span class=\"wrapper\">A: <strong>${message['ack']}</strong><span class=\"tooltip\">Acknolwedgement</span></span> `;
@@ -263,9 +281,9 @@ function loop_array(input) {
                 html_output += input[m] + "<br>";
             } else if(m == "description") {
                 html_output += "<p>Description: " + input[m] + "</p>";
-            } else {
+            } /*else {
                 console.log(`Unknown item ${m} ${input[m]}`);
-            }
+            }*/
         }
     }
 

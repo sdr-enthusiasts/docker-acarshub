@@ -13,6 +13,8 @@ docker buildx use cluster
 
 # Generate local dockerfile
 ./generate_local_dockerfile.sh
+#  move the local built copy of airframes out of rootfs
+mv rootfs/webapp/static/airframes-acars-decoder . 
 
 # Build airframesio/acars-decoder-typescript
 # Copy /src/acars-decoder-typescript.tgz out of image
@@ -26,3 +28,5 @@ docker buildx build -f Dockerfile.local --no-cache -t "${REPO}/${IMAGE}:test" --
 
 # Clean up
 rm ./acars-decoder-typescript.tgz
+#  move the local built copy of airframes back in rootfs
+mv airframes-acars-decoder rootfs/webapp/static/airframes-acars-decoder
