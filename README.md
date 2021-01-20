@@ -5,9 +5,9 @@
 [![Docker Image Size (tag)](https://img.shields.io/docker/image-size/fredclausen/acarshub/latest)](https://hub.docker.com/r/fredclausen/acarshub)
 [![Discord](https://img.shields.io/discord/734090820684349521)](https://discord.gg/sTf9uYF)
 
-Docker container to view and also stream ACARS messages to [ACARS.io/Airframes.io](http://acars.io). 
+Docker container to view and also stream ACARS messages to [ACARS.io/Airframes.io](http://acars.io).
 
-Uses [libacars](https://github.com/szpajder/libacars), the [airframe's fork of acarsdec](https://github.com/airframesio/acarsdec) and [vdlm2dec](https://github.com/TLeconte/vdlm2dec) for SDR side of decoding. 
+Uses [libacars](https://github.com/szpajder/libacars), the [airframe's fork of acarsdec](https://github.com/airframesio/acarsdec) and [vdlm2dec](https://github.com/TLeconte/vdlm2dec) for SDR side of decoding.
 
 Also, we make extensive use of the [airframes](https://github.com/airframesio) work to make the message's more 'human-readable'.
 
