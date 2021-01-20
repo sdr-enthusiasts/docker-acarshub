@@ -183,6 +183,21 @@ div#log.left {
   overflow-x:hidden;
 }
 
+.fixed_menu {
+  position: fixed;
+  top: 160px;
+  bottom: 30px;
+  padding-top: 0px;
+  margin-bottom: 10px;
+  width: 280px;
+  margin-right: 5px;
+  margin-left: 10px;
+  padding-right: 5px;
+  padding-top: 10px;
+  overflow-y:auto;
+  overflow-x:hidden;
+}
+
 .spread_text {
   letter-spacing: 1px;
   padding-left: 4px;
@@ -564,12 +579,13 @@ input[type='checkbox'] {
 
 .collapsible-content {
   max-height: 0px;
-  overflow: hidden;
+  overflow: scroll;
+  position: absolute;
   transition: max-height .25s ease-in-out;
 }
 
 .toggle:checked + .lbl-toggle + .collapsible-content {
-  max-height: 350px;
+  max-height: 100%;
 }
 
 .toggle:checked+.lbl-toggle {
@@ -582,6 +598,7 @@ input[type='checkbox'] {
   color: #1496bb;
   padding-right: 10px;
   padding-left: 10px;
+  overflow: scroll;
 }
 
 .collapsible-content p { 

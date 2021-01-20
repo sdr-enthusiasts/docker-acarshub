@@ -566,6 +566,10 @@ def lookup_label(label):
     return None
 
 
+def get_message_label_json():
+    return message_labels['labels']
+
+
 try:
     # We will pre-populate the count table if this is a new db
     # Or the user doesn't have the table already

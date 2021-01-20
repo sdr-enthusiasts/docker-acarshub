@@ -355,8 +355,11 @@ def main_connect():
         print(f'Client connected. Total connected: {connected_users}')
 
     requester = request.sid
+    socketio.emit('labels', {'labels': acarshub.acarshub_db.get_message_label_json()}, room=requester,
+                  namespace="/main")
     for item in reversed(acarshub.acarshub_db.grab_most_recent()):
-        socketio.emit('newmsg', {'msghtml': acarshub.update_keys(json.loads(item))}, room=requester, namespace='/main')
+        socketio.emit('newmsg', {'msghtml': acarshub.update_keys(json.loads(item))}, room=requester,
+                      namespace='/main')
 
     # Start the htmlGenerator thread only if the thread has not been started before.
     if not thread_html_generator.isAlive():
@@ -382,19 +385,22 @@ def stats_connect():
     if acarshub_helpers.DEBUG_LOGGING:
         print('Client connected stats')
 
-    socketio.emit('newmsg', {"vdlm": acarshub.ENABLE_VDLM, "acars": acarshub.ENABLE_ACARS}, namespace='/stats')
+    socketio.emit('newmsg', {"vdlm": acarshub_helpers.ENABLE_VDLM, "acars": acarshub_helpers.ENABLE_ACARS},
+                   namespace='/stats')
 
 
 @socketio.on('freqs', namespace="/stats")
 def request_freqs(message, namespace):
     requester = request.sid
-    socketio.emit('freqs', {'freqs': acarshub.acarshub_db.get_freq_count()}, room=requester, namespace="/stats")
+    socketio.emit('freqs', {'freqs': acarshub.acarshub_db.get_freq_count()}, room=requester,
+                  namespace="/stats")
 
 
 @socketio.on('count', namespace="/stats")
 def request_count(message, namespace):
     requester = request.sid
-    socketio.emit('count', {'count': acarshub.acarshub_db.get_errors()}, room=requester, namespace="/stats")
+    socketio.emit('count', {'count': acarshub.acarshub_db.get_errors()}, room=requester, 
+                  namespace="/stats")
 
 # handle a query request from the browser
 

@@ -84,6 +84,28 @@ window.filter_notext = function() {
     }
 }
 
+window.toggle_label = function(key) {
+    if(exclude.indexOf(key.toString()) == -1) {
+        exclude.push(key.toString());
+        document.getElementById(key.toString()).classList.add("red");
+        var exclude_string = "";
+        for(var i = 0; i < exclude.length; i++) {
+            exclude_string += exclude[i] + " ";
+        }
+
+        Cookies.set('exclude', exclude_string.trim(), {expires: 365});
+    } else {
+        var exclude_string = "";
+        document.getElementById(key.toString()).classList.remove("red");
+        for(var i = 0; i < exclude.length; i++) {
+            if(exclude[i] != key.toString())
+                exclude_string += exclude[i] + " ";
+        }
+        exclude = exclude_string.trim().split(" ");
+        Cookies.set('exclude', exclude_string.trim(), {expires: 365});
+    }
+}
+
 $(document).ready(function(){
     //connect to the socket server.
     generate_menu();
@@ -106,6 +128,17 @@ $(document).ready(function(){
         Cookies.set('exclude', exclude_cookie, {expires: 365});
         exclude = exclude_cookie.split(" ");
     }
+
+    socket.on('labels', function(msg) {
+        var label_html = "";
+        for (var key in msg.labels) {
+            var link_class = ""
+            if(exclude.indexOf(key.toString()) != -1)
+                link_class = "red";
+            label_html += `<a href="javascript:toggle_label('${key.toString()}');" id="${key}" class="${link_class}">${key} ${msg.labels[key]['name']}</a><br>`;
+        }
+        $('#label_links').html(label_html);
+    });
 
     //receive details from server
     socket.on('newmsg', function(msg) {
@@ -136,7 +169,7 @@ $(document).ready(function(){
                 increment_filtered();
             }
         } else {
-            console.log("EXCLUDED");
+            console.log("EXCLUDED" + msg.msghtml.label);
             increment_filtered();
         }
 
