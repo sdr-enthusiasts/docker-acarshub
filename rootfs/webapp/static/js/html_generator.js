@@ -3,7 +3,7 @@ function display_messages(msgs_to_process) {
     for (var i = 0; i < msgs_to_process.length; i++){
         var sub_messages = msgs_to_process[i].reverse();
         for(var u = 0; u < sub_messages.length; u++) {
-            if(sub_messages.length > 1) {
+            if(sub_messages.length > 1 && u == 0) {
                 
             }
             //msgs_string = '<p>' + msgs_received[i].toString() + '</p>' + msgs_string;
@@ -267,6 +267,10 @@ function display_messages(msgs_to_process) {
             html_output += "</table></p>";
 
             msgs_string = html_output + msgs_string;
+
+            if(sub_messages.length > 1 && u == sub_messages.length - 1) {
+                
+            }
         }
     }
     return msgs_string;

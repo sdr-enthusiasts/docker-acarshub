@@ -11,6 +11,16 @@ var received_messages = 0;
 import { MessageDecoder } from '../airframes-acars-decoder/MessageDecoder.js'
 const md = new MessageDecoder();
 
+// Automatically keep the array size at 100 messages or less
+// without the need to check before we push on to the stack
+
+msgs_received.push = function (){
+    if (this.length >= 100) {
+        this.shift();
+    }
+    return Array.prototype.push.apply(this,arguments);
+}
+
 function process_messages() {
     var output = [];
     var unique_msgs = 0;
@@ -26,17 +36,14 @@ function process_messages() {
                 output[u].push(msgs_received[i]);
                 added = true;
                 u = output.length;
-                console.log(output[u]);
             } else if(output[u][0].hasOwnProperty('icao') && new_icao== output[u][0].icao) {
                 output[u].push(msgs_received[i]);
                 added = true;
                 u = output.length;
-                console.log(output[u]);
             } else if(output[u][0].hasOwnProperty('flight') && new_flight == output[u][0].flight) {
                 output[u].push(msgs_received[i]);
                 added = true;
                 u = output.length;
-                console.log(output[u]);
             }
         }
 
@@ -77,7 +84,7 @@ window.pause_updates = function() {
         var txt_filtered = document.createTextNode("Received messages");
         id_filtered.appendChild(txt_filtered);
 
-        $('#log').html(display_messages(msgs_received));
+        $('#log').html(display_messages(process_messages()));
     }
     else {
         pause = true;
@@ -192,11 +199,7 @@ $(document).ready(function(){
                 msg.msghtml.hasOwnProperty('libacars') || msg.msghtml.hasOwnProperty('dsta') || msg.msghtml.hasOwnProperty('depa') ||
                 msg.msghtml.hasOwnProperty('eta') || msg.msghtml.hasOwnProperty('gtout') || msg.msghtml.hasOwnProperty('gtin') ||
                 msg.msghtml.hasOwnProperty('wloff') || msg.msghtml.hasOwnProperty('wlin') || msg.msghtml.hasOwnProperty('lat') ||
-                msg.msghtml.hasOwnProperty('lon') || msg.msghtml.hasOwnProperty('alt'))) {
-
-                if (msgs_received.length >= 100){
-                    msgs_received.shift();
-                }           
+                msg.msghtml.hasOwnProperty('lon') || msg.msghtml.hasOwnProperty('alt'))) {   
 
                 if(msg.msghtml.hasOwnProperty('text')) {
                     var decoded_msg = md.decode(msg.msghtml);
@@ -219,10 +222,8 @@ $(document).ready(function(){
 
         increment_received();
 
-        var output_messages = process_messages();
-
         if(!pause) {
-            $('#log').html(display_messages(output_messages));
+            $('#log').html(display_messages(process_messages()));
         }
     });
 

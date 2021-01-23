@@ -43,6 +43,8 @@ while run:
 		    	updated_message = json.loads(message[index])
 		    	updated_message['timestamp'] = time.time()
 		    	updated_message = json.dumps(updated_message);
+		    except socket.error as e:
+		    	receiver.close()
 		    except Exception as e:
 		    	print(e)
 		    else:
