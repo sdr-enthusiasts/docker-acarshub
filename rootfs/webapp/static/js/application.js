@@ -4,6 +4,7 @@ var text_filter = false;
 var socket;
 var msgs_received = [];
 var exclude = [];
+var selected_tabs = "";
 
 var filtered_messages = 0;
 var received_messages = 0;
@@ -36,14 +37,17 @@ function process_messages() {
                 output[u].push(msgs_received[i]);
                 added = true;
                 u = output.length;
+                console.log("match " + new_tail);
             } else if(output[u][0].hasOwnProperty('icao') && new_icao== output[u][0].icao) {
                 output[u].push(msgs_received[i]);
                 added = true;
                 u = output.length;
+                console.log("match " + new_icao);
             } else if(output[u][0].hasOwnProperty('flight') && new_flight == output[u][0].flight) {
                 output[u].push(msgs_received[i]);
                 added = true;
                 u = output.length;
+                console.log("match " + new_flight);
             }
         }
 
@@ -52,7 +56,7 @@ function process_messages() {
             unique_msgs++;
         }
     }
-    return output.reverse();
+    return output;
 }
 
 function increment_filtered() {
@@ -69,6 +73,31 @@ function increment_received() {
     received_messages++;
     var txt = document.createTextNode(received_messages);
     id.appendChild(txt);
+}
+
+window.handle_radio = function(element_id, uid) {
+    var all_tabs = document.querySelectorAll(`div.tabinator > div.sub_msg${uid}`);
+    for(var i = 0; i < all_tabs.length; i++) {
+        all_tabs[i].classList.remove("checked");
+    }
+    var element = document.getElementById(`message${element_id}`);
+    element.classList.add("checked");
+
+    var found = false;
+    var split = selected_tabs.split(",")
+
+    for(var i = 0; i < split.length; i++) {
+        var sub_split = split[i].split(";");
+
+        if(sub_split[0] == uid)
+            selected_tabs += uid + ";" + element_id;
+        else
+            selected_tabs += sub_split[0] + ';' + sub_split[1];
+    } 
+
+    if(!found) {
+        selected_tabs = uid + ";" + element_id;
+    }
 }
 
 window.pause_updates = function() {
@@ -223,7 +252,7 @@ $(document).ready(function(){
         increment_received();
 
         if(!pause) {
-            $('#log').html(display_messages(process_messages()));
+            $('#log').html(display_messages(process_messages(), selected_tabs));
         }
     });
 

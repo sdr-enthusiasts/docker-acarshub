@@ -240,7 +240,6 @@ def message_listener(message_type=None, ip='127.0.0.1', port=None):
                 try:
                     message_json = []
                     if data.decode().count('}\n') == 1:
-                        print("here")
                         message_json.append(json.loads(data))
                     else:
                         split_json = data.decode().split('}\n')

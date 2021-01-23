@@ -1,14 +1,54 @@
-function display_messages(msgs_to_process) {
+function display_messages(msgs_to_process, selected_tabs) {
     var msgs_string = '';
+    var message_tab_splits = "";
+    if(selected_tabs)
+        message_tab_splits = selected_tabs.split(",") // the individual tabs with selections
+
     for (var i = 0; i < msgs_to_process.length; i++){
-        var sub_messages = msgs_to_process[i].reverse();
+        var sub_messages = msgs_to_process[i];
+        var unique_id = "";
+
+        if(sub_messages[0].hasOwnProperty('timestamp'))
+            unique_id = Math.trunc(sub_messages[sub_messages.length - 1]['timestamp']);
+        else
+            unique_id = Math.trunc(sub_messages[sub_messages.length - 1]['time']);
+
+        var active_tab = 0;
+
+        if(message_tab_splits.length > 0) {
+            for(var q = 0; q < message_tab_splits.length; q++) {
+                if(message_tab_splits[q].startsWith(unique_id.toString())) {
+                    console.log("loop");
+                    var split = message_tab_splits[q].split(";");
+                    active_tab = Number(split[1]);
+                }
+            }
+        }
+
+        if(sub_messages.length > 1) {
+            msgs_string += '<div class = "tabinator">';
+            for(var j = 0; j < sub_messages.length; j++) {
+                if(j == active_tab) {
+                    msgs_string += `<input type = "radio" id = "tab${j}" name = "tabs" checked onclick="handle_radio(` + j + `, ` + unique_id + `)">`;
+                }
+                else {
+                    msgs_string += `<input type = "radio" id = "tab${j}" name = "tabs" onclick="handle_radio(` + j + `, ` + unique_id + `)">`;
+                }
+                msgs_string += `<label for = "tab${j}">Message ${j + 1}</label>`;
+            }
+        }
+
         for(var u = 0; u < sub_messages.length; u++) {
-            if(sub_messages.length > 1 && u == 0) {
-                
+            var html_output = "";
+            if(sub_messages.length > 1) {
+                if(u == active_tab)
+                    html_output += `<div id = "message${u}" class="sub_msg${unique_id} checked">`;
+                else
+                    html_output += `<div id = "message${u}" class="sub_msg${unique_id}">`;
             }
             //msgs_string = '<p>' + msgs_received[i].toString() + '</p>' + msgs_string;
             var message = sub_messages[u];
-            var html_output = "<p><table id=\"shadow\">";
+            html_output += "<p><table id=\"shadow\">";
 
             // Clean up any useless keys
 
@@ -266,13 +306,18 @@ function display_messages(msgs_to_process) {
             // Finish table html
             html_output += "</table></p>";
 
-            msgs_string = html_output + msgs_string;
+            if(sub_messages.length > 1) {
+                html_output += "</div>";
+            }
 
             if(sub_messages.length > 1 && u == sub_messages.length - 1) {
-                
+                msgs_string += "</div>";
             }
+
+            msgs_string = msgs_string + html_output;
         }
     }
+
     return msgs_string;
 }
 
