@@ -11,6 +11,43 @@ var received_messages = 0;
 import { MessageDecoder } from '../airframes-acars-decoder/MessageDecoder.js'
 const md = new MessageDecoder();
 
+function process_messages() {
+    var output = [];
+    var unique_msgs = 0;
+
+    for(var i = msgs_received.length - 1; i >= 0; i--) {
+        var new_tail = msgs_received[i].tail;
+        var new_icao = msgs_received[i].icao;
+        var new_flight = msgs_received[i].flight;
+        var added = false;
+
+        for(var u = 0; u < output.length; u++) {
+            if(output[u][0].hasOwnProperty('tail') && new_tail == output[u][0].tail) {
+                output[u].push(msgs_received[i]);
+                added = true;
+                u = output.length;
+                console.log(output[u]);
+            } else if(output[u][0].hasOwnProperty('icao') && new_icao== output[u][0].icao) {
+                output[u].push(msgs_received[i]);
+                added = true;
+                u = output.length;
+                console.log(output[u]);
+            } else if(output[u][0].hasOwnProperty('flight') && new_flight == output[u][0].flight) {
+                output[u].push(msgs_received[i]);
+                added = true;
+                u = output.length;
+                console.log(output[u]);
+            }
+        }
+
+        if(!added && unique_msgs < 50) {
+            output.push([msgs_received[i]]);
+            unique_msgs++;
+        }
+    }
+    return output.reverse();
+}
+
 function increment_filtered() {
     var id = document.getElementById("filteredmessages");
     id.innerHTML = "";
@@ -157,8 +194,8 @@ $(document).ready(function(){
                 msg.msghtml.hasOwnProperty('wloff') || msg.msghtml.hasOwnProperty('wlin') || msg.msghtml.hasOwnProperty('lat') ||
                 msg.msghtml.hasOwnProperty('lon') || msg.msghtml.hasOwnProperty('alt'))) {
 
-                if (msgs_received.length >= 50){
-                    msgs_received.shift()
+                if (msgs_received.length >= 100){
+                    msgs_received.shift();
                 }           
 
                 if(msg.msghtml.hasOwnProperty('text')) {
@@ -171,17 +208,21 @@ $(document).ready(function(){
 
                 msgs_received.push(msg.msghtml);
             } else {
+                //console.log(msg.msghtml);
                 increment_filtered();
             }
         } else {
+            //console.log(msg.msghtml);
             if(text_filter)
                 increment_filtered();
         }
 
         increment_received();
 
+        var output_messages = process_messages();
+
         if(!pause) {
-            $('#log').html(display_messages(msgs_received));
+            $('#log').html(display_messages(output_messages));
         }
     });
 

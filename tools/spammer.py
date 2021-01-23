@@ -12,6 +12,7 @@ import socket
 import time
 import sys, getopt
 from random import randint
+import json
 
 run = True
 
@@ -38,8 +39,16 @@ while run:
 		    print("sending message")
 		    # we will send a random message
 		    index = randint(0, len(message) - 1)
-		    clientConnected.send(message[index].encode())
-		    print("message sent")
+		    try:
+		    	updated_message = json.loads(message[index])
+		    	updated_message['timestamp'] = time.time()
+		    	updated_message = json.dumps(updated_message);
+		    except Exception as e:
+		    	print(e)
+		    else:
+		    	clientConnected.send(updated_message.encode() + b'\n')
+		    	print("message sent")
+		    
 		    time.sleep(message_interval)
 
 		receiver.close()

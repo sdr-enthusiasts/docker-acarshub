@@ -240,6 +240,7 @@ def message_listener(message_type=None, ip='127.0.0.1', port=None):
                 try:
                     message_json = []
                     if data.decode().count('}\n') == 1:
+                        print("here")
                         message_json.append(json.loads(data))
                     else:
                         split_json = data.decode().split('}\n')
@@ -357,9 +358,9 @@ def main_connect():
     requester = request.sid
     socketio.emit('labels', {'labels': acarshub.acarshub_db.get_message_label_json()}, room=requester,
                   namespace="/main")
-    for item in reversed(acarshub.acarshub_db.grab_most_recent()):
-        socketio.emit('newmsg', {'msghtml': acarshub.update_keys(json.loads(item))}, room=requester,
-                      namespace='/main')
+    #for item in reversed(acarshub.acarshub_db.grab_most_recent()):
+    #    socketio.emit('newmsg', {'msghtml': acarshub.update_keys(json.loads(item))}, room=requester,
+    #                  namespace='/main')
 
     # Start the htmlGenerator thread only if the thread has not been started before.
     if not thread_html_generator.isAlive():
