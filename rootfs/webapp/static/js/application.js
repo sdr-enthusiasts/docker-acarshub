@@ -76,7 +76,7 @@ function increment_received() {
 }
 
 window.handle_radio = function(element_id, uid) {
-    var all_tabs = document.querySelectorAll(`div.tabinator > div.sub_msg${uid}`);
+    var all_tabs = document.querySelectorAll(`div.sub_msg${uid}`);
     for(var i = 0; i < all_tabs.length; i++) {
         all_tabs[i].classList.remove("checked");
     }

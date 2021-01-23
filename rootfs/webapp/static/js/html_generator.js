@@ -18,7 +18,6 @@ function display_messages(msgs_to_process, selected_tabs) {
         if(message_tab_splits.length > 0) {
             for(var q = 0; q < message_tab_splits.length; q++) {
                 if(message_tab_splits[q].startsWith(unique_id.toString())) {
-                    console.log("loop");
                     var split = message_tab_splits[q].split(";");
                     active_tab = Number(split[1]);
                 }
@@ -37,7 +36,7 @@ function display_messages(msgs_to_process, selected_tabs) {
                 msgs_string += `<label for = "tab${j}">Message ${j + 1}</label>`;
             }
         }
-
+        msgs_string += "<br>"
         for(var u = 0; u < sub_messages.length; u++) {
             var html_output = "";
             if(sub_messages.length > 1) {
@@ -48,7 +47,7 @@ function display_messages(msgs_to_process, selected_tabs) {
             }
             //msgs_string = '<p>' + msgs_received[i].toString() + '</p>' + msgs_string;
             var message = sub_messages[u];
-            html_output += "<p><table id=\"shadow\">";
+            html_output += "<div><table id=\"shadow\">";
 
             // Clean up any useless keys
 
@@ -304,14 +303,14 @@ function display_messages(msgs_to_process, selected_tabs) {
             html_output += "</tr>";
 
             // Finish table html
-            html_output += "</table></p>";
+            html_output += "</table></div><!-- table -->";
 
             if(sub_messages.length > 1) {
-                html_output += "</div>";
+                html_output += "</div><!-- message -->";
             }
 
-            if(sub_messages.length > 1 && u == sub_messages.length - 1) {
-                msgs_string += "</div>";
+            if(sub_messages.length > 1 && u == 0) {
+                msgs_string += "</div><!-- tabs -->";
             }
 
             msgs_string = msgs_string + html_output;
