@@ -28,10 +28,10 @@ function display_messages(msgs_to_process, selected_tabs) {
             msgs_string += '<div class = "tabinator">';
             for(var j = 0; j < sub_messages.length; j++) {
                 if(j == active_tab) {
-                    msgs_string += `<input type = "radio" id = "tab${j}_${unique_id}" name = "tabs" checked onclick="handle_radio(` + j + `, ` + unique_id + `)">`;
+                    msgs_string += `<input type = "radio" id = "tab${j}_${unique_id}" name = "tabs_${unique_id}" checked onclick="handle_radio(` + j + `, ` + unique_id + `)">`;
                 }
                 else {
-                    msgs_string += `<input type = "radio" id = "tab${j}_${unique_id}" name = "tabs" onclick="handle_radio(` + j + `, ` + unique_id + `)">`;
+                    msgs_string += `<input type = "radio" id = "tab${j}_${unique_id}" name = "tabs_${unique_id}" onclick="handle_radio(` + j + `, ` + unique_id + `)">`;
                 }
                 msgs_string += `<label for = "tab${j}_${unique_id}">Message ${j + 1}</label>`;
             }
