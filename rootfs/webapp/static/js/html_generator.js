@@ -1,4 +1,4 @@
-function display_messages(msgs_to_process, selected_tabs) {
+function display_messages(msgs_to_process, selected_tabs, live_page=false) {
     var msgs_string = '';
     var message_tab_splits = "";
     if(selected_tabs)
@@ -7,36 +7,38 @@ function display_messages(msgs_to_process, selected_tabs) {
     for (var i = 0; i < msgs_to_process.length; i++){
         var sub_messages = msgs_to_process[i];
         var unique_id = "";
-
-        if(sub_messages[0].hasOwnProperty('timestamp'))
-            unique_id = Math.trunc(sub_messages[sub_messages.length - 1]['timestamp']);
-        else
-            unique_id = Math.trunc(sub_messages[sub_messages.length - 1]['time']);
-
         var active_tab = 0;
-
-        if(message_tab_splits.length > 0) {
-            for(var q = 0; q < message_tab_splits.length; q++) {
-                if(message_tab_splits[q].startsWith(unique_id.toString())) {
-                    var split = message_tab_splits[q].split(";");
-                    active_tab = Number(split[1]);
-                }
-            }
-        }
         msgs_string += "<br>";
-        if(sub_messages.length > 1) {
-            msgs_string += '<div class = "tabinator">';
-            for(var j = 0; j < sub_messages.length; j++) {
-                if(j == active_tab) {
-                    msgs_string += `<input type = "radio" id = "tab${j}_${unique_id}" name = "tabs_${unique_id}" checked onclick="handle_radio(` + j + `, ` + unique_id + `)">`;
+
+        if(live_page) {
+            if(sub_messages[0].hasOwnProperty('timestamp'))
+                unique_id = Math.trunc(sub_messages[sub_messages.length - 1]['timestamp']);
+            else
+                unique_id = Math.trunc(sub_messages[sub_messages.length - 1]['time']);
+
+            if(message_tab_splits.length > 0) {
+                for(var q = 0; q < message_tab_splits.length; q++) {
+                    if(message_tab_splits[q].startsWith(unique_id.toString())) {
+                        var split = message_tab_splits[q].split(";");
+                        active_tab = Number(split[1]);
+                    }
                 }
-                else {
-                    msgs_string += `<input type = "radio" id = "tab${j}_${unique_id}" name = "tabs_${unique_id}" onclick="handle_radio(` + j + `, ` + unique_id + `)">`;
+            }
+            
+            if(sub_messages.length > 1) {
+                msgs_string += '<div class = "tabinator">';
+                for(var j = 0; j < sub_messages.length; j++) {
+                    if(j == active_tab) {
+                        msgs_string += `<input type = "radio" id = "tab${j}_${unique_id}" name = "tabs_${unique_id}" checked onclick="handle_radio(` + j + `, ` + unique_id + `)">`;
+                    }
+                    else {
+                        msgs_string += `<input type = "radio" id = "tab${j}_${unique_id}" name = "tabs_${unique_id}" onclick="handle_radio(` + j + `, ` + unique_id + `)">`;
+                    }
+                    msgs_string += `<label for = "tab${j}_${unique_id}">Message ${j + 1}</label>`;
                 }
-                msgs_string += `<label for = "tab${j}_${unique_id}">Message ${j + 1}</label>`;
             }
         }
-        
+
         for(var u = 0; u < sub_messages.length; u++) {
             var html_output = "";
             if(sub_messages.length > 1) {

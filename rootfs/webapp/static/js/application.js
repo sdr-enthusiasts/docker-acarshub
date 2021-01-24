@@ -252,7 +252,7 @@ $(document).ready(function(){
         increment_received();
 
         if(!pause) {
-            $('#log').html(display_messages(process_messages(), selected_tabs));
+            $('#log').html(display_messages(process_messages(), selected_tabs, true));
         }
     });
 

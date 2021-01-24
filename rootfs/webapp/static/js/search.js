@@ -52,7 +52,7 @@ $(document).ready(function(){
                     if(decoded_msg.decoded == true) {
                         msg_json.decodedText = decoded_msg;
                     }
-                    results.push(msg_json);
+                    results.push([msg_json]);
                 }
                 display = display_messages(results);
                 display_nav_results = display_search(current_page, num_results[i]);
