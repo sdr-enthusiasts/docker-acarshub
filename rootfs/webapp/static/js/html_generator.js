@@ -53,7 +53,6 @@ function display_messages(msgs_to_process, selected_tabs, live_page=false) {
             var html_output = "";
             if(sub_messages.length > 1) {
                 var tab_uid = unique_id;
-                console.log(tab_uid + " " + active_tab);
 
                 if(sub_messages[u].hasOwnProperty('timestamp'))
                     tab_uid = Math.trunc(sub_messages[u]['timestamp']);

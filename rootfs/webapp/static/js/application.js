@@ -16,47 +16,10 @@ const md = new MessageDecoder();
 // without the need to check before we push on to the stack
 
 msgs_received.push = function (){
-    if (this.length >= 100) {
+    if (this.length >= 50) {
         this.shift();
     }
     return Array.prototype.push.apply(this,arguments);
-}
-
-function process_messages() {
-    var output = [];
-    var unique_msgs = 0;
-
-    for(var i = msgs_received.length - 1; i >= 0; i--) {
-        var new_tail = msgs_received[i].tail;
-        var new_icao = msgs_received[i].icao;
-        var new_flight = msgs_received[i].flight;
-        var added = false;
-
-        for(var u = 0; u < output.length; u++) {
-            if(output[u][0].hasOwnProperty('tail') && new_tail == output[u][0].tail) {
-                output[u].push(msgs_received[i]);
-                added = true;
-                u = output.length;
-                console.log("match " + new_tail);
-            } else if(output[u][0].hasOwnProperty('icao') && new_icao== output[u][0].icao) {
-                output[u].push(msgs_received[i]);
-                added = true;
-                u = output.length;
-                console.log("match " + new_icao);
-            } else if(output[u][0].hasOwnProperty('flight') && new_flight == output[u][0].flight) {
-                output[u].push(msgs_received[i]);
-                added = true;
-                u = output.length;
-                console.log("match " + new_flight);
-            }
-        }
-
-        if(!added && unique_msgs < 50) {
-            output.push([msgs_received[i]]);
-            unique_msgs++;
-        }
-    }
-    return output;
 }
 
 function increment_filtered() {
@@ -113,7 +76,7 @@ window.pause_updates = function() {
         var txt_filtered = document.createTextNode("Received messages");
         id_filtered.appendChild(txt_filtered);
 
-        $('#log').html(display_messages(process_messages()));
+        $('#log').html(display_messages(msgs_received, selected_tabs, true));
     }
     else {
         pause = true;
@@ -238,21 +201,56 @@ $(document).ready(function(){
                     }
                 }
 
-                msgs_received.push(msg.msghtml);
+                var new_tail = msg.msghtml.tail;
+                var new_icao = msg.msghtml.icao;
+                var new_flight = msg.msghtml.flight;
+                var added = false;
+                var index_new = 0;
+
+                for(var u = 0; u < msgs_received.length; u++) {
+                    if(msgs_received[u][0].hasOwnProperty('tail') && new_tail == msgs_received[u][0].tail) {
+                        msgs_received[u].push(msg.msghtml);
+                        added = true;
+                        index_new = u;
+                        u = msgs_received.length;
+                        console.log("match " + new_tail);
+                    } else if(msgs_received[u][0].hasOwnProperty('icao') && new_icao== msgs_received[u][0].icao) {
+                        msgs_received[u].push(msg.msghtml);
+                        added = true;
+                        index_new = u;
+                        u = msgs_received.length;
+                        console.log("match " + new_icao);
+                    } else if(msgs_received[u][0].hasOwnProperty('flight') && new_flight == msgs_received[u][0].flight) {
+                        msgs_received[u].push(msg.msghtml);
+                        added = true;
+                        index_new = u;
+                        u = msgs_received.length;
+                        console.log("match " + new_flight);
+                    }
+
+                    if(added) {
+                        msgs_received.forEach(function(item,i){
+                            if(i == index_new){
+                                msgs_received.splice(i, 1);
+                                msgs_received.unshift(item);
+                            }
+                        });
+                    }
+                }
+                if(!added) {
+                    msgs_received.unshift([msg.msghtml]);
+                }
             } else {
-                //console.log(msg.msghtml);
                 increment_filtered();
             }
         } else {
-            //console.log(msg.msghtml);
             if(text_filter)
                 increment_filtered();
         }
 
         increment_received();
-
         if(!pause) {
-            $('#log').html(display_messages(process_messages(), selected_tabs, true));
+            $('#log').html(display_messages(msgs_received, selected_tabs, true));
         }
     });
 
