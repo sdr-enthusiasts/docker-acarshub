@@ -30,8 +30,8 @@ $(document).ready(function(){
 
 	socket.on('count', function(msg) {
 		var error = msg.count[1];
-		var total = msg.count[0];
-		var good_msg = total - error;
+		var total = msg.count[0] + msg.count[2] + msg.count[3];
+		var good_msg = msg.count[0] - error;
 
 		var empty_error = msg.count[3];
 		var empty_good = msg.count[2];
