@@ -62,6 +62,7 @@ thread_database_stop_event = Event()
 
 que_messages = deque(maxlen=15)
 que_database = deque(maxlen=15)
+messages_recent = []
 
 vdlm_messages = 0
 acars_messages = 0
@@ -272,6 +273,9 @@ def message_listener(message_type=None, ip='127.0.0.1', port=None):
                         if acarshub_helpers.DEBUG_LOGGING:
                             print(f"[{message_type.lower()}Generator] sending off to db")
                         que_database.append((que_type, j))
+                        if(len(messages_recent) >= 50):
+                            del messages_recent[0]
+                        messages_recent.append((que_type, j))
 
 
 def init_listeners():
@@ -357,9 +361,10 @@ def main_connect():
     requester = request.sid
     socketio.emit('labels', {'labels': acarshub.acarshub_db.get_message_label_json()}, room=requester,
                   namespace="/main")
-    #for item in reversed(acarshub.acarshub_db.grab_most_recent()):
-    #    socketio.emit('newmsg', {'msghtml': acarshub.update_keys(json.loads(item))}, room=requester,
-    #                  namespace='/main')
+    for msg_type, json_message in messages_recent:
+        json_message.update({"message_type": msg_type})
+        socketio.emit('newmsg', {'msghtml': acarshub.update_keys(json_message)}, room=requester,
+                      namespace='/main')
 
     # Start the htmlGenerator thread only if the thread has not been started before.
     if not thread_html_generator.isAlive():
