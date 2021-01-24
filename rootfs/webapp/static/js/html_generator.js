@@ -23,27 +23,27 @@ function display_messages(msgs_to_process, selected_tabs) {
                 }
             }
         }
-
+        msgs_string += "<br>";
         if(sub_messages.length > 1) {
             msgs_string += '<div class = "tabinator">';
             for(var j = 0; j < sub_messages.length; j++) {
                 if(j == active_tab) {
-                    msgs_string += `<input type = "radio" id = "tab${j}" name = "tabs" checked onclick="handle_radio(` + j + `, ` + unique_id + `)">`;
+                    msgs_string += `<input type = "radio" id = "tab${j}_${unique_id}" name = "tabs" checked onclick="handle_radio(` + j + `, ` + unique_id + `)">`;
                 }
                 else {
-                    msgs_string += `<input type = "radio" id = "tab${j}" name = "tabs" onclick="handle_radio(` + j + `, ` + unique_id + `)">`;
+                    msgs_string += `<input type = "radio" id = "tab${j}_${unique_id}" name = "tabs" onclick="handle_radio(` + j + `, ` + unique_id + `)">`;
                 }
-                msgs_string += `<label for = "tab${j}">Message ${j + 1}</label>`;
+                msgs_string += `<label for = "tab${j}_${unique_id}">Message ${j + 1}</label>`;
             }
         }
-        msgs_string += "<br>"
+        
         for(var u = 0; u < sub_messages.length; u++) {
             var html_output = "";
             if(sub_messages.length > 1) {
                 if(u == active_tab)
-                    html_output += `<div id = "message${u}" class="sub_msg${unique_id} checked">`;
+                    html_output += `<div id = "message_${unique_id}_${u}" class="sub_msg${unique_id} checked">`;
                 else
-                    html_output += `<div id = "message${u}" class="sub_msg${unique_id}">`;
+                    html_output += `<div id = "message_${unique_id}_${u}" class="sub_msg${unique_id}">`;
             }
             //msgs_string = '<p>' + msgs_received[i].toString() + '</p>' + msgs_string;
             var message = sub_messages[u];
@@ -309,12 +309,13 @@ function display_messages(msgs_to_process, selected_tabs) {
                 html_output += "</div><!-- message -->";
             }
 
-            if(sub_messages.length > 1 && u == 0) {
-                msgs_string += "</div><!-- tabs -->";
-            }
-
             msgs_string = msgs_string + html_output;
         }
+
+        if(sub_messages.length > 1) {
+            msgs_string += "</div><!-- tabs -->";
+        }
+
     }
 
     return msgs_string;

@@ -80,7 +80,7 @@ window.handle_radio = function(element_id, uid) {
     for(var i = 0; i < all_tabs.length; i++) {
         all_tabs[i].classList.remove("checked");
     }
-    var element = document.getElementById(`message${element_id}`);
+    var element = document.getElementById(`message_${uid}_${element_id}`);
     element.classList.add("checked");
 
     var found = false;
