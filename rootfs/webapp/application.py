@@ -127,6 +127,9 @@ def scheduled_tasks():
 
     # Schedule the database pruner
     schedule.every().hour.do(acarshub.acarshub_db.pruneOld)
+    # Check for dead threads and restart
+    schedule.every().minute.at(":45").do(init_listeners)
+
     while not thread_scheduler_stop_event.isSet():
         schedule.run_pending()
         time.sleep(1)
