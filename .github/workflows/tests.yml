@@ -11,6 +11,10 @@ jobs:
   buildx:
     name: Test image build
     runs-on: ubuntu-latest
+    env:
+      REPO: fredclausen
+      IMAGE: acarshub
+      PUSH: true
     strategy:
       matrix:
         docker-platform:
