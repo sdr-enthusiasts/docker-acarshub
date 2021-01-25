@@ -15,14 +15,6 @@ jobs:
       REPO: fredclausen
       IMAGE: acarshub
       PUSH: true
-    strategy:
-      matrix:
-        docker-platform:
-          - linux/amd64
-          - linux/arm64
-          - linux/arm/v6
-          - linux/arm/v7
-          - linux/i386
     steps:
 
       # Check out our code
@@ -94,6 +86,6 @@ jobs:
           context: .
           file: ./Dockerfile
           no-cache: true
-          platforms: ${{ matrix.docker-platform }}
+          platforms: linux/386,linux/amd64,linux/arm/v7,linux/arm/v6,linux/arm64
           push: ${{ env.PUSH }}
           tags: ${{ env.REPO }}/${{ env.IMAGE }}:test-pr
