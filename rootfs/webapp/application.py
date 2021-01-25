@@ -62,7 +62,7 @@ thread_database_stop_event = Event()
 
 que_messages = deque(maxlen=15)
 que_database = deque(maxlen=15)
-messages_recent = []  #  acarshub.acarshub_db.grab_most_recent()
+messages_recent = []  
 
 vdlm_messages = 0
 acars_messages = 0
@@ -126,7 +126,7 @@ def scheduled_tasks():
         schedule.every().minute.at(":30").do(acarshub_rrd.update_graphs)
 
     # Schedule the database pruner
-    schedule.every().hour.do(acarshub.acarshub_db.pruneOld)
+    schedule.every().hour.do(acarshub.acarshub_db.pruneOld, "Error encountered! Restarting... ")
     # Check for dead threads and restart
     schedule.every().minute.at(":45").do(init_listeners)
 
@@ -281,46 +281,62 @@ def message_listener(message_type=None, ip='127.0.0.1', port=None):
                         messages_recent.append((que_type, j))
 
 
-def init_listeners():
+def init_listeners(special_message=""):
+    # This function both starts the listeners and is used with the scheduler to restart errant threads
+
     global thread_acars_listener
     global thread_vdlm2_listener
     global thread_database
     global thread_scheduler
     global thread_html_generator
 
-    if acarshub_helpers.DEBUG_LOGGING:
+    if acarshub_helpers.DEBUG_LOGGING and special_message is "":
         print('[init] Starting data listeners')
 
     if not thread_acars_listener.isAlive() and acarshub_helpers.ENABLE_ACARS:
-        if acarshub_helpers.DEBUG_LOGGING:
-            print('[init] Starting ACARS listener')
+        if acarshub_helpers.DEBUG_LOGGING or special_message != "":
+            print(f'[init] {special_message}Starting ACARS listener')
         thread_acars_listener = Thread(target=message_listener, args=("ACARS", "127.0.0.1", 15550))
         thread_acars_listener.start()
 
     if not thread_vdlm2_listener.isAlive() and acarshub_helpers.ENABLE_VDLM:
-        if acarshub_helpers.DEBUG_LOGGING:
-            print('[init] Starting VDLM listener')
+        if acarshub_helpers.DEBUG_LOGGING or special_message != "":
+            print(f'[init] {special_message}Starting VDLM listener')
         thread_vdlm2_listener = Thread(target=message_listener, args=("VDLM2", "127.0.0.1", 15555))
         thread_vdlm2_listener.start()
     if not thread_database.isAlive():
-        if acarshub_helpers.DEBUG_LOGGING:
-            print('[init] Starting Database Thread')
+        if acarshub_helpers.DEBUG_LOGGING or special_message != "":
+            print(f'[init] {special_message}Starting Database Thread')
         thread_database = Thread(target=database_listener)
         thread_database.start()
     if not thread_scheduler.isAlive():
-        if acarshub_helpers.DEBUG_LOGGING:
-            print("[init] starting scheduler")
+        if acarshub_helpers.DEBUG_LOGGING or special_message != "":
+            print(f"[init] {special_message} starting scheduler")
         thread_scheduler = Thread(target=scheduled_tasks)
         thread_scheduler.start()
     if connected_users > 0 and not thread_html_generator.isAlive():
-        if acarshub_helpers.DEBUG_LOGGING:
-            print("Starting htmlListener")
+        if acarshub_helpers.DEBUG_LOGGING or special_message != "":
+            print(f"{special_message}Starting htmlListener")
         thread_html_generator = socketio.start_background_task(htmlListener)
 
-# Any things we want to have started up in the background
+
+def init():
+    import json
+    global messages_recent
+    # grab recent messages from db and fill the most recent array
+    # then turn on the listeners
+    print("[init] grabbing most recent messages from database")
+    results = acarshub.acarshub_db.grab_most_recent()
+
+    if results is not None:
+        for item in results:
+            json_message = json.loads(item)
+            messages_recent.insert(0, [json_message['message_type'], json_message])
+    print("[init] Completed grabbing messages from database, starting up rest of services")
+    init_listeners()
 
 
-init_listeners()
+init()
 
 
 @app.route('/')
