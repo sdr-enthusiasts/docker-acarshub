@@ -315,7 +315,6 @@ def init_listeners():
     if connected_users > 0 and not thread_html_generator.isAlive():
         if acarshub_helpers.DEBUG_LOGGING:
             print("Starting htmlListener")
-        sys.stdout.flush()
         thread_html_generator = socketio.start_background_task(htmlListener)
 
 # Any things we want to have started up in the background
