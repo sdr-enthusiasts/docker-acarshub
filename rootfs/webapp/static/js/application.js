@@ -58,7 +58,7 @@ window.handle_radio = function(element_id, uid) {
             console.log("here: " + split);
             if(sub_split[0] == uid && i == 0) {
                 selected_tabs = uid + ";" + element_id;
-                added == true;
+                added = true;
             }
             else if(sub_split[0] == uid) {
                 selected_tabs += "," + uid + ";" + element_id;
