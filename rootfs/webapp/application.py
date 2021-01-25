@@ -62,7 +62,7 @@ thread_database_stop_event = Event()
 
 que_messages = deque(maxlen=15)
 que_database = deque(maxlen=15)
-messages_recent = []
+messages_recent = []  #  acarshub.acarshub_db.grab_most_recent()
 
 vdlm_messages = 0
 acars_messages = 0
@@ -286,6 +286,7 @@ def init_listeners():
     global thread_vdlm2_listener
     global thread_database
     global thread_scheduler
+    global thread_html_generator
 
     if acarshub_helpers.DEBUG_LOGGING:
         print('[init] Starting data listeners')
@@ -311,6 +312,11 @@ def init_listeners():
             print("[init] starting scheduler")
         thread_scheduler = Thread(target=scheduled_tasks)
         thread_scheduler.start()
+    if connected_users > 0 and not thread_html_generator.isAlive():
+        if acarshub_helpers.DEBUG_LOGGING:
+            print("Starting htmlListener")
+        sys.stdout.flush()
+        thread_html_generator = socketio.start_background_task(htmlListener)
 
 # Any things we want to have started up in the background
 

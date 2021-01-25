@@ -543,7 +543,7 @@ def grab_most_recent():
         if result.count() > 0:
             return [json.dumps(d, cls=AlchemyEncoder) for d in result]
         else:
-            return None
+            return []
     except Exception as e:
         acarshub_helpers.acars_traceback(e, "database")
 

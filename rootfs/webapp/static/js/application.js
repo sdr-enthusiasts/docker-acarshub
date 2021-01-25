@@ -38,28 +38,43 @@ function increment_received() {
     id.appendChild(txt);
 }
 
+function getRandomInt(max) {
+    return Math.floor(Math.random() * Math.floor(max));
+}
+
 window.handle_radio = function(element_id, uid) {
+    console.log(element_id + " " + uid);
     var all_tabs = document.querySelectorAll(`div.sub_msg${uid}`);
     for(var i = 0; i < all_tabs.length; i++) {
         all_tabs[i].classList.remove("checked");
     }
     var element = document.getElementById(`message_${uid}_${element_id}`);
     element.classList.add("checked");
+    var added = false;
+    if(selected_tabs != "") {
+        var split = selected_tabs.split(",")
+        for(var i = 0; i < split.length; i++) {
+            var sub_split = split[i].split(";");
+            console.log("here: " + split);
+            if(sub_split[0] == uid && i == 0) {
+                selected_tabs = uid + ";" + element_id;
+                added == true;
+            }
+            else if(sub_split[0] == uid) {
+                selected_tabs += "," + uid + ";" + element_id;
+                added = true;
+            }
+            else if (i == 0)
+                selected_tabs = sub_split[0] + ';' + sub_split[1];
+            else
+                selected_tabs += "," + sub_split[0] + ';' + sub_split[1];
+        }
+    }
 
-    var found = false;
-    var split = selected_tabs.split(",")
-
-    for(var i = 0; i < split.length; i++) {
-        var sub_split = split[i].split(";");
-
-        if(sub_split[0] == uid)
-            selected_tabs += uid + ";" + element_id;
-        else
-            selected_tabs += sub_split[0] + ';' + sub_split[1];
-    } 
-
-    if(!found) {
+    if(selected_tabs.length == 0) {
         selected_tabs = uid + ";" + element_id;
+    } else if(!added) {
+        selected_tabs += "," + uid + ";" + element_id;
     }
 }
 
@@ -206,6 +221,8 @@ $(document).ready(function(){
                 var new_flight = msg.msghtml.flight;
                 var added = false;
                 var index_new = 0;
+
+                msg.msghtml.uid = getRandomInt(1000000).toString(); // Each message gets a unique ID. Used to track tab selection
 
                 for(var u = 0; u < msgs_received.length; u++) {
                     if(msgs_received[u][0].hasOwnProperty('tail') && new_tail == msgs_received[u][0].tail) {

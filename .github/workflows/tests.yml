@@ -39,6 +39,14 @@ jobs:
           cp --no-dereference /etc/ssl/certs/*.pem ./rootfs/etc/ssl/certs
           cp --no-dereference /usr/share/ca-certificates/mozilla/*.crt ./rootfs/usr/share/ca-certificates/mozilla
 
+        # Log into docker hub (so we can push images)
+      -
+        name: Login to DockerHub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
       # Set up QEMU for multi-arch builds
       -
         name: Set up QEMU
@@ -83,4 +91,5 @@ jobs:
           file: ./Dockerfile
           no-cache: true
           platforms: ${{ matrix.docker-platform }}
-          push: false
+          push: ${{ env.PUSH }}
+          tags: ${{ env.REPO }}/${{ env.IMAGE }}:test-pr
