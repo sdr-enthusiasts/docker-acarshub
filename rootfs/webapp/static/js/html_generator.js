@@ -81,13 +81,7 @@ function display_messages(msgs_to_process, selected_tabs, live_page=false) {
             }
 
             html_output += "<tr>";
-            html_output += `<td><strong>${message['message_type']}</strong> from <strong>${message['station_id']}</strong>`;
-
-            if(message.hasOwnProperty('duplicates')) {
-                html_output += ` Duplicate Message(s) Received: ${message['duplicates']}`;
-            }
-
-            html_output += `</td>`;
+            html_output += `<td><strong>${message['message_type']}</strong> from <strong>${message['station_id']}</strong></td>`;
 
             var timestamp;
 
@@ -100,6 +94,10 @@ function display_messages(msgs_to_process, selected_tabs, live_page=false) {
             html_output += "</tr>";
             // Table content
             html_output += "<tr><td colspan=\"2\">";
+
+            if(message.hasOwnProperty('duplicates')) {
+                html_output += `<p>Duplicate(s) Received: <strong>${message['duplicates']}</strong></p>`;
+            }
 
             if(message.hasOwnProperty("label")) {
                 var label_type = "";

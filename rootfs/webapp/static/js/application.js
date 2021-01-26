@@ -254,11 +254,22 @@ $(document).ready(function(){
                             if (msgs_received[index_new][j].hasOwnProperty('text') && msg.msghtml.hasOwnProperty('text') &&
                                 msgs_received[index_new][j]['text'] == msg.msghtml['text']) { // it's the same message
                                 console.log("REJECTED " + msg.msghtml.text);
-                                if(msgs_received[index_new][j].hasOwnProperty("duplicates"))
+                                if(msgs_received[index_new][j].hasOwnProperty("duplicates")) {
                                     msgs_received[index_new][j]['duplicates']++;
-                                else
+                                    msgs_received[index_new][j]['timestamp'] = msg.msghtml.timestamp;
+                                }
+                                else {
                                     msgs_received[index_new][j]['duplicates'] = 1;
+                                    msgs_received[index_new][j]['timestamp'] = msg.msghtml.timestamp;
+                                }
                                 rejected = true;
+                                // Promote the message back to the front
+                                msgs_received[index_new].forEach(function(item,i) {
+                                    if(i == j) {
+                                        msgs_received[index_new].splice(i, 1);
+                                        msgs_received[index_new].unshift(item);
+                                    }
+                                });
                                 j = msgs_received[index_new].length;
                             }
                         }
@@ -268,7 +279,7 @@ $(document).ready(function(){
                     if(found) {
                         // If the message was found, and not rejected, we'll append it to the message group
                         if(!rejected)
-                            msgs_received[index_new].push(msg.msghtml);
+                            msgs_received[index_new].unshift(msg.msghtml);
 
                         msgs_received.forEach(function(item,i){
                             if(i == index_new){
