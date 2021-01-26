@@ -15,11 +15,11 @@ const md = new MessageDecoder();
 // Automatically keep the array size at 100 messages or less
 // without the need to check before we push on to the stack
 
-msgs_received.push = function (){
+msgs_received.unshift = function () {
     if (this.length >= 50) {
-        this.shift();
+        this.pop();
     }
-    return Array.prototype.push.apply(this,arguments);
+    return Array.prototype.unshift.apply(this,arguments);
 }
 
 function increment_filtered() {
@@ -43,7 +43,6 @@ function getRandomInt(max) {
 }
 
 window.handle_radio = function(element_id, uid) {
-    console.log(element_id + " " + uid);
     var all_tabs = document.querySelectorAll(`div.sub_msg${uid}`);
     for(var i = 0; i < all_tabs.length; i++) {
         all_tabs[i].classList.remove("checked");
@@ -55,7 +54,7 @@ window.handle_radio = function(element_id, uid) {
         var split = selected_tabs.split(",")
         for(var i = 0; i < split.length; i++) {
             var sub_split = split[i].split(";");
-            console.log("here: " + split);
+
             if(sub_split[0] == uid && i == 0) {
                 selected_tabs = uid + ";" + element_id;
                 added = true;
@@ -219,33 +218,58 @@ $(document).ready(function(){
                 var new_tail = msg.msghtml.tail;
                 var new_icao = msg.msghtml.icao;
                 var new_flight = msg.msghtml.flight;
-                var added = false;
-                var index_new = 0;
+                var found = false; // variable to track if the new message was found in previous messages
+                var rejected = false; // variable to track if the new message was rejected for being a duplicate
+                var index_new = 0; // the index of the found previous message
 
                 msg.msghtml.uid = getRandomInt(1000000).toString(); // Each message gets a unique ID. Used to track tab selection
 
+                // Loop through the received messages. If a message is found we'll break out of the for loop
                 for(var u = 0; u < msgs_received.length; u++) {
                     if(msgs_received[u][0].hasOwnProperty('tail') && new_tail == msgs_received[u][0].tail) {
-                        msgs_received[u].push(msg.msghtml);
-                        added = true;
+                        //msgs_received[u].push(msg.msghtml);
+                        found = true;
                         index_new = u;
                         u = msgs_received.length;
                         //console.log("match " + new_tail);
                     } else if(msgs_received[u][0].hasOwnProperty('icao') && new_icao == msgs_received[u][0].icao) {
-                        msgs_received[u].push(msg.msghtml);
-                        added = true;
+                        //msgs_received[u].push(msg.msghtml);
+                        found = true;
                         index_new = u;
                         u = msgs_received.length;
                         //console.log("match " + new_icao);
                     } else if(msgs_received[u][0].hasOwnProperty('flight') && new_flight == msgs_received[u][0].flight) {
-                        msgs_received[u].push(msg.msghtml);
-                        added = true;
+                        //msgs_received[u].push(msg.msghtml);
+                        found = true;
                         index_new = u;
                         u = msgs_received.length;
                         //console.log("match " + new_flight);
                     }
 
-                    if(added) {
+                    // if we found a message group that matches the new message
+                    // run through the messages in that group to see if it is a dup.
+                    // if it is, we'll reject the new message and append a counter to the old/saved message
+                    if(found) {
+                        for(var j = 0; j < msgs_received[index_new].length; j++) {
+                            if (msgs_received[index_new][j].hasOwnProperty('text') && msg.msghtml.hasOwnProperty('text') &&
+                                msgs_received[index_new][j]['text'] == msg.msghtml['text']) { // it's the same message
+                                console.log("REJECTED " + msg.msghtml.text);
+                                if(msgs_received[index_new][j].hasOwnProperty("duplicates"))
+                                    msgs_received[index_new][j]['duplicates']++;
+                                else
+                                    msgs_received[index_new][j]['duplicates'] = 1;
+                                rejected = true;
+                                j = msgs_received[index_new].length;
+                            }
+                        }
+                    }
+
+                    // If the message was found we'll move the message group back to the top
+                    if(found) {
+                        // If the message was found, and not rejected, we'll append it to the message group
+                        if(!rejected)
+                            msgs_received[index_new].push(msg.msghtml);
+
                         msgs_received.forEach(function(item,i){
                             if(i == index_new){
                                 msgs_received.splice(i, 1);
@@ -254,7 +278,7 @@ $(document).ready(function(){
                         });
                     }
                 }
-                if(!added) {
+                if(!found && !rejected) {
                     msgs_received.unshift([msg.msghtml]);
                 }
             } else {

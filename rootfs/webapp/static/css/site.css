@@ -644,12 +644,17 @@ input[type='checkbox'] {
 .tabinator label {
   box-sizing: border-box;
   display: inline-block;
-  padding: 15px 25px;
+  padding-top: 8px;
+  padding-bottom: 6px;
+  padding-right:  10px;
+  padding-left: 10px;
+  min-width: 102px;
+  text-align: center;
   color: #ccc;
   margin-bottom: -1px;
   margin-left: -1px;
   border: 1px solid #bbb;
-  border-radius: 10px 10px 0 0;
+  /*border-radius: 10px 10px 0 0;*/
 }
 .tabinator label:before {
   content:'';
@@ -661,7 +666,7 @@ input[type='checkbox'] {
   bottom:0px;
   left:0;
   z-index:10;
-  border-radius: 10px 10px 0 0;
+  /*border-radius: 10px 10px 0 0;*/
 }
 .tabinator label:hover {
   color: #888;
@@ -673,7 +678,7 @@ input[type='checkbox'] {
   background: transparent;
   border: 1px solid #bbb;
   border-bottom: 1px solid #fff;
-  border-radius: 10px 10px 0 0;
+  /*border-radius: 10px 10px 0 0;*/
 }
 .tabinator input:checked + label:after {
   display: block;
@@ -681,7 +686,7 @@ input[type='checkbox'] {
   position: absolute;
   top: 0; right: 0; bottom: 0; left: 0;
   box-shadow: 0 0 15px #939393;
-  border-radius: 10px 10px 0 0;
+  /*border-radius: 10px 10px 0 0;*/
 }
 [id^="message"] {
   display: none;

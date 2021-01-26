@@ -43,11 +43,10 @@ while run:
 		print("Connected")
 		index = 1
 		while True:
-		    print(f"sending message {message[index]}")
 		    # we will send a random message
 		    if random:
 		    	index = randint(0, len(message) - 1)
-		    print(index)
+
 		    try:
 		    	updated_message = json.loads(message[index])
 		    	updated_message['timestamp'] = time.time()
@@ -66,6 +65,8 @@ while run:
 		    	print("message sent")
 		    	if not random:
 		    		index += 1
+		    		if index >= len(message):
+		    			index = 1
 		    
 		    time.sleep(message_interval)
 

@@ -81,7 +81,13 @@ function display_messages(msgs_to_process, selected_tabs, live_page=false) {
             }
 
             html_output += "<tr>";
-            html_output += `<td><strong>${message['message_type']}</strong> from <strong>${message['station_id']}</strong></td>`;
+            html_output += `<td><strong>${message['message_type']}</strong> from <strong>${message['station_id']}</strong>`;
+
+            if(message.hasOwnProperty('duplicates')) {
+                html_output += ` Duplicate Message(s) Received: ${message['duplicates']}`;
+            }
+
+            html_output += `</td>`;
 
             var timestamp;
 
