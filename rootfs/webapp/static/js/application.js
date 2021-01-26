@@ -255,7 +255,7 @@ $(document).ready(function(){
                             // If not, then we'll see if this is a multipart message
                             if (msgs_received[index_new][j].hasOwnProperty('text') && msg.msghtml.hasOwnProperty('text') &&
                                 msgs_received[index_new][j]['text'] == msg.msghtml['text']) { // it's the same message
-                                console.log("REJECTED " + msg.msghtml.text);
+                                //console.log("REJECTED " + JSON.stringify(msg.msghtml));
                                 msgs_received[index_new][j]['timestamp'] = msg.msghtml.timestamp;
                                 if(msgs_received[index_new][j].hasOwnProperty("duplicates")) {
                                     msgs_received[index_new][j]['duplicates']++;                 
@@ -266,10 +266,9 @@ $(document).ready(function(){
                                 rejected = true;
                             } else if(msg.msghtml.station_id == msgs_received[index_new][j].station_id &&
                                 msg.msghtml.hasOwnProperty('msgno') && msgs_received[index_new][j].hasOwnProperty('msgno') &&
-                                msg.msghtml.hasOwnProperty('text') && msgs_received[index_new][j].hasOwnProperty('text') &&
                                 msg.msghtml['msgno'].charAt(0) == msgs_received[index_new][j]['msgno'].charAt(0) &&
-                                msg.msghtml['msgno'].charAt(0) == msgs_received[index_new][j]['msgno'].charAt(0)) {
-                                console.log("REJECTED multi-part " + msg.msghtml.msgno);
+                                msg.msghtml['msgno'].charAt(3) == msgs_received[index_new][j]['msgno'].charAt(3)) {
+                                console.log("REJECTED multi-part " + JSON.stringify(msg.msghtml));
 
                                 // We have a multi part message. Now we need to see if it is a dup
                                 rejected = true;
@@ -277,15 +276,19 @@ $(document).ready(function(){
 
                                 if(msgs_received[index_new][j].hasOwnProperty('msgno_parts')) {
                                     var split = msgs_received[index_new][j].msgno_parts.toString().split(" ");
+                                    console.log(msgs_received[index_new][j].msgno_parts);
+                                    console.log(split.length);
 
                                     for(var a = 0; a < split.length; a++) {
-                                        if(split[a].substring(0, 4) == msgs_received[index_new][j]['msgno']) {
+                                        console.log(split[a].substring(0, 4) + " " + msg.msghtml['msgno']);
+                                        if(split[a].substring(0, 4) == msg.msghtml['msgno']) {
                                             add_multi = false;
+                                            console.log("FOUND MATCH");
 
                                             if(a == 0 && split[a].length == 4) {
                                                 msgs_received[index_new][j].msgno_parts = split[a] + "x2";
                                             } else if (split[a].length == 4) {
-                                                msgs_received[index_new][j].msgno_parts = " " + split[a] + "x2";
+                                                msgs_received[index_new][j].msgno_parts += " " + split[a] + "x2";
                                             } else if(a == 0) {
                                                 console.log(split[a].substring(5));
                                                 var count = parseInt(split[a].substring(5)) + 1;
@@ -293,7 +296,7 @@ $(document).ready(function(){
                                             } else {
                                                 var count = parseInt(split[a].substring(5)) + 1;
                                                 console.log(split[a].substring(5));
-                                                msgs_received[index_new][j].msgno_parts = " " + split[a].substring(0,4) + "x" + count;
+                                                msgs_received[index_new][j].msgno_parts += " " + split[a].substring(0,4) + "x" + count;
                                             }
                                         } else {
                                             if(a == 0) {
@@ -303,12 +306,15 @@ $(document).ready(function(){
                                             }
                                         }
                                     }
-                                }                          
+                                }                  
 
                                 msgs_received[index_new][j]['timestamp'] = msg.msghtml.timestamp;
                                 
                                 if(add_multi) {
-                                    msgs_received[index_new][j]['text'] += msg.msghtml.text;
+                                    if(msgs_received[index_new][j]['text'] && msg.msghtml.hasOwnProperty('text'))
+                                        msgs_received[index_new][j]['text'] += msg.msghtml.text;
+                                    else if(msg.msghtml.hasOwnProperty('text'))
+                                        msgs_received[index_new][j]['text'] = msg.msghtml.text;
 
                                     if(msgs_received[index_new][j].hasOwnProperty('msgno_parts')) {
                                         msgs_received[index_new][j]['msgno_parts'] += " " + msg.msghtml.msgno;
