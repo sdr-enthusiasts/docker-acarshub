@@ -230,19 +230,19 @@ $(document).ready(function(){
                         added = true;
                         index_new = u;
                         u = msgs_received.length;
-                        console.log("match " + new_tail);
-                    } else if(msgs_received[u][0].hasOwnProperty('icao') && new_icao== msgs_received[u][0].icao) {
+                        //console.log("match " + new_tail);
+                    } else if(msgs_received[u][0].hasOwnProperty('icao') && new_icao == msgs_received[u][0].icao) {
                         msgs_received[u].push(msg.msghtml);
                         added = true;
                         index_new = u;
                         u = msgs_received.length;
-                        console.log("match " + new_icao);
+                        //console.log("match " + new_icao);
                     } else if(msgs_received[u][0].hasOwnProperty('flight') && new_flight == msgs_received[u][0].flight) {
                         msgs_received[u].push(msg.msghtml);
                         added = true;
                         index_new = u;
                         u = msgs_received.length;
-                        console.log("match " + new_flight);
+                        //console.log("match " + new_flight);
                     }
 
                     if(added) {

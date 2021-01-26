@@ -35,21 +35,27 @@ while run:
 		clientConnected.setblocking(0)
 		clientConnected.settimeout(1)
 		print("Connected")
+		index = 1300
 		while True:
-		    print("sending message")
+		    print(f"sending message {message[index]}")
 		    # we will send a random message
-		    index = randint(0, len(message) - 1)
+		    #index = randint(0, len(message) - 1)
 		    try:
 		    	updated_message = json.loads(message[index])
 		    	updated_message['timestamp'] = time.time()
 		    	updated_message = json.dumps(updated_message);
 		    except socket.error as e:
 		    	receiver.close()
+		    except KeyboardInterrupt:
+		    	print("Exiting...")
+		    	receiver.close()
+		    	run = False
 		    except Exception as e:
 		    	print(e)
 		    else:
 		    	clientConnected.send(updated_message.encode() + b'\n')
 		    	print("message sent")
+		    	index += 1
 		    
 		    time.sleep(message_interval)
 

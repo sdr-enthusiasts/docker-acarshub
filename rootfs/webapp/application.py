@@ -373,6 +373,7 @@ def aboutmd():
 def main_connect():
     import sys
     import json
+    import copy
     # need visibility of the global thread object
     global thread_html_generator
     global connected_users
@@ -385,8 +386,9 @@ def main_connect():
     requester = request.sid
     socketio.emit('labels', {'labels': acarshub.acarshub_db.get_message_label_json()}, room=requester,
                   namespace="/main")
-    for msg_type, json_message in messages_recent:
-        json_message.update({"message_type": msg_type})
+    for msg_type, json_message_orig in messages_recent:
+        json_message = copy.deepcopy(json_message_orig)
+        json_message['message_type'] = msg_type
         socketio.emit('newmsg', {'msghtml': acarshub.update_keys(json_message)}, room=requester,
                       namespace='/main')
 
