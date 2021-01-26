@@ -251,18 +251,80 @@ $(document).ready(function(){
                     // if it is, we'll reject the new message and append a counter to the old/saved message
                     if(found) {
                         for(var j = 0; j < msgs_received[index_new].length; j++) {
+                            // First we'll see if the text field is the same
+                            // If not, then we'll see if this is a multipart message
                             if (msgs_received[index_new][j].hasOwnProperty('text') && msg.msghtml.hasOwnProperty('text') &&
                                 msgs_received[index_new][j]['text'] == msg.msghtml['text']) { // it's the same message
                                 console.log("REJECTED " + msg.msghtml.text);
+                                msgs_received[index_new][j]['timestamp'] = msg.msghtml.timestamp;
                                 if(msgs_received[index_new][j].hasOwnProperty("duplicates")) {
-                                    msgs_received[index_new][j]['duplicates']++;
-                                    msgs_received[index_new][j]['timestamp'] = msg.msghtml.timestamp;
+                                    msgs_received[index_new][j]['duplicates']++;                 
                                 }
                                 else {
                                     msgs_received[index_new][j]['duplicates'] = 1;
-                                    msgs_received[index_new][j]['timestamp'] = msg.msghtml.timestamp;
                                 }
                                 rejected = true;
+                            } else if(msg.msghtml.station_id == msgs_received[index_new][j].station_id &&
+                                msg.msghtml.hasOwnProperty('msgno') && msgs_received[index_new][j].hasOwnProperty('msgno') &&
+                                msg.msghtml.hasOwnProperty('text') && msgs_received[index_new][j].hasOwnProperty('text') &&
+                                msg.msghtml['msgno'].charAt(0) == msgs_received[index_new][j]['msgno'].charAt(0) &&
+                                msg.msghtml['msgno'].charAt(0) == msgs_received[index_new][j]['msgno'].charAt(0)) {
+                                console.log("REJECTED multi-part " + msg.msghtml.msgno);
+
+                                // We have a multi part message. Now we need to see if it is a dup
+                                rejected = true;
+                                var add_multi = true;
+
+                                if(msgs_received[index_new][j].hasOwnProperty('msgno_parts')) {
+                                    var split = msgs_received[index_new][j].msgno_parts.toString().split(" ");
+
+                                    for(var a = 0; a < split.length; a++) {
+                                        if(split[a].substring(0, 4) == msgs_received[index_new][j]['msgno']) {
+                                            add_multi = false;
+
+                                            if(a == 0 && split[a].length == 4) {
+                                                msgs_received[index_new][j].msgno_parts = split[a] + "x2";
+                                            } else if (split[a].length == 4) {
+                                                msgs_received[index_new][j].msgno_parts = " " + split[a] + "x2";
+                                            } else if(a == 0) {
+                                                console.log(split[a].substring(5));
+                                                var count = parseInt(split[a].substring(5)) + 1;
+                                                msgs_received[index_new][j].msgno_parts = split[a].substring(0,4) + "x" + count;
+                                            } else {
+                                                var count = parseInt(split[a].substring(5)) + 1;
+                                                console.log(split[a].substring(5));
+                                                msgs_received[index_new][j].msgno_parts = " " + split[a].substring(0,4) + "x" + count;
+                                            }
+                                        } else {
+                                            if(a == 0) {
+                                                msgs_received[index_new][j].msgno_parts = split[a];
+                                            } else {
+                                                msgs_received[index_new][j].msgno_parts += " " + split[a];
+                                            }
+                                        }
+                                    }
+                                }                          
+
+                                msgs_received[index_new][j]['timestamp'] = msg.msghtml.timestamp;
+                                
+                                if(add_multi) {
+                                    msgs_received[index_new][j]['text'] += msg.msghtml.text;
+
+                                    if(msgs_received[index_new][j].hasOwnProperty('msgno_parts')) {
+                                        msgs_received[index_new][j]['msgno_parts'] += " " + msg.msghtml.msgno;
+                                    } else {
+                                        msgs_received[index_new][j]['msgno_parts'] = msgs_received[index_new][j]['msgno'] + " " + msg.msghtml.msgno;
+                                    }
+
+                                    var decoded_msg = md.decode(msgs_received[index_new][j]);
+                                    if(decoded_msg.decoded == true) {
+                                        msgs_received[index_new][j]['decoded_msg'] = decoded_msg;
+                                        //console.log(msg.msghtml.decodedText);
+                                    }
+                                }
+                            }
+
+                            if(rejected) {
                                 // Promote the message back to the front
                                 msgs_received[index_new].forEach(function(item,i) {
                                     if(i == j) {

@@ -99,6 +99,10 @@ function display_messages(msgs_to_process, selected_tabs, live_page=false) {
                 html_output += `<p>Duplicate(s) Received: <strong>${message['duplicates']}</strong></p>`;
             }
 
+            if(message.hasOwnProperty('msgno_parts')) {
+                html_output += `<p>Message Parts: <strong>${message['msgno_parts']}</strong></p>`;
+            }
+
             if(message.hasOwnProperty("label")) {
                 var label_type = "";
                 if(message.hasOwnProperty("label_type")) {
