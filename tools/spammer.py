@@ -5,7 +5,8 @@
 # connect and receive all the data. export SPAM=True to enable application.py to function properly
 # Additionally, for database pathing in testing, export ACARSHUB_DB="sqlite:////path/to/db"
 # 3 leading slashes required, the fourth is for unix path starting from root
-# python3 spammer.py /path/to/messages/file 5
+# For a sequential play of the msg file: python3 spammer.py /path/to/messages/file 5 0
+# For a random play of the msg file:     python3 spammer.py /path/to/messages/file 5 1
 # env ACARSHUB_DB=sqlite:////Users/fred/messages.db SPAM=True DEBUG_LOGGING=True ENABLE_ACARS=True FREQS_ACARS="130.025;130.450;131.125;131.550" python3 application.py
 
 import socket
@@ -21,6 +22,11 @@ while run:
 		# load the messages to send
 		message_interval = int(sys.argv[2])
 
+		if sys.argv[3] == "0":
+			random = False
+		else:
+			random = True
+
 		with open(sys.argv[1], "r") as lines:
 			message = lines.readlines()
 
@@ -35,11 +41,13 @@ while run:
 		clientConnected.setblocking(0)
 		clientConnected.settimeout(1)
 		print("Connected")
-		index = 1300
+		index = 1
 		while True:
 		    print(f"sending message {message[index]}")
 		    # we will send a random message
-		    #index = randint(0, len(message) - 1)
+		    if random:
+		    	index = randint(0, len(message) - 1)
+		    print(index)
 		    try:
 		    	updated_message = json.loads(message[index])
 		    	updated_message['timestamp'] = time.time()
@@ -52,10 +60,12 @@ while run:
 		    	run = False
 		    except Exception as e:
 		    	print(e)
+		    	receiver.close()
 		    else:
 		    	clientConnected.send(updated_message.encode() + b'\n')
 		    	print("message sent")
-		    	index += 1
+		    	if not random:
+		    		index += 1
 		    
 		    time.sleep(message_interval)
 
