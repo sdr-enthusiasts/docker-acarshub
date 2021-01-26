@@ -290,32 +290,32 @@ def init_listeners(special_message=""):
     global thread_scheduler
     global thread_html_generator
 
-    if acarshub_helpers.DEBUG_LOGGING and special_message is "":
+    if acarshub_helpers.DEBUG_LOGGING && special_message is "":
         print('[init] Starting data listeners')
 
     if not thread_acars_listener.isAlive() and acarshub_helpers.ENABLE_ACARS:
-        if acarshub_helpers.DEBUG_LOGGING or special_message != "":
+        if acarshub_helpers.DEBUG_LOGGING || special_message != "":
             print(f'[init] {special_message}Starting ACARS listener')
         thread_acars_listener = Thread(target=message_listener, args=("ACARS", "127.0.0.1", 15550))
         thread_acars_listener.start()
 
     if not thread_vdlm2_listener.isAlive() and acarshub_helpers.ENABLE_VDLM:
-        if acarshub_helpers.DEBUG_LOGGING or special_message != "":
+        if acarshub_helpers.DEBUG_LOGGING || special_message != "":
             print(f'[init] {special_message}Starting VDLM listener')
         thread_vdlm2_listener = Thread(target=message_listener, args=("VDLM2", "127.0.0.1", 15555))
         thread_vdlm2_listener.start()
     if not thread_database.isAlive():
-        if acarshub_helpers.DEBUG_LOGGING or special_message != "":
+        if acarshub_helpers.DEBUG_LOGGING || special_message != "":
             print(f'[init] {special_message}Starting Database Thread')
         thread_database = Thread(target=database_listener)
         thread_database.start()
     if not thread_scheduler.isAlive():
-        if acarshub_helpers.DEBUG_LOGGING or special_message != "":
+        if acarshub_helpers.DEBUG_LOGGING || special_message != "":
             print(f"[init] {special_message} starting scheduler")
         thread_scheduler = Thread(target=scheduled_tasks)
         thread_scheduler.start()
     if connected_users > 0 and not thread_html_generator.isAlive():
-        if acarshub_helpers.DEBUG_LOGGING or special_message != "":
+        if acarshub_helpers.DEBUG_LOGGING || special_message != "":
             print(f"{special_message}Starting htmlListener")
         thread_html_generator = socketio.start_background_task(htmlListener)
 
