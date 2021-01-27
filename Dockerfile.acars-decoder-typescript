@@ -7,12 +7,12 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 # Temorarily not using the subtree until we figure out the cloning issue
 # Instead, going to clone the remote repo
-#COPY acars-decoder-typescript/ /src/acars-decoder-typescript/
+COPY acars-decoder-typescript/ /src/acars-decoder-typescript/
 
 RUN set -x && \
 	mkdir -p /src/acars-decoder-typescript && \
     pushd /src/acars-decoder-typescript && \
-    git clone https://github.com/airframesio/acars-decoder-typescript.git . && \
+    #git clone https://github.com/airframesio/acars-decoder-typescript.git . && \
     # Patch build to run in browser (outside of nodejs)
     # https://stackoverflow.com/questions/44709031/build-for-both-browser-and-nodejs
     # https://medium.com/collaborne-engineering/typescript-create-library-for-nodejs-and-browser-fece291d517f
