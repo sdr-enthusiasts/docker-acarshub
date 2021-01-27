@@ -22,7 +22,7 @@ find . -type f -iname '*.js' -exec sed -i.bu """/export .* from '.*';/ s/';/.js'
 find . -type f -iname '*.js' -exec sed -i.bu """/export .* from \".*\";/ s/\";/.js\";/""" {} \;
 
 rm -rf /Users/fred/Git/docker-acarshub/rootfs/webapp/static/airframes-acars-decoder
-rm -rf *.bu
+rm -rf ./*.bu
 
 mkdir -p /Users/fred/Git/docker-acarshub/rootfs/webapp/static/airframes-acars-decoder
 cp -r . /Users/fred/Git/docker-acarshub/rootfs/webapp/static/airframes-acars-decoder
