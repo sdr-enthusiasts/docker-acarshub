@@ -20,7 +20,7 @@ git remote add -f acars-decoder-typescript https://github.com/airframesio/acars-
 ```
 
 ```bash
-git subtree pull --prefix acars-decoder-typescript acars-decoder-typescript master --squash 
+git subtree pull --prefix acars-decoder-typescript acars-decoder-typescript master --squash
 ```
 
 **To split changes into a fork:**
