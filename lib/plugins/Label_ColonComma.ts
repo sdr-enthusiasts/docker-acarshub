@@ -16,10 +16,11 @@ export class Label_ColonComma extends DecoderPlugin {
     decodeResult.raw.frequency = Number(message.text) / 1000;
 
     decodeResult.formatted.description = 'Aircraft Transceiver Frequency Change';
-    decodeResult.formatted.items.frequency = {
+    decodeResult.formatted.items.push({
+      type: 'frequency',
       label: 'Frequency',
       value: `${decodeResult.raw.frequency} MHz`,
-    };
+    });
 
     decodeResult.decoded = true;
     decodeResult.decoder.decodeLevel = 'full';
