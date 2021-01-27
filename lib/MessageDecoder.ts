@@ -15,11 +15,13 @@ export class MessageDecoder {
     this.registerPlugin(new Plugins.Label_ColonComma(this));
     this.registerPlugin(new Plugins.Label_5Z(this));
     this.registerPlugin(new Plugins.Label_15(this));
+    this.registerPlugin(new Plugins.Label_20_POS(this));
     this.registerPlugin(new Plugins.Label_44_ETA(this));
     this.registerPlugin(new Plugins.Label_44_IN(this));
     this.registerPlugin(new Plugins.Label_44_OFF(this));
     this.registerPlugin(new Plugins.Label_44_ON(this));
     this.registerPlugin(new Plugins.Label_44_POS(this));
+    this.registerPlugin(new Plugins.Label_B6_Forwardslash(this));
     this.registerPlugin(new Plugins.Label_H1_M1BPOS(this));
     this.registerPlugin(new Plugins.Label_80(this));
     this.registerPlugin(new Plugins.Label_SQ(this));
