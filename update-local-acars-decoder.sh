@@ -1,10 +1,10 @@
 #!/bin/bash
 
 rm -rf /Users/Git/acars-decoder-typescript
-cd /Users/Git/ 
+pushd /Users/Git/ || exit
 git clone https://github.com/airframesio/acars-decoder-typescript.git . 
 
-cd acars-decoder-typescript
+pushd acars-decoder-typescript || exit
 mkdir build-output
 
 sed -i.bu '/"module": "commonjs",/d' tsconfig.json && \
@@ -12,9 +12,9 @@ yarn install && \
 yarn build && \
 yarn pack --filename build-output/acars-decoder-typescript.tgz
 
-cd build-output
+pushd build-output || exit
 tar xvf /src/acars-decoder-typescript.tgz -C .
-cd package/dist
+pushd package/dist || exit
 
 find . -type f -iname '*.js' -exec sed -i.bu """/import .* from '.*';/ s/';/.js';/""" {} \;
 find . -type f -iname '*.js' -exec sed -i.bu """/import .* from \".*\";/ s/\";/.js\";/""" {} \;
