@@ -266,12 +266,12 @@ $(document).ready(function(){
                                 rejected = true;
                             } else if(msg.msghtml.station_id == msgs_received[index_new][j].station_id &&
                                 msg.msghtml.hasOwnProperty('msgno') && msgs_received[index_new][j].hasOwnProperty('msgno') &&
-                                msg.msghtml.timestamp - msgs_received[index_new][j].timestamp < 5.0 &&
+                                msg.msghtml.timestamp - msgs_received[index_new][j].timestamp < 8.0 &&
                                 ((msg.msghtml['msgno'].charAt(0) == msgs_received[index_new][j]['msgno'].charAt(0) &&
                                 msg.msghtml['msgno'].charAt(3) == msgs_received[index_new][j]['msgno'].charAt(3)) ||
                                 (msg.msghtml['msgno'].substring(0,3) == msgs_received[index_new][j]['msgno'].substring(0, 3)))) {
                                 console.log("REJECTED multi-part " + JSON.stringify(msg.msghtml));
-
+                                console.log(msg.msghtml.timestamp - msgs_received[index_new][j].timestamp < 8.0);
                                 // We have a multi part message. Now we need to see if it is a dup
                                 rejected = true;
                                 var add_multi = true;

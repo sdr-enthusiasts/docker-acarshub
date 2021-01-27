@@ -145,7 +145,7 @@ def handle_message(message=None):
                 for result in query_result:
                     json_message = update_keys(json.loads(result))
 
-                    serialized_json.insert(0, json.dumps(json_message))
+                    serialized_json.append(json.dumps(json_message))
 
             return (total_results, serialized_json, search_term)
     else:
