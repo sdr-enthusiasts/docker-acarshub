@@ -2,7 +2,7 @@
 
 rm -rf /Users/fred/Git/acars-decoder-typescript
 pushd /Users/fred/Git/ || exit
-git clone https://github.com/airframesio/acars-decoder-typescript.git . 
+git clone https://github.com/airframesio/acars-decoder-typescript.git
 
 pushd acars-decoder-typescript || exit
 mkdir build-output
@@ -13,7 +13,7 @@ yarn build && \
 yarn pack --filename build-output/acars-decoder-typescript.tgz
 
 pushd build-output || exit
-tar xvf /src/acars-decoder-typescript.tgz -C .
+tar xvf acars-decoder-typescript.tgz -C .
 pushd package/dist || exit
 
 find . -type f -iname '*.js' -exec sed -i.bu """/import .* from '.*';/ s/';/.js';/""" {} \;
