@@ -1,7 +1,7 @@
 #!/bin/bash
 
-rm -rf /Users/Git/acars-decoder-typescript
-pushd /Users/Git/ || exit
+rm -rf /Users/fred/Git/acars-decoder-typescript
+pushd /Users/fred/Git/ || exit
 git clone https://github.com/airframesio/acars-decoder-typescript.git . 
 
 pushd acars-decoder-typescript || exit
