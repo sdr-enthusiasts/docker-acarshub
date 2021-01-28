@@ -226,24 +226,37 @@ $(document).ready(function(){
 
                 // Loop through the received messages. If a message is found we'll break out of the for loop
                 for(var u = 0; u < msgs_received.length; u++) {
-                    if(msgs_received[u][0].hasOwnProperty('tail') && new_tail == msgs_received[u][0].tail) {
-                        //msgs_received[u].push(msg.msghtml);
-                        found = true;
-                        index_new = u;
-                        u = msgs_received.length;
-                        //console.log("match " + new_tail);
-                    } else if(msgs_received[u][0].hasOwnProperty('icao') && new_icao == msgs_received[u][0].icao) {
-                        //msgs_received[u].push(msg.msghtml);
-                        found = true;
-                        index_new = u;
-                        u = msgs_received.length;
-                        //console.log("match " + new_icao);
-                    } else if(msgs_received[u][0].hasOwnProperty('flight') && new_flight == msgs_received[u][0].flight) {
-                        //msgs_received[u].push(msg.msghtml);
-                        found = true;
-                        index_new = u;
-                        u = msgs_received.length;
-                        //console.log("match " + new_flight);
+                    // Now we loop through all of the messages in the message group to find a match in case the first doesn't
+                    // Have the field we need
+                    // There is a possibility that (for reasons I cannot fathom) aircraft will broadcast the same flight information
+                    // With one field being different. We'll reject that message as being not in the same message group if that's the case
+                    for(var z = 0; z < msgs_received[u].length; z++) {
+                        if((msgs_received[u][z].hasOwnProperty('tail') && new_tail == msgs_received[u][z].tail) &&
+                            (msgs_received[u][z].hasOwnProperty('icao') && msgs_received[u][z].hasOwnProperty('icao') == new_icao) &&
+                            (msgs_received[u][z].hasOwnProperty('flight') && msgs_received[u][z].hasOwnProperty('flight') == new_flight)) {
+                            //msgs_received[u].push(msg.msghtml);
+                            found = true;
+                            index_new = u;
+                            u = msgs_received.length;
+                            //console.log("match " + new_tail);
+                        } else if((msgs_received[u][z].hasOwnProperty('icao') && new_icao == msgs_received[u][z].icao) && 
+                            (msgs_received[u][z].hasOwnProperty('tail') && msgs_received[u][z].hasOwnProperty('tail') == new_tail) &&
+                            (msgs_received[u][z].hasOwnProperty('flight') && msgs_received[u][z].hasOwnProperty('flight') == new_icao)) {
+                            //msgs_received[u].push(msg.msghtml);
+                            found = true;
+                            index_new = u;
+                            u = msgs_received.length;
+                            //console.log("match " + new_icao);
+                        } else if((msgs_received[u][z].hasOwnProperty('flight') && new_flight == msgs_received[u][z].flight) && 
+                            (msgs_received[u][z].hasOwnProperty('icao') && msgs_received[u][z].hasOwnProperty('icao') == new_icao) &&
+                            (msgs_received[u][z].hasOwnProperty('tail') && msgs_received[u][z].hasOwnProperty('tail') == new_tail)) {
+
+                            //msgs_received[u].push(msg.msghtml);
+                            found = true;
+                            index_new = u;
+                            u = msgs_received.length;
+                            //console.log("match " + new_flight);
+                        }
                     }
 
                     // if we found a message group that matches the new message
