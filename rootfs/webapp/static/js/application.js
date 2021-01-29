@@ -232,29 +232,29 @@ $(document).ready(function(){
                     // With one field being different. We'll reject that message as being not in the same message group if that's the case
                     for(var z = 0; z < msgs_received[u].length; z++) {
                         if((msgs_received[u][z].hasOwnProperty('tail') && new_tail == msgs_received[u][z].tail) &&
-                            (msgs_received[u][z].hasOwnProperty('icao') && msgs_received[u][z].hasOwnProperty('icao') == new_icao) &&
-                            (msgs_received[u][z].hasOwnProperty('flight') && msgs_received[u][z].hasOwnProperty('flight') == new_flight)) {
+                            ((msgs_received[u][z].hasOwnProperty('icao') && msgs_received[u][z]['icao'] == new_icao) || !msgs_received[u][z].hasOwnProperty('icao')) &&
+                            ((msgs_received[u][z].hasOwnProperty('flight') && msgs_received[u][z]['flight'] == new_flight) || !msgs_received[u][z].hasOwnProperty('flight'))) {
                             //msgs_received[u].push(msg.msghtml);
                             found = true;
                             index_new = u;
-                            u = msgs_received.length;
+                            z = msgs_received[u].length;
                             //console.log("match " + new_tail);
                         } else if((msgs_received[u][z].hasOwnProperty('icao') && new_icao == msgs_received[u][z].icao) && 
-                            (msgs_received[u][z].hasOwnProperty('tail') && msgs_received[u][z].hasOwnProperty('tail') == new_tail) &&
-                            (msgs_received[u][z].hasOwnProperty('flight') && msgs_received[u][z].hasOwnProperty('flight') == new_icao)) {
+                            ((msgs_received[u][z].hasOwnProperty('tail') && msgs_received[u][z]['tail'] == new_tail) || !msgs_received[u][z].hasOwnProperty('tail')) &&
+                            ((msgs_received[u][z].hasOwnProperty('flight') && msgs_received[u][z]['flight'] == new_flight) || !msgs_received[u][z].hasOwnProperty('flight'))) { 
                             //msgs_received[u].push(msg.msghtml);
                             found = true;
                             index_new = u;
-                            u = msgs_received.length;
+                            z = msgs_received[u].length;
                             //console.log("match " + new_icao);
                         } else if((msgs_received[u][z].hasOwnProperty('flight') && new_flight == msgs_received[u][z].flight) && 
-                            (msgs_received[u][z].hasOwnProperty('icao') && msgs_received[u][z].hasOwnProperty('icao') == new_icao) &&
-                            (msgs_received[u][z].hasOwnProperty('tail') && msgs_received[u][z].hasOwnProperty('tail') == new_tail)) {
+                            ((msgs_received[u][z].hasOwnProperty('icao') && msgs_received[u][z]['icao'] == new_icao) || !msgs_received[u][z].hasOwnProperty('icao')) &&
+                            ((msgs_received[u][z].hasOwnProperty('tail') && msgs_received[u][z]['tail'] == new_tail) || !msgs_received[u][z].hasOwnProperty('tail'))) {
 
                             //msgs_received[u].push(msg.msghtml);
                             found = true;
                             index_new = u;
-                            u = msgs_received.length;
+                            z = msgs_received[u].length;
                             //console.log("match " + new_flight);
                         }
                     }
@@ -263,12 +263,37 @@ $(document).ready(function(){
                     // run through the messages in that group to see if it is a dup.
                     // if it is, we'll reject the new message and append a counter to the old/saved message
                     if(found) {
+                        u = msgs_received.length;
+
                         for(var j = 0; j < msgs_received[index_new].length; j++) {
                             // First we'll see if the text field is the same
                             // If not, then we'll see if this is a multipart message
-                            if (msgs_received[index_new][j].hasOwnProperty('text') && msg.msghtml.hasOwnProperty('text') &&
+                            if ((msgs_received[index_new][j]['text'] == msg.msghtml.text) &&
+                                (msgs_received[index_new][j]['data'] == msg.msghtml.data) &&
+                                (msgs_received[index_new][j]['libacars'] == msg.msghtml.libacars) &&
+                                (msgs_received[index_new][j]['dsta'] == msg.msghtml.dsta) &&
+                                (msgs_received[index_new][j]['depa'] == msg.msghtml.depa) && 
+                                (msgs_received[index_new][j]['eta'] == msg.msghtml.eta) &&
+                                (msgs_received[index_new][j]['gtout'] == msg.msghtml.gtout) &&
+                                (msgs_received[index_new][j]['gtin'] == msg.msghtml.gtin) &&
+                                (msgs_received[index_new][j]['wloff'] == msg.msghtml.wloff) &&
+                                (msgs_received[index_new][j]['wlin'] == msg.msghtml.wlin) &&
+                                (msgs_received[index_new][j]['lat'] == msg.msghtml.lat) &&
+                                (msgs_received[index_new][j]['lon'] == msg.msghtml.lon) &&
+                                (msgs_received[index_new][j]['alt'] == msg.msghtml.alt)) {
+                                msgs_received[index_new][j]['timestamp'] = msg.msghtml.timestamp;
+                                console.log("REJECTED2 " + JSON.stringify(msg.msghtml));
+                                if(msgs_received[index_new][j].hasOwnProperty("duplicates")) {
+                                    msgs_received[index_new][j]['duplicates']++;                 
+                                }
+                                else {
+                                    msgs_received[index_new][j]['duplicates'] = 1;
+                                }
+                                rejected = true;
+
+                            } else if (msgs_received[index_new][j].hasOwnProperty('text') && msg.msghtml.hasOwnProperty('text') &&
                                 msgs_received[index_new][j]['text'] == msg.msghtml['text']) { // it's the same message
-                                //console.log("REJECTED " + JSON.stringify(msg.msghtml));
+                                console.log("REJECTED " + JSON.stringify(msg.msghtml));
                                 msgs_received[index_new][j]['timestamp'] = msg.msghtml.timestamp;
                                 if(msgs_received[index_new][j].hasOwnProperty("duplicates")) {
                                     msgs_received[index_new][j]['duplicates']++;                 
