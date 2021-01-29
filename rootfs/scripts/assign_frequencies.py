@@ -99,7 +99,7 @@ if __name__ == "__main__":
         if not is_frequency_assigned(output, freq):
             freqs_not_assigned.append(freq)
     if len(freqs_not_assigned) > 0:
-        log_str = "ERROR: frequencies not been assigned (insufficient SDRs): "
+        log_str = "ERROR: frequencies not assigned (insufficient SDRs): "
         for freq in freqs_not_assigned:
             log_str += str(freq)
             log_str += " "
@@ -112,7 +112,7 @@ if __name__ == "__main__":
         if serial not in output.keys():
             serials_unused.append(serial)
     if len(serials_unused) > 0:
-        log_str = "ERROR: some SDRs are not required: "
+        log_str = "ERROR: SDRs are not required: "
         for serial in serials_unused:
             log_str += str(serial)
             log_str += " "
