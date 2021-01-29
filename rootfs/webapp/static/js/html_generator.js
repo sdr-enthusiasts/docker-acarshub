@@ -1,22 +1,27 @@
+// Function to generate the HTML for an array of messages
+// Input: msgs_to_process - the array of messages. Format is array of message groups, with each group being an array of message(s) that create a group of submessages
+// Input: selected_tabs - if present, we'll process. Format is uid1;elementid1,uid2;elementid2 etc
+// Input: live_page - default is false. This toggles on the checks for selected tabs
+
 function display_messages(msgs_to_process, selected_tabs, live_page=false) {
-    var msgs_string = '';
-    var message_tab_splits = "";
+    var msgs_string = ''; // output string that gets returned
+    var message_tab_splits = ""; // variable to save the splitted output of selected_tabs
     if(selected_tabs)
         message_tab_splits = selected_tabs.split(",") // the individual tabs with selections
 
-    for (var i = 0; i < msgs_to_process.length; i++){
-        var sub_messages = msgs_to_process[i];
-        var unique_id = "";
-        var active_tab = 0;
+    for (var i = 0; i < msgs_to_process.length; i++){ // Loop through the message array
+        var sub_messages = msgs_to_process[i]; // Array of messages belonging to one tab-group
+        var unique_id = ""; // UID for the message group
+        var active_tab = 0; // Active tab. Default is the first one if none selected
         msgs_string += "<br>";
 
         if(live_page) {
             // unique_id is used to track the UID for a group of messages
             // tab_id below is the UID for a selected message
 
-            unique_id = sub_messages[0]['uid'];
+            unique_id = sub_messages[0]['uid']; // Set the UID to the oldest message
 
-            if(message_tab_splits.length > 0) {                
+            if(message_tab_splits.length > 0) { // Loop through the selected tabs on the page. If we find a match for the current UID we'll set the active tab to what has been selected               
                 for(var q = 0; q < message_tab_splits.length; q++) {
                     if(message_tab_splits[q].startsWith(unique_id.toString())) {
                         var split = message_tab_splits[q].split(";");
@@ -25,20 +30,22 @@ function display_messages(msgs_to_process, selected_tabs, live_page=false) {
                 }
             }
             
-            if(sub_messages.length > 1) {
+            if(sub_messages.length > 1) { // Do we have more than one message in this group? If so, add in the HTML to set up the tabs
                 msgs_string += '<div class = "tabinator">';
-                for(var j = 0; j < sub_messages.length; j++) {
-                    var tab_uid = unique_id;
+                for(var j = 0; j < sub_messages.length; j++) { // Loop through all messages in the group to show all of the tabs
+                    var tab_uid = unique_id; 
 
                     tab_uid = sub_messages[j]['uid'];
                     
+                    // If there is no active tab set by the user we'll set the newest message to be active/checked
+
                     if(active_tab == 0 && j == 0) {
                         msgs_string += `<input type = "radio" id = "tab${tab_uid}_${unique_id}" name = "tabs_${unique_id}" checked onclick="handle_radio('` + tab_uid + `', '` + unique_id + `')">`;
                     }
-                    else if(tab_uid == active_tab) {
+                    else if(tab_uid == active_tab) { // we have an active tab set and it matches the current message
                         msgs_string += `<input type = "radio" id = "tab${tab_uid}_${unique_id}" name = "tabs_${unique_id}" checked onclick="handle_radio('` + tab_uid + `', '` + unique_id + `')">`;
                     }
-                    else {
+                    else { // Otherwise this message's tab is not active
                         msgs_string += `<input type = "radio" id = "tab${tab_uid}_${unique_id}" name = "tabs_${unique_id}" onclick="handle_radio('` + tab_uid + `', '` + unique_id + `')">`;
                     }
                     msgs_string += `<label for = "tab${tab_uid}_${unique_id}">Message ${j + 1}</label>`;
@@ -46,24 +53,25 @@ function display_messages(msgs_to_process, selected_tabs, live_page=false) {
             }
         }
 
-        for(var u = 0; u < sub_messages.length; u++) {
+        for(var u = 0; u < sub_messages.length; u++) { // Now we'll generate the HTML for each message in the group
             var html_output = "";
-            if(sub_messages.length > 1) {
+            if(sub_messages.length > 1) { // If we have multiple messages in this group we need to set the non-selected tabs to invisiable
                 var tab_uid = unique_id;
 
-                tab_uid = sub_messages[u]['uid'];
-                if(active_tab == 0 && u == 0)
+                tab_uid = sub_messages[u]['uid']; // UID for the current message
+                if(active_tab == 0 && u == 0) // Case for no tab selected by user. Newest message is active
                     html_output += `<div id = "message_${unique_id}_${tab_uid}" class="sub_msg${unique_id} checked">`;
-                else if(tab_uid == active_tab)
+                else if(tab_uid == active_tab) // User has selected a tab for the group and it is this message. Set to be vis
                     html_output += `<div id = "message_${unique_id}_${tab_uid}" class="sub_msg${unique_id} checked">`;
-                else
+                else // Hide the selected tab if the previous cases don't match
                     html_output += `<div id = "message_${unique_id}_${tab_uid}" class="sub_msg${unique_id}">`;
             }
             //msgs_string = '<p>' + msgs_received[i].toString() + '</p>' + msgs_string;
-            var message = sub_messages[u];
+            var message = sub_messages[u]; // variable to hold the current message
             html_output += "<div><table id=\"shadow\">";
 
             // Clean up any useless keys
+            // We can probably remove this....
 
             if(message.hasOwnProperty('_sa_instance_state')) {
                 delete message['_sa_instance_state'];
@@ -83,8 +91,9 @@ function display_messages(msgs_to_process, selected_tabs, live_page=false) {
             html_output += "<tr>";
             html_output += `<td><strong>${message['message_type']}</strong> from <strong>${message['station_id']}</strong></td>`;
 
-            var timestamp;
+            var timestamp; // variable to save the timestamp We need this because the database saves the time as 'time' and live messages have it as 'timestamp' (blame Fred for this silly mis-naming of db columns)
 
+            // grab the time (unix EPOCH) from the correct key and convert in to a Date object for display
             if(message.hasOwnProperty('timestamp'))
                 timestamp = new Date(message['timestamp'] * 1000);
             else
@@ -95,6 +104,9 @@ function display_messages(msgs_to_process, selected_tabs, live_page=false) {
             // Table content
             html_output += "<tr><td colspan=\"2\">";
 
+            // Special keys used by the JS files calling this function
+            // Duplicates is used to indicate the number of copies recieved for this message
+            // msgno_parts is the list of MSGID fields used to construct the multi-part message
             if(message.hasOwnProperty('duplicates')) {
                 html_output += `<p>Duplicate(s) Received: <strong>${message['duplicates']}</strong></p>`;
             }
@@ -110,6 +122,9 @@ function display_messages(msgs_to_process, selected_tabs, live_page=false) {
                 }
                 html_output += `<p>Message Label: <strong>(${message['label']}) ${label_type}</strong></p>`;
             }
+
+            // to/fromaddr is a pre-processed field
+            // if possible, we'll have an appended hex representation of the decimal address
 
             if(message.hasOwnProperty('toaddr')) {
                 var toaddr_decoded = "";
@@ -178,6 +193,8 @@ function display_messages(msgs_to_process, selected_tabs, live_page=false) {
                 html_output += `<p>Altitude: <strong>${message['alt']}</strong></p>`;
             }
 
+            // Text field is pre-processed
+            // we have a sub-table for the raw text field and if it was decoded, the decoded text as well
             if(message.hasOwnProperty("text")) {
                 var text = message['text'];
                 text = text.replace("\\r\\n", "<br>");
@@ -194,7 +211,7 @@ function display_messages(msgs_to_process, selected_tabs, live_page=false) {
                     html_output += "<td class=\"text_top\">";
                     html_output += `<strong>Decoded Text (${decodedStatus}):</strong></p>`;
                     html_output += "<pre id=\"shadow\"><strong>";
-                    html_output += loop_array(message['decodedText'].formatted);
+                    html_output += loop_array(message['decodedText'].formatted); // get the formatted html of the decoded text
                     //html_output += `${message['decodedText'].raw}`;
                     html_output += "</strong></pre>";
                     html_output += "</td>";
