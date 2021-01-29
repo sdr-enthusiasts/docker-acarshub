@@ -86,7 +86,6 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
-    print(args)
 
     output = assign_freqs_to_serials(
         serials=args.serials,
