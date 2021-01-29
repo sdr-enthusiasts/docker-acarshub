@@ -12,7 +12,7 @@ var received_messages = 0;
 import { MessageDecoder } from '../airframes-acars-decoder/MessageDecoder.js'
 const md = new MessageDecoder();
 
-// Automatically keep the array size at 100 messages or less
+// Automatically keep the array size at 50 messages or less
 // without the need to check before we push on to the stack
 
 msgs_received.unshift = function () {
@@ -22,6 +22,8 @@ msgs_received.unshift = function () {
     return Array.prototype.unshift.apply(this,arguments);
 }
 
+// Function to increment the counter of filtered messages
+
 function increment_filtered() {
     var id = document.getElementById("filteredmessages");
     id.innerHTML = "";
@@ -29,6 +31,8 @@ function increment_filtered() {
     var txt = document.createTextNode(filtered_messages);
     id.appendChild(txt);
 }
+
+// Function to increment the counter of received messages
 
 function increment_received() {
     var id = document.getElementById("receivedmessages");
@@ -38,9 +42,16 @@ function increment_received() {
     id.appendChild(txt);
 }
 
+// Function to return a random integer
+// Input: integter that represents the maximum number that can be returned
+
 function getRandomInt(max) {
     return Math.floor(Math.random() * Math.floor(max));
 }
+
+// Function to handle click events on the message tab
+// Input is the element ID (aka message label ID) that has been selected
+// Input is the UID of the message group, which is also the element ID of the oldest element in that group
 
 window.handle_radio = function(element_id, uid) {
     var all_tabs = document.querySelectorAll(`div.sub_msg${uid}`);
@@ -77,6 +88,8 @@ window.handle_radio = function(element_id, uid) {
     }
 }
 
+// Function to toggle pausing visual update of the page
+
 window.pause_updates = function() {
     if(pause) {
         pause = false;
@@ -106,6 +119,8 @@ window.pause_updates = function() {
         id_filtered.appendChild(txt_filtered);
     }
 }
+
+// function to toggle the filtering of empty/no text messages
 
 window.filter_notext = function() {
     if(text_filter) {
@@ -139,6 +154,9 @@ window.filter_notext = function() {
     }
 }
 
+// Function to toggle/save the selected filtered message labels
+// Input is the message label ID that should be filtered
+
 window.toggle_label = function(key) {
     if(exclude.indexOf(key.toString()) == -1) {
         exclude.push(key.toString());
@@ -163,11 +181,19 @@ window.toggle_label = function(key) {
     }
 }
 
+// Code that is ran when the page has loaded
+
 $(document).ready(function(){
     //connect to the socket server.
-    generate_menu();
-    generate_footer();
-    socket = io.connect('http://' + document.domain + ':' + location.port + '/main');
+    generate_menu(); // generate the top menu
+    generate_footer(); // generate the footer
+    socket = io.connect('http://' + document.domain + ':' + location.port + '/main'); // open a websocket to the server to received messages
+
+    // Grab the current cookie value for message filtering
+    // If the cookie is found with a value we run filter_notext to set the proper visual elements/variables for the rest of the functions
+    // We'll also re-write the cookie (or start a new one) with the current value
+    // This is necessary because Safari doesn't respect the expiration date of more than 7 days. It will set it to 7 days even though we've set 365 days
+    // This also just keeps moving the expiration date moving forward every time the page is loaded
 
     var filter = Cookies.get("filter");
     if(filter == "true") {
@@ -179,6 +205,8 @@ $(document).ready(function(){
         filter_notext();
     }
 
+    // Grab the current cookie value for the message labels being filtered
+    // Same restrictions as the 'filter'
     var exclude_cookie = Cookies.get("exclude");
     if(exclude_cookie == null) {
         Cookies.set('exclude', "", { expires: 365 });
@@ -187,6 +215,7 @@ $(document).ready(function(){
         exclude = exclude_cookie.split(" ");
     }
 
+    // Function to listen for the server to respond with valid message labels and process the results for display in the side-bar
     socket.on('labels', function(msg) {
         var label_html = "";
         for (var key in msg.labels) {
@@ -266,8 +295,11 @@ $(document).ready(function(){
                         u = msgs_received.length;
 
                         for(var j = 0; j < msgs_received[index_new].length; j++) {
-                            // First we'll see if the text field is the same
-                            // If not, then we'll see if this is a multipart message
+                            // First check is to see if the message is the same by checking all fields and seeing if they match
+                            // Second check is to see if the text field itself is a match
+                            // Last check is to see if we've received a multi-part message
+                            // If we do find a match we'll update the timestamp of the parent message
+                            // And add/update a duplicate counter to the parent message
                             if ((msgs_received[index_new][j]['text'] == msg.msghtml.text) &&
                                 (msgs_received[index_new][j]['data'] == msg.msghtml.data) &&
                                 (msgs_received[index_new][j]['libacars'] == msg.msghtml.libacars) &&
@@ -302,43 +334,43 @@ $(document).ready(function(){
                                     msgs_received[index_new][j]['duplicates'] = 1;
                                 }
                                 rejected = true;
-                            } else if(msg.msghtml.station_id == msgs_received[index_new][j].station_id &&
+                            } else if(msg.msghtml.station_id == msgs_received[index_new][j].station_id && // Is the message from the same station id? Keep ACARS/VDLM separate
                                 msg.msghtml.hasOwnProperty('msgno') && msgs_received[index_new][j].hasOwnProperty('msgno') &&
-                                msg.msghtml.timestamp - msgs_received[index_new][j].timestamp < 8.0 &&
-                                ((msg.msghtml['msgno'].charAt(0) == msgs_received[index_new][j]['msgno'].charAt(0) &&
+                                msg.msghtml.timestamp - msgs_received[index_new][j].timestamp < 8.0 && // We'll assume the message is not a multi-part message if the time from the new message is too great from the rest of the group
+                                ((msg.msghtml['msgno'].charAt(0) == msgs_received[index_new][j]['msgno'].charAt(0) && // Next two lines match on AzzA pattern
                                 msg.msghtml['msgno'].charAt(3) == msgs_received[index_new][j]['msgno'].charAt(3)) ||
-                                (msg.msghtml['msgno'].substring(0,3) == msgs_received[index_new][j]['msgno'].substring(0, 3)))) {
+                                (msg.msghtml['msgno'].substring(0,3) == msgs_received[index_new][j]['msgno'].substring(0, 3)))) { // This check matches if the group is a AAAz counter
                                 console.log("REJECTED multi-part " + JSON.stringify(msg.msghtml));
                                 console.log(msg.msghtml.timestamp - msgs_received[index_new][j].timestamp < 8.0);
                                 // We have a multi part message. Now we need to see if it is a dup
                                 rejected = true;
                                 var add_multi = true;
 
-                                if(msgs_received[index_new][j].hasOwnProperty('msgno_parts')) {
-                                    var split = msgs_received[index_new][j].msgno_parts.toString().split(" ");
+                                if(msgs_received[index_new][j].hasOwnProperty('msgno_parts')) { // Now we'll see if the multi-part message is a dup
+                                    var split = msgs_received[index_new][j].msgno_parts.toString().split(" "); // format of stored parts is "MSGID MSGID2" etc
                                     console.log(msgs_received[index_new][j].msgno_parts);
                                     console.log(split.length);
 
-                                    for(var a = 0; a < split.length; a++) {
+                                    for(var a = 0; a < split.length; a++) { // Loop through the msg IDs present
                                         console.log(split[a].substring(0, 4) + " " + msg.msghtml['msgno']);
-                                        if(split[a].substring(0, 4) == msg.msghtml['msgno']) {
-                                            add_multi = false;
+                                        if(split[a].substring(0, 4) == msg.msghtml['msgno']) { // Found a match in the message IDs already present
+                                            add_multi = false; // Ensure later checks know we've found a duplicate and to not add the message
                                             console.log("FOUND MATCH");
 
-                                            if(a == 0 && split[a].length == 4) {
+                                            if(a == 0 && split[a].length == 4) { // Match, first element of the array with no previous matches so we don't want a leading space
                                                 msgs_received[index_new][j].msgno_parts = split[a] + "x2";
-                                            } else if (split[a].length == 4) {
+                                            } else if (split[a].length == 4) { // Match, not first element, and doesn't have previous matches
                                                 msgs_received[index_new][j].msgno_parts += " " + split[a] + "x2";
-                                            } else if(a == 0) {
+                                            } else if(a == 0) { // Match, first element of the array so no leading space, has previous other matches so we increment the counter
                                                 console.log(split[a].substring(5));
                                                 var count = parseInt(split[a].substring(5)) + 1;
                                                 msgs_received[index_new][j].msgno_parts = split[a].substring(0,4) + "x" + count;
-                                            } else {
+                                            } else { // Match, has previous other matches so we increment the counter
                                                 var count = parseInt(split[a].substring(5)) + 1;
                                                 console.log(split[a].substring(5));
                                                 msgs_received[index_new][j].msgno_parts += " " + split[a].substring(0,4) + "x" + count;
                                             }
-                                        } else {
+                                        } else { // No match, re-add the MSG ID to the parent message
                                             if(a == 0) {
                                                 msgs_received[index_new][j].msgno_parts = split[a];
                                             } else {
@@ -350,18 +382,19 @@ $(document).ready(function(){
 
                                 msgs_received[index_new][j]['timestamp'] = msg.msghtml.timestamp;
                                 
-                                if(add_multi) {
-                                    if(msgs_received[index_new][j]['text'] && msg.msghtml.hasOwnProperty('text'))
+                                if(add_multi) { // Multi-part message has been found
+                                    if(msgs_received[index_new][j]['text'] && msg.msghtml.hasOwnProperty('text')) // If the multi-part parent has a text field and the found match has a text field, append
                                         msgs_received[index_new][j]['text'] += msg.msghtml.text;
-                                    else if(msg.msghtml.hasOwnProperty('text'))
+                                    else if(msg.msghtml.hasOwnProperty('text')) // If the new message has a text field but the parent does not, add the new text to the parent
                                         msgs_received[index_new][j]['text'] = msg.msghtml.text;
 
-                                    if(msgs_received[index_new][j].hasOwnProperty('msgno_parts')) {
+                                    if(msgs_received[index_new][j].hasOwnProperty('msgno_parts')) { // If the new message is multi, with no dupes found we need to append the msg ID to the found IDs
                                         msgs_received[index_new][j]['msgno_parts'] += " " + msg.msghtml.msgno;
                                     } else {
                                         msgs_received[index_new][j]['msgno_parts'] = msgs_received[index_new][j]['msgno'] + " " + msg.msghtml.msgno;
                                     }
 
+                                    // Re-run the text decoder against the text field we've updated
                                     var decoded_msg = md.decode(msgs_received[index_new][j]);
                                     if(decoded_msg.decoded == true) {
                                         msgs_received[index_new][j]['decoded_msg'] = decoded_msg;
@@ -413,11 +446,5 @@ $(document).ready(function(){
             $('#log').html(display_messages(msgs_received, selected_tabs, true));
         }
     });
-
-    //noop
-    socket.on('noop', function(noop) {
-        console.log("Received noop");
-    });
-
 });
 
