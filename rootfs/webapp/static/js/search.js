@@ -1,8 +1,8 @@
 var socket;
-var current_search = '';
-var current_page = 0;
-var total_pages = 0;
-var show_all = false;
+var current_search = ''; // variable to store the current search term
+var current_page = 0; // store the current page of the current_search
+var total_pages = 0; // number of pages of results
+var show_all = false; // variable to indicate we are doing a 'show all' search and not of a specific term
 
 import { MessageDecoder } from '../airframes-acars-decoder/MessageDecoder.js'
 const md = new MessageDecoder();

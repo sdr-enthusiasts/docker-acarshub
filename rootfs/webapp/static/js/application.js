@@ -259,6 +259,7 @@ $(document).ready(function(){
                     // Have the field we need
                     // There is a possibility that (for reasons I cannot fathom) aircraft will broadcast the same flight information
                     // With one field being different. We'll reject that message as being not in the same message group if that's the case
+                    // We'll also test for squitter messages which don't have tail/icao/flight
                     for(var z = 0; z < msgs_received[u].length; z++) {
                         if((msgs_received[u][z].hasOwnProperty('tail') && new_tail == msgs_received[u][z].tail) &&
                             ((msgs_received[u][z].hasOwnProperty('icao') && msgs_received[u][z]['icao'] == new_icao) || !msgs_received[u][z].hasOwnProperty('icao')) &&
@@ -285,6 +286,11 @@ $(document).ready(function(){
                             index_new = u;
                             z = msgs_received[u].length;
                             //console.log("match " + new_flight);
+                        } else if(msg.msghtml.hasOwnProperty('label') && msgs_received[u][z].hasOwnProperty('label') && msg.msghtml.hasOwnProperty('text') && msgs_received[u][z].hasOwnProperty('text') &&
+                           msg.msghtml.label == "SQ" &&  msgs_received[u][z]['label'] == "SQ" && msg.msghtml.text == msgs_received[u][z]['text']) {
+                            found = true;
+                            index_new = u;
+                            z = msgs_received[u].length;
                         }
                     }
 
@@ -300,19 +306,20 @@ $(document).ready(function(){
                             // Last check is to see if we've received a multi-part message
                             // If we do find a match we'll update the timestamp of the parent message
                             // And add/update a duplicate counter to the parent message
-                            if ((msgs_received[index_new][j]['text'] == msg.msghtml.text) &&
-                                (msgs_received[index_new][j]['data'] == msg.msghtml.data) &&
-                                (msgs_received[index_new][j]['libacars'] == msg.msghtml.libacars) &&
-                                (msgs_received[index_new][j]['dsta'] == msg.msghtml.dsta) &&
-                                (msgs_received[index_new][j]['depa'] == msg.msghtml.depa) && 
-                                (msgs_received[index_new][j]['eta'] == msg.msghtml.eta) &&
-                                (msgs_received[index_new][j]['gtout'] == msg.msghtml.gtout) &&
-                                (msgs_received[index_new][j]['gtin'] == msg.msghtml.gtin) &&
-                                (msgs_received[index_new][j]['wloff'] == msg.msghtml.wloff) &&
-                                (msgs_received[index_new][j]['wlin'] == msg.msghtml.wlin) &&
-                                (msgs_received[index_new][j]['lat'] == msg.msghtml.lat) &&
-                                (msgs_received[index_new][j]['lon'] == msg.msghtml.lon) &&
-                                (msgs_received[index_new][j]['alt'] == msg.msghtml.alt)) {
+                            if ((msgs_received[index_new][j]['text']     == msg.msghtml.text     || (!msgs_received[index_new][j].hasOwnProperty('text')     && !msg.msghtml.hasOwnProperty('text'))) &&
+                                (msgs_received[index_new][j]['data']     == msg.msghtml.data     || (!msgs_received[index_new][j].hasOwnProperty('data')     && !msg.msghtml.hasOwnProperty('data'))) &&
+                                (msgs_received[index_new][j]['libacars'] == msg.msghtml.libacars || (!msgs_received[index_new][j].hasOwnProperty('libacars') && !msg.msghtml.hasOwnProperty('libacars'))) &&
+                                (msgs_received[index_new][j]['dsta']     == msg.msghtml.dsta     || (!msgs_received[index_new][j].hasOwnProperty('dsta')     && !msg.msghtml.hasOwnProperty('dsta'))) &&
+                                (msgs_received[index_new][j]['depa']     == msg.msghtml.depa     || (!msgs_received[index_new][j].hasOwnProperty('depa')     && !msg.msghtml.hasOwnProperty('depa'))) && 
+                                (msgs_received[index_new][j]['eta']      == msg.msghtml.eta      || (!msgs_received[index_new][j].hasOwnProperty('eta')      && !msg.msghtml.hasOwnProperty('eta'))) &&
+                                (msgs_received[index_new][j]['gtout']    == msg.msghtml.gtout    || (!msgs_received[index_new][j].hasOwnProperty('gtout')    && !msg.msghtml.hasOwnProperty('gtout'))) &&
+                                (msgs_received[index_new][j]['gtin']     == msg.msghtml.gtin     || (!msgs_received[index_new][j].hasOwnProperty('gtin')     && !msg.msghtml.hasOwnProperty('gtin'))) &&
+                                (msgs_received[index_new][j]['wloff']    == msg.msghtml.wloff    || (!msgs_received[index_new][j].hasOwnProperty('wloff')    && !msg.msghtml.hasOwnProperty('wloff'))) &&
+                                (msgs_received[index_new][j]['wlin']     == msg.msghtml.wlin     || (!msgs_received[index_new][j].hasOwnProperty('wlin')     && !msg.msghtml.hasOwnProperty('wlin'))) &&
+                                (msgs_received[index_new][j]['lat']      == msg.msghtml.lat      || (!msgs_received[index_new][j].hasOwnProperty('lat')      && !msg.msghtml.hasOwnProperty('lat'))) &&
+                                (msgs_received[index_new][j]['lon']      == msg.msghtml.lon      || (!msgs_received[index_new][j].hasOwnProperty('lon')      && !msg.msghtml.hasOwnProperty('lon'))) &&
+                                (msgs_received[index_new][j]['alt']      == msg.msghtml.alt      || (!msgs_received[index_new][j].hasOwnProperty('alt')      && !msg.msghtml.hasOwnProperty('alt')))) {
+
                                 msgs_received[index_new][j]['timestamp'] = msg.msghtml.timestamp;
                                 console.log("REJECTED2 " + JSON.stringify(msg.msghtml));
                                 if(msgs_received[index_new][j].hasOwnProperty("duplicates")) {
