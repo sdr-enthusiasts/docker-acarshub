@@ -126,9 +126,9 @@ def scheduled_tasks():
         schedule.every().minute.at(":30").do(acarshub_rrd.update_graphs)
 
     # Schedule the database pruner
-    schedule.every().hour.do(acarshub.acarshub_db.pruneOld, "Error encountered! Restarting... ")
+    schedule.every().hour.do(acarshub.acarshub_db.pruneOld)
     # Check for dead threads and restart
-    schedule.every().minute.at(":45").do(init_listeners)
+    schedule.every().minute.at(":45").do(init_listeners, "Error encountered! Restarting... ")
 
     while not thread_scheduler_stop_event.isSet():
         schedule.run_pending()
