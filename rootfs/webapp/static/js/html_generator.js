@@ -108,11 +108,11 @@ function display_messages(msgs_to_process, selected_tabs, live_page=false) {
             // Duplicates is used to indicate the number of copies recieved for this message
             // msgno_parts is the list of MSGID fields used to construct the multi-part message
             if(message.hasOwnProperty('duplicates')) {
-                html_output += `<p>Duplicate(s) Received: <strong>${message['duplicates']}</strong></p>`;
+                html_output += `Duplicate(s) Received: <strong>${message['duplicates']}</strong><br>`;
             }
 
             if(message.hasOwnProperty('msgno_parts')) {
-                html_output += `<p>Message Parts: <strong>${message['msgno_parts']}</strong></p>`;
+                html_output += `Message Parts: <strong>${message['msgno_parts']}</strong><br>`;
             }
 
             if(message.hasOwnProperty("label")) {
@@ -120,7 +120,7 @@ function display_messages(msgs_to_process, selected_tabs, live_page=false) {
                 if(message.hasOwnProperty("label_type")) {
                     label_type = message['label_type'];
                 }
-                html_output += `<p>Message Label: <strong>(${message['label']}) ${label_type}</strong></p>`;
+                html_output += `Message Label: <strong>(${message['label']}) ${label_type}</strong><br>`;
             }
 
             // to/fromaddr is a pre-processed field
@@ -133,9 +133,9 @@ function display_messages(msgs_to_process, selected_tabs, live_page=false) {
                     toaddr_decoded = `<br>To Address Station ID: <strong>${message['toaddr_decoded']}</strong>`;
                 }
                 if(message.hasOwnProperty('toaddr_hex')) {
-                    html_output += `<p>To Address: <strong>${message['toaddr']}/${message['toaddr_hex']}</strong>${toaddr_decoded}</p>`;
+                    html_output += `To Address: <strong>${message['toaddr']}/${message['toaddr_hex']}</strong>${toaddr_decoded}<br>`;
                 } else {
-                    html_output += `<p>To Address: <strong>${message['toaddr']}/?</strong></p>`;
+                    html_output += `To Address: <strong>${message['toaddr']}/?</strong><br>`;
                 }
             }
 
@@ -146,51 +146,51 @@ function display_messages(msgs_to_process, selected_tabs, live_page=false) {
                     fromaddr_decoded = `<br>From Address Station ID: <strong>${message['fromaddr_decoded']}</strong>`;
                 }
                 if(message.hasOwnProperty('fromaddr_hex')) {
-                    html_output += `<p>From Address: <strong>${message['fromaddr']}/${message['fromaddr_hex']}</strong>${fromaddr_decoded}</p>`;
+                    html_output += `From Address: <strong>${message['fromaddr']}/${message['fromaddr_hex']}</strong>${fromaddr_decoded}<br>`;
                 } else {
-                    html_output += `<p>From Address: <strong>${message['fromaddr']}/?</strong></p>`;
+                    html_output += `From Address: <strong>${message['fromaddr']}/?</strong><br>`;
                 }
             }
 
             if(message.hasOwnProperty('depa')) {
-                html_output += `<p>Departing: <strong>${message['depa']}</strong></p>`;
+                html_output += `Departing: <strong>${message['depa']}</strong><br>`;
             }
 
             if(message.hasOwnProperty('dsta')) {
-                html_output += `Destination: <strong>${message['dsta']}</strong></p>`;
+                html_output += `Destination: <strong>${message['dsta']}</strong><br>`;
             }
 
             if(message.hasOwnProperty('eta')) {
-                html_output += `<p>Estimated time of arrival: <strong>${message['eta']}</strong> hours</strong></p>`;
+                html_output += `Estimated time of arrival: <strong>${message['eta']}</strong> hours</strong><br>`;
             }
 
             if(message.hasOwnProperty('gtout')) {
-                html_output += `<p>Pushback from gate: <strong>${message['gtout']}</strong> hours</strong></p>`;
+                html_output += `Pushback from gate: <strong>${message['gtout']}</strong> hours</strong><br>`;
             }
 
             if(message.hasOwnProperty('gtin')) {
-                html_output += `<p>Arriving at gate: <strong>${message['gtin']}</strong> hours</strong></p>`;
+                html_output += `Arriving at gate: <strong>${message['gtin']}</strong> hours</strong><br>`;
             }
 
             if(message.hasOwnProperty("wloff")) {
-                html_output += `<p>Wheels off: <strong>${message['wloff']}</strong> hours</strong></p>`;
+                html_output += `Wheels off: <strong>${message['wloff']}</strong> hours</strong><br>`;
             }
 
             if(message.hasOwnProperty("wlin")) {
-                html_output += `<p>Wheels down: <strong>${message['wlin']}</strong></p>`;
+                html_output += `Wheels down: <strong>${message['wlin']}</strong><br>`;
             }
 
             if(message.hasOwnProperty("lat")) {
-                html_output += `<p>Latitude: <strong>${message['lat']}</strong></p>`;
+                html_output += `Latitude: <strong>${message['lat']}</strong><br>`;
             }
 
             if(message.hasOwnProperty("lon")) {
-                html_output += `<p>Longitude: <strong>${message['lon']}</strong></p>`;
+                html_output += `Longitude: <strong>${message['lon']}</strong><br>`;
             }
 
 
             if(message.hasOwnProperty("alt")) {
-                html_output += `<p>Altitude: <strong>${message['alt']}</strong></p>`;
+                html_output += `Altitude: <strong>${message['alt']}</strong><br>`;
             }
 
             // Text field is pre-processed
