@@ -264,28 +264,21 @@ $(document).ready(function(){
                         if((msgs_received[u][z].hasOwnProperty('tail') && new_tail == msgs_received[u][z].tail) &&
                             ((msgs_received[u][z].hasOwnProperty('icao') && msgs_received[u][z]['icao'] == new_icao) || !msgs_received[u][z].hasOwnProperty('icao')) &&
                             ((msgs_received[u][z].hasOwnProperty('flight') && msgs_received[u][z]['flight'] == new_flight) || !msgs_received[u][z].hasOwnProperty('flight'))) {
-                            //msgs_received[u].push(msg.msghtml);
                             found = true;
                             index_new = u;
                             z = msgs_received[u].length;
-                            //console.log("match " + new_tail);
                         } else if((msgs_received[u][z].hasOwnProperty('icao') && new_icao == msgs_received[u][z].icao) && 
                             ((msgs_received[u][z].hasOwnProperty('tail') && msgs_received[u][z]['tail'] == new_tail) || !msgs_received[u][z].hasOwnProperty('tail')) &&
                             ((msgs_received[u][z].hasOwnProperty('flight') && msgs_received[u][z]['flight'] == new_flight) || !msgs_received[u][z].hasOwnProperty('flight'))) { 
-                            //msgs_received[u].push(msg.msghtml);
                             found = true;
                             index_new = u;
                             z = msgs_received[u].length;
-                            //console.log("match " + new_icao);
                         } else if((msgs_received[u][z].hasOwnProperty('flight') && new_flight == msgs_received[u][z].flight) && 
                             ((msgs_received[u][z].hasOwnProperty('icao') && msgs_received[u][z]['icao'] == new_icao) || !msgs_received[u][z].hasOwnProperty('icao')) &&
                             ((msgs_received[u][z].hasOwnProperty('tail') && msgs_received[u][z]['tail'] == new_tail) || !msgs_received[u][z].hasOwnProperty('tail'))) {
-
-                            //msgs_received[u].push(msg.msghtml);
                             found = true;
                             index_new = u;
                             z = msgs_received[u].length;
-                            //console.log("match " + new_flight);
                         } else if(msg.msghtml.hasOwnProperty('label') && msgs_received[u][z].hasOwnProperty('label') && msg.msghtml.hasOwnProperty('text') && msgs_received[u][z].hasOwnProperty('text') &&
                            msg.msghtml.label == "SQ" &&  msgs_received[u][z]['label'] == "SQ" && msg.msghtml.text == msgs_received[u][z]['text']) {
                             found = true;
@@ -321,7 +314,6 @@ $(document).ready(function(){
                                 (msgs_received[index_new][j]['alt']      == msg.msghtml.alt      || (!msgs_received[index_new][j].hasOwnProperty('alt')      && !msg.msghtml.hasOwnProperty('alt')))) {
 
                                 msgs_received[index_new][j]['timestamp'] = msg.msghtml.timestamp;
-                                console.log("REJECTED2 " + JSON.stringify(msg.msghtml));
                                 if(msgs_received[index_new][j].hasOwnProperty("duplicates")) {
                                     msgs_received[index_new][j]['duplicates']++;                 
                                 }
@@ -332,7 +324,6 @@ $(document).ready(function(){
 
                             } else if (msgs_received[index_new][j].hasOwnProperty('text') && msg.msghtml.hasOwnProperty('text') &&
                                 msgs_received[index_new][j]['text'] == msg.msghtml['text']) { // it's the same message
-                                console.log("REJECTED " + JSON.stringify(msg.msghtml));
                                 msgs_received[index_new][j]['timestamp'] = msg.msghtml.timestamp;
                                 if(msgs_received[index_new][j].hasOwnProperty("duplicates")) {
                                     msgs_received[index_new][j]['duplicates']++;                 
@@ -347,22 +338,17 @@ $(document).ready(function(){
                                 ((msg.msghtml['msgno'].charAt(0) == msgs_received[index_new][j]['msgno'].charAt(0) && // Next two lines match on AzzA pattern
                                 msg.msghtml['msgno'].charAt(3) == msgs_received[index_new][j]['msgno'].charAt(3)) ||
                                 (msg.msghtml['msgno'].substring(0,3) == msgs_received[index_new][j]['msgno'].substring(0, 3)))) { // This check matches if the group is a AAAz counter
-                                console.log("REJECTED multi-part " + JSON.stringify(msg.msghtml));
-                                console.log(msg.msghtml.timestamp - msgs_received[index_new][j].timestamp < 8.0);
                                 // We have a multi part message. Now we need to see if it is a dup
                                 rejected = true;
                                 var add_multi = true;
 
                                 if(msgs_received[index_new][j].hasOwnProperty('msgno_parts')) { // Now we'll see if the multi-part message is a dup
                                     var split = msgs_received[index_new][j].msgno_parts.toString().split(" "); // format of stored parts is "MSGID MSGID2" etc
-                                    console.log(msgs_received[index_new][j].msgno_parts);
-                                    console.log(split.length);
 
                                     for(var a = 0; a < split.length; a++) { // Loop through the msg IDs present
                                         console.log(split[a].substring(0, 4) + " " + msg.msghtml['msgno']);
                                         if(split[a].substring(0, 4) == msg.msghtml['msgno']) { // Found a match in the message IDs already present
                                             add_multi = false; // Ensure later checks know we've found a duplicate and to not add the message
-                                            console.log("FOUND MATCH");
 
                                             if(a == 0 && split[a].length == 4) { // Match, first element of the array with no previous matches so we don't want a leading space
                                                 msgs_received[index_new][j].msgno_parts = split[a] + "x2";
