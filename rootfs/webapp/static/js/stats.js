@@ -41,7 +41,7 @@ $(document).ready(function(){
 		html += `<tr><td><span class="menu_non_link">Messages (No Errors): </span></td><td><span class="menu_non_link">${good_msg}</span></td><td><span class="menu_non_link">${total ? parseFloat((good_msg/total)*100).toFixed(2) + '%' : ''}</span></td></tr>`;
 		html += `<tr><td><span class="menu_non_link">Messages (W/Errors): </span></td><td><span class="menu_non_link">${error}</span></td><td><span class="menu_non_link">${total ? parseFloat((error/total)*100).toFixed(2) + '%' : ''}</span></td></tr>`;
 		html += "</table></p>";
-		html += '<table class="search">'
+		html += '<table class="search">';
 		html += `<tr><td><span class="menu_non_link">Empty Messages (Total): </span></td><td><span class="menu_non_link">${empty_good + empty_error}</span></td><td><span class="menu_non_link">${total ? parseFloat(((empty_good + empty_error)/total)*100).toFixed(2) + '%' : ''}</span></td></tr>`;
 		html += `<tr><td><span class="menu_non_link">Empty Messages (No Errors): </span></td><td><span class="menu_non_link">${empty_good}</span></td><td><span class="menu_non_link">${total ? parseFloat((empty_good/total)*100).toFixed(2) + '%' : ''}</span></td></tr>`;
 		html += `<tr><td><span class="menu_non_link">Empty Messages (W/Errors): </span></td><td><span class="menu_non_link">${empty_error}</span></td><td><span class="menu_non_link">${total ? parseFloat((empty_error/total)*100).toFixed(2) + '%' : ''}</span></td></tr>`;
