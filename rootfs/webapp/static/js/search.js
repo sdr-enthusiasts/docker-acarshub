@@ -15,8 +15,9 @@ $(document).ready(function(){
     var msgs_received = [];
     var num_results = [];
 
-    //receive details from server
+    // receive details from server
 
+    // DB stats
     socket.on('database', function(msg) {
         $('#database').html(String(msg.count).trim() + " rows");
         if(parseInt(msg.size) > 0){
@@ -26,6 +27,7 @@ $(document).ready(function(){
         }
     });
 
+    // Search results returned
     socket.on('newmsg', function(msg) {
         //console.log("Received msg" + msg.msghtml);
         console.log("Received msg");
@@ -40,38 +42,39 @@ $(document).ready(function(){
         var display = '';
         var display_nav_results = '';
 
-        var results = [];
+        var results = []; // temp variable to store the JSON formatted JS object
+
+        // Show the results if the returned results match the current search string (in case user kept typing after search emmited)
+        // or the user has executed a 'show all'
 
         if(msg.search_term == current_search || show_all) {            
             msgs_received.push(msg.msghtml);
             num_results.push(msg.num_results);
-            for (var i = 0; i < msgs_received.length; i++){
-                for(var j = 0; j < msgs_received[i].length; j++) {
-                    var msg_json = JSON.parse(msgs_received[i][j]);
+            for (var i = 0; i < msgs_received.length; i++){ // Loop through the received message blob.
+                for(var j = 0; j < msgs_received[i].length; j++) { // Loop through the individual messages in the blob
+                    var msg_json = JSON.parse(msgs_received[i][j]); // The message is not in a format where JS automatically converts in to a usable format, so we'll parse as JSON
+                    // Check and see if the text field is decodable in to human readable format
                     var decoded_msg = md.decode(msg_json);
                     if(decoded_msg.decoded == true) {
                         msg_json.decodedText = decoded_msg;
                     }
                     results.push([msg_json]);
                 }
+
+                // Display the updated nav bar and messages
                 display = display_messages(results);
                 display_nav_results = display_search(current_page, num_results[i]);
                 $('#log').html(display);
                 $('#num_results').html(display_nav_results);
-                window.scrollTo(0, 0);
-                //msgs_string = '<p>' + msgs_received[i].toString() + '</p>' + msgs_string;
+                window.scrollTo(0, 0); // Scroll the window back to the top. We want this because the user might have scrolled halfway down the page and then ran a new search/updated the page
             }
         }
     });
 
+    // Function to listen for key up events. If detected, check and see if the search string has been updated. If so, process the updated query
     document.addEventListener("keyup", function(event) {
         if(current_search != document.getElementById("search_term").value)
             delay_query(document.getElementById("search_term").value);
-    });
-
-    //noop
-    socket.on('noop', function(noop) {
-        console.log("Received noop");
     });
 });
 
@@ -81,25 +84,31 @@ $(document).ready(function(){
 // Once delay is met, compare the previous text field with the current text field. If they are the same, we'll send a query out
 
 async function delay_query(initial_query) {
+    // Pause for half a second
     await sleep(500);
-    var old_search = current_search;
-    if(initial_query == document.getElementById("search_term").value) {
-        current_search = document.getElementById("search_term").value;
+    var old_search = current_search; // Save the old search term in a temp variable
+    // Only execute the search query if the user is done typing. We track that by comparing the query we were asked to run
+    // with what is currently in the text box
+    if(initial_query == document.getElementById("search_term").value) {  
+        current_search = document.getElementById("search_term").value; // update the global value for the current search
         var field = document.getElementById("dbfield").value;
-        if(current_search != '' && current_search != old_search) {
+        if(current_search != '' && current_search != old_search) { // Double check and ensure the search term is new and not blank. No sense hammering the DB to search for the same term
+            // Reset status for various elements of the page to what we're doing now
             current_page = 0;
             show_all = false;
-            console.log("sending query");
+            // Give feedback to the user while the search is going on
             $('#log').html('Searching...');
             $('#num_results').html('');
             socket.emit('query', {'search_term': current_search, 'field': field}, '/search');
-        } else if(current_search == '') {
+        } else if(current_search == '') { // Field is now blank, clear the page and reset status
             show_all = false;
             $('#log').html('');
             $('#num_results').html('');
         }
     }
 }
+
+// Function to run show all messages. Sets the various status trackers on the page to expected values
 
 window.showall = function() {
     socket.emit('query', {'show_all': true}, "/search");
@@ -111,12 +120,16 @@ window.showall = function() {
     show_all = true;
 }
 
+// Zzzzzzz
+
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+// Function called by a user clicking on a search page link.
+// Set tracking to the new page and send the query off to the DB
+
 window.runclick = function(page) {
-    console.log("updating page");
     current_page = page;
     current_search = document.getElementById("search_term").value;
     var field = document.getElementById("dbfield").value;
@@ -131,6 +144,7 @@ window.runclick = function(page) {
     }
 }
 
+// Sanity checker to ensure the page typed in the jump box makes sense. If it does, call the runclick function to send it off to the DB
 window.jumppage = function() {
     var page = document.getElementById("jump").value;
     if(page > total_pages){
@@ -140,6 +154,7 @@ window.jumppage = function() {
     }
 }
 
+// Function to format the side bar
 
 function display_search(current, total) {
     html = '';
@@ -148,6 +163,11 @@ function display_search(current, total) {
     if(total == 0)
         return html + '<span class="menu_non_link">No results</span>';
 
+    // Determine the number of pages to display.
+    // We are getting a max of 50 results back from the database
+    // We don't want a float for the total pages, and javascript (at least in my googling) doesn't have the ability to cast
+    // a result from float to int. We what we are doing is applying the ~ operator, which (IIRC) reverses the bits of the element it is applied to
+    // in doing so, it magically is cast to an int. For reasons I don't get but they work...then we reverse it again
     if(total % 50 != 0)
         total_pages = ~~(total / 50) + 1;
     else
