@@ -118,7 +118,7 @@ function display_messages(msgs_to_process, selected_tabs, live_page=false) {
             if(message.hasOwnProperty("label")) {
                 var label_type = "";
                 if(message.hasOwnProperty("label_type")) {
-                    label_type = message['label_type'];
+                    label_type = message['label_type'].trim();
                 }
                 html_output += `Message Label: <strong>(${message['label']}) ${label_type}</strong><br>`;
             }
