@@ -1,20 +1,20 @@
 import { DecoderPlugin } from '../DecoderPlugin';
 
 // In Air Report
-export class Label_44_IN extends DecoderPlugin {
-  name = 'label-44-in';
+export class Label_20_CFB01 extends DecoderPlugin {
+  name = 'label-20-cfb01';
 
   qualifiers() { // eslint-disable-line class-methods-use-this
     return {
-      labels: ['44'],
-      preambles: ['00IN01', '00IN02', '00IN03', 'IN01', 'IN02', 'IN03'],
+      labels: ['20'],
+      preambles: ['#CFB.01'],
     };
   }
 
   decode(message: any, options: any = {}) : any {
     const decodeResult: any = this.defaultResult;
     decodeResult.decoder.name = this.name;
-    decodeResult.formatted.description = 'In Air Report';
+    decodeResult.formatted.description = 'Crew Flight Bag Message';
     decodeResult.message = message;
 
     // Style: IN02,N38338W121179,KMHR,KPDX,0806,2355,005.1
@@ -23,7 +23,7 @@ export class Label_44_IN extends DecoderPlugin {
     const results = message.text.match(regex);
     if (results) {
       if (options.debug) {
-        console.log(`Label 44 In Air Report: groups`);
+        console.log(`Label 44 ETA Report: groups`);
         console.log(results.groups);
       }
 

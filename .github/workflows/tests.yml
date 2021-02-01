@@ -11,14 +11,10 @@ jobs:
   buildx:
     name: Test image build
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        docker-platform:
-          - linux/amd64
-          - linux/arm64
-          - linux/arm/v6
-          - linux/arm/v7
-          - linux/i386
+    env:
+      REPO: fredclausen
+      IMAGE: acarshub
+      PUSH: true
     steps:
 
       # Check out our code
@@ -39,6 +35,14 @@ jobs:
           cp --no-dereference /etc/ssl/certs/*.pem ./rootfs/etc/ssl/certs
           cp --no-dereference /usr/share/ca-certificates/mozilla/*.crt ./rootfs/usr/share/ca-certificates/mozilla
 
+        # Log into docker hub (so we can push images)
+      -
+        name: Login to DockerHub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
       # Set up QEMU for multi-arch builds
       -
         name: Set up QEMU
@@ -53,22 +57,22 @@ jobs:
       # Patch airframesio/acars-decoder-typescript to run in browser (outside of nodejs)
       # https://stackoverflow.com/questions/44709031/build-for-both-browser-and-nodejs
       # https://medium.com/collaborne-engineering/typescript-create-library-for-nodejs-and-browser-fece291d517f
-      - name: "Create Working Directory for git clone"
-        working-directory: .
-        run: |
-          mkdir acars-decoder-typescript-clone
+      #- name: "Create Working Directory for git clone"
+      #  working-directory: .
+      #  run: |
+      #    mkdir acars-decoder-typescript-clone
 
+      # git clone https://github.com/airframesio/acars-decoder-typescript.git .
       - 
         name: "Patch airframesio/acars-decoder-typescript to run in browser (outside of nodejs)"
-        working-directory: ./acars-decoder-typescript-clone
+        working-directory: ./acars-decoder-typescript
         run: |
-          git clone https://github.com/airframesio/acars-decoder-typescript.git .
           sed -i '/"module": "commonjs",/d' tsconfig.json
 
       # Build build airframesio/acars-decoder-typescript
       - 
         name: Build airframesio/acars-decoder-typescript
-        working-directory: ./acars-decoder-typescript-clone
+        working-directory: ./acars-decoder-typescript
         run: |
           yarn install
           yarn build
@@ -82,5 +86,6 @@ jobs:
           context: .
           file: ./Dockerfile
           no-cache: true
-          platforms: ${{ matrix.docker-platform }}
-          push: false
+          platforms: linux/386,linux/amd64,linux/arm/v7,linux/arm/v6,linux/arm64
+          push: ${{ env.PUSH }}
+          tags: ${{ env.REPO }}/${{ env.IMAGE }}:test-pr

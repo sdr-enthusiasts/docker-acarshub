@@ -10,11 +10,13 @@ export class Label_H1_M1BPOS extends DecoderPlugin { // eslint-disable-line came
     };
   }
 
-  decode(message: any) : any {
+  decode(message: any, options: any = {}) : any {
     const decodeResult: any = this.defaultResult;
     decodeResult.decoder.name = this.name;
 
-    // console.log('DECODER: #M1BPOS detected');
+    if (options.debug) {
+      console.log('DECODER: #M1BPOS detected');
+    }
     const parts = message.text.replace('#M1BPOS', '').split('/');
     const firstHalf = parts[0];
     const secondHalf = parts[1];
@@ -24,8 +26,10 @@ export class Label_H1_M1BPOS extends DecoderPlugin { // eslint-disable-line came
     const results = items[0].match(coordsRegex);
 
     if (results && results.length >= 4) {
-      decodeResult.raw.aircraft_position = {
+      decodeResult.raw.position = {
+        latitudeDirection: results.groups.lac,
         latitude: (results.groups.la / 1000) * (results.groups.lac === 'S' ? -1 : 1),
+        longitudeDirection: results.groups.lnc,
         longitude: (results.groups.ln / 1000) * (results.groups.lnc === 'W' ? -1 : 1),
       };
 
@@ -36,8 +40,8 @@ export class Label_H1_M1BPOS extends DecoderPlugin { // eslint-disable-line came
       decodeResult.formatted.description = 'Position Report';
       decodeResult.formatted.items = {
         coordinates: {
-          label: 'Coordinates',
-          value: `${decodeResult.raw.latitude} ${results.groups.lac}, ${decodeResult.raw.longitude} ${results.groups.lnc}`,
+          label: 'Position',
+          value: this.coordinateString(decodeResult.raw.position),
         },
         route: {
           label: 'Route',
