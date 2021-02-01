@@ -3,7 +3,7 @@
 function print_usage() {
     log "Usage:"
     log "  -s, --serial <serial>  RTL-SDR serial number to resolve to device ID"
-    log "  -f, --fail             Failes (exit 1) if device is not free"
+    log "  -f, --fail             Fails (exit 1) if device is not free"
     log "  -v, --verbose          Verbose logging"
     log "  -h, --help             Displays this usage info"
 }
