@@ -38,9 +38,9 @@ if [ -n "${ENABLE_ACARS}" ]; then
 		set -e
 
 		if [ -n "${QUIET_LOGS}" ]; then
-			DEVICE_ID="$(rtl_serial_to_deviceid.sh -s "$SERIAL_ACARS")"
+			DEVICE_ID="$(rtl_serial_to_deviceid.sh -f -s "$SERIAL_ACARS")"
 		else
-			DEVICE_ID="$(rtl_serial_to_deviceid.sh -v -s "$SERIAL_ACARS")"
+			DEVICE_ID="$(rtl_serial_to_deviceid.sh -v -f -s "$SERIAL_ACARS")"
 		fi
 
 		set +e
