@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
 
+set -e
+
 function print_usage() {
     log "Usage:"
     log "  -s, --serial <serial>  RTL-SDR serial number to resolve to device ID"
+    log "  -f, --fail             Failes (exit 1) if device is not free"
     log "  -v, --verbose          Verbose logging"
     log "  -h, --help             Displays this usage info"
 }
@@ -32,6 +35,9 @@ while [[ "$1" =~ ^- && ! "$1" == "--" ]]; do
         -s | --serial )
             shift; ARGS_SERIAL="$1"
             ;;
+        -f | --fail )
+            FAIL_IF_DEVICE_NOT_FREE=1
+            ;;
         -h | --help )
             print_usage
             exit
@@ -47,33 +53,45 @@ if [[ -z "$ARGS_SERIAL" ]]; then
     exit 1
 fi
 
-# Get list of rtl-sdr device IDs
-RTL_DEVICES=$(rtl_eeprom 2>&1 | grep -P '^\s+\d+:' | tr -d ' ' | cut -d ':' -f 1)
+# Get rtl_test output
+RTL_TEST_OUTPUT=$(timeout 1s rtl_test -d 0 2>&1 | grep -P '^\s+\d+:\s+\S+?,\s+\S+?,\s+SN:\s+\S+?\s*$' || true)
+IFS=$'\n'
+for RTL_TEST_OUTPUT_LINE in $RTL_TEST_OUTPUT; do
+  
+  # Unset variables in case any regexes fail
+  unset RTL_DEVICE_ID RTL_DEVICE_MAKE RTL_DEVICE_MODEL RTL_DEVICE_SERIAL
 
-# Resolve each number into serial numbers
-for RTL_DEVICE_NUMBER in $RTL_DEVICES; do
+  # Pull variables from output via regex
+  RTL_DEVICE_NUMBER=$(echo "$RTL_TEST_OUTPUT_LINE" | grep -oP '^\s+\K\d+(?=:\s+\S+?,\s+\S+?,\s+SN:\s+\S+?\s*$)')
+  RTL_DEVICE_MAKE=$(echo "$RTL_TEST_OUTPUT_LINE" | grep -oP '^\s+\d+:\s+\K\S+?(?=,\s+\S+?,\s+SN:\s+\S+?\s*$)')
+  RTL_DEVICE_MODEL=$(echo "$RTL_TEST_OUTPUT_LINE" | grep -oP '^\s+\d+:\s+\S+?,\s+\K\S+?(?=,\s+SN:\s+\S+?\s*$)')
+  RTL_DEVICE_SERIAL=$(echo "$RTL_TEST_OUTPUT_LINE" | grep -oP '^\s+\d+:\s+\S+?,\s+\S+?,\s+SN:\s+\K\S+?(?=\s*$)')
 
-    # Attempt to get serial of device
-    RTL_SERIAL=$(rtl_eeprom -d "$RTL_DEVICE_NUMBER" 2>&1 | grep 'Serial number:' | tr -d '\t' | tr -d ' ' | cut -d ':' -f 2)
-
-    # Log a warning if we can't find the serial
-    if [[ -z "$RTL_SERIAL" ]]; then
-        log_verbose "WARNING: Could not determine serial for device $RTL_DEVICE_NUMBER. The device may be in use."
-        continue
-    fi
-
-    # See if we've found the device we're looking for
-    if [[ "$ARGS_SERIAL" == "$RTL_SERIAL" ]]; then
-        log_verbose "Serial '$ARGS_SERIAL' resolves to device ID $RTL_DEVICE_NUMBER"
-        OUTPUT_DEVICE_ID="$RTL_DEVICE_NUMBER"
-    fi
+  # See if we've found the device we're looking for
+  if [[ "$ARGS_SERIAL" == "$RTL_DEVICE_SERIAL" ]]; then
+      log_verbose "Serial '$ARGS_SERIAL' resolves to device ID $RTL_DEVICE_NUMBER"
+      OUTPUT_DEVICE_ID="$RTL_DEVICE_NUMBER"
+  fi
 
 done
 
 # Return result or error
 if [[ -n "$OUTPUT_DEVICE_ID" ]]; then
     echo "$OUTPUT_DEVICE_ID"
-    exit 0
+
+    # Test if the device is free
+    if rtl_eeprom -d "$OUTPUT_DEVICE_ID" > /dev/null 2>&1; then
+
+      # If 
+      if [[ -n "$FAIL_IF_DEVICE_NOT_FREE" ]]; then
+        log "ERROR: The device is in use"
+        exit 1
+      else
+        log "WARNING: The device is in use"
+        exit 0
+      fi
+    fi
+
 else
     log "ERROR: Could not map serial '$ARGS_SERIAL' to an RTL-SDR device number."
     exit 1
