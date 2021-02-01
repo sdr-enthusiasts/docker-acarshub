@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-set -e
-
 function print_usage() {
     log "Usage:"
     log "  -s, --serial <serial>  RTL-SDR serial number to resolve to device ID"
@@ -80,9 +78,9 @@ if [[ -n "$OUTPUT_DEVICE_ID" ]]; then
     echo "$OUTPUT_DEVICE_ID"
 
     # Test if the device is free
-    if rtl_eeprom -d "$OUTPUT_DEVICE_ID" > /dev/null 2>&1; then
+    if ! rtl_eeprom -d "$OUTPUT_DEVICE_ID" > /dev/null 2>&1; then
 
-      # If 
+      # Fail if device in use and requested
       if [[ -n "$FAIL_IF_DEVICE_NOT_FREE" ]]; then
         log "ERROR: The device is in use"
         exit 1
@@ -90,6 +88,10 @@ if [[ -n "$OUTPUT_DEVICE_ID" ]]; then
         log "WARNING: The device is in use"
         exit 0
       fi
+    
+    # Exit ok if device is free
+    else
+      exit 0
     fi
 
 else
