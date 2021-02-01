@@ -103,7 +103,7 @@ jobs:
       # Build build airframesio/acars-decoder-typescript
       - 
         name: Build airframesio/acars-decoder-typescript
-        working-directory: ./acars-decoder-typescript-clone
+        working-directory: ./acars-decoder-typescript
         run: |
           yarn install
           yarn build
