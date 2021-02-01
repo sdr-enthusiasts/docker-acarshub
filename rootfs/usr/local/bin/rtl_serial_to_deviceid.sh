@@ -61,8 +61,8 @@ for RTL_TEST_OUTPUT_LINE in $RTL_TEST_OUTPUT; do
 
   # Pull variables from output via regex
   RTL_DEVICE_NUMBER=$(echo "$RTL_TEST_OUTPUT_LINE" | grep -oP '^\s+\K\d+(?=:\s+\S+?,\s+\S+?,\s+SN:\s+\S+?\s*$)')
-  RTL_DEVICE_MAKE=$(echo "$RTL_TEST_OUTPUT_LINE" | grep -oP '^\s+\d+:\s+\K\S+?(?=,\s+\S+?,\s+SN:\s+\S+?\s*$)')
-  RTL_DEVICE_MODEL=$(echo "$RTL_TEST_OUTPUT_LINE" | grep -oP '^\s+\d+:\s+\S+?,\s+\K\S+?(?=,\s+SN:\s+\S+?\s*$)')
+  # RTL_DEVICE_MAKE=$(echo "$RTL_TEST_OUTPUT_LINE" | grep -oP '^\s+\d+:\s+\K\S+?(?=,\s+\S+?,\s+SN:\s+\S+?\s*$)')
+  # RTL_DEVICE_MODEL=$(echo "$RTL_TEST_OUTPUT_LINE" | grep -oP '^\s+\d+:\s+\S+?,\s+\K\S+?(?=,\s+SN:\s+\S+?\s*$)')
   RTL_DEVICE_SERIAL=$(echo "$RTL_TEST_OUTPUT_LINE" | grep -oP '^\s+\d+:\s+\S+?,\s+\S+?,\s+SN:\s+\K\S+?(?=\s*$)')
 
   # See if we've found the device we're looking for
