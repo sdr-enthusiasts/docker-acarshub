@@ -383,12 +383,12 @@ def main_connect():
         print(f'Client connected. Total connected: {connected_users}')
 
     requester = request.sid
-    socketio.emit('labels', {'labels': acarshub.acarshub_db.get_message_label_json()}, room=requester,
+    socketio.emit('labels', {'labels': acarshub.acarshub_db.get_message_label_json()}, to=requester,
                   namespace="/main")
     for msg_type, json_message_orig in messages_recent:
         json_message = copy.deepcopy(json_message_orig)
         json_message['message_type'] = msg_type
-        socketio.emit('newmsg', {'msghtml': acarshub.update_keys(json_message)}, room=requester,
+        socketio.emit('newmsg', {'msghtml': acarshub.update_keys(json_message)}, to=requester,
                       namespace='/main')
 
     # Start the htmlGenerator thread only if the thread has not been started before.
@@ -407,7 +407,7 @@ def search_connect():
 
     rows, size = acarshub.acarshub_db.database_get_row_count()
     requester = request.sid
-    socketio.emit('database', {"count": rows, "size": size}, room=requester, namespace='/search')
+    socketio.emit('database', {"count": rows, "size": size}, to=requester, namespace='/search')
 
 
 @socketio.on('connect', namespace='/stats')
@@ -422,14 +422,14 @@ def stats_connect():
 @socketio.on('freqs', namespace="/stats")
 def request_freqs(message, namespace):
     requester = request.sid
-    socketio.emit('freqs', {'freqs': acarshub.acarshub_db.get_freq_count()}, room=requester,
+    socketio.emit('freqs', {'freqs': acarshub.acarshub_db.get_freq_count()}, to=requester,
                   namespace="/stats")
 
 
 @socketio.on('count', namespace="/stats")
 def request_count(message, namespace):
     requester = request.sid
-    socketio.emit('count', {'count': acarshub.acarshub_db.get_errors()}, room=requester,
+    socketio.emit('count', {'count': acarshub.acarshub_db.get_errors()}, to=requester,
                   namespace="/stats")
 
 # handle a query request from the browser
@@ -448,7 +448,7 @@ def handle_message(message, namespace):
 
     requester = request.sid
     socketio.emit('newmsg', {'num_results': total_results, 'msghtml': serialized_json,
-                             'search_term': str(search_term)}, room=requester, namespace='/search')
+                             'search_term': str(search_term)}, to=requester, namespace='/search')
 
 
 @socketio.on('disconnect', namespace='/main')
