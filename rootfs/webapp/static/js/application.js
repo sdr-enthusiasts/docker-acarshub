@@ -346,7 +346,6 @@ $(document).ready(function(){
                                     var split = msgs_received[index_new][j].msgno_parts.toString().split(" "); // format of stored parts is "MSGID MSGID2" etc
 
                                     for(var a = 0; a < split.length; a++) { // Loop through the msg IDs present
-                                        console.log(split[a].substring(0, 4) + " " + msg.msghtml['msgno']);
                                         if(split[a].substring(0, 4) == msg.msghtml['msgno']) { // Found a match in the message IDs already present
                                             add_multi = false; // Ensure later checks know we've found a duplicate and to not add the message
 
