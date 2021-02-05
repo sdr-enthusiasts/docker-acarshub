@@ -437,6 +437,8 @@ def database_search(field, search_term, page=0):
             result = session.query(messages).filter(messages.text.contains(search_term)).order_by(messages.time.desc())
         elif field == "msgno":
             result = session.query(messages).filter(messages.msgno.contains(search_term)).order_by(messages.time.desc())
+        elif fiend == "freq":
+            result = session.query(messages).filter(messages.freq.contains(search_term)).order_by(messages.time.desc())
         session.close()
     except Exception:
         print("[database] Error running search!")
