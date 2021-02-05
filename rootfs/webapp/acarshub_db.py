@@ -442,15 +442,16 @@ def database_search(field, search_term, page=0):
         session.close()
     except Exception:
         print("[database] Error running search!")
-
-    if acarshub_helpers.DEBUG_LOGGING:
-        print("[database] Done searching")
-
-    if result is not None and result.count() > 0:
-        data = [json.dumps(d, cls=AlchemyEncoder) for d in result[page:page + 50]]
-        return [data, result.count()]
-    else:
         return [None, 50]
+    else:
+        if acarshub_helpers.DEBUG_LOGGING:
+            print("[database] Done searching")
+
+        if result is not None and result.count() > 0:
+            data = [json.dumps(d, cls=AlchemyEncoder) for d in result[page:page + 50]]
+            return [data, result.count()]
+        else:
+            return [None, 50]
 
 
 def show_all(page=0):
