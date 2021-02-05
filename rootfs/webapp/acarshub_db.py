@@ -437,7 +437,7 @@ def database_search(field, search_term, page=0):
             result = session.query(messages).filter(messages.text.contains(search_term)).order_by(messages.time.desc())
         elif field == "msgno":
             result = session.query(messages).filter(messages.msgno.contains(search_term)).order_by(messages.time.desc())
-        elif fiend == "freq":
+        elif field == "freq":
             result = session.query(messages).filter(messages.freq.contains(search_term)).order_by(messages.time.desc())
         session.close()
     except Exception:
@@ -446,7 +446,7 @@ def database_search(field, search_term, page=0):
     if acarshub_helpers.DEBUG_LOGGING:
         print("[database] Done searching")
 
-    if result.count() > 0:
+    if result is not None and result.count() > 0:
         data = [json.dumps(d, cls=AlchemyEncoder) for d in result[page:page + 50]]
         return [data, result.count()]
     else:
