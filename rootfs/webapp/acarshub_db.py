@@ -430,7 +430,7 @@ def database_search(field, search_term, page=0):
         elif field == "tail":
             result = session.query(messages).filter(messages.tail.contains(search_term)).order_by(messages.time.desc())
         elif field == "depa":
-            result = result = session.query(messages).filter(messages.depa.contains(search_term)).order_by(messages.time.desc())
+            result = session.query(messages).filter(messages.depa.contains(search_term)).order_by(messages.time.desc())
         elif field == "dsta":
             result = session.query(messages).filter(messages.dsta.contains(search_term)).order_by(messages.time.desc())
         elif field == "text":
