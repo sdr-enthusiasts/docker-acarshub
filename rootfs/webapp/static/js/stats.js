@@ -1,10 +1,13 @@
-
+var socket;
+var socket_alerts;
 var image_prefix = '';
 $(document).ready(function(){
 	generate_menu();
 	generate_footer();
 
 	socket = io.connect('http://' + document.domain + ':' + location.port + '/stats');
+	socket_alerts = io.connect('http://' + document.domain + ':' + location.port + '/alerts');
+
 	socket.on('newmsg', function(msg) {
 		console.log("message received");
 		generate_stat_submenu(msg.acars, msg.vdlm);

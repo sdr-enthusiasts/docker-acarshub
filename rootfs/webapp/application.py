@@ -365,6 +365,11 @@ def aboutmd():
     return render_template('helppage.MD')
 
 
+@app.route('/alerts')
+def alerts():
+    return render_template('alerts.html')
+
+
 # The listener for the live message page
 # Ensure the necessary listeners are fired up
 

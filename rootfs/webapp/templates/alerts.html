@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv=“Pragma” content=”no-cache”>
+    <meta http-equiv=“Expires” content=”-1″>
+    <meta http-equiv=“CACHE-CONTROL” content=”NO-CACHE”>
+    <link rel="apple-touch-icon" sizes="180x180" href="static/images/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="static/images/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="static/images/favicon-16x16.png">
+    <link rel="manifest" href="static/images/site.webmanifest">
+    <script src="//code.jquery.com/jquery-3.3.1.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/3.1.0/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/js-cookie@rc/dist/js.cookie.min.js"></script>
+    <script src="static/js/menu.js"></script>
+    <script src="static/js/alerts.js"></script>
+    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/static/css/site.css">
+    <title>ACARS Message Alerts</title>
+  </head>
+  <body>
+    <div class="container" id="header">
+      <div class="row" id="links">
+      </div>
+    </div>
+    <div class="container" id="content">
+    <div class="row" id="right">
+      <div class="fixed_results">
+        <span id="stat_menu">
+          <label for="alert_text" class="menu_non_link">Text Field:</label><br /> 
+          <textarea rows="2" id="alert_text"></textarea><br /> 
+          <label for="alert_callsigns" class="menu_non_link">Callsign:</label><br /> 
+          <textarea rows="2" id="alert_callsigns"></textarea><br /> 
+          <label for="alert_tail" class="menu_non_link">Tail Number:</label><br /> 
+          <textarea rows="2" id="alert_tail"></textarea><br /> 
+          <button type="submit" value="Submit" onclick="updateAlerts()">Update</button>
+        </span>
+      </div>
+    </div>
+      <div class="left" id="log">
+      </div>
+    </div>
+    <div class="footer" id="footer_div">
+    </div>
+  </body>
+</html>
