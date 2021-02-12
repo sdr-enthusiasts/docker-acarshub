@@ -25,6 +25,7 @@ $(document).ready(function(){
     onInit();
 
     if(document.location.pathname == "/alerts") {
+        Cookies.set('alert_unread', 0, { expires: 365 });
         // Set the text areas to the values saved in the cookies
         document.getElementById("alert_text").value = Cookies.get("alert_text") ? Cookies.get("alert_text") : "";
         document.getElementById("alert_callsigns").value = Cookies.get("alert_callsigns") ? Cookies.get("alert_callsigns") : "";
@@ -37,20 +38,26 @@ $(document).ready(function(){
             }
         });
     } else if(document.location.pathname != "/") {
+        alerts -= 1;
+        updateAlertCounter();
         socket_alerts.on('newmsg', function(msg) {
             if(match_alert(msg)) {
                 updateAlertCounter();
             }
         });
+    } else {
+        Cookies.set('alert_unread', 0, { expires: 365 });
     }
 });
 
 function updateAlertCounter() {
     alerts += 1;
-    var id = document.getElementById("alert_count");
-    id.innerHTML = "";
-    var txt = document.createTextNode(` (${alerts})`);
-    id.appendChild(txt);
+    console.log(document.getElementById("alert_count"));
+    $('#alert_count').html(` <span class="red">(${alerts})</span>`);
+    //var txt = document.createTextNode();
+    //id.appendChild(txt);
+    console.log("end");
+    Cookies.set('alert_unread', alerts, { expires: 365 });
 }
 
 function updateAlerts() {
@@ -58,7 +65,7 @@ function updateAlerts() {
         var split = document.getElementById("alert_text").value.split(",");
         alert_text = [];
         for(var i = 0; i < split.length; i++) {
-            alert_text.push(split[i]);
+            alert_text.push(split[i].trim());
         }
     } else {
         alert_text = [];
@@ -68,7 +75,7 @@ function updateAlerts() {
         var split = document.getElementById("alert_callsigns").value.split(",");
         alert_callsigns = [];
         for(var i = 0; i < split.length; i++) {
-            alert_callsigns.push(split[i]);
+            alert_callsigns.push(split[i].trim());
         }
     } else {
         alert_callsigns = [];
@@ -78,7 +85,7 @@ function updateAlerts() {
         var split = document.getElementById("alert_tail").value.split(",");
         alert_tail = [];
         for(var i = 0; i < split.length; i++) {
-            alert_tail.push(split[i]);
+            alert_tail.push(split[i].trim());
         }
     } else {
         alert_tail = [];
@@ -140,7 +147,8 @@ function match_alert(msg) {
     var found = false;
     if(msg.msghtml.hasOwnProperty('text')) {
         for(var i = 0; i < alert_text.length; i++) {
-            if(msg.msghtml.text.includes(alert_text[i].toUpperCase())) {
+            console.log(alert_text[i]);
+            if(msg.msghtml.text.toUpperCase().includes(alert_text[i].toUpperCase())) {
                 found = true;
                 i = alert_text.length;
             }
@@ -149,7 +157,7 @@ function match_alert(msg) {
 
     if(!found && msg.msghtml.hasOwnProperty('flight')) {
         for(var i = 0; i < alert_callsigns.length; i++) {
-            if(msg.msghtml.flight.includes(alert_callsigns[i].toUpperCase())) {
+            if(msg.msghtml.flight.toUpperCase().includes(alert_callsigns[i].toUpperCase())) {
                 found = true;
                 i = alert_callsigns.length;
             }
@@ -158,7 +166,7 @@ function match_alert(msg) {
 
     if(!found && msg.msghtml.hasOwnProperty('tail')) {
         for(var i = 0; i < alert_tail.length; i++) {
-            if(msg.msghtml.tail.includes(alert_callsigns[i].toUpperCase())) {
+            if(msg.msghtml.tail.toUpperCase().includes(alert_callsigns[i].toUpperCase())) {
                 found = true;
                 i = alert_tail.length;
             }
