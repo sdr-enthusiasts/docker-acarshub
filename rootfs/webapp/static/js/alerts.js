@@ -3,7 +3,7 @@ var alerts = 0;
 var alert_text = [];
 var alert_callsigns = [];
 var alert_tail = [];
-
+var alert_icao = [];
 var msgs_received = [];
 
 msgs_received.unshift = function () {
@@ -30,6 +30,7 @@ $(document).ready(function(){
         document.getElementById("alert_text").value = Cookies.get("alert_text") ? Cookies.get("alert_text") : "";
         document.getElementById("alert_callsigns").value = Cookies.get("alert_callsigns") ? Cookies.get("alert_callsigns") : "";
         document.getElementById("alert_tail").value = Cookies.get("alert_tail") ? Cookies.get("alert_tail") : "";
+        document.getElementById("alert_icao").value = Cookies.get("alert_icao") ? Cookies.get("alert_icao") : "";
 
         socket_alerts.on('newmsg', function(msg) {
             if(match_alert(msg)) {
@@ -91,9 +92,20 @@ function updateAlerts() {
         alert_tail = [];
     }
 
+    if(document.getElementById("alert_icao").value.length > 0) {
+        var split = document.getElementById("alert_icao").value.split(",");
+        alert_icao = [];
+        for(var i = 0; i < split.length; i++) {
+            alert_icao.push(split[i].trim());
+        }
+    } else {
+        alert_icao = [];
+    }
+
     Cookies.set('alert_text', combineArray(alert_text), { expires: 365 });
     Cookies.set('alert_callsigns', combineArray(alert_callsigns), { expires: 365 });
     Cookies.set('alert_tail', combineArray(alert_tail), { expires: 365 });
+    Cookies.set('alert_icao', combineArray(alert_icao), { expires: 365 });
 }
 
 function onInit() {
@@ -124,9 +136,19 @@ function onInit() {
         alert_tail = [];
     }
 
+    if(Cookies.get("alert_icao") ? Cookies.get("alert_icao") : "" > 0) {
+        var split = Cookies.get("alert_tail").split(",");
+        for(var i = 0; i < split.length; i++) {
+            alert_icao.push(split[i]);
+        }
+    } else {
+        alert_icao = [];
+    }
+
     Cookies.set('alert_text', combineArray(alert_text), { expires: 365 });
     Cookies.set('alert_callsigns', combineArray(alert_callsigns), { expires: 365 });
     Cookies.set('alert_tail', combineArray(alert_tail), { expires: 365 });
+    Cookies.set('alert_icao', combineArray(alert_icao), { expires: 365 });
 }
 
 function combineArray(input) {
