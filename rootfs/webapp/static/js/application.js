@@ -2,7 +2,6 @@
 var pause = false;
 var text_filter = false;
 var socket;
-var socket_alerts;
 var msgs_received = [];
 var exclude = [];
 var selected_tabs = "";
@@ -189,7 +188,6 @@ $(document).ready(function(){
     generate_menu(); // generate the top menu
     generate_footer(); // generate the footer
     socket = io.connect('http://' + document.domain + ':' + location.port + '/main'); // open a websocket to the server to received messages
-    socket_alerts = io.connect('http://' + document.domain + ':' + location.port + '/alerts');
 
     // Grab the current cookie value for message filtering
     // If the cookie is found with a value we run filter_notext to set the proper visual elements/variables for the rest of the functions
@@ -244,6 +242,10 @@ $(document).ready(function(){
                         msg.msghtml.decodedText = decoded_msg;
                         //console.log(msg.msghtml.decodedText);
                     }
+                }
+
+                if(match_alert(msg)) {
+                    msg.msghtml.matched = true;
                 }
 
                 var new_tail = msg.msghtml.tail;

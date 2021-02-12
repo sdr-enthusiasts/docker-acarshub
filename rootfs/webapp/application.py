@@ -54,6 +54,11 @@ thread_message_listener_stop_event = Event()
 thread_database = Thread()
 thread_database_stop_event = Event()
 
+# alert threads
+
+thread_alerts = Thread()
+thread_alerts_stop_event = Event()
+
 # maxlen is to keep the que from becoming ginormous
 # the messages will be in the que all the time, even if no one is using the website
 # old messages will automatically be removed
@@ -62,11 +67,15 @@ thread_database_stop_event = Event()
 
 que_messages = deque(maxlen=15)
 que_database = deque(maxlen=15)
+que_alerts = deque(maxlen=15)
+
 messages_recent = []
 
 vdlm_messages = 0
 acars_messages = 0
 error_messages = 0
+
+alert_users = []
 
 
 def update_rrd_db():
@@ -135,6 +144,30 @@ def scheduled_tasks():
         time.sleep(1)
 
 
+def alert_handler():
+    import time
+    import copy
+
+    while not thread_alerts_stop_event.isSet():
+        time.sleep(1)
+
+        if len(que_alerts) != 0:
+            message_source, json_message_initial = que_alerts.popleft()
+            json_message = copy.deepcopy(json_message_initial)  # creating a copy so that our changes below aren't made to the parent object
+            # Send output via socketio
+            if acarshub_helpers.DEBUG_LOGGING:
+                print("[alerts] sending output via socketio.emit")
+            json_message.update({"message_type": message_source})
+
+            json_message = acarshub.update_keys(json_message)
+
+            socketio.emit('newmsg', {'msghtml': json_message}, namespace='/alerts')
+            if acarshub_helpers.DEBUG_LOGGING:
+                print("[alerts] packet sent via socketio.emit")
+                print("[alerts] Completed with generation")
+        else:
+            pass
+
 def database_listener():
     import sys
     import time
@@ -160,6 +193,7 @@ def message_listener(message_type=None, ip='127.0.0.1', port=None):
     import sys
 
     global error_messages
+    global alert_users
 
     if message_type == "VDLM2":
         global vdlm_messages
@@ -273,6 +307,8 @@ def message_listener(message_type=None, ip='127.0.0.1', port=None):
                             if acarshub_helpers.DEBUG_LOGGING:
                                 print(f"[{message_type.lower()}Generator] appending message")
                             que_messages.append((que_type, j))
+                        if len(alert_users) > 0:
+                            que_alerts.append((que_type, j))
                         if acarshub_helpers.DEBUG_LOGGING:
                             print(f"[{message_type.lower()}Generator] sending off to db")
                         que_database.append((que_type, j))
@@ -289,6 +325,7 @@ def init_listeners(special_message=None):
     global thread_database
     global thread_scheduler
     global thread_html_generator
+    global thread_alerts
 
     if acarshub_helpers.DEBUG_LOGGING and special_message is not None:
         print('[init] Starting data listeners')
@@ -318,6 +355,10 @@ def init_listeners(special_message=None):
         if acarshub_helpers.DEBUG_LOGGING or special_message is not None:
             print(f"{special_message}Starting htmlListener")
         thread_html_generator = socketio.start_background_task(htmlListener)
+    if len(alert_users) > 0 and not thread_alerts.isAlive():
+        if acarshub_helpers.DEBUG_LOGGING or special_message is not None:
+            print(f"{special_message}Starting alert thread")
+        thread_alerts = socketio.start_background_task(alert_handler)
 
 
 def init():
@@ -403,6 +444,31 @@ def main_connect():
         sys.stdout.flush()
         thread_html_generator_event.clear()
         thread_html_generator = socketio.start_background_task(htmlListener)
+
+
+@socketio.on('connect', namespace='/alerts')
+def alert_connect():
+    global thread_alerts_stop_event
+    global thread_alerts
+
+    alert_users.append(request.sid)
+
+    if not thread_alerts.isAlive():
+        if acarshub_helpers.DEBUG_LOGGING:
+            print("[alerts]Starting alert thread")
+        thread_alerts_stop_event.clear()
+        thread_alerts = socketio.start_background_task(alert_handler)
+
+
+@socketio.on('disconnect', namespace='/alerts')
+def alert_disconnect():
+    try:
+        del(alert_users[request.sid])
+    except Exception:
+        pass
+
+    if len(alert_users)  == 0:
+        thread_alerts_stop_event.set()
 
 
 @socketio.on('connect', namespace='/search')
@@ -495,6 +561,11 @@ def error_handler_search(e):
 @socketio.on_error('/stats')
 def stats_handler_search(e):
     acarshub_helpers.acars_traceback(e, "server-stats")
+
+
+@socketio.on_error('/alerts')
+def error_handler_alerts(e):
+    acarshub_helpers.acars_traceback(e, "server-alerts")
 
 
 @socketio.on_error_default

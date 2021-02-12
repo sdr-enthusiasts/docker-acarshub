@@ -6,7 +6,6 @@ $(document).ready(function(){
 	generate_footer();
 
 	socket = io.connect('http://' + document.domain + ':' + location.port + '/stats');
-	socket_alerts = io.connect('http://' + document.domain + ':' + location.port + '/alerts');
 
 	socket.on('newmsg', function(msg) {
 		console.log("message received");

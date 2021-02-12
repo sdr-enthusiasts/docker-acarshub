@@ -1,5 +1,4 @@
 var socket;
-var socket_alerts;
 var current_search = ''; // variable to store the current search term
 var current_page = 0; // store the current page of the current_search
 var total_pages = 0; // number of pages of results
@@ -13,7 +12,6 @@ $(document).ready(function(){
     generate_menu();
     generate_footer();
     socket = io.connect('http://' + document.domain + ':' + location.port + '/search');
-    socket_alerts = io.connect('http://' + document.domain + ':' + location.port + '/alerts');
     var msgs_received = [];
     var num_results = [];
 

@@ -48,7 +48,14 @@ function display_messages(msgs_to_process, selected_tabs, live_page=false) {
                     else { // Otherwise this message's tab is not active
                         msgs_string += `<input type = "radio" id = "tab${tab_uid}_${unique_id}" name = "tabs_${unique_id}" onclick="handle_radio('` + tab_uid + `', '` + unique_id + `')">`;
                     }
-                    msgs_string += `<label for = "tab${tab_uid}_${unique_id}">Message ${j + 1}</label>`;
+
+                    var label_string = "";
+                    if(sub_messages[j].hasOwnProperty('matched'))
+                        label_string = `<span class="red">Message ${j + 1}</span>`;
+                    else
+                        label_string = `Message ${j + 1}`;
+
+                    msgs_string += `<label for = "tab${tab_uid}_${unique_id}">${label_string}</label>`;
                 }
             }
         }
@@ -88,7 +95,10 @@ function display_messages(msgs_to_process, selected_tabs, live_page=false) {
                     delete message[key];
             }
 
-            html_output += "<tr>";
+            if(sub_messages.length == 1 && message.hasOwnProperty('matched'))
+                html_output += '<tr class="red">';
+            else
+                html_output += "<tr>";
             html_output += `<td><strong>${message['message_type']}</strong> from <strong>${message['station_id']}</strong></td>`;
 
             var timestamp; // variable to save the timestamp We need this because the database saves the time as 'time' and live messages have it as 'timestamp' (blame Fred for this silly mis-naming of db columns)
@@ -107,6 +117,7 @@ function display_messages(msgs_to_process, selected_tabs, live_page=false) {
             // Special keys used by the JS files calling this function
             // Duplicates is used to indicate the number of copies recieved for this message
             // msgno_parts is the list of MSGID fields used to construct the multi-part message
+
             if(message.hasOwnProperty('duplicates')) {
                 html_output += `Duplicate(s) Received: <strong>${message['duplicates']}</strong><br>`;
             }

@@ -1,4 +1,17 @@
 var socket_alerts;
+var alerts = 0;
+var alert_text = [];
+var alert_callsigns = [];
+var alert_tail = [];
+
+var msgs_received = [];
+
+msgs_received.unshift = function () {
+    if (this.length >= 50) {
+        this.pop();
+    }
+    return Array.prototype.unshift.apply(this,arguments);
+}
 
 $(document).ready(function(){
     generate_menu();
@@ -6,19 +19,158 @@ $(document).ready(function(){
 
     socket_alerts = io.connect('http://' + document.domain + ':' + location.port + '/alerts');
 
-    // Set the text areas to the values saved in the cookies
-    document.getElementById("alert_text").value = (Cookies.get("alert_text") === "undefined") ? "" : Cookies.get("alert_text");
-    document.getElementById("alert_callsigns").value = (Cookies.get("alert_callsigns") === "undefined") ? "" : Cookies.get("alert_callsigns");
-    document.getElementById("alert_tail").value = (Cookies.get("alert_tail") === "undefined") ? "" : Cookies.get("alert_tail");
+    alerts = Cookies.get("alert_unread") ? Number(Cookies.get("alert_unread")) : 0;
 
     // Update the cookies so the expiration date pushes out in to the future
-    Cookies.set('alert_text', document.getElementById("alert_text").value, { expires: 365 });
-	Cookies.set('alert_callsigns', document.getElementById("alert_callsigns").value, { expires: 365 });
-	Cookies.set('alert_tail', document.getElementById("alert_tail").value, { expires: 365 });
+    onInit();
+
+    if(document.location.pathname == "/alerts") {
+        // Set the text areas to the values saved in the cookies
+        document.getElementById("alert_text").value = Cookies.get("alert_text") ? Cookies.get("alert_text") : "";
+        document.getElementById("alert_callsigns").value = Cookies.get("alert_callsigns") ? Cookies.get("alert_callsigns") : "";
+        document.getElementById("alert_tail").value = Cookies.get("alert_tail") ? Cookies.get("alert_tail") : "";
+
+        socket_alerts.on('newmsg', function(msg) {
+            if(match_alert(msg)) {
+                msgs_received.unshift([msg.msghtml]);
+                $('#log').html(display_messages(msgs_received));
+            }
+        });
+    } else if(document.location.pathname != "/") {
+        socket_alerts.on('newmsg', function(msg) {
+            if(match_alert(msg)) {
+                updateAlertCounter();
+            }
+        });
+    }
 });
 
+function updateAlertCounter() {
+    alerts += 1;
+    var id = document.getElementById("alert_count");
+    id.innerHTML = "";
+    var txt = document.createTextNode(` (${alerts})`);
+    id.appendChild(txt);
+}
+
 function updateAlerts() {
-	Cookies.set('alert_text', document.getElementById("alert_text").value, { expires: 365 });
-	Cookies.set('alert_callsigns', document.getElementById("alert_callsigns").value, { expires: 365 });
-	Cookies.set('alert_tail', document.getElementById("alert_tail").value, { expires: 365 });
+    if(document.getElementById("alert_text").value.length > 0) {
+        var split = document.getElementById("alert_text").value.split(",");
+        console.log(split);
+        alert_text = [];
+        console.log("tesT");
+        for(var i = 0; i < split.length; i++) {
+            alert_text.push(split[i]);
+        }
+
+        console.log(alert_text);
+    } else {
+        alert_text = [];
+    }
+
+    if(document.getElementById("alert_callsigns").value.length > 0) {
+        var split = document.getElementById("alert_callsigns").value.split(",");
+        alert_callsigns = [];
+        for(var i = 0; i < split.length; i++) {
+            alert_callsigns.push(split[i]);
+        }
+    } else {
+        alert_callsigns = [];
+    }
+
+    if(document.getElementById("alert_tail").value.length > 0) {
+        var split = document.getElementById("alert_tail").value.split(",");
+        alert_tail = [];
+        for(var i = 0; i < split.length; i++) {
+            alert_tail.push(split[i]);
+        }
+    } else {
+        alert_tail = [];
+    }
+
+    Cookies.set('alert_text', combineArray(alert_text), { expires: 365 });
+    Cookies.set('alert_callsigns', combineArray(alert_callsigns), { expires: 365 });
+    Cookies.set('alert_tail', combineArray(alert_tail), { expires: 365 });
+}
+
+function onInit() {
+    if(Cookies.get("alert_text") ? Cookies.get("alert_text") : "" > 0) {
+        var split = Cookies.get("alert_text").split(",");
+        for(var i = 0; i < split.length; i++) {
+            alert_text.push(split[i]);
+        }
+    } else {
+        alert_text = [];
+    }
+
+    if(Cookies.get("alert_callsigns") ? Cookies.get("alert_callsigns") : "" > 0) {
+        var split = Cookies.get("alert_callsigns").split(",");
+        for(var i = 0; i < split.length; i++) {
+            alert_callsigns.push(split[i]);
+        }
+    } else {
+        alert_callsigns = [];
+    }
+
+    if(Cookies.get("alert_tail") ? Cookies.get("alert_tail") : "" > 0) {
+        var split = Cookies.get("alert_tail").split(",");
+        for(var i = 0; i < split.length; i++) {
+            alert_tail.push(split[i]);
+        }
+    } else {
+        alert_tail = [];
+    }
+
+    Cookies.set('alert_text', combineArray(alert_text), { expires: 365 });
+    Cookies.set('alert_callsigns', combineArray(alert_callsigns), { expires: 365 });
+    Cookies.set('alert_tail', combineArray(alert_tail), { expires: 365 });
+}
+
+function combineArray(input) {
+    var output = "";
+
+    for(var i = 0; i < input.length; i++) {
+        if(i != 0) {
+            output += "," + input[i];
+        } else {
+            output = input[i];
+        }
+    }
+
+    return output;
+}
+
+function match_alert(msg) {
+    var found = false;
+    if(msg.msghtml.hasOwnProperty('text')) {
+        for(var i = 0; i < alert_text.length; i++) {
+            if(msg.msghtml.text.includes(alert_text[i].toUpperCase())) {
+                console.log("found text!")
+                found = true;
+                i = alert_text.length;
+            }
+        }
+    }
+
+    if(!found && msg.msghtml.hasOwnProperty('flight')) {
+        for(var i = 0; i < alert_callsigns.length; i++) {
+            if(msg.msghtml.flight.includes(alert_callsigns[i].toUpperCase())) {
+                console.log("found text!")
+                found = true;
+                i = alert_callsigns.length;
+            }
+        }
+    }
+
+    if(!found && msg.msghtml.hasOwnProperty('tail')) {
+        for(var i = 0; i < alert_tail.length; i++) {
+            if(msg.msghtml.tail.includes(alert_callsigns[i].toUpperCase())) {
+                console.log("found text!")
+                found = true;
+                i = alert_tail.length;
+            }
+        }
+    }
+
+    return found;
 }
