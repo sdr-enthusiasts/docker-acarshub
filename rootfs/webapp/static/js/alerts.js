@@ -56,14 +56,10 @@ function updateAlertCounter() {
 function updateAlerts() {
     if(document.getElementById("alert_text").value.length > 0) {
         var split = document.getElementById("alert_text").value.split(",");
-        console.log(split);
         alert_text = [];
-        console.log("tesT");
         for(var i = 0; i < split.length; i++) {
             alert_text.push(split[i]);
         }
-
-        console.log(alert_text);
     } else {
         alert_text = [];
     }
@@ -145,7 +141,6 @@ function match_alert(msg) {
     if(msg.msghtml.hasOwnProperty('text')) {
         for(var i = 0; i < alert_text.length; i++) {
             if(msg.msghtml.text.includes(alert_text[i].toUpperCase())) {
-                console.log("found text!")
                 found = true;
                 i = alert_text.length;
             }
@@ -155,7 +150,6 @@ function match_alert(msg) {
     if(!found && msg.msghtml.hasOwnProperty('flight')) {
         for(var i = 0; i < alert_callsigns.length; i++) {
             if(msg.msghtml.flight.includes(alert_callsigns[i].toUpperCase())) {
-                console.log("found text!")
                 found = true;
                 i = alert_callsigns.length;
             }
@@ -165,7 +159,6 @@ function match_alert(msg) {
     if(!found && msg.msghtml.hasOwnProperty('tail')) {
         for(var i = 0; i < alert_tail.length; i++) {
             if(msg.msghtml.tail.includes(alert_callsigns[i].toUpperCase())) {
-                console.log("found text!")
                 found = true;
                 i = alert_tail.length;
             }
