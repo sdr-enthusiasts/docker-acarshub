@@ -268,8 +268,9 @@ function display_messages(msgs_to_process, selected_tabs, live_page=false) {
             if(message.hasOwnProperty("icao")) {
                 html_output += "ICAO: <strong>";
                 html_output += message.hasOwnProperty('icao_url') ? `<a href="${message['icao_url']}" target="_blank">` : "";
-                html_output += `${message['icao']}`;
-                html_output += message.hasOwnProperty("icao_hex") ? `/${message['icao_hex']}` : "";
+                html_output += typeof message.matched_icao === "object" ? replace_text(message.matched_icao, message.icao.toString()) : `${message['icao']}`;
+                html_output += message.hasOwnProperty("icao_hex") && !typeof message.matched_icao === "object" ? `/${message['icao_hex']}` : "";
+                html_output += message.hasOwnProperty("icao_hex") && typeof message.matched_icao === "object" ? "/" + replace_text(message.matched_icao, message['icao_hex'].toString()) : "";
                 html_output += message.hasOwnProperty('icao_url') ? "</a></strong>" : "</strong>";
             }
 

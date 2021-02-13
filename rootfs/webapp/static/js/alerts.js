@@ -143,7 +143,7 @@ function onInit() {
     }
 
     if(Cookies.get("alert_icao") ? Cookies.get("alert_icao") : "" > 0) {
-        var split = Cookies.get("alert_tail").split(",");
+        var split = Cookies.get("alert_icao").split(",");
         for(var i = 0; i < split.length; i++) {
             alert_icao.push(split[i]);
         }
@@ -207,9 +207,9 @@ function match_alert(msg) {
 
     if(msg.msghtml.hasOwnProperty('icao')) {
         for(var i = 0; i < alert_icao.length; i++) {
-            if(msg.msghtml.icao.toUpperCase().includes(alert_callsigns[i].toUpperCase()) || (
+            if(msg.msghtml.icao.toString().toUpperCase().includes(alert_icao[i].toUpperCase()) || (
                 msg.msghtml.hasOwnProperty('icao_hex') &&
-                msg.msghtml.icao_hex.toUpperCase().includes(alert_callsigns[i].toUpperCase()))) {
+                msg.msghtml.icao_hex.toUpperCase().includes(alert_icao[i].toUpperCase()))) {
                 found = true;
                 matched_icao.push(alert_icao[i]);
             }
@@ -218,9 +218,9 @@ function match_alert(msg) {
 
     return {
         was_found: found,
-        text: matched_text,
-        icao: matched_icao,
-        flight: matched_flight,
-        tail: matched_tail,
+        text: matched_text.length > 0 ? matched_text : null,
+        icao: matched_icao.length > 0 ? matched_icao : null,
+        flight: matched_flight.length > 0 ? matched_flight : null,
+        tail: matched_tail.length > 0 ? matched_tail : null,
     };
 }
