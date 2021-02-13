@@ -209,7 +209,6 @@ function display_messages(msgs_to_process, selected_tabs, live_page=false) {
             if(message.hasOwnProperty("text")) {
                 var text = message['text'];
                 text = text.replace("\\r\\n", "<br>");
-
                 //html_output += "<p>";
                 html_output += "<table class=\"message\">";
                 
@@ -222,7 +221,7 @@ function display_messages(msgs_to_process, selected_tabs, live_page=false) {
                     html_output += "<td class=\"text_top\">";
                     html_output += `<strong>Decoded Text (${decodedStatus}):</strong></p>`;
                     html_output += "<pre id=\"shadow\"><strong>";
-                    html_output += loop_array(message['decodedText'].formatted); // get the formatted html of the decoded text
+                    html_output += typeof message.matched_text === "object" ?  replace_text(message.matched_text, loop_array(message['decodedText'].formatted)) : loop_array(message['decodedText'].formatted); // get the formatted html of the decoded text
                     //html_output += `${message['decodedText'].raw}`;
                     html_output += "</strong></pre>";
                     html_output += "</td>";
@@ -233,7 +232,7 @@ function display_messages(msgs_to_process, selected_tabs, live_page=false) {
 
                 html_output += "<td class=\"text_top\">";
                 html_output += "<strong>Non-Decoded Text:</strong><p>";
-                html_output += `<pre id=\"shadow\"><strong>${text}</strong></pre>`;
+                html_output += `<pre id=\"shadow\"><strong>${typeof message.matched_text === "object" ? replace_text(message.matched_text, text) : text}</strong></pre>`;
                 html_output += "</td>";
                 html_output += "</tr></table>";
             }
@@ -259,15 +258,16 @@ function display_messages(msgs_to_process, selected_tabs, live_page=false) {
             html_output += "<tr>";
             html_output += "<td>";
             if(message.hasOwnProperty("tail")) {
-                html_output += `Tail: <strong><a href=\"https://flightaware.com/live/flight/${message['tail']}\" target=\"_blank\">${message['tail']}</a></strong> `;
+                html_output += `Tail: <strong><a href=\"https://flightaware.com/live/flight/${message['tail']}\" target=\"_blank\">${typeof message.matched_tail === "object" ? replace_text(message.matched_tail, message.tail) : message.tail}</a></strong> `;
             }
 
             if(message.hasOwnProperty("flight")) {
-                html_output += message['flight'];
+                html_output += typeof message.matched_flight === "object" ? replace_text(message.matched_flight, message.flight) : message.flight;
             }            
 
             if(message.hasOwnProperty("icao")) {
                 if (message.hasOwnProperty("icao_hex") && message.hasOwnProperty('icao_url')) {
+
                     html_output += `ICAO: <strong><a href="${message['icao_url']}" target="_blank">${message['icao']}/${message['icao_hex']}</a></strong>`
                 }
                 else if(message.hasOwnProperty("icao_hex")) {
@@ -369,6 +369,13 @@ function display_messages(msgs_to_process, selected_tabs, live_page=false) {
     }
 
     return msgs_string;
+}
+
+function replace_text(input, text) {
+    for(var i = 0; i < input.length; i++) {
+        text = text.split(`${input[i].toUpperCase()}`).join(`<span class="red">${input[i].toUpperCase()}</span>`);
+    }
+    return text;
 }
 
 function loop_array(input) {

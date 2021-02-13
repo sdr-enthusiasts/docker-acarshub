@@ -33,7 +33,12 @@ $(document).ready(function(){
         document.getElementById("alert_icao").value = Cookies.get("alert_icao") ? Cookies.get("alert_icao") : "";
 
         socket_alerts.on('newmsg', function(msg) {
-            if(match_alert(msg)) {
+            var matched = match_alert(msg);
+            if(matched.was_found) {
+                msg.msghtml.matched_text = matched.text;
+                msg.msghtml.matched_icao = matched.icao;
+                msg.msghtml.matched_flight = matched.flight;
+                msg.msghtml.matched_tail = matched.tail;
                 msgs_received.unshift([msg.msghtml]);
                 $('#log').html(display_messages(msgs_received));
             }
@@ -42,7 +47,8 @@ $(document).ready(function(){
         alerts -= 1;
         updateAlertCounter();
         socket_alerts.on('newmsg', function(msg) {
-            if(match_alert(msg)) {
+            var matched = match_alert(msg);
+            if(matched.was_found) {
                 updateAlertCounter();
             }
         });
@@ -167,33 +173,54 @@ function combineArray(input) {
 
 function match_alert(msg) {
     var found = false;
+    var matched_tail = [];
+    var matched_flight = [];
+    var matched_icao = [];
+    var matched_text = [];
+
     if(msg.msghtml.hasOwnProperty('text')) {
         for(var i = 0; i < alert_text.length; i++) {
-            console.log(alert_text[i]);
             if(msg.msghtml.text.toUpperCase().includes(alert_text[i].toUpperCase())) {
                 found = true;
-                i = alert_text.length;
+                matched_text.push(alert_text[i]);
             }
         }
     }
 
-    if(!found && msg.msghtml.hasOwnProperty('flight')) {
+    if(msg.msghtml.hasOwnProperty('flight')) {
         for(var i = 0; i < alert_callsigns.length; i++) {
             if(msg.msghtml.flight.toUpperCase().includes(alert_callsigns[i].toUpperCase())) {
                 found = true;
-                i = alert_callsigns.length;
+                matched_flight.push(alert_callsigns[i]);
             }
         }
     }
 
-    if(!found && msg.msghtml.hasOwnProperty('tail')) {
+    if(msg.msghtml.hasOwnProperty('tail')) {
         for(var i = 0; i < alert_tail.length; i++) {
-            if(msg.msghtml.tail.toUpperCase().includes(alert_callsigns[i].toUpperCase())) {
+            if(msg.msghtml.tail.toUpperCase().includes(alert_tail[i].toUpperCase())) {
                 found = true;
-                i = alert_tail.length;
+                matched_tail.push(alert_tail[i]);
             }
         }
     }
 
-    return found;
+    if(msg.msghtml.hasOwnProperty('icao')) {
+        for(var i = 0; i < alert_icao.length; i++) {
+            if(msg.msghtml.icao.toUpperCase().includes(alert_callsigns[i].toUpperCase()) || (
+                msg.msghtml.hasOwnProperty('icao_hex') &&
+                msg.msghtml.icao_hex.toUpperCase().includes(alert_callsigns[i].toUpperCase()))) {
+                found = true;
+                matched_icao.push(alert_icao[i]);
+            }
+        }
+    }
+
+    return {
+        was_found: found,
+        text: matched_text,
+        icao: matched_icao,
+        flight: matched_flight,
+        tail: matched_tail,
+    };
 }

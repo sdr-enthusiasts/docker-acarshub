@@ -244,8 +244,13 @@ $(document).ready(function(){
                     }
                 }
 
-                if(match_alert(msg)) {
+                var matched = match_alert(msg)
+                if(matched.was_found) {
                     msg.msghtml.matched = true;
+                    msg.msghtml.matched_text = matched.text;
+                    msg.msghtml.matched_icao = matched.icao;
+                    msg.msghtml.matched_flight = matched.flight;
+                    msg.msghtml.matched_tail = matched.tail;
                 }
 
                 var new_tail = msg.msghtml.tail;
@@ -358,12 +363,10 @@ $(document).ready(function(){
                                             } else if (split[a].length == 4) { // Match, not first element, and doesn't have previous matches
                                                 msgs_received[index_new][j].msgno_parts += " " + split[a] + "x2";
                                             } else if(a == 0) { // Match, first element of the array so no leading space, has previous other matches so we increment the counter
-                                                console.log(split[a].substring(5));
                                                 var count = parseInt(split[a].substring(5)) + 1;
                                                 msgs_received[index_new][j].msgno_parts = split[a].substring(0,4) + "x" + count;
                                             } else { // Match, has previous other matches so we increment the counter
                                                 var count = parseInt(split[a].substring(5)) + 1;
-                                                console.log(split[a].substring(5));
                                                 msgs_received[index_new][j].msgno_parts += " " + split[a].substring(0,4) + "x" + count;
                                             }
                                         } else { // No match, re-add the MSG ID to the parent message
