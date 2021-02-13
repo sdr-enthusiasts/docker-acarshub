@@ -266,15 +266,11 @@ function display_messages(msgs_to_process, selected_tabs, live_page=false) {
             }            
 
             if(message.hasOwnProperty("icao")) {
-                if (message.hasOwnProperty("icao_hex") && message.hasOwnProperty('icao_url')) {
-
-                    html_output += `ICAO: <strong><a href="${message['icao_url']}" target="_blank">${message['icao']}/${message['icao_hex']}</a></strong>`
-                }
-                else if(message.hasOwnProperty("icao_hex")) {
-                    html_output += `ICAO: <strong>${message['icao']}/${message['icao_hex']}</strong> `;    
-                } else {
-                    html_output += `ICAO: <strong>${message['icao']}</strong> `;
-                }
+                html_output += "ICAO: <strong>";
+                html_output += message.hasOwnProperty('icao_url') ? `<a href="${message['icao_url']}" target="_blank">` : "";
+                html_output += `${message['icao']}`;
+                html_output += message.hasOwnProperty("icao_hex") ? `/${message['icao_hex']}` : "";
+                html_output += message.hasOwnProperty('icao_url') ? "</a></strong>" : "</strong>";
             }
 
             html_output += "</td>";
