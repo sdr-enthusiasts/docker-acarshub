@@ -11,8 +11,10 @@
     <link rel="manifest" href="static/images/site.webmanifest">
     <script src="//code.jquery.com/jquery-3.3.1.min.js"></script>
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/3.1.0/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/js-cookie@rc/dist/js.cookie.min.js"></script>
     <script src="static/js/html_generator.js"></script>
     <script src="static/js/menu.js"></script>
+    <script src="static/js/alerts.js"></script>
     <script src="../static/js/search.js"  type="module"></script>
     <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
     <link rel="stylesheet" href="/static/css/site.css">
@@ -52,11 +54,13 @@
                 <td class="search_term">
                   <select name="dbfield" id="dbfield" onchange="javascript:runclick(0)">
                     <option value="flight-iata">Callsign (IATA)</option>
-                    <option value="tail">Tail Number</option>
                     <option value="depa">Departure</option>
                     <option value="dsta">Destination</option>
-                    <option value="text">Text</option>
+                    <option value="freq">Frequency</option>
+                    <option value="msglbl">Message Label</option>
                     <option value="msgno">Message Number</option>
+                    <option value="tail">Tail Number</option>
+                    <option value="text">Text</option>
                   </select>
                 </td>
               </tr>

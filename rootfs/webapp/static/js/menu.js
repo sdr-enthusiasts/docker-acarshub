@@ -1,20 +1,12 @@
 function generate_menu(){
 	html = '<nav>';
     html += '<ul class="primary">';
-    html += '<li>';
-    html += '<span class="nav_text">ACARS Hub</span>';
+    html += '<li><span class="nav_text">ACARS Hub</span></li>';
     html += '<li><a href="/">Live Messages</a></li>';
     html += '<li><a href="/search">Search Database</a></li>';
     html += '<li><a href="/stats">Statistics</a></li>';
-    html += '</ul>';
-    html += '</li>';
-
-    // Alerts!
-    /*html += '<li class="right_side"><a href="">Alerts</a>';
-    html += '<ul class="sub">';
-    html += '<li>Test</li>';
-    html += '</ul></li>';*/
-    html += '</nav>'
+    html += '<li><a href="/alerts">Alerts&nbsp;<span id="alert_count"></span></li></ul>';
+    html += '</nav>';
     $('#links').html(html);
  }
 

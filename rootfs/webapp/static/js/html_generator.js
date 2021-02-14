@@ -48,7 +48,14 @@ function display_messages(msgs_to_process, selected_tabs, live_page=false) {
                     else { // Otherwise this message's tab is not active
                         msgs_string += `<input type = "radio" id = "tab${tab_uid}_${unique_id}" name = "tabs_${unique_id}" onclick="handle_radio('` + tab_uid + `', '` + unique_id + `')">`;
                     }
-                    msgs_string += `<label for = "tab${tab_uid}_${unique_id}">Message ${j + 1}</label>`;
+
+                    var label_string = "";
+                    if(sub_messages[j].hasOwnProperty('matched'))
+                        label_string = `<span class="red">Message ${j + 1}</span>`;
+                    else
+                        label_string = `Message ${j + 1}`;
+
+                    msgs_string += `<label for = "tab${tab_uid}_${unique_id}">${label_string}</label>`;
                 }
             }
         }
@@ -88,7 +95,10 @@ function display_messages(msgs_to_process, selected_tabs, live_page=false) {
                     delete message[key];
             }
 
-            html_output += "<tr>";
+            if(sub_messages.length == 1 && message.hasOwnProperty('matched'))
+                html_output += '<tr class="red">';
+            else
+                html_output += "<tr>";
             html_output += `<td><strong>${message['message_type']}</strong> from <strong>${message['station_id']}</strong></td>`;
 
             var timestamp; // variable to save the timestamp We need this because the database saves the time as 'time' and live messages have it as 'timestamp' (blame Fred for this silly mis-naming of db columns)
@@ -107,6 +117,7 @@ function display_messages(msgs_to_process, selected_tabs, live_page=false) {
             // Special keys used by the JS files calling this function
             // Duplicates is used to indicate the number of copies recieved for this message
             // msgno_parts is the list of MSGID fields used to construct the multi-part message
+
             if(message.hasOwnProperty('duplicates')) {
                 html_output += `Duplicate(s) Received: <strong>${message['duplicates']}</strong><br>`;
             }
@@ -198,7 +209,6 @@ function display_messages(msgs_to_process, selected_tabs, live_page=false) {
             if(message.hasOwnProperty("text")) {
                 var text = message['text'];
                 text = text.replace("\\r\\n", "<br>");
-
                 //html_output += "<p>";
                 html_output += "<table class=\"message\">";
                 
@@ -211,7 +221,7 @@ function display_messages(msgs_to_process, selected_tabs, live_page=false) {
                     html_output += "<td class=\"text_top\">";
                     html_output += `<strong>Decoded Text (${decodedStatus}):</strong></p>`;
                     html_output += "<pre id=\"shadow\"><strong>";
-                    html_output += loop_array(message['decodedText'].formatted); // get the formatted html of the decoded text
+                    html_output += typeof message.matched_text === "object" ?  replace_text(message.matched_text, loop_array(message['decodedText'].formatted)) : loop_array(message['decodedText'].formatted); // get the formatted html of the decoded text
                     //html_output += `${message['decodedText'].raw}`;
                     html_output += "</strong></pre>";
                     html_output += "</td>";
@@ -222,7 +232,7 @@ function display_messages(msgs_to_process, selected_tabs, live_page=false) {
 
                 html_output += "<td class=\"text_top\">";
                 html_output += "<strong>Non-Decoded Text:</strong><p>";
-                html_output += `<pre id=\"shadow\"><strong>${text}</strong></pre>`;
+                html_output += `<pre id=\"shadow\"><strong>${typeof message.matched_text === "object" ? replace_text(message.matched_text, text) : text}</strong></pre>`;
                 html_output += "</td>";
                 html_output += "</tr></table>";
             }
@@ -248,22 +258,20 @@ function display_messages(msgs_to_process, selected_tabs, live_page=false) {
             html_output += "<tr>";
             html_output += "<td>";
             if(message.hasOwnProperty("tail")) {
-                html_output += `Tail: <strong><a href=\"https://flightaware.com/live/flight/${message['tail']}\" target=\"_blank\">${message['tail']}</a></strong> `;
+                html_output += `Tail: <strong><a href=\"https://flightaware.com/live/flight/${message['tail']}\" target=\"_blank\">${typeof message.matched_tail === "object" ? replace_text(message.matched_tail, message.tail) : message.tail}</a></strong> `;
             }
 
             if(message.hasOwnProperty("flight")) {
-                html_output += message['flight'];
+                html_output += typeof message.matched_flight === "object" ? replace_text(message.matched_flight, message.flight) : message.flight;
             }            
 
             if(message.hasOwnProperty("icao")) {
-                if (message.hasOwnProperty("icao_hex") && message.hasOwnProperty('icao_url')) {
-                    html_output += `ICAO: <strong><a href="${message['icao_url']}" target="_blank">${message['icao']}/${message['icao_hex']}</a></strong>`
-                }
-                else if(message.hasOwnProperty("icao_hex")) {
-                    html_output += `ICAO: <strong>${message['icao']}/${message['icao_hex']}</strong> `;    
-                } else {
-                    html_output += `ICAO: <strong>${message['icao']}</strong> `;
-                }
+                html_output += "ICAO: <strong>";
+                html_output += message.hasOwnProperty('icao_url') ? `<a href="${message['icao_url']}" target="_blank">` : "";
+                html_output += typeof message.matched_icao === "object" ? replace_text(message.matched_icao, message.icao.toString()) : `${message['icao']}`;
+                html_output += message.hasOwnProperty("icao_hex") && !typeof message.matched_icao === "object" ? `/${message['icao_hex']}` : "";
+                html_output += message.hasOwnProperty("icao_hex") && typeof message.matched_icao === "object" ? "/" + replace_text(message.matched_icao, message['icao_hex'].toString()) : "";
+                html_output += message.hasOwnProperty('icao_url') ? "</a></strong>" : "</strong>";
             }
 
             html_output += "</td>";
@@ -358,6 +366,13 @@ function display_messages(msgs_to_process, selected_tabs, live_page=false) {
     }
 
     return msgs_string;
+}
+
+function replace_text(input, text) {
+    for(var i = 0; i < input.length; i++) {
+        text = text.split(`${input[i].toUpperCase()}`).join(`<span class="red">${input[i].toUpperCase()}</span>`);
+    }
+    return text;
 }
 
 function loop_array(input) {

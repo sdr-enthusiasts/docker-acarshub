@@ -41,6 +41,10 @@ table.message {
   float: right;
 }
 
+textarea {
+  width: 95%;
+}
+
 img {
   max-width: 100%;
 }
@@ -128,8 +132,8 @@ div#right.row {
   background-image: -moz-linear-gradient(bottom, #333333 7%, #2B2B2B 100%);
   background-image: -o-linear-gradient(bottom, #333333 7%, #2B2B2B 100%);
   background-image: linear-gradient(bottom, #333333 7%, #2B2B2B 100%);
-  z-index: 13;
-  box-shadow: -4px -1px 2px -1px #888;
+  z-index: 9;
+  /*box-shadow: -4px -1px 2px -1px #888;*/
 }
 
 div#num_results.row {
@@ -403,8 +407,9 @@ ul {
   text-align: left;
 }
 
-.right_side {
+#right_side {
   float: right;
+  z-index: 300;
 }
 
 li {
@@ -434,9 +439,9 @@ nav {
   text-align: center;
   letter-spacing: 3px;
   text-shadow: 1px 1px 1px #0E0E0E;
-  -webkit-box-shadow: 2px 2px 3px #888;
+  /*-webkit-box-shadow: 2px 2px 3px #888;
   -moz-box-shadow: 2px 2px 3px #888;
-  box-shadow: 4px 2px 3px #888;
+  box-shadow: 4px 2px 3px #888;*/
   border-bottom-right-radius: 8px;
   border-bottom-left-radius: 8px;
   z-index: 10;
@@ -489,7 +494,8 @@ ul.sub li a {
   border-bottom: 1px dotted #ccc;
   border-right: none;
   color: #000;
-  padding: 15px 30px;
+  padding: 15px 0px;
+  
 }
 
 ul.sub li:last-child a {
