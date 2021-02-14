@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 from sqlalchemy import create_engine, Column, Integer, String, \
-    Text
+    Text, or_
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.declarative import DeclarativeMeta
@@ -455,6 +455,33 @@ def database_search(field, search_term, page=0):
         else:
             return [None, 50]
 
+
+def search_alerts(icao=None, tail=None, flight=None, text=None):
+    result = None
+    if icao is not None or tail is not None or flight is not None or text is not None:
+        try:
+            session = db_session()
+            result = session.query(messages)
+            filter_by = []
+
+            if icao is not None:
+                filter_by += [messages.icao.contains('%{0}%'.format(k)) for k in icao]
+            if tail is not None:
+                filter_by += [messages.tail.contains('%{0}%'.format(k)) for k in tail]
+            if flight is not None:
+                filter_by += [messages.flight.contains('%{0}%'.format(k)) for k in flight]
+            if text is not None:
+                filter_by += [messages.text.contains('%{0}%'.format(k)) for k in text]
+            result = result.filter(or_(*filter_by)).order_by(messages.time.desc())
+            session.close()
+        except Exception as e:
+            acarshub_helpers.acars_traceback(e, "database")
+        else:
+            if result is not None and result.count() > 0:
+                data = [json.dumps(d, cls=AlchemyEncoder) for d in result[:50]]
+                return data
+    else:
+        return None
 
 def show_all(page=0):
     result = None

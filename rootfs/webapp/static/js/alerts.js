@@ -32,7 +32,11 @@ $(document).ready(function(){
         document.getElementById("alert_tail").value = Cookies.get("alert_tail") ? Cookies.get("alert_tail") : "";
         document.getElementById("alert_icao").value = Cookies.get("alert_icao") ? Cookies.get("alert_icao") : "";
 
+        socket_alerts.emit('query', {'icao': alert_icao.length > 0 ? alert_icao : null, 'text': alert_text.length > 0 ? alert_text : null,
+                              'flight': alert_callsigns.length > 0 ? alert_callsigns : null, 'tail': alert_tail.length > 0 ? alert_tail : null}, '/alerts');
+
         socket_alerts.on('newmsg', function(msg) {
+            console.log(msg);
             var matched = match_alert(msg);
             if(matched.was_found) {
                 msg.msghtml.matched_text = matched.text;

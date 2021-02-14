@@ -490,6 +490,19 @@ def stats_connect():
                   namespace='/stats')
 
 
+@socketio.on('query', namespace='/alerts')
+def get_alerts(message, namespace):
+    import json
+
+    requester = request.sid
+    results = acarshub.acarshub_db.search_alerts(icao=message['icao'], text=message['text'], flight=message['flight'], tail=message['tail'])
+    results_sorted = results.reverse()
+    print(results_sorted)
+
+    for item in [item for item in (results or [])]:
+        socketio.emit('newmsg', {'msghtml': acarshub.update_keys(json.loads(item))}, to=requester, namespace="/alerts")
+
+
 @socketio.on('freqs', namespace="/stats")
 def request_freqs(message, namespace):
     requester = request.sid
