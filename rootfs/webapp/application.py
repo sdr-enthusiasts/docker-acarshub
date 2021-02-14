@@ -496,7 +496,8 @@ def get_alerts(message, namespace):
 
     requester = request.sid
     results = acarshub.acarshub_db.search_alerts(icao=message['icao'], text=message['text'], flight=message['flight'], tail=message['tail'])
-    results_sorted = results.reverse()
+    if results is not None:
+        results.reverse()
 
     for item in [item for item in (results or [])]:
         socketio.emit('newmsg', {'msghtml': acarshub.update_keys(json.loads(item))}, to=requester, namespace="/alerts")
