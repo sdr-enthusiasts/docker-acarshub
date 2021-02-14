@@ -13,10 +13,7 @@ msgs_received.unshift = function () {
     return Array.prototype.unshift.apply(this,arguments);
 }
 
-$(document).ready(function(){
-    generate_menu();
-    generate_footer();
-
+$(document).ready(function() {
     socket_alerts = io.connect('http://' + document.domain + ':' + location.port + '/alerts');
 
     alerts = Cookies.get("alert_unread") ? Number(Cookies.get("alert_unread")) : 0;
@@ -25,6 +22,8 @@ $(document).ready(function(){
     onInit();
 
     if(document.location.pathname == "/alerts") {
+        generate_menu();
+        generate_footer();
         Cookies.set('alert_unread', 0, { expires: 365 });
         // Set the text areas to the values saved in the cookies
         document.getElementById("alert_text").value = Cookies.get("alert_text") ? Cookies.get("alert_text") : "";
@@ -36,7 +35,6 @@ $(document).ready(function(){
                               'flight': alert_callsigns.length > 0 ? alert_callsigns : null, 'tail': alert_tail.length > 0 ? alert_tail : null}, '/alerts');
 
         socket_alerts.on('newmsg', function(msg) {
-            console.log(msg);
             var matched = match_alert(msg);
             if(matched.was_found) {
                 msg.msghtml.matched_text = matched.text;
@@ -48,11 +46,10 @@ $(document).ready(function(){
             }
         });
     } else if(document.location.pathname != "/") {
-        alerts -= 1;
-        updateAlertCounter();
         socket_alerts.on('newmsg', function(msg) {
             var matched = match_alert(msg);
             if(matched.was_found) {
+                alerts += 1;
                 updateAlertCounter();
             }
         });
@@ -62,12 +59,8 @@ $(document).ready(function(){
 });
 
 function updateAlertCounter() {
-    alerts += 1;
-    console.log(document.getElementById("alert_count"));
-    $('#alert_count').html(` <span class="red">(${alerts})</span>`);
-    //var txt = document.createTextNode();
-    //id.appendChild(txt);
-    console.log("end");
+    if(alerts)
+        $('#alert_count').html(` <span class="red">(${alerts})</span>`);
     Cookies.set('alert_unread', alerts, { expires: 365 });
 }
 

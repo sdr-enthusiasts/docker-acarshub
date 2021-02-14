@@ -11,6 +11,7 @@ $(document).ready(function(){
     //connect to the socket server.
     generate_menu();
     generate_footer();
+    updateAlertCounter();
     socket = io.connect('http://' + document.domain + ':' + location.port + '/search');
     var msgs_received = [];
     var num_results = [];
