@@ -82,7 +82,7 @@ if __name__ == "__main__":
     parser.add_argument(
         '--serials', '-s',
         type=str,
-        help='List of SDR serial numbers',
+        help='List of SDR serial numbers with PPM and gain. Separate each item with a comma. For example:\nInput with PPM but no gain: 000001,2\nInput with just gain: 000001,,28.6\nInput with all three: 000001,2,28.6',
         nargs='+',
         required=True,
     )
@@ -169,8 +169,17 @@ if __name__ == "__main__":
         for freq in output_vdlm[serial]:
             freqs += f" {freq}"
 
-        path = servicesd_path + "vdlm2dec-" + serial + "/"
-        print(path)
+        serial_fields = serial.split(",")
+        splitSerial = serial_fields[0]
+        splitPPM = None
+        splitGain = None
+        if(len(serial_fields) == 2):
+            splitPPM = serial_fields[1]
+        elif(len(serial_fields) == 3):
+            splitPPM = serial_fields[1]
+            splitGain = serial_fields[2]
+
+        path = servicesd_path + "vdlm2dec-" + splitSerial + "/"
         os.makedirs(path)
         shutil.copyfile("../etc/template/vdlm2dec/run", path + "run")
 
@@ -178,7 +187,11 @@ if __name__ == "__main__":
             if line.find("FREQS_VDLM=\"\"") == 0:
                 print('{}{}{}'.format("FREQS_VDLM=\"", freqs.strip(), "\"\n"), end='')
             elif line.find("SERIAL=\"\"") == 0:
-                print('{}{}{}'.format("SERIAL=\"", serial, "\"\n"), end='')
+                print('{}{}{}'.format("SERIAL=\"", splitSerial , "\"\n"), end='')
+            elif splitPPM is not None and line.find("PPM=\"\"") == 0:
+                print('{}{}{}'.format("PPM=\"", splitPPM, "\"\n"), end='')
+            elif splitGain is not None and line.find("GAIN=\"\"") == 0:
+                print('{}{}{}'.format("GAIN=\"", splitGain, "\"\n"), end='')
             else:
                 print('{}'.format(line),end='')
 
@@ -188,8 +201,17 @@ if __name__ == "__main__":
         for freq in output_acars[serial]:
             freqs += f" {freq}"
 
-        path = servicesd_path + "acarsdec-" + serial + "/"
-        print(path)
+        serial_fields = serial.split(",")
+        splitSerial = serial_fields[0]
+        splitPPM = None
+        splitGain = None
+        if(len(serial_fields) == 2):
+            splitPPM = serial_fields[1]
+        elif(len(serial_fields) == 3):
+            splitPPM = serial_fields[1]
+            splitGain = serial_fields[2]
+
+        path = servicesd_path + "acarsdec-" + splitSerial  + "/"
         os.makedirs(path)
         shutil.copyfile("../etc/template/acarsdec/run", path + "run")
 
@@ -197,7 +219,11 @@ if __name__ == "__main__":
             if line.find("FREQS_ACARS=\"\"") == 0:
                 print('{}{}{}'.format("FREQS_ACARS=\"", freqs.strip(), "\"\n"), end='')
             elif line.find("SERIAL=\"\"") == 0:
-                print('{}{}{}'.format("SERIAL=\"", serial, "\"\n"), end='')
+                print('{}{}{}'.format("SERIAL=\"", splitSerial , "\"\n"), end='')
+            elif splitPPM is not None and line.find("PPM=\"\"") == 0:
+                print('{}{}{}'.format("PPM=\"", splitPPM, "\"\n"), end='')
+            elif splitGain is not None and line.find("GAIN=\"\"") == 0:
+                print('{}{}{}'.format("GAIN=\"", splitGain, "\"\n"), end='')
             else:
                 print('{}'.format(line),end='')
 

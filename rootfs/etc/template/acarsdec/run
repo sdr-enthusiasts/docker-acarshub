@@ -8,15 +8,17 @@ ACARS_BIN="/usr/local/bin/acarsdec"
 SERIAL=""
 # shellcheck disable=SC2001
 FREQS_ACARS=""
+PPM=""
+GAIN=""
 
-if [ -n "$GAIN_ACARS" ]; then
-    GAIN_ACARS="-10"
+if [ -n "$GAIN" ]; then
+    GAIN="-10"
 fi
 	
-ACARS_CMD=("-g" "$GAIN_ACARS" "-i" "$STATION_ID_ACARS")
+ACARS_CMD=("-g" "$GAIN" "-i" "$STATION_ID_ACARS")
 
-if [ -n "${ACARS_PPM}" ]; then
-	ACARS_CMD+=("-p" "$ACARS_PPM")
+if [ -n "${PPM}" ]; then
+	ACARS_CMD+=("-p" "$PPM")
 fi
 
 if [ -n "${QUIET_LOGS}" ]; then

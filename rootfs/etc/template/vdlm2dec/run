@@ -8,15 +8,17 @@ VDLM_BIN="/usr/local/bin/vdlm2dec"
 SERIAL=""
 # shellcheck disable=SC2001
 FREQS_VDLM=""
+PPM=""
+GAIN=""
 
 if [ -n "$GAIN" ]; then
-    GAIN_VDLM="$GAIN"
+    GAIN="280"
 fi
 
 VDLM_CMD=("-J" "-G" "-E" "-U" "-g" "$GAIN_VDLM" "-i" "$STATION_ID_VDLM")
 
-if [ -n "${VDLM_PPM}" ]; then
-	VDLM_CMD+=("-p" "$VDLM_PPM")
+if [ -n "${PPM}" ]; then
+	VDLM_CMD+=("-p" "$PPM")
 fi
 
 if [ -n "${QUIET_LOGS}" ]; then
