@@ -7,7 +7,7 @@ export class Label_H1 extends DecoderPlugin {
     };
   }
 
-  decode(message: any) : any {
+  decode(message: any, options: any = {}) : any {
     const decodeResult: any = this.defaultResult;
     // console.log('DECODER: H1 detected');
 

@@ -13,8 +13,14 @@ See this gist for more info: <https://gist.github.com/kvnsmth/4688345> ("Be a go
 
 **To update the Subtree:**
 
+Ensure you have remote added (not sure if this is required for every clone for this repository...)
+
 ```bash
-git subtree pull --prefix acars-decoder-typescript https://github.com/airframesio/acars-decoder-typescript.git master
+git remote add -f acars-decoder-typescript https://github.com/airframesio/acars-decoder-typescript.git
+```
+
+```bash
+git subtree pull --prefix acars-decoder-typescript acars-decoder-typescript master --squash
 ```
 
 **To split changes into a fork:**

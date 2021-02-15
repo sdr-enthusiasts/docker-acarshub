@@ -11,7 +11,7 @@ export class Label_15 extends DecoderPlugin {
     };
   }
 
-  decode(message: any) : any {
+  decode(message: any, options: any = {}) : any {
     const decodeResult: any = this.defaultResult;
     decodeResult.decoder.name = this.name;
     decodeResult.formatted.description = 'Position Report';
@@ -28,10 +28,11 @@ export class Label_15 extends DecoderPlugin {
       decodeResult.raw.longitude = Number(results.groups.between.substr(7, 6)) / 1000;
       decodeResult.remaining.text = results.groups.between.substr(13);
 
-      decodeResult.formatted.items.coordinates = {
+      decodeResult.formatted.items.push({
+        type: 'coordinates',
         label: 'Coordinates',
         value: `${decodeResult.raw.latitude} ${decodeResult.raw.latitude_direction}, ${decodeResult.raw.longitude} ${decodeResult.raw.longitude_direction}`,
-      };
+      });
     }
 
     decodeResult.decoded = true;

@@ -11,7 +11,7 @@ export class Label_44_ON extends DecoderPlugin {
     };
   }
 
-  decode(message: any) : any {
+  decode(message: any, options: any = {}) : any {
     const decodeResult: any = this.defaultResult;
     decodeResult.decoder.name = this.name;
     decodeResult.formatted.description = 'On Runway Report';
@@ -22,8 +22,10 @@ export class Label_44_ON extends DecoderPlugin {
     const regex = /^ON02,(?<unsplit_coords>.*),(?<departure_icao>.*),(?<arrival_icao>.*),(?<current_date>.*),(?<current_time>.*),(?<fuel_in_tons>.*)$/;
     const results = message.text.match(regex);
     if (results) {
-      console.log(`Label 44 On Runway Report: groups`);
-      console.log(results.groups);
+      if (options.debug) {
+        console.log(`Label 44 On Runway Report: groups`);
+        console.log(results.groups);
+      }
 
       const coordsRegex = /(?<lac>[NS])(?<la>.+)\s*(?<lnc>[EW])(?<ln>.+)/;
       const coordsResults = results.groups.unsplit_coords.match(coordsRegex);

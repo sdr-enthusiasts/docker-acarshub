@@ -11,13 +11,13 @@
     <link rel="manifest" href="static/images/site.webmanifest">
     <script src="//code.jquery.com/jquery-3.3.1.min.js"></script>
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/3.1.0/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/js-cookie@rc/dist/js.cookie.min.js"></script>
     <script src="static/js/menu.js"></script>
+    <script src="static/js/html_generator.js"></script>
     <script src="static/js/alerts.js"></script>
-    <script src="static/js/about.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/1.9.1/showdown.min.js"></script>
     <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
     <link rel="stylesheet" href="/static/css/site.css">
-    <title>ACARS Stats</title>
+    <title>ACARS Message Alerts</title>
   </head>
   <body>
     <div class="container" id="header">
@@ -27,11 +27,20 @@
     <div class="container" id="content">
     <div class="row" id="right">
       <div class="fixed_results">
-        <span id="stat_menu"></span>
+        <span id="stat_menu">
+          <label for="alert_text" class="menu_non_link">Text Field:</label><br /> 
+          <textarea rows="2" id="alert_text"></textarea><br /> 
+          <label for="alert_callsigns" class="menu_non_link">Callsign:</label><br /> 
+          <textarea rows="2" id="alert_callsigns"></textarea><br /> 
+          <label for="alert_tail" class="menu_non_link">Tail Number:</label><br /> 
+          <textarea rows="2" id="alert_tail"></textarea><br />
+          <label for="alert_icao" class="menu_non_link">ICAO Address:</label><br /> 
+          <textarea rows="2" id="alert_icao"></textarea><br /> 
+          <button type="submit" value="Submit" onclick="updateAlerts()">Update</button>
+        </span>
       </div>
     </div>
       <div class="left" id="log">
-        <!-- insert -->
       </div>
     </div>
     <div class="footer" id="footer_div">

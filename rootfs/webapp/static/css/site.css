@@ -41,6 +41,10 @@ table.message {
   float: right;
 }
 
+textarea {
+  width: 95%;
+}
+
 img {
   max-width: 100%;
 }
@@ -128,8 +132,8 @@ div#right.row {
   background-image: -moz-linear-gradient(bottom, #333333 7%, #2B2B2B 100%);
   background-image: -o-linear-gradient(bottom, #333333 7%, #2B2B2B 100%);
   background-image: linear-gradient(bottom, #333333 7%, #2B2B2B 100%);
-  z-index: 13;
-  box-shadow: -4px -1px 2px -1px #888;
+  z-index: 9;
+  /*box-shadow: -4px -1px 2px -1px #888;*/
 }
 
 div#num_results.row {
@@ -403,8 +407,9 @@ ul {
   text-align: left;
 }
 
-.right_side {
+#right_side {
   float: right;
+  z-index: 300;
 }
 
 li {
@@ -434,9 +439,9 @@ nav {
   text-align: center;
   letter-spacing: 3px;
   text-shadow: 1px 1px 1px #0E0E0E;
-  -webkit-box-shadow: 2px 2px 3px #888;
+  /*-webkit-box-shadow: 2px 2px 3px #888;
   -moz-box-shadow: 2px 2px 3px #888;
-  box-shadow: 4px 2px 3px #888;
+  box-shadow: 4px 2px 3px #888;*/
   border-bottom-right-radius: 8px;
   border-bottom-left-radius: 8px;
   z-index: 10;
@@ -489,7 +494,8 @@ ul.sub li a {
   border-bottom: 1px dotted #ccc;
   border-right: none;
   color: #000;
-  padding: 15px 30px;
+  padding: 15px 0px;
+  
 }
 
 ul.sub li:last-child a {
@@ -631,4 +637,69 @@ input[type='checkbox'] {
 
 .collapsible-content p { 
   margin-bottom: 30px; 
+}
+
+/* message tabs */
+
+.tabinator {
+  background: transparent;
+}
+.tabinator input {
+  display: none;
+}
+.tabinator label {
+  box-sizing: border-box;
+  display: inline-block;
+  padding-top: 8px;
+  padding-bottom: 6px;
+  padding-right:  10px;
+  padding-left: 10px;
+  min-width: 102px;
+  text-align: center;
+  color: #ccc;
+  margin-bottom: -1px;
+  margin-left: -1px;
+  border: 1px solid #bbb;
+  /*border-radius: 10px 10px 0 0;*/
+}
+.tabinator label:before {
+  content:'';
+  display:block;
+  width:100%;
+  height:15px;
+  background-color: transparent;
+  position:absolute;
+  bottom:0px;
+  left:0;
+  z-index:10;
+  /*border-radius: 10px 10px 0 0;*/
+}
+.tabinator label:hover {
+  color: #888;
+  cursor: pointer;
+}
+.tabinator input:checked + label {
+  position: relative;
+  color: #000;
+  background: transparent;
+  border: 1px solid #bbb;
+  border-bottom: 1px solid #fff;
+  /*border-radius: 10px 10px 0 0;*/
+}
+.tabinator input:checked + label:after {
+  display: block;
+  content: '';
+  position: absolute;
+  top: 0; right: 0; bottom: 0; left: 0;
+  box-shadow: 0 0 15px #939393;
+  /*border-radius: 10px 10px 0 0;*/
+}
+[id^="message"] {
+  display: none;
+  border-top: 1px solid #bbb;
+}
+
+.checked {
+  display: block;
+  box-shadow: 0 0 15px #939393;
 }

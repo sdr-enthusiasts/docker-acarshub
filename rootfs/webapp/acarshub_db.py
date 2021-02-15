@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 from sqlalchemy import create_engine, Column, Integer, String, \
-    Text
+    Text, or_
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.declarative import DeclarativeMeta
@@ -29,10 +29,9 @@ try:
 except Exception as e:
     acarshub_helpers.acars_traceback(e, "database")
 
-# DB PATH MUST BE FROM ROOT
+# DB PATH MUST BE FROM ROOT!
 
 db_path = acarshub_helpers.ACARSHUB_DB
-
 database = create_engine(db_path)
 db_session = sessionmaker(bind=database)
 Messages = declarative_base()
@@ -60,7 +59,7 @@ for item in iata_override:
     else:
         print(f"[database] error adding in {item} to IATA overrides")
 
-# Grab the freqs
+# Grab the freqs from the environment so we know what is being monitored
 
 if acarshub_helpers.ENABLE_ACARS:
     acars_freqs = acarshub_helpers.FREQS_ACARS.split(";")
@@ -74,6 +73,8 @@ if acarshub_helpers.ENABLE_VDLM:
     for item in vdlm_freqs:
         freqs.append(("VDL-M2", item))
 
+# Class for storing the count of messages received on each frequency
+
 
 class messagesFreq(Messages):
     __tablename__ = 'freqs'
@@ -83,6 +84,9 @@ class messagesFreq(Messages):
     count = Column('count', Integer)
 
 
+# Class to store a count of how many messages are received at what signal level
+
+
 class messagesLevel(Messages):
     __tablename__ = 'level'
     id = Column(Integer, primary_key=True)
@@ -90,12 +94,18 @@ class messagesLevel(Messages):
     count = Column('count', Integer)
 
 
+# Class to store a count of messages that have been received.
+
+
 class messagesCount(Messages):
     __tablename__ = 'count'
     id = Column(Integer, primary_key=True)
-    total = Column('total', Integer)
-    errors = Column('errors', Integer)
-    good = Column('good', Integer)
+    total = Column('total', Integer)  # Count of logged messages
+    errors = Column('errors', Integer)  # Count of logged messages with errors
+    good = Column('good', Integer)  # Count of logged messages without errors
+
+
+# Class to store a count of messages received but hold no data
 
 
 class messagesCountDropped(Messages):
@@ -103,6 +113,9 @@ class messagesCountDropped(Messages):
     id = Column(Integer, primary_key=True)
     nonlogged_errors = Column('errors', Integer)
     nonlogged_good = Column('good', Integer)
+
+
+# Class to store our messages
 
 
 class messages(Messages):
@@ -142,6 +155,9 @@ class messages(Messages):
     # level = Column('level', String(32)) # Uncomment this line when we're ready to migrate the db
 
 
+# Class to store our IATA/ICAO callsigns
+
+
 class airlines(Airlines):
     __tablename__ = 'airlines'
     index = Column(Integer, primary_key=True)
@@ -149,6 +165,8 @@ class airlines(Airlines):
     ICAO = Column('ICAO', Text)
     NAME = Column('NAME', Text)
 
+
+# Now we've created the classes for the database, we'll associate the class with the database and create any missing tables
 
 Messages.metadata.create_all(database)
 Airlines.metadata.create_all(airlines_database)
@@ -276,7 +294,6 @@ def add_message_from_json(message_type, message_from_json):
             pass
         elif index == 'level':
             level = message_from_json['level']
-            pass
         elif index == 'end':
             pass
         # We have a key that we aren't saving the database. Log it
@@ -312,6 +329,7 @@ def add_message_from_json(message_type, message_from_json):
             print(f"[database] discarding no text message: {message_from_json}")
 
         # Now lets decide where to log the message count to
+        # Firs twe'll see if the message is not blank
 
         if text is not None or libacars is not None or \
            dsta is not None or depa is not None or eta is not None or gtout is not None or \
@@ -335,6 +353,8 @@ def add_message_from_json(message_type, message_from_json):
                 count.nonlogged_good += 1
 
         # Log the level count
+        # We'll see if the level is in the database already, and if so, increment the counter
+        # If not, we'll add it in
 
         found_level = session.query(messagesLevel).filter(messagesLevel.level == level).first()
 
@@ -410,26 +430,58 @@ def database_search(field, search_term, page=0):
         elif field == "tail":
             result = session.query(messages).filter(messages.tail.contains(search_term)).order_by(messages.time.desc())
         elif field == "depa":
-            result = result = session.query(messages).filter(messages.depa.contains(search_term)).order_by(messages.time.desc())
+            result = session.query(messages).filter(messages.depa.contains(search_term)).order_by(messages.time.desc())
         elif field == "dsta":
             result = session.query(messages).filter(messages.dsta.contains(search_term)).order_by(messages.time.desc())
         elif field == "text":
             result = session.query(messages).filter(messages.text.contains(search_term)).order_by(messages.time.desc())
         elif field == "msgno":
             result = session.query(messages).filter(messages.msgno.contains(search_term)).order_by(messages.time.desc())
+        elif field == "freq":
+            result = session.query(messages).filter(messages.freq.contains(search_term)).order_by(messages.time.desc())
+        elif field == "msglbl":
+            result = session.query(messages).filter(messages.label.contains(search_term)).order_by(messages.time.desc())
         session.close()
     except Exception:
         print("[database] Error running search!")
-
-    if acarshub_helpers.DEBUG_LOGGING:
-        print("[database] Done searching")
-
-    if result.count() > 0:
-        data = [json.dumps(d, cls=AlchemyEncoder) for d in result[page:page + 50]]
-        return [data, result.count()]
-    else:
         return [None, 50]
+    else:
+        if acarshub_helpers.DEBUG_LOGGING:
+            print("[database] Done searching")
 
+        if result is not None and result.count() > 0:
+            data = [json.dumps(d, cls=AlchemyEncoder) for d in result[page:page + 50]]
+            return [data, result.count()]
+        else:
+            return [None, 50]
+
+
+def search_alerts(icao=None, tail=None, flight=None, text=None):
+    result = None
+    if icao is not None or tail is not None or flight is not None or text is not None:
+        try:
+            session = db_session()
+            result = session.query(messages)
+            filter_by = []
+
+            if icao is not None:
+                filter_by += [messages.icao.contains('%{0}%'.format(k)) for k in icao]
+            if tail is not None:
+                filter_by += [messages.tail.contains('%{0}%'.format(k)) for k in tail]
+            if flight is not None:
+                filter_by += [messages.flight.contains('%{0}%'.format(k)) for k in flight]
+            if text is not None:
+                filter_by += [messages.text.contains('%{0}%'.format(k)) for k in text]
+            result = result.filter(or_(*filter_by)).order_by(messages.time.desc())
+            session.close()
+        except Exception as e:
+            acarshub_helpers.acars_traceback(e, "database")
+        else:
+            if result is not None and result.count() > 0:
+                data = [json.dumps(d, cls=AlchemyEncoder) for d in result[:50]]
+                return data
+    else:
+        return None
 
 def show_all(page=0):
     result = None
@@ -543,7 +595,7 @@ def grab_most_recent():
         if result.count() > 0:
             return [json.dumps(d, cls=AlchemyEncoder) for d in result]
         else:
-            return None
+            return []
     except Exception as e:
         acarshub_helpers.acars_traceback(e, "database")
 

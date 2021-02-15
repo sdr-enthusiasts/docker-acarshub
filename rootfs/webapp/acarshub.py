@@ -3,6 +3,11 @@
 import os
 import acarshub_db
 
+# Set the URL used for the web front end to show flight tracking.
+# Not doing too much sanitizing of the URL to ensure it's formatted right
+# But we'll at least check and see if the user put a trailing slash or not
+
+
 if os.getenv("TAR1090_URL", default=False):
     if os.getenv("TAR1090_URL").endswith("/"):
         ADSB_URL = os.getenv("TAR1090_URL") + "?icao="
@@ -28,7 +33,15 @@ def libacars_formatted(libacars=None):
     return html_output
 
 
+# Function to prepare a message for the front end
+# We do any pre-processing/updating of the keys that can't be done on the front end
+
+
 def update_keys(json_message):
+    # Santiztize the message of any empty/None vales
+    # This won't occur for live messages but if the message originates from a DB query
+    # It will return all keys, even ones where the original message didn't have a value
+
     stale_keys = []
     for key in json_message:
         if json_message[key] is None:
@@ -36,6 +49,8 @@ def update_keys(json_message):
 
     for key in stale_keys:
         del json_message[key]
+
+    # Now we process individual keys, if that key is present
 
     if "libacars" in json_message.keys() and json_message['libacars'] is not None:
         json_message['libacars'] = libacars_formatted(json_message['libacars'])
@@ -80,10 +95,16 @@ def update_keys(json_message):
 def flight_finder(callsign=None, hex_code=None, url=True):
     global ADSB_URL
 
+    # If there is only a hex code, we'll return just the ADSB url
+    # Front end will format correctly.
+
     if callsign is None and hex_code is not None:
         return f'{ADSB_URL}{hex_code}'
 
     if callsign is not None:
+        # Check the ICAO DB to see if we know what it is
+        # The ICAO DB will return the ICAO code back if it didn't find anything
+        
         icao, airline = acarshub_db.find_airline_code_from_iata(callsign[:2])
         flight_number = callsign[2:]
         flight = icao + flight_number
@@ -123,7 +144,7 @@ def handle_message(message=None):
 
                 if 'results_after' in message:
                     # ask the database for the results at the user requested index
-                    # multiply the selected index by 20 (we have 20 results per page) so the db
+                    # multiply the selected index by 50 (we have 50 results per page) so the db
                     # knows what result index to send back
                     search = acarshub_db.database_search(message['field'], message['search_term'], message['results_after'] * 20)
                 else:
@@ -145,7 +166,7 @@ def handle_message(message=None):
                 for result in query_result:
                     json_message = update_keys(json.loads(result))
 
-                    serialized_json.insert(0, json.dumps(json_message))
+                    serialized_json.append(json.dumps(json_message))
 
             return (total_results, serialized_json, search_term)
     else:

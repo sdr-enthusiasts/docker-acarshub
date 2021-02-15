@@ -10,7 +10,7 @@ export class Label_H1_M1BPRG extends DecoderPlugin { // eslint-disable-line came
     };
   }
 
-  decode(message: any) : any {
+  decode(message: any, options: any = {}) : any {
     const decodeResult: any = this.defaultResult;
     decodeResult.decoder.name = this.name;
 

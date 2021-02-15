@@ -54,6 +54,11 @@ thread_message_listener_stop_event = Event()
 thread_database = Thread()
 thread_database_stop_event = Event()
 
+# alert threads
+
+thread_alerts = Thread()
+thread_alerts_stop_event = Event()
+
 # maxlen is to keep the que from becoming ginormous
 # the messages will be in the que all the time, even if no one is using the website
 # old messages will automatically be removed
@@ -62,10 +67,15 @@ thread_database_stop_event = Event()
 
 que_messages = deque(maxlen=15)
 que_database = deque(maxlen=15)
+que_alerts = deque(maxlen=15)
+
+messages_recent = []
 
 vdlm_messages = 0
 acars_messages = 0
 error_messages = 0
+
+alert_users = []
 
 
 def update_rrd_db():
@@ -125,11 +135,38 @@ def scheduled_tasks():
         schedule.every().minute.at(":30").do(acarshub_rrd.update_graphs)
 
     # Schedule the database pruner
-    schedule.every().hour.do(acarshub.acarshub_db.pruneOld)
+    schedule.every().hour.at(":30").do(acarshub.acarshub_db.pruneOld)
+    # Check for dead threads and restart
+    schedule.every().minute.at(":45").do(init_listeners, "Error encountered! Restarting... ")
+
     while not thread_scheduler_stop_event.isSet():
         schedule.run_pending()
         time.sleep(1)
 
+
+def alert_handler():
+    import time
+    import copy
+
+    while not thread_alerts_stop_event.isSet():
+        time.sleep(1)
+
+        if len(que_alerts) != 0:
+            message_source, json_message_initial = que_alerts.popleft()
+            json_message = copy.deepcopy(json_message_initial)  # creating a copy so that our changes below aren't made to the parent object
+            # Send output via socketio
+            if acarshub_helpers.DEBUG_LOGGING:
+                print("[alerts] sending output via socketio.emit")
+            json_message.update({"message_type": message_source})
+
+            json_message = acarshub.update_keys(json_message)
+
+            socketio.emit('newmsg', {'msghtml': json_message}, namespace='/alerts')
+            if acarshub_helpers.DEBUG_LOGGING:
+                print("[alerts] packet sent via socketio.emit")
+                print("[alerts] Completed with generation")
+        else:
+            pass
 
 def database_listener():
     import sys
@@ -156,6 +193,7 @@ def message_listener(message_type=None, ip='127.0.0.1', port=None):
     import sys
 
     global error_messages
+    global alert_users
 
     if message_type == "VDLM2":
         global vdlm_messages
@@ -269,46 +307,77 @@ def message_listener(message_type=None, ip='127.0.0.1', port=None):
                             if acarshub_helpers.DEBUG_LOGGING:
                                 print(f"[{message_type.lower()}Generator] appending message")
                             que_messages.append((que_type, j))
+                        if len(alert_users) > 0:
+                            que_alerts.append((que_type, j))
                         if acarshub_helpers.DEBUG_LOGGING:
                             print(f"[{message_type.lower()}Generator] sending off to db")
                         que_database.append((que_type, j))
+                        if(len(messages_recent) >= 50):
+                            del messages_recent[0]
+                        messages_recent.append((que_type, j))
 
 
-def init_listeners():
+def init_listeners(special_message=None):
+    # This function both starts the listeners and is used with the scheduler to restart errant threads
+
     global thread_acars_listener
     global thread_vdlm2_listener
     global thread_database
     global thread_scheduler
+    global thread_html_generator
+    global thread_alerts
 
-    if acarshub_helpers.DEBUG_LOGGING:
+    if acarshub_helpers.DEBUG_LOGGING and special_message is not None:
         print('[init] Starting data listeners')
 
     if not thread_acars_listener.isAlive() and acarshub_helpers.ENABLE_ACARS:
-        if acarshub_helpers.DEBUG_LOGGING:
-            print('[init] Starting ACARS listener')
+        if acarshub_helpers.DEBUG_LOGGING or special_message is not None:
+            print(f'[init] {special_message}Starting ACARS listener')
         thread_acars_listener = Thread(target=message_listener, args=("ACARS", "127.0.0.1", 15550))
         thread_acars_listener.start()
 
     if not thread_vdlm2_listener.isAlive() and acarshub_helpers.ENABLE_VDLM:
-        if acarshub_helpers.DEBUG_LOGGING:
-            print('[init] Starting VDLM listener')
+        if acarshub_helpers.DEBUG_LOGGING or special_message is not None:
+            print(f'[init] {special_message}Starting VDLM listener')
         thread_vdlm2_listener = Thread(target=message_listener, args=("VDLM2", "127.0.0.1", 15555))
         thread_vdlm2_listener.start()
     if not thread_database.isAlive():
-        if acarshub_helpers.DEBUG_LOGGING:
-            print('[init] Starting Database Thread')
+        if acarshub_helpers.DEBUG_LOGGING or special_message is not None:
+            print(f'[init] {special_message}Starting Database Thread')
         thread_database = Thread(target=database_listener)
         thread_database.start()
     if not thread_scheduler.isAlive():
-        if acarshub_helpers.DEBUG_LOGGING:
-            print("[init] starting scheduler")
+        if acarshub_helpers.DEBUG_LOGGING or special_message is not None:
+            print(f"[init] {special_message} starting scheduler")
         thread_scheduler = Thread(target=scheduled_tasks)
         thread_scheduler.start()
+    if connected_users > 0 and not thread_html_generator.isAlive():
+        if acarshub_helpers.DEBUG_LOGGING or special_message is not None:
+            print(f"{special_message}Starting htmlListener")
+        thread_html_generator = socketio.start_background_task(htmlListener)
+    if len(alert_users) > 0 and not thread_alerts.isAlive():
+        if acarshub_helpers.DEBUG_LOGGING or special_message is not None:
+            print(f"{special_message}Starting alert thread")
+        thread_alerts = socketio.start_background_task(alert_handler)
 
-# Any things we want to have started up in the background
+
+def init():
+    import json
+    global messages_recent
+    # grab recent messages from db and fill the most recent array
+    # then turn on the listeners
+    print("[init] grabbing most recent messages from database")
+    results = acarshub.acarshub_db.grab_most_recent()
+
+    if results is not None:
+        for item in results:
+            json_message = json.loads(item)
+            messages_recent.insert(0, [json_message['message_type'], json_message])
+    print("[init] Completed grabbing messages from database, starting up rest of services")
+    init_listeners()
 
 
-init_listeners()
+init()
 
 
 @app.route('/')
@@ -337,6 +406,11 @@ def aboutmd():
     return render_template('helppage.MD')
 
 
+@app.route('/alerts')
+def alerts():
+    return render_template('alerts.html')
+
+
 # The listener for the live message page
 # Ensure the necessary listeners are fired up
 
@@ -344,7 +418,7 @@ def aboutmd():
 @socketio.on('connect', namespace='/main')
 def main_connect():
     import sys
-    import json
+    import copy
     # need visibility of the global thread object
     global thread_html_generator
     global connected_users
@@ -355,10 +429,12 @@ def main_connect():
         print(f'Client connected. Total connected: {connected_users}')
 
     requester = request.sid
-    socketio.emit('labels', {'labels': acarshub.acarshub_db.get_message_label_json()}, room=requester,
+    socketio.emit('labels', {'labels': acarshub.acarshub_db.get_message_label_json()}, to=requester,
                   namespace="/main")
-    for item in reversed(acarshub.acarshub_db.grab_most_recent()):
-        socketio.emit('newmsg', {'msghtml': acarshub.update_keys(json.loads(item))}, room=requester,
+    for msg_type, json_message_orig in messages_recent:
+        json_message = copy.deepcopy(json_message_orig)
+        json_message['message_type'] = msg_type
+        socketio.emit('newmsg', {'msghtml': acarshub.update_keys(json_message)}, to=requester,
                       namespace='/main')
 
     # Start the htmlGenerator thread only if the thread has not been started before.
@@ -370,6 +446,31 @@ def main_connect():
         thread_html_generator = socketio.start_background_task(htmlListener)
 
 
+@socketio.on('connect', namespace='/alerts')
+def alert_connect():
+    global thread_alerts_stop_event
+    global thread_alerts
+
+    alert_users.append(request.sid)
+
+    if not thread_alerts.isAlive():
+        if acarshub_helpers.DEBUG_LOGGING:
+            print("[alerts]Starting alert thread")
+        thread_alerts_stop_event.clear()
+        thread_alerts = socketio.start_background_task(alert_handler)
+
+
+@socketio.on('disconnect', namespace='/alerts')
+def alert_disconnect():
+    try:
+        del(alert_users[request.sid])
+    except Exception:
+        pass
+
+    if len(alert_users)  == 0:
+        thread_alerts_stop_event.set()
+
+
 @socketio.on('connect', namespace='/search')
 def search_connect():
     if acarshub_helpers.DEBUG_LOGGING:
@@ -377,7 +478,7 @@ def search_connect():
 
     rows, size = acarshub.acarshub_db.database_get_row_count()
     requester = request.sid
-    socketio.emit('database', {"count": rows, "size": size}, room=requester, namespace='/search')
+    socketio.emit('database', {"count": rows, "size": size}, to=requester, namespace='/search')
 
 
 @socketio.on('connect', namespace='/stats')
@@ -386,20 +487,33 @@ def stats_connect():
         print('Client connected stats')
 
     socketio.emit('newmsg', {"vdlm": acarshub_helpers.ENABLE_VDLM, "acars": acarshub_helpers.ENABLE_ACARS},
-                   namespace='/stats')
+                  namespace='/stats')
+
+
+@socketio.on('query', namespace='/alerts')
+def get_alerts(message, namespace):
+    import json
+
+    requester = request.sid
+    results = acarshub.acarshub_db.search_alerts(icao=message['icao'], text=message['text'], flight=message['flight'], tail=message['tail'])
+    if results is not None:
+        results.reverse()
+
+    for item in [item for item in (results or [])]:
+        socketio.emit('newmsg', {'msghtml': acarshub.update_keys(json.loads(item))}, to=requester, namespace="/alerts")
 
 
 @socketio.on('freqs', namespace="/stats")
 def request_freqs(message, namespace):
     requester = request.sid
-    socketio.emit('freqs', {'freqs': acarshub.acarshub_db.get_freq_count()}, room=requester,
+    socketio.emit('freqs', {'freqs': acarshub.acarshub_db.get_freq_count()}, to=requester,
                   namespace="/stats")
 
 
 @socketio.on('count', namespace="/stats")
 def request_count(message, namespace):
     requester = request.sid
-    socketio.emit('count', {'count': acarshub.acarshub_db.get_errors()}, room=requester, 
+    socketio.emit('count', {'count': acarshub.acarshub_db.get_errors()}, to=requester,
                   namespace="/stats")
 
 # handle a query request from the browser
@@ -418,7 +532,7 @@ def handle_message(message, namespace):
 
     requester = request.sid
     socketio.emit('newmsg', {'num_results': total_results, 'msghtml': serialized_json,
-                             'search_term': str(search_term)}, room=requester, namespace='/search')
+                             'search_term': str(search_term)}, to=requester, namespace='/search')
 
 
 @socketio.on('disconnect', namespace='/main')
@@ -460,6 +574,11 @@ def error_handler_search(e):
 @socketio.on_error('/stats')
 def stats_handler_search(e):
     acarshub_helpers.acars_traceback(e, "server-stats")
+
+
+@socketio.on_error('/alerts')
+def error_handler_alerts(e):
+    acarshub_helpers.acars_traceback(e, "server-alerts")
 
 
 @socketio.on_error_default

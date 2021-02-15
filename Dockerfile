@@ -74,6 +74,11 @@ RUN set -x && \
     KEPT_PACKAGES+=(rrdtool) && \
     TEMP_PACKAGES+=(librrd-dev) && \
     # install packages
+    ## Builder fixes...
+    mkdir -p /usr/sbin/ && \
+    ln -s /usr/bin/dpkg-split /usr/sbin/dpkg-split && \
+    ln -s /usr/bin/dpkg-deb /usr/sbin/dpkg-deb && \
+    ln -s /bin/tar /usr/sbin/tar && \
     apt-get update && \
     apt-get install -y --no-install-recommends \
         ${KEPT_PACKAGES[@]} \
