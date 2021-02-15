@@ -1,7 +1,15 @@
 #!/usr/bin/env python3
 import sys
+import os
+import shutil
 import argparse
+import fileinput
 from pprint import pprint
+
+if os.getenv("SPAM", default=False):
+    servicesd_path = "/Users/fred/services.d/"
+else:
+    servicesd_path = "/etc/services.d/"
 
 # place in javascript_msgs_threads
 
@@ -15,7 +23,8 @@ def is_frequency_assigned(output_dict, freq):
 def assign_freqs_to_serials(
     serials: list,
     freqs: list,
-    bw: float = 2.0,    
+    serials_used: list, 
+    bw: float = 2.0, 
 ):
 
     # order frequencies lowest to highest
@@ -26,7 +35,8 @@ def assign_freqs_to_serials(
     
     # for each SDR serial...
     for serial in serials:
-
+        if serial in serials_used:
+            continue
         # for each frequency...
         for freq in freqs:
 
@@ -78,26 +88,58 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        '--freqs', '-f',
+        '--freqs-acars', '-a',
         type=float,
-        help='List of frequencies in MHz',
+        help='List of frequencies for ACARS in MHz',
         nargs='+',
-        required=True,
+        required=False,
+    )
+
+    parser.add_argument(
+        '--freqs-vdlm', '-v',
+        type=float,
+        help='List of frequencies for VDLM in MHz',
+        nargs='+',
+        required=False,
     )
 
     args = parser.parse_args()
 
-    output = assign_freqs_to_serials(
-        serials=args.serials,
-        freqs=args.freqs,
-        bw=args.bandwidth,
-        )
+    if args.freqs_acars:
+        output_acars = assign_freqs_to_serials(
+            serials=args.serials,
+            freqs=args.freqs_acars,
+            bw=args.bandwidth,
+            serials_used=[],
+            )
+    else:
+        output_acars = dict()
 
+    acars_serials = []
+
+    for serial in output_acars.keys():
+        acars_serials.append(serial)
+
+    if args.freqs_vdlm:
+        output_vdlm = assign_freqs_to_serials(
+            serials=args.serials,
+            freqs=args.freqs_vdlm,
+            bw=args.bandwidth,
+            serials_used=acars_serials,
+            )
+    else:
+        output_vdlm = dict()
+
+#for item in [item for item in (results or [])]:
     # if any frequencies have not been assigned then error (leftover freqs)
     freqs_not_assigned = list()
-    for freq in args.freqs:
-        if not is_frequency_assigned(output, freq):
+    for freq in [freq for freq in (args.freqs_acars or [])]:
+        if not is_frequency_assigned(output_acars, freq):
             freqs_not_assigned.append(freq)
+    for freq in [freq for freq in (args.freqs_vdlm or [])]:
+        if not is_frequency_assigned(output_vdlm, freq):
+            freqs_not_assigned.append(freq)
+
     if len(freqs_not_assigned) > 0:
         log_str = "ERROR: frequencies not assigned (insufficient SDRs): "
         for freq in freqs_not_assigned:
@@ -109,7 +151,7 @@ if __name__ == "__main__":
     # if output.keys() doesnt contain all of serials then error (leftover serials)
     serials_unused = list()
     for serial in args.serials:
-        if serial not in output.keys():
+        if serial not in output_acars.keys() and serial not in output_vdlm.keys():
             serials_unused.append(serial)
     if len(serials_unused) > 0:
         log_str = "ERROR: SDRs are not required: "
@@ -119,4 +161,45 @@ if __name__ == "__main__":
         print(log_str[:len(log_str)-1], file=sys.stderr)
         sys.exit(1)
 
-    pprint(output)
+    # Everything worked, lets create the startup files
+
+    for serial in output_vdlm:
+        freqs = ""
+
+        for freq in output_vdlm[serial]:
+            freqs += f" {freq}"
+
+        path = servicesd_path + "vdlm2dec-" + serial + "/"
+        print(path)
+        os.makedirs(path)
+        shutil.copyfile("../etc/template/vdlm2dec/run", path + "run")
+
+        for line in fileinput.input(path + "run", inplace=True):
+            if line.find("FREQS_VDLM=\"\"") == 0:
+                print('{}{}{}'.format("FREQS_VDLM=\"", freqs.strip(), "\"\n"), end='')
+            elif line.find("SERIAL=\"\"") == 0:
+                print('{}{}{}'.format("SERIAL=\"", serial, "\"\n"), end='')
+            else:
+                print('{}'.format(line),end='')
+
+    for serial in output_acars:
+        freqs = ""
+
+        for freq in output_acars[serial]:
+            freqs += f" {freq}"
+
+        path = servicesd_path + "acarsdec-" + serial + "/"
+        print(path)
+        os.makedirs(path)
+        shutil.copyfile("../etc/template/acarsdec/run", path + "run")
+
+        for line in fileinput.input(path + "run", inplace=True):
+            if line.find("FREQS_ACARS=\"\"") == 0:
+                print('{}{}{}'.format("FREQS_ACARS=\"", freqs.strip(), "\"\n"), end='')
+            elif line.find("SERIAL=\"\"") == 0:
+                print('{}{}{}'.format("SERIAL=\"", serial, "\"\n"), end='')
+            else:
+                print('{}'.format(line),end='')
+
+    pprint(output_acars)
+    pprint(output_vdlm)
