@@ -12,7 +12,7 @@ PPM=""
 GAIN=""
 RTLMULT=""
 
-if [ -n "$GAIN" ]; then
+if [ -z "$GAIN" ]; then
     GAIN="-10"
 fi
 	

@@ -11,11 +11,11 @@ FREQS_VDLM=""
 PPM=""
 GAIN=""
 
-if [ -n "$GAIN" ]; then
+if [ -z "$GAIN" ]; then
     GAIN="280"
 fi
 
-VDLM_CMD=("-J" "-G" "-E" "-U" "-g" "$GAIN_VDLM" "-i" "$STATION_ID_VDLM")
+VDLM_CMD=("-J" "-G" "-E" "-U" "-g" "$GAIN" "-i" "$STATION_ID_VDLM")
 
 if [ -n "${PPM}" ]; then
 	VDLM_CMD+=("-p" "$PPM")
