@@ -71,7 +71,8 @@ def assign_freqs_to_serials(
     output = dict()
     
     # for each SDR serial...
-    for serial in serials:
+    #for item in [item for item in (results or [])]:
+    for serial in [serial for serial in (serials or [])]:
         if serial in serials_used:
             continue
         # for each frequency...
@@ -122,7 +123,7 @@ if __name__ == "__main__":
         type=str,
         help='List of SDR serial numbers with PPM and gain. Separate each item with a comma. For example:\nInput with PPM but no gain: 000001,2\nInput with just gain: 000001,,28.6\nInput with all three: 000001,2,28.6',
         nargs='+',
-        required=True,
+        required=False,
     )
 
     parser.add_argument(
@@ -168,15 +169,16 @@ if __name__ == "__main__":
     else:
         output_vdlm = dict()
 
-#for item in [item for item in (results or [])]:
-    # if any frequencies have not been assigned then error (leftover freqs)
     freqs_not_assigned = list()
-    for freq in [freq for freq in (args.freqs_acars or [])]:
-        if not is_frequency_assigned(output_acars, freq):
-            freqs_not_assigned.append(freq)
-    for freq in [freq for freq in (args.freqs_vdlm or [])]:
-        if not is_frequency_assigned(output_vdlm, freq):
-            freqs_not_assigned.append(freq)
+    # if any frequencies have not been assigned then error (leftover freqs)
+    # but make sure we're not potentially in a legacy mode
+    if len(output_acars) > 0 or len(output_vdlm) > 0:
+        for freq in [freq for freq in (args.freqs_acars or [])]:
+            if not is_frequency_assigned(output_acars, freq):
+                freqs_not_assigned.append(freq)
+        for freq in [freq for freq in (args.freqs_vdlm or [])]:
+            if not is_frequency_assigned(output_vdlm, freq):
+                freqs_not_assigned.append(freq)
 
     if len(freqs_not_assigned) > 0:
         log_str = "ERROR: frequencies not assigned (insufficient SDRs): "
@@ -188,7 +190,7 @@ if __name__ == "__main__":
 
     # if output.keys() doesnt contain all of serials then error (leftover serials)
     serials_unused = list()
-    for serial in args.serials:
+    for serial in [serial for serial in (args.serials or [])]:
         if serial not in output_acars.keys() and serial not in output_vdlm.keys():
             serials_unused.append(serial)
     if len(serials_unused) > 0:
@@ -214,7 +216,7 @@ if __name__ == "__main__":
         if os.getenv(f"ACARS_{index}", default=False) and os.getenv(f"ACARS_FREQ_{index}", default=False):
             acars_freqs = os.getenv(f"ACARS_FREQ_{index}").split(";")
             acars_custom = assign_freqs_to_serials(
-                serials=f"ACARS_{index}".split(";"),
+                serials=os.getenv(f"ACARS_{index}").split(","),
                 freqs=acars_freqs,
                 bw=args.bandwidth,
                 serials_used=[],
@@ -231,7 +233,7 @@ if __name__ == "__main__":
         if os.getenv(f"VDLM_{index}", default=False) and os.getenv(f"VDLM_FREQ_{index}", default=False):
             vdlm_freqs = os.getenv(f"VDLM_FREQ_{index}").split(";")
             vdlm_custom = assign_freqs_to_serials(
-                serials=f"VDLM_{index}".split(";"),
+                serials=os.getenv(f"VDLM_{index}").split(","),
                 freqs=vdlm_freqs,
                 bw=args.bandwidth,
                 serials_used=[],
@@ -241,6 +243,53 @@ if __name__ == "__main__":
             index += 1
         else:
             break
+
+    # Okay, lets test for depricated SERIAL_ACARS/SERIAL_VDLM
+    if os.getenv("SERIAL_ACARS", default=False):
+        old_serial = os.getenv("SERIAL_ACARS")
+
+        if os.getenv("ACARS_PPM", default=False):
+            old_serial += "," + os.getenv("ACARS_PPM")
+        else:
+            old_serial += ","
+
+        if os.getenv("GAIN_ACARS", default=False):
+            old_serial += "," + os.getenv("GAIN_ACARS")
+        elif os.getenv("GAIN", default=False):
+            old_serial += "," + os.getenv("GAIN")
+
+        serial_acars = [old_serial]
+        print(serial_acars)
+        acars = assign_freqs_to_serials(
+                serials=serial_acars,
+                freqs=args.freqs_acars,
+                bw=args.bandwidth,
+                serials_used=[],
+                )
+        generate_output_files(serials=acars, decoder="acarsdec", freqs_string="ACARS")
+
+    if os.getenv("SERIAL_VDLM", default=False):
+        old_serial = os.getenv("SERIAL_VDLM")
+
+        if os.getenv("VDLM_PPM", default=False):
+            old_serial += "," + os.getenv("VDLM_PPM")
+        else:
+            old_serial += ","
+
+        if os.getenv("GAIN_VDLM", default=False):
+            old_serial += "," + os.getenv("GAIN_VDLM")
+        elif os.getenv("GAIN", default=False):
+            old_serial += "," + os.getenv("GAIN")
+
+        serial_vdlm = [old_serial]
+
+        vdlm = assign_freqs_to_serials(
+                serials=serial_vdlm,
+                freqs=args.freqs_vdlm,
+                bw=args.bandwidth,
+                serials_used=[],
+                )
+        generate_output_files(serials=vdlm, decoder="vdlm2dec", freqs_string="VDLM")
 
     pprint(output_acars)
     pprint(output_vdlm)

@@ -8,17 +8,15 @@ mkdir -p /run/acars/
 FREQ_CMD=()
 
 if [ -n "${GAIN}" ]; then
-	echo "Error. Please use GAIN_ACARS and GAIN_VDLM to set the gain."
+	echo "WARNING. GAIN ENV variable is depricated. Please use GAIN_ACARS and GAIN_VDLM to set the gain."
 fi
 
 if [ -n "$SERIAL_ACARS" ]; then
-	echo "Error: Please see the github readme for update useage."
-	exit 1
+	echo "WARNING: SERIAL_ACARS is depricated. If you are using this in conjunction with SERIAL unexpected results will happen. Please see the github readme for update useage."
 fi
 
 if [ -n "$SERIAL_VDLM" ]; then
-	echo "Error: Please see the github readme for update useage."
-	exit 1
+	echo "WARNING: SERIAL_VDLM is depricated. If you are using this in conjunction with SERIAL unexpected results will happen. Please see the github readme for update useage."
 fi
 
 if [ -n "${ENABLE_ACARS}" ]; then
@@ -30,7 +28,7 @@ if [ -n "${ENABLE_ACARS}" ]; then
 	if [ -n "${FREQS_ACARS}" ]; then
 		FREQ_CMD+=("-a" $(echo $FREQS_ACARS | sed 's/;/ /g'))
 	elif [ -z "${ACARS_FREQ_0}" ]; then
-		echo "Error: ACARS enabled with no FREQS_ACARS. Exiting"
+		echo "Error: ACARS enabled with no FREQS_ACARS or ACARS_FREQ_0. Exiting"
 		exit 1
 	fi
 fi
@@ -43,12 +41,15 @@ if [ -n "${ENABLE_VDLM}" ]; then
 	if [ -n "${FREQS_VDLM}" ]; then
 		FREQ_CMD+=("-v" $(echo $FREQS_VDLM | sed 's/;/ /g'))
 	elif [ -z "${VDLM_FREQ_0}" ]; then
-		echo "Error: VDLM enabled with no FREQS_VDLM. Exiting"
+		echo "Error: VDLM enabled with no FREQS_VDLM or VDLM_FREQ_0. Exiting"
 		exit 1
 	fi
 fi
 
-FREQ_CMD+=("-s" $(echo $SERIAL | sed 's/;/ /g'))
+if [ -n "${SERIAL}" ]; then
+	FREQ_CMD+=("-s" $(echo $SERIAL | sed 's/;/ /g'))
+fi
+
 echo "${FREQ_CMD[@]}"
 echo "Generating decoder startup files"
 
