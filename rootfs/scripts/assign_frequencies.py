@@ -19,6 +19,7 @@ def is_frequency_assigned(output_dict, freq):
             return True
     return False
 
+
 def generate_output_files(serials, decoder, freqs_string):
     for serial in serials:
         freqs = ""
@@ -62,7 +63,6 @@ def generate_output_files(serials, decoder, freqs_string):
         mode = os.stat(path + "/run").st_mode
         mode |= (mode & 0o444) >> 2    # copy R bits to X
         os.chmod(path + "/run", mode)
-
 
 def assign_freqs_to_serials(
     serials: list,
