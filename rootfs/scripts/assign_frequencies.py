@@ -30,11 +30,16 @@ def generate_output_files(serials, decoder, freqs_string):
         splitSerial = serial_fields[0]
         splitPPM = None
         splitGain = None
+        splitRTLMult = None
         if(len(serial_fields) == 2):
             splitPPM = serial_fields[1]
         elif(len(serial_fields) == 3):
             splitPPM = serial_fields[1]
             splitGain = serial_fields[2]
+        elif(len(serial_fields) == 4):
+            splitPPM = serial_fields[1]
+            splitGain = serial_fields[2]
+            splitRTLMult = serial_fields[3]
 
         path = servicesd_path + f"{decoder}-" + splitSerial
         os.makedirs(path)
@@ -49,6 +54,8 @@ def generate_output_files(serials, decoder, freqs_string):
                 print('{}{}{}'.format("PPM=\"", splitPPM, "\"\n"), end='')
             elif splitGain is not None and line.find("GAIN=\"\"") == 0:
                 print('{}{}{}'.format("GAIN=\"", splitGain, "\"\n"), end='')
+            elif splitRTLMult is not None and line.find("RTLMULT=\"\"") == 0:
+                print('{}{}{}'.format("RTLMULT=\"", splitRTLMult, "\"\n"), end='')
             else:
                 print('{}'.format(line),end='')
 
@@ -209,7 +216,7 @@ if __name__ == "__main__":
     index = 0
 
     # loop through custom
-    # input format:       ACARS_indexnumber=serial,ppm,gain
+    # input format:       ACARS_indexnumber=serial,ppm,gain,rtlmult
     # input format freqs: ACARS_FREQ_indexnumber=freq1;freq2
 
     while True:
@@ -280,6 +287,11 @@ if __name__ == "__main__":
             old_serial += "," + os.getenv("GAIN_VDLM")
         elif os.getenv("GAIN", default=False):
             old_serial += "," + os.getenv("GAIN")
+        else:
+            old_serial += ","
+
+        if os.getenv("ACARS_RTLMULT", default=False):
+            old_serial += "," + os.getenv("ACARS_RTLMULT")
 
         serial_vdlm = [old_serial]
 

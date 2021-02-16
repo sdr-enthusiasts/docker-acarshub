@@ -10,6 +10,7 @@ SERIAL=""
 FREQS_ACARS=""
 PPM=""
 GAIN=""
+RTLMULT=""
 
 if [ -n "$GAIN" ]; then
     GAIN="-10"
@@ -29,8 +30,8 @@ else
 	ACARS_CMD+=("-v")
 fi
 
-if [ -n "${ACARS_RTLMULT}" ]; then
-	ACARS_CMD+=("-m" "$ACARS_RTLMULT")
+if [ -n "${RTLMULT}" ]; then
+	ACARS_CMD+=("-m" "$RTLMULT")
 fi
 
 # Send output JSON to acars_server
