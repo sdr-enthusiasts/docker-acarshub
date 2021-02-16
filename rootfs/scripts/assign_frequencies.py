@@ -42,14 +42,14 @@ def generate_output_files(serials, decoder, freqs_string):
             splitGain = serial_fields[2]
             splitRTLMult = serial_fields[3]
 
-        if decoder == "acarsdec" and splitGain.startswith('A'):
+        if decoder == "acarsdec" and splitGain is not None and splitGain.startswith('A'):
             splitGain = "-10"
-        elif splitGain.startswith('A'):
+        elif splitGain is not None and splitGain.startswith('A'):
             splitGain = splitGain.replace('A', '')
         
-        if decoder == "vdlm2dec":
+        if decoder == "vdlm2dec" and splitGain is not None:
             splitGain = splitGain.replace('.', '')
-        elif decoder == "acarsdec" and splitGain != "-10" and splitGain.find(".") == -1:
+        elif decoder == "acarsdec" and splitGain != "-10" and splitGain is not None and splitGain.find(".") == -1:
             print(f"WARNING: The SDR {splitSerial} is being used for ACARS Decoding and the Gain value does not include a period. You may experience improper gain...")
 
         path = servicesd_path + f"{decoder}-" + splitSerial
