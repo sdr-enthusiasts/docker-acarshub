@@ -76,16 +76,15 @@ done
 # Return result or error
 if [[ -n "$OUTPUT_DEVICE_ID" ]]; then
     echo "$OUTPUT_DEVICE_ID"
-
     # Test if the device is free
     if ! rtl_eeprom -d "$OUTPUT_DEVICE_ID" > /dev/null 2>&1; then
 
       # Fail if device in use and requested
       if [[ -n "$FAIL_IF_DEVICE_NOT_FREE" ]]; then
-        log "ERROR: The device is in use"
+        log "ERROR: The device $OUTPUT_DEVICE_ID is in use"
         exit 1
       else
-        log "WARNING: The device is in use"
+        log "WARNING: The device $OUTPUT_DEVICE_ID is in use"
         exit 0
       fi
     

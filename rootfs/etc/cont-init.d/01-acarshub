@@ -1,9 +1,9 @@
-##!/usr/bin/with-contenv sh
-## shellcheck shell=sh
+#!/usr/bin/with-contenv bash
+# shellcheck shell=bash
 
 # create the /run/acars dir
 
-#mkdir -p /run/acars/
+mkdir -p /run/acars/
 
 FREQ_CMD=()
 
@@ -27,12 +27,12 @@ if [ -n "${ENABLE_ACARS}" ]; then
 		exit 1
 	fi
 
-	if [ -z "${FREQS_ACARS}" ]; then
+	if [ -n "${FREQS_ACARS}" ]; then
+		FREQ_CMD+=("-a" $(echo $FREQS_ACARS | sed 's/;/ /g'))
+	elif [ -z "${ACARS_FREQ_0}" ]; then
 		echo "Error: ACARS enabled with no FREQS_ACARS. Exiting"
 		exit 1
 	fi
-
-	FREQ_CMD+=("-a" $(echo $FREQS_ACARS | sed 's/;/ /g'))
 fi
 
 if [ -n "${ENABLE_VDLM}" ]; then
@@ -40,24 +40,26 @@ if [ -n "${ENABLE_VDLM}" ]; then
 		echo "Error: VDLM enabled with no STATION_ID_VDLM set. Exiting"
 		exit 1
 	fi
-	if [ -z "${FREQS_VDLM}" ]; then
+	if [ -n "${FREQS_VDLM}" ]; then
+		FREQ_CMD+=("-v" $(echo $FREQS_VDLM | sed 's/;/ /g'))
+	elif [ -z "${VDLM_FREQ_0}" ]; then
 		echo "Error: VDLM enabled with no FREQS_VDLM. Exiting"
 		exit 1
 	fi
-
-	FREQ_CMD+=("-v" $(echo $FREQS_VDLM | sed 's/;/ /g'))
 fi
 
 FREQ_CMD+=("-s" $(echo $SERIAL | sed 's/;/ /g'))
-
+echo "${FREQ_CMD[@]}"
 echo "Generating decoder startup files"
 
 pushd ../../scripts
-python3 assign_frequencies.py "${FREQ_CMD[@]}" 
+python3 assign_frequencies.py "${FREQ_CMD[@]}"
+
+
 
 #FREQS_VDLM=$(echo "$FREQS_VDLM" | sed 's/;/ /g')
 # Ensure stats files are present
-#touch /run/acars/vdlm2.past5min.json
-#touch /run/acars/acars.past5min.json
+touch /run/acars/vdlm2.past5min.json
+touch /run/acars/acars.past5min.json
 
 exit 0

@@ -19,6 +19,43 @@ def is_frequency_assigned(output_dict, freq):
             return True
     return False
 
+def generate_output_files(serials, decoder, freqs_string):
+    for serial in serials:
+        freqs = ""
+
+        for freq in serials[serial]:
+            freqs += f" {freq}"
+
+        serial_fields = serial.split(",")
+        splitSerial = serial_fields[0]
+        splitPPM = None
+        splitGain = None
+        if(len(serial_fields) == 2):
+            splitPPM = serial_fields[1]
+        elif(len(serial_fields) == 3):
+            splitPPM = serial_fields[1]
+            splitGain = serial_fields[2]
+
+        path = servicesd_path + f"{decoder}-" + splitSerial
+        os.makedirs(path)
+        shutil.copyfile(f"../etc/template/{decoder}/run", path + "/run")
+
+        for line in fileinput.input(path + "/run", inplace=True):
+            if line.find(f"FREQS_{freqs_string}=\"\"") == 0:
+                print('{}{}{}'.format(f"FREQS_{freqs_string}=\"", freqs.strip(), "\"\n"), end='')
+            elif line.find("SERIAL=\"\"") == 0:
+                print('{}{}{}'.format("SERIAL=\"", splitSerial , "\"\n"), end='')
+            elif splitPPM is not None and line.find("PPM=\"\"") == 0:
+                print('{}{}{}'.format("PPM=\"", splitPPM, "\"\n"), end='')
+            elif splitGain is not None and line.find("GAIN=\"\"") == 0:
+                print('{}{}{}'.format("GAIN=\"", splitGain, "\"\n"), end='')
+            else:
+                print('{}'.format(line),end='')
+
+        mode = os.stat(path + "/run").st_mode
+        mode |= (mode & 0o444) >> 2    # copy R bits to X
+        os.chmod(path + "/run", mode)
+
 
 def assign_freqs_to_serials(
     serials: list,
@@ -52,8 +89,9 @@ def assign_freqs_to_serials(
                 continue    
 
             # ensure the current frequency is within bandwidth range
-            max_freq_for_serial = output[serial][0] + bw
-            if freq > max_freq_for_serial:
+            # casting to float just in case the input is a string...silly custom SDRs
+            max_freq_for_serial = float(output[serial][0]) + bw
+            if float(freq) > max_freq_for_serial:
                 # if frequency is outside frequency range for this serial, move on to next
                 break
             else:
@@ -163,69 +201,46 @@ if __name__ == "__main__":
 
     # Everything worked, lets create the startup files
 
-    for serial in output_vdlm:
-        freqs = ""
+    generate_output_files(serials=output_vdlm, decoder="vdlm2dec", freqs_string="VDLM")
+    generate_output_files(serials=output_acars, decoder="acarsdec", freqs_string="ACARS")
 
-        for freq in output_vdlm[serial]:
-            freqs += f" {freq}"
+    index = 0
 
-        serial_fields = serial.split(",")
-        splitSerial = serial_fields[0]
-        splitPPM = None
-        splitGain = None
-        if(len(serial_fields) == 2):
-            splitPPM = serial_fields[1]
-        elif(len(serial_fields) == 3):
-            splitPPM = serial_fields[1]
-            splitGain = serial_fields[2]
+    # loop through custom
+    # input format:       ACARS_indexnumber=serial,ppm,gain
+    # input format freqs: ACARS_FREQ_indexnumber=freq1;freq2
 
-        path = servicesd_path + "vdlm2dec-" + splitSerial + "/"
-        os.makedirs(path)
-        shutil.copyfile("../etc/template/vdlm2dec/run", path + "run")
+    while True:
+        if os.getenv(f"ACARS_{index}", default=False) and os.getenv(f"ACARS_FREQ_{index}", default=False):
+            acars_freqs = os.getenv(f"ACARS_FREQ_{index}").split(";")
+            acars_custom = assign_freqs_to_serials(
+                serials=f"ACARS_{index}".split(";"),
+                freqs=acars_freqs,
+                bw=args.bandwidth,
+                serials_used=[],
+                )
 
-        for line in fileinput.input(path + "run", inplace=True):
-            if line.find("FREQS_VDLM=\"\"") == 0:
-                print('{}{}{}'.format("FREQS_VDLM=\"", freqs.strip(), "\"\n"), end='')
-            elif line.find("SERIAL=\"\"") == 0:
-                print('{}{}{}'.format("SERIAL=\"", splitSerial , "\"\n"), end='')
-            elif splitPPM is not None and line.find("PPM=\"\"") == 0:
-                print('{}{}{}'.format("PPM=\"", splitPPM, "\"\n"), end='')
-            elif splitGain is not None and line.find("GAIN=\"\"") == 0:
-                print('{}{}{}'.format("GAIN=\"", splitGain, "\"\n"), end='')
-            else:
-                print('{}'.format(line),end='')
+            generate_output_files(serials=acars_custom, decoder="acarsdec", freqs_string="ACARS")
+            index += 1
+        else:
+            break
 
-    for serial in output_acars:
-        freqs = ""
+    index = 0
 
-        for freq in output_acars[serial]:
-            freqs += f" {freq}"
+    while True:
+        if os.getenv(f"VDLM_{index}", default=False) and os.getenv(f"VDLM_FREQ_{index}", default=False):
+            vdlm_freqs = os.getenv(f"VDLM_FREQ_{index}").split(";")
+            vdlm_custom = assign_freqs_to_serials(
+                serials=f"VDLM_{index}".split(";"),
+                freqs=vdlm_freqs,
+                bw=args.bandwidth,
+                serials_used=[],
+                )
 
-        serial_fields = serial.split(",")
-        splitSerial = serial_fields[0]
-        splitPPM = None
-        splitGain = None
-        if(len(serial_fields) == 2):
-            splitPPM = serial_fields[1]
-        elif(len(serial_fields) == 3):
-            splitPPM = serial_fields[1]
-            splitGain = serial_fields[2]
-
-        path = servicesd_path + "acarsdec-" + splitSerial  + "/"
-        os.makedirs(path)
-        shutil.copyfile("../etc/template/acarsdec/run", path + "run")
-
-        for line in fileinput.input(path + "run", inplace=True):
-            if line.find("FREQS_ACARS=\"\"") == 0:
-                print('{}{}{}'.format("FREQS_ACARS=\"", freqs.strip(), "\"\n"), end='')
-            elif line.find("SERIAL=\"\"") == 0:
-                print('{}{}{}'.format("SERIAL=\"", splitSerial , "\"\n"), end='')
-            elif splitPPM is not None and line.find("PPM=\"\"") == 0:
-                print('{}{}{}'.format("PPM=\"", splitPPM, "\"\n"), end='')
-            elif splitGain is not None and line.find("GAIN=\"\"") == 0:
-                print('{}{}{}'.format("GAIN=\"", splitGain, "\"\n"), end='')
-            else:
-                print('{}'.format(line),end='')
+            generate_output_files(serials=vdlm_custom, decoder="vdlm2dec", freqs_string="VDLM")
+            index += 1
+        else:
+            break
 
     pprint(output_acars)
     pprint(output_vdlm)

@@ -41,9 +41,9 @@ if [ -n "${SERIAL}" ]; then
 	set -e
 
 	if [ -n "${QUIET_LOGS}" ]; then
-		DEVICE_ID="$(rtl_serial_to_deviceid.sh -f -s "$SERIAL")"
+		DEVICE_ID="$(rtl_serial_to_deviceid.sh -s "$SERIAL")"
 	else
-		DEVICE_ID="$(rtl_serial_to_deviceid.sh -v -f -s "$SERIAL")"
+		DEVICE_ID="$(rtl_serial_to_deviceid.sh -v -s "$SERIAL")"
 	fi
 
 	set +e
