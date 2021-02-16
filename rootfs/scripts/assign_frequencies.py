@@ -265,6 +265,9 @@ if __name__ == "__main__":
         elif os.getenv("GAIN", default=False):
             old_serial += "," + os.getenv("GAIN")
 
+        if os.getenv("ACARS_RTLMULT", default=False):
+            old_serial += "," + os.getenv("ACARS_RTLMULT")
+
         serial_acars = [old_serial]
         print(serial_acars)
         acars = assign_freqs_to_serials(
@@ -289,9 +292,6 @@ if __name__ == "__main__":
             old_serial += "," + os.getenv("GAIN")
         else:
             old_serial += ","
-
-        if os.getenv("ACARS_RTLMULT", default=False):
-            old_serial += "," + os.getenv("ACARS_RTLMULT")
 
         serial_vdlm = [old_serial]
 

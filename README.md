@@ -112,42 +112,64 @@ Please note that for `TAR1090_URL` the required format is `http[s]://**HOSTNAME*
 | Variable | Description | Required | Default |
 |----------|-------------|---------|--------|
 | `ENABLE_ACARS` | Toggle ACARS decoding on. If set to any non-blank value ACARS decoding will start | No | Blank |
-| `GAIN_ACARS`     | Sets the gain for the dongle used for ACARS. See notes blow | No | `-10` (auto-gain) |
 | `STATION_ID_ACARS` | Your unique ID for the ACARS feed. Used on the [ACARS.io](http://acars.io) site. Follow the guide [here](https://app.airframes.io/about) for formatting. | Yes, if ENABLE_ACARS is enabled | Blank |
-| `FREQS_ACARS` | List of frequencies, separaed by a single `;`, used for ACARS monitoring. | Yes, if ENABLE_ACARS is enabled | Blank |
-| `ACARS_PPM` | If your SDR requires a PPM correction, set this value | No | Blank |
-| `ACARS_RTLMULT` | Set the sample rate for the SDR. See notes below | No | 160 |
-
-* The ACARS Decoder supports `AGC/Automatic Gain Control`. To enable, set `GAIN_ACARS` to `-10`. If you want to set the gain manually the format is is in `dB` (ie, `28.0`, `48.6` and not the previous `280` or `486`)
-* For the sample rate, use `192` for `2.4 MS/s` and `160` for `2.0MS/s` (default)
-
-For RTLSDR device selection, _one_ of the following arguments must also be set if `ENABLE_ACARS` is enabled.
-
-| Variable | Description | Required | Default |
-|----------|-------------|---------|--------|
-| `SERIAL_ACARS` | Serial of the RTLSDR dongle used for ACARS decoding. | Yes, if ENABLE_ACARS is enabled | Blank |
-| `DEVICE_ACARS` | Device number of the RTLSDR dongle used for ACARS decoding. | Yes, if ENABLE_ACARS is enabled | Blank |
-
-It is generally recommended to use `SERIAL_ACARS`, as device numbers can change if devices are added/removed/etc.
+| `FREQS_ACARS` | List of frequencies, separaed by a single `;`, used for ACARS monitoring. | Yes, if ENABLE_ACARS is enabled AND you are not using custom SDR definitions (see below)| Blank |
 
 ### VDLM2
 
 | Variable | Description | Required | Default |
 |----------|-------------|---------|--------|
 | `ENABLE_VDLM` | Toggle VDLM decoding on. If set to any non-blank value VDLM decoding will start | No | Blank |
-| `GAIN_VDLM`     | Sets the gain for the dongle used for VDLM | No | `280` |
 | `STATION_ID_VDLM`  | Your unique ID for the VDLM  feed. Used on the [ACARS.io](http://acars.io) site. Follow the guide [here](https://app.airframes.io/about) for formatting. | Yes, if ENABLE_VDLM is enabled | Blank |
-| `FREQS_VDLM`  | List of frequencies, separated by a single `;`, used for VDLM monitoring. | Yes, if ENABLE_VDLM is enabled | Blank |
-| `VDLM_PPM` | If your SDR requires a PPM correction, set this value | No | Blank |
+| `FREQS_VDLM`  | List of frequencies, separated by a single `;`, used for VDLM monitoring. | Yes, if ENABLE_VDLM is enabled AND you are not using custom SDR definitions (see below)| Blank |
 
-For RTLSDR device selection, _one_ of the following arguments must also be set if `ENABLE_ACARS` is enabled.
+### RTL Device assignment
+
+You have two options that can be used interchangably to assign RTLSDR devices in the container. The first method is most likely what most users will want
+
+#### Method 1: Auto-assignment of SDRs
+
+The container will auto-assign frequencies to an SDR based on the number of available SDRs and what decoder you've set up for that frequency. You can use both Method 1 and Method 2 to assign SDRs in the container, but ensure the serials used in one method are not used in the other.
 
 | Variable | Description | Required | Default |
-|----------|-------------|---------|--------|
-| `SERIAL_VDLM`  | Serial of the RTLSDR dongle used for VDLM decoding. | Yes, if ENABLE_VDLM is enabled | Blank |
-| `DEVICE_VDLM`  | Device number of the RTLSDR dongle used for VDLM decoding. | Yes, if ENABLE_VDLM is enabled | Blank |
+| `SERIAL` | List of SDRs and configuration options (see below), with each SDR separated by a `;` | Yes, if Method 2 below is not used | Blank |
 
-It is generally recommended to use `SERIAL_VDLM`, as device numbers can change if devices are added/removed/etc.
+Example: `SERIAL=00012507,2,-10,160;00012095,0,280,160`
+
+#### Method 2: Assign Specific Frequencies to a Specific SDR
+
+If you wish to not have frequencies auto-assigned use this method. You can use both Method 1 and Method 2 to assign SDRs in the container, but ensure the serials used in one method are not used in the other. For each SDR you want to specify the frequency assignment/decoder, use one value from each of the following tables:
+
+| Variable | Description | Required | Default |
+| `ACARS_x` | SDR with configuration options. Replace x with 0, and for every SDR you add under ACARS increase the number by one | Yes, if Method 1 is not used above and you want ACARS decoding. See below for formatting the SDR line | Yes, if Method 1 is not used | Blank
+| `VDLM_x` | SDR with configuration options. Replace x with 0, and for every SDR you add under VDLM increase the number by one | Yes, if Method 1 is not used above and you want VDLM decoding. See below for formatting the SDR line | Blank |
+
+For frequency assignment, use the following:
+
+| `ACARS_FREQ_x` | list of frequencies, each separated by a single `;`, to be used by the `ACARS_x` decoder above. Ensure the number used is the same in both configuration variables: ie `ACARS_0` and `ACARS_FREQ_0` |
+| `VDLM_FREQ_x` | list of frequencies, each separated by a single `;`, to be used by the `VDLM_x` decoder above. Ensure the number used is the same in both configuration variables: IE `VDLM_0` and `VDLM_FREQ_0` |
+
+#### Configuring the SDR options
+
+To format the SDR configuration correctly, the container expects the following options:
+
+* SDR serial
+* PPM correction
+* Gain (see below for options there)
+* RTL Multiplier - for setting the bandwidth, used by ACARS only
+
+If you don't wish to set the value for a certain option, you can skip it by leaving it blank
+
+So if your serial for the SDR was `00012095`, you had no PPM correction, and a gain of `28.0` and wanted to use the default RTL Multiplier: `SERIAL=00012095,,28.0,`
+
+If you have more than one SDR being auto-assigned (NOT APPLICABLE to Method 2 above), separate each SDR with a `;`
+
+Example: `SERIAL=00012095,,28.0,;00012507,2,A460`
+
+* The ACARS Decoder supports `AGC/Automatic Gain Control`. To enable, set `GAIN_ACARS` to `-10`
+* If you are not using ACG and wish to set the gain manually, use dBm format: `28.0`
+* If you are using Auto-Assignment of the SDRs and wish to use ACG if the decoder is being used for ACARS, but want a specific value for VDLM, pre-pend the value with an `A`: `A46.0`
+* For the sample rate, use `192` for `2.4 MS/s` and `160` for `2.0MS/s` (default)
 
 ## Viewing the messages
 
