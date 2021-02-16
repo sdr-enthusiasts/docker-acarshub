@@ -46,9 +46,10 @@ def generate_output_files(serials, decoder, freqs_string):
             splitGain = "-10"
         elif splitGain.startswith('A'):
             splitGain = splitGain.replace('A', '')
-        elif decoder == "vdlm2dec":
+        
+        if decoder == "vdlm2dec":
             splitGain = splitGain.replace('.', '')
-        elif decoder == "acarsdec" and splitGain.find(".") == -1:
+        elif decoder == "acarsdec" and splitGain != "-10" and splitGain.find(".") == -1:
             print(f"WARNING: The SDR {splitSerial} is being used for ACARS Decoding and the Gain value does not include a period. You may experience improper gain...")
 
         path = servicesd_path + f"{decoder}-" + splitSerial
