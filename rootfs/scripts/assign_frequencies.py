@@ -42,7 +42,7 @@ def generate_output_files(serials, decoder, freqs_string):
             splitGain = serial_fields[2]
             splitRTLMult = serial_fields[3]
 
-        if decoder == "acarsdec" && splitGain.startswith('A'):
+        if decoder == "acarsdec" and splitGain.startswith('A'):
             splitGain = "-10"
         elif splitGain.startswith('A'):
             splitGain = splitGain.replace('A', '')
@@ -279,7 +279,7 @@ if __name__ == "__main__":
             old_serial += "," + os.getenv("ACARS_RTLMULT")
 
         serial_acars = [old_serial]
-        print(serial_acars)
+
         acars = assign_freqs_to_serials(
                 serials=serial_acars,
                 freqs=args.freqs_acars,
@@ -313,5 +313,5 @@ if __name__ == "__main__":
                 )
         generate_output_files(serials=vdlm, decoder="vdlm2dec", freqs_string="VDLM")
 
-    pprint(output_acars)
-    pprint(output_vdlm)
+    # pprint(output_acars)
+    # pprint(output_vdlm)
