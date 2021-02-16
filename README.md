@@ -132,6 +132,7 @@ You have two options that can be used interchangably to assign RTLSDR devices in
 The container will auto-assign frequencies to an SDR based on the number of available SDRs and what decoder you've set up for that frequency. You can use both Method 1 and Method 2 to assign SDRs in the container, but ensure the serials used in one method are not used in the other.
 
 | Variable | Description | Required | Default |
+|----------|-------------|---------|--------|
 | `SERIAL` | List of SDRs and configuration options (see below), with each SDR separated by a `;` | Yes, if Method 2 below is not used | Blank |
 
 Example: `SERIAL=00012507,2,-10,160;00012095,0,280,160`
@@ -141,11 +142,14 @@ Example: `SERIAL=00012507,2,-10,160;00012095,0,280,160`
 If you wish to not have frequencies auto-assigned use this method. You can use both Method 1 and Method 2 to assign SDRs in the container, but ensure the serials used in one method are not used in the other. For each SDR you want to specify the frequency assignment/decoder, use one value from each of the following tables:
 
 | Variable | Description | Required | Default |
+|----------|-------------|---------|--------|
 | `ACARS_x` | SDR with configuration options. Replace x with 0, and for every SDR you add under ACARS increase the number by one | Yes, if Method 1 is not used above and you want ACARS decoding. See below for formatting the SDR line | Yes, if Method 1 is not used | Blank
 | `VDLM_x` | SDR with configuration options. Replace x with 0, and for every SDR you add under VDLM increase the number by one | Yes, if Method 1 is not used above and you want VDLM decoding. See below for formatting the SDR line | Blank |
 
 For frequency assignment, use the following:
 
+| Variable | Description |
+|----------|-------------|
 | `ACARS_FREQ_x` | list of frequencies, each separated by a single `;`, to be used by the `ACARS_x` decoder above. Ensure the number used is the same in both configuration variables: ie `ACARS_0` and `ACARS_FREQ_0` |
 | `VDLM_FREQ_x` | list of frequencies, each separated by a single `;`, to be used by the `VDLM_x` decoder above. Ensure the number used is the same in both configuration variables: IE `VDLM_0` and `VDLM_FREQ_0` |
 
