@@ -166,7 +166,7 @@ If you have more than one SDR being auto-assigned (NOT APPLICABLE to Method 2 ab
 
 Example: `SERIAL=00012095,,28.0,;00012507,2,A460`
 
-* The ACARS Decoder supports `AGC/Automatic Gain Control`. To enable, prepend the gain value with an `A`. Additonally, you will need to set the gain value for VDLM. See below. 
+* The ACARS Decoder supports `AGC/Automatic Gain Control`. To enable, prepend the gain value with an `A`. Additonally, you will need to set the gain value for VDLM. See below.
 * If you are not using ACG and wish to set the gain manually, use dBm format: `28.0`
 * If you are using Auto-Assignment of the SDRs and wish to use ACG if the decoder is being used for ACARS, but want a specific value for VDLM, pre-pend the value with an `A`: `A46.0`
 * For the sample rate, use `192` for `2.4 MS/s` and `160` for `2.0MS/s` (default)
