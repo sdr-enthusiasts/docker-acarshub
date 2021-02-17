@@ -53,6 +53,10 @@ jobs:
         run: |
           sed -i 's/Pre-Release/ACARS Hub Version: ${{ env.VERSION_TAG }}/' ./rootfs/webapp/static/js/menu.js
 
+      - name: Create version file
+        run: |
+          echo "$env.VERSION_TAG" >> /acarshub-version
+
       # Hit an issue where arm builds would fail with cURL errors regarding intermediary certificates when downloading from github (ie: deploy-s6-overlay).
       # After many hours of troubleshooting, the workaround is to pre-load the image's rootfs with the CA certificates from the runner.
       # This problem may go away in future.
