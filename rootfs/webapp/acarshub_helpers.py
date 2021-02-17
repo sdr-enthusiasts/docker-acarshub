@@ -39,6 +39,7 @@ while True:
             FREQS_ACARS += os.getenv(f"ACARS_FREQ_{index}")
         else:
             FREQS_ACARS += ";" + os.getenv(f"ACARS_FREQ_{index}")
+        index += 1
     else:
         break
 
@@ -53,6 +54,8 @@ while True:
             FREQS_VDLM += os.getenv(f"VDLM_FREQ_{index}")
         else:
             FREQS_VDLM += ";" + os.getenv(f"VDLM_FREQ_{index}")
+
+        index += 1
     else:
         break
 
