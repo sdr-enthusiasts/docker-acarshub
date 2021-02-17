@@ -125,6 +125,10 @@ Please note that for `TAR1090_URL` the required format is `http[s]://**HOSTNAME*
 
 ### RTL Device assignment
 
+| Variable | Description | Required | Default |
+|----------|-------------|---------|--------|
+| `BYPASS_SDR_CHECK` | If you experience issues with ACARS Hub failing to start because it cannot find your SDRs based on their serial, set this to any non-blank value to force it to bypass the check. Depending on the reason ACARS Hub could not map a serial to an SDR is because there is a problem with the SDR, and as a result ACARS Hub still won't start up properly, but there are cases where it might. It is suggested you also replace the serial number in Method 1 or 2 below with the device index (found via `rtl_test`). | No | Blank |
+
 You have two options that can be used interchangably to assign RTLSDR devices in the container. The first method is most likely what most users will want
 
 #### Method 1: Auto-assignment of SDRs
