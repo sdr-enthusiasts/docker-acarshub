@@ -6,8 +6,8 @@ import argparse
 import fileinput
 from pprint import pprint
 
-if os.getenv("SPAM", default=False):
-    servicesd_path = "/Users/fred/services.d/"
+if os.getenv("SERVICES_PATH", default=False):
+    servicesd_path = os.getenv("SERVICES_PATH")
 else:
     servicesd_path = "/etc/services.d/"
 
