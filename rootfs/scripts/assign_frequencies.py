@@ -312,6 +312,3 @@ if __name__ == "__main__":
                 serials_used=[],
                 )
         generate_output_files(serials=vdlm, decoder="vdlm2dec", freqs_string="VDLM")
-
-    # pprint(output_acars)
-    # pprint(output_vdlm)
