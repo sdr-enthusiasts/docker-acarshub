@@ -28,6 +28,7 @@ def generate_output_files(serials, decoder, freqs_string):
             freqs += f" {freq}"
 
         serial_fields = serial.split(",")
+
         splitSerial = serial_fields[0]
         splitPPM = None
         splitGain = None
@@ -233,7 +234,7 @@ if __name__ == "__main__":
         if os.getenv(f"ACARS_{index}", default=False) and os.getenv(f"ACARS_FREQ_{index}", default=False):
             acars_freqs = os.getenv(f"ACARS_FREQ_{index}").split(";")
             acars_custom = assign_freqs_to_serials(
-                serials=os.getenv(f"ACARS_{index}").split(","),
+                serials=[os.getenv(f"ACARS_{index}")],
                 freqs=acars_freqs,
                 bw=args.bandwidth,
                 serials_used=[],
@@ -250,7 +251,7 @@ if __name__ == "__main__":
         if os.getenv(f"VDLM_{index}", default=False) and os.getenv(f"VDLM_FREQ_{index}", default=False):
             vdlm_freqs = os.getenv(f"VDLM_FREQ_{index}").split(";")
             vdlm_custom = assign_freqs_to_serials(
-                serials=os.getenv(f"VDLM_{index}").split(","),
+                serials=[os.getenv(f"VDLM_{index}")],
                 freqs=vdlm_freqs,
                 bw=args.bandwidth,
                 serials_used=[],
