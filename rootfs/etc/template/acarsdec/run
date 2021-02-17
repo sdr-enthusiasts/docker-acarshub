@@ -41,7 +41,9 @@ if [ -n "${SERIAL}" ]; then
 
 	set -e
 
-	if [ -n "${QUIET_LOGS}" ]; then
+	if [ -n "${BYPASS_SDR_CHECK}" ]; then
+		DEVICE_ID=$SERIAL
+	elif [ -n "${QUIET_LOGS}" ]; then
 		DEVICE_ID="$(rtl_serial_to_deviceid.sh -s "$SERIAL")"
 	else
 		DEVICE_ID="$(rtl_serial_to_deviceid.sh -v -s "$SERIAL")"
@@ -50,10 +52,6 @@ if [ -n "${SERIAL}" ]; then
 	set +e
 
 	ACARS_CMD+=("-r" "$DEVICE_ID") 
-
-elif [ -n "${DEVICE_ACARS}" ]; then
-
-	ACARS_CMD+=("-r" "$DEVICE_ACARS")
 
 else
 	echo "[acarsdec] No serial number set. Using device index 0. If also running VDLM decoding one of these processes will fail. To fix, set SERIAL_ACARS and SERIAL_VDLM"

@@ -263,6 +263,7 @@ if __name__ == "__main__":
             break
 
     # Okay, lets test for depricated SERIAL_ACARS/SERIAL_VDLM
+
     if os.getenv("SERIAL_ACARS", default=False):
         old_serial = os.getenv("SERIAL_ACARS")
 
