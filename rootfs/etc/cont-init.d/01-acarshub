@@ -26,7 +26,7 @@ if [ -n "${ENABLE_ACARS}" ]; then
 	fi
 
 	if [ -n "${FREQS_ACARS}" ]; then
-		FREQ_CMD+=("-a" $( echo "${FREQS_ACARS//;/ }"))
+		FREQ_CMD+=("-a" ${FREQS_ACARS//;/ })
 	elif [ -z "${ACARS_FREQ_0}" ]; then
 		echo "Error: ACARS enabled with no FREQS_ACARS or ACARS_FREQ_0. Exiting"
 		exit 1
@@ -39,7 +39,7 @@ if [ -n "${ENABLE_VDLM}" ]; then
 		exit 1
 	fi
 	if [ -n "${FREQS_VDLM}" ]; then
-		FREQ_CMD+=("-v" $(echo "${FREQS_VDLM//;/ }"))
+		FREQ_CMD+=("-v" ${FREQS_VDLM//;/ })
 	elif [ -z "${VDLM_FREQ_0}" ]; then
 		echo "Error: VDLM enabled with no FREQS_VDLM or VDLM_FREQ_0. Exiting"
 		exit 1
@@ -47,7 +47,8 @@ if [ -n "${ENABLE_VDLM}" ]; then
 fi
 
 if [ -n "${SERIAL}" ]; then
-	FREQ_CMD+=("-s" $(echo "${SERIAL//;/ }"))
+	IFS=';' read -a SERIAL_ARRAY <<< $SERIAL
+	FREQ_CMD+=("-s" "${SERIAL_ARRAY[@]}")
 fi
 
 echo "${FREQ_CMD[@]}"
