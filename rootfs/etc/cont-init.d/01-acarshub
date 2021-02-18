@@ -2,7 +2,6 @@
 # shellcheck shell=bash
 
 # create the /run/acars dir
-
 mkdir -p /run/acars/
 
 FREQ_CMD=()
@@ -53,6 +52,7 @@ if [ -n "${SERIAL}" ]; then
 	FREQ_CMD+=("-s" "${SERIAL_ARRAY[@]}")
 fi
 
+# TODO - remove line below prior to release
 echo "${FREQ_CMD[@]}"
 echo "Generating decoder startup files"
 
