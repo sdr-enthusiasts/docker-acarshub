@@ -4,6 +4,7 @@ import os
 import shutil
 import argparse
 import fileinput
+import subprocess
 from pprint import pprint
 
 if os.getenv("SERVICES_PATH", default=False):
@@ -53,6 +54,39 @@ def generate_output_files(serials, decoder, freqs_string):
         elif decoder == "acarsdec" and splitGain != "-10" and splitGain is not None and splitGain.find(".") == -1:
             print(f"WARNING: The SDR {splitSerial} is being used for ACARS Decoding and the Gain value does not include a period. You may experience improper gain...")
 
+        # If bypassing deviceID to serial, set deviceID to whatever was passed on the command line
+        if os.getenv("BYPASS_SDR_CHECK", False):
+            deviceID = splitSerial
+
+        # Else, look up device ID from serial
+        else:
+
+            # Prepare command line
+            if os.getenv("QUIET_LOGS", False):
+                rtlSerialToDeviceIDArgs = ("/usr/local/bin/rtl_serial_to_deviceid.sh", "-s", splitSerial)
+            else:
+                rtlSerialToDeviceIDArgs = ("/usr/local/bin/rtl_serial_to_deviceid.sh", "-v", "-s", splitSerial)
+            
+            # Prepare & run subprocess
+            rtlSerialToDeviceID = subprocess.Popen(
+                rtlSerialToDeviceIDArgs,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                )
+            rtlSerialToDeviceID.wait(timeout=10)
+
+            # Capture output of subprocess
+            (rtlSerialToDeviceIDstdout, rtlSerialToDeviceIDstderr) = rtlSerialToDeviceID.communicate()
+
+            # Raise an exception if /usr/local/bin/rtl_serial_to_deviceid.sh fails, and show stdout & stderr from subprocess
+            if rtlSerialToDeviceID.returncode != 0:
+                raise RuntimeError("/usr/local/bin/rtl_serial_to_deviceid.sh", rtlSerialToDeviceIDstdout, rtlSerialToDeviceIDstderr)
+
+            # Set deviceID to whatever the script returned
+            # strip() to remove the \n
+            # decode() to remove the b'...'
+            deviceID = rtlSerialToDeviceIDstdout.strip().decode()
+
         path = servicesd_path + f"{decoder}-" + splitSerial
         os.makedirs(path)
         shutil.copyfile(f"../etc/template/{decoder}/run", path + "/run")
@@ -60,8 +94,8 @@ def generate_output_files(serials, decoder, freqs_string):
         for line in fileinput.input(path + "/run", inplace=True):
             if line.find(f"FREQS_{freqs_string}=\"\"") == 0:
                 print('{}{}{}'.format(f"FREQS_{freqs_string}=\"", freqs.strip(), "\"\n"), end='')
-            elif line.find("SERIAL=\"\"") == 0:
-                print('{}{}{}'.format("SERIAL=\"", splitSerial , "\"\n"), end='')
+            elif line.find("DEVICE_ID=\"\"") == 0:
+                print('{}{}{}'.format("DEVICE_ID=\"", deviceID.strip() , "\"\n"), end='')
             elif splitPPM is not None and line.find("PPM=\"\"") == 0:
                 print('{}{}{}'.format("PPM=\"", splitPPM, "\"\n"), end='')
             elif splitGain is not None and line.find("GAIN=\"\"") == 0:
