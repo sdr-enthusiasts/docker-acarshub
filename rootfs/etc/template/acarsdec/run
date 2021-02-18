@@ -5,7 +5,6 @@
 #  - acarsdec does not depend on any services and should start immediately
 
 ACARS_BIN="/usr/local/bin/acarsdec"
-#SERIAL=""
 DEVICE_ID=""
 # shellcheck disable=SC2001
 FREQS_ACARS=""

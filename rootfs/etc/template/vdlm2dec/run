@@ -5,7 +5,6 @@
 #  - vdlm2dec does not depend on any services and should start immediately
 
 VDLM_BIN="/usr/local/bin/vdlm2dec"
-#SERIAL=""
 DEVICE_ID=""
 # shellcheck disable=SC2001
 FREQS_VDLM=""
