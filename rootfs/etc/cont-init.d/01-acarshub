@@ -56,7 +56,7 @@ fi
 echo "${FREQ_CMD[@]}"
 echo "Generating decoder startup files"
 
-pushd ../../scripts || exit 1
+pushd ../../scripts > /dev/null 2>&1 || exit 1
 python3 assign_frequencies.py "${FREQ_CMD[@]}"
 
 #FREQS_VDLM=$(echo "$FREQS_VDLM" | sed 's/;/ /g')
