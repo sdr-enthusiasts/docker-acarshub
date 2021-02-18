@@ -38,31 +38,9 @@ fi
 # Send output JSON to acars_server
 ACARS_CMD+=("-j" '127.0.0.1:5550')
 
-# if [ -n "${SERIAL}" ]; then
-
-# 	set -e
-
-# 	if [ -n "${BYPASS_SDR_CHECK}" ]; then
-# 		DEVICE_ID=$SERIAL
-# 	elif [ -n "${QUIET_LOGS}" ]; then
-# 		DEVICE_ID="$(rtl_serial_to_deviceid.sh -s "$SERIAL")"
-# 	else
-# 		DEVICE_ID="$(rtl_serial_to_deviceid.sh -v -s "$SERIAL")"
-# 	fi
-
-# 	set +e
-
-# 	ACARS_CMD+=("-r" "$DEVICE_ID") 
-
-# else
-# 	echo "[acarsdec] No serial number set. Using device index 0. If also running VDLM decoding one of these processes will fail. To fix, set SERIAL_ACARS and SERIAL_VDLM"
-# 	ACARS_CMD+=("-r" "0")
-# fi
-
+# Specify device ID
 if [ -n "${DEVICE_ID}" ]; then
-
 	ACARS_CMD+=("-r" "$DEVICE_ID") 
-
 else
 	echo "[acarsdec] No serial number / device index set. Using device index 0. If also running VDLM decoding one of these processes will fail. To fix, set SERIAL_ACARS and SERIAL_VDLM"
 	ACARS_CMD+=("-r" "0")
