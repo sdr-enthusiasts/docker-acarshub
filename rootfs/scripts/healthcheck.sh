@@ -2,6 +2,7 @@
 # shellcheck shell=bash
 
 # Import healthchecks-framework
+# shellcheck disable=SC1091
 source /opt/healthchecks-framework/healthchecks.sh
 
 # Default original codes
@@ -34,8 +35,10 @@ function get_pid_of_decoder {
 
   # Get PS output for the relevant process
   if [[ -n "$ACARS_BIN" ]]; then
+    # shellcheck disable=SC2009
     ps_output=$(ps aux | grep "$ACARS_BIN" | grep " -r $DEVICE_ID " | grep " $FREQS_ACARS")
   elif [[ -n "$VDLM_BIN" ]]; then
+    # shellcheck disable=SC2009
     ps_output=$(ps aux | grep "$VDLM_BIN" | grep " -r $DEVICE_ID " | grep " $FREQS_VDLM")
   fi
 
@@ -51,7 +54,7 @@ function get_pid_of_decoder {
 
 # For each service...
 for service_dir in /etc/services.d/*; do 
-  service_name=$(basename $service_dir)
+  service_name=$(basename "$service_dir")
   
   # If the service is acarsdec-*...
   if [[ "$service_name" =~ acarsdec-.+ ]]; then
