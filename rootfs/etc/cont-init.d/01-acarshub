@@ -7,7 +7,7 @@ mkdir -p /run/acars/
 FREQ_CMD=()
 
 if [ -n "${GAIN}" ]; then
-	echo "WARNING. GAIN ENV variable is depricated. Please use GAIN_ACARS and GAIN_VDLM to set the gain."
+	echo "WARNING. GAIN ENV variable is depricated. Please see the github page for updated usage."
 fi
 
 if [ -n "$SERIAL_ACARS" ]; then
