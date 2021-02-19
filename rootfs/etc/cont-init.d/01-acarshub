@@ -1,12 +1,21 @@
-#!/usr/bin/with-contenv sh
-# shellcheck shell=sh
+#!/usr/bin/with-contenv bash
+# shellcheck shell=bash
 
 # create the /run/acars dir
-
 mkdir -p /run/acars/
 
+FREQ_CMD=()
+
 if [ -n "${GAIN}" ]; then
-	echo "Error. Please use GAIN_ACARS and GAIN_VDLM to set the gain."
+	echo "WARNING. GAIN ENV variable is depricated. Please use GAIN_ACARS and GAIN_VDLM to set the gain."
+fi
+
+if [ -n "$SERIAL_ACARS" ]; then
+	echo "WARNING: SERIAL_ACARS is depricated. If you are using this in conjunction with SERIAL unexpected results will happen. Please see the github readme for update useage."
+fi
+
+if [ -n "$SERIAL_VDLM" ]; then
+	echo "WARNING: SERIAL_VDLM is depricated. If you are using this in conjunction with SERIAL unexpected results will happen. Please see the github readme for update useage."
 fi
 
 if [ -n "${ENABLE_ACARS}" ]; then
@@ -15,8 +24,11 @@ if [ -n "${ENABLE_ACARS}" ]; then
 		exit 1
 	fi
 
-	if [ -z "${FREQS_ACARS}" ]; then
-		echo "Error: ACARS enabled with no FREQS_ACARS. Exiting"
+	if [ -n "${FREQS_ACARS}" ]; then
+		IFS=';' read -r -a ACARS_ARRAY <<< "$FREQS_ACARS"
+		FREQ_CMD+=("-a" "${ACARS_ARRAY[@]}")
+	elif [ -z "${ACARS_FREQ_0}" ]; then
+		echo "Error: ACARS enabled with no FREQS_ACARS or ACARS_FREQ_0. Exiting"
 		exit 1
 	fi
 fi
@@ -26,12 +38,28 @@ if [ -n "${ENABLE_VDLM}" ]; then
 		echo "Error: VDLM enabled with no STATION_ID_VDLM set. Exiting"
 		exit 1
 	fi
-	if [ -z "${FREQS_VDLM}" ]; then
-		echo "Error: VDLM enabled with no FREQS_VDLM. Exiting"
+	if [ -n "${FREQS_VDLM}" ]; then
+		IFS=';' read -r -a VDLM_ARRAY <<< "$FREQS_VDLM"
+		FREQ_CMD+=("-v" "${VDLM_ARRAY[@]}")
+	elif [ -z "${VDLM_FREQ_0}" ]; then
+		echo "Error: VDLM enabled with no FREQS_VDLM or VDLM_FREQ_0. Exiting"
 		exit 1
 	fi
 fi
 
+if [ -n "${SERIAL}" ]; then
+	IFS=';' read -r -a SERIAL_ARRAY <<< "$SERIAL"
+	FREQ_CMD+=("-s" "${SERIAL_ARRAY[@]}")
+fi
+
+# TODO - remove line below prior to release
+echo "${FREQ_CMD[@]}"
+echo "Generating decoder startup files"
+
+pushd ../../scripts > /dev/null 2>&1 || exit 1
+python3 assign_frequencies.py "${FREQ_CMD[@]}"
+
+#FREQS_VDLM=$(echo "$FREQS_VDLM" | sed 's/;/ /g')
 # Ensure stats files are present
 touch /run/acars/vdlm2.past5min.json
 touch /run/acars/acars.past5min.json

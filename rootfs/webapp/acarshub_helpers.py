@@ -30,8 +30,35 @@ if os.getenv("ENABLE_VDLM", default=False):
     ENABLE_VDLM = True
 if os.getenv("FREQS_ACARS", default=False):
     FREQS_ACARS = os.getenv("FREQS_ACARS")
+
+index = 0
+
+while True:
+    if os.getenv(f"ACARS_FREQ_{index}", default=False):
+        if FREQS_ACARS == "":
+            FREQS_ACARS += os.getenv(f"ACARS_FREQ_{index}")
+        else:
+            FREQS_ACARS += ";" + os.getenv(f"ACARS_FREQ_{index}")
+        index += 1
+    else:
+        break
+
 if os.getenv("FREQS_VDLM", default=False):
     FREQS_VDLM = os.getenv("FREQS_VDLM")
+
+index = 0
+
+while True:
+    if os.getenv(f"VDLM_FREQ_{index}", default=False):
+        if FREQS_VDLM == "":
+            FREQS_VDLM += os.getenv(f"VDLM_FREQ_{index}")
+        else:
+            FREQS_VDLM += ";" + os.getenv(f"VDLM_FREQ_{index}")
+
+        index += 1
+    else:
+        break
+
 if os.getenv("DB_SAVEALL", default=False):
     DB_SAVEALL = True
 

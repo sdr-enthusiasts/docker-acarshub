@@ -152,6 +152,17 @@ RUN set -x && \
     find /webapp/static/airframes-acars-decoder -type f -iname '*.js' -exec sed -i """/export .* from \".*\";/ s/\";/.js\";/""" {} \; && \
     # install S6 Overlay
     curl -s https://raw.githubusercontent.com/mikenye/deploy-s6-overlay/master/deploy-s6-overlay.sh | sh && \
+    # deploy healthchecks framework
+    git clone \
+      --depth=1 \
+      https://github.com/mikenye/docker-healthchecks-framework.git \
+      /opt/healthchecks-framework \
+      && \
+    rm -rf \
+      /opt/healthchecks-framework/.git* \
+      /opt/healthchecks-framework/*.md \
+      /opt/healthchecks-framework/tests \
+      && \
     # Clean up
     apt-get remove -y ${TEMP_PACKAGES[@]} && \
     apt-get autoremove -y && \
