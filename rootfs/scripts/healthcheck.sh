@@ -106,7 +106,6 @@ for service_dir in /etc/services.d/*; do
       EXITCODE=1
     else
       echo "Decoder $service_name (pid $decoder_pid) is connected to ${decoder_server_prefix}_server at 127.0.0.1:$decoder_udp_port: HEALTHY"
-      EXITCODE=1
     fi
   fi
 
