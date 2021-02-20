@@ -133,6 +133,7 @@ def scheduled_tasks():
         acarshub_rrd.update_graphs()
         schedule.every().minute.at(":00").do(update_rrd_db)
         schedule.every().minute.at(":30").do(acarshub_rrd.update_graphs)
+        schedule.every().minute.at(":15").do(acarshub.service_check())
 
     # Schedule the database pruner
     schedule.every().hour.at(":30").do(acarshub.acarshub_db.pruneOld)

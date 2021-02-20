@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import os
+import subprocess
 import acarshub_db
 
 # Set the URL used for the web front end to show flight tracking.
@@ -171,3 +172,49 @@ def handle_message(message=None):
             return (total_results, serialized_json, search_term)
     else:
         return (None, None, None)
+
+
+def service_check():
+    import subprocess
+    pass
+    # ==== Checking acarsdec-00012095 =====
+    # UDP4 connection between 127.0.0.1:ANY and 127.0.0.1:5550 for PID 361 established: PASS
+    # Decoder acarsdec-00012095 (pid 361) is connected to acars_server at 127.0.0.1:5550: HEALTHY
+    # ==== Checking vdlm2dec-00012507 =====
+    # UDP4 connection between 127.0.0.1:ANY and 127.0.0.1:5555 for PID 354 established: PASS
+    # Decoder vdlm2dec-00012507 (pid 354) is connected to vdlm2_server at 127.0.0.1:5555: HEALTHY
+    # ==== Checking vdlm2_server =====
+    # TCP4 listening on 127.0.0.1:15555 (tcp) for PID 359: PASS
+    # vdlm2_server TCP listening on port 15555 (pid 359): HEALTHY
+    # ==== Checking vdlm2_stats =====
+    # TCP4 connection between 127.0.0.1:ANY and 127.0.0.1:15555 for PID 8366 established: PASS
+    # vdlm2_stats (pid 8366) connected to acars_server (pid 359) at 127.0.0.1:15555: HEALTHY
+    # ==== Check for VDLM2 activity =====
+    # 1634 VDLM2 messages received in past hour: HEALTHY
+    # ==== Checking acars_server =====
+    # TCP4 listening on 127.0.0.1:15550 (tcp) for PID 380: PASS
+    # acars_server TCP listening on port 15550 (pid 380): HEALTHY
+    # ==== Checking acars_stats =====
+    # TCP4 connection between 127.0.0.1:ANY and 127.0.0.1:15550 for PID 8367 established: PASS
+    # acars_stats (pid 8367) connected to acars_server (pid 380) at 127.0.0.1:15550: HEALTHY
+    # ==== Check for ACARS activity =====
+    # 624 ACARS messages received in past hour: HEALTHY
+    # ==== Check webapp =====
+    # webapp available: HEALTHY
+    # ==== Check Service Death Tallies =====
+    # abnormal death tally for vdlm2_server since last check is: 0: HEALTHY
+    # abnormal death tally for vdlm2_feeder since last check is: 0: HEALTHY
+    # abnormal death tally for webapp since last check is: 0: HEALTHY
+    # abnormal death tally for acars_stats since last check is: 0: HEALTHY
+    # abnormal death tally for vdlm2_stats since last check is: 0: HEALTHY
+    # abnormal death tally for vdlm2dec-00012507 since last check is: 0: HEALTHY
+    # abnormal death tally for acars_feeder since last check is: 0: HEALTHY
+    # abnormal death tally for acarsdec-00012095 since last check is: 0: HEALTHY
+    # abnormal death tally for acars_server since last check is: 0: HEALTHY
+
+    # healthstatus = subprocess.run(['/scripts/healthcheck.sh'], stdout=subprocess.PIPE).stdout.decode()
+    # feeders = {}
+
+    # for line in healthstatus.split("\n"):
+
+    #     print("Line: " + line)

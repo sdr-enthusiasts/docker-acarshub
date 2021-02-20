@@ -119,11 +119,22 @@ if [ -n "${ENABLE_VDLM}" ]; then
 
   # Check vdlm2_server is listening for TCP on 127.0.0.1:15555
   vdlm2_pidof_vdlm2_tcp_server=$(pgrep -f 'ncat -4 --keep-open --listen 127.0.0.1 15555')
-  if ! check_tcp4_socket_listening_for_pid "127.0.0.1" "15555" "${vdlm2_pidof_vdlm2_tcp_server}"; then
+  if ! check_tcp4_socket_listening_for_pid "127.0.0.1" "15555" "${vdlm2_pidof_vdlm2_tcp_server}"  > /dev/null 2>&1; then
+    echo "TCP4 connection between 127.0.0.1:ANY and 127.0.0.1:15555 for python3 established: FAIL"
     echo "vdlm2_server TCP not listening on port 15555 (pid $vdlm2_pidof_vdlm2_tcp_server): UNHEALTHY"
     EXITCODE=1
   else
+    echo "TCP4 connection between 127.0.0.1:ANY and 127.0.0.1:15555 for python3 established: PASS"
     echo "vdlm2_server TCP listening on port 15555 (pid $vdlm2_pidof_vdlm2_tcp_server): HEALTHY"
+  fi
+
+  if [ -n "${ENABLE_WEB}" ]; then
+    if ! netstat -anp | grep -P "tcp\s+\d+\s+\d+\s+127.0.0.1:[0-9]+\s+127.0.0.1:15555\s+ESTABLISHED\s+[0-9]+/python3"; then
+      echo "vdlm2_server TCP not connected to python server on port 15555 (pid $vdlm2_pidof_vdlm2_tcp_server): UNHEALTHY"
+      EXITCODE=1
+    else
+      echo "vdlm2_server TCP connected to python server on port 15555 (pid $vdlm2_pidof_vdlm2_tcp_server): HEALTHY"
+    fi
   fi
 
   # Check vdlm2_feeder
@@ -191,6 +202,17 @@ if [ -n "${ENABLE_ACARS}" ]; then
     EXITCODE=1
   else
     echo "acars_server TCP listening on port 15550 (pid $acars_pidof_acars_tcp_server): HEALTHY"
+  fi
+
+  if [ -n "${ENABLE_WEB}" ]; then  
+    if ! netstat -anp | grep -P "tcp\s+\d+\s+\d+\s+127.0.0.1:[0-9]+\s+127.0.0.1:15550\s+ESTABLISHED\s+[0-9]+/python3" > /dev/null 2>&1; then
+      echo "TCP4 connection between 127.0.0.1:ANY and 127.0.0.1:15550 for python3 established: FAIL"
+      echo "acars_server TCP not connected to python server on port 15550 (pid $acars_pidof_acars_tcp_server): UNHEALTHY"
+      EXITCODE=1
+    else
+      echo "TCP4 connection between 127.0.0.1:ANY and 127.0.0.1:15550 for python3 established: PASS"
+      echo "acars_server TCP connected to python3 server on port 15550 (pid $acars_pidof_acars_tcp_server): HEALTHY"
+    fi
   fi
 
   # Check acars_feeder
