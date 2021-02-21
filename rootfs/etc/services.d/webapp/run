@@ -1,7 +1,7 @@
 #!/usr/bin/with-contenv bash
 #shellcheck shell=bash
 
-# if [ -n "${ENABLE_WEB}" ]; then
+if [ -n "${ENABLE_WEB}" ]; then
 #   if [[ -n "${ENABLE_VDLM}" ]]; then
 #     # Require that vdlm2_server is running
 #     if ! netstat -an | grep -P '^\s*tcp\s+\d+\s+\d+\s+127\.0\.0\.1:15555\s+(?>\d{1,3}\.{0,1}){4}:\*\s+LISTEN\s*$' > /dev/null; then

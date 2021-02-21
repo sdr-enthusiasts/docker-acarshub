@@ -227,6 +227,10 @@ $(document).ready(function(){
         $('#label_links').html(label_html);
     });
 
+    socket.on('system_status', function(msg) {
+        console.log(msg.status);
+    });
+
     //receive details from server
     socket.on('newmsg', function(msg) {
         if(msg.msghtml.hasOwnProperty('label') == false || exclude.indexOf(msg.msghtml.label) == -1) {

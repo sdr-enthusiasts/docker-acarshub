@@ -133,7 +133,7 @@ def scheduled_tasks():
         acarshub_rrd.update_graphs()
         schedule.every().minute.at(":00").do(update_rrd_db)
         schedule.every().minute.at(":30").do(acarshub_rrd.update_graphs)
-        schedule.every().minute.at(":15").do(acarshub.service_check())
+        schedule.every().minute.at(":15").do(acarshub.service_check)
 
     # Schedule the database pruner
     schedule.every().hour.at(":30").do(acarshub.acarshub_db.pruneOld)
@@ -360,6 +360,14 @@ def init_listeners(special_message=None):
         if acarshub_helpers.DEBUG_LOGGING or special_message is not None:
             print(f"{special_message}Starting alert thread")
         thread_alerts = socketio.start_background_task(alert_handler)
+
+    status = acarshub.get_service_status()
+
+    socketio.emit('system_status', {'status': status}, namespace="/main")
+    socketio.emit('system_status', {'status': status}, namespace="/alerts")
+    socketio.emit('system_status', {'status': status}, namespace="/search")
+    socketio.emit('system_status', {'status': status}, namespace="/stats")
+    socketio.emit('system_status', {'status': status}, namespace="/status")
 
 
 def init():
