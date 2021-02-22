@@ -45,6 +45,14 @@ $(document).ready(function() {
                 $('#log').html(display_messages(msgs_received));
             }
         });
+
+        socket_alerts.on('system_status', function(msg) {
+            if(msg.status.error_state == true) {
+                $('#system_status').html('<a href="/status">System Status: <span class="red">Error</span>');
+            } else {
+                $('#system_status').html('<a href="/status">System Status: <span class="green">Okay</a></span>');
+            }
+        });
     } else if(document.location.pathname != "/") {
         socket_alerts.on('newmsg', function(msg) {
             var matched = match_alert(msg);

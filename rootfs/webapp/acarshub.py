@@ -7,6 +7,8 @@ import acarshub_db
 decoders = dict()
 servers = dict()
 receivers = dict()
+feeders = dict()
+system_error = False
 
 # Set the URL used for the web front end to show flight tracking.
 # Not doing too much sanitizing of the URL to ensure it's formatted right
@@ -181,59 +183,21 @@ def handle_message(message=None):
 def service_check():
     import subprocess
     import re
-    # ==== Checking acarsdec-00012095 =====
-    # UDP4 connection between 127.0.0.1:ANY and 127.0.0.1:5550 for PID 361 established: PASS
-    # Decoder acarsdec-00012095 (pid 361) is connected to acars_server at 127.0.0.1:5550: HEALTHY
-    # ==== Checking vdlm2dec-00012507 =====
-    # UDP4 connection between 127.0.0.1:ANY and 127.0.0.1:5555 for PID 354 established: PASS
-    # Decoder vdlm2dec-00012507 (pid 354) is connected to vdlm2_server at 127.0.0.1:5555: HEALTHY
-    # ==== Checking vdlm2_server =====
-    # TCP4 listening on 127.0.0.1:15555 (tcp) for PID 359: PASS
-    # vdlm2_server TCP listening on port 15555 (pid 359): HEALTHY
-    # ==== Checking vdlm2_stats =====
-    # TCP4 connection between 127.0.0.1:ANY and 127.0.0.1:15555 for PID 8366 established: PASS
-    # vdlm2_stats (pid 8366) connected to acars_server (pid 359) at 127.0.0.1:15555: HEALTHY
-    # ==== Check for VDLM2 activity =====
-    # 1634 VDLM2 messages received in past hour: HEALTHY
-    # ==== Checking acars_server =====
-    # TCP4 listening on 127.0.0.1:15550 (tcp) for PID 380: PASS
-    # acars_server TCP listening on port 15550 (pid 380): HEALTHY
-    # ==== Checking acars_stats =====
-    # TCP4 connection between 127.0.0.1:ANY and 127.0.0.1:15550 for PID 8367 established: PASS
-    # acars_stats (pid 8367) connected to acars_server (pid 380) at 127.0.0.1:15550: HEALTHY
-    # ==== Check for ACARS activity =====
-    # 624 ACARS messages received in past hour: HEALTHY
-    # ==== Check webapp =====
-    # webapp available: HEALTHY
-    # ==== Check Service Death Tallies =====
-    # abnormal death tally for vdlm2_server since last check is: 0: HEALTHY
-    # abnormal death tally for vdlm2_feeder since last check is: 0: HEALTHY
-    # abnormal death tally for webapp since last check is: 0: HEALTHY
-    # abnormal death tally for acars_stats since last check is: 0: HEALTHY
-    # abnormal death tally for vdlm2_stats since last check is: 0: HEALTHY
-    # abnormal death tally for vdlm2dec-00012507 since last check is: 0: HEALTHY
-    # abnormal death tally for acars_feeder since last check is: 0: HEALTHY
-    # abnormal death tally for acarsdec-00012095 since last check is: 0: HEALTHY
-    # abnormal death tally for acars_server since last check is: 0: HEALTHY
 
-    # Decoder acarsdec-00012095 (pid 361) is connected to acars_server at 127.0.0.1:5550: HEALTHY
-    # Decoder vdlm2dec-00012507 (pid 354) is connected to vdlm2_server at 127.0.0.1:5555: HEALTHY
-    # vdlm2_server TCP listening on port 15555 (pid 359): HEALTHY
-    # acars_server TCP connected to python3 server on port 15550: HEALTHY
-    # vdlm2_stats (pid 8366) connected to acars_server (pid 359) at 127.0.0.1:15555: HEALTHY
-    # 624 ACARS messages received in past hour: HEALTHY    
-
-    #healthstatus = subprocess.run(['../../tools/healthtest.sh'], stdout=subprocess.PIPE).stdout.decode()
-    healthcheck = subprocess.Popen(['/scripts/healthcheck.sh'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    stdout, stderr = healthcheck.communicate()
-    healthstatus = stdout.decode()
     global decoders
     global servers
     global receivers
+    global system_error
+    global feeders
+
+    healthcheck = subprocess.Popen(['/scripts/healthcheck.sh'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    stdout, stderr = healthcheck.communicate()
+    healthstatus = stdout.decode()
 
     decoders = dict()
     servers = dict()
     receivers = dict()
+    system_error = False
 
     for line in healthstatus.split("\n"):
         match = re.search("(?:acarsdec|vdlm2dec)-\\d+", line)
@@ -245,9 +209,11 @@ def service_check():
 
                 if line.find(f"Decoder {key}") == 0 and line.endswith("UNHEALTHY"):
                     decoders[key]["Status"] = "Bad"
+                    system_error = True
                 elif line.find(f"Decoder {key}") == 0 and line.endswith("HEALTHY"):
                     decoders[key]["Status"] = "Ok"
                 elif line.find(f"Decoder {key}") == 0:
+                    system_error = True
                     decoders[key]["Status"] = "Unknown"
 
             continue
@@ -260,15 +226,19 @@ def service_check():
 
             if line.find("listening") != -1 and line.endswith("UNHEALTHY"):
                 servers[match.group(0)]["Status"] = "Bad"
+                system_error = True
             elif line.find("listening") != -1 and line.endswith("HEALTHY"):
                 servers[match.group(0)]["Status"] = "Ok"
             elif line.find("listening") != -1:
+                system_error = True
                 servers[match.group(0)]["Status"] = "Unknown"
             elif line.find("python") != -1 and line.endswith("UNHEALTHY"):
+                system_error = True
                 servers[match.group(0)]["Web"] = "Bad"
             elif line.find("python") != -1 and line.endswith("HEALTHY"):
                 servers[match.group(0)]["Web"] = "Ok"
             elif line.find("python") != -1:
+                system_error = True
                 servers[match.group(0)]["Web"] = "Unknown"
 
             continue
@@ -280,30 +250,52 @@ def service_check():
                 receivers['ACARS'] = dict()
 
                 if line.endswith("UNHEALTHY"):
+                    system_error = True
                     receivers['ACARS']['Status'] = "Bad"
                 elif line.endswith("HEALTHY"):
                     receivers['ACARS']['Status'] = "Ok"
                 else:
+                    system_error = True
                     receivers['ACARS']['Status'] = "Unknown"
             if line.find("VDLM") and "VDLM" not in receivers:
                 receivers['VDLM'] = dict()
                 if line.endswith("UNHEALTHY"):
+                    system_error = True
                     receivers['VDLM']['Status'] = "Bad"
                 elif line.endswith("HEALTHY"):
                     receivers['VDLM']['Status'] = "Ok"
                 else:
+                    system_error = True
                     receivers['VDLM']['Status'] = "Unknown"
 
+            continue
 
-    print(decoders)
-    print(servers)
-    print(receivers)
+        match = re.search("^(?:acars|vdlm2)_feeder", line)
+
+        if match:
+            if match.group(0) not in servers:
+                feeders[match.group(0)] = dict()
+
+            if line.find("connected") != -1 and line.endswith("UNHEALTHY"):
+                feeders[match.group(0)]["Status"] = "Bad"
+                system_error = True
+            elif line.find("connected") != -1 and line.endswith("HEALTHY"):
+                feeders[match.group(0)]["Status"] = "Ok"
+            elif line.find("connected") != -1:
+                system_error = True
+                feeders[match.group(0)]["Status"] = "Unknown"
+#    print(decoders)
+#    print(servers)
+#    print(receivers)
+#    print(feeders)
 
 
 def get_service_status():
     global decoders
     global servers
     global receivers
+    global system_error
+    global feeders
 
-    return {"decoders": decoders, "servers": servers, "global": receivers}
+    return {"decoders": decoders, "servers": servers, "global": receivers, "feeders": feeders, "error_state": system_error}
 

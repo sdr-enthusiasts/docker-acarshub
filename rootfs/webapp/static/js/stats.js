@@ -30,6 +30,14 @@ $(document).ready(function(){
 		$('#freqs').html(html);
 	});
 
+	socket.on('system_status', function(msg) {
+        if(msg.status.error_state == true) {
+            $('#system_status').html('<a href="/status">System Status: <span class="red">Error</a></span>');
+        } else {
+            $('#system_status').html('<a href="/status">System Status: <span class="green">Okay</a></span>');
+        }
+    });
+
 	socket.on('count', function(msg) {
 		var error = msg.count[1];
 		var total = msg.count[0] + msg.count[2] + msg.count[3];

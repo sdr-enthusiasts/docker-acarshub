@@ -228,7 +228,11 @@ $(document).ready(function(){
     });
 
     socket.on('system_status', function(msg) {
-        console.log(msg.status);
+        if(msg.status.error_state == true) {
+            $('#system_status').html('<a href="/status">System Status: <span class="red">Error</a></span>');
+        } else {
+            $('#system_status').html('<a href="/status">System Status: <span class="green">Okay</a></span>');
+        }
     });
 
     //receive details from server

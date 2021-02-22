@@ -55,8 +55,16 @@ img {
   padding-bottom: 3px;
 }
 
+.monofont {
+  font-family: Menlo,Monaco,Consolas,"Courier New",monospace;
+}
+
 .red {
   color: red;
+}
+
+.green {
+  color: green;
 }
 
 .red:hover {

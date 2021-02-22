@@ -131,6 +131,8 @@ def scheduled_tasks():
     if not acarshub_helpers.SPAM:
         acarshub_rrd.create_db()
         acarshub_rrd.update_graphs()
+        acarshub.service_check()
+
         schedule.every().minute.at(":00").do(update_rrd_db)
         schedule.every().minute.at(":30").do(acarshub_rrd.update_graphs)
         schedule.every().minute.at(":15").do(acarshub.service_check)
@@ -368,6 +370,7 @@ def init_listeners(special_message=None):
     socketio.emit('system_status', {'status': status}, namespace="/search")
     socketio.emit('system_status', {'status': status}, namespace="/stats")
     socketio.emit('system_status', {'status': status}, namespace="/status")
+    socketio.emit('system_status', {'status': status}, namespace="/about")
 
 
 def init():
@@ -420,6 +423,11 @@ def alerts():
     return render_template('alerts.html')
 
 
+@app.route('/status')
+def status():
+    return render_template('status.html')
+
+
 # The listener for the live message page
 # Ensure the necessary listeners are fired up
 
@@ -446,6 +454,8 @@ def main_connect():
         socketio.emit('newmsg', {'msghtml': acarshub.update_keys(json_message)}, to=requester,
                       namespace='/main')
 
+    socketio.emit('system_status', {'status': acarshub.get_service_status()}, namespace="/main")
+
     # Start the htmlGenerator thread only if the thread has not been started before.
     if not thread_html_generator.isAlive():
         if acarshub_helpers.DEBUG_LOGGING:
@@ -461,12 +471,22 @@ def alert_connect():
     global thread_alerts
 
     alert_users.append(request.sid)
-
+    socketio.emit('system_status', {'status': acarshub.get_service_status()}, namespace="/alerts")
     if not thread_alerts.isAlive():
         if acarshub_helpers.DEBUG_LOGGING:
             print("[alerts]Starting alert thread")
         thread_alerts_stop_event.clear()
         thread_alerts = socketio.start_background_task(alert_handler)
+
+
+@socketio.on('connect', namespace='/about')
+def about_connect():
+    socketio.emit('system_status', {'status': acarshub.get_service_status()}, namespace="/about")
+
+
+@socketio.on('connect', namespace='/status')
+def about_connect():
+    socketio.emit('system_status', {'status': acarshub.get_service_status()}, namespace="/status")
 
 
 @socketio.on('disconnect', namespace='/alerts')
@@ -488,6 +508,7 @@ def search_connect():
     rows, size = acarshub.acarshub_db.database_get_row_count()
     requester = request.sid
     socketio.emit('database', {"count": rows, "size": size}, to=requester, namespace='/search')
+    socketio.emit('system_status', {'status': acarshub.get_service_status()}, namespace="/search")
 
 
 @socketio.on('connect', namespace='/stats')
@@ -495,6 +516,7 @@ def stats_connect():
     if acarshub_helpers.DEBUG_LOGGING:
         print('Client connected stats')
 
+    socketio.emit('system_status', {'status': acarshub.get_service_status()}, namespace="/stats")
     socketio.emit('newmsg', {"vdlm": acarshub_helpers.ENABLE_VDLM, "acars": acarshub_helpers.ENABLE_ACARS},
                   namespace='/stats')
 
@@ -588,6 +610,11 @@ def stats_handler_search(e):
 @socketio.on_error('/alerts')
 def error_handler_alerts(e):
     acarshub_helpers.acars_traceback(e, "server-alerts")
+
+
+@socketio.on_error('/status')
+def error_handler_status(e):
+    acarshub_helpers.acars_traceback(e, "server-status")
 
 
 @socketio.on_error_default
