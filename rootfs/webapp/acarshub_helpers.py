@@ -14,6 +14,7 @@ ACARSHUB_DB = ""
 IATA_OVERRIDE = ""
 FREQS_ACARS = ""
 FREQS_VDLM = ""
+DB_SAVE_DAYS = 7
 
 if os.getenv("DEBUG_LOGGING", default=False):
     DEBUG_LOGGING = True
@@ -71,6 +72,9 @@ else:
 
 if os.getenv("IATA_OVERRIDE", default=False):
     IATA_OVERRIDE = os.getenv("IATA_OVERRIDE")
+
+if os.getenv("DB_SAVE_DAYS", default=False):
+    DB_SAVE_DAYS = int(os.getenv("DB_SAVE_DAYS"))
 
 
 def acars_traceback(e, source):

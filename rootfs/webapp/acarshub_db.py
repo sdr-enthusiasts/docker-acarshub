@@ -376,9 +376,9 @@ def add_message_from_json(message_type, message_from_json):
 def pruneOld():
     import datetime
 
-    # Grab the current time and find 7 days ago
+    # Grab the current time and the latest 'good' time for messages to be saved
     dt = datetime.datetime.now()
-    delta = datetime.timedelta(days=7)
+    delta = datetime.timedelta(days=acarshub_helpers.DB_SAVE_DAYS)
     stale_time = dt - delta
 
     # Database is storing the timestamps of messages in unix epoch. Convert the expiry time to epoch
