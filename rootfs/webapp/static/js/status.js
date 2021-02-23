@@ -8,7 +8,7 @@ $(document).ready(function(){
 
       socket.on('system_status', function(msg) {
         if(msg.status.error_state == true) {
-            $('#system_status').html('<a href="/status">System Status: <span class="red">Error</a>/span>');
+            $('#system_status').html('<a href="/status">System Status: <span class="red">Error</a></span>');
         } else {
             $('#system_status').html('<a href="/status">System Status: <span class="green">Okay</a></span>');
         }
