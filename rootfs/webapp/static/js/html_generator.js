@@ -22,7 +22,7 @@ function display_messages(msgs_to_process, selected_tabs, live_page=false) {
             // unique_id is used to track the UID for a group of messages
             // tab_id below is the UID for a selected message
 
-            unique_id = sub_messages[0]['uid']; // Set the UID to the oldest message
+            unique_id = sub_messages[sub_messages.length - 1]['uid']; // Set the UID to the oldest message
 
             if(message_tab_splits.length > 0) { // Loop through the selected tabs on the page. If we find a match for the current UID we'll set the active tab to what has been selected               
                 for(var q = 0; q < message_tab_splits.length; q++) {
@@ -30,19 +30,19 @@ function display_messages(msgs_to_process, selected_tabs, live_page=false) {
                         var split = message_tab_splits[q].split(";");
                         active_tab = Number(split[1]);
                         array_index_tab = sub_messages.findIndex( element => {
-                                                        if (element.uid === active_tab) {
+                                                        if (element.uid == active_tab || element.uid === active_tab) {
                                                             return true;
                                                           }
                                                         });
                     }
                 }
             }
-            
+
             if(sub_messages.length > 1) { // Do we have more than one message in this group? If so, add in the HTML to set up the tabs
-                if(active_tab == 0) {
+                if(array_index_tab == 0) {
                     next_tab = sub_messages[1].uid;
-                    previous_tab = sub_messages[sub_messages.length -1].uid;
-                } else if(active_tab == sub_messages[sub_messages.length -1].uid) {
+                    previous_tab = sub_messages[sub_messages.length - 1].uid;
+                } else if(array_index_tab == sub_messages.length - 1) {
                     next_tab = sub_messages[0].uid;
                     previous_tab = sub_messages[sub_messages.length - 2].uid;
                 } else {
@@ -59,10 +59,10 @@ function display_messages(msgs_to_process, selected_tabs, live_page=false) {
                     // If there is no active tab set by the user we'll set the newest message to be active/checked
 
                     if(j == 0) { // Generate tabs for the nav left and right
-                        msgs_string += `<a href="javascript:handle_radio('` + previous_tab + `', '` + unique_id + `')" id = "tab${previous_tab}_${unique_id}_previous" name = "tabs_${unique_id}"><<</a>&nbsp&nbsp`;
+                        msgs_string += `<a href="javascript:handle_radio('` + previous_tab + `', '` + unique_id + `')" id = "tab${unique_id}_previous" name = "tabs_${unique_id}" class="boxed"><<</a>`;
                         //msgs_string += `<label for = "tab${previous_tab}_${unique_id}"><<</label>`;
 
-                        msgs_string += `<a href="javascript:handle_radio('` + next_tab + `', '` + unique_id + `')" id = "tab${next_tab}_${unique_id}_next" name = "tabs_${unique_id}">>></a>&nbsp&nbsp`;
+                        msgs_string += `<a href="javascript:handle_radio('` + next_tab + `', '` + unique_id + `')" id = "tab${unique_id}_next" name = "tabs_${unique_id}" class="boxed">>></a>`;
                         //msgs_string += `<label for = "tab${next_tab}_${unique_id}">>></label>`;
                     }
 

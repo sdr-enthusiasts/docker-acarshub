@@ -61,7 +61,6 @@ window.handle_radio = function(element_id, uid) {
 
     var all_tabinator = document.querySelectorAll(`input.tabs_${uid}`); // grab the message divs in that tab group and remove check
     for(var i = 0; i < all_tabinator.length; i++) {
-        console.log(all_tabinator[i]);
         all_tabinator[i].checked = false;
     }
 
@@ -70,6 +69,40 @@ window.handle_radio = function(element_id, uid) {
 
     var tab_element = document.getElementById(`tab${element_id}_${uid}`); // grab and tag the tag that is checked
     tab_element.checked = true;
+
+    // Now we need to update the nav arrow links
+
+    var next_tab = 0;
+    var previous_tab = 0;
+
+    for(var i = 0; i < msgs_received.length; i++) {
+        if(msgs_received[i].length > 1 && msgs_received[i][msgs_received[i].length - 1].uid == uid) {
+            var active_tab = msgs_received[i].findIndex( element => {
+                                                        if (element.uid == element_id) {
+                                                            return true;
+                                                          }
+                                                        });
+
+            if(active_tab == 0) {
+                next_tab = msgs_received[i][1].uid;
+                previous_tab = msgs_received[i][msgs_received[i].length -1].uid;
+            } else if(active_tab == msgs_received[i].length - 1) {
+                next_tab = msgs_received[i][0].uid;
+                previous_tab = msgs_received[i][msgs_received[i].length - 2].uid;
+            } else {
+                next_tab = msgs_received[i][active_tab + 1].uid;
+                previous_tab = msgs_received[i][active_tab - 1].uid;
+            }
+
+            i = msgs_received.length;
+        }
+    }
+
+    var curlink_previous = document.getElementById(`tab${uid}_previous`);
+    curlink_previous.setAttribute('href', `javascript:handle_radio(${previous_tab}, ${uid})`);
+
+    var curlink_next = document.getElementById(`tab${uid}_next`);
+    curlink_next.setAttribute('href', `javascript:handle_radio(${next_tab}, ${uid})`);
 
     var added = false;
     if(selected_tabs != "") {

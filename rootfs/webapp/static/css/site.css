@@ -49,6 +49,21 @@ img {
   max-width: 100%;
 }
 
+.boxed {
+  box-sizing: border-box;
+  display: inline-block;
+  padding-top: 8px;
+  padding-bottom: 6px;
+  padding-right:  10px;
+  padding-left: 10px;
+  min-width: 20px;
+  text-align: center;
+  color: #ccc;
+  margin-bottom: -1px;
+  margin-left: -1px;
+  border: 1px solid #bbb;
+}
+
 .small_img {
   height: 14px;
   vertical-align: middle;
