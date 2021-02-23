@@ -54,12 +54,23 @@ function getRandomInt(max) {
 // Input is the UID of the message group, which is also the element ID of the oldest element in that group
 
 window.handle_radio = function(element_id, uid) {
-    var all_tabs = document.querySelectorAll(`div.sub_msg${uid}`);
+    var all_tabs = document.querySelectorAll(`div.sub_msg${uid}`); // Grab the tabinator group and remove check
     for(var i = 0; i < all_tabs.length; i++) {
         all_tabs[i].classList.remove("checked");
     }
-    var element = document.getElementById(`message_${uid}_${element_id}`);
+
+    var all_tabinator = document.querySelectorAll(`input.tabs_${uid}`); // grab the message divs in that tab group and remove check
+    for(var i = 0; i < all_tabinator.length; i++) {
+        console.log(all_tabinator[i]);
+        all_tabinator[i].checked = false;
+    }
+
+    var element = document.getElementById(`message_${uid}_${element_id}`); // grab and tag the message that is checked
     element.classList.add("checked");
+
+    var tab_element = document.getElementById(`tab${element_id}_${uid}`); // grab and tag the tag that is checked
+    tab_element.checked = true;
+
     var added = false;
     if(selected_tabs != "") {
         var split = selected_tabs.split(",")

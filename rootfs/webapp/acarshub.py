@@ -190,7 +190,10 @@ def service_check():
     global system_error
     global feeders
 
-    healthcheck = subprocess.Popen(['/scripts/healthcheck.sh'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if os.getenv("SPAM", default=False):
+        healthcheck = subprocess.Popen(['../../tools/healthtest.sh'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    else:
+        healthcheck = subprocess.Popen(['/scripts/healthcheck.sh'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = healthcheck.communicate()
     healthstatus = stdout.decode()
 
@@ -207,7 +210,7 @@ def service_check():
             else:
                 key = match.group(0)
 
-                if line.find(f"Decoder {key}") == 0 and line.endswith("UNHEALTHY"):
+                if line.find(f"Decoder {key}") and line.endswith("UNHEALTHY"):
                     decoders[key]["Status"] = "Bad"
                     system_error = True
                 elif line.find(f"Decoder {key}") == 0 and line.endswith("HEALTHY"):
@@ -284,10 +287,14 @@ def service_check():
             elif line.find("connected") != -1:
                 system_error = True
                 feeders[match.group(0)]["Status"] = "Unknown"
-#    print(decoders)
-#    print(servers)
-#    print(receivers)
-#    print(feeders)
+    if os.getenv("SPAM", default=False):
+        print(decoders)
+        print(servers)
+        print(receivers)
+        print(feeders)
+
+if os.getenv("SPAM", default=False):
+    service_check()
 
 
 def get_service_status():

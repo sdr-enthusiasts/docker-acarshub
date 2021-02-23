@@ -13,6 +13,9 @@ function display_messages(msgs_to_process, selected_tabs, live_page=false) {
         var sub_messages = msgs_to_process[i]; // Array of messages belonging to one tab-group
         var unique_id = ""; // UID for the message group
         var active_tab = 0; // Active tab. Default is the first one if none selected
+        var previous_tab = 0;
+        var next_tab = 0;
+        var array_index_tab = 0;
         msgs_string += "<br>";
 
         if(live_page) {
@@ -26,11 +29,27 @@ function display_messages(msgs_to_process, selected_tabs, live_page=false) {
                     if(message_tab_splits[q].startsWith(unique_id.toString())) {
                         var split = message_tab_splits[q].split(";");
                         active_tab = Number(split[1]);
+                        array_index_tab = sub_messages.findIndex( element => {
+                                                        if (element.uid === active_tab) {
+                                                            return true;
+                                                          }
+                                                        });
                     }
                 }
             }
             
             if(sub_messages.length > 1) { // Do we have more than one message in this group? If so, add in the HTML to set up the tabs
+                if(active_tab == 0) {
+                    next_tab = sub_messages[1].uid;
+                    previous_tab = sub_messages[sub_messages.length -1].uid;
+                } else if(active_tab == sub_messages[sub_messages.length -1].uid) {
+                    next_tab = sub_messages[0].uid;
+                    previous_tab = sub_messages[sub_messages.length - 2].uid;
+                } else {
+                    next_tab = sub_messages[array_index_tab + 1].uid;
+                    previous_tab = sub_messages[array_index_tab - 1].uid;
+                }
+
                 msgs_string += '<div class = "tabinator">';
                 for(var j = 0; j < sub_messages.length; j++) { // Loop through all messages in the group to show all of the tabs
                     var tab_uid = unique_id; 
@@ -39,14 +58,22 @@ function display_messages(msgs_to_process, selected_tabs, live_page=false) {
                     
                     // If there is no active tab set by the user we'll set the newest message to be active/checked
 
+                    if(j == 0) { // Generate tabs for the nav left and right
+                        msgs_string += `<a href="javascript:handle_radio('` + previous_tab + `', '` + unique_id + `')" id = "tab${previous_tab}_${unique_id}_previous" name = "tabs_${unique_id}"><<</a>&nbsp&nbsp`;
+                        //msgs_string += `<label for = "tab${previous_tab}_${unique_id}"><<</label>`;
+
+                        msgs_string += `<a href="javascript:handle_radio('` + next_tab + `', '` + unique_id + `')" id = "tab${next_tab}_${unique_id}_next" name = "tabs_${unique_id}">>></a>&nbsp&nbsp`;
+                        //msgs_string += `<label for = "tab${next_tab}_${unique_id}">>></label>`;
+                    }
+
                     if(active_tab == 0 && j == 0) {
-                        msgs_string += `<input type = "radio" id = "tab${tab_uid}_${unique_id}" name = "tabs_${unique_id}" checked onclick="handle_radio('` + tab_uid + `', '` + unique_id + `')">`;
+                        msgs_string += `<input type = "radio" id = "tab${tab_uid}_${unique_id}" name = "tabs_${unique_id}" class = "tabs_${unique_id}" checked onclick="handle_radio('` + tab_uid + `', '` + unique_id + `')">`;
                     }
                     else if(tab_uid == active_tab) { // we have an active tab set and it matches the current message
-                        msgs_string += `<input type = "radio" id = "tab${tab_uid}_${unique_id}" name = "tabs_${unique_id}" checked onclick="handle_radio('` + tab_uid + `', '` + unique_id + `')">`;
+                        msgs_string += `<input type = "radio" id = "tab${tab_uid}_${unique_id}" name = "tabs_${unique_id}" class = "tabs_${unique_id}" checked onclick="handle_radio('` + tab_uid + `', '` + unique_id + `')">`;
                     }
                     else { // Otherwise this message's tab is not active
-                        msgs_string += `<input type = "radio" id = "tab${tab_uid}_${unique_id}" name = "tabs_${unique_id}" onclick="handle_radio('` + tab_uid + `', '` + unique_id + `')">`;
+                        msgs_string += `<input type = "radio" id = "tab${tab_uid}_${unique_id}" name = "tabs_${unique_id}" class = "tabs_${unique_id}" onclick="handle_radio('` + tab_uid + `', '` + unique_id + `')">`;
                     }
 
                     var label_string = "";
