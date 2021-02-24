@@ -174,9 +174,7 @@ def handle_message(message=None):
                 # Loop through the results and format html
                 time_update_keys = time.time()
                 for result in query_result:
-                    json_message = update_keys(json.loads(result))
-
-                    serialized_json.append(json.dumps(json_message))
+                    serialized_json.append(update_keys(result))
 
                 print("Time update keys-- %s seconds ---" % (time.time() - time_update_keys))
             # TODO: REMOVE timer before release

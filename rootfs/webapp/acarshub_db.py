@@ -48,12 +48,13 @@ Messages = declarative_base()
 overrides = {}
 freqs = []
 
-# copy the airlines db to tmpfs
+try:
+    f = open('data/airlines.json',)
+    airlines = json.load(f)
+except Exception as e:
+    airlines = {}
+    acarshub_helpers.acars_traceback(e, database)
 
-shutil.copyfile("data/airlines.db", "/database/airlines.db")
-airlines_database = create_engine('sqlite:////database/airlines.db')
-airlines_db_session = sessionmaker(bind=airlines_database)
-Airlines = declarative_base()
 
 # Set up the override IATA/ICAO callsigns
 # Input format needs to be IATA|ICAO|Airline Name
@@ -166,43 +167,26 @@ class messages(Messages):
     libacars = Column('libacars', Text)
     # level = Column('level', String(32)) # Uncomment this line when we're ready to migrate the db
 
-
-# Class to store our IATA/ICAO callsigns
-
-
-class airlines(Airlines):
-    __tablename__ = 'airlines'
-    index = Column(Integer, primary_key=True)
-    IATA = Column('IATA', Text)
-    ICAO = Column('ICAO', Text)
-    NAME = Column('NAME', Text)
-
-
 # Now we've created the classes for the database, we'll associate the class with the database and create any missing tables
 
 Messages.metadata.create_all(database)
-Airlines.metadata.create_all(airlines_database)
 
 # Class used to convert any search query objects to JSON
 
-
-class AlchemyEncoder(json.JSONEncoder):
-
-    def default(self, obj):
-        if isinstance(obj.__class__, DeclarativeMeta):
-            # an SQLAlchemy class
-            fields = {}
-            for field in [x for x in dir(obj) if not x.startswith('_') and x != 'metadata']:
-                data = obj.__getattribute__(field)
-                try:
-                    json.dumps(data)  # this will fail on non-encodable values, like other classes
-                    fields[field] = data
-                except TypeError:
-                    fields[field] = None
-            # a json-encodable dict
-            return fields
-
-        return json.JSONEncoder.default(self, obj)
+def query_to_dict(obj):
+    if isinstance(obj.__class__, DeclarativeMeta):
+        # an SQLAlchemy class
+        fields = {}
+        for field in [x for x in dir(obj) if not x.startswith('_') and x != 'metadata']:
+            data = obj.__getattribute__(field)
+            try:
+                json.dumps(data)  # this will fail on non-encodable values, like other classes
+                fields[field] = data
+            except TypeError:
+                fields[field] = None
+        # a json-encodable dict
+        return fields
+    #return json.JSONEncoder.default(self, obj)
 
 
 def add_message_from_json(message_type, message_from_json):
@@ -413,21 +397,10 @@ def find_airline_code_from_iata(iata):
     if iata in overrides:
         return overrides[iata]
 
-    try:
-        session = airlines_db_session()
-        result = session.query(airlines.ICAO, airlines.NAME).filter(airlines.IATA == iata).first()
-        session.close()
-    except Exception:
-        print(f"[database] Error in query with IATA code {iata}")
-        return (iata, "Unknown Airline")
+    if iata in airlines:
+        return (airlines[iata]['ICAO'], airlines[iata]['NAME'])
     else:
-        if result is not None:
-            if acarshub_helpers.DEBUG_LOGGING:
-                print(f"[database] IATA code {iata} converted to {result.ICAO}")
-            return (result.ICAO, result.NAME)
-        else:
-            print(f"[database] IATA code {iata} not found in database")
-            return (iata, "Unknown Airline")
+        return (iata, "Unknown Airline")
 
 
 def database_search(field, search_term, page=0):
@@ -462,7 +435,7 @@ def database_search(field, search_term, page=0):
             print("[database] Done searching")
 
         if result is not None and result.count() > 0:
-            data = [json.dumps(d, cls=AlchemyEncoder) for d in result[page:page + 50]]
+            data = [query_to_dict(d) for d in result[page:page + 50]]
             return [data, result.count()]
         else:
             return [None, 50]
@@ -490,7 +463,7 @@ def search_alerts(icao=None, tail=None, flight=None, text=None):
             acarshub_helpers.acars_traceback(e, "database")
         else:
             if result is not None and result.count() > 0:
-                data = [json.dumps(d, cls=AlchemyEncoder) for d in result[:50]]
+                data = [query_to_dict(d) for d in result[:50]]
                 return data
     else:
         return None
@@ -506,7 +479,7 @@ def show_all(page=0):
         acarshub_helpers.acars_traceback(e, "database")
 
     if result.count() > 0:
-        data = [json.dumps(d, cls=AlchemyEncoder) for d in result[page:page + 50]]
+        data = [query_to_dict(d) for d in result[page:page + 50]]
         return [data, result.count()]
     else:
         return [None, 50]
@@ -605,7 +578,7 @@ def grab_most_recent():
         result = session.query(messages).order_by(desc('time')).limit(20)
 
         if result.count() > 0:
-            return [json.dumps(d, cls=AlchemyEncoder) for d in result]
+            return [query_to_dict(d) for d in result]
         else:
             return []
     except Exception as e:

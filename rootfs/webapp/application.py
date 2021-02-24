@@ -384,7 +384,7 @@ def init():
 
     if results is not None:
         for item in results:
-            json_message = json.loads(item)
+            json_message = item
             messages_recent.insert(0, [json_message['message_type'], json_message])
     print("[init] Completed grabbing messages from database, starting up rest of services")
     init_listeners()
@@ -532,7 +532,7 @@ def get_alerts(message, namespace):
         results.reverse()
 
     for item in [item for item in (results or [])]:
-        socketio.emit('newmsg', {'msghtml': acarshub.update_keys(json.loads(item))}, to=requester, namespace="/alerts")
+        socketio.emit('newmsg', {'msghtml': acarshub.update_keys(item)}, to=requester, namespace="/alerts")
 
 
 @socketio.on('freqs', namespace="/stats")

@@ -61,7 +61,7 @@ $(document).ready(function(){
             num_results.push(msg.num_results);
             for (var i = 0; i < msgs_received.length; i++){ // Loop through the received message blob.
                 for(var j = 0; j < msgs_received[i].length; j++) { // Loop through the individual messages in the blob
-                    var msg_json = JSON.parse(msgs_received[i][j]); // The message is not in a format where JS automatically converts in to a usable format, so we'll parse as JSON
+                    var msg_json = msgs_received[i][j];
                     // Check and see if the text field is decodable in to human readable format
                     var decoded_msg = md.decode(msg_json);
                     if(decoded_msg.decoded == true) {
