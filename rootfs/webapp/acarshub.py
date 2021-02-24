@@ -179,7 +179,7 @@ def handle_message(message=None):
                     serialized_json.append(json.dumps(json_message))
 
                 print("Time update keys-- %s seconds ---" % (time.time() - time_update_keys))
-
+            # TODO: REMOVE timer before release
             print("Total Time Handle MSG--- %s seconds ---" % (time.time() - start_time))
             return (total_results, serialized_json, search_term)
     else:
