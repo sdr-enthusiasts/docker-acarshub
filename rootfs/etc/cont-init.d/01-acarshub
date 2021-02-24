@@ -59,12 +59,13 @@ echo "Generating decoder startup files"
 pushd ../../scripts > /dev/null 2>&1 || exit 1
 python3 assign_frequencies.py "${FREQ_CMD[@]}"
 
+# Ensure /database dir is present
+
+mkdir -p /database
+
 #FREQS_VDLM=$(echo "$FREQS_VDLM" | sed 's/;/ /g')
 # Ensure stats files are present
 touch /database/vdlm2.past5min.json
 touch /database/acars.past5min.json
 
-# Ensure /database dir is present
-
-mkdir -p /database
 exit 0
