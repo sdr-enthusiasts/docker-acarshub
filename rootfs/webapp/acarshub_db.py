@@ -19,9 +19,10 @@ try:
     with urllib.request.urlopen("https://raw.githubusercontent.com/airframesio/data/master/json/vdl/ground-stations.json") as url:
         groundStations_json = json.loads(url.read().decode())
 
-    for i in range(len(groundStations_json['ground_stations'])):
-        if 'id' in groundStations_json['ground_stations'][i]:
-            groundStations[groundStations_json['ground_stations'][i]['id']] = { "icao": groundStations_json['ground_stations'][i]['airport']['icao'], "name": groundStations_json['ground_stations'][i]['airport']['name']}
+    for station in groundStations_json['ground_stations']:
+        stationId = station.get('id')
+        if stationId:
+            groundStations[stationId] = { "icao": station['airport']['icao'], "name": station['airport']['name']}
 
     print("[database] Completed downloading Station IDs")
 except Exception as e:
