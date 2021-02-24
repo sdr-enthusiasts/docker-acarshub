@@ -38,8 +38,6 @@ $(document).ready(function(){
 
     // Search results returned
     socket.on('newmsg', function(msg) {
-        //console.log("Received msg" + msg.msghtml);
-        console.log("Received msg");
         //maintain a list of 1 msgs
         if (msgs_received.length >= 1){
             msgs_received.shift();

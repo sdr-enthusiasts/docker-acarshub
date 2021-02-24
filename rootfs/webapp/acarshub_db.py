@@ -6,7 +6,6 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.declarative import DeclarativeMeta
 import json
-import shutil
 import urllib.request
 import acarshub_helpers
 
@@ -177,16 +176,10 @@ def query_to_dict(obj):
     if isinstance(obj.__class__, DeclarativeMeta):
         # an SQLAlchemy class
         fields = {}
-        for field in [x for x in dir(obj) if not x.startswith('_') and x != 'metadata']:
-            data = obj.__getattribute__(field)
-            try:
-                json.dumps(data)  # this will fail on non-encodable values, like other classes
-                fields[field] = data
-            except TypeError:
-                fields[field] = None
-        # a json-encodable dict
+        for field in [x for x in dir(obj) if not x.startswith('_') and x != 'metadata' and x != None]:
+            fields[field] = obj.__getattribute__(field)
         return fields
-    #return json.JSONEncoder.default(self, obj)
+    return None
 
 
 def add_message_from_json(message_type, message_from_json):
@@ -405,28 +398,30 @@ def find_airline_code_from_iata(iata):
 
 def database_search(field, search_term, page=0):
     result = None
-
+    import time
+    start_time = time.time()
     try:
         if acarshub_helpers.DEBUG_LOGGING:
             print(f"[database] Searching database for {search_term} in {field}")
         session = db_session()
         if field == "flight-iata":
-            result = session.query(messages).filter(messages.flight.contains(search_term)).order_by(messages.time.desc())
+            result = session.query(messages).filter(messages.flight.contains(search_term)).order_by(messages.id.desc())
         elif field == "tail":
-            result = session.query(messages).filter(messages.tail.contains(search_term)).order_by(messages.time.desc())
+            result = session.query(messages).filter(messages.tail.contains(search_term)).order_by(messages.id.desc())
         elif field == "depa":
-            result = session.query(messages).filter(messages.depa.contains(search_term)).order_by(messages.time.desc())
+            result = session.query(messages).filter(messages.depa.contains(search_term)).order_by(messages.id.desc())
         elif field == "dsta":
-            result = session.query(messages).filter(messages.dsta.contains(search_term)).order_by(messages.time.desc())
+            result = session.query(messages).filter(messages.dsta.contains(search_term)).order_by(messages.id.desc())
         elif field == "text":
-            result = session.query(messages).filter(messages.text.contains(search_term)).order_by(messages.time.desc())
+            result = session.query(messages).filter(messages.text.contains(search_term)).order_by(messages.id.desc())
         elif field == "msgno":
-            result = session.query(messages).filter(messages.msgno.contains(search_term)).order_by(messages.time.desc())
+            result = session.query(messages).filter(messages.msgno.contains(search_term)).order_by(messages.id.desc())
         elif field == "freq":
-            result = session.query(messages).filter(messages.freq.contains(search_term)).order_by(messages.time.desc())
+            result = session.query(messages).filter(messages.freq.contains(search_term)).order_by(messages.id.desc())
         elif field == "msglbl":
-            result = session.query(messages).filter(messages.label.contains(search_term)).order_by(messages.time.desc())
+            result = session.query(messages).filter(messages.label.contains(search_term)).order_by(messages.id.desc())
         session.close()
+        print("Query--- %s seconds ---" % (time.time() - start_time))
     except Exception:
         print("[database] Error running search!")
         return [None, 50]
@@ -435,7 +430,9 @@ def database_search(field, search_term, page=0):
             print("[database] Done searching")
 
         if result is not None and result.count() > 0:
+            start_time = time.time()
             data = [query_to_dict(d) for d in result[page:page + 50]]
+            print("Process data--- %s seconds ---" % (time.time() - start_time))
             return [data, result.count()]
         else:
             return [None, 50]
@@ -457,13 +454,13 @@ def search_alerts(icao=None, tail=None, flight=None, text=None):
                 filter_by += [messages.flight.contains('%{0}%'.format(k)) for k in flight]
             if text is not None:
                 filter_by += [messages.text.contains('%{0}%'.format(k)) for k in text]
-            result = result.filter(or_(*filter_by)).order_by(messages.time.desc())
+            result = result.filter(or_(*filter_by)).order_by(messages.id.desc()).limit(50)
             session.close()
         except Exception as e:
             acarshub_helpers.acars_traceback(e, "database")
         else:
             if result is not None and result.count() > 0:
-                data = [query_to_dict(d) for d in result[:50]]
+                data = [query_to_dict(d) for d in result]
                 return data
     else:
         return None
@@ -473,7 +470,7 @@ def show_all(page=0):
 
     try:
         session = db_session()
-        result = session.query(messages).order_by(messages.time.desc())
+        result = session.query(messages).order_by(messages.id.desc())
         session.close()
     except Exception as e:
         acarshub_helpers.acars_traceback(e, "database")
@@ -575,7 +572,7 @@ def grab_most_recent():
     from sqlalchemy import desc
     try:
         session = db_session()
-        result = session.query(messages).order_by(desc('time')).limit(20)
+        result = session.query(messages).order_by(desc('id')).limit(20)
 
         if result.count() > 0:
             return [query_to_dict(d) for d in result]

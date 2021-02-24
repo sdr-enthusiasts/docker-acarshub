@@ -167,13 +167,12 @@ def handle_message(message=None):
             # the db returns two values
             # index zero is the query results in json
             # the other is the count of total results
-
-            query_result = search[0]
-            if query_result is not None:
+ 
+            if search[0] is not None:
                 total_results = search[1]
                 # Loop through the results and format html
                 time_update_keys = time.time()
-                for result in query_result:
+                for result in search[0]:
                     serialized_json.append(update_keys(result))
 
                 print("Time update keys-- %s seconds ---" % (time.time() - time_update_keys))
