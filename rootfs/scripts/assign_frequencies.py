@@ -78,18 +78,24 @@ def generate_output_files(serials, decoder, freqs_string):
             # Capture output of subprocess
             (rtlSerialToDeviceIDstdout, rtlSerialToDeviceIDstderr) = rtlSerialToDeviceID.communicate()
 
-            # Raise an exception if /usr/local/bin/rtl_serial_to_deviceid.sh fails, and show stdout & stderr from subprocess
+            # So that healthcheck works right and system status will show an error we'll generate a fake startup file
             if rtlSerialToDeviceID.returncode != 0:
-                raise RuntimeError("/usr/local/bin/rtl_serial_to_deviceid.sh", rtlSerialToDeviceIDstdout, rtlSerialToDeviceIDstderr)
+                print(f"ERROR: SDR {splitSerial} could not be mapped")
+                path = servicesd_path + f"{decoder}-" + splitSerial
+                os.makedirs(path)
+                shutil.copyfile(f"../etc/template/bad/run", path + "/run")
+               # raise RuntimeError("/usr/local/bin/rtl_serial_to_deviceid.sh", rtlSerialToDeviceIDstdout, rtlSerialToDeviceIDstderr)
+            else:
+                path = servicesd_path + f"{decoder}-" + splitSerial
+                os.makedirs(path)
+                shutil.copyfile(f"../etc/template/{decoder}/run", path + "/run")
 
             # Set deviceID to whatever the script returned
             # strip() to remove the \n
             # decode() to remove the b'...'
             deviceID = rtlSerialToDeviceIDstdout.strip().decode()
 
-        path = servicesd_path + f"{decoder}-" + splitSerial
-        os.makedirs(path)
-        shutil.copyfile(f"../etc/template/{decoder}/run", path + "/run")
+        
 
         for line in fileinput.input(path + "/run", inplace=True):
             if line.find(f"FREQS_{freqs_string}=\"\"") == 0:

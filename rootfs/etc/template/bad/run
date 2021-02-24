@@ -1,0 +1,6 @@
+#!/usr/bin/with-contenv bash
+#shellcheck shell=bash
+
+DEVICE_ID=""
+
+sleep 86400

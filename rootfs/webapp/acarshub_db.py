@@ -6,15 +6,23 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.declarative import DeclarativeMeta
 import json
+import shutil
 import urllib.request
 import acarshub_helpers
+
+groundStations = dict()
 
 # Download station IDs
 
 try:
     print("[database] Downloading Station IDs")
     with urllib.request.urlopen("https://raw.githubusercontent.com/airframesio/data/master/json/vdl/ground-stations.json") as url:
-        groundStations = json.loads(url.read().decode())
+        groundStations_json = json.loads(url.read().decode())
+
+    for i in range(len(groundStations_json['ground_stations'])):
+        if 'id' in groundStations_json['ground_stations'][i]:
+            groundStations[groundStations_json['ground_stations'][i]['id']] = { "icao": groundStations_json['ground_stations'][i]['airport']['icao'], "name": groundStations_json['ground_stations'][i]['airport']['name']}
+
     print("[database] Completed downloading Station IDs")
 except Exception as e:
     acarshub_helpers.acars_traceback(e, "database")
@@ -39,7 +47,10 @@ Messages = declarative_base()
 overrides = {}
 freqs = []
 
-airlines_database = create_engine('sqlite:///data/airlines.db')
+# copy the airlines db to tmpfs
+
+shutil.copyfile("data/airlines.db", "/database/airlines.db")
+airlines_database = create_engine('sqlite:////database/airlines.db')
 airlines_db_session = sessionmaker(bind=airlines_database)
 Airlines = declarative_base()
 
@@ -403,7 +414,7 @@ def find_airline_code_from_iata(iata):
 
     try:
         session = airlines_db_session()
-        result = session.query(airlines).filter(airlines.IATA == iata).first()
+        result = session.query(airlines.ICAO, airlines.NAME).filter(airlines.IATA == iata).first()
         session.close()
     except Exception:
         print(f"[database] Error in query with IATA code {iata}")
@@ -601,10 +612,8 @@ def grab_most_recent():
 
 
 def lookup_groundstation(lookup_id):
-    for i in range(len(groundStations['ground_stations'])):
-        if 'id' in groundStations['ground_stations'][i]:
-            if groundStations['ground_stations'][i]['id'] == lookup_id:
-                return (groundStations['ground_stations'][i]['airport']['icao'], groundStations['ground_stations'][i]['airport']['name'])
+    if lookup_id in groundStations:
+        return (groundStations[lookup_id]['icao'], groundStations[lookup_id]['name'])
 
     return (None, None)
 
@@ -612,8 +621,6 @@ def lookup_groundstation(lookup_id):
 def lookup_label(label):
     if label in message_labels['labels']:
         return message_labels['labels'][label]['name']
-    #    if message_labels['labels'][i] == label:
-    #        return message_labels['labels'][i]['name']
     print(f"[database] Unknown message label: {label}")
     return None
 

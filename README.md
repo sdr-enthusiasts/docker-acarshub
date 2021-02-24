@@ -45,6 +45,7 @@ docker run \
  -e ENABLE_ACARS="true" \
  -v acars_data:/run/acars \
  --device /dev/bus/usb:/dev/bus/usb \
+ --mount type=tmpfs,destination=/database,tmpfs-mode=1777 \
 fredclausen/acarshub
 ```
 
@@ -74,6 +75,8 @@ services:
       - ENABLE_ACARS=true
     volumes:
       - acars_data:/run/acars
+    tmpfs:
+      - /database:exec,size=64M
 ```
 
 ## Ports
@@ -89,6 +92,8 @@ The database is used on the website for various functions. It is automatically p
 The reality of running any kind of database on a Pi is that database performance can be lacking. I have found that a database that has seven days worth of data, on a moderately busy site like mine, can reach file sizes of 17Mb and have 112,000+ rows of data. In other words, an awful lot of data, and with database sizes that large you will see a degredation in search performance. Queries might take a few seconds to execute after you type your search terms on the seach page.
 
 If you set `DB_SAVEALL` to a blank value you will gain back a lot of performance because messages with no informational value won't be stored. The trade-off in disabling saving all messages means you won't have all messages logged which may or may not be important to you.
+
+It is also recommended you use a tmpfs mount to reduce SD card writes.
 
 ## Environment variables
 

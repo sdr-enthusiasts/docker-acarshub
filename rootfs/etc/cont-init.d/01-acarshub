@@ -64,4 +64,7 @@ python3 assign_frequencies.py "${FREQ_CMD[@]}"
 touch /run/acars/vdlm2.past5min.json
 touch /run/acars/acars.past5min.json
 
+# Ensure /database dir is present
+
+mkdir -p /database
 exit 0

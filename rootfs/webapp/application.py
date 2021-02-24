@@ -553,7 +553,8 @@ def request_count(message, namespace):
 
 @socketio.on('query', namespace='/search')
 def handle_message(message, namespace):
-
+    import time
+    start_time = time.time()
     # We are going to send the result over in one blob
     # search.js will only maintain the most recent blob we send over
     total_results, serialized_json, search_term = acarshub.handle_message(message)
@@ -563,9 +564,11 @@ def handle_message(message, namespace):
     # in the search namespace.
 
     requester = request.sid
+    start_time_emit = time.time()
     socketio.emit('newmsg', {'num_results': total_results, 'msghtml': serialized_json,
                              'search_term': str(search_term)}, to=requester, namespace='/search')
-
+    print("Emit--- %s seconds ---" % (time.time() - start_time_emit))
+    print("Total Time--- %s seconds ---" % (time.time() - start_time))
 
 @socketio.on('disconnect', namespace='/main')
 def main_disconnect():

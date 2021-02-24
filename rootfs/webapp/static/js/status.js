@@ -13,21 +13,22 @@ $(document).ready(function(){
             $('#system_status').html('<a href="/status">System Status: <span class="green">Okay</a></span>');
         }
 
-        $('#log').html(decode_status(msg.status.error_state, msg.status.decoders, msg.status.servers, msg.status.feeders, msg.status.global));
+        $('#log').html(decode_status(msg.status.error_state, msg.status.decoders, msg.status.servers, msg.status.feeders, msg.status.global, msg.status.stats));
     });
 });
 
-function decode_status(status, decoders, servers, feeders, receivers) {
+function decode_status(status, decoders, servers, feeders, receivers, stats) {
   var html_output = "<h2>ACARS Hub System Status</h2>";
   const keys_decoder = Object.keys(decoders);
   const keys_servers = Object.keys(servers);
   const keys_receivers = Object.keys(receivers);
   const keys_feeders = Object.keys(feeders);
+  const keys_stats = Object.keys(stats);
 
   html_output += '<span class="monofont">';
   html_output += "System:".padEnd(55,'.');
   if(status) {
-    html_output += '<strong><span class="red">ERRORS</span></strong>';
+    html_output += '<strong><span class="red">DEGRADED</span></strong>';
   } else {
     html_output += '<strong><span class="green">Ok</span></strong>';
   }
@@ -45,6 +46,12 @@ function decode_status(status, decoders, servers, feeders, receivers) {
     html_output += '<br>';
     sub_string = `Internal Server ${key} to Python Connecton:`;
     html_output += `${sub_string.padEnd(55,'.')}<strong><span class=${servers[key].Web == "Ok" ? "green" : "red"}>${servers[key].Web}</span></strong>`;
+    html_output += '<br>';
+  });
+
+  keys_stats.forEach((key, index) => {
+    var sub_string = `Internal Stat Server ${key}:`;
+    html_output += `${sub_string.padEnd(55,'.')}<strong><span class=${stats[key].Status == "Ok" ? "green" : "red"}>${stats[key].Status}</span></strong>`;
     html_output += '<br>';
   });
 
