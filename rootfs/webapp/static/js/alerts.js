@@ -79,7 +79,7 @@ function updateAlerts() {
         var split = document.getElementById("alert_text").value.split(",");
         alert_text = [];
         for(var i = 0; i < split.length; i++) {
-            alert_text.push(split[i].trim());
+            alert_text.push(split[i].trim().toUpperCase());
         }
     } else {
         alert_text = [];
@@ -89,7 +89,7 @@ function updateAlerts() {
         var split = document.getElementById("alert_callsigns").value.split(",");
         alert_callsigns = [];
         for(var i = 0; i < split.length; i++) {
-            alert_callsigns.push(split[i].trim());
+            alert_callsigns.push(split[i].trim().toUpperCase());
         }
     } else {
         alert_callsigns = [];
@@ -99,7 +99,7 @@ function updateAlerts() {
         var split = document.getElementById("alert_tail").value.split(",");
         alert_tail = [];
         for(var i = 0; i < split.length; i++) {
-            alert_tail.push(split[i].trim());
+            alert_tail.push(split[i].trim().toUpperCase());
         }
     } else {
         alert_tail = [];
@@ -109,11 +109,16 @@ function updateAlerts() {
         var split = document.getElementById("alert_icao").value.split(",");
         alert_icao = [];
         for(var i = 0; i < split.length; i++) {
-            alert_icao.push(split[i].trim());
+            alert_icao.push(split[i].trim().toUpperCase());
         }
     } else {
         alert_icao = [];
     }
+
+    document.getElementById("alert_text").value = document.getElementById("alert_text").value.toUpperCase();
+    document.getElementById("alert_callsigns").value = document.getElementById("alert_callsigns").value.toUpperCase();
+    document.getElementById("alert_tail").value = document.getElementById("alert_tail").value.toUpperCase();
+    document.getElementById("alert_icao").value = document.getElementById("alert_icao").value.toUpperCase();
 
     Cookies.set('alert_text', combineArray(alert_text), { expires: 365 });
     Cookies.set('alert_callsigns', combineArray(alert_callsigns), { expires: 365 });
@@ -125,7 +130,7 @@ function onInit() {
     if(Cookies.get("alert_text") ? Cookies.get("alert_text") : "" > 0) {
         var split = Cookies.get("alert_text").split(",");
         for(var i = 0; i < split.length; i++) {
-            alert_text.push(split[i]);
+            alert_text.push(split[i].toUpperCase());
         }
     } else {
         alert_text = [];
@@ -134,7 +139,7 @@ function onInit() {
     if(Cookies.get("alert_callsigns") ? Cookies.get("alert_callsigns") : "" > 0) {
         var split = Cookies.get("alert_callsigns").split(",");
         for(var i = 0; i < split.length; i++) {
-            alert_callsigns.push(split[i]);
+            alert_callsigns.push(split[i].toUpperCase());
         }
     } else {
         alert_callsigns = [];
@@ -143,7 +148,7 @@ function onInit() {
     if(Cookies.get("alert_tail") ? Cookies.get("alert_tail") : "" > 0) {
         var split = Cookies.get("alert_tail").split(",");
         for(var i = 0; i < split.length; i++) {
-            alert_tail.push(split[i]);
+            alert_tail.push(split[i].toUpperCase());
         }
     } else {
         alert_tail = [];
@@ -152,7 +157,7 @@ function onInit() {
     if(Cookies.get("alert_icao") ? Cookies.get("alert_icao") : "" > 0) {
         var split = Cookies.get("alert_icao").split(",");
         for(var i = 0; i < split.length; i++) {
-            alert_icao.push(split[i]);
+            alert_icao.push(split[i].toUpperCase());
         }
     } else {
         alert_icao = [];
@@ -168,11 +173,7 @@ function combineArray(input) {
     var output = "";
 
     for(var i = 0; i < input.length; i++) {
-        if(i != 0) {
-            output += "," + input[i];
-        } else {
-            output = input[i];
-        }
+        output += `${i != 0 ? "," + input[i] : input[i]}`;
     }
 
     return output;
@@ -236,7 +237,7 @@ function default_alert_values() {
     var current = document.getElementById("alert_text").value;
 
     default_text_values.forEach(element => {
-        if(!alert_text.includes(element)) {
+        if(!alert_text.includes(element.toUpperCase)) {
             current += `${current.length > 0 ? "," + element : element}`;
         }
     });
