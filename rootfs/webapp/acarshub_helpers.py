@@ -83,3 +83,6 @@ def acars_traceback(e, source):
     while traceback:
         print("{}: {}".format(traceback.tb_frame.f_code.co_filename, traceback.tb_lineno))
         traceback = traceback.tb_next
+
+def log(msg, source):
+    print(f"[{source}]: {msg}")

@@ -14,7 +14,7 @@ groundStations = dict()
 # Download station IDs
 
 try:
-    print("[database] Downloading Station IDs")
+    acarshub_helpers.log("Downloading Station IDs", "database")
     with urllib.request.urlopen("https://raw.githubusercontent.com/airframesio/data/master/json/vdl/ground-stations.json") as url:
         groundStations_json = json.loads(url.read().decode())
 
@@ -23,17 +23,17 @@ try:
         if stationId:
             groundStations[stationId] = { "icao": station['airport']['icao'], "name": station['airport']['name']}
 
-    print("[database] Completed downloading Station IDs")
+    acarshub_helpers.log("Completed loading Station IDs", "database")
 except Exception as e:
     acarshub_helpers.acars_traceback(e, "database")
 
 # Load Message Labels
 
 try:
-    print("[database] Loading message labels")
+    acarshub_helpers.log("Downloading message labels", "database")
     with urllib.request.urlopen("https://raw.githubusercontent.com/airframesio/data/master/json/acars/metadata.json") as url:
         message_labels = json.loads(url.read().decode())
-    print("[database] Completed loading message labels")
+    acarshub_helpers.log("Completed loading message labels", "database")
 except Exception as e:
     acarshub_helpers.acars_traceback(e, "database")
 
@@ -48,8 +48,10 @@ overrides = {}
 freqs = []
 
 try:
+    acarshub_helpers.log("Loading Airline Codes", "database")
     f = open('data/airlines.json',)
     airlines = json.load(f)
+    acarshub_helpers.log("Completed Loading Airline Codes", "database")
 except Exception as e:
     airlines = {}
     acarshub_helpers.acars_traceback(e, database)
@@ -69,7 +71,7 @@ for item in iata_override:
     if(len(override_splits) == 3):
         overrides[override_splits[0]] = (override_splits[1], override_splits[2])
     else:
-        print(f"[database] error adding in {item} to IATA overrides")
+        acarshub_helpers.log(f"Error adding in {item} to IATA overrides", "database")
 
 # Grab the freqs from the environment so we know what is being monitored
 
@@ -287,7 +289,7 @@ def add_message_from_json(message_type, message_from_json):
             pass
         # We have a key that we aren't saving the database. Log it
         else:
-            print(f"[database] Unidenitied key: {index}")
+            acarshub_helpers.log(f"Unidenitied key: {index}", "database")
 
     try:
         session = db_session()
@@ -305,17 +307,12 @@ def add_message_from_json(message_type, message_from_json):
            lon is not None or alt is not None:  # add in level here
 
             # write the message
-            if acarshub_helpers.DEBUG_LOGGING:
-                print("[database] writing to the database")
-                print(f"[database] writing message: {message_from_json}")
 
             session.add(messages(message_type=message_type, time=time, station_id=station_id, toaddr=toaddr,
                                  fromaddr=fromaddr, depa=depa, dsta=dsta, eta=eta, gtout=gtout, gtin=gtin,
                                  wloff=wloff, wlin=wlin, lat=lat, lon=lon, alt=alt, text=text, tail=tail,
                                  flight=flight, icao=icao, freq=freq, ack=ack, mode=mode, label=label, block_id=block_id,
                                  msgno=msgno, is_response=is_response, is_onground=is_onground, error=error, libacars=libacars))
-        elif acarshub_helpers.DEBUG_LOGGING:
-            print(f"[database] discarding no text message: {message_from_json}")
 
         # Now lets decide where to log the message count to
         # Firs twe'll see if the message is not blank
@@ -356,8 +353,6 @@ def add_message_from_json(message_type, message_from_json):
         session.commit()
         session.close()
 
-        if acarshub_helpers.DEBUG_LOGGING:
-            print("[database] write to database complete")
     except Exception as e:
         acarshub_helpers.acars_traceback(e, "database")
 
@@ -378,7 +373,7 @@ def pruneOld():
         session = db_session()
         result = session.query(messages).filter(messages.time <= epoch).delete()
         session.commit()
-        print(f"[database] Pruned database of {result} records")
+        acarshub_helpers.log(f"Pruned database of {result} records", "database")
         session.close()
     except Exception as e:
         acarshub_helpers.acars_traceback(e, "database")
@@ -422,13 +417,10 @@ def database_search(field, search_term, page=0):
             result = session.query(messages).filter(messages.label.contains(search_term)).order_by(messages.id.desc())
         session.close()
         print("Query--- %s seconds ---" % (time.time() - start_time))
-    except Exception:
-        print("[database] Error running search!")
+    except Exception as e:
+        acarshub_helpers.acars_traceback(e, "database")
         return [None, 50]
     else:
-        if acarshub_helpers.DEBUG_LOGGING:
-            print("[database] Done searching")
-
         if result is not None and result.count() > 0:
             start_time = time.time()
             data = [query_to_dict(d) for d in result[page:page + 50]]
@@ -592,7 +584,6 @@ def lookup_groundstation(lookup_id):
 def lookup_label(label):
     if label in message_labels['labels']:
         return message_labels['labels'][label]['name']
-    print(f"[database] Unknown message label: {label}")
     return None
 
 
@@ -609,21 +600,21 @@ try:
     session = db_session()
 
     if session.query(messagesCount).count() == 0:
-        print("[database] Initializing table database")
+        acarshub_helpers.log("Initializing table database", "database")
         session.add(messagesCount(total=total_messages, errors=total_errors, good=good_msgs))
         session.commit()
-        print("[database] Count table initialized")
+        acarshub_helpers.log("Count table initialized", "database")
 
     if session.query(messagesCountDropped).count() == 0:
-        print("[database] Initializing dropped count database")
+        acarshub_helpers.log("Initializing dropped count database", "database")
         session.add(messagesCountDropped(nonlogged_good=0, nonlogged_errors=0))
         session.commit()
-        print("[database] Dropped count table initialized")
+        acarshub_helpers.log("Dropped count table initialized", "database")
 
     # now we pre-populate the freq db if empty
 
     if session.query(messagesFreq).count() == 0:
-        print("[database] Initializing freq table")
+        acarshub_helpers.log("Initializing freq table", "database")
         found_freq = {}
         for item in session.query(messages).all():
             if item.freq not in found_freq:
@@ -632,7 +623,7 @@ try:
         for item in found_freq:
             session.add(messagesFreq(freq=found_freq[item][0], count=found_freq[item][2], freq_type=found_freq[item][1]))
         session.commit()
-        print("[database] Freq table initialized")
+        acarshub_helpers.log("Freq table initialized", "database")
 
     session.close()
 except Exception as e:
