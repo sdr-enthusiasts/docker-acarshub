@@ -2,7 +2,7 @@
 
 ## About
 
-ACARS Hub is a collaborative, open source effort to easily enable reception of, feeding to [Airframes.io](airframes.io), and local viewing of VDLM2/ACARS messages.
+ACARS Hub is a collaborative, open source effort to easily enable reception of, feeding to [Airframes.io](http://airframes.io), and local viewing of VDLM2/ACARS messages.
 
 There are three main pages you can interact with:
 
@@ -12,7 +12,7 @@ There are three main pages you can interact with:
 
 &nbsp;<br>
 &nbsp;<br>
-ACARS is a pretty cool technology and these planes are sending an awful lot of information in a coded way. We are constantly working, along with the folks at [Airframes.io](airframes.io), to decode the messages in a more refined, human-readable way. This is an on-going project so expect to see both decoded and non-decoded messages.
+ACARS is a pretty cool technology and these planes are sending an awful lot of information in a coded way. We are constantly working, along with the folks at [Airframes.io](http://airframes.io), to decode the messages in a more refined, human-readable way. This is an on-going project so expect to see both decoded and non-decoded messages.
 
 We've made an effort to provide a maximum amount of information about the message in a compact, yet readable, way. Below is a list of terms/acronyms used throughout the web app and what they represent.
 
