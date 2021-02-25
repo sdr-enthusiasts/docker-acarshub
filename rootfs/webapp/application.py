@@ -299,7 +299,7 @@ def init_listeners(special_message=""):
     global thread_html_generator
     global thread_alerts
 
-    if acarshub_helpers.DEBUG_LOGGING and special_message is not "":
+    if special_message != "":
         print('[init] Starting data listeners')
 
     if not thread_acars_listener.isAlive() and acarshub_helpers.ENABLE_ACARS:
