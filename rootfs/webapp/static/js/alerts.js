@@ -6,6 +6,8 @@ var alert_tail = [];
 var alert_icao = [];
 var msgs_received = [];
 
+var default_text_values = ['cop', 'authorities', 'chop', 'turbulence', 'fault', 'divert', 'mask', 'csr', 'agent', 'medical']
+
 msgs_received.unshift = function () {
     if (this.length >= 50) {
         this.pop();
@@ -228,4 +230,16 @@ function match_alert(msg) {
         flight: matched_flight.length > 0 ? matched_flight : null,
         tail: matched_tail.length > 0 ? matched_tail : null,
     };
+}
+
+function default_alert_values() {
+    var current = document.getElementById("alert_text").value;
+
+    default_text_values.forEach(element => {
+        if(!alert_text.includes(element)) {
+            current += `${current.length > 0 ? "," + element : element}`;
+        }
+    });
+    document.getElementById("alert_text").value = current;
+    updateAlerts();
 }
