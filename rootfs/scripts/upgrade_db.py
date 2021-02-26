@@ -5,6 +5,7 @@
 
 import sqlite3
 import os
+import sys
 
 # Current schema:
 
@@ -108,8 +109,11 @@ if os.path.isfile(path_to_db):
 		conn.close()
 	except Exception as e:
 		print(f"[database]: ERROR UPGRADING DB. PLEASE SHUT DOWN ACARSHUB AND ENSURE DATABASE INTEGRITY: {e}")
+		sys.exit(1)
 
 if upgraded:
 	print("[database] Completed upgrading database structure")
 else:
 	print("[database] Database structure did not require upgrades")
+
+sys.exit(0)
