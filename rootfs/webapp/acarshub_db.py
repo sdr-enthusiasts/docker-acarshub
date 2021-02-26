@@ -142,8 +142,8 @@ class messages(Messages):
     station_id = Column('station_id', String(32))
     toaddr = Column('toaddr', String(32))
     fromaddr = Column('fromaddr', String(32))
-    depa = Column('depa', String(32))
-    dsta = Column('dsta', String(32))
+    depa = Column('depa', String(32), index=True)
+    dsta = Column('dsta', String(32), index=True)
     eta = Column('eta', String(32))
     gtout = Column('gtout', String(32))
     gtin = Column('gtin', String(32))
@@ -152,21 +152,21 @@ class messages(Messages):
     lat = Column('lat', String(32))
     lon = Column('lon', String(32))
     alt = Column('alt', String(32))
-    text = Column('text', Text)
-    tail = Column('tail', String(32))
-    flight = Column('flight', String(32))
-    icao = Column('icao', String(32))
-    freq = Column('freq', String(32))
+    text = Column('text', Text, index=True)
+    tail = Column('tail', String(32), index=True)
+    flight = Column('flight', String(32), index=True)
+    icao = Column('icao', String(32), index=True)
+    freq = Column('freq', String(32), index=True)
     ack = Column('ack', String(32))
     mode = Column('mode', String(32))
-    label = Column('label', String(32))
+    label = Column('label', String(32), index=True)
     block_id = Column('block_id', String(32))
-    msgno = Column('msgno', String(32))
+    msgno = Column('msgno', String(32), index=True)
     is_response = Column('is_response', String(32))
     is_onground = Column('is_onground', String(32))
     error = Column('error', String(32))
     libacars = Column('libacars', Text)
-    # level = Column('level', String(32)) # Uncomment this line when we're ready to migrate the db
+    level = Column('level', String(32))
 
 # Now we've created the classes for the database, we'll associate the class with the database and create any missing tables
 
@@ -304,7 +304,7 @@ def add_message_from_json(message_type, message_from_json):
         if acarshub_helpers.DB_SAVEALL or text is not None or libacars is not None or \
            dsta is not None or depa is not None or eta is not None or gtout is not None or \
            gtin is not None or wloff is not None or wlin is not None or lat is not None or \
-           lon is not None or alt is not None:  # add in level here
+           lon is not None or alt is not None:
 
             # write the message
 
@@ -312,7 +312,7 @@ def add_message_from_json(message_type, message_from_json):
                                  fromaddr=fromaddr, depa=depa, dsta=dsta, eta=eta, gtout=gtout, gtin=gtin,
                                  wloff=wloff, wlin=wlin, lat=lat, lon=lon, alt=alt, text=text, tail=tail,
                                  flight=flight, icao=icao, freq=freq, ack=ack, mode=mode, label=label, block_id=block_id,
-                                 msgno=msgno, is_response=is_response, is_onground=is_onground, error=error, libacars=libacars))
+                                 msgno=msgno, is_response=is_response, is_onground=is_onground, error=error, libacars=libacars, level=level))
 
         # Now lets decide where to log the message count to
         # Firs twe'll see if the message is not blank
