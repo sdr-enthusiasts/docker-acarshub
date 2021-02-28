@@ -233,8 +233,8 @@ function display_messages(msgs_to_process, selected_tabs, live_page=false) {
 
             // Text field is pre-processed
             // we have a sub-table for the raw text field and if it was decoded, the decoded text as well
-            if(message.hasOwnProperty("msg_text")) {
-                var text = message['msg_text'];
+            if(message.hasOwnProperty("text")) {
+                var text = message['text'];
                 text = text.replace("\\r\\n", "<br>");
                 //html_output += "<p>";
                 html_output += "<table class=\"message\">";

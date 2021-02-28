@@ -100,7 +100,7 @@ def check_tables(cur):
 		cur.execute('CREATE TRIGGER message_ad AFTER DELETE ON messages BEGIN INSERT INTO text_fts (text_fts, rowid, msg_time, station_id, toaddr, fromaddr, depa, dsta, eta, \
 					gtout, gtin, wloff, wlin, lat, lon, alt, msg_text, tail, flight, icao, freq, ack, mode, label, block_id, msgno, is_response, is_onground, error, libacars, \
 					level) VALUES (\'delete\', old.id, old.msg_time, old.station_id, old.toaddr, old.fromaddr, old.depa, old.dsta, old.eta, old.gtout, old.gtin, old.wloff, \
-					old.wlin, old.lat, old.lon, old.alt, old.text, old.tail, old.flight, old.icao, old.freq, old.ack, old.mode, old.label, old.block_id, old.msgno, \
+					old.wlin, old.lat, old.lon, old.alt, old.msg_text, old.tail, old.flight, old.icao, old.freq, old.ack, old.mode, old.label, old.block_id, old.msgno, \
 					old.is_response, old.is_onground, old.error, old.libacars, old.level); END;')
 
 		cur.execute('CREATE TRIGGER message_au AFTER UPDATE ON messages BEGIN INSERT INTO text_fts (text_fts, rowid, message_type, msg_time, station_id, toaddr, fromaddr, \
@@ -112,7 +112,6 @@ def check_tables(cur):
 					block_id, msgno, is_response, is_onground, error, libacars, level) VALUES (new.id, new.message_type, new.msg_time, new.station_id, new.toaddr, new.fromaddr, \
 					new.depa, new.dsta, new.eta, new.gtout, new.gtin, new.wloff, new.wlin, new.lat, new.lon, new.alt, new.msg_text, new.tail, new.flight, new.icao, \
 					new.freq, new.ack, new.mode, new.label, new.block_id, new.msgno, new.is_response, new.is_onground, new.error, new.libacars, new.level); END;')
-		conn.commit()
 
 
 def de_null(cur):
