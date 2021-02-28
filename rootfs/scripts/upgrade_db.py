@@ -93,7 +93,7 @@ def check_tables(cur):
 					new.msgno, new.is_response, new.is_onground, new.error, new.libacars, new.level); END;')
 
 		cur.execute('CREATE TRIGGER message_ad AFTER DELETE ON messages BEGIN INSERT INTO text_fts (text_fts, rowid, time, station_id, toaddr, fromaddr, depa, dsta, eta, \
-					gtout, gtin, wloff, wlin, lat, lon, alt, text, tail, flight, icao, freq, ack, mode, label, block_id, msgno, is_response, is_onground, error, libacars, \
+					gtout, gtin, wloff, wlin, lat, lon, alt, msg_text, tail, flight, icao, freq, ack, mode, label, block_id, msgno, is_response, is_onground, error, libacars, \
 					level) VALUES (\'delete\', old.id, old.time, old.station_id, old.toaddr, old.fromaddr, old.depa, old.dsta, old.eta, old.gtout, old.gtin, old.wloff, \
 					old.wlin, old.lat, old.lon, old.alt, old.text, old.tail, old.flight, old.icao, old.freq, old.ack, old.mode, old.label, old.block_id, old.msgno, \
 					old.is_response, old.is_onground, old.error, old.libacars, old.level); END;')
