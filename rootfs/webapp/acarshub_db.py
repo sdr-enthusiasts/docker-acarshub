@@ -138,7 +138,7 @@ class messages(Messages):
     # ACARS or VDLM
     message_type = Column('message_type', String(32), nullable=False)
     # message time
-    time = Column('time', String(32), nullable=False)
+    time = Column('msg_time', String(32), nullable=False)
     station_id = Column('station_id', String(32), nullable=False)
     toaddr = Column('toaddr', String(32), nullable=False)
     fromaddr = Column('fromaddr', String(32), nullable=False)

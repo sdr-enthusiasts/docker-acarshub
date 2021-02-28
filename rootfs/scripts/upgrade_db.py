@@ -17,7 +17,7 @@ import shutil
     # # ACARS or VDLM
     # message_type = Column('message_type', String(32), nullable=False)
     # # message time
-    # time = Column('time', String(32), nullable=False)
+    # time = Column('msg_time', String(32), nullable=False)
     # station_id = Column('station_id', String(32), nullable=False)
     # toaddr = Column('toaddr', String(32), nullable=False)
     # fromaddr = Column('fromaddr', String(32), nullable=False)
@@ -59,16 +59,21 @@ def check_columns(cur):
 	global upgraded
 	columns = [i[1] for i in cur.execute('PRAGMA table_info(messages)')]
 
+	# Add in level column
 	if 'level' not in columns:
 		upgraded = True
 		print("[database] Adding level column")
 		cur.execute('ALTER TABLE messages ADD COLUMN level TEXT')
-		conn.commit()
+	# Just for clarity's sake so that we don't have the same name for columns as SQL reserved keywords
+	# We'll rename the text and time columns
 	if 'text' in columns:
 		upgraded = True
 		print("[database] Renaming text column")
 		cur.execute('ALTER TABLE "main"."messages" RENAME COLUMN "text" TO "msg_text"')
-		conn.commit()
+	if 'time' in columns:
+		upgraded = True
+		print("[database] Renaming time column")
+		cur.execute('ALTER TABLE "main"."messages" RENAME COLUMN "time" TO "msg_time"')
 
 
 def check_tables(cur):
@@ -80,31 +85,31 @@ def check_tables(cur):
 		print("[database] Adding in text search tables....may take a while")
 
 		# Create the virtual table for search indexing.
-		cur.execute('CREATE VIRTUAL TABLE text_fts USING fts5(message_type UNINDEXED, time, station_id UNINDEXED, toaddr UNINDEXED, fromaddr UNINDEXED, \
+		cur.execute('CREATE VIRTUAL TABLE text_fts USING fts5(message_type UNINDEXED, msg_time, station_id UNINDEXED, toaddr UNINDEXED, fromaddr UNINDEXED, \
 					depa, dsta, eta UNINDEXED, gtout UNINDEXED, gtin UNINDEXED, wloff UNINDEXED, wlin UNINDEXED, lat UNINDEXED, lon UNINDEXED, \
 		    		alt UNINDEXED, msg_text, tail, flight, icao, freq, ack UNINDEXED, mode UNINDEXED, label, block_id UNINDEXED, msgno UNINDEXED, \
 		    		is_response UNINDEXED, is_onground UNINDEXED, error UNINDEXED, libacars UNINDEXED, level UNINDEXED, content="messages", content_rowid="id")')
 
 		# Create the triggers to keep the message table and text search table in sync
-		cur.execute('CREATE TRIGGER message_ai AFTER INSERT ON messages BEGIN INSERT INTO text_fts (rowid, message_type, time, station_id, toaddr, fromaddr, depa, dsta, \
+		cur.execute('CREATE TRIGGER message_ai AFTER INSERT ON messages BEGIN INSERT INTO text_fts (rowid, message_type, msg_time, station_id, toaddr, fromaddr, depa, dsta, \
 					eta, gtout, gtin, wloff, wlin, lat, lon, alt, msg_text, tail, flight, icao, freq, ack, mode, label, block_id, msgno, is_response, is_onground, error, \
-					libacars, level) VALUES (new.id, new.message_type, new.time, new.station_id, new.toaddr, new.fromaddr, new.depa, new.dsta, new.eta, new.gtout, new.gtin, \
+					libacars, level) VALUES (new.id, new.message_type, new.msg_time, new.station_id, new.toaddr, new.fromaddr, new.depa, new.dsta, new.eta, new.gtout, new.gtin, \
 					new.wloff, new.wlin, new.lat, new.lon, new.alt, new.msg_text, new.tail, new.flight, new.icao, new.freq, new.ack, new.mode, new.label, new.block_id, \
 					new.msgno, new.is_response, new.is_onground, new.error, new.libacars, new.level); END;')
 
-		cur.execute('CREATE TRIGGER message_ad AFTER DELETE ON messages BEGIN INSERT INTO text_fts (text_fts, rowid, time, station_id, toaddr, fromaddr, depa, dsta, eta, \
+		cur.execute('CREATE TRIGGER message_ad AFTER DELETE ON messages BEGIN INSERT INTO text_fts (text_fts, rowid, msg_time, station_id, toaddr, fromaddr, depa, dsta, eta, \
 					gtout, gtin, wloff, wlin, lat, lon, alt, msg_text, tail, flight, icao, freq, ack, mode, label, block_id, msgno, is_response, is_onground, error, libacars, \
-					level) VALUES (\'delete\', old.id, old.time, old.station_id, old.toaddr, old.fromaddr, old.depa, old.dsta, old.eta, old.gtout, old.gtin, old.wloff, \
+					level) VALUES (\'delete\', old.id, old.msg_time, old.station_id, old.toaddr, old.fromaddr, old.depa, old.dsta, old.eta, old.gtout, old.gtin, old.wloff, \
 					old.wlin, old.lat, old.lon, old.alt, old.text, old.tail, old.flight, old.icao, old.freq, old.ack, old.mode, old.label, old.block_id, old.msgno, \
 					old.is_response, old.is_onground, old.error, old.libacars, old.level); END;')
 
-		cur.execute('CREATE TRIGGER message_au AFTER UPDATE ON messages BEGIN INSERT INTO text_fts (text_fts, rowid, message_type, time, station_id, toaddr, fromaddr, \
+		cur.execute('CREATE TRIGGER message_au AFTER UPDATE ON messages BEGIN INSERT INTO text_fts (text_fts, rowid, message_type, msg_time, station_id, toaddr, fromaddr, \
 					depa, dsta, eta, gtout, gtin, wloff, wlin, lat, lon, alt, msg_text, tail, flight, icao, freq, ack, mode, label, block_id, msgno, is_response, \
-					is_onground, error, libacars, level) VALUES (\'delete\', old.id, old.message_type, old.time, old.station_id, old.toaddr, old.fromaddr, old.depa, old.dsta, \
+					is_onground, error, libacars, level) VALUES (\'delete\', old.id, old.message_type, old.msg_time, old.station_id, old.toaddr, old.fromaddr, old.depa, old.dsta, \
 					old.eta, old.gtout, old.gtin, old.wloff, old.wlin, old.lat, old.lon, old.alt, old.msg_text, old.tail, old.flight, old.icao, old.freq, old.ack, \
 					old.mode, old.label, old.block_id, old.msgno, old.is_response, old.is_onground, old.error, old.libacars, old.level); INSERT INTO text_fts (rowid, message_type, \
-					time, station_id, toaddr, fromaddr, depa, dsta, eta, gtout, gtin, wloff, wlin, lat, lon, alt, msg_text, tail, flight, icao, freq, ack, mode, label, \
-					block_id, msgno, is_response, is_onground, error, libacars, level) VALUES (new.id, new.message_type, new.time, new.station_id, new.toaddr, new.fromaddr, \
+					msg_time, station_id, toaddr, fromaddr, depa, dsta, eta, gtout, gtin, wloff, wlin, lat, lon, alt, msg_text, tail, flight, icao, freq, ack, mode, label, \
+					block_id, msgno, is_response, is_onground, error, libacars, level) VALUES (new.id, new.message_type, new.msg_time, new.station_id, new.toaddr, new.fromaddr, \
 					new.depa, new.dsta, new.eta, new.gtout, new.gtin, new.wloff, new.wlin, new.lat, new.lon, new.alt, new.msg_text, new.tail, new.flight, new.icao, \
 					new.freq, new.ack, new.mode, new.label, new.block_id, new.msgno, new.is_response, new.is_onground, new.error, new.libacars, new.level); END;')
 		conn.commit()
@@ -143,7 +148,6 @@ def de_null(cur):
 	cur.execute('UPDATE messages SET error = "" WHERE error IS NULL')
 	cur.execute('UPDATE messages SET libacars = "" WHERE libacars IS NULL')
 	cur.execute('UPDATE messages SET level = "" WHERE level IS NULL')
-	conn.commit()
 
 
 def add_indexes(cur):
@@ -201,7 +205,7 @@ def create_db(cur):
 	cur.execute('CREATE TABLE "count" ("id"	INTEGER NOT NULL,"total"	INTEGER, "errors"	INTEGER, "good"	INTEGER, PRIMARY KEY("id"));')
 	cur.execute('CREATE TABLE "freqs" ("it"	INTEGER NOT NULL, "freq"	VARCHAR(32), "freq_type"	VARCHAR(32), "count"	INTEGER, PRIMARY KEY("it"));')
 	cur.execute('CREATE TABLE "level" ("id"	INTEGER NOT NULL, "level"	INTEGER, "count"	INTEGER, PRIMARY KEY("id"));')
-	cur.execute('CREATE TABLE "messages" ("id"	INTEGER NOT NULL, "message_type"	VARCHAR(32) NOT NULL, "time"	VARCHAR(32) NOT NULL, \
+	cur.execute('CREATE TABLE "messages" ("id"	INTEGER NOT NULL, "message_type"	VARCHAR(32) NOT NULL, "msg_time"	VARCHAR(32) NOT NULL, \
 				"station_id"	VARCHAR(32) NOT NULL, "toaddr"	VARCHAR(32) NOT NULL, "fromaddr"	VARCHAR(32) NOT NULL, "depa"	VARCHAR(32) NOT NULL, \
 				"dsta"	VARCHAR(32) NOT NULL, "eta"	VARCHAR(32) NOT NULL, "gtout"	VARCHAR(32) NOT NULL, "gtin"	VARCHAR(32) NOT NULL, \
 				"wloff"	VARCHAR(32) NOT NULL, "wlin"	VARCHAR(32) NOT NULL, "lat"	VARCHAR(32) NOT NULL, "lon"	VARCHAR(32) NOT NULL, \
@@ -222,8 +226,10 @@ try:
 		create_db(cur)
 
 	check_columns(cur)
+	conn.commit()
 	check_tables(cur)
 	de_null(cur)
+	conn.commit()
 	add_indexes(cur)
 
 	conn.commit()

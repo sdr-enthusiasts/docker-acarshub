@@ -134,7 +134,7 @@ function display_messages(msgs_to_process, selected_tabs, live_page=false) {
             if(message.hasOwnProperty('timestamp'))
                 timestamp = new Date(message['timestamp'] * 1000);
             else
-                timestamp = new Date(message['time'] * 1000);
+                timestamp = new Date(message['msg_time'] * 1000);
 
             html_output += `<td style=\"text-align: right\"><strong>${timestamp}</strong></td>`;
             html_output += "</tr>";
@@ -233,8 +233,8 @@ function display_messages(msgs_to_process, selected_tabs, live_page=false) {
 
             // Text field is pre-processed
             // we have a sub-table for the raw text field and if it was decoded, the decoded text as well
-            if(message.hasOwnProperty("text")) {
-                var text = message['text'];
+            if(message.hasOwnProperty("msg_text")) {
+                var text = message['msg_text'];
                 text = text.replace("\\r\\n", "<br>");
                 //html_output += "<p>";
                 html_output += "<table class=\"message\">";
