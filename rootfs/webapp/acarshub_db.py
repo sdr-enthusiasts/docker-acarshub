@@ -136,37 +136,37 @@ class messages(Messages):
     __tablename__ = 'messages'
     id = Column(Integer, primary_key=True)
     # ACARS or VDLM
-    message_type = Column('message_type', String(32))
+    message_type = Column('message_type', String(32), nullable=False)
     # message time
-    time = Column('time', String(32))
-    station_id = Column('station_id', String(32))
-    toaddr = Column('toaddr', String(32))
-    fromaddr = Column('fromaddr', String(32))
-    depa = Column('depa', String(32), index=True)
-    dsta = Column('dsta', String(32), index=True)
-    eta = Column('eta', String(32))
-    gtout = Column('gtout', String(32))
-    gtin = Column('gtin', String(32))
-    wloff = Column('wloff', String(32))
-    wlin = Column('wlin', String(32))
-    lat = Column('lat', String(32))
-    lon = Column('lon', String(32))
-    alt = Column('alt', String(32))
-    text = Column('text', Text, index=True)
-    tail = Column('tail', String(32), index=True)
-    flight = Column('flight', String(32), index=True)
-    icao = Column('icao', String(32), index=True)
-    freq = Column('freq', String(32), index=True)
-    ack = Column('ack', String(32))
-    mode = Column('mode', String(32))
-    label = Column('label', String(32), index=True)
-    block_id = Column('block_id', String(32))
-    msgno = Column('msgno', String(32), index=True)
-    is_response = Column('is_response', String(32))
-    is_onground = Column('is_onground', String(32))
-    error = Column('error', String(32))
-    libacars = Column('libacars', Text)
-    level = Column('level', String(32))
+    time = Column('time', String(32), nullable=False)
+    station_id = Column('station_id', String(32), nullable=False)
+    toaddr = Column('toaddr', String(32), nullable=False)
+    fromaddr = Column('fromaddr', String(32), nullable=False)
+    depa = Column('depa', String(32), index=True, nullable=False)
+    dsta = Column('dsta', String(32), index=True, nullable=False)
+    eta = Column('eta', String(32), nullable=False)
+    gtout = Column('gtout', String(32), nullable=False)
+    gtin = Column('gtin', String(32), nullable=False)
+    wloff = Column('wloff', String(32), nullable=False)
+    wlin = Column('wlin', String(32), nullable=False)
+    lat = Column('lat', String(32), nullable=False)
+    lon = Column('lon', String(32), nullable=False)
+    alt = Column('alt', String(32), nullable=False)
+    text = Column('msg_text', Text, index=True, nullable=False)
+    tail = Column('tail', String(32), index=True, nullable=False)
+    flight = Column('flight', String(32), index=True, nullable=False)
+    icao = Column('icao', String(32), index=True, nullable=False)
+    freq = Column('freq', String(32), index=True, nullable=False)
+    ack = Column('ack', String(32), nullable=False)
+    mode = Column('mode', String(32), nullable=False)
+    label = Column('label', String(32), index=True, nullable=False)
+    block_id = Column('block_id', String(32), nullable=False)
+    msgno = Column('msgno', String(32), index=True, nullable=False)
+    is_response = Column('is_response', String(32), nullable=False)
+    is_onground = Column('is_onground', String(32), nullable=False)
+    error = Column('error', String(32), nullable=False)
+    libacars = Column('libacars', Text, nullable=False)
+    level = Column('level', String(32), nullable=False)
 
 # Now we've created the classes for the database, we'll associate the class with the database and create any missing tables
 
@@ -178,7 +178,7 @@ def query_to_dict(obj):
     if isinstance(obj.__class__, DeclarativeMeta):
         # an SQLAlchemy class
         fields = {}
-        for field in [x for x in dir(obj) if not x.startswith('_') and x != 'metadata' and x != None]:
+        for field in [x for x in dir(obj) if not x.startswith('_') and x != 'metadata' and x != None and x != ""]:
             fields[field] = obj.__getattribute__(field)
         return fields
     return None
@@ -188,35 +188,35 @@ def add_message_from_json(message_type, message_from_json):
     global database
     import json
     # message time
-    time = None
-    station_id = None
-    toaddr = None
-    fromaddr = None
-    depa = None
-    dsta = None
-    eta = None
-    gtout = None
-    gtin = None
-    wloff = None
-    wlin = None
-    lat = None
-    lon = None
-    alt = None
-    text = None
-    tail = None
-    flight = None
-    icao = None
-    freq = None
-    ack = None
-    mode = None
-    label = None
-    block_id = None
-    msgno = None
-    is_response = None
-    is_onground = None
-    error = None
-    libacars = None
-    level = None
+    time = ""
+    station_id = ""
+    toaddr = ""
+    fromaddr = ""
+    depa = ""
+    dsta = ""
+    eta = ""
+    gtout = ""
+    gtin = ""
+    wloff = ""
+    wlin = ""
+    lat = ""
+    lon = ""
+    alt = ""
+    text = ""
+    tail = ""
+    flight = ""
+    icao = ""
+    freq = ""
+    ack = ""
+    mode = ""
+    label = ""
+    block_id = ""
+    msgno = ""
+    is_response = ""
+    is_onground = ""
+    error = 0
+    libacars = ""
+    level = ""
 
     for index in message_from_json:
         if index == 'timestamp':
@@ -301,10 +301,10 @@ def add_message_from_json(message_type, message_from_json):
         else:
             session.add(messagesFreq(freq=f"{freq}", freq_type=message_type, count=1))
 
-        if acarshub_helpers.DB_SAVEALL or text is not None or libacars is not None or \
-           dsta is not None or depa is not None or eta is not None or gtout is not None or \
-           gtin is not None or wloff is not None or wlin is not None or lat is not None or \
-           lon is not None or alt is not None:
+        if acarshub_helpers.DB_SAVEALL or text != "" or libacars != "" or \
+           dsta != "" or depa != "" or eta != "" or gtout != "" or \
+           gtin != "" or wloff != "" or wlin != "" or lat != "" or \
+           lon != "" or alt != "":
 
             # write the message
 
@@ -312,20 +312,20 @@ def add_message_from_json(message_type, message_from_json):
                                  fromaddr=fromaddr, depa=depa, dsta=dsta, eta=eta, gtout=gtout, gtin=gtin,
                                  wloff=wloff, wlin=wlin, lat=lat, lon=lon, alt=alt, text=text, tail=tail,
                                  flight=flight, icao=icao, freq=freq, ack=ack, mode=mode, label=label, block_id=block_id,
-                                 msgno=msgno, is_response=is_response, is_onground=is_onground, error=error, libacars=libacars, level=level))
+                                 msgno=msgno, is_response=is_response, is_onground=is_onground, error=error, libacars=libacars))
 
         # Now lets decide where to log the message count to
         # Firs twe'll see if the message is not blank
 
-        if text is not None or libacars is not None or \
-           dsta is not None or depa is not None or eta is not None or gtout is not None or \
-           gtin is not None or wloff is not None or wlin is not None or lat is not None or \
-           lon is not None or alt is not None:
+        if text != ""or libacars != "" or \
+           dsta != "" or depa != "" or eta != "" or gtout != "" or \
+           gtin != "" or wloff != "" or wlin != "" or lat != "" or \
+           lon != "" or alt != "":
 
             count = session.query(messagesCount).first()
             count.total += 1
 
-            if error is not None and error > 0:
+            if error > 0:
                 count.errors += 1
             else:
                 count.good += 1
@@ -333,7 +333,7 @@ def add_message_from_json(message_type, message_from_json):
         else:
             count = session.query(messagesCountDropped).first()
 
-            if error is not None and error > 0:
+            if error > 0:
                 count.nonlogged_errors += 1
             else:
                 count.nonlogged_good += 1
@@ -395,39 +395,51 @@ def database_search(field, search_term, page=0):
     result = None
     import time
     start_time = time.time()
+
     try:
         if acarshub_helpers.DEBUG_LOGGING:
             print(f"[database] Searching database for {search_term} in {field}")
         session = db_session()
         if field == "flight-iata":
-            result = session.query(messages).filter(messages.flight.contains(search_term)).order_by(messages.id.desc())
+            result = session.execute(f'SELECT * from text_fts WHERE flight MATCH "{search_term}*" LIMIT 50 OFFSET {page * 50}')
+            count = session.execute(f'SELECT COUNT(*) from text_fts WHERE flight MATCH "{search_term}*"')
         elif field == "tail":
-            result = session.query(messages).filter(messages.tail.contains(search_term)).order_by(messages.id.desc())
+            result = session.execute(f'SELECT * from text_fts WHERE tail MATCH "{search_term}*" LIMIT 50 OFFSET {page * 50}')
+            count = session.execute(f'SELECT COUNT(*) from text_fts WHERE tail MATCH "{search_term}*"')
         elif field == "depa":
-            result = session.query(messages).filter(messages.depa.contains(search_term)).order_by(messages.id.desc())
+            result = session.execute(f'SELECT * from text_fts WHERE depa MATCH "{search_term}*" LIMIT 50 OFFSET {page * 50}')
+            count = session.execute(f'SELECT COUNT(*) from text_fts WHERE depa MATCH "{search_term}*"')
         elif field == "dsta":
-            result = session.query(messages).filter(messages.dsta.contains(search_term)).order_by(messages.id.desc())
+            result = session.execute(f'SELECT * from text_fts WHERE dsta MATCH "{search_term}*" LIMIT 50 OFFSET {page * 50}')
+            count = session.execute(f'SELECT COUNT(*) from text_fts WHERE dsta MATCH "{search_term}*"')
         elif field == "text":
-            result = session.query(messages).filter(messages.text.contains(search_term)).order_by(messages.id.desc())
+            result = session.execute(f'SELECT * from text_fts WHERE msg_text MATCH "{search_term}*" LIMIT 50 OFFSET {page * 50}')
+            count = session.execute(f'SELECT COUNT(*) from text_fts WHERE msg_text MATCH "{search_term}*"')
         elif field == "msgno":
-            result = session.query(messages).filter(messages.msgno.contains(search_term)).order_by(messages.id.desc())
+            result = session.execute(f'SELECT * from text_fts WHERE msgno MATCH "{search_term}*" LIMIT 50 OFFSET {page * 50}')
+            count = session.execute(f'SELECT COUNT(*) from text_fts WHERE msgno MATCH "{search_term}*"')
         elif field == "freq":
-            result = session.query(messages).filter(messages.freq.contains(search_term)).order_by(messages.id.desc())
+            result = session.execute(f'SELECT * from text_fts WHERE freq MATCH "{search_term}*" LIMIT 50 OFFSET {page * 50}')
+            count = session.execute(f'SELECT COUNT(*) from text_fts WHERE freq MATCH "{search_term}*"')
         elif field == "msglbl":
-            result = session.query(messages).filter(messages.label.contains(search_term)).order_by(messages.id.desc())
+            result = session.execute(f'SELECT * from text_fts WHERE label MATCH "{search_term}*" LIMIT 50 OFFSET {page * 50}')
+            count = session.execute(f'SELECT COUNT(*) from text_fts WHERE label MATCH "{search_term}*"')
+        
+
+        #a = [{column: value for column, value in rowproxy.items()} for rowproxy in result]
+        processed_results = []
+        final_count = 0
+        for row in count:
+           final_count = row[0]
+
+        for row in result:
+            processed_results.append(dict(row))
         session.close()
         print("Query--- %s seconds ---" % (time.time() - start_time))
+        return(processed_results, final_count)
     except Exception as e:
         acarshub_helpers.acars_traceback(e, "database")
         return [None, 50]
-    else:
-        if result is not None and result.count() > 0:
-            start_time = time.time()
-            data = [query_to_dict(d) for d in result[page:page + 50]]
-            print("Process data--- %s seconds ---" % (time.time() - start_time))
-            return [data, result.count()]
-        else:
-            return [None, 50]
 
 
 def search_alerts(icao=None, tail=None, flight=None, text=None):

@@ -2,3 +2,7 @@
 # shellcheck shell=bash
 
 python3 /scripts/upgrade_db.py
+
+# Do we need to catch the exit 1 from the script if it fails to stop
+# the container from starting or does that happen automatically because the script
+# exited 1?

@@ -59,6 +59,10 @@ def update_keys(json_message):
 
     # Now we process individual keys, if that key is present
 
+    if "msg_text" in json_message and json_message['msg_text'] is not None:
+        json_message['text'] = json_message['msg_text']
+        del json_message['msg_text']
+
     if "libacars" in json_message and json_message['libacars'] is not None:
         json_message['libacars'] = libacars_formatted(json_message['libacars'])
 
@@ -155,12 +159,12 @@ def handle_message(message=None):
                     # ask the database for the results at the user requested index
                     # multiply the selected index by 50 (we have 50 results per page) so the db
                     # knows what result index to send back
-                    search = acarshub_db.database_search(message['field'], message['search_term'], message['results_after'] * 50)
+                    search = acarshub_db.database_search(message['field'], message['search_term'], message['results_after'])
                 else:
                     search = acarshub_db.database_search(message['field'], message['search_term'])
             elif 'show_all' in message:
                 if 'results_after' in message:
-                    search = acarshub_db.show_all(message['results_after'] * 50)
+                    search = acarshub_db.show_all(message['results_after'])
                 else:
                     search = acarshub_db.show_all()
 
