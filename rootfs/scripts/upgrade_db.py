@@ -224,6 +224,9 @@ try:
 		conn = sqlite3.connect(path_to_db)
 		cur = conn.cursor()
 		create_db(cur)
+	else:
+		conn = sqlite3.connect(path_to_db)
+		cur = conn.cursor()
 
 	check_columns(cur)
 	conn.commit()
