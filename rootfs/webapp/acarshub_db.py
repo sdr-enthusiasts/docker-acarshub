@@ -432,6 +432,9 @@ def database_search(field, search_term, page=0):
         for row in count:
            final_count = row[0]
 
+        if final_count == 0:
+            return [None, 50]
+
         for row in result:
             processed_results.append(dict(row))
         session.close()
@@ -448,24 +451,95 @@ def search_alerts(icao=None, tail=None, flight=None, text=None):
         try:
             session = db_session()
             result = session.query(messages)
-            filter_by = []
+
+            query_string = ""
 
             if icao is not None:
-                filter_by += [messages.icao.contains('%{0}%'.format(k)) for k in icao]
+                query_string += 'flight MATCH "'
+                first = True
+                for term in icao:
+                    if first:
+                        query_string += f"{term}*"
+                        first = False
+                    else:
+                        query_string += f" OR {term}*"
+
+                query_string += '"'
+
             if tail is not None:
-                filter_by += [messages.tail.contains('%{0}%'.format(k)) for k in tail]
+                if query_string != "":
+                    query_string += ' OR tail MATCH "'
+                else:
+                    query_string += 'tail MATCH "'
+                first = True
+
+                for term in tail:
+                    if first:
+                        query_string += f"{term}*"
+                        first = False
+                    else:
+                        query_string += f" OR {term}*"
+
             if flight is not None:
-                filter_by += [messages.flight.contains('%{0}%'.format(k)) for k in flight]
+                if query_string != "":
+                    query_string += ' OR flight MATCH "'
+                else:
+                    query_string += 'flight MATCH "'
+                first = True
+
+                for term in flight:
+                    if first:
+                        query_string += f"{term}*"
+                        first = False
+                    else:
+                        query_string += f" OR {term}*"
+
             if text is not None:
-                filter_by += [messages.text.contains('%{0}%'.format(k)) for k in text]
-            result = result.filter(or_(*filter_by)).order_by(messages.id.desc()).limit(50)
+                if query_string != "":
+                    query_string += ' OR msg_text MATCH "'
+                else:
+                    query_string += 'msg_text MATCH "'
+                first = True
+
+                for term in text:
+                    if first:
+                        query_string += f"{term.lower()}*"
+                        first = False
+                    else:
+                        query_string += f" OR {term.lower()}*"
+
+            query_string += '"'
+            print(f'SELECT * from text_fts WHERE {query_string} LIMIT 50 OFFSET 0')
+
+            result = session.execute(f'SELECT * from text_fts WHERE {query_string} LIMIT 50 OFFSET 0')
+            count = session.execute(f'SELECT COUNT(*) from text_fts WHERE {query_string}')
+
+            processed_results = []
+            final_count = 0
+            for row in count:
+               final_count = row[0]
+
+            if final_count == 0:
+                return None
+
+            for row in result:
+                processed_results.append(dict(row))
+
+            return processed_results
+            # filter_by = []
+
+            # if icao is not None:
+            #     filter_by += [messages.icao.contains('%{0}%'.format(k)) for k in icao]
+            # if tail is not None:
+            #     filter_by += [messages.tail.contains('%{0}%'.format(k)) for k in tail]
+            # if flight is not None:
+            #     filter_by += [messages.flight.contains('%{0}%'.format(k)) for k in flight]
+            # if text is not None:
+            #     filter_by += [messages.text.contains('%{0}%'.format(k)) for k in text]
+            # result = result.filter(or_(*filter_by)).order_by(messages.id.desc()).limit(50)
             session.close()
         except Exception as e:
             acarshub_helpers.acars_traceback(e, "database")
-        else:
-            if result is not None and result.count() > 0:
-                data = [query_to_dict(d) for d in result]
-                return data
     else:
         return None
 
@@ -474,16 +548,25 @@ def show_all(page=0):
 
     try:
         session = db_session()
-        result = session.query(messages).order_by(messages.id.desc())
+        result = session.execute(f'SELECT * from messages LIMIT 50 OFFSET {page * 50}')
+        count = session.execute(f'SELECT COUNT(*) from messages')
+
+        processed_results = []
+        final_count = 0
+        for row in count:
+           final_count = row[0]
+
+        if final_count == 0:
+            return [None, 50]
+
+        for row in result:
+            processed_results.append(dict(row))
+
         session.close()
+
+        return(processed_results, final_count)
     except Exception as e:
         acarshub_helpers.acars_traceback(e, "database")
-
-    if result.count() > 0:
-        data = [query_to_dict(d) for d in result[page:page + 50]]
-        return [data, result.count()]
-    else:
-        return [None, 50]
 
 
 def get_freq_count():
