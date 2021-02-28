@@ -312,7 +312,7 @@ def add_message_from_json(message_type, message_from_json):
                                  fromaddr=fromaddr, depa=depa, dsta=dsta, eta=eta, gtout=gtout, gtin=gtin,
                                  wloff=wloff, wlin=wlin, lat=lat, lon=lon, alt=alt, text=text, tail=tail,
                                  flight=flight, icao=icao, freq=freq, ack=ack, mode=mode, label=label, block_id=block_id,
-                                 msgno=msgno, is_response=is_response, is_onground=is_onground, error=error, libacars=libacars))
+                                 msgno=msgno, is_response=is_response, is_onground=is_onground, error=error, libacars=libacars, level=level))
 
         # Now lets decide where to log the message count to
         # Firs twe'll see if the message is not blank
@@ -503,10 +503,10 @@ def search_alerts(icao=None, tail=None, flight=None, text=None):
 
                 for term in text:
                     if first:
-                        query_string += f"{term.lower()}*"
+                        query_string += f"{term}*"
                         first = False
                     else:
-                        query_string += f" OR {term.lower()}*"
+                        query_string += f" OR {term}*"
 
             query_string += '"'
             print(f'SELECT * from text_fts WHERE {query_string} LIMIT 50 OFFSET 0')
