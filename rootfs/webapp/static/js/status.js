@@ -63,7 +63,13 @@ function decode_status(status, decoders, servers, feeders, receivers, stats) {
 
   keys_receivers.forEach((key, index) => {
     var sub_string = `${key} Receiving Messages:`;
-    html_output += `${sub_string.padEnd(55,'.')}<strong><span class=${receivers[key].Status == "Ok" ? "green" : "red"}>${receivers[key].Status}</span></strong>`;
+    var class_string = "";
+    if(receivers[key].Status == "Ok")
+      class_string = '"green"';
+    else
+      class_string = receivers[key].Status == "Bad" ? "red" : "orange";
+
+    html_output += `${sub_string.padEnd(55,'.')}<strong><span class=${class_string}>${receivers[key].Status}</span></strong>`;
     html_output += '<br>';
   });
 

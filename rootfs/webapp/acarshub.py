@@ -3,6 +3,9 @@
 import os
 import subprocess
 import acarshub_db
+import time
+
+start_time = time.time()
 
 decoders = dict()
 servers = dict()
@@ -197,6 +200,7 @@ def service_check():
     global system_error
     global feeders
     global stats
+    global start_time
 
     if os.getenv("SPAM", default=False):
         healthcheck = subprocess.Popen(['../../tools/healthtest.sh'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -260,8 +264,11 @@ def service_check():
             if line.find("ACARS") != -1 and "ACARS" not in receivers:
                 receivers['ACARS'] = dict()
                 if line.endswith("UNHEALTHY"):
-                    system_error = True
-                    receivers['ACARS']['Status'] = "Bad"
+                    if time.time() - start_time > 300.0:
+                        system_error = True
+                        receivers['ACARS']['Status'] = "Bad"
+                    else:
+                        receivers['ACARS']['Status'] = "Waiting for first message"
                 elif line.endswith("HEALTHY"):
                     receivers['ACARS']['Status'] = "Ok"
                 else:
@@ -270,8 +277,11 @@ def service_check():
             if line.find("VDLM2") != -1 and "VDLM2" not in receivers:
                 receivers['VDLM2'] = dict()
                 if line.endswith("UNHEALTHY"):
-                    system_error = True
-                    receivers['VDLM2']['Status'] = "Bad"
+                    if time.time() - start_time > 300.0:
+                        system_error = True
+                        receivers['VDLM2']['Status'] = "Bad"
+                    else:
+                        receivers['VDLM2']['Status'] = "Waiting for first message"
                 elif line.endswith("HEALTHY"):
                     receivers['VDLM2']['Status'] = "Ok"
                 else:

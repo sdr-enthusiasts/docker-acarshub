@@ -515,7 +515,7 @@ def handle_message(message, namespace):
     requester = request.sid
     start_time_emit = time.time()
     socketio.emit('newmsg', {'num_results': total_results, 'msghtml': serialized_json,
-                             'search_term': str(search_term)}, to=requester, namespace='/search')
+                             'search_term': str(search_term), 'query_time': time.time() - start_time}, to=requester, namespace='/search')
     print("Emit--- %s seconds ---" % (time.time() - start_time_emit))
     print("Total Time--- %s seconds ---" % (time.time() - start_time))
 

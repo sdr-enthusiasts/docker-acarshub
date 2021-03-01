@@ -3,6 +3,7 @@ var current_search = ''; // variable to store the current search term
 var current_page = 0; // store the current page of the current_search
 var total_pages = 0; // number of pages of results
 var show_all = false; // variable to indicate we are doing a 'show all' search and not of a specific term
+var query_time = 0.0;
 
 import { MessageDecoder } from '../airframes-acars-decoder/MessageDecoder.js'
 const md = new MessageDecoder();
@@ -15,7 +16,7 @@ $(document).ready(function(){
     socket = io.connect('http://' + document.domain + ':' + location.port + '/search');
     var msgs_received = [];
     var num_results = [];
-
+    
     // receive details from server
 
     // DB stats
@@ -45,6 +46,9 @@ $(document).ready(function(){
         if (num_results.length >= 1) {
             num_results.shift();
         }
+
+        if(msg.hasOwnProperty('query_time'))
+            query_time = msg['query_time'];
         // Lets check and see if the results match the current search string
         var display = '';
         var display_nav_results = '';
@@ -181,6 +185,7 @@ function display_search(current, total) {
         total_pages = ~~(total / 50);
 
     html += '<table class="search"><thead><th class="search_label"></th><th class="search_term"></th></thead>';
+    html += `<tr><td colspan="2"><span class="menu_non_link">Query Time: ${query_time.toFixed(4)} Seconds</span></td></tr>`
     html += `<tr><td colspan="2"><span class="menu_non_link">Found <strong>${total}</strong> result(s) in <strong>${total_pages}</strong> page(s).</span></td></tr>`;
 
     // Determine -/+ range. We want to show -/+ 5 pages from current index
