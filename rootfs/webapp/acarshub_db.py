@@ -438,6 +438,7 @@ def database_search(field, search_term, page=0):
         for row in result:
             processed_results.append(dict(row))
         session.close()
+        processed_results.reverse()
         print("Query--- %s seconds ---" % (time.time() - start_time))
         return(processed_results, final_count)
     except Exception as e:
@@ -524,7 +525,7 @@ def search_alerts(icao=None, tail=None, flight=None, text=None):
 
             for row in result:
                 processed_results.append(dict(row))
-
+            processed_results.reverse()
             return processed_results
             # filter_by = []
 
@@ -563,7 +564,7 @@ def show_all(page=0):
             processed_results.append(dict(row))
 
         session.close()
-
+        processed_results.reverse()
         return(processed_results, final_count)
     except Exception as e:
         acarshub_helpers.acars_traceback(e, "database")
