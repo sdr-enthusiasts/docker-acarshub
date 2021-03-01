@@ -96,7 +96,7 @@ $(document).ready(function(){
 
 async function delay_query(initial_query) {
     // Pause for half a second
-    await sleep(500);
+    await sleep(100);
     var old_search = current_search; // Save the old search term in a temp variable
     // Only execute the search query if the user is done typing. We track that by comparing the query we were asked to run
     // with what is currently in the text box
