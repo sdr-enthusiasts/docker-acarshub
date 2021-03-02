@@ -78,7 +78,7 @@ function display_messages(msgs_to_process, selected_tabs, live_page=false) {
 
                     var label_string = "";
                     if(sub_messages[j].hasOwnProperty('matched'))
-                        label_string = `<span class="red">Message ${j + 1}</span>`;
+                        label_string = `<span class="red_body">Message ${j + 1}</span>`;
                     else
                         label_string = `Message ${j + 1}`;
 
@@ -123,7 +123,7 @@ function display_messages(msgs_to_process, selected_tabs, live_page=false) {
             }
 
             if(sub_messages.length == 1 && message.hasOwnProperty('matched'))
-                html_output += '<tr class="red">';
+                html_output += '<tr class="red_body">';
             else
                 html_output += "<tr>";
             html_output += `<td><strong>${message['message_type']}</strong> from <strong>${message['station_id']}</strong></td>`;
@@ -397,7 +397,7 @@ function display_messages(msgs_to_process, selected_tabs, live_page=false) {
 
 function replace_text(input, text) {
     for(var i = 0; i < input.length; i++) {
-        text = text.split(`${input[i].toUpperCase()}`).join(`<span class="red">${input[i].toUpperCase()}</span>`);
+        text = text.split(`${input[i].toUpperCase()}`).join(`<span class="red_body">${input[i].toUpperCase()}</span>`);
     }
     return text;
 }
