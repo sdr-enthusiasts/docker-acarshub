@@ -47,31 +47,79 @@
                   <span id="size"></span>
                 </td>
               </tr>
+
               <tr>
                 <td class="search_label">
-                  <label>Field:</label>
+                  <label>Callsign:</label>
                 </td>
                 <td class="search_term">
-                  <select name="dbfield" id="dbfield" onchange="javascript:runclick(0)">
-                    <option value="flight-iata">Callsign (IATA)</option>
-                    <option value="depa">Departure</option>
-                    <option value="dsta">Destination</option>
-                    <option value="freq">Frequency</option>
-                    <option value="msglbl">Message Label</option>
-                    <option value="msgno">Message Number</option>
-                    <option value="tail">Tail Number</option>
-                    <option value="text">Text</option>
-                  </select>
+                  <input type="text" id="search_flight">
                 </td>
               </tr>
+
               <tr class="search_label">
                 <td>
-                  <label>Search Term:</label>
+                  <label>DEPA:</label>
                 </td>
                 <td class="search_term">
-                  <input type="text" id="search_term">
+                  <input type="text" id="search_depa">
                 </td>
               </tr>
+
+              <tr class="search_label">
+                <td>
+                  <label>DSTA:</label>
+                </td>
+                <td class="search_term">
+                  <input type="text" id="search_dsta">
+                </td>
+              </tr>
+
+              <tr class="search_label">
+                <td>
+                  <label>Frequency:</label>
+                </td>
+                <td class="search_term">
+                  <input type="text" id="search_freq">
+                </td>
+              </tr>
+
+              <tr class="search_label">
+                <td>
+                  <label>Label:</label>
+                </td>
+                <td class="search_term">
+                  <input type="text" id="search_msglbl">
+                </td>
+              </tr>
+
+              <tr class="search_label">
+                <td>
+                  <label>Message Number:</label>
+                </td>
+                <td class="search_term">
+                  <input type="text" id="search_msgno">
+                </td>
+              </tr>
+
+              <tr class="search_label">
+                <td>
+                  <label>Tail Number:</label>
+                </td>
+                <td class="search_term">
+                  <input type="text" id="search_tail">
+                </td>
+              </tr>
+
+              <tr class="search_label">
+                <td>
+                  <label>Text:</label>
+                </td>
+                <td class="search_term">
+                  <input type="text" id="search_text">
+                </td>
+              </tr>
+
             </table>
             <div class="row" id="num_results"></div>
           </div> <!-- /fixed results -->

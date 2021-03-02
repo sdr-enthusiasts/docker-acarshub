@@ -1,5 +1,6 @@
 var socket;
-var current_search = ''; // variable to store the current search term
+var current_search = {"flight": "", "depa": "", "dsta": "", "freq": "", "label": "",
+                      "msgno": "", "tail": "", "msg_text": ""}; // variable to store the current search term
 var current_page = 0; // store the current page of the current_search
 var total_pages = 0; // number of pages of results
 var show_all = false; // variable to indicate we are doing a 'show all' search and not of a specific term
@@ -39,6 +40,8 @@ $(document).ready(function(){
 
     // Search results returned
     socket.on('newmsg', function(msg) {
+        console.log(msg);
+        console.log(current_search)
         //maintain a list of 1 msgs
         if (msgs_received.length >= 1){
             msgs_received.shift();
@@ -58,7 +61,7 @@ $(document).ready(function(){
         // Show the results if the returned results match the current search string (in case user kept typing after search emmited)
         // or the user has executed a 'show all'
 
-        if(msg.search_term == current_search || show_all) {            
+        if(true) {            
             msgs_received.push(msg.msghtml);
             num_results.push(msg.num_results);
             for (var i = 0; i < msgs_received.length; i++){ // Loop through the received message blob.
@@ -84,10 +87,35 @@ $(document).ready(function(){
 
     // Function to listen for key up events. If detected, check and see if the search string has been updated. If so, process the updated query
     document.addEventListener("keyup", function(event) {
-        if(current_search != document.getElementById("search_term").value)
-            delay_query(document.getElementById("search_term").value);
+        var current_terms = get_search_terms();
+        console.log(current_terms);
+        console.log(current_search);
+        if(current_search != current_terms)
+            delay_query(current_terms);
     });
 });
+
+function get_search_terms() {
+    return {
+        "flight": document.getElementById("search_flight").value,
+        "depa": document.getElementById("search_depa").value,
+        "dsta": document.getElementById("search_dsta").value,
+        "freq": document.getElementById("search_freq").value,
+        "label": document.getElementById("search_msglbl").value,
+        "msgno": document.getElementById("search_msgno").value,
+        "tail": document.getElementById("search_tail").value,
+        "msg_text": document.getElementById("search_text").value,
+    }
+}
+
+function is_everything_blank() {
+    for(const key in current_search) {
+        if(current_search[key] != null)
+            return false;
+    }
+
+    return true;
+}
 
 // In order to help DB responsiveness, I want to make sure the user has quit typing before emitting a query
 // We'll do this by recording the state of the DB search text field, waiting half a second (might could make this less)
@@ -100,18 +128,21 @@ async function delay_query(initial_query) {
     var old_search = current_search; // Save the old search term in a temp variable
     // Only execute the search query if the user is done typing. We track that by comparing the query we were asked to run
     // with what is currently in the text box
-    if(initial_query == document.getElementById("search_term").value) {  
-        current_search = document.getElementById("search_term").value; // update the global value for the current search
-        var field = document.getElementById("dbfield").value;
-        if(current_search != '' && current_search != old_search) { // Double check and ensure the search term is new and not blank. No sense hammering the DB to search for the same term
+    console.log(initial_query);
+    console.log(get_search_terms())
+    if(JSON.stringify(initial_query) == JSON.stringify(get_search_terms())) {  
+        current_search = get_search_terms(); // update the global value for the current search
+        console.log(old_search);
+        console.log(current_search);
+        if(!is_everything_blank() && JSON.stringify(current_search) != JSON.stringify(old_search)) { // Double check and ensure the search term is new and not blank. No sense hammering the DB to search for the same term
             // Reset status for various elements of the page to what we're doing now
             current_page = 0;
             show_all = false;
             // Give feedback to the user while the search is going on
             $('#log').html('Searching...');
             $('#num_results').html('');
-            socket.emit('query', {'search_term': current_search, 'field': field}, '/search');
-        } else if(current_search == '') { // Field is now blank, clear the page and reset status
+            socket.emit('query', {'search_term': current_search}, '/search');
+        } else if(is_everything_blank()) { // Field is now blank, clear the page and reset status
             show_all = false;
             $('#log').html('');
             $('#num_results').html('');

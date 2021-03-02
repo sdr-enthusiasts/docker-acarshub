@@ -391,52 +391,45 @@ def find_airline_code_from_iata(iata):
         return (iata, "Unknown Airline")
 
 
-def database_search(field, search_term, page=0):
+def database_search(search_term, page=0):
     result = None
     import time
     start_time = time.time()
 
     try:
         if acarshub_helpers.DEBUG_LOGGING:
-            print(f"[database] Searching database for {search_term} in {field}")
+            print(f"[database] Searching database for {search_term}")
         session = db_session()
-        if field == "flight-iata":
-            result = session.execute(f'SELECT * from text_fts WHERE flight MATCH "{search_term}*" LIMIT 50 OFFSET {page * 50}')
-            count = session.execute(f'SELECT COUNT(*) from text_fts WHERE flight MATCH "{search_term}*"')
-        elif field == "tail":
-            result = session.execute(f'SELECT * from text_fts WHERE tail MATCH "{search_term}*" LIMIT 50 OFFSET {page * 50}')
-            count = session.execute(f'SELECT COUNT(*) from text_fts WHERE tail MATCH "{search_term}*"')
-        elif field == "depa":
-            result = session.execute(f'SELECT * from text_fts WHERE depa MATCH "{search_term}*" LIMIT 50 OFFSET {page * 50}')
-            count = session.execute(f'SELECT COUNT(*) from text_fts WHERE depa MATCH "{search_term}*"')
-        elif field == "dsta":
-            result = session.execute(f'SELECT * from text_fts WHERE dsta MATCH "{search_term}*" LIMIT 50 OFFSET {page * 50}')
-            count = session.execute(f'SELECT COUNT(*) from text_fts WHERE dsta MATCH "{search_term}*"')
-        elif field == "text":
-            result = session.execute(f'SELECT * from text_fts WHERE msg_text MATCH "{search_term}*" LIMIT 50 OFFSET {page * 50}')
-            count = session.execute(f'SELECT COUNT(*) from text_fts WHERE msg_text MATCH "{search_term}*"')
-        elif field == "msgno":
-            result = session.execute(f'SELECT * from text_fts WHERE msgno MATCH "{search_term}*" LIMIT 50 OFFSET {page * 50}')
-            count = session.execute(f'SELECT COUNT(*) from text_fts WHERE msgno MATCH "{search_term}*"')
-        elif field == "freq":
-            result = session.execute(f'SELECT * from text_fts WHERE freq MATCH "{search_term}*" LIMIT 50 OFFSET {page * 50}')
-            count = session.execute(f'SELECT COUNT(*) from text_fts WHERE freq MATCH "{search_term}*"')
-        elif field == "msglbl":
-            result = session.execute(f'SELECT * from text_fts WHERE label MATCH "{search_term}*" LIMIT 50 OFFSET {page * 50}')
-            count = session.execute(f'SELECT COUNT(*) from text_fts WHERE label MATCH "{search_term}*"')
-        
+        query_string = ""
+        count_string = ""
 
-        #a = [{column: value for column, value in rowproxy.items()} for rowproxy in result]
+        for key in search_term:
+            if search_term[key] != None and search_term[key] != "":
+                if query_string == "":
+                    query_string += f'SELECT * from text_fts WHERE {key} MATCH \'"{search_term[key]}"*\''
+                    count_string += f'SELECT COUNT(*) from (SELECT rowid FROM text_fts WHERE {key} MATCH \'"{search_term[key]}"*\''
+                else:
+                    query_string += f' INTERSECT SELECT * from text_fts WHERE {key} MATCH \'"{search_term[key]}"*\''
+                    count_string += f' INTERSECT SELECT rowid from text_fts WHERE {key} MATCH \'"{search_term[key]}"*\''
+
+        count_string += ") I"
+
+        print(f'{query_string} LIMIT 50 OFFSET {page * 50}')
+        print(f'{count_string}')
+        result = session.execute(f'{query_string} LIMIT 50 OFFSET {page * 50}')
+        count = session.execute(f'{count_string}')
+
         processed_results = []
         final_count = 0
         for row in count:
            final_count = row[0]
 
-        if final_count == 0:
-            return [None, 50]
+        # if final_count == 0:
+        #     return [None, 50]
 
         for row in result:
             processed_results.append(dict(row))
+
         session.close()
         processed_results.reverse()
         print("Query--- %s seconds ---" % (time.time() - start_time))
@@ -451,67 +444,26 @@ def search_alerts(icao=None, tail=None, flight=None, text=None):
     if icao is not None or tail is not None or flight is not None or text is not None:
         try:
             session = db_session()
-            result = session.query(messages)
-
+            search_term = {"icao": icao, "msg_text": text, "flight": flight, "tail": tail}
+            print(search_term)
             query_string = ""
 
-            if icao is not None:
-                query_string += 'flight MATCH "'
-                first = True
-                for term in icao:
-                    if first:
-                        query_string += f"{term}*"
-                        first = False
+            for key in search_term:
+                if search_term[key] != None and search_term[key] != "":
+                    sub_query = ""
+                    for term in search_term[key]:
+                        if sub_query == "":
+                            sub_query += f'{term}*'
+                        else:
+                            sub_query += f' OR {term}*'
+
+                    if query_string == "":
+                        query_string += f'{key} MATCH "{sub_query}"'
                     else:
-                        query_string += f" OR {term}*"
+                        query_string += f' OR {key} MATCH "{sub_query}"'
 
-                query_string += '"'
 
-            if tail is not None:
-                if query_string != "":
-                    query_string += ' OR tail MATCH "'
-                else:
-                    query_string += 'tail MATCH "'
-                first = True
-
-                for term in tail:
-                    if first:
-                        query_string += f"{term}*"
-                        first = False
-                    else:
-                        query_string += f" OR {term}*"
-
-            if flight is not None:
-                if query_string != "":
-                    query_string += ' OR flight MATCH "'
-                else:
-                    query_string += 'flight MATCH "'
-                first = True
-
-                for term in flight:
-                    if first:
-                        query_string += f"{term}*"
-                        first = False
-                    else:
-                        query_string += f" OR {term}*"
-
-            if text is not None:
-                if query_string != "":
-                    query_string += ' OR msg_text MATCH "'
-                else:
-                    query_string += 'msg_text MATCH "'
-                first = True
-
-                for term in text:
-                    if first:
-                        query_string += f"{term}*"
-                        first = False
-                    else:
-                        query_string += f" OR {term}*"
-
-            query_string += '"'
             print(f'SELECT * from text_fts WHERE {query_string} LIMIT 50 OFFSET 0')
-
             result = session.execute(f'SELECT * from text_fts WHERE {query_string} LIMIT 50 OFFSET 0')
             count = session.execute(f'SELECT COUNT(*) from text_fts WHERE {query_string}')
 
@@ -527,17 +479,6 @@ def search_alerts(icao=None, tail=None, flight=None, text=None):
                 processed_results.append(dict(row))
             processed_results.reverse()
             return processed_results
-            # filter_by = []
-
-            # if icao is not None:
-            #     filter_by += [messages.icao.contains('%{0}%'.format(k)) for k in icao]
-            # if tail is not None:
-            #     filter_by += [messages.tail.contains('%{0}%'.format(k)) for k in tail]
-            # if flight is not None:
-            #     filter_by += [messages.flight.contains('%{0}%'.format(k)) for k in flight]
-            # if text is not None:
-            #     filter_by += [messages.text.contains('%{0}%'.format(k)) for k in text]
-            # result = result.filter(or_(*filter_by)).order_by(messages.id.desc()).limit(50)
             session.close()
         except Exception as e:
             acarshub_helpers.acars_traceback(e, "database")

@@ -162,9 +162,9 @@ def handle_message(message=None):
                     # ask the database for the results at the user requested index
                     # multiply the selected index by 50 (we have 50 results per page) so the db
                     # knows what result index to send back
-                    search = acarshub_db.database_search(message['field'], message['search_term'], message['results_after'])
+                    search = acarshub_db.database_search(message['search_term'], message['results_after'])
                 else:
-                    search = acarshub_db.database_search(message['field'], message['search_term'])
+                    search = acarshub_db.database_search(message['search_term'])
             elif 'show_all' in message:
                 if 'results_after' in message:
                     search = acarshub_db.show_all(message['results_after'])
