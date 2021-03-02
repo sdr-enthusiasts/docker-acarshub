@@ -315,7 +315,7 @@ function display_messages(msgs_to_process, selected_tabs, live_page=false) {
                 if (level >= -10.0) { circle = "circle_green"; }
                 else if (level >= -20.0) { circle = "circle_yellow"; }
                 else if (level >= -30.0) { circle = "circle_orange"; }
-                else { level = "circle_red"; }
+                else { circle = "circle_red"; }
                 html_output += `L: <strong>${level}</strong> <div class="${circle}"></div> `;
             }
 
