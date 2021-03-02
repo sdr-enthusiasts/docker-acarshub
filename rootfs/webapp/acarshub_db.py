@@ -38,11 +38,20 @@ except Exception as e:
     acarshub_helpers.acars_traceback(e, "database")
 
 # DB PATH MUST BE FROM ROOT!
-
+# default database
 db_path = acarshub_helpers.ACARSHUB_DB
 database = create_engine(db_path)
 db_session = sessionmaker(bind=database)
 Messages = declarative_base()
+
+# second database for backup
+
+if acarshub_helpers.DB_BACKUP:
+    backup = True
+    database_backup = create_engine(acarshub_helpers.DB_BACKUP)
+    db_session_backup = sessionmaker(bind=database_backup)
+else:
+    backup = False
 
 overrides = {}
 freqs = []
@@ -171,6 +180,8 @@ class messages(Messages):
 # Now we've created the classes for the database, we'll associate the class with the database and create any missing tables
 
 Messages.metadata.create_all(database)
+if backup:
+    Messages.metadata.create_all(database_backup)
 
 # Class used to convert any search query objects to JSON
 
@@ -293,6 +304,8 @@ def add_message_from_json(message_type, message_from_json):
 
     try:
         session = db_session()
+        if backup:
+            session_backup = db_session_backup()
 
         found_freq = session.query(messagesFreq).filter(messagesFreq.freq == f"{freq}" and messagesFreq.freq_type == message_type).first()
 
@@ -300,6 +313,15 @@ def add_message_from_json(message_type, message_from_json):
             found_freq.count += 1
         else:
             session.add(messagesFreq(freq=f"{freq}", freq_type=message_type, count=1))
+
+
+        if backup:
+            found_freq_backup = session_backup.query(messagesFreq).filter(messagesFreq.freq == f"{freq}" and messagesFreq.freq_type == message_type).first()
+
+            if found_freq_backup is not None:
+                found_freq_backup.count += 1
+            else:
+                session_backup.add(messagesFreq(freq=f"{freq}", freq_type=message_type, count=1))
 
         if acarshub_helpers.DB_SAVEALL or text != "" or libacars != "" or \
            dsta != "" or depa != "" or eta != "" or gtout != "" or \
@@ -313,6 +335,13 @@ def add_message_from_json(message_type, message_from_json):
                                  wloff=wloff, wlin=wlin, lat=lat, lon=lon, alt=alt, text=text, tail=tail,
                                  flight=flight, icao=icao, freq=freq, ack=ack, mode=mode, label=label, block_id=block_id,
                                  msgno=msgno, is_response=is_response, is_onground=is_onground, error=error, libacars=libacars, level=level))
+
+            if backup:
+                session_backup.add(messages(message_type=message_type, time=time, station_id=station_id, toaddr=toaddr,
+                                     fromaddr=fromaddr, depa=depa, dsta=dsta, eta=eta, gtout=gtout, gtin=gtin,
+                                     wloff=wloff, wlin=wlin, lat=lat, lon=lon, alt=alt, text=text, tail=tail,
+                                     flight=flight, icao=icao, freq=freq, ack=ack, mode=mode, label=label, block_id=block_id,
+                                     msgno=msgno, is_response=is_response, is_onground=is_onground, error=error, libacars=libacars, level=level))
 
         # Now lets decide where to log the message count to
         # Firs twe'll see if the message is not blank
@@ -330,6 +359,15 @@ def add_message_from_json(message_type, message_from_json):
             else:
                 count.good += 1
 
+            if backup:
+                count_backup = session_backup.query(messagesCount).first()
+                count.total += 1
+
+                if error > 0:
+                    count_backup.errors += 1
+                else:
+                    count_backup.good += 1
+
         else:
             count = session.query(messagesCountDropped).first()
 
@@ -337,6 +375,14 @@ def add_message_from_json(message_type, message_from_json):
                 count.nonlogged_errors += 1
             else:
                 count.nonlogged_good += 1
+
+            if backup:
+                count_backup = session_backup.query(messagesCountDropped).first()
+
+                if error > 0:
+                    count_backup.nonlogged_errors += 1
+                else:
+                    count_backup.nonlogged_good += 1
 
         # Log the level count
         # We'll see if the level is in the database already, and if so, increment the counter
@@ -349,9 +395,22 @@ def add_message_from_json(message_type, message_from_json):
         else:
             session.add(messagesLevel(level=level, count=1))
 
+
+        if backup:
+            found_level_backup = session_backup.query(messagesLevel).filter(messagesLevel.level == level).first()
+
+            if found_level_backup is not None:
+                found_level_backup.count += 1
+            else:
+                session_backup.add(messagesLevel(level=level, count=1))
+
         # commit the db change and close the session
         session.commit()
         session.close()
+
+        if backup:
+            session_backup.commit()
+            session_backup.close()
 
     except Exception as e:
         acarshub_helpers.acars_traceback(e, "database")
@@ -628,40 +687,48 @@ def get_message_label_json():
     return message_labels['labels']
 
 
-try:
-    # We will pre-populate the count table if this is a new db
-    # Or the user doesn't have the table already
+def init_database(backup_db=False):
+    try:
+        # We will pre-populate the count table if this is a new db
+        # Or the user doesn't have the table already
 
-    total_messages, total_errors = get_errors_direct()
-    good_msgs = total_messages - total_errors
-    session = db_session()
+        total_messages, total_errors = get_errors_direct()
+        good_msgs = total_messages - total_errors
+        if not backup_db:
+            session = db_session()
+        else:
+            session = db_session_backup()
 
-    if session.query(messagesCount).count() == 0:
-        acarshub_helpers.log("Initializing table database", "database")
-        session.add(messagesCount(total=total_messages, errors=total_errors, good=good_msgs))
-        session.commit()
-        acarshub_helpers.log("Count table initialized", "database")
+        if session.query(messagesCount).count() == 0:
+            acarshub_helpers.log("Initializing table database", "database")
+            session.add(messagesCount(total=total_messages, errors=total_errors, good=good_msgs))
+            session.commit()
+            acarshub_helpers.log("Count table initialized", "database")
 
-    if session.query(messagesCountDropped).count() == 0:
-        acarshub_helpers.log("Initializing dropped count database", "database")
-        session.add(messagesCountDropped(nonlogged_good=0, nonlogged_errors=0))
-        session.commit()
-        acarshub_helpers.log("Dropped count table initialized", "database")
+        if session.query(messagesCountDropped).count() == 0:
+            acarshub_helpers.log("Initializing dropped count database", "database")
+            session.add(messagesCountDropped(nonlogged_good=0, nonlogged_errors=0))
+            session.commit()
+            acarshub_helpers.log("Dropped count table initialized", "database")
 
-    # now we pre-populate the freq db if empty
+        # now we pre-populate the freq db if empty
 
-    if session.query(messagesFreq).count() == 0:
-        acarshub_helpers.log("Initializing freq table", "database")
-        found_freq = {}
-        for item in session.query(messages).all():
-            if item.freq not in found_freq:
-                found_freq[item.freq] = [item.freq, item.message_type, session.query(messages).filter(messages.freq == item.freq).count()]
+        if session.query(messagesFreq).count() == 0:
+            acarshub_helpers.log("Initializing freq table", "database")
+            found_freq = {}
+            for item in session.query(messages).all():
+                if item.freq not in found_freq:
+                    found_freq[item.freq] = [item.freq, item.message_type, session.query(messages).filter(messages.freq == item.freq).count()]
 
-        for item in found_freq:
-            session.add(messagesFreq(freq=found_freq[item][0], count=found_freq[item][2], freq_type=found_freq[item][1]))
-        session.commit()
-        acarshub_helpers.log("Freq table initialized", "database")
+            for item in found_freq:
+                session.add(messagesFreq(freq=found_freq[item][0], count=found_freq[item][2], freq_type=found_freq[item][1]))
+            session.commit()
+            acarshub_helpers.log("Freq table initialized", "database")
 
-    session.close()
-except Exception as e:
-    acarshub_helpers.acars_traceback(e, "database")
+        session.close()
+    except Exception as e:
+        acarshub_helpers.acars_traceback(e, "database")
+
+init_database()
+if backup:
+    init_database(backup_db=True)

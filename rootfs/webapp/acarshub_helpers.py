@@ -15,6 +15,7 @@ IATA_OVERRIDE = ""
 FREQS_ACARS = ""
 FREQS_VDLM = ""
 DB_SAVE_DAYS = 7
+DB_BACKUP=""
 
 if os.getenv("DEBUG_LOGGING", default=False):
     DEBUG_LOGGING = True
@@ -65,10 +66,13 @@ if os.getenv("DB_SAVEALL", default=False):
 
 # Application Settings
 
-if os.getenv("ACARSHUB_DB"):
+if os.getenv("ACARSHUB_DB", default=False):
     ACARSHUB_DB = os.getenv("ACARSHUB_DB", default=False)
 else:
     ACARSHUB_DB = 'sqlite:////run/acars/messages.db'
+
+if os.getenv("DB_BACKUP", default=False):
+    DB_BACKUP = os.getenv("DB_BACKUP")
 
 if os.getenv("IATA_OVERRIDE", default=False):
     IATA_OVERRIDE = os.getenv("IATA_OVERRIDE")
