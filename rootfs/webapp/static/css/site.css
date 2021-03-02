@@ -734,3 +734,39 @@ input[type='checkbox'] {
   display: block;
   box-shadow: 0 0 15px #939393;
 }
+
+.circle_red {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  border: 1px solid;
+  background-color: red;
+  display: inline-block;
+}
+
+.circle_orange {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  border: 1px solid;
+  background-color: orange;
+  display: inline-block;
+}
+
+.circle_yellow {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  border: 1px solid;
+  background-color: yellow;
+  display: inline-block;
+}
+
+.circle_green {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  border: 1px solid;
+  background-color: green;
+  display: inline-block;
+}

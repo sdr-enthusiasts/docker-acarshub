@@ -66,6 +66,10 @@ def update_keys(json_message):
         json_message['text'] = json_message['msg_text']
         del json_message['msg_text']
 
+    if "time" in json_message and json_message['time'] is not None:
+        json_message['timestamp'] = json_message['time']
+        del json_message['time']
+
     if "libacars" in json_message and json_message['libacars'] is not None:
         json_message['libacars'] = libacars_formatted(json_message['libacars'])
 

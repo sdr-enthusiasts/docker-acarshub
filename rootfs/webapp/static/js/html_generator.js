@@ -311,20 +311,12 @@ function display_messages(msgs_to_process, selected_tabs, live_page=false) {
 
             if(message.hasOwnProperty("level")) {
                 var level = message["level"];
-                var img = "";
-                if(level >= -6 ) {
-                    img = "5bar.png";
-                } else if(level >= -12) {
-                    img = "4bar.png";
-                } else if(level >= -18) {
-                    img = "3bar.png";
-                } else if(level >= -24) {
-                    img = "2bar.png";
-                } else {
-                    img = "1bar.png";
-                }
-
-                html_output += `<span class="wrapper">L: <img src="static/images/${img}" class="small_img" alt="${level}""><span class="tooltip">The signal level (${level}) of the received message.</span></span> `;
+                var circle = "";
+                if (level >= -10.0) { circle = "circle_green"; }
+                else if (level >= -20.0) { circle = "circle_yellow"; }
+                else if (level >= -30.0) { circle = "circle_orange"; }
+                else { level = "circle_red"; }
+                html_output += `L: <strong>${level}</strong> <div class="${circle}"></div> `;
             }
 
             if(message.hasOwnProperty("ack")) {
@@ -368,7 +360,7 @@ function display_messages(msgs_to_process, selected_tabs, live_page=false) {
             if(message.hasOwnProperty("error")) {
                 if(message['error'] != 0) {
                     html_output += '<span style="color:red;">';
-                    html_output += `E: ${message['error']} `;
+                    html_output += `<strong>E: ${message['error']}</strong> `;
                     html_output += '</span>';
                 }
             }
