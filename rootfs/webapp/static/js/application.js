@@ -279,6 +279,26 @@ $(document).ready(function(){
         }
     });
 
+    socket_alerts.on('disconnect', function(msg) {
+        connection_status();
+    });
+
+    socket_alerts.on('connect_error', function(msg) {
+        connection_status();
+    });
+
+    socket_alerts.on('connect_timeout', function(msg) {
+        connection_status();
+    });
+
+    socket_alerts.on('connect', function(msg) {
+        connection_status(true);
+    });
+
+    socket_alerts.on('reconnect', function(msg) {
+        connection_status(true);
+    });
+
     //receive details from server
     socket.on('newmsg', function(msg) {
         if(msg.msghtml.hasOwnProperty('label') == false || exclude.indexOf(msg.msghtml.label) == -1) {

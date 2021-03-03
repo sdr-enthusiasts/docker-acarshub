@@ -102,6 +102,26 @@ $(document).ready(function(){
 		$('#msgs').html(html);
 	});
 
+	socket_alerts.on('disconnect', function(msg) {
+	    connection_status();
+	});
+
+	socket_alerts.on('connect_error', function(msg) {
+	    connection_status();
+	});
+
+	socket_alerts.on('connect_timeout', function(msg) {
+	    connection_status();
+	});
+
+	socket_alerts.on('connect', function(msg) {
+	    connection_status(true);
+	});
+
+	socket_alerts.on('reconnect', function(msg) {
+	    connection_status(true);
+	});
+
 	grab_freqs();
 	grab_message_count();
 });

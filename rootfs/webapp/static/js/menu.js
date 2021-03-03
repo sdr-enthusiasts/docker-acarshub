@@ -33,6 +33,10 @@ function generate_menu(){
  }
 
  function generate_footer() {
-    var html = '<strong><a href="/about">ACARS Hub Help/About</a> | <a href="https://github.com/fredclausen/docker-acarshub" target="_blank">Project Github</a> | <a href="https://discord.gg/sTf9uYF"><img src="https://img.shields.io/discord/734090820684349521" alt="discord"></a> | <span id="system_status"><a href="/status">System Status: <span class="green">Okay</a></span></span></strong><span class="align_right">Pre-Release</span>';
+    var html = '<strong><a href="/about">ACARS Hub Help/About</a> | <a href="https://github.com/fredclausen/docker-acarshub" target="_blank">Project Github</a> | \
+     <a href="https://discord.gg/sTf9uYF"><img src="https://img.shields.io/discord/734090820684349521" alt="discord"></a> | \
+     <span id="system_status"><a href="/status">System Status: <span class="green">Okay</a></span></span></strong>\
+     <span id="disconnect"></span> \
+     <span class="align_right">Pre-Release</span>';
     $('#footer_div').html(html);
  }

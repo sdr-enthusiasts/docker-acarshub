@@ -6,15 +6,35 @@ $(document).ready(function(){
 
     socket = io.connect('http://' + document.domain + ':' + location.port + '/about');
 
-      socket.on('system_status', function(msg) {
-        if(msg.status.error_state == true) {
-            $('#system_status').html('<a href="/status">System Status: <span class="red">Error</a></span>');
-        } else {
-            $('#system_status').html('<a href="/status">System Status: <span class="green">Okay</a></span>');
-        }
+    socket.on('system_status', function(msg) {
+      if(msg.status.error_state == true) {
+          $('#system_status').html('<a href="/status">System Status: <span class="red">Error</a></span>');
+      } else {
+          $('#system_status').html('<a href="/status">System Status: <span class="green">Okay</a></span>');
+      }
 
-        $('#log').html(decode_status(msg.status.error_state, msg.status.decoders, msg.status.servers, msg.status.feeders, msg.status.global, msg.status.stats));
-    });
+      $('#log').html(decode_status(msg.status.error_state, msg.status.decoders, msg.status.servers, msg.status.feeders, msg.status.global, msg.status.stats));
+  });
+
+  socket_alerts.on('disconnect', function(msg) {
+    connection_status();
+  });
+  
+  socket_alerts.on('connect_error', function(msg) {
+      connection_status();
+  });
+
+  socket_alerts.on('connect_timeout', function(msg) {
+      connection_status();
+  });
+
+  socket_alerts.on('connect', function(msg) {
+      connection_status(true);
+  });
+
+  socket_alerts.on('reconnect', function(msg) {
+      connection_status(true);
+  });
 });
 
 function decode_status(status, decoders, servers, feeders, receivers, stats) {

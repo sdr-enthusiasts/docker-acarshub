@@ -38,6 +38,26 @@ $(document).ready(function(){
         }
     });
 
+    socket_alerts.on('disconnect', function(msg) {
+        connection_status();
+    });
+
+    socket_alerts.on('connect_error', function(msg) {
+        connection_status();
+    });
+
+    socket_alerts.on('connect_timeout', function(msg) {
+        connection_status();
+    });
+
+    socket_alerts.on('connect', function(msg) {
+        connection_status(true);
+    });
+
+    socket_alerts.on('reconnect', function(msg) {
+        connection_status(true);
+    });
+
     // Search results returned
     socket.on('newmsg', function(msg) {
         console.log(msg);

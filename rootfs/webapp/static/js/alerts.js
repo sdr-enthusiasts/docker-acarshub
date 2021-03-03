@@ -55,6 +55,27 @@ $(document).ready(function() {
                 $('#system_status').html('<a href="/status">System Status: <span class="green">Okay</a></span>');
             }
         });
+
+        socket_alerts.on('disconnect', function(msg) {
+            connection_status();
+        });
+
+        socket_alerts.on('connect_error', function(msg) {
+            connection_status();
+        });
+
+        socket_alerts.on('connect_timeout', function(msg) {
+            connection_status();
+        });
+
+        socket_alerts.on('connect', function(msg) {
+            connection_status(true);
+        });
+
+        socket_alerts.on('reconnect', function(msg) {
+            connection_status(true);
+        });
+
     } else if(document.location.pathname != "/") {
         socket_alerts.on('newmsg', function(msg) {
             var matched = match_alert(msg);
@@ -252,3 +273,7 @@ function default_alert_values() {
     document.getElementById("alert_text").value = current;
     updateAlerts();
 }
+
+function connection_status(connected=false) {
+    $('#disconnect').html(!connected ? ' | <strong><span class="red_body">DISCONNECTED FROM WEB SERVER' : "");
+} 
