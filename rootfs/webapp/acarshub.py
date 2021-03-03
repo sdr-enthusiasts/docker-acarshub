@@ -122,7 +122,7 @@ def flight_finder(callsign=None, hex_code=None, url=True):
     if callsign is not None:
         # Check the ICAO DB to see if we know what it is
         # The ICAO DB will return the ICAO code back if it didn't find anything
-        
+
         icao, airline = acarshub_db.find_airline_code_from_iata(callsign[:2])
         flight_number = callsign[2:]
         flight = icao + flight_number
@@ -143,7 +143,6 @@ def flight_finder(callsign=None, hex_code=None, url=True):
 
 
 def handle_message(message=None):
-    import json
     import time
     start_time = time.time()
     if message is not None:
@@ -178,7 +177,7 @@ def handle_message(message=None):
             # the db returns two values
             # index zero is the query results in json
             # the other is the count of total results
- 
+
             if search[0] is not None:
                 total_results = search[1]
                 # Loop through the results and format html
@@ -195,7 +194,6 @@ def handle_message(message=None):
 
 
 def service_check():
-    import subprocess
     import re
 
     global decoders
@@ -333,6 +331,7 @@ def service_check():
         print(feeders)
         print(stats)
 
+
 if os.getenv("SPAM", default=False):
     service_check()
 
@@ -346,4 +345,3 @@ def get_service_status():
     global stats
 
     return {"decoders": decoders, "servers": servers, "global": receivers, "feeders": feeders, "error_state": system_error, "stats": stats}
-

@@ -162,6 +162,7 @@ def alert_handler():
         else:
             pass
 
+
 def database_listener():
     import sys
     import time
@@ -337,18 +338,17 @@ def init_listeners(special_message=""):
 
 
 def init():
-    import json
     global messages_recent
     # grab recent messages from db and fill the most recent array
     # then turn on the listeners
-    acarshub_helpers.log(f"grabbing most recent messages from database", "init")
+    acarshub_helpers.log("grabbing most recent messages from database", "init")
     results = acarshub.acarshub_db.grab_most_recent()
 
     if results is not None:
         for item in results:
             json_message = item
             messages_recent.insert(0, [json_message['message_type'], json_message])
-    acarshub_helpers.log(f"Completed grabbing messages from database, starting up rest of services", "init")
+    acarshub_helpers.log("Completed grabbing messages from database, starting up rest of services", "init")
     init_listeners()
 
 
@@ -452,7 +452,7 @@ def alert_disconnect():
     except Exception:
         pass
 
-    if len(alert_users)  == 0:
+    if len(alert_users) == 0:
         thread_alerts_stop_event.set()
 
 
@@ -474,8 +474,6 @@ def stats_connect():
 
 @socketio.on('query', namespace='/alerts')
 def get_alerts(message, namespace):
-    import json
-
     requester = request.sid
     results = acarshub.acarshub_db.search_alerts(icao=message['icao'], text=message['text'], flight=message['flight'], tail=message['tail'])
     if results is not None:
@@ -519,6 +517,7 @@ def handle_message(message, namespace):
                              'search_term': str(search_term), 'query_time': time.time() - start_time}, to=requester, namespace='/search')
     print("Emit--- %s seconds ---" % (time.time() - start_time_emit))
     print("Total Time--- %s seconds ---" % (time.time() - start_time))
+
 
 @socketio.on('disconnect', namespace='/main')
 def main_disconnect():

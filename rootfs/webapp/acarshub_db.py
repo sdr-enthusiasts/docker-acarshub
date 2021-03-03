@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 from sqlalchemy import create_engine, Column, Integer, String, \
-    Text, or_
+    Text
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.declarative import DeclarativeMeta
@@ -21,7 +21,7 @@ try:
     for station in groundStations_json['ground_stations']:
         stationId = station.get('id')
         if stationId:
-            groundStations[stationId] = { "icao": station['airport']['icao'], "name": station['airport']['name']}
+            groundStations[stationId] = {"icao": station['airport']['icao'], "name": station['airport']['name']}
 
     acarshub_helpers.log("Completed loading Station IDs", "database")
 except Exception as e:
@@ -179,17 +179,19 @@ class messages(Messages):
 
 # Now we've created the classes for the database, we'll associate the class with the database and create any missing tables
 
+
 Messages.metadata.create_all(database)
 if backup:
     Messages.metadata.create_all(database_backup)
 
 # Class used to convert any search query objects to JSON
 
+
 def query_to_dict(obj):
     if isinstance(obj.__class__, DeclarativeMeta):
         # an SQLAlchemy class
         fields = {}
-        for field in [x for x in dir(obj) if not x.startswith('_') and x != 'metadata' and x != None and x != ""]:
+        for field in [x for x in dir(obj) if not x.startswith('_') and x != 'metadata' and x is not None and x != ""]:
             fields[field] = obj.__getattribute__(field)
         return fields
     return None
@@ -314,7 +316,6 @@ def add_message_from_json(message_type, message_from_json):
         else:
             session.add(messagesFreq(freq=f"{freq}", freq_type=message_type, count=1))
 
-
         if backup:
             found_freq_backup = session_backup.query(messagesFreq).filter(messagesFreq.freq == f"{freq}" and messagesFreq.freq_type == message_type).first()
 
@@ -338,15 +339,15 @@ def add_message_from_json(message_type, message_from_json):
 
             if backup:
                 session_backup.add(messages(message_type=message_type, time=time, station_id=station_id, toaddr=toaddr,
-                                     fromaddr=fromaddr, depa=depa, dsta=dsta, eta=eta, gtout=gtout, gtin=gtin,
-                                     wloff=wloff, wlin=wlin, lat=lat, lon=lon, alt=alt, text=text, tail=tail,
-                                     flight=flight, icao=icao, freq=freq, ack=ack, mode=mode, label=label, block_id=block_id,
-                                     msgno=msgno, is_response=is_response, is_onground=is_onground, error=error, libacars=libacars, level=level))
+                                            fromaddr=fromaddr, depa=depa, dsta=dsta, eta=eta, gtout=gtout, gtin=gtin,
+                                            wloff=wloff, wlin=wlin, lat=lat, lon=lon, alt=alt, text=text, tail=tail,
+                                            flight=flight, icao=icao, freq=freq, ack=ack, mode=mode, label=label, block_id=block_id,
+                                            msgno=msgno, is_response=is_response, is_onground=is_onground, error=error, libacars=libacars, level=level))
 
         # Now lets decide where to log the message count to
         # Firs twe'll see if the message is not blank
 
-        if text != ""or libacars != "" or \
+        if text != "" or libacars != "" or \
            dsta != "" or depa != "" or eta != "" or gtout != "" or \
            gtin != "" or wloff != "" or wlin != "" or lat != "" or \
            lon != "" or alt != "":
@@ -394,7 +395,6 @@ def add_message_from_json(message_type, message_from_json):
             found_level.count += 1
         else:
             session.add(messagesLevel(level=level, count=1))
-
 
         if backup:
             found_level_backup = session_backup.query(messagesLevel).filter(messagesLevel.level == level).first()
@@ -461,7 +461,7 @@ def database_search(search_term, page=0):
         count_string = ""
 
         for key in search_term:
-            if search_term[key] != None and search_term[key] != "":
+            if search_term[key] is not None and search_term[key] != "":
                 if query_string == "":
                     query_string += f'SELECT * from text_fts WHERE {key} MATCH \'"{search_term[key]}"*\''
                     count_string += f'SELECT COUNT(*) from (SELECT rowid FROM text_fts WHERE {key} MATCH \'"{search_term[key]}"*\''
@@ -479,7 +479,7 @@ def database_search(search_term, page=0):
         processed_results = []
         final_count = 0
         for row in count:
-           final_count = row[0]
+            final_count = row[0]
 
         # if final_count == 0:
         #     return [None, 50]
@@ -506,7 +506,7 @@ def search_alerts(icao=None, tail=None, flight=None, text=None):
             query_string = ""
 
             for key in search_term:
-                if search_term[key] != None and search_term[key] != "":
+                if search_term[key] is not None and search_term[key] != "":
                     sub_query = ""
                     for term in search_term[key]:
                         if sub_query == "":
@@ -519,7 +519,6 @@ def search_alerts(icao=None, tail=None, flight=None, text=None):
                     else:
                         query_string += f' OR {key} MATCH "{sub_query}"'
 
-
             print(f'SELECT * from text_fts WHERE {query_string} LIMIT 50 OFFSET 0')
             result = session.execute(f'SELECT * from text_fts WHERE {query_string} LIMIT 50 OFFSET 0')
             count = session.execute(f'SELECT COUNT(*) from text_fts WHERE {query_string}')
@@ -527,7 +526,7 @@ def search_alerts(icao=None, tail=None, flight=None, text=None):
             processed_results = []
             final_count = 0
             for row in count:
-               final_count = row[0]
+                final_count = row[0]
 
             if final_count == 0:
                 return None
@@ -542,18 +541,19 @@ def search_alerts(icao=None, tail=None, flight=None, text=None):
     else:
         return None
 
+
 def show_all(page=0):
     result = None
 
     try:
         session = db_session()
         result = session.execute(f'SELECT * from messages LIMIT 50 OFFSET {page * 50}')
-        count = session.execute(f'SELECT COUNT(*) from messages')
+        count = session.execute('SELECT COUNT(*) from messages')
 
         processed_results = []
         final_count = 0
         for row in count:
-           final_count = row[0]
+            final_count = row[0]
 
         if final_count == 0:
             return [None, 50]
@@ -684,6 +684,7 @@ def lookup_label(label):
 def get_message_label_json():
     return message_labels['labels']
 
+
 def get_signal_levels():
     try:
         session = db_session()
@@ -740,6 +741,8 @@ def init_database(backup_db=False):
     except Exception as e:
         acarshub_helpers.acars_traceback(e, "database")
 
+
 init_database()
+
 if backup:
     init_database(backup_db=True)

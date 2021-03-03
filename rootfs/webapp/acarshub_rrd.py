@@ -38,8 +38,6 @@ def create_db():
 
 
 def update_graphs():
-    import sys
-
     args = ["/webapp/static/images/1hour.png", "-a", "PNG", "--title", "1 Hour", "-w", "1000",
             "-h", "200", "--start", "-1h", "--vertical-label", "Messages", "--slope-mode"]
     args_all = []    # combined graph arguements

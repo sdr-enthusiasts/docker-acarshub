@@ -15,7 +15,7 @@ IATA_OVERRIDE = ""
 FREQS_ACARS = ""
 FREQS_VDLM = ""
 DB_SAVE_DAYS = 7
-DB_BACKUP=""
+DB_BACKUP = ""
 
 if os.getenv("DEBUG_LOGGING", default=False):
     DEBUG_LOGGING = True
@@ -87,6 +87,7 @@ def acars_traceback(e, source):
     while traceback:
         print("{}: {}".format(traceback.tb_frame.f_code.co_filename, traceback.tb_lineno))
         traceback = traceback.tb_next
+
 
 def log(msg, source):
     print(f"[{source}]: {msg}")
