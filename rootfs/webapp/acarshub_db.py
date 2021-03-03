@@ -458,7 +458,7 @@ def database_search(search_term, page=0):
 
     try:
         if acarshub_helpers.DEBUG_LOGGING:
-            print(f"[database] Searching database for {search_term}")
+            acarshub_helpers.log(f"[database] Searching database for {search_term}", "database")
         session = db_session()
         query_string = ""
         count_string = ""
@@ -502,7 +502,6 @@ def search_alerts(icao=None, tail=None, flight=None, text=None):
         try:
             session = db_session()
             search_term = {"icao": icao, "msg_text": text, "flight": flight, "tail": tail}
-            print(search_term)
             query_string = ""
 
             for key in search_term:
@@ -519,7 +518,6 @@ def search_alerts(icao=None, tail=None, flight=None, text=None):
                     else:
                         query_string += f' OR {key} MATCH "{sub_query}"'
 
-            print(f'SELECT * from text_fts WHERE {query_string} LIMIT 50 OFFSET 0')
             result = session.execute(f'SELECT * from text_fts WHERE {query_string} LIMIT 50 OFFSET 0')
             count = session.execute(f'SELECT COUNT(*) from text_fts WHERE {query_string}')
 
