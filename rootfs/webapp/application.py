@@ -441,7 +441,7 @@ def about_connect():
 
 
 @socketio.on('connect', namespace='/status')
-def about_connect():
+def status_connect():
     socketio.emit('system_status', {'status': acarshub.get_service_status()}, namespace="/status")
 
 

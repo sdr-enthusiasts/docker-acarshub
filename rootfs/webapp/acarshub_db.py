@@ -439,8 +439,6 @@ def pruneOld():
 
 
 def find_airline_code_from_iata(iata):
-    result = None
-
     if iata in overrides:
         return overrides[iata]
 
@@ -537,8 +535,8 @@ def search_alerts(icao=None, tail=None, flight=None, text=None):
             for row in result:
                 processed_results.append(dict(row))
             processed_results.reverse()
-            return processed_results
             session.close()
+            return processed_results
         except Exception as e:
             acarshub_helpers.acars_traceback(e, "database")
     else:
