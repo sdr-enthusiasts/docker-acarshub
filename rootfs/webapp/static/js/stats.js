@@ -16,11 +16,14 @@ $(document).ready(function(){
 		var input_labels = [];
 		var input_data = [];
 
-		// This is float check is a hack and will discard good data. However, for reasons I don't understand
+		// This float check is a hack and will discard good data. However, for reasons I don't understand
 		// The database stores whole numbers not as the input float but as an int
 		// This might be an artifact of any database that was running the old acarsdec (which used whole numbers only)
 		// And the matching done for signal levels in the db write function...in any case, the graph should even out the
 		// missing data points
+		// The ultimate result here is that anyone who had run the old acarsdec would see massive spikes on whole numbers
+		// that skews the graph significantly. Removing those values smooths the graph and is more representative of what
+		// really has been received with the newer, better signal levels
 
 		for (let i in msg.levels) {
 			if(msg.levels[i].level != null && isFloat(msg.levels[i].level)) { 
