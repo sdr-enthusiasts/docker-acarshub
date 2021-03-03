@@ -469,6 +469,7 @@ def stats_connect():
     socketio.emit('system_status', {'status': acarshub.get_service_status()}, namespace="/stats")
     socketio.emit('newmsg', {"vdlm": acarshub_helpers.ENABLE_VDLM, "acars": acarshub_helpers.ENABLE_ACARS},
                   namespace='/stats')
+    socketio.emit('signal', {'levels': acarshub.acarshub_db.get_signal_levels()}, namespace="/stats")
 
 
 @socketio.on('query', namespace='/alerts')

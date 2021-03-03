@@ -686,6 +686,19 @@ def lookup_label(label):
 def get_message_label_json():
     return message_labels['labels']
 
+def get_signal_levels():
+    try:
+        session = db_session()
+        result = session.query(messagesLevel).order_by(messagesLevel.level)
+        if result.count() > 0:
+            return [query_to_dict(d) for d in result]
+
+        else:
+            return {}
+
+    except Exception as e:
+        acarshub_helpers.acars_traceback(e, "database")
+
 
 def init_database(backup_db=False):
     try:

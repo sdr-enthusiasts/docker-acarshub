@@ -12,6 +12,43 @@ $(document).ready(function(){
 		generate_stat_submenu(msg.acars, msg.vdlm);
 	});
 
+	socket.on('signal', function(msg) {
+		var input_labels = [];
+		var input_data = [];
+
+		// This is float check is a hack and will discard good data. However, for reasons I don't understand
+		// The database stores whole numbers not as the input float but as an int
+		// This might be an artifact of any database that was running the old acarsdec (which used whole numbers only)
+		// And the matching done for signal levels in the db write function...in any case, the graph should even out the
+		// missing data points
+
+		for (let i in msg.levels) {
+			if(msg.levels[i].level != null && isFloat(msg.levels[i].level)) { 
+				input_labels.push(`${msg.levels[i].level}`);
+				input_data.push(msg.levels[i].count);
+			}
+		}
+		var ctx = document.getElementById('signallevels').getContext('2d');
+		var chart = new Chart(ctx, {
+		    // The type of chart we want to create
+		    type: 'line',
+
+		    // The data for our dataset
+		    data: {
+		        labels: input_labels,
+		        datasets: [{
+		            label: 'Received Signal Levels',
+		            backgroundColor: 'rgb(255, 99, 132)',
+		            borderColor: 'rgb(255, 99, 132)',
+		            data: input_data
+		        }]
+		    },
+
+		    // Configuration options go here
+		    options: {}
+		});
+	});
+
 	socket.on('freqs', function(msg) {
 		var html = "<table class=\"search\">";
 		html += "<thead><th><span class=\"menu_non_link\">Frequency</span></th><th><span class=\"menu_non_link\">Count</span></th><th><span class=\"menu_non_link\">Type</span></th></thead>"
@@ -63,6 +100,10 @@ $(document).ready(function(){
 	grab_freqs();
 	grab_message_count();
 });
+
+function isFloat(n){
+    return Number(n) === n && n % 1 !== 0;
+}
 
 setInterval(function() {
 	grab_images();
