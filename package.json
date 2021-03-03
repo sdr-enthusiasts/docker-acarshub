@@ -1,0 +1,25 @@
+{
+    "name": "ACARS Hub",
+    "version": "0.0.1",
+    "description": "Web App to display ACARS/VDLM MEssages",
+    "main": "dist",
+    "eslintConfig": {
+      "parserOptions": {
+        "ecmaVersion": 8
+      },
+      "env": {
+        "es6": true
+      },
+      "rules": {
+        "no-console": 0,
+        "no-unused-vars": 1
+      }
+    },
+    "repository": "https://github.com/fredclausen/docker-acarshub/",
+    "author": "Fred Clausen <clausen.fred@icloud.com>",
+    "license": "GPLv3",
+    "dependencies": {
+    },
+    "devDependencies": {
+    }
+  }
