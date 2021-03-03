@@ -16,7 +16,7 @@ jobs:
     - name: Run yarn
       run: yarn
     - name: Run eslint
-      run: yarn run eslint . --ext .ts,.tsx
+      run: yarn run eslint . --ext .js
 
   shellcheck:
 
