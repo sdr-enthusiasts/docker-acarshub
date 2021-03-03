@@ -3,6 +3,13 @@
     "version": "0.0.1",
     "description": "Web App to display ACARS/VDLM MEssages",
     "main": "dist",
+    "scripts": {
+        "dev": "nodemon -w src --exec \"babel-node src --presets es2015,stage-0\"",
+        "build": "babel src -s -D -d dist --presets es2015,stage-0",
+        "start": "node dist",
+        "prestart": "npm run -s build",
+        "test": "eslint src"
+    },
     "eslintConfig": {
       "parserOptions": {
         "ecmaVersion": 8
@@ -17,7 +24,7 @@
     },
     "repository": "https://github.com/fredclausen/docker-acarshub/",
     "author": "Fred Clausen <clausen.fred@icloud.com>",
-    "license": "GPLv3",
+    "license": "GPL-3.0-only",
     "dependencies": {
     },
     "devDependencies": {
