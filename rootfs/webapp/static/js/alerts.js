@@ -6,7 +6,9 @@ var alert_tail = [];
 var alert_icao = [];
 var msgs_received = [];
 
-var default_text_values = ['cop', 'police', 'authorities', 'chop', 'turbulence', 'turb', 'fault', 'divert', 'mask', 'csr', 'agent', 'medical', 'security', 'mayday', 'emergency', 'pan', 'red coat']
+var default_text_values = ['cop', 'police', 'authorities', 'chop', 'turbulence', 'turb',
+                           'fault', 'divert', 'mask', 'csr', 'agent', 'medical', 'security',
+                           'mayday', 'emergency', 'pan', 'red coat']
 
 msgs_received.unshift = function () {
     if (this.length >= 50) {

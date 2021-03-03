@@ -38,7 +38,7 @@ socketio = SocketIO(
 thread_scheduler = Thread()
 thread_scheduler_stop_event = Event()
 
-# threads for processing the incoming data
+# thread for processing the incoming data
 
 thread_html_generator = Thread()
 thread_html_generator_event = Event()
@@ -69,13 +69,19 @@ que_messages = deque(maxlen=15)
 que_database = deque(maxlen=15)
 que_alerts = deque(maxlen=15)
 
-messages_recent = []
+messages_recent = []  # list to store most recent msgs
 
+# counters for messages
+# will be reset once written to RRD
 vdlm_messages = 0
 acars_messages = 0
 error_messages = 0
 
 alert_users = []
+
+# all namespaces
+
+acars_namespaces = ['/main', '/alerts', '/about', '/search', '/stats', '/status']
 
 
 def update_rrd_db():
@@ -94,24 +100,19 @@ def htmlListener():
     import sys
     import copy
 
-    # TOOLTIPS: <span class="wrapper">visible text<span class="tooltip">tooltip text</span></span>
-
     # Run while requested...
     while not thread_html_generator_event.isSet():
         sys.stdout.flush()
         time.sleep(1)
 
-        if len(que_messages) != 0:
+        while len(que_messages) != 0:
             message_source, json_message_initial = que_messages.popleft()
             json_message = copy.deepcopy(json_message_initial)  # creating a copy so that our changes below aren't made to the parent object
             # Send output via socketio
-            json_message.update({"message_type": message_source})
-
+            json_message.update({"message_type": message_source})  # add in the message_type key because the parent object didn't have it
             json_message = acarshub.update_keys(json_message)
 
             socketio.emit('newmsg', {'msghtml': json_message}, namespace='/main')
-        else:
-            pass
 
     if acarshub_helpers.DEBUG_LOGGING:
         acarshub_helpers.log("Exiting HTML Listener thread", "htmlListener")
@@ -124,15 +125,15 @@ def scheduled_tasks():
     # init the dbs if not already there
 
     if not acarshub_helpers.SPAM:
-        acarshub_rrd.create_db()
-        acarshub_rrd.update_graphs()
+        acarshub_rrd.create_db()  # make sure the RRD DB is created / there
+        acarshub_rrd.update_graphs()  # generate graphs for the website so we don't 404 on images right after launch
         acarshub.service_check()
 
         schedule.every().minute.at(":00").do(update_rrd_db)
         schedule.every().minute.at(":30").do(acarshub_rrd.update_graphs)
         schedule.every().minute.at(":15").do(acarshub.service_check)
         # Run and Schedule the database pruner
-        acarshub.acarshub_db.pruneOld()
+        acarshub.acarshub_db.pruneOld()  # clean the database on startup
         schedule.every().hour.at(":30").do(acarshub.acarshub_db.pruneOld)
 
     # Check for dead threads and restart
@@ -150,12 +151,11 @@ def alert_handler():
     while not thread_alerts_stop_event.isSet():
         time.sleep(1)
 
-        if len(que_alerts) != 0:
+        while len(que_alerts) != 0:
             message_source, json_message_initial = que_alerts.popleft()
             json_message = copy.deepcopy(json_message_initial)  # creating a copy so that our changes below aren't made to the parent object
             # Send output via socketio
             json_message.update({"message_type": message_source})
-
             json_message = acarshub.update_keys(json_message)
 
             socketio.emit('newmsg', {'msghtml': json_message}, namespace='/alerts')
@@ -171,7 +171,7 @@ def database_listener():
         sys.stdout.flush()
         time.sleep(1)
 
-        if len(que_database) != 0:
+        while len(que_database) != 0:
             sys.stdout.flush()
             t, m = que_database.pop()
             acarshub.acarshub_db.add_message_from_json(message_type=t, message_from_json=m)
@@ -280,14 +280,14 @@ def message_listener(message_type=None, ip='127.0.0.1', port=None):
                             if j['error'] > 0:
                                 error_messages += j['error']
 
-                        if connected_users > 0:
+                        if connected_users > 0:  # que message up if someone is on live message page
                             que_messages.append((que_type, j))
-                        if len(alert_users) > 0:
+                        if len(alert_users) > 0:  # que message up if someone is on the alerts page
                             que_alerts.append((que_type, j))
                         que_database.append((que_type, j))
-                        if(len(messages_recent) >= 50):
+                        if(len(messages_recent) >= 150):  # Keep the que size down
                             del messages_recent[0]
-                        messages_recent.append((que_type, j))
+                        messages_recent.append((que_type, j))  # add to recent message que for anyone fresh loading the page
 
 
 def init_listeners(special_message=""):
@@ -300,6 +300,7 @@ def init_listeners(special_message=""):
     global thread_html_generator
     global thread_alerts
 
+    # show log message if this is container startup
     if special_message == "":
         acarshub_helpers.log("Starting data listeners", "init")
 
@@ -327,14 +328,11 @@ def init_listeners(special_message=""):
         acarshub_helpers.log(f"{special_message}Starting alert thread", "init")
         thread_alerts = socketio.start_background_task(alert_handler)
 
-    status = acarshub.get_service_status()
+    status = acarshub.get_service_status()  # grab system status
 
-    socketio.emit('system_status', {'status': status}, namespace="/main")
-    socketio.emit('system_status', {'status': status}, namespace="/alerts")
-    socketio.emit('system_status', {'status': status}, namespace="/search")
-    socketio.emit('system_status', {'status': status}, namespace="/stats")
-    socketio.emit('system_status', {'status': status}, namespace="/status")
-    socketio.emit('system_status', {'status': status}, namespace="/about")
+    # emit to all namespaces
+    for page in acars_namespaces:
+        socketio.emit('system_status', {'status': status}, namespace=page)
 
 
 def init():
@@ -515,8 +513,6 @@ def handle_message(message, namespace):
     start_time_emit = time.time()
     socketio.emit('newmsg', {'num_results': total_results, 'msghtml': serialized_json,
                              'search_term': str(search_term), 'query_time': time.time() - start_time}, to=requester, namespace='/search')
-    print("Emit--- %s seconds ---" % (time.time() - start_time_emit))
-    print("Total Time--- %s seconds ---" % (time.time() - start_time))
 
 
 @socketio.on('disconnect', namespace='/main')

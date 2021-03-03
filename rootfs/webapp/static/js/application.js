@@ -12,11 +12,11 @@ var received_messages = 0;
 import { MessageDecoder } from '../airframes-acars-decoder/MessageDecoder.js'
 const md = new MessageDecoder();
 
-// Automatically keep the array size at 50 messages or less
+// Automatically keep the array size at 150 messages or less
 // without the need to check before we push on to the stack
 
 msgs_received.unshift = function () {
-    if (this.length >= 50) {
+    if (this.length >= 150) {
         this.pop();
     }
     return Array.prototype.unshift.apply(this,arguments);
@@ -174,8 +174,6 @@ window.filter_notext = function() {
 
         var id = document.getElementById("filter_notext");
         id.innerHTML = "Hide Empty Messages";
-        //var txt = document.createTextNode("Hide Empty messages");
-        //id.appendChild(txt);
         Cookies.set('filter', 'false', { expires: 365 });
         filtered_messages = 0;
 
@@ -192,8 +190,6 @@ window.filter_notext = function() {
 
         id = document.getElementById("filter_notext");
         id.innerHTML = "<span class=\"red\">Show All Messages</span>";
-        //var txt = document.createTextNode("Show All messages");
-        //id.appendChild(txt);
         Cookies.set('filter', 'true', { expires: 365 });
     }
 }
@@ -312,7 +308,6 @@ $(document).ready(function(){
                     var decoded_msg = md.decode(msg.msghtml);
                     if(decoded_msg.decoded == true) {
                         msg.msghtml.decodedText = decoded_msg;
-                        //console.log(msg.msghtml.decodedText);
                     }
                 }
 

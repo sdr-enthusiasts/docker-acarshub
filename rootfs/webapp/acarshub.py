@@ -62,6 +62,8 @@ def update_keys(json_message):
 
     # Now we process individual keys, if that key is present
 
+    # database tablename for the message text doesn't match up with typescript-decoder (needs it to be text)
+    # so we rewrite the key
     if "msg_text" in json_message and json_message['msg_text'] is not None:
         json_message['text'] = json_message['msg_text']
         del json_message['msg_text']
@@ -143,7 +145,6 @@ def flight_finder(callsign=None, hex_code=None, url=True):
 
 
 def handle_message(message=None):
-    import time
     start_time = time.time()
     if message is not None:
         total_results = 0
@@ -162,9 +163,7 @@ def handle_message(message=None):
                 search_term = message['search_term']
 
                 if 'results_after' in message:
-                    # ask the database for the results at the user requested index
-                    # multiply the selected index by 50 (we have 50 results per page) so the db
-                    # knows what result index to send back
+                    # ask the database for the results at the user requested page
                     search = acarshub_db.database_search(message['search_term'], message['results_after'])
                 else:
                     search = acarshub_db.database_search(message['search_term'])
@@ -185,9 +184,6 @@ def handle_message(message=None):
                 for result in search[0]:
                     serialized_json.append(update_keys(result))
 
-                print("Time update keys-- %s seconds ---" % (time.time() - time_update_keys))
-            # TODO: REMOVE timer before release
-            print("Total Time Handle MSG--- %s seconds ---" % (time.time() - start_time))
             return (total_results, serialized_json, search_term)
     else:
         return (None, None, None)

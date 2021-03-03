@@ -45,6 +45,7 @@ db_session = sessionmaker(bind=database)
 Messages = declarative_base()
 
 # second database for backup
+# required input format is SQL Alchemy DB URL
 
 if acarshub_helpers.DB_BACKUP:
     backup = True
@@ -201,6 +202,8 @@ def add_message_from_json(message_type, message_from_json):
     global database
     import json
     # message time
+    # all fields are set to a blank string. This is because all of the database fields
+    # are set to be 'not null' so all fields require a value, even if it is blank
     time = ""
     station_id = ""
     toaddr = ""
@@ -334,18 +337,20 @@ def add_message_from_json(message_type, message_from_json):
             session.add(messages(message_type=message_type, time=time, station_id=station_id, toaddr=toaddr,
                                  fromaddr=fromaddr, depa=depa, dsta=dsta, eta=eta, gtout=gtout, gtin=gtin,
                                  wloff=wloff, wlin=wlin, lat=lat, lon=lon, alt=alt, text=text, tail=tail,
-                                 flight=flight, icao=icao, freq=freq, ack=ack, mode=mode, label=label, block_id=block_id,
-                                 msgno=msgno, is_response=is_response, is_onground=is_onground, error=error, libacars=libacars, level=level))
+                                 flight=flight, icao=icao, freq=freq, ack=ack, mode=mode, label=label,
+                                 block_id=block_id, msgno=msgno, is_response=is_response, is_onground=is_onground,
+                                 error=error, libacars=libacars, level=level))
 
             if backup:
                 session_backup.add(messages(message_type=message_type, time=time, station_id=station_id, toaddr=toaddr,
                                             fromaddr=fromaddr, depa=depa, dsta=dsta, eta=eta, gtout=gtout, gtin=gtin,
                                             wloff=wloff, wlin=wlin, lat=lat, lon=lon, alt=alt, text=text, tail=tail,
-                                            flight=flight, icao=icao, freq=freq, ack=ack, mode=mode, label=label, block_id=block_id,
-                                            msgno=msgno, is_response=is_response, is_onground=is_onground, error=error, libacars=libacars, level=level))
+                                            flight=flight, icao=icao, freq=freq, ack=ack, mode=mode, label=label,
+                                            block_id=block_id, msgno=msgno, is_response=is_response,
+                                            is_onground=is_onground, error=error, libacars=libacars, level=level))
 
         # Now lets decide where to log the message count to
-        # Firs twe'll see if the message is not blank
+        # First we'll see if the message is not blank
 
         if text != "" or libacars != "" or \
            dsta != "" or depa != "" or eta != "" or gtout != "" or \
@@ -450,8 +455,6 @@ def find_airline_code_from_iata(iata):
 
 def database_search(search_term, page=0):
     result = None
-    import time
-    start_time = time.time()
 
     try:
         if acarshub_helpers.DEBUG_LOGGING:
@@ -471,8 +474,6 @@ def database_search(search_term, page=0):
 
         count_string += ") I"
 
-        print(f'{query_string} LIMIT 50 OFFSET {page * 50}')
-        print(f'{count_string}')
         result = session.execute(f'{query_string} LIMIT 50 OFFSET {page * 50}')
         count = session.execute(f'{count_string}')
 
@@ -481,15 +482,14 @@ def database_search(search_term, page=0):
         for row in count:
             final_count = row[0]
 
-        # if final_count == 0:
-        #     return [None, 50]
+        if final_count == 0:
+            return [None, 50]
 
         for row in result:
             processed_results.append(dict(row))
 
         session.close()
         processed_results.reverse()
-        print("Query--- %s seconds ---" % (time.time() - start_time))
         return(processed_results, final_count)
     except Exception as e:
         acarshub_helpers.acars_traceback(e, "database")
@@ -572,8 +572,6 @@ def get_freq_count():
     result = None
     freq_count = []
     found_freq = []
-
-    # output: freq_count.append(f"{f[0]}|{f[1]}|{result}")
 
     try:
         session = db_session()
@@ -658,7 +656,7 @@ def grab_most_recent():
     from sqlalchemy import desc
     try:
         session = db_session()
-        result = session.query(messages).order_by(desc('id')).limit(20)
+        result = session.query(messages).order_by(desc('id')).limit(150)
 
         if result.count() > 0:
             return [query_to_dict(d) for d in result]
