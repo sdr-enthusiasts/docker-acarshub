@@ -41,9 +41,11 @@ $(document).ready(function(){
 		        labels: input_labels,
 		        datasets: [{
 		            label: 'Received Signal Levels',
-		            backgroundColor: 'rgb(255, 99, 132)',
-		            borderColor: 'rgb(255, 99, 132)',
-		            data: input_data
+		            backgroundColor: 'rgb(30, 255, 30)',
+		            borderColor: 'rgb(0, 0, 0)',
+		            data: input_data,
+		            //pointRadius: 0,
+		            borderWidth: 1
 		        }]
 		    },
 
