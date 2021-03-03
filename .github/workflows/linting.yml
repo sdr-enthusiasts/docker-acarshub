@@ -6,16 +6,16 @@ on:
       - main
 
 jobs:
-    lint:
-    runs-on: ubuntu-latest
-    name: Run eslint
-    steps:
-      - uses: actions/checkout@v1
-      - uses: actions/setup-node@v1
-        with:
-          node-version: '13.x'
-      - run: yarn
-      - run: yarn lint
+  lint:
+  runs-on: ubuntu-latest
+  name: Run eslint
+  steps:
+    - uses: actions/checkout@v1
+    - uses: actions/setup-node@v1
+      with:
+        node-version: '13.x'
+    - run: yarn
+    - run: yarn lint
 
   shellcheck:
 
