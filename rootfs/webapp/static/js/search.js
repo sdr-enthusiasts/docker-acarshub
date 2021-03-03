@@ -60,8 +60,6 @@ $(document).ready(function(){
 
     // Search results returned
     socket.on('newmsg', function(msg) {
-        console.log(msg);
-        console.log(current_search)
         //maintain a list of 1 msgs
         if (msgs_received.length >= 1){
             msgs_received.shift();
@@ -108,8 +106,6 @@ $(document).ready(function(){
     // Function to listen for key up events. If detected, check and see if the search string has been updated. If so, process the updated query
     document.addEventListener("keyup", function() {
         var current_terms = get_search_terms();
-        console.log(current_terms);
-        console.log(current_search);
         if(current_search != current_terms)
             delay_query(current_terms);
     });
@@ -148,12 +144,8 @@ async function delay_query(initial_query) {
     var old_search = current_search; // Save the old search term in a temp variable
     // Only execute the search query if the user is done typing. We track that by comparing the query we were asked to run
     // with what is currently in the text box
-    console.log(initial_query);
-    console.log(get_search_terms())
     if(JSON.stringify(initial_query) == JSON.stringify(get_search_terms())) {  
         current_search = get_search_terms(); // update the global value for the current search
-        console.log(old_search);
-        console.log(current_search);
         if(!is_everything_blank() && JSON.stringify(current_search) != JSON.stringify(old_search)) { // Double check and ensure the search term is new and not blank. No sense hammering the DB to search for the same term
             // Reset status for various elements of the page to what we're doing now
             current_page = 0;
