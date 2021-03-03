@@ -1,5 +1,5 @@
 {
-    "name": "ACARS Hub",
+    "name": "acarshub",
     "version": "0.0.1",
     "description": "Web App to display ACARS/VDLM MEssages",
     "main": "dist",
