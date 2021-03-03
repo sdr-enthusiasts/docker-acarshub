@@ -1,5 +1,5 @@
 {
-    "name": "acarshub",
+    "name": "acars_hub",
     "version": "0.0.1",
     "description": "Web App to display ACARS/VDLM MEssages",
     "main": "dist",
@@ -11,16 +11,19 @@
         "test": "eslint src"
     },
     "eslintConfig": {
-      "parserOptions": {
-        "ecmaVersion": 8
-      },
-      "env": {
-        "es6": true
-      },
-      "rules": {
-        "no-console": 0,
-        "no-unused-vars": 1
-      }
+        "extends": "airbnb-base",
+        "parserOptions": {
+          "ecmaVersion": 8,
+          "sourceType": "module"
+        },
+        "env": {
+          "node": true,
+          "es6": true
+        },
+        "rules": {
+          "no-console": 0,
+          "no-unused-vars": 1
+        }
     },
     "repository": "https://github.com/fredclausen/docker-acarshub/",
     "author": "Fred Clausen <clausen.fred@icloud.com>",
