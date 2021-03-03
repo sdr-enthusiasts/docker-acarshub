@@ -16,23 +16,23 @@ $(document).ready(function(){
       $('#log').html(decode_status(msg.status.error_state, msg.status.decoders, msg.status.servers, msg.status.feeders, msg.status.global, msg.status.stats));
   });
 
-  socket_alerts.on('disconnect', function(msg) {
+  socket_alerts.on('disconnect', function() {
     connection_status();
   });
   
-  socket_alerts.on('connect_error', function(msg) {
+  socket_alerts.on('connect_error', function() {
       connection_status();
   });
 
-  socket_alerts.on('connect_timeout', function(msg) {
+  socket_alerts.on('connect_timeout', function() {
       connection_status();
   });
 
-  socket_alerts.on('connect', function(msg) {
+  socket_alerts.on('connect', function() {
       connection_status(true);
   });
 
-  socket_alerts.on('reconnect', function(msg) {
+  socket_alerts.on('reconnect', function() {
       connection_status(true);
   });
 });

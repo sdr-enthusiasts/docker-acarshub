@@ -349,12 +349,9 @@ function display_messages(msgs_to_process, selected_tabs, live_page=false) {
                 // 2 indicates the plane is on the ground
                 // https://github.com/TLeconte/vdlm2dec/blob/1ea300d40d66ecb969f1f463506859e36f62ef5c/out.c#L457
                 // variable naming in vdlm2dec is inconsistent, but "ground" and "gnd" seem to be used
-                var is_onground = "True";
+                var is_onground = message['is_onground'] == 0 ? "False" : "True";
 
-                if(message['is_onground'] == 0)
-                    is_onground = "False";
-
-                html_output += `<span class=\"wrapper\">G: <strong>${message['is_onground']}</strong><span class=\"tooltip\">Is on ground?</span></span> `;
+                html_output += `<span class=\"wrapper\">G: <strong>${is_onground}</strong><span class=\"tooltip\">Is on ground?</span></span> `;
             }
 
             if(message.hasOwnProperty("error")) {

@@ -38,23 +38,23 @@ $(document).ready(function(){
         }
     });
 
-    socket_alerts.on('disconnect', function(msg) {
+    socket_alerts.on('disconnect', function() {
         connection_status();
     });
 
-    socket_alerts.on('connect_error', function(msg) {
+    socket_alerts.on('connect_error', function() {
         connection_status();
     });
 
-    socket_alerts.on('connect_timeout', function(msg) {
+    socket_alerts.on('connect_timeout', function() {
         connection_status();
     });
 
-    socket_alerts.on('connect', function(msg) {
+    socket_alerts.on('connect', function() {
         connection_status(true);
     });
 
-    socket_alerts.on('reconnect', function(msg) {
+    socket_alerts.on('reconnect', function() {
         connection_status(true);
     });
 
@@ -106,7 +106,7 @@ $(document).ready(function(){
     });
 
     // Function to listen for key up events. If detected, check and see if the search string has been updated. If so, process the updated query
-    document.addEventListener("keyup", function(event) {
+    document.addEventListener("keyup", function() {
         var current_terms = get_search_terms();
         console.log(current_terms);
         console.log(current_search);

@@ -102,23 +102,23 @@ $(document).ready(function(){
 		$('#msgs').html(html);
 	});
 
-	socket_alerts.on('disconnect', function(msg) {
+	socket_alerts.on('disconnect', function() {
 	    connection_status();
 	});
 
-	socket_alerts.on('connect_error', function(msg) {
+	socket_alerts.on('connect_error', function() {
 	    connection_status();
 	});
 
-	socket_alerts.on('connect_timeout', function(msg) {
+	socket_alerts.on('connect_timeout', function() {
 	    connection_status();
 	});
 
-	socket_alerts.on('connect', function(msg) {
+	socket_alerts.on('connect', function() {
 	    connection_status(true);
 	});
 
-	socket_alerts.on('reconnect', function(msg) {
+	socket_alerts.on('reconnect', function() {
 	    connection_status(true);
 	});
 
