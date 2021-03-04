@@ -4,8 +4,8 @@ function generate_menu(){
     html += '<li class="img_box"><img src="static/images/acarshubsquare.png" class="banner_img"></li>';
     html += '<li><a href="/">Live Messages</a></li>';
     html += '<li><a href="/search">Search Database</a></li>';
+    tml += '<li><a href="/alerts">Alerts&nbsp;<span id="alert_count"></span></li></ul>';
     html += '<li><a href="/stats">Statistics</a></li>';
-    html += '<li><a href="/alerts">Alerts&nbsp;<span id="alert_count"></span></li></ul>';
     html += '</nav>';
     $('#links').html(html);
  }
