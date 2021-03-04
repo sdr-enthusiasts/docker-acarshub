@@ -10,6 +10,9 @@ var default_text_values = ['cop', 'police', 'authorities', 'chop', 'turbulence',
                            'fault', 'divert', 'mask', 'csr', 'agent', 'medical', 'security',
                            'mayday', 'emergency', 'pan', 'red coat']
 
+var alert_sound = new Audio('http://' + document.domain + ':' + location.port + '/static/sounds/alert.mp3');
+var play_sound = false;
+
 msgs_received.unshift = function () {
     if (this.length >= 50) {
         this.pop();
@@ -20,8 +23,9 @@ msgs_received.unshift = function () {
 $(document).ready(function() {
     socket_alerts = io.connect('http://' + document.domain + ':' + location.port + '/alerts');
 
-    alerts = Cookies.get("alert_unread") ? Number(Cookies.get("alert_unread")) : 0;
-
+    alerts = Cookies.get("alert_unread") ? Number(Cookies.get("alert_unread")) : 0;  
+    play_sound = Cookies.get("play_sound") == "true" ? true : false;
+    Cookies.set('play_sound', play_sound == "true" ? true : false, { expires: 365 });
     // Update the cookies so the expiration date pushes out in to the future
     onInit();
 
@@ -29,6 +33,11 @@ $(document).ready(function() {
         generate_menu();
         generate_footer();
         Cookies.set('alert_unread', 0, { expires: 365 });
+
+        // temporarily toggle the play_sound variable so we can set the UI correctly
+        play_sound = play_sound ? false : true;
+        toggle_playsound();
+        
         // Set the text areas to the values saved in the cookies
         document.getElementById("alert_text").value = Cookies.get("alert_text") ? Cookies.get("alert_text") : "";
         document.getElementById("alert_callsigns").value = Cookies.get("alert_callsigns") ? Cookies.get("alert_callsigns") : "";
@@ -41,6 +50,7 @@ $(document).ready(function() {
         socket_alerts.on('newmsg', function(msg) {
             var matched = match_alert(msg);
             if(matched.was_found) {
+                sound_alert();
                 msg.msghtml.matched_text = matched.text;
                 msg.msghtml.matched_icao = matched.icao;
                 msg.msghtml.matched_flight = matched.flight;
@@ -84,6 +94,7 @@ $(document).ready(function() {
             if(matched.was_found) {
                 alerts += 1;
                 updateAlertCounter();
+                sound_alert();
             }
         });
     } else {
@@ -279,3 +290,32 @@ function default_alert_values() {
 function connection_status(connected=false) {
     $('#disconnect').html(!connected ? ' | <strong><span class="red_body">DISCONNECTED FROM WEB SERVER' : "");
 } 
+
+function toggle_playsound() {
+    if(play_sound) {
+        console.log("here");
+        var id = document.getElementById("playsound_link");
+        id.innerHTML = "";
+        var txt = document.createTextNode("Turn On Alert Sound");
+        id.appendChild(txt);
+    } else {
+        console.log("here2")
+        var id = document.getElementById("playsound_link");
+        id.innerHTML = "";
+        var txt = document.createTextNode("Turn Off Alert Sound");
+        id.appendChild(txt);
+    }
+    play_sound = play_sound ? false : true;
+    Cookies.set('play_sound', play_sound == true ? "true" : "false", { expires: 365 });
+}
+
+async function sound_alert() {
+    console.log(play_sound);
+    if(play_sound){
+        try {
+            await alert_sound.play();
+          } catch(err) {
+            console.log(err);
+        }
+    }
+}
