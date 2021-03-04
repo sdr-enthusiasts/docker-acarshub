@@ -7,7 +7,7 @@ import fileinput
 import subprocess
 from pprint import pprint
 
-BYPASS_SDR_CHECK = False
+gOpts = {}
 
 if os.getenv("SERVICES_PATH", default=False):
     servicesd_path = os.getenv("SERVICES_PATH")
@@ -24,7 +24,6 @@ def is_frequency_assigned(output_dict, freq):
 
 
 def generate_output_files(serials, decoder, freqs_string):
-    global BYPASS_SDR_CHECK
     for serial in serials:
         freqs = ""
 
@@ -57,12 +56,10 @@ def generate_output_files(serials, decoder, freqs_string):
         elif decoder == "acarsdec" and splitGain != "-10" and splitGain is not None and splitGain.find(".") == -1:
             print(f"WARNING: The SDR {splitSerial} is being used for ACARS Decoding and the Gain value does not include a period. You may experience improper gain...")
 
+        path = None
         # If bypassing deviceID to serial, set deviceID to whatever was passed on the command line
-        if os.getenv("BYPASS_SDR_CHECK", False) or BYPASS_SDR_CHECK:
+        if os.getenv("BYPASS_SDR_CHECK", False) or gOpts['useids']:
             deviceID = splitSerial
-            path = servicesd_path + f"{decoder}-" + deviceID
-            os.makedirs(path)
-            shutil.copyfile(f"../etc/template/{decoder}/run", path + "/run")
 
         # Else, look up device ID from serial
         else:
@@ -91,17 +88,15 @@ def generate_output_files(serials, decoder, freqs_string):
                 os.makedirs(path)
                 shutil.copyfile(f"../etc/template/bad/run", path + "/run")
                # raise RuntimeError("/usr/local/bin/rtl_serial_to_deviceid.sh", rtlSerialToDeviceIDstdout, rtlSerialToDeviceIDstderr)
-            else:
-                path = servicesd_path + f"{decoder}-" + splitSerial
-                os.makedirs(path)
-                shutil.copyfile(f"../etc/template/{decoder}/run", path + "/run")
-
             # Set deviceID to whatever the script returned
             # strip() to remove the \n
             # decode() to remove the b'...'
             deviceID = rtlSerialToDeviceIDstdout.strip().decode()
 
-        
+        if not path:
+            path = servicesd_path + f"{decoder}-" + splitSerial
+            os.makedirs(path)
+            shutil.copyfile(f"../etc/template/{decoder}/run", path + "/run")
 
         for line in fileinput.input(path + "/run", inplace=True):
             if line.find(f"FREQS_{freqs_string}=\"\"") == 0:
@@ -172,6 +167,7 @@ def assign_freqs_to_serials(
 
 
 if __name__ == "__main__":
+
     parser = argparse.ArgumentParser(description='Assign frequencies to SDRs')
 
     parser.add_argument(
@@ -207,24 +203,14 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    input_serials = []
+    if not args.serials and not os.getenv("SERIAL_VDLM") and not os.getenv("SERIAL_ACARS"):
+        print(f"No serials specified, assigning device ids starting with 0")
+        args.serials = [str(e) for e in range(8)]
+        gOpts['useids'] = True
 
-    if args.serials is not None:
-        input_serials = args.serials
-    else:
-        BYPASS_SDR_CHECK = True
-        print("WARNING!!! No serials have been set. Using default device indexes. THE CONTAINER MAY FAIL TO FULLY START!")
-        if args.freqs_acars:
-            input_serials = ["0"]
-        
-        if args.freqs_vdlm and len(input_serials) > 0:
-            input_serials.append("1")
-        elif args.freqs_vdlm:
-            input_serials = ["0"]
-    
     if args.freqs_acars:
         output_acars = assign_freqs_to_serials(
-            serials=input_serials,
+            serials=args.serials,
             freqs=args.freqs_acars,
             bw=args.bandwidth,
             serials_used=[],
@@ -232,14 +218,14 @@ if __name__ == "__main__":
     else:
         output_acars = dict()
 
-    acars_serials = list()
+    acars_serials = []
 
     for serial in output_acars.keys():
         acars_serials.append(serial)
 
     if args.freqs_vdlm:
         output_vdlm = assign_freqs_to_serials(
-            serials=input_serials,
+            serials=args.serials,
             freqs=args.freqs_vdlm,
             bw=args.bandwidth,
             serials_used=acars_serials,
@@ -268,10 +254,10 @@ if __name__ == "__main__":
 
     # if output.keys() doesnt contain all of serials then error (leftover serials)
     serials_unused = list()
-    for serial in [serial for serial in (input_serials or [])]:
+    for serial in [serial for serial in (args.serials or [])]:
         if serial not in output_acars.keys() and serial not in output_vdlm.keys():
             serials_unused.append(serial)
-    if len(serials_unused) > 0:
+    if len(serials_unused) > 0 and not gOpts['useids']:
         log_str = "ERROR: SDRs are not required: "
         for serial in serials_unused:
             log_str += str(serial)
