@@ -52,8 +52,6 @@ if [ -n "${SERIAL}" ]; then
 	FREQ_CMD+=("-s" "${SERIAL_ARRAY[@]}")
 fi
 
-# TODO - remove line below prior to release
-echo "${FREQ_CMD[@]}"
 echo "Generating decoder startup files"
 
 pushd ../../scripts > /dev/null 2>&1 || exit 1
