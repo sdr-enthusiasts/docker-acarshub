@@ -474,7 +474,7 @@ def database_search(search_term, page=0):
 
         count_string += ") I"
 
-        result = session.execute(f'{query_string} LIMIT 50 OFFSET {page * 50}')
+        result = session.execute(f'{query_string} ORDER BY rowid DESC LIMIT 50 OFFSET {page * 50}')
         count = session.execute(f'{count_string}')
 
         processed_results = []
@@ -489,7 +489,6 @@ def database_search(search_term, page=0):
             processed_results.append(dict(row))
 
         session.close()
-        processed_results.reverse()
         return(processed_results, final_count)
     except Exception as e:
         acarshub_helpers.acars_traceback(e, "database")
@@ -518,7 +517,7 @@ def search_alerts(icao=None, tail=None, flight=None, text=None):
                     else:
                         query_string += f' OR {key} MATCH "{sub_query}"'
 
-            result = session.execute(f'SELECT * from text_fts WHERE {query_string} LIMIT 50 OFFSET 0')
+            result = session.execute(f'SELECT * from text_fts WHERE {query_string} ORDER BY rowid DESC LIMIT 50 OFFSET 0')
             count = session.execute(f'SELECT COUNT(*) from text_fts WHERE {query_string}')
 
             processed_results = []

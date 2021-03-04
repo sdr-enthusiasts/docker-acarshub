@@ -185,13 +185,12 @@ function sleep(ms) {
 
 window.runclick = function(page) {
     current_page = page;
-    current_search = document.getElementById("search_term").value;
-    var field = document.getElementById("dbfield").value;
-    if(current_search != '' || show_all) {
+    var current_terms = get_search_terms();
+    if(!is_everything_blank()|| show_all) {
         $('#log').html('Updating results....');
         $('#num_results').html('');
         if(!show_all) {
-            socket.emit('query', {'search_term': current_search, 'field': field, 'results_after': page}, '/search');
+            socket.emit('query', {'search_term': current_search, 'results_after': page}, '/search');
         } else {
             socket.emit('query', {'show_all': true, 'results_after': page}, '/search');
         }
