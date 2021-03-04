@@ -1,7 +1,7 @@
 function generate_menu(){
 	html = '<nav>';
     html += '<ul class="primary">';
-    html += '<li><span class="nav_text">ACARS Hub</span></li>';
+    html += '<li class="img_box"><img src="static/images/acarshubsquare.png" class="banner_img"></li>';
     html += '<li><a href="/">Live Messages</a></li>';
     html += '<li><a href="/search">Search Database</a></li>';
     html += '<li><a href="/stats">Statistics</a></li>';
