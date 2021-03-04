@@ -409,7 +409,7 @@ def main_connect():
     for msg_type, json_message_orig in messages_recent:
         json_message = copy.deepcopy(json_message_orig)
         json_message['message_type'] = msg_type
-        socketio.emit('newmsg', {'msghtml': acarshub.update_keys(json_message)}, to=requester,
+        socketio.emit('newmsg', {'msghtml': acarshub.update_keys(json_message), "loading": True}, to=requester,
                       namespace='/main')
 
     socketio.emit('system_status', {'status': acarshub.get_service_status()}, namespace="/main")
@@ -478,7 +478,7 @@ def get_alerts(message, namespace):
         results.reverse()
 
     for item in [item for item in (results or [])]:
-        socketio.emit('newmsg', {'msghtml': acarshub.update_keys(item)}, to=requester, namespace="/alerts")
+        socketio.emit('newmsg', {'msghtml': acarshub.update_keys(item), "loading": True}, to=requester, namespace="/alerts")
 
 
 @socketio.on('freqs', namespace="/stats")

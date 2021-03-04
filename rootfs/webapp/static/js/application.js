@@ -486,7 +486,7 @@ $(document).ready(function(){
                     if(found) {
                         // If the message was found, and not rejected, we'll append it to the message group
                         if(!rejected) {
-                            if(matched.was_found)
+                            if(matched.was_found && msg.loading != true)
                                 sound_alert();
                             msgs_received[index_new].unshift(msg.msghtml);
                         }
@@ -500,7 +500,7 @@ $(document).ready(function(){
                     }
                 }
                 if(!found && !rejected) {
-                    if(matched.was_found)
+                    if(matched.was_found && msg.loading != true)
                         sound_alert();
                     msgs_received.unshift([msg.msghtml]);
                 }

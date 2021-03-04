@@ -25,7 +25,7 @@ $(document).ready(function() {
 
     alerts = Cookies.get("alert_unread") ? Number(Cookies.get("alert_unread")) : 0;  
     play_sound = Cookies.get("play_sound") == "true" ? true : false;
-    Cookies.set('play_sound', play_sound == "true" ? true : false, { expires: 365 });
+    Cookies.set('play_sound', play_sound == true ? "true" : "false", { expires: 365 });
     // Update the cookies so the expiration date pushes out in to the future
     onInit();
 
@@ -50,7 +50,8 @@ $(document).ready(function() {
         socket_alerts.on('newmsg', function(msg) {
             var matched = match_alert(msg);
             if(matched.was_found) {
-                sound_alert();
+                if(msg.loading != true)
+                    sound_alert();
                 msg.msghtml.matched_text = matched.text;
                 msg.msghtml.matched_icao = matched.icao;
                 msg.msghtml.matched_flight = matched.flight;
@@ -91,7 +92,7 @@ $(document).ready(function() {
     } else if(document.location.pathname != "/") {
         socket_alerts.on('newmsg', function(msg) {
             var matched = match_alert(msg);
-            if(matched.was_found) {
+            if(matched.was_found && msg.loading != true) {
                 alerts += 1;
                 updateAlertCounter();
                 sound_alert();
@@ -293,13 +294,11 @@ function connection_status(connected=false) {
 
 function toggle_playsound() {
     if(play_sound) {
-        console.log("here");
         var id = document.getElementById("playsound_link");
         id.innerHTML = "";
         var txt = document.createTextNode("Turn On Alert Sound");
         id.appendChild(txt);
     } else {
-        console.log("here2")
         var id = document.getElementById("playsound_link");
         id.innerHTML = "";
         var txt = document.createTextNode("Turn Off Alert Sound");
@@ -310,12 +309,10 @@ function toggle_playsound() {
 }
 
 async function sound_alert() {
-    console.log(play_sound);
     if(play_sound){
         try {
             await alert_sound.play();
           } catch(err) {
-            console.log(err);
         }
     }
 }
