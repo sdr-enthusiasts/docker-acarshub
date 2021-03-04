@@ -12,8 +12,8 @@ There are three main pages you can interact with:
 1. `Alerts`. Use this page to provide ACARS Hub words in the message body, flight (aka callsign), tail number or ICAO transponder codes that you want to monitor. Please see the [alerts](#alerts) section below for more information.
 1. `System Status`. On the page footer you will find text/link that shows the status of the underlying ACARS Hub system status. If you click on the link you will see a breakdown of each of the components ACARS Hub uses under the hood to get its work done and if there are any problems with it. It is normal for the system to show a fault for ACARS/VDLM receiving messages if you just started the container - give it a minute to see if it starts working. If any other bit shows a fault after container start that means something isn't right. See below for getting help if you get stuck.
 
-&nbsp;<br>
-&nbsp;<br>
+## What is ACARS
+
 ACARS is a pretty cool technology and these planes are sending an awful lot of information in a coded way. We are constantly working, along with the folks at [Airframes.io](http://airframes.io), to decode the messages in a more refined, human-readable way. This is an on-going project so expect to see both decoded and non-decoded messages.
 
 We've made an effort to provide a maximum amount of information about the message in a compact, yet readable, way. Below is a list of terms/acronyms used throughout the web app and what they represent.
@@ -30,10 +30,7 @@ Not all messages will include every field, but the fields received for that mess
 1. `R`/`Response`: Used by the sender/transmitter to indicate if the message was received properly, or if re-transmission is necessary.
 1. `E`/`Error`: The inclusion of this field on the website indicates the decoder successfully decoded part of a message, but there was an error in at least one field that it wasn't able to decode. The parts of the message that were decoded are displayed, but there will be missing fields.
 
-&nbsp;<br>
 Additionally, some fields include a tool-tip if they include extra information (such as the `Flight` field if the web app was able to decipher the airline name), or if the field name is abbreviated (such as the `Mode` field), the tool-tip will give the full name of the field.
-
-&nbsp;<br>
 
 ## Alerts
 
