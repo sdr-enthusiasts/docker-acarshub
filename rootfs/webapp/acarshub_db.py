@@ -513,19 +513,17 @@ def search_alerts(icao=None, tail=None, flight=None, text=None):
                             sub_query += f' OR {term}*'
 
                     if query_string == "":
-                        query_string += f'{key} MATCH "{sub_query}"'
+                        query_string += f'SELECT * from text_fts WHERE {key} MATCH "{sub_query}"'
                     else:
-                        query_string += f' OR {key} MATCH "{sub_query}"'
+                        query_string += f' UNION SELECT * from text_fts WHERE {key} MATCH "{sub_query}"'
 
-            result = session.execute(f'SELECT * from text_fts WHERE {query_string} ORDER BY rowid DESC LIMIT 50 OFFSET 0')
-            count = session.execute(f'SELECT COUNT(*) from text_fts WHERE {query_string}')
+            result = session.execute(f'{query_string} ORDER BY rowid DESC LIMIT 50 OFFSET 0')
 
             processed_results = []
-            final_count = 0
             for row in count:
                 final_count = row[0]
 
-            if final_count == 0:
+            if len(processed_results) == 0:
                 return None
 
             for row in result:
