@@ -23,10 +23,8 @@ msgs_received.unshift = function () {
 $(document).ready(function() {
     socket_alerts = io.connect('http://' + document.domain + ':' + location.port + '/alerts');
 
-    alerts = Cookies.get("alert_unread") ? Number(Cookies.get("alert_unread")) : 0;  
-    play_sound = Cookies.get("play_sound") == "true" ? true : false;
-    Cookies.set('play_sound', play_sound == true ? "true" : "false", { expires: 365 });
     // Update the cookies so the expiration date pushes out in to the future
+    // Also sets all of the user saved prefs
     onInit();
 
     if(document.location.pathname == "/alerts") {
@@ -166,6 +164,10 @@ function updateAlerts() {
 }
 
 function onInit() {
+    alerts = Cookies.get("alert_unread") ? Number(Cookies.get("alert_unread")) : 0;  
+    play_sound = Cookies.get("play_sound") == "true" ? true : false;
+    Cookies.set('play_sound', play_sound == true ? "true" : "false", { expires: 365 });
+
     if(Cookies.get("alert_text") ? Cookies.get("alert_text") : "" > 0) {
         var split = Cookies.get("alert_text").split(",");
         for(var i = 0; i < split.length; i++) {
@@ -309,10 +311,12 @@ function toggle_playsound() {
 }
 
 async function sound_alert() {
+    console.log(`play_sound status: ${play_sound}`)
     if(play_sound){
         try {
             await alert_sound.play();
           } catch(err) {
+              console.log(err);
         }
     }
 }
