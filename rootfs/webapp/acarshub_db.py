@@ -474,7 +474,7 @@ def database_search(search_term, page=0):
 
         count_string += ") I"
 
-        result = session.execute(f'{query_string} ORDER BY rowid DESC LIMIT 50 OFFSET {page * 50}')
+        result = session.execute(f'{query_string} ORDER BY msg_time DESC LIMIT 50 OFFSET {page * 50}')
         count = session.execute(f'{count_string}')
 
         processed_results = []
@@ -517,17 +517,14 @@ def search_alerts(icao=None, tail=None, flight=None, text=None):
                     else:
                         query_string += f' UNION SELECT * from text_fts WHERE {key} MATCH "{sub_query}"'
 
-            result = session.execute(f'{query_string} ORDER BY rowid DESC LIMIT 50 OFFSET 0')
+            result = session.execute(f'{query_string} ORDER BY msg_time DESC LIMIT 50 OFFSET 0')
 
             processed_results = []
-            for row in count:
-                final_count = row[0]
-
-            if len(processed_results) == 0:
-                return None
 
             for row in result:
-                processed_results.append(dict(row))
+                processed_results.insert(0,dict(row))
+            if len(processed_results) == 0:
+                return None
             processed_results.reverse()
             session.close()
             return processed_results

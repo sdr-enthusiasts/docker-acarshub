@@ -1,4 +1,5 @@
 var socket;
+var acars_url = 'http://' + document.domain + document.location.port + document.location.pathname.replace(/about|search|stats|status|alerts/gi, "");
 
 $(document).ready(function(){
     generate_menu();
@@ -8,9 +9,9 @@ $(document).ready(function(){
 
     socket.on('system_status', function(msg) {
       if(msg.status.error_state == true) {
-          $('#system_status').html('<a href="/status">System Status: <span class="red">Error</a></span>');
+          $('#system_status').html(`<a href="${acars_url}status">System Status: <span class="red">Error</a></span>`);
       } else {
-          $('#system_status').html('<a href="/status">System Status: <span class="green">Okay</a></span>');
+          $('#system_status').html(`<a href="${acars_url}status">System Status: <span class="green">Okay</a></span>`);
       }
 
       $('#log').html(decode_status(msg.status.error_state, msg.status.decoders, msg.status.servers, msg.status.feeders, msg.status.global, msg.status.stats));

@@ -5,6 +5,7 @@ var socket;
 var msgs_received = [];
 var exclude = [];
 var selected_tabs = "";
+var acars_url = 'http://' + document.domain + document.location.port + document.location.pathname.replace(/about|search|stats|status|alerts/gi, "");
 
 var filtered_messages = 0;
 var received_messages = 0;
@@ -227,7 +228,7 @@ $(document).ready(function(){
     //connect to the socket server.
     generate_menu(); // generate the top menu
     generate_footer(); // generate the footer
-    socket = io.connect('http://' + document.domain + ':' + location.port + '/main'); // open a websocket to the server to received messages
+    socket = io.connect(`${acars_url}main`); // open a websocket to the server to received messages
 
     // Grab the current cookie value for message filtering
     // If the cookie is found with a value we run filter_notext to set the proper visual elements/variables for the rest of the functions
@@ -269,9 +270,9 @@ $(document).ready(function(){
 
     socket.on('system_status', function(msg) {
         if(msg.status.error_state == true) {
-            $('#system_status').html('<a href="/status">System Status: <span class="red">Error</a></span>');
+            $('#system_status').html(`<a href="${acars_url}status">System Status: <span class="red">Error</a></span>`);
         } else {
-            $('#system_status').html('<a href="/status">System Status: <span class="green">Okay</a></span>');
+            $('#system_status').html(`<a href="${acars_url}status">System Status: <span class="green">Okay</a></span>`);
         }
     });
 

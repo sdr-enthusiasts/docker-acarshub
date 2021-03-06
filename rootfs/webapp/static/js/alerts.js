@@ -5,12 +5,13 @@ var alert_callsigns = [];
 var alert_tail = [];
 var alert_icao = [];
 var msgs_received = [];
+var acars_url = 'http://' + document.domain + document.location.port + document.location.pathname.replace(/about|search|stats|status|alerts/gi, "");
 
 var default_text_values = ['cop', 'police', 'authorities', 'chop', 'turbulence', 'turb',
                            'fault', 'divert', 'mask', 'csr', 'agent', 'medical', 'security',
                            'mayday', 'emergency', 'pan', 'red coat']
 
-var alert_sound = new Audio('http://' + document.domain + ':' + location.port + '/static/sounds/alert.mp3');
+var alert_sound = new Audio(`${acars_url}static/sounds/alert.mp3`);
 var play_sound = false;
 
 msgs_received.unshift = function () {
@@ -21,7 +22,7 @@ msgs_received.unshift = function () {
 }
 
 $(document).ready(function() {
-    socket_alerts = io.connect('http://' + document.domain + ':' + location.port + '/alerts');
+    socket_alerts = io.connect(`${acars_url}alerts`);
 
     // Update the cookies so the expiration date pushes out in to the future
     // Also sets all of the user saved prefs
@@ -44,7 +45,6 @@ $(document).ready(function() {
 
         socket_alerts.emit('query', {'icao': alert_icao.length > 0 ? alert_icao : null, 'text': alert_text.length > 0 ? alert_text : null,
                               'flight': alert_callsigns.length > 0 ? alert_callsigns : null, 'tail': alert_tail.length > 0 ? alert_tail : null}, '/alerts');
-
         socket_alerts.on('newmsg', function(msg) {
             var matched = match_alert(msg);
             if(matched.was_found) {
@@ -61,9 +61,9 @@ $(document).ready(function() {
 
         socket_alerts.on('system_status', function(msg) {
             if(msg.status.error_state == true) {
-                $('#system_status').html('<a href="/status">System Status: <span class="red">Error</span>');
+                $('#system_status').html(`<a href="${acars_url}status">System Status: <span class="red">Error</span>`);
             } else {
-                $('#system_status').html('<a href="/status">System Status: <span class="green">Okay</a></span>');
+                $('#system_status').html(`<a href="${acars_url}status">System Status: <span class="green">Okay</a></span>`);
             }
         });
 
@@ -295,6 +295,7 @@ function connection_status(connected=false) {
 } 
 
 function toggle_playsound() {
+    console.log(`toggle_playsound initial state: ${play_sound}`);
     if(play_sound) {
         var id = document.getElementById("playsound_link");
         id.innerHTML = "";
@@ -307,7 +308,9 @@ function toggle_playsound() {
         id.appendChild(txt);
     }
     play_sound = play_sound ? false : true;
+    console.log(`toggle_playsound final state: ${play_sound}`);
     Cookies.set('play_sound', play_sound == true ? "true" : "false", { expires: 365 });
+    console.log(`Cookie play_sound ${Cookies.get("play_sound")}`);
 }
 
 async function sound_alert() {

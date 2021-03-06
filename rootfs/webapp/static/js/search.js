@@ -5,6 +5,7 @@ var current_page = 0; // store the current page of the current_search
 var total_pages = 0; // number of pages of results
 var show_all = false; // variable to indicate we are doing a 'show all' search and not of a specific term
 var query_time = 0.0;
+var acars_url = 'http://' + document.domain + document.location.port + document.location.pathname.replace(/about|search|stats|status|alerts/gi, "");
 
 import { MessageDecoder } from '../airframes-acars-decoder/MessageDecoder.js'
 const md = new MessageDecoder();
@@ -14,7 +15,7 @@ $(document).ready(function(){
     generate_menu();
     generate_footer();
     updateAlertCounter();
-    socket = io.connect('http://' + document.domain + ':' + location.port + '/search');
+    socket = io.connect(`${acars_url}search`);
     var msgs_received = [];
     var num_results = [];
     
@@ -32,9 +33,9 @@ $(document).ready(function(){
 
     socket.on('system_status', function(msg) {
         if(msg.status.error_state == true) {
-            $('#system_status').html('<a href="/status">System Status: <span class="red">Error</a></span>');
+            $('#system_status').html(`<a href="${acars_url}status">System Status: <span class="red">Error</a></span>`);
         } else {
-            $('#system_status').html('<a href="/status">System Status: <span class="green">Okay</a></span>');
+            $('#system_status').html(`<a href="${acars_url}status">System Status: <span class="green">Okay</a></span>`);
         }
     });
 
