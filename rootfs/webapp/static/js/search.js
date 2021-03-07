@@ -5,7 +5,7 @@ var current_page = 0; // store the current page of the current_search
 var total_pages = 0; // number of pages of results
 var show_all = false; // variable to indicate we are doing a 'show all' search and not of a specific term
 var query_time = 0.0;
-var acars_url = 'http://' + document.domain + document.location.port + document.location.pathname.replace(/about|search|stats|status|alerts/gi, "");
+var acars_url = 'http://' + document.domain + (document.location.port ? ":" + document.location.port : "") + document.location.pathname.replace(/about|search|stats|status|alerts/gi, "");
 
 import { MessageDecoder } from '../airframes-acars-decoder/MessageDecoder.js'
 const md = new MessageDecoder();

@@ -1,7 +1,7 @@
 var socket;
 var socket_alerts;
 var image_prefix = '';
-var acars_url = 'http://' + document.domain + document.location.port + document.location.pathname.replace(/about|search|stats|status|alerts/gi, "");
+var acars_url = 'http://' + document.domain + (document.location.port ? ":" + document.location.port : "") + document.location.pathname.replace(/about|search|stats|status|alerts/gi, "");
 
 $(document).ready(function(){
 	generate_menu();

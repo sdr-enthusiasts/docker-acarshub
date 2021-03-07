@@ -1,4 +1,4 @@
-var acars_url = 'http://' + document.domain + document.location.port + document.location.pathname.replace(/about|search|stats|status|alerts/gi, "");
+var acars_url = 'http://' + document.domain + (document.location.port ? ":" + document.location.port : "") + document.location.pathname.replace(/about|search|stats|status|alerts/gi, "");
 console.log(acars_url);
 function generate_menu(){
 	html = '<nav>';

@@ -466,15 +466,15 @@ def database_search(search_term, page=0):
         for key in search_term:
             if search_term[key] is not None and search_term[key] != "":
                 if query_string == "":
+            #        query_string += f'SELECT * from text_fts WHERE {key} MATCH \'"{search_term[key]}"*\''
                     query_string += f'SELECT * from text_fts WHERE {key} MATCH \'"{search_term[key]}"*\''
-                    count_string += f'SELECT COUNT(*) from (SELECT rowid FROM text_fts WHERE {key} MATCH \'"{search_term[key]}"*\''
+                    count_string += f'SELECT COUNT(*) from text_fts WHERE {key} MATCH \'"{search_term[key]}"*\''
                 else:
-                    query_string += f' INTERSECT SELECT * from text_fts WHERE {key} MATCH \'"{search_term[key]}"*\''
-                    count_string += f' INTERSECT SELECT rowid from text_fts WHERE {key} MATCH \'"{search_term[key]}"*\''
+                    query_string += f' AND {key} MATCH \'"{search_term[key]}"*\''
+                #    query_string += f' INTERSECT SELECT * from text_fts WHERE {key} MATCH \'"{search_term[key]}"*\''
+                    count_string += f' AND {key} MATCH \'"{search_term[key]}"*\''
 
-        count_string += ") I"
-
-        result = session.execute(f'{query_string} ORDER BY msg_time DESC LIMIT 50 OFFSET {page * 50}')
+        result = session.execute(f'{query_string} ORDER BY rowid DESC LIMIT 50 OFFSET {page * 50}')
         count = session.execute(f'{count_string}')
 
         processed_results = []
@@ -515,7 +515,7 @@ def search_alerts(icao=None, tail=None, flight=None, text=None):
                     if query_string == "":
                         query_string += f'SELECT * from text_fts WHERE {key} MATCH "{sub_query}"'
                     else:
-                        query_string += f' UNION SELECT * from text_fts WHERE {key} MATCH "{sub_query}"'
+                        query_string += f' OR SELECT * from text_fts WHERE {key} MATCH "{sub_query}"'
 
             result = session.execute(f'{query_string} ORDER BY msg_time DESC LIMIT 50 OFFSET 0')
 
