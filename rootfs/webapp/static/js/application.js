@@ -235,6 +235,8 @@ $(document).ready(function(){
                'socket.io',
       });
 
+      console.log(document.location.pathname.replace(/about|search|stats|status|alerts/gi, "") + (document.location.pathname.replace(/about|search|stats|status|alerts/gi, "").endsWith("/") ? "" : "/") + 'socket.io');
+
     // Grab the current cookie value for message filtering
     // If the cookie is found with a value we run filter_notext to set the proper visual elements/variables for the rest of the functions
     // We'll also re-write the cookie (or start a new one) with the current value
@@ -517,8 +519,8 @@ $(document).ready(function(){
             if(text_filter)
                 increment_filtered();
         }
-
-        increment_received();
+        if(!msg.loading)
+            increment_received();
         if(!pause) {
             $('#log').html(display_messages(msgs_received, selected_tabs, true));
         }
