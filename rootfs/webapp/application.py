@@ -31,7 +31,8 @@ socketio = SocketIO(
     async_handlers=True,
     logger=False,
     engineio_logger=False,
-    ping_timeout=300)
+    ping_timeout=300,
+    cors_allowed_origins="*")
 
 # scheduler thread
 

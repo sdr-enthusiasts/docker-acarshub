@@ -8,7 +8,7 @@ var msgs_received = [];
 var acars_path = document.location.pathname.replace(/about|search|stats|status|alerts/gi, "");
 acars_path += acars_path.endsWith("/") ? "" : "/"
 var acars_url = document.location.origin + acars_path;
-
+var acars_page = "/" + document.location.pathname.replace(acars_path, "")
 var default_text_values = ['cop', 'police', 'authorities', 'chop', 'turbulence', 'turb',
                            'fault', 'divert', 'mask', 'csr', 'agent', 'medical', 'security',
                            'mayday', 'emergency', 'pan', 'red coat']
@@ -32,7 +32,7 @@ $(document).ready(function() {
     // Also sets all of the user saved prefs
     onInit();
 
-    if(document.location.pathname == "/alerts") {
+    if(acars_page == "/alerts") {
         generate_menu();
         generate_footer();
         Cookies.set('alert_unread', 0, { expires: 365 });
@@ -91,7 +91,7 @@ $(document).ready(function() {
             connection_status(true);
         });
 
-    } else if(document.location.pathname != "/") {
+    } else if(acars_page != "/") {
         socket_alerts.on('newmsg', function(msg) {
             var matched = match_alert(msg);
             if(matched.was_found && msg.loading != true) {

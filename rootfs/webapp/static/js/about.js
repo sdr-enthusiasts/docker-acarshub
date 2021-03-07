@@ -26,23 +26,23 @@ $(document).ready(function(){
       }
     });
 
-    socket.on('disconnect', function(msg) {
+    socket.on('disconnect', function() {
         connection_status();
     });
 
-    socket.on('connect_error', function(msg) {
+    socket.on('connect_error', function() {
         connection_status();
     });
 
-    socket.on('connect_timeout', function(msg) {
+    socket.on('connect_timeout', function() {
         connection_status();
     });
 
-    socket.on('connect', function(msg) {
+    socket.on('connect', function() {
         connection_status(true);
     });
 
-    socket.on('reconnect', function(msg) {
+    socket.on('reconnect', function() {
         connection_status(true);
     });
 });
