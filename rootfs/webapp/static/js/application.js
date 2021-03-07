@@ -5,7 +5,7 @@ var socket;
 var msgs_received = [];
 var exclude = [];
 var selected_tabs = "";
-var acars_url = 'http://' + document.domain + (document.location.port ? ":" + document.location.port : "") + document.location.pathname.replace(/about|search|stats|status|alerts/gi, "");
+var acars_url = document.location.href.replace(/about|search|stats|status|alerts/gi, "") + (document.location.href.replace(/about|search|stats|status|alerts/gi, "").endsWith("/") ? "" : "/");
 
 var filtered_messages = 0;
 var received_messages = 0;

@@ -5,7 +5,7 @@ var alert_callsigns = [];
 var alert_tail = [];
 var alert_icao = [];
 var msgs_received = [];
-var acars_url = 'http://' + document.domain + (document.location.port ? ":" + document.location.port : "") + document.location.pathname.replace(/about|search|stats|status|alerts/gi, "");
+var acars_url = document.location.href.replace(/about|search|stats|status|alerts/gi, "") + (document.location.href.replace(/about|search|stats|status|alerts/gi, "").endsWith("/") ? "" : "/");
 
 var default_text_values = ['cop', 'police', 'authorities', 'chop', 'turbulence', 'turb',
                            'fault', 'divert', 'mask', 'csr', 'agent', 'medical', 'security',
