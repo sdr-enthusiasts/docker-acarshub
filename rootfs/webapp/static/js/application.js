@@ -494,7 +494,7 @@ $(document).ready(function(){
                     if(found) {
                         // If the message was found, and not rejected, we'll append it to the message group
                         if(!rejected) {
-                            if(matched.was_found && msg.loading != true)
+                            if(matched.was_found && !msg.loading)
                                 sound_alert();
                             msgs_received[index_new].unshift(msg.msghtml);
                         }
@@ -508,15 +508,15 @@ $(document).ready(function(){
                     }
                 }
                 if(!found && !rejected) {
-                    if(matched.was_found && msg.loading != true)
+                    if(matched.was_found && !msg.loading)
                         sound_alert();
                     msgs_received.unshift([msg.msghtml]);
                 }
-            } else {
+            } else if(!msg.loading){
                 increment_filtered();
             }
         } else {
-            if(text_filter)
+            if(text_filter && !msg.loading)
                 increment_filtered();
         }
         if(!msg.loading)
