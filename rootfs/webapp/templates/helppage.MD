@@ -40,7 +40,7 @@ Separate each term in their respective text input box by a `,` (terms are case i
 
 ACARS Hub can also play a sound if your search term(s) are matched. You can toggle the feature on / off by clicking `TURN [ON/OFF] ALERT SOUND` on the right side of the page. If you use Firefox or Chrome, this feature will work without additional configuration. However, Safari by default blocks all auto-play sounds so you will need to head to `Safari - Preferences - Websites - Auto Play` and find your ACARS Hub IP address or domain name in that list, and change the setting to `Allow All Auto-Play`, as illustrated in the image below
 
-![Safari](../static/images/safari.png "safari config")
+![Safari](static/images/safari.png "safari config")
 
 ## Feedback / Help
 
