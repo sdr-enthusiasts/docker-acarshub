@@ -228,7 +228,12 @@ $(document).ready(function(){
     //connect to the socket server.
     generate_menu(); // generate the top menu
     generate_footer(); // generate the footer
-    socket = io.connect(`${acars_url}main`); // open a websocket to the server to received messages
+    // socket = io.connect(`${acars_url}main`); // open a websocket to the server to received messages
+    socket = io.connect(`${acars_url}main`, {
+        'path': document.location.pathname.replace(/about|search|stats|status|alerts/gi, "") + 
+               (document.location.pathname.replace(/about|search|stats|status|alerts/gi, "").endsWith("/") ? "" : "/") +
+               'socket.io',
+      });
 
     // Grab the current cookie value for message filtering
     // If the cookie is found with a value we run filter_notext to set the proper visual elements/variables for the rest of the functions

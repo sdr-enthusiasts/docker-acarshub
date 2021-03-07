@@ -467,15 +467,16 @@ def database_search(search_term, page=0):
             if search_term[key] is not None and search_term[key] != "":
                 if query_string == "":
             #        query_string += f'SELECT * from text_fts WHERE {key} MATCH \'"{search_term[key]}"*\''
-                    query_string += f'SELECT * from text_fts WHERE ({key} MATCH "{search_term[key]}*")'
-                    count_string += f'SELECT COUNT(*) from text_fts WHERE ({key} MATCH "{search_term[key]}*")'
+                    # query_string += f'SELECT * from text_fts WHERE ({key} MATCH "{search_term[key]}*")';
+                    query_string += f'SELECT * FROM messages WHERE id IN (SELECT rowid FROM text_fts WHERE text_fts MATCH "{key}:{search_term[key]}*"'
+                    count_string += f'SELECT COUNT(*) FROM messages WHERE id IN (SELECT rowid FROM text_fts WHERE text_fts MATCH "{key}:{search_term[key]}*"'
                 else:
-                    query_string += f' AND ({key} MATCH "{search_term[key]}*")'
+                    query_string += f' AND text_fts MATCH "{key}:{search_term[key]}*"'
                 #    query_string += f' INTERSECT SELECT * from text_fts WHERE {key} MATCH \'"{search_term[key]}"*\''
-                    count_string += f' AND ({key} MATCH "{search_term[key]}*")'
+                    count_string += f' AND text_fts MATCH "{key}:{search_term[key]}*"'
 
-        result = session.execute(f'{query_string} ORDER BY rowid DESC LIMIT 50 OFFSET {page * 50}')
-        count = session.execute(f'{count_string}')
+        result = session.execute(f'{query_string}) ORDER BY rowid DESC LIMIT 50 OFFSET {page * 50}')
+        count = session.execute(f'{count_string})')
 
         processed_results = []
         final_count = 0

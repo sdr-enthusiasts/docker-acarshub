@@ -15,7 +15,11 @@ $(document).ready(function(){
     generate_menu();
     generate_footer();
     updateAlertCounter();
-    socket = io.connect(`${acars_url}search`);
+    socket = io.connect(`${acars_url}search`, {
+        'path': document.location.pathname.replace(/about|search|stats|status|alerts/gi, "") + 
+               (document.location.pathname.replace(/about|search|stats|status|alerts/gi, "").endsWith("/") ? "" : "/") +
+               'socket.io',
+      });
     var msgs_received = [];
     var num_results = [];
     

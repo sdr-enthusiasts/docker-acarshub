@@ -5,7 +5,11 @@ $(document).ready(function(){
     generate_menu();
     generate_footer();
 
-    socket = io.connect('http://' + document.domain + ':' + location.port + '/about');
+    socket = io.connect(`${acars_url}status`, {
+      'path': document.location.pathname.replace(/about|search|stats|status|alerts/gi, "") + 
+             (document.location.pathname.replace(/about|search|stats|status|alerts/gi, "").endsWith("/") ? "" : "/") +
+             'socket.io',
+    });
 
     socket.on('system_status', function(msg) {
       if(msg.status.error_state == true) {

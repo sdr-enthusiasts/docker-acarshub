@@ -22,7 +22,11 @@ msgs_received.unshift = function () {
 }
 
 $(document).ready(function() {
-    socket_alerts = io.connect(`${acars_url}alerts`);
+    socket_alerts = io.connect(`${acars_url}alerts`, {
+        'path': document.location.pathname.replace(/about|search|stats|status|alerts/gi, "") + 
+               (document.location.pathname.replace(/about|search|stats|status|alerts/gi, "").endsWith("/") ? "" : "/") +
+               'socket.io',
+      });
 
     // Update the cookies so the expiration date pushes out in to the future
     // Also sets all of the user saved prefs

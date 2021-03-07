@@ -5,7 +5,11 @@ $(document).ready(function(){
     generate_menu();
     generate_footer();
 
-    socket = io.connect(`${acars_url}about`);
+    socket = io.connect(`${acars_url}about`, {
+        'path': document.location.pathname.replace(/about|search|stats|status|alerts/gi, "") + 
+               (document.location.pathname.replace(/about|search|stats|status|alerts/gi, "").endsWith("/") ? "" : "/") +
+               'socket.io',
+      });
 
     var converter = new showdown.Converter();
     fetch(`${acars_url}aboutmd`)

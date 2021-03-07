@@ -8,7 +8,11 @@ $(document).ready(function(){
 	generate_footer();
 	updateAlertCounter();
 
-	socket = io.connect(`${acars_url}stats`);
+	socket = io.connect(`${acars_url}stats`, {
+        'path': document.location.pathname.replace(/about|search|stats|status|alerts/gi, "") + 
+               (document.location.pathname.replace(/about|search|stats|status|alerts/gi, "").endsWith("/") ? "" : "/") +
+               'socket.io',
+      });
 
 	socket.on('newmsg', function(msg) {
 		generate_stat_submenu(msg.acars, msg.vdlm);
