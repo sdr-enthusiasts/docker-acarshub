@@ -539,7 +539,7 @@ def show_all(page=0):
 
     try:
         session = db_session()
-        result = session.execute(f'SELECT * from messages LIMIT 50 OFFSET {page * 50}')
+        result = session.execute(f'SELECT * from messages ORDER BY rowid DESC LIMIT 50 OFFSET {page * 50}')
         count = session.execute('SELECT COUNT(*) from messages')
 
         processed_results = []

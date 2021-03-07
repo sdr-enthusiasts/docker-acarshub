@@ -58,7 +58,7 @@ def generate_output_files(serials, decoder, freqs_string):
 
         path = None
         # If bypassing deviceID to serial, set deviceID to whatever was passed on the command line
-        if os.getenv("BYPASS_SDR_CHECK", False) or gOpts['useids']:
+        if os.getenv("BYPASS_SDR_CHECK", False) or 'useids' in gOpts:
             deviceID = splitSerial
 
         # Else, look up device ID from serial

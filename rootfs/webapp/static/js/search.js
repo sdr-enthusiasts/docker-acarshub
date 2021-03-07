@@ -107,8 +107,10 @@ $(document).ready(function(){
     // Function to listen for key up events. If detected, check and see if the search string has been updated. If so, process the updated query
     document.addEventListener("keyup", function() {
         var current_terms = get_search_terms();
-        if(current_search != current_terms)
+        if(!is_everything_blank() && current_search != current_terms) {
+            show_all = false;
             delay_query(current_terms);
+        }
     });
 });
 
@@ -132,6 +134,17 @@ function is_everything_blank() {
     }
 
     return true;
+}
+
+function reset_search_terms() {
+    document.getElementById("search_flight").value = "";
+    document.getElementById("search_depa").value = "";
+    document.getElementById("search_dsta").value = "";
+    document.getElementById("search_freq").value = "";
+    document.getElementById("search_msglbl").value = "";
+    document.getElementById("search_msgno").value = "";
+    document.getElementById("search_tail").value = "";
+    document.getElementById("search_text").value = "";
 }
 
 // In order to help DB responsiveness, I want to make sure the user has quit typing before emitting a query
@@ -169,8 +182,7 @@ window.showall = function() {
     socket.emit('query', {'show_all': true}, "/search");
     $('#log').html('Updating...');
     $('#num_results').html('');
-    const search_box = document.getElementById('search_term');
-    search_box.value = "";
+    reset_search_terms();
     current_page = 0;
     show_all = true;
 }
