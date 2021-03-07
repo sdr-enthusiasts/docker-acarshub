@@ -1,14 +1,14 @@
 var socket;
-var acars_url = document.location.href.replace(/about|search|stats|status|alerts/gi, "") + (document.location.href.replace(/about|search|stats|status|alerts/gi, "").endsWith("/") ? "" : "/");
+var acars_path = document.location.pathname.replace(/about|search|stats|status|alerts/gi, "");
+acars_path += acars_path.endsWith("/") ? "" : "/"
+var acars_url = document.location.origin + acars_path;
 
 $(document).ready(function(){
     generate_menu();
     generate_footer();
 
-    socket = io.connect(`${acars_url}about`, {
-        'path': document.location.pathname.replace(/about|search|stats|status|alerts/gi, "") + 
-               (document.location.pathname.replace(/about|search|stats|status|alerts/gi, "").endsWith("/") ? "" : "/") +
-               'socket.io',
+    socket = io.connect(`${document.location.origin}/about`, {
+        'path': acars_path + 'socket.io',
       });
 
     var converter = new showdown.Converter();

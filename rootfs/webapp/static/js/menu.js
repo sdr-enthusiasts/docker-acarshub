@@ -1,4 +1,6 @@
-var acars_url = document.location.href.replace(/about|search|stats|status|alerts/gi, "") + (document.location.href.replace(/about|search|stats|status|alerts/gi, "").endsWith("/") ? "" : "/");
+var acars_path = document.location.pathname.replace(/about|search|stats|status|alerts/gi, "");
+acars_path += acars_path.endsWith("/") ? "" : "/"
+var acars_url = document.location.origin + acars_path;
 console.log(acars_url);
 function generate_menu(){
 	html = '<nav>';

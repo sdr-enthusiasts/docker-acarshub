@@ -5,7 +5,9 @@ var alert_callsigns = [];
 var alert_tail = [];
 var alert_icao = [];
 var msgs_received = [];
-var acars_url = document.location.href.replace(/about|search|stats|status|alerts/gi, "") + (document.location.href.replace(/about|search|stats|status|alerts/gi, "").endsWith("/") ? "" : "/");
+var acars_path = document.location.pathname.replace(/about|search|stats|status|alerts/gi, "");
+acars_path += acars_path.endsWith("/") ? "" : "/"
+var acars_url = document.location.origin + acars_path;
 
 var default_text_values = ['cop', 'police', 'authorities', 'chop', 'turbulence', 'turb',
                            'fault', 'divert', 'mask', 'csr', 'agent', 'medical', 'security',
@@ -22,10 +24,8 @@ msgs_received.unshift = function () {
 }
 
 $(document).ready(function() {
-    socket_alerts = io.connect(`${acars_url}alerts`, {
-        'path': document.location.pathname.replace(/about|search|stats|status|alerts/gi, "") + 
-               (document.location.pathname.replace(/about|search|stats|status|alerts/gi, "").endsWith("/") ? "" : "/") +
-               'socket.io',
+    socket_alerts = io.connect(`${document.location.origin}/alerts`, {
+        'path': acars_path + 'socket.io',
       });
 
     // Update the cookies so the expiration date pushes out in to the future

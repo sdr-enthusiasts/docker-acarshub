@@ -5,7 +5,9 @@ var socket;
 var msgs_received = [];
 var exclude = [];
 var selected_tabs = "";
-var acars_url = document.location.href.replace(/about|search|stats|status|alerts/gi, "") + (document.location.href.replace(/about|search|stats|status|alerts/gi, "").endsWith("/") ? "" : "/");
+var acars_path = document.location.pathname.replace(/about|search|stats|status|alerts/gi, "");
+acars_path += acars_path.endsWith("/") ? "" : "/"
+var acars_url = document.location.origin + acars_path;
 
 var filtered_messages = 0;
 var received_messages = 0;
@@ -228,11 +230,9 @@ $(document).ready(function(){
     //connect to the socket server.
     generate_menu(); // generate the top menu
     generate_footer(); // generate the footer
-    // socket = io.connect(`${acars_url}main`); // open a websocket to the server to received messages
-    socket = io.connect(`${acars_url}main`, {
-        'path': document.location.pathname.replace(/about|search|stats|status|alerts/gi, "") + 
-               (document.location.pathname.replace(/about|search|stats|status|alerts/gi, "").endsWith("/") ? "" : "/") +
-               'socket.io',
+
+    socket = io.connect(`${document.location.origin}/main`, {
+        'path': acars_path + 'socket.io',
       });
 
       console.log(document.location.pathname.replace(/about|search|stats|status|alerts/gi, "") + (document.location.pathname.replace(/about|search|stats|status|alerts/gi, "").endsWith("/") ? "" : "/") + 'socket.io');

@@ -1,17 +1,17 @@
 var socket;
 var socket_alerts;
 var image_prefix = '';
-var acars_url = document.location.href.replace(/about|search|stats|status|alerts/gi, "") + (document.location.href.replace(/about|search|stats|status|alerts/gi, "").endsWith("/") ? "" : "/");
+var acars_path = document.location.pathname.replace(/about|search|stats|status|alerts/gi, "");
+acars_path += acars_path.endsWith("/") ? "" : "/"
+var acars_url = document.location.origin + acars_path;
 
 $(document).ready(function(){
 	generate_menu();
 	generate_footer();
 	updateAlertCounter();
 
-	socket = io.connect(`${acars_url}stats`, {
-        'path': document.location.pathname.replace(/about|search|stats|status|alerts/gi, "") + 
-               (document.location.pathname.replace(/about|search|stats|status|alerts/gi, "").endsWith("/") ? "" : "/") +
-               'socket.io',
+	socket = io.connect(`${document.location.origin}/stats`, {
+        'path': acars_path + 'socket.io',
       });
 
 	socket.on('newmsg', function(msg) {
