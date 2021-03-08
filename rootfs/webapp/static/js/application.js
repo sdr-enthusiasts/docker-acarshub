@@ -474,6 +474,9 @@ $(document).ready(function(){
                                         msgs_received[index_new][j]['decoded_msg'] = decoded_msg;
                                         //console.log(msg.msghtml.decodedText);
                                     }
+
+                                    if(matched.was_found && !msg.loading)
+                                        sound_alert();
                                 }
                             }
 
@@ -494,8 +497,6 @@ $(document).ready(function(){
                     if(found) {
                         // If the message was found, and not rejected, we'll append it to the message group
                         if(!rejected) {
-                            if(matched.was_found && !msg.loading)
-                                sound_alert();
                             msgs_received[index_new].unshift(msg.msghtml);
                         }
 
