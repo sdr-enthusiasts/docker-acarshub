@@ -305,27 +305,27 @@ def init_listeners(special_message=""):
     if special_message == "":
         acarshub_helpers.log("Starting data listeners", "init")
 
-    if not thread_acars_listener.isAlive() and acarshub_helpers.ENABLE_ACARS:
+    if not thread_acars_listener.is_alive() and acarshub_helpers.ENABLE_ACARS:
         acarshub_helpers.log(f"{special_message}Starting ACARS listener", "init")
         thread_acars_listener = Thread(target=message_listener, args=("ACARS", "127.0.0.1", 15550))
         thread_acars_listener.start()
 
-    if not thread_vdlm2_listener.isAlive() and acarshub_helpers.ENABLE_VDLM:
+    if not thread_vdlm2_listener.is_alive() and acarshub_helpers.ENABLE_VDLM:
         acarshub_helpers.log(f"{special_message}Starting VDLM listener", "init")
         thread_vdlm2_listener = Thread(target=message_listener, args=("VDLM2", "127.0.0.1", 15555))
         thread_vdlm2_listener.start()
-    if not thread_database.isAlive():
+    if not thread_database.is_alive():
         acarshub_helpers.log(f"{special_message}Starting Database Thread", "init")
         thread_database = Thread(target=database_listener)
         thread_database.start()
-    if not thread_scheduler.isAlive():
+    if not thread_scheduler.is_alive():
         acarshub_helpers.log(f"{special_message}starting scheduler", "init")
         thread_scheduler = Thread(target=scheduled_tasks)
         thread_scheduler.start()
-    if connected_users > 0 and not thread_html_generator.isAlive():
+    if connected_users > 0 and not thread_html_generator.is_alive():
         acarshub_helpers.log(f"{special_message}Starting htmlListener", "init")
         thread_html_generator = socketio.start_background_task(htmlListener)
-    if len(alert_users) > 0 and not thread_alerts.isAlive():
+    if len(alert_users) > 0 and not thread_alerts.is_alive():
         acarshub_helpers.log(f"{special_message}Starting alert thread", "init")
         thread_alerts = socketio.start_background_task(alert_handler)
 
@@ -416,7 +416,7 @@ def main_connect():
     socketio.emit('system_status', {'status': acarshub.get_service_status()}, namespace="/main")
 
     # Start the htmlGenerator thread only if the thread has not been started before.
-    if not thread_html_generator.isAlive():
+    if not thread_html_generator.is_alive():
         sys.stdout.flush()
         thread_html_generator_event.clear()
         thread_html_generator = socketio.start_background_task(htmlListener)
@@ -429,7 +429,7 @@ def alert_connect():
 
     alert_users.append(request.sid)
     socketio.emit('system_status', {'status': acarshub.get_service_status()}, namespace="/alerts")
-    if not thread_alerts.isAlive():
+    if not thread_alerts.is_alive():
         thread_alerts_stop_event.clear()
         thread_alerts = socketio.start_background_task(alert_handler)
 

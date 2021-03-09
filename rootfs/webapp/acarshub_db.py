@@ -435,7 +435,7 @@ def pruneOld():
     # Open session to db, run the query, and close session
     try:
         session = db_session()
-        result = session.query(messages).filter(messages.time <= epoch).delete()
+        result = session.query(messages.id).filter(messages.time <= epoch).delete()
         session.commit()
         acarshub_helpers.log(f"Pruned database of {result} records", "database")
         session.close()
@@ -468,15 +468,15 @@ def database_search(search_term, page=0):
                 if query_string == "":
             #        query_string += f'SELECT * from text_fts WHERE {key} MATCH \'"{search_term[key]}"*\''
                     # query_string += f'SELECT * from text_fts WHERE ({key} MATCH "{search_term[key]}*")';
-                    query_string += f'SELECT * FROM messages WHERE id IN (SELECT rowid FROM text_fts WHERE text_fts MATCH "{key}:{search_term[key]}*"'
-                    count_string += f'SELECT COUNT(*) FROM messages WHERE id IN (SELECT rowid FROM text_fts WHERE text_fts MATCH "{key}:{search_term[key]}*"'
+                    query_string += f'SELECT * FROM messages WHERE id IN (SELECT rowid FROM messages_fts WHERE messages_fts MATCH "{key}:{search_term[key]}*'
+                    count_string += f'SELECT COUNT(*) FROM messages WHERE id IN (SELECT rowid FROM messages_fts WHERE messages_fts MATCH "{key}:{search_term[key]}*'
                 else:
-                    query_string += f' AND text_fts MATCH "{key}:{search_term[key]}*"'
+                    query_string += f' AND {key}:{search_term[key]}*'
                 #    query_string += f' INTERSECT SELECT * from text_fts WHERE {key} MATCH \'"{search_term[key]}"*\''
-                    count_string += f' AND text_fts MATCH "{key}:{search_term[key]}*"'
+                    count_string += f' AND {key}:{search_term[key]}*'
 
-        result = session.execute(f'{query_string}) ORDER BY rowid DESC LIMIT 50 OFFSET {page * 50}')
-        count = session.execute(f'{count_string})')
+        result = session.execute(f'{query_string}") ORDER BY rowid DESC LIMIT 50 OFFSET {page * 50}')
+        count = session.execute(f'{count_string}")')
 
         processed_results = []
         final_count = 0
@@ -506,19 +506,13 @@ def search_alerts(icao=None, tail=None, flight=None, text=None):
 
             for key in search_term:
                 if search_term[key] is not None and search_term[key] != "":
-                    sub_query = ""
                     for term in search_term[key]:
-                        if sub_query == "":
-                            sub_query += f'{term}*'
+                        if query_string == "":
+                            query_string += f'{key}:{term}*'
                         else:
-                            sub_query += f' OR {term}*'
+                            query_string += f' OR {key}:{term}*'
 
-                    if query_string == "":
-                        query_string += f'SELECT * from text_fts WHERE {key} MATCH "{sub_query}"'
-                    else:
-                        query_string += f' OR SELECT * from text_fts WHERE {key} MATCH "{sub_query}"'
-
-            result = session.execute(f'{query_string} ORDER BY msg_time DESC LIMIT 50 OFFSET 0')
+            result = session.execute(f'SELECT * FROM messages WHERE id IN (SELECT rowid FROM messages_fts WHERE messages_fts MATCH "{query_string}") ORDER BY msg_time DESC LIMIT 50 OFFSET 0')
 
             processed_results = []
 
