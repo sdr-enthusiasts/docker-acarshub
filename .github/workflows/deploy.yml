@@ -37,9 +37,9 @@ jobs:
       # --format="%ct" : committer date, UNIX timestamp
       # Then using `date` to format to YYYYMMDD format
       - 
-        name: Get date of last commit for VERSION_TAG
+        name: Get version tag from file
         run: |
-          echo "VERSION_TAG=$(git log -1 --format=\"%ct\" | xargs -I{} date -d @{} +%Y%m%d)" >> $GITHUB_ENV
+          echo "VERSION_TAG=$(sed -n 1p version)" >> $GITHUB_ENV
 
       # Show version tag
       - 
