@@ -39,7 +39,7 @@ jobs:
       - 
         name: Get version tag from file
         run: |
-          echo "VERSION_TAG=$(sed -n 1p version)" >> $GITHUB_ENV
+          echo "VERSION_TAG=$(cat ./version)" >> $GITHUB_ENV
 
       # Show version tag
       - 
