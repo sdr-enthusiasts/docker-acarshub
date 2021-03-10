@@ -5,6 +5,16 @@ var alert_callsigns = [];
 var alert_tail = [];
 var alert_icao = [];
 var msgs_received = [];
+var acars_path = document.location.pathname.replace(/about|search|stats|status|alerts/gi, "");
+acars_path += acars_path.endsWith("/") ? "" : "/"
+var acars_url = document.location.origin + acars_path;
+var acars_page = "/" + document.location.pathname.replace(acars_path, "")
+var default_text_values = ['cop', 'police', 'authorities', 'chop', 'turbulence', 'turb',
+                           'fault', 'divert', 'mask', 'csr', 'agent', 'medical', 'security',
+                           'mayday', 'emergency', 'pan', 'red coat']
+
+var alert_sound = new Audio(`${acars_url}static/sounds/alert.mp3`);
+var play_sound = false;
 
 msgs_received.unshift = function () {
     if (this.length >= 50) {
@@ -14,17 +24,23 @@ msgs_received.unshift = function () {
 }
 
 $(document).ready(function() {
-    socket_alerts = io.connect('http://' + document.domain + ':' + location.port + '/alerts');
-
-    alerts = Cookies.get("alert_unread") ? Number(Cookies.get("alert_unread")) : 0;
+    socket_alerts = io.connect(`${document.location.origin}/alerts`, {
+        'path': acars_path + 'socket.io',
+      });
 
     // Update the cookies so the expiration date pushes out in to the future
+    // Also sets all of the user saved prefs
     onInit();
 
-    if(document.location.pathname == "/alerts") {
+    if(acars_page == "/alerts") {
         generate_menu();
         generate_footer();
         Cookies.set('alert_unread', 0, { expires: 365 });
+
+        // temporarily toggle the play_sound variable so we can set the UI correctly
+        play_sound = play_sound ? false : true;
+        toggle_playsound(true);
+        
         // Set the text areas to the values saved in the cookies
         document.getElementById("alert_text").value = Cookies.get("alert_text") ? Cookies.get("alert_text") : "";
         document.getElementById("alert_callsigns").value = Cookies.get("alert_callsigns") ? Cookies.get("alert_callsigns") : "";
@@ -33,10 +49,11 @@ $(document).ready(function() {
 
         socket_alerts.emit('query', {'icao': alert_icao.length > 0 ? alert_icao : null, 'text': alert_text.length > 0 ? alert_text : null,
                               'flight': alert_callsigns.length > 0 ? alert_callsigns : null, 'tail': alert_tail.length > 0 ? alert_tail : null}, '/alerts');
-
         socket_alerts.on('newmsg', function(msg) {
             var matched = match_alert(msg);
             if(matched.was_found) {
+                if(msg.loading != true)
+                    sound_alert();
                 msg.msghtml.matched_text = matched.text;
                 msg.msghtml.matched_icao = matched.icao;
                 msg.msghtml.matched_flight = matched.flight;
@@ -45,12 +62,42 @@ $(document).ready(function() {
                 $('#log').html(display_messages(msgs_received));
             }
         });
-    } else if(document.location.pathname != "/") {
+
+        socket_alerts.on('system_status', function(msg) {
+            if(msg.status.error_state == true) {
+                $('#system_status').html(`<a href="${acars_url}status">System Status: <span class="red">Error</span>`);
+            } else {
+                $('#system_status').html(`<a href="${acars_url}status">System Status: <span class="green">Okay</a></span>`);
+            }
+        });
+
+        socket_alerts.on('disconnect', function() {
+            connection_status();
+        });
+
+        socket_alerts.on('connect_error', function() {
+            connection_status();
+        });
+
+        socket_alerts.on('connect_timeout', function() {
+            connection_status();
+        });
+
+        socket_alerts.on('connect', function() {
+            connection_status(true);
+        });
+
+        socket_alerts.on('reconnect', function() {
+            connection_status(true);
+        });
+
+    } else if(acars_page != "/") {
         socket_alerts.on('newmsg', function(msg) {
             var matched = match_alert(msg);
-            if(matched.was_found) {
+            if(matched.was_found && msg.loading != true) {
                 alerts += 1;
                 updateAlertCounter();
+                sound_alert();
             }
         });
     } else {
@@ -69,7 +116,8 @@ function updateAlerts() {
         var split = document.getElementById("alert_text").value.split(",");
         alert_text = [];
         for(var i = 0; i < split.length; i++) {
-            alert_text.push(split[i].trim());
+            if(!alert_text.includes(split[i].trim().toUpperCase()))
+                alert_text.push(split[i].trim().toUpperCase());
         }
     } else {
         alert_text = [];
@@ -79,7 +127,8 @@ function updateAlerts() {
         var split = document.getElementById("alert_callsigns").value.split(",");
         alert_callsigns = [];
         for(var i = 0; i < split.length; i++) {
-            alert_callsigns.push(split[i].trim());
+            if(!alert_callsigns.includes(split[i].trim().toUpperCase()))
+                alert_callsigns.push(split[i].trim().toUpperCase());
         }
     } else {
         alert_callsigns = [];
@@ -89,7 +138,8 @@ function updateAlerts() {
         var split = document.getElementById("alert_tail").value.split(",");
         alert_tail = [];
         for(var i = 0; i < split.length; i++) {
-            alert_tail.push(split[i].trim());
+            if(!alert_tail.includes(split[i].trim().toUpperCase()))
+                alert_tail.push(split[i].trim().toUpperCase());
         }
     } else {
         alert_tail = [];
@@ -99,11 +149,17 @@ function updateAlerts() {
         var split = document.getElementById("alert_icao").value.split(",");
         alert_icao = [];
         for(var i = 0; i < split.length; i++) {
-            alert_icao.push(split[i].trim());
+            if(!alert_icao.includes(split[i].trim().toUpperCase()))
+                alert_icao.push(split[i].trim().toUpperCase());
         }
     } else {
         alert_icao = [];
     }
+
+    document.getElementById("alert_text").value = document.getElementById("alert_text").value.toUpperCase();
+    document.getElementById("alert_callsigns").value = document.getElementById("alert_callsigns").value.toUpperCase();
+    document.getElementById("alert_tail").value = document.getElementById("alert_tail").value.toUpperCase();
+    document.getElementById("alert_icao").value = document.getElementById("alert_icao").value.toUpperCase();
 
     Cookies.set('alert_text', combineArray(alert_text), { expires: 365 });
     Cookies.set('alert_callsigns', combineArray(alert_callsigns), { expires: 365 });
@@ -112,10 +168,15 @@ function updateAlerts() {
 }
 
 function onInit() {
+    alerts = Cookies.get("alert_unread") ? Number(Cookies.get("alert_unread")) : 0;  
+    play_sound = Cookies.get("play_sound") == "true" ? true : false;
+    Cookies.set('play_sound', play_sound == true ? "true" : "false", { expires: 365 });
+
     if(Cookies.get("alert_text") ? Cookies.get("alert_text") : "" > 0) {
         var split = Cookies.get("alert_text").split(",");
         for(var i = 0; i < split.length; i++) {
-            alert_text.push(split[i]);
+            if(!alert_text.includes(split[i].trim().toUpperCase()))
+                alert_text.push(split[i].toUpperCase());
         }
     } else {
         alert_text = [];
@@ -124,7 +185,8 @@ function onInit() {
     if(Cookies.get("alert_callsigns") ? Cookies.get("alert_callsigns") : "" > 0) {
         var split = Cookies.get("alert_callsigns").split(",");
         for(var i = 0; i < split.length; i++) {
-            alert_callsigns.push(split[i]);
+            if(!alert_callsigns.includes(split[i].trim().toUpperCase()))
+                alert_callsigns.push(split[i].toUpperCase());
         }
     } else {
         alert_callsigns = [];
@@ -133,7 +195,8 @@ function onInit() {
     if(Cookies.get("alert_tail") ? Cookies.get("alert_tail") : "" > 0) {
         var split = Cookies.get("alert_tail").split(",");
         for(var i = 0; i < split.length; i++) {
-            alert_tail.push(split[i]);
+            if(!alert_tail.includes(split[i].trim().toUpperCase()))
+                alert_tail.push(split[i].toUpperCase());
         }
     } else {
         alert_tail = [];
@@ -142,7 +205,8 @@ function onInit() {
     if(Cookies.get("alert_icao") ? Cookies.get("alert_icao") : "" > 0) {
         var split = Cookies.get("alert_icao").split(",");
         for(var i = 0; i < split.length; i++) {
-            alert_icao.push(split[i]);
+            if(!alert_icao.includes(split[i].trim().toUpperCase()))
+                alert_icao.push(split[i].toUpperCase());
         }
     } else {
         alert_icao = [];
@@ -158,11 +222,7 @@ function combineArray(input) {
     var output = "";
 
     for(var i = 0; i < input.length; i++) {
-        if(i != 0) {
-            output += "," + input[i];
-        } else {
-            output = input[i];
-        }
+        output += `${i != 0 ? "," + input[i] : input[i]}`;
     }
 
     return output;
@@ -220,4 +280,49 @@ function match_alert(msg) {
         flight: matched_flight.length > 0 ? matched_flight : null,
         tail: matched_tail.length > 0 ? matched_tail : null,
     };
+}
+
+function default_alert_values() {
+    var current = document.getElementById("alert_text").value;
+
+    default_text_values.forEach(element => {
+        if(!alert_text.includes(element.toUpperCase())) {
+            current += `${current.length > 0 ? "," + element : element}`;
+        }
+    });
+    document.getElementById("alert_text").value = current;
+    updateAlerts();
+}
+
+function connection_status(connected=false) {
+    $('#disconnect').html(!connected ? ' | <strong><span class="red_body">DISCONNECTED FROM WEB SERVER' : "");
+} 
+
+function toggle_playsound(loading=false) {
+    if(play_sound) {
+        var id = document.getElementById("playsound_link");
+        id.innerHTML = "";
+        var txt = document.createTextNode("Turn On Alert Sound");
+        id.appendChild(txt);
+    } else {
+        var id = document.getElementById("playsound_link");
+        id.innerHTML = "";
+        var txt = document.createTextNode("Turn Off Alert Sound");
+        id.appendChild(txt);
+    }
+    play_sound = play_sound ? false : true;
+    Cookies.set('play_sound', play_sound == true ? "true" : "false", { expires: 365 });
+
+    if(!loading)
+        sound_alert()
+}
+
+async function sound_alert() {
+    if(play_sound){
+        try {
+            await alert_sound.play();
+          } catch(err) {
+              console.log(err);
+        }
+    }
 }

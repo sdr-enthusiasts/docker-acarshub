@@ -14,6 +14,9 @@ ACARSHUB_DB = ""
 IATA_OVERRIDE = ""
 FREQS_ACARS = ""
 FREQS_VDLM = ""
+DB_SAVE_DAYS = 7
+DB_BACKUP = ""
+ALERT_STAT_TERMS = []
 
 if os.getenv("DEBUG_LOGGING", default=False):
     DEBUG_LOGGING = True
@@ -64,13 +67,26 @@ if os.getenv("DB_SAVEALL", default=False):
 
 # Application Settings
 
-if os.getenv("ACARSHUB_DB"):
+if os.getenv("ACARSHUB_DB", default=False):
     ACARSHUB_DB = os.getenv("ACARSHUB_DB", default=False)
 else:
     ACARSHUB_DB = 'sqlite:////run/acars/messages.db'
 
+if os.getenv("DB_BACKUP", default=False):
+    DB_BACKUP = os.getenv("DB_BACKUP")
+
 if os.getenv("IATA_OVERRIDE", default=False):
     IATA_OVERRIDE = os.getenv("IATA_OVERRIDE")
+
+if os.getenv("DB_SAVE_DAYS", default=False):
+    DB_SAVE_DAYS = int(os.getenv("DB_SAVE_DAYS"))
+
+if os.getenv("ALERT_STAT_TERMS", default=False):
+    ALERT_STAT_TERMS = os.getenv("ALERT_STAT_TERMS").split(",")
+else:
+    ALERT_STAT_TERMS = ['cop', 'police', 'authorities', 'chop', 'turbulence', 'turb',
+                        'fault', 'divert', 'mask', 'csr', 'agent', 'medical', 'security',
+                        'mayday', 'emergency', 'pan', 'red coat']
 
 
 def acars_traceback(e, source):
@@ -79,3 +95,7 @@ def acars_traceback(e, source):
     while traceback:
         print("{}: {}".format(traceback.tb_frame.f_code.co_filename, traceback.tb_lineno))
         traceback = traceback.tb_next
+
+
+def log(msg, source):
+    print(f"[{source}]: {msg}")

@@ -37,9 +37,9 @@ jobs:
       # --format="%ct" : committer date, UNIX timestamp
       # Then using `date` to format to YYYYMMDD format
       - 
-        name: Get date of last commit for VERSION_TAG
+        name: Get version tag from file
         run: |
-          echo "VERSION_TAG=$(git log -1 --format=\"%ct\" | xargs -I{} date -d @{} +%Y%m%d)" >> $GITHUB_ENV
+          echo "VERSION_TAG=$(cat ./version)" >> $GITHUB_ENV
 
       # Show version tag
       - 
@@ -55,7 +55,7 @@ jobs:
 
       - name: Create version file
         run: |
-          echo "$env.VERSION_TAG" >> ./rootfs/acarshub-version
+          echo "${{ env.VERSION_TAG }}" >> ./rootfs/acarshub-version
 
       # Hit an issue where arm builds would fail with cURL errors regarding intermediary certificates when downloading from github (ie: deploy-s6-overlay).
       # After many hours of troubleshooting, the workaround is to pre-load the image's rootfs with the CA certificates from the runner.

@@ -1,15 +1,95 @@
 var socket;
 var socket_alerts;
 var image_prefix = '';
+var acars_path = document.location.pathname.replace(/about|search|stats|status|alerts/gi, "");
+acars_path += acars_path.endsWith("/") ? "" : "/"
+var acars_url = document.location.origin + acars_path;
+
 $(document).ready(function(){
 	generate_menu();
 	generate_footer();
 	updateAlertCounter();
 
-	socket = io.connect('http://' + document.domain + ':' + location.port + '/stats');
+	socket = io.connect(`${document.location.origin}/stats`, {
+        'path': acars_path + 'socket.io',
+      });
 
 	socket.on('newmsg', function(msg) {
 		generate_stat_submenu(msg.acars, msg.vdlm);
+	});
+
+	socket.on('signal', function(msg) {
+		var input_labels = [];
+		var input_data = [];
+
+		// This float check is a hack and will discard good data. However, for reasons I don't understand
+		// The database stores whole numbers not as the input float but as an int
+		// This might be an artifact of any database that was running the old acarsdec (which used whole numbers only)
+		// And the matching done for signal levels in the db write function...in any case, the graph should even out the
+		// missing data points
+		// The ultimate result here is that anyone who had run the old acarsdec would see massive spikes on whole numbers
+		// that skews the graph significantly. Removing those values smooths the graph and is more representative of what
+		// really has been received with the newer, better signal levels
+
+		for (let i in msg.levels) {
+			if(msg.levels[i].level != null && isFloat(msg.levels[i].level)) { 
+				input_labels.push(`${msg.levels[i].level}`);
+				input_data.push(msg.levels[i].count);
+			}
+		}
+		var ctx = document.getElementById('signallevels').getContext('2d');
+		var chart = new Chart(ctx, {
+		    // The type of chart we want to create
+		    type: 'line',
+
+		    // The data for our dataset
+		    data: {
+		        labels: input_labels,
+		        datasets: [{
+		            label: 'Received Signal Levels',
+		            backgroundColor: 'rgb(30, 255, 30)',
+		            borderColor: 'rgb(0, 0, 0)',
+		            data: input_data,
+		            //pointRadius: 0,
+		            borderWidth: 1
+		        }]
+		    },
+
+		    // Configuration options go here
+		    options: {}
+		});
+	});
+
+	socket.on('alert_terms', function(msg) {
+		var labels = [];
+		var alert_data = [];
+		for(let i in msg.data) {
+			labels.push(msg.data[i].term)
+			alert_data.push(msg.data[i].count);
+		}
+		var ctx = document.getElementById('alertterms').getContext('2d');
+		var chart = new Chart(ctx, {
+		    // The type of chart we want to create
+		    type: 'doughnut',
+			
+		    // The data for our dataset
+		    data: {
+		        labels: labels,
+		        datasets: [{
+		            label: 'Received Alert Terms',
+		            backgroundColor: palette('tol', alert_data.length).map(function(hex) {
+						return '#' + hex;
+					  }),
+		            //borderColor: 'rgb(0, 0, 0)',
+		            data: alert_data,
+		            //borderWidth: 1
+		        }]
+		    },
+
+		    // Configuration options go here
+		    options: {
+			  }
+		});
 	});
 
 	socket.on('freqs', function(msg) {
@@ -29,6 +109,14 @@ $(document).ready(function(){
 
 		$('#freqs').html(html);
 	});
+
+	socket.on('system_status', function(msg) {
+        if(msg.status.error_state == true) {
+            $('#system_status').html(`<a href="${acars_url}status">System Status: <span class="red">Error</a></span>`);
+        } else {
+            $('#system_status').html(`<a href="${acars_url}status">System Status: <span class="green">Okay</a></span>`);
+        }
+    });
 
 	socket.on('count', function(msg) {
 		var error = msg.count[1];
@@ -52,14 +140,39 @@ $(document).ready(function(){
 		$('#msgs').html(html);
 	});
 
+	socket_alerts.on('disconnect', function() {
+	    connection_status();
+	});
+
+	socket_alerts.on('connect_error', function() {
+	    connection_status();
+	});
+
+	socket_alerts.on('connect_timeout', function() {
+	    connection_status();
+	});
+
+	socket_alerts.on('connect', function() {
+	    connection_status(true);
+	});
+
+	socket_alerts.on('reconnect', function() {
+	    connection_status(true);
+	});
+
 	grab_freqs();
 	grab_message_count();
 });
+
+function isFloat(n){
+    return Number(n) === n && n % 1 !== 0;
+}
 
 setInterval(function() {
 	grab_images();
 	grab_freqs();
 	grab_message_count();
+	grab_updated_graphs();
 }, 60000);
 
 function update_prefix(prefix) {
@@ -68,7 +181,6 @@ function update_prefix(prefix) {
 }
 
 function grab_images() {
-	console.log("Grabbing new stat images");
 	var onehour = document.getElementById('1hr');
 	onehour.src = `static/images/${image_prefix}1hour.png?rand=` + Math.random();
 
@@ -100,5 +212,9 @@ function grab_freqs() {
 
 function grab_message_count() {
 	socket.emit('count', {'count': true}, namespace='/stats');
+}
+
+function grab_updated_graphs() {
+	socket.emit('graphs', {'graphs': true}, namespace='/stats');
 }
 

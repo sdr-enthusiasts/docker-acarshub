@@ -9,9 +9,6 @@ def update_db(vdlm=0, acars=0, error=0):
     import sys
     total = vdlm + acars
 
-    if acarshub_helpers.DEBUG_LOGGING:
-        print(f"[rrdtool] updating VDLM with {vdlm}, ACARS with {acars}, Errors with {error}")
-        sys.stdout.flush()
     try:
         rrdtool.update("/run/acars/acarshub.rrd", f"N:{acars}:{vdlm}:{total}:{error}")
     except Exception as e:
@@ -37,15 +34,10 @@ def create_db():
     except Exception as e:
         acarshub_helpers.acars_traceback(e, "rrdtool")
     else:
-        print("[rrdtool] Database found")
+        acarshub_helpers.log("Database found", "rrdtool")
 
 
 def update_graphs():
-    import sys
-    if acarshub_helpers.DEBUG_LOGGING:
-        print("[rrdtool] Generating graphs")
-        sys.stdout.flush()
-
     args = ["/webapp/static/images/1hour.png", "-a", "PNG", "--title", "1 Hour", "-w", "1000",
             "-h", "200", "--start", "-1h", "--vertical-label", "Messages", "--slope-mode"]
     args_all = []    # combined graph arguements
@@ -184,6 +176,3 @@ def update_graphs():
 
     except Exception as e:
         acarshub_helpers.acars_traceback(e, "rrdtool")
-
-    if acarshub_helpers.DEBUG_LOGGING:
-        print("[rrdtool] Generating graphs complete")

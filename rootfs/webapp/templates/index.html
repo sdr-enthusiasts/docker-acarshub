@@ -2,22 +2,19 @@
 <html>
   <head>
     <meta charset="UTF-8">
-    <meta http-equiv=“Pragma” content=”no-cache”>
-    <meta http-equiv=“Expires” content=”-1″>
-    <meta http-equiv=“CACHE-CONTROL” content=”NO-CACHE”>
     <link rel="apple-touch-icon" sizes="180x180" href="static/images/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="static/images/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="static/images/favicon-16x16.png">
     <link rel="manifest" href="static/images/site.webmanifest">
-    <script src="//code.jquery.com/jquery-3.3.1.min.js"></script>
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/3.1.0/socket.io.min.js"></script>
+    <script src="static/js/other/jquery.min.js"></script>
+    <script src="static/js/other/socket.io.min.js"></script>
     <script src="static/js/html_generator.js"></script>
     <script src="static/js/menu.js"></script>
     <script src="static/js/alerts.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/js-cookie@rc/dist/js.cookie.min.js"></script>
+    <script src="static/js/other/js.cookie.min.js"></script>
     <script src="static/js/application.js" type="module"></script>
-    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
-    <link rel="stylesheet" href="/static/css/site.css">
+    <link rel="stylesheet" href="static/css/other/bootstrap.min.css">
+    <link rel="stylesheet" href="static/css/site.css">
     <title>ACARS Hub</title>
   </head>
   <body>
@@ -29,7 +26,7 @@
         <p><h3>Messages will appear here, newest first:</h3></p>
           <div class="row" id="right">
             <div class="fixed_results">
-              <a href="javascript:pause_updates()" id="pause_updates" class="spread_text">Pause updates</a><p>
+              <p><a href="javascript:pause_updates()" id="pause_updates" class="spread_text">Pause updates</a></p>
               <a href="javascript:filter_notext()" id="filter_notext" class="spread_text">Filter out "No Text" messages</a>
               <hr>
               <span class="menu_non_link" id="received">Received Messages</span>:&nbsp;<strong><span class="menu_non_link" id="receivedmessages">0</span></strong><br>

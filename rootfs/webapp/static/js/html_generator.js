@@ -13,24 +13,43 @@ function display_messages(msgs_to_process, selected_tabs, live_page=false) {
         var sub_messages = msgs_to_process[i]; // Array of messages belonging to one tab-group
         var unique_id = ""; // UID for the message group
         var active_tab = 0; // Active tab. Default is the first one if none selected
+        var previous_tab = 0;
+        var next_tab = 0;
+        var array_index_tab = 0;
         msgs_string += "<br>";
 
         if(live_page) {
             // unique_id is used to track the UID for a group of messages
             // tab_id below is the UID for a selected message
 
-            unique_id = sub_messages[0]['uid']; // Set the UID to the oldest message
+            unique_id = sub_messages[sub_messages.length - 1]['uid']; // Set the UID to the oldest message
 
             if(message_tab_splits.length > 0) { // Loop through the selected tabs on the page. If we find a match for the current UID we'll set the active tab to what has been selected               
                 for(var q = 0; q < message_tab_splits.length; q++) {
                     if(message_tab_splits[q].startsWith(unique_id.toString())) {
                         var split = message_tab_splits[q].split(";");
                         active_tab = Number(split[1]);
+                        array_index_tab = sub_messages.findIndex( element => {
+                                                        if (element.uid == active_tab || element.uid === active_tab) {
+                                                            return true;
+                                                          }
+                                                        });
                     }
                 }
             }
-            
+
             if(sub_messages.length > 1) { // Do we have more than one message in this group? If so, add in the HTML to set up the tabs
+                if(array_index_tab == 0) {
+                    next_tab = sub_messages[1].uid;
+                    previous_tab = sub_messages[sub_messages.length - 1].uid;
+                } else if(array_index_tab == sub_messages.length - 1) {
+                    next_tab = sub_messages[0].uid;
+                    previous_tab = sub_messages[sub_messages.length - 2].uid;
+                } else {
+                    next_tab = sub_messages[array_index_tab + 1].uid;
+                    previous_tab = sub_messages[array_index_tab - 1].uid;
+                }
+
                 msgs_string += '<div class = "tabinator">';
                 for(var j = 0; j < sub_messages.length; j++) { // Loop through all messages in the group to show all of the tabs
                     var tab_uid = unique_id; 
@@ -39,19 +58,27 @@ function display_messages(msgs_to_process, selected_tabs, live_page=false) {
                     
                     // If there is no active tab set by the user we'll set the newest message to be active/checked
 
+                    if(j == 0) { // Generate tabs for the nav left and right
+                        msgs_string += `<a href="javascript:handle_radio('` + previous_tab + `', '` + unique_id + `')" id = "tab${unique_id}_previous" name = "tabs_${unique_id}" class="boxed"><<</a>`;
+                        //msgs_string += `<label for = "tab${previous_tab}_${unique_id}"><<</label>`;
+
+                        msgs_string += `<a href="javascript:handle_radio('` + next_tab + `', '` + unique_id + `')" id = "tab${unique_id}_next" name = "tabs_${unique_id}" class="boxed">>></a>`;
+                        //msgs_string += `<label for = "tab${next_tab}_${unique_id}">>></label>`;
+                    }
+
                     if(active_tab == 0 && j == 0) {
-                        msgs_string += `<input type = "radio" id = "tab${tab_uid}_${unique_id}" name = "tabs_${unique_id}" checked onclick="handle_radio('` + tab_uid + `', '` + unique_id + `')">`;
+                        msgs_string += `<input type = "radio" id = "tab${tab_uid}_${unique_id}" name = "tabs_${unique_id}" class = "tabs_${unique_id}" checked onclick="handle_radio('` + tab_uid + `', '` + unique_id + `')">`;
                     }
                     else if(tab_uid == active_tab) { // we have an active tab set and it matches the current message
-                        msgs_string += `<input type = "radio" id = "tab${tab_uid}_${unique_id}" name = "tabs_${unique_id}" checked onclick="handle_radio('` + tab_uid + `', '` + unique_id + `')">`;
+                        msgs_string += `<input type = "radio" id = "tab${tab_uid}_${unique_id}" name = "tabs_${unique_id}" class = "tabs_${unique_id}" checked onclick="handle_radio('` + tab_uid + `', '` + unique_id + `')">`;
                     }
                     else { // Otherwise this message's tab is not active
-                        msgs_string += `<input type = "radio" id = "tab${tab_uid}_${unique_id}" name = "tabs_${unique_id}" onclick="handle_radio('` + tab_uid + `', '` + unique_id + `')">`;
+                        msgs_string += `<input type = "radio" id = "tab${tab_uid}_${unique_id}" name = "tabs_${unique_id}" class = "tabs_${unique_id}" onclick="handle_radio('` + tab_uid + `', '` + unique_id + `')">`;
                     }
 
                     var label_string = "";
                     if(sub_messages[j].hasOwnProperty('matched'))
-                        label_string = `<span class="red">Message ${j + 1}</span>`;
+                        label_string = `<span class="red_body">Message ${j + 1}</span>`;
                     else
                         label_string = `Message ${j + 1}`;
 
@@ -96,7 +123,7 @@ function display_messages(msgs_to_process, selected_tabs, live_page=false) {
             }
 
             if(sub_messages.length == 1 && message.hasOwnProperty('matched'))
-                html_output += '<tr class="red">';
+                html_output += '<tr class="red_body">';
             else
                 html_output += "<tr>";
             html_output += `<td><strong>${message['message_type']}</strong> from <strong>${message['station_id']}</strong></td>`;
@@ -107,7 +134,7 @@ function display_messages(msgs_to_process, selected_tabs, live_page=false) {
             if(message.hasOwnProperty('timestamp'))
                 timestamp = new Date(message['timestamp'] * 1000);
             else
-                timestamp = new Date(message['time'] * 1000);
+                timestamp = new Date(message['msg_time'] * 1000);
 
             html_output += `<td style=\"text-align: right\"><strong>${timestamp}</strong></td>`;
             html_output += "</tr>";
@@ -284,20 +311,12 @@ function display_messages(msgs_to_process, selected_tabs, live_page=false) {
 
             if(message.hasOwnProperty("level")) {
                 var level = message["level"];
-                var img = "";
-                if(level >= -6 ) {
-                    img = "5bar.png";
-                } else if(level >= -12) {
-                    img = "4bar.png";
-                } else if(level >= -18) {
-                    img = "3bar.png";
-                } else if(level >= -24) {
-                    img = "2bar.png";
-                } else {
-                    img = "1bar.png";
-                }
-
-                html_output += `<span class="wrapper">L: <img src="static/images/${img}" class="small_img" alt="${level}""><span class="tooltip">The signal level (${level}) of the received message.</span></span> `;
+                var circle = "";
+                if (level >= -10.0) { circle = "circle_green"; }
+                else if (level >= -20.0) { circle = "circle_yellow"; }
+                else if (level >= -30.0) { circle = "circle_orange"; }
+                else { circle = "circle_red"; }
+                html_output += `L: <strong>${level}</strong> <div class="${circle}"></div> `;
             }
 
             if(message.hasOwnProperty("ack")) {
@@ -330,18 +349,15 @@ function display_messages(msgs_to_process, selected_tabs, live_page=false) {
                 // 2 indicates the plane is on the ground
                 // https://github.com/TLeconte/vdlm2dec/blob/1ea300d40d66ecb969f1f463506859e36f62ef5c/out.c#L457
                 // variable naming in vdlm2dec is inconsistent, but "ground" and "gnd" seem to be used
-                var is_onground = "True";
+                var is_onground = message['is_onground'] == 0 ? "False" : "True";
 
-                if(message['is_onground'] == 0)
-                    is_onground = "False";
-
-                html_output += `<span class=\"wrapper\">G: <strong>${message['is_onground']}</strong><span class=\"tooltip\">Is on ground?</span></span> `;
+                html_output += `<span class=\"wrapper\">G: <strong>${is_onground}</strong><span class=\"tooltip\">Is on ground?</span></span> `;
             }
 
             if(message.hasOwnProperty("error")) {
                 if(message['error'] != 0) {
                     html_output += '<span style="color:red;">';
-                    html_output += `E: ${message['error']} `;
+                    html_output += `<strong>E: ${message['error']}</strong> `;
                     html_output += '</span>';
                 }
             }
@@ -370,7 +386,7 @@ function display_messages(msgs_to_process, selected_tabs, live_page=false) {
 
 function replace_text(input, text) {
     for(var i = 0; i < input.length; i++) {
-        text = text.split(`${input[i].toUpperCase()}`).join(`<span class="red">${input[i].toUpperCase()}</span>`);
+        text = text.split(`${input[i].toUpperCase()}`).join(`<span class="red_body">${input[i].toUpperCase()}</span>`);
     }
     return text;
 }
@@ -379,8 +395,6 @@ function loop_array(input) {
     var html_output = "";
     
     for (var m in input) {
-        // close to working
-        //console.log(typeof(input[m]));
         if(typeof(input[m]) === "object") {
             html_output += loop_array(input[m]);
         } else {
@@ -390,9 +404,7 @@ function loop_array(input) {
                 html_output += input[m] + "<br>";
             } else if(m == "description") {
                 html_output += "<p>Description: " + input[m] + "</p>";
-            } /*else {
-                console.log(`Unknown item ${m} ${input[m]}`);
-            }*/
+            } 
         }
     }
 

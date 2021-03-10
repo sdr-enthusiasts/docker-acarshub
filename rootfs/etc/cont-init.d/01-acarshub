@@ -7,7 +7,7 @@ mkdir -p /run/acars/
 FREQ_CMD=()
 
 if [ -n "${GAIN}" ]; then
-	echo "WARNING. GAIN ENV variable is depricated. Please use GAIN_ACARS and GAIN_VDLM to set the gain."
+	echo "WARNING. GAIN ENV variable is depricated. Please see the github page for updated usage."
 fi
 
 if [ -n "$SERIAL_ACARS" ]; then
@@ -52,16 +52,18 @@ if [ -n "${SERIAL}" ]; then
 	FREQ_CMD+=("-s" "${SERIAL_ARRAY[@]}")
 fi
 
-# TODO - remove line below prior to release
-echo "${FREQ_CMD[@]}"
 echo "Generating decoder startup files"
 
 pushd ../../scripts > /dev/null 2>&1 || exit 1
 python3 assign_frequencies.py "${FREQ_CMD[@]}"
 
+# Ensure /database dir is present
+
+mkdir -p /database
+
 #FREQS_VDLM=$(echo "$FREQS_VDLM" | sed 's/;/ /g')
 # Ensure stats files are present
-touch /run/acars/vdlm2.past5min.json
-touch /run/acars/acars.past5min.json
+touch /database/vdlm2.past5min.json
+touch /database/acars.past5min.json
 
 exit 0

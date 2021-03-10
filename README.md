@@ -1,5 +1,6 @@
 # fredclausen/acarshub
 
+![Banner](Logo-Sources/ACARS%20Hub.png "banner")
 [![GitHub Workflow Status](https://img.shields.io/github/workflow/status/fredclausen/docker-acarshub/Deploy%20to%20Docker%20Hub)](https://github.com/fredclausen/docker-acarshub/actions?query=workflow%3A%22Deploy+to+Docker+Hub%22)
 [![Requirements Status](https://requires.io/github/fredclausen/docker-acarshub/requirements.svg?branch=main)](https://requires.io/github/fredclausen/docker-acarshub/requirements/?branch=main)
 [![Docker Pulls](https://img.shields.io/docker/pulls/fredclausen/acarshub.svg)](https://hub.docker.com/r/fredclausen/acarshub)
@@ -45,6 +46,7 @@ docker run \
  -e ENABLE_ACARS="true" \
  -v acars_data:/run/acars \
  --device /dev/bus/usb:/dev/bus/usb \
+ --mount type=tmpfs,destination=/database,tmpfs-mode=1777 \
 fredclausen/acarshub
 ```
 
@@ -74,7 +76,11 @@ services:
       - ENABLE_ACARS=true
     volumes:
       - acars_data:/run/acars
+    tmpfs:
+      - /database:exec,size=64M
 ```
+
+Please keep in mind that this is a barebones configuration to get you started. You will **certainly** need to set addtional configuration options to get ACARS Hub working in the way you want.
 
 ## Ports
 
@@ -90,6 +96,8 @@ The reality of running any kind of database on a Pi is that database performance
 
 If you set `DB_SAVEALL` to a blank value you will gain back a lot of performance because messages with no informational value won't be stored. The trade-off in disabling saving all messages means you won't have all messages logged which may or may not be important to you.
 
+It is also recommended you use a tmpfs mount to reduce SD card writes.
+
 ## Environment variables
 
 There are quite a few configuration options this container can accept.
@@ -102,8 +110,11 @@ There are quite a few configuration options this container can accept.
 | `ENABLE_WEB`  | Enable the web server. Set to a blank value to disable the web server. | No | `true` |
 | `QUIET_LOGS` | By default the received ACARS/VDLM messages will be logged to the container's std output. To stop this, set to any non-blank value. | No | Blank |
 | `DB_SAVEALL` | By default the container will save all received messages in to a database, even if the message is a blank message. If you want to increase performance/decrease database size, set this option to blank to only save messages with at least one informationial field. | No | `true` |
+| `DB_SAVE_DAYS` | By default the container will save message data for 7 days. If you wish to over-ride this behavior, set this to the number of days you wish to have retained. | No | blank |
+| `DB_BACKUP` | If you want to run a second database for backup purposes set this value to a [SQL Alchemy formatted URL](https://docs.sqlalchemy.org/en/13/core/engines.html#database-urls). See the link for supported DB types. This database will have to be managed by you, as ACARS Hub will only ever write incoming data to it. | No | Blank |
 | `IATA_OVERRIDE` | Override or add any custom IATA codes. Used for the web front end to show proper callsigns; See [below](#the-fix) on formatting and [more details](#A-note-about-data-sources-used-for-the-web-site) why this might be necessary.| No | Blank |
 | `TAR1090_URL` | Flights where the container is able to, it will generate a link to a tar1090 instance so that you can see the position of the aircraft that generated the message. By default, it will link to [ADSB Exchange](https://www.adsbexchange.com), but if desired, you can set the URL to be a local tar1090 instance. | No | Blank |
+| `ALERT_STAT_TERMS` | ACARS Hub can track the number of times a list of terms appears in messages, and then display them on the stats page. Set this value to a comma separated list of terms you wish to monitor. **Please note this is separate to the `Alert` web page search terms!!** | No | `cop,police,authorities,chop,turbulence,turb,fault,divert,mask,csr,agent,medical,security,mayday,emergency,pan,red coat` |
 
 Please note that for `TAR1090_URL` the required format is `http[s]://**HOSTNAME**` only. So if your tar1090 instance is at IP address `192.168.31.10` with no SSL, the TAR1090_URL would look like `http://192.168.31.10`
 

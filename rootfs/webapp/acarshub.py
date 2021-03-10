@@ -1,7 +1,18 @@
 #!/usr/bin/env python3
 
 import os
+import subprocess
 import acarshub_db
+import time
+
+start_time = time.time()
+
+decoders = dict()
+servers = dict()
+receivers = dict()
+feeders = dict()
+stats = dict()
+system_error = False
 
 # Set the URL used for the web front end to show flight tracking.
 # Not doing too much sanitizing of the URL to ensure it's formatted right
@@ -41,10 +52,9 @@ def update_keys(json_message):
     # Santiztize the message of any empty/None vales
     # This won't occur for live messages but if the message originates from a DB query
     # It will return all keys, even ones where the original message didn't have a value
-
     stale_keys = []
     for key in json_message:
-        if json_message[key] is None:
+        if json_message[key] is None or json_message[key] == "":
             stale_keys.append(key)
 
     for key in stale_keys:
@@ -52,20 +62,30 @@ def update_keys(json_message):
 
     # Now we process individual keys, if that key is present
 
-    if "libacars" in json_message.keys() and json_message['libacars'] is not None:
+    # database tablename for the message text doesn't match up with typescript-decoder (needs it to be text)
+    # so we rewrite the key
+    if "msg_text" in json_message and json_message['msg_text'] is not None:
+        json_message['text'] = json_message['msg_text']
+        del json_message['msg_text']
+
+    if "time" in json_message and json_message['time'] is not None:
+        json_message['timestamp'] = json_message['time']
+        del json_message['time']
+
+    if "libacars" in json_message and json_message['libacars'] is not None:
         json_message['libacars'] = libacars_formatted(json_message['libacars'])
 
-    if "icao" in json_message.keys() and json_message['icao'] is not None:
+    if "icao" in json_message and json_message['icao'] is not None:
         json_message['icao_hex'] = format(int(json_message['icao']), 'X')
 
-    if "flight" in json_message.keys() and json_message['flight'] is not None and 'icao_hex' in json_message.keys():
+    if "flight" in json_message and json_message['flight'] is not None and 'icao_hex' in json_message.keys():
         json_message['flight'] = flight_finder(callsign=json_message['flight'], hex_code=json_message['icao_hex'])
-    elif "flight" in json_message.keys() and json_message['flight'] is not None:
+    elif "flight" in json_message and json_message['flight'] is not None:
         json_message['flight'] = flight_finder(callsign=json_message['flight'], url=False)
-    elif 'icao_hex' in json_message.keys():
+    elif 'icao_hex' in json_message:
         json_message['icao_url'] = flight_finder(hex_code=json_message['icao_hex'])
 
-    if "toaddr" in json_message.keys() and json_message['toaddr'] is not None:
+    if "toaddr" in json_message and json_message['toaddr'] is not None:
         json_message['toaddr_hex'] = format(int(json_message['toaddr']), 'X')
 
         toaddr_icao, toaddr_name = acarshub_db.lookup_groundstation(json_message['toaddr_hex'])
@@ -73,7 +93,7 @@ def update_keys(json_message):
         if toaddr_icao is not None:
             json_message['toaddr_decoded'] = f"{toaddr_name} ({toaddr_icao})"
 
-    if "fromaddr" in json_message.keys() and json_message['fromaddr'] is not None:
+    if "fromaddr" in json_message and json_message['fromaddr'] is not None:
         json_message['fromaddr_hex'] = format(int(json_message['fromaddr']), 'X')
 
         fromaddr_icao, fromaddr_name = acarshub_db.lookup_groundstation(json_message['fromaddr_hex'])
@@ -81,7 +101,7 @@ def update_keys(json_message):
         if fromaddr_icao is not None:
             json_message['fromaddr_decoded'] = f"{fromaddr_name} ({fromaddr_icao})"
 
-    if "label" in json_message.keys() and json_message['label'] is not None:
+    if "label" in json_message and json_message['label'] is not None:
         label_type = acarshub_db.lookup_label(json_message['label'])
 
         if label_type is not None:
@@ -104,7 +124,7 @@ def flight_finder(callsign=None, hex_code=None, url=True):
     if callsign is not None:
         # Check the ICAO DB to see if we know what it is
         # The ICAO DB will return the ICAO code back if it didn't find anything
-        
+
         icao, airline = acarshub_db.find_airline_code_from_iata(callsign[:2])
         flight_number = callsign[2:]
         flight = icao + flight_number
@@ -125,7 +145,7 @@ def flight_finder(callsign=None, hex_code=None, url=True):
 
 
 def handle_message(message=None):
-    import json
+    start_time = time.time()
     if message is not None:
         total_results = 0
         serialized_json = []
@@ -143,15 +163,13 @@ def handle_message(message=None):
                 search_term = message['search_term']
 
                 if 'results_after' in message:
-                    # ask the database for the results at the user requested index
-                    # multiply the selected index by 50 (we have 50 results per page) so the db
-                    # knows what result index to send back
-                    search = acarshub_db.database_search(message['field'], message['search_term'], message['results_after'] * 20)
+                    # ask the database for the results at the user requested page
+                    search = acarshub_db.database_search(message['search_term'], message['results_after'])
                 else:
-                    search = acarshub_db.database_search(message['field'], message['search_term'])
+                    search = acarshub_db.database_search(message['search_term'])
             elif 'show_all' in message:
                 if 'results_after' in message:
-                    search = acarshub_db.show_all(message['results_after'] * 50)
+                    search = acarshub_db.show_all(message['results_after'])
                 else:
                     search = acarshub_db.show_all()
 
@@ -159,15 +177,171 @@ def handle_message(message=None):
             # index zero is the query results in json
             # the other is the count of total results
 
-            query_result = search[0]
-            if query_result is not None:
+            if search[0] is not None:
                 total_results = search[1]
                 # Loop through the results and format html
-                for result in query_result:
-                    json_message = update_keys(json.loads(result))
-
-                    serialized_json.append(json.dumps(json_message))
+                time_update_keys = time.time()
+                for result in search[0]:
+                    serialized_json.append(update_keys(result))
 
             return (total_results, serialized_json, search_term)
     else:
         return (None, None, None)
+
+
+def service_check():
+    import re
+
+    global decoders
+    global servers
+    global receivers
+    global system_error
+    global feeders
+    global stats
+    global start_time
+
+    if os.getenv("SPAM", default=False):
+        healthcheck = subprocess.Popen(['../../tools/healthtest.sh'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    else:
+        healthcheck = subprocess.Popen(['/scripts/healthcheck.sh'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    stdout, stderr = healthcheck.communicate()
+    healthstatus = stdout.decode()
+
+    decoders = dict()
+    servers = dict()
+    receivers = dict()
+    system_error = False
+
+    for line in healthstatus.split("\n"):
+        match = re.search("(?:acarsdec|vdlm2dec)-\\d+", line)
+        if match:
+            if match.group(0) not in decoders:
+                decoders[match.group(0)] = dict()
+            else:
+                key = match.group(0)
+
+                if line.find(f"Decoder {key}") and line.endswith("UNHEALTHY"):
+                    decoders[key]["Status"] = "Bad"
+                    system_error = True
+                elif line.find(f"Decoder {key}") == 0 and line.endswith("HEALTHY"):
+                    decoders[key]["Status"] = "Ok"
+                elif line.find(f"Decoder {key}") == 0:
+                    system_error = True
+                    decoders[key]["Status"] = "Unknown"
+
+            continue
+
+        match = re.search("^(?:acars|vdlm2)_server", line)
+
+        if match:
+            if match.group(0) not in servers:
+                servers[match.group(0)] = dict()
+
+            if line.find("listening") != -1 and line.endswith("UNHEALTHY"):
+                servers[match.group(0)]["Status"] = "Bad"
+                system_error = True
+            elif line.find("listening") != -1 and line.endswith("HEALTHY"):
+                servers[match.group(0)]["Status"] = "Ok"
+            elif line.find("listening") != -1:
+                system_error = True
+                servers[match.group(0)]["Status"] = "Unknown"
+            elif line.find("python") != -1 and line.endswith("UNHEALTHY"):
+                system_error = True
+                servers[match.group(0)]["Web"] = "Bad"
+            elif line.find("python") != -1 and line.endswith("HEALTHY"):
+                servers[match.group(0)]["Web"] = "Ok"
+            elif line.find("python") != -1:
+                system_error = True
+                servers[match.group(0)]["Web"] = "Unknown"
+
+            continue
+
+        match = re.search("\\d+\\s+(?:ACARS|VDLM2) messages", line)
+
+        if match:
+            if line.find("ACARS") != -1 and "ACARS" not in receivers:
+                receivers['ACARS'] = dict()
+                if line.endswith("UNHEALTHY"):
+                    if time.time() - start_time > 300.0:
+                        system_error = True
+                        receivers['ACARS']['Status'] = "Bad"
+                    else:
+                        receivers['ACARS']['Status'] = "Waiting for first message"
+                elif line.endswith("HEALTHY"):
+                    receivers['ACARS']['Status'] = "Ok"
+                else:
+                    system_error = True
+                    receivers['ACARS']['Status'] = "Unknown"
+            if line.find("VDLM2") != -1 and "VDLM2" not in receivers:
+                receivers['VDLM2'] = dict()
+                if line.endswith("UNHEALTHY"):
+                    if time.time() - start_time > 300.0:
+                        system_error = True
+                        receivers['VDLM2']['Status'] = "Bad"
+                    else:
+                        receivers['VDLM2']['Status'] = "Waiting for first message"
+                elif line.endswith("HEALTHY"):
+                    receivers['VDLM2']['Status'] = "Ok"
+                else:
+                    system_error = True
+                    receivers['VDLM2']['Status'] = "Unknown"
+
+            continue
+
+        match = re.search("^(?:acars|vdlm2)_feeder", line)
+
+        if match:
+            if match.group(0) not in servers:
+                feeders[match.group(0)] = dict()
+
+            if line.endswith("UNHEALTHY"):
+                feeders[match.group(0)]["Status"] = "Bad"
+                system_error = True
+            elif line.endswith("HEALTHY"):
+                feeders[match.group(0)]["Status"] = "Ok"
+            else:
+                system_error = True
+                feeders[match.group(0)]["Status"] = "Unknown"
+
+            continue
+
+        match = re.search("^(acars|vdlm2)_stats", line)
+
+        if match:
+            if match.group(0) not in stats:
+                stats[match.group(0)] = dict()
+
+            if line.endswith("UNHEALTHY"):
+                system_error = True
+                stats[match.group(0)]["Status"] = "Bad"
+            elif line.endswith("HEALTHY"):
+                stats[match.group(0)]["Status"] = "Ok"
+            else:
+                system_error = True
+                stats[match.group(0)] = "Unknown"
+
+    if os.getenv("SPAM", default=False):
+        print(decoders)
+        print(servers)
+        print(receivers)
+        print(feeders)
+        print(stats)
+
+
+if os.getenv("SPAM", default=False):
+    service_check()
+
+
+def get_service_status():
+    global decoders
+    global servers
+    global receivers
+    global system_error
+    global feeders
+    global stats
+
+    return {"decoders": decoders, "servers": servers, "global": receivers, "feeders": feeders, "error_state": system_error, "stats": stats}
+
+
+def getAlerts():
+    return acarshub_db.get_alert_counts()

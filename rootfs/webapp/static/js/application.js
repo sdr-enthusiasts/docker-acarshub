@@ -5,6 +5,9 @@ var socket;
 var msgs_received = [];
 var exclude = [];
 var selected_tabs = "";
+var acars_path = document.location.pathname.replace(/about|search|stats|status|alerts/gi, "");
+acars_path += acars_path.endsWith("/") ? "" : "/"
+var acars_url = document.location.origin + acars_path;
 
 var filtered_messages = 0;
 var received_messages = 0;
@@ -12,11 +15,11 @@ var received_messages = 0;
 import { MessageDecoder } from '../airframes-acars-decoder/MessageDecoder.js'
 const md = new MessageDecoder();
 
-// Automatically keep the array size at 50 messages or less
+// Automatically keep the array size at 150 messages or less
 // without the need to check before we push on to the stack
 
 msgs_received.unshift = function () {
-    if (this.length >= 50) {
+    if (this.length >= 150) {
         this.pop();
     }
     return Array.prototype.unshift.apply(this,arguments);
@@ -54,12 +57,56 @@ function getRandomInt(max) {
 // Input is the UID of the message group, which is also the element ID of the oldest element in that group
 
 window.handle_radio = function(element_id, uid) {
-    var all_tabs = document.querySelectorAll(`div.sub_msg${uid}`);
+    var all_tabs = document.querySelectorAll(`div.sub_msg${uid}`); // Grab the tabinator group and remove check
     for(var i = 0; i < all_tabs.length; i++) {
         all_tabs[i].classList.remove("checked");
     }
-    var element = document.getElementById(`message_${uid}_${element_id}`);
+
+    var all_tabinator = document.querySelectorAll(`input.tabs_${uid}`); // grab the message divs in that tab group and remove check
+    for(var i = 0; i < all_tabinator.length; i++) {
+        all_tabinator[i].checked = false;
+    }
+
+    var element = document.getElementById(`message_${uid}_${element_id}`); // grab and tag the message that is checked
     element.classList.add("checked");
+
+    var tab_element = document.getElementById(`tab${element_id}_${uid}`); // grab and tag the tag that is checked
+    tab_element.checked = true;
+
+    // Now we need to update the nav arrow links
+
+    var next_tab = 0;
+    var previous_tab = 0;
+
+    for(var i = 0; i < msgs_received.length; i++) {
+        if(msgs_received[i].length > 1 && msgs_received[i][msgs_received[i].length - 1].uid == uid) {
+            var active_tab = msgs_received[i].findIndex( element => {
+                                                        if (element.uid == element_id) {
+                                                            return true;
+                                                          }
+                                                        });
+
+            if(active_tab == 0) {
+                next_tab = msgs_received[i][1].uid;
+                previous_tab = msgs_received[i][msgs_received[i].length -1].uid;
+            } else if(active_tab == msgs_received[i].length - 1) {
+                next_tab = msgs_received[i][0].uid;
+                previous_tab = msgs_received[i][msgs_received[i].length - 2].uid;
+            } else {
+                next_tab = msgs_received[i][active_tab + 1].uid;
+                previous_tab = msgs_received[i][active_tab - 1].uid;
+            }
+
+            i = msgs_received.length;
+        }
+    }
+
+    var curlink_previous = document.getElementById(`tab${uid}_previous`);
+    curlink_previous.setAttribute('href', `javascript:handle_radio(${previous_tab}, ${uid})`);
+
+    var curlink_next = document.getElementById(`tab${uid}_next`);
+    curlink_next.setAttribute('href', `javascript:handle_radio(${next_tab}, ${uid})`);
+
     var added = false;
     if(selected_tabs != "") {
         var split = selected_tabs.split(",")
@@ -130,8 +177,6 @@ window.filter_notext = function() {
 
         var id = document.getElementById("filter_notext");
         id.innerHTML = "Hide Empty Messages";
-        //var txt = document.createTextNode("Hide Empty messages");
-        //id.appendChild(txt);
         Cookies.set('filter', 'false', { expires: 365 });
         filtered_messages = 0;
 
@@ -148,8 +193,6 @@ window.filter_notext = function() {
 
         id = document.getElementById("filter_notext");
         id.innerHTML = "<span class=\"red\">Show All Messages</span>";
-        //var txt = document.createTextNode("Show All messages");
-        //id.appendChild(txt);
         Cookies.set('filter', 'true', { expires: 365 });
     }
 }
@@ -187,7 +230,10 @@ $(document).ready(function(){
     //connect to the socket server.
     generate_menu(); // generate the top menu
     generate_footer(); // generate the footer
-    socket = io.connect('http://' + document.domain + ':' + location.port + '/main'); // open a websocket to the server to received messages
+
+    socket = io.connect(`${document.location.origin}/main`, {
+        'path': acars_path + 'socket.io',
+      });
 
     // Grab the current cookie value for message filtering
     // If the cookie is found with a value we run filter_notext to set the proper visual elements/variables for the rest of the functions
@@ -227,6 +273,34 @@ $(document).ready(function(){
         $('#label_links').html(label_html);
     });
 
+    socket.on('system_status', function(msg) {
+        if(msg.status.error_state == true) {
+            $('#system_status').html(`<a href="${acars_url}status">System Status: <span class="red">Error</a></span>`);
+        } else {
+            $('#system_status').html(`<a href="${acars_url}status">System Status: <span class="green">Okay</a></span>`);
+        }
+    });
+
+    socket_alerts.on('disconnect', function() {
+        connection_status();
+    });
+
+    socket_alerts.on('connect_error', function() {
+        connection_status();
+    });
+
+    socket_alerts.on('connect_timeout', function() {
+        connection_status();
+    });
+
+    socket_alerts.on('connect', function() {
+        connection_status(true);
+    });
+
+    socket_alerts.on('reconnect', function() {
+        connection_status(true);
+    });
+
     //receive details from server
     socket.on('newmsg', function(msg) {
         if(msg.msghtml.hasOwnProperty('label') == false || exclude.indexOf(msg.msghtml.label) == -1) {
@@ -240,7 +314,6 @@ $(document).ready(function(){
                     var decoded_msg = md.decode(msg.msghtml);
                     if(decoded_msg.decoded == true) {
                         msg.msghtml.decodedText = decoded_msg;
-                        //console.log(msg.msghtml.decodedText);
                     }
                 }
 
@@ -397,8 +470,10 @@ $(document).ready(function(){
                                     var decoded_msg = md.decode(msgs_received[index_new][j]);
                                     if(decoded_msg.decoded == true) {
                                         msgs_received[index_new][j]['decoded_msg'] = decoded_msg;
-                                        //console.log(msg.msghtml.decodedText);
                                     }
+
+                                    if(matched.was_found && !msg.loading)
+                                        sound_alert();
                                 }
                             }
 
@@ -418,8 +493,9 @@ $(document).ready(function(){
                     // If the message was found we'll move the message group back to the top
                     if(found) {
                         // If the message was found, and not rejected, we'll append it to the message group
-                        if(!rejected)
+                        if(!rejected) {
                             msgs_received[index_new].unshift(msg.msghtml);
+                        }
 
                         msgs_received.forEach(function(item,i){
                             if(i == index_new){
@@ -430,17 +506,19 @@ $(document).ready(function(){
                     }
                 }
                 if(!found && !rejected) {
+                    if(matched.was_found && !msg.loading)
+                        sound_alert();
                     msgs_received.unshift([msg.msghtml]);
                 }
-            } else {
+            } else if(!msg.loading){
                 increment_filtered();
             }
         } else {
-            if(text_filter)
+            if(text_filter && !msg.loading)
                 increment_filtered();
         }
-
-        increment_received();
+        if(!msg.loading)
+            increment_received();
         if(!pause) {
             $('#log').html(display_messages(msgs_received, selected_tabs, true));
         }

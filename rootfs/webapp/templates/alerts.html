@@ -2,21 +2,18 @@
 <html>
   <head>
     <meta charset="UTF-8">
-    <meta http-equiv=“Pragma” content=”no-cache”>
-    <meta http-equiv=“Expires” content=”-1″>
-    <meta http-equiv=“CACHE-CONTROL” content=”NO-CACHE”>
     <link rel="apple-touch-icon" sizes="180x180" href="static/images/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="static/images/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="static/images/favicon-16x16.png">
     <link rel="manifest" href="static/images/site.webmanifest">
-    <script src="//code.jquery.com/jquery-3.3.1.min.js"></script>
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/3.1.0/socket.io.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/js-cookie@rc/dist/js.cookie.min.js"></script>
+    <script src="static/js/other/jquery.min.js"></script>
+    <script src="static/js/other/socket.io.min.js"></script>
+    <script src="static/js/other/js.cookie.min.js"></script>
     <script src="static/js/menu.js"></script>
     <script src="static/js/html_generator.js"></script>
     <script src="static/js/alerts.js"></script>
-    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
-    <link rel="stylesheet" href="/static/css/site.css">
+    <link rel="stylesheet" href="static/css/other/bootstrap.min.css">
+    <link rel="stylesheet" href="static/css/site.css">
     <title>ACARS Message Alerts</title>
   </head>
   <body>
@@ -27,6 +24,7 @@
     <div class="container" id="content">
     <div class="row" id="right">
       <div class="fixed_results">
+        <p><a href="javascript:toggle_playsound()" id="playsound_link" class="spread_text">Turn On Alert Sound</a></p>
         <span id="stat_menu">
           <label for="alert_text" class="menu_non_link">Text Field:</label><br /> 
           <textarea rows="2" id="alert_text"></textarea><br /> 
@@ -37,6 +35,7 @@
           <label for="alert_icao" class="menu_non_link">ICAO Address:</label><br /> 
           <textarea rows="2" id="alert_icao"></textarea><br /> 
           <button type="submit" value="Submit" onclick="updateAlerts()">Update</button>
+          <p><a href="javascript:default_alert_values()" class="spread_text">Default alert values</a></p>
         </span>
       </div>
     </div>

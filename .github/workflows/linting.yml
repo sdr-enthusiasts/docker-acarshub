@@ -6,6 +6,17 @@ on:
       - main
 
 jobs:
+  eslint:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - uses: actions/setup-node@v1
+      with:
+        node-version: '13.x'
+    - name: Run yarn
+      run: yarn
+    - name: Run eslint
+      run: yarn run eslint . --ext .js
 
   shellcheck:
 

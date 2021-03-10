@@ -1,0 +1,6 @@
+#!/usr/bin/with-contenv bash
+#shellcheck shell=bash
+# shellcheck disable=SC2034
+DEVICE_ID=""
+
+sleep 86400

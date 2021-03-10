@@ -1,8 +1,13 @@
 var socket;
-var current_search = ''; // variable to store the current search term
+var current_search = {"flight": "", "depa": "", "dsta": "", "freq": "", "label": "",
+                      "msgno": "", "tail": "", "msg_text": ""}; // variable to store the current search term
 var current_page = 0; // store the current page of the current_search
 var total_pages = 0; // number of pages of results
 var show_all = false; // variable to indicate we are doing a 'show all' search and not of a specific term
+var query_time = 0.0;
+var acars_path = document.location.pathname.replace(/about|search|stats|status|alerts/gi, "");
+acars_path += acars_path.endsWith("/") ? "" : "/"
+var acars_url = document.location.origin + acars_path;
 
 import { MessageDecoder } from '../airframes-acars-decoder/MessageDecoder.js'
 const md = new MessageDecoder();
@@ -12,10 +17,14 @@ $(document).ready(function(){
     generate_menu();
     generate_footer();
     updateAlertCounter();
-    socket = io.connect('http://' + document.domain + ':' + location.port + '/search');
+    
+    socket = io.connect(`${document.location.origin}/search`, {
+        'path': acars_path + 'socket.io',
+      });
+
     var msgs_received = [];
     var num_results = [];
-
+    
     // receive details from server
 
     // DB stats
@@ -28,10 +37,36 @@ $(document).ready(function(){
         }
     });
 
+    socket.on('system_status', function(msg) {
+        if(msg.status.error_state == true) {
+            $('#system_status').html(`<a href="${acars_url}status">System Status: <span class="red">Error</a></span>`);
+        } else {
+            $('#system_status').html(`<a href="${acars_url}status">System Status: <span class="green">Okay</a></span>`);
+        }
+    });
+
+    socket_alerts.on('disconnect', function() {
+        connection_status();
+    });
+
+    socket_alerts.on('connect_error', function() {
+        connection_status();
+    });
+
+    socket_alerts.on('connect_timeout', function() {
+        connection_status();
+    });
+
+    socket_alerts.on('connect', function() {
+        connection_status(true);
+    });
+
+    socket_alerts.on('reconnect', function() {
+        connection_status(true);
+    });
+
     // Search results returned
     socket.on('newmsg', function(msg) {
-        //console.log("Received msg" + msg.msghtml);
-        console.log("Received msg");
         //maintain a list of 1 msgs
         if (msgs_received.length >= 1){
             msgs_received.shift();
@@ -39,6 +74,9 @@ $(document).ready(function(){
         if (num_results.length >= 1) {
             num_results.shift();
         }
+
+        if(msg.hasOwnProperty('query_time'))
+            query_time = msg['query_time'];
         // Lets check and see if the results match the current search string
         var display = '';
         var display_nav_results = '';
@@ -48,12 +86,12 @@ $(document).ready(function(){
         // Show the results if the returned results match the current search string (in case user kept typing after search emmited)
         // or the user has executed a 'show all'
 
-        if(msg.search_term == current_search || show_all) {            
+        if(true) {            
             msgs_received.push(msg.msghtml);
             num_results.push(msg.num_results);
             for (var i = 0; i < msgs_received.length; i++){ // Loop through the received message blob.
                 for(var j = 0; j < msgs_received[i].length; j++) { // Loop through the individual messages in the blob
-                    var msg_json = JSON.parse(msgs_received[i][j]); // The message is not in a format where JS automatically converts in to a usable format, so we'll parse as JSON
+                    var msg_json = msgs_received[i][j];
                     // Check and see if the text field is decodable in to human readable format
                     var decoded_msg = md.decode(msg_json);
                     if(decoded_msg.decoded == true) {
@@ -73,11 +111,47 @@ $(document).ready(function(){
     });
 
     // Function to listen for key up events. If detected, check and see if the search string has been updated. If so, process the updated query
-    document.addEventListener("keyup", function(event) {
-        if(current_search != document.getElementById("search_term").value)
-            delay_query(document.getElementById("search_term").value);
+    document.addEventListener("keyup", function() {
+        var current_terms = get_search_terms();
+        if(!is_everything_blank() && current_search != current_terms) {
+            show_all = false;
+            delay_query(current_terms);
+        }
     });
 });
+
+function get_search_terms() {
+    return {
+        "flight": document.getElementById("search_flight").value,
+        "depa": document.getElementById("search_depa").value,
+        "dsta": document.getElementById("search_dsta").value,
+        "freq": document.getElementById("search_freq").value,
+        "label": document.getElementById("search_msglbl").value,
+        "msgno": document.getElementById("search_msgno").value,
+        "tail": document.getElementById("search_tail").value,
+        "msg_text": document.getElementById("search_text").value,
+    }
+}
+
+function is_everything_blank() {
+    for(const key in current_search) {
+        if(current_search[key] != null)
+            return false;
+    }
+
+    return true;
+}
+
+function reset_search_terms() {
+    document.getElementById("search_flight").value = "";
+    document.getElementById("search_depa").value = "";
+    document.getElementById("search_dsta").value = "";
+    document.getElementById("search_freq").value = "";
+    document.getElementById("search_msglbl").value = "";
+    document.getElementById("search_msgno").value = "";
+    document.getElementById("search_tail").value = "";
+    document.getElementById("search_text").value = "";
+}
 
 // In order to help DB responsiveness, I want to make sure the user has quit typing before emitting a query
 // We'll do this by recording the state of the DB search text field, waiting half a second (might could make this less)
@@ -86,22 +160,21 @@ $(document).ready(function(){
 
 async function delay_query(initial_query) {
     // Pause for half a second
-    await sleep(500);
+    await sleep(100);
     var old_search = current_search; // Save the old search term in a temp variable
     // Only execute the search query if the user is done typing. We track that by comparing the query we were asked to run
     // with what is currently in the text box
-    if(initial_query == document.getElementById("search_term").value) {  
-        current_search = document.getElementById("search_term").value; // update the global value for the current search
-        var field = document.getElementById("dbfield").value;
-        if(current_search != '' && current_search != old_search) { // Double check and ensure the search term is new and not blank. No sense hammering the DB to search for the same term
+    if(JSON.stringify(initial_query) == JSON.stringify(get_search_terms())) {  
+        current_search = get_search_terms(); // update the global value for the current search
+        if(!is_everything_blank() && JSON.stringify(current_search) != JSON.stringify(old_search)) { // Double check and ensure the search term is new and not blank. No sense hammering the DB to search for the same term
             // Reset status for various elements of the page to what we're doing now
             current_page = 0;
             show_all = false;
             // Give feedback to the user while the search is going on
             $('#log').html('Searching...');
             $('#num_results').html('');
-            socket.emit('query', {'search_term': current_search, 'field': field}, '/search');
-        } else if(current_search == '') { // Field is now blank, clear the page and reset status
+            socket.emit('query', {'search_term': current_search}, '/search');
+        } else if(is_everything_blank()) { // Field is now blank, clear the page and reset status
             show_all = false;
             $('#log').html('');
             $('#num_results').html('');
@@ -115,8 +188,7 @@ window.showall = function() {
     socket.emit('query', {'show_all': true}, "/search");
     $('#log').html('Updating...');
     $('#num_results').html('');
-    const search_box = document.getElementById('search_term');
-    search_box.value = "";
+    reset_search_terms();
     current_page = 0;
     show_all = true;
 }
@@ -132,13 +204,12 @@ function sleep(ms) {
 
 window.runclick = function(page) {
     current_page = page;
-    current_search = document.getElementById("search_term").value;
-    var field = document.getElementById("dbfield").value;
-    if(current_search != '' || show_all) {
+    var current_terms = get_search_terms();
+    if(!is_everything_blank()|| show_all) {
         $('#log').html('Updating results....');
         $('#num_results').html('');
         if(!show_all) {
-            socket.emit('query', {'search_term': current_search, 'field': field, 'results_after': page}, '/search');
+            socket.emit('query', {'search_term': current_search, 'results_after': page}, '/search');
         } else {
             socket.emit('query', {'show_all': true, 'results_after': page}, '/search');
         }
@@ -175,6 +246,7 @@ function display_search(current, total) {
         total_pages = ~~(total / 50);
 
     html += '<table class="search"><thead><th class="search_label"></th><th class="search_term"></th></thead>';
+    html += `<tr><td colspan="2"><span class="menu_non_link">Query Time: ${query_time.toFixed(4)} Seconds</span></td></tr>`
     html += `<tr><td colspan="2"><span class="menu_non_link">Found <strong>${total}</strong> result(s) in <strong>${total_pages}</strong> page(s).</span></td></tr>`;
 
     // Determine -/+ range. We want to show -/+ 5 pages from current index

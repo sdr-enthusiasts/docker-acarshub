@@ -126,8 +126,19 @@ if [ -n "${ENABLE_VDLM}" ]; then
     echo "vdlm2_server TCP listening on port 15555 (pid $vdlm2_pidof_vdlm2_tcp_server): HEALTHY"
   fi
 
+  if [ -n "${ENABLE_WEB}" ]; then
+    if ! netstat -anp | grep -P "tcp\s+\d+\s+\d+\s+127.0.0.1:[0-9]+\s+127.0.0.1:15555\s+ESTABLISHED\s+[0-9]+/python3" > /dev/null 2>&1; then
+      echo "TCP4 connection between 127.0.0.1:ANY and 127.0.0.1:15555 for python3 established: FAIL"
+      echo "vdlm2_server TCP connected to python server on port 15555 (pid $vdlm2_pidof_vdlm2_tcp_server): UNHEALTHY"
+      EXITCODE=1
+    else
+      echo "TCP4 connection between 127.0.0.1:ANY and 127.0.0.1:15555 for python3 established: PASS"
+      echo "vdlm2_server TCP connected to python server on port 15555: HEALTHY"
+    fi
+  fi
+
   # Check vdlm2_feeder
-  if [ -n "$FEED" ]; then
+  if [ -n "${FEED}" ]; then
 
       echo "==== Checking vdlm2_feeder ====="
 
@@ -154,7 +165,7 @@ if [ -n "${ENABLE_VDLM}" ]; then
   echo "==== Checking vdlm2_stats ====="
 
   # Check vdlm2_stats:
-  vdlm2_pidof_vdlm2_stats=$(pgrep -fx 'socat -u TCP:127.0.0.1:15555 CREATE:/run/acars/vdlm2.past5min.json')
+  vdlm2_pidof_vdlm2_stats=$(pgrep -fx 'socat -u TCP:127.0.0.1:15555 CREATE:/database/vdlm2.past5min.json')
 
   # Ensure TCP connection to vdlm2_server at 127.0.0.1:15555
   if ! check_tcp4_connection_established_for_pid "127.0.0.1" "ANY" "127.0.0.1" "15555" "${vdlm2_pidof_vdlm2_stats}"; then
@@ -168,7 +179,7 @@ if [ -n "${ENABLE_VDLM}" ]; then
 
   # Check for activity
   # read .json files, ensure messages received in past hour
-  vdlm2_num_msgs_past_hour=$(find /run/acars -type f -name 'vdlm2.*.json' -cmin -60 -exec cat {} \; | wc -l)
+  vdlm2_num_msgs_past_hour=$(find /database -type f -name 'vdlm2.*.json' -cmin -60 -exec cat {} \; | wc -l)
   if [[ "$vdlm2_num_msgs_past_hour" -gt 0 ]]; then
       echo "$vdlm2_num_msgs_past_hour VDLM2 messages received in past hour: HEALTHY"
   else
@@ -193,8 +204,19 @@ if [ -n "${ENABLE_ACARS}" ]; then
     echo "acars_server TCP listening on port 15550 (pid $acars_pidof_acars_tcp_server): HEALTHY"
   fi
 
+  if [ -n "${ENABLE_WEB}" ]; then  
+    if ! netstat -anp | grep -P "tcp\s+\d+\s+\d+\s+127.0.0.1:[0-9]+\s+127.0.0.1:15550\s+ESTABLISHED\s+[0-9]+/python3" > /dev/null 2>&1; then
+      echo "acars_server TCP4 connection between 127.0.0.1:ANY and 127.0.0.1:15550 for python3 established: FAIL"
+      echo "acars_server TCP not connected to python server on port 15550: UNHEALTHY"
+      EXITCODE=1
+    else
+      echo "TCP4 connection between 127.0.0.1:ANY and 127.0.0.1:15550 for python3 established: PASS"
+      echo "acars_server TCP connected to python3 server on port 15550: HEALTHY"
+    fi
+  fi
+
   # Check acars_feeder
-  if [ -n "$FEED" ]; then
+  if [ -n "${FEED}" ]; then
 
       echo "==== Checking acars_feeder ====="
 
@@ -221,7 +243,7 @@ if [ -n "${ENABLE_ACARS}" ]; then
   echo "==== Checking acars_stats ====="
 
   # Check acars_stats:
-  acars_pidof_acars_stats=$(pgrep -fx 'socat -u TCP:127.0.0.1:15550 CREATE:/run/acars/acars.past5min.json')
+  acars_pidof_acars_stats=$(pgrep -fx 'socat -u TCP:127.0.0.1:15550 CREATE:/database/acars.past5min.json')
 
   # Ensure TCP connection to acars_server at 127.0.0.1:15550
   if ! check_tcp4_connection_established_for_pid "127.0.0.1" "ANY" "127.0.0.1" "15550" "${acars_pidof_acars_stats}"; then
@@ -235,7 +257,7 @@ if [ -n "${ENABLE_ACARS}" ]; then
 
   # Check for activity
   # read .json files, ensure messages received in past hour
-  acars_num_msgs_past_hour=$(find /run/acars -type f -name 'acars.*.json' -cmin -60 -exec cat {} \; | wc -l)
+  acars_num_msgs_past_hour=$(find /database -type f -name 'acars.*.json' -cmin -60 -exec cat {} \; | wc -l)
   if [[ "$acars_num_msgs_past_hour" -gt 0 ]]; then
       echo "$acars_num_msgs_past_hour ACARS messages received in past hour: HEALTHY"
   else
