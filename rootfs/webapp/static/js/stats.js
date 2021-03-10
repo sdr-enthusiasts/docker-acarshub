@@ -32,7 +32,7 @@ $(document).ready(function(){
 		// really has been received with the newer, better signal levels
 
 		for (let i in msg.levels) {
-			if(msg.levels[i].level != null && isFloat(msg.levels[i].level)) { 
+			if(msg.levels[i].level != null && isFloat(msg.levels[i].level)) {
 				input_labels.push(`${msg.levels[i].level}`);
 				input_data.push(msg.levels[i].count);
 			}
@@ -64,8 +64,12 @@ $(document).ready(function(){
 		var labels = [];
 		var alert_data = [];
 		for(let i in msg.data) {
-			labels.push(msg.data[i].term)
-			alert_data.push(msg.data[i].count);
+			// for now checking if count > 0 is a hack to get it to work
+			// ideally, it should list out 0 term items
+			if(msg.data[i].count > 0) {
+				labels.push(msg.data[i].term)
+				alert_data.push(msg.data[i].count);
+			}
 		}
 		var ctx = document.getElementById('alertterms').getContext('2d');
 		var chart = new Chart(ctx, {

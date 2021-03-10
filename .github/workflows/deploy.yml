@@ -47,6 +47,7 @@ jobs:
         name: Show version tag
         run: |
           echo "ACARS Hub Version: ${{ env.VERSION_TAG }}"
+          echo "ACARS Hub Docker Version: ${{ env.VERSION_TAG_DOCKER }}"
 
       # Set version tag in webapp
       - 
