@@ -395,8 +395,6 @@ function loop_array(input) {
     var html_output = "";
     
     for (var m in input) {
-        // close to working
-        //console.log(typeof(input[m]));
         if(typeof(input[m]) === "object") {
             html_output += loop_array(input[m]);
         } else {
@@ -406,9 +404,7 @@ function loop_array(input) {
                 html_output += input[m] + "<br>";
             } else if(m == "description") {
                 html_output += "<p>Description: " + input[m] + "</p>";
-            } /*else {
-                console.log(`Unknown item ${m} ${input[m]}`);
-            }*/
+            } 
         }
     }
 

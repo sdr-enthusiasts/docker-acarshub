@@ -235,8 +235,6 @@ $(document).ready(function(){
         'path': acars_path + 'socket.io',
       });
 
-      console.log(document.location.pathname.replace(/about|search|stats|status|alerts/gi, "") + (document.location.pathname.replace(/about|search|stats|status|alerts/gi, "").endsWith("/") ? "" : "/") + 'socket.io');
-
     // Grab the current cookie value for message filtering
     // If the cookie is found with a value we run filter_notext to set the proper visual elements/variables for the rest of the functions
     // We'll also re-write the cookie (or start a new one) with the current value
@@ -472,7 +470,6 @@ $(document).ready(function(){
                                     var decoded_msg = md.decode(msgs_received[index_new][j]);
                                     if(decoded_msg.decoded == true) {
                                         msgs_received[index_new][j]['decoded_msg'] = decoded_msg;
-                                        //console.log(msg.msghtml.decodedText);
                                     }
 
                                     if(matched.was_found && !msg.loading)

@@ -180,7 +180,6 @@ function update_prefix(prefix) {
 }
 
 function grab_images() {
-	console.log("Grabbing new stat images");
 	var onehour = document.getElementById('1hr');
 	onehour.src = `static/images/${image_prefix}1hour.png?rand=` + Math.random();
 

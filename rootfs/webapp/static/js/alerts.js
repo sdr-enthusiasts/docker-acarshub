@@ -299,7 +299,6 @@ function connection_status(connected=false) {
 } 
 
 function toggle_playsound(loading=false) {
-    console.log(`toggle_playsound initial state: ${play_sound}`);
     if(play_sound) {
         var id = document.getElementById("playsound_link");
         id.innerHTML = "";
@@ -312,16 +311,13 @@ function toggle_playsound(loading=false) {
         id.appendChild(txt);
     }
     play_sound = play_sound ? false : true;
-    console.log(`toggle_playsound final state: ${play_sound}`);
     Cookies.set('play_sound', play_sound == true ? "true" : "false", { expires: 365 });
-    console.log(`Cookie play_sound ${Cookies.get("play_sound")}`);
 
     if(!loading)
         sound_alert()
 }
 
 async function sound_alert() {
-    console.log(`play_sound status: ${play_sound}`)
     if(play_sound){
         try {
             await alert_sound.play();
