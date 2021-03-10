@@ -139,6 +139,13 @@ class messagesCountDropped(Messages):
     nonlogged_good = Column('good', Integer)
 
 
+class alertStats(Messages):
+    __tablename__ = 'alert_stats'
+    id = Column(Integer(), primary_key=True)
+    term = Column('term', String(32))
+    count = Column('count', Integer)
+
+
 # Class to store our messages
 
 
@@ -409,6 +416,22 @@ def add_message_from_json(message_type, message_from_json):
             else:
                 session_backup.add(messagesLevel(level=level, count=1))
 
+        if len(text) > 0 and acarshub_helpers.ALERT_STAT_TERMS:
+            for search_term in acarshub_helpers.ALERT_STAT_TERMS:
+                if text.find(search_term.upper()) != -1:
+                    found_term = session.query(alertStats).filter(alertStats.term == search_term.upper()).first()
+                    if found_term is not None:
+                        found_term.count += 1
+                    else:
+                        session.add(alertStats(term=search_term.upper(), count=1))
+                    session.commit()
+                    if backup:
+                        found_term_backup = session_backup.query(alertStats).filter(alertStats.term == search_term.upper()).first()
+                        if found_term_backup is not None:
+                            found_term_backup.count += 1
+                        else:
+                           session_backup.add(alertStats(term=search_term.upper(), count=1))
+                        session_backup.commit()
         # commit the db change and close the session
         session.commit()
         session.close()
@@ -678,8 +701,21 @@ def get_signal_levels():
             return [query_to_dict(d) for d in result]
 
         else:
-            return {}
+            return []
 
+    except Exception as e:
+        acarshub_helpers.acars_traceback(e, "database")
+
+
+def get_alert_counts():
+    try:
+        session = db_session()
+        result = session.query(alertStats).order_by(alertStats.count)
+
+        if result.count() > 0:
+            return [query_to_dict(d) for d in result]
+        else:
+            return []
     except Exception as e:
         acarshub_helpers.acars_traceback(e, "database")
 

@@ -16,6 +16,7 @@ FREQS_ACARS = ""
 FREQS_VDLM = ""
 DB_SAVE_DAYS = 7
 DB_BACKUP = ""
+ALERT_STAT_TERMS = []
 
 if os.getenv("DEBUG_LOGGING", default=False):
     DEBUG_LOGGING = True
@@ -79,6 +80,13 @@ if os.getenv("IATA_OVERRIDE", default=False):
 
 if os.getenv("DB_SAVE_DAYS", default=False):
     DB_SAVE_DAYS = int(os.getenv("DB_SAVE_DAYS"))
+
+if os.getenv("ALERT_STAT_TERMS", default=False):
+    ALERT_STAT_TERMS = os.getenv("ALERT_STAT_TERMS").split(",")
+else:
+    ALERT_STAT_TERMS = ['cop', 'police', 'authorities', 'chop', 'turbulence', 'turb',
+                        'fault', 'divert', 'mask', 'csr', 'agent', 'medical', 'security',
+                        'mayday', 'emergency', 'pan', 'red coat']
 
 
 def acars_traceback(e, source):

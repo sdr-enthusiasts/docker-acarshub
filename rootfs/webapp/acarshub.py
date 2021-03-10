@@ -341,3 +341,7 @@ def get_service_status():
     global stats
 
     return {"decoders": decoders, "servers": servers, "global": receivers, "feeders": feeders, "error_state": system_error, "stats": stats}
+
+
+def getAlerts():
+    return acarshub_db.get_alert_counts()

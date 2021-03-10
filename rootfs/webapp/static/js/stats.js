@@ -60,6 +60,38 @@ $(document).ready(function(){
 		});
 	});
 
+	socket.on('alert_terms', function(msg) {
+		var labels = [];
+		var alert_data = [];
+		for(let i in msg.data) {
+			labels.push(msg.data[i].term)
+			alert_data.push(msg.data[i].count);
+		}
+		var ctx = document.getElementById('alertterms').getContext('2d');
+		var chart = new Chart(ctx, {
+		    // The type of chart we want to create
+		    type: 'doughnut',
+			
+		    // The data for our dataset
+		    data: {
+		        labels: labels,
+		        datasets: [{
+		            label: 'Received Alert Terms',
+		            backgroundColor: palette('tol', alert_data.length).map(function(hex) {
+						return '#' + hex;
+					  }),
+		            //borderColor: 'rgb(0, 0, 0)',
+		            data: alert_data,
+		            //borderWidth: 1
+		        }]
+		    },
+
+		    // Configuration options go here
+		    options: {
+			  }
+		});
+	});
+
 	socket.on('freqs', function(msg) {
 		var html = "<table class=\"search\">";
 		html += "<thead><th><span class=\"menu_non_link\">Frequency</span></th><th><span class=\"menu_non_link\">Count</span></th><th><span class=\"menu_non_link\">Type</span></th></thead>"
