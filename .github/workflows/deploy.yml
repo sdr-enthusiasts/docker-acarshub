@@ -39,7 +39,8 @@ jobs:
       - 
         name: Get version tag from file
         run: |
-          echo "VERSION_TAG=$(cat ./version)" >> $GITHUB_ENV
+          echo "VERSION_TAG=$(sed '1!d' ./version)" >> $GITHUB_ENV
+          echo "VERSION_TAG_DOCKER=$(sed '2!d' ./version)" >> $GITHUB_ENV
 
       # Show version tag
       - 
@@ -135,7 +136,7 @@ jobs:
           no-cache: true
           platforms: linux/386,linux/amd64,linux/arm/v7,linux/arm/v6,linux/arm64
           push: ${{ env.PUSH }}
-          tags: ${{ env.REPO }}/${{ env.IMAGE }}:${{ env.VERSION_TAG }}
+          tags: ${{ env.REPO }}/${{ env.IMAGE }}:${{ env.VERSION_TAG_DOCKER }}
 
       # Patch dockerfile to remove healthcheck
       -
@@ -164,4 +165,4 @@ jobs:
           no-cache: true
           platforms: linux/386,linux/amd64,linux/arm/v7,linux/arm/v6,linux/arm64
           push: ${{ env.PUSH }}
-          tags: ${{ env.REPO }}/${{ env.IMAGE }}:${{ env.VERSION_TAG }}_nohealthcheck
+          tags: ${{ env.REPO }}/${{ env.IMAGE }}:${{ env.VERSION_TAG_DOCKER }}_nohealthcheck
