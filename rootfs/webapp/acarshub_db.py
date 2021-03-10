@@ -711,11 +711,26 @@ def get_alert_counts():
     try:
         session = db_session()
         result = session.query(alertStats).order_by(alertStats.count)
-
+        search_terms = [term for term in acarshub_helpers.ALERT_STAT_TERMS]
         if result.count() > 0:
-            return [query_to_dict(d) for d in result]
+            result_list = [query_to_dict(d) for d in result]
+
+            for term in search_terms:
+                found = False
+                for item in result_list:
+                    if item['term'] == term:
+                        found = True
+                        continue
+                if not found:
+                    result_list.append({"term": term, "count": 0})
+        
+            return result_list
         else:
-            return []
+            result_list = []
+
+            for term in search_terms:
+                result_list.append({"term": term, "count": 0})
+            return result_list
     except Exception as e:
         acarshub_helpers.acars_traceback(e, "database")
 
