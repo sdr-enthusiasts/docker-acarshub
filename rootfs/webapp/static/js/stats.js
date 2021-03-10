@@ -172,6 +172,7 @@ setInterval(function() {
 	grab_images();
 	grab_freqs();
 	grab_message_count();
+	grab_updated_graphs();
 }, 60000);
 
 function update_prefix(prefix) {
@@ -211,5 +212,9 @@ function grab_freqs() {
 
 function grab_message_count() {
 	socket.emit('count', {'count': true}, namespace='/stats');
+}
+
+function grab_updated_graphs() {
+	socket.emit('graphs', {'graphs': true}, namespace='/stats');
 }
 

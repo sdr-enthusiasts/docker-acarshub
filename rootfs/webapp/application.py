@@ -496,6 +496,12 @@ def request_count(message, namespace):
     socketio.emit('count', {'count': acarshub.acarshub_db.get_errors()}, to=requester,
                   namespace="/stats")
 
+
+@socketio.on('graphs', namespace='/stats')
+def request_graphs(message, namespace):
+    requester = request.sid
+    socketio.emit('alert_terms', {'data': acarshub.getAlerts()}, to=requester, namespace="/stats")
+
 # handle a query request from the browser
 
 
