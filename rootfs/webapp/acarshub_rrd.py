@@ -7,6 +7,7 @@ import os
 
 def update_db(vdlm=0, acars=0, error=0):
     import sys
+
     total = vdlm + acars
 
     try:
@@ -20,17 +21,21 @@ def create_db():
     try:
         if not os.path.exists("/run/acars/acarshub.rrd"):
             print("[rrdtool] creating the RRD Database")
-            rrdtool.create("/run/acars/acarshub.rrd",
-                           "--start", "N",
-                           "--step", "60",
-                           "DS:ACARS:GAUGE:120:U:U",
-                           "DS:VDLM:GAUGE:120:U:U",
-                           "DS:TOTAL:GAUGE:120:U:U",
-                           "DS:ERROR:GAUGE:120:U:U",
-                           "RRA:AVERAGE:0.5:1:1500",  # 25 hours at 1 minute reso
-                           "RRA:AVERAGE:0.5:5:8640",  # 1 month at 5 minute reso
-                           "RRA:AVERAGE:0.5:60:4320",  # 6 months at 1 hour reso
-                           "RRA:AVERAGE:0.5:360:4380")  # 3 year at 6 hour reso
+            rrdtool.create(
+                "/run/acars/acarshub.rrd",
+                "--start",
+                "N",
+                "--step",
+                "60",
+                "DS:ACARS:GAUGE:120:U:U",
+                "DS:VDLM:GAUGE:120:U:U",
+                "DS:TOTAL:GAUGE:120:U:U",
+                "DS:ERROR:GAUGE:120:U:U",
+                "RRA:AVERAGE:0.5:1:1500",  # 25 hours at 1 minute reso
+                "RRA:AVERAGE:0.5:5:8640",  # 1 month at 5 minute reso
+                "RRA:AVERAGE:0.5:60:4320",  # 6 months at 1 hour reso
+                "RRA:AVERAGE:0.5:360:4380",
+            )  # 3 year at 6 hour reso
     except Exception as e:
         acarshub_helpers.acars_traceback(e, "rrdtool")
     else:
@@ -38,10 +43,24 @@ def create_db():
 
 
 def update_graphs():
-    args = ["/webapp/static/images/1hour.png", "-a", "PNG", "--title", "1 Hour", "-w", "1000",
-            "-h", "200", "--start", "-1h", "--vertical-label", "Messages", "--slope-mode"]
-    args_all = []    # combined graph arguements
-    args_vdlm = []   # vdlm graph arguements
+    args = [
+        "/webapp/static/images/1hour.png",
+        "-a",
+        "PNG",
+        "--title",
+        "1 Hour",
+        "-w",
+        "1000",
+        "-h",
+        "200",
+        "--start",
+        "-1h",
+        "--vertical-label",
+        "Messages",
+        "--slope-mode",
+    ]
+    args_all = []  # combined graph arguements
+    args_vdlm = []  # vdlm graph arguements
     args_acars = []  # acars graph arguements
     args_error = []  # error graph arguements
 

@@ -5,9 +5,11 @@ import shutil
 import argparse
 import fileinput
 import subprocess
+from rtlsdr import RtlSdr
 from pprint import pprint
 
 gOpts = {}
+serial_ids = {}  # Dict of serial/ids for RTLSDRS connected to the system
 
 if os.getenv("SERVICES_PATH", default=False):
     servicesd_path = os.getenv("SERVICES_PATH")
@@ -24,6 +26,7 @@ def is_frequency_assigned(output_dict, freq):
 
 
 def generate_output_files(serials, decoder, freqs_string):
+    global serial_ids
     for serial in serials:
         freqs = ""
 
@@ -50,7 +53,7 @@ def generate_output_files(serials, decoder, freqs_string):
             splitGain = "-10"
         elif splitGain is not None and splitGain.startswith('A'):
             splitGain = splitGain.replace('A', '')
-        
+
         if decoder == "vdlm2dec" and splitGain is not None:
             splitGain = splitGain.replace('.', '')
         elif decoder == "acarsdec" and splitGain != "-10" and splitGain is not None and splitGain.find(".") == -1:
@@ -63,26 +66,25 @@ def generate_output_files(serials, decoder, freqs_string):
 
         # Else, look up device ID from serial
         else:
+            # # Prepare command line
+            # if os.getenv("QUIET_LOGS", False):
+            #     rtlSerialToDeviceIDArgs = ("/usr/local/bin/rtl_serial_to_deviceid.sh", "-s", splitSerial)
+            # else:
+            #     rtlSerialToDeviceIDArgs = ("/usr/local/bin/rtl_serial_to_deviceid.sh", "-v", "-s", splitSerial)
 
-            # Prepare command line
-            if os.getenv("QUIET_LOGS", False):
-                rtlSerialToDeviceIDArgs = ("/usr/local/bin/rtl_serial_to_deviceid.sh", "-s", splitSerial)
-            else:
-                rtlSerialToDeviceIDArgs = ("/usr/local/bin/rtl_serial_to_deviceid.sh", "-v", "-s", splitSerial)
-            
             # Prepare & run subprocess
-            rtlSerialToDeviceID = subprocess.Popen(
-                rtlSerialToDeviceIDArgs,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                )
-            rtlSerialToDeviceID.wait(timeout=10)
+            # rtlSerialToDeviceID = subprocess.Popen(
+            #     rtlSerialToDeviceIDArgs,
+            #     stdout=subprocess.PIPE,
+            #     stderr=subprocess.PIPE,
+            #     )
+            # rtlSerialToDeviceID.wait(timeout=10)
 
             # Capture output of subprocess
-            (rtlSerialToDeviceIDstdout, rtlSerialToDeviceIDstderr) = rtlSerialToDeviceID.communicate()
+            # (rtlSerialToDeviceIDstdout, rtlSerialToDeviceIDstderr) = rtlSerialToDeviceID.communicate()
 
             # So that healthcheck works right and system status will show an error we'll generate a fake startup file
-            if rtlSerialToDeviceID.returncode != 0:
+            if splitSerial not in serial_ids:
                 print(f"ERROR: SDR {splitSerial} could not be mapped")
                 path = servicesd_path + f"{decoder}-" + splitSerial
                 os.makedirs(path)
@@ -91,7 +93,7 @@ def generate_output_files(serials, decoder, freqs_string):
             # Set deviceID to whatever the script returned
             # strip() to remove the \n
             # decode() to remove the b'...'
-            deviceID = rtlSerialToDeviceIDstdout.strip().decode()
+            deviceID = serial_ids[splitSerial]
 
         if not path:
             path = servicesd_path + f"{decoder}-" + splitSerial
@@ -119,8 +121,8 @@ def generate_output_files(serials, decoder, freqs_string):
 def assign_freqs_to_serials(
     serials: list,
     freqs: list,
-    serials_used: list, 
-    bw: float = 2.0, 
+    serials_used: list,
+    bw: float = 2.0,
 ):
 
     # order frequencies lowest to highest
@@ -128,7 +130,7 @@ def assign_freqs_to_serials(
 
     # prepare output dictionary
     output = dict()
-    
+
     # for each SDR serial...
     #for item in [item for item in (results or [])]:
     for serial in [serial for serial in (serials or [])]:
@@ -146,7 +148,7 @@ def assign_freqs_to_serials(
             if serial not in output.keys():
                 output[serial] = list()
                 output[serial].append(freq)
-                continue    
+                continue
 
             # ensure the current frequency is within bandwidth range
             # casting to float just in case the input is a string...silly custom SDRs
@@ -203,10 +205,23 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    if not args.serials and not os.getenv("SERIAL_VDLM") and not os.getenv("SERIAL_ACARS"):
+    serial_numbers = RtlSdr.get_device_serial_addresses()  # get the serials from the systems
+
+    # First create the dict of serial/ids
+    print("Getting list of RTLSDR serial numbers and device IDs from the system")
+    for serial in serial_numbers:
+        print(f"Grabbing {serial} device ID from the system")
+        serial_ids[serial] = RtlSdr.get_device_index_by_serial(serial)
+        print(f"Found {serial} device ID: {serial_ids[serial]}")
+
+    if not args.serials and not os.getenv("SERIAL_VDLM") and not os.getenv("SERIAL_ACARS"):  # If no serials were passed in (booo) fall back to using device IDs
         print(f"No serials specified, assigning device ids starting with 0")
         args.serials = [str(e) for e in range(8)]
         gOpts['useids'] = True
+    else:  # Serials passed in, check to ensure they exist.
+        for serial in args.serial:
+            if serial not in serial_ids:
+                print(f"Warning! Serial {serial} was provided but not found by the system. Exiting startup")
 
     if args.freqs_acars:
         output_acars = assign_freqs_to_serials(
