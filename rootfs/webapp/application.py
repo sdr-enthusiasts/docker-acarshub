@@ -211,10 +211,7 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
 
     disconnected = True
 
-    receiver = socket.socket(
-        family=socket.AF_INET,
-        type=socket.SOCK_STREAM,
-    )
+    receiver = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
 
     # Run while requested...
     while not thread_message_listener_stop_event.isSet():
@@ -223,10 +220,7 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
 
         try:
             if disconnected:
-                receiver = socket.socket(
-                    family=socket.AF_INET,
-                    type=socket.SOCK_STREAM,
-                )
+                receiver = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
                 # Set socket timeout 1 seconds
                 receiver.settimeout(1)
 

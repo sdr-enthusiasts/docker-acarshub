@@ -24,7 +24,7 @@ $(document).ready(function(){
   socket_alerts.on('disconnect', function() {
     connection_status();
   });
-  
+
   socket_alerts.on('connect_error', function() {
       connection_status();
   });

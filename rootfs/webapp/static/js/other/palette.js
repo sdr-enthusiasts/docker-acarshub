@@ -81,21 +81,21 @@
  'use strict';
 
  var palette = (function() {
- 
+
    var proto = Array.prototype;
    var slice = function(arr, opt_begin, opt_end) {
      return proto.slice.apply(arr, proto.slice.call(arguments, 1));
    };
- 
+
    var extend = function(arr, arr2) {
      return proto.push.apply(arr, arr2);
    };
- 
+
    var function_type = typeof function() {};
- 
+
    var INF = 1000000000;  // As far as we're concerned, that's infinity. ;)
- 
- 
+
+
    /**
     * Generate a colour palette from given scheme.
     *
@@ -130,7 +130,7 @@
      if (number == 0) {
        return [];
      }
- 
+
      if (typeof scheme !== function_type) {
        var arr = palette.listSchemes(
            /** @type {string|palette.Palette} */ (scheme), number);
@@ -139,13 +139,13 @@
        }
        scheme = arr[(opt_index || 0) % arr.length];
      }
- 
+
      var args = slice(arguments, 2);
      args[0] = number;
      return scheme.apply(scheme, args);
    };
- 
- 
+
+
    /**
     * Returns a callable colour scheme object.
     *
@@ -175,19 +175,19 @@
       * @type {!Object<number, palette.Palette>}
       */
      var palettes = {};
- 
+
      /**
       * The biggest palette in palettes map.
       * @type {number}
       */
      var palettes_max = 0;
- 
+
      /**
       * The smallest palette in palettes map.
       * @type {number}
       */
      var palettes_min = INF;
- 
+
      var makeGenerator = function() {
        if (arguments.length <= 1) {
          return self.color_func.bind(self);
@@ -199,7 +199,7 @@
          };
        }
      };
- 
+
      /**
       * Generate a colour palette from the scheme.
       *
@@ -219,10 +219,10 @@
        if (!number) {
          return [];
        }
- 
+
        var _number = number;
        number = Math.abs(number);
- 
+
        if (number <= palettes_max) {
          for (var i = Math.max(number, palettes_min); !(i in palettes); ++i) {
            /* nop */
@@ -246,43 +246,43 @@
            colors.reverse();
          }
          return colors;
- 
+
        } else if (self.color_func) {
          return palette.generate(makeGenerator.apply(self, arguments),
                                  _number, 0, 1, self.color_func_cyclic);
- 
+
        } else {
          return null;
        }
      };
- 
+
      /**
       * The name of the palette.
       * @type {string}
       */
      self.scheme_name = name;
- 
+
      /**
       * A list of groups the palette belongs to.
       * @type {!Array<string>}
       */
      self.groups = opt_groups ?
        typeof opt_groups === 'string' ? [opt_groups] : opt_groups : [];
- 
+
      /**
       * The biggest palette this scheme can generate.
       * @type {number}
       */
      self.max = 0;
- 
+
      /**
       * The biggest palette this scheme can generate that is colour-blind
       * friendly.
       * @type {number}
       */
      self.cbf_max = INF;
- 
- 
+
+
      /**
       * Adds a colour palette to the colour scheme.
       *
@@ -302,7 +302,7 @@
          }
        }
      };
- 
+
      /**
       * Adds number of colour palettes to the colour scheme.
       *
@@ -323,7 +323,7 @@
        }
        self.cbf_max = Math.min(self.cbf_max, opt_cbf_max || 1);
      };
- 
+
      /**
       * Enable shrinking palettes taking head of the list of colours.
       *
@@ -379,7 +379,7 @@
          self.shrinking_takes_head = !!enabled;
        }
      };
- 
+
      /**
       * Sets a colour generation function of the colour scheme.
       *
@@ -411,7 +411,7 @@
          self.cbf_max = 1;
        }
      };
- 
+
      self.color = function(x, varargs) {
        if (self.color_func) {
          return self.color_func.apply(this, arguments);
@@ -419,11 +419,11 @@
          return null;
        }
      };
- 
+
      return self;
    };
- 
- 
+
+
    /**
     * Creates a new palette.Scheme and initialises it by calling addPalettes
     * method with the rest of the arguments.
@@ -448,8 +448,8 @@
      scheme.addPalettes.apply(scheme, slice(arguments, 2));
      return scheme;
    };
- 
- 
+
+
    /**
     * Creates a new palette.Scheme and initialises it by calling
     * setColorFunction method with the rest of the arguments.
@@ -472,8 +472,8 @@
      scheme.setColorFunction.apply(scheme, slice(arguments, 2));
      return scheme;
    };
- 
- 
+
+
    /**
     * A map of registered schemes.  Maps a scheme or group name to a list of
     * scheme objects.  Property name is either 'n-<name>' for single scheme
@@ -482,8 +482,8 @@
     * @type {!Object<string, !Array<!Object>>}
     */
    var registered_schemes = {};
- 
- 
+
+
    /**
     * Registers a new colour scheme.
     *
@@ -498,8 +498,8 @@
      (registered_schemes['g-all'] =
         registered_schemes['g-all'] || []).push(scheme);
    };
- 
- 
+
+
    /**
     * List all schemes that match given name and number of colours.
     *
@@ -610,7 +610,7 @@
      } else if (opt_number < 0) {
        opt_number = -opt_number;
      }
- 
+
      var ret = [];
      (typeof name === 'string' ? [name] : name).forEach(function(n) {
        var cbf = n.substring(n.length - 4) === '-cbf';
@@ -627,15 +627,15 @@
          }
        }
      });
- 
+
      ret.sort(function(a, b) {
        return a.scheme_name >= b.scheme_name ?
          a.scheme_name > b.scheme_name ? 1 : 0 : -1;
      });
      return ret;
    };
- 
- 
+
+
    /**
     * Generates a palette using given colour generating function.
     *
@@ -675,19 +675,19 @@
      if (Math.abs(number) < 1) {
        return [];
      }
- 
+
      opt_start = opt_start === void(0) ? 0 : opt_start;
      opt_end = opt_end === void(0) ? 1 : opt_end;
- 
+
      if (Math.abs(number) < 2) {
        return [color_func(opt_start)];
      }
- 
+
      var i = Math.abs(number);
      var x = opt_start;
      var ret = [];
      var step = (opt_end - opt_start) / (opt_cyclic ? i : (i - 1));
- 
+
      for (; --i >= 0; x += step) {
        ret.push(color_func(x));
      }
@@ -696,8 +696,8 @@
      }
      return ret;
    };
- 
- 
+
+
    /**
     * Clamps value to [0, 1] range.
     * @param {number} v Number to limit value of.
@@ -707,7 +707,7 @@
    var clamp = function(v) {
      return v > 0 ? (v < 1 ? v : 1) : 0;
    };
- 
+
    /**
     * Converts r, g, b triple into RRGGBB hex representation.
     * @param {number} r Red value of the colour in the range [0, 1].
@@ -721,7 +721,7 @@
        return v.length == 1 ? '0' + v : v;
      }).join('');
    };
- 
+
    /**
     * Converts a linear r, g, b triple into RRGGBB hex representation.
     * @param {number} r Linear red value of the colour in the range [0, 1].
@@ -742,7 +742,7 @@
        return v.length == 1 ? '0' + v : v;
      }).join('');
    };
- 
+
    /**
     * Converts an HSV colours to RRGGBB hex representation.
     * @param {number} h Hue in the range [0, 1].
@@ -765,23 +765,23 @@
      default: return palette.rgbColor(v, m, x);
      }
    };
- 
+
    palette.register(palette.Scheme.withColorFunction(
      'rainbow', 'qualitative', palette.hsvColor, false, true));
- 
+
    return palette;
  })();
- 
- 
+
+
  /** @typedef {function(number): string} */
  palette.ColorFunction;
- 
+
  /** @typedef {!Array<string>} */
  palette.Palette;
- 
+
  /** @typedef {!Object<number, palette.Palette>|!Array<palette.Palette>} */
  palette.PalettesList;
- 
+
  /**
   * @typedef {
   *   function(number, ...?): Array<string>|
@@ -797,14 +797,14 @@
   *     color: function(number, ...?): ?string}}
   */
  palette.SchemeType;
- 
- 
+
+
  /* mpn65 palette start here. ************************************************/
- 
+
  /* The ‘mpn65’ palette is designed for systems which show many graphs which
     don’t have custom colour palettes chosen by humans or if number of necessary
     colours isn’t know a priori. */
- 
+
  (function() {
    var scheme = palette.Scheme.fromPalettes('mpn65', 'qualitative', [[
      'ff0029', '377eb8', '66a61e', '984ea3', '00d2d5', 'ff7f00', 'af8d00',
@@ -821,13 +821,13 @@
    scheme.shrinkByTakingHead(true);
    palette.register(scheme);
  })();
- 
+
  /* Paul Tol's schemes start here. *******************************************/
  /* See http://www.sron.nl/~pault/ */
- 
+
  (function() {
    var rgb = palette.rgbColor;
- 
+
    /**
     * Calculates value of a polynomial at given point.
     * For example, poly(x, 1, 2, 3) calculates value of “1 + 2*x + 3*X²”.
@@ -843,7 +843,7 @@
      }
      return n;
    };
- 
+
    /**
     * Calculate approximate value of error function with maximum error of 0.0005.
     * See <https://en.wikipedia.org/wiki/Error_function>.
@@ -862,7 +862,7 @@
      y = 1 - 1 / y;
      return x < 0 ? -y : y;
    };
- 
+
    palette.register(palette.Scheme.fromPalettes('tol', 'qualitative', [
      ['4477aa'],
      ['4477aa', 'cc6677'],
@@ -882,7 +882,7 @@
      ['332288', '6699cc', '88ccee', '44aa99', '117733', '999933', 'ddcc77',
       '661100', 'cc6677', 'aa4466', '882255', 'aa4499']
    ], 12, 12));
- 
+
    /**
     * Calculates a colour along Paul Tol's sequential colours axis.
     * See <http://www.sron.nl/~pault/colourschemes.pdf> figure 7 and equation 1.
@@ -894,10 +894,10 @@
                 1.021 - 0.456 * (1 + erf((x - 0.527) / 0.376)),
                 1 - 0.493 * (1 + erf((x - 0.272) / 0.309)));
    };
- 
+
    palette.register(palette.Scheme.withColorFunction(
      'tol-sq', 'sequential', palette.tolSequentialColor, true));
- 
+
    /**
     * Calculates a colour along Paul Tol's diverging colours axis.
     * See <http://www.sron.nl/~pault/colourschemes.pdf> figure 8 and equation 2.
@@ -910,10 +910,10 @@
                 g * g,
                 1 / poly(x, 1.579, -4.03, 12.92, -31.4, 48.6, -23.36));
    };
- 
+
    palette.register(palette.Scheme.withColorFunction(
      'tol-dv', 'diverging', palette.tolDivergingColor, true));
- 
+
    /**
     * Calculates a colour along Paul Tol's rainbow colours axis.
     * See <http://www.sron.nl/~pault/colourschemes.pdf> figure 13 and equation 3.
@@ -926,15 +926,15 @@
                      40.634),
                 1 / poly(x, 1.97, 3.54, -68.5, 243, -297, 125));
    };
- 
+
    palette.register(palette.Scheme.withColorFunction(
      'tol-rainbow', 'qualitative', palette.tolRainbowColor, true));
  })();
- 
- 
+
+
  /* Solarized colour schemes start here. *************************************/
  /* See http://ethanschoonover.com/solarized */
- 
+
  (function() {
    /*
     * Those are not really designed to be used in graphs, but we're keeping
@@ -949,11 +949,11 @@
       '859900']
    ]));
  })();
- 
- 
+
+
  /* ColorBrewer colour schemes start here. ***********************************/
  /* See http://colorbrewer2.org/ */
- 
+
  (function() {
    var schemes = {
      YlGn: {
@@ -1487,7 +1487,7 @@
             'b3de69', 'fccde5', 'd9d9d9', 'bc80bd', 'ccebc5', 'ffed6f']
      }
    };
- 
+
    for (var name in schemes) {
      var scheme = schemes[name];
      scheme = palette.Scheme.fromPalettes(
@@ -1495,7 +1495,7 @@
      palette.register(scheme);
    }
  })();
- 
+
  if(typeof module === "object" && module.exports) {
    module.exports = palette
  }

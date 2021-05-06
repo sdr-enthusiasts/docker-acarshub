@@ -4,7 +4,7 @@ on:
 
   # Build and deploy the image on pushes to main branch
   push:
-    branches: 
+    branches:
       - main
     paths-ignore:
       - '**.md'
@@ -36,21 +36,21 @@ jobs:
       # git log -1 : get the latest commit
       # --format="%ct" : committer date, UNIX timestamp
       # Then using `date` to format to YYYYMMDD format
-      - 
+      -
         name: Get version tag from file
         run: |
           echo "VERSION_TAG=$(sed '1!d' ./version)" >> $GITHUB_ENV
           echo "VERSION_TAG_DOCKER=$(sed '2!d' ./version)" >> $GITHUB_ENV
 
       # Show version tag
-      - 
+      -
         name: Show version tag
         run: |
           echo "ACARS Hub Version: ${{ env.VERSION_TAG }}"
           echo "ACARS Hub Docker Version: ${{ env.VERSION_TAG_DOCKER }}"
 
       # Set version tag in webapp
-      - 
+      -
         name: Patch webapp with VERSION_TAG
         run: |
           sed -i 's/Pre-Release/ACARS Hub Version: ${{ env.VERSION_TAG }}/' ./rootfs/webapp/static/js/menu.js
@@ -62,7 +62,7 @@ jobs:
       # Hit an issue where arm builds would fail with cURL errors regarding intermediary certificates when downloading from github (ie: deploy-s6-overlay).
       # After many hours of troubleshooting, the workaround is to pre-load the image's rootfs with the CA certificates from the runner.
       # This problem may go away in future.
-      - 
+      -
         name: Copy CA Certificates from GitHub Runner to Image rootfs
         run: |
           ls -la /etc/ssl/certs/
@@ -71,7 +71,7 @@ jobs:
           cp --no-dereference /etc/ssl/certs/*.crt ./rootfs/etc/ssl/certs
           cp --no-dereference /etc/ssl/certs/*.pem ./rootfs/etc/ssl/certs
           cp --no-dereference /usr/share/ca-certificates/mozilla/*.crt ./rootfs/usr/share/ca-certificates/mozilla
-      
+
       # Set up QEMU for multi-arch builds
       -
         name: Set up QEMU
@@ -100,14 +100,14 @@ jobs:
       #  run: |
       #    mkdir acars-decoder-typescript-clone
 
-      - 
+      -
         name: "Patch airframesio/acars-decoder-typescript to run in browser (outside of nodejs)"
         working-directory: ./acars-decoder-typescript
         run: |
           sed -i '/"module": "commonjs",/d' tsconfig.json
 
       # Build build airframesio/acars-decoder-typescript
-      - 
+      -
         name: Build airframesio/acars-decoder-typescript
         working-directory: ./acars-decoder-typescript
         run: |
@@ -143,7 +143,7 @@ jobs:
       -
         name: Patch Dockerfile to remove healthcheck
         run: sed '/^HEALTHCHECK /d' < Dockerfile > Dockerfile.nohealthcheck
-      
+
       # Build "latest_nohealthcheck"
       -
         name: Build & Push - latest nohealthcheck
@@ -155,7 +155,7 @@ jobs:
           platforms: linux/386,linux/amd64,linux/arm/v7,linux/arm/v6,linux/arm64
           push: ${{ env.PUSH }}
           tags: ${{ env.REPO }}/${{ env.IMAGE }}:latest_nohealthcheck
-      
+
       # Build version specific _nohealthcheck
       -
         name: Build & Push - version specific nohealthcheck

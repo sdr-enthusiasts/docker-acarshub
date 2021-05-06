@@ -20,7 +20,7 @@ function get_pid_of_decoder {
 
   # Get DEVICE_ID
   eval "$(grep "DEVICE_ID=\"" "$service_dir"/run)"
-  
+
   # Get FREQS_VDLM
   eval "$(grep "FREQS_VDLM=\"" "$service_dir"/run)"
 
@@ -44,18 +44,18 @@ function get_pid_of_decoder {
 
   # Find the PID of the decoder based on command line
   process_pid=$(echo "$ps_output" | tr -s " " | cut -d " " -f 2)
-  
+
   # Return the process_pid
   echo "$process_pid"
-  
+
 }
 
 # ===== Check acarsdec & vdlm2dec processes =====
 
 # For each service...
-for service_dir in /etc/services.d/*; do 
+for service_dir in /etc/services.d/*; do
   service_name=$(basename "$service_dir")
-  
+
   # If the service is acarsdec-*...
   if [[ "$service_name" =~ acarsdec-.+ ]]; then
 
@@ -143,7 +143,7 @@ if [ -n "${ENABLE_VDLM}" ]; then
       echo "==== Checking vdlm2_feeder ====="
 
       vdlm2_pidof_vdlm2_feeder=$(pgrep -f 'socat -d TCP:127.0.0.1:15555 UDP:feed.acars.io:5555')
-      
+
       # Ensure TCP connection to vdlm2_server at 127.0.0.1:15555
       if ! check_tcp4_connection_established_for_pid "127.0.0.1" "ANY" "127.0.0.1" "15555" "${vdlm2_pidof_vdlm2_feeder}"; then
         echo "vdlm2_feeder (pid $vdlm2_pidof_vdlm2_feeder) not connected to vdlm2_server (pid $vdlm2_pidof_vdlm2_tcp_server) at 127.0.0.1:15555: UNHEALTHY"
@@ -204,7 +204,7 @@ if [ -n "${ENABLE_ACARS}" ]; then
     echo "acars_server TCP listening on port 15550 (pid $acars_pidof_acars_tcp_server): HEALTHY"
   fi
 
-  if [ -n "${ENABLE_WEB}" ]; then  
+  if [ -n "${ENABLE_WEB}" ]; then
     if ! netstat -anp | grep -P "tcp\s+\d+\s+\d+\s+127.0.0.1:[0-9]+\s+127.0.0.1:15550\s+ESTABLISHED\s+[0-9]+/python3" > /dev/null 2>&1; then
       echo "acars_server TCP4 connection between 127.0.0.1:ANY and 127.0.0.1:15550 for python3 established: FAIL"
       echo "acars_server TCP not connected to python server on port 15550: UNHEALTHY"
@@ -221,7 +221,7 @@ if [ -n "${ENABLE_ACARS}" ]; then
       echo "==== Checking acars_feeder ====="
 
       acars_pidof_acars_feeder=$(pgrep -f 'socat -d TCP:127.0.0.1:15550 UDP:feed.acars.io:5550')
-      
+
       # Ensure TCP connection to acars_server at 127.0.0.1:15550
       if ! check_tcp4_connection_established_for_pid "127.0.0.1" "ANY" "127.0.0.1" "15550" "${acars_pidof_acars_feeder}"; then
         echo "acars_feeder (pid $acars_pidof_acars_feeder) not connected to acars_server (pid $acars_pidof_acars_tcp_server) at 127.0.0.1:15550: UNHEALTHY"

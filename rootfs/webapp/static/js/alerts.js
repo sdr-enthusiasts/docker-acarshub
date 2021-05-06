@@ -40,7 +40,7 @@ $(document).ready(function() {
         // temporarily toggle the play_sound variable so we can set the UI correctly
         play_sound = play_sound ? false : true;
         toggle_playsound(true);
-        
+
         // Set the text areas to the values saved in the cookies
         document.getElementById("alert_text").value = Cookies.get("alert_text") ? Cookies.get("alert_text") : "";
         document.getElementById("alert_callsigns").value = Cookies.get("alert_callsigns") ? Cookies.get("alert_callsigns") : "";
@@ -168,7 +168,7 @@ function updateAlerts() {
 }
 
 function onInit() {
-    alerts = Cookies.get("alert_unread") ? Number(Cookies.get("alert_unread")) : 0;  
+    alerts = Cookies.get("alert_unread") ? Number(Cookies.get("alert_unread")) : 0;
     play_sound = Cookies.get("play_sound") == "true" ? true : false;
     Cookies.set('play_sound', play_sound == true ? "true" : "false", { expires: 365 });
 
@@ -296,7 +296,7 @@ function default_alert_values() {
 
 function connection_status(connected=false) {
     $('#disconnect').html(!connected ? ' | <strong><span class="red_body">DISCONNECTED FROM WEB SERVER' : "");
-} 
+}
 
 function toggle_playsound(loading=false) {
     if(play_sound) {

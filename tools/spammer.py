@@ -18,65 +18,63 @@ import json
 run = True
 
 while run:
-	try:
-		# load the messages to send
-		message_interval = int(sys.argv[2])
+    try:
+        # load the messages to send
+        message_interval = int(sys.argv[2])
 
-		if sys.argv[3] == "0":
-			random = False
-		else:
-			random = True
+        if sys.argv[3] == "0":
+            random = False
+        else:
+            random = True
 
-		with open(sys.argv[1], "r") as lines:
-			message = lines.readlines()
+        with open(sys.argv[1], "r") as lines:
+            message = lines.readlines()
 
-		receiver = socket.socket(
-		    family=socket.AF_INET,
-		    type=socket.SOCK_STREAM)
+        receiver = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
 
-		receiver.bind(('127.0.0.1', 15550))
-		print("Waiting for connection")
-		receiver.listen()
-		(clientConnected, clientAddress) = receiver.accept()
-		clientConnected.setblocking(0)
-		clientConnected.settimeout(1)
-		print("Connected")
-		index = 1
-		while True:
-		    # we will send a random message
-		    if random:
-		    	index = randint(0, len(message) - 1)
+        receiver.bind(("127.0.0.1", 15550))
+        print("Waiting for connection")
+        receiver.listen()
+        (clientConnected, clientAddress) = receiver.accept()
+        clientConnected.setblocking(0)
+        clientConnected.settimeout(1)
+        print("Connected")
+        index = 1
+        while True:
+            # we will send a random message
+            if random:
+                index = randint(0, len(message) - 1)
 
-		    try:
-		    	updated_message = json.loads(message[index])
-		    	updated_message['timestamp'] = time.time()
-		    	updated_message = json.dumps(updated_message);
-		    except socket.error as e:
-		    	receiver.close()
-		    except KeyboardInterrupt:
-		    	print("Exiting...")
-		    	receiver.close()
-		    	run = False
-		    except Exception as e:
-		    	print(e)
-		    	receiver.close()
-		    else:
-		    	clientConnected.send(updated_message.encode() + b'\n')
-		    	print("message sent")
-		    	if not random:
-		    		index += 1
-		    		if index >= len(message):
-		    			index = 1
-		    
-		    time.sleep(message_interval)
+            try:
+                updated_message = json.loads(message[index])
+                updated_message["timestamp"] = time.time()
+                updated_message = json.dumps(updated_message)
+            except socket.error as e:
+                receiver.close()
+            except KeyboardInterrupt:
+                print("Exiting...")
+                receiver.close()
+                run = False
+            except Exception as e:
+                print(e)
+                receiver.close()
+            else:
+                clientConnected.send(updated_message.encode() + b"\n")
+                print("message sent")
+                if not random:
+                    index += 1
+                    if index >= len(message):
+                        index = 1
 
-		receiver.close()
+            time.sleep(message_interval)
 
-	except KeyboardInterrupt:
-		print("Exiting...")
-		receiver.close()
-		run = False
-	except Exception as e:
-		print(e)
-		receiver.close()
-		time.sleep(1)
+        receiver.close()
+
+    except KeyboardInterrupt:
+        print("Exiting...")
+        receiver.close()
+        run = False
+    except Exception as e:
+        print(e)
+        receiver.close()
+        time.sleep(1)

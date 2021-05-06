@@ -22,7 +22,7 @@ function generate_menu(){
 
  	if(acars) {
  		text += "<p><a href=\"javascript:update_prefix('acars')\" id=\"pause_updates\" class=\"spread_text\">ACARS Graphs</a></p>";
- 	} 
+ 	}
 
  	if(vdlm) {
  		text += "<p><a href=\"javascript:update_prefix('vdlm')\" id=\"pause_updates\" class=\"spread_text\">VDLM Graphs</a></p>";

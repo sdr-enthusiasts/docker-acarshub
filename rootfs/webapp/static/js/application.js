@@ -308,7 +308,7 @@ $(document).ready(function(){
                 msg.msghtml.hasOwnProperty('libacars') || msg.msghtml.hasOwnProperty('dsta') || msg.msghtml.hasOwnProperty('depa') ||
                 msg.msghtml.hasOwnProperty('eta') || msg.msghtml.hasOwnProperty('gtout') || msg.msghtml.hasOwnProperty('gtin') ||
                 msg.msghtml.hasOwnProperty('wloff') || msg.msghtml.hasOwnProperty('wlin') || msg.msghtml.hasOwnProperty('lat') ||
-                msg.msghtml.hasOwnProperty('lon') || msg.msghtml.hasOwnProperty('alt'))) {   
+                msg.msghtml.hasOwnProperty('lon') || msg.msghtml.hasOwnProperty('alt'))) {
 
                 if(msg.msghtml.hasOwnProperty('text')) {
                     var decoded_msg = md.decode(msg.msghtml);
@@ -349,13 +349,13 @@ $(document).ready(function(){
                             found = true;
                             index_new = u;
                             z = msgs_received[u].length;
-                        } else if((msgs_received[u][z].hasOwnProperty('icao') && new_icao == msgs_received[u][z].icao) && 
+                        } else if((msgs_received[u][z].hasOwnProperty('icao') && new_icao == msgs_received[u][z].icao) &&
                             ((msgs_received[u][z].hasOwnProperty('tail') && msgs_received[u][z]['tail'] == new_tail) || !msgs_received[u][z].hasOwnProperty('tail')) &&
-                            ((msgs_received[u][z].hasOwnProperty('flight') && msgs_received[u][z]['flight'] == new_flight) || !msgs_received[u][z].hasOwnProperty('flight'))) { 
+                            ((msgs_received[u][z].hasOwnProperty('flight') && msgs_received[u][z]['flight'] == new_flight) || !msgs_received[u][z].hasOwnProperty('flight'))) {
                             found = true;
                             index_new = u;
                             z = msgs_received[u].length;
-                        } else if((msgs_received[u][z].hasOwnProperty('flight') && new_flight == msgs_received[u][z].flight) && 
+                        } else if((msgs_received[u][z].hasOwnProperty('flight') && new_flight == msgs_received[u][z].flight) &&
                             ((msgs_received[u][z].hasOwnProperty('icao') && msgs_received[u][z]['icao'] == new_icao) || !msgs_received[u][z].hasOwnProperty('icao')) &&
                             ((msgs_received[u][z].hasOwnProperty('tail') && msgs_received[u][z]['tail'] == new_tail) || !msgs_received[u][z].hasOwnProperty('tail'))) {
                             found = true;
@@ -385,7 +385,7 @@ $(document).ready(function(){
                                 (msgs_received[index_new][j]['data']     == msg.msghtml.data     || (!msgs_received[index_new][j].hasOwnProperty('data')     && !msg.msghtml.hasOwnProperty('data'))) &&
                                 (msgs_received[index_new][j]['libacars'] == msg.msghtml.libacars || (!msgs_received[index_new][j].hasOwnProperty('libacars') && !msg.msghtml.hasOwnProperty('libacars'))) &&
                                 (msgs_received[index_new][j]['dsta']     == msg.msghtml.dsta     || (!msgs_received[index_new][j].hasOwnProperty('dsta')     && !msg.msghtml.hasOwnProperty('dsta'))) &&
-                                (msgs_received[index_new][j]['depa']     == msg.msghtml.depa     || (!msgs_received[index_new][j].hasOwnProperty('depa')     && !msg.msghtml.hasOwnProperty('depa'))) && 
+                                (msgs_received[index_new][j]['depa']     == msg.msghtml.depa     || (!msgs_received[index_new][j].hasOwnProperty('depa')     && !msg.msghtml.hasOwnProperty('depa'))) &&
                                 (msgs_received[index_new][j]['eta']      == msg.msghtml.eta      || (!msgs_received[index_new][j].hasOwnProperty('eta')      && !msg.msghtml.hasOwnProperty('eta'))) &&
                                 (msgs_received[index_new][j]['gtout']    == msg.msghtml.gtout    || (!msgs_received[index_new][j].hasOwnProperty('gtout')    && !msg.msghtml.hasOwnProperty('gtout'))) &&
                                 (msgs_received[index_new][j]['gtin']     == msg.msghtml.gtin     || (!msgs_received[index_new][j].hasOwnProperty('gtin')     && !msg.msghtml.hasOwnProperty('gtin'))) &&
@@ -397,7 +397,7 @@ $(document).ready(function(){
 
                                 msgs_received[index_new][j]['timestamp'] = msg.msghtml.timestamp;
                                 if(msgs_received[index_new][j].hasOwnProperty("duplicates")) {
-                                    msgs_received[index_new][j]['duplicates']++;                 
+                                    msgs_received[index_new][j]['duplicates']++;
                                 }
                                 else {
                                     msgs_received[index_new][j]['duplicates'] = 1;
@@ -408,7 +408,7 @@ $(document).ready(function(){
                                 msgs_received[index_new][j]['text'] == msg.msghtml['text']) { // it's the same message
                                 msgs_received[index_new][j]['timestamp'] = msg.msghtml.timestamp;
                                 if(msgs_received[index_new][j].hasOwnProperty("duplicates")) {
-                                    msgs_received[index_new][j]['duplicates']++;                 
+                                    msgs_received[index_new][j]['duplicates']++;
                                 }
                                 else {
                                     msgs_received[index_new][j]['duplicates'] = 1;
@@ -450,10 +450,10 @@ $(document).ready(function(){
                                             }
                                         }
                                     }
-                                }                  
+                                }
 
                                 msgs_received[index_new][j]['timestamp'] = msg.msghtml.timestamp;
-                                
+
                                 if(add_multi) { // Multi-part message has been found
                                     if(msgs_received[index_new][j]['text'] && msg.msghtml.hasOwnProperty('text')) // If the multi-part parent has a text field and the found match has a text field, append
                                         msgs_received[index_new][j]['text'] += msg.msghtml.text;
@@ -524,4 +524,3 @@ $(document).ready(function(){
         }
     });
 });
-

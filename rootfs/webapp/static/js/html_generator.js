@@ -24,7 +24,7 @@ function display_messages(msgs_to_process, selected_tabs, live_page=false) {
 
             unique_id = sub_messages[sub_messages.length - 1]['uid']; // Set the UID to the oldest message
 
-            if(message_tab_splits.length > 0) { // Loop through the selected tabs on the page. If we find a match for the current UID we'll set the active tab to what has been selected               
+            if(message_tab_splits.length > 0) { // Loop through the selected tabs on the page. If we find a match for the current UID we'll set the active tab to what has been selected
                 for(var q = 0; q < message_tab_splits.length; q++) {
                     if(message_tab_splits[q].startsWith(unique_id.toString())) {
                         var split = message_tab_splits[q].split(";");
@@ -52,10 +52,10 @@ function display_messages(msgs_to_process, selected_tabs, live_page=false) {
 
                 msgs_string += '<div class = "tabinator">';
                 for(var j = 0; j < sub_messages.length; j++) { // Loop through all messages in the group to show all of the tabs
-                    var tab_uid = unique_id; 
+                    var tab_uid = unique_id;
 
                     tab_uid = sub_messages[j]['uid'];
-                    
+
                     // If there is no active tab set by the user we'll set the newest message to be active/checked
 
                     if(j == 0) { // Generate tabs for the nav left and right
@@ -238,7 +238,7 @@ function display_messages(msgs_to_process, selected_tabs, live_page=false) {
                 text = text.replace("\\r\\n", "<br>");
                 //html_output += "<p>";
                 html_output += "<table class=\"message\">";
-                
+
                 //html_output += "</p>";
                 if(message.hasOwnProperty("decodedText")) {
                     //html_output += "<p>";
@@ -290,7 +290,7 @@ function display_messages(msgs_to_process, selected_tabs, live_page=false) {
 
             if(message.hasOwnProperty("flight")) {
                 html_output += typeof message.matched_flight === "object" ? replace_text(message.matched_flight, message.flight) : message.flight;
-            }            
+            }
 
             if(message.hasOwnProperty("icao")) {
                 html_output += "ICAO: <strong>";
@@ -393,7 +393,7 @@ function replace_text(input, text) {
 
 function loop_array(input) {
     var html_output = "";
-    
+
     for (var m in input) {
         if(typeof(input[m]) === "object") {
             html_output += loop_array(input[m]);
@@ -404,7 +404,7 @@ function loop_array(input) {
                 html_output += input[m] + "<br>";
             } else if(m == "description") {
                 html_output += "<p>Description: " + input[m] + "</p>";
-            } 
+            }
         }
     }
 

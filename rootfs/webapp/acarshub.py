@@ -34,10 +34,7 @@ def libacars_formatted(libacars=None):
     html_output = "<p>Decoded:</p>"
     html_output += "<p>"
     html_output += "<pre>{libacars}</pre>".format(
-        libacars=pprint.pformat(
-            libacars,
-            indent=2,
-        )
+        libacars=pprint.pformat(libacars, indent=2)
     )
     html_output += "</p>"
 

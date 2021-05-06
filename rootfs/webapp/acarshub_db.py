@@ -65,9 +65,7 @@ freqs = []
 
 try:
     acarshub_helpers.log("Loading Airline Codes", "database")
-    f = open(
-        "data/airlines.json",
-    )
+    f = open("data/airlines.json")
     airlines = json.load(f)
     acarshub_helpers.log("Completed Loading Airline Codes", "database")
 except Exception as e:

@@ -75,7 +75,7 @@ $(document).ready(function(){
 		var chart = new Chart(ctx, {
 		    // The type of chart we want to create
 		    type: 'doughnut',
-			
+
 		    // The data for our dataset
 		    data: {
 		        labels: labels,
@@ -221,4 +221,3 @@ function grab_message_count() {
 function grab_updated_graphs() {
 	socket.emit('graphs', {'graphs': true}, namespace='/stats');
 }
-

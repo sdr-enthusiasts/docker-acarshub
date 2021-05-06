@@ -56,9 +56,9 @@ fi
 if (( aggregate_files > 1 )); then
     # combine the files
     cat /run/acars/vdlm_sorted.txt /run/acars/acars_sorted.txt > /run/acars/display.txt
-    # sort them by date stamp 
-    sort -V /run/acars/display.txt > /run/acars/display_sorted.txt 
-    
+    # sort them by date stamp
+    sort -V /run/acars/display.txt > /run/acars/display_sorted.txt
+
     # clean up the trash
     rm /run/acars/vdlm_sorted.txt
     rm /run/acars/acars_sorted.txt

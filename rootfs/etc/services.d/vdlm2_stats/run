@@ -35,7 +35,7 @@ if [[ -n "${ENABLE_VDLM}" ]]; then
     mv "/database/vdlm2.past5min.json" "/database/vdlm2.0.json" > /dev/null 2>&1 || true
 
   done
-  
+
 else
 
   # If here then VDLM2 is not enabled, sleep forever

@@ -40,7 +40,7 @@ if [[ -f $VDLM_PATH ]]; then
         if pgrep -x 'vdlm2dec' > /dev/null
         then
             echo "[logcheck] Stopping VDLM"
-            ps aux | pgrep -x 'vdlm2dec' | xargs kill 
+            ps aux | pgrep -x 'vdlm2dec' | xargs kill
         fi
 
         echo "[logcheck] Trimming vdlm.json"

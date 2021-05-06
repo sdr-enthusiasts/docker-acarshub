@@ -17,14 +17,14 @@ $(document).ready(function(){
     generate_menu();
     generate_footer();
     updateAlertCounter();
-    
+
     socket = io.connect(`${document.location.origin}/search`, {
         'path': acars_path + 'socket.io',
       });
 
     var msgs_received = [];
     var num_results = [];
-    
+
     // receive details from server
 
     // DB stats
@@ -86,7 +86,7 @@ $(document).ready(function(){
         // Show the results if the returned results match the current search string (in case user kept typing after search emmited)
         // or the user has executed a 'show all'
 
-        if(true) {            
+        if(true) {
             msgs_received.push(msg.msghtml);
             num_results.push(msg.num_results);
             for (var i = 0; i < msgs_received.length; i++){ // Loop through the received message blob.
@@ -164,7 +164,7 @@ async function delay_query(initial_query) {
     var old_search = current_search; // Save the old search term in a temp variable
     // Only execute the search query if the user is done typing. We track that by comparing the query we were asked to run
     // with what is currently in the text box
-    if(JSON.stringify(initial_query) == JSON.stringify(get_search_terms())) {  
+    if(JSON.stringify(initial_query) == JSON.stringify(get_search_terms())) {
         current_search = get_search_terms(); // update the global value for the current search
         if(!is_everything_blank() && JSON.stringify(current_search) != JSON.stringify(old_search)) { // Double check and ensure the search term is new and not blank. No sense hammering the DB to search for the same term
             // Reset status for various elements of the page to what we're doing now
