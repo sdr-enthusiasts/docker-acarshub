@@ -13,5 +13,5 @@
 
 ## CSS
 
-[bootstrap](maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css)
-[bootstrap map](maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css.map)
+[bootstrap 3.4.1](https://getbootstrap.com/docs/3.4/getting-started/)
+[bootstrap map (no longer used)](https://getbootstrap.com/docs/3.4/getting-started/)
