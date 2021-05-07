@@ -72,6 +72,11 @@ $(document).ready(function(){
 			}
 		}
 		var ctx = document.getElementById('alertterms').getContext('2d');
+		p = palette('tol', 12).map(function(hex) {
+			return '#' + hex;
+		  });
+
+
 		var chart = new Chart(ctx, {
 		    // The type of chart we want to create
 		    type: 'doughnut',
@@ -81,9 +86,7 @@ $(document).ready(function(){
 		        labels: labels,
 		        datasets: [{
 		            label: 'Received Alert Terms',
-		            backgroundColor: palette('tol', alert_data.length).map(function(hex) {
-						return '#' + hex;
-					  }),
+		            backgroundColor: p,
 		            //borderColor: 'rgb(0, 0, 0)',
 		            data: alert_data,
 		            //borderWidth: 1
