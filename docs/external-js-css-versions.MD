@@ -5,7 +5,7 @@
 [jquery 3.6.0](https://www.jsdelivr.com/package/npm/jquery)
 [socket.io 4.0.2](https://socket.io/docs/v4/client-installation/)
 [socket.io 4.0.2 map](https://socket.io/docs/v4/client-installation/)
-[js cookie](https://cdn.jsdelivr.net/npm/js-cookie@rc/dist/js.cookie.min.js)
+[js cookie v3.0.0-rc.1](https://cdn.jsdelivr.net/npm/js-cookie@rc/dist/js.cookie.min.js)
 [showdown](https://cdnjs.cloudflare.com/ajax/libs/showdown/1.9.1/showdown.min.js)
 [showdown map](https://cdnjs.cloudflare.com/ajax/libs/showdown/1.9.1/showdown.min.js.map)
 [chart](https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.min.js)
