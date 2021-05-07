@@ -579,7 +579,7 @@ def pruneOld():
     # Open session to db, run the query, and close session
     try:
         session = db_session()
-        result = session.query(messages.id).filter(messages.time <= epoch).delete()
+        result = session.query(messages).filter(messages.time <= epoch).delete()
         session.commit()
         acarshub_helpers.log(f"Pruned database of {result} records", "database")
         session.close()
