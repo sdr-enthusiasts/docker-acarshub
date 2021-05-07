@@ -2,7 +2,7 @@
 
 ## JavaScript
 
-[jquery](code.jquery.com/jquery-3.3.1.min.js)
+[jquery 3.6.0](https://www.jsdelivr.com/package/npm/jquery)
 [socket.io](https://cdnjs.cloudflare.com/ajax/libs/socket.io/3.1.0/socket.io.min.js)
 [socket.io map](https://cdnjs.cloudflare.com/ajax/libs/socket.io/3.1.0/socket.io.min.js.map)
 [js cookie](https://cdn.jsdelivr.net/npm/js-cookie@rc/dist/js.cookie.min.js)
