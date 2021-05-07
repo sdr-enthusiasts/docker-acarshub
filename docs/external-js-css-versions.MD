@@ -3,8 +3,8 @@
 ## JavaScript
 
 [jquery 3.6.0](https://www.jsdelivr.com/package/npm/jquery)
-[socket.io](https://cdnjs.cloudflare.com/ajax/libs/socket.io/3.1.0/socket.io.min.js)
-[socket.io map](https://cdnjs.cloudflare.com/ajax/libs/socket.io/3.1.0/socket.io.min.js.map)
+[socket.io 4.0.2](https://socket.io/docs/v4/client-installation/)
+[socket.io 4.0.2 map](https://socket.io/docs/v4/client-installation/)
 [js cookie](https://cdn.jsdelivr.net/npm/js-cookie@rc/dist/js.cookie.min.js)
 [showdown](https://cdnjs.cloudflare.com/ajax/libs/showdown/1.9.1/showdown.min.js)
 [showdown map](https://cdnjs.cloudflare.com/ajax/libs/showdown/1.9.1/showdown.min.js.map)
