@@ -229,7 +229,7 @@ if __name__ == "__main__":
     # First create the dict of serial/ids
     print("Getting list of RTLSDR serial numbers and device IDs from the system")
     for serial in serial_numbers:
-        print(f"Grabbing {serial} device ID from the system")
+        print(f"Grabbing the serial number {serial} device ID from the system")
         serial_ids[serial] = RtlSdr.get_device_index_by_serial(serial)
         print(f"Found {serial} device ID: {serial_ids[serial]}")
 
@@ -242,7 +242,7 @@ if __name__ == "__main__":
         args.serials = [str(e) for e in range(8)]
         gOpts["useids"] = True
     else:  # Serials passed in, check to ensure they exist.
-        for serial in args.serial:
+        for serial in [serial for serial in (args.serials or [])]:
             if serial not in serial_ids:
                 print(
                     f"Warning! Serial {serial} was provided but not found by the system. Exiting startup"
