@@ -209,7 +209,11 @@ def query_to_dict(obj):
         for field in [
             x
             for x in dir(obj)
-            if not x.startswith("_") and x != "metadata" and x is not None and x != ""
+            if not x.startswith("_")
+            and x != "metadata"
+            and x is not None
+            and x != ""
+            and x != "registry"
         ]:
             fields[field] = obj.__getattribute__(field)
         return fields
