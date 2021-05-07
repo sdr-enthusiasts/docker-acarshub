@@ -245,7 +245,7 @@ if __name__ == "__main__":
         gOpts["useids"] = True
     else:  # Serials passed in, check to ensure they exist.
         for serial in [serial for serial in (args.serials or [])]:
-            if serial not in serial_ids:
+            if serial.split(",")[0] not in serial_ids:
                 print(
                     f"Warning! Serial {serial} was provided but not found by the system. Exiting startup"
                 )
