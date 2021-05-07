@@ -8,7 +8,7 @@
 [js cookie v3.0.0-rc.1](https://cdn.jsdelivr.net/npm/js-cookie@rc/dist/js.cookie.min.js)
 [showdown 1.9.1](https://cdnjs.com/libraries/showdown)
 [showdown map 1.9.1](https://cdnjs.com/libraries/showdown)
-[chart](https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.min.js)
+[chart 3.2.1](https://www.jsdelivr.com/package/npm/chart.js)
 [palette.js](https://github.com/google/palette.js/blob/master/palette.js)
 
 ## CSS
