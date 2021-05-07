@@ -14,4 +14,4 @@
 ## CSS
 
 [bootstrap 3.4.1](https://getbootstrap.com/docs/3.4/getting-started/)
-[bootstrap map (no longer used)](https://getbootstrap.com/docs/3.4/getting-started/)
+[bootstrap map](https://getbootstrap.com/docs/3.4/getting-started/)
