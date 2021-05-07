@@ -105,7 +105,9 @@ def generate_output_files(serials, decoder, freqs_string):
             # Set deviceID to whatever the script returned
             # strip() to remove the \n
             # decode() to remove the b'...'
-            deviceID = serial_ids[splitSerial]
+            deviceID = str(
+                serial_ids[splitSerial]
+            )  # Casting as an str to keep the variable type consistent with all of the input possibilities
 
         if not path:
             path = servicesd_path + f"{decoder}-" + splitSerial
