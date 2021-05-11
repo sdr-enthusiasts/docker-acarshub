@@ -318,7 +318,9 @@ function match_alert(msg) {
   if (msg.msghtml.hasOwnProperty("text")) {
     for (var i = 0; i < alert_text.length; i++) {
       if (
-        msg.msghtml.text.toUpperCase().includes(alert_text[i].toUpperCase())
+        msg.msghtml.text
+          .toUpperCase()
+          .search(new RegExp("\\b" + alert_text[i].toUpperCase() + "\\b")) != -1
       ) {
         found = true;
         matched_text.push(alert_text[i]);
