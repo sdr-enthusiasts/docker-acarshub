@@ -230,23 +230,26 @@ def service_check():
     system_error = False
 
     for line in healthstatus.split("\n"):
-        match = re.search("(?:acarsdec|vdlm2dec)-\\d+", line)
+        match = re.search("(?:acarsdec|vdlm2dec)-.+ =", line)
         if match:
-            if match.group(0) not in decoders:
-                decoders[match.group(0)] = dict()
-            else:
-                key = match.group(0)
+            if match.group(0).strip(" =") not in decoders:
+                decoders[match.group(0).strip(" =")] = dict()
+                continue
+        else:
+            for decoder in decoders:
+                if line.find(decoder) != -1:
+                    if line.find(f"Decoder {decoder}") and line.endswith("UNHEALTHY"):
+                        decoders[decoder]["Status"] = "Bad"
+                        system_error = True
+                    elif line.find(f"Decoder {decoder}") == 0 and line.endswith(
+                        "HEALTHY"
+                    ):
+                        decoders[decoder]["Status"] = "Ok"
+                    elif line.find(f"Decoder {decoder}") == 0:
+                        system_error = True
+                        decoders[decoder]["Status"] = "Unknown"
 
-                if line.find(f"Decoder {key}") and line.endswith("UNHEALTHY"):
-                    decoders[key]["Status"] = "Bad"
-                    system_error = True
-                elif line.find(f"Decoder {key}") == 0 and line.endswith("HEALTHY"):
-                    decoders[key]["Status"] = "Ok"
-                elif line.find(f"Decoder {key}") == 0:
-                    system_error = True
-                    decoders[key]["Status"] = "Unknown"
-
-            continue
+                    continue
 
         match = re.search("^(?:acars|vdlm2)_server", line)
 
