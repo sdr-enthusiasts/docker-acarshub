@@ -5,3 +5,4 @@ sqlalchemy==1.4.13
 schedule==1.1.0
 rrdtool==0.1.15
 pyrtlsdr==0.2.92
+gunicorn[eventlet]==20.1.0

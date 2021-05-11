@@ -66,7 +66,7 @@ RUN set -x && \
     KEPT_PACKAGES+=(python3-pip) && \
     KEPT_PACKAGES+=(python3-setuptools) && \
     KEPT_PACKAGES+=(python3-wheel) && \
-    KEPT_PACKAGES+=(gunicorn3) && \
+    # KEPT_PACKAGES+=(gunicorn3) && \
     TEMP_PACKAGES+=(python3-dev) && \
     # process management
     KEPT_PACKAGES+=(procps) && \

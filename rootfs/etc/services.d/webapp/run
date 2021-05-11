@@ -34,7 +34,7 @@ if [ -n "${ENABLE_WEB}" ]; then
   pushd /webapp > /dev/null 2>&1 || exit 1
 
   # shellcheck disable=SC2016
-  stdbuf -o0 gunicorn3 \
+  stdbuf -o0 gunicorn \
       -b "0.0.0.0:80" \
       -w 1 \
       --no-sendfile \
