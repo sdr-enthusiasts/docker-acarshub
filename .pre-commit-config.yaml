@@ -27,3 +27,8 @@ repos:
             -   eslint@4.15.0
             -   eslint-config-google@0.7.1
             -   babel-eslint@6.1.2
+# -   repo: https://github.com/pre-commit/mirrors-csslint
+#     rev: 'v1.0.5'  # Use the sha / tag you want to point at
+#     hooks:
+#     -   id: csslint
+#         exclude: ^rootfs/webapp/static/css/other/
