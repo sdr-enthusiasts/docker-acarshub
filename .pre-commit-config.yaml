@@ -17,7 +17,7 @@ repos:
         types: [javascript]
         additional_dependencies:
         -   prettier@2.1.2
-        exclude: ^acars-decoder-typescript/
+        exclude: ^(rootfs/webapp/static/css/other/|acars-decoder-typescript/)
 -   repo: https://github.com/pre-commit/mirrors-eslint
     rev: v7.26.0
     hooks:
