@@ -557,6 +557,11 @@ def get_alerts(message, namespace):
         )
 
 
+@socketio.on("update_alerts", namespace="/alerts")
+def update_alerts(message, namespace):
+    acarshub.acarshub_db.set_alert_terms(message["terms"])
+
+
 @socketio.on("freqs", namespace="/stats")
 def request_freqs(message, namespace):
     requester = request.sid

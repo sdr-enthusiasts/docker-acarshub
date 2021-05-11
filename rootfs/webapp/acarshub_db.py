@@ -903,6 +903,33 @@ def get_alert_counts():
         acarshub_helpers.acars_traceback(e, "database")
 
 
+def set_alert_terms(terms=None):
+    if terms is None:
+        return
+    try:
+        session = db_session()
+        # we need to do two things. First is to loop through all of the terms we should be monitoring and make sure the db has them
+        # next is to loop through what is in the db and make sure it should still be there
+        for item in terms:
+            result = session.query(alertStats).filter(alertStats.term == item).count()
+            if result == 0:
+                session.add(alertStats(term=item, count=0))
+
+        result = session.query(alertStats).all()
+        for item in result:
+            if item.term not in terms:
+                drop = (
+                    session.query(alertStats)
+                    .filter(alertStats.term == item.term)
+                    .delete()
+                )
+
+        session.commit()
+        session.close()
+    except Exception as e:
+        acarshub_helpers.acars_traceback(e, "database")
+
+
 def init_database(backup_db=False):
     try:
         # We will pre-populate the count table if this is a new db

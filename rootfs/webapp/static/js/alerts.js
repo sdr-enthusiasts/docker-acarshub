@@ -219,6 +219,14 @@ function updateAlerts() {
     "alert_icao"
   ).value = combineArray(alert_icao).toUpperCase();
 
+  socket_alerts.emit(
+    "update_alerts",
+    {
+      terms: alert_text,
+    },
+    "/alerts"
+  );
+
   Cookies.set("alert_text", combineArray(alert_text), { expires: 365 });
   Cookies.set("alert_callsigns", combineArray(alert_callsigns), {
     expires: 365,
@@ -289,6 +297,14 @@ function onInit() {
   } else {
     alert_icao = [];
   }
+
+  socket_alerts.emit(
+    "update_alerts",
+    {
+      terms: alert_text,
+    },
+    "/alerts"
+  );
 
   Cookies.set("alert_text", combineArray(alert_text), { expires: 365 });
   Cookies.set("alert_callsigns", combineArray(alert_callsigns), {
