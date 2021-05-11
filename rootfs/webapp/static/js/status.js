@@ -69,7 +69,7 @@ function decode_status(status, decoders, servers, feeders, receivers, stats) {
   html_output += '<span class="monofont">';
   html_output += "System:".padEnd(55, ".");
   if (status) {
-    html_output += '<strong><span class="red">DEGRADED</span></strong>';
+    html_output += '<strong><span class="red_body">DEGRADED</span></strong>';
   } else {
     html_output += '<strong><span class="green">Ok</span></strong>';
   }
@@ -78,7 +78,7 @@ function decode_status(status, decoders, servers, feeders, receivers, stats) {
   keys_decoder.forEach((key, index) => {
     var sub_string = `SDR ${key}:`;
     html_output += `${sub_string.padEnd(55, ".")}<strong><span class=${
-      decoders[key].Status == "Ok" ? "green" : "red"
+      decoders[key].Status == "Ok" ? "green" : "red_body"
     }>${decoders[key].Status}</span></strong>`;
     html_output += "<br>";
   });
@@ -86,12 +86,12 @@ function decode_status(status, decoders, servers, feeders, receivers, stats) {
   keys_servers.forEach((key, index) => {
     var sub_string = `Internal Server ${key}:`;
     html_output += `${sub_string.padEnd(55, ".")}<strong><span class=${
-      servers[key].Status == "Ok" ? "green" : "red"
+      servers[key].Status == "Ok" ? "green" : "red_body"
     }>${servers[key].Status}</span></strong>`;
     html_output += "<br>";
     sub_string = `Internal Server ${key} to Python Connecton:`;
     html_output += `${sub_string.padEnd(55, ".")}<strong><span class=${
-      servers[key].Web == "Ok" ? "green" : "red"
+      servers[key].Web == "Ok" ? "green" : "red_body"
     }>${servers[key].Web}</span></strong>`;
     html_output += "<br>";
   });
@@ -99,7 +99,7 @@ function decode_status(status, decoders, servers, feeders, receivers, stats) {
   keys_stats.forEach((key, index) => {
     var sub_string = `Internal Stat Server ${key}:`;
     html_output += `${sub_string.padEnd(55, ".")}<strong><span class=${
-      stats[key].Status == "Ok" ? "green" : "red"
+      stats[key].Status == "Ok" ? "green" : "red_body"
     }>${stats[key].Status}</span></strong>`;
     html_output += "<br>";
   });
@@ -107,7 +107,7 @@ function decode_status(status, decoders, servers, feeders, receivers, stats) {
   keys_feeders.forEach((key, index) => {
     var sub_string = `Airframes.io Feeders ${key}:`;
     html_output += `${sub_string.padEnd(55, ".")}<strong><span class=${
-      feeders[key].Status == "Ok" ? "green" : "red"
+      feeders[key].Status == "Ok" ? "green" : "red_body"
     }>${feeders[key].Status}</span></strong>`;
     html_output += "<br>";
   });
@@ -116,7 +116,7 @@ function decode_status(status, decoders, servers, feeders, receivers, stats) {
     var sub_string = `${key} Receiving Messages:`;
     var class_string = "";
     if (receivers[key].Status == "Ok") class_string = '"green"';
-    else class_string = receivers[key].Status == "Bad" ? "red" : "orange";
+    else class_string = receivers[key].Status == "Bad" ? "red_body" : "orange";
 
     html_output += `${sub_string.padEnd(
       55,
