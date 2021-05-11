@@ -102,7 +102,7 @@ $(document).ready(function () {
     socket_alerts.on("system_status", function (msg) {
       if (msg.status.error_state == true) {
         $("#system_status").html(
-          `<a href="${acars_url}status">System Status: <span class="red">Error</span>`
+          `<a href="${acars_url}status">System Status: <span class="red_body">Error</span>`
         );
       } else {
         $("#system_status").html(
