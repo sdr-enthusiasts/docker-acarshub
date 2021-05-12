@@ -9,6 +9,7 @@ import urllib.request
 import acarshub_helpers
 
 groundStations = dict()
+alert_terms = list()
 
 # Download station IDs
 
@@ -201,6 +202,13 @@ if backup:
 
 # Class used to convert any search query objects to JSON
 
+session = db_session()
+terms = session.query(alertStats).all()
+
+for t in terms:
+    alert_terms.append(t.term)
+session.close()
+
 
 def query_to_dict(obj):
     if isinstance(obj.__class__, DeclarativeMeta):
@@ -222,6 +230,7 @@ def query_to_dict(obj):
 
 def add_message_from_json(message_type, message_from_json):
     global database
+    global alert_terms
     import json
 
     # message time
@@ -531,8 +540,8 @@ def add_message_from_json(message_type, message_from_json):
             else:
                 session_backup.add(messagesLevel(level=level, count=1))
 
-        if len(text) > 0 and acarshub_helpers.ALERT_STAT_TERMS:
-            for search_term in acarshub_helpers.ALERT_STAT_TERMS:
+        if len(text) > 0 and alert_terms:
+            for search_term in alert_terms:
                 if text.find(search_term.upper()) != -1:
                     found_term = (
                         session.query(alertStats)
@@ -648,14 +657,20 @@ def database_search(search_term, page=0):
         return [None, 50]
 
 
-def search_alerts(icao=None, tail=None, flight=None, text=None):
+def search_alerts(icao=None, tail=None, flight=None):
     result = None
-    if icao is not None or tail is not None or flight is not None or text is not None:
+    global alert_terms
+    if (
+        icao is not None
+        or tail is not None
+        or flight is not None
+        or alert_terms is not None
+    ):
         try:
             session = db_session()
             search_term = {
                 "icao": icao,
-                "msg_text": text,
+                "msg_text": alert_terms,
                 "flight": flight,
                 "tail": tail,
             }
@@ -684,7 +699,9 @@ def search_alerts(icao=None, tail=None, flight=None, text=None):
             return processed_results
         except Exception as e:
             acarshub_helpers.acars_traceback(e, "database")
+            return None
     else:
+        print("exiting")
         return None
 
 
@@ -879,11 +896,11 @@ def get_alert_counts():
     try:
         session = db_session()
         result = session.query(alertStats).order_by(alertStats.count)
-        search_terms = [term for term in acarshub_helpers.ALERT_STAT_TERMS]
+        global alert_terms
         if result.count() > 0:
             result_list = [query_to_dict(d) for d in result]
 
-            for term in search_terms:
+            for term in alert_terms:
                 found = False
                 for item in result_list:
                     if item["term"] == term:
@@ -896,7 +913,7 @@ def get_alert_counts():
         else:
             result_list = []
 
-            for term in search_terms:
+            for term in alert_terms:
                 result_list.append({"term": term, "count": 0})
             return result_list
     except Exception as e:
@@ -906,6 +923,8 @@ def get_alert_counts():
 def set_alert_terms(terms=None):
     if terms is None:
         return
+    global alert_terms
+    alert_terms = terms
     try:
         session = db_session()
         # we need to do two things. First is to loop through all of the terms we should be monitoring and make sure the db has them
@@ -928,6 +947,11 @@ def set_alert_terms(terms=None):
         session.close()
     except Exception as e:
         acarshub_helpers.acars_traceback(e, "database")
+
+
+def get_alert_terms():
+    global alert_terms
+    return alert_terms
 
 
 def init_database(backup_db=False):

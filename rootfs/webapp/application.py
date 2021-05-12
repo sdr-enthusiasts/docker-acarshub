@@ -476,6 +476,9 @@ def alert_connect():
     socketio.emit(
         "system_status", {"status": acarshub.get_service_status()}, namespace="/alerts"
     )
+    socketio.emit(
+        "terms", {"terms": acarshub.acarshub_db.get_alert_terms()}, namespace="/alerts"
+    )
     if not thread_alerts.is_alive():
         thread_alerts_stop_event.clear()
         thread_alerts = socketio.start_background_task(alert_handler)
@@ -541,7 +544,7 @@ def get_alerts(message, namespace):
     requester = request.sid
     results = acarshub.acarshub_db.search_alerts(
         icao=message["icao"],
-        text=message["text"],
+        # text=message["text"],
         flight=message["flight"],
         tail=message["tail"],
     )

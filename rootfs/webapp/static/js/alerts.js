@@ -47,6 +47,15 @@ $(document).ready(function () {
     path: acars_path + "socket.io",
   });
 
+  socket_alerts.on("terms", function (msg) {
+    alert_text = msg.terms;
+    if (acars_page == "/alerts") {
+      document.getElementById("alert_text").value = document.getElementById(
+        "alert_text"
+      ).value = combineArray(alert_text).toUpperCase();
+    }
+  });
+
   // Update the cookies so the expiration date pushes out in to the future
   // Also sets all of the user saved prefs
   onInit();
@@ -61,9 +70,9 @@ $(document).ready(function () {
     toggle_playsound(true);
 
     // Set the text areas to the values saved in the cookies
-    document.getElementById("alert_text").value = Cookies.get("alert_text")
-      ? Cookies.get("alert_text")
-      : "";
+    // document.getElementById("alert_text").value = Cookies.get("alert_text")
+    //   ? Cookies.get("alert_text")
+    //   : "";
     document.getElementById("alert_callsigns").value = Cookies.get(
       "alert_callsigns"
     )
@@ -80,7 +89,7 @@ $(document).ready(function () {
       "query",
       {
         icao: alert_icao.length > 0 ? alert_icao : null,
-        text: alert_text.length > 0 ? alert_text : null,
+        //text: alert_text.length > 0 ? alert_text : null,
         flight: alert_callsigns.length > 0 ? alert_callsigns : null,
         tail: alert_tail.length > 0 ? alert_tail : null,
       },
@@ -227,7 +236,7 @@ function updateAlerts() {
     "/alerts"
   );
 
-  Cookies.set("alert_text", combineArray(alert_text), { expires: 365 });
+  // Cookies.set("alert_text", combineArray(alert_text), { expires: 365 });
   Cookies.set("alert_callsigns", combineArray(alert_callsigns), {
     expires: 365,
   });
@@ -244,18 +253,18 @@ function onInit() {
     expires: 365,
   });
 
-  if (Cookies.get("alert_text") ? Cookies.get("alert_text") : "" > 0) {
-    var split = Cookies.get("alert_text").split(",");
-    for (var i = 0; i < split.length; i++) {
-      if (
-        split[i].trim().length > 0 &&
-        !alert_text.includes(split[i].trim().toUpperCase())
-      )
-        alert_text.push(split[i].toUpperCase());
-    }
-  } else {
-    alert_text = [];
-  }
+  // if (Cookies.get("alert_text") ? Cookies.get("alert_text") : "" > 0) {
+  //   var split = Cookies.get("alert_text").split(",");
+  //   for (var i = 0; i < split.length; i++) {
+  //     if (
+  //       split[i].trim().length > 0 &&
+  //       !alert_text.includes(split[i].trim().toUpperCase())
+  //     )
+  //       alert_text.push(split[i].toUpperCase());
+  //   }
+  // } else {
+  //   alert_text = [];
+  // }
 
   if (
     Cookies.get("alert_callsigns") ? Cookies.get("alert_callsigns") : "" > 0
@@ -298,15 +307,15 @@ function onInit() {
     alert_icao = [];
   }
 
-  socket_alerts.emit(
-    "update_alerts",
-    {
-      terms: alert_text,
-    },
-    "/alerts"
-  );
+  // socket_alerts.emit(
+  //   "update_alerts",
+  //   {
+  //     terms: alert_text,
+  //   },
+  //   "/alerts"
+  // );
 
-  Cookies.set("alert_text", combineArray(alert_text), { expires: 365 });
+  // Cookies.set("alert_text", combineArray(alert_text), { expires: 365 });
   Cookies.set("alert_callsigns", combineArray(alert_callsigns), {
     expires: 365,
   });
