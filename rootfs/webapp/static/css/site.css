@@ -784,3 +784,7 @@ li.img_box {
   border-right: 1px solid #3D3D3D;
   text-align:center;
 }
+
+canvas {
+  max-height: 400px;
+}
