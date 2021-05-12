@@ -92,7 +92,7 @@ $(document).ready(function () {
 
     chart_alerts = new Chart(ctx, {
       // The type of chart we want to create
-      type: "doughnut",
+      type: "bar",
 
       // The data for our dataset
       data: {
@@ -109,7 +109,23 @@ $(document).ready(function () {
       },
 
       // Configuration options go here
-      options: {},
+      options: {
+        plugins: {
+          datalabels: {
+            backgroundColor: function (context) {
+              return context.dataset.backgroundColor;
+            },
+            borderRadius: 4,
+            color: "white",
+            font: {
+              weight: "bold",
+            },
+            formatter: Math.round,
+            padding: 6,
+          },
+        },
+      },
+      plugins: [ChartDataLabels],
     });
   });
 
