@@ -349,7 +349,7 @@ function display_messages(msgs_to_process, selected_tabs, live_page = false) {
             : `${message["icao"]}`;
         html_output +=
           message.hasOwnProperty("icao_hex") &&
-          !typeof message.matched_icao === "object"
+          typeof message.matched_icao === "undefined"
             ? `/${message["icao_hex"]}`
             : "";
         html_output +=
