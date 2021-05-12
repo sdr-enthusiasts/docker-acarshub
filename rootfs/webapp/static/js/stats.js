@@ -8,6 +8,9 @@ var acars_path = document.location.pathname.replace(
 acars_path += acars_path.endsWith("/") ? "" : "/";
 var acars_url = document.location.origin + acars_path;
 
+var chart_alerts;
+var chart_signals;
+
 $(document).ready(function () {
   generate_menu();
   generate_footer();
@@ -40,8 +43,11 @@ $(document).ready(function () {
         input_data.push(msg.levels[i].count);
       }
     }
+    if (chart_signals) {
+      chart_signals.destroy();
+    }
     var ctx = document.getElementById("signallevels").getContext("2d");
-    var chart = new Chart(ctx, {
+    chart_signals = new Chart(ctx, {
       // The type of chart we want to create
       type: "line",
 
@@ -76,12 +82,15 @@ $(document).ready(function () {
         alert_data.push(msg.data[i].count);
       }
     }
+    if (chart_alerts) {
+      chart_alerts.destroy();
+    }
     var ctx = document.getElementById("alertterms").getContext("2d");
     p = palette("tol", 12).map(function (hex) {
       return "#" + hex;
     });
 
-    var chart = new Chart(ctx, {
+    chart_alerts = new Chart(ctx, {
       // The type of chart we want to create
       type: "doughnut",
 
