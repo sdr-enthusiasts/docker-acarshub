@@ -1,7 +1,7 @@
 repos:
 -   repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v2.3.0
-    exclude: ^acars-decoder-typescript/
+    exclude: ^(rootfs/webapp/static/css/other/|acars-decoder-typescript/|rootfs/webapp/static/js/other/)
     hooks:
     -   id: check-yaml
     -   id: end-of-file-fixer
@@ -17,7 +17,7 @@ repos:
         types: [javascript]
         additional_dependencies:
         -   prettier@2.1.2
-        exclude: ^(rootfs/webapp/static/css/other/|acars-decoder-typescript/)
+        exclude: ^(rootfs/webapp/static/css/other/|acars-decoder-typescript/|rootfs/webapp/static/js/other/)
 -   repo: https://github.com/pre-commit/mirrors-eslint
     rev: v7.26.0
     hooks:
@@ -32,3 +32,9 @@ repos:
 #     hooks:
 #     -   id: csslint
 #         exclude: ^rootfs/webapp/static/css/other/
+- repo: https://github.com/codespell-project/codespell.git
+  rev: 'v2.0.0' # Use the sha / tag you want to point at
+  hooks:
+    -   id: codespell
+        types: [text]
+        exclude: ^(rootfs/webapp/static/css/other/|acars-decoder-typescript/|rootfs/webapp/static/js/other/|.+\.json)

@@ -7,15 +7,15 @@ mkdir -p /run/acars/
 FREQ_CMD=()
 
 if [ -n "${GAIN}" ]; then
-	echo "WARNING. GAIN ENV variable is depricated. Please see the github page for updated usage."
+	echo "WARNING. GAIN ENV variable is deprecated. Please see the github page for updated usage."
 fi
 
 if [ -n "$SERIAL_ACARS" ]; then
-	echo "WARNING: SERIAL_ACARS is depricated. If you are using this in conjunction with SERIAL unexpected results will happen. Please see the github readme for update useage."
+	echo "WARNING: SERIAL_ACARS is deprecated. If you are using this in conjunction with SERIAL unexpected results will happen. Please see the github readme for update usage."
 fi
 
 if [ -n "$SERIAL_VDLM" ]; then
-	echo "WARNING: SERIAL_VDLM is depricated. If you are using this in conjunction with SERIAL unexpected results will happen. Please see the github readme for update useage."
+	echo "WARNING: SERIAL_VDLM is deprecated. If you are using this in conjunction with SERIAL unexpected results will happen. Please see the github readme for update usage."
 fi
 
 if [ -n "${ENABLE_ACARS}" ]; then

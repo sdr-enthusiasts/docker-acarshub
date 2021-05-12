@@ -5,7 +5,7 @@
 
 function display_messages(msgs_to_process, selected_tabs, live_page = false) {
   var msgs_string = ""; // output string that gets returned
-  var message_tab_splits = ""; // variable to save the splitted output of selected_tabs
+  var message_tab_splits = ""; // variable to save the split output of selected_tabs
   if (selected_tabs) message_tab_splits = selected_tabs.split(","); // the individual tabs with selections
 
   for (var i = 0; i < msgs_to_process.length; i++) {
@@ -119,7 +119,7 @@ function display_messages(msgs_to_process, selected_tabs, live_page = false) {
       // Now we'll generate the HTML for each message in the group
       var html_output = "";
       if (sub_messages.length > 1) {
-        // If we have multiple messages in this group we need to set the non-selected tabs to invisiable
+        // If we have multiple messages in this group we need to set the non-selected tabs to invisible
         var tab_uid = unique_id;
 
         tab_uid = sub_messages[u]["uid"]; // UID for the current message
@@ -172,7 +172,7 @@ function display_messages(msgs_to_process, selected_tabs, live_page = false) {
       html_output += '<tr><td colspan="2">';
 
       // Special keys used by the JS files calling this function
-      // Duplicates is used to indicate the number of copies recieved for this message
+      // Duplicates is used to indicate the number of copies received for this message
       // msgno_parts is the list of MSGID fields used to construct the multi-part message
 
       if (message.hasOwnProperty("duplicates")) {

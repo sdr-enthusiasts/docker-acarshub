@@ -294,7 +294,7 @@ if __name__ == "__main__":
         print(log_str[: len(log_str) - 1], file=sys.stderr)
         sys.exit(1)
 
-    # if output.keys() doesnt contain all of serials then error (leftover serials)
+    # if output.keys() doesn't contain all of serials then error (leftover serials)
     serials_unused = list()
     for serial in [serial for serial in (args.serials or [])]:
         if serial not in output_acars.keys() and serial not in output_vdlm.keys():
@@ -360,7 +360,7 @@ if __name__ == "__main__":
         else:
             break
 
-    # Okay, lets test for depricated SERIAL_ACARS/SERIAL_VDLM
+    # Okay, lets test for deprecatedSERIAL_ACARS/SERIAL_VDLM
 
     if os.getenv("SERIAL_ACARS", default=False):
         old_serial = os.getenv("SERIAL_ACARS")

@@ -59,10 +59,10 @@ def update_graphs():
         "Messages",
         "--slope-mode",
     ]
-    args_all = []  # combined graph arguements
-    args_vdlm = []  # vdlm graph arguements
-    args_acars = []  # acars graph arguements
-    args_error = []  # error graph arguements
+    args_all = []  # combined graph arguments
+    args_vdlm = []  # vdlm graph arguments
+    args_acars = []  # acars graph arguments
+    args_error = []  # error graph arguments
 
     if acarshub_helpers.ENABLE_ACARS:
         args_all.append("DEF:messages-acars=/run/acars/acarshub.rrd:ACARS:AVERAGE")

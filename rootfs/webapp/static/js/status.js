@@ -89,7 +89,7 @@ function decode_status(status, decoders, servers, feeders, receivers, stats) {
       servers[key].Status == "Ok" ? "green" : "red_body"
     }>${servers[key].Status}</span></strong>`;
     html_output += "<br>";
-    sub_string = `Internal Server ${key} to Python Connecton:`;
+    sub_string = `Internal Server ${key} to Python Connection:`;
     html_output += `${sub_string.padEnd(55, ".")}<strong><span class=${
       servers[key].Web == "Ok" ? "green" : "red_body"
     }>${servers[key].Web}</span></strong>`;

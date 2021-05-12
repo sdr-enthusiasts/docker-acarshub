@@ -253,7 +253,7 @@ $(document).ready(function () {
     Cookies.set("filter", "true", { expires: 365 });
     filter_notext();
   } else {
-    text_filter = true; // temparily flip the value so we can run the filter_notext() function and set the proper CSS
+    text_filter = true; // temporarily flip the value so we can run the filter_notext() function and set the proper CSS
     Cookies.set("filter", "false", { expires: 365 });
     filter_notext();
   }

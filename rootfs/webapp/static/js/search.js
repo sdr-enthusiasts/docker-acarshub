@@ -97,7 +97,7 @@ $(document).ready(function () {
 
     var results = []; // temp variable to store the JSON formatted JS object
 
-    // Show the results if the returned results match the current search string (in case user kept typing after search emmited)
+    // Show the results if the returned results match the current search string (in case user kept typing after search emitted)
     // or the user has executed a 'show all'
 
     if (true) {
