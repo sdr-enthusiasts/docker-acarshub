@@ -388,7 +388,7 @@ function display_messages(msgs_to_process, selected_tabs, live_page = false) {
 
       if (message.hasOwnProperty("ack")) {
         if (!message["ack"])
-          html_output += `<span class=\"wrapper\">A: <strong>${message["ack"]}</strong><span class=\"tooltip\">Acknolwedgement</span></span> `;
+          html_output += `<span class=\"wrapper\">A: <strong>${message["ack"]}</strong><span class=\"tooltip\">Acknowledgement</span></span> `;
       }
 
       if (message.hasOwnProperty("mode")) {
