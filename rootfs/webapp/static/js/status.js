@@ -113,7 +113,7 @@ function decode_status(status, decoders, servers, feeders, receivers, stats) {
   });
 
   keys_receivers.forEach((key, index) => {
-    var sub_string = `${key} Receiving Messages:`;
+    var sub_string = `${key} Received ${receivers[key].Count} Messages In the Last Hour:`;
     var class_string = "";
     if (receivers[key].Status == "Ok") class_string = '"green"';
     else class_string = receivers[key].Status == "Bad" ? "red_body" : "orange";

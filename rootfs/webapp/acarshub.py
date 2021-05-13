@@ -281,6 +281,7 @@ def service_check():
         if match:
             if line.find("ACARS") != -1 and "ACARS" not in receivers:
                 receivers["ACARS"] = dict()
+                receivers["ACARS"]["Count"] = line.split(" ")[0]
                 if line.endswith("UNHEALTHY"):
                     if time.time() - start_time > 300.0:
                         system_error = True
@@ -294,6 +295,7 @@ def service_check():
                     receivers["ACARS"]["Status"] = "Unknown"
             if line.find("VDLM2") != -1 and "VDLM2" not in receivers:
                 receivers["VDLM2"] = dict()
+                receivers["VDLM2"]["Count"] = line.split(" ")[0]
                 if line.endswith("UNHEALTHY"):
                     if time.time() - start_time > 300.0:
                         system_error = True
