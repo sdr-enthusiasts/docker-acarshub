@@ -7,6 +7,7 @@ from sqlalchemy.ext.declarative import DeclarativeMeta
 import json
 import urllib.request
 import acarshub_helpers
+import re
 
 groundStations = dict()
 alert_terms = list()
@@ -542,7 +543,8 @@ def add_message_from_json(message_type, message_from_json):
 
         if len(text) > 0 and alert_terms:
             for search_term in alert_terms:
-                if text.find(search_term.upper()) != -1:
+                if re.findall(r"\b{}\b".format(search_term), text):
+                    print("found")
                     found_term = (
                         session.query(alertStats)
                         .filter(alertStats.term == search_term.upper())
