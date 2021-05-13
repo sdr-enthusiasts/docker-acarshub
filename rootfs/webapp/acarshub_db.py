@@ -194,6 +194,46 @@ class messages(Messages):
     level = Column("level", String(32), nullable=False)
 
 
+# class to save messages that matched an alert
+class messages_saved(Messages):
+    __tablename__ = "messages_saved"
+    id = Column(Integer, primary_key=True)
+    # ACARS or VDLM
+    message_type = Column("message_type", String(32), nullable=False)
+    # message time
+    time = Column("msg_time", String(32), nullable=False)
+    station_id = Column("station_id", String(32), nullable=False)
+    toaddr = Column("toaddr", String(32), nullable=False)
+    fromaddr = Column("fromaddr", String(32), nullable=False)
+    depa = Column("depa", String(32), index=True, nullable=False)
+    dsta = Column("dsta", String(32), index=True, nullable=False)
+    eta = Column("eta", String(32), nullable=False)
+    gtout = Column("gtout", String(32), nullable=False)
+    gtin = Column("gtin", String(32), nullable=False)
+    wloff = Column("wloff", String(32), nullable=False)
+    wlin = Column("wlin", String(32), nullable=False)
+    lat = Column("lat", String(32), nullable=False)
+    lon = Column("lon", String(32), nullable=False)
+    alt = Column("alt", String(32), nullable=False)
+    text = Column("msg_text", Text, index=True, nullable=False)
+    tail = Column("tail", String(32), index=True, nullable=False)
+    flight = Column("flight", String(32), index=True, nullable=False)
+    icao = Column("icao", String(32), index=True, nullable=False)
+    freq = Column("freq", String(32), index=True, nullable=False)
+    ack = Column("ack", String(32), nullable=False)
+    mode = Column("mode", String(32), nullable=False)
+    label = Column("label", String(32), index=True, nullable=False)
+    block_id = Column("block_id", String(32), nullable=False)
+    msgno = Column("msgno", String(32), index=True, nullable=False)
+    is_response = Column("is_response", String(32), nullable=False)
+    is_onground = Column("is_onground", String(32), nullable=False)
+    error = Column("error", String(32), nullable=False)
+    libacars = Column("libacars", Text, nullable=False)
+    level = Column("level", String(32), nullable=False)
+    term = Column("term", String(32), nullable=False)
+    type_of_match = Column("type_of_match", String(32), nullable=False)
+
+
 # Now we've created the classes for the database, we'll associate the class with the database and create any missing tables
 
 
@@ -207,7 +247,11 @@ session = db_session()
 terms = session.query(alertStats).all()
 
 for t in terms:
-    alert_terms.append(t.term)
+    if t.term.isupper() == False:
+        t.term = t.term.upper()
+
+    alert_terms.append(t.term.upper())
+session.commit()
 session.close()
 
 
@@ -544,7 +588,7 @@ def add_message_from_json(message_type, message_from_json):
         if len(text) > 0 and alert_terms:
             for search_term in alert_terms:
                 if re.findall(r"\b{}\b".format(search_term), text):
-                    print("found")
+
                     found_term = (
                         session.query(alertStats)
                         .filter(alertStats.term == search_term.upper())
@@ -554,6 +598,43 @@ def add_message_from_json(message_type, message_from_json):
                         found_term.count += 1
                     else:
                         session.add(alertStats(term=search_term.upper(), count=1))
+
+                    session.add(
+                        messages_saved(
+                            message_type=message_type,
+                            time=time,
+                            station_id=station_id,
+                            toaddr=toaddr,
+                            fromaddr=fromaddr,
+                            depa=depa,
+                            dsta=dsta,
+                            eta=eta,
+                            gtout=gtout,
+                            gtin=gtin,
+                            wloff=wloff,
+                            wlin=wlin,
+                            lat=lat,
+                            lon=lon,
+                            alt=alt,
+                            text=text,
+                            tail=tail,
+                            flight=flight,
+                            icao=icao,
+                            freq=freq,
+                            ack=ack,
+                            mode=mode,
+                            label=label,
+                            block_id=block_id,
+                            msgno=msgno,
+                            is_response=is_response,
+                            is_onground=is_onground,
+                            error=error,
+                            libacars=libacars,
+                            level=level,
+                            term=search_term.upper(),
+                            type_of_match="text",
+                        )
+                    )
                     session.commit()
                     if backup:
                         found_term_backup = (
@@ -567,6 +648,42 @@ def add_message_from_json(message_type, message_from_json):
                             session_backup.add(
                                 alertStats(term=search_term.upper(), count=1)
                             )
+                        session_backup.add(
+                            messages_saved(
+                                message_type=message_type,
+                                time=time,
+                                station_id=station_id,
+                                toaddr=toaddr,
+                                fromaddr=fromaddr,
+                                depa=depa,
+                                dsta=dsta,
+                                eta=eta,
+                                gtout=gtout,
+                                gtin=gtin,
+                                wloff=wloff,
+                                wlin=wlin,
+                                lat=lat,
+                                lon=lon,
+                                alt=alt,
+                                text=text,
+                                tail=tail,
+                                flight=flight,
+                                icao=icao,
+                                freq=freq,
+                                ack=ack,
+                                mode=mode,
+                                label=label,
+                                block_id=block_id,
+                                msgno=msgno,
+                                is_response=is_response,
+                                is_onground=is_onground,
+                                error=error,
+                                libacars=libacars,
+                                level=level,
+                                term=search_term.upper(),
+                                type_of_match="text",
+                            )
+                        )
                         session_backup.commit()
         # commit the db change and close the session
         session.commit()
@@ -942,6 +1059,11 @@ def set_alert_terms(terms=None):
                 drop = (
                     session.query(alertStats)
                     .filter(alertStats.term == item.term)
+                    .delete()
+                )
+                drop_term = (
+                    session.query(messages_saved)
+                    .filter(messages_saved.term == item.term)
                     .delete()
                 )
 

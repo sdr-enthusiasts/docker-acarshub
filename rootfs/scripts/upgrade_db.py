@@ -308,6 +308,16 @@ def create_db(cur):
                 "is_onground"	VARCHAR(32) NOT NULL, "error"	VARCHAR(32) NOT NULL, "libacars"	TEXT NOT NULL,"level"	VARCHAR(32) NOT NULL, \
                 PRIMARY KEY("id"));'
     )
+    cur.execute(
+        'CREATE TABLE "messages_saved" ("id"	INTEGER NOT NULL, "message_type"	VARCHAR(32) NOT NULL, "msg_time"	VARCHAR(32) NOT NULL, \
+                "station_id"	VARCHAR(32) NOT NULL, "toaddr"	VARCHAR(32) NOT NULL, "fromaddr"	VARCHAR(32) NOT NULL, "depa"	VARCHAR(32) NOT NULL, \
+                "dsta"	VARCHAR(32) NOT NULL, "eta"	VARCHAR(32) NOT NULL, "gtout"	VARCHAR(32) NOT NULL, "gtin"	VARCHAR(32) NOT NULL, "wloff"	VARCHAR(32) NOT NULL, \
+	            "wlin"	VARCHAR(32) NOT NULL, "lat"	VARCHAR(32) NOT NULL, "lon"	VARCHAR(32) NOT NULL, "alt"	VARCHAR(32) NOT NULL, "msg_text"	TEXT NOT NULL,\
+                "tail"	VARCHAR(32) NOT NULL, "flight"	VARCHAR(32) NOT NULL, "icao"	VARCHAR(32) NOT NULL, "freq"	VARCHAR(32) NOT NULL, "ack"	VARCHAR(32) NOT NULL, \
+	            "mode"	VARCHAR(32) NOT NULL, "label"	VARCHAR(32) NOT NULL, "block_id"	VARCHAR(32) NOT NULL, "msgno"	VARCHAR(32) NOT NULL, "is_response"	VARCHAR(32) NOT NULL, \
+                "is_onground"	VARCHAR(32) NOT NULL, "error"	VARCHAR(32) NOT NULL, "libacars"	TEXT NOT NULL, "level"	VARCHAR(32) NOT NULL, "term"	VARCHAR(32) NOT NULL, \
+                "type_of_match"	VARCHAR(32) NOT NULL, PRIMARY KEY("id"));'
+    )
 
 
 try:
