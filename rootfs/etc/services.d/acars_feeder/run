@@ -3,7 +3,7 @@
 
 if [ -n "${ENABLE_ACARS}" ]; then
   if [ -n "${FEED}" ]; then
-    
+
     set -o pipefail
 
     # Require that acars_server is running

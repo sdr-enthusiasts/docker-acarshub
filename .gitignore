@@ -95,6 +95,7 @@ Dockerfile.local
 *.db-journal
 rootfs/webapp/static/airframes-acars-decoder
 rootfs/webapp/static/js/Dockerfile.testing
+airframes-acars-decoder/
 Dockerfile.testing
 build-acg.sh
 rootfs/webapp/static/images/6months.png

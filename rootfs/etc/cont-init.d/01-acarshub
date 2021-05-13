@@ -7,15 +7,15 @@ mkdir -p /run/acars/
 FREQ_CMD=()
 
 if [ -n "${GAIN}" ]; then
-	echo "WARNING. GAIN ENV variable is depricated. Please see the github page for updated usage."
+	echo "WARNING. GAIN ENV variable is deprecated. Please see the github page for updated usage."
 fi
 
 if [ -n "$SERIAL_ACARS" ]; then
-	echo "WARNING: SERIAL_ACARS is depricated. If you are using this in conjunction with SERIAL unexpected results will happen. Please see the github readme for update useage."
+	echo "WARNING: SERIAL_ACARS is deprecated. If you are using this in conjunction with SERIAL unexpected results will happen. Please see the github readme for update usage."
 fi
 
 if [ -n "$SERIAL_VDLM" ]; then
-	echo "WARNING: SERIAL_VDLM is depricated. If you are using this in conjunction with SERIAL unexpected results will happen. Please see the github readme for update useage."
+	echo "WARNING: SERIAL_VDLM is deprecated. If you are using this in conjunction with SERIAL unexpected results will happen. Please see the github readme for update usage."
 fi
 
 if [ -n "${ENABLE_ACARS}" ]; then
@@ -53,6 +53,11 @@ if [ -n "${SERIAL}" ]; then
 fi
 
 echo "Generating decoder startup files"
+
+# Just in case the container was docker restart we should clean up some dirs if present
+# thanks k1xt
+
+rm -rf /etc/services.d/acarsdec-* /etc/services.d/vdlm2dec-* >/dev/null 2>&1
 
 pushd ../../scripts > /dev/null 2>&1 || exit 1
 python3 assign_frequencies.py "${FREQ_CMD[@]}"

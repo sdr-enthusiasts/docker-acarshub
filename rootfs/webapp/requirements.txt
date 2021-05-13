@@ -1,6 +1,8 @@
 Flask==1.1.2
 Flask-SocketIO==5.0.1
-eventlet==0.30.2
-sqlalchemy==1.3.23
-schedule==1.0.0
+eventlet==0.30.2  # This version HAS to be pinned here until gunicorn fixes their bug with >= 0.31.0
+sqlalchemy==1.4.13
+schedule==1.1.0
 rrdtool==0.1.15
+pyrtlsdr==0.2.92
+gunicorn[eventlet]==20.1.0

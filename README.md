@@ -80,7 +80,7 @@ services:
       - /database:exec,size=64M
 ```
 
-Please keep in mind that this is a barebones configuration to get you started. You will **certainly** need to set addtional configuration options to get ACARS Hub working in the way you want.
+Please keep in mind that this is a barebones configuration to get you started. You will **certainly** need to set additional configuration options to get ACARS Hub working in the way you want.
 
 ## Ports
 
@@ -92,7 +92,7 @@ It is recommended to give the container a volume so that database and message da
 
 The database is used on the website for various functions. It is automatically pruned of data older than 7 days old.
 
-The reality of running any kind of database on a Pi is that database performance can be lacking. I have found that a database that has seven days worth of data, on a moderately busy site like mine, can reach file sizes of 17Mb and have 112,000+ rows of data. In other words, an awful lot of data, and with database sizes that large you will see a degredation in search performance. Queries might take a few seconds to execute after you type your search terms on the seach page.
+The reality of running any kind of database on a Pi is that database performance can be lacking. I have found that a database that has seven days worth of data, on a moderately busy site like mine, can reach file sizes of 17Mb and have 112,000+ rows of data. In other words, an awful lot of data, and with database sizes that large you will see a degredation in search performance. Queries might take a few seconds to execute after you type your search terms on the search page.
 
 If you set `DB_SAVEALL` to a blank value you will gain back a lot of performance because messages with no informational value won't be stored. The trade-off in disabling saving all messages means you won't have all messages logged which may or may not be important to you.
 
@@ -114,7 +114,6 @@ There are quite a few configuration options this container can accept.
 | `DB_BACKUP` | If you want to run a second database for backup purposes set this value to a [SQL Alchemy formatted URL](https://docs.sqlalchemy.org/en/13/core/engines.html#database-urls). See the link for supported DB types. This database will have to be managed by you, as ACARS Hub will only ever write incoming data to it. | No | Blank |
 | `IATA_OVERRIDE` | Override or add any custom IATA codes. Used for the web front end to show proper callsigns; See [below](#the-fix) on formatting and [more details](#A-note-about-data-sources-used-for-the-web-site) why this might be necessary.| No | Blank |
 | `TAR1090_URL` | Flights where the container is able to, it will generate a link to a tar1090 instance so that you can see the position of the aircraft that generated the message. By default, it will link to [ADSB Exchange](https://www.adsbexchange.com), but if desired, you can set the URL to be a local tar1090 instance. | No | Blank |
-| `ALERT_STAT_TERMS` | ACARS Hub can track the number of times a list of terms appears in messages, and then display them on the stats page. Set this value to a comma separated list of terms you wish to monitor. **Please note this is separate to the `Alert` web page search terms!!** | No | `cop,police,authorities,chop,turbulence,turb,fault,divert,mask,csr,agent,medical,security,mayday,emergency,pan,red coat` |
 
 Please note that for `TAR1090_URL` the required format is `http[s]://**HOSTNAME**` only. So if your tar1090 instance is at IP address `192.168.31.10` with no SSL, the TAR1090_URL would look like `http://192.168.31.10`
 
@@ -140,7 +139,7 @@ Please note that for `TAR1090_URL` the required format is `http[s]://**HOSTNAME*
 |----------|-------------|---------|--------|
 | `BYPASS_SDR_CHECK` | If you experience issues with ACARS Hub failing to start because it cannot find your SDRs based on their serial, set this to any non-blank value to force it to bypass the check. Depending on the reason ACARS Hub could not map a serial to an SDR is because there is a problem with the SDR, and as a result ACARS Hub still won't start up properly, but there are cases where it might. It is suggested you also replace the serial number in Method 1 or 2 below with the device index (found via `rtl_test`). | No | Blank |
 
-You have two options that can be used interchangably to assign RTLSDR devices in the container. The first method is most likely what most users will want
+You have two options that can be used interchangeably to assign RTLSDR devices in the container. The first method is most likely what most users will want
 
 #### Method 1: Auto-assignment of SDRs
 
@@ -185,7 +184,7 @@ If you have more than one SDR being auto-assigned (NOT APPLICABLE to Method 2 ab
 
 Example: `SERIAL=00012095,,28.0,;00012507,2,A460`
 
-* The ACARS Decoder supports `AGC/Automatic Gain Control`. To enable, prepend the gain value with an `A`. Additonally, you will need to set the gain value for VDLM. See below.
+* The ACARS Decoder supports `AGC/Automatic Gain Control`. To enable, prepend the gain value with an `A`. Additionally, you will need to set the gain value for VDLM. See below.
 * If you are not using ACG and wish to set the gain manually, use dBm format: `28.0`
 * If you are using Auto-Assignment of the SDRs and wish to use ACG if the decoder is being used for ACARS, but want a specific value for VDLM, pre-pend the value with an `A`: `A46.0`
 * For the sample rate, use `192` for `2.4 MS/s` and `160` for `2.0MS/s` (default)
@@ -223,7 +222,7 @@ In order to make the website more usable, I have included a database used by the
 
 My observations are US centric, but from what I have seen there are "errors" you might notice in the converted callsigns.
 
-* US Airlines that have aquired airlines as part of mergers (for instance, American Airlines/AA/AAL, who has, among others, merged with America West/US/AWE) would show up as their legacy callsign if the aircraft being picked up was part of the airline that was merged in to the bigger airline. I've selectively fixed some of these errors because the IATA code of the legacy airline was not in use by anyone else.
+* US Airlines that have acquired airlines as part of mergers (for instance, American Airlines/AA/AAL, who has, among others, merged with America West/US/AWE) would show up as their legacy callsign if the aircraft being picked up was part of the airline that was merged in to the bigger airline. I've selectively fixed some of these errors because the IATA code of the legacy airline was not in use by anyone else.
 
 * Some airlines (UPS and FedEx, particularlly, among others) don't use their designated IATA callsigns period, or seem to be using contracted planes which are using an alternative two letter airline code in their message.
 

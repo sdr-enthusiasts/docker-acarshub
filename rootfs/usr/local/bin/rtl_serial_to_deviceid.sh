@@ -55,7 +55,7 @@ fi
 RTL_TEST_OUTPUT=$(timeout 1s rtl_test -d 0 2>&1 | grep -P '^\s+\d+:\s+\S+?,\s+\S+?,\s+SN:\s+\S+?\s*$' || true)
 IFS=$'\n'
 for RTL_TEST_OUTPUT_LINE in $RTL_TEST_OUTPUT; do
-  
+
   # Unset variables in case any regexes fail
   unset RTL_DEVICE_ID RTL_DEVICE_MAKE RTL_DEVICE_MODEL RTL_DEVICE_SERIAL
 
@@ -87,7 +87,7 @@ if [[ -n "$OUTPUT_DEVICE_ID" ]]; then
         log "WARNING: The device $OUTPUT_DEVICE_ID is in use"
         exit 0
       fi
-    
+
     # Exit ok if device is free
     else
       exit 0

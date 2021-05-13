@@ -118,7 +118,7 @@ ol>li {
 td {
   padding: 7px;
 }
-hr { 
+hr {
   display: block;
   margin-top: 0.5em;
   margin-bottom: 0.5em;
@@ -303,7 +303,7 @@ label {
 }
 #shadow {
 box-shadow: 2px 2px 2px 1px rgba(0, 0, 0, 0.2);
-}      
+}
 .wrapper {
   text-transform: uppercase;
   cursor: help;
@@ -504,7 +504,7 @@ ul.primary li:last-child a {
 
 ul.primary li a:hover {
   color: #000;
-  transition: all 0.25s ease-in; 
+  transition: all 0.25s ease-in;
 }
 
 /* subs */
@@ -526,7 +526,7 @@ ul.sub li a {
   border-right: none;
   color: #000;
   padding: 15px 0px;
-  
+
 }
 
 ul.sub li:last-child a {
@@ -553,22 +553,22 @@ ul.primary li:hover a {
 
 ul.primary li:hover > a{
   color: #000;
-} 
+}
 
 @media only screen and (max-width: 600px) {
   .decor {
     padding: 3px;
   }
-  
+
   .wrap {
     width: 100%;
     margin-top: 0px;
   }
-  
+
    li {
     float: none;
   }
-  
+
   ul.primary li:hover a {
     background: none;
     color: #8B8B8B;
@@ -580,20 +580,20 @@ ul.primary li:hover > a{
     background: #272727;
     color: #fff;
   }
-  
+
   ul.sub {
-    display: block;  
+    display: block;
     position: static;
     box-shadow: none;
     width: 100%;
   }
-  
+
   ul.sub li a {
     background: #272727;
     border: none;
     color: #8B8B8B;
   }
-  
+
   ul.sub li a:hover {
     color: #ccc;
     background: none;
@@ -614,9 +614,9 @@ input[type='checkbox'] {
   display: block;
   text-transform: uppercase;
   text-align: left;
-  color: #1496bb; 
-  background: transparent; 
-  cursor: pointer; 
+  color: #1496bb;
+  background: transparent;
+  cursor: pointer;
   transition: all 0.25s ease-out;
   font-weight: normal;
 }
@@ -626,9 +626,9 @@ input[type='checkbox'] {
 }
 
 .lbl-toggle::before {
-  content: ' '; 
-  display: inline-block; 
-  border-top: 5px solid transparent; 
+  content: ' ';
+  display: inline-block;
+  border-top: 5px solid transparent;
   border-bottom: 5px solid transparent;
   border-left: 5px solid currentColor;
   vertical-align: middle;
@@ -666,8 +666,8 @@ input[type='checkbox'] {
   overflow: scroll;
 }
 
-.collapsible-content p { 
-  margin-bottom: 30px; 
+.collapsible-content p {
+  margin-bottom: 30px;
 }
 
 /* message tabs */
@@ -783,4 +783,8 @@ li.img_box {
   padding-bottom: 0px;
   border-right: 1px solid #3D3D3D;
   text-align:center;
+}
+
+canvas {
+  max-height: 400px;
 }

@@ -16,7 +16,7 @@ ENV BRANCH_RTLSDR="ed0317e6a58c098874ac58b769cf2e609c18d9a5" \
     ENABLE_WEB="true" \
     QUIET_LOGS="" \
     DB_SAVEALL="true"
-    
+
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 # Copy needs to be prior to any curl/wget so SSL certs from GitHub runner are loaded
@@ -66,7 +66,7 @@ RUN set -x && \
     KEPT_PACKAGES+=(python3-pip) && \
     KEPT_PACKAGES+=(python3-setuptools) && \
     KEPT_PACKAGES+=(python3-wheel) && \
-    KEPT_PACKAGES+=(gunicorn3) && \
+    # KEPT_PACKAGES+=(gunicorn3) && \
     TEMP_PACKAGES+=(python3-dev) && \
     # process management
     KEPT_PACKAGES+=(procps) && \
@@ -143,7 +143,7 @@ RUN set -x && \
     # extract airframes-acars-decoder package to /webapp/static/airframes-acars-decoder
     mkdir -p /src/airframes-acars-decoder && \
     tar xvf /src/acars-decoder-typescript.tgz -C /src/airframes-acars-decoder && \
-    mkdir -p /webapp/static/airframes-acars-decoder && \ 
+    mkdir -p /webapp/static/airframes-acars-decoder && \
     mv -v /src/airframes-acars-decoder/package/dist/* /webapp/static/airframes-acars-decoder/ && \
     # patch airframes-acars-decoder package so imports work
     find /webapp/static/airframes-acars-decoder -type f -iname '*.js' -exec sed -i """/import .* from '.*';/ s/';/.js';/""" {} \; && \
@@ -166,7 +166,7 @@ RUN set -x && \
     # Clean up
     apt-get remove -y ${TEMP_PACKAGES[@]} && \
     apt-get autoremove -y && \
-    rm -rf /src/* /tmp/* /var/lib/apt/lists/* 
+    rm -rf /src/* /tmp/* /var/lib/apt/lists/*
 
 ENTRYPOINT [ "/init" ]
 

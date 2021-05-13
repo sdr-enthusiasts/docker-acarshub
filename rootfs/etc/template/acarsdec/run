@@ -15,7 +15,7 @@ RTLMULT=""
 if [ -z "$GAIN" ]; then
     GAIN="-10"
 fi
-	
+
 ACARS_CMD=("-g" "$GAIN" "-i" "$STATION_ID_ACARS")
 
 if [ -n "${PPM}" ]; then
@@ -39,7 +39,7 @@ ACARS_CMD+=("-j" '127.0.0.1:5550')
 
 # Specify device ID
 if [ -n "${DEVICE_ID}" ]; then
-	ACARS_CMD+=("-r" "$DEVICE_ID") 
+	ACARS_CMD+=("-r" "$DEVICE_ID")
 else
 	echo "[acarsdec] No serial number / device index set. Using device index 0. If also running VDLM decoding one of these processes will fail. To fix, set SERIAL_ACARS and SERIAL_VDLM"
 	ACARS_CMD+=("-r" "0")

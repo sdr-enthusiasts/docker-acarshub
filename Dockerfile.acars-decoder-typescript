@@ -5,7 +5,7 @@ FROM node:latest AS acars-decoder-typescript-builder
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-# Temorarily not using the subtree until we figure out the cloning issue
+# Temporarily not using the subtree until we figure out the cloning issue
 # Instead, going to clone the remote repo
 COPY acars-decoder-typescript/ /src/acars-decoder-typescript/
 
