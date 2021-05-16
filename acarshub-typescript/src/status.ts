@@ -1,13 +1,13 @@
 import { connection_status, match_alert, sound_alert, updateAlertCounter } from "./alerts.js"
 import { generate_menu, generate_footer } from "./menu.js"
 
-var socket;
-var acars_path = document.location.pathname.replace(
+let socket;
+let acars_path = document.location.pathname.replace(
   /about|search|stats|status|alerts/gi,
   ""
 );
 acars_path += acars_path.endsWith("/") ? "" : "/";
-var acars_url = document.location.origin + acars_path;
+let acars_url = document.location.origin + acars_path;
 
 $(document).ready(function () {
   generate_menu();
@@ -62,7 +62,7 @@ $(document).ready(function () {
 });
 
 function decode_status(status: any, decoders: any, servers: any, feeders: any, receivers: any, stats: any) {
-  var html_output = "<h2>ACARS Hub System Status</h2>";
+  let html_output = "<h2>ACARS Hub System Status</h2>";
   const keys_decoder = Object.keys(decoders);
   const keys_servers = Object.keys(servers);
   const keys_receivers = Object.keys(receivers);
@@ -79,7 +79,7 @@ function decode_status(status: any, decoders: any, servers: any, feeders: any, r
   html_output += "<br>";
 
   keys_decoder.forEach((key, index) => {
-    var sub_string = `SDR ${key}:`;
+    let sub_string = `SDR ${key}:`;
     html_output += `${sub_string.padEnd(55, ".")}<strong><span class=${
       decoders[key].Status == "Ok" ? "green" : "red_body"
     }>${decoders[key].Status}</span></strong>`;
@@ -87,7 +87,7 @@ function decode_status(status: any, decoders: any, servers: any, feeders: any, r
   });
 
   keys_servers.forEach((key, index) => {
-    var sub_string = `Internal Server ${key}:`;
+    let sub_string = `Internal Server ${key}:`;
     html_output += `${sub_string.padEnd(55, ".")}<strong><span class=${
       servers[key].Status == "Ok" ? "green" : "red_body"
     }>${servers[key].Status}</span></strong>`;
@@ -100,7 +100,7 @@ function decode_status(status: any, decoders: any, servers: any, feeders: any, r
   });
 
   keys_stats.forEach((key, index) => {
-    var sub_string = `Internal Stat Server ${key}:`;
+    let sub_string = `Internal Stat Server ${key}:`;
     html_output += `${sub_string.padEnd(55, ".")}<strong><span class=${
       stats[key].Status == "Ok" ? "green" : "red_body"
     }>${stats[key].Status}</span></strong>`;
@@ -108,7 +108,7 @@ function decode_status(status: any, decoders: any, servers: any, feeders: any, r
   });
 
   keys_feeders.forEach((key, index) => {
-    var sub_string = `Airframes.io Feeders ${key}:`;
+    let sub_string = `Airframes.io Feeders ${key}:`;
     html_output += `${sub_string.padEnd(55, ".")}<strong><span class=${
       feeders[key].Status == "Ok" ? "green" : "red_body"
     }>${feeders[key].Status}</span></strong>`;
@@ -116,8 +116,8 @@ function decode_status(status: any, decoders: any, servers: any, feeders: any, r
   });
 
   keys_receivers.forEach((key, index) => {
-    var sub_string = `${key} Received ${receivers[key].Count} Messages In the Last Hour:`;
-    var class_string = "";
+    let sub_string = `${key} Received ${receivers[key].Count} Messages In the Last Hour:`;
+    let class_string = "";
     if (receivers[key].Status == "Ok") class_string = '"green"';
     else class_string = receivers[key].Status == "Bad" ? "red_body" : "orange";
 

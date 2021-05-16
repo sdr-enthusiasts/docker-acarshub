@@ -3,17 +3,17 @@ import ChartDataLabels from 'chartjs-plugin-datalabels';
 import { connection_status, updateAlertCounter } from "./alerts.js"
 import { generate_menu, generate_footer, generate_stat_submenu } from "./menu.js"
 
-var socket: SocketIOClient.Socket;
-var image_prefix = "";
-var acars_path = document.location.pathname.replace(
+let socket: SocketIOClient.Socket;
+let image_prefix = "";
+let acars_path = document.location.pathname.replace(
   /about|search|stats|status|alerts/gi,
   ""
 );
 acars_path += acars_path.endsWith("/") ? "" : "/";
-var acars_url = document.location.origin + acars_path;
+let acars_url = document.location.origin + acars_path;
 
-var chart_alerts: Chart;
-var chart_signals: Chart;
+let chart_alerts: Chart;
+let chart_signals: Chart;
 
 $(document).ready(function () {
   generate_menu();
@@ -29,8 +29,8 @@ $(document).ready(function () {
   });
 
   socket.on("signal", function (msg: any) {
-    var input_labels = [];
-    var input_data = [];
+    let input_labels = [];
+    let input_data = [];
 
     // This float check is a hack and will discard good data. However, for reasons I don't understand
     // The database stores whole numbers not as the input float but as an int
@@ -80,8 +80,8 @@ $(document).ready(function () {
   });
 
   socket.on("alert_terms", function (msg: any) {
-    var labels = [];
-    var alert_data = [];
+    let labels = [];
+    let alert_data = [];
     for (let i in msg.data) {
       // for now checking if count > 0 is a hack to get it to work
       // ideally, it should list out 0 term items
@@ -142,7 +142,7 @@ $(document).ready(function () {
   });
 
   socket.on("freqs", function (msg: any) {
-    var html = '<table class="search">';
+    let html = '<table class="search">';
     html +=
       '<thead><th><span class="menu_non_link">Frequency</span></th><th><span class="menu_non_link">Count</span></th><th><span class="menu_non_link">Type</span></th></thead>';
     for (let i = 0; i < msg.freqs.length; i++) {
@@ -173,12 +173,12 @@ $(document).ready(function () {
   });
 
   socket.on("count", function (msg: any) {
-    var error: number = msg.count[1];
-    var total: number = msg.count[0] + msg.count[2] + msg.count[3];
-    var good_msg: number = msg.count[0] - error;
+    let error: number = msg.count[1];
+    let total: number = msg.count[0] + msg.count[2] + msg.count[3];
+    let good_msg: number = msg.count[0] - error;
 
-    var empty_error: number = msg.count[3];
-    var empty_good: number = msg.count[2];
+    let empty_error: number = msg.count[3];
+    let empty_good: number = msg.count[2];
 
     let html: string = '<p><table class="search">';
     html += `<tr><td><span class="menu_non_link">Total Messages (All): </span></td><td><span class="menu_non_link">${total}</span></td><td></td></tr>`;
@@ -250,28 +250,28 @@ function update_prefix(prefix: any) {
 }
 
 function grab_images() {
-  var onehour = document.getElementById("1hr");
+  let onehour = document.getElementById("1hr");
   if(onehour !== null && onehour.hasOwnProperty("src")) (<HTMLImageElement>onehour).src = `static/images/${image_prefix}1hour.png?rand=` + Math.random();
 
-  var sixhours = document.getElementById("6hr");
+  let sixhours = document.getElementById("6hr");
   if(sixhours !== null && sixhours.hasOwnProperty("src'")) (<HTMLImageElement>sixhours).src = `static/images/${image_prefix}6hour.png?rand=` + Math.random();
 
-  var twelvehours = document.getElementById("12hr");
+  let twelvehours = document.getElementById("12hr");
   if(twelvehours !== null && twelvehours.hasOwnProperty("src")) (<HTMLImageElement>twelvehours).src = `static/images/${image_prefix}12hour.png?rand=` + Math.random();
 
-  var twentyfourhours = document.getElementById("24hr");
+  let twentyfourhours = document.getElementById("24hr");
   if(twentyfourhours !== null && twentyfourhours.hasOwnProperty("src")) (<HTMLImageElement>twentyfourhours).src = `static/images/${image_prefix}24hours.png?rand=` + Math.random();
 
-  var oneweek = document.getElementById("1wk");
+  let oneweek = document.getElementById("1wk");
   if(oneweek !== null && oneweek.hasOwnProperty("src")) (<HTMLImageElement>oneweek).src = `static/images/${image_prefix}1week.png?rand=` + Math.random();
 
-  var thirtydays = document.getElementById("30day");
+  let thirtydays = document.getElementById("30day");
   if(thirtydays !== null && thirtydays.hasOwnProperty("src")) (<HTMLImageElement>thirtydays).src = `static/images/${image_prefix}30days.png?rand=` + Math.random();
 
-  var sixmonths = document.getElementById("6mon");
+  let sixmonths = document.getElementById("6mon");
   if(sixmonths !== null && sixmonths.hasOwnProperty("src'")) (<HTMLImageElement>sixmonths).src = `static/images/${image_prefix}6months.png?rand=` + Math.random();
 
-  var oneyear = document.getElementById("1yr");
+  let oneyear = document.getElementById("1yr");
   if(oneyear !== null && oneyear.hasOwnProperty("src")) (<HTMLImageElement>oneyear).src = `static/images/${image_prefix}1year.png?rand=` + Math.random();
 }
 

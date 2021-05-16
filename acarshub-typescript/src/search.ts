@@ -3,10 +3,10 @@ import { generate_menu, generate_footer } from "./menu.js"
 import { MessageDecoder } from "../node_modules/@airframes/acars-decoder/dist/MessageDecoder.js";
 import { connection_status, updateAlertCounter } from "./alerts.js"
 
-var socket: SocketIOClient.Socket;
+let socket: SocketIOClient.Socket;
 
 declare const window: any;
-var current_search = {
+let current_search = {
   flight: "",
   depa: "",
   dsta: "",
@@ -15,17 +15,17 @@ var current_search = {
   msgno: "",
   tail: "",
   msg_text: "",
-}; // variable to store the current search term
-var current_page = 0; // store the current page of the current_search
-var total_pages = 0; // number of pages of results
-var show_all = false; // variable to indicate we are doing a 'show all' search and not of a specific term
-var query_time = 0.0;
-var acars_path = document.location.pathname.replace(
+}; // letiable to store the current search term
+let current_page = 0; // store the current page of the current_search
+let total_pages = 0; // number of pages of results
+let show_all = false; // letiable to indicate we are doing a 'show all' search and not of a specific term
+let query_time = 0.0;
+let acars_path = document.location.pathname.replace(
   /about|search|stats|status|alerts/gi,
   ""
 );
 acars_path += acars_path.endsWith("/") ? "" : "/";
-var acars_url = document.location.origin + acars_path;
+let acars_url = document.location.origin + acars_path;
 const md = new MessageDecoder();
 
 $(document).ready(function () {
@@ -38,8 +38,8 @@ $(document).ready(function () {
     path: acars_path + "socket.io",
   });
 
-  var msgs_received: any[] = [];
-  var num_results: any[] = [];
+  let msgs_received: any[] = [];
+  let num_results: any[] = [];
 
   // receive details from server
 
@@ -97,10 +97,10 @@ $(document).ready(function () {
 
     if (msg.hasOwnProperty("query_time")) query_time = msg["query_time"];
     // Lets check and see if the results match the current search string
-    var display = "";
-    var display_nav_results = "";
+    let display = "";
+    let display_nav_results = "";
 
-    var results = []; // temp variable to store the JSON formatted JS object
+    let results = []; // temp letiable to store the JSON formatted JS object
 
     // Show the results if the returned results match the current search string (in case user kept typing after search emitted)
     // or the user has executed a 'show all'
@@ -108,13 +108,13 @@ $(document).ready(function () {
     if (true) {
       msgs_received.push(msg.msghtml);
       num_results.push(msg.num_results);
-      for (var i = 0; i < msgs_received.length; i++) {
+      for (let i = 0; i < msgs_received.length; i++) {
         // Loop through the received message blob.
-        for (var j = 0; j < msgs_received[i].length; j++) {
+        for (let j = 0; j < msgs_received[i].length; j++) {
           // Loop through the individual messages in the blob
-          var msg_json = msgs_received[i][j];
+          let msg_json = msgs_received[i][j];
           // Check and see if the text field is decodable in to human readable format
-          var decoded_msg = md.decode(msg_json);
+          let decoded_msg = md.decode(msg_json);
           if (decoded_msg.decoded == true) {
             msg_json.decodedText = decoded_msg;
           }
@@ -133,7 +133,7 @@ $(document).ready(function () {
 
   // Function to listen for key up events. If detected, check and see if the search string has been updated. If so, process the updated query
   document.addEventListener("keyup", function () {
-    var current_terms = get_search_terms();
+    let current_terms = get_search_terms();
     if (!is_everything_blank() && current_search != current_terms) {
       show_all = false;
       delay_query(current_terms);
@@ -180,7 +180,7 @@ function reset_search_terms() {
 async function delay_query(initial_query: any) {
   // Pause for half a second
   await sleep(100);
-  var old_search = current_search; // Save the old search term in a temp variable
+  let old_search = current_search; // Save the old search term in a temp letiable
   // Only execute the search query if the user is done typing. We track that by comparing the query we were asked to run
   // with what is currently in the text box
   if (JSON.stringify(initial_query) == JSON.stringify(get_search_terms())) {
@@ -190,7 +190,7 @@ async function delay_query(initial_query: any) {
       JSON.stringify(current_search) != JSON.stringify(old_search)
     ) {
       // Double check and ensure the search term is new and not blank. No sense hammering the DB to search for the same term
-      // Reset status for various elements of the page to what we're doing now
+      // Reset status for letious elements of the page to what we're doing now
       current_page = 0;
       show_all = false;
       // Give feedback to the user while the search is going on
@@ -206,7 +206,7 @@ async function delay_query(initial_query: any) {
   }
 }
 
-// Function to run show all messages. Sets the various status trackers on the page to expected values
+// Function to run show all messages. Sets the letious status trackers on the page to expected values
 
 window.showall = function () {
   socket.emit("query", { show_all: true }, "/search");
@@ -228,7 +228,7 @@ function sleep(ms: any) {
 
 window.runclick = function (page: any) {
   current_page = page;
-  var current_terms = get_search_terms();
+  let current_terms = get_search_terms();
   if (!is_everything_blank() || show_all) {
     $("#log").html("Updating results....");
     $("#num_results").html("");
@@ -246,7 +246,7 @@ window.runclick = function (page: any) {
 
 // Sanity checker to ensure the page typed in the jump box makes sense. If it does, call the runclick function to send it off to the DB
 // window.jumppage = function () {
-//   var page = document.getElementById("jump").value;
+//   let page = document.getElementById("jump").value;
 //   if (page > total_pages) {
 //     $("#error_message").html(`Please enter a value less than ${total_pages}`);
 //   } else if (page != 0) {
@@ -279,8 +279,8 @@ function display_search(current: any, total: any) {
 
   // Determine -/+ range. We want to show -/+ 5 pages from current index
 
-  var low_end = 0;
-  var high_end = current + 6;
+  let low_end = 0;
+  let high_end = current + 6;
 
   if (current > 5) low_end = current - 5;
 
@@ -298,7 +298,7 @@ function display_search(current: any, total: any) {
         html += `<a href=\"#\" id=\"search_page\" onclick=\"runclick(0)\"><< </a>`;
     }
 
-    for (var i = low_end; i < high_end; i++) {
+    for (let i = low_end; i < high_end; i++) {
       if (i == current) {
         html += ` <span class="menu_non_link"><strong>${
           i + 1

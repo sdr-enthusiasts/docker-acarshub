@@ -4,18 +4,18 @@
 // Input: live_page - default is false. This toggles on the checks for selected tabs
 
 export function display_messages(msgs_to_process: any, selected_tabs: any = null, live_page = false) {
-  var msgs_string = ""; // output string that gets returned
-  var message_tab_splits = ""; // variable to save the split output of selected_tabs
+  let msgs_string = ""; // output string that gets returned
+  let message_tab_splits = ""; // letiable to save the split output of selected_tabs
   if (selected_tabs) message_tab_splits = selected_tabs.split(","); // the individual tabs with selections
 
-  for (var i = 0; i < msgs_to_process.length; i++) {
+  for (let i = 0; i < msgs_to_process.length; i++) {
     // Loop through the message array
-    var sub_messages = msgs_to_process[i]; // Array of messages belonging to one tab-group
-    var unique_id = ""; // UID for the message group
-    var active_tab = 0; // Active tab. Default is the first one if none selected
-    var previous_tab = 0;
-    var next_tab = 0;
-    var array_index_tab = 0;
+    let sub_messages = msgs_to_process[i]; // Array of messages belonging to one tab-group
+    let unique_id = ""; // UID for the message group
+    let active_tab = 0; // Active tab. Default is the first one if none selected
+    let previous_tab = 0;
+    let next_tab = 0;
+    let array_index_tab = 0;
     msgs_string += "<br>";
 
     if (live_page) {
@@ -26,9 +26,9 @@ export function display_messages(msgs_to_process: any, selected_tabs: any = null
 
       if (message_tab_splits.length > 0) {
         // Loop through the selected tabs on the page. If we find a match for the current UID we'll set the active tab to what has been selected
-        for (var q = 0; q < message_tab_splits.length; q++) {
+        for (let q = 0; q < message_tab_splits.length; q++) {
           if (message_tab_splits[q].startsWith(unique_id.toString())) {
-            var split = message_tab_splits[q].split(";");
+            let split = message_tab_splits[q].split(";");
             active_tab = Number(split[1]);
             array_index_tab = sub_messages.findIndex((element: any) => {
               if (element.uid == active_tab || element.uid === active_tab) {
@@ -53,9 +53,9 @@ export function display_messages(msgs_to_process: any, selected_tabs: any = null
         }
 
         msgs_string += '<div class = "tabinator">';
-        for (var j = 0; j < sub_messages.length; j++) {
+        for (let j = 0; j < sub_messages.length; j++) {
           // Loop through all messages in the group to show all of the tabs
-          var tab_uid = unique_id;
+          let tab_uid = unique_id;
 
           tab_uid = sub_messages[j]["uid"];
 
@@ -105,7 +105,7 @@ export function display_messages(msgs_to_process: any, selected_tabs: any = null
               `')">`;
           }
 
-          var label_string = "";
+          let label_string = "";
           if (sub_messages[j].hasOwnProperty("matched"))
             label_string = `<span class="red_body">Message ${j + 1}</span>`;
           else label_string = `Message ${j + 1}`;
@@ -115,12 +115,12 @@ export function display_messages(msgs_to_process: any, selected_tabs: any = null
       }
     }
 
-    for (var u = 0; u < sub_messages.length; u++) {
+    for (let u = 0; u < sub_messages.length; u++) {
       // Now we'll generate the HTML for each message in the group
-      var html_output = "";
+      let html_output = "";
       if (sub_messages.length > 1) {
         // If we have multiple messages in this group we need to set the non-selected tabs to invisible
-        var tab_uid = unique_id;
+        let tab_uid = unique_id;
 
         tab_uid = sub_messages[u]["uid"]; // UID for the current message
         if (active_tab == 0 && u == 0)
@@ -134,7 +134,7 @@ export function display_messages(msgs_to_process: any, selected_tabs: any = null
           html_output += `<div id = "message_${unique_id}_${tab_uid}" class="sub_msg${unique_id}">`;
       }
       //msgs_string = '<p>' + msgs_received[i].toString() + '</p>' + msgs_string;
-      var message = sub_messages[u]; // variable to hold the current message
+      let message = sub_messages[u]; // letiable to hold the current message
       html_output += '<div><table id="shadow">';
 
       // Clean up any useless keys
@@ -150,7 +150,7 @@ export function display_messages(msgs_to_process: any, selected_tabs: any = null
 
       // iterate over json and remove blank keys
 
-      for (var key in message) {
+      for (let key in message) {
         if (message[key] == null) delete message[key];
       }
 
@@ -159,7 +159,7 @@ export function display_messages(msgs_to_process: any, selected_tabs: any = null
       else html_output += "<tr>";
       html_output += `<td><strong>${message["message_type"]}</strong> from <strong>${message["station_id"]}</strong></td>`;
 
-      var timestamp; // variable to save the timestamp We need this because the database saves the time as 'time' and live messages have it as 'timestamp' (blame Fred for this silly mis-naming of db columns)
+      let timestamp; // letiable to save the timestamp We need this because the database saves the time as 'time' and live messages have it as 'timestamp' (blame Fred for this silly mis-naming of db columns)
 
       // grab the time (unix EPOCH) from the correct key and convert in to a Date object for display
       if (message.hasOwnProperty("timestamp"))
@@ -184,7 +184,7 @@ export function display_messages(msgs_to_process: any, selected_tabs: any = null
       }
 
       if (message.hasOwnProperty("label")) {
-        var label_type = "";
+        let label_type = "";
         if (message.hasOwnProperty("label_type")) {
           label_type = message["label_type"].trim();
         }
@@ -195,7 +195,7 @@ export function display_messages(msgs_to_process: any, selected_tabs: any = null
       // if possible, we'll have an appended hex representation of the decimal address
 
       if (message.hasOwnProperty("toaddr")) {
-        var toaddr_decoded = "";
+        let toaddr_decoded = "";
 
         if (message.hasOwnProperty("toaddr_decoded")) {
           toaddr_decoded = `<br>To Address Station ID: <strong>${message["toaddr_decoded"]}</strong>`;
@@ -208,7 +208,7 @@ export function display_messages(msgs_to_process: any, selected_tabs: any = null
       }
 
       if (message.hasOwnProperty("fromaddr")) {
-        var fromaddr_decoded = "";
+        let fromaddr_decoded = "";
 
         if (message.hasOwnProperty("fromaddr_decoded")) {
           fromaddr_decoded = `<br>From Address Station ID: <strong>${message["fromaddr_decoded"]}</strong>`;
@@ -263,7 +263,7 @@ export function display_messages(msgs_to_process: any, selected_tabs: any = null
       // Text field is pre-processed
       // we have a sub-table for the raw text field and if it was decoded, the decoded text as well
       if (message.hasOwnProperty("text")) {
-        var text = message["text"];
+        let text = message["text"];
         text = text.replace("\\r\\n", "<br>");
         //html_output += "<p>";
         html_output += '<table class="message">';
@@ -271,7 +271,7 @@ export function display_messages(msgs_to_process: any, selected_tabs: any = null
         //html_output += "</p>";
         if (message.hasOwnProperty("decodedText")) {
           //html_output += "<p>";
-          var decodedStatus = "Full";
+          let decodedStatus = "Full";
           if (message["decodedText"].decoder.decodeLevel != "full")
             decodedStatus = "Partial";
           html_output += '<td class="text_top">';
@@ -302,7 +302,7 @@ export function display_messages(msgs_to_process: any, selected_tabs: any = null
         html_output += "</td>";
         html_output += "</tr></table>";
       } else if (message.hasOwnProperty("data")) {
-        var data = message["data"];
+        let data = message["data"];
         data = data.replace("\\r\\n", "<br>");
         html_output += "<p>";
         html_output += `<pre id=\"shadow\"><strong>${data}</strong></pre>`;
@@ -372,8 +372,8 @@ export function display_messages(msgs_to_process: any, selected_tabs: any = null
       }
 
       if (message.hasOwnProperty("level")) {
-        var level = message["level"];
-        var circle = "";
+        let level = message["level"];
+        let circle = "";
         if (level >= -10.0) {
           circle = "circle_green";
         } else if (level >= -20.0) {
@@ -413,8 +413,8 @@ export function display_messages(msgs_to_process: any, selected_tabs: any = null
         // 0 indicates the plane is airborne
         // 2 indicates the plane is on the ground
         // https://github.com/TLeconte/vdlm2dec/blob/1ea300d40d66ecb969f1f463506859e36f62ef5c/out.c#L457
-        // variable naming in vdlm2dec is inconsistent, but "ground" and "gnd" seem to be used
-        var is_onground = message["is_onground"] == 0 ? "False" : "True";
+        // letiable naming in vdlm2dec is inconsistent, but "ground" and "gnd" seem to be used
+        let is_onground = message["is_onground"] == 0 ? "False" : "True";
 
         html_output += `<span class=\"wrapper\">G: <strong>${is_onground}</strong><span class=\"tooltip\">Is on ground?</span></span> `;
       }
@@ -449,7 +449,7 @@ export function display_messages(msgs_to_process: any, selected_tabs: any = null
 }
 
 function replace_text(input: any, text: any) {
-  for (var i = 0; i < input.length; i++) {
+  for (let i = 0; i < input.length; i++) {
     text = text
       .split(`${input[i].toUpperCase()}`)
       .join(`<span class="red_body">${input[i].toUpperCase()}</span>`);
@@ -458,9 +458,9 @@ function replace_text(input: any, text: any) {
 }
 
 function loop_array(input: any) {
-  var html_output = "";
+  let html_output = "";
 
-  for (var m in input) {
+  for (let m in input) {
     if (typeof input[m] === "object") {
       html_output += loop_array(input[m]);
     } else {

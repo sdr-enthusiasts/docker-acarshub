@@ -1,18 +1,18 @@
-var pause = false;
-var text_filter = false;
-var socket;
-var msgs_received: any[] = [];
-var exclude: any[] = [];
-var selected_tabs = "";
-var acars_path = document.location.pathname.replace(
+let pause = false;
+let text_filter = false;
+let socket;
+let msgs_received: any[] = [];
+let exclude: any[] = [];
+let selected_tabs = "";
+let acars_path = document.location.pathname.replace(
   /about|search|stats|status|alerts/gi,
   ""
 );
 acars_path += acars_path.endsWith("/") ? "" : "/";
-var acars_url = document.location.origin + acars_path;
+let acars_url = document.location.origin + acars_path;
 
-var filtered_messages = 0;
-var received_messages = 0;
+let filtered_messages = 0;
+let received_messages = 0;
 declare const window: any;
 import { MessageDecoder } from "../node_modules/@airframes/acars-decoder/dist/MessageDecoder.js";
 import Cookies from "js-cookie"
@@ -35,11 +35,11 @@ msgs_received.unshift = function () {
 // Function to increment the counter of filtered messages
 
 function increment_filtered() {
-  var id = document.getElementById("filteredmessages");
+  let id = document.getElementById("filteredmessages");
   if(id !== null) {
     id.innerHTML = "";
     filtered_messages++;
-    var txt = document.createTextNode(String(filtered_messages));
+    let txt = document.createTextNode(String(filtered_messages));
     id.appendChild(txt);
   }
 }
@@ -47,11 +47,11 @@ function increment_filtered() {
 // Function to increment the counter of received messages
 
 function increment_received() {
-  var id = document.getElementById("receivedmessages");
+  let id = document.getElementById("receivedmessages");
   if(id !== null) {
     id.innerHTML = "";
     received_messages++;
-    var txt = document.createTextNode(String(received_messages));
+    let txt = document.createTextNode(String(received_messages));
     id.appendChild(txt);
   }
 }
@@ -68,33 +68,33 @@ function getRandomInt(max: any) {
 // Input is the UID of the message group, which is also the element ID of the oldest element in that group
 
 window.handle_radio = function (element_id: any, uid: any) {
-  var all_tabs = document.querySelectorAll(`div.sub_msg${uid}`); // Grab the tabinator group and remove check
-  for (var i = 0; i < all_tabs.length; i++) {
+  let all_tabs = document.querySelectorAll(`div.sub_msg${uid}`); // Grab the tabinator group and remove check
+  for (let i = 0; i < all_tabs.length; i++) {
     all_tabs[i].classList.remove("checked");
   }
 
-  var all_tabinator = (<any>document.querySelectorAll(`input.tabs_${uid}`)); // grab the message divs in that tab group and remove check
-  for (var i = 0; i < all_tabinator.length; i++) {
+  let all_tabinator = (<any>document.querySelectorAll(`input.tabs_${uid}`)); // grab the message divs in that tab group and remove check
+  for (let i = 0; i < all_tabinator.length; i++) {
     all_tabinator[i].checked = false;
   }
 
-  var element = (<HTMLInputElement>document.getElementById(`message_${uid}_${element_id}`)); // grab and tag the message that is checked
+  let element = (<HTMLInputElement>document.getElementById(`message_${uid}_${element_id}`)); // grab and tag the message that is checked
   element.classList.add("checked");
 
-  var tab_element = (<HTMLInputElement>document.getElementById(`tab${element_id}_${uid}`)); // grab and tag the tag that is checked
+  let tab_element = (<HTMLInputElement>document.getElementById(`tab${element_id}_${uid}`)); // grab and tag the tag that is checked
   tab_element.checked = true;
 
   // Now we need to update the nav arrow links
 
-  var next_tab = 0;
-  var previous_tab = 0;
+  let next_tab = 0;
+  let previous_tab = 0;
 
-  for (var i = 0; i < msgs_received.length; i++) {
+  for (let i = 0; i < msgs_received.length; i++) {
     if (
       msgs_received[i].length > 1 &&
       msgs_received[i][msgs_received[i].length - 1].uid == uid
     ) {
-      var active_tab = msgs_received[i].findIndex((element: any) => {
+      let active_tab = msgs_received[i].findIndex((element: any) => {
         if (element.uid == element_id) {
           return true;
         }
@@ -115,23 +115,23 @@ window.handle_radio = function (element_id: any, uid: any) {
     }
   }
 
-  var curlink_previous = (<HTMLInputElement>document.getElementById(`tab${uid}_previous`));
+  let curlink_previous = (<HTMLInputElement>document.getElementById(`tab${uid}_previous`));
   curlink_previous.setAttribute(
     "href",
     `javascript:handle_radio(${previous_tab}, ${uid})`
   );
 
-  var curlink_next = (<HTMLInputElement>document.getElementById(`tab${uid}_next`));
+  let curlink_next = (<HTMLInputElement>document.getElementById(`tab${uid}_next`));
   curlink_next.setAttribute(
     "href",
     `javascript:handle_radio(${next_tab}, ${uid})`
   );
 
-  var added = false;
+  let added = false;
   if (selected_tabs != "") {
-    var split = selected_tabs.split(",");
-    for (var i = 0; i < split.length; i++) {
-      var sub_split = split[i].split(";");
+    let split = selected_tabs.split(",");
+    for (let i = 0; i < split.length; i++) {
+      let sub_split = split[i].split(";");
 
       if (sub_split[0] == uid && i == 0) {
         selected_tabs = uid + ";" + element_id;
@@ -156,17 +156,17 @@ window.handle_radio = function (element_id: any, uid: any) {
 window.pause_updates = function () {
   if (pause) {
     pause = false;
-    var id = document.getElementById("pause_updates");
+    let id = document.getElementById("pause_updates");
     if(id !== null) {
       id.innerHTML = "";
-      var txt = document.createTextNode("Pause updates");
+      let txt = document.createTextNode("Pause updates");
       id.appendChild(txt);
     }
 
-    var id_filtered = document.getElementById("received");
+    let id_filtered = document.getElementById("received");
     if(id_filtered !== null) {
       id_filtered.innerHTML = "";
-      var txt_filtered = document.createTextNode("Received messages");
+      let txt_filtered = document.createTextNode("Received messages");
       id_filtered.appendChild(txt_filtered);
     }
 
@@ -174,16 +174,16 @@ window.pause_updates = function () {
   } else {
     pause = true;
 
-    var id = document.getElementById("pause_updates");
+    let id = document.getElementById("pause_updates");
     if(id !== null)
       id.innerHTML = '<span class="red">Unpause Updates</span>';
-    //var txt = document.createTextNode("Unpause Updates");
+    //let txt = document.createTextNode("Unpause Updates");
     //id.appendChild(txt);
 
-    var id_filtered = document.getElementById("received");
+    let id_filtered = document.getElementById("received");
     if(id_filtered !== null) {
       id_filtered.innerHTML = "";
-      var txt_filtered = document.createTextNode("Received messages (paused)");
+      let txt_filtered = document.createTextNode("Received messages (paused)");
       id_filtered.appendChild(txt_filtered);
     }
   }
@@ -197,7 +197,7 @@ window.filter_notext = function () {
     (<HTMLInputElement>document.getElementById("fixed_menu")).classList.remove("fixed_menu");
     (<HTMLInputElement>document.getElementById("fixed_menu")).classList.add("fixed_menu_short");
 
-    var id = document.getElementById("filter_notext");
+    let id = document.getElementById("filter_notext");
     if(id !== null) id.innerHTML = "Hide Empty Messages";
     Cookies.set("filter", "false", { expires: 365 });
     filtered_messages = 0;
@@ -211,11 +211,11 @@ window.filter_notext = function () {
     $("#filtered").html(
       'Filtered Messages:&emsp;&ensp;<strong><span id="filteredmessages"></span></strong>'
     );
-    var id_filtered = (<HTMLInputElement>document.getElementById("filteredmessages"));
-    var txt_filtered = document.createTextNode(String(filtered_messages));
+    let id_filtered = (<HTMLInputElement>document.getElementById("filteredmessages"));
+    let txt_filtered = document.createTextNode(String(filtered_messages));
     id_filtered.appendChild(txt_filtered);
 
-    id = document.getElementById("filter_notext");
+    let id = document.getElementById("filter_notext");
     if(id !== null) id.innerHTML = '<span class="red">Show All Messages</span>';
     Cookies.set("filter", "true", { expires: 365 });
   }
@@ -229,17 +229,17 @@ window.toggle_label = function (key: any) {
     exclude.push(key.toString());
     (<HTMLInputElement>document.getElementById(key.toString())).classList.remove("sidebar_link");
     (<HTMLInputElement>document.getElementById(key.toString())).classList.add("red");
-    var exclude_string = "";
-    for (var i = 0; i < exclude.length; i++) {
+    let exclude_string = "";
+    for (let i = 0; i < exclude.length; i++) {
       exclude_string += exclude[i] + " ";
     }
 
     Cookies.set("exclude", exclude_string.trim(), { expires: 365 });
   } else {
-    var exclude_string = "";
+    let exclude_string = "";
     (<HTMLInputElement>document.getElementById(key.toString())).classList.remove("red");
     (<HTMLInputElement>document.getElementById(key.toString())).classList.add("sidebar_link");
-    for (var i = 0; i < exclude.length; i++) {
+    for (let i = 0; i < exclude.length; i++) {
       if (exclude[i] != key.toString()) exclude_string += exclude[i] + " ";
     }
     exclude = exclude_string.trim().split(" ");
@@ -259,12 +259,12 @@ $(document).ready(function () {
   });
 
   // Grab the current cookie value for message filtering
-  // If the cookie is found with a value we run filter_notext to set the proper visual elements/variables for the rest of the functions
+  // If the cookie is found with a value we run filter_notext to set the proper visual elements/letiables for the rest of the functions
   // We'll also re-write the cookie (or start a new one) with the current value
   // This is necessary because Safari doesn't respect the expiration date of more than 7 days. It will set it to 7 days even though we've set 365 days
   // This also just keeps moving the expiration date moving forward every time the page is loaded
 
-  var filter = Cookies.get("filter");
+  let filter = Cookies.get("filter");
   if (filter == "true") {
     Cookies.set("filter", "true", { expires: 365 });
     window.filter_notext();
@@ -276,7 +276,7 @@ $(document).ready(function () {
 
   // Grab the current cookie value for the message labels being filtered
   // Same restrictions as the 'filter'
-  var exclude_cookie = Cookies.get("exclude");
+  let exclude_cookie = Cookies.get("exclude");
   if (exclude_cookie == null) {
     Cookies.set("exclude", "", { expires: 365 });
   } else {
@@ -286,9 +286,9 @@ $(document).ready(function () {
 
   // Function to listen for the server to respond with valid message labels and process the results for display in the side-bar
   socket.on("labels", function (msg: any) {
-    var label_html = "";
-    for (var key in msg.labels) {
-      var link_class = "sidebar_link";
+    let label_html = "";
+    for (let key in msg.labels) {
+      let link_class = "sidebar_link";
       if (exclude.indexOf(key.toString()) != -1) link_class = "red";
       label_html += `<a href="javascript:toggle_label('${key.toString()}');" id="${key}" class="${link_class}">${key} ${
         msg.labels[key]["name"]
@@ -352,13 +352,13 @@ $(document).ready(function () {
         msg.msghtml.hasOwnProperty("alt")
       ) {
         if (msg.msghtml.hasOwnProperty("text")) {
-          var decoded_msg = md.decode(msg.msghtml);
+          let decoded_msg = md.decode(msg.msghtml);
           if (decoded_msg.decoded == true) {
             msg.msghtml.decodedText = decoded_msg;
           }
         }
 
-        var matched = match_alert(msg);
+        let matched = match_alert(msg);
         if (matched.was_found) {
           msg.msghtml.matched = true;
           msg.msghtml.matched_text = matched.text;
@@ -367,23 +367,23 @@ $(document).ready(function () {
           msg.msghtml.matched_tail = matched.tail;
         }
 
-        var new_tail = msg.msghtml.tail;
-        var new_icao = msg.msghtml.icao;
-        var new_flight = msg.msghtml.flight;
-        var found = false; // variable to track if the new message was found in previous messages
-        var rejected = false; // variable to track if the new message was rejected for being a duplicate
-        var index_new = 0; // the index of the found previous message
+        let new_tail = msg.msghtml.tail;
+        let new_icao = msg.msghtml.icao;
+        let new_flight = msg.msghtml.flight;
+        let found = false; // letiable to track if the new message was found in previous messages
+        let rejected = false; // letiable to track if the new message was rejected for being a duplicate
+        let index_new = 0; // the index of the found previous message
 
         msg.msghtml.uid = getRandomInt(1000000).toString(); // Each message gets a unique ID. Used to track tab selection
 
         // Loop through the received messages. If a message is found we'll break out of the for loop
-        for (var u = 0; u < msgs_received.length; u++) {
+        for (let u = 0; u < msgs_received.length; u++) {
           // Now we loop through all of the messages in the message group to find a match in case the first doesn't
           // Have the field we need
           // There is a possibility that (for reasons I cannot fathom) aircraft will broadcast the same flight information
           // With one field being different. We'll reject that message as being not in the same message group if that's the case
           // We'll also test for squitter messages which don't have tail/icao/flight
-          for (var z = 0; z < msgs_received[u].length; z++) {
+          for (let z = 0; z < msgs_received[u].length; z++) {
             if (
               msgs_received[u][z].hasOwnProperty("tail") &&
               new_tail == msgs_received[u][z].tail &&
@@ -444,7 +444,7 @@ $(document).ready(function () {
           if (found) {
             u = msgs_received.length;
 
-            for (var j = 0; j < msgs_received[index_new].length; j++) {
+            for (let j = 0; j < msgs_received[index_new].length; j++) {
               // First check is to see if the message is the same by checking all fields and seeing if they match
               // Second check is to see if the text field itself is a match
               // Last check is to see if we've received a multi-part message
@@ -531,15 +531,15 @@ $(document).ready(function () {
                 // This check matches if the group is a AAAz counter
                 // We have a multi part message. Now we need to see if it is a dup
                 rejected = true;
-                var add_multi = true;
+                let add_multi = true;
 
                 if (msgs_received[index_new][j].hasOwnProperty("msgno_parts")) {
                   // Now we'll see if the multi-part message is a dup
-                  var split = msgs_received[index_new][j].msgno_parts
+                  let split = msgs_received[index_new][j].msgno_parts
                     .toString()
                     .split(" "); // format of stored parts is "MSGID MSGID2" etc
 
-                  for (var a = 0; a < split.length; a++) {
+                  for (let a = 0; a < split.length; a++) {
                     // Loop through the msg IDs present
                     if (split[a].substring(0, 4) == msg.msghtml["msgno"]) {
                       // Found a match in the message IDs already present
@@ -555,12 +555,12 @@ $(document).ready(function () {
                           " " + split[a] + "x2";
                       } else if (a == 0) {
                         // Match, first element of the array so no leading space, has previous other matches so we increment the counter
-                        var count = parseInt(split[a].substring(5)) + 1;
+                        let count = parseInt(split[a].substring(5)) + 1;
                         msgs_received[index_new][j].msgno_parts =
                           split[a].substring(0, 4) + "x" + count;
                       } else {
                         // Match, has previous other matches so we increment the counter
-                        var count = parseInt(split[a].substring(5)) + 1;
+                        let count = parseInt(split[a].substring(5)) + 1;
                         msgs_received[index_new][j].msgno_parts +=
                           " " + split[a].substring(0, 4) + "x" + count;
                       }
@@ -605,7 +605,7 @@ $(document).ready(function () {
                   }
 
                   // Re-run the text decoder against the text field we've updated
-                  var decoded_msg = md.decode(msgs_received[index_new][j]);
+                  let decoded_msg = md.decode(msgs_received[index_new][j]);
                   if (decoded_msg.decoded == true) {
                     msgs_received[index_new][j]["decoded_msg"] = decoded_msg;
                   }
