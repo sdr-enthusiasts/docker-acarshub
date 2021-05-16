@@ -1,8 +1,8 @@
 var pause = false;
 var text_filter = false;
 var socket;
-var msgs_received = [];
-var exclude = [];
+var msgs_received: any[] = [];
+var exclude: any[] = [];
 var selected_tabs = "";
 var acars_path = document.location.pathname.replace(
   /about|search|stats|status|alerts/gi,
@@ -10,76 +10,96 @@ var acars_path = document.location.pathname.replace(
 );
 acars_path += acars_path.endsWith("/") ? "" : "/";
 var acars_url = document.location.origin + acars_path;
+
 var filtered_messages = 0;
 var received_messages = 0;
-import { MessageDecoder } from "../airframes-acars-decoder/MessageDecoder.js";
-import Cookies from "./other/js.cookie.min.mjs";
-import { generate_menu, generate_footer } from "./menu.js";
-import { display_messages } from "./html_generator.js";
-import { match_alert, sound_alert, connection_status } from "./alerts.js";
+declare const window: any;
+import { MessageDecoder } from "../node_modules/@airframes/acars-decoder/dist/MessageDecoder.js";
+import Cookies from "js-cookie"
+import { generate_menu, generate_footer } from "./menu.js"
+import { display_messages } from "./html_generator.js"
+import { match_alert, sound_alert, connection_status } from "./alerts.js"
+
 const md = new MessageDecoder();
+
 // Automatically keep the array size at 150 messages or less
 // without the need to check before we push on to the stack
+
 msgs_received.unshift = function () {
   if (this.length >= 150) {
     this.pop();
   }
-  return Array.prototype.unshift.apply(this, arguments);
+  return Array.prototype.unshift.apply(this, arguments as any);
 };
+
 // Function to increment the counter of filtered messages
+
 function increment_filtered() {
   var id = document.getElementById("filteredmessages");
-  if (id !== null) {
+  if(id !== null) {
     id.innerHTML = "";
     filtered_messages++;
     var txt = document.createTextNode(String(filtered_messages));
     id.appendChild(txt);
   }
 }
+
 // Function to increment the counter of received messages
+
 function increment_received() {
   var id = document.getElementById("receivedmessages");
-  if (id !== null) {
+  if(id !== null) {
     id.innerHTML = "";
     received_messages++;
     var txt = document.createTextNode(String(received_messages));
     id.appendChild(txt);
   }
 }
+
 // Function to return a random integer
 // Input: integter that represents the maximum number that can be returned
-function getRandomInt(max) {
+
+function getRandomInt(max: any) {
   return Math.floor(Math.random() * Math.floor(max));
 }
+
 // Function to handle click events on the message tab
 // Input is the element ID (aka message label ID) that has been selected
 // Input is the UID of the message group, which is also the element ID of the oldest element in that group
-window.handle_radio = function (element_id, uid) {
+
+window.handle_radio = function (element_id: any, uid: any) {
   var all_tabs = document.querySelectorAll(`div.sub_msg${uid}`); // Grab the tabinator group and remove check
   for (var i = 0; i < all_tabs.length; i++) {
     all_tabs[i].classList.remove("checked");
   }
-  var all_tabinator = document.querySelectorAll(`input.tabs_${uid}`); // grab the message divs in that tab group and remove check
+
+  var all_tabinator = (<any>document.querySelectorAll(`input.tabs_${uid}`)); // grab the message divs in that tab group and remove check
   for (var i = 0; i < all_tabinator.length; i++) {
     all_tabinator[i].checked = false;
   }
-  var element = document.getElementById(`message_${uid}_${element_id}`); // grab and tag the message that is checked
+
+  var element = (<HTMLInputElement>document.getElementById(`message_${uid}_${element_id}`)); // grab and tag the message that is checked
   element.classList.add("checked");
-  var tab_element = document.getElementById(`tab${element_id}_${uid}`); // grab and tag the tag that is checked
+
+  var tab_element = (<HTMLInputElement>document.getElementById(`tab${element_id}_${uid}`)); // grab and tag the tag that is checked
   tab_element.checked = true;
+
   // Now we need to update the nav arrow links
+
   var next_tab = 0;
   var previous_tab = 0;
+
   for (var i = 0; i < msgs_received.length; i++) {
     if (
       msgs_received[i].length > 1 &&
       msgs_received[i][msgs_received[i].length - 1].uid == uid
     ) {
-      var active_tab = msgs_received[i].findIndex((element) => {
+      var active_tab = msgs_received[i].findIndex((element: any) => {
         if (element.uid == element_id) {
           return true;
         }
       });
+
       if (active_tab == 0) {
         next_tab = msgs_received[i][1].uid;
         previous_tab = msgs_received[i][msgs_received[i].length - 1].uid;
@@ -90,24 +110,29 @@ window.handle_radio = function (element_id, uid) {
         next_tab = msgs_received[i][active_tab + 1].uid;
         previous_tab = msgs_received[i][active_tab - 1].uid;
       }
+
       i = msgs_received.length;
     }
   }
-  var curlink_previous = document.getElementById(`tab${uid}_previous`);
+
+  var curlink_previous = (<HTMLInputElement>document.getElementById(`tab${uid}_previous`));
   curlink_previous.setAttribute(
     "href",
     `javascript:handle_radio(${previous_tab}, ${uid})`
   );
-  var curlink_next = document.getElementById(`tab${uid}_next`);
+
+  var curlink_next = (<HTMLInputElement>document.getElementById(`tab${uid}_next`));
   curlink_next.setAttribute(
     "href",
     `javascript:handle_radio(${next_tab}, ${uid})`
   );
+
   var added = false;
   if (selected_tabs != "") {
     var split = selected_tabs.split(",");
     for (var i = 0; i < split.length; i++) {
       var sub_split = split[i].split(";");
+
       if (sub_split[0] == uid && i == 0) {
         selected_tabs = uid + ";" + element_id;
         added = true;
@@ -118,86 +143,102 @@ window.handle_radio = function (element_id, uid) {
       else selected_tabs += "," + sub_split[0] + ";" + sub_split[1];
     }
   }
+
   if (selected_tabs.length == 0) {
     selected_tabs = uid + ";" + element_id;
   } else if (!added) {
     selected_tabs += "," + uid + ";" + element_id;
   }
 };
+
 // Function to toggle pausing visual update of the page
+
 window.pause_updates = function () {
   if (pause) {
     pause = false;
     var id = document.getElementById("pause_updates");
-    if (id !== null) {
+    if(id !== null) {
       id.innerHTML = "";
       var txt = document.createTextNode("Pause updates");
       id.appendChild(txt);
     }
+
     var id_filtered = document.getElementById("received");
-    if (id_filtered !== null) {
+    if(id_filtered !== null) {
       id_filtered.innerHTML = "";
       var txt_filtered = document.createTextNode("Received messages");
       id_filtered.appendChild(txt_filtered);
     }
+
     $("#log").html(display_messages(msgs_received, selected_tabs, true));
   } else {
     pause = true;
+
     var id = document.getElementById("pause_updates");
-    if (id !== null) id.innerHTML = '<span class="red">Unpause Updates</span>';
+    if(id !== null)
+      id.innerHTML = '<span class="red">Unpause Updates</span>';
     //var txt = document.createTextNode("Unpause Updates");
     //id.appendChild(txt);
+
     var id_filtered = document.getElementById("received");
-    if (id_filtered !== null) {
+    if(id_filtered !== null) {
       id_filtered.innerHTML = "";
       var txt_filtered = document.createTextNode("Received messages (paused)");
       id_filtered.appendChild(txt_filtered);
     }
   }
 };
+
 // function to toggle the filtering of empty/no text messages
+
 window.filter_notext = function () {
   if (text_filter) {
     text_filter = false;
-    document.getElementById("fixed_menu").classList.remove("fixed_menu");
-    document.getElementById("fixed_menu").classList.add("fixed_menu_short");
+    (<HTMLInputElement>document.getElementById("fixed_menu")).classList.remove("fixed_menu");
+    (<HTMLInputElement>document.getElementById("fixed_menu")).classList.add("fixed_menu_short");
+
     var id = document.getElementById("filter_notext");
-    if (id !== null) id.innerHTML = "Hide Empty Messages";
+    if(id !== null) id.innerHTML = "Hide Empty Messages";
     Cookies.set("filter", "false", { expires: 365 });
     filtered_messages = 0;
+
     $("#filtered").html("");
   } else {
     text_filter = true;
-    document.getElementById("fixed_menu").classList.remove("fixed_menu_short");
-    document.getElementById("fixed_menu").classList.add("fixed_menu");
+    (<HTMLInputElement>document.getElementById("fixed_menu")).classList.remove("fixed_menu_short");
+    (<HTMLInputElement>document.getElementById("fixed_menu")).classList.add("fixed_menu");
+
     $("#filtered").html(
       'Filtered Messages:&emsp;&ensp;<strong><span id="filteredmessages"></span></strong>'
     );
-    var id_filtered = document.getElementById("filteredmessages");
+    var id_filtered = (<HTMLInputElement>document.getElementById("filteredmessages"));
     var txt_filtered = document.createTextNode(String(filtered_messages));
     id_filtered.appendChild(txt_filtered);
+
     id = document.getElementById("filter_notext");
-    if (id !== null)
-      id.innerHTML = '<span class="red">Show All Messages</span>';
+    if(id !== null) id.innerHTML = '<span class="red">Show All Messages</span>';
     Cookies.set("filter", "true", { expires: 365 });
   }
 };
+
 // Function to toggle/save the selected filtered message labels
 // Input is the message label ID that should be filtered
-window.toggle_label = function (key) {
+
+window.toggle_label = function (key: any) {
   if (exclude.indexOf(key.toString()) == -1) {
     exclude.push(key.toString());
-    document.getElementById(key.toString()).classList.remove("sidebar_link");
-    document.getElementById(key.toString()).classList.add("red");
+    (<HTMLInputElement>document.getElementById(key.toString())).classList.remove("sidebar_link");
+    (<HTMLInputElement>document.getElementById(key.toString())).classList.add("red");
     var exclude_string = "";
     for (var i = 0; i < exclude.length; i++) {
       exclude_string += exclude[i] + " ";
     }
+
     Cookies.set("exclude", exclude_string.trim(), { expires: 365 });
   } else {
     var exclude_string = "";
-    document.getElementById(key.toString()).classList.remove("red");
-    document.getElementById(key.toString()).classList.add("sidebar_link");
+    (<HTMLInputElement>document.getElementById(key.toString())).classList.remove("red");
+    (<HTMLInputElement>document.getElementById(key.toString())).classList.add("sidebar_link");
     for (var i = 0; i < exclude.length; i++) {
       if (exclude[i] != key.toString()) exclude_string += exclude[i] + " ";
     }
@@ -205,19 +246,24 @@ window.toggle_label = function (key) {
     Cookies.set("exclude", exclude_string.trim(), { expires: 365 });
   }
 };
+
 // Code that is ran when the page has loaded
+
 $(document).ready(function () {
   //connect to the socket server.
   generate_menu(); // generate the top menu
   generate_footer(); // generate the footer
+
   socket = io.connect(`${document.location.origin}/main`, {
     path: acars_path + "socket.io",
   });
+
   // Grab the current cookie value for message filtering
   // If the cookie is found with a value we run filter_notext to set the proper visual elements/variables for the rest of the functions
   // We'll also re-write the cookie (or start a new one) with the current value
   // This is necessary because Safari doesn't respect the expiration date of more than 7 days. It will set it to 7 days even though we've set 365 days
   // This also just keeps moving the expiration date moving forward every time the page is loaded
+
   var filter = Cookies.get("filter");
   if (filter == "true") {
     Cookies.set("filter", "true", { expires: 365 });
@@ -227,6 +273,7 @@ $(document).ready(function () {
     Cookies.set("filter", "false", { expires: 365 });
     window.filter_notext();
   }
+
   // Grab the current cookie value for the message labels being filtered
   // Same restrictions as the 'filter'
   var exclude_cookie = Cookies.get("exclude");
@@ -236,8 +283,9 @@ $(document).ready(function () {
     Cookies.set("exclude", exclude_cookie, { expires: 365 });
     exclude = exclude_cookie.split(" ");
   }
+
   // Function to listen for the server to respond with valid message labels and process the results for display in the side-bar
-  socket.on("labels", function (msg) {
+  socket.on("labels", function (msg: any) {
     var label_html = "";
     for (var key in msg.labels) {
       var link_class = "sidebar_link";
@@ -248,7 +296,8 @@ $(document).ready(function () {
     }
     $("#label_links").html(label_html);
   });
-  socket.on("system_status", function (msg) {
+
+  socket.on("system_status", function (msg: any) {
     if (msg.status.error_state == true) {
       $("#system_status").html(
         `<a href="${acars_url}status">System Status: <span class="red_body">Error</a></span>`
@@ -259,23 +308,29 @@ $(document).ready(function () {
       );
     }
   });
+
   socket.on("disconnect", function () {
     connection_status();
   });
+
   socket.on("connect_error", function () {
     connection_status();
   });
+
   socket.on("connect_timeout", function () {
     connection_status();
   });
+
   socket.on("connect", function () {
     connection_status(true);
   });
+
   socket.on("reconnect", function () {
     connection_status(true);
   });
+
   //receive details from server
-  socket.on("newmsg", function (msg) {
+  socket.on("newmsg", function (msg: any) {
     if (
       msg.msghtml.hasOwnProperty("label") == false ||
       exclude.indexOf(msg.msghtml.label) == -1
@@ -302,6 +357,7 @@ $(document).ready(function () {
             msg.msghtml.decodedText = decoded_msg;
           }
         }
+
         var matched = match_alert(msg);
         if (matched.was_found) {
           msg.msghtml.matched = true;
@@ -310,13 +366,16 @@ $(document).ready(function () {
           msg.msghtml.matched_flight = matched.flight;
           msg.msghtml.matched_tail = matched.tail;
         }
+
         var new_tail = msg.msghtml.tail;
         var new_icao = msg.msghtml.icao;
         var new_flight = msg.msghtml.flight;
         var found = false; // variable to track if the new message was found in previous messages
         var rejected = false; // variable to track if the new message was rejected for being a duplicate
         var index_new = 0; // the index of the found previous message
+
         msg.msghtml.uid = getRandomInt(1000000).toString(); // Each message gets a unique ID. Used to track tab selection
+
         // Loop through the received messages. If a message is found we'll break out of the for loop
         for (var u = 0; u < msgs_received.length; u++) {
           // Now we loop through all of the messages in the message group to find a match in case the first doesn't
@@ -378,11 +437,13 @@ $(document).ready(function () {
               z = msgs_received[u].length;
             }
           }
+
           // if we found a message group that matches the new message
           // run through the messages in that group to see if it is a dup.
           // if it is, we'll reject the new message and append a counter to the old/saved message
           if (found) {
             u = msgs_received.length;
+
             for (var j = 0; j < msgs_received[index_new].length; j++) {
               // First check is to see if the message is the same by checking all fields and seeing if they match
               // Second check is to see if the text field itself is a match
@@ -471,16 +532,19 @@ $(document).ready(function () {
                 // We have a multi part message. Now we need to see if it is a dup
                 rejected = true;
                 var add_multi = true;
+
                 if (msgs_received[index_new][j].hasOwnProperty("msgno_parts")) {
                   // Now we'll see if the multi-part message is a dup
                   var split = msgs_received[index_new][j].msgno_parts
                     .toString()
                     .split(" "); // format of stored parts is "MSGID MSGID2" etc
+
                   for (var a = 0; a < split.length; a++) {
                     // Loop through the msg IDs present
                     if (split[a].substring(0, 4) == msg.msghtml["msgno"]) {
                       // Found a match in the message IDs already present
                       add_multi = false; // Ensure later checks know we've found a duplicate and to not add the message
+
                       if (a == 0 && split[a].length == 4) {
                         // Match, first element of the array with no previous matches so we don't want a leading space
                         msgs_received[index_new][j].msgno_parts =
@@ -511,8 +575,10 @@ $(document).ready(function () {
                     }
                   }
                 }
+
                 msgs_received[index_new][j]["timestamp"] =
                   msg.msghtml.timestamp;
+
                 if (add_multi) {
                   // Multi-part message has been found
                   if (
@@ -524,6 +590,7 @@ $(document).ready(function () {
                   else if (msg.msghtml.hasOwnProperty("text"))
                     // If the new message has a text field but the parent does not, add the new text to the parent
                     msgs_received[index_new][j]["text"] = msg.msghtml.text;
+
                   if (
                     msgs_received[index_new][j].hasOwnProperty("msgno_parts")
                   ) {
@@ -536,17 +603,20 @@ $(document).ready(function () {
                       " " +
                       msg.msghtml.msgno;
                   }
+
                   // Re-run the text decoder against the text field we've updated
                   var decoded_msg = md.decode(msgs_received[index_new][j]);
                   if (decoded_msg.decoded == true) {
                     msgs_received[index_new][j]["decoded_msg"] = decoded_msg;
                   }
+
                   if (matched.was_found && !msg.loading) sound_alert();
                 }
               }
+
               if (rejected) {
                 // Promote the message back to the front
-                msgs_received[index_new].forEach(function (item, i) {
+                msgs_received[index_new].forEach(function (item: any, i: any) {
                   if (i == j) {
                     msgs_received[index_new].splice(i, 1);
                     msgs_received[index_new].unshift(item);
@@ -556,12 +626,14 @@ $(document).ready(function () {
               }
             }
           }
+
           // If the message was found we'll move the message group back to the top
           if (found) {
             // If the message was found, and not rejected, we'll append it to the message group
             if (!rejected) {
               msgs_received[index_new].unshift(msg.msghtml);
             }
+
             msgs_received.forEach(function (item, i) {
               if (i == index_new) {
                 msgs_received.splice(i, 1);

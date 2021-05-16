@@ -1,8 +1,11 @@
-import { display_messages } from "./html_generator.js";
-import { generate_menu, generate_footer } from "./menu.js";
-import { MessageDecoder } from "../airframes-acars-decoder/MessageDecoder.js";
-import { connection_status, updateAlertCounter } from "./alerts.js";
-var socket;
+import { display_messages } from "./html_generator.js"
+import { generate_menu, generate_footer } from "./menu.js"
+import { MessageDecoder } from "../node_modules/@airframes/acars-decoder/dist/MessageDecoder.js";
+import { connection_status, updateAlertCounter } from "./alerts.js"
+
+var socket: SocketIOClient.Socket;
+
+declare const window: any;
 var current_search = {
   flight: "",
   depa: "",
@@ -24,19 +27,24 @@ var acars_path = document.location.pathname.replace(
 acars_path += acars_path.endsWith("/") ? "" : "/";
 var acars_url = document.location.origin + acars_path;
 const md = new MessageDecoder();
+
 $(document).ready(function () {
   //connect to the socket server.
   generate_menu();
   generate_footer();
   updateAlertCounter();
+
   socket = io.connect(`${document.location.origin}/search`, {
     path: acars_path + "socket.io",
   });
-  var msgs_received = [];
-  var num_results = [];
+
+  var msgs_received: any[] = [];
+  var num_results: any[] = [];
+
   // receive details from server
+
   // DB stats
-  socket.on("database", function (msg) {
+  socket.on("database", function (msg: any) {
     $("#database").html(String(msg.count).trim() + " rows");
     if (parseInt(msg.size) > 0) {
       $("#size").html(formatSizeUnits(parseInt(msg.size)));
@@ -44,7 +52,8 @@ $(document).ready(function () {
       $("#size").html("Error getting DB size");
     }
   });
-  socket.on("system_status", function (msg) {
+
+  socket.on("system_status", function (msg: any) {
     if (msg.status.error_state == true) {
       $("#system_status").html(
         `<a href="${acars_url}status">System Status: <span class="red_body">Error</a></span>`
@@ -55,23 +64,29 @@ $(document).ready(function () {
       );
     }
   });
+
   socket.on("disconnect", function () {
     connection_status();
   });
+
   socket.on("connect_error", function () {
     connection_status();
   });
+
   socket.on("connect_timeout", function () {
     connection_status();
   });
+
   socket.on("connect", function () {
     connection_status(true);
   });
+
   socket.on("reconnect", function () {
     connection_status(true);
   });
+
   // Search results returned
-  socket.on("newmsg", function (msg) {
+  socket.on("newmsg", function (msg: any) {
     //maintain a list of 1 msgs
     if (msgs_received.length >= 1) {
       msgs_received.shift();
@@ -79,13 +94,17 @@ $(document).ready(function () {
     if (num_results.length >= 1) {
       num_results.shift();
     }
+
     if (msg.hasOwnProperty("query_time")) query_time = msg["query_time"];
     // Lets check and see if the results match the current search string
     var display = "";
     var display_nav_results = "";
+
     var results = []; // temp variable to store the JSON formatted JS object
+
     // Show the results if the returned results match the current search string (in case user kept typing after search emitted)
     // or the user has executed a 'show all'
+
     if (true) {
       msgs_received.push(msg.msghtml);
       num_results.push(msg.num_results);
@@ -101,6 +120,7 @@ $(document).ready(function () {
           }
           results.push([msg_json]);
         }
+
         // Display the updated nav bar and messages
         display = display_messages(results);
         display_nav_results = display_search(current_page, num_results[i]);
@@ -110,6 +130,7 @@ $(document).ready(function () {
       }
     }
   });
+
   // Function to listen for key up events. If detected, check and see if the search string has been updated. If so, process the updated query
   document.addEventListener("keyup", function () {
     var current_terms = get_search_terms();
@@ -119,39 +140,44 @@ $(document).ready(function () {
     }
   });
 });
+
 function get_search_terms() {
   return {
-    flight: document.getElementById("search_flight").value,
-    depa: document.getElementById("search_depa").value,
-    dsta: document.getElementById("search_dsta").value,
-    freq: document.getElementById("search_freq").value,
-    label: document.getElementById("search_msglbl").value,
-    msgno: document.getElementById("search_msgno").value,
-    tail: document.getElementById("search_tail").value,
-    msg_text: document.getElementById("search_text").value,
+    flight: (<HTMLInputElement>(document.getElementById("search_flight"))).value,
+    depa: (<HTMLInputElement>(document.getElementById("search_depa"))).value,
+    dsta: (<HTMLInputElement>(document.getElementById("search_dsta"))).value,
+    freq: (<HTMLInputElement>(document.getElementById("search_freq"))).value,
+    label: (<HTMLInputElement>(document.getElementById("search_msglbl"))).value,
+    msgno: (<HTMLInputElement>(document.getElementById("search_msgno"))).value,
+    tail: (<HTMLInputElement>(document.getElementById("search_tail"))).value,
+    msg_text: (<HTMLInputElement>(document.getElementById("search_text"))).value,
   };
 }
+
 function is_everything_blank() {
   for (let [key, value] of Object.entries(current_search)) {
     if (value === "" || value === null) return false;
   }
   return true;
 }
+
 function reset_search_terms() {
-  document.getElementById("search_flight").value = "";
-  document.getElementById("search_depa").value = "";
-  document.getElementById("search_dsta").value = "";
-  document.getElementById("search_freq").value = "";
-  document.getElementById("search_msglbl").value = "";
-  document.getElementById("search_msgno").value = "";
-  document.getElementById("search_tail").value = "";
-  document.getElementById("search_text").value = "";
+  (<HTMLInputElement>(document.getElementById("search_flight"))).value = "";
+  (<HTMLInputElement>(document.getElementById("search_depa"))).value = "";
+  (<HTMLInputElement>(document.getElementById("search_dsta"))).value = "";
+  (<HTMLInputElement>(document.getElementById("search_freq"))).value = "";
+  (<HTMLInputElement>(document.getElementById("search_msglbl"))).value = "";
+  (<HTMLInputElement>(document.getElementById("search_msgno"))).value = "";
+  (<HTMLInputElement>(document.getElementById("search_tail"))).value = "";
+  (<HTMLInputElement>(document.getElementById("search_text"))).value = "";
 }
+
 // In order to help DB responsiveness, I want to make sure the user has quit typing before emitting a query
 // We'll do this by recording the state of the DB search text field, waiting half a second (might could make this less)
 // I chose 500ms for the delay because it seems like a reasonable compromise for fast/slow typers
 // Once delay is met, compare the previous text field with the current text field. If they are the same, we'll send a query out
-async function delay_query(initial_query) {
+
+async function delay_query(initial_query: any) {
   // Pause for half a second
   await sleep(100);
   var old_search = current_search; // Save the old search term in a temp variable
@@ -179,7 +205,9 @@ async function delay_query(initial_query) {
     }
   }
 }
+
 // Function to run show all messages. Sets the various status trackers on the page to expected values
+
 window.showall = function () {
   socket.emit("query", { show_all: true }, "/search");
   $("#log").html("Updating...");
@@ -188,13 +216,17 @@ window.showall = function () {
   current_page = 0;
   show_all = true;
 };
+
 // Zzzzzzz
-function sleep(ms) {
+
+function sleep(ms: any) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
+
 // Function called by a user clicking on a search page link.
 // Set tracking to the new page and send the query off to the DB
-window.runclick = function (page) {
+
+window.runclick = function (page: any) {
   current_page = page;
   var current_terms = get_search_terms();
   if (!is_everything_blank() || show_all) {
@@ -211,6 +243,7 @@ window.runclick = function (page) {
     }
   }
 };
+
 // Sanity checker to ensure the page typed in the jump box makes sense. If it does, call the runclick function to send it off to the DB
 // window.jumppage = function () {
 //   var page = document.getElementById("jump").value;
@@ -220,11 +253,15 @@ window.runclick = function (page) {
 //     runclick(parseInt(page) - 1);
 //   }
 // };
+
 // Function to format the side bar
-function display_search(current, total) {
+
+function display_search(current: any, total: any) {
   let html = "";
   total_pages = 0;
+
   if (total == 0) return html + '<span class="menu_non_link">No results</span>';
+
   // Determine the number of pages to display.
   // We are getting a max of 50 results back from the database
   // We don't want a float for the total pages, and javascript (at least in my googling) doesn't have the ability to cast
@@ -232,19 +269,26 @@ function display_search(current, total) {
   // in doing so, it magically is cast to an int. For reasons I don't get but they work...then we reverse it again
   if (total % 50 != 0) total_pages = ~~(total / 50) + 1;
   else total_pages = ~~(total / 50);
+
   html +=
     '<table class="search"><thead><th class="search_label"></th><th class="search_term"></th></thead>';
   html += `<tr><td colspan="2"><span class="menu_non_link">Query Time: ${query_time.toFixed(
     4
   )} Seconds</span></td></tr>`;
   html += `<tr><td colspan="2"><span class="menu_non_link">Found <strong>${total}</strong> result(s) in <strong>${total_pages}</strong> page(s).</span></td></tr>`;
+
   // Determine -/+ range. We want to show -/+ 5 pages from current index
+
   var low_end = 0;
   var high_end = current + 6;
+
   if (current > 5) low_end = current - 5;
+
   if (high_end > total_pages) high_end = total_pages;
+
   if (total_pages != 1) {
     html += '<tr><td colspan="2">';
+
     if (low_end > 0) {
       if (low_end > 5)
         html += `<a href=\"#\" id=\"search_page\" onclick=\"runclick(${
@@ -253,6 +297,7 @@ function display_search(current, total) {
       else
         html += `<a href=\"#\" id=\"search_page\" onclick=\"runclick(0)\"><< </a>`;
     }
+
     for (var i = low_end; i < high_end; i++) {
       if (i == current) {
         html += ` <span class="menu_non_link"><strong>${
@@ -264,6 +309,7 @@ function display_search(current, total) {
         }</a> `;
       }
     }
+
     if (high_end != total_pages) {
       if (high_end + 5 < total_pages)
         html += `<a href=\"#\" id=\"search_page\" onclick=\"runclick(${
@@ -273,6 +319,7 @@ function display_search(current, total) {
         html += `<a href=\"#\" id=\"search_page\" onclick=\"runclick(${high_end}\")> >></a>`;
     }
   }
+
   if (total_pages > 5) {
     html +=
       '</td></tr><tr><td class="search_label"><label>Page:</label></td><td class="search_term"><input type="text" id="jump"><p></td></tr>';
@@ -283,10 +330,12 @@ function display_search(current, total) {
     html += "</td></tr></table>";
     html += '<div id="error_message"></div></div>';
   }
+
   return html;
 }
-function formatSizeUnits(bytes) {
-  let output = "";
+
+function formatSizeUnits(bytes: number) {
+  let output: string = "";
   if (bytes >= 1073741824) {
     output = (bytes / 1073741824).toFixed(2) + " GB";
   } else if (bytes >= 1048576) {

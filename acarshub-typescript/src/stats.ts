@@ -1,10 +1,9 @@
-import { connection_status, updateAlertCounter } from "./alerts.js";
-import {
-  generate_menu,
-  generate_footer,
-  generate_stat_submenu,
-} from "./menu.js";
-var socket;
+import { Chart } from "chart.js";
+import ChartDataLabels from 'chartjs-plugin-datalabels';
+import { connection_status, updateAlertCounter } from "./alerts.js"
+import { generate_menu, generate_footer, generate_stat_submenu } from "./menu.js"
+
+var socket: SocketIOClient.Socket;
 var image_prefix = "";
 var acars_path = document.location.pathname.replace(
   /about|search|stats|status|alerts/gi,
@@ -12,21 +11,27 @@ var acars_path = document.location.pathname.replace(
 );
 acars_path += acars_path.endsWith("/") ? "" : "/";
 var acars_url = document.location.origin + acars_path;
-var chart_alerts;
-var chart_signals;
+
+var chart_alerts: Chart;
+var chart_signals: Chart;
+
 $(document).ready(function () {
   generate_menu();
   generate_footer();
   updateAlertCounter();
+
   socket = io.connect(`${document.location.origin}/stats`, {
     path: acars_path + "socket.io",
   });
-  socket.on("newmsg", function (msg) {
+
+  socket.on("newmsg", function (msg: any) {
     generate_stat_submenu(msg.acars, msg.vdlm);
   });
-  socket.on("signal", function (msg) {
+
+  socket.on("signal", function (msg: any) {
     var input_labels = [];
     var input_data = [];
+
     // This float check is a hack and will discard good data. However, for reasons I don't understand
     // The database stores whole numbers not as the input float but as an int
     // This might be an artifact of any database that was running the old acarsdec (which used whole numbers only)
@@ -35,6 +40,7 @@ $(document).ready(function () {
     // The ultimate result here is that anyone who had run the old acarsdec would see massive spikes on whole numbers
     // that skews the graph significantly. Removing those values smooths the graph and is more representative of what
     // really has been received with the newer, better signal levels
+
     for (let i in msg.levels) {
       if (msg.levels[i].level != null && isFloat(msg.levels[i].level)) {
         input_labels.push(`${msg.levels[i].level}`);
@@ -44,12 +50,14 @@ $(document).ready(function () {
     if (chart_signals) {
       chart_signals.destroy();
     }
-    const canvas = document.getElementById("signallevels");
-    const ctx = canvas.getContext("2d");
-    if (ctx != null) {
+
+    const canvas = <HTMLCanvasElement> document.getElementById('signallevels');
+    const ctx = canvas.getContext('2d');
+    if(ctx != null) {
       chart_signals = new Chart(ctx, {
         // The type of chart we want to create
         type: "line",
+
         // The data for our dataset
         data: {
           labels: input_labels,
@@ -64,12 +72,14 @@ $(document).ready(function () {
             },
           ],
         },
+
         // Configuration options go here
         options: {},
       });
     }
   });
-  socket.on("alert_terms", function (msg) {
+
+  socket.on("alert_terms", function (msg: any) {
     var labels = [];
     var alert_data = [];
     for (let i in msg.data) {
@@ -83,16 +93,18 @@ $(document).ready(function () {
     if (chart_alerts) {
       chart_alerts.destroy();
     }
-    const canvas_alerts = document.getElementById("alertterms");
-    const ctx_alerts = canvas_alerts.getContext("2d");
-    if (ctx_alerts != null) {
+    const canvas_alerts = <HTMLCanvasElement> document.getElementById('alertterms');
+    const ctx_alerts = canvas_alerts.getContext('2d');
+    if(ctx_alerts != null) {
       // @ts-expect-error
-      let p = palette("tol", 12, 0, "").map(function (hex) {
+      let p = palette("tol", 12, 0, "").map(function (hex: any) {
         return "#" + hex;
       });
+
       chart_alerts = new Chart(ctx_alerts, {
         // The type of chart we want to create
         type: "bar",
+
         // The data for our dataset
         data: {
           labels: labels,
@@ -106,11 +118,12 @@ $(document).ready(function () {
             },
           ],
         },
+
         // Configuration options go here
         options: {
           plugins: {
             datalabels: {
-              backgroundColor: function (context) {
+              backgroundColor: function (context: any) {
                 return context.dataset.backgroundColor;
               },
               borderRadius: 4,
@@ -127,7 +140,8 @@ $(document).ready(function () {
       });
     }
   });
-  socket.on("freqs", function (msg) {
+
+  socket.on("freqs", function (msg: any) {
     var html = '<table class="search">';
     html +=
       '<thead><th><span class="menu_non_link">Frequency</span></th><th><span class="menu_non_link">Count</span></th><th><span class="menu_non_link">Type</span></th></thead>';
@@ -135,14 +149,18 @@ $(document).ready(function () {
       if (msg.freqs[i].freq_type == "ACARS")
         html += `<tr><td><span class=\"menu_non_link\">${msg.freqs[i].freq}</span></td><td><span class=\"menu_non_link\">${msg.freqs[i].count}</span></td><td><span class=\"menu_non_link\">${msg.freqs[i].freq_type}</span></td></tr>`;
     }
+
     for (let i = 0; i < msg.freqs.length; i++) {
       if (msg.freqs[i].freq_type == "VDL-M2")
         html += `<tr><td><span class=\"menu_non_link\">${msg.freqs[i].freq}</span></td><td><span class=\"menu_non_link\">${msg.freqs[i].count}</span></td><td><span class=\"menu_non_link\">${msg.freqs[i].freq_type}</span></td></tr>`;
     }
+
     html += "</table>";
+
     $("#freqs").html(html);
   });
-  socket.on("system_status", function (msg) {
+
+  socket.on("system_status", function (msg: any) {
     if (msg.status.error_state == true) {
       $("#system_status").html(
         `<a href="${acars_url}status">System Status: <span class="red_body">Error</a></span>`
@@ -153,13 +171,16 @@ $(document).ready(function () {
       );
     }
   });
-  socket.on("count", function (msg) {
-    var error = msg.count[1];
-    var total = msg.count[0] + msg.count[2] + msg.count[3];
-    var good_msg = msg.count[0] - error;
-    var empty_error = msg.count[3];
-    var empty_good = msg.count[2];
-    let html = '<p><table class="search">';
+
+  socket.on("count", function (msg: any) {
+    var error: number = msg.count[1];
+    var total: number = msg.count[0] + msg.count[2] + msg.count[3];
+    var good_msg: number = msg.count[0] - error;
+
+    var empty_error: number = msg.count[3];
+    var empty_good: number = msg.count[2];
+
+    let html: string = '<p><table class="search">';
     html += `<tr><td><span class="menu_non_link">Total Messages (All): </span></td><td><span class="menu_non_link">${total}</span></td><td></td></tr>`;
     html += `<tr><td><span class="menu_non_link">Messages (No Errors): </span></td><td><span class="menu_non_link">${good_msg}</span></td><td><span class="menu_non_link">${
       total ? parseFloat(String((good_msg / total) * 100)).toFixed(2) + "%" : ""
@@ -173,95 +194,95 @@ $(document).ready(function () {
       empty_good + empty_error
     }</span></td><td><span class="menu_non_link">${
       total
-        ? parseFloat(
-            String(((empty_good + empty_error) / total) * 100)
-          ).toFixed(2) + "%"
+        ? parseFloat(String(((empty_good + empty_error) / total) * 100)).toFixed(2) +
+          "%"
         : ""
     }</span></td></tr>`;
     html += `<tr><td><span class="menu_non_link">Empty Messages (No Errors): </span></td><td><span class="menu_non_link">${empty_good}</span></td><td><span class="menu_non_link">${
-      total
-        ? parseFloat(String((empty_good / total) * 100)).toFixed(2) + "%"
-        : ""
+      total ? parseFloat(String((empty_good / total) * 100)).toFixed(2) + "%" : ""
     }</span></td></tr>`;
     html += `<tr><td><span class="menu_non_link">Empty Messages (W/Errors): </span></td><td><span class="menu_non_link">${empty_error}</span></td><td><span class="menu_non_link">${
-      total
-        ? parseFloat(String((empty_error / total) * 100)).toFixed(2) + "%"
-        : ""
+      total ? parseFloat(String((empty_error / total) * 100)).toFixed(2) + "%" : ""
     }</span></td></tr>`;
     html += "</table>";
+
     $("#msgs").html(html);
   });
+
   socket.on("disconnect", function () {
     connection_status();
   });
+
   socket.on("connect_error", function () {
     connection_status();
   });
+
   socket.on("connect_timeout", function () {
     connection_status();
   });
+
   socket.on("connect", function () {
     connection_status(true);
   });
+
   socket.on("reconnect", function () {
     connection_status(true);
   });
+
   grab_freqs();
   grab_message_count();
 });
-function isFloat(n) {
+
+function isFloat(n: any) {
   return Number(n) === n && n % 1 !== 0;
 }
+
 setInterval(function () {
   grab_images();
   grab_freqs();
   grab_message_count();
   grab_updated_graphs();
 }, 60000);
-function update_prefix(prefix) {
+
+function update_prefix(prefix: any) {
   image_prefix = prefix;
   grab_images();
 }
+
 function grab_images() {
   var onehour = document.getElementById("1hr");
-  if (onehour !== null && onehour.hasOwnProperty("src"))
-    onehour.src =
-      `static/images/${image_prefix}1hour.png?rand=` + Math.random();
+  if(onehour !== null && onehour.hasOwnProperty("src")) (<HTMLImageElement>onehour).src = `static/images/${image_prefix}1hour.png?rand=` + Math.random();
+
   var sixhours = document.getElementById("6hr");
-  if (sixhours !== null && sixhours.hasOwnProperty("src'"))
-    sixhours.src =
-      `static/images/${image_prefix}6hour.png?rand=` + Math.random();
+  if(sixhours !== null && sixhours.hasOwnProperty("src'")) (<HTMLImageElement>sixhours).src = `static/images/${image_prefix}6hour.png?rand=` + Math.random();
+
   var twelvehours = document.getElementById("12hr");
-  if (twelvehours !== null && twelvehours.hasOwnProperty("src"))
-    twelvehours.src =
-      `static/images/${image_prefix}12hour.png?rand=` + Math.random();
+  if(twelvehours !== null && twelvehours.hasOwnProperty("src")) (<HTMLImageElement>twelvehours).src = `static/images/${image_prefix}12hour.png?rand=` + Math.random();
+
   var twentyfourhours = document.getElementById("24hr");
-  if (twentyfourhours !== null && twentyfourhours.hasOwnProperty("src"))
-    twentyfourhours.src =
-      `static/images/${image_prefix}24hours.png?rand=` + Math.random();
+  if(twentyfourhours !== null && twentyfourhours.hasOwnProperty("src")) (<HTMLImageElement>twentyfourhours).src = `static/images/${image_prefix}24hours.png?rand=` + Math.random();
+
   var oneweek = document.getElementById("1wk");
-  if (oneweek !== null && oneweek.hasOwnProperty("src"))
-    oneweek.src =
-      `static/images/${image_prefix}1week.png?rand=` + Math.random();
+  if(oneweek !== null && oneweek.hasOwnProperty("src")) (<HTMLImageElement>oneweek).src = `static/images/${image_prefix}1week.png?rand=` + Math.random();
+
   var thirtydays = document.getElementById("30day");
-  if (thirtydays !== null && thirtydays.hasOwnProperty("src"))
-    thirtydays.src =
-      `static/images/${image_prefix}30days.png?rand=` + Math.random();
+  if(thirtydays !== null && thirtydays.hasOwnProperty("src")) (<HTMLImageElement>thirtydays).src = `static/images/${image_prefix}30days.png?rand=` + Math.random();
+
   var sixmonths = document.getElementById("6mon");
-  if (sixmonths !== null && sixmonths.hasOwnProperty("src'"))
-    sixmonths.src =
-      `static/images/${image_prefix}6months.png?rand=` + Math.random();
+  if(sixmonths !== null && sixmonths.hasOwnProperty("src'")) (<HTMLImageElement>sixmonths).src = `static/images/${image_prefix}6months.png?rand=` + Math.random();
+
   var oneyear = document.getElementById("1yr");
-  if (oneyear !== null && oneyear.hasOwnProperty("src"))
-    oneyear.src =
-      `static/images/${image_prefix}1year.png?rand=` + Math.random();
+  if(oneyear !== null && oneyear.hasOwnProperty("src")) (<HTMLImageElement>oneyear).src = `static/images/${image_prefix}1year.png?rand=` + Math.random();
 }
+
 function grab_freqs() {
-  socket.emit("freqs", { freqs: true }, "/stats");
+  socket.emit("freqs", { freqs: true }, ("/stats"));
 }
+
 function grab_message_count() {
-  socket.emit("count", { count: true }, "/stats");
+  socket.emit("count", { count: true }, ("/stats"));
 }
+
 function grab_updated_graphs() {
-  socket.emit("graphs", { graphs: true }, "/stats");
+  socket.emit("graphs", { graphs: true }, ("/stats"));
 }

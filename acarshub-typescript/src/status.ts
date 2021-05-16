@@ -1,5 +1,6 @@
-import { connection_status } from "./alerts.js";
-import { generate_menu, generate_footer } from "./menu.js";
+import { connection_status, match_alert, sound_alert, updateAlertCounter } from "./alerts.js"
+import { generate_menu, generate_footer } from "./menu.js"
+
 var socket;
 var acars_path = document.location.pathname.replace(
   /about|search|stats|status|alerts/gi,
@@ -7,13 +8,16 @@ var acars_path = document.location.pathname.replace(
 );
 acars_path += acars_path.endsWith("/") ? "" : "/";
 var acars_url = document.location.origin + acars_path;
+
 $(document).ready(function () {
   generate_menu();
   generate_footer();
+
   socket = io.connect(`${document.location.origin}/status`, {
     path: acars_path + "socket.io",
   });
-  socket.on("system_status", function (msg) {
+
+  socket.on("system_status", function (msg: any) {
     if (msg.status.error_state == true) {
       $("#system_status").html(
         `<a href="${acars_url}status">System Status: <span class="red_body">Error</a></span>`
@@ -23,6 +27,7 @@ $(document).ready(function () {
         `<a href="${acars_url}status">System Status: <span class="green">Okay</a></span>`
       );
     }
+
     $("#log").html(
       decode_status(
         msg.status.error_state,
@@ -34,29 +39,36 @@ $(document).ready(function () {
       )
     );
   });
+
   socket.on("disconnect", function () {
     connection_status();
   });
+
   socket.on("connect_error", function () {
     connection_status();
   });
+
   socket.on("connect_timeout", function () {
     connection_status();
   });
+
   socket.on("connect", function () {
     connection_status(true);
   });
+
   socket.on("reconnect", function () {
     connection_status(true);
   });
 });
-function decode_status(status, decoders, servers, feeders, receivers, stats) {
+
+function decode_status(status: any, decoders: any, servers: any, feeders: any, receivers: any, stats: any) {
   var html_output = "<h2>ACARS Hub System Status</h2>";
   const keys_decoder = Object.keys(decoders);
   const keys_servers = Object.keys(servers);
   const keys_receivers = Object.keys(receivers);
   const keys_feeders = Object.keys(feeders);
   const keys_stats = Object.keys(stats);
+
   html_output += '<span class="monofont">';
   html_output += "System:".padEnd(55, ".");
   if (status) {
@@ -65,6 +77,7 @@ function decode_status(status, decoders, servers, feeders, receivers, stats) {
     html_output += '<strong><span class="green">Ok</span></strong>';
   }
   html_output += "<br>";
+
   keys_decoder.forEach((key, index) => {
     var sub_string = `SDR ${key}:`;
     html_output += `${sub_string.padEnd(55, ".")}<strong><span class=${
@@ -72,6 +85,7 @@ function decode_status(status, decoders, servers, feeders, receivers, stats) {
     }>${decoders[key].Status}</span></strong>`;
     html_output += "<br>";
   });
+
   keys_servers.forEach((key, index) => {
     var sub_string = `Internal Server ${key}:`;
     html_output += `${sub_string.padEnd(55, ".")}<strong><span class=${
@@ -84,6 +98,7 @@ function decode_status(status, decoders, servers, feeders, receivers, stats) {
     }>${servers[key].Web}</span></strong>`;
     html_output += "<br>";
   });
+
   keys_stats.forEach((key, index) => {
     var sub_string = `Internal Stat Server ${key}:`;
     html_output += `${sub_string.padEnd(55, ".")}<strong><span class=${
@@ -91,6 +106,7 @@ function decode_status(status, decoders, servers, feeders, receivers, stats) {
     }>${stats[key].Status}</span></strong>`;
     html_output += "<br>";
   });
+
   keys_feeders.forEach((key, index) => {
     var sub_string = `Airframes.io Feeders ${key}:`;
     html_output += `${sub_string.padEnd(55, ".")}<strong><span class=${
@@ -98,11 +114,13 @@ function decode_status(status, decoders, servers, feeders, receivers, stats) {
     }>${feeders[key].Status}</span></strong>`;
     html_output += "<br>";
   });
+
   keys_receivers.forEach((key, index) => {
     var sub_string = `${key} Received ${receivers[key].Count} Messages In the Last Hour:`;
     var class_string = "";
     if (receivers[key].Status == "Ok") class_string = '"green"';
     else class_string = receivers[key].Status == "Bad" ? "red_body" : "orange";
+
     html_output += `${sub_string.padEnd(
       55,
       "."
@@ -111,6 +129,8 @@ function decode_status(status, decoders, servers, feeders, receivers, stats) {
     }</span></strong>`;
     html_output += "<br>";
   });
+
   html_output += "</span>";
+
   return html_output;
 }

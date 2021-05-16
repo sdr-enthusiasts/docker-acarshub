@@ -1,13 +1,14 @@
-import Cookies from "./other/js.cookie.min.mjs";
+import Cookies from "js-cookie"
 import { generate_menu, generate_footer } from "./menu.js";
 import { display_messages } from "./html_generator.js";
-var socket_alerts;
+
+var socket_alerts: SocketIOClient.Socket;
 var alerts = 0;
-var alert_text = [];
-var alert_callsigns = [];
-var alert_tail = [];
-var alert_icao = [];
-var msgs_received = [];
+var alert_text: string[] = [];
+var alert_callsigns: string[] = [];
+var alert_tail:string[] = [];
+var alert_icao:string[] = [];
+var msgs_received:any[] = [];
 var acars_path = document.location.pathname.replace(
   /about|search|stats|status|alerts/gi,
   ""
@@ -34,46 +35,56 @@ var default_text_values = [
   "pan",
   "red coat",
 ];
+
 var alert_sound = new Audio(`${acars_url}static/sounds/alert.mp3`);
 var play_sound = false;
+
 msgs_received.unshift = function () {
   if (this.length >= 50) {
     this.pop();
   }
-  return Array.prototype.unshift.apply(this, arguments);
+  return Array.prototype.unshift.apply(this, arguments as any);
 };
+
 $(document).ready(function () {
   socket_alerts = io.connect(`${document.location.origin}/alerts`, {
     path: acars_path + "socket.io",
   });
-  socket_alerts.on("terms", function (msg) {
+
+  socket_alerts.on("terms", function (msg: any) {
     alert_text = msg.terms;
     if (acars_page == "/alerts") {
-      document.getElementById("alert_text").value = document.getElementById(
+      (<HTMLInputElement>document.getElementById("alert_text")).value = (<HTMLInputElement>document.getElementById(
         "alert_text"
-      ).value = combineArray(alert_text).toUpperCase();
+      )).value = combineArray(alert_text).toUpperCase();
     }
   });
+
   // Update the cookies so the expiration date pushes out in to the future
   // Also sets all of the user saved prefs
   onInit();
+
   if (acars_page == "/alerts") {
     generate_menu();
     generate_footer();
     Cookies.set("alert_unread", "0", { expires: 365 });
+
     // temporarily toggle the play_sound variable so we can set the UI correctly
     play_sound = play_sound ? false : true;
     toggle_playsound(true);
+
     // Set the text areas to the values saved in the cookies
     // document.getElementById("alert_text").value = Cookies.get("alert_text")
     //   ? Cookies.get("alert_text")
     //   : "";
-    document.getElementById("alert_callsigns").value =
-      Cookies.get("alert_callsigns") || "";
-    document.getElementById("alert_tail").value =
-      Cookies.get("alert_tail") || "";
-    document.getElementById("alert_icao").value =
-      Cookies.get("alert_icao") || "";
+    (<HTMLInputElement>document.getElementById("alert_callsigns")).value = Cookies.get(
+      "alert_callsigns"
+    ) ||  "";
+      (<HTMLInputElement>document.getElementById("alert_tail")).value = Cookies.get("alert_tail")
+      ||  "";
+      (<HTMLInputElement>document.getElementById("alert_icao")).value = Cookies.get("alert_icao")
+      || "";
+
     socket_alerts.emit(
       "query",
       {
@@ -84,7 +95,7 @@ $(document).ready(function () {
       },
       "/alerts"
     );
-    socket_alerts.on("newmsg", function (msg) {
+    socket_alerts.on("newmsg", function (msg: any) {
       var matched = match_alert(msg);
       if (matched.was_found) {
         if (msg.loading != true) sound_alert();
@@ -96,7 +107,8 @@ $(document).ready(function () {
         $("#log").html(display_messages(msgs_received));
       }
     });
-    socket_alerts.on("system_status", function (msg) {
+
+    socket_alerts.on("system_status", function (msg: any) {
       if (msg.status.error_state == true) {
         $("#system_status").html(
           `<a href="${acars_url}status">System Status: <span class="red_body">Error</span>`
@@ -107,23 +119,28 @@ $(document).ready(function () {
         );
       }
     });
+
     socket_alerts.on("disconnect", function () {
       connection_status();
     });
+
     socket_alerts.on("connect_error", function () {
       connection_status();
     });
+
     socket_alerts.on("connect_timeout", function () {
       connection_status();
     });
+
     socket_alerts.on("connect", function () {
       connection_status(true);
     });
+
     socket_alerts.on("reconnect", function () {
       connection_status(true);
     });
   } else if (acars_page != "/") {
-    socket_alerts.on("newmsg", function (msg) {
+    socket_alerts.on("newmsg", function (msg: any) {
       var matched = match_alert(msg);
       if (matched.was_found && msg.loading != true) {
         alerts += 1;
@@ -135,13 +152,15 @@ $(document).ready(function () {
     Cookies.set("alert_unread", "0", { expires: 365 });
   }
 });
+
 export function updateAlertCounter() {
   if (alerts) $("#alert_count").html(` <span class="red">(${alerts})</span>`);
   Cookies.set("alert_unread", String(alerts), { expires: 365 });
 }
+
 function updateAlerts() {
-  if (document.getElementById("alert_text").value.length > 0) {
-    var split = document.getElementById("alert_text").value.split(",");
+  if ((<HTMLInputElement>document.getElementById("alert_text")).value.length > 0) {
+    var split = (<HTMLInputElement>document.getElementById("alert_text")).value.split(",");
     alert_text = [];
     for (var i = 0; i < split.length; i++) {
       if (
@@ -153,8 +172,9 @@ function updateAlerts() {
   } else {
     alert_text = [];
   }
-  if (document.getElementById("alert_callsigns").value.length > 0) {
-    var split = document.getElementById("alert_callsigns").value.split(",");
+
+  if ((<HTMLInputElement>document.getElementById("alert_callsigns")).value.length > 0) {
+    var split = (<HTMLInputElement>document.getElementById("alert_callsigns")).value.split(",");
     alert_callsigns = [];
     for (var i = 0; i < split.length; i++) {
       if (
@@ -166,8 +186,9 @@ function updateAlerts() {
   } else {
     alert_callsigns = [];
   }
-  if (document.getElementById("alert_tail").value.length > 0) {
-    var split = document.getElementById("alert_tail").value.split(",");
+
+  if ((<HTMLInputElement>document.getElementById("alert_tail")).value.length > 0) {
+    var split = (<HTMLInputElement>document.getElementById("alert_tail")).value.split(",");
     alert_tail = [];
     for (var i = 0; i < split.length; i++) {
       if (
@@ -179,8 +200,9 @@ function updateAlerts() {
   } else {
     alert_tail = [];
   }
-  if (document.getElementById("alert_icao").value.length > 0) {
-    var split = document.getElementById("alert_icao").value.split(",");
+
+  if ((<HTMLInputElement>document.getElementById("alert_icao")).value.length > 0) {
+    var split = (<HTMLInputElement>document.getElementById("alert_icao")).value.split(",");
     alert_icao = [];
     for (var i = 0; i < split.length; i++) {
       if (
@@ -192,18 +214,20 @@ function updateAlerts() {
   } else {
     alert_icao = [];
   }
-  document.getElementById("alert_text").value = document.getElementById(
+
+  (<HTMLInputElement>document.getElementById("alert_text")).value = (<HTMLInputElement>document.getElementById(
     "alert_text"
-  ).value = combineArray(alert_text).toUpperCase();
-  document.getElementById("alert_callsigns").value = document.getElementById(
+  )).value = combineArray(alert_text).toUpperCase();
+  (<HTMLInputElement>document.getElementById("alert_callsigns")).value = (<HTMLInputElement>document.getElementById(
     "alert_callsigns"
-  ).value = combineArray(alert_callsigns).toUpperCase();
-  document.getElementById("alert_tail").value = document.getElementById(
+  )).value = combineArray(alert_callsigns).toUpperCase();
+  (<HTMLInputElement>document.getElementById("alert_tail")).value = (<HTMLInputElement>document.getElementById(
     "alert_tail"
-  ).value = combineArray(alert_tail).toUpperCase();
-  document.getElementById("alert_icao").value = document.getElementById(
+  )).value = combineArray(alert_tail).toUpperCase();
+  (<HTMLInputElement>document.getElementById("alert_icao")).value = (<HTMLInputElement>document.getElementById(
     "alert_icao"
-  ).value = combineArray(alert_icao).toUpperCase();
+  )).value = combineArray(alert_icao).toUpperCase();
+
   socket_alerts.emit(
     "update_alerts",
     {
@@ -211,6 +235,7 @@ function updateAlerts() {
     },
     "/alerts"
   );
+
   // Cookies.set("alert_text", combineArray(alert_text), { expires: 365 });
   Cookies.set("alert_callsigns", combineArray(alert_callsigns), {
     expires: 365,
@@ -218,6 +243,7 @@ function updateAlerts() {
   Cookies.set("alert_tail", combineArray(alert_tail), { expires: 365 });
   Cookies.set("alert_icao", combineArray(alert_icao), { expires: 365 });
 }
+
 function onInit() {
   alerts = Cookies.get("alert_unread")
     ? Number(Cookies.get("alert_unread"))
@@ -226,6 +252,7 @@ function onInit() {
   Cookies.set("play_sound", play_sound == true ? "true" : "false", {
     expires: 365,
   });
+
   // if (Cookies.get("alert_text") ? Cookies.get("alert_text") : "" > 0) {
   //   var split = Cookies.get("alert_text").split(",");
   //   for (var i = 0; i < split.length; i++) {
@@ -238,11 +265,11 @@ function onInit() {
   // } else {
   //   alert_text = [];
   // }
+
   if (
-    Cookies.get("alert_callsigns") &&
-    Cookies.get("alert_callsigns").length > 0
+    Cookies.get("alert_callsigns") && Cookies.get("alert_callsigns")!.length > 0
   ) {
-    var split = Cookies.get("alert_callsigns").split(",");
+    var split = Cookies.get("alert_callsigns")!.split(",");
     for (var i = 0; i < split.length; i++) {
       if (
         split[i].trim().length > 0 &&
@@ -253,8 +280,9 @@ function onInit() {
   } else {
     alert_callsigns = [];
   }
-  if (Cookies.get("alert_tail") && Cookies.get("alert_tail").length > 0) {
-    var split = Cookies.get("alert_tail").split(",");
+
+  if (Cookies.get("alert_tail") && Cookies.get("alert_tail")!.length > 0) {
+    var split = Cookies.get("alert_tail")!.split(",");
     for (var i = 0; i < split.length; i++) {
       if (
         split[i].trim().length > 0 &&
@@ -265,8 +293,9 @@ function onInit() {
   } else {
     alert_tail = [];
   }
-  if (Cookies.get("alert_icao") && Cookies.get("alert_icao").length > 0) {
-    var split = Cookies.get("alert_icao").split(",");
+
+  if (Cookies.get("alert_icao") && Cookies.get("alert_icao")!.length > 0) {
+    var split = Cookies.get("alert_icao")!.split(",");
     for (var i = 0; i < split.length; i++) {
       if (
         split[i].trim().length > 0 &&
@@ -277,6 +306,7 @@ function onInit() {
   } else {
     alert_icao = [];
   }
+
   // socket_alerts.emit(
   //   "update_alerts",
   //   {
@@ -284,6 +314,7 @@ function onInit() {
   //   },
   //   "/alerts"
   // );
+
   // Cookies.set("alert_text", combineArray(alert_text), { expires: 365 });
   Cookies.set("alert_callsigns", combineArray(alert_callsigns), {
     expires: 365,
@@ -291,19 +322,24 @@ function onInit() {
   Cookies.set("alert_tail", combineArray(alert_tail), { expires: 365 });
   Cookies.set("alert_icao", combineArray(alert_icao), { expires: 365 });
 }
-function combineArray(input) {
+
+function combineArray(input: any) {
   var output = "";
+
   for (var i = 0; i < input.length; i++) {
     output += `${i != 0 ? "," + input[i] : input[i]}`;
   }
+
   return output;
 }
-export function match_alert(msg) {
+
+export function match_alert(msg: any) {
   var found = false;
   var matched_tail = [];
   var matched_flight = [];
   var matched_icao = [];
   var matched_text = [];
+
   if (msg.msghtml.hasOwnProperty("text")) {
     for (var i = 0; i < alert_text.length; i++) {
       if (
@@ -316,6 +352,7 @@ export function match_alert(msg) {
       }
     }
   }
+
   if (msg.msghtml.hasOwnProperty("flight")) {
     for (var i = 0; i < alert_callsigns.length; i++) {
       if (
@@ -328,6 +365,7 @@ export function match_alert(msg) {
       }
     }
   }
+
   if (msg.msghtml.hasOwnProperty("tail")) {
     for (var i = 0; i < alert_tail.length; i++) {
       if (
@@ -338,6 +376,7 @@ export function match_alert(msg) {
       }
     }
   }
+
   if (msg.msghtml.hasOwnProperty("icao")) {
     for (var i = 0; i < alert_icao.length; i++) {
       if (
@@ -355,6 +394,7 @@ export function match_alert(msg) {
       }
     }
   }
+
   return {
     was_found: found,
     text: matched_text.length > 0 ? matched_text : null,
@@ -363,16 +403,19 @@ export function match_alert(msg) {
     tail: matched_tail.length > 0 ? matched_tail : null,
   };
 }
+
 function default_alert_values() {
-  var current = document.getElementById("alert_text").value;
+  var current = (<HTMLInputElement>document.getElementById("alert_text")).value;
+
   default_text_values.forEach((element) => {
     if (!alert_text.includes(element.toUpperCase())) {
       current += `${current.length > 0 ? "," + element : element}`;
     }
   });
-  document.getElementById("alert_text").value = current;
+  (<HTMLInputElement>document.getElementById("alert_text")).value = current;
   updateAlerts();
 }
+
 export function connection_status(connected = false) {
   $("#disconnect").html(
     !connected
@@ -380,17 +423,18 @@ export function connection_status(connected = false) {
       : ""
   );
 }
+
 export function toggle_playsound(loading = false) {
   if (play_sound) {
     var id = document.getElementById("playsound_link");
-    if (id !== null) {
+    if(id !== null) {
       id.innerHTML = "";
       var txt = document.createTextNode("Turn On Alert Sound");
       id.appendChild(txt);
     }
   } else {
     var id = document.getElementById("playsound_link");
-    if (id !== null) {
+    if(id !== null) {
       id.innerHTML = "";
       var txt = document.createTextNode("Turn Off Alert Sound");
       id.appendChild(txt);
@@ -400,8 +444,10 @@ export function toggle_playsound(loading = false) {
   Cookies.set("play_sound", play_sound == true ? "true" : "false", {
     expires: 365,
   });
+
   if (!loading) sound_alert();
 }
+
 export async function sound_alert() {
   if (play_sound) {
     try {

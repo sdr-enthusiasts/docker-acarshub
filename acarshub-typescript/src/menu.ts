@@ -4,6 +4,7 @@ var acars_path = document.location.pathname.replace(
 );
 acars_path += acars_path.endsWith("/") ? "" : "/";
 var acars_url = document.location.origin + acars_path;
+
 export function generate_menu() {
   let html = "<nav>";
   html += '<ul class="primary">';
@@ -15,20 +16,24 @@ export function generate_menu() {
   html += "</nav>";
   $("#links").html(html);
 }
-export function generate_stat_submenu(acars, vdlm) {
+
+export function generate_stat_submenu(acars: any, vdlm: any) {
   var text = "";
   if (acars == true && vdlm == true) {
     text =
       '<p><a href="javascript:update_prefix(\'\')" id="pause_updates" class="spread_text">Combined Graphs</a></p>';
   }
+
   if (acars) {
     text +=
       '<p><a href="javascript:update_prefix(\'acars\')" id="pause_updates" class="spread_text">ACARS Graphs</a></p>';
   }
+
   if (vdlm) {
     text +=
       '<p><a href="javascript:update_prefix(\'vdlm\')" id="pause_updates" class="spread_text">VDLM Graphs</a></p>';
   }
+
   text +=
     '<p><a href="javascript:update_prefix(\'error\')" id="pause_updates" class="spread_text">Message Error Graphs</a></p>';
   //text += "<p><a href=\"javascript:grab_freqs()\" id=\"pause_updates\" class=\"spread_text\">Frequency Counts</a></p>";
@@ -37,6 +42,7 @@ export function generate_stat_submenu(acars, vdlm) {
   text += '<p><span id="msgs"></span></p>';
   $("#stat_menu").html(text);
 }
+
 export function generate_footer() {
   var html = `<strong><a href="${acars_url}about">ACARS Hub Help/About</a> | <a href="https://github.com/fredclausen/docker-acarshub" target="_blank">Project Github</a> | \
      <a href="https://discord.gg/sTf9uYF"><img src="https://img.shields.io/discord/734090820684349521" alt="discord"></a> | \
