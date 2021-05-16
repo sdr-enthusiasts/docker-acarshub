@@ -4,13 +4,13 @@ import { connection_status, updateAlertCounter } from "./alerts.js"
 import { generate_menu, generate_footer, generate_stat_submenu } from "./menu.js"
 
 let socket: SocketIOClient.Socket;
-let image_prefix = "";
-let acars_path = document.location.pathname.replace(
+let image_prefix: string = "";
+let acars_path: string = document.location.pathname.replace(
   /about|search|stats|status|alerts/gi,
   ""
 );
 acars_path += acars_path.endsWith("/") ? "" : "/";
-let acars_url = document.location.origin + acars_path;
+let acars_url: string = document.location.origin + acars_path;
 
 let chart_alerts: Chart;
 let chart_signals: Chart;
@@ -29,8 +29,8 @@ $(document).ready(function () {
   });
 
   socket.on("signal", function (msg: any) {
-    let input_labels = [];
-    let input_data = [];
+    let input_labels: string[] = [];
+    let input_data: number[] = [];
 
     // This float check is a hack and will discard good data. However, for reasons I don't understand
     // The database stores whole numbers not as the input float but as an int
@@ -51,8 +51,8 @@ $(document).ready(function () {
       chart_signals.destroy();
     }
 
-    const canvas = <HTMLCanvasElement> document.getElementById('signallevels');
-    const ctx = canvas.getContext('2d');
+    const canvas: HTMLCanvasElement = <HTMLCanvasElement> document.getElementById('signallevels');
+    const ctx: CanvasRenderingContext2D = canvas.getContext('2d')!;
     if(ctx != null) {
       chart_signals = new Chart(ctx, {
         // The type of chart we want to create
@@ -80,8 +80,8 @@ $(document).ready(function () {
   });
 
   socket.on("alert_terms", function (msg: any) {
-    let labels = [];
-    let alert_data = [];
+    let labels: string[] = [];
+    let alert_data: number[] = [];
     for (let i in msg.data) {
       // for now checking if count > 0 is a hack to get it to work
       // ideally, it should list out 0 term items
@@ -93,8 +93,8 @@ $(document).ready(function () {
     if (chart_alerts) {
       chart_alerts.destroy();
     }
-    const canvas_alerts = <HTMLCanvasElement> document.getElementById('alertterms');
-    const ctx_alerts = canvas_alerts.getContext('2d');
+    const canvas_alerts: HTMLCanvasElement = <HTMLCanvasElement> document.getElementById('alertterms');
+    const ctx_alerts: CanvasRenderingContext2D = canvas_alerts.getContext('2d')!;
     if(ctx_alerts != null) {
       // @ts-expect-error
       let p = palette("tol", 12, 0, "").map(function (hex: any) {
@@ -142,7 +142,7 @@ $(document).ready(function () {
   });
 
   socket.on("freqs", function (msg: any) {
-    let html = '<table class="search">';
+    let html: string = '<table class="search">';
     html +=
       '<thead><th><span class="menu_non_link">Frequency</span></th><th><span class="menu_non_link">Count</span></th><th><span class="menu_non_link">Type</span></th></thead>';
     for (let i = 0; i < msg.freqs.length; i++) {
@@ -233,7 +233,7 @@ $(document).ready(function () {
   grab_message_count();
 });
 
-function isFloat(n: any) {
+function isFloat(n: number) {
   return Number(n) === n && n % 1 !== 0;
 }
 
@@ -250,28 +250,28 @@ function update_prefix(prefix: any) {
 }
 
 function grab_images() {
-  let onehour = document.getElementById("1hr");
+  let onehour: HTMLElement = document.getElementById("1hr")!;
   if(onehour !== null && onehour.hasOwnProperty("src")) (<HTMLImageElement>onehour).src = `static/images/${image_prefix}1hour.png?rand=` + Math.random();
 
-  let sixhours = document.getElementById("6hr");
+  let sixhours: HTMLElement = document.getElementById("6hr")!;
   if(sixhours !== null && sixhours.hasOwnProperty("src'")) (<HTMLImageElement>sixhours).src = `static/images/${image_prefix}6hour.png?rand=` + Math.random();
 
-  let twelvehours = document.getElementById("12hr");
+  let twelvehours: HTMLElement = document.getElementById("12hr")!;
   if(twelvehours !== null && twelvehours.hasOwnProperty("src")) (<HTMLImageElement>twelvehours).src = `static/images/${image_prefix}12hour.png?rand=` + Math.random();
 
-  let twentyfourhours = document.getElementById("24hr");
+  let twentyfourhours: HTMLElement = document.getElementById("24hr")!;
   if(twentyfourhours !== null && twentyfourhours.hasOwnProperty("src")) (<HTMLImageElement>twentyfourhours).src = `static/images/${image_prefix}24hours.png?rand=` + Math.random();
 
-  let oneweek = document.getElementById("1wk");
+  let oneweek: HTMLElement = document.getElementById("1wk")!;
   if(oneweek !== null && oneweek.hasOwnProperty("src")) (<HTMLImageElement>oneweek).src = `static/images/${image_prefix}1week.png?rand=` + Math.random();
 
-  let thirtydays = document.getElementById("30day");
+  let thirtydays: HTMLElement = document.getElementById("30day")!;
   if(thirtydays !== null && thirtydays.hasOwnProperty("src")) (<HTMLImageElement>thirtydays).src = `static/images/${image_prefix}30days.png?rand=` + Math.random();
 
-  let sixmonths = document.getElementById("6mon");
+  let sixmonths: HTMLElement = document.getElementById("6mon")!;
   if(sixmonths !== null && sixmonths.hasOwnProperty("src'")) (<HTMLImageElement>sixmonths).src = `static/images/${image_prefix}6months.png?rand=` + Math.random();
 
-  let oneyear = document.getElementById("1yr");
+  let oneyear: HTMLElement = document.getElementById("1yr")!;
   if(oneyear !== null && oneyear.hasOwnProperty("src")) (<HTMLImageElement>oneyear).src = `static/images/${image_prefix}1year.png?rand=` + Math.random();
 }
 

@@ -1,6 +1,6 @@
 #!/bin/sh
 
-./node_modules/.bin/tsc
+# ./node_modules/.bin/tsc
 
 pushd ../rootfs/webapp/static/js
 find . -maxdepth 1 -type f -iname '*.js' -exec sed -i.bu "s/import Cookies from \"js-cookie\";/import Cookies from \".\/other\/js.cookie.min.mjs\";/g;" {} \;

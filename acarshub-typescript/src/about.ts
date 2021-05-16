@@ -2,13 +2,13 @@ import { generate_menu, generate_footer } from "./menu.js";
 import { connection_status } from "./alerts.js";
 import showdown from "showdown";
 
-let socket;
-let acars_path = document.location.pathname.replace(
+let socket: SocketIOClient.Socket;
+let acars_path: string = document.location.pathname.replace(
   /about|search|stats|status|alerts/gi,
   ""
 );
 acars_path += acars_path.endsWith("/") ? "" : "/";
-let acars_url = document.location.origin + acars_path;
+let acars_url: string = document.location.origin + acars_path;
 
 $(document).ready(function () {
   generate_menu();
@@ -18,7 +18,7 @@ $(document).ready(function () {
     path: acars_path + "socket.io",
   });
 
-  let converter = new showdown.Converter();
+  let converter: showdown.Converter = new showdown.Converter();
   fetch(`${acars_url}aboutmd`)
     .then((response) => response.text())
     .then((data) => {

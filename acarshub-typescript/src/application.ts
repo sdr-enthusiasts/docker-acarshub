@@ -1,18 +1,18 @@
-let pause = false;
-let text_filter = false;
-let socket;
+let pause: boolean = false;
+let text_filter: boolean = false;
+let socket: SocketIOClient.Socket;
 let msgs_received: any[] = [];
 let exclude: any[] = [];
-let selected_tabs = "";
-let acars_path = document.location.pathname.replace(
+let selected_tabs: string = "";
+let acars_path: string = document.location.pathname.replace(
   /about|search|stats|status|alerts/gi,
   ""
 );
 acars_path += acars_path.endsWith("/") ? "" : "/";
 let acars_url = document.location.origin + acars_path;
 
-let filtered_messages = 0;
-let received_messages = 0;
+let filtered_messages: number = 0;
+let received_messages: number = 0;
 declare const window: any;
 import { MessageDecoder } from "../node_modules/@airframes/acars-decoder/dist/MessageDecoder.js";
 import Cookies from "js-cookie"

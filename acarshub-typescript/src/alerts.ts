@@ -3,7 +3,7 @@ import { generate_menu, generate_footer } from "./menu.js";
 import { display_messages } from "./html_generator.js";
 
 let socket_alerts: SocketIOClient.Socket;
-let alerts = 0;
+let alerts: number = 0;
 let alert_text: string[] = [];
 let alert_callsigns: string[] = [];
 let alert_tail:string[] = [];
@@ -14,9 +14,9 @@ let acars_path = document.location.pathname.replace(
   ""
 );
 acars_path += acars_path.endsWith("/") ? "" : "/";
-let acars_url = document.location.origin + acars_path;
-let acars_page = "/" + document.location.pathname.replace(acars_path, "");
-let default_text_values = [
+let acars_url: string = document.location.origin + acars_path;
+let acars_page: string = "/" + document.location.pathname.replace(acars_path, "");
+let default_text_values: string[] = [
   "cop",
   "police",
   "authorities",
@@ -36,8 +36,8 @@ let default_text_values = [
   "red coat",
 ];
 
-let alert_sound = new Audio(`${acars_url}static/sounds/alert.mp3`);
-let play_sound = false;
+let alert_sound: HTMLAudioElement = new Audio(`${acars_url}static/sounds/alert.mp3`);
+let play_sound: boolean = false;
 
 msgs_received.unshift = function () {
   if (this.length >= 50) {

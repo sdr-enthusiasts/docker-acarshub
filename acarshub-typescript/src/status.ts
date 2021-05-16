@@ -1,4 +1,4 @@
-import { connection_status, match_alert, sound_alert, updateAlertCounter } from "./alerts.js"
+import { connection_status } from "./alerts.js"
 import { generate_menu, generate_footer } from "./menu.js"
 
 let socket;

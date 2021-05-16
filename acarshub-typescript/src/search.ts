@@ -16,17 +16,17 @@ let current_search = {
   tail: "",
   msg_text: "",
 }; // letiable to store the current search term
-let current_page = 0; // store the current page of the current_search
-let total_pages = 0; // number of pages of results
-let show_all = false; // letiable to indicate we are doing a 'show all' search and not of a specific term
-let query_time = 0.0;
-let acars_path = document.location.pathname.replace(
+let current_page: number = 0; // store the current page of the current_search
+let total_pages: number = 0; // number of pages of results
+let show_all: boolean = false; // letiable to indicate we are doing a 'show all' search and not of a specific term
+let query_time: number = 0.0;
+let acars_path: string = document.location.pathname.replace(
   /about|search|stats|status|alerts/gi,
   ""
 );
 acars_path += acars_path.endsWith("/") ? "" : "/";
-let acars_url = document.location.origin + acars_path;
-const md = new MessageDecoder();
+let acars_url: string = document.location.origin + acars_path;
+const md: MessageDecoder = new MessageDecoder();
 
 $(document).ready(function () {
   //connect to the socket server.
