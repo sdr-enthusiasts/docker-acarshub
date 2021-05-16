@@ -110,3 +110,4 @@ rootfs/webapp/static/images/6hour.png
 acars-decoder-typescript.tgz
 acarshub-typescript/node_modules/
 acarshub-typescript/dist/
+rootfs/webapp/static/js/*.js
