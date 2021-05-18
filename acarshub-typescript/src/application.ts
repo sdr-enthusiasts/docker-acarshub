@@ -1,7 +1,7 @@
 let pause: boolean = false;
 let text_filter: boolean = false;
 let socket: SocketIOClient.Socket;
-let msgs_received: any[] = [];
+let msgs_received: acars_msg[][] = [];
 let exclude: any[] = [];
 let selected_tabs: string = "";
 let acars_path: string = document.location.pathname.replace(
@@ -19,53 +19,9 @@ import Cookies from "js-cookie"
 import { generate_menu, generate_footer } from "./menu.js"
 import { display_messages } from "./html_generator.js"
 import { match_alert, sound_alert, connection_status } from "./alerts.js"
+import { html_msg, acars_msg } from "./interfaces.js"
 
 const md = new MessageDecoder();
-
-interface html_msg {
-  msghtml: acars_msg
-  loading?: boolean
-}
-
-interface acars_msg {
-  timestamp: number,
-  station_id: string
-  toaddr?: string,
-  fromaddr?: string,
-  depa?: string,
-  dsta?: string,
-  eta?: string,
-  gtout?: string,
-  gtin?: string,
-  wloff?: string,
-  wlin?: string,
-  lat?: number,
-  lon?: number,
-  alt?: number,
-  text?: string,
-  tail?: string,
-  flight?: string,
-  icao?: number,
-  freq?: number,
-  ack?: string,
-  mode?: string,
-  label?: string,
-  block_id?: string,
-  msgno?: string,
-  is_response?: number,
-  is_onground?: number,
-  error?: number,
-  libacars?: any,
-  level?: number,
-  matched?: boolean,
-  matched_text?: string[],
-  matched_icao?: string[],
-  matched_flight?: string[],
-  matched_tail?: string[],
-  uid?: string,
-  decodedText?: string,
-  data?: string
-}
 
 // Automatically keep the array size at 150 messages or less
 // without the need to check before we push on to the stack
@@ -139,24 +95,25 @@ window.handle_radio = function (element_id: string, uid: string) {
       msgs_received[i].length > 1 &&
       msgs_received[i][msgs_received[i].length - 1].uid == uid
     ) {
-      let active_tab = msgs_received[i].findIndex((sub_msg: acars_msg) => {
-        console.log(sub_msg.uid, element_id);
-        if (sub_msg.uid == element_id) {
+      let active_tab = String(msgs_received[i].findIndex((sub_msg: acars_msg) => {
+        console.log(sub_msg.uid, typeof sub_msg.uid, element_id, typeof element_id);
+        if (sub_msg.uid === element_id) {
           return true;
         }
-      });
+      }));
 
-      active_tab = active_tab === -1 ? "0" : <string>(active_tab);
+      console.log(active_tab)
+      active_tab = active_tab === "-1" ? "0" : active_tab;
 
-      if (active_tab == "0") {
+      if (active_tab === "0") {
         next_tab = msgs_received[i][1].uid;
         previous_tab = msgs_received[i][msgs_received[i].length - 1].uid;
-      } else if (active_tab == msgs_received[i].length - 1) {
+      } else if (active_tab === String(msgs_received[i].length - 1)) {
         next_tab = msgs_received[i][0].uid;
         previous_tab = msgs_received[i][msgs_received[i].length - 2].uid;
       } else {
-        next_tab = msgs_received[i][active_tab + 1].uid;
-        previous_tab = msgs_received[i][active_tab - 1].uid;
+        next_tab = msgs_received[i][Number(active_tab) + 1].uid;
+        previous_tab = msgs_received[i][Number(active_tab) - 1].uid;
       }
 
       i = msgs_received.length;
@@ -166,13 +123,13 @@ window.handle_radio = function (element_id: string, uid: string) {
   let curlink_previous = (<HTMLInputElement>document.getElementById(`tab${uid}_previous`));
   curlink_previous.setAttribute(
     "href",
-    `javascript:handle_radio(${previous_tab}, ${uid})`
+    `javascript:handle_radio("${previous_tab}", "${uid}")`
   );
 
   let curlink_next = (<HTMLInputElement>document.getElementById(`tab${uid}_next`));
   curlink_next.setAttribute(
     "href",
-    `javascript:handle_radio(${next_tab}, ${uid})`
+    `javascript:handle_radio("${next_tab}", "${uid}")`
   );
 
   let added = false;
@@ -543,9 +500,9 @@ $(document).ready(function () {
                 msgs_received[index_new][j]["timestamp"] =
                   msg.msghtml.timestamp;
                 if (msgs_received[index_new][j].hasOwnProperty("duplicates")) {
-                  msgs_received[index_new][j]["duplicates"]++;
+                  msgs_received[index_new][j]["duplicates"] = String(Number(msgs_received[index_new][j]["duplicates"]) + 1);
                 } else {
-                  msgs_received[index_new][j]["duplicates"] = 1;
+                  msgs_received[index_new][j]["duplicates"] = "1";
                 }
                 rejected = true;
               } else if (
@@ -557,9 +514,9 @@ $(document).ready(function () {
                 msgs_received[index_new][j]["timestamp"] =
                   msg.msghtml.timestamp;
                 if (msgs_received[index_new][j].hasOwnProperty("duplicates")) {
-                  msgs_received[index_new][j]["duplicates"]++;
+                  msgs_received[index_new][j]["duplicates"] = String(Number(msgs_received[index_new][j]["duplicates"]) + 1);
                 } else {
-                  msgs_received[index_new][j]["duplicates"] = 1;
+                  msgs_received[index_new][j]["duplicates"] = "1";
                 }
                 rejected = true;
               } else if (
@@ -570,11 +527,11 @@ $(document).ready(function () {
                 msg.msghtml.timestamp - msgs_received[index_new][j].timestamp <
                   8.0 && // We'll assume the message is not a multi-part message if the time from the new message is too great from the rest of the group
                 (typeof msg.msghtml.msgno !== "undefined" && ((msg.msghtml.msgno.charAt(0) ==
-                  msgs_received[index_new][j]["msgno"].charAt(0) && // Next two lines match on AzzA pattern
+                  msgs_received[index_new][j].msgno!.charAt(0) && // Next two lines match on AzzA pattern
                   msg.msghtml.msgno.charAt(3) ==
-                    msgs_received[index_new][j]["msgno"].charAt(3)) ||
+                    msgs_received[index_new][j].msgno!.charAt(3)) ||
                   msg.msghtml.msgno.substring(0, 3) ==
-                    msgs_received[index_new][j]["msgno"].substring(0, 3)))
+                    msgs_received[index_new][j].msgno!.substring(0, 3)))
               ) {
                 // This check matches if the group is a AAAz counter
                 // We have a multi part message. Now we need to see if it is a dup
@@ -583,7 +540,7 @@ $(document).ready(function () {
 
                 if (msgs_received[index_new][j].hasOwnProperty("msgno_parts")) {
                   // Now we'll see if the multi-part message is a dup
-                  let split = msgs_received[index_new][j].msgno_parts
+                  let split = msgs_received[index_new][j].msgno_parts!
                     .toString()
                     .split(" "); // format of stored parts is "MSGID MSGID2" etc
 
@@ -634,7 +591,7 @@ $(document).ready(function () {
                     msg.msghtml.hasOwnProperty("text")
                   )
                     // If the multi-part parent has a text field and the found match has a text field, append
-                    msgs_received[index_new][j]["text"] += msg.msghtml.text;
+                    msgs_received[index_new][j]["text"]! += msg.msghtml.text;
                   else if (msg.msghtml.hasOwnProperty("text"))
                     // If the new message has a text field but the parent does not, add the new text to the parent
                     msgs_received[index_new][j]["text"] = msg.msghtml.text;

@@ -2,20 +2,21 @@
 // Input: msgs_to_process - the array of messages. Format is array of message groups, with each group being an array of message(s) that create a group of submessages
 // Input: selected_tabs - if present, we'll process. Format is uid1;elementid1,uid2;elementid2 etc
 // Input: live_page - default is false. This toggles on the checks for selected tabs
+import { html_msg, acars_msg } from "./interfaces.js"
 
-export function display_messages(msgs_to_process: any, selected_tabs: any = null, live_page = false) {
+export function display_messages(msgs_to_process: acars_msg[][], selected_tabs: any = null, live_page = false) {
   let msgs_string = ""; // output string that gets returned
   let message_tab_splits = ""; // letiable to save the split output of selected_tabs
   if (selected_tabs) message_tab_splits = selected_tabs.split(","); // the individual tabs with selections
 
   for (let i = 0; i < msgs_to_process.length; i++) {
     // Loop through the message array
-    let sub_messages = msgs_to_process[i]; // Array of messages belonging to one tab-group
-    let unique_id = ""; // UID for the message group
-    let active_tab = 0; // Active tab. Default is the first one if none selected
-    let previous_tab = 0;
-    let next_tab = 0;
-    let array_index_tab = 0;
+    let sub_messages: acars_msg[] = msgs_to_process[i]; // Array of messages belonging to one tab-group
+    let unique_id: string = ""; // UID for the message group
+    let active_tab: string = "0"; // Active tab. Default is the first one if none selected
+    let previous_tab: string = "0";
+    let next_tab: string = "0";
+    let array_index_tab: string = "0";
     msgs_string += "<br>";
 
     if (live_page) {
@@ -29,27 +30,27 @@ export function display_messages(msgs_to_process: any, selected_tabs: any = null
         for (let q = 0; q < message_tab_splits.length; q++) {
           if (message_tab_splits[q].startsWith(unique_id.toString())) {
             let split = message_tab_splits[q].split(";");
-            active_tab = Number(split[1]);
-            array_index_tab = sub_messages.findIndex((element: any) => {
-              if (element.uid == active_tab || element.uid === active_tab) {
+            active_tab = split[1];
+            array_index_tab = String(sub_messages.findIndex((sub_element: acars_msg) => {
+              if (sub_element.uid == active_tab || sub_element.uid === active_tab) {
                 return true;
               }
-            });
+            }));
           }
         }
       }
 
       if (sub_messages.length > 1) {
         // Do we have more than one message in this group? If so, add in the HTML to set up the tabs
-        if (array_index_tab == 0) {
+        if (array_index_tab === "0") {
           next_tab = sub_messages[1].uid;
           previous_tab = sub_messages[sub_messages.length - 1].uid;
-        } else if (array_index_tab == sub_messages.length - 1) {
+        } else if (array_index_tab === String(sub_messages.length - 1)) {
           next_tab = sub_messages[0].uid;
           previous_tab = sub_messages[sub_messages.length - 2].uid;
         } else {
-          next_tab = sub_messages[array_index_tab + 1].uid;
-          previous_tab = sub_messages[array_index_tab - 1].uid;
+          next_tab = sub_messages[Number(array_index_tab) + 1].uid;
+          previous_tab = sub_messages[Number(array_index_tab) - 1].uid;
         }
 
         msgs_string += '<div class = "tabinator">';
@@ -80,7 +81,7 @@ export function display_messages(msgs_to_process: any, selected_tabs: any = null
             //msgs_string += `<label for = "tab${next_tab}_${unique_id}">>></label>`;
           }
 
-          if (active_tab == 0 && j == 0) {
+          if (active_tab === "0" && j == 0) {
             msgs_string +=
               `<input type = "radio" id = "tab${tab_uid}_${unique_id}" name = "tabs_${unique_id}" class = "tabs_${unique_id}" checked onclick="handle_radio('` +
               tab_uid +
@@ -123,7 +124,7 @@ export function display_messages(msgs_to_process: any, selected_tabs: any = null
         let tab_uid = unique_id;
 
         tab_uid = sub_messages[u]["uid"]; // UID for the current message
-        if (active_tab == 0 && u == 0)
+        if (active_tab === "0" && u == 0)
           // Case for no tab selected by user. Newest message is active
           html_output += `<div id = "message_${unique_id}_${tab_uid}" class="sub_msg${unique_id} checked">`;
         else if (tab_uid == String(active_tab))
@@ -134,25 +135,8 @@ export function display_messages(msgs_to_process: any, selected_tabs: any = null
           html_output += `<div id = "message_${unique_id}_${tab_uid}" class="sub_msg${unique_id}">`;
       }
       //msgs_string = '<p>' + msgs_received[i].toString() + '</p>' + msgs_string;
-      let message = sub_messages[u]; // letiable to hold the current message
+      let message: acars_msg = sub_messages[u]; // letiable to hold the current message
       html_output += '<div><table id="shadow">';
-
-      // Clean up any useless keys
-      // We can probably remove this....
-
-      if (message.hasOwnProperty("_sa_instance_state")) {
-        delete message["_sa_instance_state"];
-      }
-
-      if (message.hasOwnProperty("id")) {
-        delete message["id"];
-      }
-
-      // iterate over json and remove blank keys
-
-      for (let key in message) {
-        if (message[key] == null) delete message[key];
-      }
 
       if (sub_messages.length == 1 && message.hasOwnProperty("matched"))
         html_output += '<tr class="red_body">';
@@ -164,7 +148,7 @@ export function display_messages(msgs_to_process: any, selected_tabs: any = null
       // grab the time (unix EPOCH) from the correct key and convert in to a Date object for display
       if (message.hasOwnProperty("timestamp"))
         timestamp = new Date(message["timestamp"] * 1000);
-      else timestamp = new Date(message["msg_time"] * 1000);
+      else timestamp = new Date((typeof message["msg_time"] !== "undefined" ? message["msg_time"] : 0) * 1000);
 
       html_output += `<td style=\"text-align: right\"><strong>${timestamp}</strong></td>`;
       html_output += "</tr>";
@@ -186,7 +170,7 @@ export function display_messages(msgs_to_process: any, selected_tabs: any = null
       if (message.hasOwnProperty("label")) {
         let label_type = "";
         if (message.hasOwnProperty("label_type")) {
-          label_type = message["label_type"].trim();
+          label_type = typeof message.label_type !== "undefined" ? message["label_type"].trim() : "";
         }
         html_output += `Message Label: <strong>(${message["label"]}) ${label_type}</strong><br>`;
       }
@@ -262,7 +246,7 @@ export function display_messages(msgs_to_process: any, selected_tabs: any = null
 
       // Text field is pre-processed
       // we have a sub-table for the raw text field and if it was decoded, the decoded text as well
-      if (message.hasOwnProperty("text")) {
+      if (message.hasOwnProperty("text") && typeof message.text !== "undefined") {
         let text = message["text"];
         text = text.replace("\\r\\n", "<br>");
         //html_output += "<p>";
@@ -301,7 +285,7 @@ export function display_messages(msgs_to_process: any, selected_tabs: any = null
         }</strong></pre>`;
         html_output += "</td>";
         html_output += "</tr></table>";
-      } else if (message.hasOwnProperty("data")) {
+      } else if (message.hasOwnProperty("data") && typeof message.data !== "undefined") {
         let data = message["data"];
         data = data.replace("\\r\\n", "<br>");
         html_output += "<p>";
@@ -338,7 +322,7 @@ export function display_messages(msgs_to_process: any, selected_tabs: any = null
             : message.flight;
       }
 
-      if (message.hasOwnProperty("icao")) {
+      if (message.hasOwnProperty("icao") && typeof message.icao !== "undefined") {
         html_output += "ICAO: <strong>";
         html_output += message.hasOwnProperty("icao_url")
           ? `<a href="${message["icao_url"]}" target="_blank">`
@@ -354,7 +338,8 @@ export function display_messages(msgs_to_process: any, selected_tabs: any = null
             : "";
         html_output +=
           message.hasOwnProperty("icao_hex") &&
-          typeof message.matched_icao === "object"
+          typeof message.matched_icao !== "undefined" &&
+          typeof message.icao_hex !== "undefined"
             ? "/" +
               replace_text(message.matched_icao, message["icao_hex"].toString())
             : "";
@@ -371,7 +356,7 @@ export function display_messages(msgs_to_process: any, selected_tabs: any = null
         html_output += `<span class=\"wrapper\">F: <strong>${message["freq"]}</strong><span class=\"tooltip\">The frequency this message was received on</span></span> `;
       }
 
-      if (message.hasOwnProperty("level")) {
+      if (message.hasOwnProperty("level") && typeof message.level !== "undefined") {
         let level = message["level"];
         let circle = "";
         if (level >= -10.0) {
