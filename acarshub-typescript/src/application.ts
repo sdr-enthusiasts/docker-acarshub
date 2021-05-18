@@ -9,7 +9,7 @@ let acars_path: string = document.location.pathname.replace(
   ""
 );
 acars_path += acars_path.endsWith("/") ? "" : "/";
-let acars_url = document.location.origin + acars_path;
+const acars_url = document.location.origin + acars_path;
 
 let filtered_messages: number = 0;
 let received_messages: number = 0;

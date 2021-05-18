@@ -14,8 +14,8 @@ let acars_path = document.location.pathname.replace(
   ""
 );
 acars_path += acars_path.endsWith("/") ? "" : "/";
-let acars_url: string = document.location.origin + acars_path;
-let acars_page: string = "/" + document.location.pathname.replace(acars_path, "");
+const acars_url: string = document.location.origin + acars_path;
+const acars_page: string = "/" + document.location.pathname.replace(acars_path, "");
 let default_text_values: string[] = [
   "cop",
   "police",

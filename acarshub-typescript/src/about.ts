@@ -8,7 +8,7 @@ let acars_path: string = document.location.pathname.replace(
   ""
 );
 acars_path += acars_path.endsWith("/") ? "" : "/";
-let acars_url: string = document.location.origin + acars_path;
+const acars_url: string = document.location.origin + acars_path;
 
 $(document).ready(function () {
   generate_menu();
