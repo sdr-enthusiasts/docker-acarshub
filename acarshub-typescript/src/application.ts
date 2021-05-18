@@ -366,10 +366,10 @@ $(document).ready(function () {
         let matched = match_alert(msg);
         if (matched.was_found) {
           msg.msghtml.matched = true;
-          msg.msghtml.matched_text = matched.text !== null ? matched.text : [""];
-          msg.msghtml.matched_icao = matched.icao !== null ? matched.icao : [""];
-          msg.msghtml.matched_flight = matched.flight !== null ? matched.flight : [""];
-          msg.msghtml.matched_tail = matched.tail !== null ? matched.tail : [""];
+          msg.msghtml.matched_text = matched.text !== null ? matched.text : [];
+          msg.msghtml.matched_icao = matched.icao !== null ? matched.icao : [];
+          msg.msghtml.matched_flight = matched.flight !== null ? matched.flight : [];
+          msg.msghtml.matched_tail = matched.tail !== null ? matched.tail : [];
         }
 
         let new_tail = msg.msghtml.tail;

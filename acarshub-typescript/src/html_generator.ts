@@ -11,7 +11,7 @@ export function display_messages(msgs_to_process: acars_msg[][], selected_tabs: 
 
   for (let i = 0; i < msgs_to_process.length; i++) {
     // Loop through the message array
-    let sub_messages: acars_msg[] = msgs_to_process[i]; // Array of messages belonging to one tab-group
+    const sub_messages: acars_msg[] = msgs_to_process[i]; // Array of messages belonging to one tab-group
     let unique_id: string = ""; // UID for the message group
     let active_tab: string = "0"; // Active tab. Default is the first one if none selected
     let previous_tab: string = "0";
@@ -309,13 +309,13 @@ export function display_messages(msgs_to_process: acars_msg[][], selected_tabs: 
         html_output += `Tail: <strong><a href=\"https://flightaware.com/live/flight/${
           message["tail"]
         }\" target=\"_blank\">${
-          typeof message.matched_tail === "object"
+          typeof message.matched_tail !== "undefined" && typeof message.tail !== "undefined"
             ? replace_text(message.matched_tail, message.tail)
             : message.tail
         }</a></strong> `;
       }
 
-      if (message.hasOwnProperty("flight")) {
+      if (message.hasOwnProperty("flight") && typeof message.flight !== "undefined") {
         html_output +=
           typeof message.matched_flight === "object"
             ? replace_text(message.matched_flight, message.flight)
@@ -433,7 +433,7 @@ export function display_messages(msgs_to_process: acars_msg[][], selected_tabs: 
   return msgs_string;
 }
 
-function replace_text(input: any, text: any) {
+function replace_text(input: string[], text: string) {
   for (let i = 0; i < input.length; i++) {
     text = text
       .split(`${input[i].toUpperCase()}`)
@@ -443,7 +443,7 @@ function replace_text(input: any, text: any) {
 }
 
 function loop_array(input: any) {
-  let html_output = "";
+  let html_output: string = "";
 
   for (let m in input) {
     if (typeof input[m] === "object") {

@@ -1,6 +1,7 @@
 import Cookies from "js-cookie"
 import { generate_menu, generate_footer } from "./menu.js";
 import { display_messages } from "./html_generator.js";
+import { html_msg, system_status, terms } from "./interfaces.js"
 
 let socket_alerts: SocketIOClient.Socket;
 let alerts: number = 0;
@@ -51,7 +52,7 @@ $(document).ready(function () {
     path: acars_path + "socket.io",
   });
 
-  socket_alerts.on("terms", function (msg: any) {
+  socket_alerts.on("terms", function (msg: terms) {
     alert_text = msg.terms;
     if (acars_page == "/alerts") {
       (<HTMLInputElement>document.getElementById("alert_text")).value = (<HTMLInputElement>document.getElementById(
@@ -95,20 +96,20 @@ $(document).ready(function () {
       },
       "/alerts"
     );
-    socket_alerts.on("newmsg", function (msg: any) {
+    socket_alerts.on("newmsg", function (msg: html_msg) {
       let matched = match_alert(msg);
       if (matched.was_found) {
         if (msg.loading != true) sound_alert();
-        msg.msghtml.matched_text = matched.text;
-        msg.msghtml.matched_icao = matched.icao;
-        msg.msghtml.matched_flight = matched.flight;
-        msg.msghtml.matched_tail = matched.tail;
+        msg.msghtml.matched_text = matched.text !== null ? matched.text : [];
+        msg.msghtml.matched_icao = matched.icao !== null ? matched.icao : [];
+        msg.msghtml.matched_flight = matched.flight !== null ? matched.flight : [];
+        msg.msghtml.matched_tail = matched.tail !== null ? matched.tail : [];
         msgs_received.unshift([msg.msghtml]);
         $("#log").html(display_messages(msgs_received));
       }
     });
 
-    socket_alerts.on("system_status", function (msg: any) {
+    socket_alerts.on("system_status", function (msg: system_status) {
       if (msg.status.error_state == true) {
         $("#system_status").html(
           `<a href="${acars_url}status">System Status: <span class="red_body">Error</span>`
@@ -140,7 +141,7 @@ $(document).ready(function () {
       connection_status(true);
     });
   } else if (acars_page != "/") {
-    socket_alerts.on("newmsg", function (msg: any) {
+    socket_alerts.on("newmsg", function (msg: html_msg) {
       let matched = match_alert(msg);
       if (matched.was_found && msg.loading != true) {
         alerts += 1;
@@ -323,7 +324,7 @@ function onInit() {
   Cookies.set("alert_icao", combineArray(alert_icao), { expires: 365 });
 }
 
-function combineArray(input: any) {
+function combineArray(input: string[]) {
   let output = "";
 
   for (let i = 0; i < input.length; i++) {
@@ -333,14 +334,14 @@ function combineArray(input: any) {
   return output;
 }
 
-export function match_alert(msg: any) {
+export function match_alert(msg: html_msg) {
   let found = false;
   let matched_tail = [];
   let matched_flight = [];
   let matched_icao = [];
   let matched_text = [];
 
-  if (msg.msghtml.hasOwnProperty("text")) {
+  if (msg.msghtml.hasOwnProperty("text") && typeof msg.msghtml.text !== "undefined") {
     for (let i = 0; i < alert_text.length; i++) {
       if (
         msg.msghtml.text
@@ -353,7 +354,7 @@ export function match_alert(msg: any) {
     }
   }
 
-  if (msg.msghtml.hasOwnProperty("flight")) {
+  if (msg.msghtml.hasOwnProperty("flight") && typeof msg.msghtml.flight !== "undefined") {
     for (let i = 0; i < alert_callsigns.length; i++) {
       if (
         msg.msghtml.flight
@@ -366,7 +367,7 @@ export function match_alert(msg: any) {
     }
   }
 
-  if (msg.msghtml.hasOwnProperty("tail")) {
+  if (msg.msghtml.hasOwnProperty("tail") && typeof msg.msghtml.tail !== "undefined") {
     for (let i = 0; i < alert_tail.length; i++) {
       if (
         msg.msghtml.tail.toUpperCase().includes(alert_tail[i].toUpperCase())
@@ -377,14 +378,14 @@ export function match_alert(msg: any) {
     }
   }
 
-  if (msg.msghtml.hasOwnProperty("icao")) {
+  if (msg.msghtml.hasOwnProperty("icao") && typeof msg.msghtml.icao !== "undefined") {
     for (let i = 0; i < alert_icao.length; i++) {
       if (
         msg.msghtml.icao
           .toString()
           .toUpperCase()
           .includes(alert_icao[i].toUpperCase()) ||
-        (msg.msghtml.hasOwnProperty("icao_hex") &&
+        (msg.msghtml.hasOwnProperty("icao_hex") && typeof msg.msghtml.icao_hex !== "undefined" &&
           msg.msghtml.icao_hex
             .toUpperCase()
             .includes(alert_icao[i].toUpperCase()))

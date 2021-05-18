@@ -8,6 +8,11 @@ export interface system_status {
     error_state: boolean
   }
 }
+
+export interface terms {
+  terms: string[]
+}
+
 export interface html_msg {
     msghtml: acars_msg,
     loading?: boolean,
