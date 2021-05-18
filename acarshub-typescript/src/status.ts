@@ -78,7 +78,7 @@ function decode_status(status: any, decoders: any, servers: any, feeders: any, r
   }
   html_output += "<br>";
 
-  keys_decoder.forEach((key, index) => {
+  keys_decoder.forEach((key) => {
     let sub_string = `SDR ${key}:`;
     html_output += `${sub_string.padEnd(55, ".")}<strong><span class=${
       decoders[key].Status == "Ok" ? "green" : "red_body"
@@ -86,7 +86,7 @@ function decode_status(status: any, decoders: any, servers: any, feeders: any, r
     html_output += "<br>";
   });
 
-  keys_servers.forEach((key, index) => {
+  keys_servers.forEach((key) => {
     let sub_string = `Internal Server ${key}:`;
     html_output += `${sub_string.padEnd(55, ".")}<strong><span class=${
       servers[key].Status == "Ok" ? "green" : "red_body"
@@ -99,7 +99,7 @@ function decode_status(status: any, decoders: any, servers: any, feeders: any, r
     html_output += "<br>";
   });
 
-  keys_stats.forEach((key, index) => {
+  keys_stats.forEach((key) => {
     let sub_string = `Internal Stat Server ${key}:`;
     html_output += `${sub_string.padEnd(55, ".")}<strong><span class=${
       stats[key].Status == "Ok" ? "green" : "red_body"
@@ -107,7 +107,7 @@ function decode_status(status: any, decoders: any, servers: any, feeders: any, r
     html_output += "<br>";
   });
 
-  keys_feeders.forEach((key, index) => {
+  keys_feeders.forEach((key) => {
     let sub_string = `Airframes.io Feeders ${key}:`;
     html_output += `${sub_string.padEnd(55, ".")}<strong><span class=${
       feeders[key].Status == "Ok" ? "green" : "red_body"
@@ -115,7 +115,7 @@ function decode_status(status: any, decoders: any, servers: any, feeders: any, r
     html_output += "<br>";
   });
 
-  keys_receivers.forEach((key, index) => {
+  keys_receivers.forEach((key) => {
     let sub_string = `${key} Received ${receivers[key].Count} Messages In the Last Hour:`;
     let class_string = "";
     if (receivers[key].Status == "Ok") class_string = '"green"';
