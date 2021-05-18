@@ -1,7 +1,23 @@
-export interface html_msg {
-    msghtml: acars_msg
-    loading?: boolean
+export interface database_size {
+  size: string,
+  count: number
+}
+
+export interface system_status {
+  status: {
+    error_state: boolean
   }
+}
+export interface html_msg {
+    msghtml: acars_msg,
+    loading?: boolean,
+  }
+
+export interface search_html_msg {
+  msghtml: acars_msg,
+  query_time?: number,
+  num_results?: number
+}
 
 export interface acars_msg {
     timestamp: number,

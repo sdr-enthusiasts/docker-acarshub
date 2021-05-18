@@ -2,6 +2,7 @@ import { display_messages } from "./html_generator.js"
 import { generate_menu, generate_footer } from "./menu.js"
 import { MessageDecoder } from "../node_modules/@airframes/acars-decoder/dist/MessageDecoder.js";
 import { connection_status, updateAlertCounter } from "./alerts.js"
+import { search_html_msg, database_size, system_status } from "./interfaces.js"
 
 let socket: SocketIOClient.Socket;
 
@@ -44,7 +45,7 @@ $(document).ready(function () {
   // receive details from server
 
   // DB stats
-  socket.on("database", function (msg: any) {
+  socket.on("database", function (msg: database_size) {
     $("#database").html(String(msg.count).trim() + " rows");
     if (parseInt(msg.size) > 0) {
       $("#size").html(formatSizeUnits(parseInt(msg.size)));
@@ -53,7 +54,7 @@ $(document).ready(function () {
     }
   });
 
-  socket.on("system_status", function (msg: any) {
+  socket.on("system_status", function (msg: system_status) {
     if (msg.status.error_state == true) {
       $("#system_status").html(
         `<a href="${acars_url}status">System Status: <span class="red_body">Error</a></span>`
@@ -86,7 +87,7 @@ $(document).ready(function () {
   });
 
   // Search results returned
-  socket.on("newmsg", function (msg: any) {
+  socket.on("newmsg", function (msg: search_html_msg) {
     //maintain a list of 1 msgs
     if (msgs_received.length >= 1) {
       msgs_received.shift();
@@ -95,7 +96,7 @@ $(document).ready(function () {
       num_results.shift();
     }
 
-    if (msg.hasOwnProperty("query_time")) query_time = msg["query_time"];
+    if (msg.hasOwnProperty("query_time") && typeof msg.query_time !== "undefined") query_time = msg["query_time"];
     // Lets check and see if the results match the current search string
     let display = "";
     let display_nav_results = "";
