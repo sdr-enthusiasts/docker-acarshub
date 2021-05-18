@@ -22,6 +22,51 @@ import { match_alert, sound_alert, connection_status } from "./alerts.js"
 
 const md = new MessageDecoder();
 
+interface html_msg {
+  msghtml: acars_msg
+  loading?: boolean
+}
+
+interface acars_msg {
+  timestamp: number,
+  station_id: string
+  toaddr?: string,
+  fromaddr?: string,
+  depa?: string,
+  dsta?: string,
+  eta?: string,
+  gtout?: string,
+  gtin?: string,
+  wloff?: string,
+  wlin?: string,
+  lat?: number,
+  lon?: number,
+  alt?: number,
+  text?: string,
+  tail?: string,
+  flight?: string,
+  icao?: number,
+  freq?: number,
+  ack?: string,
+  mode?: string,
+  label?: string,
+  block_id?: string,
+  msgno?: string,
+  is_response?: number,
+  is_onground?: number,
+  error?: number,
+  libacars?: any,
+  level?: number,
+  matched?: boolean,
+  matched_text?: string[],
+  matched_icao?: string[],
+  matched_flight?: string[],
+  matched_tail?: string[],
+  uid?: string,
+  decodedText?: string,
+  data?: string
+}
+
 // Automatically keep the array size at 150 messages or less
 // without the need to check before we push on to the stack
 
@@ -59,7 +104,7 @@ function increment_received() {
 // Function to return a random integer
 // Input: integter that represents the maximum number that can be returned
 
-function getRandomInt(max: any) {
+function getRandomInt(max: number) {
   return Math.floor(Math.random() * Math.floor(max));
 }
 
@@ -67,13 +112,13 @@ function getRandomInt(max: any) {
 // Input is the element ID (aka message label ID) that has been selected
 // Input is the UID of the message group, which is also the element ID of the oldest element in that group
 
-window.handle_radio = function (element_id: any, uid: any) {
+window.handle_radio = function (element_id: string, uid: string) {
   let all_tabs = document.querySelectorAll(`div.sub_msg${uid}`); // Grab the tabinator group and remove check
   for (let i = 0; i < all_tabs.length; i++) {
     all_tabs[i].classList.remove("checked");
   }
 
-  let all_tabinator = (<any>document.querySelectorAll(`input.tabs_${uid}`)); // grab the message divs in that tab group and remove check
+  let all_tabinator: NodeListOf<HTMLInputElement> = document.querySelectorAll(`input.tabs_${uid}`); // grab the message divs in that tab group and remove check
   for (let i = 0; i < all_tabinator.length; i++) {
     all_tabinator[i].checked = false;
   }
@@ -86,21 +131,24 @@ window.handle_radio = function (element_id: any, uid: any) {
 
   // Now we need to update the nav arrow links
 
-  let next_tab = 0;
-  let previous_tab = 0;
+  let next_tab: string = "0";
+  let previous_tab: string = "0";
 
   for (let i = 0; i < msgs_received.length; i++) {
     if (
       msgs_received[i].length > 1 &&
       msgs_received[i][msgs_received[i].length - 1].uid == uid
     ) {
-      let active_tab = msgs_received[i].findIndex((element: any) => {
-        if (element.uid == element_id) {
+      let active_tab = msgs_received[i].findIndex((sub_msg: acars_msg) => {
+        console.log(sub_msg.uid, element_id);
+        if (sub_msg.uid == element_id) {
           return true;
         }
       });
 
-      if (active_tab == 0) {
+      active_tab = active_tab === -1 ? "0" : <string>(active_tab);
+
+      if (active_tab == "0") {
         next_tab = msgs_received[i][1].uid;
         previous_tab = msgs_received[i][msgs_received[i].length - 1].uid;
       } else if (active_tab == msgs_received[i].length - 1) {
@@ -330,7 +378,7 @@ $(document).ready(function () {
   });
 
   //receive details from server
-  socket.on("newmsg", function (msg: any) {
+  socket.on("newmsg", function (msg: html_msg) {
     if (
       msg.msghtml.hasOwnProperty("label") == false ||
       exclude.indexOf(msg.msghtml.label) == -1
@@ -361,10 +409,10 @@ $(document).ready(function () {
         let matched = match_alert(msg);
         if (matched.was_found) {
           msg.msghtml.matched = true;
-          msg.msghtml.matched_text = matched.text;
-          msg.msghtml.matched_icao = matched.icao;
-          msg.msghtml.matched_flight = matched.flight;
-          msg.msghtml.matched_tail = matched.tail;
+          msg.msghtml.matched_text = matched.text !== null ? matched.text : [""];
+          msg.msghtml.matched_icao = matched.icao !== null ? matched.icao : [""];
+          msg.msghtml.matched_flight = matched.flight !== null ? matched.flight : [""];
+          msg.msghtml.matched_tail = matched.tail !== null ? matched.tail : [""];
         }
 
         let new_tail = msg.msghtml.tail;
@@ -521,12 +569,12 @@ $(document).ready(function () {
                 msgs_received[index_new][j].hasOwnProperty("msgno") &&
                 msg.msghtml.timestamp - msgs_received[index_new][j].timestamp <
                   8.0 && // We'll assume the message is not a multi-part message if the time from the new message is too great from the rest of the group
-                ((msg.msghtml["msgno"].charAt(0) ==
+                (typeof msg.msghtml.msgno !== "undefined" && ((msg.msghtml.msgno.charAt(0) ==
                   msgs_received[index_new][j]["msgno"].charAt(0) && // Next two lines match on AzzA pattern
-                  msg.msghtml["msgno"].charAt(3) ==
+                  msg.msghtml.msgno.charAt(3) ==
                     msgs_received[index_new][j]["msgno"].charAt(3)) ||
-                  msg.msghtml["msgno"].substring(0, 3) ==
-                    msgs_received[index_new][j]["msgno"].substring(0, 3))
+                  msg.msghtml.msgno.substring(0, 3) ==
+                    msgs_received[index_new][j]["msgno"].substring(0, 3)))
               ) {
                 // This check matches if the group is a AAAz counter
                 // We have a multi part message. Now we need to see if it is a dup
