@@ -214,32 +214,34 @@ window.pause_updates = function () {
 // function to toggle the filtering of empty/no text messages
 
 window.filter_notext = function () {
-  if (text_filter) {
-    text_filter = false;
-    (<HTMLInputElement>document.getElementById("fixed_menu")).classList.remove("fixed_menu");
-    (<HTMLInputElement>document.getElementById("fixed_menu")).classList.add("fixed_menu_short");
+  if(page_active) {
+    if (text_filter) {
+      text_filter = false;
+      (<HTMLInputElement>document.getElementById("fixed_menu")).classList.remove("fixed_menu");
+      (<HTMLInputElement>document.getElementById("fixed_menu")).classList.add("fixed_menu_short");
 
-    let id = document.getElementById("filter_notext");
-    if(id !== null) id.innerHTML = "Hide Empty Messages";
-    Cookies.set("filter", "false", { expires: 365 });
-    filtered_messages = 0;
+      let id = document.getElementById("filter_notext");
+      if(id !== null) id.innerHTML = "Hide Empty Messages";
+      Cookies.set("filter", "false", { expires: 365 });
+      filtered_messages = 0;
 
-    $("#filtered").html("");
-  } else {
-    text_filter = true;
-    (<HTMLInputElement>document.getElementById("fixed_menu")).classList.remove("fixed_menu_short");
-    (<HTMLInputElement>document.getElementById("fixed_menu")).classList.add("fixed_menu");
+      $("#filtered").html("");
+    } else {
+      text_filter = true;
+      (<HTMLInputElement>document.getElementById("fixed_menu")).classList.remove("fixed_menu_short");
+      (<HTMLInputElement>document.getElementById("fixed_menu")).classList.add("fixed_menu");
 
-    $("#filtered").html(
-      'Filtered Messages:&emsp;&ensp;<strong><span id="filteredmessages"></span></strong>'
-    );
-    let id_filtered = (<HTMLInputElement>document.getElementById("filteredmessages"));
-    let txt_filtered = document.createTextNode(String(filtered_messages));
-    id_filtered.appendChild(txt_filtered);
+      $("#filtered").html(
+        'Filtered Messages:&emsp;&ensp;<strong><span id="filteredmessages"></span></strong>'
+      );
+      let id_filtered = (<HTMLInputElement>document.getElementById("filteredmessages"));
+      let txt_filtered = document.createTextNode(String(filtered_messages));
+      id_filtered.appendChild(txt_filtered);
 
-    let id = document.getElementById("filter_notext");
-    if(id !== null) id.innerHTML = '<span class="red">Show All Messages</span>';
-    Cookies.set("filter", "true", { expires: 365 });
+      let id = document.getElementById("filter_notext");
+      if(id !== null) id.innerHTML = '<span class="red">Show All Messages</span>';
+      Cookies.set("filter", "true", { expires: 365 });
+    }
   }
 };
 

@@ -9,8 +9,8 @@ export function generate_menu() {
   let html = "<nav>";
   html += '<ul class="primary">';
   html += `<li class="img_box"><img src="${acars_url}static/images/acarshubsquare.png" class="banner_img"></li>`;
-  html += `<li><a href="${acars_url}">Live Messages</a></li>`;
-  html += `<li><a href="${acars_url}search">Search Database</a></li>`;
+  html += `<li><a href="javascript:new_page('Live Messages')">Live Messages</a></li>`;
+  html += `<li><a href="javascript:new_page('Search')">Search Database</a></li>`;
   html += `<li><a href="${acars_url}alerts">Alerts&nbsp;<span id="alert_count"></span></li>`;
   html += `<li><a href="${acars_url}stats">Statistics</a></li></ul>`;
   html += "</nav>";

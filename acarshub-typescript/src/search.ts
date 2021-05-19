@@ -1,10 +1,11 @@
 import { display_messages } from "./html_generator.js"
-import { generate_menu, generate_footer } from "./menu.js"
 import { MessageDecoder } from "@airframes/acars-decoder/dist/MessageDecoder";
 import { connection_status, updateAlertCounter } from "./alerts.js"
 import { search_html_msg, database_size, system_status, current_search, acars_msg } from "./interfaces.js"
 
 let socket: SocketIOClient.Socket;
+let page_active: boolean = false;
+let db_size: database_size;
 
 declare const window: any;
 let current_search: current_search = {
@@ -21,37 +22,27 @@ let current_page: number = 0; // store the current page of the current_search
 let total_pages: number = 0; // number of pages of results
 let show_all: boolean = false; // variable to indicate we are doing a 'show all' search and not of a specific term
 let query_time: number = 0.0;
-let acars_path: string = document.location.pathname.replace(
-  /about|search|stats|status|alerts/gi,
-  ""
-);
-acars_path += acars_path.endsWith("/") ? "" : "/";
-const acars_url: string = document.location.origin + acars_path;
+
+let acars_path: string = "";
+let acars_url: string = "";
+let msgs_received: acars_msg[][] = [];
+let num_results: number[] = [];
 const md: MessageDecoder = new MessageDecoder();
 
-$(() => { // Document on ready new syntax....or something. Passing a function directly to jquery
+export function search_page() {
   //connect to the socket server.
-  generate_menu();
-  generate_footer();
   updateAlertCounter();
 
   socket = io.connect(`${document.location.origin}/search`, {
     path: acars_path + "socket.io",
   });
 
-  let msgs_received: acars_msg[][] = [];
-  let num_results: number[] = [];
-
   // receive details from server
 
   // DB stats
   socket.on("database", function (msg: database_size) {
-    $("#database").html(String(msg.count).trim() + " rows");
-    if (parseInt(msg.size) > 0) {
-      $("#size").html(formatSizeUnits(parseInt(msg.size)));
-    } else {
-      $("#size").html("Error getting DB size");
-    }
+    db_size = msg;
+    update_size();
   });
 
   socket.on("system_status", function (msg: system_status) {
@@ -98,10 +89,6 @@ $(() => { // Document on ready new syntax....or something. Passing a function di
 
     if (msg.hasOwnProperty("query_time") && typeof msg.query_time !== "undefined") query_time = msg["query_time"];
     // Lets check and see if the results match the current search string
-    let display = "";
-    let display_nav_results = "";
-
-    let results = []; // temp letiable to store the JSON formatted JS object
 
     // Show the results if the returned results match the current search string (in case user kept typing after search emitted)
     // or the user has executed a 'show all'
@@ -109,38 +96,50 @@ $(() => { // Document on ready new syntax....or something. Passing a function di
     if (true) {
       msgs_received.push(msg.msghtml);
       num_results.push(msg.num_results);
-      for (let i = 0; i < msgs_received.length; i++) {
-        // Loop through the received message blob.
-        for (let j = 0; j < msgs_received[i].length; j++) {
-          // Loop through the individual messages in the blob
-          let msg_json = msgs_received[i][j];
-          // Check and see if the text field is decodable in to human readable format
-          let decoded_msg = md.decode(msg_json);
-          if (decoded_msg.decoded == true) {
-            msg_json.decodedText = decoded_msg;
-          }
-          results.push([msg_json]);
-        }
-
-        // Display the updated nav bar and messages
-        display = display_messages(results);
-        display_nav_results = display_search(current_page, num_results[i]);
-        $("#log").html(display);
-        $("#num_results").html(display_nav_results);
-        window.scrollTo(0, 0); // Scroll the window back to the top. We want this because the user might have scrolled halfway down the page and then ran a new search/updated the page
-      }
+      show_search();
     }
   });
 
   // Function to listen for key up events. If detected, check and see if the search string has been updated. If so, process the updated query
   document.addEventListener("keyup", function () {
-    let current_terms = get_search_terms();
-    if (!is_everything_blank() && current_search != current_terms) {
-      show_all = false;
-      delay_query(current_terms);
+    if(page_active) {
+      let current_terms = get_search_terms();
+      if (!is_everything_blank() && current_search != current_terms) {
+        show_all = false;
+        delay_query(current_terms);
+      }
     }
   });
-});
+}
+
+function show_search() {
+  console.log("here")
+  let display = "";
+  let display_nav_results = "";
+  console.log(msgs_received)
+  let results = []; // temp letiable to store the JSON formatted JS object
+
+  for (let i = 0; i < msgs_received.length; i++) {
+    // Loop through the received message blob.
+    for (let j = 0; j < msgs_received[i].length; j++) {
+      // Loop through the individual messages in the blob
+      let msg_json = msgs_received[i][j];
+      // Check and see if the text field is decodable in to human readable format
+      let decoded_msg = md.decode(msg_json);
+      if (decoded_msg.decoded == true) {
+        msg_json.decodedText = decoded_msg;
+      }
+      results.push([msg_json]);
+    }
+
+    // Display the updated nav bar and messages
+    display = display_messages(results);
+    display_nav_results = display_search(current_page, num_results[i]);
+    $("#log").html(display);
+    $("#num_results").html(display_nav_results);
+    window.scrollTo(0, 0); // Scroll the window back to the top. We want this because the user might have scrolled halfway down the page and then ran a new search/updated the page
+  }
+}
 
 function get_search_terms() {
   return {
@@ -351,4 +350,131 @@ function formatSizeUnits(bytes: number) {
     output = "0 bytes";
   }
   return output;
+}
+
+function update_size() {
+  if(page_active && typeof db_size !== "undefined") {
+    $("#database").html(String(db_size.count).trim() + " rows");
+    if (parseInt(db_size.size) > 0) {
+      $("#size").html(formatSizeUnits(parseInt(db_size.size)));
+    } else {
+      $("#size").html("Error getting DB size");
+    }
+  }
+}
+export function set_search_page_urls(documentPath: string, documentUrl: string) {
+  acars_path = documentPath;
+  acars_url = documentUrl;
+}
+
+export function search_active(state=false) {
+  page_active = state;
+
+  if(page_active) { // page is active
+    set_html();
+    update_size();
+    $("#log").html(""); // show the messages we've received
+    show_search();
+  }
+}
+
+function set_html() {
+  $("#right").html(
+  `          <div class="fixed_results">
+  <p><a href="javascript:showall()" class="spread_text">Most Recent Messages</a></p>
+  <table class="search">
+    <tr>
+      <td class="search_label">
+        <label>Database Rows:</label>
+      </td>
+      <td class="search_term">
+        <span id="database"></span>
+      </td>
+    </tr>
+    <tr>
+      <td class="search_label">
+        <label>Database Size:</label>
+      </td>
+      <td class="search_term">
+        <span id="size"></span>
+      </td>
+    </tr>
+
+    <tr>
+      <td class="search_label">
+        <label>Callsign:</label>
+      </td>
+      <td class="search_term">
+        <input type="text" id="search_flight">
+      </td>
+    </tr>
+
+    <tr class="search_label">
+      <td>
+        <label>DEPA:</label>
+      </td>
+      <td class="search_term">
+        <input type="text" id="search_depa">
+      </td>
+    </tr>
+
+    <tr class="search_label">
+      <td>
+        <label>DSTA:</label>
+      </td>
+      <td class="search_term">
+        <input type="text" id="search_dsta">
+      </td>
+    </tr>
+
+    <tr class="search_label">
+      <td>
+        <label>Frequency:</label>
+      </td>
+      <td class="search_term">
+        <input type="text" id="search_freq">
+      </td>
+    </tr>
+
+    <tr class="search_label">
+      <td>
+        <label>Label:</label>
+      </td>
+      <td class="search_term">
+        <input type="text" id="search_msglbl">
+      </td>
+    </tr>
+
+    <tr class="search_label">
+      <td>
+        <label>Message Number:</label>
+      </td>
+      <td class="search_term">
+        <input type="text" id="search_msgno">
+      </td>
+    </tr>
+
+    <tr class="search_label">
+      <td>
+        <label>Tail Number:</label>
+      </td>
+      <td class="search_term">
+        <input type="text" id="search_tail">
+      </td>
+    </tr>
+
+    <tr class="search_label">
+      <td>
+        <label>Text:</label>
+      </td>
+      <td class="search_term">
+        <input type="text" id="search_text">
+      </td>
+    </tr>
+
+  </table>
+  <div class="row" id="num_results"></div>
+</div> <!-- /fixed results -->`);
+
+  $("#page_name").html("Search received messages");
 }
