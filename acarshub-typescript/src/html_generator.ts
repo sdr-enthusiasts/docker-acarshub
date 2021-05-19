@@ -4,10 +4,10 @@
 // Input: live_page - default is false. This toggles on the checks for selected tabs
 import { html_msg, acars_msg } from "./interfaces.js"
 
-export function display_messages(msgs_to_process: acars_msg[][], selected_tabs: any = null, live_page = false) {
+export function display_messages(msgs_to_process: acars_msg[][], selected_tabs: string = "", live_page: boolean = false) {
   let msgs_string = ""; // output string that gets returned
-  let message_tab_splits = ""; // letiable to save the split output of selected_tabs
-  if (selected_tabs) message_tab_splits = selected_tabs.split(","); // the individual tabs with selections
+  let message_tab_splits: string[] = []; // variable to save the split output of selected_tabs
+  if (selected_tabs !== "") message_tab_splits = selected_tabs.split(","); // the individual tabs with selections
 
   for (let i = 0; i < msgs_to_process.length; i++) {
     // Loop through the message array

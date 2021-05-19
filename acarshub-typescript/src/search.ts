@@ -2,12 +2,12 @@ import { display_messages } from "./html_generator.js"
 import { generate_menu, generate_footer } from "./menu.js"
 import { MessageDecoder } from "../node_modules/@airframes/acars-decoder/dist/MessageDecoder.js";
 import { connection_status, updateAlertCounter } from "./alerts.js"
-import { search_html_msg, database_size, system_status } from "./interfaces.js"
+import { search_html_msg, database_size, system_status, current_search, acars_msg } from "./interfaces.js"
 
 let socket: SocketIOClient.Socket;
 
 declare const window: any;
-let current_search = {
+let current_search: current_search = {
   flight: "",
   depa: "",
   dsta: "",
@@ -16,10 +16,10 @@ let current_search = {
   msgno: "",
   tail: "",
   msg_text: "",
-}; // letiable to store the current search term
+}; // variable to store the current search term
 let current_page: number = 0; // store the current page of the current_search
 let total_pages: number = 0; // number of pages of results
-let show_all: boolean = false; // letiable to indicate we are doing a 'show all' search and not of a specific term
+let show_all: boolean = false; // variable to indicate we are doing a 'show all' search and not of a specific term
 let query_time: number = 0.0;
 let acars_path: string = document.location.pathname.replace(
   /about|search|stats|status|alerts/gi,
@@ -39,8 +39,8 @@ $(document).ready(function () {
     path: acars_path + "socket.io",
   });
 
-  let msgs_received: any[] = [];
-  let num_results: any[] = [];
+  let msgs_received: acars_msg[] = [];
+  let num_results: number[] = [];
 
   // receive details from server
 
@@ -178,7 +178,7 @@ function reset_search_terms() {
 // I chose 500ms for the delay because it seems like a reasonable compromise for fast/slow typers
 // Once delay is met, compare the previous text field with the current text field. If they are the same, we'll send a query out
 
-async function delay_query(initial_query: any) {
+async function delay_query(initial_query: current_search) {
   // Pause for half a second
   await sleep(100);
   let old_search = current_search; // Save the old search term in a temp letiable
@@ -220,14 +220,14 @@ window.showall = function () {
 
 // Zzzzzzz
 
-function sleep(ms: any) {
+function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 // Function called by a user clicking on a search page link.
 // Set tracking to the new page and send the query off to the DB
 
-window.runclick = function (page: any) {
+window.runclick = function (page: number) {
   current_page = page;
   let current_terms = get_search_terms();
   if (!is_everything_blank() || show_all) {
@@ -257,7 +257,7 @@ window.runclick = function (page: any) {
 
 // Function to format the side bar
 
-function display_search(current: any, total: any) {
+function display_search(current: number, total: number) {
   let html = "";
   total_pages = 0;
 

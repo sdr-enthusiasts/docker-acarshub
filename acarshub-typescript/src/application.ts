@@ -2,7 +2,7 @@ let pause: boolean = false;
 let text_filter: boolean = false;
 let socket: SocketIOClient.Socket;
 let msgs_received: acars_msg[][] = [];
-let exclude: any[] = [];
+let exclude: string[] = [];
 let selected_tabs: string = "";
 let acars_path: string = document.location.pathname.replace(
   /about|search|stats|status|alerts/gi,
@@ -19,7 +19,7 @@ import Cookies from "js-cookie"
 import { generate_menu, generate_footer } from "./menu.js"
 import { display_messages } from "./html_generator.js"
 import { match_alert, sound_alert, connection_status } from "./alerts.js"
-import { html_msg, acars_msg } from "./interfaces.js"
+import { html_msg, acars_msg, labels, system_status } from "./interfaces.js"
 
 const md = new MessageDecoder();
 
@@ -229,7 +229,7 @@ window.filter_notext = function () {
 // Function to toggle/save the selected filtered message labels
 // Input is the message label ID that should be filtered
 
-window.toggle_label = function (key: any) {
+window.toggle_label = function (key: string) {
   if (exclude.indexOf(key.toString()) == -1) {
     exclude.push(key.toString());
     (<HTMLInputElement>document.getElementById(key.toString())).classList.remove("sidebar_link");
@@ -290,19 +290,18 @@ $(document).ready(function () {
   }
 
   // Function to listen for the server to respond with valid message labels and process the results for display in the side-bar
-  socket.on("labels", function (msg: any) {
+  socket.on("labels", function (msg: labels) {
     let label_html = "";
     for (let key in msg.labels) {
-      let link_class = "sidebar_link";
-      if (exclude.indexOf(key.toString()) != -1) link_class = "red";
+      let link_class: string = exclude.indexOf(key.toString()) != -1 ? "red" : "sidebar_link";
       label_html += `<a href="javascript:toggle_label('${key.toString()}');" id="${key}" class="${link_class}">${key} ${
-        msg.labels[key]["name"]
+        msg.labels[key].name
       }</a><br>`;
     }
     $("#label_links").html(label_html);
   });
 
-  socket.on("system_status", function (msg: any) {
+  socket.on("system_status", function (msg: system_status) {
     if (msg.status.error_state == true) {
       $("#system_status").html(
         `<a href="${acars_url}status">System Status: <span class="red_body">Error</a></span>`
@@ -338,7 +337,7 @@ $(document).ready(function () {
   socket.on("newmsg", function (msg: html_msg) {
     if (
       msg.msghtml.hasOwnProperty("label") == false ||
-      exclude.indexOf(msg.msghtml.label) == -1
+      exclude.indexOf(msg.msghtml.label!) == -1
     ) {
       if (
         !text_filter ||
@@ -621,7 +620,7 @@ $(document).ready(function () {
 
               if (rejected) {
                 // Promote the message back to the front
-                msgs_received[index_new].forEach(function (item: any, i: any) {
+                msgs_received[index_new].forEach(function (item: any, i: number) {
                   if (i == j) {
                     msgs_received[index_new].splice(i, 1);
                     msgs_received[index_new].unshift(item);

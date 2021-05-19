@@ -1,6 +1,7 @@
 import { generate_menu, generate_footer } from "./menu.js";
 import { connection_status } from "./alerts.js";
 import showdown from "showdown";
+import { system_status } from "./interfaces.js";
 
 let socket: SocketIOClient.Socket;
 let acars_path: string = document.location.pathname.replace(
@@ -25,7 +26,7 @@ $(document).ready(function () {
       $("#log").html(converter.makeHtml(data));
     });
 
-  socket.on("system_status", function (msg: any) {
+  socket.on("system_status", function (msg: system_status) {
     if (msg.status.error_state == true) {
       $("#system_status").html(
         `<a href="${acars_url}status">System Status: <span class="red_body">Error</a></span>`

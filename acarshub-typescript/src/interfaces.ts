@@ -13,15 +13,34 @@ export interface terms {
   terms: string[]
 }
 
+export interface current_search {
+  flight: string,
+  depa: string,
+  dsta: string,
+  freq: string,
+  label: string,
+  msgno: string,
+  tail: string,
+  msg_text: string,
+}
+
+export interface labels {
+  [index: string]: {
+    [index: string]: {
+      name: string
+    }
+  }
+}
+
 export interface html_msg {
     msghtml: acars_msg,
     loading?: boolean,
   }
 
 export interface search_html_msg {
-  msghtml: acars_msg,
-  query_time?: number,
-  num_results?: number
+  msghtml: acars_msg[],
+  query_time: number,
+  num_results: number
 }
 
 export interface acars_msg {
