@@ -12,7 +12,7 @@ export function generate_menu() {
   html += `<li><a href="javascript:new_page('Live Messages')">Live Messages</a></li>`;
   html += `<li><a href="javascript:new_page('Search')">Search Database</a></li>`;
   html += `<li><a href="${acars_url}alerts">Alerts&nbsp;<span id="alert_count"></span></li>`;
-  html += `<li><a href="${acars_url}stats">Statistics</a></li></ul>`;
+  html += `<li><a href="javascript:new_page('Stats')">Statistics</a></li></ul>`;
   html += "</nav>";
   $("#links").html(html);
 }
@@ -44,7 +44,7 @@ export function generate_stat_submenu(acars: boolean, vdlm: boolean) {
 }
 
 export function generate_footer() {
-  let html: string = `<strong><a href="${acars_url}about">ACARS Hub Help/About</a> | <a href="https://github.com/fredclausen/docker-acarshub" target="_blank">Project Github</a> | \
+  let html: string = `<strong><a href="javascript:new_page('About')">ACARS Hub Help/About</a> | <a href="https://github.com/fredclausen/docker-acarshub" target="_blank">Project Github</a> | \
      <a href="https://discord.gg/sTf9uYF"><img src="https://img.shields.io/discord/734090820684349521" alt="discord"></a> | \
      <span id="system_status"><a href="${acars_url}status">System Status: <span class="green">Okay</a></span></span></strong>\
      <span id="disconnect"></span> \

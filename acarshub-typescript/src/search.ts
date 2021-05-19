@@ -29,7 +29,7 @@ let msgs_received: acars_msg[][] = [];
 let num_results: number[] = [];
 const md: MessageDecoder = new MessageDecoder();
 
-export function search_page() {
+export function search() {
   //connect to the socket server.
   updateAlertCounter();
 

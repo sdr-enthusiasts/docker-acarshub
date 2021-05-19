@@ -1,34 +1,89 @@
 import { Chart } from "chart.js";
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 import { connection_status, updateAlertCounter } from "./alerts.js"
-import { generate_menu, generate_footer, generate_stat_submenu } from "./menu.js"
+import { generate_stat_submenu } from "./menu.js"
 
 let socket: SocketIOClient.Socket;
 let image_prefix: string = "";
-let acars_path: string = document.location.pathname.replace(
-  /about|search|stats|status|alerts/gi,
-  ""
-);
-acars_path += acars_path.endsWith("/") ? "" : "/";
-const acars_url: string = document.location.origin + acars_path;
+let acars_path: string = "";
+let acars_url: string = "";
+let page_active = false;
 
 let chart_alerts: Chart;
 let chart_signals: Chart;
 
-$(() => { // Document on ready new syntax....or something. Passing a function directly to jquery
-  generate_menu();
-  generate_footer();
-  updateAlertCounter();
+let alert_data: any;
+let signal_data: any;
+let freqs_data: any;
+let count_data: any;
 
-  socket = io.connect(`${document.location.origin}/stats`, {
-    path: acars_path + "socket.io",
-  });
+let acars_on = false;
+let vdlm_on = false;
 
-  socket.on("newmsg", function (msg: any) {
-    generate_stat_submenu(msg.acars, msg.vdlm);
-  });
+function show_alert_chart() {
+  if(typeof alert_data !== "undefined") {
+    let labels: string[] = [];
+    let alert_chart_data: number[] = [];
+    for (let i in alert_data.data) {
+      // for now checking if count > 0 is a hack to get it to work
+      // ideally, it should list out 0 term items
+      labels.push(alert_data.data[i].term);
+      alert_chart_data.push(alert_data.data[i].count);
+    }
+    if (chart_alerts) {
+      chart_alerts.destroy();
+    }
+    const canvas_alerts: HTMLCanvasElement = <HTMLCanvasElement> document.getElementById('alertterms');
+    const ctx_alerts: CanvasRenderingContext2D = canvas_alerts.getContext('2d')!;
+    if(ctx_alerts != null) {
+      // @ts-expect-error
+      let p = palette("tol", 12, 0, "").map(function (hex: any) {
+        return "#" + hex;
+      });
 
-  socket.on("signal", function (msg: any) {
+      chart_alerts = new Chart(ctx_alerts, {
+        // The type of chart we want to create
+        type: "bar",
+
+        // The data for our dataset
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: "Received Alert Terms",
+              backgroundColor: p,
+              //borderColor: 'rgb(0, 0, 0)',
+              data: alert_chart_data,
+              //borderWidth: 1
+            },
+          ],
+        },
+
+        // Configuration options go here
+        options: {
+          plugins: {
+            datalabels: {
+              backgroundColor: function (context: any) {
+                return context.dataset.backgroundColor;
+              },
+              borderRadius: 4,
+              color: "white",
+              font: {
+                weight: "bold",
+              },
+              formatter: Math.round,
+              padding: 6,
+            },
+          },
+        },
+        plugins: [ChartDataLabels],
+      });
+    }
+  }
+}
+
+function show_signal_chart() {
+  if(typeof signal_data !== "undefined") {
     let input_labels: string[] = [];
     let input_data: number[] = [];
 
@@ -41,10 +96,10 @@ $(() => { // Document on ready new syntax....or something. Passing a function di
     // that skews the graph significantly. Removing those values smooths the graph and is more representative of what
     // really has been received with the newer, better signal levels
 
-    for (let i in msg.levels) {
-      if (msg.levels[i].level != null && isFloat(msg.levels[i].level)) {
-        input_labels.push(`${msg.levels[i].level}`);
-        input_data.push(msg.levels[i].count);
+    for (let i in signal_data.levels) {
+      if (signal_data.levels[i].level != null && isFloat(signal_data.levels[i].level)) {
+        input_labels.push(`${signal_data.levels[i].level}`);
+        input_data.push(signal_data.levels[i].count);
       }
     }
     if (chart_signals) {
@@ -77,108 +132,38 @@ $(() => { // Document on ready new syntax....or something. Passing a function di
         options: {},
       });
     }
-  });
+  }
+}
 
-  socket.on("alert_terms", function (msg: any) {
-    let labels: string[] = [];
-    let alert_data: number[] = [];
-    for (let i in msg.data) {
-      // for now checking if count > 0 is a hack to get it to work
-      // ideally, it should list out 0 term items
-      if (msg.data[i].count > 0) {
-        labels.push(msg.data[i].term);
-        alert_data.push(msg.data[i].count);
-      }
-    }
-    if (chart_alerts) {
-      chart_alerts.destroy();
-    }
-    const canvas_alerts: HTMLCanvasElement = <HTMLCanvasElement> document.getElementById('alertterms');
-    const ctx_alerts: CanvasRenderingContext2D = canvas_alerts.getContext('2d')!;
-    if(ctx_alerts != null) {
-      // @ts-expect-error
-      let p = palette("tol", 12, 0, "").map(function (hex: any) {
-        return "#" + hex;
-      });
-
-      chart_alerts = new Chart(ctx_alerts, {
-        // The type of chart we want to create
-        type: "bar",
-
-        // The data for our dataset
-        data: {
-          labels: labels,
-          datasets: [
-            {
-              label: "Received Alert Terms",
-              backgroundColor: p,
-              //borderColor: 'rgb(0, 0, 0)',
-              data: alert_data,
-              //borderWidth: 1
-            },
-          ],
-        },
-
-        // Configuration options go here
-        options: {
-          plugins: {
-            datalabels: {
-              backgroundColor: function (context: any) {
-                return context.dataset.backgroundColor;
-              },
-              borderRadius: 4,
-              color: "white",
-              font: {
-                weight: "bold",
-              },
-              formatter: Math.round,
-              padding: 6,
-            },
-          },
-        },
-        plugins: [ChartDataLabels],
-      });
-    }
-  });
-
-  socket.on("freqs", function (msg: any) {
+function show_freqs() {
+  if(typeof freqs_data !== "undefined") {
     let html: string = '<table class="search">';
     html +=
       '<thead><th><span class="menu_non_link">Frequency</span></th><th><span class="menu_non_link">Count</span></th><th><span class="menu_non_link">Type</span></th></thead>';
-    for (let i = 0; i < msg.freqs.length; i++) {
-      if (msg.freqs[i].freq_type == "ACARS")
-        html += `<tr><td><span class=\"menu_non_link\">${msg.freqs[i].freq}</span></td><td><span class=\"menu_non_link\">${msg.freqs[i].count}</span></td><td><span class=\"menu_non_link\">${msg.freqs[i].freq_type}</span></td></tr>`;
+    for (let i = 0; i < freqs_data.freqs.length; i++) {
+      if (freqs_data.freqs[i].freq_type == "ACARS")
+        html += `<tr><td><span class=\"menu_non_link\">${freqs_data.freqs[i].freq}</span></td><td><span class=\"menu_non_link\">${freqs_data.freqs[i].count}</span></td><td><span class=\"menu_non_link\">${freqs_data.freqs[i].freq_type}</span></td></tr>`;
     }
 
-    for (let i = 0; i < msg.freqs.length; i++) {
-      if (msg.freqs[i].freq_type == "VDL-M2")
-        html += `<tr><td><span class=\"menu_non_link\">${msg.freqs[i].freq}</span></td><td><span class=\"menu_non_link\">${msg.freqs[i].count}</span></td><td><span class=\"menu_non_link\">${msg.freqs[i].freq_type}</span></td></tr>`;
+    for (let i = 0; i < freqs_data.freqs.length; i++) {
+      if (freqs_data.freqs[i].freq_type == "VDL-M2")
+        html += `<tr><td><span class=\"menu_non_link\">${freqs_data.freqs[i].freq}</span></td><td><span class=\"menu_non_link\">${freqs_data.freqs[i].count}</span></td><td><span class=\"menu_non_link\">${freqs_data.freqs[i].freq_type}</span></td></tr>`;
     }
 
     html += "</table>";
 
     $("#freqs").html(html);
-  });
+  }
+}
 
-  socket.on("system_status", function (msg: any) {
-    if (msg.status.error_state == true) {
-      $("#system_status").html(
-        `<a href="${acars_url}status">System Status: <span class="red_body">Error</a></span>`
-      );
-    } else {
-      $("#system_status").html(
-        `<a href="${acars_url}status">System Status: <span class="green">Okay</a></span>`
-      );
-    }
-  });
+function show_count() {
+  if(typeof count_data !== "undefined") {
+    let error: number = count_data.count[1];
+    let total: number = count_data.count[0] + count_data.count[2] + count_data.count[3];
+    let good_msg: number = count_data.count[0] - error;
 
-  socket.on("count", function (msg: any) {
-    let error: number = msg.count[1];
-    let total: number = msg.count[0] + msg.count[2] + msg.count[3];
-    let good_msg: number = msg.count[0] - error;
-
-    let empty_error: number = msg.count[3];
-    let empty_good: number = msg.count[2];
+    let empty_error: number = count_data.count[3];
+    let empty_good: number = count_data.count[2];
 
     let html: string = '<p><table class="search">';
     html += `<tr><td><span class="menu_non_link">Total Messages (All): </span></td><td><span class="menu_non_link">${total}</span></td><td></td></tr>`;
@@ -207,6 +192,53 @@ $(() => { // Document on ready new syntax....or something. Passing a function di
     html += "</table>";
 
     $("#msgs").html(html);
+  }
+}
+
+export function stats() {
+  updateAlertCounter();
+
+  socket = io.connect(`${document.location.origin}/stats`, {
+    path: acars_path + "socket.io",
+  });
+
+  socket.on("newmsg", function (msg: any) {
+    acars_on = msg.acars;
+    vdlm_on = msg.vdlm;
+    if(page_active)
+      generate_stat_submenu(acars_on, vdlm_on);
+  });
+
+  socket.on("signal", function (msg: any) {
+    signal_data = msg;
+    if(page_active) show_signal_chart();
+  });
+
+  socket.on("alert_terms", function (msg: any) {
+    alert_data = msg;
+    if(page_active) show_alert_chart();
+  });
+
+  socket.on("freqs", function (msg: any) {
+    freqs_data = msg;
+    if(page_active) show_freqs();
+  });
+
+  socket.on("system_status", function (msg: any) {
+    if (msg.status.error_state == true) {
+      $("#system_status").html(
+        `<a href="${acars_url}status">System Status: <span class="red_body">Error</a></span>`
+      );
+    } else {
+      $("#system_status").html(
+        `<a href="${acars_url}status">System Status: <span class="green">Okay</a></span>`
+      );
+    }
+  });
+
+  socket.on("count", function (msg: any) {
+    count_data = msg;
+    if(page_active) show_count();
   });
 
   socket.on("disconnect", function () {
@@ -231,7 +263,7 @@ $(() => { // Document on ready new syntax....or something. Passing a function di
 
   grab_freqs();
   grab_message_count();
-});
+}
 
 function isFloat(n: number) {
   return Number(n) === n && n % 1 !== 0;
@@ -285,4 +317,40 @@ function grab_message_count() {
 
 function grab_updated_graphs() {
   socket.emit("graphs", { graphs: true }, ("/stats"));
+}
+
+function set_html() {
+  $("#log").html(`<p></p>
+  <img src="static/images/1hour.png" id="1hr" alt="1 Hour"><br>
+  <img src="static/images/6hour.png" id="6hr" alt="6 Hours"><br>
+  <img src="static/images/12hour.png" id="12hr" alt="12 Hours"><br>
+  <img src="static/images/24hours.png" id="24hr" alt="24 Hours"><br>
+  <img src="static/images/1week.png" id="1wk" alt="1 Week"><br>
+  <img src="static/images/30days.png" id="30day" alt="30 Days"><br>
+  <img src="static/images/6months.png" id="6mon" alt="6 Months"><br>
+  <img src="static/images/1year.png" id="1yr" alt="1 Year"><br>
+  <canvas id="signallevels"></canvas>
+  <canvas id="alertterms"></canvas>`); // show the messages we've received
+  $("#right").html(`<div class="fixed_results">
+  <span id="stat_menu"></span>
+</div>`);
+  $("#page_name").html("Messages will appear here, newest first:");
+}
+
+export function stats_active(state=false) {
+  page_active = state;
+
+  if(page_active) { // page is active
+    set_html();
+    generate_stat_submenu(acars_on, vdlm_on);
+    show_signal_chart();
+    show_alert_chart();
+    show_count();
+    show_freqs();
+  }
+}
+
+export function set_stats_page_urls(documentPath: string, documentUrl: string) {
+  acars_path = documentPath;
+  acars_url = documentUrl;
 }

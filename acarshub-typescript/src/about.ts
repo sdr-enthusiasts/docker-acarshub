@@ -1,61 +1,46 @@
-import { generate_menu, generate_footer } from "./menu.js";
-import { connection_status } from "./alerts.js";
 import showdown from "showdown";
-import { system_status } from "./interfaces.js";
 
-let socket: SocketIOClient.Socket;
-let acars_path: string = document.location.pathname.replace(
-  /about|search|stats|status|alerts/gi,
-  ""
-);
-acars_path += acars_path.endsWith("/") ? "" : "/";
-const acars_url: string = document.location.origin + acars_path;
+let acars_path: string = ""
+let acars_url: string = "";
 
-$(() => { // Document on ready new syntax....or something. Passing a function directly to jquery
-//$(document).ready(function () {
-  generate_menu();
-  generate_footer();
+let page_html: string = "";
+let page_active = false;
 
-  socket = io.connect(`${document.location.origin}/about`, {
-    path: acars_path + "socket.io",
-  });
-
+export function about() {
   let converter: showdown.Converter = new showdown.Converter();
   fetch(`${acars_url}aboutmd`)
     .then((response) => response.text())
     .then((data) => {
-      $("#log").html(converter.makeHtml(data));
+      save_html(converter.makeHtml(data));
     });
+  console.log(page_html);
+  if(page_active)
+    about_active(true);
+}
 
-  socket.on("system_status", function (msg: system_status) {
-    if (msg.status.error_state == true) {
-      $("#system_status").html(
-        `<a href="${acars_url}status">System Status: <span class="red_body">Error</a></span>`
-      );
-    } else {
-      $("#system_status").html(
-        `<a href="${acars_url}status">System Status: <span class="green">Okay</a></span>`
-      );
-    }
-  });
+function save_html(html: string) {
+  page_html = html;
+  about_active(page_active);
+}
 
-  socket.on("disconnect", function () {
-    connection_status();
-  });
+export function about_active(state=false) {
+  page_active = state;
+  if(page_active) { // page is active
+    set_html();
+    $("#log").html(page_html); // show the messages we've received
+  }
+}
 
-  socket.on("connect_error", function () {
-    connection_status();
-  });
+export function set_about_page_urls(documentPath: string, documentUrl: string) {
+  acars_path = documentPath;
+  acars_url = documentUrl;
+}
 
-  socket.on("connect_timeout", function () {
-    connection_status();
-  });
+function set_html() {
+  $("#right").html(
+  `<div class="fixed_results">
+</div>`);
 
-  socket.on("connect", function () {
-    connection_status(true);
-  });
-
-  socket.on("reconnect", function () {
-    connection_status(true);
-  });
-});
+  $("#page_name").html("");
+  $("#log").html("");
+}

@@ -1,7 +1,9 @@
 import { generate_menu, generate_footer } from "./menu.js";
 
 import { set_live_page_urls, live_messages, live_message_active } from "./live_messages.js"
-import { set_search_page_urls, search_page, search_active } from "./search.js"
+import { set_search_page_urls, search, search_active } from "./search.js"
+import { set_stats_page_urls, stats, stats_active} from "./stats.js"
+import { set_about_page_urls, about, about_active} from "./about.js"
 
 declare const window: any;
 let acars_url: string = "";
@@ -9,8 +11,10 @@ let acars_path: string = "";
 let acars_page: string = "";
 
 const pages: string[] = [
-    "/", // index/live messages
-    "/search" // search page
+    "/",        // index/live messages
+    "/search",  // search page
+    "/stats",   // stats page
+    "/about"    // about page
 ]
 
 $(() => { // Document on ready new syntax....or something. Passing a function directly to jquery
@@ -23,7 +27,9 @@ $(() => { // Document on ready new syntax....or something. Passing a function di
 
     // init all page backgrounding functions
     live_messages();
-    search_page();
+    search();
+    stats();
+    about();
 
     toggle_pages();
 });
@@ -38,6 +44,8 @@ function update_url() {
 
     set_live_page_urls(acars_path, acars_url);
     set_search_page_urls(acars_path, acars_url);
+    set_stats_page_urls(acars_path, acars_url);
+    set_about_page_urls(acars_path, acars_url);
 }
 
 function toggle_pages() {
@@ -52,6 +60,14 @@ function toggle_pages() {
             search_active(true);
         } else if (pages[page] === "/search") {
             search_active();
+        } else if(pages[page] === "/stats" && acars_page === pages[page]) {
+            stats_active(true);
+        } else if (pages[page] === "/stats") {
+            stats_active();
+        } else if(pages[page] === "/about" && acars_page === pages[page]) {
+            about_active(true);
+        } else if (pages[page] === "/about") {
+            about_active();
         }
     }
 }
@@ -61,6 +77,8 @@ window.new_page = function(page: string) {
     let sub_url = "";
     if(page === "Live Messages") sub_url = ""
     else if (page === "Search") sub_url = "search"
+    else if (page === "Stats") sub_url = "stats"
+    else if (page === "About") sub_url = "about"
     window.history.pushState({path:acars_path + sub_url}, page, acars_path + sub_url);
     toggle_pages();
 }

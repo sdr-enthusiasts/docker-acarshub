@@ -155,8 +155,8 @@ $(() => { // Document on ready new syntax....or something. Passing a function di
 });
 
 export function updateAlertCounter() {
-  if (alerts) $("#alert_count").html(` <span class="red">(${alerts})</span>`);
-  Cookies.set("alert_unread", String(alerts), { expires: 365 });
+  // if (alerts) $("#alert_count").html(` <span class="red">(${alerts})</span>`);
+  // Cookies.set("alert_unread", String(alerts), { expires: 365 });
 }
 
 function updateAlerts() {

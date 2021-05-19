@@ -411,7 +411,7 @@ def about():
 
 @app.route("/aboutmd")
 def aboutmd():
-    return render_template("index.html")
+    return render_template("helppage.MD")
 
 
 @app.route("/alerts")

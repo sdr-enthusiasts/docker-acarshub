@@ -685,8 +685,6 @@ export function live_message_active(state=false) {
     increment_filtered(true); // show the filtered msgs
     show_labels();
     $("#log").html(display_messages(msgs_received, selected_tabs, true)); // show the messages we've received
-
-
   }
 }
 
