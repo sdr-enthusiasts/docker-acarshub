@@ -112,11 +112,11 @@ $(() => { // Document on ready new syntax....or something. Passing a function di
     socket_alerts.on("system_status", function (msg: system_status) {
       if (msg.status.error_state == true) {
         $("#system_status").html(
-          `<a href="${acars_url}status">System Status: <span class="red_body">Error</span>`
+          `<a href="javascript:new_page('Status')">System Status: <span class="red_body">Error</span>`
         );
       } else {
         $("#system_status").html(
-          `<a href="${acars_url}status">System Status: <span class="green">Okay</a></span>`
+          `<a href="javascript:new_page('Status')">System Status: <span class="green">Okay</a></span>`
         );
       }
     });

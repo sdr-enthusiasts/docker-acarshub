@@ -227,11 +227,11 @@ export function stats() {
   socket.on("system_status", function (msg: any) {
     if (msg.status.error_state == true) {
       $("#system_status").html(
-        `<a href="${acars_url}status">System Status: <span class="red_body">Error</a></span>`
+        `<a href="javascript:new_page('Status')">System Status: <span class="red_body">Error</a></span>`
       );
     } else {
       $("#system_status").html(
-        `<a href="${acars_url}status">System Status: <span class="green">Okay</a></span>`
+        `<a href="javascript:new_page('Status')">System Status: <span class="green">Okay</a></span>`
       );
     }
   });

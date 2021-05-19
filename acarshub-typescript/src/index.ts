@@ -4,6 +4,7 @@ import { set_live_page_urls, live_messages, live_message_active } from "./live_m
 import { set_search_page_urls, search, search_active } from "./search.js"
 import { set_stats_page_urls, stats, stats_active} from "./stats.js"
 import { set_about_page_urls, about, about_active} from "./about.js"
+import { set_status_page_urls, status, status_active} from "./status.js"
 
 declare const window: any;
 let acars_url: string = "";
@@ -14,10 +15,12 @@ const pages: string[] = [
     "/",        // index/live messages
     "/search",  // search page
     "/stats",   // stats page
-    "/about"    // about page
+    "/about",   // about page
+    "/status",  // status page
 ]
 
 $(() => { // Document on ready new syntax....or something. Passing a function directly to jquery
+    console.log("new page")
     update_url(); // update the urls for everyone
     generate_menu(); // generate the top menu
     generate_footer(); // generate the footer
@@ -30,6 +33,7 @@ $(() => { // Document on ready new syntax....or something. Passing a function di
     search();
     stats();
     about();
+    status();
 
     toggle_pages();
 });
@@ -46,6 +50,7 @@ function update_url() {
     set_search_page_urls(acars_path, acars_url);
     set_stats_page_urls(acars_path, acars_url);
     set_about_page_urls(acars_path, acars_url);
+    set_status_page_urls(acars_path, acars_url);
 }
 
 function toggle_pages() {
@@ -68,6 +73,10 @@ function toggle_pages() {
             about_active(true);
         } else if (pages[page] === "/about") {
             about_active();
+        } else if(pages[page] === "/status" && acars_page === pages[page]) {
+            status_active(true);
+        } else if (pages[page] === "/status") {
+            status_active();
         }
     }
 }
@@ -79,6 +88,7 @@ window.new_page = function(page: string) {
     else if (page === "Search") sub_url = "search"
     else if (page === "Stats") sub_url = "stats"
     else if (page === "About") sub_url = "about"
+    else if (page === "Status") sub_url = "status"
     window.history.pushState({path:acars_path + sub_url}, page, acars_path + sub_url);
     toggle_pages();
 }

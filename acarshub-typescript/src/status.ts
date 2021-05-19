@@ -1,67 +1,50 @@
-import { connection_status } from "./alerts.js"
 import { generate_menu, generate_footer } from "./menu.js"
 
 let socket;
-let acars_path = document.location.pathname.replace(
-  /about|search|stats|status|alerts/gi,
-  ""
-);
-acars_path += acars_path.endsWith("/") ? "" : "/";
-const acars_url = document.location.origin + acars_path;
+let acars_path = "";
+let acars_url = "";
 
-$(() => { // Document on ready new syntax....or something. Passing a function directly to jquery
-  generate_menu();
-  generate_footer();
+let page_active = false;
+let current_status: any;
 
+export function status() { // Document on ready new syntax....or something. Passing a function directly to jquery
   socket = io.connect(`${document.location.origin}/status`, {
     path: acars_path + "socket.io",
   });
 
   socket.on("system_status", function (msg: any) {
-    if (msg.status.error_state == true) {
+    current_status = msg;
+
+    if(page_active) show_status();
+  });
+};
+
+function show_status() {
+  if(typeof current_status !== "undefined") {
+    if (current_status.status.error_state == true) {
       $("#system_status").html(
-        `<a href="${acars_url}status">System Status: <span class="red_body">Error</a></span>`
+        `<a href="javascript:new_page('Status')">System Status: <span class="red_body">Error</a></span>`
       );
     } else {
       $("#system_status").html(
-        `<a href="${acars_url}status">System Status: <span class="green">Okay</a></span>`
+        `<a href="javascript:new_page('Status')">System Status: <span class="green">Okay</a></span>`
       );
     }
 
     $("#log").html(
       decode_status(
-        msg.status.error_state,
-        msg.status.decoders,
-        msg.status.servers,
-        msg.status.feeders,
-        msg.status.global,
-        msg.status.stats
+        current_status.status.error_state,
+        current_status.status.decoders,
+        current_status.status.servers,
+        current_status.status.feeders,
+        current_status.status.global,
+        current_status.status.stats
       )
     );
-  });
-
-  socket.on("disconnect", function () {
-    connection_status();
-  });
-
-  socket.on("connect_error", function () {
-    connection_status();
-  });
-
-  socket.on("connect_timeout", function () {
-    connection_status();
-  });
-
-  socket.on("connect", function () {
-    connection_status(true);
-  });
-
-  socket.on("reconnect", function () {
-    connection_status(true);
-  });
-});
-
+  }
+}
 function decode_status(status: any, decoders: any, servers: any, feeders: any, receivers: any, stats: any) {
+  console.log("yo");
   let html_output = "<h2>ACARS Hub System Status</h2>";
   const keys_decoder = Object.keys(decoders);
   const keys_servers = Object.keys(servers);
@@ -133,4 +116,26 @@ function decode_status(status: any, decoders: any, servers: any, feeders: any, r
   html_output += "</span>";
 
   return html_output;
+}
+
+export function status_active(state=false) {
+  page_active = state;
+  if(page_active) { // page is active
+    set_html();
+    show_status(); // show the messages we've received
+  }
+}
+
+export function set_status_page_urls(documentPath: string, documentUrl: string) {
+  acars_path = documentPath;
+  acars_url = documentUrl;
+}
+
+function set_html() {
+  $("#right").html(
+  `<div class="fixed_results">
+</div>`);
+
+  $("#page_name").html("");
+  $("#log").html("");
 }

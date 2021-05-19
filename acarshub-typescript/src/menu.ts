@@ -46,7 +46,7 @@ export function generate_stat_submenu(acars: boolean, vdlm: boolean) {
 export function generate_footer() {
   let html: string = `<strong><a href="javascript:new_page('About')">ACARS Hub Help/About</a> | <a href="https://github.com/fredclausen/docker-acarshub" target="_blank">Project Github</a> | \
      <a href="https://discord.gg/sTf9uYF"><img src="https://img.shields.io/discord/734090820684349521" alt="discord"></a> | \
-     <span id="system_status"><a href="${acars_url}status">System Status: <span class="green">Okay</a></span></span></strong>\
+     <span id="system_status"><a href="javascript:new_page('Status')">System Status: <span class="green">Okay</a></span></span></strong>\
      <span id="disconnect"></span> \
      <span class="align_right">Pre-Release</span>`;
   $("#footer_div").html(html);
