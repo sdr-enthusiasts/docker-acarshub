@@ -3,7 +3,7 @@
         "lib": ["ES2019", "DOM"],
         "module": "ES6",
         "moduleResolution": "node",
-        "outDir": "../rootfs/webapp/static/js",
+        "outDir": "dist",
         "sourceMap": false,
         "strict": true,
         "target": "ES2019",

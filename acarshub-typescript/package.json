@@ -1,14 +1,15 @@
 {
   "name": "acarshub-typescript",
   "version": "2.0.0",
-  "description": "",
+  "description": "Web front end for the docker-acarshub project",
   "main": "application.js",
   "scripts": {
     "minify": "jsmin -o name.min.js name.js",
-    "build": "tsc && ./build.sh"
+    "build": "tsc && ./build.sh",
+    "install": "rm ../rootfs/webapp/static/js/*.js && cp dist/*.js ../rootfs/webapp/static/js/"
   },
-  "author": "",
-  "license": "ISC",
+  "author": "Fred Clausen",
+  "license": "GPLv3",
   "devDependencies": {
     "@airframes/acars-decoder": "^1.1.0",
     "@types/jquery": "^3.5.5",

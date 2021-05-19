@@ -2,7 +2,7 @@
 
 # ./node_modules/.bin/tsc
 
-pushd ../rootfs/webapp/static/js
+pushd ./dist
 find . -maxdepth 1 -type f -iname '*.js' -exec sed -i.bu "s/import Cookies from \"js-cookie\";/import Cookies from \".\/other\/js.cookie.min.mjs\";/g;" {} \;
 find . -maxdepth 1 -type f -iname '*.js' -exec sed -i.bu "s/import { MessageDecoder } from \"..\/node_modules\/@airframes\/acars-decoder\/dist\/MessageDecoder.js\";/import { MessageDecoder } from \"..\/airframes-acars-decoder\/MessageDecoder.js\"/g;" {} \;
 
