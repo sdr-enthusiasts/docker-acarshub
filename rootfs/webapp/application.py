@@ -396,32 +396,32 @@ def index():
 
 @app.route("/stats")
 def stats():
-    return render_template("stats.html")
+    return render_template("index.html")
 
 
 @app.route("/search")
 def search():
-    return render_template("search.html")
+    return render_template("index.html")
 
 
 @app.route("/about")
 def about():
-    return render_template("about.html")
+    return render_template("index.html")
 
 
 @app.route("/aboutmd")
 def aboutmd():
-    return render_template("helppage.MD")
+    return render_template("index.html")
 
 
 @app.route("/alerts")
 def alerts():
-    return render_template("alerts.html")
+    return render_template("index.html")
 
 
 @app.route("/status")
 def status():
-    return render_template("status.html")
+    return render_template("index.html")
 
 
 # The listener for the live message page

@@ -1,6 +1,6 @@
 import { display_messages } from "./html_generator.js"
 import { generate_menu, generate_footer } from "./menu.js"
-import { MessageDecoder } from "../node_modules/@airframes/acars-decoder/dist/MessageDecoder.js";
+import { MessageDecoder } from "@airframes/acars-decoder/dist/MessageDecoder";
 import { connection_status, updateAlertCounter } from "./alerts.js"
 import { search_html_msg, database_size, system_status, current_search, acars_msg } from "./interfaces.js"
 

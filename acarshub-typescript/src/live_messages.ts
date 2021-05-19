@@ -4,19 +4,23 @@ let socket: SocketIOClient.Socket;
 let msgs_received: acars_msg[][] = [];
 let exclude: string[] = [];
 let selected_tabs: string = "";
-let acars_path: string = document.location.pathname.replace(
-  /about|search|stats|status|alerts/gi,
-  ""
-);
-acars_path += acars_path.endsWith("/") ? "" : "/";
-const acars_url = document.location.origin + acars_path;
+let filter_labels: labels;
+// let acars_path: string = document.location.pathname.replace(
+//   /about|search|stats|status|alerts/gi,
+//   ""
+// );
+let page_active: boolean = false;
+// acars_path += acars_path.endsWith("/") ? "" : "/";
+// const acars_url = document.location.origin + acars_path;
+
+let acars_path = "";
+let acars_url = "";
 
 let filtered_messages: number = 0;
 let received_messages: number = 0;
 declare const window: any;
-import { MessageDecoder } from "../node_modules/@airframes/acars-decoder/dist/MessageDecoder.js";
+import { MessageDecoder } from "@airframes/acars-decoder/dist/MessageDecoder";
 import Cookies from "js-cookie"
-import { generate_menu, generate_footer } from "./menu.js"
 import { display_messages } from "./html_generator.js"
 import { match_alert, sound_alert, connection_status } from "./alerts.js"
 import { html_msg, acars_msg, labels, system_status } from "./interfaces.js"
@@ -35,11 +39,11 @@ msgs_received.unshift = function () {
 
 // Function to increment the counter of filtered messages
 
-function increment_filtered() {
+function increment_filtered(page_refresh=false) {
   let id = document.getElementById("filteredmessages");
+  if(!page_refresh) filtered_messages++;
   if(id !== null) {
     id.innerHTML = "";
-    filtered_messages++;
     let txt = document.createTextNode(String(filtered_messages));
     id.appendChild(txt);
   }
@@ -47,13 +51,26 @@ function increment_filtered() {
 
 // Function to increment the counter of received messages
 
-function increment_received() {
+function increment_received(page_refresh=false) {
   let id = document.getElementById("receivedmessages");
+  if(!page_refresh) received_messages++;
   if(id !== null) {
     id.innerHTML = "";
-    received_messages++;
     let txt = document.createTextNode(String(received_messages));
     id.appendChild(txt);
+  }
+}
+
+function show_labels() {
+  let label_html = "";
+  if(typeof filter_labels !== "undefined" && page_active) {
+    for (let key in filter_labels.labels) {
+      let link_class: string = exclude.indexOf(key.toString()) !== -1 ? "red" : "sidebar_link";
+      label_html += `<a href="javascript:toggle_label('${key.toString()}');" id="${key}" class="${link_class}">${key} ${
+        filter_labels.labels[key].name
+      }</a><br>`;
+    }
+    $("#label_links").html(label_html);
   }
 }
 
@@ -254,10 +271,8 @@ window.toggle_label = function (key: string) {
 
 // Code that is ran when the page has loaded
 
-$(() => { // Document on ready new syntax....or something. Passing a function directly to jquery
+export function live_messages() { // Document on ready new syntax....or something. Passing a function directly to jquery
   //connect to the socket server.
-  generate_menu(); // generate the top menu
-  generate_footer(); // generate the footer
 
   socket = io.connect(`${document.location.origin}/main`, {
     path: acars_path + "socket.io",
@@ -291,14 +306,8 @@ $(() => { // Document on ready new syntax....or something. Passing a function di
 
   // Function to listen for the server to respond with valid message labels and process the results for display in the side-bar
   socket.on("labels", function (msg: labels) {
-    let label_html = "";
-    for (let key in msg.labels) {
-      let link_class: string = exclude.indexOf(key.toString()) !== -1 ? "red" : "sidebar_link";
-      label_html += `<a href="javascript:toggle_label('${key.toString()}');" id="${key}" class="${link_class}">${key} ${
-        msg.labels[key].name
-      }</a><br>`;
-    }
-    $("#label_links").html(label_html);
+    filter_labels = msg;
+    show_labels();
   });
 
   socket.on("system_status", function (msg: system_status) {
@@ -657,8 +666,54 @@ $(() => { // Document on ready new syntax....or something. Passing a function di
       if (text_filter && !msg.loading) increment_filtered();
     }
     if (!msg.loading) increment_received();
-    if (!pause) {
+    if (page_active && !pause) {
       $("#log").html(display_messages(msgs_received, selected_tabs, true));
     }
   });
-});
+}
+
+// if the live message page is active we'll toggle the display of everything here
+
+export function live_message_active(state=false) {
+  page_active = state;
+
+  if(page_active) { // page is active
+    set_html();
+    increment_received(true); // show the received msgs
+    increment_filtered(true); // show the filtered msgs
+    show_labels();
+    $("#log").html(display_messages(msgs_received, selected_tabs, true)); // show the messages we've received
+
+
+  }
+}
+
+export function set_live_page_urls(documentPath: string, documentUrl: string) {
+  acars_path = documentPath;
+  acars_url = documentUrl;
+}
+
+function set_html() {
+  $("#right").html(
+  `<div class="fixed_results">
+  <p><a href="javascript:pause_updates()" id="pause_updates" class="spread_text">Pause updates</a></p>
+  <a href="javascript:filter_notext()" id="filter_notext" class="spread_text">Filter out "No Text" messages</a>
+  <hr>
+  <span class="menu_non_link" id="received">Received Messages</span>:&nbsp;<strong><span class="menu_non_link" id="receivedmessages">0</span></strong><br>
+  <span class="menu_non_link" id="filtered"></span>
+  <hr>
+</div> <!-- Fixed results -->
+<div class="fixed_menu" id="fixed_menu">
+    <div class="wrap-collabsible">
+      <input id="collapsible" class="toggle" type="checkbox">
+      <label for="collapsible" class="lbl-toggle">Filter Message Labels</label>
+      <div class="collapsible-content" id="collapsible-content">
+        <div class="content-inner" id="label_links">
+          <p>&nbsp;</p>
+        </div>
+      </div>
+    </div>
+  </div>")`);
+
+  $("#page_name").html("Messages will appear here, newest first:");
+}
