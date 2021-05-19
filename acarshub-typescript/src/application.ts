@@ -254,7 +254,7 @@ window.toggle_label = function (key: string) {
 
 // Code that is ran when the page has loaded
 
-$(document).ready(function () {
+$(() => { // Document on ready new syntax....or something. Passing a function directly to jquery
   //connect to the socket server.
   generate_menu(); // generate the top menu
   generate_footer(); // generate the footer
@@ -293,7 +293,7 @@ $(document).ready(function () {
   socket.on("labels", function (msg: labels) {
     let label_html = "";
     for (let key in msg.labels) {
-      let link_class: string = exclude.indexOf(key.toString()) != -1 ? "red" : "sidebar_link";
+      let link_class: string = exclude.indexOf(key.toString()) !== -1 ? "red" : "sidebar_link";
       label_html += `<a href="javascript:toggle_label('${key.toString()}');" id="${key}" class="${link_class}">${key} ${
         msg.labels[key].name
       }</a><br>`;

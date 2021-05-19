@@ -47,7 +47,7 @@ msgs_received.unshift = function () {
   return Array.prototype.unshift.apply(this, arguments as any);
 };
 
-$(document).ready(function () {
+$(() => { // Document on ready new syntax....or something. Passing a function directly to jquery
   socket_alerts = io.connect(`${document.location.origin}/alerts`, {
     path: acars_path + "socket.io",
   });

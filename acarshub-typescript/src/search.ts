@@ -29,7 +29,7 @@ acars_path += acars_path.endsWith("/") ? "" : "/";
 const acars_url: string = document.location.origin + acars_path;
 const md: MessageDecoder = new MessageDecoder();
 
-$(document).ready(function () {
+$(() => { // Document on ready new syntax....or something. Passing a function directly to jquery
   //connect to the socket server.
   generate_menu();
   generate_footer();
@@ -39,7 +39,7 @@ $(document).ready(function () {
     path: acars_path + "socket.io",
   });
 
-  let msgs_received: acars_msg[] = [];
+  let msgs_received: acars_msg[][] = [];
   let num_results: number[] = [];
 
   // receive details from server

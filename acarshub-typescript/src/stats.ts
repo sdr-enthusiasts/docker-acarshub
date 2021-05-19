@@ -15,7 +15,7 @@ const acars_url: string = document.location.origin + acars_path;
 let chart_alerts: Chart;
 let chart_signals: Chart;
 
-$(document).ready(function () {
+$(() => { // Document on ready new syntax....or something. Passing a function directly to jquery
   generate_menu();
   generate_footer();
   updateAlertCounter();

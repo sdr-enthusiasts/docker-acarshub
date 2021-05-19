@@ -11,7 +11,8 @@ let acars_path: string = document.location.pathname.replace(
 acars_path += acars_path.endsWith("/") ? "" : "/";
 const acars_url: string = document.location.origin + acars_path;
 
-$(document).ready(function () {
+$(() => { // Document on ready new syntax....or something. Passing a function directly to jquery
+//$(document).ready(function () {
   generate_menu();
   generate_footer();
 
