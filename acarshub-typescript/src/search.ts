@@ -1,6 +1,6 @@
 import { display_messages } from "./html_generator.js"
 import { MessageDecoder } from "@airframes/acars-decoder/dist/MessageDecoder";
-import { connection_status, updateAlertCounter } from "./alerts.js"
+import { updateAlertCounter } from "./alerts.js"
 import { search_html_msg, database_size, system_status, current_search, acars_msg } from "./interfaces.js"
 
 let socket: SocketIOClient.Socket;
@@ -55,26 +55,6 @@ export function search() {
         `<a href="javascript:new_page('Status')">System Status: <span class="green">Okay</a></span>`
       );
     }
-  });
-
-  socket.on("disconnect", function () {
-    connection_status();
-  });
-
-  socket.on("connect_error", function () {
-    connection_status();
-  });
-
-  socket.on("connect_timeout", function () {
-    connection_status();
-  });
-
-  socket.on("connect", function () {
-    connection_status(true);
-  });
-
-  socket.on("reconnect", function () {
-    connection_status(true);
   });
 
   // Search results returned

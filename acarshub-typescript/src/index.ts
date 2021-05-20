@@ -1,13 +1,16 @@
 import { generate_menu, generate_footer } from "./menu.js";
 
-import { set_live_page_urls, live_messages, live_message_active } from "./live_messages.js"
+import { set_live_page_urls, live_messages, live_message_active, new_labels, new_acars_message } from "./live_messages.js"
 import { set_search_page_urls, search, search_active } from "./search.js"
 import { set_stats_page_urls, stats, stats_active } from "./stats.js"
 import { set_about_page_urls, about, about_active } from "./about.js"
 import { set_status_page_urls, status, status_active } from "./status.js"
 import { set_alert_page_urls, alert, alert_active } from "./alerts.js"
+import { labels, system_status, html_msg } from "./interfaces.js"
 
 declare const window: any;
+let socket: SocketIOClient.Socket;
+
 let acars_url: string = "";
 let acars_path: string = "";
 let acars_page: string = "";
@@ -24,6 +27,52 @@ const pages: string[] = [
 $(() => { // Document on ready new syntax....or something. Passing a function directly to jquery
     console.log("new page")
     update_url(); // update the urls for everyone
+      //connect to the socket server.
+
+    socket = io.connect(`${document.location.origin}/main`, {
+        path: acars_path + "socket.io",
+    });
+
+    socket.on("labels", function (msg: labels) {  // Msg labels
+        new_labels(msg);  // send to live messages
+    });
+
+    socket.on("acars_msg", function (msg: html_msg) {  // New acars message.
+        console.log("here");
+        new_acars_message(msg); // send the message to live messages
+    });
+
+    socket.on("system_status", function (msg: system_status) {
+    if (msg.status.error_state == true) {
+        $("#system_status").html(
+        `<a href="javascript:new_page('Status')">System Status: <span class="red_body">Error</a></span>`
+        );
+    } else {
+        $("#system_status").html(
+        `<a href="javascript:new_page('Status')">System Status: <span class="green">Okay</a></span>`
+        );
+    }
+    });
+
+    socket.on("disconnect", function () {
+    connection_status();
+    });
+
+    socket.on("connect_error", function () {
+    connection_status();
+    });
+
+    socket.on("connect_timeout", function () {
+    connection_status();
+    });
+
+    socket.on("connect", function () {
+    connection_status(true);
+    });
+
+    socket.on("reconnect", function () {
+    connection_status(true);
+    });
     generate_menu(); // generate the top menu
     generate_footer(); // generate the footer
 
@@ -100,3 +149,13 @@ window.new_page = function(page: string) {
     window.history.pushState({path:acars_path + sub_url}, page, acars_path + sub_url);
     toggle_pages();
 }
+
+function connection_status(connected = false) {
+    $("#disconnect").html(
+      !connected
+        ? ' | <strong><span class="red_body">DISCONNECTED FROM WEB SERVER'
+        : ""
+    );
+  }
+
+// Functions for opening up the socket to the child pages

@@ -1,6 +1,6 @@
 import { Chart } from "chart.js";
 import ChartDataLabels from 'chartjs-plugin-datalabels';
-import { connection_status, updateAlertCounter } from "./alerts.js"
+import { updateAlertCounter } from "./alerts.js"
 import { generate_stat_submenu } from "./menu.js"
 
 let socket: SocketIOClient.Socket;
@@ -239,26 +239,6 @@ export function stats() {
   socket.on("count", function (msg: any) {
     count_data = msg;
     if(page_active) show_count();
-  });
-
-  socket.on("disconnect", function () {
-    connection_status();
-  });
-
-  socket.on("connect_error", function () {
-    connection_status();
-  });
-
-  socket.on("connect_timeout", function () {
-    connection_status();
-  });
-
-  socket.on("connect", function () {
-    connection_status(true);
-  });
-
-  socket.on("reconnect", function () {
-    connection_status(true);
   });
 
   grab_freqs();

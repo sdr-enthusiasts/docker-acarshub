@@ -361,14 +361,6 @@ window.default_alert_values = function() {
   window.updateAlerts();
 }
 
-export function connection_status(connected = false) {
-  $("#disconnect").html(
-    !connected
-      ? ' | <strong><span class="red_body">DISCONNECTED FROM WEB SERVER'
-      : ""
-  );
-}
-
 export function toggle_playsound(loading = false) {
   if (play_sound) {
     let id = document.getElementById("playsound_link");

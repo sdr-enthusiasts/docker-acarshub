@@ -1,5 +1,3 @@
-import { generate_menu, generate_footer } from "./menu.js"
-
 let socket;
 let acars_path = "";
 let acars_url = "";

@@ -122,7 +122,7 @@ def htmlListener():
             )  # add in the message_type key because the parent object didn't have it
             json_message = acarshub.update_keys(json_message)
 
-            socketio.emit("newmsg", {"msghtml": json_message}, namespace="/main")
+            socketio.emit("acars_msg", {"msghtml": json_message}, namespace="/main")
 
     if acarshub_helpers.DEBUG_LOGGING:
         acarshub_helpers.log("Exiting HTML Listener thread", "htmlListener")
@@ -450,7 +450,7 @@ def main_connect():
         json_message = copy.deepcopy(json_message_orig)
         json_message["message_type"] = msg_type
         socketio.emit(
-            "newmsg",
+            "acars_msg",
             {"msghtml": acarshub.update_keys(json_message), "loading": True},
             to=requester,
             namespace="/main",

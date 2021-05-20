@@ -1,6 +1,5 @@
 let pause: boolean = false;
 let text_filter: boolean = false;
-let socket: SocketIOClient.Socket;
 let msgs_received: acars_msg[][] = [];
 let exclude: string[] = [];
 let selected_tabs: string = "";
@@ -22,7 +21,7 @@ declare const window: any;
 import { MessageDecoder } from "@airframes/acars-decoder/dist/MessageDecoder";
 import Cookies from "js-cookie"
 import { display_messages } from "./html_generator.js"
-import { match_alert, sound_alert, connection_status } from "./alerts.js"
+import { match_alert, sound_alert } from "./alerts.js"
 import { html_msg, acars_msg, labels, system_status } from "./interfaces.js"
 
 const md = new MessageDecoder();
@@ -274,11 +273,6 @@ window.toggle_label = function (key: string) {
 // Code that is ran when the page has loaded
 
 export function live_messages() { // Document on ready new syntax....or something. Passing a function directly to jquery
-  //connect to the socket server.
-
-  socket = io.connect(`${document.location.origin}/main`, {
-    path: acars_path + "socket.io",
-  });
 
   // Grab the current cookie value for message filtering
   // If the cookie is found with a value we run filter_notext to set the proper visual elements/variables for the rest of the functions
@@ -305,373 +299,6 @@ export function live_messages() { // Document on ready new syntax....or somethin
     Cookies.set("exclude", exclude_cookie, { expires: 365 });
     exclude = exclude_cookie.split(" ");
   }
-
-  // Function to listen for the server to respond with valid message labels and process the results for display in the side-bar
-  socket.on("labels", function (msg: labels) {
-    filter_labels = msg;
-    show_labels();
-  });
-
-  socket.on("system_status", function (msg: system_status) {
-    if (msg.status.error_state == true) {
-      $("#system_status").html(
-        `<a href="javascript:new_page('Status')">System Status: <span class="red_body">Error</a></span>`
-      );
-    } else {
-      $("#system_status").html(
-        `<a href="javascript:new_page('Status')">System Status: <span class="green">Okay</a></span>`
-      );
-    }
-  });
-
-  socket.on("disconnect", function () {
-    connection_status();
-  });
-
-  socket.on("connect_error", function () {
-    connection_status();
-  });
-
-  socket.on("connect_timeout", function () {
-    connection_status();
-  });
-
-  socket.on("connect", function () {
-    connection_status(true);
-  });
-
-  socket.on("reconnect", function () {
-    connection_status(true);
-  });
-
-  //receive details from server
-  socket.on("newmsg", function (msg: html_msg) {
-    if (
-      msg.msghtml.hasOwnProperty("label") == false ||
-      exclude.indexOf(msg.msghtml.label!) == -1
-    ) {
-      if (
-        !text_filter ||
-        msg.msghtml.hasOwnProperty("text") ||
-        msg.msghtml.hasOwnProperty("data") ||
-        msg.msghtml.hasOwnProperty("libacars") ||
-        msg.msghtml.hasOwnProperty("dsta") ||
-        msg.msghtml.hasOwnProperty("depa") ||
-        msg.msghtml.hasOwnProperty("eta") ||
-        msg.msghtml.hasOwnProperty("gtout") ||
-        msg.msghtml.hasOwnProperty("gtin") ||
-        msg.msghtml.hasOwnProperty("wloff") ||
-        msg.msghtml.hasOwnProperty("wlin") ||
-        msg.msghtml.hasOwnProperty("lat") ||
-        msg.msghtml.hasOwnProperty("lon") ||
-        msg.msghtml.hasOwnProperty("alt")
-      ) {
-        if (msg.msghtml.hasOwnProperty("text")) {
-          let decoded_msg = md.decode(msg.msghtml);
-          if (decoded_msg.decoded == true) {
-            msg.msghtml.decodedText = decoded_msg;
-          }
-        }
-
-        let matched = match_alert(msg);
-        if (matched.was_found) {
-          msg.msghtml.matched = true;
-          msg.msghtml.matched_text = matched.text !== null ? matched.text : [];
-          msg.msghtml.matched_icao = matched.icao !== null ? matched.icao : [];
-          msg.msghtml.matched_flight = matched.flight !== null ? matched.flight : [];
-          msg.msghtml.matched_tail = matched.tail !== null ? matched.tail : [];
-        }
-
-        let new_tail = msg.msghtml.tail;
-        let new_icao = msg.msghtml.icao;
-        let new_flight = msg.msghtml.flight;
-        let found = false; // variable to track if the new message was found in previous messages
-        let rejected = false; // variable to track if the new message was rejected for being a duplicate
-        let index_new = 0; // the index of the found previous message
-
-        msg.msghtml.uid = getRandomInt(1000000).toString(); // Each message gets a unique ID. Used to track tab selection
-
-        // Loop through the received messages. If a message is found we'll break out of the for loop
-        for (let u = 0; u < msgs_received.length; u++) {
-          // Now we loop through all of the messages in the message group to find a match in case the first doesn't
-          // Have the field we need
-          // There is a possibility that (for reasons I cannot fathom) aircraft will broadcast the same flight information
-          // With one field being different. We'll reject that message as being not in the same message group if that's the case
-          // We'll also test for squitter messages which don't have tail/icao/flight
-          for (let z = 0; z < msgs_received[u].length; z++) {
-            if (
-              msgs_received[u][z].hasOwnProperty("tail") &&
-              new_tail == msgs_received[u][z].tail &&
-              ((msgs_received[u][z].hasOwnProperty("icao") &&
-                msgs_received[u][z]["icao"] == new_icao) ||
-                !msgs_received[u][z].hasOwnProperty("icao")) &&
-              ((msgs_received[u][z].hasOwnProperty("flight") &&
-                msgs_received[u][z]["flight"] == new_flight) ||
-                !msgs_received[u][z].hasOwnProperty("flight"))
-            ) {
-              found = true;
-              index_new = u;
-              z = msgs_received[u].length;
-            } else if (
-              msgs_received[u][z].hasOwnProperty("icao") &&
-              new_icao == msgs_received[u][z].icao &&
-              ((msgs_received[u][z].hasOwnProperty("tail") &&
-                msgs_received[u][z]["tail"] == new_tail) ||
-                !msgs_received[u][z].hasOwnProperty("tail")) &&
-              ((msgs_received[u][z].hasOwnProperty("flight") &&
-                msgs_received[u][z]["flight"] == new_flight) ||
-                !msgs_received[u][z].hasOwnProperty("flight"))
-            ) {
-              found = true;
-              index_new = u;
-              z = msgs_received[u].length;
-            } else if (
-              msgs_received[u][z].hasOwnProperty("flight") &&
-              new_flight == msgs_received[u][z].flight &&
-              ((msgs_received[u][z].hasOwnProperty("icao") &&
-                msgs_received[u][z]["icao"] == new_icao) ||
-                !msgs_received[u][z].hasOwnProperty("icao")) &&
-              ((msgs_received[u][z].hasOwnProperty("tail") &&
-                msgs_received[u][z]["tail"] == new_tail) ||
-                !msgs_received[u][z].hasOwnProperty("tail"))
-            ) {
-              found = true;
-              index_new = u;
-              z = msgs_received[u].length;
-            } else if (
-              msg.msghtml.hasOwnProperty("label") &&
-              msgs_received[u][z].hasOwnProperty("label") &&
-              msg.msghtml.hasOwnProperty("text") &&
-              msgs_received[u][z].hasOwnProperty("text") &&
-              msg.msghtml.label == "SQ" &&
-              msgs_received[u][z]["label"] == "SQ" &&
-              msg.msghtml.text == msgs_received[u][z]["text"]
-            ) {
-              found = true;
-              index_new = u;
-              z = msgs_received[u].length;
-            }
-          }
-
-          // if we found a message group that matches the new message
-          // run through the messages in that group to see if it is a dup.
-          // if it is, we'll reject the new message and append a counter to the old/saved message
-          if (found) {
-            u = msgs_received.length;
-
-            for (let j = 0; j < msgs_received[index_new].length; j++) {
-              // First check is to see if the message is the same by checking all fields and seeing if they match
-              // Second check is to see if the text field itself is a match
-              // Last check is to see if we've received a multi-part message
-              // If we do find a match we'll update the timestamp of the parent message
-              // And add/update a duplicate counter to the parent message
-              if (
-                (msgs_received[index_new][j]["text"] == msg.msghtml.text ||
-                  (!msgs_received[index_new][j].hasOwnProperty("text") &&
-                    !msg.msghtml.hasOwnProperty("text"))) &&
-                (msgs_received[index_new][j]["data"] == msg.msghtml.data ||
-                  (!msgs_received[index_new][j].hasOwnProperty("data") &&
-                    !msg.msghtml.hasOwnProperty("data"))) &&
-                (msgs_received[index_new][j]["libacars"] ==
-                  msg.msghtml.libacars ||
-                  (!msgs_received[index_new][j].hasOwnProperty("libacars") &&
-                    !msg.msghtml.hasOwnProperty("libacars"))) &&
-                (msgs_received[index_new][j]["dsta"] == msg.msghtml.dsta ||
-                  (!msgs_received[index_new][j].hasOwnProperty("dsta") &&
-                    !msg.msghtml.hasOwnProperty("dsta"))) &&
-                (msgs_received[index_new][j]["depa"] == msg.msghtml.depa ||
-                  (!msgs_received[index_new][j].hasOwnProperty("depa") &&
-                    !msg.msghtml.hasOwnProperty("depa"))) &&
-                (msgs_received[index_new][j]["eta"] == msg.msghtml.eta ||
-                  (!msgs_received[index_new][j].hasOwnProperty("eta") &&
-                    !msg.msghtml.hasOwnProperty("eta"))) &&
-                (msgs_received[index_new][j]["gtout"] == msg.msghtml.gtout ||
-                  (!msgs_received[index_new][j].hasOwnProperty("gtout") &&
-                    !msg.msghtml.hasOwnProperty("gtout"))) &&
-                (msgs_received[index_new][j]["gtin"] == msg.msghtml.gtin ||
-                  (!msgs_received[index_new][j].hasOwnProperty("gtin") &&
-                    !msg.msghtml.hasOwnProperty("gtin"))) &&
-                (msgs_received[index_new][j]["wloff"] == msg.msghtml.wloff ||
-                  (!msgs_received[index_new][j].hasOwnProperty("wloff") &&
-                    !msg.msghtml.hasOwnProperty("wloff"))) &&
-                (msgs_received[index_new][j]["wlin"] == msg.msghtml.wlin ||
-                  (!msgs_received[index_new][j].hasOwnProperty("wlin") &&
-                    !msg.msghtml.hasOwnProperty("wlin"))) &&
-                (msgs_received[index_new][j]["lat"] == msg.msghtml.lat ||
-                  (!msgs_received[index_new][j].hasOwnProperty("lat") &&
-                    !msg.msghtml.hasOwnProperty("lat"))) &&
-                (msgs_received[index_new][j]["lon"] == msg.msghtml.lon ||
-                  (!msgs_received[index_new][j].hasOwnProperty("lon") &&
-                    !msg.msghtml.hasOwnProperty("lon"))) &&
-                (msgs_received[index_new][j]["alt"] == msg.msghtml.alt ||
-                  (!msgs_received[index_new][j].hasOwnProperty("alt") &&
-                    !msg.msghtml.hasOwnProperty("alt")))
-              ) {
-                msgs_received[index_new][j]["timestamp"] =
-                  msg.msghtml.timestamp;
-                if (msgs_received[index_new][j].hasOwnProperty("duplicates")) {
-                  msgs_received[index_new][j]["duplicates"] = String(Number(msgs_received[index_new][j]["duplicates"]) + 1);
-                } else {
-                  msgs_received[index_new][j]["duplicates"] = "1";
-                }
-                rejected = true;
-              } else if (
-                msgs_received[index_new][j].hasOwnProperty("text") &&
-                msg.msghtml.hasOwnProperty("text") &&
-                msgs_received[index_new][j]["text"] == msg.msghtml["text"]
-              ) {
-                // it's the same message
-                msgs_received[index_new][j]["timestamp"] =
-                  msg.msghtml.timestamp;
-                if (msgs_received[index_new][j].hasOwnProperty("duplicates")) {
-                  msgs_received[index_new][j]["duplicates"] = String(Number(msgs_received[index_new][j]["duplicates"]) + 1);
-                } else {
-                  msgs_received[index_new][j]["duplicates"] = "1";
-                }
-                rejected = true;
-              } else if (
-                msg.msghtml.station_id ==
-                  msgs_received[index_new][j].station_id && // Is the message from the same station id? Keep ACARS/VDLM separate
-                msg.msghtml.hasOwnProperty("msgno") &&
-                msgs_received[index_new][j].hasOwnProperty("msgno") &&
-                msg.msghtml.timestamp - msgs_received[index_new][j].timestamp <
-                  8.0 && // We'll assume the message is not a multi-part message if the time from the new message is too great from the rest of the group
-                (typeof msg.msghtml.msgno !== "undefined" && ((msg.msghtml.msgno.charAt(0) ==
-                  msgs_received[index_new][j].msgno!.charAt(0) && // Next two lines match on AzzA pattern
-                  msg.msghtml.msgno.charAt(3) ==
-                    msgs_received[index_new][j].msgno!.charAt(3)) ||
-                  msg.msghtml.msgno.substring(0, 3) ==
-                    msgs_received[index_new][j].msgno!.substring(0, 3)))
-              ) {
-                // This check matches if the group is a AAAz counter
-                // We have a multi part message. Now we need to see if it is a dup
-                rejected = true;
-                let add_multi = true;
-
-                if (msgs_received[index_new][j].hasOwnProperty("msgno_parts")) {
-                  // Now we'll see if the multi-part message is a dup
-                  let split = msgs_received[index_new][j].msgno_parts!
-                    .toString()
-                    .split(" "); // format of stored parts is "MSGID MSGID2" etc
-
-                  for (let a = 0; a < split.length; a++) {
-                    // Loop through the msg IDs present
-                    if (split[a].substring(0, 4) == msg.msghtml["msgno"]) {
-                      // Found a match in the message IDs already present
-                      add_multi = false; // Ensure later checks know we've found a duplicate and to not add the message
-
-                      if (a == 0 && split[a].length == 4) {
-                        // Match, first element of the array with no previous matches so we don't want a leading space
-                        msgs_received[index_new][j].msgno_parts =
-                          split[a] + "x2";
-                      } else if (split[a].length == 4) {
-                        // Match, not first element, and doesn't have previous matches
-                        msgs_received[index_new][j].msgno_parts +=
-                          " " + split[a] + "x2";
-                      } else if (a == 0) {
-                        // Match, first element of the array so no leading space, has previous other matches so we increment the counter
-                        let count = parseInt(split[a].substring(5)) + 1;
-                        msgs_received[index_new][j].msgno_parts =
-                          split[a].substring(0, 4) + "x" + count;
-                      } else {
-                        // Match, has previous other matches so we increment the counter
-                        let count = parseInt(split[a].substring(5)) + 1;
-                        msgs_received[index_new][j].msgno_parts +=
-                          " " + split[a].substring(0, 4) + "x" + count;
-                      }
-                    } else {
-                      // No match, re-add the MSG ID to the parent message
-                      if (a == 0) {
-                        msgs_received[index_new][j].msgno_parts = split[a];
-                      } else {
-                        msgs_received[index_new][j].msgno_parts +=
-                          " " + split[a];
-                      }
-                    }
-                  }
-                }
-
-                msgs_received[index_new][j]["timestamp"] =
-                  msg.msghtml.timestamp;
-
-                if (add_multi) {
-                  // Multi-part message has been found
-                  if (
-                    msgs_received[index_new][j]["text"] &&
-                    msg.msghtml.hasOwnProperty("text")
-                  )
-                    // If the multi-part parent has a text field and the found match has a text field, append
-                    msgs_received[index_new][j]["text"]! += msg.msghtml.text;
-                  else if (msg.msghtml.hasOwnProperty("text"))
-                    // If the new message has a text field but the parent does not, add the new text to the parent
-                    msgs_received[index_new][j]["text"] = msg.msghtml.text;
-
-                  if (
-                    msgs_received[index_new][j].hasOwnProperty("msgno_parts")
-                  ) {
-                    // If the new message is multi, with no dupes found we need to append the msg ID to the found IDs
-                    msgs_received[index_new][j]["msgno_parts"] +=
-                      " " + msg.msghtml.msgno;
-                  } else {
-                    msgs_received[index_new][j]["msgno_parts"] =
-                      msgs_received[index_new][j]["msgno"] +
-                      " " +
-                      msg.msghtml.msgno;
-                  }
-
-                  // Re-run the text decoder against the text field we've updated
-                  let decoded_msg = md.decode(msgs_received[index_new][j]);
-                  if (decoded_msg.decoded == true) {
-                    msgs_received[index_new][j]["decoded_msg"] = decoded_msg;
-                  }
-
-                  if (matched.was_found && !msg.loading) sound_alert();
-                }
-              }
-
-              if (rejected) {
-                // Promote the message back to the front
-                msgs_received[index_new].forEach(function (item: any, i: number) {
-                  if (i == j) {
-                    msgs_received[index_new].splice(i, 1);
-                    msgs_received[index_new].unshift(item);
-                  }
-                });
-                j = msgs_received[index_new].length;
-              }
-            }
-          }
-
-          // If the message was found we'll move the message group back to the top
-          if (found) {
-            // If the message was found, and not rejected, we'll append it to the message group
-            if (!rejected) {
-              msgs_received[index_new].unshift(msg.msghtml);
-            }
-
-            msgs_received.forEach(function (item, i) {
-              if (i == index_new) {
-                msgs_received.splice(i, 1);
-                msgs_received.unshift(item);
-              }
-            });
-          }
-        }
-        if (!found && !rejected) {
-          if (matched.was_found && !msg.loading) sound_alert();
-          msgs_received.unshift([msg.msghtml]);
-        }
-      } else if (!msg.loading) {
-        increment_filtered();
-      }
-    } else {
-      if (text_filter && !msg.loading) increment_filtered();
-    }
-    if (!msg.loading) increment_received();
-    if (page_active && !pause) {
-      $("#log").html(display_messages(msgs_received, selected_tabs, true));
-    }
-  });
 }
 
 // if the live message page is active we'll toggle the display of everything here
@@ -716,4 +343,337 @@ function set_html() {
   </div>")`);
 
   $("#page_name").html("Messages will appear here, newest first:");
+}
+
+export function new_labels(msg: labels) {
+  filter_labels = msg;
+  show_labels();
+}
+
+export function new_acars_message(msg: html_msg) {
+  if (
+    msg.msghtml.hasOwnProperty("label") == false ||
+    exclude.indexOf(msg.msghtml.label!) == -1
+  ) {
+    if (
+      !text_filter ||
+      msg.msghtml.hasOwnProperty("text") ||
+      msg.msghtml.hasOwnProperty("data") ||
+      msg.msghtml.hasOwnProperty("libacars") ||
+      msg.msghtml.hasOwnProperty("dsta") ||
+      msg.msghtml.hasOwnProperty("depa") ||
+      msg.msghtml.hasOwnProperty("eta") ||
+      msg.msghtml.hasOwnProperty("gtout") ||
+      msg.msghtml.hasOwnProperty("gtin") ||
+      msg.msghtml.hasOwnProperty("wloff") ||
+      msg.msghtml.hasOwnProperty("wlin") ||
+      msg.msghtml.hasOwnProperty("lat") ||
+      msg.msghtml.hasOwnProperty("lon") ||
+      msg.msghtml.hasOwnProperty("alt")
+    ) {
+      if (msg.msghtml.hasOwnProperty("text")) {
+        let decoded_msg = md.decode(msg.msghtml);
+        if (decoded_msg.decoded == true) {
+          msg.msghtml.decodedText = decoded_msg;
+        }
+      }
+
+      let matched = match_alert(msg);
+      if (matched.was_found) {
+        msg.msghtml.matched = true;
+        msg.msghtml.matched_text = matched.text !== null ? matched.text : [];
+        msg.msghtml.matched_icao = matched.icao !== null ? matched.icao : [];
+        msg.msghtml.matched_flight = matched.flight !== null ? matched.flight : [];
+        msg.msghtml.matched_tail = matched.tail !== null ? matched.tail : [];
+      }
+
+      let new_tail = msg.msghtml.tail;
+      let new_icao = msg.msghtml.icao;
+      let new_flight = msg.msghtml.flight;
+      let found = false; // variable to track if the new message was found in previous messages
+      let rejected = false; // variable to track if the new message was rejected for being a duplicate
+      let index_new = 0; // the index of the found previous message
+
+      msg.msghtml.uid = getRandomInt(1000000).toString(); // Each message gets a unique ID. Used to track tab selection
+
+      // Loop through the received messages. If a message is found we'll break out of the for loop
+      for (let u = 0; u < msgs_received.length; u++) {
+        // Now we loop through all of the messages in the message group to find a match in case the first doesn't
+        // Have the field we need
+        // There is a possibility that (for reasons I cannot fathom) aircraft will broadcast the same flight information
+        // With one field being different. We'll reject that message as being not in the same message group if that's the case
+        // We'll also test for squitter messages which don't have tail/icao/flight
+        for (let z = 0; z < msgs_received[u].length; z++) {
+          if (
+            msgs_received[u][z].hasOwnProperty("tail") &&
+            new_tail == msgs_received[u][z].tail &&
+            ((msgs_received[u][z].hasOwnProperty("icao") &&
+              msgs_received[u][z]["icao"] == new_icao) ||
+              !msgs_received[u][z].hasOwnProperty("icao")) &&
+            ((msgs_received[u][z].hasOwnProperty("flight") &&
+              msgs_received[u][z]["flight"] == new_flight) ||
+              !msgs_received[u][z].hasOwnProperty("flight"))
+          ) {
+            found = true;
+            index_new = u;
+            z = msgs_received[u].length;
+          } else if (
+            msgs_received[u][z].hasOwnProperty("icao") &&
+            new_icao == msgs_received[u][z].icao &&
+            ((msgs_received[u][z].hasOwnProperty("tail") &&
+              msgs_received[u][z]["tail"] == new_tail) ||
+              !msgs_received[u][z].hasOwnProperty("tail")) &&
+            ((msgs_received[u][z].hasOwnProperty("flight") &&
+              msgs_received[u][z]["flight"] == new_flight) ||
+              !msgs_received[u][z].hasOwnProperty("flight"))
+          ) {
+            found = true;
+            index_new = u;
+            z = msgs_received[u].length;
+          } else if (
+            msgs_received[u][z].hasOwnProperty("flight") &&
+            new_flight == msgs_received[u][z].flight &&
+            ((msgs_received[u][z].hasOwnProperty("icao") &&
+              msgs_received[u][z]["icao"] == new_icao) ||
+              !msgs_received[u][z].hasOwnProperty("icao")) &&
+            ((msgs_received[u][z].hasOwnProperty("tail") &&
+              msgs_received[u][z]["tail"] == new_tail) ||
+              !msgs_received[u][z].hasOwnProperty("tail"))
+          ) {
+            found = true;
+            index_new = u;
+            z = msgs_received[u].length;
+          } else if (
+            msg.msghtml.hasOwnProperty("label") &&
+            msgs_received[u][z].hasOwnProperty("label") &&
+            msg.msghtml.hasOwnProperty("text") &&
+            msgs_received[u][z].hasOwnProperty("text") &&
+            msg.msghtml.label == "SQ" &&
+            msgs_received[u][z]["label"] == "SQ" &&
+            msg.msghtml.text == msgs_received[u][z]["text"]
+          ) {
+            found = true;
+            index_new = u;
+            z = msgs_received[u].length;
+          }
+        }
+
+        // if we found a message group that matches the new message
+        // run through the messages in that group to see if it is a dup.
+        // if it is, we'll reject the new message and append a counter to the old/saved message
+        if (found) {
+          u = msgs_received.length;
+
+          for (let j = 0; j < msgs_received[index_new].length; j++) {
+            // First check is to see if the message is the same by checking all fields and seeing if they match
+            // Second check is to see if the text field itself is a match
+            // Last check is to see if we've received a multi-part message
+            // If we do find a match we'll update the timestamp of the parent message
+            // And add/update a duplicate counter to the parent message
+            if (
+              (msgs_received[index_new][j]["text"] == msg.msghtml.text ||
+                (!msgs_received[index_new][j].hasOwnProperty("text") &&
+                  !msg.msghtml.hasOwnProperty("text"))) &&
+              (msgs_received[index_new][j]["data"] == msg.msghtml.data ||
+                (!msgs_received[index_new][j].hasOwnProperty("data") &&
+                  !msg.msghtml.hasOwnProperty("data"))) &&
+              (msgs_received[index_new][j]["libacars"] ==
+                msg.msghtml.libacars ||
+                (!msgs_received[index_new][j].hasOwnProperty("libacars") &&
+                  !msg.msghtml.hasOwnProperty("libacars"))) &&
+              (msgs_received[index_new][j]["dsta"] == msg.msghtml.dsta ||
+                (!msgs_received[index_new][j].hasOwnProperty("dsta") &&
+                  !msg.msghtml.hasOwnProperty("dsta"))) &&
+              (msgs_received[index_new][j]["depa"] == msg.msghtml.depa ||
+                (!msgs_received[index_new][j].hasOwnProperty("depa") &&
+                  !msg.msghtml.hasOwnProperty("depa"))) &&
+              (msgs_received[index_new][j]["eta"] == msg.msghtml.eta ||
+                (!msgs_received[index_new][j].hasOwnProperty("eta") &&
+                  !msg.msghtml.hasOwnProperty("eta"))) &&
+              (msgs_received[index_new][j]["gtout"] == msg.msghtml.gtout ||
+                (!msgs_received[index_new][j].hasOwnProperty("gtout") &&
+                  !msg.msghtml.hasOwnProperty("gtout"))) &&
+              (msgs_received[index_new][j]["gtin"] == msg.msghtml.gtin ||
+                (!msgs_received[index_new][j].hasOwnProperty("gtin") &&
+                  !msg.msghtml.hasOwnProperty("gtin"))) &&
+              (msgs_received[index_new][j]["wloff"] == msg.msghtml.wloff ||
+                (!msgs_received[index_new][j].hasOwnProperty("wloff") &&
+                  !msg.msghtml.hasOwnProperty("wloff"))) &&
+              (msgs_received[index_new][j]["wlin"] == msg.msghtml.wlin ||
+                (!msgs_received[index_new][j].hasOwnProperty("wlin") &&
+                  !msg.msghtml.hasOwnProperty("wlin"))) &&
+              (msgs_received[index_new][j]["lat"] == msg.msghtml.lat ||
+                (!msgs_received[index_new][j].hasOwnProperty("lat") &&
+                  !msg.msghtml.hasOwnProperty("lat"))) &&
+              (msgs_received[index_new][j]["lon"] == msg.msghtml.lon ||
+                (!msgs_received[index_new][j].hasOwnProperty("lon") &&
+                  !msg.msghtml.hasOwnProperty("lon"))) &&
+              (msgs_received[index_new][j]["alt"] == msg.msghtml.alt ||
+                (!msgs_received[index_new][j].hasOwnProperty("alt") &&
+                  !msg.msghtml.hasOwnProperty("alt")))
+            ) {
+              msgs_received[index_new][j]["timestamp"] =
+                msg.msghtml.timestamp;
+              if (msgs_received[index_new][j].hasOwnProperty("duplicates")) {
+                msgs_received[index_new][j]["duplicates"] = String(Number(msgs_received[index_new][j]["duplicates"]) + 1);
+              } else {
+                msgs_received[index_new][j]["duplicates"] = "1";
+              }
+              rejected = true;
+            } else if (
+              msgs_received[index_new][j].hasOwnProperty("text") &&
+              msg.msghtml.hasOwnProperty("text") &&
+              msgs_received[index_new][j]["text"] == msg.msghtml["text"]
+            ) {
+              // it's the same message
+              msgs_received[index_new][j]["timestamp"] =
+                msg.msghtml.timestamp;
+              if (msgs_received[index_new][j].hasOwnProperty("duplicates")) {
+                msgs_received[index_new][j]["duplicates"] = String(Number(msgs_received[index_new][j]["duplicates"]) + 1);
+              } else {
+                msgs_received[index_new][j]["duplicates"] = "1";
+              }
+              rejected = true;
+            } else if (
+              msg.msghtml.station_id ==
+                msgs_received[index_new][j].station_id && // Is the message from the same station id? Keep ACARS/VDLM separate
+              msg.msghtml.hasOwnProperty("msgno") &&
+              msgs_received[index_new][j].hasOwnProperty("msgno") &&
+              msg.msghtml.timestamp - msgs_received[index_new][j].timestamp <
+                8.0 && // We'll assume the message is not a multi-part message if the time from the new message is too great from the rest of the group
+              (typeof msg.msghtml.msgno !== "undefined" && ((msg.msghtml.msgno.charAt(0) ==
+                msgs_received[index_new][j].msgno!.charAt(0) && // Next two lines match on AzzA pattern
+                msg.msghtml.msgno.charAt(3) ==
+                  msgs_received[index_new][j].msgno!.charAt(3)) ||
+                msg.msghtml.msgno.substring(0, 3) ==
+                  msgs_received[index_new][j].msgno!.substring(0, 3)))
+            ) {
+              // This check matches if the group is a AAAz counter
+              // We have a multi part message. Now we need to see if it is a dup
+              rejected = true;
+              let add_multi = true;
+
+              if (msgs_received[index_new][j].hasOwnProperty("msgno_parts")) {
+                // Now we'll see if the multi-part message is a dup
+                let split = msgs_received[index_new][j].msgno_parts!
+                  .toString()
+                  .split(" "); // format of stored parts is "MSGID MSGID2" etc
+
+                for (let a = 0; a < split.length; a++) {
+                  // Loop through the msg IDs present
+                  if (split[a].substring(0, 4) == msg.msghtml["msgno"]) {
+                    // Found a match in the message IDs already present
+                    add_multi = false; // Ensure later checks know we've found a duplicate and to not add the message
+
+                    if (a == 0 && split[a].length == 4) {
+                      // Match, first element of the array with no previous matches so we don't want a leading space
+                      msgs_received[index_new][j].msgno_parts =
+                        split[a] + "x2";
+                    } else if (split[a].length == 4) {
+                      // Match, not first element, and doesn't have previous matches
+                      msgs_received[index_new][j].msgno_parts +=
+                        " " + split[a] + "x2";
+                    } else if (a == 0) {
+                      // Match, first element of the array so no leading space, has previous other matches so we increment the counter
+                      let count = parseInt(split[a].substring(5)) + 1;
+                      msgs_received[index_new][j].msgno_parts =
+                        split[a].substring(0, 4) + "x" + count;
+                    } else {
+                      // Match, has previous other matches so we increment the counter
+                      let count = parseInt(split[a].substring(5)) + 1;
+                      msgs_received[index_new][j].msgno_parts +=
+                        " " + split[a].substring(0, 4) + "x" + count;
+                    }
+                  } else {
+                    // No match, re-add the MSG ID to the parent message
+                    if (a == 0) {
+                      msgs_received[index_new][j].msgno_parts = split[a];
+                    } else {
+                      msgs_received[index_new][j].msgno_parts +=
+                        " " + split[a];
+                    }
+                  }
+                }
+              }
+
+              msgs_received[index_new][j]["timestamp"] =
+                msg.msghtml.timestamp;
+
+              if (add_multi) {
+                // Multi-part message has been found
+                if (
+                  msgs_received[index_new][j]["text"] &&
+                  msg.msghtml.hasOwnProperty("text")
+                )
+                  // If the multi-part parent has a text field and the found match has a text field, append
+                  msgs_received[index_new][j]["text"]! += msg.msghtml.text;
+                else if (msg.msghtml.hasOwnProperty("text"))
+                  // If the new message has a text field but the parent does not, add the new text to the parent
+                  msgs_received[index_new][j]["text"] = msg.msghtml.text;
+
+                if (
+                  msgs_received[index_new][j].hasOwnProperty("msgno_parts")
+                ) {
+                  // If the new message is multi, with no dupes found we need to append the msg ID to the found IDs
+                  msgs_received[index_new][j]["msgno_parts"] +=
+                    " " + msg.msghtml.msgno;
+                } else {
+                  msgs_received[index_new][j]["msgno_parts"] =
+                    msgs_received[index_new][j]["msgno"] +
+                    " " +
+                    msg.msghtml.msgno;
+                }
+
+                // Re-run the text decoder against the text field we've updated
+                let decoded_msg = md.decode(msgs_received[index_new][j]);
+                if (decoded_msg.decoded == true) {
+                  msgs_received[index_new][j]["decoded_msg"] = decoded_msg;
+                }
+
+                if (matched.was_found && !msg.loading) sound_alert();
+              }
+            }
+
+            if (rejected) {
+              // Promote the message back to the front
+              msgs_received[index_new].forEach(function (item: any, i: number) {
+                if (i == j) {
+                  msgs_received[index_new].splice(i, 1);
+                  msgs_received[index_new].unshift(item);
+                }
+              });
+              j = msgs_received[index_new].length;
+            }
+          }
+        }
+
+        // If the message was found we'll move the message group back to the top
+        if (found) {
+          // If the message was found, and not rejected, we'll append it to the message group
+          if (!rejected) {
+            msgs_received[index_new].unshift(msg.msghtml);
+          }
+
+          msgs_received.forEach(function (item, i) {
+            if (i == index_new) {
+              msgs_received.splice(i, 1);
+              msgs_received.unshift(item);
+            }
+          });
+        }
+      }
+      if (!found && !rejected) {
+        if (matched.was_found && !msg.loading) sound_alert();
+        msgs_received.unshift([msg.msghtml]);
+      }
+    } else if (!msg.loading) {
+      increment_filtered();
+    }
+  } else {
+    if (text_filter && !msg.loading) increment_filtered();
+  }
+  if (!msg.loading) increment_received();
+  if (page_active && !pause) {
+    $("#log").html(display_messages(msgs_received, selected_tabs, true));
+  }
 }
