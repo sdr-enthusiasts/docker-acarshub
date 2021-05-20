@@ -60,9 +60,6 @@ thread_database_stop_event = Event()
 
 # alert threads
 
-thread_alerts = Thread()
-thread_alerts_stop_event = Event()
-
 # maxlen is to keep the que from becoming ginormous
 # the messages will be in the que all the time, even if no one is using the website
 # old messages will automatically be removed
@@ -154,27 +151,6 @@ def scheduled_tasks():
     while not thread_scheduler_stop_event.isSet():
         schedule.run_pending()
         time.sleep(1)
-
-
-def alert_handler():
-    import time
-    import copy
-
-    while not thread_alerts_stop_event.isSet():
-        time.sleep(1)
-
-        while len(que_alerts) != 0:
-            message_source, json_message_initial = que_alerts.popleft()
-            json_message = copy.deepcopy(
-                json_message_initial
-            )  # creating a copy so that our changes below aren't made to the parent object
-            # Send output via socketio
-            json_message.update({"message_type": message_source})
-            json_message = acarshub.update_keys(json_message)
-
-            socketio.emit("newmsg", {"msghtml": json_message}, namespace="/alerts")
-        else:
-            pass
 
 
 def database_listener():
@@ -326,7 +302,6 @@ def init_listeners(special_message=""):
     global thread_database
     global thread_scheduler
     global thread_html_generator
-    global thread_alerts
 
     # show log message if this is container startup
     if special_message == "":
@@ -356,9 +331,6 @@ def init_listeners(special_message=""):
     if connected_users > 0 and not thread_html_generator.is_alive():
         acarshub_helpers.log(f"{special_message}Starting htmlListener", "init")
         thread_html_generator = socketio.start_background_task(htmlListener)
-    if len(alert_users) > 0 and not thread_alerts.is_alive():
-        acarshub_helpers.log(f"{special_message}Starting alert thread", "init")
-        thread_alerts = socketio.start_background_task(alert_handler)
 
     status = acarshub.get_service_status()  # grab system status
 
@@ -457,6 +429,10 @@ def main_connect():
         )
 
     socketio.emit(
+        "terms", {"terms": acarshub.acarshub_db.get_alert_terms()}, namespace="/main"
+    )
+
+    socketio.emit(
         "system_status", {"status": acarshub.get_service_status()}, namespace="/main"
     )
 
@@ -467,39 +443,11 @@ def main_connect():
         thread_html_generator = socketio.start_background_task(htmlListener)
 
 
-@socketio.on("connect", namespace="/alerts")
-def alert_connect():
-    global thread_alerts_stop_event
-    global thread_alerts
-
-    alert_users.append(request.sid)
-    socketio.emit(
-        "system_status", {"status": acarshub.get_service_status()}, namespace="/alerts"
-    )
-    socketio.emit(
-        "terms", {"terms": acarshub.acarshub_db.get_alert_terms()}, namespace="/alerts"
-    )
-    if not thread_alerts.is_alive():
-        thread_alerts_stop_event.clear()
-        thread_alerts = socketio.start_background_task(alert_handler)
-
-
 @socketio.on("connect", namespace="/status")
 def status_connect():
     socketio.emit(
         "system_status", {"status": acarshub.get_service_status()}, namespace="/status"
     )
-
-
-@socketio.on("disconnect", namespace="/alerts")
-def alert_disconnect():
-    try:
-        del alert_users[request.sid]
-    except Exception:
-        pass
-
-    if len(alert_users) == 0:
-        thread_alerts_stop_event.set()
 
 
 @socketio.on("connect", namespace="/search")
@@ -532,7 +480,7 @@ def stats_connect():
     socketio.emit("alert_terms", {"data": acarshub.getAlerts()}, namespace="/stats")
 
 
-@socketio.on("query", namespace="/alerts")
+@socketio.on("query_terms", namespace="/main")
 def get_alerts(message, namespace):
     requester = request.sid
     results = acarshub.acarshub_db.search_alerts(
@@ -546,14 +494,14 @@ def get_alerts(message, namespace):
 
     for item in [item for item in (results or [])]:
         socketio.emit(
-            "newmsg",
+            "alert_matches",
             {"msghtml": acarshub.update_keys(item), "loading": True},
             to=requester,
-            namespace="/alerts",
+            namespace="/main",
         )
 
 
-@socketio.on("update_alerts", namespace="/alerts")
+@socketio.on("update_alerts", namespace="/main")
 def update_alerts(message, namespace):
     acarshub.acarshub_db.set_alert_terms(message["terms"])
 

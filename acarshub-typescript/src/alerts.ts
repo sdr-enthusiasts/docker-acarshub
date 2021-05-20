@@ -1,9 +1,10 @@
 import Cookies from "js-cookie"
 import { display_messages } from "./html_generator.js";
+import { alert_term_query, alert_text_update } from "./index.js";
 import { html_msg, terms } from "./interfaces.js"
 
 declare const window: any;
-let socket: SocketIOClient.Socket;
+
 let alerts: number = 0;
 let alert_text: string[] = [];
 let alert_callsigns: string[] = [];
@@ -44,59 +45,39 @@ msgs_received.unshift = function () {
 };
 
 export function alert() { // Document on ready new syntax....or something. Passing a function directly to jquery
-  socket = io.connect(`${document.location.origin}/alerts`, {
-    path: acars_path + "socket.io",
-  });
-
-  socket.on("terms", function (msg: terms) {
-    alert_text = msg.terms;
-    if (page_active) {
-      (<HTMLInputElement>document.getElementById("alert_text")).value = (<HTMLInputElement>document.getElementById(
-        "alert_text"
-      )).value = combineArray(alert_text).toUpperCase();
-    }
-  });
-
   // Update the cookies so the expiration date pushes out in to the future
   // Also sets all of the user saved prefs
   onInit();
-
-    // Set the text areas to the values saved in the cookies
-  // document.getElementById("alert_text").value = Cookies.get("alert_text")
-  //   ? Cookies.get("alert_text")
-  //   : "";
-
-
-  socket.emit(
-    "query",
-    {
-      icao: alert_icao.length > 0 ? alert_icao : null,
-      //text: alert_text.length > 0 ? alert_text : null,
-      flight: alert_callsigns.length > 0 ? alert_callsigns : null,
-      tail: alert_tail.length > 0 ? alert_tail : null,
-    },
-    "/alerts"
-  );
-
-  socket.on("newmsg", function (msg: html_msg) {
-    let matched = match_alert(msg);
-    if (matched.was_found) {
-      if (msg.loading != true) sound_alert();
-      msg.msghtml.matched_text = matched.text !== null ? matched.text : [];
-      msg.msghtml.matched_icao = matched.icao !== null ? matched.icao : [];
-      msg.msghtml.matched_flight = matched.flight !== null ? matched.flight : [];
-      msg.msghtml.matched_tail = matched.tail !== null ? matched.tail : [];
-      msgs_received.unshift([msg.msghtml]);
-      if(page_active) {
-        $("#log").html(display_messages(msgs_received));
-      } else if(matched.was_found && msg.loading != true) {
-        alerts += 1;
-        updateAlertCounter();
-        sound_alert();
-      }
-    }
-  });
+  alert_term_query(alert_icao, alert_callsigns, alert_tail);
 };
+
+export function alerts_terms(msg: terms) {
+  alert_text = msg.terms;
+  if (page_active) {
+    (<HTMLInputElement>document.getElementById("alert_text")).value = (<HTMLInputElement>document.getElementById(
+      "alert_text"
+    )).value = combineArray(alert_text).toUpperCase();
+  }
+}
+
+export function alerts_acars_message(msg: html_msg) {
+  let matched = match_alert(msg);
+  if (matched.was_found) {
+    if (msg.loading != true) sound_alert();
+    msg.msghtml.matched_text = matched.text !== null ? matched.text : [];
+    msg.msghtml.matched_icao = matched.icao !== null ? matched.icao : [];
+    msg.msghtml.matched_flight = matched.flight !== null ? matched.flight : [];
+    msg.msghtml.matched_tail = matched.tail !== null ? matched.tail : [];
+    msgs_received.unshift([msg.msghtml]);
+    if(page_active) {
+      $("#log").html(display_messages(msgs_received));
+    } else if(matched.was_found && msg.loading != true) {
+      alerts += 1;
+      updateAlertCounter();
+      sound_alert();
+    }
+  }
+}
 
 export function updateAlertCounter() {
   // if (alerts) $("#alert_count").html(` <span class="red">(${alerts})</span>`);
@@ -173,13 +154,7 @@ window.updateAlerts = function () {
     "alert_icao"
   )).value = combineArray(alert_icao).toUpperCase();
 
-  socket.emit(
-    "update_alerts",
-    {
-      terms: alert_text,
-    },
-    "/alerts"
-  );
+  alert_text_update(alert_text);
 
   // Cookies.set("alert_text", combineArray(alert_text), { expires: 365 });
   Cookies.set("alert_callsigns", combineArray(alert_callsigns), {

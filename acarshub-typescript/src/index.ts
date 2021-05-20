@@ -5,8 +5,8 @@ import { set_search_page_urls, search, search_active } from "./search.js"
 import { set_stats_page_urls, stats, stats_active } from "./stats.js"
 import { set_about_page_urls, about, about_active } from "./about.js"
 import { set_status_page_urls, status, status_active } from "./status.js"
-import { set_alert_page_urls, alert, alert_active } from "./alerts.js"
-import { labels, system_status, html_msg } from "./interfaces.js"
+import { set_alert_page_urls, alert, alert_active, alerts_acars_message, alerts_terms } from "./alerts.js"
+import { labels, system_status, html_msg, terms } from "./interfaces.js"
 
 declare const window: any;
 let socket: SocketIOClient.Socket;
@@ -38,8 +38,17 @@ $(() => { // Document on ready new syntax....or something. Passing a function di
     });
 
     socket.on("acars_msg", function (msg: html_msg) {  // New acars message.
-        console.log("here");
         new_acars_message(msg); // send the message to live messages
+        if(typeof msg.loading == "undefined" || !msg.loading === false)
+            alerts_acars_message(msg); // send the message to alerts for processing
+    });
+
+    socket.on("terms", function (msg: terms) {
+        alerts_terms(msg);  // send the terms over to the alert page
+    });
+
+    socket.on("alert_matches", function(msg: html_msg) {
+        alerts_acars_message(msg);
     });
 
     socket.on("system_status", function (msg: system_status) {
@@ -159,3 +168,25 @@ function connection_status(connected = false) {
   }
 
 // Functions for opening up the socket to the child pages
+
+export function alert_term_query(alert_icao: string[], alert_callsigns: string[], alert_tail: string[]) {
+    socket.emit(
+        "query_terms",
+        {
+          icao: alert_icao.length > 0 ? alert_icao : null,
+          flight: alert_callsigns.length > 0 ? alert_callsigns : null,
+          tail: alert_tail.length > 0 ? alert_tail : null,
+        },
+        "/main"
+      );
+}
+
+export function alert_text_update(alert_text: string[]) {
+    socket.emit(
+        "update_alerts",
+        {
+          terms: alert_text,
+        },
+        "/alerts"
+      );
+}
