@@ -85,7 +85,7 @@ alert_users = []
 
 # all namespaces
 
-acars_namespaces = ["/main", "/alerts", "/about", "/search", "/stats", "/status"]
+acars_namespaces = ["/main"]
 
 
 def update_rrd_db():
@@ -484,13 +484,6 @@ def alert_connect():
         thread_alerts = socketio.start_background_task(alert_handler)
 
 
-@socketio.on("connect", namespace="/about")
-def about_connect():
-    socketio.emit(
-        "system_status", {"status": acarshub.get_service_status()}, namespace="/about"
-    )
-
-
 @socketio.on("connect", namespace="/status")
 def status_connect():
     socketio.emit(
@@ -654,26 +647,6 @@ def error_handler(e):
 @socketio.on_error("/main")
 def error_handler_main(e):
     acarshub_helpers.acars_traceback(e, "server-main")
-
-
-@socketio.on_error("/search")
-def error_handler_search(e):
-    acarshub_helpers.acars_traceback(e, "server-search")
-
-
-@socketio.on_error("/stats")
-def stats_handler_search(e):
-    acarshub_helpers.acars_traceback(e, "server-stats")
-
-
-@socketio.on_error("/alerts")
-def error_handler_alerts(e):
-    acarshub_helpers.acars_traceback(e, "server-alerts")
-
-
-@socketio.on_error("/status")
-def error_handler_status(e):
-    acarshub_helpers.acars_traceback(e, "server-status")
 
 
 @socketio.on_error_default
