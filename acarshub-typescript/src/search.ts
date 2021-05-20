@@ -117,7 +117,7 @@ function show_search() {
   let display = "";
   let display_nav_results = "";
   console.log(msgs_received)
-  let results = []; // temp letiable to store the JSON formatted JS object
+  let results = []; // temp variable to store the JSON formatted JS object
 
   for (let i = 0; i < msgs_received.length; i++) {
     // Loop through the received message blob.
@@ -180,7 +180,7 @@ function reset_search_terms() {
 async function delay_query(initial_query: current_search) {
   // Pause for half a second
   await sleep(100);
-  let old_search = current_search; // Save the old search term in a temp letiable
+  let old_search = current_search; // Save the old search term in a temp variable
   // Only execute the search query if the user is done typing. We track that by comparing the query we were asked to run
   // with what is currently in the text box
   if (JSON.stringify(initial_query) == JSON.stringify(get_search_terms())) {

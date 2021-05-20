@@ -1,22 +1,18 @@
 import Cookies from "js-cookie"
-import { generate_menu, generate_footer } from "./menu.js";
 import { display_messages } from "./html_generator.js";
-import { html_msg, system_status, terms } from "./interfaces.js"
+import { html_msg, terms } from "./interfaces.js"
 
-let socket_alerts: SocketIOClient.Socket;
+declare const window: any;
+let socket: SocketIOClient.Socket;
 let alerts: number = 0;
 let alert_text: string[] = [];
 let alert_callsigns: string[] = [];
 let alert_tail:string[] = [];
 let alert_icao:string[] = [];
 let msgs_received:any[] = [];
-let acars_path = document.location.pathname.replace(
-  /about|search|stats|status|alerts/gi,
-  ""
-);
-acars_path += acars_path.endsWith("/") ? "" : "/";
-const acars_url: string = document.location.origin + acars_path;
-const acars_page: string = "/" + document.location.pathname.replace(acars_path, "");
+let acars_path: string = "";
+let acars_url: string = "";
+let page_active: boolean = false;
 let default_text_values: string[] = [
   "cop",
   "police",
@@ -47,14 +43,14 @@ msgs_received.unshift = function () {
   return Array.prototype.unshift.apply(this, arguments as any);
 };
 
-$(() => { // Document on ready new syntax....or something. Passing a function directly to jquery
-  socket_alerts = io.connect(`${document.location.origin}/alerts`, {
+export function alert() { // Document on ready new syntax....or something. Passing a function directly to jquery
+  socket = io.connect(`${document.location.origin}/alerts`, {
     path: acars_path + "socket.io",
   });
 
-  socket_alerts.on("terms", function (msg: terms) {
+  socket.on("terms", function (msg: terms) {
     alert_text = msg.terms;
-    if (acars_page == "/alerts") {
+    if (page_active) {
       (<HTMLInputElement>document.getElementById("alert_text")).value = (<HTMLInputElement>document.getElementById(
         "alert_text"
       )).value = combineArray(alert_text).toUpperCase();
@@ -65,101 +61,49 @@ $(() => { // Document on ready new syntax....or something. Passing a function di
   // Also sets all of the user saved prefs
   onInit();
 
-  if (acars_page == "/alerts") {
-    generate_menu();
-    generate_footer();
-    Cookies.set("alert_unread", "0", { expires: 365 });
-
-    // temporarily toggle the play_sound letiable so we can set the UI correctly
-    play_sound = play_sound ? false : true;
-    toggle_playsound(true);
-
     // Set the text areas to the values saved in the cookies
-    // document.getElementById("alert_text").value = Cookies.get("alert_text")
-    //   ? Cookies.get("alert_text")
-    //   : "";
-    (<HTMLInputElement>document.getElementById("alert_callsigns")).value = Cookies.get(
-      "alert_callsigns"
-    ) ||  "";
-      (<HTMLInputElement>document.getElementById("alert_tail")).value = Cookies.get("alert_tail")
-      ||  "";
-      (<HTMLInputElement>document.getElementById("alert_icao")).value = Cookies.get("alert_icao")
-      || "";
+  // document.getElementById("alert_text").value = Cookies.get("alert_text")
+  //   ? Cookies.get("alert_text")
+  //   : "";
 
-    socket_alerts.emit(
-      "query",
-      {
-        icao: alert_icao.length > 0 ? alert_icao : null,
-        //text: alert_text.length > 0 ? alert_text : null,
-        flight: alert_callsigns.length > 0 ? alert_callsigns : null,
-        tail: alert_tail.length > 0 ? alert_tail : null,
-      },
-      "/alerts"
-    );
-    socket_alerts.on("newmsg", function (msg: html_msg) {
-      let matched = match_alert(msg);
-      if (matched.was_found) {
-        if (msg.loading != true) sound_alert();
-        msg.msghtml.matched_text = matched.text !== null ? matched.text : [];
-        msg.msghtml.matched_icao = matched.icao !== null ? matched.icao : [];
-        msg.msghtml.matched_flight = matched.flight !== null ? matched.flight : [];
-        msg.msghtml.matched_tail = matched.tail !== null ? matched.tail : [];
-        msgs_received.unshift([msg.msghtml]);
+
+  socket.emit(
+    "query",
+    {
+      icao: alert_icao.length > 0 ? alert_icao : null,
+      //text: alert_text.length > 0 ? alert_text : null,
+      flight: alert_callsigns.length > 0 ? alert_callsigns : null,
+      tail: alert_tail.length > 0 ? alert_tail : null,
+    },
+    "/alerts"
+  );
+
+  socket.on("newmsg", function (msg: html_msg) {
+    let matched = match_alert(msg);
+    if (matched.was_found) {
+      if (msg.loading != true) sound_alert();
+      msg.msghtml.matched_text = matched.text !== null ? matched.text : [];
+      msg.msghtml.matched_icao = matched.icao !== null ? matched.icao : [];
+      msg.msghtml.matched_flight = matched.flight !== null ? matched.flight : [];
+      msg.msghtml.matched_tail = matched.tail !== null ? matched.tail : [];
+      msgs_received.unshift([msg.msghtml]);
+      if(page_active) {
         $("#log").html(display_messages(msgs_received));
-      }
-    });
-
-    socket_alerts.on("system_status", function (msg: system_status) {
-      if (msg.status.error_state == true) {
-        $("#system_status").html(
-          `<a href="javascript:new_page('Status')">System Status: <span class="red_body">Error</span>`
-        );
-      } else {
-        $("#system_status").html(
-          `<a href="javascript:new_page('Status')">System Status: <span class="green">Okay</a></span>`
-        );
-      }
-    });
-
-    socket_alerts.on("disconnect", function () {
-      connection_status();
-    });
-
-    socket_alerts.on("connect_error", function () {
-      connection_status();
-    });
-
-    socket_alerts.on("connect_timeout", function () {
-      connection_status();
-    });
-
-    socket_alerts.on("connect", function () {
-      connection_status(true);
-    });
-
-    socket_alerts.on("reconnect", function () {
-      connection_status(true);
-    });
-  } else if (acars_page != "/") {
-    socket_alerts.on("newmsg", function (msg: html_msg) {
-      let matched = match_alert(msg);
-      if (matched.was_found && msg.loading != true) {
+      } else if(matched.was_found && msg.loading != true) {
         alerts += 1;
         updateAlertCounter();
         sound_alert();
       }
-    });
-  } else {
-    Cookies.set("alert_unread", "0", { expires: 365 });
-  }
-});
+    }
+  });
+};
 
 export function updateAlertCounter() {
   // if (alerts) $("#alert_count").html(` <span class="red">(${alerts})</span>`);
   // Cookies.set("alert_unread", String(alerts), { expires: 365 });
 }
 
-function updateAlerts() {
+window.updateAlerts = function () {
   if ((<HTMLInputElement>document.getElementById("alert_text")).value.length > 0) {
     let split = (<HTMLInputElement>document.getElementById("alert_text")).value.split(",");
     alert_text = [];
@@ -229,7 +173,7 @@ function updateAlerts() {
     "alert_icao"
   )).value = combineArray(alert_icao).toUpperCase();
 
-  socket_alerts.emit(
+  socket.emit(
     "update_alerts",
     {
       terms: alert_text,
@@ -405,7 +349,7 @@ export function match_alert(msg: html_msg) {
   };
 }
 
-function default_alert_values() {
+window.default_alert_values = function() {
   let current = (<HTMLInputElement>document.getElementById("alert_text")).value;
 
   default_text_values.forEach((element) => {
@@ -414,7 +358,7 @@ function default_alert_values() {
     }
   });
   (<HTMLInputElement>document.getElementById("alert_text")).value = current;
-  updateAlerts();
+  window.updateAlerts();
 }
 
 export function connection_status(connected = false) {
@@ -457,4 +401,56 @@ export async function sound_alert() {
       console.log(err);
     }
   }
+}
+
+export function alert_active(state=false) {
+  page_active = state;
+
+  if(page_active) { // page is active
+    set_html();
+    Cookies.set("alert_unread", "0", { expires: 365 });
+
+    // temporarily toggle the play_sound variable so we can set the UI correctly
+    play_sound = play_sound ? false : true;
+    toggle_playsound(true);
+
+    (<HTMLInputElement>document.getElementById("alert_callsigns")).value = Cookies.get(
+      "alert_callsigns"
+    ) ||  "";
+    (<HTMLInputElement>document.getElementById("alert_tail")).value = Cookies.get("alert_tail")
+    ||  "";
+    (<HTMLInputElement>document.getElementById("alert_icao")).value = Cookies.get("alert_icao")
+    || "";
+    (<HTMLInputElement>document.getElementById("alert_text")).value = (<HTMLInputElement>document.getElementById(
+      "alert_text"
+    )).value = combineArray(alert_text).toUpperCase();
+    $("#log").html(display_messages(msgs_received));
+  }
+}
+
+export function set_alert_page_urls(documentPath: string, documentUrl: string) {
+  acars_path = documentPath;
+  acars_url = documentUrl;
+}
+
+function set_html() {
+  $("#right").html(
+  `      <div class="fixed_results">
+  <p><a href="javascript:toggle_playsound()" id="playsound_link" class="spread_text">Turn On Alert Sound</a></p>
+  <span id="stat_menu">
+    <label for="alert_text" class="menu_non_link">Text Field:</label><br />
+    <textarea rows="2" id="alert_text"></textarea><br />
+    <label for="alert_callsigns" class="menu_non_link">Callsign:</label><br />
+    <textarea rows="2" id="alert_callsigns"></textarea><br />
+    <label for="alert_tail" class="menu_non_link">Tail Number:</label><br />
+    <textarea rows="2" id="alert_tail"></textarea><br />
+    <label for="alert_icao" class="menu_non_link">ICAO Address:</label><br />
+    <textarea rows="2" id="alert_icao"></textarea><br />
+    <button type="submit" value="Submit" onclick="updateAlerts()">Update</button>
+    <p><a href="javascript:default_alert_values()" class="spread_text">Default alert values</a></p>
+  </span>
+</div>`);
+
+  $("#page_name").html("");
+  $("#log").html("");
 }

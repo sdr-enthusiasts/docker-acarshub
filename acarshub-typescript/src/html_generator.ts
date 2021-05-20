@@ -135,7 +135,7 @@ export function display_messages(msgs_to_process: acars_msg[][], selected_tabs: 
           html_output += `<div id = "message_${unique_id}_${tab_uid}" class="sub_msg${unique_id}">`;
       }
       //msgs_string = '<p>' + msgs_received[i].toString() + '</p>' + msgs_string;
-      let message: acars_msg = sub_messages[u]; // letiable to hold the current message
+      let message: acars_msg = sub_messages[u]; // variable to hold the current message
       html_output += '<div><table id="shadow">';
 
       if (sub_messages.length == 1 && message.hasOwnProperty("matched"))
@@ -143,7 +143,7 @@ export function display_messages(msgs_to_process: acars_msg[][], selected_tabs: 
       else html_output += "<tr>";
       html_output += `<td><strong>${message["message_type"]}</strong> from <strong>${message["station_id"]}</strong></td>`;
 
-      let timestamp; // letiable to save the timestamp We need this because the database saves the time as 'time' and live messages have it as 'timestamp' (blame Fred for this silly mis-naming of db columns)
+      let timestamp; // variable to save the timestamp We need this because the database saves the time as 'time' and live messages have it as 'timestamp' (blame Fred for this silly mis-naming of db columns)
 
       // grab the time (unix EPOCH) from the correct key and convert in to a Date object for display
       if (message.hasOwnProperty("timestamp"))
@@ -398,7 +398,7 @@ export function display_messages(msgs_to_process: acars_msg[][], selected_tabs: 
         // 0 indicates the plane is airborne
         // 2 indicates the plane is on the ground
         // https://github.com/TLeconte/vdlm2dec/blob/1ea300d40d66ecb969f1f463506859e36f62ef5c/out.c#L457
-        // letiable naming in vdlm2dec is inconsistent, but "ground" and "gnd" seem to be used
+        // variable naming in vdlm2dec is inconsistent, but "ground" and "gnd" seem to be used
         let is_onground = message["is_onground"] == 0 ? "False" : "True";
 
         html_output += `<span class=\"wrapper\">G: <strong>${is_onground}</strong><span class=\"tooltip\">Is on ground?</span></span> `;

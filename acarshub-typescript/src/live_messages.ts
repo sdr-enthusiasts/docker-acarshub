@@ -281,7 +281,7 @@ export function live_messages() { // Document on ready new syntax....or somethin
   });
 
   // Grab the current cookie value for message filtering
-  // If the cookie is found with a value we run filter_notext to set the proper visual elements/letiables for the rest of the functions
+  // If the cookie is found with a value we run filter_notext to set the proper visual elements/variables for the rest of the functions
   // We'll also re-write the cookie (or start a new one) with the current value
   // This is necessary because Safari doesn't respect the expiration date of more than 7 days. It will set it to 7 days even though we've set 365 days
   // This also just keeps moving the expiration date moving forward every time the page is loaded
@@ -385,8 +385,8 @@ export function live_messages() { // Document on ready new syntax....or somethin
         let new_tail = msg.msghtml.tail;
         let new_icao = msg.msghtml.icao;
         let new_flight = msg.msghtml.flight;
-        let found = false; // letiable to track if the new message was found in previous messages
-        let rejected = false; // letiable to track if the new message was rejected for being a duplicate
+        let found = false; // variable to track if the new message was found in previous messages
+        let rejected = false; // variable to track if the new message was rejected for being a duplicate
         let index_new = 0; // the index of the found previous message
 
         msg.msghtml.uid = getRandomInt(1000000).toString(); // Each message gets a unique ID. Used to track tab selection

@@ -2,9 +2,10 @@ import { generate_menu, generate_footer } from "./menu.js";
 
 import { set_live_page_urls, live_messages, live_message_active } from "./live_messages.js"
 import { set_search_page_urls, search, search_active } from "./search.js"
-import { set_stats_page_urls, stats, stats_active} from "./stats.js"
-import { set_about_page_urls, about, about_active} from "./about.js"
-import { set_status_page_urls, status, status_active} from "./status.js"
+import { set_stats_page_urls, stats, stats_active } from "./stats.js"
+import { set_about_page_urls, about, about_active } from "./about.js"
+import { set_status_page_urls, status, status_active } from "./status.js"
+import { set_alert_page_urls, alert, alert_active } from "./alerts.js"
 
 declare const window: any;
 let acars_url: string = "";
@@ -17,6 +18,7 @@ const pages: string[] = [
     "/stats",   // stats page
     "/about",   // about page
     "/status",  // status page
+    "/alerts"   // alerts page
 ]
 
 $(() => { // Document on ready new syntax....or something. Passing a function directly to jquery
@@ -34,7 +36,7 @@ $(() => { // Document on ready new syntax....or something. Passing a function di
     stats();
     about();
     status();
-
+    alert();
     toggle_pages();
 });
 
@@ -51,6 +53,7 @@ function update_url() {
     set_stats_page_urls(acars_path, acars_url);
     set_about_page_urls(acars_path, acars_url);
     set_status_page_urls(acars_path, acars_url);
+    set_alert_page_urls(acars_path, acars_url);
 }
 
 function toggle_pages() {
@@ -77,6 +80,10 @@ function toggle_pages() {
             status_active(true);
         } else if (pages[page] === "/status") {
             status_active();
+        } else if(pages[page] === "/alerts" && acars_page === pages[page]) {
+            alert_active(true);
+        } else if (pages[page] === "/alerts") {
+            alert_active();
         }
     }
 }
@@ -84,11 +91,12 @@ function toggle_pages() {
 window.new_page = function(page: string) {
     document.title = page;
     let sub_url = "";
-    if(page === "Live Messages") sub_url = ""
-    else if (page === "Search") sub_url = "search"
-    else if (page === "Stats") sub_url = "stats"
-    else if (page === "About") sub_url = "about"
-    else if (page === "Status") sub_url = "status"
+    if(page === "Live Messages") sub_url = "";
+    else if (page === "Search") sub_url = "search";
+    else if (page === "Stats") sub_url = "stats";
+    else if (page === "About") sub_url = "about";
+    else if (page === "Status") sub_url = "status";
+    else if (page === "Alerts") sub_url = "alerts";
     window.history.pushState({path:acars_path + sub_url}, page, acars_path + sub_url);
     toggle_pages();
 }
