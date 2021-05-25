@@ -77,7 +77,6 @@ $(() => { // Document on ready new syntax....or something. Passing a function di
 
     // sidebar frequency count
     socket.on("signal_freqs", function(msg: any) {
-      console.log(msg)
       signal_freqs(msg);
     });
 
