@@ -1,10 +1,10 @@
-import { system_status } from "./interfaces";
+import { status_decoder, status_global, status_server, system_status } from "./interfaces";
 
 let acars_path = "";
 let acars_url = "";
 
 let page_active = false;
-let current_status: any;
+let current_status: system_status;
 
 export function status() { // Document on ready new syntax....or something. Passing a function directly to jquery
 };
@@ -26,7 +26,7 @@ function show_status() {
         `<a href="javascript:new_page('Status')">System Status: <span class="green">Okay</a></span>`
       );
     }
-
+    console.log(current_status)
     $("#log").html(
       decode_status(
         current_status.status.error_state,
@@ -39,8 +39,7 @@ function show_status() {
     );
   }
 }
-function decode_status(status: any, decoders: any, servers: any, feeders: any, receivers: any, stats: any) {
-  console.log("yo");
+function decode_status(status: boolean, decoders: status_decoder, servers: status_server, feeders: status_decoder, receivers: status_global, stats: status_decoder) {
   let html_output = "<h2>ACARS Hub System Status</h2>";
   const keys_decoder = Object.keys(decoders);
   const keys_servers = Object.keys(servers);

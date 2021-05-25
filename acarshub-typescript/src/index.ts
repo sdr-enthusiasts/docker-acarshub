@@ -6,7 +6,7 @@ import { alert_terms, decoders_enabled, set_stats_page_urls, signals, signal_cou
 import { set_about_page_urls, about, about_active } from "./about.js"
 import { set_status_page_urls, status, status_active, status_received } from "./status.js"
 import { set_alert_page_urls, alert, alert_active, alerts_acars_message, alerts_terms } from "./alerts.js"
-import { labels, system_status, html_msg, terms, database_size, current_search, search_html_msg } from "./interfaces.js"
+import { labels, system_status, html_msg, terms, database_size, current_search, search_html_msg, decoders, signal, alert_term, signal_freq_data, signal_count_data } from "./interfaces.js"
 
 declare const window: any;
 let socket: SocketIOClient.Socket;
@@ -61,22 +61,22 @@ $(() => { // Document on ready new syntax....or something. Passing a function di
 
     // stats
 
-    socket.on("decoders_enabled", function(msg: any) {
+    socket.on("decoders_enabled", function(msg: decoders) {
       decoders_enabled(msg);
     });
 
     // signal level graph
-    socket.on("signal", function(msg: any) {
+    socket.on("signal", function(msg: signal) {
       signals(msg);
     });
 
     // alert term graph
-    socket.on("alert_terms", function(msg: any) {
+    socket.on("alert_terms", function(msg: alert_term) {
       alert_terms(msg);
     });
 
     // sidebar frequency count
-    socket.on("signal_freqs", function(msg: any) {
+    socket.on("signal_freqs", function(msg: signal_freq_data) {
       signal_freqs(msg);
     });
 
@@ -93,7 +93,7 @@ $(() => { // Document on ready new syntax....or something. Passing a function di
         }
     });
 
-    socket.on("signal_count", function(msg: any) {
+    socket.on("signal_count", function(msg: signal_count_data) {
       signal_count(msg);
     });
 

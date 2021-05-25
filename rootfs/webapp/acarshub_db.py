@@ -933,12 +933,12 @@ def get_errors():
         nonlogged = session.query(messagesCountDropped).first()
         session.close()
 
-        return (
-            count.total,
-            count.errors,
-            nonlogged.nonlogged_good,
-            nonlogged.nonlogged_errors,
-        )
+        return {
+            "non_empty_total": count.total,
+            "non_empty_errors": count.errors,
+            "empty_total": nonlogged.nonlogged_good,
+            "empty_errors": nonlogged.nonlogged_errors,
+        }
 
     except Exception as e:
         acarshub_helpers.acars_traceback(e, "database")

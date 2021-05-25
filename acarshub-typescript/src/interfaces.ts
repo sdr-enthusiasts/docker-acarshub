@@ -6,11 +6,80 @@ export interface database_size {
 export interface system_status {
   status: {
     error_state: boolean
+    decoders: status_decoder,
+    servers: status_server,
+    feeders: status_decoder,
+    global: status_global,
+    stats: status_decoder
+  }
+}
+
+export interface status_server {
+  [index: string]: {
+    Status: string
+    Web: string
+  }
+}
+
+export interface status_decoder {
+  [index: string]: {
+    Status: string
+  }
+}
+
+export interface status_global {
+  [index: string]: {
+    Status: string,
+    Count: number
   }
 }
 
 export interface terms {
   terms: string[]
+}
+
+export interface decoders {
+  acars: boolean,
+  vdlm: boolean
+}
+
+export interface signal {
+  levels: {
+    [index: number]: {
+      count: number
+      id: number
+      level: number
+    }
+  }
+}
+
+export interface alert_term {
+  data: {
+    [index: number]: {
+      count: number,
+      id: number,
+      term: string
+    }
+  }
+}
+
+export interface signal_freq_data {
+  freqs: Array<signal_data>
+}
+
+interface signal_data {
+  freq_type: string,
+  freq: string,
+  count: number
+}
+
+export interface signal_count_data {
+  count: {
+    non_empty_total: number,
+    non_empty_errors: number,
+    empty_total: number,
+    empty_errors: number
+  }
 }
 
 export interface current_search {
@@ -42,6 +111,7 @@ export interface search_html_msg {
   query_time: number,
   num_results: number
 }
+
 
 export interface acars_msg {
     timestamp: number,

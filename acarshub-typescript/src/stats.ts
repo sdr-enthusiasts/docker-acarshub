@@ -3,6 +3,7 @@ import ChartDataLabels from 'chartjs-plugin-datalabels';
 import { updateAlertCounter } from "./alerts.js"
 import { generate_stat_submenu } from "./menu.js"
 import {signal_grab_freqs, signal_grab_message_count, signal_grab_updated_graphs} from "./index.js"
+import { alert_term, decoders, signal, signal_count_data, signal_freq_data } from "./interfaces.js";
 
 declare const window: any;
 let image_prefix: string = "";
@@ -13,10 +14,10 @@ let page_active = false;
 let chart_alerts: Chart;
 let chart_signals: Chart;
 
-let alert_data: any;
-let signal_data: any;
-let freqs_data: any;
-let count_data: any;
+let alert_data: alert_term;
+let signal_data: signal;
+let freqs_data: signal_freq_data;
+let count_data: signal_count_data;
 
 let acars_on = false;
 let vdlm_on = false;
@@ -159,12 +160,12 @@ function show_freqs() {
 
 function show_count() {
   if(typeof count_data !== "undefined") {
-    let error: number = count_data.count[1];
-    let total: number = count_data.count[0] + count_data.count[2] + count_data.count[3];
-    let good_msg: number = count_data.count[0] - error;
+    let error: number = count_data.count.non_empty_errors;
+    let total: number = count_data.count.non_empty_total + count_data.count.empty_total + count_data.count.non_empty_errors;
+    let good_msg: number = count_data.count.non_empty_total - error;
 
-    let empty_error: number = count_data.count[3];
-    let empty_good: number = count_data.count[2];
+    let empty_error: number = count_data.count.empty_errors;
+    let empty_good: number = count_data.count.empty_total;
 
     let html: string = '<p><table class="search">';
     html += `<tr><td><span class="menu_non_link">Total Messages (All): </span></td><td><span class="menu_non_link">${total}</span></td><td></td></tr>`;
@@ -196,29 +197,29 @@ function show_count() {
   }
 }
 
-export function decoders_enabled(msg: any) {
+export function decoders_enabled(msg: decoders) {
   acars_on = msg.acars;
   vdlm_on = msg.vdlm;
   if(page_active)
     generate_stat_submenu(acars_on, vdlm_on);
 }
 
-export function signals(msg: any) {
+export function signals(msg: signal) {
   signal_data = msg;
   if(page_active) show_signal_chart();
 }
 
-export function alert_terms(msg: any) {
+export function alert_terms(msg: alert_term) {
   alert_data = msg;
   if(page_active) show_alert_chart();
 }
 
-export function signal_freqs(msg: any) {
+export function signal_freqs(msg: signal_freq_data) {
   freqs_data = msg;
   if(page_active) show_freqs();
 }
 
-export function signal_count(msg: any) {
+export function signal_count(msg: signal_count_data) {
   count_data = msg;
   if(page_active) show_count();
 }
@@ -240,7 +241,7 @@ setInterval(function () {
   grab_updated_graphs();
 }, 60000);
 
-window.update_prefix = function(prefix: any) {
+window.update_prefix = function(prefix: string) {
   image_prefix = prefix;
   grab_images();
 }
