@@ -6,7 +6,7 @@
   "scripts": {
     "minify": "jsmin -o name.min.js name.js",
     "build": "rm -f ./dist/*.js && tsc && ./build.sh",
-    "install": "rm ../rootfs/webapp/static/js/*.js && cp ./dist/*.js ../rootfs/webapp/static/js/"
+    "installer": "rm -f ../rootfs/webapp/static/js/*.js && cp ./dist/*.js ../rootfs/webapp/static/js/"
   },
   "author": "Fred Clausen",
   "license": "GPLv3",

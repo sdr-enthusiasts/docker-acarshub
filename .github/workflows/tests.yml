@@ -103,6 +103,16 @@ jobs:
           yarn build
           yarn pack --filename ../acars-decoder-typescript.tgz
 
+      # build acarshub typescript
+
+      -
+        name: Build ACARSHub typescript
+        working-directory: ./acarshub-typescript
+        run: |
+          npm install
+          npm run build
+          npm run installer
+
       # Test container build for all supported platforms (defined above)
       -
         name: Test Build ${{ matrix.docker-platform }}

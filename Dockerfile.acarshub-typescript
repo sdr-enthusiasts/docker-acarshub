@@ -1,0 +1,16 @@
+# Firstly, build airframesio/acars-decoder-typescript
+# Done in separate build stage to prevent having to install node + dependencies in final image
+
+FROM node:latest AS acarshub-typescript-builder
+
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
+COPY acarshub-typescript/ /acarshub-typescript/
+
+RUN set -x && \
+    pushd acarshub-typescript && \
+    mkdir -p ../rootfs/webapp/static/js/ && \
+    npm install && \
+    npm run build && \
+    ls && \
+    npm run installer

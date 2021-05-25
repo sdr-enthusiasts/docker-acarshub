@@ -5,3 +5,6 @@ retired_scripts
 buildx-*.sh
 update-local-acars-decoder.sh
 Logo-Sources
+acarshub-typescript/dist
+acarshub-typescript/node_modules
+roots/webapp/static/js/*.js
