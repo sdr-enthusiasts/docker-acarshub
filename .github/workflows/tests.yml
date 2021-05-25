@@ -41,7 +41,7 @@ jobs:
       -
         name: Patch webapp with VERSION_TAG
         run: |
-          sed -i 's/Pre-Release/ACARS Hub Pre-Release: ${{ env.VERSION_TAG }}/' ./rootfs/webapp/static/js/menu.js
+          sed -i 's/Pre-Release/ACARS Hub Pre-Release: ${{ env.VERSION_TAG }}/' ./acarshub-typescript/src/menu.js
 
       - name: Create version file
         run: |
