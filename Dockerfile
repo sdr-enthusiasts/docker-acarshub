@@ -21,7 +21,7 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 # Copy needs to be prior to any curl/wget so SSL certs from GitHub runner are loaded
 COPY rootfs/ /
-COPY js/*.js /webapp/static/js/
+
 # Copy in acars-decoder-typescript from previous build stage
 COPY acars-decoder-typescript.tgz /src/acars-decoder-typescript.tgz
 
