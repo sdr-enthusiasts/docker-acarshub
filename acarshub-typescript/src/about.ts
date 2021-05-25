@@ -13,7 +13,6 @@ export function about() {
     .then((data) => {
       save_html(converter.makeHtml(data));
     });
-  console.log(page_html);
   if (page_active) about_active(true);
 }
 

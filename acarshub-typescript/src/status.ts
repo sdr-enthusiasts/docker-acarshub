@@ -32,7 +32,7 @@ function show_status() {
         `<a href="javascript:new_page('Status')">System Status: <span class="green">Okay</a></span>`
       );
     }
-    console.log(current_status);
+
     $("#log").html(
       decode_status(
         current_status.status.error_state,
