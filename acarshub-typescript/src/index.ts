@@ -1,12 +1,12 @@
 import { generate_menu, generate_footer } from "./menu.js";
 
 import { set_live_page_urls, live_messages, live_message_active, new_labels, new_acars_message } from "./live_messages.js"
-import { set_search_page_urls, search, search_active } from "./search.js"
-import { set_stats_page_urls, stats, stats_active } from "./stats.js"
+import { set_search_page_urls, search, search_active, database_size_details, database_search_results } from "./search.js"
+import { alert_terms, decoders_enabled, set_stats_page_urls, signals, signal_count, signal_freqs, stats, stats_active } from "./stats.js"
 import { set_about_page_urls, about, about_active } from "./about.js"
-import { set_status_page_urls, status, status_active } from "./status.js"
+import { set_status_page_urls, status, status_active, status_received } from "./status.js"
 import { set_alert_page_urls, alert, alert_active, alerts_acars_message, alerts_terms } from "./alerts.js"
-import { labels, system_status, html_msg, terms } from "./interfaces.js"
+import { labels, system_status, html_msg, terms, database_size, current_search, search_html_msg } from "./interfaces.js"
 
 declare const window: any;
 let socket: SocketIOClient.Socket;
@@ -51,42 +51,79 @@ $(() => { // Document on ready new syntax....or something. Passing a function di
         alerts_acars_message(msg);
     });
 
-    socket.on("system_status", function (msg: system_status) {
-    if (msg.status.error_state == true) {
-        $("#system_status").html(
-        `<a href="javascript:new_page('Status')">System Status: <span class="red_body">Error</a></span>`
-        );
-    } else {
-        $("#system_status").html(
-        `<a href="javascript:new_page('Status')">System Status: <span class="green">Okay</a></span>`
-        );
-    }
+    socket.on("database", function (msg: database_size) {
+      database_size_details(msg);
     });
 
+    socket.on("database_search_results", function(msg: search_html_msg) {
+      database_search_results(msg);
+    });
+
+    // stats
+
+    socket.on("decoders_enabled", function(msg: any) {
+      decoders_enabled(msg);
+    });
+
+    // signal level graph
+    socket.on("signal", function(msg: any) {
+      signals(msg);
+    });
+
+    // alert term graph
+    socket.on("alert_terms", function(msg: any) {
+      alert_terms(msg);
+    });
+
+    // sidebar frequency count
+    socket.on("signal_freqs", function(msg: any) {
+      console.log(msg)
+      signal_freqs(msg);
+    });
+
+    socket.on("system_status", function (msg: system_status) {
+      status_received(msg);
+        if (msg.status.error_state == true) {
+            $("#system_status").html(
+            `<a href="javascript:new_page('Status')">System Status: <span class="red_body">Error</a></span>`
+            );
+        } else {
+            $("#system_status").html(
+            `<a href="javascript:new_page('Status')">System Status: <span class="green">Okay</a></span>`
+            );
+        }
+    });
+
+    socket.on("signal_count", function(msg: any) {
+      signal_count(msg);
+    });
+
+    // socket errors
+
     socket.on("disconnect", function () {
-    connection_status();
+      connection_status();
     });
 
     socket.on("connect_error", function () {
-    connection_status();
+      connection_status();
     });
 
     socket.on("connect_timeout", function () {
-    connection_status();
+      connection_status();
     });
 
     socket.on("connect", function () {
-    connection_status(true);
+      connection_status(true);
     });
 
     socket.on("reconnect", function () {
-    connection_status(true);
+      connection_status(true);
     });
+
+    // time to set everything on the page up
+
     generate_menu(); // generate the top menu
     generate_footer(); // generate the footer
-
-    // find the current page
-
 
     // init all page backgrounding functions
     live_messages();
@@ -189,4 +226,24 @@ export function alert_text_update(alert_text: string[]) {
         },
         "/alerts"
       );
+}
+
+export function search_database(current_search: current_search, show_all=false, page=0) {
+  if(!show_all)
+    socket.emit("query_search", { search_term: current_search, results_after: page }, "/main");
+  else {
+    socket.emit("query_search", { show_all: true, results_after: page }, "/main");
+  }
+}
+
+export function signal_grab_freqs() {
+  socket.emit("signal_freqs", { freqs: true }, ("/main"));
+}
+
+export function signal_grab_message_count() {
+  socket.emit("signal_count", { count: true }, ("/main"));
+}
+
+export function signal_grab_updated_graphs() {
+  socket.emit("signal_graphs", { graphs: true }, ("/main"));
 }

@@ -154,7 +154,6 @@ def flight_finder(callsign=None, hex_code=None, url=True):
 
 
 def handle_message(message=None):
-    start_time = time.time()
     if message is not None:
         total_results = 0
         serialized_json = []

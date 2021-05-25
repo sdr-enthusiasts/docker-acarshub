@@ -68,7 +68,6 @@ thread_database_stop_event = Event()
 
 que_messages = deque(maxlen=15)
 que_database = deque(maxlen=15)
-que_alerts = deque(maxlen=15)
 
 messages_recent = []  # list to store most recent msgs
 
@@ -77,8 +76,6 @@ messages_recent = []  # list to store most recent msgs
 vdlm_messages = 0
 acars_messages = 0
 error_messages = 0
-
-alert_users = []
 
 # all namespaces
 
@@ -282,10 +279,6 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
                             connected_users > 0
                         ):  # que message up if someone is on live message page
                             que_messages.append((que_type, j))
-                        if (
-                            len(alert_users) > 0
-                        ):  # que message up if someone is on the alerts page
-                            que_alerts.append((que_type, j))
                         que_database.append((que_type, j))
                         if len(messages_recent) >= 150:  # Keep the que size down
                             del messages_recent[0]
@@ -436,48 +429,28 @@ def main_connect():
         "system_status", {"status": acarshub.get_service_status()}, namespace="/main"
     )
 
+    rows, size = acarshub.acarshub_db.database_get_row_count()
+    socketio.emit(
+        "database", {"count": rows, "size": size}, to=requester, namespace="/main"
+    )
+
+    socketio.emit(
+        "decoders_enabled",
+        {"vdlm": acarshub_helpers.ENABLE_VDLM, "acars": acarshub_helpers.ENABLE_ACARS},
+        namespace="/main",
+    )
+    socketio.emit(
+        "signal",
+        {"levels": acarshub.acarshub_db.get_signal_levels()},
+        namespace="/main",
+    )
+    socketio.emit("alert_terms", {"data": acarshub.getAlerts()}, namespace="/main")
+
     # Start the htmlGenerator thread only if the thread has not been started before.
     if not thread_html_generator.is_alive():
         sys.stdout.flush()
         thread_html_generator_event.clear()
         thread_html_generator = socketio.start_background_task(htmlListener)
-
-
-@socketio.on("connect", namespace="/status")
-def status_connect():
-    socketio.emit(
-        "system_status", {"status": acarshub.get_service_status()}, namespace="/status"
-    )
-
-
-@socketio.on("connect", namespace="/search")
-def search_connect():
-    rows, size = acarshub.acarshub_db.database_get_row_count()
-    requester = request.sid
-    socketio.emit(
-        "database", {"count": rows, "size": size}, to=requester, namespace="/search"
-    )
-    socketio.emit(
-        "system_status", {"status": acarshub.get_service_status()}, namespace="/search"
-    )
-
-
-@socketio.on("connect", namespace="/stats")
-def stats_connect():
-    socketio.emit(
-        "system_status", {"status": acarshub.get_service_status()}, namespace="/stats"
-    )
-    socketio.emit(
-        "newmsg",
-        {"vdlm": acarshub_helpers.ENABLE_VDLM, "acars": acarshub_helpers.ENABLE_ACARS},
-        namespace="/stats",
-    )
-    socketio.emit(
-        "signal",
-        {"levels": acarshub.acarshub_db.get_signal_levels()},
-        namespace="/stats",
-    )
-    socketio.emit("alert_terms", {"data": acarshub.getAlerts()}, namespace="/stats")
 
 
 @socketio.on("query_terms", namespace="/main")
@@ -506,43 +479,44 @@ def update_alerts(message, namespace):
     acarshub.acarshub_db.set_alert_terms(message["terms"])
 
 
-@socketio.on("freqs", namespace="/stats")
+@socketio.on("signal_freqs", namespace="/main")
 def request_freqs(message, namespace):
     requester = request.sid
     socketio.emit(
-        "freqs",
+        "signal_freqs",
         {"freqs": acarshub.acarshub_db.get_freq_count()},
         to=requester,
-        namespace="/stats",
+        namespace="/main",
     )
 
 
-@socketio.on("count", namespace="/stats")
+@socketio.on("signal_count", namespace="/main")
 def request_count(message, namespace):
     requester = request.sid
     socketio.emit(
-        "count",
+        "signal_count",
         {"count": acarshub.acarshub_db.get_errors()},
         to=requester,
-        namespace="/stats",
+        namespace="/main",
     )
 
 
-@socketio.on("graphs", namespace="/stats")
+@socketio.on("signal_graphs", namespace="/main")
 def request_graphs(message, namespace):
     requester = request.sid
     socketio.emit(
-        "alert_terms", {"data": acarshub.getAlerts()}, to=requester, namespace="/stats"
+        "alert_terms", {"data": acarshub.getAlerts()}, to=requester, namespace="/main"
     )
 
 
 # handle a query request from the browser
 
 
-@socketio.on("query", namespace="/search")
+@socketio.on("query_search", namespace="/main")
 def handle_message(message, namespace):
     import time
 
+    print("starting search")
     start_time = time.time()
     # We are going to send the result over in one blob
     # search.js will only maintain the most recent blob we send over
@@ -553,9 +527,9 @@ def handle_message(message, namespace):
     # in the search namespace.
 
     requester = request.sid
-    start_time_emit = time.time()
+    print(total_results)
     socketio.emit(
-        "newmsg",
+        "database_search_results",
         {
             "num_results": total_results,
             "msghtml": serialized_json,
@@ -563,7 +537,7 @@ def handle_message(message, namespace):
             "query_time": time.time() - start_time,
         },
         to=requester,
-        namespace="/search",
+        namespace="/main",
     )
 
 

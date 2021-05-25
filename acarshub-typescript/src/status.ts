@@ -1,4 +1,5 @@
-let socket;
+import { system_status } from "./interfaces";
+
 let acars_path = "";
 let acars_url = "";
 
@@ -6,16 +7,13 @@ let page_active = false;
 let current_status: any;
 
 export function status() { // Document on ready new syntax....or something. Passing a function directly to jquery
-  socket = io.connect(`${document.location.origin}/status`, {
-    path: acars_path + "socket.io",
-  });
-
-  socket.on("system_status", function (msg: any) {
-    current_status = msg;
-
-    if(page_active) show_status();
-  });
 };
+
+export function status_received(msg: system_status) {
+  current_status = msg;
+
+  if(page_active) show_status();
+}
 
 function show_status() {
   if(typeof current_status !== "undefined") {

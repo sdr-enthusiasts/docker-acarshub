@@ -2,8 +2,9 @@ import { Chart } from "chart.js";
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 import { updateAlertCounter } from "./alerts.js"
 import { generate_stat_submenu } from "./menu.js"
+import {signal_grab_freqs, signal_grab_message_count, signal_grab_updated_graphs} from "./index.js"
 
-let socket: SocketIOClient.Socket;
+declare const window: any;
 let image_prefix: string = "";
 let acars_path: string = "";
 let acars_url: string = "";
@@ -195,52 +196,35 @@ function show_count() {
   }
 }
 
+export function decoders_enabled(msg: any) {
+  acars_on = msg.acars;
+  vdlm_on = msg.vdlm;
+  if(page_active)
+    generate_stat_submenu(acars_on, vdlm_on);
+}
+
+export function signals(msg: any) {
+  signal_data = msg;
+  if(page_active) show_signal_chart();
+}
+
+export function alert_terms(msg: any) {
+  alert_data = msg;
+  if(page_active) show_alert_chart();
+}
+
+export function signal_freqs(msg: any) {
+  freqs_data = msg;
+  if(page_active) show_freqs();
+}
+
+export function signal_count(msg: any) {
+  count_data = msg;
+  if(page_active) show_count();
+}
+
 export function stats() {
   updateAlertCounter();
-
-  socket = io.connect(`${document.location.origin}/stats`, {
-    path: acars_path + "socket.io",
-  });
-
-  socket.on("newmsg", function (msg: any) {
-    acars_on = msg.acars;
-    vdlm_on = msg.vdlm;
-    if(page_active)
-      generate_stat_submenu(acars_on, vdlm_on);
-  });
-
-  socket.on("signal", function (msg: any) {
-    signal_data = msg;
-    if(page_active) show_signal_chart();
-  });
-
-  socket.on("alert_terms", function (msg: any) {
-    alert_data = msg;
-    if(page_active) show_alert_chart();
-  });
-
-  socket.on("freqs", function (msg: any) {
-    freqs_data = msg;
-    if(page_active) show_freqs();
-  });
-
-  socket.on("system_status", function (msg: any) {
-    if (msg.status.error_state == true) {
-      $("#system_status").html(
-        `<a href="javascript:new_page('Status')">System Status: <span class="red_body">Error</a></span>`
-      );
-    } else {
-      $("#system_status").html(
-        `<a href="javascript:new_page('Status')">System Status: <span class="green">Okay</a></span>`
-      );
-    }
-  });
-
-  socket.on("count", function (msg: any) {
-    count_data = msg;
-    if(page_active) show_count();
-  });
-
   grab_freqs();
   grab_message_count();
 }
@@ -256,47 +240,50 @@ setInterval(function () {
   grab_updated_graphs();
 }, 60000);
 
-function update_prefix(prefix: any) {
+window.update_prefix = function(prefix: any) {
   image_prefix = prefix;
   grab_images();
 }
 
 function grab_images() {
-  let onehour: HTMLElement = document.getElementById("1hr")!;
-  if(onehour !== null && onehour.hasOwnProperty("src")) (<HTMLImageElement>onehour).src = `static/images/${image_prefix}1hour.png?rand=` + Math.random();
+  let onehour: HTMLImageElement = <HTMLImageElement>document.getElementById("1hr")!;
+  if(onehour !== null) onehour.src = `static/images/${image_prefix}1hour.png?rand=` + Math.random();
 
-  let sixhours: HTMLElement = document.getElementById("6hr")!;
-  if(sixhours !== null && sixhours.hasOwnProperty("src'")) (<HTMLImageElement>sixhours).src = `static/images/${image_prefix}6hour.png?rand=` + Math.random();
+  let sixhours: HTMLImageElement = <HTMLImageElement>document.getElementById("6hr")!;
+  if(sixhours !== null) sixhours.src = `static/images/${image_prefix}6hour.png?rand=` + Math.random();
 
-  let twelvehours: HTMLElement = document.getElementById("12hr")!;
-  if(twelvehours !== null && twelvehours.hasOwnProperty("src")) (<HTMLImageElement>twelvehours).src = `static/images/${image_prefix}12hour.png?rand=` + Math.random();
+  let twelvehours: HTMLImageElement = <HTMLImageElement>document.getElementById("12hr")!;
+  if(twelvehours !== null) twelvehours.src = `static/images/${image_prefix}12hour.png?rand=` + Math.random();
 
-  let twentyfourhours: HTMLElement = document.getElementById("24hr")!;
-  if(twentyfourhours !== null && twentyfourhours.hasOwnProperty("src")) (<HTMLImageElement>twentyfourhours).src = `static/images/${image_prefix}24hours.png?rand=` + Math.random();
+  let twentyfourhours: HTMLImageElement = <HTMLImageElement>document.getElementById("24hr")!;
+  if(twentyfourhours !== null) twentyfourhours.src = `static/images/${image_prefix}24hours.png?rand=` + Math.random();
 
-  let oneweek: HTMLElement = document.getElementById("1wk")!;
-  if(oneweek !== null && oneweek.hasOwnProperty("src")) (<HTMLImageElement>oneweek).src = `static/images/${image_prefix}1week.png?rand=` + Math.random();
+  let oneweek: HTMLImageElement = <HTMLImageElement>document.getElementById("1wk")!;
+  if(oneweek !== null) oneweek.src = `static/images/${image_prefix}1week.png?rand=` + Math.random();
 
-  let thirtydays: HTMLElement = document.getElementById("30day")!;
-  if(thirtydays !== null && thirtydays.hasOwnProperty("src")) (<HTMLImageElement>thirtydays).src = `static/images/${image_prefix}30days.png?rand=` + Math.random();
+  let thirtydays: HTMLImageElement = <HTMLImageElement>document.getElementById("30day")!;
+  if(thirtydays !== null) thirtydays.src = `static/images/${image_prefix}30days.png?rand=` + Math.random();
 
-  let sixmonths: HTMLElement = document.getElementById("6mon")!;
-  if(sixmonths !== null && sixmonths.hasOwnProperty("src'")) (<HTMLImageElement>sixmonths).src = `static/images/${image_prefix}6months.png?rand=` + Math.random();
+  let sixmonths: HTMLImageElement = <HTMLImageElement>document.getElementById("6mon")!;
+  if(sixmonths !== null) sixmonths.src = `static/images/${image_prefix}6months.png?rand=` + Math.random();
 
-  let oneyear: HTMLElement = document.getElementById("1yr")!;
-  if(oneyear !== null && oneyear.hasOwnProperty("src")) (<HTMLImageElement>oneyear).src = `static/images/${image_prefix}1year.png?rand=` + Math.random();
+  let oneyear: HTMLImageElement = <HTMLImageElement>document.getElementById("1yr")!;
+  if(oneyear !== null) oneyear.src = `static/images/${image_prefix}1year.png?rand=` + Math.random();
 }
 
 function grab_freqs() {
-  socket.emit("freqs", { freqs: true }, ("/stats"));
+  signal_grab_freqs();
+  //socket.emit("signal_freqs", { freqs: true }, ("/stats"));
 }
 
 function grab_message_count() {
-  socket.emit("count", { count: true }, ("/stats"));
+  signal_grab_message_count();
+  //socket.emit("count", { count: true }, ("/stats"));
 }
 
 function grab_updated_graphs() {
-  socket.emit("graphs", { graphs: true }, ("/stats"));
+  signal_grab_updated_graphs();
+  //socket.emit("graphs", { graphs: true }, ("/stats"));
 }
 
 function set_html() {

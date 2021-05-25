@@ -2,8 +2,8 @@ import { display_messages } from "./html_generator.js"
 import { MessageDecoder } from "@airframes/acars-decoder/dist/MessageDecoder";
 import { updateAlertCounter } from "./alerts.js"
 import { search_html_msg, database_size, system_status, current_search, acars_msg } from "./interfaces.js"
+import { search_database } from "./index.js";
 
-let socket: SocketIOClient.Socket;
 let page_active: boolean = false;
 let db_size: database_size;
 
@@ -29,56 +29,38 @@ let msgs_received: acars_msg[][] = [];
 let num_results: number[] = [];
 const md: MessageDecoder = new MessageDecoder();
 
+export function database_size_details(msg: database_size){
+  db_size = msg;
+  update_size();
+}
+
+export function database_search_results(msg: search_html_msg) {
+  //maintain a list of 1 msgs
+  console.log("yo")
+  if (msgs_received.length >= 1) {
+    msgs_received.shift();
+  }
+  if (num_results.length >= 1) {
+    num_results.shift();
+  }
+
+  if (msg.hasOwnProperty("query_time") && typeof msg.query_time !== "undefined") query_time = msg["query_time"];
+  // Lets check and see if the results match the current search string
+
+  // Show the results if the returned results match the current search string (in case user kept typing after search emitted)
+  // or the user has executed a 'show all'
+
+  if (true) {
+    msgs_received.push(msg.msghtml);
+    num_results.push(msg.num_results);
+    show_search();
+  }
+}
+
 export function search() {
   //connect to the socket server.
   updateAlertCounter();
-
-  socket = io.connect(`${document.location.origin}/search`, {
-    path: acars_path + "socket.io",
-  });
-
   // receive details from server
-
-  // DB stats
-  socket.on("database", function (msg: database_size) {
-    db_size = msg;
-    update_size();
-  });
-
-  socket.on("system_status", function (msg: system_status) {
-    if (msg.status.error_state == true) {
-      $("#system_status").html(
-        `<a href="javascript:new_page('Status')">System Status: <span class="red_body">Error</a></span>`
-      );
-    } else {
-      $("#system_status").html(
-        `<a href="javascript:new_page('Status')">System Status: <span class="green">Okay</a></span>`
-      );
-    }
-  });
-
-  // Search results returned
-  socket.on("newmsg", function (msg: search_html_msg) {
-    //maintain a list of 1 msgs
-    if (msgs_received.length >= 1) {
-      msgs_received.shift();
-    }
-    if (num_results.length >= 1) {
-      num_results.shift();
-    }
-
-    if (msg.hasOwnProperty("query_time") && typeof msg.query_time !== "undefined") query_time = msg["query_time"];
-    // Lets check and see if the results match the current search string
-
-    // Show the results if the returned results match the current search string (in case user kept typing after search emitted)
-    // or the user has executed a 'show all'
-
-    if (true) {
-      msgs_received.push(msg.msghtml);
-      num_results.push(msg.num_results);
-      show_search();
-    }
-  });
 
   // Function to listen for key up events. If detected, check and see if the search string has been updated. If so, process the updated query
   document.addEventListener("keyup", function () {
@@ -93,10 +75,8 @@ export function search() {
 }
 
 function show_search() {
-  console.log("here")
   let display = "";
   let display_nav_results = "";
-  console.log(msgs_received)
   let results = []; // temp variable to store the JSON formatted JS object
 
   for (let i = 0; i < msgs_received.length; i++) {
@@ -176,7 +156,7 @@ async function delay_query(initial_query: current_search) {
       // Give feedback to the user while the search is going on
       $("#log").html("Searching...");
       $("#num_results").html("");
-      socket.emit("query", { search_term: current_search }, "/search");
+      search_database(current_search=current_search);
     } else if (is_everything_blank()) {
       // Field is now blank, clear the page and reset status
       show_all = false;
@@ -189,7 +169,7 @@ async function delay_query(initial_query: current_search) {
 // Function to run show all messages. Sets the letious status trackers on the page to expected values
 
 window.showall = function () {
-  socket.emit("query", { show_all: true }, "/search");
+  search_database(current_search, true);
   $("#log").html("Updating...");
   $("#num_results").html("");
   reset_search_terms();
@@ -208,18 +188,13 @@ function sleep(ms: number) {
 
 window.runclick = function (page: number) {
   current_page = page;
-  let current_terms = get_search_terms();
   if (!is_everything_blank() || show_all) {
     $("#log").html("Updating results....");
     $("#num_results").html("");
     if (!show_all) {
-      socket.emit(
-        "query",
-        { search_term: current_search, results_after: page },
-        "/search"
-      );
+      search_database(current_search, false, page);
     } else {
-      socket.emit("query", { show_all: true, results_after: page }, "/search");
+      search_database(current_search, true, page);
     }
   }
 };
