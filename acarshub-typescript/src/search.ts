@@ -1,7 +1,13 @@
-import { display_messages } from "./html_generator.js"
+import { display_messages } from "./html_generator.js";
 import { MessageDecoder } from "@airframes/acars-decoder/dist/MessageDecoder";
-import { updateAlertCounter } from "./alerts.js"
-import { search_html_msg, database_size, system_status, current_search, acars_msg } from "./interfaces.js"
+import { updateAlertCounter } from "./alerts.js";
+import {
+  search_html_msg,
+  database_size,
+  system_status,
+  current_search,
+  acars_msg,
+} from "./interfaces.js";
 import { search_database } from "./index.js";
 
 let page_active: boolean = false;
@@ -29,14 +35,14 @@ let msgs_received: acars_msg[][] = [];
 let num_results: number[] = [];
 const md: MessageDecoder = new MessageDecoder();
 
-export function database_size_details(msg: database_size){
+export function database_size_details(msg: database_size) {
   db_size = msg;
   update_size();
 }
 
 export function database_search_results(msg: search_html_msg) {
   //maintain a list of 1 msgs
-  console.log("yo")
+  console.log("yo");
   if (msgs_received.length >= 1) {
     msgs_received.shift();
   }
@@ -44,7 +50,8 @@ export function database_search_results(msg: search_html_msg) {
     num_results.shift();
   }
 
-  if (msg.hasOwnProperty("query_time") && typeof msg.query_time !== "undefined") query_time = msg["query_time"];
+  if (msg.hasOwnProperty("query_time") && typeof msg.query_time !== "undefined")
+    query_time = msg["query_time"];
   // Lets check and see if the results match the current search string
 
   // Show the results if the returned results match the current search string (in case user kept typing after search emitted)
@@ -64,7 +71,7 @@ export function search() {
 
   // Function to listen for key up events. If detected, check and see if the search string has been updated. If so, process the updated query
   document.addEventListener("keyup", function () {
-    if(page_active) {
+    if (page_active) {
       let current_terms = get_search_terms();
       if (!is_everything_blank() && current_search != current_terms) {
         show_all = false;
@@ -103,14 +110,14 @@ function show_search() {
 
 function get_search_terms() {
   return {
-    flight: (<HTMLInputElement>(document.getElementById("search_flight"))).value,
-    depa: (<HTMLInputElement>(document.getElementById("search_depa"))).value,
-    dsta: (<HTMLInputElement>(document.getElementById("search_dsta"))).value,
-    freq: (<HTMLInputElement>(document.getElementById("search_freq"))).value,
-    label: (<HTMLInputElement>(document.getElementById("search_msglbl"))).value,
-    msgno: (<HTMLInputElement>(document.getElementById("search_msgno"))).value,
-    tail: (<HTMLInputElement>(document.getElementById("search_tail"))).value,
-    msg_text: (<HTMLInputElement>(document.getElementById("search_text"))).value,
+    flight: (<HTMLInputElement>document.getElementById("search_flight")).value,
+    depa: (<HTMLInputElement>document.getElementById("search_depa")).value,
+    dsta: (<HTMLInputElement>document.getElementById("search_dsta")).value,
+    freq: (<HTMLInputElement>document.getElementById("search_freq")).value,
+    label: (<HTMLInputElement>document.getElementById("search_msglbl")).value,
+    msgno: (<HTMLInputElement>document.getElementById("search_msgno")).value,
+    tail: (<HTMLInputElement>document.getElementById("search_tail")).value,
+    msg_text: (<HTMLInputElement>document.getElementById("search_text")).value,
   };
 }
 
@@ -122,14 +129,14 @@ function is_everything_blank() {
 }
 
 function reset_search_terms() {
-  (<HTMLInputElement>(document.getElementById("search_flight"))).value = "";
-  (<HTMLInputElement>(document.getElementById("search_depa"))).value = "";
-  (<HTMLInputElement>(document.getElementById("search_dsta"))).value = "";
-  (<HTMLInputElement>(document.getElementById("search_freq"))).value = "";
-  (<HTMLInputElement>(document.getElementById("search_msglbl"))).value = "";
-  (<HTMLInputElement>(document.getElementById("search_msgno"))).value = "";
-  (<HTMLInputElement>(document.getElementById("search_tail"))).value = "";
-  (<HTMLInputElement>(document.getElementById("search_text"))).value = "";
+  (<HTMLInputElement>document.getElementById("search_flight")).value = "";
+  (<HTMLInputElement>document.getElementById("search_depa")).value = "";
+  (<HTMLInputElement>document.getElementById("search_dsta")).value = "";
+  (<HTMLInputElement>document.getElementById("search_freq")).value = "";
+  (<HTMLInputElement>document.getElementById("search_msglbl")).value = "";
+  (<HTMLInputElement>document.getElementById("search_msgno")).value = "";
+  (<HTMLInputElement>document.getElementById("search_tail")).value = "";
+  (<HTMLInputElement>document.getElementById("search_text")).value = "";
 }
 
 // In order to help DB responsiveness, I want to make sure the user has quit typing before emitting a query
@@ -156,7 +163,7 @@ async function delay_query(initial_query: current_search) {
       // Give feedback to the user while the search is going on
       $("#log").html("Searching...");
       $("#num_results").html("");
-      search_database(current_search=current_search);
+      search_database((current_search = current_search));
     } else if (is_everything_blank()) {
       // Field is now blank, clear the page and reset status
       show_all = false;
@@ -308,7 +315,7 @@ function formatSizeUnits(bytes: number) {
 }
 
 function update_size() {
-  if(page_active && typeof db_size !== "undefined") {
+  if (page_active && typeof db_size !== "undefined") {
     $("#database").html(String(db_size.count).trim() + " rows");
     if (parseInt(db_size.size) > 0) {
       $("#size").html(formatSizeUnits(parseInt(db_size.size)));
@@ -317,15 +324,19 @@ function update_size() {
     }
   }
 }
-export function set_search_page_urls(documentPath: string, documentUrl: string) {
+export function set_search_page_urls(
+  documentPath: string,
+  documentUrl: string
+) {
   acars_path = documentPath;
   acars_url = documentUrl;
 }
 
-export function search_active(state=false) {
+export function search_active(state = false) {
   page_active = state;
 
-  if(page_active) { // page is active
+  if (page_active) {
+    // page is active
     set_html();
     update_size();
     $("#log").html(""); // show the messages we've received
@@ -335,7 +346,7 @@ export function search_active(state=false) {
 
 function set_html() {
   $("#right").html(
-  `          <div class="fixed_results">
+    `          <div class="fixed_results">
   <p><a href="javascript:showall()" class="spread_text">Most Recent Messages</a></p>
   <table class="search">
     <tr>
@@ -429,7 +440,8 @@ function set_html() {
 
   </table>
   <div class="row" id="num_results"></div>
-</div> <!-- /fixed results -->`);
+</div> <!-- /fixed results -->`
+  );
 
   $("#page_name").html("Search received messages");
 }

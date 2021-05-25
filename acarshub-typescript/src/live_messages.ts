@@ -19,10 +19,10 @@ let filtered_messages: number = 0;
 let received_messages: number = 0;
 declare const window: any;
 import { MessageDecoder } from "@airframes/acars-decoder/dist/MessageDecoder";
-import Cookies from "js-cookie"
-import { display_messages } from "./html_generator.js"
-import { match_alert, sound_alert } from "./alerts.js"
-import { html_msg, acars_msg, labels, system_status } from "./interfaces.js"
+import Cookies from "js-cookie";
+import { display_messages } from "./html_generator.js";
+import { match_alert, sound_alert } from "./alerts.js";
+import { html_msg, acars_msg, labels, system_status } from "./interfaces.js";
 
 const md = new MessageDecoder();
 
@@ -38,10 +38,10 @@ msgs_received.unshift = function () {
 
 // Function to increment the counter of filtered messages
 
-function increment_filtered(page_refresh=false) {
+function increment_filtered(page_refresh = false) {
   let id = document.getElementById("filteredmessages");
-  if(!page_refresh) filtered_messages++;
-  if(id !== null) {
+  if (!page_refresh) filtered_messages++;
+  if (id !== null) {
     id.innerHTML = "";
     let txt = document.createTextNode(String(filtered_messages));
     id.appendChild(txt);
@@ -50,10 +50,10 @@ function increment_filtered(page_refresh=false) {
 
 // Function to increment the counter of received messages
 
-function increment_received(page_refresh=false) {
+function increment_received(page_refresh = false) {
   let id = document.getElementById("receivedmessages");
-  if(!page_refresh) received_messages++;
-  if(id !== null) {
+  if (!page_refresh) received_messages++;
+  if (id !== null) {
     id.innerHTML = "";
     let txt = document.createTextNode(String(received_messages));
     id.appendChild(txt);
@@ -62,9 +62,10 @@ function increment_received(page_refresh=false) {
 
 function show_labels() {
   let label_html = "";
-  if(typeof filter_labels !== "undefined" && page_active) {
+  if (typeof filter_labels !== "undefined" && page_active) {
     for (let key in filter_labels.labels) {
-      let link_class: string = exclude.indexOf(key.toString()) !== -1 ? "red" : "sidebar_link";
+      let link_class: string =
+        exclude.indexOf(key.toString()) !== -1 ? "red" : "sidebar_link";
       label_html += `<a href="javascript:toggle_label('${key.toString()}');" id="${key}" class="${link_class}">${key} ${
         filter_labels.labels[key].name
       }</a><br>`;
@@ -90,15 +91,21 @@ window.handle_radio = function (element_id: string, uid: string) {
     all_tabs[i].classList.remove("checked");
   }
 
-  let all_tabinator: NodeListOf<HTMLInputElement> = document.querySelectorAll(`input.tabs_${uid}`); // grab the message divs in that tab group and remove check
+  let all_tabinator: NodeListOf<HTMLInputElement> = document.querySelectorAll(
+    `input.tabs_${uid}`
+  ); // grab the message divs in that tab group and remove check
   for (let i = 0; i < all_tabinator.length; i++) {
     all_tabinator[i].checked = false;
   }
 
-  let element = (<HTMLInputElement>document.getElementById(`message_${uid}_${element_id}`)); // grab and tag the message that is checked
+  let element = <HTMLInputElement>(
+    document.getElementById(`message_${uid}_${element_id}`)
+  ); // grab and tag the message that is checked
   element.classList.add("checked");
 
-  let tab_element = (<HTMLInputElement>document.getElementById(`tab${element_id}_${uid}`)); // grab and tag the tag that is checked
+  let tab_element = <HTMLInputElement>(
+    document.getElementById(`tab${element_id}_${uid}`)
+  ); // grab and tag the tag that is checked
   tab_element.checked = true;
 
   // Now we need to update the nav arrow links
@@ -111,14 +118,21 @@ window.handle_radio = function (element_id: string, uid: string) {
       msgs_received[i].length > 1 &&
       msgs_received[i][msgs_received[i].length - 1].uid == uid
     ) {
-      let active_tab = String(msgs_received[i].findIndex((sub_msg: acars_msg) => {
-        console.log(sub_msg.uid, typeof sub_msg.uid, element_id, typeof element_id);
-        if (sub_msg.uid === element_id) {
-          return true;
-        }
-      }));
+      let active_tab = String(
+        msgs_received[i].findIndex((sub_msg: acars_msg) => {
+          console.log(
+            sub_msg.uid,
+            typeof sub_msg.uid,
+            element_id,
+            typeof element_id
+          );
+          if (sub_msg.uid === element_id) {
+            return true;
+          }
+        })
+      );
 
-      console.log(active_tab)
+      console.log(active_tab);
       active_tab = active_tab === "-1" ? "0" : active_tab;
 
       if (active_tab === "0") {
@@ -136,13 +150,17 @@ window.handle_radio = function (element_id: string, uid: string) {
     }
   }
 
-  let curlink_previous = (<HTMLInputElement>document.getElementById(`tab${uid}_previous`));
+  let curlink_previous = <HTMLInputElement>(
+    document.getElementById(`tab${uid}_previous`)
+  );
   curlink_previous.setAttribute(
     "href",
     `javascript:handle_radio("${previous_tab}", "${uid}")`
   );
 
-  let curlink_next = (<HTMLInputElement>document.getElementById(`tab${uid}_next`));
+  let curlink_next = <HTMLInputElement>(
+    document.getElementById(`tab${uid}_next`)
+  );
   curlink_next.setAttribute(
     "href",
     `javascript:handle_radio("${next_tab}", "${uid}")`
@@ -178,14 +196,14 @@ window.pause_updates = function () {
   if (pause) {
     pause = false;
     let id = document.getElementById("pause_updates");
-    if(id !== null) {
+    if (id !== null) {
       id.innerHTML = "";
       let txt = document.createTextNode("Pause updates");
       id.appendChild(txt);
     }
 
     let id_filtered = document.getElementById("received");
-    if(id_filtered !== null) {
+    if (id_filtered !== null) {
       id_filtered.innerHTML = "";
       let txt_filtered = document.createTextNode("Received messages");
       id_filtered.appendChild(txt_filtered);
@@ -196,13 +214,12 @@ window.pause_updates = function () {
     pause = true;
 
     let id = document.getElementById("pause_updates");
-    if(id !== null)
-      id.innerHTML = '<span class="red">Unpause Updates</span>';
+    if (id !== null) id.innerHTML = '<span class="red">Unpause Updates</span>';
     //let txt = document.createTextNode("Unpause Updates");
     //id.appendChild(txt);
 
     let id_filtered = document.getElementById("received");
-    if(id_filtered !== null) {
+    if (id_filtered !== null) {
       id_filtered.innerHTML = "";
       let txt_filtered = document.createTextNode("Received messages (paused)");
       id_filtered.appendChild(txt_filtered);
@@ -213,32 +230,43 @@ window.pause_updates = function () {
 // function to toggle the filtering of empty/no text messages
 
 window.filter_notext = function () {
-  if(page_active) {
+  if (page_active) {
     if (text_filter) {
       text_filter = false;
-      (<HTMLInputElement>document.getElementById("fixed_menu")).classList.remove("fixed_menu");
-      (<HTMLInputElement>document.getElementById("fixed_menu")).classList.add("fixed_menu_short");
+      (<HTMLInputElement>(
+        document.getElementById("fixed_menu")
+      )).classList.remove("fixed_menu");
+      (<HTMLInputElement>document.getElementById("fixed_menu")).classList.add(
+        "fixed_menu_short"
+      );
 
       let id = document.getElementById("filter_notext");
-      if(id !== null) id.innerHTML = "Hide Empty Messages";
+      if (id !== null) id.innerHTML = "Hide Empty Messages";
       Cookies.set("filter", "false", { expires: 365 });
       filtered_messages = 0;
 
       $("#filtered").html("");
     } else {
       text_filter = true;
-      (<HTMLInputElement>document.getElementById("fixed_menu")).classList.remove("fixed_menu_short");
-      (<HTMLInputElement>document.getElementById("fixed_menu")).classList.add("fixed_menu");
+      (<HTMLInputElement>(
+        document.getElementById("fixed_menu")
+      )).classList.remove("fixed_menu_short");
+      (<HTMLInputElement>document.getElementById("fixed_menu")).classList.add(
+        "fixed_menu"
+      );
 
       $("#filtered").html(
         'Filtered Messages:&emsp;&ensp;<strong><span id="filteredmessages"></span></strong>'
       );
-      let id_filtered = (<HTMLInputElement>document.getElementById("filteredmessages"));
+      let id_filtered = <HTMLInputElement>(
+        document.getElementById("filteredmessages")
+      );
       let txt_filtered = document.createTextNode(String(filtered_messages));
       id_filtered.appendChild(txt_filtered);
 
       let id = document.getElementById("filter_notext");
-      if(id !== null) id.innerHTML = '<span class="red">Show All Messages</span>';
+      if (id !== null)
+        id.innerHTML = '<span class="red">Show All Messages</span>';
       Cookies.set("filter", "true", { expires: 365 });
     }
   }
@@ -250,8 +278,12 @@ window.filter_notext = function () {
 window.toggle_label = function (key: string) {
   if (exclude.indexOf(key.toString()) == -1) {
     exclude.push(key.toString());
-    (<HTMLInputElement>document.getElementById(key.toString())).classList.remove("sidebar_link");
-    (<HTMLInputElement>document.getElementById(key.toString())).classList.add("red");
+    (<HTMLInputElement>(
+      document.getElementById(key.toString())
+    )).classList.remove("sidebar_link");
+    (<HTMLInputElement>document.getElementById(key.toString())).classList.add(
+      "red"
+    );
     let exclude_string = "";
     for (let i = 0; i < exclude.length; i++) {
       exclude_string += exclude[i] + " ";
@@ -260,8 +292,12 @@ window.toggle_label = function (key: string) {
     Cookies.set("exclude", exclude_string.trim(), { expires: 365 });
   } else {
     let exclude_string = "";
-    (<HTMLInputElement>document.getElementById(key.toString())).classList.remove("red");
-    (<HTMLInputElement>document.getElementById(key.toString())).classList.add("sidebar_link");
+    (<HTMLInputElement>(
+      document.getElementById(key.toString())
+    )).classList.remove("red");
+    (<HTMLInputElement>document.getElementById(key.toString())).classList.add(
+      "sidebar_link"
+    );
     for (let i = 0; i < exclude.length; i++) {
       if (exclude[i] != key.toString()) exclude_string += exclude[i] + " ";
     }
@@ -272,7 +308,8 @@ window.toggle_label = function (key: string) {
 
 // Code that is ran when the page has loaded
 
-export function live_messages() { // Document on ready new syntax....or something. Passing a function directly to jquery
+export function live_messages() {
+  // Document on ready new syntax....or something. Passing a function directly to jquery
 
   // Grab the current cookie value for message filtering
   // If the cookie is found with a value we run filter_notext to set the proper visual elements/variables for the rest of the functions
@@ -303,10 +340,11 @@ export function live_messages() { // Document on ready new syntax....or somethin
 
 // if the live message page is active we'll toggle the display of everything here
 
-export function live_message_active(state=false) {
+export function live_message_active(state = false) {
   page_active = state;
 
-  if(page_active) { // page is active
+  if (page_active) {
+    // page is active
     set_html();
     increment_received(true); // show the received msgs
     increment_filtered(true); // show the filtered msgs
@@ -322,7 +360,7 @@ export function set_live_page_urls(documentPath: string, documentUrl: string) {
 
 function set_html() {
   $("#right").html(
-  `<div class="fixed_results">
+    `<div class="fixed_results">
   <p><a href="javascript:pause_updates()" id="pause_updates" class="spread_text">Pause updates</a></p>
   <a href="javascript:filter_notext()" id="filter_notext" class="spread_text">Filter out "No Text" messages</a>
   <hr>
@@ -340,7 +378,8 @@ function set_html() {
         </div>
       </div>
     </div>
-  </div>")`);
+  </div>")`
+  );
 
   $("#page_name").html("Messages will appear here, newest first:");
 }
@@ -383,7 +422,8 @@ export function new_acars_message(msg: html_msg) {
         msg.msghtml.matched = true;
         msg.msghtml.matched_text = matched.text !== null ? matched.text : [];
         msg.msghtml.matched_icao = matched.icao !== null ? matched.icao : [];
-        msg.msghtml.matched_flight = matched.flight !== null ? matched.flight : [];
+        msg.msghtml.matched_flight =
+          matched.flight !== null ? matched.flight : [];
         msg.msghtml.matched_tail = matched.tail !== null ? matched.tail : [];
       }
 
@@ -512,10 +552,11 @@ export function new_acars_message(msg: html_msg) {
                 (!msgs_received[index_new][j].hasOwnProperty("alt") &&
                   !msg.msghtml.hasOwnProperty("alt")))
             ) {
-              msgs_received[index_new][j]["timestamp"] =
-                msg.msghtml.timestamp;
+              msgs_received[index_new][j]["timestamp"] = msg.msghtml.timestamp;
               if (msgs_received[index_new][j].hasOwnProperty("duplicates")) {
-                msgs_received[index_new][j]["duplicates"] = String(Number(msgs_received[index_new][j]["duplicates"]) + 1);
+                msgs_received[index_new][j]["duplicates"] = String(
+                  Number(msgs_received[index_new][j]["duplicates"]) + 1
+                );
               } else {
                 msgs_received[index_new][j]["duplicates"] = "1";
               }
@@ -526,10 +567,11 @@ export function new_acars_message(msg: html_msg) {
               msgs_received[index_new][j]["text"] == msg.msghtml["text"]
             ) {
               // it's the same message
-              msgs_received[index_new][j]["timestamp"] =
-                msg.msghtml.timestamp;
+              msgs_received[index_new][j]["timestamp"] = msg.msghtml.timestamp;
               if (msgs_received[index_new][j].hasOwnProperty("duplicates")) {
-                msgs_received[index_new][j]["duplicates"] = String(Number(msgs_received[index_new][j]["duplicates"]) + 1);
+                msgs_received[index_new][j]["duplicates"] = String(
+                  Number(msgs_received[index_new][j]["duplicates"]) + 1
+                );
               } else {
                 msgs_received[index_new][j]["duplicates"] = "1";
               }
@@ -541,12 +583,13 @@ export function new_acars_message(msg: html_msg) {
               msgs_received[index_new][j].hasOwnProperty("msgno") &&
               msg.msghtml.timestamp - msgs_received[index_new][j].timestamp <
                 8.0 && // We'll assume the message is not a multi-part message if the time from the new message is too great from the rest of the group
-              (typeof msg.msghtml.msgno !== "undefined" && ((msg.msghtml.msgno.charAt(0) ==
+              typeof msg.msghtml.msgno !== "undefined" &&
+              ((msg.msghtml.msgno.charAt(0) ==
                 msgs_received[index_new][j].msgno!.charAt(0) && // Next two lines match on AzzA pattern
                 msg.msghtml.msgno.charAt(3) ==
                   msgs_received[index_new][j].msgno!.charAt(3)) ||
                 msg.msghtml.msgno.substring(0, 3) ==
-                  msgs_received[index_new][j].msgno!.substring(0, 3)))
+                  msgs_received[index_new][j].msgno!.substring(0, 3))
             ) {
               // This check matches if the group is a AAAz counter
               // We have a multi part message. Now we need to see if it is a dup
@@ -555,8 +598,8 @@ export function new_acars_message(msg: html_msg) {
 
               if (msgs_received[index_new][j].hasOwnProperty("msgno_parts")) {
                 // Now we'll see if the multi-part message is a dup
-                let split = msgs_received[index_new][j].msgno_parts!
-                  .toString()
+                let split = msgs_received[index_new][j]
+                  .msgno_parts!.toString()
                   .split(" "); // format of stored parts is "MSGID MSGID2" etc
 
                 for (let a = 0; a < split.length; a++) {
@@ -567,8 +610,7 @@ export function new_acars_message(msg: html_msg) {
 
                     if (a == 0 && split[a].length == 4) {
                       // Match, first element of the array with no previous matches so we don't want a leading space
-                      msgs_received[index_new][j].msgno_parts =
-                        split[a] + "x2";
+                      msgs_received[index_new][j].msgno_parts = split[a] + "x2";
                     } else if (split[a].length == 4) {
                       // Match, not first element, and doesn't have previous matches
                       msgs_received[index_new][j].msgno_parts +=
@@ -589,15 +631,13 @@ export function new_acars_message(msg: html_msg) {
                     if (a == 0) {
                       msgs_received[index_new][j].msgno_parts = split[a];
                     } else {
-                      msgs_received[index_new][j].msgno_parts +=
-                        " " + split[a];
+                      msgs_received[index_new][j].msgno_parts += " " + split[a];
                     }
                   }
                 }
               }
 
-              msgs_received[index_new][j]["timestamp"] =
-                msg.msghtml.timestamp;
+              msgs_received[index_new][j]["timestamp"] = msg.msghtml.timestamp;
 
               if (add_multi) {
                 // Multi-part message has been found
@@ -611,9 +651,7 @@ export function new_acars_message(msg: html_msg) {
                   // If the new message has a text field but the parent does not, add the new text to the parent
                   msgs_received[index_new][j]["text"] = msg.msghtml.text;
 
-                if (
-                  msgs_received[index_new][j].hasOwnProperty("msgno_parts")
-                ) {
+                if (msgs_received[index_new][j].hasOwnProperty("msgno_parts")) {
                   // If the new message is multi, with no dupes found we need to append the msg ID to the found IDs
                   msgs_received[index_new][j]["msgno_parts"] +=
                     " " + msg.msghtml.msgno;

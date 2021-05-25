@@ -1,11 +1,13 @@
 repos:
 -   repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v2.3.0
-    exclude: ^(rootfs/webapp/static/css/other/|acars-decoder-typescript/|rootfs/webapp/static/js/other/)
     hooks:
     -   id: check-yaml
+        exclude: ^(rootfs/webapp/static/css/other/|acars-decoder-typescript/|rootfs/webapp/static/js/other/)
     -   id: end-of-file-fixer
+        exclude: ^(rootfs/webapp/static/css/other/|acars-decoder-typescript/|rootfs/webapp/static/js/other/)
     -   id: trailing-whitespace
+        exclude: ^(rootfs/webapp/static/css/other/|acars-decoder-typescript/|rootfs/webapp/static/js/other/)
 -   repo: https://github.com/psf/black
     rev: 19.3b0
     hooks:
@@ -14,19 +16,24 @@ repos:
     rev: 'v2.3.0'  # Use the sha / tag you want to point at
     hooks:
     -   id: prettier
-        types: [javascript]
+        files: \.[jt]sx?$  # *.js, *.jsx, *.ts and *.tsx
+        types: [file]
         additional_dependencies:
         -   prettier@2.1.2
+        -   '@typescript-eslint/eslint-plugin'
         exclude: ^(rootfs/webapp/static/css/other/|acars-decoder-typescript/|rootfs/webapp/static/js/other/)
 -   repo: https://github.com/pre-commit/mirrors-eslint
     rev: v7.26.0
     hooks:
     -   id: eslint
-        exclude: ^acars-decoder-typescript/
+        files: \.[j]sx?$  # *.js, *.jsx, *.ts and *.tsx
+        types: [file]
+        exclude: ^(rootfs/webapp/static/css/other/|acars-decoder-typescript/|rootfs/webapp/static/js/other/)
         additional_dependencies:
-            -   eslint@4.15.0
+            -   eslint@7.27.0
             -   eslint-config-google@0.7.1
             -   babel-eslint@6.1.2
+#           -   '@typescript-eslint/eslint-plugin'
 # -   repo: https://github.com/pre-commit/mirrors-csslint
 #     rev: 'v1.0.5'  # Use the sha / tag you want to point at
 #     hooks:

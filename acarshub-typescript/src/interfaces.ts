@@ -1,166 +1,165 @@
 export interface database_size {
-  size: string,
-  count: number
+  size: string;
+  count: number;
 }
 
 export interface system_status {
   status: {
-    error_state: boolean
-    decoders: status_decoder,
-    servers: status_server,
-    feeders: status_decoder,
-    global: status_global,
-    stats: status_decoder
-  }
+    error_state: boolean;
+    decoders: status_decoder;
+    servers: status_server;
+    feeders: status_decoder;
+    global: status_global;
+    stats: status_decoder;
+  };
 }
 
 export interface status_server {
   [index: string]: {
-    Status: string
-    Web: string
-  }
+    Status: string;
+    Web: string;
+  };
 }
 
 export interface status_decoder {
   [index: string]: {
-    Status: string
-  }
+    Status: string;
+  };
 }
 
 export interface status_global {
   [index: string]: {
-    Status: string,
-    Count: number
-  }
+    Status: string;
+    Count: number;
+  };
 }
 
 export interface terms {
-  terms: string[]
+  terms: string[];
 }
 
 export interface decoders {
-  acars: boolean,
-  vdlm: boolean
+  acars: boolean;
+  vdlm: boolean;
 }
 
 export interface signal {
   levels: {
     [index: number]: {
-      count: number
-      id: number
-      level: number
-    }
-  }
+      count: number;
+      id: number;
+      level: number;
+    };
+  };
 }
 
 export interface alert_term {
   data: {
     [index: number]: {
-      count: number,
-      id: number,
-      term: string
-    }
-  }
+      count: number;
+      id: number;
+      term: string;
+    };
+  };
 }
 
 export interface signal_freq_data {
-  freqs: Array<signal_data>
+  freqs: Array<signal_data>;
 }
 
 interface signal_data {
-  freq_type: string,
-  freq: string,
-  count: number
+  freq_type: string;
+  freq: string;
+  count: number;
 }
 
 export interface signal_count_data {
   count: {
-    non_empty_total: number,
-    non_empty_errors: number,
-    empty_total: number,
-    empty_errors: number
-  }
+    non_empty_total: number;
+    non_empty_errors: number;
+    empty_total: number;
+    empty_errors: number;
+  };
 }
 
 export interface current_search {
-  flight: string,
-  depa: string,
-  dsta: string,
-  freq: string,
-  label: string,
-  msgno: string,
-  tail: string,
-  msg_text: string,
+  flight: string;
+  depa: string;
+  dsta: string;
+  freq: string;
+  label: string;
+  msgno: string;
+  tail: string;
+  msg_text: string;
 }
 
 export interface labels {
   [index: string]: {
     [index: string]: {
-      name: string
-    }
-  }
+      name: string;
+    };
+  };
 }
 
 export interface html_msg {
-    msghtml: acars_msg,
-    loading?: boolean,
-  }
-
-export interface search_html_msg {
-  msghtml: acars_msg[],
-  query_time: number,
-  num_results: number
+  msghtml: acars_msg;
+  loading?: boolean;
 }
 
+export interface search_html_msg {
+  msghtml: acars_msg[];
+  query_time: number;
+  num_results: number;
+}
 
 export interface acars_msg {
-    timestamp: number,
-    station_id: string
-    toaddr?: string,
-    fromaddr?: string,
-    depa?: string,
-    dsta?: string,
-    eta?: string,
-    gtout?: string,
-    gtin?: string,
-    wloff?: string,
-    wlin?: string,
-    lat?: number,
-    lon?: number,
-    alt?: number,
-    text?: string,
-    tail?: string,
-    flight?: string,
-    icao?: number,
-    freq?: number,
-    ack?: string,
-    mode?: string,
-    label?: string,
-    block_id?: string,
-    msgno?: string,
-    is_response?: number,
-    is_onground?: number,
-    error?: number,
-    libacars?: any,
-    level?: number,
-    matched?: boolean,  // This line and below are custom parameters injected by javascript or from the backend
-    matched_text?: string[],
-    matched_icao?: string[],
-    matched_flight?: string[],
-    matched_tail?: string[],
-    uid: string,
-    decodedText?: any, // no type for typescript acars decoder, so set to any
-    data?: string,
-    message_type: string,
-    msg_time?: number,
-    duplicates?: string,
-    msgno_parts?: string,
-    label_type?: string,
-    toaddr_decoded?: string,
-    toaddr_hex?: string,
-    fromaddr_hex?: string,
-    fromaddr_decoded?: string,
-    icao_url?: string,
-    icao_hex?: string,
-    decoded_msg?: string
+  timestamp: number;
+  station_id: string;
+  toaddr?: string;
+  fromaddr?: string;
+  depa?: string;
+  dsta?: string;
+  eta?: string;
+  gtout?: string;
+  gtin?: string;
+  wloff?: string;
+  wlin?: string;
+  lat?: number;
+  lon?: number;
+  alt?: number;
+  text?: string;
+  tail?: string;
+  flight?: string;
+  icao?: number;
+  freq?: number;
+  ack?: string;
+  mode?: string;
+  label?: string;
+  block_id?: string;
+  msgno?: string;
+  is_response?: number;
+  is_onground?: number;
+  error?: number;
+  libacars?: any;
+  level?: number;
+  matched?: boolean; // This line and below are custom parameters injected by javascript or from the backend
+  matched_text?: string[];
+  matched_icao?: string[];
+  matched_flight?: string[];
+  matched_tail?: string[];
+  uid: string;
+  decodedText?: any; // no type for typescript acars decoder, so set to any
+  data?: string;
+  message_type: string;
+  msg_time?: number;
+  duplicates?: string;
+  msgno_parts?: string;
+  label_type?: string;
+  toaddr_decoded?: string;
+  toaddr_hex?: string;
+  fromaddr_hex?: string;
+  fromaddr_decoded?: string;
+  icao_url?: string;
+  icao_hex?: string;
+  decoded_msg?: string;
 }

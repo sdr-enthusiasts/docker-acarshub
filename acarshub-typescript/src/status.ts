@@ -1,4 +1,9 @@
-import { status_decoder, status_global, status_server, system_status } from "./interfaces";
+import {
+  status_decoder,
+  status_global,
+  status_server,
+  system_status,
+} from "./interfaces";
 
 let acars_path = "";
 let acars_url = "";
@@ -6,17 +11,18 @@ let acars_url = "";
 let page_active = false;
 let current_status: system_status;
 
-export function status() { // Document on ready new syntax....or something. Passing a function directly to jquery
-};
+export function status() {
+  // Document on ready new syntax....or something. Passing a function directly to jquery
+}
 
 export function status_received(msg: system_status) {
   current_status = msg;
 
-  if(page_active) show_status();
+  if (page_active) show_status();
 }
 
 function show_status() {
-  if(typeof current_status !== "undefined") {
+  if (typeof current_status !== "undefined") {
     if (current_status.status.error_state == true) {
       $("#system_status").html(
         `<a href="javascript:new_page('Status')">System Status: <span class="red_body">Error</a></span>`
@@ -26,7 +32,7 @@ function show_status() {
         `<a href="javascript:new_page('Status')">System Status: <span class="green">Okay</a></span>`
       );
     }
-    console.log(current_status)
+    console.log(current_status);
     $("#log").html(
       decode_status(
         current_status.status.error_state,
@@ -39,7 +45,14 @@ function show_status() {
     );
   }
 }
-function decode_status(status: boolean, decoders: status_decoder, servers: status_server, feeders: status_decoder, receivers: status_global, stats: status_decoder) {
+function decode_status(
+  status: boolean,
+  decoders: status_decoder,
+  servers: status_server,
+  feeders: status_decoder,
+  receivers: status_global,
+  stats: status_decoder
+) {
   let html_output = "<h2>ACARS Hub System Status</h2>";
   const keys_decoder = Object.keys(decoders);
   const keys_servers = Object.keys(servers);
@@ -113,23 +126,28 @@ function decode_status(status: boolean, decoders: status_decoder, servers: statu
   return html_output;
 }
 
-export function status_active(state=false) {
+export function status_active(state = false) {
   page_active = state;
-  if(page_active) { // page is active
+  if (page_active) {
+    // page is active
     set_html();
     show_status(); // show the messages we've received
   }
 }
 
-export function set_status_page_urls(documentPath: string, documentUrl: string) {
+export function set_status_page_urls(
+  documentPath: string,
+  documentUrl: string
+) {
   acars_path = documentPath;
   acars_url = documentUrl;
 }
 
 function set_html() {
   $("#right").html(
-  `<div class="fixed_results">
-</div>`);
+    `<div class="fixed_results">
+</div>`
+  );
 
   $("#page_name").html("");
   $("#log").html("");

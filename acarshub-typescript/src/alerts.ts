@@ -1,16 +1,16 @@
-import Cookies from "js-cookie"
+import Cookies from "js-cookie";
 import { display_messages } from "./html_generator.js";
 import { alert_term_query, alert_text_update } from "./index.js";
-import { html_msg, terms } from "./interfaces.js"
+import { html_msg, terms } from "./interfaces.js";
 
 declare const window: any;
 
 let alerts: number = 0;
 let alert_text: string[] = [];
 let alert_callsigns: string[] = [];
-let alert_tail:string[] = [];
-let alert_icao:string[] = [];
-let msgs_received:any[] = [];
+let alert_tail: string[] = [];
+let alert_icao: string[] = [];
+let msgs_received: any[] = [];
 let acars_path: string = "";
 let acars_url: string = "";
 let page_active: boolean = false;
@@ -34,7 +34,9 @@ let default_text_values: string[] = [
   "red coat",
 ];
 
-let alert_sound: HTMLAudioElement = new Audio(`${acars_url}static/sounds/alert.mp3`);
+let alert_sound: HTMLAudioElement = new Audio(
+  `${acars_url}static/sounds/alert.mp3`
+);
 let play_sound: boolean = false;
 
 msgs_received.unshift = function () {
@@ -44,19 +46,22 @@ msgs_received.unshift = function () {
   return Array.prototype.unshift.apply(this, arguments as any);
 };
 
-export function alert() { // Document on ready new syntax....or something. Passing a function directly to jquery
+export function alert() {
+  // Document on ready new syntax....or something. Passing a function directly to jquery
   // Update the cookies so the expiration date pushes out in to the future
   // Also sets all of the user saved prefs
   onInit();
   alert_term_query(alert_icao, alert_callsigns, alert_tail);
-};
+}
 
 export function alerts_terms(msg: terms) {
   alert_text = msg.terms;
   if (page_active) {
-    (<HTMLInputElement>document.getElementById("alert_text")).value = (<HTMLInputElement>document.getElementById(
-      "alert_text"
-    )).value = combineArray(alert_text).toUpperCase();
+    (<HTMLInputElement>document.getElementById("alert_text")).value = (<
+      HTMLInputElement
+    >document.getElementById("alert_text")).value = combineArray(
+      alert_text
+    ).toUpperCase();
   }
 }
 
@@ -69,9 +74,9 @@ export function alerts_acars_message(msg: html_msg) {
     msg.msghtml.matched_flight = matched.flight !== null ? matched.flight : [];
     msg.msghtml.matched_tail = matched.tail !== null ? matched.tail : [];
     msgs_received.unshift([msg.msghtml]);
-    if(page_active) {
+    if (page_active) {
       $("#log").html(display_messages(msgs_received));
-    } else if(matched.was_found && msg.loading != true) {
+    } else if (matched.was_found && msg.loading != true) {
       alerts += 1;
       updateAlertCounter();
       sound_alert();
@@ -85,8 +90,12 @@ export function updateAlertCounter() {
 }
 
 window.updateAlerts = function () {
-  if ((<HTMLInputElement>document.getElementById("alert_text")).value.length > 0) {
-    let split = (<HTMLInputElement>document.getElementById("alert_text")).value.split(",");
+  if (
+    (<HTMLInputElement>document.getElementById("alert_text")).value.length > 0
+  ) {
+    let split = (<HTMLInputElement>(
+      document.getElementById("alert_text")
+    )).value.split(",");
     alert_text = [];
     for (let i = 0; i < split.length; i++) {
       if (
@@ -99,8 +108,13 @@ window.updateAlerts = function () {
     alert_text = [];
   }
 
-  if ((<HTMLInputElement>document.getElementById("alert_callsigns")).value.length > 0) {
-    let split = (<HTMLInputElement>document.getElementById("alert_callsigns")).value.split(",");
+  if (
+    (<HTMLInputElement>document.getElementById("alert_callsigns")).value
+      .length > 0
+  ) {
+    let split = (<HTMLInputElement>(
+      document.getElementById("alert_callsigns")
+    )).value.split(",");
     alert_callsigns = [];
     for (let i = 0; i < split.length; i++) {
       if (
@@ -113,8 +127,12 @@ window.updateAlerts = function () {
     alert_callsigns = [];
   }
 
-  if ((<HTMLInputElement>document.getElementById("alert_tail")).value.length > 0) {
-    let split = (<HTMLInputElement>document.getElementById("alert_tail")).value.split(",");
+  if (
+    (<HTMLInputElement>document.getElementById("alert_tail")).value.length > 0
+  ) {
+    let split = (<HTMLInputElement>(
+      document.getElementById("alert_tail")
+    )).value.split(",");
     alert_tail = [];
     for (let i = 0; i < split.length; i++) {
       if (
@@ -127,8 +145,12 @@ window.updateAlerts = function () {
     alert_tail = [];
   }
 
-  if ((<HTMLInputElement>document.getElementById("alert_icao")).value.length > 0) {
-    let split = (<HTMLInputElement>document.getElementById("alert_icao")).value.split(",");
+  if (
+    (<HTMLInputElement>document.getElementById("alert_icao")).value.length > 0
+  ) {
+    let split = (<HTMLInputElement>(
+      document.getElementById("alert_icao")
+    )).value.split(",");
     alert_icao = [];
     for (let i = 0; i < split.length; i++) {
       if (
@@ -141,18 +163,26 @@ window.updateAlerts = function () {
     alert_icao = [];
   }
 
-  (<HTMLInputElement>document.getElementById("alert_text")).value = (<HTMLInputElement>document.getElementById(
-    "alert_text"
-  )).value = combineArray(alert_text).toUpperCase();
-  (<HTMLInputElement>document.getElementById("alert_callsigns")).value = (<HTMLInputElement>document.getElementById(
-    "alert_callsigns"
-  )).value = combineArray(alert_callsigns).toUpperCase();
-  (<HTMLInputElement>document.getElementById("alert_tail")).value = (<HTMLInputElement>document.getElementById(
-    "alert_tail"
-  )).value = combineArray(alert_tail).toUpperCase();
-  (<HTMLInputElement>document.getElementById("alert_icao")).value = (<HTMLInputElement>document.getElementById(
-    "alert_icao"
-  )).value = combineArray(alert_icao).toUpperCase();
+  (<HTMLInputElement>document.getElementById("alert_text")).value = (<
+    HTMLInputElement
+  >document.getElementById("alert_text")).value = combineArray(
+    alert_text
+  ).toUpperCase();
+  (<HTMLInputElement>document.getElementById("alert_callsigns")).value = (<
+    HTMLInputElement
+  >document.getElementById("alert_callsigns")).value = combineArray(
+    alert_callsigns
+  ).toUpperCase();
+  (<HTMLInputElement>document.getElementById("alert_tail")).value = (<
+    HTMLInputElement
+  >document.getElementById("alert_tail")).value = combineArray(
+    alert_tail
+  ).toUpperCase();
+  (<HTMLInputElement>document.getElementById("alert_icao")).value = (<
+    HTMLInputElement
+  >document.getElementById("alert_icao")).value = combineArray(
+    alert_icao
+  ).toUpperCase();
 
   alert_text_update(alert_text);
 
@@ -162,7 +192,7 @@ window.updateAlerts = function () {
   });
   Cookies.set("alert_tail", combineArray(alert_tail), { expires: 365 });
   Cookies.set("alert_icao", combineArray(alert_icao), { expires: 365 });
-}
+};
 
 function onInit() {
   alerts = Cookies.get("alert_unread")
@@ -187,7 +217,8 @@ function onInit() {
   // }
 
   if (
-    Cookies.get("alert_callsigns") && Cookies.get("alert_callsigns")!.length > 0
+    Cookies.get("alert_callsigns") &&
+    Cookies.get("alert_callsigns")!.length > 0
   ) {
     let split = Cookies.get("alert_callsigns")!.split(",");
     for (let i = 0; i < split.length; i++) {
@@ -260,7 +291,10 @@ export function match_alert(msg: html_msg) {
   let matched_icao = [];
   let matched_text = [];
 
-  if (msg.msghtml.hasOwnProperty("text") && typeof msg.msghtml.text !== "undefined") {
+  if (
+    msg.msghtml.hasOwnProperty("text") &&
+    typeof msg.msghtml.text !== "undefined"
+  ) {
     for (let i = 0; i < alert_text.length; i++) {
       if (
         msg.msghtml.text
@@ -273,7 +307,10 @@ export function match_alert(msg: html_msg) {
     }
   }
 
-  if (msg.msghtml.hasOwnProperty("flight") && typeof msg.msghtml.flight !== "undefined") {
+  if (
+    msg.msghtml.hasOwnProperty("flight") &&
+    typeof msg.msghtml.flight !== "undefined"
+  ) {
     for (let i = 0; i < alert_callsigns.length; i++) {
       if (
         msg.msghtml.flight
@@ -286,7 +323,10 @@ export function match_alert(msg: html_msg) {
     }
   }
 
-  if (msg.msghtml.hasOwnProperty("tail") && typeof msg.msghtml.tail !== "undefined") {
+  if (
+    msg.msghtml.hasOwnProperty("tail") &&
+    typeof msg.msghtml.tail !== "undefined"
+  ) {
     for (let i = 0; i < alert_tail.length; i++) {
       if (
         msg.msghtml.tail.toUpperCase().includes(alert_tail[i].toUpperCase())
@@ -297,14 +337,18 @@ export function match_alert(msg: html_msg) {
     }
   }
 
-  if (msg.msghtml.hasOwnProperty("icao") && typeof msg.msghtml.icao !== "undefined") {
+  if (
+    msg.msghtml.hasOwnProperty("icao") &&
+    typeof msg.msghtml.icao !== "undefined"
+  ) {
     for (let i = 0; i < alert_icao.length; i++) {
       if (
         msg.msghtml.icao
           .toString()
           .toUpperCase()
           .includes(alert_icao[i].toUpperCase()) ||
-        (msg.msghtml.hasOwnProperty("icao_hex") && typeof msg.msghtml.icao_hex !== "undefined" &&
+        (msg.msghtml.hasOwnProperty("icao_hex") &&
+          typeof msg.msghtml.icao_hex !== "undefined" &&
           msg.msghtml.icao_hex
             .toUpperCase()
             .includes(alert_icao[i].toUpperCase()))
@@ -324,7 +368,7 @@ export function match_alert(msg: html_msg) {
   };
 }
 
-window.default_alert_values = function() {
+window.default_alert_values = function () {
   let current = (<HTMLInputElement>document.getElementById("alert_text")).value;
 
   default_text_values.forEach((element) => {
@@ -334,19 +378,19 @@ window.default_alert_values = function() {
   });
   (<HTMLInputElement>document.getElementById("alert_text")).value = current;
   window.updateAlerts();
-}
+};
 
 export function toggle_playsound(loading = false) {
   if (play_sound) {
     let id = document.getElementById("playsound_link");
-    if(id !== null) {
+    if (id !== null) {
       id.innerHTML = "";
       let txt = document.createTextNode("Turn On Alert Sound");
       id.appendChild(txt);
     }
   } else {
     let id = document.getElementById("playsound_link");
-    if(id !== null) {
+    if (id !== null) {
       id.innerHTML = "";
       let txt = document.createTextNode("Turn Off Alert Sound");
       id.appendChild(txt);
@@ -370,10 +414,11 @@ export async function sound_alert() {
   }
 }
 
-export function alert_active(state=false) {
+export function alert_active(state = false) {
   page_active = state;
 
-  if(page_active) { // page is active
+  if (page_active) {
+    // page is active
     set_html();
     Cookies.set("alert_unread", "0", { expires: 365 });
 
@@ -381,16 +426,17 @@ export function alert_active(state=false) {
     play_sound = play_sound ? false : true;
     toggle_playsound(true);
 
-    (<HTMLInputElement>document.getElementById("alert_callsigns")).value = Cookies.get(
-      "alert_callsigns"
-    ) ||  "";
-    (<HTMLInputElement>document.getElementById("alert_tail")).value = Cookies.get("alert_tail")
-    ||  "";
-    (<HTMLInputElement>document.getElementById("alert_icao")).value = Cookies.get("alert_icao")
-    || "";
-    (<HTMLInputElement>document.getElementById("alert_text")).value = (<HTMLInputElement>document.getElementById(
-      "alert_text"
-    )).value = combineArray(alert_text).toUpperCase();
+    (<HTMLInputElement>document.getElementById("alert_callsigns")).value =
+      Cookies.get("alert_callsigns") || "";
+    (<HTMLInputElement>document.getElementById("alert_tail")).value =
+      Cookies.get("alert_tail") || "";
+    (<HTMLInputElement>document.getElementById("alert_icao")).value =
+      Cookies.get("alert_icao") || "";
+    (<HTMLInputElement>document.getElementById("alert_text")).value = (<
+      HTMLInputElement
+    >document.getElementById("alert_text")).value = combineArray(
+      alert_text
+    ).toUpperCase();
     $("#log").html(display_messages(msgs_received));
   }
 }
@@ -402,7 +448,7 @@ export function set_alert_page_urls(documentPath: string, documentUrl: string) {
 
 function set_html() {
   $("#right").html(
-  `      <div class="fixed_results">
+    `      <div class="fixed_results">
   <p><a href="javascript:toggle_playsound()" id="playsound_link" class="spread_text">Turn On Alert Sound</a></p>
   <span id="stat_menu">
     <label for="alert_text" class="menu_non_link">Text Field:</label><br />
@@ -416,7 +462,8 @@ function set_html() {
     <button type="submit" value="Submit" onclick="updateAlerts()">Update</button>
     <p><a href="javascript:default_alert_values()" class="spread_text">Default alert values</a></p>
   </span>
-</div>`);
+</div>`
+  );
 
   $("#page_name").html("");
   $("#log").html("");

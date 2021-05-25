@@ -1,9 +1,19 @@
 import { Chart } from "chart.js";
-import ChartDataLabels from 'chartjs-plugin-datalabels';
-import { updateAlertCounter } from "./alerts.js"
-import { generate_stat_submenu } from "./menu.js"
-import {signal_grab_freqs, signal_grab_message_count, signal_grab_updated_graphs} from "./index.js"
-import { alert_term, decoders, signal, signal_count_data, signal_freq_data } from "./interfaces.js";
+import ChartDataLabels from "chartjs-plugin-datalabels";
+import { updateAlertCounter } from "./alerts.js";
+import { generate_stat_submenu } from "./menu.js";
+import {
+  signal_grab_freqs,
+  signal_grab_message_count,
+  signal_grab_updated_graphs,
+} from "./index.js";
+import {
+  alert_term,
+  decoders,
+  signal,
+  signal_count_data,
+  signal_freq_data,
+} from "./interfaces.js";
 
 declare const window: any;
 let image_prefix: string = "";
@@ -23,7 +33,7 @@ let acars_on = false;
 let vdlm_on = false;
 
 function show_alert_chart() {
-  if(typeof alert_data !== "undefined") {
+  if (typeof alert_data !== "undefined") {
     let labels: string[] = [];
     let alert_chart_data: number[] = [];
     for (let i in alert_data.data) {
@@ -35,9 +45,13 @@ function show_alert_chart() {
     if (chart_alerts) {
       chart_alerts.destroy();
     }
-    const canvas_alerts: HTMLCanvasElement = <HTMLCanvasElement> document.getElementById('alertterms');
-    const ctx_alerts: CanvasRenderingContext2D = canvas_alerts.getContext('2d')!;
-    if(ctx_alerts != null) {
+    const canvas_alerts: HTMLCanvasElement = <HTMLCanvasElement>(
+      document.getElementById("alertterms")
+    );
+    const ctx_alerts: CanvasRenderingContext2D = canvas_alerts.getContext(
+      "2d"
+    )!;
+    if (ctx_alerts != null) {
       // @ts-expect-error
       let p = palette("tol", 12, 0, "").map(function (hex: any) {
         return "#" + hex;
@@ -85,7 +99,7 @@ function show_alert_chart() {
 }
 
 function show_signal_chart() {
-  if(typeof signal_data !== "undefined") {
+  if (typeof signal_data !== "undefined") {
     let input_labels: string[] = [];
     let input_data: number[] = [];
 
@@ -99,7 +113,10 @@ function show_signal_chart() {
     // really has been received with the newer, better signal levels
 
     for (let i in signal_data.levels) {
-      if (signal_data.levels[i].level != null && isFloat(signal_data.levels[i].level)) {
+      if (
+        signal_data.levels[i].level != null &&
+        isFloat(signal_data.levels[i].level)
+      ) {
         input_labels.push(`${signal_data.levels[i].level}`);
         input_data.push(signal_data.levels[i].count);
       }
@@ -108,9 +125,11 @@ function show_signal_chart() {
       chart_signals.destroy();
     }
 
-    const canvas: HTMLCanvasElement = <HTMLCanvasElement> document.getElementById('signallevels');
-    const ctx: CanvasRenderingContext2D = canvas.getContext('2d')!;
-    if(ctx != null) {
+    const canvas: HTMLCanvasElement = <HTMLCanvasElement>(
+      document.getElementById("signallevels")
+    );
+    const ctx: CanvasRenderingContext2D = canvas.getContext("2d")!;
+    if (ctx != null) {
       chart_signals = new Chart(ctx, {
         // The type of chart we want to create
         type: "line",
@@ -138,7 +157,7 @@ function show_signal_chart() {
 }
 
 function show_freqs() {
-  if(typeof freqs_data !== "undefined") {
+  if (typeof freqs_data !== "undefined") {
     let html: string = '<table class="search">';
     html +=
       '<thead><th><span class="menu_non_link">Frequency</span></th><th><span class="menu_non_link">Count</span></th><th><span class="menu_non_link">Type</span></th></thead>';
@@ -159,9 +178,12 @@ function show_freqs() {
 }
 
 function show_count() {
-  if(typeof count_data !== "undefined") {
+  if (typeof count_data !== "undefined") {
     let error: number = count_data.count.non_empty_errors;
-    let total: number = count_data.count.non_empty_total + count_data.count.empty_total + count_data.count.non_empty_errors;
+    let total: number =
+      count_data.count.non_empty_total +
+      count_data.count.empty_total +
+      count_data.count.non_empty_errors;
     let good_msg: number = count_data.count.non_empty_total - error;
 
     let empty_error: number = count_data.count.empty_errors;
@@ -181,15 +203,20 @@ function show_count() {
       empty_good + empty_error
     }</span></td><td><span class="menu_non_link">${
       total
-        ? parseFloat(String(((empty_good + empty_error) / total) * 100)).toFixed(2) +
-          "%"
+        ? parseFloat(
+            String(((empty_good + empty_error) / total) * 100)
+          ).toFixed(2) + "%"
         : ""
     }</span></td></tr>`;
     html += `<tr><td><span class="menu_non_link">Empty Messages (No Errors): </span></td><td><span class="menu_non_link">${empty_good}</span></td><td><span class="menu_non_link">${
-      total ? parseFloat(String((empty_good / total) * 100)).toFixed(2) + "%" : ""
+      total
+        ? parseFloat(String((empty_good / total) * 100)).toFixed(2) + "%"
+        : ""
     }</span></td></tr>`;
     html += `<tr><td><span class="menu_non_link">Empty Messages (W/Errors): </span></td><td><span class="menu_non_link">${empty_error}</span></td><td><span class="menu_non_link">${
-      total ? parseFloat(String((empty_error / total) * 100)).toFixed(2) + "%" : ""
+      total
+        ? parseFloat(String((empty_error / total) * 100)).toFixed(2) + "%"
+        : ""
     }</span></td></tr>`;
     html += "</table>";
 
@@ -200,28 +227,27 @@ function show_count() {
 export function decoders_enabled(msg: decoders) {
   acars_on = msg.acars;
   vdlm_on = msg.vdlm;
-  if(page_active)
-    generate_stat_submenu(acars_on, vdlm_on);
+  if (page_active) generate_stat_submenu(acars_on, vdlm_on);
 }
 
 export function signals(msg: signal) {
   signal_data = msg;
-  if(page_active) show_signal_chart();
+  if (page_active) show_signal_chart();
 }
 
 export function alert_terms(msg: alert_term) {
   alert_data = msg;
-  if(page_active) show_alert_chart();
+  if (page_active) show_alert_chart();
 }
 
 export function signal_freqs(msg: signal_freq_data) {
   freqs_data = msg;
-  if(page_active) show_freqs();
+  if (page_active) show_freqs();
 }
 
 export function signal_count(msg: signal_count_data) {
   count_data = msg;
-  if(page_active) show_count();
+  if (page_active) show_count();
 }
 
 export function stats() {
@@ -241,35 +267,67 @@ setInterval(function () {
   grab_updated_graphs();
 }, 60000);
 
-window.update_prefix = function(prefix: string) {
+window.update_prefix = function (prefix: string) {
   image_prefix = prefix;
   grab_images();
-}
+};
 
 function grab_images() {
-  let onehour: HTMLImageElement = <HTMLImageElement>document.getElementById("1hr")!;
-  if(onehour !== null) onehour.src = `static/images/${image_prefix}1hour.png?rand=` + Math.random();
+  let onehour: HTMLImageElement = <HTMLImageElement>(
+    document.getElementById("1hr")!
+  );
+  if (onehour !== null)
+    onehour.src =
+      `static/images/${image_prefix}1hour.png?rand=` + Math.random();
 
-  let sixhours: HTMLImageElement = <HTMLImageElement>document.getElementById("6hr")!;
-  if(sixhours !== null) sixhours.src = `static/images/${image_prefix}6hour.png?rand=` + Math.random();
+  let sixhours: HTMLImageElement = <HTMLImageElement>(
+    document.getElementById("6hr")!
+  );
+  if (sixhours !== null)
+    sixhours.src =
+      `static/images/${image_prefix}6hour.png?rand=` + Math.random();
 
-  let twelvehours: HTMLImageElement = <HTMLImageElement>document.getElementById("12hr")!;
-  if(twelvehours !== null) twelvehours.src = `static/images/${image_prefix}12hour.png?rand=` + Math.random();
+  let twelvehours: HTMLImageElement = <HTMLImageElement>(
+    document.getElementById("12hr")!
+  );
+  if (twelvehours !== null)
+    twelvehours.src =
+      `static/images/${image_prefix}12hour.png?rand=` + Math.random();
 
-  let twentyfourhours: HTMLImageElement = <HTMLImageElement>document.getElementById("24hr")!;
-  if(twentyfourhours !== null) twentyfourhours.src = `static/images/${image_prefix}24hours.png?rand=` + Math.random();
+  let twentyfourhours: HTMLImageElement = <HTMLImageElement>(
+    document.getElementById("24hr")!
+  );
+  if (twentyfourhours !== null)
+    twentyfourhours.src =
+      `static/images/${image_prefix}24hours.png?rand=` + Math.random();
 
-  let oneweek: HTMLImageElement = <HTMLImageElement>document.getElementById("1wk")!;
-  if(oneweek !== null) oneweek.src = `static/images/${image_prefix}1week.png?rand=` + Math.random();
+  let oneweek: HTMLImageElement = <HTMLImageElement>(
+    document.getElementById("1wk")!
+  );
+  if (oneweek !== null)
+    oneweek.src =
+      `static/images/${image_prefix}1week.png?rand=` + Math.random();
 
-  let thirtydays: HTMLImageElement = <HTMLImageElement>document.getElementById("30day")!;
-  if(thirtydays !== null) thirtydays.src = `static/images/${image_prefix}30days.png?rand=` + Math.random();
+  let thirtydays: HTMLImageElement = <HTMLImageElement>(
+    document.getElementById("30day")!
+  );
+  if (thirtydays !== null)
+    thirtydays.src =
+      `static/images/${image_prefix}30days.png?rand=` + Math.random();
 
-  let sixmonths: HTMLImageElement = <HTMLImageElement>document.getElementById("6mon")!;
-  if(sixmonths !== null) sixmonths.src = `static/images/${image_prefix}6months.png?rand=` + Math.random();
+  let sixmonths: HTMLImageElement = <HTMLImageElement>(
+    document.getElementById("6mon")!
+  );
+  if (sixmonths !== null)
+    sixmonths.src =
+      `static/images/${image_prefix}6months.png?rand=` + Math.random();
 
-  let oneyear: HTMLImageElement = <HTMLImageElement>document.getElementById("1yr")!;
-  if(oneyear !== null) oneyear.src = `static/images/${image_prefix}1year.png?rand=` + Math.random();
+  let oneyear: HTMLImageElement = <HTMLImageElement>(
+    document.getElementById("1yr")!
+  );
+  if (oneyear !== null)
+    oneyear.src =
+      `static/images/${image_prefix}1year.png?rand=` + Math.random();
 }
 
 function grab_freqs() {
@@ -305,10 +363,11 @@ function set_html() {
   $("#page_name").html("Messages will appear here, newest first:");
 }
 
-export function stats_active(state=false) {
+export function stats_active(state = false) {
   page_active = state;
 
-  if(page_active) { // page is active
+  if (page_active) {
+    // page is active
     set_html();
     generate_stat_submenu(acars_on, vdlm_on);
     show_signal_chart();

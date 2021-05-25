@@ -2,9 +2,13 @@
 // Input: msgs_to_process - the array of messages. Format is array of message groups, with each group being an array of message(s) that create a group of submessages
 // Input: selected_tabs - if present, we'll process. Format is uid1;elementid1,uid2;elementid2 etc
 // Input: live_page - default is false. This toggles on the checks for selected tabs
-import { html_msg, acars_msg } from "./interfaces.js"
+import { html_msg, acars_msg } from "./interfaces.js";
 
-export function display_messages(msgs_to_process: acars_msg[][], selected_tabs: string = "", live_page: boolean = false) {
+export function display_messages(
+  msgs_to_process: acars_msg[][],
+  selected_tabs: string = "",
+  live_page: boolean = false
+) {
   let msgs_string = ""; // output string that gets returned
   let message_tab_splits: string[] = []; // variable to save the split output of selected_tabs
   if (selected_tabs !== "") message_tab_splits = selected_tabs.split(","); // the individual tabs with selections
@@ -31,11 +35,16 @@ export function display_messages(msgs_to_process: acars_msg[][], selected_tabs: 
           if (message_tab_splits[q].startsWith(unique_id.toString())) {
             let split = message_tab_splits[q].split(";");
             active_tab = split[1];
-            array_index_tab = String(sub_messages.findIndex((sub_element: acars_msg) => {
-              if (sub_element.uid == active_tab || sub_element.uid === active_tab) {
-                return true;
-              }
-            }));
+            array_index_tab = String(
+              sub_messages.findIndex((sub_element: acars_msg) => {
+                if (
+                  sub_element.uid == active_tab ||
+                  sub_element.uid === active_tab
+                ) {
+                  return true;
+                }
+              })
+            );
           }
         }
       }
@@ -148,7 +157,12 @@ export function display_messages(msgs_to_process: acars_msg[][], selected_tabs: 
       // grab the time (unix EPOCH) from the correct key and convert in to a Date object for display
       if (message.hasOwnProperty("timestamp"))
         timestamp = new Date(message["timestamp"] * 1000);
-      else timestamp = new Date((typeof message["msg_time"] !== "undefined" ? message["msg_time"] : 0) * 1000);
+      else
+        timestamp = new Date(
+          (typeof message["msg_time"] !== "undefined"
+            ? message["msg_time"]
+            : 0) * 1000
+        );
 
       html_output += `<td style=\"text-align: right\"><strong>${timestamp}</strong></td>`;
       html_output += "</tr>";
@@ -170,7 +184,10 @@ export function display_messages(msgs_to_process: acars_msg[][], selected_tabs: 
       if (message.hasOwnProperty("label")) {
         let label_type = "";
         if (message.hasOwnProperty("label_type")) {
-          label_type = typeof message.label_type !== "undefined" ? message["label_type"].trim() : "";
+          label_type =
+            typeof message.label_type !== "undefined"
+              ? message["label_type"].trim()
+              : "";
         }
         html_output += `Message Label: <strong>(${message["label"]}) ${label_type}</strong><br>`;
       }
@@ -246,7 +263,10 @@ export function display_messages(msgs_to_process: acars_msg[][], selected_tabs: 
 
       // Text field is pre-processed
       // we have a sub-table for the raw text field and if it was decoded, the decoded text as well
-      if (message.hasOwnProperty("text") && typeof message.text !== "undefined") {
+      if (
+        message.hasOwnProperty("text") &&
+        typeof message.text !== "undefined"
+      ) {
         let text = message["text"];
         text = text.replace("\\r\\n", "<br>");
         //html_output += "<p>";
@@ -285,7 +305,10 @@ export function display_messages(msgs_to_process: acars_msg[][], selected_tabs: 
         }</strong></pre>`;
         html_output += "</td>";
         html_output += "</tr></table>";
-      } else if (message.hasOwnProperty("data") && typeof message.data !== "undefined") {
+      } else if (
+        message.hasOwnProperty("data") &&
+        typeof message.data !== "undefined"
+      ) {
         let data = message["data"];
         data = data.replace("\\r\\n", "<br>");
         html_output += "<p>";
@@ -309,20 +332,27 @@ export function display_messages(msgs_to_process: acars_msg[][], selected_tabs: 
         html_output += `Tail: <strong><a href=\"https://flightaware.com/live/flight/${
           message["tail"]
         }\" target=\"_blank\">${
-          typeof message.matched_tail !== "undefined" && typeof message.tail !== "undefined"
+          typeof message.matched_tail !== "undefined" &&
+          typeof message.tail !== "undefined"
             ? replace_text(message.matched_tail, message.tail)
             : message.tail
         }</a></strong> `;
       }
 
-      if (message.hasOwnProperty("flight") && typeof message.flight !== "undefined") {
+      if (
+        message.hasOwnProperty("flight") &&
+        typeof message.flight !== "undefined"
+      ) {
         html_output +=
           typeof message.matched_flight === "object"
             ? replace_text(message.matched_flight, message.flight)
             : message.flight;
       }
 
-      if (message.hasOwnProperty("icao") && typeof message.icao !== "undefined") {
+      if (
+        message.hasOwnProperty("icao") &&
+        typeof message.icao !== "undefined"
+      ) {
         html_output += "ICAO: <strong>";
         html_output += message.hasOwnProperty("icao_url")
           ? `<a href="${message["icao_url"]}" target="_blank">`
@@ -356,7 +386,10 @@ export function display_messages(msgs_to_process: acars_msg[][], selected_tabs: 
         html_output += `<span class=\"wrapper\">F: <strong>${message["freq"]}</strong><span class=\"tooltip\">The frequency this message was received on</span></span> `;
       }
 
-      if (message.hasOwnProperty("level") && typeof message.level !== "undefined") {
+      if (
+        message.hasOwnProperty("level") &&
+        typeof message.level !== "undefined"
+      ) {
         let level = message["level"];
         let circle = "";
         if (level >= -10.0) {
