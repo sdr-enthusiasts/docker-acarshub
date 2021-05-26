@@ -53,7 +53,7 @@ jobs:
       -
         name: Patch webapp with VERSION_TAG
         run: |
-          sed -i 's/Pre-Release/ACARS Hub Version: ${{ env.VERSION_TAG }}/' ./rootfs/webapp/static/js/menu.js
+          sed -i 's/Pre-Release/ACARS Hub Version: ${{ env.VERSION_TAG }}/' ./acarshub-typescript/src/menu.ts
 
       - name: Create version file
         run: |
@@ -114,6 +114,16 @@ jobs:
           yarn install
           yarn build
           yarn pack --filename ../acars-decoder-typescript.tgz
+
+      # build acarshub typescript
+
+      -
+        name: Build ACARSHub typescript
+        working-directory: ./acarshub-typescript
+        run: |
+          npm install
+          npm run build
+          npm run installer
 
       # Build "latest"
       -
