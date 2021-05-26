@@ -6,16 +6,6 @@ IMAGE=acarshub
 # Generate local dockerfile
 ./generate_local_dockerfile.sh
 
-#  move the local built copy of airframes out of rootfs
-if [ -d ./rootfs/webapp/static/airframes-acars-decoder ]; then
-    mv -f rootfs/webapp/static/airframes-acars-decoder .
-elif [ -d ./acarshub-typescript ]; then
-    echo "Directory previously moved, skipping"
-else
-    echo "acarshub-typescript missing in both places, exiting"
-    return 1
-fi
-
 set -xe
 
 # Build airframesio/acars-decoder-typescript
@@ -39,6 +29,3 @@ docker build -f Dockerfile.local -t "${REPO}/${IMAGE}:test" .
 # Clean up
 rm ./acars-decoder-typescript.tgz
 rm -rf js
-
-#  move the local built copy of airframes out of rootfs
-mv airframes-acars-decoder rootfs/webapp/static/airframes-acars-decoder

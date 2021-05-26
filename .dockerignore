@@ -2,9 +2,10 @@
 LICENSE
 README.md
 retired_scripts
-buildx-*.sh
+build*.sh
 update-local-acars-decoder.sh
 Logo-Sources
 acarshub-typescript/dist
 acarshub-typescript/node_modules
 roots/webapp/static/js/*.js
+rootfs/webapp/static/airframes-acars-decoder
