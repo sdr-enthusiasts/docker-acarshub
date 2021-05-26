@@ -21,21 +21,21 @@ export function generate_stat_submenu(acars: boolean, vdlm: boolean) {
   let text: string = "";
   if (acars == true && vdlm == true) {
     text =
-      '<p><a href="javascript:update_prefix(\'\')" id="pause_updates" class="spread_text">Combined Graphs</a></p>';
+      '<p><a href="javascript:update_prefix(\'\')" id="combined_graphs" class="spread_text">Combined Graphs</a></p>';
   }
 
   if (acars) {
     text +=
-      '<p><a href="javascript:update_prefix(\'acars\')" id="pause_updates" class="spread_text">ACARS Graphs</a></p>';
+      '<p><a href="javascript:update_prefix(\'acars\')" id="acars_graphs" class="spread_text">ACARS Graphs</a></p>';
   }
 
   if (vdlm) {
     text +=
-      '<p><a href="javascript:update_prefix(\'vdlm\')" id="pause_updates" class="spread_text">VDLM Graphs</a></p>';
+      '<p><a href="javascript:update_prefix(\'vdlm\')" id="vdlm_graphs" class="spread_text">VDLM Graphs</a></p>';
   }
 
   text +=
-    '<p><a href="javascript:update_prefix(\'error\')" id="pause_updates" class="spread_text">Message Error Graphs</a></p>';
+    '<p><a href="javascript:update_prefix(\'error\')" id="error_graphs" class="spread_text">Message Error Graphs</a></p>';
   //text += "<p><a href=\"javascript:grab_freqs()\" id=\"pause_updates\" class=\"spread_text\">Frequency Counts</a></p>";
   text += "<hr>";
   text += '<p><span id="freqs"></span></p>';
