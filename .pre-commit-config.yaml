@@ -3,16 +3,20 @@ repos:
     rev: v2.3.0
     hooks:
     -   id: check-yaml
-        exclude: ^(rootfs/webapp/static/css/other/|acars-decoder-typescript/|rootfs/webapp/static/js/other/)
+        exclude: ^(rootfs/webapp/static/css/other/|acars-decoder-typescript/|rootfs/webapp/static/js/other/|Logo-Sources)
     -   id: end-of-file-fixer
-        exclude: ^(rootfs/webapp/static/css/other/|acars-decoder-typescript/|rootfs/webapp/static/js/other/)
+        exclude: ^(rootfs/webapp/static/css/other/|acars-decoder-typescript/|rootfs/webapp/static/js/other/|Logo-Sources)
     -   id: trailing-whitespace
-        exclude: ^(rootfs/webapp/static/css/other/|acars-decoder-typescript/|rootfs/webapp/static/js/other/)
+        exclude: ^(rootfs/webapp/static/css/other/|acars-decoder-typescript/|rootfs/webapp/static/js/other/|Logo-Sources)
+    -   id: requirements-txt-fixer
+        exclude: ^(rootfs/webapp/static/css/other/|acars-decoder-typescript/|rootfs/webapp/static/js/other/|Logo-Sources)
+    -   id: mixed-line-ending
+        exclude: ^(rootfs/webapp/static/css/other/|acars-decoder-typescript/|rootfs/webapp/static/js/other/|Logo-Sources)
 -   repo: https://github.com/IamTheFij/docker-pre-commit
     rev: v2.0.0
     hooks:
     -   id: hadolint-system
-        exclude: ^(rootfs/webapp/static/css/other/|acars-decoder-typescript/|rootfs/webapp/static/js/other/)
+        exclude: ^(rootfs/webapp/static/css/other/|acars-decoder-typescript/|rootfs/webapp/static/js/other/|Logo-Sources)
         args:
         - "--ignore"
         - "DL3003"
@@ -39,14 +43,14 @@ repos:
         additional_dependencies:
         -   prettier@2.1.2
         -   '@typescript-eslint/eslint-plugin'
-        exclude: ^(rootfs/webapp/static/css/other/|acars-decoder-typescript/|rootfs/webapp/static/js/other/)
+        exclude: ^(rootfs/webapp/static/css/other/|acars-decoder-typescript/|rootfs/webapp/static/js/other/|Logo-Sources)
 -   repo: https://github.com/pre-commit/mirrors-eslint
     rev: v7.26.0
     hooks:
     -   id: eslint
         files: \.[j]sx?$  # *.js, *.jsx, *.ts and *.tsx
         types: [file]
-        exclude: ^(rootfs/webapp/static/css/other/|acars-decoder-typescript/|rootfs/webapp/static/js/other/)
+        exclude: ^(rootfs/webapp/static/css/other/|acars-decoder-typescript/|rootfs/webapp/static/js/other/|Logo-Sources)
         additional_dependencies:
             -   eslint@7.27.0
             -   eslint-config-google@0.7.1
@@ -62,4 +66,4 @@ repos:
   hooks:
     -   id: codespell
         types: [text]
-        exclude: ^(rootfs/webapp/static/css/other/|acars-decoder-typescript/|rootfs/webapp/static/js/other/|.+\.json)
+        exclude: ^(rootfs/webapp/static/css/other/|acars-decoder-typescript/|rootfs/webapp/static/js/other/|.+\.json|Logo-Sources)
