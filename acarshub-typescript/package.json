@@ -4,6 +4,8 @@
   "description": "Web front end for the docker-acarshub project",
   "main": "application.js",
   "scripts": {
+    "buildtest": "npm run build && npm run installer",
+    "buildprod": "npm run build && npm run minify && npm run installer",
     "minify": "jsmin -o name.min.js name.js",
     "build": "rm -f ./dist/*.js && tsc && ./build.sh",
     "installer": "rm -f ../rootfs/webapp/static/js/*.js && cp ./dist/*.js ../rootfs/webapp/static/js/"

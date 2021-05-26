@@ -1,21 +1,22 @@
-#!/usr/bin/env sh
-#shellcheck shell=sh
-
-set -xe
+#!/bin/bash
 
 REPO=fredclausen
 IMAGE=acarshub
-# PLATFORMS="linux/arm64,linux/arm/v6,linux/arm/v7"
-
-# docker context use default
-# export DOCKER_CLI_EXPERIMENTAL="enabled"
-# docker buildx use cluster
 
 # Generate local dockerfile
 ./generate_local_dockerfile.sh
 
 #  move the local built copy of airframes out of rootfs
-mv rootfs/webapp/static/airframes-acars-decoder .
+if [ -d ./rootfs/webapp/static/airframes-acars-decoder ]; then
+    mv -f rootfs/webapp/static/airframes-acars-decoder .
+elif [ -d ./acarshub-typescript ]; then
+    echo "Directory previously moved, skipping"
+else
+    echo "acarshub-typescript missing in both places, exiting"
+    return 1
+fi
+
+set -xe
 
 # Build airframesio/acars-decoder-typescript
 # Copy /src/acars-decoder-typescript.tgz out of image

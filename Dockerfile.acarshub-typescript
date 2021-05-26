@@ -11,6 +11,4 @@ RUN set -x && \
     pushd acarshub-typescript && \
     mkdir -p ../rootfs/webapp/static/js/ && \
     npm install && \
-    npm run build && \
-    ls && \
-    npm run installer
+    npm run buildtest

@@ -61,13 +61,22 @@ RUN set -x && \
     KEPT_PACKAGES+=(socat) && \
     KEPT_PACKAGES+=(ncat) && \
     KEPT_PACKAGES+=(net-tools) && \
-    # packages for web interface
-    KEPT_PACKAGES+=(python3) && \
-    KEPT_PACKAGES+=(python3-pip) && \
-    KEPT_PACKAGES+=(python3-setuptools) && \
-    KEPT_PACKAGES+=(python3-wheel) && \
-    # KEPT_PACKAGES+=(gunicorn3) && \
-    TEMP_PACKAGES+=(python3-dev) && \
+    # packages for python
+    TEMP_PACKAGES+=(libssl-dev) && \
+    TEMP_PACKAGES+=(libbz2-dev) && \
+    TEMP_PACKAGES+=(libreadline-dev) && \
+    KEPT_PACKAGES+=(llvm) && \
+    TEMP_PACKAGES+=(libncurses5-dev) && \
+    TEMP_PACKAGES+=(libncursesw5-dev) && \
+    KEPT_PACKAGES+=(xz-utils ) && \
+    KEPT_PACKAGES+=(tk-dev) && \
+    TEMP_PACKAGES+=(libffi-dev) && \
+    # KEPT_PACKAGES+=(python3) && \
+    # KEPT_PACKAGES+=(python3-pip) && \
+    # KEPT_PACKAGES+=(python3-setuptools) && \
+    # KEPT_PACKAGES+=(python3-wheel) && \
+    # # KEPT_PACKAGES+=(gunicorn3) && \
+    # TEMP_PACKAGES+=(python3-dev) && \
     # process management
     KEPT_PACKAGES+=(procps) && \
     # stats
@@ -84,6 +93,30 @@ RUN set -x && \
         ${KEPT_PACKAGES[@]} \
         ${TEMP_PACKAGES[@]} \
         && \
+    # Make latest python from source
+    pushd /src/ && \
+    wget https://www.python.org/ftp/python/3.9.5/Python-3.9.5.tgz && \
+    tar xzf Python-3.9.5.tgz && \
+    cd Python-3.9.5 && \
+    ./configure --enable-optimizations --with-lto --with-computed-gotos --with-system-ffi --enable-shared && \
+    make -j "$(nproc)" && \
+    make install && \
+    ldconfig /usr/local/lib  && \
+    # /opt/python/3.9.5/bin/python3.9 -m pip install --upgrade pip setuptools wheel && \
+    # ln -s /opt/python/3.9.5/bin/python3.9        /opt/python/3.9.5/bin/python3 && \
+    # ln -s /opt/python/3.9.5/bin/python3.9        /opt/python/3.9.5/bin/python && \
+    # ln -s /opt/python/3.9.5/bin/pip3.9           /opt/python/3.9.5/bin/pip3 && \
+    # ln -s /opt/python/3.9.5/bin/pip3.9           /opt/python/3.9.5/bin/pip && \
+    # ln -s /opt/python/3.9.5/bin/pydoc3.9         /opt/python/3.9.5/bin/pydoc && \
+    # ln -s /opt/python/3.9.5/bin/idle3.9          /opt/python/3.9.5/bin/idle && \
+    # ln -s /opt/python/3.9.5/bin/python3.9-config      /opt/python/3.9.5/bin/python-config && \
+    # mkdir -p /src/python && \
+    # pushd /src/python && \
+    # wget https://www.python.org/ftp/python/3.9.5/Python-3.9.5.tgz && \
+    # tar xzf Python-3.9.5.tgz && \
+    # cd Python-3.9.5 && \
+    # ./configure --enable-optimizations && \
+    # make install && \
     # dependencies for web interface
     python3 -m pip install --no-cache-dir \
         -r /webapp/requirements.txt \
