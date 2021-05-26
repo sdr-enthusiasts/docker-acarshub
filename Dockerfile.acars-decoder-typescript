@@ -19,4 +19,5 @@ RUN set -x && \
     sed -i '/"module": "commonjs",/d' tsconfig.json && \
     yarn install && \
     yarn build && \
-    yarn pack --filename ../acars-decoder-typescript.tgz
+    yarn pack --filename ../acars-decoder-typescript.tgz && \
+    yarn cache clean

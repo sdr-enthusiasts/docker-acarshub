@@ -90,33 +90,18 @@ RUN set -x && \
     ln -s /bin/tar /usr/sbin/tar && \
     apt-get update && \
     apt-get install -y --no-install-recommends \
-        ${KEPT_PACKAGES[@]} \
-        ${TEMP_PACKAGES[@]} \
+        "${KEPT_PACKAGES[@]}" \
+        "${TEMP_PACKAGES[@]}"\
         && \
     # Make latest python from source
     pushd /src/ && \
-    wget https://www.python.org/ftp/python/3.9.5/Python-3.9.5.tgz && \
+    wget -q https://www.python.org/ftp/python/3.9.5/Python-3.9.5.tgz && \
     tar xzf Python-3.9.5.tgz && \
     cd Python-3.9.5 && \
     ./configure --enable-optimizations --with-lto --with-computed-gotos --with-system-ffi --enable-shared && \
     make -j "$(nproc)" && \
     make install && \
     ldconfig /usr/local/lib  && \
-    # /opt/python/3.9.5/bin/python3.9 -m pip install --upgrade pip setuptools wheel && \
-    # ln -s /opt/python/3.9.5/bin/python3.9        /opt/python/3.9.5/bin/python3 && \
-    # ln -s /opt/python/3.9.5/bin/python3.9        /opt/python/3.9.5/bin/python && \
-    # ln -s /opt/python/3.9.5/bin/pip3.9           /opt/python/3.9.5/bin/pip3 && \
-    # ln -s /opt/python/3.9.5/bin/pip3.9           /opt/python/3.9.5/bin/pip && \
-    # ln -s /opt/python/3.9.5/bin/pydoc3.9         /opt/python/3.9.5/bin/pydoc && \
-    # ln -s /opt/python/3.9.5/bin/idle3.9          /opt/python/3.9.5/bin/idle && \
-    # ln -s /opt/python/3.9.5/bin/python3.9-config      /opt/python/3.9.5/bin/python-config && \
-    # mkdir -p /src/python && \
-    # pushd /src/python && \
-    # wget https://www.python.org/ftp/python/3.9.5/Python-3.9.5.tgz && \
-    # tar xzf Python-3.9.5.tgz && \
-    # cd Python-3.9.5 && \
-    # ./configure --enable-optimizations && \
-    # make install && \
     # dependencies for web interface
     python3 -m pip install --no-cache-dir \
         -r /webapp/requirements.txt \
@@ -197,7 +182,7 @@ RUN set -x && \
       /opt/healthchecks-framework/tests \
       && \
     # Clean up
-    apt-get remove -y ${TEMP_PACKAGES[@]} && \
+    apt-get remove -y "${TEMP_PACKAGES[@]}" && \
     apt-get autoremove -y && \
     rm -rf /src/* /tmp/* /var/lib/apt/lists/*
 

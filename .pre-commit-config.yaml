@@ -8,6 +8,24 @@ repos:
         exclude: ^(rootfs/webapp/static/css/other/|acars-decoder-typescript/|rootfs/webapp/static/js/other/)
     -   id: trailing-whitespace
         exclude: ^(rootfs/webapp/static/css/other/|acars-decoder-typescript/|rootfs/webapp/static/js/other/)
+-   repo: https://github.com/IamTheFij/docker-pre-commit
+    rev: v2.0.0
+    hooks:
+    -   id: hadolint-system
+        exclude: ^(rootfs/webapp/static/css/other/|acars-decoder-typescript/|rootfs/webapp/static/js/other/)
+        args:
+        - "--ignore"
+        - "DL3003"
+        - "--ignore"
+        - "DL3006"
+        - "--ignore"
+        - "DL3010"
+        - "--ignore"
+        - "DL3008"
+        - "--ignore"
+        - "DL4001"
+        - "--ignore"
+        - "DL3007"
 -   repo: https://github.com/psf/black
     rev: 19.3b0
     hooks:
