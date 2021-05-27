@@ -38,10 +38,10 @@ jobs:
           echo "ACARS Hub Version: ${{ env.VERSION_TAG }}"
 
       # Set version tag in webapp
-      -
-        name: Patch webapp with VERSION_TAG
-        run: |
-          sed -i 's/Pre-Release/ACARS Hub Pre-Release: ${{ env.VERSION_TAG }}/' ./acarshub-typescript/src/menu.ts
+      # -
+      #   name: Patch webapp with VERSION_TAG
+      #   run: |
+      #     sed -i 's/Pre-Release/ACARS Hub Pre-Release: ${{ env.VERSION_TAG }}/' ./acarshub-typescript/src/menu.ts
 
       - name: Create version file
         run: |
@@ -110,6 +110,7 @@ jobs:
         working-directory: ./acarshub-typescript
         run: |
           npm install
+          sed -i 's/Pre-Release/ACARS Hub Pre-Release: ${{ env.VERSION_TAG }}/' ./src/menu.ts
           npm run build
           npm run installer
 
