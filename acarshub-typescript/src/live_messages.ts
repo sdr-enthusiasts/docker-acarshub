@@ -256,7 +256,7 @@ window.filter_notext = function () {
       );
 
       $("#filtered").html(
-        'Filtered Messages:&emsp;&ensp;<strong><span id="filteredmessages"></span></strong>'
+        ' | <span class="menu_non_link">Filtered Messages:&nbsp;</span><span id="filteredmessages"></span>'
       );
       let id_filtered = <HTMLInputElement>(
         document.getElementById("filteredmessages")
@@ -363,10 +363,6 @@ function set_html() {
     `<div class="fixed_results">
   <p><a href="javascript:pause_updates()" id="pause_updates" class="spread_text">Pause updates</a></p>
   <a href="javascript:filter_notext()" id="filter_notext" class="spread_text">Filter out "No Text" messages</a>
-  <hr>
-  <span class="menu_non_link" id="received">Received Messages</span>:&nbsp;<strong><span class="menu_non_link" id="receivedmessages">0</span></strong><br>
-  <span class="menu_non_link" id="filtered"></span>
-  <hr>
 </div> <!-- Fixed results -->
 <div class="fixed_menu" id="fixed_menu">
     <div class="wrap-collabsible">
