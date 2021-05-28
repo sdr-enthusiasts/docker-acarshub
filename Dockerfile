@@ -62,21 +62,22 @@ RUN set -x && \
     KEPT_PACKAGES+=(ncat) && \
     KEPT_PACKAGES+=(net-tools) && \
     # packages for python
-    TEMP_PACKAGES+=(libssl-dev) && \
-    TEMP_PACKAGES+=(libbz2-dev) && \
-    TEMP_PACKAGES+=(libreadline-dev) && \
-    KEPT_PACKAGES+=(llvm) && \
-    TEMP_PACKAGES+=(libncurses5-dev) && \
-    TEMP_PACKAGES+=(libncursesw5-dev) && \
-    KEPT_PACKAGES+=(xz-utils ) && \
-    KEPT_PACKAGES+=(tk-dev) && \
-    TEMP_PACKAGES+=(libffi-dev) && \
-    # KEPT_PACKAGES+=(python3) && \
-    # KEPT_PACKAGES+=(python3-pip) && \
-    # KEPT_PACKAGES+=(python3-setuptools) && \
-    # KEPT_PACKAGES+=(python3-wheel) && \
-    # # KEPT_PACKAGES+=(gunicorn3) && \
-    # TEMP_PACKAGES+=(python3-dev) && \
+    # commented out are for building manually
+    # TEMP_PACKAGES+=(libssl-dev) && \
+    # TEMP_PACKAGES+=(libbz2-dev) && \
+    # TEMP_PACKAGES+=(libreadline-dev) && \
+    # KEPT_PACKAGES+=(llvm) && \
+    # TEMP_PACKAGES+=(libncurses5-dev) && \
+    # TEMP_PACKAGES+=(libncursesw5-dev) && \
+    # KEPT_PACKAGES+=(xz-utils ) && \
+    # KEPT_PACKAGES+=(tk-dev) && \
+    # TEMP_PACKAGES+=(libffi-dev) && \
+    KEPT_PACKAGES+=(python3) && \
+    KEPT_PACKAGES+=(python3-pip) && \
+    KEPT_PACKAGES+=(python3-setuptools) && \
+    KEPT_PACKAGES+=(python3-wheel) && \
+    # KEPT_PACKAGES+=(gunicorn3) && \
+    TEMP_PACKAGES+=(python3-dev) && \
     # process management
     KEPT_PACKAGES+=(procps) && \
     # stats
@@ -94,14 +95,14 @@ RUN set -x && \
         "${TEMP_PACKAGES[@]}"\
         && \
     # Make latest python from source
-    pushd /src/ && \
-    wget -q https://www.python.org/ftp/python/3.9.5/Python-3.9.5.tgz && \
-    tar xzf Python-3.9.5.tgz && \
-    cd Python-3.9.5 && \
-    ./configure --enable-optimizations --with-lto --with-computed-gotos --with-system-ffi --enable-shared && \
-    make -j "$(nproc)" && \
-    make install && \
-    ldconfig /usr/local/lib  && \
+    # pushd /src/ && \
+    # wget -q https://www.python.org/ftp/python/3.9.5/Python-3.9.5.tgz && \
+    # tar xzf Python-3.9.5.tgz && \
+    # cd Python-3.9.5 && \
+    # ./configure --enable-optimizations --with-lto --with-computed-gotos --with-system-ffi --enable-shared && \
+    # make -j "$(nproc)" && \
+    # make install && \
+    # ldconfig /usr/local/lib  && \
     # dependencies for web interface
     python3 -m pip install --no-cache-dir \
         -r /webapp/requirements.txt \
