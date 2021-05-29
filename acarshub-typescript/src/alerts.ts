@@ -116,7 +116,7 @@ export function alerts_terms(msg: terms) {
 }
 
 export function alerts_acars_message(msg: html_msg) {
-  let matched = match_alert(msg);
+  let matched = match_alert(msg, true);
   if (matched.was_found) {
     if (msg.loading != true) sound_alert();
     msg.msghtml.matched_text = matched.text !== null ? matched.text : [];
@@ -334,12 +334,13 @@ function combineArray(input: string[]) {
   return output;
 }
 
-export function match_alert(msg: html_msg) {
+export function match_alert(msg: html_msg, show_alert: boolean = false) {
   let found = false;
   let matched_tail = [];
   let matched_flight = [];
   let matched_icao = [];
   let matched_text = [];
+  let term_string: string = "";
 
   if (
     msg.msghtml.hasOwnProperty("text") &&
@@ -353,6 +354,8 @@ export function match_alert(msg: html_msg) {
       ) {
         found = true;
         matched_text.push(alert_text[i]);
+        term_string =
+          term_string.length > 0 ? ", " + alert_text[i] : alert_text[i];
       }
     }
   }
@@ -369,6 +372,10 @@ export function match_alert(msg: html_msg) {
       ) {
         found = true;
         matched_flight.push(alert_callsigns[i]);
+        term_string =
+          term_string.length > 0
+            ? ", " + alert_callsigns[i]
+            : alert_callsigns[i];
       }
     }
   }
@@ -383,6 +390,8 @@ export function match_alert(msg: html_msg) {
       ) {
         found = true;
         matched_tail.push(alert_tail[i]);
+        term_string =
+          term_string.length > 0 ? ", " + alert_tail[i] : alert_tail[i];
       }
     }
   }
@@ -405,8 +414,34 @@ export function match_alert(msg: html_msg) {
       ) {
         found = true;
         matched_icao.push(alert_icao[i]);
+        term_string =
+          term_string.length > 0 ? ", " + alert_icao[i] : alert_icao[i];
       }
     }
+  }
+
+  if (
+    show_alert &&
+    found &&
+    (typeof msg.loading === "undefined" || !msg.loading)
+  ) {
+    const msg_text: string =
+      "A new message matched with the following term(s): " + term_string;
+    new jBox("Notice", {
+      attributes: {
+        x: "right",
+        y: "bottom",
+      },
+      stack: true,
+      delayOnHover: true,
+      showCountdown: true,
+      animation: {
+        open: "zoomIn",
+        close: "zoomIn",
+      },
+      content: msg_text,
+      color: "green",
+    });
   }
 
   return {
