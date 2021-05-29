@@ -641,7 +641,7 @@ input[type='checkbox'] {
 }
 
 .wrap-collabsible {
-  padding-top: 10px;
+  padding-top: 0px;
 }
 
 .lbl-toggle {
@@ -653,6 +653,7 @@ input[type='checkbox'] {
   cursor: pointer;
   transition: all 0.25s ease-out;
   font-weight: normal;
+  padding-top: 10px;
 }
 
 .lbl-toggle:hover {
@@ -678,7 +679,7 @@ input[type='checkbox'] {
 .collapsible-content {
   max-height: 0px;
   overflow: scroll;
-  position: fixed;
+  /* position: fixed; */
   height: calc(100% - 250px);
   transition: max-height .25s ease-in-out;
 }
@@ -821,4 +822,20 @@ li.img_box {
 
 canvas {
   max-height: 400px;
+}
+
+/* modal window stuff */
+
+#set_modal.jBox-wrapper .jBox-title {
+  background-color:  #ccc;
+  color: #1496bb;
+  font-family: "Helvetica Neue",Helvetica,Arial,sans-serif;
+  font-size: 20px;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+#set_modal.jBox-wrapper .jBox-content {
+  background-color:  #3D3D3D;
+  font-family: "Helvetica Neue",Helvetica,Arial,sans-serif;
 }

@@ -443,5 +443,6 @@ function set_html() {
 </div> <!-- /fixed results -->`
   );
 
+  $("#modal_text").html("");
   $("#page_name").html("Search received messages");
 }

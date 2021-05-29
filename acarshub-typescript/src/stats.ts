@@ -360,6 +360,7 @@ function set_html() {
   $("#right").html(`<div class="fixed_results">
   <span id="stat_menu"></span>
 </div>`);
+  $("#modal_text").html("");
   $("#page_name").html("Messages will appear here, newest first:");
 }
 

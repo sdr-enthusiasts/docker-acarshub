@@ -11,6 +11,7 @@
 [chart 3.2.1](https://www.jsdelivr.com/package/npm/chart.js)
 [chart datalabels](https://github.com/chartjs/chartjs-plugin-datalabels/blob/master/docs/guide/getting-started.md)
 [palette.js](https://github.com/google/palette.js/blob/master/palette.js)
+[jbox 1.3.2](https://github.com/StephanWagner/jBox)
 
 ## CSS
 

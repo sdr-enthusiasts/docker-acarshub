@@ -8,5 +8,7 @@ find ./dist/ -maxdepth 1 -type f -iname '*.js' -exec sed -i.bu "s/import { Messa
 find ./dist/ -maxdepth 1 -type f -iname '*.js' -exec sed -i.bu "s/import { Chart } from \"chart.js\";//g" {} \;
 find ./dist/ -maxdepth 1 -type f -iname '*.js' -exec sed -i.bu "s/import ChartDataLabels from \"chartjs-plugin-datalabels\";//g" {} \;
 find ./dist/ -maxdepth 1 -type f -iname '*.js' -exec sed -i.bu "s/import showdown from \"showdown\";//g" {} \;
+find ./dist/ -maxdepth 1 -type f -iname '*.js' -exec sed -i.bu "s/import jBox from \"jbox\";//g" {} \;
+find ./dist/ -maxdepth 1 -type f -iname '*.js' -exec sed -i.bu "s/import \"jbox\/dist\/jBox.all.css\";//g" {} \;
 
 rm -f ./dist/*.bu

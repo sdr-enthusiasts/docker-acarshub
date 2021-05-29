@@ -1,3 +1,11 @@
+import { MessageDecoder } from "@airframes/acars-decoder/dist/MessageDecoder";
+import Cookies from "js-cookie";
+import { display_messages } from "./html_generator.js";
+import { match_alert, sound_alert } from "./alerts.js";
+import { html_msg, acars_msg, labels } from "./interfaces.js";
+import jBox from "jbox";
+import "jbox/dist/jBox.all.css";
+
 let pause: boolean = false;
 let text_filter: boolean = false;
 let msgs_received: acars_msg[][] = [];
@@ -17,12 +25,38 @@ let acars_url = "";
 
 let filtered_messages: number = 0;
 let received_messages: number = 0;
+let live_message_modal = new jBox("Modal", {
+  id: "set_modal",
+  width: 350,
+  height: 200,
+  blockScroll: false,
+  isolateScroll: true,
+  animation: "zoomIn",
+  // draggable: 'title',
+  closeButton: "title",
+  overlay: true,
+  reposition: false,
+  repositionOnOpen: true,
+  onOpen: function () {
+    show_labels();
+  },
+  //attach: '#settings_modal',
+  title: "Live Message Settings",
+  content: `<p><a href="javascript:pause_updates()" id="pause_updates" class="spread_text">Pause updates</a></p>
+    <a href="javascript:filter_notext()" id="filter_notext" class="spread_text">Filter out "No Text" messages</a>
+    <!--<div class="fixed_menu" id="fixed_menu"> --!>
+  <div class="wrap-collabsible">
+        <input id="collapsible" class="toggle" type="checkbox">
+        <label for="collapsible" class="lbl-toggle">Filter Message Labels</label>
+        <div class="collapsible-content" id="collapsible-content">
+        <div class="content-inner" id="label_links">
+        <!-- <p>&nbsp;</p> --!>
+        </div>
+        </div>
+        </div>
+        <!--</div> --!>`,
+});
 declare const window: any;
-import { MessageDecoder } from "@airframes/acars-decoder/dist/MessageDecoder";
-import Cookies from "js-cookie";
-import { display_messages } from "./html_generator.js";
-import { match_alert, sound_alert } from "./alerts.js";
-import { html_msg, acars_msg, labels, system_status } from "./interfaces.js";
 
 const md = new MessageDecoder();
 
@@ -70,7 +104,8 @@ function show_labels() {
         filter_labels.labels[key].name
       }</a><br>`;
     }
-    $("#label_links").html(label_html);
+    let j = $("#label_links").html(label_html);
+    console.log(j);
   }
 }
 
@@ -233,12 +268,12 @@ window.filter_notext = function () {
   if (page_active) {
     if (text_filter) {
       text_filter = false;
-      (<HTMLInputElement>(
-        document.getElementById("fixed_menu")
-      )).classList.remove("fixed_menu");
-      (<HTMLInputElement>document.getElementById("fixed_menu")).classList.add(
-        "fixed_menu_short"
-      );
+      // (<HTMLInputElement>(
+      //   document.getElementById("fixed_menu")
+      // )).classList.remove("fixed_menu");
+      // (<HTMLInputElement>document.getElementById("fixed_menu")).classList.add(
+      //   "fixed_menu_short"
+      // );
 
       let id = document.getElementById("filter_notext");
       if (id !== null) id.innerHTML = "Hide Empty Messages";
@@ -248,12 +283,12 @@ window.filter_notext = function () {
       $("#filtered").html("");
     } else {
       text_filter = true;
-      (<HTMLInputElement>(
-        document.getElementById("fixed_menu")
-      )).classList.remove("fixed_menu_short");
-      (<HTMLInputElement>document.getElementById("fixed_menu")).classList.add(
-        "fixed_menu"
-      );
+      // (<HTMLInputElement>(
+      //   document.getElementById("fixed_menu")
+      // )).classList.remove("fixed_menu_short");
+      // (<HTMLInputElement>document.getElementById("fixed_menu")).classList.add(
+      //   "fixed_menu"
+      // );
 
       $("#filtered").html(
         ' | <span class="menu_non_link">Filtered Messages:&nbsp;</span><span id="filteredmessages"></span>'
@@ -353,30 +388,37 @@ export function live_message_active(state = false) {
   }
 }
 
+window.show_live_message_modal = function () {
+  live_message_modal.open();
+};
+
 export function set_live_page_urls(documentPath: string, documentUrl: string) {
   acars_path = documentPath;
   acars_url = documentUrl;
 }
 
 function set_html() {
-  $("#right").html(
-    `<div class="fixed_results">
-  <p><a href="javascript:pause_updates()" id="pause_updates" class="spread_text">Pause updates</a></p>
-  <a href="javascript:filter_notext()" id="filter_notext" class="spread_text">Filter out "No Text" messages</a>
-</div> <!-- Fixed results -->
-<div class="fixed_menu" id="fixed_menu">
-    <div class="wrap-collabsible">
-      <input id="collapsible" class="toggle" type="checkbox">
-      <label for="collapsible" class="lbl-toggle">Filter Message Labels</label>
-      <div class="collapsible-content" id="collapsible-content">
-        <div class="content-inner" id="label_links">
-          <p>&nbsp;</p>
-        </div>
-      </div>
-    </div>
-  </div>")`
-  );
+  //   $("#right").html(
+  //     `<div class="fixed_results">
+  //   <p><a href="javascript:pause_updates()" id="pause_updates" class="spread_text">Pause updates</a></p>
+  //   <a href="javascript:filter_notext()" id="filter_notext" class="spread_text">Filter out "No Text" messages</a>
+  // </div> <!-- Fixed results -->
+  // <div class="fixed_menu" id="fixed_menu">
+  //     <div class="wrap-collabsible">
+  //       <input id="collapsible" class="toggle" type="checkbox">
+  //       <label for="collapsible" class="lbl-toggle">Filter Message Labels</label>
+  //       <div class="collapsible-content" id="collapsible-content">
+  //         <div class="content-inner" id="label_links">
+  //           <p>&nbsp;</p>
+  //         </div>
+  //       </div>
+  //     </div>
+  //   </div>")`
+  //   );
 
+  $("#modal_text").html(
+    '<a href="javascript:show_live_message_modal()">Page Settings</a>'
+  );
   $("#page_name").html("Messages will appear here, newest first:");
 }
 
