@@ -6,6 +6,7 @@ import {
   signal_grab_freqs,
   signal_grab_message_count,
   signal_grab_updated_graphs,
+  is_connected,
 } from "./index.js";
 import {
   alert_term,
@@ -273,61 +274,65 @@ window.update_prefix = function (prefix: string) {
 };
 
 function grab_images() {
-  let onehour: HTMLImageElement = <HTMLImageElement>(
-    document.getElementById("1hr")!
-  );
-  if (onehour !== null)
-    onehour.src =
-      `static/images/${image_prefix}1hour.png?rand=` + Math.random();
+  if (is_connected()) {
+    let onehour: HTMLImageElement = <HTMLImageElement>(
+      document.getElementById("1hr")!
+    );
+    if (onehour !== null)
+      onehour.src =
+        `static/images/${image_prefix}1hour.png?rand=` + Math.random();
 
-  let sixhours: HTMLImageElement = <HTMLImageElement>(
-    document.getElementById("6hr")!
-  );
-  if (sixhours !== null)
-    sixhours.src =
-      `static/images/${image_prefix}6hour.png?rand=` + Math.random();
+    let sixhours: HTMLImageElement = <HTMLImageElement>(
+      document.getElementById("6hr")!
+    );
+    if (sixhours !== null)
+      sixhours.src =
+        `static/images/${image_prefix}6hour.png?rand=` + Math.random();
 
-  let twelvehours: HTMLImageElement = <HTMLImageElement>(
-    document.getElementById("12hr")!
-  );
-  if (twelvehours !== null)
-    twelvehours.src =
-      `static/images/${image_prefix}12hour.png?rand=` + Math.random();
+    let twelvehours: HTMLImageElement = <HTMLImageElement>(
+      document.getElementById("12hr")!
+    );
+    if (twelvehours !== null)
+      twelvehours.src =
+        `static/images/${image_prefix}12hour.png?rand=` + Math.random();
 
-  let twentyfourhours: HTMLImageElement = <HTMLImageElement>(
-    document.getElementById("24hr")!
-  );
-  if (twentyfourhours !== null)
-    twentyfourhours.src =
-      `static/images/${image_prefix}24hours.png?rand=` + Math.random();
+    let twentyfourhours: HTMLImageElement = <HTMLImageElement>(
+      document.getElementById("24hr")!
+    );
+    if (twentyfourhours !== null)
+      twentyfourhours.src =
+        `static/images/${image_prefix}24hours.png?rand=` + Math.random();
 
-  let oneweek: HTMLImageElement = <HTMLImageElement>(
-    document.getElementById("1wk")!
-  );
-  if (oneweek !== null)
-    oneweek.src =
-      `static/images/${image_prefix}1week.png?rand=` + Math.random();
+    let oneweek: HTMLImageElement = <HTMLImageElement>(
+      document.getElementById("1wk")!
+    );
+    if (oneweek !== null)
+      oneweek.src =
+        `static/images/${image_prefix}1week.png?rand=` + Math.random();
 
-  let thirtydays: HTMLImageElement = <HTMLImageElement>(
-    document.getElementById("30day")!
-  );
-  if (thirtydays !== null)
-    thirtydays.src =
-      `static/images/${image_prefix}30days.png?rand=` + Math.random();
+    let thirtydays: HTMLImageElement = <HTMLImageElement>(
+      document.getElementById("30day")!
+    );
+    if (thirtydays !== null)
+      thirtydays.src =
+        `static/images/${image_prefix}30days.png?rand=` + Math.random();
 
-  let sixmonths: HTMLImageElement = <HTMLImageElement>(
-    document.getElementById("6mon")!
-  );
-  if (sixmonths !== null)
-    sixmonths.src =
-      `static/images/${image_prefix}6months.png?rand=` + Math.random();
+    let sixmonths: HTMLImageElement = <HTMLImageElement>(
+      document.getElementById("6mon")!
+    );
+    if (sixmonths !== null)
+      sixmonths.src =
+        `static/images/${image_prefix}6months.png?rand=` + Math.random();
 
-  let oneyear: HTMLImageElement = <HTMLImageElement>(
-    document.getElementById("1yr")!
-  );
-  if (oneyear !== null)
-    oneyear.src =
-      `static/images/${image_prefix}1year.png?rand=` + Math.random();
+    let oneyear: HTMLImageElement = <HTMLImageElement>(
+      document.getElementById("1yr")!
+    );
+    if (oneyear !== null)
+      oneyear.src =
+        `static/images/${image_prefix}1year.png?rand=` + Math.random();
+  } else {
+    console.log("Server disconnected, skipping image updates");
+  }
 }
 
 function grab_freqs() {

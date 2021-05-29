@@ -55,6 +55,7 @@ import {
 
 declare const window: any;
 let socket: SocketIOClient.Socket;
+let socket_status: boolean = false;
 
 let acars_url: string = "";
 let acars_path: string = "";
@@ -247,6 +248,7 @@ window.new_page = function (page: string) {
 };
 
 function connection_status(connected = false) {
+  socket_status = connected;
   $("#disconnect").html(
     !connected
       ? ' | <strong><span class="red_body">DISCONNECTED FROM WEB SERVER'
@@ -312,4 +314,8 @@ export function signal_grab_message_count() {
 
 export function signal_grab_updated_graphs() {
   socket.emit("signal_graphs", { graphs: true }, "/main");
+}
+
+export function is_connected() {
+  return socket_status;
 }
