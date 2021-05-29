@@ -13,7 +13,7 @@ export function generate_menu() {
   html += `<li><a href="javascript:new_page('Search')">Search Database</a></li>`;
   html += `<li><a href="javascript:new_page('Alerts')">Alerts<span id="alert_count"></span></li>`;
   html += `<li><a href="javascript:new_page('Stats')">Statistics</a></li>`;
-  html += `<li><span id="modal_text"><a href="javascript:show_live_message_modal()">Page Settings</a></span></li>`;
+  html += `<li><span id="modal_text"></span></li>`;
   html += "</ul></nav></div>";
   $("#links").html(html);
 }
