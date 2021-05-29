@@ -9,6 +9,8 @@ import {
   acars_msg,
 } from "./interfaces.js";
 import { search_database } from "./index.js";
+import jBox from "jbox";
+import "jbox/dist/jBox.all.css";
 
 let page_active: boolean = false;
 let db_size: database_size;
@@ -34,6 +36,120 @@ let acars_url: string = "";
 let msgs_received: acars_msg[][] = [];
 let num_results: number[] = [];
 const md: MessageDecoder = new MessageDecoder();
+let search_message_modal = new jBox("Modal", {
+  id: "set_modal",
+  width: 350,
+  height: 400,
+  blockScroll: false,
+  isolateScroll: true,
+  animation: "zoomIn",
+  // draggable: 'title',
+  closeButton: "title",
+  overlay: true,
+  reposition: false,
+  repositionOnOpen: true,
+  // onOpen: function () {
+  //   show_labels();
+  // },
+  //attach: '#settings_modal',
+  title: "Search for messages",
+  content: `  <p><a href="javascript:showall()" class="spread_text">Most Recent Messages</a></p>
+  <table class="search">
+    <tr>
+      <td class="search_label">
+        <label>Database Rows:</label>
+      </td>
+      <td class="search_term">
+        <span id="database"></span>
+      </td>
+    </tr>
+    <tr>
+      <td class="search_label">
+        <label>Database Size:</label>
+      </td>
+      <td class="search_term">
+        <span id="size"></span>
+      </td>
+    </tr>
+
+    <tr>
+      <td class="search_label">
+        <label>Callsign:</label>
+      </td>
+      <td class="search_term">
+        <input type="text" id="search_flight">
+      </td>
+    </tr>
+
+    <tr class="search_label">
+      <td>
+        <label>DEPA:</label>
+      </td>
+      <td class="search_term">
+        <input type="text" id="search_depa">
+      </td>
+    </tr>
+
+    <tr class="search_label">
+      <td>
+        <label>DSTA:</label>
+      </td>
+      <td class="search_term">
+        <input type="text" id="search_dsta">
+      </td>
+    </tr>
+
+    <tr class="search_label">
+      <td>
+        <label>Frequency:</label>
+      </td>
+      <td class="search_term">
+        <input type="text" id="search_freq">
+      </td>
+    </tr>
+
+    <tr class="search_label">
+      <td>
+        <label>Label:</label>
+      </td>
+      <td class="search_term">
+        <input type="text" id="search_msglbl">
+      </td>
+    </tr>
+
+    <tr class="search_label">
+      <td>
+        <label>Message Number:</label>
+      </td>
+      <td class="search_term">
+        <input type="text" id="search_msgno">
+      </td>
+    </tr>
+
+    <tr class="search_label">
+      <td>
+        <label>Tail Number:</label>
+      </td>
+      <td class="search_term">
+        <input type="text" id="search_tail">
+      </td>
+    </tr>
+
+    <tr class="search_label">
+      <td>
+        <label>Text:</label>
+      </td>
+      <td class="search_term">
+        <input type="text" id="search_text">
+      </td>
+    </tr>
+
+  </table>`,
+});
+
+window.show_search_message_modal = function () {
+  search_message_modal.open();
+};
 
 export function database_size_details(msg: database_size) {
   db_size = msg;
@@ -347,102 +463,12 @@ export function search_active(state = false) {
 function set_html() {
   $("#right").html(
     `          <div class="fixed_results">
-  <p><a href="javascript:showall()" class="spread_text">Most Recent Messages</a></p>
-  <table class="search">
-    <tr>
-      <td class="search_label">
-        <label>Database Rows:</label>
-      </td>
-      <td class="search_term">
-        <span id="database"></span>
-      </td>
-    </tr>
-    <tr>
-      <td class="search_label">
-        <label>Database Size:</label>
-      </td>
-      <td class="search_term">
-        <span id="size"></span>
-      </td>
-    </tr>
 
-    <tr>
-      <td class="search_label">
-        <label>Callsign:</label>
-      </td>
-      <td class="search_term">
-        <input type="text" id="search_flight">
-      </td>
-    </tr>
-
-    <tr class="search_label">
-      <td>
-        <label>DEPA:</label>
-      </td>
-      <td class="search_term">
-        <input type="text" id="search_depa">
-      </td>
-    </tr>
-
-    <tr class="search_label">
-      <td>
-        <label>DSTA:</label>
-      </td>
-      <td class="search_term">
-        <input type="text" id="search_dsta">
-      </td>
-    </tr>
-
-    <tr class="search_label">
-      <td>
-        <label>Frequency:</label>
-      </td>
-      <td class="search_term">
-        <input type="text" id="search_freq">
-      </td>
-    </tr>
-
-    <tr class="search_label">
-      <td>
-        <label>Label:</label>
-      </td>
-      <td class="search_term">
-        <input type="text" id="search_msglbl">
-      </td>
-    </tr>
-
-    <tr class="search_label">
-      <td>
-        <label>Message Number:</label>
-      </td>
-      <td class="search_term">
-        <input type="text" id="search_msgno">
-      </td>
-    </tr>
-
-    <tr class="search_label">
-      <td>
-        <label>Tail Number:</label>
-      </td>
-      <td class="search_term">
-        <input type="text" id="search_tail">
-      </td>
-    </tr>
-
-    <tr class="search_label">
-      <td>
-        <label>Text:</label>
-      </td>
-      <td class="search_term">
-        <input type="text" id="search_text">
-      </td>
-    </tr>
-
-  </table>
-  <div class="row" id="num_results"></div>
-</div> <!-- /fixed results -->`
+  <div class="row" id="num_results"></div>`
   );
 
-  $("#modal_text").html("");
+  $("#modal_text").html(
+    '<a href="javascript:show_search_message_modal()">Search For Messages</a>'
+  );
   $("#page_name").html("Search received messages");
 }

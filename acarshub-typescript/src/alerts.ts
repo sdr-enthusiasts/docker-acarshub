@@ -2,6 +2,8 @@ import Cookies from "js-cookie";
 import { display_messages } from "./html_generator.js";
 import { alert_term_query, alert_text_update } from "./index.js";
 import { html_msg, terms } from "./interfaces.js";
+import jBox from "jbox";
+import "jbox/dist/jBox.all.css";
 
 declare const window: any;
 
@@ -34,6 +36,38 @@ let default_text_values: string[] = [
   "red coat",
 ];
 
+let alert_message_modal = new jBox("Modal", {
+  id: "set_modal",
+  width: 350,
+  height: 400,
+  blockScroll: false,
+  isolateScroll: true,
+  animation: "zoomIn",
+  // draggable: 'title',
+  closeButton: "title",
+  overlay: true,
+  reposition: false,
+  repositionOnOpen: true,
+  onOpen: function () {
+    show_modal_values();
+  },
+  //attach: '#settings_modal',
+  title: "Alert Message Settings",
+  content: `  <p><a href="javascript:toggle_playsound()" id="playsound_link" class="spread_text">Turn On Alert Sound</a></p>
+  <span id="stat_menu">
+    <label for="alert_text" class="menu_non_link">Text Field:</label><br />
+    <textarea rows="2" id="alert_text"></textarea><br />
+    <label for="alert_callsigns" class="menu_non_link">Callsign:</label><br />
+    <textarea rows="2" id="alert_callsigns"></textarea><br />
+    <label for="alert_tail" class="menu_non_link">Tail Number:</label><br />
+    <textarea rows="2" id="alert_tail"></textarea><br />
+    <label for="alert_icao" class="menu_non_link">ICAO Address:</label><br />
+    <textarea rows="2" id="alert_icao"></textarea><br />
+    <button type="submit" value="Submit" onclick="updateAlerts()">Update</button>
+    <p><a href="javascript:default_alert_values()" class="spread_text">Default alert values</a></p>
+  </span>`,
+});
+
 let alert_sound: HTMLAudioElement = new Audio(
   `${acars_url}static/sounds/alert.mp3`
 );
@@ -46,6 +80,29 @@ msgs_received.unshift = function () {
   return Array.prototype.unshift.apply(this, arguments as any);
 };
 
+function show_modal_values() {
+  (<HTMLInputElement>document.getElementById("alert_text")).value = (<
+    HTMLInputElement
+  >document.getElementById("alert_text")).value = combineArray(
+    alert_text
+  ).toUpperCase();
+  (<HTMLInputElement>document.getElementById("alert_callsigns")).value = (<
+    HTMLInputElement
+  >document.getElementById("alert_callsigns")).value = combineArray(
+    alert_callsigns
+  ).toUpperCase();
+  (<HTMLInputElement>document.getElementById("alert_tail")).value = (<
+    HTMLInputElement
+  >document.getElementById("alert_tail")).value = combineArray(
+    alert_tail
+  ).toUpperCase();
+  (<HTMLInputElement>document.getElementById("alert_icao")).value = (<
+    HTMLInputElement
+  >document.getElementById("alert_icao")).value = combineArray(
+    alert_icao
+  ).toUpperCase();
+}
+
 export function alert() {
   // Document on ready new syntax....or something. Passing a function directly to jquery
   // Update the cookies so the expiration date pushes out in to the future
@@ -56,13 +113,6 @@ export function alert() {
 
 export function alerts_terms(msg: terms) {
   alert_text = msg.terms;
-  if (page_active) {
-    (<HTMLInputElement>document.getElementById("alert_text")).value = (<
-      HTMLInputElement
-    >document.getElementById("alert_text")).value = combineArray(
-      alert_text
-    ).toUpperCase();
-  }
 }
 
 export function alerts_acars_message(msg: html_msg) {
@@ -426,17 +476,17 @@ export function alert_active(state = false) {
     play_sound = play_sound ? false : true;
     toggle_playsound(true);
 
-    (<HTMLInputElement>document.getElementById("alert_callsigns")).value =
-      Cookies.get("alert_callsigns") || "";
-    (<HTMLInputElement>document.getElementById("alert_tail")).value =
-      Cookies.get("alert_tail") || "";
-    (<HTMLInputElement>document.getElementById("alert_icao")).value =
-      Cookies.get("alert_icao") || "";
-    (<HTMLInputElement>document.getElementById("alert_text")).value = (<
-      HTMLInputElement
-    >document.getElementById("alert_text")).value = combineArray(
-      alert_text
-    ).toUpperCase();
+    // (<HTMLInputElement>document.getElementById("alert_callsigns")).value =
+    //   Cookies.get("alert_callsigns") || "";
+    // (<HTMLInputElement>document.getElementById("alert_tail")).value =
+    //   Cookies.get("alert_tail") || "";
+    // (<HTMLInputElement>document.getElementById("alert_icao")).value =
+    //   Cookies.get("alert_icao") || "";
+    // (<HTMLInputElement>document.getElementById("alert_text")).value = (<
+    //   HTMLInputElement
+    // >document.getElementById("alert_text")).value = combineArray(
+    //   alert_text
+    // ).toUpperCase();
     $("#log").html(display_messages(msgs_received));
   }
 }
@@ -447,25 +497,13 @@ export function set_alert_page_urls(documentPath: string, documentUrl: string) {
 }
 
 function set_html() {
-  $("#right").html(
-    `      <div class="fixed_results">
-  <p><a href="javascript:toggle_playsound()" id="playsound_link" class="spread_text">Turn On Alert Sound</a></p>
-  <span id="stat_menu">
-    <label for="alert_text" class="menu_non_link">Text Field:</label><br />
-    <textarea rows="2" id="alert_text"></textarea><br />
-    <label for="alert_callsigns" class="menu_non_link">Callsign:</label><br />
-    <textarea rows="2" id="alert_callsigns"></textarea><br />
-    <label for="alert_tail" class="menu_non_link">Tail Number:</label><br />
-    <textarea rows="2" id="alert_tail"></textarea><br />
-    <label for="alert_icao" class="menu_non_link">ICAO Address:</label><br />
-    <textarea rows="2" id="alert_icao"></textarea><br />
-    <button type="submit" value="Submit" onclick="updateAlerts()">Update</button>
-    <p><a href="javascript:default_alert_values()" class="spread_text">Default alert values</a></p>
-  </span>
-</div>`
+  $("#modal_text").html(
+    '<a href="javascript:show_alert_message_modal()">Page Settings</a>'
   );
-
-  $("#modal_text").html("");
   $("#page_name").html("");
   $("#log").html("");
 }
+
+window.show_alert_message_modal = function () {
+  alert_message_modal.open();
+};
