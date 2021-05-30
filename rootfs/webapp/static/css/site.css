@@ -33,7 +33,7 @@ table.message {
   border: none;
   border-collapse: collapse;
   width: 100%;
-  table-layout: fixed;
+  /* table-layout: fixed; */
   background-color: white;
   vertical-align: top;
 }
@@ -144,7 +144,7 @@ body {
   width: 100%;
   height: 100%; */
   /* max-width: 1000px; */
-  min-width: 800px;
+  min-width: 400px;
   margin-left: auto;
   margin-right: auto;
 }
@@ -619,51 +619,6 @@ ul.primary li:hover > a{
   color: white;
 }
 
-@media only screen and (max-width: 600px) {
-  .decor {
-    padding: 3px;
-  }
-
-  .wrap {
-    width: 100%;
-    margin-top: 0px;
-  }
-
-   li {
-    float: none;
-  }
-
-  ul.primary li:hover a {
-    background: none;
-    color: #8B8B8B;
-    text-shadow: 1px 1px #000;
-  }
-
-  ul.primary li:hover ul {
-    display: block;
-    background: #272727;
-    color: #fff;
-  }
-
-  ul.sub {
-    display: block;
-    position: static;
-    box-shadow: none;
-    width: 100%;
-  }
-
-  ul.sub li a {
-    background: #272727;
-    border: none;
-    color: #8B8B8B;
-  }
-
-  ul.sub li a:hover {
-    color: #ccc;
-    background: none;
-  }
-}
-
 /* Collapse */
 
 input[type='checkbox'] {
@@ -868,4 +823,83 @@ canvas {
 #set_modal.jBox-wrapper .jBox-content {
   background-color:  var(--grey-bg);
   font-family: "Helvetica Neue",Helvetica,Arial,sans-serif;
+}
+
+@media only screen and (max-width: 1050px) {
+  #logo_image{
+    display: none;
+  }
+}
+
+@media only screen and (max-width: 950px) {
+  .decor {
+    padding: 3px;
+  }
+
+  .wrap {
+    width: 100%;
+    margin-top: 0px;
+    font-size: 10px;
+  }
+
+   li {
+    float: none;
+  }
+
+  .right_side {
+    float: left;
+  }
+
+  nav {
+    letter-spacing: 1px;
+  }
+
+  ul.primary li a {
+    padding-top: 5px;
+    padding-bottom: 5px;
+    padding-right: 5px;
+    padding-left: 5px;
+  }
+
+  ul.primary li:hover a {
+    background: none;
+    color: #8B8B8B;
+    text-shadow: 1px 1px #000;
+  }
+
+  ul.primary li:hover ul {
+    display: block;
+    background: #272727;
+    color: #fff;
+  }
+
+  ul.sub {
+    display: block;
+    position: static;
+    box-shadow: none;
+    width: 100%;
+  }
+
+  ul.sub li a {
+    background: #272727;
+    border: none;
+    color: #8B8B8B;
+  }
+
+  ul.sub li a:hover {
+    color: #ccc;
+    background: none;
+  }
+
+  #release_version {
+    display: none;
+  }
+
+  #discord_badge {
+    display: none;
+  }
+
+  #github_link {
+    display: none;
+  }
 }
