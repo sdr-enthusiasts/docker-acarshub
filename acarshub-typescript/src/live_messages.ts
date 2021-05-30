@@ -240,7 +240,7 @@ window.pause_updates = function () {
     let id_filtered = document.getElementById("received");
     if (id_filtered !== null) {
       id_filtered.innerHTML = "";
-      let txt_filtered = document.createTextNode("Received messages");
+      let txt_filtered = document.createTextNode("Received messages: ");
       id_filtered.appendChild(txt_filtered);
     }
 
@@ -256,7 +256,9 @@ window.pause_updates = function () {
     let id_filtered = document.getElementById("received");
     if (id_filtered !== null) {
       id_filtered.innerHTML = "";
-      let txt_filtered = document.createTextNode("Received messages (paused)");
+      let txt_filtered = document.createTextNode(
+        "Received messages (paused): "
+      );
       id_filtered.appendChild(txt_filtered);
     }
   }
@@ -291,7 +293,7 @@ window.filter_notext = function () {
       // );
 
       $("#filtered").html(
-        ' | <span class="menu_non_link">Filtered Messages:&nbsp;</span><span id="filteredmessages"></span>'
+        ' | <span class="menu_non_link">Filtered Messages:&nbsp;</span><span class="green" id="filteredmessages"></span>'
       );
       let id_filtered = <HTMLInputElement>(
         document.getElementById("filteredmessages")
