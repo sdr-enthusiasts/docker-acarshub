@@ -203,16 +203,22 @@ function toggle_pages() {
   acars_page = "/" + document.location.pathname.replace(acars_path, "");
   for (let page in pages) {
     if (pages[page] === "/" && acars_page === pages[page]) {
+      $("#live_messages_link").addClass("invert_a");
       live_message_active(true);
     } else if (pages[page] === "/") {
+      $("#live_messages_link").removeClass("invert_a");
       live_message_active();
     } else if (pages[page] === "/search" && acars_page === pages[page]) {
+      $("#search_link").addClass("invert_a");
       search_active(true);
     } else if (pages[page] === "/search") {
+      $("#search_link").removeClass("invert_a");
       search_active();
     } else if (pages[page] === "/stats" && acars_page === pages[page]) {
+      $("#stats_link").addClass("invert_a");
       stats_active(true);
     } else if (pages[page] === "/stats") {
+      $("#stats_link").removeClass("invert_a");
       stats_active();
     } else if (pages[page] === "/about" && acars_page === pages[page]) {
       about_active(true);
@@ -223,8 +229,10 @@ function toggle_pages() {
     } else if (pages[page] === "/status") {
       status_active();
     } else if (pages[page] === "/alerts" && acars_page === pages[page]) {
+      $("#alerts_link").addClass("invert_a");
       alert_active(true);
     } else if (pages[page] === "/alerts") {
+      $("#alerts_link").removeClass("invert_a");
       alert_active();
     }
   }

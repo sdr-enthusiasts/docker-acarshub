@@ -319,7 +319,7 @@ label {
   left: 0;
   bottom: 0;
   width: 100%;
-  background-color: white;
+  background-color: #3D3D3D;
   text-align: left;
   border: 1px solid black;
   padding-right: 15px;
@@ -471,7 +471,7 @@ ul {
   padding-left: 10px;
 }
 
-#right_side {
+.right_side {
   float: right;
   z-index: 300;
 }
@@ -522,6 +522,16 @@ nav {
   color: #1496bb;
   text-transform: uppercase;
 }
+
+ul.primary li a.invert_a {
+  color: white;
+}
+
+ul.primary li a.invert_a:hover {
+  color: #1496bb;
+  transition: all 0.25s ease-in;
+}
+
 /* prime */
 ul.primary li a {
   display: block;

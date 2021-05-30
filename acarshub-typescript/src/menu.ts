@@ -9,11 +9,11 @@ export function generate_menu() {
   let html = '<div class="wrap"><span class="decor"></span>';
   html += '<nav><ul class="primary">';
   html += `<li class="img_box"><img src="${acars_url}static/images/acarshubsquare.png" class="banner_img"></li>`;
-  html += `<li><a href="javascript:new_page('Live Messages')">Live Messages</a></li>`;
-  html += `<li><a href="javascript:new_page('Search')">Search Database</a></li>`;
-  html += `<li><a href="javascript:new_page('Alerts')">Alerts<span id="alert_count"></span></li>`;
-  html += `<li><a href="javascript:new_page('Stats')">Statistics</a></li>`;
-  html += `<li><span id="modal_text"></span></li>`;
+  html += `<li><a href="javascript:new_page('Live Messages')" id="live_messages_link">Live Messages</a></li>`;
+  html += `<li><a href="javascript:new_page('Search')" id="search_link">Search Database</a></li>`;
+  html += `<li><a href="javascript:new_page('Alerts')" id="alerts_link">Alerts<span id="alert_count"></span></li>`;
+  html += `<li><a href="javascript:new_page('Stats')" id="stats_link">Statistics</a></li>`;
+  html += `<li class="right_side"><span id="modal_text"></span></li>`;
   html += "</ul></nav></div>";
   $("#links").html(html);
 }
