@@ -293,7 +293,7 @@ window.filter_notext = function () {
       // );
 
       $("#filtered").html(
-        ' | <span class="menu_non_link">Filtered Messages:&nbsp;</span><span class="green" id="filteredmessages"></span>'
+        '<div><span class="menu_non_link">Filtered Messages:&nbsp;</span><span class="green" id="filteredmessages"></span></div>'
       );
       let id_filtered = <HTMLInputElement>(
         document.getElementById("filteredmessages")

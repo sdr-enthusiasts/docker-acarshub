@@ -1,6 +1,7 @@
 :root {
   --blue-highlight: #1496bb;
   --grey-bg: #3D3D3D;
+  --grey-highlight: #BEBEBE;
 }
 table {
   border: 1px solid black;
@@ -170,7 +171,7 @@ div#header {
   margin: 0px;
 }
 
-div#right.row {
+/* div#right.row {
   position: fixed;
   right: 0px;
   top: 60px;
@@ -187,8 +188,8 @@ div#right.row {
   background-image: -o-linear-gradient(bottom, #333333 7%, #2B2B2B 100%);
   background-image: linear-gradient(bottom, #333333 7%, #2B2B2B 100%);
   z-index: 9;
-  /*box-shadow: -4px -1px 2px -1px #888;*/
-}
+  box-shadow: -4px -1px 2px -1px #888;
+} */
 
 div#links.row {
   position: relative;
@@ -338,6 +339,13 @@ label {
 
 .footer a:hover {
   color: white;
+  transition: all 0.25s ease-out;
+}
+
+.footer div {
+  display: inline-block;
+  border-right: 1px solid var(--grey-highlight);
+  padding-right: 5px;
 }
 
 #shadow {
@@ -567,7 +575,7 @@ ul.primary li a:hover {
 ul.sub {
   position: absolute;
   z-index: 200;
-  box-shadow: 2px 2px 0 #BEBEBE;
+  box-shadow: 2px 2px 0 var(--grey-highlight);
   width: 35%;
   display:none;
 }

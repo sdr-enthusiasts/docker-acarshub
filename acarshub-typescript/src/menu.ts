@@ -45,11 +45,13 @@ export function generate_stat_submenu(acars: boolean, vdlm: boolean) {
 }
 
 export function generate_footer() {
-  let html: string = `<strong><a href="javascript:new_page('About')">ACARS Hub Help/About</a> | <a href="https://github.com/fredclausen/docker-acarshub" target="_blank">Project Github</a> | \
-     <a href="https://discord.gg/sTf9uYF"><img src="https://img.shields.io/discord/734090820684349521" alt="discord"></a> | \
-     <span id="system_status"><a href="javascript:new_page('Status')">System Status: <span class="green">Okay</a></span></span> \
-     <span id="disconnect"></span>  | <span class="menu_non_link" id="received">Received Messages:&nbsp;</span><span class="green" id="receivedmessages">0</span>
-     <span id="filtered"></span></strong>\
-     <span class="align_right"><strong>Pre-Release</strong></span>`;
+  let html: string = `<strong><div><a href="javascript:new_page('About')">ACARS Hub Help/About</a></div> \
+    <div><a href="https://github.com/fredclausen/docker-acarshub" target="_blank">Project Github</a></div> \
+    <div><a href="https://discord.gg/sTf9uYF"><img src="https://img.shields.io/discord/734090820684349521" alt="discord"></a></div> \
+    <div><span id="system_status"><a href="javascript:new_page('Status')">System Status: <span class="green">Okay</a></span></span> \
+    <span id="disconnect"></span></div> \
+    <div><span class="menu_non_link" id="received">Received Messages:&nbsp;</span><span class="green" id="receivedmessages">0</span></div> \
+    <span id="filtered"></span></strong> \
+    <span class="align_right"><strong>Pre-Release</strong></span>`;
   $("#footer_div").html(html);
 }
