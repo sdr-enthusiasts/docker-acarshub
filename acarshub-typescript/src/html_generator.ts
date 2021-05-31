@@ -78,7 +78,7 @@ export function display_messages(
               previous_tab +
               `', '` +
               unique_id +
-              `')" id = "tab${unique_id}_previous" name = "tabs_${unique_id}" class="boxed"><<</a>`;
+              `')" id = "tab${unique_id}_previous" name = "tabs_${unique_id}" class="boxed">&lt;&lt;</a>`;
             //msgs_string += `<label for = "tab${previous_tab}_${unique_id}"><<</label>`;
 
             msgs_string +=
@@ -86,7 +86,7 @@ export function display_messages(
               next_tab +
               `', '` +
               unique_id +
-              `')" id = "tab${unique_id}_next" name = "tabs_${unique_id}" class="boxed">>></a>`;
+              `')" id = "tab${unique_id}_next" name = "tabs_${unique_id}" class="boxed">&gt;&gt;</a>`;
             //msgs_string += `<label for = "tab${next_tab}_${unique_id}">>></label>`;
           }
 
@@ -296,7 +296,9 @@ export function display_messages(
           html_output += "<tr>";
         }
 
-        html_output += '<td class="text_top">';
+        html_output += message.hasOwnProperty("decodedText")
+          ? '<td class="text_top dont_show">'
+          : '<td class="text_top">'; // If screen size is too small, and we have decoded text, hide this element
         html_output += "<strong>Non-Decoded Text:</strong><p>";
         html_output += `<pre id=\"shadow\"><strong>${
           typeof message.matched_text === "object"

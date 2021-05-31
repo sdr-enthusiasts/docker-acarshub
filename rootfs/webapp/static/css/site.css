@@ -33,7 +33,7 @@ table.message {
   border: none;
   border-collapse: collapse;
   width: 100%;
-  /* table-layout: fixed; */
+  table-layout: fixed;
   background-color: white;
   vertical-align: top;
 }
@@ -900,6 +900,10 @@ canvas {
   }
 
   #github_link {
+    display: none;
+  }
+
+  .dont_show {
     display: none;
   }
 }
