@@ -906,4 +906,26 @@ canvas {
   .dont_show {
     display: none;
   }
+
+  #msg_body {
+    column-span: 2;
+  }
+
+  .show_when_big {
+    display: none;
+  }
+
+  #show_when_small {
+    display: inline-block;
+  }
+}
+
+@media only screen and (min-width: 951px) {
+  #show_when_small {
+    display: none;
+  }
+}
+
+#msg_body {
+  column-span: 1;
 }
