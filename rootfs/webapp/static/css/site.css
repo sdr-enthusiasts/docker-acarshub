@@ -483,7 +483,7 @@ a:visited {
   background: -webkit-linear-gradient(left, var(--grey-bg) 50%, var(--blue-highlight) 50%);
   background: -moz-linear-gradient(left, var(--grey-bg) 50%, var(--blue-highlight) 50%);
   background: -o-linear-gradient(left, var(--grey-bg) 50%, var(--blue-highlight) 50%);
-  background: linear-gradient(to left, white 50%, var(--blue-highlight) 50%);
+  background: linear-gradient(to left, var(--grey-bg) 50%, var(--blue-highlight) 50%);
   background-size: 50px 25%;;
   padding: 2px;
   display: block;
