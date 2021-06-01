@@ -194,70 +194,77 @@ export function display_messages(
           ? add_message_field("To Address Station ID", message.toaddr_decoded)
           : "";
 
-      if (message.hasOwnProperty("fromaddr")) {
-        let fromaddr_decoded = "";
+      //
+      html_output +=
+        typeof message.fromaddr !== "undefined"
+          ? add_message_field(
+              "From Address",
+              message.fromaddr +
+                (typeof message.fromaddr_hex !== "undefined"
+                  ? "/" + message.fromaddr_hex
+                  : "/?")
+            )
+          : "";
+      html_output +=
+        typeof message.fromaddr_decoded !== "undefined"
+          ? add_message_field(
+              "From Address Station ID",
+              message.fromaddr_decoded
+            )
+          : "";
+      html_output +=
+        typeof message.depa !== "undefined"
+          ? add_message_field("Departing", message.depa)
+          : "";
+      html_output +=
+        typeof message.dsta !== "undefined"
+          ? add_message_field("Destination", message.dsta)
+          : "";
+      html_output +=
+        typeof message.eta !== "undefined"
+          ? add_message_field("Estimated time of arrival", message.eta)
+          : "";
+      html_output +=
+        typeof message.gtout !== "undefined"
+          ? add_message_field("Pushback from gate", message.gtout)
+          : "";
+      html_output +=
+        typeof message.gtin !== "undefined"
+          ? add_message_field("Arrived at gate", message.gtin)
+          : "";
+      html_output +=
+        typeof message.wloff !== "undefined"
+          ? add_message_field("Wheels off", message.wloff)
+          : "";
+      html_output +=
+        typeof message.wlin !== "undefined"
+          ? add_message_field("Departing", message.wlin)
+          : "";
+      html_output +=
+        typeof message.lat !== "undefined"
+          ? add_message_field(
+              "Latitude",
+              message.lat.toLocaleString(undefined, {
+                maximumFractionDigits: 2,
+                minimumFractionDigits: 2,
+              })
+            )
+          : "";
+      html_output +=
+        typeof message.lon !== "undefined"
+          ? add_message_field(
+              "Longitude",
+              message.lon.toLocaleString(undefined, {
+                maximumFractionDigits: 2,
+                minimumFractionDigits: 2,
+              })
+            )
+          : "";
 
-        if (message.hasOwnProperty("fromaddr_decoded")) {
-          fromaddr_decoded = `<br>From Address Station ID: <strong>${message["fromaddr_decoded"]}</strong>`;
-        }
-        if (message.hasOwnProperty("fromaddr_hex")) {
-          html_output += `From Address: <strong>${message["fromaddr"]}/${message["fromaddr_hex"]}</strong>${fromaddr_decoded}<br>`;
-        } else {
-          html_output += `From Address: <strong>${message["fromaddr"]}/?</strong><br>`;
-        }
-      }
-
-      if (message.hasOwnProperty("depa")) {
-        html_output += `Departing: <strong>${message["depa"]}</strong><br>`;
-      }
-
-      if (message.hasOwnProperty("dsta")) {
-        html_output += `Destination: <strong>${message["dsta"]}</strong><br>`;
-      }
-
-      if (message.hasOwnProperty("eta")) {
-        html_output += `Estimated time of arrival: <strong>${message["eta"]}</strong> hours</strong><br>`;
-      }
-
-      if (message.hasOwnProperty("gtout")) {
-        html_output += `Pushback from gate: <strong>${message["gtout"]}</strong> hours</strong><br>`;
-      }
-
-      if (message.hasOwnProperty("gtin")) {
-        html_output += `Arriving at gate: <strong>${message["gtin"]}</strong> hours</strong><br>`;
-      }
-
-      if (message.hasOwnProperty("wloff")) {
-        html_output += `Wheels off: <strong>${message["wloff"]}</strong> hours</strong><br>`;
-      }
-
-      if (message.hasOwnProperty("wlin")) {
-        html_output += `Wheels down: <strong>${message["wlin"]}</strong><br>`;
-      }
-
-      if (message.hasOwnProperty("lat") && typeof message.lat !== "undefined") {
-        html_output += `Latitude: <strong>${message["lat"].toLocaleString(
-          undefined,
-          {
-            maximumFractionDigits: 2,
-            minimumFractionDigits: 2,
-          }
-        )}</strong><br>`;
-      }
-
-      if (message.hasOwnProperty("lon") && typeof message.lon !== "undefined") {
-        html_output += `Longitude: <strong>${message["lon"].toLocaleString(
-          undefined,
-          {
-            maximumFractionDigits: 2,
-            minimumFractionDigits: 2,
-          }
-        )}</strong><br>`;
-      }
-
-      if (message.hasOwnProperty("alt")) {
-        html_output += `Altitude: <strong>${message["alt"]}</strong><br>`;
-      }
+      html_output +=
+        typeof message.alt !== "undefined"
+          ? add_message_field("Altitude", String(message.alt))
+          : "";
 
       // Table footer row, tail & flight info, displayed in main body if screen is too small
       html_output += '<td class="text_top show_when_small">';
