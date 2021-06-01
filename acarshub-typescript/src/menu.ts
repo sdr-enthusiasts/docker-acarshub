@@ -8,7 +8,7 @@ const acars_url: string = document.location.origin + acars_path;
 export function generate_menu() {
   let html = '<div class="wrap"><span class="decor"></span>';
   html += '<nav><ul class="primary">';
-  html += `<li class="img_box" id="logo_image"><img src="${acars_url}static/images/acarshubsquare.png" class="banner_img"></li>`;
+  html += `<li class="img_box" id="logo_image"><img src="${acars_url}static/images/acarshubsquare.png" class="banner_img" alt="ACARS Hub Logo"></li>`;
   html += `<li><a href="javascript:new_page('Live Messages')" id="live_messages_link">Live Messages</a></li>`;
   html += `<li><a href="javascript:new_page('Search')" id="search_link">Search Database</a></li>`;
   html += `<li><a href="javascript:new_page('Alerts')" id="alerts_link">Alerts<span id="alert_count"></span></li>`;
@@ -45,13 +45,13 @@ export function generate_stat_submenu(acars: boolean, vdlm: boolean) {
 }
 
 export function generate_footer() {
-  let html: string = `<strong><div><a href="javascript:new_page('About')">ACARS Hub Help/About</a></div> \
+  let html: string = `<div><a href="javascript:new_page('About')">ACARS Hub Help/About</a></div> \
     <div id="github_link"><a href="https://github.com/fredclausen/docker-acarshub" target="_blank">Project Github</a></div> \
     <div id="discord_badge"><a href="https://discord.gg/sTf9uYF"><img src="https://img.shields.io/discord/734090820684349521" alt="discord"></a></div> \
     <div><span id="system_status"><a href="javascript:new_page('Status')">System Status: <span class="green">Okay</a></span></span> \
     <span id="disconnect"></span></div> \
     <div><span class="menu_non_link" id="received">Received Messages:&nbsp;</span><span class="green" id="receivedmessages">0</span></div> \
-    <span id="filtered"></span></strong> \
+    <span id="filtered"></span> \
     <span class="align_right" id="release_version"><strong>Pre-Release</strong></span>`;
   $("#footer_div").html(html);
 }

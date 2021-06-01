@@ -2,8 +2,19 @@
 // Input: msgs_to_process - the array of messages. Format is array of message groups, with each group being an array of message(s) that create a group of submessages
 // Input: selected_tabs - if present, we'll process. Format is uid1;elementid1,uid2;elementid2 etc
 // Input: live_page - default is false. This toggles on the checks for selected tabs
-import { create_message_nav, start_message_tabs } from "./html_functions.js";
-import { html_msg, acars_msg } from "./interfaces.js";
+import {
+  add_message_field,
+  create_message_nav_arrows,
+  create_message_tab,
+  message_div,
+  message_station_and_type,
+  message_tab_label,
+  message_timestamp,
+  start_message_body,
+  start_message_box,
+  start_message_tabs,
+} from "./html_functions.js";
+import { acars_msg } from "./interfaces.js";
 
 export function display_messages(
   msgs_to_process: acars_msg[][],
@@ -39,7 +50,7 @@ export function display_messages(
             array_index_tab = String(
               sub_messages.findIndex((sub_element: acars_msg) => {
                 if (
-                  sub_element.uid == active_tab ||
+                  sub_element.uid === active_tab ||
                   sub_element.uid === active_tab
                 ) {
                   return true;
@@ -74,41 +85,21 @@ export function display_messages(
 
           msgs_string +=
             j === 0
-              ? create_message_nav(previous_tab, unique_id) +
-                create_message_nav(next_tab, unique_id, false)
+              ? create_message_nav_arrows(previous_tab, unique_id) +
+                create_message_nav_arrows(next_tab, unique_id, false)
               : "";
 
-          if (active_tab === "0" && j === 0) {
-            msgs_string +=
-              `<input type = "radio" id = "tab${tab_uid}_${unique_id}" name = "tabs_${unique_id}" class = "tabs_${unique_id}" checked onclick="handle_radio('` +
-              tab_uid +
-              `', '` +
-              unique_id +
-              `')">`;
-          } else if (tab_uid == String(active_tab)) {
-            // we have an active tab set and it matches the current message
-            msgs_string +=
-              `<input type = "radio" id = "tab${tab_uid}_${unique_id}" name = "tabs_${unique_id}" class = "tabs_${unique_id}" checked onclick="handle_radio('` +
-              tab_uid +
-              `', '` +
-              unique_id +
-              `')">`;
-          } else {
-            // Otherwise this message's tab is not active
-            msgs_string +=
-              `<input type = "radio" id = "tab${tab_uid}_${unique_id}" name = "tabs_${unique_id}" class = "tabs_${unique_id}" onclick="handle_radio('` +
-              tab_uid +
-              `', '` +
-              unique_id +
-              `')">`;
-          }
-
-          let label_string = "";
-          if (sub_messages[j].hasOwnProperty("matched"))
-            label_string = `<span class="red_body">Message ${j + 1}</span>`;
-          else label_string = `Message ${j + 1}`;
-
-          msgs_string += `<label for = "tab${tab_uid}_${unique_id}">${label_string}</label>`;
+          if (active_tab === "0" && j === 0)
+            msgs_string += create_message_tab(tab_uid, unique_id);
+          else if (tab_uid === String(active_tab))
+            msgs_string += create_message_tab(tab_uid, unique_id);
+          else msgs_string += create_message_tab(tab_uid, unique_id, false);
+          msgs_string += message_tab_label(
+            j,
+            sub_messages[j].hasOwnProperty("matched"),
+            tab_uid,
+            unique_id
+          );
         }
       }
     }
@@ -121,26 +112,31 @@ export function display_messages(
         let tab_uid = unique_id;
 
         tab_uid = sub_messages[u]["uid"]; // UID for the current message
-        if (active_tab === "0" && u == 0)
-          // Case for no tab selected by user. Newest message is active
-          html_output += `<div id = "message_${unique_id}_${tab_uid}" class="sub_msg${unique_id} checked">`;
-        else if (tab_uid == String(active_tab))
-          // User has selected a tab for the group and it is this message. Set to be vis
-          html_output += `<div id = "message_${unique_id}_${tab_uid}" class="sub_msg${unique_id} checked">`;
+        tab_uid = sub_messages[u]["uid"]; // UID for the current message
+
+        if (active_tab === "0" && u === 0)
+          html_output += message_div(unique_id, tab_uid);
+        // Case for no tab selected by user. Newest message is active
+        else if (tab_uid === String(active_tab))
+          html_output += message_div(unique_id, tab_uid);
+        // User has selected a tab for the group and it is this message. Set to be vis
         // Hide the selected tab if the previous cases don't match
-        else
-          html_output += `<div id = "message_${unique_id}_${tab_uid}" class="sub_msg${unique_id}">`;
+        else html_output += message_div(unique_id, tab_uid, false);
       }
       //msgs_string = '<p>' + msgs_received[i].toString() + '</p>' + msgs_string;
       let message: acars_msg = sub_messages[u]; // variable to hold the current message
-      html_output += '<div><table id="shadow">';
+      html_output += start_message_box();
 
-      if (sub_messages.length == 1 && message.hasOwnProperty("matched"))
-        html_output += '<tr class="red_body">';
-      else html_output += "<tr>";
-      html_output += `<td><strong>${message["message_type"]}</strong> from <strong>${message["station_id"]}</strong></td>`;
-
-      let timestamp; // variable to save the timestamp We need this because the database saves the time as 'time' and live messages have it as 'timestamp' (blame Fred for this silly mis-naming of db columns)
+      // if (sub_messages.length === 1 && message.hasOwnProperty("matched"))
+      //   html_output += '<tr class="red_body">';
+      // else html_output += "<tr>";
+      // html_output += `<td><strong>${message["message_type"]}</strong> from <strong>${message["station_id"]}</strong></td>`;
+      html_output += message_station_and_type(
+        message["message_type"],
+        message["station_id"],
+        sub_messages.length === 1 && message.hasOwnProperty("matched")
+      );
+      let timestamp: Date; // variable to save the timestamp We need this because the database saves the time as 'time' and live messages have it as 'timestamp' (blame Fred for this silly mis-naming of db columns)
 
       // grab the time (unix EPOCH) from the correct key and convert in to a Date object for display
       if (message.hasOwnProperty("timestamp"))
@@ -152,33 +148,33 @@ export function display_messages(
             : 0) * 1000
         );
 
-      html_output += `<td style=\"text-align: right\"><strong>${timestamp}</strong></td>`;
-      html_output += "</tr>";
+      html_output += message_timestamp(timestamp);
       // Table content
-      html_output += '<tr><td class="text_top msg_body">';
+      html_output += start_message_body();
 
       // Special keys used by the JS files calling this function
       // Duplicates is used to indicate the number of copies received for this message
       // msgno_parts is the list of MSGID fields used to construct the multi-part message
 
-      if (message.hasOwnProperty("duplicates")) {
-        html_output += `Duplicate(s) Received: <strong>${message["duplicates"]}</strong><br>`;
-      }
-
-      if (message.hasOwnProperty("msgno_parts")) {
-        html_output += `Message Parts: <strong>${message["msgno_parts"]}</strong><br>`;
-      }
-
-      if (message.hasOwnProperty("label")) {
-        let label_type = "";
-        if (message.hasOwnProperty("label_type")) {
-          label_type =
-            typeof message.label_type !== "undefined"
-              ? message["label_type"].trim()
-              : "";
-        }
-        html_output += `Message Label: <strong>(${message["label"]}) ${label_type}</strong><br>`;
-      }
+      html_output +=
+        typeof message.duplicates !== "undefined"
+          ? add_message_field("Duplicate(s) Received", message.duplicates)
+          : "";
+      html_output +=
+        typeof message.msgno_parts !== "undefined"
+          ? add_message_field("Message Parts", message.msgno_parts)
+          : "";
+      html_output +=
+        typeof message.label !== "undefined"
+          ? add_message_field(
+              "Message Label",
+              message.label +
+                " " +
+                (typeof message.label_type !== "undefined"
+                  ? message.label_type.trim()
+                  : "")
+            )
+          : "";
 
       // to/fromaddr is a pre-processed field
       // if possible, we'll have an appended hex representation of the decimal address
@@ -262,7 +258,7 @@ export function display_messages(
       }
 
       // Table footer row, tail & flight info, displayed in main body if screen is too small
-      html_output += '<td class="text_top" id="show_when_small">';
+      html_output += '<td class="text_top show_when_small">';
       if (message.hasOwnProperty("tail")) {
         html_output += `Tail: <strong><a href=\"https://flightaware.com/live/flight/${
           message["tail"]
@@ -364,7 +360,7 @@ export function display_messages(
         // 2 indicates the plane is on the ground
         // https://github.com/TLeconte/vdlm2dec/blob/1ea300d40d66ecb969f1f463506859e36f62ef5c/out.c#L457
         // variable naming in vdlm2dec is inconsistent, but "ground" and "gnd" seem to be used
-        let is_onground = message["is_onground"] == 0 ? "False" : "True";
+        let is_onground = message["is_onground"] === 0 ? "False" : "True";
 
         html_output += `<span class=\"wrapper\">G: <strong>${is_onground}</strong><span class=\"tooltip\">Is on ground?</span></span><br>`;
       }
@@ -400,7 +396,7 @@ export function display_messages(
             decodedStatus = "Partial";
           html_output += '<td class="text_top">';
           html_output += `<strong>Decoded Text (${decodedStatus}):</strong></p>`;
-          html_output += '<pre id="shadow"><strong>';
+          html_output += '<pre class="shadow show_strong">';
           html_output +=
             typeof message.matched_text === "object"
               ? replace_text(
@@ -409,7 +405,7 @@ export function display_messages(
                 )
               : loop_array(message["decodedText"].formatted); // get the formatted html of the decoded text
           //html_output += `${message['decodedText'].raw}`;
-          html_output += "</strong></pre>";
+          html_output += "</pre>";
           html_output += "</td>";
           //html_output += "</p>";
         } else {
@@ -420,11 +416,11 @@ export function display_messages(
           ? '<td class="text_top dont_show">'
           : '<td class="text_top">'; // If screen size is too small, and we have decoded text, hide this element
         html_output += "<strong>Non-Decoded Text:</strong><p>";
-        html_output += `<pre id=\"shadow\"><strong>${
+        html_output += `<pre class="shadow show_strong">${
           typeof message.matched_text === "object"
             ? replace_text(message.matched_text, text)
             : text
-        }</strong></pre>`;
+        }</pre>`;
         html_output += "</td>";
         html_output += "</tr></table>";
       } else if (
@@ -434,11 +430,11 @@ export function display_messages(
         let data = message["data"];
         data = data.replace("\\r\\n", "<br>");
         html_output += "<p>";
-        html_output += `<pre id=\"shadow\"><strong>${data}</strong></pre>`;
+        html_output += `<pre class="shadow show_strong">${data}</pre>`;
         html_output += "</p>";
       } else {
         html_output +=
-          '<p><pre id="shadow"><i><strong>No text</strong></i></pre></p>';
+          '<p><pre class="shadow show_strong"><i>No text</i></pre></p>';
       }
 
       if (message.hasOwnProperty("libacars")) {
@@ -554,7 +550,7 @@ export function display_messages(
         // 2 indicates the plane is on the ground
         // https://github.com/TLeconte/vdlm2dec/blob/1ea300d40d66ecb969f1f463506859e36f62ef5c/out.c#L457
         // variable naming in vdlm2dec is inconsistent, but "ground" and "gnd" seem to be used
-        let is_onground = message["is_onground"] == 0 ? "False" : "True";
+        let is_onground = message["is_onground"] === 0 ? "False" : "True";
 
         html_output += `<span class=\"wrapper\">G: <strong>${is_onground}</strong><span class=\"tooltip\">Is on ground?</span></span> `;
       }
@@ -604,11 +600,11 @@ function loop_array(input: any) {
     if (typeof input[m] === "object") {
       html_output += loop_array(input[m]);
     } else {
-      if (m == "label") html_output += input[m] + ": ";
-      else if (m == "value") {
+      if (m === "label") html_output += input[m] + ": ";
+      else if (m === "value") {
         html_output += input[m] + "<br>";
-      } else if (m == "description") {
-        html_output += "<p>Description: " + input[m] + "</p>";
+      } else if (m === "description") {
+        html_output += "Description: " + input[m] + "<br>";
       }
     }
   }
