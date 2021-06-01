@@ -179,18 +179,20 @@ export function display_messages(
       // to/fromaddr is a pre-processed field
       // if possible, we'll have an appended hex representation of the decimal address
 
-      if (message.hasOwnProperty("toaddr")) {
-        let toaddr_decoded = "";
-
-        if (message.hasOwnProperty("toaddr_decoded")) {
-          toaddr_decoded = `<br>To Address Station ID: <strong>${message["toaddr_decoded"]}</strong>`;
-        }
-        if (message.hasOwnProperty("toaddr_hex")) {
-          html_output += `To Address: <strong>${message["toaddr"]}/${message["toaddr_hex"]}</strong>${toaddr_decoded}<br>`;
-        } else {
-          html_output += `To Address: <strong>${message["toaddr"]}/?</strong><br>`;
-        }
-      }
+      html_output +=
+        typeof message.toaddr !== "undefined"
+          ? add_message_field(
+              "To Address",
+              message.toaddr +
+                (typeof message.toaddr_hex !== "undefined"
+                  ? "/" + message.toaddr_hex
+                  : "/?")
+            )
+          : "";
+      html_output +=
+        typeof message.toaddr_decoded !== "undefined"
+          ? add_message_field("To Address Station ID", message.toaddr_decoded)
+          : "";
 
       if (message.hasOwnProperty("fromaddr")) {
         let fromaddr_decoded = "";
