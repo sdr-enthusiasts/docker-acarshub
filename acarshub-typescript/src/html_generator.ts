@@ -2,6 +2,7 @@
 // Input: msgs_to_process - the array of messages. Format is array of message groups, with each group being an array of message(s) that create a group of submessages
 // Input: selected_tabs - if present, we'll process. Format is uid1;elementid1,uid2;elementid2 etc
 // Input: live_page - default is false. This toggles on the checks for selected tabs
+import { create_message_nav, start_message_tabs } from "./html_functions.js";
 import { html_msg, acars_msg } from "./interfaces.js";
 
 export function display_messages(
@@ -62,7 +63,7 @@ export function display_messages(
           previous_tab = sub_messages[Number(array_index_tab) - 1].uid;
         }
 
-        msgs_string += '<div class = "tabinator">';
+        msgs_string += start_message_tabs();
         for (let j = 0; j < sub_messages.length; j++) {
           // Loop through all messages in the group to show all of the tabs
           let tab_uid = unique_id;
@@ -71,26 +72,13 @@ export function display_messages(
 
           // If there is no active tab set by the user we'll set the newest message to be active/checked
 
-          if (j == 0) {
-            // Generate tabs for the nav left and right
-            msgs_string +=
-              `<a href="javascript:handle_radio('` +
-              previous_tab +
-              `', '` +
-              unique_id +
-              `')" id = "tab${unique_id}_previous" name = "tabs_${unique_id}" class="boxed">&lt;&lt;</a>`;
-            //msgs_string += `<label for = "tab${previous_tab}_${unique_id}"><<</label>`;
+          msgs_string +=
+            j === 0
+              ? create_message_nav(previous_tab, unique_id) +
+                create_message_nav(next_tab, unique_id, false)
+              : "";
 
-            msgs_string +=
-              `<a href="javascript:handle_radio('` +
-              next_tab +
-              `', '` +
-              unique_id +
-              `')" id = "tab${unique_id}_next" name = "tabs_${unique_id}" class="boxed">&gt;&gt;</a>`;
-            //msgs_string += `<label for = "tab${next_tab}_${unique_id}">>></label>`;
-          }
-
-          if (active_tab === "0" && j == 0) {
+          if (active_tab === "0" && j === 0) {
             msgs_string +=
               `<input type = "radio" id = "tab${tab_uid}_${unique_id}" name = "tabs_${unique_id}" class = "tabs_${unique_id}" checked onclick="handle_radio('` +
               tab_uid +
