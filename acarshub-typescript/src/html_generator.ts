@@ -11,8 +11,10 @@ import {
   message_tab_label,
   message_timestamp,
   start_message_body,
-  start_message_box,
   start_message_tabs,
+  message_text,
+  replace_text,
+  start_message_box,
 } from "./html_functions.js";
 import { acars_msg } from "./interfaces.js";
 
@@ -126,11 +128,6 @@ export function display_messages(
       //msgs_string = '<p>' + msgs_received[i].toString() + '</p>' + msgs_string;
       let message: acars_msg = sub_messages[u]; // variable to hold the current message
       html_output += start_message_box();
-
-      // if (sub_messages.length === 1 && message.hasOwnProperty("matched"))
-      //   html_output += '<tr class="red_body">';
-      // else html_output += "<tr>";
-      // html_output += `<td><strong>${message["message_type"]}</strong> from <strong>${message["station_id"]}</strong></td>`;
       html_output += message_station_and_type(
         message["message_type"],
         message["station_id"],
@@ -267,313 +264,15 @@ export function display_messages(
           : "";
 
       // Table footer row, tail & flight info, displayed in main body if screen is too small
-      html_output += '<td class="text_top show_when_small">';
-      if (message.hasOwnProperty("tail")) {
-        html_output += `Tail: <strong><a href=\"https://flightaware.com/live/flight/${
-          message["tail"]
-        }\" target=\"_blank\">${
-          typeof message.matched_tail !== "undefined" &&
-          typeof message.tail !== "undefined"
-            ? replace_text(message.matched_tail, message.tail)
-            : message.tail
-        }</a></strong><br>`;
-      }
+      html_output += show_footer_and_sidebar_text(message, false);
+      //html_output += "</td></tr>";
+      html_output += message_text(message);
 
-      if (
-        message.hasOwnProperty("flight") &&
-        typeof message.flight !== "undefined"
-      ) {
-        html_output +=
-          typeof message.matched_flight === "object"
-            ? replace_text(message.matched_flight, message.flight) + "<br>"
-            : message.flight + "<br>";
-      }
-
-      if (
-        message.hasOwnProperty("icao") &&
-        typeof message.icao !== "undefined"
-      ) {
-        html_output += "ICAO: <strong>";
-        html_output += message.hasOwnProperty("icao_url")
-          ? `<a href="${message["icao_url"]}" target="_blank">`
-          : "";
-        html_output +=
-          typeof message.matched_icao === "object"
-            ? replace_text(message.matched_icao, message.icao.toString())
-            : `${message["icao"]}`;
-        html_output +=
-          message.hasOwnProperty("icao_hex") &&
-          typeof message.matched_icao === "undefined"
-            ? `/${message["icao_hex"]}`
-            : "";
-        html_output +=
-          message.hasOwnProperty("icao_hex") &&
-          typeof message.matched_icao !== "undefined" &&
-          typeof message.icao_hex !== "undefined"
-            ? "/" +
-              replace_text(message.matched_icao, message["icao_hex"].toString())
-            : "";
-        html_output += message.hasOwnProperty("icao_url")
-          ? "</a></strong><br>"
-          : "</strong><br>";
-      }
-
-      // Table footer row, metadata
-      if (message.hasOwnProperty("freq")) {
-        html_output += `<span class=\"wrapper\">F: <strong>${message["freq"]}</strong><span class=\"tooltip\">The frequency this message was received on</span></span><br>`;
-      }
-
-      if (
-        message.hasOwnProperty("level") &&
-        typeof message.level !== "undefined"
-      ) {
-        let level = message["level"];
-        let circle = "";
-        if (level >= -10.0) {
-          circle = "circle_green";
-        } else if (level >= -20.0) {
-          circle = "circle_yellow";
-        } else if (level >= -30.0) {
-          circle = "circle_orange";
-        } else {
-          circle = "circle_red";
-        }
-        html_output += `L: <strong>${level}</strong> <div class="${circle}"></div><br>`;
-      }
-
-      if (message.hasOwnProperty("ack")) {
-        if (!message["ack"])
-          html_output += `<span class=\"wrapper\">A: <strong>${message["ack"]}</strong><span class=\"tooltip\">Acknowledgement</span></span><br>`;
-      }
-
-      if (message.hasOwnProperty("mode")) {
-        html_output += `<span class=\"wrapper\">M: <strong>${message["mode"]}</strong><span class=\"tooltip\">Mode</span></span><br>`;
-      }
-
-      if (message.hasOwnProperty("block_id")) {
-        html_output += `<span class=\"wrapper\">B: <strong>${message["block_id"]}</strong><span class=\"tooltip\">Block ID</span></span><br>`;
-      }
-
-      if (message.hasOwnProperty("msgno")) {
-        html_output += `<span class=\"wrapper\">M#: <strong>${message["msgno"]}</strong><span class=\"tooltip\">Message number. Used for multi-part messages.</span></span><br>`;
-      }
-
-      if (message.hasOwnProperty("is_response")) {
-        html_output += `<span class=\"wrapper\">R: <strong>${message["is_response"]}</strong><span class=\"tooltip\">Response</span></span><br>`;
-      }
-
-      if (message.hasOwnProperty("is_onground")) {
-        // We need to watch this to make sure I have this right. After spelunking through vdlm2dec source code
-        // Input always appears to be a 0 or 2...for reasons I don't get. I could have this backwards
-        // 0 indicates the plane is airborne
-        // 2 indicates the plane is on the ground
-        // https://github.com/TLeconte/vdlm2dec/blob/1ea300d40d66ecb969f1f463506859e36f62ef5c/out.c#L457
-        // variable naming in vdlm2dec is inconsistent, but "ground" and "gnd" seem to be used
-        let is_onground = message["is_onground"] === 0 ? "False" : "True";
-
-        html_output += `<span class=\"wrapper\">G: <strong>${is_onground}</strong><span class=\"tooltip\">Is on ground?</span></span><br>`;
-      }
-
-      if (message.hasOwnProperty("error")) {
-        if (message["error"] != 0) {
-          html_output += '<span style="color:red;">';
-          html_output += `<strong>E: ${message["error"]}</strong>`;
-          html_output += "</span><br>";
-        }
-      }
-
-      html_output += "</td>";
-      html_output += "</tr>";
-
-      html_output += '<tr><td colspan="2">';
       // Text field is pre-processed
       // we have a sub-table for the raw text field and if it was decoded, the decoded text as well
-      if (
-        message.hasOwnProperty("text") &&
-        typeof message.text !== "undefined"
-      ) {
-        let text = message["text"];
-        text = text.replace("\\r\\n", "<br>");
-        //html_output += "<p>";
-        html_output += '<table class="message">';
-
-        //html_output += "</p>";
-        if (message.hasOwnProperty("decodedText")) {
-          //html_output += "<p>";
-          let decodedStatus = "Full";
-          if (message["decodedText"].decoder.decodeLevel != "full")
-            decodedStatus = "Partial";
-          html_output += '<td class="text_top">';
-          html_output += `<strong>Decoded Text (${decodedStatus}):</strong></p>`;
-          html_output += '<pre class="shadow show_strong">';
-          html_output +=
-            typeof message.matched_text === "object"
-              ? replace_text(
-                  message.matched_text,
-                  loop_array(message["decodedText"].formatted)
-                )
-              : loop_array(message["decodedText"].formatted); // get the formatted html of the decoded text
-          //html_output += `${message['decodedText'].raw}`;
-          html_output += "</pre>";
-          html_output += "</td>";
-          //html_output += "</p>";
-        } else {
-          html_output += "<tr>";
-        }
-
-        html_output += message.hasOwnProperty("decodedText")
-          ? '<td class="text_top dont_show">'
-          : '<td class="text_top">'; // If screen size is too small, and we have decoded text, hide this element
-        html_output += "<strong>Non-Decoded Text:</strong><p>";
-        html_output += `<pre class="shadow show_strong">${
-          typeof message.matched_text === "object"
-            ? replace_text(message.matched_text, text)
-            : text
-        }</pre>`;
-        html_output += "</td>";
-        html_output += "</tr></table>";
-      } else if (
-        message.hasOwnProperty("data") &&
-        typeof message.data !== "undefined"
-      ) {
-        let data = message["data"];
-        data = data.replace("\\r\\n", "<br>");
-        html_output += "<p>";
-        html_output += `<pre class="shadow show_strong">${data}</pre>`;
-        html_output += "</p>";
-      } else {
-        html_output +=
-          '<p><pre class="shadow show_strong"><i>No text</i></pre></p>';
-      }
-
-      if (message.hasOwnProperty("libacars")) {
-        html_output += message["libacars"];
-      }
-
-      html_output += "</td></tr>";
 
       // Table footer row, tail & flight info
-      html_output += '<tr class="show_when_big">';
-      html_output += "<td>";
-      if (message.hasOwnProperty("tail")) {
-        html_output += `Tail: <strong><a href=\"https://flightaware.com/live/flight/${
-          message["tail"]
-        }\" target=\"_blank\">${
-          typeof message.matched_tail !== "undefined" &&
-          typeof message.tail !== "undefined"
-            ? replace_text(message.matched_tail, message.tail)
-            : message.tail
-        }</a></strong> `;
-      }
-
-      if (
-        message.hasOwnProperty("flight") &&
-        typeof message.flight !== "undefined"
-      ) {
-        html_output +=
-          typeof message.matched_flight === "object"
-            ? replace_text(message.matched_flight, message.flight)
-            : message.flight;
-      }
-
-      if (
-        message.hasOwnProperty("icao") &&
-        typeof message.icao !== "undefined"
-      ) {
-        html_output += "ICAO: <strong>";
-        html_output += message.hasOwnProperty("icao_url")
-          ? `<a href="${message["icao_url"]}" target="_blank">`
-          : "";
-        html_output +=
-          typeof message.matched_icao === "object"
-            ? replace_text(message.matched_icao, message.icao.toString())
-            : `${message["icao"]}`;
-        html_output +=
-          message.hasOwnProperty("icao_hex") &&
-          typeof message.matched_icao === "undefined"
-            ? `/${message["icao_hex"]}`
-            : "";
-        html_output +=
-          message.hasOwnProperty("icao_hex") &&
-          typeof message.matched_icao !== "undefined" &&
-          typeof message.icao_hex !== "undefined"
-            ? "/" +
-              replace_text(message.matched_icao, message["icao_hex"].toString())
-            : "";
-        html_output += message.hasOwnProperty("icao_url")
-          ? "</a></strong>"
-          : "</strong>";
-      }
-
-      html_output += "</td>";
-
-      // Table footer row, metadata
-      html_output += '<td style="text-align: right">';
-      if (message.hasOwnProperty("freq")) {
-        html_output += `<span class=\"wrapper\">F: <strong>${message["freq"]}</strong><span class=\"tooltip\">The frequency this message was received on</span></span> `;
-      }
-
-      if (
-        message.hasOwnProperty("level") &&
-        typeof message.level !== "undefined"
-      ) {
-        let level = message["level"];
-        let circle = "";
-        if (level >= -10.0) {
-          circle = "circle_green";
-        } else if (level >= -20.0) {
-          circle = "circle_yellow";
-        } else if (level >= -30.0) {
-          circle = "circle_orange";
-        } else {
-          circle = "circle_red";
-        }
-        html_output += `L: <strong>${level}</strong> <div class="${circle}"></div> `;
-      }
-
-      if (message.hasOwnProperty("ack")) {
-        if (!message["ack"])
-          html_output += `<span class=\"wrapper\">A: <strong>${message["ack"]}</strong><span class=\"tooltip\">Acknowledgement</span></span> `;
-      }
-
-      if (message.hasOwnProperty("mode")) {
-        html_output += `<span class=\"wrapper\">M: <strong>${message["mode"]}</strong><span class=\"tooltip\">Mode</span></span> `;
-      }
-
-      if (message.hasOwnProperty("block_id")) {
-        html_output += `<span class=\"wrapper\">B: <strong>${message["block_id"]}</strong><span class=\"tooltip\">Block ID</span></span> `;
-      }
-
-      if (message.hasOwnProperty("msgno")) {
-        html_output += `<span class=\"wrapper\">M#: <strong>${message["msgno"]}</strong><span class=\"tooltip\">Message number. Used for multi-part messages.</span></span> `;
-      }
-
-      if (message.hasOwnProperty("is_response")) {
-        html_output += `<span class=\"wrapper\">R: <strong>${message["is_response"]}</strong><span class=\"tooltip\">Response</span></span> `;
-      }
-
-      if (message.hasOwnProperty("is_onground")) {
-        // We need to watch this to make sure I have this right. After spelunking through vdlm2dec source code
-        // Input always appears to be a 0 or 2...for reasons I don't get. I could have this backwards
-        // 0 indicates the plane is airborne
-        // 2 indicates the plane is on the ground
-        // https://github.com/TLeconte/vdlm2dec/blob/1ea300d40d66ecb969f1f463506859e36f62ef5c/out.c#L457
-        // variable naming in vdlm2dec is inconsistent, but "ground" and "gnd" seem to be used
-        let is_onground = message["is_onground"] === 0 ? "False" : "True";
-
-        html_output += `<span class=\"wrapper\">G: <strong>${is_onground}</strong><span class=\"tooltip\">Is on ground?</span></span> `;
-      }
-
-      if (message.hasOwnProperty("error")) {
-        if (message["error"] != 0) {
-          html_output += '<span style="color:red;">';
-          html_output += `<strong>E: ${message["error"]}</strong> `;
-          html_output += "</span>";
-        }
-      }
-
-      html_output += "</td>";
-      html_output += "</tr>";
+      html_output += show_footer_and_sidebar_text(message);
 
       // Finish table html
       html_output += "</table></div><!-- table -->";
@@ -593,30 +292,157 @@ export function display_messages(
   return msgs_string;
 }
 
-function replace_text(input: string[], text: string) {
-  for (let i = 0; i < input.length; i++) {
-    text = text
-      .split(`${input[i].toUpperCase()}`)
-      .join(`<span class="red_body">${input[i].toUpperCase()}</span>`);
+function show_footer_and_sidebar_text(
+  message: acars_msg,
+  footer: boolean = true
+) {
+  let html_output = "";
+  html_output += footer
+    ? '<tr class="show_when_big"><td>'
+    : '<td class="text_top show_when_small">';
+
+  if (message.hasOwnProperty("tail")) {
+    html_output += `Tail: <strong><a href=\"https://flightaware.com/live/flight/${
+      message["tail"]
+    }\" target=\"_blank\">${
+      typeof message.matched_tail !== "undefined" &&
+      typeof message.tail !== "undefined"
+        ? replace_text(message.matched_tail, message.tail)
+        : message.tail
+    }</a></strong>${!footer ? "<br>" : " "}`;
   }
-  return text;
-}
 
-function loop_array(input: any) {
-  let html_output: string = "";
+  if (
+    message.hasOwnProperty("flight") &&
+    typeof message.flight !== "undefined"
+  ) {
+    html_output +=
+      typeof message.matched_flight === "object"
+        ? replace_text(message.matched_flight, message.flight) +
+          `${!footer ? "<br>" : ""}`
+        : message.flight + `${!footer ? "<br>" : " "}`;
+  }
 
-  for (let m in input) {
-    if (typeof input[m] === "object") {
-      html_output += loop_array(input[m]);
+  if (message.hasOwnProperty("icao") && typeof message.icao !== "undefined") {
+    html_output += "ICAO: <strong>";
+    html_output += message.hasOwnProperty("icao_url")
+      ? `<a href="${message["icao_url"]}" target="_blank">`
+      : "";
+    html_output +=
+      typeof message.matched_icao === "object"
+        ? replace_text(message.matched_icao, message.icao.toString()) +
+          `${!footer ? "<br>" : ""}`
+        : `${message["icao"]}`;
+    html_output +=
+      message.hasOwnProperty("icao_hex") &&
+      typeof message.matched_icao === "undefined"
+        ? `/${message["icao_hex"]}`
+        : "";
+    html_output +=
+      message.hasOwnProperty("icao_hex") &&
+      typeof message.matched_icao !== "undefined" &&
+      typeof message.icao_hex !== "undefined"
+        ? "/" +
+          replace_text(message.matched_icao, message["icao_hex"].toString()) +
+          `${!footer ? "<br>" : ""}`
+        : "";
+    html_output += message.hasOwnProperty("icao_url")
+      ? `</a></strong>${!footer ? "<br>" : " "}`
+      : `</strong>${!footer ? "<br>" : " "}`;
+  }
+
+  html_output += footer ? '</td><td style="text-align: right">' : "";
+
+  // Table footer row, metadata
+  if (message.hasOwnProperty("freq")) {
+    html_output += `<span class=\"wrapper\">F: <strong>${
+      message["freq"]
+    }</strong><span class=\"tooltip\">The frequency this message was received on</span></span>${
+      !footer ? "<br>" : " "
+    }`;
+  }
+
+  if (message.hasOwnProperty("level") && typeof message.level !== "undefined") {
+    let level = message["level"];
+    let circle = "";
+    if (level >= -10.0) {
+      circle = "circle_green";
+    } else if (level >= -20.0) {
+      circle = "circle_yellow";
+    } else if (level >= -30.0) {
+      circle = "circle_orange";
     } else {
-      if (m === "label") html_output += input[m] + ": ";
-      else if (m === "value") {
-        html_output += input[m] + "<br>";
-      } else if (m === "description") {
-        html_output += "Description: " + input[m] + "<br>";
-      }
+      circle = "circle_red";
+    }
+    html_output += `L: <strong>${level}</strong> <div class="${circle}"></div>${
+      !footer ? "<br>" : " "
+    }`;
+  }
+
+  if (message.hasOwnProperty("ack")) {
+    if (!message["ack"])
+      html_output += `<span class=\"wrapper\">A: <strong>${
+        message["ack"]
+      }</strong><span class=\"tooltip\">Acknowledgement</span></span>${
+        !footer ? "<br>" : " "
+      }`;
+  }
+
+  if (message.hasOwnProperty("mode")) {
+    html_output += `<span class=\"wrapper\">M: <strong>${
+      message["mode"]
+    }</strong><span class=\"tooltip\">Mode</span></span>${
+      !footer ? "<br>" : " "
+    }`;
+  }
+
+  if (message.hasOwnProperty("block_id")) {
+    html_output += `<span class=\"wrapper\">B: <strong>${
+      message["block_id"]
+    }</strong><span class=\"tooltip\">Block ID</span></span>${
+      !footer ? "<br>" : " "
+    }`;
+  }
+
+  if (message.hasOwnProperty("msgno")) {
+    html_output += `<span class=\"wrapper\">M#: <strong>${
+      message["msgno"]
+    }</strong><span class=\"tooltip\">Message number. Used for multi-part messages.</span></span>${
+      !footer ? "<br>" : " "
+    }`;
+  }
+
+  if (message.hasOwnProperty("is_response")) {
+    html_output += `<span class=\"wrapper\">R: <strong>${
+      message["is_response"]
+    }</strong><span class=\"tooltip\">Response</span></span>${
+      !footer ? "<br>" : " "
+    }`;
+  }
+
+  if (message.hasOwnProperty("is_onground")) {
+    // We need to watch this to make sure I have this right. After spelunking through vdlm2dec source code
+    // Input always appears to be a 0 or 2...for reasons I don't get. I could have this backwards
+    // 0 indicates the plane is airborne
+    // 2 indicates the plane is on the ground
+    // https://github.com/TLeconte/vdlm2dec/blob/1ea300d40d66ecb969f1f463506859e36f62ef5c/out.c#L457
+    // variable naming in vdlm2dec is inconsistent, but "ground" and "gnd" seem to be used
+    let is_onground = message["is_onground"] === 0 ? "False" : "True";
+
+    html_output += `<span class=\"wrapper\">G: <strong>${is_onground}</strong><span class=\"tooltip\">Is on ground?</span></span>${
+      !footer ? "<br>" : " "
+    }`;
+  }
+
+  if (message.hasOwnProperty("error")) {
+    if (message["error"] != 0) {
+      html_output += '<span style="color:red;">';
+      html_output += `<strong>E: ${message["error"]}</strong> `;
+      html_output += "</span>";
     }
   }
+
+  html_output += "</td></tr>";
 
   return html_output;
 }
