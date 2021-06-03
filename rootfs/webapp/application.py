@@ -11,7 +11,7 @@ if not acarshub_helpers.SPAM:
 import logging
 
 from flask_socketio import SocketIO
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, redirect, url_for
 from threading import Thread, Event
 from collections import deque
 
@@ -387,6 +387,11 @@ def alerts():
 @app.route("/status")
 def status():
     return render_template("index.html")
+
+
+@app.errorhandler(404)
+def not_found(e):
+    return redirect(url_for("index"))
 
 
 # The listener for the live message page
