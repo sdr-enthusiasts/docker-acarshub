@@ -212,7 +212,7 @@ export function show_footer_and_sidebar_text(
 
   if (typeof message.tail !== "undefined") {
     html_output += `<span class="tail-tooltip">Tail: <strong><a href=\"https://flightaware.com/live/flight/${
-      message["tail"]
+      message.tail
     }\" target=\"_blank\">${
       typeof message.matched_tail !== "undefined" &&
       typeof message.tail !== "undefined"
@@ -236,24 +236,24 @@ export function show_footer_and_sidebar_text(
     html_output += '<span class="icao-tooltip">ICAO: <strong>';
     html_output +=
       typeof message.icao_url !== "undefined"
-        ? `<a href="${message["icao_url"]}" target="_blank">`
+        ? `<a href="${message.icao_url}" target="_blank">`
         : "";
     html_output +=
       typeof message.matched_icao === "object"
         ? replace_text(message.matched_icao, message.icao.toString()) +
           `${!footer ? "<br>" : ""}`
-        : `${message["icao"]}`;
+        : `${message.icao}`;
     html_output +=
       typeof message.icao_hex !== "undefined" &&
       typeof message.matched_icao === "undefined"
-        ? `/${message["icao_hex"]}`
+        ? `/${message.icao_hex}`
         : "";
     html_output +=
       typeof message.icao_hex !== "undefined" &&
       typeof message.matched_icao !== "undefined" &&
       typeof message.icao_hex !== "undefined"
         ? "/" +
-          replace_text(message.matched_icao, message["icao_hex"].toString()) +
+          replace_text(message.matched_icao, message.icao_hex.toString()) +
           `${!footer ? "<br>" : ""}`
         : "";
     html_output +=
@@ -267,7 +267,7 @@ export function show_footer_and_sidebar_text(
   // Table footer row, metadata
   if (typeof message.freq !== "undefined") {
     html_output += `<span class="freq-tooltip">F: <strong>${
-      message["freq"]
+      message.freq
     }</strong></span>${!footer ? "<br>" : " "}`;
   }
 
@@ -291,44 +291,33 @@ export function show_footer_and_sidebar_text(
   }
 
   if (typeof message.ack !== "undefined") {
-    if (!message["ack"])
-      html_output += `<span class=\"wrapper\">A: <strong>${
-        message["ack"]
-      }</strong><span class=\"tooltip\">Acknowledgement</span></span>${
-        !footer ? "<br>" : " "
-      }`;
+    html_output += `<span class="ack-tooltip">A: <strong>${String(
+      message.ack
+    ).toUpperCase()}</strong></span>${!footer ? "<br>" : " "}`;
   }
 
   if (typeof message.mode !== "undefined") {
-    html_output += `<span class=\"wrapper\">M: <strong>${
-      message["mode"]
-    }</strong><span class=\"tooltip\">Mode</span></span>${
-      !footer ? "<br>" : " "
-    }`;
+    html_output += `<span class="mode-tooltip">M: <strong>${
+      message.mode
+    }</strong></span>${!footer ? "<br>" : " "}`;
   }
 
   if (typeof message.block_id !== "undefined") {
-    html_output += `<span class=\"wrapper\">B: <strong>${
-      message["block_id"]
-    }</strong><span class=\"tooltip\">Block ID</span></span>${
-      !footer ? "<br>" : " "
-    }`;
+    html_output += `<span class="blockid-tooltip">B: <strong>${
+      message.block_id
+    }</strong>${!footer ? "<br>" : " "}`;
   }
 
   if (typeof message.msgno !== "undefined") {
-    html_output += `<span class=\"wrapper\">M#: <strong>${
-      message["msgno"]
-    }</strong><span class=\"tooltip\">Message number. Used for multi-part messages.</span></span>${
-      !footer ? "<br>" : " "
-    }`;
+    html_output += `<span class="msgno-tooltip">M#: <strong>${
+      message.msgno
+    }</strong></span>${!footer ? "<br>" : " "}`;
   }
 
   if (typeof message.is_response !== "undefined") {
-    html_output += `<span class=\"wrapper\">R: <strong>${
-      message["is_response"]
-    }</strong><span class=\"tooltip\">Response</span></span>${
-      !footer ? "<br>" : " "
-    }`;
+    html_output += `<span class="response-tooltip">R: <strong>${
+      message.is_response
+    }</strong></span>${!footer ? "<br>" : " "}`;
   }
 
   if (typeof message.is_onground !== "undefined") {
@@ -346,10 +335,10 @@ export function show_footer_and_sidebar_text(
   }
 
   if (typeof message.error !== "undefined") {
-    if (message["error"] != 0) {
-      html_output += '<span style="color:red;">';
+    if (message.error !== 0) {
+      html_output += '<span class="error-tooltip"><span style="color:red;">';
       html_output += `<strong>E: ${message["error"]}</strong> `;
-      html_output += "</span>";
+      html_output += "</span></span>";
     }
   }
 
