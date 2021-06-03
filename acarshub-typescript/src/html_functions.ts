@@ -266,9 +266,9 @@ export function show_footer_and_sidebar_text(
 
   // Table footer row, metadata
   if (typeof message.freq !== "undefined") {
-    html_output += `<span class="freq-tooltip">F: <strong>${
-      message.freq
-    }</strong></span>${!footer ? "<br>" : " "}`;
+    html_output += `<span class="freq-tooltip">${
+      footer ? "F" : "Frequency"
+    }: <strong>${message.freq}</strong></span>${!footer ? "<br>" : " "}`;
   }
 
   if (typeof message.level !== "undefined") {
@@ -285,39 +285,43 @@ export function show_footer_and_sidebar_text(
     }
     html_output += `<span class="level-tooltip" data-jbox-content="The signal level (${
       message.level
-    }) of the received message.">L: <strong>${level}</strong> <div class="${circle}"></div></span>${
+    }) of the received message.">${
+      footer ? "L" : "Level"
+    }: <strong>${level}</strong> <div class="${circle}"></div></span>${
       !footer ? "<br>" : " "
     }`;
   }
 
   if (typeof message.ack !== "undefined") {
-    html_output += `<span class="ack-tooltip">A: <strong>${String(
-      message.ack
-    ).toUpperCase()}</strong></span>${!footer ? "<br>" : " "}`;
+    html_output += `<span class="ack-tooltip">${
+      footer ? "A" : "Acknowledgement"
+    }: <strong>${String(message.ack).toUpperCase()}</strong></span>${
+      !footer ? "<br>" : " "
+    }`;
   }
 
   if (typeof message.mode !== "undefined") {
-    html_output += `<span class="mode-tooltip">M: <strong>${
-      message.mode
-    }</strong></span>${!footer ? "<br>" : " "}`;
+    html_output += `<span class="mode-tooltip">${
+      footer ? "M" : "Mode"
+    }: <strong>${message.mode}</strong></span>${!footer ? "<br>" : " "}`;
   }
 
   if (typeof message.block_id !== "undefined") {
-    html_output += `<span class="blockid-tooltip">B: <strong>${
-      message.block_id
-    }</strong>${!footer ? "<br>" : " "}`;
+    html_output += `<span class="blockid-tooltip">${
+      footer ? "B" : "Block ID"
+    }: <strong>${message.block_id}</strong>${!footer ? "<br>" : " "}`;
   }
 
   if (typeof message.msgno !== "undefined") {
-    html_output += `<span class="msgno-tooltip">M#: <strong>${
-      message.msgno
-    }</strong></span>${!footer ? "<br>" : " "}`;
+    html_output += `<span class="msgno-tooltip">${
+      footer ? "M#" : "Message #"
+    }: <strong>${message.msgno}</strong></span>${!footer ? "<br>" : " "}`;
   }
 
   if (typeof message.is_response !== "undefined") {
-    html_output += `<span class="response-tooltip">R: <strong>${
-      message.is_response
-    }</strong></span>${!footer ? "<br>" : " "}`;
+    html_output += `<span class="response-tooltip">${
+      footer ? "R" : "Response"
+    }: <strong>${message.is_response}</strong></span>${!footer ? "<br>" : " "}`;
   }
 
   if (typeof message.is_onground !== "undefined") {
@@ -329,15 +333,17 @@ export function show_footer_and_sidebar_text(
     // variable naming in vdlm2dec is inconsistent, but "ground" and "gnd" seem to be used
     let is_onground = message["is_onground"] === 0 ? "False" : "True";
 
-    html_output += `<span class="ground-tooltip">G: <strong>${is_onground}</strong></span>${
-      !footer ? "<br>" : " "
-    }`;
+    html_output += `<span class="ground-tooltip">${
+      footer ? "G" : "Ground"
+    }: <strong>${is_onground}</strong></span>${!footer ? "<br>" : " "}`;
   }
 
   if (typeof message.error !== "undefined") {
     if (message.error !== 0) {
       html_output += '<span class="error-tooltip"><span style="color:red;">';
-      html_output += `<strong>E: ${message["error"]}</strong> `;
+      html_output += `<strong>${footer ? "E" : "Error"}: ${
+        message["error"]
+      }</strong> `;
       html_output += "</span></span>";
     }
   }
