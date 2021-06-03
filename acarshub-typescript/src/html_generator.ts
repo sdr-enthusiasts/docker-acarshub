@@ -15,6 +15,9 @@ import {
   message_text,
   replace_text,
   start_message_box,
+  end_message_tabs,
+  end_message_div,
+  end_message_box,
 } from "./html_functions.js";
 import { acars_msg } from "./interfaces.js";
 
@@ -41,7 +44,7 @@ export function display_messages(
       // unique_id is used to track the UID for a group of messages
       // tab_id below is the UID for a selected message
 
-      unique_id = sub_messages[sub_messages.length - 1]["uid"]; // Set the UID to the oldest message
+      unique_id = sub_messages[sub_messages.length - 1].uid; // Set the UID to the oldest message
 
       if (message_tab_splits.length > 0) {
         // Loop through the selected tabs on the page. If we find a match for the current UID we'll set the active tab to what has been selected
@@ -81,7 +84,7 @@ export function display_messages(
           // Loop through all messages in the group to show all of the tabs
           let tab_uid = unique_id;
 
-          tab_uid = sub_messages[j]["uid"];
+          tab_uid = sub_messages[j].uid;
 
           // If there is no active tab set by the user we'll set the newest message to be active/checked
 
@@ -98,7 +101,7 @@ export function display_messages(
           else msgs_string += create_message_tab(tab_uid, unique_id, false);
           msgs_string += message_tab_label(
             j,
-            sub_messages[j].hasOwnProperty("matched"),
+            typeof sub_messages[j].matched !== "undefined",
             tab_uid,
             unique_id
           );
@@ -113,8 +116,8 @@ export function display_messages(
         // If we have multiple messages in this group we need to set the non-selected tabs to invisible
         let tab_uid = unique_id;
 
-        tab_uid = sub_messages[u]["uid"]; // UID for the current message
-        tab_uid = sub_messages[u]["uid"]; // UID for the current message
+        tab_uid = sub_messages[u].uid; // UID for the current message
+        tab_uid = sub_messages[u].uid; // UID for the current message
 
         if (active_tab === "0" && u === 0)
           html_output += message_div(unique_id, tab_uid);
@@ -129,20 +132,19 @@ export function display_messages(
       let message: acars_msg = sub_messages[u]; // variable to hold the current message
       html_output += start_message_box();
       html_output += message_station_and_type(
-        message["message_type"],
-        message["station_id"],
-        sub_messages.length === 1 && message.hasOwnProperty("matched")
+        message.message_type,
+        message.station_id,
+        sub_messages.length === 1 && typeof message.matched !== "undefined"
       );
       let timestamp: Date; // variable to save the timestamp We need this because the database saves the time as 'time' and live messages have it as 'timestamp' (blame Fred for this silly mis-naming of db columns)
 
       // grab the time (unix EPOCH) from the correct key and convert in to a Date object for display
-      if (message.hasOwnProperty("timestamp"))
-        timestamp = new Date(message["timestamp"] * 1000);
+      if (typeof message.timestamp !== "undefined")
+        timestamp = new Date(message.timestamp * 1000);
       else
         timestamp = new Date(
-          (typeof message["msg_time"] !== "undefined"
-            ? message["msg_time"]
-            : 0) * 1000
+          (typeof message.msg_time !== "undefined" ? message.msg_time : 0) *
+            1000
         );
 
       html_output += message_timestamp(timestamp);
@@ -275,17 +277,17 @@ export function display_messages(
       html_output += show_footer_and_sidebar_text(message);
 
       // Finish table html
-      html_output += "</table></div><!-- table -->";
+      html_output += end_message_box();
 
       if (sub_messages.length > 1) {
-        html_output += "</div><!-- message -->";
+        html_output += end_message_div();
       }
 
       msgs_string = msgs_string + html_output;
     }
 
     if (sub_messages.length > 1) {
-      msgs_string += "</div><!-- tabs -->";
+      msgs_string += end_message_tabs();
     }
   }
 
@@ -301,7 +303,7 @@ function show_footer_and_sidebar_text(
     ? '<tr class="show_when_big"><td>'
     : '<td class="text_top show_when_small">';
 
-  if (message.hasOwnProperty("tail")) {
+  if (typeof message.tail !== "undefined") {
     html_output += `Tail: <strong><a href=\"https://flightaware.com/live/flight/${
       message["tail"]
     }\" target=\"_blank\">${
@@ -313,7 +315,7 @@ function show_footer_and_sidebar_text(
   }
 
   if (
-    message.hasOwnProperty("flight") &&
+    typeof message.flight !== "undefined" &&
     typeof message.flight !== "undefined"
   ) {
     html_output +=
@@ -323,38 +325,40 @@ function show_footer_and_sidebar_text(
         : message.flight + `${!footer ? "<br>" : " "}`;
   }
 
-  if (message.hasOwnProperty("icao") && typeof message.icao !== "undefined") {
+  if (typeof message.icao !== "undefined") {
     html_output += "ICAO: <strong>";
-    html_output += message.hasOwnProperty("icao_url")
-      ? `<a href="${message["icao_url"]}" target="_blank">`
-      : "";
+    html_output +=
+      typeof message.icao_url !== "undefined"
+        ? `<a href="${message["icao_url"]}" target="_blank">`
+        : "";
     html_output +=
       typeof message.matched_icao === "object"
         ? replace_text(message.matched_icao, message.icao.toString()) +
           `${!footer ? "<br>" : ""}`
         : `${message["icao"]}`;
     html_output +=
-      message.hasOwnProperty("icao_hex") &&
+      typeof message.icao_hex !== "undefined" &&
       typeof message.matched_icao === "undefined"
         ? `/${message["icao_hex"]}`
         : "";
     html_output +=
-      message.hasOwnProperty("icao_hex") &&
+      typeof message.icao_hex !== "undefined" &&
       typeof message.matched_icao !== "undefined" &&
       typeof message.icao_hex !== "undefined"
         ? "/" +
           replace_text(message.matched_icao, message["icao_hex"].toString()) +
           `${!footer ? "<br>" : ""}`
         : "";
-    html_output += message.hasOwnProperty("icao_url")
-      ? `</a></strong>${!footer ? "<br>" : " "}`
-      : `</strong>${!footer ? "<br>" : " "}`;
+    html_output +=
+      typeof message.icao_url !== "undefined"
+        ? `</a></strong>${!footer ? "<br>" : " "}`
+        : `</strong>${!footer ? "<br>" : " "}`;
   }
 
   html_output += footer ? '</td><td style="text-align: right">' : "";
 
   // Table footer row, metadata
-  if (message.hasOwnProperty("freq")) {
+  if (typeof message.freq !== "undefined") {
     html_output += `<span class=\"wrapper\">F: <strong>${
       message["freq"]
     }</strong><span class=\"tooltip\">The frequency this message was received on</span></span>${
@@ -362,7 +366,7 @@ function show_footer_and_sidebar_text(
     }`;
   }
 
-  if (message.hasOwnProperty("level") && typeof message.level !== "undefined") {
+  if (typeof message.level !== "undefined") {
     let level = message["level"];
     let circle = "";
     if (level >= -10.0) {
@@ -379,7 +383,7 @@ function show_footer_and_sidebar_text(
     }`;
   }
 
-  if (message.hasOwnProperty("ack")) {
+  if (typeof message.ack == "undefined") {
     if (!message["ack"])
       html_output += `<span class=\"wrapper\">A: <strong>${
         message["ack"]
@@ -388,7 +392,7 @@ function show_footer_and_sidebar_text(
       }`;
   }
 
-  if (message.hasOwnProperty("mode")) {
+  if (typeof message.mode !== "undefined") {
     html_output += `<span class=\"wrapper\">M: <strong>${
       message["mode"]
     }</strong><span class=\"tooltip\">Mode</span></span>${
@@ -396,7 +400,7 @@ function show_footer_and_sidebar_text(
     }`;
   }
 
-  if (message.hasOwnProperty("block_id")) {
+  if (typeof message.block_id !== "undefined") {
     html_output += `<span class=\"wrapper\">B: <strong>${
       message["block_id"]
     }</strong><span class=\"tooltip\">Block ID</span></span>${
@@ -404,7 +408,7 @@ function show_footer_and_sidebar_text(
     }`;
   }
 
-  if (message.hasOwnProperty("msgno")) {
+  if (typeof message.msgno !== "undefined") {
     html_output += `<span class=\"wrapper\">M#: <strong>${
       message["msgno"]
     }</strong><span class=\"tooltip\">Message number. Used for multi-part messages.</span></span>${
@@ -412,7 +416,7 @@ function show_footer_and_sidebar_text(
     }`;
   }
 
-  if (message.hasOwnProperty("is_response")) {
+  if (typeof message.is_response !== "undefined") {
     html_output += `<span class=\"wrapper\">R: <strong>${
       message["is_response"]
     }</strong><span class=\"tooltip\">Response</span></span>${
@@ -420,7 +424,7 @@ function show_footer_and_sidebar_text(
     }`;
   }
 
-  if (message.hasOwnProperty("is_onground")) {
+  if (typeof message.is_onground !== "undefined") {
     // We need to watch this to make sure I have this right. After spelunking through vdlm2dec source code
     // Input always appears to be a 0 or 2...for reasons I don't get. I could have this backwards
     // 0 indicates the plane is airborne
@@ -434,7 +438,7 @@ function show_footer_and_sidebar_text(
     }`;
   }
 
-  if (message.hasOwnProperty("error")) {
+  if (typeof message.error !== "undefined") {
     if (message["error"] != 0) {
       html_output += '<span style="color:red;">';
       html_output += `<strong>E: ${message["error"]}</strong> `;

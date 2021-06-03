@@ -6,6 +6,10 @@ export function start_message_tabs() {
   return '<div class="tabinator">';
 }
 
+export function end_message_tabs() {
+  return "</div><!-- tabs -->";
+}
+
 export function create_message_nav_arrows(
   tab_to_nav: string,
   unique_id: string,
@@ -61,8 +65,16 @@ export function message_div(
   }">`;
 }
 
+export function end_message_div() {
+  return "</div><!-- message -->";
+}
+
 export function start_message_box() {
   return '<div><table class="shadow">';
+}
+
+export function end_message_box() {
+  return "</table></div><!-- table -->";
 }
 
 export function message_station_and_type(
@@ -91,10 +103,6 @@ export function add_message_field(
   return `${field_name}:&nbsp;<strong>${field_value}</strong>${
     use_br ? "<br>" : ""
   }`;
-}
-
-export function start_message_text() {
-  return;
 }
 
 export function message_text(message: acars_msg) {
