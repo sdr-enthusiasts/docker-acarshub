@@ -137,18 +137,23 @@ def flight_finder(callsign=None, hex_code=None, url=True):
         icao, airline = acarshub_db.find_airline_code_from_iata(callsign[:2])
         flight_number = callsign[2:]
         flight = icao + flight_number
+        tooltip_text = ""
 
         if icao != callsign[:2]:
-            html = f'<span class="wrapper"><strong>{flight}/{callsign}</strong><span class="tooltip">{airline} Flight {flight_number}</span></span> '
+            html = f"<strong>{flight}/{callsign}</strong> "
+            tooltip_text = (
+                f"<p>The aircraft's callsign.</p>{airline} Flight {flight_number}"
+            )
         else:
             html = f"<strong>{flight}</strong> "
+            tooltip_text = f"<p>The aircraft's callsign. Was not found in the database for decoding.</p>{flight}"
 
         # If the iata and icao variables are not equal, airline was found in the database and we'll add in the tool-tip for the decoded airline
         # Otherwise, no tool-tip, no FA link, and use the IATA code for display
         if url:
-            return f'Flight: <span class="wrapper"><strong><a href="{ADSB_URL}{hex_code}" target="_blank">{html}</a></strong>'
+            return f'<span class="flight-tooltip" data-jbox-content="{tooltip_text}">Flight: <strong><a href="{ADSB_URL}{hex_code}" target="_blank">{html}</a></strong></span>'
         else:
-            return f"Flight: {html}"
+            return f'<span class="flight-tooltip" data-jbox-content="{tooltip_text}">Flight: {html}</span>'
     else:  # We should never run in to this condition, I don't think, but we'll add a case for it
         return "Flight: Error"
 

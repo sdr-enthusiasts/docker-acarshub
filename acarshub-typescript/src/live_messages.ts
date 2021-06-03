@@ -5,6 +5,7 @@ import { match_alert, sound_alert } from "./alerts.js";
 import { html_msg, acars_msg, labels } from "./interfaces.js";
 import jBox from "jbox";
 import "jbox/dist/jBox.all.css";
+import { attach_all_tooltips, close_all_tooltips } from "./tooltips.js";
 
 let pause: boolean = false;
 let text_filter: boolean = false;
@@ -56,6 +57,7 @@ let live_message_modal = new jBox("Modal", {
         </div>
         <!--</div> --!>`,
 });
+
 declare const window: any;
 
 const md = new MessageDecoder();
@@ -753,5 +755,7 @@ export function new_acars_message(msg: html_msg) {
   if (!msg.loading) increment_received();
   if (page_active && !pause) {
     $("#log").html(display_messages(msgs_received, selected_tabs, true));
+    close_all_tooltips();
+    attach_all_tooltips();
   }
 }

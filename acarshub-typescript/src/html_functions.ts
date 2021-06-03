@@ -1,4 +1,6 @@
 import { acars_msg } from "./interfaces";
+import jBox from "jbox";
+import "jbox/dist/jBox.all.css";
 
 export function tab_ids() {}
 
@@ -209,14 +211,14 @@ export function show_footer_and_sidebar_text(
     : '<td class="text_top show_when_small">';
 
   if (typeof message.tail !== "undefined") {
-    html_output += `Tail: <strong><a href=\"https://flightaware.com/live/flight/${
+    html_output += `<span class="tail-tooltip">Tail: <strong><a href=\"https://flightaware.com/live/flight/${
       message["tail"]
     }\" target=\"_blank\">${
       typeof message.matched_tail !== "undefined" &&
       typeof message.tail !== "undefined"
         ? replace_text(message.matched_tail, message.tail)
         : message.tail
-    }</a></strong>${!footer ? "<br>" : " "}`;
+    }</a></strong>${!footer ? "</span><br>" : "</span> "}`;
   }
 
   if (
@@ -231,7 +233,7 @@ export function show_footer_and_sidebar_text(
   }
 
   if (typeof message.icao !== "undefined") {
-    html_output += "ICAO: <strong>";
+    html_output += '<span class="icao-tooltip">ICAO: <strong>';
     html_output +=
       typeof message.icao_url !== "undefined"
         ? `<a href="${message["icao_url"]}" target="_blank">`
@@ -256,23 +258,21 @@ export function show_footer_and_sidebar_text(
         : "";
     html_output +=
       typeof message.icao_url !== "undefined"
-        ? `</a></strong>${!footer ? "<br>" : " "}`
-        : `</strong>${!footer ? "<br>" : " "}`;
+        ? `</a></strong></span>${!footer ? "<br>" : " "}`
+        : `</strong></span>${!footer ? "<br>" : " "}`;
   }
 
   html_output += footer ? '</td><td style="text-align: right">' : "";
 
   // Table footer row, metadata
   if (typeof message.freq !== "undefined") {
-    html_output += `<span class=\"wrapper\">F: <strong>${
+    html_output += `<span class="freq-tooltip">F: <strong>${
       message["freq"]
-    }</strong><span class=\"tooltip\">The frequency this message was received on</span></span>${
-      !footer ? "<br>" : " "
-    }`;
+    }</strong></span>${!footer ? "<br>" : " "}`;
   }
 
   if (typeof message.level !== "undefined") {
-    let level = message["level"];
+    let level = message.level;
     let circle = "";
     if (level >= -10.0) {
       circle = "circle_green";
@@ -283,12 +283,14 @@ export function show_footer_and_sidebar_text(
     } else {
       circle = "circle_red";
     }
-    html_output += `L: <strong>${level}</strong> <div class="${circle}"></div>${
+    html_output += `<span class="level-tooltip" data-jbox-content="The signal level (${
+      message.level
+    }) of the received message.">L: <strong>${level}</strong> <div class="${circle}"></div></span>${
       !footer ? "<br>" : " "
     }`;
   }
 
-  if (typeof message.ack == "undefined") {
+  if (typeof message.ack !== "undefined") {
     if (!message["ack"])
       html_output += `<span class=\"wrapper\">A: <strong>${
         message["ack"]
@@ -338,7 +340,7 @@ export function show_footer_and_sidebar_text(
     // variable naming in vdlm2dec is inconsistent, but "ground" and "gnd" seem to be used
     let is_onground = message["is_onground"] === 0 ? "False" : "True";
 
-    html_output += `<span class=\"wrapper\">G: <strong>${is_onground}</strong><span class=\"tooltip\">Is on ground?</span></span>${
+    html_output += `<span class="ground-tooltip">G: <strong>${is_onground}</strong></span>${
       !footer ? "<br>" : " "
     }`;
   }
