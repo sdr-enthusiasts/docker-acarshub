@@ -198,3 +198,160 @@ export function loop_array(input: any) {
 
   return html_output;
 }
+
+export function show_footer_and_sidebar_text(
+  message: acars_msg,
+  footer: boolean = true
+) {
+  let html_output = "";
+  html_output += footer
+    ? '<tr class="show_when_big"><td>'
+    : '<td class="text_top show_when_small">';
+
+  if (typeof message.tail !== "undefined") {
+    html_output += `Tail: <strong><a href=\"https://flightaware.com/live/flight/${
+      message["tail"]
+    }\" target=\"_blank\">${
+      typeof message.matched_tail !== "undefined" &&
+      typeof message.tail !== "undefined"
+        ? replace_text(message.matched_tail, message.tail)
+        : message.tail
+    }</a></strong>${!footer ? "<br>" : " "}`;
+  }
+
+  if (
+    typeof message.flight !== "undefined" &&
+    typeof message.flight !== "undefined"
+  ) {
+    html_output +=
+      typeof message.matched_flight === "object"
+        ? replace_text(message.matched_flight, message.flight) +
+          `${!footer ? "<br>" : ""}`
+        : message.flight + `${!footer ? "<br>" : " "}`;
+  }
+
+  if (typeof message.icao !== "undefined") {
+    html_output += "ICAO: <strong>";
+    html_output +=
+      typeof message.icao_url !== "undefined"
+        ? `<a href="${message["icao_url"]}" target="_blank">`
+        : "";
+    html_output +=
+      typeof message.matched_icao === "object"
+        ? replace_text(message.matched_icao, message.icao.toString()) +
+          `${!footer ? "<br>" : ""}`
+        : `${message["icao"]}`;
+    html_output +=
+      typeof message.icao_hex !== "undefined" &&
+      typeof message.matched_icao === "undefined"
+        ? `/${message["icao_hex"]}`
+        : "";
+    html_output +=
+      typeof message.icao_hex !== "undefined" &&
+      typeof message.matched_icao !== "undefined" &&
+      typeof message.icao_hex !== "undefined"
+        ? "/" +
+          replace_text(message.matched_icao, message["icao_hex"].toString()) +
+          `${!footer ? "<br>" : ""}`
+        : "";
+    html_output +=
+      typeof message.icao_url !== "undefined"
+        ? `</a></strong>${!footer ? "<br>" : " "}`
+        : `</strong>${!footer ? "<br>" : " "}`;
+  }
+
+  html_output += footer ? '</td><td style="text-align: right">' : "";
+
+  // Table footer row, metadata
+  if (typeof message.freq !== "undefined") {
+    html_output += `<span class=\"wrapper\">F: <strong>${
+      message["freq"]
+    }</strong><span class=\"tooltip\">The frequency this message was received on</span></span>${
+      !footer ? "<br>" : " "
+    }`;
+  }
+
+  if (typeof message.level !== "undefined") {
+    let level = message["level"];
+    let circle = "";
+    if (level >= -10.0) {
+      circle = "circle_green";
+    } else if (level >= -20.0) {
+      circle = "circle_yellow";
+    } else if (level >= -30.0) {
+      circle = "circle_orange";
+    } else {
+      circle = "circle_red";
+    }
+    html_output += `L: <strong>${level}</strong> <div class="${circle}"></div>${
+      !footer ? "<br>" : " "
+    }`;
+  }
+
+  if (typeof message.ack == "undefined") {
+    if (!message["ack"])
+      html_output += `<span class=\"wrapper\">A: <strong>${
+        message["ack"]
+      }</strong><span class=\"tooltip\">Acknowledgement</span></span>${
+        !footer ? "<br>" : " "
+      }`;
+  }
+
+  if (typeof message.mode !== "undefined") {
+    html_output += `<span class=\"wrapper\">M: <strong>${
+      message["mode"]
+    }</strong><span class=\"tooltip\">Mode</span></span>${
+      !footer ? "<br>" : " "
+    }`;
+  }
+
+  if (typeof message.block_id !== "undefined") {
+    html_output += `<span class=\"wrapper\">B: <strong>${
+      message["block_id"]
+    }</strong><span class=\"tooltip\">Block ID</span></span>${
+      !footer ? "<br>" : " "
+    }`;
+  }
+
+  if (typeof message.msgno !== "undefined") {
+    html_output += `<span class=\"wrapper\">M#: <strong>${
+      message["msgno"]
+    }</strong><span class=\"tooltip\">Message number. Used for multi-part messages.</span></span>${
+      !footer ? "<br>" : " "
+    }`;
+  }
+
+  if (typeof message.is_response !== "undefined") {
+    html_output += `<span class=\"wrapper\">R: <strong>${
+      message["is_response"]
+    }</strong><span class=\"tooltip\">Response</span></span>${
+      !footer ? "<br>" : " "
+    }`;
+  }
+
+  if (typeof message.is_onground !== "undefined") {
+    // We need to watch this to make sure I have this right. After spelunking through vdlm2dec source code
+    // Input always appears to be a 0 or 2...for reasons I don't get. I could have this backwards
+    // 0 indicates the plane is airborne
+    // 2 indicates the plane is on the ground
+    // https://github.com/TLeconte/vdlm2dec/blob/1ea300d40d66ecb969f1f463506859e36f62ef5c/out.c#L457
+    // variable naming in vdlm2dec is inconsistent, but "ground" and "gnd" seem to be used
+    let is_onground = message["is_onground"] === 0 ? "False" : "True";
+
+    html_output += `<span class=\"wrapper\">G: <strong>${is_onground}</strong><span class=\"tooltip\">Is on ground?</span></span>${
+      !footer ? "<br>" : " "
+    }`;
+  }
+
+  if (typeof message.error !== "undefined") {
+    if (message["error"] != 0) {
+      html_output += '<span style="color:red;">';
+      html_output += `<strong>E: ${message["error"]}</strong> `;
+      html_output += "</span>";
+    }
+  }
+
+  html_output += "</td></tr>";
+
+  return html_output;
+}
