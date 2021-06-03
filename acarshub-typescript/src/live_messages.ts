@@ -107,7 +107,6 @@ function show_labels() {
       }</a><br>`;
     }
     let j = $("#label_links").html(label_html);
-    console.log(j);
   }
 }
 
