@@ -122,8 +122,7 @@ jobs:
         working-directory: ./acarshub-typescript
         run: |
           npm install
-          npm run build
-          npm run installer
+          npm run buildprod
 
       # Build "latest"
       -

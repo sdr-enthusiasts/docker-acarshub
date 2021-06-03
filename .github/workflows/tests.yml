@@ -111,8 +111,7 @@ jobs:
         run: |
           npm install
           sed -i 's/Pre-Release/ACARS Hub Pre-Release: ${{ env.VERSION_TAG }}/' ./src/menu.ts
-          npm run build
-          npm run installer
+          npm run buildtest
 
       # Test container build for all supported platforms (defined above)
       -
