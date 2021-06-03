@@ -4,11 +4,11 @@
   "description": "Web front end for the docker-acarshub project",
   "main": "application.js",
   "scripts": {
-    "buildtest": "npm run build && npm run installer",
+    "buildtest": "npm run build && mkdir -p ./dist-min && rm -f ./dist-min/*.js && cp dist/*.js dist-min/ && npm run installer",
     "buildprod": "npm run build && npm run minify && npm run installer",
-    "minify": "jsmin -o name.min.js name.js",
+    "minify": "mkdir -p ./dist-min && rm -f ./dist-min/*.js && uglifyjs-folder dist -eo dist-min -x .js",
     "build": "rm -f ./dist/*.js && tsc && ./build.sh",
-    "installer": "rm -f ../rootfs/webapp/static/js/*.js && cp ./dist/*.js ../rootfs/webapp/static/js/"
+    "installer": "rm -f ../rootfs/webapp/static/js/*.js && cp ./dist-min/*.js ../rootfs/webapp/static/js/"
   },
   "author": "Fred Clausen",
   "license": "GPLv3",
@@ -45,6 +45,7 @@
     "showdown": "1.9.1",
     "socket.io": "4.0.2",
     "socket.io-client": "4.0.2",
-    "ts-node": "^9.1.1"
+    "ts-node": "^9.1.1",
+    "uglifyjs-folder": "^2.0.0"
   }
 }
