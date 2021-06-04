@@ -366,7 +366,7 @@ function set_html() {
   <span id="stat_menu"></span>
 </div>`);
   $("#modal_text").html("");
-  $("#page_name").html("Messages will appear here, newest first:");
+  $("#page_name").html("");
 }
 
 export function stats_active(state = false) {
