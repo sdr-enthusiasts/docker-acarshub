@@ -4,11 +4,11 @@
   "description": "Web front end for the docker-acarshub project",
   "main": "application.js",
   "scripts": {
-    "buildtest": "npm run build && mkdir -p ./dist-min && rm -f ./dist-min/*.js && cp dist/*.js dist-min/ && npm run installer",
+    "buildtest": "npm run build && mkdir -p ./dist-min && mkdir -p ./css-min && rm -f ./css-min/site.css && rm -f ./dist-min/*.js && cp dist/*.js dist-min/ && cp ./css/site.css ./css-min/site.css && npm run installer",
     "buildprod": "npm run build && npm run minify && npm run installer",
-    "minify": "mkdir -p ./dist-min && rm -f ./dist-min/*.js && uglifyjs-folder dist -eo dist-min -x .js",
+    "minify": "mkdir -p ./dist-min && mkdir -p ./css-min && rm -f ./dist-min/*.js && rm -f ./css-min/*.css && uglifyjs-folder dist -eo dist-min -x .js && uglifycss ./css/site.css --output ./css-min/site.css",
     "build": "rm -f ./dist/*.js && tsc && ./build.sh",
-    "installer": "rm -rf ../rootfs/webapp/static/js && rm -rf ../rootfs/webapp/static/css && cp ./dist-min/*.js ../rootfs/webapp/static/js/"
+    "installer": "rm -rf ../rootfs/webapp/static/js && rm -rf ../rootfs/webapp/static/css && mkdir -p ../rootfs/webapp/static/css/other && mkdir -p ../rootfs/webapp/static/js/other && cp ./dist-min/*.js ../rootfs/webapp/static/js/ && cp ./js-other/* ../rootfs/webapp/static/js/other/ && cp ./css-min/site.css ../rootfs/webapp/static/css/site.css && cp ./css/other/* ../rootfs/webapp/static/css/other/"
   },
   "author": "Fred Clausen",
   "license": "GPLv3",
@@ -46,6 +46,7 @@
     "socket.io": "4.0.2",
     "socket.io-client": "4.0.2",
     "ts-node": "^9.1.1",
+    "uglifycss": "^0.0.29",
     "uglifyjs-folder": "^2.0.0"
   }
 }
