@@ -21,6 +21,7 @@ docker build --file ./Dockerfile.acarshub-typescript -t acarshub-typescript:late
 
 id=$(docker create acarshub-typescript:latest)
 docker cp "$id":/rootfs/webapp/static/js .
+docker cp "$id":/rootfs/webapp/static/css .
 docker rm -v "$id"
 
 # Build & push latest
@@ -29,3 +30,4 @@ docker build -f Dockerfile.local -t "${REPO}/${IMAGE}:test" .
 # Clean up
 rm ./acars-decoder-typescript.tgz
 rm -rf js
+rm -rf css

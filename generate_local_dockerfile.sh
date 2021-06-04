@@ -14,7 +14,7 @@ cp Dockerfile Dockerfile.local
 sed -i.bu 's/COPY rootfs\/ \//COPY rootfs\/webapp\/requirements.txt \/webapp\/requirements.txt/g' Dockerfile.local
 
 # move the COPY FS line back to the bottom so that we can use cached builds
-sed -i.bu 's/ENTRYPOINT \[ "\/init" \]/COPY rootfs\/ \/\nCOPY js\/*.js \/webapp\/static\/js\/\nENTRYPOINT \[ "\/init" \]\n/g' Dockerfile.local
+sed -i.bu 's/ENTRYPOINT \[ "\/init" \]/COPY rootfs\/ \/\nCOPY js \/webapp\/static\nCOPY css \/webapp\/static\nENTRYPOINT \[ "\/init" \]\n/g' Dockerfile.local
 
 # clean up...thanks mac
 rm -f Dockerfile.local.bu

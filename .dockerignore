@@ -7,5 +7,6 @@ update-local-acars-decoder.sh
 Logo-Sources
 acarshub-typescript/dist
 acarshub-typescript/node_modules
-roots/webapp/static/js/*.js
+rootfs/webapp/static/js
 rootfs/webapp/static/airframes-acars-decoder
+rootfs/webapp/static/css
