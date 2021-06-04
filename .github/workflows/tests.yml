@@ -103,7 +103,7 @@ jobs:
           yarn build
           yarn pack --filename ../acars-decoder-typescript.tgz
 
-      # build acarshub typescript
+      # build acarshub typescript test
 
       -
         name: Build ACARSHub typescript
@@ -124,3 +124,25 @@ jobs:
           platforms: linux/386,linux/amd64,linux/arm/v7,linux/arm/v6,linux/arm64
           push: ${{ env.PUSH }}
           tags: ${{ env.REPO }}/${{ env.IMAGE }}:test-pr
+
+      # build acarshub typescript production
+
+      -
+        name: Build ACARSHub typescript production
+        working-directory: ./acarshub-typescript
+        run: |
+          npm install
+          sed -i 's/Pre-Release/ACARS Hub Pre-Release: ${{ env.VERSION_TAG }}/' ./src/menu.ts
+          npm run buildprod
+
+      # Test container build for all supported platforms (defined above)
+      -
+        name: Test Build ${{ matrix.docker-platform }}
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          file: ./Dockerfile
+          no-cache: true
+          platforms: linux/386,linux/amd64,linux/arm/v7,linux/arm/v6,linux/arm64
+          push: ${{ env.PUSH }}
+          tags: ${{ env.REPO }}/${{ env.IMAGE }}:test-pr-prod
