@@ -1,8 +1,8 @@
 eventlet==0.30.2  # This version HAS to be pinned here until gunicorn fixes their bug with >= 0.31.0
 Flask==2.0.1
-Flask-SocketIO==5.0.3
+Flask-SocketIO==5.1.0
 gunicorn[eventlet]==20.1.0
 pyrtlsdr==0.2.92
 rrdtool==0.1.15
 schedule==1.1.0
-sqlalchemy==1.4.15
+sqlalchemy==1.4.17
