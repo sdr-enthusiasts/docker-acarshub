@@ -309,7 +309,7 @@ export function show_footer_and_sidebar_text(
   if (typeof message.block_id !== "undefined") {
     html_output += `<span class="blockid-tooltip">${
       footer ? "B" : "Block ID"
-    }: <strong>${message.block_id}</strong>${!footer ? "<br>" : " "}`;
+    }: <strong>${message.block_id}</strong></span>${!footer ? "<br>" : " "}`;
   }
 
   if (typeof message.msgno !== "undefined") {
