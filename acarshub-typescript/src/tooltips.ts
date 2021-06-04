@@ -2,6 +2,7 @@ import jBox from "jbox";
 import "jbox/dist/jBox.all.css";
 
 // TODO: figure why "Mouse" isn't in the jBox acceptable types
+// This annoys me
 
 // @ts-expect-error
 const freq_tooltip = new jBox("Mouse", {
