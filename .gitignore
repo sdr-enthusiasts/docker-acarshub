@@ -113,7 +113,7 @@ acarshub-typescript/dist/
 acarshub-typescript/dist-min/
 acarshub-typescript/css-min/
 rootfs/webapp/static/js/*.js
-./js/
-./css/
+js/**
+css/**
 rootfs/webapp/static/js/*
 rootfs/webapp/static/css/*
