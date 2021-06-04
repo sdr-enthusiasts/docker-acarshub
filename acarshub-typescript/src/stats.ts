@@ -351,7 +351,7 @@ function grab_updated_graphs() {
 }
 
 function set_html() {
-  $("#log").html(`<p></p>
+  $("#log").html(`<p><div id="stat_menu"></div></p>
   <img src="static/images/1hour.png" id="1hr" alt="1 Hour"><br>
   <img src="static/images/6hour.png" id="6hr" alt="6 Hours"><br>
   <img src="static/images/12hour.png" id="12hr" alt="12 Hours"><br>

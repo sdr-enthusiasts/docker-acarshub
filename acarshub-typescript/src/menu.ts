@@ -38,7 +38,6 @@ export function generate_stat_submenu(acars: boolean, vdlm: boolean) {
   text +=
     '<p><a href="javascript:update_prefix(\'error\')" id="error_graphs" class="spread_text">Message Error Graphs</a></p>';
   //text += "<p><a href=\"javascript:grab_freqs()\" id=\"pause_updates\" class=\"spread_text\">Frequency Counts</a></p>";
-  text += "<hr>";
   text += '<p><span id="freqs"></span></p>';
   text += '<p><span id="msgs"></span></p>';
   $("#stat_menu").html(text);
