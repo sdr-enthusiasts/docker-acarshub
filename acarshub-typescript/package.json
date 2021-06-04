@@ -8,7 +8,7 @@
     "buildprod": "npm run build && npm run minify && npm run installer",
     "minify": "mkdir -p ./dist-min && rm -f ./dist-min/*.js && uglifyjs-folder dist -eo dist-min -x .js",
     "build": "rm -f ./dist/*.js && tsc && ./build.sh",
-    "installer": "rm -f ../rootfs/webapp/static/js/*.js && cp ./dist-min/*.js ../rootfs/webapp/static/js/"
+    "installer": "rm -rf ../rootfs/webapp/static/js && rm -rf ../rootfs/webapp/static/css && cp ./dist-min/*.js ../rootfs/webapp/static/js/"
   },
   "author": "Fred Clausen",
   "license": "GPLv3",
