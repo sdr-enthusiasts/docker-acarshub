@@ -173,26 +173,6 @@ div#header {
   margin: 0px;
 }
 
-/* div#right.row {
-  position: fixed;
-  right: 0px;
-  top: 60px;
-  height: calc(100% - 20px);
-  width: 280px;
-  padding-right: 0px;
-  margin-right: 0px;
-  margin-left: 0px;
-  margin-bottom: 0px;
-  background: black;
-  background: #2B2B2B;
-  background-image: -webkit-linear-gradient(bottom, #333333 7%, #2B2B2B 100%);
-  background-image: -moz-linear-gradient(bottom, #333333 7%, #2B2B2B 100%);
-  background-image: -o-linear-gradient(bottom, #333333 7%, #2B2B2B 100%);
-  background-image: linear-gradient(bottom, #333333 7%, #2B2B2B 100%);
-  z-index: 9;
-  box-shadow: -4px -1px 2px -1px #888;
-} */
-
 div#links.row {
   position: relative;
   margin-left: auto;
@@ -216,9 +196,6 @@ div#log.left {
   position: relative;
   margin-left: auto;
   margin-right: auto;
-  /* max-width: 1200px; */
-  /* margin-right: 300px; */
-  /* left: 0; */
   padding-right: 0px;
   padding-left: 0px;
 }
@@ -390,7 +367,6 @@ a:visited {
   margin-left: auto;
   margin-right: auto;
   top: 0;
-  /* margin-top: 40px; */
 }
 
 /* a little "umph" */
@@ -435,8 +411,6 @@ ul:after {
 
 nav {
   position: relative;
-  /* top: 0;
-  width: 100%; */
   background: #2B2B2B;
   background-image: -webkit-linear-gradient(bottom, #2B2B2B 7%, #333333 100%);
   background-image: -moz-linear-gradient(bottom, #2B2B2B 7%, #333333 100%);
@@ -445,9 +419,6 @@ nav {
   text-align: center;
   letter-spacing: 3px;
   text-shadow: 1px 1px 1px #0E0E0E;
-  /*-webkit-box-shadow: 2px 2px 3px #888;
-  -moz-box-shadow: 2px 2px 3px #888;
-  box-shadow: 4px 2px 3px #888;*/
   border-bottom-right-radius: 8px;
   border-bottom-left-radius: 8px;
   z-index: 10;
@@ -586,7 +557,6 @@ input[type='checkbox'] {
 .collapsible-content {
   max-height: 0px;
   overflow: scroll;
-  /* position: fixed; */
   height: calc(100% - 250px);
   transition: max-height .25s ease-in-out;
 }
@@ -633,7 +603,6 @@ input[type='checkbox'] {
   margin-bottom: -1px;
   margin-left: -1px;
   border: 1px solid #bbb;
-  /*border-radius: 10px 10px 0 0;*/
 }
 .tabinator label:before {
   content:'';
@@ -645,7 +614,6 @@ input[type='checkbox'] {
   bottom:0px;
   left:0;
   z-index:10;
-  /*border-radius: 10px 10px 0 0;*/
 }
 .tabinator label:hover {
   color: #888;
@@ -657,7 +625,6 @@ input[type='checkbox'] {
   background: transparent;
   border: 1px solid #bbb;
   border-bottom: 1px solid #fff;
-  /*border-radius: 10px 10px 0 0;*/
 }
 .tabinator input:checked + label:after {
   display: block;
@@ -665,7 +632,6 @@ input[type='checkbox'] {
   position: absolute;
   top: 0; right: 0; bottom: 0; left: 0;
   box-shadow: 0 0 15px #939393;
-  /*border-radius: 10px 10px 0 0;*/
 }
 [id^="message"] {
   display: none;
