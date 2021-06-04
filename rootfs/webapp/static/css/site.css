@@ -2,6 +2,7 @@
   --blue-highlight: #1496bb;
   --grey-bg: #3D3D3D;
   --grey-highlight: #BEBEBE;
+  --site-fonts: "Helvetica Neue",Helvetica,Arial,sans-serif;
 }
 table {
   border: 1px solid black;
@@ -147,6 +148,7 @@ body {
   min-width: 400px;
   margin-left: auto;
   margin-right: auto;
+  font-family: --var(--site-fonts);
 }
 .container {
   margin: 30px auto;
@@ -734,7 +736,7 @@ canvas {
 #set_modal.jBox-wrapper .jBox-title {
   background-color:  #ccc;
   color: var(--blue-highlight);
-  font-family: "Helvetica Neue",Helvetica,Arial,sans-serif;
+  font-family: var(--site-fonts);
   font-size: 20px;
   text-transform: uppercase;
   text-align: center;
@@ -742,7 +744,22 @@ canvas {
 
 #set_modal.jBox-wrapper .jBox-content {
   background-color:  var(--grey-bg);
-  font-family: "Helvetica Neue",Helvetica,Arial,sans-serif;
+  font-family: var(--site-fonts);
+}
+
+.jBox-Mouse.jBox-wrapper .jBox-title {
+  background-color:  #ccc;
+  color: var(--blue-highlight);
+  font-family: var(--site-fonts);
+  font-size: 20px;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+.jBox-Mouse.jBox-wrapper .jBox-content {
+  background-color:  var(--grey-bg);
+  font-family: var(--site-fonts);
+  color: var(--blue-highlight);
 }
 
 @media only screen and (max-width: 1050px) {
