@@ -6,6 +6,7 @@ import { html_msg, acars_msg, labels } from "./interfaces.js";
 import jBox from "jbox";
 import "jbox/dist/jBox.all.css";
 import { attach_all_tooltips, close_all_tooltips } from "./tooltips.js";
+import { resize_tabs } from "./index.js";
 
 let pause: boolean = false;
 let text_filter: boolean = false;
@@ -752,8 +753,13 @@ export function new_acars_message(msg: html_msg) {
     if (text_filter && !msg.loading) increment_filtered();
   }
   if (!msg.loading) increment_received();
-  if (page_active && !pause) {
+  if (
+    page_active &&
+    !pause &&
+    (typeof msg.done_loading === "undefined" || msg.done_loading === true)
+  ) {
     $("#log").html(display_messages(msgs_received, selected_tabs, true));
+    resize_tabs();
     close_all_tooltips();
     attach_all_tooltips();
   }

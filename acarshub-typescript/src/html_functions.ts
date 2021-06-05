@@ -54,7 +54,9 @@ export function message_tab_label(
 ) {
   return `<label for = "tab${tab_uid}_${unique_id}">${
     matched ? '<span class="red_body">' : ""
-  }Message ${message_number + 1}${matched ? "</span>" : ""}</label>`;
+  }<span class="show_when_big">Message</span><span class="show_when_small">M#</span> ${
+    message_number + 1
+  }${matched ? "</span>" : ""}</label>`;
 }
 
 export function message_div(

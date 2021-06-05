@@ -407,6 +407,8 @@ def main_connect():
     global thread_html_generator
     global connected_users
 
+    recent_options = {"loading": True, "done_loading": False}
+
     connected_users += 1
 
     requester = request.sid
@@ -416,12 +418,16 @@ def main_connect():
         to=requester,
         namespace="/main",
     )
+    msg_index = 1
     for msg_type, json_message_orig in messages_recent:
+        if msg_index == len(messages_recent):
+            recent_options["done_loading"] = True
+        msg_index += 1
         json_message = copy.deepcopy(json_message_orig)
         json_message["message_type"] = msg_type
         socketio.emit(
             "acars_msg",
-            {"msghtml": acarshub.update_keys(json_message), "loading": True},
+            {"msghtml": acarshub.update_keys(json_message), **recent_options},
             to=requester,
             namespace="/main",
         )

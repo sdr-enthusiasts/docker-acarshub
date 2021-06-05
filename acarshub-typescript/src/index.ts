@@ -61,6 +61,8 @@ let acars_url: string = "";
 let acars_path: string = "";
 let acars_page: string = "";
 
+let old_window_width: number = 0;
+
 const pages: string[] = [
   "/", // index/live messages
   "/search", // search page
@@ -70,9 +72,31 @@ const pages: string[] = [
   "/alerts", // alerts page
 ];
 
+var ro = new ResizeObserver((entries) => {
+  for (let entry of entries) {
+    const cr = entry.contentRect;
+    if (cr.width !== old_window_width) {
+      old_window_width = cr.width - 38;
+      resize_tabs(cr.width - 38);
+    }
+  }
+});
+
+export function resize_tabs(window_width: number = 0) {
+  if (!window_width || window_width <= 0) window_width = old_window_width;
+
+  // set tab width. 39 is the width of the two arrow elements to the left
+  const num_tabs = window_width > 1050 ? 10 : window_width > 400 ? 5 : 3;
+  $(".tabinator label").css("width", `${window_width / num_tabs}`);
+  $(".boxed").css("width", `${window_width / num_tabs / 2}`);
+}
+
 $(() => {
   // Document on ready new syntax....or something. Passing a function directly to jquery
   console.log("new page");
+  // Observe one or multiple elements
+  // @ts-expect-error
+  ro.observe(document.querySelector("body"));
   update_url(); // update the urls for everyone
   //connect to the socket server.
 

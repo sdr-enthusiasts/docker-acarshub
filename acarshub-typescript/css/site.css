@@ -62,7 +62,7 @@ img {
   padding-bottom: 6px;
   padding-right:  10px;
   padding-left: 10px;
-  min-width: 20px;
+  width: 45px;
   text-align: center;
   color: #ccc;
   margin-bottom: -1px;
@@ -597,7 +597,7 @@ input[type='checkbox'] {
   padding-bottom: 6px;
   padding-right:  10px;
   padding-left: 10px;
-  min-width: 102px;
+  width: 90px;
   text-align: center;
   color: #ccc;
   margin-bottom: -1px;

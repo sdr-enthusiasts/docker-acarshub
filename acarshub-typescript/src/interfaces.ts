@@ -104,6 +104,7 @@ export interface labels {
 export interface html_msg {
   msghtml: acars_msg;
   loading?: boolean;
+  done_loading?: boolean;
 }
 
 export interface search_html_msg {
