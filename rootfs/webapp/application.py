@@ -412,6 +412,11 @@ def main_connect():
     connected_users += 1
 
     requester = request.sid
+
+    socketio.emit(
+        "terms", {"terms": acarshub.acarshub_db.get_alert_terms()}, namespace="/main"
+    )
+
     socketio.emit(
         "labels",
         {"labels": acarshub.acarshub_db.get_message_label_json()},
@@ -431,10 +436,6 @@ def main_connect():
             to=requester,
             namespace="/main",
         )
-
-    socketio.emit(
-        "terms", {"terms": acarshub.acarshub_db.get_alert_terms()}, namespace="/main"
-    )
 
     socketio.emit(
         "system_status", {"status": acarshub.get_service_status()}, namespace="/main"
