@@ -73,7 +73,7 @@ const md = new MessageDecoder();
 // without the need to check before we push on to the stack
 
 msgs_received.unshift = function () {
-  if (this.length >= 150) {
+  if (this.length >= 50) {
     this.pop();
   }
   return Array.prototype.unshift.apply(this, arguments as any);
