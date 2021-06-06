@@ -94,6 +94,7 @@ export function resize_tabs(window_width: number = 0) {
 $(() => {
   // Document on ready new syntax....or something. Passing a function directly to jquery
   console.log("new page");
+  $("#log").html("Page loading.....please wait");
   // Observe one or multiple elements
   // @ts-expect-error
   ro.observe(document.querySelector("body"));
