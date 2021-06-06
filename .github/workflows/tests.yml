@@ -126,24 +126,119 @@ jobs:
           push: ${{ env.PUSH }}
           tags: ${{ env.REPO }}/${{ env.IMAGE }}:test-pr
 
-      # # build acarshub typescript production
+  # buildx:
+  #   name: Production test image build
+  #   runs-on: ubuntu-latest
+  #   env:
+  #     REPO: fredclausen
+  #     IMAGE: acarshub
+  #     PUSH: true
+  #   steps:
 
-      # -
-      #   name: Build ACARSHub typescript production
-      #   working-directory: ./acarshub-typescript
-      #   run: |
-      #     npm install
-      #     sed -i 's/Pre-Release/ACARS Hub Pre-Release: ${{ env.VERSION_TAG }}/' ./src/menu.ts
-      #     npm run buildprod
+  #     # Check out our code
+  #     -
+  #       name: Checkout
+  #       uses: actions/checkout@v2
 
-      # # Test container build for all supported platforms (defined above)
-      # -
-      #   name: Test Build ${{ matrix.docker-platform }}
-      #   uses: docker/build-push-action@v2
-      #   with:
-      #     context: .
-      #     file: ./Dockerfile
-      #     no-cache: true
-      #     platforms: linux/386,linux/amd64,linux/arm/v7,linux/arm/v6,linux/arm64
-      #     push: ${{ env.PUSH }}
-      #     tags: ${{ env.REPO }}/${{ env.IMAGE }}:test-pr-prod
+  #     # Get version tag
+  #     # git log -1 : get the latest commit
+  #     # --format="%ct" : committer date, UNIX timestamp
+  #     # Then using `date` to format to YYYYMMDD format
+  #     -
+  #       name: Get date of last commit for VERSION_TAG
+  #       run: |
+  #         echo "VERSION_TAG=$(sed '1!d' ./version)" >> $GITHUB_ENV
+
+  #     # Show version tag
+  #     -
+  #       name: Show version tag
+  #       run: |
+  #         echo "ACARS Hub Version: ${{ env.VERSION_TAG }}"
+
+  #     # Set version tag in webapp
+  #     # -
+  #     #   name: Patch webapp with VERSION_TAG
+  #     #   run: |
+  #     #     sed -i 's/Pre-Release/ACARS Hub Pre-Release: ${{ env.VERSION_TAG }}/' ./acarshub-typescript/src/menu.ts
+
+  #     - name: Create version file
+  #       run: |
+  #         echo "${{ env.VERSION_TAG }}" >> ./rootfs/acarshub-version
+
+  #     # Hit an issue where arm builds would fail with cURL errors regarding intermediary certificates when downloading from github (ie: deploy-s6-overlay).
+  #     # After many hours of troubleshooting, the workaround is to pre-load the image's rootfs with the CA certificates from the runner.
+  #     # This problem may go away in future.
+  #     -
+  #       name: Copy CA Certificates from GitHub Runner to Image rootfs
+  #       run: |
+  #         ls -la /etc/ssl/certs/
+  #         mkdir -p ./rootfs/etc/ssl/certs
+  #         mkdir -p ./rootfs/usr/share/ca-certificates/mozilla
+  #         cp --no-dereference /etc/ssl/certs/*.crt ./rootfs/etc/ssl/certs
+  #         cp --no-dereference /etc/ssl/certs/*.pem ./rootfs/etc/ssl/certs
+  #         cp --no-dereference /usr/share/ca-certificates/mozilla/*.crt ./rootfs/usr/share/ca-certificates/mozilla
+
+  #       # Log into docker hub (so we can push images)
+  #     -
+  #       name: Login to DockerHub
+  #       uses: docker/login-action@v1
+  #       with:
+  #         username: ${{ secrets.DOCKERHUB_USERNAME }}
+  #         password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+  #     # Set up QEMU for multi-arch builds
+  #     -
+  #       name: Set up QEMU
+  #       uses: docker/setup-qemu-action@v1
+
+  #     # Set up buildx for multi platform builds
+  #     -
+  #       name: Set up Docker Buildx
+  #       id: buildx
+  #       uses: docker/setup-buildx-action@v1
+
+  #     # Patch airframesio/acars-decoder-typescript to run in browser (outside of nodejs)
+  #     # https://stackoverflow.com/questions/44709031/build-for-both-browser-and-nodejs
+  #     # https://medium.com/collaborne-engineering/typescript-create-library-for-nodejs-and-browser-fece291d517f
+  #     #- name: "Create Working Directory for git clone"
+  #     #  working-directory: .
+  #     #  run: |
+  #     #    mkdir acars-decoder-typescript-clone
+
+  #     # git clone https://github.com/airframesio/acars-decoder-typescript.git .
+  #     -
+  #       name: "Patch airframesio/acars-decoder-typescript to run in browser (outside of nodejs)"
+  #       working-directory: ./acars-decoder-typescript
+  #       run: |
+  #         sed -i '/"module": "commonjs",/d' tsconfig.json
+
+  #     # Build build airframesio/acars-decoder-typescript
+  #     -
+  #       name: Build airframesio/acars-decoder-typescript
+  #       working-directory: ./acars-decoder-typescript
+  #       run: |
+  #         yarn install
+  #         yarn build
+  #         yarn pack --filename ../acars-decoder-typescript.tgz
+
+  #     # build acarshub typescript production
+
+  #     -
+  #       name: Build ACARSHub typescript production
+  #       working-directory: ./acarshub-typescript
+  #       run: |
+  #         npm install
+  #         sed -i 's/Pre-Release/ACARS Hub Pre-Release: ${{ env.VERSION_TAG }}/' ./src/menu.ts
+  #         npm run buildprod
+
+  #     # Test container build for all supported platforms (defined above)
+  #     -
+  #       name: Test Build ${{ matrix.docker-platform }}
+  #       uses: docker/build-push-action@v2
+  #       with:
+  #         context: .
+  #         file: ./Dockerfile
+  #         no-cache: true
+  #         platforms: linux/386,linux/amd64,linux/arm/v7,linux/arm/v6,linux/arm64
+  #         push: ${{ env.PUSH }}
+  #         tags: ${{ env.REPO }}/${{ env.IMAGE }}:test-pr-prod
