@@ -94,7 +94,6 @@ RUN set -x && \
         "${KEPT_PACKAGES[@]}" \
         "${TEMP_PACKAGES[@]}"\
         && \
-    ls /webapp/static/
     # Make latest python from source
     # pushd /src/ && \
     # wget -q https://www.python.org/ftp/python/3.9.5/Python-3.9.5.tgz && \
@@ -105,88 +104,88 @@ RUN set -x && \
     # make install && \
     # ldconfig /usr/local/lib  && \
     # dependencies for web interface
-    # python3 -m pip install --no-cache-dir \
-    #     -r /webapp/requirements.txt \
-    #     && \
-    # # Fix for Eventlet issues
-    # apt-get \
-    #   -o Dpkg::Options::='--force-confmiss' \
-    #   install --reinstall --no-install-recommends -y \
-    #   netbase \
-    #   && \
-    # # rtl-sdr
-    # git clone git://git.osmocom.org/rtl-sdr.git /src/rtl-sdr && \
-    # pushd /src/rtl-sdr && \
-    # git checkout "${BRANCH_RTLSDR}" && \
-    # echo "rtl-sdr ${BRANCH_RTLSDR}" >> /VERSIONS && \
-    # mkdir -p /src/rtl-sdr/build && \
-    # pushd /src/rtl-sdr/build && \
-    # cmake ../ -DINSTALL_UDEV_RULES=ON -Wno-dev && \
-    # make -Wstringop-truncation && \
-    # make -Wstringop-truncation install && \
-    # cp -v /src/rtl-sdr/rtl-sdr.rules /etc/udev/rules.d/ && \
-    # popd && popd && \
-    # # libacars
-    # git clone git://github.com/szpajder/libacars.git /src/libacars && \
-    # pushd /src/libacars && \
-    # git checkout master && \
-    # mkdir build && \
-    # pushd build && \
-    # cmake ../ && \
-    # make && \
-    # make install && \
-    # popd && popd && \
-    # # acarsdec
-    # #git clone https://github.com/fredclausen/acarsdec.git /src/acarsdec && \
-    # git clone --single-branch --branch testing https://github.com/airframesio/acarsdec.git /src/acarsdec && \
-    # pushd /src/acarsdec && \
-    # #git checkout master && \
-    # git checkout testing && \
-    # mkdir build && \
-    # pushd build && \
-    # cmake ../ -Drtl=ON && \
-    # make && \
-    # make install && \
-    # popd && popd && \
-    # # vdlm2dec
-    # git clone https://github.com/fredclausen/vdlm2dec.git /src/vdlm2dec && \
-    # pushd /src/vdlm2dec && \
-    # git checkout master && \
-    # mkdir build && \
-    # pushd build && \
-    # cmake ../ -Drtl=ON && \
-    # make && \
-    # make install && \
-    # popd && popd && \
-    # # directory for logging
-    # mkdir -p /run/acars && \
-    # # extract airframes-acars-decoder package to /webapp/static/airframes-acars-decoder
-    # mkdir -p /src/airframes-acars-decoder && \
-    # tar xvf /src/acars-decoder-typescript.tgz -C /src/airframes-acars-decoder && \
-    # mkdir -p /webapp/static/airframes-acars-decoder && \
-    # mv -v /src/airframes-acars-decoder/package/dist/* /webapp/static/airframes-acars-decoder/ && \
-    # # patch airframes-acars-decoder package so imports work
-    # find /webapp/static/airframes-acars-decoder -type f -iname '*.js' -exec sed -i """/import .* from '.*';/ s/';/.js';/""" {} \; && \
-    # find /webapp/static/airframes-acars-decoder -type f -iname '*.js' -exec sed -i """/import .* from \".*\";/ s/\";/.js\";/""" {} \; && \
-    # find /webapp/static/airframes-acars-decoder -type f -iname '*.js' -exec sed -i """/export .* from '.*';/ s/';/.js';/""" {} \; && \
-    # find /webapp/static/airframes-acars-decoder -type f -iname '*.js' -exec sed -i """/export .* from \".*\";/ s/\";/.js\";/""" {} \; && \
-    # # install S6 Overlay
-    # curl -s https://raw.githubusercontent.com/mikenye/deploy-s6-overlay/master/deploy-s6-overlay.sh | sh && \
-    # # deploy healthchecks framework
-    # git clone \
-    #   --depth=1 \
-    #   https://github.com/mikenye/docker-healthchecks-framework.git \
-    #   /opt/healthchecks-framework \
-    #   && \
-    # rm -rf \
-    #   /opt/healthchecks-framework/.git* \
-    #   /opt/healthchecks-framework/*.md \
-    #   /opt/healthchecks-framework/tests \
-    #   && \
-    # # Clean up
-    # apt-get remove -y "${TEMP_PACKAGES[@]}" && \
-    # apt-get autoremove -y && \
-    # rm -rf /src/* /tmp/* /var/lib/apt/lists/*
+    python3 -m pip install --no-cache-dir \
+        -r /webapp/requirements.txt \
+        && \
+    # Fix for Eventlet issues
+    apt-get \
+      -o Dpkg::Options::='--force-confmiss' \
+      install --reinstall --no-install-recommends -y \
+      netbase \
+      && \
+    # rtl-sdr
+    git clone git://git.osmocom.org/rtl-sdr.git /src/rtl-sdr && \
+    pushd /src/rtl-sdr && \
+    git checkout "${BRANCH_RTLSDR}" && \
+    echo "rtl-sdr ${BRANCH_RTLSDR}" >> /VERSIONS && \
+    mkdir -p /src/rtl-sdr/build && \
+    pushd /src/rtl-sdr/build && \
+    cmake ../ -DINSTALL_UDEV_RULES=ON -Wno-dev && \
+    make -Wstringop-truncation && \
+    make -Wstringop-truncation install && \
+    cp -v /src/rtl-sdr/rtl-sdr.rules /etc/udev/rules.d/ && \
+    popd && popd && \
+    # libacars
+    git clone git://github.com/szpajder/libacars.git /src/libacars && \
+    pushd /src/libacars && \
+    git checkout master && \
+    mkdir build && \
+    pushd build && \
+    cmake ../ && \
+    make && \
+    make install && \
+    popd && popd && \
+    # acarsdec
+    #git clone https://github.com/fredclausen/acarsdec.git /src/acarsdec && \
+    git clone --single-branch --branch testing https://github.com/airframesio/acarsdec.git /src/acarsdec && \
+    pushd /src/acarsdec && \
+    #git checkout master && \
+    git checkout testing && \
+    mkdir build && \
+    pushd build && \
+    cmake ../ -Drtl=ON && \
+    make && \
+    make install && \
+    popd && popd && \
+    # vdlm2dec
+    git clone https://github.com/fredclausen/vdlm2dec.git /src/vdlm2dec && \
+    pushd /src/vdlm2dec && \
+    git checkout master && \
+    mkdir build && \
+    pushd build && \
+    cmake ../ -Drtl=ON && \
+    make && \
+    make install && \
+    popd && popd && \
+    # directory for logging
+    mkdir -p /run/acars && \
+    # extract airframes-acars-decoder package to /webapp/static/airframes-acars-decoder
+    mkdir -p /src/airframes-acars-decoder && \
+    tar xvf /src/acars-decoder-typescript.tgz -C /src/airframes-acars-decoder && \
+    mkdir -p /webapp/static/airframes-acars-decoder && \
+    mv -v /src/airframes-acars-decoder/package/dist/* /webapp/static/airframes-acars-decoder/ && \
+    # patch airframes-acars-decoder package so imports work
+    find /webapp/static/airframes-acars-decoder -type f -iname '*.js' -exec sed -i """/import .* from '.*';/ s/';/.js';/""" {} \; && \
+    find /webapp/static/airframes-acars-decoder -type f -iname '*.js' -exec sed -i """/import .* from \".*\";/ s/\";/.js\";/""" {} \; && \
+    find /webapp/static/airframes-acars-decoder -type f -iname '*.js' -exec sed -i """/export .* from '.*';/ s/';/.js';/""" {} \; && \
+    find /webapp/static/airframes-acars-decoder -type f -iname '*.js' -exec sed -i """/export .* from \".*\";/ s/\";/.js\";/""" {} \; && \
+    # install S6 Overlay
+    curl -s https://raw.githubusercontent.com/mikenye/deploy-s6-overlay/master/deploy-s6-overlay.sh | sh && \
+    # deploy healthchecks framework
+    git clone \
+      --depth=1 \
+      https://github.com/mikenye/docker-healthchecks-framework.git \
+      /opt/healthchecks-framework \
+      && \
+    rm -rf \
+      /opt/healthchecks-framework/.git* \
+      /opt/healthchecks-framework/*.md \
+      /opt/healthchecks-framework/tests \
+      && \
+    # Clean up
+    apt-get remove -y "${TEMP_PACKAGES[@]}" && \
+    apt-get autoremove -y && \
+    rm -rf /src/* /tmp/* /var/lib/apt/lists/*
 
 ENTRYPOINT [ "/init" ]
 
