@@ -24,6 +24,7 @@ COPY rootfs/ /
 
 # Copy in acars-decoder-typescript from previous build stage
 COPY acars-decoder-typescript.tgz /src/acars-decoder-typescript.tgz
+COPY webapp.tar.gz /src/webapp.tar.gz
 
 RUN set -x && \
     TEMP_PACKAGES=() && \
@@ -85,7 +86,6 @@ RUN set -x && \
     TEMP_PACKAGES+=(librrd-dev) && \
     # install packages
     ## Builder fixes...
-    ls /webapp/static/ && \
     mkdir -p /usr/sbin/ && \
     ln -s /usr/bin/dpkg-split /usr/sbin/dpkg-split && \
     ln -s /usr/bin/dpkg-deb /usr/sbin/dpkg-deb && \
@@ -160,6 +160,8 @@ RUN set -x && \
     popd && popd && \
     # directory for logging
     mkdir -p /run/acars && \
+    # extract webapp
+    tar -xzvf /src/webapp.tar.gz -C / && \
     # extract airframes-acars-decoder package to /webapp/static/airframes-acars-decoder
     mkdir -p /src/airframes-acars-decoder && \
     tar xvf /src/acars-decoder-typescript.tgz -C /src/airframes-acars-decoder && \
