@@ -162,6 +162,7 @@ RUN set -x && \
     mkdir -p /run/acars && \
     # extract webapp
     tar -xzvf /src/webapp.tar.gz -C / && \
+    ls /webapp/static/js/ && \
     # extract airframes-acars-decoder package to /webapp/static/airframes-acars-decoder
     mkdir -p /src/airframes-acars-decoder && \
     tar xvf /src/acars-decoder-typescript.tgz -C /src/airframes-acars-decoder && \
