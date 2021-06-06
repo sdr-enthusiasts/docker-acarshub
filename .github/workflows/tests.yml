@@ -107,15 +107,17 @@ jobs:
 
       -
         name: Build ACARSHub typescript
-        working-directory: ./
+        working-directory: ./acarshub-typescript
         run: |
-          pushd acarshub-typescript
           npm install
           sed -i 's/Pre-Release/ACARS Hub Pre-Release: ${{ env.VERSION_TAG }}/' ./src/menu.ts
           npm run buildtest
-          popd
-          ls rootfs/webapp/static/js/
-          ls rootfs/webapp/static/
+          mkdir -p ../rootfs/webapp/static/js/other
+          mkdir -p ../rootfs/webapp/static/css/other
+          cp --verbose ./dist-min/*.js ../rootfs/webapp/static/js/
+          cp --verbose ./js-other/* ../rootfs/webapp/static/js/other/
+          cp --verbose ./css-min/site.css ../rootfs/webapp/static/css/site.css
+          cp --verbose ./css/other/* ../rootfs/webapp/static/css/other/
 
       # Test container build for all supported platforms (defined above)
       -
