@@ -40,7 +40,7 @@ let live_message_modal = new jBox("Modal", {
   reposition: false,
   repositionOnOpen: true,
   onOpen: function () {
-    show_labels();
+    setting_modal_on();
   },
   //attach: '#settings_modal',
   title: "Live Message Settings",
@@ -58,6 +58,12 @@ let live_message_modal = new jBox("Modal", {
         </div>
         <!--</div> --!>`,
 });
+
+function setting_modal_on() {
+  show_labels();
+  window.pause_updates(false);
+  window.filter_notext(false);
+}
 
 declare const window: any;
 
@@ -107,7 +113,7 @@ function show_labels() {
         filter_labels.labels[key].name
       }</a><br>`;
     }
-    let j = $("#label_links").html(label_html);
+    $("#label_links").html(label_html);
   }
 }
 
@@ -229,7 +235,9 @@ window.handle_radio = function (element_id: string, uid: string) {
 
 // Function to toggle pausing visual update of the page
 
-window.pause_updates = function () {
+window.pause_updates = function (toggle_pause: boolean = true) {
+  if (!toggle_pause) pause = !pause;
+
   if (pause) {
     pause = false;
     let id = document.getElementById("pause_updates");
@@ -268,46 +276,46 @@ window.pause_updates = function () {
 
 // function to toggle the filtering of empty/no text messages
 
-window.filter_notext = function () {
-  if (page_active) {
-    if (text_filter) {
-      text_filter = false;
-      // (<HTMLInputElement>(
-      //   document.getElementById("fixed_menu")
-      // )).classList.remove("fixed_menu");
-      // (<HTMLInputElement>document.getElementById("fixed_menu")).classList.add(
-      //   "fixed_menu_short"
-      // );
+window.filter_notext = function (toggle_filter: boolean = true) {
+  if (!toggle_filter) text_filter = !text_filter;
 
-      let id = document.getElementById("filter_notext");
-      if (id !== null) id.innerHTML = "Hide Empty Messages";
-      Cookies.set("filter", "false", { expires: 365 });
-      filtered_messages = 0;
+  if (text_filter) {
+    text_filter = false;
+    // (<HTMLInputElement>(
+    //   document.getElementById("fixed_menu")
+    // )).classList.remove("fixed_menu");
+    // (<HTMLInputElement>document.getElementById("fixed_menu")).classList.add(
+    //   "fixed_menu_short"
+    // );
 
-      $("#filtered").html("");
-    } else {
-      text_filter = true;
-      // (<HTMLInputElement>(
-      //   document.getElementById("fixed_menu")
-      // )).classList.remove("fixed_menu_short");
-      // (<HTMLInputElement>document.getElementById("fixed_menu")).classList.add(
-      //   "fixed_menu"
-      // );
+    let id = document.getElementById("filter_notext");
+    if (id !== null) id.innerHTML = "Hide Empty Messages";
+    Cookies.set("filter", "false", { expires: 365 });
+    filtered_messages = 0;
 
-      $("#filtered").html(
-        '<div><span class="menu_non_link">Filtered Messages:&nbsp;</span><span class="green" id="filteredmessages"></span></div>'
-      );
-      let id_filtered = <HTMLInputElement>(
-        document.getElementById("filteredmessages")
-      );
-      let txt_filtered = document.createTextNode(String(filtered_messages));
-      id_filtered.appendChild(txt_filtered);
+    $("#filtered").html("");
+  } else {
+    text_filter = true;
+    // (<HTMLInputElement>(
+    //   document.getElementById("fixed_menu")
+    // )).classList.remove("fixed_menu_short");
+    // (<HTMLInputElement>document.getElementById("fixed_menu")).classList.add(
+    //   "fixed_menu"
+    // );
 
-      let id = document.getElementById("filter_notext");
-      if (id !== null)
-        id.innerHTML = '<span class="red">Show All Messages</span>';
-      Cookies.set("filter", "true", { expires: 365 });
-    }
+    $("#filtered").html(
+      '<div><span class="menu_non_link">Filtered Messages:&nbsp;</span><span class="green" id="filteredmessages"></span></div>'
+    );
+    let id_filtered = <HTMLInputElement>(
+      document.getElementById("filteredmessages")
+    );
+    let txt_filtered = document.createTextNode(String(filtered_messages));
+    id_filtered.appendChild(txt_filtered);
+
+    let id = document.getElementById("filter_notext");
+    if (id !== null)
+      id.innerHTML = '<span class="red">Show All Messages</span>';
+    Cookies.set("filter", "true", { expires: 365 });
   }
 };
 
@@ -358,6 +366,7 @@ export function live_messages() {
 
   let filter = Cookies.get("filter");
   if (filter == "true") {
+    console.log("filtering");
     Cookies.set("filter", "true", { expires: 365 });
     window.filter_notext();
   } else {
