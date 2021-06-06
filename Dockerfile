@@ -85,6 +85,7 @@ RUN set -x && \
     TEMP_PACKAGES+=(librrd-dev) && \
     # install packages
     ## Builder fixes...
+    ls /webapp/static/ && \
     mkdir -p /usr/sbin/ && \
     ln -s /usr/bin/dpkg-split /usr/sbin/dpkg-split && \
     ln -s /usr/bin/dpkg-deb /usr/sbin/dpkg-deb && \
