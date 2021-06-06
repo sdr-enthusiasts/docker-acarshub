@@ -81,6 +81,7 @@ msgs_received.unshift = function () {
 };
 
 function show_modal_values() {
+  show_sound();
   (<HTMLInputElement>document.getElementById("alert_text")).value = (<
     HTMLInputElement
   >document.getElementById("alert_text")).value = combineArray(
@@ -465,7 +466,25 @@ window.default_alert_values = function () {
   window.updateAlerts();
 };
 
-export function toggle_playsound(loading = false) {
+function show_sound() {
+  if (play_sound) {
+    let id = document.getElementById("playsound_link");
+    if (id !== null) {
+      id.innerHTML = "";
+      let txt = document.createTextNode("Turn Off Alert Sound");
+      id.appendChild(txt);
+    }
+  } else {
+    let id = document.getElementById("playsound_link");
+    if (id !== null) {
+      id.innerHTML = "";
+      let txt = document.createTextNode("Turn On Alert Sound");
+      id.appendChild(txt);
+    }
+  }
+}
+
+window.toggle_playsound = function (loading = false) {
   if (play_sound) {
     let id = document.getElementById("playsound_link");
     if (id !== null) {
@@ -481,13 +500,13 @@ export function toggle_playsound(loading = false) {
       id.appendChild(txt);
     }
   }
-  play_sound = play_sound ? false : true;
+  play_sound = !play_sound;
   Cookies.set("play_sound", play_sound == true ? "true" : "false", {
     expires: 365,
   });
 
   if (!loading) sound_alert();
-}
+};
 
 export async function sound_alert() {
   if (play_sound) {
@@ -508,8 +527,8 @@ export function alert_active(state = false) {
     Cookies.set("alert_unread", "0", { expires: 365 });
 
     // temporarily toggle the play_sound variable so we can set the UI correctly
-    play_sound = play_sound ? false : true;
-    toggle_playsound(true);
+    play_sound = !play_sound;
+    window.toggle_playsound(true);
 
     // (<HTMLInputElement>document.getElementById("alert_callsigns")).value =
     //   Cookies.get("alert_callsigns") || "";
