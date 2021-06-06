@@ -48,9 +48,9 @@ let search_message_modal = new jBox("Modal", {
   overlay: true,
   reposition: false,
   repositionOnOpen: true,
-  // onOpen: function () {
-  //   show_labels();
-  // },
+  onOpen: function () {
+    update_size();
+  },
   //attach: '#settings_modal',
   title: "Search for messages",
   content: `  <p><a href="javascript:showall()" class="spread_text">Most Recent Messages</a></p>
@@ -218,7 +218,7 @@ function show_search() {
     // Display the updated nav bar and messages
     display = display_messages(results);
     display_nav_results = display_search(current_page, num_results[i]);
-    $("#log").html(display);
+    $("#log").html('<div class="row" id="num_results"></div>' + display);
     $("#num_results").html(display_nav_results);
     window.scrollTo(0, 0); // Scroll the window back to the top. We want this because the user might have scrolled halfway down the page and then ran a new search/updated the page
   }
@@ -311,6 +311,7 @@ function sleep(ms: number) {
 
 window.runclick = function (page: number) {
   current_page = page;
+  console.log("test");
   if (!is_everything_blank() || show_all) {
     $("#log").html("Updating results....");
     $("#num_results").html("");
@@ -323,14 +324,18 @@ window.runclick = function (page: number) {
 };
 
 // Sanity checker to ensure the page typed in the jump box makes sense. If it does, call the runclick function to send it off to the DB
-// window.jumppage = function () {
-//   let page = document.getElementById("jump").value;
-//   if (page > total_pages) {
-//     $("#error_message").html(`Please enter a value less than ${total_pages}`);
-//   } else if (page != 0) {
-//     runclick(parseInt(page) - 1);
-//   }
-// };
+window.jumppage = function () {
+  let page: HTMLInputElement = <HTMLInputElement>(
+    document.getElementById("jump")
+  );
+  let actual_page: number = 0;
+  if (typeof page !== "undefined") actual_page = parseInt(page.value);
+  if (actual_page > total_pages) {
+    $("#error_message").html(`Please enter a value less than ${total_pages}`);
+  } else if (actual_page != 0) {
+    window.runclick(actual_page - 1);
+  }
+};
 
 // Function to format the side bar
 
@@ -461,12 +466,6 @@ export function search_active(state = false) {
 }
 
 function set_html() {
-  $("#right").html(
-    `          <div class="fixed_results">
-
-  <div class="row" id="num_results"></div>`
-  );
-
   $("#modal_text").html(
     '<a href="javascript:show_search_message_modal()">Search For Messages</a>'
   );

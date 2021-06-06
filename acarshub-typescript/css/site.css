@@ -23,7 +23,7 @@ th {
 table.search {
   border: 1px solid black;
   border-collapse: collapse;
-  width: 95%;
+  width: 100%;
   table-layout: fixed;
   background-color: transparent;
   /* margin-right: 0px; */
@@ -181,8 +181,7 @@ div#links.row {
 }
 
 div#num_results.row {
-  position: absolute;
-  right: 0px;
+  position: relative;
   width: 100%;
   height: inherit;
   padding-right: 5px;
