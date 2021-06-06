@@ -115,16 +115,16 @@ jobs:
           ls ../rootfs/webapp/static/js/
 
       # Test container build for all supported platforms (defined above)
-      # -
-      #   name: Test Build ${{ matrix.docker-platform }}
-      #   uses: docker/build-push-action@v2
-      #   with:
-      #     context: .
-      #     file: ./Dockerfile
-      #     no-cache: true
-      #     platforms: linux/386,linux/amd64,linux/arm/v7,linux/arm/v6,linux/arm64
-      #     push: ${{ env.PUSH }}
-      #     tags: ${{ env.REPO }}/${{ env.IMAGE }}:test-pr
+      -
+        name: Test Build ${{ matrix.docker-platform }}
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          file: ./Dockerfile
+          no-cache: true
+          platforms: linux/386,linux/amd64,linux/arm/v7,linux/arm/v6,linux/arm64
+          push: ${{ env.PUSH }}
+          tags: ${{ env.REPO }}/${{ env.IMAGE }}:test-pr
 
       # # build acarshub typescript production
 
