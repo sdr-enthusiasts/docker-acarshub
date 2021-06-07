@@ -117,5 +117,5 @@ js/**
 css/**
 rootfs/webapp/static/js/*
 rootfs/webapp/static/css/*
-./webapp/**
+webapp/**
 webapp.tar.gz

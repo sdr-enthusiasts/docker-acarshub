@@ -143,7 +143,6 @@ jobs:
           rm -rf ../webapp.tar.gz
           rm -rf ./webapp.tar.gz
           rm -rf ./webapp
-          sed -i 's/Pre-Release/ACARS Hub Pre-Release: ${{ env.VERSION_TAG }}/' ./src/menu.ts
           npm run buildprod
           mkdir -p ./webapp/static/js/other
           mkdir -p ./webapp/static/css/other

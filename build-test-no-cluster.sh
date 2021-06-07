@@ -23,12 +23,10 @@ mkdir -p ./webapp/static/
 docker cp "$id":/rootfs/webapp/static/js ./webapp/static/js
 docker cp "$id":/rootfs/webapp/static/css ./webapp/static/css
 docker rm -v "$id"
-tar cvfz webapp.tar.gz ./webapp
-rm -rf ./webapp
 
 # Build & push latest
 docker build -f Dockerfile.local -t "${REPO}/${IMAGE}:test" .
 
 # Clean up
 rm ./acars-decoder-typescript.tgz
-rm ./webapp.tar.gz
+rm -rf ./webapp

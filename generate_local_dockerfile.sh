@@ -12,9 +12,11 @@ cp Dockerfile Dockerfile.local
 # This is a nice convenience for using cached builds
 
 sed -i.bu 's/COPY rootfs\/ \//COPY rootfs\/webapp\/requirements.txt \/webapp\/requirements.txt/g' Dockerfile.local
+sed -i.bu '/COPY webapp.tar.gz \/src\/webapp.tar.gz/d' Dockerfile.local
+sed -i.bu '/tar -xzvf \/src\/webapp.tar.gz -C \/ && \\/d' Dockerfile.local
 
 # move the COPY FS line back to the bottom so that we can use cached builds
-sed -i.bu 's/ENTRYPOINT \[ "\/init" \]/COPY rootfs\/ \/\nENTRYPOINT \[ "\/init" \]\n/g' Dockerfile.local
+sed -i.bu 's/ENTRYPOINT \[ "\/init" \]/COPY rootfs\/ \/\nCOPY webapp\/ \/webapp\/\nENTRYPOINT \[ "\/init" \]\n/g' Dockerfile.local
 
 # clean up...thanks mac
 rm -f Dockerfile.local.bu
