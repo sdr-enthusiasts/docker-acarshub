@@ -10,7 +10,7 @@ import { resize_tabs } from "./index.js";
 
 let pause: boolean = false;
 let text_filter: boolean = false;
-let msgs_received: acars_msg[][] = [];
+let lm_msgs_received: acars_msg[][] = [];
 let exclude: string[] = [];
 let selected_tabs: string = "";
 let filter_labels: labels;
@@ -18,12 +18,12 @@ let filter_labels: labels;
 //   /about|search|stats|status|alerts/gi,
 //   ""
 // );
-let page_active: boolean = false;
+let lm_page_active: boolean = false;
 // acars_path += acars_path.endsWith("/") ? "" : "/";
 // const acars_url = document.location.origin + acars_path;
 
-let acars_path = "";
-let acars_url = "";
+let lm_acars_path = "";
+let lm_acars_url = "";
 
 let filtered_messages: number = 0;
 let received_messages: number = 0;
@@ -67,12 +67,12 @@ function setting_modal_on() {
 
 declare const window: any;
 
-const md = new MessageDecoder();
+const lm_md = new MessageDecoder();
 
 // Automatically keep the array size at 150 messages or less
 // without the need to check before we push on to the stack
 
-msgs_received.unshift = function () {
+lm_msgs_received.unshift = function () {
   if (this.length >= 50) {
     this.pop();
   }
@@ -105,7 +105,7 @@ function increment_received(page_refresh = false) {
 
 function show_labels() {
   let label_html = "";
-  if (typeof filter_labels !== "undefined" && page_active) {
+  if (typeof filter_labels !== "undefined" && lm_page_active) {
     for (let key in filter_labels.labels) {
       let link_class: string =
         exclude.indexOf(key.toString()) !== -1 ? "red" : "sidebar_link";
@@ -156,13 +156,13 @@ window.handle_radio = function (element_id: string, uid: string) {
   let next_tab: string = "0";
   let previous_tab: string = "0";
 
-  for (let i = 0; i < msgs_received.length; i++) {
+  for (let i = 0; i < lm_msgs_received.length; i++) {
     if (
-      msgs_received[i].length > 1 &&
-      msgs_received[i][msgs_received[i].length - 1].uid == uid
+      lm_msgs_received[i].length > 1 &&
+      lm_msgs_received[i][lm_msgs_received[i].length - 1].uid == uid
     ) {
       let active_tab = String(
-        msgs_received[i].findIndex((sub_msg: acars_msg) => {
+        lm_msgs_received[i].findIndex((sub_msg: acars_msg) => {
           console.log(
             sub_msg.uid,
             typeof sub_msg.uid,
@@ -179,17 +179,17 @@ window.handle_radio = function (element_id: string, uid: string) {
       active_tab = active_tab === "-1" ? "0" : active_tab;
 
       if (active_tab === "0") {
-        next_tab = msgs_received[i][1].uid;
-        previous_tab = msgs_received[i][msgs_received[i].length - 1].uid;
-      } else if (active_tab === String(msgs_received[i].length - 1)) {
-        next_tab = msgs_received[i][0].uid;
-        previous_tab = msgs_received[i][msgs_received[i].length - 2].uid;
+        next_tab = lm_msgs_received[i][1].uid;
+        previous_tab = lm_msgs_received[i][lm_msgs_received[i].length - 1].uid;
+      } else if (active_tab === String(lm_msgs_received[i].length - 1)) {
+        next_tab = lm_msgs_received[i][0].uid;
+        previous_tab = lm_msgs_received[i][lm_msgs_received[i].length - 2].uid;
       } else {
-        next_tab = msgs_received[i][Number(active_tab) + 1].uid;
-        previous_tab = msgs_received[i][Number(active_tab) - 1].uid;
+        next_tab = lm_msgs_received[i][Number(active_tab) + 1].uid;
+        previous_tab = lm_msgs_received[i][Number(active_tab) - 1].uid;
       }
 
-      i = msgs_received.length;
+      i = lm_msgs_received.length;
     }
   }
 
@@ -254,7 +254,7 @@ window.pause_updates = function (toggle_pause: boolean = true) {
       id_filtered.appendChild(txt_filtered);
     }
 
-    $("#log").html(display_messages(msgs_received, selected_tabs, true));
+    $("#log").html(display_messages(lm_msgs_received, selected_tabs, true));
   } else {
     pause = true;
 
@@ -389,15 +389,15 @@ export function live_messages() {
 // if the live message page is active we'll toggle the display of everything here
 
 export function live_message_active(state = false) {
-  page_active = state;
+  lm_page_active = state;
 
-  if (page_active) {
+  if (lm_page_active) {
     // page is active
     set_html();
     increment_received(true); // show the received msgs
     increment_filtered(true); // show the filtered msgs
     show_labels();
-    $("#log").html(display_messages(msgs_received, selected_tabs, true)); // show the messages we've received
+    $("#log").html(display_messages(lm_msgs_received, selected_tabs, true)); // show the messages we've received
   }
 }
 
@@ -406,8 +406,8 @@ window.show_live_message_modal = function () {
 };
 
 export function set_live_page_urls(documentPath: string, documentUrl: string) {
-  acars_path = documentPath;
-  acars_url = documentUrl;
+  lm_acars_path = documentPath;
+  lm_acars_url = documentUrl;
 }
 
 function set_html() {
@@ -462,7 +462,7 @@ export function new_acars_message(msg: html_msg) {
       msg.msghtml.hasOwnProperty("alt")
     ) {
       if (msg.msghtml.hasOwnProperty("text")) {
-        let decoded_msg = md.decode(msg.msghtml);
+        let decoded_msg = lm_md.decode(msg.msghtml);
         if (decoded_msg.decoded == true) {
           msg.msghtml.decodedText = decoded_msg;
         }
@@ -488,64 +488,64 @@ export function new_acars_message(msg: html_msg) {
       msg.msghtml.uid = getRandomInt(1000000).toString(); // Each message gets a unique ID. Used to track tab selection
 
       // Loop through the received messages. If a message is found we'll break out of the for loop
-      for (let u = 0; u < msgs_received.length; u++) {
+      for (let u = 0; u < lm_msgs_received.length; u++) {
         // Now we loop through all of the messages in the message group to find a match in case the first doesn't
         // Have the field we need
         // There is a possibility that (for reasons I cannot fathom) aircraft will broadcast the same flight information
         // With one field being different. We'll reject that message as being not in the same message group if that's the case
         // We'll also test for squitter messages which don't have tail/icao/flight
-        for (let z = 0; z < msgs_received[u].length; z++) {
+        for (let z = 0; z < lm_msgs_received[u].length; z++) {
           if (
-            msgs_received[u][z].hasOwnProperty("tail") &&
-            new_tail == msgs_received[u][z].tail &&
-            ((msgs_received[u][z].hasOwnProperty("icao") &&
-              msgs_received[u][z]["icao"] == new_icao) ||
-              !msgs_received[u][z].hasOwnProperty("icao")) &&
-            ((msgs_received[u][z].hasOwnProperty("flight") &&
-              msgs_received[u][z]["flight"] == new_flight) ||
-              !msgs_received[u][z].hasOwnProperty("flight"))
+            lm_msgs_received[u][z].hasOwnProperty("tail") &&
+            new_tail == lm_msgs_received[u][z].tail &&
+            ((lm_msgs_received[u][z].hasOwnProperty("icao") &&
+              lm_msgs_received[u][z]["icao"] == new_icao) ||
+              !lm_msgs_received[u][z].hasOwnProperty("icao")) &&
+            ((lm_msgs_received[u][z].hasOwnProperty("flight") &&
+              lm_msgs_received[u][z]["flight"] == new_flight) ||
+              !lm_msgs_received[u][z].hasOwnProperty("flight"))
           ) {
             found = true;
             index_new = u;
-            z = msgs_received[u].length;
+            z = lm_msgs_received[u].length;
           } else if (
-            msgs_received[u][z].hasOwnProperty("icao") &&
-            new_icao == msgs_received[u][z].icao &&
-            ((msgs_received[u][z].hasOwnProperty("tail") &&
-              msgs_received[u][z]["tail"] == new_tail) ||
-              !msgs_received[u][z].hasOwnProperty("tail")) &&
-            ((msgs_received[u][z].hasOwnProperty("flight") &&
-              msgs_received[u][z]["flight"] == new_flight) ||
-              !msgs_received[u][z].hasOwnProperty("flight"))
+            lm_msgs_received[u][z].hasOwnProperty("icao") &&
+            new_icao == lm_msgs_received[u][z].icao &&
+            ((lm_msgs_received[u][z].hasOwnProperty("tail") &&
+              lm_msgs_received[u][z]["tail"] == new_tail) ||
+              !lm_msgs_received[u][z].hasOwnProperty("tail")) &&
+            ((lm_msgs_received[u][z].hasOwnProperty("flight") &&
+              lm_msgs_received[u][z]["flight"] == new_flight) ||
+              !lm_msgs_received[u][z].hasOwnProperty("flight"))
           ) {
             found = true;
             index_new = u;
-            z = msgs_received[u].length;
+            z = lm_msgs_received[u].length;
           } else if (
-            msgs_received[u][z].hasOwnProperty("flight") &&
-            new_flight == msgs_received[u][z].flight &&
-            ((msgs_received[u][z].hasOwnProperty("icao") &&
-              msgs_received[u][z]["icao"] == new_icao) ||
-              !msgs_received[u][z].hasOwnProperty("icao")) &&
-            ((msgs_received[u][z].hasOwnProperty("tail") &&
-              msgs_received[u][z]["tail"] == new_tail) ||
-              !msgs_received[u][z].hasOwnProperty("tail"))
+            lm_msgs_received[u][z].hasOwnProperty("flight") &&
+            new_flight == lm_msgs_received[u][z].flight &&
+            ((lm_msgs_received[u][z].hasOwnProperty("icao") &&
+              lm_msgs_received[u][z]["icao"] == new_icao) ||
+              !lm_msgs_received[u][z].hasOwnProperty("icao")) &&
+            ((lm_msgs_received[u][z].hasOwnProperty("tail") &&
+              lm_msgs_received[u][z]["tail"] == new_tail) ||
+              !lm_msgs_received[u][z].hasOwnProperty("tail"))
           ) {
             found = true;
             index_new = u;
-            z = msgs_received[u].length;
+            z = lm_msgs_received[u].length;
           } else if (
             msg.msghtml.hasOwnProperty("label") &&
-            msgs_received[u][z].hasOwnProperty("label") &&
+            lm_msgs_received[u][z].hasOwnProperty("label") &&
             msg.msghtml.hasOwnProperty("text") &&
-            msgs_received[u][z].hasOwnProperty("text") &&
+            lm_msgs_received[u][z].hasOwnProperty("text") &&
             msg.msghtml.label == "SQ" &&
-            msgs_received[u][z]["label"] == "SQ" &&
-            msg.msghtml.text == msgs_received[u][z]["text"]
+            lm_msgs_received[u][z]["label"] == "SQ" &&
+            msg.msghtml.text == lm_msgs_received[u][z]["text"]
           ) {
             found = true;
             index_new = u;
-            z = msgs_received[u].length;
+            z = lm_msgs_received[u].length;
           }
         }
 
@@ -553,103 +553,107 @@ export function new_acars_message(msg: html_msg) {
         // run through the messages in that group to see if it is a dup.
         // if it is, we'll reject the new message and append a counter to the old/saved message
         if (found) {
-          u = msgs_received.length;
+          u = lm_msgs_received.length;
 
-          for (let j = 0; j < msgs_received[index_new].length; j++) {
+          for (let j = 0; j < lm_msgs_received[index_new].length; j++) {
             // First check is to see if the message is the same by checking all fields and seeing if they match
             // Second check is to see if the text field itself is a match
             // Last check is to see if we've received a multi-part message
             // If we do find a match we'll update the timestamp of the parent message
             // And add/update a duplicate counter to the parent message
             if (
-              (msgs_received[index_new][j]["text"] == msg.msghtml.text ||
-                (!msgs_received[index_new][j].hasOwnProperty("text") &&
+              (lm_msgs_received[index_new][j]["text"] == msg.msghtml.text ||
+                (!lm_msgs_received[index_new][j].hasOwnProperty("text") &&
                   !msg.msghtml.hasOwnProperty("text"))) &&
-              (msgs_received[index_new][j]["data"] == msg.msghtml.data ||
-                (!msgs_received[index_new][j].hasOwnProperty("data") &&
+              (lm_msgs_received[index_new][j]["data"] == msg.msghtml.data ||
+                (!lm_msgs_received[index_new][j].hasOwnProperty("data") &&
                   !msg.msghtml.hasOwnProperty("data"))) &&
-              (msgs_received[index_new][j]["libacars"] ==
+              (lm_msgs_received[index_new][j]["libacars"] ==
                 msg.msghtml.libacars ||
-                (!msgs_received[index_new][j].hasOwnProperty("libacars") &&
+                (!lm_msgs_received[index_new][j].hasOwnProperty("libacars") &&
                   !msg.msghtml.hasOwnProperty("libacars"))) &&
-              (msgs_received[index_new][j]["dsta"] == msg.msghtml.dsta ||
-                (!msgs_received[index_new][j].hasOwnProperty("dsta") &&
+              (lm_msgs_received[index_new][j]["dsta"] == msg.msghtml.dsta ||
+                (!lm_msgs_received[index_new][j].hasOwnProperty("dsta") &&
                   !msg.msghtml.hasOwnProperty("dsta"))) &&
-              (msgs_received[index_new][j]["depa"] == msg.msghtml.depa ||
-                (!msgs_received[index_new][j].hasOwnProperty("depa") &&
+              (lm_msgs_received[index_new][j]["depa"] == msg.msghtml.depa ||
+                (!lm_msgs_received[index_new][j].hasOwnProperty("depa") &&
                   !msg.msghtml.hasOwnProperty("depa"))) &&
-              (msgs_received[index_new][j]["eta"] == msg.msghtml.eta ||
-                (!msgs_received[index_new][j].hasOwnProperty("eta") &&
+              (lm_msgs_received[index_new][j]["eta"] == msg.msghtml.eta ||
+                (!lm_msgs_received[index_new][j].hasOwnProperty("eta") &&
                   !msg.msghtml.hasOwnProperty("eta"))) &&
-              (msgs_received[index_new][j]["gtout"] == msg.msghtml.gtout ||
-                (!msgs_received[index_new][j].hasOwnProperty("gtout") &&
+              (lm_msgs_received[index_new][j]["gtout"] == msg.msghtml.gtout ||
+                (!lm_msgs_received[index_new][j].hasOwnProperty("gtout") &&
                   !msg.msghtml.hasOwnProperty("gtout"))) &&
-              (msgs_received[index_new][j]["gtin"] == msg.msghtml.gtin ||
-                (!msgs_received[index_new][j].hasOwnProperty("gtin") &&
+              (lm_msgs_received[index_new][j]["gtin"] == msg.msghtml.gtin ||
+                (!lm_msgs_received[index_new][j].hasOwnProperty("gtin") &&
                   !msg.msghtml.hasOwnProperty("gtin"))) &&
-              (msgs_received[index_new][j]["wloff"] == msg.msghtml.wloff ||
-                (!msgs_received[index_new][j].hasOwnProperty("wloff") &&
+              (lm_msgs_received[index_new][j]["wloff"] == msg.msghtml.wloff ||
+                (!lm_msgs_received[index_new][j].hasOwnProperty("wloff") &&
                   !msg.msghtml.hasOwnProperty("wloff"))) &&
-              (msgs_received[index_new][j]["wlin"] == msg.msghtml.wlin ||
-                (!msgs_received[index_new][j].hasOwnProperty("wlin") &&
+              (lm_msgs_received[index_new][j]["wlin"] == msg.msghtml.wlin ||
+                (!lm_msgs_received[index_new][j].hasOwnProperty("wlin") &&
                   !msg.msghtml.hasOwnProperty("wlin"))) &&
-              (msgs_received[index_new][j]["lat"] == msg.msghtml.lat ||
-                (!msgs_received[index_new][j].hasOwnProperty("lat") &&
+              (lm_msgs_received[index_new][j]["lat"] == msg.msghtml.lat ||
+                (!lm_msgs_received[index_new][j].hasOwnProperty("lat") &&
                   !msg.msghtml.hasOwnProperty("lat"))) &&
-              (msgs_received[index_new][j]["lon"] == msg.msghtml.lon ||
-                (!msgs_received[index_new][j].hasOwnProperty("lon") &&
+              (lm_msgs_received[index_new][j]["lon"] == msg.msghtml.lon ||
+                (!lm_msgs_received[index_new][j].hasOwnProperty("lon") &&
                   !msg.msghtml.hasOwnProperty("lon"))) &&
-              (msgs_received[index_new][j]["alt"] == msg.msghtml.alt ||
-                (!msgs_received[index_new][j].hasOwnProperty("alt") &&
+              (lm_msgs_received[index_new][j]["alt"] == msg.msghtml.alt ||
+                (!lm_msgs_received[index_new][j].hasOwnProperty("alt") &&
                   !msg.msghtml.hasOwnProperty("alt")))
             ) {
-              msgs_received[index_new][j]["timestamp"] = msg.msghtml.timestamp;
-              if (msgs_received[index_new][j].hasOwnProperty("duplicates")) {
-                msgs_received[index_new][j]["duplicates"] = String(
-                  Number(msgs_received[index_new][j]["duplicates"]) + 1
+              lm_msgs_received[index_new][j]["timestamp"] =
+                msg.msghtml.timestamp;
+              if (lm_msgs_received[index_new][j].hasOwnProperty("duplicates")) {
+                lm_msgs_received[index_new][j]["duplicates"] = String(
+                  Number(lm_msgs_received[index_new][j]["duplicates"]) + 1
                 );
               } else {
-                msgs_received[index_new][j]["duplicates"] = "1";
+                lm_msgs_received[index_new][j]["duplicates"] = "1";
               }
               rejected = true;
             } else if (
-              msgs_received[index_new][j].hasOwnProperty("text") &&
+              lm_msgs_received[index_new][j].hasOwnProperty("text") &&
               msg.msghtml.hasOwnProperty("text") &&
-              msgs_received[index_new][j]["text"] == msg.msghtml["text"]
+              lm_msgs_received[index_new][j]["text"] == msg.msghtml["text"]
             ) {
               // it's the same message
-              msgs_received[index_new][j]["timestamp"] = msg.msghtml.timestamp;
-              if (msgs_received[index_new][j].hasOwnProperty("duplicates")) {
-                msgs_received[index_new][j]["duplicates"] = String(
-                  Number(msgs_received[index_new][j]["duplicates"]) + 1
+              lm_msgs_received[index_new][j]["timestamp"] =
+                msg.msghtml.timestamp;
+              if (lm_msgs_received[index_new][j].hasOwnProperty("duplicates")) {
+                lm_msgs_received[index_new][j]["duplicates"] = String(
+                  Number(lm_msgs_received[index_new][j]["duplicates"]) + 1
                 );
               } else {
-                msgs_received[index_new][j]["duplicates"] = "1";
+                lm_msgs_received[index_new][j]["duplicates"] = "1";
               }
               rejected = true;
             } else if (
               msg.msghtml.station_id ==
-                msgs_received[index_new][j].station_id && // Is the message from the same station id? Keep ACARS/VDLM separate
+                lm_msgs_received[index_new][j].station_id && // Is the message from the same station id? Keep ACARS/VDLM separate
               msg.msghtml.hasOwnProperty("msgno") &&
-              msgs_received[index_new][j].hasOwnProperty("msgno") &&
-              msg.msghtml.timestamp - msgs_received[index_new][j].timestamp <
+              lm_msgs_received[index_new][j].hasOwnProperty("msgno") &&
+              msg.msghtml.timestamp - lm_msgs_received[index_new][j].timestamp <
                 8.0 && // We'll assume the message is not a multi-part message if the time from the new message is too great from the rest of the group
               typeof msg.msghtml.msgno !== "undefined" &&
               ((msg.msghtml.msgno.charAt(0) ==
-                msgs_received[index_new][j].msgno!.charAt(0) && // Next two lines match on AzzA pattern
+                lm_msgs_received[index_new][j].msgno!.charAt(0) && // Next two lines match on AzzA pattern
                 msg.msghtml.msgno.charAt(3) ==
-                  msgs_received[index_new][j].msgno!.charAt(3)) ||
+                  lm_msgs_received[index_new][j].msgno!.charAt(3)) ||
                 msg.msghtml.msgno.substring(0, 3) ==
-                  msgs_received[index_new][j].msgno!.substring(0, 3))
+                  lm_msgs_received[index_new][j].msgno!.substring(0, 3))
             ) {
               // This check matches if the group is a AAAz counter
               // We have a multi part message. Now we need to see if it is a dup
               rejected = true;
               let add_multi = true;
 
-              if (msgs_received[index_new][j].hasOwnProperty("msgno_parts")) {
+              if (
+                lm_msgs_received[index_new][j].hasOwnProperty("msgno_parts")
+              ) {
                 // Now we'll see if the multi-part message is a dup
-                let split = msgs_received[index_new][j]
+                let split = lm_msgs_received[index_new][j]
                   .msgno_parts!.toString()
                   .split(" "); // format of stored parts is "MSGID MSGID2" etc
 
@@ -661,62 +665,67 @@ export function new_acars_message(msg: html_msg) {
 
                     if (a == 0 && split[a].length == 4) {
                       // Match, first element of the array with no previous matches so we don't want a leading space
-                      msgs_received[index_new][j].msgno_parts = split[a] + "x2";
+                      lm_msgs_received[index_new][j].msgno_parts =
+                        split[a] + "x2";
                     } else if (split[a].length == 4) {
                       // Match, not first element, and doesn't have previous matches
-                      msgs_received[index_new][j].msgno_parts +=
+                      lm_msgs_received[index_new][j].msgno_parts +=
                         " " + split[a] + "x2";
                     } else if (a == 0) {
                       // Match, first element of the array so no leading space, has previous other matches so we increment the counter
                       let count = parseInt(split[a].substring(5)) + 1;
-                      msgs_received[index_new][j].msgno_parts =
+                      lm_msgs_received[index_new][j].msgno_parts =
                         split[a].substring(0, 4) + "x" + count;
                     } else {
                       // Match, has previous other matches so we increment the counter
                       let count = parseInt(split[a].substring(5)) + 1;
-                      msgs_received[index_new][j].msgno_parts +=
+                      lm_msgs_received[index_new][j].msgno_parts +=
                         " " + split[a].substring(0, 4) + "x" + count;
                     }
                   } else {
                     // No match, re-add the MSG ID to the parent message
                     if (a == 0) {
-                      msgs_received[index_new][j].msgno_parts = split[a];
+                      lm_msgs_received[index_new][j].msgno_parts = split[a];
                     } else {
-                      msgs_received[index_new][j].msgno_parts += " " + split[a];
+                      lm_msgs_received[index_new][j].msgno_parts +=
+                        " " + split[a];
                     }
                   }
                 }
               }
 
-              msgs_received[index_new][j]["timestamp"] = msg.msghtml.timestamp;
+              lm_msgs_received[index_new][j]["timestamp"] =
+                msg.msghtml.timestamp;
 
               if (add_multi) {
                 // Multi-part message has been found
                 if (
-                  msgs_received[index_new][j]["text"] &&
+                  lm_msgs_received[index_new][j]["text"] &&
                   msg.msghtml.hasOwnProperty("text")
                 )
                   // If the multi-part parent has a text field and the found match has a text field, append
-                  msgs_received[index_new][j]["text"]! += msg.msghtml.text;
+                  lm_msgs_received[index_new][j]["text"]! += msg.msghtml.text;
                 else if (msg.msghtml.hasOwnProperty("text"))
                   // If the new message has a text field but the parent does not, add the new text to the parent
-                  msgs_received[index_new][j]["text"] = msg.msghtml.text;
+                  lm_msgs_received[index_new][j]["text"] = msg.msghtml.text;
 
-                if (msgs_received[index_new][j].hasOwnProperty("msgno_parts")) {
+                if (
+                  lm_msgs_received[index_new][j].hasOwnProperty("msgno_parts")
+                ) {
                   // If the new message is multi, with no dupes found we need to append the msg ID to the found IDs
-                  msgs_received[index_new][j]["msgno_parts"] +=
+                  lm_msgs_received[index_new][j]["msgno_parts"] +=
                     " " + msg.msghtml.msgno;
                 } else {
-                  msgs_received[index_new][j]["msgno_parts"] =
-                    msgs_received[index_new][j]["msgno"] +
+                  lm_msgs_received[index_new][j]["msgno_parts"] =
+                    lm_msgs_received[index_new][j]["msgno"] +
                     " " +
                     msg.msghtml.msgno;
                 }
 
                 // Re-run the text decoder against the text field we've updated
-                let decoded_msg = md.decode(msgs_received[index_new][j]);
+                let decoded_msg = lm_md.decode(lm_msgs_received[index_new][j]);
                 if (decoded_msg.decoded == true) {
-                  msgs_received[index_new][j]["decoded_msg"] = decoded_msg;
+                  lm_msgs_received[index_new][j]["decoded_msg"] = decoded_msg;
                 }
 
                 if (matched.was_found && !msg.loading) sound_alert();
@@ -725,13 +734,16 @@ export function new_acars_message(msg: html_msg) {
 
             if (rejected) {
               // Promote the message back to the front
-              msgs_received[index_new].forEach(function (item: any, i: number) {
+              lm_msgs_received[index_new].forEach(function (
+                item: any,
+                i: number
+              ) {
                 if (i == j) {
-                  msgs_received[index_new].splice(i, 1);
-                  msgs_received[index_new].unshift(item);
+                  lm_msgs_received[index_new].splice(i, 1);
+                  lm_msgs_received[index_new].unshift(item);
                 }
               });
-              j = msgs_received[index_new].length;
+              j = lm_msgs_received[index_new].length;
             }
           }
         }
@@ -740,20 +752,20 @@ export function new_acars_message(msg: html_msg) {
         if (found) {
           // If the message was found, and not rejected, we'll append it to the message group
           if (!rejected) {
-            msgs_received[index_new].unshift(msg.msghtml);
+            lm_msgs_received[index_new].unshift(msg.msghtml);
           }
 
-          msgs_received.forEach(function (item, i) {
+          lm_msgs_received.forEach(function (item, i) {
             if (i == index_new) {
-              msgs_received.splice(i, 1);
-              msgs_received.unshift(item);
+              lm_msgs_received.splice(i, 1);
+              lm_msgs_received.unshift(item);
             }
           });
         }
       }
       if (!found && !rejected) {
         if (matched.was_found && !msg.loading) sound_alert();
-        msgs_received.unshift([msg.msghtml]);
+        lm_msgs_received.unshift([msg.msghtml]);
       }
     } else if (!msg.loading) {
       increment_filtered();
@@ -763,11 +775,11 @@ export function new_acars_message(msg: html_msg) {
   }
   if (!msg.loading) increment_received();
   if (
-    page_active &&
+    lm_page_active &&
     !pause &&
     (typeof msg.done_loading === "undefined" || msg.done_loading === true)
   ) {
-    $("#log").html(display_messages(msgs_received, selected_tabs, true));
+    $("#log").html(display_messages(lm_msgs_received, selected_tabs, true));
     resize_tabs();
     close_all_tooltips();
     attach_all_tooltips();

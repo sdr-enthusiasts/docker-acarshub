@@ -1,29 +1,29 @@
 import showdown from "showdown";
 
-let acars_path: string = "";
-let acars_url: string = "";
+let about_acars_path: string = "";
+let about_acars_url: string = "";
 
 let page_html: string = "";
-let page_active = false;
+let about_page_active = false;
 
 export function about() {
   let converter: showdown.Converter = new showdown.Converter();
-  fetch(`${acars_url}aboutmd`)
+  fetch(`${about_acars_url}aboutmd`)
     .then((response) => response.text())
     .then((data) => {
       save_html(converter.makeHtml(data));
     });
-  if (page_active) about_active(true);
+  if (about_page_active) about_active(true);
 }
 
 function save_html(html: string) {
   page_html = html;
-  about_active(page_active);
+  about_active(about_page_active);
 }
 
 export function about_active(state = false) {
-  page_active = state;
-  if (page_active) {
+  about_page_active = state;
+  if (about_page_active) {
     // page is active
     set_html();
     $("#log").html(page_html); // show the messages we've received
@@ -31,8 +31,8 @@ export function about_active(state = false) {
 }
 
 export function set_about_page_urls(documentPath: string, documentUrl: string) {
-  acars_path = documentPath;
-  acars_url = documentUrl;
+  about_acars_path = documentPath;
+  about_acars_url = documentUrl;
 }
 
 function set_html() {

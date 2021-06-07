@@ -5,10 +5,10 @@ import {
   system_status,
 } from "./interfaces";
 
-let acars_path = "";
-let acars_url = "";
+let status_acars_path = "";
+let status_acars_url = "";
 
-let page_active = false;
+let status_page_active = false;
 let current_status: system_status;
 
 export function status() {
@@ -18,7 +18,7 @@ export function status() {
 export function status_received(msg: system_status) {
   current_status = msg;
 
-  if (page_active) show_status();
+  if (status_page_active) show_status();
 }
 
 function show_status() {
@@ -127,8 +127,8 @@ function decode_status(
 }
 
 export function status_active(state = false) {
-  page_active = state;
-  if (page_active) {
+  status_page_active = state;
+  if (status_page_active) {
     // page is active
     set_html();
     show_status(); // show the messages we've received
@@ -139,8 +139,8 @@ export function set_status_page_urls(
   documentPath: string,
   documentUrl: string
 ) {
-  acars_path = documentPath;
-  acars_url = documentUrl;
+  status_acars_path = documentPath;
+  status_acars_url = documentUrl;
 }
 
 function set_html() {

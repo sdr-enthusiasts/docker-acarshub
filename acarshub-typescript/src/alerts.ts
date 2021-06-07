@@ -12,10 +12,10 @@ let alert_text: string[] = [];
 let alert_callsigns: string[] = [];
 let alert_tail: string[] = [];
 let alert_icao: string[] = [];
-let msgs_received: any[] = [];
-let acars_path: string = "";
-let acars_url: string = "";
-let page_active: boolean = false;
+let alert_msgs_received: any[] = [];
+let alert_acars_path: string = "";
+let alert_acars_url: string = "";
+let alert_page_active: boolean = false;
 let default_text_values: string[] = [
   "cop",
   "police",
@@ -69,11 +69,11 @@ let alert_message_modal = new jBox("Modal", {
 });
 
 let alert_sound: HTMLAudioElement = new Audio(
-  `${acars_url}static/sounds/alert.mp3`
+  `${alert_acars_url}static/sounds/alert.mp3`
 );
 let play_sound: boolean = false;
 
-msgs_received.unshift = function () {
+alert_msgs_received.unshift = function () {
   if (this.length >= 50) {
     this.pop();
   }
@@ -124,9 +124,9 @@ export function alerts_acars_message(msg: html_msg) {
     msg.msghtml.matched_icao = matched.icao !== null ? matched.icao : [];
     msg.msghtml.matched_flight = matched.flight !== null ? matched.flight : [];
     msg.msghtml.matched_tail = matched.tail !== null ? matched.tail : [];
-    msgs_received.unshift([msg.msghtml]);
-    if (page_active) {
-      $("#log").html(display_messages(msgs_received));
+    alert_msgs_received.unshift([msg.msghtml]);
+    if (alert_page_active) {
+      $("#log").html(display_messages(alert_msgs_received));
     } else if (matched.was_found && msg.loading != true) {
       alerts += 1;
       updateAlertCounter();
@@ -519,9 +519,9 @@ export async function sound_alert() {
 }
 
 export function alert_active(state = false) {
-  page_active = state;
+  alert_page_active = state;
 
-  if (page_active) {
+  if (alert_page_active) {
     // page is active
     set_html();
     Cookies.set("alert_unread", "0", { expires: 365 });
@@ -541,13 +541,13 @@ export function alert_active(state = false) {
     // >document.getElementById("alert_text")).value = combineArray(
     //   alert_text
     // ).toUpperCase();
-    $("#log").html(display_messages(msgs_received));
+    $("#log").html(display_messages(alert_msgs_received));
   }
 }
 
 export function set_alert_page_urls(documentPath: string, documentUrl: string) {
-  acars_path = documentPath;
-  acars_url = documentUrl;
+  alert_acars_path = documentPath;
+  alert_acars_url = documentUrl;
 }
 
 function set_html() {

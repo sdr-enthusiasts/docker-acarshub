@@ -57,9 +57,9 @@ declare const window: any;
 let socket: SocketIOClient.Socket;
 let socket_status: boolean = false;
 
-let acars_url: string = "";
-let acars_path: string = "";
-let acars_page: string = "";
+let index_acars_url: string = "";
+let index_acars_path: string = "";
+let index_acars_page: string = "";
 
 let old_window_width: number = 0;
 
@@ -102,7 +102,7 @@ $(() => {
   //connect to the socket server.
 
   socket = io.connect(`${document.location.origin}/main`, {
-    path: acars_path + "socket.io",
+    path: index_acars_path + "socket.io",
   });
 
   socket.on("labels", function (msg: labels) {
@@ -209,51 +209,52 @@ $(() => {
 });
 
 function update_url() {
-  acars_path = document.location.pathname.replace(
+  index_acars_path = document.location.pathname.replace(
     /about|search|stats|status|alerts/gi,
     ""
   );
-  acars_path += acars_path.endsWith("/") ? "" : "/";
-  acars_url = document.location.origin + acars_path;
+  index_acars_path += index_acars_path.endsWith("/") ? "" : "/";
+  index_acars_url = document.location.origin + index_acars_path;
 
-  set_live_page_urls(acars_path, acars_url);
-  set_search_page_urls(acars_path, acars_url);
-  set_stats_page_urls(acars_path, acars_url);
-  set_about_page_urls(acars_path, acars_url);
-  set_status_page_urls(acars_path, acars_url);
-  set_alert_page_urls(acars_path, acars_url);
+  set_live_page_urls(index_acars_path, index_acars_url);
+  set_search_page_urls(index_acars_path, index_acars_url);
+  set_stats_page_urls(index_acars_path, index_acars_url);
+  set_about_page_urls(index_acars_path, index_acars_url);
+  set_status_page_urls(index_acars_path, index_acars_url);
+  set_alert_page_urls(index_acars_path, index_acars_url);
 }
 
 function toggle_pages() {
-  acars_page = "/" + document.location.pathname.replace(acars_path, "");
+  index_acars_page =
+    "/" + document.location.pathname.replace(index_acars_path, "");
   for (let page in pages) {
-    if (pages[page] === "/" && acars_page === pages[page]) {
+    if (pages[page] === "/" && index_acars_page === pages[page]) {
       $("#live_messages_link").addClass("invert_a");
       live_message_active(true);
     } else if (pages[page] === "/") {
       $("#live_messages_link").removeClass("invert_a");
       live_message_active();
-    } else if (pages[page] === "/search" && acars_page === pages[page]) {
+    } else if (pages[page] === "/search" && index_acars_page === pages[page]) {
       $("#search_link").addClass("invert_a");
       search_active(true);
     } else if (pages[page] === "/search") {
       $("#search_link").removeClass("invert_a");
       search_active();
-    } else if (pages[page] === "/stats" && acars_page === pages[page]) {
+    } else if (pages[page] === "/stats" && index_acars_page === pages[page]) {
       $("#stats_link").addClass("invert_a");
       stats_active(true);
     } else if (pages[page] === "/stats") {
       $("#stats_link").removeClass("invert_a");
       stats_active();
-    } else if (pages[page] === "/about" && acars_page === pages[page]) {
+    } else if (pages[page] === "/about" && index_acars_page === pages[page]) {
       about_active(true);
     } else if (pages[page] === "/about") {
       about_active();
-    } else if (pages[page] === "/status" && acars_page === pages[page]) {
+    } else if (pages[page] === "/status" && index_acars_page === pages[page]) {
       status_active(true);
     } else if (pages[page] === "/status") {
       status_active();
-    } else if (pages[page] === "/alerts" && acars_page === pages[page]) {
+    } else if (pages[page] === "/alerts" && index_acars_page === pages[page]) {
       $("#alerts_link").addClass("invert_a");
       alert_active(true);
     } else if (pages[page] === "/alerts") {
@@ -273,9 +274,9 @@ window.new_page = function (page: string) {
   else if (page === "Status") sub_url = "status";
   else if (page === "Alerts") sub_url = "alerts";
   window.history.pushState(
-    { path: acars_path + sub_url },
+    { path: index_acars_path + sub_url },
     page,
-    acars_path + sub_url
+    index_acars_path + sub_url
   );
   toggle_pages();
 };

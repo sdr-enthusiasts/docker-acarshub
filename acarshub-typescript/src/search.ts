@@ -12,7 +12,7 @@ import { search_database } from "./index.js";
 import jBox from "jbox";
 import "jbox/dist/jBox.all.css";
 
-let page_active: boolean = false;
+let search_page_active: boolean = false;
 let db_size: database_size;
 
 declare const window: any;
@@ -31,11 +31,11 @@ let total_pages: number = 0; // number of pages of results
 let show_all: boolean = false; // variable to indicate we are doing a 'show all' search and not of a specific term
 let query_time: number = 0.0;
 
-let acars_path: string = "";
-let acars_url: string = "";
-let msgs_received: acars_msg[][] = [];
+let search_acars_path: string = "";
+let search_acars_url: string = "";
+let search_msgs_received: acars_msg[][] = [];
 let num_results: number[] = [];
-const md: MessageDecoder = new MessageDecoder();
+const search_md: MessageDecoder = new MessageDecoder();
 let search_message_modal = new jBox("Modal", {
   id: "set_modal",
   width: 350,
@@ -159,8 +159,8 @@ export function database_size_details(msg: database_size) {
 export function database_search_results(msg: search_html_msg) {
   //maintain a list of 1 msgs
   console.log("yo");
-  if (msgs_received.length >= 1) {
-    msgs_received.shift();
+  if (search_msgs_received.length >= 1) {
+    search_msgs_received.shift();
   }
   if (num_results.length >= 1) {
     num_results.shift();
@@ -174,7 +174,7 @@ export function database_search_results(msg: search_html_msg) {
   // or the user has executed a 'show all'
 
   if (true) {
-    msgs_received.push(msg.msghtml);
+    search_msgs_received.push(msg.msghtml);
     num_results.push(msg.num_results);
     show_search();
   }
@@ -187,7 +187,7 @@ export function search() {
 
   // Function to listen for key up events. If detected, check and see if the search string has been updated. If so, process the updated query
   document.addEventListener("keyup", function () {
-    if (page_active) {
+    if (search_page_active) {
       let current_terms = get_search_terms();
       if (!is_everything_blank() && current_search != current_terms) {
         show_all = false;
@@ -202,13 +202,13 @@ function show_search() {
   let display_nav_results = "";
   let results = []; // temp variable to store the JSON formatted JS object
 
-  for (let i = 0; i < msgs_received.length; i++) {
+  for (let i = 0; i < search_msgs_received.length; i++) {
     // Loop through the received message blob.
-    for (let j = 0; j < msgs_received[i].length; j++) {
+    for (let j = 0; j < search_msgs_received[i].length; j++) {
       // Loop through the individual messages in the blob
-      let msg_json = msgs_received[i][j];
+      let msg_json = search_msgs_received[i][j];
       // Check and see if the text field is decodable in to human readable format
-      let decoded_msg = md.decode(msg_json);
+      let decoded_msg = search_md.decode(msg_json);
       if (decoded_msg.decoded == true) {
         msg_json.decodedText = decoded_msg;
       }
@@ -436,7 +436,7 @@ function formatSizeUnits(bytes: number) {
 }
 
 function update_size() {
-  if (page_active && typeof db_size !== "undefined") {
+  if (search_page_active && typeof db_size !== "undefined") {
     $("#database").html(String(db_size.count).trim() + " rows");
     if (parseInt(db_size.size) > 0) {
       $("#size").html(formatSizeUnits(parseInt(db_size.size)));
@@ -449,14 +449,14 @@ export function set_search_page_urls(
   documentPath: string,
   documentUrl: string
 ) {
-  acars_path = documentPath;
-  acars_url = documentUrl;
+  search_acars_path = documentPath;
+  search_acars_url = documentUrl;
 }
 
 export function search_active(state = false) {
-  page_active = state;
+  search_page_active = state;
 
-  if (page_active) {
+  if (search_page_active) {
     // page is active
     set_html();
     update_size();

@@ -18,9 +18,9 @@ import {
 
 declare const window: any;
 let image_prefix: string = "";
-let acars_path: string = "";
-let acars_url: string = "";
-let page_active = false;
+let stats_acars_path: string = "";
+let stats_acars_url: string = "";
+let stats_page_active = false;
 
 let chart_alerts: Chart;
 let chart_signals: Chart;
@@ -228,27 +228,27 @@ function show_count() {
 export function decoders_enabled(msg: decoders) {
   acars_on = msg.acars;
   vdlm_on = msg.vdlm;
-  if (page_active) generate_stat_submenu(acars_on, vdlm_on);
+  if (stats_page_active) generate_stat_submenu(acars_on, vdlm_on);
 }
 
 export function signals(msg: signal) {
   signal_data = msg;
-  if (page_active) show_signal_chart();
+  if (stats_page_active) show_signal_chart();
 }
 
 export function alert_terms(msg: alert_term) {
   alert_data = msg;
-  if (page_active) show_alert_chart();
+  if (stats_page_active) show_alert_chart();
 }
 
 export function signal_freqs(msg: signal_freq_data) {
   freqs_data = msg;
-  if (page_active) show_freqs();
+  if (stats_page_active) show_freqs();
 }
 
 export function signal_count(msg: signal_count_data) {
   count_data = msg;
-  if (page_active) show_count();
+  if (stats_page_active) show_count();
 }
 
 export function stats() {
@@ -370,9 +370,9 @@ function set_html() {
 }
 
 export function stats_active(state = false) {
-  page_active = state;
+  stats_page_active = state;
 
-  if (page_active) {
+  if (stats_page_active) {
     // page is active
     set_html();
     generate_stat_submenu(acars_on, vdlm_on);
@@ -384,6 +384,6 @@ export function stats_active(state = false) {
 }
 
 export function set_stats_page_urls(documentPath: string, documentUrl: string) {
-  acars_path = documentPath;
-  acars_url = documentUrl;
+  stats_acars_path = documentPath;
+  stats_acars_url = documentUrl;
 }
