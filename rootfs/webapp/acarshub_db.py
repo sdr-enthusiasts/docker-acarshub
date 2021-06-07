@@ -43,6 +43,7 @@ try:
         message_labels = json.loads(url.read().decode())
     acarshub_helpers.log("Completed loading message labels", "database")
 except Exception as e:
+    message_labels = {"labels": {}}  # handle URL exception
     acarshub_helpers.acars_traceback(e, "database")
 
 # DB PATH MUST BE FROM ROOT!
