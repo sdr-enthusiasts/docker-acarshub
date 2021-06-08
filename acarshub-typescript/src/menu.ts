@@ -5,11 +5,15 @@ let acars_path: string = document.location.pathname.replace(
 acars_path += acars_path.endsWith("/") ? "" : "/";
 const acars_url: string = document.location.origin + acars_path;
 
+let menu_adsb = false;
+
 export function generate_menu() {
   let html = '<div class="wrap"><span class="decor"></span>';
   html += '<nav><ul class="primary">';
   html += `<li class="img_box" id="logo_image"><img src="${acars_url}static/images/acarshubsquare.png" class="banner_img" alt="ACARS Hub Logo"></li>`;
   html += `<li><a href="javascript:new_page('Live Messages')" id="live_messages_link">Live Messages</a></li>`;
+  if (menu_adsb)
+    html += `<li><a href="javascript:new_page('Live Map')" id="live_map_link">Live Map</a></li>`;
   html += `<li><a href="javascript:new_page('Search')" id="search_link">Search Database</a></li>`;
   html += `<li><a href="javascript:new_page('Alerts')" id="alerts_link">Alerts<span id="alert_count"></span></li>`;
   html += `<li><a href="javascript:new_page('Stats')" id="stats_link">Statistics</a></li>`;
@@ -53,4 +57,9 @@ export function generate_footer() {
     <span id="filtered"></span> \
     <span class="align_right" id="release_version"><strong>Pre-Release</strong></span>`;
   $("#footer_div").html(html);
+}
+
+export function set_adsb(adsb_status = false) {
+  menu_adsb = adsb_status;
+  generate_menu();
 }

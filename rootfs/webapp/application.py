@@ -389,6 +389,17 @@ def status():
     return render_template("index.html")
 
 
+@app.route("/adsb")
+def adsb():
+    # For now we're going to redirect the ADSB url always to live messages
+    # ADSB Page loading causes problems
+    # TODO: Fix on load ADSB
+    # if acarshub_helpers.ENABLE_ADSB:
+    #     return render_template("index.html")
+    # else:
+    return redirect(url_for("index"))
+
+
 @app.errorhandler(404)
 def not_found(e):
     return redirect(url_for("index"))
@@ -412,6 +423,20 @@ def main_connect():
     connected_users += 1
 
     requester = request.sid
+
+    socketio.emit(
+        "features_enabled",
+        {
+            "vdlm": acarshub_helpers.ENABLE_VDLM,
+            "acars": acarshub_helpers.ENABLE_ACARS,
+            "adsb": {
+                "enabled": acarshub_helpers.ENABLE_ADSB,
+                "lat": acarshub_helpers.ADSB_LAT,
+                "lon": acarshub_helpers.ADSB_LON,
+            },
+        },
+        namespace="/main",
+    )
 
     socketio.emit(
         "terms", {"terms": acarshub.acarshub_db.get_alert_terms()}, namespace="/main"
@@ -446,11 +471,6 @@ def main_connect():
         "database", {"count": rows, "size": size}, to=requester, namespace="/main"
     )
 
-    socketio.emit(
-        "decoders_enabled",
-        {"vdlm": acarshub_helpers.ENABLE_VDLM, "acars": acarshub_helpers.ENABLE_ACARS},
-        namespace="/main",
-    )
     socketio.emit(
         "signal",
         {"levels": acarshub.acarshub_db.get_signal_levels()},

@@ -1,4 +1,4 @@
-import { generate_menu, generate_footer } from "./menu.js";
+import { generate_menu, generate_footer, set_adsb } from "./menu.js";
 
 import {
   set_live_page_urls,
@@ -53,6 +53,12 @@ import {
   signal_count_data,
 } from "./interfaces.js";
 
+import {
+  live_map,
+  live_map_active,
+  set_live_map_page_urls,
+} from "./live_map.js";
+
 declare const window: any;
 let socket: SocketIOClient.Socket;
 let socket_status: boolean = false;
@@ -63,6 +69,8 @@ let index_acars_page: string = "";
 
 let old_window_width: number = 0;
 
+let ADSB: boolean = false;
+
 const pages: string[] = [
   "/", // index/live messages
   "/search", // search page
@@ -70,6 +78,7 @@ const pages: string[] = [
   "/about", // about page
   "/status", // status page
   "/alerts", // alerts page
+  "/adsb",
 ];
 
 var ro = new ResizeObserver((entries) => {
@@ -135,8 +144,13 @@ $(() => {
 
   // stats
 
-  socket.on("decoders_enabled", function (msg: decoders) {
+  socket.on("features_enabled", function (msg: decoders) {
     decoders_enabled(msg);
+    if (msg.adsb.enabled === true) {
+      set_adsb(true);
+      live_map();
+      ADSB = true;
+    }
   });
 
   // signal level graph
@@ -222,6 +236,7 @@ function update_url() {
   set_about_page_urls(index_acars_path, index_acars_url);
   set_status_page_urls(index_acars_path, index_acars_url);
   set_alert_page_urls(index_acars_path, index_acars_url);
+  set_live_map_page_urls(index_acars_path, index_acars_url);
 }
 
 function toggle_pages() {
@@ -260,6 +275,12 @@ function toggle_pages() {
     } else if (pages[page] === "/alerts") {
       $("#alerts_link").removeClass("invert_a");
       alert_active();
+    } else if (pages[page] === "/adsb" && index_acars_page === pages[page]) {
+      $("#live_map_link").addClass("invert_a");
+      live_map_active(true);
+    } else if (pages[page] === "/adsb") {
+      $("#live_map_link").removeClass("invert_a");
+      live_map_active();
     }
   }
 }
@@ -273,6 +294,7 @@ window.new_page = function (page: string) {
   else if (page === "About") sub_url = "about";
   else if (page === "Status") sub_url = "status";
   else if (page === "Alerts") sub_url = "alerts";
+  else if (page === "Live Map") sub_url = "adsb";
   window.history.pushState(
     { path: index_acars_path + sub_url },
     page,

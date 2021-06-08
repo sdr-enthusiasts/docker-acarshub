@@ -17,6 +17,12 @@ FREQS_VDLM = ""
 DB_SAVE_DAYS = 7
 DB_BACKUP = ""
 ALERT_STAT_TERMS = []
+ENABLE_ADSB = False
+ADSB_URL = "readsb"
+ADSB_PORT = 30005
+ADSB_TYPE = "beast"
+ADSB_LAT = 0
+ADSB_LON = 0
 
 if os.getenv("DEBUG_LOGGING", default=False):
     DEBUG_LOGGING = True
@@ -103,6 +109,19 @@ else:
         "pan",
         "red coat",
     ]
+
+if os.getenv("ENABLE_ADSB", default=False):
+    ENABLE_ADSB = True
+    if os.getenv("ADSB_URL", default=False):
+        ADSB_URL = os.getenv("ADSB_URL", default=False)
+    if os.getenv("ADSB_PORT"):
+        ADSB_PORT = int(os.getenv("ADSB_PORT"), default=False)
+    if os.getenv("ADSB_TYPE", default=False):
+        ADSB_TYPE = os.getenv("ADSB_TYPE")
+    if os.getenv("ADSB_LON", default=False):
+        ADSB_LON = int(os.getenv("ADSB_LON"))
+    if os.getenv("ADSB_LAT", default=False):
+        ADSB_LAT = int(os.getenv("ADSB_LAT"))
 
 
 def acars_traceback(e, source):

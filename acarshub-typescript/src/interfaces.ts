@@ -41,6 +41,11 @@ export interface terms {
 export interface decoders {
   acars: boolean;
   vdlm: boolean;
+  adsb: {
+    enabled: boolean;
+    lat: number;
+    lon: number;
+  };
 }
 
 export interface signal {
