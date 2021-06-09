@@ -154,7 +154,7 @@ export interface acars_msg {
   matched_flight?: string[];
   matched_tail?: string[];
   uid: string;
-  decodedText?: any; // no type for typescript acars decoder, so set to any
+  decodedText?: any; // no type for typescript acars decoder; so set to any
   data?: string;
   message_type: string;
   msg_time?: number;
@@ -168,4 +168,39 @@ export interface acars_msg {
   icao_url?: string;
   icao_hex?: string;
   decoded_msg?: string;
+}
+
+export interface adsb {
+  planes: adsb_plane[];
+}
+
+export interface adsb_plane {
+  live: number;
+  call: string;
+  lat: number;
+  lon: number;
+  alt: number;
+  gs: number;
+  trk: number;
+  roc: number;
+  tas: number;
+  roll: number;
+  rtrk: number;
+  ias: number;
+  mach: number;
+  hdg: number;
+  ver: number;
+  HPL: number;
+  RCu: number;
+  RCv: number;
+  HVE: number;
+  VVE: number;
+  Rc: number;
+  VPL: number;
+  EPU: number;
+  VEPU: number;
+  HFOMr: number;
+  VFOMr: number;
+  PE_RCu: number;
+  PE_VPL: number;
 }

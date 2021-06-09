@@ -66,4 +66,4 @@ repos:
   hooks:
     -   id: codespell
         types: [text]
-        exclude: ^(rootfs/webapp/static/css/other/|acars-decoder-typescript/|rootfs/webapp/static/js/other/|.+\.json|Logo-Sources|acarshub-typescript/css/other/|acarshub-typescript/js-other|rootfs/webapp/adsb.py)
+        exclude: ^(rootfs/webapp/static/css/other/|acars-decoder-typescript/|rootfs/webapp/static/js/other/|.+\.json|Logo-Sources|acarshub-typescript/css/other/|acarshub-typescript/js-other|rootfs/webapp/adsb.py|acarshub-typescript/src/interfaces.ts)

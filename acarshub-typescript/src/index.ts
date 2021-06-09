@@ -51,12 +51,15 @@ import {
   alert_term,
   signal_freq_data,
   signal_count_data,
+  adsb,
+  adsb_plane,
 } from "./interfaces.js";
 
 import {
   live_map,
   live_map_active,
   set_live_map_page_urls,
+  set_targets,
 } from "./live_map.js";
 
 declare const window: any;
@@ -126,8 +129,8 @@ $(() => {
       alerts_acars_message(msg); // send the message to alerts for processing
   });
 
-  socket.on("adsb", function (msg: any) {
-    console.log(msg);
+  socket.on("adsb", function (msg: adsb) {
+    set_targets(msg.planes);
   });
 
   socket.on("terms", function (msg: terms) {
