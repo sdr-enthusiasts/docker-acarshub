@@ -119,3 +119,4 @@ rootfs/webapp/static/js/*
 rootfs/webapp/static/css/*
 webapp/**
 webapp.tar.gz
+rootfs/webapp/__pycache__/acarshub_helpers.cpython-38.pyc
