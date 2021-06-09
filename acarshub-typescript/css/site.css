@@ -840,3 +840,7 @@ canvas {
 #mapid {
   height: 80vh;
 }
+
+.airplane {
+  width: 20px;
+}

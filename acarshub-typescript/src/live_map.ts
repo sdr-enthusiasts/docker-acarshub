@@ -26,8 +26,15 @@ function update_targets() {
     for (let plane in adsb_planes) {
       if (adsb_planes[plane].lat !== null && adsb_planes[plane].lon !== null) {
         let callsign = adsb_planes[plane].call || "ICAO Hex: " + plane;
+        let rotate = adsb_planes[plane].trk || 0;
+        let plane_icon = L.divIcon({
+          className: "airplane",
+          html: `<img style="-webkit-transform:rotate(${rotate}deg); -moz-transform: rotate(${rotate}deg); -ms-transform: rotate(${rotate}deg); -o-transform: rotate(${rotate}deg); transform: rotate(${rotate}deg);" src='static/images/plane.svg'>`,
+          iconSize: [30, 30],
+        });
         L.marker([adsb_planes[plane].lat, adsb_planes[plane].lon], {
           title: callsign.replace(/_+/g, ""),
+          icon: plane_icon,
         }).addTo(layerGroup);
       }
     }
