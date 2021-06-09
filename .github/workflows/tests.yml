@@ -116,9 +116,9 @@ jobs:
           mkdir -p ./webapp/static/js/other
           mkdir -p ./webapp/static/css/other
           cp --verbose ./dist-min/*.js ./webapp/static/js/
-          cp --verbose ./js-other/* ./webapp/static/js/other/
+          cp --verbose -r ./js-other/* ./webapp/static/js/other/
           cp --verbose ./css-min/site.css ./webapp/static/css/site.css
-          cp --verbose ./css/other/* ./webapp/static/css/other/
+          cp --verbose -r ./css/other/* ./webapp/static/css/other/
           tar cvfz webapp.tar.gz ./webapp
           cp webapp.tar.gz ../webapp.tar.gz
 
@@ -147,9 +147,9 @@ jobs:
           mkdir -p ./webapp/static/js/other
           mkdir -p ./webapp/static/css/other
           cp --verbose ./dist-min/*.js ./webapp/static/js/
-          cp --verbose ./js-other/* ./webapp/static/js/other/
+          cp --verbose -r ./js-other/* ./webapp/static/js/other/
           cp --verbose ./css-min/site.css ./webapp/static/css/site.css
-          cp --verbose ./css/other/* ./webapp/static/css/other/
+          cp --verbose -r ./css/other/* ./webapp/static/css/other/
           tar cvfz webapp.tar.gz ./webapp
           cp webapp.tar.gz ../webapp.tar.gz
 
