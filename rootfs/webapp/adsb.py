@@ -8,6 +8,7 @@ from threading import Thread
 import signal
 import traceback
 import zmq
+import socket
 
 
 class ADSBClient(TcpClient):
@@ -354,30 +355,75 @@ class ADSB:
         return self.client.get_aircraft()
 
 
+class socket_listen:
+    def __init__(self):
+        self.do_work = True
+        self.receiver = None
+
+    def stop(self):
+        self.do_work = False
+        if self.receiver is not None:
+            self.receiver.close()
+
+    def run(self):
+        import json
+
+        global adsb_runner
+
+        while self.do_work:
+            try:
+                self.receiver = socket.socket(
+                    family=socket.AF_INET, type=socket.SOCK_STREAM
+                )
+                self.receiver.bind(("127.0.0.1", 29005))
+                print("Waiting for connection")
+                self.receiver.listen()
+                (clientConnected, clientAddress) = self.receiver.accept()
+                clientConnected.setblocking(0)
+                clientConnected.settimeout(1)
+                print("Connected")
+
+                while True:
+                    time.sleep(5)
+                    clientConnected.send(
+                        json.dumps(adsb_runner.get_aircraft()).encode() + b"\n"
+                    )
+            except Exception as e:
+                print(e)
+                self.receiver.close()
+                time.sleep(5)
+
+        print("exiting socket listener")
+        self.receiver.close()
+
+
 def closeall(signal, frame):
+    # This function is garbage.............
+    # It will error out with a thread issue I don't understand. In order to prevent shutdown issues
+    # Using .join(1) on the thread to stop them from hanging program exit
     global adsb_runner
+    global stop_flag
+    global adsb_socket_thread
+    global adsb_listener_socket
+    global adsb_thread
     print("KeyboardInterrupt (ID: {}). Cleaning up...".format(signal))
+    adsb_listener_socket.stop()
+    adsb_socket_thread.join(1)
     adsb_runner.stop()
-    adsb_thread.join()
+    adsb_thread.join(1)
     sys.exit(0)
 
 
-stop_flag = True
 adsb_runner = ADSB()
-# Enable running outside of webapp for testing
+adsb_listener_socket = socket_listen()
+
 if __name__ == "__main__":
     signal.signal(signal.SIGINT, closeall)
 
     adsb_thread = Thread(target=adsb_runner.run)
-
     adsb_thread.start()
+    # adsb_thread.join()
 
-    counter = 0
-    while True:
-        if counter < 200:
-            counter += 1
-        else:
-            counter = 0
-            print(adsb_runner.get_aircraft())
-
-        time.sleep(0.01)
+    adsb_socket_thread = Thread(target=adsb_listener_socket.run)
+    adsb_socket_thread.start()
+    # adsb_socket_thread.join()

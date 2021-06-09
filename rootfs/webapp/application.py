@@ -5,6 +5,7 @@ import eventlet
 eventlet.monkey_patch()
 import acarshub
 import acarshub_helpers
+from adsb import ADSBClient
 
 if not acarshub_helpers.SPAM:
     import acarshub_rrd
@@ -58,7 +59,13 @@ thread_message_listener_stop_event = Event()
 thread_database = Thread()
 thread_database_stop_event = Event()
 
-# alert threads
+# adsb threads
+
+thread_adsb = Thread()
+thread_adsb_stop_event = Event()
+
+thread_adsb_listner = Thread()
+thread_adsb_listner_stop_event = Event()
 
 # maxlen is to keep the que from becoming ginormous
 # the messages will be in the que all the time, even if no one is using the website
@@ -68,7 +75,7 @@ thread_database_stop_event = Event()
 
 que_messages = deque(maxlen=15)
 que_database = deque(maxlen=15)
-
+que_adsb = deque(maxlen=1)
 messages_recent = []  # list to store most recent msgs
 
 # counters for messages
@@ -93,6 +100,24 @@ def update_rrd_db():
     vdlm_messages = 0
     acars_messages = 0
     error_messages = 0
+
+
+def adsbListener():
+    import time
+    import sys
+
+    global connected_users
+    global que_adsb
+
+    while not thread_adsb_stop_event.isSet():
+        sys.stdout.flush()
+        time.sleep(1)
+
+        while len(que_adsb) != 0:
+            adsb_msg = que_adsb.pop()
+
+            if connected_users > 0:
+                socketio.emit("adsb", {"planes": adsb_msg}, namespace="/main")
 
 
 def htmlListener():
@@ -179,7 +204,7 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
 
     if message_type == "VDLM2":
         global vdlm_messages
-    else:
+    elif message_type == "ACARS":
         global acars_messages
 
     disconnected = True
@@ -248,7 +273,7 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
 
                 try:
                     message_json = []
-                    if data.decode().count("}\n") == 1:
+                    if data.decode().count("}\n") == 1 or message_type == "ADSB":
                         message_json.append(json.loads(data))
                     else:
                         split_json = data.decode().split("}\n")
@@ -267,24 +292,26 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
                         if message_type == "VDLM2":
                             vdlm_messages += 1
                             que_type = "VDL-M2"
-                        else:
+                        elif message_type == "ACARS":
                             acars_messages += 1
                             que_type = "ACARS"
 
                         if "error" in j:
                             if j["error"] > 0:
                                 error_messages += j["error"]
-
-                        if (
-                            connected_users > 0
-                        ):  # que message up if someone is on live message page
-                            que_messages.append((que_type, j))
-                        que_database.append((que_type, j))
-                        if len(messages_recent) >= 150:  # Keep the que size down
-                            del messages_recent[0]
-                        messages_recent.append(
-                            (que_type, j)
-                        )  # add to recent message que for anyone fresh loading the page
+                        if message_type == "ADSB":
+                            que_adsb.append(j)
+                        else:
+                            if (
+                                connected_users > 0
+                            ):  # que message up if someone is on live message page
+                                que_messages.append((que_type, j))
+                            que_database.append((que_type, j))
+                            if len(messages_recent) >= 150:  # Keep the que size down
+                                del messages_recent[0]
+                            messages_recent.append(
+                                (que_type, j)
+                            )  # add to recent message que for anyone fresh loading the page
 
 
 def init_listeners(special_message=""):
@@ -295,6 +322,8 @@ def init_listeners(special_message=""):
     global thread_database
     global thread_scheduler
     global thread_html_generator
+    global thread_adsb_listner
+    global thread_adsb
 
     # show log message if this is container startup
     if special_message == "":
@@ -324,6 +353,16 @@ def init_listeners(special_message=""):
     if connected_users > 0 and not thread_html_generator.is_alive():
         acarshub_helpers.log(f"{special_message}Starting htmlListener", "init")
         thread_html_generator = socketio.start_background_task(htmlListener)
+
+    if not thread_adsb.is_alive() and acarshub_helpers.ENABLE_ADSB:
+        acarshub_helpers.log(f"{special_message}Starting ADSB Listener", "init")
+        thread_adsb = Thread(target=message_listener, args=("ADSB", "127.0.0.1", 29005))
+        thread_adsb.start()
+
+    if not thread_adsb_listner.is_alive() and acarshub_helpers.ENABLE_ADSB:
+        acarshub_helpers.log(f"{special_message}Starting ADSB Emitter", "init")
+        thread_adsb_listner = Thread(target=adsbListener)
+        thread_adsb_listner.start()
 
     status = acarshub.get_service_status()  # grab system status
 
@@ -416,6 +455,8 @@ def main_connect():
 
     # need visibility of the global thread object
     global thread_html_generator
+    global thread_adsb
+    global thread_adsb_stop_event
     global connected_users
 
     recent_options = {"loading": True, "done_loading": False}

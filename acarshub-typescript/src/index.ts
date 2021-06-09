@@ -126,6 +126,10 @@ $(() => {
       alerts_acars_message(msg); // send the message to alerts for processing
   });
 
+  socket.on("adsb", function (msg: any) {
+    console.log(msg);
+  });
+
   socket.on("terms", function (msg: terms) {
     alerts_terms(msg); // send the terms over to the alert page
   });
