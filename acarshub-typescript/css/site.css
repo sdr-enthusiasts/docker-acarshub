@@ -836,3 +836,7 @@ canvas {
   font-weight: bold;
   font-family: Menlo,Monaco,Consolas,"Courier New",monospace;
 }
+
+#mapid {
+  height: 80vh;
+}

@@ -10,5 +10,6 @@ find ./dist/ -maxdepth 1 -type f -iname '*.js' -exec sed -i.bu "s/import ChartDa
 find ./dist/ -maxdepth 1 -type f -iname '*.js' -exec sed -i.bu "s/import showdown from \"showdown\";//g" {} \;
 find ./dist/ -maxdepth 1 -type f -iname '*.js' -exec sed -i.bu "s/import jBox from \"jbox\";//g" {} \;
 find ./dist/ -maxdepth 1 -type f -iname '*.js' -exec sed -i.bu "s/import \"jbox\/dist\/jBox.all.css\";//g" {} \;
+find ./dist/ -maxdepth 1 -type f -iname '*.js' -exec sed -i.bu "s/import leaflet from 'leaflet';//g" {} \;
 
 rm -f ./dist/*.bu
