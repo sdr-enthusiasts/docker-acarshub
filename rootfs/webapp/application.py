@@ -332,14 +332,16 @@ def init_listeners(special_message=""):
     if not thread_acars_listener.is_alive() and acarshub_helpers.ENABLE_ACARS:
         acarshub_helpers.log(f"{special_message}Starting ACARS listener", "init")
         thread_acars_listener = Thread(
-            target=message_listener, args=("ACARS", "127.0.0.1", 15550)
+            target=message_listener,
+            args=("ACARS", acarshub_helpers.LIVE_DATA_SOURCE, 15550),
         )
         thread_acars_listener.start()
 
     if not thread_vdlm2_listener.is_alive() and acarshub_helpers.ENABLE_VDLM:
         acarshub_helpers.log(f"{special_message}Starting VDLM listener", "init")
         thread_vdlm2_listener = Thread(
-            target=message_listener, args=("VDLM2", "127.0.0.1", 15555)
+            target=message_listener,
+            args=("VDLM2", acarshub_helpers.LIVE_DATA_SOURCE, 15555),
         )
         thread_vdlm2_listener.start()
     if not thread_database.is_alive():

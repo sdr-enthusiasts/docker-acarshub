@@ -23,6 +23,9 @@ ADSB_PORT = 30005
 ADSB_TYPE = "beast"
 ADSB_LAT = 0
 ADSB_LON = 0
+LIVE_DATA_SOURCE = (
+    "127.0.0.1"
+)  # This is to switch from localhost for ACARS/VDLM to connecting to a remote data source
 
 if os.getenv("DEBUG_LOGGING", default=False):
     DEBUG_LOGGING = True
@@ -33,6 +36,8 @@ if os.getenv("EXTREME_LOGGING", default=False):
 
 if os.getenv("SPAM", default=False):
     SPAM = True
+if os.getenv("LIVE_DATA_SOURCE", default=False):
+    LIVE_DATA_SOURCE = os.getenv("LIVE_DATA_SOURCE")
 if os.getenv("ENABLE_ACARS", default=False):
     ENABLE_ACARS = True
 if os.getenv("ENABLE_VDLM", default=False):

@@ -23,7 +23,7 @@ if [ -n "${ENABLE_VDLM}" ]; then
 
   # Listen for the output of vdlm2dec (UDP), and make it available for multiple processes at TCP port 15555
   # shellcheck disable=SC2016
-  ncat -4 -u --wait 1 --listen 127.0.0.1 5555 | ncat -4 --keep-open --listen 127.0.0.1 15555 \
+  ncat -4 -u --wait 1 --listen 127.0.0.1 5555 | ncat -4 --keep-open --listen 0.0.0.0 15555 \
     2>&1 | stdbuf -o0 awk '{print "[vdlm2_server] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
 else
   sleep 86400
