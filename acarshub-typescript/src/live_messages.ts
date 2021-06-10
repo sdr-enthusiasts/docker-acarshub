@@ -14,13 +14,7 @@ let lm_msgs_received: acars_msg[][] = [];
 let exclude: string[] = [];
 let selected_tabs: string = "";
 let filter_labels: labels;
-// let acars_path: string = document.location.pathname.replace(
-//   /about|search|stats|status|alerts/gi,
-//   ""
-// );
 let lm_page_active: boolean = false;
-// acars_path += acars_path.endsWith("/") ? "" : "/";
-// const acars_url = document.location.origin + acars_path;
 
 let lm_acars_path = "";
 let lm_acars_url = "";
@@ -784,4 +778,54 @@ export function new_acars_message(msg: html_msg) {
     close_all_tooltips();
     attach_all_tooltips();
   }
+}
+
+export function find_matches() {
+  let output_hex: string[] = [];
+  let output_icao_callsigns: string[] = [];
+  let output_tail: string[] = [];
+  let found_callsign = false;
+  let found_hex = false;
+  let found_tail = false;
+
+  for (let i = 0; i < lm_msgs_received.length; i++) {
+    found_callsign = false;
+    found_hex = false;
+    found_tail = false;
+    for (let j = 0; j < lm_msgs_received[i].length; j++) {
+      if (
+        !found_hex &&
+        typeof lm_msgs_received[i][j].icao_hex !== "undefined"
+      ) {
+        // @ts-expect-error
+        output_hex.push(lm_msgs_received[i][j].icao_hex);
+        found_hex = true;
+      }
+
+      if (
+        !found_callsign &&
+        typeof lm_msgs_received[i][j].icao_flight !== "undefined"
+      ) {
+        // @ts-expect-error
+        output_icao_callsigns.push(lm_msgs_received[i][j].icao_flight);
+        found_callsign = true;
+      }
+
+      if (!found_tail && typeof lm_msgs_received[i][j].tail !== "undefined") {
+        // @ts-expect-error
+        output_tail.push(lm_msgs_received[i][j].tail);
+        found_tail = true;
+      }
+
+      if (found_hex && found_callsign && found_tail) {
+        j = lm_msgs_received[i].length;
+      }
+    }
+  }
+
+  return {
+    hex: output_hex,
+    callsigns: output_icao_callsigns,
+    tail: output_tail,
+  };
 }
