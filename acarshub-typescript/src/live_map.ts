@@ -1,5 +1,6 @@
 import * as L from "leaflet";
 import { adsb_plane } from "./interfaces";
+import { find_matches } from "./live_messages.js";
 
 let livemap_acars_path: string = "";
 let livemap_acars_url: string = "";
@@ -173,13 +174,37 @@ function update_targets() {
   if (typeof map !== "undefined") {
     // clear old planes
     layerGroup.clearLayers();
+    const plane_data = find_matches();
+    const plane_icaos = plane_data.hex;
+    const plane_callsign = plane_data.callsigns;
+    const plane_tails = plane_data.tail;
 
     for (let plane in adsb_planes) {
       if (adsb_planes[plane].lat !== null && adsb_planes[plane].lon !== null) {
         let callsign = adsb_planes[plane].call || plane;
+        let matched_with_acars = false;
+        callsign = callsign.replace(/_+/g, "");
         let rotate = adsb_planes[plane].trk || 0;
         let alt = adsb_planes[plane].alt || 0;
         let hsl = altitudeColor(adsb_planes[plane].alt);
+        for (let i = 0; i < plane_icaos.length; i++) {
+          if (plane_icaos[i] == plane) {
+            matched_with_acars = true;
+            i = plane_icaos.length;
+          }
+        }
+        for (let j = 0; j < plane_callsign.length; j++) {
+          if (plane_callsign[j] == callsign) {
+            matched_with_acars = true;
+            j = plane_callsign.length;
+          }
+        }
+        for (let u = 0; u < plane_tails.length; u++) {
+          if (plane_tails[u] == callsign) {
+            matched_with_acars = true;
+            u = plane_tails.length;
+          }
+        }
         let plane_icon = L.divIcon({
           className: "airplane",
           html: `<div style="fill: hsl(${hsl[0]}, ${hsl[1]}%, ${hsl[2]}%); -webkit-transform:rotate(${rotate}deg); -moz-transform: rotate(${rotate}deg); -ms-transform: rotate(${rotate}deg); -o-transform: rotate(${rotate}deg); transform: rotate(${rotate}deg);">${airplane_icon}</div>`,
@@ -193,10 +218,7 @@ function update_targets() {
           }
         );
         plane_marker.bindTooltip(
-          `<div style='background:white; padding:1px 3px 1px 3px'>${callsign.replace(
-            /_+/g,
-            ""
-          )}<br>Altitude: ${alt}ft<br>Heading: ${Math.round(
+          `<div style='background:white; padding:1px 3px 1px 3px'>${callsign}<br>Altitude: ${alt}ft<br>Heading: ${Math.round(
             rotate
           )}&deg;</div>`,
           { className: "popup" }
