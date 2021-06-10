@@ -842,5 +842,31 @@ canvas {
 }
 
 .airplane {
-  width: 20px;
+  width: 30px;
+}
+
+.airplane_icon {
+  -webkit-mask-image: url(http://127.0.0.1/static/images/plane.svg);
+  mask-image: url(http://127.0.0.1/static/images/plane.svg);
+  -webkit-mask-size: cover;
+  mask-size: cover;
+  background: black;
+}
+
+.airplane-messages {
+  animation: 4s frames infinite linear;
+}
+
+@keyframes frames {
+  0% { transform:translatex(100vw) }
+  25% { background: red; }
+  75% { background: lime; }
+  100% { transform:translatex(-100%) }
+}
+
+.popup {
+  background: rgba(0, 0, 0, 0) !important;
+  border: none !important;
+  font-size: 20px;
+  box-shadow: none !important;
 }
