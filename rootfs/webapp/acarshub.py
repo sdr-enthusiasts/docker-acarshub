@@ -84,7 +84,7 @@ def update_keys(json_message):
             callsign=json_message["flight"], hex_code=json_message["icao_hex"]
         )
     elif "flight" in json_message and json_message["flight"] is not None:
-        json_message["flight"] = flight_finder(
+        json_message["flight"], json_message["icao_flight"] = flight_finder(
             callsign=json_message["flight"], url=False
         )
     elif "icao_hex" in json_message:
@@ -146,16 +146,22 @@ def flight_finder(callsign=None, hex_code=None, url=True):
             )
         else:
             html = f"<strong>{flight}</strong> "
-            tooltip_text = f"<p>The aircraft's callsign. Was not found in the database for decoding.</p>{flight}"
+            tooltip_text = f"<p>The aircraft's callsign was not found in the database for decoding.</p>{flight}"
 
         # If the iata and icao variables are not equal, airline was found in the database and we'll add in the tool-tip for the decoded airline
         # Otherwise, no tool-tip, no FA link, and use the IATA code for display
         if url:
-            return f'<span class="flight-tooltip" data-jbox-content="{tooltip_text}">Flight: <strong><a href="{ADSB_URL}{hex_code}" target="_blank">{html}</a></strong></span>'
+            return (
+                f'<span class="flight-tooltip" data-jbox-content="{tooltip_text}">Flight: <strong><a href="{ADSB_URL}{hex_code}" target="_blank">{html}</a></strong></span>',
+                flight,
+            )
         else:
-            return f'<span class="flight-tooltip" data-jbox-content="{tooltip_text}">Flight: {html}</span>'
+            return (
+                f'<span class="flight-tooltip" data-jbox-content="{tooltip_text}">Flight: {html}</span>',
+                flight,
+            )
     else:  # We should never run in to this condition, I don't think, but we'll add a case for it
-        return "Flight: Error"
+        return ("Flight: Error", None)
 
 
 def handle_message(message=None):
