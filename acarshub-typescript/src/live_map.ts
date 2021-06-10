@@ -13,6 +13,29 @@ const airplane_icon = `<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xml
 <metadata> Svg Vector Icons : http://www.onlinewebfonts.com/icon </metadata>
 <g><path d="M552.5,614.1c0.8-14.1,16.9-9.2,16.9-9.2L696,630.7l261.3,99.4c0-49-7.8-54.1-19.2-62.7L565.3,400c0,0-10-122.5-10-230.5c0-50-24.1-159.5-55.3-159.5c-31.2,0-55.3,111.1-55.3,159.5c0,102.5-10,230.5-10,230.5L61.9,667.4c-14.5,10.2-19.2,15.7-19.2,62.7L304,630.7l126.4-25.7c0,0,16.1-4.9,16.9,9.2c0.8,14.1-2.5,141.1,12,208.5c1.8,9-5.1,9.6-9.8,15.1l-106,67c-3.5,3.9-5.1,14.9-5.1,14.9l-2,37.8l138.8-32.7l24.5,65.3l24.5-65.3l138.8,32.7l-2-37.8c0.2,0-1.4-11-4.9-14.9l-106-67c-4.7-5.5-11.6-6.1-9.8-15.1C554.5,755.2,551.7,628.2,552.5,614.1z"/></g>
 </svg>`;
+
+const airplane_matched_icon = `<?xml version="1.0" encoding="utf-8"?>
+<!-- Generator: Adobe Illustrator 18.1.1, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg version="1.1" id="_x31_0" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+	 viewBox="0 0 512 512" style="enable-background:new 0 0 512 512;" xml:space="preserve">
+<style type="text/css">
+	.st0{fill:#00000;}
+</style>
+<g>
+	<path class="st0" d="M256,0C114.614,0,0,114.614,0,256s114.614,256,256,256s256-114.614,256-256S397.386,0,256,0z M413.766,295.718
+		l-0.043,7.11l-104.542-28.77l-25.555-7.074v0.043l-0.16-0.046l-2.672,107.129l24.41,8.168c3.426,1.148,5.734,4.355,5.734,7.965
+		v15.402c0,0.703-0.09,1.374-0.246,2.019c-0.008,0.027-0.011,0.054-0.019,0.082c-0.84,3.285-3.594,5.691-6.836,6.203h-0.004
+		c-1.301,0.202-2.68,0.101-4.043-0.371l-41.038-14.223c-1.782-0.617-3.719-0.617-5.5,0l-41.039,14.223
+		c-5.458,1.89-11.153-2.161-11.153-7.934v-15.402c0-3.61,2.309-6.817,5.734-7.965l24.41-8.168l-2.153-86.238l-0.48-20.734
+		l-0.035,0.008l-0.004-0.164l-102.707,28.266l-27.59,7.55v-33.82l39.652-20.836v-31.324c0-4.52,3.699-8.215,8.219-8.215
+		c4.519,0,8.218,3.695,8.218,8.215v15.363l-0.074,7.183l0.074-0.039v0.184l21.84-11.477v-30.969c0-4.519,3.699-8.218,8.219-8.218
+		c4.519,0,8.218,3.699,8.218,8.218v15.118l-0.078,7.074l0.078-0.038v0.179l34.293-18.015l-1.809-72.516
+		c0-17.004,13.91-30.914,30.914-30.914c17,0,30.914,13.91,30.914,30.914l-1.813,72.516l23.34,12.262l10.793,5.754v-0.082
+		l0.164,0.082v-22.332c0-4.519,3.695-8.218,8.218-8.218c4.52,0,8.215,3.699,8.215,8.218v30.969l14.832,7.793l6.852,3.684v-0.086
+		l0.16,0.086v-22.691c0-4.52,3.699-8.215,8.218-8.215c4.52,0,8.215,3.695,8.215,8.215v31.324l39.656,20.836V295.718z"/>
+</g>
+</svg>`;
 const darkerColors = false;
 
 // thanks to wiedehopf/tar1090 for the color to altitude code
@@ -207,7 +230,11 @@ function update_targets() {
         }
         let plane_icon = L.divIcon({
           className: "airplane",
-          html: `<div style="fill: hsl(${hsl[0]}, ${hsl[1]}%, ${hsl[2]}%); -webkit-transform:rotate(${rotate}deg); -moz-transform: rotate(${rotate}deg); -ms-transform: rotate(${rotate}deg); -o-transform: rotate(${rotate}deg); transform: rotate(${rotate}deg);">${airplane_icon}</div>`,
+          html: `<div style="fill: hsl(${hsl[0]}, ${hsl[1]}%, ${
+            hsl[2]
+          }%); -webkit-transform:rotate(${rotate}deg); -moz-transform: rotate(${rotate}deg); -ms-transform: rotate(${rotate}deg); -o-transform: rotate(${rotate}deg); transform: rotate(${rotate}deg);">${
+            matched_with_acars ? airplane_matched_icon : airplane_icon
+          }</div>`,
           iconSize: [30, 30],
         });
         let plane_marker = L.marker(
@@ -223,6 +250,7 @@ function update_targets() {
           )}&deg;</div>`,
           { className: "popup" }
         );
+        plane_marker.bindPopup("test");
         plane_marker.addTo(layerGroup);
       }
     }
