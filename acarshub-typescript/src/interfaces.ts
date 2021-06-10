@@ -168,6 +168,7 @@ export interface acars_msg {
   icao_url?: string;
   icao_hex?: string;
   decoded_msg?: string;
+  icao_flight?: string;
 }
 
 export interface adsb {
