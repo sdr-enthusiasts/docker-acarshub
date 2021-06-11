@@ -3,6 +3,7 @@ import { acars_msg, adsb_plane } from "./interfaces";
 import { find_matches, get_match } from "./live_messages.js";
 import jBox from "jbox";
 import { display_messages } from "./html_generator.js";
+import { resize_tabs } from "./index.js";
 
 let livemap_acars_path: string = "";
 let livemap_acars_url: string = "";
@@ -291,13 +292,17 @@ function update_targets() {
 window.showPlaneMessages = function (plane_id: string = "") {
   if (plane_id === "") return;
   const matches: acars_msg[] = get_match(plane_id);
-  console.log("matches", matches.length);
   if (matches.length === 0) return;
-  const html = display_messages([matches], "", true);
-  console.log(html);
+  const html =
+    '<div style="background:white">' +
+    display_messages([matches], "", true) +
+    "</div>";
   plane_message_modal.setContent(html);
   plane_message_modal.setTitle(`Messages for ${plane_id}`);
   plane_message_modal.open();
+  resize_tabs(310, false);
+  $(".show_when_small").css("display", `inline-block`);
+  $(".show_when_big").css("display", "none");
 };
 
 export function live_map_active(state = false) {

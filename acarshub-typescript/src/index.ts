@@ -94,8 +94,12 @@ var ro = new ResizeObserver((entries) => {
   }
 });
 
-export function resize_tabs(window_width: number = 0) {
-  if (!window_width || window_width <= 0) window_width = old_window_width;
+export function resize_tabs(
+  window_width: number = 0,
+  set_new_width: boolean = true
+) {
+  if (set_new_width && (!window_width || window_width <= 0))
+    window_width = old_window_width;
 
   // set tab width. 39 is the width of the two arrow elements to the left
   const num_tabs = window_width > 1050 ? 10 : window_width > 400 ? 5 : 3;

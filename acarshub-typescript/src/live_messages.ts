@@ -789,7 +789,6 @@ export function get_match(callsign: string = "") {
         typeof lm_msgs_received[i][j].icao_hex !== "undefined" &&
         lm_msgs_received[i][j].icao_hex == callsign
       ) {
-        console.log("yo", lm_msgs_received[i]);
         return lm_msgs_received[i];
       }
 
@@ -797,7 +796,6 @@ export function get_match(callsign: string = "") {
         typeof lm_msgs_received[i][j].icao_flight !== "undefined" &&
         lm_msgs_received[i][j].icao_flight == callsign
       ) {
-        console.log("yo", lm_msgs_received[i]);
         return lm_msgs_received[i];
       }
 
@@ -805,7 +803,6 @@ export function get_match(callsign: string = "") {
         typeof lm_msgs_received[i][j].tail !== "undefined" &&
         lm_msgs_received[i][j].tail == callsign
       ) {
-        console.log("yo", lm_msgs_received[i]);
         return lm_msgs_received[i];
       }
     }
