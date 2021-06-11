@@ -1,6 +1,8 @@
 import * as L from "leaflet";
-import { adsb_plane } from "./interfaces";
-import { find_matches } from "./live_messages.js";
+import { acars_msg, adsb_plane } from "./interfaces";
+import { find_matches, get_match } from "./live_messages.js";
+import jBox from "jbox";
+import { display_messages } from "./html_generator.js";
 
 let livemap_acars_path: string = "";
 let livemap_acars_url: string = "";
@@ -9,6 +11,8 @@ let live_map_page_active: boolean = false;
 let adsb_planes: adsb_plane[];
 let map: L.Map;
 let layerGroup: L.LayerGroup;
+declare const window: any;
+
 const airplane_icon = `<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 1000 1000" enable-background="new 0 0 1000 1000" xml:space="preserve">
 <metadata> Svg Vector Icons : http://www.onlinewebfonts.com/icon </metadata>
 <g><path d="M552.5,614.1c0.8-14.1,16.9-9.2,16.9-9.2L696,630.7l261.3,99.4c0-49-7.8-54.1-19.2-62.7L565.3,400c0,0-10-122.5-10-230.5c0-50-24.1-159.5-55.3-159.5c-31.2,0-55.3,111.1-55.3,159.5c0,102.5-10,230.5-10,230.5L61.9,667.4c-14.5,10.2-19.2,15.7-19.2,62.7L304,630.7l126.4-25.7c0,0,16.1-4.9,16.9,9.2c0.8,14.1-2.5,141.1,12,208.5c1.8,9-5.1,9.6-9.8,15.1l-106,67c-3.5,3.9-5.1,14.9-5.1,14.9l-2,37.8l138.8-32.7l24.5,65.3l24.5-65.3l138.8,32.7l-2-37.8c0.2,0-1.4-11-4.9-14.9l-106-67c-4.7-5.5-11.6-6.1-9.8-15.1C554.5,755.2,551.7,628.2,552.5,614.1z"/></g>
@@ -36,6 +40,27 @@ const airplane_matched_icon = `<?xml version="1.0" encoding="utf-8"?>
 		l0.16,0.086v-22.691c0-4.52,3.699-8.215,8.218-8.215c4.52,0,8.215,3.695,8.215,8.215v31.324l39.656,20.836V295.718z"/>
 </g>
 </svg>`;
+
+let plane_message_modal = new jBox("Modal", {
+  id: "set_modal",
+  width: 350,
+  height: 400,
+  blockScroll: false,
+  isolateScroll: true,
+  animation: "zoomIn",
+  // draggable: 'title',
+  closeButton: "title",
+  overlay: true,
+  reposition: false,
+  repositionOnOpen: true,
+  // onOpen: function () {
+  //   update_size();
+  // },
+  //attach: '#settings_modal',
+  title: "Messages",
+  content: `<div class="img_box"><img src="${livemap_acars_url}static/images/acarshubsquare.png" class="banner_img" alt="ACARS Hub Logo"></div>`,
+});
+
 const darkerColors = false;
 
 // thanks to wiedehopf/tar1090 for the color to altitude code
@@ -244,27 +269,45 @@ function update_targets() {
             riseOnHover: true,
           }
         );
+
         plane_marker.bindTooltip(
           `<div style='background:white; padding:1px 3px 1px 3px'>${callsign}<br>Altitude: ${alt}ft<br>Heading: ${Math.round(
             rotate
           )}&deg;</div>`,
           { className: "popup" }
         );
-        plane_marker.bindPopup("test");
         plane_marker.addTo(layerGroup);
+
+        if (matched_with_acars) {
+          plane_marker.on("click", function (e) {
+            window.showPlaneMessages(callsign);
+          });
+        }
       }
     }
   }
 }
 
+window.showPlaneMessages = function (plane_id: string = "") {
+  if (plane_id === "") return;
+  const matches: acars_msg[] = get_match(plane_id);
+  console.log("matches", matches.length);
+  if (matches.length === 0) return;
+  const html = display_messages([matches], "", true);
+  console.log(html);
+  plane_message_modal.setContent(html);
+  plane_message_modal.setTitle(`Messages for ${plane_id}`);
+  plane_message_modal.open();
+};
+
 export function live_map_active(state = false) {
   live_map_page_active = state;
-  console.log(state);
   if (live_map_page_active) {
     set_html();
-    map = L.map("mapid").setView([35.18808, -106.56953], 13);
+    map = L.map("mapid").setView([35.18808, -106.56953], 8);
 
     L.tileLayer("http://{s}.tile.osm.org/{z}/{x}/{y}.png", {
+      detectRetina: true,
       attribution:
         '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors',
     }).addTo(map);

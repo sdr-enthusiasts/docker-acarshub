@@ -780,6 +780,40 @@ export function new_acars_message(msg: html_msg) {
   }
 }
 
+export function get_match(callsign: string = "") {
+  let output = [];
+  if (callsign === "") return [];
+  for (let i = 0; i < lm_msgs_received.length; i++) {
+    for (let j = 0; j < lm_msgs_received[i].length; j++) {
+      if (
+        typeof lm_msgs_received[i][j].icao_hex !== "undefined" &&
+        lm_msgs_received[i][j].icao_hex == callsign
+      ) {
+        console.log("yo", lm_msgs_received[i]);
+        return lm_msgs_received[i];
+      }
+
+      if (
+        typeof lm_msgs_received[i][j].icao_flight !== "undefined" &&
+        lm_msgs_received[i][j].icao_flight == callsign
+      ) {
+        console.log("yo", lm_msgs_received[i]);
+        return lm_msgs_received[i];
+      }
+
+      if (
+        typeof lm_msgs_received[i][j].tail !== "undefined" &&
+        lm_msgs_received[i][j].tail == callsign
+      ) {
+        console.log("yo", lm_msgs_received[i]);
+        return lm_msgs_received[i];
+      }
+    }
+  }
+
+  return [];
+}
+
 export function find_matches() {
   let output_hex: string[] = [];
   let output_icao_callsigns: string[] = [];
