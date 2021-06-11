@@ -12,6 +12,8 @@ let live_map_page_active: boolean = false;
 let adsb_planes: adsb_plane[];
 let map: L.Map;
 let layerGroup: L.LayerGroup;
+let lat: number = 0;
+let lon: number = 0;
 declare const window: any;
 
 const airplane_icon = `<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 1000 1000" enable-background="new 0 0 1000 1000" xml:space="preserve">
@@ -215,8 +217,9 @@ export function set_targets(adsb_targets: adsb_plane[]) {
   if (live_map_page_active) update_targets();
 }
 
-export function live_map() {
-  console.log("live map");
+export function live_map(lat_in: number, lon_in: number) {
+  lat = lat_in;
+  lon = lon_in;
 }
 
 function update_targets() {
@@ -309,7 +312,7 @@ export function live_map_active(state = false) {
   live_map_page_active = state;
   if (live_map_page_active) {
     set_html();
-    map = L.map("mapid").setView([35.18808, -106.56953], 8);
+    map = L.map("mapid").setView([lat, lon], 8);
 
     L.tileLayer("http://{s}.tile.osm.org/{z}/{x}/{y}.png", {
       detectRetina: true,

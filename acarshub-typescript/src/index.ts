@@ -159,7 +159,7 @@ $(() => {
     decoders_enabled(msg);
     if (msg.adsb.enabled === true) {
       set_adsb(true);
-      live_map();
+      live_map(msg.adsb.lat, msg.adsb.lon);
       ADSB = true;
     }
   });

@@ -124,9 +124,9 @@ if os.getenv("ENABLE_ADSB", default=False):
     if os.getenv("ADSB_TYPE", default=False):
         ADSB_TYPE = os.getenv("ADSB_TYPE")
     if os.getenv("ADSB_LON", default=False):
-        ADSB_LON = int(os.getenv("ADSB_LON"))
+        ADSB_LON = float(os.getenv("ADSB_LON"))
     if os.getenv("ADSB_LAT", default=False):
-        ADSB_LAT = int(os.getenv("ADSB_LAT"))
+        ADSB_LAT = float(os.getenv("ADSB_LAT"))
 
 
 def acars_traceback(e, source):
