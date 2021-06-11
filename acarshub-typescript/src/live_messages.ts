@@ -834,11 +834,6 @@ export function find_matches() {
         found_hex = true;
       }
       if (
-        typeof lm_msgs_received[i][j].icao_flight !== "undefined" &&
-        lm_msgs_received[i][j].icao_flight == "SKW3075"
-      )
-        console.log(lm_msgs_received[i]);
-      if (
         !found_callsign &&
         typeof lm_msgs_received[i][j].icao_flight !== "undefined"
       ) {
