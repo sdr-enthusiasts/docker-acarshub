@@ -780,19 +780,19 @@ export function new_acars_message(msg: html_msg) {
   }
 }
 
-export function get_match(callsign: string = "") {
-  let output = [];
-  if (callsign === "") return [];
+export function get_match(callsign: string = "", plane_hex: string = "") {
+  if (callsign === "" && plane_hex === "") return [];
   for (let i = 0; i < lm_msgs_received.length; i++) {
     for (let j = 0; j < lm_msgs_received[i].length; j++) {
       if (
         typeof lm_msgs_received[i][j].icao_hex !== "undefined" &&
-        lm_msgs_received[i][j].icao_hex == callsign
+        lm_msgs_received[i][j].icao_hex == plane_hex
       ) {
         return lm_msgs_received[i];
       }
 
       if (
+        callsign !== "" &&
         typeof lm_msgs_received[i][j].icao_flight !== "undefined" &&
         lm_msgs_received[i][j].icao_flight == callsign
       ) {
@@ -800,6 +800,7 @@ export function get_match(callsign: string = "") {
       }
 
       if (
+        callsign !== "" &&
         typeof lm_msgs_received[i][j].tail !== "undefined" &&
         lm_msgs_received[i][j].tail == callsign
       ) {
@@ -832,7 +833,11 @@ export function find_matches() {
         output_hex.push(lm_msgs_received[i][j].icao_hex);
         found_hex = true;
       }
-
+      if (
+        typeof lm_msgs_received[i][j].icao_flight !== "undefined" &&
+        lm_msgs_received[i][j].icao_flight == "SKW3075"
+      )
+        console.log(lm_msgs_received[i]);
       if (
         !found_callsign &&
         typeof lm_msgs_received[i][j].icao_flight !== "undefined"

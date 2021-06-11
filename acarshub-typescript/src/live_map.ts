@@ -240,19 +240,19 @@ function update_targets() {
         let alt = adsb_planes[plane].alt || 0;
         let hsl = altitudeColor(adsb_planes[plane].alt);
         for (let i = 0; i < plane_icaos.length; i++) {
-          if (plane_icaos[i] == plane) {
+          if (plane_icaos[i] === plane) {
             matched_with_acars = true;
             i = plane_icaos.length;
           }
         }
         for (let j = 0; j < plane_callsign.length; j++) {
-          if (plane_callsign[j] == callsign) {
+          if (plane_callsign[j] === callsign) {
             matched_with_acars = true;
             j = plane_callsign.length;
           }
         }
         for (let u = 0; u < plane_tails.length; u++) {
-          if (plane_tails[u] == callsign) {
+          if (plane_tails[u] === callsign) {
             matched_with_acars = true;
             u = plane_tails.length;
           }
@@ -284,7 +284,7 @@ function update_targets() {
 
         if (matched_with_acars) {
           plane_marker.on("click", function (e) {
-            window.showPlaneMessages(callsign);
+            window.showPlaneMessages(callsign, plane);
           });
         }
       }
@@ -292,9 +292,12 @@ function update_targets() {
   }
 }
 
-window.showPlaneMessages = function (plane_id: string = "") {
-  if (plane_id === "") return;
-  const matches: acars_msg[] = get_match(plane_id);
+window.showPlaneMessages = function (
+  plane_id: string = "",
+  plane_hex: string = ""
+) {
+  if (plane_id === "" && plane_hex === "") return;
+  const matches: acars_msg[] = get_match(plane_id, plane_hex);
   if (matches.length === 0) return;
   const html =
     '<div style="background:white">' +
