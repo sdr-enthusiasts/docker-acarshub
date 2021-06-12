@@ -1,6 +1,6 @@
 import { display_messages } from "./html_generator.js";
 import { MessageDecoder } from "@airframes/acars-decoder/dist/MessageDecoder";
-import { updateAlertCounter } from "./alerts.js";
+import { updateAlertCounter } from "./index.js";
 import {
   search_html_msg,
   database_size,

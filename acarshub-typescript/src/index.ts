@@ -31,13 +31,7 @@ import {
   status_active,
   status_received,
 } from "./status.js";
-import {
-  set_alert_page_urls,
-  alert,
-  alert_active,
-  alerts_acars_message,
-  alerts_terms,
-} from "./alerts.js";
+import { alerts_page } from "./alerts.js";
 import {
   labels,
   system_status,
@@ -53,6 +47,7 @@ import {
   signal_count_data,
   adsb,
   adsb_plane,
+  acars_msg,
 } from "./interfaces.js";
 
 import {
@@ -130,7 +125,7 @@ $(() => {
     // New acars message.
     new_acars_message(msg); // send the message to live messages
     if (typeof msg.loading == "undefined" || !msg.loading === false)
-      alerts_acars_message(msg); // send the message to alerts for processing
+      alerts_page.alerts_acars_message(msg); // send the message to alerts for processing
   });
 
   socket.on("adsb", function (msg: adsb) {
@@ -138,11 +133,11 @@ $(() => {
   });
 
   socket.on("terms", function (msg: terms) {
-    alerts_terms(msg); // send the terms over to the alert page
+    alerts_page.alerts_terms(msg); // send the terms over to the alert page
   });
 
   socket.on("alert_matches", function (msg: html_msg) {
-    alerts_acars_message(msg);
+    alerts_page.alerts_acars_message(msg);
   });
 
   socket.on("database", function (msg: database_size) {
@@ -229,7 +224,7 @@ $(() => {
   stats();
   about.about();
   status();
-  alert();
+  alerts_page.alert();
   toggle_pages();
 });
 
@@ -246,7 +241,7 @@ function update_url() {
   set_stats_page_urls(index_acars_path, index_acars_url);
   about.set_about_page_urls(index_acars_path, index_acars_url);
   set_status_page_urls(index_acars_path, index_acars_url);
-  set_alert_page_urls(index_acars_path, index_acars_url);
+  alerts_page.set_alert_page_urls(index_acars_path, index_acars_url);
   set_live_map_page_urls(index_acars_path, index_acars_url);
 }
 
@@ -282,10 +277,10 @@ function toggle_pages() {
       status_active();
     } else if (pages[page] === "/alerts" && index_acars_page === pages[page]) {
       $("#alerts_link").addClass("invert_a");
-      alert_active(true);
+      alerts_page.alert_active(true);
     } else if (pages[page] === "/alerts") {
       $("#alerts_link").removeClass("invert_a");
-      alert_active();
+      alerts_page.alert_active();
     } else if (pages[page] === "/adsb" && index_acars_page === pages[page]) {
       $("#live_map_link").addClass("invert_a");
       live_map_active(true);
@@ -386,3 +381,34 @@ export function signal_grab_updated_graphs() {
 export function is_connected() {
   return socket_status;
 }
+
+// functions to pass values between objects
+
+export function match_alert(msg: html_msg) {
+  return alerts_page.match_alert(msg);
+}
+
+export function sound_alert() {
+  alerts_page.sound_alert();
+}
+
+export function updateAlertCounter() {
+  alerts_page.updateAlertCounter();
+}
+
+// functions that need to be registered to window object
+
+window.show_page_modal = function () {
+  if (index_acars_page === "/alerts") {
+    alerts_page.show_alert_message_modal();
+  }
+};
+window.updateAlerts = function () {
+  alerts_page.updateAlerts();
+};
+window.default_alert_values = function () {
+  alerts_page.default_alert_values();
+};
+window.toggle_playsound = function (status: boolean) {
+  alerts_page.toggle_playsound(status);
+};

@@ -1,12 +1,11 @@
 import { MessageDecoder } from "@airframes/acars-decoder/dist/MessageDecoder";
 import Cookies from "js-cookie";
 import { display_messages } from "./html_generator.js";
-import { match_alert, sound_alert } from "./alerts.js";
 import { html_msg, acars_msg, labels } from "./interfaces.js";
 import jBox from "jbox";
 import "jbox/dist/jBox.all.css";
 import { tooltip } from "./tooltips.js";
-import { resize_tabs } from "./index.js";
+import { resize_tabs, match_alert, sound_alert } from "./index.js";
 
 let pause: boolean = false;
 let text_filter: boolean = false;

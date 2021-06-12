@@ -1,6 +1,6 @@
 import { Chart } from "chart.js";
 import ChartDataLabels from "chartjs-plugin-datalabels";
-import { updateAlertCounter } from "./alerts.js";
+import { updateAlertCounter } from "./index.js";
 import { generate_stat_submenu } from "./menu.js";
 import {
   signal_grab_freqs,
