@@ -14,23 +14,9 @@ import {
   database_size_details,
   database_search_results,
 } from "./search.js";
-import {
-  alert_terms,
-  decoders_enabled,
-  set_stats_page_urls,
-  signals,
-  signal_count,
-  signal_freqs,
-  stats,
-  stats_active,
-} from "./stats.js";
+import { stats_page } from "./stats.js";
 import { about } from "./about.js";
-import {
-  set_status_page_urls,
-  status,
-  status_active,
-  status_received,
-} from "./status.js";
+import { status } from "./status.js";
 import { alerts_page } from "./alerts.js";
 import {
   labels,
@@ -151,7 +137,7 @@ $(() => {
   // stats
 
   socket.on("features_enabled", function (msg: decoders) {
-    decoders_enabled(msg);
+    stats_page.decoders_enabled(msg);
     if (msg.adsb.enabled === true) {
       menu.set_adsb(true);
       live_map(msg.adsb.lat, msg.adsb.lon);
@@ -161,21 +147,21 @@ $(() => {
 
   // signal level graph
   socket.on("signal", function (msg: signal) {
-    signals(msg);
+    stats_page.signals(msg);
   });
 
   // alert term graph
   socket.on("alert_terms", function (msg: alert_term) {
-    alert_terms(msg);
+    stats_page.alert_terms(msg);
   });
 
   // sidebar frequency count
   socket.on("signal_freqs", function (msg: signal_freq_data) {
-    signal_freqs(msg);
+    stats_page.signal_freqs(msg);
   });
 
   socket.on("system_status", function (msg: system_status) {
-    status_received(msg);
+    status.status_received(msg);
     if (msg.status.error_state == true) {
       $("#system_status").html(
         `<a href="javascript:new_page('Status')">System Status: <span class="red_body">Error</a></span>`
@@ -188,7 +174,7 @@ $(() => {
   });
 
   socket.on("signal_count", function (msg: signal_count_data) {
-    signal_count(msg);
+    stats_page.signal_count(msg);
   });
 
   // socket errors
@@ -221,11 +207,15 @@ $(() => {
   // init all page backgrounding functions
   live_messages();
   search();
-  stats();
+  stats_page.stats();
   about.about();
-  status();
+  status.status();
   alerts_page.alert();
   toggle_pages();
+
+  setInterval(function () {
+    stats_page.updatePage();
+  }, 60000);
 });
 
 function update_url() {
@@ -238,9 +228,9 @@ function update_url() {
 
   set_live_page_urls(index_acars_path, index_acars_url);
   set_search_page_urls(index_acars_path, index_acars_url);
-  set_stats_page_urls(index_acars_path, index_acars_url);
+  stats_page.set_stats_page_urls(index_acars_path, index_acars_url);
   about.set_about_page_urls(index_acars_path, index_acars_url);
-  set_status_page_urls(index_acars_path, index_acars_url);
+  status.set_status_page_urls(index_acars_path, index_acars_url);
   alerts_page.set_alert_page_urls(index_acars_path, index_acars_url);
   set_live_map_page_urls(index_acars_path, index_acars_url);
   menu.set_about_page_urls(index_acars_path, index_acars_url);
@@ -264,18 +254,18 @@ function toggle_pages() {
       search_active();
     } else if (pages[page] === "/stats" && index_acars_page === pages[page]) {
       $("#stats_link").addClass("invert_a");
-      stats_active(true);
+      stats_page.stats_active(true);
     } else if (pages[page] === "/stats") {
       $("#stats_link").removeClass("invert_a");
-      stats_active();
+      stats_page.stats_active();
     } else if (pages[page] === "/about" && index_acars_page === pages[page]) {
       about.about_active(true);
     } else if (pages[page] === "/about") {
       about.about_active();
     } else if (pages[page] === "/status" && index_acars_page === pages[page]) {
-      status_active(true);
+      status.status_active(true);
     } else if (pages[page] === "/status") {
-      status_active();
+      status.status_active();
     } else if (pages[page] === "/alerts" && index_acars_page === pages[page]) {
       $("#alerts_link").addClass("invert_a");
       alerts_page.alert_active(true);
@@ -419,4 +409,7 @@ window.default_alert_values = function () {
 };
 window.toggle_playsound = function (status: boolean) {
   alerts_page.toggle_playsound(status);
+};
+window.update_prefix = function (prefix: string) {
+  stats_page.update_prefix(prefix);
 };
