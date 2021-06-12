@@ -2,24 +2,7 @@
 // Input: msgs_to_process - the array of messages. Format is array of message groups, with each group being an array of message(s) that create a group of submessages
 // Input: selected_tabs - if present, we'll process. Format is uid1;elementid1,uid2;elementid2 etc
 // Input: live_page - default is false. This toggles on the checks for selected tabs
-import {
-  add_message_field,
-  create_message_nav_arrows,
-  create_message_tab,
-  message_div,
-  message_station_and_type,
-  message_tab_label,
-  message_timestamp,
-  start_message_body,
-  start_message_tabs,
-  message_text,
-  replace_text,
-  start_message_box,
-  end_message_tabs,
-  end_message_div,
-  end_message_box,
-  show_footer_and_sidebar_text,
-} from "./html_functions.js";
+import { html_functions } from "./html_functions.js";
 import { acars_msg } from "./interfaces.js";
 
 export function display_messages(
@@ -80,7 +63,7 @@ export function display_messages(
           previous_tab = sub_messages[Number(array_index_tab) - 1].uid;
         }
 
-        msgs_string += start_message_tabs();
+        msgs_string += html_functions.start_message_tabs();
         for (let j = 0; j < sub_messages.length; j++) {
           // Loop through all messages in the group to show all of the tabs
           let tab_uid = unique_id;
@@ -91,16 +74,34 @@ export function display_messages(
 
           msgs_string +=
             j === 0
-              ? create_message_nav_arrows(previous_tab, unique_id) +
-                create_message_nav_arrows(next_tab, unique_id, false)
+              ? html_functions.create_message_nav_arrows(
+                  previous_tab,
+                  unique_id
+                ) +
+                html_functions.create_message_nav_arrows(
+                  next_tab,
+                  unique_id,
+                  false
+                )
               : "";
 
           if (active_tab === "0" && j === 0)
-            msgs_string += create_message_tab(tab_uid, unique_id);
+            msgs_string += html_functions.create_message_tab(
+              tab_uid,
+              unique_id
+            );
           else if (tab_uid === String(active_tab))
-            msgs_string += create_message_tab(tab_uid, unique_id);
-          else msgs_string += create_message_tab(tab_uid, unique_id, false);
-          msgs_string += message_tab_label(
+            msgs_string += html_functions.create_message_tab(
+              tab_uid,
+              unique_id
+            );
+          else
+            msgs_string += html_functions.create_message_tab(
+              tab_uid,
+              unique_id,
+              false
+            );
+          msgs_string += html_functions.message_tab_label(
             j,
             typeof sub_messages[j].matched !== "undefined",
             tab_uid,
@@ -121,18 +122,19 @@ export function display_messages(
         tab_uid = sub_messages[u].uid; // UID for the current message
 
         if (active_tab === "0" && u === 0)
-          html_output += message_div(unique_id, tab_uid);
+          html_output += html_functions.message_div(unique_id, tab_uid);
         // Case for no tab selected by user. Newest message is active
         else if (tab_uid === String(active_tab))
-          html_output += message_div(unique_id, tab_uid);
+          html_output += html_functions.message_div(unique_id, tab_uid);
         // User has selected a tab for the group and it is this message. Set to be vis
         // Hide the selected tab if the previous cases don't match
-        else html_output += message_div(unique_id, tab_uid, false);
+        else
+          html_output += html_functions.message_div(unique_id, tab_uid, false);
       }
       //msgs_string = '<p>' + msgs_received[i].toString() + '</p>' + msgs_string;
       let message: acars_msg = sub_messages[u]; // variable to hold the current message
-      html_output += start_message_box();
-      html_output += message_station_and_type(
+      html_output += html_functions.start_message_box();
+      html_output += html_functions.message_station_and_type(
         message.message_type,
         message.station_id,
         sub_messages.length === 1 && typeof message.matched !== "undefined"
@@ -148,9 +150,9 @@ export function display_messages(
             1000
         );
 
-      html_output += message_timestamp(timestamp);
+      html_output += html_functions.message_timestamp(timestamp);
       // Table content
-      html_output += start_message_body();
+      html_output += html_functions.start_message_body();
 
       // Special keys used by the JS files calling this function
       // Duplicates is used to indicate the number of copies received for this message
@@ -158,15 +160,21 @@ export function display_messages(
 
       html_output +=
         typeof message.duplicates !== "undefined"
-          ? add_message_field("Duplicate(s) Received", message.duplicates)
+          ? html_functions.add_message_field(
+              "Duplicate(s) Received",
+              message.duplicates
+            )
           : "";
       html_output +=
         typeof message.msgno_parts !== "undefined"
-          ? add_message_field("Message Parts", message.msgno_parts)
+          ? html_functions.add_message_field(
+              "Message Parts",
+              message.msgno_parts
+            )
           : "";
       html_output +=
         typeof message.label !== "undefined"
-          ? add_message_field(
+          ? html_functions.add_message_field(
               "Message Label",
               message.label +
                 " " +
@@ -181,7 +189,7 @@ export function display_messages(
 
       html_output +=
         typeof message.toaddr !== "undefined"
-          ? add_message_field(
+          ? html_functions.add_message_field(
               "To Address",
               message.toaddr +
                 (typeof message.toaddr_hex !== "undefined"
@@ -191,13 +199,16 @@ export function display_messages(
           : "";
       html_output +=
         typeof message.toaddr_decoded !== "undefined"
-          ? add_message_field("To Address Station ID", message.toaddr_decoded)
+          ? html_functions.add_message_field(
+              "To Address Station ID",
+              message.toaddr_decoded
+            )
           : "";
 
       //
       html_output +=
         typeof message.fromaddr !== "undefined"
-          ? add_message_field(
+          ? html_functions.add_message_field(
               "From Address",
               message.fromaddr +
                 (typeof message.fromaddr_hex !== "undefined"
@@ -207,42 +218,48 @@ export function display_messages(
           : "";
       html_output +=
         typeof message.fromaddr_decoded !== "undefined"
-          ? add_message_field(
+          ? html_functions.add_message_field(
               "From Address Station ID",
               message.fromaddr_decoded
             )
           : "";
       html_output +=
         typeof message.depa !== "undefined"
-          ? add_message_field("Departing", message.depa)
+          ? html_functions.add_message_field("Departing", message.depa)
           : "";
       html_output +=
         typeof message.dsta !== "undefined"
-          ? add_message_field("Destination", message.dsta)
+          ? html_functions.add_message_field("Destination", message.dsta)
           : "";
       html_output +=
         typeof message.eta !== "undefined"
-          ? add_message_field("Estimated time of arrival", message.eta)
+          ? html_functions.add_message_field(
+              "Estimated time of arrival",
+              message.eta
+            )
           : "";
       html_output +=
         typeof message.gtout !== "undefined"
-          ? add_message_field("Pushback from gate", message.gtout)
+          ? html_functions.add_message_field(
+              "Pushback from gate",
+              message.gtout
+            )
           : "";
       html_output +=
         typeof message.gtin !== "undefined"
-          ? add_message_field("Arrived at gate", message.gtin)
+          ? html_functions.add_message_field("Arrived at gate", message.gtin)
           : "";
       html_output +=
         typeof message.wloff !== "undefined"
-          ? add_message_field("Wheels off", message.wloff)
+          ? html_functions.add_message_field("Wheels off", message.wloff)
           : "";
       html_output +=
         typeof message.wlin !== "undefined"
-          ? add_message_field("Departing", message.wlin)
+          ? html_functions.add_message_field("Departing", message.wlin)
           : "";
       html_output +=
         typeof message.lat !== "undefined"
-          ? add_message_field(
+          ? html_functions.add_message_field(
               "Latitude",
               message.lat.toLocaleString(undefined, {
                 maximumFractionDigits: 2,
@@ -252,7 +269,7 @@ export function display_messages(
           : "";
       html_output +=
         typeof message.lon !== "undefined"
-          ? add_message_field(
+          ? html_functions.add_message_field(
               "Longitude",
               message.lon.toLocaleString(undefined, {
                 maximumFractionDigits: 2,
@@ -263,32 +280,35 @@ export function display_messages(
 
       html_output +=
         typeof message.alt !== "undefined"
-          ? add_message_field("Altitude", String(message.alt))
+          ? html_functions.add_message_field("Altitude", String(message.alt))
           : "";
 
       // Table footer row, tail & flight info, displayed in main body if screen is too small
-      html_output += show_footer_and_sidebar_text(message, false);
+      html_output += html_functions.show_footer_and_sidebar_text(
+        message,
+        false
+      );
       //html_output += "</td></tr>";
-      html_output += message_text(message);
+      html_output += html_functions.message_text(message);
 
       // Text field is pre-processed
       // we have a sub-table for the raw text field and if it was decoded, the decoded text as well
 
       // Table footer row, tail & flight info
-      html_output += show_footer_and_sidebar_text(message);
+      html_output += html_functions.show_footer_and_sidebar_text(message);
 
       // Finish table html
-      html_output += end_message_box();
+      html_output += html_functions.end_message_box();
 
       if (sub_messages.length > 1) {
-        html_output += end_message_div();
+        html_output += html_functions.end_message_div();
       }
 
       msgs_string = msgs_string + html_output;
     }
 
     if (sub_messages.length > 1) {
-      msgs_string += end_message_tabs();
+      msgs_string += html_functions.end_message_tabs();
     }
   }
 
