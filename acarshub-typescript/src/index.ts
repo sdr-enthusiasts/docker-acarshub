@@ -24,7 +24,7 @@ import {
   stats,
   stats_active,
 } from "./stats.js";
-import { set_about_page_urls, about, about_active } from "./about.js";
+import { about } from "./about.js";
 import {
   set_status_page_urls,
   status,
@@ -227,7 +227,7 @@ $(() => {
   live_messages();
   search();
   stats();
-  about();
+  about.about();
   status();
   alert();
   toggle_pages();
@@ -244,7 +244,7 @@ function update_url() {
   set_live_page_urls(index_acars_path, index_acars_url);
   set_search_page_urls(index_acars_path, index_acars_url);
   set_stats_page_urls(index_acars_path, index_acars_url);
-  set_about_page_urls(index_acars_path, index_acars_url);
+  about.set_about_page_urls(index_acars_path, index_acars_url);
   set_status_page_urls(index_acars_path, index_acars_url);
   set_alert_page_urls(index_acars_path, index_acars_url);
   set_live_map_page_urls(index_acars_path, index_acars_url);
@@ -273,9 +273,9 @@ function toggle_pages() {
       $("#stats_link").removeClass("invert_a");
       stats_active();
     } else if (pages[page] === "/about" && index_acars_page === pages[page]) {
-      about_active(true);
+      about.about_active(true);
     } else if (pages[page] === "/about") {
-      about_active();
+      about.about_active();
     } else if (pages[page] === "/status" && index_acars_page === pages[page]) {
       status_active(true);
     } else if (pages[page] === "/status") {

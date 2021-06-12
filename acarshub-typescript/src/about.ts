@@ -1,47 +1,49 @@
 import showdown from "showdown";
 
-let about_acars_path: string = "";
-let about_acars_url: string = "";
+export let about = {
+  about_acars_path: "" as string,
+  about_acars_url: "" as string,
 
-let page_html: string = "";
-let about_page_active = false;
+  page_html: "" as string,
+  about_page_active: false as boolean,
 
-export function about() {
-  let converter: showdown.Converter = new showdown.Converter();
-  fetch(`${about_acars_url}aboutmd`)
-    .then((response) => response.text())
-    .then((data) => {
-      save_html(converter.makeHtml(data));
-    });
-  if (about_page_active) about_active(true);
-}
+  about: function () {
+    let converter: showdown.Converter = new showdown.Converter();
+    fetch(`${this.about_acars_url}aboutmd`)
+      .then((response) => response.text())
+      .then((data) => {
+        this.save_html(converter.makeHtml(data));
+      });
+    if (this.about_page_active) this.about_active(true);
+  },
 
-function save_html(html: string) {
-  page_html = html;
-  about_active(about_page_active);
-}
+  save_html: function (html: string) {
+    this.page_html = html;
+    this.about_active(this.about_page_active);
+  },
 
-export function about_active(state = false) {
-  about_page_active = state;
-  if (about_page_active) {
-    // page is active
-    set_html();
-    $("#log").html(page_html); // show the messages we've received
-  }
-}
+  about_active: function (state = false) {
+    this.about_page_active = state;
+    if (this.about_page_active) {
+      // page is active
+      this.set_html();
+      $("#log").html(this.page_html); // show the messages we've received
+    }
+  },
 
-export function set_about_page_urls(documentPath: string, documentUrl: string) {
-  about_acars_path = documentPath;
-  about_acars_url = documentUrl;
-}
+  set_about_page_urls: function (documentPath: string, documentUrl: string) {
+    this.about_acars_path = documentPath;
+    this.about_acars_url = documentUrl;
+  },
 
-function set_html() {
-  $("#right").html(
-    `<div class="fixed_results">
-</div>`
-  );
+  set_html: function () {
+    $("#right").html(
+      `<div class="fixed_results">
+  </div>`
+    );
 
-  $("#modal_text").html("");
-  $("#page_name").html("");
-  $("#log").html("");
-}
+    $("#modal_text").html("");
+    $("#page_name").html("");
+    $("#log").html("");
+  },
+};
