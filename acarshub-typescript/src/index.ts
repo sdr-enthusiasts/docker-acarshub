@@ -1,4 +1,4 @@
-import { generate_menu, generate_footer, set_adsb } from "./menu.js";
+import { menu } from "./menu.js";
 
 import {
   set_live_page_urls,
@@ -153,7 +153,7 @@ $(() => {
   socket.on("features_enabled", function (msg: decoders) {
     decoders_enabled(msg);
     if (msg.adsb.enabled === true) {
-      set_adsb(true);
+      menu.set_adsb(true);
       live_map(msg.adsb.lat, msg.adsb.lon);
       ADSB = true;
     }
@@ -215,8 +215,8 @@ $(() => {
 
   // time to set everything on the page up
 
-  generate_menu(); // generate the top menu
-  generate_footer(); // generate the footer
+  menu.generate_menu(); // generate the top menu
+  menu.generate_footer(); // generate the footer
 
   // init all page backgrounding functions
   live_messages();
@@ -243,6 +243,7 @@ function update_url() {
   set_status_page_urls(index_acars_path, index_acars_url);
   alerts_page.set_alert_page_urls(index_acars_path, index_acars_url);
   set_live_map_page_urls(index_acars_path, index_acars_url);
+  menu.set_about_page_urls(index_acars_path, index_acars_url);
 }
 
 function toggle_pages() {
@@ -394,6 +395,13 @@ export function sound_alert() {
 
 export function updateAlertCounter() {
   alerts_page.updateAlertCounter();
+}
+
+export function generate_stat_submenu(
+  acars: boolean = false,
+  vdlm: boolean = false
+) {
+  menu.generate_stat_submenu(acars, vdlm);
 }
 
 // functions that need to be registered to window object
