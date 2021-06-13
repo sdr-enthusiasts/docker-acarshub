@@ -36,12 +36,7 @@ import {
   acars_msg,
 } from "./interfaces.js";
 
-import {
-  live_map,
-  live_map_active,
-  set_live_map_page_urls,
-  set_targets,
-} from "./live_map.js";
+import { live_map_page } from "./live_map.js";
 
 declare const window: any;
 let socket: SocketIOClient.Socket;
@@ -62,7 +57,7 @@ const pages: string[] = [
   "/about", // about page
   "/status", // status page
   "/alerts", // alerts page
-  "/adsb",
+  "/adsb", // live_map page
 ];
 
 var ro = new ResizeObserver((entries) => {
@@ -115,7 +110,7 @@ $(() => {
   });
 
   socket.on("adsb", function (msg: adsb) {
-    set_targets(msg.planes);
+    live_map_page.set_targets(msg.planes);
   });
 
   socket.on("terms", function (msg: terms) {
@@ -140,7 +135,7 @@ $(() => {
     stats_page.decoders_enabled(msg);
     if (msg.adsb.enabled === true) {
       menu.set_adsb(true);
-      live_map(msg.adsb.lat, msg.adsb.lon);
+      live_map_page.live_map(msg.adsb.lat, msg.adsb.lon);
       ADSB = true;
     }
   });
@@ -232,7 +227,7 @@ function update_url() {
   about.set_about_page_urls(index_acars_path, index_acars_url);
   status.set_status_page_urls(index_acars_path, index_acars_url);
   alerts_page.set_alert_page_urls(index_acars_path, index_acars_url);
-  set_live_map_page_urls(index_acars_path, index_acars_url);
+  live_map_page.set_live_map_page_urls(index_acars_path, index_acars_url);
   menu.set_about_page_urls(index_acars_path, index_acars_url);
 }
 
@@ -274,10 +269,10 @@ function toggle_pages() {
       alerts_page.alert_active();
     } else if (pages[page] === "/adsb" && index_acars_page === pages[page]) {
       $("#live_map_link").addClass("invert_a");
-      live_map_active(true);
+      live_map_page.live_map_active(true);
     } else if (pages[page] === "/adsb") {
       $("#live_map_link").removeClass("invert_a");
-      live_map_active();
+      live_map_page.live_map_active();
     }
   }
 }
@@ -413,3 +408,10 @@ window.toggle_playsound = function (status: boolean) {
 window.update_prefix = function (prefix: string) {
   stats_page.update_prefix(prefix);
 };
+
+export function showPlaneMessages(
+  plane_id: string = "",
+  plane_hex: string = ""
+) {
+  live_map_page.showPlaneMessages(plane_id, plane_hex);
+}
