@@ -121,6 +121,7 @@ $(() => {
     stats_page.decoders_enabled(msg);
     if (msg.adsb.enabled === true) {
       menu.set_adsb(true);
+      toggle_pages();
       live_map_page.live_map(msg.adsb.lat, msg.adsb.lon);
       ADSB = true;
     }
@@ -197,6 +198,10 @@ $(() => {
   setInterval(function () {
     stats_page.updatePage();
   }, 60000);
+
+  document.addEventListener("keyup", function () {
+    search_page.key_event();
+  });
 });
 
 function update_url() {
@@ -382,10 +387,6 @@ export function find_matches() {
 export function get_match(callsign: string = "", plane_hex: string = "") {
   return live_messages_page.get_match(callsign, plane_hex);
 }
-
-document.addEventListener("keyup", function () {
-  search_page.key_event();
-});
 
 // functions that need to be registered to window object
 
