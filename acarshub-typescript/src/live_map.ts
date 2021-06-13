@@ -1,9 +1,13 @@
 import * as L from "leaflet";
 import { acars_msg, adsb_plane } from "./interfaces";
-import { find_matches, get_match } from "./live_messages.js";
 import jBox from "jbox";
 import { display_messages } from "./html_generator.js";
-import { resize_tabs, showPlaneMessages } from "./index.js";
+import {
+  resize_tabs,
+  showPlaneMessages,
+  find_matches,
+  get_match,
+} from "./index.js";
 
 export let live_map_page = {
   livemap_acars_path: "" as string,

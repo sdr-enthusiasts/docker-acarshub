@@ -1,12 +1,6 @@
 import { menu } from "./menu.js";
 
-import {
-  set_live_page_urls,
-  live_messages,
-  live_message_active,
-  new_labels,
-  new_acars_message,
-} from "./live_messages.js";
+import { live_messages_page } from "./live_messages.js";
 import { search_page } from "./search.js";
 import { stats_page } from "./stats.js";
 import { about } from "./about.js";
@@ -91,12 +85,12 @@ $(() => {
 
   socket.on("labels", function (msg: labels) {
     // Msg labels
-    new_labels(msg); // send to live messages
+    live_messages_page.new_labels(msg); // send to live messages
   });
 
   socket.on("acars_msg", function (msg: html_msg) {
     // New acars message.
-    new_acars_message(msg); // send the message to live messages
+    live_messages_page.new_acars_message(msg); // send the message to live messages
     if (typeof msg.loading == "undefined" || !msg.loading === false)
       alerts_page.alerts_acars_message(msg); // send the message to alerts for processing
   });
@@ -192,7 +186,7 @@ $(() => {
   menu.generate_footer(); // generate the footer
 
   // init all page backgrounding functions
-  live_messages();
+  live_messages_page.live_messages();
   search_page.search();
   stats_page.stats();
   about.about();
@@ -213,7 +207,7 @@ function update_url() {
   index_acars_path += index_acars_path.endsWith("/") ? "" : "/";
   index_acars_url = document.location.origin + index_acars_path;
 
-  set_live_page_urls(index_acars_path, index_acars_url);
+  live_messages_page.set_live_page_urls(index_acars_path, index_acars_url);
   search_page.set_search_page_urls(index_acars_path, index_acars_url);
   stats_page.set_stats_page_urls(index_acars_path, index_acars_url);
   about.set_about_page_urls(index_acars_path, index_acars_url);
@@ -229,10 +223,10 @@ function toggle_pages() {
   for (let page in pages) {
     if (pages[page] === "/" && index_acars_page === pages[page]) {
       $("#live_messages_link").addClass("invert_a");
-      live_message_active(true);
+      live_messages_page.live_message_active(true);
     } else if (pages[page] === "/") {
       $("#live_messages_link").removeClass("invert_a");
-      live_message_active();
+      live_messages_page.live_message_active();
     } else if (pages[page] === "/search" && index_acars_page === pages[page]) {
       $("#search_link").addClass("invert_a");
       search_page.search_active(true);
@@ -381,6 +375,14 @@ export function generate_stat_submenu(
   menu.generate_stat_submenu(acars, vdlm);
 }
 
+export function find_matches() {
+  return live_messages_page.find_matches();
+}
+
+export function get_match(callsign: string = "", plane_hex: string = "") {
+  return live_messages_page.get_match(callsign, plane_hex);
+}
+
 document.addEventListener("keyup", function () {
   search_page.key_event();
 });
@@ -392,6 +394,8 @@ window.show_page_modal = function () {
     alerts_page.show_alert_message_modal();
   } else if (index_acars_page === "/search") {
     search_page.show_search_message_modal();
+  } else if (index_acars_page === "/") {
+    live_messages_page.show_live_message_modal();
   }
 };
 window.updateAlerts = function () {
@@ -417,6 +421,22 @@ window.jumppage = function () {
 
 window.runclick = function (page: number) {
   search_page.runclick(page);
+};
+
+window.handle_radio = function (element_id: string, uid: string) {
+  live_messages_page.handle_radio(element_id, uid);
+};
+
+window.pause_updates = function (toggle_pause: boolean = true) {
+  live_messages_page.pause_updates(toggle_pause);
+};
+
+window.filter_notext = function (toggle_filter: boolean = true) {
+  live_messages_page.filter_notext(toggle_filter);
+};
+
+window.toggle_label = function (key: string) {
+  live_messages_page.toggle_label(key);
 };
 
 export function showPlaneMessages(
