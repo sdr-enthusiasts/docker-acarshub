@@ -895,22 +895,22 @@ export let live_messages_page = {
       found_callsign = false;
       found_hex = false;
       found_tail = false;
+      // bypassing TS checks for icao_x elements. It says "they can be undefined"
+      // but I'm checking to make sure the bloody thing isn't. WTF?
       for (let j = 0; j < this.lm_msgs_received.value[i].length; j++) {
         if (
           !found_hex &&
           typeof this.lm_msgs_received.value[i][j].icao_hex !== "undefined"
         ) {
-          // @ts-expect-error
-          output_hex.push(this.lm_msgs_received.value[i][j].icao_hex);
+          output_hex.push(this.lm_msgs_received.value[i][j].icao_hex!);
           found_hex = true;
         }
         if (
           !found_callsign &&
           typeof this.lm_msgs_received.value[i][j].icao_flight !== "undefined"
         ) {
-          // @ts-expect-error
           output_icao_callsigns.push(
-            this.lm_msgs_received.value[i][j].icao_flight
+            this.lm_msgs_received.value[i][j].icao_flight!
           );
           found_callsign = true;
         }
@@ -919,8 +919,7 @@ export let live_messages_page = {
           !found_tail &&
           typeof this.lm_msgs_received.value[i][j].tail !== "undefined"
         ) {
-          // @ts-expect-error
-          output_tail.push(this.lm_msgs_received.value[i][j].tail);
+          output_tail.push(this.lm_msgs_received.value[i][j].tail!);
           found_tail = true;
         }
 
