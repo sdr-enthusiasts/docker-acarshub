@@ -117,6 +117,21 @@ There are quite a few configuration options this container can accept.
 
 Please note that for `TAR1090_URL` the required format is `http[s]://**HOSTNAME**` only. So if your tar1090 instance is at IP address `192.168.31.10` with no SSL, the TAR1090_URL would look like `http://192.168.31.10`
 
+### ADSB
+
+The ACARS Hub website contains the ability to display ADSB targets along side ACARS messages. To enable this feature, you need to have a valid source of BEAST or raw ADSB data. [Mike Nye's readsb-protobuf](https://github.com/mikenye/docker-readsb-protobuf) is the recommended container to run.
+
+The following options will set the options for ADSB
+
+| Variable | Description | Required | Default |
+|----------|-------------|---------|--------|
+| `ENABLE_ADSB` | Turns on ADSB in ACARS Hub | Yes, if you want to monitor ADSB | Blank |
+| `ADSB_URL` | The IP address or URL for your BEAST/raw source.  | No | `readsb` |_
+| `ADSB_LAT` | The latitude of your ADSB site | No, but recommended | 0 |
+| `ADSB_LON` | The longitude of your ADSB site | No, but recommended | 0 |
+| `ADSB_PORT` | The port that the ADSB data is being fed from. Default should be good for standard readsb BEAST messages | No | 30005 |_
+| `ADSB_TYPE` | The type of ADSB data being sent. Valid values are `beast` and `raw` | No | `beast`
+
 ### ACARS
 
 | Variable | Description | Required | Default |
