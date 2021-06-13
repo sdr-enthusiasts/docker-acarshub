@@ -118,8 +118,8 @@ if [ -n "${ENABLE_VDLM}" ]; then
   echo "==== Checking vdlm2_server ====="
 
   # Check vdlm2_server is listening for TCP on 127.0.0.1:15555
-  vdlm2_pidof_vdlm2_tcp_server=$(pgrep -f 'ncat -4 --keep-open --listen 127.0.0.1 15555')
-  if ! check_tcp4_socket_listening_for_pid "127.0.0.1" "15555" "${vdlm2_pidof_vdlm2_tcp_server}"; then
+  vdlm2_pidof_vdlm2_tcp_server=$(pgrep -f 'ncat -4 --keep-open --listen 0.0.0.0 15555')
+  if ! check_tcp4_socket_listening_for_pid "0.0.0.0" "15555" "${vdlm2_pidof_vdlm2_tcp_server}"; then
     echo "vdlm2_server TCP not listening on port 15555 (pid $vdlm2_pidof_vdlm2_tcp_server): UNHEALTHY"
     EXITCODE=1
   else
@@ -196,8 +196,8 @@ if [ -n "${ENABLE_ACARS}" ]; then
   echo "==== Checking acars_server ====="
 
   # Check acars_server is listening for TCP on 127.0.0.1:15550
-  acars_pidof_acars_tcp_server=$(pgrep -f 'ncat -4 --keep-open --listen 127.0.0.1 15550')
-  if ! check_tcp4_socket_listening_for_pid "127.0.0.1" "15550" "${acars_pidof_acars_tcp_server}"; then
+  acars_pidof_acars_tcp_server=$(pgrep -f 'ncat -4 --keep-open --listen 0.0.0.0 15550')
+  if ! check_tcp4_socket_listening_for_pid "0.0.0.0" "15550" "${acars_pidof_acars_tcp_server}"; then
     echo "acars_server TCP not listening on port 15550 (pid $acars_pidof_acars_tcp_server): UNHEALTHY"
     EXITCODE=1
   else
