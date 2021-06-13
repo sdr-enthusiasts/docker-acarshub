@@ -7,13 +7,7 @@ import {
   new_labels,
   new_acars_message,
 } from "./live_messages.js";
-import {
-  set_search_page_urls,
-  search,
-  search_active,
-  database_size_details,
-  database_search_results,
-} from "./search.js";
+import { search_page } from "./search.js";
 import { stats_page } from "./stats.js";
 import { about } from "./about.js";
 import { status } from "./status.js";
@@ -32,8 +26,6 @@ import {
   signal_freq_data,
   signal_count_data,
   adsb,
-  adsb_plane,
-  acars_msg,
 } from "./interfaces.js";
 
 import { live_map_page } from "./live_map.js";
@@ -122,11 +114,11 @@ $(() => {
   });
 
   socket.on("database", function (msg: database_size) {
-    database_size_details(msg);
+    search_page.database_size_details(msg);
   });
 
   socket.on("database_search_results", function (msg: search_html_msg) {
-    database_search_results(msg);
+    search_page.database_search_results(msg);
   });
 
   // stats
@@ -201,7 +193,7 @@ $(() => {
 
   // init all page backgrounding functions
   live_messages();
-  search();
+  search_page.search();
   stats_page.stats();
   about.about();
   status.status();
@@ -222,7 +214,7 @@ function update_url() {
   index_acars_url = document.location.origin + index_acars_path;
 
   set_live_page_urls(index_acars_path, index_acars_url);
-  set_search_page_urls(index_acars_path, index_acars_url);
+  search_page.set_search_page_urls(index_acars_path, index_acars_url);
   stats_page.set_stats_page_urls(index_acars_path, index_acars_url);
   about.set_about_page_urls(index_acars_path, index_acars_url);
   status.set_status_page_urls(index_acars_path, index_acars_url);
@@ -243,10 +235,10 @@ function toggle_pages() {
       live_message_active();
     } else if (pages[page] === "/search" && index_acars_page === pages[page]) {
       $("#search_link").addClass("invert_a");
-      search_active(true);
+      search_page.search_active(true);
     } else if (pages[page] === "/search") {
       $("#search_link").removeClass("invert_a");
-      search_active();
+      search_page.search_active();
     } else if (pages[page] === "/stats" && index_acars_page === pages[page]) {
       $("#stats_link").addClass("invert_a");
       stats_page.stats_active(true);
@@ -389,11 +381,17 @@ export function generate_stat_submenu(
   menu.generate_stat_submenu(acars, vdlm);
 }
 
+document.addEventListener("keyup", function () {
+  search_page.key_event();
+});
+
 // functions that need to be registered to window object
 
 window.show_page_modal = function () {
   if (index_acars_page === "/alerts") {
     alerts_page.show_alert_message_modal();
+  } else if (index_acars_page === "/search") {
+    search_page.show_search_message_modal();
   }
 };
 window.updateAlerts = function () {
@@ -407,6 +405,18 @@ window.toggle_playsound = function (status: boolean) {
 };
 window.update_prefix = function (prefix: string) {
   stats_page.update_prefix(prefix);
+};
+
+window.showall = function () {
+  search_page.showall();
+};
+
+window.jumppage = function () {
+  search_page.jumppage();
+};
+
+window.runclick = function (page: number) {
+  search_page.runclick(page);
 };
 
 export function showPlaneMessages(
