@@ -224,6 +224,7 @@ export let live_map_page = {
   live_map: function (lat_in: number, lon_in: number) {
     this.lat = lat_in;
     this.lon = lon_in;
+    if (this.live_map_page_active) this.map.setView([this.lat, this.lon], 8);
   },
 
   update_targets: function () {

@@ -206,7 +206,7 @@ $(() => {
 
 function update_url() {
   index_acars_path = document.location.pathname.replace(
-    /about|search|stats|status|alerts/gi,
+    /about|search|stats|status|alerts|adsb/gi,
     ""
   );
   index_acars_path += index_acars_path.endsWith("/") ? "" : "/";

@@ -435,10 +435,10 @@ def adsb():
     # For now we're going to redirect the ADSB url always to live messages
     # ADSB Page loading causes problems
     # TODO: Fix on load ADSB
-    # if acarshub_helpers.ENABLE_ADSB:
-    #     return render_template("index.html")
-    # else:
-    return redirect(url_for("index"))
+    if acarshub_helpers.ENABLE_ADSB:
+        return render_template("index.html")
+    else:
+        return redirect(url_for("index"))
 
 
 @app.errorhandler(404)
