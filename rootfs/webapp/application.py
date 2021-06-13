@@ -540,10 +540,15 @@ def get_alerts(message, namespace):
     if results is not None:
         results.reverse()
 
+    recent_options = {"loading": True, "done_loading": False}
+    msg_index = 1
     for item in [item for item in (results or [])]:
+        if msg_index == len(results):
+            recent_options["done_loading"] = True
+        msg_index += 1
         socketio.emit(
             "alert_matches",
-            {"msghtml": acarshub.update_keys(item), "loading": True},
+            {"msghtml": acarshub.update_keys(item), **recent_options},
             to=requester,
             namespace="/main",
         )

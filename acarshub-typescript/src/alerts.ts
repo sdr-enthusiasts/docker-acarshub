@@ -124,7 +124,10 @@ export let alerts_page = {
         matched.flight !== null ? matched.flight : [];
       msg.msghtml.matched_tail = matched.tail !== null ? matched.tail : [];
       this.alert_msgs_received.unshift([msg.msghtml]);
-      if (this.alert_page_active) {
+      if (
+        this.alert_page_active &&
+        (typeof msg.done_loading === "undefined" || msg.done_loading === true)
+      ) {
         $("#log").html(display_messages(this.alert_msgs_received.value));
       } else if (matched.was_found && msg.loading != true) {
         this.alerts += 1;
