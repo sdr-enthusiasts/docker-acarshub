@@ -1,6 +1,6 @@
 import { Chart } from "chart.js";
 import ChartDataLabels from "chartjs-plugin-datalabels";
-import { updateAlertCounter, generate_stat_submenu } from "./index.js";
+import { generate_stat_submenu } from "./index.js";
 import {
   signal_grab_freqs,
   signal_grab_message_count,
@@ -263,7 +263,6 @@ export let stats_page = {
   },
 
   stats: function () {
-    updateAlertCounter();
     this.grab_freqs();
     this.grab_message_count();
   },

@@ -1,6 +1,5 @@
 import { display_messages } from "./html_generator.js";
 import { MessageDecoder } from "@airframes/acars-decoder/dist/MessageDecoder";
-import { updateAlertCounter } from "./index.js";
 import {
   search_html_msg,
   database_size,
@@ -182,13 +181,7 @@ export let search_page = {
     }
   },
 
-  search: function () {
-    //connect to the socket server.
-    updateAlertCounter();
-    // receive details from server
-
-    // Function to listen for key up events. If detected, check and see if the search string has been updated. If so, process the updated query
-  },
+  search: function () {},
 
   key_event: function () {
     if (this.search_page_active) {

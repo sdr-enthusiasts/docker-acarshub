@@ -140,7 +140,6 @@ export let alerts_page = {
   updateAlertCounter: function () {
     if (this.alerts)
       $("#alert_count").html(` <span class="red">(${this.alerts})</span>`);
-    Cookies.set("alert_unread", String(this.alerts), { expires: 365 });
   },
 
   updateAlerts: function () {
@@ -523,6 +522,8 @@ export let alerts_page = {
       // page is active
       this.set_html();
       Cookies.set("alert_unread", "0", { expires: 365 });
+      this.alerts = 0;
+      $("#alert_count").html(` <span class="red"></span>`);
 
       // temporarily toggle the play_sound variable so we can set the UI correctly
       this.play_sound = !this.play_sound;

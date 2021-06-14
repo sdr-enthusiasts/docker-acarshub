@@ -133,6 +133,7 @@ $(() => {
     if (msg.adsb.enabled === true) {
       menu.set_adsb(true);
       toggle_pages();
+      alerts_page.updateAlertCounter();
       live_map_page.live_map(msg.adsb.lat, msg.adsb.lon);
       ADSB = true;
     }
@@ -382,10 +383,6 @@ export function match_alert(msg: html_msg) {
 
 export function sound_alert() {
   alerts_page.sound_alert();
-}
-
-export function updateAlertCounter() {
-  alerts_page.updateAlertCounter();
 }
 
 export function generate_stat_submenu(
