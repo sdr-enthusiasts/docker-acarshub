@@ -23,9 +23,7 @@ export let html_functions = {
       unique_id +
       `')" id = "tab${unique_id}_${
         direction_back ? "previous" : "next"
-      }" name = "tabs_${unique_id}" class="boxed">${
-        direction_back ? "&lt;&lt;" : "&gt;&gt;"
-      }</a>`
+      }" class="boxed">${direction_back ? "&lt;&lt;" : "&gt;&gt;"}</a>`
     );
   },
 
@@ -35,7 +33,7 @@ export let html_functions = {
     checked: boolean = true
   ) {
     return (
-      `<input type = "radio" id = "tab${tab_uid}_${unique_id}" name = "tabs_${unique_id}" class = "tabs_${unique_id}" ${
+      `<input type = "radio" id = "tab${tab_uid}_${unique_id}" class = "tabs_${unique_id}" ${
         checked ? "checked" : ""
       } onclick="handle_radio('` +
       tab_uid +
