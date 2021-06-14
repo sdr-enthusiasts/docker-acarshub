@@ -20,6 +20,7 @@ import {
   signal_freq_data,
   signal_count_data,
   adsb,
+  window_size,
 } from "./interfaces.js";
 
 import { live_map_page } from "./live_map.js";
@@ -33,6 +34,7 @@ let index_acars_path: string = "";
 let index_acars_page: string = "";
 
 let old_window_width: number = 0;
+let old_window_height: number = 0;
 
 let ADSB: boolean = false;
 
@@ -51,7 +53,16 @@ var ro = new ResizeObserver((entries) => {
     const cr = entry.contentRect;
     if (cr.width !== old_window_width) {
       old_window_width = cr.width - 38;
-      resize_tabs(cr.width - 38);
+      if (index_acars_page === "/") resize_tabs(cr.width - 38);
+      else if (index_acars_page === "/adsb")
+        live_map_page.updateModalSize({
+          width: cr.width,
+          height: cr.height,
+        } as window_size);
+    }
+
+    if (cr.height !== old_window_height) {
+      old_window_height = cr.height - 200;
     }
   }
 });
@@ -203,6 +214,10 @@ $(() => {
     search_page.key_event();
   });
 });
+
+export function get_window_size() {
+  return { width: old_window_width, height: old_window_height } as window_size;
+}
 
 function update_url() {
   index_acars_path = document.location.pathname.replace(

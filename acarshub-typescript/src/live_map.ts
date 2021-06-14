@@ -1,5 +1,5 @@
 import * as L from "leaflet";
-import { acars_msg, adsb_plane } from "./interfaces";
+import { acars_msg, adsb_plane, window_size } from "./interfaces";
 import jBox from "jbox";
 import { display_messages } from "./html_generator.js";
 import {
@@ -7,6 +7,7 @@ import {
   showPlaneMessages,
   find_matches,
   get_match,
+  get_window_size,
 } from "./index.js";
 
 export let live_map_page = {
@@ -19,6 +20,7 @@ export let live_map_page = {
   layerGroup: (<unknown>null) as L.LayerGroup,
   lat: 0 as number,
   lon: 0 as number,
+  ignored_keys: ["trk", "alt", "call"] as string[],
 
   airplane_icon: `<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 1000 1000" enable-background="new 0 0 1000 1000" xml:space="preserve">
   <metadata> Svg Vector Icons : http://www.onlinewebfonts.com/icon </metadata>
@@ -55,15 +57,11 @@ export let live_map_page = {
     blockScroll: false,
     isolateScroll: true,
     animation: "zoomIn",
-    // draggable: 'title',
+    draggable: "title",
     closeButton: "title",
-    overlay: true,
-    reposition: false,
-    repositionOnOpen: true,
-    // onOpen: function () {
-    //   update_size();
-    // },
-    //attach: '#settings_modal',
+    overlay: false,
+    reposition: true,
+    repositionOnOpen: false,
     title: "Messages",
     content: "",
   }),
@@ -284,10 +282,18 @@ export let live_map_page = {
             }
           );
 
+          // Disabling this for now, but might be worth adding in additional fields to the mouse over
+          let output_keys: string = "";
+          // Object.entries(this.adsb_planes[plane]).forEach(([key, value]) => {
+          //   if(!this.ignored_keys.includes(key) && value !== null) {
+          //     output_keys += `<br>${key}: ${value}`;
+          //   }
+          // });
+
           plane_marker.bindTooltip(
             `<div style='background:white; padding:1px 3px 1px 3px'>${callsign}<br>Altitude: ${alt}ft<br>Heading: ${Math.round(
               rotate
-            )}&deg;</div>`,
+            )}&deg;${output_keys}</div>`,
             { className: "popup" }
           );
           plane_marker.addTo(this.layerGroup);
@@ -312,8 +318,21 @@ export let live_map_page = {
       "</div>";
     this.plane_message_modal.setContent(html);
     this.plane_message_modal.setTitle(`Messages for ${plane_id}`);
+    const window_size: window_size = get_window_size();
+    this.plane_message_modal.setHeight(window_size.height > 500 ? 500 : 400);
+    this.plane_message_modal.setWidth(window_size.width > 500 ? 500 : 350);
     this.plane_message_modal.open();
-    resize_tabs(310, false);
+    resize_tabs(window_size.width > 500 ? 465 : 310, false);
+    $(".show_when_small").css("display", `inline-block`);
+    $(".show_when_big").css("display", "none");
+  },
+
+  updateModalSize: function (new_window_size: window_size) {
+    this.plane_message_modal.setHeight(
+      new_window_size.height > 500 ? 500 : 400
+    );
+    this.plane_message_modal.setWidth(new_window_size.width > 500 ? 500 : 350);
+    resize_tabs(new_window_size.width > 500 ? 465 : 310, false);
     $(".show_when_small").css("display", `inline-block`);
     $(".show_when_big").css("display", "none");
   },

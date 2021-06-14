@@ -48,6 +48,11 @@ export interface decoders {
   };
 }
 
+export interface window_size {
+  height: number;
+  width: number;
+}
+
 export interface signal {
   levels: {
     [index: number]: {
