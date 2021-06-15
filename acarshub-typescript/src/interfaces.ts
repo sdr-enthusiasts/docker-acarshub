@@ -233,3 +233,8 @@ export interface adsb_plane {
   oat?: number;
   tat?: number;
 }
+
+export interface matches {
+  value: string;
+  num_messages: number;
+}

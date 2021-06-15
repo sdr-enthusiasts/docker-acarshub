@@ -242,6 +242,7 @@ export let live_map_page = {
           let callsign =
             this.adsb_planes[plane].flight || this.adsb_planes[plane].hex;
           let matched_with_acars = false;
+          let num_messages = 0;
           callsign = callsign.trim();
           const rotate = this.adsb_planes[plane].track || 0;
           const alt = this.adsb_planes[plane].alt_baro || 0;
@@ -252,34 +253,42 @@ export let live_map_page = {
           const baro_rate = this.adsb_planes[plane].baro_rate || 0;
 
           for (let i = 0; i < plane_icaos.length; i++) {
-            if (plane_icaos[i].toUpperCase() === hex.toUpperCase()) {
+            if (plane_icaos[i].value.toUpperCase() === hex.toUpperCase()) {
               matched_with_acars = true;
+              num_messages = plane_icaos[i].num_messages;
               i = plane_icaos.length;
             }
           }
           for (let j = 0; j < plane_callsign.length; j++) {
-            if (plane_callsign[j] === callsign) {
+            if (plane_callsign[j].value === callsign) {
               matched_with_acars = true;
+              num_messages = plane_icaos[j].num_messages;
               j = plane_callsign.length;
             }
           }
           for (let u = 0; u < plane_tails.length; u++) {
-            if (plane_tails[u] === callsign) {
+            if (plane_tails[u].value === callsign) {
               matched_with_acars = true;
+              num_messages = plane_icaos[u].num_messages;
               u = plane_tails.length;
             }
           }
           let plane_icon = L.divIcon({
             className: "airplane",
-            html: `<div style="fill: hsl(${hsl.h}, ${hsl.s}%, ${
+            html: `<div><div style="fill: hsl(${hsl.h}, ${hsl.s}%, ${
               hsl.l
-            }%); -webkit-transform:rotate(${rotate}deg); -moz-transform: rotate(${rotate}deg); -ms-transform: rotate(${rotate}deg); -o-transform: rotate(${rotate}deg); transform: rotate(${rotate}deg);">${
+            }%); width: 30px; height: 30px; -webkit-transform:rotate(${rotate}deg); -moz-transform: rotate(${rotate}deg); -ms-transform: rotate(${rotate}deg); -o-transform: rotate(${rotate}deg); transform: rotate(${rotate}deg);">${
               matched_with_acars
                 ? this.airplane_matched_icon
                 : this.airplane_icon
+            }</div>${
+              matched_with_acars
+                ? `<div class="svg-overlay">(` + num_messages + ")</div>"
+                : ""
             }</div>`,
             iconSize: [30, 30],
           });
+
           let plane_marker = L.marker(
             [
               this.adsb_planes[plane].lat || 0,

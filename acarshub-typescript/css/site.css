@@ -844,3 +844,19 @@ canvas {
 .airplane {
   width: 30px;
 }
+
+svg {
+  position: relative;
+  top: 0;
+  left: 0;
+}
+
+.svg-overlay {
+  position: relative;
+  right: -20px;
+  bottom: 5px;
+  z-index: 1;
+  text-decoration: bold;
+  font-size: 15px;
+  color: black;
+}

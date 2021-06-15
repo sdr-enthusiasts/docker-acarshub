@@ -1,7 +1,7 @@
 import { MessageDecoder } from "@airframes/acars-decoder/dist/MessageDecoder";
 import Cookies from "js-cookie";
 import { display_messages } from "./html_generator.js";
-import { html_msg, acars_msg, labels } from "./interfaces.js";
+import { html_msg, acars_msg, labels, matches } from "./interfaces.js";
 import jBox from "jbox";
 import "jbox/dist/jBox.all.css";
 import { tooltip } from "./tooltips.js";
@@ -885,9 +885,9 @@ export let live_messages_page = {
   },
 
   find_matches: function () {
-    let output_hex: string[] = [];
-    let output_icao_callsigns: string[] = [];
-    let output_tail: string[] = [];
+    let output_hex: matches[] = [];
+    let output_icao_callsigns: matches[] = [];
+    let output_tail: matches[] = [];
     let found_callsign = false;
     let found_hex = false;
     let found_tail = false;
@@ -903,16 +903,20 @@ export let live_messages_page = {
           !found_hex &&
           typeof this.lm_msgs_received.value[i][j].icao_hex !== "undefined"
         ) {
-          output_hex.push(this.lm_msgs_received.value[i][j].icao_hex!);
+          output_hex.push({
+            value: this.lm_msgs_received.value[i][j].icao_hex!,
+            num_messages: this.lm_msgs_received.value[i].length,
+          });
           found_hex = true;
         }
         if (
           !found_callsign &&
           typeof this.lm_msgs_received.value[i][j].icao_flight !== "undefined"
         ) {
-          output_icao_callsigns.push(
-            this.lm_msgs_received.value[i][j].icao_flight!
-          );
+          output_icao_callsigns.push({
+            value: this.lm_msgs_received.value[i][j].icao_flight!,
+            num_messages: this.lm_msgs_received.value[i].length,
+          });
           found_callsign = true;
         }
 
@@ -920,7 +924,10 @@ export let live_messages_page = {
           !found_tail &&
           typeof this.lm_msgs_received.value[i][j].tail !== "undefined"
         ) {
-          output_tail.push(this.lm_msgs_received.value[i][j].tail!);
+          output_tail.push({
+            value: this.lm_msgs_received.value[i][j].tail!,
+            num_messages: this.lm_msgs_received.value[i].length,
+          });
           found_tail = true;
         }
 
