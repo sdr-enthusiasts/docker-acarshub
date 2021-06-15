@@ -216,7 +216,6 @@ export let live_map_page = {
 
   set_targets: function (adsb_targets: adsb_plane[]) {
     this.adsb_planes = adsb_targets;
-    console.log(this.adsb_planes.length);
     if (this.live_map_page_active) this.update_targets();
   },
 
