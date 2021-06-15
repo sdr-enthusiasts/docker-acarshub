@@ -2,8 +2,8 @@
   --blue-highlight: #1496bb;
   --grey-bg: #3D3D3D;
   --grey-highlight: #BEBEBE;
-  --site-fonts: "Helvetica Neue",Helvetica,Arial,sans-serif;
-  --mono-fonts: "Menlo,Monaco,Consolas,"Courier New",monospace";
+  --site-fonts: 'Helvetica Neue',Helvetica,Arial,sans-serif;
+  --mono-fonts: Menlo,Monaco,Consolas,'Courier New',monospace;
 }
 table {
   border: 1px solid black;
