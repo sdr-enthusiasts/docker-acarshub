@@ -173,7 +173,6 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
     import sys
 
     global error_messages
-    global alert_users
 
     if message_type == "VDLM2":
         global vdlm_messages
