@@ -242,7 +242,7 @@ export let live_map_page = {
           let callsign =
             this.adsb_planes[plane].flight || this.adsb_planes[plane].hex;
           let matched_with_acars = false;
-          let num_messages = 0;
+          let num_messages: string = "0";
           callsign = callsign.trim();
           const rotate = this.adsb_planes[plane].track || 0;
           const alt = this.adsb_planes[plane].alt_baro || 0;
@@ -255,24 +255,29 @@ export let live_map_page = {
           for (let i = 0; i < plane_icaos.length; i++) {
             if (plane_icaos[i].value.toUpperCase() === hex.toUpperCase()) {
               matched_with_acars = true;
-              num_messages = plane_icaos[i].num_messages;
+              num_messages = String(plane_icaos[i].num_messages) || "Unknown";
               i = plane_icaos.length;
             }
           }
           for (let j = 0; j < plane_callsign.length; j++) {
             if (plane_callsign[j].value === callsign) {
               matched_with_acars = true;
-              num_messages = plane_icaos[j].num_messages;
+              num_messages = String(plane_icaos[j].num_messages) || "Unknown";
               j = plane_callsign.length;
             }
           }
           for (let u = 0; u < plane_tails.length; u++) {
             if (plane_tails[u].value === callsign) {
               matched_with_acars = true;
-              num_messages = plane_icaos[u].num_messages;
+              num_messages = String(plane_icaos[u].num_messages) || "Unknown";
               u = plane_tails.length;
             }
           }
+
+          // added for debugging purposes
+
+          if (num_messages === "Unknown")
+            console.log("Unknown number of messages but matched for ACARS...");
 
           // saving this for later
           // ${

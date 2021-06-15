@@ -133,14 +133,14 @@ $(() => {
       live_map_page.live_map(msg.adsb.lat, msg.adsb.lon);
       adsb_url = msg.adsb.url;
 
-      setInterval(function () {
+      setInterval(() => {
         fetch("http://" + adsb_url + "/data/aircraft.json", {
           method: "GET",
           mode: "cors",
         })
           .then((response) => response.json())
           .then((planes) => live_map_page.set_targets(planes.aircraft))
-          .catch((err) => console.log(err));
+          .catch((err) => console.error(err));
       }, 5000);
     }
   });

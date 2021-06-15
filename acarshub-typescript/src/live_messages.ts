@@ -905,7 +905,7 @@ export let live_messages_page = {
         ) {
           output_hex.push({
             value: this.lm_msgs_received.value[i][j].icao_hex!,
-            num_messages: this.lm_msgs_received.value[i].length,
+            num_messages: this.lm_msgs_received.value[i].length || 0,
           });
           found_hex = true;
         }
@@ -915,7 +915,7 @@ export let live_messages_page = {
         ) {
           output_icao_callsigns.push({
             value: this.lm_msgs_received.value[i][j].icao_flight!,
-            num_messages: this.lm_msgs_received.value[i].length,
+            num_messages: this.lm_msgs_received.value[i].length || 0,
           });
           found_callsign = true;
         }
@@ -926,7 +926,7 @@ export let live_messages_page = {
         ) {
           output_tail.push({
             value: this.lm_msgs_received.value[i][j].tail!,
-            num_messages: this.lm_msgs_received.value[i].length,
+            num_messages: this.lm_msgs_received.value[i].length || 0,
           });
           found_tail = true;
         }
