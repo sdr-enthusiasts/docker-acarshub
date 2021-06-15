@@ -243,10 +243,14 @@ export let live_map_page = {
             this.adsb_planes[plane].flight || this.adsb_planes[plane].hex;
           let matched_with_acars = false;
           callsign = callsign.trim();
-          let rotate = this.adsb_planes[plane].track || 0;
-          let alt = this.adsb_planes[plane].alt_baro || 0;
-          let hsl = this.altitudeColor(alt);
-          let hex = this.adsb_planes[plane].hex || "";
+          const rotate = this.adsb_planes[plane].track || 0;
+          const alt = this.adsb_planes[plane].alt_baro || 0;
+          const hsl = this.altitudeColor(alt);
+          const hex = this.adsb_planes[plane].hex || "";
+          const speed = this.adsb_planes[plane].gs || 0;
+          const squawk = this.adsb_planes[plane].squawk || 0;
+          const baro_rate = this.adsb_planes[plane].baro_rate || 0;
+
           for (let i = 0; i < plane_icaos.length; i++) {
             if (plane_icaos[i].toUpperCase() === hex.toUpperCase()) {
               matched_with_acars = true;
@@ -287,18 +291,14 @@ export let live_map_page = {
             }
           );
 
-          // Disabling this for now, but might be worth adding in additional fields to the mouse over
-          let output_keys: string = "";
-          // Object.entries(this.adsb_planes[plane]).forEach(([key, value]) => {
-          //   if(!this.ignored_keys.includes(key) && value !== null) {
-          //     output_keys += `<br>${key}: ${value}`;
-          //   }
-          // });
-
           plane_marker.bindTooltip(
-            `<div style='background:white; padding:1px 3px 1px 3px'>${callsign}<br>Altitude: ${alt}ft<br>Heading: ${Math.round(
-              rotate
-            )}&deg;${output_keys}</div>`,
+            `<div style='background:white; padding:1px 3px 1px 3px'>${
+              callsign.toUpperCase() !== hex.toUpperCase() ? callsign + "/" : ""
+            }${hex.toUpperCase()}<hr>Altitude: ${alt}ft${
+              baro_rate ? "<br>Altitude Rate: " + baro_rate + "fpm" : ""
+            }<br>Heading: ${Math.round(rotate)}&deg;${
+              speed ? "<br>Speed: " + Math.round(speed) + " knots" : ""
+            }${speed ? "<br>Squawk: " + squawk : ""}</div>`,
             { className: "popup" }
           );
           plane_marker.addTo(this.layerGroup);
