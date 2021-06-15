@@ -273,6 +273,12 @@ export let live_map_page = {
               u = plane_tails.length;
             }
           }
+
+          // saving this for later
+          // ${
+          //   matched_with_acars
+          //     ? `<div class="svg-overlay" style="color: white;">(` + num_messages + ")</div>" : ""
+          // }
           let plane_icon = L.divIcon({
             className: "airplane",
             html: `<div><div style="fill: hsl(${hsl.h}, ${hsl.s}%, ${
@@ -281,11 +287,7 @@ export let live_map_page = {
               matched_with_acars
                 ? this.airplane_matched_icon
                 : this.airplane_icon
-            }</div>${
-              matched_with_acars
-                ? `<div class="svg-overlay">(` + num_messages + ")</div>"
-                : ""
-            }</div>`,
+            }</div></div>`,
             iconSize: [30, 30],
           });
 
@@ -307,7 +309,11 @@ export let live_map_page = {
               baro_rate ? "<br>Altitude Rate: " + baro_rate + "fpm" : ""
             }<br>Heading: ${Math.round(rotate)}&deg;${
               speed ? "<br>Speed: " + Math.round(speed) + " knots" : ""
-            }${speed ? "<br>Squawk: " + squawk : ""}</div>`,
+            }${speed ? "<br>Squawk: " + squawk : ""}${
+              matched_with_acars
+                ? "<br><br>Number of ACARS messages: " + num_messages
+                : ""
+            }</div>`,
             { className: "popup" }
           );
           plane_marker.addTo(this.layerGroup);
