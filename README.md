@@ -119,18 +119,18 @@ Please note that for `TAR1090_URL` the required format is `http[s]://**HOSTNAME*
 
 ### ADSB
 
-The ACARS Hub website contains the ability to display ADSB targets along side ACARS messages. To enable this feature, you need to have a valid source of BEAST or raw ADSB data. [Mike Nye's readsb-protobuf](https://github.com/mikenye/docker-readsb-protobuf) is the recommended container to run.
+The ACARS Hub website contains the ability to display ADSB targets along side ACARS messages. To enable this feature you need to have an available `aircraft.json` file generated from readsb and available on `tar1090webserverurl/data/aircraft.json`. [Mike Nye's readsb-protobuf](https://github.com/mikenye/docker-tar1090) is the recommended container to run to easily get this data. If you run readsb outside of Mike's container you will need to ensure the web server allows CORS headers.
 
 The following options will set the options for ADSB
 
 | Variable | Description | Required | Default |
 |----------|-------------|---------|--------|
 | `ENABLE_ADSB` | Turns on ADSB in ACARS Hub | Yes, if you want to monitor ADSB | Blank |
-| `ADSB_URL` | The IP address or URL for your BEAST/raw source.  | No | `readsb` |_
+| `ADSB_URL` | The IP address or URL for your tar1090 instance  | Yes | Blank |
 | `ADSB_LAT` | The latitude of your ADSB site | No, but recommended | 0 |
 | `ADSB_LON` | The longitude of your ADSB site | No, but recommended | 0 |
-| `ADSB_PORT` | The port that the ADSB data is being fed from. Default should be good for standard readsb BEAST messages | No | 30005 |_
-| `ADSB_TYPE` | The type of ADSB data being sent. Valid values are `beast` and `raw` | No | `beast`
+
+The formatting for `ADSB_URL` should be the IP address/port number **ONLY** for the server where your aircraft.json path is.
 
 ### ACARS
 
