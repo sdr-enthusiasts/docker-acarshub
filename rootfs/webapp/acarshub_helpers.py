@@ -27,6 +27,11 @@ LIVE_DATA_SOURCE = (
     "127.0.0.1"
 )  # This is to switch from localhost for ACARS/VDLM to connecting to a remote data source
 
+
+def log(msg, source):
+    print(f"[{source}]: {msg}")
+
+
 if os.getenv("DEBUG_LOGGING", default=False):
     DEBUG_LOGGING = True
 if os.getenv("EXTREME_LOGGING", default=False):
@@ -119,10 +124,12 @@ if os.getenv("ENABLE_ADSB", default=False):
     ENABLE_ADSB = True
     if os.getenv("ADSB_URL", default=False):
         ADSB_URL = os.getenv("ADSB_URL", default=False)
-    if os.getenv("ADSB_PORT"):
-        ADSB_PORT = int(os.getenv("ADSB_PORT"), default=False)
-    if os.getenv("ADSB_TYPE", default=False):
-        ADSB_TYPE = os.getenv("ADSB_TYPE")
+    else:
+        log(
+            "ENABLE_ADSB is set to True without ADSB_URL being set. Disabling ADSB.",
+            "SETTINGS",
+        )
+        ENABLE_ADSB = False
     if os.getenv("ADSB_LON", default=False):
         ADSB_LON = float(os.getenv("ADSB_LON"))
     if os.getenv("ADSB_LAT", default=False):
@@ -137,7 +144,3 @@ def acars_traceback(e, source):
             "{}: {}".format(traceback.tb_frame.f_code.co_filename, traceback.tb_lineno)
         )
         traceback = traceback.tb_next
-
-
-def log(msg, source):
-    print(f"[{source}]: {msg}")
