@@ -5,7 +5,6 @@ import eventlet
 eventlet.monkey_patch()
 import acarshub
 import acarshub_helpers
-from adsb import ADSBClient
 
 if not acarshub_helpers.SPAM:
     import acarshub_rrd

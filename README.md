@@ -119,7 +119,7 @@ Please note that for `TAR1090_URL` the required format is `http[s]://**HOSTNAME*
 
 ### ADSB
 
-The ACARS Hub website contains the ability to display ADSB targets along side ACARS messages. To enable this feature you need to have an available `aircraft.json` file generated from readsb and available on `tar1090webserverurl/data/aircraft.json`. [Mike Nye's readsb-protobuf](https://github.com/mikenye/docker-tar1090) is the recommended container to run to easily get this data. If you run readsb outside of Mike's container you will need to ensure the web server allows CORS headers.
+The ACARS Hub website contains the ability to display ADSB targets along side ACARS messages. To enable this feature you need to have an available `aircraft.json` file generated from readsb and available on `tar1090webserverurl/data/aircraft.json`. [Mike Nye's tar1090](https://github.com/mikenye/docker-tar1090) is the recommended container to run to easily get this data. If you run readsb outside of Mike's container you will need to ensure the web server allows CORS headers.
 
 The following options will set the options for ADSB
 
