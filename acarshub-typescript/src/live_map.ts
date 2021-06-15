@@ -249,7 +249,7 @@ export let live_map_page = {
           let hsl = this.altitudeColor(alt);
           let hex = this.adsb_planes[plane].hex || "";
           for (let i = 0; i < plane_icaos.length; i++) {
-            if (plane_icaos[i] === hex) {
+            if (plane_icaos[i].toUpperCase() === hex.toUpperCase()) {
               matched_with_acars = true;
               i = plane_icaos.length;
             }
