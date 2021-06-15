@@ -1,5 +1,13 @@
 # Install NPM stuff
 
+## Intro
+
+ACARS Hub is written in python, Typescript, HTML and CSS. It uses node so that the typescript compiler can check everything makes sense; however the generated output files aren't appropriate for running on a non-node web server like we're running so all of the output files are fixed after TS build to be appropriate for running on a web server.
+
+There are two modes for running ACARS Hub in testing. For rapid prototyping you will need to run ACARS Hub on your local machine. Please see the sections concerning compiling the typescript and running tests outside of docker below.
+
+If you wish to test inside of a docker container please see the section concerning compiling a local copy of the container.
+
 ## System setup
 
 ### Mac
@@ -18,9 +26,22 @@ npm install i
 
 ## Compiling the typescript / moving test files in to place
 
+If you want to run ACARS Hub locally you need to compile everything and move the files in to place.
+
 ```shell
 cd acarsgitpath/acarshub-typescript
 npm run buildtest && npm run installer
+```
+
+The package.json file in the acarshub-typescript directory will list all of the valid build commands. Right now ACARS Hub is set up to have separate testing and production build targets (`npm run buildtest` and `npm run buildprod` respectively) but as of right now the outputted code is the same. Just building the files does not move the files in to place for running locally. `npm run installer` will move all of the build files in to `rootfs/webapp/static` so that ACARS Hub on your machine will have all of the same files that the build container would have.
+
+## Compiling a local copy of the container
+
+Building locally utilizes cached build components in order to speed up the build process, and as such a modified Dockerfile is generated from the main Dockerfile. It is important to note that if you wish to make changes to the Dockerfile that you intend to merge back to github you need to modify `Dockerfile` and not `Dockerfile.local`. When you run the command below a new version of `Dockerfile.local` is generated based on the changes made to the main Dockerfile.
+
+```shell
+cd acars_git_path/
+./build-test-no-cluster.sh
 ```
 
 ## Running tests outside of docker
