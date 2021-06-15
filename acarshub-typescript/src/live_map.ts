@@ -305,7 +305,7 @@ export let live_map_page = {
 
           if (matched_with_acars) {
             plane_marker.on("click", function (e) {
-              showPlaneMessages(callsign, plane);
+              showPlaneMessages(callsign, hex);
             });
           }
         }

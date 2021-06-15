@@ -856,7 +856,8 @@ export let live_messages_page = {
       for (let j = 0; j < this.lm_msgs_received.value[i].length; j++) {
         if (
           typeof this.lm_msgs_received.value[i][j].icao_hex !== "undefined" &&
-          this.lm_msgs_received.value[i][j].icao_hex == plane_hex
+          this.lm_msgs_received.value[i][j].icao_hex?.toUpperCase() ===
+            plane_hex.toUpperCase()
         ) {
           return this.lm_msgs_received.value[i];
         }
@@ -865,7 +866,7 @@ export let live_messages_page = {
           callsign !== "" &&
           typeof this.lm_msgs_received.value[i][j].icao_flight !==
             "undefined" &&
-          this.lm_msgs_received.value[i][j].icao_flight == callsign
+          this.lm_msgs_received.value[i][j].icao_flight === callsign
         ) {
           return this.lm_msgs_received.value[i];
         }
@@ -873,7 +874,7 @@ export let live_messages_page = {
         if (
           callsign !== "" &&
           typeof this.lm_msgs_received.value[i][j].tail !== "undefined" &&
-          this.lm_msgs_received.value[i][j].tail == callsign
+          this.lm_msgs_received.value[i][j].tail === callsign
         ) {
           return this.lm_msgs_received.value[i];
         }
