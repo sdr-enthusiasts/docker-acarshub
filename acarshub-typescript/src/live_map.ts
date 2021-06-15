@@ -216,6 +216,7 @@ export let live_map_page = {
 
   set_targets: function (adsb_targets: adsb_plane[]) {
     this.adsb_planes = adsb_targets;
+    console.log(this.adsb_planes.length);
     if (this.live_map_page_active) this.update_targets();
   },
 
@@ -239,14 +240,16 @@ export let live_map_page = {
           this.adsb_planes[plane].lat !== null &&
           this.adsb_planes[plane].lon !== null
         ) {
-          let callsign = this.adsb_planes[plane].call || plane;
+          let callsign =
+            this.adsb_planes[plane].flight || this.adsb_planes[plane].hex;
           let matched_with_acars = false;
-          callsign = callsign.replace(/_+/g, "");
-          let rotate = this.adsb_planes[plane].trk || 0;
-          let alt = this.adsb_planes[plane].alt || 0;
-          let hsl = this.altitudeColor(this.adsb_planes[plane].alt);
+          callsign = callsign.trim();
+          let rotate = this.adsb_planes[plane].track || 0;
+          let alt = this.adsb_planes[plane].alt_baro || 0;
+          let hsl = this.altitudeColor(alt);
+          let hex = this.adsb_planes[plane].hex || "";
           for (let i = 0; i < plane_icaos.length; i++) {
-            if (plane_icaos[i] === plane) {
+            if (plane_icaos[i] === hex) {
               matched_with_acars = true;
               i = plane_icaos.length;
             }
@@ -275,7 +278,10 @@ export let live_map_page = {
             iconSize: [30, 30],
           });
           let plane_marker = L.marker(
-            [this.adsb_planes[plane].lat, this.adsb_planes[plane].lon],
+            [
+              this.adsb_planes[plane].lat || 0,
+              this.adsb_planes[plane].lon || 0,
+            ],
             {
               icon: plane_icon,
               riseOnHover: true,

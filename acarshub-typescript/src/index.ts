@@ -36,7 +36,7 @@ let index_acars_page: string = "";
 let old_window_width: number = 0;
 let old_window_height: number = 0;
 
-let ADSB: boolean = false;
+let adsb_url: string = "";
 
 const pages: string[] = [
   "/", // index/live messages
@@ -106,10 +106,6 @@ $(() => {
       alerts_page.alerts_acars_message(msg); // send the message to alerts for processing
   });
 
-  socket.on("adsb", function (msg: adsb) {
-    live_map_page.set_targets(msg.planes);
-  });
-
   socket.on("terms", function (msg: terms) {
     alerts_page.alerts_terms(msg); // send the terms over to the alert page
   });
@@ -135,7 +131,17 @@ $(() => {
       toggle_pages();
       alerts_page.updateAlertCounter();
       live_map_page.live_map(msg.adsb.lat, msg.adsb.lon);
-      ADSB = true;
+      adsb_url = msg.adsb.url;
+
+      setInterval(function () {
+        fetch("http://" + adsb_url + "/data/aircraft.json", {
+          method: "GET",
+          mode: "cors",
+        })
+          .then((response) => response.json())
+          .then((planes) => live_map_page.set_targets(planes.aircraft))
+          .catch((err) => console.log(err));
+      }, 5000);
     }
   });
 

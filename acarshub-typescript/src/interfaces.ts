@@ -45,6 +45,7 @@ export interface decoders {
     enabled: boolean;
     lat: number;
     lon: number;
+    url: string;
   };
 }
 
@@ -177,36 +178,58 @@ export interface acars_msg {
 }
 
 export interface adsb {
-  planes: adsb_plane[];
+  now: number;
+  messages: number;
+  aircraft: adsb_plane[];
 }
 
 export interface adsb_plane {
-  live: number;
-  call: string;
-  lat: number;
-  lon: number;
-  alt: number;
-  gs: number;
-  trk: number;
-  roc: number;
-  tas: number;
-  roll: number;
-  rtrk: number;
-  ias: number;
-  mach: number;
-  hdg: number;
-  ver: number;
-  HPL: number;
-  RCu: number;
-  RCv: number;
-  HVE: number;
-  VVE: number;
-  Rc: number;
-  VPL: number;
-  EPU: number;
-  VEPU: number;
-  HFOMr: number;
-  VFOMr: number;
-  PE_RCu: number;
-  PE_VPL: number;
+  hex: string;
+  type: string;
+  flight: string;
+  alt_baro?: number;
+  alt_geom?: number;
+  gs?: number;
+  ias?: number;
+  tas?: number;
+  mach?: number;
+  track?: number;
+  track_rate?: number;
+  roll?: number;
+  mag_heading?: number;
+  true_heading?: number;
+  baro_rate?: number;
+  geom_rate?: number;
+  squawk?: number;
+  emergency?: number;
+  category?: number;
+  nav_qnh?: number;
+  nav_altitude_mcp?: number;
+  nav_altitude_fms?: number;
+  nav_heading?: number;
+  nav_modes?: number;
+  lat?: number;
+  lon?: number;
+  nic?: number;
+  rc?: number;
+  seen_pos?: number;
+  version?: number;
+  nic_baro?: number;
+  nac_p?: number;
+  nac_v?: number;
+  sil?: number;
+  sil_type?: number;
+  gva?: number;
+  sda?: number;
+  mlat?: string[];
+  tisb?: string[];
+  messages?: number;
+  seen?: number;
+  rssi?: number;
+  alert?: number;
+  spi?: number;
+  wd?: number;
+  ws?: number;
+  oat?: number;
+  tat?: number;
 }
