@@ -2,7 +2,6 @@ eventlet==0.30.2  # This version HAS to be pinned here until gunicorn fixes thei
 Flask==2.0.1
 Flask-SocketIO==5.1.0
 gunicorn[eventlet]==20.1.0
-pymodes==2.9
 pyrtlsdr==0.2.92
 rrdtool==0.1.15
 schedule==1.1.0
