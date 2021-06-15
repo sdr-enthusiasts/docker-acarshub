@@ -62,6 +62,8 @@ RUN set -x && \
     KEPT_PACKAGES+=(socat) && \
     KEPT_PACKAGES+=(ncat) && \
     KEPT_PACKAGES+=(net-tools) && \
+    # Packages for nginx
+    KEPT_PACKAGES+=(nginx-light) && \
     # packages for python
     # commented out are for building manually
     # TEMP_PACKAGES+=(libssl-dev) && \

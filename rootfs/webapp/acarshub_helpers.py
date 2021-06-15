@@ -23,6 +23,9 @@ ADSB_PORT = 30005
 ADSB_TYPE = "beast"
 ADSB_LAT = 0
 ADSB_LON = 0
+ACARS_WEB_PORT = (
+    8888
+)  # default port for nginx proxying. SPAM will change this to 80 for running outside of docker
 LIVE_DATA_SOURCE = (
     "127.0.0.1"
 )  # This is to switch from localhost for ACARS/VDLM to connecting to a remote data source
@@ -41,6 +44,7 @@ if os.getenv("EXTREME_LOGGING", default=False):
 
 if os.getenv("SPAM", default=False):
     SPAM = True
+    ACARS_WEB_PORT = 80
 if os.getenv("LIVE_DATA_SOURCE", default=False):
     LIVE_DATA_SOURCE = os.getenv("LIVE_DATA_SOURCE")
 if os.getenv("ENABLE_ACARS", default=False):
