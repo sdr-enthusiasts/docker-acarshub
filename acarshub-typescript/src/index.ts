@@ -88,6 +88,7 @@ $(() => {
   // @ts-expect-error
   ro.observe(document.querySelector("body"));
   update_url(); // update the urls for everyone
+  adsb_url = index_acars_url + "data/aircraft.json";
   //connect to the socket server.
 
   socket = io.connect(`${document.location.origin}/main`, {
@@ -131,10 +132,11 @@ $(() => {
       toggle_pages();
       alerts_page.updateAlertCounter();
       live_map_page.live_map(msg.adsb.lat, msg.adsb.lon);
-      adsb_url = msg.adsb.url;
+
+      if (msg.adsb.bypass) adsb_url = msg.adsb.url;
 
       setInterval(() => {
-        fetch("http://" + adsb_url + "/data/aircraft.json", {
+        fetch(adsb_url, {
           method: "GET",
           mode: "cors",
         })

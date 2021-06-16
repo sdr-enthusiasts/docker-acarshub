@@ -437,6 +437,7 @@ def main_connect():
                 "lat": acarshub_helpers.ADSB_LAT,
                 "lon": acarshub_helpers.ADSB_LON,
                 "url": acarshub_helpers.ADSB_URL,
+                "bypass": acarshub_helpers.ADSB_BYPASS_URL,
             },
         },
         namespace="/main",

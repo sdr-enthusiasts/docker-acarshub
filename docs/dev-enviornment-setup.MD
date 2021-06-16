@@ -55,7 +55,7 @@ Pre-requisites:
 
 ```shell
 cd acars_git_path/rootfs/webapp
-env ACARSHUB_DB=sqlite:////pathwhereyouwantyourdbsaved.sqlite SPAM=True ENABLE_ACARS=True FREQS_ACARS="130.025;130.450;131.125;131.550" ENABLE_ADSB=true ADSB_URL=ipforyourtar1090instance LIVE_DATA_SOURCE=ipforyouracarssource ADSB_LAT=yourlat ADSB_LON=-yourlon ENABLE_VDLM=true FREQS_VDLM="135.0" python3 application.py
+env ACARSHUB_DB=sqlite:////pathwhereyouwantyourdbsaved.sqlite SPAM=True ENABLE_ACARS=True FREQS_ACARS="130.025;130.450;131.125;131.550" ENABLE_ADSB=true ADSB_URL=ipforyourtar1090instance ADSB_BYPASS_URL=true LIVE_DATA_SOURCE=ipforyouracarssource ADSB_LAT=yourlat ADSB_LON=-yourlon ENABLE_VDLM=true FREQS_VDLM="135.0" python3 application.py
 ```
 
 `SPAM` env variable disables a few features in ACARS Hub (namely some socket settings that caused problems and the rrd python because that build fails on Mac...)
@@ -72,7 +72,7 @@ python3 tools/spammer.py options here...see tools/spammer.py for options
 
 ```shell
 cd acars_git_path/rootfs/webapp
-env ACARSHUB_DB=sqlite:////pathwhereyouwantyourdbsaved.sqlite SPAM=True ENABLE_ACARS=True FREQS_ACARS="130.025;130.450;131.125;131.550" python3 application.py
+env ACARSHUB_DB=sqlite:////pathwhereyouwantyourdbsaved.sqlite SPAM=True ENABLE_ACARS=True FREQS_ACARS="130.025;130.450;131.125;131.550" ADSB_URL=ipforyourtar1090instance ADSB_BYPASS_URL=true python3 application.py
 ```
 
 ## Other useful testing options

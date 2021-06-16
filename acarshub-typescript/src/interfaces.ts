@@ -46,6 +46,7 @@ export interface decoders {
     lat: number;
     lon: number;
     url: string;
+    bypass: boolean;
   };
 }
 

@@ -18,11 +18,10 @@ DB_SAVE_DAYS = 7
 DB_BACKUP = ""
 ALERT_STAT_TERMS = []
 ENABLE_ADSB = False
-ADSB_URL = "readsb"
-ADSB_PORT = 30005
-ADSB_TYPE = "beast"
+ADSB_URL = "http://tar1090/data/aircraft.json"
 ADSB_LAT = 0
 ADSB_LON = 0
+ADSB_BYPASS_URL = False
 ACARS_WEB_PORT = (
     8888
 )  # default port for nginx proxying. SPAM will change this to 80 for running outside of docker
@@ -128,16 +127,19 @@ if os.getenv("ENABLE_ADSB", default=False):
     ENABLE_ADSB = True
     if os.getenv("ADSB_URL", default=False):
         ADSB_URL = os.getenv("ADSB_URL", default=False)
-    else:
-        log(
-            "ENABLE_ADSB is set to True without ADSB_URL being set. Disabling ADSB.",
-            "SETTINGS",
-        )
-        ENABLE_ADSB = False
+
+        if not ADSB_URL.startswith("http") and not ADSB_URL.endswith("aircraft.json"):
+            ENABLE_ADSB = False
+            log(
+                f"ADSB URL ({ADSB_URL}) appears to be malformed. Disabling ADSB", "init"
+            )
     if os.getenv("ADSB_LON", default=False):
         ADSB_LON = float(os.getenv("ADSB_LON"))
     if os.getenv("ADSB_LAT", default=False):
         ADSB_LAT = float(os.getenv("ADSB_LAT"))
+
+if os.getenv("ADSB_BYPASS_URL", default=False):
+    ADSB_BYPASS_URL = True
 
 
 def acars_traceback(e, source):
