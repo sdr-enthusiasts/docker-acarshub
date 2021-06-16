@@ -1,5 +1,5 @@
 import * as L from "leaflet";
-import { acars_msg, adsb_plane, window_size } from "./interfaces";
+import { acars_msg, adsb_plane, window_size, matches } from "./interfaces";
 import jBox from "jbox";
 import { display_messages } from "./html_generator.js";
 import {
@@ -230,14 +230,14 @@ export let live_map_page = {
       // clear old planes
       this.layerGroup.clearLayers();
       const plane_data = find_matches();
-      const plane_icaos = plane_data.hex;
-      const plane_callsign = plane_data.callsigns;
-      const plane_tails = plane_data.tail;
+      const plane_icaos: matches[] = plane_data.hex;
+      const plane_callsign: matches[] = plane_data.callsigns;
+      const plane_tails: matches[] = plane_data.tail;
 
-      for (let plane in this.adsb_planes) {
+      for (const plane in this.adsb_planes) {
         if (
-          this.adsb_planes[plane].lat !== null &&
-          this.adsb_planes[plane].lon !== null
+          this.adsb_planes[plane].lat != null &&
+          this.adsb_planes[plane].lon != null
         ) {
           let callsign =
             this.adsb_planes[plane].flight || this.adsb_planes[plane].hex;
@@ -252,32 +252,30 @@ export let live_map_page = {
           const squawk = this.adsb_planes[plane].squawk || 0;
           const baro_rate = this.adsb_planes[plane].baro_rate || 0;
 
-          for (let i = 0; i < plane_icaos.length; i++) {
-            if (plane_icaos[i].value.toUpperCase() === hex.toUpperCase()) {
+          for (const element in plane_icaos) {
+            const p = plane_icaos[element];
+            if (p.value.toUpperCase() === hex.toUpperCase()) {
               matched_with_acars = true;
-              num_messages = String(plane_icaos[i].num_messages) || "Unknown";
-              i = plane_icaos.length;
+              num_messages = String(p.num_messages);
+              continue;
             }
           }
-          for (let j = 0; j < plane_callsign.length; j++) {
-            if (plane_callsign[j].value === callsign) {
+          for (const element in plane_callsign) {
+            const p = plane_callsign[element];
+            if (p.value === callsign) {
               matched_with_acars = true;
-              num_messages = String(plane_icaos[j].num_messages) || "Unknown";
-              j = plane_callsign.length;
+              num_messages = String(p.num_messages);
+              continue;
             }
           }
-          for (let u = 0; u < plane_tails.length; u++) {
-            if (plane_tails[u].value === callsign) {
+          for (const element in plane_tails) {
+            const p = plane_tails[element];
+            if (p.value === callsign) {
               matched_with_acars = true;
-              num_messages = String(plane_icaos[u].num_messages) || "Unknown";
-              u = plane_tails.length;
+              num_messages = String(p.num_messages);
+              continue;
             }
           }
-
-          // added for debugging purposes
-
-          if (num_messages === "Unknown")
-            console.log("Unknown number of messages but matched for ACARS...");
 
           // saving this for later
           // ${
