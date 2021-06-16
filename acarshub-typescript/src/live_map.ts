@@ -230,9 +230,6 @@ export let live_map_page = {
       // clear old planes
       this.layerGroup.clearLayers();
       const plane_data = find_matches();
-      const plane_icaos: matches[] = plane_data.hex;
-      const plane_callsign: matches[] = plane_data.callsigns;
-      const plane_tails: matches[] = plane_data.tail;
 
       for (const plane in this.adsb_planes) {
         if (
@@ -241,8 +238,7 @@ export let live_map_page = {
         ) {
           let callsign =
             this.adsb_planes[plane].flight || this.adsb_planes[plane].hex;
-          let matched_with_acars = false;
-          let num_messages: string = "0";
+          let num_messages: number = <any>undefined; // need to cast this to any for TS to compile.
           callsign = callsign.trim();
           const rotate = this.adsb_planes[plane].track || 0;
           const alt = this.adsb_planes[plane].alt_baro || 0;
@@ -252,30 +248,18 @@ export let live_map_page = {
           const squawk = this.adsb_planes[plane].squawk || 0;
           const baro_rate = this.adsb_planes[plane].baro_rate || 0;
 
-          for (const element in plane_icaos) {
-            const p = plane_icaos[element];
-            if (p.value.toUpperCase() === hex.toUpperCase()) {
-              matched_with_acars = true;
-              num_messages = String(p.num_messages);
-              continue;
+          Object.entries(plane_data).every(([key, value]) => {
+            if (key === "hex") {
+              num_messages = value[hex.toUpperCase()];
+            } else {
+              num_messages = value[callsign];
             }
-          }
-          for (const element in plane_callsign) {
-            const p = plane_callsign[element];
-            if (p.value === callsign) {
-              matched_with_acars = true;
-              num_messages = String(p.num_messages);
-              continue;
+
+            if (num_messages != undefined) {
+              return false;
             }
-          }
-          for (const element in plane_tails) {
-            const p = plane_tails[element];
-            if (p.value === callsign) {
-              matched_with_acars = true;
-              num_messages = String(p.num_messages);
-              continue;
-            }
-          }
+            return true;
+          });
 
           // saving this for later
           // ${
@@ -287,7 +271,7 @@ export let live_map_page = {
             html: `<div><div style="fill: hsl(${hsl.h}, ${hsl.s}%, ${
               hsl.l
             }%); width: 30px; height: 30px; -webkit-transform:rotate(${rotate}deg); -moz-transform: rotate(${rotate}deg); -ms-transform: rotate(${rotate}deg); -o-transform: rotate(${rotate}deg); transform: rotate(${rotate}deg);">${
-              matched_with_acars
+              num_messages != undefined
                 ? this.airplane_matched_icon
                 : this.airplane_icon
             }</div></div>`,
@@ -313,7 +297,7 @@ export let live_map_page = {
             }<br>Heading: ${Math.round(rotate)}&deg;${
               speed ? "<br>Speed: " + Math.round(speed) + " knots" : ""
             }${speed ? "<br>Squawk: " + squawk : ""}${
-              matched_with_acars
+              num_messages != undefined
                 ? "<br><br>Number of ACARS messages: " + num_messages
                 : ""
             }</div>`,
@@ -321,7 +305,7 @@ export let live_map_page = {
           );
           plane_marker.addTo(this.layerGroup);
 
-          if (matched_with_acars) {
+          if (num_messages != undefined) {
             plane_marker.on("click", function (e) {
               showPlaneMessages(callsign, hex);
             });

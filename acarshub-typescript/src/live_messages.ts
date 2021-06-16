@@ -885,42 +885,33 @@ export let live_messages_page = {
   },
 
   find_matches: function () {
-    let output_hex: matches[] = [];
-    let output_icao_callsigns: matches[] = [];
-    let output_tail: matches[] = [];
-    let found_callsign = false;
-    let found_hex = false;
-    let found_tail = false;
-
-    for (const msg of this.lm_msgs_received.value) {
-      found_callsign = false;
-      found_hex = false;
-      found_tail = false;
-
-      for (const item of msg) {
-        // run through each plane
-        // run through all messages that plane has
-        // output format is the matched value of that plane - for now I want to see if a plane
-        // has three types. Likely this is unnecessary and we can continue to the next plane
-        // after a single match has been found
-        // additional output, the number of messages a plane has which is length of msg
-        if (!found_hex && item.icao_hex != null) {
-          found_hex = true;
-          output_hex.push({ value: item.icao_hex, num_messages: msg.length });
+    let output_hex: { [hex: string]: number } = {};
+    for (const msgList of this.lm_msgs_received.value) {
+      for (const msg of msgList) {
+        if (msg.icao_hex != null) {
+          output_hex[msg.icao_hex.toUpperCase()] = msgList.length;
+          continue;
         }
-        if (!found_callsign && item.icao_flight != null) {
-          found_callsign = true;
-          output_hex.push({
-            value: item.icao_flight,
-            num_messages: msg.length,
-          });
-        }
-        if (!found_tail && item.tail != null) {
-          found_tail = true;
-          output_hex.push({ value: item.tail, num_messages: msg.length });
-        }
+      }
+    }
 
-        if (found_tail && found_hex && found_callsign) continue;
+    let output_icao_callsigns: { [callsign: string]: number } = {};
+    for (const msgList of this.lm_msgs_received.value) {
+      for (const msg of msgList) {
+        if (msg.icao_flight != null) {
+          output_icao_callsigns[msg.icao_flight] = msgList.length;
+          continue;
+        }
+      }
+    }
+
+    let output_tail: { [tail: string]: number } = {};
+    for (const msgList of this.lm_msgs_received.value) {
+      for (const msg of msgList) {
+        if (msg.tail != null) {
+          output_tail[msg.tail] = msgList.length;
+          continue;
+        }
       }
     }
 
@@ -928,6 +919,6 @@ export let live_messages_page = {
       hex: output_hex,
       callsigns: output_icao_callsigns,
       tail: output_tail,
-    } as matches;
+    };
   },
 };
