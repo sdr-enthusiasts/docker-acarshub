@@ -80,7 +80,7 @@ def update_keys(json_message):
         and json_message["flight"] is not None
         and "icao_hex" in json_message.keys()
     ):
-        json_message["flight"] = flight_finder(
+        json_message["flight"], json_message["icao_flight"] = flight_finder(
             callsign=json_message["flight"], hex_code=json_message["icao_hex"]
         )
     elif "flight" in json_message and json_message["flight"] is not None:
