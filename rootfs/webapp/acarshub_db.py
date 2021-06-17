@@ -798,7 +798,7 @@ def search_alerts(icao=None, tail=None, flight=None):
             session = db_session()
             search_term = {
                 "icao": icao,
-                "msg_text": alert_terms,
+                #    "msg_text": alert_terms,
                 "flight": flight,
                 "tail": tail,
             }
@@ -812,9 +812,29 @@ def search_alerts(icao=None, tail=None, flight=None):
                         else:
                             query_string += f" OR {key}:{term}*"
 
-            result = session.execute(
-                f'SELECT * FROM messages WHERE id IN (SELECT rowid FROM messages_fts WHERE messages_fts MATCH "{query_string}") ORDER BY msg_time DESC LIMIT 50 OFFSET 0'
-            )
+            if query_string != "":
+                query_string = f'SELECT * FROM messages WHERE id IN (SELECT rowid FROM messages_fts WHERE messages_fts MATCH "{query_string}")'
+
+            if alert_terms is not None:
+                terms_string = f"""SELECT id, message_type, msg_time, station_id, toaddr, fromaddr, depa, dsta, eta, gtout, gtin, wloff, wlin,
+                                lat, lon, alt, msg_text, tail, flight, icao, freq, ack, mode, label, block_id, msgno, is_response, is_onground, error, libacars, level FROM messages_saved"""
+            else:
+                terms_string = ""
+
+            if query_string != "" and terms_string != "":
+                joiner = " UNION "
+            else:
+                joiner = ""
+
+            if query_string != "" or terms_string != "":
+                result = session.execute(
+                    f"{query_string}{joiner}{terms_string} ORDER BY msg_time DESC LIMIT 50 OFFSET 0"
+                )
+            else:
+                acarshub_helpers.log(f"SKipping alert search", "database")
+                return None
+
+            print(result)
 
             processed_results = []
 
