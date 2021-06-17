@@ -473,6 +473,10 @@ window.toggle_label = function (key: string) {
   live_messages_page.toggle_label(key);
 };
 
+$(window).on("popstate", () => {
+  toggle_pages();
+});
+
 export function showPlaneMessages(
   plane_callsign: string = "",
   plane_hex: string = "",
