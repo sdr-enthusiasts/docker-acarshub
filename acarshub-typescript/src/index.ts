@@ -258,6 +258,7 @@ function update_url() {
 function toggle_pages() {
   index_acars_page =
     "/" + document.location.pathname.replace(index_acars_path, "");
+  live_map_page.plane_message_modal.close();
   for (let page in pages) {
     if (pages[page] === "/" && index_acars_page === pages[page]) {
       $("#live_messages_link").addClass("invert_a");
