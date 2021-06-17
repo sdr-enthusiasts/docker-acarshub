@@ -342,6 +342,7 @@ export let live_map_page = {
     resize_tabs(window_size.width > 500 ? 465 : 310, false);
     $(".show_when_small").css("display", `inline-block`);
     $(".show_when_big").css("display", "none");
+    $(".dont_show").css("display", "none");
   },
 
   updateModalSize: function (new_window_size: window_size) {
