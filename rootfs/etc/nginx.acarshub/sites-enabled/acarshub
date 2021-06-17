@@ -3,6 +3,12 @@ server {
   root /var/www/html;
   server_name _;
 
+  location ~* \.(?:css|js)$ {
+    expires 1d;
+    add_header Cache-Control "public";
+    proxy_pass http://127.0.0.1:8888;
+  }
+
   location / {
     proxy_pass http://127.0.0.1:8888;
   }

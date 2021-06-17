@@ -834,8 +834,6 @@ def search_alerts(icao=None, tail=None, flight=None):
                 acarshub_helpers.log(f"SKipping alert search", "database")
                 return None
 
-            print(result)
-
             processed_results = []
 
             for row in result:

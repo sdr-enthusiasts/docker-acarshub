@@ -60,7 +60,8 @@ echo "Generating decoder startup files"
 rm -rf /etc/services.d/acarsdec-* /etc/services.d/vdlm2dec-* >/dev/null 2>&1
 
 pushd ../../scripts > /dev/null 2>&1 || exit 1
-python3 assign_frequencies.py "${FREQ_CMD[@]}"
+python3 assign_frequencies.py "${FREQ_CMD[@]}" || exit 1
+python3 rename_files.py || exit 1
 
 # Ensure /database dir is present
 
