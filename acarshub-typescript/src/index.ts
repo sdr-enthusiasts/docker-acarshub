@@ -421,10 +421,6 @@ export function get_match(
   return live_messages_page.get_match(callsign, hex, tail);
 }
 
-export function get_adsb_status() {
-  return { adsb_enabled: adsb_enabled, adsb_status: adsb_getting_data };
-}
-
 // functions that need to be registered to window object
 
 window.show_page_modal = function () {

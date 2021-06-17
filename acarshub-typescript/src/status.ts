@@ -1,4 +1,3 @@
-import { get_adsb_status } from "src";
 import {
   status_decoder,
   status_global,
