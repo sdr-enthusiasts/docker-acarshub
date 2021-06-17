@@ -51,15 +51,15 @@ jobs:
       # After many hours of troubleshooting, the workaround is to pre-load the image's rootfs with the CA certificates from the runner.
       # This problem may go away in future.
       # with image sid-slim the issue appears to go away...
-      # -
-      #   name: Copy CA Certificates from GitHub Runner to Image rootfs
-      #   run: |
-      #     ls -la /etc/ssl/certs/
-      #     mkdir -p ./rootfs/etc/ssl/certs
-      #     mkdir -p ./rootfs/usr/share/ca-certificates/mozilla
-      #     cp --no-dereference /etc/ssl/certs/*.crt ./rootfs/etc/ssl/certs
-      #     cp --no-dereference /etc/ssl/certs/*.pem ./rootfs/etc/ssl/certs
-      #     cp --no-dereference /usr/share/ca-certificates/mozilla/*.crt ./rootfs/usr/share/ca-certificates/mozilla
+      -
+        name: Copy CA Certificates from GitHub Runner to Image rootfs
+        run: |
+          ls -la /etc/ssl/certs/
+          mkdir -p ./rootfs/etc/ssl/certs
+          mkdir -p ./rootfs/usr/share/ca-certificates/mozilla
+          cp --no-dereference /etc/ssl/certs/*.crt ./rootfs/etc/ssl/certs
+          cp --no-dereference /etc/ssl/certs/*.pem ./rootfs/etc/ssl/certs
+          cp --no-dereference /usr/share/ca-certificates/mozilla/*.crt ./rootfs/usr/share/ca-certificates/mozilla
 
         # Log into docker hub (so we can push images)
       -
