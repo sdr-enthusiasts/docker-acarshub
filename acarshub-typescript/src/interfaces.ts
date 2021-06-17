@@ -241,3 +241,8 @@ export interface matches {
   value: string;
   num_messages: number;
 }
+
+export interface adsb_status {
+  adsb_enabled: boolean;
+  adsb_getting_data: boolean;
+}

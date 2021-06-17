@@ -1,8 +1,10 @@
+import { get_adsb_status } from "src";
 import {
   status_decoder,
   status_global,
   status_server,
   system_status,
+  adsb_status,
 } from "./interfaces";
 
 export let status = {
@@ -11,6 +13,7 @@ export let status = {
 
   status_page_active: false as boolean,
   current_status: {} as system_status,
+  adsb_status: { adsb_enabled: false, adsb_getting_data: false } as adsb_status,
 
   status: function () {
     // Document on ready new syntax....or something. Passing a function directly to jquery
@@ -18,8 +21,33 @@ export let status = {
 
   status_received: function (msg: system_status) {
     this.current_status = msg;
-
+    this.update_status_bar();
     if (this.status_page_active) this.show_status();
+  },
+
+  update_adsb_status(
+    adsb_status = {
+      adsb_enabled: false,
+      adsb_getting_data: false,
+    } as adsb_status
+  ) {
+    this.adsb_status = adsb_status;
+  },
+
+  update_status_bar: function () {
+    if (
+      this.current_status.status.error_state == true ||
+      (this.adsb_status.adsb_enabled === true &&
+        this.adsb_status.adsb_getting_data === false)
+    ) {
+      $("#system_status").html(
+        `<a href="javascript:new_page('Status')">System Status: <span class="red_body">Error</a></span>`
+      );
+    } else {
+      $("#system_status").html(
+        `<a href="javascript:new_page('Status')">System Status: <span class="green">Okay</a></span>`
+      );
+    }
   },
 
   show_status: function () {
@@ -27,16 +55,6 @@ export let status = {
       typeof this.current_status !== "undefined" &&
       typeof this.current_status.status !== "undefined"
     ) {
-      if (this.current_status.status.error_state == true) {
-        $("#system_status").html(
-          `<a href="javascript:new_page('Status')">System Status: <span class="red_body">Error</a></span>`
-        );
-      } else {
-        $("#system_status").html(
-          `<a href="javascript:new_page('Status')">System Status: <span class="green">Okay</a></span>`
-        );
-      }
-
       $("#log").html(
         this.decode_status(
           this.current_status.status.error_state,
@@ -66,7 +84,11 @@ export let status = {
 
     html_output += '<span class="monofont">';
     html_output += "System:".padEnd(55, ".");
-    if (status) {
+    if (
+      status ||
+      (this.adsb_status.adsb_enabled &&
+        this.adsb_status.adsb_getting_data === false)
+    ) {
       html_output += '<strong><span class="red_body">DEGRADED</span></strong>';
     } else {
       html_output += '<strong><span class="green">Ok</span></strong>';
@@ -126,7 +148,23 @@ export let status = {
       html_output += "<br>";
     });
 
-    html_output += "</span>";
+    let adsb_string = "ADSB Enabled".padEnd(55, ".");
+    adsb_string += `<strong><span class="green">${
+      this.adsb_status.adsb_enabled ? "OK" : "Disabled"
+    }</span></strong><br>`;
+
+    if (this.adsb_status.adsb_enabled) {
+      let class_string = "";
+      if (this.adsb_status.adsb_getting_data == true) class_string = '"green"';
+      else class_string = "red_body";
+      let adsb_status_string = "ADSB Receiving Data".padEnd(55, ".");
+      adsb_status_string += `<strong><span class=${class_string}>${
+        this.adsb_status.adsb_getting_data ? "OK" : "Bad"
+      }</span></strong>`;
+      adsb_string += adsb_status_string;
+    }
+
+    html_output += adsb_string + "</span>";
 
     return html_output;
   },

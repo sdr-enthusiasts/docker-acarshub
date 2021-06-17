@@ -308,7 +308,7 @@ export let live_map_page = {
           plane_marker.addTo(this.layerGroup);
 
           if (num_messages) {
-            plane_marker.on("click", (e) => {
+            plane_marker.on("click", () => {
               showPlaneMessages(callsign, hex, tail);
             });
           }

@@ -37,6 +37,8 @@ let old_window_width: number = 0;
 let old_window_height: number = 0;
 
 let adsb_url: string = "";
+let adsb_enabled: boolean = false;
+let adsb_getting_data: boolean = false;
 
 const pages: string[] = [
   "/", // index/live messages
@@ -132,6 +134,12 @@ $(() => {
       toggle_pages();
       alerts_page.updateAlertCounter();
       live_map_page.live_map(msg.adsb.lat, msg.adsb.lon);
+      adsb_enabled = true;
+
+      status.update_adsb_status({
+        adsb_enabled: true,
+        adsb_getting_data: true,
+      });
 
       if (msg.adsb.bypass) adsb_url = msg.adsb.url;
       setInterval(() => {
@@ -139,9 +147,20 @@ $(() => {
           method: "GET",
           mode: "cors",
         })
-          .then((response) => response.json())
+          .then((response) => {
+            adsb_getting_data = true;
+            return response.json();
+          })
           .then((planes) => live_map_page.set_targets(planes.aircraft))
-          .catch((err) => console.error(err));
+          .catch((err) => {
+            adsb_getting_data = false;
+            status.update_adsb_status({
+              adsb_enabled: true,
+              adsb_getting_data: false,
+            });
+            status.update_status_bar();
+            console.error(err);
+          });
       }, 5000);
     }
   });
@@ -163,15 +182,6 @@ $(() => {
 
   socket.on("system_status", function (msg: system_status) {
     status.status_received(msg);
-    if (msg.status.error_state == true) {
-      $("#system_status").html(
-        `<a href="javascript:new_page('Status')">System Status: <span class="red_body">Error</a></span>`
-      );
-    } else {
-      $("#system_status").html(
-        `<a href="javascript:new_page('Status')">System Status: <span class="green">Okay</a></span>`
-      );
-    }
   });
 
   socket.on("signal_count", function (msg: signal_count_data) {
@@ -409,6 +419,10 @@ export function get_match(
   tail: string = ""
 ) {
   return live_messages_page.get_match(callsign, hex, tail);
+}
+
+export function get_adsb_status() {
+  return { adsb_enabled: adsb_enabled, adsb_status: adsb_getting_data };
 }
 
 // functions that need to be registered to window object
