@@ -135,8 +135,8 @@ def scheduled_tasks():
         schedule.every().minute.at(":30").do(acarshub_rrd.update_graphs)
         schedule.every().minute.at(":15").do(acarshub.service_check)
         # Run and Schedule the database pruner
-        acarshub.acarshub_db.pruneOld()  # clean the database on startup
-        schedule.every().hour.at(":30").do(acarshub.acarshub_db.pruneOld)
+    acarshub.acarshub_db.pruneOld()  # clean the database on startup
+    schedule.every().hour.at(":30").do(acarshub.acarshub_db.pruneOld)
 
     # Check for dead threads and restart
     schedule.every().minute.at(":45").do(

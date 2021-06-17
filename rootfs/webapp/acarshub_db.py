@@ -703,18 +703,26 @@ def pruneOld():
 
     # Grab the current time and the latest 'good' time for messages to be saved
     dt = datetime.datetime.now()
-    delta = datetime.timedelta(days=acarshub_helpers.DB_SAVE_DAYS)
-    stale_time = dt - delta
-
     # Database is storing the timestamps of messages in unix epoch. Convert the expiry time to epoch
-    epoch = stale_time.replace().timestamp()
+    epoch = (
+        (dt - datetime.timedelta(days=acarshub_helpers.DB_SAVE_DAYS))
+        .replace()
+        .timestamp()
+    )
+    epoch_alerts = (dt - datetime.timedelta(days=120)).replace().timestamp()
 
     # Open session to db, run the query, and close session
     try:
         session = db_session()
         result = session.query(messages).filter(messages.time <= epoch).delete()
         session.commit()
-        acarshub_helpers.log(f"Pruned database of {result} records", "database")
+        acarshub_helpers.log(f"Pruned main database of {result} records", "database")
+        result = (
+            session.query(messages_saved)
+            .filter(messages_saved.time <= epoch_alerts)
+            .delete()
+        )
+        acarshub_helpers.log(f"Pruned alerts database of {result} records", "database")
         session.close()
     except Exception as e:
         acarshub_helpers.acars_traceback(e, "database")
