@@ -19,8 +19,9 @@ log = logging.getLogger("werkzeug")
 log.setLevel(logging.ERROR)
 
 app = Flask(__name__)
-# Make the browser not cache files
-app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0
+# Make the browser not cache files if running in dev mode
+if acarshub_helpers.SPAM:
+    app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0
 
 # Global variable to keep track of connected users in the main namespace
 connected_users = 0
