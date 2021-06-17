@@ -850,68 +850,46 @@ export let live_messages_page = {
     }
   },
 
-  get_match: function (callsign: string = "", plane_hex: string = "") {
-    if (callsign === "" && plane_hex === "") return [];
-    for (let i = 0; i < this.lm_msgs_received.value.length; i++) {
-      for (let j = 0; j < this.lm_msgs_received.value[i].length; j++) {
+  get_match: function (
+    callsign: string = "",
+    hex: string = "",
+    tail: string = ""
+  ) {
+    if (callsign === "" && hex === "" && tail === "") return [];
+    for (const msgList of this.lm_msgs_received.value) {
+      for (const msg of msgList) {
+        // check to see if any of the inputs match the message. msg.tail needs to be checked
+        // against both callsign and tail because sometimes the tail is the flight/callsign
         if (
-          typeof this.lm_msgs_received.value[i][j].icao_hex !== "undefined" &&
-          this.lm_msgs_received.value[i][j].icao_hex?.toUpperCase() ===
-            plane_hex.toUpperCase()
+          msg.icao_hex === hex.toUpperCase() ||
+          msg.flight === callsign ||
+          msg.tail === callsign ||
+          (tail != undefined && msg.tail === tail)
         ) {
-          return this.lm_msgs_received.value[i];
-        }
-
-        if (
-          callsign !== "" &&
-          typeof this.lm_msgs_received.value[i][j].icao_flight !==
-            "undefined" &&
-          this.lm_msgs_received.value[i][j].icao_flight === callsign
-        ) {
-          return this.lm_msgs_received.value[i];
-        }
-
-        if (
-          callsign !== "" &&
-          typeof this.lm_msgs_received.value[i][j].tail !== "undefined" &&
-          this.lm_msgs_received.value[i][j].tail === callsign
-        ) {
-          return this.lm_msgs_received.value[i];
+          return msgList;
         }
       }
     }
-
     return [];
   },
 
   find_matches: function () {
     let output_hex: { [hex: string]: number } = {};
-    for (const msgList of this.lm_msgs_received.value) {
-      for (const msg of msgList) {
-        if (msg.icao_hex != null) {
-          output_hex[msg.icao_hex.toUpperCase()] = msgList.length;
-          continue;
-        }
-      }
-    }
-
     let output_icao_callsigns: { [callsign: string]: number } = {};
-    for (const msgList of this.lm_msgs_received.value) {
-      for (const msg of msgList) {
-        if (msg.icao_flight != null) {
-          output_icao_callsigns[msg.icao_flight] = msgList.length;
-          continue;
-        }
-      }
-    }
-
     let output_tail: { [tail: string]: number } = {};
     for (const msgList of this.lm_msgs_received.value) {
+      let matched_hex,
+        matched_tail,
+        matched_flight = false;
       for (const msg of msgList) {
-        if (msg.tail != null) {
+        if (!matched_hex && msg.icao_hex != null)
+          output_hex[msg.icao_hex.toUpperCase()] = msgList.length;
+        if (!matched_flight && msg.icao_flight != null)
+          output_icao_callsigns[msg.icao_flight] = msgList.length;
+        if (!matched_tail && msg.tail != null)
           output_tail[msg.tail] = msgList.length;
-          continue;
-        }
+
+        if (matched_hex && matched_flight && matched_tail) continue;
       }
     }
 

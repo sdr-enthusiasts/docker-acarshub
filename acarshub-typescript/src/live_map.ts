@@ -240,26 +240,28 @@ export let live_map_page = {
             this.adsb_planes[plane].flight || this.adsb_planes[plane].hex;
           let num_messages: number = <any>undefined; // need to cast this to any for TS to compile.
           callsign = callsign.trim();
-          const rotate = this.adsb_planes[plane].track || 0;
-          const alt = this.adsb_planes[plane].alt_baro || 0;
+          const rotate: number = this.adsb_planes[plane].track || 0;
+          const alt: number = this.adsb_planes[plane].alt_baro || 0;
           const hsl = this.altitudeColor(alt);
-          const hex = this.adsb_planes[plane].hex || "";
-          const speed = this.adsb_planes[plane].gs || 0;
-          const squawk = this.adsb_planes[plane].squawk || 0;
-          const baro_rate = this.adsb_planes[plane].baro_rate || 0;
+          const hex: string = this.adsb_planes[plane].hex || "";
+          const speed: number = this.adsb_planes[plane].gs || 0;
+          const squawk: number = this.adsb_planes[plane].squawk || 0;
+          const baro_rate: number = this.adsb_planes[plane].baro_rate || 0;
+          const tail: string = this.adsb_planes[plane].r || <any>undefined;
+          const ac_type: string = this.adsb_planes[plane].t || <any>undefined;
 
-          Object.entries(plane_data).every(([key, value]) => {
-            if (key === "hex") {
-              num_messages = value[hex.toUpperCase()];
-            } else {
-              num_messages = value[callsign];
-            }
-
-            if (num_messages != undefined) {
-              return false;
-            }
-            return true;
-          });
+          if (num_messages == undefined) {
+            num_messages = plane_data.hex[hex.toUpperCase()];
+          }
+          if (num_messages == undefined) {
+            num_messages = plane_data.callsigns[callsign];
+          }
+          if (num_messages == undefined && tail != undefined) {
+            num_messages = plane_data.tail[tail];
+          }
+          if (num_messages == undefined) {
+            num_messages = 0;
+          }
 
           // saving this for later
           // ${
@@ -271,9 +273,7 @@ export let live_map_page = {
             html: `<div><div style="fill: hsl(${hsl.h}, ${hsl.s}%, ${
               hsl.l
             }%); width: 30px; height: 30px; -webkit-transform:rotate(${rotate}deg); -moz-transform: rotate(${rotate}deg); -ms-transform: rotate(${rotate}deg); -o-transform: rotate(${rotate}deg); transform: rotate(${rotate}deg);">${
-              num_messages != undefined
-                ? this.airplane_matched_icon
-                : this.airplane_icon
+              num_messages ? this.airplane_matched_icon : this.airplane_icon
             }</div></div>`,
             iconSize: [30, 30],
           });
@@ -297,7 +297,9 @@ export let live_map_page = {
             }<br>Heading: ${Math.round(rotate)}&deg;${
               speed ? "<br>Speed: " + Math.round(speed) + " knots" : ""
             }${speed ? "<br>Squawk: " + squawk : ""}${
-              num_messages != undefined
+              tail ? "<br>Tail Number: " + tail : ""
+            }${ac_type ? "<br>Aircraft Type: " + ac_type : ""}${
+              num_messages
                 ? "<br><br>Number of ACARS messages: " + num_messages
                 : ""
             }</div>`,
@@ -305,9 +307,9 @@ export let live_map_page = {
           );
           plane_marker.addTo(this.layerGroup);
 
-          if (num_messages != undefined) {
-            plane_marker.on("click", function (e) {
-              showPlaneMessages(callsign, hex);
+          if (num_messages) {
+            plane_marker.on("click", (e) => {
+              showPlaneMessages(callsign, hex, tail);
             });
           }
         }
@@ -315,16 +317,24 @@ export let live_map_page = {
     }
   },
 
-  showPlaneMessages: function (plane_id: string = "", plane_hex: string = "") {
-    if (plane_id === "" && plane_hex === "") return;
-    const matches: acars_msg[] = get_match(plane_id, plane_hex);
+  showPlaneMessages: function (
+    plane_callsign: string = "",
+    plane_hex: string = "",
+    plane_tail = ""
+  ) {
+    if (plane_callsign === "" && plane_hex === "") return;
+    const matches: acars_msg[] = get_match(
+      plane_callsign,
+      plane_hex,
+      plane_tail
+    );
     if (matches.length === 0) return;
     const html =
       '<div style="background:white">' +
       display_messages([matches], "", true) +
       "</div>";
     this.plane_message_modal.setContent(html);
-    this.plane_message_modal.setTitle(`Messages for ${plane_id}`);
+    this.plane_message_modal.setTitle(`Messages for ${plane_callsign}`);
     const window_size: window_size = get_window_size();
     this.plane_message_modal.setHeight(window_size.height > 500 ? 500 : 400);
     this.plane_message_modal.setWidth(window_size.width > 500 ? 500 : 350);

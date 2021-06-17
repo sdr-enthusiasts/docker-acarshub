@@ -134,7 +134,6 @@ $(() => {
       live_map_page.live_map(msg.adsb.lat, msg.adsb.lon);
 
       if (msg.adsb.bypass) adsb_url = msg.adsb.url;
-
       setInterval(() => {
         fetch(adsb_url, {
           method: "GET",
@@ -404,8 +403,12 @@ export function find_matches() {
   return live_messages_page.find_matches();
 }
 
-export function get_match(callsign: string = "", plane_hex: string = "") {
-  return live_messages_page.get_match(callsign, plane_hex);
+export function get_match(
+  callsign: string = "",
+  hex: string = "",
+  tail: string = ""
+) {
+  return live_messages_page.get_match(callsign, hex, tail);
 }
 
 // functions that need to be registered to window object
@@ -461,8 +464,9 @@ window.toggle_label = function (key: string) {
 };
 
 export function showPlaneMessages(
-  plane_id: string = "",
-  plane_hex: string = ""
+  plane_callsign: string = "",
+  plane_hex: string = "",
+  plane_tail: string = ""
 ) {
-  live_map_page.showPlaneMessages(plane_id, plane_hex);
+  live_map_page.showPlaneMessages(plane_callsign, plane_hex, plane_tail);
 }

@@ -233,6 +233,8 @@ export interface adsb_plane {
   ws?: number;
   oat?: number;
   tat?: number;
+  t?: string;
+  r?: string;
 }
 
 export interface matches {
