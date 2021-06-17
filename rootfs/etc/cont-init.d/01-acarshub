@@ -6,44 +6,22 @@ mkdir -p /run/acars/
 
 FREQ_CMD=()
 
-if [ -n "${GAIN}" ]; then
-	echo "WARNING. GAIN ENV variable is deprecated. Please see the github page for updated usage."
-fi
+# we do the sanity checking of the env variables in python because I cannot stomach the idea of doing this in bash any more
 
-if [ -n "$SERIAL_ACARS" ]; then
-	echo "WARNING: SERIAL_ACARS is deprecated. If you are using this in conjunction with SERIAL unexpected results will happen. Please see the github readme for update usage."
-fi
-
-if [ -n "$SERIAL_VDLM" ]; then
-	echo "WARNING: SERIAL_VDLM is deprecated. If you are using this in conjunction with SERIAL unexpected results will happen. Please see the github readme for update usage."
-fi
+pushd ../../scripts > /dev/null 2>&1 || exit 1
+python3 acars-sanity-checker.py || exit 1
 
 if [ -n "${ENABLE_ACARS}" ]; then
-	if [ -z "${STATION_ID_ACARS}" ]; then
-		echo "Error: ACARS enabled with no STATION_ID_ACARS set. Exiting"
-		exit 1
-	fi
-
 	if [ -n "${FREQS_ACARS}" ]; then
 		IFS=';' read -r -a ACARS_ARRAY <<< "$FREQS_ACARS"
 		FREQ_CMD+=("-a" "${ACARS_ARRAY[@]}")
-	elif [ -z "${ACARS_FREQ_0}" ]; then
-		echo "Error: ACARS enabled with no FREQS_ACARS or ACARS_FREQ_0. Exiting"
-		exit 1
 	fi
 fi
 
 if [ -n "${ENABLE_VDLM}" ]; then
-	if [ -z "${STATION_ID_VDLM}" ]; then
-		echo "Error: VDLM enabled with no STATION_ID_VDLM set. Exiting"
-		exit 1
-	fi
 	if [ -n "${FREQS_VDLM}" ]; then
 		IFS=';' read -r -a VDLM_ARRAY <<< "$FREQS_VDLM"
 		FREQ_CMD+=("-v" "${VDLM_ARRAY[@]}")
-	elif [ -z "${VDLM_FREQ_0}" ]; then
-		echo "Error: VDLM enabled with no FREQS_VDLM or VDLM_FREQ_0. Exiting"
-		exit 1
 	fi
 fi
 
@@ -59,7 +37,6 @@ echo "Generating decoder startup files"
 
 rm -rf /etc/services.d/acarsdec-* /etc/services.d/vdlm2dec-* >/dev/null 2>&1
 
-pushd ../../scripts > /dev/null 2>&1 || exit 1
 python3 assign_frequencies.py "${FREQ_CMD[@]}" || exit 1
 python3 rename_files.py || exit 1
 
