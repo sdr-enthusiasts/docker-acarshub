@@ -119,18 +119,26 @@ Please note that for `TAR1090_URL` the required format is `http[s]://**HOSTNAME*
 
 ### ADSB
 
-The ACARS Hub website contains the ability to display ADSB targets along side ACARS messages. To enable this feature you need to have an available `aircraft.json` file generated from readsb and available on `tar1090webserverurl/data/aircraft.json`. [Mike Nye's tar1090](https://github.com/mikenye/docker-tar1090) is the recommended container to run to easily get this data. If you run readsb outside of Mike's container you will need to ensure the web server allows CORS headers.
+The ACARS Hub website contains the ability to display ADSB targets along side ACARS messages. To enable this feature you need to have an available `aircraft.json` file generated from readsb and available on `tar1090webserverurl/data/aircraft.json`. [Mike Nye's tar1090](https://github.com/mikenye/docker-tar1090) is the recommended container to run to easily get this data. By turning this on you will get a map that shows the ADSB targets picked up by your readsb instance and enable you to click on planes to see what messages they've sent.
 
 The following options will set the options for ADSB
 
 | Variable | Description | Required | Default |
 |----------|-------------|---------|--------|
 | `ENABLE_ADSB` | Turns on ADSB in ACARS Hub | Yes, if you want to monitor ADSB | Blank |
-| `ADSB_URL` | The IP address or URL for your tar1090 instance  | Yes | Blank |
+| `ADSB_URL` | The IP address or URL for your tar1090 instance  | Yes | `http://tar1090/data/aircraft.json`|
 | `ADSB_LAT` | The latitude of your ADSB site | No, but recommended | 0 |
 | `ADSB_LON` | The longitude of your ADSB site | No, but recommended | 0 |
 
-The formatting for `ADSB_URL` should be the IP address/port number **ONLY** for the server where your aircraft.json path is.
+If you run Mike's tar1090 container on the same machine as ACARS Hub then the default value for `ADSB_URL` is fine. If you don't, the formatting for `ADSB_URL` should be the full URL path to `aircraft.json` from your readsb source.
+
+If you desire enhanced ADSB and ACARS message matching, and are running Mike's tar1090 container, you can enable the following option:
+
+```yaml
+- TAR1090_ENABLE_AC_DB=true
+```
+
+In the configuration options for tar1090. Setting this will include additional aircraft information in the `aircraft.json` file that is not normally part of the ADSB broadcast, such as the aircraft's tail number and aircraft type. Please enable this with caution: there is increased memory usage in the tar1090 container so RAM constrained systems should be cautious enabling this.
 
 ### ACARS
 
