@@ -762,6 +762,9 @@ def database_search(search_term, page=0):
                     #    query_string += f' INTERSECT SELECT * from text_fts WHERE {key} MATCH \'"{search_term[key]}"*\''
                     count_string += f" AND {key}:{search_term[key]}*"
 
+        if query_string == "":
+            session.close()
+            return [None, 50]
         result = session.execute(
             f'{query_string}") ORDER BY rowid DESC LIMIT 50 OFFSET {page * 50}'
         )
@@ -773,6 +776,7 @@ def database_search(search_term, page=0):
             final_count = row[0]
 
         if final_count == 0:
+            session.close()
             return [None, 50]
 
         for row in result:
@@ -782,6 +786,7 @@ def database_search(search_term, page=0):
         return (processed_results, final_count)
     except Exception as e:
         acarshub_helpers.acars_traceback(e, "database")
+        session.close()
         return [None, 50]
 
 

@@ -186,7 +186,7 @@ export let search_page = {
   key_event: function () {
     if (this.search_page_active) {
       let current_terms = this.get_search_terms();
-      if (!this.is_everything_blank() && this.current_search != current_terms) {
+      if (this.current_search != current_terms) {
         this.show_all = false;
         this.delay_query(current_terms);
       }
@@ -239,8 +239,8 @@ export let search_page = {
   },
 
   is_everything_blank: function () {
-    for (let [key, value] of Object.entries(this.current_search)) {
-      if (value === "" || value === null) return false;
+    for (let [key, value] of Object.entries(this.get_search_terms())) {
+      if (value != "") return false;
     }
     return true;
   },
@@ -262,7 +262,7 @@ export let search_page = {
   // Once delay is met, compare the previous text field with the current text field. If they are the same, we'll send a query out
 
   delay_query: async function (initial_query: current_search) {
-    // Pause for half a second
+    // Pause for a tenth of a second
     await this.sleep(100);
     let old_search = this.current_search; // Save the old search term in a temp variable
     // Only execute the search query if the user is done typing. We track that by comparing the query we were asked to run
@@ -314,7 +314,6 @@ export let search_page = {
 
   runclick: function (page: number) {
     this.current_page = page;
-    console.log("test");
     if (!this.is_everything_blank() || this.show_all) {
       $("#log").html("Updating results....");
       $("#num_results").html("");
