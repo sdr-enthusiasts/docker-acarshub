@@ -343,7 +343,7 @@ export let html_functions = {
     }
 
     if (typeof message.error !== "undefined") {
-      if (message.error !== 0) {
+      if (Number(message.error) !== 0) {
         html_output += '<span class="error-tooltip"><span style="color:red;">';
         html_output += `<strong>${footer ? "E" : "Error"}: ${
           message["error"]
