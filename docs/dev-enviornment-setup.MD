@@ -17,12 +17,19 @@ Pre-requisites:
 * [brew](https://brew.sh)
 * XCode
 * Cloned ACARS Hub repository
+* Python modules from `requirements.txt` installed
 
 ```shell
+#!/bin/bash
 brew install node pre-commit
-cd acarsgitpath/acarshub-typescript
+pushd acarsgitpath/acarshub-typescript
 npm install i
+popd
+pushd acarsgitpath/rootfs/webapp
+python3 -m pip install requirements.txt
 ```
+
+Please note that if you are running on a Mac the installation of requirements.txt will fail because `rrdtool` will not install. Remove it from `requirements.txt` temporarily to get the installation done.
 
 ## Compiling the typescript / moving test files in to place
 
