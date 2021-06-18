@@ -9,7 +9,7 @@
 [showdown 1.9.1](https://cdnjs.com/libraries/showdown)
 [showdown map 1.9.1](https://cdnjs.com/libraries/showdown)
 [chart 3.2.2](https://www.jsdelivr.com/package/npm/chart.js)
-[chart datalabels](https://github.com/chartjs/chartjs-plugin-datalabels/blob/master/docs/guide/getting-started.md)
+[chart datalabels 2.0.0 RC1](https://github.com/chartjs/chartjs-plugin-datalabels/blob/master/docs/guide/getting-started.md)
 [palette.js](https://github.com/google/palette.js/blob/master/palette.js)
 [jbox 1.3.2](https://github.com/StephanWagner/jBox)
 
