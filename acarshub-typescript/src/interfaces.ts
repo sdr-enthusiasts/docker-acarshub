@@ -152,7 +152,7 @@ export interface acars_msg {
   msgno?: string;
   is_response?: number;
   is_onground?: number;
-  error?: number;
+  error?: number | string;
   libacars?: any;
   level?: number;
   matched?: boolean; // This line and below are custom parameters injected by javascript or from the backend
