@@ -131,7 +131,7 @@ export function display_messages(
         else
           html_output += html_functions.message_div(unique_id, tab_uid, false);
       }
-      //msgs_string = '<p>' + msgs_received[i].toString() + '</p>' + msgs_string;
+
       let message: acars_msg = sub_messages[u]; // variable to hold the current message
       html_output += html_functions.start_message_box();
       html_output += html_functions.message_station_and_type(

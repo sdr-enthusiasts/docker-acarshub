@@ -36,15 +36,10 @@ export let live_messages_page = {
     blockScroll: false,
     isolateScroll: true,
     animation: "zoomIn",
-    // draggable: 'title',
     closeButton: "title",
     overlay: true,
     reposition: false,
     repositionOnOpen: true,
-    // onOpen: function () {
-    //   setting_modal_on();
-    // },
-    //attach: '#settings_modal',
     title: "Live Message Settings",
     content: `<p><a href="javascript:pause_updates()" id="pause_updates" class="spread_text">Pause updates</a></p>
       <a href="javascript:filter_notext()" id="filter_notext" class="spread_text">Filter out "No Text" messages</a>
@@ -254,8 +249,6 @@ export let live_messages_page = {
       let id = document.getElementById("pause_updates");
       if (id !== null)
         id.innerHTML = '<span class="red">Unpause Updates</span>';
-      //let txt = document.createTextNode("Unpause Updates");
-      //id.appendChild(txt);
 
       let id_filtered = document.getElementById("received");
       if (id_filtered !== null) {
@@ -275,13 +268,6 @@ export let live_messages_page = {
 
     if (this.text_filter) {
       this.text_filter = false;
-      // (<HTMLInputElement>(
-      //   document.getElementById("fixed_menu")
-      // )).classList.remove("fixed_menu");
-      // (<HTMLInputElement>document.getElementById("fixed_menu")).classList.add(
-      //   "fixed_menu_short"
-      // );
-
       let id = document.getElementById("filter_notext");
       if (id !== null) id.innerHTML = "Hide Empty Messages";
       Cookies.set("filter", "false", { expires: 365 });
@@ -290,12 +276,6 @@ export let live_messages_page = {
       $("#filtered").html("");
     } else {
       this.text_filter = true;
-      // (<HTMLInputElement>(
-      //   document.getElementById("fixed_menu")
-      // )).classList.remove("fixed_menu_short");
-      // (<HTMLInputElement>document.getElementById("fixed_menu")).classList.add(
-      //   "fixed_menu"
-      // );
 
       $("#filtered").html(
         '<div><span class="menu_non_link">Filtered Messages:&nbsp;</span><span class="green" id="filteredmessages"></span></div>'

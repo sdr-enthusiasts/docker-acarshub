@@ -87,8 +87,8 @@ $(() => {
   console.log("new page");
   $("#log").html("Page loading.....please wait");
   // Observe one or multiple elements
-  // @ts-expect-error
-  ro.observe(document.querySelector("body"));
+
+  ro.observe(<Element>document.querySelector("body"));
   update_url(); // update the urls for everyone
   adsb_url = index_acars_url + "data/aircraft.json";
   //connect to the socket server.

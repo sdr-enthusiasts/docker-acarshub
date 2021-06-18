@@ -41,15 +41,10 @@ export let search_page = {
     blockScroll: false,
     isolateScroll: true,
     animation: "zoomIn",
-    // draggable: 'title',
     closeButton: "title",
     overlay: true,
     reposition: false,
     repositionOnOpen: true,
-    // onOpen: function () {
-    //   update_size();
-    // },
-    //attach: '#settings_modal',
     title: "Search for messages",
     content: `  <p><a href="javascript:showall()" class="spread_text">Most Recent Messages</a></p>
     <table class="search">
