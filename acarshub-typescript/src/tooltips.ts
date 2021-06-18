@@ -168,31 +168,17 @@ export let tooltip = {
   // Function to attach all of the tooltips to the new elements on the page
 
   attach_all_tooltips: function () {
-    // Stop ts errors
-    // TODO: Figure out why it gives a jquery TS error...
-    // @ts-expect-error
-    this.freq_tooltip.attach(".freq-tooltip");
-    // @ts-expect-error
-    this.ground_tooltip.attach(".ground-tooltip");
-    // @ts-expect-error
-    this.tail_tooltip.attach(".tail-tooltip");
-    // @ts-expect-error
-    this.flight_tooltip.attach(".flight-tooltip");
-    // @ts-expect-error
-    this.icao_tooltip.attach(".icao-tooltip");
-    // @ts-expect-error
-    this.level_tooltip.attach(".level-tooltip");
-    // @ts-expect-error
-    this.ack_tooltip.attach(".ack-tooltip");
-    // @ts-expect-error
-    this.mode_tooltip.attach(".mode-tooltip");
-    // @ts-expect-error
-    this.blockid_tooltip.attach(".blockid-tooltip");
-    // @ts-expect-error
-    this.msgno_tooltip.attach(".msgno-tooltip");
-    // @ts-expect-error
-    this.response_tooltip.attach(".response-tooltip");
-    // @ts-expect-error
-    this.error_tooltip.attach(".error-tooltip");
+    this.freq_tooltip.attach($(".freq-tooltip"));
+    this.ground_tooltip.attach($(".ground-tooltip"));
+    this.tail_tooltip.attach($(".tail-tooltip"));
+    this.flight_tooltip.attach($(".flight-tooltip"));
+    this.icao_tooltip.attach($(".icao-tooltip"));
+    this.level_tooltip.attach($(".level-tooltip"));
+    this.ack_tooltip.attach($(".ack-tooltip"));
+    this.mode_tooltip.attach($(".mode-tooltip"));
+    this.blockid_tooltip.attach($(".blockid-tooltip"));
+    this.msgno_tooltip.attach($(".msgno-tooltip"));
+    this.response_tooltip.attach($(".response-tooltip"));
+    this.error_tooltip.attach($(".error-tooltip"));
   },
 };
