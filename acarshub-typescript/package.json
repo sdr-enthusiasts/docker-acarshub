@@ -2,7 +2,7 @@
   "name": "acarshub-typescript",
   "version": "2.0.0",
   "description": "Web front end for the docker-acarshub project",
-  "main": "application.js",
+  "main": "index.js",
   "repository": "https://github.com/fredclausen/docker-acarshub",
   "scripts": {
     "buildtest-old": "npm run build && mkdir -p ./dist-min && mkdir -p ./css-min && rm -f ./css-min/site.css && rm -f ./dist-min/*.js && cp dist/*.js dist-min/ && cp ./css/site.css ./css-min/site.css",
