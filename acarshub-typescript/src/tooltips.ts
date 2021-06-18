@@ -2,6 +2,7 @@ import jBox from "jbox";
 import "jbox/dist/jBox.all.css";
 
 // TODO: figure why "Mouse" isn't in the jBox acceptable types
+// Figured it out, submitted an issue to jBox upstream. Waiting on response
 // This annoys me
 
 export let tooltip = {
