@@ -22,12 +22,8 @@ ADSB_URL = "http://tar1090/data/aircraft.json"
 ADSB_LAT = 0
 ADSB_LON = 0
 ADSB_BYPASS_URL = False
-ACARS_WEB_PORT = (
-    8888
-)  # default port for nginx proxying. SPAM will change this to 80 for running outside of docker
-LIVE_DATA_SOURCE = (
-    "127.0.0.1"
-)  # This is to switch from localhost for ACARS/VDLM to connecting to a remote data source
+ACARS_WEB_PORT = 8888  # default port for nginx proxying. SPAM will change this to 80 for running outside of docker
+LIVE_DATA_SOURCE = "127.0.0.1"  # This is to switch from localhost for ACARS/VDLM to connecting to a remote data source
 
 
 def log(msg, source):
