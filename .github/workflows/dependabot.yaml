@@ -1,4 +1,9 @@
 version: 2
+name: check Versions
+
+on:
+  schedule:
+    - cron: "0 0 * * *"
 updates:
   - package-ecosystem: "pip"
     directory: "/rootfs/webapp"
