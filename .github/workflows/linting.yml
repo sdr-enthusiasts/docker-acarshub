@@ -28,8 +28,8 @@ jobs:
       run: docker pull koalaman/shellcheck:stable
     - name: Run Shellcheck against shell scripts
       run: |
-        find . -type f -exec grep -m1 -l -E '^#!.*sh.*' {} \; | grep -v '\/(.git\/|\S+.MD|\S+.md|retired_scripts\/|acarshub-typescript\/node_modules\/)'
-        docker run --rm -i -v "$PWD:/mnt" koalaman/shellcheck:stable $(find . -type f -exec grep -m1 -l -E '^#!.*sh.*' {} \; | grep -v '\/(.git\/|\S+.MD|\S+.md|retired_scripts\/|acarshub-typescript\/node_modules\/)')
+        find . -type f -exec grep -m1 -l -E '^#!.*sh.*' {} \; | grep -v '(.git\/|\S+.MD|\S+.md|retired_scripts\/|acarshub-typescript\/node_modules\/)'
+        docker run --rm -i -v "$PWD:/mnt" koalaman/shellcheck:stable $(find . -type f -exec grep -m1 -l -E '^#!.*sh.*' {} \; | grep -v '(.git\/|\S+.MD|\S+.md|retired_scripts\/|acarshub-typescript\/node_modules\/)')
 #        docker run --rm -i -v "$PWD:/mnt" koalaman/shellcheck:stable $(find . -type f -exec grep -m1 -l -E '^#!.*execline.*' {} \; | grep -v '/.git/')
 
   hadolint:
