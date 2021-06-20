@@ -1,5 +1,5 @@
 import * as L from "leaflet";
-import { acars_msg, adsb_plane, window_size, matches } from "./interfaces";
+import { acars_msg, adsb_plane, window_size, adsb } from "./interfaces";
 import jBox from "jbox";
 import { display_messages } from "./html_generator.js";
 import {
@@ -15,7 +15,7 @@ export let live_map_page = {
   livemap_acars_url: "" as string,
 
   live_map_page_active: false as boolean,
-  adsb_planes: (<unknown>null) as adsb_plane[],
+  adsb_planes: (<unknown>null) as adsb,
   map: (<unknown>null) as L.Map,
   layerGroup: (<unknown>null) as L.LayerGroup,
   lat: 0 as number,
@@ -214,9 +214,11 @@ export let live_map_page = {
     return { h: h, s: s, l: l };
   },
 
-  set_targets: function (adsb_targets: adsb_plane[]) {
-    this.adsb_planes = adsb_targets;
-    if (this.live_map_page_active) this.update_targets();
+  set_targets: function (adsb_targets: adsb) {
+    if (this.adsb_planes == null || this.adsb_planes.now < adsb_targets.now) {
+      this.adsb_planes = adsb_targets;
+      if (this.live_map_page_active) this.update_targets();
+    }
   },
 
   live_map: function (lat_in: number, lon_in: number) {
@@ -226,32 +228,39 @@ export let live_map_page = {
   },
 
   update_targets: function () {
-    if (typeof this.map !== null && this.layerGroup !== null) {
+    if (
+      typeof this.map !== null &&
+      this.layerGroup !== null &&
+      this.adsb_planes !== null
+    ) {
       // clear old planes
       this.layerGroup.clearLayers();
       const plane_data = find_matches();
 
-      for (const plane in this.adsb_planes) {
+      for (const plane in this.adsb_planes.aircraft) {
         if (
-          this.adsb_planes[plane].lat != null &&
-          this.adsb_planes[plane].lon != null
+          this.adsb_planes.aircraft[plane].lat != null &&
+          this.adsb_planes.aircraft[plane].lon != null
         ) {
-          let callsign =
-            this.adsb_planes[plane].flight || this.adsb_planes[plane].hex;
-          let num_messages: number = <any>undefined; // need to cast this to any for TS to compile.
-          callsign = callsign.trim();
-          const rotate: number = this.adsb_planes[plane].track || 0;
-          const alt: number = this.adsb_planes[plane].alt_baro || 0;
+          const current_plane = this.adsb_planes.aircraft[plane];
+          const callsign = current_plane.flight
+            ? current_plane.flight.trim()
+            : current_plane.r || current_plane.hex.toUpperCase();
+          const rotate: number = current_plane.track || 0;
+          const alt: number = current_plane.alt_baro || 0;
           const hsl = this.altitudeColor(alt);
-          const hex: string = this.adsb_planes[plane].hex || "";
-          const speed: number = this.adsb_planes[plane].gs || 0;
-          const squawk: number = this.adsb_planes[plane].squawk || 0;
-          const baro_rate: number = this.adsb_planes[plane].baro_rate || 0;
-          const tail: string = this.adsb_planes[plane].r || <any>undefined;
-          const ac_type: string = this.adsb_planes[plane].t || <any>undefined;
+          const hex: string = current_plane.hex
+            ? current_plane.hex.toUpperCase()
+            : "";
+          const speed: number = current_plane.gs || 0;
+          const squawk: number = current_plane.squawk || 0;
+          const baro_rate: number = current_plane.baro_rate || 0;
+          const tail: string = current_plane.r || <any>undefined;
+          const ac_type: string = current_plane.t || <any>undefined;
+          let num_messages: number = <any>undefined; // need to cast this to any for TS to compile.
 
           if (num_messages == undefined) {
-            num_messages = plane_data.hex[hex.toUpperCase()];
+            num_messages = plane_data.hex[hex];
           }
           if (num_messages == undefined) {
             num_messages = plane_data.callsigns[callsign];
@@ -279,10 +288,7 @@ export let live_map_page = {
           });
 
           let plane_marker = L.marker(
-            [
-              this.adsb_planes[plane].lat || 0,
-              this.adsb_planes[plane].lon || 0,
-            ],
+            [current_plane.lat || 0, current_plane.lon || 0],
             {
               icon: plane_icon,
               riseOnHover: true,
@@ -291,8 +297,8 @@ export let live_map_page = {
 
           plane_marker.bindTooltip(
             `<div style='background:white; padding:1px 3px 1px 3px'>${
-              callsign.toUpperCase() !== hex.toUpperCase() ? callsign + "/" : ""
-            }${hex.toUpperCase()}<hr>Altitude: ${alt}ft${
+              callsign !== hex ? callsign + "/" : ""
+            }${hex}<hr>Altitude: ${alt}ft${
               baro_rate ? "<br>Altitude Rate: " + baro_rate + "fpm" : ""
             }<br>Heading: ${Math.round(rotate)}&deg;${
               speed ? "<br>Speed: " + Math.round(speed) + " knots" : ""

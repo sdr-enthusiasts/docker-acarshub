@@ -151,7 +151,7 @@ $(() => {
             adsb_getting_data = true;
             return response.json();
           })
-          .then((planes) => live_map_page.set_targets(planes.aircraft))
+          .then((planes) => live_map_page.set_targets(planes as adsb))
           .catch((err) => {
             adsb_getting_data = false;
             status.update_adsb_status({
