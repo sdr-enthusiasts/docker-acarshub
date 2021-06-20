@@ -4,16 +4,18 @@ name: check Versions
 on:
   schedule:
     - cron: "0 0 * * *"
-updates:
-  - package-ecosystem: "pip"
-    directory: "/rootfs/webapp"
-    schedule:
-      interval: "daily"
-    ignore:
-      # ignoring eventlet until gunicorn is updated to support the latest version
-      - dependency-name: "eventlet"
 
-  - package-ecosystem: "npm"
-    directory: "/acarshub-typescript"
-    schedule:
-      interval: "daily"
+jobs:
+  updates:
+    - package-ecosystem: "pip"
+      directory: "/rootfs/webapp"
+      schedule:
+        interval: "daily"
+      ignore:
+        # ignoring eventlet until gunicorn is updated to support the latest version
+        - dependency-name: "eventlet"
+
+    - package-ecosystem: "npm"
+      directory: "/acarshub-typescript"
+      schedule:
+        interval: "daily"
