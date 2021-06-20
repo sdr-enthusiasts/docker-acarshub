@@ -19,7 +19,7 @@
     "@types/jquery": "^3.5.5",
     "@types/js-cookie": "^2.2.6",
     "@types/leaflet": "^1.7.1",
-    "@types/node": "^15.0.3",
+    "@types/node": "^15.12.4",
     "@types/showdown": "^1.9.3",
     "@types/socket.io": "^2.1.13",
     "@types/socket.io-client": "^1.4.36",
