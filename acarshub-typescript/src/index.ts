@@ -6,6 +6,8 @@ import { stats_page } from "./stats.js";
 import { about } from "./about.js";
 import { status } from "./status.js";
 import { alerts_page } from "./alerts.js";
+import { io } from "socket.io-client";
+
 import {
   labels,
   system_status,
@@ -26,7 +28,7 @@ import {
 import { live_map_page } from "./live_map.js";
 
 declare const window: any;
-let socket: SocketIOClient.Socket;
+let socket = io();
 let socket_status: boolean = false;
 
 let index_acars_url: string = "";
@@ -93,7 +95,7 @@ $(() => {
   adsb_url = index_acars_url + "data/aircraft.json";
   //connect to the socket server.
 
-  socket = io.connect(`${document.location.origin}/main`, {
+  socket = io(`${document.location.origin}/main`, {
     path: index_acars_path + "socket.io",
   });
 
