@@ -1,20 +1,25 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=400, user-scalable=yes, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, minimal-ui" />
     <link rel="apple-touch-icon" sizes="180x180" href="static/images/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="static/images/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="static/images/favicon-16x16.png">
     <link rel="manifest" href="static/images/site.webmanifest">
+    <link rel="stylesheet" href="static/css/other/bootstrap.min.css">
+    <link rel="stylesheet" href="static/css/other/leaflet.css" />
+    <link rel="stylesheet" href="static/css/site.css">
+    <script src="static/js/other/leaflet.js"></script>
     <script src="static/js/other/jquery.min.js"></script>
     <script src="static/js/other/socket.io.min.js"></script>
-    <script src="static/js/html_generator.js"></script>
-    <script src="static/js/menu.js"></script>
-    <script src="static/js/alerts.js"></script>
-    <script src="static/js/other/js.cookie.min.js"></script>
-    <script src="static/js/application.js" type="module"></script>
-    <link rel="stylesheet" href="static/css/other/bootstrap.min.css">
-    <link rel="stylesheet" href="static/css/site.css">
+    <script src="static/js/other/chart.min.js"></script>
+    <script src="static/js/other/chartjs-plugin-datalabels.min.js"></script>
+    <script src="static/js/other/palette.js"></script>
+    <script src="static/js/other/showdown.min.js"></script>
+    <link href="static/js/other/jBox.all.min.css" rel="stylesheet">
+    <script src="static/js/other/jBox.all.min.js"></script>
+    <script src="static/js/index.js" type="module"></script>
     <title>ACARS Hub</title>
   </head>
   <body>
@@ -22,32 +27,11 @@
       <div class="row" id="links"></div>
     </div>
     <div class="container" id="content">
-      <div class="row">
-        <p><h3>Messages will appear here, newest first:</h3></p>
-          <div class="row" id="right">
-            <div class="fixed_results">
-              <p><a href="javascript:pause_updates()" id="pause_updates" class="spread_text">Pause updates</a></p>
-              <a href="javascript:filter_notext()" id="filter_notext" class="spread_text">Filter out "No Text" messages</a>
-              <hr>
-              <span class="menu_non_link" id="received">Received Messages</span>:&nbsp;<strong><span class="menu_non_link" id="receivedmessages">0</span></strong><br>
-              <span class="menu_non_link" id="filtered"></span>
-              <hr>
-            </div> <!-- Fixed results -->
-            <div class="fixed_menu" id="fixed_menu">
-                <div class="wrap-collabsible">
-                  <input id="collapsible" class="toggle" type="checkbox">
-                  <label for="collapsible" class="lbl-toggle">Filter Message Labels</label>
-                  <div class="collapsible-content" id="collapsible-content">
-                    <div class="content-inner" id="label_links">
-                      <p>&nbsp;</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div> <!-- Right -->
-          <div class="left" id="log">
-          </div> <!-- /#log -->
-      </div>
+      <div class="row" id="main_block">
+        <p><h3><span id="page_name"></span></h3></p>
+      </div> <!-- Main block -->
+      <div class="left" id="log">
+      </div> <!-- /#log -->
     </div>
     <div class="footer" id="footer_div">
     </div>

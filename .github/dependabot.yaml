@@ -1,0 +1,19 @@
+version: 2
+
+updates:
+  - package-ecosystem: "pip"
+    directory: "/rootfs/webapp"
+    schedule:
+      interval: daily
+      time: "00:00"
+      timezone: "Etc/UTC"
+    ignore:
+      # ignoring eventlet until gunicorn is updated to support the latest version
+      - dependency-name: "eventlet"
+
+  - package-ecosystem: "npm"
+    directory: "/acarshub-typescript"
+    schedule:
+      interval: daily
+      time: "00:00"
+      timezone: "Etc/UTC"

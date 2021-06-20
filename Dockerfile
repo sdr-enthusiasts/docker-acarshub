@@ -15,7 +15,8 @@ ENV BRANCH_RTLSDR="ed0317e6a58c098874ac58b769cf2e609c18d9a5" \
     GAIN_VDLM="280" \
     ENABLE_WEB="true" \
     QUIET_LOGS="" \
-    DB_SAVEALL="true"
+    DB_SAVEALL="true" \
+    ADSB_URL="http://tar1090/data/aircraft.json"
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
@@ -24,6 +25,7 @@ COPY rootfs/ /
 
 # Copy in acars-decoder-typescript from previous build stage
 COPY acars-decoder-typescript.tgz /src/acars-decoder-typescript.tgz
+COPY webapp.tar.gz /src/webapp.tar.gz
 
 RUN set -x && \
     TEMP_PACKAGES=() && \
@@ -61,7 +63,19 @@ RUN set -x && \
     KEPT_PACKAGES+=(socat) && \
     KEPT_PACKAGES+=(ncat) && \
     KEPT_PACKAGES+=(net-tools) && \
-    # packages for web interface
+    # Packages for nginx
+    KEPT_PACKAGES+=(nginx-light) && \
+    # packages for python
+    # commented out are for building manually
+    # TEMP_PACKAGES+=(libssl-dev) && \
+    # TEMP_PACKAGES+=(libbz2-dev) && \
+    # TEMP_PACKAGES+=(libreadline-dev) && \
+    # KEPT_PACKAGES+=(llvm) && \
+    # TEMP_PACKAGES+=(libncurses5-dev) && \
+    # TEMP_PACKAGES+=(libncursesw5-dev) && \
+    # KEPT_PACKAGES+=(xz-utils ) && \
+    # KEPT_PACKAGES+=(tk-dev) && \
+    # TEMP_PACKAGES+=(libffi-dev) && \
     KEPT_PACKAGES+=(python3) && \
     KEPT_PACKAGES+=(python3-pip) && \
     KEPT_PACKAGES+=(python3-setuptools) && \
@@ -81,9 +95,18 @@ RUN set -x && \
     ln -s /bin/tar /usr/sbin/tar && \
     apt-get update && \
     apt-get install -y --no-install-recommends \
-        ${KEPT_PACKAGES[@]} \
-        ${TEMP_PACKAGES[@]} \
+        "${KEPT_PACKAGES[@]}" \
+        "${TEMP_PACKAGES[@]}"\
         && \
+    # Make latest python from source
+    # pushd /src/ && \
+    # wget -q https://www.python.org/ftp/python/3.9.5/Python-3.9.5.tgz && \
+    # tar xzf Python-3.9.5.tgz && \
+    # cd Python-3.9.5 && \
+    # ./configure --enable-optimizations --with-lto --with-computed-gotos --with-system-ffi --enable-shared && \
+    # make -j "$(nproc)" && \
+    # make install && \
+    # ldconfig /usr/local/lib  && \
     # dependencies for web interface
     python3 -m pip install --no-cache-dir \
         -r /webapp/requirements.txt \
@@ -140,6 +163,8 @@ RUN set -x && \
     popd && popd && \
     # directory for logging
     mkdir -p /run/acars && \
+    # extract webapp
+    tar -xzvf /src/webapp.tar.gz -C / && \
     # extract airframes-acars-decoder package to /webapp/static/airframes-acars-decoder
     mkdir -p /src/airframes-acars-decoder && \
     tar xvf /src/acars-decoder-typescript.tgz -C /src/airframes-acars-decoder && \
@@ -164,7 +189,7 @@ RUN set -x && \
       /opt/healthchecks-framework/tests \
       && \
     # Clean up
-    apt-get remove -y ${TEMP_PACKAGES[@]} && \
+    apt-get remove -y "${TEMP_PACKAGES[@]}" && \
     apt-get autoremove -y && \
     rm -rf /src/* /tmp/* /var/lib/apt/lists/*
 

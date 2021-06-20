@@ -108,3 +108,15 @@ rootfs/webapp/static/images/30days.png
 rootfs/webapp/static/images/6hour.png
 ./acars-decoder-typescript.tgz
 acars-decoder-typescript.tgz
+acarshub-typescript/node_modules/
+acarshub-typescript/dist/
+acarshub-typescript/dist-min/
+acarshub-typescript/css-min/
+rootfs/webapp/static/js/*.js
+js/**
+css/**
+rootfs/webapp/static/js/*
+rootfs/webapp/static/css/*
+webapp/**
+webapp.tar.gz
+rootfs/webapp/__pycache__/acarshub_helpers.cpython-38.pyc

@@ -1,0 +1,23 @@
+#!/usr/bin/with-contenv bash
+# shellcheck shell=bash
+
+if [[ ! -e /nginx-ranonce ]]; then
+    cp /etc/nginx.acarshub/sites-enabled/acarshub /etc/nginx/sites-enabled/acarshub || exit 1
+    rm /etc/nginx/nginx.conf  || exit 1
+    cp /etc/nginx.acarshub/nginx.conf /etc/nginx/nginx.conf || exit 1
+    rm -rv /etc/nginx.acarshub || exit 1
+    rm /etc/nginx/sites-enabled/default || exit 1
+
+    # turn off nginx logging
+    # shellcheck disable=SC1003
+    sed -i 's\access_log .*\access_log off;\' /etc/nginx/nginx.conf
+    # shellcheck disable=SC1003
+    sed -i 's\error_log .*\error_log /dev/null crit;\' /etc/nginx/nginx.conf
+
+    #write the ADSB URL in to the nginx config file
+    sed -i "s\<>\\${ADSB_URL}\\" /etc/nginx/sites-enabled/acarshub
+else
+    echo "SKipping nginx file configuring, container was restarted"
+fi
+
+touch /nginx-ranonce

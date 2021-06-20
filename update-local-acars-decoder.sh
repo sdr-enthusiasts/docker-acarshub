@@ -1,7 +1,10 @@
 #!/bin/bash
 
-rm -rf /Users/fred/Git/acars-decoder-typescript
-pushd /Users/fred/Git/ || exit
+# Will clone the typescript code to the parent dir, build, and copy in to
+# ACARS Hub tree where appropriate
+
+rm -rf ../acars-decoder-typescript
+pushd ../ || exit
 git clone https://github.com/airframesio/acars-decoder-typescript.git
 
 pushd acars-decoder-typescript || exit
@@ -21,8 +24,8 @@ find . -type f -iname '*.js' -exec sed -i.bu """/import .* from \".*\";/ s/\";/.
 find . -type f -iname '*.js' -exec sed -i.bu """/export .* from '.*';/ s/';/.js';/""" {} \;
 find . -type f -iname '*.js' -exec sed -i.bu """/export .* from \".*\";/ s/\";/.js\";/""" {} \;
 
-rm -rf /Users/fred/Git/docker-acarshub/rootfs/webapp/static/airframes-acars-decoder
+rm -rf ../docker-acarshub/rootfs/webapp/static/airframes-acars-decoder
 rm -rf ./*.bu
 
-mkdir -p /Users/fred/Git/docker-acarshub/rootfs/webapp/static/airframes-acars-decoder
-cp -r . /Users/fred/Git/docker-acarshub/rootfs/webapp/static/airframes-acars-decoder
+mkdir -p ../docker-acarshub/rootfs/webapp/static/airframes-acars-decoder
+cp -r . ../docker-acarshub/rootfs/webapp/static/airframes-acars-decoder

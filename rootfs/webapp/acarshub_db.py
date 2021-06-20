@@ -43,6 +43,7 @@ try:
         message_labels = json.loads(url.read().decode())
     acarshub_helpers.log("Completed loading message labels", "database")
 except Exception as e:
+    message_labels = {"labels": {}}  # handle URL exception
     acarshub_helpers.acars_traceback(e, "database")
 
 # DB PATH MUST BE FROM ROOT!
@@ -702,18 +703,26 @@ def pruneOld():
 
     # Grab the current time and the latest 'good' time for messages to be saved
     dt = datetime.datetime.now()
-    delta = datetime.timedelta(days=acarshub_helpers.DB_SAVE_DAYS)
-    stale_time = dt - delta
-
     # Database is storing the timestamps of messages in unix epoch. Convert the expiry time to epoch
-    epoch = stale_time.replace().timestamp()
+    epoch = (
+        (dt - datetime.timedelta(days=acarshub_helpers.DB_SAVE_DAYS))
+        .replace()
+        .timestamp()
+    )
+    epoch_alerts = (dt - datetime.timedelta(days=120)).replace().timestamp()
 
     # Open session to db, run the query, and close session
     try:
         session = db_session()
         result = session.query(messages).filter(messages.time <= epoch).delete()
         session.commit()
-        acarshub_helpers.log(f"Pruned database of {result} records", "database")
+        acarshub_helpers.log(f"Pruned main database of {result} records", "database")
+        result = (
+            session.query(messages_saved)
+            .filter(messages_saved.time <= epoch_alerts)
+            .delete()
+        )
+        acarshub_helpers.log(f"Pruned alerts database of {result} records", "database")
         session.close()
     except Exception as e:
         acarshub_helpers.acars_traceback(e, "database")
@@ -753,6 +762,9 @@ def database_search(search_term, page=0):
                     #    query_string += f' INTERSECT SELECT * from text_fts WHERE {key} MATCH \'"{search_term[key]}"*\''
                     count_string += f" AND {key}:{search_term[key]}*"
 
+        if query_string == "":
+            session.close()
+            return [None, 50]
         result = session.execute(
             f'{query_string}") ORDER BY rowid DESC LIMIT 50 OFFSET {page * 50}'
         )
@@ -764,6 +776,7 @@ def database_search(search_term, page=0):
             final_count = row[0]
 
         if final_count == 0:
+            session.close()
             return [None, 50]
 
         for row in result:
@@ -773,6 +786,7 @@ def database_search(search_term, page=0):
         return (processed_results, final_count)
     except Exception as e:
         acarshub_helpers.acars_traceback(e, "database")
+        session.close()
         return [None, 50]
 
 
@@ -789,7 +803,7 @@ def search_alerts(icao=None, tail=None, flight=None):
             session = db_session()
             search_term = {
                 "icao": icao,
-                "msg_text": alert_terms,
+                #    "msg_text": alert_terms,
                 "flight": flight,
                 "tail": tail,
             }
@@ -803,9 +817,27 @@ def search_alerts(icao=None, tail=None, flight=None):
                         else:
                             query_string += f" OR {key}:{term}*"
 
-            result = session.execute(
-                f'SELECT * FROM messages WHERE id IN (SELECT rowid FROM messages_fts WHERE messages_fts MATCH "{query_string}") ORDER BY msg_time DESC LIMIT 50 OFFSET 0'
-            )
+            if query_string != "":
+                query_string = f'SELECT * FROM messages WHERE id IN (SELECT rowid FROM messages_fts WHERE messages_fts MATCH "{query_string}")'
+
+            if alert_terms is not None:
+                terms_string = f"""SELECT id, message_type, msg_time, station_id, toaddr, fromaddr, depa, dsta, eta, gtout, gtin, wloff, wlin,
+                                lat, lon, alt, msg_text, tail, flight, icao, freq, ack, mode, label, block_id, msgno, is_response, is_onground, error, libacars, level FROM messages_saved"""
+            else:
+                terms_string = ""
+
+            if query_string != "" and terms_string != "":
+                joiner = " UNION "
+            else:
+                joiner = ""
+
+            if query_string != "" or terms_string != "":
+                result = session.execute(
+                    f"{query_string}{joiner}{terms_string} ORDER BY msg_time DESC LIMIT 50 OFFSET 0"
+                )
+            else:
+                acarshub_helpers.log(f"SKipping alert search", "database")
+                return None
 
             processed_results = []
 
@@ -933,12 +965,12 @@ def get_errors():
         nonlogged = session.query(messagesCountDropped).first()
         session.close()
 
-        return (
-            count.total,
-            count.errors,
-            nonlogged.nonlogged_good,
-            nonlogged.nonlogged_errors,
-        )
+        return {
+            "non_empty_total": count.total,
+            "non_empty_errors": count.errors,
+            "empty_total": nonlogged.nonlogged_good,
+            "empty_errors": nonlogged.nonlogged_errors,
+        }
 
     except Exception as e:
         acarshub_helpers.acars_traceback(e, "database")

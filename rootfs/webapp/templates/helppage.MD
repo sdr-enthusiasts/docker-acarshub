@@ -7,6 +7,7 @@ ACARS Hub is a collaborative, open source effort to easily enable reception of, 
 There are three main pages you can interact with:
 
 1. `Live Messages`. This page will show you a rolling, constantly updated, list of up to the 50 most recent live messages as they come in. You can filter out messages that do not contain any information (the `Filter Out 'No Text' Messages/Show 'No Text' Messages` link on the right side), as well as pause the page update so you can catch up with messages.
+1. `Live Map`. If you have enabled ADSB this link will be available to you. You can see live ADSB targets from your local tar1090 instance, with targets that have ACARS messages highlighted in a circle.
 1. `Search Database`. If you want to look for interesting messages from the past you can use this page to have a look. On the right side, the `Most Recent Messages` will provide a look at your messages in chronological order, most recent first. Otherwise, you can use the provided search for to select the field you are interested in searching and the term to look for.
 1. `Statistics`. This page will provide an insight in to the data you've collected.
 1. `Alerts`. Use this page to provide ACARS Hub words in the message body, flight (aka callsign), tail number or ICAO transponder codes that you want to monitor. Please see the [alerts](#alerts) section below for more information.
