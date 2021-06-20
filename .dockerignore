@@ -10,3 +10,12 @@ acarshub-typescript/node_modules
 rootfs/webapp/static/js
 rootfs/webapp/static/airframes-acars-decoder
 rootfs/webapp/static/css
+docs
+retired_scripts
+.eslintignore
+.pre-commit-config.yaml
+notes.txt
+update-local-acars-decoder.sh
+generate_local_dockerfile.sh
+tools
+.vscode
