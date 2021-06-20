@@ -22,7 +22,6 @@
     "@types/node": "^15.12.4",
     "@types/showdown": "^1.9.3",
     "@types/socket.io": "^2.1.13",
-    "@types/socket.io-client": "^3.0.0",
     "eslint": "^7.29.0",
     "jsmin": "^1.0.1",
     "ts-loader": "^9.2.3",
