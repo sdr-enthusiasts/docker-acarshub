@@ -1,12 +1,7 @@
 import jBox from "jbox";
 import "jbox/dist/jBox.all.css";
 
-// TODO: figure why "Mouse" isn't in the jBox acceptable types
-// Figured it out, submitted an issue to jBox upstream. Waiting on response
-// This annoys me
-
 export let tooltip = {
-  // @ts-expect-error
   freq_tooltip: new jBox("Mouse", {
     title: "Frequency",
     content: "The frequency this message was received on",
@@ -18,7 +13,6 @@ export let tooltip = {
     },
   }),
 
-  // @ts-expect-error
   ground_tooltip: new jBox("Mouse", {
     title: "Ground",
     content: "Is the aircraft on the ground?",
@@ -30,7 +24,6 @@ export let tooltip = {
     },
   }),
 
-  // @ts-expect-error
   tail_tooltip: new jBox("Mouse", {
     title: "Tail",
     content: "The tail number of the plane",
@@ -42,7 +35,6 @@ export let tooltip = {
     },
   }),
 
-  // @ts-expect-error
   flight_tooltip: new jBox("Mouse", {
     title: "Flight Number/Callsign",
     getContent: "data-jbox-content",
@@ -54,7 +46,6 @@ export let tooltip = {
     },
   }),
 
-  // @ts-expect-error
   icao_tooltip: new jBox("Mouse", {
     title: "ICAO Value",
     content: "The ICAO value assigned to the aircraft",
@@ -66,7 +57,6 @@ export let tooltip = {
     },
   }),
 
-  // @ts-expect-error
   level_tooltip: new jBox("Mouse", {
     title: "Signal Level",
     getContent: "data-jbox-content",
@@ -78,7 +68,6 @@ export let tooltip = {
     },
   }),
 
-  // @ts-expect-error
   ack_tooltip: new jBox("Mouse", {
     title: "Acknowledgement",
     content:
@@ -90,7 +79,7 @@ export let tooltip = {
       y: "bottom",
     },
   }),
-  // @ts-expect-error
+
   mode_tooltip: new jBox("Mouse", {
     title: "Mode",
     content: "A flag to indicate the mode of the message.",
@@ -102,7 +91,6 @@ export let tooltip = {
     },
   }),
 
-  // @ts-expect-error
   blockid_tooltip: new jBox("Mouse", {
     title: "Block ID",
     content: "A flag to indicate the block-id of the message.",
@@ -114,7 +102,6 @@ export let tooltip = {
     },
   }),
 
-  // @ts-expect-error
   msgno_tooltip: new jBox("Mouse", {
     title: "Message Number",
     content:
@@ -126,7 +113,7 @@ export let tooltip = {
       y: "bottom",
     },
   }),
-  // @ts-expect-error
+
   response_tooltip: new jBox("Mouse", {
     title: "Response",
     content: "A flag to indicate if the message is, or requires, a response.",
@@ -138,7 +125,6 @@ export let tooltip = {
     },
   }),
 
-  // @ts-expect-error
   error_tooltip: new jBox("Mouse", {
     title: "Error",
     content: "A flag to indicate if the message had any errors in decoding.",
