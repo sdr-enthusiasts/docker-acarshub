@@ -2,6 +2,7 @@ import * as L from "leaflet";
 import { acars_msg, adsb_plane, window_size, adsb } from "./interfaces";
 import jBox from "jbox";
 import { display_messages } from "./html_generator.js";
+
 import {
   resize_tabs,
   showPlaneMessages,
@@ -365,7 +366,15 @@ export let live_map_page = {
     this.live_map_page_active = state;
     if (this.live_map_page_active) {
       this.set_html();
-      this.map = L.map("mapid").setView([this.lat, this.lon], 8);
+      this.map = L.map("mapid", {
+        zoomDelta: 0.2,
+        center: [this.lat, this.lon],
+        zoom: 8,
+        scrollWheelZoom: false,
+        // @ts-expect-error
+        smoothWheelZoom: true,
+        smoothSensitivity: 1,
+      });
 
       L.tileLayer("http://{s}.tile.osm.org/{z}/{x}/{y}.png", {
         detectRetina: true,

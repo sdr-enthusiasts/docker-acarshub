@@ -12,6 +12,7 @@
 [chart datalabels 2.0.0 RC1](https://github.com/chartjs/chartjs-plugin-datalabels/blob/master/docs/guide/getting-started.md)
 [palette.js](https://github.com/google/palette.js/blob/master/palette.js)
 [jbox 1.3.3](https://github.com/StephanWagner/jBox)
+[Leaflet Smooth Wheel Zoom 6/21/21](https://github.com/mutsuyuki/Leaflet.SmoothWheelZoom)
 
 ## CSS
 
