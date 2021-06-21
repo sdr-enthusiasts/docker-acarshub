@@ -6,6 +6,7 @@
 
 ACARS_BIN="/usr/local/bin/acarsdec"
 DEVICE_ID=""
+SERIAL=""
 # shellcheck disable=SC2001
 FREQS_ACARS=""
 PPM=""
@@ -41,7 +42,7 @@ ACARS_CMD+=("-j" '127.0.0.1:5550')
 if [ -n "${DEVICE_ID}" ]; then
 	ACARS_CMD+=("-r" "$DEVICE_ID")
 else
-	echo "[acarsdec] No serial number / device index set. Using device index 0. If also running VDLM decoding one of these processes will fail. To fix, set SERIAL_ACARS and SERIAL_VDLM"
+	echo "[acarsdec-$SERIAL] No serial number / device index set. Using device index 0. If also running VDLM decoding one of these processes will fail. To fix, set SERIAL_ACARS and SERIAL_VDLM"
 	ACARS_CMD+=("-r" "0")
 fi
 
@@ -50,10 +51,10 @@ ACARS_CMD+=($FREQS_ACARS)
 
 set -eo pipefail
 
-echo "[acarsdec] Starting: '$ACARS_BIN" "${ACARS_CMD[*]}'"
+echo "[acarsdec-$SERIAL] Starting: '$ACARS_BIN" "${ACARS_CMD[*]}'"
 
 # shellcheck disable=SC2016
 "$ACARS_BIN" "${ACARS_CMD[@]}" \
-2>&1  | stdbuf -o0 sed --unbuffered '/^$/d' | stdbuf -o0 awk '{print "[acarsdec] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
+2>&1 | stdbuf -o0 sed --unbuffered '/^$/d' | stdbuf -o0 awk '{print "[acarsdec] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
 
 sleep 5
