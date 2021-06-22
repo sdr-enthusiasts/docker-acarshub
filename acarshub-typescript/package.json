@@ -39,6 +39,6 @@
     "socket.io-client": "4.1.2",
     "ts-node": "^10.0.0",
     "uglifycss": "^0.0.29",
-    "uglifyjs-folder": "^2.0.0"
+    "uglifyjs-folder": "^3.0.0"
   }
 }
