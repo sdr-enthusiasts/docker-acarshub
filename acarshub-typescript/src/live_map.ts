@@ -377,7 +377,8 @@ export let live_map_page = {
       });
 
       L.tileLayer("http://{s}.tile.osm.org/{z}/{x}/{y}.png", {
-        detectRetina: true,
+        detectRetina: false,
+        opacity: 0.6,
         attribution:
           '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors',
       }).addTo(this.map);
