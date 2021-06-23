@@ -97,7 +97,9 @@ export let stats_page = {
                 font: {
                   weight: "bold",
                 },
-                formatter: Math.round,
+                formatter: (value) => {
+                  return value.toLocaleString();
+                },
                 padding: 6,
               },
             },
@@ -282,13 +284,15 @@ export let stats_page = {
                     return (
                       freq_labels_acars[context.dataIndex] +
                       "\n" +
-                      freq_data_acars[context.dataIndex] +
+                      freq_data_acars[context.dataIndex].toLocaleString() +
                       " msgs\n" +
                       (
                         (freq_data_acars[context.dataIndex] /
                           total_count_acars) *
                         100
-                      ).toFixed(2) +
+                      )
+                        .toFixed(2)
+                        .toLocaleString() +
                       "%"
                     );
                   },
@@ -364,12 +368,14 @@ export let stats_page = {
                     return (
                       freq_labels_vdlm[context.dataIndex] +
                       "\n" +
-                      freq_data_vdlm[context.dataIndex] +
+                      freq_data_vdlm[context.dataIndex].toLocaleString() +
                       " msgs\n" +
                       (
                         (freq_data_vdlm[context.dataIndex] / total_count_vdlm) *
                         100
-                      ).toFixed(2) +
+                      )
+                        .toFixed(2)
+                        .toLocaleString() +
                       "%"
                     );
                   },
@@ -478,10 +484,12 @@ export let stats_page = {
                 },
                 formatter: (value, context) => {
                   return (
-                    value +
+                    value.toLocaleString() +
                     count_labels[context.dataIndex] +
                     "\n" +
-                    ((value / total_non_empty) * 100).toFixed(2) +
+                    ((value / total_non_empty) * 100)
+                      .toFixed(2)
+                      .toLocaleString() +
                     "% of total messages"
                   );
                 },
@@ -544,10 +552,10 @@ export let stats_page = {
                 },
                 formatter: (value, context) => {
                   return (
-                    value +
+                    value.toLocaleString() +
                     count_labels[context.dataIndex] +
                     "\n" +
-                    ((value / empty_total) * 100).toFixed(2) +
+                    ((value / empty_total) * 100).toFixed(2).toLocaleString() +
                     "% of total messages"
                   );
                 },
