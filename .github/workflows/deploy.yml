@@ -8,6 +8,7 @@ on:
       - main
     paths-ignore:
       - '**.md'
+      - '**.MD'
 
   # Build and deploy the image nightly (to ensure we pick up any security updates)
   schedule:
