@@ -448,7 +448,7 @@ ul.primary li a.invert_a:hover {
 /* prime */
 ul.primary li a {
   display: block;
-  padding-top: 23px;
+  padding-top: 35px;
   padding-bottom: 10px;
   padding-right: 20px;
   padding-left: 20px;
@@ -686,15 +686,24 @@ img.banner_img {
 
 li.img_box {
   width: 100px;
+  height: 80px;
   display: block;
   padding-top: 5px;
   padding-bottom: 0px;
   border-right: 1px solid var(--grey-bg);
   text-align:center;
+  color: white;
+  text-shadow: none;
+}
+
+li.img_box svg {
+  max-width: 85%;
+  max-height: 80px;
+  letter-spacing: 0px;
 }
 
 canvas {
-  max-height: 400px;
+  max-height: 400px !important;
 }
 
 /* modal window stuff */
@@ -728,9 +737,19 @@ canvas {
   color: var(--blue-highlight);
 }
 
-@media only screen and (max-width: 1050px) {
+@media only screen and (max-width: 1200px) {
   #logo_image{
     display: none;
+  }
+
+  ul.primary li a {
+    padding-top: 23px;
+  }
+  nav {
+    letter-spacing: 1px;
+  }
+  .right_side {
+    float: left;
   }
 }
 
@@ -749,19 +768,11 @@ canvas {
     float: none;
   }
 
-  .right_side {
-    float: left;
-  }
-
-  nav {
-    letter-spacing: 1px;
-  }
-
   ul.primary li a {
-    padding-top: 5px;
-    padding-bottom: 5px;
-    padding-right: 5px;
-    padding-left: 5px;
+    padding-top: 2.5px;
+    padding-bottom: 2.5px;
+    padding-right: 2.5px;
+    padding-left: 2.5px;
   }
 
   ul.primary li:hover a {

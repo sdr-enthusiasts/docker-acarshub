@@ -1,3 +1,4 @@
+import { images } from "./images.js";
 export let menu = {
   acars_path: "" as string,
   acars_url: "" as string,
@@ -7,7 +8,7 @@ export let menu = {
   generate_menu: function () {
     let html = '<div class="wrap"><span class="decor"></span>';
     html += '<nav><ul class="primary">';
-    html += `<li class="img_box" id="logo_image"><img src="${this.acars_url}static/images/acarshubsquare.png" class="banner_img" alt="ACARS Hub Logo"></li>`;
+    html += `<li class="img_box" id="logo_image">${images.acars_hub_logo}"</li>`;
     html += `<li><a href="javascript:new_page('Live Messages')" id="live_messages_link">Live Messages</a></li>`;
     if (this.menu_adsb)
       html += `<li><a href="javascript:new_page('Live Map')" id="live_map_link">Live Map</a></li>`;
