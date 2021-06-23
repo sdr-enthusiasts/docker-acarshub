@@ -25,7 +25,8 @@ export let stats_page = {
   chart_signals: (<unknown>null) as Chart,
   chart_frequency_data_acars: (<unknown>null) as Chart,
   chart_frequency_data_vdlm: (<unknown>null) as Chart,
-  chart_message_counts: (<unknown>null) as Chart,
+  chart_message_counts_data: (<unknown>null) as Chart,
+  chart_message_counts_empty: (<unknown>null) as Chart,
 
   alert_data: {} as alert_term,
   signal_data: {} as signal,
@@ -34,9 +35,15 @@ export let stats_page = {
 
   acars_on: false as boolean,
   vdlm_on: false as boolean,
+  width: 1000 as number,
 
   // @ts-expect-error
-  p: new palette("tol", 12, 0, "").map(function (hex: any) {
+  tol: new palette("tol", 12, 0, "").map(function (hex: any) {
+    return "#" + hex;
+  }),
+
+  // @ts-expect-error
+  rainbox: new palette("cb-Dark2", 8, 0, "").map(function (hex: any) {
     return "#" + hex;
   }),
 
@@ -70,7 +77,7 @@ export let stats_page = {
             datasets: [
               {
                 label: "Received Alert Terms",
-                backgroundColor: this.p,
+                backgroundColor: this.tol,
                 //borderColor: 'rgb(0, 0, 0)',
                 data: alert_chart_data,
                 //borderWidth: 1
@@ -156,7 +163,9 @@ export let stats_page = {
           },
 
           // Configuration options go here
-          options: {},
+          options: {
+            responsive: true,
+          },
         });
       }
     }
@@ -237,7 +246,7 @@ export let stats_page = {
               datasets: [
                 {
                   label: "ACARS Frequencies",
-                  backgroundColor: this.p,
+                  backgroundColor: this.rainbox,
                   borderColor: "rgb(0, 0, 0)",
                   data: freq_data_acars,
                   //pointRadius: 0,
@@ -255,6 +264,10 @@ export let stats_page = {
                 },
                 tooltip: {
                   enabled: false,
+                },
+                title: {
+                  display: true,
+                  text: "ACARS Frequency Counts",
                 },
                 datalabels: {
                   backgroundColor: function (context: any) {
@@ -275,15 +288,17 @@ export let stats_page = {
                         (freq_data_acars[context.dataIndex] /
                           total_count_acars) *
                         100
-                      ).toPrecision(4) +
+                      ).toFixed(2) +
                       "%"
                     );
                   },
                   align: "bottom",
                   padding: 6,
-                  //@ts-expect-error
                   anchor: (context) => {
-                    return freq_labels_acars_positions[context.dataIndex];
+                    return freq_labels_acars_positions[context.dataIndex] as
+                      | "start"
+                      | "end"
+                      | "center";
                   },
                   offset: (context) => {
                     return freq_labels_acars_offset[context.dataIndex];
@@ -313,7 +328,7 @@ export let stats_page = {
               datasets: [
                 {
                   label: "VDLM Frequencies",
-                  backgroundColor: this.p,
+                  backgroundColor: this.rainbox,
                   borderColor: "rgb(0, 0, 0)",
                   data: freq_data_vdlm,
                   //pointRadius: 0,
@@ -326,6 +341,16 @@ export let stats_page = {
             options: {
               responsive: true,
               plugins: {
+                legend: {
+                  display: false,
+                },
+                tooltip: {
+                  enabled: false,
+                },
+                title: {
+                  display: true,
+                  text: "VDLM Frequency Counts",
+                },
                 datalabels: {
                   backgroundColor: function (context: any) {
                     return context.dataset.backgroundColor;
@@ -344,15 +369,17 @@ export let stats_page = {
                       (
                         (freq_data_vdlm[context.dataIndex] / total_count_vdlm) *
                         100
-                      ).toPrecision(4) +
+                      ).toFixed(2) +
                       "%"
                     );
                   },
                   align: "bottom",
                   padding: 6,
-                  //@ts-expect-error
                   anchor: (context) => {
-                    return freq_labels_vdlm_positions[context.dataIndex];
+                    return freq_labels_vdlm_positions[context.dataIndex] as
+                      | "start"
+                      | "end"
+                      | "center";
                   },
                   offset: (context) => {
                     return freq_labels_vdlm_offset[context.dataIndex];
@@ -373,55 +400,53 @@ export let stats_page = {
       typeof this.count_data !== "undefined" &&
       typeof this.count_data.count !== "undefined"
     ) {
-      const error: number = this.count_data.count.non_empty_errors;
       const total: number =
         this.count_data.count.non_empty_total +
         this.count_data.count.empty_total +
         this.count_data.count.non_empty_errors;
+      const total_non_empty: number =
+        this.count_data.count.non_empty_total +
+        this.count_data.count.non_empty_errors;
+      const error: number = this.count_data.count.non_empty_errors;
       const good_msg: number = this.count_data.count.non_empty_total - error;
 
       const empty_error: number = this.count_data.count.empty_errors;
       const empty_good: number = this.count_data.count.empty_total;
-      const empty_total: number = empty_good + empty_error;
+      const empty_total: number = empty_error + empty_good;
 
-      const counts: number[] = [
-        total,
-        good_msg,
-        error,
-        empty_total,
-        empty_good,
-        empty_error,
-      ];
+      const counts_data: number[] = [good_msg, error];
+
+      const counts_empty: number[] = [empty_good, empty_error];
       const count_labels: string[] = [
-        "Total Messages (All)",
-        `Messages (No Errors)`,
-        `Messages (W/Errors)`,
-        `Empty Messages (Total)`,
-        `Empty Messages (No Errors)`,
-        `Empty Messages (W/Errors)`,
+        " Messages (No Errors)",
+        " Messages (W/Errors)",
       ];
 
-      if (this.chart_message_counts !== null) {
-        this.chart_message_counts.destroy();
+      if (this.chart_message_counts_data !== null) {
+        this.chart_message_counts_data.destroy();
       }
-      const canvas: HTMLCanvasElement = <HTMLCanvasElement>(
-        document.getElementById("msg_count")
+
+      if (this.chart_message_counts_empty !== null) {
+        this.chart_message_counts_empty.destroy();
+      }
+      const canvas_data: HTMLCanvasElement = <HTMLCanvasElement>(
+        document.getElementById("msg_count_data")
       );
-      const ctx: CanvasRenderingContext2D = canvas.getContext("2d")!;
-      if (ctx != null) {
-        this.chart_message_counts = new Chart(ctx, {
+      const ctx_data: CanvasRenderingContext2D = canvas_data.getContext("2d")!;
+      if (ctx_data != null) {
+        this.chart_message_counts_data = new Chart(ctx_data, {
           // The type of chart we want to create
-          type: "bar",
+          type: "pie",
 
           // The data for our dataset
           data: {
             labels: count_labels,
             datasets: [
               {
-                label: "Frequency Counts",
-                backgroundColor: this.p,
+                label: "Frequency Count for Messages",
+                backgroundColor: this.rainbox,
                 borderColor: "rgb(0, 0, 0)",
-                data: counts,
+                data: counts_data,
                 //pointRadius: 0,
                 borderWidth: 1,
               },
@@ -430,7 +455,18 @@ export let stats_page = {
 
           // Configuration options go here
           options: {
+            responsive: true,
             plugins: {
+              legend: {
+                display: false,
+              },
+              tooltip: {
+                enabled: false,
+              },
+              title: {
+                display: true,
+                text: `Non-Empty Messages (${total_non_empty})`,
+              },
               datalabels: {
                 backgroundColor: function (context: any) {
                   return context.dataset.backgroundColor;
@@ -440,7 +476,15 @@ export let stats_page = {
                 font: {
                   weight: "bold",
                 },
-                formatter: Math.round,
+                formatter: (value, context) => {
+                  return (
+                    value +
+                    count_labels[context.dataIndex] +
+                    "\n" +
+                    ((value / total_non_empty) * 100).toFixed(2) +
+                    "% of total messages"
+                  );
+                },
                 padding: 6,
               },
             },
@@ -448,40 +492,72 @@ export let stats_page = {
           plugins: [ChartDataLabels],
         });
       }
-      // let html: string = '<p><table class="search">';
-      // html += `<tr><td><span class="menu_non_link">Total Messages (All): </span></td><td><span class="menu_non_link">${total}</span></td><td></td></tr>`;
-      // html += `<tr><td><span class="menu_non_link">Messages (No Errors): </span></td><td><span class="menu_non_link">${good_msg}</span></td><td><span class="menu_non_link">${
-      //   total
-      //     ? parseFloat(String((good_msg / total) * 100)).toFixed(2) + "%"
-      //     : ""
-      // }</span></td></tr>`;
-      // html += `<tr><td><span class="menu_non_link">Messages (W/Errors): </span></td><td><span class="menu_non_link">${error}</span></td><td><span class="menu_non_link">${
-      //   total ? parseFloat(String((error / total) * 100)).toFixed(2) + "%" : ""
-      // }</span></td></tr>`;
-      // html += "</table></p>";
-      // html += '<table class="search">';
-      // html += `<tr><td><span class="menu_non_link">Empty Messages (Total): </span></td><td><span class="menu_non_link">${
-      //   empty_good + empty_error
-      // }</span></td><td><span class="menu_non_link">${
-      //   total
-      //     ? parseFloat(
-      //         String(((empty_good + empty_error) / total) * 100)
-      //       ).toFixed(2) + "%"
-      //     : ""
-      // }</span></td></tr>`;
-      // html += `<tr><td><span class="menu_non_link">Empty Messages (No Errors): </span></td><td><span class="menu_non_link">${empty_good}</span></td><td><span class="menu_non_link">${
-      //   total
-      //     ? parseFloat(String((empty_good / total) * 100)).toFixed(2) + "%"
-      //     : ""
-      // }</span></td></tr>`;
-      // html += `<tr><td><span class="menu_non_link">Empty Messages (W/Errors): </span></td><td><span class="menu_non_link">${empty_error}</span></td><td><span class="menu_non_link">${
-      //   total
-      //     ? parseFloat(String((empty_error / total) * 100)).toFixed(2) + "%"
-      //     : ""
-      // }</span></td></tr>`;
-      // html += "</table>";
 
-      // $("#msgs").html(html);
+      const canvas_empty: HTMLCanvasElement = <HTMLCanvasElement>(
+        document.getElementById("msg_count_empty")
+      );
+      const ctx_empty: CanvasRenderingContext2D = canvas_empty.getContext(
+        "2d"
+      )!;
+      if (ctx_empty != null) {
+        this.chart_message_counts_empty = new Chart(ctx_empty, {
+          // The type of chart we want to create
+          type: "pie",
+
+          // The data for our dataset
+          data: {
+            labels: count_labels,
+            datasets: [
+              {
+                label: "Frequency Count for Empty Messages",
+                backgroundColor: this.rainbox,
+                borderColor: "rgb(0, 0, 0)",
+                data: counts_empty,
+                //pointRadius: 0,
+                borderWidth: 1,
+              },
+            ],
+          },
+
+          // Configuration options go here
+          options: {
+            responsive: true,
+            plugins: {
+              legend: {
+                display: false,
+              },
+              tooltip: {
+                enabled: false,
+              },
+              title: {
+                display: true,
+                text: `Empty Messages (${empty_total})`,
+              },
+              datalabels: {
+                backgroundColor: function (context: any) {
+                  return context.dataset.backgroundColor;
+                },
+                borderRadius: 4,
+                color: "white",
+                font: {
+                  weight: "bold",
+                },
+                formatter: (value, context) => {
+                  return (
+                    value +
+                    count_labels[context.dataIndex] +
+                    "\n" +
+                    ((value / empty_total) * 100).toFixed(2) +
+                    "% of total messages"
+                  );
+                },
+                padding: 6,
+              },
+            },
+          },
+          plugins: [ChartDataLabels],
+        });
+      }
     }
   },
 
@@ -612,6 +688,7 @@ export let stats_page = {
 
   set_html: function () {
     $("#log").html(`<p><div id="stat_menu"></div></p>
+    <div id="stat_images">
     <img src="static/images/1hour.png" id="1hr" alt="1 Hour"><br>
     <img src="static/images/6hour.png" id="6hr" alt="6 Hours"><br>
     <img src="static/images/12hour.png" id="12hr" alt="12 Hours"><br>
@@ -620,25 +697,60 @@ export let stats_page = {
     <img src="static/images/30days.png" id="30day" alt="30 Days"><br>
     <img src="static/images/6months.png" id="6mon" alt="6 Months"><br>
     <img src="static/images/1year.png" id="1yr" alt="1 Year"><br>
-    <canvas id="signallevels"></canvas>
+    </div>
+    <div class="chart_container"><canvas id="signallevels"></canvas></div>
     <canvas id="alertterms"></canvas>
-    ${
+    <div class="canvas_wrapper">${
       this.acars_on
-        ? '<canvas id="frequencies_acars"' +
-          (this.vdlm_on ? ' class="frequency"' : "") +
-          "></canvas>"
+        ? '<div id="acars_freq_graph" class="chart-container"><canvas id="frequencies_acars"></canvas></div>'
         : ""
     }
-${
-  this.vdlm_on
-    ? '<canvas id="frequencies_vdlm"' +
-      (this.acars_on ? ' class="frequency"' : "") +
-      "></canvas>"
-    : ""
-}
-    <canvas id="msg_count"></p>'`); // show the messages we've received
+    ${
+      this.vdlm_on
+        ? '<div id="vdlm_freq_graph" class="chart-container"><canvas id="frequencies_vdlm"></canvas></div>'
+        : ""
+    }</div>
+    <div id="counts" class="canvas_wrapper">
+    <div id="chart_msg_good" class="chart-container"><canvas id="msg_count_data"></div>
+    <div id="chart_msg_empty" class="chart-container"><canvas id="msg_count_empty"></div>
+    </div>
+    </p>'`); // show the messages we've received
     $("#modal_text").html("");
     $("#page_name").html("");
+
+    this.resize();
+  },
+
+  resize(width: number = 0) {
+    if (width) {
+      this.width = width;
+    }
+    $("#counts").css("padding-top", "10px");
+    if (this.width >= 1000) {
+      $("#acars_freq_graph").css("float", "left");
+      $("#vdlm_freq_graph").css("float", "left");
+      $("#vdlm_freq_graph").css("padding-top", "0px");
+      $("#frequencies_acars").css("float", "right");
+      $("#frequencies_vdlm").css("float", "right");
+
+      $("#chart_msg_good").css("float", "left");
+      $("#chart_msg_empty").css("float", "left");
+      $("#chart_msg_empty").css("padding-top", "0px");
+      $("#msg_count_data").css("float", "right");
+      $("#msg_count_empty").css("float", "right");
+    } else {
+      $("#acars_freq_graph").css("float", "none");
+      $("#vdlm_freq_graph").css("float", "none");
+      $("#vdlm_freq_graph").css("padding-top", "10px");
+      $("#frequencies_acars").css("float", "none");
+      $("#frequencies_vdlm").css("float", "none");
+
+      $("#chart_msg_good").css("float", "none");
+      $("#chart_msg_empty").css("float", "none");
+      $("#chart_msg_empty").css("padding-top", "10px");
+      $("#msg_count_data").css("float", "none");
+      $("#msg_count_empty").css("float", "none");
+    }
   },
 
   stats_active: function (state = false) {

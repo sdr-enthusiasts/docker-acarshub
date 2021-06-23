@@ -63,6 +63,9 @@ var ro = new ResizeObserver((entries) => {
           width: cr.width,
           height: cr.height,
         } as window_size);
+      else if (index_acars_page === "/stats") {
+        stats_page.resize(cr.width);
+      }
     }
 
     if (cr.height !== old_window_height) {

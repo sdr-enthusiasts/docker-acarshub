@@ -704,7 +704,22 @@ li.img_box svg {
 
 canvas {
   max-height: 400px !important;
+  max-width: 1000px !important;
 }
+
+.canvas_wrapper {
+  position: relative;
+  width: 1000px;
+  float: left;
+}
+
+.chart-container {
+  width: 50%;
+}
+
+/* div.canvas_wrapper div.chart-container {
+  max-width: 500px !important;
+} */
 
 /* modal window stuff */
 
@@ -872,4 +887,8 @@ svg {
   font-weight: bold;
   font-size: 15px;
   font-family: var(--mono-fonts);
+}
+
+div#stat_images {
+  max-width: 1000px;
 }
