@@ -171,13 +171,45 @@ export let stats_page = {
       let freq_data_vdlm: number[] = [];
       let freq_labels_acars: string[] = [];
       let freq_labels_vdlm: string[] = [];
+      let freq_labels_acars_positions: string[] = [];
+      let freq_labels_vdlm_positions: string[] = [];
+      let freq_labels_acars_offset: number[] = [];
+      let freq_labels_vdlm_offset: number[] = [];
+      let total_count_acars: number = 0;
+      let total_count_vdlm: number = 0;
+      let acars_offset: number = 5;
+      let vdlm_offset: number = 5;
+
+      Object.entries(this.freqs_data.freqs).forEach(([key, value]) => {
+        if (value.freq_type === "ACARS") total_count_acars += value.count;
+        else total_count_vdlm += value.count;
+      });
+
       Object.entries(this.freqs_data.freqs).forEach(([key, value]) => {
         if (value.freq_type === "ACARS") {
           freq_data_acars.push(value.count);
           freq_labels_acars.push(value.freq);
+
+          if (value.count / total_count_acars > 0.2) {
+            freq_labels_acars_positions.push("center");
+            freq_labels_acars_offset.push(0);
+          } else {
+            freq_labels_acars_positions.push("end");
+            freq_labels_acars_offset.push(acars_offset);
+            acars_offset += 60;
+          }
         } else {
           freq_data_vdlm.push(value.count);
           freq_labels_vdlm.push(value.freq);
+
+          if (value.count / total_count_acars > 0.2) {
+            freq_labels_vdlm_positions.push("center");
+            freq_labels_vdlm_offset.push(0);
+          } else {
+            freq_labels_vdlm_positions.push("end");
+            freq_labels_vdlm_offset.push(vdlm_offset);
+            vdlm_offset += 60;
+          }
         }
       });
 
@@ -193,12 +225,11 @@ export let stats_page = {
         const canvas: HTMLCanvasElement = <HTMLCanvasElement>(
           document.getElementById("frequencies_acars")
         );
-
         const ctx: CanvasRenderingContext2D = canvas.getContext("2d")!;
         if (ctx != null) {
           this.chart_frequency_data_acars = new Chart(ctx, {
             // The type of chart we want to create
-            type: "bar",
+            type: "pie",
 
             // The data for our dataset
             data: {
@@ -219,6 +250,12 @@ export let stats_page = {
             options: {
               responsive: true,
               plugins: {
+                legend: {
+                  display: false,
+                },
+                tooltip: {
+                  enabled: false,
+                },
                 datalabels: {
                   backgroundColor: function (context: any) {
                     return context.dataset.backgroundColor;
@@ -228,8 +265,30 @@ export let stats_page = {
                   font: {
                     weight: "bold",
                   },
-                  formatter: Math.round,
+                  formatter: (value, context) => {
+                    return (
+                      freq_labels_acars[context.dataIndex] +
+                      "\n" +
+                      freq_data_acars[context.dataIndex] +
+                      " msgs\n" +
+                      (
+                        (freq_data_acars[context.dataIndex] /
+                          total_count_acars) *
+                        100
+                      ).toPrecision(4) +
+                      "%"
+                    );
+                  },
+                  align: "bottom",
                   padding: 6,
+                  //@ts-expect-error
+                  anchor: (context) => {
+                    return freq_labels_acars_positions[context.dataIndex];
+                  },
+                  offset: (context) => {
+                    return freq_labels_acars_offset[context.dataIndex];
+                  },
+                  clip: false,
                 },
               },
             },
@@ -246,7 +305,7 @@ export let stats_page = {
         if (ctx != null) {
           this.chart_frequency_data_vdlm = new Chart(ctx, {
             // The type of chart we want to create
-            type: "bar",
+            type: "pie",
 
             // The data for our dataset
             data: {
@@ -276,8 +335,29 @@ export let stats_page = {
                   font: {
                     weight: "bold",
                   },
-                  formatter: Math.round,
+                  formatter: (value, context) => {
+                    return (
+                      freq_labels_vdlm[context.dataIndex] +
+                      "\n" +
+                      freq_data_vdlm[context.dataIndex] +
+                      " msgs\n" +
+                      (
+                        (freq_data_vdlm[context.dataIndex] / total_count_vdlm) *
+                        100
+                      ).toPrecision(4) +
+                      "%"
+                    );
+                  },
+                  align: "bottom",
                   padding: 6,
+                  //@ts-expect-error
+                  anchor: (context) => {
+                    return freq_labels_vdlm_positions[context.dataIndex];
+                  },
+                  offset: (context) => {
+                    return freq_labels_vdlm_offset[context.dataIndex];
+                  },
+                  clip: false,
                 },
               },
             },
