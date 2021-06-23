@@ -23,6 +23,9 @@ export let stats_page = {
 
   chart_alerts: (<unknown>null) as Chart,
   chart_signals: (<unknown>null) as Chart,
+  chart_frequency_data_acars: (<unknown>null) as Chart,
+  chart_frequency_data_vdlm: (<unknown>null) as Chart,
+  chart_message_counts: (<unknown>null) as Chart,
 
   alert_data: {} as alert_term,
   signal_data: {} as signal,
@@ -31,6 +34,11 @@ export let stats_page = {
 
   acars_on: false as boolean,
   vdlm_on: false as boolean,
+
+  // @ts-expect-error
+  p: new palette("tol", 12, 0, "").map(function (hex: any) {
+    return "#" + hex;
+  }),
 
   show_alert_chart: function () {
     if (typeof this.alert_data !== "undefined") {
@@ -52,11 +60,6 @@ export let stats_page = {
         "2d"
       )!;
       if (ctx_alerts != null) {
-        // @ts-expect-error
-        let p = palette("tol", 12, 0, "").map(function (hex: any) {
-          return "#" + hex;
-        });
-
         this.chart_alerts = new Chart(ctx_alerts, {
           // The type of chart we want to create
           type: "bar",
@@ -67,7 +70,7 @@ export let stats_page = {
             datasets: [
               {
                 label: "Received Alert Terms",
-                backgroundColor: p,
+                backgroundColor: this.p,
                 //borderColor: 'rgb(0, 0, 0)',
                 data: alert_chart_data,
                 //borderWidth: 1
@@ -164,22 +167,124 @@ export let stats_page = {
       typeof this.freqs_data !== "undefined" &&
       typeof this.freqs_data.freqs !== "undefined"
     ) {
-      let html: string = '<table class="search">';
-      html +=
-        '<thead><th><span class="menu_non_link">Frequency</span></th><th><span class="menu_non_link">Count</span></th><th><span class="menu_non_link">Type</span></th></thead>';
-      for (let i = 0; i < this.freqs_data.freqs.length; i++) {
-        if (this.freqs_data.freqs[i].freq_type == "ACARS")
-          html += `<tr><td><span class=\"menu_non_link\">${this.freqs_data.freqs[i].freq}</span></td><td><span class=\"menu_non_link\">${this.freqs_data.freqs[i].count}</span></td><td><span class=\"menu_non_link\">${this.freqs_data.freqs[i].freq_type}</span></td></tr>`;
+      let freq_data_acars: number[] = [];
+      let freq_data_vdlm: number[] = [];
+      let freq_labels_acars: string[] = [];
+      let freq_labels_vdlm: string[] = [];
+      Object.entries(this.freqs_data.freqs).forEach(([key, value]) => {
+        if (value.freq_type === "ACARS") {
+          freq_data_acars.push(value.count);
+          freq_labels_acars.push(value.freq);
+        } else {
+          freq_data_vdlm.push(value.count);
+          freq_labels_vdlm.push(value.freq);
+        }
+      });
+
+      if (this.chart_frequency_data_acars !== null) {
+        this.chart_frequency_data_acars.destroy();
       }
 
-      for (let i = 0; i < this.freqs_data.freqs.length; i++) {
-        if (this.freqs_data.freqs[i].freq_type == "VDL-M2")
-          html += `<tr><td><span class=\"menu_non_link\">${this.freqs_data.freqs[i].freq}</span></td><td><span class=\"menu_non_link\">${this.freqs_data.freqs[i].count}</span></td><td><span class=\"menu_non_link\">${this.freqs_data.freqs[i].freq_type}</span></td></tr>`;
+      if (this.chart_frequency_data_vdlm !== null) {
+        this.chart_frequency_data_vdlm.destroy();
       }
 
-      html += "</table>";
+      if (freq_data_acars.length > 0) {
+        const canvas: HTMLCanvasElement = <HTMLCanvasElement>(
+          document.getElementById("frequencies_acars")
+        );
 
-      $("#freqs").html(html);
+        const ctx: CanvasRenderingContext2D = canvas.getContext("2d")!;
+        if (ctx != null) {
+          this.chart_frequency_data_acars = new Chart(ctx, {
+            // The type of chart we want to create
+            type: "bar",
+
+            // The data for our dataset
+            data: {
+              labels: freq_labels_acars,
+              datasets: [
+                {
+                  label: "ACARS Frequencies",
+                  backgroundColor: this.p,
+                  borderColor: "rgb(0, 0, 0)",
+                  data: freq_data_acars,
+                  //pointRadius: 0,
+                  borderWidth: 1,
+                },
+              ],
+            },
+
+            // Configuration options go here
+            options: {
+              responsive: true,
+              plugins: {
+                datalabels: {
+                  backgroundColor: function (context: any) {
+                    return context.dataset.backgroundColor;
+                  },
+                  borderRadius: 4,
+                  color: "white",
+                  font: {
+                    weight: "bold",
+                  },
+                  formatter: Math.round,
+                  padding: 6,
+                },
+              },
+            },
+            plugins: [ChartDataLabels],
+          });
+        }
+      }
+
+      if (freq_data_vdlm.length > 0) {
+        const canvas: HTMLCanvasElement = <HTMLCanvasElement>(
+          document.getElementById("frequencies_vdlm")
+        );
+        const ctx: CanvasRenderingContext2D = canvas.getContext("2d")!;
+        if (ctx != null) {
+          this.chart_frequency_data_vdlm = new Chart(ctx, {
+            // The type of chart we want to create
+            type: "bar",
+
+            // The data for our dataset
+            data: {
+              labels: freq_labels_vdlm,
+              datasets: [
+                {
+                  label: "VDLM Frequencies",
+                  backgroundColor: this.p,
+                  borderColor: "rgb(0, 0, 0)",
+                  data: freq_data_vdlm,
+                  //pointRadius: 0,
+                  borderWidth: 1,
+                },
+              ],
+            },
+
+            // Configuration options go here
+            options: {
+              responsive: true,
+              plugins: {
+                datalabels: {
+                  backgroundColor: function (context: any) {
+                    return context.dataset.backgroundColor;
+                  },
+                  borderRadius: 4,
+                  color: "white",
+                  font: {
+                    weight: "bold",
+                  },
+                  formatter: Math.round,
+                  padding: 6,
+                },
+              },
+            },
+            plugins: [ChartDataLabels],
+          });
+        }
+      }
     }
   },
 
@@ -188,50 +293,115 @@ export let stats_page = {
       typeof this.count_data !== "undefined" &&
       typeof this.count_data.count !== "undefined"
     ) {
-      let error: number = this.count_data.count.non_empty_errors;
-      let total: number =
+      const error: number = this.count_data.count.non_empty_errors;
+      const total: number =
         this.count_data.count.non_empty_total +
         this.count_data.count.empty_total +
         this.count_data.count.non_empty_errors;
-      let good_msg: number = this.count_data.count.non_empty_total - error;
+      const good_msg: number = this.count_data.count.non_empty_total - error;
 
-      let empty_error: number = this.count_data.count.empty_errors;
-      let empty_good: number = this.count_data.count.empty_total;
+      const empty_error: number = this.count_data.count.empty_errors;
+      const empty_good: number = this.count_data.count.empty_total;
+      const empty_total: number = empty_good + empty_error;
 
-      let html: string = '<p><table class="search">';
-      html += `<tr><td><span class="menu_non_link">Total Messages (All): </span></td><td><span class="menu_non_link">${total}</span></td><td></td></tr>`;
-      html += `<tr><td><span class="menu_non_link">Messages (No Errors): </span></td><td><span class="menu_non_link">${good_msg}</span></td><td><span class="menu_non_link">${
-        total
-          ? parseFloat(String((good_msg / total) * 100)).toFixed(2) + "%"
-          : ""
-      }</span></td></tr>`;
-      html += `<tr><td><span class="menu_non_link">Messages (W/Errors): </span></td><td><span class="menu_non_link">${error}</span></td><td><span class="menu_non_link">${
-        total ? parseFloat(String((error / total) * 100)).toFixed(2) + "%" : ""
-      }</span></td></tr>`;
-      html += "</table></p>";
-      html += '<table class="search">';
-      html += `<tr><td><span class="menu_non_link">Empty Messages (Total): </span></td><td><span class="menu_non_link">${
-        empty_good + empty_error
-      }</span></td><td><span class="menu_non_link">${
-        total
-          ? parseFloat(
-              String(((empty_good + empty_error) / total) * 100)
-            ).toFixed(2) + "%"
-          : ""
-      }</span></td></tr>`;
-      html += `<tr><td><span class="menu_non_link">Empty Messages (No Errors): </span></td><td><span class="menu_non_link">${empty_good}</span></td><td><span class="menu_non_link">${
-        total
-          ? parseFloat(String((empty_good / total) * 100)).toFixed(2) + "%"
-          : ""
-      }</span></td></tr>`;
-      html += `<tr><td><span class="menu_non_link">Empty Messages (W/Errors): </span></td><td><span class="menu_non_link">${empty_error}</span></td><td><span class="menu_non_link">${
-        total
-          ? parseFloat(String((empty_error / total) * 100)).toFixed(2) + "%"
-          : ""
-      }</span></td></tr>`;
-      html += "</table>";
+      const counts: number[] = [
+        total,
+        good_msg,
+        error,
+        empty_total,
+        empty_good,
+        empty_error,
+      ];
+      const count_labels: string[] = [
+        "Total Messages (All)",
+        `Messages (No Errors)`,
+        `Messages (W/Errors)`,
+        `Empty Messages (Total)`,
+        `Empty Messages (No Errors)`,
+        `Empty Messages (W/Errors)`,
+      ];
 
-      $("#msgs").html(html);
+      if (this.chart_message_counts !== null) {
+        this.chart_message_counts.destroy();
+      }
+      const canvas: HTMLCanvasElement = <HTMLCanvasElement>(
+        document.getElementById("msg_count")
+      );
+      const ctx: CanvasRenderingContext2D = canvas.getContext("2d")!;
+      if (ctx != null) {
+        this.chart_message_counts = new Chart(ctx, {
+          // The type of chart we want to create
+          type: "bar",
+
+          // The data for our dataset
+          data: {
+            labels: count_labels,
+            datasets: [
+              {
+                label: "Frequency Counts",
+                backgroundColor: this.p,
+                borderColor: "rgb(0, 0, 0)",
+                data: counts,
+                //pointRadius: 0,
+                borderWidth: 1,
+              },
+            ],
+          },
+
+          // Configuration options go here
+          options: {
+            plugins: {
+              datalabels: {
+                backgroundColor: function (context: any) {
+                  return context.dataset.backgroundColor;
+                },
+                borderRadius: 4,
+                color: "white",
+                font: {
+                  weight: "bold",
+                },
+                formatter: Math.round,
+                padding: 6,
+              },
+            },
+          },
+          plugins: [ChartDataLabels],
+        });
+      }
+      // let html: string = '<p><table class="search">';
+      // html += `<tr><td><span class="menu_non_link">Total Messages (All): </span></td><td><span class="menu_non_link">${total}</span></td><td></td></tr>`;
+      // html += `<tr><td><span class="menu_non_link">Messages (No Errors): </span></td><td><span class="menu_non_link">${good_msg}</span></td><td><span class="menu_non_link">${
+      //   total
+      //     ? parseFloat(String((good_msg / total) * 100)).toFixed(2) + "%"
+      //     : ""
+      // }</span></td></tr>`;
+      // html += `<tr><td><span class="menu_non_link">Messages (W/Errors): </span></td><td><span class="menu_non_link">${error}</span></td><td><span class="menu_non_link">${
+      //   total ? parseFloat(String((error / total) * 100)).toFixed(2) + "%" : ""
+      // }</span></td></tr>`;
+      // html += "</table></p>";
+      // html += '<table class="search">';
+      // html += `<tr><td><span class="menu_non_link">Empty Messages (Total): </span></td><td><span class="menu_non_link">${
+      //   empty_good + empty_error
+      // }</span></td><td><span class="menu_non_link">${
+      //   total
+      //     ? parseFloat(
+      //         String(((empty_good + empty_error) / total) * 100)
+      //       ).toFixed(2) + "%"
+      //     : ""
+      // }</span></td></tr>`;
+      // html += `<tr><td><span class="menu_non_link">Empty Messages (No Errors): </span></td><td><span class="menu_non_link">${empty_good}</span></td><td><span class="menu_non_link">${
+      //   total
+      //     ? parseFloat(String((empty_good / total) * 100)).toFixed(2) + "%"
+      //     : ""
+      // }</span></td></tr>`;
+      // html += `<tr><td><span class="menu_non_link">Empty Messages (W/Errors): </span></td><td><span class="menu_non_link">${empty_error}</span></td><td><span class="menu_non_link">${
+      //   total
+      //     ? parseFloat(String((empty_error / total) * 100)).toFixed(2) + "%"
+      //     : ""
+      // }</span></td></tr>`;
+      // html += "</table>";
+
+      // $("#msgs").html(html);
     }
   },
 
@@ -371,10 +541,22 @@ export let stats_page = {
     <img src="static/images/6months.png" id="6mon" alt="6 Months"><br>
     <img src="static/images/1year.png" id="1yr" alt="1 Year"><br>
     <canvas id="signallevels"></canvas>
-    <canvas id="alertterms"></canvas>`); // show the messages we've received
-    $("#right").html(`<div class="fixed_results">
-    <span id="stat_menu"></span>
-  </div>`);
+    <canvas id="alertterms"></canvas>
+    ${
+      this.acars_on
+        ? '<canvas id="frequencies_acars"' +
+          (this.vdlm_on ? ' class="frequency"' : "") +
+          "></canvas>"
+        : ""
+    }
+${
+  this.vdlm_on
+    ? '<canvas id="frequencies_vdlm"' +
+      (this.acars_on ? ' class="frequency"' : "") +
+      "></canvas>"
+    : ""
+}
+    <canvas id="msg_count"></p>'`); // show the messages we've received
     $("#modal_text").html("");
     $("#page_name").html("");
   },
