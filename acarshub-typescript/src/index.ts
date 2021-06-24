@@ -39,8 +39,8 @@ let old_window_width: number = 0;
 let old_window_height: number = 0;
 
 let adsb_url: string = "";
-let adsb_enabled: boolean = false;
 let adsb_getting_data: boolean = false;
+let adsb_interval: any;
 
 const pages: string[] = [
   "/", // index/live messages
@@ -139,7 +139,6 @@ $(() => {
       toggle_pages();
       alerts_page.updateAlertCounter();
       live_map_page.live_map(msg.adsb.lat, msg.adsb.lon);
-      adsb_enabled = true;
 
       status.update_adsb_status({
         adsb_enabled: true,
@@ -147,26 +146,28 @@ $(() => {
       });
 
       if (msg.adsb.bypass) adsb_url = msg.adsb.url;
-      setInterval(() => {
-        fetch(adsb_url, {
-          method: "GET",
-          mode: "cors",
-        })
-          .then((response) => {
-            adsb_getting_data = true;
-            return response.json();
-          })
-          .then((planes) => live_map_page.set_targets(planes as adsb))
-          .catch((err) => {
-            adsb_getting_data = false;
-            status.update_adsb_status({
-              adsb_enabled: true,
-              adsb_getting_data: false,
-            });
-            status.update_status_bar();
-            console.error(err);
-          });
-      }, 5000);
+
+      // Check to see if the adsb interval already exists.
+      // We want to do this because if the client disconnects it will
+      // receive all of the 'on connect' data again, and another adsb interval
+      // would be spawned.
+
+      if (!adsb_interval) {
+        update_adsb();
+        adsb_interval = setInterval(() => {
+          update_adsb();
+        }, 5000);
+      }
+    }
+
+    // If for some reason ADSB was ever turned off on the back end and was enabled for the client, turn off the updater
+    // And update the web app to remove menu and destroy costly background assets
+    if (!msg.adsb.enabled && adsb_interval) {
+      clearInterval(adsb_interval);
+      menu.set_adsb(false);
+      toggle_pages();
+      alerts_page.updateAlertCounter();
+      live_map_page.destroy_maps();
     }
   });
 
@@ -236,6 +237,27 @@ $(() => {
 
 export function get_window_size() {
   return { width: old_window_width, height: old_window_height } as window_size;
+}
+
+async function update_adsb() {
+  fetch(adsb_url, {
+    method: "GET",
+    mode: "cors",
+  })
+    .then((response) => {
+      adsb_getting_data = true;
+      return response.json();
+    })
+    .then((planes) => live_map_page.set_targets(planes as adsb))
+    .catch((err) => {
+      adsb_getting_data = false;
+      status.update_adsb_status({
+        adsb_enabled: true,
+        adsb_getting_data: false,
+      });
+      status.update_status_bar();
+      console.error(err);
+    });
 }
 
 function update_url() {

@@ -374,4 +374,10 @@ export let live_map_page = {
     $("#page_name").html("");
     $("#log").html('<div id="mapid"></div>');
   },
+
+  destroy_maps: function () {
+    this.map = (<unknown>null) as L.Map;
+    this.layerGroup = (<unknown>null) as L.LayerGroup;
+    this.adsb_planes = (<unknown>null) as adsb;
+  },
 };
