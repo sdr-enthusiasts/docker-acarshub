@@ -394,10 +394,10 @@ export let live_map_page = {
     this.adsb_enabled = is_enabled;
     if (this.live_map_page_active) {
       this.set_html();
-    }
 
-    if (this.adsb_enabled) {
-      this.live_map_active(true);
+      if (this.live_map_page_active) {
+        this.live_map_active(true);
+      }
     }
   },
 };
