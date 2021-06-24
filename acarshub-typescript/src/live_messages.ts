@@ -12,11 +12,11 @@ export let live_messages_page = {
   text_filter: false as boolean,
   lm_msgs_received: {
     value: [] as acars_msg[][],
-    unshift: function (a: any) {
+    unshift: function (a: acars_msg[]) {
       if (this.value.length >= 50) {
         this.value.pop();
       }
-      return Array.prototype.unshift.apply(this.value, [a] as any);
+      return Array.prototype.unshift.apply(this.value, [a] as acars_msg[][]);
     },
   },
   exclude: [] as string[],
