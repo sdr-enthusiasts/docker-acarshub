@@ -134,7 +134,6 @@ $(() => {
 
   socket.on("features_enabled", function (msg: decoders) {
     stats_page.decoders_enabled(msg);
-    console.log(msg);
     if (msg.adsb.enabled === true) {
       menu.set_adsb(true);
       toggle_pages();
