@@ -12,12 +12,12 @@ export let alerts_page = {
   alert_tail: [] as string[],
   alert_icao: [] as string[],
   alert_msgs_received: {
-    value: [] as any[],
-    unshift: function (a: any) {
+    value: [] as acars_msg[][],
+    unshift: function (a: acars_msg[]) {
       if (this.value.length >= 50) {
         this.value.pop();
       }
-      return Array.prototype.unshift.apply(this.value, [a] as any);
+      return Array.prototype.unshift.apply(this.value, [a] as acars_msg[][]);
     },
   },
   alert_acars_path: "" as string,
