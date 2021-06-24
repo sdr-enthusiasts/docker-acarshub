@@ -27,7 +27,7 @@ import {
 
 import { live_map_page } from "./live_map.js";
 
-declare const window: any;
+export declare const window: any;
 let socket = io();
 let socket_status: boolean = false;
 
@@ -232,10 +232,6 @@ $(() => {
   setInterval(function () {
     stats_page.updatePage();
   }, 60000);
-
-  document.addEventListener("keyup", function () {
-    search_page.key_event();
-  });
 });
 
 export function get_window_size() {
@@ -482,6 +478,13 @@ window.toggle_label = function (key: string) {
 $(window).on("popstate", () => {
   toggle_pages();
 });
+
+window.close_modal = function () {
+  console.log("here");
+  if (index_acars_page === "/search") {
+    $("input").off(); // Turn off the event listener for keys in the search modal
+  }
+};
 
 export function showPlaneMessages(
   plane_callsign: string = "",
