@@ -65,25 +65,15 @@ export let live_messages_page = {
   // Function to increment the counter of filtered messages
 
   increment_filtered: function (page_refresh = false) {
-    let id = document.getElementById("filteredmessages");
     if (!page_refresh) this.filtered_messages++;
-    if (id !== null) {
-      id.innerHTML = "";
-      let txt = document.createTextNode(String(this.filtered_messages));
-      id.appendChild(txt);
-    }
+    $("#filteredmessages").html(String(this.filtered_messages));
   },
 
   // Function to increment the counter of received messages
 
   increment_received: function (page_refresh = false) {
-    let id = document.getElementById("receivedmessages");
     if (!page_refresh) this.received_messages++;
-    if (id !== null) {
-      id.innerHTML = "";
-      let txt = document.createTextNode(String(this.received_messages));
-      id.appendChild(txt);
-    }
+    $("#receivedmessages").html(String(this.received_messages));
   },
 
   show_labels: function () {
@@ -112,33 +102,19 @@ export let live_messages_page = {
   // Input is the UID of the message group, which is also the element ID of the oldest element in that group
 
   handle_radio: function (element_id: string, uid: string) {
-    let all_tabs = document.querySelectorAll(`div.sub_msg${uid}`); // Grab the tabinator group and remove check
-    for (let i = 0; i < all_tabs.length; i++) {
-      all_tabs[i].classList.remove("checked");
-    }
-
-    let all_tabinator: NodeListOf<HTMLInputElement> = document.querySelectorAll(
-      `input.tabs_${uid}`
-    ); // grab the message divs in that tab group and remove check
-    for (let i = 0; i < all_tabinator.length; i++) {
-      all_tabinator[i].checked = false;
-    }
-
-    let element = <HTMLInputElement>(
-      document.getElementById(`message_${uid}_${element_id}`)
-    ); // grab and tag the message that is checked
-    element.classList.add("checked");
-
-    let tab_element = <HTMLInputElement>(
-      document.getElementById(`tab${element_id}_${uid}`)
-    ); // grab and tag the tag that is checked
-    tab_element.checked = true;
+    $(`div.sub_msg${uid}`).removeClass("checked"); // Turn off the display of all messages in the UID group
+    $(`input.tabs_${uid}`).prop("checked", false); // Turn off the checked indicator for all messages in the UID group
+    $(`#message_${uid}_${element_id}`).addClass("checked"); // Turn on the display of the message that is now active
+    $(`#tab${element_id}_${uid}`).prop("checked", true); // Turn on the checked indicator for the message that is now active
 
     // Now we need to update the nav arrow links
 
     let next_tab: string = "0";
     let previous_tab: string = "0";
 
+    // Find the next / previous tabs
+    // This is UGLY
+    // TODO....deuglify it
     for (let i = 0; i < this.lm_msgs_received.value.length; i++) {
       if (
         this.lm_msgs_received.value[i].length > 1 &&
@@ -178,18 +154,12 @@ export let live_messages_page = {
       }
     }
 
-    let curlink_previous = <HTMLInputElement>(
-      document.getElementById(`tab${uid}_previous`)
-    );
-    curlink_previous.setAttribute(
+    // Update the buttons for the previous / next message
+    $(`#tab${uid}_previous`).attr(
       "href",
       `javascript:handle_radio("${previous_tab}", "${uid}")`
     );
-
-    let curlink_next = <HTMLInputElement>(
-      document.getElementById(`tab${uid}_next`)
-    );
-    curlink_next.setAttribute(
+    $(`#tab${uid}_next`).attr(
       "href",
       `javascript:handle_radio("${next_tab}", "${uid}")`
     );
@@ -226,38 +196,15 @@ export let live_messages_page = {
 
     if (this.pause) {
       this.pause = false;
-      let id = document.getElementById("pause_updates");
-      if (id !== null) {
-        id.innerHTML = "";
-        let txt = document.createTextNode("Pause updates");
-        id.appendChild(txt);
-      }
-
-      let id_filtered = document.getElementById("received");
-      if (id_filtered !== null) {
-        id_filtered.innerHTML = "";
-        let txt_filtered = document.createTextNode("Received messages: ");
-        id_filtered.appendChild(txt_filtered);
-      }
-
+      $("#pause_updates").html("Pause Updates");
+      $("#received").html("Received messages: ");
       $("#log").html(
         display_messages(this.lm_msgs_received.value, this.selected_tabs, true)
       );
     } else {
       this.pause = true;
-
-      let id = document.getElementById("pause_updates");
-      if (id !== null)
-        id.innerHTML = '<span class="red">Unpause Updates</span>';
-
-      let id_filtered = document.getElementById("received");
-      if (id_filtered !== null) {
-        id_filtered.innerHTML = "";
-        let txt_filtered = document.createTextNode(
-          "Received messages (paused): "
-        );
-        id_filtered.appendChild(txt_filtered);
-      }
+      $("#pause_updates").html('<span class="red">Unpause Updates</span>');
+      $("#received").html("Received messages (paused): ");
     }
   },
 
@@ -268,8 +215,7 @@ export let live_messages_page = {
 
     if (this.text_filter) {
       this.text_filter = false;
-      let id = document.getElementById("filter_notext");
-      if (id !== null) id.innerHTML = "Hide Empty Messages";
+      $("#filter_notext").html("Hide Empty Messages");
       Cookies.set("filter", "false", { expires: 365 });
       this.filtered_messages = 0;
 
@@ -280,17 +226,9 @@ export let live_messages_page = {
       $("#filtered").html(
         '<div><span class="menu_non_link">Filtered Messages:&nbsp;</span><span class="green" id="filteredmessages"></span></div>'
       );
-      let id_filtered = <HTMLInputElement>(
-        document.getElementById("filteredmessages")
-      );
-      let txt_filtered = document.createTextNode(
-        String(this.filtered_messages)
-      );
-      id_filtered.appendChild(txt_filtered);
 
-      let id = document.getElementById("filter_notext");
-      if (id !== null)
-        id.innerHTML = '<span class="red">Show All Messages</span>';
+      $("#filteredmessages").html(String(this.filtered_messages));
+      $("#filter_notext").html('<span class="red">Show All Messages</span>');
       Cookies.set("filter", "true", { expires: 365 });
     }
   },
@@ -301,12 +239,7 @@ export let live_messages_page = {
   toggle_label: function (key: string) {
     if (this.exclude.indexOf(key.toString()) == -1) {
       this.exclude.push(key.toString());
-      (<HTMLInputElement>(
-        document.getElementById(key.toString())
-      )).classList.remove("sidebar_link");
-      (<HTMLInputElement>document.getElementById(key.toString())).classList.add(
-        "red"
-      );
+      $(`#${key.toString()}`).removeClass("sidebar_link").addClass("red");
       let exclude_string = "";
       for (let i = 0; i < this.exclude.length; i++) {
         exclude_string += this.exclude[i] + " ";
@@ -315,12 +248,7 @@ export let live_messages_page = {
       Cookies.set("exclude", exclude_string.trim(), { expires: 365 });
     } else {
       let exclude_string = "";
-      (<HTMLInputElement>(
-        document.getElementById(key.toString())
-      )).classList.remove("red");
-      (<HTMLInputElement>document.getElementById(key.toString())).classList.add(
-        "sidebar_link"
-      );
+      $(`#${key.toString()}`).removeClass("red").addClass("sidebar_link");
       for (let i = 0; i < this.exclude.length; i++) {
         if (this.exclude[i] != key.toString())
           exclude_string += this.exclude[i] + " ";
