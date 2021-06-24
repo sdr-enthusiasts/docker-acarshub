@@ -4,6 +4,7 @@ import { alert_term_query, alert_text_update } from "./index.js";
 import { acars_msg, html_msg, terms } from "./interfaces.js";
 import jBox from "jbox";
 import "jbox/dist/jBox.all.css";
+import { tooltip } from "./tooltips.js";
 
 export let alerts_page = {
   alerts: 0 as number,
@@ -115,6 +116,8 @@ export let alerts_page = {
         (typeof msg.done_loading === "undefined" || msg.done_loading === true)
       ) {
         $("#log").html(display_messages(this.alert_msgs_received.value));
+        tooltip.close_all_tooltips();
+        tooltip.attach_all_tooltips();
       } else if (matched.was_found && msg.loading != true) {
         this.alerts += 1;
         this.updateAlertCounter();

@@ -10,6 +10,7 @@ import {
 import { search_database, window } from "./index.js";
 import jBox from "jbox";
 import "jbox/dist/jBox.all.css";
+import { tooltip } from "./tooltips.js";
 
 export let search_page = {
   search_page_active: false as boolean,
@@ -216,6 +217,8 @@ export let search_page = {
       );
       $("#log").html('<div class="row" id="num_results"></div>' + display);
       $("#num_results").html(display_nav_results);
+      tooltip.close_all_tooltips();
+      tooltip.attach_all_tooltips();
       window.scrollTo(0, 0); // Scroll the window back to the top. We want this because the user might have scrolled halfway down the page and then ran a new search/updated the page
     }
   },
