@@ -755,20 +755,21 @@ def database_search(search_term, page=0):
                 if query_string == "":
                     #        query_string += f'SELECT * from text_fts WHERE {key} MATCH \'"{search_term[key]}"*\''
                     # query_string += f'SELECT * from text_fts WHERE ({key} MATCH "{search_term[key]}*")';
-                    query_string += f'SELECT * FROM messages WHERE id IN (SELECT rowid FROM messages_fts WHERE messages_fts MATCH "{key}:{search_term[key]}*'
-                    count_string += f'SELECT COUNT(*) FROM messages WHERE id IN (SELECT rowid FROM messages_fts WHERE messages_fts MATCH "{key}:{search_term[key]}*'
+                    query_string += f'SELECT * FROM messages WHERE id IN (SELECT rowid FROM messages_fts WHERE messages_fts MATCH \'{key}:"{search_term[key]}"*'
+                    count_string += f'SELECT COUNT(*) FROM messages WHERE id IN (SELECT rowid FROM messages_fts WHERE messages_fts MATCH \'{key}:"{search_term[key]}"*'
                 else:
-                    query_string += f" AND {key}:{search_term[key]}*"
+                    query_string += f' AND {key}:"{search_term[key]}"*'
                     #    query_string += f' INTERSECT SELECT * from text_fts WHERE {key} MATCH \'"{search_term[key]}"*\''
-                    count_string += f" AND {key}:{search_term[key]}*"
+                    count_string += f' AND {key}:"{search_term[key]}"*'
 
         if query_string == "":
             session.close()
             return [None, 50]
         result = session.execute(
-            f'{query_string}") ORDER BY rowid DESC LIMIT 50 OFFSET {page * 50}'
+            f"{query_string}') ORDER BY rowid DESC LIMIT 50 OFFSET {page * 50}"
         )
-        count = session.execute(f'{count_string}")')
+
+        count = session.execute(f"{count_string}')")
 
         processed_results = []
         final_count = 0
@@ -813,9 +814,9 @@ def search_alerts(icao=None, tail=None, flight=None):
                 if search_term[key] is not None and search_term[key] != "":
                     for term in search_term[key]:
                         if query_string == "":
-                            query_string += f"{key}:{term}*"
+                            query_string += f'{key}:"{term}"*'
                         else:
-                            query_string += f" OR {key}:{term}*"
+                            query_string += f' OR {key}:"{term}"*'
 
             if query_string != "":
                 query_string = f'SELECT * FROM messages WHERE id IN (SELECT rowid FROM messages_fts WHERE messages_fts MATCH "{query_string}")'
