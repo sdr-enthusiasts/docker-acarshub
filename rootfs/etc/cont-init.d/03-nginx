@@ -3,10 +3,10 @@
 
 if [[ ! -e /nginx-ranonce ]]; then
     cp /etc/nginx.acarshub/sites-enabled/acarshub /etc/nginx/sites-enabled/acarshub || exit 1
-    rm /etc/nginx/nginx.conf  || exit 1
+    rm /etc/nginx/nginx.conf > /dev/null 2>&1  || exit 1
     cp /etc/nginx.acarshub/nginx.conf /etc/nginx/nginx.conf || exit 1
-    rm -rv /etc/nginx.acarshub || exit 1
-    rm /etc/nginx/sites-enabled/default || exit 1
+    rm -rv /etc/nginx.acarshub > /dev/null 2>&1 || exit 1
+    rm /etc/nginx/sites-enabled/default > /dev/null 2>&1 || exit 1
 
     # turn off nginx logging
     # shellcheck disable=SC1003
@@ -15,9 +15,15 @@ if [[ ! -e /nginx-ranonce ]]; then
     sed -i 's\error_log .*\error_log /dev/null crit;\' /etc/nginx/nginx.conf
 
     #write the ADSB URL in to the nginx config file
-    sed -i "s\<>\\${ADSB_URL}\\" /etc/nginx/sites-enabled/acarshub
+    if [[ "${ENABLE_ADSB}" == "true" ]]; then
+        sed -i "s\<>\\${ADSB_URL}\\" /etc/nginx/sites-enabled/acarshub
+        echo "[init-nginx] ADSB enabled with ${ADSB_URL}"
+    else
+        sed -i "s\<>\\http://127.0.0.1:8888\\" /etc/nginx/sites-enabled/acarshub
+        echo "[init-nginx] ADSB Disabled"
+    fi
 else
-    echo "SKipping nginx file configuring, container was restarted"
+    echo "Skipping nginx file configuring, container was restarted"
 fi
 
 touch /nginx-ranonce
