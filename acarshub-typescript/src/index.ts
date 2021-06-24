@@ -134,10 +134,12 @@ $(() => {
 
   socket.on("features_enabled", function (msg: decoders) {
     stats_page.decoders_enabled(msg);
+    console.log(msg);
     if (msg.adsb.enabled === true) {
       menu.set_adsb(true);
       toggle_pages();
       alerts_page.updateAlertCounter();
+      live_map_page.is_adsb_enabled(true);
       live_map_page.live_map(msg.adsb.lat, msg.adsb.lon);
 
       status.update_adsb_status({
@@ -162,11 +164,13 @@ $(() => {
 
     // If for some reason ADSB was ever turned off on the back end and was enabled for the client, turn off the updater
     // And update the web app to remove menu and destroy costly background assets
-    if (!msg.adsb.enabled && adsb_interval) {
+    if (!msg.adsb.enabled && adsb_interval != null) {
       clearInterval(adsb_interval);
+      adsb_interval = null;
       menu.set_adsb(false);
       toggle_pages();
       alerts_page.updateAlertCounter();
+      live_map_page.is_adsb_enabled();
       live_map_page.destroy_maps();
     }
   });

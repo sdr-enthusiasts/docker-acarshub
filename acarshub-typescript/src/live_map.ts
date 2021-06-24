@@ -11,11 +11,12 @@ import {
   get_window_size,
 } from "./index.js";
 import { images } from "./images";
+import { tooltip } from "./tooltips.js";
 
 export let live_map_page = {
   livemap_acars_path: "" as string,
   livemap_acars_url: "" as string,
-
+  adsb_enabled: false as boolean,
   live_map_page_active: false as boolean,
   adsb_planes: (<unknown>null) as adsb,
   map: (<unknown>null) as L.Map,
@@ -197,7 +198,8 @@ export let live_map_page = {
   live_map: function (lat_in: number, lon_in: number) {
     this.lat = lat_in;
     this.lon = lon_in;
-    if (this.live_map_page_active) this.map.setView([this.lat, this.lon], 8);
+    if (this.live_map_page_active && this.adsb_enabled)
+      this.map.setView([this.lat, this.lon], 8);
   },
 
   update_targets: function () {
@@ -325,6 +327,8 @@ export let live_map_page = {
     $(".show_when_small").css("display", `inline-block`);
     $(".show_when_big").css("display", "none");
     $(".dont_show").css("display", "none");
+    tooltip.close_all_tooltips();
+    tooltip.attach_all_tooltips();
   },
 
   updateModalSize: function (new_window_size: window_size) {
@@ -335,11 +339,13 @@ export let live_map_page = {
     resize_tabs(new_window_size.width > 500 ? 465 : 310, false);
     $(".show_when_small").css("display", `inline-block`);
     $(".show_when_big").css("display", "none");
+    tooltip.close_all_tooltips();
+    tooltip.attach_all_tooltips();
   },
 
   live_map_active: function (state = false) {
     this.live_map_page_active = state;
-    if (this.live_map_page_active) {
+    if (this.live_map_page_active && this.adsb_enabled) {
       this.set_html();
       this.map = L.map("mapid", {
         zoomDelta: 0.2,
@@ -359,9 +365,9 @@ export let live_map_page = {
       }).addTo(this.map);
 
       this.layerGroup = L.layerGroup().addTo(this.map);
-    }
 
-    this.update_targets();
+      this.update_targets();
+    }
   },
 
   set_live_map_page_urls: function (documentPath: string, documentUrl: string) {
@@ -372,12 +378,26 @@ export let live_map_page = {
   set_html: function () {
     $("#modal_text").html("");
     $("#page_name").html("");
-    $("#log").html('<div id="mapid"></div>');
+    if (this.adsb_enabled) $("#log").html('<div id="mapid"></div>');
+    else $("#log").html("ADSB Disabled");
   },
 
   destroy_maps: function () {
     this.map = (<unknown>null) as L.Map;
     this.layerGroup = (<unknown>null) as L.LayerGroup;
     this.adsb_planes = (<unknown>null) as adsb;
+
+    if (this.live_map_page_active) this.set_html();
+  },
+
+  is_adsb_enabled: function (is_enabled: boolean = false) {
+    this.adsb_enabled = is_enabled;
+    if (this.live_map_page_active) {
+      this.set_html();
+    }
+
+    if (this.adsb_enabled) {
+      this.live_map_active(true);
+    }
   },
 };
