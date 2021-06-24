@@ -41,6 +41,7 @@ let old_window_height: number = 0;
 let adsb_url: string = "";
 let adsb_getting_data: boolean = false;
 let adsb_interval: any;
+let connection_good: boolean = true;
 
 const pages: string[] = [
   "/", // index/live messages
@@ -109,9 +110,11 @@ $(() => {
 
   socket.on("acars_msg", function (msg: html_msg) {
     // New acars message.
-    live_messages_page.new_acars_message(msg); // send the message to live messages
-    if (typeof msg.loading == "undefined" || !msg.loading === false)
-      alerts_page.alerts_acars_message(msg); // send the message to alerts for processing
+    if (connection_good || typeof msg.loading == "undefined") {
+      live_messages_page.new_acars_message(msg); // send the message to live messages
+      if (typeof msg.loading == "undefined" || msg.loading === false)
+        alerts_page.alerts_acars_message(msg); // send the message to alerts for processing
+    }
   });
 
   socket.on("terms", function (msg: terms) {
@@ -200,22 +203,28 @@ $(() => {
   // socket errors
 
   socket.on("disconnect", function () {
+    connection_good = false;
     connection_status();
   });
 
   socket.on("connect_error", function () {
+    connection_good = false;
     connection_status();
   });
 
   socket.on("connect_timeout", function () {
+    connection_good = false;
     connection_status();
   });
 
   socket.on("connect", function () {
+    console.log("Connect");
+    set_connection_good();
     connection_status(true);
   });
 
   socket.on("reconnect", function () {
+    set_connection_good();
     connection_status(true);
   });
 
@@ -240,6 +249,10 @@ $(() => {
 
 export function get_window_size() {
   return { width: old_window_width, height: old_window_height } as window_size;
+}
+
+function set_connection_good() {
+  setTimeout(() => (connection_good = socket.connected), 5000);
 }
 
 async function update_adsb() {
