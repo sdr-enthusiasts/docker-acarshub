@@ -1,6 +1,7 @@
 import { Chart } from "chart.js";
 import ChartDataLabels from "chartjs-plugin-datalabels";
 import { generate_stat_submenu } from "./index.js";
+import palette from "palette";
 import {
   signal_grab_freqs,
   signal_grab_message_count,
@@ -37,12 +38,10 @@ export let stats_page = {
   vdlm_on: false as boolean,
   width: 1000 as number,
 
-  // @ts-expect-error
   tol: new palette("tol", 12, 0, "").map(function (hex: any) {
     return "#" + hex;
   }),
 
-  // @ts-expect-error
   rainbox: new palette("cb-Dark2", 8, 0, "").map(function (hex: any) {
     return "#" + hex;
   }),
