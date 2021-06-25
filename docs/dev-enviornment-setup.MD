@@ -53,6 +53,15 @@ cd acars_git_path/
 
 ## Running tests outside of docker
 
+### Copy over test assets
+
+Some files are generated in the container at run time and not present if you run outside of docker. To copy those over
+
+```shell
+cd acarsgitpath/acarshub-typescript
+npm run copy_test
+```
+
 ### Using Live Data
 
 Pre-requisites:

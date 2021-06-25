@@ -10,7 +10,7 @@ import {
   get_match,
   get_window_size,
 } from "./index.js";
-import { images } from "./images";
+import { images } from "./images.js";
 import { tooltip } from "./tooltips.js";
 
 export let live_map_page = {
