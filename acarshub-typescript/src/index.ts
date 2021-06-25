@@ -218,7 +218,6 @@ $(() => {
   });
 
   socket.on("connect", function () {
-    console.log("Connect");
     set_connection_good();
     connection_status(true);
   });
