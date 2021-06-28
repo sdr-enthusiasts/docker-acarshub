@@ -28,7 +28,7 @@
   },
   "dependencies": {
     "@airframes/acars-decoder": "^1.1.0",
-    "chart.js": "3.3.2",
+    "chart.js": "3.4.0",
     "chartjs-plugin-datalabels": "v2.0.0-rc.1",
     "jbox": "^1.3.3",
     "jquery": "3.6.0",
