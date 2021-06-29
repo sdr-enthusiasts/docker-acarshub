@@ -273,7 +273,7 @@ export let live_map_page = {
 
           let plane_icon = L.divIcon({
             className: "airplane",
-            html: `<div><div style="width: 30px; height: 30px; -webkit-transform:rotate(${rotate}deg); -moz-transform: rotate(${rotate}deg); -ms-transform: rotate(${rotate}deg); -o-transform: rotate(${rotate}deg); transform: rotate(${rotate}deg);">${
+            html: `<div><div style="-webkit-transform:rotate(${rotate}deg); -moz-transform: rotate(${rotate}deg); -ms-transform: rotate(${rotate}deg); -o-transform: rotate(${rotate}deg); transform: rotate(${rotate}deg);">${
               num_messages ? icon_image : icon_image
             }</div></div>`,
             iconSize: [30, 30],
