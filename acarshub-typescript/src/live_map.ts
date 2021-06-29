@@ -2,6 +2,7 @@ import * as L from "leaflet";
 import { acars_msg, adsb_plane, window_size, adsb } from "./interfaces";
 import jBox from "jbox";
 import { display_messages } from "./html_generator.js";
+import { getBaseMarker, svgShapeToURI, hslToRgb } from "aircraft_icons";
 
 import {
   resize_tabs,
@@ -252,12 +253,28 @@ export let live_map_page = {
           //   matched_with_acars
           //     ? `<div class="svg-overlay" style="color: white;">(` + num_messages + ")</div>" : ""
           // }
+          let type_shape = getBaseMarker(
+            current_plane.category,
+            current_plane.t,
+            null,
+            null,
+            current_plane.type,
+            alt,
+            null
+          );
+          let color = hslToRgb(hsl, null);
+          let icon_image = svgShapeToURI(
+            type_shape[0],
+            color,
+            "black",
+            2,
+            type_shape[1]
+          );
+
           let plane_icon = L.divIcon({
             className: "airplane",
-            html: `<div><div style="fill: hsl(${hsl.h}, ${hsl.s}%, ${
-              hsl.l
-            }%); width: 30px; height: 30px; -webkit-transform:rotate(${rotate}deg); -moz-transform: rotate(${rotate}deg); -ms-transform: rotate(${rotate}deg); -o-transform: rotate(${rotate}deg); transform: rotate(${rotate}deg);">${
-              num_messages ? images.airplane_matched_icon : images.airplane_icon
+            html: `<div><div style="width: 30px; height: 30px; -webkit-transform:rotate(${rotate}deg); -moz-transform: rotate(${rotate}deg); -ms-transform: rotate(${rotate}deg); -o-transform: rotate(${rotate}deg); transform: rotate(${rotate}deg);">${
+              num_messages ? icon_image : icon_image
             }</div></div>`,
             iconSize: [30, 30],
           });
