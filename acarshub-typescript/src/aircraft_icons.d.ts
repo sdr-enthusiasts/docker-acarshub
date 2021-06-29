@@ -15,5 +15,4 @@ declare module "aircraft_icons" {
     strokeWidth: any,
     scale: any
   ): any;
-  export function hslToRgb(arr: any, opacity: any): any;
 }
