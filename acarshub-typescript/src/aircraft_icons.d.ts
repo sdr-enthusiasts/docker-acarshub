@@ -8,6 +8,7 @@ declare module "aircraft_icons" {
     altitude: any,
     eastbound: any
   ): any;
+
   export function svgShapeToURI(
     shape: any,
     fillColor: any,
