@@ -125,6 +125,14 @@ export interface search_html_msg {
   num_results: number;
 }
 
+export interface plane {
+  callsign?: string;
+  hex?: string;
+  tail?: string;
+  icon?: string;
+  messages: acars_msg[];
+}
+
 export interface acars_msg {
   timestamp: number;
   station_id: string;
