@@ -11,7 +11,6 @@ import {
   get_match,
   get_window_size,
 } from "./index.js";
-import { images } from "./images.js";
 import { tooltip } from "./tooltips.js";
 
 export let live_map_page = {
@@ -119,15 +118,13 @@ export let live_map_page = {
             color,
             "black",
             2,
-            type_shape[1]
+            type_shape[1] * 1.1
           );
 
           let plane_icon = L.divIcon({
             className: "airplane",
-            html: `<div><div style="-webkit-transform:rotate(${rotate}deg); -moz-transform: rotate(${rotate}deg); -ms-transform: rotate(${rotate}deg); -o-transform: rotate(${rotate}deg); transform: rotate(${rotate}deg);">${
-              num_messages ? icon_image : icon_image
-            }</div></div>`,
-            iconSize: [30, 30],
+            html: `<div><div style="-webkit-transform:rotate(${rotate}deg); -moz-transform: rotate(${rotate}deg); -ms-transform: rotate(${rotate}deg); -o-transform: rotate(${rotate}deg); transform: rotate(${rotate}deg);">${icon_image.svg}</div></div>`,
+            iconSize: [icon_image.width, icon_image.height],
           });
 
           let plane_marker = L.marker(

@@ -1210,8 +1210,7 @@ function svgShapeToURI(shape, fillColor, strokeColor, strokeWidth, scale){
     }
 
     svg += '</g></svg>';
-    return svg;
-    //return "data:image/svg+xml;base64," + btoa(svg);
+    return {svg: svg, width: wi, height: he};
 }
 
 let glIconSize = 72;

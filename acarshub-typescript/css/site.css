@@ -869,14 +869,20 @@ canvas {
   background-color: black;
 }
 
-.airplane {
-  width: 30px;
-}
+/* .airplane {
+  width: 45px;
+  background-color: red;
+} */
 
 svg {
   position: relative;
-  top: 0;
-  left: 0;
+  /* top: 0;
+  left: 0; */
+  display: block;
+  margin-top: auto;
+  margin-bottom: auto;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .svg-overlay {
