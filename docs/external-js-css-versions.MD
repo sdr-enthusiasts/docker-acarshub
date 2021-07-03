@@ -9,7 +9,7 @@
 [showdown 1.9.1](https://cdnjs.com/libraries/showdown)
 [showdown map 1.9.1](https://cdnjs.com/libraries/showdown)
 [chart 3.4.0](https://www.jsdelivr.com/package/npm/chart.js)
-[chart datalabels 2.0.0 RC1](https://github.com/chartjs/chartjs-plugin-datalabels/blob/master/docs/guide/getting-started.md)
+[chart datalabels 2.0.0](https://github.com/chartjs/chartjs-plugin-datalabels/blob/master/docs/guide/getting-started.md)
 [palette.js](https://github.com/google/palette.js/blob/master/palette.js)
 [jbox 1.3.3](https://github.com/StephanWagner/jBox)
 [Leaflet Smooth Wheel Zoom 6/21/21](https://github.com/mutsuyuki/Leaflet.SmoothWheelZoom)
