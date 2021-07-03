@@ -126,9 +126,7 @@ export interface search_html_msg {
 }
 
 export interface plane {
-  callsign?: string;
-  hex?: string;
-  tail?: string;
+  identifiers: string[];
   icon?: string;
   messages: acars_msg[];
 }
