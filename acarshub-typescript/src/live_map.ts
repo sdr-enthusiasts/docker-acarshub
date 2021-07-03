@@ -112,7 +112,7 @@ export let live_map_page = {
             alt,
             null
           );
-          let color: string = num_messages ? "blue" : "green";
+          let color: string = num_messages ? "green" : "blue";
           let icon_image = svgShapeToURI(
             type_shape[0],
             color,
