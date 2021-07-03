@@ -86,13 +86,13 @@ export let live_map_page = {
           let num_messages: number = <any>undefined; // need to cast this to any for TS to compile.
 
           if (num_messages == undefined) {
-            num_messages = plane_data.hex[hex];
+            num_messages = plane_data[hex];
           }
           if (num_messages == undefined) {
-            num_messages = plane_data.callsigns[callsign];
+            num_messages = plane_data[callsign];
           }
           if (num_messages == undefined && tail != undefined) {
-            num_messages = plane_data.tail[tail];
+            num_messages = plane_data[tail];
           }
           if (num_messages == undefined) {
             num_messages = 0;

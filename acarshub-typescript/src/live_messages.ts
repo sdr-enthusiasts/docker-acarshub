@@ -391,16 +391,17 @@ export let live_messages_page = {
           new_msg.matched_tail = matched.tail !== null ? matched.tail : [];
         }
 
-        let new_tail = new_msg.tail;
-        let new_icao = new_msg.icao;
-        let new_flight = new_msg.flight;
+        const new_tail = new_msg.tail;
+        const new_icao = new_msg.icao;
+        const new_icao_hex = new_msg.icao_hex;
+        const new_flight = new_msg.flight;
+        const new_icao_flight = new_msg.icao_flight;
         let found = false; // variable to track if the new message was found in previous messages
         let rejected = false; // variable to track if the new message was rejected for being a duplicate
         let index_new = 0; // the index of the found previous message
-
         new_msg.uid = this.getRandomInt(1000000).toString(); // Each message gets a unique ID. Used to track tab selection
         // Loop through the received messages. If a message is found we'll break out of the for loop
-        for (const planes of this.lm_msgs_received.planes) {
+        for (let planes of this.lm_msgs_received.planes) {
           // Now we loop through all of the messages in the message group to find a match in case the first doesn't
           // Have the field we need
           // There is a possibility that (for reasons I cannot fathom) aircraft will broadcast the same flight information
@@ -452,6 +453,17 @@ export let live_messages_page = {
               index_new = this.lm_msgs_received.planes.indexOf(planes);
             }
             if (found) {
+              // We've found a matching message
+              // See if the UIDs for the plane are present, and if not, push them
+              if (
+                new_icao_flight &&
+                !planes.identifiers.includes(new_icao_flight)
+              )
+                planes.identifiers.push(new_icao_flight);
+              if (new_tail && !planes.identifiers.includes(new_tail))
+                planes.identifiers.push(new_tail);
+              if (new_icao_hex && !planes.identifiers.includes(new_icao_hex))
+                planes.identifiers.push(new_icao_hex);
               break;
             }
           }
@@ -651,9 +663,13 @@ export let live_messages_page = {
         }
         if (!found && !rejected) {
           if (matched.was_found && !msg.loading) sound_alert();
+          let ids = [];
+          if (new_icao_hex) ids.push(new_icao_hex);
+          if (new_icao_flight) ids.push(new_icao_flight);
+          if (new_tail) ids.push(new_tail);
           this.lm_msgs_received.unshift({
             messages: [new_msg],
-            identifiers: [],
+            identifiers: ids,
           } as plane);
         }
       } else if (!msg.loading) {
@@ -687,47 +703,28 @@ export let live_messages_page = {
     tail: string = ""
   ) {
     if (callsign === "" && hex === "" && tail === "") return [];
-    for (const msgList of this.lm_msgs_received.planes) {
-      for (const msg of msgList.messages) {
-        // check to see if any of the inputs match the message. msg.tail needs to be checked
-        // against both callsign and tail because sometimes the tail is the flight/callsign
-        if (
-          msg.icao_hex === hex.toUpperCase() ||
-          msg.flight === callsign ||
-          msg.tail === callsign ||
-          (tail != undefined && msg.tail === tail)
-        ) {
-          return msgList.messages;
-        }
+    for (const planes of this.lm_msgs_received.planes) {
+      // check to see if any of the inputs match the message. msg.tail needs to be checked
+      // against both callsign and tail because sometimes the tail is the flight/callsign
+      if (
+        planes.identifiers.includes(hex.toUpperCase()) ||
+        planes.identifiers.includes(callsign) ||
+        planes.identifiers.includes(tail)
+      ) {
+        return planes.messages;
       }
     }
     return [];
   },
 
   find_matches: function () {
-    let output_hex: { [hex: string]: number } = {};
-    let output_icao_callsigns: { [callsign: string]: number } = {};
-    let output_tail: { [tail: string]: number } = {};
-    for (const msgList of this.lm_msgs_received.planes) {
-      let matched_hex,
-        matched_tail,
-        matched_flight = false;
-      for (const msg of msgList.messages) {
-        if (!matched_hex && msg.icao_hex != null)
-          output_hex[msg.icao_hex.toUpperCase()] = msgList.messages.length;
-        if (!matched_flight && msg.icao_flight != null)
-          output_icao_callsigns[msg.icao_flight] = msgList.messages.length;
-        if (!matched_tail && msg.tail != null)
-          output_tail[msg.tail] = msgList.messages.length;
-
-        if (matched_hex && matched_flight && matched_tail) continue;
-      }
+    let output: { [index: string]: number } = {};
+    for (const planes of this.lm_msgs_received.planes) {
+      const length_of_messages = planes.messages.length;
+      planes.identifiers.forEach((identifier) => {
+        output[identifier] = length_of_messages;
+      });
     }
-
-    return {
-      hex: output_hex,
-      callsigns: output_icao_callsigns,
-      tail: output_tail,
-    };
+    return output;
   },
 };
