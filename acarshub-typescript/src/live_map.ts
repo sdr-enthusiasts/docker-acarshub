@@ -90,6 +90,8 @@ export let live_map_page = {
   setSort: function (sort: string = "") {
     if (sort === "") return;
     if (sort === this.current_sort) this.ascending = !this.ascending;
+    else if (sort === "msgs" || sort === "code") this.ascending = false;
+    // two special cases where we want the default sort to be reversed
     else this.ascending = true;
     this.current_sort = sort;
     this.airplaneList();
