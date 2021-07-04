@@ -702,7 +702,6 @@ export let stats_page = {
     </p>'`); // show the messages we've received
     $("#modal_text").html("");
     $("#page_name").html("");
-
     this.resize();
   },
 

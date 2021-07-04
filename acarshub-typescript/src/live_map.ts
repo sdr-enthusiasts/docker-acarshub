@@ -47,6 +47,9 @@ export let live_map_page = {
     title: "Messages",
     content: "",
   }),
+  current_sort: "callsign" as string,
+  ascending: true as boolean,
+  window_size: (<unknown>null) as window_size,
 
   set_targets: function (adsb_targets: adsb) {
     if (this.adsb_planes == null || this.last_updated < adsb_targets.now) {
@@ -70,7 +73,10 @@ export let live_map_page = {
           delete this.adsb_planes[plane];
         }
       }
-      if (this.live_map_page_active) this.update_targets();
+      if (this.live_map_page_active) {
+        this.update_targets();
+        this.airplaneList();
+      }
     }
   },
 
@@ -79,6 +85,166 @@ export let live_map_page = {
     this.lon = lon_in;
     if (this.live_map_page_active && this.adsb_enabled)
       this.map.setView([this.lat, this.lon], 8);
+  },
+
+  setSort: function (sort: string = "") {
+    if (sort === "") return;
+    if (sort === this.current_sort) this.ascending = !this.ascending;
+    else this.ascending = true;
+    this.current_sort = sort;
+    this.airplaneList();
+  },
+
+  airplaneList: function () {
+    let html: string = `<div class="plane_list"><div class="plane_element" id="num_planes" style="width: 50%"></div><div class="plane_element" id="num_planes_targets" style="width: 50%"></div></div>
+                        <div class="plane_list" style="font-weight: bold;border-bottom: 1px solid black;">
+                        <div class="plane_element plane_header"><a href="javascript:setSort('callsign')">Callsign</a></div>
+                        <div class="plane_element plane_header" style="width: 18%; border-left: 2px solid var(--grey-highlight)"><a href="javascript:setSort('alt')">Alt</a></div>
+                        <div class="plane_element plane_header" style="width: 15%; border-left: 2px solid var(--grey-highlight)"><a href="javascript:setSort('code')">Code</a></div>
+                        <div class="plane_element plane_header" style="width: 18%; border-left: 2px solid var(--grey-highlight)"><a href="javascript:setSort('speed')">Speed</a></div>
+                        <div class="plane_element plane_header" style="width: 10%; border-left: 2px solid var(--grey-highlight)"><a href="javascript:setSort('msgs')">Msgs</a></div></div>`;
+    const plane_data = find_matches();
+    let num_planes = 0;
+    let num_planes_targets = 0;
+    let sorted = Object.values(this.adsb_planes).sort((a, b) => {
+      let pos_a: number | string = a.position.flight
+        ? a.position.flight.trim()
+        : a.position.r || a.position.hex.toUpperCase();
+      let pos_b: number | string = b.position.flight
+        ? b.position.flight.trim()
+        : b.position.r || b.position.hex.toUpperCase();
+      if (this.current_sort === "alt") {
+        pos_a = a.position.alt_baro || 0;
+        pos_b = b.position.alt_baro || 0;
+
+        if (this.ascending) {
+          return pos_a - pos_b;
+        } else {
+          return pos_b - pos_a;
+        }
+      } else if (this.current_sort === "code") {
+        pos_a = a.position.squawk || 0;
+        pos_b = b.position.squawk || 0;
+
+        if (this.ascending) {
+          return pos_a - pos_b;
+        } else {
+          return pos_b - pos_a;
+        }
+      } else if (this.current_sort === "speed") {
+        pos_a = a.position.gs || 0;
+        pos_b = b.position.gs || 0;
+        if (this.ascending) {
+          return pos_a - pos_b;
+        } else {
+          return pos_b - pos_a;
+        }
+      } else if (this.current_sort === "msgs") {
+        pos_a = 0;
+        pos_b = 0;
+
+        const callsign_a = a.position.flight
+          ? a.position.flight.trim()
+          : a.position.r || a.position.hex.toUpperCase();
+        const tail_a: string = a.position.r || <any>undefined;
+
+        const callsign_b = b.position.flight
+          ? b.position.flight.trim()
+          : b.position.r || b.position.hex.toUpperCase();
+        const tail_b: string = b.position.r || <any>undefined;
+
+        if (plane_data[a.position.hex]) {
+          pos_a = plane_data[a.position.hex].id;
+        }
+        if (pos_a == undefined && plane_data[callsign_a]) {
+          pos_a = plane_data[callsign_a].id;
+        }
+        if (pos_a == 0 && tail_a != undefined && plane_data[tail_a]) {
+          pos_a = plane_data[tail_a].id;
+        }
+
+        if (plane_data[b.position.hex]) {
+          pos_b = plane_data[b.position.hex].id;
+        }
+        if (pos_b == 0 && plane_data[callsign_b]) {
+          pos_b = plane_data[callsign_b].id;
+        }
+        if (pos_b == 0 && tail_b != undefined && plane_data[tail_b]) {
+          pos_b = plane_data[tail_b].id;
+        }
+
+        console.log(pos_b, pos_a);
+        if (this.ascending) {
+          return pos_a - pos_b;
+        } else {
+          return pos_b - pos_a;
+        }
+      } else {
+        if (this.ascending) {
+          if (pos_a < pos_b) {
+            return -1;
+          } else {
+            return 1;
+          }
+        } else {
+          if (pos_b < pos_a) {
+            return -1;
+          } else {
+            return 1;
+          }
+        }
+      }
+    });
+
+    // add data to the table
+    for (const plane in sorted) {
+      const current_plane = sorted[plane].position;
+      num_planes++;
+      if (current_plane.lat) num_planes_targets++;
+      const alt = current_plane.alt_baro || 0;
+      const speed = current_plane.gs || 0;
+      const squawk = current_plane.squawk || 0;
+      const callsign = current_plane.flight
+        ? current_plane.flight.trim()
+        : current_plane.r || current_plane.hex.toUpperCase();
+      const hex = current_plane.hex;
+      const tail: string = current_plane.r || <any>undefined;
+      let num_messages = undefined;
+      if (num_messages == undefined && plane_data[hex]) {
+        num_messages = plane_data[hex].id;
+      }
+      if (num_messages == undefined && plane_data[callsign]) {
+        num_messages = plane_data[callsign].id;
+      }
+      if (num_messages == undefined && tail != undefined && plane_data[tail]) {
+        num_messages = plane_data[tail].id;
+      }
+      if (num_messages == undefined) {
+        num_messages = 0;
+      }
+      html += `<div id="${callsign}" class="plane_list">
+      <div class="plane_element">${
+        callsign && num_messages
+          ? `<a href="javascript:showPlaneMessages('${callsign}', '${hex}', '${tail}');">${callsign}</a>`
+          : callsign || "&nbsp;"
+      }</div>
+      <div class="plane_element" style="width: 18%; border-left: 2px solid var(--grey-highlight)">${
+        alt || "&nbsp;"
+      }</div>
+      <div class="plane_element" style="width: 15%; border-left: 2px solid var(--grey-highlight)">${
+        squawk || "&nbsp;"
+      }</div>
+      <div class="plane_element" style="width: 18%; border-left: 2px solid var(--grey-highlight)">${
+        Math.round(speed) || "&nbsp;"
+      }</div>
+      <div class="plane_element" style="width: 10%; border-left: 2px solid var(--grey-highlight)">${
+        num_messages || "&nbsp;"
+      }</div>
+      </div>`;
+    }
+    $("#planes").html(html);
+    $("#num_planes").html(`Planes: ${num_planes}`);
+    $("#num_planes_targets").html(`Planes w/ Targets: ${num_planes_targets}`);
   },
 
   update_targets: function () {
@@ -149,7 +315,7 @@ export let live_map_page = {
             alt,
             null
           );
-          let color: string = num_messages ? "green" : "blue";
+          let color: string = num_messages ? "green" : "var(--blue-highlight)";
           if (icon == null) {
             icon = svgShapeToURI(
               type_shape[0],
@@ -158,8 +324,7 @@ export let live_map_page = {
               2,
               type_shape[1] * 1.1
             ) as aircraft_icon;
-
-            this.adsb_planes[plane].icon = icon;
+            this.adsb_planes[current_plane.hex].icon = icon;
           }
 
           let plane_icon = L.divIcon({
@@ -238,6 +403,13 @@ export let live_map_page = {
   },
 
   updateModalSize: function (new_window_size: window_size) {
+    this.window_size = new_window_size;
+    if (new_window_size.width < 700) {
+      $("#mapid").css("width", "100%");
+      $("#planes").css("display", "none");
+    } else {
+      $("#mapid").css("width", `${this.window_size.width - 370}px`);
+    }
     this.plane_message_modal.setHeight(
       new_window_size.height > 500 ? 500 : 400
     );
@@ -249,8 +421,15 @@ export let live_map_page = {
     tooltip.attach_all_tooltips();
   },
 
-  live_map_active: function (state = false) {
+  live_map_active: function (state = false, window_size: window_size) {
     this.live_map_page_active = state;
+    this.window_size = window_size;
+    if (window_size.width < 700) {
+      $("#mapid").css("width", "100%");
+      $("#planes").css("display", "none");
+    } else {
+      $("#mapid").css("width", `${this.window_size.width - 370}px`);
+    }
     if (this.live_map_page_active && this.adsb_enabled) {
       this.set_html();
       this.map = L.map("mapid", {
@@ -284,7 +463,10 @@ export let live_map_page = {
   set_html: function () {
     $("#modal_text").html("");
     $("#page_name").html("");
-    if (this.adsb_enabled) $("#log").html('<div id="mapid"></div>');
+    if (this.adsb_enabled)
+      $("#log").html(
+        '<div style="width: 100%; display: inline-block" ><div id="mapid" style="float: left"></div><div id="planes" style="float: right"></div>'
+      );
     else $("#log").html("ADSB Disabled");
   },
 
@@ -296,13 +478,16 @@ export let live_map_page = {
     if (this.live_map_page_active) this.set_html();
   },
 
-  is_adsb_enabled: function (is_enabled: boolean = false) {
+  is_adsb_enabled: function (
+    is_enabled: boolean = false,
+    window_size: window_size
+  ) {
     this.adsb_enabled = is_enabled;
     if (this.live_map_page_active) {
       this.set_html();
 
       if (this.live_map_page_active) {
-        this.live_map_active(true);
+        this.live_map_active(true, window_size);
       }
     }
   },

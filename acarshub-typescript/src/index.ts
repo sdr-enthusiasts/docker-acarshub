@@ -141,7 +141,10 @@ $(() => {
       menu.set_adsb(true);
       toggle_pages();
       alerts_page.updateAlertCounter();
-      live_map_page.is_adsb_enabled(true);
+      live_map_page.is_adsb_enabled(true, {
+        width: old_window_width,
+        height: old_window_height,
+      } as window_size);
       live_map_page.live_map(msg.adsb.lat, msg.adsb.lon);
 
       status.update_adsb_status({
@@ -172,7 +175,10 @@ $(() => {
       menu.set_adsb(false);
       toggle_pages();
       alerts_page.updateAlertCounter();
-      live_map_page.is_adsb_enabled();
+      live_map_page.is_adsb_enabled(false, {
+        width: old_window_width,
+        height: old_window_height,
+      } as window_size);
       live_map_page.destroy_maps();
     }
   });
@@ -332,10 +338,16 @@ function toggle_pages() {
       alerts_page.alert_active();
     } else if (pages[page] === "/adsb" && index_acars_page === pages[page]) {
       $("#live_map_link").addClass("invert_a");
-      live_map_page.live_map_active(true);
+      live_map_page.live_map_active(true, {
+        width: old_window_width,
+        height: old_window_height,
+      } as window_size);
     } else if (pages[page] === "/adsb") {
       $("#live_map_link").removeClass("invert_a");
-      live_map_page.live_map_active();
+      live_map_page.live_map_active(false, {
+        width: old_window_width,
+        height: old_window_height,
+      } as window_size);
     }
   }
 }
@@ -512,12 +524,23 @@ window.toggle_label = function (key: string) {
   live_messages_page.toggle_label(key);
 };
 
+window.setSort = function (sort: string = "") {
+  live_map_page.setSort(sort);
+};
+
+window.showPlaneMessages = function (
+  callsign: string,
+  hex: string,
+  tail: string
+) {
+  live_map_page.showPlaneMessages(callsign, hex, tail);
+};
+
 $(window).on("popstate", () => {
   toggle_pages();
 });
 
 window.close_modal = function () {
-  console.log("here");
   if (index_acars_page === "/search") {
     $("input").off(); // Turn off the event listener for keys in the search modal
   }

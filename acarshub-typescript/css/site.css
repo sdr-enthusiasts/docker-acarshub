@@ -156,6 +156,7 @@ body {
   width: 100%;
   position: relative;
   width: 100%;
+  margin-top: 0px;
 }
 
 div#content.container {
@@ -866,7 +867,9 @@ canvas {
 
 #mapid {
   height: 80vh;
+  width: 100%;
   background-color: black;
+  display: inline-block;
 }
 
 /* .airplane {
@@ -897,4 +900,41 @@ svg {
 
 div#stat_images {
   max-width: 1000px;
+}
+
+div#planes {
+  width: 320px;
+  height: 80vh;
+  overflow: scroll;
+  position: relative;
+  border: 1px solid var(--grey-bg)
+}
+
+div.plane_list {
+  display: inline-block;
+  width: 100%;
+  border: 1px solid var(--grey-highlight);
+  background-color: var(--grey-bg);
+  color: var(--blue-highlight);
+}
+
+div.plane_element {
+  display: inline-block;
+  position: relative;
+  width: 25%;
+  padding-left: 5px;
+}
+
+.plane_header a {
+  color: var(--blue-highlight) !important;
+  text-decoration: none;
+  text-transform: uppercase;
+  font-weight: bold;
+}
+
+.plane_element a {
+  color: green;
+  text-decoration: none;
+  text-transform: uppercase;
+  font-weight: bold;
 }
