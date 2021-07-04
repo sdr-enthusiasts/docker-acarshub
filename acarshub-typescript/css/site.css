@@ -687,13 +687,13 @@ img.banner_img {
 
 li.img_box {
   width: 100px;
-  height: 80px;
+  height: 82px;
   display: block;
   padding-top: 5px;
   padding-bottom: 0px;
   border-right: 1px solid var(--grey-bg);
   text-align:center;
-  color: white;
+  color: var(--grey-bg);
   text-shadow: none;
 }
 
