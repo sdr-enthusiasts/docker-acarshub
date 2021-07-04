@@ -86,7 +86,13 @@ jobs:
   acarshub-typescript:
     runs-on: ubuntu-latest
     steps:
-            # Get version tag
+
+      # Check out our code
+      -
+        name: Checkout
+        uses: actions/checkout@v2
+
+      # Get version tag
       # git log -1 : get the latest commit
       # --format="%ct" : committer date, UNIX timestamp
       # Then using `date` to format to YYYYMMDD format
