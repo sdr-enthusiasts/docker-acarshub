@@ -1,5 +1,12 @@
 import * as L from "leaflet";
-import { acars_msg, adsb_plane, window_size, adsb } from "./interfaces";
+import {
+  acars_msg,
+  adsb_plane,
+  window_size,
+  adsb,
+  aircraft_icon,
+  adsb_target,
+} from "./interfaces";
 import jBox from "jbox";
 import { display_messages } from "./html_generator.js";
 import { getBaseMarker, svgShapeToURI } from "aircraft_icons";
@@ -18,7 +25,8 @@ export let live_map_page = {
   livemap_acars_url: "" as string,
   adsb_enabled: false as boolean,
   live_map_page_active: false as boolean,
-  adsb_planes: (<unknown>null) as adsb,
+  adsb_planes: {} as { [key: string]: adsb_target },
+  last_updated: 0 as number,
   map: (<unknown>null) as L.Map,
   layerGroup: (<unknown>null) as L.LayerGroup,
   lat: 0 as number,
@@ -41,8 +49,27 @@ export let live_map_page = {
   }),
 
   set_targets: function (adsb_targets: adsb) {
-    if (this.adsb_planes == null || this.adsb_planes.now < adsb_targets.now) {
-      this.adsb_planes = adsb_targets;
+    if (this.adsb_planes == null || this.last_updated < adsb_targets.now) {
+      this.last_updated = adsb_targets.now;
+      // Loop through all of the planes in the new data and save them to the target object
+      adsb_targets.aircraft.forEach((aircraft) => {
+        if (this.adsb_planes[aircraft.hex] == undefined) {
+          this.adsb_planes[aircraft.hex] = {
+            position: aircraft,
+            last_updated: this.last_updated,
+            id: aircraft.hex,
+          };
+        } else {
+          this.adsb_planes[aircraft.hex].position = aircraft;
+          this.adsb_planes[aircraft.hex].last_updated = this.last_updated;
+        }
+      });
+      // Now loop through the target object and expire any that are no longer there
+      for (let plane in this.adsb_planes) {
+        if (this.adsb_planes[plane].last_updated < this.last_updated) {
+          delete this.adsb_planes[plane];
+        }
+      }
       if (this.live_map_page_active) this.update_targets();
     }
   },
@@ -64,12 +91,12 @@ export let live_map_page = {
       this.layerGroup.clearLayers();
       const plane_data = find_matches();
 
-      for (const plane in this.adsb_planes.aircraft) {
+      for (const plane in this.adsb_planes) {
         if (
-          this.adsb_planes.aircraft[plane].lat != null &&
-          this.adsb_planes.aircraft[plane].lon != null
+          this.adsb_planes[plane].position.lat != null &&
+          this.adsb_planes[plane].position.lon != null
         ) {
-          const current_plane = this.adsb_planes.aircraft[plane];
+          const current_plane = this.adsb_planes[plane].position;
           const callsign = current_plane.flight
             ? current_plane.flight.trim()
             : current_plane.r || current_plane.hex.toUpperCase();
@@ -83,16 +110,26 @@ export let live_map_page = {
           const baro_rate: number = current_plane.baro_rate || 0;
           const tail: string = current_plane.r || <any>undefined;
           const ac_type: string = current_plane.t || <any>undefined;
-          let num_messages: number = <any>undefined; // need to cast this to any for TS to compile.
+          let icon: aircraft_icon | null =
+            this.adsb_planes[plane].icon || <any>undefined;
+          let num_messages: number = <any>null; // need to cast this to any for TS to compile.
+          let matched_term = <any>undefined;
 
-          if (num_messages == undefined) {
-            num_messages = plane_data[hex];
+          if (num_messages == undefined && plane_data[hex]) {
+            num_messages = plane_data[hex].id;
+            matched_term = hex;
           }
-          if (num_messages == undefined) {
-            num_messages = plane_data[callsign];
+          if (num_messages == undefined && plane_data[callsign]) {
+            num_messages = plane_data[callsign].id;
+            matched_term = callsign;
           }
-          if (num_messages == undefined && tail != undefined) {
-            num_messages = plane_data[tail];
+          if (
+            num_messages == undefined &&
+            tail != undefined &&
+            plane_data[tail]
+          ) {
+            num_messages = plane_data[tail].id;
+            matched_term = tail;
           }
           if (num_messages == undefined) {
             num_messages = 0;
@@ -113,18 +150,22 @@ export let live_map_page = {
             null
           );
           let color: string = num_messages ? "green" : "blue";
-          let icon_image = svgShapeToURI(
-            type_shape[0],
-            color,
-            "black",
-            2,
-            type_shape[1] * 1.1
-          );
+          if (icon == null) {
+            icon = svgShapeToURI(
+              type_shape[0],
+              color,
+              "black",
+              2,
+              type_shape[1] * 1.1
+            ) as aircraft_icon;
+
+            this.adsb_planes[plane].icon = icon;
+          }
 
           let plane_icon = L.divIcon({
             className: "airplane",
-            html: `<div><div style="-webkit-transform:rotate(${rotate}deg); -moz-transform: rotate(${rotate}deg); -ms-transform: rotate(${rotate}deg); -o-transform: rotate(${rotate}deg); transform: rotate(${rotate}deg);">${icon_image.svg}</div></div>`,
-            iconSize: [icon_image.width, icon_image.height],
+            html: `<div><div style="-webkit-transform:rotate(${rotate}deg); -moz-transform: rotate(${rotate}deg); -ms-transform: rotate(${rotate}deg); -o-transform: rotate(${rotate}deg); transform: rotate(${rotate}deg);">${icon.svg}</div></div>`,
+            iconSize: [icon.width, icon.height],
           });
 
           let plane_marker = L.marker(
@@ -250,7 +291,7 @@ export let live_map_page = {
   destroy_maps: function () {
     this.map = (<unknown>null) as L.Map;
     this.layerGroup = (<unknown>null) as L.LayerGroup;
-    this.adsb_planes = (<unknown>null) as adsb;
+    this.adsb_planes = {};
 
     if (this.live_map_page_active) this.set_html();
   },

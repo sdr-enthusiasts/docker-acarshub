@@ -127,7 +127,6 @@ export interface search_html_msg {
 
 export interface plane {
   identifiers: string[];
-  icon?: string;
   messages: acars_msg[];
 }
 
@@ -188,6 +187,13 @@ export interface adsb {
   now: number;
   messages: number;
   aircraft: adsb_plane[];
+}
+
+export interface adsb_target {
+  id: string;
+  position: adsb_plane;
+  last_updated: number;
+  icon?: aircraft_icon;
 }
 
 export interface adsb_plane {
@@ -251,4 +257,10 @@ export interface matches {
 export interface adsb_status {
   adsb_enabled: boolean;
   adsb_getting_data: boolean;
+}
+
+export interface aircraft_icon {
+  svg: string;
+  width: number;
+  height: number;
 }

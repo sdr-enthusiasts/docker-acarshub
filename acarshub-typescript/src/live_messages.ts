@@ -1,7 +1,14 @@
 import { MessageDecoder } from "@airframes/acars-decoder/dist/MessageDecoder";
 import Cookies from "js-cookie";
 import { display_messages } from "./html_generator.js";
-import { html_msg, acars_msg, labels, matches, plane } from "./interfaces.js";
+import {
+  html_msg,
+  acars_msg,
+  labels,
+  matches,
+  plane,
+  aircraft_icon,
+} from "./interfaces.js";
 import jBox from "jbox";
 import "jbox/dist/jBox.all.css";
 import { tooltip } from "./tooltips.js";
@@ -718,11 +725,11 @@ export let live_messages_page = {
   },
 
   find_matches: function () {
-    let output: { [index: string]: number } = {};
+    let output: { [index: string]: { id: number } } = {};
     for (const planes of this.lm_msgs_received.planes) {
       const length_of_messages = planes.messages.length;
       planes.identifiers.forEach((identifier) => {
-        output[identifier] = length_of_messages;
+        output[identifier] = { id: length_of_messages };
       });
     }
     return output;
