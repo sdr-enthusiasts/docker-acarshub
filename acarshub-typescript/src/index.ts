@@ -540,6 +540,14 @@ window.toggle_acars_only = function () {
   live_map_page.toggle_acars_only();
 };
 
+window.toggle_datablocks = function () {
+  live_map_page.toggle_datablocks();
+};
+
+window.toggle_extended_datablocks = function () {
+  live_map_page.toggle_extended_datablocks();
+};
+
 $(window).on("popstate", () => {
   toggle_pages();
 });

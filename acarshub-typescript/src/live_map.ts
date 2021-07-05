@@ -29,7 +29,8 @@ export let live_map_page = {
   adsb_planes: {} as { [key: string]: adsb_target },
   last_updated: 0 as number,
   map: (<unknown>null) as L.Map,
-  layerGroup: (<unknown>null) as L.LayerGroup,
+  layerGroupPlanes: (<unknown>null) as L.LayerGroup,
+  layerGroupPlaneDatablocks: (<unknown>null) as L.LayerGroup,
   lat: 0 as number,
   lon: 0 as number,
   ignored_keys: ["trk", "alt", "call"] as string[],
@@ -52,16 +53,50 @@ export let live_map_page = {
   ascending: true as boolean,
   window_size: (<unknown>null) as window_size,
   show_only_acars: false as boolean,
+  show_datablocks: false as boolean,
+  show_extended_datablocks: false as boolean,
 
   toggle_acars_only: function () {
     this.show_only_acars = !this.show_only_acars;
 
     if (this.live_map_page_active) {
-      $("#toggle_acars").html(
+      $("#toggle-acars").html(
         `${
           !this.show_only_acars
             ? images.toggle_acars_only_show_acars
             : images.toggle_acars_only_show_all
+        }`
+      );
+      this.update_targets();
+      this.airplaneList();
+    }
+  },
+
+  toggle_datablocks: function () {
+    this.show_datablocks = !this.show_datablocks;
+
+    if (this.live_map_page_active) {
+      $("#toggle-datablocks").html(
+        `${
+          this.show_datablocks
+            ? images.toggle_datablocks_on
+            : images.toggle_datablocks_off
+        }`
+      );
+      this.update_targets();
+      this.airplaneList();
+    }
+  },
+
+  toggle_extended_datablocks: function () {
+    this.show_extended_datablocks = !this.show_extended_datablocks;
+
+    if (this.live_map_page_active) {
+      $("#toggle-extended-datablocks").html(
+        `${
+          this.show_extended_datablocks
+            ? images.toggle_extended_datablocks_on
+            : images.toggle_extended_datablocks_off
         }`
       );
       this.update_targets();
@@ -269,14 +304,41 @@ export let live_map_page = {
     $("#num_planes_targets").html(`Planes w/ Targets: ${num_planes_targets}`);
   },
 
+  metersperpixel: function () {
+    return (
+      (40075016.686 *
+        Math.abs(Math.cos((this.map.getCenter().lat * Math.PI) / 180))) /
+      Math.pow(2, this.map.getZoom() + 8)
+    );
+  },
+
+  offset_datablock: function (centerpoint: [number, number]) {
+    const mtp = this.metersperpixel();
+    const offset_y = 0;
+    const offset_x = mtp * 30;
+
+    //Earth’s radius, sphere
+    const R = 6378137;
+
+    //Coordinate offsets in radians
+    const dLat = offset_y / R;
+    const dLon = offset_x / (R * Math.cos((Math.PI * centerpoint[0]) / 180));
+
+    return [
+      centerpoint[0] + (dLat * 180) / Math.PI,
+      centerpoint[1] + (dLon * 180) / Math.PI,
+    ];
+  },
+
   update_targets: function () {
     if (
       typeof this.map !== null &&
-      this.layerGroup !== null &&
+      this.layerGroupPlanes !== null &&
       this.adsb_planes !== null
     ) {
       // clear old planes
-      this.layerGroup.clearLayers();
+      this.layerGroupPlanes.clearLayers();
+      this.layerGroupPlaneDatablocks.clearLayers();
       const plane_data = find_matches();
 
       for (const plane in this.adsb_planes) {
@@ -343,7 +405,6 @@ export let live_map_page = {
           if (icon != null) {
             if (!icon.svg.includes(color)) {
               icon_old = true;
-              console.log("found");
             }
           }
 
@@ -392,7 +453,35 @@ export let live_map_page = {
                 sticky: true,
               }
             );
-            plane_marker.addTo(this.layerGroup);
+            plane_marker.addTo(this.layerGroupPlanes);
+
+            if (this.show_datablocks) {
+              let datablock = `<div class="airplane_datablock">${callsign}`;
+              if (this.show_extended_datablocks) {
+                datablock += `<br>${alt}`;
+                if (ac_type || speed) {
+                  datablock += `<br>${ac_type + " " || ""}${Math.round(speed)}`;
+                }
+
+                if (num_messages) {
+                  datablock += `<br>Msgs: ${num_messages}`;
+                }
+              }
+              datablock += "</div>";
+              let datablock_icon = new L.DivIcon({
+                className: "airplane",
+                html: datablock,
+                //iconSize: [80, 80],
+              });
+              let datablock_marker = new L.Marker(
+                this.offset_datablock([
+                  current_plane.lat || 0,
+                  current_plane.lon || 0,
+                ]) as L.LatLngTuple,
+                { icon: datablock_icon }
+              );
+              datablock_marker.addTo(this.layerGroupPlaneDatablocks);
+            }
 
             if (num_messages) {
               plane_marker.on("click", () => {
@@ -487,19 +576,27 @@ export let live_map_page = {
         .custom({
           position: "topright",
           content:
-            '<button type="button" id="toggle_acars" class="btn btn-default toggle-acars" onclick="toggle_acars_only()">' +
+            '<button type="button" id="toggle-acars" class="btn btn-default toggle-acars" onclick="toggle_acars_only()">' +
             `    ${
               !this.show_only_acars
                 ? images.toggle_acars_only_show_acars
                 : images.toggle_acars_only_show_all
             }` +
+            "</button>" +
+            '<button type="button" id="toggle-datablocks" class="btn btn-info toggle-datablocks" onclick="toggle_datablocks()">' +
+            `    ${
+              this.show_datablocks
+                ? images.toggle_datablocks_on
+                : images.toggle_datablocks_off
+            }` +
+            "</button>" +
+            '<button type="button" id="toggle-extended-datablocks" class="btn btn-primary toggle-extended-datablocks" onclick="toggle_extended_datablocks()">' +
+            `    ${
+              this.show_extended_datablocks
+                ? images.toggle_extended_datablocks_on
+                : images.toggle_extended_datablocks_off
+            }` +
             "</button>", //+
-          // '<button type="button" class="btn btn-info">'+
-          // '    <i class="fa fa-compass"></i>'+
-          // '</button>'+
-          // '<button type="button" class="btn btn-primary">'+
-          // '    <i class="fa fa-spinner fa-pulse fa-fw"></i>'+
-          // '</button>'+
           // '<button type="button" class="btn btn-danger">'+
           // '    <i class="fa fa-times"></i>'+
           // '</button>'+
@@ -519,7 +616,12 @@ export let live_map_page = {
         })
         .addTo(this.map);
 
-      this.layerGroup = L.layerGroup().addTo(this.map);
+      this.layerGroupPlanes = L.layerGroup().addTo(this.map);
+      this.layerGroupPlaneDatablocks = L.layerGroup().addTo(this.map);
+
+      this.map.on("zoom", () => {
+        this.update_targets();
+      });
 
       this.update_targets();
       this.airplaneList();
@@ -545,7 +647,8 @@ export let live_map_page = {
 
   destroy_maps: function () {
     this.map = (<unknown>null) as L.Map;
-    this.layerGroup = (<unknown>null) as L.LayerGroup;
+    this.layerGroupPlanes = (<unknown>null) as L.LayerGroup;
+    this.layerGroupPlaneDatablocks = (<unknown>null) as L.LayerGroup;
     this.adsb_planes = {};
 
     if (this.live_map_page_active) this.set_html();

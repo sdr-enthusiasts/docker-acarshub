@@ -44,4 +44,10 @@ export let images = {
 
   toggle_acars_only_show_acars: '<i class="fas fa-plane-slash"></i>' as string,
   toggle_acars_only_show_all: '<i class="fas fa-plane"></i>' as string,
+
+  toggle_datablocks_on: '<i class="fas fa-comment-alt"></i>' as string,
+  toggle_datablocks_off: '<i class="far fa-comment-alt"></i>' as string,
+
+  toggle_extended_datablocks_on: '<i class="fas fa-toggle-on"></i>' as string,
+  toggle_extended_datablocks_off: '<i class="fas fa-toggle-off"></i>' as string,
 };

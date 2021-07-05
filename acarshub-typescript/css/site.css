@@ -868,7 +868,7 @@ canvas {
 }
 
 #mapid {
-  height: 80vh;
+  height: 86vh;
   width: 100%;
   background-color: black;
   display: inline-block;
@@ -906,7 +906,7 @@ div#stat_images {
 
 div#planes {
   width: 320px;
-  max-height: 80vh;
+  max-height: 86vh;
   overflow: scroll;
   position: relative;
   border: 1px solid var(--grey-bg)
@@ -939,4 +939,17 @@ div.plane_element {
   text-decoration: none;
   text-transform: uppercase;
   font-weight: bold;
+}
+
+.airplane_datablock {
+  background: rgba(255, 255, 255, 0.2);
+  color: black;
+  font-weight: bold;
+  text-transform: uppercase;
+  max-width: 80px;
+  max-height: 80px;
+  width: max-content;
+  padding: 4px;
+  border-radius: 15px;
+  -moz-border-radius: 15px;
 }
