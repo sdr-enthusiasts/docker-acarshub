@@ -50,6 +50,16 @@ export let live_map_page = {
   current_sort: "callsign" as string,
   ascending: true as boolean,
   window_size: (<unknown>null) as window_size,
+  show_only_acars: false as boolean,
+
+  toggle_acars_only: function () {
+    this.show_only_acars = !this.show_only_acars;
+
+    if (this.live_map_page_active) {
+      this.update_targets();
+      this.airplaneList();
+    }
+  },
 
   set_targets: function (adsb_targets: adsb) {
     if (this.adsb_planes == null || this.last_updated < adsb_targets.now) {
@@ -175,7 +185,6 @@ export let live_map_page = {
           pos_b = plane_data[tail_b].id;
         }
 
-        console.log(pos_b, pos_a);
         if (this.ascending) {
           return pos_a - pos_b;
         } else {
@@ -224,25 +233,28 @@ export let live_map_page = {
       if (num_messages == undefined) {
         num_messages = 0;
       }
-      html += `<div id="${callsign}" class="plane_list">
-      <div class="plane_element">${
-        callsign && num_messages
-          ? `<a href="javascript:showPlaneMessages('${callsign}', '${hex}', '${tail}');">${callsign}</a>`
-          : callsign || "&nbsp;"
-      }</div>
-      <div class="plane_element" style="width: 18%; border-left: 2px solid var(--grey-highlight)">${
-        alt || "&nbsp;"
-      }</div>
-      <div class="plane_element" style="width: 15%; border-left: 2px solid var(--grey-highlight)">${
-        squawk || "&nbsp;"
-      }</div>
-      <div class="plane_element" style="width: 18%; border-left: 2px solid var(--grey-highlight)">${
-        Math.round(speed) || "&nbsp;"
-      }</div>
-      <div class="plane_element" style="width: 10%; border-left: 2px solid var(--grey-highlight)">${
-        num_messages || "&nbsp;"
-      }</div>
-      </div>`;
+
+      if (!this.show_only_acars || num_messages) {
+        html += `<div id="${callsign}" class="plane_list">
+        <div class="plane_element">${
+          callsign && num_messages
+            ? `<a href="javascript:showPlaneMessages('${callsign}', '${hex}', '${tail}');">${callsign}</a>`
+            : callsign || "&nbsp;"
+        }</div>
+        <div class="plane_element" style="width: 18%; border-left: 2px solid var(--grey-highlight)">${
+          alt || "&nbsp;"
+        }</div>
+        <div class="plane_element" style="width: 15%; border-left: 2px solid var(--grey-highlight)">${
+          squawk || "&nbsp;"
+        }</div>
+        <div class="plane_element" style="width: 18%; border-left: 2px solid var(--grey-highlight)">${
+          Math.round(speed) || "&nbsp;"
+        }</div>
+        <div class="plane_element" style="width: 10%; border-left: 2px solid var(--grey-highlight)">${
+          num_messages || "&nbsp;"
+        }</div>
+        </div>`;
+      }
     }
     $("#planes").html(html);
     $("#num_planes").html(`Planes: ${num_planes}`);
@@ -329,45 +341,47 @@ export let live_map_page = {
             this.adsb_planes[current_plane.hex].icon = icon;
           }
 
-          let plane_icon = L.divIcon({
-            className: "airplane",
-            html: `<div><div style="-webkit-transform:rotate(${rotate}deg); -moz-transform: rotate(${rotate}deg); -ms-transform: rotate(${rotate}deg); -o-transform: rotate(${rotate}deg); transform: rotate(${rotate}deg);">${icon.svg}</div></div>`,
-            iconSize: [icon.width, icon.height],
-          });
-
-          let plane_marker = L.marker(
-            [current_plane.lat || 0, current_plane.lon || 0],
-            {
-              icon: plane_icon,
-              riseOnHover: true,
-            }
-          );
-
-          plane_marker.bindTooltip(
-            `<div style='background:white; padding:1px 3px 1px 3px'>${
-              callsign !== hex ? callsign + "/" : ""
-            }${hex}<hr>Altitude: ${alt}ft${
-              baro_rate ? "<br>Altitude Rate: " + baro_rate + "fpm" : ""
-            }<br>Heading: ${Math.round(rotate)}&deg;${
-              speed ? "<br>Speed: " + Math.round(speed) + " knots" : ""
-            }${speed ? "<br>Squawk: " + squawk : ""}${
-              tail ? "<br>Tail Number: " + tail : ""
-            }${ac_type ? "<br>Aircraft Type: " + ac_type : ""}${
-              num_messages
-                ? "<br><br>Number of ACARS messages: " + num_messages
-                : ""
-            }</div>`,
-            {
-              className: "popup",
-              sticky: true,
-            }
-          );
-          plane_marker.addTo(this.layerGroup);
-
-          if (num_messages) {
-            plane_marker.on("click", () => {
-              showPlaneMessages(callsign, hex, tail);
+          if (!this.show_only_acars || num_messages) {
+            let plane_icon = L.divIcon({
+              className: "airplane",
+              html: `<div><div style="-webkit-transform:rotate(${rotate}deg); -moz-transform: rotate(${rotate}deg); -ms-transform: rotate(${rotate}deg); -o-transform: rotate(${rotate}deg); transform: rotate(${rotate}deg);">${icon.svg}</div></div>`,
+              iconSize: [icon.width, icon.height],
             });
+
+            let plane_marker = L.marker(
+              [current_plane.lat || 0, current_plane.lon || 0],
+              {
+                icon: plane_icon,
+                riseOnHover: true,
+              }
+            );
+
+            plane_marker.bindTooltip(
+              `<div style='background:white; padding:1px 3px 1px 3px'>${
+                callsign !== hex ? callsign + "/" : ""
+              }${hex}<hr>Altitude: ${alt}ft${
+                baro_rate ? "<br>Altitude Rate: " + baro_rate + "fpm" : ""
+              }<br>Heading: ${Math.round(rotate)}&deg;${
+                speed ? "<br>Speed: " + Math.round(speed) + " knots" : ""
+              }${speed ? "<br>Squawk: " + squawk : ""}${
+                tail ? "<br>Tail Number: " + tail : ""
+              }${ac_type ? "<br>Aircraft Type: " + ac_type : ""}${
+                num_messages
+                  ? "<br><br>Number of ACARS messages: " + num_messages
+                  : ""
+              }</div>`,
+              {
+                className: "popup",
+                sticky: true,
+              }
+            );
+            plane_marker.addTo(this.layerGroup);
+
+            if (num_messages) {
+              plane_marker.on("click", () => {
+                showPlaneMessages(callsign, hex, tail);
+              });
+            }
           }
         }
       }
@@ -451,10 +465,46 @@ export let live_map_page = {
           '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors',
       }).addTo(this.map);
 
+      L.control
+        // @ts-expect-error
+        .custom({
+          position: "topright",
+          content:
+            '<button type="button" id="toggle_acars" class="btn btn-default toggle-acars" onclick="toggle_acars_only()">' +
+            '    <i class="fas fa-envelope-open-text"></i>' +
+            "</button>", //+
+          // '<button type="button" class="btn btn-info">'+
+          // '    <i class="fa fa-compass"></i>'+
+          // '</button>'+
+          // '<button type="button" class="btn btn-primary">'+
+          // '    <i class="fa fa-spinner fa-pulse fa-fw"></i>'+
+          // '</button>'+
+          // '<button type="button" class="btn btn-danger">'+
+          // '    <i class="fa fa-times"></i>'+
+          // '</button>'+
+          // '<button type="button" class="btn btn-success">'+
+          // '    <i class="fa fa-check"></i>'+
+          // '</button>'+
+          // '<button type="button" class="btn btn-warning">'+
+          // '    <i class="fa fa-exclamation-triangle"></i>'+
+          // '</button>',
+          classes: "btn-group-vertical btn-group-sm",
+          style: {
+            margin: "10px",
+            padding: "0px 0 0 0",
+            cursor: "pointer",
+          },
+          events: {},
+        })
+        .addTo(this.map);
+
       this.layerGroup = L.layerGroup().addTo(this.map);
 
       this.update_targets();
+      this.airplaneList();
     }
+    tooltip.close_all_tooltips();
+    tooltip.attach_all_tooltips();
   },
 
   set_live_map_page_urls: function (documentPath: string, documentUrl: string) {

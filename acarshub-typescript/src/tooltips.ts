@@ -135,6 +135,21 @@ export let tooltip = {
       y: "bottom",
     },
   }),
+
+  toggle_acars: new jBox("Tooltip", {
+    title: "Toggle ACARS",
+    content:
+      "Toggle between showing all ADSB targets and only those with ACARS messages",
+    closeOnMouseleave: true,
+    adjustTracker: true,
+    delayOpen: 500,
+    position: {
+      x: "left",
+      y: "center",
+    },
+    outside: "xy",
+  }),
+
   // Function to close all open tool tips. This is needed so that when the page updates tooltips aren't just chilling randomly
 
   close_all_tooltips: function () {
@@ -150,6 +165,7 @@ export let tooltip = {
     this.msgno_tooltip.close();
     this.response_tooltip.close();
     this.error_tooltip.close();
+    this.toggle_acars.close();
   },
 
   // Function to attach all of the tooltips to the new elements on the page
@@ -167,5 +183,6 @@ export let tooltip = {
     this.msgno_tooltip.attach($(".msgno-tooltip"));
     this.response_tooltip.attach($(".response-tooltip"));
     this.error_tooltip.attach($(".error-tooltip"));
+    this.toggle_acars.attach($(".toggle-acars"));
   },
 };

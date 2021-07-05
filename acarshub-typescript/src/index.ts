@@ -536,6 +536,10 @@ window.showPlaneMessages = function (
   live_map_page.showPlaneMessages(callsign, hex, tail);
 };
 
+window.toggle_acars_only = function () {
+  live_map_page.toggle_acars_only();
+};
+
 $(window).on("popstate", () => {
   toggle_pages();
 });
