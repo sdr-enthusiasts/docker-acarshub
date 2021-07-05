@@ -7,6 +7,7 @@ update-local-acars-decoder.sh
 Logo-Sources
 acarshub-typescript/dist
 acarshub-typescript/node_modules
+acarshub-typescript/test_assets
 rootfs/webapp/static/js
 rootfs/webapp/static/airframes-acars-decoder
 rootfs/webapp/static/css
@@ -19,3 +20,4 @@ update-local-acars-decoder.sh
 generate_local_dockerfile.sh
 tools
 .vscode
+tools
