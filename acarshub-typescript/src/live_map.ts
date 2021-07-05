@@ -559,7 +559,6 @@ export let live_map_page = {
     this.window_size = new_window_size;
     if (this.map) {
       this.map.invalidateSize();
-      console.log("invalidateSize");
     }
     if (new_window_size.width < 700) {
       $("#mapid").css("width", "100%");
@@ -652,8 +651,9 @@ export let live_map_page = {
           events: {},
         })
         .addTo(this.map);
-      // @ts-expect-error
+
       L.control
+        // @ts-expect-error
         .Legend({
           position: "bottomleft",
           symbolWidth: 45,
