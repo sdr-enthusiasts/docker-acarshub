@@ -738,7 +738,8 @@ canvas {
   font-family: var(--site-fonts);
 }
 
-.jBox-Mouse.jBox-wrapper .jBox-title {
+.jBox-Mouse.jBox-wrapper .jBox-title,
+.jBox-Tooltip.jBox-wrapper .jBox-title {
   background-color:  #ccc;
   color: var(--blue-highlight);
   font-family: var(--site-fonts);
@@ -747,7 +748,8 @@ canvas {
   text-align: center;
 }
 
-.jBox-Mouse.jBox-wrapper .jBox-content {
+.jBox-Mouse.jBox-wrapper .jBox-content,
+.jBox-Tooltip.jBox-wrapper .jBox-content {
   background-color:  var(--grey-bg);
   font-family: var(--site-fonts);
   color: var(--blue-highlight);
@@ -904,7 +906,7 @@ div#stat_images {
 
 div#planes {
   width: 320px;
-  height: 80vh;
+  max-height: 80vh;
   overflow: scroll;
   position: relative;
   border: 1px solid var(--grey-bg)

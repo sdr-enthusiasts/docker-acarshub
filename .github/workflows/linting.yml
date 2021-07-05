@@ -121,6 +121,7 @@ jobs:
         name: Build ACARSHub typescript test
         working-directory: ./acarshub-typescript
         run: |
+          set -xe
           npm install
           sed -i 's/Pre-Release/ACARS Hub Pre-Release: ${{ env.VERSION_TAG }}/' ./src/menu.ts
           npm run buildtest
