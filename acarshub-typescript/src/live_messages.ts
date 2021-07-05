@@ -151,24 +151,26 @@ export let live_messages_page = {
 
         if (active_tab === "0") {
           next_tab = this.lm_msgs_received.planes[i].messages[1].uid;
-          previous_tab = this.lm_msgs_received.planes[i].messages[
-            this.lm_msgs_received.planes[i].messages.length - 1
-          ].uid;
+          previous_tab =
+            this.lm_msgs_received.planes[i].messages[
+              this.lm_msgs_received.planes[i].messages.length - 1
+            ].uid;
         } else if (
           active_tab ===
           String(this.lm_msgs_received.planes[i].messages.length - 1)
         ) {
           next_tab = this.lm_msgs_received.planes[i].messages[0].uid;
-          previous_tab = this.lm_msgs_received.planes[i].messages[
-            this.lm_msgs_received.planes[i].messages.length - 2
-          ].uid;
+          previous_tab =
+            this.lm_msgs_received.planes[i].messages[
+              this.lm_msgs_received.planes[i].messages.length - 2
+            ].uid;
         } else {
-          next_tab = this.lm_msgs_received.planes[i].messages[
-            Number(active_tab) + 1
-          ].uid;
-          previous_tab = this.lm_msgs_received.planes[i].messages[
-            Number(active_tab) - 1
-          ].uid;
+          next_tab =
+            this.lm_msgs_received.planes[i].messages[Number(active_tab) + 1]
+              .uid;
+          previous_tab =
+            this.lm_msgs_received.planes[i].messages[Number(active_tab) - 1]
+              .uid;
         }
 
         i = this.lm_msgs_received.planes.length;

@@ -63,9 +63,8 @@ export let stats_page = {
       const canvas_alerts: HTMLCanvasElement = <HTMLCanvasElement>(
         document.getElementById("alertterms")
       );
-      const ctx_alerts: CanvasRenderingContext2D = canvas_alerts.getContext(
-        "2d"
-      )!;
+      const ctx_alerts: CanvasRenderingContext2D =
+        canvas_alerts.getContext("2d")!;
       if (ctx_alerts != null) {
         this.chart_alerts = new Chart(ctx_alerts, {
           // The type of chart we want to create
@@ -504,9 +503,8 @@ export let stats_page = {
       const canvas_empty: HTMLCanvasElement = <HTMLCanvasElement>(
         document.getElementById("msg_count_empty")
       );
-      const ctx_empty: CanvasRenderingContext2D = canvas_empty.getContext(
-        "2d"
-      )!;
+      const ctx_empty: CanvasRenderingContext2D =
+        canvas_empty.getContext("2d")!;
       if (ctx_empty != null) {
         this.chart_message_counts_empty = new Chart(ctx_empty, {
           // The type of chart we want to create
