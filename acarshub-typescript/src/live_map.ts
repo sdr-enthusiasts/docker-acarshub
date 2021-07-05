@@ -330,10 +330,16 @@ export let live_map_page = {
             null
           );
           let color: string = num_messages ? "green" : "var(--blue-highlight)";
-          // TODO: num_messages == 1 is a hack to stop an issue where an adsb plane comes
-          // in range, has no messages, and then we pick up a message. If this happens the icon never changes
-          // color
-          if (icon == null || num_messages == 1) {
+          let icon_old = false;
+
+          if (icon != null) {
+            if (!icon.svg.includes(color)) {
+              icon_old = true;
+              console.log("found");
+            }
+          }
+
+          if (icon == null || icon_old) {
             icon = svgShapeToURI(
               type_shape[0],
               color,
