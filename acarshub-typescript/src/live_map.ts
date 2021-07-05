@@ -652,6 +652,27 @@ export let live_map_page = {
           events: {},
         })
         .addTo(this.map);
+      // @ts-expect-error
+      L.control
+        .Legend({
+          position: "bottomleft",
+          symbolWidth: 45,
+          symbolHeight: 45,
+          opacity: 0.6,
+          legends: [
+            {
+              label: "Planes With ACARS",
+              type: "image",
+              url: "static/images/legend-has-acars.svg",
+            },
+            {
+              label: "Planes Without ACARS",
+              type: "image",
+              url: "static/images/legend-without-acars.svg",
+            },
+          ],
+        })
+        .addTo(this.map);
 
       this.layerGroupPlanes = L.layerGroup().addTo(this.map);
       this.layerGroupPlaneDatablocks = L.layerGroup().addTo(this.map);
