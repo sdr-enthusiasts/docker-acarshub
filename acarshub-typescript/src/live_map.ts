@@ -10,6 +10,7 @@ import {
 import jBox from "jbox";
 import { display_messages } from "./html_generator.js";
 import { getBaseMarker, svgShapeToURI } from "aircraft_icons";
+import { window } from "./index.js";
 
 import {
   resize_tabs,
@@ -48,6 +49,7 @@ export let live_map_page = {
     repositionOnOpen: false,
     title: "Messages",
     content: "",
+    onClose: () => window.close_live_map_modal(),
   }),
   current_sort: "callsign" as string,
   ascending: true as boolean,
@@ -55,6 +57,11 @@ export let live_map_page = {
   show_only_acars: false as boolean,
   show_datablocks: false as boolean,
   show_extended_datablocks: false as boolean,
+  current_modal_terms: (<unknown>null) as {
+    callsign: string;
+    hex: string;
+    tail: string;
+  },
 
   toggle_acars_only: function () {
     this.show_only_acars = !this.show_only_acars;
@@ -67,8 +74,7 @@ export let live_map_page = {
             : images.toggle_acars_only_show_all
         }`
       );
-      this.update_targets();
-      this.airplaneList();
+      this.redraw_map();
     }
   },
 
@@ -83,8 +89,7 @@ export let live_map_page = {
             : images.toggle_datablocks_off
         }`
       );
-      this.update_targets();
-      this.airplaneList();
+      this.redraw_map();
     }
   },
 
@@ -99,8 +104,22 @@ export let live_map_page = {
             : images.toggle_extended_datablocks_off
         }`
       );
+      this.redraw_map();
+    }
+  },
+
+  redraw_map: function () {
+    if (this.live_map_page_active) {
       this.update_targets();
       this.airplaneList();
+
+      if (this.current_modal_terms != null) {
+        this.showPlaneMessages(
+          this.current_modal_terms.callsign,
+          this.current_modal_terms.hex,
+          this.current_modal_terms.tail
+        );
+      }
     }
   },
 
@@ -127,8 +146,7 @@ export let live_map_page = {
         }
       }
       if (this.live_map_page_active) {
-        this.update_targets();
-        this.airplaneList();
+        this.redraw_map();
       }
     }
   },
@@ -500,6 +518,11 @@ export let live_map_page = {
     plane_tail = ""
   ) {
     if (plane_callsign === "" && plane_hex === "") return;
+    this.current_modal_terms = {
+      callsign: plane_callsign,
+      hex: plane_hex,
+      tail: plane_tail,
+    };
     const matches: acars_msg[] = get_match(
       plane_callsign,
       plane_hex,
@@ -522,6 +545,14 @@ export let live_map_page = {
     $(".dont_show").css("display", "none");
     tooltip.close_all_tooltips();
     tooltip.attach_all_tooltips();
+  },
+
+  close_live_map_modal: function () {
+    this.current_modal_terms = (<unknown>null) as {
+      callsign: string;
+      hex: string;
+      tail: string;
+    };
   },
 
   updateModalSize: function (new_window_size: window_size) {
@@ -620,11 +651,10 @@ export let live_map_page = {
       this.layerGroupPlaneDatablocks = L.layerGroup().addTo(this.map);
 
       this.map.on("zoom", () => {
-        this.update_targets();
+        this.redraw_map();
       });
 
-      this.update_targets();
-      this.airplaneList();
+      this.redraw_map();
     }
     tooltip.close_all_tooltips();
     tooltip.attach_all_tooltips();

@@ -15,5 +15,6 @@ find ./dist/ -maxdepth 1 -type f -iname '*.js' -exec sed -i.bu "s/import { io } 
 find ./dist/ -maxdepth 1 -type f -iname '*.js' -exec sed -i.bu "s/import palette from \"palette\";//g" {} \;
 find ./dist/ -maxdepth 1 -type f -iname '*.js' -exec sed -i.bu "s/import { getBaseMarker, svgShapeToURI } from \"aircraft_icons\"//g" {} \;
 find ./dist/ -maxdepth 1 -type f -iname '*.js' -exec sed -i.bu "s/import { search_database, window } from \".\/index.js\";/import { search_database } from \".\/index.js\";/g" {} \;
+find ./dist/ -maxdepth 1 -type f -iname '*.js' -exec sed -i.bu "s/import { window } from \".\/index.js\";//g" {} \;
 
 rm -f ./dist/*.bu

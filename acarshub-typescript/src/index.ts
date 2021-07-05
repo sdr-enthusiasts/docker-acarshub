@@ -42,6 +42,7 @@ let adsb_url: string = "";
 let adsb_getting_data: boolean = false;
 let adsb_interval: any;
 let connection_good: boolean = true;
+let adsb_enabled = false;
 
 const pages: string[] = [
   "/", // index/live messages
@@ -112,6 +113,8 @@ $(() => {
     // New acars message.
     if (connection_good || typeof msg.loading == "undefined") {
       live_messages_page.new_acars_message(msg); // send the message to live messages
+      if (adsb_enabled && typeof msg.loading == "undefined")
+        live_map_page.redraw_map();
       if (typeof msg.loading == "undefined" || msg.loading === false)
         alerts_page.alerts_acars_message(msg); // send the message to alerts for processing
     }
@@ -138,6 +141,7 @@ $(() => {
   socket.on("features_enabled", function (msg: decoders) {
     stats_page.decoders_enabled(msg);
     if (msg.adsb.enabled === true) {
+      adsb_enabled = true;
       menu.set_adsb(true);
       toggle_pages();
       alerts_page.updateAlertCounter();
@@ -170,6 +174,7 @@ $(() => {
     // If for some reason ADSB was ever turned off on the back end and was enabled for the client, turn off the updater
     // And update the web app to remove menu and destroy costly background assets
     if (!msg.adsb.enabled && adsb_interval != null) {
+      adsb_enabled = false;
       clearInterval(adsb_interval);
       adsb_interval = null;
       menu.set_adsb(false);
@@ -556,6 +561,10 @@ window.close_modal = function () {
   if (index_acars_page === "/search") {
     $("input").off(); // Turn off the event listener for keys in the search modal
   }
+};
+
+window.close_live_map_modal = function () {
+  live_map_page.close_live_map_modal();
 };
 
 export function showPlaneMessages(
