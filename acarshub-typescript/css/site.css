@@ -951,5 +951,6 @@ div.plane_element {
   width: max-content;
   padding: 4px;
   border-radius: 15px;
+  border: 2px solid rgba(0, 0, 0, 0.3);
   -moz-border-radius: 15px;
 }
