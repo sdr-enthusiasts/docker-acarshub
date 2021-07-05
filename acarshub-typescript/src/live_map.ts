@@ -557,11 +557,16 @@ export let live_map_page = {
 
   updateModalSize: function (new_window_size: window_size) {
     this.window_size = new_window_size;
+    if (this.map) {
+      this.map.invalidateSize();
+      console.log("invalidateSize");
+    }
     if (new_window_size.width < 700) {
       $("#mapid").css("width", "100%");
       $("#planes").css("display", "none");
     } else {
       $("#mapid").css("width", `${this.window_size.width - 370}px`);
+      $("#planes").css("display", "inline-block");
     }
     this.plane_message_modal.setHeight(
       new_window_size.height > 500 ? 500 : 400

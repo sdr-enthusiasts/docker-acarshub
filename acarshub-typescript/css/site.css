@@ -769,6 +769,12 @@ canvas {
   .right_side {
     float: left;
   }
+
+  #planes,
+  #mapid {
+    height: calc(100vh - 130px) !important;
+    max-height: calc(100vh - 130px) !important;
+  }
 }
 
 @media only screen and (max-width: 950px) {
@@ -850,6 +856,12 @@ canvas {
   .show_when_small {
     display: inline-block;
   }
+
+  #planes,
+  #mapid {
+    height: calc(100vh - 170px) !important;
+    max-height: calc(100vh - 170px) !important;
+  }
 }
 
 @media only screen and (min-width: 951px) {
@@ -868,7 +880,8 @@ canvas {
 }
 
 #mapid {
-  height: 86vh;
+  height: calc(100vh - 160px);
+  max-height: calc(100vh - 160px);
   width: 100%;
   background-color: black;
   display: inline-block;
@@ -906,7 +919,8 @@ div#stat_images {
 
 div#planes {
   width: 320px;
-  max-height: 86vh;
+  height: calc(100vh - 160px);
+  max-height: calc(100vh - 160px);
   overflow: scroll;
   position: relative;
   border: 1px solid var(--grey-bg)
