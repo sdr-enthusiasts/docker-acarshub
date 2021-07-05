@@ -738,6 +738,15 @@ canvas {
   font-family: var(--site-fonts);
 }
 
+#airplane.jBox-Mouse.jBox-wrapper .jBox-content,
+#airplane.jBox-Tooltip.jBox-wrapper .jBox-content {
+  background-color:  white;
+  color: black;
+  font-size: 12px;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
 .jBox-Mouse.jBox-wrapper .jBox-title,
 .jBox-Tooltip.jBox-wrapper .jBox-title {
   background-color:  #ccc;

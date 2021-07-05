@@ -112,6 +112,7 @@ export let live_map_page = {
     if (this.live_map_page_active) {
       this.update_targets();
       this.airplaneList();
+      tooltip.attach_all_tooltips();
 
       if (this.current_modal_terms != null) {
         this.showPlaneMessages(
@@ -437,10 +438,24 @@ export let live_map_page = {
             this.adsb_planes[current_plane.hex].icon = icon;
           }
 
+          const popup_text = `<div style='background:white; padding:1px 3px 1px 3px'>${
+            callsign !== hex ? callsign + "/" : ""
+          }${hex}<hr>Altitude: ${alt}ft${
+            baro_rate ? "<br>Altitude Rate: " + baro_rate + "fpm" : ""
+          }<br>Heading: ${Math.round(rotate)}&deg;${
+            speed ? "<br>Speed: " + Math.round(speed) + " knots" : ""
+          }${speed ? "<br>Squawk: " + squawk : ""}${
+            tail ? "<br>Tail Number: " + tail : ""
+          }${ac_type ? "<br>Aircraft Type: " + ac_type : ""}${
+            num_messages
+              ? "<br><br>Number of ACARS messages: " + num_messages
+              : ""
+          }</div>`;
+
           if (!this.show_only_acars || num_messages) {
             let plane_icon = L.divIcon({
               className: "airplane",
-              html: `<div><div style="-webkit-transform:rotate(${rotate}deg); -moz-transform: rotate(${rotate}deg); -ms-transform: rotate(${rotate}deg); -o-transform: rotate(${rotate}deg); transform: rotate(${rotate}deg);">${icon.svg}</div></div>`,
+              html: `<div><div class="datablock" data-jbox-content="${popup_text}" style="-webkit-transform:rotate(${rotate}deg); -moz-transform: rotate(${rotate}deg); -ms-transform: rotate(${rotate}deg); -o-transform: rotate(${rotate}deg); transform: rotate(${rotate}deg);">${icon.svg}</div></div>`,
               iconSize: [icon.width, icon.height],
             });
 
@@ -452,25 +467,26 @@ export let live_map_page = {
               }
             );
 
-            plane_marker.bindTooltip(
-              `<div style='background:white; padding:1px 3px 1px 3px'>${
-                callsign !== hex ? callsign + "/" : ""
-              }${hex}<hr>Altitude: ${alt}ft${
-                baro_rate ? "<br>Altitude Rate: " + baro_rate + "fpm" : ""
-              }<br>Heading: ${Math.round(rotate)}&deg;${
-                speed ? "<br>Speed: " + Math.round(speed) + " knots" : ""
-              }${speed ? "<br>Squawk: " + squawk : ""}${
-                tail ? "<br>Tail Number: " + tail : ""
-              }${ac_type ? "<br>Aircraft Type: " + ac_type : ""}${
-                num_messages
-                  ? "<br><br>Number of ACARS messages: " + num_messages
-                  : ""
-              }</div>`,
-              {
-                className: "popup",
-                sticky: true,
-              }
-            );
+            // plane_marker.bindTooltip(
+            // `<div style='background:white; padding:1px 3px 1px 3px'>${
+            //   callsign !== hex ? callsign + "/" : ""
+            // }${hex}<hr>Altitude: ${alt}ft${
+            //   baro_rate ? "<br>Altitude Rate: " + baro_rate + "fpm" : ""
+            // }<br>Heading: ${Math.round(rotate)}&deg;${
+            //   speed ? "<br>Speed: " + Math.round(speed) + " knots" : ""
+            // }${speed ? "<br>Squawk: " + squawk : ""}${
+            //   tail ? "<br>Tail Number: " + tail : ""
+            // }${ac_type ? "<br>Aircraft Type: " + ac_type : ""}${
+            //   num_messages
+            //     ? "<br><br>Number of ACARS messages: " + num_messages
+            //     : ""
+            // }</div>`,
+            //   {
+            //     className: "popup",
+
+            //     sticky: true,
+            //   }
+            // );
             plane_marker.addTo(this.layerGroupPlanes);
 
             if (this.show_datablocks) {
@@ -543,7 +559,6 @@ export let live_map_page = {
     $(".show_when_small").css("display", `inline-block`);
     $(".show_when_big").css("display", "none");
     $(".dont_show").css("display", "none");
-    tooltip.close_all_tooltips();
     tooltip.attach_all_tooltips();
   },
 
@@ -574,7 +589,6 @@ export let live_map_page = {
     resize_tabs(new_window_size.width > 500 ? 465 : 310, false);
     $(".show_when_small").css("display", `inline-block`);
     $(".show_when_big").css("display", "none");
-    tooltip.close_all_tooltips();
     tooltip.attach_all_tooltips();
   },
 
@@ -683,8 +697,7 @@ export let live_map_page = {
 
       this.redraw_map();
     }
-    tooltip.close_all_tooltips();
-    tooltip.attach_all_tooltips();
+    tooltip.cycle_tooltip();
   },
 
   set_live_map_page_urls: function (documentPath: string, documentUrl: string) {

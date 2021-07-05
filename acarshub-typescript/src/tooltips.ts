@@ -177,6 +177,17 @@ export let tooltip = {
     outside: "xy",
   }),
 
+  datablock: new jBox("Mouse", {
+    getContent: "data-jbox-content",
+    id: "airplane",
+    closeOnMouseleave: true,
+    adjustTracker: true,
+    position: {
+      x: "right",
+      y: "bottom",
+    },
+  }),
+
   // Function to close all open tool tips. This is needed so that when the page updates tooltips aren't just chilling randomly
 
   close_all_tooltips: function () {
@@ -195,6 +206,7 @@ export let tooltip = {
     this.toggle_acars.close();
     this.toggle_datablocks.close();
     this.toggle_extended_datablocks.close();
+    this.datablock.close();
   },
 
   // Function to attach all of the tooltips to the new elements on the page
@@ -215,5 +227,11 @@ export let tooltip = {
     this.toggle_acars.attach($(".toggle-acars"));
     this.toggle_datablocks.attach($(".toggle-datablocks"));
     this.toggle_extended_datablocks.attach($(".toggle-extended-datablocks"));
+    this.datablock.attach($(".datablock"));
+  },
+
+  cycle_tooltip: function () {
+    this.close_all_tooltips();
+    this.attach_all_tooltips();
   },
 };
