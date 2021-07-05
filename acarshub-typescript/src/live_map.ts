@@ -409,15 +409,7 @@ export let live_map_page = {
           //   matched_with_acars
           //     ? `<div class="svg-overlay" style="color: white;">(` + num_messages + ")</div>" : ""
           // }
-          let type_shape = getBaseMarker(
-            current_plane.category,
-            current_plane.t,
-            null,
-            null,
-            current_plane.type,
-            alt,
-            null
-          );
+
           let color: string = num_messages ? "green" : "var(--blue-highlight)";
           let icon_old = false;
 
@@ -428,6 +420,16 @@ export let live_map_page = {
           }
 
           if (icon == null || icon_old) {
+            const type_shape = getBaseMarker(
+              current_plane.category,
+              current_plane.t,
+              null,
+              null,
+              current_plane.type,
+              alt,
+              null
+            );
+
             icon = svgShapeToURI(
               type_shape[0],
               color,
