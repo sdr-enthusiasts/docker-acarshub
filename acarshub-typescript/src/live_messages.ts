@@ -420,32 +420,48 @@ export let live_messages_page = {
             if (
               message.hasOwnProperty("tail") &&
               new_tail == message.tail &&
-              ((message.hasOwnProperty("icao") && message.icao == new_icao) ||
-                message.hasOwnProperty("icao")) &&
+              ((message.hasOwnProperty("icao") &&
+                new_msg.hasOwnProperty("icao") &&
+                message.icao == new_icao) ||
+                !message.hasOwnProperty("icao") ||
+                !new_msg.hasOwnProperty("icao")) &&
               ((message.hasOwnProperty("flight") &&
+                new_msg.hasOwnProperty("flight") &&
                 message.flight == new_flight) ||
-                !message.hasOwnProperty("flight"))
+                !message.hasOwnProperty("flight") ||
+                !new_msg.hasOwnProperty("flight"))
             ) {
               found = true;
               index_new = this.lm_msgs_received.planes.indexOf(planes);
             } else if (
               message.hasOwnProperty("icao") &&
               new_icao == message.icao &&
-              ((message.hasOwnProperty("tail") && message.tail == new_tail) ||
-                !message.hasOwnProperty("tail")) &&
+              ((message.hasOwnProperty("tail") &&
+                new_msg.hasOwnProperty("tail") &&
+                message.tail == new_tail) ||
+                !message.hasOwnProperty("tail") ||
+                !new_msg.hasOwnProperty("tail")) &&
               ((message.hasOwnProperty("flight") &&
+                new_msg.hasOwnProperty("flight") &&
                 message.flight == new_flight) ||
-                !message.hasOwnProperty("flight"))
+                !message.hasOwnProperty("flight") ||
+                !new_msg.hasOwnProperty("flight"))
             ) {
               found = true;
               index_new = this.lm_msgs_received.planes.indexOf(planes);
             } else if (
               message.hasOwnProperty("flight") &&
               new_flight == message.flight &&
-              ((message.hasOwnProperty("icao") && message.icao == new_icao) ||
-                !message.hasOwnProperty("icao")) &&
-              ((message.hasOwnProperty("tail") && message.tail == new_tail) ||
-                !message.hasOwnProperty("tail"))
+              ((message.hasOwnProperty("icao") &&
+                new_msg.hasOwnProperty("icao") &&
+                message.icao == new_icao) ||
+                !message.hasOwnProperty("icao") ||
+                !new_msg.hasOwnProperty("icao")) &&
+              ((message.hasOwnProperty("tail") &&
+                new_msg.hasOwnProperty("tail") &&
+                message.tail == new_tail) ||
+                !message.hasOwnProperty("tail") ||
+                !new_msg.hasOwnProperty("tail"))
             ) {
               found = true;
               index_new = this.lm_msgs_received.planes.indexOf(planes);
