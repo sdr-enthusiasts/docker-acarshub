@@ -181,86 +181,124 @@ export let live_map_page = {
     let num_planes = 0;
     let num_planes_targets = 0;
     let sorted = Object.values(this.adsb_planes).sort((a, b) => {
-      let pos_a: number | string = a.position.flight
+      const callsign_a: number | string = a.position.flight
         ? a.position.flight.trim()
         : a.position.r || a.position.hex.toUpperCase();
-      let pos_b: number | string = b.position.flight
+      const callsign_b: number | string = b.position.flight
         ? b.position.flight.trim()
         : b.position.r || b.position.hex.toUpperCase();
-      if (this.current_sort === "alt") {
-        pos_a = a.position.alt_baro || 0;
-        pos_b = b.position.alt_baro || 0;
+      const alt_a = a.position.alt_baro || 0;
+      const alt_b = b.position.alt_baro || 0;
+      const squawk_a = a.position.squawk || 0;
+      const squawk_b = b.position.squawk || 0;
+      const speed_a = a.position.gs || 0;
+      const speed_b = b.position.gs || 0;
+      const tail_a: string = a.position.r || <any>undefined;
+      const tail_b: string = b.position.r || <any>undefined;
+      let num_msgs_a = 0;
+      let num_msgs_b = 0;
 
+      if (plane_data[a.position.hex]) {
+        num_msgs_a = plane_data[a.position.hex].id;
+      }
+      if (num_msgs_a == undefined && plane_data[callsign_a]) {
+        num_msgs_a = plane_data[callsign_a].id;
+      }
+      if (num_msgs_a == 0 && tail_a != undefined && plane_data[tail_a]) {
+        num_msgs_a = plane_data[tail_a].id;
+      }
+
+      if (plane_data[b.position.hex]) {
+        num_msgs_b = plane_data[b.position.hex].id;
+      }
+      if (num_msgs_b == 0 && plane_data[callsign_b]) {
+        num_msgs_b = plane_data[callsign_b].id;
+      }
+      if (num_msgs_b == 0 && tail_b != undefined && plane_data[tail_b]) {
+        num_msgs_b = plane_data[tail_b].id;
+      }
+      if (this.current_sort === "alt") {
+        if (alt_a == alt_b) {
+          if (callsign_a != callsign_b) {
+            if (callsign_a < callsign_b) {
+              return -1;
+            } else {
+              return 1;
+            }
+          }
+        }
         if (this.ascending) {
-          return pos_a - pos_b;
+          if (String(alt_a) == "ground" && String(alt_b) != "ground") return -1;
+          else if (String(alt_b) == "ground" && String(alt_a) != "ground")
+            return 1;
+          return alt_a - alt_b;
         } else {
-          return pos_b - pos_a;
+          if (String(alt_a) == "ground" && String(alt_b) != "ground") return 1;
+          else if (String(alt_b) == "ground" && String(alt_a) != "ground")
+            return -1;
+          else if (alt_a == alt_b) {
+            if (callsign_a < callsign_b) {
+              return -1;
+            } else {
+              return 1;
+            }
+          }
+          return alt_b - alt_a;
         }
       } else if (this.current_sort === "code") {
-        pos_a = a.position.squawk || 0;
-        pos_b = b.position.squawk || 0;
-
+        if (squawk_a == squawk_b) {
+          if (callsign_a != callsign_b) {
+            if (callsign_a < callsign_b) {
+              return -1;
+            } else {
+              return 1;
+            }
+          }
+        }
         if (this.ascending) {
-          return pos_a - pos_b;
+          return squawk_a - squawk_b;
         } else {
-          return pos_b - pos_a;
+          return squawk_b - squawk_a;
         }
       } else if (this.current_sort === "speed") {
-        pos_a = a.position.gs || 0;
-        pos_b = b.position.gs || 0;
+        if (speed_a == speed_b) {
+          if (callsign_a != callsign_b) {
+            if (callsign_a < callsign_b) {
+              return -1;
+            } else {
+              return 1;
+            }
+          }
+        }
         if (this.ascending) {
-          return pos_a - pos_b;
+          return speed_a - speed_b;
         } else {
-          return pos_b - pos_a;
+          return speed_b - speed_a;
         }
       } else if (this.current_sort === "msgs") {
-        pos_a = 0;
-        pos_b = 0;
-
-        const callsign_a = a.position.flight
-          ? a.position.flight.trim()
-          : a.position.r || a.position.hex.toUpperCase();
-        const tail_a: string = a.position.r || <any>undefined;
-
-        const callsign_b = b.position.flight
-          ? b.position.flight.trim()
-          : b.position.r || b.position.hex.toUpperCase();
-        const tail_b: string = b.position.r || <any>undefined;
-
-        if (plane_data[a.position.hex]) {
-          pos_a = plane_data[a.position.hex].id;
+        if (num_msgs_a == num_msgs_b) {
+          if (callsign_a != callsign_b) {
+            if (callsign_a < callsign_b) {
+              return -1;
+            } else {
+              return 1;
+            }
+          }
         }
-        if (pos_a == undefined && plane_data[callsign_a]) {
-          pos_a = plane_data[callsign_a].id;
-        }
-        if (pos_a == 0 && tail_a != undefined && plane_data[tail_a]) {
-          pos_a = plane_data[tail_a].id;
-        }
-
-        if (plane_data[b.position.hex]) {
-          pos_b = plane_data[b.position.hex].id;
-        }
-        if (pos_b == 0 && plane_data[callsign_b]) {
-          pos_b = plane_data[callsign_b].id;
-        }
-        if (pos_b == 0 && tail_b != undefined && plane_data[tail_b]) {
-          pos_b = plane_data[tail_b].id;
-        }
-
         if (this.ascending) {
-          return pos_a - pos_b;
+          return num_msgs_a - num_msgs_b;
         } else {
-          return pos_b - pos_a;
+          return num_msgs_b - num_msgs_a;
         }
       } else {
         if (this.ascending) {
-          if (pos_a < pos_b) {
+          if (callsign_a < callsign_b) {
             return -1;
           } else {
             return 1;
           }
         } else {
-          if (pos_b < pos_a) {
+          if (callsign_b < callsign_a) {
             return -1;
           } else {
             return 1;
