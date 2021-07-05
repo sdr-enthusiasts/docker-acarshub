@@ -41,4 +41,7 @@ export let images = {
      </g>
     </svg>
     ` as string,
+
+  toggle_acars_only_show_acars: '<i class="fas fa-plane-slash"></i>' as string,
+  toggle_acars_only_show_all: '<i class="fas fa-plane"></i>' as string,
 };

@@ -19,6 +19,7 @@ import {
   get_window_size,
 } from "./index.js";
 import { tooltip } from "./tooltips.js";
+import { images } from "./images.js";
 
 export let live_map_page = {
   livemap_acars_path: "" as string,
@@ -56,6 +57,13 @@ export let live_map_page = {
     this.show_only_acars = !this.show_only_acars;
 
     if (this.live_map_page_active) {
+      $("#toggle_acars").html(
+        `${
+          !this.show_only_acars
+            ? images.toggle_acars_only_show_acars
+            : images.toggle_acars_only_show_all
+        }`
+      );
       this.update_targets();
       this.airplaneList();
     }
@@ -480,7 +488,11 @@ export let live_map_page = {
           position: "topright",
           content:
             '<button type="button" id="toggle_acars" class="btn btn-default toggle-acars" onclick="toggle_acars_only()">' +
-            '    <i class="fas fa-envelope-open-text"></i>' +
+            `    ${
+              !this.show_only_acars
+                ? images.toggle_acars_only_show_acars
+                : images.toggle_acars_only_show_all
+            }` +
             "</button>", //+
           // '<button type="button" class="btn btn-info">'+
           // '    <i class="fa fa-compass"></i>'+
