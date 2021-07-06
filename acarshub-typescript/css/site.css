@@ -900,30 +900,28 @@ canvas {
   display: inline-block;
 }
 
-/* .airplane {
-  width: 45px;
-  background-color: red;
-} */
+.airplane_blue:hover,
+.airplane_green:hover {
+  fill: orange;
+}
+
+.airplane_green {
+  fill: green;
+  stroke: black;
+}
+
+.airplane_blue {
+  fill: var(--blue-highlight);
+  stroke: black;
+}
 
 svg {
   position: relative;
-  /* top: 0;
-  left: 0; */
   display: block;
   margin-top: auto;
   margin-bottom: auto;
   margin-left: auto;
   margin-right: auto;
-}
-
-.svg-overlay {
-  position: relative;
-  right: 0px;
-  bottom: 20px;
-  z-index: 1;
-  font-weight: bold;
-  font-size: 15px;
-  font-family: var(--mono-fonts);
 }
 
 div#stat_images {
@@ -938,12 +936,19 @@ div#planes {
   border: 1px solid var(--grey-bg)
 }
 
+div.plane_list_no_hover,
 div.plane_list {
   display: inline-block;
   width: 100%;
   border: 1px solid black;
   background-color: var(--grey-bg);
   color: var(--blue-highlight);
+}
+
+div.plane_list:hover {
+  background-color: var(--grey-highlight) !important;
+  font-weight: bold !important;
+  color: black !important
 }
 
 div.plane_element {

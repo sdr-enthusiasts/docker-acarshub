@@ -172,8 +172,8 @@ export let live_map_page = {
   },
 
   airplaneList: function () {
-    let html: string = `<div class="plane_list"><div class="plane_element" id="num_planes" style="width: 50%"></div><div class="plane_element" id="num_planes_targets" style="width: 50%"></div></div>
-                        <div class="plane_list" style="font-weight: bold;border-bottom: 1px solid black;">
+    let html: string = `<div class="plane_list_no_hover"><div class="plane_element" id="num_planes" style="width: 50%"></div><div class="plane_element" id="num_planes_targets" style="width: 50%"></div></div>
+                        <div class="plane_list_no_hover" style="font-weight: bold;border-bottom: 1px solid black;">
                         <div class="plane_element plane_header"><a href="javascript:setSort('callsign')">Callsign</a></div>
                         <div class="plane_element plane_header" style="width: 18%; border-left: 2px solid black"><a href="javascript:setSort('alt')">Alt</a></div>
                         <div class="plane_element plane_header" style="width: 15%; border-left: 2px solid black"><a href="javascript:setSort('code')">Code</a></div>
@@ -182,7 +182,6 @@ export let live_map_page = {
     const plane_data = find_matches();
     let num_planes = 0;
     let num_planes_targets = 0;
-    let plane_callsigns: string[] = [];
     let sorted = Object.values(this.adsb_planes).sort((a, b) => {
       const callsign_a: number | string = a.position.flight
         ? a.position.flight.trim()
@@ -323,7 +322,6 @@ export let live_map_page = {
       const callsign = current_plane.flight
         ? current_plane.flight.trim()
         : current_plane.r || current_plane.hex.toUpperCase();
-      plane_callsigns.push(callsign);
       const hex = current_plane.hex.toUpperCase();
       const tail: string = current_plane.r || <any>undefined;
       let num_messages = undefined;
@@ -371,21 +369,21 @@ export let live_map_page = {
       }
     }
     $("#planes").html(html);
-    for (const id in plane_callsigns) {
-      const plane = plane_callsigns[id];
-      $(`#${plane.replace("~", "")}`).on({
-        mouseenter: () => {
-          if (this.current_hovered !== plane.replace("~", "")) {
-            this.current_hovered = plane.replace("~", "");
-            this.redraw_map();
-          }
-        },
-        mouseleave: () => {
-          this.current_hovered = "";
-          this.redraw_map();
-        },
-      });
-    }
+    // for (const id in plane_callsigns) {
+    //   const plane = plane_callsigns[id];
+    //   $(`#${plane.replace("~", "")}`).on({
+    //     mouseenter: () => {
+    //       if (this.current_hovered !== plane.replace("~", "")) {
+    //         this.current_hovered = plane.replace("~", "");
+    //         this.redraw_map();
+    //       }
+    //     },
+    //     mouseleave: () => {
+    //       this.current_hovered = "";
+    //       this.redraw_map();
+    //     },
+    //   });
+    // }
     $("#num_planes").html(`Planes: ${num_planes}`);
     $("#num_planes_targets").html(`Planes w/ Targets: ${num_planes_targets}`);
   },
@@ -471,6 +469,7 @@ export let live_map_page = {
             num_messages = 0;
           }
 
+          // TODO: Color is now set in CSS. Remove function calls / values for it
           let color: string = num_messages ? "green" : "var(--blue-highlight)";
           let icon_old = false;
 
@@ -524,7 +523,9 @@ export let live_map_page = {
               html: `<div><div id="${callsign.replace(
                 "~",
                 ""
-              )}_marker" class="datablock" data-jbox-content="${popup_text}" style="-webkit-transform:rotate(${rotate}deg); -moz-transform: rotate(${rotate}deg); -ms-transform: rotate(${rotate}deg); -o-transform: rotate(${rotate}deg); transform: rotate(${rotate}deg);">${
+              )}_marker" class="datablock ${
+                num_messages ? "airplane_green" : "airplane_blue"
+              }" data-jbox-content="${popup_text}" style="-webkit-transform:rotate(${rotate}deg); -moz-transform: rotate(${rotate}deg); -ms-transform: rotate(${rotate}deg); -o-transform: rotate(${rotate}deg); transform: rotate(${rotate}deg);">${
                 icon.svg
               }</div></div>`,
               iconSize: [icon.width, icon.height],
