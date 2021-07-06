@@ -503,8 +503,8 @@ export let live_map_page = {
 
           const popup_text = `<div style='background:white; padding:1px 3px 1px 3px'>${
             callsign !== hex ? callsign + "/" : ""
-          }${hex}<hr>Altitude: ${alt}${
-            String(alt).toUpperCase() !== "ground" ? " ft" : ""
+          }${hex}<hr>Altitude: ${String(alt).toUpperCase()}${
+            String(alt) !== "ground" ? " ft" : ""
           }
           ${
             baro_rate ? "<br>Altitude Rate: " + baro_rate + "fpm" : ""
