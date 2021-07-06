@@ -740,11 +740,11 @@ canvas {
 
 #airplane.jBox-Mouse.jBox-wrapper .jBox-content,
 #airplane.jBox-Tooltip.jBox-wrapper .jBox-content {
-  background-color:  white;
+  background-color: white;
   color: black;
   font-size: 12px;
   font-weight: bold;
-  text-transform: uppercase;
+  text-transform: uppercase;;
 }
 
 .jBox-Mouse.jBox-wrapper .jBox-title,
@@ -941,7 +941,7 @@ div#planes {
 div.plane_list {
   display: inline-block;
   width: 100%;
-  border: 1px solid var(--grey-highlight);
+  border: 1px solid black;
   background-color: var(--grey-bg);
   color: var(--blue-highlight);
 }

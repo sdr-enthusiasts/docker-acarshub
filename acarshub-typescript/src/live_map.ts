@@ -62,6 +62,7 @@ export let live_map_page = {
     hex: string;
     tail: string;
   },
+  current_hovered: "" as string,
 
   toggle_acars_only: function () {
     this.show_only_acars = !this.show_only_acars;
@@ -173,13 +174,14 @@ export let live_map_page = {
     let html: string = `<div class="plane_list"><div class="plane_element" id="num_planes" style="width: 50%"></div><div class="plane_element" id="num_planes_targets" style="width: 50%"></div></div>
                         <div class="plane_list" style="font-weight: bold;border-bottom: 1px solid black;">
                         <div class="plane_element plane_header"><a href="javascript:setSort('callsign')">Callsign</a></div>
-                        <div class="plane_element plane_header" style="width: 18%; border-left: 2px solid var(--grey-highlight)"><a href="javascript:setSort('alt')">Alt</a></div>
-                        <div class="plane_element plane_header" style="width: 15%; border-left: 2px solid var(--grey-highlight)"><a href="javascript:setSort('code')">Code</a></div>
-                        <div class="plane_element plane_header" style="width: 18%; border-left: 2px solid var(--grey-highlight)"><a href="javascript:setSort('speed')">Speed</a></div>
-                        <div class="plane_element plane_header" style="width: 10%; border-left: 2px solid var(--grey-highlight)"><a href="javascript:setSort('msgs')">Msgs</a></div></div>`;
+                        <div class="plane_element plane_header" style="width: 18%; border-left: 2px solid black"><a href="javascript:setSort('alt')">Alt</a></div>
+                        <div class="plane_element plane_header" style="width: 15%; border-left: 2px solid black"><a href="javascript:setSort('code')">Code</a></div>
+                        <div class="plane_element plane_header" style="width: 18%; border-left: 2px solid black"><a href="javascript:setSort('speed')">Speed</a></div>
+                        <div class="plane_element plane_header" style="width: 10%; border-left: 2px solid black"><a href="javascript:setSort('msgs')">Msgs</a></div></div>`;
     const plane_data = find_matches();
     let num_planes = 0;
     let num_planes_targets = 0;
+    let plane_callsigns: string[] = [];
     let sorted = Object.values(this.adsb_planes).sort((a, b) => {
       const callsign_a: number | string = a.position.flight
         ? a.position.flight.trim()
@@ -318,7 +320,8 @@ export let live_map_page = {
       const callsign = current_plane.flight
         ? current_plane.flight.trim()
         : current_plane.r || current_plane.hex.toUpperCase();
-      const hex = current_plane.hex;
+      plane_callsigns.push(callsign);
+      const hex = current_plane.hex.toUpperCase();
       const tail: string = current_plane.r || <any>undefined;
       let num_messages = undefined;
       if (num_messages == undefined && plane_data[hex]) {
@@ -335,28 +338,51 @@ export let live_map_page = {
       }
 
       if (!this.show_only_acars || num_messages) {
-        html += `<div id="${callsign}" class="plane_list">
+        let styles = "";
+        if (this.current_hovered == callsign.replace("~", "")) {
+          styles =
+            ' style="background-color: var(--grey-highlight) !important; font-weight: bold !important; color: black !important"';
+        }
+        html += `<div id="${callsign.replace(
+          "~",
+          ""
+        )}" class="plane_list"${styles}>
         <div class="plane_element">${
           callsign && num_messages
             ? `<a href="javascript:showPlaneMessages('${callsign}', '${hex}', '${tail}');">${callsign}</a>`
             : callsign || "&nbsp;"
         }</div>
-        <div class="plane_element" style="width: 18%; border-left: 2px solid var(--grey-highlight)">${
+        <div class="plane_element" style="width: 18%; border-left: 2px solid black">${
           alt || "&nbsp;"
         }</div>
-        <div class="plane_element" style="width: 15%; border-left: 2px solid var(--grey-highlight)">${
+        <div class="plane_element" style="width: 15%; border-left: 2px solid black">${
           squawk || "&nbsp;"
         }</div>
-        <div class="plane_element" style="width: 18%; border-left: 2px solid var(--grey-highlight)">${
+        <div class="plane_element" style="width: 18%; border-left: 2px solid black">${
           Math.round(speed) || "&nbsp;"
         }</div>
-        <div class="plane_element" style="width: 10%; border-left: 2px solid var(--grey-highlight)">${
+        <div class="plane_element" style="width: 10%; border-left: 2px solid black">${
           num_messages || "&nbsp;"
         }</div>
         </div>`;
       }
     }
     $("#planes").html(html);
+    for (const id in plane_callsigns) {
+      const plane = plane_callsigns[id];
+      $(`#${plane.replace("~", "")}`).on({
+        mouseenter: () => {
+          if (this.current_hovered !== plane.replace("~", "")) {
+            this.current_hovered = plane.replace("~", "");
+            this.redraw_map();
+          }
+        },
+        mouseleave: () => {
+          this.current_hovered = "";
+          this.redraw_map();
+        },
+      });
+    }
     $("#num_planes").html(`Planes: ${num_planes}`);
     $("#num_planes_targets").html(`Planes w/ Targets: ${num_planes_targets}`);
   },
@@ -442,12 +468,6 @@ export let live_map_page = {
             num_messages = 0;
           }
 
-          // saving this for later
-          // ${
-          //   matched_with_acars
-          //     ? `<div class="svg-overlay" style="color: white;">(` + num_messages + ")</div>" : ""
-          // }
-
           let color: string = num_messages ? "green" : "var(--blue-highlight)";
           let icon_old = false;
 
@@ -496,7 +516,12 @@ export let live_map_page = {
           if (!this.show_only_acars || num_messages) {
             let plane_icon = L.divIcon({
               className: "airplane",
-              html: `<div><div class="datablock" data-jbox-content="${popup_text}" style="-webkit-transform:rotate(${rotate}deg); -moz-transform: rotate(${rotate}deg); -ms-transform: rotate(${rotate}deg); -o-transform: rotate(${rotate}deg); transform: rotate(${rotate}deg);">${icon.svg}</div></div>`,
+              html: `<div><div id="${callsign.replace(
+                "~",
+                ""
+              )}_marker" class="datablock" data-jbox-content="${popup_text}" style="-webkit-transform:rotate(${rotate}deg); -moz-transform: rotate(${rotate}deg); -ms-transform: rotate(${rotate}deg); -o-transform: rotate(${rotate}deg); transform: rotate(${rotate}deg);">${
+                icon.svg
+              }</div></div>`,
               iconSize: [icon.width, icon.height],
             });
 
@@ -508,27 +533,19 @@ export let live_map_page = {
               }
             );
 
-            // plane_marker.bindTooltip(
-            // `<div style='background:white; padding:1px 3px 1px 3px'>${
-            //   callsign !== hex ? callsign + "/" : ""
-            // }${hex}<hr>Altitude: ${alt}ft${
-            //   baro_rate ? "<br>Altitude Rate: " + baro_rate + "fpm" : ""
-            // }<br>Heading: ${Math.round(rotate)}&deg;${
-            //   speed ? "<br>Speed: " + Math.round(speed) + " knots" : ""
-            // }${speed ? "<br>Squawk: " + squawk : ""}${
-            //   tail ? "<br>Tail Number: " + tail : ""
-            // }${ac_type ? "<br>Aircraft Type: " + ac_type : ""}${
-            //   num_messages
-            //     ? "<br><br>Number of ACARS messages: " + num_messages
-            //     : ""
-            // }</div>`,
-            //   {
-            //     className: "popup",
-
-            //     sticky: true,
-            //   }
-            // );
             plane_marker.addTo(this.layerGroupPlanes);
+            $(`#${callsign.replace("~", "")}_marker`).on({
+              mouseenter: () => {
+                if (this.current_hovered !== callsign.replace("~", "")) {
+                  this.current_hovered = callsign.replace("~", "");
+                  this.airplaneList();
+                }
+              },
+              mouseleave: () => {
+                this.current_hovered = "";
+                this.airplaneList();
+              },
+            });
 
             if (this.show_datablocks) {
               let datablock = `<div class="airplane_datablock">${callsign}`;
