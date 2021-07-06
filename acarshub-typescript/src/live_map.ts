@@ -63,6 +63,7 @@ export let live_map_page = {
     tail: string;
   },
   current_hovered: "" as string,
+  modal_content: "",
 
   toggle_acars_only: function () {
     this.show_only_acars = !this.show_only_acars;
@@ -607,7 +608,10 @@ export let live_map_page = {
       '<div style="background:white">' +
       display_messages([matches], "", true) +
       "</div>";
-    this.plane_message_modal.setContent(html);
+    if (this.modal_content !== html) {
+      this.modal_content = html;
+      this.plane_message_modal.setContent(html);
+    }
     this.plane_message_modal.setTitle(`Messages for ${plane_callsign}`);
     const window_size: window_size = get_window_size();
     this.plane_message_modal.setHeight(window_size.height > 500 ? 500 : 400);
@@ -626,6 +630,7 @@ export let live_map_page = {
       hex: string;
       tail: string;
     };
+    this.modal_content = "";
   },
 
   updateModalSize: function (new_window_size: window_size) {
