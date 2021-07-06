@@ -315,7 +315,9 @@ export let live_map_page = {
       const current_plane = sorted[plane].position;
       num_planes++;
       if (current_plane.lat) num_planes_targets++;
-      const alt = current_plane.alt_baro || 0;
+      let alt = current_plane.alt_baro
+        ? String(current_plane.alt_baro).toUpperCase()
+        : 0;
       const speed = current_plane.gs || 0;
       const squawk = current_plane.squawk || 0;
       const callsign = current_plane.flight
@@ -501,7 +503,9 @@ export let live_map_page = {
 
           const popup_text = `<div style='background:white; padding:1px 3px 1px 3px'>${
             callsign !== hex ? callsign + "/" : ""
-          }${hex}<hr>Altitude: ${alt}${String(alt) !== "ground" ? " ft" : ""}
+          }${hex}<hr>Altitude: ${alt}${
+            String(alt).toUpperCase() !== "ground" ? " ft" : ""
+          }
           ${
             baro_rate ? "<br>Altitude Rate: " + baro_rate + "fpm" : ""
           }<br>Heading: ${Math.round(rotate)}&deg;${
