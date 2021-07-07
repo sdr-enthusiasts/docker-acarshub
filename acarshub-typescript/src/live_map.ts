@@ -353,6 +353,8 @@ export let live_map_page = {
         if (callsign && num_messages && !styles) {
           styles =
             ' style="color: green !important; font-weight: bold !important"';
+        } else {
+          styles = ' style="color: var(--blue-highlight) !important"';
         }
         html += `<div id="${callsign.replace(
           "~",

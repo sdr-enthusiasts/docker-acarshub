@@ -961,7 +961,7 @@ div.plane_element {
   position: relative;
   width: 25%;
   padding-left: 5px;
-  color: var(--blue-highlight);
+  /* color: var(--blue-highlight); */
 }
 
 .plane_header a {
