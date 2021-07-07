@@ -915,6 +915,11 @@ canvas {
   stroke: black;
 }
 
+.airplane_orange {
+  fill: orange;
+  stroke: black;
+}
+
 svg {
   position: relative;
   display: block;
@@ -946,7 +951,7 @@ div.plane_list {
 }
 
 div.plane_list:hover {
-  background-color: var(--grey-highlight) !important;
+  background-color: black !important;
   font-weight: bold !important;
   color: black !important
 }
@@ -956,6 +961,7 @@ div.plane_element {
   position: relative;
   width: 25%;
   padding-left: 5px;
+  color: var(--blue-highlight);
 }
 
 .plane_header a {
