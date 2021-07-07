@@ -7,11 +7,10 @@ on:
     paths-ignore:
       - '**.md'
       - '**.MD'
-    tags-ignore:
-      - 'dependencies'
 
 jobs:
   buildx:
+    if: github.actor != 'depbot'
     name: Test image build
     runs-on: ubuntu-latest
     env:
