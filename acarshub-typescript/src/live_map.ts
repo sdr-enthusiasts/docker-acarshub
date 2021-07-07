@@ -693,6 +693,8 @@ export let live_map_page = {
         // @ts-expect-error
         smoothWheelZoom: true,
         smoothSensitivity: 1,
+        // TODO: diagnose why buttons don't work
+        zoomControl: false,
       });
 
       L.tileLayer("http://{s}.tile.osm.org/{z}/{x}/{y}.png", {
