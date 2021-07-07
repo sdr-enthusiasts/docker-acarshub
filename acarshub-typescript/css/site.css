@@ -946,8 +946,8 @@ div.plane_list {
   display: inline-block;
   width: 100%;
   border: 1px solid black;
-  background-color: var(--grey-bg);
-  color: var(--blue-highlight);
+  /* background-color: var(--grey-bg);
+  color: var(--blue-highlight); */
 }
 
 div.plane_list:hover {

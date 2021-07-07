@@ -346,15 +346,16 @@ export let live_map_page = {
       if (!this.show_only_acars || num_messages) {
         let styles = "";
         if (this.current_hovered_from_map == callsign.replace("~", "")) {
+          console.log("hello)");
           styles = ` style="background-color: black !important; font-weight: bold !important; color: ${
             callsign && num_messages ? "green" : "var(--grey-highlight)"
           } !important"`;
-        }
-        if (callsign && num_messages && !styles) {
+        } else if (callsign && num_messages && styles == "") {
           styles =
-            ' style="color: green !important; font-weight: bold !important"';
+            ' style="color: green !important;font-weight: bold !important;background-color: var(--grey-bg)"';
         } else {
-          styles = ' style="color: var(--blue-highlight) !important"';
+          styles =
+            ' style="color: var(--blue-highlight) !important;background-color: var(--grey-bg)"';
         }
         html += `<div id="${callsign.replace(
           "~",
