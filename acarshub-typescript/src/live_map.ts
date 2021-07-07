@@ -703,11 +703,11 @@ export let live_map_page = {
   },
 
   zoom_in: function () {
-    this.map.setZoom(this.map.getZoom() - 1);
+    this.map.setZoom(this.map.getZoom() + 1);
   },
 
   zoom_out: function () {
-    this.map.setZoom(this.map.getZoom() + 1);
+    this.map.setZoom(this.map.getZoom() - 1);
   },
 
   live_map_active: function (state = false, window_size: window_size) {
