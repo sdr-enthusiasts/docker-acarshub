@@ -64,7 +64,8 @@ export let live_map_page = {
   },
   current_hovered_from_map: "" as string,
   current_hovered_from_sidebar: "" as string,
-  modal_content: "",
+  modal_content: "" as string,
+  modal_current_tab: "" as string,
   current_scale: 8 as number,
 
   toggle_acars_only: function () {
@@ -346,7 +347,6 @@ export let live_map_page = {
       if (!this.show_only_acars || num_messages) {
         let styles = "";
         if (this.current_hovered_from_map == callsign.replace("~", "")) {
-          console.log("hello)");
           styles = ` style="background-color: black !important; font-weight: bold !important; color: ${
             callsign && num_messages ? "green" : "var(--grey-highlight)"
           } !important"`;
@@ -634,9 +634,14 @@ export let live_map_page = {
       plane_tail
     );
     if (matches.length === 0) return;
+    if (this.modal_content == "") {
+      this.modal_current_tab ==
+        matches[matches.length - 1].uid + ";" + matches[0];
+    }
+
     const html =
       '<div style="background:white">' +
-      display_messages([matches], "", true) +
+      display_messages([matches], this.modal_current_tab, true) +
       "</div>";
     if (this.modal_content !== html) {
       this.modal_content = html;
@@ -661,6 +666,18 @@ export let live_map_page = {
       tail: string;
     };
     this.modal_content = "";
+  },
+
+  handle_radio: function (element_id: string, uid: string) {
+    this.modal_current_tab = uid + ";" + element_id;
+    if (this.current_modal_terms != null) {
+      this.showPlaneMessages(
+        this.current_modal_terms.callsign,
+        this.current_modal_terms.hex,
+        this.current_modal_terms.tail
+      );
+    }
+    tooltip.cycle_tooltip();
   },
 
   updateModalSize: function (new_window_size: window_size) {

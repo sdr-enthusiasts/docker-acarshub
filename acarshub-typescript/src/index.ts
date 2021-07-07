@@ -514,7 +514,10 @@ window.runclick = function (page: number) {
 };
 
 window.handle_radio = function (element_id: string, uid: string) {
-  live_messages_page.handle_radio(element_id, uid);
+  if (index_acars_page === "/")
+    live_messages_page.handle_radio(element_id, uid);
+  else if (index_acars_page === "/adsb")
+    live_map_page.handle_radio(element_id, uid);
 };
 
 window.pause_updates = function (toggle_pause: boolean = true) {
