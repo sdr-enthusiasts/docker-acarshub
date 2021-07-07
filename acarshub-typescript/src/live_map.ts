@@ -64,6 +64,7 @@ export let live_map_page = {
   },
   current_hovered: "" as string,
   modal_content: "",
+  current_scale: 8 as number,
 
   toggle_acars_only: function () {
     this.show_only_acars = !this.show_only_acars;
@@ -175,7 +176,7 @@ export let live_map_page = {
     let html: string = `<div class="plane_list_no_hover"><div class="plane_element" id="num_planes" style="width: 50%"></div><div class="plane_element" id="num_planes_targets" style="width: 50%"></div></div>
                         <div class="plane_list_no_hover" style="font-weight: bold;border-bottom: 1px solid black;">
                         <div class="plane_element plane_header"><a href="javascript:setSort('callsign')">Callsign</a></div>
-                        <div class="plane_element plane_header" style="width: 18%; border-left: 2px solid black"><a href="javascript:setSort('alt')">Alt</a></div>
+                        <div class="plane_element plane_header" style="width: 21%; border-left: 2px solid black"><a href="javascript:setSort('alt')">Alt</a></div>
                         <div class="plane_element plane_header" style="width: 15%; border-left: 2px solid black"><a href="javascript:setSort('code')">Code</a></div>
                         <div class="plane_element plane_header" style="width: 18%; border-left: 2px solid black"><a href="javascript:setSort('speed')">Speed</a></div>
                         <div class="plane_element plane_header" style="width: 10%; border-left: 2px solid black"><a href="javascript:setSort('msgs')">Msgs</a></div></div>`;
@@ -324,6 +325,7 @@ export let live_map_page = {
         : current_plane.r || current_plane.hex.toUpperCase();
       const hex = current_plane.hex.toUpperCase();
       const tail: string = current_plane.r || <any>undefined;
+      const baro_rate = current_plane.baro_rate || 0;
       let num_messages = undefined;
       if (num_messages == undefined && plane_data[hex]) {
         num_messages = plane_data[hex].id;
@@ -353,8 +355,14 @@ export let live_map_page = {
             ? `<a href="javascript:showPlaneMessages('${callsign}', '${hex}', '${tail}');">${callsign}</a>`
             : callsign || "&nbsp;"
         }</div>
-        <div class="plane_element" style="width: 18%; border-left: 2px solid black">${
+        <div class="plane_element" style="height: 100%;width: 21%; border-left: 2px solid black">${
           alt || "&nbsp;"
+        }${
+          alt && baro_rate > 100 ? '&nbsp;<i class="fas fa-arrow-up"></i>' : ""
+        }${
+          alt && baro_rate < -100
+            ? '&nbsp;<i class="fas fa-arrow-down"></i>'
+            : ""
         }</div>
         <div class="plane_element" style="width: 15%; border-left: 2px solid black">${
           squawk || "&nbsp;"
@@ -675,7 +683,7 @@ export let live_map_page = {
       this.map = L.map("mapid", {
         zoomDelta: 0.2,
         center: [this.lat, this.lon],
-        zoom: 8,
+        zoom: this.current_scale,
         scrollWheelZoom: false,
         // @ts-expect-error
         smoothWheelZoom: true,
@@ -743,12 +751,12 @@ export let live_map_page = {
           opacity: 0.6,
           legends: [
             {
-              label: "Planes With ACARS",
+              label: "Planes With ACARS Messages",
               type: "image",
               url: "static/images/legend-has-acars.svg",
             },
             {
-              label: "Planes Without ACARS",
+              label: "Planes Without ACARS Messages",
               type: "image",
               url: "static/images/legend-without-acars.svg",
             },
@@ -759,8 +767,16 @@ export let live_map_page = {
       this.layerGroupPlanes = L.layerGroup().addTo(this.map);
       this.layerGroupPlaneDatablocks = L.layerGroup().addTo(this.map);
 
-      this.map.on("zoom", () => {
-        this.redraw_map();
+      this.map.on({
+        zoom: () => {
+          this.current_scale = this.map.getZoom();
+          this.redraw_map();
+        },
+        move: () => {
+          const center = this.map.getCenter();
+          this.lat = center.lat;
+          this.lon = center.lng;
+        },
       });
 
       this.redraw_map();
