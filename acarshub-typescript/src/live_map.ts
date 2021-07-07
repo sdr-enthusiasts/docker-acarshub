@@ -175,13 +175,6 @@ export let live_map_page = {
   },
 
   airplaneList: function () {
-    let html: string = `<div class="plane_list_no_hover" style="color: var(--blue-highlight) !important;background-color: var(--grey-bg)"><div class="plane_element" id="num_planes" style="width: 50%"></div><div class="plane_element" id="num_planes_targets" style="width: 50%"></div></div>
-                        <div class="plane_list_no_hover" style="font-weight: bold;border-bottom: 1px solid black;color: var(--blue-highlight) !important;background-color: var(--grey-bg)">
-                        <div class="plane_element plane_header"><a href="javascript:setSort('callsign')">Callsign</a></div>
-                        <div class="plane_element plane_header" style="width: 21%; border-left: 2px solid black"><a href="javascript:setSort('alt')">Alt</a></div>
-                        <div class="plane_element plane_header" style="width: 15%; border-left: 2px solid black"><a href="javascript:setSort('code')">Code</a></div>
-                        <div class="plane_element plane_header" style="width: 18%; border-left: 2px solid black"><a href="javascript:setSort('speed')">Speed</a></div>
-                        <div class="plane_element plane_header" style="width: 10%; border-left: 2px solid black"><a href="javascript:setSort('msgs')">Msgs</a></div></div>`;
     const plane_data = find_matches();
     let num_planes = 0;
     let num_planes_targets = 0;
@@ -313,6 +306,19 @@ export let live_map_page = {
     });
 
     let plane_callsigns = [];
+    const alt_width = 21;
+    const code_width = 15;
+    const speed_width = 18;
+    const msgs_width = 10;
+    const callsign_width = 25;
+    //const callsign_width = 100 - alt_width - code_width - speed_width - msgs_width;
+    let html: string = `<div class="plane_list_no_hover" style="color: var(--blue-highlight) !important;background-color: var(--grey-bg)"><div class="plane_element noleft" id="num_planes" style="width: 50%"></div><div class="plane_element noleft" id="num_planes_targets" style="width: 50%"></div></div>
+    <div class="plane_list_no_hover" style="font-weight: bold;border-bottom: 1px solid black;color: var(--blue-highlight) !important;background-color: var(--grey-bg)">
+    <div class="plane_element plane_header noleft" style="width: ${callsign_width}%"><a href="javascript:setSort('callsign')">Callsign</a></div>
+    <div class="plane_element plane_header" style="width: ${alt_width}%;"><a href="javascript:setSort('alt')">Alt</a></div>
+    <div class="plane_element plane_header" style="width: ${code_width}%;"><a href="javascript:setSort('code')">Code</a></div>
+    <div class="plane_element plane_header" style="width: ${speed_width}%;"><a href="javascript:setSort('speed')">Speed</a></div>
+    <div class="plane_element plane_header" style="width: ${msgs_width}%;"><a href="javascript:setSort('msgs')">Msgs</a></div></div>`;
     // add data to the table
     for (const plane in sorted) {
       const current_plane = sorted[plane].position;
@@ -346,27 +352,27 @@ export let live_map_page = {
 
       if (!this.show_only_acars || num_messages) {
         let styles = "";
-        if (this.current_hovered_from_map == callsign.replace("~", "")) {
-          styles = ` style="background-color: black !important; font-weight: bold !important; color: ${
-            callsign && num_messages ? "green" : "var(--grey-highlight)"
-          } !important"`;
+        if (
+          this.current_hovered_from_map == callsign.replace("~", "") &&
+          callsign &&
+          num_messages
+        ) {
+          styles = " sidebar_hovered_from_map_acars";
+        } else if (this.current_hovered_from_map == callsign.replace("~", "")) {
+          styles = " sidebar_hovered_from_map_no_acars";
         } else if (callsign && num_messages && styles == "") {
-          styles =
-            ' style="color: green !important;font-weight: bold !important;background-color: var(--grey-bg)"';
-        } else {
-          styles =
-            ' style="color: var(--blue-highlight) !important;background-color: var(--grey-bg)"';
+          styles = " sidebar_no_hover_with_acars";
         }
         html += `<div id="${callsign.replace(
           "~",
           ""
-        )}" class="plane_list"${styles}>
-        <div class="plane_element">${
+        )}" class="plane_list${styles}">
+        <div class="plane_element noleft" style="width:${callsign_width}%">${
           callsign && num_messages
             ? `<a href="javascript:showPlaneMessages('${callsign}', '${hex}', '${tail}');">${callsign}</a>`
             : callsign || "&nbsp;"
         }</div>
-        <div class="plane_element" style="height: 100%;width: 21%; border-left: 2px solid black">${
+        <div class="plane_element" style="width: ${alt_width}%;">${
           alt || "&nbsp;"
         }${
           alt && baro_rate > 100 ? '&nbsp;<i class="fas fa-arrow-up"></i>' : ""
@@ -375,13 +381,13 @@ export let live_map_page = {
             ? '&nbsp;<i class="fas fa-arrow-down"></i>'
             : ""
         }</div>
-        <div class="plane_element" style="width: 15%; border-left: 2px solid black">${
+        <div class="plane_element" style="width: ${code_width}%;">${
           squawk || "&nbsp;"
         }</div>
-        <div class="plane_element" style="width: 18%; border-left: 2px solid black">${
+        <div class="plane_element" style="width: ${speed_width}%;">${
           Math.round(speed) || "&nbsp;"
         }</div>
-        <div class="plane_element" style="width: 10%; border-left: 2px solid black">${
+        <div class="plane_element" style="width: ${msgs_width}%;">${
           num_messages || "&nbsp;"
         }</div>
         </div>`;
