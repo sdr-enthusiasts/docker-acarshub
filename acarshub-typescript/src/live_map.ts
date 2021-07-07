@@ -343,8 +343,13 @@ export let live_map_page = {
       if (!this.show_only_acars || num_messages) {
         let styles = "";
         if (this.current_hovered == callsign.replace("~", "")) {
+          styles = ` style="background-color: black !important; font-weight: bold !important; color: ${
+            callsign && num_messages ? "green" : "var(--grey-highlight)"
+          } !important"`;
+        }
+        if (callsign && num_messages && !styles) {
           styles =
-            ' style="background-color: var(--grey-highlight) !important; font-weight: bold !important; color: black !important"';
+            ' style="color: green !important; font-weight: bold !important"';
         }
         html += `<div id="${callsign.replace(
           "~",
@@ -769,6 +774,7 @@ export let live_map_page = {
 
       this.map.on({
         zoom: () => {
+          console.log("yo");
           this.current_scale = this.map.getZoom();
           this.redraw_map();
         },
