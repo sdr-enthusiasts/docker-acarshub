@@ -119,7 +119,7 @@ else:
         "red coat",
     ]
 
-if os.getenv("ENABLE_ADSB", default=False):
+if os.getenv("ENABLE_ADSB", default=False) == "true":
     ENABLE_ADSB = True
     if os.getenv("ADSB_URL", default=False):
         ADSB_URL = os.getenv("ADSB_URL", default=False)

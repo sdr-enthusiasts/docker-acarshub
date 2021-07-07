@@ -156,6 +156,7 @@ body {
   width: 100%;
   position: relative;
   width: 100%;
+  margin-top: 0px;
 }
 
 div#content.container {
@@ -448,7 +449,7 @@ ul.primary li a.invert_a:hover {
 /* prime */
 ul.primary li a {
   display: block;
-  padding-top: 23px;
+  padding-top: 35px;
   padding-bottom: 10px;
   padding-right: 20px;
   padding-left: 20px;
@@ -686,16 +687,40 @@ img.banner_img {
 
 li.img_box {
   width: 100px;
+  height: 82px;
   display: block;
   padding-top: 5px;
   padding-bottom: 0px;
   border-right: 1px solid var(--grey-bg);
   text-align:center;
+  color: var(--grey-bg);
+  text-shadow: none;
+}
+
+li.img_box svg {
+  max-width: 85%;
+  max-height: 80px;
+  letter-spacing: 0px;
 }
 
 canvas {
-  max-height: 400px;
+  max-height: 400px !important;
+  max-width: 1000px !important;
 }
+
+.canvas_wrapper {
+  position: relative;
+  width: 1000px;
+  float: left;
+}
+
+.chart-container {
+  width: 50%;
+}
+
+/* div.canvas_wrapper div.chart-container {
+  max-width: 500px !important;
+} */
 
 /* modal window stuff */
 
@@ -713,7 +738,17 @@ canvas {
   font-family: var(--site-fonts);
 }
 
-.jBox-Mouse.jBox-wrapper .jBox-title {
+#airplane.jBox-Mouse.jBox-wrapper .jBox-content,
+#airplane.jBox-Tooltip.jBox-wrapper .jBox-content {
+  background-color: white;
+  color: black;
+  font-size: 12px;
+  font-weight: bold;
+  text-transform: uppercase;;
+}
+
+.jBox-Mouse.jBox-wrapper .jBox-title,
+.jBox-Tooltip.jBox-wrapper .jBox-title {
   background-color:  #ccc;
   color: var(--blue-highlight);
   font-family: var(--site-fonts);
@@ -722,15 +757,34 @@ canvas {
   text-align: center;
 }
 
-.jBox-Mouse.jBox-wrapper .jBox-content {
+.jBox-Mouse.jBox-wrapper .jBox-content,
+.jBox-Tooltip.jBox-wrapper .jBox-content {
   background-color:  var(--grey-bg);
   font-family: var(--site-fonts);
   color: var(--blue-highlight);
 }
 
-@media only screen and (max-width: 1050px) {
+@media only screen and (max-width: 1200px) {
   #logo_image{
     display: none;
+  }
+
+  ul.primary li a {
+    padding-top: 23px;
+  }
+  nav {
+    letter-spacing: 1px;
+  }
+  .right_side {
+    float: left;
+  }
+
+  #planes {
+    max-height: calc(100vh - 130px) !important;
+  }
+  #mapid {
+    height: calc(100vh - 130px) !important;
+    max-height: calc(100vh - 130px) !important;
   }
 }
 
@@ -749,19 +803,11 @@ canvas {
     float: none;
   }
 
-  .right_side {
-    float: left;
-  }
-
-  nav {
-    letter-spacing: 1px;
-  }
-
   ul.primary li a {
-    padding-top: 5px;
-    padding-bottom: 5px;
-    padding-right: 5px;
-    padding-left: 5px;
+    padding-top: 2.5px;
+    padding-bottom: 2.5px;
+    padding-right: 2.5px;
+    padding-left: 2.5px;
   }
 
   ul.primary li:hover a {
@@ -821,6 +867,14 @@ canvas {
   .show_when_small {
     display: inline-block;
   }
+
+  #planes {
+    max-height: calc(100vh - 170px) !important;
+  }
+  #mapid {
+    height: calc(100vh - 170px) !important;
+    max-height: calc(100vh - 170px) !important;
+  }
 }
 
 @media only screen and (min-width: 951px) {
@@ -839,25 +893,101 @@ canvas {
 }
 
 #mapid {
-  height: 80vh;
+  height: calc(100vh - 160px);
+  max-height: calc(100vh - 160px);
+  width: 100%;
+  background-color: black;
+  display: inline-block;
 }
 
-.airplane {
-  width: 30px;
+.airplane_blue:hover,
+.airplane_green:hover {
+  fill: orange;
+}
+
+.airplane_green {
+  fill: green;
+  stroke: black;
+}
+
+.airplane_blue {
+  fill: var(--blue-highlight);
+  stroke: black;
+}
+
+.airplane_orange {
+  fill: orange;
+  stroke: black;
 }
 
 svg {
   position: relative;
-  top: 0;
-  left: 0;
+  display: block;
+  margin-top: auto;
+  margin-bottom: auto;
+  margin-left: auto;
+  margin-right: auto;
 }
 
-.svg-overlay {
+div#stat_images {
+  max-width: 1000px;
+}
+
+div#planes {
+  width: 320px;
+  max-height: calc(100vh - 160px);
+  overflow: scroll;
   position: relative;
-  right: 0px;
-  bottom: 20px;
-  z-index: 1;
+  border: 1px solid var(--grey-bg)
+}
+
+div.plane_list_no_hover,
+div.plane_list {
+  display: inline-block;
+  width: 100%;
+  border: 1px solid black;
+  /* background-color: var(--grey-bg);
+  color: var(--blue-highlight); */
+}
+
+div.plane_list:hover {
+  background-color: black !important;
+  font-weight: bold !important;
+  color: black !important
+}
+
+div.plane_element {
+  display: inline-block;
+  position: relative;
+  width: 25%;
+  padding-left: 5px;
+  /* color: var(--blue-highlight); */
+}
+
+.plane_header a {
+  color: var(--blue-highlight) !important;
+  text-decoration: none;
+  text-transform: uppercase;
   font-weight: bold;
-  font-size: 15px;
-  font-family: var(--mono-fonts);
+}
+
+.plane_element a {
+  color: green;
+  text-decoration: none;
+  text-transform: uppercase;
+  font-weight: bold;
+}
+
+.airplane_datablock {
+  background: rgba(255, 255, 255, 0.2);
+  color: black;
+  font-weight: bold;
+  text-transform: uppercase;
+  max-width: 80px;
+  max-height: 80px;
+  width: max-content;
+  padding: 4px;
+  border-radius: 15px;
+  border: 2px solid rgba(0, 0, 0, 0.3);
+  -moz-border-radius: 15px;
 }

@@ -135,6 +135,59 @@ export let tooltip = {
       y: "bottom",
     },
   }),
+
+  toggle_acars: new jBox("Tooltip", {
+    title: "Toggle ACARS",
+    content:
+      "Toggle between showing all ADSB targets and only those with ACARS messages",
+    closeOnMouseleave: true,
+    adjustTracker: true,
+    delayOpen: 500,
+    position: {
+      x: "left",
+      y: "center",
+    },
+    outside: "xy",
+  }),
+
+  toggle_datablocks: new jBox("Tooltip", {
+    title: "Toggle Data Blocks",
+    content:
+      "Toggle between showing data blocks on the map and turning them off",
+    closeOnMouseleave: true,
+    adjustTracker: true,
+    delayOpen: 500,
+    position: {
+      x: "left",
+      y: "center",
+    },
+    outside: "xy",
+  }),
+
+  toggle_extended_datablocks: new jBox("Tooltip", {
+    title: "Toggle Extended Data Blocks",
+    content: "Toggle extra information on/off in the data blocks",
+    closeOnMouseleave: true,
+    adjustTracker: true,
+    delayOpen: 500,
+    position: {
+      x: "left",
+      y: "center",
+    },
+    outside: "xy",
+  }),
+
+  datablock: new jBox("Mouse", {
+    getContent: "data-jbox-content",
+    id: "airplane",
+    closeOnMouseleave: true,
+    adjustTracker: true,
+    position: {
+      x: "right",
+      y: "bottom",
+    },
+  }),
+
   // Function to close all open tool tips. This is needed so that when the page updates tooltips aren't just chilling randomly
 
   close_all_tooltips: function () {
@@ -150,6 +203,10 @@ export let tooltip = {
     this.msgno_tooltip.close();
     this.response_tooltip.close();
     this.error_tooltip.close();
+    this.toggle_acars.close();
+    this.toggle_datablocks.close();
+    this.toggle_extended_datablocks.close();
+    this.datablock.close();
   },
 
   // Function to attach all of the tooltips to the new elements on the page
@@ -167,5 +224,14 @@ export let tooltip = {
     this.msgno_tooltip.attach($(".msgno-tooltip"));
     this.response_tooltip.attach($(".response-tooltip"));
     this.error_tooltip.attach($(".error-tooltip"));
+    this.toggle_acars.attach($(".toggle-acars"));
+    this.toggle_datablocks.attach($(".toggle-datablocks"));
+    this.toggle_extended_datablocks.attach($(".toggle-extended-datablocks"));
+    this.datablock.attach($(".datablock"));
+  },
+
+  cycle_tooltip: function () {
+    this.close_all_tooltips();
+    this.attach_all_tooltips();
   },
 };

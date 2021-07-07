@@ -120,3 +120,9 @@ rootfs/webapp/static/css/*
 webapp/**
 webapp.tar.gz
 rootfs/webapp/__pycache__/acarshub_helpers.cpython-38.pyc
+rootfs/webapp/static/images/*hour.png
+rootfs/webapp/static/images/*hours.png
+rootfs/webapp/static/images/*days.png
+rootfs/webapp/static/images/*week.png
+rootfs/webapp/static/images/*months.png
+rootfs/webapp/static/images/*year.png

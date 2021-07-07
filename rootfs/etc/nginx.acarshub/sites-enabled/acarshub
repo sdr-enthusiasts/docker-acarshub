@@ -3,12 +3,6 @@ server {
   root /var/www/html;
   server_name _;
 
-  location ~* \.(?:css|js)$ {
-    expires 1d;
-    add_header Cache-Control "public";
-    proxy_pass http://127.0.0.1:8888;
-  }
-
   location / {
     proxy_pass http://127.0.0.1:8888;
   }
@@ -23,5 +17,13 @@ server {
 
   location /data/aircraft.json {
     proxy_pass <>;
+  }
+
+  location ~ \.(css|js|png|jpg|jpeg|gif|ico|woff|woff2|ttf|svg|eot|otf)$ {
+    add_header "Access-Control-Allow-Origin" "*";
+    expires 1d;
+    access_log off;
+    add_header Cache-Control "public";
+    proxy_pass http://127.0.0.1:8888;
   }
 }

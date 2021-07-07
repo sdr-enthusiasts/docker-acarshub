@@ -10,6 +10,7 @@ DEVICE_ID=""
 FREQS_VDLM=""
 PPM=""
 GAIN=""
+SERIAL=""
 
 if [ -z "$GAIN" ]; then
     GAIN="280"
@@ -34,7 +35,7 @@ VDLM_CMD+=("-j" "127.0.0.1:5555")
 if [ -n "${DEVICE_ID}" ]; then
 	VDLM_CMD+=("-r" "$DEVICE_ID")
 else
-	echo "[vdlm2dec] No serial number / device index set. Using device index 0. If also running ACARS decoding one of these processes will fail. To fix, set SERIAL_ACARS and SERIAL_VDLM"
+	echo "[vdlm2dec-$SERIAL] No serial number / device index set. Using device index 0. If also running ACARS decoding one of these processes will fail. To fix, set SERIAL_ACARS and SERIAL_VDLM"
 	VDLM_CMD+=("-r" "0")
 fi
 
@@ -43,10 +44,10 @@ VDLM_CMD+=($FREQS_VDLM)
 
 set -eo pipefail
 
-echo "[vdlm2dec] Starting: '$VDLM_BIN" "${VDLM_CMD[*]}'"
+echo "[vdlm2dec-$SERIAL] Starting: '$VDLM_BIN" "${VDLM_CMD[*]}'"
 
 # shellcheck disable=SC2016
 "$VDLM_BIN" "${VDLM_CMD[@]}" \
-  2>&1 | stdbuf -o0 sed --unbuffered '/^$/d' | stdbuf -o0 awk '{print "[vdlm2dec] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
+2>&1 | stdbuf -o0 sed --unbuffered '/^$/d' | stdbuf -o0 awk '{print "[vdlm2dec] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
 
 sleep 5

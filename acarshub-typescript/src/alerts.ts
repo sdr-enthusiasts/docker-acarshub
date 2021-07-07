@@ -4,6 +4,7 @@ import { alert_term_query, alert_text_update } from "./index.js";
 import { acars_msg, html_msg, terms } from "./interfaces.js";
 import jBox from "jbox";
 import "jbox/dist/jBox.all.css";
+import { tooltip } from "./tooltips.js";
 
 export let alerts_page = {
   alerts: 0 as number,
@@ -12,12 +13,12 @@ export let alerts_page = {
   alert_tail: [] as string[],
   alert_icao: [] as string[],
   alert_msgs_received: {
-    value: [] as any[],
-    unshift: function (a: any) {
+    value: [] as acars_msg[][],
+    unshift: function (a: acars_msg[]) {
       if (this.value.length >= 50) {
         this.value.pop();
       }
-      return Array.prototype.unshift.apply(this.value, [a] as any);
+      return Array.prototype.unshift.apply(this.value, [a] as acars_msg[][]);
     },
   },
   alert_acars_path: "" as string,
@@ -80,26 +81,12 @@ export let alerts_page = {
 
   show_modal_values: function () {
     this.show_sound();
-    (<HTMLInputElement>document.getElementById("alert_text")).value = (<
-      HTMLInputElement
-    >document.getElementById("alert_text")).value = this.combineArray(
-      this.alert_text
-    ).toUpperCase();
-    (<HTMLInputElement>document.getElementById("alert_callsigns")).value = (<
-      HTMLInputElement
-    >document.getElementById("alert_callsigns")).value = this.combineArray(
-      this.alert_callsigns
-    ).toUpperCase();
-    (<HTMLInputElement>document.getElementById("alert_tail")).value = (<
-      HTMLInputElement
-    >document.getElementById("alert_tail")).value = this.combineArray(
-      this.alert_tail
-    ).toUpperCase();
-    (<HTMLInputElement>document.getElementById("alert_icao")).value = (<
-      HTMLInputElement
-    >document.getElementById("alert_icao")).value = this.combineArray(
-      this.alert_icao
-    ).toUpperCase();
+    $("#alert_text").val(this.combineArray(this.alert_text).toUpperCase());
+    $("#alert_callsigns").val(
+      this.combineArray(this.alert_callsigns).toUpperCase()
+    );
+    $("#alert_tail").val(this.combineArray(this.alert_tail).toUpperCase());
+    $("#alert_icao").val(this.combineArray(this.alert_icao).toUpperCase());
   },
 
   alert: function () {
@@ -129,6 +116,8 @@ export let alerts_page = {
         (typeof msg.done_loading === "undefined" || msg.done_loading === true)
       ) {
         $("#log").html(display_messages(this.alert_msgs_received.value));
+        tooltip.close_all_tooltips();
+        tooltip.attach_all_tooltips();
       } else if (matched.was_found && msg.loading != true) {
         this.alerts += 1;
         this.updateAlertCounter();
@@ -143,12 +132,8 @@ export let alerts_page = {
   },
 
   updateAlerts: function () {
-    if (
-      (<HTMLInputElement>document.getElementById("alert_text")).value.length > 0
-    ) {
-      let split = (<HTMLInputElement>(
-        document.getElementById("alert_text")
-      )).value.split(",");
+    if ($("#alert_text").val()) {
+      let split = String($("#alert_text").val()).split(",");
       this.alert_text = [];
       for (let i = 0; i < split.length; i++) {
         if (
@@ -161,13 +146,8 @@ export let alerts_page = {
       this.alert_text = [];
     }
 
-    if (
-      (<HTMLInputElement>document.getElementById("alert_callsigns")).value
-        .length > 0
-    ) {
-      let split = (<HTMLInputElement>(
-        document.getElementById("alert_callsigns")
-      )).value.split(",");
+    if ($("#alert_callsigns").val()) {
+      let split = String($("#alert_callsigns").val()).split(",");
       this.alert_callsigns = [];
       for (let i = 0; i < split.length; i++) {
         if (
@@ -180,12 +160,8 @@ export let alerts_page = {
       this.alert_callsigns = [];
     }
 
-    if (
-      (<HTMLInputElement>document.getElementById("alert_tail")).value.length > 0
-    ) {
-      let split = (<HTMLInputElement>(
-        document.getElementById("alert_tail")
-      )).value.split(",");
+    if ($("#alert_tail").val()) {
+      let split = String($("#alert_tail").val()).split(",");
       this.alert_tail = [];
       for (let i = 0; i < split.length; i++) {
         if (
@@ -198,12 +174,8 @@ export let alerts_page = {
       this.alert_tail = [];
     }
 
-    if (
-      (<HTMLInputElement>document.getElementById("alert_icao")).value.length > 0
-    ) {
-      let split = (<HTMLInputElement>(
-        document.getElementById("alert_icao")
-      )).value.split(",");
+    if ($("#alert_icao").val()) {
+      let split = String($("#alert_icao").val()).split(",");
       this.alert_icao = [];
       for (let i = 0; i < split.length; i++) {
         if (
@@ -216,26 +188,12 @@ export let alerts_page = {
       this.alert_icao = [];
     }
 
-    (<HTMLInputElement>document.getElementById("alert_text")).value = (<
-      HTMLInputElement
-    >document.getElementById("alert_text")).value = this.combineArray(
-      this.alert_text
-    ).toUpperCase();
-    (<HTMLInputElement>document.getElementById("alert_callsigns")).value = (<
-      HTMLInputElement
-    >document.getElementById("alert_callsigns")).value = this.combineArray(
-      this.alert_callsigns
-    ).toUpperCase();
-    (<HTMLInputElement>document.getElementById("alert_tail")).value = (<
-      HTMLInputElement
-    >document.getElementById("alert_tail")).value = this.combineArray(
-      this.alert_tail
-    ).toUpperCase();
-    (<HTMLInputElement>document.getElementById("alert_icao")).value = (<
-      HTMLInputElement
-    >document.getElementById("alert_icao")).value = this.combineArray(
-      this.alert_icao
-    ).toUpperCase();
+    $("#alert_text").val(this.combineArray(this.alert_text).toUpperCase());
+    $("#alert_callsigns").val(
+      this.combineArray(this.alert_callsigns).toUpperCase()
+    );
+    $("#alert_tail").val(this.combineArray(this.alert_tail).toUpperCase());
+    $("#alert_icao").val(this.combineArray(this.alert_icao).toUpperCase());
 
     alert_text_update(this.alert_text);
 
@@ -452,51 +410,30 @@ export let alerts_page = {
   },
 
   default_alert_values: function () {
-    let current = (<HTMLInputElement>document.getElementById("alert_text"))
-      .value;
+    let current = String($("#alert_text").val());
 
     this.default_text_values.forEach((element) => {
       if (!this.alert_text.includes(element.toUpperCase())) {
         current += `${current.length > 0 ? "," + element : element}`;
       }
     });
-    (<HTMLInputElement>document.getElementById("alert_text")).value = current;
+    $("#alert_text").val(current);
     this.updateAlerts();
   },
 
   show_sound: function () {
     if (this.play_sound) {
-      let id = document.getElementById("playsound_link");
-      if (id !== null) {
-        id.innerHTML = "";
-        let txt = document.createTextNode("Turn Off Alert Sound");
-        id.appendChild(txt);
-      }
+      $("#playsound_link").html("Turn Off Alert Sound");
     } else {
-      let id = document.getElementById("playsound_link");
-      if (id !== null) {
-        id.innerHTML = "";
-        let txt = document.createTextNode("Turn On Alert Sound");
-        id.appendChild(txt);
-      }
+      $("#playsound_link").html("Turn On Alert Sound");
     }
   },
 
   toggle_playsound: function (loading = false) {
     if (this.play_sound) {
-      let id = document.getElementById("playsound_link");
-      if (id !== null) {
-        id.innerHTML = "";
-        let txt = document.createTextNode("Turn On Alert Sound");
-        id.appendChild(txt);
-      }
+      $("#playsound_link").html("Turn On Alert Sound");
     } else {
-      let id = document.getElementById("playsound_link");
-      if (id !== null) {
-        id.innerHTML = "";
-        let txt = document.createTextNode("Turn Off Alert Sound");
-        id.appendChild(txt);
-      }
+      $("#playsound_link").html("Turn Off Alert Sound");
     }
     this.play_sound = !this.play_sound;
     Cookies.set("play_sound", this.play_sound == true ? "true" : "false", {

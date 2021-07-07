@@ -16,5 +16,5 @@
             ]
         }
     },
-    "include": ["src/"],
+    "include": ["src/", "js-other/aircraft_icons.ts"],
 }

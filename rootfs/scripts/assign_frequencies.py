@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from re import S
 import sys
 import os
 import shutil
@@ -122,6 +123,23 @@ def generate_output_files(serials, decoder, freqs_string):
                 )
             elif line.find('DEVICE_ID=""') == 0:
                 print("{}{}{}".format('DEVICE_ID="', deviceID.strip(), '"\n'), end="")
+            elif line.find('SERIAL=""') == 0:
+                print("{}{}{}".format('SERIAL="', splitSerial.strip(), '"\n'), end="")
+            elif line.find("2>&1 | stdbuf") == 0:  # set the decoder name in the output
+                if line.find("acarsdec") != -1:
+                    print(
+                        "{}".format(
+                            line.replace("acarsdec", f"acarsdec-{splitSerial}")
+                        ),
+                        end="",
+                    )
+                elif line.find("vdlm2dec") != -1:
+                    print(
+                        "{}".format(
+                            line.replace("vdlm2dec", f"vdlm2dec-{splitSerial}")
+                        ),
+                        end="",
+                    )
             elif splitPPM is not None and line.find('PPM=""') == 0:
                 print("{}{}{}".format('PPM="', splitPPM, '"\n'), end="")
             elif splitGain is not None and line.find('GAIN=""') == 0:

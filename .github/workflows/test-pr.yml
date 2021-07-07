@@ -1,4 +1,4 @@
-name: Tests
+name: Test PR
 
 on:
   pull_request:
@@ -6,6 +6,9 @@ on:
       - main
     paths-ignore:
       - '**.md'
+      - '**.MD'
+    tags-ignore:
+      - 'dependencies'
 
 jobs:
   buildx:
@@ -112,7 +115,7 @@ jobs:
         run: |
           npm install
           sed -i 's/Pre-Release/ACARS Hub Pre-Release: ${{ env.VERSION_TAG }}/' ./src/menu.ts
-          npm run buildtest
+          npm run buildprod
           mkdir -p ./webapp/static/js/other
           mkdir -p ./webapp/static/css/other
           cp --verbose ./dist-min/*.js ./webapp/static/js/

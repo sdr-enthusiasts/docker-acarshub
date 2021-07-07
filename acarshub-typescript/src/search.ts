@@ -7,9 +7,10 @@ import {
   current_search,
   acars_msg,
 } from "./interfaces.js";
-import { search_database } from "./index.js";
+import { search_database, window } from "./index.js";
 import jBox from "jbox";
 import "jbox/dist/jBox.all.css";
+import { tooltip } from "./tooltips.js";
 
 export let search_page = {
   search_page_active: false as boolean,
@@ -45,6 +46,7 @@ export let search_page = {
     overlay: true,
     reposition: false,
     repositionOnOpen: true,
+    onClose: () => window.close_modal(),
     title: "Search for messages",
     content: `  <p><a href="javascript:showall()" class="spread_text">Most Recent Messages</a></p>
     <table class="search">
@@ -142,6 +144,7 @@ export let search_page = {
 
   show_search_message_modal: function () {
     this.search_message_modal.open();
+    $("input").on("keyup", () => this.key_event());
     this.update_size();
   },
 
@@ -214,26 +217,28 @@ export let search_page = {
       );
       $("#log").html('<div class="row" id="num_results"></div>' + display);
       $("#num_results").html(display_nav_results);
+      tooltip.close_all_tooltips();
+      tooltip.attach_all_tooltips();
       window.scrollTo(0, 0); // Scroll the window back to the top. We want this because the user might have scrolled halfway down the page and then ran a new search/updated the page
     }
   },
 
   get_search_terms: function () {
+    console.log($("#search_text").val(), $("search_text"));
     return {
-      flight: (<HTMLInputElement>document.getElementById("search_flight"))
-        .value,
-      depa: (<HTMLInputElement>document.getElementById("search_depa")).value,
-      dsta: (<HTMLInputElement>document.getElementById("search_dsta")).value,
-      freq: (<HTMLInputElement>document.getElementById("search_freq")).value,
-      label: (<HTMLInputElement>document.getElementById("search_msglbl")).value,
-      msgno: (<HTMLInputElement>document.getElementById("search_msgno")).value,
-      tail: (<HTMLInputElement>document.getElementById("search_tail")).value,
-      msg_text: (<HTMLInputElement>document.getElementById("search_text"))
-        .value,
-    };
+      flight: $("#search_flight").val(),
+      depa: $("#search_depa").val(),
+      dsta: $("#search_dsta").val(),
+      freq: $("#search_freq").val(),
+      label: $("#search_msglbl").val(),
+      msgno: $("#search_msgno").val(),
+      tail: $("#search_tail").val(),
+      msg_text: $("search_text").val(),
+    } as current_search;
   },
 
   is_everything_blank: function () {
+    console.log(this.get_search_terms());
     for (let [key, value] of Object.entries(this.get_search_terms())) {
       if (value != "") return false;
     }
@@ -241,14 +246,14 @@ export let search_page = {
   },
 
   reset_search_terms: function () {
-    (<HTMLInputElement>document.getElementById("search_flight")).value = "";
-    (<HTMLInputElement>document.getElementById("search_depa")).value = "";
-    (<HTMLInputElement>document.getElementById("search_dsta")).value = "";
-    (<HTMLInputElement>document.getElementById("search_freq")).value = "";
-    (<HTMLInputElement>document.getElementById("search_msglbl")).value = "";
-    (<HTMLInputElement>document.getElementById("search_msgno")).value = "";
-    (<HTMLInputElement>document.getElementById("search_tail")).value = "";
-    (<HTMLInputElement>document.getElementById("search_text")).value = "";
+    $("#search_flight").val("");
+    $("#search_depa").val("");
+    $("#search_dsta").val("");
+    $("#search_freq").val("");
+    $("#search_msglbl").val("");
+    $("#search_msgno").val("");
+    $("#search_tail").val("");
+    $("#search_text").val("");
   },
 
   // In order to help DB responsiveness, I want to make sure the user has quit typing before emitting a query
@@ -322,18 +327,15 @@ export let search_page = {
 
   // Sanity checker to ensure the page typed in the jump box makes sense. If it does, call the runclick function to send it off to the DB
   jumppage: function () {
-    let page: HTMLInputElement = <HTMLInputElement>(
-      document.getElementById("jump")
-    );
-    let actual_page: number = 0;
-    if (typeof page !== "undefined") actual_page = parseInt(page.value);
-    if (actual_page > this.total_pages) {
+    let page: number = Number($("#jump").val());
+    if (typeof page === "undefined" || page === null) return;
+    if (page > this.total_pages || page < 1) {
       $("#error_message").html(
-        `Please enter a value less than ${this.total_pages}`
+        `Please enter a value less than ${this.total_pages} and greater than 1`
       );
-    } else if (actual_page != 0) {
-      this.runclick(actual_page - 1);
+      return;
     }
+    this.runclick(page - (page > 1 ? 1 : 0));
   },
 
   // Function to format the side bar

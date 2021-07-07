@@ -17,3 +17,10 @@ updates:
       interval: daily
       time: "00:00"
       timezone: "Etc/UTC"
+
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: daily
+      time: "00:00"
+      timezone: "Etc/UTC"

@@ -27,7 +27,7 @@ import {
 
 import { live_map_page } from "./live_map.js";
 
-declare const window: any;
+export declare const window: any;
 let socket = io();
 let socket_status: boolean = false;
 
@@ -39,8 +39,10 @@ let old_window_width: number = 0;
 let old_window_height: number = 0;
 
 let adsb_url: string = "";
-let adsb_enabled: boolean = false;
 let adsb_getting_data: boolean = false;
+let adsb_interval: any;
+let connection_good: boolean = true;
+let adsb_enabled = false;
 
 const pages: string[] = [
   "/", // index/live messages
@@ -63,6 +65,9 @@ var ro = new ResizeObserver((entries) => {
           width: cr.width,
           height: cr.height,
         } as window_size);
+      else if (index_acars_page === "/stats") {
+        stats_page.resize(cr.width);
+      }
     }
 
     if (cr.height !== old_window_height) {
@@ -106,9 +111,13 @@ $(() => {
 
   socket.on("acars_msg", function (msg: html_msg) {
     // New acars message.
-    live_messages_page.new_acars_message(msg); // send the message to live messages
-    if (typeof msg.loading == "undefined" || !msg.loading === false)
-      alerts_page.alerts_acars_message(msg); // send the message to alerts for processing
+    if (connection_good || typeof msg.loading == "undefined") {
+      live_messages_page.new_acars_message(msg); // send the message to live messages
+      if (adsb_enabled && typeof msg.loading == "undefined")
+        live_map_page.redraw_map();
+      if (typeof msg.loading == "undefined" || msg.loading === false)
+        alerts_page.alerts_acars_message(msg); // send the message to alerts for processing
+    }
   });
 
   socket.on("terms", function (msg: terms) {
@@ -132,11 +141,15 @@ $(() => {
   socket.on("features_enabled", function (msg: decoders) {
     stats_page.decoders_enabled(msg);
     if (msg.adsb.enabled === true) {
+      adsb_enabled = true;
       menu.set_adsb(true);
       toggle_pages();
       alerts_page.updateAlertCounter();
+      live_map_page.is_adsb_enabled(true, {
+        width: old_window_width,
+        height: old_window_height,
+      } as window_size);
       live_map_page.live_map(msg.adsb.lat, msg.adsb.lon);
-      adsb_enabled = true;
 
       status.update_adsb_status({
         adsb_enabled: true,
@@ -144,26 +157,34 @@ $(() => {
       });
 
       if (msg.adsb.bypass) adsb_url = msg.adsb.url;
-      setInterval(() => {
-        fetch(adsb_url, {
-          method: "GET",
-          mode: "cors",
-        })
-          .then((response) => {
-            adsb_getting_data = true;
-            return response.json();
-          })
-          .then((planes) => live_map_page.set_targets(planes as adsb))
-          .catch((err) => {
-            adsb_getting_data = false;
-            status.update_adsb_status({
-              adsb_enabled: true,
-              adsb_getting_data: false,
-            });
-            status.update_status_bar();
-            console.error(err);
-          });
-      }, 5000);
+
+      // Check to see if the adsb interval already exists.
+      // We want to do this because if the client disconnects it will
+      // receive all of the 'on connect' data again, and another adsb interval
+      // would be spawned.
+
+      if (!adsb_interval) {
+        update_adsb();
+        adsb_interval = setInterval(() => {
+          update_adsb();
+        }, 5000);
+      }
+    }
+
+    // If for some reason ADSB was ever turned off on the back end and was enabled for the client, turn off the updater
+    // And update the web app to remove menu and destroy costly background assets
+    if (!msg.adsb.enabled && adsb_interval != null) {
+      adsb_enabled = false;
+      clearInterval(adsb_interval);
+      adsb_interval = null;
+      menu.set_adsb(false);
+      toggle_pages();
+      alerts_page.updateAlertCounter();
+      live_map_page.is_adsb_enabled(false, {
+        width: old_window_width,
+        height: old_window_height,
+      } as window_size);
+      live_map_page.destroy_maps();
     }
   });
 
@@ -193,22 +214,27 @@ $(() => {
   // socket errors
 
   socket.on("disconnect", function () {
+    connection_good = false;
     connection_status();
   });
 
   socket.on("connect_error", function () {
+    connection_good = false;
     connection_status();
   });
 
   socket.on("connect_timeout", function () {
+    connection_good = false;
     connection_status();
   });
 
   socket.on("connect", function () {
+    set_connection_good();
     connection_status(true);
   });
 
   socket.on("reconnect", function () {
+    set_connection_good();
     connection_status(true);
   });
 
@@ -229,14 +255,35 @@ $(() => {
   setInterval(function () {
     stats_page.updatePage();
   }, 60000);
-
-  document.addEventListener("keyup", function () {
-    search_page.key_event();
-  });
 });
 
 export function get_window_size() {
   return { width: old_window_width, height: old_window_height } as window_size;
+}
+
+function set_connection_good() {
+  setTimeout(() => (connection_good = socket.connected), 5000);
+}
+
+async function update_adsb() {
+  fetch(adsb_url, {
+    method: "GET",
+    mode: "cors",
+  })
+    .then((response) => {
+      adsb_getting_data = true;
+      return response.json();
+    })
+    .then((planes) => live_map_page.set_targets(planes as adsb))
+    .catch((err) => {
+      adsb_getting_data = false;
+      status.update_adsb_status({
+        adsb_enabled: true,
+        adsb_getting_data: false,
+      });
+      status.update_status_bar();
+      console.error(err);
+    });
 }
 
 function update_url() {
@@ -296,10 +343,16 @@ function toggle_pages() {
       alerts_page.alert_active();
     } else if (pages[page] === "/adsb" && index_acars_page === pages[page]) {
       $("#live_map_link").addClass("invert_a");
-      live_map_page.live_map_active(true);
+      live_map_page.live_map_active(true, {
+        width: old_window_width,
+        height: old_window_height,
+      } as window_size);
     } else if (pages[page] === "/adsb") {
       $("#live_map_link").removeClass("invert_a");
-      live_map_page.live_map_active();
+      live_map_page.live_map_active(false, {
+        width: old_window_width,
+        height: old_window_height,
+      } as window_size);
     }
   }
 }
@@ -476,9 +529,43 @@ window.toggle_label = function (key: string) {
   live_messages_page.toggle_label(key);
 };
 
+window.setSort = function (sort: string = "") {
+  live_map_page.setSort(sort);
+};
+
+window.showPlaneMessages = function (
+  callsign: string,
+  hex: string,
+  tail: string
+) {
+  live_map_page.showPlaneMessages(callsign, hex, tail);
+};
+
+window.toggle_acars_only = function () {
+  live_map_page.toggle_acars_only();
+};
+
+window.toggle_datablocks = function () {
+  live_map_page.toggle_datablocks();
+};
+
+window.toggle_extended_datablocks = function () {
+  live_map_page.toggle_extended_datablocks();
+};
+
 $(window).on("popstate", () => {
   toggle_pages();
 });
+
+window.close_modal = function () {
+  if (index_acars_page === "/search") {
+    $("input").off(); // Turn off the event listener for keys in the search modal
+  }
+};
+
+window.close_live_map_modal = function () {
+  live_map_page.close_live_map_modal();
+};
 
 export function showPlaneMessages(
   plane_callsign: string = "",

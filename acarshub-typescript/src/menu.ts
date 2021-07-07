@@ -1,3 +1,4 @@
+import { images } from "./images.js";
 export let menu = {
   acars_path: "" as string,
   acars_url: "" as string,
@@ -7,7 +8,7 @@ export let menu = {
   generate_menu: function () {
     let html = '<div class="wrap"><span class="decor"></span>';
     html += '<nav><ul class="primary">';
-    html += `<li class="img_box" id="logo_image"><img src="${this.acars_url}static/images/acarshubsquare.png" class="banner_img" alt="ACARS Hub Logo"></li>`;
+    html += `<li class="img_box" id="logo_image">${images.acars_hub_logo}"</li>`;
     html += `<li><a href="javascript:new_page('Live Messages')" id="live_messages_link">Live Messages</a></li>`;
     if (this.menu_adsb)
       html += `<li><a href="javascript:new_page('Live Map')" id="live_map_link">Live Map</a></li>`;
@@ -26,23 +27,21 @@ export let menu = {
     let text: string = "";
     if (acars == true && vdlm == true) {
       text =
-        '<p><a href="javascript:update_prefix(\'\')" id="combined_graphs" class="spread_text">Combined Graphs</a></p>';
+        '<a href="javascript:update_prefix(\'\')" id="combined_graphs" class="spread_text">Combined Graphs</a>';
     }
 
     if (acars) {
       text +=
-        '<p><a href="javascript:update_prefix(\'acars\')" id="acars_graphs" class="spread_text">ACARS Graphs</a></p>';
+        ' | <a href="javascript:update_prefix(\'acars\')" id="acars_graphs" class="spread_text">ACARS Graphs</a>';
     }
 
     if (vdlm) {
       text +=
-        '<p><a href="javascript:update_prefix(\'vdlm\')" id="vdlm_graphs" class="spread_text">VDLM Graphs</a></p>';
+        ' | <a href="javascript:update_prefix(\'vdlm\')" id="vdlm_graphs" class="spread_text">VDLM Graphs</a>';
     }
 
     text +=
-      '<p><a href="javascript:update_prefix(\'error\')" id="error_graphs" class="spread_text">Message Error Graphs</a></p>';
-    text += '<p><span id="freqs"></span></p>';
-    text += '<p><span id="msgs"></span></p>';
+      '| <a href="javascript:update_prefix(\'error\')" id="error_graphs" class="spread_text">Message Error Graphs</a>';
     $("#stat_menu").html(text);
   },
 
