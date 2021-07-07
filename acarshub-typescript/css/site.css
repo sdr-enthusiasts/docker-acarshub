@@ -1009,4 +1009,5 @@ div.plane_element {
   border-radius: 15px;
   border: 2px solid rgba(0, 0, 0, 0.3);
   -moz-border-radius: 15px;
+  font-family: var(--mono-fonts)
 }
