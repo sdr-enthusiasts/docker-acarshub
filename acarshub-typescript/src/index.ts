@@ -570,6 +570,14 @@ window.close_live_map_modal = function () {
   live_map_page.close_live_map_modal();
 };
 
+window.zoom_in = function () {
+  live_map_page.zoom_in();
+};
+
+window.zoom_out = function () {
+  live_map_page.zoom_out();
+};
+
 export function showPlaneMessages(
   plane_callsign: string = "",
   plane_hex: string = "",

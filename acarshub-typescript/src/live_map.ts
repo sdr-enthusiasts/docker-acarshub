@@ -702,6 +702,14 @@ export let live_map_page = {
     tooltip.attach_all_tooltips();
   },
 
+  zoom_in: function () {
+    this.map.setZoom(this.map.getZoom() - 1);
+  },
+
+  zoom_out: function () {
+    this.map.setZoom(this.map.getZoom() + 1);
+  },
+
   live_map_active: function (state = false, window_size: window_size) {
     this.live_map_page_active = state;
     this.window_size = window_size;
@@ -732,6 +740,23 @@ export let live_map_page = {
         attribution:
           '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors',
       }).addTo(this.map);
+
+      L.control
+        // @ts-expect-error
+        .custom({
+          position: "topleft",
+          content:
+            '<button type="button" id="zoomin" class="btn btn-default" onclick="zoom_in()"><i class="fas fa-plus"></i></button>' +
+            '<button type="button" id="zoomout" class="btn btn-default" onclick="zoom_out()"><i class="fas fa-minus"></i></button>',
+          classes: "btn-group-vertical btn-group-sm",
+          style: {
+            margin: "10px",
+            padding: "0px 0 0 0",
+            cursor: "pointer",
+          },
+          events: {},
+        })
+        .addTo(this.map);
 
       L.control
         // @ts-expect-error
