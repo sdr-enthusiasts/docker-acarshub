@@ -174,8 +174,8 @@ export let live_map_page = {
   },
 
   airplaneList: function () {
-    let html: string = `<div class="plane_list_no_hover"><div class="plane_element" id="num_planes" style="width: 50%"></div><div class="plane_element" id="num_planes_targets" style="width: 50%"></div></div>
-                        <div class="plane_list_no_hover" style="font-weight: bold;border-bottom: 1px solid black;">
+    let html: string = `<div class="plane_list_no_hover" style="color: var(--blue-highlight) !important;background-color: var(--grey-bg)"><div class="plane_element" id="num_planes" style="width: 50%"></div><div class="plane_element" id="num_planes_targets" style="width: 50%"></div></div>
+                        <div class="plane_list_no_hover" style="font-weight: bold;border-bottom: 1px solid black;color: var(--blue-highlight) !important;background-color: var(--grey-bg)">
                         <div class="plane_element plane_header"><a href="javascript:setSort('callsign')">Callsign</a></div>
                         <div class="plane_element plane_header" style="width: 21%; border-left: 2px solid black"><a href="javascript:setSort('alt')">Alt</a></div>
                         <div class="plane_element plane_header" style="width: 15%; border-left: 2px solid black"><a href="javascript:setSort('code')">Code</a></div>
