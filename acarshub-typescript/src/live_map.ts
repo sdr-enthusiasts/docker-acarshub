@@ -1,7 +1,6 @@
 import * as L from "leaflet";
 import {
   acars_msg,
-  adsb_plane,
   window_size,
   adsb,
   aircraft_icon,
@@ -494,7 +493,6 @@ export let live_map_page = {
             num_messages = 0;
           }
 
-          // TODO: Color is now set in CSS. Remove function calls / values for it
           let color: string = num_messages ? "green" : "var(--blue-highlight)";
           let icon_old = false;
 
@@ -506,19 +504,16 @@ export let live_map_page = {
 
           if (icon == null || icon_old) {
             const type_shape = getBaseMarker(
-              current_plane.category,
+              String(current_plane.category),
               current_plane.t,
               null,
               null,
               current_plane.type,
-              alt,
-              null
+              alt
             );
 
             icon = svgShapeToURI(
               type_shape[0],
-              color,
-              "black",
               2,
               type_shape[1] * 1.1
             ) as aircraft_icon;
@@ -736,7 +731,6 @@ export let live_map_page = {
         // @ts-expect-error
         smoothWheelZoom: true,
         smoothSensitivity: 1,
-        // TODO: diagnose why buttons don't work
         zoomControl: false,
       });
 

@@ -2,10 +2,6 @@
 // https://github.com/wiedehopf/tar1090/blob/276269564d9b417e74cbf93de69af650905e9a22/html/markers.js
 
 // -*- mode: javascript; indent-tabs-mode: nil; c-basic-offset: 8 -*-
-
-let halloween = false;
-let squareMania = false;
-
 let shapes = {
     'airliner': {
         id: 0,
@@ -1113,20 +1109,7 @@ let CategoryIcons = {
     'C3' : ['ground_tower', 1],
 };
 
-function getBaseMarker(category, typeDesignator, typeDescription, wtc, addrtype, altitude, eastbound) {
-    //return ['f5_tiger', 1];
-    if (halloween) {
-        if ((typeDescription && typeDescription[0] == 'H') || typeDesignator == 'C172')
-            return ['pumpkin', 1];
-        if (wtc == 'L') {
-            if (eastbound)
-                return ['witchr', 1];
-            else
-                return ['witchl', 1];
-        }
-    }
-    if (squareMania)
-        return ['ground_square', 1.2];
+function getBaseMarker(category, typeDesignator, typeDescription, wtc, addrtype, altitude) {
     if (typeDesignator in TypeDesignatorIcons) {
         let shape = TypeDesignatorIcons[typeDesignator][0];
         let scaling = TypeDesignatorIcons[typeDesignator][1];
@@ -1165,12 +1148,10 @@ function getBaseMarker(category, typeDesignator, typeDescription, wtc, addrtype,
     if (altitude == 'ground' && (addrtype == 'adsb_icao_nt' || addrtype == 'tisb_other' || addrtype == 'tisb_trackfile'))
         return ['ground_square', 1];
 
-    if (halloween)
-        return ['pumpkin', 1];
     return ['unknown', 1];
 }
 
-function svgShapeToURI(shape, fillColor, strokeColor, strokeWidth, scale){
+function svgShapeToURI(shape, strokeWidth, scale){
     shape = shapes[shape];
     scale = scale ? scale : 1;
 
