@@ -837,6 +837,7 @@ export let live_map_page = {
           this.current_scale = this.map.getZoom();
           Cookies.set("live_map_zoom", String(this.current_scale), {
             expires: 365,
+            sameSite: "Strict",
           });
           this.redraw_map();
         },
