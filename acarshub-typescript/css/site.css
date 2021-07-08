@@ -744,7 +744,7 @@ canvas {
   color: black;
   font-size: 12px;
   font-weight: bold;
-  text-transform: uppercase;;
+  text-transform: uppercase;
 }
 
 .jBox-Mouse.jBox-wrapper .jBox-title,
@@ -946,22 +946,20 @@ div.plane_list {
   display: inline-block;
   width: 100%;
   border: 1px solid black;
-  /* background-color: var(--grey-bg);
-  color: var(--blue-highlight); */
+  color: var(--blue-highlight);
+  background-color: var(--grey-bg);
 }
 
 div.plane_list:hover {
   background-color: black !important;
   font-weight: bold !important;
-  color: black !important
 }
 
 div.plane_element {
   display: inline-block;
   position: relative;
-  width: 25%;
   padding-left: 5px;
-  /* color: var(--blue-highlight); */
+  border-left: 2px solid black;
 }
 
 .plane_header a {
@@ -969,6 +967,27 @@ div.plane_element {
   text-decoration: none;
   text-transform: uppercase;
   font-weight: bold;
+}
+
+.noleft {
+  border-left: 0px solid rgba(0, 0, 0, 0.0) !important;
+}
+
+.sidebar_hovered_from_map_acars {
+  background-color: black !important;
+  font-weight: bold !important;
+  color: green !important;
+}
+
+.sidebar_hovered_from_map_no_acars {
+  background-color: black !important;
+  font-weight: bold !important;
+  color: var(--blue-highlight) !important;
+}
+
+.sidebar_no_hover_with_acars {
+  color: green !important;
+  font-weight: bold !important;
 }
 
 .plane_element a {
@@ -990,4 +1009,5 @@ div.plane_element {
   border-radius: 15px;
   border: 2px solid rgba(0, 0, 0, 0.3);
   -moz-border-radius: 15px;
+  font-family: var(--mono-fonts)
 }

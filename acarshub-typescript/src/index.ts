@@ -514,7 +514,10 @@ window.runclick = function (page: number) {
 };
 
 window.handle_radio = function (element_id: string, uid: string) {
-  live_messages_page.handle_radio(element_id, uid);
+  if (index_acars_page === "/")
+    live_messages_page.handle_radio(element_id, uid);
+  else if (index_acars_page === "/adsb")
+    live_map_page.handle_radio(element_id, uid);
 };
 
 window.pause_updates = function (toggle_pause: boolean = true) {
@@ -565,6 +568,14 @@ window.close_modal = function () {
 
 window.close_live_map_modal = function () {
   live_map_page.close_live_map_modal();
+};
+
+window.zoom_in = function () {
+  live_map_page.zoom_in();
+};
+
+window.zoom_out = function () {
+  live_map_page.zoom_out();
 };
 
 export function showPlaneMessages(

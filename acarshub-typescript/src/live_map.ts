@@ -1,7 +1,6 @@
 import * as L from "leaflet";
 import {
   acars_msg,
-  adsb_plane,
   window_size,
   adsb,
   aircraft_icon,
@@ -64,7 +63,8 @@ export let live_map_page = {
   },
   current_hovered_from_map: "" as string,
   current_hovered_from_sidebar: "" as string,
-  modal_content: "",
+  modal_content: "" as string,
+  modal_current_tab: "" as string,
   current_scale: 8 as number,
 
   toggle_acars_only: function () {
@@ -174,13 +174,6 @@ export let live_map_page = {
   },
 
   airplaneList: function () {
-    let html: string = `<div class="plane_list_no_hover" style="color: var(--blue-highlight) !important;background-color: var(--grey-bg)"><div class="plane_element" id="num_planes" style="width: 50%"></div><div class="plane_element" id="num_planes_targets" style="width: 50%"></div></div>
-                        <div class="plane_list_no_hover" style="font-weight: bold;border-bottom: 1px solid black;color: var(--blue-highlight) !important;background-color: var(--grey-bg)">
-                        <div class="plane_element plane_header"><a href="javascript:setSort('callsign')">Callsign</a></div>
-                        <div class="plane_element plane_header" style="width: 21%; border-left: 2px solid black"><a href="javascript:setSort('alt')">Alt</a></div>
-                        <div class="plane_element plane_header" style="width: 15%; border-left: 2px solid black"><a href="javascript:setSort('code')">Code</a></div>
-                        <div class="plane_element plane_header" style="width: 18%; border-left: 2px solid black"><a href="javascript:setSort('speed')">Speed</a></div>
-                        <div class="plane_element plane_header" style="width: 10%; border-left: 2px solid black"><a href="javascript:setSort('msgs')">Msgs</a></div></div>`;
     const plane_data = find_matches();
     let num_planes = 0;
     let num_planes_targets = 0;
@@ -312,6 +305,19 @@ export let live_map_page = {
     });
 
     let plane_callsigns = [];
+    const alt_width = 21;
+    const code_width = 15;
+    const speed_width = 18;
+    const msgs_width = 10;
+    const callsign_width = 25;
+    //const callsign_width = 100 - alt_width - code_width - speed_width - msgs_width;
+    let html: string = `<div class="plane_list_no_hover" style="color: var(--blue-highlight) !important;background-color: var(--grey-bg)"><div class="plane_element noleft" id="num_planes" style="width: 50%"></div><div class="plane_element noleft" id="num_planes_targets" style="width: 50%"></div></div>
+    <div class="plane_list_no_hover" style="font-weight: bold;border-bottom: 1px solid black;color: var(--blue-highlight) !important;background-color: var(--grey-bg)">
+    <div class="plane_element plane_header noleft" style="width: ${callsign_width}%"><a href="javascript:setSort('callsign')">Callsign</a></div>
+    <div class="plane_element plane_header" style="width: ${alt_width}%;"><a href="javascript:setSort('alt')">Alt</a></div>
+    <div class="plane_element plane_header" style="width: ${code_width}%;"><a href="javascript:setSort('code')">Code</a></div>
+    <div class="plane_element plane_header" style="width: ${speed_width}%;"><a href="javascript:setSort('speed')">Speed</a></div>
+    <div class="plane_element plane_header" style="width: ${msgs_width}%;"><a href="javascript:setSort('msgs')">Msgs</a></div></div>`;
     // add data to the table
     for (const plane in sorted) {
       const current_plane = sorted[plane].position;
@@ -345,28 +351,27 @@ export let live_map_page = {
 
       if (!this.show_only_acars || num_messages) {
         let styles = "";
-        if (this.current_hovered_from_map == callsign.replace("~", "")) {
-          console.log("hello)");
-          styles = ` style="background-color: black !important; font-weight: bold !important; color: ${
-            callsign && num_messages ? "green" : "var(--grey-highlight)"
-          } !important"`;
+        if (
+          this.current_hovered_from_map == callsign.replace("~", "") &&
+          callsign &&
+          num_messages
+        ) {
+          styles = " sidebar_hovered_from_map_acars";
+        } else if (this.current_hovered_from_map == callsign.replace("~", "")) {
+          styles = " sidebar_hovered_from_map_no_acars";
         } else if (callsign && num_messages && styles == "") {
-          styles =
-            ' style="color: green !important;font-weight: bold !important;background-color: var(--grey-bg)"';
-        } else {
-          styles =
-            ' style="color: var(--blue-highlight) !important;background-color: var(--grey-bg)"';
+          styles = " sidebar_no_hover_with_acars";
         }
         html += `<div id="${callsign.replace(
           "~",
           ""
-        )}" class="plane_list"${styles}>
-        <div class="plane_element">${
+        )}" class="plane_list${styles}">
+        <div class="plane_element noleft" style="width:${callsign_width}%">${
           callsign && num_messages
             ? `<a href="javascript:showPlaneMessages('${callsign}', '${hex}', '${tail}');">${callsign}</a>`
             : callsign || "&nbsp;"
         }</div>
-        <div class="plane_element" style="height: 100%;width: 21%; border-left: 2px solid black">${
+        <div class="plane_element" style="width: ${alt_width}%;">${
           alt || "&nbsp;"
         }${
           alt && baro_rate > 100 ? '&nbsp;<i class="fas fa-arrow-up"></i>' : ""
@@ -375,13 +380,13 @@ export let live_map_page = {
             ? '&nbsp;<i class="fas fa-arrow-down"></i>'
             : ""
         }</div>
-        <div class="plane_element" style="width: 15%; border-left: 2px solid black">${
+        <div class="plane_element" style="width: ${code_width}%;">${
           squawk || "&nbsp;"
         }</div>
-        <div class="plane_element" style="width: 18%; border-left: 2px solid black">${
+        <div class="plane_element" style="width: ${speed_width}%;">${
           Math.round(speed) || "&nbsp;"
         }</div>
-        <div class="plane_element" style="width: 10%; border-left: 2px solid black">${
+        <div class="plane_element" style="width: ${msgs_width}%;">${
           num_messages || "&nbsp;"
         }</div>
         </div>`;
@@ -488,7 +493,6 @@ export let live_map_page = {
             num_messages = 0;
           }
 
-          // TODO: Color is now set in CSS. Remove function calls / values for it
           let color: string = num_messages ? "green" : "var(--blue-highlight)";
           let icon_old = false;
 
@@ -500,19 +504,16 @@ export let live_map_page = {
 
           if (icon == null || icon_old) {
             const type_shape = getBaseMarker(
-              current_plane.category,
+              String(current_plane.category),
               current_plane.t,
               null,
               null,
               current_plane.type,
-              alt,
-              null
+              alt
             );
 
             icon = svgShapeToURI(
               type_shape[0],
-              color,
-              "black",
               2,
               type_shape[1] * 1.1
             ) as aircraft_icon;
@@ -634,9 +635,14 @@ export let live_map_page = {
       plane_tail
     );
     if (matches.length === 0) return;
+    if (this.modal_content == "") {
+      this.modal_current_tab ==
+        matches[matches.length - 1].uid + ";" + matches[0];
+    }
+
     const html =
       '<div style="background:white">' +
-      display_messages([matches], "", true) +
+      display_messages([matches], this.modal_current_tab, true) +
       "</div>";
     if (this.modal_content !== html) {
       this.modal_content = html;
@@ -663,6 +669,18 @@ export let live_map_page = {
     this.modal_content = "";
   },
 
+  handle_radio: function (element_id: string, uid: string) {
+    this.modal_current_tab = uid + ";" + element_id;
+    if (this.current_modal_terms != null) {
+      this.showPlaneMessages(
+        this.current_modal_terms.callsign,
+        this.current_modal_terms.hex,
+        this.current_modal_terms.tail
+      );
+    }
+    tooltip.cycle_tooltip();
+  },
+
   updateModalSize: function (new_window_size: window_size) {
     this.window_size = new_window_size;
     if (this.map) {
@@ -685,6 +703,14 @@ export let live_map_page = {
     tooltip.attach_all_tooltips();
   },
 
+  zoom_in: function () {
+    this.map.setZoom(this.map.getZoom() + 1);
+  },
+
+  zoom_out: function () {
+    this.map.setZoom(this.map.getZoom() - 1);
+  },
+
   live_map_active: function (state = false, window_size: window_size) {
     this.live_map_page_active = state;
     this.window_size = window_size;
@@ -705,7 +731,6 @@ export let live_map_page = {
         // @ts-expect-error
         smoothWheelZoom: true,
         smoothSensitivity: 1,
-        // TODO: diagnose why buttons don't work
         zoomControl: false,
       });
 
@@ -715,6 +740,23 @@ export let live_map_page = {
         attribution:
           '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors',
       }).addTo(this.map);
+
+      L.control
+        // @ts-expect-error
+        .custom({
+          position: "topleft",
+          content:
+            '<button type="button" id="zoomin" class="btn btn-default" onclick="zoom_in()"><i class="fas fa-plus"></i></button>' +
+            '<button type="button" id="zoomout" class="btn btn-default" onclick="zoom_out()"><i class="fas fa-minus"></i></button>',
+          classes: "btn-group-vertical btn-group-sm",
+          style: {
+            margin: "10px",
+            padding: "0px 0 0 0",
+            cursor: "pointer",
+          },
+          events: {},
+        })
+        .addTo(this.map);
 
       L.control
         // @ts-expect-error

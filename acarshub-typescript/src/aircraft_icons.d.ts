@@ -1,19 +1,16 @@
 declare module "aircraft_icons" {
   export function getBaseMarker(
-    category: any,
-    typeDesignator: any,
-    typeDescription: any,
-    wtc: any,
-    addrtype: any,
-    altitude: any,
-    eastbound: any
+    category: string,
+    typeDesignator: string | undefined,
+    typeDescription: string | null,
+    wtc: string | null,
+    addrtype: string,
+    altitude: number
   ): any;
 
   export function svgShapeToURI(
     shape: any,
-    fillColor: any,
-    strokeColor: any,
-    strokeWidth: any,
-    scale: any
-  ): any;
+    strokeWidth: number,
+    scale: number
+  ): import("./interfaces").aircraft_icon;
 }
