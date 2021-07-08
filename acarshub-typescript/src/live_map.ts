@@ -407,6 +407,7 @@ export let live_map_page = {
         mouseleave: () => {
           this.current_hovered_from_sidebar = "";
           this.update_targets();
+          tooltip.attach_all_tooltips();
         },
       });
     }
