@@ -194,9 +194,11 @@ export let live_map_page = {
       const tail_b: string = b.position.r || <any>undefined;
       let num_msgs_a = 0;
       let num_msgs_b = 0;
+      const hex_a = a.position.hex;
+      const hex_b = b.position.hex;
 
-      if (plane_data[a.position.hex]) {
-        num_msgs_a = plane_data[a.position.hex].id;
+      if (hex_a && plane_data[a.position.hex.toUpperCase()]) {
+        num_msgs_a = plane_data[a.position.hex.toUpperCase()].id;
       }
       if (num_msgs_a == undefined && plane_data[callsign_a]) {
         num_msgs_a = plane_data[callsign_a].id;
@@ -205,8 +207,8 @@ export let live_map_page = {
         num_msgs_a = plane_data[tail_a].id;
       }
 
-      if (plane_data[b.position.hex]) {
-        num_msgs_b = plane_data[b.position.hex].id;
+      if (hex_b && plane_data[b.position.hex.toUpperCase()]) {
+        num_msgs_b = plane_data[b.position.hex.toUpperCase()].id;
       }
       if (num_msgs_b == 0 && plane_data[callsign_b]) {
         num_msgs_b = plane_data[callsign_b].id;
@@ -529,7 +531,7 @@ export let live_map_page = {
             baro_rate ? "<br>Altitude Rate: " + baro_rate + "fpm" : ""
           }<br>Heading: ${Math.round(rotate)}&deg;${
             speed ? "<br>Speed: " + Math.round(speed) + " knots" : ""
-          }${speed ? "<br>Squawk: " + squawk : ""}${
+          }${squawk ? "<br>Squawk: " + squawk : ""}${
             tail ? "<br>Tail Number: " + tail : ""
           }${ac_type ? "<br>Aircraft Type: " + ac_type : ""}${
             num_messages
