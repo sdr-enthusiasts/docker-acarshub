@@ -1,4 +1,5 @@
 import * as L from "leaflet";
+import Cookies from "js-cookie";
 import {
   acars_msg,
   window_size,
@@ -42,7 +43,7 @@ export let live_map_page = {
     isolateScroll: true,
     animation: "zoomIn",
     draggable: "title",
-    closeButton: "title",
+    closeButton: "box",
     overlay: false,
     reposition: true,
     repositionOnOpen: false,
@@ -65,7 +66,7 @@ export let live_map_page = {
   current_hovered_from_sidebar: "" as string,
   modal_content: "" as string,
   modal_current_tab: "" as string,
-  current_scale: 8 as number,
+  current_scale: Number(Cookies.get("live_map_zoom")) || (8 as number),
 
   toggle_acars_only: function () {
     this.show_only_acars = !this.show_only_acars;
@@ -160,7 +161,7 @@ export let live_map_page = {
     this.lat = lat_in;
     this.lon = lon_in;
     if (this.live_map_page_active && this.adsb_enabled)
-      this.map.setView([this.lat, this.lon], 8);
+      this.map.setView([this.lat, this.lon]);
   },
 
   setSort: function (sort: string = "") {
@@ -194,9 +195,11 @@ export let live_map_page = {
       const tail_b: string = b.position.r || <any>undefined;
       let num_msgs_a = 0;
       let num_msgs_b = 0;
+      const hex_a = a.position.hex;
+      const hex_b = b.position.hex;
 
-      if (plane_data[a.position.hex]) {
-        num_msgs_a = plane_data[a.position.hex].id;
+      if (hex_a && plane_data[a.position.hex.toUpperCase()]) {
+        num_msgs_a = plane_data[a.position.hex.toUpperCase()].id;
       }
       if (num_msgs_a == undefined && plane_data[callsign_a]) {
         num_msgs_a = plane_data[callsign_a].id;
@@ -205,8 +208,8 @@ export let live_map_page = {
         num_msgs_a = plane_data[tail_a].id;
       }
 
-      if (plane_data[b.position.hex]) {
-        num_msgs_b = plane_data[b.position.hex].id;
+      if (hex_b && plane_data[b.position.hex.toUpperCase()]) {
+        num_msgs_b = plane_data[b.position.hex.toUpperCase()].id;
       }
       if (num_msgs_b == 0 && plane_data[callsign_b]) {
         num_msgs_b = plane_data[callsign_b].id;
@@ -405,6 +408,7 @@ export let live_map_page = {
         mouseleave: () => {
           this.current_hovered_from_sidebar = "";
           this.update_targets();
+          tooltip.attach_all_tooltips();
         },
       });
     }
@@ -520,7 +524,7 @@ export let live_map_page = {
             this.adsb_planes[current_plane.hex].icon = icon;
           }
 
-          const popup_text = `<div style='background:white; padding:1px 3px 1px 3px'>${
+          const popup_text = `<div>${
             callsign !== hex ? callsign + "/" : ""
           }${hex}<hr>Altitude: ${String(alt).toUpperCase()}${
             String(alt) !== "ground" ? " ft" : ""
@@ -529,12 +533,10 @@ export let live_map_page = {
             baro_rate ? "<br>Altitude Rate: " + baro_rate + "fpm" : ""
           }<br>Heading: ${Math.round(rotate)}&deg;${
             speed ? "<br>Speed: " + Math.round(speed) + " knots" : ""
-          }${speed ? "<br>Squawk: " + squawk : ""}${
+          }${squawk ? "<br>Squawk: " + squawk : ""}${
             tail ? "<br>Tail Number: " + tail : ""
           }${ac_type ? "<br>Aircraft Type: " + ac_type : ""}${
-            num_messages
-              ? "<br><br>Number of ACARS messages: " + num_messages
-              : ""
+            num_messages ? "<br><br>ACARS messages: " + num_messages : ""
           }</div>`;
 
           if (!this.show_only_acars || num_messages) {
@@ -831,6 +833,10 @@ export let live_map_page = {
       this.map.on({
         zoom: () => {
           this.current_scale = this.map.getZoom();
+          Cookies.set("live_map_zoom", String(this.current_scale), {
+            expires: 365,
+            sameSite: "Strict",
+          });
           this.redraw_map();
         },
         move: () => {

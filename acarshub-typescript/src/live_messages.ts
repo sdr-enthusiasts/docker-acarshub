@@ -51,11 +51,10 @@ export let live_messages_page = {
     blockScroll: false,
     isolateScroll: true,
     animation: "zoomIn",
-    closeButton: "title",
+    closeButton: "box",
     overlay: true,
     reposition: false,
     repositionOnOpen: true,
-    title: "Live Message Settings",
     content: `<p><a href="javascript:pause_updates()" id="pause_updates" class="spread_text">Pause updates</a></p>
       <a href="javascript:filter_notext()" id="filter_notext" class="spread_text">Filter out "No Text" messages</a>
       <!--<div class="fixed_menu" id="fixed_menu"> --!>
@@ -243,7 +242,10 @@ export let live_messages_page = {
     if (this.text_filter) {
       this.text_filter = false;
       $("#filter_notext").html("Hide Empty Messages");
-      Cookies.set("filter", "false", { expires: 365 });
+      Cookies.set("filter", "false", {
+        expires: 365,
+        sameSite: "Strict",
+      });
       this.filtered_messages = 0;
 
       $("#filtered").html("");
@@ -256,7 +258,10 @@ export let live_messages_page = {
 
       $("#filteredmessages").html(String(this.filtered_messages));
       $("#filter_notext").html('<span class="red">Show All Messages</span>');
-      Cookies.set("filter", "true", { expires: 365 });
+      Cookies.set("filter", "true", {
+        expires: 365,
+        sameSite: "Strict",
+      });
     }
   },
 
@@ -272,7 +277,10 @@ export let live_messages_page = {
         exclude_string += this.exclude[i] + " ";
       }
 
-      Cookies.set("exclude", exclude_string.trim(), { expires: 365 });
+      Cookies.set("exclude", exclude_string.trim(), {
+        expires: 365,
+        sameSite: "Strict",
+      });
     } else {
       let exclude_string = "";
       $(`#${key.toString()}`).removeClass("red").addClass("sidebar_link");
@@ -281,7 +289,10 @@ export let live_messages_page = {
           exclude_string += this.exclude[i] + " ";
       }
       this.exclude = exclude_string.trim().split(" ");
-      Cookies.set("exclude", exclude_string.trim(), { expires: 365 });
+      Cookies.set("exclude", exclude_string.trim(), {
+        expires: 365,
+        sameSite: "Strict",
+      });
     }
   },
 
@@ -299,11 +310,17 @@ export let live_messages_page = {
     let filter = Cookies.get("filter");
     if (filter == "true") {
       console.log("filtering");
-      Cookies.set("filter", "true", { expires: 365 });
+      Cookies.set("filter", "true", {
+        expires: 365,
+        sameSite: "Strict",
+      });
       this.filter_notext();
     } else {
       this.text_filter = true; // temporarily flip the value so we can run the filter_notext() function and set the proper CSS
-      Cookies.set("filter", "false", { expires: 365 });
+      Cookies.set("filter", "false", {
+        expires: 365,
+        sameSite: "Strict",
+      });
       this.filter_notext();
     }
 
@@ -311,9 +328,15 @@ export let live_messages_page = {
     // Same restrictions as the 'filter'
     let exclude_cookie = Cookies.get("exclude");
     if (exclude_cookie == null) {
-      Cookies.set("exclude", "", { expires: 365 });
+      Cookies.set("exclude", "", {
+        expires: 365,
+        sameSite: "Strict",
+      });
     } else {
-      Cookies.set("exclude", exclude_cookie, { expires: 365 });
+      Cookies.set("exclude", exclude_cookie, {
+        expires: 365,
+        sameSite: "Strict",
+      });
       this.exclude = exclude_cookie.split(" ");
     }
   },

@@ -51,16 +51,10 @@ export let alerts_page = {
     blockScroll: false,
     isolateScroll: true,
     animation: "zoomIn",
-    // draggable: 'title',
-    closeButton: "title",
+    closeButton: "box",
     overlay: true,
     reposition: false,
     repositionOnOpen: true,
-    // onOpen: function () {
-    //   //show_modal_values();
-    // },
-    //attach: '#settings_modal',
-    title: "Alert Message Settings",
     content: `  <p><a href="javascript:toggle_playsound()" id="playsound_link" class="spread_text">Turn On Alert Sound</a></p>
     <span id="stat_menu">
       <label for="alert_text" class="menu_non_link">Text Field:</label><br />
@@ -199,12 +193,15 @@ export let alerts_page = {
 
     Cookies.set("alert_callsigns", this.combineArray(this.alert_callsigns), {
       expires: 365,
+      sameSite: "Strict",
     });
     Cookies.set("alert_tail", this.combineArray(this.alert_tail), {
       expires: 365,
+      sameSite: "Strict",
     });
     Cookies.set("alert_icao", this.combineArray(this.alert_icao), {
       expires: 365,
+      sameSite: "Strict",
     });
   },
 
@@ -215,6 +212,7 @@ export let alerts_page = {
     this.play_sound = Cookies.get("play_sound") == "true" ? true : false;
     Cookies.set("play_sound", this.play_sound == true ? "true" : "false", {
       expires: 365,
+      sameSite: "Strict",
     });
 
     if (
@@ -261,12 +259,15 @@ export let alerts_page = {
 
     Cookies.set("alert_callsigns", this.combineArray(this.alert_callsigns), {
       expires: 365,
+      sameSite: "Strict",
     });
     Cookies.set("alert_tail", this.combineArray(this.alert_tail), {
       expires: 365,
+      sameSite: "Strict",
     });
     Cookies.set("alert_icao", this.combineArray(this.alert_icao), {
       expires: 365,
+      sameSite: "Strict",
     });
   },
 
@@ -438,6 +439,7 @@ export let alerts_page = {
     this.play_sound = !this.play_sound;
     Cookies.set("play_sound", this.play_sound == true ? "true" : "false", {
       expires: 365,
+      sameSite: "Strict",
     });
 
     if (!loading) this.sound_alert();
@@ -458,7 +460,10 @@ export let alerts_page = {
     if (this.alert_page_active) {
       // page is active
       this.set_html();
-      Cookies.set("alert_unread", "0", { expires: 365 });
+      Cookies.set("alert_unread", "0", {
+        expires: 365,
+        sameSite: "Strict",
+      });
       this.alerts = 0;
       $("#alert_count").html(` <span class="red"></span>`);
 

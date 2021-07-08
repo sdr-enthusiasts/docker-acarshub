@@ -738,30 +738,63 @@ canvas {
   font-family: var(--site-fonts);
 }
 
-#airplane.jBox-Mouse.jBox-wrapper .jBox-content,
-#airplane.jBox-Tooltip.jBox-wrapper .jBox-content {
-  background-color: white;
-  color: black;
-  font-size: 12px;
-  font-weight: bold;
+#airplane .jBox-content {
+  font-family: var(--mono-fonts) !important;
   text-transform: uppercase;
 }
 
-.jBox-Mouse.jBox-wrapper .jBox-title,
-.jBox-Tooltip.jBox-wrapper .jBox-title {
-  background-color:  #ccc;
-  color: var(--blue-highlight);
-  font-family: var(--site-fonts);
-  font-size: 20px;
-  text-transform: uppercase;
-  text-align: center;
+#airplane.jBox-Tooltip.jBox-wrapper .jBox-content {
+  border-radius: 0px 0px 15px 15px;
+  -moz-border-radius: 0px 0px 15px 15px;
+}
+
+.jBox-wrapper  {
+  border-radius: 15px;
+  border: 2px solid rgba(0, 0, 0, 0.3);
+  padding: 5px;
+  border-radius: 15px;
+  -moz-border-radius: 15px;
+  background-color: var(--grey-bg);
+  box-shadow: 0 0 3px rgba(0,0,0,.25);
+}
+
+.jBox-Modal {
+  max-height: 80%;
+}
+
+.jBox-wrapper.jBox-Tooltip,
+.jBox-wrapper.jBox-Mouse {
+  max-width: 250px;
+}
+
+.jBox-container {
+  background-color: var(--grey-bg);
+  border-radius: 0px;
+  box-shadow: 0 0 0px rgba(0,0,0,0) !important;
 }
 
 .jBox-Mouse.jBox-wrapper .jBox-content,
 .jBox-Tooltip.jBox-wrapper .jBox-content {
-  background-color:  var(--grey-bg);
-  font-family: var(--site-fonts);
+  background-color: var(--grey-bg);
   color: var(--blue-highlight);
+  font-size: 12px;
+  font-weight: bold;
+  font-family: var(--site-fonts);
+  box-shadow: none;
+}
+
+.jBox-wrapper .jBox-title {
+  background-color:  #ccc;
+  color: var(--blue-highlight);
+  font-family: var(--site-fonts);
+  font-size: 15px;
+  text-transform: uppercase;
+  text-align: center;
+  border-radius: 15px 15px 0px 0px;
+  -moz-border-radius: 15px 15px 0px 0px;
+  text-transform: uppercase;
+  padding: 0px;
+  width: 100%;
 }
 
 @media only screen and (max-width: 1200px) {
