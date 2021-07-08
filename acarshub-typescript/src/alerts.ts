@@ -51,16 +51,10 @@ export let alerts_page = {
     blockScroll: false,
     isolateScroll: true,
     animation: "zoomIn",
-    // draggable: 'title',
-    closeButton: "title",
+    closeButton: "box",
     overlay: true,
     reposition: false,
     repositionOnOpen: true,
-    // onOpen: function () {
-    //   //show_modal_values();
-    // },
-    //attach: '#settings_modal',
-    title: "Alert Message Settings",
     content: `  <p><a href="javascript:toggle_playsound()" id="playsound_link" class="spread_text">Turn On Alert Sound</a></p>
     <span id="stat_menu">
       <label for="alert_text" class="menu_non_link">Text Field:</label><br />

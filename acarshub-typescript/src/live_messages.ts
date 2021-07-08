@@ -51,11 +51,10 @@ export let live_messages_page = {
     blockScroll: false,
     isolateScroll: true,
     animation: "zoomIn",
-    closeButton: "title",
+    closeButton: "box",
     overlay: true,
     reposition: false,
     repositionOnOpen: true,
-    title: "Live Message Settings",
     content: `<p><a href="javascript:pause_updates()" id="pause_updates" class="spread_text">Pause updates</a></p>
       <a href="javascript:filter_notext()" id="filter_notext" class="spread_text">Filter out "No Text" messages</a>
       <!--<div class="fixed_menu" id="fixed_menu"> --!>

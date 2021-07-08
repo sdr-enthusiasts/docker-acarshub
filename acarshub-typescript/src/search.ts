@@ -42,12 +42,11 @@ export let search_page = {
     blockScroll: false,
     isolateScroll: true,
     animation: "zoomIn",
-    closeButton: "title",
+    closeButton: "box",
     overlay: true,
     reposition: false,
     repositionOnOpen: true,
     onClose: () => window.close_modal(),
-    title: "Search for messages",
     content: `  <p><a href="javascript:showall()" class="spread_text">Most Recent Messages</a></p>
     <table class="search">
       <tr>

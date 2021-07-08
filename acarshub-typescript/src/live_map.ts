@@ -43,7 +43,7 @@ export let live_map_page = {
     isolateScroll: true,
     animation: "zoomIn",
     draggable: "title",
-    closeButton: "title",
+    closeButton: "box",
     overlay: false,
     reposition: true,
     repositionOnOpen: false,
@@ -524,7 +524,7 @@ export let live_map_page = {
             this.adsb_planes[current_plane.hex].icon = icon;
           }
 
-          const popup_text = `<div style='background:white; padding:1px 3px 1px 3px'>${
+          const popup_text = `<div>${
             callsign !== hex ? callsign + "/" : ""
           }${hex}<hr>Altitude: ${String(alt).toUpperCase()}${
             String(alt) !== "ground" ? " ft" : ""
@@ -536,9 +536,7 @@ export let live_map_page = {
           }${squawk ? "<br>Squawk: " + squawk : ""}${
             tail ? "<br>Tail Number: " + tail : ""
           }${ac_type ? "<br>Aircraft Type: " + ac_type : ""}${
-            num_messages
-              ? "<br><br>Number of ACARS messages: " + num_messages
-              : ""
+            num_messages ? "<br><br>ACARS messages: " + num_messages : ""
           }</div>`;
 
           if (!this.show_only_acars || num_messages) {
