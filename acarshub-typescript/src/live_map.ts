@@ -51,7 +51,7 @@ export let live_map_page = {
     content: "",
     onClose: () => window.close_live_map_modal(),
   }),
-  current_sort: "callsign" as string,
+  current_sort: Cookies.get("current_sort") || ("callsign" as string),
   ascending: true as boolean,
   window_size: (<unknown>null) as window_size,
   show_only_acars: false as boolean,
@@ -68,8 +68,21 @@ export let live_map_page = {
   modal_current_tab: "" as string,
   current_scale: Number(Cookies.get("live_map_zoom")) || (8 as number),
 
+  get_cookie_value: function () {
+    this.show_only_acars = Cookies.get("only_acars") == "true" ? true : false;
+    this.show_datablocks =
+      Cookies.get("show_datablocks") == "true" ? true : false;
+    this.show_extended_datablocks =
+      Cookies.get("show_extended_datablocks") == "true" ? true : false;
+    this.current_sort = Cookies.get("current_sort") || "callsign";
+  },
+
   toggle_acars_only: function () {
     this.show_only_acars = !this.show_only_acars;
+    Cookies.set("only_acars", String(this.show_only_acars), {
+      expires: 365,
+      sameSite: "Strict",
+    });
 
     if (this.live_map_page_active) {
       $("#toggle-acars").html(
@@ -86,6 +99,11 @@ export let live_map_page = {
   toggle_datablocks: function () {
     this.show_datablocks = !this.show_datablocks;
 
+    Cookies.set("show_datablocks", String(this.show_datablocks), {
+      expires: 365,
+      sameSite: "Strict",
+    });
+
     if (this.live_map_page_active) {
       $("#toggle-datablocks").html(
         `${
@@ -100,6 +118,15 @@ export let live_map_page = {
 
   toggle_extended_datablocks: function () {
     this.show_extended_datablocks = !this.show_extended_datablocks;
+
+    Cookies.set(
+      "show_extended_datablocks",
+      String(this.show_extended_datablocks),
+      {
+        expires: 365,
+        sameSite: "Strict",
+      }
+    );
 
     if (this.live_map_page_active) {
       $("#toggle-extended-datablocks").html(
@@ -171,6 +198,17 @@ export let live_map_page = {
     // two special cases where we want the default sort to be reversed
     else this.ascending = true;
     this.current_sort = sort;
+
+    Cookies.set("current_sort", String(this.current_sort), {
+      expires: 365,
+      sameSite: "Strict",
+    });
+
+    Cookies.set("sort_direction", String(this.ascending), {
+      expires: 365,
+      sameSite: "Strict",
+    });
+
     this.airplaneList();
   },
 
@@ -716,6 +754,7 @@ export let live_map_page = {
   live_map_active: function (state = false, window_size: window_size) {
     this.live_map_page_active = state;
     this.window_size = window_size;
+    this.get_cookie_value();
     if (window_size.width < 700) {
       $("#mapid").css("width", "100%");
       $("#planes").css("display", "none");
