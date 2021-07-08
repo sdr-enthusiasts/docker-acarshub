@@ -1,4 +1,5 @@
 import * as L from "leaflet";
+import Cookies from "js-cookie";
 import {
   acars_msg,
   window_size,
@@ -65,7 +66,7 @@ export let live_map_page = {
   current_hovered_from_sidebar: "" as string,
   modal_content: "" as string,
   modal_current_tab: "" as string,
-  current_scale: 8 as number,
+  current_scale: Number(Cookies.get("live_map_zoom")) || (8 as number),
 
   toggle_acars_only: function () {
     this.show_only_acars = !this.show_only_acars;
@@ -160,7 +161,7 @@ export let live_map_page = {
     this.lat = lat_in;
     this.lon = lon_in;
     if (this.live_map_page_active && this.adsb_enabled)
-      this.map.setView([this.lat, this.lon], 8);
+      this.map.setView([this.lat, this.lon]);
   },
 
   setSort: function (sort: string = "") {
@@ -834,6 +835,9 @@ export let live_map_page = {
       this.map.on({
         zoom: () => {
           this.current_scale = this.map.getZoom();
+          Cookies.set("live_map_zoom", String(this.current_scale), {
+            expires: 365,
+          });
           this.redraw_map();
         },
         move: () => {
