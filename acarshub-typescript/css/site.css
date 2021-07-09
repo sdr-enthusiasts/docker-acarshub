@@ -971,14 +971,15 @@ div#planes {
   max-height: calc(100vh - 160px);
   overflow: scroll;
   position: relative;
-  border: 1px solid var(--grey-bg)
+  /* border: 1px solid var(--grey-bg) */
 }
 
 div.plane_list_no_hover,
 div.plane_list {
   display: inline-block;
   width: 100%;
-  border: 1px solid black;
+  border-top: 1px solid black;
+  border-bottom: 1px solid black;
   color: white;
   background-color: var(--blue-highlight);
   font-weight: bold
