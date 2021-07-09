@@ -75,6 +75,10 @@ export let live_map_page = {
     this.show_extended_datablocks =
       Cookies.get("show_extended_datablocks") == "true" ? true : false;
     this.current_sort = Cookies.get("current_sort") || "callsign";
+    this.ascending =
+      !Cookies.get("sort_direction") || Cookies.get("sort_direction") == "true"
+        ? true
+        : false;
   },
 
   toggle_acars_only: function () {
