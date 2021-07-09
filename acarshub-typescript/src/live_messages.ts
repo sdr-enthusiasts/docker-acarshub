@@ -309,7 +309,6 @@ export let live_messages_page = {
 
     let filter = Cookies.get("filter");
     if (filter == "true") {
-      console.log("filtering");
       Cookies.set("filter", "true", {
         expires: 365,
         sameSite: "Strict",
