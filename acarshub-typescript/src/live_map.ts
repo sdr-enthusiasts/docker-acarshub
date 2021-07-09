@@ -420,9 +420,11 @@ export let live_map_page = {
         <div class="plane_element" style="width: ${alt_width}%;">${
           alt || "&nbsp;"
         }${
-          alt && baro_rate > 100 ? '&nbsp;<i class="fas fa-arrow-up"></i>' : ""
+          alt && alt !== "GROUND" && baro_rate > 100
+            ? '&nbsp;<i class="fas fa-arrow-up"></i>'
+            : ""
         }${
-          alt && baro_rate < -100
+          alt && alt !== "GROUND" && baro_rate < -100
             ? '&nbsp;<i class="fas fa-arrow-down"></i>'
             : ""
         }</div>
