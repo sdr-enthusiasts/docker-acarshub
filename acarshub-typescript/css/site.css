@@ -979,7 +979,7 @@ div.plane_list {
   display: inline-block;
   width: 100%;
   border: 1px solid black;
-  color: black;
+  color: white;
   background-color: var(--blue-highlight);
   font-weight: bold
 }
@@ -1019,7 +1019,7 @@ div.plane_element {
 
 .sidebar_no_hover_with_acars {
   background-color: green !important;
-  color: black !important;
+  color: white !important;
   font-weight: bold !important;
 }
 
@@ -1036,7 +1036,7 @@ div.plane_element {
 }
 
 .plane_element a {
-  color: black;
+  color: white;
 }
 
 .airplane_datablock {
