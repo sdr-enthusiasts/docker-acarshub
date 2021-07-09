@@ -8,6 +8,7 @@ import {
   matches,
   plane,
   aircraft_icon,
+  plane_data,
 } from "./interfaces.js";
 import jBox from "jbox";
 import "jbox/dist/jBox.all.css";
@@ -765,7 +766,7 @@ export let live_messages_page = {
   },
 
   find_matches: function () {
-    let output: { [index: string]: { id: number } } = {};
+    let output: plane_data = {};
     for (const planes of this.lm_msgs_received.planes) {
       const length_of_messages = planes.messages.length;
       planes.identifiers.forEach((identifier) => {
