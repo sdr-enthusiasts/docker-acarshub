@@ -393,6 +393,7 @@ export let live_map_page = {
       if (!this.show_only_acars || num_messages) {
         let styles = "";
         if (
+          this.current_hovered_from_map !== "" &&
           this.current_hovered_from_map == callsign.replace("~", "") &&
           callsign &&
           num_messages
@@ -436,19 +437,21 @@ export let live_map_page = {
     $("#planes").html(html);
     for (const id in plane_callsigns) {
       const plane = plane_callsigns[id];
-      $(`#${plane.replace("~", "")}`).on({
-        mouseenter: () => {
-          if (this.current_hovered_from_sidebar !== plane.replace("~", "")) {
-            this.current_hovered_from_sidebar = plane.replace("~", "");
+      if (plane) {
+        $(`#${plane.replace("~", "")}`).on({
+          mouseenter: () => {
+            if (this.current_hovered_from_sidebar !== plane.replace("~", "")) {
+              this.current_hovered_from_sidebar = plane.replace("~", "");
+              this.update_targets();
+            }
+          },
+          mouseleave: () => {
+            this.current_hovered_from_sidebar = "";
             this.update_targets();
-          }
-        },
-        mouseleave: () => {
-          this.current_hovered_from_sidebar = "";
-          this.update_targets();
-          tooltip.attach_all_tooltips();
-        },
-      });
+            tooltip.attach_all_tooltips();
+          },
+        });
+      }
     }
     $("#num_planes").html(`Planes: ${num_planes}`);
     $("#num_planes_targets").html(`Planes w/ Targets: ${num_planes_targets}`);

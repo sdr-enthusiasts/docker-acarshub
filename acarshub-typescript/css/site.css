@@ -979,13 +979,14 @@ div.plane_list {
   display: inline-block;
   width: 100%;
   border: 1px solid black;
-  color: var(--blue-highlight);
-  background-color: var(--grey-bg);
+  color: black;
+  background-color: var(--blue-highlight);
+  font-weight: bold
 }
 
 div.plane_list:hover {
-  background-color: black !important;
-  font-weight: bold !important;
+  background-color: black;
+  color: var(--blue-highlight);
 }
 
 div.plane_element {
@@ -1008,26 +1009,34 @@ div.plane_element {
 
 .sidebar_hovered_from_map_acars {
   background-color: black !important;
-  font-weight: bold !important;
   color: green !important;
 }
 
 .sidebar_hovered_from_map_no_acars {
   background-color: black !important;
-  font-weight: bold !important;
   color: var(--blue-highlight) !important;
 }
 
 .sidebar_no_hover_with_acars {
-  color: green !important;
+  background-color: green !important;
+  color: black !important;
   font-weight: bold !important;
 }
 
+.sidebar_no_hover_with_acars:hover,
+.sidebar_no_hover_with_acars:focus,
+.sidebar_no_hover_with_acars:hover a,
+.sidebar_no_hover_with_acars:focus a {
+  background-color: black !important;
+  color: green !important;
+}
+
+.sidebar_hovered_from_map_acars .plane_element a {
+  color: green !important;
+}
+
 .plane_element a {
-  color: green;
-  text-decoration: none;
-  text-transform: uppercase;
-  font-weight: bold;
+  color: black;
 }
 
 .airplane_datablock {
