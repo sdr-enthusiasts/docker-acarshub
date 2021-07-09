@@ -264,3 +264,9 @@ export interface aircraft_icon {
   width: number;
   height: number;
 }
+
+export interface plane_data {
+  [index: string]: {
+    id: number;
+  };
+}
