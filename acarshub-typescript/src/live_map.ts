@@ -346,19 +346,15 @@ export let live_map_page = {
     });
 
     let plane_callsigns = [];
+    let acars_planes = 0;
+    let acars_message_count = 0;
     const alt_width = 21;
     const code_width = 15;
     const speed_width = 18;
     const msgs_width = 10;
     const callsign_width = 25;
     //const callsign_width = 100 - alt_width - code_width - speed_width - msgs_width;
-    let html: string = `<div class="plane_list_no_hover" style="color: var(--blue-highlight) !important;background-color: var(--grey-bg)"><div class="plane_element noleft" id="num_planes" style="width: 50%"></div><div class="plane_element noleft" id="num_planes_targets" style="width: 50%"></div></div>
-    <div class="plane_list_no_hover" style="font-weight: bold;border-bottom: 1px solid black;color: var(--blue-highlight) !important;background-color: var(--grey-bg)">
-    <div class="plane_element plane_header noleft" style="width: ${callsign_width}%"><a href="javascript:setSort('callsign')">Callsign</a></div>
-    <div class="plane_element plane_header" style="width: ${alt_width}%;"><a href="javascript:setSort('alt')">Alt</a></div>
-    <div class="plane_element plane_header" style="width: ${code_width}%;"><a href="javascript:setSort('code')">Code</a></div>
-    <div class="plane_element plane_header" style="width: ${speed_width}%;"><a href="javascript:setSort('speed')">Speed</a></div>
-    <div class="plane_element plane_header" style="width: ${msgs_width}%;"><a href="javascript:setSort('msgs')">Msgs</a></div></div>`;
+    let html: string = "";
     // add data to the table
     for (const plane in sorted) {
       const current_plane = sorted[plane].position;
@@ -388,6 +384,10 @@ export let live_map_page = {
       }
       if (num_messages == undefined) {
         num_messages = 0;
+      }
+      if (num_messages) {
+        acars_planes++;
+        acars_message_count += num_messages;
       }
 
       if (!this.show_only_acars || num_messages) {
@@ -434,6 +434,16 @@ export let live_map_page = {
         </div>`;
       }
     }
+    html =
+      `<div class="plane_list_no_hover" style="color: var(--blue-highlight) !important;background-color: var(--grey-bg)"><div class="plane_element noleft" id="num_planes" style="width: 50%"></div><div class="plane_element noleft" id="num_planes_targets" style="width: 50%"></div></div>
+    <div class="plane_list_no_hover" style="color: var(--blue-highlight) !important;background-color: var(--grey-bg)"><div class="plane_element noleft" id="num_acars_planes" style="vertical-align: text-top;width: 50%">Planes w/ ACARS Msgs: ${acars_planes}</div><div class="plane_element noleft" id="numnonoleft" id="num_acars_planes_targets" style="width: 50%">Total ACARS Msgs: ${acars_message_count}</div></div>
+    <div class="plane_list_no_hover" style="font-weight: bold;border-bottom: 1px solid black;color: var(--blue-highlight) !important;background-color: var(--grey-bg)">
+    <div class="plane_element plane_header noleft" style="width: ${callsign_width}%"><a href="javascript:setSort('callsign')">Callsign</a></div>
+    <div class="plane_element plane_header" style="width: ${alt_width}%;"><a href="javascript:setSort('alt')">Alt</a></div>
+    <div class="plane_element plane_header" style="width: ${code_width}%;"><a href="javascript:setSort('code')">Code</a></div>
+    <div class="plane_element plane_header" style="width: ${speed_width}%;"><a href="javascript:setSort('speed')">Speed</a></div>
+    <div class="plane_element plane_header" style="width: ${msgs_width}%;"><a href="javascript:setSort('msgs')">Msgs</a></div></div>` +
+      html;
     $("#planes").html(html);
     for (const id in plane_callsigns) {
       const plane = plane_callsigns[id];
