@@ -470,7 +470,7 @@ export let stats_page = {
               },
               title: {
                 display: true,
-                text: `Non-Empty Messages (${total_non_empty})`,
+                text: `Non-Empty Messages (${total_non_empty.toLocaleString()})`,
               },
               datalabels: {
                 backgroundColor: function (context: any) {
@@ -537,7 +537,7 @@ export let stats_page = {
               },
               title: {
                 display: true,
-                text: `Empty Messages (${empty_total})`,
+                text: `Empty Messages (${empty_total.toLocaleString()})`,
               },
               datalabels: {
                 backgroundColor: function (context: any) {
