@@ -15,8 +15,10 @@ def update_version_file(line="", build=False, minor=False, patch=False):
     if minor:
         minor_number = str(int(minor_number) + 1)
     patch_number = re.search(r"(\.\d+$)", version).group().replace(".", "")
-    if patch:
+    if not minor and patch:
         patch_number = str(int(patch_number) + 1)
+    elif patch:
+        patch_number = 0
     build_number = re.search(r"\d+$", line).group()
     if build:
         build_number = str(int(build_number) + 1)
@@ -43,8 +45,10 @@ def update_package_file(line="", minor=False, patch=False):
     version = re.search(r"\d+\.\d+\.\d+", line).group()
     major_number = re.search(r"\d+\.", version).group().replace(".", "")
     minor_number = re.search(r"\.\d+\.", version).group().replace(".", "")
-    if minor:
+    if not minor and minor:
         minor_number = str(int(minor_number) + 1)
+    elif patch:
+        minor_number = 0
     patch_number = re.search(r"(\.\d+$)", version).group().replace(".", "")
     if patch:
         patch_number = str(int(patch_number) + 1)
