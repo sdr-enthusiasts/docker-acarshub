@@ -131,7 +131,9 @@ export let stats_page = {
           this.signal_data.levels[i].level != null &&
           this.isFloat(this.signal_data.levels[i].level)
         ) {
-          input_labels.push(`${this.signal_data.levels[i].level}`);
+          input_labels.push(
+            `${this.signal_data.levels[i].level.toLocaleString()}`
+          );
           input_data.push(this.signal_data.levels[i].count);
         }
       }
