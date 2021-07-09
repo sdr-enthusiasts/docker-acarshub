@@ -777,7 +777,6 @@ export let live_map_page = {
       $("#planes").css("display", "none");
     } else {
       $("#mapid").css("width", `${this.window_size.width - 370}px`);
-      $("#planes").css("display", "none");
     }
     if (this.live_map_page_active && this.adsb_enabled) {
       this.set_html();
