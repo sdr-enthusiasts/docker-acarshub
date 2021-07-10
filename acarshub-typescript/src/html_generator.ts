@@ -9,7 +9,7 @@ export function display_messages(
   msgs_to_process: acars_msg[][],
   selected_tabs: string = "",
   live_page: boolean = false
-) {
+): string {
   let msgs_string = ""; // output string that gets returned
   let message_tab_splits: string[] = []; // variable to save the split output of selected_tabs
   if (selected_tabs !== "") message_tab_splits = selected_tabs.split(","); // the individual tabs with selections
