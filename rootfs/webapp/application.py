@@ -562,7 +562,6 @@ def request_graphs(message, namespace):
 def handle_message(message, namespace):
     import time
 
-    print("starting search")
     start_time = time.time()
     # We are going to send the result over in one blob
     # search.js will only maintain the most recent blob we send over
@@ -573,7 +572,6 @@ def handle_message(message, namespace):
     # in the search namespace.
 
     requester = request.sid
-    print(total_results)
     socketio.emit(
         "database_search_results",
         {

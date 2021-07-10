@@ -849,7 +849,6 @@ def search_alerts(icao=None, tail=None, flight=None):
             acarshub_helpers.acars_traceback(e, "database")
             return None
     else:
-        print("exiting")
         return None
 
 
