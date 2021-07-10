@@ -51,7 +51,6 @@ fi
 
 mkdir -p /database
 
-#FREQS_VDLM=$(echo "$FREQS_VDLM" | sed 's/;/ /g')
 # Ensure stats files are present
 touch /database/vdlm2.past5min.json
 touch /database/acars.past5min.json
