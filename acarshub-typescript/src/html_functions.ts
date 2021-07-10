@@ -1,13 +1,11 @@
 import { acars_msg } from "./interfaces";
 
 export let html_functions = {
-  tab_ids: function () {},
-
-  start_message_tabs: function () {
+  start_message_tabs: function (): string {
     return '<div class="tabinator">';
   },
 
-  end_message_tabs: function () {
+  end_message_tabs: function (): string {
     return "</div><!-- tabs -->";
   },
 
@@ -15,7 +13,7 @@ export let html_functions = {
     tab_to_nav: string,
     unique_id: string,
     direction_back: boolean = true
-  ) {
+  ): string {
     return (
       `<a href="javascript:handle_radio('` +
       tab_to_nav +
@@ -31,7 +29,7 @@ export let html_functions = {
     tab_uid: string,
     unique_id: string,
     checked: boolean = true
-  ) {
+  ): string {
     return (
       `<input type = "radio" id = "tab${tab_uid}_${unique_id}" class = "tabs_${unique_id}" ${
         checked ? "checked" : ""
@@ -48,7 +46,7 @@ export let html_functions = {
     matched: boolean,
     tab_uid: string,
     unique_id: string
-  ) {
+  ): string {
     return `<label for = "tab${tab_uid}_${unique_id}">${
       matched ? '<span class="red_body">' : ""
     }<span class="show_when_big">Message</span><span class="show_when_small">M#</span> ${
@@ -60,21 +58,21 @@ export let html_functions = {
     unique_id: string,
     tab_uid: string,
     checked: boolean = true
-  ) {
+  ): string {
     return `<div id = "message_${unique_id}_${tab_uid}" class="sub_msg${unique_id}${
       checked ? " checked" : ""
     }">`;
   },
 
-  end_message_div: function () {
+  end_message_div: function (): string {
     return "</div><!-- message -->";
   },
 
-  start_message_box: function () {
+  start_message_box: function (): string {
     return '<div><table class="shadow">';
   },
 
-  end_message_box: function () {
+  end_message_box: function (): string {
     return "</table></div><!-- table -->";
   },
 
@@ -82,17 +80,17 @@ export let html_functions = {
     message_type: string,
     station_id: string,
     matched: boolean = false
-  ) {
+  ): string {
     return `<tr${
       matched ? ' class="red_body"' : ""
     }><td><strong>${message_type}</strong> from <strong>${station_id}</strong></td>`;
   },
 
-  message_timestamp: function (timestamp: Date) {
+  message_timestamp: function (timestamp: Date): string {
     return `<td style=\"text-align: right\"><strong>${timestamp}</strong></td></tr>`;
   },
 
-  start_message_body: function () {
+  start_message_body: function (): string {
     return '<tr><td class="text_top msg_body">';
   },
 
@@ -100,13 +98,13 @@ export let html_functions = {
     field_name: string,
     field_value: string,
     use_br: boolean = true
-  ) {
+  ): string {
     return `${field_name}:&nbsp;<strong>${field_value}</strong>${
       use_br ? "<br>" : ""
     }`;
   },
 
-  message_text: function (message: acars_msg) {
+  message_text: function (message: acars_msg): string {
     let html_output: string = '<tr><td colspan="2">';
     if (message.hasOwnProperty("text") && typeof message.text !== "undefined") {
       let text = message["text"];
@@ -172,7 +170,7 @@ export let html_functions = {
     return html_output;
   },
 
-  replace_text: function (input: string[], text: string) {
+  replace_text: function (input: string[], text: string): string {
     for (let i = 0; i < input.length; i++) {
       text = text
         .split(`${input[i].toUpperCase()}`)
@@ -181,7 +179,7 @@ export let html_functions = {
     return text;
   },
 
-  loop_array: function (input: any) {
+  loop_array: function (input: any): string {
     let html_output: string = "";
 
     for (let m in input) {
@@ -203,7 +201,7 @@ export let html_functions = {
   show_footer_and_sidebar_text: function (
     message: acars_msg,
     footer: boolean = true
-  ) {
+  ): string {
     let html_output = "";
     html_output += footer
       ? '<tr class="show_when_big"><td>'
