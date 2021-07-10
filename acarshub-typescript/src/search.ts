@@ -141,18 +141,18 @@ export let search_page = {
     </table>`,
   }),
 
-  show_search_message_modal: function () {
+  show_search_message_modal: function (): void {
     this.search_message_modal.open();
     $("input").on("keyup", () => this.key_event());
     this.update_size();
   },
 
-  database_size_details: function (msg: database_size) {
+  database_size_details: function (msg: database_size): void {
     this.db_size = msg;
     this.update_size();
   },
 
-  database_search_results: function (msg: search_html_msg) {
+  database_search_results: function (msg: search_html_msg): void {
     //maintain a list of 1 msgs
     if (this.search_msgs_received.length >= 1) {
       this.search_msgs_received.shift();
@@ -178,9 +178,9 @@ export let search_page = {
     }
   },
 
-  search: function () {},
+  search: function (): void {},
 
-  key_event: function () {
+  key_event: function (): void {
     if (this.search_page_active) {
       let current_terms = this.get_search_terms();
       if (this.current_search != current_terms) {
@@ -190,7 +190,7 @@ export let search_page = {
     }
   },
 
-  show_search: function () {
+  show_search: function (): void {
     let display = "";
     let display_nav_results = "";
     let results = []; // temp variable to store the JSON formatted JS object
@@ -222,7 +222,7 @@ export let search_page = {
     }
   },
 
-  get_search_terms: function () {
+  get_search_terms: function (): current_search {
     console.log($("#search_text").val(), $("search_text"));
     return {
       flight: $("#search_flight").val(),
@@ -236,7 +236,7 @@ export let search_page = {
     } as current_search;
   },
 
-  is_everything_blank: function () {
+  is_everything_blank: function (): boolean {
     console.log(this.get_search_terms());
     for (let [key, value] of Object.entries(this.get_search_terms())) {
       if (value != "") return false;
@@ -244,7 +244,7 @@ export let search_page = {
     return true;
   },
 
-  reset_search_terms: function () {
+  reset_search_terms: function (): void {
     $("#search_flight").val("");
     $("#search_depa").val("");
     $("#search_dsta").val("");
@@ -260,7 +260,7 @@ export let search_page = {
   // I chose 500ms for the delay because it seems like a reasonable compromise for fast/slow typers
   // Once delay is met, compare the previous text field with the current text field. If they are the same, we'll send a query out
 
-  delay_query: async function (initial_query: current_search) {
+  delay_query: async function (initial_query: current_search): Promise<void> {
     // Pause for a tenth of a second
     await this.sleep(100);
     let old_search = this.current_search; // Save the old search term in a temp variable
@@ -293,7 +293,7 @@ export let search_page = {
 
   // Function to run show all messages. Sets the letious status trackers on the page to expected values
 
-  showall: function () {
+  showall: function (): void {
     search_database(this.current_search, true);
     $("#log").html("Updating...");
     $("#num_results").html("");
@@ -304,14 +304,14 @@ export let search_page = {
 
   // Zzzzzzz
 
-  sleep: function (ms: number) {
+  sleep: function (ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
   },
 
   // Function called by a user clicking on a search page link.
   // Set tracking to the new page and send the query off to the DB
 
-  runclick: function (page: number) {
+  runclick: function (page: number): void {
     this.current_page = page;
     if (!this.is_everything_blank() || this.show_all) {
       $("#log").html("Updating results....");
@@ -325,7 +325,7 @@ export let search_page = {
   },
 
   // Sanity checker to ensure the page typed in the jump box makes sense. If it does, call the runclick function to send it off to the DB
-  jumppage: function () {
+  jumppage: function (): void {
     let page: number = Number($("#jump").val());
     if (typeof page === "undefined" || page === null) return;
     if (page > this.total_pages || page < 1) {
@@ -339,7 +339,7 @@ export let search_page = {
 
   // Function to format the side bar
 
-  display_search: function (current: number, total: number) {
+  display_search: function (current: number, total: number): string {
     let html = "";
     this.total_pages = 0;
 
@@ -418,7 +418,7 @@ export let search_page = {
     return html;
   },
 
-  formatSizeUnits: function (bytes: number) {
+  formatSizeUnits: function (bytes: number): string {
     let output: string = "";
     if (bytes >= 1073741824) {
       output = (bytes / 1073741824).toFixed(2) + " GB";
@@ -436,7 +436,7 @@ export let search_page = {
     return output;
   },
 
-  update_size: function () {
+  update_size: function (): void {
     if (this.search_page_active && this.db_size !== null) {
       $("#database").html(String(this.db_size.count).trim() + " rows");
       if (parseInt(this.db_size.size) > 0) {
@@ -446,12 +446,15 @@ export let search_page = {
       }
     }
   },
-  set_search_page_urls: function (documentPath: string, documentUrl: string) {
+  set_search_page_urls: function (
+    documentPath: string,
+    documentUrl: string
+  ): void {
     this.search_acars_path = documentPath;
     this.search_acars_url = documentUrl;
   },
 
-  search_active: function (state = false) {
+  search_active: function (state = false): void {
     this.search_page_active = state;
 
     if (this.search_page_active) {
@@ -463,7 +466,7 @@ export let search_page = {
     }
   },
 
-  set_html: function () {
+  set_html: function (): void {
     $("#modal_text").html(
       '<a href="javascript:show_page_modal()">Search For Messages</a>'
     );
