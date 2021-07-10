@@ -275,3 +275,11 @@ export interface svg_icon {
   name: string;
   scale: number;
 }
+
+export interface alert_matched {
+  was_found: boolean;
+  text: string[] | null;
+  icao: string[] | null;
+  flight: string[] | null;
+  tail: string[] | null;
+}

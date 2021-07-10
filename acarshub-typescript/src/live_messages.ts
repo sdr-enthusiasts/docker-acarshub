@@ -9,6 +9,7 @@ import {
   plane,
   aircraft_icon,
   plane_data,
+  alert_matched,
 } from "./interfaces.js";
 import jBox from "jbox";
 import "jbox/dist/jBox.all.css";
@@ -413,7 +414,7 @@ export let live_messages_page = {
           }
         }
 
-        let matched = match_alert(msg);
+        let matched: alert_matched = match_alert(msg);
         if (matched.was_found) {
           new_msg.matched = true;
           new_msg.matched_text = matched.text !== null ? matched.text : [];
