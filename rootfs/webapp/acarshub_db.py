@@ -16,10 +16,8 @@ alert_terms = list()
 
 try:
     acarshub_helpers.log("Downloading Station IDs", "database")
-    with urllib.request.urlopen(
-        "https://raw.githubusercontent.com/airframesio/data/master/json/vdl/ground-stations.json"
-    ) as url:
-        groundStations_json = json.loads(url.read().decode())
+    with open("./data/ground-stations.json", "r") as f:
+        groundStations_json = json.load(f)
 
     for station in groundStations_json["ground_stations"]:
         stationId = station.get("id")
@@ -37,10 +35,8 @@ except Exception as e:
 
 try:
     acarshub_helpers.log("Downloading message labels", "database")
-    with urllib.request.urlopen(
-        "https://raw.githubusercontent.com/airframesio/data/master/json/acars/metadata.json"
-    ) as url:
-        message_labels = json.loads(url.read().decode())
+    with open("./data/acars-metadata.json", "r") as f:
+        message_labels = json.load(f)
     acarshub_helpers.log("Completed loading message labels", "database")
 except Exception as e:
     message_labels = {"labels": {}}  # handle URL exception

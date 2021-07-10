@@ -8,3 +8,9 @@ rm -f ../rootfs/webapp/static/images/*months.png
 rm -f ../rootfs/webapp/static/images/*year.png
 
 cp  test_assets/images/* ../rootfs/webapp/static/images/
+
+rm -f ../rootfs/webapp/data/ground-stations.json
+rm -f ../rootfs/webapp/data/acars-metadata.json
+
+curl https://raw.githubusercontent.com/airframesio/data/master/json/vdl/ground-stations.json > ../rootfs/webapp/data/ground-stations.json
+curl https://raw.githubusercontent.com/airframesio/data/master/json/acars/metadata.json > ../rootfs/webapp/data/acars-metadata.json
