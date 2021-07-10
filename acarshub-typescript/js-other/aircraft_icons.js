@@ -1113,42 +1113,42 @@ function getBaseMarker(category, typeDesignator, typeDescription, wtc, addrtype,
     if (typeDesignator in TypeDesignatorIcons) {
         let shape = TypeDesignatorIcons[typeDesignator][0];
         let scaling = TypeDesignatorIcons[typeDesignator][1];
-        return [shape, scaling];
+        return {name: shape, scale: scaling};
     }
 
     if (typeDescription != null && typeDescription.length === 3) {
         if (wtc !== null && wtc.length === 1) {
             let typeDescriptionWithWtc = typeDescription + "-" + wtc;
             if (typeDescriptionWithWtc === "L2J-M" && category === "A2") {
-                return ["jet_swept", 1];
+                return {name: "jet_swept", scale: 1};
             }
             if (typeDescriptionWithWtc in TypeDescriptionIcons) {
                 let shape = TypeDescriptionIcons[typeDescriptionWithWtc][0];
                 let scaling = TypeDescriptionIcons[typeDescriptionWithWtc][1];
-                return [shape, scaling];
+                return {name: shape, scale: scaling};
             }
         }
 
         if (typeDescription in TypeDescriptionIcons) {
             let shape = TypeDescriptionIcons[typeDescription][0];
             let scaling = TypeDescriptionIcons[typeDescription][1];
-            return [shape, scaling];
+            return {name: shape, scale: scaling};
         }
 
         let basicType = typeDescription.charAt(0);
         if (basicType in TypeDescriptionIcons) {
-            return [TypeDescriptionIcons[basicType][0], 1];
+            return {name: TypeDescriptionIcons[basicType][0], scale: 1};
         }
     }
 
     if (category in CategoryIcons) {
-        return CategoryIcons[category];
+        return {name: CategoryIcons[category][0], scale: CategoryIcons[category][1]};
     }
 
     if (altitude == 'ground' && (addrtype == 'adsb_icao_nt' || addrtype == 'tisb_other' || addrtype == 'tisb_trackfile'))
-        return ['ground_square', 1];
+        return {name: 'ground_square', scale: 1};
 
-    return ['unknown', 1];
+    return {name: 'unknown', scale: 1};
 }
 
 function svgShapeToURI(shape, strokeWidth, scale){

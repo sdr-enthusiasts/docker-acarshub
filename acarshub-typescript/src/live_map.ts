@@ -7,6 +7,7 @@ import {
   aircraft_icon,
   adsb_target,
   plane_data,
+  svg_icon,
 } from "./interfaces";
 import jBox from "jbox";
 import { display_messages } from "./html_generator.js";
@@ -556,7 +557,7 @@ export let live_map_page = {
           }
 
           if (icon == null || icon_old) {
-            const type_shape = getBaseMarker(
+            const type_shape: svg_icon = getBaseMarker(
               String(current_plane.category),
               current_plane.t,
               null,
@@ -566,9 +567,9 @@ export let live_map_page = {
             );
 
             icon = svgShapeToURI(
-              type_shape[0],
+              type_shape.name,
               2,
-              type_shape[1] * 1.1
+              type_shape.scale * 1.1
             ) as aircraft_icon;
             this.adsb_planes[current_plane.hex].icon = icon;
           }

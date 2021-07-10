@@ -270,3 +270,8 @@ export interface plane_data {
     id: number;
   };
 }
+
+export interface svg_icon {
+  name: string;
+  scale: number;
+}
