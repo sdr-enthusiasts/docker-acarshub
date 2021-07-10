@@ -27,7 +27,7 @@ export let live_messages_page = {
       }
       return Array.prototype.unshift.apply(this.planes, [a]);
     },
-    get_all_messages: function () {
+    get_all_messages: function (): acars_msg[][] {
       let output = [] as acars_msg[][];
       for (const msgList of this.planes) {
         output.push(msgList.messages);
@@ -72,7 +72,7 @@ export let live_messages_page = {
           <!--</div> --!>`,
   }),
 
-  setting_modal_on: function () {
+  setting_modal_on: function (): void {
     this.show_labels();
     this.pause_updates(false);
     this.filter_notext(false);
@@ -80,19 +80,19 @@ export let live_messages_page = {
 
   // Function to increment the counter of filtered messages
 
-  increment_filtered: function (page_refresh = false) {
+  increment_filtered: function (page_refresh = false): void {
     if (!page_refresh) this.filtered_messages++;
     $("#filteredmessages").html(String(this.filtered_messages));
   },
 
   // Function to increment the counter of received messages
 
-  increment_received: function (page_refresh = false) {
+  increment_received: function (page_refresh = false): void {
     if (!page_refresh) this.received_messages++;
     $("#receivedmessages").html(String(this.received_messages));
   },
 
-  show_labels: function () {
+  show_labels: function (): void {
     let label_html = "";
     if (this.filter_labels !== null && this.lm_page_active) {
       for (let key in this.filter_labels.labels) {
@@ -109,7 +109,7 @@ export let live_messages_page = {
   // Function to return a random integer
   // Input: integter that represents the maximum number that can be returned
 
-  getRandomInt: function (max: number) {
+  getRandomInt: function (max: number): number {
     return Math.floor(Math.random() * Math.floor(max));
   },
 
@@ -117,7 +117,7 @@ export let live_messages_page = {
   // Input is the element ID (aka message label ID) that has been selected
   // Input is the UID of the message group, which is also the element ID of the oldest element in that group
 
-  handle_radio: function (element_id: string, uid: string) {
+  handle_radio: function (element_id: string, uid: string): void {
     $(`div.sub_msg${uid}`).removeClass("checked"); // Turn off the display of all messages in the UID group
     $(`input.tabs_${uid}`).prop("checked", false); // Turn off the checked indicator for all messages in the UID group
     $(`#message_${uid}_${element_id}`).addClass("checked"); // Turn on the display of the message that is now active
@@ -215,7 +215,7 @@ export let live_messages_page = {
 
   // Function to toggle pausing visual update of the page
 
-  pause_updates: function (toggle_pause: boolean = true) {
+  pause_updates: function (toggle_pause: boolean = true): void {
     if (!toggle_pause) this.pause = !this.pause;
 
     if (this.pause) {
@@ -238,7 +238,7 @@ export let live_messages_page = {
 
   // function to toggle the filtering of empty/no text messages
 
-  filter_notext: function (toggle_filter: boolean = true) {
+  filter_notext: function (toggle_filter: boolean = true): void {
     if (!toggle_filter) this.text_filter = !this.text_filter;
 
     if (this.text_filter) {
@@ -270,7 +270,7 @@ export let live_messages_page = {
   // Function to toggle/save the selected filtered message labels
   // Input is the message label ID that should be filtered
 
-  toggle_label: function (key: string) {
+  toggle_label: function (key: string): void {
     if (this.exclude.indexOf(key.toString()) == -1) {
       this.exclude.push(key.toString());
       $(`#${key.toString()}`).removeClass("sidebar_link").addClass("red");
@@ -300,7 +300,7 @@ export let live_messages_page = {
 
   // Code that is ran when the page has loaded
 
-  live_messages: function () {
+  live_messages: function (): void {
     // Document on ready new syntax....or something. Passing a function directly to jquery
 
     // Grab the current cookie value for message filtering
@@ -344,7 +344,7 @@ export let live_messages_page = {
 
   // if the live message page is active we'll toggle the display of everything here
 
-  live_message_active: function (state = false) {
+  live_message_active: function (state = false): void {
     this.lm_page_active = state;
 
     if (this.lm_page_active) {
@@ -363,7 +363,7 @@ export let live_messages_page = {
     }
   },
 
-  show_live_message_modal: function () {
+  show_live_message_modal: function (): void {
     this.live_message_modal.open();
     this.setting_modal_on();
   },
@@ -373,19 +373,19 @@ export let live_messages_page = {
     this.lm_acars_url = documentUrl;
   },
 
-  set_html: function () {
+  set_html: function (): void {
     $("#modal_text").html(
       '<a href="javascript:show_page_modal()">Page Settings</a>'
     );
     $("#page_name").html("Messages will appear here, newest first:");
   },
 
-  new_labels: function (msg: labels) {
+  new_labels: function (msg: labels): void {
     this.filter_labels = msg;
     this.show_labels();
   },
 
-  new_acars_message: function (msg: html_msg) {
+  new_acars_message: function (msg: html_msg): void {
     let new_msg = msg.msghtml;
     if (
       new_msg.hasOwnProperty("label") == false ||
@@ -750,7 +750,7 @@ export let live_messages_page = {
     callsign: string = "",
     hex: string = "",
     tail: string = ""
-  ) {
+  ): acars_msg[] {
     if (callsign === "" && hex === "" && tail === "") return [];
     for (const planes of this.lm_msgs_received.planes) {
       // check to see if any of the inputs match the message. msg.tail needs to be checked
@@ -763,10 +763,10 @@ export let live_messages_page = {
         return planes.messages;
       }
     }
-    return [];
+    return [] as acars_msg[];
   },
 
-  find_matches: function () {
+  find_matches: function (): plane_data {
     let output: plane_data = {};
     for (const planes of this.lm_msgs_received.planes) {
       const length_of_messages = planes.messages.length;
