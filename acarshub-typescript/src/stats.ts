@@ -46,7 +46,7 @@ export let stats_page = {
     return "#" + hex;
   }),
 
-  show_alert_chart: function () {
+  show_alert_chart: function (): void {
     if (typeof this.alert_data !== "undefined") {
       let labels: string[] = [];
       let alert_chart_data: number[] = [];
@@ -109,7 +109,7 @@ export let stats_page = {
     }
   },
 
-  show_signal_chart: function () {
+  show_signal_chart: function (): void {
     if (
       typeof this.signal_data !== "undefined" &&
       typeof this.signal_data.levels !== "undefined"
@@ -174,7 +174,7 @@ export let stats_page = {
     }
   },
 
-  show_freqs: function () {
+  show_freqs: function (): void {
     if (
       typeof this.freqs_data !== "undefined" &&
       typeof this.freqs_data.freqs !== "undefined"
@@ -402,7 +402,7 @@ export let stats_page = {
     }
   },
 
-  show_count: function () {
+  show_count: function (): void {
     if (
       typeof this.count_data !== "undefined" &&
       typeof this.count_data.count !== "undefined"
@@ -569,55 +569,55 @@ export let stats_page = {
     }
   },
 
-  decoders_enabled: function (msg: decoders) {
+  decoders_enabled: function (msg: decoders): void {
     this.acars_on = msg.acars;
     this.vdlm_on = msg.vdlm;
     if (this.stats_page_active)
       generate_stat_submenu(this.acars_on, this.vdlm_on);
   },
 
-  signals: function (msg: signal) {
+  signals: function (msg: signal): void {
     this.signal_data = msg;
     if (this.stats_page_active) this.show_signal_chart();
   },
 
-  alert_terms: function (msg: alert_term) {
+  alert_terms: function (msg: alert_term): void {
     this.alert_data = msg;
     if (this.stats_page_active) this.show_alert_chart();
   },
 
-  signal_freqs: function (msg: signal_freq_data) {
+  signal_freqs: function (msg: signal_freq_data): void {
     this.freqs_data = msg;
     if (this.stats_page_active) this.show_freqs();
   },
 
-  signal_count: function (msg: signal_count_data) {
+  signal_count: function (msg: signal_count_data): void {
     this.count_data = msg;
     if (this.stats_page_active) this.show_count();
   },
 
-  stats: function () {
+  stats: function (): void {
     this.grab_freqs();
     this.grab_message_count();
   },
 
-  isFloat: function (n: number) {
+  isFloat: function (n: number): boolean {
     return Number(n) === n && n % 1 !== 0;
   },
 
-  updatePage: function () {
+  updatePage: function (): void {
     this.grab_images();
     this.grab_freqs();
     this.grab_message_count();
     this.grab_updated_graphs();
   },
 
-  update_prefix: function (prefix: string) {
+  update_prefix: function (prefix: string): void {
     this.image_prefix = prefix;
     this.grab_images();
   },
 
-  grab_images: function () {
+  grab_images: function (): void {
     if (!is_connected()) {
       console.log("Server disconnected, skipping image updates");
       return;
@@ -656,22 +656,19 @@ export let stats_page = {
     );
   },
 
-  grab_freqs: function () {
+  grab_freqs: function (): void {
     signal_grab_freqs();
-    //socket.emit("signal_freqs", { freqs: true }, ("/stats"));
   },
 
-  grab_message_count: function () {
+  grab_message_count: function (): void {
     signal_grab_message_count();
-    //socket.emit("count", { count: true }, ("/stats"));
   },
 
-  grab_updated_graphs: function () {
+  grab_updated_graphs: function (): void {
     signal_grab_updated_graphs();
-    //socket.emit("graphs", { graphs: true }, ("/stats"));
   },
 
-  set_html: function () {
+  set_html: function (): void {
     $("#log").html(`<p><div id="stat_menu"></div></p>
     <div id="stat_images">
     <img src="static/images/1hour.png" id="1hr" alt="1 Hour"><br>
@@ -705,7 +702,7 @@ export let stats_page = {
     this.resize();
   },
 
-  resize(width: number = 0) {
+  resize(width: number = 0): void {
     if (width) {
       this.width = width;
     }
@@ -737,7 +734,7 @@ export let stats_page = {
     }
   },
 
-  stats_active: function (state = false) {
+  stats_active: function (state = false): void {
     this.stats_page_active = state;
 
     if (this.stats_page_active) {
@@ -751,7 +748,10 @@ export let stats_page = {
     }
   },
 
-  set_stats_page_urls: function (documentPath: string, documentUrl: string) {
+  set_stats_page_urls: function (
+    documentPath: string,
+    documentUrl: string
+  ): void {
     this.stats_acars_path = documentPath;
     this.stats_acars_url = documentUrl;
   },
