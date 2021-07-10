@@ -7,7 +7,7 @@ export let about = {
   page_html: "" as string,
   about_page_active: false as boolean,
 
-  about: function () {
+  about: function (): void {
     let converter: showdown.Converter = new showdown.Converter();
     fetch(`${this.about_acars_url}aboutmd`)
       .then((response) => response.text())
@@ -17,12 +17,12 @@ export let about = {
     if (this.about_page_active) this.about_active(true);
   },
 
-  save_html: function (html: string) {
+  save_html: function (html: string): void {
     this.page_html = html;
     this.about_active(this.about_page_active);
   },
 
-  about_active: function (state = false) {
+  about_active: function (state = false): void {
     this.about_page_active = state;
     if (this.about_page_active) {
       // page is active
@@ -31,12 +31,15 @@ export let about = {
     }
   },
 
-  set_about_page_urls: function (documentPath: string, documentUrl: string) {
+  set_about_page_urls: function (
+    documentPath: string,
+    documentUrl: string
+  ): void {
     this.about_acars_path = documentPath;
     this.about_acars_url = documentUrl;
   },
 
-  set_html: function () {
+  set_html: function (): void {
     $("#right").html(
       `<div class="fixed_results">
   </div>`

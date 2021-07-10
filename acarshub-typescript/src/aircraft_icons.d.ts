@@ -6,7 +6,7 @@ declare module "aircraft_icons" {
     wtc: string | null,
     addrtype: string,
     altitude: number
-  ): any;
+  ): import("./interfaces").svg_icon;
 
   export function svgShapeToURI(
     shape: any,

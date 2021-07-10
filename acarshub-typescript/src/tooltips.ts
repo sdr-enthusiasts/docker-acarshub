@@ -190,7 +190,7 @@ export let tooltip = {
 
   // Function to close all open tool tips. This is needed so that when the page updates tooltips aren't just chilling randomly
 
-  close_all_tooltips: function () {
+  close_all_tooltips: function (): void {
     this.freq_tooltip.close();
     this.ground_tooltip.close();
     this.tail_tooltip.close();
@@ -211,7 +211,7 @@ export let tooltip = {
 
   // Function to attach all of the tooltips to the new elements on the page
 
-  attach_all_tooltips: function () {
+  attach_all_tooltips: function (): void {
     this.freq_tooltip.attach($(".freq-tooltip"));
     this.ground_tooltip.attach($(".ground-tooltip"));
     this.tail_tooltip.attach($(".tail-tooltip"));
@@ -230,7 +230,7 @@ export let tooltip = {
     this.datablock.attach($(".datablock"));
   },
 
-  cycle_tooltip: function () {
+  cycle_tooltip: function (): void {
     this.close_all_tooltips();
     this.attach_all_tooltips();
   },

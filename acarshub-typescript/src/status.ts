@@ -14,11 +14,9 @@ export let status = {
   current_status: {} as system_status,
   adsb_status: { adsb_enabled: false, adsb_getting_data: false } as adsb_status,
 
-  status: function () {
-    // Document on ready new syntax....or something. Passing a function directly to jquery
-  },
+  status: function (): void {},
 
-  status_received: function (msg: system_status) {
+  status_received: function (msg: system_status): void {
     this.current_status = msg;
     this.update_status_bar();
     if (this.status_page_active) this.show_status();
@@ -29,11 +27,11 @@ export let status = {
       adsb_enabled: false,
       adsb_getting_data: false,
     } as adsb_status
-  ) {
+  ): void {
     this.adsb_status = adsb_status;
   },
 
-  update_status_bar: function () {
+  update_status_bar: function (): void {
     if (
       this.current_status.status.error_state == true ||
       (this.adsb_status.adsb_enabled === true &&
@@ -49,7 +47,7 @@ export let status = {
     }
   },
 
-  show_status: function () {
+  show_status: function (): void {
     if (
       typeof this.current_status !== "undefined" &&
       typeof this.current_status.status !== "undefined"
@@ -73,7 +71,7 @@ export let status = {
     feeders: status_decoder,
     receivers: status_global,
     stats: status_decoder
-  ) {
+  ): string {
     let html_output = "<h2>ACARS Hub System Status</h2>";
     const keys_decoder = Object.keys(decoders);
     const keys_servers = Object.keys(servers);
@@ -168,7 +166,7 @@ export let status = {
     return html_output;
   },
 
-  status_active: function (state = false) {
+  status_active: function (state = false): void {
     this.status_page_active = state;
     if (this.status_page_active) {
       // page is active
@@ -177,12 +175,15 @@ export let status = {
     }
   },
 
-  set_status_page_urls: function (documentPath: string, documentUrl: string) {
+  set_status_page_urls: function (
+    documentPath: string,
+    documentUrl: string
+  ): void {
     this.status_acars_path = documentPath;
     this.status_acars_url = documentUrl;
   },
 
-  set_html: function () {
+  set_html: function (): void {
     $("#right").html(
       `<div class="fixed_results">
   </div>`

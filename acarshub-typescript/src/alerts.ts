@@ -1,7 +1,7 @@
 import Cookies from "js-cookie";
 import { display_messages } from "./html_generator.js";
 import { alert_term_query, alert_text_update } from "./index.js";
-import { acars_msg, html_msg, terms } from "./interfaces.js";
+import { acars_msg, alert_matched, html_msg, terms } from "./interfaces.js";
 import jBox from "jbox";
 import "jbox/dist/jBox.all.css";
 import { tooltip } from "./tooltips.js";
@@ -73,7 +73,7 @@ export let alerts_page = {
   alert_sound: "" as any,
   play_sound: false as boolean,
 
-  show_modal_values: function () {
+  show_modal_values: function (): void {
     this.show_sound();
     $("#alert_text").val(this.combineArray(this.alert_text).toUpperCase());
     $("#alert_callsigns").val(
@@ -83,7 +83,7 @@ export let alerts_page = {
     $("#alert_icao").val(this.combineArray(this.alert_icao).toUpperCase());
   },
 
-  alert: function () {
+  alert: function (): void {
     // Document on ready new syntax....or something. Passing a function directly to jquery
     // Update the cookies so the expiration date pushes out in to the future
     // Also sets all of the user saved prefs
@@ -95,8 +95,8 @@ export let alerts_page = {
     this.alert_text = msg.terms;
   },
 
-  alerts_acars_message: function (msg: html_msg) {
-    let matched = this.match_alert(msg, true);
+  alerts_acars_message: function (msg: html_msg): void {
+    let matched: alert_matched = this.match_alert(msg, true);
     if (matched.was_found) {
       if (msg.loading != true) this.sound_alert();
       msg.msghtml.matched_text = matched.text !== null ? matched.text : [];
@@ -120,12 +120,12 @@ export let alerts_page = {
     }
   },
 
-  updateAlertCounter: function () {
+  updateAlertCounter: function (): void {
     if (this.alerts)
       $("#alert_count").html(` <span class="red">(${this.alerts})</span>`);
   },
 
-  updateAlerts: function () {
+  updateAlerts: function (): void {
     if ($("#alert_text").val()) {
       let split = String($("#alert_text").val()).split(",");
       this.alert_text = [];
@@ -205,7 +205,7 @@ export let alerts_page = {
     });
   },
 
-  onInit: function () {
+  onInit: function (): void {
     this.alerts = Cookies.get("alert_unread")
       ? Number(Cookies.get("alert_unread"))
       : 0;
@@ -271,7 +271,7 @@ export let alerts_page = {
     });
   },
 
-  combineArray: function (input: string[]) {
+  combineArray: function (input: string[]): string {
     let output = "";
 
     for (let i = 0; i < input.length; i++) {
@@ -281,7 +281,10 @@ export let alerts_page = {
     return output;
   },
 
-  match_alert: function (msg: html_msg, show_alert: boolean = false) {
+  match_alert: function (
+    msg: html_msg,
+    show_alert: boolean = false
+  ): alert_matched {
     let found = false;
     let matched_tail = [];
     let matched_flight = [];
@@ -407,10 +410,10 @@ export let alerts_page = {
       icao: matched_icao.length > 0 ? matched_icao : null,
       flight: matched_flight.length > 0 ? matched_flight : null,
       tail: matched_tail.length > 0 ? matched_tail : null,
-    };
+    } as alert_matched;
   },
 
-  default_alert_values: function () {
+  default_alert_values: function (): void {
     let current = String($("#alert_text").val());
 
     this.default_text_values.forEach((element) => {
@@ -422,7 +425,7 @@ export let alerts_page = {
     this.updateAlerts();
   },
 
-  show_sound: function () {
+  show_sound: function (): void {
     if (this.play_sound) {
       $("#playsound_link").html("Turn Off Alert Sound");
     } else {
@@ -430,7 +433,7 @@ export let alerts_page = {
     }
   },
 
-  toggle_playsound: function (loading = false) {
+  toggle_playsound: function (loading = false): void {
     if (this.play_sound) {
       $("#playsound_link").html("Turn On Alert Sound");
     } else {
@@ -445,7 +448,7 @@ export let alerts_page = {
     if (!loading) this.sound_alert();
   },
 
-  sound_alert: async function () {
+  sound_alert: async function (): Promise<void> {
     if (this.play_sound) {
       try {
         await this.alert_sound.play();
@@ -455,7 +458,7 @@ export let alerts_page = {
     }
   },
 
-  alert_active: function (state = false) {
+  alert_active: function (state = false): void {
     this.alert_page_active = state;
     if (this.alert_page_active) {
       // page is active
@@ -475,7 +478,10 @@ export let alerts_page = {
     }
   },
 
-  set_alert_page_urls: function (documentPath: string, documentUrl: string) {
+  set_alert_page_urls: function (
+    documentPath: string,
+    documentUrl: string
+  ): void {
     this.alert_acars_path = documentPath;
     this.alert_acars_url = documentUrl;
     this.alert_sound = new Audio(
@@ -483,7 +489,7 @@ export let alerts_page = {
     );
   },
 
-  set_html: function () {
+  set_html: function (): void {
     $("#modal_text").html(
       '<a href="javascript:show_page_modal()">Page Settings</a>'
     );
@@ -491,7 +497,7 @@ export let alerts_page = {
     $("#log").html("");
   },
 
-  show_alert_message_modal: function () {
+  show_alert_message_modal: function (): void {
     this.alert_message_modal.open();
     this.show_modal_values();
   },
