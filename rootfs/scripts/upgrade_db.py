@@ -53,7 +53,7 @@ if os.getenv("SPAM", default=False):
     path_to_db = "/Users/fred/messages.db"
 else:
     path_to_db = "/run/acars/messages.db"
-print("[database] Checking to see if database needs upgrades")
+print("Checking to see if database needs upgrades")
 upgraded = False
 
 
@@ -64,17 +64,17 @@ def check_columns(cur):
     # Add in level column
     if "level" not in columns:
         upgraded = True
-        print("[database] Adding level column")
+        print("Adding level column")
         cur.execute("ALTER TABLE messages ADD COLUMN level TEXT")
     # Just for clarity's sake so that we don't have the same name for columns as SQL reserved keywords
     # We'll rename the text and time columns
     if "text" in columns:
         upgraded = True
-        print("[database] Renaming text column")
+        print("Renaming text column")
         cur.execute('ALTER TABLE "main"."messages" RENAME COLUMN "text" TO "msg_text"')
     if "time" in columns:
         upgraded = True
-        print("[database] Renaming time column")
+        print("Renaming time column")
         cur.execute('ALTER TABLE "main"."messages" RENAME COLUMN "time" TO "msg_time"')
 
 
@@ -84,7 +84,7 @@ def enable_fts(db: Connection, table: str, columns: List[str]):
         f"{c}" for c in columns if c.find(" UNINDEXED") == -1
     )
 
-    print("[database] Creating new FTS table")
+    print("Creating new FTS table")
     db.executescript(
         """
         CREATE VIRTUAL TABLE {table}_fts USING fts5
@@ -97,7 +97,7 @@ def enable_fts(db: Connection, table: str, columns: List[str]):
         )
     )
 
-    print("[database] Creating new triggers")
+    print("Creating new triggers")
     db.executescript(
         """
         CREATE TRIGGER {table}_fts_insert AFTER INSERT ON messages
@@ -125,7 +125,7 @@ def enable_fts(db: Connection, table: str, columns: List[str]):
         )
     )
 
-    print("[database] Populating new FTS table with data")
+    print("Populating new FTS table with data")
     db.executescript('INSERT INTO messages_fts(messages_fts) VALUES ("rebuild")')
 
 
@@ -174,34 +174,34 @@ def check_tables(conn, cur):
 
     if "text_fts" in tables:
         upgraded = True
-        print("[database] Removing old FTS table")
+        print("Removing old FTS table")
         cur.execute('DROP TABLE "main"."text_fts";')
 
     if "message_ad" in triggers:
         upgraded = True
-        print("[database] Removing AD trigger")
+        print("Removing AD trigger")
         cur.execute('DROP TRIGGER "main"."message_ad";')
     if "message_ai" in triggers:
         upgraded = True
-        print("[database] Removing AI trigger")
+        print("Removing AI trigger")
         cur.execute('DROP TRIGGER "main"."message_ai";')
     if "message_au" in triggers:
         upgraded = True
-        print("[database] Removing AU trigger")
+        print("Removing AU trigger")
         cur.execute('DROP TRIGGER "main"."message_au";')
 
     if "messages_fts" not in tables:
         upgraded = True
-        print("[database] Adding in text search tables....may take a while")
+        print("Adding in text search tables....may take a while")
 
-        print("[database] creating virtual table")
+        print("creating virtual table")
         enable_fts(conn, "messages", columns)
 
 
 def de_null(cur):
     # we need to ensure the columns don't have any NULL values
     # Legacy db problems...
-    print("[database] Ensuring no columns contain NULL values")
+    print("Ensuring no columns contain NULL values")
     cur.execute('UPDATE messages SET toaddr = "" WHERE toaddr is NULL')
     cur.execute('UPDATE messages SET fromaddr = "" WHERE toaddr is NULL')
     cur.execute('UPDATE messages SET depa = "" WHERE depa IS NULL')
@@ -231,7 +231,7 @@ def de_null(cur):
     cur.execute('UPDATE messages SET error = "" WHERE error IS NULL')
     cur.execute('UPDATE messages SET libacars = "" WHERE libacars IS NULL')
     cur.execute('UPDATE messages SET level = "" WHERE level IS NULL')
-    print("[database] done with de-nulling")
+    print("done with de-nulling")
 
 
 def add_indexes(cur):
@@ -240,49 +240,49 @@ def add_indexes(cur):
     indexes = [i[1] for i in cur.execute("PRAGMA index_list(messages)")]
 
     if "ix_messages_msg_text" not in indexes:
-        print("[database] Adding text index")
+        print("Adding text index")
         upgraded = True
         cur.execute(
             'CREATE INDEX "ix_messages_msg_text" ON "messages" ("msg_text"	DESC)'
         )
 
     if "ix_messages_icao" not in indexes:
-        print("[database] Adding icao index")
+        print("Adding icao index")
         upgraded = True
         cur.execute('CREATE INDEX "ix_messages_icao" ON "messages" ("icao"	DESC)')
 
     if "ix_messages_flight" not in indexes:
-        print("[database] Adding flight index")
+        print("Adding flight index")
         upgraded = True
         cur.execute('CREATE INDEX "ix_messages_flight" ON "messages" ("flight"	DESC)')
 
     if "ix_messages_tail" not in indexes:
-        print("[database] Adding tail index")
+        print("Adding tail index")
         upgraded = True
         cur.execute('CREATE INDEX "ix_messages_tail" ON "messages" ("tail"	DESC)')
 
     if "ix_messages_depa" not in indexes:
-        print("[database] Adding depa index")
+        print("Adding depa index")
         upgraded = True
         cur.execute('CREATE INDEX "ix_messages_depa" ON "messages" ("depa"	DESC)')
 
     if "ix_messages_dsta" not in indexes:
-        print("[database] Adding dsta index")
+        print("Adding dsta index")
         upgraded = True
         cur.execute('CREATE INDEX "ix_messages_dsta" ON "messages" ("dsta"	DESC)')
 
     if "ix_messages_msgno" not in indexes:
-        print("[database] Adding msgno index")
+        print("Adding msgno index")
         upgraded = True
         cur.execute('CREATE INDEX "ix_messages_msgno" ON "messages" ("msgno" DESC)')
 
     if "ix_messages_freq" not in indexes:
-        print("[database] Adding freq index")
+        print("Adding freq index")
         upgraded = True
         cur.execute('CREATE INDEX "ix_messages_freq" ON "messages" ("freq"	DESC)')
 
     if "ix_messages_label" not in indexes:
-        print("[database] Adding label index")
+        print("Adding label index")
         upgraded = True
         cur.execute('CREATE INDEX "ix_messages_label" ON "messages" ("label"	DESC)')
 
@@ -350,8 +350,8 @@ except Exception as e:
     sys.exit(1)
 
 if upgraded:
-    print("[database] Completed upgrading database structure")
+    print("Completed upgrading database structure")
 else:
-    print("[database] Database structure did not require upgrades")
+    print("Database structure did not require upgrades")
 
 sys.exit(0)

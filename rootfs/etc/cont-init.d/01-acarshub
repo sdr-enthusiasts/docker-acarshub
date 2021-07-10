@@ -30,19 +30,21 @@ if [ -n "${SERIAL}" ]; then
 	FREQ_CMD+=("-s" "${SERIAL_ARRAY[@]}")
 fi
 
-echo "Generating decoder startup files"
+echo "Generating decoder startup files" | awk '{print "[01-acarshub] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
 
 # Just in case the container was docker restart we should clean up some dirs if present
 # thanks k1xt
 
 rm -rf /etc/services.d/acarsdec-* /etc/services.d/vdlm2dec-* >/dev/null 2>&1
-
-python3 assign_frequencies.py "${FREQ_CMD[@]}" || exit 1
+# shellcheck disable=SC2016
+python3 assign_frequencies.py "${FREQ_CMD[@]}" | stdbuf -oL awk '{print "[01-acarshub] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}' || exit 1
 
 if [[ ! -e /ranonce ]]; then
-	python3 rename_files.py || exit 1
+	echo "Renaming files" | awk '{print "[01-acarshub] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
+	# shellcheck disable=SC2016
+	python3 rename_files.py | stdbuf -oL awk '{print "[01-acarshub] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}' || exit 1
 else
-	echo "Skipping file renaming. Container was restarted"
+	echo "Skipping file renaming. Container was restarted" | awk '{print "[01-acarshub] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
 fi
 
 # Ensure /database dir is present

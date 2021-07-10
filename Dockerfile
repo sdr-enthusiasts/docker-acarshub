@@ -175,6 +175,10 @@ RUN set -x && \
     find /webapp/static/airframes-acars-decoder -type f -iname '*.js' -exec sed -i """/import .* from \".*\";/ s/\";/.js\";/""" {} \; && \
     find /webapp/static/airframes-acars-decoder -type f -iname '*.js' -exec sed -i """/export .* from '.*';/ s/';/.js';/""" {} \; && \
     find /webapp/static/airframes-acars-decoder -type f -iname '*.js' -exec sed -i """/export .* from \".*\";/ s/\";/.js\";/""" {} \; && \
+    # grab the ground stations and other data from airframes
+    mkdir -p /webapp/data/ && \
+    curl https://raw.githubusercontent.com/airframesio/data/master/json/vdl/ground-stations.json > /webapp/data/ground-stations.json && \
+    curl https://raw.githubusercontent.com/airframesio/data/master/json/acars/metadata.json > /webapp/data/acars-metadata.json && \
     # install S6 Overlay
     curl -s https://raw.githubusercontent.com/mikenye/deploy-s6-overlay/master/deploy-s6-overlay.sh | sh && \
     # deploy healthchecks framework
