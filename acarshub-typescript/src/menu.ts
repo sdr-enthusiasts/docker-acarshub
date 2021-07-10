@@ -5,7 +5,7 @@ export let menu = {
 
   menu_adsb: false as boolean,
 
-  generate_menu: function () {
+  generate_menu: function (): void {
     let html = '<div class="wrap"><span class="decor"></span>';
     html += '<nav><ul class="primary">';
     html += `<li class="img_box" id="logo_image">${images.acars_hub_logo}"</li>`;
@@ -23,7 +23,7 @@ export let menu = {
   generate_stat_submenu: function (
     acars: boolean = false,
     vdlm: boolean = false
-  ) {
+  ): void {
     let text: string = "";
     if (acars == true && vdlm == true) {
       text =
@@ -45,7 +45,7 @@ export let menu = {
     $("#stat_menu").html(text);
   },
 
-  generate_footer: function () {
+  generate_footer: function (): void {
     let html: string = `<div><a href="javascript:new_page('About')">ACARS Hub Help/About</a></div> \
       <div id="github_link"><a href="https://github.com/fredclausen/docker-acarshub" target="_blank">Project Github</a></div> \
       <div id="discord_badge"><a href="https://discord.gg/sTf9uYF"><img src="https://img.shields.io/discord/734090820684349521" alt="discord"></a></div> \
@@ -57,12 +57,15 @@ export let menu = {
     $("#footer_div").html(html);
   },
 
-  set_adsb: function (adsb_status = false) {
+  set_adsb: function (adsb_status = false): void {
     this.menu_adsb = adsb_status;
     this.generate_menu();
   },
 
-  set_about_page_urls: function (documentPath: string, documentUrl: string) {
+  set_about_page_urls: function (
+    documentPath: string,
+    documentUrl: string
+  ): void {
     this.acars_path = documentPath;
     this.acars_url = documentUrl;
   },
