@@ -23,6 +23,9 @@ import {
   signal_count_data,
   adsb,
   window_size,
+  alert_matched,
+  plane_data,
+  acars_msg,
 } from "./interfaces.js";
 
 import { live_map_page } from "./live_map.js";
@@ -54,7 +57,7 @@ const pages: string[] = [
   "/adsb", // live_map page
 ];
 
-var ro = new ResizeObserver((entries) => {
+var ro: ResizeObserver = new ResizeObserver((entries) => {
   for (let entry of entries) {
     const cr = entry.contentRect;
     if (cr.width !== old_window_width) {
@@ -79,7 +82,7 @@ var ro = new ResizeObserver((entries) => {
 export function resize_tabs(
   window_width: number = 0,
   set_new_width: boolean = true
-) {
+): void {
   if (set_new_width && (!window_width || window_width <= 0))
     window_width = old_window_width;
 
@@ -89,7 +92,7 @@ export function resize_tabs(
   $(".boxed").css("width", `${window_width / num_tabs / 2}`);
 }
 
-$(() => {
+$((): void => {
   // Document on ready new syntax....or something. Passing a function directly to jquery
   $("#log").html("Page loading.....please wait");
   // Observe one or multiple elements
@@ -119,25 +122,25 @@ $(() => {
     }
   });
 
-  socket.on("terms", function (msg: terms) {
+  socket.on("terms", function (msg: terms): void {
     alerts_page.alerts_terms(msg); // send the terms over to the alert page
   });
 
-  socket.on("alert_matches", function (msg: html_msg) {
+  socket.on("alert_matches", function (msg: html_msg): void {
     alerts_page.alerts_acars_message(msg);
   });
 
-  socket.on("database", function (msg: database_size) {
+  socket.on("database", function (msg: database_size): void {
     search_page.database_size_details(msg);
   });
 
-  socket.on("database_search_results", function (msg: search_html_msg) {
+  socket.on("database_search_results", function (msg: search_html_msg): void {
     search_page.database_search_results(msg);
   });
 
   // stats
 
-  socket.on("features_enabled", function (msg: decoders) {
+  socket.on("features_enabled", function (msg: decoders): void {
     stats_page.decoders_enabled(msg);
     if (msg.adsb.enabled === true) {
       adsb_enabled = true;
@@ -188,51 +191,51 @@ $(() => {
   });
 
   // signal level graph
-  socket.on("signal", function (msg: signal) {
+  socket.on("signal", function (msg: signal): void {
     stats_page.signals(msg);
   });
 
   // alert term graph
-  socket.on("alert_terms", function (msg: alert_term) {
+  socket.on("alert_terms", function (msg: alert_term): void {
     stats_page.alert_terms(msg);
   });
 
   // sidebar frequency count
-  socket.on("signal_freqs", function (msg: signal_freq_data) {
+  socket.on("signal_freqs", function (msg: signal_freq_data): void {
     stats_page.signal_freqs(msg);
   });
 
-  socket.on("system_status", function (msg: system_status) {
+  socket.on("system_status", function (msg: system_status): void {
     status.status_received(msg);
   });
 
-  socket.on("signal_count", function (msg: signal_count_data) {
+  socket.on("signal_count", function (msg: signal_count_data): void {
     stats_page.signal_count(msg);
   });
 
   // socket errors
 
-  socket.on("disconnect", function () {
+  socket.on("disconnect", function (): void {
     connection_good = false;
     connection_status();
   });
 
-  socket.on("connect_error", function () {
+  socket.on("connect_error", function (): void {
     connection_good = false;
     connection_status();
   });
 
-  socket.on("connect_timeout", function () {
+  socket.on("connect_timeout", function (): void {
     connection_good = false;
     connection_status();
   });
 
-  socket.on("connect", function () {
+  socket.on("connect", function (): void {
     set_connection_good();
     connection_status(true);
   });
 
-  socket.on("reconnect", function () {
+  socket.on("reconnect", function (): void {
     set_connection_good();
     connection_status(true);
   });
@@ -256,15 +259,15 @@ $(() => {
   }, 60000);
 });
 
-export function get_window_size() {
+export function get_window_size(): window_size {
   return { width: old_window_width, height: old_window_height } as window_size;
 }
 
-function set_connection_good() {
+function set_connection_good(): void {
   setTimeout(() => (connection_good = socket.connected), 5000);
 }
 
-async function update_adsb() {
+async function update_adsb(): Promise<void> {
   fetch(adsb_url, {
     method: "GET",
     mode: "cors",
@@ -285,7 +288,7 @@ async function update_adsb() {
     });
 }
 
-function update_url() {
+function update_url(): void {
   index_acars_path = document.location.pathname.replace(
     /about|search|stats|status|alerts|adsb/gi,
     ""
@@ -303,7 +306,7 @@ function update_url() {
   menu.set_about_page_urls(index_acars_path, index_acars_url);
 }
 
-function toggle_pages() {
+function toggle_pages(): void {
   index_acars_page =
     "/" + document.location.pathname.replace(index_acars_path, "");
   live_map_page.plane_message_modal.close();
@@ -356,7 +359,7 @@ function toggle_pages() {
   }
 }
 
-window.new_page = function (page: string) {
+window.new_page = function (page: string): void {
   document.title = page;
   let sub_url = "";
   if (page === "Live Messages") sub_url = "";
@@ -374,7 +377,7 @@ window.new_page = function (page: string) {
   toggle_pages();
 };
 
-function connection_status(connected = false) {
+function connection_status(connected = false): void {
   socket_status = connected;
   $("#disconnect").html(
     !connected
@@ -389,7 +392,7 @@ export function alert_term_query(
   alert_icao: string[],
   alert_callsigns: string[],
   alert_tail: string[]
-) {
+): void {
   socket.emit(
     "query_terms",
     {
@@ -401,7 +404,7 @@ export function alert_term_query(
   );
 }
 
-export function alert_text_update(alert_text: string[]) {
+export function alert_text_update(alert_text: string[]): void {
   socket.emit(
     "update_alerts",
     {
@@ -415,7 +418,7 @@ export function search_database(
   current_search: current_search,
   show_all = false,
   page = 0
-) {
+): void {
   if (!show_all)
     socket.emit(
       "query_search",
@@ -431,40 +434,40 @@ export function search_database(
   }
 }
 
-export function signal_grab_freqs() {
+export function signal_grab_freqs(): void {
   socket.emit("signal_freqs", { freqs: true }, "/main");
 }
 
-export function signal_grab_message_count() {
+export function signal_grab_message_count(): void {
   socket.emit("signal_count", { count: true }, "/main");
 }
 
-export function signal_grab_updated_graphs() {
+export function signal_grab_updated_graphs(): void {
   socket.emit("signal_graphs", { graphs: true }, "/main");
 }
 
-export function is_connected() {
+export function is_connected(): boolean {
   return socket_status;
 }
 
 // functions to pass values between objects
 
-export function match_alert(msg: html_msg) {
+export function match_alert(msg: html_msg): alert_matched {
   return alerts_page.match_alert(msg);
 }
 
-export function sound_alert() {
+export function sound_alert(): void {
   alerts_page.sound_alert();
 }
 
 export function generate_stat_submenu(
   acars: boolean = false,
   vdlm: boolean = false
-) {
+): void {
   menu.generate_stat_submenu(acars, vdlm);
 }
 
-export function find_matches() {
+export function find_matches(): plane_data {
   return live_messages_page.find_matches();
 }
 
@@ -472,13 +475,13 @@ export function get_match(
   callsign: string = "",
   hex: string = "",
   tail: string = ""
-) {
+): acars_msg[] {
   return live_messages_page.get_match(callsign, hex, tail);
 }
 
 // functions that need to be registered to window object
 
-window.show_page_modal = function () {
+window.show_page_modal = function (): void {
   if (index_acars_page === "/alerts") {
     alerts_page.show_alert_message_modal();
   } else if (index_acars_page === "/search") {
@@ -487,51 +490,51 @@ window.show_page_modal = function () {
     live_messages_page.show_live_message_modal();
   }
 };
-window.updateAlerts = function () {
+window.updateAlerts = function (): void {
   alerts_page.updateAlerts();
 };
-window.default_alert_values = function () {
+window.default_alert_values = function (): void {
   alerts_page.default_alert_values();
 };
-window.toggle_playsound = function (status: boolean) {
+window.toggle_playsound = function (status: boolean): void {
   alerts_page.toggle_playsound(status);
 };
-window.update_prefix = function (prefix: string) {
+window.update_prefix = function (prefix: string): void {
   stats_page.update_prefix(prefix);
 };
 
-window.showall = function () {
+window.showall = function (): void {
   search_page.showall();
 };
 
-window.jumppage = function () {
+window.jumppage = function (): void {
   search_page.jumppage();
 };
 
-window.runclick = function (page: number) {
+window.runclick = function (page: number): void {
   search_page.runclick(page);
 };
 
-window.handle_radio = function (element_id: string, uid: string) {
+window.handle_radio = function (element_id: string, uid: string): void {
   if (index_acars_page === "/")
     live_messages_page.handle_radio(element_id, uid);
   else if (index_acars_page === "/adsb")
     live_map_page.handle_radio(element_id, uid);
 };
 
-window.pause_updates = function (toggle_pause: boolean = true) {
+window.pause_updates = function (toggle_pause: boolean = true): void {
   live_messages_page.pause_updates(toggle_pause);
 };
 
-window.filter_notext = function (toggle_filter: boolean = true) {
+window.filter_notext = function (toggle_filter: boolean = true): void {
   live_messages_page.filter_notext(toggle_filter);
 };
 
-window.toggle_label = function (key: string) {
+window.toggle_label = function (key: string): void {
   live_messages_page.toggle_label(key);
 };
 
-window.setSort = function (sort: string = "") {
+window.setSort = function (sort: string = ""): void {
   live_map_page.setSort(sort);
 };
 
@@ -539,41 +542,41 @@ window.showPlaneMessages = function (
   callsign: string,
   hex: string,
   tail: string
-) {
+): void {
   live_map_page.showPlaneMessages(callsign, hex, tail);
 };
 
-window.toggle_acars_only = function () {
+window.toggle_acars_only = function (): void {
   live_map_page.toggle_acars_only();
 };
 
-window.toggle_datablocks = function () {
+window.toggle_datablocks = function (): void {
   live_map_page.toggle_datablocks();
 };
 
-window.toggle_extended_datablocks = function () {
+window.toggle_extended_datablocks = function (): void {
   live_map_page.toggle_extended_datablocks();
 };
 
-$(window).on("popstate", () => {
+$(window).on("popstate", (): void => {
   toggle_pages();
 });
 
-window.close_modal = function () {
+window.close_modal = function (): void {
   if (index_acars_page === "/search") {
     $("input").off(); // Turn off the event listener for keys in the search modal
   }
 };
 
-window.close_live_map_modal = function () {
+window.close_live_map_modal = function (): void {
   live_map_page.close_live_map_modal();
 };
 
-window.zoom_in = function () {
+window.zoom_in = function (): void {
   live_map_page.zoom_in();
 };
 
-window.zoom_out = function () {
+window.zoom_out = function (): void {
   live_map_page.zoom_out();
 };
 
@@ -581,6 +584,6 @@ export function showPlaneMessages(
   plane_callsign: string = "",
   plane_hex: string = "",
   plane_tail: string = ""
-) {
+): void {
   live_map_page.showPlaneMessages(plane_callsign, plane_hex, plane_tail);
 }
