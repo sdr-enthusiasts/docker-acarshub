@@ -128,19 +128,10 @@ def scheduled_tasks():
     # init the dbs if not already there
 
     if not acarshub_helpers.SPAM:
-        acarshub_helpers.log("Initializing RRD Database", "init")
-        acarshub_rrd.create_db()  # make sure the RRD DB is created / there
-        acarshub_helpers.log("Generating stat page graphs", "init")
-        acarshub_rrd.update_graphs()  # generate graphs for the website so we don't 404 on images right after launch
-        # acarshub_helpers.log("Getting initial system status from healthcheck", "init")
-        # acarshub.service_check()
-
         schedule.every().minute.at(":00").do(update_rrd_db)
         schedule.every().minute.at(":30").do(acarshub_rrd.update_graphs)
         schedule.every().minute.at(":15").do(acarshub.service_check)
         # Run and Schedule the database pruner
-    acarshub_helpers.log("Running startup database prune", "init")
-    acarshub.acarshub_db.pruneOld()  # clean the database on startup
     schedule.every().hour.at(":30").do(acarshub.acarshub_db.pruneOld)
 
     # Check for dead threads and restart
@@ -303,7 +294,17 @@ def init_listeners(special_message=""):
     # show log message if this is container startup
     if special_message == "":
         acarshub_helpers.log("Starting Data Listeners", "init")
-
+    if not thread_database.is_alive():
+        acarshub_helpers.log(f"{special_message}Starting Database Thread", "init")
+        thread_database = Thread(target=database_listener)
+        thread_database.start()
+    if not thread_scheduler.is_alive():
+        acarshub_helpers.log(f"{special_message}starting scheduler", "init")
+        thread_scheduler = Thread(target=scheduled_tasks)
+        thread_scheduler.start()
+    if connected_users > 0 and not thread_html_generator.is_alive():
+        acarshub_helpers.log(f"{special_message}Starting htmlListener", "init")
+        thread_html_generator = socketio.start_background_task(htmlListener)
     if not thread_acars_listener.is_alive() and acarshub_helpers.ENABLE_ACARS:
         acarshub_helpers.log(f"{special_message}Starting ACARS listener", "init")
         thread_acars_listener = Thread(
@@ -319,18 +320,6 @@ def init_listeners(special_message=""):
             args=("VDLM2", acarshub_helpers.LIVE_DATA_SOURCE, 15555),
         )
         thread_vdlm2_listener.start()
-    if not thread_database.is_alive():
-        acarshub_helpers.log(f"{special_message}Starting Database Thread", "init")
-        thread_database = Thread(target=database_listener)
-        thread_database.start()
-    if not thread_scheduler.is_alive():
-        acarshub_helpers.log(f"{special_message}starting scheduler", "init")
-        thread_scheduler = Thread(target=scheduled_tasks)
-        thread_scheduler.start()
-    if connected_users > 0 and not thread_html_generator.is_alive():
-        acarshub_helpers.log(f"{special_message}Starting htmlListener", "init")
-        thread_html_generator = socketio.start_background_task(htmlListener)
-
     status = acarshub.get_service_status()  # grab system status
 
     # emit to all namespaces
@@ -342,9 +331,15 @@ def init():
     global messages_recent
     # grab recent messages from db and fill the most recent array
     # then turn on the listeners
+    acarshub_helpers.log("Running startup database prune", "init")
+    acarshub.acarshub_db.pruneOld()  # clean the database on startup
     acarshub_helpers.log("grabbing most recent messages from database", "init")
     results = acarshub.acarshub_db.grab_most_recent()
-
+    if not acarshub_helpers.SPAM:
+        acarshub_helpers.log("Initializing RRD Database", "init")
+        acarshub_rrd.create_db()  # make sure the RRD DB is created / there
+        acarshub_helpers.log("Generating stat page graphs", "init")
+        acarshub_rrd.update_graphs()  # generate graphs for the website so we don't 404 on images right after launch
     if results is not None:
         for item in results:
             json_message = item
