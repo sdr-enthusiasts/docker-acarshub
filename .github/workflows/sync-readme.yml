@@ -7,15 +7,16 @@ on:
     paths:
       - 'README.md'
 
-syncreadme:
-  name: Sync Readme
-  runs-on: ubuntu-latest
-  steps:
-  -
-    name: sync readme to dockerhub
-    uses: ms-jpq/sync-dockerhub-readme@v1
-    with:
-      username: ${{ secrets.DOCKERHUB_USERNAME }}
-      password: ${{ secrets.DOCKERHUB_TOKEN }}
-      repository: fredclausen/acarshub
-      readme: "./README.md"
+jobs:
+  syncreadme:
+    name: Sync Readme
+    runs-on: ubuntu-latest
+    steps:
+    -
+      name: sync readme to dockerhub
+      uses: ms-jpq/sync-dockerhub-readme@v1
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+        repository: fredclausen/acarshub
+        readme: "./README.md"
