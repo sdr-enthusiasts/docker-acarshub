@@ -24,9 +24,11 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 COPY rootfs/ /
 
 # Copy in acars-decoder-typescript from previous build stage
+# hadolint ignore=DL3010
 COPY acars-decoder-typescript.tgz /src/acars-decoder-typescript.tgz
+# hadolint ignore=DL3010
 COPY webapp.tar.gz /src/webapp.tar.gz
-
+# hadolint ignore=DL3008
 RUN set -x && \
     TEMP_PACKAGES=() && \
     KEPT_PACKAGES=() && \
