@@ -710,15 +710,31 @@ def pruneOld():
     # Open session to db, run the query, and close session
     try:
         session = db_session()
-        result = session.query(messages).filter(messages.time <= epoch).delete()
-        session.commit()
-        acarshub_helpers.log(f"Pruned main database of {result} records", "database")
-        result = (
-            session.query(messages_saved)
-            .filter(messages_saved.time <= epoch_alerts)
-            .delete()
+        acarshub_helpers.log("Pruning old messages", "database")
+        messages_count = session.execute(
+            f"SELECT COUNT(*) FROM messages WHERE id < (SELECT id FROM messages WHERE msg_time < {epoch} LIMIT 1)"
         )
-        acarshub_helpers.log(f"Pruned alerts database of {result} records", "database")
+        count = 0
+        for row in messages_count:
+            count = row[0]
+        result = session.execute(
+            f"DELETE FROM messages WHERE id < (SELECT id FROM messages WHERE msg_time < {epoch} LIMIT 1)"
+        )
+        session.commit()
+        acarshub_helpers.log(f"Pruned main database of {count} records", "database")
+        acarshub_helpers.log("Pruning alerts database", "database")
+        messages_saved_count = session.execute(
+            f"SELECT COUNT(*) FROM messages_saved WHERE id < (SELECT id FROM messages_saved WHERE msg_time < {epoch_alerts} LIMIT 1)"
+        )
+        count = 0
+        for row in messages_saved_count:
+            count = row[0]
+        result = session.execute(
+            f"DELETE FROM messages_saved WHERE id < (SELECT id FROM messages_saved WHERE msg_time < {epoch_alerts} LIMIT 1)"
+        )
+
+        acarshub_helpers.log(f"Pruned alerts database of {count} records", "database")
+        session.commit()
         session.close()
     except Exception as e:
         acarshub_helpers.acars_traceback(e, "database")
