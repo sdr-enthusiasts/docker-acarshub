@@ -6,7 +6,7 @@ import { stats_page } from "./stats.js";
 import { about } from "./about.js";
 import { status } from "./status.js";
 import { alerts_page } from "./alerts.js";
-import { io } from "socket.io-client";
+import { io, Socket } from "socket.io-client";
 
 import {
   labels,
@@ -31,7 +31,7 @@ import {
 import { live_map_page } from "./live_map.js";
 
 export declare const window: any;
-let socket = io();
+let socket: Socket = <any>null;
 let socket_status: boolean = false;
 
 let index_acars_url: string = "";
@@ -46,6 +46,9 @@ let adsb_getting_data: boolean = false;
 let adsb_interval: any;
 let connection_good: boolean = true;
 let adsb_enabled = false;
+let adsb_request_options = {
+  method: "GET",
+} as RequestInit;
 
 const pages: string[] = [
   "/", // index/live messages
@@ -101,7 +104,6 @@ $((): void => {
   update_url(); // update the urls for everyone
   adsb_url = index_acars_url + "data/aircraft.json";
   //connect to the socket server.
-
   socket = io(`${document.location.origin}/main`, {
     path: index_acars_path + "socket.io",
   });
@@ -158,7 +160,10 @@ $((): void => {
         adsb_getting_data: true,
       });
 
-      if (msg.adsb.bypass) adsb_url = msg.adsb.url;
+      if (msg.adsb.bypass) {
+        adsb_url = msg.adsb.url;
+        adsb_request_options["mode"] = "cors";
+      }
 
       // Check to see if the adsb interval already exists.
       // We want to do this because if the client disconnects it will
@@ -268,10 +273,7 @@ function set_connection_good(): void {
 }
 
 async function update_adsb(): Promise<void> {
-  fetch(adsb_url, {
-    method: "GET",
-    mode: "cors",
-  })
+  fetch(adsb_url, adsb_request_options)
     .then((response) => {
       adsb_getting_data = true;
       return response.json();
