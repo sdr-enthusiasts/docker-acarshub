@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import os
+import sys
 
 # debug levels
 
@@ -28,6 +29,7 @@ LIVE_DATA_SOURCE = "127.0.0.1"  # This is to switch from localhost for ACARS/VDL
 
 def log(msg, source):
     print(f"[{source}]: {msg}")
+    sys.stdout.flush()
 
 
 if os.getenv("DEBUG_LOGGING", default=False):
