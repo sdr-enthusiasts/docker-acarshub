@@ -149,16 +149,38 @@ def check_columns(cur, conn):
 
         if index is not None:
             info = column_info[index]
-            if info[2] != "INTEGER":
+            if (
+                info[2] != "INTEGER"
+                or "messages_old" in columns
+                or "messages_saved_old" in columns
+                or os.getenv("FORCE_UPGRADE", default=False)
+            ):
                 upgraded = True
                 global messages_table
                 global messages_saved_table
+                print(
+                    "**************************************************************************"
+                )
+                print(
+                    "**************************************************************************"
+                )
+                print(
+                    "UPDATING THE DATABASE. THIS WILL TAKE A WHILE. PLEASE DON'T STOP CONTAINER"
+                )
+                print(
+                    "**************************************************************************"
+                )
+                print(
+                    "**************************************************************************"
+                )
                 print("Converting time from string to number\nRenaming current tables")
                 sys.stdout.flush()
-                cur.execute('ALTER TABLE "messages" RENAME TO "messages_old";')
-                cur.execute(
-                    'ALTER TABLE "messages_saved" RENAME TO "messages_saved_old";'
-                )
+                if "messages_old" not in columns:
+                    cur.execute('ALTER TABLE "messages" RENAME TO "messages_old";')
+                if "messages_saved_old" not in columns:
+                    cur.execute(
+                        'ALTER TABLE "messages_saved" RENAME TO "messages_saved_old";'
+                    )
                 print("Creating new tables")
                 sys.stdout.flush()
                 cur.execute(messages_table)
@@ -417,6 +439,13 @@ def add_indexes(cur):
         sys.stdout.flush()
         upgraded = True
         cur.execute('CREATE INDEX "ix_messages_label" ON "messages" ("label" DESC)')
+    if "ix_messages_label" not in indexes:
+        print("Adding msg time index")
+        sys.stdout.flush()
+        upgraded = True
+        cur.execute(
+            'CREATE INDEX "ix_messages_msgtime" ON "messages" ("msg_time" DESC)'
+        )
 
 
 def create_db(cur):
@@ -435,6 +464,7 @@ def create_db(cur):
 try:
     if os.getenv("BACKUP_THE_DB", default=False):
         print("Backing up database")
+        sys.stdout.flush()
         shutil.copyfile(path_to_db, path_to_db + ".back")
     if not os.path.isfile(path_to_db):
         conn = sqlite3.connect(path_to_db)
@@ -455,16 +485,16 @@ try:
     conn.commit()
 
     result = [i for i in cur.execute("PRAGMA auto_vacuum")]
-    if result[0][0] != 1:
+    if result[0][0] != 0 or os.getenv("AUTO_VACUUM", default=False):
         print("Reclaiming disk space")
         sys.stdout.flush()
-        cur.execute("PRAGMA auto_vacuum = '1';")
+        cur.execute("PRAGMA auto_vacuum = '0';")
         cur.execute("VACUUM;")
     conn.commit()
     conn.close()
 except Exception as e:
     print(
-        f"[database]: ERROR UPGRADING DB. PLEASE SHUT DOWN ACARSHUB AND ENSURE DATABASE INTEGRITY: {e}"
+        f"ERROR UPGRADING DB. PLEASE SHUT DOWN ACARSHUB AND ENSURE DATABASE INTEGRITY: {e}"
     )
     sys.stdout.flush()
     sys.exit(1)
