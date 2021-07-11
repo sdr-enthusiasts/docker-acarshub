@@ -11,7 +11,7 @@ Docker container to view and also stream ACARS messages to [ACARS.io/Airframes.i
 
 Uses [libacars](https://github.com/szpajder/libacars), the [airframe's fork of acarsdec](https://github.com/airframesio/acarsdec) and [vdlm2dec](https://github.com/TLeconte/vdlm2dec) for SDR side of decoding.
 
-Also, we make extensive use of the [airframes](https://github.com/airframesio) work to make the message's more 'human-readable'.
+Also, we make extensive use of the [airframes](https://github.com/airframesio) work to make the messages more 'human-readable' as well as provide more detail for each of the messages.
 
 Builds and runs on `amd64`, `arm64`, `arm/v7`, `arm/v6` and `386` architectures.
 
