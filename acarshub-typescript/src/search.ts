@@ -232,7 +232,7 @@ export let search_page = {
       label: $("#search_msglbl").val(),
       msgno: $("#search_msgno").val(),
       tail: $("#search_tail").val(),
-      msg_text: $("search_text").val(),
+      msg_text: $("#search_text").val(),
     } as current_search;
   },
 
@@ -281,7 +281,7 @@ export let search_page = {
         // Give feedback to the user while the search is going on
         $("#log").html("Searching...");
         $("#num_results").html("");
-        search_database((this.current_search = this.current_search));
+        search_database(this.current_search);
       } else if (this.is_everything_blank()) {
         // Field is now blank, clear the page and reset status
         this.show_all = false;
