@@ -712,25 +712,23 @@ def pruneOld():
         session = db_session()
         acarshub_helpers.log("Pruning old messages", "database")
         messages_count = session.execute(
-            f"SELECT COUNT(*) FROM messages WHERE id < (SELECT id FROM messages WHERE msg_time < {epoch} LIMIT 1)"
+            f"SELECT COUNT(*) FROM messages WHERE msg_time < {epoch};"
         )
         count = 0
         for row in messages_count:
             count = row[0]
-        result = session.execute(
-            f"DELETE FROM messages WHERE id < (SELECT id FROM messages WHERE msg_time < {epoch} LIMIT 1)"
-        )
+        result = session.execute(f"DELETE FROM messages WHERE msg_time < {epoch};")
         session.commit()
         acarshub_helpers.log(f"Pruned main database of {count} records", "database")
         acarshub_helpers.log("Pruning alerts database", "database")
         messages_saved_count = session.execute(
-            f"SELECT COUNT(*) FROM messages_saved WHERE id < (SELECT id FROM messages_saved WHERE msg_time < {epoch_alerts} LIMIT 1)"
+            f"SELECT COUNT(*) FROM messages_saved WHERE msg_time < {epoch_alerts};"
         )
         count = 0
         for row in messages_saved_count:
             count = row[0]
         result = session.execute(
-            f"DELETE FROM messages_saved WHERE id < (SELECT id FROM messages_saved WHERE msg_time < {epoch_alerts} LIMIT 1)"
+            f"DELETE FROM messages_saved WHERE msg_time < {epoch_alerts};"
         )
 
         acarshub_helpers.log(f"Pruned alerts database of {count} records", "database")
