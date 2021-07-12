@@ -54,7 +54,7 @@ docker run \
 fredclausen/acarshub
 ```
 
-You should obviously replace `STATION_ID_ACARS` with a unique ID for your station.
+You should obviously replace `STATION_ID_ACARS` with a unique ID for your station, as well as frequencies appropriate to your region.
 
 ## Up-and-Running with Docker Compose
 
@@ -88,7 +88,10 @@ Please keep in mind that this is a barebones configuration to get you started. Y
 
 ## Ports
 
-The built in webserver is available on port `80` if you wish the view messages in realtime.
+| Port | Description |
+| `80` | Port used for the web interface |
+| `15550` | Port used for exposing JSON ACARS data |
+| `15555` | Port used for exposing JSON VDLM2 data |
 
 ## Volumes / Database
 
