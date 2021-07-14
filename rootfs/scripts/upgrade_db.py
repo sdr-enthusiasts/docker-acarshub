@@ -216,6 +216,8 @@ def check_columns(cur, conn):
                     conn.executescript(
                         'INSERT INTO messages_fts(messages_fts) VALUES ("rebuild")'
                     )
+                print("Reclaiming disk space. This will take a while.")
+                cur.execute("VACUUM;")
 
 
 def enable_fts(db: Connection, table: str, columns: List[str]):
@@ -487,7 +489,6 @@ try:
     de_null(cur)
     conn.commit()
     add_indexes(cur)
-
     conn.commit()
 
     result = [i for i in cur.execute("PRAGMA auto_vacuum")]
@@ -503,6 +504,7 @@ except Exception as e:
         f"ERROR UPGRADING DB. PLEASE SHUT DOWN ACARSHUB AND ENSURE DATABASE INTEGRITY: {e}"
     )
     sys.stdout.flush()
+    conn.close()
     sys.exit(1)
 
 if upgraded:
