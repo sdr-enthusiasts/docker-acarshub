@@ -12,6 +12,10 @@ jobs:
     name: Sync Readme
     runs-on: ubuntu-latest
     steps:
+          # Check out our code
+    -
+      name: Checkout
+      uses: actions/checkout@v2
     -
       name: sync readme to dockerhub
       uses: ms-jpq/sync-dockerhub-readme@v1
