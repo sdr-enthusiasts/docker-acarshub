@@ -19,7 +19,7 @@ import shutil
 # # ACARS or VDLM
 # message_type = Column('message_type', String(32), nullable=False)
 # # message time
-# time = Column('msg_time', String(32), nullable=False)
+# time = Column('msg_time', Integer, nullable=False)
 # station_id = Column('station_id', String(32), nullable=False)
 # toaddr = Column('toaddr', String(32), nullable=False)
 # fromaddr = Column('fromaddr', String(32), nullable=False)
@@ -49,33 +49,175 @@ import shutil
 # libacars = Column('libacars', Text, nullable=False)
 # level = Column('level', String(32), nullable=False)
 
+# __tablename__ = "messages_saved"
+# id = Column(Integer, primary_key=True)
+# # ACARS or VDLM
+# message_type = Column("message_type", String(32), nullable=False)
+# # message time
+# time = Column("msg_time", Integer, nullable=False)
+# station_id = Column("station_id", String(32), nullable=False)
+# toaddr = Column("toaddr", String(32), nullable=False)
+# fromaddr = Column("fromaddr", String(32), nullable=False)
+# depa = Column("depa", String(32), index=True, nullable=False)
+# dsta = Column("dsta", String(32), index=True, nullable=False)
+# eta = Column("eta", String(32), nullable=False)
+# gtout = Column("gtout", String(32), nullable=False)
+# gtin = Column("gtin", String(32), nullable=False)
+# wloff = Column("wloff", String(32), nullable=False)
+# wlin = Column("wlin", String(32), nullable=False)
+# lat = Column("lat", String(32), nullable=False)
+# lon = Column("lon", String(32), nullable=False)
+# alt = Column("alt", String(32), nullable=False)
+# text = Column("msg_text", Text, index=True, nullable=False)
+# tail = Column("tail", String(32), index=True, nullable=False)
+# flight = Column("flight", String(32), index=True, nullable=False)
+# icao = Column("icao", String(32), index=True, nullable=False)
+# freq = Column("freq", String(32), index=True, nullable=False)
+# ack = Column("ack", String(32), nullable=False)
+# mode = Column("mode", String(32), nullable=False)
+# label = Column("label", String(32), index=True, nullable=False)
+# block_id = Column("block_id", String(32), nullable=False)
+# msgno = Column("msgno", String(32), index=True, nullable=False)
+# is_response = Column("is_response", String(32), nullable=False)
+# is_onground = Column("is_onground", String(32), nullable=False)
+# error = Column("error", String(32), nullable=False)
+# libacars = Column("libacars", Text, nullable=False)
+# level = Column("level", String(32), nullable=False)
+# term = Column("term", String(32), nullable=False)
+# type_of_match = Column("type_of_match", String(32), nullable=False)
+
 if os.getenv("SPAM", default=False):
-    path_to_db = "/Users/fred/messages.db"
+    path_to_db = os.getenv("DB_PATH")
 else:
     path_to_db = "/run/acars/messages.db"
-print("[database] Checking to see if database needs upgrades")
+print("Checking to see if database needs upgrades")
+sys.stdout.flush()
 upgraded = False
 
+count_table = 'CREATE TABLE "count" ("id" INTEGER NOT NULL,"total" INTEGER, "errors" INTEGER, "good" INTEGER, PRIMARY KEY("id"));'
+freq_table = 'CREATE TABLE "freqs" ("it" INTEGER NOT NULL, "freq" VARCHAR(32), "freq_type" VARCHAR(32), "count" INTEGER, PRIMARY KEY("it"));'
+level_table = 'CREATE TABLE "level" ("id" INTEGER NOT NULL, "level" INTEGER, "count" INTEGER, PRIMARY KEY("id"));'
+messages_table = 'CREATE TABLE "messages" ("id" INTEGER NOT NULL, "message_type" VARCHAR(32) NOT NULL, "msg_time" INTEGER NOT NULL, \
+                "station_id" VARCHAR(32) NOT NULL, "toaddr" VARCHAR(32) NOT NULL, "fromaddr" VARCHAR(32) NOT NULL, "depa" VARCHAR(32) NOT NULL, \
+                "dsta" VARCHAR(32) NOT NULL, "eta" VARCHAR(32) NOT NULL, "gtout" VARCHAR(32) NOT NULL, "gtin" VARCHAR(32) NOT NULL, \
+                "wloff" VARCHAR(32) NOT NULL, "wlin" VARCHAR(32) NOT NULL, "lat" VARCHAR(32) NOT NULL, "lon" VARCHAR(32) NOT NULL, \
+                "alt" VARCHAR(32) NOT NULL, "msg_text" TEXT NOT NULL, "tail" VARCHAR(32) NOT NULL, "flight" VARCHAR(32) NOT NULL, \
+                "icao" VARCHAR(32) NOT NULL, "freq" VARCHAR(32) NOT NULL, "ack" VARCHAR(32) NOT NULL, "mode" VARCHAR(32) NOT NULL, \
+                "label" VARCHAR(32) NOT NULL, "block_id" VARCHAR(32) NOT NULL, "msgno" VARCHAR(32) NOT NULL, "is_response" VARCHAR(32) NOT NULL, \
+                "is_onground" VARCHAR(32) NOT NULL, "error" VARCHAR(32) NOT NULL, "libacars" TEXT NOT NULL,"level" VARCHAR(32) NOT NULL, \
+                PRIMARY KEY("id"));'
+messages_saved_table = 'CREATE TABLE "messages_saved" ("id" INTEGER NOT NULL, "message_type" VARCHAR(32) NOT NULL, "msg_time" INTEGER NOT NULL, \
+                "station_id" VARCHAR(32) NOT NULL, "toaddr" VARCHAR(32) NOT NULL, "fromaddr" VARCHAR(32) NOT NULL, "depa" VARCHAR(32) NOT NULL, \
+                "dsta" VARCHAR(32) NOT NULL, "eta" VARCHAR(32) NOT NULL, "gtout" VARCHAR(32) NOT NULL, "gtin" VARCHAR(32) NOT NULL, "wloff" VARCHAR(32) NOT NULL, \
+             "wlin" VARCHAR(32) NOT NULL, "lat" VARCHAR(32) NOT NULL, "lon" VARCHAR(32) NOT NULL, "alt" VARCHAR(32) NOT NULL, "msg_text" TEXT NOT NULL,\
+                "tail" VARCHAR(32) NOT NULL, "flight" VARCHAR(32) NOT NULL, "icao" VARCHAR(32) NOT NULL, "freq" VARCHAR(32) NOT NULL, "ack" VARCHAR(32) NOT NULL, \
+             "mode" VARCHAR(32) NOT NULL, "label" VARCHAR(32) NOT NULL, "block_id" VARCHAR(32) NOT NULL, "msgno" VARCHAR(32) NOT NULL, "is_response" VARCHAR(32) NOT NULL, \
+                "is_onground" VARCHAR(32) NOT NULL, "error" VARCHAR(32) NOT NULL, "libacars" TEXT NOT NULL, "level" VARCHAR(32) NOT NULL, "term" VARCHAR(32) NOT NULL, \
+                "type_of_match" VARCHAR(32) NOT NULL, PRIMARY KEY("id"));'
 
-def check_columns(cur):
+
+def check_columns(cur, conn):
     global upgraded
     columns = [i[1] for i in cur.execute("PRAGMA table_info(messages)")]
+    column_info = [i for i in cur.execute("PRAGMA table_info(messages)")]
 
     # Add in level column
     if "level" not in columns:
         upgraded = True
-        print("[database] Adding level column")
+        print("Adding level column")
+        sys.stdout.flush()
         cur.execute("ALTER TABLE messages ADD COLUMN level TEXT")
     # Just for clarity's sake so that we don't have the same name for columns as SQL reserved keywords
     # We'll rename the text and time columns
     if "text" in columns:
         upgraded = True
-        print("[database] Renaming text column")
+        print("Renaming text column")
+        sys.stdout.flush()
         cur.execute('ALTER TABLE "main"."messages" RENAME COLUMN "text" TO "msg_text"')
     if "time" in columns:
         upgraded = True
-        print("[database] Renaming time column")
+        print("Renaming time column")
+        sys.stdout.flush()
         cur.execute('ALTER TABLE "main"."messages" RENAME COLUMN "time" TO "msg_time"')
+
+    if "msg_time" in columns:
+        index = None
+        for i in column_info:
+            if i[1] == "msg_time":
+                index = i[0]
+                break
+
+        if index is not None:
+            info = column_info[index]
+            if (
+                info[2] != "INTEGER"
+                or "messages_old" in columns
+                or "messages_saved_old" in columns
+                or os.getenv("FORCE_UPGRADE", default=False)
+            ):
+                upgraded = True
+                global messages_table
+                global messages_saved_table
+                global path_to_db
+                if not os.getenv("BACKUP_THE_DB", default=False) and not os.path.isfile(
+                    path_to_db + "-pre2.2.0"
+                ):
+                    print("Backing up the database")
+                    shutil.copyfile(path_to_db, path_to_db + "-pre2.2.0")
+                print(
+                    "**************************************************************************"
+                )
+                print(
+                    "**************************************************************************"
+                )
+                print(
+                    "UPDATING THE DATABASE. THIS WILL TAKE A WHILE. PLEASE DON'T STOP CONTAINER"
+                )
+                print(
+                    "**************************************************************************"
+                )
+                print(
+                    "**************************************************************************"
+                )
+                print("Converting time from string to number\nRenaming current tables")
+                sys.stdout.flush()
+                if "messages_old" not in columns:
+                    cur.execute('ALTER TABLE "messages" RENAME TO "messages_old";')
+                if "messages_saved_old" not in columns:
+                    cur.execute(
+                        'ALTER TABLE "messages_saved" RENAME TO "messages_saved_old";'
+                    )
+                print("Creating new tables")
+                sys.stdout.flush()
+                cur.execute(messages_table)
+                cur.execute(messages_saved_table)
+                print("Copying old data")
+                sys.stdout.flush()
+                cur.execute(
+                    'INSERT INTO "main"."messages" SELECT * FROM "messages_old";'
+                )
+                cur.execute(
+                    'INSERT INTO "main"."messages_saved" SELECT * FROM "messages_saved_old";'
+                )
+                print("Dropping old tables")
+                sys.stdout.flush()
+                cur.execute('DROP TABLE "messages_old";')
+                cur.execute('DROP TABLE "messages_saved_old";')
+                sub_tables = [
+                    i[0]
+                    for i in cur.execute(
+                        'SELECT name FROM sqlite_master WHERE type ="table" AND name NOT LIKE "sqlite_%"'
+                    )
+                ]
+
+                if "messages_fts" in sub_tables:
+                    print("Updating FTS cache. May take a while")
+                    sys.stdout.flush()
+                    conn.executescript(
+                        'INSERT INTO messages_fts(messages_fts) VALUES ("rebuild")'
+                    )
+                print("Reclaiming disk space. This will take a while.")
+                cur.execute("VACUUM;")
 
 
 def enable_fts(db: Connection, table: str, columns: List[str]):
@@ -84,7 +226,8 @@ def enable_fts(db: Connection, table: str, columns: List[str]):
         f"{c}" for c in columns if c.find(" UNINDEXED") == -1
     )
 
-    print("[database] Creating new FTS table")
+    print("Creating new FTS table")
+    sys.stdout.flush()
     db.executescript(
         """
         CREATE VIRTUAL TABLE {table}_fts USING fts5
@@ -97,7 +240,8 @@ def enable_fts(db: Connection, table: str, columns: List[str]):
         )
     )
 
-    print("[database] Creating new triggers")
+    print("Creating new triggers")
+    sys.stdout.flush()
     db.executescript(
         """
         CREATE TRIGGER {table}_fts_insert AFTER INSERT ON messages
@@ -125,7 +269,8 @@ def enable_fts(db: Connection, table: str, columns: List[str]):
         )
     )
 
-    print("[database] Populating new FTS table with data")
+    print("Populating new FTS table with data")
+    sys.stdout.flush()
     db.executescript('INSERT INTO messages_fts(messages_fts) VALUES ("rebuild")')
 
 
@@ -174,34 +319,41 @@ def check_tables(conn, cur):
 
     if "text_fts" in tables:
         upgraded = True
-        print("[database] Removing old FTS table")
+        print("Removing old FTS table")
+        sys.stdout.flush()
         cur.execute('DROP TABLE "main"."text_fts";')
 
     if "message_ad" in triggers:
         upgraded = True
-        print("[database] Removing AD trigger")
+        print("Removing AD trigger")
+        sys.stdout.flush()
         cur.execute('DROP TRIGGER "main"."message_ad";')
     if "message_ai" in triggers:
         upgraded = True
-        print("[database] Removing AI trigger")
+        print("Removing AI trigger")
+        sys.stdout.flush()
         cur.execute('DROP TRIGGER "main"."message_ai";')
     if "message_au" in triggers:
         upgraded = True
-        print("[database] Removing AU trigger")
+        print("Removing AU trigger")
+        sys.stdout.flush()
         cur.execute('DROP TRIGGER "main"."message_au";')
 
     if "messages_fts" not in tables:
         upgraded = True
-        print("[database] Adding in text search tables....may take a while")
+        print("Adding in text search tables....may take a while")
+        sys.stdout.flush()
 
-        print("[database] creating virtual table")
+        print("creating virtual table")
+        sys.stdout.flush()
         enable_fts(conn, "messages", columns)
 
 
 def de_null(cur):
     # we need to ensure the columns don't have any NULL values
     # Legacy db problems...
-    print("[database] Ensuring no columns contain NULL values")
+    print("Ensuring no columns contain NULL values")
+    sys.stdout.flush()
     cur.execute('UPDATE messages SET toaddr = "" WHERE toaddr is NULL')
     cur.execute('UPDATE messages SET fromaddr = "" WHERE toaddr is NULL')
     cur.execute('UPDATE messages SET depa = "" WHERE depa IS NULL')
@@ -231,7 +383,8 @@ def de_null(cur):
     cur.execute('UPDATE messages SET error = "" WHERE error IS NULL')
     cur.execute('UPDATE messages SET libacars = "" WHERE libacars IS NULL')
     cur.execute('UPDATE messages SET level = "" WHERE level IS NULL')
-    print("[database] done with de-nulling")
+    print("done with de-nulling")
+    sys.stdout.flush()
 
 
 def add_indexes(cur):
@@ -240,92 +393,88 @@ def add_indexes(cur):
     indexes = [i[1] for i in cur.execute("PRAGMA index_list(messages)")]
 
     if "ix_messages_msg_text" not in indexes:
-        print("[database] Adding text index")
+        print("Adding text index")
+        sys.stdout.flush()
         upgraded = True
         cur.execute(
-            'CREATE INDEX "ix_messages_msg_text" ON "messages" ("msg_text"	DESC)'
+            'CREATE INDEX "ix_messages_msg_text" ON "messages" ("msg_text" DESC)'
         )
 
     if "ix_messages_icao" not in indexes:
-        print("[database] Adding icao index")
+        print("Adding icao index")
+        sys.stdout.flush()
         upgraded = True
-        cur.execute('CREATE INDEX "ix_messages_icao" ON "messages" ("icao"	DESC)')
+        cur.execute('CREATE INDEX "ix_messages_icao" ON "messages" ("icao" DESC)')
 
     if "ix_messages_flight" not in indexes:
-        print("[database] Adding flight index")
+        print("Adding flight index")
+        sys.stdout.flush()
         upgraded = True
-        cur.execute('CREATE INDEX "ix_messages_flight" ON "messages" ("flight"	DESC)')
+        cur.execute('CREATE INDEX "ix_messages_flight" ON "messages" ("flight" DESC)')
 
     if "ix_messages_tail" not in indexes:
-        print("[database] Adding tail index")
+        print("Adding tail index")
+        sys.stdout.flush()
         upgraded = True
-        cur.execute('CREATE INDEX "ix_messages_tail" ON "messages" ("tail"	DESC)')
+        cur.execute('CREATE INDEX "ix_messages_tail" ON "messages" ("tail" DESC)')
 
     if "ix_messages_depa" not in indexes:
-        print("[database] Adding depa index")
+        print("Adding depa index")
+        sys.stdout.flush()
         upgraded = True
-        cur.execute('CREATE INDEX "ix_messages_depa" ON "messages" ("depa"	DESC)')
+        cur.execute('CREATE INDEX "ix_messages_depa" ON "messages" ("depa" DESC)')
 
     if "ix_messages_dsta" not in indexes:
-        print("[database] Adding dsta index")
+        print("Adding dsta index")
+        sys.stdout.flush()
         upgraded = True
-        cur.execute('CREATE INDEX "ix_messages_dsta" ON "messages" ("dsta"	DESC)')
+        cur.execute('CREATE INDEX "ix_messages_dsta" ON "messages" ("dsta" DESC)')
 
     if "ix_messages_msgno" not in indexes:
-        print("[database] Adding msgno index")
+        print("Adding msgno index")
+        sys.stdout.flush()
         upgraded = True
         cur.execute('CREATE INDEX "ix_messages_msgno" ON "messages" ("msgno" DESC)')
 
     if "ix_messages_freq" not in indexes:
-        print("[database] Adding freq index")
+        print("Adding freq index")
+        sys.stdout.flush()
         upgraded = True
-        cur.execute('CREATE INDEX "ix_messages_freq" ON "messages" ("freq"	DESC)')
+        cur.execute('CREATE INDEX "ix_messages_freq" ON "messages" ("freq" DESC)')
 
     if "ix_messages_label" not in indexes:
-        print("[database] Adding label index")
+        print("Adding label index")
+        sys.stdout.flush()
         upgraded = True
-        cur.execute('CREATE INDEX "ix_messages_label" ON "messages" ("label"	DESC)')
+        cur.execute('CREATE INDEX "ix_messages_label" ON "messages" ("label" DESC)')
+    if "ix_messages_label" not in indexes:
+        print("Adding msg time index")
+        sys.stdout.flush()
+        upgraded = True
+        cur.execute(
+            'CREATE INDEX "ix_messages_msgtime" ON "messages" ("msg_time" DESC)'
+        )
 
 
 def create_db(cur):
-    cur.execute(
-        'CREATE TABLE "count" ("id"	INTEGER NOT NULL,"total"	INTEGER, "errors"	INTEGER, "good"	INTEGER, PRIMARY KEY("id"));'
-    )
-    cur.execute(
-        'CREATE TABLE "freqs" ("it"	INTEGER NOT NULL, "freq"	VARCHAR(32), "freq_type"	VARCHAR(32), "count"	INTEGER, PRIMARY KEY("it"));'
-    )
-    cur.execute(
-        'CREATE TABLE "level" ("id"	INTEGER NOT NULL, "level"	INTEGER, "count"	INTEGER, PRIMARY KEY("id"));'
-    )
-    cur.execute(
-        'CREATE TABLE "messages" ("id"	INTEGER NOT NULL, "message_type"	VARCHAR(32) NOT NULL, "msg_time"	VARCHAR(32) NOT NULL, \
-                "station_id"	VARCHAR(32) NOT NULL, "toaddr"	VARCHAR(32) NOT NULL, "fromaddr"	VARCHAR(32) NOT NULL, "depa"	VARCHAR(32) NOT NULL, \
-                "dsta"	VARCHAR(32) NOT NULL, "eta"	VARCHAR(32) NOT NULL, "gtout"	VARCHAR(32) NOT NULL, "gtin"	VARCHAR(32) NOT NULL, \
-                "wloff"	VARCHAR(32) NOT NULL, "wlin"	VARCHAR(32) NOT NULL, "lat"	VARCHAR(32) NOT NULL, "lon"	VARCHAR(32) NOT NULL, \
-                "alt"	VARCHAR(32) NOT NULL, "msg_text"	TEXT NOT NULL, "tail"	VARCHAR(32) NOT NULL, "flight"	VARCHAR(32) NOT NULL, \
-                "icao"	VARCHAR(32) NOT NULL, "freq"	VARCHAR(32) NOT NULL, "ack"	VARCHAR(32) NOT NULL, "mode"	VARCHAR(32) NOT NULL, \
-                "label"	VARCHAR(32) NOT NULL, "block_id"	VARCHAR(32) NOT NULL, "msgno"	VARCHAR(32) NOT NULL, "is_response"	VARCHAR(32) NOT NULL, \
-                "is_onground"	VARCHAR(32) NOT NULL, "error"	VARCHAR(32) NOT NULL, "libacars"	TEXT NOT NULL,"level"	VARCHAR(32) NOT NULL, \
-                PRIMARY KEY("id"));'
-    )
-    cur.execute(
-        'CREATE TABLE "messages_saved" ("id"	INTEGER NOT NULL, "message_type"	VARCHAR(32) NOT NULL, "msg_time"	VARCHAR(32) NOT NULL, \
-                "station_id"	VARCHAR(32) NOT NULL, "toaddr"	VARCHAR(32) NOT NULL, "fromaddr"	VARCHAR(32) NOT NULL, "depa"	VARCHAR(32) NOT NULL, \
-                "dsta"	VARCHAR(32) NOT NULL, "eta"	VARCHAR(32) NOT NULL, "gtout"	VARCHAR(32) NOT NULL, "gtin"	VARCHAR(32) NOT NULL, "wloff"	VARCHAR(32) NOT NULL, \
-	            "wlin"	VARCHAR(32) NOT NULL, "lat"	VARCHAR(32) NOT NULL, "lon"	VARCHAR(32) NOT NULL, "alt"	VARCHAR(32) NOT NULL, "msg_text"	TEXT NOT NULL,\
-                "tail"	VARCHAR(32) NOT NULL, "flight"	VARCHAR(32) NOT NULL, "icao"	VARCHAR(32) NOT NULL, "freq"	VARCHAR(32) NOT NULL, "ack"	VARCHAR(32) NOT NULL, \
-	            "mode"	VARCHAR(32) NOT NULL, "label"	VARCHAR(32) NOT NULL, "block_id"	VARCHAR(32) NOT NULL, "msgno"	VARCHAR(32) NOT NULL, "is_response"	VARCHAR(32) NOT NULL, \
-                "is_onground"	VARCHAR(32) NOT NULL, "error"	VARCHAR(32) NOT NULL, "libacars"	TEXT NOT NULL, "level"	VARCHAR(32) NOT NULL, "term"	VARCHAR(32) NOT NULL, \
-                "type_of_match"	VARCHAR(32) NOT NULL, PRIMARY KEY("id"));'
-    )
+    global count_table
+    global freq_table
+    global level_table
+    global messages_table
+    global messages_saved_table
+    cur.execute(count_table)
+    cur.execute(freq_table)
+    cur.execute(level_table)
+    cur.execute(messages_table)
+    cur.execute(messages_saved_table)
 
 
 try:
-    if os.path.isfile(path_to_db) and not os.path.isfile(path_to_db + ".back"):
+    if os.getenv("BACKUP_THE_DB", default=False):
+        print("Backing up database")
+        sys.stdout.flush()
         shutil.copyfile(path_to_db, path_to_db + ".back")
-        conn = sqlite3.connect(path_to_db)
-        cur = conn.cursor()
-    elif not os.path.isfile(path_to_db):
+    if not os.path.isfile(path_to_db):
         conn = sqlite3.connect(path_to_db)
         cur = conn.cursor()
         create_db(cur)
@@ -333,25 +482,36 @@ try:
         conn = sqlite3.connect(path_to_db)
         cur = conn.cursor()
 
-    check_columns(cur)
+    check_columns(cur, conn)
     conn.commit()
     check_tables(conn, cur)
     conn.commit()
     de_null(cur)
     conn.commit()
     add_indexes(cur)
+    conn.commit()
 
+    result = [i for i in cur.execute("PRAGMA auto_vacuum")]
+    if result[0][0] != 0 or os.getenv("AUTO_VACUUM", default=False):
+        print("Reclaiming disk space")
+        sys.stdout.flush()
+        cur.execute("PRAGMA auto_vacuum = '0';")
+        cur.execute("VACUUM;")
     conn.commit()
     conn.close()
 except Exception as e:
     print(
-        f"[database]: ERROR UPGRADING DB. PLEASE SHUT DOWN ACARSHUB AND ENSURE DATABASE INTEGRITY: {e}"
+        f"ERROR UPGRADING DB. PLEASE SHUT DOWN ACARSHUB AND ENSURE DATABASE INTEGRITY: {e}"
     )
+    sys.stdout.flush()
+    conn.close()
     sys.exit(1)
 
 if upgraded:
-    print("[database] Completed upgrading database structure")
+    print("Completed upgrading database structure")
+    sys.stdout.flush()
 else:
-    print("[database] Database structure did not require upgrades")
+    print("Database structure did not require upgrades")
+    sys.stdout.flush()
 
 sys.exit(0)

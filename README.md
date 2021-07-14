@@ -11,9 +11,13 @@ Docker container to view and also stream ACARS messages to [ACARS.io/Airframes.i
 
 Uses [libacars](https://github.com/szpajder/libacars), the [airframe's fork of acarsdec](https://github.com/airframesio/acarsdec) and [vdlm2dec](https://github.com/TLeconte/vdlm2dec) for SDR side of decoding.
 
-Also, we make extensive use of the [airframes](https://github.com/airframesio) work to make the message's more 'human-readable'.
+Also, we make extensive use of the [airframes](https://github.com/airframesio) work to make the messages more 'human-readable' as well as provide more detail for each of the messages.
 
 Builds and runs on `amd64`, `arm64`, `arm/v7`, `arm/v6` and `386` architectures.
+
+## AN IMPORTANT NOTE ABOUT UPGRADING FROM VERSIONS PRIOR TO 2.2.0 OR LATER
+
+If you are a long time user of ACARS Hub and you upgrade from `2.1.4` or earlier to `2.2.0` or later the first startup after the upgrade will take a while; as much as 10 minutes or more. The database structure changed and requires a migration to accommodate this. It is *VERY IMPORANT* you let the upgrade complete, otherwise you risk database corruption. This is a one time operation and after that startup times will be normal. Please see [this](https://github.com/fredclausen/docker-acarshub/issues/94) for more information.
 
 ## Supported tags and respective Dockerfiles
 
@@ -50,7 +54,7 @@ docker run \
 fredclausen/acarshub
 ```
 
-You should obviously replace `STATION_ID_ACARS` with a unique ID for your station.
+You should obviously replace `STATION_ID_ACARS` with a unique ID for your station, as well as frequencies appropriate to your region.
 
 ## Up-and-Running with Docker Compose
 
@@ -84,7 +88,10 @@ Please keep in mind that this is a barebones configuration to get you started. Y
 
 ## Ports
 
-The built in webserver is available on port `80` if you wish the view messages in realtime.
+| Port | Description |
+| `80` | Port used for the web interface |
+| `15550` | Port used for exposing JSON ACARS data |
+| `15555` | Port used for exposing JSON VDLM2 data |
 
 ## Volumes / Database
 
@@ -114,6 +121,7 @@ There are quite a few configuration options this container can accept.
 | `DB_BACKUP` | If you want to run a second database for backup purposes set this value to a [SQL Alchemy formatted URL](https://docs.sqlalchemy.org/en/13/core/engines.html#database-urls). See the link for supported DB types. This database will have to be managed by you, as ACARS Hub will only ever write incoming data to it. | No | Blank |
 | `IATA_OVERRIDE` | Override or add any custom IATA codes. Used for the web front end to show proper callsigns; See [below](#the-fix) on formatting and [more details](#A-note-about-data-sources-used-for-the-web-site) why this might be necessary.| No | Blank |
 | `TAR1090_URL` | Flights where the container is able to, it will generate a link to a tar1090 instance so that you can see the position of the aircraft that generated the message. By default, it will link to [ADSB Exchange](https://www.adsbexchange.com), but if desired, you can set the URL to be a local tar1090 instance. | No | Blank |
+| `AUTO_VACUUM` | If you find your database size to be too large you can temporarily enable this and on the next container startup the database will attempt to reduce itself in size. When you do this startup time will take a few minutes. It is recommended to leave this flag disabled and only enable it temporarily. | No | `False` |
 
 Please note that for `TAR1090_URL` the required format is `http[s]://**HOSTNAME**` only. So if your tar1090 instance is at IP address `192.168.31.10` with no SSL, the TAR1090_URL would look like `http://192.168.31.10`
 
@@ -263,9 +271,25 @@ Formatting is as follows: `IATA|ICAO|Airline Name`
 
 If you have multiple airlines you wish to override, you add in a `;` between them, such as the following: `UP|UPS|United Parcel Service;US|AAL|American Airlines`
 
-For anyone in the US, I suggest adding `IATA_OVERRIDE=UP|UPS|United Parcel Service;GS|FTH|Mountain Aviation (Foothills)` to start out with.
+For anyone in the US, I suggest adding `IATA_OVERRIDE=UP|UPS|United Parcel Service` to start out with.
 
 If there are airlines you notice that are wrong because the data used is wrong (IATA codes do change over time as airlines come and go), or airlines that are missing from the database that do have an IATA code, submit a PR above and I'll get it in there!
+
+## Accessing ACARS/VDLM data with external programs
+
+If you wish to access the JSON data that the decoders `acarsdec` and `vdlm2dec` generate with an external program, such as FlightAirMap, expose the following ports in your docker-compose configuration:
+
+* Port 15555 for UDP VDLM2 JSON
+* Port 15550 for UDP ACARS JSON
+
+```yaml
+    ports:
+      - 80:80
+      - 15550:15550
+      - 15555:15555
+```
+
+And then you will be able to connect to `yourpisipaddress:15555` or `yourpisipaddress:15550`, respectively, in whatever program can decode ACARS/VDLM JSON.
 
 ## Future improvements
 

@@ -16,10 +16,8 @@ alert_terms = list()
 
 try:
     acarshub_helpers.log("Downloading Station IDs", "database")
-    with urllib.request.urlopen(
-        "https://raw.githubusercontent.com/airframesio/data/master/json/vdl/ground-stations.json"
-    ) as url:
-        groundStations_json = json.loads(url.read().decode())
+    with open("./data/ground-stations.json", "r") as f:
+        groundStations_json = json.load(f)
 
     for station in groundStations_json["ground_stations"]:
         stationId = station.get("id")
@@ -37,10 +35,8 @@ except Exception as e:
 
 try:
     acarshub_helpers.log("Downloading message labels", "database")
-    with urllib.request.urlopen(
-        "https://raw.githubusercontent.com/airframesio/data/master/json/acars/metadata.json"
-    ) as url:
-        message_labels = json.loads(url.read().decode())
+    with open("./data/acars-metadata.json", "r") as f:
+        message_labels = json.load(f)
     acarshub_helpers.log("Completed loading message labels", "database")
 except Exception as e:
     message_labels = {"labels": {}}  # handle URL exception
@@ -164,7 +160,7 @@ class messages(Messages):
     # ACARS or VDLM
     message_type = Column("message_type", String(32), nullable=False)
     # message time
-    time = Column("msg_time", String(32), nullable=False)
+    time = Column("msg_time", Integer, nullable=False)
     station_id = Column("station_id", String(32), nullable=False)
     toaddr = Column("toaddr", String(32), nullable=False)
     fromaddr = Column("fromaddr", String(32), nullable=False)
@@ -202,7 +198,7 @@ class messages_saved(Messages):
     # ACARS or VDLM
     message_type = Column("message_type", String(32), nullable=False)
     # message time
-    time = Column("msg_time", String(32), nullable=False)
+    time = Column("msg_time", Integer, nullable=False)
     station_id = Column("station_id", String(32), nullable=False)
     toaddr = Column("toaddr", String(32), nullable=False)
     fromaddr = Column("fromaddr", String(32), nullable=False)
@@ -714,15 +710,29 @@ def pruneOld():
     # Open session to db, run the query, and close session
     try:
         session = db_session()
-        result = session.query(messages).filter(messages.time <= epoch).delete()
-        session.commit()
-        acarshub_helpers.log(f"Pruned main database of {result} records", "database")
-        result = (
-            session.query(messages_saved)
-            .filter(messages_saved.time <= epoch_alerts)
-            .delete()
+        acarshub_helpers.log("Pruning old messages", "database")
+        messages_count = session.execute(
+            f"SELECT COUNT(*) FROM messages WHERE msg_time < {epoch};"
         )
-        acarshub_helpers.log(f"Pruned alerts database of {result} records", "database")
+        count = 0
+        for row in messages_count:
+            count = row[0]
+        result = session.execute(f"DELETE FROM messages WHERE msg_time < {epoch};")
+        session.commit()
+        acarshub_helpers.log(f"Pruned main database of {count} records", "database")
+        acarshub_helpers.log("Pruning alerts database", "database")
+        messages_saved_count = session.execute(
+            f"SELECT COUNT(*) FROM messages_saved WHERE msg_time < {epoch_alerts};"
+        )
+        count = 0
+        for row in messages_saved_count:
+            count = row[0]
+        result = session.execute(
+            f"DELETE FROM messages_saved WHERE msg_time < {epoch_alerts};"
+        )
+
+        acarshub_helpers.log(f"Pruned alerts database of {count} records", "database")
+        session.commit()
         session.close()
     except Exception as e:
         acarshub_helpers.acars_traceback(e, "database")
@@ -853,7 +863,6 @@ def search_alerts(icao=None, tail=None, flight=None):
             acarshub_helpers.acars_traceback(e, "database")
             return None
     else:
-        print("exiting")
         return None
 
 

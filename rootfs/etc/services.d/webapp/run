@@ -40,6 +40,7 @@ if [ -n "${ENABLE_WEB}" ]; then
       --no-sendfile \
       -k eventlet \
       application:app \
+      --timeout 120 \
     2>&1 | stdbuf -o0 sed --unbuffered '/^$/d' | stdbuf -o0 awk '{print "[webapp] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
 else
   # web server must be disabled. Go to sleep forever
