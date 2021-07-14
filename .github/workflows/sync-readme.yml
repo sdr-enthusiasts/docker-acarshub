@@ -13,7 +13,7 @@ jobs:
     name: Sync Readme
     runs-on: ubuntu-latest
     steps:
-          # Check out our code
+    # Check out our code
     -
       name: Checkout
       uses: actions/checkout@v2
