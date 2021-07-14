@@ -1,6 +1,7 @@
 name: Sync dockerhub readme
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
