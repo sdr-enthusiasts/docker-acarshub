@@ -23,7 +23,8 @@ if [[ -n "${ENABLE_ACARS}" ]]; then
   while true; do
 
     # capture 5 mins of flows
-    timeout 300s socat -u TCP:127.0.0.1:15550 CREATE:/database/acars.past5min.json
+    #timeout 300s socat -u TCP:127.0.0.1:15550 CREATE:/database/acars.past5min.json
+    timeout --foreground 300s socat -u TCP:127.0.0.1:15550 CREATE:/database/acars.past5min.json
 
     # shellcheck disable=SC2016
     echo "$(wc -l < /database/acars.past5min.json) ACARS messages received in last 5 mins" | stdbuf -o0 awk '{print "[acars_stats] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
