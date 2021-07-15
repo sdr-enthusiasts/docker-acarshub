@@ -130,7 +130,6 @@ def scheduled_tasks():
     if not acarshub_helpers.SPAM:
         schedule.every().minute.at(":15").do(acarshub.service_check)
         schedule.every().minute.at(":00").do(update_rrd_db)
-        schedule.every().minute.at(":30").do(acarshub_rrd.update_graphs)
     # Run and Schedule the database pruner
     schedule.every().hour.at(":00").do(acarshub.acarshub_db.pruneOld)
     schedule.every().hour.at(":15").do(acarshub.acarshub_db.pruneOld)
@@ -341,8 +340,6 @@ def init():
     if not acarshub_helpers.SPAM:
         acarshub_helpers.log("Initializing RRD Database", "init")
         acarshub_rrd.create_db()  # make sure the RRD DB is created / there
-        acarshub_helpers.log("Generating stat page graphs", "init")
-        acarshub_rrd.update_graphs()  # generate graphs for the website so we don't 404 on images right after launch
     if results is not None:
         for item in results:
             json_message = item
