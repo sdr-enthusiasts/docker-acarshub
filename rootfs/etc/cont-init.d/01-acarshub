@@ -49,7 +49,7 @@ fi
 
 # Ensure /database dir is present
 
-mkdir -p /database
+mkdir -p /database/images/static/images
 
 # Ensure stats files are present
 touch /database/vdlm2.past5min.json
