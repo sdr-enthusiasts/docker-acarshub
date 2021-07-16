@@ -10,7 +10,7 @@
     "copy_test": "./copy_test_assets.sh",
     "minify": "mkdir -p ./dist-min && mkdir -p ./css-min && rm -f ./dist-min/*.js && rm -f ./css-min/*.css && ./minifer.sh && uglifyjs-folder dist -o dist-min/index.js && uglifycss ./css/site.css --output ./css-min/site.css",
     "build": "rm -f ./dist/*.js && tsc && ./build.sh",
-    "installer": "rm -rf ../rootfs/webapp/static/js && rm -rf ../rootfs/webapp/static/css && mkdir -p ../rootfs/webapp/static/css/other && mkdir -p ../rootfs/webapp/static/js/other && cp ./dist-min/*.js ../rootfs/webapp/static/js/ && cp ./js-other/* ../rootfs/webapp/static/js/other/ && cp ./css-min/site.css ../rootfs/webapp/static/css/site.css && cp -r ./css/other/* ../rootfs/webapp/static/css/other/"
+    "installer": "./installer.sh"
   },
   "author": "Fred Clausen",
   "license": "GPL-3.0-only",

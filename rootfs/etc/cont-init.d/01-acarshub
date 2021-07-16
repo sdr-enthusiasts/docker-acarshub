@@ -39,14 +39,6 @@ rm -rf /etc/services.d/acarsdec-* /etc/services.d/vdlm2dec-* >/dev/null 2>&1
 # shellcheck disable=SC2016
 python3 assign_frequencies.py "${FREQ_CMD[@]}" | stdbuf -oL awk '{print "[01-acarshub] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}' || exit 1
 
-if [[ ! -e /ranonce ]]; then
-	echo "Renaming files" | awk '{print "[01-acarshub] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
-	# shellcheck disable=SC2016
-	python3 rename_files.py | stdbuf -oL awk '{print "[01-acarshub] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}' || exit 1
-else
-	echo "Skipping file renaming. Container was restarted" | awk '{print "[01-acarshub] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
-fi
-
 # Ensure /database dir is present
 
 mkdir -p /database/images/static/images
@@ -54,7 +46,5 @@ mkdir -p /database/images/static/images
 # Ensure stats files are present
 touch /database/vdlm2.past5min.json
 touch /database/acars.past5min.json
-# file to flag if the file rename has been done already, in case of container restart
-touch /ranonce
 
 exit 0
