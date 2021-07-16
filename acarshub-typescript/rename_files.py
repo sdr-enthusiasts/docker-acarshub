@@ -10,6 +10,7 @@ import hashlib
 import re
 
 filenames = {}
+changed_names = []
 
 
 def rename_files(path):
@@ -40,7 +41,7 @@ def rename_files(path):
 
 def replace_file_names(path):
     global filenames
-    print("yo", path)
+    global changed_names
     with fileinput.input(path, inplace=True) as f:
         for line in f:
             if ".js" in line:
@@ -51,6 +52,7 @@ def replace_file_names(path):
                         old_name, f'{filenames[old_name].replace(".js", "")}.js'
                     )
                     line = line.replace(old_name, new_name)
+                    changed_names.append(old_name + "->" + new_name)
             elif ".css" in line:
                 old_name = re.search(r"\/.+\.css", line).group(0)
                 old_name = old_name.split("/")[-1]
@@ -59,19 +61,24 @@ def replace_file_names(path):
                         old_name, f'{filenames[old_name].replace(".css", "")}.css'
                     )
                     line = line.replace(old_name, new_name)
-
+                    changed_names.append(old_name + "->" + new_name)
             print(line, end="")
 
 
 try:
     now = datetime.datetime.now().timestamp()
 
+    if not os.getenv("DOCKER_BUILD", default=False):
+        path = "./webapp"
+    else:
+        path = "/rootfs/webapp"
     print("Renaming ACARS Hub web files for caching")
-    rename_files(r"./webapp/static/js")
-    rename_files(r"./webapp/static/css")
+    rename_files(path + r"/static/js")
+    rename_files(path + r"/static/css")
     print("Changing ACARS Hub web paths for renamed files")
-    replace_file_names(r"./webapp/templates/index.html")
-
+    replace_file_names(path + r"/templates/index.html")
+    for line in changed_names:
+        print(line)
     sys.exit(0)
 except Exception as e:
     print(e)
