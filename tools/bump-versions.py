@@ -47,7 +47,7 @@ def update_package_file(line="", minor=False, patch=False):
     minor_number = re.search(r"\.\d+\.", version).group().replace(".", "")
     patch_number = re.search(r"(\.\d+$)", version).group().replace(".", "")
     if not minor and patch:
-        patch_number = str(int(minor_number) + 1)
+        patch_number = str(int(patch_number) + 1)
     elif minor:
         patch_number = str(0)
     if minor:
