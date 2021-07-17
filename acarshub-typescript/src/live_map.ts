@@ -252,13 +252,13 @@ export let live_map_page = {
   sort_list: function (plane_data: plane_data): adsb_target[] {
     return Object.values(this.adsb_planes).sort((a, b) => {
       const callsign_a: number | string =
-        a.position.flight && a.position.flight !== ""
+        a.position.flight && a.position.flight.trim() !== ""
           ? a.position.flight.trim()
           : a.position.r && a.position.r !== ""
           ? a.position.r
           : a.position.hex.toUpperCase();
       const callsign_b: number | string =
-        b.position.flight && b.position.flight !== ""
+        b.position.flight && b.position.flight.trim() !== ""
           ? b.position.flight.trim()
           : b.position.r && b.position.r !== ""
           ? b.position.r
@@ -396,7 +396,7 @@ export let live_map_page = {
       const speed = current_plane.gs || 0;
       const squawk = current_plane.squawk || 0;
       const callsign =
-        current_plane.flight && current_plane.flight !== ""
+        current_plane.flight && current_plane.flight.trim() !== ""
           ? current_plane.flight.trim()
           : current_plane.r && current_plane.r !== ""
           ? current_plane.r
@@ -538,7 +538,7 @@ export let live_map_page = {
         ) {
           const current_plane = this.adsb_planes[plane].position;
           const callsign =
-            current_plane.flight && current_plane.flight !== ""
+            current_plane.flight && current_plane.flight.trim() !== ""
               ? current_plane.flight.trim()
               : current_plane.r && current_plane.r !== ""
               ? current_plane.r
