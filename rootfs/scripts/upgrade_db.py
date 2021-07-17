@@ -159,7 +159,7 @@ def check_columns(cur, conn):
                 global messages_table
                 global messages_saved_table
                 global path_to_db
-                if not os.getenv("BACKUP_THE_DB", default=False) and not os.path.isfile(
+                if os.getenv("BACKUP_THE_DB", default=False) or not os.path.isfile(
                     path_to_db + "-pre2.2.0"
                 ):
                     print("Backing up the database")
@@ -490,6 +490,40 @@ try:
     conn.commit()
     add_indexes(cur)
     conn.commit()
+
+    if os.getenv("MANUAL_PRUNE", default=False):
+        import datetime
+
+        print("Pruning")
+        sys.stdout.flush()
+        dt = datetime.datetime.now()
+        epoch = (dt - datetime.timedelta(days=7)).replace().timestamp()
+        epoch_alerts = (dt - datetime.timedelta(days=120)).replace().timestamp()
+
+        messages_count = cur.execute(
+            f"SELECT COUNT(*) FROM messages WHERE msg_time < {epoch};"
+        )
+        count = 0
+        for row in messages_count:
+            count = row[0]
+        result = cur.execute(f"DELETE FROM messages WHERE msg_time < {epoch};")
+        conn.commit()
+        print(f"Pruned main database of {count} records")
+        print("Pruning alerts database")
+        sys.stdout.flush()
+        messages_saved_count = cur.execute(
+            f"SELECT COUNT(*) FROM messages_saved WHERE msg_time < {epoch_alerts};"
+        )
+        count = 0
+        for row in messages_saved_count:
+            count = row[0]
+        result = cur.execute(
+            f"DELETE FROM messages_saved WHERE msg_time < {epoch_alerts};"
+        )
+
+        print(f"Pruned alerts database of {count} records")
+        sys.stdout.flush()
+        conn.commit()
 
     result = [i for i in cur.execute("PRAGMA auto_vacuum")]
     if result[0][0] != 0 or os.getenv("AUTO_VACUUM", default=False):

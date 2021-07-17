@@ -128,3 +128,4 @@ rootfs/webapp/static/images/*months.png
 rootfs/webapp/static/images/*year.png
 rootfs/webapp/data/acars-metadata.json
 rootfs/webapp/data/ground-stations.json
+package/
