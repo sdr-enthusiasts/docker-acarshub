@@ -36,7 +36,6 @@ def rename_files(path):
             if rename:
                 filenames[name] = new_name
                 os.rename(os.path.join(root, name), os.path.join(root, new_name))
-    print(filenames)
 
 
 def replace_file_names(path):
