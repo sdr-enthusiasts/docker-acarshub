@@ -159,7 +159,7 @@ def check_columns(cur, conn):
                 global messages_table
                 global messages_saved_table
                 global path_to_db
-                if not os.getenv("BACKUP_THE_DB", default=False) and not os.path.isfile(
+                if os.getenv("BACKUP_THE_DB", default=False) or not os.path.isfile(
                     path_to_db + "-pre2.2.0"
                 ):
                     print("Backing up the database")
