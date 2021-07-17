@@ -28,7 +28,8 @@ COPY rootfs/ /
 COPY acars-decoder-typescript.tgz /src/acars-decoder-typescript.tgz
 # hadolint ignore=DL3010
 COPY webapp.tar.gz /src/webapp.tar.gz
-# hadolint ignore=DL3008
+COPY rootfs/scripts /scripts
+# hadolint ignore=DL3008,SC2086
 RUN set -x && \
     TEMP_PACKAGES=() && \
     KEPT_PACKAGES=() && \
@@ -171,12 +172,19 @@ RUN set -x && \
     mkdir -p /src/airframes-acars-decoder && \
     tar xvf /src/acars-decoder-typescript.tgz -C /src/airframes-acars-decoder && \
     mkdir -p /webapp/static/airframes-acars-decoder && \
+    # delete the source files and testing artifacts
+    rm -rf /src/airframes-acars-decoder/package/dist/bin && \
+    find /src/airframes-acars-decoder/package/dist -type f -iname "*.ts" -delete && \
+    python3 /scripts/rename_acars_decoder_imports.py && \
+    rm /scripts/rename_acars_decoder_imports.py && \
     mv -v /src/airframes-acars-decoder/package/dist/* /webapp/static/airframes-acars-decoder/ && \
-    # patch airframes-acars-decoder package so imports work
-    find /webapp/static/airframes-acars-decoder -type f -iname '*.js' -exec sed -i """/import .* from '.*';/ s/';/.js';/""" {} \; && \
-    find /webapp/static/airframes-acars-decoder -type f -iname '*.js' -exec sed -i """/import .* from \".*\";/ s/\";/.js\";/""" {} \; && \
-    find /webapp/static/airframes-acars-decoder -type f -iname '*.js' -exec sed -i """/export .* from '.*';/ s/';/.js';/""" {} \; && \
-    find /webapp/static/airframes-acars-decoder -type f -iname '*.js' -exec sed -i """/export .* from \".*\";/ s/\";/.js\";/""" {} \; && \
+    # fix the import for Message Decoder
+    export INDEX_PATH=$(ls /webapp/static/js/index*.js) && \
+    export OLD_MD5=$(md5sum $INDEX_PATH | awk -F' ' '{print $1}') && \
+    echo $(basename /webapp/static/airframes-acars-decoder/MessageDecoder*.js) | xargs -I '{}' sed -i "s/MessageDecoder.js/$(echo {})/g" $INDEX_PATH && \
+    export NEW_MD5=$(md5sum $INDEX_PATH | awk -F' ' '{print $1}') && \
+    mv $INDEX_PATH $(echo $INDEX_PATH | sed -e "s/$OLD_MD5/$NEW_MD5/g") && \
+    sed -i "s/$(echo $OLD_MD5)/$(echo $NEW_MD5)/g" /webapp/templates/index.html && \
     # grab the ground stations and other data from airframes
     mkdir -p /webapp/data/ && \
     curl https://raw.githubusercontent.com/airframesio/data/master/json/vdl/ground-stations.json > /webapp/data/ground-stations.json && \
