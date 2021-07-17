@@ -251,12 +251,18 @@ export let live_map_page = {
 
   sort_list: function (plane_data: plane_data): adsb_target[] {
     return Object.values(this.adsb_planes).sort((a, b) => {
-      const callsign_a: number | string = a.position.flight
-        ? a.position.flight.trim()
-        : a.position.r || a.position.hex.toUpperCase();
-      const callsign_b: number | string = b.position.flight
-        ? b.position.flight.trim()
-        : b.position.r || b.position.hex.toUpperCase();
+      const callsign_a: number | string =
+        a.position.flight && a.position.flight !== ""
+          ? a.position.flight.trim()
+          : a.position.r && a.position.r !== ""
+          ? a.position.r
+          : a.position.hex.toUpperCase();
+      const callsign_b: number | string =
+        b.position.flight && b.position.flight !== ""
+          ? b.position.flight.trim()
+          : b.position.r && b.position.r !== ""
+          ? b.position.r
+          : b.position.hex.toUpperCase();
       const alt_a = a.position.alt_baro || 0;
       const alt_b = b.position.alt_baro || 0;
       const squawk_a = a.position.squawk || 0;
@@ -389,9 +395,12 @@ export let live_map_page = {
         : 0;
       const speed = current_plane.gs || 0;
       const squawk = current_plane.squawk || 0;
-      const callsign = current_plane.flight
-        ? current_plane.flight.trim()
-        : current_plane.r || current_plane.hex.toUpperCase();
+      const callsign =
+        current_plane.flight && current_plane.flight !== ""
+          ? current_plane.flight.trim()
+          : current_plane.r && current_plane.r !== ""
+          ? current_plane.r
+          : current_plane.hex.toUpperCase();
       plane_callsigns.push(callsign);
       const hex = current_plane.hex.toUpperCase();
       const tail: string = current_plane.r || <any>undefined;
@@ -528,9 +537,12 @@ export let live_map_page = {
           this.adsb_planes[plane].position.lon != null
         ) {
           const current_plane = this.adsb_planes[plane].position;
-          const callsign = current_plane.flight
-            ? current_plane.flight.trim()
-            : current_plane.r || current_plane.hex.toUpperCase();
+          const callsign =
+            current_plane.flight && current_plane.flight !== ""
+              ? current_plane.flight.trim()
+              : current_plane.r && current_plane.r !== ""
+              ? current_plane.r
+              : current_plane.hex.toUpperCase();
           const rotate: number = current_plane.track || 0;
           const alt: number = current_plane.alt_baro || 0;
           const hex: string = current_plane.hex
