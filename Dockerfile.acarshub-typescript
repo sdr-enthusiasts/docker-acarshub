@@ -3,13 +3,28 @@
 
 FROM node:16.5.0-buster-slim AS acarshub-typescript-builder
 
+ENV DOCKER_BUILD="true"
+
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
+COPY acarshub-typescript/package.json /acarshub-typescript/package.json
+COPY acarshub-typescript/package-lock.json /acarshub-typescript/package-lock.json
+
+#hadolint ignore=SC1072
+#hadolint ignore=DL3008
+RUN set -xe && \
+    pushd /acarshub-typescript && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends python3 && \
+    npm install && \
+    rm -rf /src/* /tmp/* /var/lib/apt/lists/*
 
 COPY acarshub-typescript/ /acarshub-typescript/
 
+#hadolint ignore=DL3052
 RUN set -xe && \
-    pushd acarshub-typescript && \
+    pushd /acarshub-typescript && \
     mkdir -p ../rootfs/webapp/static/js/ && \
-    npm install && \
     npm run buildprod && \
-    npm run installer
+    npm run installer && \
+    python3 rename_files.py

@@ -19,9 +19,7 @@ docker rm -v "$id"
 # build the acarshub typescript
 docker build --file ./Dockerfile.acarshub-typescript -t acarshub-typescript:latest .
 id=$(docker create acarshub-typescript:latest)
-mkdir -p ./webapp/static/
-docker cp "$id":/rootfs/webapp/static/js ./webapp/static/js
-docker cp "$id":/rootfs/webapp/static/css ./webapp/static/css
+docker cp "$id":/rootfs/webapp ./
 docker rm -v "$id"
 
 # Build & push latest

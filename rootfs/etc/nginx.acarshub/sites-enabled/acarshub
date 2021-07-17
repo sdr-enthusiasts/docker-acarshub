@@ -1,22 +1,62 @@
 server {
   listen 80 default_server;
-  root /var/www/html;
+  root /webapp;
   server_name _;
 
   proxy_http_version 1.1;
   proxy_set_header Upgrade $http_upgrade;
   proxy_set_header Connection $http_connection;
   proxy_set_header Host $host;
+  include /etc/nginx/mime.types;
 
-  location / {
-    proxy_pass http://127.0.0.1:8888;
+  # mjs is not in default mime types, add in here
+  types {
+    application/javascript mjs;
+  }
+	default_type application/octet-stream;
+  access_log off;
+
+  # point the stat image files to the dir they're dumped in, mark as no cache
+  location ~ (.*hour.*|.*week.*|.*month.*|.*year.*|.*days.*).png {
+    add_header Cache-Control 'no-store';
+    root /database/images;
   }
 
+  # cache all of the files
+  location ~ \.(css|js|png|jpg|jpeg|gif|ico|woff|woff2|ttf|svg|eot|otf|map|mjs|mp3)$ {
+    expires 30d;
+    add_header Cache-Control "public";
+    root /webapp;
+  }
+
+  # proxy pass the web socket to gunicorn
   location /socket.io {
     proxy_pass http://127.0.0.1:8888/socket.io;
   }
 
+  # proxy pass the aircraft.json file to tar1090
+  # <> is used as a place holder that the container startup rewrites to the correct URL
   location /data/aircraft.json {
     proxy_pass <>;
   }
+
+  # index page
+  location = / {
+    add_header Cache-Control 'no-store';
+    try_files /templates/index.html =404;
+  }
+
+  # pass the request for about.md to the correct file
+  location /aboutmd {
+    expires 30d;
+    try_files /templates/helppage.MD =404;
+  }
+
+  # valid URL paths for pages serve index.html
+  location ~ ^/(search|alerts|stats|adsb|about|status) {
+    add_header Cache-Control 'no-store';
+    try_files /templates/index.html =404;
+  }
+
+  # TODO: handle invalid URLS and redirect back to /
 }
