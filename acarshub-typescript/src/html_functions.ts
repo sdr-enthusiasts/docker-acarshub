@@ -205,7 +205,9 @@ export let html_functions = {
     let html_output = "";
     html_output += footer
       ? '<tr class="show_when_big"><td>'
-      : '<td class="text_top show_when_small">';
+      : '<td class="text_top">';
+
+    html_output += !footer ? '<div class="show_when_small">' : "";
 
     if (typeof message.tail !== "undefined") {
       html_output += `<span class="tail-tooltip">Tail: <strong><a href=\"https://flightaware.com/live/flight/${
@@ -349,7 +351,7 @@ export let html_functions = {
         html_output += "</span></span>";
       }
     }
-
+    html_output += !footer ? "</div>" : "";
     html_output += "</td></tr>";
 
     return html_output;
