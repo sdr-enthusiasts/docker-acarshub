@@ -610,8 +610,8 @@ export let live_map_page = {
 
             icon = svgShapeToURI(
               type_shape.name,
-              2,
-              type_shape.scale * 1.1
+              0.5,
+              type_shape.scale * 1.5
             ) as aircraft_icon;
             this.adsb_planes[current_plane.hex].icon = icon;
           }
