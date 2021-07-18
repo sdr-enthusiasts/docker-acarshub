@@ -522,6 +522,7 @@ def add_triggers(cur, db: Connection, table: str, columns: List[str]):
             ),
         )
     if execute_script != "":
+        upgraded = True
         print("Inserting FTS triggers")
         sys.stdout.flush()
         db.executescript(execute_script)
