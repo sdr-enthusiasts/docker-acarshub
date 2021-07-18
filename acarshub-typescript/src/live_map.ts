@@ -8,6 +8,7 @@ import {
   adsb_target,
   plane_data,
   svg_icon,
+  adsb_plane,
 } from "./interfaces";
 import jBox from "jbox";
 import { display_messages } from "./html_generator.js";
@@ -251,30 +252,20 @@ export let live_map_page = {
 
   sort_list: function (plane_data: plane_data): adsb_target[] {
     return Object.values(this.adsb_planes).sort((a, b) => {
-      const callsign_a: number | string =
-        a.position.flight && a.position.flight.trim() !== ""
-          ? a.position.flight.trim()
-          : a.position.r && a.position.r !== ""
-          ? a.position.r
-          : a.position.hex.toUpperCase();
-      const callsign_b: number | string =
-        b.position.flight && b.position.flight.trim() !== ""
-          ? b.position.flight.trim()
-          : b.position.r && b.position.r !== ""
-          ? b.position.r
-          : b.position.hex.toUpperCase();
-      const alt_a = a.position.alt_baro || 0;
-      const alt_b = b.position.alt_baro || 0;
-      const squawk_a = a.position.squawk || 0;
-      const squawk_b = b.position.squawk || 0;
-      const speed_a = a.position.gs || 0;
-      const speed_b = b.position.gs || 0;
-      const tail_a: string = a.position.r || <any>undefined;
-      const tail_b: string = b.position.r || <any>undefined;
+      const callsign_a: string = this.get_callsign(a.position);
+      const callsign_b: string = this.get_callsign(b.position);
+      const alt_a: number | string = this.get_alt(a.position);
+      const alt_b: number | string = this.get_alt(b.position);
+      const squawk_a: number = this.get_sqwk(a.position);
+      const squawk_b: number = this.get_sqwk(b.position);
+      const speed_a: number = this.get_speed(a.position);
+      const speed_b: number = this.get_speed(b.position);
+      const tail_a: string = this.get_tail(a.position);
+      const tail_b: string = this.get_tail(b.position);
       let num_msgs_a: number = <any>undefined;
       let num_msgs_b: number = <any>undefined;
-      const hex_a = a.position.hex;
-      const hex_b = b.position.hex;
+      const hex_a = this.get_hex(a.position);
+      const hex_b = this.get_hex(b.position);
 
       num_msgs_a = this.match_plane(plane_data, callsign_a, tail_a, hex_a);
       num_msgs_b = this.match_plane(plane_data, callsign_b, tail_b, hex_b);
@@ -293,7 +284,7 @@ export let live_map_page = {
           if (String(alt_a) == "ground" && String(alt_b) != "ground") return -1;
           else if (String(alt_b) == "ground" && String(alt_a) != "ground")
             return 1;
-          return alt_a - alt_b;
+          return Number(alt_a) - Number(alt_b);
         } else {
           if (String(alt_a) == "ground" && String(alt_b) != "ground") return 1;
           else if (String(alt_b) == "ground" && String(alt_a) != "ground")
@@ -305,7 +296,7 @@ export let live_map_page = {
               return 1;
             }
           }
-          return alt_b - alt_a;
+          return Number(alt_b) - Number(alt_a);
         }
       } else if (this.current_sort === "code") {
         if (squawk_a == squawk_b) {
@@ -370,6 +361,58 @@ export let live_map_page = {
     });
   },
 
+  get_callsign: function (plane: adsb_plane): string {
+    return plane.flight && plane.flight.trim() !== ""
+      ? plane.flight.trim()
+      : plane.r && plane.r !== ""
+      ? plane.r
+      : plane.hex.toUpperCase();
+  },
+
+  get_sqwk: function (plane: adsb_plane): number {
+    return plane.squawk || 0;
+  },
+
+  get_alt: function (plane: adsb_plane): string | number {
+    return plane.alt_baro ? String(plane.alt_baro).toUpperCase() : 0;
+  },
+
+  get_speed: function (plane: adsb_plane): number {
+    return plane.gs ? plane.gs : 0;
+  },
+
+  get_tail: function (plane: adsb_plane): string {
+    return plane.r ? plane.r : <any>undefined;
+  },
+
+  get_hex: function (plane: adsb_plane): string {
+    return plane.hex ? plane.hex.toUpperCase() : <any>undefined;
+  },
+
+  get_baro_rate: function (plane: adsb_plane): number {
+    return plane.baro_rate ? plane.baro_rate : 0;
+  },
+
+  get_heading: function (plane: adsb_plane): number {
+    return plane.track || 0;
+  },
+
+  get_ac_type: function (plane: adsb_plane): string {
+    return plane.t || <any>undefined;
+  },
+
+  get_icon: function (plane: string): aircraft_icon | null {
+    return this.adsb_planes[plane].icon || <any>undefined;
+  },
+
+  get_lat: function (plane: adsb_plane): number {
+    return plane.lat || 0;
+  },
+
+  get_lon: function (plane: adsb_plane): number {
+    return plane.lon || 0;
+  },
+
   airplaneList: function (): void {
     const plane_data: plane_data = find_matches();
     let num_planes = 0;
@@ -390,21 +433,14 @@ export let live_map_page = {
       const current_plane = sorted[plane].position;
       num_planes++;
       if (current_plane.lat) num_planes_targets++;
-      let alt = current_plane.alt_baro
-        ? String(current_plane.alt_baro).toUpperCase()
-        : 0;
-      const speed = current_plane.gs || 0;
-      const squawk = current_plane.squawk || 0;
-      const callsign =
-        current_plane.flight && current_plane.flight.trim() !== ""
-          ? current_plane.flight.trim()
-          : current_plane.r && current_plane.r !== ""
-          ? current_plane.r
-          : current_plane.hex.toUpperCase();
+      const alt = this.get_alt(current_plane);
+      const speed = this.get_speed(current_plane);
+      const squawk = this.get_sqwk(current_plane);
+      const callsign = this.get_callsign(current_plane);
       plane_callsigns.push(callsign);
-      const hex = current_plane.hex.toUpperCase();
-      const tail: string = current_plane.r || <any>undefined;
-      const baro_rate = current_plane.baro_rate || 0;
+      const hex = this.get_hex(current_plane);
+      const tail: string = this.get_tail(current_plane);
+      const baro_rate = this.get_baro_rate(current_plane);
       let num_messages: number = <any>undefined;
 
       num_messages = this.match_plane(plane_data, callsign, tail, hex);
@@ -537,24 +573,18 @@ export let live_map_page = {
           this.adsb_planes[plane].position.lon != null
         ) {
           const current_plane = this.adsb_planes[plane].position;
-          const callsign =
-            current_plane.flight && current_plane.flight.trim() !== ""
-              ? current_plane.flight.trim()
-              : current_plane.r && current_plane.r !== ""
-              ? current_plane.r
-              : current_plane.hex.toUpperCase();
-          const rotate: number = current_plane.track || 0;
-          const alt: number = current_plane.alt_baro || 0;
-          const hex: string = current_plane.hex
-            ? current_plane.hex.toUpperCase()
-            : "";
-          const speed: number = current_plane.gs || 0;
-          const squawk: number = current_plane.squawk || 0;
-          const baro_rate: number = current_plane.baro_rate || 0;
-          const tail: string = current_plane.r || <any>undefined;
-          const ac_type: string = current_plane.t || <any>undefined;
-          let icon: aircraft_icon | null =
-            this.adsb_planes[plane].icon || <any>undefined;
+          const callsign = this.get_callsign(current_plane);
+          const rotate: number = this.get_heading(current_plane);
+          const alt: string | number = this.get_alt(current_plane);
+          const hex: string = this.get_hex(current_plane);
+          const speed: number = this.get_speed(current_plane);
+          const squawk: number = this.get_sqwk(current_plane);
+          const baro_rate: number = this.get_baro_rate(current_plane);
+          const tail: string = this.get_tail(current_plane);
+          const ac_type: string = this.get_ac_type(current_plane);
+          const lon: number = this.get_lon(current_plane);
+          const lat: number = this.get_lat(current_plane);
+          let icon: aircraft_icon | null = this.get_icon(plane);
           let num_messages: number = <any>null; // need to cast this to any for TS to compile.
 
           num_messages = this.match_plane(plane_data, callsign, tail, hex);
@@ -619,13 +649,10 @@ export let live_map_page = {
               iconSize: [icon.width, icon.height],
             });
 
-            let plane_marker = L.marker(
-              [current_plane.lat || 0, current_plane.lon || 0],
-              {
-                icon: plane_icon,
-                riseOnHover: true,
-              }
-            );
+            let plane_marker = L.marker([lat, lon], {
+              icon: plane_icon,
+              riseOnHover: true,
+            });
 
             plane_marker.addTo(this.layerGroupPlanes);
             $(`#${callsign.replace("~", "")}_marker`).on({
@@ -661,10 +688,7 @@ export let live_map_page = {
                 html: datablock,
               });
               let datablock_marker = new L.Marker(
-                this.offset_datablock([
-                  current_plane.lat || 0,
-                  current_plane.lon || 0,
-                ]) as L.LatLngTuple,
+                this.offset_datablock([lat, lon]) as L.LatLngTuple,
                 { icon: datablock_icon }
               );
               datablock_marker.addTo(this.layerGroupPlaneDatablocks);
