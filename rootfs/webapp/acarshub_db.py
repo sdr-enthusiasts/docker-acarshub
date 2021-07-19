@@ -829,7 +829,7 @@ def search_alerts(icao=None, tail=None, flight=None):
                             query_string += f' OR {key}:"{term}"*'
 
             if query_string != "":
-                query_string = f'SELECT * FROM messages WHERE id IN (SELECT rowid FROM messages_fts WHERE messages_fts MATCH "{query_string}")'
+                query_string = f"SELECT * FROM messages WHERE id IN (SELECT rowid FROM messages_fts WHERE messages_fts MATCH '{query_string}')"
 
             if alert_terms is not None:
                 terms_string = f"""SELECT id, message_type, msg_time, station_id, toaddr, fromaddr, depa, dsta, eta, gtout, gtin, wloff, wlin,
