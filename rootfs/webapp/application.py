@@ -548,6 +548,11 @@ def request_graphs(message, namespace):
     socketio.emit(
         "alert_terms", {"data": acarshub.getAlerts()}, to=requester, namespace="/main"
     )
+    socketio.emit(
+        "signal",
+        {"levels": acarshub.acarshub_db.get_signal_levels()},
+        namespace="/main",
+    )
 
 
 # handle a query request from the browser
