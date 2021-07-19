@@ -1039,13 +1039,19 @@ div.plane_element {
 .sidebar_no_hover_with_acars:hover,
 .sidebar_no_hover_with_acars:focus,
 .sidebar_no_hover_with_acars:hover a,
-.sidebar_no_hover_with_acars:focus a,
+.sidebar_no_hover_with_acars:focus a {
+  background-color: black !important;
+  color: green !important;
+}
+
+.sidebar_alert_hovered_from_map,
+.sidebar_alert_hovered_from_map a,
 .sidebar_alert:hover,
 .sidebar_alert:focus,
 .sidebar_alert:hover a,
 .sidebar_alert:focus a {
   background-color: black !important;
-  color: green !important;
+  color: red !important;
 }
 
 .sidebar_hovered_from_map_acars .plane_element a {

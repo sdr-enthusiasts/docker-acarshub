@@ -474,11 +474,20 @@ export let live_map_page = {
           this.current_hovered_from_map !== "" &&
           this.current_hovered_from_map == callsign.replace("~", "") &&
           callsign &&
-          num_messages
+          num_messages &&
+          !num_alerts
         ) {
           styles = " sidebar_hovered_from_map_acars";
-        } else if (this.current_hovered_from_map == callsign.replace("~", "")) {
+        } else if (
+          this.current_hovered_from_map == callsign.replace("~", "") &&
+          !num_alerts
+        ) {
           styles = " sidebar_hovered_from_map_no_acars";
+        } else if (
+          num_alerts &&
+          this.current_hovered_from_map == callsign.replace("~", "")
+        ) {
+          styles = " sidebar_alert_hovered_from_map";
         } else if (num_alerts) {
           styles = " sidebar_alert";
         } else if (callsign && num_messages && styles == "") {
