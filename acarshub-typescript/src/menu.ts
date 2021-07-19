@@ -25,23 +25,27 @@ export let menu = {
     vdlm: boolean = false
   ): void {
     let text: string = "";
-    if (acars == true && vdlm == true) {
+    const acars_prefix = acars && vdlm ? "'acars'" : "''";
+    const vdlm_prefix = vdlm && acars ? "'vdlm'" : "''";
+    if (acars && vdlm) {
       text =
         '<a href="javascript:update_prefix(\'\')" id="combined_graphs" class="spread_text">Combined Graphs</a>';
     }
 
     if (acars) {
-      text +=
-        ' | <a href="javascript:update_prefix(\'acars\')" id="acars_graphs" class="spread_text">ACARS Graphs</a>';
+      text += `${
+        acars && vdlm ? " | " : ""
+      }<a href="javascript:update_prefix(${acars_prefix})" id="acars_graphs" class="spread_text">ACARS Graphs</a>`;
     }
 
     if (vdlm) {
-      text +=
-        ' | <a href="javascript:update_prefix(\'vdlm\')" id="vdlm_graphs" class="spread_text">VDLM Graphs</a>';
+      text += `${
+        acars && vdlm ? " | " : ""
+      }<a href="javascript:update_prefix(${vdlm_prefix})" id="vdlm_graphs" class="spread_text">VDLM Graphs</a>`;
     }
 
     text +=
-      '| <a href="javascript:update_prefix(\'error\')" id="error_graphs" class="spread_text">Message Error Graphs</a>';
+      ' | <a href="javascript:update_prefix(\'error\')" id="error_graphs" class="spread_text">Message Error Graphs</a>';
     $("#stat_menu").html(text);
   },
 
