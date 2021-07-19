@@ -127,6 +127,8 @@ export interface search_html_msg {
 
 export interface plane {
   identifiers: string[];
+  has_alerts: boolean;
+  num_alerts: number;
   messages: acars_msg[];
 }
 
@@ -267,7 +269,9 @@ export interface aircraft_icon {
 
 export interface plane_data {
   [index: string]: {
-    id: number;
+    count: number;
+    has_alerts: boolean;
+    num_alerts: number;
   };
 }
 
@@ -282,4 +286,16 @@ export interface alert_matched {
   icao: string[] | null;
   flight: string[] | null;
   tail: string[] | null;
+}
+
+export interface plane_match {
+  messages: acars_msg[];
+  has_alerts: boolean;
+  num_alerts: number;
+}
+
+export interface plane_num_msgs_and_alert {
+  num_messages: number;
+  has_alerts: boolean;
+  num_alerts: number;
 }

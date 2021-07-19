@@ -9,6 +9,8 @@ import {
   plane_data,
   svg_icon,
   adsb_plane,
+  plane_match,
+  plane_num_msgs_and_alert,
 } from "./interfaces";
 import jBox from "jbox";
 import { display_messages } from "./html_generator.js";
@@ -201,7 +203,7 @@ export let live_map_page = {
   setSort: function (sort: string = ""): void {
     if (sort === "") return;
     if (sort === this.current_sort) this.ascending = !this.ascending;
-    else if (sort === "msgs" || sort === "code") this.ascending = false;
+    else if (sort === "msgs" || sort === "alerts") this.ascending = false;
     // two special cases where we want the default sort to be reversed
     else this.ascending = true;
     this.current_sort = sort;
@@ -224,30 +226,46 @@ export let live_map_page = {
     callsign: string,
     tail: string,
     hex: string
-  ): number {
+  ): plane_num_msgs_and_alert {
     let num_messages: number = <any>undefined;
+    let alert: boolean = false;
+    let num_alerts: number = <any>undefined;
 
     if (num_messages == undefined && plane_data[hex.toUpperCase()]) {
-      num_messages = plane_data[hex.toUpperCase()].id;
+      num_messages = plane_data[hex.toUpperCase()].count;
+      alert = plane_data[hex.toUpperCase()].has_alerts;
+      num_alerts = plane_data[hex.toUpperCase()].num_alerts;
     }
     if (num_messages == undefined && plane_data[callsign]) {
-      num_messages = plane_data[callsign].id;
+      num_messages = plane_data[callsign].count;
+      alert = plane_data[callsign].has_alerts;
+      num_alerts = plane_data[callsign].num_alerts;
     }
     if (num_messages == undefined && plane_data[callsign.replace("-", "")]) {
-      num_messages = plane_data[callsign.replace("-", "")].id;
+      num_messages = plane_data[callsign.replace("-", "")].count;
+      alert = plane_data[callsign.replace("-", "")].has_alerts;
+      num_alerts = plane_data[callsign.replace("-", "")].num_alerts;
     }
     if (num_messages == undefined && tail != undefined && plane_data[tail]) {
-      num_messages = plane_data[tail].id;
+      num_messages = plane_data[tail].count;
+      alert = plane_data[tail].has_alerts;
+      num_alerts = plane_data[tail].num_alerts;
     }
     if (
       num_messages == undefined &&
       tail != undefined &&
       plane_data[tail.replace("-", "")]
     ) {
-      num_messages = plane_data[tail.replace("-", "")].id;
+      num_messages = plane_data[tail.replace("-", "")].count;
+      alert = plane_data[tail.replace("-", "")].has_alerts;
+      num_alerts = plane_data[tail.replace("-", "")].num_alerts;
     }
 
-    return num_messages || 0;
+    return {
+      num_messages: num_messages || 0,
+      has_alerts: alert,
+      num_alerts: num_alerts || 0,
+    };
   },
 
   sort_list: function (plane_data: plane_data): adsb_target[] {
@@ -256,19 +274,18 @@ export let live_map_page = {
       const callsign_b: string = this.get_callsign(b.position);
       const alt_a: number | string = this.get_alt(a.position);
       const alt_b: number | string = this.get_alt(b.position);
-      const squawk_a: number = this.get_sqwk(a.position);
-      const squawk_b: number = this.get_sqwk(b.position);
       const speed_a: number = this.get_speed(a.position);
       const speed_b: number = this.get_speed(b.position);
       const tail_a: string = this.get_tail(a.position);
       const tail_b: string = this.get_tail(b.position);
-      let num_msgs_a: number = <any>undefined;
-      let num_msgs_b: number = <any>undefined;
       const hex_a = this.get_hex(a.position);
       const hex_b = this.get_hex(b.position);
-
-      num_msgs_a = this.match_plane(plane_data, callsign_a, tail_a, hex_a);
-      num_msgs_b = this.match_plane(plane_data, callsign_b, tail_b, hex_b);
+      const details_a = this.match_plane(plane_data, callsign_a, tail_a, hex_a);
+      const details_b = this.match_plane(plane_data, callsign_b, tail_b, hex_b);
+      const num_msgs_a = details_a.num_messages;
+      const num_msgs_b = details_b.num_messages;
+      const has_alerts_a = details_a.num_alerts;
+      const has_alerts_b = details_b.num_alerts;
 
       if (this.current_sort === "alt") {
         if (alt_a == alt_b) {
@@ -281,13 +298,14 @@ export let live_map_page = {
           }
         }
         if (this.ascending) {
-          if (String(alt_a) == "ground" && String(alt_b) != "ground") return -1;
-          else if (String(alt_b) == "ground" && String(alt_a) != "ground")
+          console.log(alt_a);
+          if (String(alt_a) == "GROUND" && String(alt_b) != "GROUND") return -1;
+          else if (String(alt_b) == "ground" && String(alt_a) != "GROUND")
             return 1;
           return Number(alt_a) - Number(alt_b);
         } else {
-          if (String(alt_a) == "ground" && String(alt_b) != "ground") return 1;
-          else if (String(alt_b) == "ground" && String(alt_a) != "ground")
+          if (String(alt_a) == "GROUND" && String(alt_b) != "GROUND") return 1;
+          else if (String(alt_b) == "GROUND" && String(alt_a) != "GROUND")
             return -1;
           else if (alt_a == alt_b) {
             if (callsign_a < callsign_b) {
@@ -298,8 +316,8 @@ export let live_map_page = {
           }
           return Number(alt_b) - Number(alt_a);
         }
-      } else if (this.current_sort === "code") {
-        if (squawk_a == squawk_b) {
+      } else if (this.current_sort === "alerts") {
+        if (has_alerts_a == has_alerts_b) {
           if (callsign_a != callsign_b) {
             if (callsign_a < callsign_b) {
               return -1;
@@ -309,9 +327,9 @@ export let live_map_page = {
           }
         }
         if (this.ascending) {
-          return squawk_a - squawk_b;
+          return has_alerts_a - has_alerts_b;
         } else {
-          return squawk_b - squawk_a;
+          return has_alerts_b - has_alerts_a;
         }
       } else if (this.current_sort === "speed") {
         if (speed_a == speed_b) {
@@ -422,7 +440,7 @@ export let live_map_page = {
     let acars_planes = 0;
     let acars_message_count = 0;
     const alt_width = 21;
-    const code_width = 15;
+    const alert_width = 15;
     const speed_width = 18;
     const msgs_width = 10;
     const callsign_width = 25;
@@ -441,9 +459,9 @@ export let live_map_page = {
       const hex = this.get_hex(current_plane);
       const tail: string = this.get_tail(current_plane);
       const baro_rate = this.get_baro_rate(current_plane);
-      let num_messages: number = <any>undefined;
-
-      num_messages = this.match_plane(plane_data, callsign, tail, hex);
+      const details = this.match_plane(plane_data, callsign, tail, hex);
+      const num_messages = details.num_messages;
+      const num_alerts = details.num_alerts;
 
       if (num_messages) {
         acars_planes++;
@@ -461,6 +479,8 @@ export let live_map_page = {
           styles = " sidebar_hovered_from_map_acars";
         } else if (this.current_hovered_from_map == callsign.replace("~", "")) {
           styles = " sidebar_hovered_from_map_no_acars";
+        } else if (num_alerts) {
+          styles = " sidebar_alert";
         } else if (callsign && num_messages && styles == "") {
           styles = " sidebar_no_hover_with_acars";
         }
@@ -484,11 +504,11 @@ export let live_map_page = {
             ? '&nbsp;<i class="fas fa-arrow-down"></i>'
             : ""
         }</div>
-        <div class="plane_element" style="width: ${code_width}%;">${
-          squawk || "&nbsp;"
-        }</div>
         <div class="plane_element" style="width: ${speed_width}%;">${
           Math.round(speed) || "&nbsp;"
+        }</div>
+        <div class="plane_element" style="width: ${alert_width}%;">${
+          num_alerts || "&nbsp;"
         }</div>
         <div class="plane_element" style="width: ${msgs_width}%;">${
           num_messages || "&nbsp;"
@@ -502,8 +522,8 @@ export let live_map_page = {
     <div class="plane_list_no_hover" style="font-weight: bold;border-bottom: 1px solid black;color: var(--blue-highlight) !important;background-color: var(--grey-bg)">
     <div class="plane_element plane_header noleft" style="width: ${callsign_width}%"><a href="javascript:setSort('callsign')">Callsign</a></div>
     <div class="plane_element plane_header" style="width: ${alt_width}%;"><a href="javascript:setSort('alt')">Alt</a></div>
-    <div class="plane_element plane_header" style="width: ${code_width}%;"><a href="javascript:setSort('code')">Code</a></div>
     <div class="plane_element plane_header" style="width: ${speed_width}%;"><a href="javascript:setSort('speed')">Speed</a></div>
+    <div class="plane_element plane_header" style="width: ${alert_width}%;"><a href="javascript:setSort('alerts')">Alert</a></div>
     <div class="plane_element plane_header" style="width: ${msgs_width}%;"><a href="javascript:setSort('msgs')">Msgs</a></div></div>` +
       html;
     $("#planes").html(html);
@@ -587,18 +607,11 @@ export let live_map_page = {
           let icon: aircraft_icon | null = this.get_icon(plane);
           let num_messages: number = <any>null; // need to cast this to any for TS to compile.
 
-          num_messages = this.match_plane(plane_data, callsign, tail, hex);
+          const details = this.match_plane(plane_data, callsign, tail, hex);
+          num_messages = details.num_messages;
+          const alert: boolean = details.has_alerts;
 
-          let color: string = num_messages ? "green" : "var(--blue-highlight)";
-          let icon_old = false;
-
-          if (icon != null) {
-            if (!icon.svg.includes(color)) {
-              icon_old = true;
-            }
-          }
-
-          if (icon == null || icon_old) {
+          if (icon == null) {
             const type_shape: svg_icon = getBaseMarker(
               String(current_plane.category),
               current_plane.t,
@@ -619,7 +632,7 @@ export let live_map_page = {
           const popup_text = `<div>${
             callsign !== hex ? callsign + "/" : ""
           }${hex}<hr>Altitude: ${String(alt).toUpperCase()}${
-            String(alt) !== "ground" ? " ft" : ""
+            String(alt) !== "GROUND" ? " ft" : ""
           }
           ${
             baro_rate ? "<br>Altitude Rate: " + baro_rate + "fpm" : ""
@@ -640,6 +653,8 @@ export let live_map_page = {
               )}_marker" class="datablock ${
                 this.current_hovered_from_sidebar == callsign.replace("~", "")
                   ? "airplane_orange"
+                  : alert
+                  ? "airplane_red"
                   : num_messages
                   ? "airplane_green"
                   : "airplane_blue"
@@ -716,11 +731,12 @@ export let live_map_page = {
       hex: plane_hex,
       tail: plane_tail,
     };
-    const matches: acars_msg[] = get_match(
+    const plane_details: plane_match = get_match(
       plane_callsign,
       plane_hex,
       plane_tail
     );
+    const matches = plane_details.messages;
     if (matches.length === 0) return;
     if (this.modal_content == "") {
       this.modal_current_tab ==
@@ -907,6 +923,11 @@ export let live_map_page = {
               label: "Planes Without ACARS Messages",
               type: "image",
               url: "static/images/legend-without-acars.svg",
+            },
+            {
+              label: "Planes With ACARS Alerts",
+              type: "image",
+              url: "static/images/legend-has-acars-alert.svg",
             },
           ],
         })
