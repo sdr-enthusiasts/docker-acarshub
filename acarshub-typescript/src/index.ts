@@ -26,6 +26,7 @@ import {
   alert_matched,
   plane_data,
   acars_msg,
+  plane_match,
 } from "./interfaces.js";
 
 import { live_map_page } from "./live_map.js";
@@ -477,7 +478,7 @@ export function get_match(
   callsign: string = "",
   hex: string = "",
   tail: string = ""
-): acars_msg[] {
+): plane_match {
   return live_messages_page.get_match(callsign, hex, tail);
 }
 

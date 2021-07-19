@@ -10,6 +10,7 @@ import {
   aircraft_icon,
   plane_data,
   alert_matched,
+  plane_match,
 } from "./interfaces.js";
 import jBox from "jbox";
 import "jbox/dist/jBox.all.css";
@@ -697,6 +698,13 @@ export let live_messages_page = {
             // If the message was found, and not rejected, we'll append it to the message group
             if (!rejected) {
               this.lm_msgs_received.planes[index_new].messages.unshift(new_msg);
+              if (
+                !this.lm_msgs_received.planes[index_new].has_alerts &&
+                matched.was_found
+              )
+                this.lm_msgs_received.planes[index_new].has_alerts = true;
+              if (matched.was_found)
+                this.lm_msgs_received.planes[index_new].num_alerts += 1;
             }
 
             this.lm_msgs_received.planes.forEach((item, i) => {
@@ -717,6 +725,8 @@ export let live_messages_page = {
           if (new_icao_flight) ids.push(new_icao_flight);
           if (new_tail) ids.push(new_tail);
           this.lm_msgs_received.unshift({
+            has_alerts: matched.was_found,
+            num_alerts: matched.was_found ? 1 : 0,
             messages: [new_msg],
             identifiers: ids,
           } as plane);
@@ -750,8 +760,9 @@ export let live_messages_page = {
     callsign: string = "",
     hex: string = "",
     tail: string = ""
-  ): acars_msg[] {
-    if (callsign === "" && hex === "" && tail === "") return [];
+  ): plane_match {
+    if (callsign === "" && hex === "" && tail === "")
+      return { messages: [] as acars_msg[], has_alerts: false } as plane_match;
     for (const planes of this.lm_msgs_received.planes) {
       // check to see if any of the inputs match the message. msg.tail needs to be checked
       // against both callsign and tail because sometimes the tail is the flight/callsign
@@ -760,18 +771,32 @@ export let live_messages_page = {
         planes.identifiers.includes(callsign) ||
         planes.identifiers.includes(tail)
       ) {
-        return planes.messages;
+        return {
+          messages: planes.messages,
+          has_alerts: planes.has_alerts,
+          num_alerts: planes.num_alerts,
+        } as plane_match;
       }
     }
-    return [] as acars_msg[];
+    return {
+      messages: [] as acars_msg[],
+      has_alerts: false,
+      num_alerts: 0,
+    } as plane_match;
   },
 
   find_matches: function (): plane_data {
     let output: plane_data = {};
     for (const planes of this.lm_msgs_received.planes) {
       const length_of_messages = planes.messages.length;
+      const alert = planes.has_alerts;
+      const num_alerts = planes.num_alerts;
       planes.identifiers.forEach((identifier) => {
-        output[identifier] = { id: length_of_messages };
+        output[identifier] = {
+          count: length_of_messages,
+          has_alerts: alert,
+          num_alerts: num_alerts,
+        };
       });
     }
     return output;

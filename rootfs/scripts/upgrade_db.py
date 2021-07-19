@@ -348,6 +348,8 @@ def check_tables(conn, cur):
         sys.stdout.flush()
         enable_fts(conn, "messages", columns)
 
+    add_triggers(cur, conn, "messages", columns)
+
 
 def de_null(cur):
     # we need to ensure the columns don't have any NULL values
@@ -454,6 +456,77 @@ def add_indexes(cur):
         cur.execute(
             'CREATE INDEX "ix_messages_msgtime" ON "messages" ("msg_time" DESC)'
         )
+
+
+def add_triggers(cur, db: Connection, table: str, columns: List[str]):
+    global upgraded
+    column_list = ",".join(f"{c}" for c in columns)
+    column_list_without = ",".join(
+        f"{c}" for c in columns if c.find(" UNINDEXED") == -1
+    )
+
+    triggers = [
+        i[1] for i in cur.execute("select * from sqlite_master where type = 'trigger';")
+    ]
+    execute_script = ""
+
+    if f"{table}_fts_insert" not in triggers:
+        execute_script += """
+        CREATE TRIGGER {table}_fts_insert AFTER INSERT ON messages
+        BEGIN
+            INSERT INTO {table}_fts (rowid, {column_list}) VALUES (new.id, {new_columns});
+        END;
+        """.format(
+            table=table,
+            column_list=column_list_without,
+            new_columns=",".join(
+                f"new.{c}" for c in columns if c.find(" UNINDEXED") == -1
+            ),
+            old_columns=",".join(
+                f"old.{c}" for c in columns if c.find(" UNINDEXED") == -1
+            ),
+        )
+
+    if f"{table}_fts_delete" not in triggers:
+        execute_script += """
+        CREATE TRIGGER {table}_fts_delete AFTER DELETE ON messages
+        BEGIN
+            INSERT INTO {table}_fts ({table}_fts, rowid, {column_list}) VALUES ('delete', old.id, {old_columns});
+        END;
+        """.format(
+            table=table,
+            column_list=column_list_without,
+            new_columns=",".join(
+                f"new.{c}" for c in columns if c.find(" UNINDEXED") == -1
+            ),
+            old_columns=",".join(
+                f"old.{c}" for c in columns if c.find(" UNINDEXED") == -1
+            ),
+        )
+
+    if f"{table}_fts_update" not in triggers:
+        execute_script += """
+        CREATE TRIGGER {table}_fts_update AFTER UPDATE ON messages
+        BEGIN
+            INSERT INTO {table}_fts ({table}_fts, rowid, {column_list}) VALUES ('delete', old.id, {old_columns});
+            INSERT INTO {table}_fts (rowid, {column_list}) VALUES (new.id, {new_columns});
+        END;
+        """.format(
+            table=table,
+            column_list=column_list_without,
+            new_columns=",".join(
+                f"new.{c}" for c in columns if c.find(" UNINDEXED") == -1
+            ),
+            old_columns=",".join(
+                f"old.{c}" for c in columns if c.find(" UNINDEXED") == -1
+            ),
+        )
+    if execute_script != "":
+        upgraded = True
+        print("Inserting FTS triggers")
+        sys.stdout.flush()
+        db.executescript(execute_script)
+        conn.executescript('INSERT INTO messages_fts(messages_fts) VALUES ("rebuild")')
 
 
 def create_db(cur):

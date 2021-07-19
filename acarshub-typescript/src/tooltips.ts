@@ -36,7 +36,7 @@ export let tooltip = {
   }),
 
   flight_tooltip: new jBox("Mouse", {
-    title: "Flight Number/Callsign",
+    title: "Aircraft Callsign",
     getContent: "data-jbox-content",
     closeOnMouseleave: true,
     adjustTracker: true,

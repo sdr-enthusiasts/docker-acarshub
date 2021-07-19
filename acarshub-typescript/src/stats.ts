@@ -237,7 +237,9 @@ export let stats_page = {
         const canvas: HTMLCanvasElement = <HTMLCanvasElement>(
           document.getElementById("frequencies_acars")
         );
-        const ctx: CanvasRenderingContext2D = canvas.getContext("2d")!;
+        const ctx: CanvasRenderingContext2D = canvas
+          ? canvas.getContext("2d")!
+          : null!;
         if (ctx != null) {
           this.chart_frequency_data_acars = new Chart(ctx, {
             // The type of chart we want to create
@@ -321,7 +323,9 @@ export let stats_page = {
         const canvas: HTMLCanvasElement = <HTMLCanvasElement>(
           document.getElementById("frequencies_vdlm")
         );
-        const ctx: CanvasRenderingContext2D = canvas.getContext("2d")!;
+        const ctx: CanvasRenderingContext2D = canvas
+          ? canvas.getContext("2d")!
+          : null!;
         if (ctx != null) {
           this.chart_frequency_data_vdlm = new Chart(ctx, {
             // The type of chart we want to create

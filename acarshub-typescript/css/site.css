@@ -128,6 +128,7 @@ ol>li {
 td {
   padding: 7px;
 }
+
 hr {
   display: block;
   margin-top: 0.5em;
@@ -280,7 +281,7 @@ div#log.left {
 }
 
 a.spread_text:hover {
-  color: #FFF;
+  color: black;
 }
 
 select {
@@ -934,23 +935,34 @@ canvas {
 }
 
 .airplane_blue:hover,
-.airplane_green:hover {
+.airplane_green:hover,
+.airplane_red:hover {
   fill: orange;
+  paint-order: stroke;
 }
 
 .airplane_green {
   fill: green;
   stroke: black;
+  paint-order: stroke;
 }
 
 .airplane_blue {
   fill: var(--blue-highlight);
   stroke: black;
+  paint-order: stroke;
 }
 
 .airplane_orange {
   fill: orange;
   stroke: black;
+  paint-order: stroke;
+}
+
+.airplane_red {
+  fill: red;
+  stroke: black;
+  paint-order: stroke;
 }
 
 svg {
@@ -1027,13 +1039,21 @@ div.plane_element {
 .sidebar_no_hover_with_acars:hover,
 .sidebar_no_hover_with_acars:focus,
 .sidebar_no_hover_with_acars:hover a,
-.sidebar_no_hover_with_acars:focus a {
+.sidebar_no_hover_with_acars:focus a,
+.sidebar_alert:hover,
+.sidebar_alert:focus,
+.sidebar_alert:hover a,
+.sidebar_alert:focus a {
   background-color: black !important;
   color: green !important;
 }
 
 .sidebar_hovered_from_map_acars .plane_element a {
   color: green !important;
+}
+
+.sidebar_alert {
+  background-color: red !important;
 }
 
 .plane_element a {

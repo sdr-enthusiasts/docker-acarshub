@@ -111,14 +111,14 @@ export let search_page = {
         </td>
       </tr>
 
-      <tr class="search_label">
+      <!-- <tr class="search_label">
         <td>
           <label>Message Number:</label>
         </td>
         <td class="search_term">
           <input type="text" id="search_msgno">
         </td>
-      </tr>
+      </tr> --!>
 
       <tr class="search_label">
         <td>
