@@ -50,4 +50,9 @@ export let images = {
 
   toggle_extended_datablocks_on: '<i class="fas fa-toggle-on"></i>' as string,
   toggle_extended_datablocks_off: '<i class="fas fa-toggle-off"></i>' as string,
+
+  mark_all_messages_read: '<i class="fas fa-check"></i>' as string,
+
+  toggle_unread_messages_on: '<i class="fas fa-square"></i>' as string,
+  toggle_unread_messages_off: '<i class="far fa-square"></i>' as string,
 };

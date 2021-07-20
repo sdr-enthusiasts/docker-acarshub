@@ -177,6 +177,33 @@ export let tooltip = {
     outside: "xy",
   }),
 
+  toggle_unread: new jBox("Tooltip", {
+    title: "Toggle Unread Messages",
+    content:
+      "Toggle the count of unread messages for each plane in the sidebar",
+    closeOnMouseleave: true,
+    adjustTracker: true,
+    delayOpen: 500,
+    position: {
+      x: "left",
+      y: "center",
+    },
+    outside: "xy",
+  }),
+
+  toggle_markallread: new jBox("Tooltip", {
+    title: "Mark Unread Messages as Read",
+    content: "Mark all messages as read",
+    closeOnMouseleave: true,
+    adjustTracker: true,
+    delayOpen: 500,
+    position: {
+      x: "left",
+      y: "center",
+    },
+    outside: "xy",
+  }),
+
   datablock: new jBox("Mouse", {
     getContent: "data-jbox-content",
     id: "airplane",
@@ -206,6 +233,8 @@ export let tooltip = {
     this.toggle_acars.close();
     this.toggle_datablocks.close();
     this.toggle_extended_datablocks.close();
+    this.toggle_unread.close();
+    this.toggle_markallread.close();
     this.datablock.close();
   },
 
@@ -227,6 +256,8 @@ export let tooltip = {
     this.toggle_acars.attach($(".toggle-acars"));
     this.toggle_datablocks.attach($(".toggle-datablocks"));
     this.toggle_extended_datablocks.attach($(".toggle-extended-datablocks"));
+    this.toggle_unread.attach($(".toggle-unread-messages"));
+    this.toggle_markallread.attach($(".mark-all-messages-read"));
     this.datablock.attach($(".datablock"));
   },
 

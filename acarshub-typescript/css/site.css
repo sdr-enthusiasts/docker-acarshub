@@ -917,6 +917,17 @@ canvas {
   }
 }
 
+@media only screen and (max-width: 700px) {
+  #mapid {
+    width: 100%;
+    max-width: 100% !important;
+  }
+
+  #planes {
+    display: none;
+  }
+}
+
 #msg_body {
   column-span: inherit;
 }
@@ -931,7 +942,9 @@ canvas {
   max-height: calc(100vh - 160px);
   width: 100%;
   background-color: black;
-  display: inline-block;
+  display: block;
+  float: left;
+  max-width: calc(100vw - 430px);
 }
 
 .airplane_blue:hover,
@@ -965,6 +978,12 @@ canvas {
   paint-order: stroke;
 }
 
+.airplane_darkgreen {
+  fill: darkgreen;
+  stroke: black;
+  paint-order: stroke;
+}
+
 svg {
   position: relative;
   display: block;
@@ -979,10 +998,11 @@ div#stat_images {
 }
 
 div#planes {
-  width: 320px;
+  width: 340px;
   max-height: calc(100vh - 160px);
   overflow: scroll;
   position: relative;
+  float: right;
   /* border: 1px solid var(--grey-bg) */
 }
 
@@ -1036,16 +1056,39 @@ div.plane_element {
   font-weight: bold !important;
 }
 
+.sidebar_no_hover_with_unread {
+  background-color: darkgreen !important;
+  color: white !important;
+  font-weight: bold !important;
+}
+
+.sidebar_no_hover_with_unread:hover,
+.sidebar_no_hover_with_unread:focus,
+.sidebar_no_hover_with_unread:hover a,
+.sidebar_no_hover_with_unread:focus a,
+.sidebar_hovered_from_map_with_unread,
+.sidebar_hovered_from_map_with_unread a  {
+  background-color: black !important;
+  color: darkgreen !important;
+  font-weight: bold !important;
+}
+
 .sidebar_no_hover_with_acars:hover,
 .sidebar_no_hover_with_acars:focus,
 .sidebar_no_hover_with_acars:hover a,
-.sidebar_no_hover_with_acars:focus a,
+.sidebar_no_hover_with_acars:focus a {
+  background-color: black !important;
+  color: green !important;
+}
+
+.sidebar_alert_hovered_from_map,
+.sidebar_alert_hovered_from_map a,
 .sidebar_alert:hover,
 .sidebar_alert:focus,
 .sidebar_alert:hover a,
 .sidebar_alert:focus a {
   background-color: black !important;
-  color: green !important;
+  color: red !important;
 }
 
 .sidebar_hovered_from_map_acars .plane_element a {

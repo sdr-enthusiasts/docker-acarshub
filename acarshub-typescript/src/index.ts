@@ -583,6 +583,14 @@ window.zoom_out = function (): void {
   live_map_page.zoom_out();
 };
 
+window.toggle_unread_messages = function (): void {
+  live_map_page.toggle_unread_messages();
+};
+
+window.mark_all_messages_read = function (): void {
+  live_map_page.mark_all_messages_read();
+};
+
 export function showPlaneMessages(
   plane_callsign: string = "",
   plane_hex: string = "",
