@@ -101,7 +101,7 @@ export let live_map_page = {
       expires: 365,
       sameSite: "Strict",
     });
-    this.airplaneList();
+    this.redraw_map();
     this.set_controls();
   },
 
@@ -207,10 +207,7 @@ export let live_map_page = {
           delete this.adsb_planes[plane];
         }
       }
-      if (!this.had_targets) {
-        console.log("was null");
-        this.mark_all_messages_read();
-      }
+      if (!this.had_targets) this.mark_all_messages_read();
       if (this.live_map_page_active) {
         this.redraw_map();
       }
@@ -502,7 +499,16 @@ export let live_map_page = {
         acars_planes++;
         acars_message_count += num_messages;
 
-        if (num_messages !== old_messages) {
+        if (old_messages > num_messages) {
+          console.error(
+            "OLD MESSAGES WAS LARGER THAN TOTAL MESSAGE COUNT: " + callsign,
+            hex,
+            tail,
+            num_messages,
+            old_messages
+          );
+          this.set_old_messages(hex.toLowerCase(), num_messages);
+        } else if (num_messages !== old_messages) {
           has_new_messages = true;
         }
       }
@@ -513,10 +519,10 @@ export let live_map_page = {
           this.current_hovered_from_map !== "" &&
           this.current_hovered_from_map == callsign.replace("~", "") &&
           callsign &&
-          num_messages &&
-          !num_alerts
+          num_messages
         ) {
-          styles = " sidebar_hovered_from_map_acars";
+          if (!num_alerts) styles = " sidebar_hovered_from_map_acars";
+          else styles = " sidebar_hovered_from_map_with_unread";
         } else if (
           this.current_hovered_from_map == callsign.replace("~", "") &&
           !num_alerts
@@ -530,7 +536,8 @@ export let live_map_page = {
         } else if (num_alerts) {
           styles = " sidebar_alert";
         } else if (callsign && num_messages && styles == "") {
-          styles = " sidebar_no_hover_with_acars";
+          if (!has_new_messages) styles = " sidebar_no_hover_with_acars";
+          else styles = " sidebar_no_hover_with_unread";
         }
         html += `<div id="${callsign.replace(
           "~",
@@ -655,11 +662,11 @@ export let live_map_page = {
           const lat: number = this.get_lat(current_plane);
           let icon: aircraft_icon | null = this.get_icon(plane);
           let num_messages: number = <any>null; // need to cast this to any for TS to compile.
-
+          const old_messages = this.get_old_messages(plane);
           const details = this.match_plane(plane_data, callsign, tail, hex);
           num_messages = details.num_messages;
           const alert: boolean = details.has_alerts;
-
+          let color = "airplane_blue";
           if (icon == null) {
             const type_shape: svg_icon = getBaseMarker(
               String(current_plane.category),
@@ -676,6 +683,29 @@ export let live_map_page = {
               type_shape.scale * 1.5
             ) as aircraft_icon;
             this.adsb_planes[current_plane.hex].icon = icon;
+          }
+
+          // set the color of the icon
+
+          if (this.current_hovered_from_sidebar == callsign.replace("~", ""))
+            color = "airplane_orange";
+          else if (alert) color = "airplane_red";
+          else if (num_messages) {
+            if (old_messages > num_messages) {
+              console.error(
+                "OLD MESSAGES WAS LARGER THAN TOTAL MESSAGE COUNT: " + callsign,
+                hex,
+                tail,
+                num_messages,
+                old_messages
+              );
+              this.set_old_messages(plane, num_messages);
+              num_messages = old_messages;
+            }
+
+            if (this.show_unread_messages && num_messages !== old_messages)
+              color = "airplane_darkgreen";
+            else color = "airplane_green";
           }
 
           const popup_text = `<div>${
@@ -699,15 +729,7 @@ export let live_map_page = {
               html: `<div><div id="${callsign.replace(
                 "~",
                 ""
-              )}_marker" class="datablock ${
-                this.current_hovered_from_sidebar == callsign.replace("~", "")
-                  ? "airplane_orange"
-                  : alert
-                  ? "airplane_red"
-                  : num_messages
-                  ? "airplane_green"
-                  : "airplane_blue"
-              }" data-jbox-content="${popup_text}" style="-webkit-transform:rotate(${rotate}deg); -moz-transform: rotate(${rotate}deg); -ms-transform: rotate(${rotate}deg); -o-transform: rotate(${rotate}deg); transform: rotate(${rotate}deg);">${
+              )}_marker" class="datablock ${color}" data-jbox-content="${popup_text}" style="-webkit-transform:rotate(${rotate}deg); -moz-transform: rotate(${rotate}deg); -ms-transform: rotate(${rotate}deg); -o-transform: rotate(${rotate}deg); transform: rotate(${rotate}deg);">${
                 icon.svg
               }</div></div>`,
               iconSize: [icon.width, icon.height],
@@ -781,7 +803,7 @@ export let live_map_page = {
 
       this.adsb_planes[plane].num_messages = num_messages;
     }
-    this.airplaneList();
+    this.redraw_map();
   },
 
   showPlaneMessages: function (
@@ -954,14 +976,19 @@ export let live_map_page = {
               url: "static/images/legend-has-acars.svg",
             },
             {
-              label: "Planes Without ACARS Messages",
+              label: "Planes With Unread ACARS Messages",
               type: "image",
-              url: "static/images/legend-without-acars.svg",
+              url: "static/images/legend-with-acars-unread.svg",
             },
             {
               label: "Planes With ACARS Alerts",
               type: "image",
               url: "static/images/legend-has-acars-alert.svg",
+            },
+            {
+              label: "Planes Without ACARS Messages",
+              type: "image",
+              url: "static/images/legend-without-acars.svg",
             },
           ],
         });

@@ -978,6 +978,12 @@ canvas {
   paint-order: stroke;
 }
 
+.airplane_darkgreen {
+  fill: darkgreen;
+  stroke: black;
+  paint-order: stroke;
+}
+
 svg {
   position: relative;
   display: block;
@@ -1047,6 +1053,23 @@ div.plane_element {
 .sidebar_no_hover_with_acars {
   background-color: green !important;
   color: white !important;
+  font-weight: bold !important;
+}
+
+.sidebar_no_hover_with_unread {
+  background-color: darkgreen !important;
+  color: white !important;
+  font-weight: bold !important;
+}
+
+.sidebar_no_hover_with_unread:hover,
+.sidebar_no_hover_with_unread:focus,
+.sidebar_no_hover_with_unread:hover a,
+.sidebar_no_hover_with_unread:focus a,
+.sidebar_hovered_from_map_with_unread,
+.sidebar_hovered_from_map_with_unread a  {
+  background-color: black !important;
+  color: darkgreen !important;
   font-weight: bold !important;
 }
 
