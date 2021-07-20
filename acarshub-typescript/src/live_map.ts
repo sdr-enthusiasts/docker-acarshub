@@ -33,8 +33,11 @@ export let live_map_page = {
   adsb_enabled: false as boolean,
   live_map_page_active: false as boolean,
   adsb_planes: {} as { [key: string]: adsb_target },
+  had_targets: false as boolean,
   last_updated: 0 as number,
   map: (<unknown>null) as L.Map,
+  map_controls: (<unknown>null) as L.Control,
+  legend: (<unknown>null) as L.Control,
   layerGroupPlanes: (<unknown>null) as L.LayerGroup,
   layerGroupPlaneDatablocks: (<unknown>null) as L.LayerGroup,
   lat: 0 as number,
@@ -62,6 +65,7 @@ export let live_map_page = {
   show_only_acars: false as boolean,
   show_datablocks: false as boolean,
   show_extended_datablocks: false as boolean,
+  show_unread_messages: true as boolean,
   current_modal_terms: (<unknown>null) as {
     callsign: string;
     hex: string;
@@ -84,6 +88,21 @@ export let live_map_page = {
       !Cookies.get("sort_direction") || Cookies.get("sort_direction") == "true"
         ? true
         : false;
+    this.show_unread_messages =
+      !Cookies.get("show_unread_messages") ||
+      Cookies.get("show_unread_messages") == "true"
+        ? true
+        : false;
+  },
+
+  toggle_unread_messages: function (): void {
+    this.show_unread_messages = !this.show_unread_messages;
+    Cookies.set("show_unread_messages", String(this.show_unread_messages), {
+      expires: 365,
+      sameSite: "Strict",
+    });
+    this.airplaneList();
+    this.set_controls();
   },
 
   toggle_acars_only: function (): void {
@@ -166,7 +185,7 @@ export let live_map_page = {
   },
 
   set_targets: function (adsb_targets: adsb): void {
-    if (this.adsb_planes == null || this.last_updated < adsb_targets.now) {
+    if (this.last_updated < adsb_targets.now) {
       this.last_updated = adsb_targets.now;
       // Loop through all of the planes in the new data and save them to the target object
       adsb_targets.aircraft.forEach((aircraft) => {
@@ -175,6 +194,7 @@ export let live_map_page = {
             position: aircraft,
             last_updated: this.last_updated,
             id: aircraft.hex,
+            num_messages: 0,
           };
         } else {
           this.adsb_planes[aircraft.hex].position = aircraft;
@@ -187,9 +207,14 @@ export let live_map_page = {
           delete this.adsb_planes[plane];
         }
       }
+      if (!this.had_targets) {
+        console.log("was null");
+        this.mark_all_messages_read();
+      }
       if (this.live_map_page_active) {
         this.redraw_map();
       }
+      this.had_targets = true;
     }
   },
 
@@ -431,19 +456,27 @@ export let live_map_page = {
     return plane.lon || 0;
   },
 
+  set_old_messages: function (plane: string, new_messages: number) {
+    this.adsb_planes[plane].num_messages = new_messages;
+  },
+
+  get_old_messages: function (plane: string): number {
+    return this.adsb_planes[plane].num_messages;
+  },
+
   airplaneList: function (): void {
-    const plane_data: plane_data = find_matches();
+    const plane_data = find_matches();
     let num_planes = 0;
     let num_planes_targets = 0;
     let sorted = this.sort_list(plane_data);
     let plane_callsigns = [];
     let acars_planes = 0;
     let acars_message_count = 0;
-    const alt_width = 21;
+    const alt_width = 20;
     const alert_width = 15;
-    const speed_width = 18;
-    const msgs_width = 10;
-    const callsign_width = 25;
+    const speed_width = 16;
+    const msgs_width = 21;
+    const callsign_width = 23;
     //const callsign_width = 100 - alt_width - code_width - speed_width - msgs_width;
     let html: string = "";
     // add data to the table
@@ -462,10 +495,16 @@ export let live_map_page = {
       const details = this.match_plane(plane_data, callsign, tail, hex);
       const num_messages = details.num_messages;
       const num_alerts = details.num_alerts;
+      const old_messages = this.get_old_messages(hex.toLowerCase());
+      let has_new_messages: boolean = false;
 
       if (num_messages) {
         acars_planes++;
         acars_message_count += num_messages;
+
+        if (num_messages !== old_messages) {
+          has_new_messages = true;
+        }
       }
 
       if (!this.show_only_acars || num_messages) {
@@ -520,14 +559,15 @@ export let live_map_page = {
           num_alerts || "&nbsp;"
         }</div>
         <div class="plane_element" style="width: ${msgs_width}%;">${
-          num_messages || "&nbsp;"
-        }</div>
-        </div>`;
+          this.show_unread_messages && has_new_messages
+            ? num_messages - old_messages + " / "
+            : ""
+        }${num_messages || "&nbsp;"}</div></div>`;
       }
     }
     html =
       `<div class="plane_list_no_hover" style="color: var(--blue-highlight) !important;background-color: var(--grey-bg)"><div class="plane_element noleft" id="num_planes" style="width: 50%"></div><div class="plane_element noleft" id="num_planes_targets" style="width: 50%"></div></div>
-    <div class="plane_list_no_hover" style="color: var(--blue-highlight) !important;background-color: var(--grey-bg)"><div class="plane_element noleft" id="num_acars_planes" style="vertical-align: text-top;width: 50%">Planes w/ ACARS Msgs: ${acars_planes}</div><div class="plane_element noleft" id="numnonoleft" id="num_acars_planes_targets" style="width: 50%">Total ACARS Msgs: ${acars_message_count}</div></div>
+    <div class="plane_list_no_hover" style="color: var(--blue-highlight) !important;background-color: var(--grey-bg)"><div class="plane_element noleft" id="num_acars_planes" style="vertical-align: text-top;width: 100%">Planes with ACARS Msgs: ${acars_planes}<br>Total ACARS Messages: ${acars_message_count}</div></div>
     <div class="plane_list_no_hover" style="font-weight: bold;border-bottom: 1px solid black;color: var(--blue-highlight) !important;background-color: var(--grey-bg)">
     <div class="plane_element plane_header noleft" style="width: ${callsign_width}%"><a href="javascript:setSort('callsign')">Callsign</a></div>
     <div class="plane_element plane_header" style="width: ${alt_width}%;"><a href="javascript:setSort('alt')">Alt</a></div>
@@ -729,6 +769,21 @@ export let live_map_page = {
     }
   },
 
+  mark_all_messages_read: function (): void {
+    const plane_data: plane_data = find_matches();
+    for (const plane in this.adsb_planes) {
+      const current_plane = this.adsb_planes[plane].position;
+      const callsign = this.get_callsign(current_plane);
+      const hex: string = this.get_hex(current_plane);
+      const tail: string = this.get_tail(current_plane);
+      const details = this.match_plane(plane_data, callsign, tail, hex);
+      const num_messages = details.num_messages;
+
+      this.adsb_planes[plane].num_messages = num_messages;
+    }
+    this.airplaneList();
+  },
+
   showPlaneMessages: function (
     plane_callsign: string = "",
     plane_hex: string = "",
@@ -765,6 +820,8 @@ export let live_map_page = {
     this.plane_message_modal.setHeight(window_size.height > 500 ? 500 : 400);
     this.plane_message_modal.setWidth(window_size.width > 500 ? 500 : 350);
     this.plane_message_modal.open();
+    this.adsb_planes[plane_hex.toLowerCase()].num_messages = matches.length;
+    this.airplaneList();
     resize_tabs(window_size.width > 500 ? 465 : 310, false);
     $(".show_when_small").css("display", `inline-block`);
     $(".show_when_big").css("display", "none");
@@ -798,13 +855,6 @@ export let live_map_page = {
     if (this.map) {
       this.map.invalidateSize();
     }
-    if (new_window_size.width < 700) {
-      $("#mapid").css("width", "100%");
-      $("#planes").css("display", "none");
-    } else {
-      $("#mapid").css("width", `${this.window_size.width - 370}px`);
-      $("#planes").css("display", "inline-block");
-    }
     this.plane_message_modal.setHeight(
       new_window_size.height > 500 ? 500 : 400
     );
@@ -827,12 +877,6 @@ export let live_map_page = {
     this.live_map_page_active = state;
     this.window_size = window_size;
     this.get_cookie_value();
-    if (window_size.width < 700) {
-      $("#mapid").css("width", "100%");
-      $("#planes").css("display", "none");
-    } else {
-      $("#mapid").css("width", `${this.window_size.width - 370}px`);
-    }
     if (this.live_map_page_active && this.adsb_enabled) {
       this.set_html();
       this.map = L.map("mapid", {
@@ -870,52 +914,33 @@ export let live_map_page = {
         })
         .addTo(this.map);
 
-      L.control
-        // @ts-expect-error
-        .custom({
-          position: "topright",
-          content:
-            '<button type="button" id="toggle-acars" class="btn btn-default toggle-acars" onclick="toggle_acars_only()">' +
-            `    ${
-              !this.show_only_acars
-                ? images.toggle_acars_only_show_acars
-                : images.toggle_acars_only_show_all
-            }` +
-            "</button>" +
-            '<button type="button" id="toggle-datablocks" class="btn btn-info toggle-datablocks" onclick="toggle_datablocks()">' +
-            `    ${
-              this.show_datablocks
-                ? images.toggle_datablocks_on
-                : images.toggle_datablocks_off
-            }` +
-            "</button>" +
-            '<button type="button" id="toggle-extended-datablocks" class="btn btn-primary toggle-extended-datablocks" onclick="toggle_extended_datablocks()">' +
-            `    ${
-              this.show_extended_datablocks
-                ? images.toggle_extended_datablocks_on
-                : images.toggle_extended_datablocks_off
-            }` +
-            "</button>", //+
-          // '<button type="button" class="btn btn-danger">'+
-          // '    <i class="fa fa-times"></i>'+
-          // '</button>'+
-          // '<button type="button" class="btn btn-success">'+
-          // '    <i class="fa fa-check"></i>'+
-          // '</button>'+
-          // '<button type="button" class="btn btn-warning">'+
-          // '    <i class="fa fa-exclamation-triangle"></i>'+
-          // '</button>',
-          classes: "btn-group-vertical btn-group-sm",
-          style: {
-            margin: "10px",
-            padding: "0px 0 0 0",
-            cursor: "pointer",
-          },
-          events: {},
-        })
-        .addTo(this.map);
+      this.layerGroupPlanes = L.layerGroup().addTo(this.map);
+      this.layerGroupPlaneDatablocks = L.layerGroup().addTo(this.map);
+      this.set_controls();
+      this.map.on({
+        zoom: () => {
+          this.current_scale = this.map.getZoom();
+          Cookies.set("live_map_zoom", String(this.current_scale), {
+            expires: 365,
+            sameSite: "Strict",
+          });
+          this.redraw_map();
+        },
+        move: () => {
+          const center = this.map.getCenter();
+          this.lat = center.lat;
+          this.lon = center.lng;
+        },
+      });
 
-      L.control
+      this.redraw_map();
+    }
+    tooltip.cycle_tooltip();
+  },
+
+  set_controls: function (): void {
+    if (!this.legend) {
+      this.legend = L.control
         // @ts-expect-error
         .Legend({
           position: "bottomleft",
@@ -939,31 +964,57 @@ export let live_map_page = {
               url: "static/images/legend-has-acars-alert.svg",
             },
           ],
-        })
-        .addTo(this.map);
-
-      this.layerGroupPlanes = L.layerGroup().addTo(this.map);
-      this.layerGroupPlaneDatablocks = L.layerGroup().addTo(this.map);
-
-      this.map.on({
-        zoom: () => {
-          this.current_scale = this.map.getZoom();
-          Cookies.set("live_map_zoom", String(this.current_scale), {
-            expires: 365,
-            sameSite: "Strict",
-          });
-          this.redraw_map();
-        },
-        move: () => {
-          const center = this.map.getCenter();
-          this.lat = center.lat;
-          this.lon = center.lng;
-        },
-      });
-
-      this.redraw_map();
+        });
+      this.legend.addTo(this.map);
     }
-    tooltip.cycle_tooltip();
+
+    if (this.map_controls) this.map_controls.remove();
+
+    this.map_controls = L.control
+      // @ts-expect-error
+      .custom({
+        position: "topright",
+        content:
+          '<button type="button" id="toggle-acars" class="btn btn-default toggle-acars" onclick="toggle_acars_only()">' +
+          `    ${
+            !this.show_only_acars
+              ? images.toggle_acars_only_show_acars
+              : images.toggle_acars_only_show_all
+          }` +
+          "</button>" +
+          '<button type="button" id="toggle-datablocks" class="btn btn-info toggle-datablocks" onclick="toggle_datablocks()">' +
+          `    ${
+            this.show_datablocks
+              ? images.toggle_datablocks_on
+              : images.toggle_datablocks_off
+          }` +
+          "</button>" +
+          '<button type="button" id="toggle-extended-datablocks" class="btn btn-primary toggle-extended-datablocks" onclick="toggle_extended_datablocks()">' +
+          `    ${
+            this.show_extended_datablocks
+              ? images.toggle_extended_datablocks_on
+              : images.toggle_extended_datablocks_off
+          }` +
+          "</button>" +
+          '<button type="button" class="btn btn-success toggle-unread-messages" onclick="toggle_unread_messages()">' +
+          `    ${images.toggle_unread_messages_on}` +
+          "</button>" +
+          (this.show_unread_messages
+            ? `<button type="button" class="btn btn-danger mark-all-messages-read" onclick="mark_all_messages_read()">    ${images.mark_all_messages_read}</button>`
+            : ""),
+        //+
+        // '<button type="button" class="btn btn-warning">'+
+        // '    <i class="fa fa-exclamation-triangle"></i>'+
+        // '</button>',
+        classes: "btn-group-vertical btn-group-sm",
+        style: {
+          margin: "10px",
+          padding: "0px 0 0 0",
+          cursor: "pointer",
+        },
+        events: {},
+      });
+    this.map_controls.addTo(this.map);
   },
 
   set_live_map_page_urls: function (
@@ -979,7 +1030,7 @@ export let live_map_page = {
     $("#page_name").html("");
     if (this.adsb_enabled)
       $("#log").html(
-        '<div style="width: 100%; display: inline-block" ><div id="mapid" style="float: left"></div><div id="planes" style="float: right"></div>'
+        '<div style="width: 100%; display: inline-block" ><div id="mapid"></div><div id="planes"></div>'
       );
     else $("#log").html("ADSB Disabled");
   },
@@ -989,6 +1040,8 @@ export let live_map_page = {
     this.layerGroupPlanes = (<unknown>null) as L.LayerGroup;
     this.layerGroupPlaneDatablocks = (<unknown>null) as L.LayerGroup;
     this.adsb_planes = {};
+    this.map_controls = (<unknown>null) as L.Control;
+    this.legend = (<unknown>null) as L.Control;
 
     if (this.live_map_page_active) this.set_html();
   },
