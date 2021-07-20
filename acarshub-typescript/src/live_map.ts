@@ -689,7 +689,8 @@ export let live_map_page = {
 
           if (this.current_hovered_from_sidebar == callsign.replace("~", ""))
             color = "airplane_orange";
-          else if (alert) color = "airplane_red";
+          else if (alert || squawk == 7500 || squawk == 7600 || squawk == 7700)
+            color = "airplane_red";
           else if (num_messages) {
             if (old_messages > num_messages) {
               console.error(
