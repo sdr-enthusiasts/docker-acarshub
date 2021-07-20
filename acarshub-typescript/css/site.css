@@ -917,6 +917,17 @@ canvas {
   }
 }
 
+@media only screen and (max-width: 700px) {
+  #mapid {
+    width: 100%;
+    max-width: 100% !important;
+  }
+
+  #planes {
+    display: none;
+  }
+}
+
 #msg_body {
   column-span: inherit;
 }
@@ -931,7 +942,9 @@ canvas {
   max-height: calc(100vh - 160px);
   width: 100%;
   background-color: black;
-  display: inline-block;
+  display: block;
+  float: left;
+  max-width: calc(100vw - 430px);
 }
 
 .airplane_blue:hover,
@@ -979,10 +992,11 @@ div#stat_images {
 }
 
 div#planes {
-  width: 320px;
+  width: 340px;
   max-height: calc(100vh - 160px);
   overflow: scroll;
   position: relative;
+  float: right;
   /* border: 1px solid var(--grey-bg) */
 }
 
