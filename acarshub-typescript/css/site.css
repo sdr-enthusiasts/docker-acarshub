@@ -949,7 +949,8 @@ canvas {
 
 .airplane_blue:hover,
 .airplane_green:hover,
-.airplane_red:hover {
+.airplane_red:hover,
+.airplane_darkgreen:hover {
   fill: orange;
   paint-order: stroke;
 }
