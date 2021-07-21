@@ -962,40 +962,39 @@ export let live_map_page = {
   },
 
   set_controls: function (): void {
-    if (!this.legend) {
-      this.legend = L.control
-        // @ts-expect-error
-        .Legend({
-          position: "bottomleft",
-          symbolWidth: 45,
-          symbolHeight: 45,
-          opacity: 0.6,
-          collapsed: true,
-          legends: [
-            {
-              label: "Planes With ACARS Messages",
-              type: "image",
-              url: "static/images/legend-has-acars.svg",
-            },
-            {
-              label: "Planes With Unread ACARS Messages",
-              type: "image",
-              url: "static/images/legend-with-acars-unread.svg",
-            },
-            {
-              label: "Planes With ACARS Alerts",
-              type: "image",
-              url: "static/images/legend-has-acars-alert.svg",
-            },
-            {
-              label: "Planes Without ACARS Messages",
-              type: "image",
-              url: "static/images/legend-without-acars.svg",
-            },
-          ],
-        });
-      this.legend.addTo(this.map);
-    }
+    if (this.legend) this.legend.remove();
+    this.legend = L.control
+      // @ts-expect-error
+      .Legend({
+        position: "bottomleft",
+        symbolWidth: 45,
+        symbolHeight: 45,
+        opacity: 0.6,
+        collapsed: true,
+        legends: [
+          {
+            label: "Planes With ACARS Messages",
+            type: "image",
+            url: "static/images/legend-has-acars.svg",
+          },
+          {
+            label: "Planes With Unread ACARS Messages",
+            type: "image",
+            url: "static/images/legend-with-acars-unread.svg",
+          },
+          {
+            label: "Planes With ACARS Alerts",
+            type: "image",
+            url: "static/images/legend-has-acars-alert.svg",
+          },
+          {
+            label: "Planes Without ACARS Messages",
+            type: "image",
+            url: "static/images/legend-without-acars.svg",
+          },
+        ],
+      });
+    this.legend.addTo(this.map);
 
     if (this.map_controls) this.map_controls.remove();
 
