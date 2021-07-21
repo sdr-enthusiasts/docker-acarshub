@@ -970,6 +970,7 @@ export let live_map_page = {
           symbolWidth: 45,
           symbolHeight: 45,
           opacity: 0.6,
+          collapsed: true,
           legends: [
             {
               label: "Planes With ACARS Messages",
