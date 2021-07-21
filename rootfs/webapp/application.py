@@ -126,7 +126,7 @@ def scheduled_tasks():
     import time
 
     # init the dbs if not already there
-
+    acarshub_helpers.check_github_version()
     if not acarshub_helpers.SPAM:
         schedule.every().minute.at(":15").do(acarshub.service_check)
         schedule.every().minute.at(":00").do(update_rrd_db)

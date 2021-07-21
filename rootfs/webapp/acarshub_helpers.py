@@ -2,6 +2,7 @@
 
 import os
 import sys
+import requests
 
 # debug levels
 
@@ -25,6 +26,11 @@ ADSB_LON = 0
 ADSB_BYPASS_URL = False
 ACARS_WEB_PORT = 8888  # default port for nginx proxying. SPAM will change this to 80 for running outside of docker
 LIVE_DATA_SOURCE = "127.0.0.1"  # This is to switch from localhost for ACARS/VDLM to connecting to a remote data source
+ACARSHUB_VERSION = "0"
+ACARSHUB_BUILD = "0"
+CURRENT_ACARS_HUB_VERSION = "0"
+CURRENT_ACARS_HUB_BUILD = "0"
+IS_UPDATE_AVAILABLE = False
 
 
 def log(msg, source):
@@ -138,6 +144,37 @@ if os.getenv("ENABLE_ADSB", default=False) == "true":
 
 if os.getenv("ADSB_BYPASS_URL", default=False):
     ADSB_BYPASS_URL = True
+
+
+if SPAM:
+    version_path = "../../VERSION"
+else:
+    version_path = "/VERSION"
+with open(version_path, "r") as f:
+    lines = f.read()
+    ACARSHUB_VERSION = lines.split("\n")[0].split(" ")[0].replace("v", "")
+    CURRENT_ACARS_HUB_VERSION = ACARSHUB_VERSION
+    ACARSHUB_BUILD = lines.split("\n")[0].split(" ")[2].replace("v", "")
+    CURRENT_ACARS_HUB_BUILD = ACARSHUB_BUILD
+
+
+def check_github_version():
+    r = requests.get(
+        "https://raw.githubusercontent.com/fredclausen/docker-acarshub/main/version"
+    )
+    CURRENT_ACARS_HUB_VERSION = r.text.split("\n")[0].split(" ")[0].replace("v", "")
+    CURRENT_ACARS_HUB_BUILD = r.text.split("\n")[0].split(" ")[2].replace("v", "")
+
+    if (
+        CURRENT_ACARS_HUB_VERSION != ACARSHUB_VERSION
+        and ACARSHUB_VERSION < CURRENT_ACARS_HUB_VERSION
+    ) or (
+        CURRENT_ACARS_HUB_BUILD != ACARSHUB_BUILD
+        and ACARSHUB_BUILD < CURRENT_ACARS_HUB_BUILD
+    ):
+        log("Update found", "version-checker")
+    else:
+        log("No update found", "version-checker")
 
 
 def acars_traceback(e, source):
