@@ -1058,7 +1058,7 @@ export let live_map_page = {
     $("#page_name").html("");
     if (this.adsb_enabled)
       $("#log").html(
-        '<div style="width: 100%; display: inline-block" ><div id="mapid"></div><div id="planes"></div>'
+        '<div style="display: flex;height: 100%;" ><div id="mapid"></div><div id="planes"></div>'
       );
     else $("#log").html("ADSB Disabled");
   },
