@@ -146,35 +146,35 @@ if os.getenv("ADSB_BYPASS_URL", default=False):
     ADSB_BYPASS_URL = True
 
 
-if SPAM:
-    version_path = "../../VERSION"
-else:
-    version_path = "/VERSION"
-with open(version_path, "r") as f:
-    lines = f.read()
-    ACARSHUB_VERSION = lines.split("\n")[0].split(" ")[0].replace("v", "")
-    CURRENT_ACARS_HUB_VERSION = ACARSHUB_VERSION
-    ACARSHUB_BUILD = lines.split("\n")[0].split(" ")[2].replace("v", "")
-    CURRENT_ACARS_HUB_BUILD = ACARSHUB_BUILD
+# if SPAM:
+#     version_path = "../../VERSION"
+# else:
+#     version_path = "/VERSION"
+# with open(version_path, "r") as f:
+#     lines = f.read()
+#     ACARSHUB_VERSION = lines.split("\n")[0].split(" ")[0].replace("v", "")
+#     CURRENT_ACARS_HUB_VERSION = ACARSHUB_VERSION
+#     ACARSHUB_BUILD = lines.split("\n")[0].split(" ")[2].replace("v", "")
+#     CURRENT_ACARS_HUB_BUILD = ACARSHUB_BUILD
 
 
-def check_github_version():
-    r = requests.get(
-        "https://raw.githubusercontent.com/fredclausen/docker-acarshub/main/version"
-    )
-    CURRENT_ACARS_HUB_VERSION = r.text.split("\n")[0].split(" ")[0].replace("v", "")
-    CURRENT_ACARS_HUB_BUILD = r.text.split("\n")[0].split(" ")[2].replace("v", "")
+# def check_github_version():
+#     r = requests.get(
+#         "https://raw.githubusercontent.com/fredclausen/docker-acarshub/main/version"
+#     )
+#     CURRENT_ACARS_HUB_VERSION = r.text.split("\n")[0].split(" ")[0].replace("v", "")
+#     CURRENT_ACARS_HUB_BUILD = r.text.split("\n")[0].split(" ")[2].replace("v", "")
 
-    if (
-        CURRENT_ACARS_HUB_VERSION != ACARSHUB_VERSION
-        and ACARSHUB_VERSION < CURRENT_ACARS_HUB_VERSION
-    ) or (
-        CURRENT_ACARS_HUB_BUILD != ACARSHUB_BUILD
-        and ACARSHUB_BUILD < CURRENT_ACARS_HUB_BUILD
-    ):
-        log("Update found", "version-checker")
-    else:
-        log("No update found", "version-checker")
+#     if (
+#         CURRENT_ACARS_HUB_VERSION != ACARSHUB_VERSION
+#         and ACARSHUB_VERSION < CURRENT_ACARS_HUB_VERSION
+#     ) or (
+#         CURRENT_ACARS_HUB_BUILD != ACARSHUB_BUILD
+#         and ACARSHUB_BUILD < CURRENT_ACARS_HUB_BUILD
+#     ):
+#         log("Update found", "version-checker")
+#     else:
+#         log("No update found", "version-checker")
 
 
 def acars_traceback(e, source):

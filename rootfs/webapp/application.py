@@ -126,7 +126,7 @@ def scheduled_tasks():
     import time
 
     # init the dbs if not already there
-    acarshub_helpers.check_github_version()
+    # acarshub_helpers.check_github_version()
     if not acarshub_helpers.SPAM:
         schedule.every().minute.at(":15").do(acarshub.service_check)
         schedule.every().minute.at(":00").do(update_rrd_db)
@@ -135,7 +135,7 @@ def scheduled_tasks():
     schedule.every().hour.at(":15").do(acarshub.acarshub_db.pruneOld)
     schedule.every().hour.at(":30").do(acarshub.acarshub_db.pruneOld)
     schedule.every().hour.at(":45").do(acarshub.acarshub_db.pruneOld)
-    schedule.every().hour.at(":05").do(acarshub_helpers.check_github_version)
+    # schedule.every().hour.at(":05").do(acarshub_helpers.check_github_version)
 
     # Check for dead threads and restart
     schedule.every().minute.at(":45").do(
