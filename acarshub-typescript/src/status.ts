@@ -1,9 +1,11 @@
+import { version } from "leaflet";
 import {
   status_decoder,
   status_global,
   status_server,
   system_status,
   adsb_status,
+  acarshub_version,
 } from "./interfaces";
 
 export let status = {
@@ -13,6 +15,7 @@ export let status = {
   status_page_active: false as boolean,
   current_status: {} as system_status,
   adsb_status: { adsb_enabled: false, adsb_getting_data: false } as adsb_status,
+  current_version: {} as acarshub_version,
 
   status: function (): void {},
 
@@ -29,6 +32,11 @@ export let status = {
     } as adsb_status
   ): void {
     this.adsb_status = adsb_status;
+  },
+
+  set_version(version: acarshub_version): void {
+    this.current_version = version;
+    if (this.status_page_active) this.show_status();
   },
 
   update_status_bar: function (): void {
@@ -80,6 +88,19 @@ export let status = {
     const keys_stats = Object.keys(stats);
 
     html_output += '<span class="monofont">';
+    if (this.current_version.container_version) {
+      html_output +=
+        "Installed ACARS Hub Version:".padEnd(55, ".") +
+        `<span class='${
+          this.current_version.is_outdated ? "red_body" : "green"
+        }'><strong>${
+          this.current_version.container_version
+        }</span></strong><br>`;
+      html_output += this.current_version.is_outdated
+        ? "Most Recent ACARS Hub Version:".padEnd(55, ".") +
+          `<span class='red_body'><strong>${this.current_version.container_version}</span></strong><br>`
+        : "";
+    }
     html_output += "System:".padEnd(55, ".");
     if (
       status ||

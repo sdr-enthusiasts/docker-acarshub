@@ -6,6 +6,7 @@ import { stats_page } from "./stats.js";
 import { about } from "./about.js";
 import { status } from "./status.js";
 import { alerts_page } from "./alerts.js";
+import { tooltip } from "./tooltips.js";
 import { io, Socket } from "socket.io-client";
 
 import {
@@ -27,6 +28,7 @@ import {
   plane_data,
   acars_msg,
   plane_match,
+  acarshub_version,
 } from "./interfaces.js";
 
 import { live_map_page } from "./live_map.js";
@@ -100,6 +102,10 @@ $((): void => {
   // Document on ready new syntax....or something. Passing a function directly to jquery
   $("#log").html("Page loading.....please wait");
   // Observe one or multiple elements
+  // time to set everything on the page up
+
+  menu.generate_menu(); // generate the top menu
+  menu.generate_footer(); // generate the footer
 
   ro.observe(<Element>document.querySelector("body"));
   update_url(); // update the urls for everyone
@@ -139,6 +145,12 @@ $((): void => {
 
   socket.on("database_search_results", function (msg: search_html_msg): void {
     search_page.database_search_results(msg);
+  });
+
+  socket.on("acarshub-version", function (version: acarshub_version): void {
+    menu.set_version(version);
+    status.set_version(version);
+    tooltip.cycle_tooltip();
   });
 
   // stats
@@ -245,11 +257,6 @@ $((): void => {
     set_connection_good();
     connection_status(true);
   });
-
-  // time to set everything on the page up
-
-  menu.generate_menu(); // generate the top menu
-  menu.generate_footer(); // generate the footer
 
   // init all page backgrounding functions
   live_messages_page.live_messages();

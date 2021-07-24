@@ -107,6 +107,10 @@ img {
   color: var(--full-red);
 }
 
+span.red_important strong {
+  color: var(--full-red) !important;
+}
+
 .orange {
   color: var(--full-orange);
 }
