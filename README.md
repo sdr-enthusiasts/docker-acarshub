@@ -89,6 +89,7 @@ Please keep in mind that this is a barebones configuration to get you started. Y
 ## Ports
 
 | Port | Description |
+|------|-------------|
 | `80` | Port used for the web interface |
 | `15550` | Port used for exposing JSON ACARS data |
 | `15555` | Port used for exposing JSON VDLM2 data |
