@@ -566,7 +566,7 @@ export let live_map_page = {
           num_alerts || "&nbsp;"
         }</div>
         <div class="plane_element" style="width: ${msgs_width}%;">${
-          this.show_unread_messages && has_new_messages
+          this.show_unread_messages && num_messages
             ? num_messages - old_messages + " / "
             : ""
         }${num_messages || "&nbsp;"}</div></div>`;
