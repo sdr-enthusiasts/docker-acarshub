@@ -16,7 +16,7 @@ sed -i.bu '/COPY webapp.tar.gz \/src\/webapp.tar.gz/d' Dockerfile.local
 sed -i.bu '/tar -xzvf \/src\/webapp.tar.gz -C \/ && \\/d' Dockerfile.local
 
 # move the COPY FS line back to the bottom so that we can use cached builds
-sed -i.bu 's/ENTRYPOINT \[ "\/init" \]/COPY rootfs\/ \/\nCOPY webapp\/ \/webapp\/\nENTRYPOINT \[ "\/init" \]\n/g' Dockerfile.local
+sed -i.bu 's/ENTRYPOINT \[ "\/init" \]/COPY rootfs\/ \/\nCOPY webapp\/ \/webapp\/\nCOPY version \/acarshub-version\nENTRYPOINT \[ "\/init" \]\n/g' Dockerfile.local
 
 # fix the import for Message Decoder
 # shellcheck disable=SC2016

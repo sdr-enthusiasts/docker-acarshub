@@ -300,3 +300,9 @@ export interface plane_num_msgs_and_alert {
   has_alerts: boolean;
   num_alerts: number;
 }
+
+export interface acarshub_version {
+  container_version: string;
+  github_version: string;
+  is_outdated: boolean;
+}

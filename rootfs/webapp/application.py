@@ -23,9 +23,6 @@ app = Flask(__name__)
 if acarshub_helpers.SPAM:
     app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0
 
-# Global variable to keep track of connected users in the main namespace
-connected_users = 0
-
 # turn the flask app into a socketio app
 # regarding async_handlers=True, see: https://github.com/miguelgrinberg/Flask-SocketIO/issues/348
 socketio = SocketIO(
@@ -126,7 +123,7 @@ def scheduled_tasks():
     import time
 
     # init the dbs if not already there
-    # acarshub_helpers.check_github_version()
+    acarshub_helpers.check_github_version()
     if not acarshub_helpers.SPAM:
         schedule.every().minute.at(":15").do(acarshub.service_check)
         schedule.every().minute.at(":00").do(update_rrd_db)
@@ -135,7 +132,8 @@ def scheduled_tasks():
     schedule.every().hour.at(":15").do(acarshub.acarshub_db.pruneOld)
     schedule.every().hour.at(":30").do(acarshub.acarshub_db.pruneOld)
     schedule.every().hour.at(":45").do(acarshub.acarshub_db.pruneOld)
-    # schedule.every().hour.at(":05").do(acarshub_helpers.check_github_version)
+    schedule.every().hour.at(":05").do(acarshub_helpers.check_github_version)
+    schedule.every().hour.at(":01").do(send_version)
 
     # Check for dead threads and restart
     schedule.every().minute.at(":45").do(
@@ -271,10 +269,7 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
                             if j["error"] > 0:
                                 error_messages += j["error"]
 
-                        if (
-                            connected_users > 0
-                        ):  # que message up if someone is on live message page
-                            que_messages.append((que_type, j))
+                        que_messages.append((que_type, j))
                         que_database.append((que_type, j))
                         if len(messages_recent) >= 150:  # Keep the que size down
                             del messages_recent[0]
@@ -305,7 +300,7 @@ def init_listeners(special_message=""):
         acarshub_helpers.log(f"{special_message}starting scheduler", "init")
         thread_scheduler = Thread(target=scheduled_tasks)
         thread_scheduler.start()
-    if connected_users > 0 and not thread_html_generator.is_alive():
+    if not thread_html_generator.is_alive():
         acarshub_helpers.log(f"{special_message}Starting htmlListener", "init")
         thread_html_generator = socketio.start_background_task(htmlListener)
     if not thread_acars_listener.is_alive() and acarshub_helpers.ENABLE_ACARS:
@@ -350,6 +345,10 @@ def init():
         "init",
     )
     init_listeners()
+
+
+def send_version():
+    socketio.emit("acarshub-version", acarshub_helpers.get_version(), namespace="/main")
 
 
 init()
@@ -419,11 +418,8 @@ def main_connect():
     global thread_html_generator
     global thread_adsb
     global thread_adsb_stop_event
-    global connected_users
 
     recent_options = {"loading": True, "done_loading": False}
-
-    connected_users += 1
 
     requester = request.sid
 
@@ -482,6 +478,7 @@ def main_connect():
         namespace="/main",
     )
     socketio.emit("alert_terms", {"data": acarshub.getAlerts()}, namespace="/main")
+    send_version()
 
     # Start the htmlGenerator thread only if the thread has not been started before.
     if not thread_html_generator.is_alive():
@@ -588,18 +585,7 @@ def handle_message(message, namespace):
 
 @socketio.on("disconnect", namespace="/main")
 def main_disconnect():
-    import time
-
-    global connected_users
-
-    connected_users -= 1
-
-    # Client disconnected, stop the htmlListener
-    # We are going to pause for one second in case the user was refreshing the page
-    time.sleep(1)
-    if connected_users == 0:
-        thread_html_generator_event.set()
-        que_messages.clear()
+    pass
 
 
 if __name__ == "__main__":

@@ -215,6 +215,17 @@ export let tooltip = {
     },
   }),
 
+  release_version: new jBox("Mouse", {
+    getContent: "data-jbox-content",
+    id: "version",
+    closeOnMouseleave: true,
+    adjustTracker: true,
+    position: {
+      x: "left",
+      y: "top",
+    },
+  }),
+
   // Function to close all open tool tips. This is needed so that when the page updates tooltips aren't just chilling randomly
 
   close_all_tooltips: function (): void {
@@ -236,6 +247,7 @@ export let tooltip = {
     this.toggle_unread.close();
     this.toggle_markallread.close();
     this.datablock.close();
+    //this.release_version.close();
   },
 
   // Function to attach all of the tooltips to the new elements on the page
@@ -259,6 +271,7 @@ export let tooltip = {
     this.toggle_unread.attach($(".toggle-unread-messages"));
     this.toggle_markallread.attach($(".mark-all-messages-read"));
     this.datablock.attach($(".datablock"));
+    this.release_version.attach($("#release_version"));
   },
 
   cycle_tooltip: function (): void {

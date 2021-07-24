@@ -1,4 +1,5 @@
 import { images } from "./images.js";
+import { acarshub_version } from "./interfaces.js";
 export let menu = {
   acars_path: "" as string,
   acars_url: "" as string,
@@ -57,13 +58,29 @@ export let menu = {
       <span id="disconnect"></span></div> \
       <div><span class="menu_non_link" id="received">Received Messages:&nbsp;</span><span class="green" id="receivedmessages">0</span></div> \
       <span id="filtered"></span> \
-      <span class="align_right" id="release_version"><strong>Pre-Release</strong></span>`;
+      <span class="align_right" id="release_version" data-jbox-content="Your version of ACARS Hub is up to date"><strong>Pre-Release</strong></span>`;
     $("#footer_div").html(html);
   },
 
   set_adsb: function (adsb_status = false): void {
     this.menu_adsb = adsb_status;
     this.generate_menu();
+  },
+
+  set_version: function (version: acarshub_version): void {
+    if (version.is_outdated) {
+      $("#release_version").attr(
+        "data-jbox-content",
+        `ACARS Hub is outdated. Newest version is ${version.github_version}`
+      );
+      $("#release_version").addClass("red_important");
+    } else {
+      $("#release_version").attr(
+        "data-jbox-content",
+        `ACARS Hub is up to date. Current version is ${version.github_version}`
+      );
+      $("#release_version").removeClass("red_important");
+    }
   },
 
   set_about_page_urls: function (
