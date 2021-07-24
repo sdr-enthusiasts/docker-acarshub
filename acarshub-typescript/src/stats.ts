@@ -272,7 +272,7 @@ export let stats_page = {
                 },
                 title: {
                   display: true,
-                  text: "ACARS Frequency Counts",
+                  text: `ACARS Frequency Counts (${total_count_acars.toLocaleString()})`,
                 },
                 datalabels: {
                   backgroundColor: function (context: any) {
@@ -358,7 +358,7 @@ export let stats_page = {
                 },
                 title: {
                   display: true,
-                  text: "VDLM Frequency Counts",
+                  text: `VDLM Frequency Counts  (${total_count_vdlm.toLocaleString()})`,
                 },
                 datalabels: {
                   backgroundColor: function (context: any) {
