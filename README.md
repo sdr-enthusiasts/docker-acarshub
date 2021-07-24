@@ -153,7 +153,7 @@ In the configuration options for tar1090. Setting this will include additional a
 
 | Variable | Description | Required | Default |
 |----------|-------------|---------|--------|
-| `ENABLE_ACARS` | Toggle ACARS decoding on. If set to any non-blank value ACARS decoding will start | No | Blank |
+| `ENABLE_ACARS` | Toggle ACARS decoding on. If set to any non-blank value ACARS decoding will start. Set to "external" if you want to not use an SDR and push acarsdecoder json data to UDP port 5550 (needs port mapping 5550:5550/udp). | No | Blank |
 | `STATION_ID_ACARS` | Your unique ID for the ACARS feed. Used on the [ACARS.io](http://acars.io) site. Follow the guide [here](https://app.airframes.io/about) for formatting. | Yes, if ENABLE_ACARS is enabled | Blank |
 | `FREQS_ACARS` | List of frequencies, separaed by a single `;`, used for ACARS monitoring. | Yes, if ENABLE_ACARS is enabled AND you are not using custom SDR definitions (see below)| Blank |
 
@@ -161,9 +161,10 @@ In the configuration options for tar1090. Setting this will include additional a
 
 | Variable | Description | Required | Default |
 |----------|-------------|---------|--------|
-| `ENABLE_VDLM` | Toggle VDLM decoding on. If set to any non-blank value VDLM decoding will start | No | Blank |
+| `ENABLE_VDLM` | Toggle VDLM decoding on. If set to any non-blank value VDLM decoding will start. Set to "external" if you want     to not use an SDR and push vdmldec json data to UDP port 5555 (needs port mapping 5555:5555/udp). | No | Blank |
 | `STATION_ID_VDLM`  | Your unique ID for the VDLM  feed. Used on the [ACARS.io](http://acars.io) site. Follow the guide [here](https://app.airframes.io/about) for formatting. | Yes, if ENABLE_VDLM is enabled | Blank |
 | `FREQS_VDLM`  | List of frequencies, separated by a single `;`, used for VDLM monitoring. | Yes, if ENABLE_VDLM is enabled AND you are not using custom SDR definitions (see below)| Blank |
+
 
 ### RTL Device assignment
 
