@@ -642,7 +642,6 @@ input[type='checkbox'] {
   color: var(--full-black);
   background: transparent;
   border: 1px solid var(--grey-highlight);
-  border-bottom: 1px solid var(--full-white);
 }
 
 .tabinator input::checked + label::after {
