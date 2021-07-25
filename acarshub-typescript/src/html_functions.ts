@@ -1,6 +1,13 @@
 import { acars_msg } from "./interfaces";
 
 export let html_functions = {
+  start_message(uid: string) {
+    return `<div class="acarshub-message-container" id="${uid}">`;
+  },
+  end_message() {
+    return "</div>";
+  },
+
   start_message_tabs: function (): string {
     return '<div class="tabinator">';
   },

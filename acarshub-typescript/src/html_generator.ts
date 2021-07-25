@@ -13,7 +13,6 @@ export function display_messages(
   let msgs_string = ""; // output string that gets returned
   let message_tab_splits: string[] = []; // variable to save the split output of selected_tabs
   if (selected_tabs !== "") message_tab_splits = selected_tabs.split(","); // the individual tabs with selections
-
   for (let i = 0; i < msgs_to_process.length; i++) {
     // Loop through the message array
     const sub_messages: acars_msg[] = msgs_to_process[i]; // Array of messages belonging to one tab-group
@@ -22,8 +21,9 @@ export function display_messages(
     let previous_tab: string = "0";
     let next_tab: string = "0";
     let array_index_tab: string = "0";
+    const message_uid = "acarsmsg_" + sub_messages[sub_messages.length - 1].uid;
     msgs_string += "<br>";
-
+    msgs_string += `<div class="acarshub-message-group" id="${message_uid}">`;
     if (live_page) {
       // unique_id is used to track the UID for a group of messages
       // tab_id below is the UID for a selected message
@@ -310,6 +310,8 @@ export function display_messages(
     if (sub_messages.length > 1) {
       msgs_string += html_functions.end_message_tabs();
     }
+
+    msgs_string += html_functions.end_message();
   }
 
   return msgs_string;
