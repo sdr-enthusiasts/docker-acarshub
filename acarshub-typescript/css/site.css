@@ -196,6 +196,13 @@ div#content.container {
   height: calc(100vh - 125px);
 }
 
+/* -ms-overflow-style: none;  /* IE and Edge
+scrollbar-width: none;  Firefox */
+
+/* div#content.container::-webkit-scrollbar {
+  display: none;
+} */
+
 div#main_block.row {
   margin-left: 0;
   padding-top: 5px;
