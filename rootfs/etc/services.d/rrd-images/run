@@ -31,7 +31,7 @@ if [ -n "${ENABLE_WEB}" ]; then
     while true; do
         if [[ -n "${VERBOSE_LOGS}" ]]; then
             #shellcheck disable=SC2016
-            echo "starting graph generation" | stdbuf -o0 awk '{print "[rrd-graph] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
+            echo "starting graph generation" | stdbuf -oL awk '{print "[rrd-graph] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
         fi
         # regular graphs
         rrdtool graph "${OUTPUT_DIR}/1hour.png" --title "1 Hour" --start "-1h" "${ARGS_ALL[@]}" >/dev/null 2>&1
@@ -88,7 +88,7 @@ if [ -n "${ENABLE_WEB}" ]; then
 
         if [[ -n "${VERBOSE_LOGS}" ]]; then
             #shellcheck disable=SC2016
-            echo "completed graph generation" | stdbuf -o0 awk '{print "[rrd-graph] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
+            echo "completed graph generation" | stdbuf -oL awk '{print "[rrd-graph] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
         fi
         STARTING_UP="FALSE"
         sleep 60
