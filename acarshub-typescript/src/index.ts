@@ -124,8 +124,8 @@ $((): void => {
     // New acars message.
     if (connection_good || typeof msg.loading == "undefined") {
       live_messages_page.new_acars_message(msg); // send the message to live messages
-      if (adsb_enabled && typeof msg.loading == "undefined")
-        live_map_page.redraw_map();
+      // if (adsb_enabled && typeof msg.loading == "undefined")
+      //   live_map_page.redraw_map();
       if (typeof msg.loading == "undefined" || msg.loading === false)
         alerts_page.alerts_acars_message(msg); // send the message to alerts for processing
     }

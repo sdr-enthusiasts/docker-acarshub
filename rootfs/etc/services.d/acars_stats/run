@@ -9,14 +9,14 @@ if [[ -n "${ENABLE_ACARS}" ]]; then
   if ! netstat -an | grep -P '^\s*tcp\s+\d+\s+\d+\s+0\.0\.0\.0:15550\s+(?>\d{1,3}\.{0,1}){4}:\*\s+LISTEN\s*$' > /dev/null; then
     if [ -z "${QUIET_LOGS}" ]; then
       # shellcheck disable=SC2016
-      echo "Waiting for acars_server" | stdbuf -o0 awk '{print "[acars_stats] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
+      echo "Waiting for acars_server" | stdbuf -oL awk '{print "[acars_stats] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
     fi
     sleep 1
     exit
   fi
   if [ -z "${QUIET_LOGS}" ]; then
     # shellcheck disable=SC2016
-    echo "acars_server ready, starting service" | stdbuf -o0 awk '{print "[acars_stats] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
+    echo "acars_server ready, starting service" | stdbuf -oL awk '{print "[acars_stats] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
   fi
 
   # Start our stats loop
@@ -27,7 +27,7 @@ if [[ -n "${ENABLE_ACARS}" ]]; then
     timeout --foreground 300s socat -u TCP:127.0.0.1:15550 CREATE:/database/acars.past5min.json
 
     # shellcheck disable=SC2016
-    echo "$(wc -l < /database/acars.past5min.json) ACARS messages received in last 5 mins" | stdbuf -o0 awk '{print "[acars_stats] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
+    echo "$(wc -l < /database/acars.past5min.json) ACARS messages received in last 5 mins" | stdbuf -oL awk '{print "[acars_stats] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
 
     # rotate files keeping last 2 hours
     for i in {24..1}; do

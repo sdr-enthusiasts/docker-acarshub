@@ -55,6 +55,6 @@ echo "[acarsdec-$SERIAL] Starting: '$ACARS_BIN" "${ACARS_CMD[*]}'"
 
 # shellcheck disable=SC2016
 "$ACARS_BIN" "${ACARS_CMD[@]}" \
-2>&1 | stdbuf -o0 sed --unbuffered '/^$/d' | stdbuf -o0 awk '{print "[acarsdec] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
+2>&1 | stdbuf -oL sed --unbuffered '/^$/d' | stdbuf -oL awk '{print "[acarsdec] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
 
 sleep 5

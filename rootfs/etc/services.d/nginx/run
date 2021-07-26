@@ -4,12 +4,12 @@
 if [ -n "${ENABLE_WEB}" ]; then
     if [ -z "${QUIET_LOGS}" ]; then
         # shellcheck disable=SC2016
-        echo "Starting web proxy service" | stdbuf -o0 awk '{print "[nginx] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
+        echo "Starting web proxy service" | stdbuf -oL awk '{print "[nginx] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
     fi
 
     # shellcheck disable=SC2016
     mkdir -p /var/log/nginx
     # shellcheck disable=SC2016
     exec \
-    /usr/sbin/nginx 2>&1 | stdbuf -o0 awk '{print "[nginx] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
+    /usr/sbin/nginx 2>&1 | stdbuf -oL awk '{print "[nginx] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
 fi
