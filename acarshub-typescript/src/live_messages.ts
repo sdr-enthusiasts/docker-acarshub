@@ -77,6 +77,7 @@ export let live_messages_page = {
     this.show_labels();
     this.pause_updates(false);
     this.filter_notext(false);
+    resize_tabs();
   },
 
   // Function to increment the counter of filtered messages
@@ -361,6 +362,7 @@ export let live_messages_page = {
           true
         )
       ); // show the messages we've received
+      resize_tabs();
     }
   },
 
