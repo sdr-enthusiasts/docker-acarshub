@@ -168,6 +168,8 @@ hr {
 }
 
 body {
+  height: 100vh;
+  width: 100vw;
   background-color: var(--body-bg);
   padding-left: 20px;
   padding-right: 20px;
@@ -374,6 +376,11 @@ label {
 
 pre {
   box-shadow: 2px 2px 2px 1px var(--mostly-transparent);
+  white-space: pre-wrap;       /* Since CSS 2.1 */
+  white-space: -moz-pre-wrap;  /* Mozilla, since 1999 */
+  white-space: -pre-wrap;      /* Opera 4-6 */
+  white-space: -o-pre-wrap;    /* Opera 7 */
+  word-wrap: break-word;       /* Internet Explorer 5.5+ */
 }
 
 a {

@@ -196,6 +196,7 @@ export interface adsb_target {
   position: adsb_plane;
   last_updated: number;
   num_messages: number;
+  messages?: acars_msg[];
   icon?: aircraft_icon;
 }
 
