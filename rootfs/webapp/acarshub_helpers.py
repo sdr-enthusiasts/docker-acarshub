@@ -33,9 +33,12 @@ CURRENT_ACARS_HUB_BUILD = "0"
 IS_UPDATE_AVAILABLE = False
 
 
+import logging
+logger = logging.getLogger("werkzeug")
+
+
 def log(msg, source):
-    print(f"[{source}]: {msg}")
-    sys.stdout.flush()
+    logger.error(f"[{source}]: {msg}")
 
 
 if os.getenv("DEBUG_LOGGING", default=False):
@@ -201,10 +204,4 @@ def get_version():
 
 
 def acars_traceback(e, source):
-    traceback = e.__traceback__
-    print(f"[{source}] An error has occurred: " + str(e))
-    while traceback:
-        print(
-            "{}: {}".format(traceback.tb_frame.f_code.co_filename, traceback.tb_lineno)
-        )
-        traceback = traceback.tb_next
+    logger.exception(f"[{source}]")
