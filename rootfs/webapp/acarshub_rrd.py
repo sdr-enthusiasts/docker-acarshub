@@ -12,15 +12,15 @@ def update_db(vdlm=0, acars=0, error=0):
 
     try:
         rrdtool.update("/run/acars/acarshub.rrd", f"N:{acars}:{vdlm}:{total}:{error}")
+        if acarshub_helpers.DEBUG_LOGGING:
+            acarshub_helpers.log(f"rrdtool.update: N:{acars}:{vdlm}:{total}:{error}", "rrdtool")
     except Exception as e:
         acarshub_helpers.acars_traceback(e, "rrdtool")
-        sys.stdout.flush()
-
 
 def create_db():
     try:
         if not os.path.exists("/run/acars/acarshub.rrd"):
-            print("[rrdtool] creating the RRD Database")
+            arcarshub_helpers.log("creating the RRD Database", "rrdtool")
             rrdtool.create(
                 "/run/acars/acarshub.rrd",
                 "--start",

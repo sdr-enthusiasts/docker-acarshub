@@ -26,6 +26,12 @@ if [[ -n "${ENABLE_ACARS}" ]]; then
     #timeout 300s socat -u TCP:127.0.0.1:15550 CREATE:/database/acars.past5min.json
     timeout --foreground 300s socat -u TCP:127.0.0.1:15550 CREATE:/database/acars.past5min.json
 
+    # if the port isn't reachable, this file isn't created, either container is shutting down or acars_server isn't reachable
+    # in both cases let's exit, if this should still be running it will be restarted
+    if ! [[ -f /database/acars.past5min.json ]]; then
+      exit
+    fi
+
     # shellcheck disable=SC2016
     echo "$(wc -l < /database/acars.past5min.json) ACARS messages received in last 5 mins" | stdbuf -oL awk '{print "[acars_stats] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
 
