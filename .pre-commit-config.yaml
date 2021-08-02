@@ -45,14 +45,14 @@ repos:
         -   '@typescript-eslint/eslint-plugin'
         exclude: ^(rootfs/webapp/static/css/other/|acars-decoder-typescript/|rootfs/webapp/static/js/other/|Logo-Sources|acarshub-typescript/css/other/|acarshub-typescript/js-other)
 -   repo: https://github.com/pre-commit/mirrors-eslint
-    rev: v7.31.0
+    rev: v7.32.0
     hooks:
     -   id: eslint
         files: \.[j]sx?$  # *.js, *.jsx, *.ts and *.tsx
         types: [file]
         exclude: ^(rootfs/webapp/static/css/other/|acars-decoder-typescript/|rootfs/webapp/static/js/other/|Logo-Sources|acarshub-typescript/css/other/|acarshub-typescript/js-other)
         additional_dependencies:
-            -   eslint@7.31.0
+            -   eslint@7.32.0
             -   eslint-config-google@0.7.1
             -   babel-eslint@10.1.0
 #           -   '@typescript-eslint/eslint-plugin'
