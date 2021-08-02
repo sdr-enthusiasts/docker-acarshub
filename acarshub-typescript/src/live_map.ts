@@ -840,12 +840,14 @@ export let live_map_page = {
     }
     this.plane_message_modal.setTitle(`Messages for ${plane_callsign}`);
     const window_size: window_size = get_window_size();
-    this.plane_message_modal.setHeight(window_size.height > 500 ? 500 : 400);
-    this.plane_message_modal.setWidth(window_size.width > 500 ? 500 : 350);
+    const window_width = this.get_modal_width();
+    const window_height = this.get_modal_height();
+    this.plane_message_modal.setHeight(window_height);
+    this.plane_message_modal.setWidth(window_width);
     this.plane_message_modal.open();
     this.adsb_planes[plane_hex.toLowerCase()].num_messages = matches.length;
     this.airplaneList();
-    resize_tabs(window_size.width > 500 ? 465 : 310, false);
+    resize_tabs(window_width - 40, false);
     $(".show_when_small").css("display", `inline-block`);
     $(".show_when_big").css("display", "none");
     $(".dont_show").css("display", "none");
@@ -878,14 +880,22 @@ export let live_map_page = {
     if (this.map) {
       this.map.invalidateSize();
     }
-    this.plane_message_modal.setHeight(
-      new_window_size.height > 500 ? 500 : 400
-    );
-    this.plane_message_modal.setWidth(new_window_size.width > 500 ? 500 : 350);
-    resize_tabs(new_window_size.width > 500 ? 465 : 310, false);
+    const window_width = this.get_modal_width();
+    const window_height = this.get_modal_height();
+    this.plane_message_modal.setHeight(window_height);
+    this.plane_message_modal.setWidth(window_width);
+    resize_tabs(window_width - 40, false);
     $(".show_when_small").css("display", `inline-block`);
     $(".show_when_big").css("display", "none");
     tooltip.attach_all_tooltips();
+  },
+
+  get_modal_height: function () {
+    return this.window_size.height * (this.window_size.height < 500 ? 1 : 0.8);
+  },
+
+  get_modal_width: function () {
+    return this.window_size.width * (this.window_size.width < 500 ? 1 : 0.5);
   },
 
   zoom_in: function (): void {
