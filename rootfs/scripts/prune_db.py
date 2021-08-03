@@ -44,7 +44,7 @@ def pruneTable(cursor, conn, table, days, print_name):
 
         elapsed = time.time() - before
         if count > 0:
-            print(f"Pruned {print_name} of {count} records in {elapsed:.3f} seconds")
+            print(f"Pruned {print_name} of {count} records older than {days:.0f} days in {elapsed:.3f} seconds")
             sys.stdout.flush()
 
         if count < DB_PRUNE_LIMIT:
