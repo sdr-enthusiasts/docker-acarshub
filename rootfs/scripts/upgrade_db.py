@@ -564,40 +564,6 @@ try:
     add_indexes(cur)
     conn.commit()
 
-    if os.getenv("MANUAL_PRUNE", default=False):
-        import datetime
-
-        print("Pruning")
-        sys.stdout.flush()
-        dt = datetime.datetime.now()
-        epoch = (dt - datetime.timedelta(days=7)).replace().timestamp()
-        epoch_alerts = (dt - datetime.timedelta(days=120)).replace().timestamp()
-
-        messages_count = cur.execute(
-            f"SELECT COUNT(*) FROM messages WHERE msg_time < {epoch};"
-        )
-        count = 0
-        for row in messages_count:
-            count = row[0]
-        result = cur.execute(f"DELETE FROM messages WHERE msg_time < {epoch};")
-        conn.commit()
-        print(f"Pruned main database of {count} records")
-        print("Pruning alerts database")
-        sys.stdout.flush()
-        messages_saved_count = cur.execute(
-            f"SELECT COUNT(*) FROM messages_saved WHERE msg_time < {epoch_alerts};"
-        )
-        count = 0
-        for row in messages_saved_count:
-            count = row[0]
-        result = cur.execute(
-            f"DELETE FROM messages_saved WHERE msg_time < {epoch_alerts};"
-        )
-
-        print(f"Pruned alerts database of {count} records")
-        sys.stdout.flush()
-        conn.commit()
-
     result = [i for i in cur.execute("PRAGMA auto_vacuum")]
     if result[0][0] != 0 or os.getenv("AUTO_VACUUM", default=False):
         print("Reclaiming disk space")
