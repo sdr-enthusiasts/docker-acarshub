@@ -20,7 +20,7 @@ def update_db(vdlm=0, acars=0, error=0):
 def create_db():
     try:
         if not os.path.exists("/run/acars/acarshub.rrd"):
-            arcarshub_helpers.log("creating the RRD Database", "rrdtool")
+            acarshub_helpers.log("creating the RRD Database", "rrdtool")
             rrdtool.create(
                 "/run/acars/acarshub.rrd",
                 "--start",
