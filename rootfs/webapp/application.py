@@ -127,11 +127,7 @@ def scheduled_tasks():
     if not acarshub_helpers.SPAM:
         schedule.every().minute.at(":15").do(acarshub.service_check)
         schedule.every().minute.at(":00").do(update_rrd_db)
-    # Run and Schedule the database pruner
-    schedule.every().hour.at(":00").do(acarshub.acarshub_db.pruneOld)
-    schedule.every().hour.at(":15").do(acarshub.acarshub_db.pruneOld)
-    schedule.every().hour.at(":30").do(acarshub.acarshub_db.pruneOld)
-    schedule.every().hour.at(":45").do(acarshub.acarshub_db.pruneOld)
+
     schedule.every().hour.at(":05").do(acarshub_helpers.check_github_version)
     schedule.every().hour.at(":01").do(send_version)
 
@@ -329,8 +325,6 @@ def init():
     global messages_recent
     # grab recent messages from db and fill the most recent array
     # then turn on the listeners
-    acarshub_helpers.log("Running startup database prune", "init")
-    acarshub.acarshub_db.pruneOld()  # clean the database on startup
     acarshub_helpers.log("grabbing most recent messages from database", "init")
     results = acarshub.acarshub_db.grab_most_recent()
     if not acarshub_helpers.SPAM:

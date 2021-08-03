@@ -694,50 +694,6 @@ def add_message_from_json(message_type, message_from_json):
         acarshub_helpers.acars_traceback(e, "database")
 
 
-def pruneOld():
-    import datetime
-
-    # Grab the current time and the latest 'good' time for messages to be saved
-    dt = datetime.datetime.now()
-    # Database is storing the timestamps of messages in unix epoch. Convert the expiry time to epoch
-    epoch = (
-        (dt - datetime.timedelta(days=acarshub_helpers.DB_SAVE_DAYS))
-        .replace()
-        .timestamp()
-    )
-    epoch_alerts = (dt - datetime.timedelta(days=120)).replace().timestamp()
-
-    # Open session to db, run the query, and close session
-    try:
-        session = db_session()
-        acarshub_helpers.log("Pruning old messages", "database")
-        messages_count = session.execute(
-            f"SELECT COUNT(*) FROM messages WHERE msg_time < {epoch};"
-        )
-        count = 0
-        for row in messages_count:
-            count = row[0]
-        result = session.execute(f"DELETE FROM messages WHERE msg_time < {epoch};")
-        session.commit()
-        acarshub_helpers.log(f"Pruned main database of {count} records", "database")
-        acarshub_helpers.log("Pruning alerts database", "database")
-        messages_saved_count = session.execute(
-            f"SELECT COUNT(*) FROM messages_saved WHERE msg_time < {epoch_alerts};"
-        )
-        count = 0
-        for row in messages_saved_count:
-            count = row[0]
-        result = session.execute(
-            f"DELETE FROM messages_saved WHERE msg_time < {epoch_alerts};"
-        )
-
-        acarshub_helpers.log(f"Pruned alerts database of {count} records", "database")
-        session.commit()
-        session.close()
-    except Exception as e:
-        acarshub_helpers.acars_traceback(e, "database")
-
-
 def find_airline_code_from_iata(iata):
     if iata in overrides:
         return overrides[iata]

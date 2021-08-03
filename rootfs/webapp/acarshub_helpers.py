@@ -16,7 +16,6 @@ ACARSHUB_DB = ""
 IATA_OVERRIDE = ""
 FREQS_ACARS = ""
 FREQS_VDLM = ""
-DB_SAVE_DAYS = 7
 DB_BACKUP = ""
 ALERT_STAT_TERMS = []
 ENABLE_ADSB = False
@@ -103,9 +102,6 @@ if os.getenv("DB_BACKUP", default=False):
 
 if os.getenv("IATA_OVERRIDE", default=False):
     IATA_OVERRIDE = os.getenv("IATA_OVERRIDE")
-
-if os.getenv("DB_SAVE_DAYS", default=False):
-    DB_SAVE_DAYS = int(os.getenv("DB_SAVE_DAYS"))
 
 if os.getenv("ALERT_STAT_TERMS", default=False):
     ALERT_STAT_TERMS = os.getenv("ALERT_STAT_TERMS").split(",")
