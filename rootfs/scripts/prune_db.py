@@ -1,11 +1,8 @@
 #!/usr/bin/env python3
 
 import sqlite3
-from sqlite3 import Connection
-from typing import List
 import os
 import sys
-import shutil
 import time
 
 DB_SAVE_DAYS = float(os.getenv("DB_SAVE_DAYS", default=7))
@@ -56,7 +53,7 @@ try:
     while not os.path.isfile(path_to_db):
         time.sleep(30)
 
-    conn = sqlite3.connect(path_to_db)
+    conn = sqlite3.connect(database=path_to_db, timeout=120.0)
     cursor = conn.cursor()
 
     while True:
@@ -64,8 +61,8 @@ try:
             print(f"Started database pruning")
             sys.stdout.flush()
 
-        pruneTable(cursor, conn, table="messages", days=DB_SAVE_DAYS, print_name="main database");
-        pruneTable(cursor, conn, table="messages_saved", days=DB_ALERT_SAVE_DAYS, print_name="alerts database");
+        pruneTable(cursor, conn, table="messages", days=DB_SAVE_DAYS, print_name="main database")
+        pruneTable(cursor, conn, table="messages_saved", days=DB_ALERT_SAVE_DAYS, print_name="alerts database")
 
         if DEBUG_LOGGING:
             print(f"Finished database pruning")
