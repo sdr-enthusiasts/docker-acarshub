@@ -17,7 +17,10 @@ Ensure you have remote added (not sure if this is required for every clone for t
 
 ```bash
 git remote add -f acars-decoder-typescript https://github.com/airframesio/acars-decoder-typescript.git
+git subtree add -P acars-decoder-typescript acars-decoder-typescript master
 ```
+
+Then to update it
 
 ```bash
 git subtree pull --prefix acars-decoder-typescript acars-decoder-typescript master --squash
