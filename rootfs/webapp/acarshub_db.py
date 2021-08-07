@@ -712,30 +712,26 @@ def database_search(search_term, page=0):
             acarshub_helpers.log(
                 f"[database] Searching database for {search_term}", "database"
             )
-        session = db_session()
-        query_string = ""
-        count_string = ""
+        match_string = ""
 
         for key in search_term:
             if search_term[key] is not None and search_term[key] != "":
-                if query_string == "":
-                    #        query_string += f'SELECT * from text_fts WHERE {key} MATCH \'"{search_term[key]}"*\''
-                    # query_string += f'SELECT * from text_fts WHERE ({key} MATCH "{search_term[key]}*")';
-                    query_string += f'SELECT * FROM messages WHERE id IN (SELECT rowid FROM messages_fts WHERE messages_fts MATCH \'{key}:"{search_term[key]}"*'
-                    count_string += f'SELECT COUNT(*) FROM messages WHERE id IN (SELECT rowid FROM messages_fts WHERE messages_fts MATCH \'{key}:"{search_term[key]}"*'
+                if match_string == "":
+                    match_string += f'\'{key}:"{search_term[key]}"*'
                 else:
-                    query_string += f' AND {key}:"{search_term[key]}"*'
-                    #    query_string += f' INTERSECT SELECT * from text_fts WHERE {key} MATCH \'"{search_term[key]}"*\''
-                    count_string += f' AND {key}:"{search_term[key]}"*'
+                    match_string += f' AND {key}:"{search_term[key]}"*'
 
-        if query_string == "":
-            session.close()
+        if match_string == "":
             return [None, 50]
+
+        match_string += "'"
+
+        session = db_session()
         result = session.execute(
-            f"{query_string}') ORDER BY rowid DESC LIMIT 50 OFFSET {page * 50}"
+            f"SELECT * FROM messages WHERE id IN (SELECT rowid FROM messages_fts WHERE messages_fts MATCH {match_string} ORDER BY rowid DESC LIMIT 50 OFFSET {page * 50})"
         )
 
-        count = session.execute(f"{count_string}')")
+        count = session.execute(f"SELECT COUNT(*) FROM messages_fts WHERE messages_fts MATCH {match_string}")
 
         processed_results = []
         final_count = 0
