@@ -320,7 +320,6 @@ export let live_map_page = {
           }
         }
         if (this.ascending) {
-          console.log(alt_a);
           if (String(alt_a) == "GROUND" && String(alt_b) != "GROUND") return -1;
           else if (String(alt_b) == "ground" && String(alt_a) != "GROUND")
             return 1;
