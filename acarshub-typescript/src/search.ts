@@ -109,9 +109,7 @@ export let search_page = {
         this.current_page,
         this.num_results[i]
       );
-      $("#search_results").html(
-        '<div class="row" id="num_results"></div>' + display
-      );
+      $("#search_results").html(display);
       $("#num_results").html(display_nav_results);
       tooltip.close_all_tooltips();
       tooltip.attach_all_tooltips();
@@ -349,7 +347,7 @@ export let search_page = {
       // page is active
       this.set_html();
       $("#log").html(
-        '<div style="display: flex;height: 100%;" ><div id="search_results"></div><div id="side_pane"></div>'
+        '<div id="search"><div id="side_pane"></div><div id="search_results"></div>'
       ); // show the messages we've received
       $("#side_pane")
         .html(`<p><a href="javascript:showall()" class="spread_text">Most Recent Messages</a></p>
@@ -444,7 +442,8 @@ export let search_page = {
           </td>
         </tr>
 
-      </table>`);
+      </table>
+      <div class="row" id="num_results"></div>`);
       this.show_search();
       this.update_size();
       this.set_search_terms();
@@ -454,7 +453,7 @@ export let search_page = {
 
   set_html: function (): void {
     $("#modal_text").html("");
-    $("#page_name").html("Search received messages");
+    $("#page_name").html("").css("display", "none");
     this.update_size();
   },
 };

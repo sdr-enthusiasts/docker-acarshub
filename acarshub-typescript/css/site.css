@@ -227,11 +227,14 @@ div#num_results.row {
   position: relative;
   width: 100%;
   height: inherit;
-  padding-right: 5px;
   padding-top: 10px;
   margin-right: 0;
   margin-left: 0;
   margin-bottom: 0;
+}
+
+table.search thead {
+  border: 0;
 }
 
 div#log.left {
@@ -871,6 +874,14 @@ canvas {
 }
 
 @media only screen and (max-width: 950px) {
+  #search_results {
+    width: calc(100vw - 295px) !important;
+  }
+
+  #side_pane {
+    width: 200px !important;
+  }
+
   div#content.container {
     top: 133px;
     height: calc(100vh - 160px);
@@ -948,6 +959,20 @@ canvas {
     top: 133px;
     height: calc(100vh - 160px);
   }
+
+  #search_results {
+    width: 100% !important;
+  }
+
+  #side_pane {
+    width: 100% !important;
+  }
+}
+
+#search {
+  display: flex;
+  flex-wrap: wrap;
+  height: 100%;
 }
 
 #msg_body {
@@ -974,7 +999,7 @@ canvas {
   width: calc(100vw - 435px);
   flex: 1 1 auto;
   position: relative;
-  margin-right: 5px;
+  margin-left: 5px;
 }
 
 #side_pane {
