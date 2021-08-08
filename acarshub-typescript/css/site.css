@@ -970,6 +970,17 @@ canvas {
   position: relative;
 }
 
+#search_results {
+  width: calc(100vw - 435px);
+  flex: 1 1 auto;
+  position: relative;
+  margin-right: 5px;
+}
+
+#side_pane {
+  width: 340px;
+}
+
 .airplane_blue:hover,
 .airplane_green:hover,
 .airplane_red:hover,

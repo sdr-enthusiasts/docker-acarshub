@@ -494,8 +494,6 @@ export function get_match(
 window.show_page_modal = function (): void {
   if (index_acars_page === "/alerts") {
     alerts_page.show_alert_message_modal();
-  } else if (index_acars_page === "/search") {
-    search_page.show_search_message_modal();
   } else if (index_acars_page === "/") {
     live_messages_page.show_live_message_modal();
   }
@@ -596,6 +594,10 @@ window.toggle_unread_messages = function (): void {
 
 window.mark_all_messages_read = function (): void {
   live_map_page.mark_all_messages_read();
+};
+
+window.query = function (): void {
+  search_page.query();
 };
 
 export function showPlaneMessages(
