@@ -55,41 +55,45 @@ export class Label_SQ extends DecoderPlugin {
         value: decodeResult.raw.version,
       }
     ];
-    if (decodeResult.raw.groundStation.icaoCode && decodeResult.raw.groundStation.number) {
-      decodeResult.formatted.items.push({
-        type: 'ground_station',
-        label: 'Ground Station',
-        value: `${decodeResult.raw.groundStation.icaoCode}${decodeResult.raw.groundStation.number}`,
-      });
+
+    if (decodeResult.raw.groundStation) {
+      if (decodeResult.raw.groundStation.icaoCode && decodeResult.raw.groundStation.number) {
+        decodeResult.formatted.items.push({
+          type: 'ground_station',
+          label: 'Ground Station',
+          value: `${decodeResult.raw.groundStation.icaoCode}${decodeResult.raw.groundStation.number}`,
+        });
+      }
+      if (decodeResult.raw.groundStation.iataCode) {
+        decodeResult.formatted.items.push({
+          type: 'iataCode',
+          label: 'IATA',
+          value: decodeResult.raw.groundStation.iataCode,
+        });
+      }
+      if (decodeResult.raw.groundStation.icaoCode) {
+        decodeResult.formatted.items.push({
+          type: 'icaoCode',
+          label: 'ICAO',
+          value: decodeResult.raw.groundStation.icaoCode,
+        });
+      }
+      if (decodeResult.raw.groundStation.coordinates.latitude) {
+        decodeResult.formatted.items.push({
+          type: 'coordinates',
+          label: 'Ground Station Location',
+          value: `${decodeResult.raw.groundStation.coordinates.latitude}, ${decodeResult.raw.groundStation.coordinates.longitude}`,
+        });
+      }
+      if (decodeResult.raw.groundStation.airport) {
+        decodeResult.formatted.items.push({
+          type: 'airport',
+          label: 'Airport',
+          value: `${decodeResult.raw.groundStation.airport.name} (${decodeResult.raw.groundStation.airport.icao}) in ${decodeResult.raw.groundStation.airport.location}`,
+        });
+      }
     }
-    if (decodeResult.raw.groundStation.iataCode) {
-      decodeResult.formatted.items.push({
-        type: 'iataCode',
-        label: 'IATA',
-        value: decodeResult.raw.groundStation.iataCode,
-      });
-    }
-    if (decodeResult.raw.groundStation.icaoCode) {
-      decodeResult.formatted.items.push({
-        type: 'icaoCode',
-        label: 'ICAO',
-        value: decodeResult.raw.groundStation.icaoCode,
-      });
-    }
-    if (decodeResult.raw.groundStation.coordinates.latitude) {
-      decodeResult.formatted.items.push({
-        type: 'coordinates',
-        label: 'Ground Station Location',
-        value: `${decodeResult.raw.groundStation.coordinates.latitude}, ${decodeResult.raw.groundStation.coordinates.longitude}`,
-      });
-    }
-    if (decodeResult.raw.groundStation.airport) {
-      decodeResult.formatted.items.push({
-        type: 'airport',
-        label: 'Airport',
-        value: `${decodeResult.raw.groundStation.airport.name} (${decodeResult.raw.groundStation.airport.icao}) in ${decodeResult.raw.groundStation.airport.location}`,
-      });
-    }
+
     if (decodeResult.raw.vdlFrequency) {
       decodeResult.formatted.items.push({
         type: 'vdlFrequency',
