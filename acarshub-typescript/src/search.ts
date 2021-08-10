@@ -346,9 +346,7 @@ export let search_page = {
     if (this.search_page_active) {
       // page is active
       this.set_html();
-      $("#log").html(
-        '<div id="search"><div id="side_pane"></div><div id="search_results"></div>'
-      ); // show the messages we've received
+      $("#log").html('<div id="side_pane"></div><div id="search_results">'); // show the messages we've received
       $("#side_pane")
         .html(`<p><a href="javascript:showall()" class="spread_text">Most Recent Messages</a></p>
       <p><a href="javascript:query()" class="spread_text">Search</a></p>

@@ -969,12 +969,6 @@ canvas {
   }
 }
 
-#search {
-  display: flex;
-  flex-wrap: wrap;
-  height: 100%;
-}
-
 #msg_body {
   column-span: inherit;
 }
@@ -982,6 +976,21 @@ canvas {
 .show_strong {
   font-weight: bold;
   font-family: var(--mono-fonts);
+}
+
+#search_results {
+  width: calc(100vw - 435px);
+  max-height: 100%;
+  margin-left: 5px;
+  overflow: auto;
+  float: left;
+}
+
+#side_pane {
+  width: 340px;
+  max-height: 100%;
+  overflow: auto;
+  float: left;
 }
 
 #mapid {
@@ -993,17 +1002,6 @@ canvas {
   max-width: calc(100vw - 435px);
   flex: 1 1 auto;
   position: relative;
-}
-
-#search_results {
-  width: calc(100vw - 435px);
-  flex: 1 1 auto;
-  position: relative;
-  margin-left: 5px;
-}
-
-#side_pane {
-  width: 340px;
 }
 
 .airplane_blue:hover,
