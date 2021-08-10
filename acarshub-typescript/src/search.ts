@@ -104,7 +104,7 @@ export let search_page = {
       }
 
       // Display the updated nav bar and messages
-      display = display_messages(results);
+      display = display_messages(results.reverse());
       display_nav_results = this.display_search(
         this.current_page,
         this.num_results[i]
