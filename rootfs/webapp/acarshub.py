@@ -240,117 +240,122 @@ def service_check():
     system_error = False
 
     for line in healthstatus.split("\n"):
-        match = re.search("(?:acarsdec|vdlm2dec)-.+ =", line)
-        if match:
-            if match.group(0).strip(" =") not in decoders:
-                decoders[match.group(0).strip(" =")] = dict()
-                continue
-        else:
-            for decoder in decoders:
-                if line.find(decoder) != -1:
-                    if line.find(f"Decoder {decoder}") and line.endswith("UNHEALTHY"):
-                        decoders[decoder]["Status"] = "Bad"
-                        system_error = True
-                    elif line.find(f"Decoder {decoder}") == 0 and line.endswith(
-                        "HEALTHY"
-                    ):
-                        decoders[decoder]["Status"] = "Ok"
-                    elif line.find(f"Decoder {decoder}") == 0:
-                        system_error = True
-                        decoders[decoder]["Status"] = "Unknown"
-
+        try:
+            match = re.search("(?:acarsdec|vdlm2dec)-.+ =", line)
+            if match:
+                if match.group(0).strip(" =") not in decoders:
+                    decoders[match.group(0).strip(" =")] = dict()
                     continue
+            else:
+                for decoder in decoders:
+                    if line.find(decoder) != -1:
+                        if line.find(f"Decoder {decoder}") and line.endswith(
+                            "UNHEALTHY"
+                        ):
+                            decoders[decoder]["Status"] = "Bad"
+                            system_error = True
+                        elif line.find(f"Decoder {decoder}") == 0 and line.endswith(
+                            "HEALTHY"
+                        ):
+                            decoders[decoder]["Status"] = "Ok"
+                        elif line.find(f"Decoder {decoder}") == 0:
+                            system_error = True
+                            decoders[decoder]["Status"] = "Unknown"
 
-        match = re.search("^(?:acars|vdlm2)_server", line)
+                        continue
 
-        if match:
-            if match.group(0) not in servers:
-                servers[match.group(0)] = dict()
+            match = re.search("^(?:acars|vdlm2)_server", line)
 
-            if line.find("listening") != -1 and line.endswith("UNHEALTHY"):
-                servers[match.group(0)]["Status"] = "Bad"
-                system_error = True
-            elif line.find("listening") != -1 and line.endswith("HEALTHY"):
-                servers[match.group(0)]["Status"] = "Ok"
-            elif line.find("listening") != -1:
-                system_error = True
-                servers[match.group(0)]["Status"] = "Unknown"
-            elif line.find("python") != -1 and line.endswith("UNHEALTHY"):
-                system_error = True
-                servers[match.group(0)]["Web"] = "Bad"
-            elif line.find("python") != -1 and line.endswith("HEALTHY"):
-                servers[match.group(0)]["Web"] = "Ok"
-            elif line.find("python") != -1:
-                system_error = True
-                servers[match.group(0)]["Web"] = "Unknown"
+            if match:
+                if match.group(0) not in servers:
+                    servers[match.group(0)] = dict()
 
-            continue
+                if line.find("listening") != -1 and line.endswith("UNHEALTHY"):
+                    servers[match.group(0)]["Status"] = "Bad"
+                    system_error = True
+                elif line.find("listening") != -1 and line.endswith("HEALTHY"):
+                    servers[match.group(0)]["Status"] = "Ok"
+                elif line.find("listening") != -1:
+                    system_error = True
+                    servers[match.group(0)]["Status"] = "Unknown"
+                elif line.find("python") != -1 and line.endswith("UNHEALTHY"):
+                    system_error = True
+                    servers[match.group(0)]["Web"] = "Bad"
+                elif line.find("python") != -1 and line.endswith("HEALTHY"):
+                    servers[match.group(0)]["Web"] = "Ok"
+                elif line.find("python") != -1:
+                    system_error = True
+                    servers[match.group(0)]["Web"] = "Unknown"
 
-        match = re.search("\\d+\\s+(?:ACARS|VDLM2) messages", line)
+                continue
 
-        if match:
-            if line.find("ACARS") != -1 and "ACARS" not in receivers:
-                receivers["ACARS"] = dict()
-                receivers["ACARS"]["Count"] = line.split(" ")[0]
-                if line.endswith("UNHEALTHY"):
-                    if time.time() - start_time > 300.0:
-                        system_error = True
-                        receivers["ACARS"]["Status"] = "Bad"
+            match = re.search("\\d+\\s+(?:ACARS|VDLM2) messages", line)
+
+            if match:
+                if line.find("ACARS") != -1 and "ACARS" not in receivers:
+                    receivers["ACARS"] = dict()
+                    receivers["ACARS"]["Count"] = line.split(" ")[0]
+                    if line.endswith("UNHEALTHY"):
+                        if time.time() - start_time > 300.0:
+                            system_error = True
+                            receivers["ACARS"]["Status"] = "Bad"
+                        else:
+                            receivers["ACARS"]["Status"] = "Waiting for first message"
+                    elif line.endswith("HEALTHY"):
+                        receivers["ACARS"]["Status"] = "Ok"
                     else:
-                        receivers["ACARS"]["Status"] = "Waiting for first message"
+                        system_error = True
+                        receivers["ACARS"]["Status"] = "Unknown"
+                if line.find("VDLM2") != -1 and "VDLM2" not in receivers:
+                    receivers["VDLM2"] = dict()
+                    receivers["VDLM2"]["Count"] = line.split(" ")[0]
+                    if line.endswith("UNHEALTHY"):
+                        if time.time() - start_time > 300.0:
+                            system_error = True
+                            receivers["VDLM2"]["Status"] = "Bad"
+                        else:
+                            receivers["VDLM2"]["Status"] = "Waiting for first message"
+                    elif line.endswith("HEALTHY"):
+                        receivers["VDLM2"]["Status"] = "Ok"
+                    else:
+                        system_error = True
+                        receivers["VDLM2"]["Status"] = "Unknown"
+
+                continue
+
+            match = re.search("^(?:acars|vdlm2)_feeder", line)
+
+            if match:
+                if match.group(0) not in servers:
+                    feeders[match.group(0)] = dict()
+
+                if line.endswith("UNHEALTHY"):
+                    feeders[match.group(0)]["Status"] = "Bad"
+                    system_error = True
                 elif line.endswith("HEALTHY"):
-                    receivers["ACARS"]["Status"] = "Ok"
+                    feeders[match.group(0)]["Status"] = "Ok"
                 else:
                     system_error = True
-                    receivers["ACARS"]["Status"] = "Unknown"
-            if line.find("VDLM2") != -1 and "VDLM2" not in receivers:
-                receivers["VDLM2"] = dict()
-                receivers["VDLM2"]["Count"] = line.split(" ")[0]
+                    feeders[match.group(0)]["Status"] = "Unknown"
+
+                continue
+
+            match = re.search("^(acars|vdlm2)_stats", line)
+
+            if match:
+                if match.group(0) not in stats:
+                    stats[match.group(0)] = dict()
+
                 if line.endswith("UNHEALTHY"):
-                    if time.time() - start_time > 300.0:
-                        system_error = True
-                        receivers["VDLM2"]["Status"] = "Bad"
-                    else:
-                        receivers["VDLM2"]["Status"] = "Waiting for first message"
+                    system_error = True
+                    stats[match.group(0)]["Status"] = "Bad"
                 elif line.endswith("HEALTHY"):
-                    receivers["VDLM2"]["Status"] = "Ok"
+                    stats[match.group(0)]["Status"] = "Ok"
                 else:
                     system_error = True
-                    receivers["VDLM2"]["Status"] = "Unknown"
-
-            continue
-
-        match = re.search("^(?:acars|vdlm2)_feeder", line)
-
-        if match:
-            if match.group(0) not in servers:
-                feeders[match.group(0)] = dict()
-
-            if line.endswith("UNHEALTHY"):
-                feeders[match.group(0)]["Status"] = "Bad"
-                system_error = True
-            elif line.endswith("HEALTHY"):
-                feeders[match.group(0)]["Status"] = "Ok"
-            else:
-                system_error = True
-                feeders[match.group(0)]["Status"] = "Unknown"
-
-            continue
-
-        match = re.search("^(acars|vdlm2)_stats", line)
-
-        if match:
-            if match.group(0) not in stats:
-                stats[match.group(0)] = dict()
-
-            if line.endswith("UNHEALTHY"):
-                system_error = True
-                stats[match.group(0)]["Status"] = "Bad"
-            elif line.endswith("HEALTHY"):
-                stats[match.group(0)]["Status"] = "Ok"
-            else:
-                system_error = True
-                stats[match.group(0)] = "Unknown"
+                    stats[match.group(0)]["Status"] = "Unknown"
+        except Exception as e:
+            print(f"[service-check] Error: {line}\n{e}")
 
     if os.getenv("SPAM", default=False):
         print(decoders)
