@@ -25,6 +25,16 @@ export let search_page = {
     tail: "",
     msg_text: "",
   } as current_search, // variable to store the current search term
+  typed_searches: {
+    flight: "",
+    depa: "",
+    dsta: "",
+    freq: "",
+    label: "",
+    msgno: "",
+    tail: "",
+    msg_text: "",
+  } as current_search, // variable to store the current search term
   current_page: 0 as number, // store the current page of the current_search
   total_pages: 0 as number, // number of pages of results
   show_all: false as boolean, // variable to indicate we are doing a 'show all' search and not of a specific term
@@ -35,117 +45,6 @@ export let search_page = {
   search_msgs_received: [] as acars_msg[][],
   num_results: [] as number[],
   search_md: new MessageDecoder(),
-  search_message_modal: new jBox("Modal", {
-    id: "set_modal",
-    width: 350,
-    height: 400,
-    blockScroll: false,
-    isolateScroll: true,
-    animation: "zoomIn",
-    closeButton: "box",
-    overlay: true,
-    reposition: false,
-    repositionOnOpen: true,
-    onClose: () => window.close_modal(),
-    content: `  <p><a href="javascript:showall()" class="spread_text">Most Recent Messages</a></p>
-    <table class="search">
-      <tr>
-        <td class="search_label">
-          <label>Database Rows:</label>
-        </td>
-        <td class="search_term">
-          <span id="database"></span>
-        </td>
-      </tr>
-      <tr>
-        <td class="search_label">
-          <label>Database Size:</label>
-        </td>
-        <td class="search_term">
-          <span id="size"></span>
-        </td>
-      </tr>
-
-      <tr>
-        <td class="search_label">
-          <label>Callsign:</label>
-        </td>
-        <td class="search_term">
-          <input type="text" id="search_flight">
-        </td>
-      </tr>
-
-      <tr class="search_label">
-        <td>
-          <label>DEPA:</label>
-        </td>
-        <td class="search_term">
-          <input type="text" id="search_depa">
-        </td>
-      </tr>
-
-      <tr class="search_label">
-        <td>
-          <label>DSTA:</label>
-        </td>
-        <td class="search_term">
-          <input type="text" id="search_dsta">
-        </td>
-      </tr>
-
-      <tr class="search_label">
-        <td>
-          <label>Frequency:</label>
-        </td>
-        <td class="search_term">
-          <input type="text" id="search_freq">
-        </td>
-      </tr>
-
-      <tr class="search_label">
-        <td>
-          <label>Label:</label>
-        </td>
-        <td class="search_term">
-          <input type="text" id="search_msglbl">
-        </td>
-      </tr>
-
-      <!-- <tr class="search_label">
-        <td>
-          <label>Message Number:</label>
-        </td>
-        <td class="search_term">
-          <input type="text" id="search_msgno">
-        </td>
-      </tr> --!>
-
-      <tr class="search_label">
-        <td>
-          <label>Tail Number:</label>
-        </td>
-        <td class="search_term">
-          <input type="text" id="search_tail">
-        </td>
-      </tr>
-
-      <tr class="search_label">
-        <td>
-          <label>Text:</label>
-        </td>
-        <td class="search_term">
-          <input type="text" id="search_text">
-        </td>
-      </tr>
-
-    </table>`,
-  }),
-
-  show_search_message_modal: function (): void {
-    this.search_message_modal.open();
-    $("input").on("keyup", () => this.key_event());
-    this.update_size();
-  },
 
   database_size_details: function (msg: database_size): void {
     this.db_size = msg;
@@ -182,11 +81,7 @@ export let search_page = {
 
   key_event: function (): void {
     if (this.search_page_active) {
-      let current_terms = this.get_search_terms();
-      if (this.current_search != current_terms) {
-        this.show_all = false;
-        this.delay_query(current_terms);
-      }
+      this.typed_searches = this.get_search_terms();
     }
   },
 
@@ -214,7 +109,7 @@ export let search_page = {
         this.current_page,
         this.num_results[i]
       );
-      $("#log").html('<div class="row" id="num_results"></div>' + display);
+      $("#search_results").html(display);
       $("#num_results").html(display_nav_results);
       tooltip.close_all_tooltips();
       tooltip.attach_all_tooltips();
@@ -223,7 +118,6 @@ export let search_page = {
   },
 
   get_search_terms: function (): current_search {
-    console.log($("#search_text").val(), $("search_text"));
     return {
       flight: $("#search_flight").val(),
       depa: $("#search_depa").val(),
@@ -236,8 +130,18 @@ export let search_page = {
     } as current_search;
   },
 
+  set_search_terms: function (): void {
+    $("#search_flight").val(this.typed_searches.flight);
+    $("#search_depa").val(this.typed_searches.depa);
+    $("#search_dsta").val(this.typed_searches.dsta);
+    $("#search_freq").val(this.typed_searches.freq);
+    $("#search_msglbl").val(this.typed_searches.label);
+    $("#search_msgno").val(this.typed_searches.msgno);
+    $("#search_tail").val(this.typed_searches.tail);
+    $("#search_text").val(this.typed_searches.msg_text);
+  },
+
   is_everything_blank: function (): boolean {
-    console.log(this.get_search_terms());
     for (let [key, value] of Object.entries(this.get_search_terms())) {
       if (value != "") return false;
     }
@@ -260,34 +164,22 @@ export let search_page = {
   // I chose 500ms for the delay because it seems like a reasonable compromise for fast/slow typers
   // Once delay is met, compare the previous text field with the current text field. If they are the same, we'll send a query out
 
-  delay_query: async function (initial_query: current_search): Promise<void> {
-    // Pause for a tenth of a second
-    await this.sleep(100);
-    let old_search = this.current_search; // Save the old search term in a temp variable
-    // Only execute the search query if the user is done typing. We track that by comparing the query we were asked to run
-    // with what is currently in the text box
-    if (
-      JSON.stringify(initial_query) == JSON.stringify(this.get_search_terms())
-    ) {
-      this.current_search = this.get_search_terms(); // update the global value for the current search
-      if (
-        !this.is_everything_blank() &&
-        JSON.stringify(this.current_search) != JSON.stringify(old_search)
-      ) {
-        // Double check and ensure the search term is new and not blank. No sense hammering the DB to search for the same term
-        // Reset status for letious elements of the page to what we're doing now
-        this.current_page = 0;
-        this.show_all = false;
-        // Give feedback to the user while the search is going on
-        $("#log").html("Searching...");
-        $("#num_results").html("");
-        search_database(this.current_search);
-      } else if (this.is_everything_blank()) {
-        // Field is now blank, clear the page and reset status
-        this.show_all = false;
-        $("#log").html("");
-        $("#num_results").html("");
-      }
+  query: function (): void {
+    this.current_search = this.get_search_terms(); // update the global value for the current search
+    if (!this.is_everything_blank()) {
+      // Double check and ensure the search term is new and not blank. No sense hammering the DB to search for the same term
+      // Reset status for letious elements of the page to what we're doing now
+      this.current_page = 0;
+      this.show_all = false;
+      // Give feedback to the user while the search is going on
+      $("#search_results").html("Searching...");
+      $("#num_results").html("");
+      search_database(this.current_search);
+    } else if (this.is_everything_blank()) {
+      // Field is now blank, clear the page and reset status
+      this.show_all = false;
+      $("#search_results").html("");
+      $("#num_results").html("");
     }
   },
 
@@ -295,17 +187,11 @@ export let search_page = {
 
   showall: function (): void {
     search_database(this.current_search, true);
-    $("#log").html("Updating...");
+    $("#search_results").html("Updating...");
     $("#num_results").html("");
     this.reset_search_terms();
     this.current_page = 0;
     this.show_all = true;
-  },
-
-  // Zzzzzzz
-
-  sleep: function (ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
   },
 
   // Function called by a user clicking on a search page link.
@@ -314,7 +200,7 @@ export let search_page = {
   runclick: function (page: number): void {
     this.current_page = page;
     if (!this.is_everything_blank() || this.show_all) {
-      $("#log").html("Updating results....");
+      $("#search_results").html("Updating results....");
       $("#num_results").html("");
       if (!this.show_all) {
         search_database(this.current_search, false, page);
@@ -460,16 +346,112 @@ export let search_page = {
     if (this.search_page_active) {
       // page is active
       this.set_html();
-      this.update_size();
-      $("#log").html(""); // show the messages we've received
+      $("#log").html('<div id="side_pane"></div><div id="search_results">'); // show the messages we've received
+      $("#side_pane")
+        .html(`<p><a href="javascript:showall()" class="spread_text">Most Recent Messages</a></p>
+      <p><a href="javascript:query()" class="spread_text">Search</a></p>
+      <table class="search">
+        <tr>
+          <td class="search_label">
+            <label>Database Rows:</label>
+          </td>
+          <td class="search_term">
+            <span id="database"></span>
+          </td>
+        </tr>
+        <tr>
+          <td class="search_label">
+            <label>Database Size:</label>
+          </td>
+          <td class="search_term">
+            <span id="size"></span>
+          </td>
+        </tr>
+
+        <tr>
+          <td class="search_label">
+            <label>Callsign:</label>
+          </td>
+          <td class="search_term">
+            <input type="text" id="search_flight">
+          </td>
+        </tr>
+
+        <tr class="search_label">
+          <td>
+            <label>DEPA:</label>
+          </td>
+          <td class="search_term">
+            <input type="text" id="search_depa">
+          </td>
+        </tr>
+
+        <tr class="search_label">
+          <td>
+            <label>DSTA:</label>
+          </td>
+          <td class="search_term">
+            <input type="text" id="search_dsta">
+          </td>
+        </tr>
+
+        <tr class="search_label">
+          <td>
+            <label>Frequency:</label>
+          </td>
+          <td class="search_term">
+            <input type="text" id="search_freq">
+          </td>
+        </tr>
+
+        <tr class="search_label">
+          <td>
+            <label>Label:</label>
+          </td>
+          <td class="search_term">
+            <input type="text" id="search_msglbl">
+          </td>
+        </tr>
+
+        <!-- <tr class="search_label">
+          <td>
+            <label>Message Number:</label>
+          </td>
+          <td class="search_term">
+            <input type="text" id="search_msgno">
+          </td>
+        </tr> --!>
+
+        <tr class="search_label">
+          <td>
+            <label>Tail Number:</label>
+          </td>
+          <td class="search_term">
+            <input type="text" id="search_tail">
+          </td>
+        </tr>
+
+        <tr class="search_label">
+          <td>
+            <label>Text:</label>
+          </td>
+          <td class="search_term">
+            <input type="text" id="search_text">
+          </td>
+        </tr>
+
+      </table>
+      <div class="row" id="num_results"></div>`);
       this.show_search();
+      this.update_size();
+      this.set_search_terms();
+      $("input").on("keyup", () => this.key_event());
     }
   },
 
   set_html: function (): void {
-    $("#modal_text").html(
-      '<a href="javascript:show_page_modal()">Search For Messages</a>'
-    );
-    $("#page_name").html("Search received messages");
+    $("#modal_text").html("");
+    $("#page_name").html("").css("display", "none");
+    this.update_size();
   },
 };

@@ -119,9 +119,10 @@ def htmlListener():
 
 
 def scheduled_tasks():
-    import schedule
+    from SafeScheduler import SafeScheduler
     import time
 
+    schedule = SafeScheduler()
     # init the dbs if not already there
     acarshub_helpers.check_github_version()
     if not acarshub_helpers.SPAM:
@@ -224,13 +225,6 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
                 receiver.close()
                 data = None
             elif data is not None:
-
-                if acarshub_helpers.DEBUG_LOGGING:
-                    acarshub_helpers.log(
-                        f"{repr(data)}", f"{message_type.lower()}Generator"
-                    )
-                    sys.stdout.flush()
-
                 # Decode json
                 # There is a rare condition where we'll receive two messages at once
                 # We will cover this condition off by ensuring each json message is

@@ -227,11 +227,14 @@ div#num_results.row {
   position: relative;
   width: 100%;
   height: inherit;
-  padding-right: 5px;
   padding-top: 10px;
   margin-right: 0;
   margin-left: 0;
   margin-bottom: 0;
+}
+
+table.search thead {
+  border: 0;
 }
 
 div#log.left {
@@ -871,6 +874,14 @@ canvas {
 }
 
 @media only screen and (max-width: 950px) {
+  #search_results {
+    width: calc(100vw - 295px) !important;
+  }
+
+  #side_pane {
+    width: 200px !important;
+  }
+
   div#content.container {
     top: 133px;
     height: calc(100vh - 160px);
@@ -948,6 +959,14 @@ canvas {
     top: 133px;
     height: calc(100vh - 160px);
   }
+
+  #search_results {
+    width: 100% !important;
+  }
+
+  #side_pane {
+    width: 100% !important;
+  }
 }
 
 #msg_body {
@@ -957,6 +976,21 @@ canvas {
 .show_strong {
   font-weight: bold;
   font-family: var(--mono-fonts);
+}
+
+#search_results {
+  width: calc(100vw - 435px);
+  max-height: 100%;
+  margin-left: 5px;
+  overflow: auto;
+  float: left;
+}
+
+#side_pane {
+  width: 340px;
+  max-height: 100%;
+  overflow: auto;
+  float: left;
 }
 
 #mapid {
