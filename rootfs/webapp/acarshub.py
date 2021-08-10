@@ -237,6 +237,8 @@ def service_check():
     decoders = dict()
     servers = dict()
     receivers = dict()
+    feeders = dict()
+    stats = dict()
     system_error = False
 
     for line in healthstatus.split("\n"):
@@ -343,6 +345,8 @@ def service_check():
             match = re.search("^(acars|vdlm2)_stats", line)
 
             if match:
+                if os.getenv("DEBUG_LOGGING", default=False):
+                    print(line)
                 if match.group(0) not in stats:
                     stats[match.group(0)] = dict()
 
