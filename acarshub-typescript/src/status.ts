@@ -98,7 +98,7 @@ export let status = {
         }</span></strong><br>`;
       html_output += this.current_version.is_outdated
         ? "Most Recent ACARS Hub Version:".padEnd(55, ".") +
-          `<span class='red_body'><strong>${this.current_version.container_version}</span></strong><br>`
+          `<span class='red_body'><strong>${this.current_version.github_version}</span></strong><br>`
         : "";
     }
     html_output += "System:".padEnd(55, ".");
