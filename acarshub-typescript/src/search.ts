@@ -445,7 +445,12 @@ export let search_page = {
       this.show_search();
       this.update_size();
       this.set_search_terms();
-      $("input").on("keyup", () => this.key_event());
+      $("input").on("keyup", (event) => {
+        this.key_event();
+        if (event.key === "Enter" && this.search_page_active) {
+          this.query();
+        }
+      });
     }
   },
 
