@@ -1,7 +1,7 @@
 # Firstly, build airframesio/acars-decoder-typescript
 # Done in separate build stage to prevent having to install node + dependencies in final image
 
-FROM node:16.6.2-buster-slim AS acars-decoder-typescript-builder
+FROM node:16.7.0-buster-slim AS acars-decoder-typescript-builder
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
