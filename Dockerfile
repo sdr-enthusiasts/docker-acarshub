@@ -210,6 +210,10 @@ RUN set -x && \
 ENTRYPOINT [ "/init" ]
 
 EXPOSE 80
+EXPOSE 15550
+EXPOSE 15555
+EXPOSE 5550/udp
+EXPOSE 5555/udp
 
 # Add healthcheck
 HEALTHCHECK --start-period=3600s --interval=600s CMD /scripts/healthcheck.sh
