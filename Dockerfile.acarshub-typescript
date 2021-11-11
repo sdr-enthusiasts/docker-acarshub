@@ -1,7 +1,7 @@
 # Firstly, build airframesio/acars-decoder-typescript
 # Done in separate build stage to prevent having to install node + dependencies in final image
 
-FROM node:16.10.0-buster-slim AS acarshub-typescript-builder
+FROM node:17.1.0-buster-slim AS acarshub-typescript-builder
 
 ENV DOCKER_BUILD="true"
 
