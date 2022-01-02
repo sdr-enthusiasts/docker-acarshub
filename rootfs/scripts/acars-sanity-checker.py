@@ -26,10 +26,10 @@ if os.getenv("ENABLE_ACARS", default=False):
         sys.exit(1)
 
     if (
-            not os.getenv("FREQS_ACARS", default=False)
-            and not os.getenv("ACARS_FREQ_0", default=False)
-            and os.getenv("ENABLE_ACARS", default=False) != "external"
-            ):
+        not os.getenv("FREQS_ACARS", default=False)
+        and not os.getenv("ACARS_FREQ_0", default=False)
+        and os.getenv("ENABLE_ACARS", default=False) != "external"
+    ):
         print("Error: ACARS enabled with no FREQS_ACARS or ACARS_FREQ_0. Exiting")
         sys.exit(1)
 
@@ -40,10 +40,10 @@ if os.getenv("ENABLE_VDLM", default=False):
         sys.exit(1)
 
     if (
-            not os.getenv("FREQS_VDLM", default=False)
-            and not os.getenv("VDLM_FREQ_0", default=False)
-            and os.getenv("ENABLE_VDLM", default=False) != "external"
-            ):
+        not os.getenv("FREQS_VDLM", default=False)
+        and not os.getenv("VDLM_FREQ_0", default=False)
+        and os.getenv("ENABLE_VDLM", default=False) != "external"
+    ):
         print("Error: VDLM enabled with no FREQS_VDLM or VDLM_FREQ_0. Exiting")
         sys.exit(1)
 

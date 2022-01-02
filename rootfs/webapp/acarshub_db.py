@@ -731,7 +731,9 @@ def database_search(search_term, page=0):
             f"SELECT * FROM messages WHERE id IN (SELECT rowid FROM messages_fts WHERE messages_fts MATCH {match_string} ORDER BY rowid DESC LIMIT 50 OFFSET {page * 50})"
         )
 
-        count = session.execute(f"SELECT COUNT(*) FROM messages_fts WHERE messages_fts MATCH {match_string}")
+        count = session.execute(
+            f"SELECT COUNT(*) FROM messages_fts WHERE messages_fts MATCH {match_string}"
+        )
 
         processed_results = []
         final_count = 0

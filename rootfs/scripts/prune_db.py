@@ -16,6 +16,7 @@ if os.getenv("SPAM", default=False):
 else:
     path_to_db = "/run/acars/messages.db"
 
+
 def pruneTable(cursor, conn, table, days, print_name):
     import datetime
 
@@ -30,9 +31,7 @@ def pruneTable(cursor, conn, table, days, print_name):
         )
         conn.commit()
 
-        changes = cursor.execute(
-            f"SELECT changes();"
-        )
+        changes = cursor.execute(f"SELECT changes();")
         count = 0
         for row in changes:
             count = row[0]
@@ -41,13 +40,16 @@ def pruneTable(cursor, conn, table, days, print_name):
 
         elapsed = time.time() - before
         if count > 0:
-            print(f"Pruned {print_name} of {count} records older than {days:.0f} days in {elapsed:.3f} seconds")
+            print(
+                f"Pruned {print_name} of {count} records older than {days:.0f} days in {elapsed:.3f} seconds"
+            )
             sys.stdout.flush()
 
         if count < DB_PRUNE_LIMIT:
             break
 
         time.sleep(0.2)
+
 
 try:
     while not os.path.isfile(path_to_db):
@@ -61,8 +63,20 @@ try:
             print(f"Started database pruning")
             sys.stdout.flush()
 
-        pruneTable(cursor, conn, table="messages", days=DB_SAVE_DAYS, print_name="main database")
-        pruneTable(cursor, conn, table="messages_saved", days=DB_ALERT_SAVE_DAYS, print_name="alerts database")
+        pruneTable(
+            cursor,
+            conn,
+            table="messages",
+            days=DB_SAVE_DAYS,
+            print_name="main database",
+        )
+        pruneTable(
+            cursor,
+            conn,
+            table="messages_saved",
+            days=DB_ALERT_SAVE_DAYS,
+            print_name="alerts database",
+        )
 
         if DEBUG_LOGGING:
             print(f"Finished database pruning")
