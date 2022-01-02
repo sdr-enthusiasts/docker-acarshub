@@ -3,12 +3,12 @@
 ## JavaScript
 
 [jquery 3.6.0](https://www.jsdelivr.com/package/npm/jquery)
-[socket.io 4.2.0](https://socket.io/docs/v4/client-installation/)
-[socket.io 4.2.0 map](https://socket.io/docs/v4/client-installation/)
+[socket.io 4.4.0](https://socket.io/docs/v4/client-installation/)
+[socket.io 4.4.0 map](https://socket.io/docs/v4/client-installation/)
 [js cookie v3.0.1](https://cdn.jsdelivr.net/npm/js-cookie@rc/dist/js.cookie.min.js)
 [showdown 1.9.1](https://cdnjs.com/libraries/showdown)
 [showdown map 1.9.1](https://cdnjs.com/libraries/showdown)
-[chart 3.5.1](https://www.jsdelivr.com/package/npm/chart.js)
+[chart 3.7.0](https://www.jsdelivr.com/package/npm/chart.js)
 [chart datalabels 2.0.0](https://github.com/chartjs/chartjs-plugin-datalabels/blob/master/docs/guide/getting-started.md)
 [palette.js](https://github.com/google/palette.js/blob/master/palette.js)
 [jbox 1.3.3](https://github.com/StephanWagner/jBox)
