@@ -14,7 +14,7 @@
 [jbox 1.3.3](https://github.com/StephanWagner/jBox)
 [Leaflet Smooth Wheel Zoom 6/21/21](https://github.com/mutsuyuki/Leaflet.SmoothWheelZoom)
 [Leaflet Control Panel 7/4/21](https://github.com/yigityuce/Leaflet.Control.Custom)
-[Font Awesome 5.15.3](https://fontawesome.com/v5.15/how-to-use/on-the-web/setup/hosting-font-awesome-yourself)
+[Font Awesome 5.15.4](https://fontawesome.com/v5.15/how-to-use/on-the-web/setup/hosting-font-awesome-yourself)
 [Leaftet Legend 1.0.0 + CSS](https://github.com/ptma/Leaflet.Legend)
 
 ## CSS

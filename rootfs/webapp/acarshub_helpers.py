@@ -33,6 +33,7 @@ IS_UPDATE_AVAILABLE = False
 
 
 import logging
+
 logger = logging.getLogger("werkzeug")
 
 
