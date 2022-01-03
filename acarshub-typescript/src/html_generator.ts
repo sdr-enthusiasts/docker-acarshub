@@ -2,8 +2,8 @@
 // Input: msgs_to_process - the array of messages. Format is array of message groups, with each group being an array of message(s) that create a group of submessages
 // Input: selected_tabs - if present, we'll process. Format is uid1;elementid1,uid2;elementid2 etc
 // Input: live_page - default is false. This toggles on the checks for selected tabs
-import { html_functions } from "./html_functions.js";
-import { acars_msg } from "./interfaces.js";
+import { html_functions } from "./html_functions";
+import { acars_msg } from "./interfaces";
 
 export function display_messages(
   msgs_to_process: acars_msg[][],

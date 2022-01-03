@@ -1,6 +1,6 @@
 import { MessageDecoder } from "@airframes/acars-decoder/dist/MessageDecoder";
 import Cookies from "js-cookie";
-import { display_messages } from "./html_generator.js";
+import { display_messages } from "./html_generator";
 import {
   html_msg,
   acars_msg,
@@ -11,11 +11,11 @@ import {
   plane_data,
   alert_matched,
   plane_match,
-} from "./interfaces.js";
+} from "./interfaces";
 import jBox from "jbox";
-import "jbox/dist/jBox.all.css";
-import { tooltip } from "./tooltips.js";
-import { resize_tabs, match_alert, sound_alert } from "./index.js";
+//i mport "jbox/dist/jBox.all.css";
+import { tooltip } from "./tooltips";
+import { resize_tabs, match_alert, sound_alert } from "./index";
 
 export let live_messages_page = {
   pause: false as boolean,

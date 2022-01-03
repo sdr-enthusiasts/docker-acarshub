@@ -393,7 +393,7 @@ var palette = (function () {
     /**
      * Sets a colour generation function of the colour scheme.
      *
-     * The function must accept a singe number argument whose value can be from
+     * The function must accept a single number argument whose value can be from
      * 0.0 to 1.0, and return a colour as an 'RRGGBB' string.  This function
      * will be used when generating palettes, i.e. if 11-colour palette is
      * requested, this function will be called with arguments 0.0, 0.1, …, 1.0.
@@ -656,7 +656,7 @@ var palette = (function () {
   /**
    * Generates a palette using given colour generating function.
    *
-   * The color_func callback must accept a singe number argument whose value
+   * The color_func callback must accept a single number argument whose value
    * can vary from 0.0 to 1.0 (or in general from opt_start to opt_end), and
    * return a colour as an 'RRGGBB' string.  This function will be used when
    * generating palettes, i.e. if 11-colour palette is requested, this

@@ -1,5 +1,5 @@
-import { images } from "./images.js";
-import { acarshub_version } from "./interfaces.js";
+import { images } from "./images";
+import { acarshub_version } from "./interfaces";
 export let menu = {
   acars_path: "" as string,
   acars_url: "" as string,

@@ -1,4 +1,7 @@
-import * as L from "leaflet";
+import * as LeafLet from "leaflet";
+import "./jsother/SmoothWheelZoom";
+import "./jsother/leaftlet.legend";
+import "./jsother/Leaflet.Control.Custom";
 import Cookies from "js-cookie";
 import {
   acars_msg,
@@ -13,19 +16,18 @@ import {
   plane_num_msgs_and_alert,
 } from "./interfaces";
 import jBox from "jbox";
-import { display_messages } from "./html_generator.js";
-import { getBaseMarker, svgShapeToURI } from "aircraft_icons";
-import { window } from "./index.js";
-
+import { display_messages } from "./html_generator";
+import { getBaseMarker, svgShapeToURI } from "./jsother/aircraft_icons";
 import {
+  window,
   resize_tabs,
   showPlaneMessages,
   find_matches,
   get_match,
   get_window_size,
-} from "./index.js";
-import { tooltip } from "./tooltips.js";
-import { images } from "./images.js";
+} from "./index";
+import { tooltip } from "./tooltips";
+import { images } from "./images";
 
 export let live_map_page = {
   livemap_acars_path: "" as string,
@@ -35,11 +37,11 @@ export let live_map_page = {
   adsb_planes: {} as { [key: string]: adsb_target },
   had_targets: false as boolean,
   last_updated: 0 as number,
-  map: (<unknown>null) as L.Map,
-  map_controls: (<unknown>null) as L.Control,
-  legend: (<unknown>null) as L.Control,
-  layerGroupPlanes: (<unknown>null) as L.LayerGroup,
-  layerGroupPlaneDatablocks: (<unknown>null) as L.LayerGroup,
+  map: (<unknown>null) as LeafLet.Map,
+  map_controls: (<unknown>null) as LeafLet.Control,
+  legend: (<unknown>null) as LeafLet.Control,
+  layerGroupPlanes: (<unknown>null) as LeafLet.LayerGroup,
+  layerGroupPlaneDatablocks: (<unknown>null) as LeafLet.LayerGroup,
   lat: 0 as number,
   lon: 0 as number,
   ignored_keys: ["trk", "alt", "call"] as string[],
@@ -724,7 +726,7 @@ export let live_map_page = {
           }</div>`;
 
           if (!this.show_only_acars || num_messages) {
-            let plane_icon = L.divIcon({
+            let plane_icon = LeafLet.divIcon({
               className: "airplane",
               html: `<div><div id="${callsign.replace(
                 "~",
@@ -735,7 +737,7 @@ export let live_map_page = {
               iconSize: [icon.width, icon.height],
             });
 
-            let plane_marker = L.marker([lat, lon], {
+            let plane_marker = LeafLet.marker([lat, lon], {
               icon: plane_icon,
               riseOnHover: true,
             });
@@ -769,12 +771,12 @@ export let live_map_page = {
                 }
               }
               datablock += "</div>";
-              let datablock_icon = new L.DivIcon({
+              let datablock_icon = new LeafLet.DivIcon({
                 className: "airplane",
                 html: datablock,
               });
-              let datablock_marker = new L.Marker(
-                this.offset_datablock([lat, lon]) as L.LatLngTuple,
+              let datablock_marker = new LeafLet.Marker(
+                this.offset_datablock([lat, lon]) as LeafLet.LatLngTuple,
                 { icon: datablock_icon }
               );
               datablock_marker.addTo(this.layerGroupPlaneDatablocks);
@@ -911,7 +913,7 @@ export let live_map_page = {
     this.get_cookie_value();
     if (this.live_map_page_active && this.adsb_enabled) {
       this.set_html();
-      this.map = L.map("mapid", {
+      this.map = LeafLet.map("mapid", {
         zoomDelta: 0.2,
         center: [this.lat, this.lon],
         zoom: this.current_scale,
@@ -922,14 +924,14 @@ export let live_map_page = {
         zoomControl: false,
       });
 
-      L.tileLayer("http://{s}.tile.osm.org/{z}/{x}/{y}.png", {
+      LeafLet.tileLayer("http://{s}.tile.osm.org/{z}/{x}/{y}.png", {
         detectRetina: false,
         opacity: 0.6,
         attribution:
           '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors',
       }).addTo(this.map);
 
-      L.control
+      LeafLet.control
         // @ts-expect-error
         .custom({
           position: "topleft",
@@ -946,8 +948,8 @@ export let live_map_page = {
         })
         .addTo(this.map);
 
-      this.layerGroupPlanes = L.layerGroup().addTo(this.map);
-      this.layerGroupPlaneDatablocks = L.layerGroup().addTo(this.map);
+      this.layerGroupPlanes = LeafLet.layerGroup().addTo(this.map);
+      this.layerGroupPlaneDatablocks = LeafLet.layerGroup().addTo(this.map);
       this.set_controls();
       this.map.on({
         zoom: () => {
@@ -972,7 +974,7 @@ export let live_map_page = {
 
   set_controls: function (): void {
     if (this.legend) this.legend.remove();
-    this.legend = L.control
+    this.legend = LeafLet.control
       // @ts-expect-error
       .Legend({
         position: "bottomleft",
@@ -1007,7 +1009,7 @@ export let live_map_page = {
 
     if (this.map_controls) this.map_controls.remove();
 
-    this.map_controls = L.control
+    this.map_controls = LeafLet.control
       // @ts-expect-error
       .custom({
         position: "topright",
@@ -1073,12 +1075,12 @@ export let live_map_page = {
   },
 
   destroy_maps: function (): void {
-    this.map = (<unknown>null) as L.Map;
-    this.layerGroupPlanes = (<unknown>null) as L.LayerGroup;
-    this.layerGroupPlaneDatablocks = (<unknown>null) as L.LayerGroup;
+    this.map = (<unknown>null) as LeafLet.Map;
+    this.layerGroupPlanes = (<unknown>null) as LeafLet.LayerGroup;
+    this.layerGroupPlaneDatablocks = (<unknown>null) as LeafLet.LayerGroup;
     this.adsb_planes = {};
-    this.map_controls = (<unknown>null) as L.Control;
-    this.legend = (<unknown>null) as L.Control;
+    this.map_controls = (<unknown>null) as LeafLet.Control;
+    this.legend = (<unknown>null) as LeafLet.Control;
 
     if (this.live_map_page_active) this.set_html();
   },

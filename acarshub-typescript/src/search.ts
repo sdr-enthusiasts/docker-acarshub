@@ -1,4 +1,4 @@
-import { display_messages } from "./html_generator.js";
+import { display_messages } from "./html_generator";
 import { MessageDecoder } from "@airframes/acars-decoder/dist/MessageDecoder";
 import {
   search_html_msg,
@@ -6,11 +6,11 @@ import {
   system_status,
   current_search,
   acars_msg,
-} from "./interfaces.js";
-import { search_database, window } from "./index.js";
+} from "./interfaces";
+import { search_database, window } from "./index";
 import jBox from "jbox";
-import "jbox/dist/jBox.all.css";
-import { tooltip } from "./tooltips.js";
+//im port "jbox/dist/jBox.all.css";
+import { tooltip } from "./tooltips";
 
 export let search_page = {
   search_page_active: false as boolean,

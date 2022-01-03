@@ -2,7 +2,18 @@
     "compilerOptions": {
         "lib": ["ES2019", "DOM"],
         "module": "ES6",
+        "jsx": "react",
         "moduleResolution": "node",
+        "noEmit": false,
+        "allowJs": true,
+        // Generate d.ts files
+        "declaration": true,
+        // This compiler run should
+        // only output d.ts files
+        // go to js file when using IDE functions like
+        // "Go to Definition" in VSCode
+        "declarationMap": false,
+        "emitDeclarationOnly": false,
         "outDir": "dist",
         "sourceMap": false,
         "strict": true,
@@ -16,5 +27,5 @@
             ]
         }
     },
-    "include": ["src/", "js-other/aircraft_icons.ts"],
+    "include": ["src/"],
 }
