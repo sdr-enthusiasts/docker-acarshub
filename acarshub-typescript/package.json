@@ -5,13 +5,9 @@
   "main": "index.js",
   "repository": "https://github.com/fredclausen/docker-acarshub",
   "scripts": {
-    "buildtest": "npm run build && mkdir -p ./dist-min && mkdir -p ./css-min && rm -f ./css-min/site.css && rm -f ./dist-min/*.js && cp dist/*.js dist-min/ && cp ./css/site.css ./css-min/site.css",
-    "buildprod": "npm run build && npm run minify",
-    "buildnode": "webpack --mode production",
-    "buildnode-dev": "webpack --mode development",
+    "build": "webpack --mode production",
+    "build-dev": "webpack --mode development",
     "copy_test": "./copy_test_assets.sh",
-    "minify": "mkdir -p ./dist-min && mkdir -p ./css-min && rm -f ./dist-min/*.js && rm -f ./css-min/*.css && ./minifer.sh && uglifyjs-folder dist -o dist-min/index.js && uglifycss ./css/site.css --output ./css-min/site.css",
-    "build": "rm -f ./dist/*.js && tsc && ./build.sh",
     "installer": "./installer.sh"
   },
   "author": "Fred Clausen",
@@ -38,7 +34,8 @@
     "typescript": "^4.5.4",
     "webpack": "^5.65.0",
     "webpack-cli": "^4.9.1",
-    "webpack-dev-server": "^4.7.2"
+    "webpack-dev-server": "^4.7.2",
+    "webpack-image-loader": "^0.1.2"
   },
   "dependencies": {
     "@airframes/acars-decoder": "^1.1.0",
@@ -46,6 +43,7 @@
     "bootstrap": "^5.1.3",
     "chart.js": "3.7.0",
     "chartjs-plugin-datalabels": "v2.0.0",
+    "file-loader": "^6.2.0",
     "jbox": "^1.3.3",
     "jquery": "3.6.0",
     "js-cookie": "v3.0.1",
