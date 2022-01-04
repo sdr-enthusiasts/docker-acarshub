@@ -1,3 +1,12 @@
+//@ts-expect-error
+import * as legend_has_acars_url from "./images/legend-has-acars.svg";
+//@ts-expect-error
+import * as legend_has_acars_alert_url from "./images/legend-has-acars-alert.svg";
+//@ts-expect-error
+import * as legend_with_acars_unread_url from "./images/legend-with-acars-unread.svg";
+//@ts-expect-error
+import * as legend_without_acars_url from "./images/legend-without-acars.svg";
+
 export let images = {
   acars_hub_logo: `<?xml version="1.0" encoding="UTF-8"?>
     <svg width="764px" height="577px" viewBox="0 0 764 577" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1">
@@ -55,4 +64,9 @@ export let images = {
 
   toggle_unread_messages_on: '<i class="fas fa-square"></i>' as string,
   toggle_unread_messages_off: '<i class="far fa-square"></i>' as string,
+
+  legend_has_acars: legend_has_acars_url as string,
+  legend_has_acars_alert: legend_has_acars_alert_url as string,
+  legend_with_acars_unread: legend_with_acars_unread_url as string,
+  legend_without_acars_url: legend_without_acars_url as string,
 };
