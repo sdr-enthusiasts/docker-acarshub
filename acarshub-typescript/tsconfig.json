@@ -7,7 +7,7 @@
         "noEmit": false,
         "allowJs": true,
         // Generate d.ts files
-        "declaration": true,
+        "declaration": false,
         // This compiler run should
         // only output d.ts files
         // go to js file when using IDE functions like
@@ -17,7 +17,7 @@
         "outDir": "dist",
         "sourceMap": false,
         "strict": true,
-        "target": "ES2019",
+        "target": "ES2020",
         "esModuleInterop": true,
         "allowSyntheticDefaultImports": true,
         "baseUrl": ".",

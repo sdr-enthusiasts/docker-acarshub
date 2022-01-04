@@ -29,14 +29,40 @@ module.exports = {
           loader: "babel-loader",
         },
       },
+      {
+        test: /\.(png|jpe?g|gif|svg)$/i,
+        loader: "file-loader",
+        options: {
+          outputPath: "../images",
+          name: "[name].[ext]",
+        },
+      },
+      {
+        test: /\.(md)$/i,
+        loader: "file-loader",
+        options: {
+          name: "[name].[ext]",
+        },
+      },
     ],
   },
   resolve: {
-    extensions: [".js", ".ts", ".tsx", ".css"],
+    extensions: [
+      ".js",
+      ".ts",
+      ".tsx",
+      ".css",
+      ".png",
+      ".jpg",
+      ".jpeg",
+      ".gif",
+      ".svg",
+      ".md",
+    ],
   },
   output: {
     filename: "[name].[chunkhash].js",
-    path: path.resolve(__dirname, "dist"),
+    path: path.resolve(__dirname, "dist/js"),
     clean: true,
   },
 
@@ -47,6 +73,10 @@ module.exports = {
       maxInitialRequests: Infinity,
       minSize: 0,
       cacheGroups: {
+        acarshub: {
+          name: "acarshub",
+          minChunks: 2,
+        },
         vendor: {
           test: /[\\/]node_modules[\\/]/,
           name(module) {
@@ -68,10 +98,14 @@ module.exports = {
       logo: path.resolve(__dirname, "src/static/images") + "/acarshub.svg",
       inject: true,
       mode: "production",
+      cache: true,
+      outputPath: "../images/favicons",
+      publicPath: "../images/favicons",
+      prefix: "",
     }),
     new HtmlWebpackPlugin({
       title: "ACARS Hub",
-      filename: "index.html",
+      filename: "../index.html",
       meta: {
         viewport:
           "width=400, user-scalable=yes, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, minimal-ui",

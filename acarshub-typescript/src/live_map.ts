@@ -986,22 +986,22 @@ export let live_map_page = {
           {
             label: "Planes With ACARS Messages",
             type: "image",
-            url: "static/images/legend-has-acars.svg",
+            url: images.legend_has_acars,
           },
           {
             label: "Planes With Unread ACARS Messages",
             type: "image",
-            url: "static/images/legend-with-acars-unread.svg",
+            url: images.legend_with_acars_unread,
           },
           {
             label: "Planes With ACARS Alerts",
             type: "image",
-            url: "static/images/legend-has-acars-alert.svg",
+            url: images.legend_has_acars_alert,
           },
           {
             label: "Planes Without ACARS Messages",
             type: "image",
-            url: "static/images/legend-without-acars.svg",
+            url: images.legend_without_acars_url,
           },
         ],
       });
