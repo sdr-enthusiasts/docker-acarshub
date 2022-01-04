@@ -1,7 +1,7 @@
 import * as LeafLet from "leaflet";
-import "./jsother/SmoothWheelZoom";
-import "./jsother/leaftlet.legend";
-import "./jsother/Leaflet.Control.Custom";
+import "./js-other/SmoothWheelZoom";
+import "./js-other/leaftlet.legend";
+import "./js-other/Leaflet.Control.Custom";
 import Cookies from "js-cookie";
 import {
   acars_msg,
@@ -17,7 +17,7 @@ import {
 } from "./interfaces";
 import jBox from "jbox";
 import { display_messages } from "./html_generator";
-import { getBaseMarker, svgShapeToURI } from "./jsother/aircraft_icons";
+import { getBaseMarker, svgShapeToURI } from "./js-other/aircraft_icons";
 import {
   window,
   resize_tabs,

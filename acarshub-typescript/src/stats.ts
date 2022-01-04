@@ -1,7 +1,7 @@
 import { Chart } from "chart.js";
 import ChartDataLabels from "chartjs-plugin-datalabels";
 import { generate_stat_submenu } from "./index";
-import palette from "./jsother/palette";
+import palette from "./js-other/palette";
 import {
   signal_grab_freqs,
   signal_grab_message_count,
