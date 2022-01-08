@@ -2,6 +2,7 @@ const path = require("path");
 const webpack = require("webpack");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 const FaviconsWebpackPlugin = require("favicons-webpack-plugin");
+const InjectBodyPlugin = require("inject-body-webpack-plugin").default;
 
 module.exports = {
   entry: {
@@ -19,21 +20,27 @@ module.exports = {
         loader: "ignore-loader",
       },
       {
-        test: /\.css$/i,
+        test: /\.(sass|css|scss)$/,
         use: ["style-loader", "css-loader"],
-        exclude: /node_modules|\.d\.ts$/,
       },
       {
         test: /\.js$/,
-        use: {
-          loader: "babel-loader",
-        },
+        loader: "babel-loader",
+        exclude: /(node_modules)/,
       },
       {
         test: /\.(png|jpe?g|gif|svg)$/i,
         loader: "file-loader",
         options: {
           outputPath: "../images",
+          name: "[name].[ext]",
+        },
+      },
+      {
+        test: /\.(mp3)$/i,
+        loader: "file-loader",
+        options: {
+          outputPath: "../sounds",
           name: "[name].[ext]",
         },
       },
@@ -62,7 +69,8 @@ module.exports = {
   },
   output: {
     filename: "[name].[chunkhash].js",
-    path: path.resolve(__dirname, "dist/js"),
+    path: path.resolve(__dirname, "dist/static/js"),
+    publicPath: "/static/js/",
     clean: true,
   },
 
@@ -95,9 +103,8 @@ module.exports = {
   },
   plugins: [
     new FaviconsWebpackPlugin({
-      logo: path.resolve(__dirname, "src/static/images") + "/acarshub.svg",
+      logo: path.resolve(__dirname, "./src/assets/images") + "/acarshub.svg",
       inject: true,
-      mode: "production",
       cache: true,
       outputPath: "../images/favicons",
       publicPath: "../images/favicons",
@@ -111,6 +118,23 @@ module.exports = {
           "width=400, user-scalable=yes, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, minimal-ui",
       },
     }),
+    new InjectBodyPlugin({
+      content: `    <div class="container" id="header">
+      <div class="row" id="links"></div>
+    </div> <!-- /#header -->
+    <div class="container" id="content">
+      <div class="row" id="main_block">
+        <h3><span id="page_name"></span></h3>
+      </div> <!-- Main block -->
+      <div class="left" id="log">
+      </div> <!-- /#log -->
+    </div> <!-- /#content -->
+    <div class="footer" id="footer_div">
+    </div> <!-- /#footer_div -->`,
+    }),
+    new webpack.ProvidePlugin({
+      $: "jquery",
+      jQuery: "jquery",
+    }),
   ],
-  //stats: 'verbose'
 };
