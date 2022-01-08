@@ -1,11 +1,15 @@
-export declare const window: any;
+declare const window: any;
 
 // CSS loading
 
-import "bootstrap";
-import "./css/site.css";
+import "jquery";
+
+// import 'bootstrap'
+import "bootstrap/dist/css/bootstrap.min.css";
 import "./css/leaftlet.legend.css";
-// import "jbox/dist/jBox.all.css";
+import "leaflet/dist/leaflet.css";
+import "jbox/dist/jBox.all.css";
+import "./css/site.css";
 
 import { menu } from "./menu";
 import { live_messages_page } from "./live_messages";
@@ -107,19 +111,7 @@ export function resize_tabs(
 }
 
 $((): void => {
-  // inject the base HTML in to the body tag
-  $("body").html(`  <div class="container" id="header">
-  <div class="row" id="links"></div>
-</div> <!-- /#header -->
-<div class="container" id="content">
-  <div class="row" id="main_block">
-    <h3><span id="page_name"></span></h3>
-  </div> <!-- Main block -->
-  <div class="left" id="log">
-  </div> <!-- /#log -->
-</div> <!-- /#content -->
-<div class="footer" id="footer_div">
-</div> <!-- /#footer_div -->`);
+  //inject the base HTML in to the body tag
   // Document on ready new syntax....or something. Passing a function directly to jquery
   $("#log").html("Page loading.....please wait");
   // Observe one or multiple elements

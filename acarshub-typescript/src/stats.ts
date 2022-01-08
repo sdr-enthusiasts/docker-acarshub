@@ -1,4 +1,4 @@
-import { Chart } from "chart.js";
+import Chart from "chart.js/auto";
 import ChartDataLabels from "chartjs-plugin-datalabels";
 import { generate_stat_submenu } from "./index";
 import palette from "./js-other/palette";

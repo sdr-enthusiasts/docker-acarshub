@@ -19,7 +19,6 @@ import jBox from "jbox";
 import { display_messages } from "./html_generator";
 import { getBaseMarker, svgShapeToURI } from "./js-other/aircraft_icons";
 import {
-  window,
   resize_tabs,
   showPlaneMessages,
   find_matches,
@@ -27,8 +26,8 @@ import {
   get_window_size,
 } from "./index";
 import { tooltip } from "./tooltips";
-import { images } from "./images";
-
+import { images } from "./assets";
+declare const window: any;
 export let live_map_page = {
   livemap_acars_path: "" as string,
   livemap_acars_url: "" as string,

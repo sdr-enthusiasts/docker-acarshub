@@ -1,4 +1,4 @@
-import { images } from "./images";
+import { images } from "./assets";
 import { acarshub_version } from "./interfaces";
 export let menu = {
   acars_path: "" as string,

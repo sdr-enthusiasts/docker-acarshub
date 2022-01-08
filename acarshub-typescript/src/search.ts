@@ -7,10 +7,11 @@ import {
   current_search,
   acars_msg,
 } from "./interfaces";
-import { search_database, window } from "./index";
+import { search_database } from "./index";
 import jBox from "jbox";
 //im port "jbox/dist/jBox.all.css";
 import { tooltip } from "./tooltips";
+declare const window: any;
 
 export let search_page = {
   search_page_active: false as boolean,
