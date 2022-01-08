@@ -131,3 +131,5 @@ rootfs/webapp/data/ground-stations.json
 package/
 rootfs/webapp/templates/index.html
 rootfs/webapp/templates/helppage.MD
+rootfs/webapp/templates
+rootfs/webapp/static
