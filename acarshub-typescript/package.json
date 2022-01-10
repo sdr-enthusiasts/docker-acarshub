@@ -57,7 +57,7 @@
     "leaflet": "^1.7.1",
     "path": "^0.12.7",
     "showdown": "1.9.1",
-    "socket.io-client": "4.4.0",
+    "socket.io-client": "4.4.1",
     "uglifycss": "^0.0.29",
     "uglifyjs-folder": "^3.0.0"
   }
