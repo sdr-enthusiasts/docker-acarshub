@@ -132,7 +132,7 @@ jobs:
           cp -r ./dist/static/images ./webapp/static/
           cp -r ./dist/static/sounds ./webapp/static/
           cp -r ./dist/static/js ./webapp/static/
-          mv ./webapp/static/index.html ./webapp/templates/
+          mv ./dist/static/index.html ./webapp/templates/
           mv ./webapp/static/js/helppage.MD ./webapp/templates/
           tar cvfz webapp.tar.gz ./webapp
           cp webapp.tar.gz ../webapp.tar.gz
