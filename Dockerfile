@@ -23,9 +23,6 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # Copy needs to be prior to any curl/wget so SSL certs from GitHub runner are loaded
 COPY rootfs/ /
 
-# Copy in acars-decoder-typescript from previous build stage
-# hadolint ignore=DL3010
-COPY acars-decoder-typescript.tgz /src/acars-decoder-typescript.tgz
 # hadolint ignore=DL3010
 COPY webapp.tar.gz /src/webapp.tar.gz
 COPY rootfs/scripts /scripts
@@ -168,23 +165,6 @@ RUN set -x && \
     mkdir -p /run/acars && \
     # extract webapp
     tar -xzvf /src/webapp.tar.gz -C / && \
-    # extract airframes-acars-decoder package to /webapp/static/airframes-acars-decoder
-    mkdir -p /src/airframes-acars-decoder && \
-    tar xvf /src/acars-decoder-typescript.tgz -C /src/airframes-acars-decoder && \
-    mkdir -p /webapp/static/airframes-acars-decoder && \
-    # delete the source files and testing artifacts
-    rm -rf /src/airframes-acars-decoder/package/dist/bin && \
-    find /src/airframes-acars-decoder/package/dist -type f -iname "*.ts" -delete && \
-    python3 /scripts/rename_acars_decoder_imports.py && \
-    rm /scripts/rename_acars_decoder_imports.py && \
-    mv -v /src/airframes-acars-decoder/package/dist/* /webapp/static/airframes-acars-decoder/ && \
-    # fix the import for Message Decoder
-    export INDEX_PATH=$(ls /webapp/static/js/index*.js) && \
-    export OLD_MD5=$(md5sum $INDEX_PATH | awk -F' ' '{print $1}') && \
-    echo $(basename /webapp/static/airframes-acars-decoder/MessageDecoder*.js) | xargs -I '{}' sed -i "s/MessageDecoder.js/$(echo {})/g" $INDEX_PATH && \
-    export NEW_MD5=$(md5sum $INDEX_PATH | awk -F' ' '{print $1}') && \
-    mv $INDEX_PATH $(echo $INDEX_PATH | sed -e "s/$OLD_MD5/$NEW_MD5/g") && \
-    sed -i "s/$(echo $OLD_MD5)/$(echo $NEW_MD5)/g" /webapp/templates/index.html && \
     # grab the ground stations and other data from airframes
     mkdir -p /webapp/data/ && \
     curl https://raw.githubusercontent.com/airframesio/data/master/json/vdl/ground-stations.json > /webapp/data/ground-stations.json && \
