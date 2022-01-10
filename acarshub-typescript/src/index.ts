@@ -1,13 +1,26 @@
-import { menu } from "./menu.js";
+declare const window: any;
 
-import { live_messages_page } from "./live_messages.js";
-import { search_page } from "./search.js";
-import { stats_page } from "./stats.js";
-import { about } from "./about.js";
-import { status } from "./status.js";
-import { alerts_page } from "./alerts.js";
-import { tooltip } from "./tooltips.js";
+// CSS loading
+
+import "jquery";
+
+// import 'bootstrap'
+import "bootstrap/dist/css/bootstrap.min.css";
+import "./css/leaftlet.legend.css";
+import "leaflet/dist/leaflet.css";
+import "jbox/dist/jBox.all.css";
+import "./css/site.css";
+
+import { menu } from "./menu";
+import { live_messages_page } from "./live_messages";
+import { search_page } from "./search";
+import { stats_page } from "./stats";
+import { about } from "./about";
+import { status } from "./status";
+import { alerts_page } from "./alerts";
+import { tooltip } from "./tooltips";
 import { io, Socket } from "socket.io-client";
+import "@fortawesome/fontawesome-free/js/all.min.js";
 
 import {
   labels,
@@ -29,11 +42,10 @@ import {
   acars_msg,
   plane_match,
   acarshub_version,
-} from "./interfaces.js";
+} from "./interfaces";
 
-import { live_map_page } from "./live_map.js";
+import { live_map_page } from "./live_map";
 
-export declare const window: any;
 let socket: Socket = <any>null;
 let socket_status: boolean = false;
 
@@ -99,6 +111,7 @@ export function resize_tabs(
 }
 
 $((): void => {
+  //inject the base HTML in to the body tag
   // Document on ready new syntax....or something. Passing a function directly to jquery
   $("#log").html("Page loading.....please wait");
   // Observe one or multiple elements

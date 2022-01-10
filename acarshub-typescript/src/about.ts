@@ -1,5 +1,6 @@
 import showdown from "showdown";
-
+// @ts-expect-error
+import helpfile from "./helppage.MD";
 export let about = {
   about_acars_path: "" as string,
   about_acars_url: "" as string,
@@ -9,7 +10,7 @@ export let about = {
 
   about: function (): void {
     let converter: showdown.Converter = new showdown.Converter();
-    fetch(`${this.about_acars_url}aboutmd`)
+    fetch(helpfile)
       .then((response) => response.text())
       .then((data) => {
         this.save_html(converter.makeHtml(data));

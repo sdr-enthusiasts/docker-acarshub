@@ -1,5 +1,5 @@
 import jBox from "jbox";
-import "jbox/dist/jBox.all.css";
+//im port "jbox/dist/jBox.all.css";
 
 export let tooltip = {
   freq_tooltip: new jBox("Mouse", {
