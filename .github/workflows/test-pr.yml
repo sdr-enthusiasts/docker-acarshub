@@ -91,7 +91,7 @@ jobs:
         run: |
           npm install
           sed -i 's/Pre-Release/ACARS Hub Pre-Release: ${{ env.VERSION_TAG }}/' ./src/menu.ts
-          npm build-dev
+          npm run build-dev
           mkdir -p ./webapp/static/images
           mkdir -p ./webapp/static/js
           mkdir -p ./webapp/static/sounds
@@ -123,7 +123,7 @@ jobs:
         run: |
           npm install
           sed -i 's/Pre-Release/ACARS Hub Pre-Release: ${{ env.VERSION_TAG }}/' ./src/menu.ts
-          npm build
+          npm run build
           mkdir -p ./webapp/static/images
           mkdir -p ./webapp/static/js
           mkdir -p ./webapp/static/sounds

@@ -99,7 +99,7 @@ jobs:
         working-directory: ./acarshub-typescript
         run: |
           npm install
-          npm build
+          npm run build
           mkdir -p ./webapp/static/images
           mkdir -p ./webapp/static/js
           mkdir -p ./webapp/static/sounds
