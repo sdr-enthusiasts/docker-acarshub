@@ -1,6 +1,6 @@
 import showdown from "showdown";
 // @ts-expect-error
-import * as helpfile from "./helppage.MD";
+import helpfile from "./helppage.MD";
 export let about = {
   about_acars_path: "" as string,
   about_acars_url: "" as string,

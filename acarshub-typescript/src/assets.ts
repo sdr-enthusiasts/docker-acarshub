@@ -1,13 +1,15 @@
 //@ts-expect-error
-import * as legend_has_acars_url from "./assets/images/legend-has-acars.svg";
+import legend_has_acars_url from "./assets/images/legend-has-acars.svg";
 //@ts-expect-error
-import * as legend_has_acars_alert_url from "./assets/images/legend-has-acars-alert.svg";
+import legend_has_acars_alert_url from "./assets/images/legend-has-acars-alert.svg";
 //@ts-expect-error
-import * as legend_with_acars_unread_url from "./assets/images/legend-with-acars-unread.svg";
+import legend_with_acars_unread_url from "./assets/images/legend-with-acars-unread.svg";
 //@ts-expect-error
-import * as legend_without_acars_url from "./assets/images/legend-without-acars.svg";
+import legend_without_acars_url from "./assets/images/legend-without-acars.svg";
 // @ts-expect-error
-import * as acars_alert_url from "./assets/sounds/alert.mp3";
+import acars_alert_url from "./assets/sounds/alert.mp3";
+// @ts-expect-error
+import safari_image_url from "./assets/images/safari.png";
 
 export let images = {
   acars_hub_logo: `<?xml version="1.0" encoding="UTF-8"?>
@@ -71,6 +73,7 @@ export let images = {
   legend_has_acars_alert: legend_has_acars_alert_url as string,
   legend_with_acars_unread: legend_with_acars_unread_url as string,
   legend_without_acars_url: legend_without_acars_url as string,
+  safari_image_url: safari_image_url as string,
 };
 
 export let misc_assets = {
