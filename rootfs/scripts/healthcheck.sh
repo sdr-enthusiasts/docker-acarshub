@@ -179,6 +179,7 @@ if [ -n "${ENABLE_VDLM}" ]; then
 
   # Check for activity
   # read .json files, ensure messages received in past hour
+  sed -i -e 's/}{/}\n{/g' /database/vdlm2.past5min.json
   vdlm2_num_msgs_past_hour=$(find /database -type f -name 'vdlm2.*.json' -cmin -60 -exec cat {} \; | wc -l)
   if [[ "$vdlm2_num_msgs_past_hour" -gt 0 ]]; then
       echo "$vdlm2_num_msgs_past_hour VDLM2 messages received in past hour: HEALTHY"
