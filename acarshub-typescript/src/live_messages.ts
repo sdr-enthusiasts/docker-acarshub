@@ -231,6 +231,7 @@ export let live_messages_page = {
           true
         )
       );
+      resize_tabs();
     } else {
       this.pause = true;
       $("#pause_updates").html('<span class="red">Unpause Updates</span>');
