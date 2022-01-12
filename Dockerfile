@@ -87,6 +87,9 @@ RUN set -x && \
     # stats
     KEPT_PACKAGES+=(rrdtool) && \
     TEMP_PACKAGES+=(librrd-dev) && \
+    # packages for dumpvdl2
+    TEMP_PACKAGES+=(libglib2.0-dev) && \
+    KEPT_PACKAGES+=(libglib2.0-0) && \
     # install packages
     ## Builder fixes...
     mkdir -p /usr/sbin/ && \
@@ -130,7 +133,7 @@ RUN set -x && \
     cp -v /src/rtl-sdr/rtl-sdr.rules /etc/udev/rules.d/ && \
     popd && popd && \
     # libacars
-    git clone git://github.com/szpajder/libacars.git /src/libacars && \
+    git clone https://github.com/szpajder/libacars.git /src/libacars && \
     pushd /src/libacars && \
     git checkout master && \
     mkdir build && \
@@ -151,16 +154,25 @@ RUN set -x && \
     make && \
     make install && \
     popd && popd && \
-    # vdlm2dec
-    git clone https://github.com/fredclausen/vdlm2dec.git /src/vdlm2dec && \
-    pushd /src/vdlm2dec && \
-    git checkout master && \
+    # dumpvdl2
+    pushd /src/ && \
+    git clone https://github.com/szpajder/dumpvdl2.git && \
+    pushd dumpvdl2 && \
     mkdir build && \
     pushd build && \
-    cmake ../ -Drtl=ON && \
+    cmake ../ && \
     make && \
     make install && \
     popd && popd && \
+    # git clone https://github.com/fredclausen/vdlm2dec.git /src/vdlm2dec && \
+    # pushd /src/vdlm2dec && \
+    # git checkout master && \
+    # mkdir build && \
+    # pushd build && \
+    # cmake ../ -Drtl=ON && \
+    # make && \
+    # make install && \
+    # popd && popd && \
     # directory for logging
     mkdir -p /run/acars && \
     # extract webapp
