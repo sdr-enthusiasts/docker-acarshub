@@ -92,6 +92,8 @@ def format_dumpvdl2_message(unformatted_message):
     # msgno = Column('msgno', String(32), index=True, nullable=False)
     if "acars" in unformatted_message["vdl2"]["avlc"]and "msg_num" in unformatted_message["vdl2"]["avlc"]["acars"]:
         vdlm2_message["msgno"] = unformatted_message["vdl2"]["avlc"]["acars"]["msg_num"]
+        if "msg_num_seq" in unformatted_message["vdl2"]["avlc"]["acars"]:
+            vdlm2_message["msgno"] = vdlm2_message["msgno"] + unformatted_message["vdl2"]["avlc"]["acars"]["msg_num_seq"]
     # is_response = Column('is_response', String(32), nullable=False)
     if "cr" in unformatted_message["vdl2"]["avlc"] and unformatted_message["vdl2"]["avlc"]["cr"] == "Response":
         vdlm2_message["is_response"] = 1
