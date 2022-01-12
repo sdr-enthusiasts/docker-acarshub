@@ -33,7 +33,13 @@ def generate_output_files(serials, decoder, freqs_string):
         freqs = ""
 
         for freq in serials[serial]:
-            freqs += f" {freq}"
+            formatted_freqs = freq
+
+            # vdlm requires the input string to have no period and length of 9 to the right
+
+            if decoder == "dumpvdl2":
+                formatted_freqs = "{:<09s}".format(freq.replace(".", ""))
+            freqs += f" {formatted_freqs}"
 
         serial_fields = serial.split(",")
 
@@ -60,7 +66,7 @@ def generate_output_files(serials, decoder, freqs_string):
         elif splitGain is not None and splitGain.startswith("A"):
             splitGain = splitGain.replace("A", "")
 
-        if decoder == "vdlm2dec" and splitGain is not None:
+        if decoder == "dumpvdl2" and splitGain is not None:
             splitGain = splitGain.replace(".", "")
         elif (
             decoder == "acarsdec"
@@ -133,10 +139,10 @@ def generate_output_files(serials, decoder, freqs_string):
                         ),
                         end="",
                     )
-                elif line.find("vdlm2dec") != -1:
+                elif line.find("dumpvdl2") != -1:
                     print(
                         "{}".format(
-                            line.replace("vdlm2dec", f"vdlm2dec-{splitSerial}")
+                            line.replace("dumpvdl2", f"dumpvdl2-{splitSerial}")
                         ),
                         end="",
                     )
@@ -327,7 +333,7 @@ if __name__ == "__main__":
 
     # Everything worked, lets create the startup files
 
-    generate_output_files(serials=output_vdlm, decoder="vdlm2dec", freqs_string="VDLM")
+    generate_output_files(serials=output_vdlm, decoder="dumpvdl2", freqs_string="VDLM")
     generate_output_files(
         serials=output_acars, decoder="acarsdec", freqs_string="ACARS"
     )
@@ -372,7 +378,7 @@ if __name__ == "__main__":
             )
 
             generate_output_files(
-                serials=vdlm_custom, decoder="vdlm2dec", freqs_string="VDLM"
+                serials=vdlm_custom, decoder="dumpvdl2", freqs_string="VDLM"
             )
             index += 1
         else:
@@ -429,4 +435,4 @@ if __name__ == "__main__":
             bw=args.bandwidth,
             serials_used=[],
         )
-        generate_output_files(serials=vdlm, decoder="vdlm2dec", freqs_string="VDLM")
+        generate_output_files(serials=vdlm, decoder="dumpvdl2", freqs_string="VDLM")
