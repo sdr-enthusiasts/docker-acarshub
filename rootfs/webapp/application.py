@@ -234,14 +234,22 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
                 try:
                     message_json = []
                     if data.decode().count("}\n") == 1:
-                        # print(data, "between:", data.decode())
-                        # sys.stdout.flush()
                         message_json.append(json.loads(data.decode()))
-                    elif data.decode().count("}\n") == 0:
+                    elif data.decode().count("}\n") == 0 and data.decode().count("}{") == 0:
                         message_json.append(json.loads(data.decode() + "\n"))
+                    elif data.decode().count("}{") > 0:
+                        split_json = data.decode().split("}{")
+
+                        count = 0
+                        for j in split_json:
+                            count += 1
+                            if len(j) > 1:
+                                if not j.startswith("{"):
+                                    j = "{" + j
+                                if not count == len(split_json):
+                                    j = j + "}"
+                                message_json.append(json.loads(j + "\n"))
                     else:
-                        # print(data.decode() + " " + "end")
-                        # sys.stdout.flush()
                         split_json = data.decode().split("}\n")
 
                         for j in split_json:
