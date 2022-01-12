@@ -5,6 +5,7 @@ import eventlet
 eventlet.monkey_patch()
 import acarshub
 import acarshub_helpers
+import acars_formatter
 
 if not acarshub_helpers.SPAM:
     import acarshub_rrd
@@ -259,12 +260,12 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
                             if j["error"] > 0:
                                 error_messages += j["error"]
 
-                        que_messages.append((que_type, j))
-                        que_database.append((que_type, j))
+                        que_messages.append((que_type, acars_formatter.format_acars_message(j)))
+                        que_database.append((que_type, acars_formatter.format_acars_message(j)))
                         if len(messages_recent) >= 150:  # Keep the que size down
                             del messages_recent[0]
                         messages_recent.append(
-                            (que_type, j)
+                            (que_type, acars_formatter.format_acars_message(j))
                         )  # add to recent message que for anyone fresh loading the page
 
 
