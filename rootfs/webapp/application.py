@@ -238,10 +238,7 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
                     elif data.decode().count("}\n") == 0 and data.decode().count("}{") == 0:
                         message_json.append(json.loads(data.decode() + "\n"))
                     elif data.decode().count("}{") > 0:
-                        print(f"********************************LONG MESSAGE********************************\n{data.decode().count('}{')}")
-                        message_json = json.loads(data.decode())
                         split_json = data.decode().split("}{")
-
                         count = 0
                         for j in split_json:
                             if len(j) > 1:
