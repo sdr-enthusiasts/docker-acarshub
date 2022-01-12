@@ -25,7 +25,8 @@ if [[ -n "${ENABLE_VDLM}" ]]; then
     # capture 5 mins of flows
     #timeout 300s socat -u TCP:127.0.0.1:15555 CREATE:/database/vdlm2.past5min.json
     timeout --foreground 300s socat -u TCP:127.0.0.1:15555 CREATE:/database/vdlm2.past5min.json
-
+    # insert new lines between messages because dumpvdl2 doesn't append a new line at the end of a json message
+    sed -i -e 's/}{/}\n{/g' /database/vdlm2.past5min.json
     # shellcheck disable=SC2016
     echo "$(wc -l < /database/vdlm2.past5min.json) VDLM2 messages received in last 5 mins" | stdbuf -oL awk '{print "[vdlm2_stats] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
 
