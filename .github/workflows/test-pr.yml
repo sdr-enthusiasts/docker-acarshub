@@ -4,13 +4,14 @@ on:
   pull_request:
     branches:
       - main
-      # - "!dependabot/**"
+      - "!dependabot/**"
     paths-ignore:
       - '**.md'
       - '**.MD'
 
 jobs:
   buildx:
+    if: github.actor != 'depbot'
     name: Test image build
     runs-on: ubuntu-latest
     env:
@@ -33,11 +34,12 @@ jobs:
         run: |
           echo "VERSION_TAG=$(sed '1!d' ./version)" >> $GITHUB_ENV
 
-      - name: Set get branch name
-          run: |
-            # Short name for current branch. For PRs, use target branch (base ref)
-            GIT_BRANCH=${GITHUB_BASE_REF:-${GITHUB_REF#refs/heads/}}
-            echo "GIT_BRANCH=$GIT_BRANCH" >> $GITHUB_ENV
+      -
+        name: Set get branch name
+        run: |
+          # Short name for current branch. For PRs, use target branch (base ref)
+          GIT_BRANCH=${GITHUB_BASE_REF:-${GITHUB_REF#refs/heads/}}
+          echo "GIT_BRANCH=$GIT_BRANCH" >> $GITHUB_ENV
       # Show version tag
       -
         name: Show version tag
