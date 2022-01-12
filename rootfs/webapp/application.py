@@ -242,13 +242,14 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
 
                         count = 0
                         for j in split_json:
-                            count += 1
                             if len(j) > 1:
                                 if not j.startswith("{"):
                                     j = "{" + j
                                 if not count == len(split_json):
                                     j = j + "}"
                                 message_json.append(json.loads(j + "\n"))
+
+                            count += 1
                     else:
                         split_json = data.decode().split("}\n")
 
