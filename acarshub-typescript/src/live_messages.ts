@@ -349,7 +349,7 @@ export let live_messages_page = {
 
   live_message_active: function (state = false): void {
     this.lm_page_active = state;
-
+    $(document).off("keyup");
     if (this.lm_page_active) {
       // page is active
       this.set_html();
@@ -364,6 +364,14 @@ export let live_messages_page = {
         )
       ); // show the messages we've received
       resize_tabs();
+      $(document).on("keyup", (event: any) => {
+        if(this.lm_page_active) {
+          // key code for escape is 27
+          if (event.keyCode == 80) {
+            this.pause_updates();
+          }
+        }
+      });
     }
   },
 
