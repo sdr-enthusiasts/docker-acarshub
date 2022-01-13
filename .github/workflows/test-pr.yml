@@ -34,6 +34,12 @@ jobs:
         run: |
           echo "VERSION_TAG=$(sed '1!d' ./version)" >> $GITHUB_ENV
 
+      -
+        name: Set get branch name
+        run: |
+          # Short name for current branch. For PRs, use target branch (base ref)
+          GIT_BRANCH=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}
+          echo "GIT_BRANCH=$GIT_BRANCH" >> $GITHUB_ENV
       # Show version tag
       -
         name: Show version tag
@@ -86,12 +92,12 @@ jobs:
       # build acarshub typescript test
 
       -
-        name: Build ACARSHub typescript test
+        name: Build ACARSHub typescript production
         working-directory: ./acarshub-typescript
         run: |
           npm install
           sed -i 's/Pre-Release/ACARS Hub Pre-Release: ${{ env.VERSION_TAG }}/' ./src/menu.ts
-          npm run build-dev
+          npm run build
           mkdir -p ./webapp/static/images
           mkdir -p ./webapp/static/js
           mkdir -p ./webapp/static/sounds
@@ -113,16 +119,16 @@ jobs:
           no-cache: true
           platforms: linux/amd64,linux/arm/v7,linux/arm/v6,linux/arm64,linux/386
           push: ${{ env.PUSH }}
-          tags: ${{ env.REPO }}/${{ env.IMAGE }}:test-pr
+          tags: ${{ env.REPO }}/${{ env.IMAGE }}:test-${{ env.GIT_BRANCH }}
             # build acarshub typescript test
 
       -
-        name: Build ACARSHub typescript Production
+        name: Build ACARSHub typescript dev
         working-directory: ./acarshub-typescript
         run: |
           npm install
           sed -i 's/Pre-Release/ACARS Hub Pre-Release: ${{ env.VERSION_TAG }}/' ./src/menu.ts
-          npm run build
+          npm run build-dev
           mkdir -p ./webapp/static/images
           mkdir -p ./webapp/static/js
           mkdir -p ./webapp/static/sounds
@@ -144,5 +150,5 @@ jobs:
           no-cache: true
           platforms: linux/amd64,linux/arm/v7,linux/arm/v6,linux/arm64,linux/386
           push: ${{ env.PUSH }}
-          tags: ${{ env.REPO }}/${{ env.IMAGE }}:test-pr-prod
+          tags: ${{ env.REPO }}/${{ env.IMAGE }}:test-${{ env.GIT_BRANCH }}-dev
             # build acarshub typescript test

@@ -39,7 +39,7 @@ function get_pid_of_decoder {
     ps_output=$(ps aux | grep "$ACARS_BIN" | grep " -r $DEVICE_ID " | grep " $FREQS_ACARS")
   elif [[ -n "$VDLM_BIN" ]]; then
     # shellcheck disable=SC2009
-    ps_output=$(ps aux | grep "$VDLM_BIN" | grep " -r $DEVICE_ID " | grep " $FREQS_VDLM")
+    ps_output=$(ps aux | grep "$VDLM_BIN" | grep " --rtlsdr $DEVICE_ID " | grep " $FREQS_VDLM")
   fi
 
   # Find the PID of the decoder based on command line
@@ -50,7 +50,7 @@ function get_pid_of_decoder {
 
 }
 
-# ===== Check acarsdec & vdlm2dec processes =====
+# ===== Check acarsdec & dumpvdl2 processes =====
 
 # For each service...
 for service_dir in /etc/services.d/*; do
@@ -71,22 +71,22 @@ for service_dir in /etc/services.d/*; do
       continue
     fi
 
-  # If the service is vdlm2dec-*...
-  elif [[ "$service_name" =~ vdlm2dec-.+ ]]; then
+  # If the service is dumpvdl2-*...
+  elif [[ "$service_name" =~ dumpvdl2-.+ ]]; then
 
-    # If vdlm2dec is enabled...
+    # If dumpvdl2 is enabled...
     if [ -n "${ENABLE_VDLM}" ]; then
       decoder_pid=$(get_pid_of_decoder "$service_dir")
       decoder_udp_port="5555"
       decoder_server_prefix="vdlm2"
     else
-      # We shouldn't ever get here because if vdlm2dec is disabled, the template wouldn't have been converted to a service
-      echo "Found vdlm2dec service directory when ENABLE_VDLM not set: UNHEALTHY"
+      # We shouldn't ever get here because if dumpvdl2 is disabled, the template wouldn't have been converted to a service
+      echo "Found dumpvdl2 service directory when ENABLE_VDLM not set: UNHEALTHY"
       EXITCODE=1
       continue
     fi
 
-  # If the server isn't acarsdec-* or vdlm2dec-*...
+  # If the server isn't acarsdec-* or dumpvdl2-*...
   else
     # skip it!
     continue
@@ -179,7 +179,8 @@ if [ -n "${ENABLE_VDLM}" ]; then
 
   # Check for activity
   # read .json files, ensure messages received in past hour
-  vdlm2_num_msgs_past_hour=$(find /database -type f -name 'vdlm2.*.json' -cmin -60 -exec cat {} \; | wc -l)
+
+  vdlm2_num_msgs_past_hour=$(find /database -type f -name 'vdlm2.*.json' -cmin -60 -exec cat {} \; | sed -e 's/}{/}\n{/g' | wc -l)
   if [[ "$vdlm2_num_msgs_past_hour" -gt 0 ]]; then
       echo "$vdlm2_num_msgs_past_hour VDLM2 messages received in past hour: HEALTHY"
   else

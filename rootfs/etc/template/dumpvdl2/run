@@ -1,0 +1,49 @@
+#!/usr/bin/with-contenv bash
+#shellcheck shell=bash
+
+# STARTUP SEQUENCE
+#  - dumpvdl2 does not depend on any services and should start immediately
+
+VDLM_BIN="/usr/local/bin/dumpvdl2"
+DEVICE_ID=""
+# shellcheck disable=SC2001
+FREQS_VDLM=""
+PPM=""
+GAIN=""
+SERIAL=""
+VDLM_CMD=()
+
+# Specify device ID
+if [ -n "${DEVICE_ID}" ]; then
+	VDLM_CMD+=("--rtlsdr" "$DEVICE_ID")
+else
+	echo "[dumpvdl2-$SERIAL] No serial number / device index set. Using device index 0. If also running ACARS decoding one of these processes will fail. To fix, set SERIAL_ACARS and SERIAL_VDLM"
+	VDLM_CMD+=("--rtlsdr" "0")
+fi
+
+if [ -z "$GAIN" ]; then
+    GAIN="28.0"
+fi
+
+if [ -n "${PPM}" ]; then
+	VDLM_CMD+=("--correction" "$PPM")
+fi
+
+VDLM_CMD+=("--gain" "$GAIN" "--station-id" "$STATION_ID_VDLM")
+
+# Send output JSON to vdlm2_server.
+VDLM_CMD+=("--msg-filter" "all,-avlc_s,-acars_nodata,-x25_control,-idrp_keepalive,-esis")
+VDLM_CMD+=("--station-id=$STATION_ID_VDLM" "--output" "decoded:json:udp:address=127.0.0.1,port=5555")
+
+# shellcheck disable=SC2206
+VDLM_CMD+=($FREQS_VDLM)
+
+set -eo pipefail
+
+echo "[dumpvdl2-$SERIAL] Starting: '$VDLM_BIN" "${VDLM_CMD[*]}'"
+
+# shellcheck disable=SC2016
+"$VDLM_BIN" "${VDLM_CMD[@]}" \
+2>&1 | stdbuf -oL sed --unbuffered '/^$/d' | stdbuf -oL awk '{print "[dumpvdl2] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
+
+sleep 5

@@ -5,6 +5,7 @@ import eventlet
 eventlet.monkey_patch()
 import acarshub
 import acarshub_helpers
+import acars_formatter
 
 if not acarshub_helpers.SPAM:
     import acarshub_rrd
@@ -232,8 +233,36 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
 
                 try:
                     message_json = []
+                    # JSON decoder requires a newline at the end of the string for processing?
+                    # This is a workaround to ensure we don't lose the last message
+                    # We'll add a newline to the end of the string if it doesn't already exist
+                    # Addtionally, decoders might send more than one message at once. We need
+                    # to handle this.
+                    # acarsdec or vdlm2dec single message ends with a newline so no additional processing required
+                    # acarsdec or vdlm2dec multi messages ends with a newline and each message has a newline but the decoder
+                    # breaks with more than one JSON object
+                    # dumpvdl2 does not end with a newline so we need to add one
                     if data.decode().count("}\n") == 1:
-                        message_json.append(json.loads(data))
+                        message_json.append(json.loads(data.decode()))
+                    # dumpvdl2 single message
+                    elif data.decode().count("}\n") == 0 and data.decode().count("}{") == 0:
+                        message_json.append(json.loads(data.decode() + "\n"))
+                    # dumpvdl2 multi message
+                    elif data.decode().count("}{") > 0:
+                        print("Multiple messages received at once")
+                        split_json = data.decode().split("}{")
+                        count = 0
+                        for j in split_json:
+                            if len(j) > 1:
+                                msg = j
+                                if not msg.startswith("{"):
+                                    msg = "{" + msg
+                                if not count == len(split_json) - 1:
+                                    msg = msg + "}"
+                                message_json.append(json.loads(msg + "\n"))
+
+                            count += 1
+                    # acarsdec/dumpvdl2 multi message
                     else:
                         split_json = data.decode().split("}\n")
 
@@ -259,12 +288,12 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
                             if j["error"] > 0:
                                 error_messages += j["error"]
 
-                        que_messages.append((que_type, j))
-                        que_database.append((que_type, j))
+                        que_messages.append((que_type, acars_formatter.format_acars_message(j)))
+                        que_database.append((que_type, acars_formatter.format_acars_message(j)))
                         if len(messages_recent) >= 150:  # Keep the que size down
                             del messages_recent[0]
                         messages_recent.append(
-                            (que_type, j)
+                            (que_type, acars_formatter.format_acars_message(j))
                         )  # add to recent message que for anyone fresh loading the page
 
 

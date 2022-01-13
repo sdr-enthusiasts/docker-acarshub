@@ -5,15 +5,6 @@ if [ -n "${ENABLE_VDLM}" ]; then
 
   set -o pipefail
 
-  # Require that vdlm2dec is running
-  # if ! netstat -an | grep -P '^\s*udp\s+\d+\s+\d+\s+(?>\d{1,3}\.{0,1}){4}:\d{1,5}\s+127\.0\.0\.1:5555\s+\w+\s*$' > /dev/null; then
-  #   if [ -z "${QUIET_LOGS}" ]; then
-  #     # shellcheck disable=SC2016
-  #     echo "Waiting for vdlm2dec" | stdbuf -oL awk '{print "[vdlm2_server] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
-  #   fi
-  #   sleep 1
-  #   exit
-  # fi
   if [ -z "${QUIET_LOGS}" ]; then
     # shellcheck disable=SC2016
     echo "Starting service" | stdbuf -oL awk '{print "[vdlm2_server] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'

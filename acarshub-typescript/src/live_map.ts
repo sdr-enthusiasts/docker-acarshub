@@ -923,7 +923,7 @@ export let live_map_page = {
         zoomControl: false,
       });
 
-      LeafLet.tileLayer("http://{s}.tile.osm.org/{z}/{x}/{y}.png", {
+      LeafLet.tileLayer("https://{s}.tile.osm.org/{z}/{x}/{y}.png", {
         detectRetina: false,
         opacity: 0.6,
         attribution:

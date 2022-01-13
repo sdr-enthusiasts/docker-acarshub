@@ -243,7 +243,7 @@ def service_check():
 
     for line in healthstatus.split("\n"):
         try:
-            match = re.search("(?:acarsdec|vdlm2dec)-.+ =", line)
+            match = re.search("(?:acarsdec|dumpvdl2)-.+ =", line)
             if match:
                 if match.group(0).strip(" =") not in decoders:
                     decoders[match.group(0).strip(" =")] = dict()
