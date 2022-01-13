@@ -57,11 +57,11 @@ def format_dumpvdl2_message(unformatted_message):
                     elif "name" in item and item["name"] == "ac_location":
                         position = item["value"]["loc"]
                         if "lat" in position:
-                            vdlm2_message["lat"] = position["lat"]
+                            vdlm2_message["lat"] = str(position["lat"])
                         if "lon" in position:
-                            vdlm2_message["lon"] = position["lon"]
+                            vdlm2_message["lon"] = str(position["lon"])
                         if "alt" in item["value"]:
-                            vdlm2_message["alt"] = item["value"]["alt"]
+                            vdlm2_message["alt"] = str(item["value"]["alt"])
     # text = Column('msg_text', Text, index=True, nullable=False)
     if "acars" in unformatted_message["vdl2"]["avlc"] and "msg_text" in unformatted_message["vdl2"]["avlc"]["acars"]:
         vdlm2_message["text"] = unformatted_message["vdl2"]["avlc"]["acars"]["msg_text"]
@@ -113,12 +113,30 @@ def format_dumpvdl2_message(unformatted_message):
 if __name__ == '__main__':
     import json
     try:
-        f = open('/Users/fred/vdml-filtered.txt')
+        f = open('/Users/fred/single_message.txt')
 
-        for line in f:
-            unformatted_message = json.loads(line)
-            vdlm2_message = format_dumpvdl2_message(unformatted_message)
-            print(vdlm2_message)
+        for data in f:
+            message_json = []
+            if data.count("}\n") == 1:
+                message_json.append(data)
+            elif data.count("}\n") == 0 and data.count("}{") == 0:
+                message_json.append(data + "\n")
+            elif data.count("}{") > 0:
+                split_json = data.split("}{")
+                count = 0
+                for j in split_json:
+                    if len(j) > 1:
+                        msg = j
+                        if not msg.startswith("{"):
+                            msg = "{" + msg
+                        if not count == len(split_json) - 1:
+                            msg = msg + "}"
+                        message_json.append(msg)
+                        count += 1
+            print(len(message_json))
+            for msg in message_json:
+                vdlm2_message = format_dumpvdl2_message(json.loads(msg))
+                print(vdlm2_message)
 
     except Exception as e:
         print(f"error: {e}")
