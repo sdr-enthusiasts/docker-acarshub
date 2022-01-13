@@ -327,6 +327,10 @@ a.spread_text:hover {
   color: var(--full-black);
 }
 
+.red {
+  color: var(--full-red);
+}
+
 select {
   min-width: 100%;
 }
