@@ -107,7 +107,7 @@ module.exports = {
       inject: true,
       cache: true,
       outputPath: "images/favicons",
-      publicPath: "static/images/favicons",
+      publicPath: "../../static/images/favicons",
       prefix: "",
     }),
     new HtmlWebpackPlugin({
