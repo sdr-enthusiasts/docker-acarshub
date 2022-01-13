@@ -235,7 +235,7 @@ export let live_messages_page = {
     } else {
       this.pause = true;
       $("#pause_updates").html('<span class="red">Unpause Updates</span>');
-      $("#received").html("Received messages (paused): ");
+      $("#received").html('Received messages <span class="red">(paused)</span>: ');
     }
   },
 
