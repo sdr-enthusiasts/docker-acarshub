@@ -38,7 +38,7 @@ def generate_output_files(serials, decoder, freqs_string):
             # vdlm requires the input string to have no period and length of 9 to the right
 
             if decoder == "dumpvdl2":
-                formatted_freqs = "{:<09s}".format(freq.replace(".", ""))
+                formatted_freqs = "{:<09s}".format(str(freq).replace(".", ""))
             freqs += f" {formatted_freqs}"
 
         serial_fields = serial.split(",")
