@@ -35,7 +35,7 @@ except Exception as e:
 
 try:
     acarshub_helpers.log("Downloading message labels", "database")
-    with open("./data/acars-metadata.json", "r") as f:
+    with open("./data/metadata.json", "r") as f:
         message_labels = json.load(f)
     acarshub_helpers.log("Completed loading message labels", "database")
 except Exception as e:
