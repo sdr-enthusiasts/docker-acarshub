@@ -78,6 +78,36 @@ error_messages = 0
 
 acars_namespaces = ["/main"]
 
+#### REMOVE AFTER AIRFRAMES IS UPDATED ####
+# VDLM Feeders
+que_vdlm2_feed = deque(maxlen=15)
+vdlm2_feeder_thread = Thread()
+vdlm2_feeder_stop_event = Event()
+
+
+def vdlm_feeder():
+    import socket
+    import time
+    import json
+
+    airframes = (socket.gethostbyname("feed.acars.io"), 5555)
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    while not vdlm2_feeder_stop_event.isSet():
+        time.sleep(1)
+
+        while len(que_vdlm2_feed) != 0:
+            time.sleep(.5)
+            msg = que_vdlm2_feed.popleft()
+
+            try:
+                sock.sendto(json.dumps(msg, separators=(',', ':')).encode(), airframes)
+            except Exception as e:
+                acarshub_helpers.acars_traceback(e, "vdlm_python_feeder")
+                que_vdlm2_feed.appendleft(msg)
+                break
+
+#### REMOVE AFTER AIRFRAMES IS UPDATED ####
+
 
 def update_rrd_db():
     global vdlm_messages
@@ -236,7 +266,7 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
                     # JSON decoder requires a newline at the end of the string for processing?
                     # This is a workaround to ensure we don't lose the last message
                     # We'll add a newline to the end of the string if it doesn't already exist
-                    # Addtionally, decoders might send more than one message at once. We need
+                    # Additionally, decoders might send more than one message at once. We need
                     # to handle this.
                     # acarsdec or vdlm2dec single message ends with a newline so no additional processing required
                     # acarsdec or vdlm2dec multi messages ends with a newline and each message has a newline but the decoder
@@ -245,7 +275,10 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
                     if data.decode().count("}\n") == 1:
                         message_json.append(json.loads(data.decode()))
                     # dumpvdl2 single message
-                    elif data.decode().count("}\n") == 0 and data.decode().count("}{") == 0:
+                    elif (
+                        data.decode().count("}\n") == 0
+                        and data.decode().count("}{") == 0
+                    ):
                         message_json.append(json.loads(data.decode() + "\n"))
                     # dumpvdl2 multi message
                     elif data.decode().count("}{") > 0:
@@ -288,8 +321,14 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
                             if j["error"] > 0:
                                 error_messages += j["error"]
 
-                        que_messages.append((que_type, acars_formatter.format_acars_message(j)))
-                        que_database.append((que_type, acars_formatter.format_acars_message(j)))
+                        que_messages.append(
+                            (que_type, acars_formatter.format_acars_message(j))
+                        )
+                        que_database.append(
+                            (que_type, acars_formatter.format_acars_message(j))
+                        )
+                        if acarshub_helpers.FEED is True and message_type == "VDLM2":
+                            que_vdlm2_feed.append(acars_formatter.format_acars_message(j))
                         if len(messages_recent) >= 150:  # Keep the que size down
                             del messages_recent[0]
                         messages_recent.append(
@@ -307,6 +346,9 @@ def init_listeners(special_message=""):
     global thread_html_generator
     global thread_adsb_listner
     global thread_adsb
+    #### REMOVE AFTER AIRFRAMES IS UPDATED ####
+    global vdlm2_feeder_thread
+    #### REMOVE AFTER AIRFRAMES IS UPDATED ####
 
     # show log message if this is container startup
     if special_message == "":
@@ -337,6 +379,17 @@ def init_listeners(special_message=""):
             args=("VDLM2", acarshub_helpers.LIVE_DATA_SOURCE, 15555),
         )
         thread_vdlm2_listener.start()
+    #### REMOVE AFTER AIRFRAMES IS UPDATED ####
+    if (
+        not acarshub_helpers.SPAM
+        and acarshub_helpers.FEED
+        and acarshub_helpers.ENABLE_VDLM
+        and not vdlm2_feeder_thread.is_alive()
+    ):
+        acarshub_helpers.log(f"{special_message}Starting VDLM feeder", "init")
+        vdlm2_feeder_thread = Thread(target=vdlm_feeder)
+        vdlm2_feeder_thread.start()
+    #### REMOVE AFTER AIRFRAMES IS UPDATED ####
     status = acarshub.get_service_status()  # grab system status
 
     # emit to all namespaces
@@ -473,12 +526,15 @@ def main_connect():
         msg_index += 1
         json_message = copy.deepcopy(json_message_orig)
         json_message["message_type"] = msg_type
-        socketio.emit(
-            "acars_msg",
-            {"msghtml": acarshub.update_keys(json_message), **recent_options},
-            to=requester,
-            namespace="/main",
-        )
+        try:
+            socketio.emit(
+                "acars_msg",
+                {"msghtml": acarshub.update_keys(json_message), **recent_options},
+                to=requester,
+                namespace="/main",
+            )
+        except Exception as e:
+            pass
 
     socketio.emit(
         "system_status", {"status": acarshub.get_service_status()}, namespace="/main"

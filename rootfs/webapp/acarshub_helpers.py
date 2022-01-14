@@ -30,6 +30,7 @@ ACARSHUB_BUILD = "0"
 CURRENT_ACARS_HUB_VERSION = "0"
 CURRENT_ACARS_HUB_BUILD = "0"
 IS_UPDATE_AVAILABLE = False
+FEED = False
 
 
 import logging
@@ -40,6 +41,9 @@ logger = logging.getLogger("werkzeug")
 def log(msg, source):
     logger.error(f"[{source}]: {msg}")
 
+
+if os.getenv("FEED", default=False):
+    FEED = True
 
 if os.getenv("DEBUG_LOGGING", default=False):
     DEBUG_LOGGING = True
@@ -201,4 +205,4 @@ def get_version():
 
 
 def acars_traceback(e, source):
-    logger.exception(f"[{source}]")
+    logger.exception(f"[{source}]: {e}")
