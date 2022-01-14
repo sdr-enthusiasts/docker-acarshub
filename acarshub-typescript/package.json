@@ -29,7 +29,7 @@
     "favicons-webpack-plugin": "^5.0.2",
     "html-webpack-plugin": "^5.5.0",
     "inject-body-webpack-plugin": "^1.3.0",
-    "mini-css-extract-plugin": "^2.4.6",
+    "mini-css-extract-plugin": "^2.4.7",
     "node-sass": "^7.0.1",
     "postcss-loader": "^6.2.1",
     "sass-loader": "^12.4.0",
