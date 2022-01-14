@@ -235,7 +235,9 @@ export let live_messages_page = {
     } else {
       this.pause = true;
       $("#pause_updates").html('<span class="red">Unpause Updates</span>');
-      $("#received").html('Received messages <span class="red">(paused)</span>: ');
+      $("#received").html(
+        'Received messages <span class="red">(paused)</span>: '
+      );
     }
   },
 
@@ -365,7 +367,7 @@ export let live_messages_page = {
       ); // show the messages we've received
       resize_tabs();
       $(document).on("keyup", (event: any) => {
-        if(this.lm_page_active) {
+        if (this.lm_page_active) {
           // key code for escape is 27
           if (event.keyCode == 80) {
             this.pause_updates();
