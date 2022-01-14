@@ -33,8 +33,10 @@ RUN set -x && \
     tar -xzvf /src/webapp.tar.gz -C / && \
     # grab the ground stations and other data from airframes
     mkdir -p /webapp/data/ && \
-    curl https://raw.githubusercontent.com/airframesio/data/master/json/vdl/ground-stations.json > /webapp/data/ground-stations.json && \
-    curl https://raw.githubusercontent.com/airframesio/data/master/json/acars/metadata.json > /webapp/data/acars-metadata.json && \
+    # Download the airframes Ground Station and ACARS Label data
+    pushd /webapp/data/ && \
+    curl -O https://raw.githubusercontent.com/airframesio/data/master/json/vdl/ground-stations.json&& \
+    curl -O https://raw.githubusercontent.com/airframesio/data/master/json/acars/metadata.json && \
     # Clean up
     rm -rf /src/* /tmp/* /var/lib/apt/lists/*
 
