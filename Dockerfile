@@ -1,3 +1,4 @@
+# hadolint ignore=DL3007
 FROM fredclausen/acarshub-baseimage:latest
 
 ENV BRANCH_RTLSDR="ed0317e6a58c098874ac58b769cf2e609c18d9a5" \
@@ -21,16 +22,12 @@ ENV BRANCH_RTLSDR="ed0317e6a58c098874ac58b769cf2e609c18d9a5" \
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 # Copy needs to be prior to any curl/wget so SSL certs from GitHub runner are loaded
+# Using the ADD commands makes it so we don't have to untar the archive in the RUN step
 COPY rootfs/ /
+ADD webapp.tar.gz /
 
-# hadolint ignore=DL3010
-COPY webapp.tar.gz /src/webapp.tar.gz
-
-# hadolint ignore=DL3008,SC2086
 RUN set -x && \
     mkdir -p /run/acars && \
-    # extract webapp
-    tar -xzvf /src/webapp.tar.gz -C / && \
     # grab the ground stations and other data from airframes
     mkdir -p /webapp/data/ && \
     # Download the airframes Ground Station and ACARS Label data
