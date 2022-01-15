@@ -100,7 +100,7 @@ export let menu = {
     if (version.is_outdated) {
       $("#release_version").attr(
         "data-jbox-content",
-        `ACARS Hub is outdated. Newest version is ${version.github_version}`
+        `Latest non-development version of ACARS Hub is ${version.github_version}`
       );
       $("#release_version").addClass("red_important");
     } else {
