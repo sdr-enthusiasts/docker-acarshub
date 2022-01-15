@@ -72,7 +72,7 @@ export let menu = {
 
   generate_footer: function (): void {
     let update_message =
-      this.arch !== "armhf"
+      this.arch.trim() === "armhf"
         ? '<div id="update_notice"><a href="javascript:show_menu_modal()" class="red">Notice: System may need update!</a></div>'
         : "";
     let html: string = `<div><a href="javascript:new_page('About')">ACARS Hub Help/About</a></div> \
