@@ -1,3 +1,5 @@
+import { MapOptions } from "leaflet";
+
 export interface database_size {
   size: string;
   count: number;
@@ -307,4 +309,8 @@ export interface acarshub_version {
   container_version: string;
   github_version: string;
   is_outdated: boolean;
+}
+
+export interface MapOptionsWithNewConfig extends MapOptions {
+  smoothWheelZoom: boolean;
 }
