@@ -14,6 +14,7 @@ import {
   adsb_plane,
   plane_match,
   plane_num_msgs_and_alert,
+  MapOptionsWithNewConfig,
 } from "./interfaces";
 import jBox from "jbox";
 import { display_messages } from "./html_generator";
@@ -690,8 +691,11 @@ export let live_map_page = {
 
           if (this.current_hovered_from_sidebar == callsign.replace("~", ""))
             color = "airplane_orange";
-          else if (alert || squawk == 7500 || squawk == 7600 || squawk == 7700)
+          else if ((alert && this.show_unread_messages && num_messages !== old_messages) || squawk == 7500 || squawk == 7600 || squawk == 7700)
             color = "airplane_red";
+          else if (alert) {
+            color = "airplane_yellow";
+          }
           else if (num_messages) {
             if (old_messages > num_messages) {
               console.error(
@@ -918,11 +922,10 @@ export let live_map_page = {
         center: [this.lat, this.lon],
         zoom: this.current_scale,
         scrollWheelZoom: false,
-        // @ts-expect-error
         smoothWheelZoom: true,
         smoothSensitivity: 1,
         zoomControl: false,
-      });
+      } as MapOptionsWithNewConfig);
 
       LeafLet.tileLayer("https://{s}.tile.osm.org/{z}/{x}/{y}.png", {
         detectRetina: false,
@@ -932,7 +935,7 @@ export let live_map_page = {
       }).addTo(this.map);
 
       LeafLet.control
-        // @ts-expect-error
+      // @ts-expect-error
         .custom({
           position: "topleft",
           content:
@@ -994,9 +997,14 @@ export let live_map_page = {
             url: images.legend_with_acars_unread,
           },
           {
-            label: "Planes With ACARS Alerts",
+            label: "Planes With Unread ACARS Alerts",
             type: "image",
-            url: images.legend_has_acars_alert,
+            url: images.legend_has_acars_alert_unread,
+          },
+          {
+            label: "Planes With Read ACARS Alerts",
+            type: "image",
+            url: images.legend_has_acars_alert_read,
           },
           {
             label: "Planes Without ACARS Messages",
