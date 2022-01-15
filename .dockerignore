@@ -31,3 +31,4 @@ rootfs/webapp/data/acars-metadata.json
 rootfs/webapp/data/metadata.json
 rootfs/webapp/data/metadata.json
 rootfs/webapp/data/ground-stations.json
+libseccomp2-checker.sh

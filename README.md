@@ -9,15 +9,15 @@
 
 Docker container to view and also stream ACARS messages to [ACARS.io/Airframes.io](http://acars.io).
 
-Uses [libacars](https://github.com/szpajder/libacars), the [airframe's fork of acarsdec](https://github.com/airframesio/acarsdec) and [vdlm2dec](https://github.com/TLeconte/vdlm2dec) for SDR side of decoding.
+Uses [libacars](https://github.com/szpajder/libacars), the [airframe's fork of acarsdec](https://github.com/airframesio/acarsdec) and [dumpvdl2](https://github.com/szpajder/dumpvdl2) for SDR side of decoding.
 
 Also, we make extensive use of the [airframes](https://github.com/airframesio) work to make the messages more 'human-readable' as well as provide more detail for each of the messages.
 
 Builds and runs on `amd64`, `arm64`, `arm/v7`, `arm/v6` and `386` architectures.
 
-## AN IMPORTANT NOTE ABOUT UPGRADING FROM VERSIONS PRIOR TO 2.2.0 OR LATER
+## IMPORTANT NOTE FOR RASPBERRY PI OS 32 BIT USERS
 
-If you are a long time user of ACARS Hub and you upgrade from `2.1.4` or earlier to `2.2.0` or later the first startup after the upgrade will take a while; as much as 10 minutes or more. The database structure changed and requires a migration to accommodate this. It is *VERY IMPORANT* you let the upgrade complete, otherwise you risk database corruption. This is a one time operation and after that startup times will be normal. Please see [this](https://github.com/fredclausen/docker-acarshub/issues/94) for more information.
+After March 1st, 2022 32 bit Rasperry Pi OS machines may not run ACARS Hub properly. I will be updating the base image of the container to Debian Bullseye and this will cause ACARS Hub to cease working if you are not prepared. Please see [this document](arm32.MD)
 
 ## Supported tags and respective Dockerfiles
 
@@ -234,7 +234,7 @@ The [ACARS.io/Airframes.io](https://app.airframes.io/about) website has a great 
 
 Some notes about frequencies:
 
-* `acarsdec` and `vdlm2dec` are limited to monitoring 8 frequencies apiece
+* `acarsdec` and `dumpvdl2` are limited to monitoring 8 frequencies apiece
 * The spread of frequencies for each decoder has to be within 2 Mhz.
 
 ## Logging
@@ -279,7 +279,7 @@ If there are airlines you notice that are wrong because the data used is wrong (
 
 ## Accessing ACARS/VDLM data with external programs
 
-If you wish to access the JSON data that the decoders `acarsdec` and `vdlm2dec` generate with an external program, such as FlightAirMap, expose the following ports in your docker-compose configuration:
+If you wish to access the JSON data that the decoders `acarsdec` and `dumpvdl2` generate with an external program, such as FlightAirMap, expose the following ports in your docker-compose configuration:
 
 * Port 15555 for UDP VDLM2 JSON
 * Port 15550 for UDP ACARS JSON
@@ -292,6 +292,11 @@ If you wish to access the JSON data that the decoders `acarsdec` and `vdlm2dec` 
 ```
 
 And then you will be able to connect to `yourpisipaddress:15555` or `yourpisipaddress:15550`, respectively, in whatever program can decode ACARS/VDLM JSON.
+
+## Website tips and tricks
+
+* On the `Live Message` page pressing the `p` key on your keyboard will pause the message updates so you can catch up. Pressing `p` again will cause the page to refresh again and display messages as they come in.
+* On the search page enter your search terms and then press `enter` to start the search.
 
 ## Future improvements
 
