@@ -1,6 +1,7 @@
 
 import legend_has_acars_url from "./assets/images/legend-has-acars.svg";
-import legend_has_acars_alert_url from "./assets/images/legend-has-acars-alert.svg";
+import legend_has_acars_alert_unread_url from "./assets/images/legend-has-acars-alert-unread.svg";
+import legend_has_acars_alert_read_url from "./assets/images/legend-has-acars-alert-read.svg";
 import legend_with_acars_unread_url from "./assets/images/legend-with-acars-unread.svg";
 import legend_without_acars_url from "./assets/images/legend-without-acars.svg";
 import acars_alert_url from "./assets/sounds/alert.mp3";
@@ -96,7 +97,8 @@ export let images = {
   toggle_unread_messages_off: '<i class="far fa-square"></i>' as string,
 
   legend_has_acars: legend_has_acars_url as string,
-  legend_has_acars_alert: legend_has_acars_alert_url as string,
+  legend_has_acars_alert_unread: legend_has_acars_alert_unread_url as string,
+  legend_has_acars_alert_read: legend_has_acars_alert_read_url as string,
   legend_with_acars_unread: legend_with_acars_unread_url as string,
   legend_without_acars_url: legend_without_acars_url as string,
   safari_image_url: safari_image_url as string,

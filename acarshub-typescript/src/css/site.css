@@ -1056,8 +1056,15 @@ canvas {
 .airplane_blue:hover,
 .airplane_green:hover,
 .airplane_red:hover,
-.airplane_darkgreen:hover {
+.airplane_darkgreen:hover,
+.airplane_yellow:hover {
   fill: var(--full-orange);
+  paint-order: stroke;
+}
+
+.airplane_yellow {
+  fill: var(--full-yellow);
+  stroke: var(--full-black);
   paint-order: stroke;
 }
 
