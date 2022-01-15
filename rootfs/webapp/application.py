@@ -96,15 +96,16 @@ def vdlm_feeder():
         time.sleep(1)
 
         while len(que_vdlm2_feed) != 0:
-            time.sleep(.5)
+            time.sleep(0.5)
             msg = que_vdlm2_feed.popleft()
 
             try:
-                sock.sendto(json.dumps(msg, separators=(',', ':')).encode(), airframes)
+                sock.sendto(json.dumps(msg, separators=(",", ":")).encode(), airframes)
             except Exception as e:
                 acarshub_helpers.acars_traceback(e, "vdlm_python_feeder")
                 que_vdlm2_feed.appendleft(msg)
                 break
+
 
 #### REMOVE AFTER AIRFRAMES IS UPDATED ####
 
@@ -328,7 +329,9 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
                             (que_type, acars_formatter.format_acars_message(j))
                         )
                         if acarshub_helpers.FEED is True and message_type == "VDLM2":
-                            que_vdlm2_feed.append(acars_formatter.format_acars_message(j))
+                            que_vdlm2_feed.append(
+                                acars_formatter.format_acars_message(j)
+                            )
                         if len(messages_recent) >= 150:  # Keep the que size down
                             del messages_recent[0]
                         messages_recent.append(

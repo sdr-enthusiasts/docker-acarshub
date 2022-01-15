@@ -40,9 +40,13 @@ def format_dumpvdl2_message(unformatted_message):
     if "station" in unformatted_message["vdl2"]:
         vdlm2_message["station_id"] = unformatted_message["vdl2"]["station"]
     if "addr" in unformatted_message["vdl2"]["avlc"]["dst"]:
-        vdlm2_message["toaddr"] = int(unformatted_message["vdl2"]["avlc"]["dst"]["addr"], 16)
+        vdlm2_message["toaddr"] = int(
+            unformatted_message["vdl2"]["avlc"]["dst"]["addr"], 16
+        )
     if "addr" in unformatted_message["vdl2"]["avlc"]["src"]:
-        vdlm2_message["fromaddr"] = int(unformatted_message["vdl2"]["avlc"]["src"]["addr"], 16)
+        vdlm2_message["fromaddr"] = int(
+            unformatted_message["vdl2"]["avlc"]["src"]["addr"], 16
+        )
     # depa = Column('depa', String(32), index=True, nullable=False)
     # eta = Column('eta', String(32), nullable=False)
     # gtout = Column('gtout', String(32), nullable=False)

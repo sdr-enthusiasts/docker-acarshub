@@ -403,7 +403,7 @@ window.new_page = function (page: string): void {
 
 function connection_status(connected = false): void {
   socket_status = connected;
-  if(connected) {
+  if (connected) {
     $("#update_notice").removeClass("hidden");
   } else {
     $("#update_notice").addClass("hidden");
@@ -491,7 +491,7 @@ export function sound_alert(): void {
 
 export function generate_stat_submenu(
   acars: boolean = false,
-  vdlm: boolean = false,
+  vdlm: boolean = false
 ): void {
   menu.generate_stat_submenu(acars, vdlm);
 }
@@ -518,7 +518,7 @@ window.show_page_modal = function (): void {
   }
 };
 
-window.show_menu_modal = function(): void {
+window.show_menu_modal = function (): void {
   menu.show_menu_modal();
 };
 

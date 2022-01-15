@@ -31,7 +31,7 @@ CURRENT_ACARS_HUB_VERSION = "0"
 CURRENT_ACARS_HUB_BUILD = "0"
 IS_UPDATE_AVAILABLE = False
 FEED = False
-ARCH="unknown"
+ARCH = "unknown"
 
 
 import logging

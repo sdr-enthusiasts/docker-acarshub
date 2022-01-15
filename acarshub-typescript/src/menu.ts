@@ -71,7 +71,10 @@ export let menu = {
   },
 
   generate_footer: function (): void {
-    let update_message = this.arch !== "armhf" ? "<div id=\"update_notice\"><a href=\"javascript:show_menu_modal()\" class=\"red\">Notice: System may need update!</a></div>" : "";
+    let update_message =
+      this.arch !== "armhf"
+        ? '<div id="update_notice"><a href="javascript:show_menu_modal()" class="red">Notice: System may need update!</a></div>'
+        : "";
     let html: string = `<div><a href="javascript:new_page('About')">ACARS Hub Help/About</a></div> \
       <div id="github_link"><a href="https://github.com/fredclausen/docker-acarshub" target="_blank">Project Github</a></div> \
       <div id="discord_badge"><a href="https://discord.gg/sTf9uYF"><img src="https://img.shields.io/discord/734090820684349521" alt="discord"></a></div> \
@@ -89,7 +92,7 @@ export let menu = {
     this.generate_menu();
   },
 
-  set_arch: function(arch: string): void {
+  set_arch: function (arch: string): void {
     this.arch = arch;
   },
 
