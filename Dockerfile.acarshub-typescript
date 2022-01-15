@@ -24,5 +24,5 @@ COPY acarshub-typescript/ /acarshub-typescript/
 RUN set -xe && \
     pushd /acarshub-typescript && \
     mkdir -p ../rootfs/webapp/static/js/ && \
-    npm run build && \
+    npm run build-dev && \
     npm run installer
