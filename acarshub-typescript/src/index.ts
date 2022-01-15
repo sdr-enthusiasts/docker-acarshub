@@ -20,7 +20,6 @@ import { status } from "./status";
 import { alerts_page } from "./alerts";
 import { tooltip } from "./tooltips";
 import { io, Socket } from "socket.io-client";
-import "@fortawesome/fontawesome-free/js/all.min.js";
 
 import {
   labels,

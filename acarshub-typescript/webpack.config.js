@@ -54,6 +54,9 @@ let config = {
     ],
   },
   resolve: {
+    alias: {
+      '@fortawesome/fontawesome-free-solid$': '@fortawesome/fontawesome-free-solid/shakable.es.js',
+    },
     extensions: [
       ".js",
       ".ts",

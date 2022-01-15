@@ -46,6 +46,9 @@
   "dependencies": {
     "@airframes/acars-decoder": "^1.1.0",
     "@fortawesome/fontawesome-free": "^5.15.4",
+    "@fortawesome/fontawesome-svg-core": "^1.2.36",
+    "@fortawesome/free-regular-svg-icons": "^5.15.4",
+    "@fortawesome/free-solid-svg-icons": "^5.15.4",
     "bootstrap": "3.4.1",
     "chart.js": "3.7.0",
     "chartjs-plugin-datalabels": "v2.0.0",

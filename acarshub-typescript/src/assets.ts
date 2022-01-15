@@ -11,6 +11,38 @@ import acars_alert_url from "./assets/sounds/alert.mp3";
 // @ts-expect-error
 import safari_image_url from "./assets/images/safari.png";
 
+import { library, dom } from "@fortawesome/fontawesome-svg-core";
+import { faCheck } from "@fortawesome/free-solid-svg-icons/faCheck";
+import { faPlane } from "@fortawesome/free-solid-svg-icons/faPlane";
+import { faPlaneSlash } from "@fortawesome/free-solid-svg-icons/faPlaneSlash";
+import { faCommentAlt as faCommentAltSolid } from "@fortawesome/free-solid-svg-icons/faCommentAlt";
+import { faCommentAlt as faCommentAltRegular} from "@fortawesome/free-regular-svg-icons/faCommentAlt";
+import { faToggleOn } from "@fortawesome/free-solid-svg-icons/faToggleOn";
+import { faToggleOff } from "@fortawesome/free-solid-svg-icons/faToggleOff";
+import { faSquare as faSquareSolid } from "@fortawesome/free-solid-svg-icons/faSquare";
+import { faSquare as faSquareRegular } from "@fortawesome/free-regular-svg-icons/faSquare";
+import { faArrowUp } from "@fortawesome/free-solid-svg-icons/faArrowUp";
+import { faArrowDown } from "@fortawesome/free-solid-svg-icons/faArrowDown";
+import { faPlus } from "@fortawesome/free-solid-svg-icons/faPlus";
+import { faMinus } from "@fortawesome/free-solid-svg-icons/faMinus";
+
+library.add(faCheck);
+library.add(faPlane);
+library.add(faPlaneSlash);
+library.add(faCommentAltSolid);
+library.add(faCommentAltRegular);
+library.add(faToggleOn);
+library.add(faToggleOff);
+library.add(faSquareSolid);
+library.add(faSquareRegular);
+library.add(faArrowUp);
+library.add(faArrowDown);
+library.add(faPlus);
+library.add(faMinus);
+library.add
+
+dom.watch();
+
 export let images = {
   acars_hub_logo: `<?xml version="1.0" encoding="UTF-8"?>
     <svg width="764px" height="577px" viewBox="0 0 764 577" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1">
