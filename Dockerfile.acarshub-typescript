@@ -17,6 +17,7 @@ COPY acarshub-typescript/package.json /acarshub-typescript/package.json
 COPY acarshub-typescript/package-lock.json /acarshub-typescript/package-lock.json
 
 RUN set -xe && \
+    pushd /acarshub-typescript && \
     npm install
 
 COPY acarshub-typescript/ /acarshub-typescript/
