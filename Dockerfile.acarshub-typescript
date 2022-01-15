@@ -13,11 +13,12 @@ COPY acarshub-typescript/package-lock.json /acarshub-typescript/package-lock.jso
 
 #hadolint ignore=DL3008
 RUN set -xe && \
-    pushd /acarshub-typescript && \
     apt-get update && \
     apt-get install -y --no-install-recommends make python3 g++ && \
-    npm install && \
     rm -rf /src/* /tmp/* /var/lib/apt/lists/*
+
+RUN set -xe && \
+    npm install
 
 COPY acarshub-typescript/ /acarshub-typescript/
 
