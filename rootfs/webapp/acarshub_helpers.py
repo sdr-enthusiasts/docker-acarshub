@@ -174,24 +174,26 @@ def check_github_version():
     global ACARSHUB_BUILD
     global CURRENT_ACARS_HUB_BUILD
     global IS_UPDATE_AVAILABLE
-    r = requests.get(
-        "https://raw.githubusercontent.com/fredclausen/docker-acarshub/main/version"
-    )
-    CURRENT_ACARS_HUB_VERSION = r.text.split("\n")[0].split(" ")[0].replace("v", "")
-    CURRENT_ACARS_HUB_BUILD = r.text.split("\n")[0].split(" ")[2].replace("v", "")
+    ### FIXME: This is a hack to get around the fact that the version file is not updated on the build server
+    if not SPAM:
+        r = requests.get(
+            "https://raw.githubusercontent.com/fredclausen/docker-acarshub/main/version"
+        )
+        CURRENT_ACARS_HUB_VERSION = r.text.split("\n")[0].split(" ")[0].replace("v", "")
+        CURRENT_ACARS_HUB_BUILD = r.text.split("\n")[0].split(" ")[2].replace("v", "")
 
-    if (
-        CURRENT_ACARS_HUB_VERSION != ACARSHUB_VERSION
-        and ACARSHUB_VERSION < CURRENT_ACARS_HUB_VERSION
-    ) or (
-        CURRENT_ACARS_HUB_BUILD != ACARSHUB_BUILD
-        and ACARSHUB_BUILD < CURRENT_ACARS_HUB_BUILD
-    ):
-        log("Update found", "version-checker")
-        IS_UPDATE_AVAILABLE = True
-    else:
-        log("No update found", "version-checker")
-        IS_UPDATE_AVAILABLE = False
+        if (
+            CURRENT_ACARS_HUB_VERSION != ACARSHUB_VERSION
+            and ACARSHUB_VERSION < CURRENT_ACARS_HUB_VERSION
+        ) or (
+            CURRENT_ACARS_HUB_BUILD != ACARSHUB_BUILD
+            and ACARSHUB_BUILD < CURRENT_ACARS_HUB_BUILD
+        ):
+            log("Update found", "version-checker")
+            IS_UPDATE_AVAILABLE = True
+        else:
+            log("No update found", "version-checker")
+            IS_UPDATE_AVAILABLE = False
 
 
 def get_version():
