@@ -41,6 +41,7 @@ export interface terms {
 export interface decoders {
   acars: boolean;
   vdlm: boolean;
+  arch: string;
   adsb: {
     enabled: boolean;
     lat: number;

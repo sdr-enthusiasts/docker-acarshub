@@ -331,6 +331,10 @@ a.spread_text:hover {
   color: var(--full-red);
 }
 
+
+.white {
+  color: var(--full-white);
+}
 select {
   min-width: 100%;
 }
@@ -874,6 +878,10 @@ canvas {
   #mapid {
     height: calc(100vh - 130px) !important;
     max-height: calc(100vh - 130px) !important;
+  }
+
+  #update_notice {
+    display: none;
   }
 }
 

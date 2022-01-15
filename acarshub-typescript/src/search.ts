@@ -9,7 +9,6 @@ import {
 } from "./interfaces";
 import { search_database } from "./index";
 import jBox from "jbox";
-//im port "jbox/dist/jBox.all.css";
 import { tooltip } from "./tooltips";
 declare const window: any;
 

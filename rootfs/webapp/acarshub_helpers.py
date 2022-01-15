@@ -31,6 +31,7 @@ CURRENT_ACARS_HUB_VERSION = "0"
 CURRENT_ACARS_HUB_BUILD = "0"
 IS_UPDATE_AVAILABLE = False
 FEED = False
+ARCH="unknown"
 
 
 import logging
@@ -160,6 +161,11 @@ with open(version_path, "r") as f:
     CURRENT_ACARS_HUB_VERSION = ACARSHUB_VERSION
     ACARSHUB_BUILD = lines.split("\n")[0].split(" ")[2].replace("v", "")
     CURRENT_ACARS_HUB_BUILD = ACARSHUB_BUILD
+
+if not SPAM and os.path.exists("/arch"):
+    with open("/arch", "r") as f:
+        lines = f.read()
+        ARCH = lines.split("\n")[0]
 
 
 def check_github_version():

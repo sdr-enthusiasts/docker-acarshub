@@ -1,10 +1,30 @@
 import { images } from "./assets";
 import { acarshub_version } from "./interfaces";
+import jBox from "jbox";
 export let menu = {
   acars_path: "" as string,
   acars_url: "" as string,
 
   menu_adsb: false as boolean,
+  arch: "" as string,
+
+  footer_message_modal: new jBox("Modal", {
+    id: "set_modal",
+    width: 300,
+    height: 200,
+    blockScroll: false,
+    isolateScroll: true,
+    animation: "zoomIn",
+    closeButton: "box",
+    overlay: true,
+    reposition: false,
+    repositionOnOpen: true,
+    content: `<span class="red"><center><h2>NOTICE!</h2></center></span><span class="white">You are running an ARM 32 bit host system. After March 1st, 2022 your system may fail to properly run ACARS Hub. Please visit <a href="https://github.com/fredclausen/docker-acarshub/blob/main/ARM32.md">this page</a> for more information.</span>`,
+  }),
+
+  show_menu_modal(): void {
+    this.footer_message_modal.open();
+  },
 
   generate_menu: function (): void {
     let html = '<div class="wrap"><span class="decor"></span>';
@@ -51,6 +71,7 @@ export let menu = {
   },
 
   generate_footer: function (): void {
+    let update_message = this.arch !== "armhf" ? "<div id=\"update_notice\"><a href=\"javascript:show_menu_modal()\" class=\"red\">Notice: System may need update!</a></div>" : "";
     let html: string = `<div><a href="javascript:new_page('About')">ACARS Hub Help/About</a></div> \
       <div id="github_link"><a href="https://github.com/fredclausen/docker-acarshub" target="_blank">Project Github</a></div> \
       <div id="discord_badge"><a href="https://discord.gg/sTf9uYF"><img src="https://img.shields.io/discord/734090820684349521" alt="discord"></a></div> \
@@ -58,6 +79,7 @@ export let menu = {
       <span id="disconnect"></span></div> \
       <div><span class="menu_non_link" id="received">Received Messages:&nbsp;</span><span class="green" id="receivedmessages">0</span></div> \
       <span id="filtered"></span> \
+      ${update_message} \
       <span class="align_right" id="release_version" data-jbox-content="Your version of ACARS Hub is up to date"><strong>Pre-Release</strong></span>`;
     $("#footer_div").html(html);
   },
@@ -65,6 +87,10 @@ export let menu = {
   set_adsb: function (adsb_status = false): void {
     this.menu_adsb = adsb_status;
     this.generate_menu();
+  },
+
+  set_arch: function(arch: string): void {
+    this.arch = arch;
   },
 
   set_version: function (version: acarshub_version): void {

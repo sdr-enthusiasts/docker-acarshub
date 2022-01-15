@@ -170,6 +170,7 @@ $((): void => {
 
   socket.on("features_enabled", function (msg: decoders): void {
     stats_page.decoders_enabled(msg);
+    menu.set_arch(msg.arch);
     if (msg.adsb.enabled === true) {
       adsb_enabled = true;
       menu.set_adsb(true);
@@ -402,6 +403,11 @@ window.new_page = function (page: string): void {
 
 function connection_status(connected = false): void {
   socket_status = connected;
+  if(connected) {
+    $("#update_notice").removeClass("hidden");
+  } else {
+    $("#update_notice").addClass("hidden");
+  }
   $("#disconnect").html(
     !connected
       ? ' | <strong><span class="red_body">DISCONNECTED FROM WEB SERVER'
@@ -485,7 +491,7 @@ export function sound_alert(): void {
 
 export function generate_stat_submenu(
   acars: boolean = false,
-  vdlm: boolean = false
+  vdlm: boolean = false,
 ): void {
   menu.generate_stat_submenu(acars, vdlm);
 }
@@ -511,6 +517,11 @@ window.show_page_modal = function (): void {
     live_messages_page.show_live_message_modal();
   }
 };
+
+window.show_menu_modal = function(): void {
+  menu.show_menu_modal();
+};
+
 window.updateAlerts = function (): void {
   alerts_page.updateAlerts();
 };

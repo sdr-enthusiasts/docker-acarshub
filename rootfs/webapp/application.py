@@ -498,6 +498,7 @@ def main_connect():
         {
             "vdlm": acarshub_helpers.ENABLE_VDLM,
             "acars": acarshub_helpers.ENABLE_ACARS,
+            "arch": acarshub_helpers.ARCH,
             "adsb": {
                 "enabled": acarshub_helpers.ENABLE_ADSB,
                 "lat": acarshub_helpers.ADSB_LAT,
