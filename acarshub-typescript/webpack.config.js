@@ -4,7 +4,7 @@ const HtmlWebpackPlugin = require("html-webpack-plugin");
 const FaviconsWebpackPlugin = require("favicons-webpack-plugin");
 const InjectBodyPlugin = require("inject-body-webpack-plugin").default;
 
-module.exports = {
+let config = {
   entry: {
     acarshub: path.resolve(__dirname, "src") + "/index.ts",
   },
@@ -87,7 +87,7 @@ module.exports = {
         },
         vendor: {
           test: /[\\/]node_modules[\\/]/,
-          name(module) {
+          name: (module) => {
             // get the name. E.g. node_modules/packageName/not/this/part.js
             // or node_modules/packageName
             const packageName = module.context.match(
@@ -138,3 +138,11 @@ module.exports = {
     }),
   ],
 };
+
+module.exports = (env, argv) => {
+  if (argv.mode === 'development') {
+    config.devtool = 'source-map';
+  }
+  return config;
+};
+
