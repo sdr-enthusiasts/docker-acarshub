@@ -27,6 +27,43 @@
   --jbox-shadow: hsla(0, 0%, 0%, 0.25);
 }
 
+div * {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE 10+ */
+}
+div *::-webkit-scrollbar-track {
+  -webkit-box-shadow: none !important;
+  box-shadow: none !important;
+  background-color: transparent;
+}
+div *::-webkit-scrollbar {
+  width: 3px !important;
+  background-color: transparent;
+}
+div *::-webkit-scrollbar-thumb {
+  background-color: transparent;
+}
+
+.on-scrollbar{
+  scrollbar-width: thin; /* Firefox */
+  -ms-overflow-style: none; /* IE 10+ */
+}
+
+.on-scrollbar::-webkit-scrollbar-track {
+  -webkit-box-shadow: none !important;
+  box-shadow: none !important;
+  background-color: transparent !important;
+}
+
+.on-scrollbar::-webkit-scrollbar {
+  width: 6px !important;
+  background-color: transparent;
+}
+
+.on-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #acacac;
+}
+
 table {
   border: 1px solid var(--full-black);
   border-collapse: collapse;
@@ -177,6 +214,13 @@ body {
   margin-left: auto;
   margin-right: auto;
   font-family: var(--site-fonts);
+  -ms-overflow-style: none; /* for Internet Explorer, Edge */
+  scrollbar-width: none; /* for Firefox */
+  overflow-y: scroll;
+}
+
+body::-webkit-scrollbar {
+  display: none; /* for Chrome, Safari, and Opera */
 }
 
 .container {
@@ -197,13 +241,6 @@ div#content.container {
   overflow: scroll;
   height: calc(100vh - 125px);
 }
-
-/* -ms-overflow-style: none;  /* IE and Edge
-scrollbar-width: none;  Firefox */
-
-/* div#content.container::-webkit-scrollbar {
-  display: none;
-} */
 
 div#main_block.row {
   margin-left: 0;

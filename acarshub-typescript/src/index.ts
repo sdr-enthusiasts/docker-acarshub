@@ -110,10 +110,28 @@ export function resize_tabs(
   $(".boxed").css("width", `${window_width / num_tabs / 2}`);
 }
 
+export function setScrollers() {
+  let timer: null | NodeJS.Timeout = null;
+  $("div").on("scroll", function(e) {
+    if (e.target.classList.contains("on-scrollbar") === false) {
+      e.target.classList.add("on-scrollbar");
+    }
+
+    if(timer !== null) {
+      clearTimeout(timer);
+    }
+
+    timer = setTimeout(function() {
+      $("div").removeClass("on-scrollbar");
+    }, 500);
+  });
+}
+
 $((): void => {
   //inject the base HTML in to the body tag
   // Document on ready new syntax....or something. Passing a function directly to jquery
   $("#log").html("Page loading.....please wait");
+  setScrollers();
   // Observe one or multiple elements
   // time to set everything on the page up
 

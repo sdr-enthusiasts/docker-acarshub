@@ -24,6 +24,7 @@ import {
   find_matches,
   get_match,
   get_window_size,
+  setScrollers,
 } from "./index";
 import { tooltip } from "./tooltips";
 import { images } from "./assets";
@@ -1071,6 +1072,7 @@ export let live_map_page = {
         '<div style="display: flex;height: 100%;" ><div id="mapid"></div><div id="planes"></div>'
       );
     else $("#log").html("ADSB Disabled");
+    setScrollers();
   },
 
   destroy_maps: function (): void {
