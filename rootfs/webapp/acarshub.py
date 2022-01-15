@@ -2,7 +2,8 @@
 
 import os
 import subprocess
-import acarshub_db
+if not os.getenv('SPAM', default=False):
+    import acarshub_db
 import time
 
 start_time = time.time()
@@ -358,6 +359,7 @@ def service_check():
                 else:
                     system_error = True
                     stats[match.group(0)]["Status"] = "Unknown"
+            match = re.search("^planeplotter")
         except Exception as e:
             print(f"[service-check] Error: {line}\n{e}")
 
