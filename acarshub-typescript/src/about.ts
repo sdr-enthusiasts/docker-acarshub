@@ -1,5 +1,4 @@
 import showdown from "showdown";
-// @ts-expect-error
 import helpfile from "./helppage.MD";
 export let about = {
   about_acars_path: "" as string,

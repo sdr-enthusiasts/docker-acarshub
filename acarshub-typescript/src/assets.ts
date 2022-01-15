@@ -1,14 +1,9 @@
-//@ts-expect-error
+
 import legend_has_acars_url from "./assets/images/legend-has-acars.svg";
-//@ts-expect-error
 import legend_has_acars_alert_url from "./assets/images/legend-has-acars-alert.svg";
-//@ts-expect-error
 import legend_with_acars_unread_url from "./assets/images/legend-with-acars-unread.svg";
-//@ts-expect-error
 import legend_without_acars_url from "./assets/images/legend-without-acars.svg";
-// @ts-expect-error
 import acars_alert_url from "./assets/sounds/alert.mp3";
-// @ts-expect-error
 import safari_image_url from "./assets/images/safari.png";
 
 import { library, dom } from "@fortawesome/fontawesome-svg-core";
@@ -39,7 +34,6 @@ library.add(faArrowUp);
 library.add(faArrowDown);
 library.add(faPlus);
 library.add(faMinus);
-library.add
 
 dom.watch();
 
