@@ -35,6 +35,23 @@ VDLM_CMD+=("--gain" "$GAIN" "--station-id" "$STATION_ID_VDLM")
 VDLM_CMD+=("--msg-filter" "all,-avlc_s,-acars_nodata,-x25_control,-idrp_keepalive,-esis")
 VDLM_CMD+=("--station-id=$STATION_ID_VDLM" "--output" "decoded:json:udp:address=127.0.0.1,port=5555")
 
+if [ -n "${PLANEPLOTTER}" ] && [ -n "$ENABLE_VDLM" ]; then
+	VDLM_CMD+=("--output" "decoded:pp_acars:udp:address=127.0.0.1,port=4444")
+
+	if ! netstat -an | grep -P '^\s*tcp\s+\d+\s+\d+\s+0\.0\.0\.0:14444\s+(?>\d{1,3}\.{0,1}){4}:\*\s+LISTEN\s*$' > /dev/null; then
+      if [ -z "${QUIET_LOGS}" ]; then
+        # shellcheck disable=SC2016
+        echo "Waiting for planeplotter_server" | stdbuf -oL awk '{print "[dumpvdl2] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
+      fi
+      sleep 1
+      exit
+	fi
+    if [ -z "${QUIET_LOGS}" ]; then
+      # shellcheck disable=SC2016
+      echo "planeplotter_server ready, starting service" | stdbuf -oL awk '{print "[dumpvdl2] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
+    fi
+fi
+
 # shellcheck disable=SC2206
 VDLM_CMD+=($FREQS_VDLM)
 

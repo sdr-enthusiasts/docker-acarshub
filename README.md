@@ -124,6 +124,7 @@ There are quite a few configuration options this container can accept.
 | `IATA_OVERRIDE` | Override or add any custom IATA codes. Used for the web front end to show proper callsigns; See [below](#the-fix) on formatting and [more details](#A-note-about-data-sources-used-for-the-web-site) why this might be necessary.| No | Blank |
 | `TAR1090_URL` | Flights where the container is able to, it will generate a link to a tar1090 instance so that you can see the position of the aircraft that generated the message. By default, it will link to [ADSB Exchange](https://www.adsbexchange.com), but if desired, you can set the URL to be a local tar1090 instance. | No | Blank |
 | `AUTO_VACUUM` | If you find your database size to be too large you can temporarily enable this and on the next container startup the database will attempt to reduce itself in size. When you do this startup time will take a few minutes. It is recommended to leave this flag disabled and only enable it temporarily. | No | `False` |
+| `PLANEPLOTTER` | If you want to output data in plane plotter format for use in Plane Plotter set this option to `true`. Only VDLM2 output is supported. | No | `False` |
 
 Please note that for `TAR1090_URL` the required format is `http[s]://**HOSTNAME**` only. So if your tar1090 instance is at IP address `192.168.31.10` with no SSL, the TAR1090_URL would look like `http://192.168.31.10`
 
@@ -279,19 +280,30 @@ If there are airlines you notice that are wrong because the data used is wrong (
 
 ## Accessing ACARS/VDLM data with external programs
 
-If you wish to access the JSON data that the decoders `acarsdec` and `dumpvdl2` generate with an external program, such as FlightAirMap, expose the following ports in your docker-compose configuration:
+If you wish to access the JSON data that the decoders `acarsdec` and `dumpvdl2` generate with an external program, such as FlightAirMap or Plane Plotter, expose the following ports in your docker-compose configuration:
 
+* Port 80 for the web site
+* Port 14444 for TCP VDLM2 Plane Plotter
 * Port 15555 for UDP VDLM2 JSON
 * Port 15550 for UDP ACARS JSON
+
+### Note about Plane Plotter export format
+
+This is currently untested in those programs, so specific set up instructions for those programs are not available. If this format does not work (ie, it needs ACARS Hub to connect to it rather that it connect to ACARS Hub) please open an issue and let me know.
+
+Additionally this format does not export *ACARS* at all and only supports VDLM2.
+
+### YAML Configuration for Ports
 
 ```yaml
     ports:
       - 80:80
       - 15550:15550
       - 15555:15555
+      - 14444:14444
 ```
 
-And then you will be able to connect to `yourpisipaddress:15555` or `yourpisipaddress:15550`, respectively, in whatever program can decode ACARS/VDLM JSON.
+And then you will be able to connect to `yourpisipaddress:15555`, `yourpisipaddress:15550`, or `youripaddress:14444` respectively, in whatever program can decode ACARS/VDLM JSON.
 
 ## Website tips and tricks
 

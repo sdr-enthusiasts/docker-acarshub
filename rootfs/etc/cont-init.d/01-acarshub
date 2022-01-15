@@ -39,6 +39,10 @@ elif [ -n "${ENABLE_VDLM}" ]; then
 	fi
 fi
 
+if [[ -n "$PLANEPLOTTER" && -z "${ENABLE_VDLM}" ]]; then
+	echo "WARNING: PlanePlotter is enabled but VDLM is not enabled, this will not work" | awk '{print "[01-acarshub] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
+fi
+
 if [ -n "${SERIAL}" ]; then
     GENERATE=true
 	IFS=';' read -r -a SERIAL_ARRAY <<< "$SERIAL"
