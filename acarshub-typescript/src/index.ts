@@ -44,6 +44,7 @@ import {
 } from "./interfaces";
 
 import { live_map_page } from "./live_map";
+import Cookies from "js-cookie";
 
 let socket: Socket = <any>null;
 let socket_status: boolean = false;
@@ -639,6 +640,11 @@ window.mark_all_messages_read = function (): void {
 
 window.query = function (): void {
   search_page.query();
+};
+
+window.hide_libseccomp2_warning = function (): void {
+  Cookies.set("hide_libseccomp2_warning", "true", { expires: 365 });
+  menu.generate_footer();
 };
 
 export function showPlaneMessages(

@@ -1,6 +1,7 @@
 import { images } from "./assets";
 import { acarshub_version } from "./interfaces";
 import jBox from "jbox";
+import Cookies from "js-cookie";
 export let menu = {
   acars_path: "" as string,
   acars_url: "" as string,
@@ -11,7 +12,7 @@ export let menu = {
   footer_message_modal: new jBox("Modal", {
     id: "set_modal",
     width: 300,
-    height: 200,
+    height: 250,
     blockScroll: false,
     isolateScroll: true,
     animation: "zoomIn",
@@ -19,7 +20,7 @@ export let menu = {
     overlay: true,
     reposition: false,
     repositionOnOpen: true,
-    content: `<span class="red"><center><h2>NOTICE!</h2></center></span><span class="white">You are running an ARM 32 bit host system. After March 1st, 2022 your system may fail to properly run ACARS Hub. Please visit <a href="https://github.com/fredclausen/docker-acarshub/blob/main/arm32.md">this page</a> for more information.</span>`,
+    content: `<span class="red"><center><h2>NOTICE!</h2></center></span><p><span class="white">You are running an ARM 32 bit host system. After March 1st, 2022 your system may fail to properly run ACARS Hub. Please visit <a href="https://github.com/fredclausen/docker-acarshub/blob/main/arm32.md">this page</a> for more information.</p><a href="javascript:hide_libseccomp2_warning()">Mute this message</a></span>`,
   }),
 
   show_menu_modal(): void {
@@ -71,8 +72,11 @@ export let menu = {
   },
 
   generate_footer: function (): void {
+    const show_libseccomp2_warning = Cookies.get("hide_libseccomp2_warning") !== "true";
+    Cookies.set("hide_libseccomp2_warning", show_libseccomp2_warning ? "false" : "true", { expires: 365 });
+    console.log(show_libseccomp2_warning);
     let update_message =
-      this.arch.trim() === "armhf"
+      show_libseccomp2_warning && this.arch.trim() !== "armhf"
         ? '<div id="update_notice"><a href="javascript:show_menu_modal()" class="red">Notice: System may need update!</a></div>'
         : "";
     let html: string = `<div><a href="javascript:new_page('About')">ACARS Hub Help/About</a></div> \
