@@ -132,7 +132,7 @@ export let live_messages_page = {
 
     // Find the next / previous tabs
     // This is UGLY
-    // TODO....deuglify it
+    // FIXME....deuglify it
     for (let i = 0; i < this.lm_msgs_received.planes.length; i++) {
       if (
         this.lm_msgs_received.planes[i].messages.length > 1 &&
