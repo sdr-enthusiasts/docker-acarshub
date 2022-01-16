@@ -148,7 +148,6 @@ export let status = {
 
     keys_external_formats.forEach((key) => {
       const decoder_types = external_formats[key];
-      console.log(decoder_types)
       decoder_types.forEach((sub_key) => {
         let sub_string = `External Decoder ${key}/${sub_key.type}:`;
         html_output += `${sub_string.padEnd(55, ".")}<strong><span class=${
