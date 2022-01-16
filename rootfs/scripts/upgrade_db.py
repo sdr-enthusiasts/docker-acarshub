@@ -90,7 +90,13 @@ if os.getenv("SPAM", default=False):
     path_to_db = os.getenv("DB_PATH")
 else:
     path_to_db = "/run/acars/messages.db"
-print("Checking to see if database needs upgrades")
+if os.getenv("QUIET_LOGS", default=False):
+    be_quiet = True
+else:
+    be_quiet = False
+
+if not be_quiet:
+    print("Checking to see if database needs upgrades")
 sys.stdout.flush()
 upgraded = False
 
@@ -225,8 +231,8 @@ def enable_fts(db: Connection, table: str, columns: List[str]):
     column_list_without = ",".join(
         f"{c}" for c in columns if c.find(" UNINDEXED") == -1
     )
-
-    print("Creating new FTS table")
+    if not be_quiet:
+        print("Creating new FTS table")
     sys.stdout.flush()
     db.executescript(
         """
@@ -239,8 +245,8 @@ def enable_fts(db: Connection, table: str, columns: List[str]):
             table=table, column_list=column_list_without, rowid="id"
         )
     )
-
-    print("Creating new triggers")
+    if not be_quiet:
+        print("Creating new triggers")
     sys.stdout.flush()
     db.executescript(
         """
@@ -268,8 +274,8 @@ def enable_fts(db: Connection, table: str, columns: List[str]):
             ),
         )
     )
-
-    print("Populating new FTS table with data")
+    if not be_quiet:
+        print("Populating new FTS table with data")
     sys.stdout.flush()
     db.executescript('INSERT INTO messages_fts(messages_fts) VALUES ("rebuild")')
 
@@ -354,7 +360,8 @@ def check_tables(conn, cur):
 def de_null(cur):
     # we need to ensure the columns don't have any NULL values
     # Legacy db problems...
-    print("Ensuring no columns contain NULL values")
+    if not be_quiet:
+        print("Ensuring no columns contain NULL values")
     sys.stdout.flush()
     cur.execute('UPDATE messages SET toaddr = "" WHERE toaddr is NULL')
     cur.execute('UPDATE messages SET fromaddr = "" WHERE toaddr is NULL')
@@ -385,7 +392,8 @@ def de_null(cur):
     cur.execute('UPDATE messages SET error = "" WHERE error IS NULL')
     cur.execute('UPDATE messages SET libacars = "" WHERE libacars IS NULL')
     cur.execute('UPDATE messages SET level = "" WHERE level IS NULL')
-    print("done with de-nulling")
+    if not be_quiet:
+        print("done with de-nulling")
     sys.stdout.flush()
 
 
@@ -395,7 +403,8 @@ def add_indexes(cur):
     indexes = [i[1] for i in cur.execute("PRAGMA index_list(messages)")]
 
     if "ix_messages_msg_text" not in indexes:
-        print("Adding text index")
+        if not be_quiet:
+            print("Adding text index")
         sys.stdout.flush()
         upgraded = True
         cur.execute(
@@ -403,54 +412,63 @@ def add_indexes(cur):
         )
 
     if "ix_messages_icao" not in indexes:
-        print("Adding icao index")
+        if not be_quiet:
+            print("Adding icao index")
         sys.stdout.flush()
         upgraded = True
         cur.execute('CREATE INDEX "ix_messages_icao" ON "messages" ("icao" DESC)')
 
     if "ix_messages_flight" not in indexes:
-        print("Adding flight index")
+        if not be_quiet:
+            print("Adding flight index")
         sys.stdout.flush()
         upgraded = True
         cur.execute('CREATE INDEX "ix_messages_flight" ON "messages" ("flight" DESC)')
 
     if "ix_messages_tail" not in indexes:
-        print("Adding tail index")
+        if not be_quiet:
+            print("Adding tail index")
         sys.stdout.flush()
         upgraded = True
         cur.execute('CREATE INDEX "ix_messages_tail" ON "messages" ("tail" DESC)')
 
     if "ix_messages_depa" not in indexes:
-        print("Adding depa index")
+        if not be_quiet:
+            print("Adding depa index")
         sys.stdout.flush()
         upgraded = True
         cur.execute('CREATE INDEX "ix_messages_depa" ON "messages" ("depa" DESC)')
 
     if "ix_messages_dsta" not in indexes:
-        print("Adding dsta index")
+        if not be_quiet:
+            print("Adding dsta index")
         sys.stdout.flush()
         upgraded = True
         cur.execute('CREATE INDEX "ix_messages_dsta" ON "messages" ("dsta" DESC)')
 
     if "ix_messages_msgno" not in indexes:
-        print("Adding msgno index")
+        if not be_quiet:
+            print("Adding msgno index")
         sys.stdout.flush()
         upgraded = True
         cur.execute('CREATE INDEX "ix_messages_msgno" ON "messages" ("msgno" DESC)')
 
     if "ix_messages_freq" not in indexes:
-        print("Adding freq index")
+        if not be_quiet:
+            print("Adding freq index")
         sys.stdout.flush()
         upgraded = True
         cur.execute('CREATE INDEX "ix_messages_freq" ON "messages" ("freq" DESC)')
 
     if "ix_messages_label" not in indexes:
-        print("Adding label index")
+        if not be_quiet:
+            print("Adding label index")
         sys.stdout.flush()
         upgraded = True
         cur.execute('CREATE INDEX "ix_messages_label" ON "messages" ("label" DESC)')
     if "ix_messages_label" not in indexes:
-        print("Adding msg time index")
+        if not be_quiet:
+            print("Adding msg time index")
         sys.stdout.flush()
         upgraded = True
         cur.execute(
@@ -584,7 +602,8 @@ if upgraded:
     print("Completed upgrading database structure")
     sys.stdout.flush()
 else:
-    print("Database structure did not require upgrades")
+    if not be_quiet:
+        print("Database structure did not require upgrades")
     sys.stdout.flush()
 
 sys.exit(0)

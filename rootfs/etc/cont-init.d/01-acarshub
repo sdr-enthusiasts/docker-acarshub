@@ -50,7 +50,9 @@ if [ -n "${SERIAL}" ]; then
 fi
 
 if [[ "$GENERATE" == "true" ]]; then
-    echo "Generating decoder startup files" | awk '{print "[01-acarshub] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
+	if [[ -z "$QUIET_LOGS" ]]; then
+    	echo "Generating decoder startup files" | awk '{print "[01-acarshub] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
+	fi
 # shellcheck disable=SC2016
     python3 assign_frequencies.py "${FREQ_CMD[@]}" | stdbuf -oL awk '{print "[01-acarshub] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}' || exit 1
 fi

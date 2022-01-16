@@ -15,7 +15,8 @@ alert_terms = list()
 # Download station IDs
 
 try:
-    acarshub_helpers.log("Downloading Station IDs", "database")
+    if not acarshub_helpers.QUIET_LOGS:
+        acarshub_helpers.log("Downloading Station IDs", "database")
     with open("./data/ground-stations.json", "r") as f:
         groundStations_json = json.load(f)
 
@@ -26,18 +27,20 @@ try:
                 "icao": station["airport"]["icao"],
                 "name": station["airport"]["name"],
             }
-
-    acarshub_helpers.log("Completed loading Station IDs", "database")
+    if not acarshub_helpers.QUIET_LOGS:
+        acarshub_helpers.log("Completed loading Station IDs", "database")
 except Exception as e:
     acarshub_helpers.acars_traceback(e, "database")
 
 # Load Message Labels
 
 try:
-    acarshub_helpers.log("Downloading message labels", "database")
+    if not acarshub_helpers.QUIET_LOGS:
+        acarshub_helpers.log("Downloading message labels", "database")
     with open("./data/metadata.json", "r") as f:
         message_labels = json.load(f)
-    acarshub_helpers.log("Completed loading message labels", "database")
+    if not acarshub_helpers.QUIET_LOGS:
+        acarshub_helpers.log("Completed loading message labels", "database")
 except Exception as e:
     message_labels = {"labels": {}}  # handle URL exception
     acarshub_helpers.acars_traceback(e, "database")
@@ -63,10 +66,12 @@ overrides = {}
 freqs = []
 
 try:
-    acarshub_helpers.log("Loading Airline Codes", "database")
+    if not acarshub_helpers.QUIET_LOGS:
+        acarshub_helpers.log("Loading Airline Codes", "database")
     f = open("data/airlines.json")
     airlines = json.load(f)
-    acarshub_helpers.log("Completed Loading Airline Codes", "database")
+    if not acarshub_helpers.QUIET_LOGS:
+        acarshub_helpers.log("Completed Loading Airline Codes", "database")
 except Exception as e:
     airlines = {}
     acarshub_helpers.acars_traceback(e, database)

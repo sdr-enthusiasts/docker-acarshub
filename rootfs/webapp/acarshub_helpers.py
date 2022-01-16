@@ -8,6 +8,7 @@ import requests
 
 DEBUG_LOGGING = False
 EXTREME_LOGGING = False
+QUIET_LOGS = False
 SPAM = False
 ENABLE_ACARS = False
 ENABLE_VDLM = False
@@ -50,6 +51,8 @@ if os.getenv("DEBUG_LOGGING", default=False):
     DEBUG_LOGGING = True
 if os.getenv("EXTREME_LOGGING", default=False):
     EXTREME_LOGGING = True
+if os.getenv("QUIET_LOGS", default=False):
+    QUIET_LOGS = True
 
 # Application states
 
@@ -192,7 +195,8 @@ def check_github_version():
             log("Update found", "version-checker")
             IS_UPDATE_AVAILABLE = True
         else:
-            log("No update found", "version-checker")
+            if not QUIET_LOGS:
+                log("No update found", "version-checker")
             IS_UPDATE_AVAILABLE = False
 
 

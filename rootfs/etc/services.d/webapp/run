@@ -41,7 +41,9 @@ if [ -n "${ENABLE_WEB}" ]; then
       -k eventlet \
       application:app \
       --timeout 120 \
-    2>&1 | stdbuf -oL sed --unbuffered '/^$/d' | stdbuf -oL awk '{print "[webapp] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
+    2>&1 | stdbuf -oL sed --unbuffered '/^$/d' | \
+    stdbuf -oL awk '! /[INFO]/' | \
+    stdbuf -oL awk '{print "[webapp] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
 else
   # web server must be disabled. Go to sleep forever
   sleep 86400

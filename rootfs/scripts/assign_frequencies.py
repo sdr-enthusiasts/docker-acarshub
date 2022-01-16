@@ -17,6 +17,11 @@ if os.getenv("SERVICES_PATH", default=False):
 else:
     servicesd_path = "/etc/services.d/"
 
+if os.getenv("QUIET_LOGS", default=False):
+    be_quiet = True
+else:
+    be_quiet = False
+
 # place in javascript_msgs_threads
 
 
@@ -253,11 +258,14 @@ if __name__ == "__main__":
     )  # get the serials from the systems
 
     # First create the dict of serial/ids
-    print("Getting list of RTLSDR serial numbers and device IDs from the system")
+    if not be_quiet:
+        print("Getting list of RTLSDR serial numbers and device IDs from the system")
     for serial in serial_numbers:
-        print(f"Grabbing the serial number {serial} device ID from the system")
+        if not be_quiet:
+            print(f"Grabbing the serial number {serial} device ID from the system")
         serial_ids[serial] = RtlSdr.get_device_index_by_serial(serial)
-        print(f"Found {serial} device ID: {serial_ids[serial]}")
+        if not be_quiet:
+            print(f"Found {serial} device ID: {serial_ids[serial]}")
 
     if (
         not args.serials

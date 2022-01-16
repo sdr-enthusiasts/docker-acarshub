@@ -283,7 +283,6 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
                         message_json.append(json.loads(data.decode() + "\n"))
                     # dumpvdl2 multi message
                     elif data.decode().count("}{") > 0:
-                        print("Multiple messages received at once")
                         split_json = data.decode().split("}{")
                         count = 0
                         for j in split_json:
@@ -354,21 +353,25 @@ def init_listeners(special_message=""):
     #### REMOVE AFTER AIRFRAMES IS UPDATED ####
 
     # show log message if this is container startup
-    if special_message == "":
+    if special_message == "" and acarshub_helpers.QUIET_LOGS == False:
         acarshub_helpers.log("Starting Data Listeners", "init")
     if not thread_database.is_alive():
-        acarshub_helpers.log(f"{special_message}Starting Database Thread", "init")
+        if special_message or acarshub_helpers.QUIET_LOGS == False:
+            acarshub_helpers.log(f"{special_message}Starting Database Thread", "init")
         thread_database = Thread(target=database_listener)
         thread_database.start()
     if not thread_scheduler.is_alive():
-        acarshub_helpers.log(f"{special_message}starting scheduler", "init")
+        if special_message or acarshub_helpers.QUIET_LOGS == False:
+            acarshub_helpers.log(f"{special_message}starting scheduler", "init")
         thread_scheduler = Thread(target=scheduled_tasks)
         thread_scheduler.start()
     if not thread_html_generator.is_alive():
-        acarshub_helpers.log(f"{special_message}Starting htmlListener", "init")
+        if special_message or acarshub_helpers.QUIET_LOGS == False:
+            acarshub_helpers.log(f"{special_message}Starting htmlListener", "init")
         thread_html_generator = socketio.start_background_task(htmlListener)
     if not thread_acars_listener.is_alive() and acarshub_helpers.ENABLE_ACARS:
-        acarshub_helpers.log(f"{special_message}Starting ACARS listener", "init")
+        if special_message or acarshub_helpers.QUIET_LOGS == False:
+            acarshub_helpers.log(f"{special_message}Starting ACARS listener", "init")
         thread_acars_listener = Thread(
             target=message_listener,
             args=("ACARS", acarshub_helpers.LIVE_DATA_SOURCE, 15550),
@@ -376,7 +379,8 @@ def init_listeners(special_message=""):
         thread_acars_listener.start()
 
     if not thread_vdlm2_listener.is_alive() and acarshub_helpers.ENABLE_VDLM:
-        acarshub_helpers.log(f"{special_message}Starting VDLM listener", "init")
+        if special_message or acarshub_helpers.QUIET_LOGS == False:
+            acarshub_helpers.log(f"{special_message}Starting VDLM listener", "init")
         thread_vdlm2_listener = Thread(
             target=message_listener,
             args=("VDLM2", acarshub_helpers.LIVE_DATA_SOURCE, 15555),
@@ -389,7 +393,8 @@ def init_listeners(special_message=""):
         and acarshub_helpers.ENABLE_VDLM
         and not vdlm2_feeder_thread.is_alive()
     ):
-        acarshub_helpers.log(f"{special_message}Starting VDLM feeder", "init")
+        if special_message or acarshub_helpers.QUIET_LOGS == False:
+            acarshub_helpers.log(f"{special_message}Starting VDLM feeder", "init")
         vdlm2_feeder_thread = Thread(target=vdlm_feeder)
         vdlm2_feeder_thread.start()
     #### REMOVE AFTER AIRFRAMES IS UPDATED ####
@@ -404,14 +409,16 @@ def init():
     global messages_recent
     # grab recent messages from db and fill the most recent array
     # then turn on the listeners
-    acarshub_helpers.log("grabbing most recent messages from database", "init")
+    if not acarshub_helpers.QUIET_LOGS:
+        acarshub_helpers.log("Grabbing most recent messages from database", "init")
     try:
         results = acarshub.acarshub_db.grab_most_recent()
     except Exception as e:
         acarshub_helpers.log(f"Startup Error grabbing most recent messages {e}", "init")
     if not acarshub_helpers.SPAM:
         try:
-            acarshub_helpers.log("Initializing RRD Database", "init")
+            if not acarshub_helpers.QUIET_LOGS:
+                acarshub_helpers.log("Initializing RRD Database", "init")
             acarshub_rrd.create_db()  # make sure the RRD DB is created / there
         except Exception as e:
             acarshub_helpers.log(
@@ -426,7 +433,9 @@ def init():
                 acarshub_helpers.log(
                     f"Startup Error adding message to recent messages {e}", "init"
                 )
-    acarshub_helpers.log(
+
+    if not acarshub_helpers.QUIET_LOGS:
+        acarshub_helpers.log(
         "Completed grabbing messages from database, starting up rest of services",
         "init",
     )

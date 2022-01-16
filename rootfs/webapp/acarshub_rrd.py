@@ -42,4 +42,5 @@ def create_db():
     except Exception as e:
         acarshub_helpers.acars_traceback(e, "rrdtool")
     else:
-        acarshub_helpers.log("Database found", "rrdtool")
+        if not acarshub_helpers.QUIET_LOGS:
+            acarshub_helpers.log("Database found", "rrdtool")

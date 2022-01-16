@@ -8,7 +8,7 @@ import time
 DB_SAVE_DAYS = float(os.getenv("DB_SAVE_DAYS", default=7))
 DB_ALERT_SAVE_DAYS = float(os.getenv("DB_ALERT_SAVE_DAYS", default=120))
 DB_PRUNE_LIMIT = int(os.getenv("DB_PRUNE_LIMIT", default=500))
-
+QUIET_LOGS = bool(os.getenv("QUIET_LOGS", default=False))
 DEBUG_LOGGING = bool(os.getenv("DEBUG_LOGGING", default=False))
 
 if os.getenv("SPAM", default=False):
@@ -39,7 +39,7 @@ def pruneTable(cursor, conn, table, days, print_name):
         total += count
 
         elapsed = time.time() - before
-        if count > 0:
+        if not QUIET_LOGS and count > 0:
             print(
                 f"Pruned {print_name} of {count} records older than {days:.0f} days in {elapsed:.3f} seconds"
             )
