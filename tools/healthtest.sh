@@ -177,7 +177,7 @@ echo "TCP4 connection between 127.0.0.1:ANY and 127.0.0.1:15555 for python3 esta
 echo "vdlm2_server TCP connected to python server on port 15555: HEALTHY"
 echo "vdlm2_feeder (pid 0) is feeding: HEALTHY"
 echo "==== Checking planeplotter_server ====="
-echo "planeplotter TCP listening on port 14444 (pid 427): HEALTHY"
+echo "planeplotter (vdl2) listening on port 14444 (pid 427): HEALTHY"
 echo "UDP connection between dumpvdl2 and planeplotter server available: HEALTHY"
 echo "==== Checking vdlm2_stats ====="
 echo "TCP4 connection between 127.0.0.1:ANY and 127.0.0.1:15555 for PID 508 established: PASS"
