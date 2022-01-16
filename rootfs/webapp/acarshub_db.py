@@ -1069,6 +1069,20 @@ def set_alert_terms(terms=None):
         acarshub_helpers.acars_traceback(e, "database")
 
 
+def reset_alert_counts():
+    print("resetting counts")
+    try:
+        session = db_session()
+        result = session.query(alertStats).all()
+        for item in result:
+            item.count = 0
+
+        session.commit()
+        session.close()
+    except Exception as e:
+        acarshub_helpers.acars_traceback(e, "database")
+
+
 def get_alert_terms():
     global alert_terms
     return alert_terms

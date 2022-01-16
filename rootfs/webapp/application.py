@@ -700,6 +700,11 @@ def handle_message(message, namespace):
     )
 
 
+@socketio.on('reset_alert_counts', namespace="/main")
+def reset_alert_counts(message, namespace):
+    if message['reset_alerts']:
+        acarshub.acarshub_db.reset_alert_counts()
+
 @socketio.on("disconnect", namespace="/main")
 def main_disconnect():
     pass

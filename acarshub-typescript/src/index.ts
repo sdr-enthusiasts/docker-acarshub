@@ -647,6 +647,13 @@ window.hide_libseccomp2_warning = function (): void {
   menu.generate_footer();
 };
 
+window.reset_alert_counts = function (): void {
+  const reset_alerts = confirm("This will reset the alert term counts in your database. This action cannot be undone. Are you sure you want to continue?");
+  if (reset_alerts) {
+    socket.emit("reset_alert_counts", { reset_alerts: true }, "/main");
+  }
+}
+
 export function showPlaneMessages(
   plane_callsign: string = "",
   plane_hex: string = "",
