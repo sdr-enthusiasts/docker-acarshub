@@ -7,6 +7,7 @@
   --grey-highlight: hsl(0, 0%, 75%);
   --full-black: hsl(0, 0%, 0%);
   --full-red: hsl(0, 100%, 50%);
+  --full-brown: hsl(0, 51%, 33%);
   --full-orange: hsl(39, 100%, 50%);
   --full-yellow: hsl(60, 100%, 50%);
   --full-green: hsl(120, 100%, 25%);
@@ -1057,13 +1058,13 @@ canvas {
 .airplane_green:hover,
 .airplane_red:hover,
 .airplane_darkgreen:hover,
-.airplane_yellow:hover {
+.airplane_brown:hover {
   fill: var(--full-orange);
   paint-order: stroke;
 }
 
-.airplane_yellow {
-  fill: var(--full-yellow);
+.airplane_brown {
+  fill: var(--full-brown);
   stroke: var(--full-black);
   paint-order: stroke;
 }
@@ -1134,7 +1135,7 @@ div.plane_list {
 }
 
 div.plane_list:hover {
-  background-color: var(--full-black);
+  background-color: var(--datablock-bg);
   color: var(--blue-highlight);
 }
 
@@ -1157,12 +1158,12 @@ div.plane_element {
 }
 
 .sidebar_hovered_from_map_acars {
-  background-color: var(--full-black) !important;
+  background-color: var(--datablock-bg) !important;
   color: var(--full-green) !important;
 }
 
 .sidebar_hovered_from_map_no_acars {
-  background-color: var(--full-black) !important;
+  background-color: var(--datablock-bg) !important;
   color: var(--blue-highlight) !important;
 }
 
@@ -1184,7 +1185,7 @@ div.plane_element {
 .sidebar_no_hover_with_unread:focus a,
 .sidebar_hovered_from_map_with_unread,
 .sidebar_hovered_from_map_with_unread a {
-  background-color: var(--full-black) !important;
+  background-color: var(--datablock-bg) !important;
   color: var(--full-darkgreen) !important;
   font-weight: bold !important;
 }
@@ -1193,26 +1194,40 @@ div.plane_element {
 .sidebar_no_hover_with_acars:focus,
 .sidebar_no_hover_with_acars:hover a,
 .sidebar_no_hover_with_acars:focus a {
-  background-color: var(--full-black) !important;
+  background-color: var(--datablock-bg) !important;
   color: var(--full-green) !important;
 }
 
-.sidebar_alert_hovered_from_map,
-.sidebar_alert_hovered_from_map a,
-.sidebar_alert:hover,
-.sidebar_alert:focus,
-.sidebar_alert:hover a,
-.sidebar_alert:focus a {
-  background-color: var(--full-black) !important;
+.sidebar_alert_unread_hovered_from_map,
+.sidebar_alert_unread_hovered_from_map a,
+.sidebar_alert_unread:hover,
+.sidebar_alert_unread:focus,
+.sidebar_alert_unread:hover a,
+.sidebar_alert_unread:focus a {
+  background-color: var(--datablock-bg) !important;
   color: var(--full-red) !important;
+}
+
+.sidebar_alert_read_hovered_from_map,
+.sidebar_alert_read_hovered_from_map a,
+.sidebar_alert_read:hover,
+.sidebar_alert_read:focus,
+.sidebar_alert_read:hover a,
+.sidebar_alert_read:focus a {
+  background-color: var(--datablock-bg) !important;
+  color: var(--full-brown) !important;
 }
 
 .sidebar_hovered_from_map_acars .plane_element a {
   color: var(--full-green) !important;
 }
 
-.sidebar_alert {
+.sidebar_alert_unread {
   background-color: var(--full-red) !important;
+}
+
+.sidebar_alert_read {
+  background-color: var(--full-brown) !important;
 }
 
 .plane_element a {

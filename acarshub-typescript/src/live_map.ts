@@ -534,9 +534,10 @@ export let live_map_page = {
           num_alerts &&
           this.current_hovered_from_map == callsign.replace("~", "")
         ) {
-          styles = " sidebar_alert_hovered_from_map";
+          styles = has_new_messages ? " sidebar_alert_unread_hovered_from_map" : " sidebar_alert_unread_hovered_from_map";
         } else if (num_alerts) {
-          styles = " sidebar_alert";
+          styles = has_new_messages ? " sidebar_alert_unread" : " sidebar_alert_read";
+          console.log(styles)
         } else if (callsign && num_messages && styles == "") {
           if (!has_new_messages) styles = " sidebar_no_hover_with_acars";
           else styles = " sidebar_no_hover_with_unread";
@@ -694,7 +695,7 @@ export let live_map_page = {
           else if ((alert && this.show_unread_messages && num_messages !== old_messages) || squawk == 7500 || squawk == 7600 || squawk == 7700)
             color = "airplane_red";
           else if (alert) {
-            color = "airplane_yellow";
+            color = "airplane_brown";
           }
           else if (num_messages) {
             if (old_messages > num_messages) {
