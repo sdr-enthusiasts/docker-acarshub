@@ -956,9 +956,8 @@ export let live_map_page = {
           '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors',
       }).addTo(this.map);
       this.set_range_markers();
-      LeafLet.control
-      // @ts-expect-error
-        .custom({
+
+      LeafLet.control.custom({
           position: "topleft",
           content:
             '<button type="button" id="zoomin" class="btn btn-default" onclick="zoom_in()"><i class="fas fa-plus"></i></button>' +
@@ -970,8 +969,7 @@ export let live_map_page = {
             cursor: "pointer",
           },
           events: {},
-        })
-        .addTo(this.map);
+        }).addTo(this.map);
 
       this.layerGroupPlanes = LeafLet.layerGroup().addTo(this.map);
       this.layerGroupPlaneDatablocks = LeafLet.layerGroup().addTo(this.map);
@@ -1000,7 +998,6 @@ export let live_map_page = {
   set_controls: function (): void {
     if (this.legend) this.legend.remove();
     this.legend = LeafLet.control
-      // @ts-expect-error
       .Legend({
         position: "bottomleft",
         symbolWidth: 45,
@@ -1040,7 +1037,6 @@ export let live_map_page = {
     if (this.map_controls) this.map_controls.remove();
 
     this.map_controls = LeafLet.control
-      // @ts-expect-error
       .custom({
         position: "topright",
         content:

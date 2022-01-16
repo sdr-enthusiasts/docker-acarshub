@@ -1,4 +1,4 @@
-import { MapOptions } from "leaflet";
+import * as LeafLet from "leaflet";
 
 export interface database_size {
   size: string;
@@ -319,6 +319,13 @@ export interface acarshub_version {
   is_outdated: boolean;
 }
 
-export interface MapOptionsWithNewConfig extends MapOptions {
+export interface MapOptionsWithNewConfig extends LeafLet.MapOptions {
   smoothWheelZoom: boolean;
+}
+
+declare global {
+  namespace L.control {
+    function custom(options: any): any;
+    function Legend(options: any): any;
+  }
 }
