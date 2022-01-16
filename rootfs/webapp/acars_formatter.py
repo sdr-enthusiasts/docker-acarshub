@@ -176,6 +176,7 @@ if __name__ == "__main__":
     import json
 
     try:
+        # FIXME to not have hard coded
         f = open("/Users/fred/single_message.txt")
 
         for data in f:
@@ -198,7 +199,11 @@ if __name__ == "__main__":
                         count += 1
             print(len(message_json))
             for msg in message_json:
-                vdlm2_message = format_dumpvdl2_message(json.loads(msg))
+                try:
+                    vdlm2_message = format_acars_message(json.loads(msg))
+                except Exception as e:
+                    print(e)
+                    print(msg)
                 print(vdlm2_message)
 
     except Exception as e:
