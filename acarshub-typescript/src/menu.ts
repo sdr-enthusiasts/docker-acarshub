@@ -76,7 +76,7 @@ export let menu = {
     Cookies.set("hide_libseccomp2_warning", show_libseccomp2_warning ? "false" : "true", { expires: 365 });
     console.log(show_libseccomp2_warning);
     let update_message =
-      show_libseccomp2_warning && this.arch.trim() !== "armhf"
+      show_libseccomp2_warning && this.arch.trim() === "armhf"
         ? '<div id="update_notice"><a href="javascript:show_menu_modal()" class="red">Notice: System may need update!</a></div>'
         : "";
     let html: string = `<div><a href="javascript:new_page('About')">ACARS Hub Help/About</a></div> \
