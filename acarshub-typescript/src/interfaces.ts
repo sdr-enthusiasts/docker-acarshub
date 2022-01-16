@@ -13,7 +13,15 @@ export interface system_status {
     feeders: status_decoder;
     global: status_global;
     stats: status_decoder;
+    external_formats: status_external_formats;
   };
+}
+
+export interface status_external_formats {
+  [index: string]: [{
+    Status: string;
+    type: string;
+  }];
 }
 
 export interface status_server {

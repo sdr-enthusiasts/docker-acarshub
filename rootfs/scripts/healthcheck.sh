@@ -162,7 +162,22 @@ if [ -n "${ENABLE_VDLM}" ]; then
       # fi
 
   fi
+  if [ -n "$PLANEPLOTTER" ]; then
+    echo "==== Checking planeplotter_server ====="
+    if ! netstat -anp | grep -P "tcp\s+\d+\s+\d+\s+0.0.0.0:14444\s+0.0.0.0:\*\s+LISTEN\s+[0-9]+/ncat" > /dev/null 2>&1; then
+      echo "planeplotter (vdl2) TCP not listening on port 14444 (pid $vdlm2_pidof_vdlm2_tcp_server): UNHEALTHY"
+      EXITCODE=1
+    else
+      echo "planeplotter (vdl2) listening on port 14444 (pid $vdlm2_pidof_vdlm2_tcp_server): HEALTHY"
+    fi
 
+    if ! netstat -anp | grep -P "udp\s+\d+\s+\d+\s+127.0.0.1:[0-9]+\s+127.0.0.1:4444\s+ESTABLISHED\s+[0-9]+/dumpvdl2" > /dev/null 2>&1; then
+      echo "UDP connection between dumpvdl2 and planeplotter server not available: UNHEALTHY"
+      EXITCODE=1
+    else
+      echo "UDP connection between dumpvdl2 and planeplotter server available: HEALTHY"
+    fi
+  fi
   #### REMOVE AFTER AIRFRAMES IS UPDATED ####
 
   echo "==== Checking vdlm2_stats ====="
