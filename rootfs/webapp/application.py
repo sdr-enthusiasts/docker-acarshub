@@ -405,14 +405,27 @@ def init():
     # grab recent messages from db and fill the most recent array
     # then turn on the listeners
     acarshub_helpers.log("grabbing most recent messages from database", "init")
-    results = acarshub.acarshub_db.grab_most_recent()
+    try:
+        results = acarshub.acarshub_db.grab_most_recent()
+    except Exception as e:
+        acarshub_helpers.log(f"Startup Error grabbing most recent messages {e}", "init")
     if not acarshub_helpers.SPAM:
-        acarshub_helpers.log("Initializing RRD Database", "init")
-        acarshub_rrd.create_db()  # make sure the RRD DB is created / there
+        try:
+            acarshub_helpers.log("Initializing RRD Database", "init")
+            acarshub_rrd.create_db()  # make sure the RRD DB is created / there
+        except Exception as e:
+            acarshub_helpers.log(
+                f"Startup Error creating RRD Database {e}", "init"
+            )
     if results is not None:
         for item in results:
             json_message = item
-            messages_recent.insert(0, [json_message["message_type"], json_message])
+            try:
+                messages_recent.insert(0, [json_message["message_type"], json_message])
+            except Exception as e:
+                acarshub_helpers.log(
+                    f"Startup Error adding message to recent messages {e}", "init"
+                )
     acarshub_helpers.log(
         "Completed grabbing messages from database, starting up rest of services",
         "init",
@@ -496,33 +509,43 @@ def main_connect():
 
     requester = request.sid
 
-    socketio.emit(
-        "features_enabled",
-        {
-            "vdlm": acarshub_helpers.ENABLE_VDLM,
-            "acars": acarshub_helpers.ENABLE_ACARS,
-            "arch": acarshub_helpers.ARCH,
-            "adsb": {
-                "enabled": acarshub_helpers.ENABLE_ADSB,
-                "lat": acarshub_helpers.ADSB_LAT,
-                "lon": acarshub_helpers.ADSB_LON,
-                "url": acarshub_helpers.ADSB_URL,
-                "bypass": acarshub_helpers.ADSB_BYPASS_URL,
+    try:
+        socketio.emit(
+            "features_enabled",
+            {
+                "vdlm": acarshub_helpers.ENABLE_VDLM,
+                "acars": acarshub_helpers.ENABLE_ACARS,
+                "arch": acarshub_helpers.ARCH,
+                "adsb": {
+                    "enabled": acarshub_helpers.ENABLE_ADSB,
+                    "lat": acarshub_helpers.ADSB_LAT,
+                    "lon": acarshub_helpers.ADSB_LON,
+                    "url": acarshub_helpers.ADSB_URL,
+                    "bypass": acarshub_helpers.ADSB_BYPASS_URL,
+                },
             },
-        },
-        namespace="/main",
-    )
+            namespace="/main",
+        )
 
-    socketio.emit(
-        "terms", {"terms": acarshub.acarshub_db.get_alert_terms()}, namespace="/main"
-    )
+        socketio.emit(
+            "terms", {"terms": acarshub.acarshub_db.get_alert_terms()}, namespace="/main"
+        )
+    except Exception as e:
+        acarshub_helpers.log(
+            f"Main Connect: Error sending features_enabled: {e}", "webapp"
+        )
 
-    socketio.emit(
-        "labels",
-        {"labels": acarshub.acarshub_db.get_message_label_json()},
-        to=requester,
-        namespace="/main",
-    )
+    try:
+        socketio.emit(
+            "labels",
+            {"labels": acarshub.acarshub_db.get_message_label_json()},
+            to=requester,
+            namespace="/main",
+        )
+    except Exception as e:
+        acarshub_helpers.log(
+            f"Main Connect: Error sending labels: {e}", "webapp"
+        )
     msg_index = 1
     for msg_type, json_message_orig in messages_recent:
         if msg_index == len(messages_recent):
@@ -538,24 +561,41 @@ def main_connect():
                 namespace="/main",
             )
         except Exception as e:
-            pass
+            acarshub_helpers.log(
+                f"Main Connect: Error sending acars_msg: {e}", "webapp"
+            )
 
-    socketio.emit(
-        "system_status", {"status": acarshub.get_service_status()}, namespace="/main"
-    )
+    try:
+        socketio.emit(
+            "system_status", {"status": acarshub.get_service_status()}, namespace="/main"
+        )
+    except Exception as e:
+        acarshub_helpers.log(
+            f"Main Connect: Error sending system_status: {e}", "webapp"
+        )
 
-    rows, size = acarshub.acarshub_db.database_get_row_count()
-    socketio.emit(
-        "database", {"count": rows, "size": size}, to=requester, namespace="/main"
-    )
+    try:
+        rows, size = acarshub.acarshub_db.database_get_row_count()
+        socketio.emit(
+            "database", {"count": rows, "size": size}, to=requester, namespace="/main"
+        )
+    except Exception as e:
+        acarshub_helpers.log(
+            f"Main Connect: Error sending database: {e}", "webapp"
+        )
 
-    socketio.emit(
-        "signal",
-        {"levels": acarshub.acarshub_db.get_signal_levels()},
-        namespace="/main",
-    )
-    socketio.emit("alert_terms", {"data": acarshub.getAlerts()}, namespace="/main")
-    send_version()
+    try:
+        socketio.emit(
+            "signal",
+            {"levels": acarshub.acarshub_db.get_signal_levels()},
+            namespace="/main",
+        )
+        socketio.emit("alert_terms", {"data": acarshub.getAlerts()}, namespace="/main")
+        send_version()
+    except Exception as e:
+        acarshub_helpers.log(
+            f"Main Connect: Error sending signal levels: {e}", "webapp"
+        )
 
     # Start the htmlGenerator thread only if the thread has not been started before.
     if not thread_html_generator.is_alive():
