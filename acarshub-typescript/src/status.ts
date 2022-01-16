@@ -165,13 +165,7 @@ export let status = {
       }>${feeders[key].Status}</span></strong>`;
       html_output += "<br>";
     });
-          // let sub_string = `External Format Output ${key} ${external_feeder.type}:`;
-      // html_output += `${sub_string.padEnd(55, ".")}<strong><span class=${
-      //   external_feeder.Status == "Ok"
-      //     ? "green"
-      //     : "red_body"
-      // }>${external_feeder.Status}</span></strong>`;
-      // html_output += "<br>";
+
     keys_receivers.forEach((key) => {
       let sub_string = `${key} Received ${receivers[key].Count} Messages In the Last Hour:`;
       let class_string = "";
