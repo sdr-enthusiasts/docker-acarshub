@@ -541,8 +541,8 @@ export let live_map_page = {
       const speed = this.get_speed(current_plane);
       const squawk = this.get_sqwk(current_plane);
       const callsign = this.get_callsign(current_plane);
-      plane_callsigns.push(callsign);
       const hex = this.get_hex(current_plane);
+      plane_callsigns.push({ callsign: callsign, hex: hex });
       const tail: string = this.get_tail(current_plane);
       const baro_rate = this.get_baro_rate(current_plane);
       const details = this.match_plane(plane_data, callsign, tail, hex);
@@ -646,21 +646,76 @@ export let live_map_page = {
       html;
     $("#planes").html(html);
     for (const id in plane_callsigns) {
-      const plane = plane_callsigns[id];
-      if (plane) {
-        $(`#${plane.replace("~", "")}`).on({
-          mouseenter: () => {
-            if (this.current_hovered_from_sidebar !== plane.replace("~", "")) {
-              this.current_hovered_from_sidebar = plane.replace("~", "");
-              this.update_targets();
-            }
-          },
-          mouseleave: () => {
-            this.current_hovered_from_sidebar = "";
-            this.update_targets();
-            tooltip.attach_all_tooltips();
-          },
-        });
+      const plane_list = plane_callsigns[id].callsign;
+      const hex_list = plane_callsigns[id].hex;
+      if (plane_list && hex_list) {
+        const current_plane =
+          this.adsb_planes[hex_list.toLowerCase()] !== undefined &&
+          this.adsb_planes[hex_list.toLowerCase()].position !== undefined
+            ? this.adsb_planes[hex_list.toLowerCase()].position
+            : null;
+        if (
+          current_plane !== null &&
+          current_plane.lat != null &&
+          current_plane.lon != null
+        ) {
+          const callsign = this.get_callsign(current_plane);
+          const hex = this.get_hex(current_plane);
+          const tail = this.get_tail(current_plane);
+          const details = this.match_plane(plane_data, callsign, tail, hex);
+          const num_messages = details.num_messages;
+          const old_messages = this.get_old_messages(hex.toLowerCase());
+          const alert = details.has_alerts;
+          const squawk = this.get_sqwk(current_plane);
+          $(`#${callsign.replace("~", "").replace(".", "")}`).on({
+            mouseenter: () => {
+              if (
+                this.current_hovered_from_sidebar !==
+                hex.replace("~", "").replace(".", "")
+              ) {
+                this.current_hovered_from_sidebar = hex
+                  .replace("~", "")
+                  .replace(".", "");
+                $(
+                  `#${callsign.replace("~", "").replace(".", "")}_marker`
+                ).removeClass(
+                  this.find_plane_color(
+                    callsign,
+                    alert,
+                    num_messages,
+                    squawk,
+                    old_messages,
+                    hex,
+                    tail
+                  )
+                );
+                $(
+                  `#${callsign.replace("~", "").replace(".", "")}_marker`
+                ).addClass("airplane_orange");
+              }
+            },
+            mouseleave: () => {
+              this.current_hovered_from_sidebar = "";
+              $(
+                `#${callsign.replace("~", "").replace(".", "")}_marker`
+              ).removeClass("airplane_orange");
+              $(
+                `#${callsign.replace("~", "").replace(".", "")}_marker`
+              ).addClass(
+                this.find_plane_color(
+                  callsign,
+                  alert,
+                  num_messages,
+                  squawk,
+                  old_messages,
+                  hex,
+                  tail
+                )
+              );
+              tooltip.attach_all_tooltips();
+            },
+          });
+        }
       }
     }
     $("#num_planes").html(`Planes: ${num_planes}`);
@@ -692,6 +747,50 @@ export let live_map_page = {
       centerpoint[0] + (dLat * 180) / Math.PI,
       centerpoint[1] + (dLon * 180) / Math.PI,
     ] as [number, number];
+  },
+
+  find_plane_color: function (
+    callsign: string,
+    alert: boolean,
+    num_messages: number,
+    squawk: number,
+    old_messages: number,
+    hex: string,
+    tail: string
+  ): string {
+    let color: string = "airplane_blue";
+    if (
+      this.current_hovered_from_sidebar ==
+      callsign.replace("~", "").replace(".", "")
+    )
+      color = "airplane_orange";
+    else if (
+      (alert && this.show_unread_messages && num_messages !== old_messages) ||
+      squawk == 7500 ||
+      squawk == 7600 ||
+      squawk == 7700
+    )
+      color = "airplane_red";
+    else if (alert) {
+      color = "airplane_brown";
+    } else if (num_messages) {
+      if (old_messages > num_messages) {
+        console.error(
+          "OLD MESSAGES WAS LARGER THAN TOTAL MESSAGE COUNT: " + callsign,
+          hex,
+          tail,
+          num_messages,
+          old_messages
+        );
+        //this.set_old_messages(plane, num_messages);
+        num_messages = old_messages;
+      }
+
+      if (this.show_unread_messages && num_messages !== old_messages)
+        color = "airplane_darkgreen";
+      else color = "airplane_green";
+    }
+    return color;
   },
 
   update_targets: function (): void {
@@ -728,7 +827,15 @@ export let live_map_page = {
           const details = this.match_plane(plane_data, callsign, tail, hex);
           num_messages = details.num_messages;
           const alert: boolean = details.has_alerts;
-          let color = "airplane_blue";
+          let color = this.find_plane_color(
+            callsign,
+            alert,
+            num_messages,
+            squawk,
+            old_messages,
+            hex,
+            tail
+          );
           if (icon == null) {
             const type_shape: svg_icon = getBaseMarker(
               String(current_plane.category),
@@ -745,42 +852,6 @@ export let live_map_page = {
               type_shape.scale * 1.5
             ) as aircraft_icon;
             this.adsb_planes[current_plane.hex].icon = icon;
-          }
-
-          // set the color of the icon
-
-          if (
-            this.current_hovered_from_sidebar ==
-            callsign.replace("~", "").replace(".", "")
-          )
-            color = "airplane_orange";
-          else if (
-            (alert &&
-              this.show_unread_messages &&
-              num_messages !== old_messages) ||
-            squawk == 7500 ||
-            squawk == 7600 ||
-            squawk == 7700
-          )
-            color = "airplane_red";
-          else if (alert) {
-            color = "airplane_brown";
-          } else if (num_messages) {
-            if (old_messages > num_messages) {
-              console.error(
-                "OLD MESSAGES WAS LARGER THAN TOTAL MESSAGE COUNT: " + callsign,
-                hex,
-                tail,
-                num_messages,
-                old_messages
-              );
-              this.set_old_messages(plane, num_messages);
-              num_messages = old_messages;
-            }
-
-            if (this.show_unread_messages && num_messages !== old_messages)
-              color = "airplane_darkgreen";
-            else color = "airplane_green";
           }
 
           const popup_text = `<div>${
