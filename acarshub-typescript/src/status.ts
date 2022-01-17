@@ -69,7 +69,7 @@ export let status = {
           this.current_status.status.feeders,
           this.current_status.status.global,
           this.current_status.status.stats,
-          this.current_status.status.external_formats,
+          this.current_status.status.external_formats
         )
       );
     }

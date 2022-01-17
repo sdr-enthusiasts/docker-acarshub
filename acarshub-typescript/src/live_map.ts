@@ -233,15 +233,27 @@ export let live_map_page = {
   },
 
   set_range_markers: function (): void {
-    console.log("yo")
+    console.log("yo");
     if (this.layerGroupRangeRings == null)
       this.layerGroupRangeRings = L.layerGroup();
     this.layerGroupRangeRings.clearLayers();
     const nautical_miles_to_meters = 1852;
-    const ring_radius = [10 * nautical_miles_to_meters, 50 * nautical_miles_to_meters, 100 * nautical_miles_to_meters,  150 * nautical_miles_to_meters, 200 * nautical_miles_to_meters];
+    const ring_radius = [
+      10 * nautical_miles_to_meters,
+      50 * nautical_miles_to_meters,
+      100 * nautical_miles_to_meters,
+      150 * nautical_miles_to_meters,
+      200 * nautical_miles_to_meters,
+    ];
 
     ring_radius.forEach((radius) => {
-      LeafLet.circle([this.station_lat, this.station_lon], {radius: radius, fill: false, interactive: false, weight: 2, color: "hsl(0, 0%, 0%)"}).addTo(this.layerGroupRangeRings);
+      LeafLet.circle([this.station_lat, this.station_lon], {
+        radius: radius,
+        fill: false,
+        interactive: false,
+        weight: 2,
+        color: "hsl(0, 0%, 0%)",
+      }).addTo(this.layerGroupRangeRings);
     });
 
     this.map.addLayer(this.layerGroupRangeRings);
@@ -556,9 +568,13 @@ export let live_map_page = {
           num_alerts &&
           this.current_hovered_from_map == callsign.replace("~", "")
         ) {
-          styles = has_new_messages ? " sidebar_alert_unread_hovered_from_map" : " sidebar_alert_unread_hovered_from_map";
+          styles = has_new_messages
+            ? " sidebar_alert_unread_hovered_from_map"
+            : " sidebar_alert_unread_hovered_from_map";
         } else if (num_alerts) {
-          styles = has_new_messages ? " sidebar_alert_unread" : " sidebar_alert_read";
+          styles = has_new_messages
+            ? " sidebar_alert_unread"
+            : " sidebar_alert_read";
         } else if (callsign && num_messages && styles == "") {
           if (!has_new_messages) styles = " sidebar_no_hover_with_acars";
           else styles = " sidebar_no_hover_with_unread";
@@ -713,12 +729,18 @@ export let live_map_page = {
 
           if (this.current_hovered_from_sidebar == callsign.replace("~", ""))
             color = "airplane_orange";
-          else if ((alert && this.show_unread_messages && num_messages !== old_messages) || squawk == 7500 || squawk == 7600 || squawk == 7700)
+          else if (
+            (alert &&
+              this.show_unread_messages &&
+              num_messages !== old_messages) ||
+            squawk == 7500 ||
+            squawk == 7600 ||
+            squawk == 7700
+          )
             color = "airplane_red";
           else if (alert) {
             color = "airplane_brown";
-          }
-          else if (num_messages) {
+          } else if (num_messages) {
             if (old_messages > num_messages) {
               console.error(
                 "OLD MESSAGES WAS LARGER THAN TOTAL MESSAGE COUNT: " + callsign,
@@ -957,7 +979,8 @@ export let live_map_page = {
       }).addTo(this.map);
       this.set_range_markers();
 
-      LeafLet.control.custom({
+      LeafLet.control
+        .custom({
           position: "topleft",
           content:
             '<button type="button" id="zoomin" class="btn btn-default" onclick="zoom_in()"><i class="fas fa-plus"></i></button>' +
@@ -969,7 +992,8 @@ export let live_map_page = {
             cursor: "pointer",
           },
           events: {},
-        }).addTo(this.map);
+        })
+        .addTo(this.map);
 
       this.layerGroupPlanes = LeafLet.layerGroup().addTo(this.map);
       this.layerGroupPlaneDatablocks = LeafLet.layerGroup().addTo(this.map);
@@ -997,88 +1021,86 @@ export let live_map_page = {
 
   set_controls: function (): void {
     if (this.legend) this.legend.remove();
-    this.legend = LeafLet.control
-      .Legend({
-        position: "bottomleft",
-        symbolWidth: 45,
-        symbolHeight: 45,
-        opacity: 0.6,
-        collapsed: true,
-        legends: [
-          {
-            label: "Planes With ACARS Messages",
-            type: "image",
-            url: images.legend_has_acars,
-          },
-          {
-            label: "Planes With Unread ACARS Messages",
-            type: "image",
-            url: images.legend_with_acars_unread,
-          },
-          {
-            label: "Planes With Unread ACARS Alerts",
-            type: "image",
-            url: images.legend_has_acars_alert_unread,
-          },
-          {
-            label: "Planes With Read ACARS Alerts",
-            type: "image",
-            url: images.legend_has_acars_alert_read,
-          },
-          {
-            label: "Planes Without ACARS Messages",
-            type: "image",
-            url: images.legend_without_acars_url,
-          },
-        ],
-      });
+    this.legend = LeafLet.control.Legend({
+      position: "bottomleft",
+      symbolWidth: 45,
+      symbolHeight: 45,
+      opacity: 0.6,
+      collapsed: true,
+      legends: [
+        {
+          label: "Planes With ACARS Messages",
+          type: "image",
+          url: images.legend_has_acars,
+        },
+        {
+          label: "Planes With Unread ACARS Messages",
+          type: "image",
+          url: images.legend_with_acars_unread,
+        },
+        {
+          label: "Planes With Unread ACARS Alerts",
+          type: "image",
+          url: images.legend_has_acars_alert_unread,
+        },
+        {
+          label: "Planes With Read ACARS Alerts",
+          type: "image",
+          url: images.legend_has_acars_alert_read,
+        },
+        {
+          label: "Planes Without ACARS Messages",
+          type: "image",
+          url: images.legend_without_acars_url,
+        },
+      ],
+    });
     this.legend.addTo(this.map);
 
     if (this.map_controls) this.map_controls.remove();
 
-    this.map_controls = LeafLet.control
-      .custom({
-        position: "topright",
-        content:
-          '<button type="button" id="toggle-acars" class="btn btn-default toggle-acars" onclick="toggle_acars_only()">' +
-          `    ${
-            !this.show_only_acars
-              ? images.toggle_acars_only_show_acars
-              : images.toggle_acars_only_show_all
-          }` +
-          "</button>" +
-          '<button type="button" id="toggle-datablocks" class="btn btn-info toggle-datablocks" onclick="toggle_datablocks()">' +
-          `    ${
-            this.show_datablocks
-              ? images.toggle_datablocks_on
-              : images.toggle_datablocks_off
-          }` +
-          "</button>" +
-          '<button type="button" id="toggle-extended-datablocks" class="btn btn-primary toggle-extended-datablocks" onclick="toggle_extended_datablocks()">' +
-          `    ${
-            this.show_extended_datablocks
-              ? images.toggle_extended_datablocks_on
-              : images.toggle_extended_datablocks_off
-          }` +
-          "</button>" +
-          '<button type="button" class="btn btn-success toggle-unread-messages" onclick="toggle_unread_messages()">' +
-          `    ${images.toggle_unread_messages_on}` +
-          "</button>" +
-          (this.show_unread_messages
-            ? `<button type="button" class="btn btn-danger mark-all-messages-read" onclick="mark_all_messages_read()">    ${images.mark_all_messages_read}</button>`
-            : ""),
-        //+
-        // '<button type="button" class="btn btn-warning">'+
-        // '    <i class="fa fa-exclamation-triangle"></i>'+
-        // '</button>',
-        classes: "btn-group-vertical btn-group-sm",
-        style: {
-          margin: "10px",
-          padding: "0px 0 0 0",
-          cursor: "pointer",
-        },
-        events: {},
-      });
+    this.map_controls = LeafLet.control.custom({
+      position: "topright",
+      content:
+        '<button type="button" id="toggle-acars" class="btn btn-default toggle-acars" onclick="toggle_acars_only()">' +
+        `    ${
+          !this.show_only_acars
+            ? images.toggle_acars_only_show_acars
+            : images.toggle_acars_only_show_all
+        }` +
+        "</button>" +
+        '<button type="button" id="toggle-datablocks" class="btn btn-info toggle-datablocks" onclick="toggle_datablocks()">' +
+        `    ${
+          this.show_datablocks
+            ? images.toggle_datablocks_on
+            : images.toggle_datablocks_off
+        }` +
+        "</button>" +
+        '<button type="button" id="toggle-extended-datablocks" class="btn btn-primary toggle-extended-datablocks" onclick="toggle_extended_datablocks()">' +
+        `    ${
+          this.show_extended_datablocks
+            ? images.toggle_extended_datablocks_on
+            : images.toggle_extended_datablocks_off
+        }` +
+        "</button>" +
+        '<button type="button" class="btn btn-success toggle-unread-messages" onclick="toggle_unread_messages()">' +
+        `    ${images.toggle_unread_messages_on}` +
+        "</button>" +
+        (this.show_unread_messages
+          ? `<button type="button" class="btn btn-danger mark-all-messages-read" onclick="mark_all_messages_read()">    ${images.mark_all_messages_read}</button>`
+          : ""),
+      //+
+      // '<button type="button" class="btn btn-warning">'+
+      // '    <i class="fa fa-exclamation-triangle"></i>'+
+      // '</button>',
+      classes: "btn-group-vertical btn-group-sm",
+      style: {
+        margin: "10px",
+        padding: "0px 0 0 0",
+        cursor: "pointer",
+      },
+      events: {},
+    });
     this.map_controls.addTo(this.map);
   },
 

@@ -112,16 +112,16 @@ export function resize_tabs(
 
 export function setScrollers() {
   let timer: null | NodeJS.Timeout = null;
-  $("div").on("scroll", function(e) {
+  $("div").on("scroll", function (e) {
     if (e.target.classList.contains("on-scrollbar") === false) {
       e.target.classList.add("on-scrollbar");
     }
 
-    if(timer !== null) {
+    if (timer !== null) {
       clearTimeout(timer);
     }
 
-    timer = setTimeout(function() {
+    timer = setTimeout(function () {
       $("div").removeClass("on-scrollbar");
     }, 500);
   });
@@ -648,11 +648,13 @@ window.hide_libseccomp2_warning = function (): void {
 };
 
 window.reset_alert_counts = function (): void {
-  const reset_alerts = confirm("This will reset the alert term counts in your database. This action cannot be undone. Are you sure you want to continue?");
+  const reset_alerts = confirm(
+    "This will reset the alert term counts in your database. This action cannot be undone. Are you sure you want to continue?"
+  );
   if (reset_alerts) {
     socket.emit("reset_alert_counts", { reset_alerts: true }, "/main");
   }
-}
+};
 
 export function showPlaneMessages(
   plane_callsign: string = "",
