@@ -1,10 +1,31 @@
 import { images } from "./assets";
 import { acarshub_version } from "./interfaces";
+import jBox from "jbox";
+import Cookies from "js-cookie";
 export let menu = {
   acars_path: "" as string,
   acars_url: "" as string,
 
   menu_adsb: false as boolean,
+  arch: "" as string,
+
+  footer_message_modal: new jBox("Modal", {
+    id: "set_modal",
+    width: 300,
+    height: 250,
+    blockScroll: false,
+    isolateScroll: true,
+    animation: "zoomIn",
+    closeButton: "box",
+    overlay: true,
+    reposition: false,
+    repositionOnOpen: true,
+    content: `<span class="red"><center><h2>NOTICE!</h2></center></span><p><span class="white">You are running an ARM 32 bit host system. After March 1st, 2022 your system may fail to properly run ACARS Hub. Please visit <a href="https://github.com/fredclausen/docker-acarshub/blob/main/arm32.md">this page</a> for more information.</p><a href="javascript:hide_libseccomp2_warning()">Mute this message</a></span>`,
+  }),
+
+  show_menu_modal(): void {
+    this.footer_message_modal.open();
+  },
 
   generate_menu: function (): void {
     let html = '<div class="wrap"><span class="decor"></span>';
@@ -51,6 +72,13 @@ export let menu = {
   },
 
   generate_footer: function (): void {
+    const show_libseccomp2_warning = Cookies.get("hide_libseccomp2_warning") !== "true";
+    Cookies.set("hide_libseccomp2_warning", show_libseccomp2_warning ? "false" : "true", { expires: 365 });
+    console.log(show_libseccomp2_warning);
+    let update_message =
+      show_libseccomp2_warning && this.arch.trim() === "armhf"
+        ? '<div id="update_notice"><a href="javascript:show_menu_modal()" class="red">Notice: System may need update!</a></div>'
+        : "";
     let html: string = `<div><a href="javascript:new_page('About')">ACARS Hub Help/About</a></div> \
       <div id="github_link"><a href="https://github.com/fredclausen/docker-acarshub" target="_blank">Project Github</a></div> \
       <div id="discord_badge"><a href="https://discord.gg/sTf9uYF"><img src="https://img.shields.io/discord/734090820684349521" alt="discord"></a></div> \
@@ -58,6 +86,7 @@ export let menu = {
       <span id="disconnect"></span></div> \
       <div><span class="menu_non_link" id="received">Received Messages:&nbsp;</span><span class="green" id="receivedmessages">0</span></div> \
       <span id="filtered"></span> \
+      ${update_message} \
       <span class="align_right" id="release_version" data-jbox-content="Your version of ACARS Hub is up to date"><strong>Pre-Release</strong></span>`;
     $("#footer_div").html(html);
   },
@@ -67,11 +96,15 @@ export let menu = {
     this.generate_menu();
   },
 
+  set_arch: function (arch: string): void {
+    this.arch = arch;
+  },
+
   set_version: function (version: acarshub_version): void {
     if (version.is_outdated) {
       $("#release_version").attr(
         "data-jbox-content",
-        `ACARS Hub is outdated. Newest version is ${version.github_version}`
+        `Latest non-development version of ACARS Hub is ${version.github_version}`
       );
       $("#release_version").addClass("red_important");
     } else {

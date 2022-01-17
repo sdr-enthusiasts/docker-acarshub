@@ -39,7 +39,7 @@ function get_pid_of_decoder {
     ps_output=$(ps aux | grep "$ACARS_BIN" | grep " -r $DEVICE_ID " | grep " $FREQS_ACARS")
   elif [[ -n "$VDLM_BIN" ]]; then
     # shellcheck disable=SC2009
-    ps_output=$(ps aux | grep "$VDLM_BIN" | grep " -r $DEVICE_ID " | grep " $FREQS_VDLM")
+    ps_output=$(ps aux | grep "$VDLM_BIN" | grep " --rtlsdr $DEVICE_ID " | grep " $FREQS_VDLM")
   fi
 
   # Find the PID of the decoder based on command line
@@ -50,7 +50,7 @@ function get_pid_of_decoder {
 
 }
 
-# ===== Check acarsdec & vdlm2dec processes =====
+# ===== Check acarsdec & dumpvdl2 processes =====
 
 # For each service...
 for service_dir in /etc/services.d/*; do
@@ -71,22 +71,22 @@ for service_dir in /etc/services.d/*; do
       continue
     fi
 
-  # If the service is vdlm2dec-*...
-  elif [[ "$service_name" =~ vdlm2dec-.+ ]]; then
+  # If the service is dumpvdl2-*...
+  elif [[ "$service_name" =~ dumpvdl2-.+ ]]; then
 
-    # If vdlm2dec is enabled...
+    # If dumpvdl2 is enabled...
     if [ -n "${ENABLE_VDLM}" ]; then
       decoder_pid=$(get_pid_of_decoder "$service_dir")
       decoder_udp_port="5555"
       decoder_server_prefix="vdlm2"
     else
-      # We shouldn't ever get here because if vdlm2dec is disabled, the template wouldn't have been converted to a service
-      echo "Found vdlm2dec service directory when ENABLE_VDLM not set: UNHEALTHY"
+      # We shouldn't ever get here because if dumpvdl2 is disabled, the template wouldn't have been converted to a service
+      echo "Found dumpvdl2 service directory when ENABLE_VDLM not set: UNHEALTHY"
       EXITCODE=1
       continue
     fi
 
-  # If the server isn't acarsdec-* or vdlm2dec-*...
+  # If the server isn't acarsdec-* or dumpvdl2-*...
   else
     # skip it!
     continue
@@ -137,30 +137,48 @@ if [ -n "${ENABLE_VDLM}" ]; then
     fi
   fi
 
+#### REMOVE AFTER AIRFRAMES IS UPDATED ####
   # Check vdlm2_feeder
   if [ -n "${FEED}" ]; then
+      echo "vdlm2_feeder (pid 0) is feeding: HEALTHY"
+      # echo "==== Checking vdlm2_feeder ====="
 
-      echo "==== Checking vdlm2_feeder ====="
+      # vdlm2_pidof_vdlm2_feeder=$(pgrep -f 'socat -d TCP:127.0.0.1:15555 UDP:feed.acars.io:5555')
 
-      vdlm2_pidof_vdlm2_feeder=$(pgrep -f 'socat -d TCP:127.0.0.1:15555 UDP:feed.acars.io:5555')
+      # # Ensure TCP connection to vdlm2_server at 127.0.0.1:15555
+      # if ! check_tcp4_connection_established_for_pid "127.0.0.1" "ANY" "127.0.0.1" "15555" "${vdlm2_pidof_vdlm2_feeder}"; then
+      #   echo "vdlm2_feeder (pid $vdlm2_pidof_vdlm2_feeder) not connected to vdlm2_server (pid $vdlm2_pidof_vdlm2_tcp_server) at 127.0.0.1:15555: UNHEALTHY"
+      #   EXITCODE=1
+      # else
+      #   echo "vdlm2_feeder (pid $vdlm2_pidof_vdlm2_feeder) is connected to vdlm2_server (pid $vdlm2_pidof_vdlm2_tcp_server) at 127.0.0.1:15555: HEALTHY"
+      # fi
 
-      # Ensure TCP connection to vdlm2_server at 127.0.0.1:15555
-      if ! check_tcp4_connection_established_for_pid "127.0.0.1" "ANY" "127.0.0.1" "15555" "${vdlm2_pidof_vdlm2_feeder}"; then
-        echo "vdlm2_feeder (pid $vdlm2_pidof_vdlm2_feeder) not connected to vdlm2_server (pid $vdlm2_pidof_vdlm2_tcp_server) at 127.0.0.1:15555: UNHEALTHY"
-        EXITCODE=1
-      else
-        echo "vdlm2_feeder (pid $vdlm2_pidof_vdlm2_feeder) is connected to vdlm2_server (pid $vdlm2_pidof_vdlm2_tcp_server) at 127.0.0.1:15555: HEALTHY"
-      fi
-
-      # Ensure UDP connection to acars.io
-      if ! check_udp4_connection_established_for_pid "ANY" "ANY" "ANY" "5555" "${vdlm2_pidof_vdlm2_feeder}"; then
-        echo "vdlm2_feeder (pid $vdlm2_pidof_vdlm2_feeder) not feeding: UNHEALTHY"
-        EXITCODE=1
-      else
-        echo "vdlm2_feeder (pid $vdlm2_pidof_vdlm2_feeder) is feeding: HEALTHY"
-      fi
+      # # Ensure UDP connection to acars.io
+      # if ! check_udp4_connection_established_for_pid "ANY" "ANY" "ANY" "5555" "${vdlm2_pidof_vdlm2_feeder}"; then
+      #   echo "vdlm2_feeder (pid $vdlm2_pidof_vdlm2_feeder) not feeding: UNHEALTHY"
+      #   EXITCODE=1
+      # else
+      #   echo "vdlm2_feeder (pid $vdlm2_pidof_vdlm2_feeder) is feeding: HEALTHY"
+      # fi
 
   fi
+  if [ -n "$PLANEPLOTTER" ]; then
+    echo "==== Checking planeplotter_server ====="
+    if ! netstat -anp | grep -P "tcp\s+\d+\s+\d+\s+0.0.0.0:14444\s+0.0.0.0:\*\s+LISTEN\s+[0-9]+/ncat" > /dev/null 2>&1; then
+      echo "planeplotter (vdl2) TCP not listening on port 14444 (pid $vdlm2_pidof_vdlm2_tcp_server): UNHEALTHY"
+      EXITCODE=1
+    else
+      echo "planeplotter (vdl2) listening on port 14444 (pid $vdlm2_pidof_vdlm2_tcp_server): HEALTHY"
+    fi
+
+    if ! netstat -anp | grep -P "udp\s+\d+\s+\d+\s+127.0.0.1:[0-9]+\s+127.0.0.1:4444\s+ESTABLISHED\s+[0-9]+/dumpvdl2" > /dev/null 2>&1; then
+      echo "UDP connection between dumpvdl2 and planeplotter server not available: UNHEALTHY"
+      EXITCODE=1
+    else
+      echo "UDP connection between dumpvdl2 and planeplotter server available: HEALTHY"
+    fi
+  fi
+  #### REMOVE AFTER AIRFRAMES IS UPDATED ####
 
   echo "==== Checking vdlm2_stats ====="
 
@@ -179,7 +197,8 @@ if [ -n "${ENABLE_VDLM}" ]; then
 
   # Check for activity
   # read .json files, ensure messages received in past hour
-  vdlm2_num_msgs_past_hour=$(find /database -type f -name 'vdlm2.*.json' -cmin -60 -exec cat {} \; | wc -l)
+
+  vdlm2_num_msgs_past_hour=$(find /database -type f -name 'vdlm2.*.json' -cmin -60 -exec cat {} \; | sed -e 's/}{/}\n{/g' | wc -l)
   if [[ "$vdlm2_num_msgs_past_hour" -gt 0 ]]; then
       echo "$vdlm2_num_msgs_past_hour VDLM2 messages received in past hour: HEALTHY"
   else

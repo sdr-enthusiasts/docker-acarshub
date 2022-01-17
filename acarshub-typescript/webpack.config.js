@@ -4,7 +4,7 @@ const HtmlWebpackPlugin = require("html-webpack-plugin");
 const FaviconsWebpackPlugin = require("favicons-webpack-plugin");
 const InjectBodyPlugin = require("inject-body-webpack-plugin").default;
 
-module.exports = {
+let config = {
   entry: {
     acarshub: path.resolve(__dirname, "src") + "/index.ts",
   },
@@ -54,6 +54,9 @@ module.exports = {
     ],
   },
   resolve: {
+    alias: {
+      '@fortawesome/fontawesome-free-solid$': '@fortawesome/fontawesome-free-solid/shakable.es.js',
+    },
     extensions: [
       ".js",
       ".ts",
@@ -70,7 +73,7 @@ module.exports = {
   output: {
     filename: "[name].[chunkhash].js",
     path: path.resolve(__dirname, "dist/static/js"),
-    publicPath: "/static/js/",
+    publicPath: "static/js/",
     clean: true,
   },
 
@@ -87,7 +90,7 @@ module.exports = {
         },
         vendor: {
           test: /[\\/]node_modules[\\/]/,
-          name(module) {
+          name: (module) => {
             // get the name. E.g. node_modules/packageName/not/this/part.js
             // or node_modules/packageName
             const packageName = module.context.match(
@@ -106,8 +109,8 @@ module.exports = {
       logo: path.resolve(__dirname, "./src/assets/images") + "/acarshub.svg",
       inject: true,
       cache: true,
-      outputPath: "../images/favicons",
-      publicPath: "../images/favicons",
+      outputPath: "images/favicons",
+      publicPath: "../../static/images/favicons",
       prefix: "",
     }),
     new HtmlWebpackPlugin({
@@ -138,3 +141,11 @@ module.exports = {
     }),
   ],
 };
+
+module.exports = (env, argv) => {
+  if (argv.mode === 'development') {
+    config.devtool = 'source-map';
+  }
+  return config;
+};
+

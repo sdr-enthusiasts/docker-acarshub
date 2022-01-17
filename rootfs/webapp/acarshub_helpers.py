@@ -8,6 +8,7 @@ import requests
 
 DEBUG_LOGGING = False
 EXTREME_LOGGING = False
+QUIET_LOGS = False
 SPAM = False
 ENABLE_ACARS = False
 ENABLE_VDLM = False
@@ -30,6 +31,8 @@ ACARSHUB_BUILD = "0"
 CURRENT_ACARS_HUB_VERSION = "0"
 CURRENT_ACARS_HUB_BUILD = "0"
 IS_UPDATE_AVAILABLE = False
+FEED = False
+ARCH = "unknown"
 
 
 import logging
@@ -41,10 +44,15 @@ def log(msg, source):
     logger.error(f"[{source}]: {msg}")
 
 
+if os.getenv("FEED", default=False):
+    FEED = True
+
 if os.getenv("DEBUG_LOGGING", default=False):
     DEBUG_LOGGING = True
 if os.getenv("EXTREME_LOGGING", default=False):
     EXTREME_LOGGING = True
+if os.getenv("QUIET_LOGS", default=False):
+    QUIET_LOGS = True
 
 # Application states
 
@@ -157,6 +165,11 @@ with open(version_path, "r") as f:
     ACARSHUB_BUILD = lines.split("\n")[0].split(" ")[2].replace("v", "")
     CURRENT_ACARS_HUB_BUILD = ACARSHUB_BUILD
 
+if not SPAM and os.path.exists("/arch"):
+    with open("/arch", "r") as f:
+        lines = f.read()
+        ARCH = lines.split("\n")[0]
+
 
 def check_github_version():
     global CURRENT_ACARS_HUB_VERSION
@@ -164,24 +177,27 @@ def check_github_version():
     global ACARSHUB_BUILD
     global CURRENT_ACARS_HUB_BUILD
     global IS_UPDATE_AVAILABLE
-    r = requests.get(
-        "https://raw.githubusercontent.com/fredclausen/docker-acarshub/main/version"
-    )
-    CURRENT_ACARS_HUB_VERSION = r.text.split("\n")[0].split(" ")[0].replace("v", "")
-    CURRENT_ACARS_HUB_BUILD = r.text.split("\n")[0].split(" ")[2].replace("v", "")
+    ### FIXME: This is a hack to get around the fact that the version file is not updated on the build server
+    if not SPAM:
+        r = requests.get(
+            "https://raw.githubusercontent.com/fredclausen/docker-acarshub/main/version"
+        )
+        CURRENT_ACARS_HUB_VERSION = r.text.split("\n")[0].split(" ")[0].replace("v", "")
+        CURRENT_ACARS_HUB_BUILD = r.text.split("\n")[0].split(" ")[2].replace("v", "")
 
-    if (
-        CURRENT_ACARS_HUB_VERSION != ACARSHUB_VERSION
-        and ACARSHUB_VERSION < CURRENT_ACARS_HUB_VERSION
-    ) or (
-        CURRENT_ACARS_HUB_BUILD != ACARSHUB_BUILD
-        and ACARSHUB_BUILD < CURRENT_ACARS_HUB_BUILD
-    ):
-        log("Update found", "version-checker")
-        IS_UPDATE_AVAILABLE = True
-    else:
-        log("No update found", "version-checker")
-        IS_UPDATE_AVAILABLE = False
+        if (
+            CURRENT_ACARS_HUB_VERSION != ACARSHUB_VERSION
+            and ACARSHUB_VERSION < CURRENT_ACARS_HUB_VERSION
+        ) or (
+            CURRENT_ACARS_HUB_BUILD != ACARSHUB_BUILD
+            and ACARSHUB_BUILD < CURRENT_ACARS_HUB_BUILD
+        ):
+            log("Update found", "version-checker")
+            IS_UPDATE_AVAILABLE = True
+        else:
+            if not QUIET_LOGS:
+                log("No update found", "version-checker")
+            IS_UPDATE_AVAILABLE = False
 
 
 def get_version():
@@ -201,4 +217,4 @@ def get_version():
 
 
 def acars_traceback(e, source):
-    logger.exception(f"[{source}]")
+    logger.exception(f"[{source}]: {e}")

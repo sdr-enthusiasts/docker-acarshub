@@ -1,15 +1,42 @@
-//@ts-expect-error
+
 import legend_has_acars_url from "./assets/images/legend-has-acars.svg";
-//@ts-expect-error
-import legend_has_acars_alert_url from "./assets/images/legend-has-acars-alert.svg";
-//@ts-expect-error
+import legend_has_acars_alert_unread_url from "./assets/images/legend-has-acars-alert-unread.svg";
+import legend_has_acars_alert_read_url from "./assets/images/legend-has-acars-alert-read.svg";
 import legend_with_acars_unread_url from "./assets/images/legend-with-acars-unread.svg";
-//@ts-expect-error
 import legend_without_acars_url from "./assets/images/legend-without-acars.svg";
-// @ts-expect-error
 import acars_alert_url from "./assets/sounds/alert.mp3";
-// @ts-expect-error
 import safari_image_url from "./assets/images/safari.png";
+
+import { library, dom } from "@fortawesome/fontawesome-svg-core";
+import { faCheck } from "@fortawesome/free-solid-svg-icons/faCheck";
+import { faPlane } from "@fortawesome/free-solid-svg-icons/faPlane";
+import { faPlaneSlash } from "@fortawesome/free-solid-svg-icons/faPlaneSlash";
+import { faCommentAlt as faCommentAltSolid } from "@fortawesome/free-solid-svg-icons/faCommentAlt";
+import { faCommentAlt as faCommentAltRegular} from "@fortawesome/free-regular-svg-icons/faCommentAlt";
+import { faToggleOn } from "@fortawesome/free-solid-svg-icons/faToggleOn";
+import { faToggleOff } from "@fortawesome/free-solid-svg-icons/faToggleOff";
+import { faSquare as faSquareSolid } from "@fortawesome/free-solid-svg-icons/faSquare";
+import { faSquare as faSquareRegular } from "@fortawesome/free-regular-svg-icons/faSquare";
+import { faArrowUp } from "@fortawesome/free-solid-svg-icons/faArrowUp";
+import { faArrowDown } from "@fortawesome/free-solid-svg-icons/faArrowDown";
+import { faPlus } from "@fortawesome/free-solid-svg-icons/faPlus";
+import { faMinus } from "@fortawesome/free-solid-svg-icons/faMinus";
+
+library.add(faCheck);
+library.add(faPlane);
+library.add(faPlaneSlash);
+library.add(faCommentAltSolid);
+library.add(faCommentAltRegular);
+library.add(faToggleOn);
+library.add(faToggleOff);
+library.add(faSquareSolid);
+library.add(faSquareRegular);
+library.add(faArrowUp);
+library.add(faArrowDown);
+library.add(faPlus);
+library.add(faMinus);
+
+dom.watch();
 
 export let images = {
   acars_hub_logo: `<?xml version="1.0" encoding="UTF-8"?>
@@ -70,7 +97,8 @@ export let images = {
   toggle_unread_messages_off: '<i class="far fa-square"></i>' as string,
 
   legend_has_acars: legend_has_acars_url as string,
-  legend_has_acars_alert: legend_has_acars_alert_url as string,
+  legend_has_acars_alert_unread: legend_has_acars_alert_unread_url as string,
+  legend_has_acars_alert_read: legend_has_acars_alert_read_url as string,
   legend_with_acars_unread: legend_with_acars_unread_url as string,
   legend_without_acars_url: legend_without_acars_url as string,
   safari_image_url: safari_image_url as string,

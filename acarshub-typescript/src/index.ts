@@ -20,7 +20,6 @@ import { status } from "./status";
 import { alerts_page } from "./alerts";
 import { tooltip } from "./tooltips";
 import { io, Socket } from "socket.io-client";
-import "@fortawesome/fontawesome-free/js/all.min.js";
 
 import {
   labels,
@@ -45,6 +44,7 @@ import {
 } from "./interfaces";
 
 import { live_map_page } from "./live_map";
+import Cookies from "js-cookie";
 
 let socket: Socket = <any>null;
 let socket_status: boolean = false;
@@ -110,10 +110,28 @@ export function resize_tabs(
   $(".boxed").css("width", `${window_width / num_tabs / 2}`);
 }
 
+export function setScrollers() {
+  let timer: null | NodeJS.Timeout = null;
+  $("div").on("scroll", function(e) {
+    if (e.target.classList.contains("on-scrollbar") === false) {
+      e.target.classList.add("on-scrollbar");
+    }
+
+    if(timer !== null) {
+      clearTimeout(timer);
+    }
+
+    timer = setTimeout(function() {
+      $("div").removeClass("on-scrollbar");
+    }, 500);
+  });
+}
+
 $((): void => {
   //inject the base HTML in to the body tag
   // Document on ready new syntax....or something. Passing a function directly to jquery
   $("#log").html("Page loading.....please wait");
+  setScrollers();
   // Observe one or multiple elements
   // time to set everything on the page up
 
@@ -170,6 +188,7 @@ $((): void => {
 
   socket.on("features_enabled", function (msg: decoders): void {
     stats_page.decoders_enabled(msg);
+    menu.set_arch(msg.arch);
     if (msg.adsb.enabled === true) {
       adsb_enabled = true;
       menu.set_adsb(true);
@@ -402,6 +421,11 @@ window.new_page = function (page: string): void {
 
 function connection_status(connected = false): void {
   socket_status = connected;
+  if (connected) {
+    $("#update_notice").removeClass("hidden");
+  } else {
+    $("#update_notice").addClass("hidden");
+  }
   $("#disconnect").html(
     !connected
       ? ' | <strong><span class="red_body">DISCONNECTED FROM WEB SERVER'
@@ -511,6 +535,11 @@ window.show_page_modal = function (): void {
     live_messages_page.show_live_message_modal();
   }
 };
+
+window.show_menu_modal = function (): void {
+  menu.show_menu_modal();
+};
+
 window.updateAlerts = function (): void {
   alerts_page.updateAlerts();
 };
@@ -612,6 +641,18 @@ window.mark_all_messages_read = function (): void {
 window.query = function (): void {
   search_page.query();
 };
+
+window.hide_libseccomp2_warning = function (): void {
+  Cookies.set("hide_libseccomp2_warning", "true", { expires: 365 });
+  menu.generate_footer();
+};
+
+window.reset_alert_counts = function (): void {
+  const reset_alerts = confirm("This will reset the alert term counts in your database. This action cannot be undone. Are you sure you want to continue?");
+  if (reset_alerts) {
+    socket.emit("reset_alert_counts", { reset_alerts: true }, "/main");
+  }
+}
 
 export function showPlaneMessages(
   plane_callsign: string = "",

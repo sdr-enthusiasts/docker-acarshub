@@ -27,7 +27,7 @@ if [[ -n "${ENABLE_VDLM}" ]]; then
     timeout --foreground 300s socat -u TCP:127.0.0.1:15555 CREATE:/database/vdlm2.past5min.json
 
     # shellcheck disable=SC2016
-    echo "$(wc -l < /database/vdlm2.past5min.json) VDLM2 messages received in last 5 mins" | stdbuf -oL awk '{print "[vdlm2_stats] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
+    echo "$(sed 's/}{/}\n{/g' /database/vdlm2.past5min.json | wc -l) VDLM2 messages received in last 5 mins" | stdbuf -oL awk '{print "[vdlm2_stats] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
 
     # rotate files keeping last 2 hours
     for i in {24..1}; do

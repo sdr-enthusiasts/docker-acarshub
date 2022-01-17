@@ -1,29 +1,29 @@
 # Firstly, build airframesio/acars-decoder-typescript
 # Done in separate build stage to prevent having to install node + dependencies in final image
 
-FROM node:17.3.0-slim AS acarshub-typescript-builder
+FROM node:17.3.1-slim AS acarshub-typescript-builder
 
 ENV DOCKER_BUILD="true"
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
+#hadolint ignore=DL3008
+RUN set -xe && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends make python3 g++ && \
+    rm -rf /src/* /tmp/* /var/lib/apt/lists/*
+
 COPY acarshub-typescript/package.json /acarshub-typescript/package.json
 COPY acarshub-typescript/package-lock.json /acarshub-typescript/package-lock.json
 
-#hadolint ignore=SC1072
-#hadolint ignore=DL3008
 RUN set -xe && \
     pushd /acarshub-typescript && \
-    apt-get update && \
-    apt-get install -y --no-install-recommends make python3 g++ && \
-    npm install && \
-    rm -rf /src/* /tmp/* /var/lib/apt/lists/*
+    npm install
 
 COPY acarshub-typescript/ /acarshub-typescript/
 
-#hadolint ignore=DL3052
 RUN set -xe && \
     pushd /acarshub-typescript && \
     mkdir -p ../rootfs/webapp/static/js/ && \
-    npm run build && \
+    npm run build-dev && \
     npm run installer

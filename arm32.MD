@@ -19,7 +19,7 @@ The libseccomp2 script will do the following things to your system if the versio
 * Update your system packages prior to updating libseccomp2
 * Finally, install libseccomp2
 
-You may be prompted for a password because the script is modifying things that require escalated priviledges.
+You may be prompted for a password because the script is modifying things that require escalated privileges.
 
 To run this script, which only needs to be done once, please do the following
 

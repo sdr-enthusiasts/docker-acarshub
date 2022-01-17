@@ -2,7 +2,6 @@
 
 ![Banner](Logo-Sources/ACARS%20Hub.png "banner")
 [![GitHub Workflow Status](https://img.shields.io/github/workflow/status/fredclausen/docker-acarshub/Deploy%20to%20Docker%20Hub)](https://github.com/fredclausen/docker-acarshub/actions?query=workflow%3A%22Deploy+to+Docker+Hub%22)
-[![Requirements Status](https://requires.io/github/fredclausen/docker-acarshub/requirements.svg?branch=main)](https://requires.io/github/fredclausen/docker-acarshub/requirements/?branch=main)
 [![Docker Pulls](https://img.shields.io/docker/pulls/fredclausen/acarshub.svg)](https://hub.docker.com/r/fredclausen/acarshub)
 [![Docker Image Size (tag)](https://img.shields.io/docker/image-size/fredclausen/acarshub/latest)](https://hub.docker.com/r/fredclausen/acarshub)
 [![Discord](https://img.shields.io/discord/734090820684349521)](https://discord.gg/sTf9uYF)
@@ -116,7 +115,8 @@ There are quite a few configuration options this container can accept.
 |----------|-------------|---------|--------|
 | `FEED`     | Used to toggle feeding to [ACARS.io](http://acars.io). If set to any non-blank value feeding will be enabled. | No | Blank |
 | `ENABLE_WEB`  | Enable the web server. Set to a blank value to disable the web server. | No | `true` |
-| `QUIET_LOGS` | By default the received ACARS/VDLM messages will be logged to the container's std output. To stop this, set to any non-blank value. | No | Blank |
+| `QUIET_LOGS` | By default the container displays all logging messages. If you wish to only see errors and critical messages in the container logs set `QUIET_LOGS` to a non-blank value. | No | Blank |
+| `QUIET_MESSAGES` | By default the decoders will not output their received messages to the container logs. If you want to see these messages in the logs set `QUIET_MESSAGES` to a blank value. | No | `true` |
 | `DB_SAVEALL` | By default the container will save all received messages in to a database, even if the message is a blank message. If you want to increase performance/decrease database size, set this option to blank to only save messages with at least one informationial field. | No | `true` |
 | `DB_SAVE_DAYS` | By default the container will save message data for 7 days. If you wish to over-ride this behavior, set this to the number of days you wish to have retained. | No | blank |
 | `DB_ALERT_SAVE_DAYS` | By default the container will save message data for 7 days. If you wish to over-ride this behavior, set this to the number of days you wish to have retained. | No | blank |
@@ -124,6 +124,7 @@ There are quite a few configuration options this container can accept.
 | `IATA_OVERRIDE` | Override or add any custom IATA codes. Used for the web front end to show proper callsigns; See [below](#the-fix) on formatting and [more details](#A-note-about-data-sources-used-for-the-web-site) why this might be necessary.| No | Blank |
 | `TAR1090_URL` | Flights where the container is able to, it will generate a link to a tar1090 instance so that you can see the position of the aircraft that generated the message. By default, it will link to [ADSB Exchange](https://www.adsbexchange.com), but if desired, you can set the URL to be a local tar1090 instance. | No | Blank |
 | `AUTO_VACUUM` | If you find your database size to be too large you can temporarily enable this and on the next container startup the database will attempt to reduce itself in size. When you do this startup time will take a few minutes. It is recommended to leave this flag disabled and only enable it temporarily. | No | `False` |
+| `PLANEPLOTTER` | If you want to output data in plane plotter format for use in Plane Plotter set this option to `true`. Only VDLM2 output is supported. | No | `False` |
 
 Please note that for `TAR1090_URL` the required format is `http[s]://**HOSTNAME**` only. So if your tar1090 instance is at IP address `192.168.31.10` with no SSL, the TAR1090_URL would look like `http://192.168.31.10`
 
@@ -279,19 +280,30 @@ If there are airlines you notice that are wrong because the data used is wrong (
 
 ## Accessing ACARS/VDLM data with external programs
 
-If you wish to access the JSON data that the decoders `acarsdec` and `dumpvdl2` generate with an external program, such as FlightAirMap, expose the following ports in your docker-compose configuration:
+If you wish to access the JSON data that the decoders `acarsdec` and `dumpvdl2` generate with an external program, such as FlightAirMap or Plane Plotter, expose the following ports in your docker-compose configuration:
 
+* Port 80 for the web site
+* Port 14444 for TCP VDLM2 Plane Plotter
 * Port 15555 for UDP VDLM2 JSON
 * Port 15550 for UDP ACARS JSON
+
+### Note about Plane Plotter export format
+
+This is currently untested in those programs, so specific set up instructions for those programs are not available. If this format does not work (ie, it needs ACARS Hub to connect to it rather that it connect to ACARS Hub) please open an issue and let me know.
+
+Additionally this format does not export *ACARS* at all and only supports VDLM2.
+
+### YAML Configuration for Ports
 
 ```yaml
     ports:
       - 80:80
       - 15550:15550
       - 15555:15555
+      - 14444:14444
 ```
 
-And then you will be able to connect to `yourpisipaddress:15555` or `yourpisipaddress:15550`, respectively, in whatever program can decode ACARS/VDLM JSON.
+And then you will be able to connect to `yourpisipaddress:15555`, `yourpisipaddress:15550`, or `youripaddress:14444` respectively, in whatever program can decode ACARS/VDLM JSON.
 
 ## Website tips and tricks
 

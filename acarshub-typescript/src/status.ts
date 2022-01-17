@@ -6,6 +6,7 @@ import {
   system_status,
   adsb_status,
   acarshub_version,
+  status_external_formats,
 } from "./interfaces";
 
 export let status = {
@@ -67,7 +68,8 @@ export let status = {
           this.current_status.status.servers,
           this.current_status.status.feeders,
           this.current_status.status.global,
-          this.current_status.status.stats
+          this.current_status.status.stats,
+          this.current_status.status.external_formats,
         )
       );
     }
@@ -78,7 +80,8 @@ export let status = {
     servers: status_server,
     feeders: status_decoder,
     receivers: status_global,
-    stats: status_decoder
+    stats: status_decoder,
+    external_formats: status_external_formats
   ): string {
     let html_output = "<h2>ACARS Hub System Status</h2>";
     const keys_decoder = Object.keys(decoders);
@@ -86,6 +89,7 @@ export let status = {
     const keys_receivers = Object.keys(receivers);
     const keys_feeders = Object.keys(feeders);
     const keys_stats = Object.keys(stats);
+    const keys_external_formats = Object.keys(external_formats);
 
     html_output += '<span class="monofont">';
     if (this.current_version.container_version) {
@@ -140,6 +144,17 @@ export let status = {
         stats[key].Status == "Ok" ? "green" : "red_body"
       }>${stats[key].Status}</span></strong>`;
       html_output += "<br>";
+    });
+
+    keys_external_formats.forEach((key) => {
+      const decoder_types = external_formats[key];
+      decoder_types.forEach((sub_key) => {
+        let sub_string = `External Decoder ${key}/${sub_key.type}:`;
+        html_output += `${sub_string.padEnd(55, ".")}<strong><span class=${
+          sub_key.Status == "Ok" ? "green" : "red_body"
+        }>${sub_key.Status}</span></strong>`;
+        html_output += "<br>";
+      });
     });
 
     keys_feeders.forEach((key) => {

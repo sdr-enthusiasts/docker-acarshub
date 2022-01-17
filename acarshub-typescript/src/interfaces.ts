@@ -1,3 +1,5 @@
+import * as LeafLet from "leaflet";
+
 export interface database_size {
   size: string;
   count: number;
@@ -11,7 +13,15 @@ export interface system_status {
     feeders: status_decoder;
     global: status_global;
     stats: status_decoder;
+    external_formats: status_external_formats;
   };
+}
+
+export interface status_external_formats {
+  [index: string]: [{
+    Status: string;
+    type: string;
+  }];
 }
 
 export interface status_server {
@@ -41,6 +51,7 @@ export interface terms {
 export interface decoders {
   acars: boolean;
   vdlm: boolean;
+  arch: string;
   adsb: {
     enabled: boolean;
     lat: number;
@@ -306,4 +317,15 @@ export interface acarshub_version {
   container_version: string;
   github_version: string;
   is_outdated: boolean;
+}
+
+export interface MapOptionsWithNewConfig extends LeafLet.MapOptions {
+  smoothWheelZoom: boolean;
+}
+
+declare global {
+  namespace L.control {
+    function custom(options: any): any;
+    function Legend(options: any): any;
+  }
 }

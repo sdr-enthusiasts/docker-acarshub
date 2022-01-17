@@ -14,6 +14,7 @@ import {
   adsb_plane,
   plane_match,
   plane_num_msgs_and_alert,
+  MapOptionsWithNewConfig,
 } from "./interfaces";
 import jBox from "jbox";
 import { display_messages } from "./html_generator";
@@ -24,6 +25,7 @@ import {
   find_matches,
   get_match,
   get_window_size,
+  setScrollers,
 } from "./index";
 import { tooltip } from "./tooltips";
 import { images } from "./assets";
@@ -41,8 +43,11 @@ export let live_map_page = {
   legend: (<unknown>null) as LeafLet.Control,
   layerGroupPlanes: (<unknown>null) as LeafLet.LayerGroup,
   layerGroupPlaneDatablocks: (<unknown>null) as LeafLet.LayerGroup,
+  layerGroupRangeRings: (<unknown>null) as LeafLet.LayerGroup,
   lat: 0 as number,
   lon: 0 as number,
+  station_lat: 0 as number,
+  station_lon: 0 as number,
   ignored_keys: ["trk", "alt", "call"] as string[],
   plane_message_modal: new jBox("Modal", {
     id: "set_modal",
@@ -219,8 +224,27 @@ export let live_map_page = {
   live_map: function (lat_in: number, lon_in: number): void {
     this.lat = lat_in;
     this.lon = lon_in;
-    if (this.live_map_page_active && this.adsb_enabled)
+    this.station_lat = this.lat;
+    this.station_lon = this.lon;
+    if (this.live_map_page_active && this.adsb_enabled) {
       this.map.setView([this.lat, this.lon]);
+      this.set_range_markers();
+    }
+  },
+
+  set_range_markers: function (): void {
+    console.log("yo")
+    if (this.layerGroupRangeRings == null)
+      this.layerGroupRangeRings = L.layerGroup();
+    this.layerGroupRangeRings.clearLayers();
+    const nautical_miles_to_meters = 1852;
+    const ring_radius = [10 * nautical_miles_to_meters, 50 * nautical_miles_to_meters, 100 * nautical_miles_to_meters,  150 * nautical_miles_to_meters, 200 * nautical_miles_to_meters];
+
+    ring_radius.forEach((radius) => {
+      LeafLet.circle([this.station_lat, this.station_lon], {radius: radius, fill: false, interactive: false, weight: 2, color: "hsl(0, 0%, 0%)"}).addTo(this.layerGroupRangeRings);
+    });
+
+    this.map.addLayer(this.layerGroupRangeRings);
   },
 
   setSort: function (sort: string = ""): void {
@@ -532,9 +556,9 @@ export let live_map_page = {
           num_alerts &&
           this.current_hovered_from_map == callsign.replace("~", "")
         ) {
-          styles = " sidebar_alert_hovered_from_map";
+          styles = has_new_messages ? " sidebar_alert_unread_hovered_from_map" : " sidebar_alert_unread_hovered_from_map";
         } else if (num_alerts) {
-          styles = " sidebar_alert";
+          styles = has_new_messages ? " sidebar_alert_unread" : " sidebar_alert_read";
         } else if (callsign && num_messages && styles == "") {
           if (!has_new_messages) styles = " sidebar_no_hover_with_acars";
           else styles = " sidebar_no_hover_with_unread";
@@ -689,8 +713,11 @@ export let live_map_page = {
 
           if (this.current_hovered_from_sidebar == callsign.replace("~", ""))
             color = "airplane_orange";
-          else if (alert || squawk == 7500 || squawk == 7600 || squawk == 7700)
+          else if ((alert && this.show_unread_messages && num_messages !== old_messages) || squawk == 7500 || squawk == 7600 || squawk == 7700)
             color = "airplane_red";
+          else if (alert) {
+            color = "airplane_brown";
+          }
           else if (num_messages) {
             if (old_messages > num_messages) {
               console.error(
@@ -917,22 +944,20 @@ export let live_map_page = {
         center: [this.lat, this.lon],
         zoom: this.current_scale,
         scrollWheelZoom: false,
-        // @ts-expect-error
         smoothWheelZoom: true,
         smoothSensitivity: 1,
         zoomControl: false,
-      });
+      } as MapOptionsWithNewConfig);
 
-      LeafLet.tileLayer("http://{s}.tile.osm.org/{z}/{x}/{y}.png", {
+      LeafLet.tileLayer("https://{s}.tile.osm.org/{z}/{x}/{y}.png", {
         detectRetina: false,
         opacity: 0.6,
         attribution:
           '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors',
       }).addTo(this.map);
+      this.set_range_markers();
 
-      LeafLet.control
-        // @ts-expect-error
-        .custom({
+      LeafLet.control.custom({
           position: "topleft",
           content:
             '<button type="button" id="zoomin" class="btn btn-default" onclick="zoom_in()"><i class="fas fa-plus"></i></button>' +
@@ -944,8 +969,7 @@ export let live_map_page = {
             cursor: "pointer",
           },
           events: {},
-        })
-        .addTo(this.map);
+        }).addTo(this.map);
 
       this.layerGroupPlanes = LeafLet.layerGroup().addTo(this.map);
       this.layerGroupPlaneDatablocks = LeafLet.layerGroup().addTo(this.map);
@@ -974,7 +998,6 @@ export let live_map_page = {
   set_controls: function (): void {
     if (this.legend) this.legend.remove();
     this.legend = LeafLet.control
-      // @ts-expect-error
       .Legend({
         position: "bottomleft",
         symbolWidth: 45,
@@ -993,9 +1016,14 @@ export let live_map_page = {
             url: images.legend_with_acars_unread,
           },
           {
-            label: "Planes With ACARS Alerts",
+            label: "Planes With Unread ACARS Alerts",
             type: "image",
-            url: images.legend_has_acars_alert,
+            url: images.legend_has_acars_alert_unread,
+          },
+          {
+            label: "Planes With Read ACARS Alerts",
+            type: "image",
+            url: images.legend_has_acars_alert_read,
           },
           {
             label: "Planes Without ACARS Messages",
@@ -1009,7 +1037,6 @@ export let live_map_page = {
     if (this.map_controls) this.map_controls.remove();
 
     this.map_controls = LeafLet.control
-      // @ts-expect-error
       .custom({
         position: "topright",
         content:
@@ -1071,12 +1098,14 @@ export let live_map_page = {
         '<div style="display: flex;height: 100%;" ><div id="mapid"></div><div id="planes"></div>'
       );
     else $("#log").html("ADSB Disabled");
+    setScrollers();
   },
 
   destroy_maps: function (): void {
     this.map = (<unknown>null) as LeafLet.Map;
     this.layerGroupPlanes = (<unknown>null) as LeafLet.LayerGroup;
     this.layerGroupPlaneDatablocks = (<unknown>null) as LeafLet.LayerGroup;
+    this.layerGroupRangeRings = (<unknown>null) as LeafLet.LayerGroup;
     this.adsb_planes = {};
     this.map_controls = (<unknown>null) as LeafLet.Control;
     this.legend = (<unknown>null) as LeafLet.Control;

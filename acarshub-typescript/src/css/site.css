@@ -7,6 +7,7 @@
   --grey-highlight: hsl(0, 0%, 75%);
   --full-black: hsl(0, 0%, 0%);
   --full-red: hsl(0, 100%, 50%);
+  --full-brown: hsl(0, 51%, 33%);
   --full-orange: hsl(39, 100%, 50%);
   --full-yellow: hsl(60, 100%, 50%);
   --full-green: hsl(120, 100%, 25%);
@@ -25,6 +26,43 @@
   --egg-white: hsl(0, 0%, 80%);
   --tabs-grey-shadow: hsl(0, 0%, 58%);
   --jbox-shadow: hsla(0, 0%, 0%, 0.25);
+}
+
+div * {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE 10+ */
+}
+div *::-webkit-scrollbar-track {
+  -webkit-box-shadow: none !important;
+  box-shadow: none !important;
+  background-color: transparent;
+}
+div *::-webkit-scrollbar {
+  width: 3px !important;
+  background-color: transparent;
+}
+div *::-webkit-scrollbar-thumb {
+  background-color: transparent;
+}
+
+.on-scrollbar{
+  scrollbar-width: thin; /* Firefox */
+  -ms-overflow-style: none; /* IE 10+ */
+}
+
+.on-scrollbar::-webkit-scrollbar-track {
+  -webkit-box-shadow: none !important;
+  box-shadow: none !important;
+  background-color: transparent !important;
+}
+
+.on-scrollbar::-webkit-scrollbar {
+  width: 6px !important;
+  background-color: transparent;
+}
+
+.on-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #acacac;
 }
 
 table {
@@ -177,6 +215,13 @@ body {
   margin-left: auto;
   margin-right: auto;
   font-family: var(--site-fonts);
+  -ms-overflow-style: none; /* for Internet Explorer, Edge */
+  scrollbar-width: none; /* for Firefox */
+  overflow-y: scroll;
+}
+
+body::-webkit-scrollbar {
+  display: none; /* for Chrome, Safari, and Opera */
 }
 
 .container {
@@ -197,13 +242,6 @@ div#content.container {
   overflow: scroll;
   height: calc(100vh - 125px);
 }
-
-/* -ms-overflow-style: none;  /* IE and Edge
-scrollbar-width: none;  Firefox */
-
-/* div#content.container::-webkit-scrollbar {
-  display: none;
-} */
 
 div#main_block.row {
   margin-left: 0;
@@ -327,6 +365,14 @@ a.spread_text:hover {
   color: var(--full-black);
 }
 
+.red {
+  color: var(--full-red);
+}
+
+
+.white {
+  color: var(--full-white);
+}
 select {
   min-width: 100%;
 }
@@ -871,6 +917,10 @@ canvas {
     height: calc(100vh - 130px) !important;
     max-height: calc(100vh - 130px) !important;
   }
+
+  #update_notice {
+    display: none;
+  }
 }
 
 @media only screen and (max-width: 950px) {
@@ -1007,8 +1057,15 @@ canvas {
 .airplane_blue:hover,
 .airplane_green:hover,
 .airplane_red:hover,
-.airplane_darkgreen:hover {
+.airplane_darkgreen:hover,
+.airplane_brown:hover {
   fill: var(--full-orange);
+  paint-order: stroke;
+}
+
+.airplane_brown {
+  fill: var(--full-brown);
+  stroke: var(--full-black);
   paint-order: stroke;
 }
 
@@ -1078,7 +1135,7 @@ div.plane_list {
 }
 
 div.plane_list:hover {
-  background-color: var(--full-black);
+  background-color: var(--datablock-bg);
   color: var(--blue-highlight);
 }
 
@@ -1101,12 +1158,12 @@ div.plane_element {
 }
 
 .sidebar_hovered_from_map_acars {
-  background-color: var(--full-black) !important;
+  background-color: var(--datablock-bg) !important;
   color: var(--full-green) !important;
 }
 
 .sidebar_hovered_from_map_no_acars {
-  background-color: var(--full-black) !important;
+  background-color: var(--datablock-bg) !important;
   color: var(--blue-highlight) !important;
 }
 
@@ -1128,7 +1185,7 @@ div.plane_element {
 .sidebar_no_hover_with_unread:focus a,
 .sidebar_hovered_from_map_with_unread,
 .sidebar_hovered_from_map_with_unread a {
-  background-color: var(--full-black) !important;
+  background-color: var(--datablock-bg) !important;
   color: var(--full-darkgreen) !important;
   font-weight: bold !important;
 }
@@ -1137,26 +1194,40 @@ div.plane_element {
 .sidebar_no_hover_with_acars:focus,
 .sidebar_no_hover_with_acars:hover a,
 .sidebar_no_hover_with_acars:focus a {
-  background-color: var(--full-black) !important;
+  background-color: var(--datablock-bg) !important;
   color: var(--full-green) !important;
 }
 
-.sidebar_alert_hovered_from_map,
-.sidebar_alert_hovered_from_map a,
-.sidebar_alert:hover,
-.sidebar_alert:focus,
-.sidebar_alert:hover a,
-.sidebar_alert:focus a {
-  background-color: var(--full-black) !important;
+.sidebar_alert_unread_hovered_from_map,
+.sidebar_alert_unread_hovered_from_map a,
+.sidebar_alert_unread:hover,
+.sidebar_alert_unread:focus,
+.sidebar_alert_unread:hover a,
+.sidebar_alert_unread:focus a {
+  background-color: var(--datablock-bg) !important;
   color: var(--full-red) !important;
+}
+
+.sidebar_alert_read_hovered_from_map,
+.sidebar_alert_read_hovered_from_map a,
+.sidebar_alert_read:hover,
+.sidebar_alert_read:focus,
+.sidebar_alert_read:hover a,
+.sidebar_alert_read:focus a {
+  background-color: var(--datablock-bg) !important;
+  color: var(--full-brown) !important;
 }
 
 .sidebar_hovered_from_map_acars .plane_element a {
   color: var(--full-green) !important;
 }
 
-.sidebar_alert {
+.sidebar_alert_unread {
   background-color: var(--full-red) !important;
+}
+
+.sidebar_alert_read {
+  background-color: var(--full-brown) !important;
 }
 
 .plane_element a {

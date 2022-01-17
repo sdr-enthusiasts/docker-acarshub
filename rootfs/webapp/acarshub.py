@@ -12,6 +12,7 @@ servers = dict()
 receivers = dict()
 feeders = dict()
 stats = dict()
+external_formats = dict()
 system_error = False
 
 # Set the URL used for the web front end to show flight tracking.
@@ -220,6 +221,7 @@ def service_check():
     global feeders
     global stats
     global start_time
+    global external_formats
 
     if os.getenv("SPAM", default=False):
         healthcheck = subprocess.Popen(
@@ -239,11 +241,12 @@ def service_check():
     receivers = dict()
     feeders = dict()
     stats = dict()
+    external_formats = dict()
     system_error = False
 
     for line in healthstatus.split("\n"):
         try:
-            match = re.search("(?:acarsdec|vdlm2dec)-.+ =", line)
+            match = re.search("(?:acarsdec|dumpvdl2)-.+ =", line)
             if match:
                 if match.group(0).strip(" =") not in decoders:
                     decoders[match.group(0).strip(" =")] = dict()
@@ -358,6 +361,47 @@ def service_check():
                 else:
                     system_error = True
                     stats[match.group(0)]["Status"] = "Unknown"
+
+            match = re.search("^planeplotter", line)
+
+            if match:
+                if line.find("vdl2") != -1:
+                    pp_decoder = "VDLM2"
+                else:
+                    pp_decoder = "ACARS"
+
+                if pp_decoder not in external_formats:
+                    external_formats[pp_decoder] = []
+
+                if line.endswith("UNHEALTHY"):
+                    system_error = True
+                    external_formats[pp_decoder].append({ "type": "planeplotter",  "Status": "Bad" })
+                elif line.endswith("HEALTHY"):
+                    external_formats[pp_decoder].append({ "type": "planeplotter",  "Status": "Ok" })
+                else:
+                    system_error = True
+                    external_formats[pp_decoder].append({ "type": "planeplotter",  "Status": "Unknown" })
+
+            match = re.search("dumpvdl2 and planeplotter", line)
+
+            if match:
+                if line.find("vdl2") != -1:
+                    pp_decoder = "VDLM2"
+                else:
+                    pp_decoder = "ACARS"
+
+                if pp_decoder not in external_formats:
+                    external_formats[pp_decoder] = []
+
+                if line.endswith("UNHEALTHY"):
+                    system_error = True
+                    external_formats[pp_decoder].append({"type": "dumpvdl2 to planeplotter",  "Status": "Bad" })
+                elif line.endswith("HEALTHY"):
+                    external_formats[pp_decoder].append({ "type": "dumpvdl2 to planeplotter", "Status": "Ok" })
+                else:
+                    system_error = True
+                    external_formats[pp_decoder].append({ "type": "dumpvdl2 to planeplotter", "Status": "Unknown" })
+
         except Exception as e:
             print(f"[service-check] Error: {line}\n{e}")
 
@@ -367,6 +411,7 @@ def service_check():
         print(receivers)
         print(feeders)
         print(stats)
+        print(external_formats)
 
 
 if os.getenv("SPAM", default=False):
@@ -380,6 +425,7 @@ def get_service_status():
     global system_error
     global feeders
     global stats
+    global external_formats
 
     return {
         "decoders": decoders,
@@ -388,6 +434,7 @@ def get_service_status():
         "feeders": feeders,
         "error_state": system_error,
         "stats": stats,
+        "external_formats": external_formats,
     }
 
 

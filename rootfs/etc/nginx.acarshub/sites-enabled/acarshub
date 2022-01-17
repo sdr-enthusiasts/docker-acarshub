@@ -58,5 +58,5 @@ server {
     try_files /templates/index.html =404;
   }
 
-  # TODO: handle invalid URLS and redirect back to /
+  # FIXME: handle invalid URLS and redirect back to /
 }

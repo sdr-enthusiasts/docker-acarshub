@@ -47,7 +47,7 @@ export let alerts_page = {
   alert_message_modal: new jBox("Modal", {
     id: "set_modal",
     width: 350,
-    height: 400,
+    height: 450,
     blockScroll: false,
     isolateScroll: true,
     animation: "zoomIn",
@@ -66,7 +66,8 @@ export let alerts_page = {
       <label for="alert_icao" class="menu_non_link">ICAO Address:</label><br />
       <textarea rows="2" id="alert_icao"></textarea><br />
       <button type="submit" value="Submit" onclick="javascript:updateAlerts()">Update</button>
-      <p><a href="javascript:default_alert_values()" class="spread_text">Default alert values</a></p>
+      <p><a href="javascript:default_alert_values()" class="spread_text">Default alert values</a><br>
+      <a href="javascript:reset_alert_counts()" class="spread_text red">Reset ALL alert counts in data base</a></p>
     </span>`,
   }),
 
