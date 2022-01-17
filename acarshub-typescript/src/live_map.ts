@@ -667,6 +667,7 @@ export let live_map_page = {
           const old_messages = this.get_old_messages(hex.toLowerCase());
           const alert = details.has_alerts;
           const squawk = this.get_sqwk(current_plane);
+
           $(`#${callsign.replace("~", "").replace(".", "")}`).on({
             mouseenter: () => {
               if (
@@ -719,6 +720,8 @@ export let live_map_page = {
       }
     }
     $("#num_planes").html(`Planes: ${num_planes}`);
+    // FIXME: IF THE SIDEBAR IS UPDATED AND A PLANE IS HOVERED THE STATE IS NOT RETAINED
+    // ONLY MOVING THE MOUSE WILL RESET THE HOVERED PLANE
     $("#num_planes_targets").html(`Planes w/ Targets: ${num_planes_targets}`);
   },
 
