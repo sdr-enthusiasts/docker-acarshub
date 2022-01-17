@@ -96,57 +96,57 @@ jobs:
           yamllint_comment: true
 
   acarshub-typescript:
-  runs-on: ubuntu-latest
-  steps:
+    runs-on: ubuntu-latest
+    steps:
 
-    # Check out our code
-    -
-      name: Checkout
-      uses: actions/checkout@v2
+      # Check out our code
+      -
+        name: Checkout
+        uses: actions/checkout@v2
 
-    # Get version tag
-    # git log -1 : get the latest commit
-    # --format="%ct" : committer date, UNIX timestamp
-    # Then using `date` to format to YYYYMMDD format
-    -
-      name: Get date of last commit for VERSION_TAG
-      run: |
-        echo "VERSION_TAG=$(sed '1!d' ./version)" >> $GITHUB_ENV
+      # Get version tag
+      # git log -1 : get the latest commit
+      # --format="%ct" : committer date, UNIX timestamp
+      # Then using `date` to format to YYYYMMDD format
+      -
+        name: Get date of last commit for VERSION_TAG
+        run: |
+          echo "VERSION_TAG=$(sed '1!d' ./version)" >> $GITHUB_ENV
 
-    # Show version tag
-    -
-      name: Show version tag
-      run: |
-        echo "ACARS Hub Version: ${{ env.VERSION_TAG }}"
+      # Show version tag
+      -
+        name: Show version tag
+        run: |
+          echo "ACARS Hub Version: ${{ env.VERSION_TAG }}"
 
-    # Set version tag in webapp
-    # -
-    #   name: Patch webapp with VERSION_TAG
-    #   run: |
-    #     sed -i 's/Pre-Release/ACARS Hub Pre-Release: ${{ env.VERSION_TAG }}/' ./acarshub-typescript/src/menu.ts
+      # Set version tag in webapp
+      # -
+      #   name: Patch webapp with VERSION_TAG
+      #   run: |
+      #     sed -i 's/Pre-Release/ACARS Hub Pre-Release: ${{ env.VERSION_TAG }}/' ./acarshub-typescript/src/menu.ts
 
-    - name: Create version file
-      run: |
-        echo "${{ env.VERSION_TAG }}" >> ./rootfs/acarshub-version
+      - name: Create version file
+        run: |
+          echo "${{ env.VERSION_TAG }}" >> ./rootfs/acarshub-version
 
-    -
-      name: Build ACARSHub typescript test
-      working-directory: ./acarshub-typescript
-      run: |
-        set -xe
-        npm install
-        sed -i 's/Pre-Release/ACARS Hub Pre-Release: ${{ env.VERSION_TAG }}/' ./src/menu.ts
-        npm run build-dev
-        mkdir -p ./webapp/static/images
-        mkdir -p ./webapp/static/js
-        mkdir -p ./webapp/static/sounds
-        mkdir -p ./webapp/templates
-        cp -r ./dist/static/images ./webapp/static/
-        cp -r ./dist/static/sounds ./webapp/static/
-        cp -r ./dist/static/js ./webapp/static/
-        mv ./dist/static/index.html ./webapp/templates/
-        tar cvfz webapp.tar.gz ./webapp
-        cp webapp.tar.gz ../webapp.tar.gz
+      -
+        name: Build ACARSHub typescript test
+        working-directory: ./acarshub-typescript
+        run: |
+          set -xe
+          npm install
+          sed -i 's/Pre-Release/ACARS Hub Pre-Release: ${{ env.VERSION_TAG }}/' ./src/menu.ts
+          npm run build-dev
+          mkdir -p ./webapp/static/images
+          mkdir -p ./webapp/static/js
+          mkdir -p ./webapp/static/sounds
+          mkdir -p ./webapp/templates
+          cp -r ./dist/static/images ./webapp/static/
+          cp -r ./dist/static/sounds ./webapp/static/
+          cp -r ./dist/static/js ./webapp/static/
+          mv ./dist/static/index.html ./webapp/templates/
+          tar cvfz webapp.tar.gz ./webapp
+          cp webapp.tar.gz ../webapp.tar.gz
 
   linelint:
     runs-on: ubuntu-latest
