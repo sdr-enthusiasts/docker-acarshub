@@ -112,7 +112,7 @@ def generate_output_files(serials, decoder, freqs_string):
                 print(f"ERROR: SDR {splitSerial} could not be mapped")
                 path = servicesd_path + f"{decoder}-" + splitSerial.replace(" ", "-")
                 os.makedirs(path)
-                shutil.copyfile(f"../etc/template/bad/run", path + "/run")
+                shutil.copyfile("../etc/template/bad/run", path + "/run")
             # raise RuntimeError("/usr/local/bin/rtl_serial_to_deviceid.sh", rtlSerialToDeviceIDstdout, rtlSerialToDeviceIDstderr)
             # Set deviceID to whatever the script returned
             # strip() to remove the \n
@@ -272,7 +272,7 @@ if __name__ == "__main__":
         and not os.getenv("SERIAL_VDLM")
         and not os.getenv("SERIAL_ACARS")
     ):  # If no serials were passed in (booo) fall back to using device IDs
-        print(f"No serials specified, assigning device ids starting with 0")
+        print("No serials specified, assigning device ids starting with 0")
         args.serials = [str(e) for e in range(8)]
         gOpts["useids"] = True
     else:  # Serials passed in, check to ensure they exist.

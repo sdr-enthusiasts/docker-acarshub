@@ -202,7 +202,6 @@ def handle_message(message=None):
             if search[0] is not None:
                 total_results = search[1]
                 # Loop through the results and format html
-                time_update_keys = time.time()
                 for result in search[0]:
                     serialized_json.append(update_keys(result))
 
@@ -375,12 +374,18 @@ def service_check():
 
                 if line.endswith("UNHEALTHY"):
                     system_error = True
-                    external_formats[pp_decoder].append({ "type": "planeplotter",  "Status": "Bad" })
+                    external_formats[pp_decoder].append(
+                        {"type": "planeplotter", "Status": "Bad"}
+                    )
                 elif line.endswith("HEALTHY"):
-                    external_formats[pp_decoder].append({ "type": "planeplotter",  "Status": "Ok" })
+                    external_formats[pp_decoder].append(
+                        {"type": "planeplotter", "Status": "Ok"}
+                    )
                 else:
                     system_error = True
-                    external_formats[pp_decoder].append({ "type": "planeplotter",  "Status": "Unknown" })
+                    external_formats[pp_decoder].append(
+                        {"type": "planeplotter", "Status": "Unknown"}
+                    )
 
             match = re.search("dumpvdl2 and planeplotter", line)
 
@@ -395,12 +400,18 @@ def service_check():
 
                 if line.endswith("UNHEALTHY"):
                     system_error = True
-                    external_formats[pp_decoder].append({"type": "dumpvdl2 to planeplotter",  "Status": "Bad" })
+                    external_formats[pp_decoder].append(
+                        {"type": "dumpvdl2 to planeplotter", "Status": "Bad"}
+                    )
                 elif line.endswith("HEALTHY"):
-                    external_formats[pp_decoder].append({ "type": "dumpvdl2 to planeplotter", "Status": "Ok" })
+                    external_formats[pp_decoder].append(
+                        {"type": "dumpvdl2 to planeplotter", "Status": "Ok"}
+                    )
                 else:
                     system_error = True
-                    external_formats[pp_decoder].append({ "type": "dumpvdl2 to planeplotter", "Status": "Unknown" })
+                    external_formats[pp_decoder].append(
+                        {"type": "dumpvdl2 to planeplotter", "Status": "Unknown"}
+                    )
 
         except Exception as e:
             print(f"[service-check] Error: {line}\n{e}")

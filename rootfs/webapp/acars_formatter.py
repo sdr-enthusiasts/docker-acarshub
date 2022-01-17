@@ -173,8 +173,6 @@ def format_dumpvdl2_message(unformatted_message):
 
 
 if __name__ == "__main__":
-    import json
-
     try:
         # FIXME to not have hard coded
         f = open("/Users/fred/single_message.txt")

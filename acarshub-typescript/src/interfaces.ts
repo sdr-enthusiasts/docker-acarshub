@@ -18,10 +18,12 @@ export interface system_status {
 }
 
 export interface status_external_formats {
-  [index: string]: [{
-    Status: string;
-    type: string;
-  }];
+  [index: string]: [
+    {
+      Status: string;
+      type: string;
+    }
+  ];
 }
 
 export interface status_server {

@@ -353,24 +353,24 @@ def init_listeners(special_message=""):
     #### REMOVE AFTER AIRFRAMES IS UPDATED ####
 
     # show log message if this is container startup
-    if special_message == "" and acarshub_helpers.QUIET_LOGS == False:
+    if special_message == "" and acarshub_helpers.QUIET_LOGS is False:
         acarshub_helpers.log("Starting Data Listeners", "init")
     if not thread_database.is_alive():
-        if special_message or acarshub_helpers.QUIET_LOGS == False:
+        if special_message or acarshub_helpers.QUIET_LOGS is False:
             acarshub_helpers.log(f"{special_message}Starting Database Thread", "init")
         thread_database = Thread(target=database_listener)
         thread_database.start()
     if not thread_scheduler.is_alive():
-        if special_message or acarshub_helpers.QUIET_LOGS == False:
+        if special_message or acarshub_helpers.QUIET_LOGS is False:
             acarshub_helpers.log(f"{special_message}starting scheduler", "init")
         thread_scheduler = Thread(target=scheduled_tasks)
         thread_scheduler.start()
     if not thread_html_generator.is_alive():
-        if special_message or acarshub_helpers.QUIET_LOGS == False:
+        if special_message or acarshub_helpers.QUIET_LOGS is False:
             acarshub_helpers.log(f"{special_message}Starting htmlListener", "init")
         thread_html_generator = socketio.start_background_task(htmlListener)
     if not thread_acars_listener.is_alive() and acarshub_helpers.ENABLE_ACARS:
-        if special_message or acarshub_helpers.QUIET_LOGS == False:
+        if special_message or acarshub_helpers.QUIET_LOGS is False:
             acarshub_helpers.log(f"{special_message}Starting ACARS listener", "init")
         thread_acars_listener = Thread(
             target=message_listener,
@@ -379,7 +379,7 @@ def init_listeners(special_message=""):
         thread_acars_listener.start()
 
     if not thread_vdlm2_listener.is_alive() and acarshub_helpers.ENABLE_VDLM:
-        if special_message or acarshub_helpers.QUIET_LOGS == False:
+        if special_message or acarshub_helpers.QUIET_LOGS is False:
             acarshub_helpers.log(f"{special_message}Starting VDLM listener", "init")
         thread_vdlm2_listener = Thread(
             target=message_listener,
@@ -393,7 +393,7 @@ def init_listeners(special_message=""):
         and acarshub_helpers.ENABLE_VDLM
         and not vdlm2_feeder_thread.is_alive()
     ):
-        if special_message or acarshub_helpers.QUIET_LOGS == False:
+        if special_message or acarshub_helpers.QUIET_LOGS is False:
             acarshub_helpers.log(f"{special_message}Starting VDLM feeder", "init")
         vdlm2_feeder_thread = Thread(target=vdlm_feeder)
         vdlm2_feeder_thread.start()
@@ -421,9 +421,7 @@ def init():
                 acarshub_helpers.log("Initializing RRD Database", "init")
             acarshub_rrd.create_db()  # make sure the RRD DB is created / there
         except Exception as e:
-            acarshub_helpers.log(
-                f"Startup Error creating RRD Database {e}", "init"
-            )
+            acarshub_helpers.log(f"Startup Error creating RRD Database {e}", "init")
     if results is not None:
         for item in results:
             json_message = item
@@ -436,9 +434,9 @@ def init():
 
     if not acarshub_helpers.QUIET_LOGS:
         acarshub_helpers.log(
-        "Completed grabbing messages from database, starting up rest of services",
-        "init",
-    )
+            "Completed grabbing messages from database, starting up rest of services",
+            "init",
+        )
     init_listeners()
 
 
@@ -537,7 +535,9 @@ def main_connect():
         )
 
         socketio.emit(
-            "terms", {"terms": acarshub.acarshub_db.get_alert_terms()}, namespace="/main"
+            "terms",
+            {"terms": acarshub.acarshub_db.get_alert_terms()},
+            namespace="/main",
         )
     except Exception as e:
         acarshub_helpers.log(
@@ -552,9 +552,7 @@ def main_connect():
             namespace="/main",
         )
     except Exception as e:
-        acarshub_helpers.log(
-            f"Main Connect: Error sending labels: {e}", "webapp"
-        )
+        acarshub_helpers.log(f"Main Connect: Error sending labels: {e}", "webapp")
     msg_index = 1
     for msg_type, json_message_orig in messages_recent:
         if msg_index == len(messages_recent):
@@ -576,7 +574,9 @@ def main_connect():
 
     try:
         socketio.emit(
-            "system_status", {"status": acarshub.get_service_status()}, namespace="/main"
+            "system_status",
+            {"status": acarshub.get_service_status()},
+            namespace="/main",
         )
     except Exception as e:
         acarshub_helpers.log(
@@ -589,9 +589,7 @@ def main_connect():
             "database", {"count": rows, "size": size}, to=requester, namespace="/main"
         )
     except Exception as e:
-        acarshub_helpers.log(
-            f"Main Connect: Error sending database: {e}", "webapp"
-        )
+        acarshub_helpers.log(f"Main Connect: Error sending database: {e}", "webapp")
 
     try:
         socketio.emit(
@@ -709,10 +707,11 @@ def handle_message(message, namespace):
     )
 
 
-@socketio.on('reset_alert_counts', namespace="/main")
+@socketio.on("reset_alert_counts", namespace="/main")
 def reset_alert_counts(message, namespace):
-    if message['reset_alerts']:
+    if message["reset_alerts"]:
         acarshub.acarshub_db.reset_alert_counts()
+
 
 @socketio.on("disconnect", namespace="/main")
 def main_disconnect():

@@ -6,18 +6,6 @@ on:
       - main
 
 jobs:
-  # eslint:
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #   - uses: actions/checkout@v1
-  #   - uses: actions/setup-node@v1
-  #     with:
-  #       node-version: '13.x'
-  #   - name: Run yarn
-  #     run: yarn
-    # - name: Run eslint
-    #   run: yarn run eslint . --ext .js
-
   shellcheck:
 
     runs-on: ubuntu-latest
@@ -28,9 +16,11 @@ jobs:
       run: docker pull koalaman/shellcheck:stable
     - name: Run Shellcheck against shell scripts
       run: |
-        find . -type f -exec grep -m1 -l -E '^#!.*sh.*' {} \; | grep -v -E '\/(.git\/|\S+.MD|\S+.md|retired_scripts\/|acarshub-typescript\/node_modules\/)'
-        docker run --rm -i -v "$PWD:/mnt" koalaman/shellcheck:stable $(find . -type f -exec grep -m1 -l -E '^#!.*sh.*' {} \; | grep -v -E '\/(.git\/|\S+.MD|\S+.md|retired_scripts\/|acarshub-typescript\/node_modules\/)')
-#        docker run --rm -i -v "$PWD:/mnt" koalaman/shellcheck:stable $(find . -type f -exec grep -m1 -l -E '^#!.*execline.*' {} \; | grep -v '/.git/')
+        find . -type f -exec grep -m1 -l -E '^#!.*sh.*' {} \; | \
+        grep -v -E '\/(.git\/|\S+.MD|\S+.md|retired_scripts\/|acarshub-typescript\/node_modules\/)'
+        docker run --rm -i -v "$PWD:/mnt" koalaman/shellcheck:stable \
+        $(find . -type f -exec grep -m1 -l -E '^#!.*sh.*' {} \; | \
+        grep -v -E '\/(.git\/|\S+.MD|\S+.md|retired_scripts\/|acarshub-typescript\/node_modules\/)')
 
   hadolint:
 
@@ -41,7 +31,12 @@ jobs:
     - name: Pull hadolint/hadolint:latest Image
       run: docker pull hadolint/hadolint:latest
     - name: Run hadolint against Dockerfiles
-      run: docker run --rm -i -v "$PWD":/workdir --workdir /workdir --entrypoint hadolint hadolint/hadolint --ignore DL3003 --ignore DL3006 --ignore DL3010 --ignore DL4001 --ignore DL3007 --ignore DL3008 --ignore SC2068 --ignore DL3007 --ignore SC1091 --ignore DL3013 --ignore DL3010 $(find . -type f -iname "Dockerfile*")
+      run: |
+        docker run --rm -i -v "$PWD":/workdir --workdir /workdir \
+        --entrypoint hadolint hadolint/hadolint --ignore DL3003 \
+         --ignore DL3006 --ignore DL3010 --ignore DL4001 --ignore DL3007 \
+         --ignore DL3008 --ignore SC2068 --ignore DL3007 --ignore SC1091 \
+         --ignore DL3013 --ignore DL3010 $(find . -type f -iname "Dockerfile*")
 
   markdownlint:
 
@@ -52,7 +47,10 @@ jobs:
     - name: Pull markdownlint/markdownlint:latest Image
       run: docker pull markdownlint/markdownlint:latest
     - name: Run markdownlint against *.md files
-      run: docker run --rm -i -v "$(pwd)":/workdir --workdir /workdir markdownlint/markdownlint:latest --rules ~MD013,~MD033,~MD026,~MD002,~MD022 $(find . -type f -iname '*.md' | grep -v '/.git/')
+      run: |
+        docker run --rm -i -v "$(pwd)":/workdir --workdir /workdir \
+        markdownlint/markdownlint:latest --rules ~MD013,~MD033,~MD026,\
+        ~MD002,~MD022 $(find . -type f -iname '*.md' | grep -v '/.git/')
 
   flake8:
 
@@ -79,59 +77,101 @@ jobs:
       run: |
         cd "$GITHUB_WORKSPACE/rootfs/webapp"
         # stop the build if there are Python syntax errors or undefined names
-        flake8 *.py --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 *.py --count --ignore=E203,E266,E501,W503,F403,F401,E402,F841,C901,F522 --show-source --statistics
         # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
-        flake8 *.py --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+        flake8 *.py --count --exit-zero --max-complexity=10 --max-line-length=89 --statistics
+      # F841,C901,F522 are F8 errors that need to get fixed in code later
 
-  acarshub-typescript:
+  yamllint:
+    name: 'Yamllint'
     runs-on: ubuntu-latest
     steps:
+      - name: 'Checkout'
+        uses: actions/checkout@master
+      - name: 'Yamllint'
+        uses: karancode/yamllint-github-action@master
+        with:
+          yamllint_file_or_dir: './.github/'
+          yamllint_strict: false
+          yamllint_comment: true
 
-      # Check out our code
-      -
-        name: Checkout
+  acarshub-typescript:
+  runs-on: ubuntu-latest
+  steps:
+
+    # Check out our code
+    -
+      name: Checkout
+      uses: actions/checkout@v2
+
+    # Get version tag
+    # git log -1 : get the latest commit
+    # --format="%ct" : committer date, UNIX timestamp
+    # Then using `date` to format to YYYYMMDD format
+    -
+      name: Get date of last commit for VERSION_TAG
+      run: |
+        echo "VERSION_TAG=$(sed '1!d' ./version)" >> $GITHUB_ENV
+
+    # Show version tag
+    -
+      name: Show version tag
+      run: |
+        echo "ACARS Hub Version: ${{ env.VERSION_TAG }}"
+
+    # Set version tag in webapp
+    # -
+    #   name: Patch webapp with VERSION_TAG
+    #   run: |
+    #     sed -i 's/Pre-Release/ACARS Hub Pre-Release: ${{ env.VERSION_TAG }}/' ./acarshub-typescript/src/menu.ts
+
+    - name: Create version file
+      run: |
+        echo "${{ env.VERSION_TAG }}" >> ./rootfs/acarshub-version
+
+    -
+      name: Build ACARSHub typescript test
+      working-directory: ./acarshub-typescript
+      run: |
+        set -xe
+        npm install
+        sed -i 's/Pre-Release/ACARS Hub Pre-Release: ${{ env.VERSION_TAG }}/' ./src/menu.ts
+        npm run build-dev
+        mkdir -p ./webapp/static/images
+        mkdir -p ./webapp/static/js
+        mkdir -p ./webapp/static/sounds
+        mkdir -p ./webapp/templates
+        cp -r ./dist/static/images ./webapp/static/
+        cp -r ./dist/static/sounds ./webapp/static/
+        cp -r ./dist/static/js ./webapp/static/
+        mv ./dist/static/index.html ./webapp/templates/
+        tar cvfz webapp.tar.gz ./webapp
+        cp webapp.tar.gz ../webapp.tar.gz
+
+  linelint:
+    runs-on: ubuntu-latest
+    name: Check if all files end in newline
+    steps:
+      - name: Checkout
         uses: actions/checkout@v2
+      - name: Linelint
+        uses: actions/linelint@master
+        id: linelint
 
-      # Get version tag
-      # git log -1 : get the latest commit
-      # --format="%ct" : committer date, UNIX timestamp
-      # Then using `date` to format to YYYYMMDD format
-      -
-        name: Get date of last commit for VERSION_TAG
+  find-trailing-whitespace:
+    name: Find Trailing Whitespace
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: harupy/find-trailing-whitespace@master
+
+  eslint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install modules
         run: |
-          echo "VERSION_TAG=$(sed '1!d' ./version)" >> $GITHUB_ENV
-
-      # Show version tag
-      -
-        name: Show version tag
-        run: |
-          echo "ACARS Hub Version: ${{ env.VERSION_TAG }}"
-
-      # Set version tag in webapp
-      # -
-      #   name: Patch webapp with VERSION_TAG
-      #   run: |
-      #     sed -i 's/Pre-Release/ACARS Hub Pre-Release: ${{ env.VERSION_TAG }}/' ./acarshub-typescript/src/menu.ts
-
-      - name: Create version file
-        run: |
-          echo "${{ env.VERSION_TAG }}" >> ./rootfs/acarshub-version
-
-      -
-        name: Build ACARSHub typescript test
-        working-directory: ./acarshub-typescript
-        run: |
-          set -xe
+          cd acarshub-typescript
           npm install
-          sed -i 's/Pre-Release/ACARS Hub Pre-Release: ${{ env.VERSION_TAG }}/' ./src/menu.ts
-          npm run build-dev
-          mkdir -p ./webapp/static/images
-          mkdir -p ./webapp/static/js
-          mkdir -p ./webapp/static/sounds
-          mkdir -p ./webapp/templates
-          cp -r ./dist/static/images ./webapp/static/
-          cp -r ./dist/static/sounds ./webapp/static/
-          cp -r ./dist/static/js ./webapp/static/
-          mv ./dist/static/index.html ./webapp/templates/
-          tar cvfz webapp.tar.gz ./webapp
-          cp webapp.tar.gz ../webapp.tar.gz
+      - name: Run ESLint
+        run: eslint . --ext .js,.jsx,.ts,.tsx

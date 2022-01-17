@@ -11,7 +11,7 @@
 
 import socket
 import time
-import sys, getopt
+import sys
 from random import randint
 import json
 
@@ -49,7 +49,7 @@ while run:
                 updated_message = json.loads(message[index])
                 updated_message["timestamp"] = time.time()
                 updated_message = json.dumps(updated_message)
-            except socket.error as e:
+            except socket.error:
                 receiver.close()
             except KeyboardInterrupt:
                 print("Exiting...")

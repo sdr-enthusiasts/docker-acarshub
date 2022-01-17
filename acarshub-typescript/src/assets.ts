@@ -1,4 +1,3 @@
-
 import legend_has_acars_url from "./assets/images/legend-has-acars.svg";
 import legend_has_acars_alert_unread_url from "./assets/images/legend-has-acars-alert-unread.svg";
 import legend_has_acars_alert_read_url from "./assets/images/legend-has-acars-alert-read.svg";
@@ -12,7 +11,7 @@ import { faCheck } from "@fortawesome/free-solid-svg-icons/faCheck";
 import { faPlane } from "@fortawesome/free-solid-svg-icons/faPlane";
 import { faPlaneSlash } from "@fortawesome/free-solid-svg-icons/faPlaneSlash";
 import { faCommentAlt as faCommentAltSolid } from "@fortawesome/free-solid-svg-icons/faCommentAlt";
-import { faCommentAlt as faCommentAltRegular} from "@fortawesome/free-regular-svg-icons/faCommentAlt";
+import { faCommentAlt as faCommentAltRegular } from "@fortawesome/free-regular-svg-icons/faCommentAlt";
 import { faToggleOn } from "@fortawesome/free-solid-svg-icons/faToggleOn";
 import { faToggleOff } from "@fortawesome/free-solid-svg-icons/faToggleOff";
 import { faSquare as faSquareSolid } from "@fortawesome/free-solid-svg-icons/faSquare";
