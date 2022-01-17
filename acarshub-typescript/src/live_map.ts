@@ -36,6 +36,9 @@ export let live_map_page = {
   adsb_enabled: false as boolean,
   live_map_page_active: false as boolean,
   adsb_planes: {} as { [key: string]: adsb_target },
+  adsb_plane_tails: [] as Array<string>,
+  adsb_plane_hex: [] as Array<string>,
+  adsb_plane_callsign: [] as Array<string>,
   had_targets: false as boolean,
   last_updated: 0 as number,
   map: (<unknown>null) as LeafLet.Map,
@@ -193,8 +196,14 @@ export let live_map_page = {
   set_targets: function (adsb_targets: adsb): void {
     if (this.last_updated < adsb_targets.now) {
       this.last_updated = adsb_targets.now;
+      this.adsb_plane_hex = [];
+      this.adsb_plane_callsign = [];
+      this.adsb_plane_tails = [];
       // Loop through all of the planes in the new data and save them to the target object
       adsb_targets.aircraft.forEach((aircraft) => {
+        this.adsb_plane_hex.push(this.get_hex(aircraft));
+        this.adsb_plane_callsign.push(this.get_callsign(aircraft));
+        this.adsb_plane_tails.push(this.get_tail(aircraft));
         if (this.adsb_planes[aircraft.hex] == undefined) {
           this.adsb_planes[aircraft.hex] = {
             position: aircraft,
@@ -233,7 +242,6 @@ export let live_map_page = {
   },
 
   set_range_markers: function (): void {
-    console.log("yo");
     if (this.layerGroupRangeRings == null)
       this.layerGroupRangeRings = L.layerGroup();
     this.layerGroupRangeRings.clearLayers();
@@ -497,6 +505,18 @@ export let live_map_page = {
     return this.adsb_planes[plane].num_messages;
   },
 
+  get_current_planes: function (): {
+    callsigns: Array<string>;
+    hex: Array<string>;
+    tail: Array<string>;
+  } {
+    return {
+      callsigns: this.adsb_plane_callsign,
+      hex: this.adsb_plane_hex,
+      tail: this.adsb_plane_tails,
+    };
+  },
+
   airplaneList: function (): void {
     const plane_data = find_matches();
     let num_planes = 0;
@@ -553,20 +573,23 @@ export let live_map_page = {
         let styles = "";
         if (
           this.current_hovered_from_map !== "" &&
-          this.current_hovered_from_map == callsign.replace("~", "") &&
+          this.current_hovered_from_map ==
+            callsign.replace("~", "").replace(".", "") &&
           callsign &&
           num_messages
         ) {
           if (!num_alerts) styles = " sidebar_hovered_from_map_acars";
           else styles = " sidebar_hovered_from_map_with_unread";
         } else if (
-          this.current_hovered_from_map == callsign.replace("~", "") &&
+          this.current_hovered_from_map ==
+            callsign.replace("~", "").replace(".", "") &&
           !num_alerts
         ) {
           styles = " sidebar_hovered_from_map_no_acars";
         } else if (
           num_alerts &&
-          this.current_hovered_from_map == callsign.replace("~", "")
+          this.current_hovered_from_map ==
+            callsign.replace("~", "").replace(".", "")
         ) {
           styles = has_new_messages
             ? " sidebar_alert_unread_hovered_from_map"
@@ -579,10 +602,9 @@ export let live_map_page = {
           if (!has_new_messages) styles = " sidebar_no_hover_with_acars";
           else styles = " sidebar_no_hover_with_unread";
         }
-        html += `<div id="${callsign.replace(
-          "~",
-          ""
-        )}" class="plane_list${styles}">
+        html += `<div id="${callsign
+          .replace("~", "")
+          .replace(".", "")}" class="plane_list${styles}">
         <div class="plane_element noleft" style="width:${callsign_width}%">${
           callsign && num_messages
             ? `<a href="javascript:showPlaneMessages('${callsign}', '${hex}', '${tail}');">${callsign}</a>`
@@ -727,7 +749,10 @@ export let live_map_page = {
 
           // set the color of the icon
 
-          if (this.current_hovered_from_sidebar == callsign.replace("~", ""))
+          if (
+            this.current_hovered_from_sidebar ==
+            callsign.replace("~", "").replace(".", "")
+          )
             color = "airplane_orange";
           else if (
             (alert &&
@@ -776,10 +801,12 @@ export let live_map_page = {
           if (!this.show_only_acars || num_messages) {
             let plane_icon = LeafLet.divIcon({
               className: "airplane",
-              html: `<div><div id="${callsign.replace(
-                "~",
-                ""
-              )}_marker" class="datablock ${color}" data-jbox-content="${popup_text}" style="-webkit-transform:rotate(${rotate}deg); -moz-transform: rotate(${rotate}deg); -ms-transform: rotate(${rotate}deg); -o-transform: rotate(${rotate}deg); transform: rotate(${rotate}deg);">${
+              html: `<div><div id="${callsign
+                .replace("~", "")
+                .replace(
+                  ".",
+                  ""
+                )}_marker" class="datablock ${color}" data-jbox-content="${popup_text}" style="-webkit-transform:rotate(${rotate}deg); -moz-transform: rotate(${rotate}deg); -ms-transform: rotate(${rotate}deg); -o-transform: rotate(${rotate}deg); transform: rotate(${rotate}deg);">${
                 icon.svg
               }</div></div>`,
               iconSize: [icon.width, icon.height],
@@ -791,12 +818,15 @@ export let live_map_page = {
             });
 
             plane_marker.addTo(this.layerGroupPlanes);
-            $(`#${callsign.replace("~", "")}_marker`).on({
+            $(`#${callsign.replace("~", "").replace(".", "")}_marker`).on({
               mouseenter: () => {
                 if (
-                  this.current_hovered_from_map !== callsign.replace("~", "")
+                  this.current_hovered_from_map !==
+                  callsign.replace("~", "").replace(".", "")
                 ) {
-                  this.current_hovered_from_map = callsign.replace("~", "");
+                  this.current_hovered_from_map = callsign
+                    .replace("~", "")
+                    .replace(".", "");
                   this.airplaneList();
                 }
               },

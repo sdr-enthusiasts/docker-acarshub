@@ -221,6 +221,8 @@ $((): void => {
           update_adsb();
         }, 5000);
       }
+    } else {
+      adsb_enabled = false;
     }
 
     // If for some reason ADSB was ever turned off on the back end and was enabled for the client, turn off the updater
@@ -524,6 +526,14 @@ export function get_match(
   tail: string = ""
 ): plane_match {
   return live_messages_page.get_match(callsign, hex, tail);
+}
+
+export function is_adsb_enabled() {
+  return adsb_enabled;
+}
+
+export function get_current_planes() {
+  return live_map_page.get_current_planes();
 }
 
 // functions that need to be registered to window object
