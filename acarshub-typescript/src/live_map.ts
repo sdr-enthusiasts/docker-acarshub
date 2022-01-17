@@ -660,6 +660,12 @@ export let live_map_page = {
           current_plane.lon != null
         ) {
           const callsign = this.get_callsign(current_plane);
+          if (callsign.includes("@@")) {
+            console.error(
+              "CALLSIGN CONTAINS @@. Not adding mouse hover handlers."
+            );
+            continue;
+          }
           const hex = this.get_hex(current_plane);
           const tail = this.get_tail(current_plane);
           const details = this.match_plane(plane_data, callsign, tail, hex);
@@ -674,9 +680,7 @@ export let live_map_page = {
                 this.current_hovered_from_sidebar !==
                 hex.replace("~", "").replace(".", "")
               ) {
-                this.current_hovered_from_sidebar = hex
-                  .replace("~", "")
-                  .replace(".", "");
+                this.current_hovered_from_sidebar = callsign;
                 $(
                   `#${callsign.replace("~", "").replace(".", "")}_marker`
                 ).removeClass(
@@ -814,6 +818,10 @@ export let live_map_page = {
         ) {
           const current_plane = this.adsb_planes[plane].position;
           const callsign = this.get_callsign(current_plane);
+          if (callsign.includes("@@")) {
+            console.error("CALLSIGN CONTAINS @s. Skipping target.");
+            continue;
+          }
           const rotate: number = this.get_heading(current_plane);
           const alt: string | number = this.get_alt(current_plane);
           const hex: string = this.get_hex(current_plane);
