@@ -94,6 +94,7 @@ jobs:
           yamllint_file_or_dir: './.github/'
           yamllint_strict: false
           yamllint_comment: true
+          yamllint_config_datapath: './yamllint.yml'
 
   acarshub-typescript:
     runs-on: ubuntu-latest
@@ -148,30 +149,18 @@ jobs:
           tar cvfz webapp.tar.gz ./webapp
           cp webapp.tar.gz ../webapp.tar.gz
 
-  linelint:
-    runs-on: ubuntu-latest
-    name: Check if all files end in newline
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-      - name: Linelint
-        uses: actions/linelint@master
-        id: linelint
-
-  find-trailing-whitespace:
-    name: Find Trailing Whitespace
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: harupy/find-trailing-whitespace@master
+  # find-trailing-whitespace:
+  #   name: Find Trailing Whitespace
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v2
+  #     - uses: harupy/find-trailing-whitespace@master
 
   eslint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
       - name: Install modules
-        run: |
-          cd acarshub-typescript
-          npm install
+        run: yarn install
       - name: Run ESLint
         run: eslint . --ext .js,.jsx,.ts,.tsx
