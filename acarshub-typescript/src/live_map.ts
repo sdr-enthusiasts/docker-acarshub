@@ -691,7 +691,8 @@ export let live_map_page = {
                     squawk,
                     old_messages,
                     hex,
-                    tail
+                    tail,
+                    true
                   )
                 );
                 $(
@@ -701,9 +702,7 @@ export let live_map_page = {
             },
             mouseleave: () => {
               this.current_hovered_from_sidebar = "";
-              $(
-                `#${callsign.replace("~", "").replace(".", "")}_marker`
-              ).removeClass("airplane_orange");
+              $("div").removeClass("airplane_orange");
               $(
                 `#${callsign.replace("~", "").replace(".", "")}_marker`
               ).addClass(
@@ -724,8 +723,6 @@ export let live_map_page = {
       }
     }
     $("#num_planes").html(`Planes: ${num_planes}`);
-    // FIXME: IF THE SIDEBAR IS UPDATED AND A PLANE IS HOVERED THE STATE IS NOT RETAINED
-    // ONLY MOVING THE MOUSE WILL RESET THE HOVERED PLANE
     $("#num_planes_targets").html(`Planes w/ Targets: ${num_planes_targets}`);
   },
 
@@ -763,12 +760,14 @@ export let live_map_page = {
     squawk: number,
     old_messages: number,
     hex: string,
-    tail: string
+    tail: string,
+    skip_hovered: boolean = false
   ): string {
     let color: string = "airplane_blue";
     if (
+      !skip_hovered &&
       this.current_hovered_from_sidebar ==
-      callsign.replace("~", "").replace(".", "")
+        callsign.replace("~", "").replace(".", "")
     )
       color = "airplane_orange";
     else if (
