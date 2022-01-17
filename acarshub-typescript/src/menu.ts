@@ -72,8 +72,13 @@ export let menu = {
   },
 
   generate_footer: function (): void {
-    const show_libseccomp2_warning = Cookies.get("hide_libseccomp2_warning") !== "true";
-    Cookies.set("hide_libseccomp2_warning", show_libseccomp2_warning ? "false" : "true", { expires: 365 });
+    const show_libseccomp2_warning =
+      Cookies.get("hide_libseccomp2_warning") !== "true";
+    Cookies.set(
+      "hide_libseccomp2_warning",
+      show_libseccomp2_warning ? "false" : "true",
+      { expires: 365 }
+    );
     console.log(show_libseccomp2_warning);
     let update_message =
       show_libseccomp2_warning && this.arch.trim() === "armhf"

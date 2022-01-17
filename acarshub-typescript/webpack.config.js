@@ -55,7 +55,8 @@ let config = {
   },
   resolve: {
     alias: {
-      '@fortawesome/fontawesome-free-solid$': '@fortawesome/fontawesome-free-solid/shakable.es.js',
+      "@fortawesome/fontawesome-free-solid$":
+        "@fortawesome/fontawesome-free-solid/shakable.es.js",
     },
     extensions: [
       ".js",
@@ -143,9 +144,8 @@ let config = {
 };
 
 module.exports = (env, argv) => {
-  if (argv.mode === 'development') {
-    config.devtool = 'source-map';
+  if (argv.mode === "development") {
+    config.devtool = "source-map";
   }
   return config;
 };
-
