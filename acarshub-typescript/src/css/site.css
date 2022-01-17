@@ -28,9 +28,9 @@
   --jbox-shadow: hsla(0, 0%, 0%, 0.25);
 }
 
-div * {
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE 10+ */
+/*div * {
+  scrollbar-width: none; /* Firefox
+  -ms-overflow-style: none; /* IE 10+
 }
 div *::-webkit-scrollbar-track {
   -webkit-box-shadow: none !important;
@@ -46,8 +46,8 @@ div *::-webkit-scrollbar-thumb {
 }
 
 .on-scrollbar{
-  scrollbar-width: thin; /* Firefox */
-  -ms-overflow-style: none; /* IE 10+ */
+  scrollbar-width: thin; /* Firefox
+  -ms-overflow-style: none; /* IE 10+
 }
 
 .on-scrollbar::-webkit-scrollbar-track {
@@ -63,7 +63,7 @@ div *::-webkit-scrollbar-thumb {
 
 .on-scrollbar::-webkit-scrollbar-thumb {
   background-color: #acacac;
-}
+}*/
 
 table {
   border: 1px solid var(--full-black);
