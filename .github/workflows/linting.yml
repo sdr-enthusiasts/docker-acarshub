@@ -161,6 +161,8 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Install modules
-        run: yarn
+        run: |
+          cd ./acarshub-typescript
+          yarn
       - name: Run ESLint
         run: yarn run eslint . --ext .js,.jsx,.ts,.tsx
