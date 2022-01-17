@@ -94,7 +94,7 @@ jobs:
           yamllint_file_or_dir: './.github/'
           yamllint_strict: false
           yamllint_comment: true
-          yamllint_config_datapath: './yamllint.yml'
+          yamllint_config_datapath: './.yaml-lint.yaml'
 
   acarshub-typescript:
     runs-on: ubuntu-latest
