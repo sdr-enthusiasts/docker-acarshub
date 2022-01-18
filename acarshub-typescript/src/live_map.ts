@@ -905,44 +905,52 @@ export let live_map_page = {
           }${ac_type ? "<br>Aircraft Type: " + ac_type : ""}${
             num_messages ? "<br><br>ACARS messages: " + num_messages : ""
           }</div>`;
+          const marker_icon_text = `<div><div id="${callsign}_marker" class="datablock ${color}" data-jbox-content="${popup_text}" style="-webkit-transform:rotate(${rotate}deg); -moz-transform: rotate(${rotate}deg); -ms-transform: rotate(${rotate}deg); -o-transform: rotate(${rotate}deg); transform: rotate(${rotate}deg);">${icon.svg}</div></div>`;
+          let datablock = `${callsign}`;
+          if (this.show_extended_datablocks) {
+            datablock += `<br>${alt}`;
+            if (ac_type || speed) {
+              datablock += `<br>${ac_type !== undefined ? ac_type + " " : ""}${
+                speed !== undefined ? Math.round(speed) + " kts" : ""
+              }`;
+            }
+
+            if (num_messages) {
+              datablock += `<br>Msgs: ${num_messages}`;
+            }
+          }
+
+          if (this.adsb_planes[plane].position_marker === null) {
+            let plane_icon = LeafLet.divIcon({
+              className: "airplane",
+              html: marker_icon_text,
+              iconSize: [icon.width, icon.height],
+            });
+
+            let plane_marker = LeafLet.marker([lat, lon], {
+              icon: plane_icon,
+              riseOnHover: true,
+            });
+            this.adsb_planes[plane].position_marker = plane_marker;
+          }
+
+          // All fields generated. Time to determine if the marker needs to be displayed
 
           if (!this.show_only_acars || num_messages) {
+            // Marker Should be displayed
             if (
-              this.adsb_planes[plane].position_marker === null ||
               !this.layerGroupPlanes.hasLayer(
                 this.adsb_planes[plane].position_marker!
               )
             ) {
-              let plane_icon = LeafLet.divIcon({
-                className: "airplane",
-                html: `<div><div id="${callsign
-                  .replace("~", "")
-                  .replace(
-                    ".",
-                    ""
-                  )}_marker" class="datablock ${color}" data-jbox-content="${popup_text}" style="-webkit-transform:rotate(${rotate}deg); -moz-transform: rotate(${rotate}deg); -ms-transform: rotate(${rotate}deg); -o-transform: rotate(${rotate}deg); transform: rotate(${rotate}deg);">${
-                  icon.svg
-                }</div></div>`,
-                iconSize: [icon.width, icon.height],
-              });
-
-              let plane_marker = LeafLet.marker([lat, lon], {
-                icon: plane_icon,
-                riseOnHover: true,
-              });
-              this.adsb_planes[plane].position_marker = plane_marker;
+              // Marker is missing, add it
               this.adsb_planes[plane].position_marker!.addTo(
                 this.layerGroupPlanes
               );
-              $(`#${callsign.replace("~", "").replace(".", "")}_marker`).on({
+              $(`#${callsign}_marker`).on({
                 mouseenter: () => {
-                  if (
-                    this.current_hovered_from_map !==
-                    callsign.replace("~", "").replace(".", "")
-                  ) {
-                    this.current_hovered_from_map = callsign
-                      .replace("~", "")
-                      .replace(".", "");
+                  if (this.current_hovered_from_map !== callsign) {
+                    this.current_hovered_from_map = callsign;
                     this.airplaneList();
                   }
                 },
@@ -952,6 +960,7 @@ export let live_map_page = {
                 },
               });
             } else {
+              // Marker is present, update it
               this.adsb_planes[plane].position_marker!.setLatLng([lat, lon]);
               $(`#${callsign}_marker`).removeClass();
               $(`#${callsign}_marker`).removeAttr("style");
@@ -976,83 +985,71 @@ export let live_map_page = {
               );
               $(`#${callsign}_marker`).css("transform", `rotate(${rotate}deg)`);
             }
-
-            let datablock = `<div id="${callsign}_datablock" class="airplane_datablock">${callsign}`;
-            if (this.show_extended_datablocks) {
-              datablock += `<br>${alt}`;
-              if (ac_type || speed) {
-                datablock += `<br>${ac_type + " " || ""}${Math.round(speed)}`;
-              }
-
-              if (num_messages) {
-                datablock += `<br>Msgs: ${num_messages}`;
-              }
-            }
-            datablock += "</div>";
-
-            if (this.adsb_planes[plane].datablock_marker === null) {
-              let datablock_icon = new LeafLet.DivIcon({
-                className: "airplane",
-                html: datablock,
-              });
-              this.adsb_planes[plane].datablock_marker = new LeafLet.Marker(
-                this.offset_datablock([lat, lon]) as LeafLet.LatLngTuple,
-                { icon: datablock_icon }
-              );
-            }
-
-            if (
-              this.show_datablocks &&
-              this.layerGroupPlaneDatablocks.hasLayer(
-                this.adsb_planes[plane].datablock_marker!
-              )
-            ) {
-              this.adsb_planes[plane].datablock_marker!.setLatLng([lat, lon]);
-              $(`#${callsign}_datablock`).html(datablock);
-            } else if (this.show_datablocks) {
-              this.adsb_planes[plane].datablock_marker!.addTo(
-                this.layerGroupPlaneDatablocks
-              );
-            } else if (
-              this.layerGroupPlaneDatablocks.hasLayer(
-                this.adsb_planes[plane].datablock_marker!
-              )
-            ) {
-              this.layerGroupPlaneDatablocks!.removeLayer(
-                this.layerGroupPlaneDatablocks
-              );
-            }
-          } else {
-            if (
-              this.adsb_planes[plane].position_marker !== null &&
-              this.layerGroupPlanes.hasLayer(
-                this.adsb_planes[plane].position_marker!
-              )
-            ) {
-              this.layerGroupPlanes.removeLayer(
-                this.adsb_planes[plane].position_marker!
-              );
-            }
-            if (
-              this.adsb_planes[plane].datablock_marker !== null &&
-              !this.show_datablocks &&
-              this.layerGroupPlaneDatablocks.hasLayer(
-                this.adsb_planes[plane].datablock_marker!
-              )
-            ) {
-              this.layerGroupPlaneDatablocks.removeLayer(
-                this.adsb_planes[plane].datablock_marker!
-              );
-            }
+          } else if (
+            this.show_only_acars &&
+            this.layerGroupPlanes.hasLayer(
+              this.adsb_planes[plane].position_marker!
+            )
+          ) {
+            // remove the marker if present
+            this.layerGroupPlanes.removeLayer(
+              this.adsb_planes[plane].position_marker!
+            );
           }
 
           if (num_messages) {
+            // Add in click event for showing messages
             this.adsb_planes[plane].position_marker!.on("click", () => {
               showPlaneMessages(callsign, hex, tail);
             });
           }
+
+          // Now determine if datablocks need to be displayed
+          if (this.adsb_planes[plane].datablock_marker === null) {
+            // datablock is missing, add it
+            let datablock_icon = new LeafLet.DivIcon({
+              className: "airplane",
+              html:
+                `<div id="${callsign}_datablock" class="airplane_datablock">` +
+                datablock +
+                "</div>",
+            });
+            this.adsb_planes[plane].datablock_marker = new LeafLet.Marker(
+              this.offset_datablock([lat, lon]) as LeafLet.LatLngTuple,
+              { icon: datablock_icon }
+            );
+          }
+
+          // Datablock is present, update it
+          if (
+            this.show_datablocks &&
+            this.layerGroupPlaneDatablocks.hasLayer(
+              this.adsb_planes[plane].datablock_marker!
+            )
+          ) {
+            this.adsb_planes[plane].datablock_marker!.setLatLng(
+              this.offset_datablock([lat, lon])
+            );
+            $(`#${callsign}_datablock`).html(datablock);
+          } else if (this.show_datablocks) {
+            // datablock is missing and should be displayed, add it to the map
+            this.adsb_planes[plane].datablock_marker!.addTo(
+              this.layerGroupPlaneDatablocks
+            );
+          } else if (
+            !this.show_datablocks &&
+            this.layerGroupPlaneDatablocks.hasLayer(
+              this.adsb_planes[plane].datablock_marker!
+            )
+          ) {
+            // datablock is present and should not be displayed, remove it from the map
+            this.layerGroupPlaneDatablocks.removeLayer(
+              this.adsb_planes[plane].datablock_marker!
+            );
+          }
         } else {
           // hide the plane marker if it exists
+          // I doubt we could ever end up in this branch but who knows
           if (
             this.adsb_planes[plane].position_marker !== null &&
             this.layerGroupPlanes.hasLayer(
@@ -1061,6 +1058,18 @@ export let live_map_page = {
           ) {
             this.layerGroupPlanes.removeLayer(
               this.adsb_planes[plane].position_marker!
+            );
+          }
+
+          // hide the datablock if it exists
+          if (
+            this.adsb_planes[plane].datablock_marker !== null &&
+            this.layerGroupPlaneDatablocks.hasLayer(
+              this.adsb_planes[plane].datablock_marker!
+            )
+          ) {
+            this.layerGroupPlaneDatablocks.removeLayer(
+              this.adsb_planes[plane].datablock_marker!
             );
           }
         }
