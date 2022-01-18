@@ -598,14 +598,6 @@ window.setSort = function (sort: string = ""): void {
   live_map_page.setSort(sort);
 };
 
-window.showPlaneMessages = function (
-  callsign: string,
-  hex: string,
-  tail: string
-): void {
-  live_map_page.showPlaneMessages(callsign, hex, tail);
-};
-
 window.toggle_acars_only = function (): void {
   live_map_page.toggle_acars_only();
 };
@@ -665,11 +657,3 @@ window.reset_alert_counts = function (): void {
     socket.emit("reset_alert_counts", { reset_alerts: true }, "/main");
   }
 };
-
-export function showPlaneMessages(
-  plane_callsign: string = "",
-  plane_hex: string = "",
-  plane_tail: string = ""
-): void {
-  live_map_page.showPlaneMessages(plane_callsign, plane_hex, plane_tail);
-}

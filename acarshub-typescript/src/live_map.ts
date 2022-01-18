@@ -21,7 +21,7 @@ import { display_messages } from "./html_generator";
 import { getBaseMarker, svgShapeToURI } from "./js-other/aircraft_icons";
 import {
   resize_tabs,
-  showPlaneMessages,
+  //showPlaneMessages,
   find_matches,
   get_match,
   get_window_size,
@@ -180,10 +180,6 @@ export let live_map_page = {
 
   redraw_map: function (): void {
     if (this.live_map_page_active) {
-      this.update_targets();
-      this.airplaneList();
-      tooltip.attach_all_tooltips();
-
       if (this.current_modal_terms != null) {
         this.showPlaneMessages(
           this.current_modal_terms.callsign,
@@ -191,6 +187,9 @@ export let live_map_page = {
           this.current_modal_terms.tail
         );
       }
+      this.update_targets();
+      this.airplaneList();
+      tooltip.attach_all_tooltips();
     }
   },
 
@@ -600,24 +599,15 @@ export let live_map_page = {
         let styles = "";
         if (
           this.current_hovered_from_map !== "" &&
-          this.current_hovered_from_map ==
-            callsign.replace("~", "").replace(".", "") &&
+          this.current_hovered_from_map == callsign &&
           callsign &&
           num_messages
         ) {
           if (!num_alerts) styles = " sidebar_hovered_from_map_acars";
           else styles = " sidebar_hovered_from_map_with_unread";
-        } else if (
-          this.current_hovered_from_map ==
-            callsign.replace("~", "").replace(".", "") &&
-          !num_alerts
-        ) {
+        } else if (this.current_hovered_from_map == callsign && !num_alerts) {
           styles = " sidebar_hovered_from_map_no_acars";
-        } else if (
-          num_alerts &&
-          this.current_hovered_from_map ==
-            callsign.replace("~", "").replace(".", "")
-        ) {
+        } else if (num_alerts && this.current_hovered_from_map == callsign) {
           styles = has_new_messages
             ? " sidebar_alert_unread_hovered_from_map"
             : " sidebar_alert_unread_hovered_from_map";
@@ -629,9 +619,7 @@ export let live_map_page = {
           if (!has_new_messages) styles = " sidebar_no_hover_with_acars";
           else styles = " sidebar_no_hover_with_unread";
         }
-        html += `<div id="${callsign
-          .replace("~", "")
-          .replace(".", "")}" class="plane_list${styles}">
+        html += `<div id="${callsign}" class="plane_list${styles}">
         <div class="plane_element noleft" style="width:${callsign_width}%">${
           callsign && num_messages
             ? `<a href="javascript:showPlaneMessages('${callsign}', '${hex}', '${tail}');">${callsign}</a>`
@@ -701,16 +689,11 @@ export let live_map_page = {
           const alert = details.has_alerts;
           const squawk = this.get_sqwk(current_plane);
 
-          $(`#${callsign.replace("~", "").replace(".", "")}`).on({
+          $(`#${callsign}`).on({
             mouseenter: () => {
-              if (
-                this.current_hovered_from_sidebar !==
-                hex.replace("~", "").replace(".", "")
-              ) {
+              if (this.current_hovered_from_sidebar !== hex) {
                 this.current_hovered_from_sidebar = callsign;
-                $(
-                  `#${callsign.replace("~", "").replace(".", "")}_marker`
-                ).removeClass(
+                $(`#${callsign}_marker`).removeClass(
                   this.find_plane_color(
                     callsign,
                     alert,
@@ -722,17 +705,13 @@ export let live_map_page = {
                     true
                   )
                 );
-                $(
-                  `#${callsign.replace("~", "").replace(".", "")}_marker`
-                ).addClass("airplane_orange");
+                $(`#${callsign}_marker`).addClass("airplane_orange");
               }
             },
             mouseleave: () => {
               this.current_hovered_from_sidebar = "";
               $("div").removeClass("airplane_orange");
-              $(
-                `#${callsign.replace("~", "").replace(".", "")}_marker`
-              ).addClass(
+              $(`#${callsign}_marker`).addClass(
                 this.find_plane_color(
                   callsign,
                   alert,
@@ -791,11 +770,7 @@ export let live_map_page = {
     skip_hovered: boolean = false
   ): string {
     let color: string = "airplane_blue";
-    if (
-      !skip_hovered &&
-      this.current_hovered_from_sidebar ==
-        callsign.replace("~", "").replace(".", "")
-    )
+    if (!skip_hovered && this.current_hovered_from_sidebar == callsign)
       color = "airplane_orange";
     else if (
       (alert && this.show_unread_messages && num_messages !== old_messages) ||
@@ -859,7 +834,7 @@ export let live_map_page = {
           const lon: number = this.get_lon(current_plane);
           const lat: number = this.get_lat(current_plane);
           let icon: aircraft_icon | null = this.get_icon(plane);
-          let num_messages: number = <any>null; // need to cast this to any for TS to compile.
+          let num_messages: null | number = null;
           const old_messages = this.get_old_messages(plane);
           const details = this.match_plane(plane_data, callsign, tail, hex);
           num_messages = details.num_messages;
@@ -947,6 +922,12 @@ export let live_map_page = {
               this.adsb_planes[plane].position_marker!.addTo(
                 this.layerGroupPlanes
               );
+              if (num_messages) {
+                // Add in click event for showing messages
+                this.adsb_planes[plane].position_marker!.on("click", () => {
+                  this.showPlaneMessages(callsign, hex, tail);
+                });
+              }
               $(`#${callsign}_marker`).on({
                 mouseenter: () => {
                   if (this.current_hovered_from_map !== callsign) {
@@ -997,13 +978,6 @@ export let live_map_page = {
             );
           }
 
-          if (num_messages) {
-            // Add in click event for showing messages
-            this.adsb_planes[plane].position_marker!.on("click", () => {
-              showPlaneMessages(callsign, hex, tail);
-            });
-          }
-
           // Now determine if datablocks need to be displayed
           if (this.adsb_planes[plane].datablock_marker === null) {
             // datablock is missing, add it
@@ -1023,6 +997,7 @@ export let live_map_page = {
           // Datablock is present, update it
           if (
             this.show_datablocks &&
+            (!this.show_only_acars || num_messages) &&
             this.layerGroupPlaneDatablocks.hasLayer(
               this.adsb_planes[plane].datablock_marker!
             )
@@ -1031,13 +1006,15 @@ export let live_map_page = {
               this.offset_datablock([lat, lon])
             );
             $(`#${callsign}_datablock`).html(datablock);
-          } else if (this.show_datablocks) {
+          } else if (
+            this.show_datablocks &&
+            (!this.show_only_acars || num_messages)
+          ) {
             // datablock is missing and should be displayed, add it to the map
             this.adsb_planes[plane].datablock_marker!.addTo(
               this.layerGroupPlaneDatablocks
             );
           } else if (
-            !this.show_datablocks &&
             this.layerGroupPlaneDatablocks.hasLayer(
               this.adsb_planes[plane].datablock_marker!
             )
@@ -1095,7 +1072,7 @@ export let live_map_page = {
   showPlaneMessages: function (
     plane_callsign: string = "",
     plane_hex: string = "",
-    plane_tail = ""
+    plane_tail: string = ""
   ): void {
     if (plane_callsign === "" && plane_hex === "") return;
     this.current_modal_terms = {
@@ -1103,11 +1080,13 @@ export let live_map_page = {
       hex: plane_hex,
       tail: plane_tail,
     };
+    // log the time it takes to run this function
     const plane_details: plane_match = get_match(
       plane_callsign,
       plane_hex,
       plane_tail
     );
+
     const matches = plane_details.messages;
     if (matches.length === 0) return;
     if (this.modal_content == "") {
@@ -1205,6 +1184,20 @@ export let live_map_page = {
         smoothWheelZoom: true,
         smoothSensitivity: 1,
         zoomControl: false,
+        click:
+          /Android|webOS|iPhone|iPad|iPod|BlackBerry/i.test(
+            navigator.userAgent
+          ) ||
+          /Android|webOS|iPhone|iPad|iPod|BlackBerry/i.test(navigator.platform)
+            ? false
+            : true,
+        tap:
+          /Android|webOS|iPhone|iPad|iPod|BlackBerry/i.test(
+            navigator.userAgent
+          ) ||
+          /Android|webOS|iPhone|iPad|iPod|BlackBerry/i.test(navigator.platform)
+            ? true
+            : false,
       } as MapOptionsWithNewConfig);
 
       LeafLet.tileLayer("https://{s}.tile.osm.org/{z}/{x}/{y}.png", {

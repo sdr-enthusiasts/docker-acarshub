@@ -29,9 +29,9 @@ export let live_messages_page = {
   lm_msgs_received: {
     planes: [] as plane[],
     unshift: function (a: plane) {
-      console.log(
-        `Initial number of planes w/ messages saved:  ${this.planes.length}`
-      );
+      // console.log(
+      //   `Initial number of planes w/ messages saved:  ${this.planes.length}`
+      // );
       if (this.planes.length >= 50) {
         // ADSB is off so we don't need to be all clever like removing the last element
         if (!is_adsb_enabled()) {
@@ -48,15 +48,15 @@ export let live_messages_page = {
                 current_planes_adsb.tail.includes(identifier)
               ) {
                 delete_index = false;
-                console.log(`saving plane with ${identifier}`);
+                // console.log(`saving plane with ${identifier}`);
                 return false;
               }
               return true;
             });
             if (delete_index) {
-              console.log(
-                `deleting a plane (${this.planes[i].identifiers}).....`
-              );
+              // console.log(
+              //   `deleting a plane (${this.planes[i].identifiers}).....`
+              // );
               indexes_to_delete.push(i);
             }
           }
@@ -71,9 +71,9 @@ export let live_messages_page = {
             });
         }
       }
-      console.log(
-        `Final number of planes w/ messages saved: ${this.planes.length + 1}`
-      );
+      // console.log(
+      //   `Final number of planes w/ messages saved: ${this.planes.length + 1}`
+      // );
       return Array.prototype.unshift.apply(this.planes, [a]);
     },
     get_all_messages: function (): acars_msg[][] {
