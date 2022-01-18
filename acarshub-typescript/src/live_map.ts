@@ -787,7 +787,7 @@ export let live_map_page = {
           num_messages,
           old_messages
         );
-        //this.set_old_messages(plane, num_messages);
+        this.set_old_messages(hex.toLowerCase(), num_messages);
         num_messages = old_messages;
       }
 
@@ -926,6 +926,19 @@ export let live_map_page = {
                 // Add in click event for showing messages
                 this.adsb_planes[plane].position_marker!.on("click", () => {
                   this.showPlaneMessages(callsign, hex, tail);
+                  const color = this.find_plane_color(
+                    callsign,
+                    alert,
+                    num_messages || 0,
+                    squawk,
+                    num_messages || 0,
+                    hex,
+                    tail
+                  );
+                  $(`#${callsign}_marker`).removeClass();
+                  $(`#${callsign}_marker`).addClass(
+                    `datablock ${color} data-jbox-content="${popup_text}`
+                  );
                 });
               }
               $(`#${callsign}_marker`).on({
@@ -972,8 +985,20 @@ export let live_map_page = {
                 // But we'll hit a snag if the plane already had a click event, so we'll remove it first
                 this.adsb_planes[plane].position_marker!.off("click");
                 this.adsb_planes[plane].position_marker!.on("click", () => {
-                  //this.adsb_planes[plane].
                   this.showPlaneMessages(callsign, hex, tail);
+                  const color = this.find_plane_color(
+                    callsign,
+                    alert,
+                    num_messages || 0,
+                    squawk,
+                    num_messages || 0,
+                    hex,
+                    tail
+                  );
+                  $(`#${callsign}_marker`).removeClass();
+                  $(`#${callsign}_marker`).addClass(
+                    `datablock ${color} data-jbox-content="${popup_text}`
+                  );
                 });
               }
             }
