@@ -47,6 +47,7 @@ export let live_map_page = {
   layerGroupPlanes: (<unknown>null) as LeafLet.LayerGroup,
   layerGroupPlaneDatablocks: (<unknown>null) as LeafLet.LayerGroup,
   layerGroupRangeRings: (<unknown>null) as LeafLet.LayerGroup,
+  plane_markers: {} as { [key: string]: LeafLet.Marker },
   lat: 0 as number,
   lon: 0 as number,
   station_lat: 0 as number,
@@ -210,6 +211,8 @@ export let live_map_page = {
             last_updated: this.last_updated,
             id: aircraft.hex,
             num_messages: 0,
+            position_marker: null,
+            datablock_marker: null,
           };
         } else {
           this.adsb_planes[aircraft.hex].position = aircraft;
@@ -219,6 +222,26 @@ export let live_map_page = {
       // Now loop through the target object and expire any that are no longer there
       for (let plane in this.adsb_planes) {
         if (this.adsb_planes[plane].last_updated < this.last_updated) {
+          if (
+            this.adsb_planes[plane].position_marker != null &&
+            this.layerGroupPlanes.hasLayer(
+              this.adsb_planes[plane].position_marker!
+            )
+          ) {
+            this.layerGroupPlanes.removeLayer(
+              this.adsb_planes[plane].position_marker!
+            );
+          }
+          if (
+            this.adsb_planes[plane].datablock_marker != null &&
+            this.layerGroupPlaneDatablocks.hasLayer(
+              this.adsb_planes[plane].datablock_marker!
+            )
+          ) {
+            this.layerGroupPlaneDatablocks.removeLayer(
+              this.adsb_planes[plane].datablock_marker!
+            );
+          }
           delete this.adsb_planes[plane];
         }
       }
@@ -446,11 +469,15 @@ export let live_map_page = {
   },
 
   get_callsign: function (plane: adsb_plane): string {
-    return plane.flight && plane.flight.trim() !== ""
-      ? plane.flight.trim()
-      : plane.r && plane.r !== ""
-      ? plane.r
-      : plane.hex.toUpperCase();
+    return (
+      plane.flight && plane.flight.trim() !== ""
+        ? plane.flight.trim()
+        : plane.r && plane.r !== ""
+        ? plane.r
+        : plane.hex.toUpperCase()
+    )
+      .replace("~", "")
+      .replace(".", "");
   },
 
   get_sqwk: function (plane: adsb_plane): number {
@@ -806,8 +833,8 @@ export let live_map_page = {
       this.adsb_planes !== null
     ) {
       // clear old planes
-      this.layerGroupPlanes.clearLayers();
-      this.layerGroupPlaneDatablocks.clearLayers();
+      // this.layerGroupPlanes.clearLayers();
+      // this.layerGroupPlaneDatablocks.clearLayers();
       const plane_data: plane_data = find_matches();
 
       for (const plane in this.adsb_planes) {
@@ -880,72 +907,161 @@ export let live_map_page = {
           }</div>`;
 
           if (!this.show_only_acars || num_messages) {
-            let plane_icon = LeafLet.divIcon({
-              className: "airplane",
-              html: `<div><div id="${callsign
-                .replace("~", "")
-                .replace(
-                  ".",
-                  ""
-                )}_marker" class="datablock ${color}" data-jbox-content="${popup_text}" style="-webkit-transform:rotate(${rotate}deg); -moz-transform: rotate(${rotate}deg); -ms-transform: rotate(${rotate}deg); -o-transform: rotate(${rotate}deg); transform: rotate(${rotate}deg);">${
-                icon.svg
-              }</div></div>`,
-              iconSize: [icon.width, icon.height],
-            });
+            if (
+              this.adsb_planes[plane].position_marker === null ||
+              !this.layerGroupPlanes.hasLayer(
+                this.adsb_planes[plane].position_marker!
+              )
+            ) {
+              let plane_icon = LeafLet.divIcon({
+                className: "airplane",
+                html: `<div><div id="${callsign
+                  .replace("~", "")
+                  .replace(
+                    ".",
+                    ""
+                  )}_marker" class="datablock ${color}" data-jbox-content="${popup_text}" style="-webkit-transform:rotate(${rotate}deg); -moz-transform: rotate(${rotate}deg); -ms-transform: rotate(${rotate}deg); -o-transform: rotate(${rotate}deg); transform: rotate(${rotate}deg);">${
+                  icon.svg
+                }</div></div>`,
+                iconSize: [icon.width, icon.height],
+              });
 
-            let plane_marker = LeafLet.marker([lat, lon], {
-              icon: plane_icon,
-              riseOnHover: true,
-            });
-
-            plane_marker.addTo(this.layerGroupPlanes);
-            $(`#${callsign.replace("~", "").replace(".", "")}_marker`).on({
-              mouseenter: () => {
-                if (
-                  this.current_hovered_from_map !==
-                  callsign.replace("~", "").replace(".", "")
-                ) {
-                  this.current_hovered_from_map = callsign
-                    .replace("~", "")
-                    .replace(".", "");
+              let plane_marker = LeafLet.marker([lat, lon], {
+                icon: plane_icon,
+                riseOnHover: true,
+              });
+              this.adsb_planes[plane].position_marker = plane_marker;
+              this.adsb_planes[plane].position_marker!.addTo(
+                this.layerGroupPlanes
+              );
+              $(`#${callsign.replace("~", "").replace(".", "")}_marker`).on({
+                mouseenter: () => {
+                  if (
+                    this.current_hovered_from_map !==
+                    callsign.replace("~", "").replace(".", "")
+                  ) {
+                    this.current_hovered_from_map = callsign
+                      .replace("~", "")
+                      .replace(".", "");
+                    this.airplaneList();
+                  }
+                },
+                mouseleave: () => {
+                  this.current_hovered_from_map = "";
                   this.airplaneList();
-                }
-              },
-              mouseleave: () => {
-                this.current_hovered_from_map = "";
-                this.airplaneList();
-              },
-            });
+                },
+              });
+            } else {
+              this.adsb_planes[plane].position_marker!.setLatLng([lat, lon]);
+              $(`#${callsign}_marker`).removeClass();
+              $(`#${callsign}_marker`).removeAttr("style");
+              $(`#${callsign}_marker`).removeAttr("data-jbox-content");
+              $(`#${callsign}_marker`).addClass(`datablock ${color}`);
+              $(`#${callsign}_marker`).attr("data-jbox-content", popup_text);
+              $(`#${callsign}_marker`).css(
+                "-webkit-transform",
+                `:rotate(${rotate}deg)`
+              );
+              $(`#${callsign}_marker`).css(
+                "-moz-transform",
+                `rotate(${rotate}deg)`
+              );
+              $(`#${callsign}_marker`).css(
+                "-ms-transform",
+                `rotate(${rotate}deg)`
+              );
+              $(`#${callsign}_marker`).css(
+                "-o-transform",
+                `rotate(${rotate}deg)`
+              );
+              $(`#${callsign}_marker`).css("transform", `rotate(${rotate}deg)`);
+            }
 
-            if (this.show_datablocks) {
-              let datablock = `<div class="airplane_datablock">${callsign}`;
-              if (this.show_extended_datablocks) {
-                datablock += `<br>${alt}`;
-                if (ac_type || speed) {
-                  datablock += `<br>${ac_type + " " || ""}${Math.round(speed)}`;
-                }
-
-                if (num_messages) {
-                  datablock += `<br>Msgs: ${num_messages}`;
-                }
+            let datablock = `<div id="${callsign}_datablock" class="airplane_datablock">${callsign}`;
+            if (this.show_extended_datablocks) {
+              datablock += `<br>${alt}`;
+              if (ac_type || speed) {
+                datablock += `<br>${ac_type + " " || ""}${Math.round(speed)}`;
               }
-              datablock += "</div>";
+
+              if (num_messages) {
+                datablock += `<br>Msgs: ${num_messages}`;
+              }
+            }
+            datablock += "</div>";
+
+            if (this.adsb_planes[plane].datablock_marker === null) {
               let datablock_icon = new LeafLet.DivIcon({
                 className: "airplane",
                 html: datablock,
               });
-              let datablock_marker = new LeafLet.Marker(
+              this.adsb_planes[plane].datablock_marker = new LeafLet.Marker(
                 this.offset_datablock([lat, lon]) as LeafLet.LatLngTuple,
                 { icon: datablock_icon }
               );
-              datablock_marker.addTo(this.layerGroupPlaneDatablocks);
             }
 
-            if (num_messages) {
-              plane_marker.on("click", () => {
-                showPlaneMessages(callsign, hex, tail);
-              });
+            if (
+              this.show_datablocks &&
+              this.layerGroupPlaneDatablocks.hasLayer(
+                this.adsb_planes[plane].datablock_marker!
+              )
+            ) {
+              this.adsb_planes[plane].datablock_marker!.setLatLng([lat, lon]);
+              $(`#${callsign}_datablock`).html(datablock);
+            } else if (this.show_datablocks) {
+              this.adsb_planes[plane].datablock_marker!.addTo(
+                this.layerGroupPlaneDatablocks
+              );
+            } else if (
+              this.layerGroupPlaneDatablocks.hasLayer(
+                this.adsb_planes[plane].datablock_marker!
+              )
+            ) {
+              this.layerGroupPlaneDatablocks!.removeLayer(
+                this.layerGroupPlaneDatablocks
+              );
             }
+          } else {
+            if (
+              this.adsb_planes[plane].position_marker !== null &&
+              this.layerGroupPlanes.hasLayer(
+                this.adsb_planes[plane].position_marker!
+              )
+            ) {
+              this.layerGroupPlanes.removeLayer(
+                this.adsb_planes[plane].position_marker!
+              );
+            }
+            if (
+              this.adsb_planes[plane].datablock_marker !== null &&
+              !this.show_datablocks &&
+              this.layerGroupPlaneDatablocks.hasLayer(
+                this.adsb_planes[plane].datablock_marker!
+              )
+            ) {
+              this.layerGroupPlaneDatablocks.removeLayer(
+                this.adsb_planes[plane].datablock_marker!
+              );
+            }
+          }
+
+          if (num_messages) {
+            this.adsb_planes[plane].position_marker!.on("click", () => {
+              showPlaneMessages(callsign, hex, tail);
+            });
+          }
+        } else {
+          // hide the plane marker if it exists
+          if (
+            this.adsb_planes[plane].position_marker !== null &&
+            this.layerGroupPlanes.hasLayer(
+              this.adsb_planes[plane].position_marker!
+            )
+          ) {
+            this.layerGroupPlanes.removeLayer(
+              this.adsb_planes[plane].position_marker!
+            );
           }
         }
       }

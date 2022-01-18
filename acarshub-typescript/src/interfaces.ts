@@ -211,6 +211,8 @@ export interface adsb_target {
   num_messages: number;
   messages?: acars_msg[];
   icon?: aircraft_icon;
+  position_marker: null | LeafLet.Marker;
+  datablock_marker: null | LeafLet.Marker;
 }
 
 export interface adsb_plane {
