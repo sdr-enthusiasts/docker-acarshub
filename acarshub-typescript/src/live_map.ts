@@ -330,24 +330,20 @@ export let live_map_page = {
       alert = plane_data[callsign].has_alerts;
       num_alerts = plane_data[callsign].num_alerts;
     }
-    if (num_messages == undefined && plane_data[callsign.replace("-", "")]) {
-      num_messages = plane_data[callsign.replace("-", "")].count;
-      alert = plane_data[callsign.replace("-", "")].has_alerts;
-      num_alerts = plane_data[callsign.replace("-", "")].num_alerts;
+    if (num_messages == undefined && plane_data[callsign]) {
+      num_messages = plane_data[callsign].count;
+      alert = plane_data[callsign].has_alerts;
+      num_alerts = plane_data[callsign].num_alerts;
     }
     if (num_messages == undefined && tail != undefined && plane_data[tail]) {
       num_messages = plane_data[tail].count;
       alert = plane_data[tail].has_alerts;
       num_alerts = plane_data[tail].num_alerts;
     }
-    if (
-      num_messages == undefined &&
-      tail != undefined &&
-      plane_data[tail.replace("-", "")]
-    ) {
-      num_messages = plane_data[tail.replace("-", "")].count;
-      alert = plane_data[tail.replace("-", "")].has_alerts;
-      num_alerts = plane_data[tail.replace("-", "")].num_alerts;
+    if (num_messages == undefined && tail != undefined && plane_data[tail]) {
+      num_messages = plane_data[tail].count;
+      alert = plane_data[tail].has_alerts;
+      num_alerts = plane_data[tail].num_alerts;
     }
 
     return {
@@ -476,7 +472,8 @@ export let live_map_page = {
         : plane.hex.toUpperCase()
     )
       .replace("~", "")
-      .replace(".", "");
+      .replace(".", "")
+      .replace("-", "");
   },
 
   get_sqwk: function (plane: adsb_plane): number {
@@ -492,7 +489,7 @@ export let live_map_page = {
   },
 
   get_tail: function (plane: adsb_plane): string {
-    return plane.r ? plane.r : <any>undefined;
+    return plane.r ? plane.r.replace("-", "") : <any>undefined;
   },
 
   get_hex: function (plane: adsb_plane): string {
@@ -848,23 +845,6 @@ export let live_map_page = {
             hex,
             tail
           );
-          if (icon == null) {
-            const type_shape: svg_icon = getBaseMarker(
-              String(current_plane.category),
-              current_plane.t,
-              null,
-              null,
-              current_plane.type,
-              alt
-            );
-
-            icon = svgShapeToURI(
-              type_shape.name,
-              0.5,
-              type_shape.scale * 1.5
-            ) as aircraft_icon;
-            this.adsb_planes[current_plane.hex].icon = icon;
-          }
 
           const popup_text = `<div>${
             callsign !== hex ? callsign + "/" : ""
@@ -880,8 +860,9 @@ export let live_map_page = {
           }${ac_type ? "<br>Aircraft Type: " + ac_type : ""}${
             num_messages ? "<br><br>ACARS messages: " + num_messages : ""
           }</div>`;
-          const marker_icon_text = `<div><div id="${callsign}_marker" class="datablock ${color}" data-jbox-content="${popup_text}" style="-webkit-transform:rotate(${rotate}deg); -moz-transform: rotate(${rotate}deg); -ms-transform: rotate(${rotate}deg); -o-transform: rotate(${rotate}deg); transform: rotate(${rotate}deg);">${icon.svg}</div></div>`;
+
           let datablock = `${callsign}`;
+
           if (this.show_extended_datablocks) {
             datablock += `<br>${alt}`;
             if (ac_type || speed) {
@@ -896,6 +877,25 @@ export let live_map_page = {
           }
 
           if (this.adsb_planes[plane].position_marker === null) {
+            if (icon == null) {
+              const type_shape: svg_icon = getBaseMarker(
+                String(current_plane.category),
+                current_plane.t,
+                null,
+                null,
+                current_plane.type,
+                alt
+              );
+
+              icon = svgShapeToURI(
+                type_shape.name,
+                0.5,
+                type_shape.scale * 1.5
+              ) as aircraft_icon;
+              this.adsb_planes[current_plane.hex].icon = icon;
+            }
+            const marker_icon_text = `<div><div id="${callsign}_marker" class="datablock ${color}" data-jbox-content="${popup_text}" style="-webkit-transform:rotate(${rotate}deg); -moz-transform: rotate(${rotate}deg); -ms-transform: rotate(${rotate}deg); -o-transform: rotate(${rotate}deg); transform: rotate(${rotate}deg);">${icon.svg}</div></div>`;
+
             let plane_icon = LeafLet.divIcon({
               className: "airplane",
               html: marker_icon_text,
@@ -965,6 +965,17 @@ export let live_map_page = {
                 `rotate(${rotate}deg)`
               );
               $(`#${callsign}_marker`).css("transform", `rotate(${rotate}deg)`);
+              if (num_messages) {
+                // Add in click event for showing messages
+                // If the plane previously didn't have messages when it was generated the click event is never added
+                // So we need to add it here
+                // But we'll hit a snag if the plane already had a click event, so we'll remove it first
+                this.adsb_planes[plane].position_marker!.off("click");
+                this.adsb_planes[plane].position_marker!.on("click", () => {
+                  //this.adsb_planes[plane].
+                  this.showPlaneMessages(callsign, hex, tail);
+                });
+              }
             }
           } else if (
             this.show_only_acars &&
@@ -1080,7 +1091,7 @@ export let live_map_page = {
       hex: plane_hex,
       tail: plane_tail,
     };
-    // log the time it takes to run this function
+
     const plane_details: plane_match = get_match(
       plane_callsign,
       plane_hex,
