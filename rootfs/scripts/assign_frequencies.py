@@ -71,7 +71,7 @@ def generate_output_files(serials, decoder, freqs_string):
         elif splitGain is not None and splitGain.startswith("A"):
             splitGain = splitGain.replace("A", "")
 
-        if decoder == "dumpvdl2" and len(splitGain) >= 3 and splitGain.find("." == -1):
+        if decoder == "dumpvdl2" and len(splitGain) >= 3 and splitGain.find(".") == -1:
             print(
                 f"WARNING: The SDR {splitSerial} is being used for VDLM Decoding and the Gain value does not include a period. You may experience improper gain..."
             )
