@@ -19,6 +19,7 @@ ENV BRANCH_RTLSDR="ed0317e6a58c098874ac58b769cf2e609c18d9a5" \
     QUIET_MESSAGES="true" \
     DB_SAVEALL="true" \
     PLANEPLOTTER="" \
+    VDLM_FILTER_ENABLE="true" \
     ADSB_URL="http://tar1090/data/aircraft.json"
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
