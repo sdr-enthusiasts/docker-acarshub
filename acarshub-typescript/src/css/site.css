@@ -161,8 +161,10 @@ span.red_important strong {
   color: var(--full-limegreen);
 }
 
-.red:hover {
-  color: var(--full-white);
+@media not all and (pointer: coarse) {
+  .red:hover {
+    color: var(--full-white);
+  }
 }
 
 .footer strong {
@@ -173,8 +175,10 @@ span.red_important strong {
   color: var(--blue-highlight);
 }
 
-.sidebar_link:hover {
-  color: var(--full-white);
+@media not all and (pointer: coarse) {
+  .sidebar_link:hover {
+    color: var(--full-white);
+  }
 }
 
 ol {
@@ -365,8 +369,10 @@ div#log.left {
   padding-left: 4px;
 }
 
-a.spread_text:hover {
-  color: var(--full-black);
+@media not all and (pointer: coarse) {
+  a.spread_text:hover {
+    color: var(--full-black);
+  }
 }
 
 .red {
@@ -412,9 +418,11 @@ label {
   font-weight: bold;
 }
 
-.footer a:hover {
-  color: var(--full-white);
-  transition: all 0.25s ease-out;
+@media not all and (pointer: coarse) {
+  .footer a:hover {
+    color: var(--full-white);
+    transition: all 0.25s ease-out;
+  }
 }
 
 .footer div {
@@ -453,9 +461,11 @@ a {
   text-decoration: none;
 }
 
-a:hover {
-  color: var(--full-black);
-  text-decoration: none;
+@media not all and (pointer: coarse) {
+  a:hover {
+    color: var(--full-black);
+    text-decoration: none;
+  }
 }
 
 a:active {
@@ -542,12 +552,7 @@ nav {
 
 ul.primary li a.invert_a,
 ul.primary li a.invert_a:visited {
-  color: var(--full-white);
-}
-
-ul.primary li a.invert_a:hover {
-  color: var(--blue-highlight);
-  transition: all 0.25s ease-in;
+  color: var(--full-white) !important;
 }
 
 /* prime */
@@ -564,10 +569,16 @@ ul.primary li:last-child a {
   border-right: none;
 }
 
-ul.primary li a:hover,
-ul.primary li a:active {
-  color: var(--full-white);
-  transition: all 0.25s ease-in;
+@media not all and (pointer: coarse) {
+  ul.primary li a.invert_a:hover {
+    color: var(--blue-highlight) !important;
+    transition: all 0.25s ease-in;
+  }
+  ul.primary li a:hover,
+  ul.primary li a:active {
+    color: var(--full-white);
+    transition: all 0.25s ease-in;
+  }
 }
 
 /* subs */
@@ -903,6 +914,15 @@ canvas {
   text-transform: uppercase;
   padding: 0;
   width: 100%;
+}
+
+a[x-apple-data-detectors] {
+  color: inherit !important;
+  text-decoration: none !important;
+  font-size: inherit !important;
+  font-family: inherit !important;
+  font-weight: inherit !important;
+  line-height: inherit !important;
 }
 
 @media only screen and (min-width: 0px) {
