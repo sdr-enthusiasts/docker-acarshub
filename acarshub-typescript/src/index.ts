@@ -657,3 +657,19 @@ window.reset_alert_counts = function (): void {
     socket.emit("reset_alert_counts", { reset_alerts: true }, "/main");
   }
 };
+
+window.showPlaneMessages = function (
+  callsign: string,
+  hex: string,
+  tail: string
+): void {
+  live_map_page.showPlaneMessages(callsign, hex, tail);
+};
+
+export function showPlaneMessages(
+  plane_callsign: string = "",
+  plane_hex: string = "",
+  plane_tail: string = ""
+): void {
+  live_map_page.showPlaneMessages(plane_callsign, plane_hex, plane_tail);
+}

@@ -204,18 +204,26 @@ export let live_map_page = {
         this.adsb_plane_hex.push(this.get_hex(aircraft));
         this.adsb_plane_callsign.push(this.get_callsign(aircraft));
         this.adsb_plane_tails.push(this.get_tail(aircraft));
-        if (this.adsb_planes[aircraft.hex] == undefined) {
-          this.adsb_planes[aircraft.hex] = {
+        if (
+          this.adsb_planes[aircraft.hex.replace("~", "").toUpperCase()] ==
+          undefined
+        ) {
+          this.adsb_planes[aircraft.hex.replace("~", "").toUpperCase()] = {
             position: aircraft,
             last_updated: this.last_updated,
-            id: aircraft.hex,
+            id: aircraft.hex.replace("~", "").toUpperCase(),
             num_messages: 0,
             position_marker: null,
             datablock_marker: null,
+            icon: null,
           };
         } else {
-          this.adsb_planes[aircraft.hex].position = aircraft;
-          this.adsb_planes[aircraft.hex].last_updated = this.last_updated;
+          this.adsb_planes[
+            aircraft.hex.replace("~", "").toUpperCase()
+          ].position = aircraft;
+          this.adsb_planes[
+            aircraft.hex.replace("~", "").toUpperCase()
+          ].last_updated = this.last_updated;
         }
       });
       // Now loop through the target object and expire any that are no longer there
@@ -281,7 +289,7 @@ export let live_map_page = {
         radius: radius,
         fill: false,
         interactive: false,
-        weight: 2,
+        weight: 1,
         color: "hsl(0, 0%, 0%)",
       }).addTo(this.layerGroupRangeRings);
     });
@@ -469,11 +477,12 @@ export let live_map_page = {
         ? plane.flight.trim()
         : plane.r && plane.r !== ""
         ? plane.r
-        : plane.hex.toUpperCase()
+        : plane.hex
     )
       .replace("~", "")
       .replace(".", "")
-      .replace("-", "");
+      .replace("-", "")
+      .toUpperCase();
   },
 
   get_sqwk: function (plane: adsb_plane): number {
@@ -493,7 +502,9 @@ export let live_map_page = {
   },
 
   get_hex: function (plane: adsb_plane): string {
-    return plane.hex ? plane.hex.toUpperCase() : <any>undefined;
+    return plane.hex
+      ? plane.hex.replace("~", "").toUpperCase()
+      : <any>undefined;
   },
 
   get_baro_rate: function (plane: adsb_plane): number {
@@ -571,7 +582,7 @@ export let live_map_page = {
       const details = this.match_plane(plane_data, callsign, tail, hex);
       const num_messages = details.num_messages;
       const num_alerts = details.num_alerts;
-      const old_messages = this.get_old_messages(hex.toLowerCase());
+      const old_messages = this.get_old_messages(hex);
       let has_new_messages: boolean = false;
 
       if (num_messages) {
@@ -586,7 +597,7 @@ export let live_map_page = {
             num_messages,
             old_messages
           );
-          this.set_old_messages(hex.toLowerCase(), num_messages);
+          this.set_old_messages(hex, num_messages);
         } else if (num_messages !== old_messages) {
           has_new_messages = true;
         }
@@ -662,9 +673,9 @@ export let live_map_page = {
       const hex_list = plane_callsigns[id].hex;
       if (plane_list && hex_list) {
         const current_plane =
-          this.adsb_planes[hex_list.toLowerCase()] !== undefined &&
-          this.adsb_planes[hex_list.toLowerCase()].position !== undefined
-            ? this.adsb_planes[hex_list.toLowerCase()].position
+          this.adsb_planes[hex_list] !== undefined &&
+          this.adsb_planes[hex_list].position !== undefined
+            ? this.adsb_planes[hex_list].position
             : null;
         if (
           current_plane !== null &&
@@ -672,6 +683,7 @@ export let live_map_page = {
           current_plane.lon != null
         ) {
           const callsign = this.get_callsign(current_plane);
+
           if (callsign.includes("@@")) {
             console.error(
               "CALLSIGN CONTAINS @@. Not adding mouse hover handlers."
@@ -682,7 +694,7 @@ export let live_map_page = {
           const tail = this.get_tail(current_plane);
           const details = this.match_plane(plane_data, callsign, tail, hex);
           const num_messages = details.num_messages;
-          const old_messages = this.get_old_messages(hex.toLowerCase());
+          const old_messages = this.get_old_messages(hex);
           const alert = details.has_alerts;
           const squawk = this.get_sqwk(current_plane);
 
@@ -690,7 +702,7 @@ export let live_map_page = {
             mouseenter: () => {
               if (this.current_hovered_from_sidebar !== hex) {
                 this.current_hovered_from_sidebar = callsign;
-                $(`#${callsign}_marker`).removeClass(
+                $(`#${hex}_marker`).removeClass(
                   this.find_plane_color(
                     callsign,
                     alert,
@@ -702,13 +714,13 @@ export let live_map_page = {
                     true
                   )
                 );
-                $(`#${callsign}_marker`).addClass("airplane_orange");
+                $(`#${hex}_marker`).addClass("airplane_orange");
               }
             },
             mouseleave: () => {
               this.current_hovered_from_sidebar = "";
               $("div").removeClass("airplane_orange");
-              $(`#${callsign}_marker`).addClass(
+              $(`#${hex}_marker`).addClass(
                 this.find_plane_color(
                   callsign,
                   alert,
@@ -787,7 +799,7 @@ export let live_map_page = {
           num_messages,
           old_messages
         );
-        this.set_old_messages(hex.toLowerCase(), num_messages);
+        this.set_old_messages(hex, num_messages);
         num_messages = old_messages;
       }
 
@@ -892,9 +904,9 @@ export let live_map_page = {
                 0.5,
                 type_shape.scale * 1.5
               ) as aircraft_icon;
-              this.adsb_planes[current_plane.hex].icon = icon;
+              this.adsb_planes[hex].icon = icon;
             }
-            const marker_icon_text = `<div><div id="${callsign}_marker" class="datablock ${color}" data-jbox-content="${popup_text}" style="-webkit-transform:rotate(${rotate}deg); -moz-transform: rotate(${rotate}deg); -ms-transform: rotate(${rotate}deg); -o-transform: rotate(${rotate}deg); transform: rotate(${rotate}deg);">${icon.svg}</div></div>`;
+            const marker_icon_text = `<div><div id="${hex}_marker" class="datablock ${color}" data-jbox-content="${popup_text}" style="-webkit-transform:rotate(${rotate}deg); -moz-transform: rotate(${rotate}deg); -ms-transform: rotate(${rotate}deg); -o-transform: rotate(${rotate}deg); transform: rotate(${rotate}deg);">${icon.svg}</div></div>`;
 
             let plane_icon = LeafLet.divIcon({
               className: "airplane",
@@ -935,13 +947,13 @@ export let live_map_page = {
                     hex,
                     tail
                   );
-                  $(`#${callsign}_marker`).removeClass();
-                  $(`#${callsign}_marker`).addClass(
+                  $(`#${hex}_marker`).removeClass();
+                  $(`#${hex}_marker`).addClass(
                     `datablock ${color} data-jbox-content="${popup_text}`
                   );
                 });
               }
-              $(`#${callsign}_marker`).on({
+              $(`#${hex}_marker`).on({
                 mouseenter: () => {
                   if (this.current_hovered_from_map !== callsign) {
                     this.current_hovered_from_map = callsign;
@@ -956,28 +968,19 @@ export let live_map_page = {
             } else {
               // Marker is present, update it
               this.adsb_planes[plane].position_marker!.setLatLng([lat, lon]);
-              $(`#${callsign}_marker`).removeClass();
-              $(`#${callsign}_marker`).removeAttr("style");
-              $(`#${callsign}_marker`).removeAttr("data-jbox-content");
-              $(`#${callsign}_marker`).addClass(`datablock ${color}`);
-              $(`#${callsign}_marker`).attr("data-jbox-content", popup_text);
-              $(`#${callsign}_marker`).css(
+              $(`#${hex}_marker`).removeClass();
+              $(`#${hex}_marker`).removeAttr("style");
+              $(`#${hex}_marker`).removeAttr("data-jbox-content");
+              $(`#${hex}_marker`).addClass(`datablock ${color}`);
+              $(`#${hex}_marker`).attr("data-jbox-content", popup_text);
+              $(`#${hex}_marker`).css(
                 "-webkit-transform",
                 `:rotate(${rotate}deg)`
               );
-              $(`#${callsign}_marker`).css(
-                "-moz-transform",
-                `rotate(${rotate}deg)`
-              );
-              $(`#${callsign}_marker`).css(
-                "-ms-transform",
-                `rotate(${rotate}deg)`
-              );
-              $(`#${callsign}_marker`).css(
-                "-o-transform",
-                `rotate(${rotate}deg)`
-              );
-              $(`#${callsign}_marker`).css("transform", `rotate(${rotate}deg)`);
+              $(`#${hex}_marker`).css("-moz-transform", `rotate(${rotate}deg)`);
+              $(`#${hex}_marker`).css("-ms-transform", `rotate(${rotate}deg)`);
+              $(`#${hex}_marker`).css("-o-transform", `rotate(${rotate}deg)`);
+              $(`#${hex}_marker`).css("transform", `rotate(${rotate}deg)`);
               if (num_messages) {
                 // Add in click event for showing messages
                 // If the plane previously didn't have messages when it was generated the click event is never added
@@ -995,8 +998,8 @@ export let live_map_page = {
                     hex,
                     tail
                   );
-                  $(`#${callsign}_marker`).removeClass();
-                  $(`#${callsign}_marker`).addClass(
+                  $(`#${hex}_marker`).removeClass();
+                  $(`#${hex}_marker`).addClass(
                     `datablock ${color} data-jbox-content="${popup_text}`
                   );
                 });
@@ -1020,7 +1023,7 @@ export let live_map_page = {
             let datablock_icon = new LeafLet.DivIcon({
               className: "airplane",
               html:
-                `<div id="${callsign}_datablock" class="airplane_datablock">` +
+                `<div id="${hex}_datablock" class="airplane_datablock">` +
                 datablock +
                 "</div>",
             });
@@ -1041,7 +1044,7 @@ export let live_map_page = {
             this.adsb_planes[plane].datablock_marker!.setLatLng(
               this.offset_datablock([lat, lon])
             );
-            $(`#${callsign}_datablock`).html(datablock);
+            $(`#${hex}_datablock`).html(datablock);
           } else if (
             this.show_datablocks &&
             (!this.show_only_acars || num_messages)
@@ -1145,7 +1148,7 @@ export let live_map_page = {
     this.plane_message_modal.setHeight(window_height);
     this.plane_message_modal.setWidth(window_width);
     this.plane_message_modal.open();
-    this.adsb_planes[plane_hex.toLowerCase()].num_messages = matches.length;
+    this.adsb_planes[plane_hex].num_messages = matches.length;
     this.airplaneList();
     resize_tabs(window_width - 40, false);
     $(".show_when_small").css("display", `inline-block`);
@@ -1270,7 +1273,6 @@ export let live_map_page = {
             expires: 365,
             sameSite: "Strict",
           });
-          this.redraw_map();
         },
         move: () => {
           const center = this.map.getCenter();
