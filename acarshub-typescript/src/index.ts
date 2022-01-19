@@ -221,6 +221,8 @@ $((): void => {
           update_adsb();
         }, 5000);
       }
+    } else {
+      adsb_enabled = false;
     }
 
     // If for some reason ADSB was ever turned off on the back end and was enabled for the client, turn off the updater
@@ -526,6 +528,14 @@ export function get_match(
   return live_messages_page.get_match(callsign, hex, tail);
 }
 
+export function is_adsb_enabled() {
+  return adsb_enabled;
+}
+
+export function get_current_planes() {
+  return live_map_page.get_current_planes();
+}
+
 // functions that need to be registered to window object
 
 window.show_page_modal = function (): void {
@@ -588,14 +598,6 @@ window.setSort = function (sort: string = ""): void {
   live_map_page.setSort(sort);
 };
 
-window.showPlaneMessages = function (
-  callsign: string,
-  hex: string,
-  tail: string
-): void {
-  live_map_page.showPlaneMessages(callsign, hex, tail);
-};
-
 window.toggle_acars_only = function (): void {
   live_map_page.toggle_acars_only();
 };
@@ -654,6 +656,14 @@ window.reset_alert_counts = function (): void {
   if (reset_alerts) {
     socket.emit("reset_alert_counts", { reset_alerts: true }, "/main");
   }
+};
+
+window.showPlaneMessages = function (
+  callsign: string,
+  hex: string,
+  tail: string
+): void {
+  live_map_page.showPlaneMessages(callsign, hex, tail);
 };
 
 export function showPlaneMessages(

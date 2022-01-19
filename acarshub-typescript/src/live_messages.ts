@@ -15,7 +15,13 @@ import {
 import jBox from "jbox";
 //i mport "jbox/dist/jBox.all.css";
 import { tooltip } from "./tooltips";
-import { resize_tabs, match_alert, sound_alert } from "./index";
+import {
+  resize_tabs,
+  match_alert,
+  sound_alert,
+  is_adsb_enabled,
+  get_current_planes,
+} from "./index";
 
 export let live_messages_page = {
   pause: false as boolean,
@@ -23,17 +29,62 @@ export let live_messages_page = {
   lm_msgs_received: {
     planes: [] as plane[],
     unshift: function (a: plane) {
+      // console.log(
+      //   `Initial number of planes w/ messages saved:  ${this.planes.length}`
+      // );
       if (this.planes.length >= 50) {
-        this.planes.pop();
+        // ADSB is off so we don't need to be all clever like removing the last element
+        if (!is_adsb_enabled()) {
+          this.planes.pop();
+        } else {
+          let indexes_to_delete: Array<number> = [];
+          const current_planes_adsb = get_current_planes();
+          for (let i = 49; i < this.planes.length; i++) {
+            let delete_index = true;
+            this.planes[i].identifiers.every((identifier) => {
+              if (
+                current_planes_adsb.hex.includes(identifier) ||
+                current_planes_adsb.callsigns.includes(identifier) ||
+                current_planes_adsb.tail.includes(identifier)
+              ) {
+                delete_index = false;
+                // console.log(`saving plane with ${identifier}`);
+                return false;
+              }
+              return true;
+            });
+            if (delete_index) {
+              // console.log(
+              //   `deleting a plane (${this.planes[i].identifiers}).....`
+              // );
+              indexes_to_delete.push(i);
+            }
+          }
+          // delete the selected indexes from this.planes
+          // sorting the list descending because we want to keep
+          // the indexes true to the original indexes and deleting from the front
+          // of the list would cause invalid indexes as we walked the array
+          indexes_to_delete
+            .sort((a, b) => b - a)
+            .forEach((index) => {
+              this.planes.splice(index, 1);
+            });
+        }
       }
+      // console.log(
+      //   `Final number of planes w/ messages saved: ${this.planes.length + 1}`
+      // );
       return Array.prototype.unshift.apply(this.planes, [a]);
     },
     get_all_messages: function (): acars_msg[][] {
       let output = [] as acars_msg[][];
       for (const msgList of this.planes) {
-        output.push(msgList.messages);
+        if (output.length < 50) {
+          output.push(msgList.messages);
+        } else {
+          return output;
+        }
       }
-
       return output;
     },
   },

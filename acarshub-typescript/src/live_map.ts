@@ -21,7 +21,7 @@ import { display_messages } from "./html_generator";
 import { getBaseMarker, svgShapeToURI } from "./js-other/aircraft_icons";
 import {
   resize_tabs,
-  showPlaneMessages,
+  //showPlaneMessages,
   find_matches,
   get_match,
   get_window_size,
@@ -36,6 +36,9 @@ export let live_map_page = {
   adsb_enabled: false as boolean,
   live_map_page_active: false as boolean,
   adsb_planes: {} as { [key: string]: adsb_target },
+  adsb_plane_tails: [] as Array<string>,
+  adsb_plane_hex: [] as Array<string>,
+  adsb_plane_callsign: [] as Array<string>,
   had_targets: false as boolean,
   last_updated: 0 as number,
   map: (<unknown>null) as LeafLet.Map,
@@ -44,6 +47,7 @@ export let live_map_page = {
   layerGroupPlanes: (<unknown>null) as LeafLet.LayerGroup,
   layerGroupPlaneDatablocks: (<unknown>null) as LeafLet.LayerGroup,
   layerGroupRangeRings: (<unknown>null) as LeafLet.LayerGroup,
+  plane_markers: {} as { [key: string]: LeafLet.Marker },
   lat: 0 as number,
   lon: 0 as number,
   station_lat: 0 as number,
@@ -176,10 +180,6 @@ export let live_map_page = {
 
   redraw_map: function (): void {
     if (this.live_map_page_active) {
-      this.update_targets();
-      this.airplaneList();
-      tooltip.attach_all_tooltips();
-
       if (this.current_modal_terms != null) {
         this.showPlaneMessages(
           this.current_modal_terms.callsign,
@@ -187,29 +187,91 @@ export let live_map_page = {
           this.current_modal_terms.tail
         );
       }
+      this.update_targets();
+      this.airplaneList();
+      tooltip.attach_all_tooltips();
     }
   },
 
   set_targets: function (adsb_targets: adsb): void {
     if (this.last_updated < adsb_targets.now) {
       this.last_updated = adsb_targets.now;
+      this.adsb_plane_hex = [];
+      this.adsb_plane_callsign = [];
+      this.adsb_plane_tails = [];
       // Loop through all of the planes in the new data and save them to the target object
       adsb_targets.aircraft.forEach((aircraft) => {
-        if (this.adsb_planes[aircraft.hex] == undefined) {
-          this.adsb_planes[aircraft.hex] = {
+        this.adsb_plane_hex.push(this.get_hex(aircraft));
+        this.adsb_plane_callsign.push(this.get_callsign(aircraft));
+        this.adsb_plane_tails.push(this.get_tail(aircraft));
+        if (
+          this.adsb_planes[
+            aircraft.hex
+              .replace("-", "")
+              .replace(".", "")
+              .replace("~", "")
+              .toUpperCase()
+          ] == undefined
+        ) {
+          this.adsb_planes[
+            aircraft.hex
+              .replace("-", "")
+              .replace(".", "")
+              .replace("~", "")
+              .toUpperCase()
+          ] = {
             position: aircraft,
             last_updated: this.last_updated,
-            id: aircraft.hex,
+            id: aircraft.hex
+              .replace("-", "")
+              .replace(".", "")
+              .replace("~", "")
+              .toUpperCase(),
             num_messages: 0,
+            position_marker: null,
+            datablock_marker: null,
+            icon: null,
           };
         } else {
-          this.adsb_planes[aircraft.hex].position = aircraft;
-          this.adsb_planes[aircraft.hex].last_updated = this.last_updated;
+          this.adsb_planes[
+            aircraft.hex
+              .replace("-", "")
+              .replace(".", "")
+              .replace("~", "")
+              .toUpperCase()
+          ].position = aircraft;
+          this.adsb_planes[
+            aircraft.hex
+              .replace("-", "")
+              .replace(".", "")
+              .replace("~", "")
+              .toUpperCase()
+          ].last_updated = this.last_updated;
         }
       });
       // Now loop through the target object and expire any that are no longer there
       for (let plane in this.adsb_planes) {
         if (this.adsb_planes[plane].last_updated < this.last_updated) {
+          if (
+            this.adsb_planes[plane].position_marker != null &&
+            this.layerGroupPlanes.hasLayer(
+              this.adsb_planes[plane].position_marker!
+            )
+          ) {
+            this.layerGroupPlanes.removeLayer(
+              this.adsb_planes[plane].position_marker!
+            );
+          }
+          if (
+            this.adsb_planes[plane].datablock_marker != null &&
+            this.layerGroupPlaneDatablocks.hasLayer(
+              this.adsb_planes[plane].datablock_marker!
+            )
+          ) {
+            this.layerGroupPlaneDatablocks.removeLayer(
+              this.adsb_planes[plane].datablock_marker!
+            );
+          }
           delete this.adsb_planes[plane];
         }
       }
@@ -233,7 +295,6 @@ export let live_map_page = {
   },
 
   set_range_markers: function (): void {
-    console.log("yo");
     if (this.layerGroupRangeRings == null)
       this.layerGroupRangeRings = L.layerGroup();
     this.layerGroupRangeRings.clearLayers();
@@ -251,7 +312,7 @@ export let live_map_page = {
         radius: radius,
         fill: false,
         interactive: false,
-        weight: 2,
+        weight: 1,
         color: "hsl(0, 0%, 0%)",
       }).addTo(this.layerGroupRangeRings);
     });
@@ -300,24 +361,20 @@ export let live_map_page = {
       alert = plane_data[callsign].has_alerts;
       num_alerts = plane_data[callsign].num_alerts;
     }
-    if (num_messages == undefined && plane_data[callsign.replace("-", "")]) {
-      num_messages = plane_data[callsign.replace("-", "")].count;
-      alert = plane_data[callsign.replace("-", "")].has_alerts;
-      num_alerts = plane_data[callsign.replace("-", "")].num_alerts;
+    if (num_messages == undefined && plane_data[callsign]) {
+      num_messages = plane_data[callsign].count;
+      alert = plane_data[callsign].has_alerts;
+      num_alerts = plane_data[callsign].num_alerts;
     }
     if (num_messages == undefined && tail != undefined && plane_data[tail]) {
       num_messages = plane_data[tail].count;
       alert = plane_data[tail].has_alerts;
       num_alerts = plane_data[tail].num_alerts;
     }
-    if (
-      num_messages == undefined &&
-      tail != undefined &&
-      plane_data[tail.replace("-", "")]
-    ) {
-      num_messages = plane_data[tail.replace("-", "")].count;
-      alert = plane_data[tail.replace("-", "")].has_alerts;
-      num_alerts = plane_data[tail.replace("-", "")].num_alerts;
+    if (num_messages == undefined && tail != undefined && plane_data[tail]) {
+      num_messages = plane_data[tail].count;
+      alert = plane_data[tail].has_alerts;
+      num_alerts = plane_data[tail].num_alerts;
     }
 
     return {
@@ -438,11 +495,17 @@ export let live_map_page = {
   },
 
   get_callsign: function (plane: adsb_plane): string {
-    return plane.flight && plane.flight.trim() !== ""
-      ? plane.flight.trim()
-      : plane.r && plane.r !== ""
-      ? plane.r
-      : plane.hex.toUpperCase();
+    return (
+      plane.flight && plane.flight.trim() !== ""
+        ? plane.flight.trim()
+        : plane.r && plane.r !== ""
+        ? plane.r
+        : plane.hex
+    )
+      .replace("~", "")
+      .replace(".", "")
+      .replace("-", "")
+      .toUpperCase();
   },
 
   get_sqwk: function (plane: adsb_plane): number {
@@ -458,11 +521,19 @@ export let live_map_page = {
   },
 
   get_tail: function (plane: adsb_plane): string {
-    return plane.r ? plane.r : <any>undefined;
+    return plane.r
+      ? plane.r.replace("-", "").replace(".", "").replace("~", "")
+      : <any>undefined;
   },
 
   get_hex: function (plane: adsb_plane): string {
-    return plane.hex ? plane.hex.toUpperCase() : <any>undefined;
+    return plane.hex
+      ? plane.hex
+          .replace("-", "")
+          .replace(".", "")
+          .replace("~", "")
+          .toUpperCase()
+      : <any>undefined;
   },
 
   get_baro_rate: function (plane: adsb_plane): number {
@@ -497,6 +568,18 @@ export let live_map_page = {
     return this.adsb_planes[plane].num_messages;
   },
 
+  get_current_planes: function (): {
+    callsigns: Array<string>;
+    hex: Array<string>;
+    tail: Array<string>;
+  } {
+    return {
+      callsigns: this.adsb_plane_callsign,
+      hex: this.adsb_plane_hex,
+      tail: this.adsb_plane_tails,
+    };
+  },
+
   airplaneList: function (): void {
     const plane_data = find_matches();
     let num_planes = 0;
@@ -521,14 +604,14 @@ export let live_map_page = {
       const speed = this.get_speed(current_plane);
       const squawk = this.get_sqwk(current_plane);
       const callsign = this.get_callsign(current_plane);
-      plane_callsigns.push(callsign);
       const hex = this.get_hex(current_plane);
+      plane_callsigns.push({ callsign: callsign, hex: hex });
       const tail: string = this.get_tail(current_plane);
       const baro_rate = this.get_baro_rate(current_plane);
       const details = this.match_plane(plane_data, callsign, tail, hex);
       const num_messages = details.num_messages;
       const num_alerts = details.num_alerts;
-      const old_messages = this.get_old_messages(hex.toLowerCase());
+      const old_messages = this.get_old_messages(hex);
       let has_new_messages: boolean = false;
 
       if (num_messages) {
@@ -543,7 +626,7 @@ export let live_map_page = {
             num_messages,
             old_messages
           );
-          this.set_old_messages(hex.toLowerCase(), num_messages);
+          this.set_old_messages(hex, num_messages);
         } else if (num_messages !== old_messages) {
           has_new_messages = true;
         }
@@ -553,21 +636,15 @@ export let live_map_page = {
         let styles = "";
         if (
           this.current_hovered_from_map !== "" &&
-          this.current_hovered_from_map == callsign.replace("~", "") &&
+          this.current_hovered_from_map == callsign &&
           callsign &&
           num_messages
         ) {
           if (!num_alerts) styles = " sidebar_hovered_from_map_acars";
           else styles = " sidebar_hovered_from_map_with_unread";
-        } else if (
-          this.current_hovered_from_map == callsign.replace("~", "") &&
-          !num_alerts
-        ) {
+        } else if (this.current_hovered_from_map == callsign && !num_alerts) {
           styles = " sidebar_hovered_from_map_no_acars";
-        } else if (
-          num_alerts &&
-          this.current_hovered_from_map == callsign.replace("~", "")
-        ) {
+        } else if (num_alerts && this.current_hovered_from_map == callsign) {
           styles = has_new_messages
             ? " sidebar_alert_unread_hovered_from_map"
             : " sidebar_alert_unread_hovered_from_map";
@@ -579,10 +656,7 @@ export let live_map_page = {
           if (!has_new_messages) styles = " sidebar_no_hover_with_acars";
           else styles = " sidebar_no_hover_with_unread";
         }
-        html += `<div id="${callsign.replace(
-          "~",
-          ""
-        )}" class="plane_list${styles}">
+        html += `<div id="${callsign}" class="plane_list${styles}">
         <div class="plane_element noleft" style="width:${callsign_width}%">${
           callsign && num_messages
             ? `<a href="javascript:showPlaneMessages('${callsign}', '${hex}', '${tail}');">${callsign}</a>`
@@ -624,21 +698,72 @@ export let live_map_page = {
       html;
     $("#planes").html(html);
     for (const id in plane_callsigns) {
-      const plane = plane_callsigns[id];
-      if (plane) {
-        $(`#${plane.replace("~", "")}`).on({
-          mouseenter: () => {
-            if (this.current_hovered_from_sidebar !== plane.replace("~", "")) {
-              this.current_hovered_from_sidebar = plane.replace("~", "");
-              this.update_targets();
-            }
-          },
-          mouseleave: () => {
-            this.current_hovered_from_sidebar = "";
-            this.update_targets();
-            tooltip.attach_all_tooltips();
-          },
-        });
+      const plane_list = plane_callsigns[id].callsign;
+      const hex_list = plane_callsigns[id].hex;
+      if (plane_list && hex_list) {
+        const current_plane =
+          this.adsb_planes[hex_list] !== undefined &&
+          this.adsb_planes[hex_list].position !== undefined
+            ? this.adsb_planes[hex_list].position
+            : null;
+        if (
+          current_plane !== null &&
+          current_plane.lat != null &&
+          current_plane.lon != null
+        ) {
+          const callsign = this.get_callsign(current_plane);
+
+          if (callsign.includes("@@")) {
+            console.error(
+              "CALLSIGN CONTAINS @@. Not adding mouse hover handlers."
+            );
+            continue;
+          }
+          const hex = this.get_hex(current_plane);
+          const tail = this.get_tail(current_plane);
+          const details = this.match_plane(plane_data, callsign, tail, hex);
+          const num_messages = details.num_messages;
+          const old_messages = this.get_old_messages(hex);
+          const alert = details.has_alerts;
+          const squawk = this.get_sqwk(current_plane);
+
+          $(`#${callsign}`).on({
+            mouseenter: () => {
+              if (this.current_hovered_from_sidebar !== hex) {
+                this.current_hovered_from_sidebar = callsign;
+                $(`#${hex}_marker`).removeClass(
+                  this.find_plane_color(
+                    callsign,
+                    alert,
+                    num_messages,
+                    squawk,
+                    old_messages,
+                    hex,
+                    tail,
+                    true
+                  )
+                );
+                $(`#${hex}_marker`).addClass("airplane_orange");
+              }
+            },
+            mouseleave: () => {
+              this.current_hovered_from_sidebar = "";
+              $("div").removeClass("airplane_orange");
+              $(`#${hex}_marker`).addClass(
+                this.find_plane_color(
+                  callsign,
+                  alert,
+                  num_messages,
+                  squawk,
+                  old_messages,
+                  hex,
+                  tail
+                )
+              );
+              tooltip.attach_all_tooltips();
+            },
+          });
+        }
       }
     }
     $("#num_planes").html(`Planes: ${num_planes}`);
@@ -672,6 +797,48 @@ export let live_map_page = {
     ] as [number, number];
   },
 
+  find_plane_color: function (
+    callsign: string,
+    alert: boolean,
+    num_messages: number,
+    squawk: number,
+    old_messages: number,
+    hex: string,
+    tail: string,
+    skip_hovered: boolean = false
+  ): string {
+    let color: string = "airplane_blue";
+    if (!skip_hovered && this.current_hovered_from_sidebar == callsign)
+      color = "airplane_orange";
+    else if (
+      (alert && this.show_unread_messages && num_messages !== old_messages) ||
+      squawk == 7500 ||
+      squawk == 7600 ||
+      squawk == 7700
+    )
+      color = "airplane_red";
+    else if (alert) {
+      color = "airplane_brown";
+    } else if (num_messages) {
+      if (old_messages > num_messages) {
+        console.error(
+          "OLD MESSAGES WAS LARGER THAN TOTAL MESSAGE COUNT: " + callsign,
+          hex,
+          tail,
+          num_messages,
+          old_messages
+        );
+        this.set_old_messages(hex, num_messages);
+        num_messages = old_messages;
+      }
+
+      if (this.show_unread_messages && num_messages !== old_messages)
+        color = "airplane_darkgreen";
+      else color = "airplane_green";
+    }
+    return color;
+  },
+
   update_targets: function (): void {
     if (
       typeof this.map !== null &&
@@ -679,8 +846,8 @@ export let live_map_page = {
       this.adsb_planes !== null
     ) {
       // clear old planes
-      this.layerGroupPlanes.clearLayers();
-      this.layerGroupPlaneDatablocks.clearLayers();
+      // this.layerGroupPlanes.clearLayers();
+      // this.layerGroupPlaneDatablocks.clearLayers();
       const plane_data: plane_data = find_matches();
 
       for (const plane in this.adsb_planes) {
@@ -690,6 +857,10 @@ export let live_map_page = {
         ) {
           const current_plane = this.adsb_planes[plane].position;
           const callsign = this.get_callsign(current_plane);
+          if (callsign.includes("@@")) {
+            console.error("CALLSIGN CONTAINS @s. Skipping target.");
+            continue;
+          }
           const rotate: number = this.get_heading(current_plane);
           const alt: string | number = this.get_alt(current_plane);
           const hex: string = this.get_hex(current_plane);
@@ -701,62 +872,20 @@ export let live_map_page = {
           const lon: number = this.get_lon(current_plane);
           const lat: number = this.get_lat(current_plane);
           let icon: aircraft_icon | null = this.get_icon(plane);
-          let num_messages: number = <any>null; // need to cast this to any for TS to compile.
+          let num_messages: null | number = null;
           const old_messages = this.get_old_messages(plane);
           const details = this.match_plane(plane_data, callsign, tail, hex);
           num_messages = details.num_messages;
           const alert: boolean = details.has_alerts;
-          let color = "airplane_blue";
-          if (icon == null) {
-            const type_shape: svg_icon = getBaseMarker(
-              String(current_plane.category),
-              current_plane.t,
-              null,
-              null,
-              current_plane.type,
-              alt
-            );
-
-            icon = svgShapeToURI(
-              type_shape.name,
-              0.5,
-              type_shape.scale * 1.5
-            ) as aircraft_icon;
-            this.adsb_planes[current_plane.hex].icon = icon;
-          }
-
-          // set the color of the icon
-
-          if (this.current_hovered_from_sidebar == callsign.replace("~", ""))
-            color = "airplane_orange";
-          else if (
-            (alert &&
-              this.show_unread_messages &&
-              num_messages !== old_messages) ||
-            squawk == 7500 ||
-            squawk == 7600 ||
-            squawk == 7700
-          )
-            color = "airplane_red";
-          else if (alert) {
-            color = "airplane_brown";
-          } else if (num_messages) {
-            if (old_messages > num_messages) {
-              console.error(
-                "OLD MESSAGES WAS LARGER THAN TOTAL MESSAGE COUNT: " + callsign,
-                hex,
-                tail,
-                num_messages,
-                old_messages
-              );
-              this.set_old_messages(plane, num_messages);
-              num_messages = old_messages;
-            }
-
-            if (this.show_unread_messages && num_messages !== old_messages)
-              color = "airplane_darkgreen";
-            else color = "airplane_green";
-          }
+          let color = this.find_plane_color(
+            callsign,
+            alert,
+            num_messages,
+            squawk,
+            old_messages,
+            hex,
+            tail
+          );
 
           const popup_text = `<div>${
             callsign !== hex ? callsign + "/" : ""
@@ -773,15 +902,44 @@ export let live_map_page = {
             num_messages ? "<br><br>ACARS messages: " + num_messages : ""
           }</div>`;
 
-          if (!this.show_only_acars || num_messages) {
+          let datablock = `${callsign}`;
+
+          if (this.show_extended_datablocks) {
+            datablock += `<br>${alt}`;
+            if (ac_type || speed) {
+              datablock += `<br>${ac_type !== undefined ? ac_type + " " : ""}${
+                speed !== undefined ? Math.round(speed) + " kts" : ""
+              }`;
+            }
+
+            if (num_messages) {
+              datablock += `<br>Msgs: ${num_messages}`;
+            }
+          }
+
+          if (this.adsb_planes[plane].position_marker === null) {
+            if (icon == null) {
+              const type_shape: svg_icon = getBaseMarker(
+                String(current_plane.category),
+                current_plane.t,
+                null,
+                null,
+                current_plane.type,
+                alt
+              );
+
+              icon = svgShapeToURI(
+                type_shape.name,
+                0.5,
+                type_shape.scale * 1.5
+              ) as aircraft_icon;
+              this.adsb_planes[hex].icon = icon;
+            }
+            const marker_icon_text = `<div><div id="${hex}_marker" class="datablock ${color}" data-jbox-content="${popup_text}" style="-webkit-transform:rotate(${rotate}deg); -moz-transform: rotate(${rotate}deg); -ms-transform: rotate(${rotate}deg); -o-transform: rotate(${rotate}deg); transform: rotate(${rotate}deg);">${icon.svg}</div></div>`;
+
             let plane_icon = LeafLet.divIcon({
               className: "airplane",
-              html: `<div><div id="${callsign.replace(
-                "~",
-                ""
-              )}_marker" class="datablock ${color}" data-jbox-content="${popup_text}" style="-webkit-transform:rotate(${rotate}deg); -moz-transform: rotate(${rotate}deg); -ms-transform: rotate(${rotate}deg); -o-transform: rotate(${rotate}deg); transform: rotate(${rotate}deg);">${
-                icon.svg
-              }</div></div>`,
+              html: marker_icon_text,
               iconSize: [icon.width, icon.height],
             });
 
@@ -789,52 +947,175 @@ export let live_map_page = {
               icon: plane_icon,
               riseOnHover: true,
             });
+            this.adsb_planes[plane].position_marker = plane_marker;
+          }
 
-            plane_marker.addTo(this.layerGroupPlanes);
-            $(`#${callsign.replace("~", "")}_marker`).on({
-              mouseenter: () => {
-                if (
-                  this.current_hovered_from_map !== callsign.replace("~", "")
-                ) {
-                  this.current_hovered_from_map = callsign.replace("~", "");
-                  this.airplaneList();
-                }
-              },
-              mouseleave: () => {
-                this.current_hovered_from_map = "";
-                this.airplaneList();
-              },
-            });
+          // All fields generated. Time to determine if the marker needs to be displayed
 
-            if (this.show_datablocks) {
-              let datablock = `<div class="airplane_datablock">${callsign}`;
-              if (this.show_extended_datablocks) {
-                datablock += `<br>${alt}`;
-                if (ac_type || speed) {
-                  datablock += `<br>${ac_type + " " || ""}${Math.round(speed)}`;
-                }
-
-                if (num_messages) {
-                  datablock += `<br>Msgs: ${num_messages}`;
-                }
-              }
-              datablock += "</div>";
-              let datablock_icon = new LeafLet.DivIcon({
-                className: "airplane",
-                html: datablock,
-              });
-              let datablock_marker = new LeafLet.Marker(
-                this.offset_datablock([lat, lon]) as LeafLet.LatLngTuple,
-                { icon: datablock_icon }
+          if (!this.show_only_acars || num_messages) {
+            // Marker Should be displayed
+            if (
+              !this.layerGroupPlanes.hasLayer(
+                this.adsb_planes[plane].position_marker!
+              )
+            ) {
+              // Marker is missing, add it
+              this.adsb_planes[plane].position_marker!.addTo(
+                this.layerGroupPlanes
               );
-              datablock_marker.addTo(this.layerGroupPlaneDatablocks);
-            }
-
-            if (num_messages) {
-              plane_marker.on("click", () => {
-                showPlaneMessages(callsign, hex, tail);
+              if (num_messages) {
+                // Add in click event for showing messages
+                this.adsb_planes[plane].position_marker!.on("click", () => {
+                  this.showPlaneMessages(callsign, hex, tail);
+                  const color = this.find_plane_color(
+                    callsign,
+                    alert,
+                    num_messages || 0,
+                    squawk,
+                    num_messages || 0,
+                    hex,
+                    tail
+                  );
+                  $(`#${hex}_marker`).removeClass();
+                  $(`#${hex}_marker`).addClass(
+                    `datablock ${color} data-jbox-content="${popup_text}`
+                  );
+                });
+              }
+              $(`#${hex}_marker`).on({
+                mouseenter: () => {
+                  if (this.current_hovered_from_map !== callsign) {
+                    this.current_hovered_from_map = callsign;
+                    this.airplaneList();
+                  }
+                },
+                mouseleave: () => {
+                  this.current_hovered_from_map = "";
+                  this.airplaneList();
+                },
               });
+            } else {
+              // Marker is present, update it
+              this.adsb_planes[plane].position_marker!.setLatLng([lat, lon]);
+              $(`#${hex}_marker`).removeClass();
+              $(`#${hex}_marker`).removeAttr("style");
+              $(`#${hex}_marker`).removeAttr("data-jbox-content");
+              $(`#${hex}_marker`).addClass(`datablock ${color}`);
+              $(`#${hex}_marker`).attr("data-jbox-content", popup_text);
+              $(`#${hex}_marker`).css(
+                "-webkit-transform",
+                `:rotate(${rotate}deg)`
+              );
+              $(`#${hex}_marker`).css("-moz-transform", `rotate(${rotate}deg)`);
+              $(`#${hex}_marker`).css("-ms-transform", `rotate(${rotate}deg)`);
+              $(`#${hex}_marker`).css("-o-transform", `rotate(${rotate}deg)`);
+              $(`#${hex}_marker`).css("transform", `rotate(${rotate}deg)`);
+              if (num_messages) {
+                // Add in click event for showing messages
+                // If the plane previously didn't have messages when it was generated the click event is never added
+                // So we need to add it here
+                // But we'll hit a snag if the plane already had a click event, so we'll remove it first
+                this.adsb_planes[plane].position_marker!.off("click");
+                this.adsb_planes[plane].position_marker!.on("click", () => {
+                  this.showPlaneMessages(callsign, hex, tail);
+                  const color = this.find_plane_color(
+                    callsign,
+                    alert,
+                    num_messages || 0,
+                    squawk,
+                    num_messages || 0,
+                    hex,
+                    tail
+                  );
+                  $(`#${hex}_marker`).removeClass();
+                  $(`#${hex}_marker`).addClass(
+                    `datablock ${color} data-jbox-content="${popup_text}`
+                  );
+                });
+              }
             }
+          } else if (
+            this.show_only_acars &&
+            this.layerGroupPlanes.hasLayer(
+              this.adsb_planes[plane].position_marker!
+            )
+          ) {
+            // remove the marker if present
+            this.layerGroupPlanes.removeLayer(
+              this.adsb_planes[plane].position_marker!
+            );
+          }
+
+          // Now determine if datablocks need to be displayed
+          if (this.adsb_planes[plane].datablock_marker === null) {
+            // datablock is missing, add it
+            let datablock_icon = new LeafLet.DivIcon({
+              className: "airplane",
+              html:
+                `<div id="${hex}_datablock" class="airplane_datablock">` +
+                datablock +
+                "</div>",
+            });
+            this.adsb_planes[plane].datablock_marker = new LeafLet.Marker(
+              this.offset_datablock([lat, lon]) as LeafLet.LatLngTuple,
+              { icon: datablock_icon }
+            );
+          }
+
+          // Datablock is present, update it
+          if (
+            this.show_datablocks &&
+            (!this.show_only_acars || num_messages) &&
+            this.layerGroupPlaneDatablocks.hasLayer(
+              this.adsb_planes[plane].datablock_marker!
+            )
+          ) {
+            this.adsb_planes[plane].datablock_marker!.setLatLng(
+              this.offset_datablock([lat, lon])
+            );
+            $(`#${hex}_datablock`).html(datablock);
+          } else if (
+            this.show_datablocks &&
+            (!this.show_only_acars || num_messages)
+          ) {
+            // datablock is missing and should be displayed, add it to the map
+            this.adsb_planes[plane].datablock_marker!.addTo(
+              this.layerGroupPlaneDatablocks
+            );
+          } else if (
+            this.layerGroupPlaneDatablocks.hasLayer(
+              this.adsb_planes[plane].datablock_marker!
+            )
+          ) {
+            // datablock is present and should not be displayed, remove it from the map
+            this.layerGroupPlaneDatablocks.removeLayer(
+              this.adsb_planes[plane].datablock_marker!
+            );
+          }
+        } else {
+          // hide the plane marker if it exists
+          // I doubt we could ever end up in this branch but who knows
+          if (
+            this.adsb_planes[plane].position_marker !== null &&
+            this.layerGroupPlanes.hasLayer(
+              this.adsb_planes[plane].position_marker!
+            )
+          ) {
+            this.layerGroupPlanes.removeLayer(
+              this.adsb_planes[plane].position_marker!
+            );
+          }
+
+          // hide the datablock if it exists
+          if (
+            this.adsb_planes[plane].datablock_marker !== null &&
+            this.layerGroupPlaneDatablocks.hasLayer(
+              this.adsb_planes[plane].datablock_marker!
+            )
+          ) {
+            this.layerGroupPlaneDatablocks.removeLayer(
+              this.adsb_planes[plane].datablock_marker!
+            );
           }
         }
       }
@@ -859,7 +1140,7 @@ export let live_map_page = {
   showPlaneMessages: function (
     plane_callsign: string = "",
     plane_hex: string = "",
-    plane_tail = ""
+    plane_tail: string = ""
   ): void {
     if (plane_callsign === "" && plane_hex === "") return;
     this.current_modal_terms = {
@@ -867,11 +1148,13 @@ export let live_map_page = {
       hex: plane_hex,
       tail: plane_tail,
     };
+
     const plane_details: plane_match = get_match(
       plane_callsign,
       plane_hex,
       plane_tail
     );
+
     const matches = plane_details.messages;
     if (matches.length === 0) return;
     if (this.modal_content == "") {
@@ -894,7 +1177,7 @@ export let live_map_page = {
     this.plane_message_modal.setHeight(window_height);
     this.plane_message_modal.setWidth(window_width);
     this.plane_message_modal.open();
-    this.adsb_planes[plane_hex.toLowerCase()].num_messages = matches.length;
+    this.adsb_planes[plane_hex].num_messages = matches.length;
     this.airplaneList();
     resize_tabs(window_width - 40, false);
     $(".show_when_small").css("display", `inline-block`);
@@ -969,6 +1252,20 @@ export let live_map_page = {
         smoothWheelZoom: true,
         smoothSensitivity: 1,
         zoomControl: false,
+        click:
+          /Android|webOS|iPhone|iPad|iPod|BlackBerry/i.test(
+            navigator.userAgent
+          ) ||
+          /Android|webOS|iPhone|iPad|iPod|BlackBerry/i.test(navigator.platform)
+            ? false
+            : true,
+        tap:
+          /Android|webOS|iPhone|iPad|iPod|BlackBerry/i.test(
+            navigator.userAgent
+          ) ||
+          /Android|webOS|iPhone|iPad|iPod|BlackBerry/i.test(navigator.platform)
+            ? true
+            : false,
       } as MapOptionsWithNewConfig);
 
       LeafLet.tileLayer("https://{s}.tile.osm.org/{z}/{x}/{y}.png", {
@@ -1005,7 +1302,6 @@ export let live_map_page = {
             expires: 365,
             sameSite: "Strict",
           });
-          this.redraw_map();
         },
         move: () => {
           const center = this.map.getCenter();
