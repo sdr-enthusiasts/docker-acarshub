@@ -1243,7 +1243,6 @@ export let live_map_page = {
     this.window_size = window_size;
     this.get_cookie_value();
     if (this.live_map_page_active && this.adsb_enabled) {
-      console.log("hello");
       Object.keys(this.adsb_planes).forEach((plane) => {
         this.adsb_planes[plane].datablock_marker = null;
         this.adsb_planes[plane].position_marker = null;
