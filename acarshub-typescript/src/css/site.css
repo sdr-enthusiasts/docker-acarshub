@@ -215,6 +215,8 @@ body {
   margin-left: auto;
   margin-right: auto;
   font-family: var(--site-fonts);
+  font-size: 14px;
+  line-height: 1.42857143;
   -ms-overflow-style: none; /* for Internet Explorer, Edge */
   scrollbar-width: none; /* for Firefox */
   overflow-y: scroll;
@@ -230,11 +232,13 @@ body::-webkit-scrollbar {
   position: relative;
   width: 100%;
   margin-top: 0;
+  padding-left: 5px;
+  padding-right: 5px;
 }
 
 div#content.container {
   position: fixed;
-  top: 98px;
+  top: 105px;
   padding-left: 20px;
   padding-right: 20px;
   width: calc(100vw - 40px);
@@ -430,6 +434,16 @@ pre {
   white-space: -pre-wrap;      /* Opera 4-6 */
   white-space: -o-pre-wrap;    /* Opera 7 */
   word-wrap: break-word;       /* Internet Explorer 5.5+ */
+  display: block;
+  padding: 9.5px;
+  margin: 0 0 10px;
+  font-size: 13px;
+  line-height: 1.42857143;
+  color: #333;
+  word-break: break-all;
+  background-color: #f5f5f5;
+  border: 1px solid #ccc;
+  border-radius: 4px;
 }
 
 a {
@@ -513,7 +527,7 @@ nav {
   border-bottom-right-radius: 8px;
   border-bottom-left-radius: 8px;
   z-index: 10;
-  padding-bottom: 2px;
+  padding-bottom: 1px;
 }
 
 .nav_text {
@@ -526,7 +540,8 @@ nav {
   text-transform: uppercase;
 }
 
-ul.primary li a.invert_a {
+ul.primary li a.invert_a,
+ul.primary li a.invert_a:visited {
   color: var(--full-white);
 }
 
@@ -536,7 +551,8 @@ ul.primary li a.invert_a:hover {
 }
 
 /* prime */
-ul.primary li a {
+ul.primary li a,
+ul.primary li a:visited {
   display: block;
   padding-top: 35px;
   padding-bottom: 10px;
@@ -548,7 +564,8 @@ ul.primary li:last-child a {
   border-right: none;
 }
 
-ul.primary li a:hover {
+ul.primary li a:hover,
+ul.primary li a:active {
   color: var(--full-white);
   transition: all 0.25s ease-in;
 }
@@ -691,6 +708,7 @@ input[type='checkbox'] {
   margin-bottom: -1px;
   margin-left: -1px;
   border: 1px solid var(--grey-highlight);
+  font-weight: bold;
 }
 
 .tabinator label::before {
@@ -887,9 +905,16 @@ canvas {
   width: 100%;
 }
 
+@media only screen and (min-width: 0px) {
+  .container {
+    min-width: 400px;
+    max-width: calc(100vw - 40px);
+  }
+}
+
 @media only screen and (max-width: 1200px) {
   div#content.container {
-    top: 70px;
+    top: 77px;
     height: calc(100vh - 98px);
   }
 
@@ -933,7 +958,7 @@ canvas {
   }
 
   div#content.container {
-    top: 133px;
+    top: 140px;
     height: calc(100vh - 160px);
   }
 
@@ -1006,7 +1031,7 @@ canvas {
   }
 
   div#content.container {
-    top: 133px;
+    top: 140px;
     height: calc(100vh - 160px);
   }
 
@@ -1016,6 +1041,10 @@ canvas {
 
   #side_pane {
     width: 100% !important;
+  }
+
+  #acarshub_help {
+    display: none;
   }
 }
 
