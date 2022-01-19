@@ -1239,8 +1239,8 @@ div.plane_element {
   color: var(--full-black);
   font-weight: bold;
   text-transform: uppercase;
-  max-width: 80px;
-  max-height: 80px;
+  max-width: 120px;
+  max-height: 120px;
   width: max-content;
   padding: 4px;
   border-radius: 15px;
