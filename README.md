@@ -166,7 +166,9 @@ In the configuration options for tar1090. Setting this will include additional a
 | `ENABLE_VDLM` | Toggle VDLM decoding on. If set to any non-blank value VDLM decoding will start. Set to "external" if you want     to not use an SDR and push vdmldec json data to UDP port 5555 (needs port mapping 5555:5555/udp). | No | Blank |
 | `STATION_ID_VDLM`  | Your unique ID for the VDLM  feed. Used on the [ACARS.io](http://acars.io) site. Follow the guide [here](https://app.airframes.io/about) for formatting. | Yes, if ENABLE_VDLM is enabled | Blank |
 | `FREQS_VDLM`  | List of frequencies, separated by a single `;`, used for VDLM monitoring. | Yes, if ENABLE_VDLM is enabled AND you are not using custom SDR definitions (see below)| Blank |
-| `VDLM_FILTER_ENABLE` | By default `dumpvdl2` filters out certain kinds of messages. These messages have been determined to be generally not interesting and not of any import so it's safe to discard these. If you wish to see all VDLM2 messages your station is receiving set this value to be blank. | No | `true` |
+| `VDLM_FILTER_ENABLE` | By default `dumpvdl2` filters out certain kinds of messages. These messages have been determined to be generally not interesting and not of any import so it's safe to discard these. See note below. If you wish to see all VDLM2 messages your station is receiving set this value to be blank. | No | `true` |
+
+* If you were previously running ACARS Hub and the `vdlm2dec` decoder you may see a "drop" in message rate in your stats. This is normal and is a result of `vdlm2dec` not doing any filtering and `dumpvdl2` doing filtering. If you disable the filter you will see an increase in SD card writes so use with caution.
 
 ### RTL Device assignment
 
