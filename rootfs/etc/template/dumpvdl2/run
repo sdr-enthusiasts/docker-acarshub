@@ -29,7 +29,7 @@ if [ -n "${PPM}" ]; then
 	VDLM_CMD+=("--correction" "$PPM")
 fi
 
-VDLM_CMD+=("--gain" "$GAIN" "--station-id" "$STATION_ID_VDLM")
+VDLM_CMD+=("--gain" "$GAIN")
 
 # Send output JSON to vdlm2_server.
 if [[ -n "${VDLM_FILTER_ENABLE}" ]]; then
