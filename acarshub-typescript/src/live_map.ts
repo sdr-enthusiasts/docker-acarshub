@@ -205,13 +205,28 @@ export let live_map_page = {
         this.adsb_plane_callsign.push(this.get_callsign(aircraft));
         this.adsb_plane_tails.push(this.get_tail(aircraft));
         if (
-          this.adsb_planes[aircraft.hex.replace("~", "").toUpperCase()] ==
-          undefined
+          this.adsb_planes[
+            aircraft.hex
+              .replace("-", "")
+              .replace(".", "")
+              .replace("~", "")
+              .toUpperCase()
+          ] == undefined
         ) {
-          this.adsb_planes[aircraft.hex.replace("~", "").toUpperCase()] = {
+          this.adsb_planes[
+            aircraft.hex
+              .replace("-", "")
+              .replace(".", "")
+              .replace("~", "")
+              .toUpperCase()
+          ] = {
             position: aircraft,
             last_updated: this.last_updated,
-            id: aircraft.hex.replace("~", "").toUpperCase(),
+            id: aircraft.hex
+              .replace("-", "")
+              .replace(".", "")
+              .replace("~", "")
+              .toUpperCase(),
             num_messages: 0,
             position_marker: null,
             datablock_marker: null,
@@ -219,10 +234,18 @@ export let live_map_page = {
           };
         } else {
           this.adsb_planes[
-            aircraft.hex.replace("~", "").toUpperCase()
+            aircraft.hex
+              .replace("-", "")
+              .replace(".", "")
+              .replace("~", "")
+              .toUpperCase()
           ].position = aircraft;
           this.adsb_planes[
-            aircraft.hex.replace("~", "").toUpperCase()
+            aircraft.hex
+              .replace("-", "")
+              .replace(".", "")
+              .replace("~", "")
+              .toUpperCase()
           ].last_updated = this.last_updated;
         }
       });
@@ -498,12 +521,18 @@ export let live_map_page = {
   },
 
   get_tail: function (plane: adsb_plane): string {
-    return plane.r ? plane.r.replace("-", "") : <any>undefined;
+    return plane.r
+      ? plane.r.replace("-", "").replace(".", "").replace("~", "")
+      : <any>undefined;
   },
 
   get_hex: function (plane: adsb_plane): string {
     return plane.hex
-      ? plane.hex.replace("~", "").toUpperCase()
+      ? plane.hex
+          .replace("-", "")
+          .replace(".", "")
+          .replace("~", "")
+          .toUpperCase()
       : <any>undefined;
   },
 
