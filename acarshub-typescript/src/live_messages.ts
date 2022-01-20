@@ -109,7 +109,7 @@ export let live_messages_page = {
     "lat",
     "lon",
     "alt",
-  ],
+  ] as Array<keyof acars_msg>,
   filtered_messages: 0 as number,
   received_messages: 0 as number,
   live_message_modal: new jBox("Modal", {
@@ -569,7 +569,6 @@ export let live_messages_page = {
   check_for_dup(message: acars_msg, new_msg: acars_msg): boolean {
     return Object.values(this.msg_tags).every((tag) => {
       if (tag in message && tag in new_msg) {
-        // @ts-expect-error
         if (message[tag] == new_msg[tag]) return true;
       } else if (!(tag in message) && !(tag in new_msg)) {
         return true;
