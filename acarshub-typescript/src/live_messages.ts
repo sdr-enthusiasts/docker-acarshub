@@ -428,7 +428,6 @@ export let live_messages_page = {
       });
       if (this.exclude.length > 0) this.exclude = exclude_cookie.split(" ");
       else this.exclude = [];
-      console.log(this.exclude);
     }
   },
 
@@ -504,6 +503,69 @@ export let live_messages_page = {
     return skip;
   },
 
+  // See if the new message matches an old message
+
+  check_for_message_match(message: acars_msg, new_msg: acars_msg): boolean {
+    if (
+      message.hasOwnProperty("tail") &&
+      new_msg.tail == message.tail &&
+      ((message.hasOwnProperty("icao") &&
+        new_msg.hasOwnProperty("icao") &&
+        message.icao == new_msg.icao) ||
+        !message.hasOwnProperty("icao") ||
+        !new_msg.hasOwnProperty("icao")) &&
+      ((message.hasOwnProperty("flight") &&
+        new_msg.hasOwnProperty("flight") &&
+        message.flight == new_msg.flight) ||
+        !message.hasOwnProperty("flight") ||
+        !new_msg.hasOwnProperty("flight"))
+    ) {
+      return true;
+    } else if (
+      message.hasOwnProperty("icao") &&
+      new_msg.icao == message.icao &&
+      ((message.hasOwnProperty("tail") &&
+        new_msg.hasOwnProperty("tail") &&
+        message.tail == new_msg.tail) ||
+        !message.hasOwnProperty("tail") ||
+        !new_msg.hasOwnProperty("tail")) &&
+      ((message.hasOwnProperty("flight") &&
+        new_msg.hasOwnProperty("flight") &&
+        message.flight == new_msg.flight) ||
+        !message.hasOwnProperty("flight") ||
+        !new_msg.hasOwnProperty("flight"))
+    ) {
+      return true;
+    } else if (
+      message.hasOwnProperty("flight") &&
+      new_msg.flight == message.flight &&
+      ((message.hasOwnProperty("icao") &&
+        new_msg.hasOwnProperty("icao") &&
+        message.icao == new_msg.icao) ||
+        !message.hasOwnProperty("icao") ||
+        !new_msg.hasOwnProperty("icao")) &&
+      ((message.hasOwnProperty("tail") &&
+        new_msg.hasOwnProperty("tail") &&
+        message.tail == new_msg.tail) ||
+        !message.hasOwnProperty("tail") ||
+        !new_msg.hasOwnProperty("tail"))
+    ) {
+      return true;
+    } else if (
+      new_msg.hasOwnProperty("label") &&
+      message.hasOwnProperty("label") &&
+      new_msg.hasOwnProperty("text") &&
+      message.hasOwnProperty("text") &&
+      new_msg.label == "SQ" &&
+      message.label == "SQ" &&
+      new_msg.text == message.text
+    ) {
+      return true;
+    }
+
+    return false;
+  },
+
   new_acars_message: function (msg: html_msg): void {
     let new_msg = msg.msghtml;
     if (!this.skip_message(new_msg)) {
@@ -543,69 +605,11 @@ export let live_messages_page = {
         // With one field being different. We'll reject that message as being not in the same message group if that's the case
         // We'll also test for squitter messages which don't have tail/icao/flight
         for (const message of planes.messages) {
-          if (
-            message.hasOwnProperty("tail") &&
-            new_tail == message.tail &&
-            ((message.hasOwnProperty("icao") &&
-              new_msg.hasOwnProperty("icao") &&
-              message.icao == new_icao) ||
-              !message.hasOwnProperty("icao") ||
-              !new_msg.hasOwnProperty("icao")) &&
-            ((message.hasOwnProperty("flight") &&
-              new_msg.hasOwnProperty("flight") &&
-              message.flight == new_flight) ||
-              !message.hasOwnProperty("flight") ||
-              !new_msg.hasOwnProperty("flight"))
-          ) {
-            found = true;
-            index_new = this.lm_msgs_received.planes.indexOf(planes);
-          } else if (
-            message.hasOwnProperty("icao") &&
-            new_icao == message.icao &&
-            ((message.hasOwnProperty("tail") &&
-              new_msg.hasOwnProperty("tail") &&
-              message.tail == new_tail) ||
-              !message.hasOwnProperty("tail") ||
-              !new_msg.hasOwnProperty("tail")) &&
-            ((message.hasOwnProperty("flight") &&
-              new_msg.hasOwnProperty("flight") &&
-              message.flight == new_flight) ||
-              !message.hasOwnProperty("flight") ||
-              !new_msg.hasOwnProperty("flight"))
-          ) {
-            found = true;
-            index_new = this.lm_msgs_received.planes.indexOf(planes);
-          } else if (
-            message.hasOwnProperty("flight") &&
-            new_flight == message.flight &&
-            ((message.hasOwnProperty("icao") &&
-              new_msg.hasOwnProperty("icao") &&
-              message.icao == new_icao) ||
-              !message.hasOwnProperty("icao") ||
-              !new_msg.hasOwnProperty("icao")) &&
-            ((message.hasOwnProperty("tail") &&
-              new_msg.hasOwnProperty("tail") &&
-              message.tail == new_tail) ||
-              !message.hasOwnProperty("tail") ||
-              !new_msg.hasOwnProperty("tail"))
-          ) {
-            found = true;
-            index_new = this.lm_msgs_received.planes.indexOf(planes);
-          } else if (
-            new_msg.hasOwnProperty("label") &&
-            message.hasOwnProperty("label") &&
-            new_msg.hasOwnProperty("text") &&
-            message.hasOwnProperty("text") &&
-            new_msg.label == "SQ" &&
-            message.label == "SQ" &&
-            new_msg.text == message.text
-          ) {
-            found = true;
-            index_new = this.lm_msgs_received.planes.indexOf(planes);
-          }
-          if (found) {
+          if (this.check_for_message_match(message, new_msg)) {
             // We've found a matching message
             // See if the UIDs for the plane are present, and if not, push them
+            found = true;
+            index_new = planes.messages.indexOf(message);
             if (
               new_icao_flight &&
               !planes.identifiers.includes(new_icao_flight)
