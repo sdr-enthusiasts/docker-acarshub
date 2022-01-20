@@ -14,7 +14,7 @@
   "license": "GPL-3.0-only",
   "devDependencies": {
     "@babel/core": "^7.16.7",
-    "@babel/preset-env": "^7.16.8",
+    "@babel/preset-env": "^7.16.10",
     "@types/jquery": "^3.5.13",
     "@types/js-cookie": "^3.0.1",
     "@types/leaflet": "^1.7.8",
