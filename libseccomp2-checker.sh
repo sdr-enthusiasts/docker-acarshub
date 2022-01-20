@@ -10,7 +10,12 @@ echo "Welcome to the libseccomp2 upgrade script for Buster. This script is meant
 echo "that run Debian Bullseye or later. For this, the \"libseccomp2\" library version must be 2.4 or later."
 echo "This script will check this, and upgrade the library as necessary."
 echo ""
-echo "Once upgraded, you can always stay up to date by typing \"sudo apt update && sudo apt upgrade\" on your commandline."
+echo "Once upgraded, you can always stay up to date by typing \"sudo apt update && sudo apt upgrade\" on your command line."
+echo ""
+
+# Now make sure that all packages are at their latest version, just in case the system is running way behind:
+echo "Updating your system with the latest package versions. Please be patient, this may take a while."
+sudo apt update -q && sudo apt upgrade -y -q && sudo apt install -y -q bc >/dev/null 2>&1
 echo ""
 
 LIBVERSION="$(apt-cache policy libseccomp2|sed -n 's/\s*Installed:\s*\([0-9]*.[0-9]*\).*/\1/p')"
@@ -34,9 +39,7 @@ echo "Your system is \"buster\" based, and it has libseccomp2 v${LIBVERSION}. Up
 read -rp "Press ENTER to the upgrade" </dev/tty
 echo ""
 
-# Now make sure that all packages are at their latest version, just in case the system is running way behind:
-echo "Updating your system with the latest package versions. Please be patient, this may take a while."
-sudo apt update && sudo apt upgrade -y -q
+
 
 #Now check once more which version of libseccomp2 is installed:
 LIBVERSION="$(apt-cache policy libseccomp2|sed -n 's/\s*Installed:\s*\([0-9]*.[0-9]*\).*/\1/p')"
