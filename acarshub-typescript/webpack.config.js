@@ -72,7 +72,7 @@ let config = {
     ],
   },
   output: {
-    filename: "[name].[chunkhash].js",
+    //filename: "[name].[chunkhash].js",
     path: path.resolve(__dirname, "dist/static/js"),
     publicPath: "static/js/",
     clean: true,
@@ -146,6 +146,9 @@ let config = {
 module.exports = (env, argv) => {
   if (argv.mode === "development") {
     config.devtool = "source-map";
+    config.output.filename = "[name].js";
+  } else {
+    config.output.filename = "[name].[chunkhash].js";
   }
   return config;
 };
