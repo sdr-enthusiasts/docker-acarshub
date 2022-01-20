@@ -95,7 +95,7 @@ export let live_messages_page = {
   lm_md: new MessageDecoder(),
   lm_acars_path: "" as string,
   lm_acars_url: "" as string,
-  dont_skip_msg_tags: [
+  msg_tags: [
     "text",
     "data",
     "libacars",
@@ -484,8 +484,8 @@ export let live_messages_page = {
   },
 
   skip_message(msg: acars_msg): boolean {
-    let skip = true;
     // The message has a label and it's in the group to exclude
+    let skip_message = true;
     if (
       msg.hasOwnProperty("label") == true &&
       this.exclude.indexOf(msg.label!) != -1
@@ -496,11 +496,11 @@ export let live_messages_page = {
     if (!this.text_filter) return false;
 
     // The user is filtering empty messages, return if not empty
-    Object.values(this.dont_skip_msg_tags).forEach((tag) => {
-      if (msg.hasOwnProperty(tag)) skip = false;
+    Object.values(this.msg_tags).forEach((tag) => {
+      if (tag in msg) skip_message = false;
     });
 
-    return skip;
+    return skip_message;
   },
 
   // See if the new message matches an old message
@@ -564,6 +564,18 @@ export let live_messages_page = {
     }
 
     return false;
+  },
+
+  check_for_dup(message: acars_msg, new_msg: acars_msg): boolean {
+    return Object.values(this.msg_tags).every((tag) => {
+      if (tag in message && tag in new_msg) {
+        // @ts-expect-error
+        if (message[tag] == new_msg[tag]) return true;
+      } else if (!(tag in message) && !(tag in new_msg)) {
+        return true;
+      }
+      return false;
+    });
   },
 
   new_acars_message: function (msg: html_msg): void {
@@ -633,53 +645,15 @@ export let live_messages_page = {
             // Last check is to see if we've received a multi-part message
             // If we do find a match we'll update the timestamp of the parent message
             // And add/update a duplicate counter to the parent message
-            if (
-              (message.text == new_msg.text ||
-                (!message.hasOwnProperty("text") &&
-                  !new_msg.hasOwnProperty("text"))) &&
-              (message.data == new_msg.data ||
-                (!message.hasOwnProperty("data") &&
-                  !new_msg.hasOwnProperty("data"))) &&
-              (message.libacars == new_msg.libacars ||
-                (!message.hasOwnProperty("libacars") &&
-                  !new_msg.hasOwnProperty("libacars"))) &&
-              (message.dsta == new_msg.dsta ||
-                (!message.hasOwnProperty("dsta") &&
-                  !new_msg.hasOwnProperty("dsta"))) &&
-              (message.depa == new_msg.depa ||
-                (!message.hasOwnProperty("depa") &&
-                  !new_msg.hasOwnProperty("depa"))) &&
-              (message.eta == new_msg.eta ||
-                (!message.hasOwnProperty("eta") &&
-                  !new_msg.hasOwnProperty("eta"))) &&
-              (message.gtout == new_msg.gtout ||
-                (!message.hasOwnProperty("gtout") &&
-                  !new_msg.hasOwnProperty("gtout"))) &&
-              (message.gtin == new_msg.gtin ||
-                (!message.hasOwnProperty("gtin") &&
-                  !new_msg.hasOwnProperty("gtin"))) &&
-              (message.wloff == new_msg.wloff ||
-                (!message.hasOwnProperty("wloff") &&
-                  !new_msg.hasOwnProperty("wloff"))) &&
-              (message.wlin == new_msg.wlin ||
-                (!message.hasOwnProperty("wlin") &&
-                  !new_msg.hasOwnProperty("wlin"))) &&
-              (message.lat == new_msg.lat ||
-                (!message.hasOwnProperty("lat") &&
-                  !new_msg.hasOwnProperty("lat"))) &&
-              (message.lon == new_msg.lon ||
-                (!message.hasOwnProperty("lon") &&
-                  !new_msg.hasOwnProperty("lon"))) &&
-              (message.alt == new_msg.alt ||
-                (!message.hasOwnProperty("alt") &&
-                  !new_msg.hasOwnProperty("alt")))
-            ) {
+            if (this.check_for_dup(message, new_msg)) {
+              // Check if the message is a dup based on all fields
               message.timestamp = new_msg.timestamp;
               message.duplicates = String(Number(message.duplicates || 0) + 1);
               rejected = true;
             } else if (
-              message.hasOwnProperty("text") &&
-              new_msg.hasOwnProperty("text") &&
+              // check if text fields are the same
+              "text" in message &&
+              "text" in new_msg &&
               message.text == new_msg.text
             ) {
               // it's the same message
