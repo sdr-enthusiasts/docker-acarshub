@@ -486,10 +486,7 @@ export let live_messages_page = {
   skip_message(msg: acars_msg): boolean {
     // The message has a label and it's in the group to exclude
     let skip_message = true;
-    if (
-      msg.hasOwnProperty("label") == true &&
-      this.exclude.indexOf(msg.label!) != -1
-    )
+    if ("label" in msg == true && this.exclude.indexOf(msg.label!) != -1)
       return true;
 
     // The user is not filtering empty messages, return
@@ -507,55 +504,41 @@ export let live_messages_page = {
 
   check_for_message_match(message: acars_msg, new_msg: acars_msg): boolean {
     if (
-      message.hasOwnProperty("tail") &&
+      this.property_checker(message, new_msg, "tail") &&
       new_msg.tail == message.tail &&
-      ((message.hasOwnProperty("icao") &&
-        new_msg.hasOwnProperty("icao") &&
+      ((this.property_checker(message, new_msg, "icao") &&
         message.icao == new_msg.icao) ||
-        !message.hasOwnProperty("icao") ||
-        !new_msg.hasOwnProperty("icao")) &&
-      ((message.hasOwnProperty("flight") &&
-        new_msg.hasOwnProperty("flight") &&
+        !this.property_checker(message, new_msg, "icao")) &&
+      ((this.property_checker(message, new_msg, "flight") &&
         message.flight == new_msg.flight) ||
-        !message.hasOwnProperty("flight") ||
-        !new_msg.hasOwnProperty("flight"))
+        !this.property_checker(message, new_msg, "flight"))
     ) {
       return true;
     } else if (
-      message.hasOwnProperty("icao") &&
+      this.property_checker(message, new_msg, "icao") &&
       new_msg.icao == message.icao &&
-      ((message.hasOwnProperty("tail") &&
-        new_msg.hasOwnProperty("tail") &&
+      ((this.property_checker(message, new_msg, "tail") &&
         message.tail == new_msg.tail) ||
-        !message.hasOwnProperty("tail") ||
-        !new_msg.hasOwnProperty("tail")) &&
-      ((message.hasOwnProperty("flight") &&
-        new_msg.hasOwnProperty("flight") &&
+        !this.property_checker(message, new_msg, "tail")) &&
+      ((this.property_checker(message, new_msg, "flight") &&
         message.flight == new_msg.flight) ||
-        !message.hasOwnProperty("flight") ||
-        !new_msg.hasOwnProperty("flight"))
+        !this.property_checker(message, new_msg, "flight"))
     ) {
       return true;
     } else if (
-      message.hasOwnProperty("flight") &&
+      this.property_checker(message, new_msg, "flight") &&
       new_msg.flight == message.flight &&
-      ((message.hasOwnProperty("icao") &&
-        new_msg.hasOwnProperty("icao") &&
+      ((this.property_checker(message, new_msg, "icao") &&
         message.icao == new_msg.icao) ||
-        !message.hasOwnProperty("icao") ||
-        !new_msg.hasOwnProperty("icao")) &&
-      ((message.hasOwnProperty("tail") &&
-        new_msg.hasOwnProperty("tail") &&
+        !this.property_checker(message, new_msg, "icao")) &&
+      ((this.property_checker(message, new_msg, "tail") &&
         message.tail == new_msg.tail) ||
-        !message.hasOwnProperty("tail") ||
-        !new_msg.hasOwnProperty("tail"))
+        !this.property_checker(message, new_msg, "tail"))
     ) {
       return true;
     } else if (
-      new_msg.hasOwnProperty("label") &&
-      message.hasOwnProperty("label") &&
-      new_msg.hasOwnProperty("text") &&
-      message.hasOwnProperty("text") &&
+      this.property_checker(message, new_msg, "label") &&
+      this.property_checker(message, new_msg, "text") &&
       new_msg.label == "SQ" &&
       message.label == "SQ" &&
       new_msg.text == message.text
@@ -566,7 +549,15 @@ export let live_messages_page = {
     return false;
   },
 
-  check_for_dup(message: acars_msg, new_msg: acars_msg): boolean {
+  property_checker: function (
+    message: acars_msg,
+    new_msg: acars_msg,
+    property: string
+  ): boolean {
+    return property in message && property in new_msg;
+  },
+
+  check_for_dup: function (message: acars_msg, new_msg: acars_msg): boolean {
     return Object.values(this.msg_tags).every((tag) => {
       if (tag in message && tag in new_msg) {
         if (message[tag] == new_msg[tag]) return true;
@@ -581,7 +572,7 @@ export let live_messages_page = {
     let new_msg = msg.msghtml;
     if (!this.skip_message(new_msg)) {
       // if the message filter is not set or the message is not in the exclude list, continue
-      if (new_msg.hasOwnProperty("text")) {
+      if ("text" in new_msg) {
         // see if we can run it through the text decoder
         let decoded_msg = this.lm_md.decode(new_msg);
         if (decoded_msg.decoded == true) {
@@ -661,8 +652,8 @@ export let live_messages_page = {
               rejected = true;
             } else if (
               new_msg.station_id == message.station_id && // Is the message from the same station id? Keep ACARS/VDLM separate
-              new_msg.hasOwnProperty("msgno") &&
-              message.hasOwnProperty("msgno") &&
+              "msgno" in new_msg &&
+              "msgno" in message &&
               new_msg.timestamp - message.timestamp < 8.0 && // We'll assume the message is not a multi-part message if the time from the new message is too great from the rest of the group
               typeof new_msg.msgno !== "undefined" &&
               typeof message.msgno !== "undefined" &&
@@ -675,7 +666,7 @@ export let live_messages_page = {
               rejected = true;
               let add_multi = true;
 
-              if (message.hasOwnProperty("msgno_parts")) {
+              if ("msgno_parts" in message) {
                 // Now we'll see if the multi-part message is a dup
                 let split = message.msgno_parts!.toString().split(" "); // format of stored parts is "MSGID MSGID2" etc
 
@@ -717,14 +708,14 @@ export let live_messages_page = {
 
               if (add_multi) {
                 // Multi-part message has been found
-                if (message.text && new_msg.hasOwnProperty("text"))
+                if (message.text && "text" in new_msg)
                   // If the multi-part parent has a text field and the found match has a text field, append
                   message.text += new_msg.text;
-                else if (new_msg.hasOwnProperty("text"))
+                else if ("text" in new_msg)
                   // If the new message has a text field but the parent does not, add the new text to the parent
                   message.text = new_msg.text;
 
-                if (message.hasOwnProperty("msgno_parts")) {
+                if ("msgno_parts" in message) {
                   // If the new message is multi, with no dupes found we need to append the msg ID to the found IDs
                   message.msgno_parts += " " + new_msg.msgno;
                 } else {
