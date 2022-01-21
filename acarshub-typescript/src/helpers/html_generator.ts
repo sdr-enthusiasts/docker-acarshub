@@ -9,7 +9,7 @@ export function display_messages(
   msgs_to_process: acars_msg[][],
   selected_tabs: string = "",
   live_page: boolean = false
-) {
+): string {
   let html_string = "";
 
   msgs_to_process.forEach((plane) => {
