@@ -1,7 +1,7 @@
 import * as LeafLet from "leaflet";
-import "./js-other/SmoothWheelZoom";
-import "./js-other/leaftlet.legend";
-import "./js-other/Leaflet.Control.Custom";
+import "../js-other/SmoothWheelZoom";
+import "../js-other/leaftlet.legend";
+import "../js-other/Leaflet.Control.Custom";
 import Cookies from "js-cookie";
 import {
   acars_msg,
@@ -15,10 +15,10 @@ import {
   plane_match,
   plane_num_msgs_and_alert,
   MapOptionsWithNewConfig,
-} from "./interfaces";
+} from "../interfaces";
 import jBox from "jbox";
-import { display_messages } from "./html_generator";
-import { getBaseMarker, svgShapeToURI } from "./js-other/aircraft_icons";
+import { display_messages } from "../helpers/html_generator";
+import { getBaseMarker, svgShapeToURI } from "../js-other/aircraft_icons";
 import {
   resize_tabs,
   //showPlaneMessages,
@@ -26,9 +26,9 @@ import {
   get_match,
   get_window_size,
   //setScrollers,
-} from "./index";
-import { tooltip } from "./tooltips";
-import { images } from "./assets";
+} from "../index";
+import { tooltip } from "../helpers/tooltips";
+import { images } from "../assets/assets";
 declare const window: any;
 export let live_map_page = {
   livemap_acars_path: "" as string,

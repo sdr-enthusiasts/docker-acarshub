@@ -1,4 +1,4 @@
-import { acars_msg } from "./interfaces";
+import { acars_msg } from "../interfaces";
 
 export let html_functions = {
   start_message(uid: string) {

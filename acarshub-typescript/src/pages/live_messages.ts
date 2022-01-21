@@ -1,6 +1,6 @@
 import { MessageDecoder } from "@airframes/acars-decoder/dist/MessageDecoder";
 import Cookies from "js-cookie";
-import { display_messages } from "./html_generator";
+import { display_messages } from "../helpers/html_generator";
 import {
   html_msg,
   acars_msg,
@@ -11,17 +11,17 @@ import {
   plane_data,
   alert_matched,
   plane_match,
-} from "./interfaces";
+} from "../interfaces";
 import jBox from "jbox";
 //i mport "jbox/dist/jBox.all.css";
-import { tooltip } from "./tooltips";
+import { tooltip } from "../helpers/tooltips";
 import {
   resize_tabs,
   match_alert,
   sound_alert,
   is_adsb_enabled,
   get_current_planes,
-} from "./index";
+} from "../index";
 
 export let live_messages_page = {
   pause: false as boolean,
@@ -289,13 +289,14 @@ export let live_messages_page = {
       this.pause = false;
       $("#pause_updates").html("Pause Updates");
       $("#received").html("Received messages: ");
-      $("#log").html(
-        display_messages(
-          this.lm_msgs_received.get_all_messages(),
-          this.selected_tabs,
-          true
-        )
-      );
+      $("#log")
+        .html
+        // display_messages(
+        //   this.lm_msgs_received.get_all_messages(),
+        //   this.selected_tabs,
+        //   true
+        // )
+        ();
       resize_tabs();
     } else {
       this.pause = true;
@@ -442,13 +443,14 @@ export let live_messages_page = {
       this.increment_received(true); // show the received msgs
       this.increment_filtered(true); // show the filtered msgs
       this.show_labels();
-      $("#log").html(
-        display_messages(
-          this.lm_msgs_received.get_all_messages(),
-          this.selected_tabs,
-          true
-        )
-      ); // show the messages we've received
+      $("#log")
+        .html
+        // display_messages(
+        //   this.lm_msgs_received.get_all_messages(),
+        //   this.selected_tabs,
+        //   true
+        // )
+        (); // show the messages we've received
       resize_tabs();
       $(document).on("keyup", (event: any) => {
         if (this.lm_page_active) {
@@ -802,13 +804,12 @@ export let live_messages_page = {
       !this.pause &&
       (typeof msg.done_loading === "undefined" || msg.done_loading === true)
     ) {
-      $("#log").html(
-        display_messages(
-          this.lm_msgs_received.get_all_messages(),
-          this.selected_tabs,
-          true
-        )
-      );
+      let output = "";
+      this.lm_msgs_received.get_all_messages().forEach((item) => {
+        output += display_messages([item], this.selected_tabs, true);
+      });
+
+      $("#log").html(output);
       resize_tabs();
       tooltip.close_all_tooltips();
       tooltip.attach_all_tooltips();

@@ -1,10 +1,10 @@
-import legend_has_acars_url from "./assets/images/legend-has-acars.svg";
-import legend_has_acars_alert_unread_url from "./assets/images/legend-has-acars-alert-unread.svg";
-import legend_has_acars_alert_read_url from "./assets/images/legend-has-acars-alert-read.svg";
-import legend_with_acars_unread_url from "./assets/images/legend-with-acars-unread.svg";
-import legend_without_acars_url from "./assets/images/legend-without-acars.svg";
-import acars_alert_url from "./assets/sounds/alert.mp3";
-import safari_image_url from "./assets/images/safari.png";
+import legend_has_acars_url from "./images/legend-has-acars.svg";
+import legend_has_acars_alert_unread_url from "./images/legend-has-acars-alert-unread.svg";
+import legend_has_acars_alert_read_url from "./images/legend-has-acars-alert-read.svg";
+import legend_with_acars_unread_url from "./images/legend-with-acars-unread.svg";
+import legend_without_acars_url from "./images/legend-without-acars.svg";
+import acars_alert_url from "./sounds/alert.mp3";
+import safari_image_url from "./images/safari.png";
 
 import { library, dom } from "@fortawesome/fontawesome-svg-core";
 import { faCheck } from "@fortawesome/free-solid-svg-icons/faCheck";

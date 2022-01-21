@@ -1,20 +1,20 @@
 import Chart from "chart.js/auto";
 import ChartDataLabels from "chartjs-plugin-datalabels";
-import { generate_stat_submenu } from "./index";
-import palette from "./js-other/palette";
+import { generate_stat_submenu } from "../index";
+import palette from "../js-other/palette";
 import {
   signal_grab_freqs,
   signal_grab_message_count,
   signal_grab_updated_graphs,
   is_connected,
-} from "./index";
+} from "../index";
 import {
   alert_term,
   decoders,
   signal,
   signal_count_data,
   signal_freq_data,
-} from "./interfaces";
+} from "../interfaces";
 
 export let stats_page = {
   image_prefix: "" as string,

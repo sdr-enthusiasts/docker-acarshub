@@ -11,14 +11,14 @@ import "leaflet/dist/leaflet.css";
 import "jbox/dist/jBox.all.css";
 import "./css/site.css";
 
-import { menu } from "./menu";
-import { live_messages_page } from "./live_messages";
-import { search_page } from "./search";
-import { stats_page } from "./stats";
-import { about } from "./about";
-import { status } from "./status";
-import { alerts_page } from "./alerts";
-import { tooltip } from "./tooltips";
+import { menu } from "./helpers/menu";
+import { live_messages_page } from "./pages/live_messages";
+import { search_page } from "./pages/search";
+import { stats_page } from "./pages/stats";
+import { about } from "./pages/about";
+import { status } from "./pages/status";
+import { alerts_page } from "./pages/alerts";
+import { tooltip } from "./helpers/tooltips";
 import { io, Socket } from "socket.io-client";
 
 import {
@@ -43,7 +43,7 @@ import {
   acarshub_version,
 } from "./interfaces";
 
-import { live_map_page } from "./live_map";
+import { live_map_page } from "./pages/live_map";
 import Cookies from "js-cookie";
 
 let socket: Socket = <any>null;

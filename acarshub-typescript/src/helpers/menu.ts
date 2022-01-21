@@ -1,5 +1,5 @@
-import { images } from "./assets";
-import { acarshub_version } from "./interfaces";
+import { images } from "../assets/assets";
+import { acarshub_version } from "../interfaces";
 import jBox from "jbox";
 import Cookies from "js-cookie";
 export let menu = {
