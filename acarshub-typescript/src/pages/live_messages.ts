@@ -1,6 +1,9 @@
 import { MessageDecoder } from "@airframes/acars-decoder/dist/MessageDecoder";
 import Cookies from "js-cookie";
-import { display_messages } from "../helpers/html_generator";
+import {
+  display_messages,
+  display_message_group,
+} from "../helpers/html_generator";
 import {
   html_msg,
   acars_msg,
@@ -806,7 +809,7 @@ export let live_messages_page = {
     ) {
       let output = "";
       this.lm_msgs_received.get_all_messages().forEach((item) => {
-        output += display_messages([item], this.selected_tabs, true);
+        output += display_message_group(item, this.selected_tabs, true);
       });
 
       $("#log").html(output);
