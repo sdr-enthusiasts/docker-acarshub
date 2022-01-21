@@ -652,11 +652,9 @@ export let live_messages_page = {
               rejected = true;
             } else if (
               new_msg.station_id == message.station_id && // Is the message from the same station id? Keep ACARS/VDLM separate
-              "msgno" in new_msg &&
-              "msgno" in message &&
               new_msg.timestamp - message.timestamp < 8.0 && // We'll assume the message is not a multi-part message if the time from the new message is too great from the rest of the group
-              typeof new_msg.msgno !== "undefined" &&
-              typeof message.msgno !== "undefined" &&
+              typeof new_msg.msgno !== "undefined" && // For reasons unknown to me TS is throwing an error if we don't check for undefined
+              typeof message.msgno !== "undefined" && // Even though we can't reach this point if the message doesn't have a msgno
               ((new_msg.msgno.charAt(0) == message.msgno.charAt(0) && // Next two lines match on AzzA pattern
                 new_msg.msgno.charAt(3) == message.msgno.charAt(3)) ||
                 new_msg.msgno.substring(0, 3) == message.msgno.substring(0, 3))
