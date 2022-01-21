@@ -15,6 +15,7 @@ export function display_messages(
   msgs_to_process.forEach((plane) => {
     html_string += display_message_group(plane, selected_tabs, live_page);
   });
+
   return html_string;
 }
 
@@ -117,17 +118,17 @@ export function display_message_group(
     }
   }
 
-  for (let u = 0; u < msg_to_process.length; u++) {
+  msg_to_process.forEach((message) => {
     // Now we'll generate the HTML for each message in the group
     let html_output = "";
     if (msg_to_process.length > 1) {
       // If we have multiple messages in this group we need to set the non-selected tabs to invisible
       let tab_uid = unique_id;
 
-      tab_uid = msg_to_process[u].uid; // UID for the current message
-      tab_uid = msg_to_process[u].uid; // UID for the current message
+      tab_uid = message.uid; // UID for the current message
+      tab_uid = message.uid; // UID for the current message
 
-      if (active_tab === "0" && u === 0)
+      if (active_tab === "0" && msg_to_process.indexOf(message) === 0)
         html_output += html_functions.message_div(unique_id, tab_uid);
       // Case for no tab selected by user. Newest message is active
       else if (tab_uid === String(active_tab))
@@ -136,8 +137,7 @@ export function display_message_group(
       // Hide the selected tab if the previous cases don't match
       else html_output += html_functions.message_div(unique_id, tab_uid, false);
     }
-
-    let message: acars_msg = msg_to_process[u]; // variable to hold the current message
+    // variable to hold the current message
     html_output += html_functions.start_message_box();
     html_output += html_functions.message_station_and_type(
       message.message_type,
@@ -300,7 +300,7 @@ export function display_message_group(
     }
 
     msgs_string = msgs_string + html_output;
-  }
+  });
 
   if (msg_to_process.length > 1) {
     msgs_string += html_functions.end_message_tabs();
