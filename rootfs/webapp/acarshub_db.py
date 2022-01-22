@@ -156,6 +156,12 @@ class alertStats(Messages):
     count = Column("count", Integer)
 
 
+class ignoreAlertTerms(Messages):
+    __tablename__ = "ignore_alert_terms"
+    id = Column(Integer(), primary_key=True)
+    term = Column("term", String(32))
+
+
 # Class to store our messages
 
 
@@ -1038,6 +1044,9 @@ def get_alert_counts():
             return result_list
     except Exception as e:
         acarshub_helpers.acars_traceback(e, "database")
+
+
+# def set_alert_ignore(terms: None):
 
 
 def set_alert_terms(terms=None):
