@@ -843,6 +843,7 @@ export let live_messages_page = {
           messages: planes.messages,
           has_alerts: planes.has_alerts,
           num_alerts: planes.num_alerts,
+          matches: planes.has_alerts,
         } as plane_match;
       }
     }
