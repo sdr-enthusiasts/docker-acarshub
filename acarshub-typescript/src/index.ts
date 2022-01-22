@@ -459,9 +459,19 @@ function connection_status(connected = false): void {
   }
   $("#disconnect").html(
     !connected
-      ? ' | <strong><span class="red_body">DISCONNECTED FROM WEB SERVER'
+      ? '<strong><span class="red_body">DISCONNECTED FROM WEB SERVER</strong>'
       : ""
   );
+
+  if (connected) {
+    $("#received").css("display", "inline-block");
+    $("#system_status").css("display", "inline-block");
+    $("#receivedmessages").css("display", "inline-block");
+  } else {
+    $("#received").css("display", "none");
+    $("#system_status").css("display", "none");
+    $("#receivedmessages").css("display", "none");
+  }
 }
 
 // Functions for opening up the socket to the child pages
