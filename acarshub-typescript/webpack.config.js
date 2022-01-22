@@ -148,6 +148,7 @@ module.exports = (env, argv) => {
     config.devtool = "source-map";
     config.output.filename = "[name].js";
   } else {
+    config.devtool = "source-map";
     config.output.filename = "[name].[chunkhash].js";
   }
   return config;

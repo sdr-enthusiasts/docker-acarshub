@@ -952,6 +952,18 @@ a[x-apple-data-detectors] {
   }
 }
 
+@media screen and (max-width: 1070px) {
+  #release_version {
+    display: none;
+  }
+}
+
+@media screen and (max-width: 1100px) {
+  #discord_badge {
+    display: none;
+  }
+}
+
 @media only screen and (max-width: 1200px) {
   div#content.container {
     top: 77px;

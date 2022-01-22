@@ -34,6 +34,7 @@ export let live_map_page = {
   livemap_acars_path: "" as string,
   livemap_acars_url: "" as string,
   adsb_enabled: false as boolean,
+  range_rings: true as boolean,
   live_map_page_active: false as boolean,
   adsb_planes: {} as { [key: string]: adsb_target },
   adsb_plane_tails: [] as Array<string>,
@@ -283,11 +284,16 @@ export let live_map_page = {
     }
   },
 
-  live_map: function (lat_in: number, lon_in: number): void {
+  live_map: function (
+    lat_in: number,
+    lon_in: number,
+    range_rings: boolean
+  ): void {
     this.lat = lat_in;
     this.lon = lon_in;
     this.station_lat = this.lat;
     this.station_lon = this.lon;
+    this.range_rings = range_rings;
     if (this.live_map_page_active && this.adsb_enabled) {
       this.map.setView([this.lat, this.lon]);
       this.set_range_markers();
@@ -298,6 +304,8 @@ export let live_map_page = {
     if (this.layerGroupRangeRings == null)
       this.layerGroupRangeRings = L.layerGroup();
     this.layerGroupRangeRings.clearLayers();
+    if (!this.range_rings) return;
+
     const nautical_miles_to_meters = 1852;
     const ring_radius = [
       10 * nautical_miles_to_meters,

@@ -31,6 +31,7 @@ ACARSHUB_BUILD = "0"
 CURRENT_ACARS_HUB_VERSION = "0"
 CURRENT_ACARS_HUB_BUILD = "0"
 IS_UPDATE_AVAILABLE = False
+ENABLE_RANGE_RINGS = True
 FEED = False
 ARCH = "unknown"
 
@@ -149,6 +150,8 @@ if os.getenv("ENABLE_ADSB", default=False) == "true":
         ADSB_LON = float(os.getenv("ADSB_LON"))
     if os.getenv("ADSB_LAT", default=False):
         ADSB_LAT = float(os.getenv("ADSB_LAT"))
+    if os.getenv("DISABLE_RANGE_RINGS", default=False):
+        ENABLE_RANGE_RINGS = False
 
 if os.getenv("ADSB_BYPASS_URL", default=False):
     ADSB_BYPASS_URL = True
