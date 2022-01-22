@@ -29,6 +29,7 @@ import {
 export let live_messages_page = {
   pause: false as boolean,
   text_filter: false as boolean,
+  current_message_string: "" as string,
   lm_msgs_received: {
     planes: [] as plane[],
     unshift: function (a: plane) {
@@ -445,11 +446,14 @@ export let live_messages_page = {
       this.increment_received(true); // show the received msgs
       this.increment_filtered(true); // show the filtered msgs
       this.show_labels();
-      $("#log").html;
-      display_messages(
-        this.lm_msgs_received.get_all_messages(),
-        this.selected_tabs,
-        true
+      $("#log").html(
+        !this.pause
+          ? display_messages(
+              this.lm_msgs_received.get_all_messages(),
+              this.selected_tabs,
+              true
+            )
+          : this.current_message_string
       ); // show the messages we've received
       resize_tabs();
       $(document).on("keyup", (event: any) => {
@@ -804,12 +808,16 @@ export let live_messages_page = {
       !this.pause &&
       (typeof msg.done_loading === "undefined" || msg.done_loading === true)
     ) {
-      let output = "";
+      this.current_message_string = "";
       this.lm_msgs_received.get_all_messages().forEach((item) => {
-        output += display_message_group(item, this.selected_tabs, true);
+        this.current_message_string += display_message_group(
+          item,
+          this.selected_tabs,
+          true
+        );
       });
 
-      $("#log").html(output);
+      $("#log").html(this.current_message_string);
       resize_tabs();
       tooltip.close_all_tooltips();
       tooltip.attach_all_tooltips();
