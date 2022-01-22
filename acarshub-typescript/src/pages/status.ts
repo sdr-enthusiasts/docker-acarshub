@@ -7,7 +7,7 @@ import {
   adsb_status,
   acarshub_version,
   status_external_formats,
-} from "./interfaces";
+} from "../interfaces";
 
 export let status = {
   status_acars_path: "" as string,

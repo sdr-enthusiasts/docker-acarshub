@@ -120,6 +120,7 @@ img {
 }
 
 .boxed {
+  background-color: var(--full-white);
   box-sizing: border-box;
   display: inline-block;
   padding-top: 8px;
@@ -128,10 +129,17 @@ img {
   padding-left: 10px;
   width: 45px;
   text-align: center;
-  color: var(--creamy-white);
+  color: var(--full-black);
   margin-bottom: -1px;
+  border-left: 1px solid var(--full-black);
+  border-right: 1px solid var(--full-black);
+  border-top: 1px solid var(--full-black);
+  border-bottom: 1px solid var(--full-black);
+  font-weight: bold;
+}
+
+.boxed_right_arrow {
   margin-left: -1px;
-  border: 1px solid var(--pale-white);
 }
 
 .small_img {
@@ -161,8 +169,10 @@ span.red_important strong {
   color: var(--full-limegreen);
 }
 
-.red:hover {
-  color: var(--full-white);
+@media not all and (pointer: coarse) {
+  .red:hover {
+    color: var(--full-white);
+  }
 }
 
 .footer strong {
@@ -173,8 +183,10 @@ span.red_important strong {
   color: var(--blue-highlight);
 }
 
-.sidebar_link:hover {
-  color: var(--full-white);
+@media not all and (pointer: coarse) {
+  .sidebar_link:hover {
+    color: var(--full-white);
+  }
 }
 
 ol {
@@ -215,6 +227,8 @@ body {
   margin-left: auto;
   margin-right: auto;
   font-family: var(--site-fonts);
+  font-size: 14px;
+  line-height: 1.42857143;
   -ms-overflow-style: none; /* for Internet Explorer, Edge */
   scrollbar-width: none; /* for Firefox */
   overflow-y: scroll;
@@ -230,11 +244,13 @@ body::-webkit-scrollbar {
   position: relative;
   width: 100%;
   margin-top: 0;
+  padding-left: 5px;
+  padding-right: 5px;
 }
 
 div#content.container {
   position: fixed;
-  top: 98px;
+  top: 105px;
   padding-left: 20px;
   padding-right: 20px;
   width: calc(100vw - 40px);
@@ -281,6 +297,10 @@ div#log.left {
   margin-right: auto;
   padding-right: 0;
   padding-left: 0;
+}
+
+.acarshub-message-group {
+  margin: auto;
 }
 
 #size {
@@ -361,8 +381,10 @@ div#log.left {
   padding-left: 4px;
 }
 
-a.spread_text:hover {
-  color: var(--full-black);
+@media not all and (pointer: coarse) {
+  a.spread_text:hover {
+    color: var(--full-black);
+  }
 }
 
 .red {
@@ -408,9 +430,11 @@ label {
   font-weight: bold;
 }
 
-.footer a:hover {
-  color: var(--full-white);
-  transition: all 0.25s ease-out;
+@media not all and (pointer: coarse) {
+  .footer a:hover {
+    color: var(--full-white);
+    transition: all 0.25s ease-out;
+  }
 }
 
 .footer div {
@@ -430,6 +454,16 @@ pre {
   white-space: -pre-wrap;      /* Opera 4-6 */
   white-space: -o-pre-wrap;    /* Opera 7 */
   word-wrap: break-word;       /* Internet Explorer 5.5+ */
+  display: block;
+  padding: 9.5px;
+  margin: 0 0 10px;
+  font-size: 13px;
+  line-height: 1.42857143;
+  color: #333;
+  word-break: break-all;
+  background-color: #f5f5f5;
+  border: 1px solid #ccc;
+  border-radius: 4px;
 }
 
 a {
@@ -439,9 +473,11 @@ a {
   text-decoration: none;
 }
 
-a:hover {
-  color: var(--full-black);
-  text-decoration: none;
+@media not all and (pointer: coarse) {
+  a:hover {
+    color: var(--full-black);
+    text-decoration: none;
+  }
 }
 
 a:active {
@@ -513,7 +549,7 @@ nav {
   border-bottom-right-radius: 8px;
   border-bottom-left-radius: 8px;
   z-index: 10;
-  padding-bottom: 2px;
+  padding-bottom: 1px;
 }
 
 .nav_text {
@@ -526,17 +562,14 @@ nav {
   text-transform: uppercase;
 }
 
-ul.primary li a.invert_a {
-  color: var(--full-white);
-}
-
-ul.primary li a.invert_a:hover {
-  color: var(--blue-highlight);
-  transition: all 0.25s ease-in;
+ul.primary li a.invert_a,
+ul.primary li a.invert_a:visited {
+  color: var(--full-white) !important;
 }
 
 /* prime */
-ul.primary li a {
+ul.primary li a,
+ul.primary li a:visited {
   display: block;
   padding-top: 35px;
   padding-bottom: 10px;
@@ -548,9 +581,16 @@ ul.primary li:last-child a {
   border-right: none;
 }
 
-ul.primary li a:hover {
-  color: var(--full-white);
-  transition: all 0.25s ease-in;
+@media not all and (pointer: coarse) {
+  ul.primary li a.invert_a:hover {
+    color: var(--blue-highlight) !important;
+    transition: all 0.25s ease-in;
+  }
+  ul.primary li a:hover,
+  ul.primary li a:active {
+    color: var(--full-white);
+    transition: all 0.25s ease-in;
+  }
 }
 
 /* subs */
@@ -679,6 +719,7 @@ input[type='checkbox'] {
 }
 
 .tabinator label {
+  background-color: var(--full-white);
   box-sizing: border-box;
   display: inline-block;
   padding-top: 8px;
@@ -687,10 +728,15 @@ input[type='checkbox'] {
   padding-left: 10px;
   width: 90px;
   text-align: center;
-  color: var(--egg-white);
+  color: var(--full-black);
+  margin-top: 0px;
   margin-bottom: -1px;
   margin-left: -1px;
-  border: 1px solid var(--grey-highlight);
+  font-weight: bold;
+  border-left: 1px solid var(--full-black);
+  border-top: 1px solid var(--full-black);
+  border-right: 1px solid var(--full-black);
+  border-bottom: 1px solid var(--full-black);
 }
 
 .tabinator label::before {
@@ -698,7 +744,6 @@ input[type='checkbox'] {
   display: block;
   width: 100%;
   height: 15px;
-  background-color: transparent;
   position: absolute;
   bottom: 0;
   left: 0;
@@ -712,9 +757,13 @@ input[type='checkbox'] {
 
 .tabinator input:checked + label {
   position: relative;
-  color: var(--full-black);
-  background: transparent;
-  border: 1px solid var(--grey-highlight);
+  color: var(--full-white);
+  background: var(--full-black);
+  border-left: 1px solid var(--full-black);
+  border-top: 1px solid var(--full-black);
+  border-right: 1px solid var(--full-black);
+  font-weight: bold;
+  font-style: normal;
 }
 
 .tabinator input::checked + label::after {
@@ -887,9 +936,25 @@ canvas {
   width: 100%;
 }
 
+a[x-apple-data-detectors] {
+  color: inherit !important;
+  text-decoration: none !important;
+  font-size: inherit !important;
+  font-family: inherit !important;
+  font-weight: inherit !important;
+  line-height: inherit !important;
+}
+
+@media only screen and (min-width: 0px) {
+  .container {
+    min-width: 400px;
+    max-width: calc(100vw - 40px);
+  }
+}
+
 @media only screen and (max-width: 1200px) {
   div#content.container {
-    top: 70px;
+    top: 77px;
     height: calc(100vh - 98px);
   }
 
@@ -923,7 +988,7 @@ canvas {
   }
 }
 
-@media only screen and (max-width: 950px) {
+@media only screen and (max-width: 970px) {
   #search_results {
     width: calc(100vw - 295px) !important;
   }
@@ -933,7 +998,7 @@ canvas {
   }
 
   div#content.container {
-    top: 133px;
+    top: 140px;
     height: calc(100vh - 160px);
   }
 
@@ -975,9 +1040,9 @@ canvas {
     column-span: all;
   }
 
-  .show_when_small {
+  /* .show_when_small {
     display: inline-block;
-  }
+  } */
 
   #planes {
     max-height: calc(100vh - 170px) !important;
@@ -989,7 +1054,7 @@ canvas {
   }
 }
 
-@media only screen and (min-width: 951px) {
+@media only screen and (min-width: 970px) {
   .show_when_small {
     display: none;
   }
@@ -1006,7 +1071,7 @@ canvas {
   }
 
   div#content.container {
-    top: 133px;
+    top: 140px;
     height: calc(100vh - 160px);
   }
 
@@ -1016,6 +1081,10 @@ canvas {
 
   #side_pane {
     width: 100% !important;
+  }
+
+  #acarshub_help {
+    display: none;
   }
 }
 

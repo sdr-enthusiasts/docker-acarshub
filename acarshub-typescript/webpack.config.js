@@ -72,7 +72,7 @@ let config = {
     ],
   },
   output: {
-    filename: "[name].[chunkhash].js",
+    //filename: "[name].[chunkhash].js",
     path: path.resolve(__dirname, "dist/static/js"),
     publicPath: "static/js/",
     clean: true,
@@ -110,7 +110,7 @@ let config = {
       logo: path.resolve(__dirname, "./src/assets/images") + "/acarshub.svg",
       inject: true,
       cache: true,
-      outputPath: "images/favicons",
+      outputPath: "../images/favicons",
       publicPath: "../../static/images/favicons",
       prefix: "",
     }),
@@ -146,6 +146,9 @@ let config = {
 module.exports = (env, argv) => {
   if (argv.mode === "development") {
     config.devtool = "source-map";
+    config.output.filename = "[name].js";
+  } else {
+    config.output.filename = "[name].[chunkhash].js";
   }
   return config;
 };

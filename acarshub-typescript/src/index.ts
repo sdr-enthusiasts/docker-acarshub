@@ -11,14 +11,14 @@ import "leaflet/dist/leaflet.css";
 import "jbox/dist/jBox.all.css";
 import "./css/site.css";
 
-import { menu } from "./menu";
-import { live_messages_page } from "./live_messages";
-import { search_page } from "./search";
-import { stats_page } from "./stats";
-import { about } from "./about";
-import { status } from "./status";
-import { alerts_page } from "./alerts";
-import { tooltip } from "./tooltips";
+import { menu } from "./helpers/menu";
+import { live_messages_page } from "./pages/live_messages";
+import { search_page } from "./pages/search";
+import { stats_page } from "./pages/stats";
+import { about } from "./pages/about";
+import { status } from "./pages/status";
+import { alerts_page } from "./pages/alerts";
+import { tooltip } from "./helpers/tooltips";
 import { io, Socket } from "socket.io-client";
 
 import {
@@ -43,7 +43,7 @@ import {
   acarshub_version,
 } from "./interfaces";
 
-import { live_map_page } from "./live_map";
+import { live_map_page } from "./pages/live_map";
 import Cookies from "js-cookie";
 
 let socket: Socket = <any>null;
@@ -79,8 +79,8 @@ var ro: ResizeObserver = new ResizeObserver((entries) => {
   for (let entry of entries) {
     const cr = entry.contentRect;
     if (cr.width !== old_window_width) {
-      old_window_width = cr.width - 38;
-      if (index_acars_page === "/") resize_tabs(cr.width - 38);
+      old_window_width = cr.width - 50;
+      if (index_acars_page === "/") resize_tabs(cr.width - 50);
       else if (index_acars_page === "/adsb")
         live_map_page.updateModalSize({
           width: cr.width,
@@ -103,11 +103,40 @@ export function resize_tabs(
 ): void {
   if (set_new_width && (!window_width || window_width <= 0))
     window_width = old_window_width;
+  // set tab width. 35 is the width of the two arrow elements to the left
+  let num_tabs = 0;
 
-  // set tab width. 39 is the width of the two arrow elements to the left
-  const num_tabs = window_width > 1050 ? 10 : window_width > 400 ? 5 : 3;
-  $(".tabinator label").css("width", `${window_width / num_tabs}`);
-  $(".boxed").css("width", `${window_width / num_tabs / 2}`);
+  if (window_width > 1700) num_tabs = 15;
+  else if (window_width > 1050) num_tabs = 10;
+  else if (window_width > 400) num_tabs = 5;
+  else num_tabs = 3;
+
+  // FIXME: THIS WHOLE THING
+  // Lets get REALLY fucking stupid with tab widths
+  // The problem: browsers can't obviously display widths with decimals. It rounds it off. Somehow.
+  // We need to do the following so that rows align with each other
+  // 1) determine how many tabs we can fit in the row (done above)
+  // 2) Normalize it to an integer
+  // 3) make it even so we can have two "sub tabs" for the nav arrows
+  // 4) set the width for the tabs
+  // 5) set the width for the sub tabs
+  // 6) set the container width to the total width of all of the tabs
+  // 6) Oh and, not related to the above, remove the margin left on all tabs that start a row.
+  // Because fucking reasons.
+  let tab_width = Math.floor(window_width / num_tabs);
+  tab_width % 2 === 0 ? (tab_width -= 0) : (tab_width += 1);
+  const sub_tab_width = Math.floor(tab_width / 2);
+  tab_width -= 1;
+  $(".tabinator label").css("width", `${tab_width}px`);
+  $(".boxed").css("width", `${sub_tab_width}px`);
+  $(".acarshub-message-group").css(
+    "width",
+    `${tab_width * num_tabs - (num_tabs - 1)}px`
+  );
+  // Fix 10 rows of tabs
+  for (let i = 1; i <= 10; i++) {
+    $(`.msg${num_tabs * i - 1}`).css("margin-left", "0");
+  }
 }
 
 // export function setScrollers() {

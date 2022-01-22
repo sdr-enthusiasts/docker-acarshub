@@ -1,10 +1,10 @@
 import Cookies from "js-cookie";
-import { display_messages } from "./html_generator";
-import { alert_term_query, alert_text_update } from "./index";
-import { acars_msg, alert_matched, html_msg, terms } from "./interfaces";
+import { display_messages } from "../helpers/html_generator";
+import { alert_term_query, alert_text_update } from "../index";
+import { acars_msg, alert_matched, html_msg, terms } from "../interfaces";
 import jBox from "jbox";
 //import "jbox/dist/jBox.all.css";
-import { tooltip } from "./tooltips";
+import { tooltip } from "../helpers/tooltips";
 
 export let alerts_page = {
   alerts: 0 as number,

@@ -1,5 +1,5 @@
-import { images } from "./assets";
-import { acarshub_version } from "./interfaces";
+import { images } from "../assets/assets";
+import { acarshub_version } from "../interfaces";
 import jBox from "jbox";
 import Cookies from "js-cookie";
 export let menu = {
@@ -84,7 +84,7 @@ export let menu = {
       show_libseccomp2_warning && this.arch.trim() === "armhf"
         ? '<div id="update_notice"><a href="javascript:show_menu_modal()" class="red">Notice: System may need update!</a></div>'
         : "";
-    let html: string = `<div><a href="javascript:new_page('About')">ACARS Hub Help/About</a></div> \
+    let html: string = `<div id="acarshub_help"><a href="javascript:new_page('About')">ACARS Hub Help/About</a></div> \
       <div id="github_link"><a href="https://github.com/fredclausen/docker-acarshub" target="_blank">Project Github</a></div> \
       <div id="discord_badge"><a href="https://discord.gg/sTf9uYF"><img src="https://img.shields.io/discord/734090820684349521" alt="discord"></a></div> \
       <div><span id="system_status"><a href="javascript:new_page('Status')">System Status: <span class="green">Okay</a></span></span> \

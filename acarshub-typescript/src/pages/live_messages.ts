@@ -1,0 +1,866 @@
+import { MessageDecoder } from "@airframes/acars-decoder/dist/MessageDecoder";
+import Cookies from "js-cookie";
+import {
+  display_messages,
+  display_message_group,
+} from "../helpers/html_generator";
+import {
+  html_msg,
+  acars_msg,
+  labels,
+  matches,
+  plane,
+  aircraft_icon,
+  plane_data,
+  alert_matched,
+  plane_match,
+} from "../interfaces";
+import jBox from "jbox";
+//i mport "jbox/dist/jBox.all.css";
+import { tooltip } from "../helpers/tooltips";
+import {
+  resize_tabs,
+  match_alert,
+  sound_alert,
+  is_adsb_enabled,
+  get_current_planes,
+} from "../index";
+
+export let live_messages_page = {
+  pause: false as boolean,
+  text_filter: false as boolean,
+  lm_msgs_received: {
+    planes: [] as plane[],
+    unshift: function (a: plane) {
+      // console.log(
+      //   `Initial number of planes w/ messages saved:  ${this.planes.length}`
+      // );
+      if (this.planes.length >= 50) {
+        // ADSB is off so we don't need to be all clever like removing the last element
+        if (!is_adsb_enabled()) {
+          this.planes.pop();
+        } else {
+          let indexes_to_delete: Array<number> = [];
+          const current_planes_adsb = get_current_planes();
+          for (let i = 49; i < this.planes.length; i++) {
+            let delete_index = true;
+            this.planes[i].identifiers.every((identifier) => {
+              if (
+                current_planes_adsb.hex.includes(identifier) ||
+                current_planes_adsb.callsigns.includes(identifier) ||
+                current_planes_adsb.tail.includes(identifier)
+              ) {
+                delete_index = false;
+                // console.log(`saving plane with ${identifier}`);
+                return false;
+              }
+              return true;
+            });
+            if (delete_index) {
+              // console.log(
+              //   `deleting a plane (${this.planes[i].identifiers}).....`
+              // );
+              indexes_to_delete.push(i);
+            }
+          }
+          // delete the selected indexes from this.planes
+          // sorting the list descending because we want to keep
+          // the indexes true to the original indexes and deleting from the front
+          // of the list would cause invalid indexes as we walked the array
+          indexes_to_delete
+            .sort((a, b) => b - a)
+            .forEach((index) => {
+              this.planes.splice(index, 1);
+            });
+        }
+      }
+      // console.log(
+      //   `Final number of planes w/ messages saved: ${this.planes.length + 1}`
+      // );
+      return Array.prototype.unshift.apply(this.planes, [a]);
+    },
+    get_all_messages: function (): acars_msg[][] {
+      let output = [] as acars_msg[][];
+      for (const msgList of this.planes) {
+        if (output.length < 50) {
+          output.push(msgList.messages);
+        } else {
+          return output;
+        }
+      }
+      return output;
+    },
+  },
+  exclude: [] as string[],
+  selected_tabs: "" as string,
+  filter_labels: (<unknown>null) as labels,
+  lm_page_active: false as boolean,
+  lm_md: new MessageDecoder(),
+  lm_acars_path: "" as string,
+  lm_acars_url: "" as string,
+  msg_tags: [
+    "text",
+    "data",
+    "libacars",
+    "dsta",
+    "depa",
+    "eta",
+    "gtout",
+    "gtin",
+    "wloff",
+    "wlin",
+    "lat",
+    "lon",
+    "alt",
+  ] as Array<keyof acars_msg>,
+  filtered_messages: 0 as number,
+  received_messages: 0 as number,
+  live_message_modal: new jBox("Modal", {
+    id: "set_modal",
+    width: 350,
+    height: 200,
+    blockScroll: false,
+    isolateScroll: true,
+    animation: "zoomIn",
+    closeButton: "box",
+    overlay: true,
+    reposition: false,
+    repositionOnOpen: true,
+    content: `<p><a href="javascript:pause_updates()" id="pause_updates" class="spread_text">Pause updates</a></p>
+      <a href="javascript:filter_notext()" id="filter_notext" class="spread_text">Filter out "No Text" messages</a>
+      <!--<div class="fixed_menu" id="fixed_menu"> --!>
+    <div class="wrap-collabsible">
+          <input id="collapsible" class="toggle" type="checkbox">
+          <label for="collapsible" class="lbl-toggle">Filter Message Labels</label>
+          <div class="collapsible-content" id="collapsible-content">
+          <div class="content-inner" id="label_links">
+          <!-- <p>&nbsp;</p> --!>
+          </div>
+          </div>
+          </div>
+          <!--</div> --!>`,
+  }),
+
+  setting_modal_on: function (): void {
+    this.show_labels();
+    this.pause_updates(false);
+    this.filter_notext(false);
+    resize_tabs();
+  },
+
+  // Function to increment the counter of filtered messages
+
+  increment_filtered: function (page_refresh = false): void {
+    if (!page_refresh) this.filtered_messages++;
+    $("#filteredmessages").html(String(this.filtered_messages));
+  },
+
+  // Function to increment the counter of received messages
+
+  increment_received: function (page_refresh = false): void {
+    if (!page_refresh) this.received_messages++;
+    $("#receivedmessages").html(String(this.received_messages));
+  },
+
+  show_labels: function (): void {
+    let label_html = "";
+    if (this.filter_labels !== null && this.lm_page_active) {
+      for (let key in this.filter_labels.labels) {
+        let link_class: string =
+          this.exclude.indexOf(key.toString()) !== -1 ? "red" : "sidebar_link";
+        label_html += `<a href="javascript:toggle_label('${key.toString()}');" id="${key}" class="${link_class}">${key} ${
+          this.filter_labels.labels[key].name
+        }</a><br>`;
+      }
+      $("#label_links").html(label_html);
+    }
+  },
+
+  // Function to return a random integer
+  // Input: integter that represents the maximum number that can be returned
+
+  getRandomInt: function (max: number): number {
+    return Math.floor(Math.random() * Math.floor(max));
+  },
+
+  // Function to handle click events on the message tab
+  // Input is the element ID (aka message label ID) that has been selected
+  // Input is the UID of the message group, which is also the element ID of the oldest element in that group
+
+  handle_radio: function (element_id: string, uid: string): void {
+    $(`div.sub_msg${uid}`).removeClass("checked"); // Turn off the display of all messages in the UID group
+    $(`input.tabs_${uid}`).prop("checked", false); // Turn off the checked indicator for all messages in the UID group
+    $(`#message_${uid}_${element_id}`).addClass("checked"); // Turn on the display of the message that is now active
+    $(`#tab${element_id}_${uid}`).prop("checked", true); // Turn on the checked indicator for the message that is now active
+
+    // Now we need to update the nav arrow links
+
+    let next_tab: string = "0";
+    let previous_tab: string = "0";
+
+    // Find the next / previous tabs
+    // This is UGLY
+    // FIXME....deuglify it
+    for (let i = 0; i < this.lm_msgs_received.planes.length; i++) {
+      if (
+        this.lm_msgs_received.planes[i].messages.length > 1 &&
+        this.lm_msgs_received.planes[i].messages[
+          this.lm_msgs_received.planes[i].messages.length - 1
+        ].uid == uid
+      ) {
+        let active_tab = String(
+          this.lm_msgs_received.planes[i].messages.findIndex(
+            (sub_msg: acars_msg) => {
+              if (sub_msg.uid === element_id) {
+                return true;
+              }
+            }
+          )
+        );
+
+        active_tab = active_tab === "-1" ? "0" : active_tab;
+
+        if (active_tab === "0") {
+          next_tab = this.lm_msgs_received.planes[i].messages[1].uid;
+          previous_tab =
+            this.lm_msgs_received.planes[i].messages[
+              this.lm_msgs_received.planes[i].messages.length - 1
+            ].uid;
+        } else if (
+          active_tab ===
+          String(this.lm_msgs_received.planes[i].messages.length - 1)
+        ) {
+          next_tab = this.lm_msgs_received.planes[i].messages[0].uid;
+          previous_tab =
+            this.lm_msgs_received.planes[i].messages[
+              this.lm_msgs_received.planes[i].messages.length - 2
+            ].uid;
+        } else {
+          next_tab =
+            this.lm_msgs_received.planes[i].messages[Number(active_tab) + 1]
+              .uid;
+          previous_tab =
+            this.lm_msgs_received.planes[i].messages[Number(active_tab) - 1]
+              .uid;
+        }
+
+        i = this.lm_msgs_received.planes.length;
+      }
+    }
+
+    // Update the buttons for the previous / next message
+    $(`#tab${uid}_previous`).attr(
+      "href",
+      `javascript:handle_radio("${previous_tab}", "${uid}")`
+    );
+    $(`#tab${uid}_next`).attr(
+      "href",
+      `javascript:handle_radio("${next_tab}", "${uid}")`
+    );
+
+    let added = false;
+    if (this.selected_tabs != "") {
+      let split = this.selected_tabs.split(",");
+      for (let i = 0; i < split.length; i++) {
+        let sub_split = split[i].split(";");
+
+        if (sub_split[0] == uid && i == 0) {
+          this.selected_tabs = uid + ";" + element_id;
+          added = true;
+        } else if (sub_split[0] == uid) {
+          this.selected_tabs += "," + uid + ";" + element_id;
+          added = true;
+        } else if (i == 0)
+          this.selected_tabs = sub_split[0] + ";" + sub_split[1];
+        else this.selected_tabs += "," + sub_split[0] + ";" + sub_split[1];
+      }
+    }
+
+    if (this.selected_tabs.length == 0) {
+      this.selected_tabs = uid + ";" + element_id;
+    } else if (!added) {
+      this.selected_tabs += "," + uid + ";" + element_id;
+    }
+  },
+
+  // Function to toggle pausing visual update of the page
+
+  pause_updates: function (toggle_pause: boolean = true): void {
+    if (!toggle_pause) this.pause = !this.pause;
+
+    if (this.pause) {
+      this.pause = false;
+      $("#pause_updates").html("Pause Updates");
+      $("#received").html("Received messages: ");
+      $("#log").html(
+        display_messages(
+          this.lm_msgs_received.get_all_messages(),
+          this.selected_tabs,
+          true
+        )
+      );
+      resize_tabs();
+    } else {
+      this.pause = true;
+      $("#pause_updates").html('<span class="red">Unpause Updates</span>');
+      $("#received").html(
+        'Received messages <span class="red">(paused)</span>: '
+      );
+    }
+  },
+
+  // function to toggle the filtering of empty/no text messages
+
+  filter_notext: function (toggle_filter: boolean = true): void {
+    if (!toggle_filter) this.text_filter = !this.text_filter;
+
+    if (this.text_filter) {
+      this.text_filter = false;
+      $("#filter_notext").html("Hide Empty Messages");
+      Cookies.set("filter", "false", {
+        expires: 365,
+        sameSite: "Strict",
+      });
+      // Only reset the counter if no filters are active
+      if (this.exclude.length == 0) {
+        this.filtered_messages = 0;
+
+        $("#filtered").html("");
+      }
+    } else {
+      this.text_filter = true;
+
+      $("#filtered").html(
+        '<div><span class="menu_non_link">Filtered Messages:&nbsp;</span><span class="green" id="filteredmessages"></span></div>'
+      );
+
+      $("#filteredmessages").html(String(this.filtered_messages));
+      $("#filter_notext").html('<span class="red">Show All Messages</span>');
+      Cookies.set("filter", "true", {
+        expires: 365,
+        sameSite: "Strict",
+      });
+    }
+  },
+
+  // Function to toggle/save the selected filtered message labels
+  // Input is the message label ID that should be filtered
+
+  toggle_label: function (key: string): void {
+    if (this.exclude.indexOf(key.toString()) == -1) {
+      this.exclude.push(key.toString());
+      $(`#${key.toString()}`).removeClass("sidebar_link").addClass("red");
+      let exclude_string = "";
+      for (let i = 0; i < this.exclude.length; i++) {
+        exclude_string += this.exclude[i] + " ";
+      }
+
+      Cookies.set("exclude", exclude_string.trim(), {
+        expires: 365,
+        sameSite: "Strict",
+      });
+    } else {
+      let exclude_string = "";
+      $(`#${key.toString()}`).removeClass("red").addClass("sidebar_link");
+      for (let i = 0; i < this.exclude.length; i++) {
+        if (this.exclude[i] != key.toString() && key !== " " && key !== "")
+          exclude_string += this.exclude[i] + " ";
+      }
+      if (
+        exclude_string.trim().split(" ").length == 1 &&
+        exclude_string.trim().split(" ")[0] == ""
+      )
+        this.exclude = [];
+      else this.exclude = exclude_string.trim().split(" ");
+
+      Cookies.set("exclude", exclude_string.trim(), {
+        expires: 365,
+        sameSite: "Strict",
+      });
+    }
+
+    if (this.exclude.length > 0 || this.text_filter) {
+      $("#filtered").html(
+        '<div><span class="menu_non_link">Filtered Messages:&nbsp;</span><span class="green" id="filteredmessages"></span></div>'
+      );
+
+      $("#filteredmessages").html(String(this.filtered_messages));
+    } else {
+      this.filtered_messages = 0;
+      $("#filtered").html("");
+    }
+  },
+
+  // Code that is ran when the page has loaded
+
+  live_messages: function (): void {
+    // Grab the current cookie value for message filtering
+    // If the cookie is found with a value we run filter_notext to set the proper visual elements/variables for the rest of the functions
+    // We'll also re-write the cookie (or start a new one) with the current value
+    // This is necessary because Safari doesn't respect the expiration date of more than 7 days. It will set it to 7 days even though we've set 365 days
+    // This also just keeps moving the expiration date moving forward every time the page is loaded
+
+    let filter = Cookies.get("filter");
+    if (filter == "true") {
+      Cookies.set("filter", "true", {
+        expires: 365,
+        sameSite: "Strict",
+      });
+      this.filter_notext();
+    } else {
+      this.text_filter = true; // temporarily flip the value so we can run the filter_notext() function and set the proper CSS
+      Cookies.set("filter", "false", {
+        expires: 365,
+        sameSite: "Strict",
+      });
+      this.filter_notext();
+    }
+
+    // Grab the current cookie value for the message labels being filtered
+    // Same restrictions as the 'filter'
+    let exclude_cookie = Cookies.get("exclude");
+    if (exclude_cookie == null) {
+      Cookies.set("exclude", "", {
+        expires: 365,
+        sameSite: "Strict",
+      });
+    } else {
+      Cookies.set("exclude", exclude_cookie, {
+        expires: 365,
+        sameSite: "Strict",
+      });
+      if (this.exclude.length > 0) this.exclude = exclude_cookie.split(" ");
+      else this.exclude = [];
+    }
+  },
+
+  // if the live message page is active we'll toggle the display of everything here
+
+  live_message_active: function (state = false): void {
+    this.lm_page_active = state;
+    $(document).off("keyup");
+    if (this.lm_page_active) {
+      // page is active
+      this.set_html();
+      this.increment_received(true); // show the received msgs
+      this.increment_filtered(true); // show the filtered msgs
+      this.show_labels();
+      $("#log")
+        .html
+        // display_messages(
+        //   this.lm_msgs_received.get_all_messages(),
+        //   this.selected_tabs,
+        //   true
+        // )
+        (); // show the messages we've received
+      resize_tabs();
+      $(document).on("keyup", (event: any) => {
+        if (this.lm_page_active) {
+          // key code for escape is 27
+          if (event.keyCode == 80) {
+            this.pause_updates();
+          }
+        }
+      });
+    }
+  },
+
+  show_live_message_modal: function (): void {
+    this.live_message_modal.open();
+    this.setting_modal_on();
+  },
+
+  set_live_page_urls: function (documentPath: string, documentUrl: string) {
+    this.lm_acars_path = documentPath;
+    this.lm_acars_url = documentUrl;
+  },
+
+  set_html: function (): void {
+    $("#modal_text").html(
+      '<a href="javascript:show_page_modal()">Page Settings</a>'
+    );
+    $("#page_name").html("Messages will appear here, newest first:");
+  },
+
+  new_labels: function (msg: labels): void {
+    this.filter_labels = msg;
+    this.show_labels();
+  },
+
+  skip_message(msg: acars_msg): boolean {
+    // The message has a label and it's in the group to exclude
+    let skip_message = true;
+    if ("label" in msg == true && this.exclude.indexOf(msg.label!) != -1)
+      return true;
+
+    // The user is not filtering empty messages, return
+    if (!this.text_filter) return false;
+
+    // The user is filtering empty messages, return if not empty
+    Object.values(this.msg_tags).forEach((tag) => {
+      if (tag in msg) skip_message = false;
+    });
+
+    return skip_message;
+  },
+
+  // See if the new message matches an old message
+
+  check_for_message_match(message: acars_msg, new_msg: acars_msg): boolean {
+    if (
+      this.property_checker(message, new_msg, "tail") &&
+      new_msg.tail == message.tail &&
+      ((this.property_checker(message, new_msg, "icao") &&
+        message.icao == new_msg.icao) ||
+        !this.property_checker(message, new_msg, "icao")) &&
+      ((this.property_checker(message, new_msg, "flight") &&
+        message.flight == new_msg.flight) ||
+        !this.property_checker(message, new_msg, "flight"))
+    ) {
+      return true;
+    } else if (
+      this.property_checker(message, new_msg, "icao") &&
+      new_msg.icao == message.icao &&
+      ((this.property_checker(message, new_msg, "tail") &&
+        message.tail == new_msg.tail) ||
+        !this.property_checker(message, new_msg, "tail")) &&
+      ((this.property_checker(message, new_msg, "flight") &&
+        message.flight == new_msg.flight) ||
+        !this.property_checker(message, new_msg, "flight"))
+    ) {
+      return true;
+    } else if (
+      this.property_checker(message, new_msg, "flight") &&
+      new_msg.flight == message.flight &&
+      ((this.property_checker(message, new_msg, "icao") &&
+        message.icao == new_msg.icao) ||
+        !this.property_checker(message, new_msg, "icao")) &&
+      ((this.property_checker(message, new_msg, "tail") &&
+        message.tail == new_msg.tail) ||
+        !this.property_checker(message, new_msg, "tail"))
+    ) {
+      return true;
+    } else if (
+      this.property_checker(message, new_msg, "label") &&
+      this.property_checker(message, new_msg, "text") &&
+      new_msg.label == "SQ" &&
+      message.label == "SQ" &&
+      new_msg.text == message.text
+    ) {
+      return true;
+    }
+
+    return false;
+  },
+
+  property_checker: function (
+    message: acars_msg,
+    new_msg: acars_msg,
+    property: string
+  ): boolean {
+    return property in message && property in new_msg;
+  },
+
+  check_for_dup: function (message: acars_msg, new_msg: acars_msg): boolean {
+    return Object.values(this.msg_tags).every((tag) => {
+      if (tag in message && tag in new_msg) {
+        if (message[tag] == new_msg[tag]) return true;
+      } else if (!(tag in message) && !(tag in new_msg)) {
+        return true;
+      }
+      return false;
+    });
+  },
+
+  new_acars_message: function (msg: html_msg): void {
+    let new_msg = msg.msghtml;
+    if (!this.skip_message(new_msg)) {
+      // if the message filter is not set or the message is not in the exclude list, continue
+      if ("text" in new_msg) {
+        // see if we can run it through the text decoder
+        let decoded_msg = this.lm_md.decode(new_msg);
+        if (decoded_msg.decoded == true) {
+          new_msg.decodedText = decoded_msg;
+        }
+      }
+
+      // See if the message matches any alerts
+      let matched: alert_matched = match_alert(msg);
+      if (matched.was_found) {
+        new_msg.matched = true;
+        new_msg.matched_text = matched.text !== null ? matched.text : [];
+        new_msg.matched_icao = matched.icao !== null ? matched.icao : [];
+        new_msg.matched_flight = matched.flight !== null ? matched.flight : [];
+        new_msg.matched_tail = matched.tail !== null ? matched.tail : [];
+      }
+
+      const new_tail = new_msg.tail;
+      const new_icao = new_msg.icao;
+      const new_icao_hex = new_msg.icao_hex;
+      const new_flight = new_msg.flight;
+      const new_icao_flight = new_msg.icao_flight;
+      let found = false; // variable to track if the new message was found in previous messages
+      let rejected = false; // variable to track if the new message was rejected for being a duplicate
+      let index_new = 0; // the index of the found previous message
+      new_msg.uid = this.getRandomInt(1000000).toString(); // Each message gets a unique ID. Used to track tab selection
+      // Loop through the received messages. If a message is found we'll break out of the for loop
+      for (let planes of this.lm_msgs_received.planes) {
+        // Now we loop through all of the messages in the message group to find a match in case the first doesn't
+        // Have the field we need
+        // There is a possibility that (for reasons I cannot fathom) aircraft will broadcast the same flight information
+        // With one field being different. We'll reject that message as being not in the same message group if that's the case
+        // We'll also test for squitter messages which don't have tail/icao/flight
+        for (const message of planes.messages) {
+          if (this.check_for_message_match(message, new_msg)) {
+            // We've found a matching message
+            // See if the UIDs for the plane are present, and if not, push them
+            found = true;
+            index_new = planes.messages.indexOf(message);
+            if (
+              new_icao_flight &&
+              !planes.identifiers.includes(new_icao_flight)
+            )
+              planes.identifiers.push(new_icao_flight);
+            if (new_tail && !planes.identifiers.includes(new_tail))
+              planes.identifiers.push(new_tail);
+            if (new_icao_hex && !planes.identifiers.includes(new_icao_hex))
+              planes.identifiers.push(new_icao_hex);
+            break;
+          }
+        }
+        // if we found a message group that matches the new message
+        // run through the messages in that group to see if it is a dup.
+        // if it is, we'll reject the new message and append a counter to the old/saved message
+        if (found) {
+          for (let message of this.lm_msgs_received.planes[index_new]
+            .messages) {
+            // First check is to see if the message is the same by checking all fields and seeing if they match
+            // Second check is to see if the text field itself is a match
+            // Last check is to see if we've received a multi-part message
+            // If we do find a match we'll update the timestamp of the parent message
+            // And add/update a duplicate counter to the parent message
+            if (this.check_for_dup(message, new_msg)) {
+              // Check if the message is a dup based on all fields
+              message.timestamp = new_msg.timestamp;
+              message.duplicates = String(Number(message.duplicates || 0) + 1);
+              rejected = true;
+            } else if (
+              // check if text fields are the same
+              "text" in message &&
+              "text" in new_msg &&
+              message.text == new_msg.text
+            ) {
+              // it's the same message
+              message.timestamp = new_msg.timestamp;
+              message.duplicates = String(Number(message.duplicates || 0) + 1);
+              rejected = true;
+            } else if (
+              new_msg.station_id == message.station_id && // Is the message from the same station id? Keep ACARS/VDLM separate
+              new_msg.timestamp - message.timestamp < 8.0 && // We'll assume the message is not a multi-part message if the time from the new message is too great from the rest of the group
+              typeof new_msg.msgno !== "undefined" && // For reasons unknown to me TS is throwing an error if we don't check for undefined
+              typeof message.msgno !== "undefined" && // Even though we can't reach this point if the message doesn't have a msgno
+              ((new_msg.msgno.charAt(0) == message.msgno.charAt(0) && // Next two lines match on AzzA pattern
+                new_msg.msgno.charAt(3) == message.msgno.charAt(3)) ||
+                new_msg.msgno.substring(0, 3) == message.msgno.substring(0, 3))
+            ) {
+              // This check matches if the group is a AAAz counter
+              // We have a multi part message. Now we need to see if it is a dup
+              rejected = true;
+              let add_multi = true;
+
+              if ("msgno_parts" in message) {
+                // Now we'll see if the multi-part message is a dup
+                let split = message.msgno_parts!.toString().split(" "); // format of stored parts is "MSGID MSGID2" etc
+
+                for (let a = 0; a < split.length; a++) {
+                  // Loop through the msg IDs present
+                  if (split[a].substring(0, 4) == new_msg.msgno) {
+                    // Found a match in the message IDs already present
+                    add_multi = false; // Ensure later checks know we've found a duplicate and to not add the message
+
+                    if (a == 0 && split[a].length == 4) {
+                      // Match, first element of the array with no previous matches so we don't want a leading space
+                      message.msgno_parts = split[a] + "x2";
+                    } else if (split[a].length == 4) {
+                      // Match, not first element, and doesn't have previous matches
+                      message.msgno_parts += " " + split[a] + "x2";
+                    } else if (a == 0) {
+                      // Match, first element of the array so no leading space, has previous other matches so we increment the counter
+                      let count = parseInt(split[a].substring(5)) + 1;
+                      message.msgno_parts =
+                        split[a].substring(0, 4) + "x" + count;
+                    } else {
+                      // Match, has previous other matches so we increment the counter
+                      let count = parseInt(split[a].substring(5)) + 1;
+                      message.msgno_parts +=
+                        " " + split[a].substring(0, 4) + "x" + count;
+                    }
+                  } else {
+                    // No match, re-add the MSG ID to the parent message
+                    if (a == 0) {
+                      message.msgno_parts = split[a];
+                    } else {
+                      message.msgno_parts += " " + split[a];
+                    }
+                  }
+                }
+              }
+
+              message.timestamp = new_msg.timestamp;
+
+              if (add_multi) {
+                // Multi-part message has been found
+                if (message.text && "text" in new_msg)
+                  // If the multi-part parent has a text field and the found match has a text field, append
+                  message.text += new_msg.text;
+                else if ("text" in new_msg)
+                  // If the new message has a text field but the parent does not, add the new text to the parent
+                  message.text = new_msg.text;
+
+                if ("msgno_parts" in message) {
+                  // If the new message is multi, with no dupes found we need to append the msg ID to the found IDs
+                  message.msgno_parts += " " + new_msg.msgno;
+                } else {
+                  message.msgno_parts = message.msgno + " " + new_msg.msgno;
+                }
+
+                // Re-run the text decoder against the text field we've updated
+                let decoded_msg = this.lm_md.decode(message);
+                if (decoded_msg.decoded == true) {
+                  message["decoded_msg"] = decoded_msg;
+                }
+
+                if (matched.was_found && !msg.loading) sound_alert();
+              }
+              break;
+            }
+
+            if (rejected) {
+              // Promote the message back to the front
+              this.lm_msgs_received.planes[index_new].messages.forEach(
+                (item: any, i: number) => {
+                  if (
+                    i ==
+                    this.lm_msgs_received.planes[index_new].messages.indexOf(
+                      message
+                    )
+                  ) {
+                    this.lm_msgs_received.planes[index_new].messages.splice(
+                      i,
+                      1
+                    );
+                    this.lm_msgs_received.planes[index_new].messages.unshift(
+                      item
+                    );
+                  }
+                }
+              );
+              break;
+            }
+          }
+        }
+        // If the message was found we'll move the message group back to the top
+        if (found) {
+          // If the message was found, and not rejected, we'll append it to the message group
+          if (!rejected) {
+            this.lm_msgs_received.planes[index_new].messages.unshift(new_msg);
+            if (
+              !this.lm_msgs_received.planes[index_new].has_alerts &&
+              matched.was_found
+            )
+              this.lm_msgs_received.planes[index_new].has_alerts = true;
+            if (matched.was_found)
+              this.lm_msgs_received.planes[index_new].num_alerts += 1;
+          }
+
+          this.lm_msgs_received.planes.forEach((item, i) => {
+            if (i == index_new) {
+              this.lm_msgs_received.planes.splice(i, 1);
+              this.lm_msgs_received.planes.unshift(item);
+            }
+          });
+        }
+        if (found) {
+          break;
+        }
+      }
+      if (!found && !rejected) {
+        if (matched.was_found && !msg.loading) sound_alert();
+        let ids = [];
+        if (new_icao_hex) ids.push(new_icao_hex);
+        if (new_icao_flight) ids.push(new_icao_flight);
+        if (new_tail) ids.push(new_tail);
+        this.lm_msgs_received.unshift({
+          has_alerts: matched.was_found,
+          num_alerts: matched.was_found ? 1 : 0,
+          messages: [new_msg],
+          identifiers: ids,
+        } as plane);
+      }
+    } else {
+      if (this.text_filter && !msg.loading) this.increment_filtered();
+    }
+    if (!msg.loading) this.increment_received();
+    if (
+      this.lm_page_active &&
+      !this.pause &&
+      (typeof msg.done_loading === "undefined" || msg.done_loading === true)
+    ) {
+      let output = "";
+      this.lm_msgs_received.get_all_messages().forEach((item) => {
+        output += display_message_group(item, this.selected_tabs, true);
+      });
+
+      $("#log").html(output);
+      resize_tabs();
+      tooltip.close_all_tooltips();
+      tooltip.attach_all_tooltips();
+    }
+  },
+
+  get_match: function (
+    callsign: string = "",
+    hex: string = "",
+    tail: string = ""
+  ): plane_match {
+    if (callsign === "" && hex === "" && tail === "")
+      return { messages: [] as acars_msg[], has_alerts: false } as plane_match;
+    for (const planes of this.lm_msgs_received.planes) {
+      // check to see if any of the inputs match the message. msg.tail needs to be checked
+      // against both callsign and tail because sometimes the tail is the flight/callsign
+      if (
+        planes.identifiers.includes(hex.toUpperCase()) ||
+        planes.identifiers.includes(callsign) ||
+        planes.identifiers.includes(tail)
+      ) {
+        return {
+          messages: planes.messages,
+          has_alerts: planes.has_alerts,
+          num_alerts: planes.num_alerts,
+        } as plane_match;
+      }
+    }
+    return {
+      messages: [] as acars_msg[],
+      has_alerts: false,
+      num_alerts: 0,
+    } as plane_match;
+  },
+
+  find_matches: function (): plane_data {
+    let output: plane_data = {};
+    for (const planes of this.lm_msgs_received.planes) {
+      const length_of_messages = planes.messages.length;
+      const alert = planes.has_alerts;
+      const num_alerts = planes.num_alerts;
+      planes.identifiers.forEach((identifier) => {
+        output[identifier] = {
+          count: length_of_messages,
+          has_alerts: alert,
+          num_alerts: num_alerts,
+        };
+      });
+    }
+    return output;
+  },
+};

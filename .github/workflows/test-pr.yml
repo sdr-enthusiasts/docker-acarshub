@@ -50,7 +50,7 @@ jobs:
       # -
       #   name: Patch webapp with VERSION_TAG
       #   run: |
-      #     sed -i 's/Pre-Release/ACARS Hub Pre-Release: ${{ env.VERSION_TAG }}/' ./acarshub-typescript/src/menu.ts
+      #     sed -i 's/Pre-Release/ACARS Hub Pre-Release: ${{ env.VERSION_TAG }}/' ./acarshub-typescript/src/helpers/menu.ts
 
       - name: Create version file
         run: |
@@ -96,7 +96,7 @@ jobs:
         working-directory: ./acarshub-typescript
         run: |
           npm install
-          sed -i 's/Pre-Release/ACARS Hub Pre-Release: ${{ env.VERSION_TAG }}/' ./src/menu.ts
+          sed -i 's/Pre-Release/ACARS Hub Pre-Release: ${{ env.VERSION_TAG }}/' ./src/helpers/menu.ts
           npm run build
           mkdir -p ./webapp/static/images
           mkdir -p ./webapp/static/js
@@ -127,7 +127,7 @@ jobs:
         working-directory: ./acarshub-typescript
         run: |
           npm install
-          sed -i 's/Pre-Release/ACARS Hub Pre-Release: ${{ env.VERSION_TAG }}/' ./src/menu.ts
+          sed -i 's/Pre-Release/ACARS Hub Pre-Release: ${{ env.VERSION_TAG }}/' ./src/helpers/menu.ts
           npm run build-dev
           mkdir -p ./webapp/static/images
           mkdir -p ./webapp/static/js
