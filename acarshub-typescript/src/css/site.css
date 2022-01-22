@@ -729,7 +729,7 @@ input[type='checkbox'] {
   width: 90px;
   text-align: center;
   color: var(--full-black);
-  margin-top: -1px;
+  margin-top: 0px;
   margin-bottom: -1px;
   margin-left: -1px;
   font-weight: bold;
