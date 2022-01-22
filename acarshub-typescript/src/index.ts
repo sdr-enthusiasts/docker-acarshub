@@ -232,7 +232,7 @@ $((): void => {
         width: old_window_width,
         height: old_window_height,
       } as window_size);
-      live_map_page.live_map(msg.adsb.lat, msg.adsb.lon);
+      live_map_page.live_map(msg.adsb.lat, msg.adsb.lon, msg.adsb.range_rings);
 
       status.update_adsb_status({
         adsb_enabled: true,

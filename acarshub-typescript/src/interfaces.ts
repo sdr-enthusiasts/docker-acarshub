@@ -60,6 +60,7 @@ export interface decoders {
     lon: number;
     url: string;
     bypass: boolean;
+    range_rings: boolean;
   };
 }
 

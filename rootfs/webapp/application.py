@@ -529,6 +529,7 @@ def main_connect():
                     "lon": acarshub_helpers.ADSB_LON,
                     "url": acarshub_helpers.ADSB_URL,
                     "bypass": acarshub_helpers.ADSB_BYPASS_URL,
+                    "range_rings": acarshub_helpers.ENABLE_RANGE_RINGS,
                 },
             },
             to=requester,
