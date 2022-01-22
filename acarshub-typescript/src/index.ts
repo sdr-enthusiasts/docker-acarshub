@@ -220,6 +220,7 @@ $((): void => {
   // stats
 
   socket.on("features_enabled", function (msg: decoders): void {
+    console.log(msg);
     stats_page.decoders_enabled(msg);
     menu.set_arch(msg.arch);
     if (msg.adsb.enabled === true) {
@@ -323,6 +324,14 @@ $((): void => {
   socket.on("reconnect", function (): void {
     set_connection_good();
     connection_status(true);
+  });
+
+  socket.on("reconnecting", function (): void {
+    console.error("reconnecting");
+  });
+
+  socket.on("error", function (e): void {
+    console.error(e);
   });
 
   // init all page backgrounding functions

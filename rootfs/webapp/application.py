@@ -531,12 +531,14 @@ def main_connect():
                     "bypass": acarshub_helpers.ADSB_BYPASS_URL,
                 },
             },
+            to=requester,
             namespace="/main",
         )
 
         socketio.emit(
             "terms",
             {"terms": acarshub.acarshub_db.get_alert_terms()},
+            to=requester,
             namespace="/main",
         )
     except Exception as e:
@@ -576,6 +578,7 @@ def main_connect():
         socketio.emit(
             "system_status",
             {"status": acarshub.get_service_status()},
+            to=requester,
             namespace="/main",
         )
     except Exception as e:
@@ -595,6 +598,7 @@ def main_connect():
         socketio.emit(
             "signal",
             {"levels": acarshub.acarshub_db.get_signal_levels()},
+            to=requester,
             namespace="/main",
         )
         socketio.emit("alert_terms", {"data": acarshub.getAlerts()}, namespace="/main")
