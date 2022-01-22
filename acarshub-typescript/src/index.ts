@@ -103,7 +103,6 @@ export function resize_tabs(
 ): void {
   if (set_new_width && (!window_width || window_width <= 0))
     window_width = old_window_width;
-  // set tab width. 35 is the width of the two arrow elements to the left
   let num_tabs = 0;
 
   if (window_width > 1700) num_tabs = 15;
@@ -113,21 +112,25 @@ export function resize_tabs(
 
   // FIXME: THIS WHOLE THING
   // Lets get REALLY fucking stupid with tab widths
-  // The problem: browsers can't obviously display widths with decimals. It rounds it off. Somehow.
+  // The problem: browsers can't obviously display widths with decimals. It rounds it off. Somehow. And that somehow is out of our control.
   // We need to do the following so that rows align with each other
   // 1) determine how many tabs we can fit in the row (done above)
-  // 2) Normalize it to an integer
-  // 3) make it even so we can have two "sub tabs" for the nav arrows
+  // 2) determine how many pixels each tab takes up and normalize it to an integer so we remove any decimals.
+  // 3) make it even so that it can be divisible by two (the two nav arrow widths) so that the width of two nav arrows == the width of a tab
   // 4) set the width for the tabs
   // 5) set the width for the sub tabs
-  // 6) set the container width to the total width of all of the tabs
-  // 6) Oh and, not related to the above, remove the margin left on all tabs that start a row.
+  // 6) set the message container width to the total width of all of the tabs because it's default size may be off a 1-2 pixels because of the rounding of tab widths.
+  // 7) Oh and, not related to the above, remove the margin left on all tabs that start a row.
+  // There has to be reason why all of these things weren't just working prior where we were dividing width / number of tabs per row
+  // and then dividing the pixels / tab in half for the nav buttons. The first row was always fine but the second row got out of alignment by 1-3 pixels.
+  // Absolutely nothing I did could make it work. And now with this method I'm having to do random stuff like adding and removing random pixels.
   // Because fucking reasons.
-  let tab_width = Math.floor(window_width / num_tabs);
-  tab_width % 2 === 0 ? (tab_width -= 0) : (tab_width += 1);
-  const sub_tab_width = Math.floor(tab_width / 2);
-  tab_width -= 1;
-  $(".tabinator label").css("width", `${tab_width}px`);
+  // Plz CSS gurus tell me what I'm missing here.
+  let tab_width = Math.floor(window_width / num_tabs); // #2 above
+  tab_width % 2 === 0 ? (tab_width -= 0) : (tab_width += 1); // #3 above
+  const sub_tab_width = Math.floor(tab_width / 2); // #4 above
+  tab_width -= 1; // Why?! Everything gets off by at least a pixel if we don't do this!?
+  $(".tabinator label").css("width", `${tab_width}px`); // CSS to set the widths everywhere
   $(".boxed").css("width", `${sub_tab_width}px`);
   $(".acarshub-message-group").css(
     "width",
@@ -135,6 +138,7 @@ export function resize_tabs(
   );
   // Fix 10 rows of tabs
   for (let i = 1; i <= 10; i++) {
+    // #7
     $(`.msg${num_tabs * i - 1}`).css("margin-left", "0");
   }
 }
