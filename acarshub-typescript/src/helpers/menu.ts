@@ -20,7 +20,7 @@ export let menu = {
     overlay: true,
     reposition: false,
     repositionOnOpen: true,
-    content: `<span class="red"><center><h2>NOTICE!</h2></center></span><p><span class="white">You are running an ARM 32 bit host system. After March 1st, 2022 your system may fail to properly run ACARS Hub. Please visit <a href="https://github.com/fredclausen/docker-acarshub/blob/main/arm32.md">this page</a> for more information.</p><a href="javascript:hide_libseccomp2_warning()">Mute this message</a></span>`,
+    content: `<span class="red"><center><h2>NOTICE!</h2></center></span><p><span class="white">You are running an ARM 32 bit host system. After March 1st, 2022 your system may fail to properly run ACARS Hub. Please visit <a href="https://github.com/fredclausen/Buster-Docker-Fixes">this page</a> for more information.</p><a href="javascript:hide_libseccomp2_warning()">Mute this message</a></span>`,
   }),
 
   show_menu_modal(): void {
