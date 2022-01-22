@@ -103,9 +103,14 @@ export function resize_tabs(
 ): void {
   if (set_new_width && (!window_width || window_width <= 0))
     window_width = old_window_width;
-
   // set tab width. 35 is the width of the two arrow elements to the left
-  const num_tabs = window_width > 1050 ? 10 : window_width > 400 ? 5 : 3;
+  let num_tabs = 0;
+
+  if (window_width > 1700) num_tabs = 15;
+  else if (window_width > 1050) num_tabs = 10;
+  else if (window_width > 400) num_tabs = 5;
+  else num_tabs = 3;
+
   // FIXME: THIS WHOLE THING
   // Lets get REALLY fucking stupid with tab widths
   // The problem: browsers can't obviously display widths with decimals. It rounds it off. Somehow.

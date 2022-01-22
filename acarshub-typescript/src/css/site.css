@@ -134,7 +134,7 @@ img {
   border-left: 1px solid var(--full-black);
   border-right: 1px solid var(--full-black);
   border-top: 1px solid var(--full-black);
-  border-left: 1px solid var(--full-black);
+  border-bottom: 1px solid var(--full-black);
   font-weight: bold;
 }
 
@@ -297,6 +297,10 @@ div#log.left {
   margin-right: auto;
   padding-right: 0;
   padding-left: 0;
+}
+
+.acarshub-message-group {
+  margin: auto;
 }
 
 #size {
@@ -725,12 +729,14 @@ input[type='checkbox'] {
   width: 90px;
   text-align: center;
   color: var(--full-black);
+  margin-top: -1px;
   margin-bottom: -1px;
   margin-left: -1px;
   font-weight: bold;
   border-left: 1px solid var(--full-black);
   border-top: 1px solid var(--full-black);
   border-right: 1px solid var(--full-black);
+  border-bottom: 1px solid var(--full-black);
 }
 
 .tabinator label::before {
