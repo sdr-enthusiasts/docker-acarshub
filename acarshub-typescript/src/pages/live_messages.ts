@@ -445,14 +445,12 @@ export let live_messages_page = {
       this.increment_received(true); // show the received msgs
       this.increment_filtered(true); // show the filtered msgs
       this.show_labels();
-      $("#log")
-        .html
-        // display_messages(
-        //   this.lm_msgs_received.get_all_messages(),
-        //   this.selected_tabs,
-        //   true
-        // )
-        (); // show the messages we've received
+      $("#log").html;
+      display_messages(
+        this.lm_msgs_received.get_all_messages(),
+        this.selected_tabs,
+        true
+      ); // show the messages we've received
       resize_tabs();
       $(document).on("keyup", (event: any) => {
         if (this.lm_page_active) {
