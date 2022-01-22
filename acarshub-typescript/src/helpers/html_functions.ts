@@ -28,7 +28,9 @@ export let html_functions = {
       unique_id +
       `')" id = "tab${unique_id}_${
         direction_back ? "previous" : "next"
-      }" class="boxed">${direction_back ? "&lt;&lt;" : "&gt;&gt;"}</a>`
+      }" class="boxed${direction_back ? "" : " boxed_right_arrow"}">${
+        direction_back ? "&lt;&lt;" : "&gt;&gt;"
+      }</a>`
     );
   },
 
@@ -54,7 +56,7 @@ export let html_functions = {
     tab_uid: string,
     unique_id: string
   ): string {
-    return `<label for = "tab${tab_uid}_${unique_id}">${
+    return `<label for = "tab${tab_uid}_${unique_id}" class="msg${message_number}">${
       matched ? '<span class="red_body">' : ""
     }<span class="show_when_big">Message</span><span class="show_when_small">M#</span> ${
       message_number + 1

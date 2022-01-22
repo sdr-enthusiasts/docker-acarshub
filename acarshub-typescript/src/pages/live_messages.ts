@@ -292,14 +292,13 @@ export let live_messages_page = {
       this.pause = false;
       $("#pause_updates").html("Pause Updates");
       $("#received").html("Received messages: ");
-      $("#log")
-        .html
-        // display_messages(
-        //   this.lm_msgs_received.get_all_messages(),
-        //   this.selected_tabs,
-        //   true
-        // )
-        ();
+      $("#log").html(
+        display_messages(
+          this.lm_msgs_received.get_all_messages(),
+          this.selected_tabs,
+          true
+        )
+      );
       resize_tabs();
     } else {
       this.pause = true;

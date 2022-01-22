@@ -138,6 +138,10 @@ img {
   font-weight: bold;
 }
 
+.boxed_right_arrow {
+  margin-left: -1px;
+}
+
 .small_img {
   height: 14px;
   vertical-align: middle;
@@ -978,7 +982,7 @@ a[x-apple-data-detectors] {
   }
 }
 
-@media only screen and (max-width: 950px) {
+@media only screen and (max-width: 970px) {
   #search_results {
     width: calc(100vw - 295px) !important;
   }
@@ -1030,9 +1034,9 @@ a[x-apple-data-detectors] {
     column-span: all;
   }
 
-  .show_when_small {
+  /* .show_when_small {
     display: inline-block;
-  }
+  } */
 
   #planes {
     max-height: calc(100vh - 170px) !important;
@@ -1044,7 +1048,7 @@ a[x-apple-data-detectors] {
   }
 }
 
-@media only screen and (min-width: 951px) {
+@media only screen and (min-width: 970px) {
   .show_when_small {
     display: none;
   }
