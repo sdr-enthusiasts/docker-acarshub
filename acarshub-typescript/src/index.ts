@@ -220,7 +220,6 @@ $((): void => {
   // stats
 
   socket.on("features_enabled", function (msg: decoders): void {
-    console.log(msg);
     stats_page.decoders_enabled(msg);
     menu.set_arch(msg.arch);
     if (msg.adsb.enabled === true) {
