@@ -504,13 +504,17 @@ export function alert_term_query(
   );
 }
 
-export function alert_text_update(alert_text: string[]): void {
+export function alert_text_update(
+  alert_text: string[],
+  ignore_text: string[]
+): void {
   socket.emit(
     "update_alerts",
     {
       terms: alert_text,
+      ignore: ignore_text,
     },
-    "/alerts"
+    "/main"
   );
 }
 
@@ -714,6 +718,10 @@ window.showPlaneMessages = function (
   hex: string,
   tail: string
 ): void {
+  if (hex === undefined) {
+    console.error("ERROR", callsign, tail);
+    return;
+  }
   live_map_page.showPlaneMessages(callsign, hex, tail);
 };
 

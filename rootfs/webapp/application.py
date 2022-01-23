@@ -538,7 +538,10 @@ def main_connect():
 
         socketio.emit(
             "terms",
-            {"terms": acarshub.acarshub_db.get_alert_terms()},
+            {
+                "terms": acarshub.acarshub_db.get_alert_terms(),
+                "ignore": acarshub.acarshub_db.get_alert_ignore(),
+            },
             to=requester,
             namespace="/main",
         )
@@ -602,7 +605,12 @@ def main_connect():
             to=requester,
             namespace="/main",
         )
-        socketio.emit("alert_terms", {"data": acarshub.getAlerts()}, namespace="/main")
+        socketio.emit(
+            "alert_terms",
+            {"data": acarshub.getAlerts()},
+            to=requester,
+            namespace="/main",
+        )
         send_version()
     except Exception as e:
         acarshub_helpers.log(
@@ -645,6 +653,7 @@ def get_alerts(message, namespace):
 @socketio.on("update_alerts", namespace="/main")
 def update_alerts(message, namespace):
     acarshub.acarshub_db.set_alert_terms(message["terms"])
+    acarshub.acarshub_db.set_alert_ignore(message["ignore"])
 
 
 @socketio.on("signal_freqs", namespace="/main")
@@ -715,7 +724,16 @@ def handle_message(message, namespace):
 @socketio.on("reset_alert_counts", namespace="/main")
 def reset_alert_counts(message, namespace):
     if message["reset_alerts"]:
+        requester = request.sid
         acarshub.acarshub_db.reset_alert_counts()
+        try:
+            socketio.emit(
+                "alert_terms", {"data": acarshub.getAlerts()}, namespace="/main"
+            )
+        except Exception as e:
+            acarshub_helpers.log(
+                f"Main Connect: Error sending alert_terms: {e}", "webapp"
+            )
 
 
 @socketio.on("disconnect", namespace="/main")

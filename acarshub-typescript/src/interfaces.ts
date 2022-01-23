@@ -48,6 +48,7 @@ export interface status_global {
 
 export interface terms {
   terms: string[];
+  ignore: string[];
 }
 
 export interface decoders {
