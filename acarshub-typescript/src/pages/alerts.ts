@@ -430,6 +430,7 @@ export let alerts_page = {
         stack: true,
         delayOnHover: true,
         showCountdown: true,
+        closeOnClick: true,
         animation: {
           open: "zoomIn",
           close: "zoomIn",
