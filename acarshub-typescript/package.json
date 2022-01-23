@@ -1,6 +1,6 @@
 {
   "name": "acarshub-typescript",
-  "version": "2.8.2",
+  "version": "2.9.0",
   "description": "Web front end for the docker-acarshub project",
   "main": "index.js",
   "repository": "https://github.com/fredclausen/docker-acarshub",
@@ -13,7 +13,7 @@
   "author": "Fred Clausen",
   "license": "GPL-3.0-only",
   "devDependencies": {
-    "@babel/core": "^7.16.10",
+    "@babel/core": "^7.16.12",
     "@babel/preset-env": "^7.16.11",
     "@types/jquery": "^3.5.13",
     "@types/js-cookie": "^3.0.1",
