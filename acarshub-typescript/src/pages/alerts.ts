@@ -1,6 +1,14 @@
 import Cookies from "js-cookie";
-import { display_messages } from "../helpers/html_generator";
-import { alert_term_query, alert_text_update } from "../index";
+import {
+  display_messages,
+  display_message_group,
+} from "../helpers/html_generator";
+import {
+  alert_term_query,
+  alert_text_update,
+  get_window_size,
+  resize_tabs,
+} from "../index";
 import { acars_msg, alert_matched, html_msg, terms } from "../interfaces";
 import jBox from "jbox";
 //import "jbox/dist/jBox.all.css";
@@ -420,9 +428,14 @@ export let alerts_page = {
       found &&
       (typeof msg.loading === "undefined" || !msg.loading)
     ) {
+      // get random number between 1000 and 10000000000
+      const random_number = String(
+        Math.floor(Math.random() * (1000000000 - 1000 + 1)) + 1000
+      );
       const msg_text: string =
         "A new message matched with the following term(s): " + term_string;
       new jBox("Notice", {
+        id: "alert_popup_" + random_number,
         attributes: {
           x: "right",
           y: "bottom",
@@ -430,13 +443,35 @@ export let alerts_page = {
         stack: true,
         delayOnHover: true,
         showCountdown: true,
-        closeOnClick: true,
         animation: {
           open: "zoomIn",
           close: "zoomIn",
         },
         content: msg_text,
         color: "green",
+        autoClose: 10000,
+      });
+
+      $("#alert_popup_" + random_number).on("click", () => {
+        const window_size = get_window_size();
+        console.log(window_size);
+        let box = new jBox("Modal", {
+          id: "set_modal" + random_number,
+          blockScroll: false,
+          isolateScroll: true,
+          animation: "zoomIn",
+          closeButton: "box",
+          overlay: false,
+          reposition: true,
+          repositionOnOpen: false,
+          title: "Messages",
+          content:
+            `<div id="msg${random_number}">` +
+            display_message_group([msg.msghtml]) +
+            "</div>",
+        });
+        box.open();
+        resize_tabs();
       });
     }
 
