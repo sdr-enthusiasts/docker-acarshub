@@ -613,6 +613,10 @@ export let live_map_page = {
       const squawk = this.get_sqwk(current_plane);
       const callsign = this.get_callsign(current_plane);
       const hex = this.get_hex(current_plane);
+      if (hex === undefined) {
+        console.error("NO HEX FOUND");
+        continue;
+      }
       plane_callsigns.push({ callsign: callsign, hex: hex });
       const tail: string = this.get_tail(current_plane);
       const baro_rate = this.get_baro_rate(current_plane);
@@ -728,6 +732,10 @@ export let live_map_page = {
             continue;
           }
           const hex = this.get_hex(current_plane);
+          if (hex === undefined) {
+            console.error("NO HEX FOR PLANE");
+            continue;
+          }
           const tail = this.get_tail(current_plane);
           const details = this.match_plane(plane_data, callsign, tail, hex);
           const num_messages = details.num_messages;
@@ -872,6 +880,10 @@ export let live_map_page = {
           const rotate: number = this.get_heading(current_plane);
           const alt: string | number = this.get_alt(current_plane);
           const hex: string = this.get_hex(current_plane);
+          if (hex === undefined) {
+            console.error("NO HEX FOR PLANE");
+            continue;
+          }
           const speed: number = this.get_speed(current_plane);
           const squawk: number = this.get_sqwk(current_plane);
           const baro_rate: number = this.get_baro_rate(current_plane);
@@ -1136,6 +1148,10 @@ export let live_map_page = {
       const current_plane = this.adsb_planes[plane].position;
       const callsign = this.get_callsign(current_plane);
       const hex: string = this.get_hex(current_plane);
+      if (hex === undefined) {
+        console.error("NO HEX FOR PLANE");
+        continue;
+      }
       const tail: string = this.get_tail(current_plane);
       const details = this.match_plane(plane_data, callsign, tail, hex);
       const num_messages = details.num_messages;

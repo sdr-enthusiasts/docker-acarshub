@@ -543,7 +543,6 @@ export let live_messages_page = {
     ) {
       return true;
     } else if (
-      this.property_checker(message, new_msg, "label") &&
       this.property_checker(message, new_msg, "text") &&
       new_msg.label == "SQ" &&
       message.label == "SQ" &&
@@ -603,9 +602,10 @@ export let live_messages_page = {
       const new_icao_flight = new_msg.icao_flight;
       let found = false; // variable to track if the new message was found in previous messages
       let rejected = false; // variable to track if the new message was rejected for being a duplicate
-      let index_new = 0; // the index of the found previous message
+      let index_of_found_plane = 0;
       new_msg.uid = this.getRandomInt(1000000).toString(); // Each message gets a unique ID. Used to track tab selection
       // Loop through the received messages. If a message is found we'll break out of the for loop
+
       for (let planes of this.lm_msgs_received.planes) {
         // Now we loop through all of the messages in the message group to find a match in case the first doesn't
         // Have the field we need
@@ -617,7 +617,6 @@ export let live_messages_page = {
             // We've found a matching message
             // See if the UIDs for the plane are present, and if not, push them
             found = true;
-            index_new = planes.messages.indexOf(message);
             if (
               new_icao_flight &&
               !planes.identifiers.includes(new_icao_flight)
@@ -634,7 +633,8 @@ export let live_messages_page = {
         // run through the messages in that group to see if it is a dup.
         // if it is, we'll reject the new message and append a counter to the old/saved message
         if (found) {
-          for (let message of this.lm_msgs_received.planes[index_new]
+          index_of_found_plane = this.lm_msgs_received.planes.indexOf(planes);
+          for (let message of this.lm_msgs_received.planes[index_of_found_plane]
             .messages) {
             // First check is to see if the message is the same by checking all fields and seeing if they match
             // Second check is to see if the text field itself is a match
@@ -739,24 +739,23 @@ export let live_messages_page = {
 
             if (rejected) {
               // Promote the message back to the front
-              this.lm_msgs_received.planes[index_new].messages.forEach(
-                (item: any, i: number) => {
-                  if (
-                    i ==
-                    this.lm_msgs_received.planes[index_new].messages.indexOf(
-                      message
-                    )
-                  ) {
-                    this.lm_msgs_received.planes[index_new].messages.splice(
-                      i,
-                      1
-                    );
-                    this.lm_msgs_received.planes[index_new].messages.unshift(
-                      item
-                    );
-                  }
+              this.lm_msgs_received.planes[
+                index_of_found_plane
+              ].messages.forEach((item: any, i: number) => {
+                if (
+                  i ==
+                  this.lm_msgs_received.planes[
+                    index_of_found_plane
+                  ].messages.indexOf(message)
+                ) {
+                  this.lm_msgs_received.planes[
+                    index_of_found_plane
+                  ].messages.splice(i, 1);
+                  this.lm_msgs_received.planes[
+                    index_of_found_plane
+                  ].messages.unshift(item);
                 }
-              );
+              });
               break;
             }
           }
@@ -765,18 +764,23 @@ export let live_messages_page = {
         if (found) {
           // If the message was found, and not rejected, we'll append it to the message group
           if (!rejected) {
-            this.lm_msgs_received.planes[index_new].messages.unshift(new_msg);
+            this.lm_msgs_received.planes[index_of_found_plane].messages.unshift(
+              new_msg
+            );
             if (
-              !this.lm_msgs_received.planes[index_new].has_alerts &&
+              !this.lm_msgs_received.planes[index_of_found_plane].has_alerts &&
               matched.was_found
             )
-              this.lm_msgs_received.planes[index_new].has_alerts = true;
+              this.lm_msgs_received.planes[index_of_found_plane].has_alerts =
+                true;
             if (matched.was_found)
-              this.lm_msgs_received.planes[index_new].num_alerts += 1;
+              this.lm_msgs_received.planes[
+                index_of_found_plane
+              ].num_alerts += 1;
           }
 
           this.lm_msgs_received.planes.forEach((item, i) => {
-            if (i == index_new) {
+            if (i == index_of_found_plane) {
               this.lm_msgs_received.planes.splice(i, 1);
               this.lm_msgs_received.planes.unshift(item);
             }

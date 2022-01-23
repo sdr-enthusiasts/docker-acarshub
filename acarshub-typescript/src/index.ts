@@ -718,6 +718,10 @@ window.showPlaneMessages = function (
   hex: string,
   tail: string
 ): void {
+  if (hex === undefined) {
+    console.error("ERROR", callsign, tail);
+    return;
+  }
   live_map_page.showPlaneMessages(callsign, hex, tail);
 };
 
