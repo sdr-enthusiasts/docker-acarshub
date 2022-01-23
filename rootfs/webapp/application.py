@@ -538,7 +538,10 @@ def main_connect():
 
         socketio.emit(
             "terms",
-            {"terms": acarshub.acarshub_db.get_alert_terms()},
+            {
+                "terms": acarshub.acarshub_db.get_alert_terms(),
+                "ignore": acarshub.acarshub_db.get_alert_ignore(),
+            },
             to=requester,
             namespace="/main",
         )

@@ -9,6 +9,7 @@ import { tooltip } from "../helpers/tooltips";
 export let alerts_page = {
   alerts: 0 as number,
   alert_text: [] as string[],
+  ignore_text: [] as string[],
   alert_callsigns: [] as string[],
   alert_tail: [] as string[],
   alert_icao: [] as string[],
@@ -59,6 +60,8 @@ export let alerts_page = {
     <span id="stat_menu">
       <label for="alert_text" class="menu_non_link">Text Field:</label><br />
       <textarea rows="2" id="alert_text"></textarea><br />
+      <label for="alert_text_ignore" class="menu_non_link">Text Field to Ignore:</label><br />
+      <textarea rows="2" id="alert_text_ignore"></textarea><br />
       <label for="alert_callsigns" class="menu_non_link">Callsign:</label><br />
       <textarea rows="2" id="alert_callsigns"></textarea><br />
       <label for="alert_tail" class="menu_non_link">Tail Number:</label><br />
@@ -77,6 +80,9 @@ export let alerts_page = {
   show_modal_values: function (): void {
     this.show_sound();
     $("#alert_text").val(this.combineArray(this.alert_text).toUpperCase());
+    $("#alert_text_ignore").val(
+      this.combineArray(this.ignore_text).toUpperCase()
+    );
     $("#alert_callsigns").val(
       this.combineArray(this.alert_callsigns).toUpperCase()
     );
@@ -94,6 +100,7 @@ export let alerts_page = {
 
   alerts_terms: function (msg: terms) {
     this.alert_text = msg.terms;
+    this.ignore_text = msg.ignore;
   },
 
   alerts_acars_message: function (msg: html_msg): void {
@@ -139,6 +146,20 @@ export let alerts_page = {
       }
     } else {
       this.alert_text = [];
+    }
+
+    if ($("#alert_text_ignore").val()) {
+      const split = String($("#alert_text_ignore").val()).split(",");
+      this.ignore_text = [];
+      Object.values(split).forEach((value) => {
+        if (
+          value.trim().length > 0 &&
+          !this.ignore_text.includes(value.trim().toUpperCase())
+        )
+          this.ignore_text.push(value.trim().toUpperCase());
+      });
+    } else {
+      this.ignore_text = [];
     }
 
     if ($("#alert_callsigns").val()) {
@@ -190,7 +211,7 @@ export let alerts_page = {
     $("#alert_tail").val(this.combineArray(this.alert_tail).toUpperCase());
     $("#alert_icao").val(this.combineArray(this.alert_icao).toUpperCase());
 
-    alert_text_update(this.alert_text);
+    alert_text_update(this.alert_text, this.ignore_text);
 
     Cookies.set("alert_callsigns", this.combineArray(this.alert_callsigns), {
       expires: 365,
@@ -282,6 +303,7 @@ export let alerts_page = {
     return output;
   },
 
+  // FIXME: Rewrite this with forEach
   match_alert: function (
     msg: html_msg,
     show_alert: boolean = false
@@ -292,11 +314,11 @@ export let alerts_page = {
     let matched_icao = [];
     let matched_text = [];
     let term_string: string = "";
-
     if (
       msg.msghtml.hasOwnProperty("text") &&
       typeof msg.msghtml.text !== "undefined"
     ) {
+      let dont_ignore_msg = true;
       for (let i = 0; i < this.alert_text.length; i++) {
         if (
           msg.msghtml.text
@@ -305,12 +327,24 @@ export let alerts_page = {
               new RegExp("\\b" + this.alert_text[i].toUpperCase() + "\\b")
             ) != -1
         ) {
-          found = true;
-          matched_text.push(this.alert_text[i]);
-          term_string =
-            term_string.length > 0
-              ? ", " + this.alert_text[i]
-              : this.alert_text[i];
+          const ignore_not_found = Object.values(this.ignore_text).every(
+            (text) => {
+              return (
+                msg.msghtml
+                  .text!.toUpperCase()
+                  .search(new RegExp("\\b" + text + "\\b")) == -1
+              );
+            }
+          );
+          if (!ignore_not_found) dont_ignore_msg = false;
+          if (ignore_not_found && dont_ignore_msg) {
+            found = true;
+            matched_text.push(this.alert_text[i]);
+            term_string =
+              term_string.length > 0
+                ? ", " + this.alert_text[i]
+                : this.alert_text[i];
+          }
         }
       }
     }

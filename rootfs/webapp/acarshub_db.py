@@ -11,6 +11,7 @@ import re
 
 groundStations = dict()
 alert_terms = list()
+alert_terms_ignore = list()
 
 # Download station IDs
 
@@ -255,10 +256,12 @@ session = db_session()
 terms = session.query(alertStats).all()
 
 for t in terms:
-    if t.term.isupper() == False:
-        t.term = t.term.upper()
-
     alert_terms.append(t.term.upper())
+
+terms = session.query(ignoreAlertTerms).all()
+for t in terms:
+    alert_terms_ignore.append(t.term.upper())
+
 session.commit()
 session.close()
 
@@ -596,67 +599,23 @@ def add_message_from_json(message_type, message_from_json):
         if len(text) > 0 and alert_terms:
             for search_term in alert_terms:
                 if re.findall(r"\b{}\b".format(search_term), text):
-
-                    found_term = (
-                        session.query(alertStats)
-                        .filter(alertStats.term == search_term.upper())
-                        .first()
-                    )
-                    if found_term is not None:
-                        found_term.count += 1
-                    else:
-                        session.add(alertStats(term=search_term.upper(), count=1))
-
-                    session.add(
-                        messages_saved(
-                            message_type=message_type,
-                            time=time,
-                            station_id=station_id,
-                            toaddr=toaddr,
-                            fromaddr=fromaddr,
-                            depa=depa,
-                            dsta=dsta,
-                            eta=eta,
-                            gtout=gtout,
-                            gtin=gtin,
-                            wloff=wloff,
-                            wlin=wlin,
-                            lat=lat,
-                            lon=lon,
-                            alt=alt,
-                            text=text,
-                            tail=tail,
-                            flight=flight,
-                            icao=icao,
-                            freq=freq,
-                            ack=ack,
-                            mode=mode,
-                            label=label,
-                            block_id=block_id,
-                            msgno=msgno,
-                            is_response=is_response,
-                            is_onground=is_onground,
-                            error=error,
-                            libacars=libacars,
-                            level=level,
-                            term=search_term.upper(),
-                            type_of_match="text",
-                        )
-                    )
-                    session.commit()
-                    if backup:
-                        found_term_backup = (
-                            session_backup.query(alertStats)
+                    should_add = True
+                    for ignore_term in alert_terms_ignore:
+                        if re.findall(r"\b{}\b".format(ignore_term), text):
+                            should_add = False
+                            break
+                    if should_add:
+                        found_term = (
+                            session.query(alertStats)
                             .filter(alertStats.term == search_term.upper())
                             .first()
                         )
-                        if found_term_backup is not None:
-                            found_term_backup.count += 1
+                        if found_term is not None:
+                            found_term.count += 1
                         else:
-                            session_backup.add(
-                                alertStats(term=search_term.upper(), count=1)
-                            )
-                        session_backup.add(
+                            session.add(alertStats(term=search_term.upper(), count=1))
+
+                        session.add(
                             messages_saved(
                                 message_type=message_type,
                                 time=time,
@@ -692,7 +651,56 @@ def add_message_from_json(message_type, message_from_json):
                                 type_of_match="text",
                             )
                         )
-                        session_backup.commit()
+                        session.commit()
+                        if backup:
+                            found_term_backup = (
+                                session_backup.query(alertStats)
+                                .filter(alertStats.term == search_term.upper())
+                                .first()
+                            )
+                            if found_term_backup is not None:
+                                found_term_backup.count += 1
+                            else:
+                                session_backup.add(
+                                    alertStats(term=search_term.upper(), count=1)
+                                )
+                            session_backup.add(
+                                messages_saved(
+                                    message_type=message_type,
+                                    time=time,
+                                    station_id=station_id,
+                                    toaddr=toaddr,
+                                    fromaddr=fromaddr,
+                                    depa=depa,
+                                    dsta=dsta,
+                                    eta=eta,
+                                    gtout=gtout,
+                                    gtin=gtin,
+                                    wloff=wloff,
+                                    wlin=wlin,
+                                    lat=lat,
+                                    lon=lon,
+                                    alt=alt,
+                                    text=text,
+                                    tail=tail,
+                                    flight=flight,
+                                    icao=icao,
+                                    freq=freq,
+                                    ack=ack,
+                                    mode=mode,
+                                    label=label,
+                                    block_id=block_id,
+                                    msgno=msgno,
+                                    is_response=is_response,
+                                    is_onground=is_onground,
+                                    error=error,
+                                    libacars=libacars,
+                                    level=level,
+                                    term=search_term.upper(),
+                                    type_of_match="text",
+                                )
+                            )
+                            session_backup.commit()
         # commit the db change and close the session
         session.commit()
         session.close()
@@ -1046,7 +1054,23 @@ def get_alert_counts():
         acarshub_helpers.acars_traceback(e, "database")
 
 
-# def set_alert_ignore(terms: None):
+def set_alert_ignore(terms=None):
+    if terms is None:
+        return
+
+    global alert_terms_ignore
+    alert_terms_ignore = terms
+
+    try:
+        session = db_session()
+        result = session.query(ignoreAlertTerms).delete()
+        for t in terms:
+            session.add(ignoreAlertTerms(term=t))
+        session.commit()
+    except Exception as e:
+        acarshub_helpers.acars_traceback(e, "database")
+    finally:
+        session.close()
 
 
 def set_alert_terms(terms=None):
@@ -1084,7 +1108,6 @@ def set_alert_terms(terms=None):
 
 
 def reset_alert_counts():
-    print("resetting counts")
     try:
         session = db_session()
         result = session.query(alertStats).all()
@@ -1095,6 +1118,11 @@ def reset_alert_counts():
         session.close()
     except Exception as e:
         acarshub_helpers.acars_traceback(e, "database")
+
+
+def get_alert_ignore():
+    global alert_terms_ignore
+    return alert_terms_ignore
 
 
 def get_alert_terms():
