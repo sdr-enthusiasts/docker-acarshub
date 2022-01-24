@@ -57,7 +57,7 @@ if [[ -n "${QUIET_LOGS}" ]]; then
   stdbuf -oL sed --unbuffered '/^$/d' | \
   stdbuf -oL awk '! /^dumpvdl2/' | \
   stdbuf -oL awk '! /^Sampling rate set/' | \
-  stdbuf -oL awk '! /^Found \d+ device(s):/' | \
+  stdbuf -oL awk '! /^Found \[0-9]+ device(s):/' | \
   stdbuf -oL awk '! /^  [0-9]+/' | \
   stdbuf -oL awk '! /^Using device [0-9]+/' | \
   stdbuf -oL awk '! /^Found /' | \
