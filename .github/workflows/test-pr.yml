@@ -10,9 +10,9 @@ on:
       - '**.MD'
 
 jobs:
-  buildx:
+  build-acarshub-prod-test:
     if: github.actor != 'depbot'
-    name: Test image build
+    name: Build ACARSHub PR Prod Test
     runs-on: ubuntu-latest
     env:
       REPO: fredclausen
@@ -120,35 +120,4 @@ jobs:
           platforms: linux/amd64,linux/arm/v7,linux/arm/v6,linux/arm64,linux/386
           push: ${{ env.PUSH }}
           tags: ${{ env.REPO }}/${{ env.IMAGE }}:test-${{ env.GIT_BRANCH }}
-            # build acarshub typescript test
-
-      -
-        name: Build ACARSHub typescript dev
-        working-directory: ./acarshub-typescript
-        run: |
-          npm install
-          sed -i 's/Pre-Release/ACARS Hub Pre-Release: ${{ env.VERSION_TAG }}/' ./src/helpers/menu.ts
-          npm run build-dev
-          mkdir -p ./webapp/static/images
-          mkdir -p ./webapp/static/js
-          mkdir -p ./webapp/static/sounds
-          mkdir -p ./webapp/templates
-          cp -r ./dist/static/images ./webapp/static/
-          cp -r ./dist/static/sounds ./webapp/static/
-          cp -r ./dist/static/js ./webapp/static/
-          mv ./dist/static/index.html ./webapp/templates/
-          tar cvfz webapp.tar.gz ./webapp
-          cp webapp.tar.gz ../webapp.tar.gz
-
-      # Test container build for all supported platforms (defined above)
-      -
-        name: Produciton Test Build ${{ matrix.docker-platform }}
-        uses: docker/build-push-action@v2
-        with:
-          context: .
-          file: ./Dockerfile
-          no-cache: true
-          platforms: linux/amd64,linux/arm/v7,linux/arm/v6,linux/arm64,linux/386
-          push: ${{ env.PUSH }}
-          tags: ${{ env.REPO }}/${{ env.IMAGE }}:test-${{ env.GIT_BRANCH }}-dev
             # build acarshub typescript test
