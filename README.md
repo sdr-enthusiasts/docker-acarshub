@@ -16,7 +16,7 @@ Builds and runs on `amd64`, `arm64`, `arm/v7`, `arm/v6` and `386` architectures.
 
 ## IMPORTANT NOTE FOR RASPBERRY PI OS 32 BIT USERS
 
-After March 1st, 2022 32 bit Rasperry Pi OS machines may not run ACARS Hub properly. I will be updating the base image of the container to Debian Bullseye and this will cause ACARS Hub to cease working if you are not prepared. Please see [this document](arm32.MD)
+After March 1st, 2022 32 bit Rasperry Pi OS machines may not run ACARS Hub properly. I will be updating the base image of the container to Debian Bullseye and this will cause ACARS Hub to cease working if you are not prepared. Please see [this](https://github.com/fredclausen/Buster-Docker-Fixes) for instructions on how to fix.
 
 ## Supported tags and respective Dockerfiles
 
