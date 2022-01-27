@@ -36,7 +36,7 @@ if [ -n "${ENABLE_WEB}" ]; then
         # regular graphs
         rrdtool graph "${OUTPUT_DIR}/1hour.png" --title "1 Hour" --start "-1h" "${ARGS_ALL[@]}" >/dev/null 2>&1
         rrdtool graph "${OUTPUT_DIR}/6hour.png" --title "6 Hours" --start "-6h" "${ARGS_ALL[@]}" >/dev/null 2>&1
-        rrdtool graph "${OUTPUT_DIR}/12hour.png" --title "12 Hours" --start "-1d" "${ARGS_ALL[@]}" >/dev/null 2>&1
+        rrdtool graph "${OUTPUT_DIR}/12hour.png" --title "12 Hours" --start "-12h" "${ARGS_ALL[@]}" >/dev/null 2>&1
         rrdtool graph "${OUTPUT_DIR}/24hours.png" --title "1 Day" --start "-1d" "${ARGS_ALL[@]}" >/dev/null 2>&1
         rrdtool graph "${OUTPUT_DIR}/1week.png" --title "1 Week" --start "-7d" "${ARGS_ALL[@]}" >/dev/null 2>&1
         if [[ "${STARTING_UP}" == "TRUE" || $(date +%M) == "00" ]]; then
@@ -50,7 +50,7 @@ if [ -n "${ENABLE_WEB}" ]; then
 
         rrdtool graph "${OUTPUT_DIR}/error1hour.png" --title "1 Hour" --start "-1h" "${ARGS_ERROR[@]}" >/dev/null 2>&1
         rrdtool graph "${OUTPUT_DIR}/error6hour.png" --title "6 Hours" --start "-6h" "${ARGS_ERROR[@]}" >/dev/null 2>&1
-        rrdtool graph "${OUTPUT_DIR}/error12hour.png" --title "12 Hours" --start "-1d" "${ARGS_ERROR[@]}" >/dev/null 2>&1
+        rrdtool graph "${OUTPUT_DIR}/error12hour.png" --title "12 Hours" --start "-12h" "${ARGS_ERROR[@]}" >/dev/null 2>&1
         rrdtool graph "${OUTPUT_DIR}/error24hours.png" --title "1 Day" --start "-1d" "${ARGS_ERROR[@]}" >/dev/null 2>&1
         rrdtool graph "${OUTPUT_DIR}/error1week.png" --title "1 Week" --start "-7d" "${ARGS_ERROR[@]}" >/dev/null 2>&1
         if [[ "${STARTING_UP}" == "TRUE" || $(date +%M) == "00" ]]; then
@@ -63,7 +63,7 @@ if [ -n "${ENABLE_WEB}" ]; then
             # ACARS Graphs
             rrdtool graph "${OUTPUT_DIR}/acars1hour.png" --title "1 Hour" --start "-1h" "${ARGS_ACARS[@]}" >/dev/null 2>&1
             rrdtool graph "${OUTPUT_DIR}/acars6hour.png" --title "6 Hours" --start "-6h" "${ARGS_ACARS[@]}" >/dev/null 2>&1
-            rrdtool graph "${OUTPUT_DIR}/acars12hour.png" --title "12 Hours" --start "-1d" "${ARGS_ACARS[@]}" >/dev/null 2>&1
+            rrdtool graph "${OUTPUT_DIR}/acars12hour.png" --title "12 Hours" --start "-12h" "${ARGS_ACARS[@]}" >/dev/null 2>&1
             rrdtool graph "${OUTPUT_DIR}/acars24hours.png" --title "1 Day" --start "-1d" "${ARGS_ACARS[@]}" >/dev/null 2>&1
             rrdtool graph "${OUTPUT_DIR}/acars1week.png" --title "1 Week" --start "-7d" "${ARGS_ACARS[@]}" >/dev/null 2>&1
             if [[ "${STARTING_UP}" == "TRUE" || $(date +%M) == "00" ]]; then
@@ -76,7 +76,7 @@ if [ -n "${ENABLE_WEB}" ]; then
 
             rrdtool graph "${OUTPUT_DIR}/vdlm1hour.png" --title "1 Hour" --start "-1h" "${ARGS_VDLM[@]}" >/dev/null 2>&1
             rrdtool graph "${OUTPUT_DIR}/vdlm6hour.png" --title "6 Hours" --start "-6h" "${ARGS_VDLM[@]}" >/dev/null 2>&1
-            rrdtool graph "${OUTPUT_DIR}/vdlm12hour.png" --title "12 Hours" --start "-1d" "${ARGS_VDLM[@]}" >/dev/null 2>&1
+            rrdtool graph "${OUTPUT_DIR}/vdlm12hour.png" --title "12 Hours" --start "-12h" "${ARGS_VDLM[@]}" >/dev/null 2>&1
             rrdtool graph "${OUTPUT_DIR}/vdlm24hours.png" --title "1 Day" --start "-1d" "${ARGS_VDLM[@]}" >/dev/null 2>&1
             rrdtool graph "${OUTPUT_DIR}/vdlm1week.png" --title "1 Week" --start "-7d" "${ARGS_VDLM[@]}" >/dev/null 2>&1
             if [[ "${STARTING_UP}" == "TRUE" || $(date +%M) == "00" ]]; then
