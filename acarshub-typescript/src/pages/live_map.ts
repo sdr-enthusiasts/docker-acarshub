@@ -56,8 +56,8 @@ export let live_map_page = {
   ignored_keys: ["trk", "alt", "call"] as string[],
   plane_message_modal: new jBox("Modal", {
     id: "set_modal",
-    width: 350,
-    height: 400,
+    // width: 350,
+    // height: 400,
     blockScroll: false,
     isolateScroll: true,
     animation: "zoomIn",
@@ -1240,18 +1240,21 @@ export let live_map_page = {
     const window_height = this.get_modal_height();
     this.plane_message_modal.setHeight(window_height);
     this.plane_message_modal.setWidth(window_width);
-    resize_tabs(window_width - 40, false);
+    resize_tabs(
+      (this.window_size.height > 500 ? this.window_size.height : 500) - 40,
+      false
+    );
     $(".show_when_small").css("display", `inline-block`);
     $(".show_when_big").css("display", "none");
     tooltip.attach_all_tooltips();
   },
 
   get_modal_height: function () {
-    return this.window_size.height * (this.window_size.height < 500 ? 1 : 0.8);
+    return this.window_size.height < 500 ? this.window_size.height : 500;
   },
 
   get_modal_width: function () {
-    return this.window_size.width * (this.window_size.width < 500 ? 1 : 0.5);
+    return this.window_size.width < 500 ? this.window_size.width : 500;
   },
 
   zoom_in: function (): void {

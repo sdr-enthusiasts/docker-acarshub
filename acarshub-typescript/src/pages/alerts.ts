@@ -11,7 +11,6 @@ import {
 } from "../index";
 import { acars_msg, alert_matched, html_msg, terms } from "../interfaces";
 import jBox from "jbox";
-//import "jbox/dist/jBox.all.css";
 import { tooltip } from "../helpers/tooltips";
 
 export let alerts_page = {
@@ -454,7 +453,6 @@ export let alerts_page = {
 
       $("#alert_popup_" + random_number).on("click", () => {
         const window_size = get_window_size();
-        console.log(window_size);
         let box = new jBox("Modal", {
           id: "set_modal" + random_number,
           blockScroll: false,

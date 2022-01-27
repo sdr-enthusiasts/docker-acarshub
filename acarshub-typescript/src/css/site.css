@@ -910,6 +910,8 @@ canvas {
   background-color: var(--grey-bg);
   border-radius: 0;
   box-shadow: 0 0 0 var(--transparent) !important;
+  width: inherit;
+  height: inherit;
 }
 
 .jBox-Mouse.jBox-wrapper .jBox-content,
