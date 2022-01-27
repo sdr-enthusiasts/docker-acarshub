@@ -27,7 +27,6 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # Copy needs to be prior to any curl/wget so SSL certs from GitHub runner are loaded
 # Using the ADD commands makes it so we don't have to untar the archive in the RUN step
 COPY rootfs/ /
-ADD webapp.tar.gz /
 
 RUN set -x && \
     mkdir -p /run/acars && \
