@@ -20,6 +20,7 @@ ENV BRANCH_RTLSDR="ed0317e6a58c098874ac58b769cf2e609c18d9a5" \
     DB_SAVEALL="true" \
     PLANEPLOTTER="" \
     VDLM_FILTER_ENABLE="true" \
+    ENABLE_RANGE_RINGS="true" \
     ADSB_URL="http://tar1090/data/aircraft.json"
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
@@ -27,6 +28,7 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # Copy needs to be prior to any curl/wget so SSL certs from GitHub runner are loaded
 # Using the ADD commands makes it so we don't have to untar the archive in the RUN step
 COPY rootfs/ /
+ADD webapp.tar.gz /
 
 RUN set -x && \
     mkdir -p /run/acars && \
@@ -36,8 +38,6 @@ RUN set -x && \
     pushd /webapp/data/ && \
     curl -O https://raw.githubusercontent.com/airframesio/data/master/json/vdl/ground-stations.json&& \
     curl -O https://raw.githubusercontent.com/airframesio/data/master/json/acars/metadata.json && \
-    ls -la /webapp/static && \
-    ls -la /webapp/static/js && \
     # Clean up
     rm -rf /src/* /tmp/* /var/lib/apt/lists/*
 
