@@ -57,15 +57,13 @@ jobs:
           cp -r ./dist/static/sounds ./webapp/static/
           cp -r ./dist/static/js ./webapp/static/
           mv ./dist/static/index.html ./webapp/templates/
-          tar cvfz webapp.tar.gz ./webapp
-          cp webapp.tar.gz ../webapp.tar.gz
 
       # upload webapp.tar.gz to github artifact
-      - name: Upload webapp.tar.gz to github artifact
+      - name: Upload webapp to github artifact
         uses: actions/upload-artifact@v2
         with:
-          name: webapp.tar.gz
-          path: webapp.tar.gz
+          name: webapp
+          path: ./acarshub-typescript/webapp
 
   deploy_dockerhub_latest:
     name: Deploy to latest to dockerhub
@@ -86,13 +84,8 @@ jobs:
       - name: Retrieve ACARS Hub typescript
         uses: actions/download-artifact@v2
         with:
-          name: webapp.tar.gz
-          path: ./webapp.tar.gz
-
-      - name: Extract webapp in to /rootfs/webapp
-        run: |
-          mkdir -p rootfs/webapp
-          tar xvfz ./webapp.tar.gz -C rootfs/webapp
+          name: webapp
+          path: ./rootfs/webapp
 
       # Get version tag
       # git log -1 : get the latest commit
@@ -159,13 +152,8 @@ jobs:
         - name: Retrieve ACARS Hub typescript
           uses: actions/download-artifact@v2
           with:
-            name: webapp.tar.gz
-            path: ./webapp.tar.gz
-
-        - name: Extract webapp in to /rootfs/webapp
-          run: |
-            mkdir -p rootfs/webapp
-            tar xvfz ./webapp.tar.gz -C rootfs/webapp
+            name: webapp
+            path: ./rootfs/webapp
 
         # Get version tag
         # git log -1 : get the latest commit
@@ -228,13 +216,8 @@ jobs:
         - name: Retrieve ACARS Hub typescript
           uses: actions/download-artifact@v2
           with:
-            name: webapp.tar.gz
-            path: ./webapp.tar.gz
-
-        - name: Extract webapp in to /rootfs/webapp
-          run: |
-            mkdir -p rootfs/webapp
-            tar xvfz ./webapp.tar.gz -C rootfs/webapp
+            name: webapp
+            path: ./rootfs/webapp
 
         # Get version tag
         # git log -1 : get the latest commit
@@ -305,13 +288,8 @@ jobs:
         - name: Retrieve ACARS Hub typescript
           uses: actions/download-artifact@v2
           with:
-            name: webapp.tar.gz
-            path: ./webapp.tar.gz
-
-        - name: Extract webapp in to /rootfs/webapp
-          run: |
-            mkdir -p rootfs/webapp
-            tar xvfz ./webapp.tar.gz -C rootfs/webapp
+            name: webapp
+            path: ./rootfs/webapp
 
         # Get version tag
         # git log -1 : get the latest commit
