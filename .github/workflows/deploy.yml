@@ -42,10 +42,6 @@ jobs:
         run: |
           sed -i 's/Pre-Release/ACARS Hub Version: ${{ env.VERSION_TAG }}/' ./acarshub-typescript/src/helpers/menu.ts
 
-      - name: Create version file
-        run: |
-          echo "${{ env.VERSION_TAG }}" >> ./rootfs/acarshub-version
-
       # build acarshub typescript
 
       - name: Build ACARSHub typescript
@@ -92,6 +88,25 @@ jobs:
         with:
           name: webapp.tar.gz
           path: webapp.tar.gz
+
+                    # Get version tag
+      # git log -1 : get the latest commit
+      # --format="%ct" : committer date, UNIX timestamp
+      # Then using `date` to format to YYYYMMDD format
+      - name: Get version tag from file
+        run: |
+          echo "VERSION_TAG=$(sed '1!d' ./version)" >> $GITHUB_ENV
+          echo "VERSION_TAG_DOCKER=$(sed '2!d' ./version)" >> $GITHUB_ENV
+
+      # Show version tag
+      - name: Show version tag
+        run: |
+          echo "ACARS Hub Version: ${{ env.VERSION_TAG }}"
+          echo "ACARS Hub Docker Version: ${{ env.VERSION_TAG_DOCKER }}"
+
+      - name: Create version file
+        run: |
+          echo "${{ env.VERSION_TAG }}" >> ./rootfs/acarshub-version
 
       # Set up QEMU for multi-arch builds
       - name: Set up QEMU
@@ -142,26 +157,39 @@ jobs:
             name: webapp.tar.gz
             path: webapp.tar.gz
 
+              # Get version tag
+        # git log -1 : get the latest commit
+        # --format="%ct" : committer date, UNIX timestamp
+        # Then using `date` to format to YYYYMMDD format
+        - name: Get version tag from file
+          run: |
+            echo "VERSION_TAG=$(sed '1!d' ./version)" >> $GITHUB_ENV
+            echo "VERSION_TAG_DOCKER=$(sed '2!d' ./version)" >> $GITHUB_ENV
+
+          # Show version tag
+        - name: Show version tag
+          run: |
+            echo "ACARS Hub Version: ${{ env.VERSION_TAG }}"
+            echo "ACARS Hub Docker Version: ${{ env.VERSION_TAG_DOCKER }}"
+
         - name: Create version file
           run: |
             echo "${{ env.VERSION_TAG }}" >> ./rootfs/acarshub-version
+
         # Log into docker hub (so we can push images)
-        -
-          name: Login to DockerHub
+        - name: Login to DockerHub
           uses: docker/login-action@v1
           with:
             username: ${{ secrets.DOCKERHUB_USERNAME }}
             password: ${{ secrets.DOCKERHUB_TOKEN }}
 
         # Set up buildx for multi platform builds
-        -
-          name: Set up Docker Buildx
+        - name: Set up Docker Buildx
           id: buildx
           uses: docker/setup-buildx-action@v1
 
         # Build version specific
-        -
-          name: Build & Push - version specific
+        - name: Build & Push - version specific
           uses: docker/build-push-action@v2
           with:
             context: .
@@ -192,6 +220,21 @@ jobs:
           with:
             name: webapp.tar.gz
             path: webapp.tar.gz
+
+                      # Get version tag
+        # git log -1 : get the latest commit
+        # --format="%ct" : committer date, UNIX timestamp
+        # Then using `date` to format to YYYYMMDD format
+        - name: Get version tag from file
+          run: |
+            echo "VERSION_TAG=$(sed '1!d' ./version)" >> $GITHUB_ENV
+            echo "VERSION_TAG_DOCKER=$(sed '2!d' ./version)" >> $GITHUB_ENV
+
+        # Show version tag
+        - name: Show version tag
+          run: |
+            echo "ACARS Hub Version: ${{ env.VERSION_TAG }}"
+            echo "ACARS Hub Docker Version: ${{ env.VERSION_TAG_DOCKER }}"
 
         - name: Create version file
           run: |
@@ -249,6 +292,21 @@ jobs:
           with:
             name: webapp.tar.gz
             path: webapp.tar.gz
+
+                      # Get version tag
+        # git log -1 : get the latest commit
+        # --format="%ct" : committer date, UNIX timestamp
+        # Then using `date` to format to YYYYMMDD format
+        - name: Get version tag from file
+          run: |
+            echo "VERSION_TAG=$(sed '1!d' ./version)" >> $GITHUB_ENV
+            echo "VERSION_TAG_DOCKER=$(sed '2!d' ./version)" >> $GITHUB_ENV
+
+        # Show version tag
+        - name: Show version tag
+          run: |
+            echo "ACARS Hub Version: ${{ env.VERSION_TAG }}"
+            echo "ACARS Hub Docker Version: ${{ env.VERSION_TAG_DOCKER }}"
 
         - name: Create version file
           run: |
