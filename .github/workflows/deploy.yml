@@ -87,7 +87,7 @@ jobs:
         uses: actions/download-artifact@v2
         with:
           name: webapp.tar.gz
-          path: webapp.tar.gz
+          path: ./webapp.tar.gz
 
                     # Get version tag
       # git log -1 : get the latest commit
@@ -155,7 +155,7 @@ jobs:
           uses: actions/download-artifact@v2
           with:
             name: webapp.tar.gz
-            path: webapp.tar.gz
+            path: ./webapp.tar.gz
 
               # Get version tag
         # git log -1 : get the latest commit
@@ -219,7 +219,7 @@ jobs:
           uses: actions/download-artifact@v2
           with:
             name: webapp.tar.gz
-            path: webapp.tar.gz
+            path: ./webapp.tar.gz
 
                       # Get version tag
         # git log -1 : get the latest commit
@@ -291,7 +291,7 @@ jobs:
           uses: actions/download-artifact@v2
           with:
             name: webapp.tar.gz
-            path: webapp.tar.gz
+            path: ./webapp.tar.gz
 
                       # Get version tag
         # git log -1 : get the latest commit
