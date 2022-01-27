@@ -69,7 +69,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: webapp.tar.gz
-          path: /webapp.tar.gz
+          path: webapp.tar.gz
 
   deploy_dockerhub_latest:
     name: Deploy to latest to dockerhub
@@ -91,7 +91,7 @@ jobs:
         uses: actions/download-artifact@v2
         with:
           name: webapp.tar.gz
-          path: /webapp.tar.gz
+          path: webapp.tar.gz
 
       # Set up QEMU for multi-arch builds
       - name: Set up QEMU
@@ -140,7 +140,7 @@ jobs:
           uses: actions/download-artifact@v2
           with:
             name: webapp.tar.gz
-            path: /webapp.tar.gz
+            path: webapp.tar.gz
 
         - name: Create version file
           run: |
@@ -191,7 +191,7 @@ jobs:
           uses: actions/download-artifact@v2
           with:
             name: webapp.tar.gz
-            path: /webapp.tar.gz
+            path: webapp.tar.gz
 
         - name: Create version file
           run: |
@@ -248,7 +248,7 @@ jobs:
           uses: actions/download-artifact@v2
           with:
             name: webapp.tar.gz
-            path: /webapp.tar.gz
+            path: webapp.tar.gz
 
         - name: Create version file
           run: |
