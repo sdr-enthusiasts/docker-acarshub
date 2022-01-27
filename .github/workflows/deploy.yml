@@ -69,7 +69,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: webapp.tar.gz
-          path: ../webapp.tar.gz
+          path: /webapp.tar.gz
 
   deploy_dockerhub_latest:
     name: Deploy to latest to dockerhub
