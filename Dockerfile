@@ -1,25 +1,13 @@
 # hadolint ignore=DL3007
-FROM fredclausen/acarshub-baseimage:v2
+FROM ghcr.io/fredclausen/acarshub-baseimage:nextgen
 
-ENV BRANCH_RTLSDR="ed0317e6a58c098874ac58b769cf2e609c18d9a5" \
-    S6_BEHAVIOUR_IF_STAGE2_FAILS=2 \
-    FEED="" \
-    STATION_ID_ACARS="" \
-    STATION_ID_VDLM="" \
-    SERIAL_ACARS="" \
-    SERIAL_VDLM="" \
-    FREQS_ACARS="" \
-    FREQS_VDLM="" \
+ENV FEED="" \
     ENABLE_ACARS="" \
     ENABLE_VDLM="" \
-    GAIN_ACARS="-10" \
-    GAIN_VDLM="280" \
     ENABLE_WEB="true" \
     QUIET_LOGS="" \
     QUIET_MESSAGES="true" \
     DB_SAVEALL="true" \
-    PLANEPLOTTER="" \
-    VDLM_FILTER_ENABLE="true" \
     ENABLE_RANGE_RINGS="true" \
     ADSB_URL="http://tar1090/data/aircraft.json"
 
@@ -40,8 +28,6 @@ RUN set -x && \
     curl -O https://raw.githubusercontent.com/airframesio/data/master/json/acars/metadata.json && \
     # Clean up
     rm -rf /src/* /tmp/* /var/lib/apt/lists/*
-
-ENTRYPOINT [ "/init" ]
 
 EXPOSE 80
 
