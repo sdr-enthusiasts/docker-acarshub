@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # Copyright (C) 2022 Frederick Clausen II
 # This file is part of acarshub <https://github.com/fredclausen/docker-acarshub>.
 #
@@ -14,23 +16,21 @@
 # You should have received a copy of the GNU General Public License
 # along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-#!/usr/bin/env python3
-
 import eventlet
 
 eventlet.monkey_patch()
-import acarshub
-import acarshub_helpers
-import acars_formatter
+import acarshub  # noqa: E402
+import acarshub_helpers  # noqa: E402
+import acars_formatter  # noqa: E402
 
 if not acarshub_helpers.SPAM:
-    import acarshub_rrd
-import logging
+    import acarshub_rrd  # noqa: E402
+import logging  # noqa: E402
 
-from flask_socketio import SocketIO
-from flask import Flask, render_template, request, redirect, url_for
-from threading import Thread, Event
-from collections import deque
+from flask_socketio import SocketIO  # noqa: E402
+from flask import Flask, render_template, request, redirect, url_for  # noqa: E402
+from threading import Thread, Event  # noqa: E402
+from collections import deque  # noqa: E402
 
 log = logging.getLogger("werkzeug")
 log.setLevel(logging.ERROR)
@@ -94,7 +94,7 @@ error_messages = 0
 
 acars_namespaces = ["/main"]
 
-#### REMOVE AFTER AIRFRAMES IS UPDATED ####
+# REMOVE AFTER AIRFRAMES IS UPDATED ####
 # VDLM Feeders
 que_vdlm2_feed = deque(maxlen=15)
 vdlm2_feeder_thread = Thread()
@@ -123,7 +123,7 @@ def vdlm_feeder():
                 break
 
 
-#### REMOVE AFTER AIRFRAMES IS UPDATED ####
+# REMOVE AFTER AIRFRAMES IS UPDATED ####
 
 
 def update_rrd_db():
@@ -364,29 +364,29 @@ def init_listeners(special_message=""):
     global thread_html_generator
     global thread_adsb_listner
     global thread_adsb
-    #### REMOVE AFTER AIRFRAMES IS UPDATED ####
+    # REMOVE AFTER AIRFRAMES IS UPDATED ####
     global vdlm2_feeder_thread
-    #### REMOVE AFTER AIRFRAMES IS UPDATED ####
+    # REMOVE AFTER AIRFRAMES IS UPDATED ####
 
     # show log message if this is container startup
-    if special_message == "" and acarshub_helpers.QUIET_LOGS == False:
+    if special_message == "" and acarshub_helpers.QUIET_LOGS is False:
         acarshub_helpers.log("Starting Data Listeners", "init")
     if not thread_database.is_alive():
-        if special_message or acarshub_helpers.QUIET_LOGS == False:
+        if special_message or acarshub_helpers.QUIET_LOGS is False:
             acarshub_helpers.log(f"{special_message}Starting Database Thread", "init")
         thread_database = Thread(target=database_listener)
         thread_database.start()
     if not thread_scheduler.is_alive():
-        if special_message or acarshub_helpers.QUIET_LOGS == False:
+        if special_message or acarshub_helpers.QUIET_LOGS is False:
             acarshub_helpers.log(f"{special_message}starting scheduler", "init")
         thread_scheduler = Thread(target=scheduled_tasks)
         thread_scheduler.start()
     if not thread_html_generator.is_alive():
-        if special_message or acarshub_helpers.QUIET_LOGS == False:
+        if special_message or acarshub_helpers.QUIET_LOGS is False:
             acarshub_helpers.log(f"{special_message}Starting htmlListener", "init")
         thread_html_generator = socketio.start_background_task(htmlListener)
     if not thread_acars_listener.is_alive() and acarshub_helpers.ENABLE_ACARS:
-        if special_message or acarshub_helpers.QUIET_LOGS == False:
+        if special_message or acarshub_helpers.QUIET_LOGS is False:
             acarshub_helpers.log(f"{special_message}Starting ACARS listener", "init")
         thread_acars_listener = Thread(
             target=message_listener,
@@ -395,25 +395,25 @@ def init_listeners(special_message=""):
         thread_acars_listener.start()
 
     if not thread_vdlm2_listener.is_alive() and acarshub_helpers.ENABLE_VDLM:
-        if special_message or acarshub_helpers.QUIET_LOGS == False:
+        if special_message or acarshub_helpers.QUIET_LOGS is False:
             acarshub_helpers.log(f"{special_message}Starting VDLM listener", "init")
         thread_vdlm2_listener = Thread(
             target=message_listener,
             args=("VDLM2", acarshub_helpers.LIVE_DATA_SOURCE, 15555),
         )
         thread_vdlm2_listener.start()
-    #### REMOVE AFTER AIRFRAMES IS UPDATED ####
+    # REMOVE AFTER AIRFRAMES IS UPDATED ####
     if (
         not acarshub_helpers.SPAM
         and acarshub_helpers.FEED
         and acarshub_helpers.ENABLE_VDLM
         and not vdlm2_feeder_thread.is_alive()
     ):
-        if special_message or acarshub_helpers.QUIET_LOGS == False:
+        if special_message or acarshub_helpers.QUIET_LOGS is False:
             acarshub_helpers.log(f"{special_message}Starting VDLM feeder", "init")
         vdlm2_feeder_thread = Thread(target=vdlm_feeder)
         vdlm2_feeder_thread.start()
-    #### REMOVE AFTER AIRFRAMES IS UPDATED ####
+    # REMOVE AFTER AIRFRAMES IS UPDATED ####
     status = acarshub.get_service_status()  # grab system status
 
     # emit to all namespaces
@@ -740,7 +740,6 @@ def handle_message(message, namespace):
 @socketio.on("reset_alert_counts", namespace="/main")
 def reset_alert_counts(message, namespace):
     if message["reset_alerts"]:
-        requester = request.sid
         acarshub.acarshub_db.reset_alert_counts()
         try:
             socketio.emit(

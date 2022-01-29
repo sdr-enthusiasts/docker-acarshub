@@ -13,6 +13,8 @@ repos:
         exclude: ^(acarshub-typescript/node_modules/)
       - id: mixed-line-ending
         exclude: ^(rootfs/webapp/|acarshub-typescript/node_modules/)
+      - id: check-executables-have-shebangs
+        exclude: ^(rootfs/webapp/|acarshub-typescript/node_modules/|acarshub-typescript/src)
       - id: check-shebang-scripts-are-executable
         exclude: ^(rootfs/webapp/|acarshub-typescript/node_modules/)
 
@@ -28,6 +30,12 @@ repos:
     rev: 21.12b0
     hooks:
       - id: black
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v1.2.3
+    hooks:
+      - id: flake8
+        args: ["--extend-ignore=W503,W504,E501"]
 
   # prettier
   - repo: https://github.com/pre-commit/mirrors-prettier
@@ -61,3 +69,12 @@ repos:
       - id: codespell
         types: [text]
         exclude: ^(rootfs/webapp/|acarshub-typescript/node_modules/|acarshub-typescript/package.json|acarshub-typescript/package-lock.json)
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.8.0.3
+    hooks:
+      - id: shellcheck
+  - repo: https://github.com/sirosen/check-jsonschema
+    rev: 0.10.1
+    hooks:
+      - id: check-github-actions
+      - id: check-github-workflows

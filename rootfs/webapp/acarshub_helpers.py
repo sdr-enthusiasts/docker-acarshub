@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # Copyright (C) 2022 Frederick Clausen II
 # This file is part of acarshub <https://github.com/fredclausen/docker-acarshub>.
 #
@@ -14,10 +16,8 @@
 # You should have received a copy of the GNU General Public License
 # along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-#!/usr/bin/env python3
-
+import logging
 import os
-import sys
 import requests
 
 # debug levels
@@ -48,9 +48,6 @@ IS_UPDATE_AVAILABLE = False
 ENABLE_RANGE_RINGS = True
 FEED = False
 ARCH = "unknown"
-
-
-import logging
 
 logger = logging.getLogger("werkzeug")
 
@@ -164,7 +161,7 @@ def check_github_version():
     global ACARSHUB_BUILD
     global CURRENT_ACARS_HUB_BUILD
     global IS_UPDATE_AVAILABLE
-    ### FIXME: This is a hack to get around the fact that the version file is not updated on the build server
+    # FIXME: This is a hack to get around the fact that the version file is not updated on the build server
     if not SPAM:
         r = requests.get(
             "https://raw.githubusercontent.com/fredclausen/docker-acarshub/main/version"

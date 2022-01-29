@@ -26,12 +26,12 @@ def pruneTable(cursor, conn, table, days, print_name):
 
     while True:
         before = time.time()
-        result = cursor.execute(
+        cursor.execute(
             f"DELETE FROM {table} WHERE msg_time < {cutoff} LIMIT {DB_PRUNE_LIMIT};"
         )
         conn.commit()
 
-        changes = cursor.execute(f"SELECT changes();")
+        changes = cursor.execute("SELECT changes();")
         count = 0
         for row in changes:
             count = row[0]
@@ -60,7 +60,7 @@ try:
 
     while True:
         if DEBUG_LOGGING:
-            print(f"Started database pruning")
+            print("Started database pruning")
             sys.stdout.flush()
 
         pruneTable(
@@ -79,7 +79,7 @@ try:
         )
 
         if DEBUG_LOGGING:
-            print(f"Finished database pruning")
+            print("Finished database pruning")
             sys.stdout.flush()
 
         time.sleep(900)

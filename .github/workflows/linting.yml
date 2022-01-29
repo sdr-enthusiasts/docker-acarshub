@@ -6,18 +6,6 @@ on:
       - main
 
 jobs:
-  # eslint:
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #   - uses: actions/checkout@v1
-  #   - uses: actions/setup-node@v1
-  #     with:
-  #       node-version: '13.x'
-  #   - name: Run yarn
-  #     run: yarn
-  # - name: Run eslint
-  #   run: yarn run eslint . --ext .js
-
   shellcheck:
     runs-on: ubuntu-latest
 
@@ -38,7 +26,7 @@ jobs:
       - name: Pull hadolint/hadolint:latest Image
         run: docker pull hadolint/hadolint:latest
       - name: Run hadolint against Dockerfiles
-        run: docker run --rm -i -v "$PWD":/workdir --workdir /workdir --entrypoint hadolint hadolint/hadolint --ignore DL3003 --ignore DL3006 --ignore DL3010 --ignore DL4001 --ignore DL3007 --ignore DL3008 --ignore SC2068 --ignore DL3007 --ignore SC1091 --ignore DL3013 --ignore DL3010 $(find . -type f -iname "Dockerfile*")
+        run: docker run --rm -i -v "$PWD":/workdir --workdir /workdir --entrypoint hadolint hadolint/hadolint $(find . -type f -iname "Dockerfile*")
 
   markdownlint:
     runs-on: ubuntu-latest
@@ -48,13 +36,13 @@ jobs:
       - name: Pull markdownlint/markdownlint:latest Image
         run: docker pull markdownlint/markdownlint:latest
       - name: Run markdownlint against *.md files
-        run: docker run --rm -i -v "$(pwd)":/workdir --workdir /workdir markdownlint/markdownlint:latest --rules ~MD013,~MD033,~MD026,~MD002,~MD022 $(find . -type f -iname '*.md' | grep -v '/.git/')
+        run: docker run --rm -i -v "$(pwd)":/workdir --workdir /workdir markdownlint/markdownlint:latest $(find . -type f -iname '*.md' | grep -v '/.git/')
 
   flake8:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.7, 3.8, 3.9]
+        python-version: [3.7, 3.8, 3.9, 3.10]
 
     steps:
       - uses: actions/checkout@v2
@@ -68,15 +56,11 @@ jobs:
           sudo apt-get install -y rrdtool librrd-dev
           python -m pip install --upgrade pip
           pip install flake8 pytest wheel
-          cd "$GITHUB_WORKSPACE/rootfs/webapp"
-          pip install -r requirements.txt
+          pip install -r $GITHUB_WORKSPACE/rootfs/webapp/requirements.txt
       - name: Lint with flake8
         run: |
-          cd "$GITHUB_WORKSPACE/rootfs/webapp"
           # stop the build if there are Python syntax errors or undefined names
-          flake8 *.py --count --select=E9,F63,F7,F82 --show-source --statistics
-          # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
-          flake8 *.py --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+          flake8 *.py --extend-ingore=W503,W504,E501
 
   acarshub-typescript:
     runs-on: ubuntu-latest

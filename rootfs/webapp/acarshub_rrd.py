@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # Copyright (C) 2022 Frederick Clausen II
 # This file is part of acarshub <https://github.com/fredclausen/docker-acarshub>.
 #
@@ -14,16 +16,12 @@
 # You should have received a copy of the GNU General Public License
 # along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-#!/usr/bin/env python3
-
 import rrdtool
 import acarshub_helpers
 import os
 
 
 def update_db(vdlm=0, acars=0, error=0):
-    import sys
-
     total = vdlm + acars
 
     try:

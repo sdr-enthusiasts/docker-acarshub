@@ -1,4 +1,6 @@
-# Copyright (C) 2022 Frederick Clausen II
+#!/usr/bin/env python3
+
+# # Copyright (C) 2022 Frederick Clausen II
 # This file is part of acarshub <https://github.com/fredclausen/docker-acarshub>.
 #
 # acarshub is free software: you can redistribute it and/or modify
@@ -14,10 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-#!/usr/bin/env python3
-
 import json
-import os
 
 
 def format_acars_message(acars_message):
@@ -189,8 +188,6 @@ def format_dumpvdl2_message(unformatted_message):
 
 
 if __name__ == "__main__":
-    import json
-
     try:
         # FIXME to not have hard coded
         f = open("/Users/fred/single_message.txt")

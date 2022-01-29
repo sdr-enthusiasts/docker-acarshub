@@ -227,7 +227,6 @@ def check_columns(cur, conn):
 
 
 def enable_fts(db: Connection, table: str, columns: List[str]):
-    column_list = ",".join(f"{c}" for c in columns)
     column_list_without = ",".join(
         f"{c}" for c in columns if c.find(" UNINDEXED") == -1
     )
@@ -478,7 +477,6 @@ def add_indexes(cur):
 
 def add_triggers(cur, db: Connection, table: str, columns: List[str]):
     global upgraded
-    column_list = ",".join(f"{c}" for c in columns)
     column_list_without = ",".join(
         f"{c}" for c in columns if c.find(" UNINDEXED") == -1
     )
@@ -500,9 +498,6 @@ def add_triggers(cur, db: Connection, table: str, columns: List[str]):
             new_columns=",".join(
                 f"new.{c}" for c in columns if c.find(" UNINDEXED") == -1
             ),
-            old_columns=",".join(
-                f"old.{c}" for c in columns if c.find(" UNINDEXED") == -1
-            ),
         )
 
     if f"{table}_fts_delete" not in triggers:
@@ -514,9 +509,6 @@ def add_triggers(cur, db: Connection, table: str, columns: List[str]):
         """.format(
             table=table,
             column_list=column_list_without,
-            new_columns=",".join(
-                f"new.{c}" for c in columns if c.find(" UNINDEXED") == -1
-            ),
             old_columns=",".join(
                 f"old.{c}" for c in columns if c.find(" UNINDEXED") == -1
             ),

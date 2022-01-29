@@ -1,5 +1,7 @@
+#!/usr/bin/env python3
+
 # Copyright (C) 2022 Frederick Clausen II
-# This file is part of acarshub <https://github.com/fredclausen/docker-acarshub>.
+# File is part of acarshub <https://github.com/fredclausen/docker-acarshub>.
 #
 # acarshub is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -13,9 +15,6 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
-
-
-#!/usr/bin/env python3
 
 import os
 import subprocess
@@ -219,7 +218,6 @@ def handle_message(message=None):
             if search[0] is not None:
                 total_results = search[1]
                 # Loop through the results and format html
-                time_update_keys = time.time()
                 for result in search[0]:
                     serialized_json.append(update_keys(result))
 

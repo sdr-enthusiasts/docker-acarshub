@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # Copyright (C) 2022 Frederick Clausen II
 # This file is part of acarshub <https://github.com/fredclausen/docker-acarshub>.
 #
@@ -13,8 +15,6 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
-
-#!/usr/bin/env python3
 
 from sqlalchemy import create_engine, Column, Integer, String, Text, desc
 from sqlalchemy.orm import sessionmaker
@@ -804,7 +804,7 @@ def search_alerts(icao=None, tail=None, flight=None):
                 query_string = f"SELECT * FROM messages WHERE id IN (SELECT rowid FROM messages_fts WHERE messages_fts MATCH '{query_string}')"
 
             if alert_terms is not None:
-                terms_string = f"""SELECT id, message_type, msg_time, station_id, toaddr, fromaddr, depa, dsta, eta, gtout, gtin, wloff, wlin,
+                terms_string = """SELECT id, message_type, msg_time, station_id, toaddr, fromaddr, depa, dsta, eta, gtout, gtin, wloff, wlin,
                                 lat, lon, alt, msg_text, tail, flight, icao, freq, ack, mode, label, block_id, msgno, is_response, is_onground, error, libacars, level FROM messages_saved"""
             else:
                 terms_string = ""
@@ -819,7 +819,7 @@ def search_alerts(icao=None, tail=None, flight=None):
                     f"{query_string}{joiner}{terms_string} ORDER BY msg_time DESC LIMIT 50 OFFSET 0"
                 )
             else:
-                acarshub_helpers.log(f"SKipping alert search", "database")
+                acarshub_helpers.log("SKipping alert search", "database")
 
             for row in result:
                 processed_results.insert(0, dict(row))
@@ -1021,7 +1021,7 @@ def set_alert_ignore(terms=None):
 
     try:
         session = db_session()
-        result = session.query(ignoreAlertTerms).delete()
+        session.query(ignoreAlertTerms).delete()
         for t in terms:
             session.add(ignoreAlertTerms(term=t))
         session.commit()
@@ -1048,16 +1048,10 @@ def set_alert_terms(terms=None):
         result = session.query(alertStats).all()
         for item in result:
             if item.term not in terms:
-                drop = (
-                    session.query(alertStats)
-                    .filter(alertStats.term == item.term)
-                    .delete()
-                )
-                drop_term = (
-                    session.query(messages_saved)
-                    .filter(messages_saved.term == item.term)
-                    .delete()
-                )
+                session.query(alertStats).filter(alertStats.term == item.term).delete()
+                session.query(messages_saved).filter(
+                    messages_saved.term == item.term
+                ).delete()
 
         session.commit()
     except Exception as e:
