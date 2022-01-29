@@ -104,8 +104,6 @@ rootfs/webapp/static/images/1year.png
 rootfs/webapp/static/images/24hours.png
 rootfs/webapp/static/images/30days.png
 rootfs/webapp/static/images/6hour.png
-./acars-decoder-typescript.tgz
-acars-decoder-typescript.tgz
 acarshub-typescript/node_modules/
 acarshub-typescript/dist/
 acarshub-typescript/dist-min/

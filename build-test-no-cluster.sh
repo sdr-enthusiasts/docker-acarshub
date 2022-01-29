@@ -8,10 +8,6 @@ IMAGE=acarshub
 
 set -xe
 
-# Build airframesio/acars-decoder-typescript
-# Copy /src/acars-decoder-typescript.tgz out of image
-# docker build --file ./Dockerfile.acars-decoder-typescript -t acars-decoder-typescript:latest .
-
 cleanup() {
   rm -rf ./webapp
   exit 0
