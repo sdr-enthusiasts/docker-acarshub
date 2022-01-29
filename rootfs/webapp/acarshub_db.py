@@ -364,7 +364,7 @@ def add_message_from_json(message_type, message_from_json):
     libacars = ""
     level = ""
 
-    for index, value in message_from_json:
+    for index, value in message_from_json.items():
         if index == "timestamp":
             time = value
         elif index == "station_id":
@@ -829,7 +829,7 @@ def search_alerts(icao=None, tail=None, flight=None):
             acarshub_helpers.acars_traceback(e, "database")
         finally:
             session.close()
-            if len(processed_results > 0):
+            if len(processed_results) > 0:
                 return processed_results
             return None
     else:
@@ -865,8 +865,6 @@ def show_all(page=0):
 
 
 def get_freq_count():
-    # FIXME: this probably doesn't work with no freqs passed in
-    result = None
     freq_count = []
     found_freq = []
 
@@ -896,7 +894,7 @@ def get_freq_count():
 
 
 def get_errors():
-    count_total, count_errors, nonlogged_good, nonlogged_errors = 0
+    count_total, count_errors, nonlogged_good, nonlogged_errors = 0, 0, 0, 0
     try:
         session = db_session()
         count = session.query(messagesCount).first()
