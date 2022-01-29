@@ -1,4 +1,3 @@
-@@ -1,50 +0,0 @@
 # ACARS Hub About/Help
 
 ## About

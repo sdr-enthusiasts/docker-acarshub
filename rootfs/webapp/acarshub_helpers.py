@@ -1,3 +1,19 @@
+# Copyright (C) 2022 Frederick Clausen II
+# This file is part of acarshub <https://github.com/fredclausen/docker-acarshub>.
+#
+# acarshub is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# acarshub is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
+
 #!/usr/bin/env python3
 
 import os
@@ -15,8 +31,6 @@ ENABLE_VDLM = False
 DB_SAVEALL = False
 ACARSHUB_DB = ""
 IATA_OVERRIDE = ""
-FREQS_ACARS = ""
-FREQS_VDLM = ""
 DB_BACKUP = ""
 ALERT_STAT_TERMS = []
 ENABLE_ADSB = False
@@ -66,36 +80,6 @@ if os.getenv("ENABLE_ACARS", default=False):
     ENABLE_ACARS = True
 if os.getenv("ENABLE_VDLM", default=False):
     ENABLE_VDLM = True
-if os.getenv("FREQS_ACARS", default=False):
-    FREQS_ACARS = os.getenv("FREQS_ACARS")
-
-index = 0
-
-while True:
-    if os.getenv(f"ACARS_FREQ_{index}", default=False):
-        if FREQS_ACARS == "":
-            FREQS_ACARS += os.getenv(f"ACARS_FREQ_{index}")
-        else:
-            FREQS_ACARS += ";" + os.getenv(f"ACARS_FREQ_{index}")
-        index += 1
-    else:
-        break
-
-if os.getenv("FREQS_VDLM", default=False):
-    FREQS_VDLM = os.getenv("FREQS_VDLM")
-
-index = 0
-
-while True:
-    if os.getenv(f"VDLM_FREQ_{index}", default=False):
-        if FREQS_VDLM == "":
-            FREQS_VDLM += os.getenv(f"VDLM_FREQ_{index}")
-        else:
-            FREQS_VDLM += ";" + os.getenv(f"VDLM_FREQ_{index}")
-
-        index += 1
-    else:
-        break
 
 if os.getenv("DB_SAVEALL", default=False):
     DB_SAVEALL = True
