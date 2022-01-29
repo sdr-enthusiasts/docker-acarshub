@@ -10,7 +10,7 @@ repos:
       - id: trailing-whitespace
         exclude: ^(rootfs/webapp/|acarshub-typescript/node_modules/)
       - id: requirements-txt-fixer
-        exclude: ^(rootfs/webapp/|acarshub-typescript/node_modules/)
+        exclude: ^(acarshub-typescript/node_modules/)
       - id: mixed-line-ending
         exclude: ^(rootfs/webapp/|acarshub-typescript/node_modules/)
       - id: check-shebang-scripts-are-executable
