@@ -16,21 +16,21 @@
 
 #!/usr/bin/env python3
 
-from sqlalchemy import create_engine, Column, Integer, String, Text
+from sqlalchemy import create_engine, Column, Integer, String, Text, desc
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.declarative import DeclarativeMeta
 import json
-import urllib.request
 import acarshub_helpers
 import re
+import os
 
 groundStations = dict()  # dictionary of all ground stations
 alert_terms = list()  # dictionary of all alert terms monitored
 # dictionary of all alert terms that should flag a message as a non-alert, even if alert matched
 alert_terms_ignore = list()
 overrides = {}
-freqs = []
+
 # Download station IDs
 
 try:
@@ -728,6 +728,8 @@ def find_airline_code_from_iata(iata):
 
 def database_search(search_term, page=0):
     result = None
+    processed_results = None
+    final_count = 0
 
     try:
         if acarshub_helpers.DEBUG_LOGGING:
@@ -743,42 +745,36 @@ def database_search(search_term, page=0):
                 else:
                     match_string += f' AND {key}:"{search_term[key]}"*'
 
-        if match_string == "":
-            return [None, 50]
+        if match_string != "":
+            match_string += "'"
 
-        match_string += "'"
+            session = db_session()
+            result = session.execute(
+                f"SELECT * FROM messages WHERE id IN (SELECT rowid FROM messages_fts WHERE messages_fts MATCH {match_string} ORDER BY rowid DESC LIMIT 50 OFFSET {page * 50})"
+            )
 
-        session = db_session()
-        result = session.execute(
-            f"SELECT * FROM messages WHERE id IN (SELECT rowid FROM messages_fts WHERE messages_fts MATCH {match_string} ORDER BY rowid DESC LIMIT 50 OFFSET {page * 50})"
-        )
+            count = session.execute(
+                f"SELECT COUNT(*) FROM messages_fts WHERE messages_fts MATCH {match_string}"
+            )
 
-        count = session.execute(
-            f"SELECT COUNT(*) FROM messages_fts WHERE messages_fts MATCH {match_string}"
-        )
+            for row in count:
+                final_count = row[0]
 
-        processed_results = []
-        final_count = 0
-        for row in count:
-            final_count = row[0]
+            if final_count != 0:
+                processed_results = []
+                for row in result:
+                    processed_results.append(dict(row))
 
-        if final_count == 0:
-            session.close()
-            return [None, 50]
-
-        for row in result:
-            processed_results.append(dict(row))
-
-        session.close()
-        return (processed_results, final_count)
     except Exception as e:
         acarshub_helpers.acars_traceback(e, "database")
+    finally:
         session.close()
-        return [None, 50]
+        return [processed_results, final_count]
 
 
 def search_alerts(icao=None, tail=None, flight=None):
     result = None
+    processed_results = []
     global alert_terms
     if (
         icao is not None
@@ -824,19 +820,17 @@ def search_alerts(icao=None, tail=None, flight=None):
                 )
             else:
                 acarshub_helpers.log(f"SKipping alert search", "database")
-                return None
-
-            processed_results = []
 
             for row in result:
                 processed_results.insert(0, dict(row))
-            if len(processed_results) == 0:
-                return None
+
             processed_results.reverse()
-            session.close()
-            return processed_results
         except Exception as e:
             acarshub_helpers.acars_traceback(e, "database")
+        finally:
+            session.close()
+            if len(processed_results > 0):
+                return processed_results
             return None
     else:
         return None
@@ -844,30 +838,30 @@ def search_alerts(icao=None, tail=None, flight=None):
 
 def show_all(page=0):
     result = None
-
+    processed_results = []
+    final_count = 0
     try:
         session = db_session()
         result = session.execute(
             f"SELECT * from messages ORDER BY rowid DESC LIMIT 50 OFFSET {page * 50}"
         )
         count = session.execute("SELECT COUNT(*) from messages")
-
-        processed_results = []
-        final_count = 0
         for row in count:
             final_count = row[0]
 
-        if final_count == 0:
-            return [None, 50]
+        if final_count > 0:
+            for row in result:
+                processed_results.append(dict(row))
 
-        for row in result:
-            processed_results.append(dict(row))
-
-        session.close()
-        processed_results.reverse()
-        return (processed_results, final_count)
+            processed_results.reverse()
     except Exception as e:
         acarshub_helpers.acars_traceback(e, "database")
+    finally:
+        session.close()
+        if final_count == 0:
+            # FIXME: I'm not sure why we're returning an array here but a tuple if successful. Check upstream
+            return [None, 50]
+        return (processed_results, final_count)
 
 
 def get_freq_count():
@@ -879,37 +873,6 @@ def get_freq_count():
     try:
         session = db_session()
 
-        for f in freqs:
-            if f[1].endswith("00"):
-                freq = f[1][:-2]
-            elif f[1].endswith(".0"):
-                freq = f[1]
-            elif f[1].endswith("0"):
-                freq = f[1][:-1]
-            else:
-                freq = f[1]
-
-            result = (
-                session.query(messagesFreq)
-                .filter(messagesFreq.freq)
-                .filter(messagesFreq.freq == freq and messagesFreq.freq_type == f[0])
-                .first()
-            )
-
-            if result is not None:
-                freq_count.append(
-                    {
-                        "freq_type": f"{result.freq_type}",
-                        "freq": f"{result.freq}",
-                        "count": result.count,
-                    }
-                )
-                found_freq.append(freq)
-            else:
-                freq_count.append(
-                    {"freq_type": f"{f[0]}", "freq": f"{f[1]}", "count": 0}
-                )
-
         for item in session.query(messagesFreq).all():
             if item.freq not in found_freq:
                 freq_count.append(
@@ -919,84 +882,72 @@ def get_freq_count():
                         "count": item.count,
                     }
                 )
-
+    except Exception as e:
+        acarshub_helpers.acars_traceback(e, "database")
+    finally:
         session.close()
-
+        if len(freq_count) == 0:
+            return []
         return sorted(
             freq_count,
             reverse=True,
             key=lambda freq: (freq["freq_type"], freq["count"]),
         )
 
-    except Exception as e:
-        acarshub_helpers.acars_traceback(e, "database")
-
-
-def get_errors_direct():
-    try:
-        session = db_session()
-        total_messages = session.query(messages).count()
-        total_errors = session.query(messages).filter(messages.error != "0").count()
-        session.close()
-
-        return (total_messages, total_errors)
-
-    except Exception as e:
-        acarshub_helpers.acars_traceback(e, "database")
-
 
 def get_errors():
+    count_total, count_errors, nonlogged_good, nonlogged_errors = 0
     try:
         session = db_session()
         count = session.query(messagesCount).first()
         nonlogged = session.query(messagesCountDropped).first()
-        session.close()
-
-        return {
-            "non_empty_total": count.total,
-            "non_empty_errors": count.errors,
-            "empty_total": nonlogged.nonlogged_good,
-            "empty_errors": nonlogged.nonlogged_errors,
-        }
+        count_total = count.total
+        count_errors = count.errors
+        nonlogged_good = nonlogged.nonlogged_good
+        nonlogged_errors = nonlogged.nonlogged_errors
 
     except Exception as e:
         acarshub_helpers.acars_traceback(e, "database")
+    finally:
+        session.close()
+        return {
+            "non_empty_total": count_total,
+            "non_empty_errors": count_errors,
+            "empty_total": nonlogged_good,
+            "empty_errors": nonlogged_errors,
+        }
 
 
 def database_get_row_count():
-    import os
-
     result = None
-
+    size = None
     try:
         session = db_session()
         result = session.query(messages).count()
-        session.close()
-
         try:
             size = os.path.getsize(db_path[10:])
         except Exception as e:
             acarshub_helpers.acars_traceback(e, "database")
-            size = None
-
-        return (result, size)
     except Exception as e:
         acarshub_helpers.acars_traceback(e, "database")
+    finally:
+        session.close()
+        return (result, size)
 
 
 def grab_most_recent():
-    from sqlalchemy import desc
-
+    output = []
     try:
         session = db_session()
         result = session.query(messages).order_by(desc("id")).limit(150)
 
         if result.count() > 0:
-            return [query_to_dict(d) for d in result]
-        else:
-            return []
+            output = [query_to_dict(d) for d in result]
     except Exception as e:
         acarshub_helpers.acars_traceback(e, "database")
+    finally:
+        session.close()
+        return output
 
 
 def lookup_groundstation(lookup_id):
@@ -1035,10 +986,12 @@ def get_signal_levels():
 
 
 def get_alert_counts():
+    global alert_terms
+    result_list = []
     try:
         session = db_session()
         result = session.query(alertStats).order_by(alertStats.count)
-        global alert_terms
+
         if result.count() > 0:
             result_list = [query_to_dict(d) for d in result]
 
@@ -1050,16 +1003,15 @@ def get_alert_counts():
                         continue
                 if not found:
                     result_list.append({"term": term, "count": 0})
-
-            return result_list
         else:
-            result_list = []
-
             for term in alert_terms:
                 result_list.append({"term": term, "count": 0})
-            return result_list
+
     except Exception as e:
         acarshub_helpers.acars_traceback(e, "database")
+    finally:
+        session.close()
+        return result_list
 
 
 def set_alert_ignore(terms=None):
