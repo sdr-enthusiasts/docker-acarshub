@@ -1,39 +1,35 @@
 repos:
+# lint yaml, line and whitespace
 -   repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.1.0
     hooks:
     -   id: check-yaml
-        exclude: ^(rootfs/webapp/static/css/other/|acars-decoder-typescript/|rootfs/webapp/static/js/other/|Logo-Sources|acarshub-typescript/css/other/|acarshub-typescript/js-other)
+        exclude: ^(rootfs/webapp/|acarshub-typescript/node_modules/)
     -   id: end-of-file-fixer
-        exclude: ^(rootfs/webapp/static/css/other/|acars-decoder-typescript/|rootfs/webapp/static/js/other/|Logo-Sources|acarshub-typescript/css/other/|acarshub-typescript/js-other)
+        exclude: ^(rootfs/webapp/|acarshub-typescript/node_modules/)
     -   id: trailing-whitespace
-        exclude: ^(rootfs/webapp/static/css/other/|acars-decoder-typescript/|rootfs/webapp/static/js/other/|Logo-Sources|acarshub-typescript/css/other/|acarshub-typescript/js-other)
+        exclude: ^(rootfs/webapp/|acarshub-typescript/node_modules/)
     -   id: requirements-txt-fixer
-        exclude: ^(rootfs/webapp/static/css/other/|acars-decoder-typescript/|rootfs/webapp/static/js/other/|Logo-Sources|acarshub-typescript/css/other/|acarshub-typescript/js-other)
+        exclude: ^(rootfs/webapp/|acarshub-typescript/node_modules/)
     -   id: mixed-line-ending
-        exclude: ^(rootfs/webapp/static/css/other/|acars-decoder-typescript/|rootfs/webapp/static/js/other/|Logo-Sources|acarshub-typescript/css/other/|acarshub-typescript/js-other)
+        exclude: ^(rootfs/webapp/|acarshub-typescript/node_modules/)
+    -   id: check-shebang-scripts-are-executable
+        exclude: ^(rootfs/webapp/|acarshub-typescript/node_modules/)
+
+# lint the dockerfiles
 -   repo:  https://github.com/hadolint/hadolint
     rev: v2.8.0
     hooks:
     -   id: hadolint
-        exclude: ^(rootfs/webapp/static/css/other/|acars-decoder-typescript/|rootfs/webapp/static/js/other/|Logo-Sources|acarshub-typescript/css/other/|acarshub-typescript/js-other)
-        args:
-        - "--ignore"
-        - "DL3003"
-        - "--ignore"
-        - "DL3006"
-        - "--ignore"
-        - "DL3010"
-        - "--ignore"
-        - "DL3008"
-        - "--ignore"
-        - "DL4001"
-        - "--ignore"
-        - "DL3007"
+        exclude: ^(rootfs/webapp/|acarshub-typescript/node_modules/)
+
+# lint python formatting
 -   repo: https://github.com/psf/black
     rev: 21.12b0
     hooks:
     -   id: black
+
+# lint typescript files
 -   repo: https://github.com/pre-commit/mirrors-prettier
     rev: 'v2.5.1'  # Use the sha / tag you want to point at
     hooks:
@@ -43,27 +39,36 @@ repos:
         additional_dependencies:
         -   prettier@2.5.1
         -   '@typescript-eslint/eslint-plugin'
-        exclude: ^(rootfs/webapp/static/css/other/|acars-decoder-typescript/|rootfs/webapp/static/js/other/|Logo-Sources|acarshub-typescript/css/other/|acarshub-typescript/js-other)
+        exclude: ^(rootfs/webapp/|acarshub-typescript/node_modules/)
+
+# lint shell files
+# -   repo: https://github.com/pre-commit/mirrors-prettier
+#     rev: 'v2.5.1'  # Use the sha / tag you want to point at
+#     hooks:
+#     -   id: prettier
+#         files: \.[jt]sx?$  # *.js, *.jsx, *.ts and *.tsx
+#         types: [file]
+#         additional_dependencies:
+#         -   prettier@2.5.1
+#         -   'prettier-plugin-sh'
+#         exclude: ^(rootfs/webapp/|acarshub-typescript/node_modules/)
+
 -   repo: https://github.com/pre-commit/mirrors-eslint
-    rev: v8.6.0
+    rev: v8.8.0
     hooks:
     -   id: eslint
         files: \.[j]sx?$  # *.js, *.jsx, *.ts and *.tsx
         types: [file]
-        exclude: ^(rootfs/webapp/static/css/other/|acars-decoder-typescript/|rootfs/webapp/static/js/other/|Logo-Sources|acarshub-typescript/css/other/|acarshub-typescript/js-other)
+        exclude: ^(rootfs/webapp/|acarshub-typescript/node_modules/)
         additional_dependencies:
             -   eslint@8.6.0
             -   eslint-config-google@0.7.1
             -   babel-eslint@10.1.0
 #           -   '@typescript-eslint/eslint-plugin'
-# -   repo: https://github.com/pre-commit/mirrors-csslint
-#     rev: 'v1.0.5'  # Use the sha / tag you want to point at
-#     hooks:
-#     -   id: csslint
-#         exclude: ^rootfs/webapp/static/css/other/
+
 - repo: https://github.com/codespell-project/codespell.git
   rev: 'v2.1.0' # Use the sha / tag you want to point at
   hooks:
     -   id: codespell
         types: [text]
-        exclude: ^(rootfs/webapp/static/css/other/|acars-decoder-typescript/|rootfs/webapp/static/js/other/|.+\.json|Logo-Sources|acarshub-typescript/css/other/|acarshub-typescript/js-other|rootfs/webapp/adsb.py|acarshub-typescript/src/interfaces.ts)
+        exclude: ^(rootfs/webapp/|acarshub-typescript/node_modules/|acarshub-typescript/package.json|acarshub-typescript/package-lock.json)
