@@ -183,7 +183,7 @@ The container implements a basic web interface, listening on port `80`, which wi
 
 If `QUIET_LOGS` is disabled, received messages are also logged to the container log.
 
-## Which frequencies should you monitor?
+## Which frequencies should you monitor
 
 The [ACARS.io/Airframes.io](https://app.airframes.io/about) website has a great list of community derived frequencies that aircraft typically will broadcast ACARS/VDLM on, and what regions those are applicable to. The values provided in the example docker-compose/docker run example above are frequencies I have found to be good in the United States, with a decent level of traffic. I imagine the list is not complete, and could be refined better.
 
