@@ -10,10 +10,10 @@ git clone https://github.com/airframesio/acars-decoder-typescript.git
 pushd acars-decoder-typescript || exit
 mkdir build-output
 
-sed -i.bu '/"module": "commonjs",/d' tsconfig.json && \
-yarn install && \
-yarn build && \
-yarn pack --filename build-output/acars-decoder-typescript.tgz
+sed -i.bu '/"module": "commonjs",/d' tsconfig.json \
+  && yarn install \
+  && yarn build \
+  && yarn pack --filename build-output/acars-decoder-typescript.tgz
 
 pushd build-output || exit
 tar xvf acars-decoder-typescript.tgz -C .

@@ -1,6 +1,6 @@
 :root {
-  --site-fonts: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-  --mono-fonts: Menlo, Monaco, Consolas, 'Courier New', monospace;
+  --site-fonts: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --mono-fonts: Menlo, Monaco, Consolas, "Courier New", monospace;
   --blue-highlight: hsl(193, 81%, 41%);
   --body-bg: hsl(0, 0%, 96%);
   --grey-bg: hsl(0, 0%, 24%);
@@ -391,7 +391,6 @@ div#log.left {
   color: var(--full-red);
 }
 
-
 .white {
   color: var(--full-white);
 }
@@ -449,11 +448,11 @@ label {
 
 pre {
   box-shadow: 2px 2px 2px 1px var(--mostly-transparent);
-  white-space: pre-wrap;       /* Since CSS 2.1 */
-  white-space: -moz-pre-wrap;  /* Mozilla, since 1999 */
-  white-space: -pre-wrap;      /* Opera 4-6 */
-  white-space: -o-pre-wrap;    /* Opera 7 */
-  word-wrap: break-word;       /* Internet Explorer 5.5+ */
+  white-space: pre-wrap; /* Since CSS 2.1 */
+  white-space: -moz-pre-wrap; /* Mozilla, since 1999 */
+  white-space: -pre-wrap; /* Opera 4-6 */
+  white-space: -o-pre-wrap; /* Opera 7 */
+  word-wrap: break-word; /* Internet Explorer 5.5+ */
   display: block;
   padding: 9.5px;
   margin: 0 0 10px;
@@ -503,10 +502,26 @@ a:visited {
 
 .decor {
   background: var(--decor-banner-green);
-  background: -webkit-linear-gradient(left, var(--grey-bg) 50%, var(--blue-highlight) 50%);
-  background: -moz-linear-gradient(left, var(--grey-bg) 50%, var(--blue-highlight) 50%);
-  background: -o-linear-gradient(left, var(--grey-bg) 50%, var(--blue-highlight) 50%);
-  background: linear-gradient(to left, var(--grey-bg) 50%, var(--blue-highlight) 50%);
+  background: -webkit-linear-gradient(
+    left,
+    var(--grey-bg) 50%,
+    var(--blue-highlight) 50%
+  );
+  background: -moz-linear-gradient(
+    left,
+    var(--grey-bg) 50%,
+    var(--blue-highlight) 50%
+  );
+  background: -o-linear-gradient(
+    left,
+    var(--grey-bg) 50%,
+    var(--blue-highlight) 50%
+  );
+  background: linear-gradient(
+    to left,
+    var(--grey-bg) 50%,
+    var(--blue-highlight) 50%
+  );
   background-size: 50px 25%;
   padding: 2px;
   display: block;
@@ -640,7 +655,7 @@ ul.primary li:hover > a {
 
 /* Collapse */
 
-input[type='checkbox'] {
+input[type="checkbox"] {
   display: none;
 }
 
@@ -665,7 +680,7 @@ input[type='checkbox'] {
 }
 
 .lbl-toggle::before {
-  content: ' ';
+  content: " ";
   display: inline-block;
   border-top: 5px solid transparent;
   border-bottom: 5px solid transparent;
@@ -740,7 +755,7 @@ input[type='checkbox'] {
 }
 
 .tabinator label::before {
-  content: '';
+  content: "";
   display: block;
   width: 100%;
   height: 15px;
@@ -768,7 +783,7 @@ input[type='checkbox'] {
 
 .tabinator input::checked + label::after {
   display: block;
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   right: 0;

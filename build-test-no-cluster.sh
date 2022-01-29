@@ -13,8 +13,8 @@ set -xe
 # docker build --file ./Dockerfile.acars-decoder-typescript -t acars-decoder-typescript:latest .
 
 cleanup() {
-    rm -rf ./webapp
-    exit 0
+  rm -rf ./webapp
+  exit 0
 }
 
 # build the acarshub typescript
@@ -23,7 +23,6 @@ id=$(docker create acarshub-typescript:latest) || cleanup
 docker cp "$id":/rootfs/webapp ./ || cleanup
 docker rm -v "$id" || cleanup
 sleep 3
-
 
 # Generate local dockerfile
 ./generate_local_dockerfile.sh || cleanup

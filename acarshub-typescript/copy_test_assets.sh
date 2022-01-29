@@ -7,7 +7,7 @@ rm -f ../rootfs/webapp/static/images/*week.png
 rm -f ../rootfs/webapp/static/images/*months.png
 rm -f ../rootfs/webapp/static/images/*year.png
 
-cp  test_assets/images/* ../rootfs/webapp/static/images/
+cp test_assets/images/* ../rootfs/webapp/static/images/
 
 rm -f ../rootfs/webapp/data/ground-stations.json
 rm -f ../rootfs/webapp/data/metadata.json

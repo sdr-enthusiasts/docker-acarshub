@@ -1,54 +1,55 @@
 #!/usr/bin/env bash
 
 function print_usage() {
-    log "Usage:"
-    log "  -s, --serial <serial>  RTL-SDR serial number to resolve to device ID"
-    log "  -f, --fail             Fails (exit 1) if device is not free"
-    log "  -v, --verbose          Verbose logging"
-    log "  -h, --help             Displays this usage info"
+  log "Usage:"
+  log "  -s, --serial <serial>  RTL-SDR serial number to resolve to device ID"
+  log "  -f, --fail             Fails (exit 1) if device is not free"
+  log "  -v, --verbose          Verbose logging"
+  log "  -h, --help             Displays this usage info"
 }
 
 function log_verbose() {
-    if [[ -n "$LOG_VERBOSE" ]]; then >&2 echo "$1"; fi
+  if [[ -n "$LOG_VERBOSE" ]]; then echo >&2 "$1"; fi
 }
 
-function log () {
-    >&2 echo "$1"
+function log() {
+  echo >&2 "$1"
 }
 
 # ===== MAIN SCRIPT =====
 
 # If no arguments given, print help
 if [[ "$#" -eq 0 ]]; then
-    print_usage
-    exit 1
+  print_usage
+  exit 1
 fi
 
 # Handle command line arguments
 while [[ "$1" =~ ^- && ! "$1" == "--" ]]; do
-    case $1 in
-        -v | --verbose )
-            LOG_VERBOSE=1
-            ;;
-        -s | --serial )
-            shift; ARGS_SERIAL="$1"
-            ;;
-        -f | --fail )
-            FAIL_IF_DEVICE_NOT_FREE=1
-            ;;
-        -h | --help )
-            print_usage
-            exit
-            ;;
-    esac
-    shift
+  case $1 in
+    -v | --verbose)
+      LOG_VERBOSE=1
+      ;;
+    -s | --serial)
+      shift
+      ARGS_SERIAL="$1"
+      ;;
+    -f | --fail)
+      FAIL_IF_DEVICE_NOT_FREE=1
+      ;;
+    -h | --help)
+      print_usage
+      exit
+      ;;
+  esac
+  shift
 done
 if [[ "$1" == '--' ]]; then shift; fi
 
 # Ensure we've been passed a serial
 if [[ -z "$ARGS_SERIAL" ]]; then
-    log "ERROR: RTL-SDR device serial required!"
-    exit 1
+  log "ERROR: RTL-SDR device serial required!"
+  exit 1
 fi
 
 # Get rtl_test output
@@ -67,33 +68,33 @@ for RTL_TEST_OUTPUT_LINE in $RTL_TEST_OUTPUT; do
 
   # See if we've found the device we're looking for
   if [[ "$ARGS_SERIAL" == "$RTL_DEVICE_SERIAL" ]]; then
-      log_verbose "Serial '$ARGS_SERIAL' resolves to device ID $RTL_DEVICE_NUMBER"
-      OUTPUT_DEVICE_ID="$RTL_DEVICE_NUMBER"
+    log_verbose "Serial '$ARGS_SERIAL' resolves to device ID $RTL_DEVICE_NUMBER"
+    OUTPUT_DEVICE_ID="$RTL_DEVICE_NUMBER"
   fi
 
 done
 
 # Return result or error
 if [[ -n "$OUTPUT_DEVICE_ID" ]]; then
-    echo "$OUTPUT_DEVICE_ID"
-    # Test if the device is free
-    if ! rtl_eeprom -d "$OUTPUT_DEVICE_ID" > /dev/null 2>&1; then
+  echo "$OUTPUT_DEVICE_ID"
+  # Test if the device is free
+  if ! rtl_eeprom -d "$OUTPUT_DEVICE_ID" > /dev/null 2>&1; then
 
-      # Fail if device in use and requested
-      if [[ -n "$FAIL_IF_DEVICE_NOT_FREE" ]]; then
-        log "ERROR: The device $OUTPUT_DEVICE_ID is in use"
-        exit 1
-      else
-        log "WARNING: The device $OUTPUT_DEVICE_ID is in use"
-        exit 0
-      fi
-
-    # Exit ok if device is free
+    # Fail if device in use and requested
+    if [[ -n "$FAIL_IF_DEVICE_NOT_FREE" ]]; then
+      log "ERROR: The device $OUTPUT_DEVICE_ID is in use"
+      exit 1
     else
+      log "WARNING: The device $OUTPUT_DEVICE_ID is in use"
       exit 0
     fi
 
+  # Exit ok if device is free
+  else
+    exit 0
+  fi
+
 else
-    log "ERROR: Could not map serial '$ARGS_SERIAL' to an RTL-SDR device number."
-    exit 1
+  log "ERROR: Could not map serial '$ARGS_SERIAL' to an RTL-SDR device number."
+  exit 1
 fi

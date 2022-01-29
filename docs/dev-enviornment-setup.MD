@@ -14,10 +14,10 @@ If you wish to test inside of a docker container please see the section concerni
 
 Pre-requisites:
 
-* [brew](https://brew.sh)
-* XCode
-* Cloned ACARS Hub repository
-* Python modules from `requirements.txt` installed
+- [brew](https://brew.sh)
+- XCode
+- Cloned ACARS Hub repository
+- Python modules from `requirements.txt` installed
 
 ```shell
 #!/bin/bash
@@ -66,8 +66,8 @@ npm run copy_test
 
 Pre-requisites:
 
-* A running version of ACARS Hub is required to provide the ACARS/VDLM source. You could also emulate what ACARS Hub does with vdlm2dec and acarsdec + acars/vdlm_server.
-* A valid aircraft.json source. Recommend Mike Nye's tar1090 container
+- A running version of ACARS Hub is required to provide the ACARS/VDLM source. You could also emulate what ACARS Hub does with vdlm2dec and acarsdec + acars/vdlm_server.
+- A valid aircraft.json source. Recommend Mike Nye's tar1090 container
 
 ```shell
 cd acars_git_path/rootfs/webapp
@@ -95,4 +95,4 @@ env ACARSHUB_DB=sqlite:////pathwhereyouwantyourdbsaved.sqlite SPAM=True ENABLE_A
 
 ### ENV
 
-* `DEBUG_LOGGING=True` makes ACARS Hub really noisy in the logs
+- `DEBUG_LOGGING=True` makes ACARS Hub really noisy in the logs

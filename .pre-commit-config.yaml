@@ -1,74 +1,62 @@
 repos:
-# lint yaml, line and whitespace
--   repo: https://github.com/pre-commit/pre-commit-hooks
+  # lint yaml, line and whitespace
+  - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.1.0
     hooks:
-    -   id: check-yaml
+      - id: check-yaml
         exclude: ^(rootfs/webapp/|acarshub-typescript/node_modules/)
-    -   id: end-of-file-fixer
+      - id: end-of-file-fixer
         exclude: ^(rootfs/webapp/|acarshub-typescript/node_modules/)
-    -   id: trailing-whitespace
+      - id: trailing-whitespace
         exclude: ^(rootfs/webapp/|acarshub-typescript/node_modules/)
-    -   id: requirements-txt-fixer
+      - id: requirements-txt-fixer
         exclude: ^(rootfs/webapp/|acarshub-typescript/node_modules/)
-    -   id: mixed-line-ending
+      - id: mixed-line-ending
         exclude: ^(rootfs/webapp/|acarshub-typescript/node_modules/)
-    -   id: check-shebang-scripts-are-executable
+      - id: check-shebang-scripts-are-executable
         exclude: ^(rootfs/webapp/|acarshub-typescript/node_modules/)
 
-# lint the dockerfiles
--   repo:  https://github.com/hadolint/hadolint
+  # lint the dockerfiles
+  - repo: https://github.com/hadolint/hadolint
     rev: v2.8.0
     hooks:
-    -   id: hadolint
+      - id: hadolint
         exclude: ^(rootfs/webapp/|acarshub-typescript/node_modules/)
 
-# lint python formatting
--   repo: https://github.com/psf/black
+  # lint python formatting
+  - repo: https://github.com/psf/black
     rev: 21.12b0
     hooks:
-    -   id: black
+      - id: black
 
-# lint typescript files
--   repo: https://github.com/pre-commit/mirrors-prettier
-    rev: 'v2.5.1'  # Use the sha / tag you want to point at
+  # prettier
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: "v2.5.1" # Use the sha / tag you want to point at
     hooks:
-    -   id: prettier
-        files: \.[jt]sx?$  # *.js, *.jsx, *.ts and *.tsx
-        types: [file]
+      - id: prettier
+        types_or: [file, bash, sh, javascript, jsx, ts, tsx]
         additional_dependencies:
-        -   prettier@2.5.1
-        -   '@typescript-eslint/eslint-plugin'
-        exclude: ^(rootfs/webapp/|acarshub-typescript/node_modules/)
+          - prettier@2.5.1
+          - "@typescript-eslint/eslint-plugin"
+          - "prettier-plugin-sh"
+        exclude: ^(rootfs/webapp/|acarshub-typescript/node_modules/|Dockerfile*)
 
-# lint shell files
-# -   repo: https://github.com/pre-commit/mirrors-prettier
-#     rev: 'v2.5.1'  # Use the sha / tag you want to point at
-#     hooks:
-#     -   id: prettier
-#         files: \.[jt]sx?$  # *.js, *.jsx, *.ts and *.tsx
-#         types: [file]
-#         additional_dependencies:
-#         -   prettier@2.5.1
-#         -   'prettier-plugin-sh'
-#         exclude: ^(rootfs/webapp/|acarshub-typescript/node_modules/)
-
--   repo: https://github.com/pre-commit/mirrors-eslint
+  - repo: https://github.com/pre-commit/mirrors-eslint
     rev: v8.8.0
     hooks:
-    -   id: eslint
-        files: \.[j]sx?$  # *.js, *.jsx, *.ts and *.tsx
+      - id: eslint
+        files: \.[j]sx?$ # *.js, *.jsx, *.ts and *.tsx
         types: [file]
         exclude: ^(rootfs/webapp/|acarshub-typescript/node_modules/)
         additional_dependencies:
-            -   eslint@8.6.0
-            -   eslint-config-google@0.7.1
-            -   babel-eslint@10.1.0
-#           -   '@typescript-eslint/eslint-plugin'
+          - eslint@8.6.0
+          - eslint-config-google@0.7.1
+          - babel-eslint@10.1.0
+  #           -   '@typescript-eslint/eslint-plugin'
 
-- repo: https://github.com/codespell-project/codespell.git
-  rev: 'v2.1.0' # Use the sha / tag you want to point at
-  hooks:
-    -   id: codespell
+  - repo: https://github.com/codespell-project/codespell.git
+    rev: "v2.1.0" # Use the sha / tag you want to point at
+    hooks:
+      - id: codespell
         types: [text]
         exclude: ^(rootfs/webapp/|acarshub-typescript/node_modules/|acarshub-typescript/package.json|acarshub-typescript/package-lock.json)

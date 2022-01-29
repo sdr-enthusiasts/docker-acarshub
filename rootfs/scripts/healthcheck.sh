@@ -10,7 +10,7 @@ EXITCODE=0
 
 # ===== Local Helper Functions =====
 
-function get_pid_of_decoder {
+function get_pid_of_decoder() {
 
   # $1: service_dir
   service_dir="$1"
@@ -54,45 +54,45 @@ function get_pid_of_decoder {
 
 # For each service...
 # for service_dir in /etc/services.d/*; do
-  # service_name=$(basename "$service_dir")
+# service_name=$(basename "$service_dir")
 
-  # # If the service is acarsdec-*...
-  # if [[ "$service_name" =~ acarsdec-.+ ]]; then
+# # If the service is acarsdec-*...
+# if [[ "$service_name" =~ acarsdec-.+ ]]; then
 
-  #   # If acarsdec is enabled...
-  #   if [ -n "${ENABLE_ACARS}" ]; then
-  #     decoder_pid=$(get_pid_of_decoder "$service_dir")
-  #     decoder_udp_port="5550"
-  #     decoder_server_prefix="acars"
-  #   else
-  #     # We shouldn't ever get here because if acarsdec is disabled, the template wouldn't have been converted to a service
-  #     echo "Found acarsdec service directory when ENABLE_ACARS not set: UNHEALTHY"
-  #     EXITCODE=1
-  #     continue
-  #   fi
+#   # If acarsdec is enabled...
+#   if [ -n "${ENABLE_ACARS}" ]; then
+#     decoder_pid=$(get_pid_of_decoder "$service_dir")
+#     decoder_udp_port="5550"
+#     decoder_server_prefix="acars"
+#   else
+#     # We shouldn't ever get here because if acarsdec is disabled, the template wouldn't have been converted to a service
+#     echo "Found acarsdec service directory when ENABLE_ACARS not set: UNHEALTHY"
+#     EXITCODE=1
+#     continue
+#   fi
 
-  # # If the service is dumpvdl2-*...
-  # elif [[ "$service_name" =~ dumpvdl2-.+ ]]; then
+# # If the service is dumpvdl2-*...
+# elif [[ "$service_name" =~ dumpvdl2-.+ ]]; then
 
-  #   # If dumpvdl2 is enabled...
-  #   if [ -n "${ENABLE_VDLM}" ]; then
-  #     decoder_pid=$(get_pid_of_decoder "$service_dir")
-  #     decoder_udp_port="5555"
-  #     decoder_server_prefix="vdlm2"
-  #   else
-  #     # We shouldn't ever get here because if dumpvdl2 is disabled, the template wouldn't have been converted to a service
-  #     echo "Found dumpvdl2 service directory when ENABLE_VDLM not set: UNHEALTHY"
-  #     EXITCODE=1
-  #     continue
-  #   fi
+#   # If dumpvdl2 is enabled...
+#   if [ -n "${ENABLE_VDLM}" ]; then
+#     decoder_pid=$(get_pid_of_decoder "$service_dir")
+#     decoder_udp_port="5555"
+#     decoder_server_prefix="vdlm2"
+#   else
+#     # We shouldn't ever get here because if dumpvdl2 is disabled, the template wouldn't have been converted to a service
+#     echo "Found dumpvdl2 service directory when ENABLE_VDLM not set: UNHEALTHY"
+#     EXITCODE=1
+#     continue
+#   fi
 
-  # # If the server isn't acarsdec-* or dumpvdl2-*...
-  # else
-  #   # skip it!
-  #   continue
-  # fi
+# # If the server isn't acarsdec-* or dumpvdl2-*...
+# else
+#   # skip it!
+#   continue
+# fi
 
-  # If the process doesn't exists, then fail
+# If the process doesn't exists, then fail
 
 #   echo "==== Checking $service_name ====="
 
@@ -137,29 +137,29 @@ if [[ ${ENABLE_VDLM,,} =~ external ]]; then
     fi
   fi
 
-#### REMOVE AFTER AIRFRAMES IS UPDATED ####
+  #### REMOVE AFTER AIRFRAMES IS UPDATED ####
   # Check vdlm2_feeder
   if [ -n "${FEED}" ]; then
-      echo "vdlm2_feeder (pid 0) is feeding: HEALTHY"
-      # echo "==== Checking vdlm2_feeder ====="
+    echo "vdlm2_feeder (pid 0) is feeding: HEALTHY"
+    # echo "==== Checking vdlm2_feeder ====="
 
-      # vdlm2_pidof_vdlm2_feeder=$(pgrep -f 'socat -d TCP:127.0.0.1:15555 UDP:feed.acars.io:5555')
+    # vdlm2_pidof_vdlm2_feeder=$(pgrep -f 'socat -d TCP:127.0.0.1:15555 UDP:feed.acars.io:5555')
 
-      # # Ensure TCP connection to vdlm2_server at 127.0.0.1:15555
-      # if ! check_tcp4_connection_established_for_pid "127.0.0.1" "ANY" "127.0.0.1" "15555" "${vdlm2_pidof_vdlm2_feeder}"; then
-      #   echo "vdlm2_feeder (pid $vdlm2_pidof_vdlm2_feeder) not connected to vdlm2_server (pid $vdlm2_pidof_vdlm2_tcp_server) at 127.0.0.1:15555: UNHEALTHY"
-      #   EXITCODE=1
-      # else
-      #   echo "vdlm2_feeder (pid $vdlm2_pidof_vdlm2_feeder) is connected to vdlm2_server (pid $vdlm2_pidof_vdlm2_tcp_server) at 127.0.0.1:15555: HEALTHY"
-      # fi
+    # # Ensure TCP connection to vdlm2_server at 127.0.0.1:15555
+    # if ! check_tcp4_connection_established_for_pid "127.0.0.1" "ANY" "127.0.0.1" "15555" "${vdlm2_pidof_vdlm2_feeder}"; then
+    #   echo "vdlm2_feeder (pid $vdlm2_pidof_vdlm2_feeder) not connected to vdlm2_server (pid $vdlm2_pidof_vdlm2_tcp_server) at 127.0.0.1:15555: UNHEALTHY"
+    #   EXITCODE=1
+    # else
+    #   echo "vdlm2_feeder (pid $vdlm2_pidof_vdlm2_feeder) is connected to vdlm2_server (pid $vdlm2_pidof_vdlm2_tcp_server) at 127.0.0.1:15555: HEALTHY"
+    # fi
 
-      # # Ensure UDP connection to acars.io
-      # if ! check_udp4_connection_established_for_pid "ANY" "ANY" "ANY" "5555" "${vdlm2_pidof_vdlm2_feeder}"; then
-      #   echo "vdlm2_feeder (pid $vdlm2_pidof_vdlm2_feeder) not feeding: UNHEALTHY"
-      #   EXITCODE=1
-      # else
-      #   echo "vdlm2_feeder (pid $vdlm2_pidof_vdlm2_feeder) is feeding: HEALTHY"
-      # fi
+    # # Ensure UDP connection to acars.io
+    # if ! check_udp4_connection_established_for_pid "ANY" "ANY" "ANY" "5555" "${vdlm2_pidof_vdlm2_feeder}"; then
+    #   echo "vdlm2_feeder (pid $vdlm2_pidof_vdlm2_feeder) not feeding: UNHEALTHY"
+    #   EXITCODE=1
+    # else
+    #   echo "vdlm2_feeder (pid $vdlm2_pidof_vdlm2_feeder) is feeding: HEALTHY"
+    # fi
 
   fi
   #### REMOVE AFTER AIRFRAMES IS UPDATED ####
@@ -184,10 +184,10 @@ if [[ ${ENABLE_VDLM,,} =~ external ]]; then
 
   vdlm2_num_msgs_past_hour=$(find /database -type f -name 'vdlm2.*.json' -cmin -60 -exec cat {} \; | sed -e 's/}{/}\n{/g' | wc -l)
   if [[ "$vdlm2_num_msgs_past_hour" -gt 0 ]]; then
-      echo "$vdlm2_num_msgs_past_hour VDLM2 messages received in past hour: HEALTHY"
+    echo "$vdlm2_num_msgs_past_hour VDLM2 messages received in past hour: HEALTHY"
   else
-      echo "$vdlm2_num_msgs_past_hour VDLM2 messages received in past hour: UNHEALTHY"
-      EXITCODE=1
+    echo "$vdlm2_num_msgs_past_hour VDLM2 messages received in past hour: UNHEALTHY"
+    EXITCODE=1
   fi
 
 fi
@@ -221,25 +221,25 @@ if [[ ${ENABLE_ACARS,,} =~ external ]]; then
   # Check acars_feeder
   if [ -n "${FEED}" ]; then
 
-      echo "==== Checking acars_feeder ====="
+    echo "==== Checking acars_feeder ====="
 
-      acars_pidof_acars_feeder=$(pgrep -f 'socat -d TCP:127.0.0.1:15550 UDP:feed.acars.io:5550')
+    acars_pidof_acars_feeder=$(pgrep -f 'socat -d TCP:127.0.0.1:15550 UDP:feed.acars.io:5550')
 
-      # Ensure TCP connection to acars_server at 127.0.0.1:15550
-      if ! check_tcp4_connection_established_for_pid "127.0.0.1" "ANY" "127.0.0.1" "15550" "${acars_pidof_acars_feeder}"; then
-        echo "acars_feeder (pid $acars_pidof_acars_feeder) not connected to acars_server (pid $acars_pidof_acars_tcp_server) at 127.0.0.1:15550: UNHEALTHY"
-        EXITCODE=1
-      else
-        echo "acars_feeder (pid $acars_pidof_acars_feeder) is connected to acars_server (pid $acars_pidof_acars_tcp_server) at 127.0.0.1:15550: HEALTHY"
-      fi
+    # Ensure TCP connection to acars_server at 127.0.0.1:15550
+    if ! check_tcp4_connection_established_for_pid "127.0.0.1" "ANY" "127.0.0.1" "15550" "${acars_pidof_acars_feeder}"; then
+      echo "acars_feeder (pid $acars_pidof_acars_feeder) not connected to acars_server (pid $acars_pidof_acars_tcp_server) at 127.0.0.1:15550: UNHEALTHY"
+      EXITCODE=1
+    else
+      echo "acars_feeder (pid $acars_pidof_acars_feeder) is connected to acars_server (pid $acars_pidof_acars_tcp_server) at 127.0.0.1:15550: HEALTHY"
+    fi
 
-      # Ensure UDP connection to acars.io
-      if ! check_udp4_connection_established_for_pid "ANY" "ANY" "ANY" "5550" "${acars_pidof_acars_feeder}"; then
-        echo "acars_feeder (pid $acars_pidof_acars_feeder) not feeding: UNHEALTHY"
-        EXITCODE=1
-      else
-        echo "acars_feeder (pid $acars_pidof_acars_feeder) is feeding: HEALTHY"
-      fi
+    # Ensure UDP connection to acars.io
+    if ! check_udp4_connection_established_for_pid "ANY" "ANY" "ANY" "5550" "${acars_pidof_acars_feeder}"; then
+      echo "acars_feeder (pid $acars_pidof_acars_feeder) not feeding: UNHEALTHY"
+      EXITCODE=1
+    else
+      echo "acars_feeder (pid $acars_pidof_acars_feeder) is feeding: HEALTHY"
+    fi
 
   fi
 
@@ -262,10 +262,10 @@ if [[ ${ENABLE_ACARS,,} =~ external ]]; then
   # read .json files, ensure messages received in past hour
   acars_num_msgs_past_hour=$(find /database -type f -name 'acars.*.json' -cmin -60 -exec cat {} \; | wc -l)
   if [[ "$acars_num_msgs_past_hour" -gt 0 ]]; then
-      echo "$acars_num_msgs_past_hour ACARS messages received in past hour: HEALTHY"
+    echo "$acars_num_msgs_past_hour ACARS messages received in past hour: HEALTHY"
   else
-      echo "$acars_num_msgs_past_hour ACARS messages received in past hour: UNHEALTHY"
-      EXITCODE=1
+    echo "$acars_num_msgs_past_hour ACARS messages received in past hour: UNHEALTHY"
+    EXITCODE=1
   fi
 
 fi
