@@ -1,3 +1,19 @@
+# Copyright (C) 2022 Frederick Clausen II
+# This file is part of acarshub <https://github.com/fredclausen/docker-acarshub>.
+#
+# acarshub is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# acarshub is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
+
 #!/usr/bin/env python3
 
 from sqlalchemy import create_engine, Column, Integer, String, Text
@@ -9,9 +25,11 @@ import urllib.request
 import acarshub_helpers
 import re
 
-groundStations = dict()
-alert_terms = list()
-alert_terms_ignore = list()
+groundStations = dict()  # dictionary of all ground stations
+alert_terms = list()  # dictionary of all alert terms monitored
+alert_terms_ignore = (
+    list()
+)  # dictionary of all alert terms that should flag a message as a non-alert, even if alert matched
 
 # Download station IDs
 
@@ -93,20 +111,6 @@ for item in iata_override:
         overrides[override_splits[0]] = (override_splits[1], override_splits[2])
     else:
         acarshub_helpers.log(f"Error adding in {item} to IATA overrides", "database")
-
-# Grab the freqs from the environment so we know what is being monitored
-
-if acarshub_helpers.ENABLE_ACARS:
-    acars_freqs = acarshub_helpers.FREQS_ACARS.split(";")
-
-    for item in acars_freqs:
-        freqs.append(("ACARS", item))
-
-if acarshub_helpers.ENABLE_VDLM:
-    vdlm_freqs = acarshub_helpers.FREQS_VDLM.split(";")
-
-    for item in vdlm_freqs:
-        freqs.append(("VDL-M2", item))
 
 # Class for storing the count of messages received on each frequency
 
@@ -252,18 +256,22 @@ if backup:
 
 # Class used to convert any search query objects to JSON
 
-session = db_session()
-terms = session.query(alertStats).all()
+try:
+    session = db_session()
+    terms = session.query(alertStats).all()
 
-for t in terms:
-    alert_terms.append(t.term.upper())
+    for t in terms:
+        alert_terms.append(t.term.upper())
 
-terms = session.query(ignoreAlertTerms).all()
-for t in terms:
-    alert_terms_ignore.append(t.term.upper())
+    terms = session.query(ignoreAlertTerms).all()
+    for t in terms:
+        alert_terms_ignore.append(t.term.upper())
 
-session.commit()
-session.close()
+    session.commit()
+except Exception as e:
+    acarshub_helpers.acars_traceback(e, "database")
+finally:
+    session.close()
 
 
 def query_to_dict(obj):
@@ -322,78 +330,78 @@ def add_message_from_json(message_type, message_from_json):
     libacars = ""
     level = ""
 
-    for index in message_from_json:
+    for index, value in message_from_json:
         if index == "timestamp":
-            time = message_from_json[index]
+            time = value
         elif index == "station_id":
-            station_id = message_from_json[index]
+            station_id = value
         elif index == "toaddr":
-            toaddr = message_from_json[index]
+            toaddr = value
         elif index == "fromaddr":
-            fromaddr = message_from_json[index]
+            fromaddr = value
         elif index == "depa":
-            depa = message_from_json[index]
+            depa = value
         elif index == "dsta":
-            dsta = message_from_json[index]
+            dsta = value
         elif index == "eta":
-            eta = message_from_json[index]
+            eta = value
         elif index == "gtout":
-            gtout = message_from_json[index]
+            gtout = value
         elif index == "gtin":
-            gtin = message_from_json[index]
+            gtin = value
         elif index == "wloff":
-            wloff = message_from_json[index]
+            wloff = value
         elif index == "wlin":
-            wlin = message_from_json[index]
+            wlin = value
         elif index == "lat":
-            lat = message_from_json[index]
+            lat = value
         elif index == "lon":
-            lon = message_from_json[index]
+            lon = value
         elif index == "alt":
-            alt = message_from_json[index]
+            alt = value
         elif index == "text":
-            text = message_from_json[index]
+            text = value
         elif index == "data":
-            text = message_from_json[index]
+            text = value
         elif index == "tail":
-            tail = message_from_json[index]
+            tail = value
         elif index == "flight":
-            flight = message_from_json[index]
+            flight = value
         elif index == "icao":
-            icao = message_from_json[index]
+            icao = value
         elif index == "freq":
-            freq = message_from_json[index]
+            freq = value
         elif index == "ack":
-            ack = message_from_json[index]
+            ack = value
         elif index == "mode":
-            mode = message_from_json[index]
+            mode = value
         elif index == "label":
-            label = message_from_json[index]
+            label = value
         elif index == "block_id":
-            block_id = message_from_json[index]
+            block_id = value
         elif index == "msgno":
-            msgno = message_from_json[index]
+            msgno = value
         elif index == "is_response":
-            is_response = message_from_json[index]
+            is_response = value
         elif index == "is_onground":
-            is_onground = message_from_json[index]
+            is_onground = value
         elif index == "error":
-            error = message_from_json[index]
+            error = value
         elif index == "libacars":
             try:
-                libacars = json.dumps(message_from_json[index])
+                libacars = json.dumps(value)
             except Exception as e:
                 acarshub_helpers.acars_traceback(e, "database")
         # skip these
         elif index == "channel":
             pass
         elif index == "level":
-            level = message_from_json["level"]
+            level = value
         elif index == "end":
             pass
         # We have a key that we aren't saving the database. Log it
         else:
-            acarshub_helpers.log(f"Unidenitied key: {index}", "database")
+            acarshub_helpers.log(f"Unidenitied key: {index}: {value}", "database")
 
     try:
         session = db_session()
@@ -703,14 +711,16 @@ def add_message_from_json(message_type, message_from_json):
                             session_backup.commit()
         # commit the db change and close the session
         session.commit()
-        session.close()
 
         if backup:
             session_backup.commit()
-            session_backup.close()
 
     except Exception as e:
         acarshub_helpers.acars_traceback(e, "database")
+    finally:
+        session.close()
+        if backup:
+            session_backup.close()
 
 
 def find_airline_code_from_iata(iata):
@@ -868,6 +878,7 @@ def show_all(page=0):
 
 
 def get_freq_count():
+    # FIXME: this probably doesn't work with no freqs passed in
     result = None
     freq_count = []
     found_freq = []
@@ -1014,16 +1025,20 @@ def get_message_label_json():
 
 def get_signal_levels():
     try:
+        output = []
         session = db_session()
         result = session.query(messagesLevel).order_by(messagesLevel.level)
         if result.count() > 0:
-            return [query_to_dict(d) for d in result]
-
-        else:
-            return []
+            output = [query_to_dict(d) for d in result]
 
     except Exception as e:
         acarshub_helpers.acars_traceback(e, "database")
+    finally:
+        session.close()
+        if len(output) > 0:
+            return output
+        else:
+            return []
 
 
 def get_alert_counts():
@@ -1102,9 +1117,10 @@ def set_alert_terms(terms=None):
                 )
 
         session.commit()
-        session.close()
     except Exception as e:
         acarshub_helpers.acars_traceback(e, "database")
+    finally:
+        session.close()
 
 
 def reset_alert_counts():
@@ -1115,9 +1131,10 @@ def reset_alert_counts():
             item.count = 0
 
         session.commit()
-        session.close()
     except Exception as e:
         acarshub_helpers.acars_traceback(e, "database")
+    finally:
+        session.close()
 
 
 def get_alert_ignore():
@@ -1128,66 +1145,3 @@ def get_alert_ignore():
 def get_alert_terms():
     global alert_terms
     return alert_terms
-
-
-def init_database(backup_db=False):
-    try:
-        # We will pre-populate the count table if this is a new db
-        # Or the user doesn't have the table already
-
-        total_messages, total_errors = get_errors_direct()
-        good_msgs = total_messages - total_errors
-        if not backup_db:
-            session = db_session()
-        else:
-            session = db_session_backup()
-
-        if session.query(messagesCount).count() == 0:
-            acarshub_helpers.log("Initializing table database", "database")
-            session.add(
-                messagesCount(total=total_messages, errors=total_errors, good=good_msgs)
-            )
-            session.commit()
-            acarshub_helpers.log("Count table initialized", "database")
-
-        if session.query(messagesCountDropped).count() == 0:
-            acarshub_helpers.log("Initializing dropped count database", "database")
-            session.add(messagesCountDropped(nonlogged_good=0, nonlogged_errors=0))
-            session.commit()
-            acarshub_helpers.log("Dropped count table initialized", "database")
-
-        # now we pre-populate the freq db if empty
-
-        if session.query(messagesFreq).count() == 0:
-            acarshub_helpers.log("Initializing freq table", "database")
-            found_freq = {}
-            for item in session.query(messages).all():
-                if item.freq not in found_freq:
-                    found_freq[item.freq] = [
-                        item.freq,
-                        item.message_type,
-                        session.query(messages)
-                        .filter(messages.freq == item.freq)
-                        .count(),
-                    ]
-
-            for item in found_freq:
-                session.add(
-                    messagesFreq(
-                        freq=found_freq[item][0],
-                        count=found_freq[item][2],
-                        freq_type=found_freq[item][1],
-                    )
-                )
-            session.commit()
-            acarshub_helpers.log("Freq table initialized", "database")
-
-        session.close()
-    except Exception as e:
-        acarshub_helpers.acars_traceback(e, "database")
-
-
-init_database()
-
-if backup:
-    init_database(backup_db=True)
