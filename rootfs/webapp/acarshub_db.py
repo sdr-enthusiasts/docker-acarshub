@@ -27,10 +27,10 @@ import re
 
 groundStations = dict()  # dictionary of all ground stations
 alert_terms = list()  # dictionary of all alert terms monitored
-alert_terms_ignore = (
-    list()
-)  # dictionary of all alert terms that should flag a message as a non-alert, even if alert matched
-
+# dictionary of all alert terms that should flag a message as a non-alert, even if alert matched
+alert_terms_ignore = list()
+overrides = {}
+freqs = []
 # Download station IDs
 
 try:
@@ -80,9 +80,6 @@ if acarshub_helpers.DB_BACKUP:
     db_session_backup = sessionmaker(bind=database_backup)
 else:
     backup = False
-
-overrides = {}
-freqs = []
 
 try:
     if not acarshub_helpers.QUIET_LOGS:
@@ -292,6 +289,43 @@ def query_to_dict(obj):
     return None
 
 
+def update_frequencies(freq, message_type, session):
+    found_freq = (
+        session.query(messagesFreq)
+        .filter(
+            messagesFreq.freq == f"{freq}" and messagesFreq.freq_type == message_type
+        )
+        .first()
+    )
+
+    if found_freq is not None:
+        found_freq.count += 1
+    else:
+        session.add(messagesFreq(freq=f"{freq}", freq_type=message_type, count=1))
+
+
+def is_message_not_empty(json_message):
+    fields = [
+        "text",
+        "libacars",
+        "dsta",
+        "depa",
+        "eta",
+        "gtout",
+        "gtin",
+        "wloff",
+        "wlin",
+        "lat",
+        "lon",
+        "alt",
+    ]
+
+    for field in fields:
+        if field in json_message:
+            return True
+    return False
+
+
 def add_message_from_json(message_type, message_from_json):
     global database
     global alert_terms
@@ -408,52 +442,11 @@ def add_message_from_json(message_type, message_from_json):
         if backup:
             session_backup = db_session_backup()
 
-        found_freq = (
-            session.query(messagesFreq)
-            .filter(
-                messagesFreq.freq == f"{freq}"
-                and messagesFreq.freq_type == message_type
-            )
-            .first()
-        )
-
-        if found_freq is not None:
-            found_freq.count += 1
-        else:
-            session.add(messagesFreq(freq=f"{freq}", freq_type=message_type, count=1))
-
+        update_frequencies(freq, message_type, session)
         if backup:
-            found_freq_backup = (
-                session_backup.query(messagesFreq)
-                .filter(
-                    messagesFreq.freq == f"{freq}"
-                    and messagesFreq.freq_type == message_type
-                )
-                .first()
-            )
+            update_frequencies(freq, message_type, session_backup)
 
-            if found_freq_backup is not None:
-                found_freq_backup.count += 1
-            else:
-                session_backup.add(
-                    messagesFreq(freq=f"{freq}", freq_type=message_type, count=1)
-                )
-
-        if (
-            acarshub_helpers.DB_SAVEALL
-            or text != ""
-            or libacars != ""
-            or dsta != ""
-            or depa != ""
-            or eta != ""
-            or gtout != ""
-            or gtin != ""
-            or wloff != ""
-            or wlin != ""
-            or lat != ""
-            or lon != ""
-            or alt != ""
-        ):
+        if acarshub_helpers.DB_SAVEALL or is_message_not_empty(message_from_json):
 
             # write the message
 
