@@ -52,7 +52,8 @@ repos:
           - eslint@8.6.0
           - eslint-config-google@0.7.1
           - babel-eslint@10.1.0
-  #           -   '@typescript-eslint/eslint-plugin'
+          - "@typescript-eslint/eslint-plugin"
+          - eslint-loader@1.6.1
 
   - repo: https://github.com/codespell-project/codespell.git
     rev: "v2.1.0" # Use the sha / tag you want to point at
