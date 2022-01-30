@@ -30,6 +30,10 @@ RUN set -x && \
     rm -rf /src/* /tmp/* /var/lib/apt/lists/*
 
 EXPOSE 80
+EXPOSE 5550
+EXPOSE 5555
+EXPOSE 15550
+EXPOSE 15555
 
 # Add healthcheck
 HEALTHCHECK --start-period=3600s --interval=600s CMD /scripts/healthcheck.sh
