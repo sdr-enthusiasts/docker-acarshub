@@ -326,223 +326,150 @@ def is_message_not_empty(json_message):
     return False
 
 
-def add_message_from_json(message_type, message_from_json):
-    global database
-    global alert_terms
-    import json
-
-    # message time
-    # all fields are set to a blank string. This is because all of the database fields
-    # are set to be 'not null' so all fields require a value, even if it is blank
-    time = ""
-    station_id = ""
-    toaddr = ""
-    fromaddr = ""
-    depa = ""
-    dsta = ""
-    eta = ""
-    gtout = ""
-    gtin = ""
-    wloff = ""
-    wlin = ""
-    lat = ""
-    lon = ""
-    alt = ""
-    text = ""
-    tail = ""
-    flight = ""
-    icao = ""
-    freq = ""
-    ack = ""
-    mode = ""
-    label = ""
-    block_id = ""
-    msgno = ""
-    is_response = ""
-    is_onground = ""
-    error = 0
-    libacars = ""
-    level = ""
+def create_db_safe_params(message_from_json):
+    params = {
+        "time": "",
+        "station_id": "",
+        "toaddr": "",
+        "fromaddr": "",
+        "depa": "",
+        "dsta": "",
+        "eta": "",
+        "gtout": "",
+        "gtin": "",
+        "wloff": "",
+        "wlin": "",
+        "lat": "",
+        "lon": "",
+        "alt": "",
+        "text": "",
+        "tail": "",
+        "flight": "",
+        "icao": "",
+        "freq": "",
+        "ack": "",
+        "mode": "",
+        "label": "",
+        "block_id": "",
+        "msgno": "",
+        "is_response": "",
+        "is_onground": "",
+        "error": 0,
+        "libacars": "",
+        "level": "",
+    }
 
     for index, value in message_from_json.items():
         if index == "timestamp":
-            time = value
+            params["time"] = value
         elif index == "station_id":
-            station_id = value
+            params["station_id"] = value
         elif index == "toaddr":
-            toaddr = value
+            params["toaddr"] = value
         elif index == "fromaddr":
-            fromaddr = value
+            params["fromaddr"] = value
         elif index == "depa":
-            depa = value
+            params["depa"] = value
         elif index == "dsta":
-            dsta = value
+            params["dsta"] = value
         elif index == "eta":
-            eta = value
+            params["eta"] = value
         elif index == "gtout":
-            gtout = value
+            params["gtout"] = value
         elif index == "gtin":
-            gtin = value
+            params["gtin"] = value
         elif index == "wloff":
-            wloff = value
+            params["wloff"] = value
         elif index == "wlin":
-            wlin = value
+            params["wlin"] = value
         elif index == "lat":
-            lat = value
+            params["lat"] = value
         elif index == "lon":
-            lon = value
+            params["lon"] = value
         elif index == "alt":
-            alt = value
+            params["alt"] = value
         elif index == "text":
-            text = value
+            params["text"] = value
         elif index == "data":
-            text = value
+            params["text"] = value
         elif index == "tail":
-            tail = value
+            params["tail"] = value
         elif index == "flight":
-            flight = value
+            params["flight"] = value
         elif index == "icao":
-            icao = value
+            params["icao"] = value
         elif index == "freq":
-            freq = value
+            params["freq"] = value
         elif index == "ack":
-            ack = value
+            params["ack"] = value
         elif index == "mode":
-            mode = value
+            params["mode"] = value
         elif index == "label":
-            label = value
+            params["label"] = value
         elif index == "block_id":
-            block_id = value
+            params["block_id"] = value
         elif index == "msgno":
-            msgno = value
+            params["msgno"] = value
         elif index == "is_response":
-            is_response = value
+            params["is_response"] = value
         elif index == "is_onground":
-            is_onground = value
+            params["is_onground"] = value
         elif index == "error":
-            error = value
+            params["error"] = value
         elif index == "libacars":
             try:
-                libacars = json.dumps(value)
+                params["libacars"] = json.dumps(value)
             except Exception as e:
                 acarshub_helpers.acars_traceback(e, "database")
         # skip these
         elif index == "channel":
             pass
         elif index == "level":
-            level = value
+            params["level"] = value
         elif index == "end":
             pass
         # We have a key that we aren't saving the database. Log it
         else:
             acarshub_helpers.log(f"Unidenitied key: {index}: {value}", "database")
 
+    return params
+
+
+def add_message_from_json(message_type, message_from_json):
+    global database
+    global alert_terms
+
+    # message time
+    # all fields are set to a blank string. This is because all of the database fields
+    # are set to be 'not null' so all fields require a value, even if it is blank
+    params = create_db_safe_params(message_from_json)
+
     try:
         session = db_session()
         if backup:
             session_backup = db_session_backup()
 
-        update_frequencies(freq, message_type, session)
+        update_frequencies(params["freq"], message_type, session)
         if backup:
-            update_frequencies(freq, message_type, session_backup)
+            update_frequencies(params["freq"], message_type, session_backup)
 
         if acarshub_helpers.DB_SAVEALL or is_message_not_empty(message_from_json):
 
             # write the message
-
-            session.add(
-                messages(
-                    message_type=message_type,
-                    time=time,
-                    station_id=station_id,
-                    toaddr=toaddr,
-                    fromaddr=fromaddr,
-                    depa=depa,
-                    dsta=dsta,
-                    eta=eta,
-                    gtout=gtout,
-                    gtin=gtin,
-                    wloff=wloff,
-                    wlin=wlin,
-                    lat=lat,
-                    lon=lon,
-                    alt=alt,
-                    text=text,
-                    tail=tail,
-                    flight=flight,
-                    icao=icao,
-                    freq=freq,
-                    ack=ack,
-                    mode=mode,
-                    label=label,
-                    block_id=block_id,
-                    msgno=msgno,
-                    is_response=is_response,
-                    is_onground=is_onground,
-                    error=error,
-                    libacars=libacars,
-                    level=level,
-                )
-            )
+            session.add(messages(message_type=message_type, **params))
 
             if backup:
-                session_backup.add(
-                    messages(
-                        message_type=message_type,
-                        time=time,
-                        station_id=station_id,
-                        toaddr=toaddr,
-                        fromaddr=fromaddr,
-                        depa=depa,
-                        dsta=dsta,
-                        eta=eta,
-                        gtout=gtout,
-                        gtin=gtin,
-                        wloff=wloff,
-                        wlin=wlin,
-                        lat=lat,
-                        lon=lon,
-                        alt=alt,
-                        text=text,
-                        tail=tail,
-                        flight=flight,
-                        icao=icao,
-                        freq=freq,
-                        ack=ack,
-                        mode=mode,
-                        label=label,
-                        block_id=block_id,
-                        msgno=msgno,
-                        is_response=is_response,
-                        is_onground=is_onground,
-                        error=error,
-                        libacars=libacars,
-                        level=level,
-                    )
-                )
+                session_backup.add(messages(message_type=message_type, **params))
 
         # Now lets decide where to log the message count to
         # First we'll see if the message is not blank
 
-        if (
-            text != ""
-            or libacars != ""
-            or dsta != ""
-            or depa != ""
-            or eta != ""
-            or gtout != ""
-            or gtin != ""
-            or wloff != ""
-            or wlin != ""
-            or lat != ""
-            or lon != ""
-            or alt != ""
-        ):
+        if is_message_not_empty(message_from_json):
 
             count = session.query(messagesCount).first()
             count.total += 1
 
-            if error > 0:
+            if params["error"] > 0:
                 count.errors += 1
             else:
                 count.good += 1
@@ -551,7 +478,7 @@ def add_message_from_json(message_type, message_from_json):
                 count_backup = session_backup.query(messagesCount).first()
                 count.total += 1
 
-                if error > 0:
+                if params["error"] > 0:
                     count_backup.errors += 1
                 else:
                     count_backup.good += 1
@@ -559,7 +486,7 @@ def add_message_from_json(message_type, message_from_json):
         else:
             count = session.query(messagesCountDropped).first()
 
-            if error > 0:
+            if params["error"] > 0:
                 count.nonlogged_errors += 1
             else:
                 count.nonlogged_good += 1
@@ -567,7 +494,7 @@ def add_message_from_json(message_type, message_from_json):
             if backup:
                 count_backup = session_backup.query(messagesCountDropped).first()
 
-                if error > 0:
+                if params["error"] > 0:
                     count_backup.nonlogged_errors += 1
                 else:
                     count_backup.nonlogged_good += 1
@@ -577,32 +504,34 @@ def add_message_from_json(message_type, message_from_json):
         # If not, we'll add it in
 
         found_level = (
-            session.query(messagesLevel).filter(messagesLevel.level == level).first()
+            session.query(messagesLevel)
+            .filter(messagesLevel.level == params["level"])
+            .first()
         )
 
         if found_level is not None:
             found_level.count += 1
         else:
-            session.add(messagesLevel(level=level, count=1))
+            session.add(messagesLevel(level=params["level"], count=1))
 
         if backup:
             found_level_backup = (
                 session_backup.query(messagesLevel)
-                .filter(messagesLevel.level == level)
+                .filter(messagesLevel.level == params["level"])
                 .first()
             )
 
             if found_level_backup is not None:
                 found_level_backup.count += 1
             else:
-                session_backup.add(messagesLevel(level=level, count=1))
+                session_backup.add(messagesLevel(level=params["level"], count=1))
 
-        if len(text) > 0 and alert_terms:
+        if len(params["text"]) > 0 and alert_terms:
             for search_term in alert_terms:
-                if re.findall(r"\b{}\b".format(search_term), text):
+                if re.findall(r"\b{}\b".format(search_term), params["text"]):
                     should_add = True
                     for ignore_term in alert_terms_ignore:
-                        if re.findall(r"\b{}\b".format(ignore_term), text):
+                        if re.findall(r"\b{}\b".format(ignore_term), params["text"]):
                             should_add = False
                             break
                     if should_add:
@@ -619,35 +548,7 @@ def add_message_from_json(message_type, message_from_json):
                         session.add(
                             messages_saved(
                                 message_type=message_type,
-                                time=time,
-                                station_id=station_id,
-                                toaddr=toaddr,
-                                fromaddr=fromaddr,
-                                depa=depa,
-                                dsta=dsta,
-                                eta=eta,
-                                gtout=gtout,
-                                gtin=gtin,
-                                wloff=wloff,
-                                wlin=wlin,
-                                lat=lat,
-                                lon=lon,
-                                alt=alt,
-                                text=text,
-                                tail=tail,
-                                flight=flight,
-                                icao=icao,
-                                freq=freq,
-                                ack=ack,
-                                mode=mode,
-                                label=label,
-                                block_id=block_id,
-                                msgno=msgno,
-                                is_response=is_response,
-                                is_onground=is_onground,
-                                error=error,
-                                libacars=libacars,
-                                level=level,
+                                **params,
                                 term=search_term.upper(),
                                 type_of_match="text",
                             )
@@ -668,35 +569,7 @@ def add_message_from_json(message_type, message_from_json):
                             session_backup.add(
                                 messages_saved(
                                     message_type=message_type,
-                                    time=time,
-                                    station_id=station_id,
-                                    toaddr=toaddr,
-                                    fromaddr=fromaddr,
-                                    depa=depa,
-                                    dsta=dsta,
-                                    eta=eta,
-                                    gtout=gtout,
-                                    gtin=gtin,
-                                    wloff=wloff,
-                                    wlin=wlin,
-                                    lat=lat,
-                                    lon=lon,
-                                    alt=alt,
-                                    text=text,
-                                    tail=tail,
-                                    flight=flight,
-                                    icao=icao,
-                                    freq=freq,
-                                    ack=ack,
-                                    mode=mode,
-                                    label=label,
-                                    block_id=block_id,
-                                    msgno=msgno,
-                                    is_response=is_response,
-                                    is_onground=is_onground,
-                                    error=error,
-                                    libacars=libacars,
-                                    level=level,
+                                    **params,
                                     term=search_term.upper(),
                                     type_of_match="text",
                                 )
