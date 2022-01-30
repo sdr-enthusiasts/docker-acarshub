@@ -33,11 +33,19 @@ Not all messages will include every field, but the fields received for that mess
 
 Additionally, some fields include a tool-tip if they include extra information (such as the `Flight` field if the web app was able to decipher the airline name), or if the field name is abbreviated (such as the `Mode` field), the tool-tip will give the full name of the field.
 
+## General Tips
+
+- On the `Live Message` page press the `p` key on your keyboard to quickly pause/unpause the website updates so you can catch up on messages.
+- On the bottom right corner of all pages you will get a little pop-over indicating a message came in that matched one of your alerts. Click on the box to pull up the message to see the contents of it.
+- If a page has configuration options there will be a link in the top bar called `Page Settings` where you can adjust options for that page.
+
 ## Alerts
 
 To enable ACARS Hub to highlight messages that you may find interesting, please head on over to the `ALERTS` tab to set everything up.
 
 Separate each term in their respective text input box by a `,` (terms are case insensitive) and hit the update button to have ACARS Hub start monitoring for those terms. If you stay on the Alerts page you will see messages pop up that match your terms. On the Live Messages page you will see the message flagged with red text, and if you are on any other page the Alerts link on the top of the page will show a counter of messages that you've missed. If you want a list of curated terms that the community has determined generally indicate an interesting message click on the `Default Alert Values` link on the right side to autofill in those values.
+
+Additionally, you may see messages that are flagged as an alert but are of no interest to you. By inputting words and or phrases in the `Text field to ignore` setting on the `Alerts` Page you will be able to start filtering out messages that match a word or phrase you want alerted, but when that word or phrase is commonly found in combination with another word/phrase are meaningless to you. A typical example would be you want to see messages about `TURBULENCE` but want to ignore messages about `LIGHT TURBULENCE`.
 
 ACARS Hub can also play a sound if your search term(s) are matched. You can toggle the feature on / off by clicking `TURN [ON/OFF] ALERT SOUND` on the right side of the page. If you use Firefox or Chrome, this feature will work without additional configuration. However, Safari by default blocks all auto-play sounds so you will need to head to `Safari - Preferences - Websites - Auto Play` and find your ACARS Hub IP address or domain name in that list, and change the setting to `Allow All Auto-Play`, as illustrated in the image below
 
@@ -47,4 +55,4 @@ ACARS Hub can also play a sound if your search term(s) are matched. You can togg
 
 Your feedback has been instrumental in improving this little project from a bare-bones website showing raw data to what it is now, and it is instrumental to guiding future improvements and making it a complete solution for feeding, receiving and viewing ACARS/VDLM data. Please, don't be a stranger on the [Discord](https://discord.gg/sTf9uYF) server and let us know what you think!
 
-Also the [Discord](https://discord.gg/sTf9uYF) server is a great place to get technical assistance in setting up the container or troubleshooting any issues that you might run in to. No question is too "simple" and there are plenty of folks around to help out.
+Also the [Discord](https://discord.gg/sTf9uYF) server is a great place to get technical assistance in setting up the container or troubleshooting any issues that you might run in to. No question is too simple, everyone is welcome, and there are plenty of great folks around to help out.
