@@ -21,7 +21,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.declarative import DeclarativeMeta
 import json
-import acarshub_helpers
+import acarshub_configuration
 import re
 import os
 
@@ -34,8 +34,8 @@ overrides = {}
 # Download station IDs
 
 try:
-    if not acarshub_helpers.QUIET_LOGS:
-        acarshub_helpers.log("Downloading Station IDs", "database")
+    if not acarshub_configuration.QUIET_LOGS:
+        acarshub_configuration.log("Downloading Station IDs", "database")
     with open("./data/ground-stations.json", "r") as f:
         groundStations_json = json.load(f)
 
@@ -46,27 +46,27 @@ try:
                 "icao": station["airport"]["icao"],
                 "name": station["airport"]["name"],
             }
-    if not acarshub_helpers.QUIET_LOGS:
-        acarshub_helpers.log("Completed loading Station IDs", "database")
+    if not acarshub_configuration.QUIET_LOGS:
+        acarshub_configuration.log("Completed loading Station IDs", "database")
 except Exception as e:
-    acarshub_helpers.acars_traceback(e, "database")
+    acarshub_configuration.acars_traceback(e, "database")
 
 # Load Message Labels
 
 try:
-    if not acarshub_helpers.QUIET_LOGS:
-        acarshub_helpers.log("Downloading message labels", "database")
+    if not acarshub_configuration.QUIET_LOGS:
+        acarshub_configuration.log("Downloading message labels", "database")
     with open("./data/metadata.json", "r") as f:
         message_labels = json.load(f)
-    if not acarshub_helpers.QUIET_LOGS:
-        acarshub_helpers.log("Completed loading message labels", "database")
+    if not acarshub_configuration.QUIET_LOGS:
+        acarshub_configuration.log("Completed loading message labels", "database")
 except Exception as e:
     message_labels = {"labels": {}}  # handle URL exception
-    acarshub_helpers.acars_traceback(e, "database")
+    acarshub_configuration.acars_traceback(e, "database")
 
 # DB PATH MUST BE FROM ROOT!
 # default database
-db_path = acarshub_helpers.ACARSHUB_DB
+db_path = acarshub_configuration.ACARSHUB_DB
 database = create_engine(db_path)
 db_session = sessionmaker(bind=database)
 Messages = declarative_base()
@@ -74,31 +74,31 @@ Messages = declarative_base()
 # second database for backup
 # required input format is SQL Alchemy DB URL
 
-if acarshub_helpers.DB_BACKUP:
+if acarshub_configuration.DB_BACKUP:
     backup = True
-    database_backup = create_engine(acarshub_helpers.DB_BACKUP)
+    database_backup = create_engine(acarshub_configuration.DB_BACKUP)
     db_session_backup = sessionmaker(bind=database_backup)
 else:
     backup = False
 
 try:
-    if not acarshub_helpers.QUIET_LOGS:
-        acarshub_helpers.log("Loading Airline Codes", "database")
+    if not acarshub_configuration.QUIET_LOGS:
+        acarshub_configuration.log("Loading Airline Codes", "database")
     f = open("data/airlines.json")
     airlines = json.load(f)
-    if not acarshub_helpers.QUIET_LOGS:
-        acarshub_helpers.log("Completed Loading Airline Codes", "database")
+    if not acarshub_configuration.QUIET_LOGS:
+        acarshub_configuration.log("Completed Loading Airline Codes", "database")
 except Exception as e:
     airlines = {}
-    acarshub_helpers.acars_traceback(e, database)
+    acarshub_configuration.acars_traceback(e, database)
 
 
 # Set up the override IATA/ICAO callsigns
 # Input format needs to be IATA|ICAO|Airline Name
 # Multiple overrides need to be separated with a ;
 
-if len(acarshub_helpers.IATA_OVERRIDE) > 0:
-    iata_override = acarshub_helpers.IATA_OVERRIDE.split(";")
+if len(acarshub_configuration.IATA_OVERRIDE) > 0:
+    iata_override = acarshub_configuration.IATA_OVERRIDE.split(";")
 else:
     iata_override = ""
 
@@ -107,7 +107,9 @@ for item in iata_override:
     if len(override_splits) == 3:
         overrides[override_splits[0]] = (override_splits[1], override_splits[2])
     else:
-        acarshub_helpers.log(f"Error adding in {item} to IATA overrides", "database")
+        acarshub_configuration.log(
+            f"Error adding in {item} to IATA overrides", "database"
+        )
 
 # Class for storing the count of messages received on each frequency
 
@@ -266,7 +268,7 @@ try:
 
     session.commit()
 except Exception as e:
-    acarshub_helpers.acars_traceback(e, "database")
+    acarshub_configuration.acars_traceback(e, "database")
 finally:
     session.close()
 
@@ -420,7 +422,7 @@ def create_db_safe_params(message_from_json):
             try:
                 params["libacars"] = json.dumps(value)
             except Exception as e:
-                acarshub_helpers.acars_traceback(e, "database")
+                acarshub_configuration.acars_traceback(e, "database")
         # skip these
         elif index == "channel":
             pass
@@ -430,7 +432,7 @@ def create_db_safe_params(message_from_json):
             pass
         # We have a key that we aren't saving the database. Log it
         else:
-            acarshub_helpers.log(f"Unidenitied key: {index}: {value}", "database")
+            acarshub_configuration.log(f"Unidenitied key: {index}: {value}", "database")
 
     return params
 
@@ -453,7 +455,7 @@ def add_message_from_json(message_type, message_from_json):
         if backup:
             update_frequencies(params["freq"], message_type, session_backup)
 
-        if acarshub_helpers.DB_SAVEALL or is_message_not_empty(message_from_json):
+        if acarshub_configuration.DB_SAVEALL or is_message_not_empty(message_from_json):
 
             # write the message
             session.add(messages(message_type=message_type, **params))
@@ -582,7 +584,7 @@ def add_message_from_json(message_type, message_from_json):
             session_backup.commit()
 
     except Exception as e:
-        acarshub_helpers.acars_traceback(e, "database")
+        acarshub_configuration.acars_traceback(e, "database")
     finally:
         session.close()
         if backup:
@@ -605,8 +607,8 @@ def database_search(search_term, page=0):
     final_count = 0
 
     try:
-        if acarshub_helpers.DEBUG_LOGGING:
-            acarshub_helpers.log(
+        if acarshub_configuration.DEBUG_LOGGING:
+            acarshub_configuration.log(
                 f"[database] Searching database for {search_term}", "database"
             )
         match_string = ""
@@ -639,7 +641,7 @@ def database_search(search_term, page=0):
                     processed_results.append(dict(row))
 
     except Exception as e:
-        acarshub_helpers.acars_traceback(e, "database")
+        acarshub_configuration.acars_traceback(e, "database")
     finally:
         session.close()
         return (processed_results, final_count)
@@ -692,14 +694,14 @@ def search_alerts(icao=None, tail=None, flight=None):
                     f"{query_string}{joiner}{terms_string} ORDER BY msg_time DESC LIMIT 50 OFFSET 0"
                 )
             else:
-                acarshub_helpers.log("SKipping alert search", "database")
+                acarshub_configuration.log("SKipping alert search", "database")
 
             for row in result:
                 processed_results.insert(0, dict(row))
 
             processed_results.reverse()
         except Exception as e:
-            acarshub_helpers.acars_traceback(e, "database")
+            acarshub_configuration.acars_traceback(e, "database")
         finally:
             session.close()
             if len(processed_results) > 0:
@@ -728,7 +730,7 @@ def show_all(page=0):
 
             processed_results.reverse()
     except Exception as e:
-        acarshub_helpers.acars_traceback(e, "database")
+        acarshub_configuration.acars_traceback(e, "database")
     finally:
         session.close()
         if final_count == 0:
@@ -753,7 +755,7 @@ def get_freq_count():
                     }
                 )
     except Exception as e:
-        acarshub_helpers.acars_traceback(e, "database")
+        acarshub_configuration.acars_traceback(e, "database")
     finally:
         session.close()
         if len(freq_count) == 0:
@@ -777,7 +779,7 @@ def get_errors():
         nonlogged_errors = nonlogged.nonlogged_errors
 
     except Exception as e:
-        acarshub_helpers.acars_traceback(e, "database")
+        acarshub_configuration.acars_traceback(e, "database")
     finally:
         session.close()
         return {
@@ -797,9 +799,9 @@ def database_get_row_count():
         try:
             size = os.path.getsize(db_path[10:])
         except Exception as e:
-            acarshub_helpers.acars_traceback(e, "database")
+            acarshub_configuration.acars_traceback(e, "database")
     except Exception as e:
-        acarshub_helpers.acars_traceback(e, "database")
+        acarshub_configuration.acars_traceback(e, "database")
     finally:
         session.close()
         return (result, size)
@@ -814,7 +816,7 @@ def grab_most_recent():
         if result.count() > 0:
             output = [query_to_dict(d) for d in result]
     except Exception as e:
-        acarshub_helpers.acars_traceback(e, "database")
+        acarshub_configuration.acars_traceback(e, "database")
     finally:
         session.close()
         return output
@@ -846,7 +848,7 @@ def get_signal_levels():
             output = [query_to_dict(d) for d in result]
 
     except Exception as e:
-        acarshub_helpers.acars_traceback(e, "database")
+        acarshub_configuration.acars_traceback(e, "database")
     finally:
         session.close()
         if len(output) > 0:
@@ -878,7 +880,7 @@ def get_alert_counts():
                 result_list.append({"term": term, "count": 0})
 
     except Exception as e:
-        acarshub_helpers.acars_traceback(e, "database")
+        acarshub_configuration.acars_traceback(e, "database")
     finally:
         session.close()
         return result_list
@@ -898,7 +900,7 @@ def set_alert_ignore(terms=None):
             session.add(ignoreAlertTerms(term=t))
         session.commit()
     except Exception as e:
-        acarshub_helpers.acars_traceback(e, "database")
+        acarshub_configuration.acars_traceback(e, "database")
     finally:
         session.close()
 
@@ -927,7 +929,7 @@ def set_alert_terms(terms=None):
 
         session.commit()
     except Exception as e:
-        acarshub_helpers.acars_traceback(e, "database")
+        acarshub_configuration.acars_traceback(e, "database")
     finally:
         session.close()
 
@@ -941,7 +943,7 @@ def reset_alert_counts():
 
         session.commit()
     except Exception as e:
-        acarshub_helpers.acars_traceback(e, "database")
+        acarshub_configuration.acars_traceback(e, "database")
     finally:
         session.close()
 
