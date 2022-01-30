@@ -193,9 +193,9 @@ if __name__ == "__main__":
         import os
 
         if len(sys.argv) < 2:
-            sys.exit("Usage: %s <dumpvdl2 file>" % sys.argv[0])
+            sys.exit("Usage: %s <message file>" % sys.argv[0])
 
-        # make sure the dumpvdl2 file exists
+        # make sure the message file exists
         if not os.path.isfile(sys.argv[1]):
             sys.exit("File %s does not exist" % sys.argv[1])
 
