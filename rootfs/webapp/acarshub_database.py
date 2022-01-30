@@ -267,7 +267,6 @@ try:
     for t in terms:
         alert_terms_ignore.append(t.term.upper())
 
-    session.commit()
 except Exception as e:
     acarshub_configuration.acars_traceback(e, "database")
 finally:
