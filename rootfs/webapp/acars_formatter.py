@@ -189,8 +189,17 @@ def format_dumpvdl2_message(unformatted_message):
 
 if __name__ == "__main__":
     try:
-        # FIXME to not have hard coded
-        f = open("/Users/fred/single_message.txt")
+        import sys
+        import os
+
+        if len(sys.argv) < 2:
+            sys.exit("Usage: %s <dumpvdl2 file>" % sys.argv[0])
+
+        # make sure the dumpvdl2 file exists
+        if not os.path.isfile(sys.argv[1]):
+            sys.exit("File %s does not exist" % sys.argv[1])
+
+        f = open(sys.argv[1], "r")
 
         for data in f:
             message_json = []
