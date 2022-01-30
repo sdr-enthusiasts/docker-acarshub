@@ -967,7 +967,7 @@ def prune_database():
             datetime.datetime.now()
             - datetime.timedelta(days=acarshub_configuration.DB_SAVE_DAYS)
         ).timestamp()
-        print(cutoff)
+
         session = db_session()
         result = session.query(messages).filter(messages.time < cutoff).delete()
 
@@ -989,6 +989,8 @@ def prune_database():
 
         if not acarshub_configuration.QUIET_LOGS:
             acarshub_configuration.log("Pruned %s messages" % result, "database")
+
+        session.commit()
     except Exception as e:
         acarshub_configuration.acars_traceback(e, "database")
     finally:
