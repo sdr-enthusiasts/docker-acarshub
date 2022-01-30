@@ -179,6 +179,9 @@ def scheduled_tasks():
 
     schedule.every().hour.at(":05").do(acarshub_configuration.check_github_version)
     schedule.every().hour.at(":01").do(send_version)
+    schedule.every().minute.at(":30").do(
+        acarshub_helpers.acarshub_database.prune_database
+    )
 
     # Check for dead threads and restart
     schedule.every().minute.at(":45").do(

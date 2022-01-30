@@ -48,6 +48,8 @@ IS_UPDATE_AVAILABLE = False
 ENABLE_RANGE_RINGS = True
 FEED = False
 ARCH = "unknown"
+DB_SAVE_DAYS = 7
+DB_ALERT_SAVE_DAYS = 120
 
 logger = logging.getLogger("werkzeug")
 

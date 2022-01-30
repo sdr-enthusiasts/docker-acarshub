@@ -21,6 +21,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.declarative import DeclarativeMeta
 import json
+import datetime
 import acarshub_configuration
 import re
 import os
@@ -956,3 +957,39 @@ def get_alert_ignore():
 def get_alert_terms():
     global alert_terms
     return alert_terms
+
+
+def prune_database():
+    try:
+        if not acarshub_configuration.QUIET_LOGS:
+            acarshub_configuration.log("Pruning database", "database")
+        cutoff = (
+            datetime.datetime.now()
+            - datetime.timedelta(days=acarshub_configuration.DB_SAVE_DAYS)
+        ).timestamp()
+        print(cutoff)
+        session = db_session()
+        result = session.query(messages).filter(messages.time < cutoff).delete()
+
+        if not acarshub_configuration.QUIET_LOGS:
+            acarshub_configuration.log("Pruned %s messages" % result, "database")
+
+        session.commit()
+
+        if not acarshub_configuration.QUIET_LOGS:
+            acarshub_configuration.log("Pruning alert database", "database")
+        cutoff = (
+            datetime.datetime.now()
+            - datetime.timedelta(days=acarshub_configuration.DB_ALERT_SAVE_DAYS)
+        ).timestamp()
+
+        result = (
+            session.query(messages_saved).filter(messages_saved.time < cutoff).delete()
+        )
+
+        if not acarshub_configuration.QUIET_LOGS:
+            acarshub_configuration.log("Pruned %s messages" % result, "database")
+    except Exception as e:
+        acarshub_configuration.acars_traceback(e, "database")
+    finally:
+        session.close()
