@@ -769,7 +769,7 @@ def database_search(search_term, page=0):
         acarshub_helpers.acars_traceback(e, "database")
     finally:
         session.close()
-        return [processed_results, final_count]
+        return (processed_results, final_count)
 
 
 def search_alerts(icao=None, tail=None, flight=None):
@@ -859,8 +859,7 @@ def show_all(page=0):
     finally:
         session.close()
         if final_count == 0:
-            # FIXME: I'm not sure why we're returning an array here but a tuple if successful. Check upstream
-            return [None, 50]
+            return (None, 50)
         return (processed_results, final_count)
 
 

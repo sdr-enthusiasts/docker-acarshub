@@ -200,25 +200,28 @@ def handle_message(message=None):
 
                 if "results_after" in message:
                     # ask the database for the results at the user requested page
-                    search = acarshub_db.database_search(
+                    results, total_results = acarshub_db.database_search(
                         message["search_term"], message["results_after"]
                     )
                 else:
-                    search = acarshub_db.database_search(message["search_term"])
+                    results, total_results = acarshub_db.database_search(
+                        message["search_term"]
+                    )
             elif "show_all" in message:
                 if "results_after" in message:
-                    search = acarshub_db.show_all(message["results_after"])
+                    results, total_results = acarshub_db.show_all(
+                        message["results_after"]
+                    )
                 else:
-                    search = acarshub_db.show_all()
+                    results, total_results = acarshub_db.show_all()
 
             # the db returns two values
             # index zero is the query results in json
             # the other is the count of total results
 
-            if search[0] is not None:
-                total_results = search[1]
+            if results is not None:
                 # Loop through the results and format html
-                for result in search[0]:
+                for result in results:
                     serialized_json.append(update_keys(result))
 
             return (total_results, serialized_json, search_term)
