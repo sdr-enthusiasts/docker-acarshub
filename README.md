@@ -160,8 +160,9 @@ For VDLM decoding `dumpvdl2` is preferred as the decoder provides richer data an
 
 For ease of use I have provided docker images set up to work with ACARS Hub. This is the preferred way to get data in to ACARS Hub.
 
-- [docker-acarsdec](https://github.com/fredclausen/docker-acarsdec)
-- [docker-dumpvdl2](https://github.com/fredclausen/docker-dumpvdl2)
+- [docker-acarsdec](https://github.com/fredclausen/docker-acarsdec) for ACARS decoding.
+- [docker-dumpvdl2](https://github.com/fredclausen/docker-dumpvdl2) for VDLM decoding. This is the preferred decoder.
+- [docker-vdlm2dec](https://github.com/fredclausen/docker-vdlm2dec) as an alternative for VDLM decoding. This decoder is far less feature-rich compared to `dumpvdl2` and is provided only as an alternative if you have a strong preference for using this over `dumpvdl2`.
 
 If you wish to use `acars` decoding please ensure port `5550` is mapped to the container. If you wish to use `vdlm2` decoding please ensure port `5555` is mapped to the container.
 
