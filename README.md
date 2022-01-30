@@ -181,7 +181,7 @@ If you wish to use `acars` decoding please ensure port `5550` is mapped to the c
 
 The container implements a basic web interface, listening on port `80`, which will show messages as they are received.
 
-If `QUIET_LOGS` is disabled, received messages are also logged to the container log.
+If `QUIET_MESSAGES`is disabled, received messages are also logged to the container log.
 
 ## Which frequencies should you monitor
 
