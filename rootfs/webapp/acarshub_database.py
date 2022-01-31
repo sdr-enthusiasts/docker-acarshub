@@ -411,7 +411,7 @@ def create_db_safe_params(message_from_json):
             params["icao"] = value
         elif index == "freq":
             # normalizing frequency to 7 decimal places
-            params["freq"] = value.ljust(7, "0")
+            params["freq"] = str(value).ljust(7, "0")
         elif index == "ack":
             params["ack"] = value
         elif index == "mode":

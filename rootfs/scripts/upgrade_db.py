@@ -451,33 +451,34 @@ def normalize_freqs(cur):
     global upgraded
     global be_quiet
     # select freqs from messages and ensure there are three decimal places
-    if not be_quiet:
-        print("Normalizing frequencies")
-    cur.execute(
-        """
-        SELECT freq, count(*) as cnt
-        FROM messages
-        GROUP BY freq
-        HAVING cnt > 1
-        """
-    )
-    freqs = cur.fetchall()
-    for freq in freqs:
-        freq_in_table = freq[0]
-        if len(freq_in_table) != 7:
-            upgraded = True
-            adjusted_freq = freq_in_table.ljust(7, "0")
-            cur.execute(
-                """
-                UPDATE messages
-                SET freq = ?
-                WHERE freq = ?
-                """,
-                (adjusted_freq, freq_in_table),
-            )
+    tables = ["messages", "messages_saved", "freqs"]
+    for table in tables:
+        if not be_quiet:
+            print(f"Normalizing frequencies in {table}")
+        cur.execute(
+            f"""
+            SELECT freq, count(*) as cnt
+            FROM {table}
+            GROUP BY freq
+            """
+        )
+        freqs = cur.fetchall()
+        for freq in freqs:
+            freq_in_table = freq[0]
+            if len(freq_in_table) != 7:
+                upgraded = True
+                adjusted_freq = freq_in_table.ljust(7, "0")
+                cur.execute(
+                    f"""
+                    UPDATE {table}
+                    SET freq = ?
+                    WHERE freq = ?
+                    """,
+                    (adjusted_freq, freq_in_table),
+                )
 
-    if not be_quiet:
-        print("Normalizing frequencies complete")
+        if not be_quiet:
+            print(f"Normalizing frequencies in {table} complete")
 
 
 if __name__ == "__main__":
