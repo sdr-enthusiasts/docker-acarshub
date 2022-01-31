@@ -23,7 +23,7 @@ import acarshub_helpers  # noqa: E402
 import acarshub_configuration  # noqa: E402
 import acars_formatter  # noqa: E402
 
-if not acarshub_configuration.SPAM:
+if not acarshub_configuration.LOCAL_TEST:
     import acarshub_rrd_database  # noqa: E402
 import logging  # noqa: E402
 
@@ -37,7 +37,7 @@ log.setLevel(logging.ERROR)
 
 app = Flask(__name__)
 # Make the browser not cache files if running in dev mode
-if acarshub_configuration.SPAM:
+if acarshub_configuration.LOCAL_TEST:
     app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0
 
 # turn the flask app into a socketio app

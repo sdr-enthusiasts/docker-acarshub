@@ -241,7 +241,7 @@ def service_check():
     global start_time
     global external_formats
 
-    if os.getenv("SPAM", default=False):
+    if os.getenv("LOCAL_TEST", default=False):
         healthcheck = subprocess.Popen(
             ["../../tools/healthtest.sh"],
             stdout=subprocess.PIPE,
@@ -435,7 +435,7 @@ def service_check():
         except Exception as e:
             print(f"[service-check] Error: {line}\n{e}")
 
-    if os.getenv("SPAM", default=False):
+    if os.getenv("LOCAL_TEST", default=False):
         print(decoders)
         print(servers)
         print(receivers)
@@ -444,7 +444,7 @@ def service_check():
         print(external_formats)
 
 
-if os.getenv("SPAM", default=False):
+if os.getenv("LOCAL_TEST", default=False):
     service_check()
 
 

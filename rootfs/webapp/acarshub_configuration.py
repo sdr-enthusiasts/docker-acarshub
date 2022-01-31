@@ -25,7 +25,7 @@ import requests
 DEBUG_LOGGING = False
 EXTREME_LOGGING = False
 QUIET_LOGS = False
-SPAM = False
+LOCAL_TEST = False
 ENABLE_ACARS = False
 ENABLE_VDLM = False
 DB_SAVEALL = False
@@ -38,7 +38,7 @@ ADSB_URL = "http://tar1090/data/aircraft.json"
 ADSB_LAT = 0
 ADSB_LON = 0
 ADSB_BYPASS_URL = False
-ACARS_WEB_PORT = 8888  # default port for nginx proxying. SPAM will change this to 80 for running outside of docker
+ACARS_WEB_PORT = 8888  # default port for nginx proxying. LOCAL_TEST will change this to 80 for running outside of docker
 LIVE_DATA_SOURCE = "127.0.0.1"  # This is to switch from localhost for ACARS/VDLM to connecting to a remote data source
 ACARSHUB_VERSION = "0"
 ACARSHUB_BUILD = "0"
@@ -70,8 +70,8 @@ if os.getenv("QUIET_LOGS", default=False):
 
 # Application states
 
-if os.getenv("SPAM", default=False):
-    SPAM = True
+if os.getenv("LOCAL_TEST", default=False):
+    LOCAL_TEST = True
     ACARS_WEB_PORT = 80
 if os.getenv("LIVE_DATA_SOURCE", default=False):
     LIVE_DATA_SOURCE = os.getenv("LIVE_DATA_SOURCE")
@@ -140,7 +140,7 @@ if os.getenv("ADSB_BYPASS_URL", default=False):
     ADSB_BYPASS_URL = True
 
 
-if SPAM:
+if LOCAL_TEST:
     version_path = "../../VERSION"
 else:
     version_path = "/acarshub-version"
@@ -151,7 +151,7 @@ with open(version_path, "r") as f:
     ACARSHUB_BUILD = lines.split("\n")[0].split(" ")[2].replace("v", "")
     CURRENT_ACARS_HUB_BUILD = ACARSHUB_BUILD
 
-if not SPAM and os.path.exists("/arch"):
+if not LOCAL_TEST and os.path.exists("/arch"):
     with open("/arch", "r") as f:
         lines = f.read()
         ARCH = lines.split("\n")[0]
@@ -164,7 +164,7 @@ def check_github_version():
     global CURRENT_ACARS_HUB_BUILD
     global IS_UPDATE_AVAILABLE
     # FIXME: This is a hack to get around the fact that the version file is not updated on the build server
-    if not SPAM:
+    if not LOCAL_TEST:
         r = requests.get(
             "https://raw.githubusercontent.com/fredclausen/docker-acarshub/main/version"
         )

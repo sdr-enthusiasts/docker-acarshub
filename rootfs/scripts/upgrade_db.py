@@ -8,7 +8,6 @@ from sqlite3 import Connection
 from typing import List
 import os
 import sys
-import shutil
 
 # Current schema:
 # LEGACY DBS WILL NOT HAVE COLUMNS SET AS NOT NULLABLE BUT WE TAKE CARE OF THAT BELOW
@@ -86,7 +85,7 @@ import shutil
 # term = Column("term", String(32), nullable=False)
 # type_of_match = Column("type_of_match", String(32), nullable=False)
 
-if os.getenv("SPAM", default=False):
+if os.getenv("LOCAL_TEST", default=False):
     path_to_db = os.getenv("DB_PATH")
 else:
     path_to_db = "/run/acars/messages.db"
@@ -99,7 +98,7 @@ if not be_quiet:
     print("Checking to see if database needs upgrades")
 sys.stdout.flush()
 upgraded = False
-
+exit_code = 0
 count_table = 'CREATE TABLE "count" ("id" INTEGER NOT NULL,"total" INTEGER, "errors" INTEGER, "good" INTEGER, PRIMARY KEY("id"));'
 freq_table = 'CREATE TABLE "freqs" ("it" INTEGER NOT NULL, "freq" VARCHAR(32), "freq_type" VARCHAR(32), "count" INTEGER, PRIMARY KEY("it"));'
 level_table = 'CREATE TABLE "level" ("id" INTEGER NOT NULL, "level" INTEGER, "count" INTEGER, PRIMARY KEY("id"));'
@@ -120,110 +119,6 @@ messages_saved_table = 'CREATE TABLE "messages_saved" ("id" INTEGER NOT NULL, "m
              "mode" VARCHAR(32) NOT NULL, "label" VARCHAR(32) NOT NULL, "block_id" VARCHAR(32) NOT NULL, "msgno" VARCHAR(32) NOT NULL, "is_response" VARCHAR(32) NOT NULL, \
                 "is_onground" VARCHAR(32) NOT NULL, "error" VARCHAR(32) NOT NULL, "libacars" TEXT NOT NULL, "level" VARCHAR(32) NOT NULL, "term" VARCHAR(32) NOT NULL, \
                 "type_of_match" VARCHAR(32) NOT NULL, PRIMARY KEY("id"));'
-
-
-def check_columns(cur, conn):
-    global upgraded
-    columns = [i[1] for i in cur.execute("PRAGMA table_info(messages)")]
-    column_info = [i for i in cur.execute("PRAGMA table_info(messages)")]
-
-    # Add in level column
-    if "level" not in columns:
-        upgraded = True
-        print("Adding level column")
-        sys.stdout.flush()
-        cur.execute("ALTER TABLE messages ADD COLUMN level TEXT")
-    # Just for clarity's sake so that we don't have the same name for columns as SQL reserved keywords
-    # We'll rename the text and time columns
-    if "text" in columns:
-        upgraded = True
-        print("Renaming text column")
-        sys.stdout.flush()
-        cur.execute('ALTER TABLE "main"."messages" RENAME COLUMN "text" TO "msg_text"')
-    if "time" in columns:
-        upgraded = True
-        print("Renaming time column")
-        sys.stdout.flush()
-        cur.execute('ALTER TABLE "main"."messages" RENAME COLUMN "time" TO "msg_time"')
-
-    if "msg_time" in columns:
-        index = None
-        for i in column_info:
-            if i[1] == "msg_time":
-                index = i[0]
-                break
-
-        if index is not None:
-            info = column_info[index]
-            if (
-                info[2] != "INTEGER"
-                or "messages_old" in columns
-                or "messages_saved_old" in columns
-                or os.getenv("FORCE_UPGRADE", default=False)
-            ):
-                upgraded = True
-                global messages_table
-                global messages_saved_table
-                global path_to_db
-                if os.getenv("BACKUP_THE_DB", default=False) or not os.path.isfile(
-                    path_to_db + "-pre2.2.0"
-                ):
-                    print("Backing up the database")
-                    shutil.copyfile(path_to_db, path_to_db + "-pre2.2.0")
-                print(
-                    "**************************************************************************"
-                )
-                print(
-                    "**************************************************************************"
-                )
-                print(
-                    "UPDATING THE DATABASE. THIS WILL TAKE A WHILE. PLEASE DON'T STOP CONTAINER"
-                )
-                print(
-                    "**************************************************************************"
-                )
-                print(
-                    "**************************************************************************"
-                )
-                print("Converting time from string to number\nRenaming current tables")
-                sys.stdout.flush()
-                if "messages_old" not in columns:
-                    cur.execute('ALTER TABLE "messages" RENAME TO "messages_old";')
-                if "messages_saved_old" not in columns:
-                    cur.execute(
-                        'ALTER TABLE "messages_saved" RENAME TO "messages_saved_old";'
-                    )
-                print("Creating new tables")
-                sys.stdout.flush()
-                cur.execute(messages_table)
-                cur.execute(messages_saved_table)
-                print("Copying old data")
-                sys.stdout.flush()
-                cur.execute(
-                    'INSERT INTO "main"."messages" SELECT * FROM "messages_old";'
-                )
-                cur.execute(
-                    'INSERT INTO "main"."messages_saved" SELECT * FROM "messages_saved_old";'
-                )
-                print("Dropping old tables")
-                sys.stdout.flush()
-                cur.execute('DROP TABLE "messages_old";')
-                cur.execute('DROP TABLE "messages_saved_old";')
-                sub_tables = [
-                    i[0]
-                    for i in cur.execute(
-                        'SELECT name FROM sqlite_master WHERE type ="table" AND name NOT LIKE "sqlite_%"'
-                    )
-                ]
-
-                if "messages_fts" in sub_tables:
-                    print("Updating FTS cache. May take a while")
-                    sys.stdout.flush()
-                    conn.executescript(
-                        'INSERT INTO messages_fts(messages_fts) VALUES ("rebuild")'
-                    )
-                print("Reclaiming disk space. This will take a while.")
-                cur.execute("VACUUM;")
 
 
 def enable_fts(db: Connection, table: str, columns: List[str]):
@@ -552,50 +447,47 @@ def create_db(cur):
     cur.execute(messages_saved_table)
 
 
-try:
-    if os.getenv("BACKUP_THE_DB", default=False):
-        print("Backing up database")
+if __name__ == "__main__":
+    try:
+        if not os.path.isfile(path_to_db):
+            conn = sqlite3.connect(path_to_db)
+            cur = conn.cursor()
+            create_db(cur)
+        else:
+            conn = sqlite3.connect(path_to_db)
+            cur = conn.cursor()
+
+        conn.commit()
+        check_tables(conn, cur)
+        conn.commit()
+        de_null(cur)
+        conn.commit()
+        add_indexes(cur)
+        conn.commit()
+
+        result = [i for i in cur.execute("PRAGMA auto_vacuum")]
+        if result[0][0] != 0 or os.getenv("AUTO_VACUUM", default=False):
+            print("Reclaiming disk space")
+            sys.stdout.flush()
+            cur.execute("PRAGMA auto_vacuum = '0';")
+            cur.execute("VACUUM;")
+        conn.commit()
+
+        if upgraded:
+            print("Completed upgrading database structure")
+            sys.stdout.flush()
+        elif not be_quiet:
+            print("Database structure did not require upgrades")
+            sys.stdout.flush()
+    except Exception as e:
+        print(
+            f"ERROR UPGRADING DB. PLEASE SHUT DOWN ACARSHUB AND ENSURE DATABASE INTEGRITY: {e}"
+        )
         sys.stdout.flush()
-        shutil.copyfile(path_to_db, path_to_db + ".back")
-    if not os.path.isfile(path_to_db):
-        conn = sqlite3.connect(path_to_db)
-        cur = conn.cursor()
-        create_db(cur)
-    else:
-        conn = sqlite3.connect(path_to_db)
-        cur = conn.cursor()
+        conn.close()
+        exit_code = 1
+    finally:
+        if conn:
+            conn.close()
 
-    check_columns(cur, conn)
-    conn.commit()
-    check_tables(conn, cur)
-    conn.commit()
-    de_null(cur)
-    conn.commit()
-    add_indexes(cur)
-    conn.commit()
-
-    result = [i for i in cur.execute("PRAGMA auto_vacuum")]
-    if result[0][0] != 0 or os.getenv("AUTO_VACUUM", default=False):
-        print("Reclaiming disk space")
-        sys.stdout.flush()
-        cur.execute("PRAGMA auto_vacuum = '0';")
-        cur.execute("VACUUM;")
-    conn.commit()
-    conn.close()
-except Exception as e:
-    print(
-        f"ERROR UPGRADING DB. PLEASE SHUT DOWN ACARSHUB AND ENSURE DATABASE INTEGRITY: {e}"
-    )
-    sys.stdout.flush()
-    conn.close()
-    sys.exit(1)
-
-if upgraded:
-    print("Completed upgrading database structure")
-    sys.stdout.flush()
-else:
-    if not be_quiet:
-        print("Database structure did not require upgrades")
-    sys.stdout.flush()
-
-sys.exit(0)
+    sys.exit(exit_code)
