@@ -750,6 +750,7 @@ def search_alerts(icao=None, tail=None, flight=None):
                     .select_from(messages)
                     .join(MessagesIdx, MessagesIdx.id == messages.id)
                     .filter(or_(*query_filter))
+                    .order_by(MessagesIdx.time.desc())
                     .limit(50)
                     .offset(0)
                 )
@@ -757,41 +758,6 @@ def search_alerts(icao=None, tail=None, flight=None):
             if result:
                 processed_results = [query_to_dict(d) for d in result]
 
-            # query_string = ""
-
-            # for key in search_term:
-            #     if search_term[key] is not None and search_term[key] != "":
-            #         for term in search_term[key]:
-            #             if query_string == "":
-            #                 query_string += f'{key}:"{term}"*'
-            #             else:
-            #                 query_string += f' OR {key}:"{term}"*'
-
-            # if query_string != "":
-            #     query_string = f"SELECT * FROM messages WHERE id IN (SELECT rowid FROM messages_fts WHERE messages_fts MATCH '{query_string}')"
-
-            # if alert_terms is not None:
-            #     terms_string = """SELECT id, message_type, msg_time, station_id, toaddr, fromaddr, depa, dsta, eta, gtout, gtin, wloff, wlin,
-            #                     lat, lon, alt, msg_text, tail, flight, icao, freq, ack, mode, label, block_id, msgno, is_response, is_onground, error, libacars, level FROM messages_saved"""
-            # else:
-            #     terms_string = ""
-
-            # if query_string != "" and terms_string != "":
-            #     joiner = " UNION "
-            # else:
-            #     joiner = ""
-
-            # if query_string != "" or terms_string != "":
-            #     result = session.execute(
-            #         f"{query_string}{joiner}{terms_string} ORDER BY msg_time DESC LIMIT 50 OFFSET 0"
-            #     )
-            # else:
-            #     acarshub_configuration.log("SKipping alert search", "database")
-
-            # for row in result:
-            #     processed_results.insert(0, dict(row))
-
-            # processed_results.reverse()
         except Exception as e:
             acarshub_configuration.acars_traceback(e, "database")
         finally:
