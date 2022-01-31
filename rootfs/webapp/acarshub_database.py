@@ -20,6 +20,8 @@ from sqlalchemy import create_engine, Column, Integer, String, Text, desc
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.declarative import DeclarativeMeta
+
+# from sqlalchemy.engine.reflection import Inspector
 import json
 import datetime
 import acarshub_configuration
@@ -254,6 +256,13 @@ Messages.metadata.create_all(database)
 if backup:
     Messages.metadata.create_all(database_backup)
 
+
+# database is init, now check and see if the fts table is there
+
+# inspector = Inspector.from_engine(database)
+# if "messages_fts" not in inspector.get_table_names():
+
+
 # Class used to convert any search query objects to JSON
 
 try:
@@ -401,7 +410,8 @@ def create_db_safe_params(message_from_json):
         elif index == "icao":
             params["icao"] = value
         elif index == "freq":
-            params["freq"] = value
+            # normalizing frequency to 7 decimal places
+            params["freq"] = value.ljust(7, "0")
         elif index == "ack":
             params["ack"] = value
         elif index == "mode":

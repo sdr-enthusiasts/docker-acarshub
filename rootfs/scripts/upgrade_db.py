@@ -447,6 +447,39 @@ def create_db(cur):
     cur.execute(messages_saved_table)
 
 
+def normalize_freqs(cur):
+    global upgraded
+    global be_quiet
+    # select freqs from messages and ensure there are three decimal places
+    if not be_quiet:
+        print("Normalizing frequencies")
+    cur.execute(
+        """
+        SELECT freq, count(*) as cnt
+        FROM messages
+        GROUP BY freq
+        HAVING cnt > 1
+        """
+    )
+    freqs = cur.fetchall()
+    for freq in freqs:
+        freq_in_table = freq[0]
+        if len(freq_in_table) != 7:
+            upgraded = True
+            adjusted_freq = freq_in_table.ljust(7, "0")
+            cur.execute(
+                """
+                UPDATE messages
+                SET freq = ?
+                WHERE freq = ?
+                """,
+                (adjusted_freq, freq_in_table),
+            )
+
+    if not be_quiet:
+        print("Normalizing frequencies complete")
+
+
 if __name__ == "__main__":
     try:
         if not os.path.isfile(path_to_db):
@@ -463,6 +496,8 @@ if __name__ == "__main__":
         de_null(cur)
         conn.commit()
         add_indexes(cur)
+        conn.commit()
+        normalize_freqs(cur)
         conn.commit()
 
         result = [i for i in cur.execute("PRAGMA auto_vacuum")]
