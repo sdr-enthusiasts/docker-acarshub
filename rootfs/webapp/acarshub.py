@@ -173,7 +173,7 @@ def scheduled_tasks():
     schedule = SafeScheduler()
     # init the dbs if not already there
     acarshub_configuration.check_github_version()
-    if not acarshub_configuration.SPAM:
+    if not acarshub_configuration.LOCAL_TEST:
         schedule.every().minute.at(":15").do(acarshub_helpers.service_check)
         schedule.every().minute.at(":00").do(update_rrd_db)
 
@@ -250,7 +250,7 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
 
             data = None
 
-            if acarshub_configuration.SPAM is True:
+            if acarshub_configuration.LOCAL_TEST is True:
                 data, addr = receiver.recvfrom(65527)
             else:
                 data, addr = receiver.recvfrom(65527, socket.MSG_WAITALL)
@@ -422,7 +422,7 @@ def init_listeners(special_message=""):
         thread_vdlm2_listener.start()
     # REMOVE AFTER AIRFRAMES IS UPDATED ####
     if (
-        not acarshub_configuration.SPAM
+        not acarshub_configuration.LOCAL_TEST
         and acarshub_configuration.FEED
         and acarshub_configuration.ENABLE_VDLM
         and not vdlm2_feeder_thread.is_alive()
@@ -453,7 +453,7 @@ def init():
         acarshub_configuration.log(
             f"Startup Error grabbing most recent messages {e}", "init"
         )
-    if not acarshub_configuration.SPAM:
+    if not acarshub_configuration.LOCAL_TEST:
         try:
             if not acarshub_configuration.QUIET_LOGS:
                 acarshub_configuration.log("Initializing RRD Database", "init")
