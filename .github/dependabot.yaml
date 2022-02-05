@@ -24,3 +24,10 @@ updates:
       interval: daily
       time: "00:00"
       timezone: "Etc/UTC"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: daily
+      time: "00:00"
+      timezone: "Etc/UTC"
