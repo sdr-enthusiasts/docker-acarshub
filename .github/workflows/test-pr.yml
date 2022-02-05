@@ -1,6 +1,7 @@
 name: Test PR
 
 # FIXME: Can we not build either job if stuff has been unchanged since last commit for that job?
+# FIXME: Use branch name for tagging docker build
 on:
   pull_request:
     branches:
@@ -64,7 +65,7 @@ jobs:
         uses: docker/setup-buildx-action@v1
 
       # Build & Push Dockerfile (only push if this action was NOT triggered by a PR)
-      - name: Build & Push ghcr.io/sdr-enthusiasts/docker-acarshub:nextgen-test-${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}
+      - name: Build & Push ghcr.io/sdr-enthusiasts/docker-acarshub:nextgen-test
         if: steps.changed-files-specific.outputs.any_changed == 'true'
         uses: docker/build-push-action@v2
         with:
@@ -73,7 +74,7 @@ jobs:
           no-cache: true
           platforms: linux/386,linux/amd64,linux/arm/v7,linux/arm/v6,linux/arm64
           push: true
-          tags: ghcr.io/sdr-enthusiasts/docker-acarshub:nextgen-test-${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}
+          tags: ghcr.io/sdr-enthusiasts/docker-acarshub:nextgen-test
           labels: ${{ steps.meta.outputs.labels }}
 
   deploy_ghcr_latest_test:
@@ -176,10 +177,10 @@ jobs:
 
       - name: Patch Dockerfile if Nextgen was built for this branch
         if: steps.changed-file-nextgen.outputs.any_changed
-        run: sed -i "s/^FROM ghcr.io\/sdr-enthusiasts\/acarshub-baseimage:nextgen/FROM ghcr.io\/sdr-enthusiasts\/docker-acarshub:nextgen-test-${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}/g" Dockerfile.acarshub
+        run: sed -i "s/^FROM ghcr.io\/sdr-enthusiasts\/acarshub-baseimage:nextgen/FROM ghcr.io\/sdr-enthusiasts\/docker-acarshub:nextgen-test/g" Dockerfile.acarshub
 
       # Build & Push Dockerfile (only push if this action was NOT triggered by a PR)
-      - name: Build & Push ghcr.io/sdr-enthusiasts/docker-acarshub:test-${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}
+      - name: Build & Push ghcr.io/sdr-enthusiasts/docker-acarshub:test
         if: steps.changed-files-specific.outputs.any_changed == 'true'
         uses: docker/build-push-action@v2
         with:
@@ -188,5 +189,6 @@ jobs:
           no-cache: true
           platforms: linux/386,linux/amd64,linux/arm/v7,linux/arm/v6,linux/arm64
           push: true
-          tags: ghcr.io/sdr-enthusiasts/docker-acarshub:test-${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}
+          tags: ghcr.io/sdr-enthusiasts/docker-acarshub:test
+          #tags: ghcr.io/sdr-enthusiasts/docker-acarshub:test-${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}
           labels: ${{ steps.meta.outputs.labels }}
