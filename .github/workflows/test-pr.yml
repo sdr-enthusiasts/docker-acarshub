@@ -10,7 +10,7 @@ on:
       - "Dockerfile.acarshub"
       - "Dockerfile.acarshub-nextgen"
       - "rootfs/**"
-      - ".github/deploy.yml"
+      - ".github/test-pr.yml"
       - "version$"
 
 env:
@@ -33,7 +33,7 @@ jobs:
         with:
           files: |
             Dockerfile.nextgen
-            .github/on-pr.yml
+            .github/test-pr.yml
             rootfs/webapp/requirements.txt
 
       - name: Login to ghcr.io
