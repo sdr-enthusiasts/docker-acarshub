@@ -72,7 +72,7 @@ jobs:
           file: ./Dockerfile.nextgen
           no-cache: true
           platforms: linux/386,linux/amd64,linux/arm/v7,linux/arm/v6,linux/arm64
-          push: ${{ github.event_name != 'pull_request' }}
+          push: true
           tags: ghcr.io/sdr-enthusiasts/docker-acarshub:nextgen-test-${{ env.GIT_BRANCH }}
           labels: ${{ steps.meta.outputs.labels }}
 
@@ -187,6 +187,6 @@ jobs:
           file: ./Dockerfile.acarshub
           no-cache: true
           platforms: linux/386,linux/amd64,linux/arm/v7,linux/arm/v6,linux/arm64
-          push: ${{ github.event_name != 'pull_request' }}
+          push: true
           tags: ghcr.io/sdr-enthusiasts/docker-acarshub:test-${{ env.GIT_BRANCH }}
           labels: ${{ steps.meta.outputs.labels }}
