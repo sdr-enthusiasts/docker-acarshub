@@ -177,7 +177,7 @@ jobs:
 
       - name: Patch Dockerfile if Nextgen was built for this branch
         if: steps.changed-file-nextgen.outputs.any_changed
-        run: sed -i "s/^FROM ghcr.io\/sdr-enthusiasts\/acarshub-baseimage:nextgen/FROM ghcr.io\/sdr-enthusiasts\/docker-acarshub:nextgen-test/g" Dockerfile.acarshub
+        run: sed -i "s/^FROM ghcr.io\/sdr-enthusiasts\/docker-acarshub:nextgen/FROM ghcr.io\/sdr-enthusiasts\/docker-acarshub:nextgen-test/g" Dockerfile.acarshub
 
       # Build & Push Dockerfile (only push if this action was NOT triggered by a PR)
       - name: Build & Push ghcr.io/sdr-enthusiasts/docker-acarshub:test
