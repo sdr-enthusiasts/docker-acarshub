@@ -3,10 +3,8 @@ on:
   workflow_run:
     workflows:
       - "Deploy to Docker Hub"
-      - "Linting"
       - "Tests"
       - "Test PR"
-      - "Sync dockerhub readme"
     types: ["requested"]
 
 jobs:
