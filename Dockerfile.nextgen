@@ -26,7 +26,6 @@ RUN set -x && \
         "${KEPT_PACKAGES[@]}" \
         "${TEMP_PACKAGES[@]}"\
         && \
-    mkdir /src/ && \
     pushd /src/ && \
     python3 -m pip install --no-cache-dir \
         -r /src/requirements.txt \
