@@ -16,7 +16,7 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
-  GIT_BRANCH: ${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}
+  GIT_BRANCH: "${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}"
 
 jobs:
   deploy_ghcr_nextgen_test:
