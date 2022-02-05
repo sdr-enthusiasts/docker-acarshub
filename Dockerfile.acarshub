@@ -1,5 +1,5 @@
 # hadolint ignore=DL3007
-FROM ghcr.io/fredclausen/acarshub-baseimage:nextgen
+FROM ghcr.io/sdr-enthusiasts/acarshub-baseimage:nextgen
 
 ENV FEED="" \
     ENABLE_ACARS="" \

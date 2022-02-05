@@ -14,7 +14,7 @@ Builds and runs on `amd64`, `arm64`, `arm/v7`, `arm/v6` and `386` architectures.
 
 ## IMPORTANT NOTE FOR RASPBERRY PI OS 32 BIT USERS
 
-Please see [this](https://github.com/fredclausen/Buster-Docker-Fixes) if you encounter `RTC/Real Time Clock` issues.
+Please see [this](https://github.com/sdr-enthusiasts/Buster-Docker-Fixes) if you encounter `RTC/Real Time Clock` issues.
 
 ## Supported tags and respective Dockerfiles
 
@@ -46,7 +46,7 @@ docker volume create acarshub \
     -v acars_data:/run/acars \
     --device /dev/bus/usb:/dev/bus/usb \
     --mount type=tmpfs,destination=/database,tmpfs-mode=1777 \
-    fredclausen/acarshub
+    ghcr.io/sdr-enthusiasts/docker-acarshub:latest
 ```
 
 ## Up-and-Running with Docker Compose
@@ -59,7 +59,7 @@ volumes:
 
 services:
   acarshub:
-    image: fredclausen/acarshub
+    image: ghcr.io/sdr-enthusiasts/docker-acarshub:latest
     tty: true
     container_name: acarshub
     restart: always
@@ -68,7 +68,6 @@ services:
     ports:
       - 80:80
     environment:
-      - FREQS_ACARS=130.025;130.450;131.125;131.550
       - ENABLE_ACARS=external
     volumes:
       - acars_data:/run/acars

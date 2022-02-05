@@ -4,75 +4,163 @@ on:
   pull_request:
     branches:
       - main
-      - "!dependabot/**"
-    paths-ignore:
-      - "**.md"
-      - "**.MD"
+    paths:
+      - "acarshub-typescript/**"
+      - "Dockerfile.acarshub"
+      - "Dockerfile.acarshub-nextgen"
+      - "rootfs/**"
+      - ".github/deploy.yml"
+      - "version$"
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  build-acarshub-prod-test:
-    if: github.actor != 'depbot'
-    name: Build ACARSHub PR Prod Test
+  deploy_ghcr_nextgen_test:
+    name: Deploy ACARS Hub Next Gen Base Image
     runs-on: ubuntu-latest
-    env:
-      REPO: fredclausen
-      IMAGE: acarshub
-      PUSH: true
+
     steps:
       # Check out our code
       - name: Checkout
         uses: actions/checkout@v2
 
-      # Get version tag
-      # git log -1 : get the latest commit
-      # --format="%ct" : committer date, UNIX timestamp
-      # Then using `date` to format to YYYYMMDD format
-      - name: Get date of last commit for VERSION_TAG
-        run: |
-          echo "VERSION_TAG=$(sed '1!d' ./version)" >> $GITHUB_ENV
+      - name: Get specific changed files
+        id: changed-files-specific
+        uses: tj-actions/changed-files@v14.3
+        with:
+          files: |
+            Dockerfile.nextgen
+            .github/on-pr.yml
+            rootfs/webapp/requirements.txt
 
-      - name: Set get branch name
-        run: |
-          # Short name for current branch. For PRs, use target branch (base ref)
-          GIT_BRANCH=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}
-          echo "GIT_BRANCH=$GIT_BRANCH" >> $GITHUB_ENV
-      # Show version tag
-      - name: Show version tag
-        run: |
-          echo "ACARS Hub Version: ${{ env.VERSION_TAG }}"
-
-      # Set version tag in webapp
-      # -
-      #   name: Patch webapp with VERSION_TAG
-      #   run: |
-      #     sed -i 's/Pre-Release/ACARS Hub Pre-Release: ${{ env.VERSION_TAG }}/' ./acarshub-typescript/src/helpers/menu.ts
-      - name: Create version file
-        run: |
-          echo "${{ env.VERSION_TAG }}" >> ./rootfs/acarshub-version
-
-        # Log into docker hub (so we can push images)
-      - name: Login to DockerHub
+      - name: Login to ghcr.io
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
         uses: docker/login-action@v1
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Get metadata from repo
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        uses: docker/metadata-action@v3
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
 
       # Set up QEMU for multi-arch builds
       - name: Set up QEMU
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
         uses: docker/setup-qemu-action@v1
 
       # Set up buildx for multi platform builds
       - name: Set up Docker Buildx
         id: buildx
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
         uses: docker/setup-buildx-action@v1
 
-      # build acarshub typescript test
+      # Build & Push Dockerfile (only push if this action was NOT triggered by a PR)
+      - name: Build & Push ghcr.io/sdr-enthusiasts/docker-acarshub:nextgen
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          file: ./Dockerfile.nextgen
+          no-cache: true
+          platforms: linux/386,linux/amd64,linux/arm/v7,linux/arm/v6,linux/arm64
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ghcr.io/sdr-enthusiasts/docker-acarshub:nextgen-test-${{ env.GIT_BRANCH }}
+          labels: ${{ steps.meta.outputs.labels }}
 
-      - name: Build ACARSHub typescript production
+  deploy_ghcr_latest_test:
+    name: Deploy to latest to dockerhub
+    runs-on: ubuntu-latest
+    needs: [deploy_ghcr_nextgen_test]
+    steps:
+      # Check out our code
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Get specific changed files
+        id: changed-files-specific
+        uses: tj-actions/changed-files@v14.3
+        with:
+          files: |
+            Dockerfile.nextgen
+            Dockerfile.acarshub
+            acarshub-typescript/**
+            rootfs/**
+            .github/test-pr.yml
+            version$
+
+      - name: Get status of next file
+        id: changed-file-nextgen
+        uses: tj-actions/changed-files@v14.3
+        with:
+          files: |
+            Dockerfile.nextgen
+
+      - name: Get version tag from file
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        run: |
+          echo "VERSION_TAG=$(sed '1!d' ./version)" >> $GITHUB_ENV
+          echo "VERSION_TAG_DOCKER=$(sed '2!d' ./version)" >> $GITHUB_ENV
+
+      # Show version tag
+      - name: Show version tag
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        run: |
+          echo "ACARS Hub Version: ${{ env.VERSION_TAG }}"
+          echo "ACARS Hub Docker Version: ${{ env.VERSION_TAG_DOCKER }}"
+
+      # Set version tag in webapp
+      - name: Patch webapp with VERSION_TAG
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        run: |
+          sed -i 's/Pre-Release/ACARS Hub Version: ${{ env.VERSION_TAG }}/' ./acarshub-typescript/src/helpers/menu.ts
+
+      - name: Create version file
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        run: |
+          echo "${{ env.VERSION_TAG }}" >> ./rootfs/acarshub-version
+
+      - name: Login to ghcr.io
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        uses: docker/login-action@v1
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Get metadata from repo
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        uses: docker/metadata-action@v3
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+
+      # Set up QEMU for multi-arch builds
+      - name: Set up QEMU
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        uses: docker/setup-qemu-action@v1
+
+      # Set up buildx for multi platform builds
+      - name: Set up Docker Buildx
+        id: buildx
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        uses: docker/setup-buildx-action@v1
+
+      # build acarshub typescript
+
+      - name: Build ACARSHub typescript
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
         working-directory: ./acarshub-typescript
         run: |
           npm install
-          sed -i 's/Pre-Release/ACARS Hub Pre-Release: ${{ env.VERSION_TAG }}/' ./src/helpers/menu.ts
           npm run build
           mkdir -p ./webapp/static/images
           mkdir -p ./webapp/static/js
@@ -85,15 +173,19 @@ jobs:
           tar cvfz webapp.tar.gz ./webapp
           cp webapp.tar.gz ../webapp.tar.gz
 
-      # Test container build for all supported platforms (defined above)
-      - name: Test Build ${{ matrix.docker-platform }}
+      - name: Patch Dockerfile if Nextgen was built for this branch
+        if: steps.changed-file-nextgen.outputs.any_changed
+        run: sed -i 's/^FROM ghcr.io\/sdr-enthusiasts\/acarshub-baseimage:nextgen/\/ghcr.io\/FROM sdr-enthusiasts\/docker-acarshub:nextgen-test-${{ env.GIT_BRANCH }}/g' Dockerfile.acarshub
+
+      # Build & Push Dockerfile (only push if this action was NOT triggered by a PR)
+      - name: Build & Push ghcr.io/sdr-enthusiasts/docker-acarshub:test-${{ env.GIT_BRANCH }}
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
         uses: docker/build-push-action@v2
         with:
           context: .
-          file: ./Dockerfile
+          file: ./Dockerfile.acarshub
           no-cache: true
-          platforms: linux/amd64,linux/arm/v7,linux/arm/v6,linux/arm64,linux/386
-          push: ${{ env.PUSH }}
-          tags:
-            ${{ env.REPO }}/${{ env.IMAGE }}:test-${{ env.GIT_BRANCH }}
-            # build acarshub typescript test
+          platforms: linux/386,linux/amd64,linux/arm/v7,linux/arm/v6,linux/arm64
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ghcr.io/sdr-enthusiasts/docker-acarshub:test-${{ env.GIT_BRANCH }}
+          labels: ${{ steps.meta.outputs.labels }}
