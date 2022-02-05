@@ -16,8 +16,15 @@
 # You should have received a copy of the GNU General Public License
 # along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-from sqlalchemy import create_engine, Column, Integer, String, Text, Table, desc, or_
-from sqlalchemy.orm import sessionmaker, aliased
+from sqlalchemy import (
+    create_engine,
+    Column,
+    Integer,
+    String,
+    Text,
+    desc,
+)
+from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.declarative import DeclarativeMeta
 
@@ -266,21 +273,22 @@ if "messages_fts" not in inspector.get_table_names():
     acarshub_configuration.log("Missing FTS TABLE! Aborting!", "database")
     sys.exit(1)
 
-messages_idx = Table(
-    "messages_fts",
-    Messages.metadata,
-    Column("rowid", Integer(), key="id", primary_key=True),
-    Column("depa", String(32)),
-    Column("dsta", String(32)),
-    Column("text", Text()),
-    Column("tail", String(32)),
-    Column("flight", String(32)),
-    Column("icao", String(32)),
-    Column("freq", String(32)),
-    Column("label", String(32)),
-)
+# messages_idx = Table(
+#     "messages_fts",
+#     Messages.metadata,
+#     #,
+#     Column("rowid", Integer(), key="id", primary_key=True),
+#     Column("depa", String(32)),
+#     Column("dsta", String(32)),
+#     Column("text", Text()),
+#     Column("tail", String(32)),
+#     Column("flight", String(32)),
+#     Column("icao", String(32)),
+#     Column("freq", String(32)),
+#     Column("label", String(32)),
+# )
 
-MessagesIdx = aliased(messages, messages_idx, adapt_on_names=True)
+# MessagesIdx = aliased(messages, messages_idx, adapt_on_names=True)
 
 # Class used to convert any search query objects to JSON
 
@@ -630,78 +638,144 @@ def find_airline_code_from_iata(iata):
         return (iata, "Unknown Airline")
 
 
+# FIXME: Rolled back to old database_search. Should wrap FTS table in SQL Alchemy engine
 def database_search(search_term, page=0):
-    global MessagesIdx
     result = None
-    processed_results = None
-    count = 0
+
     try:
         if acarshub_configuration.DEBUG_LOGGING:
             acarshub_configuration.log(
                 f"[database] Searching database for {search_term}", "database"
             )
-        query_filters = []
+        match_string = ""
 
-        for term in search_term:
-            if term == "msg_text":
-                query_filters.append(
-                    MessagesIdx.text.like(f'%{search_term["msg_text"].upper()}%')
-                )
-            elif term == "flight":
-                query_filters.append(
-                    MessagesIdx.flight.like(f'%{search_term["flight"].upper()}%')
-                )
-            elif term == "depa":
-                query_filters.append(
-                    MessagesIdx.depa.like(f'%{search_term["depa"].upper()}%')
-                )
-            elif term == "dsta":
-                query_filters.append(
-                    MessagesIdx.dsta.like(f'%{search_term["dsta"].upper()}%')
-                )
-            elif term == "freq":
-                query_filters.append(
-                    MessagesIdx.freq.like(f'%{search_term["freq"].upper()}%')
-                )
-            elif term == "label":
-                query_filters.append(
-                    MessagesIdx.label.like(f'%{search_term["label"].upper()}%')
-                )
-            elif term == "tail":
-                query_filters.append(
-                    MessagesIdx.tail.like(f'%{search_term["tail"].upper()}%')
-                )
+        for key in search_term:
+            if search_term[key] is not None and search_term[key] != "":
+                if match_string == "":
+                    match_string += f'\'{key}:"{search_term[key]}"*'
+                else:
+                    match_string += f' AND {key}:"{search_term[key]}"*'
 
-        if len(query_filters) > 0:
-            session = db_session()
-            result = (
-                session.query(MessagesIdx)
-                .select_from(messages)
-                .join(MessagesIdx, MessagesIdx.id == messages.id)
-                .filter(*query_filters)
-                .limit(50)
-                .offset(page * 50)
-            )
-            count = (
-                session.query(MessagesIdx)
-                .select_from(messages)
-                .join(MessagesIdx, MessagesIdx.id == messages.id)
-                .filter(*query_filters)
-                .count()
-            )
-            if count > 0:
-                processed_results = [query_to_dict(d) for d in result]
+        if match_string == "":
+            return [None, 50]
 
+        match_string += "'"
+
+        session = db_session()
+        result = session.execute(
+            f"SELECT * FROM messages WHERE id IN (SELECT rowid FROM messages_fts WHERE messages_fts MATCH {match_string} ORDER BY rowid DESC LIMIT 50 OFFSET {page * 50})"
+        )
+
+        count = session.execute(
+            f"SELECT COUNT(*) FROM messages_fts WHERE messages_fts MATCH {match_string}"
+        )
+
+        processed_results = []
+        final_count = 0
+        for row in count:
+            final_count = row[0]
+
+        if final_count == 0:
+            session.close()
+            return [None, 50]
+
+        for row in result:
+            processed_results.append(dict(row))
+
+        session.close()
+        return (processed_results, final_count)
     except Exception as e:
         acarshub_configuration.acars_traceback(e, "database")
-    finally:
         session.close()
-        return (processed_results, count)
+        return [None, 50]
 
 
+# def database_search(search_term, page=0):
+#     global MessagesIdx
+#     result = None
+#     processed_results = None
+#     count = 0
+#     session = None
+#     try:
+#         if acarshub_configuration.DEBUG_LOGGING:
+#             acarshub_configuration.log(
+#                 f"[database] Searching database for {search_term}", "database"
+#             )
+#         query_filters = []
+
+#         for term in search_term:
+#             if search_term[term]:
+#                 if term == "msg_text":
+#                     query_filters.append(text("message_fts MATCH 'msg_text:" + search_term[term] + "'"))
+#                     # query_filters.append(
+#                     #     MessagesIdx.text.like(f'%{search_term["msg_text"].upper()}%')
+#                     # )
+#                 # elif term == "flight":
+#                 #     query_filters.append(
+#                 #         MessagesIdx.flight.like(f'%{search_term["flight"].upper()}%')
+#                 #     )
+#                 # elif term == "depa":
+#                 #     query_filters.append(
+#                 #         MessagesIdx.depa.like(f'%{search_term["depa"].upper()}%')
+#                 #     )
+#                 # elif term == "dsta":
+#                 #     query_filters.append(
+#                 #         MessagesIdx.dsta.like(f'%{search_term["dsta"].upper()}%')
+#                 #     )
+#                 # elif term == "freq":
+#                 #     query_filters.append(
+#                 #         MessagesIdx.freq.like(f'%{search_term["freq"].upper()}%')
+#                 #     )
+#                 # elif term == "label":
+#                 #     query_filters.append(
+#                 #         MessagesIdx.label.like(f'%{search_term["label"].upper()}%')
+#                 #     )
+#                 # elif term == "tail":
+#                 #     query_filters.append(
+#                 #         MessagesIdx.tail.like(f'%{search_term["tail"].upper()}%')
+#                 #     )
+
+#         #     result = session.execute(
+#         #     f"SELECT * FROM messages WHERE id IN (SELECT rowid FROM messages_fts WHERE messages_fts MATCH {match_string} ORDER BY rowid DESC LIMIT 50 OFFSET {page * 50})"
+#         # )
+
+#         # SELECT messages_fts.rowid AS messages_fts_rowid, messages_fts.depa AS messages_fts_depa, messages_fts.dsta AS messages_fts_dsta, messages_fts.tail AS messages_fts_tail,
+#         # messages_fts.flight AS messages_fts_flight, messages_fts.icao AS messages_fts_icao, messages_fts.freq AS messages_fts_freq, messages_fts.label AS messages_fts_label
+#         # FROM messages_fts, messages
+#         # WHERE messages_fts.flight LIKE ? AND messages_fts.depa LIKE ? AND messages_fts.dsta LIKE ? AND messages_fts.freq LIKE ? AND messages_fts.label LIKE ?
+#         # AND messages_fts.tail LIKE ? AND messages.msg_text LIKE ?
+#         # LIMIT ? OFFSET ?
+#         if len(query_filters) > 0:
+#             session = db_session()
+#             result = (
+#                 session.query(messages)
+#                 .select_from(MessagesIdx)
+#                 .join(messages, MessagesIdx.rowid == messages.id)
+#                 .filter(*query_filters)
+#                 .limit(50)
+#                 .offset(page * 50)
+#             )
+#             #print(result)
+#             count = (
+#                 session.query(messages)
+#                 .select_from(MessagesIdx)
+#                 .join(messages, MessagesIdx.rowid == messages.id)
+#                 .filter(*query_filters)
+#                 .count()
+#             )
+#             if count > 0:
+#                 processed_results = [query_to_dict(d) for d in result]
+
+#     except Exception as e:
+#         acarshub_configuration.acars_traceback(e, "database")
+#     finally:
+#         if session:
+#             session.close()
+#         return (processed_results, count)
+
+# FIXME: Rolled back to old search_alerts. We should wrap this in SQL Alchemy goodness
 def search_alerts(icao=None, tail=None, flight=None):
     result = None
-    processed_results = []
     global alert_terms
     if (
         icao is not None
@@ -711,62 +785,128 @@ def search_alerts(icao=None, tail=None, flight=None):
     ):
         try:
             session = db_session()
-            # FIXME: This should really be FTS searched on messages_saved. We need to do the following:
-            # 1. Create a new fts table for messaged_saved
-            # 2. Save ALL alert terms to the db so we can match properly and save
-            query_filter_icao = []
-            query_filter_tail = []
-            query_filter_flight = []
-            query_filter_text = []
-            if icao is not None:
-                for term in icao:
-                    query_filter_icao.append(MessagesIdx.icao.like(f"%{term.upper()}%"))
-            if tail is not None:
-                for term in tail:
-                    query_filter_tail.append(MessagesIdx.tail.like(f"%{term.upper()}%"))
-            if flight is not None:
-                for term in flight:
-                    query_filter_flight.append(
-                        MessagesIdx.flight.like(f"%{term.upper()}%")
-                    )
+            search_term = {
+                "icao": icao,
+                #    "msg_text": alert_terms,
+                "flight": flight,
+                "tail": tail,
+            }
+            query_string = ""
+
+            for key in search_term:
+                if search_term[key] is not None and search_term[key] != "":
+                    for term in search_term[key]:
+                        if query_string == "":
+                            query_string += f'{key}:"{term}"*'
+                        else:
+                            query_string += f' OR {key}:"{term}"*'
+
+            if query_string != "":
+                query_string = f"SELECT * FROM messages WHERE id IN (SELECT rowid FROM messages_fts WHERE messages_fts MATCH '{query_string}')"
+
             if alert_terms is not None:
-                for term in alert_terms:
-                    query_filter_text.append(MessagesIdx.text.like(f"%{term.upper()}%"))
+                terms_string = """SELECT id, message_type, msg_time, station_id, toaddr, fromaddr, depa, dsta, eta, gtout, gtin, wloff, wlin,
+                                lat, lon, alt, msg_text, tail, flight, icao, freq, ack, mode, label, block_id, msgno, is_response, is_onground, error, libacars, level FROM messages_saved"""
+            else:
+                terms_string = ""
 
-            query_filter = []
+            if query_string != "" and terms_string != "":
+                joiner = " UNION "
+            else:
+                joiner = ""
 
-            if len(query_filter_icao) > 0:
-                query_filter.append(or_(*query_filter_icao))
-            if len(query_filter_tail) > 0:
-                query_filter.append(or_(*query_filter_tail))
-            if len(query_filter_flight) > 0:
-                query_filter.append(or_(*query_filter_flight))
-            if len(query_filter_text) > 0:
-                query_filter.append(or_(*query_filter_text))
-
-            if len(query_filter) > 0:
-                result = (
-                    session.query(MessagesIdx)
-                    .select_from(messages)
-                    .join(MessagesIdx, MessagesIdx.id == messages.id)
-                    .filter(or_(*query_filter))
-                    .order_by(MessagesIdx.time.desc())
-                    .limit(50)
-                    .offset(0)
+            if query_string != "" or terms_string != "":
+                result = session.execute(
+                    f"{query_string}{joiner}{terms_string} ORDER BY msg_time DESC LIMIT 50 OFFSET 0"
                 )
+            else:
+                acarshub_configuration.log("SKipping alert search", "database")
+                return None
 
-            if result:
-                processed_results = [query_to_dict(d) for d in result]
+            processed_results = []
 
+            for row in result:
+                processed_results.insert(0, dict(row))
+            if len(processed_results) == 0:
+                return None
+            processed_results.reverse()
+            session.close()
+            return processed_results
         except Exception as e:
             acarshub_configuration.acars_traceback(e, "database")
-        finally:
-            session.close()
-            if len(processed_results) > 0:
-                return processed_results
             return None
     else:
         return None
+
+
+# def search_alerts(icao=None, tail=None, flight=None):
+#     result = None
+#     processed_results = []
+#     global alert_terms
+#     if (
+#         icao is not None
+#         or tail is not None
+#         or flight is not None
+#         or alert_terms is not None
+#     ):
+#         try:
+#             session = db_session()
+#             # FIXME: This should really be FTS searched on messages_saved. We need to do the following:
+#             # 1. Create a new fts table for messaged_saved
+#             # 2. Save ALL alert terms to the db so we can match properly and save
+#             # query_filter_icao = []
+#             # query_filter_tail = []
+#             # query_filter_flight = []
+#             # query_filter_text = []
+#             # if icao is not None:
+#             #     for term in icao:
+#             #         query_filter_icao.append(MessagesIdx.icao.like(f"%{term.upper()}%"))
+#             # if tail is not None:
+#             #     for term in tail:
+#             #         query_filter_tail.append(MessagesIdx.tail.like(f"%{term.upper()}%"))
+#             # if flight is not None:
+#             #     for term in flight:
+#             #         query_filter_flight.append(
+#             #             MessagesIdx.flight.like(f"%{term.upper()}%")
+#             #         )
+#             # if alert_terms is not None:
+#             #     for term in alert_terms:
+#             #         query_filter_text.append(MessagesIdx.text.like(f"%{term.upper()}%"))
+
+#             # query_filter = []
+
+#             # if len(query_filter_icao) > 0:
+#             #     query_filter.append(or_(*query_filter_icao))
+#             # if len(query_filter_tail) > 0:
+#             #     query_filter.append(or_(*query_filter_tail))
+#             # if len(query_filter_flight) > 0:
+#             #     query_filter.append(or_(*query_filter_flight))
+#             # if len(query_filter_text) > 0:
+#             #     query_filter.append(or_(*query_filter_text))
+
+#             # if len(query_filter) > 0:
+#             #     result = (
+#             #         session.query(MessagesIdx)
+#             #         .select_from(messages)
+#             #         .join(MessagesIdx, MessagesIdx.id == messages.id)
+#             #         .filter(or_(*query_filter))
+#             #         .order_by(MessagesIdx.time.desc())
+#             #         .limit(50)
+#             #         .offset(0)
+#             #     )
+
+#             if result:
+#                 processed_results = [query_to_dict(d) for d in result]
+
+#         except Exception as e:
+#             acarshub_configuration.acars_traceback(e, "database")
+#         finally:
+#             session.close()
+#             if len(processed_results) > 0:
+#                 return processed_results
+#             return None
+#     else:
+#         return None
 
 
 def show_all(page=0):
