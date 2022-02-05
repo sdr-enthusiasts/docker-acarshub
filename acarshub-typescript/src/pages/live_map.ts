@@ -1405,7 +1405,7 @@ export let live_map_page = {
     this.map_controls = LeafLet.control.custom({
       position: "topright",
       content:
-        '<button type="button" id="toggle-acars" class="btn btn-default toggle-acars" onclick="toggle_acars_only()">' +
+        '<button type="button" id="toggle-acars" style="background: white" class="btn btn-default toggle-acars" onclick="toggle_acars_only()">' +
         `    ${
           !this.show_only_acars
             ? images.toggle_acars_only_show_acars
