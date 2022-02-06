@@ -285,6 +285,9 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
                 # We will cover this condition off by ensuring each json message is
                 # broken apart and handled individually
 
+                if acarshub_configuration.DEBUG_LOGGING:
+                    acarshub_configuration.log(data, f"{message_type.lower()}Generator")
+
                 try:
                     message_json = []
                     # JSON decoder requires a newline at the end of the string for processing?
