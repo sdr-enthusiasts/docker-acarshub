@@ -1,7 +1,22 @@
 #!/usr/bin/env python3
 
+# # Copyright (C) 2022 Frederick Clausen II
+# This file is part of acarshub <https://github.com/fredclausen/docker-acarshub>.
+#
+# acarshub is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# acarshub is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
+
 import json
-import os
 
 
 def format_acars_message(acars_message):
@@ -173,11 +188,18 @@ def format_dumpvdl2_message(unformatted_message):
 
 
 if __name__ == "__main__":
-    import json
-
     try:
-        # FIXME to not have hard coded
-        f = open("/Users/fred/single_message.txt")
+        import sys
+        import os
+
+        if len(sys.argv) < 2:
+            sys.exit("Usage: %s <message file>" % sys.argv[0])
+
+        # make sure the message file exists
+        if not os.path.isfile(sys.argv[1]):
+            sys.exit("File %s does not exist" % sys.argv[1])
+
+        f = open(sys.argv[1], "r")
 
         for data in f:
             message_json = []

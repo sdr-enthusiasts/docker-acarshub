@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 
 # Little script to generate traffic for testing outside of docker
-# I needed to change the socket parameters in application.py so it would
-# connect and receive all the data. export SPAM=True to enable application.py to function properly
+# I needed to change the socket parameters in acarshub.py so it would
+# connect and receive all the data. export LOCAL_TEST=True to enable acarshub.py to function properly
 # Additionally, for database pathing in testing, export ACARSHUB_DB="sqlite:////path/to/db"
 # 3 leading slashes required, the fourth is for unix path starting from root
 # For a sequential play of the msg file: python3 spammer.py /path/to/messages/file 5 0
 # For a random play of the msg file:     python3 spammer.py /path/to/messages/file 5 1
-# env ACARSHUB_DB=sqlite:////Users/fred/messages.db SPAM=True DEBUG_LOGGING=True ENABLE_ACARS=True FREQS_ACARS="130.025;130.450;131.125;131.550" python3 application.py
+# env ACARSHUB_DB=sqlite:////Users/fred/messages.db LOCAL_TEST=True DEBUG_LOGGING=True ENABLE_ACARS=True FREQS_ACARS="130.025;130.450;131.125;131.550" python3 acarshub.py
 
 import socket
 import time
-import sys, getopt
+import sys
 from random import randint
 import json
 
@@ -50,6 +50,7 @@ while run:
                 updated_message["timestamp"] = time.time()
                 updated_message = json.dumps(updated_message)
             except socket.error as e:
+                print(e)
                 receiver.close()
             except KeyboardInterrupt:
                 print("Exiting...")

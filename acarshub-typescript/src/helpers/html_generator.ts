@@ -1,3 +1,19 @@
+// Copyright (C) 2022 Frederick Clausen II
+// This file is part of acarshub <https://github.com/fredclausen/docker-acarshub>.
+
+// acarshub is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+
+// acarshub is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+
+// You should have received a copy of the GNU General Public License
+// along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
+
 // Function to generate the HTML for an array of messages
 // Input: msgs_to_process - the array of messages. Format is array of message groups, with each group being an array of message(s) that create a group of submessages
 // Input: selected_tabs - if present, we'll process. Format is uid1;elementid1,uid2;elementid2 etc

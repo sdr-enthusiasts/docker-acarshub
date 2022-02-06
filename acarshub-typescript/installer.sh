@@ -10,7 +10,7 @@ rm -rf ../rootfs/webapp/templates/* || exit 1
 
 mkdir -p ../rootfs/webapp/static/images || exit 1
 mkdir -p ../rootfs/webapp/static/js || exit 1
-mkdir -p ../rootfs/webapp/static/sounds  || exit 1
+mkdir -p ../rootfs/webapp/static/sounds || exit 1
 mkdir -p ../rootfs/webapp/templates || exit 1
 
 # copy the assets to the correct place

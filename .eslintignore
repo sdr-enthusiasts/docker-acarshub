@@ -2,5 +2,4 @@
 # /node_modules/* and /bower_components/* in the project root are ignored by default
 
 # Ignore built files except build/index.js
-acars-decoder-typescript/*
 rootfs/webapp/static/js/other/*

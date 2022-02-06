@@ -1,3 +1,19 @@
+// Copyright (C) 2022 Frederick Clausen II
+// This file is part of acarshub <https://github.com/fredclausen/docker-acarshub>.
+
+// acarshub is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+
+// acarshub is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+
+// You should have received a copy of the GNU General Public License
+// along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
+
 import * as LeafLet from "leaflet";
 import "../js-other/SmoothWheelZoom";
 import "../js-other/leaftlet.legend";
@@ -1389,7 +1405,7 @@ export let live_map_page = {
     this.map_controls = LeafLet.control.custom({
       position: "topright",
       content:
-        '<button type="button" id="toggle-acars" class="btn btn-default toggle-acars" onclick="toggle_acars_only()">' +
+        '<button type="button" id="toggle-acars" class="btn btn-default toggle-acars bg-white" onclick="toggle_acars_only()">' +
         `    ${
           !this.show_only_acars
             ? images.toggle_acars_only_show_acars

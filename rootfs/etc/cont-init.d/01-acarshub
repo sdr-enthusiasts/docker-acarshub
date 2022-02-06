@@ -4,57 +4,12 @@
 # create the /run/acars dir
 mkdir -p /run/acars/
 
-FREQ_CMD=()
-
-# we do the sanity checking of the env variables in python because I cannot stomach the idea of doing this in bash any more
-
-pushd ../../scripts > /dev/null 2>&1 || exit 1
-python3 acars-sanity-checker.py || exit 1
-
-
-# Just in case the container was docker restart we should clean up some dirs if present
-# thanks k1xt
-
-rm -rf /etc/services.d/acarsdec-* /etc/services.d/vdlm2dec-* >/dev/null 2>&1
-
-GENERATE=false
-
-if [[ "${ENABLE_ACARS}" == "external" ]]; then
+if [[ ${ENABLE_ACARS,,} =~ external ]]; then
     echo "ACARS Decoder set to external, push data to UDP port 5550" | awk '{print "[01-acarshub] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
-elif [ -n "${ENABLE_ACARS}" ] && [[ "${ENABLE_ACARS}" != "external" ]]; then
-    GENERATE=true
-	if [ -n "${FREQS_ACARS}" ]; then
-		IFS=';' read -r -a ACARS_ARRAY <<< "$FREQS_ACARS"
-		FREQ_CMD+=("-a" "${ACARS_ARRAY[@]}")
-	fi
 fi
 
-if [[ "${ENABLE_VDLM}" == "external" ]]; then
+if [[ ${ENABLE_VDLM,,} =~ external ]]; then
     echo "VDLM Decoder set to external, push data to UDP port 5555" | awk '{print "[01-acarshub] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
-elif [ -n "${ENABLE_VDLM}" ]; then
-    GENERATE=true
-	if [ -n "${FREQS_VDLM}" ]; then
-		IFS=';' read -r -a VDLM_ARRAY <<< "$FREQS_VDLM"
-		FREQ_CMD+=("-v" "${VDLM_ARRAY[@]}")
-	fi
-fi
-
-if [[ -n "$PLANEPLOTTER" && -z "${ENABLE_VDLM}" ]]; then
-	echo "WARNING: PlanePlotter is enabled but VDLM is not enabled, this will not work" | awk '{print "[01-acarshub] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
-fi
-
-if [ -n "${SERIAL}" ]; then
-    GENERATE=true
-	IFS=';' read -r -a SERIAL_ARRAY <<< "$SERIAL"
-	FREQ_CMD+=("-s" "${SERIAL_ARRAY[@]}")
-fi
-
-if [[ "$GENERATE" == "true" ]]; then
-	if [[ -z "$QUIET_LOGS" ]]; then
-    	echo "Generating decoder startup files" | awk '{print "[01-acarshub] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
-	fi
-# shellcheck disable=SC2016
-    python3 assign_frequencies.py "${FREQ_CMD[@]}" | stdbuf -oL awk '{print "[01-acarshub] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}' || exit 1
 fi
 
 # Ensure /database dir is present

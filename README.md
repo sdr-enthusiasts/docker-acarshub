@@ -8,20 +8,57 @@
 
 Docker container to view and also stream ACARS messages to [ACARS.io/Airframes.io](http://acars.io).
 
-Uses [libacars](https://github.com/szpajder/libacars), the [airframe's fork of acarsdec](https://github.com/airframesio/acarsdec) and [dumpvdl2](https://github.com/szpajder/dumpvdl2) for SDR side of decoding.
-
-Also, we make extensive use of the [airframes](https://github.com/airframesio) work to make the messages more 'human-readable' as well as provide more detail for each of the messages.
+We make extensive use of the [airframes](https://github.com/airframesio) work to make the messages more 'human-readable' as well as provide more detail for each of the messages.
 
 Builds and runs on `amd64`, `arm64`, `arm/v7`, `arm/v6` and `386` architectures.
 
-## IMPORTANT NOTE FOR RASPBERRY PI OS 32 BIT USERS
+## Table of Contents
 
-After March 1st, 2022 32 bit Rasperry Pi OS machines may not run ACARS Hub properly. I will be updating the base image of the container to Debian Bullseye and this will cause ACARS Hub to cease working if you are not prepared. Please see [this](https://github.com/fredclausen/Buster-Docker-Fixes) for instructions on how to fix.
+- [Users of v2 that need to migrate to v3](#Users-of-v2-that-need-to-migrate-to-v3)
+- [IMPORTANT NOTE FOR BUSTER USERS](#IMPORTANT-NOTE-FOR-BUSTER-USERS)
+- [Pre-requisites/Totally new to docker but you think this looks cool?](#Pre-requisitesTotally-new-to-docker-but-you-think-this-looks-cool)
+- [Supported tags and respective Dockerfiles](#Supported-tags-and-respective-Dockerfiles)
+- [Thanks](#thanks)
+- [Getting valid ACARS/VDLM2 data](#Getting-valid-ACARSVDLM2-data))
+- [Up-and-Running](#up-and-running)
+- [Ports](#ports)
+- [Volumes / Database](#VolumesDatabase)
+- [Environment Variables](#environment-variables)
+  - [General](#general)
+  - [ADSB](#adsb)
+  - [ACARS](#acars)
+  - [VDLM2](#vdlm2)
+- [Viewing the messages](#viewing-the-messages)
+- [Which frequencies should you monitor?](#which-frequencies-should-you-monitor)
+- [Logging](#logging)
+- [A note about data sources used for the website](#a-note-about-data-sources-used-for-the-web-site)
+- [Accessing ACARS/VDLM data with external programs](#accessing-acarsvdlm-data-with-external-programs)
+- [Website Tips and Tricks](#website-tips-and-tricks)
+- [Future Improvements](#future-improvements)
+- [Getting Help](#getting-help)
+
+## Users of v2 that need to migrate to v3
+
+Please see [this](Setting-Up-ACARSHub.md) for an example `docker-compose.yaml` file to get you started. You should be able to copy/paste values quickly over in to the new config and be up and running very quickly.
+
+## IMPORTANT NOTE FOR BUSTER USERS
+
+Please see [this](https://github.com/sdr-enthusiasts/Buster-Docker-Fixes) if you encounter `RTC/Real Time Clock` issues.
+
+## Pre-requisites/Totally new to docker but you think this looks cool
+
+Welcome! New to docker but you love the idea of monitoring ACARS and/or ADSB data? You will to prepare your system to run this, but it's super easy!
+
+You will need the following:
+
+- A Linux computer capable of running docker with the system installed and running. I personally recommend a raspberry Pi
+- At least one RTL-SDR Dongle. Two if you want to listen to both ACARS and VDLM. Something like [this](https://www.amazon.com/dp/B0129EBDS2), although other kinds do work.
+- Docker and docker-compose installed. Please see [installing docker and docker compose](https://github.com/sdr-enthusiasts/docker-install) for help with that, and come back here when you're ready.
 
 ## Supported tags and respective Dockerfiles
 
-* `latest` (`master` branch, `Dockerfile`)
-* Version and architecture specific tags available
+- `latest` (`master` branch, `Dockerfile`)
+- Version and architecture specific tags available
 
 ## Thanks
 
@@ -31,67 +68,39 @@ Additional thanks goes to the folks over at [airframes.io](airframes.io) for the
 
 I am missing a boat load of people who have provided feed back as this project has progressed, as well as contributed ideas or let me bounce thoughts off of them. You've all molded this project and made it better than I could have done on my own.
 
-## Required hardware
+## Getting valid ACARS/VDLM2 data
 
-You will need an RTLSDR dongle, and if you want to feed both VDLM2 and ACARS you will need two dongles with unique serial numbers.
+External to ACARS Hub you need to be running an ACARS and/or VDLM2 decoder for ACARS Hub, and have that decoder connect to ACARS Hub to send over the messages for processing.
 
-## Up-and-Running with `docker run`
+The following decoders are supported:
 
-```shell
-docker volume create acarshub &&
-docker run \
- -d \
- --rm \
- --name acarshub \
- -p 80:80 \
- -e STATION_ID_ACARS="YOURIDHERE" \
- -e FREQS_ACARS="130.025;130.450;131.125;131.550" \
- -e ENABLE_ACARS="true" \
- -v acars_data:/run/acars \
- --device /dev/bus/usb:/dev/bus/usb \
- --mount type=tmpfs,destination=/database,tmpfs-mode=1777 \
-fredclausen/acarshub
-```
+- [acarsdec](https://github.com/TLeconte/acarsdec) or one of the forks of acarsdec. I suggest [the airframes fork](https://github.com/airframesio/acarsdec). Run the decoder with the option `-j youracarshubip:5550`, ensuring that port `5550` is mapped to the container.
+- [dumpvdl2](https://github.com/szpajder/dumpvdl2). Run the decoder with the option `--output decoded:json:udp:address=<youracarshubip>,port=5555`, ensuring that port `5555` is mapped to the container.
+- [vdlm2dec](https://github.com/TLeconte/vdlm2dec). Run the decoder with the option `-j youracarshubip:5555`, ensuring that port `5555` is mapped to the container.
 
-You should obviously replace `STATION_ID_ACARS` with a unique ID for your station, as well as frequencies appropriate to your region.
+For VDLM decoding `dumpvdl2` is preferred as the decoder provides richer data and is more modern than `vdlm2dec`.
 
-## Up-and-Running with Docker Compose
+For ease of use I have provided docker images set up to work with ACARS Hub. This is the preferred way to get data in to ACARS Hub.
 
-```yaml
-version: '3.8'
+- [docker-acarsdec](https://github.com/fredclausen/docker-acarsdec) for ACARS decoding.
+- [docker-dumpvdl2](https://github.com/fredclausen/docker-dumpvdl2) for VDLM decoding. This is the preferred decoder.
+- [docker-vdlm2dec](https://github.com/fredclausen/docker-vdlm2dec) as an alternative for VDLM decoding. This decoder is far less feature-rich compared to `dumpvdl2` and is provided only as an alternative if you have a strong preference for using this over `dumpvdl2`.
 
-volumes:
-  acars_data:
+If you wish to use `acars` decoding please ensure port `5550` is mapped to the container. If you wish to use `vdlm2` decoding please ensure port `5555` is mapped to the container.
 
-services:
-  acarshub:
-    image: fredclausen/acarshub
-    tty: true
-    container_name: acarshub
-    restart: always
-    devices:
-      - /dev/bus/usb:/dev/bus/usb
-    ports:
-      - 80:80
-    environment:
-      - STATION_ID_ACARS=YOURIDHERE
-      - FREQS_ACARS=130.025;130.450;131.125;131.550
-      - ENABLE_ACARS=true
-    volumes:
-      - acars_data:/run/acars
-    tmpfs:
-      - /database:exec,size=64M
-```
+## Up-and-Running
 
-Please keep in mind that this is a barebones configuration to get you started. You will **certainly** need to set additional configuration options to get ACARS Hub working in the way you want.
+The document below covers a lot of configuration options, however, most of them are not needed to get started. Please see [this](Setting-Up-ACARSHub.md) for an example `docker-compose.yaml` file that should get you off the ground.
 
 ## Ports
 
-| Port | Description |
-|------|-------------|
-| `80` | Port used for the web interface |
-| `15550` | Port used for exposing JSON ACARS data |
-| `15555` | Port used for exposing JSON VDLM2 data |
+| Port    | Description                              |
+| ------- | ---------------------------------------- |
+| `80`    | Port used for the web interface          |
+| `5550`  | Port used for pushing ACARS JSON data to |
+| `5555`  | Port used for pushing VDLM2 JSON data to |
+| `15550` | Port used for exposing JSON ACARS data   |
+| `15555` | Port used for exposing JSON VDLM2 data   |
 
 ## Volumes / Database
 
@@ -111,20 +120,19 @@ There are quite a few configuration options this container can accept.
 
 ### General
 
-| Variable | Description | Required | Default |
-|----------|-------------|---------|--------|
-| `FEED`     | Used to toggle feeding to [ACARS.io](http://acars.io). If set to any non-blank value feeding will be enabled. | No | Blank |
-| `ENABLE_WEB`  | Enable the web server. Set to a blank value to disable the web server. | No | `true` |
-| `QUIET_LOGS` | By default the container displays all logging messages. If you wish to only see errors and critical messages in the container logs set `QUIET_LOGS` to a non-blank value. | No | Blank |
-| `QUIET_MESSAGES` | By default the decoders will not output their received messages to the container logs. If you want to see these messages in the logs set `QUIET_MESSAGES` to a blank value. | No | `true` |
-| `DB_SAVEALL` | By default the container will save all received messages in to a database, even if the message is a blank message. If you want to increase performance/decrease database size, set this option to blank to only save messages with at least one informationial field. | No | `true` |
-| `DB_SAVE_DAYS` | By default the container will save message data for 7 days. If you wish to over-ride this behavior, set this to the number of days you wish to have retained. | No | blank |
-| `DB_ALERT_SAVE_DAYS` | By default the container will save message data for 7 days. If you wish to over-ride this behavior, set this to the number of days you wish to have retained. | No | blank |
-| `DB_BACKUP` | If you want to run a second database for backup purposes set this value to a [SQL Alchemy formatted URL](https://docs.sqlalchemy.org/en/13/core/engines.html#database-urls). See the link for supported DB types. This database will have to be managed by you, as ACARS Hub will only ever write incoming data to it. | No | Blank |
-| `IATA_OVERRIDE` | Override or add any custom IATA codes. Used for the web front end to show proper callsigns; See [below](#the-fix) on formatting and [more details](#A-note-about-data-sources-used-for-the-web-site) why this might be necessary.| No | Blank |
-| `TAR1090_URL` | Flights where the container is able to, it will generate a link to a tar1090 instance so that you can see the position of the aircraft that generated the message. By default, it will link to [ADSB Exchange](https://www.adsbexchange.com), but if desired, you can set the URL to be a local tar1090 instance. | No | Blank |
-| `AUTO_VACUUM` | If you find your database size to be too large you can temporarily enable this and on the next container startup the database will attempt to reduce itself in size. When you do this startup time will take a few minutes. It is recommended to leave this flag disabled and only enable it temporarily. | No | `False` |
-| `PLANEPLOTTER` | If you want to output data in plane plotter format for use in Plane Plotter set this option to `true`. Only VDLM2 output is supported. | No | `False` |
+| Variable             | Description                                                                                                                                                                                                                                                                                                            | Required | Default |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------- |
+| `FEED`               | Used to toggle feeding to [ACARS.io](http://acars.io). If set to any non-blank value feeding will be enabled.                                                                                                                                                                                                          | No       | Blank   |
+| `ENABLE_WEB`         | Enable the web server. Set to a blank value to disable the web server.                                                                                                                                                                                                                                                 | No       | `true`  |
+| `QUIET_LOGS`         | By default the container displays all logging messages. If you wish to only see errors and critical messages in the container logs set `QUIET_LOGS` to a non-blank value.                                                                                                                                              | No       | Blank   |
+| `QUIET_MESSAGES`     | By default the decoders will not output their received messages to the container logs. If you want to see these messages in the logs set `QUIET_MESSAGES` to a blank value.                                                                                                                                            | No       | `true`  |
+| `DB_SAVEALL`         | By default the container will save all received messages in to a database, even if the message is a blank message. If you want to increase performance/decrease database size, set this option to blank to only save messages with at least one informationial field.                                                  | No       | `true`  |
+| `DB_SAVE_DAYS`       | By default the container will save message data for 7 days. If you wish to over-ride this behavior, set this to the number of days you wish to have retained.                                                                                                                                                          | No       | blank   |
+| `DB_ALERT_SAVE_DAYS` | By default the container will save message data for 7 days. If you wish to over-ride this behavior, set this to the number of days you wish to have retained.                                                                                                                                                          | No       | blank   |
+| `DB_BACKUP`          | If you want to run a second database for backup purposes set this value to a [SQL Alchemy formatted URL](https://docs.sqlalchemy.org/en/13/core/engines.html#database-urls). See the link for supported DB types. This database will have to be managed by you, as ACARS Hub will only ever write incoming data to it. | No       | Blank   |
+| `IATA_OVERRIDE`      | Override or add any custom IATA codes. Used for the web front end to show proper callsigns; See [below](#the-fix) on formatting and [more details](#A-note-about-data-sources-used-for-the-web-site) why this might be necessary.                                                                                      | No       | Blank   |
+| `TAR1090_URL`        | Flights where the container is able to, it will generate a link to a tar1090 instance so that you can see the position of the aircraft that generated the message. By default, it will link to [ADSB Exchange](https://www.adsbexchange.com), but if desired, you can set the URL to be a local tar1090 instance.      | No       | Blank   |
+| `AUTO_VACUUM`        | If you find your database size to be too large you can temporarily enable this and on the next container startup the database will attempt to reduce itself in size. When you do this startup time will take a few minutes. It is recommended to leave this flag disabled and only enable it temporarily.              | No       | `False` |
 
 Please note that for `TAR1090_URL` the required format is `http[s]://**HOSTNAME**` only. So if your tar1090 instance is at IP address `192.168.31.10` with no SSL, the TAR1090_URL would look like `http://192.168.31.10`
 
@@ -134,13 +142,13 @@ The ACARS Hub website contains the ability to display ADSB targets along side AC
 
 The following options will set the options for ADSB
 
-| Variable | Description | Required | Default |
-|----------|-------------|---------|--------|
-| `ENABLE_ADSB` | Turns on ADSB in ACARS Hub | Yes, if you want to monitor ADSB | Blank |
-| `ADSB_URL` | The IP address or URL for your tar1090 instance  | Yes | `http://tar1090/data/aircraft.json`|
-| `ADSB_LAT` | The latitude of your ADSB site | No, but recommended | 0 |
-| `ADSB_LON` | The longitude of your ADSB site | No, but recommended | 0 |
-| `DISABLE_RANGE_RINGS` | Turn off range rings on your map. Set to a blank value to disable range rings. | No | Blank |
+| Variable              | Description                                                                    | Required                         | Default                             |
+| --------------------- | ------------------------------------------------------------------------------ | -------------------------------- | ----------------------------------- |
+| `ENABLE_ADSB`         | Turns on ADSB in ACARS Hub                                                     | Yes, if you want to monitor ADSB | Blank                               |
+| `ADSB_URL`            | The IP address or URL for your tar1090 instance                                | No (see note below)              | `http://tar1090/data/aircraft.json` |
+| `ADSB_LAT`            | The latitude of your ADSB site                                                 | No, but recommended              | 0                                   |
+| `ADSB_LON`            | The longitude of your ADSB site                                                | No, but recommended              | 0                                   |
+| `DISABLE_RANGE_RINGS` | Turn off range rings on your map. Set to a blank value to disable range rings. | No                               | Blank                               |
 
 If you run Mike's tar1090 container on the same machine as ACARS Hub then the default value for `ADSB_URL` is fine. If you don't, the formatting for `ADSB_URL` should be the full URL path to `aircraft.json` from your readsb source.
 
@@ -154,117 +162,54 @@ In the configuration options for tar1090. Setting this will include additional a
 
 ### ACARS
 
-| Variable | Description | Required | Default |
-|----------|-------------|---------|--------|
-| `ENABLE_ACARS` | Toggle ACARS decoding on. If set to any non-blank value ACARS decoding will start. Set to "external" if you want to not use an SDR and push acarsdecoder json data to UDP port 5550 (needs port mapping 5550:5550/udp). | No | Blank |
-| `STATION_ID_ACARS` | Your unique ID for the ACARS feed. Used on the [ACARS.io](http://acars.io) site. Follow the guide [here](https://app.airframes.io/about) for formatting. | Yes, if ENABLE_ACARS is enabled | Blank |
-| `FREQS_ACARS` | List of frequencies, separaed by a single `;`, used for ACARS monitoring. | Yes, if ENABLE_ACARS is enabled AND you are not using custom SDR definitions (see below)| Blank |
+| Variable       | Description                                                                                                                                                                         | Required | Default |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------- |
+| `ENABLE_ACARS` | Toggle ACARS decoding on. If set to `external` this will enable VDLM processing in the container. Push valid `ACARS` json data to UDP port 5550 (needs port mapping 5550:5550/udp). | No       | Blank   |
 
 ### VDLM2
 
-| Variable | Description | Required | Default |
-|----------|-------------|---------|--------|
-| `ENABLE_VDLM` | Toggle VDLM decoding on. If set to any non-blank value VDLM decoding will start. Set to "external" if you want     to not use an SDR and push vdmldec json data to UDP port 5555 (needs port mapping 5555:5555/udp). | No | Blank |
-| `STATION_ID_VDLM`  | Your unique ID for the VDLM  feed. Used on the [ACARS.io](http://acars.io) site. Follow the guide [here](https://app.airframes.io/about) for formatting. | Yes, if ENABLE_VDLM is enabled | Blank |
-| `FREQS_VDLM`  | List of frequencies, separated by a single `;`, used for VDLM monitoring. | Yes, if ENABLE_VDLM is enabled AND you are not using custom SDR definitions (see below)| Blank |
-| `VDLM_FILTER_ENABLE` | By default `dumpvdl2` filters out certain kinds of messages. These messages have been determined to be generally not interesting and not of any import so it's safe to discard these. See note below. If you wish to see all VDLM2 messages your station is receiving set this value to be blank. | No | `true` |
-
-* If you were previously running ACARS Hub and the `vdlm2dec` decoder you may see a "drop" in message rate in your stats. This is normal and is a result of `vdlm2dec` not doing any filtering and `dumpvdl2` doing filtering. If you disable the filter you will see an increase in SD card writes so use with caution.
-
-### RTL Device assignment
-
-| Variable | Description | Required | Default |
-|----------|-------------|---------|--------|
-| `BYPASS_SDR_CHECK` | If you experience issues with ACARS Hub failing to start because it cannot find your SDRs based on their serial, set this to any non-blank value to force it to bypass the check. Depending on the reason ACARS Hub could not map a serial to an SDR is because there is a problem with the SDR, and as a result ACARS Hub still won't start up properly, but there are cases where it might. It is suggested you also replace the serial number in Method 1 or 2 below with the device index (found via `rtl_test`). | No | Blank |
-
-You have two options that can be used interchangeably to assign RTLSDR devices in the container. The first method is most likely what most users will want
-
-#### Method 1: Auto-assignment of SDRs
-
-The container will auto-assign frequencies to an SDR based on the number of available SDRs and what decoder you've set up for that frequency. You can use both Method 1 and Method 2 to assign SDRs in the container, but ensure the serials used in one method are not used in the other.
-
-| Variable | Description | Required | Default |
-|----------|-------------|---------|--------|
-| `SERIAL` | List of SDRs and configuration options (see below), with each SDR separated by a `;` | Yes, if Method 2 below is not used | Blank |
-
-Example: `SERIAL=00012507,2,-10,160;00012095,0,280,160`
-
-#### Method 2: Assign Specific Frequencies to a Specific SDR
-
-If you wish to not have frequencies auto-assigned use this method. You can use both Method 1 and Method 2 to assign SDRs in the container, but ensure the serials used in one method are not used in the other. For each SDR you want to specify the frequency assignment/decoder, use one value from each of the following tables:
-
-| Variable | Description | Required | Default |
-|----------|-------------|---------|--------|
-| `ACARS_x` | SDR with configuration options. Replace x with 0, and for every SDR you add under ACARS increase the number by one | Yes, if Method 1 is not used above and you want ACARS decoding. See below for formatting the SDR line | Yes, if Method 1 is not used | Blank
-| `VDLM_x` | SDR with configuration options. Replace x with 0, and for every SDR you add under VDLM increase the number by one | Yes, if Method 1 is not used above and you want VDLM decoding. See below for formatting the SDR line | Blank |
-
-For frequency assignment, use the following:
-
-| Variable | Description |
-|----------|-------------|
-| `ACARS_FREQ_x` | list of frequencies, each separated by a single `;`, to be used by the `ACARS_x` decoder above. Ensure the number used is the same in both configuration variables: ie `ACARS_0` and `ACARS_FREQ_0` |
-| `VDLM_FREQ_x` | list of frequencies, each separated by a single `;`, to be used by the `VDLM_x` decoder above. Ensure the number used is the same in both configuration variables: IE `VDLM_0` and `VDLM_FREQ_0` |
-
-#### Configuring the SDR options
-
-To format the SDR configuration correctly, the container expects the following options:
-
-* SDR serial
-* PPM correction
-* Gain (see below for options there)
-* RTL Multiplier - for setting the bandwidth, used by ACARS only
-
-If you don't wish to set the value for a certain option, you can skip it by leaving it blank
-
-So if your serial for the SDR was `00012095`, you had no PPM correction, and a gain of `28.0` and wanted to use the default RTL Multiplier: `SERIAL=00012095,,28.0,`
-
-If you have more than one SDR being auto-assigned (NOT APPLICABLE to Method 2 above), separate each SDR with a `;`
-
-Example: `SERIAL=00012095,,28.0,;00012507,2,A460`
-
-* The ACARS Decoder supports `AGC/Automatic Gain Control`. To enable, prepend the gain value with an `A`. Additionally, you will need to set the gain value for VDLM. See below.
-* If you are not using ACG and wish to set the gain manually, use dBm format: `28.0`
-* If you are using Auto-Assignment of the SDRs and wish to use ACG if the decoder is being used for ACARS, but want a specific value for VDLM, pre-pend the value with an `A`: `A46.0`
-* For the sample rate, use `192` for `2.4 MS/s` and `160` for `2.0MS/s` (default)
+| Variable      | Description                                                                                                                                                                   | Required | Default |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------- |
+| `ENABLE_VDLM` | Toggle VDLM decoding on. If set to `external` this will enable VDLM processing in the container. Push valid `VDLM2` data to UDP port 5555 (needs port mapping 5555:5555/udp). | No       | Blank   |
 
 ## Viewing the messages
 
 The container implements a basic web interface, listening on port `80`, which will show messages as they are received.
 
-If `QUIET_LOGS` is disabled, received messages are also logged to the container log.
+If `QUIET_MESSAGES`is disabled, received messages are also logged to the container log.
 
-## Which frequencies should you monitor?
+## Which frequencies should you monitor
 
 The [ACARS.io/Airframes.io](https://app.airframes.io/about) website has a great list of community derived frequencies that aircraft typically will broadcast ACARS/VDLM on, and what regions those are applicable to. The values provided in the example docker-compose/docker run example above are frequencies I have found to be good in the United States, with a decent level of traffic. I imagine the list is not complete, and could be refined better.
 
 Some notes about frequencies:
 
-* `acarsdec` and `dumpvdl2` are limited to monitoring 8 frequencies apiece
-* The spread of frequencies for each decoder has to be within 2 Mhz.
+- `acarsdec` and `dumpvdl2` are limited to monitoring 8 frequencies apiece
+- The spread of frequencies for each decoder has to be within 2 Mhz.
 
 ## Logging
 
-* All processes are logged to the container's stdout. If `QUIET_LOGS` is disabled, all received aircraft messages are logged to the container log as well. General logging can be viewed with `docker logs [-f] container`.
+All processes are logged to the container's stdout. If `QUIET_LOGS` is disabled, all received aircraft messages are logged to the container log as well. General logging can be viewed with `docker logs [-f] container`.
 
 ## A note about data sources used for the web site
 
 A brief primer on some terms:
 
-* All ACARS/VDLM broadcasts that have a callsign appended to the message will use a two letter airline code
+- All ACARS/VDLM broadcasts that have a callsign appended to the message will use a two letter airline code
 
-* IATA is a two letter airline identification code. Many airlines don't actually have an IATA code and use their own internal code.
+- IATA is a two letter airline identification code. Many airlines don't actually have an IATA code and use their own internal code.
 
-* ICAO is an international standard, unique-across-the-world three letter airline code.
+- ICAO is an international standard, unique-across-the-world three letter airline code.
 
 In order to make the website more usable, I have included a database used by the container to convert the two airline codes used in the messages from IATA to ICAO codes, and to show their long-form name. This data was found from public, free sources. The data had some errors in it, some of which was due to the age of the data, and some of it is due to airlines not always using the correct IATA codes in their broadcoast messages.
 
 My observations are US centric, but from what I have seen there are "errors" you might notice in the converted callsigns.
 
-* US Airlines that have acquired airlines as part of mergers (for instance, American Airlines/AA/AAL, who has, among others, merged with America West/US/AWE) would show up as their legacy callsign if the aircraft being picked up was part of the airline that was merged in to the bigger airline. I've selectively fixed some of these errors because the IATA code of the legacy airline was not in use by anyone else.
+- US Airlines that have acquired airlines as part of mergers (for instance, American Airlines/AA/AAL, who has, among others, merged with America West/US/AWE) would show up as their legacy callsign if the aircraft being picked up was part of the airline that was merged in to the bigger airline. I've selectively fixed some of these errors because the IATA code of the legacy airline was not in use by anyone else.
 
-* Some airlines (UPS and FedEx, particularlly, among others) don't use their designated IATA callsigns period, or seem to be using contracted planes which are using an alternative two letter airline code in their message.
+- Some airlines (UPS and FedEx, particularlly, among others) don't use their designated IATA callsigns period, or seem to be using contracted planes which are using an alternative two letter airline code in their message.
 
-* There are three IATA code regions that cover the world. If an airline flies only in one region, and another flies in a separate region, those airlines are allowed to use the same IATA code. The airline code generated from the database might use the wrong IATA code because of this.
+- There are three IATA code regions that cover the world. If an airline flies only in one region, and another flies in a separate region, those airlines are allowed to use the same IATA code. The airline code generated from the database might use the wrong IATA code because of this.
 
 So what this means is you will occasionally see callsigns on the web front end that are wrong. The above mentioned UPS will show up `BHSxxxx/BahamasAir` which is obviously not right, at least for my part of the world. I am hesitant to "fix" too many of these "errors" in the database because this container is being used all around the world.
 
@@ -284,39 +229,38 @@ If there are airlines you notice that are wrong because the data used is wrong (
 
 ## Accessing ACARS/VDLM data with external programs
 
-If you wish to access the JSON data that the decoders `acarsdec` and `dumpvdl2` generate with an external program, such as FlightAirMap or Plane Plotter, expose the following ports in your docker-compose configuration:
+If you wish to access the JSON data that the decoders `acarsdec` and `dumpvdl2` generate with an external program expose the following ports in your docker-compose configuration:
 
-* Port 80 for the web site
-* Port 14444 for TCP VDLM2 Plane Plotter
-* Port 15555 for UDP VDLM2 JSON
-* Port 15550 for UDP ACARS JSON
-
-### Note about Plane Plotter export format
-
-This is currently untested in those programs, so specific set up instructions for those programs are not available. If this format does not work (ie, it needs ACARS Hub to connect to it rather that it connect to ACARS Hub) please open an issue and let me know.
-
-Additionally this format does not export *ACARS* at all and only supports VDLM2.
+- Port 80 for the web site
+- Port 15555 for UDP VDLM2 JSON
+- Port 15550 for UDP ACARS JSON
 
 ### YAML Configuration for Ports
 
 ```yaml
-    ports:
-      - 80:80
-      - 15550:15550
-      - 15555:15555
-      - 14444:14444
+ports:
+  - 80:80
+  - 5550:5550
+  - 5555:5555
+  - 15550:15550
+  - 15555:15555
 ```
 
-And then you will be able to connect to `yourpisipaddress:15555`, `yourpisipaddress:15550`, or `youripaddress:14444` respectively, in whatever program can decode ACARS/VDLM JSON.
+And then you will be able to connect to `yourpisipaddress:15555` or `yourpisipaddress:15550` respectively, in whatever program can decode ACARS/VDLM JSON.
 
 ## Website tips and tricks
 
-* On the `Live Message` page pressing the `p` key on your keyboard will pause the message updates so you can catch up. Pressing `p` again will cause the page to refresh again and display messages as they come in.
-* On the search page enter your search terms and then press `enter` to start the search.
+- On the `Live Message` page pressing the `p` key on your keyboard will pause the message updates so you can catch up. Pressing `p` again will cause the page to refresh again and display messages as they come in.
+- On the search page enter your search terms and then press `enter` to start the search.
 
 ## Future improvements
 
 ACARS decoding appears to be in active development, and as such, I expect a lot of movement in data-visualization and presentation to happen. This container will follow those developments and add in functionality as it appears.
+
+The following features are in active development:
+
+- A fresh new look to the website
+- Desktop application to view the data
 
 ## Getting Help
 

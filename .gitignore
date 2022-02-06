@@ -1,4 +1,3 @@
-
 # Created by https://www.toptal.com/developers/gitignore/api/macos,linux,windows,vscode
 # Edit at https://www.toptal.com/developers/gitignore?templates=macos,linux,windows,vscode
 
@@ -25,7 +24,6 @@
 
 # Icon must end with two \r
 Icon
-
 
 # Thumbnails
 ._*
@@ -106,8 +104,6 @@ rootfs/webapp/static/images/1year.png
 rootfs/webapp/static/images/24hours.png
 rootfs/webapp/static/images/30days.png
 rootfs/webapp/static/images/6hour.png
-./acars-decoder-typescript.tgz
-acars-decoder-typescript.tgz
 acarshub-typescript/node_modules/
 acarshub-typescript/dist/
 acarshub-typescript/dist-min/

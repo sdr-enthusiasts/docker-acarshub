@@ -1,454 +1,811 @@
 #!/usr/bin/env python3
 
-import os
-import subprocess
-import acarshub_db
-import time
+# Copyright (C) 2022 Frederick Clausen II
+# This file is part of acarshub <https://github.com/fredclausen/docker-acarshub>.
+#
+# acarshub is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# acarshub is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-start_time = time.time()
+import eventlet
 
-decoders = dict()
-servers = dict()
-receivers = dict()
-feeders = dict()
-stats = dict()
-external_formats = dict()
-system_error = False
+eventlet.monkey_patch()
+import acarshub_helpers  # noqa: E402
+import acarshub_configuration  # noqa: E402
+import acars_formatter  # noqa: E402
 
-# Set the URL used for the web front end to show flight tracking.
-# Not doing too much sanitizing of the URL to ensure it's formatted right
-# But we'll at least check and see if the user put a trailing slash or not
+if not acarshub_configuration.LOCAL_TEST:
+    import acarshub_rrd_database  # noqa: E402
+import logging  # noqa: E402
+
+from flask_socketio import SocketIO  # noqa: E402
+from flask import Flask, render_template, request, redirect, url_for  # noqa: E402
+from threading import Thread, Event  # noqa: E402
+from collections import deque  # noqa: E402
+
+log = logging.getLogger("werkzeug")
+log.setLevel(logging.ERROR)
+
+app = Flask(__name__)
+# Make the browser not cache files if running in dev mode
+if acarshub_configuration.LOCAL_TEST:
+    app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0
+
+# turn the flask app into a socketio app
+# regarding async_handlers=True, see: https://github.com/miguelgrinberg/Flask-SocketIO/issues/348
+socketio = SocketIO(
+    app,
+    async_mode=None,
+    async_handlers=True,
+    logger=False,
+    engineio_logger=False,
+    ping_timeout=300,
+    cors_allowed_origins="*",
+)
+
+# scheduler thread
+
+thread_scheduler = Thread()
+thread_scheduler_stop_event = Event()
+
+# thread for processing the incoming data
+
+thread_html_generator = Thread()
+thread_html_generator_event = Event()
+
+# web thread
+
+thread_acars_listener = Thread()
+thread_vdlm2_listener = Thread()
+thread_message_listener_stop_event = Event()
+
+# db thread
+
+thread_database = Thread()
+thread_database_stop_event = Event()
+
+# maxlen is to keep the que from becoming ginormous
+# the messages will be in the que all the time, even if no one is using the website
+# old messages will automatically be removed
+# Note on the que: We are adding new messages to the right
+# This means oldest messages are to the left
+
+que_messages = deque(maxlen=15)
+que_database = deque(maxlen=15)
+
+messages_recent = []  # list to store most recent msgs
+
+# counters for messages
+# will be reset once written to RRD
+vdlm_messages = 0
+acars_messages = 0
+error_messages = 0
+
+# all namespaces
+
+acars_namespaces = ["/main"]
+
+# REMOVE AFTER AIRFRAMES IS UPDATED ####
+# VDLM Feeders
+que_vdlm2_feed = deque(maxlen=15)
+vdlm2_feeder_thread = Thread()
+vdlm2_feeder_stop_event = Event()
 
 
-if os.getenv("TAR1090_URL", default=False):
-    if os.getenv("TAR1090_URL").endswith("/"):
-        ADSB_URL = os.getenv("TAR1090_URL") + "?icao="
-    else:
-        ADSB_URL = os.getenv("TAR1090_URL") + "/?icao="
-else:
-    ADSB_URL = "https://globe.adsbexchange.com/?icao="
+def vdlm_feeder():
+    import socket
+    import time
+    import json
+
+    airframes = (socket.gethostbyname("feed.acars.io"), 5555)
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    while not vdlm2_feeder_stop_event.isSet():
+        time.sleep(1)
+
+        while len(que_vdlm2_feed) != 0:
+            time.sleep(0.5)
+            msg = que_vdlm2_feed.popleft()
+
+            try:
+                sock.sendto(json.dumps(msg, separators=(",", ":")).encode(), airframes)
+            except Exception as e:
+                acarshub_configuration.acars_traceback(e, "vdlm_python_feeder")
+                que_vdlm2_feed.appendleft(msg)
+                break
 
 
-def libacars_formatted(libacars=None):
-    import pprint
+# REMOVE AFTER AIRFRAMES IS UPDATED ####
 
-    html_output = "<p>Decoded:</p>"
-    html_output += "<p>"
-    html_output += "<pre>{libacars}</pre>".format(
-        libacars=pprint.pformat(libacars, indent=2)
+
+def update_rrd_db():
+    global vdlm_messages
+    global acars_messages
+    global error_messages
+
+    acarshub_rrd_database.update_db(
+        vdlm=vdlm_messages, acars=acars_messages, error=error_messages
     )
-    html_output += "</p>"
-
-    return html_output
-
-
-# Function to prepare a message for the front end
-# We do any pre-processing/updating of the keys that can't be done on the front end
+    vdlm_messages = 0
+    acars_messages = 0
+    error_messages = 0
 
 
-def update_keys(json_message):
-    # Santiztize the message of any empty/None vales
-    # This won't occur for live messages but if the message originates from a DB query
-    # It will return all keys, even ones where the original message didn't have a value
-    stale_keys = []
-    for key in json_message:
-        if json_message[key] is None or json_message[key] == "":
-            stale_keys.append(key)
+def htmlListener():
+    import time
+    import sys
+    import copy
 
-    for key in stale_keys:
-        del json_message[key]
+    # Run while requested...
+    while not thread_html_generator_event.isSet():
+        sys.stdout.flush()
+        time.sleep(1)
 
-    # Now we process individual keys, if that key is present
+        while len(que_messages) != 0:
+            message_source, json_message_initial = que_messages.popleft()
+            json_message = copy.deepcopy(
+                json_message_initial
+            )  # creating a copy so that our changes below aren't made to the parent object
+            # Send output via socketio
+            json_message.update(
+                {"message_type": message_source}
+            )  # add in the message_type key because the parent object didn't have it
+            json_message = acarshub_helpers.update_keys(json_message)
 
-    # database tablename for the message text doesn't match up with typescript-decoder (needs it to be text)
-    # so we rewrite the key
-    if "msg_text" in json_message and json_message["msg_text"] is not None:
-        json_message["text"] = json_message["msg_text"]
-        del json_message["msg_text"]
+            socketio.emit("acars_msg", {"msghtml": json_message}, namespace="/main")
 
-    if "time" in json_message and json_message["time"] is not None:
-        json_message["timestamp"] = json_message["time"]
-        del json_message["time"]
-
-    if "libacars" in json_message and json_message["libacars"] is not None:
-        json_message["libacars"] = libacars_formatted(json_message["libacars"])
-
-    if "icao" in json_message and json_message["icao"] is not None:
-        json_message["icao_hex"] = format(int(json_message["icao"]), "X")
-
-    if (
-        "flight" in json_message
-        and json_message["flight"] is not None
-        and "icao_hex" in json_message
-    ):
-        json_message["flight"], json_message["icao_flight"] = flight_finder(
-            callsign=json_message["flight"], hex_code=json_message["icao_hex"]
-        )
-    elif "flight" in json_message and json_message["flight"] is not None:
-        json_message["flight"], json_message["icao_flight"] = flight_finder(
-            callsign=json_message["flight"], url=False
-        )
-    elif "icao_hex" in json_message:
-        json_message["icao_url"] = flight_finder(hex_code=json_message["icao_hex"])
-
-    if "toaddr" in json_message and json_message["toaddr"] is not None:
-        json_message["toaddr_hex"] = format(int(json_message["toaddr"]), "X")
-
-        toaddr_icao, toaddr_name = acarshub_db.lookup_groundstation(
-            json_message["toaddr_hex"]
-        )
-
-        if toaddr_icao is not None:
-            json_message["toaddr_decoded"] = f"{toaddr_name} ({toaddr_icao})"
-
-    if "fromaddr" in json_message and json_message["fromaddr"] is not None:
-        json_message["fromaddr_hex"] = format(int(json_message["fromaddr"]), "X")
-
-        fromaddr_icao, fromaddr_name = acarshub_db.lookup_groundstation(
-            json_message["fromaddr_hex"]
-        )
-
-        if fromaddr_icao is not None:
-            json_message["fromaddr_decoded"] = f"{fromaddr_name} ({fromaddr_icao})"
-
-    if "label" in json_message and json_message["label"] is not None:
-        label_type = acarshub_db.lookup_label(json_message["label"])
-
-        if label_type is not None:
-            json_message["label_type"] = label_type
-        else:
-            json_message["label_type"] = "Unknown Message Label"
-
-    return json_message
+    if acarshub_configuration.DEBUG_LOGGING:
+        acarshub_configuration.log("Exiting HTML Listener thread", "htmlListener")
 
 
-def flight_finder(callsign=None, hex_code=None, url=True):
-    global ADSB_URL
+def scheduled_tasks():
+    from SafeScheduler import SafeScheduler
+    import time
 
-    # If there is only a hex code, we'll return just the ADSB url
-    # Front end will format correctly.
+    schedule = SafeScheduler()
+    # init the dbs if not already there
+    acarshub_configuration.check_github_version()
+    if not acarshub_configuration.LOCAL_TEST:
+        schedule.every().minute.at(":15").do(acarshub_helpers.service_check)
+        schedule.every().minute.at(":00").do(update_rrd_db)
 
-    if callsign is None and hex_code is not None:
-        return f"{ADSB_URL}{hex_code}"
+    schedule.every().hour.at(":05").do(acarshub_configuration.check_github_version)
+    schedule.every().hour.at(":01").do(send_version)
+    schedule.every().minute.at(":30").do(
+        acarshub_helpers.acarshub_database.prune_database
+    )
 
-    if callsign is not None:
-        # Check the ICAO DB to see if we know what it is
-        # The ICAO DB will return the ICAO code back if it didn't find anything
+    # Check for dead threads and restart
+    schedule.every().minute.at(":45").do(
+        init_listeners, "Error encountered! Restarting... "
+    )
 
-        icao, airline = acarshub_db.find_airline_code_from_iata(callsign[:2])
-        flight_number = callsign[2:]
-        flight = icao + flight_number
-        tooltip_text = ""
+    while not thread_scheduler_stop_event.isSet():
+        schedule.run_pending()
+        time.sleep(1)
 
-        if icao != callsign[:2]:
-            html = f"<strong>{flight}/{callsign}</strong> "
-            tooltip_text = (
-                f"<p>The aircraft's callsign.</p>{airline} Flight {flight_number}"
+
+def database_listener():
+    import sys
+    import time
+
+    while not thread_database_stop_event.isSet():
+        sys.stdout.flush()
+        time.sleep(1)
+
+        while len(que_database) != 0:
+            sys.stdout.flush()
+            t, m = que_database.pop()
+            acarshub_helpers.acarshub_database.add_message_from_json(
+                message_type=t, message_from_json=m
             )
         else:
-            html = f"<strong>{flight}</strong> "
-            tooltip_text = f"<p>The aircraft's callsign was not found in the database for decoding.</p>{flight}"
-
-        # If the iata and icao variables are not equal, airline was found in the database and we'll add in the tool-tip for the decoded airline
-        # Otherwise, no tool-tip, no FA link, and use the IATA code for display
-        if url:
-            return (
-                f'<span class="flight-tooltip" data-jbox-content="{tooltip_text}">Flight: <strong><a href="{ADSB_URL}{hex_code}" target="_blank">{html}</a></strong></span>',
-                flight,
-            )
-        else:
-            return (
-                f'<span class="flight-tooltip" data-jbox-content="{tooltip_text}">Flight: {html}</span>',
-                flight,
-            )
-    else:  # We should never run in to this condition, I don't think, but we'll add a case for it
-        return ("Flight: Error", None)
+            pass
 
 
-def handle_message(message=None):
-    if message is not None:
-        total_results = 0
-        serialized_json = []
-        search_term = ""
-        # If the user has cleared the search bar, we'll execute the else statement
-        # And the browsers clears the data
-        # otherwise, run the search and format the results
+def message_listener(message_type=None, ip="127.0.0.1", port=None):
+    import time
+    import socket
+    import json
+    import sys
 
-        if "show_all" in message or message["search_term"] != "":
-            # Decide if the user is executing a new search or is clicking on a page of results
-            # search.js appends the "results_after" as the result page index user is requested
-            # Otherwise, we're at the first page
+    global error_messages
 
-            if "search_term" in message:
-                search_term = message["search_term"]
+    if message_type == "VDLM2":
+        global vdlm_messages
+    elif message_type == "ACARS":
+        global acars_messages
 
-                if "results_after" in message:
-                    # ask the database for the results at the user requested page
-                    search = acarshub_db.database_search(
-                        message["search_term"], message["results_after"]
-                    )
-                else:
-                    search = acarshub_db.database_search(message["search_term"])
-            elif "show_all" in message:
-                if "results_after" in message:
-                    search = acarshub_db.show_all(message["results_after"])
-                else:
-                    search = acarshub_db.show_all()
+    disconnected = True
 
-            # the db returns two values
-            # index zero is the query results in json
-            # the other is the count of total results
+    receiver = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
 
-            if search[0] is not None:
-                total_results = search[1]
-                # Loop through the results and format html
-                time_update_keys = time.time()
-                for result in search[0]:
-                    serialized_json.append(update_keys(result))
+    # Run while requested...
+    while not thread_message_listener_stop_event.isSet():
+        sys.stdout.flush()
+        time.sleep(0)
 
-            return (total_results, serialized_json, search_term)
-    else:
-        return (None, None, None)
-
-
-def service_check():
-    import re
-
-    global decoders
-    global servers
-    global receivers
-    global system_error
-    global feeders
-    global stats
-    global start_time
-    global external_formats
-
-    if os.getenv("SPAM", default=False):
-        healthcheck = subprocess.Popen(
-            ["../../tools/healthtest.sh"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
-    else:
-        healthcheck = subprocess.Popen(
-            ["/scripts/healthcheck.sh"], stdout=subprocess.PIPE, stderr=subprocess.PIPE
-        )
-    stdout, stderr = healthcheck.communicate()
-    healthstatus = stdout.decode()
-
-    decoders = dict()
-    servers = dict()
-    receivers = dict()
-    feeders = dict()
-    stats = dict()
-    external_formats = dict()
-    system_error = False
-
-    for line in healthstatus.split("\n"):
         try:
-            match = re.search("(?:acarsdec|dumpvdl2)-.+ =", line)
-            if match:
-                if match.group(0).strip(" =") not in decoders:
-                    decoders[match.group(0).strip(" =")] = dict()
-                    continue
+            if disconnected:
+                receiver = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
+                # Set socket timeout 1 seconds
+                receiver.settimeout(1)
+
+                # Connect to the sender
+                receiver.connect((ip, port))
+                disconnected = False
+                if acarshub_configuration.DEBUG_LOGGING:
+                    acarshub_configuration.log(
+                        f"{message_type.lower()}_receiver connected to {ip}:{port}",
+                        f"{message_type.lower()}Generator",
+                    )
+
+            data = None
+
+            if acarshub_configuration.LOCAL_TEST is True:
+                data, addr = receiver.recvfrom(65527)
             else:
-                for decoder in decoders:
-                    if line.find(decoder) != -1:
-                        if line.find(f"Decoder {decoder}") and line.endswith(
-                            "UNHEALTHY"
-                        ):
-                            decoders[decoder]["Status"] = "Bad"
-                            system_error = True
-                        elif line.find(f"Decoder {decoder}") == 0 and line.endswith(
-                            "HEALTHY"
-                        ):
-                            decoders[decoder]["Status"] = "Ok"
-                        elif line.find(f"Decoder {decoder}") == 0:
-                            system_error = True
-                            decoders[decoder]["Status"] = "Unknown"
-
-                        continue
-
-            match = re.search("^(?:acars|vdlm2)_server", line)
-
-            if match:
-                if match.group(0) not in servers:
-                    servers[match.group(0)] = dict()
-
-                if line.find("listening") != -1 and line.endswith("UNHEALTHY"):
-                    servers[match.group(0)]["Status"] = "Bad"
-                    system_error = True
-                elif line.find("listening") != -1 and line.endswith("HEALTHY"):
-                    servers[match.group(0)]["Status"] = "Ok"
-                elif line.find("listening") != -1:
-                    system_error = True
-                    servers[match.group(0)]["Status"] = "Unknown"
-                elif line.find("python") != -1 and line.endswith("UNHEALTHY"):
-                    system_error = True
-                    servers[match.group(0)]["Web"] = "Bad"
-                elif line.find("python") != -1 and line.endswith("HEALTHY"):
-                    servers[match.group(0)]["Web"] = "Ok"
-                elif line.find("python") != -1:
-                    system_error = True
-                    servers[match.group(0)]["Web"] = "Unknown"
-
-                continue
-
-            match = re.search("\\d+\\s+(?:ACARS|VDLM2) messages", line)
-
-            if match:
-                if line.find("ACARS") != -1 and "ACARS" not in receivers:
-                    receivers["ACARS"] = dict()
-                    receivers["ACARS"]["Count"] = line.split(" ")[0]
-                    if line.endswith("UNHEALTHY"):
-                        if time.time() - start_time > 300.0:
-                            system_error = True
-                            receivers["ACARS"]["Status"] = "Bad"
-                        else:
-                            receivers["ACARS"]["Status"] = "Waiting for first message"
-                    elif line.endswith("HEALTHY"):
-                        receivers["ACARS"]["Status"] = "Ok"
-                    else:
-                        system_error = True
-                        receivers["ACARS"]["Status"] = "Unknown"
-                if line.find("VDLM2") != -1 and "VDLM2" not in receivers:
-                    receivers["VDLM2"] = dict()
-                    receivers["VDLM2"]["Count"] = line.split(" ")[0]
-                    if line.endswith("UNHEALTHY"):
-                        if time.time() - start_time > 300.0:
-                            system_error = True
-                            receivers["VDLM2"]["Status"] = "Bad"
-                        else:
-                            receivers["VDLM2"]["Status"] = "Waiting for first message"
-                    elif line.endswith("HEALTHY"):
-                        receivers["VDLM2"]["Status"] = "Ok"
-                    else:
-                        system_error = True
-                        receivers["VDLM2"]["Status"] = "Unknown"
-
-                continue
-
-            match = re.search("^(?:acars|vdlm2)_feeder", line)
-
-            if match:
-                if match.group(0) not in servers:
-                    feeders[match.group(0)] = dict()
-
-                if line.endswith("UNHEALTHY"):
-                    feeders[match.group(0)]["Status"] = "Bad"
-                    system_error = True
-                elif line.endswith("HEALTHY"):
-                    feeders[match.group(0)]["Status"] = "Ok"
-                else:
-                    system_error = True
-                    feeders[match.group(0)]["Status"] = "Unknown"
-
-                continue
-
-            match = re.search("^(acars|vdlm2)_stats", line)
-
-            if match:
-                if os.getenv("DEBUG_LOGGING", default=False):
-                    print(line)
-                if match.group(0) not in stats:
-                    stats[match.group(0)] = dict()
-
-                if line.endswith("UNHEALTHY"):
-                    system_error = True
-                    stats[match.group(0)]["Status"] = "Bad"
-                elif line.endswith("HEALTHY"):
-                    stats[match.group(0)]["Status"] = "Ok"
-                else:
-                    system_error = True
-                    stats[match.group(0)]["Status"] = "Unknown"
-
-            match = re.search("^planeplotter", line)
-
-            if match:
-                if line.find("vdl2") != -1:
-                    pp_decoder = "VDLM2"
-                else:
-                    pp_decoder = "ACARS"
-
-                if pp_decoder not in external_formats:
-                    external_formats[pp_decoder] = []
-
-                if line.endswith("UNHEALTHY"):
-                    system_error = True
-                    external_formats[pp_decoder].append(
-                        {"type": "planeplotter", "Status": "Bad"}
-                    )
-                elif line.endswith("HEALTHY"):
-                    external_formats[pp_decoder].append(
-                        {"type": "planeplotter", "Status": "Ok"}
-                    )
-                else:
-                    system_error = True
-                    external_formats[pp_decoder].append(
-                        {"type": "planeplotter", "Status": "Unknown"}
-                    )
-
-            match = re.search("dumpvdl2 and planeplotter", line)
-
-            if match:
-                if line.find("vdl2") != -1:
-                    pp_decoder = "VDLM2"
-                else:
-                    pp_decoder = "ACARS"
-
-                if pp_decoder not in external_formats:
-                    external_formats[pp_decoder] = []
-
-                if line.endswith("UNHEALTHY"):
-                    system_error = True
-                    external_formats[pp_decoder].append(
-                        {"type": "dumpvdl2 to planeplotter", "Status": "Bad"}
-                    )
-                elif line.endswith("HEALTHY"):
-                    external_formats[pp_decoder].append(
-                        {"type": "dumpvdl2 to planeplotter", "Status": "Ok"}
-                    )
-                else:
-                    system_error = True
-                    external_formats[pp_decoder].append(
-                        {"type": "dumpvdl2 to planeplotter", "Status": "Unknown"}
-                    )
-
+                data, addr = receiver.recvfrom(65527, socket.MSG_WAITALL)
+        except socket.timeout:
+            pass
+        except socket.error as e:
+            acarshub_configuration.log(
+                f"Error to {ip}:{port}. Reattemping...",
+                f"{message_type.lower()}Generator",
+            )
+            acarshub_configuration.acars_traceback(
+                e, f"{message_type.lower()}Generator"
+            )
+            disconnected = True
+            receiver.close()
+            time.sleep(1)
         except Exception as e:
-            print(f"[service-check] Error: {line}\n{e}")
+            acarshub_configuration.acars_traceback(
+                e, f"{message_type.lower()}Generator"
+            )
+            disconnected = True
+            receiver.close()
+            time.sleep(1)
+        else:
+            if data.decode() == "":
+                disconnected = True
+                receiver.close()
+                data = None
+            elif data is not None:
+                # Decode json
+                # There is a rare condition where we'll receive two messages at once
+                # We will cover this condition off by ensuring each json message is
+                # broken apart and handled individually
 
-    if os.getenv("SPAM", default=False):
-        print(decoders)
-        print(servers)
-        print(receivers)
-        print(feeders)
-        print(stats)
-        print(external_formats)
+                try:
+                    message_json = []
+                    # JSON decoder requires a newline at the end of the string for processing?
+                    # This is a workaround to ensure we don't lose the last message
+                    # We'll add a newline to the end of the string if it doesn't already exist
+                    # Additionally, decoders might send more than one message at once. We need
+                    # to handle this.
+                    # acarsdec or vdlm2dec single message ends with a newline so no additional processing required
+                    # acarsdec or vdlm2dec multi messages ends with a newline and each message has a newline but the decoder
+                    # breaks with more than one JSON object
+                    # dumpvdl2 does not end with a newline so we need to add one
+                    if data.decode().count("}\n") == 1:
+                        message_json.append(json.loads(data.decode()))
+                    # dumpvdl2 single message
+                    elif (
+                        data.decode().count("}\n") == 0
+                        and data.decode().count("}{") == 0
+                    ):
+                        message_json.append(json.loads(data.decode() + "\n"))
+                    # dumpvdl2 multi message
+                    elif data.decode().count("}{") > 0:
+                        split_json = data.decode().split("}{")
+                        count = 0
+                        for j in split_json:
+                            if len(j) > 1:
+                                msg = j
+                                if not msg.startswith("{"):
+                                    msg = "{" + msg
+                                if not count == len(split_json) - 1:
+                                    msg = msg + "}"
+                                message_json.append(json.loads(msg + "\n"))
+
+                            count += 1
+                    # acarsdec/dumpvdl2 multi message
+                    else:
+                        split_json = data.decode().split("}\n")
+
+                        for j in split_json:
+                            if len(j) > 1:
+                                message_json.append(json.loads(j + "}\n"))
+
+                except Exception as e:
+                    acarshub_configuration.log(
+                        f"Error with JSON input {repr(data)} .\n{e}",
+                        f"{message_type.lower()}Generator",
+                    )
+                else:
+                    for j in message_json:
+                        if message_type == "VDLM2":
+                            vdlm_messages += 1
+                            que_type = "VDL-M2"
+                        elif message_type == "ACARS":
+                            acars_messages += 1
+                            que_type = "ACARS"
+
+                        if "error" in j:
+                            if j["error"] > 0:
+                                error_messages += j["error"]
+
+                        que_messages.append(
+                            (que_type, acars_formatter.format_acars_message(j))
+                        )
+                        que_database.append(
+                            (que_type, acars_formatter.format_acars_message(j))
+                        )
+                        if (
+                            acarshub_configuration.FEED is True
+                            and message_type == "VDLM2"
+                        ):
+                            que_vdlm2_feed.append(
+                                acars_formatter.format_acars_message(j)
+                            )
+                        if len(messages_recent) >= 150:  # Keep the que size down
+                            del messages_recent[0]
+                        messages_recent.append(
+                            (que_type, acars_formatter.format_acars_message(j))
+                        )  # add to recent message que for anyone fresh loading the page
 
 
-if os.getenv("SPAM", default=False):
-    service_check()
+def init_listeners(special_message=""):
+    # This function both starts the listeners and is used with the scheduler to restart errant threads
+
+    global thread_acars_listener
+    global thread_vdlm2_listener
+    global thread_database
+    global thread_scheduler
+    global thread_html_generator
+    global thread_adsb_listner
+    global thread_adsb
+    # REMOVE AFTER AIRFRAMES IS UPDATED ####
+    global vdlm2_feeder_thread
+    # REMOVE AFTER AIRFRAMES IS UPDATED ####
+
+    # show log message if this is container startup
+    if special_message == "" and acarshub_configuration.QUIET_LOGS is False:
+        acarshub_configuration.log("Starting Data Listeners", "init")
+    if not thread_database.is_alive():
+        if special_message or acarshub_configuration.QUIET_LOGS is False:
+            acarshub_configuration.log(
+                f"{special_message}Starting Database Thread", "init"
+            )
+        thread_database = Thread(target=database_listener)
+        thread_database.start()
+    if not thread_scheduler.is_alive():
+        if special_message or acarshub_configuration.QUIET_LOGS is False:
+            acarshub_configuration.log(f"{special_message}starting scheduler", "init")
+        thread_scheduler = Thread(target=scheduled_tasks)
+        thread_scheduler.start()
+    if not thread_html_generator.is_alive():
+        if special_message or acarshub_configuration.QUIET_LOGS is False:
+            acarshub_configuration.log(
+                f"{special_message}Starting htmlListener", "init"
+            )
+        thread_html_generator = socketio.start_background_task(htmlListener)
+    if not thread_acars_listener.is_alive() and acarshub_configuration.ENABLE_ACARS:
+        if special_message or acarshub_configuration.QUIET_LOGS is False:
+            acarshub_configuration.log(
+                f"{special_message}Starting ACARS listener", "init"
+            )
+        thread_acars_listener = Thread(
+            target=message_listener,
+            args=("ACARS", acarshub_configuration.LIVE_DATA_SOURCE, 15550),
+        )
+        thread_acars_listener.start()
+
+    if not thread_vdlm2_listener.is_alive() and acarshub_configuration.ENABLE_VDLM:
+        if special_message or acarshub_configuration.QUIET_LOGS is False:
+            acarshub_configuration.log(
+                f"{special_message}Starting VDLM listener", "init"
+            )
+        thread_vdlm2_listener = Thread(
+            target=message_listener,
+            args=("VDLM2", acarshub_configuration.LIVE_DATA_SOURCE, 15555),
+        )
+        thread_vdlm2_listener.start()
+    # REMOVE AFTER AIRFRAMES IS UPDATED ####
+    if (
+        not acarshub_configuration.LOCAL_TEST
+        and acarshub_configuration.FEED
+        and acarshub_configuration.ENABLE_VDLM
+        and not vdlm2_feeder_thread.is_alive()
+    ):
+        if special_message or acarshub_configuration.QUIET_LOGS is False:
+            acarshub_configuration.log(f"{special_message}Starting VDLM feeder", "init")
+        vdlm2_feeder_thread = Thread(target=vdlm_feeder)
+        vdlm2_feeder_thread.start()
+    # REMOVE AFTER AIRFRAMES IS UPDATED ####
+    status = acarshub_helpers.get_service_status()  # grab system status
+
+    # emit to all namespaces
+    for page in acars_namespaces:
+        socketio.emit("system_status", {"status": status}, namespace=page)
 
 
-def get_service_status():
-    global decoders
-    global servers
-    global receivers
-    global system_error
-    global feeders
-    global stats
-    global external_formats
+def init():
+    global messages_recent
+    # grab recent messages from db and fill the most recent array
+    # then turn on the listeners
+    if not acarshub_configuration.QUIET_LOGS:
+        acarshub_configuration.log(
+            "Grabbing most recent messages from database", "init"
+        )
+    try:
+        results = acarshub_helpers.acarshub_database.grab_most_recent()
+    except Exception as e:
+        acarshub_configuration.log(
+            f"Startup Error grabbing most recent messages {e}", "init"
+        )
+    if not acarshub_configuration.LOCAL_TEST:
+        try:
+            if not acarshub_configuration.QUIET_LOGS:
+                acarshub_configuration.log("Initializing RRD Database", "init")
+            acarshub_rrd_database.create_db()  # make sure the RRD DB is created / there
+        except Exception as e:
+            acarshub_configuration.log(
+                f"Startup Error creating RRD Database {e}", "init"
+            )
+    if results is not None:
+        for item in results:
+            json_message = item
+            try:
+                messages_recent.insert(0, [json_message["message_type"], json_message])
+            except Exception as e:
+                acarshub_configuration.log(
+                    f"Startup Error adding message to recent messages {e}", "init"
+                )
 
-    return {
-        "decoders": decoders,
-        "servers": servers,
-        "global": receivers,
-        "feeders": feeders,
-        "error_state": system_error,
-        "stats": stats,
-        "external_formats": external_formats,
-    }
+    if not acarshub_configuration.QUIET_LOGS:
+        acarshub_configuration.log(
+            "Completed grabbing messages from database, starting up rest of services",
+            "init",
+        )
+    init_listeners()
 
 
-def getAlerts():
-    return acarshub_db.get_alert_counts()
+def send_version():
+    socketio.emit(
+        "acarshub-version", acarshub_configuration.get_version(), namespace="/main"
+    )
+
+
+init()
+
+
+@app.route("/")
+def index():
+    # only by sending this page first will the client be connected to the socketio instance
+    return render_template("index.html")
+
+
+@app.route("/stats")
+def stats():
+    return render_template("index.html")
+
+
+@app.route("/search")
+def search():
+    return render_template("index.html")
+
+
+@app.route("/about")
+def about():
+    return render_template("index.html")
+
+
+@app.route("/aboutmd")
+def aboutmd():
+    return render_template("helppage.MD")
+
+
+@app.route("/alerts")
+def alerts():
+    return render_template("index.html")
+
+
+@app.route("/status")
+def status():
+    return render_template("index.html")
+
+
+@app.route("/adsb")
+def adsb():
+    # For now we're going to redirect the ADSB url always to live messages
+    # ADSB Page loading causes problems
+    if acarshub_configuration.ENABLE_ADSB:
+        return render_template("index.html")
+    else:
+        return redirect(url_for("index"))
+
+
+@app.errorhandler(404)
+def not_found(e):
+    return redirect(url_for("index"))
+
+
+# The listener for the live message page
+# Ensure the necessary listeners are fired up
+
+
+@socketio.on("connect", namespace="/main")
+def main_connect():
+    import sys
+    import copy
+
+    # need visibility of the global thread object
+    global thread_html_generator
+    global thread_adsb
+    global thread_adsb_stop_event
+
+    recent_options = {"loading": True, "done_loading": False}
+
+    requester = request.sid
+
+    try:
+        socketio.emit(
+            "features_enabled",
+            {
+                "vdlm": acarshub_configuration.ENABLE_VDLM,
+                "acars": acarshub_configuration.ENABLE_ACARS,
+                "arch": acarshub_configuration.ARCH,
+                "adsb": {
+                    "enabled": acarshub_configuration.ENABLE_ADSB,
+                    "lat": acarshub_configuration.ADSB_LAT,
+                    "lon": acarshub_configuration.ADSB_LON,
+                    "url": acarshub_configuration.ADSB_URL,
+                    "bypass": acarshub_configuration.ADSB_BYPASS_URL,
+                    "range_rings": acarshub_configuration.ENABLE_RANGE_RINGS,
+                },
+            },
+            to=requester,
+            namespace="/main",
+        )
+
+        socketio.emit(
+            "terms",
+            {
+                "terms": acarshub_helpers.acarshub_database.get_alert_terms(),
+                "ignore": acarshub_helpers.acarshub_database.get_alert_ignore(),
+            },
+            to=requester,
+            namespace="/main",
+        )
+    except Exception as e:
+        acarshub_configuration.log(
+            f"Main Connect: Error sending features_enabled: {e}", "webapp"
+        )
+
+    try:
+        socketio.emit(
+            "labels",
+            {"labels": acarshub_helpers.acarshub_database.get_message_label_json()},
+            to=requester,
+            namespace="/main",
+        )
+    except Exception as e:
+        acarshub_configuration.log(f"Main Connect: Error sending labels: {e}", "webapp")
+    msg_index = 1
+    for msg_type, json_message_orig in messages_recent:
+        if msg_index == len(messages_recent):
+            recent_options["done_loading"] = True
+        msg_index += 1
+        json_message = copy.deepcopy(json_message_orig)
+        json_message["message_type"] = msg_type
+        try:
+            socketio.emit(
+                "acars_msg",
+                {
+                    "msghtml": acarshub_helpers.update_keys(json_message),
+                    **recent_options,
+                },
+                to=requester,
+                namespace="/main",
+            )
+        except Exception as e:
+            acarshub_configuration.log(
+                f"Main Connect: Error sending acars_msg: {e}", "webapp"
+            )
+
+    try:
+        socketio.emit(
+            "system_status",
+            {"status": acarshub_helpers.get_service_status()},
+            to=requester,
+            namespace="/main",
+        )
+    except Exception as e:
+        acarshub_configuration.log(
+            f"Main Connect: Error sending system_status: {e}", "webapp"
+        )
+
+    try:
+        rows, size = acarshub_helpers.acarshub_database.database_get_row_count()
+        socketio.emit(
+            "database", {"count": rows, "size": size}, to=requester, namespace="/main"
+        )
+    except Exception as e:
+        acarshub_configuration.log(
+            f"Main Connect: Error sending database: {e}", "webapp"
+        )
+
+    try:
+        socketio.emit(
+            "signal",
+            {"levels": acarshub_helpers.acarshub_database.get_signal_levels()},
+            to=requester,
+            namespace="/main",
+        )
+        socketio.emit(
+            "alert_terms",
+            {"data": acarshub_helpers.getAlerts()},
+            to=requester,
+            namespace="/main",
+        )
+        send_version()
+    except Exception as e:
+        acarshub_configuration.log(
+            f"Main Connect: Error sending signal levels: {e}", "webapp"
+        )
+
+    # Start the htmlGenerator thread only if the thread has not been started before.
+    if not thread_html_generator.is_alive():
+        sys.stdout.flush()
+        thread_html_generator_event.clear()
+        thread_html_generator = socketio.start_background_task(htmlListener)
+
+
+@socketio.on("query_terms", namespace="/main")
+def get_alerts(message, namespace):
+    requester = request.sid
+    results = acarshub_helpers.acarshub_database.search_alerts(
+        icao=message["icao"],
+        # text=message["text"],
+        flight=message["flight"],
+        tail=message["tail"],
+    )
+    if results is not None:
+        results.reverse()
+
+    recent_options = {"loading": True, "done_loading": False}
+    msg_index = 1
+    for item in [item for item in (results or [])]:
+        if msg_index == len(results):
+            recent_options["done_loading"] = True
+        msg_index += 1
+        socketio.emit(
+            "alert_matches",
+            {"msghtml": acarshub_helpers.update_keys(item), **recent_options},
+            to=requester,
+            namespace="/main",
+        )
+
+
+@socketio.on("update_alerts", namespace="/main")
+def update_alerts(message, namespace):
+    acarshub_helpers.acarshub_database.set_alert_terms(message["terms"])
+    acarshub_helpers.acarshub_database.set_alert_ignore(message["ignore"])
+
+
+@socketio.on("signal_freqs", namespace="/main")
+def request_freqs(message, namespace):
+    requester = request.sid
+    socketio.emit(
+        "signal_freqs",
+        {"freqs": acarshub_helpers.acarshub_database.get_freq_count()},
+        to=requester,
+        namespace="/main",
+    )
+
+
+@socketio.on("signal_count", namespace="/main")
+def request_count(message, namespace):
+    requester = request.sid
+    socketio.emit(
+        "signal_count",
+        {"count": acarshub_helpers.acarshub_database.get_errors()},
+        to=requester,
+        namespace="/main",
+    )
+
+
+@socketio.on("signal_graphs", namespace="/main")
+def request_graphs(message, namespace):
+    requester = request.sid
+    socketio.emit(
+        "alert_terms",
+        {"data": acarshub_helpers.getAlerts()},
+        to=requester,
+        namespace="/main",
+    )
+    socketio.emit(
+        "signal",
+        {"levels": acarshub_helpers.acarshub_database.get_signal_levels()},
+        namespace="/main",
+    )
+
+
+# handle a query request from the browser
+
+
+@socketio.on("query_search", namespace="/main")
+def handle_message(message, namespace):
+    import time
+
+    start_time = time.time()
+    # We are going to send the result over in one blob
+    # search.js will only maintain the most recent blob we send over
+    total_results, serialized_json, search_term = acarshub_helpers.handle_message(
+        message
+    )
+
+    # grab the socket id for the request
+    # This stops the broadcast of the search results to everyone
+    # in the search namespace.
+
+    requester = request.sid
+    socketio.emit(
+        "database_search_results",
+        {
+            "num_results": total_results,
+            "msghtml": serialized_json,
+            "search_term": str(search_term),
+            "query_time": time.time() - start_time,
+        },
+        to=requester,
+        namespace="/main",
+    )
+
+
+@socketio.on("reset_alert_counts", namespace="/main")
+def reset_alert_counts(message, namespace):
+    if message["reset_alerts"]:
+        acarshub_helpers.acarshub_database.reset_alert_counts()
+        try:
+            socketio.emit(
+                "alert_terms", {"data": acarshub_helpers.getAlerts()}, namespace="/main"
+            )
+        except Exception as e:
+            acarshub_configuration.log(
+                f"Main Connect: Error sending alert_terms: {e}", "webapp"
+            )
+
+
+@socketio.on("disconnect", namespace="/main")
+def main_disconnect():
+    pass
+
+
+if __name__ == "__main__":
+    socketio.run(app, host="0.0.0.0", port=acarshub_configuration.ACARS_WEB_PORT)
+
+
+@socketio.on_error()
+def error_handler(e):
+    acarshub_configuration.acars_traceback(e, "server-error")
+
+
+@socketio.on_error("/main")
+def error_handler_main(e):
+    acarshub_configuration.acars_traceback(e, "server-main")
+
+
+@socketio.on_error_default
+def default_error_handler(e):
+    acarshub_configuration.acars_traceback(e, "server")

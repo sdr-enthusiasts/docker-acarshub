@@ -1,31 +1,29 @@
 {
-    "compilerOptions": {
-        "lib": ["ES2019", "DOM"],
-        "module": "ES6",
-        "jsx": "react",
-        "moduleResolution": "node",
-        "noEmit": false,
-        "allowJs": true,
-        // Generate d.ts files
-        "declaration": false,
-        // This compiler run should
-        // only output d.ts files
-        // go to js file when using IDE functions like
-        // "Go to Definition" in VSCode
-        "declarationMap": false,
-        "emitDeclarationOnly": false,
-        "outDir": "dist",
-        "sourceMap": false,
-        "strict": true,
-        "target": "ES2020",
-        "esModuleInterop": true,
-        "allowSyntheticDefaultImports": true,
-        "baseUrl": ".",
-        "paths": {
-            "@other/": [
-                "./node_modules/"
-            ]
-        }
-    },
-    "include": ["src/"],
+  "compilerOptions": {
+    "lib": ["ES2019", "DOM"],
+    "module": "ES6",
+    "jsx": "react",
+    "moduleResolution": "node",
+    "noEmit": false,
+    "allowJs": true,
+    // Generate d.ts files
+    "declaration": false,
+    // This compiler run should
+    // only output d.ts files
+    // go to js file when using IDE functions like
+    // "Go to Definition" in VSCode
+    "declarationMap": false,
+    "emitDeclarationOnly": false,
+    "outDir": "dist",
+    "sourceMap": false,
+    "strict": true,
+    "target": "ES2020",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "baseUrl": ".",
+    "paths": {
+      "@other/": ["./node_modules/"]
+    }
+  },
+  "include": ["src/"]
 }

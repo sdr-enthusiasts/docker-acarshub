@@ -1,23 +1,51 @@
 #!/usr/bin/env python3
 
-from sqlalchemy import create_engine, Column, Integer, String, Text
+# Copyright (C) 2022 Frederick Clausen II
+# This file is part of acarshub <https://github.com/fredclausen/docker-acarshub>.
+#
+# acarshub is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# acarshub is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
+
+from sqlalchemy import (
+    create_engine,
+    Column,
+    Integer,
+    String,
+    Text,
+    desc,
+)
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.declarative import DeclarativeMeta
-import json
-import urllib.request
-import acarshub_helpers
-import re
 
-groundStations = dict()
-alert_terms = list()
+from sqlalchemy.engine.reflection import Inspector
+import json
+import datetime
+import acarshub_configuration
+import re
+import os
+
+groundStations = dict()  # dictionary of all ground stations
+alert_terms = list()  # dictionary of all alert terms monitored
+# dictionary of all alert terms that should flag a message as a non-alert, even if alert matched
 alert_terms_ignore = list()
+overrides = {}
 
 # Download station IDs
 
 try:
-    if not acarshub_helpers.QUIET_LOGS:
-        acarshub_helpers.log("Downloading Station IDs", "database")
+    if not acarshub_configuration.QUIET_LOGS:
+        acarshub_configuration.log("Downloading Station IDs", "database")
     with open("./data/ground-stations.json", "r") as f:
         groundStations_json = json.load(f)
 
@@ -28,27 +56,27 @@ try:
                 "icao": station["airport"]["icao"],
                 "name": station["airport"]["name"],
             }
-    if not acarshub_helpers.QUIET_LOGS:
-        acarshub_helpers.log("Completed loading Station IDs", "database")
+    if not acarshub_configuration.QUIET_LOGS:
+        acarshub_configuration.log("Completed loading Station IDs", "database")
 except Exception as e:
-    acarshub_helpers.acars_traceback(e, "database")
+    acarshub_configuration.acars_traceback(e, "database")
 
 # Load Message Labels
 
 try:
-    if not acarshub_helpers.QUIET_LOGS:
-        acarshub_helpers.log("Downloading message labels", "database")
+    if not acarshub_configuration.QUIET_LOGS:
+        acarshub_configuration.log("Downloading message labels", "database")
     with open("./data/metadata.json", "r") as f:
         message_labels = json.load(f)
-    if not acarshub_helpers.QUIET_LOGS:
-        acarshub_helpers.log("Completed loading message labels", "database")
+    if not acarshub_configuration.QUIET_LOGS:
+        acarshub_configuration.log("Completed loading message labels", "database")
 except Exception as e:
     message_labels = {"labels": {}}  # handle URL exception
-    acarshub_helpers.acars_traceback(e, "database")
+    acarshub_configuration.acars_traceback(e, "database")
 
 # DB PATH MUST BE FROM ROOT!
 # default database
-db_path = acarshub_helpers.ACARSHUB_DB
+db_path = acarshub_configuration.ACARSHUB_DB
 database = create_engine(db_path)
 db_session = sessionmaker(bind=database)
 Messages = declarative_base()
@@ -56,34 +84,31 @@ Messages = declarative_base()
 # second database for backup
 # required input format is SQL Alchemy DB URL
 
-if acarshub_helpers.DB_BACKUP:
+if acarshub_configuration.DB_BACKUP:
     backup = True
-    database_backup = create_engine(acarshub_helpers.DB_BACKUP)
+    database_backup = create_engine(acarshub_configuration.DB_BACKUP)
     db_session_backup = sessionmaker(bind=database_backup)
 else:
     backup = False
 
-overrides = {}
-freqs = []
-
 try:
-    if not acarshub_helpers.QUIET_LOGS:
-        acarshub_helpers.log("Loading Airline Codes", "database")
+    if not acarshub_configuration.QUIET_LOGS:
+        acarshub_configuration.log("Loading Airline Codes", "database")
     f = open("data/airlines.json")
     airlines = json.load(f)
-    if not acarshub_helpers.QUIET_LOGS:
-        acarshub_helpers.log("Completed Loading Airline Codes", "database")
+    if not acarshub_configuration.QUIET_LOGS:
+        acarshub_configuration.log("Completed Loading Airline Codes", "database")
 except Exception as e:
     airlines = {}
-    acarshub_helpers.acars_traceback(e, database)
+    acarshub_configuration.acars_traceback(e, database)
 
 
 # Set up the override IATA/ICAO callsigns
 # Input format needs to be IATA|ICAO|Airline Name
 # Multiple overrides need to be separated with a ;
 
-if len(acarshub_helpers.IATA_OVERRIDE) > 0:
-    iata_override = acarshub_helpers.IATA_OVERRIDE.split(";")
+if len(acarshub_configuration.IATA_OVERRIDE) > 0:
+    iata_override = acarshub_configuration.IATA_OVERRIDE.split(";")
 else:
     iata_override = ""
 
@@ -92,21 +117,9 @@ for item in iata_override:
     if len(override_splits) == 3:
         overrides[override_splits[0]] = (override_splits[1], override_splits[2])
     else:
-        acarshub_helpers.log(f"Error adding in {item} to IATA overrides", "database")
-
-# Grab the freqs from the environment so we know what is being monitored
-
-if acarshub_helpers.ENABLE_ACARS:
-    acars_freqs = acarshub_helpers.FREQS_ACARS.split(";")
-
-    for item in acars_freqs:
-        freqs.append(("ACARS", item))
-
-if acarshub_helpers.ENABLE_VDLM:
-    vdlm_freqs = acarshub_helpers.FREQS_VDLM.split(";")
-
-    for item in vdlm_freqs:
-        freqs.append(("VDL-M2", item))
+        acarshub_configuration.log(
+            f"Error adding in {item} to IATA overrides", "database"
+        )
 
 # Class for storing the count of messages received on each frequency
 
@@ -250,20 +263,50 @@ Messages.metadata.create_all(database)
 if backup:
     Messages.metadata.create_all(database_backup)
 
+
+# database is init, now check and see if the fts table is there
+
+inspector = Inspector.from_engine(database)
+if "messages_fts" not in inspector.get_table_names():
+    import sys
+
+    acarshub_configuration.log("Missing FTS TABLE! Aborting!", "database")
+    sys.exit(1)
+
+# messages_idx = Table(
+#     "messages_fts",
+#     Messages.metadata,
+#     #,
+#     Column("rowid", Integer(), key="id", primary_key=True),
+#     Column("depa", String(32)),
+#     Column("dsta", String(32)),
+#     Column("text", Text()),
+#     Column("tail", String(32)),
+#     Column("flight", String(32)),
+#     Column("icao", String(32)),
+#     Column("freq", String(32)),
+#     Column("label", String(32)),
+# )
+
+# MessagesIdx = aliased(messages, messages_idx, adapt_on_names=True)
+
 # Class used to convert any search query objects to JSON
 
-session = db_session()
-terms = session.query(alertStats).all()
+try:
+    session = db_session()
+    terms = session.query(alertStats).all()
 
-for t in terms:
-    alert_terms.append(t.term.upper())
+    for t in terms:
+        alert_terms.append(t.term.upper())
 
-terms = session.query(ignoreAlertTerms).all()
-for t in terms:
-    alert_terms_ignore.append(t.term.upper())
+    terms = session.query(ignoreAlertTerms).all()
+    for t in terms:
+        alert_terms_ignore.append(t.term.upper())
 
-session.commit()
-session.close()
+except Exception as e:
+    acarshub_configuration.acars_traceback(e, "database")
+finally:
+    session.close()
 
 
 def query_to_dict(obj):
@@ -284,264 +327,188 @@ def query_to_dict(obj):
     return None
 
 
-def add_message_from_json(message_type, message_from_json):
-    global database
-    global alert_terms
-    import json
+def update_frequencies(freq, message_type, session):
+    found_freq = (
+        session.query(messagesFreq)
+        .filter(
+            messagesFreq.freq == f"{freq}" and messagesFreq.freq_type == message_type
+        )
+        .first()
+    )
 
-    # message time
-    # all fields are set to a blank string. This is because all of the database fields
-    # are set to be 'not null' so all fields require a value, even if it is blank
-    time = ""
-    station_id = ""
-    toaddr = ""
-    fromaddr = ""
-    depa = ""
-    dsta = ""
-    eta = ""
-    gtout = ""
-    gtin = ""
-    wloff = ""
-    wlin = ""
-    lat = ""
-    lon = ""
-    alt = ""
-    text = ""
-    tail = ""
-    flight = ""
-    icao = ""
-    freq = ""
-    ack = ""
-    mode = ""
-    label = ""
-    block_id = ""
-    msgno = ""
-    is_response = ""
-    is_onground = ""
-    error = 0
-    libacars = ""
-    level = ""
+    if found_freq is not None:
+        found_freq.count += 1
+    else:
+        session.add(messagesFreq(freq=f"{freq}", freq_type=message_type, count=1))
 
-    for index in message_from_json:
+
+def is_message_not_empty(json_message):
+    fields = [
+        "text",
+        "libacars",
+        "dsta",
+        "depa",
+        "eta",
+        "gtout",
+        "gtin",
+        "wloff",
+        "wlin",
+        "lat",
+        "lon",
+        "alt",
+    ]
+
+    for field in fields:
+        if field in json_message:
+            return True
+    return False
+
+
+def create_db_safe_params(message_from_json):
+    params = {
+        "time": "",
+        "station_id": "",
+        "toaddr": "",
+        "fromaddr": "",
+        "depa": "",
+        "dsta": "",
+        "eta": "",
+        "gtout": "",
+        "gtin": "",
+        "wloff": "",
+        "wlin": "",
+        "lat": "",
+        "lon": "",
+        "alt": "",
+        "text": "",
+        "tail": "",
+        "flight": "",
+        "icao": "",
+        "freq": "",
+        "ack": "",
+        "mode": "",
+        "label": "",
+        "block_id": "",
+        "msgno": "",
+        "is_response": "",
+        "is_onground": "",
+        "error": 0,
+        "libacars": "",
+        "level": "",
+    }
+
+    for index, value in message_from_json.items():
         if index == "timestamp":
-            time = message_from_json[index]
+            params["time"] = value
         elif index == "station_id":
-            station_id = message_from_json[index]
+            params["station_id"] = value
         elif index == "toaddr":
-            toaddr = message_from_json[index]
+            params["toaddr"] = value
         elif index == "fromaddr":
-            fromaddr = message_from_json[index]
+            params["fromaddr"] = value
         elif index == "depa":
-            depa = message_from_json[index]
+            params["depa"] = value
         elif index == "dsta":
-            dsta = message_from_json[index]
+            params["dsta"] = value
         elif index == "eta":
-            eta = message_from_json[index]
+            params["eta"] = value
         elif index == "gtout":
-            gtout = message_from_json[index]
+            params["gtout"] = value
         elif index == "gtin":
-            gtin = message_from_json[index]
+            params["gtin"] = value
         elif index == "wloff":
-            wloff = message_from_json[index]
+            params["wloff"] = value
         elif index == "wlin":
-            wlin = message_from_json[index]
+            params["wlin"] = value
         elif index == "lat":
-            lat = message_from_json[index]
+            params["lat"] = value
         elif index == "lon":
-            lon = message_from_json[index]
+            params["lon"] = value
         elif index == "alt":
-            alt = message_from_json[index]
+            params["alt"] = value
         elif index == "text":
-            text = message_from_json[index]
+            params["text"] = value
         elif index == "data":
-            text = message_from_json[index]
+            params["text"] = value
         elif index == "tail":
-            tail = message_from_json[index]
+            params["tail"] = value
         elif index == "flight":
-            flight = message_from_json[index]
+            params["flight"] = value
         elif index == "icao":
-            icao = message_from_json[index]
+            params["icao"] = value
         elif index == "freq":
-            freq = message_from_json[index]
+            # normalizing frequency to 7 decimal places
+            params["freq"] = str(value).ljust(7, "0")
         elif index == "ack":
-            ack = message_from_json[index]
+            params["ack"] = value
         elif index == "mode":
-            mode = message_from_json[index]
+            params["mode"] = value
         elif index == "label":
-            label = message_from_json[index]
+            params["label"] = value
         elif index == "block_id":
-            block_id = message_from_json[index]
+            params["block_id"] = value
         elif index == "msgno":
-            msgno = message_from_json[index]
+            params["msgno"] = value
         elif index == "is_response":
-            is_response = message_from_json[index]
+            params["is_response"] = value
         elif index == "is_onground":
-            is_onground = message_from_json[index]
+            params["is_onground"] = value
         elif index == "error":
-            error = message_from_json[index]
+            params["error"] = value
         elif index == "libacars":
             try:
-                libacars = json.dumps(message_from_json[index])
+                params["libacars"] = json.dumps(value)
             except Exception as e:
-                acarshub_helpers.acars_traceback(e, "database")
+                acarshub_configuration.acars_traceback(e, "database")
         # skip these
         elif index == "channel":
             pass
         elif index == "level":
-            level = message_from_json["level"]
+            params["level"] = value
         elif index == "end":
             pass
         # We have a key that we aren't saving the database. Log it
         else:
-            acarshub_helpers.log(f"Unidenitied key: {index}", "database")
+            acarshub_configuration.log(f"Unidenitied key: {index}: {value}", "database")
+
+    return params
+
+
+def add_message_from_json(message_type, message_from_json):
+    global database
+    global alert_terms
+
+    # message time
+    # all fields are set to a blank string. This is because all of the database fields
+    # are set to be 'not null' so all fields require a value, even if it is blank
+    params = create_db_safe_params(message_from_json)
 
     try:
         session = db_session()
         if backup:
             session_backup = db_session_backup()
 
-        found_freq = (
-            session.query(messagesFreq)
-            .filter(
-                messagesFreq.freq == f"{freq}"
-                and messagesFreq.freq_type == message_type
-            )
-            .first()
-        )
-
-        if found_freq is not None:
-            found_freq.count += 1
-        else:
-            session.add(messagesFreq(freq=f"{freq}", freq_type=message_type, count=1))
-
+        update_frequencies(params["freq"], message_type, session)
         if backup:
-            found_freq_backup = (
-                session_backup.query(messagesFreq)
-                .filter(
-                    messagesFreq.freq == f"{freq}"
-                    and messagesFreq.freq_type == message_type
-                )
-                .first()
-            )
+            update_frequencies(params["freq"], message_type, session_backup)
 
-            if found_freq_backup is not None:
-                found_freq_backup.count += 1
-            else:
-                session_backup.add(
-                    messagesFreq(freq=f"{freq}", freq_type=message_type, count=1)
-                )
-
-        if (
-            acarshub_helpers.DB_SAVEALL
-            or text != ""
-            or libacars != ""
-            or dsta != ""
-            or depa != ""
-            or eta != ""
-            or gtout != ""
-            or gtin != ""
-            or wloff != ""
-            or wlin != ""
-            or lat != ""
-            or lon != ""
-            or alt != ""
-        ):
+        if acarshub_configuration.DB_SAVEALL or is_message_not_empty(message_from_json):
 
             # write the message
-
-            session.add(
-                messages(
-                    message_type=message_type,
-                    time=time,
-                    station_id=station_id,
-                    toaddr=toaddr,
-                    fromaddr=fromaddr,
-                    depa=depa,
-                    dsta=dsta,
-                    eta=eta,
-                    gtout=gtout,
-                    gtin=gtin,
-                    wloff=wloff,
-                    wlin=wlin,
-                    lat=lat,
-                    lon=lon,
-                    alt=alt,
-                    text=text,
-                    tail=tail,
-                    flight=flight,
-                    icao=icao,
-                    freq=freq,
-                    ack=ack,
-                    mode=mode,
-                    label=label,
-                    block_id=block_id,
-                    msgno=msgno,
-                    is_response=is_response,
-                    is_onground=is_onground,
-                    error=error,
-                    libacars=libacars,
-                    level=level,
-                )
-            )
+            session.add(messages(message_type=message_type, **params))
 
             if backup:
-                session_backup.add(
-                    messages(
-                        message_type=message_type,
-                        time=time,
-                        station_id=station_id,
-                        toaddr=toaddr,
-                        fromaddr=fromaddr,
-                        depa=depa,
-                        dsta=dsta,
-                        eta=eta,
-                        gtout=gtout,
-                        gtin=gtin,
-                        wloff=wloff,
-                        wlin=wlin,
-                        lat=lat,
-                        lon=lon,
-                        alt=alt,
-                        text=text,
-                        tail=tail,
-                        flight=flight,
-                        icao=icao,
-                        freq=freq,
-                        ack=ack,
-                        mode=mode,
-                        label=label,
-                        block_id=block_id,
-                        msgno=msgno,
-                        is_response=is_response,
-                        is_onground=is_onground,
-                        error=error,
-                        libacars=libacars,
-                        level=level,
-                    )
-                )
+                session_backup.add(messages(message_type=message_type, **params))
 
         # Now lets decide where to log the message count to
         # First we'll see if the message is not blank
 
-        if (
-            text != ""
-            or libacars != ""
-            or dsta != ""
-            or depa != ""
-            or eta != ""
-            or gtout != ""
-            or gtin != ""
-            or wloff != ""
-            or wlin != ""
-            or lat != ""
-            or lon != ""
-            or alt != ""
-        ):
+        if is_message_not_empty(message_from_json):
 
             count = session.query(messagesCount).first()
             count.total += 1
 
-            if error > 0:
+            if params["error"] > 0:
                 count.errors += 1
             else:
                 count.good += 1
@@ -550,7 +517,7 @@ def add_message_from_json(message_type, message_from_json):
                 count_backup = session_backup.query(messagesCount).first()
                 count.total += 1
 
-                if error > 0:
+                if params["error"] > 0:
                     count_backup.errors += 1
                 else:
                     count_backup.good += 1
@@ -558,7 +525,7 @@ def add_message_from_json(message_type, message_from_json):
         else:
             count = session.query(messagesCountDropped).first()
 
-            if error > 0:
+            if params["error"] > 0:
                 count.nonlogged_errors += 1
             else:
                 count.nonlogged_good += 1
@@ -566,7 +533,7 @@ def add_message_from_json(message_type, message_from_json):
             if backup:
                 count_backup = session_backup.query(messagesCountDropped).first()
 
-                if error > 0:
+                if params["error"] > 0:
                     count_backup.nonlogged_errors += 1
                 else:
                     count_backup.nonlogged_good += 1
@@ -576,32 +543,34 @@ def add_message_from_json(message_type, message_from_json):
         # If not, we'll add it in
 
         found_level = (
-            session.query(messagesLevel).filter(messagesLevel.level == level).first()
+            session.query(messagesLevel)
+            .filter(messagesLevel.level == params["level"])
+            .first()
         )
 
         if found_level is not None:
             found_level.count += 1
         else:
-            session.add(messagesLevel(level=level, count=1))
+            session.add(messagesLevel(level=params["level"], count=1))
 
         if backup:
             found_level_backup = (
                 session_backup.query(messagesLevel)
-                .filter(messagesLevel.level == level)
+                .filter(messagesLevel.level == params["level"])
                 .first()
             )
 
             if found_level_backup is not None:
                 found_level_backup.count += 1
             else:
-                session_backup.add(messagesLevel(level=level, count=1))
+                session_backup.add(messagesLevel(level=params["level"], count=1))
 
-        if len(text) > 0 and alert_terms:
+        if len(params["text"]) > 0 and alert_terms:
             for search_term in alert_terms:
-                if re.findall(r"\b{}\b".format(search_term), text):
+                if re.findall(r"\b{}\b".format(search_term), params["text"]):
                     should_add = True
                     for ignore_term in alert_terms_ignore:
-                        if re.findall(r"\b{}\b".format(ignore_term), text):
+                        if re.findall(r"\b{}\b".format(ignore_term), params["text"]):
                             should_add = False
                             break
                     if should_add:
@@ -618,35 +587,7 @@ def add_message_from_json(message_type, message_from_json):
                         session.add(
                             messages_saved(
                                 message_type=message_type,
-                                time=time,
-                                station_id=station_id,
-                                toaddr=toaddr,
-                                fromaddr=fromaddr,
-                                depa=depa,
-                                dsta=dsta,
-                                eta=eta,
-                                gtout=gtout,
-                                gtin=gtin,
-                                wloff=wloff,
-                                wlin=wlin,
-                                lat=lat,
-                                lon=lon,
-                                alt=alt,
-                                text=text,
-                                tail=tail,
-                                flight=flight,
-                                icao=icao,
-                                freq=freq,
-                                ack=ack,
-                                mode=mode,
-                                label=label,
-                                block_id=block_id,
-                                msgno=msgno,
-                                is_response=is_response,
-                                is_onground=is_onground,
-                                error=error,
-                                libacars=libacars,
-                                level=level,
+                                **params,
                                 term=search_term.upper(),
                                 type_of_match="text",
                             )
@@ -667,35 +608,7 @@ def add_message_from_json(message_type, message_from_json):
                             session_backup.add(
                                 messages_saved(
                                     message_type=message_type,
-                                    time=time,
-                                    station_id=station_id,
-                                    toaddr=toaddr,
-                                    fromaddr=fromaddr,
-                                    depa=depa,
-                                    dsta=dsta,
-                                    eta=eta,
-                                    gtout=gtout,
-                                    gtin=gtin,
-                                    wloff=wloff,
-                                    wlin=wlin,
-                                    lat=lat,
-                                    lon=lon,
-                                    alt=alt,
-                                    text=text,
-                                    tail=tail,
-                                    flight=flight,
-                                    icao=icao,
-                                    freq=freq,
-                                    ack=ack,
-                                    mode=mode,
-                                    label=label,
-                                    block_id=block_id,
-                                    msgno=msgno,
-                                    is_response=is_response,
-                                    is_onground=is_onground,
-                                    error=error,
-                                    libacars=libacars,
-                                    level=level,
+                                    **params,
                                     term=search_term.upper(),
                                     type_of_match="text",
                                 )
@@ -703,14 +616,16 @@ def add_message_from_json(message_type, message_from_json):
                             session_backup.commit()
         # commit the db change and close the session
         session.commit()
-        session.close()
 
         if backup:
             session_backup.commit()
-            session_backup.close()
 
     except Exception as e:
-        acarshub_helpers.acars_traceback(e, "database")
+        acarshub_configuration.acars_traceback(e, "database")
+    finally:
+        session.close()
+        if backup:
+            session_backup.close()
 
 
 def find_airline_code_from_iata(iata):
@@ -723,12 +638,13 @@ def find_airline_code_from_iata(iata):
         return (iata, "Unknown Airline")
 
 
+# FIXME: Rolled back to old database_search. Should wrap FTS table in SQL Alchemy engine
 def database_search(search_term, page=0):
     result = None
 
     try:
-        if acarshub_helpers.DEBUG_LOGGING:
-            acarshub_helpers.log(
+        if acarshub_configuration.DEBUG_LOGGING:
+            acarshub_configuration.log(
                 f"[database] Searching database for {search_term}", "database"
             )
         match_string = ""
@@ -769,11 +685,95 @@ def database_search(search_term, page=0):
         session.close()
         return (processed_results, final_count)
     except Exception as e:
-        acarshub_helpers.acars_traceback(e, "database")
+        acarshub_configuration.acars_traceback(e, "database")
         session.close()
         return [None, 50]
 
 
+# def database_search(search_term, page=0):
+#     global MessagesIdx
+#     result = None
+#     processed_results = None
+#     count = 0
+#     session = None
+#     try:
+#         if acarshub_configuration.DEBUG_LOGGING:
+#             acarshub_configuration.log(
+#                 f"[database] Searching database for {search_term}", "database"
+#             )
+#         query_filters = []
+
+#         for term in search_term:
+#             if search_term[term]:
+#                 if term == "msg_text":
+#                     query_filters.append(text("message_fts MATCH 'msg_text:" + search_term[term] + "'"))
+#                     # query_filters.append(
+#                     #     MessagesIdx.text.like(f'%{search_term["msg_text"].upper()}%')
+#                     # )
+#                 # elif term == "flight":
+#                 #     query_filters.append(
+#                 #         MessagesIdx.flight.like(f'%{search_term["flight"].upper()}%')
+#                 #     )
+#                 # elif term == "depa":
+#                 #     query_filters.append(
+#                 #         MessagesIdx.depa.like(f'%{search_term["depa"].upper()}%')
+#                 #     )
+#                 # elif term == "dsta":
+#                 #     query_filters.append(
+#                 #         MessagesIdx.dsta.like(f'%{search_term["dsta"].upper()}%')
+#                 #     )
+#                 # elif term == "freq":
+#                 #     query_filters.append(
+#                 #         MessagesIdx.freq.like(f'%{search_term["freq"].upper()}%')
+#                 #     )
+#                 # elif term == "label":
+#                 #     query_filters.append(
+#                 #         MessagesIdx.label.like(f'%{search_term["label"].upper()}%')
+#                 #     )
+#                 # elif term == "tail":
+#                 #     query_filters.append(
+#                 #         MessagesIdx.tail.like(f'%{search_term["tail"].upper()}%')
+#                 #     )
+
+#         #     result = session.execute(
+#         #     f"SELECT * FROM messages WHERE id IN (SELECT rowid FROM messages_fts WHERE messages_fts MATCH {match_string} ORDER BY rowid DESC LIMIT 50 OFFSET {page * 50})"
+#         # )
+
+#         # SELECT messages_fts.rowid AS messages_fts_rowid, messages_fts.depa AS messages_fts_depa, messages_fts.dsta AS messages_fts_dsta, messages_fts.tail AS messages_fts_tail,
+#         # messages_fts.flight AS messages_fts_flight, messages_fts.icao AS messages_fts_icao, messages_fts.freq AS messages_fts_freq, messages_fts.label AS messages_fts_label
+#         # FROM messages_fts, messages
+#         # WHERE messages_fts.flight LIKE ? AND messages_fts.depa LIKE ? AND messages_fts.dsta LIKE ? AND messages_fts.freq LIKE ? AND messages_fts.label LIKE ?
+#         # AND messages_fts.tail LIKE ? AND messages.msg_text LIKE ?
+#         # LIMIT ? OFFSET ?
+#         if len(query_filters) > 0:
+#             session = db_session()
+#             result = (
+#                 session.query(messages)
+#                 .select_from(MessagesIdx)
+#                 .join(messages, MessagesIdx.rowid == messages.id)
+#                 .filter(*query_filters)
+#                 .limit(50)
+#                 .offset(page * 50)
+#             )
+#             #print(result)
+#             count = (
+#                 session.query(messages)
+#                 .select_from(MessagesIdx)
+#                 .join(messages, MessagesIdx.rowid == messages.id)
+#                 .filter(*query_filters)
+#                 .count()
+#             )
+#             if count > 0:
+#                 processed_results = [query_to_dict(d) for d in result]
+
+#     except Exception as e:
+#         acarshub_configuration.acars_traceback(e, "database")
+#     finally:
+#         if session:
+#             session.close()
+#         return (processed_results, count)
+
+# FIXME: Rolled back to old search_alerts. We should wrap this in SQL Alchemy goodness
 def search_alerts(icao=None, tail=None, flight=None):
     result = None
     global alert_terms
@@ -805,7 +805,7 @@ def search_alerts(icao=None, tail=None, flight=None):
                 query_string = f"SELECT * FROM messages WHERE id IN (SELECT rowid FROM messages_fts WHERE messages_fts MATCH '{query_string}')"
 
             if alert_terms is not None:
-                terms_string = f"""SELECT id, message_type, msg_time, station_id, toaddr, fromaddr, depa, dsta, eta, gtout, gtin, wloff, wlin,
+                terms_string = """SELECT id, message_type, msg_time, station_id, toaddr, fromaddr, depa, dsta, eta, gtout, gtin, wloff, wlin,
                                 lat, lon, alt, msg_text, tail, flight, icao, freq, ack, mode, label, block_id, msgno, is_response, is_onground, error, libacars, level FROM messages_saved"""
             else:
                 terms_string = ""
@@ -820,7 +820,7 @@ def search_alerts(icao=None, tail=None, flight=None):
                     f"{query_string}{joiner}{terms_string} ORDER BY msg_time DESC LIMIT 50 OFFSET 0"
                 )
             else:
-                acarshub_helpers.log(f"SKipping alert search", "database")
+                acarshub_configuration.log("SKipping alert search", "database")
                 return None
 
             processed_results = []
@@ -833,78 +833,114 @@ def search_alerts(icao=None, tail=None, flight=None):
             session.close()
             return processed_results
         except Exception as e:
-            acarshub_helpers.acars_traceback(e, "database")
+            acarshub_configuration.acars_traceback(e, "database")
             return None
     else:
         return None
 
 
+# def search_alerts(icao=None, tail=None, flight=None):
+#     result = None
+#     processed_results = []
+#     global alert_terms
+#     if (
+#         icao is not None
+#         or tail is not None
+#         or flight is not None
+#         or alert_terms is not None
+#     ):
+#         try:
+#             session = db_session()
+#             # FIXME: This should really be FTS searched on messages_saved. We need to do the following:
+#             # 1. Create a new fts table for messaged_saved
+#             # 2. Save ALL alert terms to the db so we can match properly and save
+#             # query_filter_icao = []
+#             # query_filter_tail = []
+#             # query_filter_flight = []
+#             # query_filter_text = []
+#             # if icao is not None:
+#             #     for term in icao:
+#             #         query_filter_icao.append(MessagesIdx.icao.like(f"%{term.upper()}%"))
+#             # if tail is not None:
+#             #     for term in tail:
+#             #         query_filter_tail.append(MessagesIdx.tail.like(f"%{term.upper()}%"))
+#             # if flight is not None:
+#             #     for term in flight:
+#             #         query_filter_flight.append(
+#             #             MessagesIdx.flight.like(f"%{term.upper()}%")
+#             #         )
+#             # if alert_terms is not None:
+#             #     for term in alert_terms:
+#             #         query_filter_text.append(MessagesIdx.text.like(f"%{term.upper()}%"))
+
+#             # query_filter = []
+
+#             # if len(query_filter_icao) > 0:
+#             #     query_filter.append(or_(*query_filter_icao))
+#             # if len(query_filter_tail) > 0:
+#             #     query_filter.append(or_(*query_filter_tail))
+#             # if len(query_filter_flight) > 0:
+#             #     query_filter.append(or_(*query_filter_flight))
+#             # if len(query_filter_text) > 0:
+#             #     query_filter.append(or_(*query_filter_text))
+
+#             # if len(query_filter) > 0:
+#             #     result = (
+#             #         session.query(MessagesIdx)
+#             #         .select_from(messages)
+#             #         .join(MessagesIdx, MessagesIdx.id == messages.id)
+#             #         .filter(or_(*query_filter))
+#             #         .order_by(MessagesIdx.time.desc())
+#             #         .limit(50)
+#             #         .offset(0)
+#             #     )
+
+#             if result:
+#                 processed_results = [query_to_dict(d) for d in result]
+
+#         except Exception as e:
+#             acarshub_configuration.acars_traceback(e, "database")
+#         finally:
+#             session.close()
+#             if len(processed_results) > 0:
+#                 return processed_results
+#             return None
+#     else:
+#         return None
+
+
 def show_all(page=0):
     result = None
-
+    processed_results = []
+    count = 0
     try:
         session = db_session()
-        result = session.execute(
-            f"SELECT * from messages ORDER BY rowid DESC LIMIT 50 OFFSET {page * 50}"
+        result = (
+            session.query(messages)
+            .order_by(messages.time.desc())
+            .limit(50)
+            .offset(page * 50)
         )
-        count = session.execute("SELECT COUNT(*) from messages")
+        count = session.query(messages).count()
 
-        processed_results = []
-        final_count = 0
-        for row in count:
-            final_count = row[0]
-
-        if final_count == 0:
-            return [None, 50]
-
-        for row in result:
-            processed_results.append(dict(row))
-
-        session.close()
-        processed_results.reverse()
-        return (processed_results, final_count)
+        if count > 0:
+            processed_results = [query_to_dict(d) for d in result]
+            processed_results.reverse()
     except Exception as e:
-        acarshub_helpers.acars_traceback(e, "database")
+        acarshub_configuration.acars_traceback(e, "database")
+    finally:
+        session.close()
+        if count == 0:
+            return (None, 50)
+        return (processed_results, count)
 
 
 def get_freq_count():
-    result = None
     freq_count = []
     found_freq = []
 
     try:
         session = db_session()
-
-        for f in freqs:
-            if f[1].endswith("00"):
-                freq = f[1][:-2]
-            elif f[1].endswith(".0"):
-                freq = f[1]
-            elif f[1].endswith("0"):
-                freq = f[1][:-1]
-            else:
-                freq = f[1]
-
-            result = (
-                session.query(messagesFreq)
-                .filter(messagesFreq.freq)
-                .filter(messagesFreq.freq == freq and messagesFreq.freq_type == f[0])
-                .first()
-            )
-
-            if result is not None:
-                freq_count.append(
-                    {
-                        "freq_type": f"{result.freq_type}",
-                        "freq": f"{result.freq}",
-                        "count": result.count,
-                    }
-                )
-                found_freq.append(freq)
-            else:
-                freq_count.append(
-                    {"freq_type": f"{f[0]}", "freq": f"{f[1]}", "count": 0}
-                )
 
         for item in session.query(messagesFreq).all():
             if item.freq not in found_freq:
@@ -915,84 +951,72 @@ def get_freq_count():
                         "count": item.count,
                     }
                 )
-
+    except Exception as e:
+        acarshub_configuration.acars_traceback(e, "database")
+    finally:
         session.close()
-
+        if len(freq_count) == 0:
+            return []
         return sorted(
             freq_count,
             reverse=True,
             key=lambda freq: (freq["freq_type"], freq["count"]),
         )
 
-    except Exception as e:
-        acarshub_helpers.acars_traceback(e, "database")
-
-
-def get_errors_direct():
-    try:
-        session = db_session()
-        total_messages = session.query(messages).count()
-        total_errors = session.query(messages).filter(messages.error != "0").count()
-        session.close()
-
-        return (total_messages, total_errors)
-
-    except Exception as e:
-        acarshub_helpers.acars_traceback(e, "database")
-
 
 def get_errors():
+    count_total, count_errors, nonlogged_good, nonlogged_errors = 0, 0, 0, 0
     try:
         session = db_session()
         count = session.query(messagesCount).first()
         nonlogged = session.query(messagesCountDropped).first()
-        session.close()
-
-        return {
-            "non_empty_total": count.total,
-            "non_empty_errors": count.errors,
-            "empty_total": nonlogged.nonlogged_good,
-            "empty_errors": nonlogged.nonlogged_errors,
-        }
+        count_total = count.total
+        count_errors = count.errors
+        nonlogged_good = nonlogged.nonlogged_good
+        nonlogged_errors = nonlogged.nonlogged_errors
 
     except Exception as e:
-        acarshub_helpers.acars_traceback(e, "database")
+        acarshub_configuration.acars_traceback(e, "database")
+    finally:
+        session.close()
+        return {
+            "non_empty_total": count_total,
+            "non_empty_errors": count_errors,
+            "empty_total": nonlogged_good,
+            "empty_errors": nonlogged_errors,
+        }
 
 
 def database_get_row_count():
-    import os
-
     result = None
-
+    size = None
     try:
         session = db_session()
         result = session.query(messages).count()
-        session.close()
-
         try:
             size = os.path.getsize(db_path[10:])
         except Exception as e:
-            acarshub_helpers.acars_traceback(e, "database")
-            size = None
-
-        return (result, size)
+            acarshub_configuration.acars_traceback(e, "database")
     except Exception as e:
-        acarshub_helpers.acars_traceback(e, "database")
+        acarshub_configuration.acars_traceback(e, "database")
+    finally:
+        session.close()
+        return (result, size)
 
 
 def grab_most_recent():
-    from sqlalchemy import desc
-
+    output = []
     try:
         session = db_session()
         result = session.query(messages).order_by(desc("id")).limit(150)
 
         if result.count() > 0:
-            return [query_to_dict(d) for d in result]
-        else:
-            return []
+            output = [query_to_dict(d) for d in result]
     except Exception as e:
-        acarshub_helpers.acars_traceback(e, "database")
+        acarshub_configuration.acars_traceback(e, "database")
+    finally:
+        session.close()
+        return output
 
 
 def lookup_groundstation(lookup_id):
@@ -1014,23 +1038,29 @@ def get_message_label_json():
 
 def get_signal_levels():
     try:
+        output = []
         session = db_session()
         result = session.query(messagesLevel).order_by(messagesLevel.level)
         if result.count() > 0:
-            return [query_to_dict(d) for d in result]
+            output = [query_to_dict(d) for d in result]
 
+    except Exception as e:
+        acarshub_configuration.acars_traceback(e, "database")
+    finally:
+        session.close()
+        if len(output) > 0:
+            return output
         else:
             return []
 
-    except Exception as e:
-        acarshub_helpers.acars_traceback(e, "database")
-
 
 def get_alert_counts():
+    global alert_terms
+    result_list = []
     try:
         session = db_session()
         result = session.query(alertStats).order_by(alertStats.count)
-        global alert_terms
+
         if result.count() > 0:
             result_list = [query_to_dict(d) for d in result]
 
@@ -1042,16 +1072,15 @@ def get_alert_counts():
                         continue
                 if not found:
                     result_list.append({"term": term, "count": 0})
-
-            return result_list
         else:
-            result_list = []
-
             for term in alert_terms:
                 result_list.append({"term": term, "count": 0})
-            return result_list
+
     except Exception as e:
-        acarshub_helpers.acars_traceback(e, "database")
+        acarshub_configuration.acars_traceback(e, "database")
+    finally:
+        session.close()
+        return result_list
 
 
 def set_alert_ignore(terms=None):
@@ -1063,12 +1092,12 @@ def set_alert_ignore(terms=None):
 
     try:
         session = db_session()
-        result = session.query(ignoreAlertTerms).delete()
+        session.query(ignoreAlertTerms).delete()
         for t in terms:
             session.add(ignoreAlertTerms(term=t))
         session.commit()
     except Exception as e:
-        acarshub_helpers.acars_traceback(e, "database")
+        acarshub_configuration.acars_traceback(e, "database")
     finally:
         session.close()
 
@@ -1090,21 +1119,16 @@ def set_alert_terms(terms=None):
         result = session.query(alertStats).all()
         for item in result:
             if item.term not in terms:
-                drop = (
-                    session.query(alertStats)
-                    .filter(alertStats.term == item.term)
-                    .delete()
-                )
-                drop_term = (
-                    session.query(messages_saved)
-                    .filter(messages_saved.term == item.term)
-                    .delete()
-                )
+                session.query(alertStats).filter(alertStats.term == item.term).delete()
+                session.query(messages_saved).filter(
+                    messages_saved.term == item.term
+                ).delete()
 
         session.commit()
-        session.close()
     except Exception as e:
-        acarshub_helpers.acars_traceback(e, "database")
+        acarshub_configuration.acars_traceback(e, "database")
+    finally:
+        session.close()
 
 
 def reset_alert_counts():
@@ -1115,9 +1139,10 @@ def reset_alert_counts():
             item.count = 0
 
         session.commit()
-        session.close()
     except Exception as e:
-        acarshub_helpers.acars_traceback(e, "database")
+        acarshub_configuration.acars_traceback(e, "database")
+    finally:
+        session.close()
 
 
 def get_alert_ignore():
@@ -1130,64 +1155,39 @@ def get_alert_terms():
     return alert_terms
 
 
-def init_database(backup_db=False):
+def prune_database():
     try:
-        # We will pre-populate the count table if this is a new db
-        # Or the user doesn't have the table already
+        if not acarshub_configuration.QUIET_LOGS:
+            acarshub_configuration.log("Pruning database", "database")
+        cutoff = (
+            datetime.datetime.now()
+            - datetime.timedelta(days=acarshub_configuration.DB_SAVE_DAYS)
+        ).timestamp()
 
-        total_messages, total_errors = get_errors_direct()
-        good_msgs = total_messages - total_errors
-        if not backup_db:
-            session = db_session()
-        else:
-            session = db_session_backup()
+        session = db_session()
+        result = session.query(messages).filter(messages.time < cutoff).delete()
 
-        if session.query(messagesCount).count() == 0:
-            acarshub_helpers.log("Initializing table database", "database")
-            session.add(
-                messagesCount(total=total_messages, errors=total_errors, good=good_msgs)
-            )
-            session.commit()
-            acarshub_helpers.log("Count table initialized", "database")
+        if not acarshub_configuration.QUIET_LOGS:
+            acarshub_configuration.log("Pruned %s messages" % result, "database")
 
-        if session.query(messagesCountDropped).count() == 0:
-            acarshub_helpers.log("Initializing dropped count database", "database")
-            session.add(messagesCountDropped(nonlogged_good=0, nonlogged_errors=0))
-            session.commit()
-            acarshub_helpers.log("Dropped count table initialized", "database")
+        session.commit()
 
-        # now we pre-populate the freq db if empty
+        if not acarshub_configuration.QUIET_LOGS:
+            acarshub_configuration.log("Pruning alert database", "database")
+        cutoff = (
+            datetime.datetime.now()
+            - datetime.timedelta(days=acarshub_configuration.DB_ALERT_SAVE_DAYS)
+        ).timestamp()
 
-        if session.query(messagesFreq).count() == 0:
-            acarshub_helpers.log("Initializing freq table", "database")
-            found_freq = {}
-            for item in session.query(messages).all():
-                if item.freq not in found_freq:
-                    found_freq[item.freq] = [
-                        item.freq,
-                        item.message_type,
-                        session.query(messages)
-                        .filter(messages.freq == item.freq)
-                        .count(),
-                    ]
+        result = (
+            session.query(messages_saved).filter(messages_saved.time < cutoff).delete()
+        )
 
-            for item in found_freq:
-                session.add(
-                    messagesFreq(
-                        freq=found_freq[item][0],
-                        count=found_freq[item][2],
-                        freq_type=found_freq[item][1],
-                    )
-                )
-            session.commit()
-            acarshub_helpers.log("Freq table initialized", "database")
+        if not acarshub_configuration.QUIET_LOGS:
+            acarshub_configuration.log("Pruned %s messages" % result, "database")
 
-        session.close()
+        session.commit()
     except Exception as e:
-        acarshub_helpers.acars_traceback(e, "database")
-
-
-init_database()
-
-if backup:
-    init_database(backup_db=True)
+        acarshub_configuration.acars_traceback(e, "database")
+    finally:
+        session.close()

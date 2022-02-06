@@ -39,7 +39,7 @@ if [ -n "${ENABLE_WEB}" ]; then
       -w 1 \
       --no-sendfile \
       -k eventlet \
-      application:app \
+      acarshub:app \
       --timeout 120 \
     2>&1 | stdbuf -oL sed --unbuffered '/^$/d' | \
     stdbuf -oL awk '! /[INFO]/' | \

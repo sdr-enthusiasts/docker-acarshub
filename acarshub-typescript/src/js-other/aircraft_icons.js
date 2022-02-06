@@ -2,6 +2,7 @@
 // https://github.com/wiedehopf/tar1090/blob/276269564d9b417e74cbf93de69af650905e9a22/html/markers.js
 
 // -*- mode: javascript; indent-tabs-mode: nil; c-basic-offset: 8 -*-
+// Ensure B762/B763 are in there
 let shapes = {
   airliner: {
     id: 0,
@@ -580,7 +581,7 @@ let shapes = {
     w: 22,
     h: 22,
     viewBox: "-2.5 -2.5 22 22",
-    path: "M5.25,16.76c-.92,0-1.33-.46-1.39-.86a1,1,0,0,1,.79-1.11c.25-.08,1.22-.43,2.63-1V10.65h-6c-.68,0-1-.35-1-.66a.81.81,0,0,1,.6-.86C1.14,9,4.8,7,7.28,5.63V3c0-1.11.44-2.71,1.23-2.71S9.77,1.84,9.77,3V5.63C12.22,7,15.87,9,16.14,9.13a.8.8,0,0,1,.61.86c-.05.31-.36.67-1.05.67H9.77v3.19l1.61.59,1,.36a1.05,1.05,0,0,1,.8,1.11c-.07.39-.47.86-1.39.86Z",
+    path: "M 4.256,15.496 C 3.979,14.340 7.280,13.606 7.280,13.606 V 8.650 l -6,2 c -0.680,0 -1,-0.350 -1,-0.660 C 0.242,9.595 0.496,9.231 0.880,9.130 1.140,9 4.800,7 7.280,5.630 V 3 C 7.280,1.890 7.720,0.290 8.510,0.290 9.300,0.290 9.770,1.840 9.770,3 v 2.630 c 2.450,1.370 6.100,3.370 6.370,3.500 0.390,0.093 0.651,0.461 0.610,0.860 -0.050,0.310 -0.360,0.670 -1.050,0.670 l -5.930,-2 v 4.946 c 0,0 3.300,0.734 3.024,1.890 -0.331,1.384 -2.830,0.378 -4.254,0.378 -1.434,4.520e-4 -3.950,1.016 -4.284,-0.378 z",
     size: [22, 22],
   },
   ground_square: {
@@ -597,26 +598,26 @@ let shapes = {
     id: 66,
     w: 7.2,
     h: 18,
-    svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="-0.6 -1.5 7.2 18" SIZE><defs><style>.cls-1{fill:#5a5a5a;stroke-width:strokeWidth;}.cls-2{fill:#fff;stroke:none;}</style></defs><title>emergency_dark</title><g id="Layer_2" data-name="Layer 2"><g id="Emergency"><path class="cls-1" d="M1.77,0a3.32,3.32,0,0,0-.63.07L1,.11.86.16h0L.7.23.59.3l0,0L.49.38l0,.06a.15.15,0,0,0,0,0h0v0h0V.9l0,0,0,0h0l0,.07V4c0,.13.06.16.1.23v.3H.09c0,1.32,0,3.38,0,4.8l0,.44C.07,9.82,0,9.88,0,10v2.82c0,.09-.05.14.07.18v1.9a50.76,50.76,0,0,0,5.78,0V13.06C6,13,6,12.93,6,12.84V10c0-.15-.05-.2-.11-.22V9.37c0-1.41,0-3.51,0-4.8H5.55v-.3c0-.08.11-.1.09-.23v-3L5.6,1h0l0,0,0,0V.51h0v0h0a.15.15,0,0,0,0,0,.16.16,0,0,0,0-.06L5.41.32l0,0L5.26.23,5.12.17h0L5,.11l-.16,0A3.45,3.45,0,0,0,4,0H1.77Z"/><path class="cls-2" d="M.77,2.77A4.31,4.31,0,0,1,3,2.33a4.31,4.31,0,0,1,2.26.44l-.38.92A7.51,7.51,0,0,0,3,3.41a7.9,7.9,0,0,0-1.91.27Z"/><path class="cls-2" d="M4.35,8.27a1.05,1.05,0,0,1-.59.93A3.5,3.5,0,0,0,2.62,6.63a1.71,1.71,0,0,1-.56,1.26l-.41.38a1.71,1.71,0,0,0-.56,1.26A1.79,1.79,0,0,0,2.4,11.21H3.6A1.79,1.79,0,0,0,4.92,9.52,1.71,1.71,0,0,0,4.35,8.27Z"/></g></g></svg>',
+    svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="-0.6 -1.5 7.2 18" SIZE><defs><style>.cls-1{fill:#5a5a5a;stroke:strokeColor;stroke-width:strokeWidth;}.cls-2{fill:#fff;stroke:none;}</style></defs><title>emergency_dark</title><g id="Layer_2" data-name="Layer 2"><g id="Emergency"><path class="cls-1" d="M1.77,0a3.32,3.32,0,0,0-.63.07L1,.11.86.16h0L.7.23.59.3l0,0L.49.38l0,.06a.15.15,0,0,0,0,0h0v0h0V.9l0,0,0,0h0l0,.07V4c0,.13.06.16.1.23v.3H.09c0,1.32,0,3.38,0,4.8l0,.44C.07,9.82,0,9.88,0,10v2.82c0,.09-.05.14.07.18v1.9a50.76,50.76,0,0,0,5.78,0V13.06C6,13,6,12.93,6,12.84V10c0-.15-.05-.2-.11-.22V9.37c0-1.41,0-3.51,0-4.8H5.55v-.3c0-.08.11-.1.09-.23v-3L5.6,1h0l0,0,0,0V.51h0v0h0a.15.15,0,0,0,0,0,.16.16,0,0,0,0-.06L5.41.32l0,0L5.26.23,5.12.17h0L5,.11l-.16,0A3.45,3.45,0,0,0,4,0H1.77Z"/><path class="cls-2" d="M.77,2.77A4.31,4.31,0,0,1,3,2.33a4.31,4.31,0,0,1,2.26.44l-.38.92A7.51,7.51,0,0,0,3,3.41a7.9,7.9,0,0,0-1.91.27Z"/><path class="cls-2" d="M4.35,8.27a1.05,1.05,0,0,1-.59.93A3.5,3.5,0,0,0,2.62,6.63a1.71,1.71,0,0,1-.56,1.26l-.41.38a1.71,1.71,0,0,0-.56,1.26A1.79,1.79,0,0,0,2.4,11.21H3.6A1.79,1.79,0,0,0,4.92,9.52,1.71,1.71,0,0,0,4.35,8.27Z"/></g></g></svg>',
   },
   ground_service: {
     id: 67,
     w: 7.2,
     h: 18,
-    svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="-0.6 -1.5 7.2 18" SIZE><defs><style>.cls-1{fill:#5a5a5a;stroke-width:strokeWidth;}.cls-2{fill:#fff;stroke:none;}</style></defs><title>service_dark</title><g id="Layer_2" data-name="Layer 2"><g id="Service"><path class="cls-1" d="M1.77,0a3.32,3.32,0,0,0-.63.07L1,.11.86.16h0L.7.23.59.3l0,0L.49.38l0,.06a.15.15,0,0,0,0,0h0v0h0V.9l0,0,0,0h0l0,.07V4c0,.13.06.16.1.23v.3H.09c0,1.32,0,3.38,0,4.8l0,.44C.07,9.82,0,9.88,0,10v2.82c0,.09-.05.14.07.18v1.9a50.76,50.76,0,0,0,5.78,0V13.06C6,13,6,12.93,6,12.84V10c0-.15-.05-.2-.11-.22V9.37c0-1.41,0-3.51,0-4.8H5.55v-.3c0-.08.11-.1.09-.23v-3L5.6,1h0l0,0,0,0V.51h0v0h0a.15.15,0,0,0,0,0,.16.16,0,0,0,0-.06L5.41.32l0,0L5.26.23,5.12.17h0L5,.11l-.16,0A3.45,3.45,0,0,0,4,0H1.77Z"/><path class="cls-2" d="M.77,2.77A4.31,4.31,0,0,1,3,2.33a4.31,4.31,0,0,1,2.26.44l-.38.92A7.51,7.51,0,0,0,3,3.41a7.9,7.9,0,0,0-1.91.27Z"/><path class="cls-2" d="M4.85,8a1.67,1.67,0,0,0-.65-1.3A.12.12,0,0,0,4,6.74v.95a.12.12,0,0,1,0,.09l-.9.65a.12.12,0,0,1-.13,0L2,7.77a.12.12,0,0,1,0-.09V6.73a.11.11,0,0,0-.18-.08A1.72,1.72,0,0,0,1.15,8,1.66,1.66,0,0,0,2,9.4a.19.19,0,0,1,.1.17l0,1.54a.1.1,0,0,0,.11.1H3.78c.07,0,.12,0,.11-.1V9.57A.22.22,0,0,1,4,9.4,1.7,1.7,0,0,0,4.85,8Z"/></g></g></svg>',
+    svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="-0.6 -1.5 7.2 18" SIZE><defs><style>.cls-1{fill:#5a5a5a;stroke:strokeColor;stroke-width:strokeWidth;}.cls-2{fill:#fff;stroke:none;}</style></defs><title>service_dark</title><g id="Layer_2" data-name="Layer 2"><g id="Service"><path class="cls-1" d="M1.77,0a3.32,3.32,0,0,0-.63.07L1,.11.86.16h0L.7.23.59.3l0,0L.49.38l0,.06a.15.15,0,0,0,0,0h0v0h0V.9l0,0,0,0h0l0,.07V4c0,.13.06.16.1.23v.3H.09c0,1.32,0,3.38,0,4.8l0,.44C.07,9.82,0,9.88,0,10v2.82c0,.09-.05.14.07.18v1.9a50.76,50.76,0,0,0,5.78,0V13.06C6,13,6,12.93,6,12.84V10c0-.15-.05-.2-.11-.22V9.37c0-1.41,0-3.51,0-4.8H5.55v-.3c0-.08.11-.1.09-.23v-3L5.6,1h0l0,0,0,0V.51h0v0h0a.15.15,0,0,0,0,0,.16.16,0,0,0,0-.06L5.41.32l0,0L5.26.23,5.12.17h0L5,.11l-.16,0A3.45,3.45,0,0,0,4,0H1.77Z"/><path class="cls-2" d="M.77,2.77A4.31,4.31,0,0,1,3,2.33a4.31,4.31,0,0,1,2.26.44l-.38.92A7.51,7.51,0,0,0,3,3.41a7.9,7.9,0,0,0-1.91.27Z"/><path class="cls-2" d="M4.85,8a1.67,1.67,0,0,0-.65-1.3A.12.12,0,0,0,4,6.74v.95a.12.12,0,0,1,0,.09l-.9.65a.12.12,0,0,1-.13,0L2,7.77a.12.12,0,0,1,0-.09V6.73a.11.11,0,0,0-.18-.08A1.72,1.72,0,0,0,1.15,8,1.66,1.66,0,0,0,2,9.4a.19.19,0,0,1,.1.17l0,1.54a.1.1,0,0,0,.11.1H3.78c.07,0,.12,0,.11-.1V9.57A.22.22,0,0,1,4,9.4,1.7,1.7,0,0,0,4.85,8Z"/></g></g></svg>',
   },
   ground_unknown: {
     id: 68,
     w: 7.2,
     h: 18,
-    svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="-0.6 -1.5 7.2 18" SIZE><defs><style>.cls-1{fill:#5a5a5a;stroke-width:strokeWidth;}.cls-2{fill:#fff;stroke:none;}</style></defs><title>unknown_dark</title><g id="Layer_2" data-name="Layer 2"><g id="Unknown"><path class="cls-1" d="M1.77,0a3.32,3.32,0,0,0-.63.07L1,.11.86.16h0L.7.23.59.3l0,0L.49.38l0,.06a.15.15,0,0,0,0,0h0v0h0V.9l0,0,0,0h0l0,.07V4c0,.13.06.16.1.23v.3H.09c0,1.32,0,3.38,0,4.8l0,.44C.07,9.82,0,9.88,0,10v2.82c0,.09-.05.14.07.18v1.9a50.76,50.76,0,0,0,5.78,0V13.06C6,13,6,12.93,6,12.84V10c0-.15-.05-.2-.11-.22V9.37c0-1.41,0-3.51,0-4.8H5.55v-.3c0-.08.11-.1.09-.23v-3L5.6,1h0l0,0,0,0V.51h0v0h0a.15.15,0,0,0,0,0,.16.16,0,0,0,0-.06L5.41.32l0,0L5.26.23,5.12.17h0L5,.11l-.16,0A3.45,3.45,0,0,0,4,0H1.77Z"/><path class="cls-2" d="M.77,2.77A4.31,4.31,0,0,1,3,2.33a4.31,4.31,0,0,1,2.26.44l-.38.92A7.51,7.51,0,0,0,3,3.41a7.9,7.9,0,0,0-1.91.27Z"/><path class="cls-2" d="M4.31,7.51A1.1,1.1,0,0,0,4,7.12a1.55,1.55,0,0,0-.5-.3,2.18,2.18,0,0,0-.77-.12,1.81,1.81,0,0,0-.65.11,1.48,1.48,0,0,0-.5.32,1.43,1.43,0,0,0-.32.48,1.62,1.62,0,0,0-.12.6v.12H2.31V8.2a1,1,0,0,1,0-.25.54.54,0,0,1,.09-.19.42.42,0,0,1,.15-.12.49.49,0,0,1,.22,0,.41.41,0,0,1,.29.09.39.39,0,0,1,.1.3.33.33,0,0,1,0,.19A.65.65,0,0,1,3,8.33l-.22.16a1.61,1.61,0,0,0-.25.22A1.28,1.28,0,0,0,2.33,9a1.2,1.2,0,0,0-.11.45v.37H3.29V9.52a.44.44,0,0,1,.09-.22,1,1,0,0,1,.19-.18l.25-.17a1.35,1.35,0,0,0,.27-.23,1.19,1.19,0,0,0,.21-.33,1.23,1.23,0,0,0,.09-.49A1.06,1.06,0,0,0,4.31,7.51Z"/><rect class="cls-2" x="2.18" y="10.26" width="1.12" height="1.02"/></g></g></svg>',
+    svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="-0.6 -1.5 7.2 18" SIZE><defs><style>.cls-1{fill:#5a5a5a;stroke:strokeColor;stroke-width:strokeWidth;}.cls-2{fill:#fff;stroke:none;}</style></defs><title>unknown_dark</title><g id="Layer_2" data-name="Layer 2"><g id="Unknown"><path class="cls-1" d="M1.77,0a3.32,3.32,0,0,0-.63.07L1,.11.86.16h0L.7.23.59.3l0,0L.49.38l0,.06a.15.15,0,0,0,0,0h0v0h0V.9l0,0,0,0h0l0,.07V4c0,.13.06.16.1.23v.3H.09c0,1.32,0,3.38,0,4.8l0,.44C.07,9.82,0,9.88,0,10v2.82c0,.09-.05.14.07.18v1.9a50.76,50.76,0,0,0,5.78,0V13.06C6,13,6,12.93,6,12.84V10c0-.15-.05-.2-.11-.22V9.37c0-1.41,0-3.51,0-4.8H5.55v-.3c0-.08.11-.1.09-.23v-3L5.6,1h0l0,0,0,0V.51h0v0h0a.15.15,0,0,0,0,0,.16.16,0,0,0,0-.06L5.41.32l0,0L5.26.23,5.12.17h0L5,.11l-.16,0A3.45,3.45,0,0,0,4,0H1.77Z"/><path class="cls-2" d="M.77,2.77A4.31,4.31,0,0,1,3,2.33a4.31,4.31,0,0,1,2.26.44l-.38.92A7.51,7.51,0,0,0,3,3.41a7.9,7.9,0,0,0-1.91.27Z"/><path class="cls-2" d="M4.31,7.51A1.1,1.1,0,0,0,4,7.12a1.55,1.55,0,0,0-.5-.3,2.18,2.18,0,0,0-.77-.12,1.81,1.81,0,0,0-.65.11,1.48,1.48,0,0,0-.5.32,1.43,1.43,0,0,0-.32.48,1.62,1.62,0,0,0-.12.6v.12H2.31V8.2a1,1,0,0,1,0-.25.54.54,0,0,1,.09-.19.42.42,0,0,1,.15-.12.49.49,0,0,1,.22,0,.41.41,0,0,1,.29.09.39.39,0,0,1,.1.3.33.33,0,0,1,0,.19A.65.65,0,0,1,3,8.33l-.22.16a1.61,1.61,0,0,0-.25.22A1.28,1.28,0,0,0,2.33,9a1.2,1.2,0,0,0-.11.45v.37H3.29V9.52a.44.44,0,0,1,.09-.22,1,1,0,0,1,.19-.18l.25-.17a1.35,1.35,0,0,0,.27-.23,1.19,1.19,0,0,0,.21-.33,1.23,1.23,0,0,0,.09-.49A1.06,1.06,0,0,0,4.31,7.51Z"/><rect class="cls-2" x="2.18" y="10.26" width="1.12" height="1.02"/></g></g></svg>',
   },
   ground_fixed: {
     id: 69,
     w: 12,
     h: 12,
     noRotate: true,
-    svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="-1 -1 14 14" SIZE><defs><style>.cls-1{fill:#5a5a5a;stroke-width:strokeWidth;}.cls-2{fill:#fff;stroke:none;}</style></defs><title>fixed_dark</title><g id="Layer_2" data-name="Layer 2"><g id="Fixed"><polygon class="cls-1" points="0 0 0 0.43 0 12 12 12 12 0 0 0"/><path class="cls-2" d="M3.24,2.73,1.36.86h9.29L8.77,2.73A4.29,4.29,0,0,0,3.24,2.73Z"/><circle class="cls-2" cx="6" cy="6" r="3.58" transform="translate(-2.49 6) rotate(-45)"/><path class="cls-2" d="M2.73,3.23a4.29,4.29,0,0,0,0,5.54L.86,10.62V1.37Z"/><path class="cls-2" d="M3.24,9.28a4.29,4.29,0,0,0,5.54,0l1.87,1.87H1.35Z"/><path class="cls-2" d="M9.28,8.77a4.29,4.29,0,0,0,0-5.54l1.86-1.86v9.26Z"/><circle class="cls-1" cx="6" cy="6" r="2" transform="translate(-2.49 6) rotate(-45)"/></g></g></svg>',
+    svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="-1 -1 14 14" SIZE><defs><style>.cls-1{fill:#5a5a5a;stroke:strokeColor;stroke-width:strokeWidth;}.cls-2{fill:#fff;stroke:none;}</style></defs><title>fixed_dark</title><g id="Layer_2" data-name="Layer 2"><g id="Fixed"><polygon class="cls-1" points="0 0 0 0.43 0 12 12 12 12 0 0 0"/><path class="cls-2" d="M3.24,2.73,1.36.86h9.29L8.77,2.73A4.29,4.29,0,0,0,3.24,2.73Z"/><circle class="cls-2" cx="6" cy="6" r="3.58" transform="translate(-2.49 6) rotate(-45)"/><path class="cls-2" d="M2.73,3.23a4.29,4.29,0,0,0,0,5.54L.86,10.62V1.37Z"/><path class="cls-2" d="M3.24,9.28a4.29,4.29,0,0,0,5.54,0l1.87,1.87H1.35Z"/><path class="cls-2" d="M9.28,8.77a4.29,4.29,0,0,0,0-5.54l1.86-1.86v9.26Z"/><circle class="cls-1" cx="6" cy="6" r="2" transform="translate(-2.49 6) rotate(-45)"/></g></g></svg>',
   },
   ground_tower: {
     id: 70,
@@ -702,6 +703,8 @@ let shapes = {
   }
 }
 
+const _ulac = ["cessna", 0.92];
+
 let TypeDesignatorIcons = {
   SHIP: ["balloon", 1], // Blimp
   BALL: ["balloon", 1], // Balloon
@@ -725,6 +728,8 @@ let TypeDesignatorIcons = {
 
   A359: ["heavy_2e", 1.0],
   A35K: ["heavy_2e", 1.02],
+  B762: ["heavy_2e", 1.0],
+  B763: ["heavy_2e", 1.0],
 
   A388: ["a380", 1],
 
@@ -797,20 +802,22 @@ let TypeDesignatorIcons = {
   CL35: ["jet_swept", 0.92],
   F900: ["jet_swept", 0.96], // 21t
   CL60: ["jet_swept", 0.96], // 22t
-  GLEX: ["jet_swept", 1],
   G200: ["jet_swept", 0.92], // 16t
   G280: ["jet_swept", 0.92], // 18t
   HA4T: ["jet_swept", 0.92], // 18t
-  GL5T: ["jet_swept", 1],
   FA7X: ["jet_swept", 0.96], // 29t
   FA8X: ["jet_swept", 0.96], // 33t
   GLF2: ["jet_swept", 0.96], // 29t
   GLF3: ["jet_swept", 0.96], // 31t
   GLF4: ["jet_swept", 0.96], // 34t
   GA5C: ["jet_swept", 0.96], // 34t
+  GL5T: ["jet_swept", 0.98], // 40t
   GLF5: ["jet_swept", 0.98], // 41t
   GA6C: ["jet_swept", 0.98], // 41t
+  GLEX: ["jet_swept", 1], // 45t
+  GL6T: ["jet_swept", 1], // 45t
   GLF6: ["jet_swept", 1], // 48t
+  GL7T: ["jet_swept", 1], // 52t
   E135: ["jet_swept", 0.92], // 20t
   E35L: ["jet_swept", 0.92], // 24t
   E145: ["jet_swept", 0.92], // 22t
@@ -872,6 +879,7 @@ let TypeDesignatorIcons = {
   H25A: ["jet_nonswept", 1.03], // 11t
   H25B: ["jet_nonswept", 1.03], // 11t
   H25C: ["jet_nonswept", 1.03], // 11t
+  H25C: ["jet_nonswept", 1.03], // 11t
 
   PRM1: ["jet_nonswept", 0.96],
   E55P: ["jet_nonswept", 0.96],
@@ -881,6 +889,7 @@ let TypeDesignatorIcons = {
   SF50: ["jet_nonswept", 0.94],
 
   C97: ["super_guppy", 1],
+  SGUP: ["super_guppy", 1],
   A3ST: ["beluga", 1],
   A337: ["beluga", 1.06],
   WB57: ["wb57", 1],
@@ -977,6 +986,7 @@ let TypeDesignatorIcons = {
   Q4: ["uav", 1],
   Q9: ["uav", 1],
   Q25: ["uav", 1],
+  HRON: ["uav", 1],
 
   A400: ["a400", 1],
 
@@ -1001,6 +1011,8 @@ let TypeDesignatorIcons = {
   GAZL: ["gazelle", 1.0],
   AS50: ["gazelle", 1.0],
   AS55: ["gazelle", 1.0],
+  ALO2: ["gazelle", 1.0],
+  ALO3: ["gazelle", 1.0],
 
   R22: ["helicopter", 0.92],
   R44: ["helicopter", 0.94],
@@ -1017,6 +1029,7 @@ let TypeDesignatorIcons = {
   S61: ["s61", 0.98], // 8.6t
   S61R: ["s61", 1], // 10t
   EC25: ["s61", 1.01], // 11t
+  EH10: ["s61", 1.04], // 14.5t (AW101)
   H53: ["s61", 1.1], // 19t
   H53S: ["s61", 1.1], // 19t
 
@@ -1035,8 +1048,58 @@ let TypeDesignatorIcons = {
   E3CF: ["e3awacs", 0.88],
   //
   GLID: ["glider", 1],
+  //Stemme
+  S6: ["glider", 1],
+  S10S: ["glider", 1],
   S12: ["glider", 1],
-  ULAC: ["cessna", 0.9],
+  S12S: ["glider", 1],
+  //Schempp-Hirth
+  ARCE: ["glider", 1],
+  ARCP: ["glider", 1],
+  DISC: ["glider", 1],
+  DUOD: ["glider", 1],
+  JANU: ["glider", 1],
+  NIMB: ["glider", 1],
+  QINT: ["glider", 1],
+  VENT: ["glider", 1],
+  VNTE: ["glider", 1],
+  //Schleicher
+  A20J: ["glider", 1],
+  A32E: ["glider", 1],
+  A32P: ["glider", 1],
+  A33E: ["glider", 1],
+  A33P: ["glider", 1],
+  A34E: ["glider", 1],
+  AS14: ["glider", 1],
+  AS16: ["glider", 1],
+  AS20: ["glider", 1],
+  AS21: ["glider", 1],
+  AS22: ["glider", 1],
+  AS24: ["glider", 1],
+  AS25: ["glider", 1],
+  AS26: ["glider", 1],
+  AS28: ["glider", 1],
+  AS29: ["glider", 1],
+  AS30: ["glider", 1],
+  AS31: ["glider", 1],
+  //DG
+  DG80: ["glider", 1],
+  DG1T: ["glider", 1],
+  LS10: ["glider", 1],
+  LS8: ["glider", 1],
+  //Jonker
+  TS1J: ["glider", 1],
+
+  ULAC: _ulac,
+  EV97: _ulac,
+  FDCT: _ulac,
+  WT9: _ulac,
+  PIVI: _ulac,
+  FK9: _ulac,
+  AVID: _ulac,
+  NG5: _ulac,
+  PNR3: _ulac,
+  TL20: _ulac,
 
   SR20: ["cirrus_sr22", 1],
   SR22: ["cirrus_sr22", 1],
@@ -1062,6 +1125,7 @@ let TypeDesignatorIcons = {
 
 let TypeDescriptionIcons = {
   H: ["helicopter", 1],
+  G: ["gyrocopter", 1],
 
   L1P: ["cessna", 1],
   A1P: ["cessna", 1],
@@ -1069,6 +1133,8 @@ let TypeDescriptionIcons = {
   L1J: ["hi_perf", 0.92],
 
   L2P: ["twin_small", 1],
+  A2P: ["twin_large", 0.96],
+  "A2P-M": ["twin_large", 1.12],
   L2T: ["twin_large", 0.96],
   "L2T-M": ["twin_large", 1.12],
   A2T: ["twin_large", 0.96],
@@ -1109,7 +1175,7 @@ let CategoryIcons = {
 
   B2: ["balloon", 1],
 
-  B4: ["cirrus_sr22", 0.8],
+  B4: _ulac,
 
   B6: ["uav", 1],
 

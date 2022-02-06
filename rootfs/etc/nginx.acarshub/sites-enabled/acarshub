@@ -16,6 +16,16 @@ server {
 	default_type application/octet-stream;
   access_log off;
 
+  #Catch 40x errors:
+  error_page 400 401 402 403 404 = @RedirectToHome;
+
+  #Catch 50x errors:
+  error_page 500 501 502 503 504 = @RedirectToHome;
+
+  location @RedirectToHome {
+    return 301 $scheme://$http_host;
+  }
+
   # point the stat image files to the dir they're dumped in, mark as no cache
   location ~ (.*hour.*|.*week.*|.*month.*|.*year.*|.*days.*).png {
     add_header Cache-Control 'no-store';
@@ -57,6 +67,4 @@ server {
     add_header Cache-Control 'no-store';
     try_files /templates/index.html =404;
   }
-
-  # FIXME: handle invalid URLS and redirect back to /
 }
