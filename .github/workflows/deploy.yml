@@ -1,4 +1,4 @@
-name: Deploy to Docker Hub
+name: Deploy to GHCR
 
 # FIXME: Typescript build should be an artifact and shared between all jobs in the workflow
 
