@@ -12,9 +12,48 @@ We make extensive use of the [airframes](https://github.com/airframesio) work to
 
 Builds and runs on `amd64`, `arm64`, `arm/v7`, `arm/v6` and `386` architectures.
 
-## IMPORTANT NOTE FOR RASPBERRY PI OS 32 BIT USERS
+## Table of Contents
+
+- [Users of v2 that need to migrate to v3](#Users-of-v2-that-need-to-migrate-to-v3)
+- [IMPORTANT NOTE FOR BUSTER USERS](#IMPORTANT-NOTE-FOR-BUSTER-USERS)
+- [Pre-requisites/Totally new to docker but you think this looks cool?](#Pre-requisitesTotally-new-to-docker-but-you-think-this-looks-cool)
+- [Supported tags and respective Dockerfiles](#Supported-tags-and-respective-Dockerfiles)
+- [Thanks](#thanks)
+- [Getting valid ACARS/VDLM2 data](#Getting-valid-ACARSVDLM2-data))
+- [Up-and-Running](#up-and-running)
+- [Ports](#ports)
+- [Volumes / Database](#VolumesDatabase)
+- [Environment Variables](#environment-variables)
+  - [General](#general)
+  - [ADSB](#adsb)
+  - [ACARS](#acars)
+  - [VDLM2](#vdlm2)
+- [Viewing the messages](#viewing-the-messages)
+- [Which frequencies should you monitor?](#which-frequencies-should-you-monitor)
+- [Logging](#logging)
+- [A note about data sources used for the website](#a-note-about-data-sources-used-for-the-web-site)
+- [Accessing ACARS/VDLM data with external programs](#accessing-acarsvdlm-data-with-external-programs)
+- [Website Tips and Tricks](#website-tips-and-tricks)
+- [Future Improvements](#future-improvements)
+- [Getting Help](#getting-help)
+
+## Users of v2 that need to migrate to v3
+
+Please see [this](Setting-Up-ACARSHub.md) for an example `docker-compose.yaml` file to get you started. You should be able to copy/paste values quickly over in to the new config and be up and running very quickly.
+
+## IMPORTANT NOTE FOR BUSTER USERS
 
 Please see [this](https://github.com/sdr-enthusiasts/Buster-Docker-Fixes) if you encounter `RTC/Real Time Clock` issues.
+
+## Pre-requisites/Totally new to docker but you think this looks cool?
+
+Welcome! New to docker but you love the idea of monitoring ACARS and/or ADSB data? You will to prepare your system to run this, but it's super easy!
+
+You will need the following:
+
+- A Linux computer capable of running docker with the system installed and running. I personally recommend a raspberry Pi
+- At least one RTL-SDR Dongle. Two if you want to listen to both ACARS and VDLM. Something like [this](https://www.amazon.com/dp/B0129EBDS2), although other kinds do work.
+- Docker and docker-compose installed. Please see [installing docker and docker compose](https://github.com/sdr-enthusiasts/docker-install) for help with that, and come back here when you're ready.
 
 ## Supported tags and respective Dockerfiles
 
@@ -29,53 +68,29 @@ Additional thanks goes to the folks over at [airframes.io](airframes.io) for the
 
 I am missing a boat load of people who have provided feed back as this project has progressed, as well as contributed ideas or let me bounce thoughts off of them. You've all molded this project and made it better than I could have done on my own.
 
-## Required data
+## Getting valid ACARS/VDLM2 data
 
-You will need a [valid source of ACARS and/or VDLM data](#Getting-valid-ACARSVDLM2-data).
+External to ACARS Hub you need to be running an ACARS and/or VDLM2 decoder for ACARS Hub, and have that decoder connect to ACARS Hub to send over the messages for processing.
 
-## Up-and-Running with `docker run`
+The following decoders are supported:
 
-```shell
-docker volume create acarshub \
-  && docker run \
-    -d \
-    --rm \
-    --name acarshub \
-    -p 80:80 \
-    -e ENABLE_ACARS="external" \
-    -v acars_data:/run/acars \
-    --device /dev/bus/usb:/dev/bus/usb \
-    --mount type=tmpfs,destination=/database,tmpfs-mode=1777 \
-    ghcr.io/sdr-enthusiasts/docker-acarshub:latest
-```
+- [acarsdec](https://github.com/TLeconte/acarsdec) or one of the forks of acarsdec. I suggest [the airframes fork](https://github.com/airframesio/acarsdec). Run the decoder with the option `-j youracarshubip:5550`, ensuring that port `5550` is mapped to the container.
+- [dumpvdl2](https://github.com/szpajder/dumpvdl2). Run the decoder with the option `--output decoded:json:udp:address=<youracarshubip>,port=5555`, ensuring that port `5555` is mapped to the container.
+- [vdlm2dec](https://github.com/TLeconte/vdlm2dec). Run the decoder with the option `-j youracarshubip:5555`, ensuring that port `5555` is mapped to the container.
 
-## Up-and-Running with Docker Compose
+For VDLM decoding `dumpvdl2` is preferred as the decoder provides richer data and is more modern than `vdlm2dec`.
 
-```yaml
-version: "3.8"
+For ease of use I have provided docker images set up to work with ACARS Hub. This is the preferred way to get data in to ACARS Hub.
 
-volumes:
-  acars_data:
+- [docker-acarsdec](https://github.com/fredclausen/docker-acarsdec) for ACARS decoding.
+- [docker-dumpvdl2](https://github.com/fredclausen/docker-dumpvdl2) for VDLM decoding. This is the preferred decoder.
+- [docker-vdlm2dec](https://github.com/fredclausen/docker-vdlm2dec) as an alternative for VDLM decoding. This decoder is far less feature-rich compared to `dumpvdl2` and is provided only as an alternative if you have a strong preference for using this over `dumpvdl2`.
 
-services:
-  acarshub:
-    image: ghcr.io/sdr-enthusiasts/docker-acarshub:latest
-    tty: true
-    container_name: acarshub
-    restart: always
-    devices:
-      - /dev/bus/usb:/dev/bus/usb
-    ports:
-      - 80:80
-    environment:
-      - ENABLE_ACARS=external
-    volumes:
-      - acars_data:/run/acars
-    tmpfs:
-      - /database:exec,size=64M
-```
+If you wish to use `acars` decoding please ensure port `5550` is mapped to the container. If you wish to use `vdlm2` decoding please ensure port `5555` is mapped to the container.
 
-Please keep in mind that this is a barebones configuration to get you started. You will **certainly** need to set additional configuration options to get ACARS Hub working in the way you want.
+## Up-and-Running
+
+The document below covers a lot of configuration options, however, most of them are not needed to get started. Please see [this](Setting-Up-ACARSHub.md) for an example `docker-compose.yaml` file that should get you off the ground.
 
 ## Ports
 
@@ -145,26 +160,6 @@ If you desire enhanced ADSB and ACARS message matching and thus show coloured ai
 
 In the configuration options for tar1090. Setting this will include additional aircraft information in the `aircraft.json` file that is not normally part of the ADSB broadcast, such as the aircraft's tail number and aircraft type. Please enable this with caution: there is increased memory usage in the tar1090 container so RAM constrained systems should be cautious enabling this.
 
-### Getting valid ACARS/VDLM2 data
-
-External to ACARS Hub you need to be running an ACARS and/or VDLM2 decoder for ACARS Hub, and have that decoder connect to ACARS Hub to send over the messages for processing.
-
-The following decoders are supported:
-
-- [acarsdec](https://github.com/TLeconte/acarsdec) or one of the forks of acarsdec. I suggest [the airframes fork](https://github.com/airframesio/acarsdec). Run the decoder with the option `-j youracarshubip:5550`, ensuring that port `5550` is mapped to the container.
-- [dumpvdl2](https://github.com/szpajder/dumpvdl2). Run the decoder with the option `--output decoded:json:udp:address=<youracarshubip>,port=5555`, ensuring that port `5555` is mapped to the container.
-- [vdlm2dec](https://github.com/TLeconte/vdlm2dec). Run the decoder with the option `-j youracarshubip:5555`, ensuring that port `5555` is mapped to the container.
-
-For VDLM decoding `dumpvdl2` is preferred as the decoder provides richer data and is more modern than `vdlm2dec`.
-
-For ease of use I have provided docker images set up to work with ACARS Hub. This is the preferred way to get data in to ACARS Hub.
-
-- [docker-acarsdec](https://github.com/fredclausen/docker-acarsdec) for ACARS decoding.
-- [docker-dumpvdl2](https://github.com/fredclausen/docker-dumpvdl2) for VDLM decoding. This is the preferred decoder.
-- [docker-vdlm2dec](https://github.com/fredclausen/docker-vdlm2dec) as an alternative for VDLM decoding. This decoder is far less feature-rich compared to `dumpvdl2` and is provided only as an alternative if you have a strong preference for using this over `dumpvdl2`.
-
-If you wish to use `acars` decoding please ensure port `5550` is mapped to the container. If you wish to use `vdlm2` decoding please ensure port `5555` is mapped to the container.
-
 ### ACARS
 
 | Variable       | Description                                                                                                                                                                         | Required | Default |
@@ -194,7 +189,7 @@ Some notes about frequencies:
 
 ## Logging
 
-- All processes are logged to the container's stdout. If `QUIET_LOGS` is disabled, all received aircraft messages are logged to the container log as well. General logging can be viewed with `docker logs [-f] container`.
+All processes are logged to the container's stdout. If `QUIET_LOGS` is disabled, all received aircraft messages are logged to the container log as well. General logging can be viewed with `docker logs [-f] container`.
 
 ## A note about data sources used for the web site
 
@@ -261,6 +256,11 @@ And then you will be able to connect to `yourpisipaddress:15555` or `yourpisipad
 ## Future improvements
 
 ACARS decoding appears to be in active development, and as such, I expect a lot of movement in data-visualization and presentation to happen. This container will follow those developments and add in functionality as it appears.
+
+The following features are in active development:
+
+- A fresh new look to the website
+- Desktop application to view the data
 
 ## Getting Help
 
