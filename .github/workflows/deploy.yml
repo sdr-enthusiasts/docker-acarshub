@@ -286,7 +286,7 @@ jobs:
           cp webapp.tar.gz ../webapp.tar.gz
 
       # Build & Push Dockerfile (only push if this action was NOT triggered by a PR)
-      - name: Build & Push ghcr.io/sdr-enthusiasts/docker-acarshub:${{ env.VERSION_TAG_DOCKER }
+      - name: Build & Push ghcr.io/sdr-enthusiasts/docker-acarshub:${{ env.VERSION_TAG_DOCKER }}
         if: steps.changed-files-specific.outputs.any_changed == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         uses: docker/build-push-action@v2
         with:
