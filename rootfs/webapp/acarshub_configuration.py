@@ -58,29 +58,50 @@ def log(msg, source):
     logger.error(f"[{source}]: {msg}")
 
 
-if os.getenv("FEED", default=False):
+if os.getenv("FEED", default=False) and str(os.getenv("FEED")).upper() == "TRUE":
     FEED = True
 
-if os.getenv("DEBUG_LOGGING", default=False):
+if (
+    os.getenv("DEBUG_LOGGING", default=False)
+    and str(os.getenv("DEBUG_LOGGING")).upper() == "TRUE"
+):
     DEBUG_LOGGING = True
-if os.getenv("EXTREME_LOGGING", default=False):
+if (
+    os.getenv("EXTREME_LOGGING", default=False)
+    and str(os.getenv("EXTREME_LOGGING")).upper() == "TRUE"
+):
     EXTREME_LOGGING = True
-if os.getenv("QUIET_LOGS", default=False):
+if (
+    os.getenv("QUIET_LOGS", default=False)
+    and str(os.getenv("QUIET_LOGS")).upper() == "TRUE"
+):
     QUIET_LOGS = True
 
 # Application states
 
-if os.getenv("LOCAL_TEST", default=False):
+if (
+    os.getenv("LOCAL_TEST", default=False)
+    and str(os.getenv("LOCAL_TEST")).upper() == "TRUE"
+):
     LOCAL_TEST = True
     ACARS_WEB_PORT = 80
 if os.getenv("LIVE_DATA_SOURCE", default=False):
     LIVE_DATA_SOURCE = os.getenv("LIVE_DATA_SOURCE")
-if os.getenv("ENABLE_ACARS", default=False):
+if (
+    os.getenv("ENABLE_ACARS", default=False)
+    and str(os.getenv("ENABLE_ACARS")).upper() == "EXTERNAL"
+):
     ENABLE_ACARS = True
-if os.getenv("ENABLE_VDLM", default=False):
+if (
+    os.getenv("ENABLE_VDLM", default=False)
+    and str(os.getenv("ENABLE_VDLM")).upper() == "EXTERNAL"
+):
     ENABLE_VDLM = True
 
-if os.getenv("DB_SAVEALL", default=False):
+if (
+    os.getenv("DB_SAVEALL", default=False)
+    and str(os.getenv("DB_SAVEALL")).upper() == "TRUE"
+):
     DB_SAVEALL = True
 
 # Application Settings
@@ -119,7 +140,10 @@ else:
         "red coat",
     ]
 
-if os.getenv("ENABLE_ADSB", default=False) == "true":
+if (
+    os.getenv("ENABLE_ADSB", default=False)
+    and str(os.getenv("ENABLE_ADSB")).upper() == "TRUE"
+):
     ENABLE_ADSB = True
     if os.getenv("ADSB_URL", default=False):
         ADSB_URL = os.getenv("ADSB_URL", default=False)
@@ -133,7 +157,10 @@ if os.getenv("ENABLE_ADSB", default=False) == "true":
         ADSB_LON = float(os.getenv("ADSB_LON"))
     if os.getenv("ADSB_LAT", default=False):
         ADSB_LAT = float(os.getenv("ADSB_LAT"))
-    if os.getenv("DISABLE_RANGE_RINGS", default=False):
+    if (
+        os.getenv("DISABLE_RANGE_RINGS", default=False)
+        and str(os.getenv("DISABLE_RANGE_RINGS")).upper() == "TRUE"
+    ):
         ENABLE_RANGE_RINGS = False
 
 if os.getenv("ADSB_BYPASS_URL", default=False):
