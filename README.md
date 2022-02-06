@@ -45,7 +45,7 @@ Please see [this](Setting-Up-ACARSHub.md) for an example `docker-compose.yaml` f
 
 Please see [this](https://github.com/sdr-enthusiasts/Buster-Docker-Fixes) if you encounter `RTC/Real Time Clock` issues.
 
-## Pre-requisites/Totally new to docker but you think this looks cool?
+## Pre-requisites/Totally new to docker but you think this looks cool
 
 Welcome! New to docker but you love the idea of monitoring ACARS and/or ADSB data? You will to prepare your system to run this, but it's super easy!
 
