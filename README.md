@@ -90,7 +90,7 @@ If you wish to use `acars` decoding please ensure port `5550` is mapped to the c
 
 ## Up-and-Running
 
-The document below covers a lot of configuration options, however, most of them are not needed to get started. Please see [this](Setting-Up-ACARSHub.md) for an example `docker-compose.yaml` file that should get you off the ground.
+The document below covers a lot of configuration options, however, most of them are not needed to get started. Please see [this](Setting-Up-ACARSHub.MD) for an example `docker-compose.yaml` file that should get you off the ground.
 
 ## Ports
 
