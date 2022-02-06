@@ -45,7 +45,7 @@ jobs:
             .github/deploy.yml
 
       - name: Login to ghcr.io
-        if: steps.changed-files-specific.outputs.any_changed == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
+        if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         uses: docker/login-action@v1
         with:
           registry: ${{ env.REGISTRY }}
@@ -55,25 +55,25 @@ jobs:
       # Get metadata from repo
       - name: Extract metadata (tags, labels) for Docker
         id: meta
-        if: steps.changed-files-specific.outputs.any_changed == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
+        if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         uses: docker/metadata-action@v3
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
 
       # Set up QEMU for multi-arch builds
       - name: Set up QEMU
-        if: steps.changed-files-specific.outputs.any_changed == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
+        if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         uses: docker/setup-qemu-action@v1
 
       # Set up buildx for multi platform builds
       - name: Set up Docker Buildx
         id: buildx
-        if: steps.changed-files-specific.outputs.any_changed == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
+        if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         uses: docker/setup-buildx-action@v1
 
       # Build & Push Dockerfile (only push if this action was NOT triggered by a PR)
       - name: Build & Push ghcr.io/sdr-enthusiasts/docker-acarshub:nextgen
-        if: steps.changed-files-specific.outputs.any_changed == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
+        if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         uses: docker/build-push-action@v2
         with:
           context: .
@@ -112,31 +112,31 @@ jobs:
       # --format="%ct" : committer date, UNIX timestamp
       # Then using `date` to format to YYYYMMDD format
       - name: Get version tag from file
-        if: steps.changed-files-specific.outputs.any_changed == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
+        if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         run: |
           echo "VERSION_TAG=$(sed '1!d' ./version)" >> $GITHUB_ENV
           echo "VERSION_TAG_DOCKER=$(sed '2!d' ./version)" >> $GITHUB_ENV
 
       # Show version tag
       - name: Show version tag
-        if: steps.changed-files-specific.outputs.any_changed == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
+        if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         run: |
           echo "ACARS Hub Version: ${{ env.VERSION_TAG }}"
           echo "ACARS Hub Docker Version: ${{ env.VERSION_TAG_DOCKER }}"
 
       # Set version tag in webapp
       - name: Patch webapp with VERSION_TAG
-        if: steps.changed-files-specific.outputs.any_changed == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
+        if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         run: |
           sed -i 's/Pre-Release/ACARS Hub Version: ${{ env.VERSION_TAG }}/' ./acarshub-typescript/src/helpers/menu.ts
 
       - name: Create version file
-        if: steps.changed-files-specific.outputs.any_changed == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
+        if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         run: |
           echo "${{ env.VERSION_TAG }}" >> ./rootfs/acarshub-version
 
       - name: Login to ghcr.io
-        if: steps.changed-files-specific.outputs.any_changed == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
+        if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         uses: docker/login-action@v1
         with:
           registry: ${{ env.REGISTRY }}
@@ -146,26 +146,26 @@ jobs:
       # Get metadata from repo
       - name: Extract metadata (tags, labels) for Docker
         id: meta
-        if: steps.changed-files-specific.outputs.any_changed == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
+        if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         uses: docker/metadata-action@v3
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
 
       # Set up QEMU for multi-arch builds
       - name: Set up QEMU
-        if: steps.changed-files-specific.outputs.any_changed == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
+        if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         uses: docker/setup-qemu-action@v1
 
       # Set up buildx for multi platform builds
       - name: Set up Docker Buildx
         id: buildx
-        if: steps.changed-files-specific.outputs.any_changed == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
+        if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         uses: docker/setup-buildx-action@v1
 
       # build acarshub typescript
 
       - name: Build ACARSHub typescript
-        if: steps.changed-files-specific.outputs.any_changed == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
+        if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         working-directory: ./acarshub-typescript
         run: |
           npm install
@@ -183,7 +183,7 @@ jobs:
 
       # Build & Push Dockerfile (only push if this action was NOT triggered by a PR)
       - name: Build & Push ghcr.io/sdr-enthusiasts/docker-acarshub:latest
-        if: steps.changed-files-specific.outputs.any_changed == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
+        if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         uses: docker/build-push-action@v2
         with:
           context: .
@@ -222,31 +222,31 @@ jobs:
       # --format="%ct" : committer date, UNIX timestamp
       # Then using `date` to format to YYYYMMDD format
       - name: Get version tag from file
-        if: steps.changed-files-specific.outputs.any_changed == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
+        if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         run: |
           echo "VERSION_TAG=$(sed '1!d' ./version)" >> $GITHUB_ENV
           echo "VERSION_TAG_DOCKER=$(sed '2!d' ./version)" >> $GITHUB_ENV
 
       # Show version tag
       - name: Show version tag
-        if: steps.changed-files-specific.outputs.any_changed == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
+        if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         run: |
           echo "ACARS Hub Version: ${{ env.VERSION_TAG }}"
           echo "ACARS Hub Docker Version: ${{ env.VERSION_TAG_DOCKER }}"
 
       # Set version tag in webapp
       - name: Patch webapp with VERSION_TAG
-        if: steps.changed-files-specific.outputs.any_changed == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
+        if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         run: |
           sed -i 's/Pre-Release/ACARS Hub Version: ${{ env.VERSION_TAG }}/' ./acarshub-typescript/src/helpers/menu.ts
 
       - name: Create version file
-        if: steps.changed-files-specific.outputs.any_changed == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
+        if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         run: |
           echo "${{ env.VERSION_TAG }}" >> ./rootfs/acarshub-version
 
       - name: Login to ghcr.io
-        if: steps.changed-files-specific.outputs.any_changed == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
+        if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         uses: docker/login-action@v1
         with:
           registry: ${{ env.REGISTRY }}
@@ -256,26 +256,26 @@ jobs:
       # Get metadata from repo
       - name: Extract metadata (tags, labels) for Docker
         id: meta
-        if: steps.changed-files-specific.outputs.any_changed == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
+        if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         uses: docker/metadata-action@v3
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
 
       # Set up QEMU for multi-arch builds
       - name: Set up QEMU
-        if: steps.changed-files-specific.outputs.any_changed == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
+        if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         uses: docker/setup-qemu-action@v1
 
       # Set up buildx for multi platform builds
       - name: Set up Docker Buildx
         id: buildx
-        if: steps.changed-files-specific.outputs.any_changed == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
+        if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         uses: docker/setup-buildx-action@v1
 
       # build acarshub typescript
 
       - name: Build ACARSHub typescript
-        if: steps.changed-files-specific.outputs.any_changed == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
+        if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         working-directory: ./acarshub-typescript
         run: |
           npm install
@@ -293,7 +293,7 @@ jobs:
 
       # Build & Push Dockerfile (only push if this action was NOT triggered by a PR)
       - name: Build & Push ghcr.io/sdr-enthusiasts/docker-acarshub:${{ env.VERSION_TAG_DOCKER }}
-        if: steps.changed-files-specific.outputs.any_changed == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
+        if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         uses: docker/build-push-action@v2
         with:
           context: .
@@ -331,31 +331,31 @@ jobs:
       # --format="%ct" : committer date, UNIX timestamp
       # Then using `date` to format to YYYYMMDD format
       - name: Get version tag from file
-        if: steps.changed-files-specific.outputs.any_changed == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
+        if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         run: |
           echo "VERSION_TAG=$(sed '1!d' ./version)" >> $GITHUB_ENV
           echo "VERSION_TAG_DOCKER=$(sed '2!d' ./version)" >> $GITHUB_ENV
 
       # Show version tag
       - name: Show version tag
-        if: steps.changed-files-specific.outputs.any_changed == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
+        if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         run: |
           echo "ACARS Hub Version: ${{ env.VERSION_TAG }}"
           echo "ACARS Hub Docker Version: ${{ env.VERSION_TAG_DOCKER }}"
 
       # Set version tag in webapp
       - name: Patch webapp with VERSION_TAG
-        if: steps.changed-files-specific.outputs.any_changed == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
+        if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         run: |
           sed -i 's/Pre-Release/ACARS Hub Version: ${{ env.VERSION_TAG }}/' ./acarshub-typescript/src/helpers/menu.ts
 
       - name: Create version file
-        if: steps.changed-files-specific.outputs.any_changed == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
+        if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         run: |
           echo "${{ env.VERSION_TAG }}" >> ./rootfs/acarshub-version
 
       - name: Login to ghcr.io
-        if: steps.changed-files-specific.outputs.any_changed == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
+        if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         uses: docker/login-action@v1
         with:
           registry: ${{ env.REGISTRY }}
@@ -365,26 +365,26 @@ jobs:
       # Get metadata from repo
       - name: Extract metadata (tags, labels) for Docker
         id: meta
-        if: steps.changed-files-specific.outputs.any_changed == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
+        if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         uses: docker/metadata-action@v3
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
 
       # Set up QEMU for multi-arch builds
       - name: Set up QEMU
-        if: steps.changed-files-specific.outputs.any_changed == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
+        if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         uses: docker/setup-qemu-action@v1
 
       # Set up buildx for multi platform builds
       - name: Set up Docker Buildx
         id: buildx
-        if: steps.changed-files-specific.outputs.any_changed == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
+        if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         uses: docker/setup-buildx-action@v1
 
       # build acarshub typescript
 
       - name: Build ACARSHub typescript
-        if: steps.changed-files-specific.outputs.any_changed == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
+        if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         working-directory: ./acarshub-typescript
         run: |
           npm install
@@ -402,12 +402,12 @@ jobs:
 
       # Patch dockerfile to remove healthcheck
       - name: Patch Dockerfile to remove healthcheck
-        if: steps.changed-files-specific.outputs.any_changed == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
+        if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         run: sed '/^HEALTHCHECK /d' < Dockerfile.acarshub > Dockerfile.acarshub.nohealthcheck
 
       # Build & Push Dockerfile (only push if this action was NOT triggered by a PR)
       - name: Build & Push ghcr.io/sdr-enthusiasts/docker-acarshub:latest_nohealthcheck
-        if: steps.changed-files-specific.outputs.any_changed == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
+        if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         uses: docker/build-push-action@v2
         with:
           context: .
@@ -445,31 +445,31 @@ jobs:
       # --format="%ct" : committer date, UNIX timestamp
       # Then using `date` to format to YYYYMMDD format
       - name: Get version tag from file
-        if: steps.changed-files-specific.outputs.any_changed == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
+        if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         run: |
           echo "VERSION_TAG=$(sed '1!d' ./version)" >> $GITHUB_ENV
           echo "VERSION_TAG_DOCKER=$(sed '2!d' ./version)" >> $GITHUB_ENV
 
       # Show version tag
       - name: Show version tag
-        if: steps.changed-files-specific.outputs.any_changed == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
+        if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         run: |
           echo "ACARS Hub Version: ${{ env.VERSION_TAG }}"
           echo "ACARS Hub Docker Version: ${{ env.VERSION_TAG_DOCKER }}"
 
       # Set version tag in webapp
       - name: Patch webapp with VERSION_TAG
-        if: steps.changed-files-specific.outputs.any_changed == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
+        if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         run: |
           sed -i 's/Pre-Release/ACARS Hub Version: ${{ env.VERSION_TAG }}/' ./acarshub-typescript/src/helpers/menu.ts
 
       - name: Create version file
-        if: steps.changed-files-specific.outputs.any_changed == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
+        if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         run: |
           echo "${{ env.VERSION_TAG }}" >> ./rootfs/acarshub-version
 
       - name: Login to ghcr.io
-        if: steps.changed-files-specific.outputs.any_changed == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
+        if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         uses: docker/login-action@v1
         with:
           registry: ${{ env.REGISTRY }}
@@ -479,26 +479,26 @@ jobs:
       # Get metadata from repo
       - name: Extract metadata (tags, labels) for Docker
         id: meta
-        if: steps.changed-files-specific.outputs.any_changed == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
+        if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         uses: docker/metadata-action@v3
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
 
       # Set up QEMU for multi-arch builds
       - name: Set up QEMU
-        if: steps.changed-files-specific.outputs.any_changed == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
+        if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         uses: docker/setup-qemu-action@v1
 
       # Set up buildx for multi platform builds
       - name: Set up Docker Buildx
         id: buildx
-        if: steps.changed-files-specific.outputs.any_changed == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
+        if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         uses: docker/setup-buildx-action@v1
 
       # build acarshub typescript
 
       - name: Build ACARSHub typescript
-        if: steps.changed-files-specific.outputs.any_changed == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
+        if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         working-directory: ./acarshub-typescript
         run: |
           npm install
@@ -516,12 +516,12 @@ jobs:
 
       # Patch dockerfile to remove healthcheck
       - name: Patch Dockerfile to remove healthcheck
-        if: steps.changed-files-specific.outputs.any_changed == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
+        if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         run: sed '/^HEALTHCHECK /d' < Dockerfile.acarshub > Dockerfile.acarshub.nohealthcheck
 
       # Build & Push Dockerfile (only push if this action was NOT triggered by a PR)
       - name: Build & Push ghcr.io/sdr-enthusiasts/docker-acarshub:${{ env.VERSION_TAG_DOCKER }}_nohealthcheck
-        if: steps.changed-files-specific.outputs.any_changed == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
+        if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         uses: docker/build-push-action@v2
         with:
           context: .
