@@ -61,7 +61,8 @@ services:
       - /dev/bus/usb:/dev/bus/usb
     ports:
       - 8080:80
-      - 14444:14444
+      - 5550:5550/udp
+      - 5555:5555/udp
       - 15550:15550
       - 15555:15555
     volumes:
@@ -74,14 +75,14 @@ services:
       - TZ=Etc/UTC
       - ENABLE_VDLM=false
       - ENABLE_ACARS=false
- #      - FEED=true
+      #      - FEED=true
       - QUIET_LOGS=true
- #      - TAR1090_URL=http://tar1090
- #      - IATA_OVERRIDE=UP|UPS|United Parcel Service;GS|FTH|Mountain Aviation (Foothills);GS|EJA|ExecJet
- #      - ENABLE_ADSB=true
- #      - ADSB_LAT=
- #      - ADSB_LON=
- #      - ADSB_URL=
+  #      - TAR1090_URL=http://tar1090
+  #      - IATA_OVERRIDE=UP|UPS|United Parcel Service;GS|FTH|Mountain Aviation (Foothills);GS|EJA|ExecJet
+  #      - ENABLE_ADSB=true
+  #      - ADSB_LAT=
+  #      - ADSB_LON=
+  #      - ADSB_URL=
 
   ### Remove this section if you are NOT decoding ACARS
   acarsdec:

@@ -94,13 +94,13 @@ The document below covers a lot of configuration options, however, most of them 
 
 ## Ports
 
-| Port    | Description                              |
-| ------- | ---------------------------------------- |
-| `80`    | Port used for the web interface          |
-| `5550`  | Port used for pushing ACARS JSON data to |
-| `5555`  | Port used for pushing VDLM2 JSON data to |
-| `15550` | Port used for exposing JSON ACARS data   |
-| `15555` | Port used for exposing JSON VDLM2 data   |
+| Port       | Description                              |
+| ---------- | ---------------------------------------- |
+| `80`       | Port used for the web interface          |
+| `5550/udp` | Port used for pushing ACARS JSON data to |
+| `5555/udp` | Port used for pushing VDLM2 JSON data to |
+| `15550`    | Port used for exposing JSON ACARS data   |
+| `15555`    | Port used for exposing JSON VDLM2 data   |
 
 ## Volumes / Database
 
@@ -240,8 +240,8 @@ If you wish to access the JSON data that the decoders `acarsdec` and `dumpvdl2` 
 ```yaml
 ports:
   - 80:80
-  - 5550:5550
-  - 5555:5555
+  - 5550:5550/udp
+  - 5555:5555/udp
   - 15550:15550
   - 15555:15555
 ```
