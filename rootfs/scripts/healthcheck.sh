@@ -210,7 +210,7 @@ if [[ ${ENABLE_ACARS,,} =~ external ]]; then
 fi
 
 # If either ENABLE_VDLM or ENABLE_ACARS is set:
-if [[ ${ENABLE_ACARS,,} =~ true ]] || [[ ${ENABLE_VDLM,,} =~ true ]]; then
+if [[ ${ENABLE_ACARS,,} =~ external ]] || [[ ${ENABLE_VDLM,,} =~ external ]]; then
 
   echo "==== Check webapp ====="
 

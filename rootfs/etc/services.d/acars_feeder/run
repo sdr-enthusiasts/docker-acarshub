@@ -1,7 +1,7 @@
 #!/usr/bin/with-contenv bash
 # shellcheck shell=bash
 
-if [[  ${ENABLE_ACARS,,} =~ true ]]; then
+if [[  ${ENABLE_ACARS,,} =~ external ]]; then
   if [[  ${FEED,,} =~ true ]]; then
 
     set -o pipefail

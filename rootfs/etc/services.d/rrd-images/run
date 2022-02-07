@@ -12,17 +12,17 @@ if [[ ${ENABLE_WEB,,} =~ true ]]; then
     ARGS_VDLM=("-a" "PNG" "-w" "1000" "-h" "200"  "--vertical-label" "Messages" "--slope-mode")
     ARGS_ACARS=("-a" "PNG" "-w" "1000" "-h" "200"  "--vertical-label" "Messages" "--slope-mode")
 
-    if [[ ${ENABLE_ACARS,,} =~ true ]]; then
+    if [[ ${ENABLE_ACARS,,} =~ external ]]; then
         ARGS_ALL+=("DEF:messages-acars=/run/acars/acarshub.rrd:ACARS:AVERAGE" "LINE1:messages-acars#000000:ACARS")
         ARGS_ACARS+=("DEF:messages-acars=/run/acars/acarshub.rrd:ACARS:AVERAGE" "LINE1:messages-acars#000000:ACARS")
     fi
 
-    if [[ ${ENABLE_VDLM,,} =~ true ]]; then
+    if [[ ${ENABLE_VDLM,,} =~ external ]]; then
         ARGS_ALL+=("DEF:messages-vdlm=/run/acars/acarshub.rrd:VDLM:AVERAGE" "LINE1:messages-vdlm#0000FF:VDLM")
         ARGS_VDLM+=("DEF:messages-vdlm=/run/acars/acarshub.rrd:VDLM:AVERAGE" "LINE1:messages-vdlm#0000FF:VDLM")
     fi
 
-    if [[  ${ENABLE_VDLM,,} =~ true ]]  && [[ ${ENABLE_ACARS,,} =~ true ]]; then
+    if [[  ${ENABLE_VDLM,,} =~ external ]]  && [[ ${ENABLE_ACARS,,} =~ external ]]; then
         ARGS_ALL+=("DEF:messages-total=/run/acars/acarshub.rrd:TOTAL:AVERAGE" "LINE1:messages-total#00ff00:Total")
     fi
 
@@ -59,7 +59,7 @@ if [[ ${ENABLE_WEB,,} =~ true ]]; then
             rrdtool graph "${OUTPUT_DIR}/error1year.png" --title "1 Year" --start "-1y" "${ARGS_ERROR[@]}" >/dev/null 2>&1
         fi
 
-        if [[ ${ENABLE_VDLM,,} =~ true ]] && [[ ${ENABLE_ACARS,,} =~ true ]]; then
+        if [[ ${ENABLE_VDLM,,} =~ external ]] && [[ ${ENABLE_ACARS,,} =~ external ]]; then
             # ACARS Graphs
             rrdtool graph "${OUTPUT_DIR}/acars1hour.png" --title "1 Hour" --start "-1h" "${ARGS_ACARS[@]}" >/dev/null 2>&1
             rrdtool graph "${OUTPUT_DIR}/acars6hour.png" --title "6 Hours" --start "-6h" "${ARGS_ACARS[@]}" >/dev/null 2>&1
