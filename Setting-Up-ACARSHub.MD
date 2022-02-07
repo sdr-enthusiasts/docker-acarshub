@@ -14,8 +14,8 @@ Please use the `yaml` file below and save it to your computer with docker instal
 
 ACARS Hub:
 
-- If you intend to feed VDLM, change `ENABLE_VDLM=false` to `ENABLE_VDLM=external`
-- If you intend to feed ACARS, change `ENABLE_ACARS=false` to `ENABLE_ACARS=external`
+- If you intend to feed VDLM, change `ENABLE_VDLM=false` to `ENABLE_VDLM=true`
+- If you intend to feed ACARS, change `ENABLE_ACARS=false` to `ENABLE_ACARS=true`
 - If you wish to feed ACARS data to [airframes](airframes.io) remove the `#` from the start of the line
 - If you have a local `tar1090` instance and want to be able to click on a link in the message to see that plane on it,
   - Remove the `#` from the start of the line
@@ -118,7 +118,7 @@ services:
       - QUIET_LOGS=true
       - TZ=Etc/UTC
       - SERIAL=
-      - GAIN=400
+      - GAIN=40.0
       - PPM=0
       - FREQUENCIES=136650000;136700000;136975000;136925000;136800000
       - FEED_ID=
