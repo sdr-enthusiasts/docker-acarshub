@@ -11,7 +11,7 @@ on:
       - "Dockerfile.acarshub"
       - "Dockerfile.acarshub-nextgen"
       - "rootfs/**"
-      - ".github/test-pr.yml"
+      - "**test-pr.yml"
       - "version$"
 
 env:
@@ -67,6 +67,7 @@ jobs:
 
   acarshub-typescript:
     runs-on: ubuntu-latest
+    needs: [hadolint, shellcheck, flake8]
     steps:
       # Check out our code
       - name: Checkout
@@ -107,6 +108,13 @@ jobs:
           tar cvfz webapp.tar.gz ./webapp
           cp webapp.tar.gz ../webapp.tar.gz
 
+      - name: Save webapp.tar.gz
+        uses: actions/upload-artifact@v2
+        with:
+          name: webapp
+          path: |
+            ./webapp.tar.gz
+
   hadolint:
     runs-on: ubuntu-latest
 
@@ -120,7 +128,7 @@ jobs:
   deploy_ghcr_nextgen_test:
     name: Deploy ACARS Hub Next Gen Base Image
     runs-on: ubuntu-latest
-    needs: [hadolint, shellcheck, flake8, markdownlint, acarshub-typescript]
+    needs: [acarshub-typescript]
     steps:
       # Check out our code
       - name: Checkout
@@ -132,7 +140,7 @@ jobs:
         with:
           files: |
             Dockerfile.nextgen
-            .github/test-pr.yml
+            **test-pr.yml
             rootfs/webapp/requirements.txt
 
       - name: Login to ghcr.io
@@ -179,14 +187,9 @@ jobs:
     name: Deploy to test to GHCR
     runs-on: ubuntu-latest
     needs:
-      [
-        deploy_ghcr_nextgen_test,
-        hadolint,
-        shellcheck,
-        flake8,
-        markdownlint,
-        acarshub-typescript,
-      ]
+      - acarshub-typescript
+      - deploy_ghcr_nextgen_test
+
     steps:
       # Check out our code
       - name: Checkout
@@ -201,8 +204,8 @@ jobs:
             Dockerfile.acarshub
             acarshub-typescript/**
             rootfs/**
-            .github/test-pr.yml
-            version$
+            **test-pr.yml
+            version
 
       - name: Get status of next file
         id: changed-file-nextgen
@@ -210,6 +213,12 @@ jobs:
         with:
           files: |
             Dockerfile.nextgen
+
+      - name: Download webapp
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        uses: actions/download-artifact@v2
+        with:
+          name: webapp
 
       - name: Get version tag from file
         if: steps.changed-files-specific.outputs.any_changed == 'true'
@@ -223,12 +232,6 @@ jobs:
         run: |
           echo "ACARS Hub Version: ${{ env.VERSION_TAG }}"
           echo "ACARS Hub Docker Version: ${{ env.VERSION_TAG_DOCKER }}"
-
-      # Set version tag in webapp
-      - name: Patch webapp with VERSION_TAG
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
-        run: |
-          sed -i 's/Pre-Release/ACARS Hub NextGen Version: ${{ env.VERSION_TAG }}/' ./acarshub-typescript/src/helpers/menu.ts
 
       - name: Create version file
         if: steps.changed-files-specific.outputs.any_changed == 'true'
@@ -262,24 +265,24 @@ jobs:
         if: steps.changed-files-specific.outputs.any_changed == 'true'
         uses: docker/setup-buildx-action@v1
 
-      # build acarshub typescript
+      # # build acarshub typescript
 
-      - name: Build ACARSHub typescript
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
-        working-directory: ./acarshub-typescript
-        run: |
-          npm install
-          npm run build
-          mkdir -p ./webapp/static/images
-          mkdir -p ./webapp/static/js
-          mkdir -p ./webapp/static/sounds
-          mkdir -p ./webapp/templates
-          cp -r ./dist/static/images ./webapp/static/
-          cp -r ./dist/static/sounds ./webapp/static/
-          cp -r ./dist/static/js ./webapp/static/
-          mv ./dist/static/index.html ./webapp/templates/
-          tar cvfz webapp.tar.gz ./webapp
-          cp webapp.tar.gz ../webapp.tar.gz
+      # - name: Build ACARSHub typescript
+      #   if: steps.changed-files-specific.outputs.any_changed == 'true'
+      #   working-directory: ./acarshub-typescript
+      #   run: |
+      #     npm install
+      #     npm run build
+      #     mkdir -p ./webapp/static/images
+      #     mkdir -p ./webapp/static/js
+      #     mkdir -p ./webapp/static/sounds
+      #     mkdir -p ./webapp/templates
+      #     cp -r ./dist/static/images ./webapp/static/
+      #     cp -r ./dist/static/sounds ./webapp/static/
+      #     cp -r ./dist/static/js ./webapp/static/
+      #     mv ./dist/static/index.html ./webapp/templates/
+      #     tar cvfz webapp.tar.gz ./webapp
+      #     cp webapp.tar.gz ../webapp.tar.gz
 
       - name: Patch Dockerfile if Nextgen was built for this branch
         if: steps.changed-file-nextgen.outputs.any_changed == 'true'
