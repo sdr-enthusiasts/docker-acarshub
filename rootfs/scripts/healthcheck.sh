@@ -50,67 +50,6 @@ function get_pid_of_decoder() {
 
 }
 
-# ===== Check acarsdec & dumpvdl2 processes =====
-
-# For each service...
-# for service_dir in /etc/services.d/*; do
-# service_name=$(basename "$service_dir")
-
-# # If the service is acarsdec-*...
-# if [[ "$service_name" =~ acarsdec-.+ ]]; then
-
-#   # If acarsdec is enabled...
-#   if [ -n "${ENABLE_ACARS}" ]; then
-#     decoder_pid=$(get_pid_of_decoder "$service_dir")
-#     decoder_udp_port="5550"
-#     decoder_server_prefix="acars"
-#   else
-#     # We shouldn't ever get here because if acarsdec is disabled, the template wouldn't have been converted to a service
-#     echo "Found acarsdec service directory when ENABLE_ACARS not set: UNHEALTHY"
-#     EXITCODE=1
-#     continue
-#   fi
-
-# # If the service is dumpvdl2-*...
-# elif [[ "$service_name" =~ dumpvdl2-.+ ]]; then
-
-#   # If dumpvdl2 is enabled...
-#   if [ -n "${ENABLE_VDLM}" ]; then
-#     decoder_pid=$(get_pid_of_decoder "$service_dir")
-#     decoder_udp_port="5555"
-#     decoder_server_prefix="vdlm2"
-#   else
-#     # We shouldn't ever get here because if dumpvdl2 is disabled, the template wouldn't have been converted to a service
-#     echo "Found dumpvdl2 service directory when ENABLE_VDLM not set: UNHEALTHY"
-#     EXITCODE=1
-#     continue
-#   fi
-
-# # If the server isn't acarsdec-* or dumpvdl2-*...
-# else
-#   # skip it!
-#   continue
-# fi
-
-# If the process doesn't exists, then fail
-
-#   echo "==== Checking $service_name ====="
-
-#   if [[ -z "$decoder_pid" ]]; then
-#     echo "Cannot find PID of decoder $service_name: UNHEALTHY"
-#     EXITCODE=1
-#   else
-#     # If the process does exist, then make sure it has made a connection to localhost on the relevant port.
-#     if ! check_udp4_connection_established_for_pid "127.0.0.1" "ANY" "127.0.0.1" "$decoder_udp_port" "$decoder_pid"; then
-#       echo "Decoder $service_name (pid $decoder_pid) not connected to ${decoder_server_prefix}_server at 127.0.0.1:$decoder_udp_port: UNHEALTHY"
-#       EXITCODE=1
-#     else
-#       echo "Decoder $service_name (pid $decoder_pid) is connected to ${decoder_server_prefix}_server at 127.0.0.1:$decoder_udp_port: HEALTHY"
-#     fi
-#   fi
-
-# done
-
 # ===== Check vdlm2_server, vdlm2_feeder, vdlm2_stats processes =====
 
 if [[ ${ENABLE_VDLM,,} =~ external ]]; then
@@ -126,7 +65,7 @@ if [[ ${ENABLE_VDLM,,} =~ external ]]; then
     echo "vdlm2_server TCP listening on port 15555 (pid $vdlm2_pidof_vdlm2_tcp_server): HEALTHY"
   fi
 
-  if [ -n "${ENABLE_WEB}" ]; then
+  if [[ ${ENABLE_WEB,,} =~ true ]]; then
     if ! netstat -anp | grep -P "tcp\s+\d+\s+\d+\s+127.0.0.1:[0-9]+\s+127.0.0.1:15555\s+ESTABLISHED\s+[0-9]+/python3" > /dev/null 2>&1; then
       echo "TCP4 connection between 127.0.0.1:ANY and 127.0.0.1:15555 for python3 established: FAIL"
       echo "vdlm2_server TCP connected to python server on port 15555 (pid $vdlm2_pidof_vdlm2_tcp_server): UNHEALTHY"
@@ -139,7 +78,7 @@ if [[ ${ENABLE_VDLM,,} =~ external ]]; then
 
   #### REMOVE AFTER AIRFRAMES IS UPDATED ####
   # Check vdlm2_feeder
-  if [ -n "${FEED}" ]; then
+  if [[ ${FEED,,} =~ true ]]; then
     echo "vdlm2_feeder (pid 0) is feeding: HEALTHY"
     # echo "==== Checking vdlm2_feeder ====="
 
@@ -207,7 +146,7 @@ if [[ ${ENABLE_ACARS,,} =~ external ]]; then
     echo "acars_server TCP listening on port 15550 (pid $acars_pidof_acars_tcp_server): HEALTHY"
   fi
 
-  if [ -n "${ENABLE_WEB}" ]; then
+  if [[ ${ENABLE_WEB,,} =~ true ]]; then
     if ! netstat -anp | grep -P "tcp\s+\d+\s+\d+\s+127.0.0.1:[0-9]+\s+127.0.0.1:15550\s+ESTABLISHED\s+[0-9]+/python3" > /dev/null 2>&1; then
       echo "acars_server TCP4 connection between 127.0.0.1:ANY and 127.0.0.1:15550 for python3 established: FAIL"
       echo "acars_server TCP not connected to python server on port 15550: UNHEALTHY"
@@ -219,7 +158,7 @@ if [[ ${ENABLE_ACARS,,} =~ external ]]; then
   fi
 
   # Check acars_feeder
-  if [ -n "${FEED}" ]; then
+  if [[ ${FEED,,} =~ true ]]; then
 
     echo "==== Checking acars_feeder ====="
 
@@ -271,7 +210,7 @@ if [[ ${ENABLE_ACARS,,} =~ external ]]; then
 fi
 
 # If either ENABLE_VDLM or ENABLE_ACARS is set:
-if [ -n "${ENABLE_ACARS}" ] || [ -n "${ENABLE_VDLM}" ]; then
+if [[ ${ENABLE_ACARS,,} =~ external ]] || [[ ${ENABLE_VDLM,,} =~ external ]]; then
 
   echo "==== Check webapp ====="
 

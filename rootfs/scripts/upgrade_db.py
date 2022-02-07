@@ -85,11 +85,17 @@ import sys
 # term = Column("term", String(32), nullable=False)
 # type_of_match = Column("type_of_match", String(32), nullable=False)
 
-if os.getenv("LOCAL_TEST", default=False):
+if (
+    os.getenv("LOCAL_TEST", default=False)
+    and str(os.getenv("LOCAL_TEST", default=False)).upper() == "TRUE"
+):
     path_to_db = os.getenv("DB_PATH")
 else:
     path_to_db = "/run/acars/messages.db"
-if os.getenv("QUIET_LOGS", default=False):
+if (
+    os.getenv("QUIET_LOGS", default=False)
+    and str(os.getenv("QUIET_LOGS", default=False)).upper() == "TRUE"
+):
     be_quiet = True
 else:
     be_quiet = False
@@ -502,7 +508,10 @@ if __name__ == "__main__":
         conn.commit()
 
         result = [i for i in cur.execute("PRAGMA auto_vacuum")]
-        if result[0][0] != 0 or os.getenv("AUTO_VACUUM", default=False):
+        if result[0][0] != 0 or (
+            os.getenv("AUTO_VACUUM", default=False)
+            and str(os.getenv("AUTO_VACUUM")).upper() == "TRUE"
+        ):
             print("Reclaiming disk space")
             sys.stdout.flush()
             cur.execute("PRAGMA auto_vacuum = '0';")

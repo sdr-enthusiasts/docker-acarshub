@@ -1,7 +1,7 @@
 #!/usr/bin/with-contenv bash
 # shellcheck shell=bash
 
-if [ -n "${ENABLE_WEB}" ]; then
+if [[ ${ENABLE_WEB,,} =~ true ]]; then
     while [[ ! -e /run/acars/acarshub.rrd ]]; do
         sleep 5
     done
@@ -12,24 +12,24 @@ if [ -n "${ENABLE_WEB}" ]; then
     ARGS_VDLM=("-a" "PNG" "-w" "1000" "-h" "200"  "--vertical-label" "Messages" "--slope-mode")
     ARGS_ACARS=("-a" "PNG" "-w" "1000" "-h" "200"  "--vertical-label" "Messages" "--slope-mode")
 
-    if [[ -n "${ENABLE_ACARS}" ]]; then
+    if [[ ${ENABLE_ACARS,,} =~ external ]]; then
         ARGS_ALL+=("DEF:messages-acars=/run/acars/acarshub.rrd:ACARS:AVERAGE" "LINE1:messages-acars#000000:ACARS")
         ARGS_ACARS+=("DEF:messages-acars=/run/acars/acarshub.rrd:ACARS:AVERAGE" "LINE1:messages-acars#000000:ACARS")
     fi
 
-    if [[ -n "${ENABLE_VDLM}" ]]; then
+    if [[ ${ENABLE_VDLM,,} =~ external ]]; then
         ARGS_ALL+=("DEF:messages-vdlm=/run/acars/acarshub.rrd:VDLM:AVERAGE" "LINE1:messages-vdlm#0000FF:VDLM")
         ARGS_VDLM+=("DEF:messages-vdlm=/run/acars/acarshub.rrd:VDLM:AVERAGE" "LINE1:messages-vdlm#0000FF:VDLM")
     fi
 
-    if [[ -n "$ENABLE_VDLM" && -n "$ENABLE_ACARS" ]]; then
+    if [[  ${ENABLE_VDLM,,} =~ external ]]  && [[ ${ENABLE_ACARS,,} =~ external ]]; then
         ARGS_ALL+=("DEF:messages-total=/run/acars/acarshub.rrd:TOTAL:AVERAGE" "LINE1:messages-total#00ff00:Total")
     fi
 
     ARGS_ALL+=("DEF:messages-error=/run/acars/acarshub.rrd:ERROR:AVERAGE" "LINE1:messages-error#ff0000:Error")
     ARGS_ERROR+=("DEF:messages-error=/run/acars/acarshub.rrd:ERROR:AVERAGE" "LINE1:messages-error#ff0000:Error")
     while true; do
-        if [[ -n "${VERBOSE_LOGS}" ]]; then
+        if [[ ${VERBOSE_LOGS,,} =~ true ]]; then
             #shellcheck disable=SC2016
             echo "starting graph generation" | stdbuf -oL awk '{print "[rrd-graph] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
         fi
@@ -59,7 +59,7 @@ if [ -n "${ENABLE_WEB}" ]; then
             rrdtool graph "${OUTPUT_DIR}/error1year.png" --title "1 Year" --start "-1y" "${ARGS_ERROR[@]}" >/dev/null 2>&1
         fi
 
-        if [[ -n "${ENABLE_VDLM}" && -n "${ENABLE_ACARS}" ]]; then
+        if [[ ${ENABLE_VDLM,,} =~ external ]] && [[ ${ENABLE_ACARS,,} =~ external ]]; then
             # ACARS Graphs
             rrdtool graph "${OUTPUT_DIR}/acars1hour.png" --title "1 Hour" --start "-1h" "${ARGS_ACARS[@]}" >/dev/null 2>&1
             rrdtool graph "${OUTPUT_DIR}/acars6hour.png" --title "6 Hours" --start "-6h" "${ARGS_ACARS[@]}" >/dev/null 2>&1
@@ -86,7 +86,7 @@ if [ -n "${ENABLE_WEB}" ]; then
             fi
         fi
 
-        if [[ -n "${VERBOSE_LOGS}" ]]; then
+        if [[ ${VERBOSE_LOGS,,} =~ true ]]; then
             #shellcheck disable=SC2016
             echo "completed graph generation" | stdbuf -oL awk '{print "[rrd-graph] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
         fi

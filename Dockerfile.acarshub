@@ -2,10 +2,11 @@
 FROM ghcr.io/sdr-enthusiasts/docker-acarshub:nextgen
 
 ENV FEED="" \
-    ENABLE_ACARS="" \
-    ENABLE_VDLM="" \
+    ENABLE_ACARS="false" \
+    ENABLE_VDLM="false" \
+    ENABLE_ADSB="false" \
     ENABLE_WEB="true" \
-    QUIET_LOGS="" \
+    QUIET_LOGS="false" \
     QUIET_MESSAGES="true" \
     DB_SAVEALL="true" \
     ENABLE_RANGE_RINGS="true" \

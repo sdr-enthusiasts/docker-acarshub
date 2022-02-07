@@ -1327,8 +1327,8 @@ export let live_map_page = {
         .custom({
           position: "topleft",
           content:
-            '<button type="button" id="zoomin" class="btn btn-default" onclick="zoom_in()"><i class="fas fa-plus"></i></button>' +
-            '<button type="button" id="zoomout" class="btn btn-default" onclick="zoom_out()"><i class="fas fa-minus"></i></button>',
+            '<button type="button" id="zoomin" class="btn btn-default bg-white" onclick="zoom_in()"><i class="fas fa-plus"></i></button>' +
+            '<button type="button" id="zoomout" class="btn btn-default bg-white" onclick="zoom_out()"><i class="fas fa-minus"></i></button>',
           classes: "btn-group-vertical btn-group-sm",
           style: {
             margin: "10px",

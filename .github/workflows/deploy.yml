@@ -128,7 +128,7 @@ jobs:
       - name: Patch webapp with VERSION_TAG
         if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         run: |
-          sed -i 's/Pre-Release/ACARS Hub Version: ${{ env.VERSION_TAG }}/' ./acarshub-typescript/src/helpers/menu.ts
+          sed -i 's/Pre-Release/ACARS Hub NextGen Version: ${{ env.VERSION_TAG }}/' ./acarshub-typescript/src/helpers/menu.ts
 
       - name: Create version file
         if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
@@ -238,7 +238,7 @@ jobs:
       - name: Patch webapp with VERSION_TAG
         if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         run: |
-          sed -i 's/Pre-Release/ACARS Hub Version: ${{ env.VERSION_TAG }}/' ./acarshub-typescript/src/helpers/menu.ts
+          sed -i 's/Pre-Release/ACARS Hub NextGen Version: ${{ env.VERSION_TAG }}/' ./acarshub-typescript/src/helpers/menu.ts
 
       - name: Create version file
         if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
@@ -347,7 +347,7 @@ jobs:
       - name: Patch webapp with VERSION_TAG
         if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         run: |
-          sed -i 's/Pre-Release/ACARS Hub Version: ${{ env.VERSION_TAG }}/' ./acarshub-typescript/src/helpers/menu.ts
+          sed -i 's/Pre-Release/ACARS Hub NextGen Version: ${{ env.VERSION_TAG }}/' ./acarshub-typescript/src/helpers/menu.ts
 
       - name: Create version file
         if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
@@ -461,7 +461,7 @@ jobs:
       - name: Patch webapp with VERSION_TAG
         if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         run: |
-          sed -i 's/Pre-Release/ACARS Hub Version: ${{ env.VERSION_TAG }}/' ./acarshub-typescript/src/helpers/menu.ts
+          sed -i 's/Pre-Release/ACARS Hub NextGen Version: ${{ env.VERSION_TAG }}/' ./acarshub-typescript/src/helpers/menu.ts
 
       - name: Create version file
         if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
