@@ -209,7 +209,7 @@ jobs:
             Dockerfile.acarshub
             acarshub-typescript/**
             rootfs/**
-            .github/test-pr.yml
+            **test-pr.yml
             version$
 
       - name: Get status of next file
