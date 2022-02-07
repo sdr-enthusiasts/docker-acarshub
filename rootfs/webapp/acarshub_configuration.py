@@ -25,6 +25,7 @@ import requests
 DEBUG_LOGGING = False
 EXTREME_LOGGING = False
 QUIET_LOGS = False
+QUIET_MESSAGES = True
 LOCAL_TEST = False
 ENABLE_ACARS = False
 ENABLE_VDLM = False
@@ -76,6 +77,12 @@ if (
     and str(os.getenv("QUIET_LOGS")).upper() == "TRUE"
 ):
     QUIET_LOGS = True
+
+if (
+    os.getenv("QUIET_MESSAGES", default=False)
+    and str(os.getenv("QUIET_MESSAGES")).upper() == "TRUE"
+):
+    QUIET_MESSAGES = True
 
 # Application states
 

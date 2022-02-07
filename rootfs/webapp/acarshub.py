@@ -359,6 +359,12 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
                             )
                         if len(messages_recent) >= 150:  # Keep the que size down
                             del messages_recent[0]
+
+                        if not acarshub_configuration.QUIET_MESSAGES:
+                            acarshub_configuration.log(
+                                j, f"{message_type.lower()}Generator"
+                            )
+
                         messages_recent.append(
                             (que_type, acars_formatter.format_acars_message(j))
                         )  # add to recent message que for anyone fresh loading the page
