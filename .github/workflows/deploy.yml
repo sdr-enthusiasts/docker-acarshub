@@ -25,7 +25,7 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  acarshub-typescript:
+  acarshub_typescript:
     runs-on: ubuntu-latest
     steps:
       # Check out our code
@@ -248,7 +248,7 @@ jobs:
   deploy_ghcr_version_specific:
     name: Deploy version to dockerhub
     runs-on: ubuntu-latest
-    needs: [deploy_ghcr_nextge, acarshub_typescript]
+    needs: [deploy_ghcr_nextgen, acarshub_typescript]
     steps:
       # Check out our code
       - name: Checkout
