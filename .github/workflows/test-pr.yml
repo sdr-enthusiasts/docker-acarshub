@@ -11,7 +11,7 @@ on:
       - "Dockerfile.acarshub"
       - "Dockerfile.acarshub-nextgen"
       - "rootfs/**"
-      - ".github/test-pr.yml"
+      - "**test-pr.yml"
       - "version$"
 
 env:
