@@ -80,9 +80,9 @@ if (
 
 if (
     os.getenv("QUIET_MESSAGES", default=False)
-    and str(os.getenv("QUIET_MESSAGES")).upper() == "TRUE"
+    and str(os.getenv("QUIET_MESSAGES")).upper() == "FALSE"
 ):
-    QUIET_MESSAGES = True
+    QUIET_MESSAGES = False
 
 # Application states
 
