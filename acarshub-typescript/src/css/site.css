@@ -975,7 +975,7 @@ a[x-apple-data-detectors] {
   }
 }
 
-@media screen and (max-width: 1100px) {
+@media screen and (max-width: 1150px) {
   #discord_badge {
     display: none;
   }
