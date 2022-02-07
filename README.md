@@ -122,7 +122,7 @@ There are quite a few configuration options this container can accept.
 
 | Variable             | Description                                                                                                                                                                                                                                                                                                            | Required | Default |
 | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------- |
-| `FEED`               | Used to toggle feeding to [ACARS.io](http://acars.io). If set to any non-blank value feeding will be enabled.                                                                                                                                                                                                          | No       | Blank   |
+| `FEED`               | Used to toggle feeding to [ACARS.io](http://acars.io). Set to `true` to enable feeding.                                                                                                                                                                                                                                | No       | `false` |
 | `ENABLE_WEB`         | Enable the web server. `true` to enable, any other value will disable it.                                                                                                                                                                                                                                              | No       | `true`  |
 | `QUIET_LOGS`         | By default the container displays all logging messages. If you wish to only see errors and critical messages in the container logs set `QUIET_LOGS` to `true`.                                                                                                                                                         | No       | `false` |
 | `QUIET_MESSAGES`     | By default the decoders will not output their received messages to the container logs. If you want to see these messages in the logs set `QUIET_MESSAGES` to `false`.                                                                                                                                                  | No       | `true`  |
@@ -142,13 +142,13 @@ The ACARS Hub website contains the ability to display ADSB targets along side AC
 
 The following options will set the options for ADSB
 
-| Variable              | Description                                                                    | Required                         | Default                             |
-| --------------------- | ------------------------------------------------------------------------------ | -------------------------------- | ----------------------------------- |
-| `ENABLE_ADSB`         | Turns on ADSB in ACARS Hub                                                     | Yes, if you want to monitor ADSB | `false`                             |
-| `ADSB_URL`            | The IP address or URL for your tar1090 instance                                | No (see note below)              | `http://tar1090/data/aircraft.json` |
-| `ADSB_LAT`            | The latitude of your ADSB site                                                 | No, but recommended              | 0                                   |
-| `ADSB_LON`            | The longitude of your ADSB site                                                | No, but recommended              | 0                                   |
-| `DISABLE_RANGE_RINGS` | Turn off range rings on your map. Set to a blank value to disable range rings. | No                               | Blank                               |
+| Variable              | Description                                                             | Required                         | Default                             |
+| --------------------- | ----------------------------------------------------------------------- | -------------------------------- | ----------------------------------- |
+| `ENABLE_ADSB`         | Turns on ADSB in ACARS Hub                                              | Yes, if you want to monitor ADSB | `false`                             |
+| `ADSB_URL`            | The IP address or URL for your tar1090 instance                         | No (see note below)              | `http://tar1090/data/aircraft.json` |
+| `ADSB_LAT`            | The latitude of your ADSB site                                          | No, but recommended              | 0                                   |
+| `ADSB_LON`            | The longitude of your ADSB site                                         | No, but recommended              | 0                                   |
+| `DISABLE_RANGE_RINGS` | Turn off range rings on your map. Set to `true` to disable range rings. | No                               | `false`                             |
 
 If you run Mike's tar1090 container on the same machine as ACARS Hub then the default value for `ADSB_URL` is fine. If you don't, the formatting for `ADSB_URL` should be the full URL path to `aircraft.json` from your readsb source.
 
