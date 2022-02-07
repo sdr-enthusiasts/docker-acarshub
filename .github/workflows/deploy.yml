@@ -27,7 +27,6 @@ env:
 jobs:
   acarshub-typescript:
     runs-on: ubuntu-latest
-    needs: [hadolint, shellcheck, flake8]
     steps:
       # Check out our code
       - name: Checkout
@@ -55,8 +54,8 @@ jobs:
         run: |
           set -xe
           npm install
-          sed -i 's/Pre-Release/ACARS Hub NextGen Pre-Release: ${{ env.VERSION_TAG }}/' ./src/helpers/menu.ts
-          npm run build-dev
+          sed -i 's/Pre-Release/ACARS Hub NextGen: ${{ env.VERSION_TAG }}/' ./src/helpers/menu.ts
+          npm run build
           mkdir -p ./webapp/static/images
           mkdir -p ./webapp/static/js
           mkdir -p ./webapp/static/sounds
