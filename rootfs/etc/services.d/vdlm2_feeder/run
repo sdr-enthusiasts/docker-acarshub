@@ -1,8 +1,8 @@
 #!/usr/bin/with-contenv bash
 # shellcheck shell=bash
 
-if [ -n "${ENABLE_VDLM}" ]; then
-  if [ -n "${FEED}" ]; then
+if [[ ${ENABLE_VDLM,,} =~ true ]]; then
+  if [[ ${FEED,,} =~ true ]]; then
     # Don't do anything because dumpvdl2 is not compabile with airframes right now.
     # We'll handle this elsewhere.
     sleep 86400

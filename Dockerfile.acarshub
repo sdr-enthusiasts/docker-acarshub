@@ -4,6 +4,7 @@ FROM ghcr.io/sdr-enthusiasts/docker-acarshub:nextgen
 ENV FEED="" \
     ENABLE_ACARS="false" \
     ENABLE_VDLM="false" \
+    ENABLE_ADSB="false" \
     ENABLE_WEB="true" \
     QUIET_LOGS="false" \
     QUIET_MESSAGES="true" \
