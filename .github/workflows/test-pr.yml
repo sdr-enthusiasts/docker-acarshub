@@ -12,7 +12,7 @@ on:
       - "Dockerfile.acarshub-nextgen"
       - "rootfs/**"
       - "**test-pr.yml"
-      - "version$"
+      - "version"
 
 env:
   REGISTRY: ghcr.io

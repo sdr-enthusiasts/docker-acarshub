@@ -162,6 +162,12 @@ jobs:
             **deploy.yml
             version
 
+      - name: Download webapp
+        if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
+        uses: actions/download-artifact@v2
+        with:
+          name: webapp
+
       - name: Get version tag from file
         if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         run: |
@@ -212,25 +218,6 @@ jobs:
         id: buildx
         if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         uses: docker/setup-buildx-action@v1
-
-      # build acarshub typescript
-
-      - name: Build ACARSHub typescript
-        if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
-        working-directory: ./acarshub-typescript
-        run: |
-          npm install
-          npm run build
-          mkdir -p ./webapp/static/images
-          mkdir -p ./webapp/static/js
-          mkdir -p ./webapp/static/sounds
-          mkdir -p ./webapp/templates
-          cp -r ./dist/static/images ./webapp/static/
-          cp -r ./dist/static/sounds ./webapp/static/
-          cp -r ./dist/static/js ./webapp/static/
-          mv ./dist/static/index.html ./webapp/templates/
-          tar cvfz webapp.tar.gz ./webapp
-          cp webapp.tar.gz ../webapp.tar.gz
 
       # Build & Push Dockerfile (only push if this action was NOT triggered by a PR)
       - name: Build & Push ghcr.io/sdr-enthusiasts/docker-acarshub:latest
