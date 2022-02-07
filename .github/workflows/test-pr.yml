@@ -288,7 +288,7 @@ jobs:
           cp webapp.tar.gz ../webapp.tar.gz
 
       - name: Patch Dockerfile if Nextgen was built for this branch
-        if: steps.changed-file-nextgen.outputs.any_changed
+        if: steps.changed-file-nextgen.outputs.any_changed == 'true'
         run: sed -i "s/^FROM ghcr.io\/sdr-enthusiasts\/docker-acarshub:nextgen/FROM ghcr.io\/sdr-enthusiasts\/docker-acarshub:nextgen-test/g" Dockerfile.acarshub
 
       # Build & Push Dockerfile (only push if this action was NOT triggered by a PR)
