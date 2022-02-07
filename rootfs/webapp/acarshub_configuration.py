@@ -18,6 +18,7 @@
 
 import logging
 import os
+import sys
 import requests
 
 # debug levels
@@ -25,7 +26,7 @@ import requests
 DEBUG_LOGGING = False
 EXTREME_LOGGING = False
 QUIET_LOGS = False
-QUIET_MESSAGES = True
+QUIET_MESSAGES = False
 LOCAL_TEST = False
 ENABLE_ACARS = False
 ENABLE_VDLM = False
@@ -57,6 +58,7 @@ logger = logging.getLogger("werkzeug")
 
 def log(msg, source):
     logger.error(f"[{source}]: {msg}")
+    sys.stdout.flush()
 
 
 if os.getenv("FEED", default=False) and str(os.getenv("FEED")).upper() == "TRUE":
@@ -80,9 +82,11 @@ if (
 
 if (
     os.getenv("QUIET_MESSAGES", default=False)
-    and str(os.getenv("QUIET_MESSAGES")).upper() == "FALSE"
+    and str(os.getenv("QUIET_MESSAGES")).upper() == "TRUE"
 ):
-    QUIET_MESSAGES = False
+    QUIET_MESSAGES = True
+elif not os.getenv("QUIET_MESSAGES", default=False):
+    QUIET_MESSAGES = True
 
 # Application states
 
