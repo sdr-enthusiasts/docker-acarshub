@@ -331,7 +331,7 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
                         f"Error with JSON input {repr(data)} .\n{e}",
                         f"{message_type.lower()}Generator",
                     )
-                else:
+                finally:
                     for j in message_json:
                         if message_type == "VDLM2":
                             vdlm_messages += 1
