@@ -205,7 +205,7 @@ jobs:
             acarshub-typescript/**
             rootfs/**
             **test-pr.yml
-            version$
+            version
 
       - name: Get status of next file
         id: changed-file-nextgen
