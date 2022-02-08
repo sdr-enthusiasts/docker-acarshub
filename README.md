@@ -55,8 +55,10 @@ You will need the following:
 
 ## Supported tags and respective Dockerfiles
 
-- `latest` (`master` branch, `Dockerfile`)
-- Version and architecture specific tags available
+- `latest` (`master` branch, `Dockerfile.acarshub`)
+- `latest_nohealthcheck (`master`branch,`Dockerfile.acarshub` patched to remove Heathcheck)
+- `version specific` (`master` branch at the time of build, `Dockerfile.acarshub`)
+- `version specific no healthcheck` (`master` branch at the time of build, `Dockerfile.acarshub`)
 
 ## Thanks
 
