@@ -177,6 +177,11 @@ if (
 if os.getenv("ADSB_BYPASS_URL", default=False):
     ADSB_BYPASS_URL = True
 
+if os.getenv("DB_SAVE_DAYS", default=False):
+    DB_SAVE_DAYS = int(os.getenv("DB_SAVE_DAYS"))
+
+if os.getenv("DB_ALERT_SAVE_DAYS", default=False):
+    DB_ALERT_SAVE_DAYS = int(os.getenv("DB_ALERT_SAVE_DAYS"))
 
 if LOCAL_TEST:
     version_path = "../../VERSION"
