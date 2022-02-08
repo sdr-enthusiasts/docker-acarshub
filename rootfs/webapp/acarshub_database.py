@@ -474,69 +474,56 @@ def create_db_safe_params(message_from_json):
     return params
 
 
-def add_message_from_json(message_type, message_from_json):
+def add_message(params, message_type, message_from_json, backup=False):
     global database
     global alert_terms
 
-    # message time
-    # all fields are set to a blank string. This is because all of the database fields
-    # are set to be 'not null' so all fields require a value, even if it is blank
-    params = create_db_safe_params(message_from_json)
-
     try:
-        session = db_session()
         if backup:
-            session_backup = db_session_backup()
+            session = db_session_backup()
+        else:
+            session = db_session()
 
         update_frequencies(params["freq"], message_type, session)
-        if backup:
-            update_frequencies(params["freq"], message_type, session_backup)
-
         if acarshub_configuration.DB_SAVEALL or is_message_not_empty(message_from_json):
-
             # write the message
             session.add(messages(message_type=message_type, **params))
-
-            if backup:
-                session_backup.add(messages(message_type=message_type, **params))
 
         # Now lets decide where to log the message count to
         # First we'll see if the message is not blank
 
         if is_message_not_empty(message_from_json):
-
             count = session.query(messagesCount).first()
-            count.total += 1
-
-            if params["error"] > 0:
-                count.errors += 1
-            else:
-                count.good += 1
-
-            if backup:
-                count_backup = session_backup.query(messagesCount).first()
+            if count is not None:
                 count.total += 1
 
                 if params["error"] > 0:
-                    count_backup.errors += 1
+                    count.errors += 1
                 else:
-                    count_backup.good += 1
+                    count.good += 1
+            else:
+                session.add(
+                    messagesCount(
+                        total=1,
+                        good=0 if params["error"] == 0 else 1,
+                        errors=1 if params["error"] > 0 else 0,
+                    )
+                )
 
         else:
             count = session.query(messagesCountDropped).first()
-
-            if params["error"] > 0:
-                count.nonlogged_errors += 1
-            else:
-                count.nonlogged_good += 1
-
-            if backup:
-                count_backup = session_backup.query(messagesCountDropped).first()
-
+            if count is not None:
                 if params["error"] > 0:
-                    count_backup.nonlogged_errors += 1
+                    count.nonlogged_errors += 1
                 else:
-                    count_backup.nonlogged_good += 1
+                    count.nonlogged_good += 1
+            else:
+                session.add(
+                    messagesCountDropped(
+                        nonlogged_good=1 if params["error"] == 0 else 0,
+                        nonlogged_errors=1 if params["error"] > 0 else 0,
+                    )
+                )
 
         # Log the level count
         # We'll see if the level is in the database already, and if so, increment the counter
@@ -552,18 +539,6 @@ def add_message_from_json(message_type, message_from_json):
             found_level.count += 1
         else:
             session.add(messagesLevel(level=params["level"], count=1))
-
-        if backup:
-            found_level_backup = (
-                session_backup.query(messagesLevel)
-                .filter(messagesLevel.level == params["level"])
-                .first()
-            )
-
-            if found_level_backup is not None:
-                found_level_backup.count += 1
-            else:
-                session_backup.add(messagesLevel(level=params["level"], count=1))
 
         if len(params["text"]) > 0 and alert_terms:
             for search_term in alert_terms:
@@ -593,39 +568,24 @@ def add_message_from_json(message_type, message_from_json):
                             )
                         )
                         session.commit()
-                        if backup:
-                            found_term_backup = (
-                                session_backup.query(alertStats)
-                                .filter(alertStats.term == search_term.upper())
-                                .first()
-                            )
-                            if found_term_backup is not None:
-                                found_term_backup.count += 1
-                            else:
-                                session_backup.add(
-                                    alertStats(term=search_term.upper(), count=1)
-                                )
-                            session_backup.add(
-                                messages_saved(
-                                    message_type=message_type,
-                                    **params,
-                                    term=search_term.upper(),
-                                    type_of_match="text",
-                                )
-                            )
-                            session_backup.commit()
+
         # commit the db change and close the session
         session.commit()
-
-        if backup:
-            session_backup.commit()
-
     except Exception as e:
         acarshub_configuration.acars_traceback(e, "database")
     finally:
-        session.close()
-        if backup:
-            session_backup.close()
+        if session:
+            session.close()
+
+
+def add_message_from_json(message_type, message_from_json):
+    # message time
+    # all fields are set to a blank string. This is because all of the database fields
+    # are set to be 'not null' so all fields require a value, even if it is blank
+    params = create_db_safe_params(message_from_json)
+    add_message(params, message_type, message_from_json)
+    if backup:
+        add_message(params, message_type, message_from_json, backup=True)
 
 
 def find_airline_code_from_iata(iata):
