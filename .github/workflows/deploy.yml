@@ -1,7 +1,5 @@
 name: Deploy to GHCR
 
-# FIXME: Typescript build should be an artifact and shared between all jobs in the workflow
-
 on:
   # Build and deploy the image on pushes to main branch
   workflow_dispatch:
@@ -91,13 +89,7 @@ jobs:
         with:
           files: |
             Dockerfile.nextgen
-            .github/deploy.yml
-
-      - name: Download webapp
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
-        uses: actions/download-artifact@v2
-        with:
-          name: webapp
+            **deploy.yml
 
       - name: Login to ghcr.io
         if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
