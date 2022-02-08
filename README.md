@@ -37,7 +37,7 @@ Builds and runs on `amd64`, `arm64`, `arm/v7`, `arm/v6` and `386` architectures.
 
 ## Users of v2 that need to migrate to v3
 
-Please see [this](Setting-Up-ACARSHub.md) for an example `docker-compose.yaml` file to get you started. You should be able to copy/paste values quickly over in to the new config and be up and running very quickly.
+Please see [this](Setting-Up-ACARSHub.MD) for an example `docker-compose.yaml` file to get you started. You should be able to copy/paste values quickly over in to the new config and be up and running very quickly.
 
 ## IMPORTANT NOTE FOR BUSTER USERS
 
