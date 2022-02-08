@@ -467,9 +467,17 @@ def create_db_safe_params(message_from_json):
             params["level"] = value
         elif index == "end":
             pass
+        # FIXME: acarsdec now appears to support message reassembly?
+        # https://github.com/TLeconte/acarsdec/commit/b2d0a4c27c6092a1c38943da48319a3406db74f2
+        # do we need to do anything here for reassembled messages?
+        elif index == "assstat":
+            if acarshub_configuration.DEBUG_LOGGING:
+                acarshub_configuration.log(f"assstat key: {index}: {value}", "database")
+                acarshub_configuration.log(message_from_json, "database")
         # We have a key that we aren't saving the database. Log it
         else:
             acarshub_configuration.log(f"Unidenitied key: {index}: {value}", "database")
+            acarshub_configuration.log(message_from_json, "database")
 
     return params
 
