@@ -933,16 +933,10 @@ def get_errors():
         if count is not None:
             count_total = count.total
             count_errors = count.errors
-        else:
-            count_total = 0
-            count_errors = 0
 
         if nonlogged is not None:
             nonlogged_good = nonlogged.nonlogged_good
             nonlogged_errors = nonlogged.nonlogged_errors
-        else:
-            nonlogged_good = 0
-            nonlogged_errors = 0
 
     except Exception as e:
         acarshub_configuration.acars_traceback(e, "database")
