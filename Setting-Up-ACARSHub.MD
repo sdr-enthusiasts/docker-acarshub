@@ -16,7 +16,7 @@ ACARS Hub:
 
 - If you intend to feed VDLM, change `ENABLE_VDLM=false` to `ENABLE_VDLM=external`
 - If you intend to feed ACARS, change `ENABLE_ACARS=false` to `ENABLE_ACARS=external`
-- If you wish to feed ACARS data to [airframes](airframes.io) remove the `#` from the start of the line
+- If you wish to feed ACARS data to [airframes](https://airframes.io) remove the `#` from the start of the line
 - If you have a local `tar1090` instance and want to be able to click on a link in the message to see that plane on it,
   - Remove the `#` from the start of the line
   - After the `=` sign input the URL you use in your browser to visit `tar1090`, ie `http://192.168.1.100`
