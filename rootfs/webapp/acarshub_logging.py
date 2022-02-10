@@ -28,28 +28,37 @@ import os
 
 MIN_LOG_LEVEL = 3
 
-logger = logging.getLogger("werkzeug")
-logging.basicConfig(
-    stream=sys.stdout,
-    filemode="w",
-    format="%(levelname)s:%(message)s",
-)
+# logger = logging.getLogger("werkzeug")
+# logging.basicConfig(
+#     stream=sys.stdout,
+#     filemode="w",
+#     format="%(levelname)s:%(message)s",
+# )
+
+logger = logging.getLogger()
+
+# logger.setLevel(logging.DEBUG) # set logger level
+logFormatter = logging.Formatter("%(levelname)s:%(message)s")
+consoleHandler = logging.StreamHandler(sys.stdout)  # set streamhandler to stdout
+consoleHandler.setFormatter(logFormatter)
+logger.addHandler(consoleHandler)
 
 # we are using a second logger for messages, in case the user has a log level lower
 # than the log level of the error messages
 
 
 def log(msg, source, level=4):
+    # line length 20
     if level == 1:
-        logger.error(f"[{source}]: {msg}")
+        logger.error(f"[{source}]:".ljust(15, " ") + f"{msg}")
     elif level == 2:
-        logger.critical(f"[{source}]: {msg}")
+        logger.critical(f"[{source}]:".ljust(12, " ") + f"{msg}")
     elif level == 3:
-        logger.warning(f"[{source}]: {msg}")
+        logger.warning(f"[{source}]:".ljust(13, " ") + f"{msg}")
     elif level == 4:
-        logger.info(f"[{source}]: {msg}")
+        logger.info(f"[{source}]:".ljust(16, " ") + f"{msg}")
     elif level == 5:
-        logger.debug(f"[{source}]: {msg}")
+        logger.debug(f"[{source}]:".ljust(15, " ") + f"{msg}")
 
 
 def acars_traceback(e, source):
