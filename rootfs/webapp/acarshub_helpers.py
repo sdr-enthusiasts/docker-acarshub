@@ -367,7 +367,6 @@ def service_check():
             match = re.search("^(acars|vdlm2)_stats", line)
 
             if match:
-                acarshub_logging.log(line, "service_check", level=5)
                 if match.group(0) not in stats:
                     stats[match.group(0)] = dict()
 
