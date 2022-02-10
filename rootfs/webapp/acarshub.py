@@ -378,7 +378,11 @@ def init_listeners(special_message=""):
 
     # show log message if this is container startup
     acarshub_logging.log(
-        "Starting Data Listeners", "init", level=4 if special_message == "" else 1
+        "Starting Data Listeners"
+        if special_message == ""
+        else "Checking Data Listeners",
+        "init",
+        level=4 if special_message == "" else 5,
     )
     if not thread_database.is_alive():
         acarshub_logging.log(
