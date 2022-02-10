@@ -124,8 +124,6 @@ There are quite a few configuration options this container can accept.
 | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------- |
 | `FEED`               | Used to toggle feeding to [ACARS.io](http://acars.io). Set to `true` to enable feeding.                                                                                                                                                                                                                                | No       | `false` |
 | `ENABLE_WEB`         | Enable the web server. `true` to enable, any other value will disable it.                                                                                                                                                                                                                                              | No       | `true`  |
-| `QUIET_LOGS`         | By default the container displays all logging messages. If you wish to only see errors and critical messages in the container logs set `QUIET_LOGS` to `true`.                                                                                                                                                         | No       | `false` |
-| `QUIET_MESSAGES`     | By default the decoders will not output their received messages to the container logs. If you want to see these messages in the logs set `QUIET_MESSAGES` to `false`.                                                                                                                                                  | No       | `true`  |
 | `DB_SAVEALL`         | By default the container will save all received messages in to a database, even if the message is a blank message. If you want to increase performance/decrease database size, set this option to `false` to only save messages with at least one informationial field.                                                | No       | `true`  |
 | `DB_SAVE_DAYS`       | By default the container will save message data for 7 days. If you wish to over-ride this behavior, set this to the number of days you wish to have retained.                                                                                                                                                          | No       | `7`     |
 | `DB_ALERT_SAVE_DAYS` | By default the container will save message data for 120 days. If you wish to over-ride this behavior, set this to the number of days you wish to have retained.                                                                                                                                                        | No       | `120`   |
@@ -135,6 +133,15 @@ There are quite a few configuration options this container can accept.
 | `AUTO_VACUUM`        | If you find your database size to be too large you can temporarily enable this and on the next container startup the database will attempt to reduce itself in size. When you do this startup time will take a few minutes. It is recommended to leave this flag disabled and only enable it temporarily.              | No       | `False` |
 
 Please note that for `TAR1090_URL` the required format is `http[s]://**HOSTNAME**` only. So if your tar1090 instance is at IP address `192.168.31.10` with no SSL, the TAR1090_URL would look like `http://192.168.31.10`
+
+### Logging
+
+By default ACARS Hub will only show errors, warnings, and other kinds of critical messages in the logs. This can be changed by setting `MIN_LOG_LEVEL` to a higher number.
+
+All processes are logged to the container's stdout. General logging can be viewed with `docker logs [-f] container`.
+
+| `MIN_LOG_LEVEL` | Acceptable values are `3-5`. `3` is `Warnings/Critical/Errors`, `4` adds `Informational messages` and `5` adds everything previous plus `debug` messages. | No | `3` |
+| `QUIET_MESSAGES` | By default the decoders will not output their received messages to the container logs. If you want to see these messages in the logs set `QUIET_MESSAGES` to `false`. | No | `true` |
 
 ### ADSB
 
@@ -186,10 +193,6 @@ Some notes about frequencies:
 
 - `acarsdec` and `dumpvdl2` are limited to monitoring 8 frequencies apiece
 - The spread of frequencies for each decoder has to be within 2 Mhz.
-
-## Logging
-
-All processes are logged to the container's stdout. If `QUIET_LOGS` is disabled, all received aircraft messages are logged to the container log as well. General logging can be viewed with `docker logs [-f] container`.
 
 ## A note about data sources used for the web site
 

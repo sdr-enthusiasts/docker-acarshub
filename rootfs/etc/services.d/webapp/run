@@ -2,7 +2,7 @@
 #shellcheck shell=bash
 
 if [[ ${ENABLE_WEB,,} =~ true ]]; then
-  if [[ ! ${QUIET_LOGS,,} =~ true ]]; then
+  if [[ $((MIN_LOG_LEVEL)) -ge 4 ]]; then
     # shellcheck disable=SC2016
     echo "Starting web service" | stdbuf -oL awk '{print "[webapp] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
   fi

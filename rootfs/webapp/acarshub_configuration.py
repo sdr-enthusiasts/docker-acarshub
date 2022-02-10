@@ -16,16 +16,13 @@
 # You should have received a copy of the GNU General Public License
 # along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-import logging
+
 import os
-import sys
 import requests
+import acarshub_logging
 
 # debug levels
 
-DEBUG_LOGGING = False
-EXTREME_LOGGING = False
-QUIET_LOGS = False
 QUIET_MESSAGES = False
 LOCAL_TEST = False
 ENABLE_ACARS = False
@@ -53,32 +50,8 @@ ARCH = "unknown"
 DB_SAVE_DAYS = 7
 DB_ALERT_SAVE_DAYS = 120
 
-logger = logging.getLogger("werkzeug")
-
-
-def log(msg, source):
-    logger.error(f"[{source}]: {msg}")
-    sys.stdout.flush()
-
-
 if os.getenv("FEED", default=False) and str(os.getenv("FEED")).upper() == "TRUE":
     FEED = True
-
-if (
-    os.getenv("DEBUG_LOGGING", default=False)
-    and str(os.getenv("DEBUG_LOGGING")).upper() == "TRUE"
-):
-    DEBUG_LOGGING = True
-if (
-    os.getenv("EXTREME_LOGGING", default=False)
-    and str(os.getenv("EXTREME_LOGGING")).upper() == "TRUE"
-):
-    EXTREME_LOGGING = True
-if (
-    os.getenv("QUIET_LOGS", default=False)
-    and str(os.getenv("QUIET_LOGS")).upper() == "TRUE"
-):
-    QUIET_LOGS = True
 
 if (
     os.getenv("QUIET_MESSAGES", default=False)
@@ -161,8 +134,10 @@ if (
 
         if not ADSB_URL.startswith("http") and not ADSB_URL.endswith("aircraft.json"):
             ENABLE_ADSB = False
-            log(
-                f"ADSB URL ({ADSB_URL}) appears to be malformed. Disabling ADSB", "init"
+            acarshub_logging.log(
+                f"ADSB URL ({ADSB_URL}) appears to be malformed. Disabling ADSB",
+                "init",
+                level=1,
             )
     if os.getenv("ADSB_LON", default=False):
         ADSB_LON = float(os.getenv("ADSB_LON"))
@@ -221,11 +196,10 @@ def check_github_version():
             CURRENT_ACARS_HUB_BUILD != ACARSHUB_BUILD
             and ACARSHUB_BUILD < CURRENT_ACARS_HUB_BUILD
         ):
-            log("Update found", "version-checker")
+            acarshub_logging.log("Update found", "version-checker", level=3)
             IS_UPDATE_AVAILABLE = True
         else:
-            if not QUIET_LOGS:
-                log("No update found", "version-checker")
+            acarshub_logging.log("No update found", "version-checker", level=5)
             IS_UPDATE_AVAILABLE = False
 
 
@@ -243,7 +217,3 @@ def get_version():
         "container_version": "v" + ACARSHUB_VERSION + " Build " + ACARSHUB_BUILD,
         "is_outdated": IS_UPDATE_AVAILABLE,
     }
-
-
-def acars_traceback(e, source):
-    logger.exception(f"[{source}]: {e}")

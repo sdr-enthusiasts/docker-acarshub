@@ -32,6 +32,7 @@ from sqlalchemy.engine.reflection import Inspector
 import json
 import datetime
 import acarshub_configuration
+import acarshub_logging
 import re
 import os
 
@@ -44,8 +45,7 @@ overrides = {}
 # Download station IDs
 
 try:
-    if not acarshub_configuration.QUIET_LOGS:
-        acarshub_configuration.log("Downloading Station IDs", "database")
+    acarshub_logging.log("Downloading Station IDs", "database")
     with open("./data/ground-stations.json", "r") as f:
         groundStations_json = json.load(f)
 
@@ -56,23 +56,20 @@ try:
                 "icao": station["airport"]["icao"],
                 "name": station["airport"]["name"],
             }
-    if not acarshub_configuration.QUIET_LOGS:
-        acarshub_configuration.log("Completed loading Station IDs", "database")
+    acarshub_logging.log("Completed loading Station IDs", "database")
 except Exception as e:
-    acarshub_configuration.acars_traceback(e, "database")
+    acarshub_logging.acars_traceback(e, "database")
 
 # Load Message Labels
 
 try:
-    if not acarshub_configuration.QUIET_LOGS:
-        acarshub_configuration.log("Downloading message labels", "database")
+    acarshub_logging.log("Downloading message labels", "database")
     with open("./data/metadata.json", "r") as f:
         message_labels = json.load(f)
-    if not acarshub_configuration.QUIET_LOGS:
-        acarshub_configuration.log("Completed loading message labels", "database")
+    acarshub_logging.log("Completed loading message labels", "database")
 except Exception as e:
     message_labels = {"labels": {}}  # handle URL exception
-    acarshub_configuration.acars_traceback(e, "database")
+    acarshub_logging.acars_traceback(e, "database")
 
 # DB PATH MUST BE FROM ROOT!
 # default database
@@ -92,15 +89,13 @@ else:
     backup = False
 
 try:
-    if not acarshub_configuration.QUIET_LOGS:
-        acarshub_configuration.log("Loading Airline Codes", "database")
+    acarshub_logging.log("Loading Airline Codes", "database")
     f = open("data/airlines.json")
     airlines = json.load(f)
-    if not acarshub_configuration.QUIET_LOGS:
-        acarshub_configuration.log("Completed Loading Airline Codes", "database")
+    acarshub_logging.log("Completed Loading Airline Codes", "database")
 except Exception as e:
     airlines = {}
-    acarshub_configuration.acars_traceback(e, database)
+    acarshub_logging.acars_traceback(e, database)
 
 
 # Set up the override IATA/ICAO callsigns
@@ -117,8 +112,8 @@ for item in iata_override:
     if len(override_splits) == 3:
         overrides[override_splits[0]] = (override_splits[1], override_splits[2])
     else:
-        acarshub_configuration.log(
-            f"Error adding in {item} to IATA overrides", "database"
+        acarshub_logging.log(
+            f"Error adding in {item} to IATA overrides", "database", level=3
         )
 
 # Class for storing the count of messages received on each frequency
@@ -270,7 +265,7 @@ inspector = Inspector.from_engine(database)
 if "messages_fts" not in inspector.get_table_names():
     import sys
 
-    acarshub_configuration.log("Missing FTS TABLE! Aborting!", "database")
+    acarshub_logging.log("Missing FTS TABLE! Aborting!", "database", level=1)
     sys.exit(1)
 
 # messages_idx = Table(
@@ -304,7 +299,7 @@ try:
         alert_terms_ignore.append(t.term.upper())
 
 except Exception as e:
-    acarshub_configuration.acars_traceback(e, "database")
+    acarshub_logging.acars_traceback(e, "database")
 finally:
     session.close()
 
@@ -459,7 +454,7 @@ def create_db_safe_params(message_from_json):
             try:
                 params["libacars"] = json.dumps(value)
             except Exception as e:
-                acarshub_configuration.acars_traceback(e, "database")
+                acarshub_logging.acars_traceback(e, "database")
         # skip these
         elif index == "channel":
             pass
@@ -471,13 +466,14 @@ def create_db_safe_params(message_from_json):
         # https://github.com/TLeconte/acarsdec/commit/b2d0a4c27c6092a1c38943da48319a3406db74f2
         # do we need to do anything here for reassembled messages?
         elif index == "assstat":
-            if acarshub_configuration.DEBUG_LOGGING:
-                acarshub_configuration.log(f"assstat key: {index}: {value}", "database")
-                acarshub_configuration.log(message_from_json, "database")
+            acarshub_logging.log(f"assstat key: {index}: {value}", "database", level=5)
+            acarshub_logging.log(message_from_json, "database", level=5)
         # We have a key that we aren't saving the database. Log it
         else:
-            acarshub_configuration.log(f"Unidenitied key: {index}: {value}", "database")
-            acarshub_configuration.log(message_from_json, "database")
+            acarshub_logging.log(
+                f"Unidenitied key: {index}: {value}", "database", level=5
+            )
+            acarshub_logging.log(message_from_json, "database", level=5)
 
     return params
 
@@ -513,7 +509,7 @@ def add_message(params, message_type, message_from_json, backup=False):
                 session.add(
                     messagesCount(
                         total=1,
-                        good=0 if params["error"] == 0 else 1,
+                        good=0 if params["error"] > 0 else 1,
                         errors=1 if params["error"] > 0 else 0,
                     )
                 )
@@ -580,7 +576,7 @@ def add_message(params, message_type, message_from_json, backup=False):
         # commit the db change and close the session
         session.commit()
     except Exception as e:
-        acarshub_configuration.acars_traceback(e, "database")
+        acarshub_logging.acars_traceback(e, "database")
     finally:
         if session:
             session.close()
@@ -611,10 +607,9 @@ def database_search(search_term, page=0):
     result = None
 
     try:
-        if acarshub_configuration.DEBUG_LOGGING:
-            acarshub_configuration.log(
-                f"[database] Searching database for {search_term}", "database"
-            )
+        acarshub_logging.log(
+            f"[database] Searching database for {search_term}", "database", level=5
+        )
         match_string = ""
 
         for key in search_term:
@@ -653,7 +648,7 @@ def database_search(search_term, page=0):
         session.close()
         return (processed_results, final_count)
     except Exception as e:
-        acarshub_configuration.acars_traceback(e, "database")
+        acarshub_logging.acars_traceback(e, "database")
         session.close()
         return [None, 50]
 
@@ -666,7 +661,7 @@ def database_search(search_term, page=0):
 #     session = None
 #     try:
 #         if acarshub_configuration.DEBUG_LOGGING:
-#             acarshub_configuration.log(
+#             acarshub_logging.log(
 #                 f"[database] Searching database for {search_term}", "database"
 #             )
 #         query_filters = []
@@ -735,7 +730,7 @@ def database_search(search_term, page=0):
 #                 processed_results = [query_to_dict(d) for d in result]
 
 #     except Exception as e:
-#         acarshub_configuration.acars_traceback(e, "database")
+#         acarshub_logging.acars_traceback(e, "database")
 #     finally:
 #         if session:
 #             session.close()
@@ -788,7 +783,7 @@ def search_alerts(icao=None, tail=None, flight=None):
                     f"{query_string}{joiner}{terms_string} ORDER BY msg_time DESC LIMIT 50 OFFSET 0"
                 )
             else:
-                acarshub_configuration.log("SKipping alert search", "database")
+                acarshub_logging.log("SKipping alert search", "database")
                 return None
 
             processed_results = []
@@ -801,7 +796,7 @@ def search_alerts(icao=None, tail=None, flight=None):
             session.close()
             return processed_results
         except Exception as e:
-            acarshub_configuration.acars_traceback(e, "database")
+            acarshub_logging.acars_traceback(e, "database")
             return None
     else:
         return None
@@ -867,7 +862,7 @@ def search_alerts(icao=None, tail=None, flight=None):
 #                 processed_results = [query_to_dict(d) for d in result]
 
 #         except Exception as e:
-#             acarshub_configuration.acars_traceback(e, "database")
+#             acarshub_logging.acars_traceback(e, "database")
 #         finally:
 #             session.close()
 #             if len(processed_results) > 0:
@@ -895,9 +890,10 @@ def show_all(page=0):
             processed_results = [query_to_dict(d) for d in result]
             processed_results.reverse()
     except Exception as e:
-        acarshub_configuration.acars_traceback(e, "database")
+        acarshub_logging.acars_traceback(e, "database")
     finally:
-        session.close()
+        if session:
+            session.close()
         if count == 0:
             return (None, 50)
         return (processed_results, count)
@@ -920,9 +916,10 @@ def get_freq_count():
                     }
                 )
     except Exception as e:
-        acarshub_configuration.acars_traceback(e, "database")
+        acarshub_logging.acars_traceback(e, "database")
     finally:
-        session.close()
+        if session:
+            session.close()
         if len(freq_count) == 0:
             return []
         return sorted(
@@ -947,9 +944,10 @@ def get_errors():
             nonlogged_errors = nonlogged.nonlogged_errors
 
     except Exception as e:
-        acarshub_configuration.acars_traceback(e, "database")
+        acarshub_logging.acars_traceback(e, "database")
     finally:
-        session.close()
+        if session:
+            session.close()
         return {
             "non_empty_total": count_total,
             "non_empty_errors": count_errors,
@@ -967,11 +965,12 @@ def database_get_row_count():
         try:
             size = os.path.getsize(db_path[10:])
         except Exception as e:
-            acarshub_configuration.acars_traceback(e, "database")
+            acarshub_logging.acars_traceback(e, "database")
     except Exception as e:
-        acarshub_configuration.acars_traceback(e, "database")
+        acarshub_logging.acars_traceback(e, "database")
     finally:
-        session.close()
+        if session:
+            session.close()
         return (result, size)
 
 
@@ -984,9 +983,10 @@ def grab_most_recent():
         if result.count() > 0:
             output = [query_to_dict(d) for d in result]
     except Exception as e:
-        acarshub_configuration.acars_traceback(e, "database")
+        acarshub_logging.acars_traceback(e, "database")
     finally:
-        session.close()
+        if session:
+            session.close()
         return output
 
 
@@ -1016,9 +1016,10 @@ def get_signal_levels():
             output = [query_to_dict(d) for d in result]
 
     except Exception as e:
-        acarshub_configuration.acars_traceback(e, "database")
+        acarshub_logging.acars_traceback(e, "database")
     finally:
-        session.close()
+        if session:
+            session.close()
         if len(output) > 0:
             return output
         else:
@@ -1048,9 +1049,10 @@ def get_alert_counts():
                 result_list.append({"term": term, "count": 0})
 
     except Exception as e:
-        acarshub_configuration.acars_traceback(e, "database")
+        acarshub_logging.acars_traceback(e, "database")
     finally:
-        session.close()
+        if session:
+            session.close()
         return result_list
 
 
@@ -1068,9 +1070,10 @@ def set_alert_ignore(terms=None):
             session.add(ignoreAlertTerms(term=t))
         session.commit()
     except Exception as e:
-        acarshub_configuration.acars_traceback(e, "database")
+        acarshub_logging.acars_traceback(e, "database")
     finally:
-        session.close()
+        if session:
+            session.close()
 
 
 def set_alert_terms(terms=None):
@@ -1097,9 +1100,10 @@ def set_alert_terms(terms=None):
 
         session.commit()
     except Exception as e:
-        acarshub_configuration.acars_traceback(e, "database")
+        acarshub_logging.acars_traceback(e, "database")
     finally:
-        session.close()
+        if session:
+            session.close()
 
 
 def reset_alert_counts():
@@ -1111,9 +1115,10 @@ def reset_alert_counts():
 
         session.commit()
     except Exception as e:
-        acarshub_configuration.acars_traceback(e, "database")
+        acarshub_logging.acars_traceback(e, "database")
     finally:
-        session.close()
+        if session:
+            session.close()
 
 
 def get_alert_ignore():
@@ -1128,8 +1133,7 @@ def get_alert_terms():
 
 def prune_database():
     try:
-        if not acarshub_configuration.QUIET_LOGS:
-            acarshub_configuration.log("Pruning database", "database")
+        acarshub_logging.log("Pruning database", "database")
         cutoff = (
             datetime.datetime.now()
             - datetime.timedelta(days=acarshub_configuration.DB_SAVE_DAYS)
@@ -1138,13 +1142,12 @@ def prune_database():
         session = db_session()
         result = session.query(messages).filter(messages.time < cutoff).delete()
 
-        if not acarshub_configuration.QUIET_LOGS:
-            acarshub_configuration.log("Pruned %s messages" % result, "database")
+        acarshub_logging.log("Pruned %s messages" % result, "database")
 
         session.commit()
 
-        if not acarshub_configuration.QUIET_LOGS:
-            acarshub_configuration.log("Pruning alert database", "database")
+        acarshub_logging.log("Pruning alert database", "database")
+
         cutoff = (
             datetime.datetime.now()
             - datetime.timedelta(days=acarshub_configuration.DB_ALERT_SAVE_DAYS)
@@ -1154,11 +1157,11 @@ def prune_database():
             session.query(messages_saved).filter(messages_saved.time < cutoff).delete()
         )
 
-        if not acarshub_configuration.QUIET_LOGS:
-            acarshub_configuration.log("Pruned %s messages" % result, "database")
+        acarshub_logging.log("Pruned %s messages" % result, "database")
 
         session.commit()
     except Exception as e:
-        acarshub_configuration.acars_traceback(e, "database")
+        acarshub_logging.acars_traceback(e, "database")
     finally:
-        session.close()
+        if session:
+            session.close()
