@@ -16,7 +16,6 @@
 # along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
 import logging
-import sys
 import os
 
 # AVAILABLE LOG LEVELS:
@@ -39,7 +38,7 @@ logger = logging.getLogger()
 
 # logger.setLevel(logging.DEBUG) # set logger level
 logFormatter = logging.Formatter("%(levelname)s:%(message)s")
-consoleHandler = logging.StreamHandler(sys.stdout)  # set streamhandler to stdout
+consoleHandler = logging.StreamHandler()  # set streamhandler to stdout
 consoleHandler.setFormatter(logFormatter)
 logger.addHandler(consoleHandler)
 
