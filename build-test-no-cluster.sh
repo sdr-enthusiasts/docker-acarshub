@@ -1,7 +1,7 @@
 #!/bin/bash
 
-REPO=fredclausen
-IMAGE=acarshub
+REPO=ghcr.io/sdr-enthusiasts
+IMAGE=docker-acarshub
 
 # Generate local dockerfile
 ./generate_local_dockerfile.sh
@@ -24,7 +24,7 @@ sleep 3
 ./generate_local_dockerfile.sh || cleanup
 
 # Build & push latest
-docker build -f Dockerfile.local -t "${REPO}/${IMAGE}:test" . || cleanup
+docker build -f Dockerfile.acarshub.local -t "${REPO}/${IMAGE}:test-local" . || cleanup
 
 # Clean up
 cleanup

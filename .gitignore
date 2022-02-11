@@ -90,6 +90,7 @@ roles/metal-lb/files/metallb.yaml
 roles/metal-lb/files/namespace.yaml
 notes.txt
 Dockerfile.local
+Dockerfile.acarshub.local
 *.db-journal
 rootfs/webapp/static/airframes-acars-decoder
 rootfs/webapp/static/js/Dockerfile.testing
