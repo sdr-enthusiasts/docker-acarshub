@@ -15,8 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-import logging
 import os
+import traceback
 
 # AVAILABLE LOG LEVELS:
 # 1 logging.error('This is an error message')
@@ -27,41 +27,24 @@ import os
 
 MIN_LOG_LEVEL = 3
 
-# logger = logging.getLogger("werkzeug")
-# logging.basicConfig(
-#     stream=sys.stdout,
-#     filemode="w",
-#     format="%(levelname)s:%(message)s",
-# )
-
-logger = logging.getLogger()
-
-# logger.setLevel(logging.DEBUG) # set logger level
-logFormatter = logging.Formatter("%(levelname)s:%(message)s")
-consoleHandler = logging.StreamHandler()  # set streamhandler to stdout
-consoleHandler.setFormatter(logFormatter)
-logger.addHandler(consoleHandler)
-
-# we are using a second logger for messages, in case the user has a log level lower
-# than the log level of the error messages
-
 
 def log(msg, source, level=4):
     # line length 20
     if level == 1:
-        logger.error(f"[{source}]:".ljust(15, " ") + f"{msg}")
+        print(f"ERROR:[{source}]:".ljust(25, " ") + f"{msg}")
     elif level == 2:
-        logger.critical(f"[{source}]:".ljust(12, " ") + f"{msg}")
+        print(f"CRITICAL:[{source}]:".ljust(25, " ") + f"{msg}")
     elif level == 3:
-        logger.warning(f"[{source}]:".ljust(13, " ") + f"{msg}")
-    elif level == 4:
-        logger.info(f"[{source}]:".ljust(16, " ") + f"{msg}")
-    elif level == 5:
-        logger.debug(f"[{source}]:".ljust(15, " ") + f"{msg}")
+        print(f"WARNING:[{source}]:".ljust(25, " ") + f"{msg}")
+    elif level == 4 and level <= MIN_LOG_LEVEL:
+        print(f"INFO:[{source}]:".ljust(25, " ") + f"{msg}")
+    elif level == 5 and level <= MIN_LOG_LEVEL:
+        print(f"DEBUG:[{source}]:".ljust(25, " ") + f"{msg}")
 
 
 def acars_traceback(e, source):
-    logger.exception(f"[{source}]: {e}")
+    # logger.exception(f"[{source}]: {e}")
+    traceback.print_exception(e.__class__, e, e.__traceback__)
 
 
 if os.getenv("MIN_LOG_LEVEL", default=False):
@@ -70,10 +53,3 @@ if os.getenv("MIN_LOG_LEVEL", default=False):
     else:
         log(f"LOG_LEVEL is not a number: {os.getenv('MIN_LOG_LEVEL')}", "MIN_LOG_LEVEL")
         log(f"LOG_LEVEL set to {MIN_LOG_LEVEL}", "MIN_LOG_LEVEL")
-
-    if MIN_LOG_LEVEL <= 3:
-        logger.setLevel(logging.WARNING)
-    elif MIN_LOG_LEVEL == 4:
-        logger.setLevel(logging.INFO)
-    elif MIN_LOG_LEVEL == 5:
-        logger.setLevel(logging.DEBUG)
