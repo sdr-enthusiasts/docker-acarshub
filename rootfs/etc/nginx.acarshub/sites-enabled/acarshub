@@ -23,7 +23,7 @@ server {
   error_page 500 501 502 503 504 = @RedirectToHome;
 
   location @RedirectToHome {
-    return 301 $scheme://$http_host;
+    return 302 $scheme://$http_host;
   }
 
   # point the stat image files to the dir they're dumped in, mark as no cache
