@@ -7,12 +7,12 @@ on:
     branches:
       - main
     paths:
-      - "acarshub-typescript/**"
-      - "Dockerfile.acarshub"
-      - "Dockerfile.acarshub-nextgen"
-      - "rootfs/**"
-      - "**test-pr.yml"
-      - "version"
+      - acarshub-typescript/**
+      - Dockerfile.acarshub
+      - Dockerfile.acarshub-nextgen
+      - rootfs/**
+      - .github/workflows/test-pr.yml
+      - version
 
 env:
   REGISTRY: ghcr.io

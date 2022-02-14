@@ -76,7 +76,7 @@ services:
       - ENABLE_VDLM=false
       - ENABLE_ACARS=false
       #      - FEED=true
-      - QUIET_LOGS=true
+      - MIN_LOG_LEVEL=3
   #      - TAR1090_URL=http://tar1090
   #      - IATA_OVERRIDE=UP|UPS|United Parcel Service;GS|FTH|Mountain Aviation (Foothills);GS|EJA|ExecJet
   #      - ENABLE_ADSB=true

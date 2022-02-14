@@ -17,18 +17,18 @@ if [[ ! -e /nginx-ranonce ]]; then
     #write the ADSB URL in to the nginx config file
     if [[ "${ENABLE_ADSB}" == "true" ]]; then
         sed -i "s\<>\\${ADSB_URL}\\" /etc/nginx/sites-enabled/acarshub
-        if [[ -z "$QUIET_LOGS" ]]; then
-            echo "ADSB enabled with ${ADSB_URL}" | awk '{print "[03-nginx] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
+        if [[ $((MIN_LOG_LEVEL)) -ge 4 ]]; then
+            echo "ADSB enabled with ${ADSB_URL}" | awk '{print "[03-nginx    ] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
         fi
     else
         sed -i "s\<>\\http://127.0.0.1:8888\\" /etc/nginx/sites-enabled/acarshub
-        if [[ -z "$QUIET_LOGS" ]]; then
-            echo "ADSB Disabled" | awk '{print "[03-nginx] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
+        if [[ $((MIN_LOG_LEVEL)) -ge 4 ]]; then
+            echo "ADSB Disabled" | awk '{print "[03-nginx    ] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
         fi
     fi
 else
-    if [[ -z "$QUIET_LOGS" ]]; then
-        echo "Skipping nginx file configuring, container was restarted" | awk '{print "[03-nginx] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
+    if [[ $((MIN_LOG_LEVEL)) -ge 4 ]]; then
+        echo "Skipping nginx file configuring, container was restarted" | awk '{print "[03-nginx    ] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
     fi
 fi
 

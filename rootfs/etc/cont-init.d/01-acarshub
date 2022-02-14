@@ -5,11 +5,26 @@
 mkdir -p /run/acars/
 
 if [[ ${ENABLE_ACARS,,} =~ external ]]; then
-    echo "ACARS Decoder set to external, push data to UDP port 5550" | awk '{print "[01-acarshub] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
+    if [[ $((MIN_LOG_LEVEL)) -ge 4 ]]; then
+        echo "ACARS Decoder set to external, push data to UDP port 5550" | awk '{print "[01-acarshub ] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
+    fi
 fi
 
 if [[ ${ENABLE_VDLM,,} =~ external ]]; then
-    echo "VDLM Decoder set to external, push data to UDP port 5555" | awk '{print "[01-acarshub] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
+    if [[ $((MIN_LOG_LEVEL)) -ge 4 ]]; then
+        echo "VDLM Decoder set to external, push data to UDP port 5555" | awk '{print "[01-acarshub ] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
+    fi
+fi
+
+if [[ -n "${QUIET_LOGS}" ]]; then
+    echo "########################################################"
+    echo "QUIET_LOGS has been deprecated. Please use MIN_LOG_LEVEL"
+    if [[ ${QUIET_LOGS,,} =~ false ]]; then
+        echo "Please remove QUIET_LOGS to remove this warning and set MIN_LOG_LEVEL=4 to get back the logs you are expecting"
+    else
+        echo "Please remove QUIET_LOGS to remove this warning and set MIN_LOG_LEVEL=3 to get back the logs you are expecting"
+    fi
+    echo "########################################################"
 fi
 
 # Ensure /database dir is present

@@ -191,6 +191,7 @@ if __name__ == "__main__":
     try:
         import sys
         import os
+        import acarshub_logging
 
         if len(sys.argv) < 2:
             sys.exit("Usage: %s <message file>" % sys.argv[0])
@@ -229,4 +230,4 @@ if __name__ == "__main__":
                 print(vdlm2_message)
 
     except Exception as e:
-        print(f"error: {e}")
+        acarshub_logging.acars_traceback(e, "acars_formatter")

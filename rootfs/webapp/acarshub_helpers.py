@@ -20,6 +20,7 @@ import os
 import subprocess
 import acarshub_database
 import time
+import acarshub_logging
 
 start_time = time.time()
 
@@ -366,8 +367,6 @@ def service_check():
             match = re.search("^(acars|vdlm2)_stats", line)
 
             if match:
-                if os.getenv("DEBUG_LOGGING", default=False):
-                    print(line)
                 if match.group(0) not in stats:
                     stats[match.group(0)] = dict()
 
@@ -433,15 +432,8 @@ def service_check():
                     )
 
         except Exception as e:
-            print(f"[service-check] Error: {line}\n{e}")
-
-    if os.getenv("LOCAL_TEST", default=False):
-        print(decoders)
-        print(servers)
-        print(receivers)
-        print(feeders)
-        print(stats)
-        print(external_formats)
+            acarshub_logging.log(e, "service_check", level=1)
+            acarshub_logging.traceback(e)
 
 
 if os.getenv("LOCAL_TEST", default=False):

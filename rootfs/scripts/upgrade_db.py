@@ -85,6 +85,9 @@ import sys
 # term = Column("term", String(32), nullable=False)
 # type_of_match = Column("type_of_match", String(32), nullable=False)
 
+sys.path.append("../webapp/")
+import acarshub_logging  # noqa: E402
+
 if (
     os.getenv("LOCAL_TEST", default=False)
     and str(os.getenv("LOCAL_TEST", default=False)).upper() == "TRUE"
@@ -92,17 +95,9 @@ if (
     path_to_db = os.getenv("DB_PATH")
 else:
     path_to_db = "/run/acars/messages.db"
-if (
-    os.getenv("QUIET_LOGS", default=False)
-    and str(os.getenv("QUIET_LOGS", default=False)).upper() == "TRUE"
-):
-    be_quiet = True
-else:
-    be_quiet = False
 
-if not be_quiet:
-    print("Checking to see if database needs upgrades")
-sys.stdout.flush()
+acarshub_logging.log("Checking to see if database needs upgrades", "db_upgrade")
+
 upgraded = False
 exit_code = 0
 count_table = 'CREATE TABLE "count" ("id" INTEGER NOT NULL,"total" INTEGER, "errors" INTEGER, "good" INTEGER, PRIMARY KEY("id"));'
@@ -131,9 +126,8 @@ def enable_fts(db: Connection, table: str, columns: List[str]):
     column_list_without = ",".join(
         f"{c}" for c in columns if c.find(" UNINDEXED") == -1
     )
-    if not be_quiet:
-        print("Creating new FTS table")
-    sys.stdout.flush()
+    acarshub_logging.log("Creating new FTS table", "db_upgrade", 4)
+
     db.executescript(
         """
         CREATE VIRTUAL TABLE {table}_fts USING fts5
@@ -145,9 +139,8 @@ def enable_fts(db: Connection, table: str, columns: List[str]):
             table=table, column_list=column_list_without, rowid="id"
         )
     )
-    if not be_quiet:
-        print("Creating new triggers")
-    sys.stdout.flush()
+    acarshub_logging.log("Creating new triggers", "db_upgrade", 4)
+
     db.executescript(
         """
         CREATE TRIGGER {table}_fts_insert AFTER INSERT ON messages
@@ -174,9 +167,7 @@ def enable_fts(db: Connection, table: str, columns: List[str]):
             ),
         )
     )
-    if not be_quiet:
-        print("Populating new FTS table with data")
-    sys.stdout.flush()
+    acarshub_logging.log("Populating new FTS table with data", "db_upgrade", 4)
     db.executescript('INSERT INTO messages_fts(messages_fts) VALUES ("rebuild")')
 
 
@@ -225,33 +216,29 @@ def check_tables(conn, cur):
 
     if "text_fts" in tables:
         upgraded = True
-        print("Removing old FTS table")
-        sys.stdout.flush()
+        acarshub_logging.log("Removing old FTS table", "db_upgrade", 4)
         cur.execute('DROP TABLE "main"."text_fts";')
 
     if "message_ad" in triggers:
         upgraded = True
-        print("Removing AD trigger")
-        sys.stdout.flush()
+        acarshub_logging.log("Removing AD trigger", "db_upgrade", 4)
         cur.execute('DROP TRIGGER "main"."message_ad";')
     if "message_ai" in triggers:
         upgraded = True
-        print("Removing AI trigger")
-        sys.stdout.flush()
+        acarshub_logging.log("Removing AI trigger", "db_upgrade", 4)
         cur.execute('DROP TRIGGER "main"."message_ai";')
     if "message_au" in triggers:
         upgraded = True
-        print("Removing AU trigger")
-        sys.stdout.flush()
+        acarshub_logging.log("Removing AU trigger", "db_upgrade", 4)
         cur.execute('DROP TRIGGER "main"."message_au";')
 
     if "messages_fts" not in tables:
         upgraded = True
-        print("Adding in text search tables....may take a while")
-        sys.stdout.flush()
+        acarshub_logging.log(
+            "Adding in text search tables....may take a while", "db_upgrade", 4
+        )
 
-        print("creating virtual table")
-        sys.stdout.flush()
+        acarshub_logging.log("creating virtual table", "db_upgrade", 4)
         enable_fts(conn, "messages", columns)
 
     add_triggers(cur, conn, "messages", columns)
@@ -260,9 +247,7 @@ def check_tables(conn, cur):
 def de_null(cur):
     # we need to ensure the columns don't have any NULL values
     # Legacy db problems...
-    if not be_quiet:
-        print("Ensuring no columns contain NULL values")
-    sys.stdout.flush()
+    acarshub_logging.log("Ensuring no columns contain NULL values", "db_upgrade", 4)
     cur.execute('UPDATE messages SET toaddr = "" WHERE toaddr is NULL')
     cur.execute('UPDATE messages SET fromaddr = "" WHERE toaddr is NULL')
     cur.execute('UPDATE messages SET depa = "" WHERE depa IS NULL')
@@ -292,9 +277,7 @@ def de_null(cur):
     cur.execute('UPDATE messages SET error = "" WHERE error IS NULL')
     cur.execute('UPDATE messages SET libacars = "" WHERE libacars IS NULL')
     cur.execute('UPDATE messages SET level = "" WHERE level IS NULL')
-    if not be_quiet:
-        print("done with de-nulling")
-    sys.stdout.flush()
+    acarshub_logging.log("done with de-nulling", "db_upgrade", 4)
 
 
 def add_indexes(cur):
@@ -303,73 +286,53 @@ def add_indexes(cur):
     indexes = [i[1] for i in cur.execute("PRAGMA index_list(messages)")]
 
     if "ix_messages_msg_text" not in indexes:
-        if not be_quiet:
-            print("Adding text index")
-        sys.stdout.flush()
+        acarshub_logging.log("Adding text index", "db_upgrade", 4)
         upgraded = True
         cur.execute(
             'CREATE INDEX "ix_messages_msg_text" ON "messages" ("msg_text" DESC)'
         )
 
     if "ix_messages_icao" not in indexes:
-        if not be_quiet:
-            print("Adding icao index")
-        sys.stdout.flush()
+        acarshub_logging.log("Adding icao index", "db_upgrade", 4)
         upgraded = True
         cur.execute('CREATE INDEX "ix_messages_icao" ON "messages" ("icao" DESC)')
 
     if "ix_messages_flight" not in indexes:
-        if not be_quiet:
-            print("Adding flight index")
-        sys.stdout.flush()
+        acarshub_logging.log("Adding flight index", "db_upgrade", 4)
         upgraded = True
         cur.execute('CREATE INDEX "ix_messages_flight" ON "messages" ("flight" DESC)')
 
     if "ix_messages_tail" not in indexes:
-        if not be_quiet:
-            print("Adding tail index")
-        sys.stdout.flush()
+        acarshub_logging.log("Adding tail index", "db_upgrade", 4)
         upgraded = True
         cur.execute('CREATE INDEX "ix_messages_tail" ON "messages" ("tail" DESC)')
 
     if "ix_messages_depa" not in indexes:
-        if not be_quiet:
-            print("Adding depa index")
-        sys.stdout.flush()
+        acarshub_logging.log("Adding depa index", "db_upgrade", 4)
         upgraded = True
         cur.execute('CREATE INDEX "ix_messages_depa" ON "messages" ("depa" DESC)')
 
     if "ix_messages_dsta" not in indexes:
-        if not be_quiet:
-            print("Adding dsta index")
-        sys.stdout.flush()
+        acarshub_logging.log("Adding dsta index", "db_upgrade", 4)
         upgraded = True
         cur.execute('CREATE INDEX "ix_messages_dsta" ON "messages" ("dsta" DESC)')
 
     if "ix_messages_msgno" not in indexes:
-        if not be_quiet:
-            print("Adding msgno index")
-        sys.stdout.flush()
+        acarshub_logging.log("Adding msgno index", "db_upgrade", 4)
         upgraded = True
         cur.execute('CREATE INDEX "ix_messages_msgno" ON "messages" ("msgno" DESC)')
 
     if "ix_messages_freq" not in indexes:
-        if not be_quiet:
-            print("Adding freq index")
-        sys.stdout.flush()
+        acarshub_logging.log("Adding freq index", "db_upgrade", 4)
         upgraded = True
         cur.execute('CREATE INDEX "ix_messages_freq" ON "messages" ("freq" DESC)')
 
     if "ix_messages_label" not in indexes:
-        if not be_quiet:
-            print("Adding label index")
-        sys.stdout.flush()
+        acarshub_logging.log("Adding label index", "db_upgrade", 4)
         upgraded = True
         cur.execute('CREATE INDEX "ix_messages_label" ON "messages" ("label" DESC)')
     if "ix_messages_label" not in indexes:
-        if not be_quiet:
-            print("Adding msg time index")
-        sys.stdout.flush()
+        acarshub_logging.log("Adding msg time index", "db_upgrade", 4)
         upgraded = True
         cur.execute(
             'CREATE INDEX "ix_messages_msgtime" ON "messages" ("msg_time" DESC)'
@@ -434,8 +397,7 @@ def add_triggers(cur, db: Connection, table: str, columns: List[str]):
         )
     if execute_script != "":
         upgraded = True
-        print("Inserting FTS triggers")
-        sys.stdout.flush()
+        acarshub_logging.log("Inserting FTS triggers", "db_upgrade", 4)
         db.executescript(execute_script)
         conn.executescript('INSERT INTO messages_fts(messages_fts) VALUES ("rebuild")')
 
@@ -459,8 +421,7 @@ def normalize_freqs(cur):
     # select freqs from messages and ensure there are three decimal places
     tables = ["messages", "messages_saved", "freqs"]
     for table in tables:
-        if not be_quiet:
-            print(f"Normalizing frequencies in {table}")
+        acarshub_logging.log(f"Normalizing frequencies in {table}", "db_upgrade", 4)
         cur.execute(
             f"""
             SELECT freq, count(*) as cnt
@@ -483,8 +444,9 @@ def normalize_freqs(cur):
                     (adjusted_freq, freq_in_table),
                 )
 
-        if not be_quiet:
-            print(f"Normalizing frequencies in {table} complete")
+        acarshub_logging.log(
+            f"Normalizing frequencies in {table} complete", "db_upgrade", 4
+        )
 
 
 if __name__ == "__main__":
@@ -512,24 +474,20 @@ if __name__ == "__main__":
             os.getenv("AUTO_VACUUM", default=False)
             and str(os.getenv("AUTO_VACUUM")).upper() == "TRUE"
         ):
-            print("Reclaiming disk space")
-            sys.stdout.flush()
+            acarshub_logging.log("Reclaiming disk space", "db_upgrade", 4)
             cur.execute("PRAGMA auto_vacuum = '0';")
             cur.execute("VACUUM;")
         conn.commit()
 
         if upgraded:
-            print("Completed upgrading database structure")
-            sys.stdout.flush()
-        elif not be_quiet:
-            print("Database structure did not require upgrades")
-            sys.stdout.flush()
-    except Exception as e:
-        print(
-            f"ERROR UPGRADING DB. PLEASE SHUT DOWN ACARSHUB AND ENSURE DATABASE INTEGRITY: {e}"
+            acarshub_logging.log(
+                "Completed upgrading database structure", "db_upgrade", 4
+            )
+        acarshub_logging.log(
+            "Database structure did not require upgrades", "db_upgrade", 4
         )
-        sys.stdout.flush()
-        conn.close()
+    except Exception as e:
+        acarshub_logging.acars_traceback(e, "db_upgrade", 1)
         exit_code = 1
     finally:
         if conn:
