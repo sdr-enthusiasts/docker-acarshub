@@ -7,9 +7,6 @@ updates:
       interval: daily
       time: "00:00"
       timezone: "Etc/UTC"
-    ignore:
-      # ignoring eventlet until gunicorn is updated to support the latest version
-      - dependency-name: "eventlet"
 
   - package-ecosystem: "npm"
     directory: "/acarshub-typescript"
