@@ -29,7 +29,7 @@ def format_acars_message(acars_message):
 def formated_dumpvdl2_level(unformatted_level):
     import math
 
-    truncated = str(math.trunc((10.0 ** 1) * unformatted_level) / (10.0 ** 1))
+    truncated = str(math.trunc((10.0**1) * unformatted_level) / (10.0**1))
 
     if str.endswith(truncated, "0"):
         truncated = truncated[:-2]
