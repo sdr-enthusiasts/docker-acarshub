@@ -96,7 +96,7 @@ jobs:
           set -xe
           npm install
           sed -i 's/Pre-Release/ACARS Hub NextGen Pre-Release: ${{ env.VERSION_TAG }}/' ./src/helpers/menu.ts
-          npm run build-dev
+          npm run build
           mkdir -p ./webapp/static/images
           mkdir -p ./webapp/static/js
           mkdir -p ./webapp/static/sounds
