@@ -128,7 +128,7 @@ jobs:
   deploy_ghcr_nextgen_test:
     name: Deploy ACARS Hub Next Gen Base Image
     runs-on: ubuntu-latest
-    needs: [acarshub-typescript]
+    needs: [hadolint, shellcheck, flake8]
     steps:
       # Check out our code
       - name: Checkout
