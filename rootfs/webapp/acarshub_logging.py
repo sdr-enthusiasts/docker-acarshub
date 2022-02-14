@@ -51,5 +51,5 @@ if os.getenv("MIN_LOG_LEVEL", default=False):
     if os.getenv("MIN_LOG_LEVEL").isdigit():
         MIN_LOG_LEVEL = int(os.getenv("MIN_LOG_LEVEL"))
     else:
-        log(f"LOG_LEVEL is not a number: {os.getenv('MIN_LOG_LEVEL')}", "MIN_LOG_LEVEL")
-        log(f"LOG_LEVEL set to {MIN_LOG_LEVEL}", "MIN_LOG_LEVEL")
+        log(f"LOG_LEVEL is not a number: {os.getenv('MIN_LOG_LEVEL')}", "logger")
+        log(f"LOG_LEVEL set to {MIN_LOG_LEVEL}", "logger")
