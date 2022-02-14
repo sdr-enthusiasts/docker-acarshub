@@ -620,7 +620,7 @@ def database_search(search_term, page=0):
                     match_string += f' AND {key}:"{search_term[key]}"*'
 
         if match_string == "":
-            return [None, 50]
+            return [None, 0]
 
         match_string += "'"
 
@@ -640,7 +640,7 @@ def database_search(search_term, page=0):
 
         if final_count == 0:
             session.close()
-            return [None, 50]
+            return [None, 0]
 
         for row in result:
             processed_results.append(dict(row))
@@ -650,7 +650,7 @@ def database_search(search_term, page=0):
     except Exception as e:
         acarshub_logging.acars_traceback(e, "database")
         session.close()
-        return [None, 50]
+        return [None, 0]
 
 
 # def database_search(search_term, page=0):
