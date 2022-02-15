@@ -63,7 +63,7 @@ server {
   }
 
   # valid URL paths for pages serve index.html
-  location ~ ^/(search|alerts|stats|adsb|about|status) {
+  location ~ ^/(search|alerts|stats|adsb|about|status)$ {
     add_header Cache-Control 'no-store';
     try_files /templates/index.html =404;
   }
