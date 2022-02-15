@@ -31,6 +31,9 @@ from flask_socketio import SocketIO  # noqa: E402
 from flask import Flask, render_template, request, redirect, url_for  # noqa: E402
 from threading import Thread, Event  # noqa: E402
 from collections import deque  # noqa: E402
+import json  # noqa: E402
+import socket  # noqa: E402
+import time  # noqa: E402
 
 app = Flask(__name__)
 # Make the browser not cache files if running in dev mode
@@ -79,13 +82,13 @@ thread_database_stop_event = Event()
 que_messages = deque(maxlen=15)
 que_database = deque(maxlen=15)
 
-messages_recent = []  # list to store most recent msgs
+list_of_recent_messages = []  # list to store most recent msgs
 
 # counters for messages
 # will be reset once written to RRD
-vdlm_messages = 0
-acars_messages = 0
-error_messages = 0
+vdlm_messages_last_minute = 0
+acars_messages_last_minute = 0
+error_messages_last_minute = 0
 
 # all namespaces
 
@@ -99,12 +102,8 @@ vdlm2_feeder_stop_event = Event()
 
 
 def vdlm_feeder():
-    import socket
-    import time
-    import json
-
-    airframes = (socket.gethostbyname("feed.acars.io"), 5555)
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    airframes_host = (socket.gethostbyname("feed.acars.io"), 5555)
+    airframes_vdlm_feed_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     while not vdlm2_feeder_stop_event.isSet():
         time.sleep(1)
 
@@ -113,7 +112,14 @@ def vdlm_feeder():
             msg = que_vdlm2_feed.popleft()
 
             try:
-                sock.sendto(json.dumps(msg, separators=(",", ":")).encode(), airframes)
+                airframes_vdlm_feed_socket.sendto(
+                    json.dumps(msg, separators=(",", ":")).encode(), airframes_host
+                )
+            except ValueError as e:
+                acarshub_logging.log(f"JSON Error: {e}", "vdlm_python_feeder", 1)
+                acarshub_logging.log(f"JSON Error: {msg}", "vdlm_python_feeder", 1)
+                acarshub_logging.log("Skipping Message", "vdlm_python_feeder", 1)
+                acarshub_logging.traceback(e, "vdlm_python_feeder")
             except Exception as e:
                 acarshub_logging.acars_traceback(e, "vdlm_python_feeder")
                 que_vdlm2_feed.appendleft(msg)
@@ -124,16 +130,18 @@ def vdlm_feeder():
 
 
 def update_rrd_db():
-    global vdlm_messages
-    global acars_messages
-    global error_messages
+    global vdlm_messages_last_minute
+    global acars_messages_last_minute
+    global error_messages_last_minute
 
     acarshub_rrd_database.update_db(
-        vdlm=vdlm_messages, acars=acars_messages, error=error_messages
+        vdlm=vdlm_messages_last_minute,
+        acars=acars_messages_last_minute,
+        error=error_messages_last_minute,
     )
-    vdlm_messages = 0
-    acars_messages = 0
-    error_messages = 0
+    vdlm_messages_last_minute = 0
+    acars_messages_last_minute = 0
+    error_messages_last_minute = 0
 
 
 def htmlListener():
@@ -148,16 +156,16 @@ def htmlListener():
 
         while len(que_messages) != 0:
             message_source, json_message_initial = que_messages.popleft()
-            json_message = copy.deepcopy(
+            message_as_json = copy.deepcopy(
                 json_message_initial
             )  # creating a copy so that our changes below aren't made to the parent object
             # Send output via socketio
-            json_message.update(
+            message_as_json.update(
                 {"message_type": message_source}
             )  # add in the message_type key because the parent object didn't have it
-            json_message = acarshub_helpers.update_keys(json_message)
+            message_as_json = acarshub_helpers.update_keys(message_as_json)
 
-            socketio.emit("acars_msg", {"msghtml": json_message}, namespace="/main")
+            socketio.emit("acars_msg", {"msghtml": message_as_json}, namespace="/main")
 
     acarshub_logging.log("Exiting HTML Listener thread", "htmlListener", level=5)
 
@@ -199,9 +207,9 @@ def database_listener():
 
         while len(que_database) != 0:
             sys.stdout.flush()
-            t, m = que_database.pop()
+            message_type, message_as_json = que_database.pop()
             acarshub_helpers.acarshub_database.add_message_from_json(
-                message_type=t, message_from_json=m
+                message_type=message_type, message_from_json=message_as_json
             )
         else:
             pass
@@ -213,12 +221,12 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
     import json
     import sys
 
-    global error_messages
+    global error_messages_last_minute
 
     if message_type == "VDLM2":
-        global vdlm_messages
+        global vdlm_messages_last_minute
     elif message_type == "ACARS":
-        global acars_messages
+        global acars_messages_last_minute
 
     disconnected = True
 
@@ -318,25 +326,36 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
                         for j in split_json:
                             if len(j) > 1:
                                 message_json.append(json.loads(j + "}\n"))
-
+                except ValueError as e:
+                    acarshub_logging.log(
+                        f"JSON Error: {e}", f"{message_type.lower()}Generator", 1
+                    )
+                    acarshub_logging.log(
+                        f"JSON Error: {j}", f"{message_type.lower()}Generator", 1
+                    )
+                    acarshub_logging.log(
+                        "Skipping Message", f"{message_type.lower()}Generator", 1
+                    )
+                    acarshub_logging.traceback(e, f"{message_type.lower()}Generator")
                 except Exception as e:
                     acarshub_logging.log(
-                        f"Error with JSON input {repr(data)} .\n{e}",
+                        f"Unknown Error with JSON input: {e}",
                         f"{message_type.lower()}Generator",
-                        level=3,
+                        level=1,
                     )
+                    acarshub_logging.traceback(e, f"{message_type.lower()}Generator")
                 finally:
                     for j in message_json:
                         if message_type == "VDLM2":
-                            vdlm_messages += 1
+                            vdlm_messages_last_minute += 1
                             que_type = "VDL-M2"
                         elif message_type == "ACARS":
-                            acars_messages += 1
+                            acars_messages_last_minute += 1
                             que_type = "ACARS"
 
                         if "error" in j:
                             if j["error"] > 0:
-                                error_messages += j["error"]
+                                error_messages_last_minute += j["error"]
 
                         que_messages.append(
                             (que_type, acars_formatter.format_acars_message(j))
@@ -351,13 +370,15 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
                             que_vdlm2_feed.append(
                                 acars_formatter.format_acars_message(j)
                             )
-                        if len(messages_recent) >= 150:  # Keep the que size down
-                            del messages_recent[0]
+                        if (
+                            len(list_of_recent_messages) >= 150
+                        ):  # Keep the que size down
+                            del list_of_recent_messages[0]
 
                         if not acarshub_configuration.QUIET_MESSAGES:
                             print(f"MESSAGE:{message_type.lower()}Generator: {j}")
 
-                        messages_recent.append(
+                        list_of_recent_messages.append(
                             (que_type, acars_formatter.format_acars_message(j))
                         )  # add to recent message que for anyone fresh loading the page
 
@@ -453,7 +474,7 @@ def init_listeners(special_message=""):
 
 
 def init():
-    global messages_recent
+    global list_of_recent_messages
     # grab recent messages from db and fill the most recent array
     # then turn on the listeners
     acarshub_logging.log("Grabbing most recent messages from database", "init")
@@ -475,7 +496,9 @@ def init():
         for item in results:
             json_message = item
             try:
-                messages_recent.insert(0, [json_message["message_type"], json_message])
+                list_of_recent_messages.insert(
+                    0, [json_message["message_type"], json_message]
+                )
             except Exception as e:
                 acarshub_logging.log(
                     f"Startup Error adding message to recent messages {e}", "init"
@@ -613,8 +636,8 @@ def main_connect():
         acarshub_logging.traceback(e, "webapp")
 
     msg_index = 1
-    for msg_type, json_message_orig in messages_recent:
-        if msg_index == len(messages_recent):
+    for msg_type, json_message_orig in list_of_recent_messages:
+        if msg_index == len(list_of_recent_messages):
             recent_options["done_loading"] = True
         msg_index += 1
         json_message = copy.deepcopy(json_message_orig)
