@@ -31,8 +31,8 @@ repos:
     hooks:
       - id: black
 
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v1.2.3
+  - repo: https://github.com/pycqa/flake8
+    rev: "4.0.1" # pick a git hash / tag to point to
     hooks:
       - id: flake8
         args: ["--extend-ignore=W503,W504,E501"]
