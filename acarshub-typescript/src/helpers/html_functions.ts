@@ -21,7 +21,7 @@ export let html_functions = {
     return `<div class="acarshub-message-container" id="${uid}">`;
   },
   end_message() {
-    return "</div>";
+    return "</div></div>";
   },
 
   start_message_tabs: function (): string {

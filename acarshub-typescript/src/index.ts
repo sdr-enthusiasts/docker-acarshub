@@ -81,6 +81,22 @@ let adsb_request_options = {
   method: "GET",
 } as RequestInit;
 
+// @ts-expect-error
+var hidden, visibilityChange;
+if (typeof document.hidden !== "undefined") {
+  // Opera 12.10 and Firefox 18 and later support
+  hidden = "hidden";
+  visibilityChange = "visibilitychange";
+} //@ts-ignore
+else if (typeof document.msHidden !== "undefined") {
+  hidden = "msHidden";
+  visibilityChange = "msvisibilitychange";
+} //@ts-ignore
+else if (typeof document.webkitHidden !== "undefined") {
+  hidden = "webkitHidden";
+  visibilityChange = "webkitvisibilitychange";
+}
+
 const pages: string[] = [
   "/", // index/live messages
   "/search", // search page
@@ -361,6 +377,16 @@ $((): void => {
   setInterval(function () {
     stats_page.updatePage();
   }, 60000);
+
+  // @ts-expect-error
+  document.addEventListener(
+    visibilityChange,
+    () => {
+      // @ts-expect-error
+      toggle_pages(document[hidden]);
+    },
+    false
+  );
 });
 
 export function get_window_size(): window_size {
@@ -407,46 +433,46 @@ function update_url(): void {
   menu.set_about_page_urls(index_acars_path, index_acars_url);
 }
 
-function toggle_pages(): void {
+function toggle_pages(is_backgrounded = false): void {
   index_acars_page =
     "/" + document.location.pathname.replace(index_acars_path, "");
   live_map_page.plane_message_modal.close();
   for (let page in pages) {
     if (pages[page] === "/" && index_acars_page === pages[page]) {
       $("#live_messages_link").addClass("invert_a");
-      live_messages_page.live_message_active(true);
+      live_messages_page.live_message_active(!is_backgrounded);
     } else if (pages[page] === "/") {
       $("#live_messages_link").removeClass("invert_a");
       live_messages_page.live_message_active();
     } else if (pages[page] === "/search" && index_acars_page === pages[page]) {
       $("#search_link").addClass("invert_a");
-      search_page.search_active(true);
+      search_page.search_active(!is_backgrounded);
     } else if (pages[page] === "/search") {
       $("#search_link").removeClass("invert_a");
       search_page.search_active();
     } else if (pages[page] === "/stats" && index_acars_page === pages[page]) {
       $("#stats_link").addClass("invert_a");
-      stats_page.stats_active(true);
+      stats_page.stats_active(!is_backgrounded);
     } else if (pages[page] === "/stats") {
       $("#stats_link").removeClass("invert_a");
       stats_page.stats_active();
     } else if (pages[page] === "/about" && index_acars_page === pages[page]) {
-      about.about_active(true);
+      about.about_active(!is_backgrounded);
     } else if (pages[page] === "/about") {
       about.about_active();
     } else if (pages[page] === "/status" && index_acars_page === pages[page]) {
-      status.status_active(true);
+      status.status_active(!is_backgrounded);
     } else if (pages[page] === "/status") {
       status.status_active();
     } else if (pages[page] === "/alerts" && index_acars_page === pages[page]) {
       $("#alerts_link").addClass("invert_a");
-      alerts_page.alert_active(true);
+      alerts_page.alert_active(!is_backgrounded);
     } else if (pages[page] === "/alerts") {
       $("#alerts_link").removeClass("invert_a");
       alerts_page.alert_active();
     } else if (pages[page] === "/adsb" && index_acars_page === pages[page]) {
       $("#live_map_link").addClass("invert_a");
-      live_map_page.live_map_active(true, {
+      live_map_page.live_map_active(!is_backgrounded, {
         width: old_window_width,
         height: old_window_height,
       } as window_size);

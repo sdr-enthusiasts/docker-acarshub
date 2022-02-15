@@ -24,9 +24,7 @@ import {
   html_msg,
   acars_msg,
   labels,
-  matches,
   plane,
-  aircraft_icon,
   plane_data,
   alert_matched,
   plane_match,
@@ -99,13 +97,17 @@ export let live_messages_page = {
     get_all_messages: function (): acars_msg[][] {
       let output = [] as acars_msg[][];
       for (const msgList of this.planes) {
-        if (output.length < 50) {
+        if (output.length < 20) {
+          // 20 is the maximum number of message groups we ever want to display on the page
           output.push(msgList.messages);
         } else {
           return output;
         }
       }
       return output;
+    },
+    get_first_message: function (): acars_msg[] {
+      return this.planes[0].messages;
     },
   },
   exclude: [] as string[],
@@ -591,6 +593,7 @@ export let live_messages_page = {
 
   new_acars_message: function (msg: html_msg): void {
     let new_msg = msg.msghtml;
+    let move_or_delete_id: undefined | string = undefined;
     if (!this.skip_message(new_msg)) {
       // if the message filter is not set or the message is not in the exclude list, continue
       if ("text" in new_msg) {
@@ -662,6 +665,11 @@ export let live_messages_page = {
               message.timestamp = new_msg.timestamp;
               message.duplicates = String(Number(message.duplicates || 0) + 1);
               rejected = true;
+              move_or_delete_id =
+                this.lm_msgs_received.planes[index_of_found_plane].messages[
+                  this.lm_msgs_received.planes[index_of_found_plane].messages
+                    .length - 1
+                ].uid;
             } else if (
               // check if text fields are the same
               "text" in message &&
@@ -672,6 +680,11 @@ export let live_messages_page = {
               message.timestamp = new_msg.timestamp;
               message.duplicates = String(Number(message.duplicates || 0) + 1);
               rejected = true;
+              move_or_delete_id =
+                this.lm_msgs_received.planes[index_of_found_plane].messages[
+                  this.lm_msgs_received.planes[index_of_found_plane].messages
+                    .length - 1
+                ].uid;
             } else if (
               new_msg.station_id == message.station_id && // Is the message from the same station id? Keep ACARS/VDLM separate
               new_msg.timestamp - message.timestamp < 8.0 && // We'll assume the message is not a multi-part message if the time from the new message is too great from the rest of the group
@@ -684,6 +697,11 @@ export let live_messages_page = {
               // This check matches if the group is a AAAz counter
               // We have a multi part message. Now we need to see if it is a dup
               rejected = true;
+              move_or_delete_id =
+                this.lm_msgs_received.planes[index_of_found_plane].messages[
+                  this.lm_msgs_received.planes[index_of_found_plane].messages
+                    .length - 1
+                ].uid;
               let add_multi = true;
 
               if ("msgno_parts" in message) {
@@ -828,16 +846,35 @@ export let live_messages_page = {
       !this.pause &&
       (typeof msg.done_loading === "undefined" || msg.done_loading === true)
     ) {
-      this.current_message_string = "";
-      this.lm_msgs_received.get_all_messages().forEach((item) => {
-        this.current_message_string += display_message_group(
-          item,
+      if (typeof msg.done_loading === "undefined") {
+        // this is not loading and we should already have a valid DOM tree to play with
+        // If this was a matched message delete the element from the tree so it can be moved to the front
+        if (move_or_delete_id) {
+          $(`#${move_or_delete_id}_container`).remove();
+        }
+        // Display the new message at the front of the DOM tree
+        $("#log").prepend(
+          display_message_group(
+            this.lm_msgs_received.get_first_message(),
+            this.selected_tabs,
+            true
+          )
+        );
+        // After updating the tree we may exceed the length. If so, remove the last element
+        if ($("#log .acars_message_container").length > 20) {
+          $("#log div.acars_message_container:last").remove();
+        }
+        // Save the DOM tree HTML because this is a hacky hack to get the page refreshed on page in
+        this.current_message_string = $("#log").html();
+      } else {
+        // This is a new load and we need to populate the DOM tree
+        this.current_message_string = display_messages(
+          this.lm_msgs_received.get_all_messages(),
           this.selected_tabs,
           true
         );
-      });
-
-      $("#log").html(this.current_message_string);
+        $("#log").html(this.current_message_string);
+      }
       resize_tabs();
       tooltip.close_all_tooltips();
       tooltip.attach_all_tooltips();
