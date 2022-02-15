@@ -378,8 +378,8 @@ $((): void => {
     stats_page.updatePage();
   }, 60000);
 
-  // @ts-expect-error
   document.addEventListener(
+    // @ts-expect-error
     visibilityChange,
     () => {
       // @ts-expect-error
