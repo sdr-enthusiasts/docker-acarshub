@@ -59,6 +59,20 @@ def libacars_formatted(libacars=None):
     return html_output
 
 
+def has_specified_key_not_none(message=None, key=None):
+    if (key is None or message is None) or (
+        key not in message or message[key] is None or message[key] == ""
+    ):
+        return False
+    return True
+
+
+def has_specified_key(message=None, key=None):
+    if (key is None or message is None) or (key not in message):
+        return False
+    return True
+
+
 # Function to prepare a message for the front end
 # We do any pre-processing/updating of the keys that can't be done on the front end
 
@@ -69,7 +83,7 @@ def update_keys(json_message):
     # It will return all keys, even ones where the original message didn't have a value
     stale_keys = []
     for key in json_message:
-        if json_message[key] is None or json_message[key] == "":
+        if not has_specified_key_not_none(json_message, key):
             stale_keys.append(key)
 
     for key in stale_keys:
@@ -79,36 +93,42 @@ def update_keys(json_message):
 
     # database tablename for the message text doesn't match up with typescript-decoder (needs it to be text)
     # so we rewrite the key
-    if "msg_text" in json_message and json_message["msg_text"] is not None:
+    if has_specified_key(json_message, "msg_text"):
         json_message["text"] = json_message["msg_text"]
         del json_message["msg_text"]
 
-    if "time" in json_message and json_message["time"] is not None:
+    if has_specified_key(json_message, "time"):
         json_message["timestamp"] = json_message["time"]
         del json_message["time"]
 
-    if "libacars" in json_message and json_message["libacars"] is not None:
+    if has_specified_key(json_message, "libacars"):
         json_message["libacars"] = libacars_formatted(json_message["libacars"])
 
-    if "icao" in json_message and json_message["icao"] is not None:
-        json_message["icao_hex"] = format(int(json_message["icao"]), "X")
+    if has_specified_key(json_message, "icao"):
+        try:
+            json_message["icao_hex"] = format(int(json_message["icao"]), "X")
+        except Exception as e:
+            acarshub_logging.log(
+                f"Unable to convert icao to hex: {json_message['icao']}",
+                "update_keys",
+                2,
+            )
+            acarshub_logging.traceback(e, "update_keys")
 
-    if (
-        "flight" in json_message
-        and json_message["flight"] is not None
-        and "icao_hex" in json_message
+    if has_specified_key(json_message, "flight") and has_specified_key(
+        json_message, "icao_hex"
     ):
         json_message["flight"], json_message["icao_flight"] = flight_finder(
             callsign=json_message["flight"], hex_code=json_message["icao_hex"]
         )
-    elif "flight" in json_message and json_message["flight"] is not None:
+    elif has_specified_key(json_message, "flight"):
         json_message["flight"], json_message["icao_flight"] = flight_finder(
             callsign=json_message["flight"], url=False
         )
-    elif "icao_hex" in json_message:
+    elif has_specified_key(json_message, "icao_hex"):
         json_message["icao_url"] = flight_finder(hex_code=json_message["icao_hex"])
 
-    if "toaddr" in json_message and json_message["toaddr"] is not None:
+    if has_specified_key(json_message, "toaddr"):
         json_message["toaddr_hex"] = format(int(json_message["toaddr"]), "X")
 
         toaddr_icao, toaddr_name = acarshub_database.lookup_groundstation(
@@ -118,7 +138,7 @@ def update_keys(json_message):
         if toaddr_icao is not None:
             json_message["toaddr_decoded"] = f"{toaddr_name} ({toaddr_icao})"
 
-    if "fromaddr" in json_message and json_message["fromaddr"] is not None:
+    if has_specified_key(json_message, "fromaddr"):
         json_message["fromaddr_hex"] = format(int(json_message["fromaddr"]), "X")
 
         fromaddr_icao, fromaddr_name = acarshub_database.lookup_groundstation(
@@ -128,7 +148,7 @@ def update_keys(json_message):
         if fromaddr_icao is not None:
             json_message["fromaddr_decoded"] = f"{fromaddr_name} ({fromaddr_icao})"
 
-    if "label" in json_message and json_message["label"] is not None:
+    if has_specified_key(json_message, "label"):
         label_type = acarshub_database.lookup_label(json_message["label"])
 
         if label_type is not None:
