@@ -18,6 +18,7 @@
 
 import rrdtool
 import acarshub_logging
+from acarshub_logging import LOG_LEVEL
 import os
 
 
@@ -27,7 +28,9 @@ def update_db(vdlm=0, acars=0, error=0):
     try:
         rrdtool.update("/run/acars/acarshub.rrd", f"N:{acars}:{vdlm}:{total}:{error}")
         acarshub_logging.log(
-            f"rrdtool.update: N:{acars}:{vdlm}:{total}:{error}", "rrdtool", level=5
+            f"rrdtool.update: N:{acars}:{vdlm}:{total}:{error}",
+            "rrdtool",
+            level=LOG_LEVEL["DEBUG"],
         )
     except Exception as e:
         acarshub_logging.acars_traceback(e, "rrdtool")

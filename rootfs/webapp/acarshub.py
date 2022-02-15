@@ -22,6 +22,7 @@ eventlet.monkey_patch()
 import acarshub_helpers  # noqa: E402
 import acarshub_configuration  # noqa: E402
 import acarshub_logging  # noqa: E402
+from acarshub_logging import LOG_LEVEL  # noqa: E402
 import acars_formatter  # noqa: E402
 
 if not acarshub_configuration.LOCAL_TEST:
@@ -119,7 +120,7 @@ def vdlm_feeder():
                 acarshub_logging.log(f"JSON Error: {e}", "vdlm_python_feeder", 1)
                 acarshub_logging.log(f"JSON Error: {msg}", "vdlm_python_feeder", 1)
                 acarshub_logging.log("Skipping Message", "vdlm_python_feeder", 1)
-                acarshub_logging.traceback(e, "vdlm_python_feeder")
+                acarshub_logging.acars_traceback(e, "vdlm_python_feeder")
             except Exception as e:
                 acarshub_logging.acars_traceback(e, "vdlm_python_feeder")
                 que_vdlm2_feed.appendleft(msg)
@@ -167,7 +168,9 @@ def htmlListener():
 
             socketio.emit("acars_msg", {"msghtml": message_as_json}, namespace="/main")
 
-    acarshub_logging.log("Exiting HTML Listener thread", "htmlListener", level=5)
+    acarshub_logging.log(
+        "Exiting HTML Listener thread", "htmlListener", level=LOG_LEVEL["DEBUG"]
+    )
 
 
 def scheduled_tasks():
@@ -249,7 +252,7 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
                 acarshub_logging.log(
                     f"{message_type.lower()}_receiver connected to {ip}:{port}",
                     f"{message_type.lower()}Generator",
-                    level=5,
+                    level=LOG_LEVEL["DEBUG"],
                 )
 
             data = None
@@ -264,7 +267,7 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
             acarshub_logging.log(
                 f"Error to {ip}:{port}. Reattemping...",
                 f"{message_type.lower()}Generator",
-                level=1,
+                level=LOG_LEVEL["ERROR"],
             )
             acarshub_logging.acars_traceback(e, f"{message_type.lower()}Generator")
             disconnected = True
@@ -336,14 +339,18 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
                     acarshub_logging.log(
                         "Skipping Message", f"{message_type.lower()}Generator", 1
                     )
-                    acarshub_logging.traceback(e, f"{message_type.lower()}Generator")
+                    acarshub_logging.acars_traceback(
+                        e, f"{message_type.lower()}Generator"
+                    )
                 except Exception as e:
                     acarshub_logging.log(
                         f"Unknown Error with JSON input: {e}",
                         f"{message_type.lower()}Generator",
-                        level=1,
+                        level=LOG_LEVEL["ERROR"],
                     )
-                    acarshub_logging.traceback(e, f"{message_type.lower()}Generator")
+                    acarshub_logging.acars_traceback(
+                        e, f"{message_type.lower()}Generator"
+                    )
                 finally:
                     for j in message_json:
                         if message_type == "VDLM2":
@@ -403,13 +410,13 @@ def init_listeners(special_message=""):
         if special_message == ""
         else "Checking Data Listeners",
         "init",
-        level=4 if special_message == "" else 5,
+        level=LOG_LEVEL["INFO"] if special_message == "" else LOG_LEVEL["DEBUG"],
     )
     if not thread_database.is_alive():
         acarshub_logging.log(
             f"{special_message}Starting Database Thread",
             "init",
-            level=4 if special_message == "" else 1,
+            level=LOG_LEVEL["INFO"] if special_message == "" else LOG_LEVEL["ERROR"],
         )
         thread_database = Thread(target=database_listener)
         thread_database.start()
@@ -417,7 +424,7 @@ def init_listeners(special_message=""):
         acarshub_logging.log(
             f"{special_message}starting scheduler",
             "init",
-            level=4 if special_message == "" else 1,
+            level=LOG_LEVEL["INFO"] if special_message == "" else LOG_LEVEL["ERROR"],
         )
         thread_scheduler = Thread(target=scheduled_tasks)
         thread_scheduler.start()
@@ -425,14 +432,14 @@ def init_listeners(special_message=""):
         acarshub_logging.log(
             f"{special_message}Starting htmlListener",
             "init",
-            level=4 if special_message == "" else 1,
+            level=LOG_LEVEL["INFO"] if special_message == "" else LOG_LEVEL["ERROR"],
         )
         thread_html_generator = socketio.start_background_task(htmlListener)
     if not thread_acars_listener.is_alive() and acarshub_configuration.ENABLE_ACARS:
         acarshub_logging.log(
             f"{special_message}Starting ACARS listener",
             "init",
-            level=4 if special_message == "" else 1,
+            level=LOG_LEVEL["INFO"] if special_message == "" else LOG_LEVEL["ERROR"],
         )
         thread_acars_listener = Thread(
             target=message_listener,
@@ -444,7 +451,7 @@ def init_listeners(special_message=""):
         acarshub_logging.log(
             f"{special_message}Starting VDLM listener",
             "init",
-            level=4 if special_message == "" else 1,
+            level=LOG_LEVEL["INFO"] if special_message == "" else LOG_LEVEL["ERROR"],
         )
         thread_vdlm2_listener = Thread(
             target=message_listener,
@@ -461,7 +468,7 @@ def init_listeners(special_message=""):
         acarshub_logging.log(
             f"{special_message}Starting VDLM feeder",
             "init",
-            level=4 if special_message == "" else 1,
+            level=LOG_LEVEL["INFO"] if special_message == "" else LOG_LEVEL["ERROR"],
         )
         vdlm2_feeder_thread = Thread(target=vdlm_feeder)
         vdlm2_feeder_thread.start()
@@ -482,16 +489,18 @@ def init():
         results = acarshub_helpers.acarshub_database.grab_most_recent()
     except Exception as e:
         acarshub_logging.log(
-            f"Startup Error grabbing most recent messages {e}", "init", level=1
+            f"Startup Error grabbing most recent messages {e}",
+            "init",
+            level=LOG_LEVEL["ERROR"],
         )
-        acarshub_logging.traceback(e, "init")
+        acarshub_logging.acars_traceback(e, "init")
     if not acarshub_configuration.LOCAL_TEST:
         try:
             acarshub_logging.log("Initializing RRD Database", "init")
             acarshub_rrd_database.create_db()  # make sure the RRD DB is created / there
         except Exception as e:
             acarshub_logging.log(f"Startup Error creating RRD Database {e}", "init")
-            acarshub_logging.traceback(e, "init")
+            acarshub_logging.acars_traceback(e, "init")
     if results is not None:
         for item in results:
             json_message = item
@@ -503,7 +512,7 @@ def init():
                 acarshub_logging.log(
                     f"Startup Error adding message to recent messages {e}", "init"
                 )
-                acarshub_logging.traceback(e, "init")
+                acarshub_logging.acars_traceback(e, "init")
 
     acarshub_logging.log(
         "Completed grabbing messages from database, starting up rest of services",
@@ -623,7 +632,7 @@ def main_connect():
         acarshub_logging.log(
             f"Main Connect: Error sending features_enabled: {e}", "webapp"
         )
-        acarshub_logging.traceback(e, "webapp")
+        acarshub_logging.acars_traceback(e, "webapp")
     try:
         socketio.emit(
             "labels",
@@ -633,7 +642,7 @@ def main_connect():
         )
     except Exception as e:
         acarshub_logging.log(f"Main Connect: Error sending labels: {e}", "webapp")
-        acarshub_logging.traceback(e, "webapp")
+        acarshub_logging.acars_traceback(e, "webapp")
 
     msg_index = 1
     for msg_type, json_message_orig in list_of_recent_messages:
@@ -656,7 +665,7 @@ def main_connect():
             acarshub_logging.log(
                 f"Main Connect: Error sending acars_msg: {e}", "webapp"
             )
-            acarshub_logging.traceback(e, "webapp")
+            acarshub_logging.acars_traceback(e, "webapp")
 
     try:
         socketio.emit(
@@ -669,7 +678,7 @@ def main_connect():
         acarshub_logging.log(
             f"Main Connect: Error sending system_status: {e}", "webapp"
         )
-        acarshub_logging.traceback(e, "webapp")
+        acarshub_logging.acars_traceback(e, "webapp")
 
     try:
         rows, size = acarshub_helpers.acarshub_database.database_get_row_count()
@@ -678,7 +687,7 @@ def main_connect():
         )
     except Exception as e:
         acarshub_logging.log(f"Main Connect: Error sending database: {e}", "webapp")
-        acarshub_logging.traceback(e, "webapp")
+        acarshub_logging.acars_traceback(e, "webapp")
 
     try:
         socketio.emit(
@@ -698,7 +707,7 @@ def main_connect():
         acarshub_logging.log(
             f"Main Connect: Error sending signal levels: {e}", "webapp"
         )
-        acarshub_logging.traceback(e, "webapp")
+        acarshub_logging.acars_traceback(e, "webapp")
 
     # Start the htmlGenerator thread only if the thread has not been started before.
     if not thread_html_generator.is_alive():
@@ -821,7 +830,7 @@ def reset_alert_counts(message, namespace):
             acarshub_logging.log(
                 f"Main Connect: Error sending alert_terms: {e}", "webapp"
             )
-            acarshub_logging.traceback(e, "webapp")
+            acarshub_logging.acars_traceback(e, "webapp")
 
 
 @socketio.on("disconnect", namespace="/main")

@@ -21,6 +21,7 @@ import subprocess
 import acarshub_database
 import time
 import acarshub_logging
+from acarshub_logging import LOG_LEVEL
 
 start_time = time.time()
 
@@ -111,9 +112,9 @@ def update_keys(json_message):
             acarshub_logging.log(
                 f"Unable to convert icao to hex: {json_message['icao']}",
                 "update_keys",
-                2,
+                LOG_LEVEL["WARNING"],
             )
-            acarshub_logging.traceback(e, "update_keys")
+            acarshub_logging.acars_traceback(e, "update_keys")
 
     if has_specified_key(json_message, "flight") and has_specified_key(
         json_message, "icao_hex"
@@ -452,8 +453,8 @@ def service_check():
                     )
 
         except Exception as e:
-            acarshub_logging.log(e, "service_check", level=1)
-            acarshub_logging.traceback(e)
+            acarshub_logging.log(e, "service_check", level=LOG_LEVEL["ERROR"])
+            acarshub_logging.acars_traceback(e)
 
 
 if os.getenv("LOCAL_TEST", default=False):

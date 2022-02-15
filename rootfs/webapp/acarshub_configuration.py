@@ -20,6 +20,7 @@
 import os
 import requests
 import acarshub_logging
+from acarshub_logging import LOG_LEVEL
 
 # debug levels
 
@@ -137,7 +138,7 @@ if (
             acarshub_logging.log(
                 f"ADSB URL ({ADSB_URL}) appears to be malformed. Disabling ADSB",
                 "init",
-                level=1,
+                level=LOG_LEVEL["ERROR"],
             )
     if os.getenv("ADSB_LON", default=False):
         ADSB_LON = float(os.getenv("ADSB_LON"))
@@ -196,10 +197,14 @@ def check_github_version():
             CURRENT_ACARS_HUB_BUILD != ACARSHUB_BUILD
             and ACARSHUB_BUILD < CURRENT_ACARS_HUB_BUILD
         ):
-            acarshub_logging.log("Update found", "version-checker", level=3)
+            acarshub_logging.log(
+                "Update found", "version-checker", level=LOG_LEVEL["WARNING"]
+            )
             IS_UPDATE_AVAILABLE = True
         else:
-            acarshub_logging.log("No update found", "version-checker", level=5)
+            acarshub_logging.log(
+                "No update found", "version-checker", level=LOG_LEVEL["DEBUG"]
+            )
             IS_UPDATE_AVAILABLE = False
 
 

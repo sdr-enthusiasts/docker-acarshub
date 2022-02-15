@@ -27,6 +27,8 @@ import traceback
 
 MIN_LOG_LEVEL = 3
 
+LOG_LEVEL = {"ERROR": 1, "CRITICAL": 2, "WARNING": 3, "INFO": 4, "DEBUG": 5}
+
 
 def log(msg, source, level=4):
     # line length 20
