@@ -378,9 +378,9 @@ $((): void => {
     stats_page.updatePage();
   }, 60000);
 
-  // @ts-expect-error
   if (
     typeof document.addEventListener === "undefined" ||
+    // @ts-expect-error
     hidden === undefined
   ) {
     console.error(
