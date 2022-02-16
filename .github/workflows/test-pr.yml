@@ -136,7 +136,7 @@ jobs:
 
       - name: Get specific changed files
         id: changed-files-specific
-        uses: tj-actions/changed-files@v14.7
+        uses: tj-actions/changed-files@v15
         with:
           files: |
             Dockerfile.nextgen
@@ -197,7 +197,7 @@ jobs:
 
       - name: Get specific changed files
         id: changed-files-specific
-        uses: tj-actions/changed-files@v14.7
+        uses: tj-actions/changed-files@v15
         with:
           files: |
             Dockerfile.nextgen
@@ -209,7 +209,7 @@ jobs:
 
       - name: Get status of next file
         id: changed-file-nextgen
-        uses: tj-actions/changed-files@v14.7
+        uses: tj-actions/changed-files@v15
         with:
           files: |
             Dockerfile.nextgen
