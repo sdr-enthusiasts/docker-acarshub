@@ -7,6 +7,8 @@ updates:
       interval: daily
       time: "00:00"
       timezone: "Etc/UTC"
+    assignees:
+      - "fredclausen"
 
   - package-ecosystem: "npm"
     directory: "/acarshub-typescript"
@@ -14,6 +16,8 @@ updates:
       interval: daily
       time: "00:00"
       timezone: "Etc/UTC"
+    assignees:
+      - "fredclausen"
 
   - package-ecosystem: "docker"
     directory: "/"
@@ -21,6 +25,8 @@ updates:
       interval: daily
       time: "00:00"
       timezone: "Etc/UTC"
+    assignees:
+      - "fredclausen"
 
   - package-ecosystem: "github-actions"
     directory: "/"
@@ -28,3 +34,5 @@ updates:
       interval: daily
       time: "00:00"
       timezone: "Etc/UTC"
+    assignees:
+      - "fredclausen"
