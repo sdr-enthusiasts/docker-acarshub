@@ -1,9 +1,9 @@
 {
   "name": "acarshub-typescript",
-  "version": "3.0.6",
+  "version": "3.0.7",
   "description": "Web front end for the docker-acarshub project",
   "main": "index.js",
-  "repository": "https://github.com/fredclausen/docker-acarshub",
+  "repository": "https://github.com/sdr-enthusiasts/docker-acarshub",
   "scripts": {
     "build": "webpack --mode production",
     "build-dev": "webpack --mode development",
@@ -13,7 +13,7 @@
   "author": "Fred Clausen",
   "license": "GPL-3.0-only",
   "devDependencies": {
-    "@babel/core": "^7.17.2",
+    "@babel/core": "^7.17.4",
     "@babel/preset-env": "^7.16.11",
     "@types/jquery": "^3.5.13",
     "@types/js-cookie": "^3.0.1",
@@ -34,7 +34,7 @@
     "ts-loader": "^9.2.6",
     "ts-node": "^10.5.0",
     "typescript": "^4.5.5",
-    "webpack": "^5.68.0",
+    "webpack": "^5.69.0",
     "webpack-cli": "^4.9.2",
     "webpack-dev-server": "^4.7.4",
     "webpack-image-loader": "^0.1.2"

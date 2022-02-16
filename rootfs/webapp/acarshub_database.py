@@ -33,6 +33,7 @@ import json
 import datetime
 import acarshub_configuration
 import acarshub_logging
+from acarshub_logging import LOG_LEVEL
 import re
 import os
 
@@ -113,7 +114,9 @@ for item in iata_override:
         overrides[override_splits[0]] = (override_splits[1], override_splits[2])
     else:
         acarshub_logging.log(
-            f"Error adding in {item} to IATA overrides", "database", level=3
+            f"Error adding in {item} to IATA overrides",
+            "database",
+            level=LOG_LEVEL["WARNING"],
         )
 
 # Class for storing the count of messages received on each frequency
@@ -265,7 +268,9 @@ inspector = Inspector.from_engine(database)
 if "messages_fts" not in inspector.get_table_names():
     import sys
 
-    acarshub_logging.log("Missing FTS TABLE! Aborting!", "database", level=1)
+    acarshub_logging.log(
+        "Missing FTS TABLE! Aborting!", "database", level=LOG_LEVEL["ERROR"]
+    )
     sys.exit(1)
 
 # messages_idx = Table(
@@ -466,14 +471,22 @@ def create_db_safe_params(message_from_json):
         # https://github.com/TLeconte/acarsdec/commit/b2d0a4c27c6092a1c38943da48319a3406db74f2
         # do we need to do anything here for reassembled messages?
         elif index == "assstat":
-            acarshub_logging.log(f"assstat key: {index}: {value}", "database", level=5)
-            acarshub_logging.log(message_from_json, "database", level=5)
+            acarshub_logging.log(
+                f"assstat key: {index}: {value}", "database", level=LOG_LEVEL["DEBUG"]
+            )
+            acarshub_logging.log(
+                message_from_json, "database", level=LOG_LEVEL["DEBUG"]
+            )
         # We have a key that we aren't saving the database. Log it
         else:
             acarshub_logging.log(
-                f"Unidenitied key: {index}: {value}", "database", level=5
+                f"Unidenitied key: {index}: {value}",
+                "database",
+                level=LOG_LEVEL["DEBUG"],
             )
-            acarshub_logging.log(message_from_json, "database", level=5)
+            acarshub_logging.log(
+                message_from_json, "database", level=LOG_LEVEL["DEBUG"]
+            )
 
     return params
 
@@ -608,7 +621,9 @@ def database_search(search_term, page=0):
 
     try:
         acarshub_logging.log(
-            f"[database] Searching database for {search_term}", "database", level=5
+            f"[database] Searching database for {search_term}",
+            "database",
+            level=LOG_LEVEL["DEBUG"],
         )
         match_string = ""
 

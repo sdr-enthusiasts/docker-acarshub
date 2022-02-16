@@ -51,6 +51,7 @@ export function display_message_group(
   let array_index_tab: string = "0";
   const message_uid =
     "acarsmsg_" + msg_to_process[msg_to_process.length - 1].uid;
+  msgs_string += `<div id="${message_uid}_container" class="acars_message_container">`;
   msgs_string += "<br>";
   msgs_string += `<div class="acarshub-message-group" id="${message_uid}">`;
   if (live_page) {
