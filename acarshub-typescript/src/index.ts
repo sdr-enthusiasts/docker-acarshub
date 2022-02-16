@@ -1,5 +1,5 @@
 // Copyright (C) 2022 Frederick Clausen II
-// This file is part of acarshub <https://github.com/fredclausen/docker-acarshub>.
+// This file is part of acarshub <https://github.com/sdr-enthusiasts/docker-acarshub>.
 
 // acarshub is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -378,15 +378,25 @@ $((): void => {
     stats_page.updatePage();
   }, 60000);
 
-  document.addEventListener(
-    // @ts-expect-error
-    visibilityChange,
-    () => {
+  // @ts-expect-error
+  if (
+    typeof document.addEventListener === "undefined" ||
+    hidden === undefined
+  ) {
+    console.error(
+      "This webapp requires a browser, such as Safari, Google Chrome or Firefox, that supports the Page Visibility API."
+    );
+  } else {
+    document.addEventListener(
       // @ts-expect-error
-      toggle_pages(document[hidden]);
-    },
-    false
-  );
+      visibilityChange,
+      () => {
+        // @ts-expect-error
+        toggle_pages(document[hidden]);
+      },
+      false
+    );
+  }
 });
 
 export function get_window_size(): window_size {

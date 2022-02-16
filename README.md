@@ -267,4 +267,4 @@ The following features are in active development:
 
 ## Getting Help
 
-You can [log an issue](https://github.com/fredclausen/docker-acarshub/issues) on the project's GitHub or visit the [discord](https://discord.gg/sTf9uYF) server.
+You can [log an issue](https://github.com/sdr-enthusiasts/docker-acarshub/issues) on the project's GitHub or visit the [discord](https://discord.gg/sTf9uYF) server.
