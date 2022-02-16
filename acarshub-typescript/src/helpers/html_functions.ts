@@ -1,5 +1,5 @@
 // Copyright (C) 2022 Frederick Clausen II
-// This file is part of acarshub <https://github.com/fredclausen/docker-acarshub>.
+// This file is part of acarshub <https://github.com/sdr-enthusiasts/docker-acarshub>.
 
 // acarshub is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by

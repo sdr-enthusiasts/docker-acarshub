@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 # Copyright (C) 2022 Frederick Clausen II
-# This file is part of acarshub <https://github.com/fredclausen/docker-acarshub>.
+# This file is part of acarshub <https://github.com/sdr-enthusiasts/docker-acarshub>.
 #
 # acarshub is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -640,6 +640,7 @@ def database_search(search_term, page=0):
         match_string += "'"
 
         session = db_session()
+
         result = session.execute(
             f"SELECT * FROM messages WHERE id IN (SELECT rowid FROM messages_fts WHERE messages_fts MATCH {match_string} ORDER BY rowid DESC LIMIT 50 OFFSET {page * 50})"
         )
