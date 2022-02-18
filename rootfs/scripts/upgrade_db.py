@@ -8,8 +8,10 @@ from sqlite3 import Connection
 from typing import List
 import os
 import sys
-import acarshub_logging
-from acarshub_logging import LOG_LEVEL
+
+sys.path.append("../webapp/")
+import acarshub_logging  # noqa: E402
+from acarshub_logging import LOG_LEVEL  # noqa: E402
 
 # Current schema:
 # LEGACY DBS WILL NOT HAVE COLUMNS SET AS NOT NULLABLE BUT WE TAKE CARE OF THAT BELOW
@@ -86,8 +88,6 @@ from acarshub_logging import LOG_LEVEL
 # level = Column("level", String(32), nullable=False)
 # term = Column("term", String(32), nullable=False)
 # type_of_match = Column("type_of_match", String(32), nullable=False)
-
-sys.path.append("../webapp/")
 
 if (
     os.getenv("LOCAL_TEST", default=False)
