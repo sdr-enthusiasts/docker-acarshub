@@ -199,7 +199,7 @@ if [[ ${ENABLE_ACARS,,} =~ external ]]; then
 
   # Check for activity
   # read .json files, ensure messages received in past hour
-  acars_num_msgs_past_hour=$(find /database -type f -name 'acars.*.json' -cmin -60 -exec cat {} \; | wc -l)
+  acars_num_msgs_past_hour=$(find /database -type f -name 'acars.*.json' -cmin -60 -exec cat {} \; | sed -e 's/}{/}\n{/g' | wc -l)
   if [[ "$acars_num_msgs_past_hour" -gt 0 ]]; then
     echo "$acars_num_msgs_past_hour ACARS messages received in past hour: HEALTHY"
   else
