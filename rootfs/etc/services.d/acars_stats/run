@@ -33,7 +33,7 @@ if [[ ${ENABLE_ACARS,,} =~ external ]]; then
     fi
 
     # shellcheck disable=SC2016
-    echo "$(wc -l < /database/acars.past5min.json) ACARS messages received in last 5 mins" | stdbuf -oL awk '{print "[acars_stats ] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
+    echo "$(sed 's/}{/}\n{/g' /database/acars.past5min.json | wc -l) ACARS messages received in last 5 mins" | stdbuf -oL awk '{print "[acars_stats ] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
 
     # rotate files keeping last 2 hours
     for i in {24..1}; do
