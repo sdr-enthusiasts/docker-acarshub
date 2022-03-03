@@ -91,7 +91,7 @@ jobs:
         run: |
           set -xe
           npm install
-          sed -i 's/Pre-Release/ACARS Hub NextGen Pre-Release: ${{ env.VERSION }} Build ${{ github.run_id }}/' ./src/helpers/menu.ts
+          sed -i 's/Pre-Release/ACARS Hub NextGen Pre-Release: ${{ env.VERSION }} Build ${{ github.run_number }}/' ./src/helpers/menu.ts
           npm run build
           mkdir -p ./webapp/static/images
           mkdir -p ./webapp/static/js
@@ -226,12 +226,12 @@ jobs:
         if: steps.changed-files-specific.outputs.any_changed == 'true'
         run: |
           echo "ACARS Hub Version: ${{ env.VERSION }}"
-          echo "ACARS Hub Build: ${{ github.run_id }}"
+          echo "ACARS Hub Build: ${{ github.run_number }}"
 
       - name: Create ACARS Hub Version file
         if: steps.changed-files-specific.outputs.any_changed == 'true'
         run: |
-          echo "${{ env.VERSION }} Build ${{ github.run_id }}" > ./rootfs/version
+          echo "${{ env.VERSION }} Build ${{ github.run_number }}" > ./rootfs/version
 
       - name: Create version file
         if: steps.changed-files-specific.outputs.any_changed == 'true'
