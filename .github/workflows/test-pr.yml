@@ -79,23 +79,19 @@ jobs:
       # Then using `date` to format to YYYYMMDD format
       - name: Get date of last commit for VERSION_TAG
         run: |
-          echo "VERSION_TAG=$(sed '1!d' ./version)" >> $GITHUB_ENV
+          echo "VERSION=$(sed '1!d' ./version)" >> $GITHUB_ENV
 
       # Show version tag
       - name: Show version tag
         run: |
-          echo "ACARS Hub Version: ${{ env.VERSION_TAG }}"
-
-      - name: Create version file
-        run: |
-          echo "${{ env.VERSION }}" >> ./rootfs/acarshub-version
+          echo "ACARS Hub Version: ${{ env.VERSION }}"
 
       - name: Build ACARSHub typescript test
         working-directory: ./acarshub-typescript
         run: |
           set -xe
           npm install
-          sed -i 's/Pre-Release/ACARS Hub NextGen Pre-Release: ${{ env.VERSION }} Build ${{ env.GITHUB_RUN_ID }}/' ./src/helpers/menu.ts
+          sed -i 's/Pre-Release/ACARS Hub NextGen Pre-Release: ${{ env.VERSION }} Build ${{ github.run_id }}/' ./src/helpers/menu.ts
           npm run build
           mkdir -p ./webapp/static/images
           mkdir -p ./webapp/static/js
@@ -223,19 +219,19 @@ jobs:
       - name: Get version tag from file
         if: steps.changed-files-specific.outputs.any_changed == 'true'
         run: |
-          echo "VERSION_TAG=$(sed '1!d' ./version)" >> $GITHUB_ENV
+          echo "VERSION=$(sed '1!d' ./version)" >> $GITHUB_ENV
 
       # Show version tag
       - name: Show version tag
         if: steps.changed-files-specific.outputs.any_changed == 'true'
         run: |
           echo "ACARS Hub Version: ${{ env.VERSION }}"
-          echo "ACARS Hub Build: ${{ env.VERSION_TAG_DOCKER }}"
+          echo "ACARS Hub Build: ${{ github.run_id }}"
 
       - name: Create ACARS Hub Version file
         if: steps.changed-files-specific.outputs.any_changed == 'true'
         run: |
-          echo "${{ env.VERSION_TAG }} Build ${{ env.GITHUB_RUN_ID }}" > ./rootfs/version
+          echo "${{ env.VERSION }} Build ${{ github.run_id }}" > ./rootfs/version
 
       - name: Create version file
         if: steps.changed-files-specific.outputs.any_changed == 'true'
