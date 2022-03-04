@@ -519,26 +519,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Get specific changed files
-        id: changed-files-specific
-        uses: tj-actions/changed-files@v17
-        with:
-          files: |
-            Dockerfile.nextgen
-            Dockerfile.acarshub
-            acarshub-typescript/**
-            rootfs/**
-            .github/workflows/deploy.yml
-            version-nextgen
-
       - name: Get version
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
         run: |
           echo "VERSION=$(sed '1!d' ./version-nextgen)" >> $GITHUB_ENV
 
       # Show version tag
       - name: Show version tag
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
         run: |
           echo "ACARS Hub Version: ${{ env.VERSION }}"
           echo "ACARS Hub Build: ${{ github.run_number }}"
