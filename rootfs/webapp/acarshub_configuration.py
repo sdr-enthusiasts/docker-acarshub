@@ -17,8 +17,9 @@
 # along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
 
+import json
 import os
-import requests
+import urllib
 import acarshub_logging
 from acarshub_logging import LOG_LEVEL
 
@@ -184,11 +185,32 @@ def check_github_version():
     global IS_UPDATE_AVAILABLE
     # FIXME: This is a hack to get around the fact that the version file is not updated on the build server
     if not LOCAL_TEST:
-        r = requests.get(
-            "https://raw.githubusercontent.com/fredclausen/docker-acarshub/main/version"
+        try:
+            operUrl = urllib.request.urlopen(
+                "https://api.github.com/repos/sdr-enthusiasts/docker-acarshub/releases/latest"
+            )
+            if operUrl.getcode() == 200:
+                data = operUrl.read()
+                jsonData = json.loads(data)
+            else:
+                print("Error receiving data", operUrl.getcode())
+        except Exception as e:
+            acarshub_logging.log(
+                "Error getting latest version from github",
+                "version_checker",
+                level=LOG_LEVEL["ERROR"],
+            )
+            acarshub_logging.traceback(e)
+            return
+
+        github_version_from_json = jsonData["name"]
+
+        CURRENT_ACARS_HUB_VERSION = (
+            github_version_from_json.split("\n")[0].split(" ")[0].replace("v", "")
         )
-        CURRENT_ACARS_HUB_VERSION = r.text.split("\n")[0].split(" ")[0].replace("v", "")
-        CURRENT_ACARS_HUB_BUILD = r.text.split("\n")[0].split(" ")[2].replace("v", "")
+        CURRENT_ACARS_HUB_BUILD = (
+            github_version_from_json.split("\n")[0].split(" ")[2].replace("v", "")
+        )
 
         if (
             CURRENT_ACARS_HUB_VERSION != ACARSHUB_VERSION

@@ -12,7 +12,7 @@ on:
       - Dockerfile.acarshub-nextgen
       - rootfs/**
       - .github/workflows/test-pr.yml
-      - version
+      - version-nextgen
 
 env:
   REGISTRY: ghcr.io
@@ -77,25 +77,21 @@ jobs:
       # git log -1 : get the latest commit
       # --format="%ct" : committer date, UNIX timestamp
       # Then using `date` to format to YYYYMMDD format
-      - name: Get date of last commit for VERSION_TAG
+      - name: Get the version tag
         run: |
-          echo "VERSION_TAG=$(sed '1!d' ./version)" >> $GITHUB_ENV
+          echo "VERSION=$(sed '1!d' ./version-nextgen)" >> $GITHUB_ENV
 
       # Show version tag
       - name: Show version tag
         run: |
-          echo "ACARS Hub Version: ${{ env.VERSION_TAG }}"
-
-      - name: Create version file
-        run: |
-          echo "${{ env.VERSION_TAG }}" >> ./rootfs/acarshub-version
+          echo "ACARS Hub Version: ${{ env.VERSION }}"
 
       - name: Build ACARSHub typescript test
         working-directory: ./acarshub-typescript
         run: |
           set -xe
           npm install
-          sed -i 's/Pre-Release/ACARS Hub NextGen Pre-Release: ${{ env.VERSION_TAG }}/' ./src/helpers/menu.ts
+          sed -i 's/Pre-Release/ACARS Hub NextGen Pre-Release: ${{ env.VERSION }} Build ${{ github.run_number }}/' ./src/helpers/menu.ts
           npm run build
           mkdir -p ./webapp/static/images
           mkdir -p ./webapp/static/js
@@ -140,7 +136,7 @@ jobs:
         with:
           files: |
             Dockerfile.nextgen
-            **test-pr.yml
+            .github/workflows/test-pr.yml
             rootfs/webapp/requirements.txt
 
       - name: Login to ghcr.io
@@ -184,7 +180,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
 
   deploy_ghcr_latest_test:
-    name: Deploy to test to GHCR
+    name: Deploy test to GHCR
     runs-on: ubuntu-latest
     needs:
       - acarshub-typescript
@@ -204,7 +200,7 @@ jobs:
             Dockerfile.acarshub
             acarshub-typescript/**
             rootfs/**
-            **test-pr.yml
+            .github/workflows/test-pr.yml
             version
 
       - name: Get status of next file
@@ -220,23 +216,28 @@ jobs:
         with:
           name: webapp
 
-      - name: Get version tag from file
+      - name: Get version
         if: steps.changed-files-specific.outputs.any_changed == 'true'
         run: |
-          echo "VERSION_TAG=$(sed '1!d' ./version)" >> $GITHUB_ENV
-          echo "VERSION_TAG_DOCKER=$(sed '2!d' ./version)" >> $GITHUB_ENV
+          echo "VERSION=$(sed '1!d' ./version-nextgen)" >> $GITHUB_ENV
 
       # Show version tag
       - name: Show version tag
         if: steps.changed-files-specific.outputs.any_changed == 'true'
         run: |
-          echo "ACARS Hub Version: ${{ env.VERSION_TAG }}"
-          echo "ACARS Hub Docker Version: ${{ env.VERSION_TAG_DOCKER }}"
+          echo "ACARS Hub Version: ${{ env.VERSION }}"
+          echo "ACARS Hub Build: ${{ github.run_number }}"
+
+      - name: Create ACARS Hub Version file
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        run: |
+          echo "${{ env.VERSION }} Build ${{ github.run_number }}" > ./rootfs/version
 
       - name: Create version file
         if: steps.changed-files-specific.outputs.any_changed == 'true'
         run: |
-          echo "${{ env.VERSION_TAG }}" >> ./rootfs/acarshub-version
+          rm ./rootfs/version
+          echo "${{ env.VERSION }}" >> ./rootfs/acarshub-version
 
       - name: Login to ghcr.io
         if: steps.changed-files-specific.outputs.any_changed == 'true'
@@ -264,25 +265,6 @@ jobs:
         id: buildx
         if: steps.changed-files-specific.outputs.any_changed == 'true'
         uses: docker/setup-buildx-action@v1
-
-      # # build acarshub typescript
-
-      # - name: Build ACARSHub typescript
-      #   if: steps.changed-files-specific.outputs.any_changed == 'true'
-      #   working-directory: ./acarshub-typescript
-      #   run: |
-      #     npm install
-      #     npm run build
-      #     mkdir -p ./webapp/static/images
-      #     mkdir -p ./webapp/static/js
-      #     mkdir -p ./webapp/static/sounds
-      #     mkdir -p ./webapp/templates
-      #     cp -r ./dist/static/images ./webapp/static/
-      #     cp -r ./dist/static/sounds ./webapp/static/
-      #     cp -r ./dist/static/js ./webapp/static/
-      #     mv ./dist/static/index.html ./webapp/templates/
-      #     tar cvfz webapp.tar.gz ./webapp
-      #     cp webapp.tar.gz ../webapp.tar.gz
 
       - name: Patch Dockerfile if Nextgen was built for this branch
         if: steps.changed-file-nextgen.outputs.any_changed == 'true'
