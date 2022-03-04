@@ -503,7 +503,7 @@ jobs:
           no-cache: true
           platforms: linux/386,linux/amd64,linux/arm/v7,linux/arm/v6,linux/arm64
           push: ${{ github.event_name != 'pull_request' }}
-          tags: ghcr.io/sdr-enthusiasts/docker-acarshub:${{ env.VERSION }Build${{ github.run_number }}_nohealthcheck
+          tags: ghcr.io/sdr-enthusiasts/docker-acarshub:${{ env.VERSION }}Build${{ github.run_number }}_nohealthcheck
           labels: ${{ steps.meta.outputs.labels }}
 
   create_release:
