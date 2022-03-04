@@ -507,7 +507,6 @@ jobs:
   create_release:
     name: Create Release
     runs-on: ubuntu-latest
-    if: needs.deploy
     needs:
       - deploy_ghcr_nextgen
       - acarshub_typescript
