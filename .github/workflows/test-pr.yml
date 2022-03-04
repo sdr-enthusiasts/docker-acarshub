@@ -279,7 +279,7 @@ jobs:
           file: ./Dockerfile.acarshub
           no-cache: true
           platforms: linux/386,linux/amd64,linux/arm/v7,linux/arm/v6,linux/arm64
-          push: true
+          push: github.actor != "dependabot[bot]"
           tags: ghcr.io/sdr-enthusiasts/docker-acarshub:test
           #tags: ghcr.io/sdr-enthusiasts/docker-acarshub:test-${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}
           labels: ${{ steps.meta.outputs.labels }}
