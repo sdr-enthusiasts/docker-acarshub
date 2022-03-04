@@ -77,9 +77,9 @@ jobs:
       # git log -1 : get the latest commit
       # --format="%ct" : committer date, UNIX timestamp
       # Then using `date` to format to YYYYMMDD format
-      - name: Get date of last commit for VERSION_TAG
+      - name: Get the version tag
         run: |
-          echo "VERSION=$(sed '1!d' ./version)" >> $GITHUB_ENV
+          echo "VERSION=$(sed '1!d' ./version-nextgen)" >> $GITHUB_ENV
 
       # Show version tag
       - name: Show version tag
@@ -216,10 +216,10 @@ jobs:
         with:
           name: webapp
 
-      - name: Get version tag from file
+      - name: Get version
         if: steps.changed-files-specific.outputs.any_changed == 'true'
         run: |
-          echo "VERSION=$(sed '1!d' ./version)" >> $GITHUB_ENV
+          echo "VERSION=$(sed '1!d' ./version-nextgen)" >> $GITHUB_ENV
 
       # Show version tag
       - name: Show version tag
