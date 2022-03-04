@@ -174,7 +174,7 @@ jobs:
         if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         run: |
           rm ./rootfs/version
-          echo "${{ env.VERSION }}" >> ./rootfs/acarshub-version
+          echo "${{ env.VERSION }} Build ${{ github.run_number }}" >> ./rootfs/acarshub-version
 
       - name: Login to ghcr.io
         if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
@@ -266,7 +266,7 @@ jobs:
         if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         run: |
           rm ./rootfs/version
-          echo "${{ env.VERSION }}" >> ./rootfs/acarshub-version
+          echo "${{ env.VERSION }} Build ${{ github.run_number }}" >> ./rootfs/acarshub-version
 
       - name: Login to ghcr.io
         if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
@@ -358,7 +358,7 @@ jobs:
         if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         run: |
           rm ./rootfs/version
-          echo "${{ env.VERSION }}" >> ./rootfs/acarshub-version
+          echo "${{ env.VERSION }} Build ${{ github.run_number }}" >> ./rootfs/acarshub-version
 
       - name: Login to ghcr.io
         if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
@@ -457,7 +457,7 @@ jobs:
         if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         run: |
           rm ./rootfs/version
-          echo "${{ env.VERSION }}" >> ./rootfs/acarshub-version
+          echo "${{ env.VERSION }} Build ${{ github.run_number }}" >> ./rootfs/acarshub-version
 
       - name: Login to ghcr.io
         if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')

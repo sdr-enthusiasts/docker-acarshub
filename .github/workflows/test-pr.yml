@@ -237,7 +237,7 @@ jobs:
         if: steps.changed-files-specific.outputs.any_changed == 'true'
         run: |
           rm ./rootfs/version
-          echo "${{ env.VERSION }}" >> ./rootfs/acarshub-version
+          echo "${{ env.VERSION }} Build ${{ github.run_number }}" >> ./rootfs/acarshub-version
 
       - name: Login to ghcr.io
         if: steps.changed-files-specific.outputs.any_changed == 'true'
