@@ -15,7 +15,7 @@ on:
       - "Dockerfile.acarshub"
       - "Dockerfile.acarshub-nextgen"
       - "rootfs/**"
-      - "**deploy.yml"
+      - ".github/workflows/deploy.yml"
       - "version"
 
 env:
@@ -30,29 +30,24 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      # Get version tag
-      # git log -1 : get the latest commit
-      # --format="%ct" : committer date, UNIX timestamp
-      # Then using `date` to format to YYYYMMDD format
-      - name: Get date of last commit for VERSION_TAG
+      - name: Get version
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
         run: |
-          echo "VERSION_TAG=$(sed '1!d' ./version)" >> $GITHUB_ENV
+          echo "VERSION=$(sed '1!d' ./version-nextgen)" >> $GITHUB_ENV
 
       # Show version tag
       - name: Show version tag
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
         run: |
-          echo "ACARS Hub Version: ${{ env.VERSION_TAG }}"
-
-      - name: Create version file
-        run: |
-          echo "${{ env.VERSION_TAG }}" >> ./rootfs/acarshub-version
+          echo "ACARS Hub Version: ${{ env.VERSION }}"
+          echo "ACARS Hub Build: ${{ github.run_number }}"
 
       - name: Build ACARSHub typescript test
         working-directory: ./acarshub-typescript
         run: |
           set -xe
           npm install
-          sed -i 's/Pre-Release/ACARS Hub NextGen: ${{ env.VERSION_TAG }}/' ./src/helpers/menu.ts
+          sed -i 's/Pre-Release/ACARS Hub NextGen: ${{ env.VERSION }} Build ${{ github.run_number }}/' ./src/helpers/menu.ts
           npm run build
           mkdir -p ./webapp/static/images
           mkdir -p ./webapp/static/js
@@ -89,7 +84,7 @@ jobs:
         with:
           files: |
             Dockerfile.nextgen
-            **deploy.yml
+            .github/workflows/deploy.yml
 
       - name: Login to ghcr.io
         if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
@@ -151,8 +146,8 @@ jobs:
             Dockerfile.acarshub
             acarshub-typescript/**
             rootfs/**
-            **deploy.yml
-            version
+            .github/workflows/deploy.yml
+            version-nextgen
 
       - name: Download webapp
         if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
@@ -160,29 +155,28 @@ jobs:
         with:
           name: webapp
 
-      - name: Get version tag from file
+      - name: Get version
         if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         run: |
-          echo "VERSION_TAG=$(sed '1!d' ./version)" >> $GITHUB_ENV
-          echo "VERSION_TAG_DOCKER=$(sed '2!d' ./version)" >> $GITHUB_ENV
+          echo "VERSION=$(sed '1!d' ./version-nextgen)" >> $GITHUB_ENV
 
       # Show version tag
       - name: Show version tag
         if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         run: |
-          echo "ACARS Hub Version: ${{ env.VERSION_TAG }}"
-          echo "ACARS Hub Docker Version: ${{ env.VERSION_TAG_DOCKER }}"
+          echo "ACARS Hub Version: ${{ env.VERSION }}"
+          echo "ACARS Hub Build: ${{ github.run_number }}"
 
-      # Set version tag in webapp
-      - name: Patch webapp with VERSION_TAG
+      - name: Create ACARS Hub Version file
         if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         run: |
-          sed -i 's/Pre-Release/ACARS Hub NextGen Version: ${{ env.VERSION_TAG }}/' ./acarshub-typescript/src/helpers/menu.ts
+          echo "${{ env.VERSION }} Build ${{ github.run_number }}" > ./rootfs/version
 
       - name: Create version file
         if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         run: |
-          echo "${{ env.VERSION_TAG }}" >> ./rootfs/acarshub-version
+          rm ./rootfs/version
+          echo "${{ env.VERSION }}" >> ./rootfs/acarshub-version
 
       - name: Login to ghcr.io
         if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
@@ -253,29 +247,28 @@ jobs:
         with:
           name: webapp
 
-      - name: Get version tag from file
+      - name: Get version
         if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         run: |
-          echo "VERSION_TAG=$(sed '1!d' ./version)" >> $GITHUB_ENV
-          echo "VERSION_TAG_DOCKER=$(sed '2!d' ./version)" >> $GITHUB_ENV
+          echo "VERSION=$(sed '1!d' ./version-nextgen)" >> $GITHUB_ENV
 
       # Show version tag
       - name: Show version tag
         if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         run: |
-          echo "ACARS Hub Version: ${{ env.VERSION_TAG }}"
-          echo "ACARS Hub Docker Version: ${{ env.VERSION_TAG_DOCKER }}"
+          echo "ACARS Hub Version: ${{ env.VERSION }}"
+          echo "ACARS Hub Build: ${{ github.run_number }}"
 
-      # Set version tag in webapp
-      - name: Patch webapp with VERSION_TAG
+      - name: Create ACARS Hub Version file
         if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         run: |
-          sed -i 's/Pre-Release/ACARS Hub NextGen Version: ${{ env.VERSION_TAG }}/' ./acarshub-typescript/src/helpers/menu.ts
+          echo "${{ env.VERSION }} Build ${{ github.run_number }}" > ./rootfs/version
 
       - name: Create version file
         if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         run: |
-          echo "${{ env.VERSION_TAG }}" >> ./rootfs/acarshub-version
+          rm ./rootfs/version
+          echo "${{ env.VERSION }}" >> ./rootfs/acarshub-version
 
       - name: Login to ghcr.io
         if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
@@ -305,7 +298,7 @@ jobs:
         uses: docker/setup-buildx-action@v1
 
       # Build & Push Dockerfile (only push if this action was NOT triggered by a PR)
-      - name: Build & Push ghcr.io/sdr-enthusiasts/docker-acarshub:${{ env.VERSION_TAG_DOCKER }}
+      - name: Build & Push ghcr.io/sdr-enthusiasts/docker-acarshub:version specific
         if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         uses: docker/build-push-action@v2
         with:
@@ -314,7 +307,7 @@ jobs:
           no-cache: true
           platforms: linux/386,linux/amd64,linux/arm/v7,linux/arm/v6,linux/arm64
           push: ${{ github.event_name != 'pull_request' }}
-          tags: ghcr.io/sdr-enthusiasts/docker-acarshub:${{ env.VERSION_TAG_DOCKER }}
+          tags: ghcr.io/sdr-enthusiasts/docker-acarshub:${{ env.VERSION }}Build${{ github.run_number }}
           labels: ${{ steps.meta.outputs.labels }}
 
   deploy_ghcr_latest_no_healthcheck:
@@ -346,29 +339,28 @@ jobs:
         with:
           name: webapp
 
-      - name: Get version tag from file
+      - name: Get version
         if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         run: |
-          echo "VERSION_TAG=$(sed '1!d' ./version)" >> $GITHUB_ENV
-          echo "VERSION_TAG_DOCKER=$(sed '2!d' ./version)" >> $GITHUB_ENV
+          echo "VERSION=$(sed '1!d' ./version-nextgen)" >> $GITHUB_ENV
 
       # Show version tag
       - name: Show version tag
         if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         run: |
-          echo "ACARS Hub Version: ${{ env.VERSION_TAG }}"
-          echo "ACARS Hub Docker Version: ${{ env.VERSION_TAG_DOCKER }}"
+          echo "ACARS Hub Version: ${{ env.VERSION }}"
+          echo "ACARS Hub Build: ${{ github.run_number }}"
 
-      # Set version tag in webapp
-      - name: Patch webapp with VERSION_TAG
+      - name: Create ACARS Hub Version file
         if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         run: |
-          sed -i 's/Pre-Release/ACARS Hub NextGen Version: ${{ env.VERSION_TAG }}/' ./acarshub-typescript/src/helpers/menu.ts
+          echo "${{ env.VERSION }} Build ${{ github.run_number }}" > ./rootfs/version
 
       - name: Create version file
         if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         run: |
-          echo "${{ env.VERSION_TAG }}" >> ./rootfs/acarshub-version
+          rm ./rootfs/version
+          echo "${{ env.VERSION }}" >> ./rootfs/acarshub-version
 
       - name: Login to ghcr.io
         if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
@@ -415,10 +407,12 @@ jobs:
           tags: ghcr.io/sdr-enthusiasts/docker-acarshub:latest_nohealthcheck
           labels: ${{ steps.meta.outputs.labels }}
 
-  deploy_dockerhub_version_specific_no_healthcheck:
+  deploy_ghcr_version_specific_no_healthcheck:
     name: Deploy version specific no healthcheck to dockerhub
     runs-on: ubuntu-latest
     needs: [deploy_ghcr_nextgen, acarshub_typescript]
+    outputs:
+      cleanupinfo: ${{ steps.set-output.outputs.do_release }}
     steps:
       # Check out our code
       - name: Checkout
@@ -444,29 +438,28 @@ jobs:
         with:
           name: webapp
 
-      - name: Get version tag from file
+      - name: Get version
         if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         run: |
-          echo "VERSION_TAG=$(sed '1!d' ./version)" >> $GITHUB_ENV
-          echo "VERSION_TAG_DOCKER=$(sed '2!d' ./version)" >> $GITHUB_ENV
+          echo "VERSION=$(sed '1!d' ./version-nextgen)" >> $GITHUB_ENV
 
       # Show version tag
       - name: Show version tag
         if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         run: |
-          echo "ACARS Hub Version: ${{ env.VERSION_TAG }}"
-          echo "ACARS Hub Docker Version: ${{ env.VERSION_TAG_DOCKER }}"
+          echo "ACARS Hub Version: ${{ env.VERSION }}"
+          echo "ACARS Hub Build: ${{ github.run_number }}"
 
-      # Set version tag in webapp
-      - name: Patch webapp with VERSION_TAG
+      - name: Create ACARS Hub Version file
         if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         run: |
-          sed -i 's/Pre-Release/ACARS Hub NextGen Version: ${{ env.VERSION_TAG }}/' ./acarshub-typescript/src/helpers/menu.ts
+          echo "${{ env.VERSION }} Build ${{ github.run_number }}" > ./rootfs/version
 
       - name: Create version file
         if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         run: |
-          echo "${{ env.VERSION_TAG }}" >> ./rootfs/acarshub-version
+          rm ./rootfs/version
+          echo "${{ env.VERSION }}" >> ./rootfs/acarshub-version
 
       - name: Login to ghcr.io
         if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
@@ -501,7 +494,7 @@ jobs:
         run: sed '/^HEALTHCHECK /d' < Dockerfile.acarshub > Dockerfile.acarshub.nohealthcheck
 
       # Build & Push Dockerfile (only push if this action was NOT triggered by a PR)
-      - name: Build & Push ghcr.io/sdr-enthusiasts/docker-acarshub:${{ env.VERSION_TAG_DOCKER }}_nohealthcheck
+      - name: Build & Push ghcr.io/sdr-enthusiasts/docker-acarshub:version_nohealthcheck
         if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         uses: docker/build-push-action@v2
         with:
@@ -510,5 +503,57 @@ jobs:
           no-cache: true
           platforms: linux/386,linux/amd64,linux/arm/v7,linux/arm/v6,linux/arm64
           push: ${{ github.event_name != 'pull_request' }}
-          tags: ghcr.io/sdr-enthusiasts/docker-acarshub:${{ env.VERSION_TAG_DOCKER }}_nohealthcheck
+          tags: ghcr.io/sdr-enthusiasts/docker-acarshub:${{ env.VERSION }Build${{ github.run_number }}_nohealthcheck
           labels: ${{ steps.meta.outputs.labels }}
+
+  create_release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    if: needs.deploy
+    needs:
+      - deploy_ghcr_nextgen
+      - acarshub_typescript
+      - deploy_ghcr_latest
+      - deploy_ghcr_version_specific
+      - deploy_ghcr_latest_no_healthcheck
+      - deploy_ghcr_version_specific_no_healthcheck
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Get specific changed files
+        id: changed-files-specific
+        uses: tj-actions/changed-files@v17
+        with:
+          files: |
+            Dockerfile.nextgen
+            Dockerfile.acarshub
+            acarshub-typescript/**
+            rootfs/**
+            .github/workflows/deploy.yml
+            version-nextgen
+
+      - name: Get version
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        run: |
+          echo "VERSION=$(sed '1!d' ./version-nextgen)" >> $GITHUB_ENV
+
+      # Show version tag
+      - name: Show version tag
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        run: |
+          echo "ACARS Hub Version: ${{ env.VERSION }}"
+          echo "ACARS Hub Build: ${{ github.run_number }}"
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
+        with:
+          tag_name: ACARS Hub NextGen ${{ env.VERSION }} Build ${{ env.GITHUB_RUN_ID }}
+          release_name: ACARS Hub NextGen ${{ env.VERSION }} Build ${{ env.GITHUB_RUN_ID }}
+          body: |
+            See commit history.
+          draft: false
+          prerelease: false

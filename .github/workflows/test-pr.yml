@@ -12,7 +12,7 @@ on:
       - Dockerfile.acarshub-nextgen
       - rootfs/**
       - .github/workflows/test-pr.yml
-      - version
+      - version-nextgen
 
 env:
   REGISTRY: ghcr.io
@@ -136,7 +136,7 @@ jobs:
         with:
           files: |
             Dockerfile.nextgen
-            **test-pr.yml
+            .github/workflows/test-pr.yml
             rootfs/webapp/requirements.txt
 
       - name: Login to ghcr.io
