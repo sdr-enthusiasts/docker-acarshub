@@ -54,7 +54,7 @@
     "jquery": "3.6.0",
     "js-cookie": "v3.0.1",
     "leaflet": "^1.7.1",
-    "showdown": "^2.0.2",
+    "showdown": "^2.0.3",
     "socket.io-client": "4.4.1"
   }
 }
