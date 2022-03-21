@@ -20,7 +20,7 @@ repos:
 
   # lint the dockerfiles
   - repo: https://github.com/hadolint/hadolint
-    rev: v2.9.1
+    rev: v2.9.2
     hooks:
       - id: hadolint
         exclude: ^(rootfs/webapp/|acarshub-typescript/node_modules/)
