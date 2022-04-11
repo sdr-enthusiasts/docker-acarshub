@@ -59,7 +59,7 @@ jobs:
           cp webapp.tar.gz ../webapp.tar.gz
 
       - name: Save webapp.tar.gz
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: webapp
           path: |
