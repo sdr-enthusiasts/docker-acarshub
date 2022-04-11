@@ -149,7 +149,7 @@ jobs:
 
       - name: Download webapp
         if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: webapp
 
@@ -241,7 +241,7 @@ jobs:
 
       - name: Download webapp
         if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: webapp
 
@@ -333,7 +333,7 @@ jobs:
 
       - name: Download webapp
         if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: webapp
 
@@ -432,7 +432,7 @@ jobs:
 
       - name: Download webapp
         if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: webapp
 

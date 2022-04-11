@@ -212,7 +212,7 @@ jobs:
 
       - name: Download webapp
         if: steps.changed-files-specific.outputs.any_changed == 'true'
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: webapp
 
