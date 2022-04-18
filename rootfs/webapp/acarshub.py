@@ -145,10 +145,22 @@ def update_rrd_db():
     error_messages_last_minute = 0
 
 
+def generateClientMessage(message_type, json_message):
+    import copy
+    # creating a copy so that our changes below aren't made to the passed object
+    client_message = copy.deepcopy(json_message)
+
+    # add in the message_type key because the parent object didn't have it
+    client_message.update({"message_type": message_type})
+
+    # enrich message using udpate_keys
+    client_message = acarshub_helpers.update_keys(client_message)
+
+    return client_message
+
 def htmlListener():
     import time
     import sys
-    import copy
 
     # Run while requested...
     while not thread_html_generator_event.isSet():
@@ -156,17 +168,11 @@ def htmlListener():
         time.sleep(1)
 
         while len(que_messages) != 0:
-            message_source, json_message_initial = que_messages.popleft()
-            message_as_json = copy.deepcopy(
-                json_message_initial
-            )  # creating a copy so that our changes below aren't made to the parent object
-            # Send output via socketio
-            message_as_json.update(
-                {"message_type": message_source}
-            )  # add in the message_type key because the parent object didn't have it
-            message_as_json = acarshub_helpers.update_keys(message_as_json)
+            message_source, json_message = que_messages.popleft()
 
-            socketio.emit("acars_msg", {"msghtml": message_as_json}, namespace="/main")
+            client_message = generateClientMessage(message_source, json_message)
+
+            socketio.emit("acars_msg", {"msghtml": client_message}, namespace="/main")
 
     acarshub_logging.log(
         "Exiting HTML Listener thread", "htmlListener", level=LOG_LEVEL["DEBUG"]
@@ -385,9 +391,10 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
                         if not acarshub_configuration.QUIET_MESSAGES:
                             print(f"MESSAGE:{message_type.lower()}Generator: {j}")
 
-                        list_of_recent_messages.append(
-                            (que_type, acars_formatter.format_acars_message(j))
-                        )  # add to recent message que for anyone fresh loading the page
+                        client_message = generateClientMessage(message_type, acars_formatter.format_acars_message(j))
+
+                        # add to recent message que for anyone fresh loading the page
+                        list_of_recent_messages.append(client_message)
 
 
 def init_listeners(special_message=""):
@@ -505,9 +512,9 @@ def init():
         for item in results:
             json_message = item
             try:
-                list_of_recent_messages.insert(
-                    0, [json_message["message_type"], json_message]
-                )
+                client_message = generateClientMessage(json_message["message_type"], json_message)
+                list_of_recent_messages.insert(0, client_message)
+
             except Exception as e:
                 acarshub_logging.log(
                     f"Startup Error adding message to recent messages {e}", "init"
@@ -588,7 +595,6 @@ def not_found(e):
 @socketio.on("connect", namespace="/main")
 def main_connect():
     import sys
-    import copy
 
     # need visibility of the global thread object
     global thread_html_generator
@@ -633,6 +639,7 @@ def main_connect():
             f"Main Connect: Error sending features_enabled: {e}", "webapp"
         )
         acarshub_logging.acars_traceback(e, "webapp")
+
     try:
         socketio.emit(
             "labels",
@@ -645,17 +652,15 @@ def main_connect():
         acarshub_logging.acars_traceback(e, "webapp")
 
     msg_index = 1
-    for msg_type, json_message_orig in list_of_recent_messages:
+    for json_message in list_of_recent_messages:
         if msg_index == len(list_of_recent_messages):
             recent_options["done_loading"] = True
         msg_index += 1
-        json_message = copy.deepcopy(json_message_orig)
-        json_message["message_type"] = msg_type
         try:
             socketio.emit(
                 "acars_msg",
                 {
-                    "msghtml": acarshub_helpers.update_keys(json_message),
+                    "msghtml": json_message,
                     **recent_options,
                 },
                 to=requester,
@@ -666,6 +671,7 @@ def main_connect():
                 f"Main Connect: Error sending acars_msg: {e}", "webapp"
             )
             acarshub_logging.acars_traceback(e, "webapp")
+
 
     try:
         socketio.emit(
