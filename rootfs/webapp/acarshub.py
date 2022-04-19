@@ -154,7 +154,7 @@ def generateClientMessage(message_type, json_message):
     client_message.update({"message_type": message_type})
 
     # enrich message using udpate_keys
-    client_message = acarshub_helpers.update_keys(client_message)
+    acarshub_helpers.update_keys(client_message)
 
     return client_message
 
@@ -740,9 +740,10 @@ def get_alerts(message, namespace):
         if msg_index == len(results):
             recent_options["done_loading"] = True
         msg_index += 1
+        acarshub_helpers.update_keys(item)
         socketio.emit(
             "alert_matches",
-            {"msghtml": acarshub_helpers.update_keys(item), **recent_options},
+            {"msghtml": item, **recent_options},
             to=requester,
             namespace="/main",
         )
