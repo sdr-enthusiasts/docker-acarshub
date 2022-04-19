@@ -147,6 +147,7 @@ def update_rrd_db():
 
 def generateClientMessage(message_type, json_message):
     import copy
+
     # creating a copy so that our changes below aren't made to the passed object
     client_message = copy.deepcopy(json_message)
 
@@ -157,6 +158,7 @@ def generateClientMessage(message_type, json_message):
     acarshub_helpers.update_keys(client_message)
 
     return client_message
+
 
 def htmlListener():
     import time
@@ -391,7 +393,9 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
                         if not acarshub_configuration.QUIET_MESSAGES:
                             print(f"MESSAGE:{message_type.lower()}Generator: {j}")
 
-                        client_message = generateClientMessage(message_type, acars_formatter.format_acars_message(j))
+                        client_message = generateClientMessage(
+                            message_type, acars_formatter.format_acars_message(j)
+                        )
 
                         # add to recent message que for anyone fresh loading the page
                         list_of_recent_messages.append(client_message)
@@ -512,7 +516,9 @@ def init():
         for item in results:
             json_message = item
             try:
-                client_message = generateClientMessage(json_message["message_type"], json_message)
+                client_message = generateClientMessage(
+                    json_message["message_type"], json_message
+                )
                 list_of_recent_messages.insert(0, client_message)
 
             except Exception as e:
@@ -671,7 +677,6 @@ def main_connect():
                 f"Main Connect: Error sending acars_msg: {e}", "webapp"
             )
             acarshub_logging.acars_traceback(e, "webapp")
-
 
     try:
         socketio.emit(
