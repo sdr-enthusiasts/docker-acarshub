@@ -157,8 +157,6 @@ def update_keys(json_message):
         else:
             json_message["label_type"] = "Unknown Message Label"
 
-    return json_message
-
 
 def flight_finder(callsign=None, hex_code=None, url=True):
     global ADSB_URL
@@ -244,7 +242,8 @@ def handle_message(message=None):
             if results is not None:
                 # Loop through the results and format html
                 for result in results:
-                    serialized_json.append(update_keys(result))
+                    update_keys(result)
+                    serialized_json.append(result)
 
             return (total_results, serialized_json, search_term)
     else:
