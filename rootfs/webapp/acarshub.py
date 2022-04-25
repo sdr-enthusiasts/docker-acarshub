@@ -102,6 +102,24 @@ vdlm2_feeder_thread = Thread()
 vdlm2_feeder_stop_event = Event()
 
 
+function_cache = dict()
+
+
+def get_cached(func, validSecs):
+    fname = func.__name__
+
+    cached, cacheTime = function_cache.get(fname, (None, None))
+
+    if cacheTime and time.time() - cacheTime < validSecs:
+        # print(f'using function cache for {fname}')
+        return cached
+
+    result = func()
+
+    function_cache[fname] = (result, time.time())
+    return result
+
+
 def vdlm_feeder():
     airframes_host = (socket.gethostbyname("feed.acars.io"), 5555)
     airframes_vdlm_feed_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -600,6 +618,7 @@ def not_found(e):
 
 @socketio.on("connect", namespace="/main")
 def main_connect():
+    pt = time.time()
     import sys
 
     # need visibility of the global thread object
@@ -692,7 +711,7 @@ def main_connect():
         acarshub_logging.acars_traceback(e, "webapp")
 
     try:
-        rows, size = acarshub_helpers.acarshub_database.database_get_row_count()
+        rows, size = get_cached(acarshub_helpers.acarshub_database.database_get_row_count, 30)
         socketio.emit(
             "database", {"count": rows, "size": size}, to=requester, namespace="/main"
         )
@@ -703,7 +722,7 @@ def main_connect():
     try:
         socketio.emit(
             "signal",
-            {"levels": acarshub_helpers.acarshub_database.get_signal_levels()},
+            {"levels": get_cached(acarshub_helpers.acarshub_database.get_signal_levels, 30)},
             to=requester,
             namespace="/main",
         )
@@ -725,6 +744,11 @@ def main_connect():
         sys.stdout.flush()
         thread_html_generator_event.clear()
         thread_html_generator = socketio.start_background_task(htmlListener)
+
+    pt = time.time() - pt
+    acarshub_logging.log(
+        f'main_connect took {pt * 1000:.0f}ms', "htmlListener", level=LOG_LEVEL["DEBUG"]
+    )
 
 
 @socketio.on("query_terms", namespace="/main")
