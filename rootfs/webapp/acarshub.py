@@ -728,7 +728,7 @@ def main_connect():
         )
         socketio.emit(
             "alert_terms",
-            {"data": acarshub_helpers.getAlerts()},
+            {"data": get_cached(acarshub_helpers.acarshub_database.get_alert_counts, 30)},
             to=requester,
             namespace="/main",
         )
@@ -797,28 +797,38 @@ def request_freqs(message, namespace):
 
 @socketio.on("signal_count", namespace="/main")
 def request_count(message, namespace):
+    pt = time.time()
     requester = request.sid
     socketio.emit(
         "signal_count",
-        {"count": acarshub_helpers.acarshub_database.get_errors()},
+        {"count": get_cached(acarshub_helpers.acarshub_database.get_errors, 30)},
         to=requester,
         namespace="/main",
+    )
+    pt = time.time() - pt
+    acarshub_logging.log(
+        f'request_count took {pt * 1000:.0f}ms', "request_count", level=LOG_LEVEL["DEBUG"]
     )
 
 
 @socketio.on("signal_graphs", namespace="/main")
 def request_graphs(message, namespace):
+    pt = time.time()
     requester = request.sid
     socketio.emit(
         "alert_terms",
-        {"data": acarshub_helpers.getAlerts()},
+        {"data": get_cached(acarshub_helpers.acarshub_database.get_alert_counts, 30)},
         to=requester,
         namespace="/main",
     )
     socketio.emit(
         "signal",
-        {"levels": acarshub_helpers.acarshub_database.get_signal_levels()},
+        {"levels": get_cached(acarshub_helpers.acarshub_database.get_signal_levels, 30)},
         namespace="/main",
+    )
+    pt = time.time() - pt
+    acarshub_logging.log(
+        f'request_graphs took {pt * 1000:.0f}ms', "request_graphs", level=LOG_LEVEL["DEBUG"]
     )
 
 
@@ -853,6 +863,11 @@ def handle_message(message, namespace):
         namespace="/main",
     )
 
+    pt = time.time() - start_time
+    acarshub_logging.log(
+            f'query took {pt * 1000:.0f}ms: {str(search_term)}', "query_search", level=LOG_LEVEL["DEBUG"]
+    )
+
 
 @socketio.on("reset_alert_counts", namespace="/main")
 def reset_alert_counts(message, namespace):
@@ -860,7 +875,7 @@ def reset_alert_counts(message, namespace):
         acarshub_helpers.acarshub_database.reset_alert_counts()
         try:
             socketio.emit(
-                "alert_terms", {"data": acarshub_helpers.getAlerts()}, namespace="/main"
+                "alert_terms", {"data": acarshub_helpers.acarshub_database.get_alert_counts()}, namespace="/main"
             )
         except Exception as e:
             acarshub_logging.log(

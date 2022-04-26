@@ -478,7 +478,3 @@ def get_service_status():
         "stats": stats,
         "external_formats": external_formats,
     }
-
-
-def getAlerts():
-    return acarshub_database.get_alert_counts()
