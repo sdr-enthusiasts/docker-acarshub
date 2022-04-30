@@ -291,7 +291,7 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
             pass
         except socket.error as e:
             acarshub_logging.log(
-                f"Error to {ip}:{port}. Reattemping...",
+                f"Error to {ip}:{port}. Reattempting...",
                 f"{message_type.lower()}Generator",
                 level=LOG_LEVEL["ERROR"],
             )
@@ -305,11 +305,17 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
             receiver.close()
             time.sleep(1)
         else:
-            if data.decode() == "":
+
+            if data is not None:
+                decoded = data.decode()
+            else:
+                decoded = ""
+
+            if decoded == "":
                 disconnected = True
                 receiver.close()
                 data = None
-            elif data is not None:
+            else:
                 # Decode json
                 # There is a rare condition where we'll receive two messages at once
                 # We will cover this condition off by ensuring each json message is
@@ -326,17 +332,17 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
                     # acarsdec or vdlm2dec multi messages ends with a newline and each message has a newline but the decoder
                     # breaks with more than one JSON object
                     # dumpvdl2 does not end with a newline so we need to add one
-                    if data.decode().count("}\n") == 1:
-                        message_json.append(json.loads(data.decode()))
+                    if decoded.count("}\n") == 1:
+                        message_json.append(json.loads(decoded))
                     # dumpvdl2 single message
                     elif (
-                        data.decode().count("}\n") == 0
-                        and data.decode().count("}{") == 0
+                        decoded.count("}\n") == 0
+                        and decoded.count("}{") == 0
                     ):
-                        message_json.append(json.loads(data.decode() + "\n"))
+                        message_json.append(json.loads(decoded + "\n"))
                     # dumpvdl2 multi message
-                    elif data.decode().count("}{") > 0:
-                        split_json = data.decode().split("}{")
+                    elif decoded.count("}{") > 0:
+                        split_json = decoded.split("}{")
                         count = 0
                         for j in split_json:
                             if len(j) > 1:
@@ -350,23 +356,18 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
                             count += 1
                     # acarsdec/dumpvdl2 multi message
                     else:
-                        split_json = data.decode().split("}\n")
+                        split_json = decoded.split("}\n")
 
                         for j in split_json:
                             if len(j) > 1:
                                 message_json.append(json.loads(j + "}\n"))
                 except ValueError as e:
                     acarshub_logging.log(
-                        f"JSON Error: {e}", f"{message_type.lower()}Generator", 1
-                    )
+                            f"JSON Error: {e}", f"{message_type.lower()}Generator", 1
+                            )
+                    no_newline_decoded = decoded.replace("\n", "\\n")
                     acarshub_logging.log(
-                        f"JSON Error: {j}", f"{message_type.lower()}Generator", 1
-                    )
-                    acarshub_logging.log(
-                        "Skipping Message", f"{message_type.lower()}Generator", 1
-                    )
-                    acarshub_logging.acars_traceback(
-                        e, f"{message_type.lower()}Generator"
+                            f'Skipping Message: {no_newline_decoded}', f"{message_type.lower()}Generator", 1
                     )
                 except Exception as e:
                     acarshub_logging.log(
