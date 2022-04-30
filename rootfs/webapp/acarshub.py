@@ -178,6 +178,17 @@ def generateClientMessage(message_type, json_message):
     return client_message
 
 
+def getQueType(message_type):
+    if message_type == "VDLM2":
+        return "VDL-M2"
+    elif message_type == "ACARS":
+        return "ACARS"
+    elif message_type is not None:
+        return str(message_type)
+    else:
+        return "UNKNOWN"
+
+
 def htmlListener():
     import time
     import sys
@@ -380,12 +391,12 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
                     )
                 finally:
                     for j in message_json:
+                        que_type = getQueType(message_type)
+
                         if message_type == "VDLM2":
                             vdlm_messages_last_minute += 1
-                            que_type = "VDL-M2"
                         elif message_type == "ACARS":
                             acars_messages_last_minute += 1
-                            que_type = "ACARS"
 
                         if "error" in j:
                             if j["error"] > 0:
@@ -413,7 +424,7 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
                             print(f"MESSAGE:{message_type.lower()}Generator: {j}")
 
                         client_message = generateClientMessage(
-                            message_type, acars_formatter.format_acars_message(j)
+                            que_type, acars_formatter.format_acars_message(j)
                         )
 
                         # add to recent message que for anyone fresh loading the page
@@ -532,11 +543,12 @@ def init():
             acarshub_logging.log(f"Startup Error creating RRD Database {e}", "init")
             acarshub_logging.acars_traceback(e, "init")
     if results is not None:
-        for item in results:
-            json_message = item
+        for json_message in results:
             try:
+                que_type = getQueType(json_message["message_type"])
+
                 client_message = generateClientMessage(
-                    json_message["message_type"], json_message
+                    que_type, json_message
                 )
                 list_of_recent_messages.insert(0, client_message)
 
