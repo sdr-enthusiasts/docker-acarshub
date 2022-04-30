@@ -22,17 +22,10 @@ if [[ ${ENABLE_ACARS,,} =~ external ]]; then
 
   set -e
 
-  socat_verbose=''
-  ncat_verbose=''
-  if [[ $((MIN_LOG_LEVEL)) -ge 5 ]]; then
-    socat_verbose='-d'
-    ncat_verbose='-v'
-  fi
-
   # Listens for the output of acarsdec (UDP), and makes it available for multiple processes at TCP port 15550
   # shellcheck disable=SC2016
-  { socat "${socat_verbose}" -T 60 -u udp-listen:5550,fork,reuseaddr stdout \
-    | ncat "${ncat_verbose}" -4 --keep-open --listen 0.0.0.0 15550; } 2>&1 \
+  { socat -T 60 -u udp-listen:5550,fork,reuseaddr stdout \
+    | ncat -4 --keep-open --listen 0.0.0.0 15550; } 2>&1 \
     | stdbuf -oL awk '{print "[acars_server] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
 
 else
