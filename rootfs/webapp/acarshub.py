@@ -84,6 +84,7 @@ que_messages = deque(maxlen=15)
 que_database = deque(maxlen=15)
 
 list_of_recent_messages = []  # list to store most recent msgs
+list_of_recent_messages_max = 150
 
 # counters for messages
 # will be reset once written to RRD
@@ -204,6 +205,7 @@ def htmlListener():
             client_message = generateClientMessage(message_source, json_message)
 
             socketio.emit("acars_msg", {"msghtml": client_message}, namespace="/main")
+            #acarshub_logging.log(f"EMIT: {client_message}", "htmlListener", level=LOG_LEVEL["DEBUG"])
 
     acarshub_logging.log(
         "Exiting HTML Listener thread", "htmlListener", level=LOG_LEVEL["DEBUG"]
@@ -272,11 +274,17 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
 
     receiver = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
 
+    acarshub_logging.log(
+            f"message_listener starting: {message_type.lower()}",
+            "message_listener",
+            level=LOG_LEVEL["DEBUG"]
+            )
+
     # Run while requested...
     while not thread_message_listener_stop_event.isSet():
-        sys.stdout.flush()
-        time.sleep(0)
+        data = None
 
+        #acarshub_logging.log(f"recv_from ...", "message_listener", level=LOG_LEVEL["DEBUG"])
         try:
             if disconnected:
                 receiver = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
@@ -292,14 +300,13 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
                     level=LOG_LEVEL["DEBUG"],
                 )
 
-            data = None
 
             if acarshub_configuration.LOCAL_TEST is True:
                 data, addr = receiver.recvfrom(65527)
             else:
                 data, addr = receiver.recvfrom(65527, socket.MSG_WAITALL)
         except socket.timeout:
-            pass
+            continue
         except socket.error as e:
             acarshub_logging.log(
                 f"Error to {ip}:{port}. Reattempting...",
@@ -310,125 +317,129 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
             disconnected = True
             receiver.close()
             time.sleep(1)
+            continue
         except Exception as e:
             acarshub_logging.acars_traceback(e, f"{message_type.lower()}Generator")
             disconnected = True
             receiver.close()
             time.sleep(1)
+            continue
+
+        #acarshub_logging.log(f"{message_type.lower()}: got data", "message_listener", level=LOG_LEVEL["DEBUG"])
+
+        if data is not None:
+            decoded = data.decode()
         else:
+            decoded = ""
 
-            if data is not None:
-                decoded = data.decode()
+        if decoded == "":
+            disconnected = True
+            receiver.close()
+            continue
+
+
+        # Decode json
+        # There is a rare condition where we'll receive two messages at once
+        # We will cover this condition off by ensuring each json message is
+        # broken apart and handled individually
+
+        message_json = []
+        try:
+            # JSON decoder requires a newline at the end of the string for processing?
+            # This is a workaround to ensure we don't lose the last message
+            # We'll add a newline to the end of the string if it doesn't already exist
+            # Additionally, decoders might send more than one message at once. We need
+            # to handle this.
+            # acarsdec or vdlm2dec single message ends with a newline so no additional processing required
+            # acarsdec or vdlm2dec multi messages ends with a newline and each message has a newline but the decoder
+            # breaks with more than one JSON object
+            # dumpvdl2 does not end with a newline so we need to add one
+            if decoded.count("}\n") == 1:
+                message_json.append(json.loads(decoded))
+            # dumpvdl2 single message
+            elif (
+                decoded.count("}\n") == 0
+                and decoded.count("}{") == 0
+            ):
+                message_json.append(json.loads(decoded + "\n"))
+            # dumpvdl2 multi message
+            elif decoded.count("}{") > 0:
+                split_json = decoded.split("}{")
+                count = 0
+                for msg in split_json:
+                    if len(msg) > 1:
+                        if not msg.startswith("{"):
+                            msg = "{" + msg
+                        if not count == len(split_json) - 1:
+                            msg = msg + "}"
+                        message_json.append(json.loads(msg + "\n"))
+
+                    count += 1
+            # acarsdec/dumpvdl2 multi message
             else:
-                decoded = ""
+                split_json = decoded.split("}\n")
 
-            if decoded == "":
-                disconnected = True
-                receiver.close()
-                data = None
-            else:
-                # Decode json
-                # There is a rare condition where we'll receive two messages at once
-                # We will cover this condition off by ensuring each json message is
-                # broken apart and handled individually
-
-                try:
-                    message_json = []
-                    # JSON decoder requires a newline at the end of the string for processing?
-                    # This is a workaround to ensure we don't lose the last message
-                    # We'll add a newline to the end of the string if it doesn't already exist
-                    # Additionally, decoders might send more than one message at once. We need
-                    # to handle this.
-                    # acarsdec or vdlm2dec single message ends with a newline so no additional processing required
-                    # acarsdec or vdlm2dec multi messages ends with a newline and each message has a newline but the decoder
-                    # breaks with more than one JSON object
-                    # dumpvdl2 does not end with a newline so we need to add one
-                    if decoded.count("}\n") == 1:
-                        message_json.append(json.loads(decoded))
-                    # dumpvdl2 single message
-                    elif (
-                        decoded.count("}\n") == 0
-                        and decoded.count("}{") == 0
-                    ):
-                        message_json.append(json.loads(decoded + "\n"))
-                    # dumpvdl2 multi message
-                    elif decoded.count("}{") > 0:
-                        split_json = decoded.split("}{")
-                        count = 0
-                        for j in split_json:
-                            if len(j) > 1:
-                                msg = j
-                                if not msg.startswith("{"):
-                                    msg = "{" + msg
-                                if not count == len(split_json) - 1:
-                                    msg = msg + "}"
-                                message_json.append(json.loads(msg + "\n"))
-
-                            count += 1
-                    # acarsdec/dumpvdl2 multi message
-                    else:
-                        split_json = decoded.split("}\n")
-
-                        for j in split_json:
-                            if len(j) > 1:
-                                message_json.append(json.loads(j + "}\n"))
-                except ValueError as e:
-                    acarshub_logging.log(
-                            f"JSON Error: {e}", f"{message_type.lower()}Generator", 1
-                            )
-                    no_newline_decoded = decoded.replace("\n", "\\n")
-                    acarshub_logging.log(
-                            f'Skipping Message: {no_newline_decoded}', f"{message_type.lower()}Generator", 1
+                for msg in split_json:
+                    if len(msg) > 1:
+                        message_json.append(json.loads(msg + "}\n"))
+        except ValueError as e:
+            acarshub_logging.log(
+                    f"JSON Error: {e}", f"{message_type.lower()}Generator", 1
                     )
-                except Exception as e:
-                    acarshub_logging.log(
-                        f"Unknown Error with JSON input: {e}",
-                        f"{message_type.lower()}Generator",
-                        level=LOG_LEVEL["ERROR"],
-                    )
-                    acarshub_logging.acars_traceback(
-                        e, f"{message_type.lower()}Generator"
-                    )
-                finally:
-                    for j in message_json:
-                        que_type = getQueType(message_type)
+            no_newline_decoded = decoded.replace("\n", "\\n")
+            acarshub_logging.log(
+                    f'Skipping Message: {no_newline_decoded}', f"{message_type.lower()}Generator", 1
+            )
+        except Exception as e:
+            acarshub_logging.log(
+                f"Unknown Error with JSON input: {e}",
+                f"{message_type.lower()}Generator",
+                level=LOG_LEVEL["ERROR"],
+            )
+            acarshub_logging.acars_traceback(
+                e, f"{message_type.lower()}Generator"
+            )
 
-                        if message_type == "VDLM2":
-                            vdlm_messages_last_minute += 1
-                        elif message_type == "ACARS":
-                            acars_messages_last_minute += 1
+        for msg in message_json:
+            #acarshub_logging.log(f"{message_type.lower()}: message: {msg}", "message_listener", level=LOG_LEVEL["DEBUG"])
+            que_type = getQueType(message_type)
 
-                        if "error" in j:
-                            if j["error"] > 0:
-                                error_messages_last_minute += j["error"]
+            if message_type == "VDLM2":
+                vdlm_messages_last_minute += 1
+            elif message_type == "ACARS":
+                acars_messages_last_minute += 1
 
-                        que_messages.append(
-                            (que_type, acars_formatter.format_acars_message(j))
-                        )
-                        que_database.append(
-                            (que_type, acars_formatter.format_acars_message(j))
-                        )
-                        if (
-                            acarshub_configuration.FEED is True
-                            and message_type == "VDLM2"
-                        ):
-                            que_vdlm2_feed.append(
-                                acars_formatter.format_acars_message(j)
-                            )
-                        if (
-                            len(list_of_recent_messages) >= 150
-                        ):  # Keep the que size down
-                            del list_of_recent_messages[0]
+            if "error" in msg:
+                if msg["error"] > 0:
+                    error_messages_last_minute += msg["error"]
 
-                        if not acarshub_configuration.QUIET_MESSAGES:
-                            print(f"MESSAGE:{message_type.lower()}Generator: {j}")
+            que_messages.append(
+                (que_type, acars_formatter.format_acars_message(msg))
+            )
+            que_database.append(
+                (que_type, acars_formatter.format_acars_message(msg))
+            )
+            if (
+                acarshub_configuration.FEED is True
+                and message_type == "VDLM2"
+            ):
+                que_vdlm2_feed.append(
+                    acars_formatter.format_acars_message(msg)
+                )
+            if (
+                len(list_of_recent_messages) >= list_of_recent_messages_max
+            ):  # Keep the que size down
+                del list_of_recent_messages[0]
 
-                        client_message = generateClientMessage(
-                            que_type, acars_formatter.format_acars_message(j)
-                        )
+            if not acarshub_configuration.QUIET_MESSAGES:
+                print(f"MESSAGE:{message_type.lower()}Generator: {msg}")
 
-                        # add to recent message que for anyone fresh loading the page
-                        list_of_recent_messages.append(client_message)
+            client_message = generateClientMessage(
+                que_type, acars_formatter.format_acars_message(msg)
+            )
+
+            # add to recent message que for anyone fresh loading the page
+            list_of_recent_messages.append(client_message)
 
 
 def init_listeners(special_message=""):
@@ -527,7 +538,7 @@ def init():
     # then turn on the listeners
     acarshub_logging.log("Grabbing most recent messages from database", "init")
     try:
-        results = acarshub_helpers.acarshub_database.grab_most_recent()
+        results = acarshub_helpers.acarshub_database.grab_most_recent(list_of_recent_messages_max)
     except Exception as e:
         acarshub_logging.log(
             f"Startup Error grabbing most recent messages {e}",
