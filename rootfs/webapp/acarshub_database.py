@@ -990,11 +990,11 @@ def database_get_row_count():
         return (result, size)
 
 
-def grab_most_recent():
+def grab_most_recent(count):
     output = []
     try:
         session = db_session()
-        result = session.query(messages).order_by(desc("id")).limit(150)
+        result = session.query(messages).order_by(desc("id")).limit(count)
 
         if result.count() > 0:
             output = [query_to_dict(d) for d in result]
