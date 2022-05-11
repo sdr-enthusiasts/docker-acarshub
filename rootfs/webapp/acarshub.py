@@ -205,7 +205,7 @@ def htmlListener():
             client_message = generateClientMessage(message_source, json_message)
 
             socketio.emit("acars_msg", {"msghtml": client_message}, namespace="/main")
-            #acarshub_logging.log(f"EMIT: {client_message}", "htmlListener", level=LOG_LEVEL["DEBUG"])
+            # acarshub_logging.log(f"EMIT: {client_message}", "htmlListener", level=LOG_LEVEL["DEBUG"])
 
     acarshub_logging.log(
         "Exiting HTML Listener thread", "htmlListener", level=LOG_LEVEL["DEBUG"]
@@ -261,7 +261,6 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
     import time
     import socket
     import json
-    import sys
 
     global error_messages_last_minute
 
@@ -280,11 +279,13 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
             level=LOG_LEVEL["DEBUG"]
             )
 
+    partial_message = None
+
     # Run while requested...
     while not thread_message_listener_stop_event.isSet():
         data = None
 
-        #acarshub_logging.log(f"recv_from ...", "message_listener", level=LOG_LEVEL["DEBUG"])
+        # acarshub_logging.log(f"recv_from ...", "message_listener", level=LOG_LEVEL["DEBUG"])
         try:
             if disconnected:
                 receiver = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
@@ -300,11 +301,11 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
                     level=LOG_LEVEL["DEBUG"],
                 )
 
-
             if acarshub_configuration.LOCAL_TEST is True:
                 data, addr = receiver.recvfrom(65527)
             else:
                 data, addr = receiver.recvfrom(65527, socket.MSG_WAITALL)
+
         except socket.timeout:
             continue
         except socket.error as e:
@@ -325,7 +326,7 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
             time.sleep(1)
             continue
 
-        #acarshub_logging.log(f"{message_type.lower()}: got data", "message_listener", level=LOG_LEVEL["DEBUG"])
+        # acarshub_logging.log(f"{message_type.lower()}: got data", "message_listener", level=LOG_LEVEL["DEBUG"])
 
         if data is not None:
             decoded = data.decode()
@@ -337,71 +338,77 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
             receiver.close()
             continue
 
-
         # Decode json
         # There is a rare condition where we'll receive two messages at once
         # We will cover this condition off by ensuring each json message is
         # broken apart and handled individually
 
-        message_json = []
-        try:
-            # JSON decoder requires a newline at the end of the string for processing?
-            # This is a workaround to ensure we don't lose the last message
-            # We'll add a newline to the end of the string if it doesn't already exist
-            # Additionally, decoders might send more than one message at once. We need
-            # to handle this.
-            # acarsdec or vdlm2dec single message ends with a newline so no additional processing required
-            # acarsdec or vdlm2dec multi messages ends with a newline and each message has a newline but the decoder
-            # breaks with more than one JSON object
-            # dumpvdl2 does not end with a newline so we need to add one
-            if decoded.count("}\n") == 1:
-                message_json.append(json.loads(decoded))
-            # dumpvdl2 single message
-            elif (
-                decoded.count("}\n") == 0
-                and decoded.count("}{") == 0
-            ):
-                message_json.append(json.loads(decoded + "\n"))
-            # dumpvdl2 multi message
-            elif decoded.count("}{") > 0:
-                split_json = decoded.split("}{")
-                count = 0
-                for msg in split_json:
-                    if len(msg) > 1:
-                        if not msg.startswith("{"):
-                            msg = "{" + msg
-                        if not count == len(split_json) - 1:
-                            msg = msg + "}"
-                        message_json.append(json.loads(msg + "\n"))
+        # acarsdec or vdlm2dec single message ends with a newline so no additional processing required
+        # acarsdec or vdlm2dec multi messages ends with a newline and each message has a newline but the decoder
+        # breaks with more than one JSON object
 
-                    count += 1
-            # acarsdec/dumpvdl2 multi message
-            else:
-                split_json = decoded.split("}\n")
+        # in case of back to back objects, add a newline to split on
+        decoded = decoded.replace("}{", "}\n{")
 
-                for msg in split_json:
-                    if len(msg) > 1:
-                        message_json.append(json.loads(msg + "}\n"))
-        except ValueError as e:
-            acarshub_logging.log(
-                    f"JSON Error: {e}", f"{message_type.lower()}Generator", 1
-                    )
-            no_newline_decoded = decoded.replace("\n", "\\n")
-            acarshub_logging.log(
-                    f'Skipping Message: {no_newline_decoded}', f"{message_type.lower()}Generator", 1
-            )
-        except Exception as e:
-            acarshub_logging.log(
-                f"Unknown Error with JSON input: {e}",
-                f"{message_type.lower()}Generator",
-                level=LOG_LEVEL["ERROR"],
-            )
-            acarshub_logging.acars_traceback(
-                e, f"{message_type.lower()}Generator"
-            )
+        # split on newlines
+        split_json = decoded.splitlines()
 
-        for msg in message_json:
-            #acarshub_logging.log(f"{message_type.lower()}: message: {msg}", "message_listener", level=LOG_LEVEL["DEBUG"])
+        # try and reassemble messages that were received separately
+        if partial_message is not None and len(split_json) > 0:
+            combined = partial_message + split_json[0]
+
+            try:
+                # check if we can decode the json
+                json.loads(combined)
+
+                # no exception, json decoded fine, reassembly succeeded
+                # replace the first string in the list with the reassembled string
+                split_json[0] = combined
+                acarshub_logging.log(
+                        "Reassembly successful, message not skipped after all!",
+                        f"{message_type.lower()}Generator",
+                        1
+                        )
+            except Exception as e:
+                # reassembly didn't work, don't do anything but print an error when debug is enabled
+                acarshub_logging.log(f"Reassembly failed {e}: {combined}", f'{message_type.lower()}Generator', level=LOG_LEVEL["DEBUG"])
+
+            # forget the partial message, it can't be useful anymore
+            partial_message = None
+
+        for part in split_json:
+            # acarshub_logging.log(f"{message_type.lower()}: part: {part}", "message_listener", level=LOG_LEVEL["DEBUG"])
+
+            if len(part) == 0:
+                continue
+
+            msg = None
+            try:
+                msg = json.loads(part)
+            except ValueError as e:
+
+                if part == split_json[-1]:
+                    # last element in the list, could be a partial json object
+                    partial_message = part
+
+                acarshub_logging.log(
+                        f"JSON Error: {e}", f"{message_type.lower()}Generator", 1
+                        )
+                acarshub_logging.log(
+                        f'Skipping Message: {part}', f"{message_type.lower()}Generator", 1
+                )
+                continue
+            except Exception as e:
+                acarshub_logging.log(
+                    f"Unknown Error with JSON input: {e}",
+                    f"{message_type.lower()}Generator",
+                    level=LOG_LEVEL["ERROR"],
+                )
+                acarshub_logging.acars_traceback(
+                    e, f"{message_type.lower()}Generator"
+                )
+                continue
+
             que_type = getQueType(message_type)
 
             if message_type == "VDLM2":
