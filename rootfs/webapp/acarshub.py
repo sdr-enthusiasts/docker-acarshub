@@ -464,6 +464,9 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
             que_database.append((que_type, acars_formatter.format_acars_message(msg)))
             if acarshub_configuration.FEED is True and message_type == "VDLM2":
                 que_vdlm2_feed.append(acars_formatter.format_acars_message(msg))
+            if acarshub_configuration.FEED is True and message_type == "ACARS":
+                que_acars_feed.append(acars_formatter.format_acars_message(msg))
+
             if (
                 len(list_of_recent_messages) >= list_of_recent_messages_max
             ):  # Keep the que size down
