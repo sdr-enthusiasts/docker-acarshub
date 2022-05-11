@@ -140,9 +140,11 @@ def acars_feeder():
             client_msg = copy.deepcopy(msg)
             if "level" in client_msg:
                 client_msg["level"] = int(client_msg["level"])
+
             try:
                 airframes_vdlm_feed_socket.sendto(
-                    json.dumps(msg, separators=(",", ":")).encode(), airframes_host
+                    json.dumps(client_msg, separators=(",", ":")).encode(),
+                    airframes_host,
                 )
             except ValueError as e:
                 acarshub_logging.log(f"JSON Error: {e}", "vdlm_python_feeder", 1)
@@ -169,9 +171,11 @@ def vdlm_feeder():
             client_msg = copy.deepcopy(msg)
             if "level" in client_msg:
                 del client_msg["level"]
+
             try:
                 airframes_vdlm_feed_socket.sendto(
-                    json.dumps(msg, separators=(",", ":")).encode(), airframes_host
+                    json.dumps(client_msg, separators=(",", ":")).encode(),
+                    airframes_host,
                 )
             except ValueError as e:
                 acarshub_logging.log(f"JSON Error: {e}", "vdlm_python_feeder", 1)
