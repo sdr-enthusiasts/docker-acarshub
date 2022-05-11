@@ -850,7 +850,11 @@ export let live_messages_page = {
         // this is not loading and we should already have a valid DOM tree to play with
         // If this was a matched message delete the element from the tree so it can be moved to the front
         if (move_or_delete_id) {
-          $(`#${move_or_delete_id}_container`).remove();
+          let counter = 1;
+          while ($(`#acarsmsg_${move_or_delete_id}_container`).length > 0) {
+            $(`#acarsmsg_${move_or_delete_id}_container`).remove();
+            counter++;
+          }
         }
         // Display the new message at the front of the DOM tree
         $("#log").prepend(
