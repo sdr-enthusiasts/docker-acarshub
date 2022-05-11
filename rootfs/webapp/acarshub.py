@@ -274,10 +274,10 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
     receiver = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
 
     acarshub_logging.log(
-            f"message_listener starting: {message_type.lower()}",
-            "message_listener",
-            level=LOG_LEVEL["DEBUG"]
-            )
+        f"message_listener starting: {message_type.lower()}",
+        "message_listener",
+        level=LOG_LEVEL["DEBUG"],
+    )
 
     partial_message = None
 
@@ -365,13 +365,17 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
                 # replace the first string in the list with the reassembled string
                 split_json[0] = combined
                 acarshub_logging.log(
-                        "Reassembly successful, message not skipped after all!",
-                        f"{message_type.lower()}Generator",
-                        1
-                        )
+                    "Reassembly successful, message not skipped after all!",
+                    f"{message_type.lower()}Generator",
+                    1,
+                )
             except Exception as e:
                 # reassembly didn't work, don't do anything but print an error when debug is enabled
-                acarshub_logging.log(f"Reassembly failed {e}: {combined}", f'{message_type.lower()}Generator', level=LOG_LEVEL["DEBUG"])
+                acarshub_logging.log(
+                    f"Reassembly failed {e}: {combined}",
+                    f"{message_type.lower()}Generator",
+                    level=LOG_LEVEL["DEBUG"],
+                )
 
             # forget the partial message, it can't be useful anymore
             partial_message = None
@@ -392,10 +396,10 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
                     partial_message = part
 
                 acarshub_logging.log(
-                        f"JSON Error: {e}", f"{message_type.lower()}Generator", 1
-                        )
+                    f"JSON Error: {e}", f"{message_type.lower()}Generator", 1
+                )
                 acarshub_logging.log(
-                        f'Skipping Message: {part}', f"{message_type.lower()}Generator", 1
+                    f"Skipping Message: {part}", f"{message_type.lower()}Generator", 1
                 )
                 continue
             except Exception as e:
@@ -404,9 +408,7 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
                     f"{message_type.lower()}Generator",
                     level=LOG_LEVEL["ERROR"],
                 )
-                acarshub_logging.acars_traceback(
-                    e, f"{message_type.lower()}Generator"
-                )
+                acarshub_logging.acars_traceback(e, f"{message_type.lower()}Generator")
                 continue
 
             que_type = getQueType(message_type)
@@ -420,19 +422,10 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
                 if msg["error"] > 0:
                     error_messages_last_minute += msg["error"]
 
-            que_messages.append(
-                (que_type, acars_formatter.format_acars_message(msg))
-            )
-            que_database.append(
-                (que_type, acars_formatter.format_acars_message(msg))
-            )
-            if (
-                acarshub_configuration.FEED is True
-                and message_type == "VDLM2"
-            ):
-                que_vdlm2_feed.append(
-                    acars_formatter.format_acars_message(msg)
-                )
+            que_messages.append((que_type, acars_formatter.format_acars_message(msg)))
+            que_database.append((que_type, acars_formatter.format_acars_message(msg)))
+            if acarshub_configuration.FEED is True and message_type == "VDLM2":
+                que_vdlm2_feed.append(acars_formatter.format_acars_message(msg))
             if (
                 len(list_of_recent_messages) >= list_of_recent_messages_max
             ):  # Keep the que size down
@@ -545,7 +538,9 @@ def init():
     # then turn on the listeners
     acarshub_logging.log("Grabbing most recent messages from database", "init")
     try:
-        results = acarshub_helpers.acarshub_database.grab_most_recent(list_of_recent_messages_max)
+        results = acarshub_helpers.acarshub_database.grab_most_recent(
+            list_of_recent_messages_max
+        )
     except Exception as e:
         acarshub_logging.log(
             f"Startup Error grabbing most recent messages {e}",
@@ -565,9 +560,7 @@ def init():
             try:
                 que_type = getQueType(json_message["message_type"])
 
-                client_message = generateClientMessage(
-                    que_type, json_message
-                )
+                client_message = generateClientMessage(que_type, json_message)
                 list_of_recent_messages.insert(0, client_message)
 
             except Exception as e:
@@ -742,7 +735,9 @@ def main_connect():
         acarshub_logging.acars_traceback(e, "webapp")
 
     try:
-        rows, size = get_cached(acarshub_helpers.acarshub_database.database_get_row_count, 30)
+        rows, size = get_cached(
+            acarshub_helpers.acarshub_database.database_get_row_count, 30
+        )
         socketio.emit(
             "database", {"count": rows, "size": size}, to=requester, namespace="/main"
         )
@@ -753,13 +748,21 @@ def main_connect():
     try:
         socketio.emit(
             "signal",
-            {"levels": get_cached(acarshub_helpers.acarshub_database.get_signal_levels, 30)},
+            {
+                "levels": get_cached(
+                    acarshub_helpers.acarshub_database.get_signal_levels, 30
+                )
+            },
             to=requester,
             namespace="/main",
         )
         socketio.emit(
             "alert_terms",
-            {"data": get_cached(acarshub_helpers.acarshub_database.get_alert_counts, 30)},
+            {
+                "data": get_cached(
+                    acarshub_helpers.acarshub_database.get_alert_counts, 30
+                )
+            },
             to=requester,
             namespace="/main",
         )
@@ -778,7 +781,7 @@ def main_connect():
 
     pt = time.time() - pt
     acarshub_logging.log(
-        f'main_connect took {pt * 1000:.0f}ms', "htmlListener", level=LOG_LEVEL["DEBUG"]
+        f"main_connect took {pt * 1000:.0f}ms", "htmlListener", level=LOG_LEVEL["DEBUG"]
     )
 
 
@@ -838,7 +841,9 @@ def request_count(message, namespace):
     )
     pt = time.time() - pt
     acarshub_logging.log(
-        f'request_count took {pt * 1000:.0f}ms', "request_count", level=LOG_LEVEL["DEBUG"]
+        f"request_count took {pt * 1000:.0f}ms",
+        "request_count",
+        level=LOG_LEVEL["DEBUG"],
     )
 
 
@@ -854,12 +859,18 @@ def request_graphs(message, namespace):
     )
     socketio.emit(
         "signal",
-        {"levels": get_cached(acarshub_helpers.acarshub_database.get_signal_levels, 30)},
+        {
+            "levels": get_cached(
+                acarshub_helpers.acarshub_database.get_signal_levels, 30
+            )
+        },
         namespace="/main",
     )
     pt = time.time() - pt
     acarshub_logging.log(
-        f'request_graphs took {pt * 1000:.0f}ms', "request_graphs", level=LOG_LEVEL["DEBUG"]
+        f"request_graphs took {pt * 1000:.0f}ms",
+        "request_graphs",
+        level=LOG_LEVEL["DEBUG"],
     )
 
 
@@ -896,7 +907,9 @@ def handle_message(message, namespace):
 
     pt = time.time() - start_time
     acarshub_logging.log(
-            f'query took {pt * 1000:.0f}ms: {str(search_term)}', "query_search", level=LOG_LEVEL["DEBUG"]
+        f"query took {pt * 1000:.0f}ms: {str(search_term)}",
+        "query_search",
+        level=LOG_LEVEL["DEBUG"],
     )
 
 
@@ -906,7 +919,9 @@ def reset_alert_counts(message, namespace):
         acarshub_helpers.acarshub_database.reset_alert_counts()
         try:
             socketio.emit(
-                "alert_terms", {"data": acarshub_helpers.acarshub_database.get_alert_counts()}, namespace="/main"
+                "alert_terms",
+                {"data": acarshub_helpers.acarshub_database.get_alert_counts()},
+                namespace="/main",
             )
         except Exception as e:
             acarshub_logging.log(
