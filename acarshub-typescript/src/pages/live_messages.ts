@@ -594,6 +594,7 @@ export let live_messages_page = {
   new_acars_message: function (msg: html_msg): void {
     let new_msg = msg.msghtml;
     let move_or_delete_id: undefined | string = undefined;
+    let dont_update_page = false;
     if (!this.skip_message(new_msg)) {
       // if the message filter is not set or the message is not in the exclude list, continue
       if ("text" in new_msg) {
@@ -839,11 +840,13 @@ export let live_messages_page = {
       }
     } else {
       if (this.text_filter && !msg.loading) this.increment_filtered();
+      dont_update_page = true;
     }
     if (!msg.loading) this.increment_received();
     if (
       this.lm_page_active &&
       !this.pause &&
+      !dont_update_page &&
       (typeof msg.done_loading === "undefined" || msg.done_loading === true)
     ) {
       if (typeof msg.done_loading === "undefined") {
