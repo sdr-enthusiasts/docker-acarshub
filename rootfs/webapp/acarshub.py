@@ -138,8 +138,6 @@ def acars_feeder():
             time.sleep(0.5)
             msg = que_acars_feed.popleft()
             client_msg = copy.deepcopy(msg)
-            if "level" in client_msg:
-                client_msg["level"] = int(client_msg["level"])
 
             try:
                 airframes_vdlm_feed_socket.sendto(
@@ -169,8 +167,6 @@ def vdlm_feeder():
             time.sleep(0.5)
             msg = que_vdlm2_feed.popleft()
             client_msg = copy.deepcopy(msg)
-            if "level" in client_msg:
-                del client_msg["level"]
 
             try:
                 airframes_vdlm_feed_socket.sendto(

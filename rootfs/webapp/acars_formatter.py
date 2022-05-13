@@ -80,11 +80,11 @@ def format_dumpvdl2_message(unformatted_message):
                     elif "name" in item and item["name"] == "ac_location":
                         position = item["value"]["loc"]
                         if "lat" in position:
-                            vdlm2_message["lat"] = str(position["lat"])
+                            vdlm2_message["lat"] = float(position["lat"])
                         if "lon" in position:
-                            vdlm2_message["lon"] = str(position["lon"])
+                            vdlm2_message["lon"] = float(position["lon"])
                         if "alt" in item["value"]:
-                            vdlm2_message["alt"] = str(item["value"]["alt"])
+                            vdlm2_message["alt"] = int(item["value"]["alt"])
     # text = Column('msg_text', Text, index=True, nullable=False)
     if (
         "acars" in unformatted_message["vdl2"]["avlc"]
