@@ -15,7 +15,7 @@ if [[ ${ENABLE_ACARS,,} =~ external ]]; then
   #   exit
   # fi
 
-  if [[ $((MIN_LOG_LEVEL)) -ge 4 ]]; then
+  if true || [[ $((MIN_LOG_LEVEL)) -ge 4 ]]; then
     # shellcheck disable=SC2016
     echo "Starting service" | stdbuf -oL awk '{print "[acars_server] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
   fi
@@ -24,9 +24,10 @@ if [[ ${ENABLE_ACARS,,} =~ external ]]; then
 
   # Listens for the output of acarsdec (UDP), and makes it available for multiple processes at TCP port 15550
   # shellcheck disable=SC2016
-  { socat -T 60 -u udp-listen:5550,fork,reuseaddr stdout \
-    | ncat -4 --keep-open --listen 0.0.0.0 15550; } 2>&1 \
-    | stdbuf -oL awk '{print "[acars_server] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
+  {
+      socat -T 60 -u udp-listen:5550,fork,reuseaddr stdout | { cat; kill -s INT 0; } \
+          | ncat -4 --keep-open --listen 0.0.0.0 15550 | { cat; kill -s INT 0; }
+  } 2>&1 | stdbuf -oL awk '{print "[acars_server] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
 
 else
   sleep 86400
