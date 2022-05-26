@@ -28,7 +28,6 @@ start_time = time.time()
 decoders = dict()
 servers = dict()
 receivers = dict()
-feeders = dict()
 stats = dict()
 external_formats = dict()
 system_error = False
@@ -257,7 +256,6 @@ def service_check():
     global servers
     global receivers
     global system_error
-    global feeders
     global stats
     global start_time
     global external_formats
@@ -278,7 +276,6 @@ def service_check():
     decoders = dict()
     servers = dict()
     receivers = dict()
-    feeders = dict()
     stats = dict()
     external_formats = dict()
     system_error = False
@@ -364,23 +361,6 @@ def service_check():
                     else:
                         system_error = True
                         receivers["VDLM2"]["Status"] = "Unknown"
-
-                continue
-
-            match = re.search("^(?:acars|vdlm2)_feeder", line)
-
-            if match:
-                if match.group(0) not in servers:
-                    feeders[match.group(0)] = dict()
-
-                if line.endswith("UNHEALTHY"):
-                    feeders[match.group(0)]["Status"] = "Bad"
-                    system_error = True
-                elif line.endswith("HEALTHY"):
-                    feeders[match.group(0)]["Status"] = "Ok"
-                else:
-                    system_error = True
-                    feeders[match.group(0)]["Status"] = "Unknown"
 
                 continue
 

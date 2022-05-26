@@ -76,33 +76,6 @@ if [[ ${ENABLE_VDLM,,} =~ external ]]; then
     fi
   fi
 
-  #### REMOVE AFTER AIRFRAMES IS UPDATED ####
-  # Check vdlm2_feeder
-  if [[ ${FEED,,} =~ true ]]; then
-    echo "vdlm2_feeder (pid 0) is feeding: HEALTHY"
-    # echo "==== Checking vdlm2_feeder ====="
-
-    # vdlm2_pidof_vdlm2_feeder=$(pgrep -f 'socat -d TCP:127.0.0.1:15555 UDP:feed.acars.io:5555')
-
-    # # Ensure TCP connection to vdlm2_server at 127.0.0.1:15555
-    # if ! check_tcp4_connection_established_for_pid "127.0.0.1" "ANY" "127.0.0.1" "15555" "${vdlm2_pidof_vdlm2_feeder}"; then
-    #   echo "vdlm2_feeder (pid $vdlm2_pidof_vdlm2_feeder) not connected to vdlm2_server (pid $vdlm2_pidof_vdlm2_tcp_server) at 127.0.0.1:15555: UNHEALTHY"
-    #   EXITCODE=1
-    # else
-    #   echo "vdlm2_feeder (pid $vdlm2_pidof_vdlm2_feeder) is connected to vdlm2_server (pid $vdlm2_pidof_vdlm2_tcp_server) at 127.0.0.1:15555: HEALTHY"
-    # fi
-
-    # # Ensure UDP connection to acars.io
-    # if ! check_udp4_connection_established_for_pid "ANY" "ANY" "ANY" "5555" "${vdlm2_pidof_vdlm2_feeder}"; then
-    #   echo "vdlm2_feeder (pid $vdlm2_pidof_vdlm2_feeder) not feeding: UNHEALTHY"
-    #   EXITCODE=1
-    # else
-    #   echo "vdlm2_feeder (pid $vdlm2_pidof_vdlm2_feeder) is feeding: HEALTHY"
-    # fi
-
-  fi
-  #### REMOVE AFTER AIRFRAMES IS UPDATED ####
-
   echo "==== Checking vdlm2_stats ====="
 
   # Check vdlm2_stats:
@@ -155,31 +128,6 @@ if [[ ${ENABLE_ACARS,,} =~ external ]]; then
       echo "TCP4 connection between 127.0.0.1:ANY and 127.0.0.1:15550 for python3 established: PASS"
       echo "acars_server TCP connected to python3 server on port 15550: HEALTHY"
     fi
-  fi
-
-  # Check acars_feeder
-  if [[ ${FEED,,} =~ true ]]; then
-    echo "acars_feeder (pid 0) is feeding: HEALTHY"
-    # echo "==== Checking acars_feeder ====="
-
-    # acars_pidof_acars_feeder=$(pgrep -f 'socat -d TCP:127.0.0.1:15550 UDP:feed.acars.io:5550')
-
-    # # Ensure TCP connection to acars_server at 127.0.0.1:15550
-    # if ! check_tcp4_connection_established_for_pid "127.0.0.1" "ANY" "127.0.0.1" "15550" "${acars_pidof_acars_feeder}"; then
-    #   echo "acars_feeder (pid $acars_pidof_acars_feeder) not connected to acars_server (pid $acars_pidof_acars_tcp_server) at 127.0.0.1:15550: UNHEALTHY"
-    #   EXITCODE=1
-    # else
-    #   echo "acars_feeder (pid $acars_pidof_acars_feeder) is connected to acars_server (pid $acars_pidof_acars_tcp_server) at 127.0.0.1:15550: HEALTHY"
-    # fi
-
-    # # Ensure UDP connection to acars.io
-    # if ! check_udp4_connection_established_for_pid "ANY" "ANY" "ANY" "5550" "${acars_pidof_acars_feeder}"; then
-    #   echo "acars_feeder (pid $acars_pidof_acars_feeder) not feeding: UNHEALTHY"
-    #   EXITCODE=1
-    # else
-    #   echo "acars_feeder (pid $acars_pidof_acars_feeder) is feeding: HEALTHY"
-    # fi
-
   fi
 
   echo "==== Checking acars_stats ====="

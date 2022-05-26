@@ -32,8 +32,6 @@ from flask_socketio import SocketIO  # noqa: E402
 from flask import Flask, render_template, request, redirect, url_for  # noqa: E402
 from threading import Thread, Event  # noqa: E402
 from collections import deque  # noqa: E402
-import json  # noqa: E402
-import socket  # noqa: E402
 import time  # noqa: E402
 
 app = Flask(__name__)
@@ -95,19 +93,6 @@ error_messages_last_minute = 0
 # all namespaces
 
 acars_namespaces = ["/main"]
-
-# REMOVE AFTER AIRFRAMES IS UPDATED ####
-# VDLM Feeders
-que_vdlm2_feed = deque(maxlen=15)
-que_acars_feed = deque(maxlen=15)
-
-vdlm2_feeder_thread = Thread()
-vdlm2_feeder_stop_event = Event()
-
-acars_feeder_thread = Thread()
-acars_feeder_stop_event = Event()
-
-
 function_cache = dict()
 
 
@@ -124,67 +109,6 @@ def get_cached(func, validSecs):
 
     function_cache[fname] = (result, time.time())
     return result
-
-
-def acars_feeder():
-    import copy
-
-    airframes_host = (socket.gethostbyname("feed.acars.io"), 5550)
-    airframes_vdlm_feed_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    while not acars_feeder_stop_event.isSet():
-        time.sleep(1)
-
-        while len(que_acars_feed) != 0:
-            time.sleep(0.5)
-            msg = que_acars_feed.popleft()
-            client_msg = copy.deepcopy(msg)
-
-            try:
-                airframes_vdlm_feed_socket.sendto(
-                    json.dumps(client_msg, separators=(",", ":")).encode(),
-                    airframes_host,
-                )
-            except ValueError as e:
-                acarshub_logging.log(f"JSON Error: {e}", "vdlm_python_feeder", 1)
-                acarshub_logging.log(f"JSON Error: {msg}", "vdlm_python_feeder", 1)
-                acarshub_logging.log("Skipping Message", "vdlm_python_feeder", 1)
-                acarshub_logging.acars_traceback(e, "vdlm_python_feeder")
-            except Exception as e:
-                acarshub_logging.acars_traceback(e, "vdlm_python_feeder")
-                que_vdlm2_feed.appendleft(msg)
-                break
-
-
-def vdlm_feeder():
-    import copy
-
-    airframes_host = (socket.gethostbyname("feed.acars.io"), 5555)
-    airframes_vdlm_feed_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    while not vdlm2_feeder_stop_event.isSet():
-        time.sleep(1)
-
-        while len(que_vdlm2_feed) != 0:
-            time.sleep(0.5)
-            msg = que_vdlm2_feed.popleft()
-            client_msg = copy.deepcopy(msg)
-
-            try:
-                airframes_vdlm_feed_socket.sendto(
-                    json.dumps(client_msg, separators=(",", ":")).encode(),
-                    airframes_host,
-                )
-            except ValueError as e:
-                acarshub_logging.log(f"JSON Error: {e}", "vdlm_python_feeder", 1)
-                acarshub_logging.log(f"JSON Error: {msg}", "vdlm_python_feeder", 1)
-                acarshub_logging.log("Skipping Message", "vdlm_python_feeder", 1)
-                acarshub_logging.acars_traceback(e, "vdlm_python_feeder")
-            except Exception as e:
-                acarshub_logging.acars_traceback(e, "vdlm_python_feeder")
-                que_vdlm2_feed.appendleft(msg)
-                break
-
-
-# REMOVE AFTER AIRFRAMES IS UPDATED ####
 
 
 def update_rrd_db():
@@ -462,10 +386,6 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
 
             que_messages.append((que_type, acars_formatter.format_acars_message(msg)))
             que_database.append((que_type, acars_formatter.format_acars_message(msg)))
-            if acarshub_configuration.FEED is True and message_type == "VDLM2":
-                que_vdlm2_feed.append(acars_formatter.format_acars_message(msg))
-            if acarshub_configuration.FEED is True and message_type == "ACARS":
-                que_acars_feed.append(acars_formatter.format_acars_message(msg))
 
             if (
                 len(list_of_recent_messages) >= list_of_recent_messages_max
@@ -552,36 +472,7 @@ def init_listeners(special_message=""):
             args=("VDLM2", acarshub_configuration.LIVE_DATA_SOURCE, 15555),
         )
         thread_vdlm2_listener.start()
-    # REMOVE AFTER AIRFRAMES IS UPDATED ####
-    if (
-        not acarshub_configuration.LOCAL_TEST
-        and acarshub_configuration.FEED
-        and acarshub_configuration.ENABLE_VDLM
-        and not vdlm2_feeder_thread.is_alive()
-    ):
-        acarshub_logging.log(
-            f"{special_message}Starting VDLM feeder",
-            "init",
-            level=LOG_LEVEL["INFO"] if special_message == "" else LOG_LEVEL["ERROR"],
-        )
-        vdlm2_feeder_thread = Thread(target=vdlm_feeder)
-        vdlm2_feeder_thread.start()
 
-    if (
-        not acarshub_configuration.LOCAL_TEST
-        and acarshub_configuration.FEED
-        and acarshub_configuration.ENABLE_ACARS
-        and not acars_feeder_thread.is_alive()
-    ):
-        acarshub_logging.log(
-            f"{special_message}Starting ACARS feeder",
-            "init",
-            level=LOG_LEVEL["INFO"] if special_message == "" else LOG_LEVEL["ERROR"],
-        )
-        acars_feeder_thread = Thread(target=acars_feeder)
-        acars_feeder_thread.start()
-
-    # REMOVE AFTER AIRFRAMES IS UPDATED ####
     status = acarshub_helpers.get_service_status()  # grab system status
 
     # emit to all namespaces
