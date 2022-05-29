@@ -75,7 +75,6 @@ services:
       - TZ=Etc/UTC
       - ENABLE_VDLM=false
       - ENABLE_ACARS=false
-      #      - FEED=true
       - MIN_LOG_LEVEL=3
   #      - TAR1090_URL=http://tar1090
   #      - IATA_OVERRIDE=UP|UPS|United Parcel Service;GS|FTH|Mountain Aviation (Foothills);GS|EJA|ExecJet
@@ -100,6 +99,7 @@ services:
       - PPM=0
       - FREQUENCIES=130.025;130.450;131.125;131.550
       - FEED_ID=
+      - SERVER=acars_router
     tmpfs:
       - /run:exec,size=64M
       - /var/log,size=64M
@@ -123,9 +123,40 @@ services:
       - FREQUENCIES=136650000;136700000;136975000;136925000;136800000
       - FEED_ID=
       - VDLM_FILTER_ENABLE=true
+      - ZMQ_MODE=server
+      - ZMQ_ENDPOINT=tcp://0.0.0.0:45555
+      - SERVER=
     tmpfs:
       - /run:exec,size=64M
       - /var/log,size=64M
+
+  acars_router:
+    image: ghcr.io/sdr-enthusiasts/acars_router:latest
+    labels:
+      - "autoheal=true"
+    tty: true
+    ports:
+      - 55555:15555
+      - 55550:15550
+    container_name: acars_router
+    restart: always
+    environment:
+      - TZ=${FEEDER_TZ}
+      # The line below should be uncommented if you are receiving acars data from acarsdec AND do not want to feed
+      #- AR_SEND_UDP_ACARS=acarshub:5550
+      # The line below should be uncommented if you are receiving acars data from acarsdec AND want to feed airframes
+      #- AR_SEND_UDP_ACARS=acarshub:5550;feed.airframes.io:5550
+      # The line below should uncommented if you are receiving VDLM and DO NOT want to feed aiframes
+      #- AR_SEND_UDP_VDLM2=acarshub:5555;feed.airframes.io:5555
+      # The line below should uncommented if you are receiving VDLM, using dumpvdl2 AND want to feed airframes
+      #- AR_SEND_UDP_VDLM2=acarshub:5555;feed.airframes.io:5552
+      # The line below should uncommented if you are receiving VDLM, using vdlm2dec AND want to feed airframes
+      #- AR_SEND_UDP_VDLM2=acarshub:5555;feed.airframes.io:5555
+      # The line below should uncommented if you are receiving dumpvdl2 AND using ZMQ (recommended)
+      #- AR_RECV_ZMQ_VDLM2=dumpvdl2:45555
+    tmpfs:
+      - /run:exec,size=64M
+      - /var/log
 #####
 ```
 
