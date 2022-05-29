@@ -47,13 +47,9 @@ CURRENT_ACARS_HUB_VERSION = "0"
 CURRENT_ACARS_HUB_BUILD = "0"
 IS_UPDATE_AVAILABLE = False
 ENABLE_RANGE_RINGS = True
-FEED = False
 ARCH = "unknown"
 DB_SAVE_DAYS = 7
 DB_ALERT_SAVE_DAYS = 120
-
-if os.getenv("FEED", default=False) and str(os.getenv("FEED")).upper() == "TRUE":
-    FEED = True
 
 if (
     os.getenv("QUIET_MESSAGES", default=False)
