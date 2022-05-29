@@ -445,7 +445,6 @@ def get_service_status():
     global servers
     global receivers
     global system_error
-    global feeders
     global stats
     global external_formats
 
@@ -453,7 +452,6 @@ def get_service_status():
         "decoders": decoders,
         "servers": servers,
         "global": receivers,
-        "feeders": feeders,
         "error_state": system_error,
         "stats": stats,
         "external_formats": external_formats,
