@@ -81,7 +81,6 @@ export let status = {
           this.current_status.status.error_state,
           this.current_status.status.decoders,
           this.current_status.status.servers,
-          this.current_status.status.feeders,
           this.current_status.status.global,
           this.current_status.status.stats,
           this.current_status.status.external_formats
@@ -93,7 +92,6 @@ export let status = {
     status: boolean,
     decoders: status_decoder,
     servers: status_server,
-    feeders: status_decoder,
     receivers: status_global,
     stats: status_decoder,
     external_formats: status_external_formats
@@ -102,7 +100,6 @@ export let status = {
     const keys_decoder = Object.keys(decoders);
     const keys_servers = Object.keys(servers);
     const keys_receivers = Object.keys(receivers);
-    const keys_feeders = Object.keys(feeders);
     const keys_stats = Object.keys(stats);
     const keys_external_formats = Object.keys(external_formats);
 
@@ -170,14 +167,6 @@ export let status = {
         }>${sub_key.Status}</span></strong>`;
         html_output += "<br>";
       });
-    });
-
-    keys_feeders.forEach((key) => {
-      let sub_string = `Airframes.io Feeders ${key}:`;
-      html_output += `${sub_string.padEnd(55, ".")}<strong><span class=${
-        feeders[key].Status == "Ok" ? "green" : "red_body"
-      }>${feeders[key].Status}</span></strong>`;
-      html_output += "<br>";
     });
 
     keys_receivers.forEach((key) => {
