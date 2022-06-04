@@ -26,7 +26,6 @@ export interface system_status {
     error_state: boolean;
     decoders: status_decoder;
     servers: status_server;
-    feeders: status_decoder;
     global: status_global;
     stats: status_decoder;
     external_formats: status_external_formats;

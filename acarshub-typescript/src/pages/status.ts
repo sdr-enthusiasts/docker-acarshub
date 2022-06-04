@@ -81,7 +81,6 @@ export let status = {
           this.current_status.status.error_state,
           this.current_status.status.decoders,
           this.current_status.status.servers,
-          this.current_status.status.feeders,
           this.current_status.status.global,
           this.current_status.status.stats,
           this.current_status.status.external_formats
@@ -93,7 +92,6 @@ export let status = {
     status: boolean,
     decoders: status_decoder,
     servers: status_server,
-    feeders: status_decoder,
     receivers: status_global,
     stats: status_decoder,
     external_formats: status_external_formats
