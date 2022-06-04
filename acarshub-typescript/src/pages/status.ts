@@ -102,7 +102,6 @@ export let status = {
     const keys_decoder = Object.keys(decoders);
     const keys_servers = Object.keys(servers);
     const keys_receivers = Object.keys(receivers);
-    const keys_feeders = Object.keys(feeders);
     const keys_stats = Object.keys(stats);
     const keys_external_formats = Object.keys(external_formats);
 
@@ -170,14 +169,6 @@ export let status = {
         }>${sub_key.Status}</span></strong>`;
         html_output += "<br>";
       });
-    });
-
-    keys_feeders.forEach((key) => {
-      let sub_string = `Airframes.io Feeders ${key}:`;
-      html_output += `${sub_string.padEnd(55, ".")}<strong><span class=${
-        feeders[key].Status == "Ok" ? "green" : "red_body"
-      }>${feeders[key].Status}</span></strong>`;
-      html_output += "<br>";
     });
 
     keys_receivers.forEach((key) => {
