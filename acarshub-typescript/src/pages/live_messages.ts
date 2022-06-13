@@ -599,9 +599,13 @@ export let live_messages_page = {
       // if the message filter is not set or the message is not in the exclude list, continue
       if ("text" in new_msg) {
         // see if we can run it through the text decoder
-        let decoded_msg = this.lm_md.decode(new_msg);
-        if (decoded_msg.decoded == true) {
-          new_msg.decodedText = decoded_msg;
+        try {
+          let decoded_msg = this.lm_md.decode(new_msg);
+          if (decoded_msg.decoded == true) {
+            new_msg.decodedText = decoded_msg;
+          }
+        } catch (e) {
+          console.error(`Decoder Error: ${e}`);
         }
       }
 
@@ -762,9 +766,13 @@ export let live_messages_page = {
                 }
 
                 // Re-run the text decoder against the text field we've updated
-                let decoded_msg = this.lm_md.decode(message);
-                if (decoded_msg.decoded == true) {
-                  message["decoded_msg"] = decoded_msg;
+                try {
+                  let decoded_msg = this.lm_md.decode(message);
+                  if (decoded_msg.decoded == true) {
+                    message["decoded_msg"] = decoded_msg;
+                  }
+                } catch (e) {
+                  console.error(`Decoder Error${e}`);
                 }
 
                 if (matched.was_found && !msg.loading) sound_alert();

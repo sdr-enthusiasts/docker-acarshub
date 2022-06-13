@@ -112,9 +112,13 @@ export let search_page = {
         // Loop through the individual messages in the blob
         let msg_json = this.search_msgs_received[i][j];
         // Check and see if the text field is decodable in to human readable format
-        let decoded_msg = this.search_md.decode(msg_json);
-        if (decoded_msg.decoded == true) {
-          msg_json.decodedText = decoded_msg;
+        try {
+          let decoded_msg = this.search_md.decode(msg_json);
+          if (decoded_msg.decoded == true) {
+            msg_json.decodedText = decoded_msg;
+          }
+        } catch (e) {
+          console.error(`Decoder Error: ${e}`);
         }
         results.push([msg_json]);
       }
