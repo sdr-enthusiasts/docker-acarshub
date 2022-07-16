@@ -1145,7 +1145,7 @@ a[x-apple-data-detectors] {
   height: calc(100vh - 160px);
   max-height: calc(100vh - 160px);
   width: 100%;
-  background-color: var(--full-black);
+  background-color: var(--full-white);
   float: left;
   max-width: calc(100vw - 435px);
   flex: 1 1 auto;
