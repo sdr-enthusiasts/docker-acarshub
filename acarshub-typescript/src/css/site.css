@@ -50,63 +50,6 @@
   --mono-fonts: Menlo, Monaco, Consolas, "Courier New", monospace;
 }
 
-/*div * {
-  scrollbar-width: none; /* Firefox
-  -ms-overflow-style: none; /* IE 10+
-}
-div *::-webkit-scrollbar-track {
-  -webkit-box-shadow: none !important;
-  box-shadow: none !important;
-  background-color: transparent;
-}
-div *::-webkit-scrollbar {
-  width: 3px !important;
-  background-color: transparent;
-}
-div *::-webkit-scrollbar-thumb {
-  background-color: transparent;
-}
-
-.on-scrollbar{
-  scrollbar-width: thin; /* Firefox
-  -ms-overflow-style: none; /* IE 10+
-}
-
-.on-scrollbar::-webkit-scrollbar-track {
-  -webkit-box-shadow: none !important;
-  box-shadow: none !important;
-  background-color: transparent !important;
-}
-
-.on-scrollbar::-webkit-scrollbar {
-  width: 6px !important;
-  background-color: transparent;
-}
-
-.on-scrollbar::-webkit-scrollbar-thumb {
-  background-color: #acacac;
-}*/
-
-table {
-  border: 1px solid var(--full-black);
-  border-collapse: collapse;
-  width: 100%;
-  table-layout: fixed;
-  background-color: var(--full-white);
-}
-
-thead {
-  border: 1px solid var(--full-black);
-}
-
-th {
-  padding-left: 5px;
-}
-
-#main_block h3 {
-  margin-top: 0;
-}
-
 .text_top {
   vertical-align: top;
 }
@@ -232,7 +175,7 @@ body::-webkit-scrollbar {
 
 div#content.container {
   position: fixed;
-  top: 105px;
+  top: 100px;
   padding-left: 20px;
   padding-right: 20px;
   width: calc(100vw - 40px);
@@ -290,7 +233,9 @@ div#log.left {
 }
 
 #acarshub_content {
-  margin-right: 5px;
+  margin-top: 1rem;
+  margin-right: 1rem;
+  margin-bottom: 1rem;
 }
 
 .search_label {
@@ -483,34 +428,6 @@ a:visited {
   top: 0;
 }
 
-.decor {
-  background: var(--decor-banner-green);
-  background: -webkit-linear-gradient(
-    left,
-    var(--grey-bg) 50%,
-    var(--blue-highlight) 50%
-  );
-  background: -moz-linear-gradient(
-    left,
-    var(--grey-bg) 50%,
-    var(--blue-highlight) 50%
-  );
-  background: -o-linear-gradient(
-    left,
-    var(--grey-bg) 50%,
-    var(--blue-highlight) 50%
-  );
-  background: linear-gradient(
-    to left,
-    var(--grey-bg) 50%,
-    var(--blue-highlight) 50%
-  );
-  background-size: 50px 25%;
-  padding: 2px;
-  display: block;
-  z-index: 200;
-}
-
 ul {
   list-style: none;
   position: relative;
@@ -634,155 +551,6 @@ ul.primary li:hover a {
 
 ul.primary li:hover > a {
   color: var(--full-white);
-}
-
-/* Collapse */
-
-input[type="checkbox"] {
-  display: none;
-}
-
-.wrap-collabsible {
-  padding-top: 0;
-}
-
-.lbl-toggle {
-  display: block;
-  text-transform: uppercase;
-  text-align: left;
-  color: var(--blue-highlight);
-  background: transparent;
-  cursor: pointer;
-  transition: all 0.25s ease-out;
-  font-weight: normal;
-  padding-top: 10px;
-}
-
-.lbl-toggle:hover {
-  color: var(--full-white);
-}
-
-.lbl-toggle::before {
-  content: " ";
-  display: inline-block;
-  border-top: 5px solid transparent;
-  border-bottom: 5px solid transparent;
-  border-left: 5px solid currentColor;
-  vertical-align: middle;
-  margin-right: 0.7rem;
-  transform: translateY(-2px);
-  transition: transform 0.2s ease-out;
-}
-
-.toggle::checked + .lbl-toggle::before {
-  transform: rotate(90deg) translateX(-3px);
-}
-
-.collapsible-content {
-  max-height: 0;
-  overflow: scroll;
-  height: calc(100% - 250px);
-  transition: max-height 0.25s ease-in-out;
-}
-
-.toggle:checked + .lbl-toggle + .collapsible-content {
-  max-height: 100%;
-}
-
-.toggle::checked + .lbl-toggle {
-  border-bottom-right-radius: 0;
-  border-bottom-left-radius: 0;
-}
-
-.collapsible-content .content-inner {
-  background: transparent;
-  color: var(--blue-highlight);
-  padding-right: 10px;
-  padding-left: 10px;
-  overflow: scroll;
-}
-
-.collapsible-content p {
-  margin-bottom: 30px;
-}
-
-/* message tabs */
-
-.tabinator {
-  background: transparent;
-}
-
-.tabinator input {
-  display: none;
-}
-
-.tabinator label {
-  background-color: var(--full-white);
-  box-sizing: border-box;
-  display: inline-block;
-  padding-top: 8px;
-  padding-bottom: 6px;
-  padding-right: 10px;
-  padding-left: 10px;
-  width: 90px;
-  text-align: center;
-  color: var(--full-black);
-  margin-top: 0px;
-  margin-bottom: -1px;
-  margin-left: -1px;
-  font-weight: bold;
-  border-left: 1px solid var(--full-black);
-  border-top: 1px solid var(--full-black);
-  border-right: 1px solid var(--full-black);
-  border-bottom: 1px solid var(--full-black);
-}
-
-.tabinator label::before {
-  content: "";
-  display: block;
-  width: 100%;
-  height: 15px;
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  z-index: 10;
-}
-
-.tabinator label:hover {
-  color: var(--grey-bg);
-  cursor: pointer;
-}
-
-.tabinator input:checked + label {
-  position: relative;
-  color: var(--full-white);
-  background: var(--full-black);
-  border-left: 1px solid var(--full-black);
-  border-top: 1px solid var(--full-black);
-  border-right: 1px solid var(--full-black);
-  font-weight: bold;
-  font-style: normal;
-}
-
-.tabinator input::checked + label::after {
-  display: block;
-  content: "";
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  box-shadow: 0 0 15px var(--tabs-grey-shadow);
-}
-
-[id^="message"] {
-  display: none;
-  border-top: 1px solid var(--grey-highlight);
-}
-
-.checked {
-  display: block;
-  box-shadow: 0 0 15px var(--grey-highlight);
 }
 
 .circle_red {
@@ -966,8 +734,8 @@ a[x-apple-data-detectors] {
 
 @media only screen and (max-width: 1200px) {
   div#content.container {
-    top: 77px;
-    height: calc(100vh - 98px);
+    top: 70px;
+    height: calc(100vh - 92px);
   }
 
   #logo_image {
@@ -1010,8 +778,8 @@ a[x-apple-data-detectors] {
   }
 
   div#content.container {
-    top: 140px;
-    height: calc(100vh - 160px);
+    top: 95px;
+    height: calc(100vh - 110px);
   }
 
   .decor {
@@ -1083,8 +851,8 @@ a[x-apple-data-detectors] {
   }
 
   div#content.container {
-    top: 140px;
-    height: calc(100vh - 160px);
+    top: 95px;
+    height: calc(100vh - 120px);
   }
 
   #search_results {
@@ -1333,13 +1101,10 @@ div.plane_element {
 /* ACARS Message CSS values */
 
 #acarshub_content {
-  /* padding-right: 10rem;
-  padding-left: 5rem;
-  padding-bottom: 1rem; */
   width: 100%;
 }
 
-.acars_message_container,
+.acars_message,
 .settings_container {
   display: flex;
   flex-direction: column;
@@ -1351,14 +1116,24 @@ div.plane_element {
   padding: 0.1rem;
   margin-bottom: 1rem;
   border: 0.1rem solid var(--lightest-gray);
-  border-radius: 10px;
+  border-radius: 0 1rem 1rem 1rem;
   overflow-wrap: break-word;
   word-wrap: break-word;
   line-height: 1.3rem;
   font-size: 1rem;
 }
 
-.acars_message_container a {
+.rounded_corners {
+  border-radius: 1rem;
+}
+
+.no_bottom_margin {
+  margin-bottom: -0.15rem;
+  padding-bottom: 0 !important;
+  padding-left: 0 !important;
+}
+
+.acars_message a {
   color: var(--blue-highlight);
   text-decoration: none;
   font-weight: bold;
@@ -1388,11 +1163,18 @@ div.plane_element {
   word-wrap: break-word;
 }
 
-.message_from,
-.footer_left_side,
-.message_buttons {
+.message_from {
   justify-content: left;
   width: 50%;
+}
+
+.message_buttons {
+  border: 0.1rem solid var(--lightest-gray);
+  border-radius: 1rem 1rem 0 0;
+  padding: 0.5rem;
+  color: var(--dark-bg-text-color);
+  font-size: 1rem;
+  background-color: var(--medium-gray);
 }
 
 .message_time,
@@ -1460,8 +1242,6 @@ div.plane_element {
 .footer_item {
   display: inline-block;
   border-right: 1px solid var(--light-gray);
-  /* margin-left: 0.3rem;
-  padding-right: 0.3rem; */
 }
 
 .footer_left_side > .footer_item {

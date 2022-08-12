@@ -689,10 +689,6 @@ window.show_page_modal = function (): void {
   }
 };
 
-window.show_menu_modal = function (): void {
-  menu.show_menu_modal();
-};
-
 window.updateAlerts = function (): void {
   //alerts_page.updateAlerts();
 };

@@ -52,7 +52,7 @@ export function generate_message_group_html_from_plane(
   planes.messages.every((message, index) => {
     if (message.uid == planes.selected_tab) {
       if (planes.messages.length > 1) {
-        output += `<div class="acars_message_row"><div class="message_buttons">`;
+        output += `<div class="acars_message_row no_bottom_margin"><div class="message_buttons">`;
         output += `<button id="${planes.uid}_button_left" class="nav-button" onclick="nav_left('${planes.uid}')" role="button">${images.arrow_left}</button>`;
         output += `<button id="${planes.uid}_button_right" class="nav-button" onclick="nav_right('${planes.uid}')" role="button">${images.arrow_right}</button>`;
         output += `<strong>&nbspMessage ${index + 1} of ${
@@ -61,7 +61,11 @@ export function generate_message_group_html_from_plane(
         output += `</div></div>`;
       }
 
-      output += generate_message_html(message, planes);
+      output += generate_message_html(
+        message,
+        planes,
+        planes.messages.length > 1 ? false : true
+      );
       return false;
     }
     return true;
@@ -74,12 +78,15 @@ export function generate_message_group_html_from_plane(
 
 function generate_message_html(
   acars_message: acars_msg,
-  planes: plane
+  planes: plane,
+  round_corners: boolean
 ): string {
   let output = "";
   // TODO: from_addr may be the ICAO Hex of the plane....investigate
 
-  output += `<div class="acars_message">`;
+  output += `<div class="acars_message${
+    round_corners ? " rounded_corners" : ""
+  }">`;
   output += generate_message_body(acars_message, planes);
   output += `</div></div>`;
 

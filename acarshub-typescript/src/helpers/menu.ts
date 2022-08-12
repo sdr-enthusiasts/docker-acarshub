@@ -24,26 +24,8 @@ export let menu = {
   menu_adsb: false as boolean,
   arch: "" as string,
 
-  footer_message_modal: new jBox("Modal", {
-    id: "set_modal",
-    width: 300,
-    height: 250,
-    blockScroll: false,
-    isolateScroll: true,
-    animation: "zoomIn",
-    closeButton: "box",
-    overlay: true,
-    reposition: false,
-    repositionOnOpen: true,
-    content: `<span class="red"><center><h2>NOTICE!</h2></center></span><p><span class="white">You are running an ARM 32 bit host system. After March 1st, 2022 your system may fail to properly run ACARS Hub. Please visit <a href="https://github.com/fredclausen/Buster-Docker-Fixes">this page</a> for more information.</p><a href="javascript:hide_libseccomp2_warning()">Mute this message</a></span>`,
-  }),
-
-  show_menu_modal(): void {
-    this.footer_message_modal.open();
-  },
-
   generate_menu: function (): void {
-    let html = '<div class="wrap"><span class="decor"></span>';
+    let html = '<div class="wrap">';
     html += '<nav><ul class="primary">';
     html += `<li class="img_box" id="logo_image">${images.acars_hub_logo}"</li>`;
     html += `<li><a href="javascript:new_page('Live Messages')" id="live_messages_link">Live Messages</a></li>`;
