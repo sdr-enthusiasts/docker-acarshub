@@ -15,7 +15,7 @@
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
 import { display_messages } from "../helpers/html_generator";
-import { MessageDecoder } from "@airframes/acars-decoder/dist/MessageDecoder";
+//import { MessageDecoder } from "@airframes/acars-decoder/dist/MessageDecoder";
 import {
   search_html_msg,
   database_size,
@@ -23,8 +23,7 @@ import {
   current_search,
   acars_msg,
 } from "../interfaces";
-import { search_database } from "../index";
-import jBox from "jbox";
+import { search_database } from "../acarshub";
 import { tooltip } from "../helpers/tooltips";
 declare const window: any;
 
@@ -60,8 +59,13 @@ export let search_page = {
   search_acars_url: "" as string,
   search_msgs_received: [] as acars_msg[][],
   num_results: [] as number[],
-  search_md: new MessageDecoder(),
-
+  //search_md: new MessageDecoder(),
+  // this is a temp workaround to get things building while acars decoder is broken
+  search_md: {
+    decode: (message: acars_msg) => {
+      return { decoded: false, decoded_msg: "" } as any;
+    },
+  },
   database_size_details: function (msg: database_size): void {
     this.db_size = msg;
     this.update_size();

@@ -16,14 +16,14 @@
 
 import Chart from "chart.js/auto";
 import ChartDataLabels from "chartjs-plugin-datalabels";
-import { generate_stat_submenu } from "../index";
 import palette from "../js-other/palette";
 import {
   signal_grab_freqs,
   signal_grab_message_count,
   signal_grab_updated_graphs,
   is_connected,
-} from "../index";
+  generate_stat_submenu,
+} from "../acarshub";
 import {
   alert_term,
   decoders,

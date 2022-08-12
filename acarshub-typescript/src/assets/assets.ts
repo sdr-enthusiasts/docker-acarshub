@@ -20,6 +20,8 @@ import { faArrowUp } from "@fortawesome/free-solid-svg-icons/faArrowUp";
 import { faArrowDown } from "@fortawesome/free-solid-svg-icons/faArrowDown";
 import { faPlus } from "@fortawesome/free-solid-svg-icons/faPlus";
 import { faMinus } from "@fortawesome/free-solid-svg-icons/faMinus";
+import { faArrowLeft } from "@fortawesome/free-solid-svg-icons/faArrowLeft";
+import { faArrowRight } from "@fortawesome/free-solid-svg-icons/faArrowRight";
 
 library.add(faCheck);
 library.add(faPlane);
@@ -34,6 +36,8 @@ library.add(faArrowUp);
 library.add(faArrowDown);
 library.add(faPlus);
 library.add(faMinus);
+library.add(faArrowLeft);
+library.add(faArrowRight);
 
 dom.watch();
 
@@ -94,6 +98,9 @@ export let images = {
 
   toggle_unread_messages_on: '<i class="fas fa-square"></i>' as string,
   toggle_unread_messages_off: '<i class="far fa-square"></i>' as string,
+
+  arrow_left: '<i class="fa-solid fa-arrow-left"></i>' as string,
+  arrow_right: '<i class="fa-solid fa-arrow-right"></i>' as string,
 
   legend_has_acars: legend_has_acars_url as string,
   legend_has_acars_alert_unread: legend_has_acars_alert_unread_url as string,

@@ -28,14 +28,17 @@ import "jbox/dist/jBox.all.css";
 import "./css/site.css";
 
 import { menu } from "./helpers/menu";
-import { live_messages_page } from "./pages/live_messages";
-import { search_page } from "./pages/search";
+import { LiveMessagesPage } from "./pages/live_messages";
+// import { search_page } from "./pages/search";
 import { stats_page } from "./pages/stats";
 import { about } from "./pages/about";
+// import { live_map_page } from "./pages/live_map";
 import { status } from "./pages/status";
-import { alerts_page } from "./pages/alerts";
+// import { alerts_page } from "./pages/alerts";
 import { tooltip } from "./helpers/tooltips";
 import { io, Socket } from "socket.io-client";
+import { MessageHandler } from "./data-handling/message_handler";
+import { Settings } from "./data-handling/settings";
 
 import {
   labels,
@@ -57,10 +60,10 @@ import {
   acars_msg,
   plane_match,
   acarshub_version,
+  alert_terms,
+  LocalStorageSettings,
+  message_properties,
 } from "./interfaces";
-
-import { live_map_page } from "./pages/live_map";
-import Cookies from "js-cookie";
 
 let socket: Socket = <any>null;
 let socket_status: boolean = false;
@@ -80,6 +83,10 @@ let adsb_enabled = false;
 let adsb_request_options = {
   method: "GET",
 } as RequestInit;
+
+let msg_handler = new MessageHandler(index_acars_url);
+const settings = new Settings();
+let live_messages_page = new LiveMessagesPage();
 
 // @ts-expect-error
 var hidden, visibilityChange;
@@ -113,11 +120,11 @@ var ro: ResizeObserver = new ResizeObserver((entries) => {
     if (cr.width !== old_window_width) {
       old_window_width = cr.width - 50;
       if (index_acars_page === "/") resize_tabs(cr.width - 50);
-      else if (index_acars_page === "/adsb")
-        live_map_page.updateModalSize({
-          width: cr.width,
-          height: cr.height,
-        } as window_size);
+      // else if (index_acars_page === "/adsb")
+      //   live_map_page.updateModalSize({
+      //     width: cr.width,
+      //     height: cr.height,
+      //   } as window_size);
       else if (index_acars_page === "/stats") {
         stats_page.resize(cr.width);
       }
@@ -213,34 +220,62 @@ $((): void => {
 
   socket.on("labels", function (msg: labels) {
     // Msg labels
-    live_messages_page.new_labels(msg); // send to live messages
+    //live_messages_page.new_labels(msg); // send to live messages
   });
 
   socket.on("acars_msg", function (msg: html_msg) {
     // New acars message.
     if (connection_good || typeof msg.loading == "undefined") {
-      live_messages_page.new_acars_message(msg); // send the message to live messages
-      // if (adsb_enabled && typeof msg.loading == "undefined")
-      //   live_map_page.redraw_map();
-      if (typeof msg.loading == "undefined" || msg.loading === false)
-        alerts_page.alerts_acars_message(msg); // send the message to alerts for processing
+      const processed_msg: message_properties = msg_handler.acars_message(
+        msg.msghtml
+      );
+      //FIXME
+      if (true) {
+        //if (!is_page_backgrounded) {
+        // If the message is a new message, then we need to update the page.
+        if (
+          msg.done_loading === true &&
+          index_acars_page === "/" &&
+          live_messages_page
+        ) {
+          live_messages_page.update_page(msg_handler.get_all_messages());
+        } else if (
+          typeof msg.done_loading === "undefined" &&
+          index_acars_page === "/" &&
+          live_messages_page &&
+          processed_msg.should_display
+        ) {
+          live_messages_page.update_page(
+            msg_handler.get_message_by_id(processed_msg.uid)
+          );
+        }
+
+        if (
+          typeof msg.done_loading === "undefined" &&
+          processed_msg.has_alerts
+        ) {
+          msg_handler.sound_alert();
+        }
+      } else {
+        console.log("Skipping update: page back grounded");
+      }
     }
   });
 
   socket.on("terms", function (msg: terms): void {
-    alerts_page.alerts_terms(msg); // send the terms over to the alert page
+    //alerts_page.alerts_terms(msg); // send the terms over to the alert page
   });
 
   socket.on("alert_matches", function (msg: html_msg): void {
-    alerts_page.alerts_acars_message(msg);
+    //alerts_page.alerts_acars_message(msg);
   });
 
   socket.on("database", function (msg: database_size): void {
-    search_page.database_size_details(msg);
+    //search_page.database_size_details(msg);
   });
 
   socket.on("database_search_results", function (msg: search_html_msg): void {
-    search_page.database_search_results(msg);
+    //search_page.database_search_results(msg);
   });
 
   socket.on("acarshub-version", function (version: acarshub_version): void {
@@ -258,12 +293,12 @@ $((): void => {
       adsb_enabled = true;
       menu.set_adsb(true);
       toggle_pages();
-      alerts_page.updateAlertCounter();
-      live_map_page.is_adsb_enabled(true, {
-        width: old_window_width,
-        height: old_window_height,
-      } as window_size);
-      live_map_page.live_map(msg.adsb.lat, msg.adsb.lon, msg.adsb.range_rings);
+      //alerts_page.updateAlertCounter();
+      // live_map_page.is_adsb_enabled(true, {
+      //   width: old_window_width,
+      //   height: old_window_height,
+      // } as window_size);
+      // live_map_page.live_map(msg.adsb.lat, msg.adsb.lon, msg.adsb.range_rings);
 
       status.update_adsb_status({
         adsb_enabled: true,
@@ -298,12 +333,12 @@ $((): void => {
       adsb_interval = null;
       menu.set_adsb(false);
       toggle_pages();
-      alerts_page.updateAlertCounter();
-      live_map_page.is_adsb_enabled(false, {
-        width: old_window_width,
-        height: old_window_height,
-      } as window_size);
-      live_map_page.destroy_maps();
+      //alerts_page.updateAlertCounter();
+      // live_map_page.is_adsb_enabled(false, {
+      //   width: old_window_width,
+      //   height: old_window_height,
+      // } as window_size);
+      // live_map_page.destroy_maps();
     }
   });
 
@@ -366,12 +401,12 @@ $((): void => {
   });
 
   // init all page backgrounding functions
-  live_messages_page.live_messages();
-  search_page.search();
+  //live_messages_page.live_messages();
+  //search_page.search();
   stats_page.stats();
   about.about();
   status.status();
-  alerts_page.alert();
+  //alerts_page.alert();
   toggle_pages();
 
   setInterval(function () {
@@ -413,7 +448,7 @@ async function update_adsb(): Promise<void> {
       adsb_getting_data = true;
       return response.json();
     })
-    .then((planes) => live_map_page.set_targets(planes as adsb))
+    .then((planes) => msg_handler.adsb_message(planes))
     .catch((err) => {
       adsb_getting_data = false;
       status.update_adsb_status({
@@ -433,33 +468,33 @@ function update_url(): void {
   index_acars_path += index_acars_path.endsWith("/") ? "" : "/";
   index_acars_url = document.location.origin + index_acars_path;
 
-  live_messages_page.set_live_page_urls(index_acars_path, index_acars_url);
-  search_page.set_search_page_urls(index_acars_path, index_acars_url);
+  //live_messages_page.set_live_page_urls(index_acars_path, index_acars_url);
+  //search_page.set_search_page_urls(index_acars_path, index_acars_url);
   stats_page.set_stats_page_urls(index_acars_path, index_acars_url);
   about.set_about_page_urls(index_acars_path, index_acars_url);
   status.set_status_page_urls(index_acars_path, index_acars_url);
-  alerts_page.set_alert_page_urls(index_acars_path, index_acars_url);
-  live_map_page.set_live_map_page_urls(index_acars_path, index_acars_url);
+  // alerts_page.set_alert_page_urls(index_acars_path, index_acars_url);
+  // live_map_page.set_live_map_page_urls(index_acars_path, index_acars_url);
   menu.set_about_page_urls(index_acars_path, index_acars_url);
 }
 
 function toggle_pages(is_backgrounded = false): void {
   index_acars_page =
     "/" + document.location.pathname.replace(index_acars_path, "");
-  live_map_page.plane_message_modal.close();
+  // live_map_page.plane_message_modal.close();
   for (let page in pages) {
     if (pages[page] === "/" && index_acars_page === pages[page]) {
       $("#live_messages_link").addClass("invert_a");
-      live_messages_page.live_message_active(!is_backgrounded);
+      live_messages_page.set_page_active();
     } else if (pages[page] === "/") {
       $("#live_messages_link").removeClass("invert_a");
-      live_messages_page.live_message_active();
+      live_messages_page.set_page_inactive;
     } else if (pages[page] === "/search" && index_acars_page === pages[page]) {
       $("#search_link").addClass("invert_a");
-      search_page.search_active(!is_backgrounded);
+      //search_page.search_active(!is_backgrounded);
     } else if (pages[page] === "/search") {
       $("#search_link").removeClass("invert_a");
-      search_page.search_active();
+      //search_page.search_active();
     } else if (pages[page] === "/stats" && index_acars_page === pages[page]) {
       $("#stats_link").addClass("invert_a");
       stats_page.stats_active(!is_backgrounded);
@@ -476,22 +511,22 @@ function toggle_pages(is_backgrounded = false): void {
       status.status_active();
     } else if (pages[page] === "/alerts" && index_acars_page === pages[page]) {
       $("#alerts_link").addClass("invert_a");
-      alerts_page.alert_active(!is_backgrounded);
+      // alerts_page.alert_active(!is_backgrounded);
     } else if (pages[page] === "/alerts") {
       $("#alerts_link").removeClass("invert_a");
-      alerts_page.alert_active();
+      // alerts_page.alert_active();
     } else if (pages[page] === "/adsb" && index_acars_page === pages[page]) {
       $("#live_map_link").addClass("invert_a");
-      live_map_page.live_map_active(!is_backgrounded, {
-        width: old_window_width,
-        height: old_window_height,
-      } as window_size);
+      // live_map_page.live_map_active(!is_backgrounded, {
+      //   width: old_window_width,
+      //   height: old_window_height,
+      // } as window_size);
     } else if (pages[page] === "/adsb") {
       $("#live_map_link").removeClass("invert_a");
-      live_map_page.live_map_active(false, {
-        width: old_window_width,
-        height: old_window_height,
-      } as window_size);
+      // live_map_page.live_map_active(false, {
+      //   width: old_window_width,
+      //   height: old_window_height,
+      // } as window_size);
     }
   }
 }
@@ -608,13 +643,13 @@ export function is_connected(): boolean {
 
 // functions to pass values between objects
 
-export function match_alert(msg: html_msg): alert_matched {
-  return alerts_page.match_alert(msg);
-}
+// export function match_alert(msg: html_msg): alert_matched {
+//   return alerts_page.match_alert(msg);
+// }
 
-export function sound_alert(): void {
-  alerts_page.sound_alert();
-}
+// export function sound_alert(): void {
+//   alerts_page.sound_alert();
+// }
 
 export function generate_stat_submenu(
   acars: boolean = false,
@@ -623,33 +658,34 @@ export function generate_stat_submenu(
   menu.generate_stat_submenu(acars, vdlm);
 }
 
-export function find_matches(): plane_data {
-  return live_messages_page.find_matches();
-}
+// export function find_matches(): plane_data {
+//   return live_messages_page.find_matches();
+// }
 
-export function get_match(
-  callsign: string = "",
-  hex: string = "",
-  tail: string = ""
-): plane_match {
-  return live_messages_page.get_match(callsign, hex, tail);
-}
+// export function get_match(
+//   callsign: string = "",
+//   hex: string = "",
+//   tail: string = ""
+// ): plane_match {
+//   return live_messages_page.get_match(callsign, hex, tail);
+// }
 
 export function is_adsb_enabled() {
   return adsb_enabled;
 }
 
-export function get_current_planes() {
-  return live_map_page.get_current_planes();
-}
+// export function get_current_planes() {
+//   return live_map_page.get_current_planes();
+// }
 
 // functions that need to be registered to window object
 
 window.show_page_modal = function (): void {
-  if (index_acars_page === "/alerts") {
-    alerts_page.show_alert_message_modal();
-  } else if (index_acars_page === "/") {
-    live_messages_page.show_live_message_modal();
+  // if (index_acars_page === "/alerts") {
+  //   alerts_page.show_alert_message_modal();
+  // } else
+  if (index_acars_page === "/") {
+    //live_messages_page.show_live_message_modal();
   }
 };
 
@@ -658,63 +694,56 @@ window.show_menu_modal = function (): void {
 };
 
 window.updateAlerts = function (): void {
-  alerts_page.updateAlerts();
+  //alerts_page.updateAlerts();
 };
 window.default_alert_values = function (): void {
-  alerts_page.default_alert_values();
+  //alerts_page.default_alert_values();
 };
 window.toggle_playsound = function (status: boolean): void {
-  alerts_page.toggle_playsound(status);
+  //alerts_page.toggle_playsound(status);
 };
 window.update_prefix = function (prefix: string): void {
   stats_page.update_prefix(prefix);
 };
 
 window.showall = function (): void {
-  search_page.showall();
+  //search_page.showall();
 };
 
 window.jumppage = function (): void {
-  search_page.jumppage();
+  //search_page.jumppage();
 };
 
 window.runclick = function (page: number): void {
-  search_page.runclick(page);
-};
-
-window.handle_radio = function (element_id: string, uid: string): void {
-  if (index_acars_page === "/")
-    live_messages_page.handle_radio(element_id, uid);
-  else if (index_acars_page === "/adsb")
-    live_map_page.handle_radio(element_id, uid);
+  //search_page.runclick(page);
 };
 
 window.pause_updates = function (toggle_pause: boolean = true): void {
-  live_messages_page.pause_updates(toggle_pause);
+  //live_messages_page.pause_updates(toggle_pause);
 };
 
 window.filter_notext = function (toggle_filter: boolean = true): void {
-  live_messages_page.filter_notext(toggle_filter);
+  //live_messages_page.filter_notext(toggle_filter);
 };
 
 window.toggle_label = function (key: string): void {
-  live_messages_page.toggle_label(key);
+  //live_messages_page.toggle_label(key);
 };
 
 window.setSort = function (sort: string = ""): void {
-  live_map_page.setSort(sort);
+  // live_map_page.setSort(sort);
 };
 
 window.toggle_acars_only = function (): void {
-  live_map_page.toggle_acars_only();
+  // live_map_page.toggle_acars_only();
 };
 
 window.toggle_datablocks = function (): void {
-  live_map_page.toggle_datablocks();
+  // live_map_page.toggle_datablocks();
 };
 
 window.toggle_extended_datablocks = function (): void {
-  live_map_page.toggle_extended_datablocks();
+  // live_map_page.toggle_extended_datablocks();
 };
 
 $(window).on("popstate", (): void => {
@@ -728,31 +757,30 @@ window.close_modal = function (): void {
 };
 
 window.close_live_map_modal = function (): void {
-  live_map_page.close_live_map_modal();
+  // live_map_page.close_live_map_modal();
 };
 
 window.zoom_in = function (): void {
-  live_map_page.zoom_in();
+  // live_map_page.zoom_in();
 };
 
 window.zoom_out = function (): void {
-  live_map_page.zoom_out();
+  // live_map_page.zoom_out();
 };
 
 window.toggle_unread_messages = function (): void {
-  live_map_page.toggle_unread_messages();
+  // live_map_page.toggle_unread_messages();
 };
 
 window.mark_all_messages_read = function (): void {
-  live_map_page.mark_all_messages_read();
+  // live_map_page.mark_all_messages_read();
 };
 
 window.query = function (): void {
-  search_page.query();
+  //search_page.query();
 };
 
 window.hide_libseccomp2_warning = function (): void {
-  Cookies.set("hide_libseccomp2_warning", "true", { expires: 365 });
   menu.generate_footer();
 };
 
@@ -774,7 +802,7 @@ window.showPlaneMessages = function (
     console.error("ERROR", callsign, tail);
     return;
   }
-  live_map_page.showPlaneMessages(callsign, hex, tail);
+  // live_map_page.showPlaneMessages(callsign, hex, tail);
 };
 
 export function showPlaneMessages(
@@ -782,5 +810,48 @@ export function showPlaneMessages(
   plane_hex: string = "",
   plane_tail: string = ""
 ): void {
-  live_map_page.showPlaneMessages(plane_callsign, plane_hex, plane_tail);
+  // live_map_page.showPlaneMessages(plane_callsign, plane_hex, plane_tail);
 }
+
+export function get_setting(key: string): string {
+  return settings.get_setting(key);
+}
+
+export function is_label_excluded(label: string): boolean {
+  return settings.is_label_excluded(label);
+}
+
+export function get_all_settings(): LocalStorageSettings {
+  return settings.get_all_settings();
+}
+
+export function get_display_settings() {
+  return settings.get_display_settings();
+}
+
+export function get_all_planes() {
+  return msg_handler.get_all_messages();
+}
+
+export function get_alerts() {
+  return {
+    ignore: settings.get_alerts_list_of_blacklist_terms(),
+    text_terms: settings.get_alerts_list_of_whitelist_terms(),
+  } as alert_terms;
+}
+
+window.nav_left = (uid: string): void => {
+  if (!uid) return;
+
+  msg_handler.update_selected_tab(uid);
+  if (live_messages_page)
+    live_messages_page.update_page_in_place(msg_handler.get_message_by_id(uid));
+};
+
+window.nav_right = (uid: string): void => {
+  if (!uid) return;
+
+  msg_handler.update_selected_tab(uid, "right");
+  if (live_messages_page)
+    live_messages_page.update_page_in_place(msg_handler.get_message_by_id(uid));
+};

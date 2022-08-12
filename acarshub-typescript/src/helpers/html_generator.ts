@@ -14,316 +14,396 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-// Function to generate the HTML for an array of messages
-// Input: msgs_to_process - the array of messages. Format is array of message groups, with each group being an array of message(s) that create a group of submessages
-// Input: selected_tabs - if present, we'll process. Format is uid1;elementid1,uid2;elementid2 etc
-// Input: live_page - default is false. This toggles on the checks for selected tabs
-import { html_functions } from "./html_functions";
-import { acars_msg } from "../interfaces";
+import { acars_msg, plane } from "src/interfaces";
+import { get_setting } from "../acarshub";
+import { feet_to_meters } from "./math_conversions";
+import { images } from "../assets/assets";
 
-export function display_messages(
-  msgs_to_process: acars_msg[][],
-  selected_tabs: string = "",
-  live_page: boolean = false
+export function generate_messages_html_from_planes(
+  planes: plane[] | undefined = undefined
 ): string {
-  let html_string = "";
+  let output: string = "";
+  if (typeof planes === "undefined" || planes.length === 0) {
+    console.error("No planes. Nothing to display.");
+    return "";
+  }
 
-  msgs_to_process.forEach((plane) => {
-    html_string += display_message_group(plane, selected_tabs, live_page);
+  planes.forEach((plane) => {
+    if (typeof plane !== "undefined") {
+      output += generate_message_group_html_from_plane(plane);
+    }
   });
 
-  return html_string;
+  return output;
 }
 
-export function display_message_group(
-  msg_to_process: acars_msg[],
-  selected_tabs: string = "",
-  live_page: boolean = false
+export function generate_message_group_html_from_plane(
+  planes: plane | undefined = undefined,
+  create_container = true
 ): string {
-  let msgs_string = ""; // output string that gets returned
-  let message_tab_splits: string[] = []; // variable to save the split output of selected_tabs
-  if (selected_tabs !== "") message_tab_splits = selected_tabs.split(","); // the individual tabs with selections
-  // Loop through the message array
-  let unique_id: string = ""; // UID for the message group
-  let active_tab: string = "0"; // Active tab. Default is the first one if none selected
-  let previous_tab: string = "0";
-  let next_tab: string = "0";
-  let array_index_tab: string = "0";
-  const message_uid =
-    "acarsmsg_" + msg_to_process[msg_to_process.length - 1].uid;
-  msgs_string += `<div id="${message_uid}_container" class="acars_message_container">`;
-  msgs_string += "<br>";
-  msgs_string += `<div class="acarshub-message-group" id="${message_uid}">`;
-  if (live_page) {
-    // unique_id is used to track the UID for a group of messages
-    // tab_id below is the UID for a selected message
-
-    unique_id = msg_to_process[msg_to_process.length - 1].uid; // Set the UID to the oldest message
-
-    if (message_tab_splits.length > 0) {
-      // Loop through the selected tabs on the page. If we find a match for the current UID we'll set the active tab to what has been selected
-      for (let q = 0; q < message_tab_splits.length; q++) {
-        if (message_tab_splits[q].startsWith(unique_id.toString())) {
-          let split = message_tab_splits[q].split(";");
-          active_tab = split[1];
-          array_index_tab = String(
-            msg_to_process.findIndex((sub_element: acars_msg) => {
-              if (
-                sub_element.uid === active_tab ||
-                sub_element.uid === active_tab
-              ) {
-                return true;
-              }
-            })
-          );
-        }
-      }
-    }
-
-    if (msg_to_process.length > 1) {
-      // Do we have more than one message in this group? If so, add in the HTML to set up the tabs
-      if (array_index_tab === "0") {
-        next_tab = msg_to_process[1].uid;
-        previous_tab = msg_to_process[msg_to_process.length - 1].uid;
-      } else if (array_index_tab === String(msg_to_process.length - 1)) {
-        next_tab = msg_to_process[0].uid;
-        previous_tab = msg_to_process[msg_to_process.length - 2].uid;
-      } else {
-        next_tab = msg_to_process[Number(array_index_tab) + 1].uid;
-        previous_tab = msg_to_process[Number(array_index_tab) - 1].uid;
-      }
-
-      msgs_string += html_functions.start_message_tabs();
-      for (let j = 0; j < msg_to_process.length; j++) {
-        // Loop through all messages in the group to show all of the tabs
-        let tab_uid = unique_id;
-
-        tab_uid = msg_to_process[j].uid;
-
-        // If there is no active tab set by the user we'll set the newest message to be active/checked
-
-        msgs_string +=
-          j === 0
-            ? html_functions.create_message_nav_arrows(
-                previous_tab,
-                unique_id
-              ) +
-              html_functions.create_message_nav_arrows(
-                next_tab,
-                unique_id,
-                false
-              )
-            : "";
-
-        if (active_tab === "0" && j === 0)
-          msgs_string += html_functions.create_message_tab(tab_uid, unique_id);
-        else if (tab_uid === String(active_tab))
-          msgs_string += html_functions.create_message_tab(tab_uid, unique_id);
-        else
-          msgs_string += html_functions.create_message_tab(
-            tab_uid,
-            unique_id,
-            false
-          );
-        msgs_string += html_functions.message_tab_label(
-          j,
-          typeof msg_to_process[j].matched !== "undefined",
-          tab_uid,
-          unique_id
-        );
-      }
-    }
+  if (!planes || planes.messages.length === 0) {
+    console.error("No messages. Nothing to display.");
+    return "";
   }
+  let output = "";
+  if (create_container)
+    output = `<div id="${planes.uid}_container" class="acars_message_container">`;
 
-  msg_to_process.forEach((message) => {
-    // Now we'll generate the HTML for each message in the group
-    let html_output = "";
-    if (msg_to_process.length > 1) {
-      // If we have multiple messages in this group we need to set the non-selected tabs to invisible
-      let tab_uid = unique_id;
+  planes.messages.every((message, index) => {
+    if (message.uid == planes.selected_tab) {
+      if (planes.messages.length > 1) {
+        output += `<div class="acars_message_row"><div class="message_buttons">`;
+        output += `<button id="${planes.uid}_button_left" class="nav-button" onclick="nav_left('${planes.uid}')" role="button">${images.arrow_left}</button>`;
+        output += `<button id="${planes.uid}_button_right" class="nav-button" onclick="nav_right('${planes.uid}')" role="button">${images.arrow_right}</button>`;
+        output += `<strong>&nbspMessage ${index + 1} of ${
+          planes.messages.length
+        }</strong>`;
+        output += `</div></div>`;
+      }
 
-      tab_uid = message.uid; // UID for the current message
-      tab_uid = message.uid; // UID for the current message
-
-      if (active_tab === "0" && msg_to_process.indexOf(message) === 0)
-        html_output += html_functions.message_div(unique_id, tab_uid);
-      // Case for no tab selected by user. Newest message is active
-      else if (tab_uid === String(active_tab))
-        html_output += html_functions.message_div(unique_id, tab_uid);
-      // User has selected a tab for the group and it is this message. Set to be vis
-      // Hide the selected tab if the previous cases don't match
-      else html_output += html_functions.message_div(unique_id, tab_uid, false);
+      output += generate_message_html(message, planes);
+      return false;
     }
-    // variable to hold the current message
-    html_output += html_functions.start_message_box();
-    html_output += html_functions.message_station_and_type(
-      message.message_type,
-      message.station_id,
-      msg_to_process.length === 1 && typeof message.matched !== "undefined"
-    );
-    let timestamp: Date; // variable to save the timestamp We need this because the database saves the time as 'time' and live messages have it as 'timestamp' (blame Fred for this silly mis-naming of db columns)
-
-    // grab the time (unix EPOCH) from the correct key and convert in to a Date object for display
-    if (typeof message.timestamp !== "undefined")
-      timestamp = new Date(message.timestamp * 1000);
-    else
-      timestamp = new Date(
-        (typeof message.msg_time !== "undefined" ? message.msg_time : 0) * 1000
-      );
-
-    html_output += html_functions.message_timestamp(timestamp);
-    // Table content
-    html_output += html_functions.start_message_body();
-
-    // Special keys used by the JS files calling this function
-    // Duplicates is used to indicate the number of copies received for this message
-    // msgno_parts is the list of MSGID fields used to construct the multi-part message
-
-    html_output +=
-      typeof message.duplicates !== "undefined"
-        ? html_functions.add_message_field(
-            "Duplicate(s) Received",
-            message.duplicates
-          )
-        : "";
-    html_output +=
-      typeof message.msgno_parts !== "undefined"
-        ? html_functions.add_message_field("Message Parts", message.msgno_parts)
-        : "";
-    html_output +=
-      typeof message.label !== "undefined"
-        ? html_functions.add_message_field(
-            "Message Label",
-            message.label +
-              " " +
-              (typeof message.label_type !== "undefined"
-                ? message.label_type.trim()
-                : "")
-          )
-        : "";
-
-    // to/fromaddr is a pre-processed field
-    // if possible, we'll have an appended hex representation of the decimal address
-
-    html_output +=
-      typeof message.toaddr !== "undefined"
-        ? html_functions.add_message_field(
-            "To Address",
-            message.toaddr +
-              (typeof message.toaddr_hex !== "undefined"
-                ? "/" + message.toaddr_hex
-                : "/?")
-          )
-        : "";
-    html_output +=
-      typeof message.toaddr_decoded !== "undefined"
-        ? html_functions.add_message_field(
-            "To Address Station ID",
-            message.toaddr_decoded
-          )
-        : "";
-
-    //
-    html_output +=
-      typeof message.fromaddr !== "undefined"
-        ? html_functions.add_message_field(
-            "From Address",
-            message.fromaddr +
-              (typeof message.fromaddr_hex !== "undefined"
-                ? "/" + message.fromaddr_hex
-                : "/?")
-          )
-        : "";
-    html_output +=
-      typeof message.fromaddr_decoded !== "undefined"
-        ? html_functions.add_message_field(
-            "From Address Station ID",
-            message.fromaddr_decoded
-          )
-        : "";
-    html_output +=
-      typeof message.depa !== "undefined"
-        ? html_functions.add_message_field("Departing", message.depa)
-        : "";
-    html_output +=
-      typeof message.dsta !== "undefined"
-        ? html_functions.add_message_field("Destination", message.dsta)
-        : "";
-    html_output +=
-      typeof message.eta !== "undefined"
-        ? html_functions.add_message_field(
-            "Estimated time of arrival",
-            message.eta
-          )
-        : "";
-    html_output +=
-      typeof message.gtout !== "undefined"
-        ? html_functions.add_message_field("Pushback from gate", message.gtout)
-        : "";
-    html_output +=
-      typeof message.gtin !== "undefined"
-        ? html_functions.add_message_field("Arrived at gate", message.gtin)
-        : "";
-    html_output +=
-      typeof message.wloff !== "undefined"
-        ? html_functions.add_message_field("Wheels off", message.wloff)
-        : "";
-    html_output +=
-      typeof message.wlin !== "undefined"
-        ? html_functions.add_message_field("Departing", message.wlin)
-        : "";
-    html_output +=
-      typeof message.lat !== "undefined"
-        ? html_functions.add_message_field(
-            "Latitude",
-            message.lat.toLocaleString(undefined, {
-              maximumFractionDigits: 2,
-              minimumFractionDigits: 2,
-            })
-          )
-        : "";
-    html_output +=
-      typeof message.lon !== "undefined"
-        ? html_functions.add_message_field(
-            "Longitude",
-            message.lon.toLocaleString(undefined, {
-              maximumFractionDigits: 2,
-              minimumFractionDigits: 2,
-            })
-          )
-        : "";
-
-    html_output +=
-      typeof message.alt !== "undefined"
-        ? html_functions.add_message_field("Altitude", String(message.alt))
-        : "";
-
-    // Table footer row, tail & flight info, displayed in main body if screen is too small
-    html_output += html_functions.show_footer_and_sidebar_text(message, false);
-    //html_output += "</td></tr>";
-    html_output += html_functions.message_text(message);
-
-    // Text field is pre-processed
-    // we have a sub-table for the raw text field and if it was decoded, the decoded text as well
-
-    // Table footer row, tail & flight info
-    html_output += html_functions.show_footer_and_sidebar_text(message);
-
-    // Finish table html
-    html_output += html_functions.end_message_box();
-
-    if (msg_to_process.length > 1) {
-      html_output += html_functions.end_message_div();
-    }
-
-    msgs_string = msgs_string + html_output;
+    return true;
   });
 
-  if (msg_to_process.length > 1) {
-    msgs_string += html_functions.end_message_tabs();
+  if (create_container) output += "</div>";
+
+  return output;
+}
+
+function generate_message_html(
+  acars_message: acars_msg,
+  planes: plane
+): string {
+  let output = "";
+  // TODO: from_addr may be the ICAO Hex of the plane....investigate
+
+  output += `<div class="acars_message">`;
+  output += generate_message_body(acars_message, planes);
+  output += `</div></div>`;
+
+  return output;
+}
+
+function generate_message_body(
+  acars_message: acars_msg,
+  planes: plane
+): string {
+  let output = "";
+
+  output += `<div class="acars_message_row">`;
+  output += `<div class="message_body">`;
+
+  let timestamp = undefined;
+  if (has_field(acars_message, "timestamp"))
+    timestamp = new Date(acars_message.timestamp * 1000);
+  else
+    timestamp = new Date(
+      (typeof acars_message.msg_time !== "undefined"
+        ? acars_message.msg_time
+        : 0) * 1000
+    );
+
+  output += `<strong>${acars_message.message_type}</strong> from <strong>${acars_message.station_id}</strong><br>`;
+  output += `<strong>Message Time:</strong> ${timestamp.toLocaleString()}<br>`;
+
+  if (has_field(acars_message, "duplicates")) {
+    output += `<strong>Duplicates received:</strong> ${acars_message.duplicates}<br>`;
   }
 
-  msgs_string += html_functions.end_message();
+  if (has_field(acars_message, "msgno_parts")) {
+    output += `<strong>Message Parts:</strong> ${acars_message.msgno_parts}<br>`;
+  }
 
-  return msgs_string;
+  if (has_field(acars_message, "label")) {
+    output += `<strong>Message Label:</strong> ${acars_message.label}${
+      has_field(acars_message, "label_type")
+        ? " (" + acars_message.label_type + ")"
+        : ""
+    }<br>`;
+  }
+
+  if (has_field(acars_message, "toaddr")) {
+    output += `<strong>To Address:</strong> ${acars_message.toaddr}/${
+      has_field(acars_message, "toaddr_hex") ? acars_message.toaddr_hex : "?"
+    }<br>`;
+  }
+
+  if (has_field(acars_message, "toaddr_decoded")) {
+    output += `<strong>To Address Station ID:</strong> ${acars_message.toaddr_decoded}<br>`;
+  }
+
+  if (has_field(acars_message, "fromaddr")) {
+    output += `<strong>From Address:</strong> ${acars_message.fromaddr}/${
+      has_field(acars_message, "fromaddr_hex")
+        ? acars_message.fromaddr_hex
+        : "?"
+    }<br>`;
+  }
+
+  if (has_field(acars_message, "fromaddr_decoded")) {
+    output += `<strong>From Address Station ID:</strong> ${acars_message.fromaddr_decoded}<br>`;
+  }
+
+  if (has_field(acars_message, "depa")) {
+    output += `<strong>Departure Airport:</strong> ${acars_message.depa}<br>`;
+  }
+
+  if (has_field(acars_message, "dsta")) {
+    output += `<strong>Destination Airport:</strong> ${acars_message.dsta}<br>`;
+  }
+
+  if (has_field(acars_message, "eta")) {
+    output += `<strong>Estimated Arrival Time:</strong> ${acars_message.eta}<br>`;
+  }
+
+  if (has_field(acars_message, "gtout")) {
+    output += `<strong>Pushback from gate:</strong> ${acars_message.gtout}<br>`;
+  }
+
+  if (has_field(acars_message, "gtin")) {
+    output += `<strong>Arrived at gate:</strong> ${acars_message.gtin}<br>`;
+  }
+
+  if (has_field(acars_message, "wloff")) {
+    output += `<strong>Takeoff from runway:</strong> ${acars_message.wloff}<br>`;
+  }
+
+  if (has_field(acars_message, "wlin")) {
+    output += `<strong>Landed at runway:</strong> ${acars_message.wlin}<br>`;
+  }
+
+  if (has_field(acars_message, "lat")) {
+    output += `<strong>Latitude:</strong> ${acars_message.lat?.toLocaleString(
+      undefined,
+      { maximumFractionDigits: 2, minimumFractionDigits: 2 }
+    )}<br>`;
+  }
+
+  if (has_field(acars_message, "lon")) {
+    output += `<strong>Longitude:</strong> ${acars_message.lon?.toLocaleString(
+      undefined,
+      { maximumFractionDigits: 2, minimumFractionDigits: 2 }
+    )}<br>`;
+  }
+
+  if (has_field(acars_message, "alt")) {
+    const altitude = acars_message.alt || 0;
+    let output_alt = "";
+    if (!get_setting("general_use_metric_altitude")) {
+      if (
+        !get_setting("general_convert_to_flight_levels") ||
+        altitude < 18000
+      ) {
+        output_alt = altitude + " feet";
+      } else {
+        output_alt = "FL" + altitude / 100;
+      }
+    } else {
+      output_alt =
+        feet_to_meters(altitude).toLocaleString(undefined, {
+          maximumFractionDigits: 0,
+          minimumFractionDigits: 0,
+        }) + " meters";
+    }
+    output += `<strong>Altitude:</strong> ${output_alt}<br>`;
+  }
+
+  output += "</div>";
+
+  output += generate_right_side_text(planes, acars_message);
+  output += display_message_text(acars_message);
+  output += `</div></div>`;
+
+  output += `</div>`; // div for message body
+
+  return output;
+}
+
+function display_message_text(acars_message: acars_msg): string {
+  let output = `<div class="message_body">`;
+
+  if (
+    has_field(acars_message, "decodedText") ||
+    has_field(acars_message, "text") ||
+    has_field(acars_message, "data") ||
+    has_field(acars_message, "libacars")
+  ) {
+    if (has_field(acars_message, "text")) {
+      // TODO: fix TS !
+      // FIXME: Decoded probably needs it's own flex box
+
+      let text = acars_message.text!.replace("\\r\\n", "<br>");
+      if (acars_message.matched && acars_message.matched_text) {
+        acars_message.matched_text.forEach((term) => {
+          text = text.replace(term, `<span class="alert_term">${term}</span>`);
+        });
+      }
+      output += `<div class="text_body"><p><strong>Message Text:</strong></p><pre>${text}</pre></div>`;
+    }
+
+    if (has_field(acars_message, "decodedText")) {
+      let text = loop_array(acars_message.decodedText.formatted);
+      if (acars_message.matched && acars_message.matched_text) {
+        acars_message.matched_text.forEach((term) => {
+          text = text.replace(term, `<span class="alert_term">${term}</span>`);
+        });
+      }
+
+      output += `<div class="text_body"><p><strong>${
+        acars_message.decodedText.decoder.decodeLevel == "full"
+          ? ""
+          : "Partially "
+      }Decoded Text:</strong></p><div class="code">${text}</div></div>`;
+    }
+
+    if (has_field(acars_message, "data")) {
+      // TODO: fix TS !
+      let text = acars_message.data!.replace("\\r\\n", "<br>");
+      if (acars_message.matched && acars_message.matched_text) {
+        acars_message.matched_text.forEach((term) => {
+          text = text.replace(term, `<span class="alert_term">${term}</span>`);
+        });
+      }
+      output += `<div class="text_body"><p><strong>Data:</strong></p><div class="code">${text}</div></div>`;
+    }
+
+    if (has_field(acars_message, "libacars")) {
+      let text = acars_message.libacars!.replace("<pre>").replace("</pre>");
+      if (acars_message.matched && acars_message.matched_text) {
+        acars_message.matched_text.forEach((term) => {
+          text = text.replace(term, `<span class="alert_term">${term}</span>`);
+        });
+      }
+      output += `<div class="text_body"><p><strong>LibACARS Decoded Text:</strong></p><div class="code">${text}</div></div>`;
+    }
+  }
+  output += "</div>";
+  return output;
+}
+
+function generate_right_side_text(
+  planes: plane,
+  acars_message: acars_msg
+): string {
+  let output = `<div class="message_body">`;
+
+  if (has_field(acars_message, "tail")) {
+    // TODO: show tail as matched if matched
+    output += `<strong>Tail:</strong> <a href="https://flightaware.com/live/flight/${acars_message.tail}" target="_blank">${acars_message.tail}</a><br>`;
+  } else if (planes.tail) {
+    output += `<strong>Tail:</strong> <a href="https://flightaware.com/live/flight/${planes.tail}" target="_blank">${planes.tail}</a><br>`;
+  }
+
+  if (has_field(acars_message, "flight")) {
+    output += `${acars_message.flight}<br>`;
+  } else if (planes.callsign) {
+    output += `<strong>Flight:</strong> ${planes.callsign}<br>`;
+  }
+
+  if (has_field(acars_message, "icao")) {
+    output += `<strong>ICAO:</strong>`;
+    if (has_field(acars_message, "icao_url")) {
+      output += ` <a href="${acars_message.icao_url}" target="_blank">${acars_message.icao}`;
+    } else {
+      output += ` ${acars_message.icao}`;
+    }
+
+    if (has_field(acars_message, "icao_hex")) {
+      output += `/${acars_message.icao_hex}${
+        has_field(acars_message, "icao_url") ? "</a>" : ""
+      }`;
+    } else {
+      output += `/?`;
+    }
+
+    output += `<br>`;
+  }
+
+  if (has_field(acars_message, "freq")) {
+    output += `<strong>Frequency:</strong> ${Number(acars_message.freq)
+      ?.toPrecision(6)
+      .toLocaleString()}<br>`;
+  }
+
+  if (has_field(acars_message, "level")) {
+    let level = Number(acars_message.level ? acars_message.level : 0);
+    let circle = "";
+    if (level >= -10.0) {
+      circle = "circle_green";
+    } else if (level >= -20.0) {
+      circle = "circle_yellow";
+    } else if (level >= -30.0) {
+      circle = "circle_orange";
+    } else {
+      circle = "circle_red";
+    }
+
+    output += `<strong>Level:</strong> ${level
+      .toPrecision(3)
+      .toLocaleString()}&nbsp<div class="${circle}"></div><br>`;
+  }
+
+  if (has_field(acars_message, "ack")) {
+    output += `<strong>Acknolwedge:</strong> ${acars_message.ack}<br>`;
+  }
+
+  if (has_field(acars_message, "mode")) {
+    output += `<strong>Mode</strong>: ${acars_message.mode}<br>`;
+  }
+
+  if (has_field(acars_message, "block_id")) {
+    output += `<strong>Block ID:</strong> ${acars_message.block_id}<br>`;
+  }
+
+  if (has_field(acars_message, "msgno")) {
+    output += `<strong>Message Number:</strong> ${acars_message.msgno}<br>`;
+  }
+
+  if (has_field(acars_message, "is_response")) {
+    output += `<strong>Response:</strong> ${
+      acars_message.is_response === 0 ? "False" : "True"
+    }<br>`;
+  }
+
+  if (has_field(acars_message, "is_onground")) {
+    output += `<strong>On Ground:</strong> ${
+      acars_message.is_onground === 0 ? "False" : "True"
+    }<br>`;
+  }
+
+  if (has_field(acars_message, "error") && Number(acars_message.error) !== 0) {
+    output += `<strong>Error${
+      acars_message.error! > 1 ? "s" : ""
+    }:</strong> <span class="error">${acars_message.error}</span><br>`;
+  }
+
+  output += `</div>`; // div for row
+  return output;
+}
+
+function has_field(acars_message: acars_msg, field: string): boolean {
+  return (
+    typeof acars_message[field] !== "undefined" && acars_message[field] !== ""
+  );
+}
+
+function loop_array(input: any): string {
+  let html_output: string = "";
+
+  for (let m in input) {
+    if (typeof input[m] === "object") {
+      html_output += loop_array(input[m]);
+    } else {
+      if (m === "label") html_output += input[m] + ": ";
+      else if (m === "value") {
+        html_output += input[m] + "<br>";
+      } else if (m === "description") {
+        html_output += "Description: " + input[m] + "<br>";
+      }
+    }
+  }
+
+  return html_output;
 }

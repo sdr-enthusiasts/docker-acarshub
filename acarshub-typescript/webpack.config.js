@@ -6,7 +6,7 @@ const InjectBodyPlugin = require("inject-body-webpack-plugin").default;
 
 let config = {
   entry: {
-    acarshub: path.resolve(__dirname, "src") + "/index.ts",
+    acarshub: path.resolve(__dirname, "src") + "/acarshub.ts",
   },
   module: {
     rules: [
@@ -120,6 +120,10 @@ let config = {
       meta: {
         viewport:
           "width=400, user-scalable=yes, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, minimal-ui",
+        language: {
+          httpEquiv: "Content-Language",
+          content: "en_US",
+        },
       },
     }),
     new InjectBodyPlugin({
@@ -127,11 +131,8 @@ let config = {
       <div class="row" id="links"></div>
     </div> <!-- /#header -->
     <div class="container" id="content">
-      <div class="row" id="main_block">
-        <h3><span id="page_name"></span></h3>
-      </div> <!-- Main block -->
-      <div class="left" id="log">
-      </div> <!-- /#log -->
+      <div class="left" id="acarshub_content">
+      </div> <!-- /#acarshub_content -->
     </div> <!-- /#content -->
     <div class="footer" id="footer_div">
     </div> <!-- /#footer_div -->`,
@@ -143,7 +144,7 @@ let config = {
   ],
 };
 
-module.exports = (env, argv) => {
+module.exports = (_, argv) => {
   if (argv.mode === "development") {
     config.devtool = "source-map";
     config.output.filename = "[name].js";

@@ -184,12 +184,12 @@ def scheduled_tasks():
     if not acarshub_configuration.LOCAL_TEST:
         schedule.every().minute.at(":15").do(acarshub_helpers.service_check)
         schedule.every().minute.at(":00").do(update_rrd_db)
+        schedule.every().minute.at(":30").do(
+            acarshub_helpers.acarshub_database.prune_database
+        )
 
     schedule.every().hour.at(":05").do(acarshub_configuration.check_github_version)
     schedule.every().hour.at(":01").do(send_version)
-    schedule.every().minute.at(":30").do(
-        acarshub_helpers.acarshub_database.prune_database
-    )
 
     # Check for dead threads and restart
     schedule.every().minute.at(":45").do(

@@ -156,13 +156,23 @@ export interface search_html_msg {
 }
 
 export interface plane {
-  identifiers: string[];
+  uid: string;
+  callsign?: string;
+  hex?: string;
+  tail?: string;
+  squitter?: string;
   has_alerts: boolean;
   num_alerts: number;
+  selected_tab?: string;
+  manually_selected_tab: boolean;
   messages: acars_msg[];
+  position?: adsb_plane;
+  position_history: aircraft_position[];
+  last_updated?: number;
 }
 
 export interface acars_msg {
+  [index: string]: any;
   timestamp: number;
   station_id: string;
   toaddr?: string;
@@ -349,4 +359,80 @@ declare global {
     function custom(options: any): any;
     function Legend(options: any): any;
   }
+}
+
+export interface LocalStorageSettings {
+  [index: string]: any;
+  general_use_metric_altitude: boolean;
+  general_use_metric_distance: boolean;
+  general_convert_to_flight_levels: boolean;
+  general_transition_altitude: number;
+  alerts_play_sound: boolean;
+  alerts_list_of_blacklist_terms: Array<string>;
+  alerts_list_of_whitelist_terms: Array<string>;
+  adsb_update_rate: number;
+  live_map_show_range_rings: boolean;
+  live_map_range_ring_color: string;
+  live_map_range_ring_miles: Array<number>;
+  live_map_show_adsb_trails: boolean; // TODO: save adsb position history
+  live_map_show_datablocks: boolean;
+  live_map_show_full_datablocks: boolean;
+  live_map_show_only_planes_with_messages: boolean;
+  live_messages_page_num_items: number;
+  live_messages_page_exclude_labels: Array<string>;
+  live_messages_page_exclude_empty: boolean;
+}
+
+export interface LocalStorageSettingsDisplayProperties {
+  [index: string]: SettingDisplayProperties;
+}
+
+export interface SettingDisplayProperties {
+  LocalStorageSettingPropertyName: string;
+  LocalStorageSettingPropertyType: string;
+  LocalStorageSettingPropertyDefault: any;
+  LocalStorageSettingPropertyAllowedValues?: Array<string>;
+  LocalStorageSettingPropertyDisplayCategory: string;
+  LocalStorageSettingPropertyDisplayName: string;
+  LocalStorageSettingPropertyToolTip: string;
+  LocalStorageSettingPropertyNumberMax?: number;
+  LocalStorageSettingPropertyNumberMin?: number;
+  LocalStorageSettingPropertyNumberStep?: number;
+}
+
+export interface alert_terms {
+  text_terms: string[];
+  ignore: string[];
+}
+
+export interface planes_array extends Array<plane> {
+  prepend: (item: plane) => number;
+}
+
+export interface aircraft_position {
+  gs?: number;
+  ias?: number;
+  tas?: number;
+  mach?: number;
+  track?: number;
+  track_rate?: number;
+  roll?: number;
+  mag_heading?: number;
+  true_heading?: number;
+  baro_rate?: number;
+  geom_rate?: number;
+  lat?: number;
+  lon?: number;
+}
+
+export interface message_properties {
+  uid: string;
+  has_alerts: boolean;
+  should_display: boolean;
+}
+
+export interface message_properties {
+  uid: string;
+  has_alerts: boolean;
+  should_display: boolean;
 }

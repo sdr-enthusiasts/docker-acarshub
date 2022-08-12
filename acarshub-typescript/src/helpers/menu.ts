@@ -17,7 +17,6 @@
 import { images } from "../assets/assets";
 import { acarshub_version } from "../interfaces";
 import jBox from "jbox";
-import Cookies from "js-cookie";
 export let menu = {
   acars_path: "" as string,
   acars_url: "" as string,
@@ -88,26 +87,13 @@ export let menu = {
   },
 
   generate_footer: function (): void {
-    const show_libseccomp2_warning =
-      Cookies.get("hide_libseccomp2_warning") !== "true";
-    Cookies.set(
-      "hide_libseccomp2_warning",
-      show_libseccomp2_warning ? "false" : "true",
-      { expires: 365 }
-    );
-
-    let update_message =
-      show_libseccomp2_warning && this.arch.trim() === "armhf"
-        ? '<div id="update_notice"><a href="javascript:show_menu_modal()" class="red">Notice: System may need update!</a></div>'
-        : "";
     let html: string = `<div id="acarshub_help"><a href="javascript:new_page('About')">ACARS Hub Help/About</a></div> \
       <div id="github_link"><a href="https://github.com/sdr-enthusiasts/docker-acarshub" target="_blank">Project Github</a></div> \
       <div id="discord_badge"><a href="https://discord.gg/sTf9uYF"><img src="https://img.shields.io/discord/734090820684349521" alt="discord"></a></div> \
       <div><span id="system_status"><a href="javascript:new_page('Status')">System Status: <span class="green">Okay</a></span></span> \
       <span id="disconnect"></span></div> \
       <div><span class="menu_non_link" id="received">Received Messages:&nbsp;</span><span class="green" id="receivedmessages">0</span></div> \
-      <span id="filtered"></span> \
-      ${update_message} \
+      <span id="filtered"></span>
       <span class="align_right" id="release_version" data-jbox-content="Your version of ACARS Hub is up to date"><strong>Pre-Release</strong></span>`;
     $("#footer_div").html(html);
   },
