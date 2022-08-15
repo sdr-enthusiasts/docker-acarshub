@@ -71,8 +71,8 @@ function generate_aircraft_header(plane: plane): string {
 
   output += `<div class="aircraft_header_label">Flight Number</div>`;
   output += `<div class="aircraft_header_label">Registration</div>`;
-  output += `<div class="aircraft_header_label">ACARS ICAO</div>`;
-  output += `<div class="aircraft_header_label">ADSB ICAO</div>`;
+  // output += `<div class="aircraft_header_label">ACARS ICAO</div>`;
+  // output += `<div class="aircraft_header_label">ADSB ICAO</div>`;
   output += `<div class="aircraft_header_label">Received Messages</div>`;
 
   output += `<div class="aircraft_header_value">${
@@ -81,12 +81,12 @@ function generate_aircraft_header(plane: plane): string {
   output += `<div class="aircraft_header_value">${
     plane.tail ? plane.tail : "N/A"
   }</div>`;
-  output += `<div class="aircraft_header_value">${
-    plane.hex_acars ? plane.hex_acars : "N/A"
-  }</div>`;
-  output += `<div class="aircraft_header_value">${
-    plane.hex_adsb ? plane.hex_adsb : "N/A"
-  }</div>`;
+  // output += `<div class="aircraft_header_value">${
+  //   plane.hex_acars ? plane.hex_acars : "N/A"
+  // }</div>`;
+  // output += `<div class="aircraft_header_value">${
+  //   plane.hex_adsb ? plane.hex_adsb : "N/A"
+  // }</div>`;
   output += `<div class="aircraft_header_value">${plane.messages.length}</div>`;
 
   return output;

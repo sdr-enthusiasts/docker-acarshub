@@ -1071,7 +1071,7 @@ div.plane_element {
 
   display: grid;
   grid-template-rows: 1fr 1fr;
-  grid-template-columns: 20% 20% 20% 20% 20%;
+  grid-template-columns: 1fr 1fr 1fr;
 }
 
 .acars_message_container a {
