@@ -129,6 +129,7 @@ export class LiveMessagesPage extends Page {
     }
 
     $(".cropText").each((_, element) => {
+      //comment for test
       //@ts-expect-error
       console.log($(element).renderedText());
       //@ts-expect-error
