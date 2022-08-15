@@ -835,19 +835,3 @@ export function get_alerts() {
     text_terms: settings.get_alerts_list_of_whitelist_terms(),
   } as alert_terms;
 }
-
-window.nav_left = (uid: string): void => {
-  if (!uid) return;
-
-  msg_handler.update_selected_tab(uid);
-  if (live_messages_page)
-    live_messages_page.update_page_in_place(msg_handler.get_message_by_id(uid));
-};
-
-window.nav_right = (uid: string): void => {
-  if (!uid) return;
-
-  msg_handler.update_selected_tab(uid, "right");
-  if (live_messages_page)
-    live_messages_page.update_page_in_place(msg_handler.get_message_by_id(uid));
-};

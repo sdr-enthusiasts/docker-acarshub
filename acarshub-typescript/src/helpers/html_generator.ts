@@ -17,7 +17,13 @@
 import { acars_msg, plane } from "src/interfaces";
 import { get_setting } from "../acarshub";
 import { feet_to_meters } from "./math_conversions";
-import { images } from "../assets/assets";
+
+const userLocale =
+  navigator.languages && navigator.languages.length
+    ? navigator.languages[0]
+    : navigator.language;
+
+console.log(userLocale);
 
 export function generate_messages_html_from_planes(
   planes: plane[] | undefined = undefined
@@ -29,7 +35,11 @@ export function generate_messages_html_from_planes(
   }
 
   planes.forEach((plane) => {
-    if (typeof plane !== "undefined") {
+    if (
+      typeof plane !== "undefined" &&
+      typeof plane.messages !== "undefined" &&
+      plane.messages.length > 0
+    ) {
       output += generate_message_group_html_from_plane(plane);
     }
   });
@@ -38,41 +48,84 @@ export function generate_messages_html_from_planes(
 }
 
 export function generate_message_group_html_from_plane(
-  planes: plane | undefined = undefined,
+  planes: plane,
   create_container = true
 ): string {
-  if (!planes || planes.messages.length === 0) {
-    console.error("No messages. Nothing to display.");
-    return "";
-  }
   let output = "";
   if (create_container)
     output = `<div id="${planes.uid}_container" class="acars_message_container">`;
 
-  planes.messages.every((message, index) => {
-    if (message.uid == planes.selected_tab) {
-      if (planes.messages.length > 1) {
-        output += `<div class="acars_message_row no_bottom_margin"><div class="message_buttons">`;
-        output += `<button id="${planes.uid}_button_left" class="nav-button" onclick="nav_left('${planes.uid}')" role="button">${images.arrow_left}</button>`;
-        output += `<button id="${planes.uid}_button_right" class="nav-button" onclick="nav_right('${planes.uid}')" role="button">${images.arrow_right}</button>`;
-        output += `<strong>&nbspMessage ${index + 1} of ${
-          planes.messages.length
-        }</strong>`;
-        output += `</div></div>`;
-      }
-
-      output += generate_message_html(
-        message,
-        planes,
-        planes.messages.length > 1 ? false : true
-      );
-      return false;
-    }
-    return true;
-  });
+  output += "<div class='acars_header'>";
+  output += generate_aircraft_header(planes);
+  output += "</div>";
+  output += `<div class="acars_message_row">`;
+  output += generate_aircraft_messages(planes.messages);
+  output += "</div>";
 
   if (create_container) output += "</div>";
+  return output;
+}
 
+function generate_aircraft_header(plane: plane): string {
+  let output = "";
+
+  output += `<div class="aircraft_header_label">Flight Number</div>`;
+  output += `<div class="aircraft_header_label">Registration</div>`;
+  output += `<div class="aircraft_header_label">ACARS ICAO</div>`;
+  output += `<div class="aircraft_header_label">ADSB ICAO</div>`;
+  output += `<div class="aircraft_header_label">Received Messages</div>`;
+
+  output += `<div class="aircraft_header_value">${
+    plane.callsign ? plane.callsign : "N/A"
+  }</div>`;
+  output += `<div class="aircraft_header_value">${
+    plane.tail ? plane.tail : "N/A"
+  }</div>`;
+  output += `<div class="aircraft_header_value">${
+    plane.hex_acars ? plane.hex_acars : "N/A"
+  }</div>`;
+  output += `<div class="aircraft_header_value">${
+    plane.hex_adsb ? plane.hex_adsb : "N/A"
+  }</div>`;
+  output += `<div class="aircraft_header_value">${plane.messages.length}</div>`;
+
+  return output;
+}
+
+function generate_aircraft_messages(messages: acars_msg[]): string {
+  let output = `<div class="message_data">Received</div>`;
+  output += `<div class="message_data">Station ID</div>`;
+  output += `<div class="message_data">Label</div>`;
+  output += `<div class="message_data">Text</div>`;
+  messages.forEach((message) => {
+    let timestamp = undefined;
+    if (has_field(message, "timestamp"))
+      timestamp = new Date(message.timestamp * 1000);
+    else
+      timestamp = new Date(
+        (typeof message.msg_time !== "undefined" ? message.msg_time : 0) * 1000
+      );
+
+    output += `<div class="message_data">${timestamp.toLocaleString(
+      userLocale,
+      {
+        day: "2-digit",
+        month: "2-digit",
+        year: "2-digit",
+        hour12: false,
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      }
+    )}</div>`;
+    output += `<div class="message_data">${message.station_id}</div>`;
+    output += `<div class="message_data">${
+      message.label ? message.label : "N/A"
+    }</div>`;
+    output += `<div class="message_data cropText" id="${
+      message.uid
+    }_text_area">${message.text ? message.text : "N/A"}</div>`;
+  });
   return output;
 }
 

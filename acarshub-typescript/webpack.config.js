@@ -130,10 +130,8 @@ let config = {
       content: `    <div class="container" id="header">
       <div class="row" id="links"></div>
     </div> <!-- /#header -->
-    <div class="container" id="content">
-      <div class="left" id="acarshub_content">
+      <div class="container" id="acarshub_content">
       </div> <!-- /#acarshub_content -->
-    </div> <!-- /#content -->
     <div class="footer" id="footer_div">
     </div> <!-- /#footer_div -->`,
     }),

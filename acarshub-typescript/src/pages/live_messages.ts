@@ -33,7 +33,6 @@ import jBox from "jbox";
 //i mport "jbox/dist/jBox.all.css";
 import { tooltip } from "../helpers/tooltips";
 import {
-  resize_tabs,
   get_all_planes,
   // match_alert,
   // sound_alert,
@@ -49,6 +48,17 @@ export class LiveMessagesPage extends Page {
 
   constructor() {
     super("Live Messages");
+
+    //@ts-expect-error
+    $.fn.renderedText = function () {
+      var s = this.text();
+      //@ts-expect-error
+      if (s.length && this[0].scrollWidth > this.innerWidth()) {
+        return true;
+      }
+
+      return false;
+    };
   }
 
   set_page_active(): void {
@@ -118,7 +128,16 @@ export class LiveMessagesPage extends Page {
       $(this.content_area).html(this.current_message_string);
     }
 
-    resize_tabs();
+    $(".cropText").each((_, element) => {
+      //@ts-expect-error
+      console.log($(element).renderedText());
+      //@ts-expect-error
+      if ($(element).renderedText()) {
+        console.log("cropped");
+      } else {
+        console.log("not cropped.");
+      }
+    });
   }
 }
 
@@ -186,7 +205,6 @@ export let live_messages_page = {
     this.show_labels();
     this.pause_updates(false);
     this.filter_notext(false);
-    resize_tabs();
   },
 
   // Function to increment the counter of filtered messages

@@ -113,17 +113,6 @@ export class MessageHandler {
         this.planes[plane].has_alerts = true;
         this.planes[plane].num_alerts += 1;
       }
-      // Ensure we always have a good selected tab UID
-      // If there was never a message (aka this is the first time ACARS has been received)
-      // Or if the user has never interacted with the tab selection for this plane
-      // Then we'll set the selected tab to the first message
-      if (
-        (this.should_display_message(this.planes[plane].messages[0]) &&
-          this.planes[plane].messages.length == 1) ||
-        !this.planes[plane].manually_selected_tab
-      ) {
-        this.planes[plane].selected_tab = this.planes[plane].messages[0].uid;
-      }
 
       this.planes.forEach((item, i) => {
         if (i == plane) {
@@ -148,7 +137,7 @@ export class MessageHandler {
       }
       this.planes.prepend({
         callsign: callsign,
-        hex: hex,
+        hex_acars: hex,
         tail: tail,
         squitter: squitter,
         position: undefined,
@@ -158,8 +147,6 @@ export class MessageHandler {
         num_alerts: matched_terms && matched_terms.length > 0 ? 1 : 0,
         last_updated: 0,
         uid: uuidv4(),
-        selected_tab: msg_uid,
-        manually_selected_tab: false,
       });
     }
 
@@ -225,7 +212,7 @@ export class MessageHandler {
       } else {
         this.planes.unshift({
           callsign: callsign,
-          hex: hex,
+          hex_adsb: hex,
           tail: tail,
           position: target,
           position_history: [] as Array<aircraft_position>,
@@ -234,8 +221,6 @@ export class MessageHandler {
           num_alerts: 0,
           last_updated: this.adsb_last_update_time,
           uid: uuidv4(),
-          selected_tab: "0",
-          manually_selected_tab: false,
         });
       }
     });
@@ -264,10 +249,13 @@ export class MessageHandler {
       );
     }
     if (
-      (this.planes[0].hex == "" || typeof this.planes[0].hex === "undefined") &&
+      (this.planes[0].hex_acars == "" ||
+        typeof this.planes[0].hex_acars === "undefined") &&
       this.get_hex_from_acars(this.planes[0].messages[0]) != ""
     ) {
-      this.planes[0].hex = this.get_hex_from_acars(this.planes[0].messages[0]);
+      this.planes[0].hex_acars = this.get_hex_from_acars(
+        this.planes[0].messages[0]
+      );
     }
 
     if (
@@ -439,7 +427,7 @@ export class MessageHandler {
     const previous_position = this.planes[index].position || undefined;
     this.planes[index].position = plane;
     this.planes[index].last_updated = this.adsb_last_update_time;
-    this.planes[index].hex = this.get_hex_from_adsb(plane);
+    this.planes[index].hex_adsb = this.get_hex_from_adsb(plane);
     this.planes[index].callsign = this.get_callsign_from_adsb(plane);
     this.planes[index].tail = this.get_tail_from_adsb(plane);
 
@@ -484,24 +472,24 @@ export class MessageHandler {
     let plane_index = undefined;
 
     Object.values(this.planes).every((plane, index) => {
-      if (uid && plane.uid == uid) {
+      if (uid && plane.uid === uid) {
         plane_index = index;
         return false;
       }
-      if (callsign && plane.callsign == callsign) {
+      if (callsign && plane.callsign === callsign) {
         plane_index = index;
         return false;
       }
-      if (hex && plane.hex == hex) {
+      if (hex && (plane.hex_acars === hex || plane.hex_adsb === hex)) {
         plane_index = index;
         return false;
       }
-      if (tail && plane.tail == tail) {
+      if (tail && plane.tail === tail) {
         plane_index = index;
         return false;
       }
 
-      if (squitter && plane.squitter == squitter) {
+      if (squitter && plane.squitter === squitter) {
         plane_index = index;
         return false;
       }
@@ -604,7 +592,7 @@ export class MessageHandler {
     Object.values(this.planes).every((plane) => {
       if (plane.uid == id) {
         const found_plane = this.get_good_messages_by_plane(plane);
-        if (found_plane.msgs.length > 0) {
+        if (found_plane.length > 0) {
           output = [plane];
         }
         return false;
@@ -624,15 +612,10 @@ export class MessageHandler {
         // that isn't going to get caught in the filters
 
         const plane_messages = this.get_good_messages_by_plane(plane);
-        if (plane_messages.msgs.length > 0) {
-          // reset the selected tab if the selected tab wasn't found.
-          if (!plane_messages.found_selected_id) {
-            plane.selected_tab = plane_messages.msgs[0].uid;
-            plane.manually_selected_tab = false;
-          }
+        if (plane_messages.length > 0) {
           let clone: plane = {} as plane;
           Object.assign(clone, plane);
-          clone.messages = plane_messages.msgs;
+          clone.messages = plane_messages;
           output.push(clone);
         }
       }
@@ -643,68 +626,60 @@ export class MessageHandler {
     return output;
   }
 
-  get_good_messages_by_plane(plane: plane): {
-    msgs: Array<acars_msg>;
-    found_selected_id: boolean;
-  } {
+  get_good_messages_by_plane(plane: plane): Array<acars_msg> {
     let plane_messages: Array<acars_msg> = [];
-    let found_selected_id = false;
     plane.messages.forEach((message) => {
       if (this.should_display_message(message)) {
-        if (plane.selected_tab == message.uid) found_selected_id = true;
         plane_messages.push(message);
       }
     });
 
-    return {
-      msgs: plane_messages,
-      found_selected_id: found_selected_id,
-    };
+    return plane_messages;
   }
 
   getRandomInt(max: number): number {
     return Math.floor(Math.random() * Math.floor(max));
   }
 
-  update_selected_tab(uid: string, direction: "left" | "right" = "left"): void {
-    if (!uid) return;
-    let index = this.match_plane_from_id(undefined, undefined, undefined, uid);
+  // update_selected_tab(uid: string, direction: "left" | "right" = "left"): void {
+  //   if (!uid) return;
+  //   let index = this.match_plane_from_id(undefined, undefined, undefined, uid);
 
-    if (index === undefined) return;
+  //   if (index === undefined) return;
 
-    this.planes[index].manually_selected_tab = true;
-    // get current position of the current tab
-    let current_tab_index = 0;
+  //   this.planes[index].manually_selected_tab = true;
+  //   // get current position of the current tab
+  //   let current_tab_index = 0;
 
-    this.planes[index].messages.every((message, msg_index) => {
-      if (message.uid == this.planes[index!].selected_tab) {
-        current_tab_index = msg_index;
-        return false;
-      }
-      return true;
-    });
+  //   this.planes[index].messages.every((message, msg_index) => {
+  //     if (message.uid == this.planes[index!].selected_tab) {
+  //       current_tab_index = msg_index;
+  //       return false;
+  //     }
+  //     return true;
+  //   });
 
-    if (direction == "left") {
-      // if we are at the first tab, go to the last tab
-      if (current_tab_index == 0) {
-        this.planes[index].selected_tab =
-          this.planes[index].messages[
-            this.planes[index].messages.length - 1
-          ].uid;
-      } else {
-        this.planes[index].selected_tab =
-          this.planes[index].messages[current_tab_index - 1].uid;
-      }
-    } else {
-      // if we are at the last tab, go to the first tab
-      if (current_tab_index == this.planes[index].messages.length - 1) {
-        this.planes[index].selected_tab = this.planes[index].messages[0].uid;
-      } else {
-        this.planes[index].selected_tab =
-          this.planes[index].messages[current_tab_index + 1].uid;
-      }
-    }
-  }
+  //   if (direction == "left") {
+  //     // if we are at the first tab, go to the last tab
+  //     if (current_tab_index == 0) {
+  //       this.planes[index].selected_tab =
+  //         this.planes[index].messages[
+  //           this.planes[index].messages.length - 1
+  //         ].uid;
+  //     } else {
+  //       this.planes[index].selected_tab =
+  //         this.planes[index].messages[current_tab_index - 1].uid;
+  //     }
+  //   } else {
+  //     // if we are at the last tab, go to the first tab
+  //     if (current_tab_index == this.planes[index].messages.length - 1) {
+  //       this.planes[index].selected_tab = this.planes[index].messages[0].uid;
+  //     } else {
+  //       this.planes[index].selected_tab =
+  //         this.planes[index].messages[current_tab_index + 1].uid;
+  //     }
+  //   }
+  // }
 
   sound_alert() {
     this.alert_handler.sound_alert();

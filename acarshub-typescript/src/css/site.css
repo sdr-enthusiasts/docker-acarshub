@@ -50,14 +50,11 @@
   --mono-fonts: Menlo, Monaco, Consolas, "Courier New", monospace;
 }
 
-.text_top {
-  vertical-align: top;
-}
-
 .align_right {
   float: right;
 }
 
+/* TODO: Maybe remove */
 textarea {
   width: 95%;
 }
@@ -66,12 +63,7 @@ img {
   max-width: 100%;
 }
 
-.small_img {
-  height: 14px;
-  vertical-align: middle;
-  padding-bottom: 3px;
-}
-
+/* TODO: Maybe remove */
 .monofont {
   font-family: var(--mono-fonts);
 }
@@ -108,12 +100,6 @@ span.red_important strong {
   color: var(--blue-highlight);
 }
 
-@media not all and (pointer: coarse) {
-  .sidebar_link:hover {
-    color: var(--full-white);
-  }
-}
-
 ol {
   list-style-type: circle;
   margin-left: 0;
@@ -131,7 +117,7 @@ td {
   padding: 7px;
 }
 
-hr {
+/* hr {
   display: block;
   margin-top: 0.5em;
   margin-bottom: 0.5em;
@@ -140,7 +126,7 @@ hr {
   border-style: inset;
   border-top: 0.1em solid var(--grey-bg);
   color: var(--body-bg);
-}
+} */
 
 body {
   height: 100vh;
@@ -173,7 +159,7 @@ body::-webkit-scrollbar {
   padding-right: 5px;
 }
 
-div#content.container {
+div#acarshub_content.container {
   position: fixed;
   top: 100px;
   padding-left: 20px;
@@ -212,18 +198,6 @@ div#num_results.row {
   margin-bottom: 0;
 }
 
-table.search thead {
-  border: 0;
-}
-
-div#log.left {
-  position: relative;
-  margin-left: auto;
-  margin-right: auto;
-  padding-right: 0;
-  padding-left: 0;
-}
-
 #size {
   color: var(--blue-highlight);
 }
@@ -236,72 +210,7 @@ div#log.left {
   margin-top: 1rem;
   margin-right: 1rem;
   margin-bottom: 1rem;
-}
-
-.search_label {
-  width: 30%;
-  vertical-align: middle;
-  color: var(--blue-highlight);
-}
-
-.search_term {
-  width: 70%;
-  padding-left: 15px;
-  padding-right: 20px;
-}
-
-.fixed_results {
-  position: fixed;
-  top: 60px;
-  bottom: 30px;
-  padding-top: 0;
-  margin-bottom: 10px;
-  width: 280px;
-  margin-right: 5px;
-  margin-left: 10px;
-  padding-right: 5px;
-  padding-top: 10px;
-  overflow-y: auto;
-  overflow-x: hidden;
-}
-
-.fixed_menu {
-  position: fixed;
-  top: 170px;
-  bottom: 30px;
-  padding-top: 0;
-  margin-bottom: 10px;
-  width: 280px;
-  margin-top: 0;
-  margin-right: 5px;
-  margin-left: 10px;
-  margin-bottom: 30px;
-  padding-right: 5px;
-  padding-top: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
-}
-
-.fixed_menu_short {
-  position: fixed;
-  top: 150px;
-  bottom: 30px;
-  padding-top: 0;
-  margin-bottom: 10px;
-  width: 280px;
-  margin-top: 0;
-  margin-right: 5px;
-  margin-left: 10px;
-  margin-bottom: 30px;
-  padding-right: 5px;
-  padding-top: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
-}
-
-.spread_text {
-  letter-spacing: 1px;
-  padding-left: 4px;
+  width: 100%;
 }
 
 @media not all and (pointer: coarse) {
@@ -417,12 +326,11 @@ a:visited {
   text-decoration: none;
 }
 
+/* Menu */
+
 .wrap {
   display: block;
   position: relative;
-  /* -webkit-box-shadow: 0 0 70px var(--full-white);
-  -moz-box-shadow: 0 0 70px var(--full-white);
-  box-shadow: 0 0 70px var(--full-white); */
   margin-left: auto;
   margin-right: auto;
   top: 0;
@@ -444,7 +352,6 @@ li {
   float: left;
 }
 
-/* clear'n floats */
 ul::after {
   clear: both;
 }
@@ -733,7 +640,7 @@ a[x-apple-data-detectors] {
 }
 
 @media only screen and (max-width: 1200px) {
-  div#content.container {
+  div#acarshub_content.container {
     top: 70px;
     height: calc(100vh - 92px);
   }
@@ -777,7 +684,7 @@ a[x-apple-data-detectors] {
     width: 200px !important;
   }
 
-  div#content.container {
+  div#acarshub_content.container {
     top: 95px;
     height: calc(100vh - 110px);
   }
@@ -840,6 +747,41 @@ a[x-apple-data-detectors] {
   }
 }
 
+@media screen and (min-width: 851px) {
+  .message_data:nth-last-child(-n + 4) {
+    border-bottom: none;
+  }
+}
+
+@media only screen and (max-width: 850px) {
+  /* .acars_message_header {
+  } */
+
+  .acars_message_row {
+    grid-template-columns: 150px auto !important;
+  }
+
+  .message_data:nth-child(1) {
+    border-bottom: none !important;
+  }
+
+  .message_data:nth-child(2) {
+    border-bottom: none !important;
+  }
+
+  .message_data:nth-child(4n + 6) {
+    border-bottom: none !important;
+  }
+
+  .message_data:nth-child(4n + 5) {
+    border-bottom: none !important;
+  }
+
+  .message_data:nth-last-child(-n + 2) {
+    border-bottom: none !important;
+  }
+}
+
 @media only screen and (max-width: 700px) {
   #mapid {
     width: 100%;
@@ -850,7 +792,7 @@ a[x-apple-data-detectors] {
     display: none !important;
   }
 
-  div#content.container {
+  div#acarshub_content.container {
     top: 95px;
     height: calc(100vh - 120px);
   }
@@ -1100,126 +1042,85 @@ div.plane_element {
 
 /* ACARS Message CSS values */
 
-#acarshub_content {
-  width: 100%;
-}
+.acars_message_container {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  grid-template-columns: 100%;
 
-.acars_message,
-.settings_container {
-  display: flex;
-  flex-direction: column;
-  /* align-items: center; */
-  justify-content: center;
   width: 100%;
   background-color: var(--medium-gray);
   color: var(--dark-bg-text-color);
-  padding: 0.1rem;
   margin-bottom: 1rem;
   border: 0.1rem solid var(--lightest-gray);
-  border-radius: 0 1rem 1rem 1rem;
+  border-radius: 1rem;
   overflow-wrap: break-word;
   word-wrap: break-word;
   line-height: 1.3rem;
   font-size: 1rem;
 }
 
-.rounded_corners {
-  border-radius: 1rem;
+.acars_header {
+  width: 100%;
+  padding: 0.5rem;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+
+  background-color: var(--light-gray);
+  border-radius: 0.9rem 0.9rem 0 0;
+  width: 100%;
+
+  display: grid;
+  grid-template-rows: 1fr 1fr;
+  grid-template-columns: 20% 20% 20% 20% 20%;
 }
 
-.no_bottom_margin {
-  margin-bottom: -0.15rem;
-  padding-bottom: 0 !important;
-  padding-left: 0 !important;
-}
-
-.acars_message a {
+.acars_message_container a {
   color: var(--blue-highlight);
   text-decoration: none;
   font-weight: bold;
 }
 
-.acars_message_row,
-.acars_row_footer {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
+.acars_message_row {
   width: 100%;
-  padding: 0.5rem;
-  overflow-wrap: break-word;
-  word-wrap: break-word;
+  padding: 1rem;
+
+  display: grid;
+  grid-auto-rows: minmax(min-content, max-content);
+  grid-template-columns: 150px 150px 60px auto;
+  grid-row-gap: 0.75em;
 }
 
-.acars_row_footer {
-  border-bottom: none;
+.message_data {
   position: relative;
+  padding-bottom: 1rem;
+  border-bottom: 0.1em solid var(--light-gray);
 }
 
-.acars_message {
-  margin-bottom: 0.1rem;
-  margin-top: 0.1rem;
-
-  overflow-wrap: break-word;
-  word-wrap: break-word;
+.spoilerbutton {
+  display: block;
+  margin: 5px 0;
 }
 
-.message_from {
-  justify-content: left;
-  width: 50%;
-}
-
-.message_buttons {
-  border: 0.1rem solid var(--lightest-gray);
-  border-radius: 1rem 1rem 0 0;
-  padding: 0.5rem;
-  color: var(--dark-bg-text-color);
-  font-size: 1rem;
-  background-color: var(--medium-gray);
-}
-
-.message_time,
-.footer_right_side {
-  justify-content: right;
-  text-align: right;
-  width: 50%;
-  float: right;
-  margin-right: 0;
-}
-
-.message_body {
-  padding-right: 1rem;
-}
-
-.text_body {
-  font-weight: bold;
-  overflow-wrap: break-word;
-  word-wrap: break-word;
+.cropText {
   max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.text_fields,
-.settings_row {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
-  width: 100%;
-  overflow-wrap: break-word;
-  word-wrap: break-word;
-  margin-left: -1rem;
-}
-
-.settings_row {
-  margin-left: 0.5rem;
-  padding: 0.1rem;
-}
-
-.setting_item_left {
-  min-width: 30%;
-}
-
-.setting_item_right {
-  min-width: 68%;
-}
+/* .cropText:active,
+.cropText:hover {
+  height: auto;
+  overflow: visible;
+  white-space: normal;
+  white-space: pre-wrap; /* Since CSS 2.1 */
+/* white-space: -moz-pre-wrap; /* Mozilla, since 1999 */
+/* white-space: -pre-wrap; /* Opera 4-6 */
+/* white-space: -o-pre-wrap; /* Opera 7 */
+/* word-wrap: break-word; /* Internet Explorer 5.5+ */
+/* display: block; */
+/*word-break: break-all;
+} */
 
 .code {
   background-color: var(--lightest-gray);
@@ -1238,7 +1139,7 @@ div.plane_element {
   word-wrap: break-all; /* Internet Explorer 5.5+ */
   overflow-wrap: break-all;
 }
-
+/*
 .footer_item {
   display: inline-block;
   border-right: 1px solid var(--light-gray);
@@ -1266,12 +1167,12 @@ div.plane_element {
 
 .footer_item:first-child {
   margin-left: 0;
-}
+} */
 
 /* Nav buttons for messages */
 
 /* CSS */
-.nav-button {
+/* .nav-button {
   align-items: center;
   appearance: none;
   background-color: #fff;
@@ -1350,4 +1251,4 @@ div.plane_element {
 .nav-button:disabled {
   box-shadow: rgba(60, 64, 67, 0.3) 0 1px 3px 0,
     rgba(60, 64, 67, 0.15) 0 4px 8px 3px;
-}
+} */

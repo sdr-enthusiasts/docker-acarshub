@@ -158,13 +158,12 @@ export interface search_html_msg {
 export interface plane {
   uid: string;
   callsign?: string;
-  hex?: string;
+  hex_acars?: string;
+  hex_adsb?: string;
   tail?: string;
   squitter?: string;
   has_alerts: boolean;
   num_alerts: number;
-  selected_tab?: string;
-  manually_selected_tab: boolean;
   messages: acars_msg[];
   position?: adsb_plane;
   position_history: aircraft_position[];
