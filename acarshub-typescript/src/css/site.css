@@ -752,17 +752,31 @@ a[x-apple-data-detectors] {
     border-bottom: none;
     padding-bottom: 0px;
   }
+}
+
+@media only screen and (max-width: 850px) {
+  .acars_header {
+    grid-row-gap: 0.1em !important;
+    grid-template-columns: 150px 140px 170px !important;
+  }
+
+  .acars_message_row {
+    grid-template-columns: 150px auto !important;
+    grid-row-gap: 0.1em !important;
+  }
 
   .message_data {
-    padding-top: 0.5rem;
-    padding-bottom: 0.5rem;
+    padding-top: 0.1rem;
+    padding-bottom: 0.1rem !important;
   }
 
   .message_data:nth-child(1) {
+    border-bottom: none !important;
     padding-top: 0px !important;
   }
 
   .message_data:nth-child(2) {
+    border-bottom: none !important;
     padding-top: 0px !important;
   }
 
@@ -773,45 +787,13 @@ a[x-apple-data-detectors] {
   .message_data:nth-child(4) {
     padding-top: 0px !important;
   }
-}
-
-@media only screen and (max-width: 850px) {
-  .acars_message_row {
-    grid-template-columns: 150px auto !important;
-    grid-row-gap: 0.1em !important;
-  }
-
-  .message_data {
-    padding-top: 0.5rem;
-    padding-bottom: 0.5rem !important;
-  }
-
-  .message_data:nth-child(1) {
-    border-bottom: none !important;
-    padding-top: 0px !important;
-  }
-
-  .message_data:nth-child(2) {
-    border-bottom: none !important;
-    padding-top: 0px !important;
-  }
-
-  .message_data:nth-child(2n + 5) {
-    padding-bottom: 0px !important;
-  }
-
-  .message_data:nth-child(2n + 6) {
-    padding-bottom: 0px !important;
-  }
 
   .message_data:nth-child(4n + 6) {
     border-bottom: none !important;
-    padding-top: 0px !important;
   }
 
   .message_data:nth-child(4n + 5) {
     border-bottom: none !important;
-    padding-top: 0px !important;
   }
 
   .message_data:nth-last-child(-n + 2) {
@@ -854,7 +836,6 @@ a[x-apple-data-detectors] {
 
 .show_strong {
   font-weight: bold;
-  font-family: var(--mono-fonts);
 }
 
 #search_results {
@@ -1109,8 +1090,8 @@ div.plane_element {
 
   display: grid;
   grid-template-rows: 1fr 1fr;
-  grid-template-columns: 150px 150px 150px;
-  grid-row-gap: 1.5rem;
+  grid-template-columns: 160px 150px 170px;
+  grid-row-gap: 0.5em;
 }
 
 .acars_message_container a {
@@ -1121,18 +1102,18 @@ div.plane_element {
 
 .acars_message_row {
   width: 100%;
-  padding: 1rem;
-
+  padding: 0.5rem;
   display: grid;
   grid-auto-rows: minmax(min-content, max-content);
-  grid-template-columns: 150px 150px 60px auto;
+  grid-template-columns: 160px 150px 60px auto;
   grid-row-gap: 0.75em;
 }
 
 .message_data {
   position: relative;
-  padding-bottom: 1rem;
+  padding-bottom: 0.75em;
   border-bottom: 0.1em solid var(--light-gray);
+  /* border-right: 0.1em solid var(--light-gray); */
 }
 
 .spoilerbutton {

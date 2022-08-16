@@ -69,11 +69,11 @@ export function generate_message_group_html_from_plane(
 function generate_aircraft_header(plane: plane): string {
   let output = "";
 
-  output += `<div class="aircraft_header_label">Flight Number</div>`;
-  output += `<div class="aircraft_header_label">Registration</div>`;
+  output += `<div class="aircraft_header_label show_strong">Flight Number</div>`;
+  output += `<div class="aircraft_header_label show_strong">Registration</div>`;
   // output += `<div class="aircraft_header_label">ACARS ICAO</div>`;
   // output += `<div class="aircraft_header_label">ADSB ICAO</div>`;
-  output += `<div class="aircraft_header_label">Received Messages</div>`;
+  output += `<div class="aircraft_header_label show_strong">Received Messages</div>`;
 
   output += `<div class="aircraft_header_value">${
     plane.callsign ? plane.callsign : "N/A"
