@@ -93,10 +93,10 @@ function generate_aircraft_header(plane: plane): string {
 }
 
 function generate_aircraft_messages(messages: acars_msg[]): string {
-  let output = `<div class="message_data">Received</div>`;
-  output += `<div class="message_data">Station ID</div>`;
-  output += `<div class="message_data">Label</div>`;
-  output += `<div class="message_data">Text</div>`;
+  let output = `<div class="message_data show_strong">Received</div>`;
+  output += `<div class="message_data show_strong">Station ID</div>`;
+  output += `<div class="message_data show_strong">Label</div>`;
+  output += `<div class="message_data show_strong">Text</div>`;
   messages.forEach((message) => {
     let timestamp = undefined;
     if (has_field(message, "timestamp"))
