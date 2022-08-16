@@ -750,35 +750,73 @@ a[x-apple-data-detectors] {
 @media screen and (min-width: 851px) {
   .message_data:nth-last-child(-n + 4) {
     border-bottom: none;
+    padding-bottom: 0px;
+  }
+
+  .message_data {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+
+  .message_data:nth-child(1) {
+    padding-top: 0px !important;
+  }
+
+  .message_data:nth-child(2) {
+    padding-top: 0px !important;
+  }
+
+  .message_data:nth-child(3) {
+    padding-top: 0px !important;
+  }
+
+  .message_data:nth-child(4) {
+    padding-top: 0px !important;
   }
 }
 
 @media only screen and (max-width: 850px) {
-  /* .acars_message_header {
-  } */
-
   .acars_message_row {
     grid-template-columns: 150px auto !important;
+    grid-row-gap: 0.1em !important;
+  }
+
+  .message_data {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem !important;
   }
 
   .message_data:nth-child(1) {
     border-bottom: none !important;
+    padding-top: 0px !important;
   }
 
   .message_data:nth-child(2) {
     border-bottom: none !important;
+    padding-top: 0px !important;
+  }
+
+  .message_data:nth-child(2n + 5) {
+    padding-bottom: 0px !important;
+  }
+
+  .message_data:nth-child(2n + 6) {
+    padding-bottom: 0px !important;
   }
 
   .message_data:nth-child(4n + 6) {
     border-bottom: none !important;
+    padding-top: 0px !important;
   }
 
   .message_data:nth-child(4n + 5) {
     border-bottom: none !important;
+    padding-top: 0px !important;
   }
 
   .message_data:nth-last-child(-n + 2) {
     border-bottom: none !important;
+    padding-bottom: 0px !important;
   }
 }
 
@@ -1071,7 +1109,8 @@ div.plane_element {
 
   display: grid;
   grid-template-rows: 1fr 1fr;
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: 150px 150px 150px;
+  grid-row-gap: 1.5rem;
 }
 
 .acars_message_container a {
