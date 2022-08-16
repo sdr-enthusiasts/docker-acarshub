@@ -840,3 +840,7 @@ export function get_alerts() {
     text_terms: settings.get_alerts_list_of_whitelist_terms(),
   } as alert_terms;
 }
+
+export function set_live_messages_paused(state: boolean): void {
+  menu.set_paused(state);
+}

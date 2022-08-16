@@ -84,6 +84,20 @@ export let menu = {
     $("#receivedmessages").text(new_count);
   },
 
+  set_paused(state: boolean): void {
+    if (state) {
+      $("#received").html(
+        "Received Messages <span class='red'>(PAUSED)</span>:&nbsp;"
+      );
+      $("#receivedmessages").removeClass("green");
+      $("#receivedmessages").addClass("red");
+    } else {
+      $("#received").html("Received Messages:&nbsp;");
+      $("#receivedmessages").removeClass("red");
+      $("#receivedmessages").addClass("green");
+    }
+  },
+
   set_adsb: function (adsb_status = false): void {
     this.menu_adsb = adsb_status;
     this.generate_menu();

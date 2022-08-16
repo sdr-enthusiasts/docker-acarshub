@@ -34,6 +34,7 @@ import jBox from "jbox";
 import { tooltip } from "../helpers/tooltips";
 import {
   get_all_planes,
+  set_live_messages_paused,
   // match_alert,
   // sound_alert,
   // is_adsb_enabled,
@@ -72,11 +73,13 @@ export class LiveMessagesPage extends Page {
 
     $(document).on("keyup", (event: any) => {
       // key code for escape is 27
-      if (event.keyCode == 80)
+      if (event.keyCode == 80) {
         this.page_updates_paused = !this.page_updates_paused;
 
+        set_live_messages_paused(this.page_updates_paused);
+      }
+
       if (!this.page_updates_paused) this.update_page(get_all_planes(), false);
-      // TODO: Indicate on the page that updates are paused
     });
   }
 
