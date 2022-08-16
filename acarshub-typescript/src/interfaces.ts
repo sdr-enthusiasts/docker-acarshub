@@ -435,3 +435,9 @@ export interface message_properties {
   has_alerts: boolean;
   should_display: boolean;
 }
+
+export interface DocumentEventListeners extends Document {
+  msHidden: boolean;
+  webkitHidden: boolean;
+  [index: string]: any;
+}

@@ -15,6 +15,7 @@
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
 declare const window: any;
+declare const document: DocumentEventListeners;
 
 // CSS loading
 
@@ -63,6 +64,7 @@ import {
   alert_terms,
   LocalStorageSettings,
   message_properties,
+  DocumentEventListeners,
 } from "./interfaces";
 
 let socket: Socket = <any>null;
@@ -80,6 +82,7 @@ let adsb_getting_data: boolean = false;
 let adsb_interval: any;
 let connection_good: boolean = true;
 let adsb_enabled = false;
+
 let adsb_request_options = {
   method: "GET",
 } as RequestInit;
@@ -87,21 +90,20 @@ let adsb_request_options = {
 let msg_handler = new MessageHandler(index_acars_url);
 const settings = new Settings();
 let live_messages_page = new LiveMessagesPage();
+let hidden: string = "";
+let visibilityChange: string = "";
+let is_page_backgrounded = false;
 
-// @ts-expect-error
-var hidden, visibilityChange;
-if (typeof document.hidden !== "undefined") {
+if (typeof document.webkitHidden !== "undefined") {
+  hidden = "webkitHidden";
+  visibilityChange = "webkitvisibilitychange";
+} else if (typeof document.hidden !== "undefined") {
   // Opera 12.10 and Firefox 18 and later support
   hidden = "hidden";
   visibilityChange = "visibilitychange";
-} //@ts-ignore
-else if (typeof document.msHidden !== "undefined") {
+} else if (typeof document.msHidden !== "undefined") {
   hidden = "msHidden";
   visibilityChange = "msvisibilitychange";
-} //@ts-ignore
-else if (typeof document.webkitHidden !== "undefined") {
-  hidden = "webkitHidden";
-  visibilityChange = "webkitvisibilitychange";
 }
 
 const pages: string[] = [
@@ -114,91 +116,6 @@ const pages: string[] = [
   "/adsb", // live_map page
 ];
 
-var ro: ResizeObserver = new ResizeObserver((entries) => {
-  for (let entry of entries) {
-    const cr = entry.contentRect;
-    if (cr.width !== old_window_width) {
-      old_window_width = cr.width - 50;
-      if (index_acars_page === "/") resize_tabs(cr.width - 50);
-      // else if (index_acars_page === "/adsb")
-      //   live_map_page.updateModalSize({
-      //     width: cr.width,
-      //     height: cr.height,
-      //   } as window_size);
-      else if (index_acars_page === "/stats") {
-        stats_page.resize(cr.width);
-      }
-    }
-
-    if (cr.height !== old_window_height) {
-      old_window_height = cr.height - 200;
-    }
-  }
-});
-
-export function resize_tabs(
-  window_width: number = 0,
-  set_new_width: boolean = true
-): void {
-  if (set_new_width && (!window_width || window_width <= 0))
-    window_width = old_window_width;
-  let num_tabs = 0;
-
-  if (window_width > 1700) num_tabs = 15;
-  else if (window_width > 1050) num_tabs = 10;
-  else if (window_width > 400) num_tabs = 5;
-  else num_tabs = 3;
-
-  // FIXME: THIS WHOLE THING
-  // Lets get REALLY fucking stupid with tab widths
-  // The problem: browsers can't obviously display widths with decimals. It rounds it off. Somehow. And that somehow is out of our control.
-  // We need to do the following so that rows align with each other
-  // 1) determine how many tabs we can fit in the row (done above)
-  // 2) determine how many pixels each tab takes up and normalize it to an integer so we remove any decimals.
-  // 3) make it even so that it can be divisible by two (the two nav arrow widths) so that the width of two nav arrows == the width of a tab
-  // 4) set the width for the tabs
-  // 5) set the width for the sub tabs
-  // 6) set the message container width to the total width of all of the tabs because it's default size may be off a 1-2 pixels because of the rounding of tab widths.
-  // 7) Oh and, not related to the above, remove the margin left on all tabs that start a row.
-  // There has to be reason why all of these things weren't just working prior where we were dividing width / number of tabs per row
-  // and then dividing the pixels / tab in half for the nav buttons. The first row was always fine but the second row got out of alignment by 1-3 pixels.
-  // Absolutely nothing I did could make it work. And now with this method I'm having to do random stuff like adding and removing random pixels.
-  // Because fucking reasons.
-  // Plz CSS gurus tell me what I'm missing here.
-  let tab_width = Math.floor(window_width / num_tabs); // #2 above
-  tab_width % 2 === 0 ? (tab_width -= 0) : (tab_width += 1); // #3 above
-  const sub_tab_width = Math.floor(tab_width / 2); // #4 above
-  tab_width -= 1; // Why?! Everything gets off by at least a pixel if we don't do this!?
-  $(".tabinator label").css("width", `${tab_width}px`); // CSS to set the widths everywhere
-  $(".boxed").css("width", `${sub_tab_width}px`);
-  $(".acarshub-message-group").css(
-    "width",
-    `${tab_width * num_tabs - (num_tabs - 1)}px`
-  );
-  // Fix 10 rows of tabs
-  for (let i = 1; i <= 10; i++) {
-    // #7
-    $(`.msg${num_tabs * i - 1}`).css("margin-left", "0");
-  }
-}
-
-// export function setScrollers() {
-//   let timer: null | NodeJS.Timeout = null;
-//   $("div").on("scroll", function (e) {
-//     if (e.target.classList.contains("on-scrollbar") === false) {
-//       e.target.classList.add("on-scrollbar");
-//     }
-
-//     if (timer !== null) {
-//       clearTimeout(timer);
-//     }
-
-//     timer = setTimeout(function () {
-//       $("div").removeClass("on-scrollbar");
-//     }, 500);
-//   });
-// }
-
 $((): void => {
   //inject the base HTML in to the body tag
   // Document on ready new syntax....or something. Passing a function directly to jquery
@@ -210,7 +127,6 @@ $((): void => {
   menu.generate_menu(); // generate the top menu
   menu.generate_footer(); // generate the footer
 
-  ro.observe(<Element>document.querySelector("body"));
   update_url(); // update the urls for everyone
   adsb_url = index_acars_url + "data/aircraft.json";
   //connect to the socket server.
@@ -225,14 +141,15 @@ $((): void => {
 
   socket.on("acars_msg", function (msg: html_msg) {
     // New acars message.
+    console.log(document.visibilityState);
     if (connection_good || typeof msg.loading == "undefined") {
       const processed_msg: message_properties = msg_handler.acars_message(
         msg.msghtml,
         typeof msg.loading === "undefined"
       );
       //FIXME
-      if (true) {
-        //if (!is_page_backgrounded) {
+
+      if (document.visibilityState) {
         // If the message is a new message, then we need to update the page.
         if (
           msg.done_loading === true &&
@@ -420,19 +337,18 @@ $((): void => {
 
   if (
     typeof document.addEventListener === "undefined" ||
-    // @ts-expect-error
     hidden === undefined
   ) {
     console.error(
       "This webapp requires a browser, such as Safari, Google Chrome or Firefox, that supports the Page Visibility API."
     );
   } else {
+    console.log(visibilityChange, hidden, document[hidden]);
     document.addEventListener(
-      // @ts-expect-error
       visibilityChange,
       () => {
-        // @ts-expect-error
-        toggle_pages(document[hidden]);
+        console.log("visibilityChange", document[hidden]);
+        is_page_backgrounded = document[hidden];
       },
       false
     );
