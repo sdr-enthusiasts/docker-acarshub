@@ -128,17 +128,17 @@ export class LiveMessagesPage extends Page {
       $(this.content_area).html(this.current_message_string);
     }
 
-    $(".cropText").each((_, element) => {
-      //comment for test
-      //@ts-expect-error
-      console.log($(element).renderedText());
-      //@ts-expect-error
-      if ($(element).renderedText()) {
-        console.log("cropped");
-      } else {
-        console.log("not cropped.");
-      }
-    });
+    // $(".cropText").each((_, element) => {
+    //   //comment for test
+    //   //@ts-expect-error
+    //   console.log($(element).renderedText());
+    //   //@ts-expect-error
+    //   if ($(element).renderedText()) {
+    //     console.log("cropped");
+    //   } else {
+    //     console.log("not cropped.");
+    //   }
+    // });
   }
 }
 

@@ -80,13 +80,13 @@ export let menu = {
     $("#footer_div").html(html);
   },
 
+  increment_message_counter(new_count: number): void {
+    $("#receivedmessages").text(new_count);
+  },
+
   set_adsb: function (adsb_status = false): void {
     this.menu_adsb = adsb_status;
     this.generate_menu();
-  },
-
-  set_arch: function (arch: string): void {
-    this.arch = arch;
   },
 
   set_version: function (version: acarshub_version): void {

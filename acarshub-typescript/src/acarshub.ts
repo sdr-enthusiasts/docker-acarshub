@@ -227,7 +227,8 @@ $((): void => {
     // New acars message.
     if (connection_good || typeof msg.loading == "undefined") {
       const processed_msg: message_properties = msg_handler.acars_message(
-        msg.msghtml
+        msg.msghtml,
+        typeof msg.loading === "undefined"
       );
       //FIXME
       if (true) {
@@ -249,6 +250,10 @@ $((): void => {
             msg_handler.get_message_by_id(processed_msg.uid)
           );
         }
+
+        menu.increment_message_counter(
+          msg_handler.get_received_messages_count()
+        );
 
         if (
           typeof msg.done_loading === "undefined" &&
@@ -288,7 +293,7 @@ $((): void => {
 
   socket.on("features_enabled", function (msg: decoders): void {
     stats_page.decoders_enabled(msg);
-    menu.set_arch(msg.arch);
+
     if (msg.adsb.enabled === true) {
       adsb_enabled = true;
       menu.set_adsb(true);

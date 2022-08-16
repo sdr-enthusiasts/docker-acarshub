@@ -34,6 +34,7 @@ export class MessageHandler {
   // @ts-expect-error
   planes: planes_array = [] as Array<plane>;
   adsb_last_update_time: number = 0;
+  received_messages = 0;
   //lm_md = new MessageDecoder();
   // this is a temp workaround to get things building while acars decoder is broken
   lm_md = {
@@ -89,7 +90,10 @@ export class MessageHandler {
     };
   }
 
-  acars_message(msg: acars_msg) {
+  acars_message(msg: acars_msg, increment_count = true): message_properties {
+    // increment the message counter if we are not in the loading state
+    if (increment_count) this.received_messages++;
+
     const callsign = this.get_callsign_from_acars(msg);
     const hex = this.get_hex_from_acars(msg);
     const tail = this.get_tail_from_acars(msg);
@@ -704,5 +708,9 @@ export class MessageHandler {
         });
       }
     });
+  }
+
+  get_received_messages_count(): number {
+    return this.received_messages;
   }
 }
