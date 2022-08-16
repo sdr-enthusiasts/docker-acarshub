@@ -23,8 +23,6 @@ const userLocale =
     ? navigator.languages[0]
     : navigator.language;
 
-console.log(userLocale);
-
 export function generate_messages_html_from_planes(
   planes: plane[] | undefined = undefined
 ): string {
