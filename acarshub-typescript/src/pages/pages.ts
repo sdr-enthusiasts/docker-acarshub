@@ -17,6 +17,7 @@
 export class Page {
   name: string = "";
   content_area = "#acarshub_content";
+  page_active = false;
   constructor(name: string = "") {
     if (!name) {
       console.error("You need to define a name!");
@@ -26,19 +27,25 @@ export class Page {
     this.name = name;
   }
 
-  update_title_bar() {
+  is_active(): boolean {
+    return this.page_active;
+  }
+
+  update_title_bar(): void {
     $(document).attr("title", `ACARS Hub: ${this.name}`);
   }
 
-  update_page() {
+  update_page(): void {
     console.log(`Updating ${this.name} page`);
   }
 
-  set_page_inactive() {
+  set_page_inactive(): void {
+    this.page_active = false;
     console.log(`Setting ${this.name} page inactive`);
   }
 
-  set_page_active() {
+  set_page_active(): void {
+    this.page_active = true;
     console.log(`Setting ${this.name} page active`);
   }
 }

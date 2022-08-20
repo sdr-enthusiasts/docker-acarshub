@@ -63,6 +63,7 @@ export class LiveMessagesPage extends Page {
   }
 
   set_page_active(): void {
+    this.page_active = true;
     this.update_title_bar();
 
     if (!this.current_message_string) {
@@ -84,6 +85,8 @@ export class LiveMessagesPage extends Page {
   }
 
   set_page_inactive(): void {
+    this.page_active = false;
+
     $(document).off("keyup");
   }
 

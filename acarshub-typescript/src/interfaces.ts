@@ -358,6 +358,8 @@ declare global {
     function custom(options: any): any;
     function Legend(options: any): any;
   }
+
+  interface Window {}
 }
 
 export interface LocalStorageSettings {
