@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-declare const window: Window;
+export declare const window: Window;
 declare const document: DocumentEventListeners;
 
 // CSS loading
@@ -40,18 +40,17 @@ import { tooltip } from "./helpers/tooltips";
 import { io, Socket } from "socket.io-client";
 import { MessageHandler } from "./data-handling/message_handler";
 import { Settings } from "./data-handling/settings";
+import { SettingsPage } from "./pages/settings";
 
 import {
   labels,
   system_status,
   html_msg,
-  terms,
   database_size,
   current_search,
   search_html_msg,
   decoders,
   signal,
-  alert_term,
   signal_freq_data,
   signal_count_data,
   adsb,
@@ -62,9 +61,11 @@ import {
   plane_match,
   acarshub_version,
   alert_terms,
+  terms,
   LocalStorageSettings,
   message_properties,
   DocumentEventListeners,
+  alert_counts,
 } from "./interfaces";
 
 let socket: Socket = <any>null;
@@ -72,7 +73,6 @@ let socket_status: boolean = false;
 
 let index_acars_url: string = "";
 let index_acars_path: string = "";
-let index_acars_page: string = "";
 
 let adsb_url: string = "";
 let adsb_getting_data: boolean = false;
@@ -80,12 +80,13 @@ let adsb_interval: any;
 let connection_good: boolean = true;
 let adsb_enabled = false;
 
-let adsb_request_options = {
+const adsb_request_options = {
   method: "GET",
 } as RequestInit;
 
 let msg_handler = new MessageHandler(index_acars_url);
 const settings = new Settings();
+let settings_page = new SettingsPage();
 let live_messages_page = new LiveMessagesPage();
 let hidden: string = "";
 let visibilityChange: string = "";
@@ -143,7 +144,7 @@ $((): void => {
       msg.msghtml,
       typeof msg.loading === "undefined"
     );
-    console.log(typeof msg.loading == "undefined");
+
     if (!is_page_backgrounded) {
       // If the message is a new message, then we need to update the page.
       if (
@@ -173,7 +174,12 @@ $((): void => {
     }
   });
 
+  socket.on("alert_term_counts", function (msg: alert_counts): void {
+    console.log(msg);
+  });
+
   socket.on("terms", function (msg: terms): void {
+    settings.set_all_alert_terms(msg);
     //alerts_page.alerts_terms(msg); // send the terms over to the alert page
   });
 
@@ -258,11 +264,6 @@ $((): void => {
     stats_page.signals(msg);
   });
 
-  // alert term graph
-  socket.on("alert_terms", function (msg: alert_term): void {
-    stats_page.alert_terms(msg);
-  });
-
   // sidebar frequency count
   socket.on("signal_freqs", function (msg: signal_freq_data): void {
     stats_page.signal_freqs(msg);
@@ -332,7 +333,11 @@ $((): void => {
     document.addEventListener(
       visibilityChange,
       () => {
-        console.log("visibilityChange", document[hidden]);
+        console.log(
+          "visibilityChange",
+          document[hidden],
+          document.visibilityState
+        );
         is_page_backgrounded = document[hidden];
       },
       false
@@ -340,7 +345,7 @@ $((): void => {
   }
 });
 
-let update_adsb = async (): Promise<void> => {
+const update_adsb = async (): Promise<void> => {
   fetch(adsb_url, adsb_request_options)
     .then((response) => {
       adsb_getting_data = true;
@@ -393,7 +398,7 @@ const connection_status = (connected = false): void => {
 
 // Functions for opening up the socket to the child pages
 
-export let alert_term_query = (
+export const alert_term_query = (
   alert_icao: string[],
   alert_callsigns: string[],
   alert_tail: string[]
@@ -409,7 +414,7 @@ export let alert_term_query = (
   );
 };
 
-export let alert_text_update = (
+export const alert_text_update = (
   alert_text: string[],
   ignore_text: string[]
 ): void => {
@@ -423,7 +428,7 @@ export let alert_text_update = (
   );
 };
 
-export let search_database = (
+export const search_database = (
   current_search: current_search,
   show_all = false,
   page = 0
@@ -536,4 +541,14 @@ export const get_alerts = () => {
 
 export const set_live_messages_paused = (state: boolean): void => {
   menu.set_paused(state);
+};
+
+window.save_settings = async (): Promise<void> => {
+  settings.save_settings()
+    ? settings_page.close_modal()
+    : alert("Error saving settings");
+
+  msg_handler.scan_for_new_alerts();
+  live_messages_page.update_page(msg_handler.get_all_messages(), false);
+  socket.emit("update_alerts", settings.get_all_alert_terms(), "/main");
 };

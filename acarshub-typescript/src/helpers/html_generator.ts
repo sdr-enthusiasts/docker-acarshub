@@ -46,18 +46,19 @@ export function generate_messages_html_from_planes(
 }
 
 export function generate_message_group_html_from_plane(
-  planes: plane,
+  plane: plane,
   create_container = true
 ): string {
   let output = "";
+
   if (create_container)
-    output = `<div id="${planes.uid}_container" class="acars_message_container">`;
+    output = `<div id="${plane.uid}_container" class="acars_message_container">`;
 
   output += "<div class='acars_header'>";
-  output += generate_aircraft_header(planes);
+  output += generate_aircraft_header(plane);
   output += "</div>";
   output += `<div class="acars_message_row">`;
-  output += generate_aircraft_messages(planes.messages);
+  output += generate_aircraft_messages(plane.messages);
   output += "</div>";
 
   if (create_container) output += "</div>";
@@ -67,11 +68,17 @@ export function generate_message_group_html_from_plane(
 function generate_aircraft_header(plane: plane): string {
   let output = "";
 
-  output += `<div class="aircraft_header_label show_strong">Flight Number</div>`;
-  output += `<div class="aircraft_header_label show_strong">Registration</div>`;
+  output += `<div class="aircraft_header_label show_strong${
+    plane.has_alerts ? " red" : ""
+  }">Flight Number</div>`;
+  output += `<div class="aircraft_header_label show_strong${
+    plane.has_alerts ? " red" : ""
+  }">Registration</div>`;
   // output += `<div class="aircraft_header_label">ACARS ICAO</div>`;
   // output += `<div class="aircraft_header_label">ADSB ICAO</div>`;
-  output += `<div class="aircraft_header_label show_strong">Received Messages</div>`;
+  output += `<div class="aircraft_header_label show_strong${
+    plane.has_alerts ? " red" : ""
+  }">Received Messages</div>`;
 
   output += `<div class="aircraft_header_value">${
     plane.callsign ? plane.callsign : "N/A"
@@ -104,25 +111,31 @@ function generate_aircraft_messages(messages: acars_msg[]): string {
         (typeof message.msg_time !== "undefined" ? message.msg_time : 0) * 1000
       );
 
-    output += `<div class="message_data">${timestamp.toLocaleString(
-      userLocale,
-      {
-        day: "2-digit",
-        month: "2-digit",
-        year: "2-digit",
-        hour12: false,
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-      }
-    )}</div>`;
+    output += `<div class="message_data${
+      message.matched_text ? " red" : ""
+    }">${timestamp.toLocaleString(userLocale, {
+      day: "2-digit",
+      month: "2-digit",
+      year: "2-digit",
+      hour12: false,
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    })}</div>`;
     output += `<div class="message_data">${message.station_id}</div>`;
     output += `<div class="message_data">${
       message.label ? message.label : "N/A"
     }</div>`;
     output += `<div class="message_data cropText" id="${
       message.uid
-    }_text_area">${message.text ? message.text : "N/A"}</div>`;
+    }_text_area">${
+      message.text
+        ? replace_text(
+            message.text,
+            message.matched_text ? message.matched_text : []
+          )
+        : "N/A"
+    }</div>`;
   });
   return output;
 }
@@ -464,4 +477,17 @@ function loop_array(input: any): string {
   }
 
   return html_output;
+}
+
+function replace_text(message: string, fields: string[]) {
+  if (fields.length == 0) return message;
+  let new_message = message;
+
+  for (let field of fields) {
+    new_message = new_message.replace(
+      field,
+      `<span class="red">${field}</span>`
+    );
+  }
+  return new_message;
 }

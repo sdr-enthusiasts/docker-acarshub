@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-import { alert_term, alert_terms, LocalStorageSettings } from "src/interfaces";
+import { terms, LocalStorageSettings } from "src/interfaces";
 import {
   default_settings,
   default_settings_display_properties,
@@ -49,8 +49,10 @@ export class Settings {
     this.live_map_show_only_planes_with_messages_init();
   }
 
-  save_settings() {
+  save_settings(): boolean {
     // get the value of the item from DOM
+    let was_saved = true;
+
     for (const key in this.settings) {
       let value = undefined;
       if ($(`#${key}`).is('input[type="checkbox"]'))
@@ -59,11 +61,14 @@ export class Settings {
         value = $(`#${key}`).val();
       else if ($(`#${key}`).is('input[type="number"]'))
         value = Number($(`#${key}`).val());
-      else
+      else {
         console.error(`Unknown type for ${key}: ${$(`#${key}`).attr("type")}`);
+        was_saved = false;
+      }
 
       if (typeof value === "undefined") {
         console.error("No value for key:", key, value);
+        was_saved = false;
         continue;
       }
 
@@ -118,9 +123,10 @@ export class Settings {
           );
           break;
         case "live_map_range_ring_color":
-          this.set_live_map_range_ring_color(
+          const saved_color = this.set_live_map_range_ring_color(
             typeof value === "string" ? value : ""
           );
+          if (!saved_color) was_saved = false;
           break;
         case "live_map_range_ring_miles":
           let input: Array<number> = [];
@@ -168,10 +174,12 @@ export class Settings {
           break;
         default:
           console.error("No value for key:", key);
+          was_saved = false;
           break;
       }
     }
     // save the value to the settings object
+    return was_saved;
   }
 
   is_label_excluded(label: string): boolean {
@@ -265,7 +273,7 @@ export class Settings {
     };
   }
 
-  set_all_alert_terms(terms: alert_terms) {
+  set_all_alert_terms(terms: terms) {
     this.set_alerts_list_of_blacklist_terms(terms.ignore);
     this.set_alerts_list_of_whitelist_terms(terms.text_terms);
   }
@@ -308,11 +316,15 @@ export class Settings {
 
   set_alerts_list_of_blacklist_terms(list_of_blacklist_terms: Array<string>) {
     let formatted_input: Array<string> = [];
-    list_of_blacklist_terms.forEach((term) => {
-      if (term && term !== "") formatted_input.push(term.toUpperCase().trim());
-    });
 
-    formatted_input.sort();
+    if (list_of_blacklist_terms instanceof Array) {
+      list_of_blacklist_terms.forEach((term) => {
+        if (term && term !== "")
+          formatted_input.push(term.toUpperCase().trim());
+      });
+
+      formatted_input.sort();
+    }
 
     this.settings.alerts_list_of_blacklist_terms = formatted_input;
   }
@@ -320,9 +332,12 @@ export class Settings {
   set_alerts_list_of_whitelist_terms(list_of_whitelist_terms: Array<string>) {
     let formatted_input: Array<string> = [];
 
-    list_of_whitelist_terms.forEach((term) => {
-      if (term && term !== "") formatted_input.push(term.toUpperCase().trim());
-    });
+    if (list_of_whitelist_terms instanceof Array) {
+      list_of_whitelist_terms.forEach((term) => {
+        if (term && term !== "")
+          formatted_input.push(term.toUpperCase().trim());
+      });
+    }
 
     formatted_input.sort();
 
@@ -347,11 +362,11 @@ export class Settings {
     );
   }
 
-  set_live_map_range_ring_color(range_ring_color: string) {
+  set_live_map_range_ring_color(range_ring_color: string): boolean {
     range_ring_color = range_ring_color.toUpperCase().trim();
     if (!range_ring_color.startsWith("#"))
       range_ring_color = "#" + range_ring_color;
-    if (/^#([0-9A-F]{3}){1,2}$/.test(range_ring_color)) {
+    if (/^#([0-9A-F]{1,6})$/.test(range_ring_color)) {
       this.settings.live_map_range_ring_color = range_ring_color;
       localStorage.setItem(
         "live_map_range_ring_color",
@@ -359,7 +374,10 @@ export class Settings {
       );
     } else {
       console.error(`Input ${range_ring_color} is not a valid hex color`);
+      return false;
     }
+
+    return true;
   }
 
   set_live_map_range_ring_miles(range_ring_miles: Array<number>) {

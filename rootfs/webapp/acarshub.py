@@ -625,7 +625,7 @@ def main_connect():
         socketio.emit(
             "terms",
             {
-                "terms": acarshub_helpers.acarshub_database.get_alert_terms(),
+                "text_terms": acarshub_helpers.acarshub_database.get_alert_terms(),
                 "ignore": acarshub_helpers.acarshub_database.get_alert_ignore(),
             },
             to=requester,
@@ -705,7 +705,7 @@ def main_connect():
             namespace="/main",
         )
         socketio.emit(
-            "alert_terms",
+            "alert_term_count",
             {
                 "data": get_cached(
                     acarshub_helpers.acarshub_database.get_alert_counts, 30

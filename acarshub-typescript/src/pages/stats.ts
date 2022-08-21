@@ -25,7 +25,7 @@ import {
   generate_stat_submenu,
 } from "../acarshub";
 import {
-  alert_term,
+  alert_counts,
   decoders,
   signal,
   signal_count_data,
@@ -45,7 +45,7 @@ export let stats_page = {
   chart_message_counts_data: (<unknown>null) as Chart,
   chart_message_counts_empty: (<unknown>null) as Chart,
 
-  alert_data: {} as alert_term,
+  alert_data: {} as alert_counts,
   signal_data: {} as signal,
   freqs_data: {} as signal_freq_data,
   count_data: {} as signal_count_data,
@@ -601,7 +601,7 @@ export let stats_page = {
     if (this.stats_page_active) this.show_signal_chart();
   },
 
-  alert_terms: function (msg: alert_term): void {
+  alert_terms: function (msg: alert_counts): void {
     this.alert_data = msg;
     if (this.stats_page_active) this.show_alert_chart();
   },

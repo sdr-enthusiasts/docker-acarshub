@@ -72,6 +72,7 @@ export class AlertHandler {
             matches.push(term);
           }
         });
+
         return matches;
       }
     }

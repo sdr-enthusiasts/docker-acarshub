@@ -62,7 +62,7 @@ export interface status_global {
 }
 
 export interface terms {
-  terms: string[];
+  text_terms: string[];
   ignore: string[];
 }
 
@@ -95,7 +95,7 @@ export interface signal {
   };
 }
 
-export interface alert_term {
+export interface alert_counts {
   data: {
     [index: number]: {
       count: number;
@@ -359,7 +359,10 @@ declare global {
     function Legend(options: any): any;
   }
 
-  interface Window {}
+  interface Window {
+    show_settings_modal: () => void;
+    save_settings: () => void;
+  }
 }
 
 export interface LocalStorageSettings {
