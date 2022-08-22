@@ -703,7 +703,7 @@ export class MessageHandler {
             this.planes[index].num_alerts += 1;
           } else {
             this.planes[index].messages[msg_index].matched = false;
-            this.planes[index].messages[msg_index].matched_text = [];
+            this.planes[index].messages[msg_index].matched_text = undefined;
           }
         });
       }

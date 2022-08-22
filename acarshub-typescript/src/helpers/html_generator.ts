@@ -112,7 +112,7 @@ function generate_aircraft_messages(messages: acars_msg[]): string {
       );
 
     output += `<div class="message_data${
-      message.matched_text ? " red" : ""
+      message.matched ? " red" : ""
     }">${timestamp.toLocaleString(userLocale, {
       day: "2-digit",
       month: "2-digit",
