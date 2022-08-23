@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-//import { MessageDecoder } from "@airframes/acars-decoder/dist/MessageDecoder";
+import { MessageDecoder } from "@airframes/acars-decoder/dist/MessageDecoder";
 import { get_setting, is_label_excluded } from "../acarshub";
 import { v4 as uuidv4 } from "uuid";
 import {
@@ -35,13 +35,7 @@ export class MessageHandler {
   planes: planes_array = [] as Array<plane>;
   adsb_last_update_time: number = 0;
   received_messages = 0;
-  //lm_md = new MessageDecoder();
-  // this is a temp workaround to get things building while acars decoder is broken
-  lm_md = {
-    decode: (message: acars_msg) => {
-      return { decoded: false, decoded_msg: "" } as any;
-    },
-  };
+  lm_md = new MessageDecoder();
   msg_tags = [
     "text",
     "data",
@@ -284,6 +278,7 @@ export class MessageHandler {
       // see if we can run it through the text decoder
       let decoded_msg = this.lm_md.decode(new_msg);
       if (decoded_msg.decoded == true) {
+        console.log(decoded_msg);
         new_msg.decodedText = decoded_msg;
       }
     }

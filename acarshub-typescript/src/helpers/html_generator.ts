@@ -166,15 +166,16 @@ function generate_message_body(
   output += `<div class="acars_message_row">`;
   output += `<div class="message_body">`;
 
-  let timestamp = undefined;
+  let timestamp: undefined | Date = undefined;
   if (has_field(acars_message, "timestamp"))
     timestamp = new Date(acars_message.timestamp * 1000);
-  else
-    timestamp = new Date(
-      (typeof acars_message.msg_time !== "undefined"
-        ? acars_message.msg_time
-        : 0) * 1000
-    );
+  else if (has_field(acars_message, "msg_time")) {
+    // FIXME
+    timestamp = new Date(acars_message.msg_time! * 1000);
+  } else {
+    console.error("No timestamp found for message");
+    return "";
+  }
 
   output += `<strong>${acars_message.message_type}</strong> from <strong>${acars_message.station_id}</strong><br>`;
   output += `<strong>Message Time:</strong> ${timestamp.toLocaleString()}<br>`;
