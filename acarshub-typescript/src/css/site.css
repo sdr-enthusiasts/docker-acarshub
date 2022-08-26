@@ -27,6 +27,7 @@
   --egg-white: hsl(0, 0%, 80%);
   --tabs-grey-shadow: hsl(0, 0%, 58%);
   --jbox-shadow: hsla(0, 0%, 0%, 0.25);
+  --mapbackground: hsl(0, 0%, 60%);
 
   --full-yellow: hsl(60, 100%, 50%);
   --full-orange: hsl(39, 100%, 50%);
@@ -855,7 +856,7 @@ a[x-apple-data-detectors] {
   height: calc(100vh - 160px);
   max-height: calc(100vh - 160px);
   width: 100%;
-  background-color: var(--full-black);
+  background-color: var(--mapbackground);
   float: left;
   max-width: calc(100vw - 435px);
   flex: 1 1 auto;
