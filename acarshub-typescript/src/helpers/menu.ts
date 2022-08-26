@@ -131,4 +131,27 @@ export let menu = {
     this.acars_path = documentPath;
     this.acars_url = documentUrl;
   },
+
+  set_disconnect: function (connected = false): void {
+    if (connected) {
+      $("#update_notice").removeClass("hidden");
+    } else {
+      $("#update_notice").addClass("hidden");
+    }
+    $("#disconnect").html(
+      !connected
+        ? '<strong><span class="red_body">DISCONNECTED FROM WEB SERVER</strong>'
+        : ""
+    );
+
+    if (connected) {
+      $("#received").css("display", "inline-block");
+      $("#system_status").css("display", "inline-block");
+      $("#receivedmessages").css("display", "inline-block");
+    } else {
+      $("#received").css("display", "none");
+      $("#system_status").css("display", "none");
+      $("#receivedmessages").css("display", "none");
+    }
+  },
 };

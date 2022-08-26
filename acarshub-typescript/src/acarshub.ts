@@ -281,25 +281,25 @@ $((): void => {
 
   socket.on("disconnect", (): void => {
     connection_good = false;
-    connection_status();
+    menu.set_disconnect();
   });
 
   socket.on("connect_error", (): void => {
     connection_good = false;
-    connection_status();
+    menu.set_disconnect();
   });
 
   socket.on("connect_timeout", (): void => {
     connection_good = false;
-    connection_status();
+    menu.set_disconnect();
   });
 
   socket.on("connect", (): void => {
-    connection_status(true);
+    menu.set_disconnect(true);
   });
 
   socket.on("reconnect", (): void => {
-    connection_status(true);
+    menu.set_disconnect(true);
   });
 
   socket.on("reconnecting", (): void => {
@@ -370,30 +370,6 @@ const update_url = (): void => {
   );
   index_acars_path += index_acars_path.endsWith("/") ? "" : "/";
   index_acars_url = document.location.origin + index_acars_path;
-};
-
-const connection_status = (connected = false): void => {
-  socket_status = connected;
-  if (connected) {
-    $("#update_notice").removeClass("hidden");
-  } else {
-    $("#update_notice").addClass("hidden");
-  }
-  $("#disconnect").html(
-    !connected
-      ? '<strong><span class="red_body">DISCONNECTED FROM WEB SERVER</strong>'
-      : ""
-  );
-
-  if (connected) {
-    $("#received").css("display", "inline-block");
-    $("#system_status").css("display", "inline-block");
-    $("#receivedmessages").css("display", "inline-block");
-  } else {
-    $("#received").css("display", "none");
-    $("#system_status").css("display", "none");
-    $("#receivedmessages").css("display", "none");
-  }
 };
 
 // Functions for opening up the socket to the child pages
