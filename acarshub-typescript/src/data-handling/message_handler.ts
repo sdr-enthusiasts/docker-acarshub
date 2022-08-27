@@ -278,7 +278,6 @@ export class MessageHandler {
       // see if we can run it through the text decoder
       let decoded_msg = this.lm_md.decode(new_msg);
       if (decoded_msg.decoded == true) {
-        console.log(decoded_msg);
         new_msg.decodedText = decoded_msg;
       }
     }

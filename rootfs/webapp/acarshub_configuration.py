@@ -66,7 +66,7 @@ if (
     and str(os.getenv("LOCAL_TEST")).upper() == "TRUE"
 ):
     LOCAL_TEST = True
-    ACARS_WEB_PORT = 80
+    ACARS_WEB_PORT = 8080
 if os.getenv("LIVE_DATA_SOURCE", default=False):
     LIVE_DATA_SOURCE = os.getenv("LIVE_DATA_SOURCE")
 if (
@@ -157,7 +157,7 @@ if os.getenv("DB_ALERT_SAVE_DAYS", default=False):
     DB_ALERT_SAVE_DAYS = int(os.getenv("DB_ALERT_SAVE_DAYS"))
 
 if LOCAL_TEST:
-    version_path = "../../VERSION"
+    version_path = "../../version"
 else:
     version_path = "/acarshub-version"
 with open(version_path, "r") as f:
