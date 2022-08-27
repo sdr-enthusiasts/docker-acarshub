@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-export declare const window: Window;
+declare const window: Window;
 declare const document: DocumentEventListeners;
 
 // CSS loading
@@ -103,16 +103,6 @@ if (typeof document.webkitHidden !== "undefined") {
   hidden = "msHidden";
   visibilityChange = "msvisibilitychange";
 }
-
-const pages: string[] = [
-  "/", // index/live messages
-  "/search", // search page
-  "/stats", // stats page
-  "/about", // about page
-  "/status", // status page
-  "/alerts", // alerts page
-  "/adsb", // live_map page
-];
 
 $((): void => {
   live_messages_page.set_page_active();

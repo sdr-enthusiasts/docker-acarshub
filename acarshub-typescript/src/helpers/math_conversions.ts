@@ -14,10 +14,10 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-export function feet_to_meters(input: number): number {
+export const feet_to_meters = (input: number): number => {
   return input * 0.3048;
-}
+};
 
-export function nautical_miles_to_kilometers(input: number): number {
+export const nautical_miles_to_kilometers = (input: number): number => {
   return input * 1.852;
-}
+};
