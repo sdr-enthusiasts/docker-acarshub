@@ -5,4 +5,4 @@ gunicorn[eventlet] @ git+https://github.com/benoitc/gunicorn.git@80a62afc1e410f9
 requests==2.28.1
 rrdtool==0.1.16
 schedule==1.1.0
-sqlalchemy==1.4.40
+sqlalchemy==1.4.41
