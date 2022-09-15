@@ -21,7 +21,7 @@
     "@types/node": "^18.7.16",
     "@types/showdown": "^2.0.0",
     "@types/webpack-dev-server": "^4.7.2",
-    "autoprefixer": "^10.4.9",
+    "autoprefixer": "^10.4.11",
     "babel-loader": "^8.2.5",
     "css-loader": "^6.7.1",
     "favicons-webpack-plugin": "^5.0.2",
