@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-import Chart from "chart.js/auto";
+import { Chart } from "chart.js";
 import ChartDataLabels from "chartjs-plugin-datalabels";
 import { generate_stat_submenu } from "../index";
 import palette from "../js-other/palette";
