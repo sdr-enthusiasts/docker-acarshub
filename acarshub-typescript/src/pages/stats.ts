@@ -23,6 +23,7 @@ import {
   LinearScale,
   Title,
   CategoryScale,
+  BarController,
 } from "chart.js";
 
 import ChartDataLabels from "chartjs-plugin-datalabels";
@@ -774,7 +775,8 @@ export let stats_page = {
         PointElement,
         LinearScale,
         Title,
-        CategoryScale
+        CategoryScale,
+        BarController
       );
       // page is active
       this.set_html();
