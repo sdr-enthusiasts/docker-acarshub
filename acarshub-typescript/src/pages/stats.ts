@@ -14,7 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-import { Chart } from "chart.js";
+import { Chart, registerables } from "chart.js";
+
 import ChartDataLabels from "chartjs-plugin-datalabels";
 import { generate_stat_submenu } from "../index";
 import palette from "../js-other/palette";
@@ -758,6 +759,7 @@ export let stats_page = {
     this.stats_page_active = state;
 
     if (this.stats_page_active) {
+      Chart.register(...registerables);
       // page is active
       this.set_html();
       generate_stat_submenu(this.acars_on, this.vdlm_on);
