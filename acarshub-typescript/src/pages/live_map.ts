@@ -122,10 +122,7 @@ export let live_map_page = {
       Cookies.get("show_unread_messages") == "true"
         ? true
         : false;
-    this.show_nexrad =
-      !Cookies.get("show_nexrad") || Cookies.get("show_nexrad") == "true"
-        ? true
-        : false;
+    this.show_nexrad = Cookies.get("show_nexrad") == "true" ? true : false;
   },
 
   toggle_unread_messages: function (): void {
