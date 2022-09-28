@@ -129,6 +129,8 @@ jobs:
       # Check out our code
       - name: Checkout
         uses: actions/checkout@v3.0.2
+        with:
+          fetch-depth: 0
 
       - name: Get specific changed files
         id: changed-files-specific
@@ -190,6 +192,8 @@ jobs:
       # Check out our code
       - name: Checkout
         uses: actions/checkout@v3.0.2
+        with:
+          fetch-depth: 0
 
       - name: Get specific changed files
         id: changed-files-specific
