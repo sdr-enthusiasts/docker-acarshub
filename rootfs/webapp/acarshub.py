@@ -220,6 +220,12 @@ def database_listener():
 
 
 def message_listener(message_type=None, ip="127.0.0.1", port=None):
+    if port is None:
+        acarshub_logging.log(
+            "No port specified", "message_listener", level=LOG_LEVEL["ERROR"]
+        )
+        return
+
     import time
     import socket
     import json
@@ -457,7 +463,11 @@ def init_listeners(special_message=""):
         )
         thread_acars_listener = Thread(
             target=message_listener,
-            args=("ACARS", acarshub_configuration.LIVE_DATA_SOURCE, 15550),
+            args=(
+                "ACARS",
+                acarshub_configuration.LIVE_DATA_SOURCE,
+                acarshub_configuration.ACARS_SOURCE_PORT,
+            ),
         )
         thread_acars_listener.start()
 
@@ -469,7 +479,11 @@ def init_listeners(special_message=""):
         )
         thread_vdlm2_listener = Thread(
             target=message_listener,
-            args=("VDLM2", acarshub_configuration.LIVE_DATA_SOURCE, 15555),
+            args=(
+                "VDLM2",
+                acarshub_configuration.LIVE_DATA_SOURCE,
+                acarshub_configuration.VDLM_SOURCE_PORT,
+            ),
         )
         thread_vdlm2_listener.start()
 

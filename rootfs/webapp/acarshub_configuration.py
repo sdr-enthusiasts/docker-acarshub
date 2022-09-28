@@ -40,6 +40,8 @@ ADSB_LAT = 0
 ADSB_LON = 0
 ADSB_BYPASS_URL = False
 ACARS_WEB_PORT = 8888  # default port for nginx proxying. LOCAL_TEST will change this to 80 for running outside of docker
+ACARS_SOURCE_PORT = 15550
+VDLM_SOURCE_PORT = 15555
 LIVE_DATA_SOURCE = "127.0.0.1"  # This is to switch from localhost for ACARS/VDLM to connecting to a remote data source
 ACARSHUB_VERSION = "0"
 ACARSHUB_BUILD = "0"
@@ -85,6 +87,12 @@ if (
     and str(os.getenv("DB_SAVEALL")).upper() == "TRUE"
 ):
     DB_SAVEALL = True
+
+if os.getenv("ACARS_SOURCE_PORT", default=15550):
+    ACARS_SOURCE_PORT = int(os.getenv("ACARS_SOURCE_PORT"))
+
+if os.getenv("VDLM_SOURCE_PORT", default=15555):
+    VDLM_SOURCE_PORT = int(os.getenv("VDLM_SOURCE_PORT"))
 
 # Application Settings
 
