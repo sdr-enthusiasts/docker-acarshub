@@ -18,6 +18,7 @@ import * as LeafLet from "leaflet";
 import "../js-other/SmoothWheelZoom";
 import "../js-other/leaftlet.legend";
 import "../js-other/Leaflet.Control.Custom";
+import "../js-other/leaflet.radar";
 import Cookies from "js-cookie";
 import {
   acars_msg,
@@ -93,6 +94,7 @@ export let live_map_page = {
   show_datablocks: false as boolean,
   show_extended_datablocks: false as boolean,
   show_unread_messages: true as boolean,
+  show_nexrad: false as boolean,
   current_modal_terms: (<unknown>null) as {
     callsign: string;
     hex: string;
@@ -118,6 +120,10 @@ export let live_map_page = {
     this.show_unread_messages =
       !Cookies.get("show_unread_messages") ||
       Cookies.get("show_unread_messages") == "true"
+        ? true
+        : false;
+    this.show_nexrad =
+      !Cookies.get("show_nexrad") || Cookies.get("show_nexrad") == "true"
         ? true
         : false;
   },
@@ -193,6 +199,15 @@ export let live_map_page = {
       );
       this.redraw_map();
     }
+  },
+
+  toggle_nexrad: function (): void {
+    this.show_nexrad = !this.show_nexrad;
+
+    Cookies.set("show_nexrad", String(this.show_nexrad), {
+      expires: 365,
+      sameSite: "Strict",
+    });
   },
 
   redraw_map: function (): void {
@@ -1285,6 +1300,8 @@ export let live_map_page = {
     this.live_map_page_active = state;
     this.window_size = window_size;
     this.get_cookie_value();
+    let leafletRadarAttribution =
+      '<a href="https://github.com/rwev/leaflet-radar">Radar</a>';
     if (this.live_map_page_active && this.adsb_enabled) {
       Object.keys(this.adsb_planes).forEach((plane) => {
         this.adsb_planes[plane].datablock_marker = null;
@@ -1318,8 +1335,10 @@ export let live_map_page = {
       LeafLet.tileLayer("https://{s}.tile.osm.org/{z}/{x}/{y}.png", {
         detectRetina: false,
         opacity: 0.6,
-        attribution:
+        attribution: [
           '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors',
+          leafletRadarAttribution,
+        ].join(" | "),
       }).addTo(this.map);
       this.set_range_markers();
 
@@ -1341,6 +1360,10 @@ export let live_map_page = {
 
       this.layerGroupPlanes = LeafLet.layerGroup().addTo(this.map);
       this.layerGroupPlaneDatablocks = LeafLet.layerGroup().addTo(this.map);
+
+      LeafLet.control
+        .radar({ position: "bottomleft", start_active: this.show_nexrad })
+        .addTo(this.map);
       this.set_controls();
       this.map.on({
         zoom: () => {

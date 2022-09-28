@@ -24,6 +24,7 @@ import "jquery";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./css/leaftlet.legend.css";
 import "leaflet/dist/leaflet.css";
+import "./css/leaftlet.radar.css";
 import "jbox/dist/jBox.all.css";
 import "./css/site.css";
 
@@ -107,7 +108,7 @@ const pages: string[] = [
   "/adsb", // live_map page
 ];
 
-var ro: ResizeObserver = new ResizeObserver((entries) => {
+let robserver: ResizeObserver = new ResizeObserver((entries) => {
   for (let entry of entries) {
     const cr = entry.contentRect;
     if (cr.width !== old_window_width) {
@@ -203,7 +204,7 @@ $((): void => {
   menu.generate_menu(); // generate the top menu
   menu.generate_footer(); // generate the footer
 
-  ro.observe(<Element>document.querySelector("body"));
+  robserver.observe(<Element>document.querySelector("body"));
   update_url(); // update the urls for everyone
   adsb_url = index_acars_url + "data/aircraft.json";
   //connect to the socket server.
@@ -775,6 +776,10 @@ window.showPlaneMessages = function (
     return;
   }
   live_map_page.showPlaneMessages(callsign, hex, tail);
+};
+
+window.toggleNexrad = function (): void {
+  live_map_page.toggle_nexrad();
 };
 
 export function showPlaneMessages(
