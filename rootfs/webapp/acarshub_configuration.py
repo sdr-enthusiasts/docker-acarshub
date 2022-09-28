@@ -88,10 +88,10 @@ if (
 ):
     DB_SAVEALL = True
 
-if os.getenv("ACARS_SOURCE_PORT", default=15550):
+if os.getenv("ACARS_SOURCE_PORT", default=False):
     ACARS_SOURCE_PORT = int(os.getenv("ACARS_SOURCE_PORT"))
 
-if os.getenv("VDLM_SOURCE_PORT", default=15555):
+if os.getenv("VDLM_SOURCE_PORT", default=False):
     VDLM_SOURCE_PORT = int(os.getenv("VDLM_SOURCE_PORT"))
 
 # Application Settings
