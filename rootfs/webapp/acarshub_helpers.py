@@ -270,7 +270,7 @@ def service_check():
         healthcheck = subprocess.Popen(
             ["/scripts/healthcheck.sh"], stdout=subprocess.PIPE, stderr=subprocess.PIPE
         )
-    stdout, stderr = healthcheck.communicate()
+    stdout, _ = healthcheck.communicate()
     healthstatus = stdout.decode()
 
     decoders = dict()
