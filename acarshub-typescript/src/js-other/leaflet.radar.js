@@ -1,6 +1,3 @@
-// TODO add refresh (reload time layers)
-// TODO add buffer time to load layers where radar turned on
-
 L.Control.Radar = L.Control.extend({
   NEXRAD_URL: `https://mesonet.agron.iastate.edu/cgi-bin/wms/nexrad/n0q.cgi`,
   NEXRAD_LAYER: `nexrad-n0q-900913`,
@@ -32,21 +29,8 @@ L.Control.Radar = L.Control.extend({
           myThis.removeLayers();
         }
         myThis.timeLayers = myThis.generateLayers();
-        myThis.addLayers(myThis.timeLayers);
-
-        myThis.slider.max = `${myThis.timeLayers.length - 1}`;
-
-        myThis.timeLayerIndex = 0;
-
+        myThis.setTransitionTimer();
         myThis.isPaused = false;
-
-        myThis.slider.oninput = () => {
-          myThis.hideLayerByIndex(myThis.timeLayerIndex);
-          myThis.timeLayerIndex = +myThis.slider.value;
-          myThis.showLayerByIndex(myThis.timeLayerIndex);
-
-          myThis.isPaused = true;
-        };
       }, myThis.options.refreshTime * 60000);
     }
   },
@@ -82,19 +66,6 @@ L.Control.Radar = L.Control.extend({
 
     checkbox_div.appendChild(checkbox_label);
 
-    let slider_div = L.DomUtil.create(
-      `div`,
-      `leaflet-radar-slider`,
-      this.container
-    );
-
-    this.slider = document.createElement(`input`);
-    this.slider.id = `leaflet-radar-slider`;
-    this.slider.type = `range`;
-    this.slider.min = 0;
-
-    slider_div.appendChild(this.slider);
-
     this.timestamp_div = L.DomUtil.create(
       `div`,
       `leaflet-radar-timestamp`,
@@ -119,7 +90,6 @@ L.Control.Radar = L.Control.extend({
   },
 
   setDisabled: function (disabled) {
-    this.slider.disabled = disabled;
     this.timestamp_div.innerText = ``;
   },
 
@@ -137,19 +107,9 @@ L.Control.Radar = L.Control.extend({
     this.timeLayers = this.generateLayers();
     this.addLayers(this.timeLayers);
 
-    this.slider.max = `${this.timeLayers.length - 1}`;
-
     this.timeLayerIndex = 0;
 
     this.isPaused = false;
-
-    this.slider.oninput = () => {
-      this.hideLayerByIndex(this.timeLayerIndex);
-      this.timeLayerIndex = +this.slider.value;
-      this.showLayerByIndex(this.timeLayerIndex);
-
-      this.isPaused = true;
-    };
 
     this.refresher = 0;
     this.refreshTimer(this);
@@ -157,29 +117,18 @@ L.Control.Radar = L.Control.extend({
   },
 
   setTransitionTimer: function () {
-    setTimeout(() => {
-      if (this.isPaused) {
-        return;
-      }
+    if (this.isPaused) {
+      return;
+    }
 
-      this.timeLayers.forEach((timeLayer) => {
-        timeLayer.tileLayer.setOpacity(0);
-        timeLayer.tileLayer.addTo(this.map);
-      });
+    this.timeLayers.forEach((timeLayer) => {
+      timeLayer.tileLayer.setOpacity(0);
+      timeLayer.tileLayer.addTo(this.map);
+    });
 
-      if (this.checkbox.checked) {
-        this.hideLayerByIndex(this.timeLayerIndex);
-        this.incrementLayerIndex();
-        this.showLayerByIndex(this.timeLayerIndex);
-
-        this.slider.value = `${this.timeLayerIndex}`;
-
-        this.setTransitionTimer();
-      } else {
-        this.setDisabled(true);
-        this.removeLayers();
-      }
-    }, this.options.transitionMs);
+    if (this.checkbox.checked) {
+      this.showLayerByIndex(this.timeLayerIndex);
+    }
   },
 
   incrementLayerIndex: function () {
@@ -207,8 +156,8 @@ L.Control.Radar = L.Control.extend({
   generateLayers: function () {
     let timeLayers = [];
 
-    const TOTAL_INTERVALS = 10;
-    const INTERVAL_LENGTH_HRS = 5;
+    const TOTAL_INTERVALS = 0;
+    const INTERVAL_LENGTH_HRS = 0;
 
     const currentTime = new Date();
 
@@ -241,7 +190,7 @@ L.Control.Radar = L.Control.extend({
         currentTime.valueOf() - timeDiffMins * 60 * 1000
       ).toLocaleTimeString();
       timeLayers.push({
-        timestamp: `${timeString} (-${timeDiffMins} min)`,
+        timestamp: `${timeString}`,
         tileLayer: layer,
       });
     }
