@@ -22,7 +22,7 @@
     "@types/showdown": "^2.0.0",
     "@types/webpack-dev-server": "^4.7.2",
     "autoprefixer": "^10.4.13",
-    "babel-loader": "^9.0.0",
+    "babel-loader": "^9.1.2",
     "css-loader": "^6.7.1",
     "favicons": "^7.0.2",
     "favicons-webpack-plugin": "^v6.0.0-alpha.2",
