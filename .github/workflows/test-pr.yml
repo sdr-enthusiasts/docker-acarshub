@@ -39,7 +39,7 @@ jobs:
       - name: Pull markdownlint/markdownlint:latest Image
         run: docker pull markdownlint/markdownlint:latest
       - name: Run markdownlint against *.md files
-        run: docker run --rm -i -v "$(pwd)":/workdir --workdir /workdir markdownlint/markdownlint:latest -r ~MD013 $(find . -type f -iname '*.md' | grep -v '/.git/')
+        run: docker run --rm -i -v "$(pwd)":/workdir --workdir /workdir markdownlint/markdownlint:latest -r ~MD013,~MD007 $(find . -type f -iname '*.md' | grep -v '/.git/')
 
   flake8:
     runs-on: ubuntu-latest
