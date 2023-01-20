@@ -139,7 +139,7 @@ Please note that for `TAR1090_URL` the required format is `http[s]://**HOSTNAME*
 By default ACARS Hub will only show errors, warnings, and other kinds of critical messages in the logs. This can be changed by setting `MIN_LOG_LEVEL` to a higher number.
 
 All processes are logged to the container's stdout. General logging can be viewed with `docker logs [-f] container`.
-| Variable              | Description                                                             | Required                         | Default                             |
+| Variable | Description | Required | Default |
 | --------------------- | ----------------------------------------------------------------------- | -------------------------------- | ----------------------------------- |
 | `MIN_LOG_LEVEL` | Acceptable values are `3-5`. `3` is `Warnings/Critical/Errors`, `4` adds `Informational messages` and `5` adds everything previous plus `debug` messages. | No | `3` |
 | `QUIET_MESSAGES` | By default the decoders will not output their received messages to the container logs. If you want to see these messages in the logs set `QUIET_MESSAGES` to `false`. | No | `true` |
