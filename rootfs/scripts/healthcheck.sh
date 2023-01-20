@@ -10,45 +10,45 @@ EXITCODE=0
 
 # ===== Local Helper Functions =====
 
-function get_pid_of_decoder() {
+# function get_pid_of_decoder() {
 
-  # $1: service_dir
-  service_dir="$1"
+#   # $1: service_dir
+#   service_dir="$1"
 
-  # Ensure variables are unset
-  unset DEVICE_ID FREQS_VDLM VDLM_BIN FREQS_ACARS ACARS_BIN
+#   # Ensure variables are unset
+#   unset DEVICE_ID FREQS_VDLM VDLM_BIN FREQS_ACARS ACARS_BIN
 
-  # Get DEVICE_ID
-  eval "$(grep "DEVICE_ID=\"" "$service_dir"/run)"
+#   # Get DEVICE_ID
+#   eval "$(grep "DEVICE_ID=\"" "$service_dir"/run)"
 
-  # Get FREQS_VDLM
-  eval "$(grep "FREQS_VDLM=\"" "$service_dir"/run)"
+#   # Get FREQS_VDLM
+#   eval "$(grep "FREQS_VDLM=\"" "$service_dir"/run)"
 
-  # Get VDLM_BIN
-  eval "$(grep "VDLM_BIN=\"" "$service_dir"/run)"
+#   # Get VDLM_BIN
+#   eval "$(grep "VDLM_BIN=\"" "$service_dir"/run)"
 
-  # Get FREQS_ACARS
-  eval "$(grep "FREQS_ACARS=\"" "$service_dir"/run)"
+#   # Get FREQS_ACARS
+#   eval "$(grep "FREQS_ACARS=\"" "$service_dir"/run)"
 
-  # Get ACARS_BIN
-  eval "$(grep "ACARS_BIN=\"" "$service_dir"/run)"
+#   # Get ACARS_BIN
+#   eval "$(grep "ACARS_BIN=\"" "$service_dir"/run)"
 
-  # Get PS output for the relevant process
-  if [[ -n "$ACARS_BIN" ]]; then
-    # shellcheck disable=SC2009
-    ps_output=$(ps aux | grep "$ACARS_BIN" | grep " -r $DEVICE_ID " | grep " $FREQS_ACARS")
-  elif [[ -n "$VDLM_BIN" ]]; then
-    # shellcheck disable=SC2009
-    ps_output=$(ps aux | grep "$VDLM_BIN" | grep " --rtlsdr $DEVICE_ID " | grep " $FREQS_VDLM")
-  fi
+#   # Get PS output for the relevant process
+#   if [[ -n "$ACARS_BIN" ]]; then
+#     # shellcheck disable=SC2009
+#     ps_output=$(ps aux | grep "$ACARS_BIN" | grep " -r $DEVICE_ID " | grep " $FREQS_ACARS")
+#   elif [[ -n "$VDLM_BIN" ]]; then
+#     # shellcheck disable=SC2009
+#     ps_output=$(ps aux | grep "$VDLM_BIN" | grep " --rtlsdr $DEVICE_ID " | grep " $FREQS_VDLM")
+#   fi
 
-  # Find the PID of the decoder based on command line
-  process_pid=$(echo "$ps_output" | tr -s " " | cut -d " " -f 2)
+#   # Find the PID of the decoder based on command line
+#   process_pid=$(echo "$ps_output" | tr -s " " | cut -d " " -f 2)
 
-  # Return the process_pid
-  echo "$process_pid"
+#   # Return the process_pid
+#   echo "$process_pid"
 
-}
+# }
 
 # ===== Check vdlm2_server, vdlm2_feeder, vdlm2_stats processes =====
 
