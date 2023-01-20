@@ -1,4 +1,4 @@
-FROM node:19.2.0-slim AS acarshub-typescript-builder
+FROM node:19.4.0-slim AS acarshub-typescript-builder
 
 ENV DOCKER_BUILD="true"
 
