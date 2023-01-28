@@ -543,11 +543,11 @@ export let alerts_page = {
     }
   },
 
-  alert_active: function (state = false): void {
+  alert_active: function (state = false, show_modal_link: boolean): void {
     this.alert_page_active = state;
     if (this.alert_page_active) {
       // page is active
-      this.set_html();
+      this.set_html(show_modal_link);
       Cookies.set("alert_unread", "0", {
         expires: 365,
         sameSite: "Strict",
@@ -574,10 +574,12 @@ export let alerts_page = {
     );
   },
 
-  set_html: function (): void {
-    $("#modal_text").html(
-      '<a href="javascript:show_page_modal()">Page Settings</a>'
-    );
+  set_html: function (show_menu_modal: boolean): void {
+    if (show_menu_modal) {
+      $("#modal_text").html(
+        '<a href="javascript:show_page_modal()">Page Settings</a>'
+      );
+    }
     $("#page_name").html("");
     $("#log").html("");
   },
