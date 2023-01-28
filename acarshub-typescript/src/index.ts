@@ -482,7 +482,7 @@ function toggle_pages(is_backgrounded = false): void {
       alerts_page.alert_active(!is_backgrounded, allow_remote_updates);
     } else if (pages[page] === "/alerts") {
       $("#alerts_link").removeClass("invert_a");
-      alerts_page.alert_active(true, allow_remote_updates);
+      alerts_page.alert_active(false, allow_remote_updates);
     } else if (pages[page] === "/adsb" && index_acars_page === pages[page]) {
       $("#live_map_link").addClass("invert_a");
       live_map_page.live_map_active(!is_backgrounded, {
