@@ -24,6 +24,7 @@ from sqlalchemy import (
     Text,
     desc,
 )
+from sqlalchemy.sql import text
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.declarative import DeclarativeMeta
@@ -642,11 +643,15 @@ def database_search(search_term, page=0):
         session = db_session()
 
         result = session.execute(
-            f"SELECT * FROM messages WHERE id IN (SELECT rowid FROM messages_fts WHERE messages_fts MATCH {match_string} ORDER BY rowid DESC LIMIT 50 OFFSET {page * 50})"
+            text(
+                f"SELECT * FROM messages WHERE id IN (SELECT rowid FROM messages_fts WHERE messages_fts MATCH {match_string} ORDER BY rowid DESC LIMIT 50 OFFSET {page * 50})"
+            )
         )
 
         count = session.execute(
-            f"SELECT COUNT(*) FROM messages_fts WHERE messages_fts MATCH {match_string}"
+            text(
+                f"SELECT COUNT(*) FROM messages_fts WHERE messages_fts MATCH {match_string}"
+            )
         )
 
         processed_results = []
@@ -658,7 +663,7 @@ def database_search(search_term, page=0):
             session.close()
             return [None, 0]
 
-        for row in result:
+        for row in result.mappings().all():
             processed_results.append(dict(row))
 
         session.close()
@@ -796,7 +801,9 @@ def search_alerts(icao=None, tail=None, flight=None):
 
             if query_string != "" or terms_string != "":
                 result = session.execute(
-                    f"{query_string}{joiner}{terms_string} ORDER BY msg_time DESC LIMIT 50 OFFSET 0"
+                    text(
+                        f"{query_string}{joiner}{terms_string} ORDER BY msg_time DESC LIMIT 50 OFFSET 0"
+                    )
                 )
             else:
                 acarshub_logging.log("SKipping alert search", "database")
@@ -804,7 +811,7 @@ def search_alerts(icao=None, tail=None, flight=None):
 
             processed_results = []
 
-            for row in result:
+            for row in result.mappings().all():
                 processed_results.insert(0, dict(row))
             if len(processed_results) == 0:
                 return None
