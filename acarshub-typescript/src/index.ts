@@ -81,6 +81,7 @@ let adsb_enabled = false;
 let adsb_request_options = {
   method: "GET",
 } as RequestInit;
+let allow_remote_updates = false;
 
 // @ts-expect-error
 var hidden, visibilityChange;
@@ -255,6 +256,7 @@ $((): void => {
   socket.on("features_enabled", function (msg: decoders): void {
     stats_page.decoders_enabled(msg);
     menu.set_arch(msg.arch);
+    allow_remote_updates = msg.allow_remote_updates;
     if (msg.adsb.enabled === true) {
       adsb_enabled = true;
       menu.set_adsb(true);
@@ -477,10 +479,10 @@ function toggle_pages(is_backgrounded = false): void {
       status.status_active();
     } else if (pages[page] === "/alerts" && index_acars_page === pages[page]) {
       $("#alerts_link").addClass("invert_a");
-      alerts_page.alert_active(!is_backgrounded);
+      alerts_page.alert_active(!is_backgrounded, allow_remote_updates);
     } else if (pages[page] === "/alerts") {
       $("#alerts_link").removeClass("invert_a");
-      alerts_page.alert_active();
+      alerts_page.alert_active(true, allow_remote_updates);
     } else if (pages[page] === "/adsb" && index_acars_page === pages[page]) {
       $("#live_map_link").addClass("invert_a");
       live_map_page.live_map_active(!is_backgrounded, {
