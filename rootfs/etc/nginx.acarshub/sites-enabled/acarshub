@@ -7,6 +7,8 @@ server {
   proxy_set_header Upgrade $http_upgrade;
   proxy_set_header Connection $http_connection;
   proxy_set_header Host $host;
+  proxy_set_header  X-Real-IP $remote_addr;
+  proxy_set_header  X-Real-Port $remote_port;
   include /etc/nginx/mime.types;
 
   # mjs is not in default mime types, add in here
