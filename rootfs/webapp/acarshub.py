@@ -33,7 +33,6 @@ from flask import Flask, render_template, request, redirect, url_for  # noqa: E4
 from threading import Thread, Event  # noqa: E402
 from collections import deque  # noqa: E402
 import time  # noqa: E402
-import ipaddress  # noqa: E402
 
 app = Flask(__name__)
 # Make the browser not cache files if running in dev mode
@@ -777,29 +776,16 @@ def get_alerts(message, namespace):
 
 @socketio.on("update_alerts", namespace="/main")
 def update_alerts(message, namespace):
-    acarshub_logging.log(request.remote_addr, "update alerts", level=LOG_LEVEL["DEBUG"])
-    acarshub_logging.log(request.headers, "update alerts", level=LOG_LEVEL["DEBUG"])
-    try:
-        host = request.headers["Host"]
-        host_split = host.split(".")
-        host = host_split[0] + "." + host_split[1] + "." + host_split[2] + ".0/24"
-    except Exception as e:
+    if not acarshub_configuration.ALLOW_REMOTE_UPDATES:
         acarshub_logging.log(
-            f"Error getting host: {e}", "update alerts", level=LOG_LEVEL["ERROR"]
-        )
-        return
-
-    acarshub_logging.log(host, "update alerts", level=LOG_LEVEL["DEBUG"])
-    if not acarshub_configuration.ALLOW_REMOTE_UPDATES and not ipaddress.ip_address(
-        request.headers["X-Real-Ip"]
-    ) in ipaddress.ip_network(host):
-        acarshub_logging.log(
-            "Invalid IP. Not updating alerts", "update alerts", level=LOG_LEVEL["ERROR"]
+            "Remote updates are disabled. Not saving changes.",
+            "update alerts",
+            level=LOG_LEVEL["ERROR"],
         )
         return
 
     acarshub_logging.log(
-        f"{'Valid IP' if not acarshub_configuration.ALLOW_REMOTE_UPDATES else 'Allowing Remote updates'}. Updating alerts",
+        "Remote updates enabled. Updating alerts",
         "update alerts",
         level=LOG_LEVEL["DEBUG"],
     )
@@ -904,6 +890,14 @@ def handle_message(message, namespace):
 
 @socketio.on("reset_alert_counts", namespace="/main")
 def reset_alert_counts(message, namespace):
+    if not acarshub_configuration.ALLOW_REMOTE_UPDATES:
+        acarshub_logging.log(
+            "Remote updates are disabled. Not resetting counts.",
+            "reset_alert_counts",
+            level=LOG_LEVEL["ERROR"],
+        )
+        return
+
     if message["reset_alerts"]:
         acarshub_helpers.acarshub_database.reset_alert_counts()
         try:
