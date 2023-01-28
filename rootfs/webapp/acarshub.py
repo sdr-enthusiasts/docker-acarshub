@@ -777,11 +777,17 @@ def get_alerts(message, namespace):
 
 @socketio.on("update_alerts", namespace="/main")
 def update_alerts(message, namespace):
-    host = request.headers["Host"]
-    host_split = host.split(".")
-    host = host_split[0] + "." + host_split[1] + "." + host_split[2] + ".0/24"
     acarshub_logging.log(request.remote_addr, "update alerts", level=LOG_LEVEL["DEBUG"])
     acarshub_logging.log(request.headers, "update alerts", level=LOG_LEVEL["DEBUG"])
+    try:
+        host = request.headers["Host"]
+        host_split = host.split(".")
+    except Exception as e:
+        acarshub_logging.log(
+            f"Error getting host: {e}", "update alerts", level=LOG_LEVEL["ERROR"]
+        )
+        return
+    host = host_split[0] + "." + host_split[1] + "." + host_split[2] + ".0/24"
     acarshub_logging.log(host, "update alerts", level=LOG_LEVEL["DEBUG"])
     if not acarshub_configuration.ALLOW_REMOTE_UPDATES and not ipaddress.ip_address(
         request.headers["X-Real-Ip"]
