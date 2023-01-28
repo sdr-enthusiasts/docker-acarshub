@@ -33,6 +33,7 @@ from flask import Flask, render_template, request, redirect, url_for  # noqa: E4
 from threading import Thread, Event  # noqa: E402
 from collections import deque  # noqa: E402
 import time  # noqa: E402
+import ipaddress  # noqa: E402
 
 app = Flask(__name__)
 # Make the browser not cache files if running in dev mode
@@ -776,6 +777,25 @@ def get_alerts(message, namespace):
 
 @socketio.on("update_alerts", namespace="/main")
 def update_alerts(message, namespace):
+    host = request.headers["Host"]
+    host_split = host.split(".")
+    host = host_split[0] + "." + host_split[1] + "." + host_split[2] + ".0/24"
+    acarshub_logging.log(request.remote_addr, "update alerts", level=LOG_LEVEL["DEBUG"])
+    acarshub_logging.log(request.headers, "update alerts", level=LOG_LEVEL["DEBUG"])
+    acarshub_logging.log(host, "update alerts", level=LOG_LEVEL["DEBUG"])
+    if not acarshub_configuration.ALLOW_REMOTE_UPDATES and not ipaddress.ip_address(
+        request.headers["X-Real-Ip"]
+    ) in ipaddress.ip_network(host):
+        acarshub_logging.log(
+            "Invalid IP. Not updating alerts", "update alerts", level=LOG_LEVEL["ERROR"]
+        )
+        return
+
+    acarshub_logging.log(
+        f"{'Valid IP' if not acarshub_configuration.ALLOW_REMOTE_UPDATES else 'Allowing Remote updates'}. Updating alerts",
+        "update alerts",
+        level=LOG_LEVEL["DEBUG"],
+    )
     acarshub_helpers.acarshub_database.set_alert_terms(message["terms"])
     acarshub_helpers.acarshub_database.set_alert_ignore(message["ignore"])
 

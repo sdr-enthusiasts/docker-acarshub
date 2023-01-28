@@ -52,6 +52,7 @@ ENABLE_RANGE_RINGS = True
 ARCH = "unknown"
 DB_SAVE_DAYS = 7
 DB_ALERT_SAVE_DAYS = 120
+ALLOW_REMOTE_UPDATES = True
 
 if (
     os.getenv("QUIET_MESSAGES", default=False)
@@ -62,6 +63,12 @@ elif not os.getenv("QUIET_MESSAGES", default=False):
     QUIET_MESSAGES = True
 
 # Application states
+
+if (
+    os.getenv("ALLOW_REMOTE_UPDATES", default=False)
+    and str(os.getenv("ALLOW_REMOTE_UPDATES")).upper() == "FALSE"
+):
+    ALLOW_REMOTE_UPDATES = False
 
 if (
     os.getenv("LOCAL_TEST", default=False)

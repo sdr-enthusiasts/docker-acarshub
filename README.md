@@ -12,28 +12,32 @@ Builds and runs on `amd64`, `arm64`, `arm/v7`, `arm/v6` and `386` architectures.
 
 ## Table of Contents
 
-- [Users of v2 that need to migrate to v3](#Users-of-v2-that-need-to-migrate-to-v3)
-- [IMPORTANT NOTE FOR BUSTER USERS](#IMPORTANT-NOTE-FOR-BUSTER-USERS)
-- [Pre-requisites/Totally new to docker but you think this looks cool?](#Pre-requisitesTotally-new-to-docker-but-you-think-this-looks-cool)
-- [Supported tags and respective Dockerfiles](#Supported-tags-and-respective-Dockerfiles)
-- [Thanks](#thanks)
-- [Getting valid ACARS/VDLM2 data](#Getting-valid-ACARSVDLM2-data))
-- [Up-and-Running](#up-and-running)
-- [Ports](#ports)
-- [Volumes / Database](#VolumesDatabase)
-- [Environment Variables](#environment-variables)
-  - [General](#general)
-  - [ADSB](#adsb)
-  - [ACARS](#acars)
-  - [VDLM2](#vdlm2)
-- [Viewing the messages](#viewing-the-messages)
-- [Which frequencies should you monitor?](#which-frequencies-should-you-monitor)
-- [Logging](#logging)
-- [A note about data sources used for the website](#a-note-about-data-sources-used-for-the-web-site)
-- [Accessing ACARS/VDLM data with external programs](#accessing-acarsvdlm-data-with-external-programs)
-- [Website Tips and Tricks](#website-tips-and-tricks)
-- [Future Improvements](#future-improvements)
-- [Getting Help](#getting-help)
+- [sdr-enthusiasts/acarshub](#sdr-enthusiastsacarshub)
+  - [Table of Contents](#table-of-contents)
+  - [Users of v2 that need to migrate to v3](#users-of-v2-that-need-to-migrate-to-v3)
+  - [IMPORTANT NOTE FOR BUSTER USERS](#important-note-for-buster-users)
+  - [Pre-requisites/Totally new to docker but you think this looks cool](#pre-requisitestotally-new-to-docker-but-you-think-this-looks-cool)
+  - [Supported tags and respective Dockerfiles](#supported-tags-and-respective-dockerfiles)
+  - [Thanks](#thanks)
+  - [Getting valid ACARS/VDLM2 data](#getting-valid-acarsvdlm2-data)
+  - [Up-and-Running](#up-and-running)
+  - [Ports](#ports)
+  - [Volumes / Database](#volumes--database)
+  - [Environment variables](#environment-variables)
+    - [General](#general)
+    - [Logging](#logging)
+    - [ADSB](#adsb)
+    - [ACARS](#acars)
+    - [VDLM2](#vdlm2)
+  - [Viewing the messages](#viewing-the-messages)
+  - [Which frequencies should you monitor](#which-frequencies-should-you-monitor)
+  - [A note about data sources used for the web site](#a-note-about-data-sources-used-for-the-web-site)
+    - [The Fix](#the-fix)
+  - [Accessing ACARS/VDLM data with external programs](#accessing-acarsvdlm-data-with-external-programs)
+    - [YAML Configuration for Ports](#yaml-configuration-for-ports)
+  - [Website tips and tricks](#website-tips-and-tricks)
+  - [Future improvements](#future-improvements)
+  - [Getting Help](#getting-help)
 
 ## Users of v2 that need to migrate to v3
 
@@ -120,17 +124,18 @@ There are quite a few configuration options this container can accept.
 
 ### General
 
-| Variable             | Description                                                                                                                                                                                                                                                                                                            | Required | Default |
-| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------- |
-| `FEED`               | Used to toggle feeding to [ACARS.io](http://acars.io). Set to `true` to enable feeding.                                                                                                                                                                                                                                | No       | `false` |
-| `ENABLE_WEB`         | Enable the web server. `true` to enable, any other value will disable it.                                                                                                                                                                                                                                              | No       | `true`  |
-| `DB_SAVEALL`         | By default the container will save all received messages in to a database, even if the message is a blank message. If you want to increase performance/decrease database size, set this option to `false` to only save messages with at least one informationial field.                                                | No       | `true`  |
-| `DB_SAVE_DAYS`       | By default the container will save message data for 7 days. If you wish to over-ride this behavior, set this to the number of days you wish to have retained.                                                                                                                                                          | No       | `7`     |
-| `DB_ALERT_SAVE_DAYS` | By default the container will save message data for 120 days. If you wish to over-ride this behavior, set this to the number of days you wish to have retained.                                                                                                                                                        | No       | `120`   |
-| `DB_BACKUP`          | If you want to run a second database for backup purposes set this value to a [SQL Alchemy formatted URL](https://docs.sqlalchemy.org/en/13/core/engines.html#database-urls). See the link for supported DB types. This database will have to be managed by you, as ACARS Hub will only ever write incoming data to it. | No       | Blank   |
-| `IATA_OVERRIDE`      | Override or add any custom IATA codes. Used for the web front end to show proper callsigns; See [below](#the-fix) on formatting and [more details](#A-note-about-data-sources-used-for-the-web-site) why this might be necessary.                                                                                      | No       | Blank   |
-| `TAR1090_URL`        | Flights where the container is able to, it will generate a link to a tar1090 instance so that you can see the position of the aircraft that generated the message. By default, it will link to [ADSB Exchange](https://www.adsbexchange.com), but if desired, you can set the URL to be a local tar1090 instance.      | No       | Blank   |
-| `AUTO_VACUUM`        | If you find your database size to be too large you can temporarily enable this and on the next container startup the database will attempt to reduce itself in size. When you do this startup time will take a few minutes. It is recommended to leave this flag disabled and only enable it temporarily.              | No       | `False` |
+| Variable               | Description                                                                                                                                                                                                                                                                                                            | Required | Default |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------- |
+| `FEED`                 | Used to toggle feeding to [ACARS.io](http://acars.io). Set to `true` to enable feeding.                                                                                                                                                                                                                                | No       | `false` |
+| `ENABLE_WEB`           | Enable the web server. `true` to enable, any other value will disable it.                                                                                                                                                                                                                                              | No       | `true`  |
+| `DB_SAVEALL`           | By default the container will save all received messages in to a database, even if the message is a blank message. If you want to increase performance/decrease database size, set this option to `false` to only save messages with at least one informationial field.                                                | No       | `true`  |
+| `DB_SAVE_DAYS`         | By default the container will save message data for 7 days. If you wish to over-ride this behavior, set this to the number of days you wish to have retained.                                                                                                                                                          | No       | `7`     |
+| `DB_ALERT_SAVE_DAYS`   | By default the container will save message data for 120 days. If you wish to over-ride this behavior, set this to the number of days you wish to have retained.                                                                                                                                                        | No       | `120`   |
+| `DB_BACKUP`            | If you want to run a second database for backup purposes set this value to a [SQL Alchemy formatted URL](https://docs.sqlalchemy.org/en/13/core/engines.html#database-urls). See the link for supported DB types. This database will have to be managed by you, as ACARS Hub will only ever write incoming data to it. | No       | Blank   |
+| `IATA_OVERRIDE`        | Override or add any custom IATA codes. Used for the web front end to show proper callsigns; See [below](#the-fix) on formatting and [more details](#A-note-about-data-sources-used-for-the-web-site) why this might be necessary.                                                                                      | No       | Blank   |
+| `TAR1090_URL`          | Flights where the container is able to, it will generate a link to a tar1090 instance so that you can see the position of the aircraft that generated the message. By default, it will link to [ADSB Exchange](https://www.adsbexchange.com), but if desired, you can set the URL to be a local tar1090 instance.      | No       | Blank   |
+| `AUTO_VACUUM`          | If you find your database size to be too large you can temporarily enable this and on the next container startup the database will attempt to reduce itself in size. When you do this startup time will take a few minutes. It is recommended to leave this flag disabled and only enable it temporarily.              | No       | `False` |
+| `ALLOW_REMOTE_UPDATES` | If you do not want to allow users to update the alert terms (and potentially other things in the future) via the web interface, set this to `False`                                                                                                                                                                    | No       | `True`  |
 
 Please note that for `TAR1090_URL` the required format is `http[s]://**HOSTNAME**` only. So if your tar1090 instance is at IP address `192.168.31.10` with no SSL, the TAR1090_URL would look like `http://192.168.31.10`
 
