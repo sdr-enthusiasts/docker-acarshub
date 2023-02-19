@@ -69,7 +69,7 @@ services:
     tmpfs:
       - /database:exec,size=64M
       - /run:exec,size=64M
-      - /var/log,size=64M
+      - /var/log:size=64M
     environment:
       - TZ=Etc/UTC
       - ENABLE_VDLM=false
@@ -101,7 +101,7 @@ services:
       - SERVER=acars_router
     tmpfs:
       - /run:exec,size=64M
-      - /var/log,size=64M
+      - /var/log:size=64M
   #####
 
   ### Remove this section if you are NOT decoding VDLM
@@ -127,7 +127,7 @@ services:
       - SERVER=
     tmpfs:
       - /run:exec,size=64M
-      - /var/log,size=64M
+      - /var/log:size=64M
 
   acars_router:
     image: ghcr.io/sdr-enthusiasts/acars_router:latest
