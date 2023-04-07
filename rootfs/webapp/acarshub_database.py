@@ -757,6 +757,7 @@ def database_search(search_term, page=0):
 #             session.close()
 #         return (processed_results, count)
 
+
 # FIXME: Rolled back to old search_alerts. We should wrap this in SQL Alchemy goodness
 def search_alerts(icao=None, tail=None, flight=None):
     result = None

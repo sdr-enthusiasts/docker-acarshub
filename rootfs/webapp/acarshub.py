@@ -358,7 +358,6 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
             try:
                 msg = json.loads(part)
             except ValueError as e:
-
                 if part == split_json[-1]:
                     # last element in the list, could be a partial json object
                     partial_message = part
