@@ -134,3 +134,4 @@ rootfs/webapp/static
 acarshub/node_modules
 **/dist/**
 acarshub-typescript/package-lock.json
+.venv
