@@ -10,6 +10,14 @@ If you wish to test inside of a docker container please see the section concerni
 
 ## System setup
 
+### Python venv
+
+```shell
+python3 -m venv .venv
+source .venv/bin/activate
+python3 -m pip install -r rootfs/webapp/requirements.txt
+```
+
 ### Mac
 
 Pre-requisites:
