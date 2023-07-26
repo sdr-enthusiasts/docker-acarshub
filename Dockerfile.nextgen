@@ -1,5 +1,4 @@
 FROM ghcr.io/sdr-enthusiasts/docker-baseimage:python
-ENV PATH="/root/.cargo/bin:${PATH}"
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 COPY rootfs/webapp/requirements.txt /src/requirements.txt
@@ -18,6 +17,7 @@ RUN set -x && \
     # Packages for nginx
     KEPT_PACKAGES+=(nginx-light) && \
     TEMP_PACKAGES+=(python3-dev) && \
+    KEPT_PACKAGES+=(python3-cryptography) && \
     # stats
     KEPT_PACKAGES+=(rrdtool) && \
     TEMP_PACKAGES+=(librrd-dev) && \
@@ -26,8 +26,6 @@ RUN set -x && \
     "${KEPT_PACKAGES[@]}" \
     "${TEMP_PACKAGES[@]}"\
     && \
-    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y && \
-    python3 -m pip install --upgrade pip setuptools wheel && \
     pushd /src/ && \
     python3 -m pip install --no-cache-dir \
     -r /src/requirements.txt \
