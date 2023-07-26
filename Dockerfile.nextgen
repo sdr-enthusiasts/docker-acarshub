@@ -28,6 +28,7 @@ RUN set -x && \
     "${TEMP_PACKAGES[@]}"\
     && \
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y && \
+    pytnon3 -m pip install --upgrade pip setuptools wheel && \
     pushd /src/ && \
     python3 -m pip install --no-cache-dir \
     -r /src/requirements.txt \
