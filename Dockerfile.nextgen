@@ -1,8 +1,6 @@
 FROM ghcr.io/sdr-enthusiasts/docker-baseimage:python
-# Raspbian 32 bit sucks and we can't run recent versions of bullseye
-#FROM debian:bullseye-20211220-slim
-SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 ENV PATH="/root/.cargo/bin:${PATH}"
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 COPY rootfs/webapp/requirements.txt /src/requirements.txt
 
