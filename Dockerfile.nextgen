@@ -24,21 +24,23 @@ RUN set -x && \
     TEMP_PACKAGES+=(librrd-dev) && \
     apt-get update && \
     apt-get install -y --no-install-recommends \
-        "${KEPT_PACKAGES[@]}" \
-        "${TEMP_PACKAGES[@]}"\
-        && \
+    "${KEPT_PACKAGES[@]}" \
+    "${TEMP_PACKAGES[@]}"\
+    && \
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh && \
     pushd /src/ && \
     python3 -m pip install --no-cache-dir \
-        -r /src/requirements.txt \
-        && \
+    -r /src/requirements.txt \
+    && \
     # Fix for Eventlet issues
     apt-get \
-      -o Dpkg::Options::='--force-confmiss' \
-      install --reinstall --no-install-recommends -y \
-      netbase \
-      && \
+    -o Dpkg::Options::='--force-confmiss' \
+    install --reinstall --no-install-recommends -y \
+    netbase \
+    && \
     popd && \
     # Clean up
     apt-get remove -y "${TEMP_PACKAGES[@]}" && \
     apt-get autoremove -y && \
-    rm -rf /src/* /tmp/* /var/lib/apt/lists/*
+    rm -rf /src/* /tmp/* /var/lib/apt/lists/* && \
+    rm -rf /root/.cargo
