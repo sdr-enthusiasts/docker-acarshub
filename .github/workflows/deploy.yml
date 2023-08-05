@@ -12,16 +12,16 @@ on:
         type: boolean
         description: "Use base image testpr"
         default: false
-  push:
-    branches:
-      - main
-    paths:
-      - "acarshub-typescript/**"
-      - "Dockerfile.acarshub"
-      - "Dockerfile.acarshub-nextgen"
-      - "rootfs/**"
-      - ".github/workflows/deploy.yml"
-      - "version"
+  # push:
+  #   branches:
+  #     - main
+  #   paths:
+  #     - "acarshub-typescript/**"
+  #     - "Dockerfile.acarshub"
+  #     - "Dockerfile.acarshub-nextgen"
+  #     - "rootfs/**"
+  #     - ".github/workflows/deploy.yml"
+  #     - "version"
 
 env:
   REGISTRY: ghcr.io
@@ -161,7 +161,7 @@ jobs:
           no-cache: true
           platforms: linux/386,linux/amd64,linux/arm/v7,linux/arm/v6,linux/arm64
           push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ github.env.dockertag }}
+          tags: ${{ env.dockertag }}
           labels: ${{ steps.meta.outputs.labels }}
 
   deploy_ghcr_latest:
@@ -570,7 +570,7 @@ jobs:
       # Show version tag
       - name: Show version tag
         run: |
-          echo "ACARS Hub Version: ${{ github.env.VERSION }}"
+          echo "ACARS Hub Version: ${{ env.VERSION }}"
           echo "ACARS Hub Build: ${{ github.run_number }}"
 
       - name: Create Release
@@ -579,6 +579,6 @@ jobs:
           body: "See Commits"
           allowUpdates: true
           commit: ${{ github.ref }}
-          name: ${{ github.env.VERSION }} Build ${{ github.run_number }}
-          tag: ${{ github.env.VERSION }}
+          name: ${{ env.VERSION }} Build ${{ github.run_number }}
+          tag: ${{ env.VERSION }}
           token: ${{ secrets.GITHUB_TOKEN }}
