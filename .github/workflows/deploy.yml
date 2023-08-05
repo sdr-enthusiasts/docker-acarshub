@@ -146,9 +146,9 @@ jobs:
         run: |
           # if we're using the test image, set an env variable to ghcr.io/sdr-enthusiasts/docker-acarshub:nextgen-test-pr
           if [ "${{ github.event.inputs.use_test_image == 'true' }}" = "true" ]; then
-            echo "dockertag='ghcr.io/sdr-enthusiasts/docker-acarshub:nextgen-test-pr'" >> $GITHUB_ENV
+            echo "dockertag=ghcr.io/sdr-enthusiasts/docker-acarshub:nextgen-test-pr" >> $GITHUB_ENV
           else
-            echo "dockertag='ghcr.io/sdr-enthusiasts/docker-acarshub:nextgen'" >> $GITHUB_ENV
+            echo "dockertag=ghcr.io/sdr-enthusiasts/docker-acarshub:nextgen" >> $GITHUB_ENV
           fi
 
       # Build & Push Dockerfile (only push if this action was NOT triggered by a PR)
