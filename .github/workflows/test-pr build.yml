@@ -1,4 +1,4 @@
-name: Test PR
+name: Test PR Build
 
 # FIXME: Can we not build either job if stuff has been unchanged since last commit for that job?
 # FIXME: Use branch name for tagging docker build
@@ -8,7 +8,6 @@ on:
       reason:
         required: true
         description: "Reason for running this workflow"
-  push:
 
 env:
   REGISTRY: ghcr.io

@@ -1,4 +1,4 @@
-name: Deploy to GHCR
+name: Deploy
 
 on:
   # Build and deploy the image on pushes to main branch
@@ -133,6 +133,24 @@ jobs:
         if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
         uses: docker/setup-buildx-action@v2
 
+      # Change the dockerfile to use the test image if we've been triggered as a test
+
+      - name: Change dockerfile if under baseimage test
+        id: change_dockerfile
+        if: ${{ github.event.inputs.use_test_image == 'true' }}
+        run: |
+          sed -i "s/:python/:python-test-pr/g" Dockerfile.nextgen
+
+      - name: Set output tag
+        id: set-output
+        run: |
+          # if we're using the test image, set an env variable to ghcr.io/sdr-enthusiasts/docker-acarshub:nextgen-test-pr
+          if [ "${{ github.event.inputs.use_test_image == 'true' }}" = "true" ]; then
+            echo "dockertag='ghcr.io/sdr-enthusiasts/docker-acarshub:nextgen-test-pr'" >> $GITHUB_OUTPUT
+          else
+            echo "dockertag='ghcr.io/sdr-enthusiasts/docker-acarshub:nextgen'" >> $GITHUB_OUTPUT
+          fi
+
       # Build & Push Dockerfile (only push if this action was NOT triggered by a PR)
       - name: Build & Push ghcr.io/sdr-enthusiasts/docker-acarshub:nextgen
         if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
@@ -143,13 +161,14 @@ jobs:
           no-cache: true
           platforms: linux/386,linux/amd64,linux/arm/v7,linux/arm/v6,linux/arm64
           push: ${{ github.event_name != 'pull_request' }}
-          tags: ghcr.io/sdr-enthusiasts/docker-acarshub:nextgen
+          tags: ${{ github.env.dockertag }}
           labels: ${{ steps.meta.outputs.labels }}
 
   deploy_ghcr_latest:
     name: Deploy to latest to dockerhub
     runs-on: ubuntu-latest
     needs: [deploy_ghcr_nextgen, acarshub_typescript]
+    if: ${{ github.event.inputs.use_test_image == 'false' }}
     steps:
       # Check out our code
       - name: Checkout
@@ -242,6 +261,7 @@ jobs:
     name: Deploy version to dockerhub
     runs-on: ubuntu-latest
     needs: [deploy_ghcr_nextgen, acarshub_typescript]
+    if: ${{ github.event.inputs.use_test_image == 'false' }}
     steps:
       # Check out our code
       - name: Checkout
@@ -334,6 +354,7 @@ jobs:
     name: Deploy to latest/no healthcheck
     runs-on: ubuntu-latest
     needs: [deploy_ghcr_nextgen, acarshub_typescript]
+    if: ${{ github.event.inputs.use_test_image == 'false' }}
     steps:
       # Check out our code
       - name: Checkout
@@ -431,6 +452,7 @@ jobs:
     name: Deploy version specific no healthcheck to dockerhub
     runs-on: ubuntu-latest
     needs: [deploy_ghcr_nextgen, acarshub_typescript]
+    if: ${{ github.event.inputs.use_test_image == 'false' }}
     outputs:
       cleanupinfo: ${{ steps.set-output.outputs.do_release }}
     steps:
@@ -529,6 +551,7 @@ jobs:
   create_release:
     name: Create Release
     runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.use_test_image == 'false' }}
     needs:
       - deploy_ghcr_nextgen
       - acarshub_typescript
@@ -547,7 +570,7 @@ jobs:
       # Show version tag
       - name: Show version tag
         run: |
-          echo "ACARS Hub Version: ${{ env.VERSION }}"
+          echo "ACARS Hub Version: ${{ github.env.VERSION }}"
           echo "ACARS Hub Build: ${{ github.run_number }}"
 
       - name: Create Release
@@ -556,6 +579,6 @@ jobs:
           body: "See Commits"
           allowUpdates: true
           commit: ${{ github.ref }}
-          name: ${{ env.VERSION }} Build ${{ github.run_number }}
-          tag: ${{ env.VERSION }}
+          name: ${{ github.env.VERSION }} Build ${{ github.run_number }}
+          tag: ${{ github.env.VERSION }}
           token: ${{ secrets.GITHUB_TOKEN }}

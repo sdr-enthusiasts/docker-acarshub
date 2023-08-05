@@ -2,9 +2,9 @@ name: Cancelling Duplicates
 on:
   workflow_run:
     workflows:
-      - "Deploy to GHCR"
-      - "Tests"
-      - "Test PR"
+      - "Deploy"
+      - "Test Build ACARS Hub Typescript"
+      - "Test PR Build"
     types: ["requested"]
 
 jobs:

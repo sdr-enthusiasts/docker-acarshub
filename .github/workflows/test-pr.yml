@@ -1,4 +1,4 @@
-name: Test PR
+name: Test Build ACARS Hub Typescript
 
 # FIXME: Can we not build either job if stuff has been unchanged since last commit for that job?
 # FIXME: Use branch name for tagging docker build
