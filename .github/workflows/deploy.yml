@@ -159,7 +159,7 @@ jobs:
           context: .
           file: ./Dockerfile.nextgen
           no-cache: true
-          platforms: linux/386,linux/amd64,linux/arm/v7,linux/arm/v6,linux/arm64
+          platforms: linux/amd64,linux/arm/v7,linux/arm/v6,linux/arm64
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ env.dockertag }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -252,7 +252,7 @@ jobs:
           context: .
           file: ./Dockerfile.acarshub
           no-cache: true
-          platforms: linux/386,linux/amd64,linux/arm/v7,linux/arm/v6,linux/arm64
+          platforms: linux/amd64,linux/arm/v7,linux/arm/v6,linux/arm64
           push: ${{ github.event_name != 'pull_request' }}
           tags: ghcr.io/sdr-enthusiasts/docker-acarshub:latest
           labels: ${{ steps.meta.outputs.labels }}
@@ -345,7 +345,7 @@ jobs:
           context: .
           file: ./Dockerfile.acarshub
           no-cache: true
-          platforms: linux/386,linux/amd64,linux/arm/v7,linux/arm/v6,linux/arm64
+          platforms: linux/amd64,linux/arm/v7,linux/arm/v6,linux/arm64
           push: ${{ github.event_name != 'pull_request' }}
           tags: ghcr.io/sdr-enthusiasts/docker-acarshub:${{ env.VERSION }}Build${{ github.run_number }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -443,7 +443,7 @@ jobs:
           context: .
           file: ./Dockerfile.acarshub.nohealthcheck
           no-cache: true
-          platforms: linux/386,linux/amd64,linux/arm/v7,linux/arm/v6,linux/arm64
+          platforms: linux/amd64,linux/arm/v7,linux/arm/v6,linux/arm64
           push: ${{ github.event_name != 'pull_request' }}
           tags: ghcr.io/sdr-enthusiasts/docker-acarshub:latest_nohealthcheck
           labels: ${{ steps.meta.outputs.labels }}
@@ -543,7 +543,7 @@ jobs:
           context: .
           file: ./Dockerfile.acarshub.nohealthcheck
           no-cache: true
-          platforms: linux/386,linux/amd64,linux/arm/v7,linux/arm/v6,linux/arm64
+          platforms: linux/amd64,linux/arm/v7,linux/arm/v6,linux/arm64
           push: ${{ github.event_name != 'pull_request' }}
           tags: ghcr.io/sdr-enthusiasts/docker-acarshub:${{ env.VERSION }}Build${{ github.run_number }}_nohealthcheck
           labels: ${{ steps.meta.outputs.labels }}
