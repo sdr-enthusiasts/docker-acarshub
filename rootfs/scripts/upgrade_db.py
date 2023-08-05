@@ -9,7 +9,8 @@ from typing import List
 import os
 import sys
 
-sys.path.append("../webapp/")
+sys.path.append(os.path.join(os.path.dirname(__file__), "../webapp/"))
+
 import acarshub_logging  # noqa: E402
 from acarshub_logging import LOG_LEVEL  # noqa: E402
 
