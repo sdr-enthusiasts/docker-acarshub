@@ -7,6 +7,11 @@ on:
       reason:
         required: true
         description: "Reason for running this workflow"
+      use_test_image:
+        required: false
+        type: boolean
+        description: "Use base image testpr"
+        default: false
   push:
     branches:
       - main
@@ -23,6 +28,23 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
+  workflow-dispatch:
+    name: Triggered via Workflow Dispatch?
+    # only run this step if workflow dispatch triggered
+    # log the reason the workflow dispatch was triggered
+    if: |
+      github.event_name == 'workflow_dispatch' &&
+      github.event.inputs.reason != ''
+    runs-on: ubuntu-latest
+    steps:
+      - name: Log dispatch reason
+        env:
+          INPUTS_REASON: ${{ github.event.inputs.reason }}
+          INPUTS_USE_TEST_IMAGE: ${{ github.event.inputs.use_test_image }}
+        run: |
+          echo "Workflow dispatch reason: $INPUTS_REASON"
+          echo "Use test image: $INPUTS_USE_TEST_IMAGE"
+
   acarshub_typescript:
     runs-on: ubuntu-latest
     steps:

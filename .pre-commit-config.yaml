@@ -46,7 +46,7 @@ repos:
         additional_dependencies:
           - prettier@2.5.1
           - "@typescript-eslint/eslint-plugin"
-          - "prettier-plugin-sh"
+          # - "prettier-plugin-sh"
         exclude: ^(rootfs/webapp/|acarshub-typescript/node_modules/|Dockerfile*)
 
   - repo: https://github.com/pre-commit/mirrors-eslint
