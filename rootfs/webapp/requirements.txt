@@ -6,4 +6,4 @@ pyrtlsdr==0.3.0
 requests==2.31.0
 rrdtool==0.1.16
 schedule==1.2.0
-sqlalchemy==2.0.19
+sqlalchemy==2.0.20
