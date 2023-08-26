@@ -276,7 +276,7 @@ jobs:
     name: Deploy version to dockerhub
     runs-on: ubuntu-latest
     needs: [deploy_ghcr_nextgen, acarshub_typescript]
-    if: ${{ github.event.inputs.use_test_image == 'false' }}
+    if: ${{ github.event.inputs.use_test_image == 'false' || github.event.inputs.use_test_image == '' }}
     steps:
       # Check out our code
       - name: Checkout
@@ -369,7 +369,7 @@ jobs:
     name: Deploy to latest/no healthcheck
     runs-on: ubuntu-latest
     needs: [deploy_ghcr_nextgen, acarshub_typescript]
-    if: ${{ github.event.inputs.use_test_image == 'false' }}
+    if: ${{ github.event.inputs.use_test_image == 'false' || github.event.inputs.use_test_image == '' }}
     steps:
       # Check out our code
       - name: Checkout
@@ -467,7 +467,7 @@ jobs:
     name: Deploy version specific no healthcheck to dockerhub
     runs-on: ubuntu-latest
     needs: [deploy_ghcr_nextgen, acarshub_typescript]
-    if: ${{ github.event.inputs.use_test_image == 'false' }}
+    if: ${{ github.event.inputs.use_test_image == 'false' || github.event.inputs.use_test_image == '' }}
     outputs:
       cleanupinfo: ${{ steps.set-output.outputs.do_release }}
     steps:
@@ -566,7 +566,7 @@ jobs:
   create_release:
     name: Create Release
     runs-on: ubuntu-latest
-    if: ${{ github.event.inputs.use_test_image == 'false' }}
+    if: ${{ github.event.inputs.use_test_image == 'false' || github.event.inputs.use_test_image == '' }}
     needs:
       - deploy_ghcr_nextgen
       - acarshub_typescript
