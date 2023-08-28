@@ -1,4 +1,4 @@
-#!/usr/bin/with-contenv bash
+#!/command/with-contenv bash
 # shellcheck shell=bash
 
 # Import healthchecks-framework
@@ -175,7 +175,7 @@ fi
 echo "==== Check Service Death Tallies ====="
 
 # Check service death tally
-mapfile -t SERVICES < <(find /run/s6/legacy-services -maxdepth 1 -type d -not -name "*s6-*" | tail +2)
+mapfile -t SERVICES < <(find /run/service -maxdepth 1 -not -name "*s6*" | tail +2)
 for service in "${SERVICES[@]}"; do
   SVDT=$(s6-svdt "$service" | grep -cv 'exitcode 0')
   if [[ "$SVDT" -gt 0 ]]; then
