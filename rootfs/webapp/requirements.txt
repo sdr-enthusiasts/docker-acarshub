@@ -1,7 +1,7 @@
 eventlet==0.33.3
 Flask==2.3.3
 Flask-SocketIO==5.3.5
-gunicorn[eventlet] @ git+https://github.com/benoitc/gunicorn.git@48eda22a4b3399b0a65677619b4938503cc207cb
+gunicorn[eventlet]==21.2.0
 pyrtlsdr==0.3.0
 requests==2.31.0
 rrdtool==0.1.16
