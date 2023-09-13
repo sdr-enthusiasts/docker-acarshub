@@ -90,7 +90,7 @@ jobs:
 
       - name: Login to ghcr.io
         if: steps.changed-files-specific.outputs.any_changed == 'true'
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.repository_owner }}
@@ -192,7 +192,7 @@ jobs:
 
       - name: Login to ghcr.io
         if: steps.changed-files-specific.outputs.any_changed == 'true'
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.repository_owner }}
