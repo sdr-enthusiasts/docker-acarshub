@@ -154,7 +154,7 @@ jobs:
       # Build & Push Dockerfile (only push if this action was NOT triggered by a PR)
       - name: Build & Push ghcr.io/sdr-enthusiasts/docker-acarshub:nextgen
         if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v5
         with:
           context: .
           file: ./Dockerfile.nextgen
@@ -262,7 +262,7 @@ jobs:
       # Build & Push Dockerfile (only push if this action was NOT triggered by a PR)
       - name: Build & Push ghcr.io/sdr-enthusiasts/docker-acarshub:latest
         if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v5
         with:
           context: .
           file: ./Dockerfile.acarshub
@@ -355,7 +355,7 @@ jobs:
       # Build & Push Dockerfile (only push if this action was NOT triggered by a PR)
       - name: Build & Push ghcr.io/sdr-enthusiasts/docker-acarshub:version specific
         if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v5
         with:
           context: .
           file: ./Dockerfile.acarshub
@@ -453,7 +453,7 @@ jobs:
       # Build & Push Dockerfile (only push if this action was NOT triggered by a PR)
       - name: Build & Push ghcr.io/sdr-enthusiasts/docker-acarshub:latest_nohealthcheck
         if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v5
         with:
           context: .
           file: ./Dockerfile.acarshub.nohealthcheck
@@ -553,7 +553,7 @@ jobs:
       # Build & Push Dockerfile (only push if this action was NOT triggered by a PR)
       - name: Build & Push ghcr.io/sdr-enthusiasts/docker-acarshub:version_nohealthcheck
         if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v5
         with:
           context: .
           file: ./Dockerfile.acarshub.nohealthcheck
