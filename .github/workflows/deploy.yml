@@ -118,7 +118,7 @@ jobs:
       - name: Extract metadata (tags, labels) for Docker
         id: meta
         if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
-        uses: docker/metadata-action@v4
+        uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
 
@@ -244,7 +244,7 @@ jobs:
       - name: Extract metadata (tags, labels) for Docker
         id: meta
         if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
-        uses: docker/metadata-action@v4
+        uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
 
@@ -337,7 +337,7 @@ jobs:
       - name: Extract metadata (tags, labels) for Docker
         id: meta
         if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
-        uses: docker/metadata-action@v4
+        uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
 
@@ -430,7 +430,7 @@ jobs:
       - name: Extract metadata (tags, labels) for Docker
         id: meta
         if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
-        uses: docker/metadata-action@v4
+        uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
 
@@ -530,7 +530,7 @@ jobs:
       - name: Extract metadata (tags, labels) for Docker
         id: meta
         if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason != '')
-        uses: docker/metadata-action@v4
+        uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
 
