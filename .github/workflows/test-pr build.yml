@@ -113,7 +113,7 @@ jobs:
       - name: Set up Docker Buildx
         id: buildx
         if: steps.changed-files-specific.outputs.any_changed == 'true'
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v3
 
       # Build & Push Dockerfile (only push if this action was NOT triggered by a PR)
       - name: Build & Push ghcr.io/sdr-enthusiasts/docker-acarshub:nextgen-test
@@ -215,7 +215,7 @@ jobs:
       - name: Set up Docker Buildx
         id: buildx
         if: steps.changed-files-specific.outputs.any_changed == 'true'
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v3
 
       - name: Patch Dockerfile if Nextgen was built for this branch
         if: steps.changed-file-nextgen.outputs.any_changed == 'true'
