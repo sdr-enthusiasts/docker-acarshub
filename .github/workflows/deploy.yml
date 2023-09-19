@@ -100,7 +100,7 @@ jobs:
 
       - name: Get specific changed files
         id: changed-files-specific
-        uses: tj-actions/changed-files@v39.0.3
+        uses: tj-actions/changed-files@v39.1.0
         with:
           files: |
             Dockerfile.nextgen
@@ -177,7 +177,7 @@ jobs:
 
       - name: Get specific changed files
         id: changed-files-specific
-        uses: tj-actions/changed-files@v39.0.3
+        uses: tj-actions/changed-files@v39.1.0
         with:
           files: |
             Dockerfile.nextgen
@@ -286,7 +286,7 @@ jobs:
 
       - name: Get specific changed files
         id: changed-files-specific
-        uses: tj-actions/changed-files@v39.0.3
+        uses: tj-actions/changed-files@v39.1.0
         with:
           files: |
             Dockerfile.nextgen
@@ -379,7 +379,7 @@ jobs:
 
       - name: Get specific changed files
         id: changed-files-specific
-        uses: tj-actions/changed-files@v39.0.3
+        uses: tj-actions/changed-files@v39.1.0
         with:
           files: |
             Dockerfile.nextgen
@@ -479,7 +479,7 @@ jobs:
 
       - name: Get specific changed files
         id: changed-files-specific
-        uses: tj-actions/changed-files@v39.0.3
+        uses: tj-actions/changed-files@v39.1.0
         with:
           files: |
             Dockerfile.nextgen
