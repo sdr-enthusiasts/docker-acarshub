@@ -447,7 +447,8 @@ def init_listeners(special_message=""):
         )
         thread_scheduler = Thread(target=scheduled_tasks)
         thread_scheduler.start()
-    if not thread_html_generator.is_alive():
+    # check if 'g' is not in thread_html_generator
+    if not hasattr(thread_html_generator, "g"):
         acarshub_logging.log(
             f"{special_message}Starting htmlListener",
             "init",
@@ -736,7 +737,7 @@ def main_connect():
         acarshub_logging.acars_traceback(e, "webapp")
 
     # Start the htmlGenerator thread only if the thread has not been started before.
-    if not thread_html_generator.is_alive():
+    if not hasattr(thread_html_generator, "g"):
         sys.stdout.flush()
         thread_html_generator_event.clear()
         thread_html_generator = socketio.start_background_task(htmlListener)
