@@ -15,7 +15,7 @@
   "devDependencies": {
     "@babel/core": "^7.23.0",
     "@babel/preset-env": "^7.22.20",
-    "@types/jquery": "^3.5.19",
+    "@types/jquery": "^3.5.20",
     "@types/js-cookie": "^3.0.4",
     "@types/leaflet": "^1.9.6",
     "@types/node": "^20.7.0",
