@@ -447,6 +447,7 @@ def init_listeners(special_message=""):
         )
         thread_scheduler = Thread(target=scheduled_tasks)
         thread_scheduler.start()
+
     # check if 'g' is not in thread_html_generator
     if not hasattr(thread_html_generator, "g"):
         acarshub_logging.log(
