@@ -1,5 +1,5 @@
 eventlet==0.33.3
-Flask==2.3.3
+Flask==3.0.0
 Flask-SocketIO==5.3.6
 gunicorn[eventlet]==21.2.0
 requests==2.31.0
