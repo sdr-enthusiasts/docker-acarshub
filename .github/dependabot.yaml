@@ -5,8 +5,6 @@ updates:
     directory: "/rootfs/webapp"
     schedule:
       interval: daily
-      time: "00:00"
-      timezone: "Etc/UTC"
     assignees:
       - "fredclausen"
 
@@ -14,8 +12,6 @@ updates:
     directory: "/acarshub-typescript"
     schedule:
       interval: daily
-      time: "00:00"
-      timezone: "Etc/UTC"
     assignees:
       - "fredclausen"
 
@@ -23,8 +19,6 @@ updates:
     directory: "/"
     schedule:
       interval: daily
-      time: "00:00"
-      timezone: "Etc/UTC"
     assignees:
       - "fredclausen"
 
@@ -32,7 +26,5 @@ updates:
     directory: "/"
     schedule:
       interval: daily
-      time: "00:00"
-      timezone: "Etc/UTC"
     assignees:
       - "fredclausen"
