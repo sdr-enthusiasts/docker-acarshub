@@ -69,168 +69,20 @@ jobs:
       - name: Run hadolint against Dockerfiles
         run: docker run --rm -i -v "$PWD":/workdir --workdir /workdir --entrypoint hadolint hadolint/hadolint $(find . -type f -iname "Dockerfile*")
 
-  deploy_ghcr_nextgen_test:
-    name: Deploy ACARS Hub Next Gen Base Image
-    runs-on: ubuntu-latest
-    steps:
-      # Check out our code
-      - name: Checkout
-        uses: actions/checkout@v4.1.0
-        with:
-          fetch-depth: 0
-
-      - name: Get specific changed files
-        id: changed-files-specific
-        uses: tj-actions/changed-files@v39.2.0
-        with:
-          files: |
-            Dockerfile.nextgen
-            .github/workflows/test-pr.yml
-            rootfs/webapp/requirements.txt
-
-      - name: Login to ghcr.io
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      # Get metadata from repo
-      - name: Extract metadata (tags, labels) for Docker
-        id: meta
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-
-      # Set up QEMU for multi-arch builds
-      - name: Set up QEMU
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
-        uses: docker/setup-qemu-action@v3
-
-      # Set up buildx for multi platform builds
-      - name: Set up Docker Buildx
-        id: buildx
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
-        uses: docker/setup-buildx-action@v3
-
-      # Build & Push Dockerfile (only push if this action was NOT triggered by a PR)
-      - name: Build & Push ghcr.io/sdr-enthusiasts/docker-acarshub:nextgen-test
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./Dockerfile.nextgen
-          no-cache: true
-          platforms: linux/386,linux/amd64,linux/arm/v7,linux/arm/v6,linux/arm64
-          push: true
-          tags: ghcr.io/sdr-enthusiasts/docker-acarshub:nextgen-test
-          labels: ${{ steps.meta.outputs.labels }}
-
-  deploy_ghcr_latest_test:
-    name: Deploy test to GHCR
-    runs-on: ubuntu-latest
-    needs:
-      - acarshub-typescript
-      - deploy_ghcr_nextgen_test
-
-    steps:
-      # Check out our code
-      - name: Checkout
-        uses: actions/checkout@v4.1.0
-        with:
-          fetch-depth: 0
-
-      - name: Get specific changed files
-        id: changed-files-specific
-        uses: tj-actions/changed-files@v39.2.0
-        with:
-          files: |
-            Dockerfile.nextgen
-            Dockerfile.acarshub
-            acarshub-typescript/**
-            rootfs/**
-            .github/workflows/test-pr.yml
-            version
-
-      - name: Get status of next file
-        id: changed-file-nextgen
-        uses: tj-actions/changed-files@v39.2.0
-        with:
-          files: |
-            Dockerfile.nextgen
-
-      - name: Download webapp
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
-        uses: actions/download-artifact@v3
-        with:
-          name: webapp
-
-      - name: Get version
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
-        run: |
-          echo "VERSION=$(sed '1!d' ./version-nextgen)" >> $GITHUB_ENV
-
-      # Show version tag
-      - name: Show version tag
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
-        run: |
-          echo "ACARS Hub Version: ${{ env.VERSION }}"
-          echo "ACARS Hub Build: ${{ github.run_number }}"
-
-      - name: Create ACARS Hub Version file
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
-        run: |
-          echo "${{ env.VERSION }} Build ${{ github.run_number }}" > ./rootfs/version
-
-      - name: Create version file
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
-        run: |
-          rm ./rootfs/version
-          echo "${{ env.VERSION }} Build ${{ github.run_number }}" >> ./rootfs/acarshub-version
-
-      - name: Login to ghcr.io
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      # Get metadata from repo
-      - name: Extract metadata (tags, labels) for Docker
-        id: meta
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-
-      # Set up QEMU for multi-arch builds
-      - name: Set up QEMU
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
-        uses: docker/setup-qemu-action@v3
-
-      # Set up buildx for multi platform builds
-      - name: Set up Docker Buildx
-        id: buildx
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
-        uses: docker/setup-buildx-action@v3
-
-      - name: Patch Dockerfile if Nextgen was built for this branch
-        if: steps.changed-file-nextgen.outputs.any_changed == 'true'
-        run: sed -i "s/^FROM ghcr.io\/sdr-enthusiasts\/docker-acarshub:nextgen/FROM ghcr.io\/sdr-enthusiasts\/docker-acarshub:nextgen-test/g" Dockerfile.acarshub
-
-      # Build & Push Dockerfile (only push if this action was NOT triggered by a PR)
-      - name: Build & Push ghcr.io/sdr-enthusiasts/docker-acarshub:test
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./Dockerfile.acarshub
-          no-cache: true
-          platforms: linux/386,linux/amd64,linux/arm/v7,linux/arm/v6,linux/arm64
-          push: true
-          tags: ghcr.io/sdr-enthusiasts/docker-acarshub:test
-          #tags: ghcr.io/sdr-enthusiasts/docker-acarshub:test-${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}
-          labels: ${{ steps.meta.outputs.labels }}
+  deploy:
+    name: Deploy
+    uses: sdr-enthusiasts/common-github-workflows/.github/workflows/build_and_push_image.yml@main
+    with:
+      push_enabled: false
+      push_destinations: ghcr.io
+      ghcr_repo_owner: ${{ github.repository_owner }}
+      ghcr_repo: ${{ github.repository }}
+      # set build_latest to true if github.event.inputs.use_test_image is false
+      build_latest: true
+      build_baseimage_test: false
+      # only build the entire stack if we are not using the test image
+      build_version_specific: false
+      build_platform_specific: false
+      build_nohealthcheck: false
+    secrets:
+      ghcr_token: ${{ secrets.GITHUB_TOKEN }}
