@@ -1,92 +1,3 @@
-# From https://github.com/sdr-enthusiasts/docker-baseimage/blob/bace2830cbb6d6de4bfe05a3116bc74cf5fea658/Dockerfile.base
-FROM debian:bookworm-20230814-slim AS sdr-enthusiasts-baseimage
-
-ENV S6_BEHAVIOUR_IF_STAGE2_FAILS=2 \
-  S6OVERLAY_VERSION="v3.1.5.0" \
-  # Fix for any issues with the S6 overlay. We have quite a few legacy services
-  # that worked fine under v2, but v3 is more strict and will kill a startup process
-  # if it takes more than 5 seconds. tar1090 and rtlsdrairband are the hardest hit
-  # but we may have others.
-  S6_CMD_WAIT_FOR_SERVICES_MAXTIME="0"
-
-SHELL ["/bin/bash", "-o", "pipefail", "-c"]
-
-# hadolint ignore=DL3008,SC2086
-RUN set -x && \
-  TEMP_PACKAGES=() && \
-  KEPT_PACKAGES=() && \
-  # packages needed to install
-  TEMP_PACKAGES+=(git) && \
-  # logging
-  KEPT_PACKAGES+=(gawk) && \
-  KEPT_PACKAGES+=(pv) && \
-  # required for S6 overlay
-  # curl kept for healthcheck
-  TEMP_PACKAGES+=(file) && \
-  KEPT_PACKAGES+=(curl) && \
-  TEMP_PACKAGES+=(xz-utils) && \
-  KEPT_PACKAGES+=(ca-certificates) && \
-  # bc for scripts and healthchecks
-  KEPT_PACKAGES+=(bc) && \
-  # packages for network stuff
-  KEPT_PACKAGES+=(socat) && \
-  KEPT_PACKAGES+=(ncat) && \
-  KEPT_PACKAGES+=(net-tools) && \
-  KEPT_PACKAGES+=(wget) && \
-  # process management
-  KEPT_PACKAGES+=(procps) && \
-  # needed to compile s6wrap:
-  TEMP_PACKAGES+=(gcc) && \
-  TEMP_PACKAGES+=(build-essential) && \
-  # install packages
-  ## Builder fixes...
-  mkdir -p /usr/sbin/ && \
-  ln -s /usr/bin/dpkg-split /usr/sbin/dpkg-split && \
-  ln -s /usr/bin/dpkg-deb /usr/sbin/dpkg-deb && \
-  ln -s /bin/tar /usr/sbin/tar && \
-  apt-get update && \
-  apt-get install -y --no-install-recommends \
-  "${KEPT_PACKAGES[@]}" \
-  "${TEMP_PACKAGES[@]}" \
-  && \
-  # install S6 Overlay
-  curl --location --output /tmp/deploy-s6-overlay.sh https://raw.githubusercontent.com/mikenye/deploy-s6-overlay/master/deploy-s6-overlay-v3.sh && \
-  sh /tmp/deploy-s6-overlay.sh && \
-  rm -f /tmp/deploy-s6-overlay.sh && \
-  # deploy healthchecks framework
-  git clone \
-  --depth=1 \
-  https://github.com/mikenye/docker-healthchecks-framework.git \
-  /opt/healthchecks-framework \
-  && \
-  rm -rf \
-  /opt/healthchecks-framework/.git* \
-  /opt/healthchecks-framework/*.md \
-  /opt/healthchecks-framework/tests \
-  && \
-  # fix healthchecks framework pathing
-  sed -i 's/S6_SERVICE_PATH="\/run\/s6\/services"/S6_SERVICE_PATH="\/run\/s6\/legacy-services"/g' /opt/healthchecks-framework/checks/check_s6_service_abnormal_death_tally.sh && \
-  # Add s6wrap
-  pushd /tmp && \
-  git clone --depth=1 https://github.com/wiedehopf/s6wrap.git && \
-  cd s6wrap && \
-  make && \
-  mv s6wrap /usr/local/bin && \
-  popd && \
-  # Add additional stuff
-  mkdir -p /scripts /etc/cont-init.d && \
-  curl -sSL https://raw.githubusercontent.com/sdr-enthusiasts/Buster-Docker-Fixes/main/install_libseccomp2.sh | bash && \
-  chmod +x /etc/s6-overlay/s6-rc.d/libseccomp2/up && \
-  chmod +x /etc/s6-overlay/scripts/libseccomp2_check.sh && \
-  curl -sSL https://raw.githubusercontent.com/sdr-enthusiasts/docker-baseimage/main/scripts/common -o /scripts/common && \
-  # Clean up
-  apt-get remove -y "${TEMP_PACKAGES[@]}" && \
-  apt-get autoremove -y && \
-  rm -rf /src/* /tmp/* /var/lib/apt/lists/*
-
-ENTRYPOINT [ "/init" ]
-
-
 FROM node:slim AS acarshub-typescript-builder
 # pushd/popd
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
@@ -120,7 +31,7 @@ RUN set -xe && \
     cp -r ./dist/static/js /webapp/static/ && \
     mv ./dist/static/index.html /webapp/templates/
 
-FROM sdr-enthusiasts-baseimage
+FROM ghcr.io/sdr-enthusiasts/docker-baseimage:python
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 COPY rootfs/webapp/requirements.txt /src/requirements.txt
@@ -140,10 +51,6 @@ RUN set -x && \
     KEPT_PACKAGES+=(nginx-light) && \
     TEMP_PACKAGES+=(python3-dev) && \
     KEPT_PACKAGES+=(python3-cryptography) && \
-    KEPT_PACKAGES+=(python3) && \
-    KEPT_PACKAGES+=(python3-pip) && \
-    KEPT_PACKAGES+=(python3-setuptools) && \
-    KEPT_PACKAGES+=(python3-wheel) && \
     # stats
     KEPT_PACKAGES+=(rrdtool) && \
     TEMP_PACKAGES+=(librrd-dev) && \
