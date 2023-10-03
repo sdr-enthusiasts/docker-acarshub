@@ -64,7 +64,7 @@ repos:
           - eslint-loader@1.6.1
 
   - repo: https://github.com/codespell-project/codespell.git
-    rev: "v2.2.5" # Use the sha / tag you want to point at
+    rev: "v2.2.6" # Use the sha / tag you want to point at
     hooks:
       - id: codespell
         types: [text]
