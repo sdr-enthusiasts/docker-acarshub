@@ -91,7 +91,7 @@ RUN set -x && \
     rm -rf /src/* /tmp/* /var/lib/apt/lists/*
 
 COPY rootfs/ /
-COPY version /acarshub_version
+COPY version-nextgen /acarshub_version
 
 EXPOSE 80
 EXPOSE 5550

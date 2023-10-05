@@ -17,9 +17,10 @@
 # along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
 
-import json
+# import json
 import os
-import urllib
+
+# import urllib
 import acarshub_logging
 from acarshub_logging import LOG_LEVEL
 
@@ -175,12 +176,16 @@ if LOCAL_TEST:
     version_path = "../../VERSION"
 else:
     version_path = "/acarshub_version"
-with open(version_path, "r") as f:
-    lines = f.read()
-    ACARSHUB_VERSION = lines.split("\n")[0].split(" ")[0].replace("v", "")
-    CURRENT_ACARS_HUB_VERSION = ACARSHUB_VERSION
-    ACARSHUB_BUILD = lines.split("\n")[0].split(" ")[2].replace("v", "")
-    CURRENT_ACARS_HUB_BUILD = ACARSHUB_BUILD
+
+ACARSHUB_BUILD = "0"
+ACARSHUB_VERSION = "v3.2.2"
+
+# with open(version_path, "r") as f:
+#     lines = f.read()
+#     ACARSHUB_VERSION = lines.split("\n")[0].split(" ")[0].replace("v", "")
+#     CURRENT_ACARS_HUB_VERSION = ACARSHUB_VERSION
+#     ACARSHUB_BUILD = lines.split("\n")[0].split(" ")[2].replace("v", "")
+#     CURRENT_ACARS_HUB_BUILD = ACARSHUB_BUILD
 
 if not LOCAL_TEST and os.path.exists("/arch"):
     with open("/arch", "r") as f:
@@ -189,56 +194,58 @@ if not LOCAL_TEST and os.path.exists("/arch"):
 
 
 def check_github_version():
-    global CURRENT_ACARS_HUB_VERSION
-    global ACARSHUB_VERSION
-    global ACARSHUB_BUILD
-    global CURRENT_ACARS_HUB_BUILD
     global IS_UPDATE_AVAILABLE
-    # FIXME: This is a hack to get around the fact that the version file is not updated on the build server
-    if not LOCAL_TEST:
-        try:
-            operUrl = urllib.request.urlopen(
-                "https://api.github.com/repos/sdr-enthusiasts/docker-acarshub/releases/latest"
-            )
-            if operUrl.getcode() == 200:
-                data = operUrl.read()
-                jsonData = json.loads(data)
-            else:
-                print("Error receiving data", operUrl.getcode())
-        except Exception as e:
-            acarshub_logging.log(
-                "Error getting latest version from github",
-                "version_checker",
-                level=LOG_LEVEL["ERROR"],
-            )
-            acarshub_logging.traceback(e)
-            return
+    IS_UPDATE_AVAILABLE = False
+    # global CURRENT_ACARS_HUB_VERSION
+    # global ACARSHUB_VERSION
+    # global ACARSHUB_BUILD
+    # global CURRENT_ACARS_HUB_BUILD
+    # global IS_UPDATE_AVAILABLE
+    # # FIXME: This is a hack to get around the fact that the version file is not updated on the build server
+    # if not LOCAL_TEST:
+    #     try:
+    #         operUrl = urllib.request.urlopen(
+    #             "https://api.github.com/repos/sdr-enthusiasts/docker-acarshub/releases/latest"
+    #         )
+    #         if operUrl.getcode() == 200:
+    #             data = operUrl.read()
+    #             jsonData = json.loads(data)
+    #         else:
+    #             print("Error receiving data", operUrl.getcode())
+    #     except Exception as e:
+    #         acarshub_logging.log(
+    #             "Error getting latest version from github",
+    #             "version_checker",
+    #             level=LOG_LEVEL["ERROR"],
+    #         )
+    #         acarshub_logging.traceback(e)
+    #         return
 
-        github_version_from_json = jsonData["name"]
+    #     github_version_from_json = jsonData["name"]
 
-        CURRENT_ACARS_HUB_VERSION = (
-            github_version_from_json.split("\n")[0].split(" ")[0].replace("v", "")
-        )
-        CURRENT_ACARS_HUB_BUILD = (
-            github_version_from_json.split("\n")[0].split(" ")[2].replace("v", "")
-        )
+    #     CURRENT_ACARS_HUB_VERSION = (
+    #         github_version_from_json.split("\n")[0].split(" ")[0].replace("v", "")
+    #     )
+    #     CURRENT_ACARS_HUB_BUILD = (
+    #         github_version_from_json.split("\n")[0].split(" ")[2].replace("v", "")
+    #     )
 
-        if (
-            CURRENT_ACARS_HUB_VERSION != ACARSHUB_VERSION
-            and ACARSHUB_VERSION < CURRENT_ACARS_HUB_VERSION
-        ) or (
-            CURRENT_ACARS_HUB_BUILD != ACARSHUB_BUILD
-            and ACARSHUB_BUILD < CURRENT_ACARS_HUB_BUILD
-        ):
-            acarshub_logging.log(
-                "Update found", "version-checker", level=LOG_LEVEL["WARNING"]
-            )
-            IS_UPDATE_AVAILABLE = True
-        else:
-            acarshub_logging.log(
-                "No update found", "version-checker", level=LOG_LEVEL["DEBUG"]
-            )
-            IS_UPDATE_AVAILABLE = False
+    #     if (
+    #         CURRENT_ACARS_HUB_VERSION != ACARSHUB_VERSION
+    #         and ACARSHUB_VERSION < CURRENT_ACARS_HUB_VERSION
+    #     ) or (
+    #         CURRENT_ACARS_HUB_BUILD != ACARSHUB_BUILD
+    #         and ACARSHUB_BUILD < CURRENT_ACARS_HUB_BUILD
+    #     ):
+    #         acarshub_logging.log(
+    #             "Update found", "version-checker", level=LOG_LEVEL["WARNING"]
+    #         )
+    #         IS_UPDATE_AVAILABLE = True
+    #     else:
+    #         acarshub_logging.log(
+    #             "No update found", "version-checker", level=LOG_LEVEL["DEBUG"]
+    #         )
+    #         IS_UPDATE_AVAILABLE = False
 
 
 def get_version():
