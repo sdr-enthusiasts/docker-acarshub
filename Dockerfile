@@ -113,8 +113,3 @@ ENV FEED="" \
 
 # Add healthcheck
 HEALTHCHECK --start-period=3600s --interval=600s CMD /scripts/healthcheck.sh
-
-ARG BUILD_EXTRA="Build git"
-# append BUILD_EXTRA to the only line in /acarshub-version
-RUN set -x && \
-    echo "$(cat /acarshub_version) ${BUILD_EXTRA}" > /acarshub_version
