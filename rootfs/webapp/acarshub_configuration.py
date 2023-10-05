@@ -174,7 +174,7 @@ if os.getenv("DB_ALERT_SAVE_DAYS", default=False):
 if LOCAL_TEST:
     version_path = "../../VERSION"
 else:
-    version_path = "/acarshub-version"
+    version_path = "/acarshub_version"
 with open(version_path, "r") as f:
     lines = f.read()
     ACARSHUB_VERSION = lines.split("\n")[0].split(" ")[0].replace("v", "")

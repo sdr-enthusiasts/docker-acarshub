@@ -84,6 +84,6 @@ jobs:
       build_version_specific: false
       build_platform_specific: false
       build_nohealthcheck: false
-      get_version_method: file_in_container:file=/acarshub-version
+      get_version_method: file_in_container:file=/acarshub_version
     secrets:
       ghcr_token: ${{ secrets.GITHUB_TOKEN }}

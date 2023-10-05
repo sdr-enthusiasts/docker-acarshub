@@ -91,7 +91,7 @@ RUN set -x && \
     rm -rf /src/* /tmp/* /var/lib/apt/lists/*
 
 COPY rootfs/ /
-COPY version-nextgen /acarshub-version
+COPY version-nextgen /acarshub_version
 
 EXPOSE 80
 EXPOSE 5550
@@ -117,4 +117,4 @@ HEALTHCHECK --start-period=3600s --interval=600s CMD /scripts/healthcheck.sh
 ARG BUILD_EXTRA="Build git"
 # append BUILD_EXTRA to the only line in /acarshub-version
 RUN set -x && \
-    echo "$(cat /acarshub-version) ${BUILD_EXTRA}" > /acarshub-version
+    echo "$(cat /acarshub_version) ${BUILD_EXTRA}" > /acarshub_version
