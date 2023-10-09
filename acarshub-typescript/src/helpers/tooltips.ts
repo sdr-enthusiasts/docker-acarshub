@@ -86,7 +86,7 @@ export let tooltip = {
   ack_tooltip: new jBox("Mouse", {
     title: "Acknowledgement",
     content:
-      "A flag to indicate if the message is, or requires, an acknolwedgement.",
+      "A flag to indicate if the message is, or requires, an acknowledgement.",
     closeOnMouseleave: true,
     adjustTracker: true,
     position: {
