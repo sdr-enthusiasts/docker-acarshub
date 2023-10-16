@@ -177,7 +177,7 @@ In the configuration options for tar1090. Setting this will include additional a
 
 | Variable       | Description                                                                                                                                                                         | Required | Default |
 | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------- |
-| `ENABLE_ACARS` | Toggle ACARS decoding on. If set to `external` this will enable VDLM processing in the container. Push valid `ACARS` json data to UDP port 5550 (needs port mapping 5550:5550/udp). | No       | `false` |
+| `ENABLE_ACARS` | Toggle ACARS decoding on. If set to `external` this will enable ACARS processing in the container. Push valid `ACARS` json data to UDP port 5550 (needs port mapping 5550:5550/udp). | No       | `false` |
 
 ### VDLM2
 
