@@ -4,27 +4,27 @@ updates:
   - package-ecosystem: "pip"
     directory: "/rootfs/webapp"
     schedule:
-      interval: daily
+      interval: weekly
     assignees:
       - "fredclausen"
 
   - package-ecosystem: "npm"
     directory: "/acarshub-typescript"
     schedule:
-      interval: daily
+      interval: weekly
     assignees:
       - "fredclausen"
 
   - package-ecosystem: "docker"
     directory: "/"
     schedule:
-      interval: daily
+      interval: weekly
     assignees:
       - "fredclausen"
 
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: daily
+      interval: weekly
     assignees:
       - "fredclausen"
