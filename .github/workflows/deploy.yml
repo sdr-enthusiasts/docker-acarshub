@@ -20,7 +20,6 @@ on:
       - "Dockerfile.acarshub"
       - "Dockerfile.acarshub-nextgen"
       - "rootfs/**"
-      - ".github/workflows/deploy.yml"
       - "version"
 
 env:
