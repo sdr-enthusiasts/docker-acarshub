@@ -12,16 +12,16 @@ on:
         type: boolean
         description: "Use base image testpr"
         default: false
-  # push:
-  #   branches:
-  #     - main
-  #   paths:
-  #     - "acarshub-typescript/**"
-  #     - "Dockerfile.acarshub"
-  #     - "Dockerfile.acarshub-nextgen"
-  #     - "rootfs/**"
-  #     - ".github/workflows/deploy.yml"
-  #     - "version"
+  push:
+    branches:
+      - main
+    paths:
+      - "acarshub-typescript/**"
+      - "Dockerfile.acarshub"
+      - "Dockerfile.acarshub-nextgen"
+      - "rootfs/**"
+      - ".github/workflows/deploy.yml"
+      - "version"
 
 env:
   REGISTRY: ghcr.io
