@@ -54,6 +54,10 @@ ARCH = "unknown"
 DB_SAVE_DAYS = 7
 DB_ALERT_SAVE_DAYS = 120
 ALLOW_REMOTE_UPDATES = True
+FLIGHT_TRACKING_URL = "https://flightaware.com/live/flight/"
+
+if os.getenv("FLIGHT_TRACKING_URL", default=False):
+    FLIGHT_TRACKING_URL = os.getenv("FLIGHT_TRACKING_URL", default=False)
 
 if (
     os.getenv("QUIET_MESSAGES", default=False)

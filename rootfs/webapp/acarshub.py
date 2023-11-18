@@ -632,6 +632,7 @@ def main_connect():
                     "url": acarshub_configuration.ADSB_URL,
                     "bypass": acarshub_configuration.ADSB_BYPASS_URL,
                     "range_rings": acarshub_configuration.ENABLE_RANGE_RINGS,
+                    "flight_tracking_url": acarshub_configuration.FLIGHT_TRACKING_URL,
                 },
             },
             to=requester,
