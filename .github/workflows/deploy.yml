@@ -85,6 +85,6 @@ jobs:
       build_baseimage_url: :python/:python-test-pr
       get_version_method: file_in_container:file=/acarshub_version
       dockerfile_changes: |
-        \# patch acarshub version/sed -i s\/Pre-Release\/${{ needs.patch_acars_hub_verison.outputs.acarshub_version}}\/g \/webapp\/src\/helpers\/menu.ts
+        \# patch acarshub version/sed -i \"s\/Pre-Release\/${{ needs.patch_acars_hub_verison.outputs.acarshub_version}}\/g\" \/webapp\/src\/helpers\/menu.ts
     secrets:
       ghcr_token: ${{ secrets.GITHUB_TOKEN }}
