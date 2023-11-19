@@ -862,19 +862,31 @@ li.img_box svg {
   letter-spacing: 0;
 }
 
-canvas {
-  max-height: 400px !important;
-  max-width: 1000px !important;
-}
+/* canvas {
+  width: 100% !important;
+  height: 100% !important;
+} */
 
-.canvas_wrapper {
+/* .canvas_wrapper {
   position: relative;
-  width: 1000px;
-  float: left;
-}
+  width: 100%;
+  max-width: 1000px !important;
+  display: flex;
+  /* float: left;
+} */
 
 .chart-container {
-  width: 50%;
+  position: relative;
+  /* min-height: auto; */
+  width: 100%;
+  max-width: 1000px !important;
+  height: 300px;
+  /* overflow: hidden; */
+}
+
+#chart_msg_good,
+#chart_msg_empty {
+  height: 150px !important;
 }
 
 /* modal window stuff */

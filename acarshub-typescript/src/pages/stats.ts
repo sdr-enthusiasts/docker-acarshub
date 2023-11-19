@@ -103,6 +103,8 @@ export let stats_page = {
 
           // Configuration options go here
           options: {
+            responsive: true,
+            maintainAspectRatio: false,
             plugins: {
               datalabels: {
                 backgroundColor: function (context: any) {
@@ -185,6 +187,7 @@ export let stats_page = {
           // Configuration options go here
           options: {
             responsive: true,
+            maintainAspectRatio: false,
           },
         });
       }
@@ -260,7 +263,7 @@ export let stats_page = {
         if (ctx != null) {
           this.chart_frequency_data_acars = new Chart(ctx, {
             // The type of chart we want to create
-            type: "pie",
+            type: "bar",
 
             // The data for our dataset
             data: {
@@ -279,7 +282,9 @@ export let stats_page = {
 
             // Configuration options go here
             options: {
+              indexAxis: "y",
               responsive: true,
+              maintainAspectRatio: false,
               plugins: {
                 legend: {
                   display: false,
@@ -289,7 +294,7 @@ export let stats_page = {
                 },
                 title: {
                   display: true,
-                  text: `ACARS Frequency Counts (${total_count_acars.toLocaleString()})`,
+                  text: `ACARS Frequency Message Counts (${total_count_acars.toLocaleString()})`,
                 },
                 datalabels: {
                   backgroundColor: function (context: any) {
@@ -297,15 +302,14 @@ export let stats_page = {
                   },
                   borderRadius: 4,
                   color: "white",
+                  clamp: true,
                   font: {
                     weight: "bold",
                   },
                   formatter: (value, context) => {
                     return (
-                      freq_labels_acars[context.dataIndex] +
-                      "\n" +
                       freq_data_acars[context.dataIndex].toLocaleString() +
-                      " msgs\n" +
+                      " (" +
                       (
                         (freq_data_acars[context.dataIndex] /
                           total_count_acars) *
@@ -313,26 +317,33 @@ export let stats_page = {
                       )
                         .toFixed(2)
                         .toLocaleString() +
-                      "%"
+                      "%)"
                     );
                   },
-                  align: "bottom",
-                  padding: 6,
-                  anchor: (context) => {
-                    return freq_labels_acars_positions[context.dataIndex] as
-                      | "start"
-                      | "end"
-                      | "center";
-                  },
-                  offset: (context) => {
-                    return freq_labels_acars_offset[context.dataIndex];
-                  },
+                  align: "right",
+                  // padding: 6,
+                  // anchor: (context) => {
+                  //   return freq_labels_acars_positions[context.dataIndex] as
+                  //     | "end"
+                  //     | "center"
+                  //     | "start";
+                  // },
+                  // offset: (context) => {
+                  //   return freq_labels_acars_offset[context.dataIndex];
+                  // },
                   clip: false,
                 },
               },
             },
             plugins: [ChartDataLabels],
           });
+          // clamp the height of the parent container to the height of the chart based on the number of elements
+          // this is a hack to get the chart to display properly
+
+          $("#acars_freq_graph").css(
+            "height",
+            `${freq_data_acars.length * 50}px`
+          );
         }
       }
 
@@ -346,7 +357,7 @@ export let stats_page = {
         if (ctx != null) {
           this.chart_frequency_data_vdlm = new Chart(ctx, {
             // The type of chart we want to create
-            type: "pie",
+            type: "bar",
 
             // The data for our dataset
             data: {
@@ -365,7 +376,9 @@ export let stats_page = {
 
             // Configuration options go here
             options: {
+              indexAxis: "y",
               responsive: true,
+              maintainAspectRatio: false,
               plugins: {
                 legend: {
                   display: false,
@@ -375,7 +388,7 @@ export let stats_page = {
                 },
                 title: {
                   display: true,
-                  text: `VDLM Frequency Counts  (${total_count_vdlm.toLocaleString()})`,
+                  text: `VDLM Frequency Message Counts  (${total_count_vdlm.toLocaleString()})`,
                 },
                 datalabels: {
                   backgroundColor: function (context: any) {
@@ -383,41 +396,47 @@ export let stats_page = {
                   },
                   borderRadius: 4,
                   color: "white",
+                  clamp: true,
                   font: {
                     weight: "bold",
                   },
                   formatter: (value, context) => {
                     return (
-                      freq_labels_vdlm[context.dataIndex] +
-                      "\n" +
                       freq_data_vdlm[context.dataIndex].toLocaleString() +
-                      " msgs\n" +
+                      " (" +
                       (
                         (freq_data_vdlm[context.dataIndex] / total_count_vdlm) *
                         100
                       )
                         .toFixed(2)
                         .toLocaleString() +
-                      "%"
+                      "%)"
                     );
                   },
-                  align: "bottom",
-                  padding: 6,
-                  anchor: (context) => {
-                    return freq_labels_vdlm_positions[context.dataIndex] as
-                      | "start"
-                      | "end"
-                      | "center";
-                  },
-                  offset: (context) => {
-                    return freq_labels_vdlm_offset[context.dataIndex];
-                  },
+                  align: "right",
+                  // padding: 6,
+                  // anchor: (context) => {
+                  //   return freq_labels_vdlm_positions[context.dataIndex] as
+                  //     | "start"
+                  //     | "end"
+                  //     | "center";
+                  // },
+                  // offset: (context) => {
+                  //   return freq_labels_vdlm_offset[context.dataIndex];
+                  // },
                   clip: false,
                 },
               },
             },
             plugins: [ChartDataLabels],
           });
+          // clamp the height of the parent container to the height of the chart based on the number of elements
+          // this is a hack to get the chart to display properly
+
+          $("#vdlm_freq_graph").css(
+            "height",
+            `${freq_data_vdlm.length * 50}px`
+          );
         }
       }
     }
@@ -446,8 +465,8 @@ export let stats_page = {
 
       const counts_empty: number[] = [empty_good, empty_error];
       const count_labels: string[] = [
-        " Messages (No Errors)",
-        " Messages (W/Errors)",
+        "Messages (No Errors)",
+        "Messages (W/Errors)",
       ];
 
       if (this.chart_message_counts_data !== null) {
@@ -464,7 +483,7 @@ export let stats_page = {
       if (ctx_data != null) {
         this.chart_message_counts_data = new Chart(ctx_data, {
           // The type of chart we want to create
-          type: "pie",
+          type: "bar",
 
           // The data for our dataset
           data: {
@@ -483,7 +502,9 @@ export let stats_page = {
 
           // Configuration options go here
           options: {
+            indexAxis: "y",
             responsive: true,
+            maintainAspectRatio: false,
             plugins: {
               legend: {
                 display: false,
@@ -504,15 +525,17 @@ export let stats_page = {
                 font: {
                   weight: "bold",
                 },
+                align: "right",
                 formatter: (value, context) => {
                   return (
                     value.toLocaleString() +
-                    count_labels[context.dataIndex] +
-                    "\n" +
+                    " (" +
+                    // count_labels[context.dataIndex] +
+                    // "\n" +
                     ((value / total_non_empty) * 100)
                       .toFixed(2)
                       .toLocaleString() +
-                    "% of total messages"
+                    "%) "
                   );
                 },
                 padding: 6,
@@ -531,7 +554,7 @@ export let stats_page = {
       if (ctx_empty != null) {
         this.chart_message_counts_empty = new Chart(ctx_empty, {
           // The type of chart we want to create
-          type: "pie",
+          type: "bar",
 
           // The data for our dataset
           data: {
@@ -550,7 +573,9 @@ export let stats_page = {
 
           // Configuration options go here
           options: {
+            indexAxis: "y",
             responsive: true,
+            maintainAspectRatio: false,
             plugins: {
               legend: {
                 display: false,
@@ -571,13 +596,15 @@ export let stats_page = {
                 font: {
                   weight: "bold",
                 },
+                align: "right",
                 formatter: (value, context) => {
                   return (
                     value.toLocaleString() +
-                    count_labels[context.dataIndex] +
-                    "\n" +
+                    " (" +
+                    // count_labels[context.dataIndex] +
+                    // "\n" +
                     ((value / empty_total) * 100).toFixed(2).toLocaleString() +
-                    "% of total messages"
+                    "%)"
                   );
                 },
                 padding: 6,
@@ -701,22 +728,20 @@ export let stats_page = {
     <img src="static/images/6months.png" id="6mon" alt="6 Months"><br>
     <img src="static/images/1year.png" id="1yr" alt="1 Year"><br>
     </div>
-    <div class="chart_container"><canvas id="signallevels"></canvas></div>
-    <canvas id="alertterms"></canvas>
-    <div class="canvas_wrapper">${
+    <div class="chart-container"><div>&nbsp;</div><canvas id="signallevels"></canvas></div>
+    <div class="chart-container"><div>&nbsp;</div><canvas id="alertterms"></canvas></div>
+    ${
       this.acars_on
-        ? '<div id="acars_freq_graph" class="chart-container"><canvas id="frequencies_acars"></canvas></div>'
+        ? '<div id="acars_freq_graph" class="chart-container"><div>&nbsp;</div><canvas id="frequencies_acars"></canvas></div>'
         : ""
     }
     ${
       this.vdlm_on
-        ? '<div id="vdlm_freq_graph" class="chart-container"><canvas id="frequencies_vdlm"></canvas></div>'
+        ? '<div id="vdlm_freq_graph" class="chart-container"><div>&nbsp;</div><canvas id="frequencies_vdlm"></canvas></div>'
         : ""
-    }</div>
-    <div id="counts" class="canvas_wrapper">
-    <div id="chart_msg_good" class="chart-container"><canvas id="msg_count_data"></div>
-    <div id="chart_msg_empty" class="chart-container"><canvas id="msg_count_empty"></div>
-    </div>
+    }
+    <div id="chart_msg_good" class="chart-container"><div>&nbsp;</div><canvas id="msg_count_data"></div>
+    <div id="chart_msg_empty" class="chart-container"><div>&nbsp;</div><canvas id="msg_count_empty"></div>
     </p>'`); // show the messages we've received
     $("#modal_text").html("");
     $("#page_name").html("");
@@ -728,31 +753,32 @@ export let stats_page = {
       this.width = width;
     }
     $("#counts").css("padding-top", "10px");
-    if (this.width >= 1000) {
-      $("#acars_freq_graph").css("float", "left");
-      $("#vdlm_freq_graph").css("float", "left");
-      $("#vdlm_freq_graph").css("padding-top", "0px");
-      $("#frequencies_acars").css("float", "right");
-      $("#frequencies_vdlm").css("float", "right");
+    // if (this.width >= 1000) {
+    //   $("#acars_freq_graph").css("float", "left");
+    //   $("#vdlm_freq_graph").css("float", "left");
+    //   $("#vdlm_freq_graph").css("padding-top", "0px");
+    //   $("#frequencies_acars").css("float", "right");
+    //   $("#frequencies_vdlm").css("float", "right");
 
-      $("#chart_msg_good").css("float", "left");
-      $("#chart_msg_empty").css("float", "left");
-      $("#chart_msg_empty").css("padding-top", "0px");
-      $("#msg_count_data").css("float", "right");
-      $("#msg_count_empty").css("float", "right");
-    } else {
-      $("#acars_freq_graph").css("float", "none");
-      $("#vdlm_freq_graph").css("float", "none");
-      $("#vdlm_freq_graph").css("padding-top", "10px");
-      $("#frequencies_acars").css("float", "none");
-      $("#frequencies_vdlm").css("float", "none");
+    //   $("#chart_msg_good").css("float", "left");
+    //   $("#chart_msg_empty").css("float", "left");
+    //   $("#chart_msg_empty").css("padding-top", "0px");
+    //   $("#msg_count_data").css("float", "right");
+    //   $("#msg_count_empty").css("float", "right");
+    // } else {
+    // TODO: fix this
+    // $("#acars_freq_graph").css("float", "none");
+    // $("#vdlm_freq_graph").css("float", "none");
+    // $("#vdlm_freq_graph").css("padding-top", "10px");
+    // $("#frequencies_acars").css("float", "none");
+    // $("#frequencies_vdlm").css("float", "none");
 
-      $("#chart_msg_good").css("float", "none");
-      $("#chart_msg_empty").css("float", "none");
-      $("#chart_msg_empty").css("padding-top", "10px");
-      $("#msg_count_data").css("float", "none");
-      $("#msg_count_empty").css("float", "none");
-    }
+    // $("#chart_msg_good").css("float", "none");
+    // $("#chart_msg_empty").css("float", "none");
+    // $("#chart_msg_empty").css("padding-top", "10px");
+    // $("#msg_count_data").css("float", "none");
+    // $("#msg_count_empty").css("float", "none");
+    //}
   },
 
   stats_active: function (state = false): void {

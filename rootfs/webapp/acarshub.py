@@ -157,7 +157,7 @@ def htmlListener():
     import sys
 
     # Run while requested...
-    while not thread_html_generator_event.isSet():
+    while not thread_html_generator_event.is_set():
         sys.stdout.flush()
         time.sleep(1)
 
@@ -196,7 +196,7 @@ def scheduled_tasks():
         init_listeners, "Error encountered! Restarting... "
     )
 
-    while not thread_scheduler_stop_event.isSet():
+    while not thread_scheduler_stop_event.is_set():
         schedule.run_pending()
         time.sleep(1)
 
@@ -205,7 +205,7 @@ def database_listener():
     import sys
     import time
 
-    while not thread_database_stop_event.isSet():
+    while not thread_database_stop_event.is_set():
         sys.stdout.flush()
         time.sleep(1)
 
@@ -250,7 +250,7 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
     partial_message = None
 
     # Run while requested...
-    while not thread_message_listener_stop_event.isSet():
+    while not thread_message_listener_stop_event.is_set():
         data = None
 
         # acarshub_logging.log(f"recv_from ...", "message_listener", level=LOG_LEVEL["DEBUG"])
@@ -632,6 +632,7 @@ def main_connect():
                     "url": acarshub_configuration.ADSB_URL,
                     "bypass": acarshub_configuration.ADSB_BYPASS_URL,
                     "range_rings": acarshub_configuration.ENABLE_RANGE_RINGS,
+                    "flight_tracking_url": acarshub_configuration.FLIGHT_TRACKING_URL,
                 },
             },
             to=requester,
