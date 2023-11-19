@@ -25,7 +25,7 @@ RUN set -xe && \
     mkdir -p /webapp/static/js && \
     mkdir -p /webapp/static/sounds && \
     mkdir -p /webapp/templates && \
-    # patch acarshub version
+    # patch acarshub version && \
     npm run build && \
     cp -r ./dist/static/images /webapp/static/ && \
     cp -r ./dist/static/sounds /webapp/static/ && \
