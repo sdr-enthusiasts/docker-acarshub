@@ -94,7 +94,6 @@ RUN set -x && \
 COPY rootfs/ /
 
 RUN set -x && \
-    rm /acarshub_version && \
     # find the latest version of acarshub from /webapp/static/js/acarshub.*.js
     # it is in the format ACARS Hub: v0.0.0 Build 0000
     # and we want to extract the version number and echo it out to /acarshub_version
