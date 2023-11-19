@@ -880,8 +880,7 @@ li.img_box svg {
   /* min-height: auto; */
   width: 100%;
   max-width: 1000px !important;
-  min-height: 100px !important;
-  max-height: 500px !important;
+  height: 300px;
   /* overflow: hidden; */
 }
 

@@ -337,6 +337,13 @@ export let stats_page = {
             },
             plugins: [ChartDataLabels],
           });
+          // clamp the height of the parent container to the height of the chart based on the number of elements
+          // this is a hack to get the chart to display properly
+
+          $("#acars_freq_graph").css(
+            "height",
+            `${freq_data_acars.length * 50}px`
+          );
         }
       }
 
@@ -423,6 +430,13 @@ export let stats_page = {
             },
             plugins: [ChartDataLabels],
           });
+          // clamp the height of the parent container to the height of the chart based on the number of elements
+          // this is a hack to get the chart to display properly
+
+          $("#vdlm_freq_graph").css(
+            "height",
+            `${freq_data_vdlm.length * 50}px`
+          );
         }
       }
     }
