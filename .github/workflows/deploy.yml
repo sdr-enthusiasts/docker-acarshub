@@ -44,9 +44,27 @@ jobs:
           echo "Workflow dispatch reason: $INPUTS_REASON"
           echo "Use test image: $INPUTS_USE_TEST_IMAGE"
 
+  patch_acars_hub_verison:
+    name: Patch acars-hub version
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Patch acars-hub version
+        run: |
+          # get the version from version-nextgen. First line only
+          VERSION=$(head -n 1 version-nextgen)
+          # get the build number from the github run
+          BUILD_NUMBER=$GITHUB_RUN_ID
+          echo "ACARS Hub: $VERSION Build $BUILD_NUMBER"
+          OUTPUT="ACARS Hub: $VERSION Build $BUILD_NUMBER"
+          # replace the version in acarshub-typescript/src/menu.ts
+          sed -i "s/Pre-Release/$OUTPUT/g" acarshub-typescript/src/menu.ts
+
   deploy:
     name: Deploy
     uses: sdr-enthusiasts/common-github-workflows/.github/workflows/build_and_push_image.yml@main
+    needs: patch_acars_hub_verison
     with:
       push_enabled: true
       push_destinations: ghcr.io
