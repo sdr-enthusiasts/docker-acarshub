@@ -103,6 +103,8 @@ export let stats_page = {
 
           // Configuration options go here
           options: {
+            responsive: true,
+            maintainAspectRatio: false,
             plugins: {
               datalabels: {
                 backgroundColor: function (context: any) {
@@ -185,6 +187,7 @@ export let stats_page = {
           // Configuration options go here
           options: {
             responsive: true,
+            maintainAspectRatio: false,
           },
         });
       }
@@ -281,6 +284,7 @@ export let stats_page = {
             options: {
               indexAxis: "y",
               responsive: true,
+              maintainAspectRatio: false,
               plugins: {
                 legend: {
                   display: false,
@@ -367,6 +371,7 @@ export let stats_page = {
             options: {
               indexAxis: "y",
               responsive: true,
+              maintainAspectRatio: false,
               plugins: {
                 legend: {
                   display: false,
@@ -485,6 +490,7 @@ export let stats_page = {
           options: {
             indexAxis: "y",
             responsive: true,
+            maintainAspectRatio: false,
             plugins: {
               legend: {
                 display: false,
@@ -555,6 +561,7 @@ export let stats_page = {
           options: {
             indexAxis: "y",
             responsive: true,
+            maintainAspectRatio: false,
             plugins: {
               legend: {
                 display: false,
@@ -707,24 +714,20 @@ export let stats_page = {
     <img src="static/images/6months.png" id="6mon" alt="6 Months"><br>
     <img src="static/images/1year.png" id="1yr" alt="1 Year"><br>
     </div>
-    <div class="chart_container"><canvas id="signallevels"></canvas></div>
-    <canvas id="alertterms"></canvas>
+    <div class="chart-container"><div>&nbsp;</div><canvas id="signallevels"></canvas></div>
+    <div class="chart-container"><div>&nbsp;</div><canvas id="alertterms"></canvas></div>
     ${
       this.acars_on
-        ? '<div class="canvas_wrapper"><div id="acars_freq_graph" class="chart-container"><canvas id="frequencies_acars"></canvas></div></div>'
+        ? '<div id="acars_freq_graph" class="chart-container"><div>&nbsp;</div><canvas id="frequencies_acars"></canvas></div>'
         : ""
     }
     ${
       this.vdlm_on
-        ? '<div class="canvas_wrapper"><div id="vdlm_freq_graph" class="chart-container"><canvas id="frequencies_vdlm"></canvas></div></div>'
+        ? '<div id="vdlm_freq_graph" class="chart-container"><div>&nbsp;</div><canvas id="frequencies_vdlm"></canvas></div>'
         : ""
     }
-    <div class="canvas_wrapper">
-    <div id="chart_msg_good" class="chart-container"><canvas id="msg_count_data"></div>
-    </div>
-    <div class="canvas_wrapper">
-    <div id="chart_msg_empty" class="chart-container"><canvas id="msg_count_empty"></div>
-    </div>
+    <div id="chart_msg_good" class="chart-container"><div>&nbsp;</div><canvas id="msg_count_data"></div>
+    <div id="chart_msg_empty" class="chart-container"><div>&nbsp;</div><canvas id="msg_count_empty"></div>
     </p>'`); // show the messages we've received
     $("#modal_text").html("");
     $("#page_name").html("");
@@ -750,17 +753,17 @@ export let stats_page = {
     //   $("#msg_count_empty").css("float", "right");
     // } else {
     // TODO: fix this
-    $("#acars_freq_graph").css("float", "none");
-    $("#vdlm_freq_graph").css("float", "none");
-    $("#vdlm_freq_graph").css("padding-top", "10px");
-    $("#frequencies_acars").css("float", "none");
-    $("#frequencies_vdlm").css("float", "none");
+    // $("#acars_freq_graph").css("float", "none");
+    // $("#vdlm_freq_graph").css("float", "none");
+    // $("#vdlm_freq_graph").css("padding-top", "10px");
+    // $("#frequencies_acars").css("float", "none");
+    // $("#frequencies_vdlm").css("float", "none");
 
-    $("#chart_msg_good").css("float", "none");
-    $("#chart_msg_empty").css("float", "none");
-    $("#chart_msg_empty").css("padding-top", "10px");
-    $("#msg_count_data").css("float", "none");
-    $("#msg_count_empty").css("float", "none");
+    // $("#chart_msg_good").css("float", "none");
+    // $("#chart_msg_empty").css("float", "none");
+    // $("#chart_msg_empty").css("padding-top", "10px");
+    // $("#msg_count_data").css("float", "none");
+    // $("#msg_count_empty").css("float", "none");
     //}
   },
 

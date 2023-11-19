@@ -862,26 +862,32 @@ li.img_box svg {
   letter-spacing: 0;
 }
 
-canvas {
-  /* max-height: 400px !important; */
-  max-width: 1000px !important;
-}
+/* canvas {
+  width: 100% !important;
+  height: 100% !important;
+} */
 
-.canvas_wrapper {
+/* .canvas_wrapper {
   position: relative;
-  width: 1000px;
-  /* float: left; */
-}
+  width: 100%;
+  max-width: 1000px !important;
+  display: flex;
+  /* float: left;
+} */
 
 .chart-container {
+  position: relative;
+  /* min-height: auto; */
   width: 100%;
-  min-height: 200px;
+  max-width: 1000px !important;
+  min-height: 100px !important;
+  max-height: 500px !important;
+  /* overflow: hidden; */
 }
 
 #chart_msg_good,
 #chart_msg_empty {
-  height: 200px;
-  width: 100%;
+  height: 150px !important;
 }
 
 /* modal window stuff */
