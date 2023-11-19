@@ -45,21 +45,26 @@ jobs:
           echo "Use test image: $INPUTS_USE_TEST_IMAGE"
 
   patch_acars_hub_verison:
-    name: Patch acars-hub version
+    name: "patch acars-hub version"
     runs-on: ubuntu-latest
+    outputs:
+      acarshub_version: ${{ steps.patch.outputs.acarshub_version }}
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-      - name: Patch acars-hub version
+      - name: patch
+        id: patch
         run: |
           # get the version from version-nextgen. First line only
           VERSION=$(head -n 1 version-nextgen)
           # get the build number from the github run
           BUILD_NUMBER=$GITHUB_RUN_NUMBER
           echo "ACARS Hub: $VERSION Build $BUILD_NUMBER"
+          echo "sed statement in next step will look like"
+          echo "\#patch acarshub version/sed -i s\/Pre-Release\/$OUTPUT\/g"
           OUTPUT="ACARS Hub: $VERSION Build $BUILD_NUMBER"
-          # replace the version in acarshub-typescript/src/menu.ts
-          sed -i "s/Pre-Release/$OUTPUT/g" acarshub-typescript/src/helpers/menu.ts
+          # set the output in github env
+          echo "acarshub_version=$OUTPUT" >> $GITHUB_OUTPUT
 
   deploy:
     name: Deploy
@@ -79,5 +84,7 @@ jobs:
       build_nohealthcheck: ${{ github.event.inputs.use_test_image == 'false' || github.event.inputs.use_test_image == ''  }}
       build_baseimage_url: :python/:python-test-pr
       get_version_method: file_in_container:file=/acarshub_version
+      dockerfile_changes: |
+        \#patch acarshub version/sed -i s\/Pre-Release\/${{ needs.patch_acars_hub_verison.outputs.acarshub_version}}\/g
     secrets:
       ghcr_token: ${{ secrets.GITHUB_TOKEN }}
