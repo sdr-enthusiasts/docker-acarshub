@@ -92,7 +92,21 @@ RUN set -x && \
     rm -rf /src/* /tmp/* /var/lib/apt/lists/*
 
 COPY rootfs/ /
-COPY version-nextgen /acarshub_version
+
+RUN set -x && \
+    rm /acarshub_version && \
+    # find the latest version of acarshub from /webapp/static/js/acarshub.*.js
+    # it is in the format ACARS Hub: v0.0.0 Build 0000
+    # and we want to extract the version number and echo it out to /acarshub_version
+    # get the acarshub version from the js file along with the build number
+    ACARS_VERSION=$(grep -oP 'ACARS Hub: v\K[0-9\.]+' /webapp/static/js/acarshub.*.js) && \
+    ACARSHUB_BUILD=$(grep -oP 'ACARS Hub: v\K[0-9\.]+ Build \K[0-9]+' /webapp/static/js/acarshub.*.js) && \
+    # echo the version and build number to /acarshub_version
+    # check and see if we have a build number and version. If not, set it to 0
+    # This will be for local non-github versions
+    if [ -z "${ACARS_VERSION}" ]; then ACARS_VERSION="0.0.0"; fi && \
+    if [ -z "${ACARSHUB_BUILD}" ]; then ACARSHUB_BUILD="0"; fi && \
+    printf "v%s Build %s\nv%sBuild%s" "$ACARS_VERSION" "$ACARS_BUILD" "${ACARS_VERSION}" "$ACARS_BUILD" > /acarshub_version
 
 EXPOSE 80
 EXPOSE 5550
