@@ -85,7 +85,7 @@ RUN set -x && \
     mkdir -p /webapp/data/ && \
     # Download the airframes Ground Station and ACARS Label data
     pushd /webapp/data/ && \
-    curl -O https://raw.githubusercontent.com/airframesio/data/master/json/vdl/ground-stations.json&& \
+    curl -O https://raw.githubusercontent.com/airframesio/data/master/json/vdl/ground-stations.json && \
     curl -O https://raw.githubusercontent.com/airframesio/data/master/json/acars/metadata.json && \
     # Clean up
     rm -rf /src/* /tmp/* /var/lib/apt/lists/*
