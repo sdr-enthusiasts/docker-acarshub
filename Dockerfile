@@ -106,9 +106,9 @@ RUN set -x && \
     if [ -z "${ACARS_VERSION}" ]; then ACARS_VERSION="0.0.0"; fi && \
     if [ -z "${ACARS_BUILD}" ]; then ACARS_BUILD="0"; fi && \
     printf "v%sBuild%s" "$ACARS_VERSION" "$ACARS_BUILD" > /acarshub_version && \
-    printf "v%s Build %s\nv%sBuild%s" "$ACARS_VERSION" "$ACARS_BUILD" "$ACARS_VERSION" "$ACARS_BUILD" > /version && \
+    printf "v%s Build %s\nv%sBuild%s" "$ACARS_VERSION" "$ACARS_BUILD" "$ACARS_VERSION" "$ACARS_BUILD" > /version
 
-    EXPOSE 80
+EXPOSE 80
 EXPOSE 5550
 EXPOSE 5555
 EXPOSE 15550
