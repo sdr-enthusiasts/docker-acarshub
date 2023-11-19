@@ -49,6 +49,8 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       acarshub_version: ${{ steps.patch.outputs.acarshub_version }}
+      version: ${{ steps.patch.outputs.version }}
+      build_number: ${{ steps.patch.outputs.build_number }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4.1.1
@@ -65,6 +67,8 @@ jobs:
           OUTPUT="ACARS Hub: $VERSION Build $BUILD_NUMBER"
           # set the output in github env
           echo "acarshub_version=$OUTPUT" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "build_number=$BUILD_NUMBER" >> $GITHUB_OUTPUT
 
   deploy:
     name: Deploy
@@ -88,3 +92,35 @@ jobs:
         \# patch acarshub version/sed -i \"s\/Pre-Release\/${{ needs.patch_acars_hub_verison.outputs.acarshub_version}}\/g\" \/acarshub-typescript\/src\/helpers\/menu.ts
     secrets:
       ghcr_token: ${{ secrets.GITHUB_TOKEN }}
+
+  # generate a release
+  release:
+    name: Release
+    needs: [deploy, patch_acars_hub_verison]
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'workflow_dispatch' &&
+      github.event.inputs.reason != ''
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.1.1
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ needs.patch_acars_hub_verison.outputs.version }}
+          release_name: ${{ needs.patch_acars_hub_verison.outputs.version }} + "Build " + ${{ needs.patch_acars_hub_verison.outputs.build_number }}
+          draft: false
+          prerelease: false
+      - name: Upload Release Asset
+        id: upload-release-asset
+        uses: actions/upload-release-asset@v1.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ github.workspace }}/
+          asset_name: acarshub
+          asset_content_type: application/octet-stream
