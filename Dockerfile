@@ -105,7 +105,7 @@ RUN set -x && \
     # This will be for local non-github versions
     if [ -z "${ACARS_VERSION}" ]; then ACARS_VERSION="0.0.0"; fi && \
     if [ -z "${ACARS_BUILD}" ]; then ACARS_BUILD="0"; fi && \
-    printf "v%s Build %s\nv%sBuild%s" "$ACARS_VERSION" "$ACARS_BUILD" "${ACARS_VERSION}" "$ACARS_BUILD" > /acarshub_version
+    printf "v%sBuild%s" "$ACARS_VERSION" "$ACARS_BUILD" > /acarshub_version
 
 EXPOSE 80
 EXPOSE 5550
