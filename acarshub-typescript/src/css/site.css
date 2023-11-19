@@ -863,18 +863,25 @@ li.img_box svg {
 }
 
 canvas {
-  max-height: 400px !important;
+  /* max-height: 400px !important; */
   max-width: 1000px !important;
 }
 
 .canvas_wrapper {
   position: relative;
   width: 1000px;
-  float: left;
+  /* float: left; */
 }
 
 .chart-container {
-  width: 50%;
+  width: 100%;
+  min-height: 200px;
+}
+
+#chart_msg_good,
+#chart_msg_empty {
+  height: 200px;
+  width: 100%;
 }
 
 /* modal window stuff */
