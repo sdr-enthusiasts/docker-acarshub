@@ -25,6 +25,7 @@ RUN set -xe && \
     mkdir -p /webapp/static/js && \
     mkdir -p /webapp/static/sounds && \
     mkdir -p /webapp/templates && \
+    # patch acarshub version
     npm run build && \
     cp -r ./dist/static/images /webapp/static/ && \
     cp -r ./dist/static/sounds /webapp/static/ && \
@@ -70,7 +71,6 @@ RUN set -x && \
     netbase \
     && \
     popd && \
-    # patch acarshub version
     # Clean up
     apt-get remove -y "${TEMP_PACKAGES[@]}" && \
     apt-get autoremove -y && \
