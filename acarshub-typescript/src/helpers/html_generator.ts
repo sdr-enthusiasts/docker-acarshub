@@ -20,6 +20,7 @@
 // Input: live_page - default is false. This toggles on the checks for selected tabs
 import { html_functions } from "./html_functions";
 import { acars_msg } from "../interfaces";
+import { get_flight_tracking_url } from "../index";
 
 export function display_messages(
   msgs_to_process: acars_msg[][],
@@ -299,7 +300,11 @@ export function display_message_group(
         : "";
 
     // Table footer row, tail & flight info, displayed in main body if screen is too small
-    html_output += html_functions.show_footer_and_sidebar_text(message, false);
+    html_output += html_functions.show_footer_and_sidebar_text(
+      message,
+      get_flight_tracking_url(),
+      false
+    );
     //html_output += "</td></tr>";
     html_output += html_functions.message_text(message);
 
@@ -307,7 +312,10 @@ export function display_message_group(
     // we have a sub-table for the raw text field and if it was decoded, the decoded text as well
 
     // Table footer row, tail & flight info
-    html_output += html_functions.show_footer_and_sidebar_text(message);
+    html_output += html_functions.show_footer_and_sidebar_text(
+      message,
+      get_flight_tracking_url()
+    );
 
     // Finish table html
     html_output += html_functions.end_message_box();

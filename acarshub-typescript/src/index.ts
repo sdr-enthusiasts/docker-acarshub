@@ -82,6 +82,7 @@ let adsb_request_options = {
   method: "GET",
 } as RequestInit;
 let allow_remote_updates = false;
+let flight_tracking_url: string | undefined = undefined;
 
 // @ts-expect-error
 var hidden, visibilityChange;
@@ -257,6 +258,7 @@ $((): void => {
     stats_page.decoders_enabled(msg);
     menu.set_arch(msg.arch);
     allow_remote_updates = msg.allow_remote_updates;
+    flight_tracking_url = msg.adsb.flight_tracking_url;
     if (msg.adsb.enabled === true) {
       adsb_enabled = true;
       menu.set_adsb(true);
@@ -401,6 +403,12 @@ $((): void => {
     );
   }
 });
+
+export function get_flight_tracking_url(): string {
+  return flight_tracking_url
+    ? flight_tracking_url
+    : "https://flightaware.com/live/flight/";
+}
 
 export function get_window_size(): window_size {
   return { width: old_window_width, height: old_window_height } as window_size;

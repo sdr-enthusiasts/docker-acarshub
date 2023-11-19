@@ -225,6 +225,7 @@ export let html_functions = {
 
   show_footer_and_sidebar_text: function (
     message: acars_msg,
+    flight_tracking_url: string,
     footer: boolean = true
   ): string {
     let html_output = "";
@@ -235,7 +236,7 @@ export let html_functions = {
     html_output += !footer ? '<div class="show_when_small">' : "";
 
     if (typeof message.tail !== "undefined") {
-      html_output += `<span class="tail-tooltip">Tail: <strong><a href=\"https://flightaware.com/live/flight/${
+      html_output += `<span class="tail-tooltip">Tail: <strong><a href=\"${flight_tracking_url}${
         message.tail
       }\" target=\"_blank\">${
         typeof message.matched_tail !== "undefined" &&
