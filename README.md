@@ -1,7 +1,8 @@
 # sdr-enthusiasts/acarshub
 
 ![Banner](Logo-Sources/ACARS%20Hub.png "banner")
-[![GitHub Workflow Status](https://img.shields.io/github/workflow/status/sdr-enthusiasts/docker-acarshub/Deploy)](https://github.com/sdr-enthusiasts/docker-acarshub/actions?query=workflow%3ADeploy)
+
+[![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/sdr-enthusiasts/docker-acarshub/deploy.yml?branch=main)](https://github.com/sdr-enthusiasts/docker-acarshub/actions?query=workflow%3ADeploy)
 [![Discord](https://img.shields.io/discord/734090820684349521)](https://discord.gg/sTf9uYF)
 
 Docker container to view and also stream ACARS messages to [ACARS.io/Airframes.io](http://acars.io).
