@@ -90,6 +90,24 @@ def format_hfdl_message(unformatted_message):
                     hfdl_message["tail"] = unformatted_message["hfdl"]["lpdu"][
                         "hfnpdu"
                     ]["acars"]["reg"].replace(".", "")
+                # flight
+                if (
+                    "flight_id"
+                    in unformatted_message["hfdl"]["lpdu"]["hfnpdu"]["acars"]
+                ):
+                    hfdl_message["flight"] = unformatted_message["hfdl"]["lpdu"][
+                        "hfnpdu"
+                    ]["acars"]["flight_id"]
+                # lat
+                # lon
+                if "pos" in unformatted_message["hfdl"]["lpdu"]["hfnpdu"]["acars"]:
+                    position = unformatted_message["hfdl"]["lpdu"]["hfnpdu"]["acars"][
+                        "pos"
+                    ]
+                    if "lat" in position:
+                        hfdl_message["lat"] = float(position["lat"])
+                    if "lon" in position:
+                        hfdl_message["lon"] = float(position["lon"])
                 # label
                 if "label" in unformatted_message["hfdl"]["lpdu"]["hfnpdu"]["acars"]:
                     hfdl_message["label"] = str(
@@ -144,11 +162,10 @@ def format_hfdl_message(unformatted_message):
     # gtin
     # wloff
     # wlin
-    # lat
-    # lon
+
     # alt
     # data
-    # flight
+
     # icao
 
     # is_response
