@@ -466,7 +466,7 @@ export let search_page = {
         </tr>
         <tr class="search_label">
           <td>
-            <label>Text:</label>
+            <label>Station ID:</label>
           </td>
           <td class="search_term">
             <input type="text" id="search_station_id">
