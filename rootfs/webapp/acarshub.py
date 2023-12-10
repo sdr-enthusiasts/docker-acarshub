@@ -400,25 +400,8 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
                 if msg["error"] > 0:
                     error_messages_last_minute += msg["error"]
 
-            if message_type != "HFDL":
-                que_messages.append(
-                    (que_type, acars_formatter.format_acars_message(msg))
-                )
-                que_database.append(
-                    (que_type, acars_formatter.format_acars_message(msg))
-                )
-            else:
-                acarshub_logging.log(
-                    f"Attempting to add to database {acars_formatter.format_acars_message(msg)}",
-                    "message_listener",
-                    acarshub_logging.LOG_LEVEL["WARNING"],
-                )
-                que_messages.append(
-                    (que_type, acars_formatter.format_acars_message(msg))
-                )
-                que_database.append(
-                    (que_type, acars_formatter.format_acars_message(msg))
-                )
+            que_messages.append((que_type, acars_formatter.format_acars_message(msg)))
+            que_database.append((que_type, acars_formatter.format_acars_message(msg)))
 
             if (
                 len(list_of_recent_messages) >= list_of_recent_messages_max

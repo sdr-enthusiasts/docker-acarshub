@@ -620,7 +620,6 @@ def find_airline_code_from_icao(icao):
     # FIXME: this is complete shit and we need to do IATA/ICAO stuff better
     for iata in airlines:
         if airlines[iata]["ICAO"] == icao:
-            print("found iata for icao", iata, icao)
             return (iata, airlines[iata]["NAME"])
 
     return (icao, "UNKNOWN AIRLINE")
@@ -670,7 +669,6 @@ def database_search(search_term, page=0):
                 .offset(page * 50)
             )
             count = result.count()
-            print(result)
 
             if count > 0:
                 processed_results = [query_to_dict(d) for d in result]
