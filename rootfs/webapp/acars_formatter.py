@@ -57,49 +57,51 @@ def format_hfdl_message(unformatted_message):
             hfdl_message["error"] = (
                 1 if unformatted_message["hfdl"]["lpdu"]["err"] is True else 0
             )  # FIXME: this is a guess
+        else:
+            hfdl_message["error"] = 0
 
-        if "hfpdu" in unformatted_message["hfdl"]["lpdu"]:
-            if "acars" in unformatted_message["hfdl"]["lpdu"]["hfpdu"]:
+        if "hfnpdu" in unformatted_message["hfdl"]["lpdu"]:
+            if "acars" in unformatted_message["hfdl"]["lpdu"]["hfnpdu"]:
                 # ack
-                if "ack" in unformatted_message["hfdl"]["lpdu"]["hfpdu"]["acars"]:
-                    hfdl_message["ack"] = unformatted_message["hfdl"]["lpdu"]["hfpdu"][
+                if "ack" in unformatted_message["hfdl"]["lpdu"]["hfnpdu"]["acars"]:
+                    hfdl_message["ack"] = unformatted_message["hfdl"]["lpdu"]["hfpndu"][
                         "acars"
                     ]["ack"]
                 # tail
-                if "reg" in unformatted_message["hfdl"]["lpdu"]["hfpdu"]["acars"]:
-                    hfdl_message["tail"] = unformatted_message["hfdl"]["lpdu"]["hfpdu"][
-                        "acars"
-                    ]["reg"].replace(".", "")
+                if "reg" in unformatted_message["hfdl"]["lpdu"]["hfnpdu"]["acars"]:
+                    hfdl_message["tail"] = unformatted_message["hfdl"]["lpdu"][
+                        "hfnpdu"
+                    ]["acars"]["reg"].replace(".", "")
                 # label
-                if "label" in unformatted_message["hfdl"]["lpdu"]["hfpdu"]["acars"]:
+                if "label" in unformatted_message["hfdl"]["lpdu"]["hfnpdu"]["acars"]:
                     hfdl_message["label"] = str(
-                        unformatted_message["hfdl"]["lpdu"]["hfpdu"]["acars"]["label"]
+                        unformatted_message["hfdl"]["lpdu"]["hfnpdu"]["acars"]["label"]
                     )
                 # block_id
-                if "blk_id" in unformatted_message["hfdl"]["lpdu"]["hfpdu"]["acars"]:
+                if "blk_id" in unformatted_message["hfdl"]["lpdu"]["hfnpdu"]["acars"]:
                     hfdl_message["block_id"] = unformatted_message["hfdl"]["lpdu"][
-                        "hfpdu"
+                        "hfnpdu"
                     ]["acars"]["blk_id"]
                 # msgno
-                if "msg_num" in unformatted_message["hfdl"]["lpdu"]["hfpdu"]["acars"]:
+                if "msg_num" in unformatted_message["hfdl"]["lpdu"]["hfnpdu"]["acars"]:
                     hfdl_message["msgno"] = unformatted_message["hfdl"]["lpdu"][
-                        "hfpdu"
+                        "hfnpdu"
                     ]["acars"]["msg_num"]
                     if (
                         "msg_num_seq"
-                        in unformatted_message["hfdl"]["lpdu"]["hfpdu"]["acars"]
+                        in unformatted_message["hfdl"]["lpdu"]["hfnpdu"]["acars"]
                     ):
                         hfdl_message["msgno"] = (
                             hfdl_message["msgno"]
-                            + unformatted_message["hfdl"]["lpdu"]["hfpdu"]["acars"][
+                            + unformatted_message["hfdl"]["lpdu"]["hfnpdu"]["acars"][
                                 "msg_num_seq"
                             ]
                         )
                 # mode
-                if "mode" in unformatted_message["hfdl"]["lpdu"]["hfpdu"]["acars"]:
-                    hfdl_message["mode"] = unformatted_message["hfdl"]["lpdu"]["hfpdu"][
-                        "acars"
-                    ]["mode"]
+                if "mode" in unformatted_message["hfdl"]["lpdu"]["hfnpdu"]["acars"]:
+                    hfdl_message["mode"] = unformatted_message["hfdl"]["lpdu"][
+                        "hfnpdu"
+                    ]["acars"]["mode"]
 
     # toaddr
     # fromaddr
