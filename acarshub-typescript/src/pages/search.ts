@@ -40,6 +40,7 @@ export let search_page = {
     msgno: "",
     tail: "",
     msg_text: "",
+    station_id: "",
   } as current_search, // variable to store the current search term
   typed_searches: {
     flight: "",
@@ -50,6 +51,7 @@ export let search_page = {
     msgno: "",
     tail: "",
     msg_text: "",
+    station_id: "",
   } as current_search, // variable to store the current search term
   current_page: 0 as number, // store the current page of the current_search
   total_pages: 0 as number, // number of pages of results
@@ -147,6 +149,7 @@ export let search_page = {
       msgno: $("#search_msgno").val(),
       tail: $("#search_tail").val(),
       msg_text: $("#search_text").val(),
+      station_id: $("#search_station_id").val(),
     } as current_search;
   },
 
@@ -159,6 +162,7 @@ export let search_page = {
     $("#search_msgno").val(this.typed_searches.msgno);
     $("#search_tail").val(this.typed_searches.tail);
     $("#search_text").val(this.typed_searches.msg_text);
+    $("#search_station_id").val(this.typed_searches.station_id);
   },
 
   is_everything_blank: function (): boolean {
@@ -177,6 +181,7 @@ export let search_page = {
     $("#search_msgno").val("");
     $("#search_tail").val("");
     $("#search_text").val("");
+    $("#search_station_id").val("");
   },
 
   // In order to help DB responsiveness, I want to make sure the user has quit typing before emitting a query
@@ -457,6 +462,14 @@ export let search_page = {
           </td>
           <td class="search_term">
             <input type="text" id="search_text">
+          </td>
+        </tr>
+        <tr class="search_label">
+          <td>
+            <label>Text:</label>
+          </td>
+          <td class="search_term">
+            <input type="text" id="search_station_id">
           </td>
         </tr>
 

@@ -135,6 +135,7 @@ export interface current_search {
   msgno: string;
   tail: string;
   msg_text: string;
+  station_id: string;
 }
 
 export interface labels {
