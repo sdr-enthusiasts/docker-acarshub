@@ -641,28 +641,34 @@ def database_search(search_term, page=0):
 
         if "station_id" in search_term and search_term["station_id"] != "":
             # we need to search outside of FTS
-            result = session.query(messages).all()
+            conditions = []
+            query = session.query(messages)
             for key in search_term:
                 if search_term[key] == "":
                     continue
                 if key == "flight":
-                    result.filter(messages.flight.contains(search_term[key]))
+                    conditions.append(messages.flight.contains(search_term[key]))
                 elif key == "depa":
-                    result.filter(messages.depa.contains(search_term[key]))
+                    conditions.append(messages.depa.contains(search_term[key]))
                 elif key == "dsta":
-                    result.filter(messages.dsta.contains(search_term[key]))
+                    conditions.append(messages.dsta.contains(search_term[key]))
                 elif key == "freq":
-                    result.filter(messages.freq.contains(search_term[key]))
+                    conditions.append(messages.freq.contains(search_term[key]))
                 elif key == "label":
-                    result.filter(messages.label.contains(search_term[key]))
+                    conditions.append(messages.label.contains(search_term[key]))
                 elif key == "tail":
-                    result.filter(messages.tail.contains(search_term[key]))
+                    conditions.append(messages.tail.contains(search_term[key]))
                 elif key == "msg_text":
-                    result.filter(messages.text.contains(search_term[key]))
+                    conditions.append(messages.text.contains(search_term[key]))
                 elif key == "station_id":
-                    result.filter(messages.station_id.contains(search_term[key]))
+                    conditions.append(messages.station_id.contains(search_term[key]))
 
-            result.order_by(messages.time.desc()).limit(50).offset(page * 50)
+            result = (
+                query.filter(*conditions)
+                .order_by(messages.time.desc())
+                .limit(50)
+                .offset(page * 50)
+            )
             count = result.count()
             print(result)
             return (None, 0)
