@@ -643,6 +643,8 @@ def database_search(search_term, page=0):
             # we need to search outside of FTS
             result = session.query(messages)
             for key in search_term:
+                if search_term[key] == "":
+                    continue
                 if key == "flight":
                     result.filter(messages.flight.contains(search_term[key]))
                 elif key == "depa":
@@ -656,7 +658,7 @@ def database_search(search_term, page=0):
                 elif key == "tail":
                     result.filter(messages.tail.contains(search_term[key]))
                 elif key == "msg_text":
-                    result.filter(messages.msg_text.contains(search_term[key]))
+                    result.filter(messages.text.contains(search_term[key]))
                 elif key == "station_id":
                     result.filter(messages.station_id.contains(search_term[key]))
 
