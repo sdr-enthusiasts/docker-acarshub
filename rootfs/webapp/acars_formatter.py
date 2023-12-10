@@ -52,6 +52,10 @@ def format_hfdl_message(unformatted_message):
     if "station" in unformatted_message["hfdl"]:
         hfdl_message["station_id"] = unformatted_message["hfdl"]["station"]
 
+    # error if lpdu is not present
+    if "lpdu" not in unformatted_message["hfdl"]:
+        hfdl_message["error"] = 0  # FIXME: this is a guess
+
     if "lpdu" in unformatted_message["hfdl"]:
         if "err" in unformatted_message["hfdl"]["lpdu"]:
             hfdl_message["error"] = (
@@ -64,7 +68,7 @@ def format_hfdl_message(unformatted_message):
             if "acars" in unformatted_message["hfdl"]["lpdu"]["hfnpdu"]:
                 # ack
                 if "ack" in unformatted_message["hfdl"]["lpdu"]["hfnpdu"]["acars"]:
-                    hfdl_message["ack"] = unformatted_message["hfdl"]["lpdu"]["hfpndu"][
+                    hfdl_message["ack"] = unformatted_message["hfdl"]["lpdu"]["hfnpdu"][
                         "acars"
                     ]["ack"]
                 # tail
