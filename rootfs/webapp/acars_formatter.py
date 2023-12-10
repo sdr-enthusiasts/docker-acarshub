@@ -88,6 +88,7 @@ def format_hfdl_message(unformatted_message):
             # lon
             if "pos" in unformatted_message["hfdl"]["lpdu"]["hfnpdu"]:
                 position = unformatted_message["hfdl"]["lpdu"]["hfnpdu"]["pos"]
+                print(position)
                 if "lat" in position:
                     hfdl_message["lat"] = float(position["lat"])
                 if "lon" in position:
