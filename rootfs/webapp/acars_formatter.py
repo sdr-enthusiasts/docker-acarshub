@@ -56,6 +56,7 @@ def count_hfdl_errors(unformatted_message):
 
 def format_hfdl_message(unformatted_message):
     hfdl_message = dict()
+    libacars = dict()
 
     # timestamp
     hfdl_message["timestamp"] = unformatted_message["hfdl"]["t"]["sec"]
@@ -76,6 +77,9 @@ def format_hfdl_message(unformatted_message):
         hfdl_message["level"] = formated_dumpvdl2_level(
             unformatted_message["hfdl"]["sig_level"]
         )
+
+    if "spdu" in unformatted_message["hfdl"]:
+        libacars["spdu"] = unformatted_message["hfdl"]["spdu"]
 
     if "lpdu" in unformatted_message["hfdl"]:
         # icao
@@ -101,9 +105,9 @@ def format_hfdl_message(unformatted_message):
                     hfdl_message["lon"] = float(position["lon"])
             if "freq_data" in unformatted_message["hfdl"]["lpdu"]["hfnpdu"]:
                 # use libacars to dump the JSON
-                hfdl_message["libacars"] = json.dumps(
-                    unformatted_message["hfdl"]["lpdu"]["hfnpdu"]["freq_data"]
-                )
+                libacars["freq_data"] = unformatted_message["hfdl"]["lpdu"]["hfnpdu"][
+                    "freq_data"
+                ]
             if "acars" in unformatted_message["hfdl"]["lpdu"]["hfnpdu"]:
                 # ack
                 if "ack" in unformatted_message["hfdl"]["lpdu"]["hfnpdu"]["acars"]:
@@ -154,21 +158,11 @@ def format_hfdl_message(unformatted_message):
                 # libacars
                 # use the arinc622 field, dumped as JSON
                 if "arinc622" in unformatted_message["hfdl"]["lpdu"]["hfnpdu"]["acars"]:
-                    if "libacars" not in hfdl_message:
-                        hfdl_message["libacars"] = json.dumps(
-                            unformatted_message["hfdl"]["lpdu"]["hfnpdu"]["acars"][
-                                "arinc622"
-                            ]
-                        )
-                    else:
-                        hfdl_message["libacars"] = hfdl_message[
-                            "libacars"
-                        ] + json.dumps(
-                            unformatted_message["hfdl"]["lpdu"]["hfnpdu"]["acars"][
-                                "arinc622"
-                            ]
-                        )
-
+                    libacars["arinc622"] = unformatted_message["hfdl"]["lpdu"][
+                        "hfnpdu"
+                    ]["acars"]["arinc622"]
+    if len(libacars) > 0:
+        hfdl_message["libacars"] = json.dumps(libacars)
     # toaddr
     # fromaddr
     # depa
