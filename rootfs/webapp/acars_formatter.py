@@ -29,12 +29,59 @@ def format_acars_message(acars_message):
     return acars_message
 
 
+def format_hfdl_freq(unformatted_freq):
+    # input is in Hz
+    # output is in MHz
+    output = float(unformatted_freq) / 1000000.0
+
+    # normalize to 3 decimal places
+    truncated = str(int(output * 1000) / 1000)
+
+    if str.endswith(truncated, "0"):
+        truncated = truncated[:-2]
+
+    return truncated
+
+
 def format_hfdl_message(unformatted_message):
     hfdl_message = dict()
 
+    # timestamp
     hfdl_message["timestamp"] = unformatted_message["hfdl"]["t"]["sec"]
+    # station
     if "station" in unformatted_message["hfdl"]:
         hfdl_message["station_id"] = unformatted_message["hfdl"]["station"]
+
+    # toaddr
+    # fromaddr
+    # depa
+    # dsta
+    # eta
+    # gtout
+    # gtin
+    # wloff
+    # wlin
+    # lat
+    # lon
+    # alt
+    # text
+    # data
+    # tail
+    # flight
+    # icao
+    # freq
+    if "freq" in unformatted_message["hfdl"]:
+        hfdl_message["freq"] = format_hfdl_freq(unformatted_message["hfdl"]["freq"])
+    # ack
+    # mode
+    # label
+    # block_id
+    # msgno
+    # is_response
+    # is_onground
+    # error
+    # libacars
+    # level
 
     return hfdl_message
 
