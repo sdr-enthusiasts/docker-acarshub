@@ -242,6 +242,15 @@ def check_github_version():
             github_version_from_json.split("\n")[0].split(" ")[2].replace("v", "")
         )
 
+        if ACARSHUB_BUILD == "0":
+            acarshub_logging.log(
+                "Detected a Pre-Release build.",
+                "version-checker",
+                level=LOG_LEVEL["WARNING"],
+            )
+            IS_UPDATE_AVAILABLE = False
+            return
+
         if (
             CURRENT_ACARS_HUB_VERSION != ACARSHUB_VERSION
             and ACARSHUB_VERSION < CURRENT_ACARS_HUB_VERSION
