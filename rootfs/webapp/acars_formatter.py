@@ -52,6 +52,53 @@ def format_hfdl_message(unformatted_message):
     if "station" in unformatted_message["hfdl"]:
         hfdl_message["station_id"] = unformatted_message["hfdl"]["station"]
 
+    if "lpdu" in unformatted_message["hfdl"]:
+        if "err" in unformatted_message["hfdl"]["lpdu"]:
+            hfdl_message["error"] = 1  # FIXME: this is a guess
+
+        if "hfpdu" in unformatted_message["hfdl"]["lpdu"]:
+            if "acars" in unformatted_message["hfdl"]["lpdu"]["hfpdu"]:
+                # ack
+                if "ack" in unformatted_message["hfdl"]["lpdu"]["hfpdu"]["acars"]:
+                    hfdl_message["ack"] = unformatted_message["hfdl"]["lpdu"]["hfpdu"][
+                        "acars"
+                    ]["ack"]
+                # tail
+                if "reg" in unformatted_message["hfdl"]["lpdu"]["hfpdu"]["acars"]:
+                    hfdl_message["tail"] = unformatted_message["hfdl"]["lpdu"]["hfpdu"][
+                        "acars"
+                    ]["reg"].replace(".", "")
+                # label
+                if "label" in unformatted_message["hfdl"]["lpdu"]["hfpdu"]["acars"]:
+                    hfdl_message["label"] = str(
+                        unformatted_message["hfdl"]["lpdu"]["hfpdu"]["acars"]["label"]
+                    )
+                # block_id
+                if "blk_id" in unformatted_message["hfdl"]["lpdu"]["hfpdu"]["acars"]:
+                    hfdl_message["block_id"] = unformatted_message["hfdl"]["lpdu"][
+                        "hfpdu"
+                    ]["acars"]["blk_id"]
+                # msgno
+                if "msg_num" in unformatted_message["hfdl"]["lpdu"]["hfpdu"]["acars"]:
+                    hfdl_message["msgno"] = unformatted_message["hfdl"]["lpdu"][
+                        "hfpdu"
+                    ]["acars"]["msg_num"]
+                    if (
+                        "msg_num_seq"
+                        in unformatted_message["hfdl"]["lpdu"]["hfpdu"]["acars"]
+                    ):
+                        hfdl_message["msgno"] = (
+                            hfdl_message["msgno"]
+                            + unformatted_message["hfdl"]["lpdu"]["hfpdu"]["acars"][
+                                "msg_num_seq"
+                            ]
+                        )
+                # mode
+                if "mode" in unformatted_message["hfdl"]["lpdu"]["hfpdu"]["acars"]:
+                    hfdl_message["mode"] = unformatted_message["hfdl"]["lpdu"]["hfpdu"][
+                        "acars"
+                    ]["mode"]
+
     # toaddr
     # fromaddr
     # depa
@@ -66,17 +113,13 @@ def format_hfdl_message(unformatted_message):
     # alt
     # text
     # data
-    # tail
+
     # flight
     # icao
     # freq
     if "freq" in unformatted_message["hfdl"]:
         hfdl_message["freq"] = format_hfdl_freq(unformatted_message["hfdl"]["freq"])
-    # ack
-    # mode
-    # label
-    # block_id
-    # msgno
+
     # is_response
     # is_onground
     # error
