@@ -411,7 +411,7 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
                 acarshub_logging.log(
                     "Skipping HFDL message",
                     "message_listener",
-                    acarshub_logging.LOG_LEVEL["WARN"],
+                    acarshub_logging.LOG_LEVEL["WARNING"],
                 )
 
             if (
