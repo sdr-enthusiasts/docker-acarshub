@@ -65,6 +65,7 @@ thread_html_generator_event = Event()
 
 thread_acars_listener = Thread()
 thread_vdlm2_listener = Thread()
+thread_hfdl_listener = Thread()
 thread_message_listener_stop_event = Event()
 
 # db thread
@@ -88,6 +89,7 @@ list_of_recent_messages_max = 150
 # will be reset once written to RRD
 vdlm_messages_last_minute = 0
 acars_messages_last_minute = 0
+hfdl_messages_last_minute = 0
 error_messages_last_minute = 0
 
 # all namespaces
@@ -115,15 +117,18 @@ def update_rrd_db():
     global vdlm_messages_last_minute
     global acars_messages_last_minute
     global error_messages_last_minute
+    global hfdl_messages_last_minute
 
     acarshub_rrd_database.update_db(
         vdlm=vdlm_messages_last_minute,
         acars=acars_messages_last_minute,
         error=error_messages_last_minute,
+        hfdl=hfdl_messages_last_minute,
     )
     vdlm_messages_last_minute = 0
     acars_messages_last_minute = 0
     error_messages_last_minute = 0
+    hfdl_messages_last_minute = 0
 
 
 def generateClientMessage(message_type, json_message):
@@ -146,6 +151,8 @@ def getQueType(message_type):
         return "VDL-M2"
     elif message_type == "ACARS":
         return "ACARS"
+    elif message_type == "HFDL":
+        return "HFDL"
     elif message_type is not None:
         return str(message_type)
     else:
@@ -236,6 +243,8 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
         global vdlm_messages_last_minute
     elif message_type == "ACARS":
         global acars_messages_last_minute
+    elif message_type == "HFDL":
+        global hfdl_messages_last_minute
 
     disconnected = True
 
@@ -384,13 +393,26 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
                 vdlm_messages_last_minute += 1
             elif message_type == "ACARS":
                 acars_messages_last_minute += 1
+            elif message_type == "HFDL":
+                hfdl_messages_last_minute += 1
 
             if "error" in msg:
                 if msg["error"] > 0:
                     error_messages_last_minute += msg["error"]
 
-            que_messages.append((que_type, acars_formatter.format_acars_message(msg)))
-            que_database.append((que_type, acars_formatter.format_acars_message(msg)))
+            if message_type != "HFDL":
+                que_messages.append(
+                    (que_type, acars_formatter.format_acars_message(msg))
+                )
+                que_database.append(
+                    (que_type, acars_formatter.format_acars_message(msg))
+                )
+            else:
+                acarshub_logging.log(
+                    "Skipping HFDL message",
+                    "message_listener",
+                    acarshub_logging.LOG_LEVEL["WARN"],
+                )
 
             if (
                 len(list_of_recent_messages) >= list_of_recent_messages_max
@@ -413,6 +435,7 @@ def init_listeners(special_message=""):
 
     global thread_acars_listener
     global thread_vdlm2_listener
+    global thread_hfdl_listener
     global thread_database
     global thread_scheduler
     global thread_html_generator
@@ -487,6 +510,22 @@ def init_listeners(special_message=""):
             ),
         )
         thread_vdlm2_listener.start()
+
+    if not thread_hfdl_listener.is_alive() and acarshub_configuration.ENABLE_HFDL:
+        acarshub_logging.log(
+            f"{special_message}Starting HFDL listener",
+            "init",
+            level=LOG_LEVEL["INFO"] if special_message == "" else LOG_LEVEL["ERROR"],
+        )
+        thread_hfdl_listener = Thread(
+            target=message_listener,
+            args=(
+                "HFDL",
+                acarshub_configuration.LIVE_DATA_SOURCE,
+                acarshub_configuration.HFDL_SOURCE_PORT,
+            ),
+        )
+        thread_hfdl_listener.start()
 
     status = acarshub_helpers.get_service_status()  # grab system status
 

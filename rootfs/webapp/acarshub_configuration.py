@@ -30,6 +30,7 @@ QUIET_MESSAGES = False
 LOCAL_TEST = False
 ENABLE_ACARS = False
 ENABLE_VDLM = False
+ENABLE_HFDL = False
 DB_SAVEALL = False
 ACARSHUB_DB = ""
 IATA_OVERRIDE = ""
@@ -43,6 +44,7 @@ ADSB_BYPASS_URL = False
 ACARS_WEB_PORT = 8888  # default port for nginx proxying. LOCAL_TEST will change this to 8080 for running outside of docker
 ACARS_SOURCE_PORT = 15550
 VDLM_SOURCE_PORT = 15555
+HFDL_SOURCE_PORT = 15556
 LIVE_DATA_SOURCE = "127.0.0.1"  # This is to switch from localhost for ACARS/VDLM to connecting to a remote data source
 ACARSHUB_VERSION = "0"
 ACARSHUB_BUILD = "0"
@@ -95,6 +97,12 @@ if (
     ENABLE_VDLM = True
 
 if (
+    os.getenv("ENABLE_HFDL", default=False)
+    and str(os.getenv("ENABLE_HFDL")).upper() == "EXTERNAL"
+):
+    ENABLE_HFDL = True
+
+if (
     os.getenv("DB_SAVEALL", default=False)
     and str(os.getenv("DB_SAVEALL")).upper() == "TRUE"
 ):
@@ -105,6 +113,9 @@ if os.getenv("ACARS_SOURCE_PORT", default=False):
 
 if os.getenv("VDLM_SOURCE_PORT", default=False):
     VDLM_SOURCE_PORT = int(os.getenv("VDLM_SOURCE_PORT"))
+
+if os.getenv("HFDL_SOURCE_PORT", default=False):
+    HFDL_SOURCE_PORT = int(os.getenv("HFDL_SOURCE_PORT"))
 
 # Application Settings
 
