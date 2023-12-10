@@ -639,7 +639,7 @@ def database_search(search_term, page=0):
         session = db_session()
         match_string = ""
 
-        if "station_id" in search_term:
+        if "station_id" in search_term and search_term["station_id"] != "":
             # we need to search outside of FTS
             result = session.query(messages)
             for key in search_term:
