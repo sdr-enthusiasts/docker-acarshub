@@ -99,6 +99,11 @@ def format_hfdl_message(unformatted_message):
                     hfdl_message["lat"] = float(position["lat"])
                 if "lon" in position:
                     hfdl_message["lon"] = float(position["lon"])
+            if "freq_data" in unformatted_message["hfdl"]["lpdu"]["hfnpdu"]:
+                # use libacars to dump the JSON
+                hfdl_message["libacars"] = json.dumps(
+                    unformatted_message["hfdl"]["lpdu"]["hfnpdu"]["freq_data"]
+                )
             if "acars" in unformatted_message["hfdl"]["lpdu"]["hfnpdu"]:
                 # ack
                 if "ack" in unformatted_message["hfdl"]["lpdu"]["hfnpdu"]["acars"]:
@@ -149,11 +154,20 @@ def format_hfdl_message(unformatted_message):
                 # libacars
                 # use the arinc622 field, dumped as JSON
                 if "arinc622" in unformatted_message["hfdl"]["lpdu"]["hfnpdu"]["acars"]:
-                    hfdl_message["libacars"] = json.dumps(
-                        unformatted_message["hfdl"]["lpdu"]["hfnpdu"]["acars"][
-                            "arinc622"
-                        ]
-                    )
+                    if "libacars" not in hfdl_message:
+                        hfdl_message["libacars"] = json.dumps(
+                            unformatted_message["hfdl"]["lpdu"]["hfnpdu"]["acars"][
+                                "arinc622"
+                            ]
+                        )
+                    else:
+                        hfdl_message["libacars"] = hfdl_message[
+                            "libacars"
+                        ] + json.dumps(
+                            unformatted_message["hfdl"]["lpdu"]["hfnpdu"]["acars"][
+                                "arinc622"
+                            ]
+                        )
 
     # toaddr
     # fromaddr
