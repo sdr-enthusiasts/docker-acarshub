@@ -36,7 +36,7 @@ def update_db(vdlm=0, acars=0, error=0, hfdl=0, hfdl_error=0):
         acarshub_logging.acars_traceback(e, "rrdtool")
 
     try:
-        rrdtool.update("/run/acars/hfdl.rrd", f"N:{hfdl}:{vdlm}:{total}:{error}")
+        rrdtool.update("/run/acars/hfdl.rrd", f"N:{hfdl}:{hfdl_error}")
         acarshub_logging.log(
             f"rrdtool.update: N:{hfdl}:{hfdl_error}",
             "rrdtool",
