@@ -78,6 +78,13 @@ def format_hfdl_message(unformatted_message):
         )
 
     if "lpdu" in unformatted_message["hfdl"]:
+        # icao
+        if "ac_info" in unformatted_message["hfdl"]["lpdu"]:
+            if "icao" in unformatted_message["hfdl"]["lpdu"]["ac_info"]:
+                hfdl_message["icao"] = int(
+                    unformatted_message["hfdl"]["lpdu"]["ac_info"]["icao"], 16
+                )
+
         if "hfnpdu" in unformatted_message["hfdl"]["lpdu"]:
             # flight
             if "flight_id" in unformatted_message["hfdl"]["lpdu"]["hfnpdu"]:
@@ -88,7 +95,6 @@ def format_hfdl_message(unformatted_message):
             # lon
             if "pos" in unformatted_message["hfdl"]["lpdu"]["hfnpdu"]:
                 position = unformatted_message["hfdl"]["lpdu"]["hfnpdu"]["pos"]
-                print(position)
                 if "lat" in position:
                     hfdl_message["lat"] = float(position["lat"])
                 if "lon" in position:
@@ -161,8 +167,6 @@ def format_hfdl_message(unformatted_message):
 
     # alt
     # data
-
-    # icao
 
     # is_response
     # is_onground
