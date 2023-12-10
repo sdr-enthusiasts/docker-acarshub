@@ -413,6 +413,11 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
                     "message_listener",
                     acarshub_logging.LOG_LEVEL["WARNING"],
                 )
+                acarshub_logging.log(
+                    f"Would attempt to add to database {acars_formatter.format_acars_message(msg)}",
+                    "message_listener",
+                    acarshub_logging.LOG_LEVEL["WARNING"],
+                )
 
             if (
                 len(list_of_recent_messages) >= list_of_recent_messages_max

@@ -22,8 +22,21 @@ import json
 def format_acars_message(acars_message):
     if "vdl2" in acars_message:
         return format_dumpvdl2_message(acars_message)
-    else:
-        return acars_message
+
+    if "hfdl" in acars_message:
+        return format_hfdl_message(acars_message)
+
+    return acars_message
+
+
+def format_hfdl_message(unformatted_message):
+    hfdl_message = dict()
+
+    hfdl_message["timestamp"] = unformatted_message["hfdl"]["t"]["sec"]
+    if "station" in unformatted_message["hfdl"]:
+        hfdl_message["station_id"] = unformatted_message["hfdl"]["station"]
+
+    return hfdl_message
 
 
 def formated_dumpvdl2_level(unformatted_level):
