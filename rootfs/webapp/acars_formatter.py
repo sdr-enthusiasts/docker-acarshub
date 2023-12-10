@@ -54,7 +54,9 @@ def format_hfdl_message(unformatted_message):
 
     if "lpdu" in unformatted_message["hfdl"]:
         if "err" in unformatted_message["hfdl"]["lpdu"]:
-            hfdl_message["error"] = 1  # FIXME: this is a guess
+            hfdl_message["error"] = (
+                1 if unformatted_message["hfdl"]["lpdu"]["err"] is True else 0
+            )  # FIXME: this is a guess
 
         if "hfpdu" in unformatted_message["hfdl"]["lpdu"]:
             if "acars" in unformatted_message["hfdl"]["lpdu"]["hfpdu"]:
