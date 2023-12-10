@@ -45,7 +45,7 @@ def format_hfdl_freq(unformatted_freq):
 
 def count_hfdl_errors(unformatted_message):
     total_errors = 0
-    for key, value in unformatted_message["hfdl"].items():
+    for key, value in unformatted_message.items():
         if type(value) is dict:
             total_errors += count_hfdl_errors(value)
         else:
