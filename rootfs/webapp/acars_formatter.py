@@ -106,6 +106,20 @@ def format_hfdl_message(unformatted_message):
                     hfdl_message["mode"] = unformatted_message["hfdl"]["lpdu"][
                         "hfnpdu"
                     ]["acars"]["mode"]
+                # text
+                if "msg_text" in unformatted_message["hfdl"]["lpdu"]["hfnpdu"]["acars"]:
+                    hfdl_message["text"] = unformatted_message["hfdl"]["lpdu"][
+                        "hfnpdu"
+                    ]["acars"]["msg_text"]
+
+                # libacars
+                # use the arinc622 field, dumped as JSON
+                if "arinc622" in unformatted_message["hfdl"]["lpdu"]["hfnpdu"]["acars"]:
+                    hfdl_message["libacars"] = json.dumps(
+                        unformatted_message["hfdl"]["lpdu"]["hfnpdu"]["acars"][
+                            "arinc622"
+                        ]
+                    )
 
     # toaddr
     # fromaddr
@@ -119,7 +133,7 @@ def format_hfdl_message(unformatted_message):
     # lat
     # lon
     # alt
-    # text
+
     # data
 
     # flight
@@ -131,7 +145,7 @@ def format_hfdl_message(unformatted_message):
     # is_response
     # is_onground
     # error
-    # libacars
+
     # level
     if "sig_level" in unformatted_message["hfdl"]:
         hfdl_message["level"] = formated_dumpvdl2_level(
