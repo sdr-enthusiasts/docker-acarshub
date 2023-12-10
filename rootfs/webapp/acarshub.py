@@ -409,14 +409,15 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
                 )
             else:
                 acarshub_logging.log(
-                    "Skipping HFDL message",
+                    f"Attempting to add to database {acars_formatter.format_acars_message(msg)}",
                     "message_listener",
                     acarshub_logging.LOG_LEVEL["WARNING"],
                 )
-                acarshub_logging.log(
-                    f"Would attempt to add to database {acars_formatter.format_acars_message(msg)}",
-                    "message_listener",
-                    acarshub_logging.LOG_LEVEL["WARNING"],
+                que_messages.append(
+                    (que_type, acars_formatter.format_acars_message(msg))
+                )
+                que_database.append(
+                    (que_type, acars_formatter.format_acars_message(msg))
                 )
 
             if (
