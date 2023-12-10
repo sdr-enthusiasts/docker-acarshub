@@ -82,6 +82,18 @@ def format_hfdl_message(unformatted_message):
         libacars["spdu"] = unformatted_message["hfdl"]["spdu"]
 
     if "lpdu" in unformatted_message["hfdl"]:
+        # toaddr
+        if "dst" in unformatted_message["hfdl"]["lpdu"]:
+            if "addr" in unformatted_message["hfdl"]["lpdu"]["dst"]:
+                hfdl_message["toaddr"] = int(
+                    unformatted_message["hfdl"]["lpdu"]["dst"]["addr"], 16
+                )
+        # fromaddr
+        if "src" in unformatted_message["hfdl"]["lpdu"]:
+            if "addr" in unformatted_message["hfdl"]["lpdu"]["src"]:
+                hfdl_message["fromaddr"] = int(
+                    unformatted_message["hfdl"]["lpdu"]["src"]["addr"], 16
+                )
         # icao
         if "ac_info" in unformatted_message["hfdl"]["lpdu"]:
             if "icao" in unformatted_message["hfdl"]["lpdu"]["ac_info"]:
@@ -163,8 +175,7 @@ def format_hfdl_message(unformatted_message):
                     ]["acars"]["arinc622"]
     if len(libacars) > 0:
         hfdl_message["libacars"] = json.dumps(libacars)
-    # toaddr
-    # fromaddr
+
     # depa
     # dsta
     # eta
