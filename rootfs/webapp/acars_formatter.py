@@ -82,6 +82,10 @@ def format_hfdl_message(unformatted_message):
     # error
     # libacars
     # level
+    if "sig_level" in unformatted_message["hfdl"]:
+        hfdl_message["level"] = formated_dumpvdl2_level(
+            unformatted_message["hfdl"]["sig_level"]
+        )
 
     return hfdl_message
 
