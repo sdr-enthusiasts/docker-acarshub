@@ -170,31 +170,46 @@ def flight_finder(callsign=None, hex_code=None, url=True):
         # Check the ICAO DB to see if we know what it is
         # The ICAO DB will return the ICAO code back if it didn't find anything
 
-        icao, airline = acarshub_database.find_airline_code_from_iata(callsign[:2])
-        flight_number = callsign[2:]
-        flight = icao + flight_number
+        # see if the callsign is in IATA or ICAO format
+        # if there are three letters starting the callsign, it's ICAO
+        # anything else is IATA
+
+        # check the first three characters for letters
+        icao_flight = ""
+        iata_flight = ""
+
+        if callsign[:3].isalpha():
+            icao_flight = callsign
+            iata, airline = acarshub_database.find_airline_code_from_icao(callsign[:3])
+            flight_number = callsign[3:]
+            iata_flight = iata + flight_number
+        else:
+            icao, airline = acarshub_database.find_airline_code_from_iata(callsign[:2])
+            flight_number = callsign[2:]
+            icao_flight = icao + flight_number
+            iata_flight = callsign
         tooltip_text = ""
 
         if icao != callsign[:2]:
-            html = f"<strong>{flight}/{callsign}</strong> "
+            html = f"<strong>{icao_flight}/{iata_flight}</strong> "
             tooltip_text = (
                 f"<p>The aircraft's callsign.</p>{airline} Flight {flight_number}"
             )
         else:
-            html = f"<strong>{flight}</strong> "
-            tooltip_text = f"<p>The aircraft's callsign was not found in the database for decoding.</p>{flight}"
+            html = f"<strong>{icao_flight}</strong> "
+            tooltip_text = f"<p>The aircraft's callsign was not found in the database for decoding.</p>{icao_flight}"
 
         # If the iata and icao variables are not equal, airline was found in the database and we'll add in the tool-tip for the decoded airline
         # Otherwise, no tool-tip, no FA link, and use the IATA code for display
         if url:
             return (
                 f'<span class="flight-tooltip" data-jbox-content="{tooltip_text}">Flight: <strong><a href="{ADSB_URL}{hex_code}" target="_blank">{html}</a></strong></span>',
-                flight,
+                icao_flight,
             )
         else:
             return (
                 f'<span class="flight-tooltip" data-jbox-content="{tooltip_text}">Flight: {html}</span>',
-                flight,
+                icao_flight,
             )
     else:  # We should never run in to this condition, I don't think, but we'll add a case for it
         return ("Flight: Error", None)

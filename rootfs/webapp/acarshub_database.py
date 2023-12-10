@@ -616,6 +616,15 @@ def find_airline_code_from_iata(iata):
         return (iata, "Unknown Airline")
 
 
+def find_airline_code_from_icao(icao):
+    # FIXME: this is complete shit and we need to do IATA/ICAO stuff better
+    for iata in airlines:
+        if iata["ICAO"] == icao:
+            return (iata, airlines[iata]["NAME"])
+
+    return (icao, "UNKNOWN AIRLINE")
+
+
 # FIXME: Rolled back to old database_search. Should wrap FTS table in SQL Alchemy engine
 def database_search(search_term, page=0):
     result = None
