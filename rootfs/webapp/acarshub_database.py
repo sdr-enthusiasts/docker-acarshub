@@ -619,7 +619,7 @@ def find_airline_code_from_iata(iata):
 def find_airline_code_from_icao(icao):
     # FIXME: this is complete shit and we need to do IATA/ICAO stuff better
     for iata in airlines:
-        if iata["ICAO"] == icao:
+        if airlines[iata]["ICAO"] == icao:
             return (iata, airlines[iata]["NAME"])
 
     return (icao, "UNKNOWN AIRLINE")
