@@ -189,7 +189,6 @@ def format_hfdl_message(unformatted_message):
 
     # is_response
     # is_onground
-    # error
 
     return hfdl_message
 
