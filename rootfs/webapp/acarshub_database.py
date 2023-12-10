@@ -641,7 +641,7 @@ def database_search(search_term, page=0):
 
         if "station_id" in search_term and search_term["station_id"] != "":
             # we need to search outside of FTS
-            result = session.query(messages)
+            result = session.query(messages).all()
             for key in search_term:
                 if search_term[key] == "":
                     continue
