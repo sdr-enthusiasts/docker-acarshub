@@ -636,7 +636,23 @@ def database_search(search_term, page=0):
             "database",
             level=LOG_LEVEL["DEBUG"],
         )
+        session = db_session()
         match_string = ""
+
+        if "station_id" in search_term:
+            # we need to search outside of FTS
+            result = session.query(messages)
+            for key in search_term:
+                result.filter(messages[key].contains(search_term[key]))
+
+            result.order_by(messages.time.desc()).limit(50).offset(page * 50)
+            count = result.count()
+
+            if count > 0:
+                processed_results = [query_to_dict(d) for d in result]
+                processed_results.reverse()
+            session.close()
+            return (processed_results, count)
 
         for key in search_term:
             if search_term[key] is not None and search_term[key] != "":
@@ -649,8 +665,6 @@ def database_search(search_term, page=0):
             return [None, 0]
 
         match_string += "'"
-
-        session = db_session()
 
         result = session.execute(
             text(
