@@ -101,6 +101,7 @@ RUN set -x && \
     ACARS_VERSION=$(grep -oP 'ACARS Hub: v\K[0-9\.]+' /webapp/static/js/acarshub.*.js) && \
     ACARS_BUILD=$(grep -oP 'ACARS Hub: v\K[0-9\.]+ Build \K[0-9]+' /webapp/static/js/acarshub.*.js) && \
     echo "ACARS Hub: v${ACARS_VERSION} Build ${ACARS_BUILD}" && \
+    sleep 100 && \
     # echo the version and build number to /acarshub_version
     # check and see if we have a build number and version. If not, set it to 0
     # This will be for local non-github versions
