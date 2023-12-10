@@ -80,14 +80,14 @@ def format_hfdl_message(unformatted_message):
     if "lpdu" in unformatted_message["hfdl"]:
         if "hfnpdu" in unformatted_message["hfdl"]["lpdu"]:
             # flight
-            if "flight_id" in unformatted_message["hfdl"]["lpdu"]["hfnpdu"]["acars"]:
+            if "flight_id" in unformatted_message["hfdl"]["lpdu"]["hfnpdu"]:
                 hfdl_message["flight"] = unformatted_message["hfdl"]["lpdu"]["hfnpdu"][
-                    "acars"
-                ]["flight_id"]
+                    "flight_id"
+                ]
             # lat
             # lon
-            if "pos" in unformatted_message["hfdl"]["lpdu"]["hfnpdu"]["acars"]:
-                position = unformatted_message["hfdl"]["lpdu"]["hfnpdu"]["acars"]["pos"]
+            if "pos" in unformatted_message["hfdl"]["lpdu"]["hfnpdu"]:
+                position = unformatted_message["hfdl"]["lpdu"]["hfnpdu"]["pos"]
                 if "lat" in position:
                     hfdl_message["lat"] = float(position["lat"])
                 if "lon" in position:
