@@ -43,6 +43,17 @@ def format_hfdl_freq(unformatted_freq):
     return truncated
 
 
+def count_hfdl_errors(unformatted_message):
+    total_errors = 0
+    for key, value in unformatted_message["hfdl"].items():
+        if type(value) is dict:
+            total_errors += count_hfdl_errors(value)
+        else:
+            if key == "err" and value:
+                total_errors += 1
+    return total_errors
+
+
 def format_hfdl_message(unformatted_message):
     hfdl_message = dict()
 
@@ -52,18 +63,21 @@ def format_hfdl_message(unformatted_message):
     if "station" in unformatted_message["hfdl"]:
         hfdl_message["station_id"] = unformatted_message["hfdl"]["station"]
 
-    # error if lpdu is not present
-    if "lpdu" not in unformatted_message["hfdl"]:
-        hfdl_message["error"] = 0  # FIXME: this is a guess
+    # error
+    # walk the entire message and look for err fields. Count the total of trues
+    hfdl_message["error"] = count_hfdl_errors(unformatted_message["hfdl"])
+
+    # freq
+    if "freq" in unformatted_message["hfdl"]:
+        hfdl_message["freq"] = format_hfdl_freq(unformatted_message["hfdl"]["freq"])
+
+    # level
+    if "sig_level" in unformatted_message["hfdl"]:
+        hfdl_message["level"] = formated_dumpvdl2_level(
+            unformatted_message["hfdl"]["sig_level"]
+        )
 
     if "lpdu" in unformatted_message["hfdl"]:
-        if "err" in unformatted_message["hfdl"]["lpdu"]:
-            hfdl_message["error"] = (
-                1 if unformatted_message["hfdl"]["lpdu"]["err"] is True else 0
-            )  # FIXME: this is a guess
-        else:
-            hfdl_message["error"] = 0
-
         if "hfnpdu" in unformatted_message["hfdl"]["lpdu"]:
             if "acars" in unformatted_message["hfdl"]["lpdu"]["hfnpdu"]:
                 # ack
@@ -133,24 +147,13 @@ def format_hfdl_message(unformatted_message):
     # lat
     # lon
     # alt
-
     # data
-
     # flight
     # icao
-    # freq
-    if "freq" in unformatted_message["hfdl"]:
-        hfdl_message["freq"] = format_hfdl_freq(unformatted_message["hfdl"]["freq"])
 
     # is_response
     # is_onground
     # error
-
-    # level
-    if "sig_level" in unformatted_message["hfdl"]:
-        hfdl_message["level"] = formated_dumpvdl2_level(
-            unformatted_message["hfdl"]["sig_level"]
-        )
 
     return hfdl_message
 
