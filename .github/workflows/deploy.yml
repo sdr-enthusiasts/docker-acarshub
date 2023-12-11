@@ -106,8 +106,7 @@ jobs:
     name: Deploy as test
     if: |
       github.event.inputs.build_latest_as_test == 'true' &&
-      (github.event.inputs.build_latest_as_test == 'false' ||
-      github.event.inputs.build_latest_as_test == '')
+      (github.event.inputs.use_test_image == 'false' || github.event.inputs.use_test_image == '')
     uses: sdr-enthusiasts/common-github-workflows/.github/workflows/build_and_push_image.yml@main
     needs: patch_acars_hub_verison
     with:
