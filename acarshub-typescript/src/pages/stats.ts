@@ -243,7 +243,7 @@ export let stats_page = {
             freq_labels_acars_offset.push(acars_offset);
             acars_offset += 60;
           }
-        } else if (value.freq_type === "VDLM") {
+        } else if (value.freq_type === "VDL-M2") {
           freq_data_vdlm.push(value.count);
           freq_labels_vdlm.push(value.freq);
 
@@ -334,7 +334,7 @@ export let stats_page = {
       ? canvas.getContext("2d")!
       : null!;
     if (ctx != null) {
-      this.chart_frequency_data_vdlm = new Chart(ctx, {
+      let temp_chart = new Chart(ctx, {
         // The type of chart we want to create
         type: "bar",
 
@@ -406,6 +406,14 @@ export let stats_page = {
         },
         plugins: [ChartDataLabels],
       });
+
+      if (label === "ACARS") {
+        this.chart_frequency_data_acars = temp_chart;
+      } else if (label === "VDLM") {
+        this.chart_frequency_data_vdlm = temp_chart;
+      } else if (label === "HFDL") {
+        this.chart_frequency_data_hfdl = temp_chart;
+      }
       // clamp the height of the parent container to the height of the chart based on the number of elements
       // this is a hack to get the chart to display properly
 
