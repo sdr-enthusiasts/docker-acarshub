@@ -226,8 +226,15 @@ export let stats_page = {
       let hfdl_offset: number = 5;
 
       Object.entries(this.freqs_data.freqs).forEach(([key, value]) => {
-        if (value.freq_type === "ACARS") total_count_acars += value.count;
-        else total_count_vdlm += value.count;
+        if (value.freq_type === "ACARS") {
+          total_count_acars += value.count;
+        } else if (value.freq_type === "HFDL") {
+          total_count_hfdl += value.count;
+        } else if (value.freq_type === "VDL-M2") {
+          total_count_vdlm += value.count;
+        } else {
+          console.error("Unknown freq type: " + value.freq_type);
+        }
       });
 
       Object.entries(this.freqs_data.freqs).forEach(([key, value]) => {
