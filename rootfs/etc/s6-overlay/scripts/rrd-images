@@ -28,8 +28,8 @@ if [[ ${ENABLE_WEB,,} =~ true ]]; then
     fi
 
     if [[ ${ENABLE_HFDL,,} =~ external ]]; then
-        ARGS_ALL+=("DEF:messages-hfdl=/run/acars/acarshub.rrd:HFDL:AVERAGE" "LINE1:messages-hfdl#FF00FF:HFDL")
-        ARGS_HFDL+=("DEF:messages-hfdl=/run/acars/acarshub.rrd:HFDL:AVERAGE" "LINE1:messages-hfdl#FF00FF:HFDL")
+        ARGS_ALL+=("DEF:messages-hfdl=/run/acars/acarshub.rrd:HFDL:AVERAGE" "LINE1:messages-hfdl#F05E16:HFDL")
+        ARGS_HFDL+=("DEF:messages-hfdl=/run/acars/acarshub.rrd:HFDL:AVERAGE" "LINE1:messages-hfdl#F05E16:HFDL")
         total_enabled=$((total_enabled + 1))
     fi
 
