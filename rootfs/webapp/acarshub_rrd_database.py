@@ -22,23 +22,18 @@ from acarshub_logging import LOG_LEVEL
 import os
 
 
-def update_db(vdlm=0, acars=0, error=0, hfdl=0, hfdl_error=0):
-    total = vdlm + acars
+def update_db(vdlm=0, acars=0, error=0, hfdl=0):
+    total = vdlm + acars + hfdl
+    args = (
+        "--template",
+        "ACARS:VDLM:TOTAL:ERROR:HFDL",
+        f"N:{acars}:{vdlm}:{total}:{error}:{hfdl}",
+    )
 
     try:
-        rrdtool.update("/run/acars/acarshub.rrd", f"N:{acars}:{vdlm}:{total}:{error}")
+        rrdtool.update("/run/acars/acarshub.rrd", *args)
         acarshub_logging.log(
-            f"rrdtool.update: N:{acars}:{vdlm}:{total}:{error}",
-            "rrdtool",
-            level=LOG_LEVEL["DEBUG"],
-        )
-    except Exception as e:
-        acarshub_logging.acars_traceback(e, "rrdtool")
-
-    try:
-        rrdtool.update("/run/acars/hfdl.rrd", f"N:{hfdl}:{hfdl_error}")
-        acarshub_logging.log(
-            f"rrdtool.update: N:{hfdl}:{hfdl_error}",
+            f"rrdtool.update: N:{acars}:{vdlm}:{total}:{error}:{hfdl}",
             "rrdtool",
             level=LOG_LEVEL["DEBUG"],
         )
@@ -60,6 +55,7 @@ def create_db():
                 "DS:VDLM:GAUGE:120:U:U",
                 "DS:TOTAL:GAUGE:120:U:U",
                 "DS:ERROR:GAUGE:120:U:U",
+                "DS:HFDL:GAUGE:120:U:U",
                 "RRA:AVERAGE:0.5:1:1500",  # 25 hours at 1 minute reso
                 "RRA:AVERAGE:0.5:5:8640",  # 1 month at 5 minute reso
                 "RRA:AVERAGE:0.5:60:4320",  # 6 months at 1 hour reso
@@ -69,24 +65,3 @@ def create_db():
         acarshub_logging.acars_traceback(e, "rrdtool")
     else:
         acarshub_logging.log("Database found", "rrdtool")
-
-    try:
-        if not os.path.exists("/run/acars/hfdl.rrd"):
-            acarshub_logging.log("creating the HFDL RRD Database", "rrdtool")
-            rrdtool.create(
-                "/run/acars/hfdl.rrd",
-                "--start",
-                "N",
-                "--step",
-                "60",
-                "DS:HFDL:GAUGE:120:U:U",
-                "DS:ERROR:GAUGE:120:U:U",
-                "RRA:AVERAGE:0.5:1:1500",  # 25 hours at 1 minute reso
-                "RRA:AVERAGE:0.5:5:8640",  # 1 month at 5 minute reso
-                "RRA:AVERAGE:0.5:60:4320",  # 6 months at 1 hour reso
-                "RRA:AVERAGE:0.5:360:4380",  # 3 year at 6 hour reso
-            )
-    except Exception as e:
-        acarshub_logging.acars_traceback(e, "rrdtool")
-    else:
-        acarshub_logging.log("HFDL Database found", "rrdtool")
