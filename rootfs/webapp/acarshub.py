@@ -651,6 +651,7 @@ def main_connect():
             {
                 "vdlm": acarshub_configuration.ENABLE_VDLM,
                 "acars": acarshub_configuration.ENABLE_ACARS,
+                "hfdl": acarshub_configuration.ENABLE_HFDL,
                 "arch": acarshub_configuration.ARCH,
                 "allow_remote_updates": acarshub_configuration.ALLOW_REMOTE_UPDATES,
                 "adsb": {

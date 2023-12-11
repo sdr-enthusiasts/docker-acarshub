@@ -60,12 +60,22 @@ export let menu = {
 
   generate_stat_submenu: function (
     acars: boolean = false,
-    vdlm: boolean = false
+    vdlm: boolean = false,
+    hfdl: boolean = false
   ): void {
     let text: string = "";
     const acars_prefix = acars && vdlm ? "'acars'" : "''";
     const vdlm_prefix = vdlm && acars ? "'vdlm'" : "''";
-    if (acars && vdlm) {
+    const hfdl_prefix = hfdl ? "'hfdl'" : "''";
+
+    let show_combined = false;
+
+    // if any two of acars, vdlm, hfdl are true, set show_combined to true
+    if (acars && vdlm) show_combined = true;
+    if (acars && hfdl) show_combined = true;
+    if (vdlm && hfdl) show_combined = true;
+
+    if (show_combined) {
       text =
         '<a href="javascript:update_prefix(\'\')" id="combined_graphs" class="spread_text">Combined Graphs</a>';
     }
@@ -80,6 +90,12 @@ export let menu = {
       text += `${
         acars && vdlm ? " | " : ""
       }<a href="javascript:update_prefix(${vdlm_prefix})" id="vdlm_graphs" class="spread_text">VDLM Graphs</a>`;
+    }
+
+    if (hfdl) {
+      text += `${
+        acars && vdlm ? " | " : ""
+      }<a href="javascript:update_prefix(${hfdl_prefix})" id="hfdl_graphs" class="spread_text">HFDL Graphs</a>`;
     }
 
     text +=

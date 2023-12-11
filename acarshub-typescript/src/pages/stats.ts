@@ -53,6 +53,7 @@ export let stats_page = {
 
   acars_on: false as boolean,
   vdlm_on: false as boolean,
+  hfdl_on: false as boolean,
   width: 1000 as number,
 
   tol: new palette("tol", 12, 0, "").map(function (hex: any) {
@@ -620,6 +621,8 @@ export let stats_page = {
   decoders_enabled: function (msg: decoders): void {
     this.acars_on = msg.acars;
     this.vdlm_on = msg.vdlm;
+    this.hfdl_on = msg.hfdl;
+
     if (this.stats_page_active)
       generate_stat_submenu(this.acars_on, this.vdlm_on);
   },
@@ -740,6 +743,7 @@ export let stats_page = {
         ? '<div id="vdlm_freq_graph" class="chart-container"><div>&nbsp;</div><canvas id="frequencies_vdlm"></canvas></div>'
         : ""
     }
+
     <div id="chart_msg_good" class="chart-container"><div>&nbsp;</div><canvas id="msg_count_data"></div>
     <div id="chart_msg_empty" class="chart-container"><div>&nbsp;</div><canvas id="msg_count_empty"></div>
     </p>'`); // show the messages we've received

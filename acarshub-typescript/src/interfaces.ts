@@ -69,6 +69,7 @@ export interface terms {
 export interface decoders {
   acars: boolean;
   vdlm: boolean;
+  hfdl: boolean;
   arch: string;
   allow_remote_updates: boolean;
   adsb: {
