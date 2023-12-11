@@ -624,7 +624,7 @@ export let stats_page = {
     this.hfdl_on = msg.hfdl;
 
     if (this.stats_page_active)
-      generate_stat_submenu(this.acars_on, this.vdlm_on);
+      generate_stat_submenu(this.acars_on, this.vdlm_on, this.hfdl_on);
   },
 
   signals: function (msg: signal): void {
@@ -792,7 +792,7 @@ export let stats_page = {
       Chart.register(...registerables);
       // page is active
       this.set_html();
-      generate_stat_submenu(this.acars_on, this.vdlm_on);
+      generate_stat_submenu(this.acars_on, this.vdlm_on, this.hfdl_on);
       this.show_signal_chart();
       this.show_alert_chart();
       this.show_count();

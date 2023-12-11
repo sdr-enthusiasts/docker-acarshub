@@ -629,9 +629,10 @@ export function sound_alert(): void {
 
 export function generate_stat_submenu(
   acars: boolean = false,
-  vdlm: boolean = false
+  vdlm: boolean = false,
+  hfdl: boolean = false
 ): void {
-  menu.generate_stat_submenu(acars, vdlm);
+  menu.generate_stat_submenu(acars, vdlm, hfdl);
 }
 
 export function find_matches(): plane_data {
