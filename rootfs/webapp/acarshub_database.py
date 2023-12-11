@@ -668,7 +668,7 @@ def database_search(search_term, page=0):
                 .limit(50)
                 .offset(page * 50)
             )
-            count = result.count()
+            count = query.filter(*conditions).order_by(messages.time.desc()).count()
 
             if count > 0:
                 processed_results = [query_to_dict(d) for d in result]
