@@ -247,7 +247,7 @@ export let stats_page = {
           freq_data_vdlm.push(value.count);
           freq_labels_vdlm.push(value.freq);
 
-          if (value.count / total_count_acars > 0.2) {
+          if (value.count / total_count_vdlm > 0.2) {
             freq_labels_vdlm_positions.push("center");
             freq_labels_vdlm_offset.push(0);
           } else {
@@ -259,7 +259,7 @@ export let stats_page = {
           freq_data_hfdl.push(value.count);
           freq_labels_hfdl.push(value.freq);
 
-          if (value.count / total_count_acars > 0.2) {
+          if (value.count / total_count_hfdl > 0.2) {
             freq_labels_hfdl_positions.push("center");
             freq_labels_hfdl_offset.push(0);
           } else {
