@@ -24,7 +24,7 @@
     "autoprefixer": "^10.4.16",
     "babel-loader": "^9.1.3",
     "css-loader": "^6.8.1",
-    "favicons": "^7.1.4",
+    "favicons": "^7.1.5",
     "favicons-webpack-plugin": "^6.0.1",
     "html-webpack-plugin": "^5.5.4",
     "inject-body-webpack-plugin": "^1.3.0",
