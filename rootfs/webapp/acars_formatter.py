@@ -351,6 +351,14 @@ def format_dumpvdl2_message(unformatted_message):
             unformatted_message["vdl2"]["sig_level"]
         )
 
+    if "acars" in unformatted_message["vdl2"]["avlc"]:
+        # libacars
+        # use the arinc622 field, dumped as JSON
+        if "arinc622" in unformatted_message["vdl2"]["avlc"]["acars"]:
+            vdlm2_message["libacars"] = json.dumps(
+                unformatted_message["vdl2"]["avlc"]["acars"]["arinc622"]
+            )
+
     return vdlm2_message
 
 
