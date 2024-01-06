@@ -12,6 +12,11 @@ on:
         type: boolean
         description: "Use base image testpr"
         default: false
+      build_latest_as_test:
+        required: false
+        type: boolean
+        description: "Build latest as test"
+        default: false
   push:
     branches:
       - main
@@ -40,9 +45,11 @@ jobs:
         env:
           INPUTS_REASON: ${{ github.event.inputs.reason }}
           INPUTS_USE_TEST_IMAGE: ${{ github.event.inputs.use_test_image }}
+          INPUTS_BUILD_LATEST_AS_TEST: ${{ github.event.inputs.build_latest_as_test }}
         run: |
           echo "Workflow dispatch reason: $INPUTS_REASON"
           echo "Use test image: $INPUTS_USE_TEST_IMAGE"
+          echo "Build latest as test: $INPUTS_BUILD_LATEST_AS_TEST"
 
   patch_acars_hub_verison:
     name: "patch acars-hub version"
@@ -72,6 +79,9 @@ jobs:
 
   deploy:
     name: Deploy
+    if: |
+      github.event.inputs.build_latest_as_test == 'false' ||
+      github.event.inputs.build_latest_as_test == ''
     uses: sdr-enthusiasts/common-github-workflows/.github/workflows/build_and_push_image.yml@main
     needs: patch_acars_hub_verison
     with:
@@ -92,6 +102,32 @@ jobs:
         \# patch acarshub version/sed -i \"s\/Pre-Release\/${{ needs.patch_acars_hub_verison.outputs.acarshub_version}}\/g\" \/acarshub-typescript\/src\/helpers\/menu.ts
     secrets:
       ghcr_token: ${{ secrets.GITHUB_TOKEN }}
+  deploy_test:
+    name: Deploy as test
+    if: |
+      github.event.inputs.build_latest_as_test == 'true' &&
+      (github.event.inputs.use_test_image == 'false' || github.event.inputs.use_test_image == '')
+    uses: sdr-enthusiasts/common-github-workflows/.github/workflows/build_and_push_image.yml@main
+    needs: patch_acars_hub_verison
+    with:
+      push_enabled: true
+      push_destinations: ghcr.io
+      ghcr_repo_owner: ${{ github.repository_owner }}
+      ghcr_repo: ${{ github.repository }}
+      # set build_latest to true if github.event.inputs.use_test_image is false
+      build_latest: true
+      build_baseimage_test: false
+      # only build the entire stack if we are not using the test image
+      build_version_specific: false
+      build_platform_specific: false
+      build_nohealthcheck: false
+      build_baseimage_url: :python/:python-test-pr
+      get_version_method: file_in_container:file=/acarshub_version
+      docker_latest_tag: test
+      dockerfile_changes: |
+        \# patch acarshub version/sed -i \"s\/Pre-Release\/${{ needs.patch_acars_hub_verison.outputs.acarshub_version}}\/g\" \/acarshub-typescript\/src\/helpers\/menu.ts
+    secrets:
+      ghcr_token: ${{ secrets.GITHUB_TOKEN }}
 
   # generate a release
   release:
@@ -99,8 +135,11 @@ jobs:
     needs: [deploy, patch_acars_hub_verison]
     runs-on: ubuntu-latest
     if: |
-      github.event.inputs.use_test_image == 'false' ||
-      github.event.inputs.use_test_image == ''
+      (github.event.inputs.use_test_image == 'false' ||
+      github.event.inputs.use_test_image == '' ) &&
+      (github.event.inputs.build_latest_as_test == 'false' ||
+      github.event.inputs.build_latest_as_test == '' )
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4.1.1

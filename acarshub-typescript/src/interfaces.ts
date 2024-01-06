@@ -69,6 +69,7 @@ export interface terms {
 export interface decoders {
   acars: boolean;
   vdlm: boolean;
+  hfdl: boolean;
   arch: string;
   allow_remote_updates: boolean;
   adsb: {
@@ -135,6 +136,7 @@ export interface current_search {
   msgno: string;
   tail: string;
   msg_text: string;
+  station_id: string;
 }
 
 export interface labels {

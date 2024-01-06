@@ -43,6 +43,7 @@ export let stats_page = {
   chart_signals: (<unknown>null) as Chart,
   chart_frequency_data_acars: (<unknown>null) as Chart,
   chart_frequency_data_vdlm: (<unknown>null) as Chart,
+  chart_frequency_data_hfdl: (<unknown>null) as Chart,
   chart_message_counts_data: (<unknown>null) as Chart,
   chart_message_counts_empty: (<unknown>null) as Chart,
 
@@ -53,6 +54,7 @@ export let stats_page = {
 
   acars_on: false as boolean,
   vdlm_on: false as boolean,
+  hfdl_on: false as boolean,
   width: 1000 as number,
 
   tol: new palette("tol", 12, 0, "").map(function (hex: any) {
@@ -201,20 +203,38 @@ export let stats_page = {
     ) {
       let freq_data_acars: number[] = [];
       let freq_data_vdlm: number[] = [];
+      let freq_data_hfdl: number[] = [];
+
       let freq_labels_acars: string[] = [];
       let freq_labels_vdlm: string[] = [];
+      let freq_labels_hfdl: string[] = [];
+
       let freq_labels_acars_positions: string[] = [];
       let freq_labels_vdlm_positions: string[] = [];
+      let freq_labels_hfdl_positions: string[] = [];
+
       let freq_labels_acars_offset: number[] = [];
       let freq_labels_vdlm_offset: number[] = [];
+      let freq_labels_hfdl_offset: number[] = [];
+
       let total_count_acars: number = 0;
       let total_count_vdlm: number = 0;
+      let total_count_hfdl: number = 0;
+
       let acars_offset: number = 5;
       let vdlm_offset: number = 5;
+      let hfdl_offset: number = 5;
 
       Object.entries(this.freqs_data.freqs).forEach(([key, value]) => {
-        if (value.freq_type === "ACARS") total_count_acars += value.count;
-        else total_count_vdlm += value.count;
+        if (value.freq_type === "ACARS") {
+          total_count_acars += value.count;
+        } else if (value.freq_type === "HFDL") {
+          total_count_hfdl += value.count;
+        } else if (value.freq_type === "VDL-M2") {
+          total_count_vdlm += value.count;
+        } else {
+          console.error("Unknown freq type: " + value.freq_type);
+        }
       });
 
       Object.entries(this.freqs_data.freqs).forEach(([key, value]) => {
@@ -230,11 +250,11 @@ export let stats_page = {
             freq_labels_acars_offset.push(acars_offset);
             acars_offset += 60;
           }
-        } else {
+        } else if (value.freq_type === "VDL-M2") {
           freq_data_vdlm.push(value.count);
           freq_labels_vdlm.push(value.freq);
 
-          if (value.count / total_count_acars > 0.2) {
+          if (value.count / total_count_vdlm > 0.2) {
             freq_labels_vdlm_positions.push("center");
             freq_labels_vdlm_offset.push(0);
           } else {
@@ -242,6 +262,20 @@ export let stats_page = {
             freq_labels_vdlm_offset.push(vdlm_offset);
             vdlm_offset += 60;
           }
+        } else if (value.freq_type === "HFDL") {
+          freq_data_hfdl.push(value.count);
+          freq_labels_hfdl.push(value.freq);
+
+          if (value.count / total_count_hfdl > 0.2) {
+            freq_labels_hfdl_positions.push("center");
+            freq_labels_hfdl_offset.push(0);
+          } else {
+            freq_labels_hfdl_positions.push("end");
+            freq_labels_hfdl_offset.push(hfdl_offset);
+            hfdl_offset += 60;
+          }
+        } else {
+          console.error("Unknown freq type: " + value.freq_type);
         }
       });
 
@@ -253,192 +287,144 @@ export let stats_page = {
         this.chart_frequency_data_vdlm.destroy();
       }
 
+      if (this.chart_frequency_data_hfdl !== null) {
+        this.chart_frequency_data_hfdl.destroy();
+      }
+
       if (freq_data_acars.length > 0) {
-        const canvas: HTMLCanvasElement = <HTMLCanvasElement>(
-          document.getElementById("frequencies_acars")
+        this.render_freq_graph(
+          "ACARS",
+          freq_labels_acars,
+          freq_data_acars,
+          total_count_acars,
+          "frequencies_acars",
+          "#acars_freq_graph"
         );
-        const ctx: CanvasRenderingContext2D = canvas
-          ? canvas.getContext("2d")!
-          : null!;
-        if (ctx != null) {
-          this.chart_frequency_data_acars = new Chart(ctx, {
-            // The type of chart we want to create
-            type: "bar",
-
-            // The data for our dataset
-            data: {
-              labels: freq_labels_acars,
-              datasets: [
-                {
-                  label: "ACARS Frequencies",
-                  backgroundColor: this.rainbox,
-                  borderColor: "rgb(0, 0, 0)",
-                  data: freq_data_acars,
-                  //pointRadius: 0,
-                  borderWidth: 1,
-                },
-              ],
-            },
-
-            // Configuration options go here
-            options: {
-              indexAxis: "y",
-              responsive: true,
-              maintainAspectRatio: false,
-              plugins: {
-                legend: {
-                  display: false,
-                },
-                tooltip: {
-                  enabled: false,
-                },
-                title: {
-                  display: true,
-                  text: `ACARS Frequency Message Counts (${total_count_acars.toLocaleString()})`,
-                },
-                datalabels: {
-                  backgroundColor: function (context: any) {
-                    return context.dataset.backgroundColor;
-                  },
-                  borderRadius: 4,
-                  color: "white",
-                  clamp: true,
-                  font: {
-                    weight: "bold",
-                  },
-                  formatter: (value, context) => {
-                    return (
-                      freq_data_acars[context.dataIndex].toLocaleString() +
-                      " (" +
-                      (
-                        (freq_data_acars[context.dataIndex] /
-                          total_count_acars) *
-                        100
-                      )
-                        .toFixed(2)
-                        .toLocaleString() +
-                      "%)"
-                    );
-                  },
-                  align: "right",
-                  // padding: 6,
-                  // anchor: (context) => {
-                  //   return freq_labels_acars_positions[context.dataIndex] as
-                  //     | "end"
-                  //     | "center"
-                  //     | "start";
-                  // },
-                  // offset: (context) => {
-                  //   return freq_labels_acars_offset[context.dataIndex];
-                  // },
-                  clip: false,
-                },
-              },
-            },
-            plugins: [ChartDataLabels],
-          });
-          // clamp the height of the parent container to the height of the chart based on the number of elements
-          // this is a hack to get the chart to display properly
-
-          $("#acars_freq_graph").css(
-            "height",
-            `${freq_data_acars.length * 50}px`
-          );
-        }
       }
 
       if (freq_data_vdlm.length > 0) {
-        const canvas: HTMLCanvasElement = <HTMLCanvasElement>(
-          document.getElementById("frequencies_vdlm")
+        this.render_freq_graph(
+          "VDLM",
+          freq_labels_vdlm,
+          freq_data_vdlm,
+          total_count_vdlm,
+          "frequencies_vdlm",
+          "#vdlm_freq_graph"
         );
-        const ctx: CanvasRenderingContext2D = canvas
-          ? canvas.getContext("2d")!
-          : null!;
-        if (ctx != null) {
-          this.chart_frequency_data_vdlm = new Chart(ctx, {
-            // The type of chart we want to create
-            type: "bar",
-
-            // The data for our dataset
-            data: {
-              labels: freq_labels_vdlm,
-              datasets: [
-                {
-                  label: "VDLM Frequencies",
-                  backgroundColor: this.rainbox,
-                  borderColor: "rgb(0, 0, 0)",
-                  data: freq_data_vdlm,
-                  //pointRadius: 0,
-                  borderWidth: 1,
-                },
-              ],
-            },
-
-            // Configuration options go here
-            options: {
-              indexAxis: "y",
-              responsive: true,
-              maintainAspectRatio: false,
-              plugins: {
-                legend: {
-                  display: false,
-                },
-                tooltip: {
-                  enabled: false,
-                },
-                title: {
-                  display: true,
-                  text: `VDLM Frequency Message Counts  (${total_count_vdlm.toLocaleString()})`,
-                },
-                datalabels: {
-                  backgroundColor: function (context: any) {
-                    return context.dataset.backgroundColor;
-                  },
-                  borderRadius: 4,
-                  color: "white",
-                  clamp: true,
-                  font: {
-                    weight: "bold",
-                  },
-                  formatter: (value, context) => {
-                    return (
-                      freq_data_vdlm[context.dataIndex].toLocaleString() +
-                      " (" +
-                      (
-                        (freq_data_vdlm[context.dataIndex] / total_count_vdlm) *
-                        100
-                      )
-                        .toFixed(2)
-                        .toLocaleString() +
-                      "%)"
-                    );
-                  },
-                  align: "right",
-                  // padding: 6,
-                  // anchor: (context) => {
-                  //   return freq_labels_vdlm_positions[context.dataIndex] as
-                  //     | "start"
-                  //     | "end"
-                  //     | "center";
-                  // },
-                  // offset: (context) => {
-                  //   return freq_labels_vdlm_offset[context.dataIndex];
-                  // },
-                  clip: false,
-                },
-              },
-            },
-            plugins: [ChartDataLabels],
-          });
-          // clamp the height of the parent container to the height of the chart based on the number of elements
-          // this is a hack to get the chart to display properly
-
-          $("#vdlm_freq_graph").css(
-            "height",
-            `${freq_data_vdlm.length * 50}px`
-          );
-        }
       }
+
+      if (freq_data_hfdl.length > 0) {
+        this.render_freq_graph(
+          "HFDL",
+          freq_labels_hfdl,
+          freq_data_hfdl,
+          total_count_hfdl,
+          "frequencies_hfdl",
+          "#hfdl_freq_graph"
+        );
+      }
+    }
+  },
+
+  render_freq_graph: function (
+    label: string,
+    freq_labels: string[],
+    freq_data: number[],
+    total_count: number,
+    canvas_id: string,
+    graph_id: string
+  ) {
+    const canvas: HTMLCanvasElement = <HTMLCanvasElement>(
+      document.getElementById(canvas_id)
+    );
+    const ctx: CanvasRenderingContext2D = canvas
+      ? canvas.getContext("2d")!
+      : null!;
+    if (ctx != null) {
+      let temp_chart = new Chart(ctx, {
+        // The type of chart we want to create
+        type: "bar",
+
+        // The data for our dataset
+        data: {
+          labels: freq_labels,
+          datasets: [
+            {
+              label: `${label} Frequencies`,
+              backgroundColor: this.rainbox,
+              borderColor: "rgb(0, 0, 0)",
+              data: freq_data,
+              //pointRadius: 0,
+              borderWidth: 1,
+            },
+          ],
+        },
+
+        // Configuration options go here
+        options: {
+          indexAxis: "y",
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: false,
+            },
+            tooltip: {
+              enabled: false,
+            },
+            title: {
+              display: true,
+              text: `${label} Frequency Message Counts  (${total_count.toLocaleString()})`,
+            },
+            datalabels: {
+              backgroundColor: function (context: any) {
+                return context.dataset.backgroundColor;
+              },
+              borderRadius: 4,
+              color: "white",
+              clamp: true,
+              font: {
+                weight: "bold",
+              },
+              formatter: (value, context) => {
+                return (
+                  freq_data[context.dataIndex].toLocaleString() +
+                  " (" +
+                  ((freq_data[context.dataIndex] / total_count) * 100)
+                    .toFixed(2)
+                    .toLocaleString() +
+                  "%)"
+                );
+              },
+              align: "right",
+              // padding: 6,
+              // anchor: (context) => {
+              //   return freq_labels_vdlm_positions[context.dataIndex] as
+              //     | "start"
+              //     | "end"
+              //     | "center";
+              // },
+              // offset: (context) => {
+              //   return freq_labels_vdlm_offset[context.dataIndex];
+              // },
+              clip: false,
+            },
+          },
+        },
+        plugins: [ChartDataLabels],
+      });
+
+      if (label === "ACARS") {
+        this.chart_frequency_data_acars = temp_chart;
+      } else if (label === "VDLM") {
+        this.chart_frequency_data_vdlm = temp_chart;
+      } else if (label === "HFDL") {
+        this.chart_frequency_data_hfdl = temp_chart;
+      }
+      // clamp the height of the parent container to the height of the chart based on the number of elements
+      // this is a hack to get the chart to display properly
+
+      $(graph_id).css("height", `${freq_data.length * 50}px`);
     }
   },
 
@@ -620,8 +606,10 @@ export let stats_page = {
   decoders_enabled: function (msg: decoders): void {
     this.acars_on = msg.acars;
     this.vdlm_on = msg.vdlm;
+    this.hfdl_on = msg.hfdl;
+
     if (this.stats_page_active)
-      generate_stat_submenu(this.acars_on, this.vdlm_on);
+      generate_stat_submenu(this.acars_on, this.vdlm_on, this.hfdl_on);
   },
 
   signals: function (msg: signal): void {
@@ -740,6 +728,12 @@ export let stats_page = {
         ? '<div id="vdlm_freq_graph" class="chart-container"><div>&nbsp;</div><canvas id="frequencies_vdlm"></canvas></div>'
         : ""
     }
+    ${
+      this.hfdl_on
+        ? '<div id="hfdl_freq_graph" class="chart-container"><div>&nbsp;</div><canvas id="frequencies_hfdl"></canvas></div>'
+        : ""
+    }
+
     <div id="chart_msg_good" class="chart-container"><div>&nbsp;</div><canvas id="msg_count_data"></div>
     <div id="chart_msg_empty" class="chart-container"><div>&nbsp;</div><canvas id="msg_count_empty"></div>
     </p>'`); // show the messages we've received
@@ -788,7 +782,7 @@ export let stats_page = {
       Chart.register(...registerables);
       // page is active
       this.set_html();
-      generate_stat_submenu(this.acars_on, this.vdlm_on);
+      generate_stat_submenu(this.acars_on, this.vdlm_on, this.hfdl_on);
       this.show_signal_chart();
       this.show_alert_chart();
       this.show_count();

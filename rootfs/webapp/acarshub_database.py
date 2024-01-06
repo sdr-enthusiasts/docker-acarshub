@@ -616,6 +616,15 @@ def find_airline_code_from_iata(iata):
         return (iata, "Unknown Airline")
 
 
+def find_airline_code_from_icao(icao):
+    # FIXME: this is complete shit and we need to do IATA/ICAO stuff better
+    for iata in airlines:
+        if airlines[iata]["ICAO"] == icao:
+            return (iata, airlines[iata]["NAME"])
+
+    return (icao, "UNKNOWN AIRLINE")
+
+
 # FIXME: Rolled back to old database_search. Should wrap FTS table in SQL Alchemy engine
 def database_search(search_term, page=0):
     result = None
@@ -626,7 +635,47 @@ def database_search(search_term, page=0):
             "database",
             level=LOG_LEVEL["DEBUG"],
         )
+        session = db_session()
         match_string = ""
+
+        if "station_id" in search_term and search_term["station_id"] != "":
+            # we need to search outside of FTS
+            conditions = []
+            query = session.query(messages)
+            for key in search_term:
+                if search_term[key] == "":
+                    continue
+                if key == "flight":
+                    conditions.append(messages.flight.contains(search_term[key]))
+                elif key == "depa":
+                    conditions.append(messages.depa.contains(search_term[key]))
+                elif key == "dsta":
+                    conditions.append(messages.dsta.contains(search_term[key]))
+                elif key == "freq":
+                    conditions.append(messages.freq.contains(search_term[key]))
+                elif key == "label":
+                    conditions.append(messages.label.contains(search_term[key]))
+                elif key == "tail":
+                    conditions.append(messages.tail.contains(search_term[key]))
+                elif key == "msg_text":
+                    conditions.append(messages.text.contains(search_term[key]))
+                elif key == "station_id":
+                    conditions.append(messages.station_id.contains(search_term[key]))
+
+            result = (
+                query.filter(*conditions)
+                .order_by(messages.time.desc())
+                .limit(50)
+                .offset(page * 50)
+            )
+            count = query.filter(*conditions).order_by(messages.time.desc()).count()
+            processed_results = []
+
+            if count > 0:
+                processed_results = [query_to_dict(d) for d in result]
+                processed_results.reverse()
+            session.close()
+            return (processed_results, count)
 
         for key in search_term:
             if search_term[key] is not None and search_term[key] != "":
@@ -639,8 +688,6 @@ def database_search(search_term, page=0):
             return [None, 0]
 
         match_string += "'"
-
-        session = db_session()
 
         result = session.execute(
             text(

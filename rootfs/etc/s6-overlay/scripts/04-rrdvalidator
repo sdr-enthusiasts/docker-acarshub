@@ -1,0 +1,24 @@
+#!/command/with-contenv bash
+# shellcheck shell=bash
+
+# usage: ./04-rrdvalidator <optional path to rrd file>
+
+# if the rrd file is not specified, use the default
+if [[ -z "${1}" ]]; then
+    RRD_FILE="/run/acars/acarshub.rrd"
+else
+    RRD_FILE="${1}"
+fi
+
+# if the rrd file does not exist, exit 0
+if [[ ! -e "${RRD_FILE}" ]]; then
+    exit 0
+fi
+
+# check and see if the grep output of rrdinfo containers 'HFDL'. If it does, exit 0
+if rrdtool info "${RRD_FILE}" | grep -q 'HFDL'; then
+    exit 0
+else
+    rrdtool tune "${RRD_FILE}" DS:HFDL:GAUGE:120:U:U
+    echo "[04-rrdvalidator] Added HFDL to ${RRD_FILE}"
+fi

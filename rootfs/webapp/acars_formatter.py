@@ -22,8 +22,175 @@ import json
 def format_acars_message(acars_message):
     if "vdl2" in acars_message:
         return format_dumpvdl2_message(acars_message)
-    else:
-        return acars_message
+
+    if "hfdl" in acars_message:
+        return format_hfdl_message(acars_message)
+
+    return acars_message
+
+
+def format_hfdl_freq(unformatted_freq):
+    # input is in Hz
+    # output is in MHz
+    output = float(unformatted_freq) / 1000000.0
+
+    # normalize to 3 decimal places
+    truncated = str(int(output * 1000) / 1000)
+
+    if str.endswith(truncated, "0"):
+        truncated = truncated[:-2]
+
+    return truncated
+
+
+def count_hfdl_errors(unformatted_message):
+    total_errors = 0
+    for key, value in unformatted_message.items():
+        if type(value) is dict:
+            total_errors += count_hfdl_errors(value)
+        else:
+            if key == "err" and value:
+                total_errors += 1
+    return total_errors
+
+
+def format_hfdl_message(unformatted_message):
+    hfdl_message = dict()
+    libacars = dict()
+
+    # timestamp
+    hfdl_message["timestamp"] = unformatted_message["hfdl"]["t"]["sec"]
+    # station
+    if "station" in unformatted_message["hfdl"]:
+        hfdl_message["station_id"] = unformatted_message["hfdl"]["station"]
+
+    # error
+    # walk the entire message and look for err fields. Count the total of trues
+    hfdl_message["error"] = count_hfdl_errors(unformatted_message["hfdl"])
+
+    # freq
+    if "freq" in unformatted_message["hfdl"]:
+        hfdl_message["freq"] = format_hfdl_freq(unformatted_message["hfdl"]["freq"])
+
+    # level
+    if "sig_level" in unformatted_message["hfdl"]:
+        hfdl_message["level"] = formated_dumpvdl2_level(
+            unformatted_message["hfdl"]["sig_level"]
+        )
+
+    if "spdu" in unformatted_message["hfdl"]:
+        libacars["spdu"] = unformatted_message["hfdl"]["spdu"]
+
+    if "lpdu" in unformatted_message["hfdl"]:
+        # toaddr
+        if "dst" in unformatted_message["hfdl"]["lpdu"]:
+            if "addr" in unformatted_message["hfdl"]["lpdu"]["dst"]:
+                hfdl_message["toaddr"] = int(
+                    unformatted_message["hfdl"]["lpdu"]["dst"]["addr"], 16
+                )
+        # fromaddr
+        if "src" in unformatted_message["hfdl"]["lpdu"]:
+            if "addr" in unformatted_message["hfdl"]["lpdu"]["src"]:
+                hfdl_message["fromaddr"] = int(
+                    unformatted_message["hfdl"]["lpdu"]["src"]["addr"], 16
+                )
+        # icao
+        if "ac_info" in unformatted_message["hfdl"]["lpdu"]:
+            if "icao" in unformatted_message["hfdl"]["lpdu"]["ac_info"]:
+                hfdl_message["icao"] = int(
+                    unformatted_message["hfdl"]["lpdu"]["ac_info"]["icao"], 16
+                )
+
+        if "hfnpdu" in unformatted_message["hfdl"]["lpdu"]:
+            # flight
+            if "flight_id" in unformatted_message["hfdl"]["lpdu"]["hfnpdu"]:
+                hfdl_message["flight"] = unformatted_message["hfdl"]["lpdu"]["hfnpdu"][
+                    "flight_id"
+                ]
+            # lat
+            # lon
+            if "pos" in unformatted_message["hfdl"]["lpdu"]["hfnpdu"]:
+                position = unformatted_message["hfdl"]["lpdu"]["hfnpdu"]["pos"]
+                if "lat" in position:
+                    hfdl_message["lat"] = float(position["lat"])
+                if "lon" in position:
+                    hfdl_message["lon"] = float(position["lon"])
+            if "freq_data" in unformatted_message["hfdl"]["lpdu"]["hfnpdu"]:
+                # use libacars to dump the JSON
+                libacars["freq_data"] = unformatted_message["hfdl"]["lpdu"]["hfnpdu"][
+                    "freq_data"
+                ]
+            if "acars" in unformatted_message["hfdl"]["lpdu"]["hfnpdu"]:
+                # ack
+                if "ack" in unformatted_message["hfdl"]["lpdu"]["hfnpdu"]["acars"]:
+                    hfdl_message["ack"] = unformatted_message["hfdl"]["lpdu"]["hfnpdu"][
+                        "acars"
+                    ]["ack"]
+                # tail
+                if "reg" in unformatted_message["hfdl"]["lpdu"]["hfnpdu"]["acars"]:
+                    hfdl_message["tail"] = unformatted_message["hfdl"]["lpdu"][
+                        "hfnpdu"
+                    ]["acars"]["reg"].replace(".", "")
+                # label
+                if "label" in unformatted_message["hfdl"]["lpdu"]["hfnpdu"]["acars"]:
+                    hfdl_message["label"] = str(
+                        unformatted_message["hfdl"]["lpdu"]["hfnpdu"]["acars"]["label"]
+                    )
+                # block_id
+                if "blk_id" in unformatted_message["hfdl"]["lpdu"]["hfnpdu"]["acars"]:
+                    hfdl_message["block_id"] = unformatted_message["hfdl"]["lpdu"][
+                        "hfnpdu"
+                    ]["acars"]["blk_id"]
+                # msgno
+                if "msg_num" in unformatted_message["hfdl"]["lpdu"]["hfnpdu"]["acars"]:
+                    hfdl_message["msgno"] = unformatted_message["hfdl"]["lpdu"][
+                        "hfnpdu"
+                    ]["acars"]["msg_num"]
+                    if (
+                        "msg_num_seq"
+                        in unformatted_message["hfdl"]["lpdu"]["hfnpdu"]["acars"]
+                    ):
+                        hfdl_message["msgno"] = (
+                            hfdl_message["msgno"]
+                            + unformatted_message["hfdl"]["lpdu"]["hfnpdu"]["acars"][
+                                "msg_num_seq"
+                            ]
+                        )
+                # mode
+                if "mode" in unformatted_message["hfdl"]["lpdu"]["hfnpdu"]["acars"]:
+                    hfdl_message["mode"] = unformatted_message["hfdl"]["lpdu"][
+                        "hfnpdu"
+                    ]["acars"]["mode"]
+                # text
+                if "msg_text" in unformatted_message["hfdl"]["lpdu"]["hfnpdu"]["acars"]:
+                    hfdl_message["text"] = unformatted_message["hfdl"]["lpdu"][
+                        "hfnpdu"
+                    ]["acars"]["msg_text"]
+
+                # libacars
+                # use the arinc622 field, dumped as JSON
+                if "arinc622" in unformatted_message["hfdl"]["lpdu"]["hfnpdu"]["acars"]:
+                    libacars["arinc622"] = unformatted_message["hfdl"]["lpdu"][
+                        "hfnpdu"
+                    ]["acars"]["arinc622"]
+    if len(libacars) > 0:
+        hfdl_message["libacars"] = json.dumps(libacars)
+
+    # depa
+    # dsta
+    # eta
+    # gtout
+    # gtin
+    # wloff
+    # wlin
+
+    # alt
+    # data
+
+    # is_response
+    # is_onground
+
+    return hfdl_message
 
 
 def formated_dumpvdl2_level(unformatted_level):
@@ -183,6 +350,14 @@ def format_dumpvdl2_message(unformatted_message):
         vdlm2_message["level"] = formated_dumpvdl2_level(
             unformatted_message["vdl2"]["sig_level"]
         )
+
+    if "acars" in unformatted_message["vdl2"]["avlc"]:
+        # libacars
+        # use the arinc622 field, dumped as JSON
+        if "arinc622" in unformatted_message["vdl2"]["avlc"]["acars"]:
+            vdlm2_message["libacars"] = json.dumps(
+                unformatted_message["vdl2"]["avlc"]["acars"]["arinc622"]
+            )
 
     return vdlm2_message
 

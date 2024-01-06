@@ -5,7 +5,7 @@
 [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/sdr-enthusiasts/docker-acarshub/deploy.yml?branch=main)](https://github.com/sdr-enthusiasts/docker-acarshub/actions?query=workflow%3ADeploy)
 [![Discord](https://img.shields.io/discord/734090820684349521)](https://discord.gg/sTf9uYF)
 
-Docker container to view and also stream ACARS messages to [ACARS.io/Airframes.io](http://acars.io).
+Docker container to view ACARS, VDLM2 and HFDL messages.
 
 We make extensive use of the [airframes](https://github.com/airframesio) work to make the messages more 'human-readable' as well as provide more detail for each of the messages.
 
@@ -30,6 +30,7 @@ Builds and runs on `amd64`, `arm64`, `arm/v7`, `arm/v6` and `386` architectures.
     - [ADSB](#adsb)
     - [ACARS](#acars)
     - [VDLM2](#vdlm2)
+    - [HFDL](#hfdl)
   - [Viewing the messages](#viewing-the-messages)
   - [Which frequencies should you monitor](#which-frequencies-should-you-monitor)
   - [A note about data sources used for the web site](#a-note-about-data-sources-used-for-the-web-site)
@@ -79,19 +80,20 @@ External to ACARS Hub you need to be running an ACARS and/or VDLM2 decoder for A
 
 The following decoders are supported:
 
-- [acarsdec](https://github.com/TLeconte/acarsdec) or one of the forks of acarsdec. I suggest [the airframes fork](https://github.com/airframesio/acarsdec). Run the decoder with the option `-j youracarshubip:5550`, ensuring that port `5550` is mapped to the container.
-- [dumpvdl2](https://github.com/szpajder/dumpvdl2). Run the decoder with the option `--output decoded:json:udp:address=<youracarshubip>,port=5555`, ensuring that port `5555` is mapped to the container.
-- [vdlm2dec](https://github.com/TLeconte/vdlm2dec). Run the decoder with the option `-j youracarshubip:5555`, ensuring that port `5555` is mapped to the container.
+- [acarsdec](https://github.com/TLeconte/acarsdec) or one of the forks of acarsdec. I suggest [the airframes fork](https://github.com/airframesio/acarsdec). Run the decoder with the option `-j youracarshubip:5550`, ensuring that port `5550` is mapped to the container if the source is external to your docker network.
+- [dumpvdl2](https://github.com/szpajder/dumpvdl2). Run the decoder with the option `--output decoded:json:udp:address=<youracarshubip>,port=5555`, ensuring that port `5555` is mapped to the container if your source is external to the docker network.
+- [vdlm2dec](https://github.com/TLeconte/vdlm2dec). Run the decoder with the option `-j youracarshubip:5555`, ensuring that port `5555` is mapped to the container if the source is external to the docker network.
+- [dumphfdl](https://github.com/szpajder/dumphfdl). Run the decoder with the option `--output decoded:json:udp:address=<youracarshubip>,port=5556`, ensuring that port `5556` is mapped to the container if the source is external to the docker network..
 
 For VDLM decoding `dumpvdl2` is preferred as the decoder provides richer data and is more modern than `vdlm2dec`.
 
 For ease of use I have provided docker images set up to work with ACARS Hub. This is the preferred way to get data in to ACARS Hub.
 
-- [docker-acarsdec](https://github.com/fredclausen/docker-acarsdec) for ACARS decoding.
-- [docker-dumpvdl2](https://github.com/fredclausen/docker-dumpvdl2) for VDLM decoding. This is the preferred decoder.
-- [docker-vdlm2dec](https://github.com/fredclausen/docker-vdlm2dec) as an alternative for VDLM decoding. This decoder is far less feature-rich compared to `dumpvdl2` and is provided only as an alternative if you have a strong preference for using this over `dumpvdl2`.
-
-If you wish to use `acars` decoding please ensure port `5550` is mapped to the container. If you wish to use `vdlm2` decoding please ensure port `5555` is mapped to the container.
+- [docker-acarsdec](https://github.com/sdr-enthusiasts/docker-acarsdec) for ACARS decoding.
+- [docker-dumpvdl2](https://github.com/sdr-enthusiasts/docker-dumpvdl2) for VDLM decoding. This is the preferred decoder.
+- [docker-vdlm2dec](https://github.com/sdr-enthusiasts/docker-vdlm2dec) as an alternative for VDLM decoding. This decoder is far less feature-rich compared to `dumpvdl2` and is provided only as an alternative if you have a strong preference for using this over `dumpvdl2`.
+- [docker-dumphfdl](https://github.com/sdr-enthusiasts/docker-dumphfdl) for HFDL decoding.
+- [acars_router](https://github.com/sdr-enthusiasts/acars_router) for routing ACARS messages from one source to another. This is useful if you have a decoder that can only send messages to one destination, but you want to send messages to multiple destinations. This is the preferred way to get data in to ACARS Hub.
 
 ## Up-and-Running
 
@@ -104,8 +106,10 @@ The document below covers a lot of configuration options, however, most of them 
 | `80`       | Port used for the web interface          |
 | `5550/udp` | Port used for pushing ACARS JSON data to |
 | `5555/udp` | Port used for pushing VDLM2 JSON data to |
+| `5556/udp` | Port used for pushing HFDL JSON data to  |
 | `15550`    | Port used for exposing JSON ACARS data   |
 | `15555`    | Port used for exposing JSON VDLM2 data   |
+| `15556`    | Port used for exposing JSON HFDL data    |
 
 ## Volumes / Database
 
@@ -186,6 +190,12 @@ In the configuration options for tar1090. Setting this will include additional a
 | Variable      | Description                                                                                                                                                                   | Required | Default |
 | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------- |
 | `ENABLE_VDLM` | Toggle VDLM decoding on. If set to `external` this will enable VDLM processing in the container. Push valid `VDLM2` data to UDP port 5555 (needs port mapping 5555:5555/udp). | No       | `false` |
+
+### HFDL
+
+| Variable      | Description                                                                                                                                                                  | Required | Default |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------- |
+| `ENABLE_HFDL` | Toggle HFDL decoding on. If set to `external` this will enable HFDL processing in the container. Push valid `HFDL` data to UDP port 5556 (needs port mapping 5556:5556/udp). | No       | `false` |
 
 ## Viewing the messages
 
