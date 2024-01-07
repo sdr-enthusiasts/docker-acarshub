@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (C) 2022 Frederick Clausen II
+# Copyright (C) 2022-2024 Frederick Clausen II
 # This file is part of acarshub <https://github.com/sdr-enthusiasts/docker-acarshub>.
 # acarshub is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
