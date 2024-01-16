@@ -23,7 +23,7 @@
     "@types/webpack-dev-server": "^4.7.2",
     "autoprefixer": "^10.4.16",
     "babel-loader": "^9.1.3",
-    "css-loader": "^6.8.1",
+    "css-loader": "^6.9.0",
     "favicons": "^7.1.5",
     "favicons-webpack-plugin": "^6.0.1",
     "html-webpack-plugin": "^5.6.0",
