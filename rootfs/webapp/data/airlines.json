@@ -1771,6 +1771,11 @@
     "ICAO": "AAR",
     "NAME": "Asiana Airlines"
   },
+  "P3":
+  {
+    "ICAO": "PTR",
+    "NAME": "Porter Airlines"
+  },
   "P5": {
     "ICAO": "RPB",
     "NAME": "Copa Airlines Colombia"
