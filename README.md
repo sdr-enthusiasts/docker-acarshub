@@ -209,7 +209,7 @@ The [ACARS.io/Airframes.io](https://app.airframes.io/about) website has a great 
 
 Some notes about frequencies:
 
-- `acarsdec` and `dumpvdl2` are limited to monitoring 8 frequencies apiece
+- `acarsdec` is limited to monitoring 16 frequencies apiece, while `dumpvdl2` has no limit besides your available processing power
 - The spread of frequencies for each decoder has to be within 2 Mhz.
 
 ## A note about data sources used for the web site
