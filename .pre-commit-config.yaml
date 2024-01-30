@@ -27,7 +27,7 @@ repos:
 
   # lint python formatting
   - repo: https://github.com/psf/black
-    rev: 23.12.1
+    rev: 24.1.0
     hooks:
       - id: black
 
@@ -50,7 +50,7 @@ repos:
         exclude: ^(rootfs/webapp/|acarshub-typescript/node_modules/|Dockerfile*)
 
   - repo: https://github.com/pre-commit/mirrors-eslint
-    rev: v9.0.0-alpha.1
+    rev: v9.0.0-alpha.2
     hooks:
       - id: eslint
         files: \.[j]sx?$ # *.js, *.jsx, *.ts and *.tsx
