@@ -128,6 +128,7 @@ services:
     tmpfs:
       - /run:exec,size=64M
       - /var/log:size=64M
+  #####
 
   acars_router:
     image: ghcr.io/sdr-enthusiasts/acars_router:latest
@@ -156,7 +157,6 @@ services:
     tmpfs:
       - /run:exec,size=64M
       - /var/log
-#####
 ```
 
 ## Final thoughts
