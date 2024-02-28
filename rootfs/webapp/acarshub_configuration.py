@@ -229,7 +229,7 @@ def check_github_version():
                 "version_checker",
                 level=LOG_LEVEL["ERROR"],
             )
-            acarshub_logging.traceback(e)
+            acarshub_logging.acars_traceback(e)
             return
 
         github_version_from_json = jsonData["name"]
