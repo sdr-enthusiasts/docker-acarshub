@@ -18,7 +18,7 @@
     "@types/jquery": "^3.5.29",
     "@types/js-cookie": "^3.0.6",
     "@types/leaflet": "^1.9.8",
-    "@types/node": "^20.11.28",
+    "@types/node": "^20.11.29",
     "@types/showdown": "^2.0.6",
     "@types/webpack-dev-server": "^4.7.2",
     "autoprefixer": "^10.4.18",
@@ -41,7 +41,7 @@
     "webpack-image-loader": "^0.1.2"
   },
   "dependencies": {
-    "@airframes/acars-decoder": "^1.6.1",
+    "@airframes/acars-decoder": "^1.6.3",
     "@fortawesome/fontawesome-free": "^6.5.1",
     "@fortawesome/fontawesome-svg-core": "^6.5.1",
     "@fortawesome/free-regular-svg-icons": "^6.5.1",
@@ -57,6 +57,7 @@
     "leaflet": "^1.9.4",
     "npm-check": "^6.0.1",
     "showdown": "^2.1.0",
-    "socket.io-client": "^4.7.5"
+    "socket.io-client": "^4.7.5",
+    "node-polyfill-webpack-plugin": "^3.0.0"
   }
 }
