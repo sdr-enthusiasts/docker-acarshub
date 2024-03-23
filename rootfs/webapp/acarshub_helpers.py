@@ -324,7 +324,7 @@ def service_check():
 
                         continue
 
-            match = re.search("^(?:acars|vdlm2)_server", line)
+            match = re.search("^(?:acars|vdlm2|hfdl)_server", line)
 
             if match:
                 if match.group(0) not in servers:
@@ -349,7 +349,7 @@ def service_check():
 
                 continue
 
-            match = re.search("\\d+\\s+(?:ACARS|VDLM2) messages", line)
+            match = re.search("\\d+\\s+(?:ACARS|VDLM2|HFDL) messages", line)
 
             if match:
                 if line.find("ACARS") != -1 and "ACARS" not in receivers:
@@ -380,10 +380,24 @@ def service_check():
                     else:
                         system_error = True
                         receivers["VDLM2"]["Status"] = "Unknown"
+                if line.find("HFDL") != -1 and "HFDL" not in receivers:
+                    receivers["HFDL"] = dict()
+                    receivers["HFDL"]["Count"] = line.split(" ")[0]
+                    if line.endswith("UNHEALTHY"):
+                        if time.time() - start_time > 300.0:
+                            system_error = True
+                            receivers["HFDL"]["Status"] = "Bad"
+                        else:
+                            receivers["HFDL"]["Status"] = "Waiting for first message"
+                    elif line.endswith("HEALTHY"):
+                        receivers["HFDL"]["Status"] = "Ok"
+                    else:
+                        system_error = True
+                        receivers["HFDL"]["Status"] = "Unknown"
 
                 continue
 
-            match = re.search("^(acars|vdlm2)_stats", line)
+            match = re.search("^(acars|vdlm2|hfdl)_stats", line)
 
             if match:
                 if match.group(0) not in stats:
