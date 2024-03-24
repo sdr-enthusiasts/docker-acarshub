@@ -44,6 +44,7 @@ export let stats_page = {
   chart_frequency_data_acars: (<unknown>null) as Chart,
   chart_frequency_data_vdlm: (<unknown>null) as Chart,
   chart_frequency_data_hfdl: (<unknown>null) as Chart,
+  chart_frequency_data_imsl: (<unknown>null) as Chart,
   chart_message_counts_data: (<unknown>null) as Chart,
   chart_message_counts_empty: (<unknown>null) as Chart,
 
@@ -55,6 +56,7 @@ export let stats_page = {
   acars_on: false as boolean,
   vdlm_on: false as boolean,
   hfdl_on: false as boolean,
+  imsl_on: false as boolean,
   width: 1000 as number,
 
   tol: new palette("tol", 12, 0, "").map(function (hex: any) {
@@ -204,34 +206,42 @@ export let stats_page = {
       let freq_data_acars: number[] = [];
       let freq_data_vdlm: number[] = [];
       let freq_data_hfdl: number[] = [];
+      let freq_data_imsl: number[] = [];
 
       let freq_labels_acars: string[] = [];
       let freq_labels_vdlm: string[] = [];
       let freq_labels_hfdl: string[] = [];
+      let freq_labels_imsl: string[] = [];
 
       let freq_labels_acars_positions: string[] = [];
       let freq_labels_vdlm_positions: string[] = [];
       let freq_labels_hfdl_positions: string[] = [];
+      let freq_labels_imsl_positions: string[] = [];
 
       let freq_labels_acars_offset: number[] = [];
       let freq_labels_vdlm_offset: number[] = [];
       let freq_labels_hfdl_offset: number[] = [];
+      let freq_labels_imsl_offset: number[] = [];
 
       let total_count_acars: number = 0;
       let total_count_vdlm: number = 0;
       let total_count_hfdl: number = 0;
+      let total_count_imsl: number = 0;
 
       let acars_offset: number = 5;
       let vdlm_offset: number = 5;
       let hfdl_offset: number = 5;
+      let imsl_offset: number = 5;
 
       Object.entries(this.freqs_data.freqs).forEach(([key, value]) => {
         if (value.freq_type === "ACARS") {
           total_count_acars += value.count;
-        } else if (value.freq_type === "HFDL") {
-          total_count_hfdl += value.count;
         } else if (value.freq_type === "VDL-M2") {
           total_count_vdlm += value.count;
+        } else if (value.freq_type === "HFDL") {
+          total_count_hfdl += value.count;
+        } else if (value.freq_type === "IMS-L") {
+          total_count_imsl += value.count;
         } else {
           console.error("Unknown freq type: " + value.freq_type);
         }
@@ -274,6 +284,18 @@ export let stats_page = {
             freq_labels_hfdl_offset.push(hfdl_offset);
             hfdl_offset += 60;
           }
+        } else if (value.freq_type === "IMS-L") {
+          freq_data_imsl.push(value.count);
+          freq_labels_imsl.push(value.freq);
+
+          if (value.count / total_count_imsl > 0.2) {
+            freq_labels_imsl_positions.push("center");
+            freq_labels_imsl_offset.push(0);
+          } else {
+            freq_labels_imsl_positions.push("end");
+            freq_labels_imsl_offset.push(imsl_offset);
+            imsl_offset += 60;
+          }
         } else {
           console.error("Unknown freq type: " + value.freq_type);
         }
@@ -289,6 +311,10 @@ export let stats_page = {
 
       if (this.chart_frequency_data_hfdl !== null) {
         this.chart_frequency_data_hfdl.destroy();
+      }
+
+      if (this.chart_frequency_data_imsl !== null) {
+        this.chart_frequency_data_imsl.destroy();
       }
 
       if (freq_data_acars.length > 0) {
@@ -321,6 +347,17 @@ export let stats_page = {
           total_count_hfdl,
           "frequencies_hfdl",
           "#hfdl_freq_graph"
+        );
+      }
+
+      if (freq_data_imsl.length > 0) {
+        this.render_freq_graph(
+          "IMSL",
+          freq_labels_imsl,
+          freq_data_imsl,
+          total_count_imsl,
+          "frequencies_imsl",
+          "#imsl_freq_graph"
         );
       }
     }
@@ -420,6 +457,8 @@ export let stats_page = {
         this.chart_frequency_data_vdlm = temp_chart;
       } else if (label === "HFDL") {
         this.chart_frequency_data_hfdl = temp_chart;
+      } else if (label === "IMSL") {
+        this.chart_frequency_data_imsl = temp_chart;
       }
       // clamp the height of the parent container to the height of the chart based on the number of elements
       // this is a hack to get the chart to display properly
@@ -607,9 +646,10 @@ export let stats_page = {
     this.acars_on = msg.acars;
     this.vdlm_on = msg.vdlm;
     this.hfdl_on = msg.hfdl;
+    this.imsl_on = msg.imsl;
 
     if (this.stats_page_active)
-      generate_stat_submenu(this.acars_on, this.vdlm_on, this.hfdl_on);
+      generate_stat_submenu(this.acars_on, this.vdlm_on, this.hfdl_on, this.imsl_on);
   },
 
   signals: function (msg: signal): void {
@@ -733,6 +773,11 @@ export let stats_page = {
         ? '<div id="hfdl_freq_graph" class="chart-container"><div>&nbsp;</div><canvas id="frequencies_hfdl"></canvas></div>'
         : ""
     }
+    ${
+      this.imsl_on
+        ? '<div id="imsl_freq_graph" class="chart-container"><div>&nbsp;</div><canvas id="frequencies_imsl"></canvas></div>'
+        : ""
+    }
 
     <div id="chart_msg_good" class="chart-container"><div>&nbsp;</div><canvas id="msg_count_data"></div>
     <div id="chart_msg_empty" class="chart-container"><div>&nbsp;</div><canvas id="msg_count_empty"></div>
@@ -782,7 +827,7 @@ export let stats_page = {
       Chart.register(...registerables);
       // page is active
       this.set_html();
-      generate_stat_submenu(this.acars_on, this.vdlm_on, this.hfdl_on);
+      generate_stat_submenu(this.acars_on, this.vdlm_on, this.hfdl_on, this.imsl_on);
       this.show_signal_chart();
       this.show_alert_chart();
       this.show_count();

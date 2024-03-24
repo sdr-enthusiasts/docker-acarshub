@@ -61,19 +61,21 @@ export let menu = {
   generate_stat_submenu: function (
     acars: boolean = false,
     vdlm: boolean = false,
-    hfdl: boolean = false
+    hfdl: boolean = false,
+    imsl: boolean = false
   ): void {
     let text: string = "";
     const acars_prefix = acars && vdlm ? "'acars'" : "''";
     const vdlm_prefix = vdlm && acars ? "'vdlm'" : "''";
     const hfdl_prefix = hfdl ? "'hfdl'" : "''";
+    const imsl_prefix = imsl ? "'imsl'" : "''";
 
     let show_combined = false;
 
+
+    let ennum = [acars, vdlm, hfdl, imsl].filter(x => x).length;
     // if any two of acars, vdlm, hfdl are true, set show_combined to true
-    if (acars && vdlm) show_combined = true;
-    if (acars && hfdl) show_combined = true;
-    if (vdlm && hfdl) show_combined = true;
+    if (ennum > 1) show_combined = true;
 
     if (show_combined) {
       text =
@@ -96,6 +98,12 @@ export let menu = {
       text += `${
         acars && vdlm ? " | " : ""
       }<a href="javascript:update_prefix(${hfdl_prefix})" id="hfdl_graphs" class="spread_text">HFDL Graphs</a>`;
+    }
+
+    if (imsl) {
+      text += `${
+        acars && vdlm ? " | " : ""
+      }<a href="javascript:update_prefix(${imsl_prefix})" id="imsl_graphs" class="spread_text">IMSL Graphs</a>`;
     }
 
     text +=

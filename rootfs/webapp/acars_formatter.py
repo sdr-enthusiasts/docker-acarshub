@@ -26,6 +26,10 @@ def format_acars_message(acars_message):
     if "hfdl" in acars_message:
         return format_hfdl_message(acars_message)
 
+    if "imsl" in acars_message:
+        return acars_message["imsl"]
+#        return format_imsl_message(acars_message)
+
     return acars_message
 
 
