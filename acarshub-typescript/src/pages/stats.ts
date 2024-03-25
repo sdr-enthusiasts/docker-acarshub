@@ -472,21 +472,15 @@ export let stats_page = {
       typeof this.count_data !== "undefined" &&
       typeof this.count_data.count !== "undefined"
     ) {
-      const total: number =
-        this.count_data.count.non_empty_total +
-        this.count_data.count.empty_total +
-        this.count_data.count.non_empty_errors;
-      const total_non_empty: number =
-        this.count_data.count.non_empty_total +
-        this.count_data.count.non_empty_errors;
-      const error: number = this.count_data.count.non_empty_errors;
-      const good_msg: number = this.count_data.count.non_empty_total - error;
+      const data_error: number = this.count_data.count.non_empty_errors;
+      const data_good: number = this.count_data.count.non_empty_total;
+      const data_total: number = data_error + data_good;
 
       const empty_error: number = this.count_data.count.empty_errors;
       const empty_good: number = this.count_data.count.empty_total;
       const empty_total: number = empty_error + empty_good;
 
-      const counts_data: number[] = [good_msg, error];
+      const counts_data: number[] = [data_good, data_error];
 
       const counts_empty: number[] = [empty_good, empty_error];
       const count_labels: string[] = [
@@ -539,7 +533,7 @@ export let stats_page = {
               },
               title: {
                 display: true,
-                text: `Non-Empty Messages (${total_non_empty.toLocaleString()})`,
+                text: `Non-Empty Messages (${data_total.toLocaleString()})`,
               },
               datalabels: {
                 backgroundColor: function (context: any) {
@@ -557,7 +551,7 @@ export let stats_page = {
                     " (" +
                     // count_labels[context.dataIndex] +
                     // "\n" +
-                    ((value / total_non_empty) * 100)
+                    ((value / data_total) * 100)
                       .toFixed(2)
                       .toLocaleString() +
                     "%) "
