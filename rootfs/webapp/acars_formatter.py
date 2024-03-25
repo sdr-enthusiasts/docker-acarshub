@@ -84,6 +84,12 @@ def format_imsl_message(unformatted_message):
     if "libacars" in unformatted_message:
         imsl_message["libacars"] = json.dumps(unformatted_message["libacars"])
 
+    if "flight" in unformatted_message:
+        imsl_message["flight"] = json.dumps(unformatted_message["flight"])
+
+    if "fromaddr_decoded" in unformatted_message:
+        imsl_message["fromaddr_decoded"] = unformatted_message["fromaddr_decoded"]
+
     if "signal_unit" in unformatted_message:
         sigunit = unformatted_message["signal_unit"]
 
@@ -93,6 +99,9 @@ def format_imsl_message(unformatted_message):
 
         if "ges_id" in sigunit:
             imsl_message["fromaddr"] = sigunit["ges_id"]
+
+        if "msgno" in sigunit:
+            imsl_message["msgno"] = sigunit["ref_no"]
 
     return imsl_message
 
