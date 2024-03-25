@@ -159,7 +159,7 @@ def getQueType(message_type):
     elif message_type == "HFDL":
         return "HFDL"
     elif message_type == "IMSL":
-        return "IMSL"
+        return "IMS-L"
     elif message_type is not None:
         return str(message_type)
     else:
