@@ -16,17 +16,13 @@ if [[ ! -e "${RRD_FILE}" ]]; then
 fi
 
 # check and see if the grep output of rrdinfo containers 'HFDL'. If it does, exit 0
-if rrdtool info "${RRD_FILE}" | grep -q 'HFDL'; then
-    exit 0
-else
+if ! rrdtool info "${RRD_FILE}" | grep -q 'HFDL'; then
     rrdtool tune "${RRD_FILE}" DS:HFDL:GAUGE:120:U:U
     echo "[04-rrdvalidator] Added HFDL to ${RRD_FILE}"
 fi
 
 # check and see if the grep output of rrdinfo containers 'IMSL'. If it does, exit 0
-if rrdtool info "${RRD_FILE}" | grep -q 'IMSL'; then
-    exit 0
-else
+if ! rrdtool info "${RRD_FILE}" | grep -q 'IMSL'; then
     rrdtool tune "${RRD_FILE}" DS:IMSL:GAUGE:120:U:U
     echo "[04-rrdvalidator] Added IMSL to ${RRD_FILE}"
 fi
