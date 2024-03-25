@@ -26,11 +26,75 @@ def format_acars_message(acars_message):
     if "hfdl" in acars_message:
         return format_hfdl_message(acars_message)
 
-    if "imsl" in acars_message:
-        return acars_message["imsl"]
-#        return format_imsl_message(acars_message)
+    if acars_message.get("source", {}).get("app", {}).get("name") == "SatDump":
+        if acars_message.get("msg_name") == "ACARS":
+            return format_imsl_message(acars_message)
+        else:
+            return None
 
     return acars_message
+
+
+def count_errors(unformatted_message):
+    total_errors = 0
+    for key, value in unformatted_message.items():
+        if type(value) is dict:
+            total_errors += count_errors(value)
+        else:
+            if key == "err" and value:
+                total_errors += 1
+    return total_errors
+
+
+def format_imsl_message(unformatted_message):
+    imsl_message = dict()
+
+    imsl_message["timestamp"] = unformatted_message["timestamp"]
+
+    if "station_id" in unformatted_message.get("source", {}):
+        imsl_message["station_id"] = unformatted_message["source"]["station_id"]
+
+    if "freq" in unformatted_message:
+        imsl_message["freq"] = unformatted_message["freq"]
+
+# not currently exposed by satdump, but probably could be in the future
+#    if "level" in unformatted_message:
+#        imsl_message["level"] = unformatted_message["level"]
+
+    imsl_message["error"] = count_errors(unformatted_message)
+
+    if "mode" in unformatted_message:
+        imsl_message["mode"] = unformatted_message["mode"]
+
+    if "label" in unformatted_message:
+        imsl_message["label"] = unformatted_message["label"].replace("\x7f", "d")
+
+    if "bi" in unformatted_message:
+        imsl_message["block_id"] = unformatted_message["bi"]
+
+    if "message" in unformatted_message:
+        imsl_message["text"] = unformatted_message["message"]
+
+    if "more_to_come" in unformatted_message:
+        imsl_message["end"] = not unformatted_message["more_to_come"]
+
+    if "plane_reg" in unformatted_message:
+        imsl_message["tail"] = unformatted_message["plane_reg"].replace(".", "")
+
+    if "libacars" in unformatted_message:
+        imsl_message["libacars"] = json.dumps(unformatted_message["libacars"])
+
+    if "signal_unit" in unformatted_message:
+        sigunit = unformatted_message["signal_unit"]
+
+        if "aes_id" in sigunit:
+            imsl_message["toaddr"] = sigunit["aes_id"]
+            imsl_message["icao"] = sigunit["aes_id"]
+
+        if "ges_id" in sigunit:
+            imsl_message["fromaddr"] = sigunit["ges_id"]
+
+    return imsl_message
 
 
 def format_hfdl_freq(unformatted_freq):
@@ -47,17 +111,6 @@ def format_hfdl_freq(unformatted_freq):
     return truncated
 
 
-def count_hfdl_errors(unformatted_message):
-    total_errors = 0
-    for key, value in unformatted_message.items():
-        if type(value) is dict:
-            total_errors += count_hfdl_errors(value)
-        else:
-            if key == "err" and value:
-                total_errors += 1
-    return total_errors
-
-
 def format_hfdl_message(unformatted_message):
     hfdl_message = dict()
     libacars = dict()
@@ -70,7 +123,7 @@ def format_hfdl_message(unformatted_message):
 
     # error
     # walk the entire message and look for err fields. Count the total of trues
-    hfdl_message["error"] = count_hfdl_errors(unformatted_message["hfdl"])
+    hfdl_message["error"] = count_errors(unformatted_message["hfdl"])
 
     # freq
     if "freq" in unformatted_message["hfdl"]:

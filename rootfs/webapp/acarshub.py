@@ -398,36 +398,39 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
 
             que_type = getQueType(message_type)
 
-            if message_type == "VDLM2":
-                vdlm_messages_last_minute += 1
-            elif message_type == "ACARS":
-                acars_messages_last_minute += 1
-            elif message_type == "HFDL":
-                hfdl_messages_last_minute += 1
-            elif message_type == "IMSL":
-                imsl_messages_last_minute += 1
+            formatted_message = acars_formatter.format_acars_message(msg)
 
-            if "error" in msg:
-                if msg["error"] > 0:
-                    error_messages_last_minute += msg["error"]
+            if formatted_message:
+                if message_type == "VDLM2":
+                    vdlm_messages_last_minute += 1
+                elif message_type == "ACARS":
+                    acars_messages_last_minute += 1
+                elif message_type == "HFDL":
+                    hfdl_messages_last_minute += 1
+                elif message_type == "IMSL":
+                    imsl_messages_last_minute += 1
 
-            que_messages.append((que_type, acars_formatter.format_acars_message(msg)))
-            que_database.append((que_type, acars_formatter.format_acars_message(msg)))
+                if "error" in msg:
+                    if msg["error"] > 0:
+                        error_messages_last_minute += msg["error"]
 
-            if (
-                len(list_of_recent_messages) >= list_of_recent_messages_max
-            ):  # Keep the que size down
-                del list_of_recent_messages[0]
+                que_messages.append((que_type, formatted_message))
+                que_database.append((que_type, formatted_message))
 
-            if not acarshub_configuration.QUIET_MESSAGES:
-                print(f"MESSAGE:{message_type.lower()}Generator: {msg}")
+                if (
+                    len(list_of_recent_messages) >= list_of_recent_messages_max
+                ):  # Keep the que size down
+                    del list_of_recent_messages[0]
 
-            client_message = generateClientMessage(
-                que_type, acars_formatter.format_acars_message(msg)
-            )
+                if not acarshub_configuration.QUIET_MESSAGES:
+                    print(f"MESSAGE:{message_type.lower()}Generator: {msg}")
 
-            # add to recent message que for anyone fresh loading the page
-            list_of_recent_messages.append(client_message)
+                client_message = generateClientMessage(
+                    que_type, formatted_message
+                )
+
+                # add to recent message que for anyone fresh loading the page
+                list_of_recent_messages.append(client_message)
 
 
 def init_listeners(special_message=""):
