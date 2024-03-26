@@ -100,7 +100,7 @@ def format_imsl_message(unformatted_message):
         if "ges_id" in sigunit:
             imsl_message["fromaddr"] = sigunit["ges_id"]
 
-        if "msgno" in sigunit:
+        if "ref_no" in sigunit:
             imsl_message["msgno"] = sigunit["ref_no"]
 
     return imsl_message
