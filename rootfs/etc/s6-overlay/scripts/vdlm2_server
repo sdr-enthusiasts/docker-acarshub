@@ -12,12 +12,15 @@ if [[ ${ENABLE_VDLM,,} =~ external ]]; then
 
   set -e
 
+  trap 'pkill -P $$' SIGTERM SIGINT SIGHUP SIGQUIT
+
   # Listen for the output of vdlm2dec (UDP), and make it available for multiple processes at TCP port 15555
   # shellcheck disable=SC2016
   {
       socat -T 60 -u udp-listen:5555,fork,reuseaddr stdout | { cat; kill -s INT 0; } \
           | ncat -4 --keep-open --listen 0.0.0.0 15555 | { cat; kill -s INT 0; }
-  } 2>&1 | stdbuf -oL awk '{print "[vdlm2_server] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
+  } 2>&1 | stdbuf -oL awk '{print "[vdlm2_server] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}' &
+  wait || true
 else
-  sleep 86400
+  exec sleep 86400
 fi

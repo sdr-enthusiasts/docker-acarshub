@@ -45,5 +45,5 @@ if [[ ${ENABLE_ACARS,,} =~ external ]]; then
 
 else
   # If here then VDLM2 is not enabled, sleep forever
-  sleep 86400
+  exec sleep 86400
 fi

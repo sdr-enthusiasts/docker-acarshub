@@ -12,12 +12,16 @@ if [[ ${ENABLE_HFDL,,} =~ external ]]; then
 
   set -e
 
+  trap 'pkill -P $$' SIGTERM SIGINT SIGHUP SIGQUIT
+
   # Listen for the output of acars_router / hfdl, and make it available for multiple processes at TCP port 15556
   # shellcheck disable=SC2016
   {
       socat -T 60 -u udp-listen:5556,fork,reuseaddr stdout | { cat; kill -s INT 0; } \
           | ncat -4 --keep-open --listen 0.0.0.0 15556 | { cat; kill -s INT 0; }
-  } 2>&1 | stdbuf -oL awk '{print "[hfdl_server] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
+  } 2>&1 | stdbuf -oL awk '{print "[hfdl_server] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}' &
+
+  wait || true
 else
-  sleep 86400
+  exec sleep 86400
 fi
