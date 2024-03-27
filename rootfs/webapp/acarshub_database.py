@@ -360,7 +360,7 @@ def is_message_not_empty(json_message):
     ]
 
     for field in fields:
-        if field in json_message:
+        if json_message.get(field):
             return True
     return False
 

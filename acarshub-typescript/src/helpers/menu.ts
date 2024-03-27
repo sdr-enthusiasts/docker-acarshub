@@ -61,19 +61,19 @@ export let menu = {
   generate_stat_submenu: function (
     acars: boolean = false,
     vdlm: boolean = false,
-    hfdl: boolean = false
+    hfdl: boolean = false,
+    imsl: boolean = false
   ): void {
     let text: string = "";
-    const acars_prefix = acars && vdlm ? "'acars'" : "''";
-    const vdlm_prefix = vdlm && acars ? "'vdlm'" : "''";
-    const hfdl_prefix = hfdl ? "'hfdl'" : "''";
 
-    let show_combined = false;
+    let ennum = [acars, vdlm, hfdl, imsl].filter(x => x).length;
+    // if any two of acars, vdlm, hfdl, imsl are true, set show_combined to true
+    let show_combined = ennum > 1;
 
-    // if any two of acars, vdlm, hfdl are true, set show_combined to true
-    if (acars && vdlm) show_combined = true;
-    if (acars && hfdl) show_combined = true;
-    if (vdlm && hfdl) show_combined = true;
+    const acars_prefix = show_combined ? "'acars'" : "''";
+    const vdlm_prefix  = show_combined ? "'vdlm'"  : "''";
+    const hfdl_prefix  = show_combined ? "'hfdl'"  : "''";
+    const imsl_prefix  = show_combined ? "'imsl'"  : "''";
 
     if (show_combined) {
       text =
@@ -82,20 +82,26 @@ export let menu = {
 
     if (acars) {
       text += `${
-        acars && vdlm ? " | " : ""
+        show_combined ? " | " : ""
       }<a href="javascript:update_prefix(${acars_prefix})" id="acars_graphs" class="spread_text">ACARS Graphs</a>`;
     }
 
     if (vdlm) {
       text += `${
-        acars && vdlm ? " | " : ""
+        show_combined ? " | " : ""
       }<a href="javascript:update_prefix(${vdlm_prefix})" id="vdlm_graphs" class="spread_text">VDLM Graphs</a>`;
     }
 
     if (hfdl) {
       text += `${
-        acars && vdlm ? " | " : ""
+        show_combined ? " | " : ""
       }<a href="javascript:update_prefix(${hfdl_prefix})" id="hfdl_graphs" class="spread_text">HFDL Graphs</a>`;
+    }
+
+    if (imsl) {
+      text += `${
+        show_combined ? " | " : ""
+      }<a href="javascript:update_prefix(${imsl_prefix})" id="imsl_graphs" class="spread_text">IMSL Graphs</a>`;
     }
 
     text +=

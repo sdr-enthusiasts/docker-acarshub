@@ -66,6 +66,7 @@ thread_html_generator_event = Event()
 thread_acars_listener = Thread()
 thread_vdlm2_listener = Thread()
 thread_hfdl_listener = Thread()
+thread_imsl_listener = Thread()
 thread_message_listener_stop_event = Event()
 
 # db thread
@@ -90,6 +91,7 @@ list_of_recent_messages_max = 150
 vdlm_messages_last_minute = 0
 acars_messages_last_minute = 0
 hfdl_messages_last_minute = 0
+imsl_messages_last_minute = 0
 error_messages_last_minute = 0
 
 # all namespaces
@@ -118,17 +120,20 @@ def update_rrd_db():
     global acars_messages_last_minute
     global error_messages_last_minute
     global hfdl_messages_last_minute
+    global imsl_messages_last_minute
 
     acarshub_rrd_database.update_db(
         vdlm=vdlm_messages_last_minute,
         acars=acars_messages_last_minute,
         error=error_messages_last_minute,
         hfdl=hfdl_messages_last_minute,
+        imsl=imsl_messages_last_minute,
     )
     vdlm_messages_last_minute = 0
     acars_messages_last_minute = 0
     error_messages_last_minute = 0
     hfdl_messages_last_minute = 0
+    imsl_messages_last_minute = 0
 
 
 def generateClientMessage(message_type, json_message):
@@ -153,6 +158,8 @@ def getQueType(message_type):
         return "ACARS"
     elif message_type == "HFDL":
         return "HFDL"
+    elif message_type == "IMSL":
+        return "IMS-L"
     elif message_type is not None:
         return str(message_type)
     else:
@@ -245,6 +252,8 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
         global acars_messages_last_minute
     elif message_type == "HFDL":
         global hfdl_messages_last_minute
+    elif message_type == "IMSL":
+        global imsl_messages_last_minute
 
     disconnected = True
 
@@ -344,14 +353,14 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
                 acarshub_logging.log(
                     "Reassembly successful, message not skipped after all!",
                     f"{message_type.lower()}Generator",
-                    1,
+                    level=LOG_LEVEL["DEBUG"]
                 )
             except Exception as e:
                 # reassembly didn't work, don't do anything but print an error when debug is enabled
                 acarshub_logging.log(
                     f"Reassembly failed {e}: {combined}",
                     f"{message_type.lower()}Generator",
-                    level=LOG_LEVEL["DEBUG"],
+                    level=LOG_LEVEL["WARNING"]
                 )
 
             # forget the partial message, it can't be useful anymore
@@ -366,16 +375,12 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
             msg = None
             try:
                 msg = json.loads(part)
-            except ValueError as e:
+            except ValueError:
                 if part == split_json[-1]:
                     # last element in the list, could be a partial json object
                     partial_message = part
-
                 acarshub_logging.log(
-                    f"JSON Error: {e}", f"{message_type.lower()}Generator", 1
-                )
-                acarshub_logging.log(
-                    f"Skipping Message: {part}", f"{message_type.lower()}Generator", 1
+                    f"Skipping Message: {part}", f"{message_type.lower()}Generator", LOG_LEVEL["DEBUG"]
                 )
                 continue
             except Exception as e:
@@ -389,34 +394,39 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
 
             que_type = getQueType(message_type)
 
-            if message_type == "VDLM2":
-                vdlm_messages_last_minute += 1
-            elif message_type == "ACARS":
-                acars_messages_last_minute += 1
-            elif message_type == "HFDL":
-                hfdl_messages_last_minute += 1
+            formatted_message = acars_formatter.format_acars_message(msg)
 
-            if "error" in msg:
-                if msg["error"] > 0:
-                    error_messages_last_minute += msg["error"]
+            if formatted_message:
+                if message_type == "VDLM2":
+                    vdlm_messages_last_minute += 1
+                elif message_type == "ACARS":
+                    acars_messages_last_minute += 1
+                elif message_type == "HFDL":
+                    hfdl_messages_last_minute += 1
+                elif message_type == "IMSL":
+                    imsl_messages_last_minute += 1
 
-            que_messages.append((que_type, acars_formatter.format_acars_message(msg)))
-            que_database.append((que_type, acars_formatter.format_acars_message(msg)))
+                if "error" in msg:
+                    if msg["error"] > 0:
+                        error_messages_last_minute += msg["error"]
 
-            if (
-                len(list_of_recent_messages) >= list_of_recent_messages_max
-            ):  # Keep the que size down
-                del list_of_recent_messages[0]
+                que_messages.append((que_type, formatted_message))
+                que_database.append((que_type, formatted_message))
 
-            if not acarshub_configuration.QUIET_MESSAGES:
-                print(f"MESSAGE:{message_type.lower()}Generator: {msg}")
+                if (
+                    len(list_of_recent_messages) >= list_of_recent_messages_max
+                ):  # Keep the que size down
+                    del list_of_recent_messages[0]
 
-            client_message = generateClientMessage(
-                que_type, acars_formatter.format_acars_message(msg)
-            )
+                if not acarshub_configuration.QUIET_MESSAGES:
+                    print(f"MESSAGE:{message_type.lower()}Generator: {msg}")
 
-            # add to recent message que for anyone fresh loading the page
-            list_of_recent_messages.append(client_message)
+                client_message = generateClientMessage(
+                    que_type, formatted_message
+                )
+
+                # add to recent message que for anyone fresh loading the page
+                list_of_recent_messages.append(client_message)
 
 
 def init_listeners(special_message=""):
@@ -425,6 +435,7 @@ def init_listeners(special_message=""):
     global thread_acars_listener
     global thread_vdlm2_listener
     global thread_hfdl_listener
+    global thread_imsl_listener
     global thread_database
     global thread_scheduler
     global thread_html_generator
@@ -515,6 +526,22 @@ def init_listeners(special_message=""):
             ),
         )
         thread_hfdl_listener.start()
+
+    if not thread_imsl_listener.is_alive() and acarshub_configuration.ENABLE_IMSL:
+        acarshub_logging.log(
+            f"{special_message}Starting IMSL listener",
+            "init",
+            level=LOG_LEVEL["INFO"] if special_message == "" else LOG_LEVEL["ERROR"],
+        )
+        thread_imsl_listener = Thread(
+            target=message_listener,
+            args=(
+                "IMSL",
+                acarshub_configuration.LIVE_DATA_SOURCE,
+                acarshub_configuration.IMSL_SOURCE_PORT,
+            ),
+        )
+        thread_imsl_listener.start()
 
     status = acarshub_helpers.get_service_status()  # grab system status
 
@@ -652,6 +679,7 @@ def main_connect():
                 "vdlm": acarshub_configuration.ENABLE_VDLM,
                 "acars": acarshub_configuration.ENABLE_ACARS,
                 "hfdl": acarshub_configuration.ENABLE_HFDL,
+                "imsl": acarshub_configuration.ENABLE_IMSL,
                 "arch": acarshub_configuration.ARCH,
                 "allow_remote_updates": acarshub_configuration.ALLOW_REMOTE_UPDATES,
                 "adsb": {
