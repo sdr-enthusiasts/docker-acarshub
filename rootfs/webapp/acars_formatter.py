@@ -98,6 +98,8 @@ def format_jaero_imsl_message(unformatted_message):
         if refno := isu.get("refno"):
             imsl_message["msgno"] = refno
 
+    return imsl_message
+
 
 def format_satdump_imsl_message(unformatted_message):
     imsl_message = dict()
