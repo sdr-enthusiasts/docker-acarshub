@@ -88,8 +88,8 @@ def format_jaero_imsl_message(unformatted_message):
 
         if dst := isu.get("dst"):
             if addr := dst.get("addr"):
-                imsl_message["toaddr"] = addr
-                imsl_message["icao"] = addr
+                imsl_message["toaddr"] = int(addr, 16)
+                imsl_message["icao"] = int(addr, 16)
 
         if src := isu.get("src"):
             if addr := src.get("addr"):
