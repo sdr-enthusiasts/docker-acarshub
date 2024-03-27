@@ -28,9 +28,12 @@ def format_acars_message(acars_message):
 
     if acars_message.get("source", {}).get("app", {}).get("name") == "SatDump":
         if acars_message.get("msg_name") == "ACARS":
-            return format_imsl_message(acars_message)
+            return format_satdump_imsl_message(acars_message)
         else:
             return None
+
+    if acars_message.get("app", {}).get("name") == "JAERO":
+        return format_jaero_imsl_message(acars_message)
 
     return acars_message
 
@@ -46,7 +49,57 @@ def count_errors(unformatted_message):
     return total_errors
 
 
-def format_imsl_message(unformatted_message):
+def format_jaero_imsl_message(unformatted_message):
+    imsl_message = dict()
+
+    imsl_message["error"] = count_errors(unformatted_message)
+
+    if t := unformatted_message.get("t"):
+        if "sec" in t:
+            imsl_message["timestamp"] = t["sec"]
+
+    if "station" in unformatted_message:
+        imsl_message["station_id"] = unformatted_message["station"]
+
+    if isu := unformatted_message.get("isu"):
+        if acars := isu.get("acars"):
+            if msg_text := acars.get("msg_text"):
+                imsl_message["text"] = msg_text
+
+            if arinc622 := acars.get("arinc622"):
+                imsl_message["libacars"] = json.dumps(arinc622)
+                if gs_addr := arinc622.get("gs_addr"):
+                    imsl_message["fromaddr_decoded"] = gs_addr
+
+            if ack := acars.get("ack"):
+                imsl_message["ack"] = ack
+
+            if blk_id := acars.get("blk_id"):
+                imsl_message["block_id"] = blk_id
+
+            if label := acars.get("label"):
+                imsl_message["label"] = label
+
+            if mode := acars.get("mode"):
+                imsl_message["mode"] = mode
+
+            if reg := acars.get("reg"):
+                imsl_message["tail"] = reg
+
+        if dst := isu.get("dst"):
+            if addr := dst.get("addr"):
+                imsl_message["toaddr"] = addr
+                imsl_message["icao"] = addr
+
+        if src := isu.get("src"):
+            if addr := src.get("addr"):
+                imsl_message["fromaddr"] = addr
+
+        if refno := isu.get("refno"):
+            imsl_message["msgno"] = refno
+
+
+def format_satdump_imsl_message(unformatted_message):
     imsl_message = dict()
 
     imsl_message["timestamp"] = unformatted_message["timestamp"]
@@ -63,45 +116,44 @@ def format_imsl_message(unformatted_message):
 
     imsl_message["error"] = count_errors(unformatted_message)
 
-    if "mode" in unformatted_message:
-        imsl_message["mode"] = unformatted_message["mode"]
+    if mode := unformatted_message.get("mode"):
+        imsl_message["mode"] = mode
 
-    if "label" in unformatted_message:
-        imsl_message["label"] = unformatted_message["label"].replace("\x7f", "d")
+    if label := unformatted_message.get("label"):
+        imsl_message["label"] = label.replace("\x7f", "d")
 
-    if "bi" in unformatted_message:
-        imsl_message["block_id"] = unformatted_message["bi"]
+    if bi := unformatted_message.get("bi"):
+        imsl_message["block_id"] = bi
 
-    if "message" in unformatted_message:
-        imsl_message["text"] = unformatted_message["message"]
+    if message := unformatted_message.get("message"):
+        imsl_message["text"] = message
 
-    if "more_to_come" in unformatted_message:
-        imsl_message["end"] = not unformatted_message["more_to_come"]
+    if more_to_come := unformatted_message.get("more_to_come"):
+        imsl_message["end"] = not more_to_come
 
-    if "plane_reg" in unformatted_message:
-        imsl_message["tail"] = unformatted_message["plane_reg"].replace(".", "")
+    if plane_reg := unformatted_message.get("plane_reg"):
+        imsl_message["tail"] = plane_reg.replace(".", "")
 
-    if "libacars" in unformatted_message:
-        imsl_message["libacars"] = json.dumps(unformatted_message["libacars"])
+    if tak := unformatted_message.get("tak"):
+        imsl_message["ack"] = chr(tak).replace(chr(0x15), "!")
 
-    if "flight" in unformatted_message:
-        imsl_message["flight"] = json.dumps(unformatted_message["flight"])
+    if libacars := unformatted_message.get("libacars"):
+        imsl_message["libacars"] = json.dumps(libacars)
 
-    if "fromaddr_decoded" in unformatted_message:
-        imsl_message["fromaddr_decoded"] = unformatted_message["fromaddr_decoded"]
+    if flight := unformatted_message.get("flight"):
+        imsl_message["flight"] = flight
 
-    if "signal_unit" in unformatted_message:
-        sigunit = unformatted_message["signal_unit"]
+    if fromaddr_decoded := unformatted_message.get("fromaddr_decoded"):
+        imsl_message["fromaddr_decoded"] = fromaddr_decoded
 
-        if "aes_id" in sigunit:
-            imsl_message["toaddr"] = sigunit["aes_id"]
-            imsl_message["icao"] = sigunit["aes_id"]
-
-        if "ges_id" in sigunit:
-            imsl_message["fromaddr"] = sigunit["ges_id"]
-
-        if "ref_no" in sigunit:
-            imsl_message["msgno"] = sigunit["ref_no"]
+    if sigunit := unformatted_message.get("signal_unit"):
+        if aes_id := sigunit.get("aes_id"):
+            imsl_message["toaddr"] = aes_id
+            imsl_message["icao"] = aes_id
+        if ges_id := sigunit.get("ges_id"):
+            imsl_message["fromaddr"] = ges_id
+        if ref_no := sigunit.get("ref_no"):
+            imsl_message["msgno"] = ref_no
 
     return imsl_message
 

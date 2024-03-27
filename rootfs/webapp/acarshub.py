@@ -353,14 +353,14 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
                 acarshub_logging.log(
                     "Reassembly successful, message not skipped after all!",
                     f"{message_type.lower()}Generator",
-                    1,
+                    level=LOG_LEVEL["DEBUG"]
                 )
             except Exception as e:
                 # reassembly didn't work, don't do anything but print an error when debug is enabled
                 acarshub_logging.log(
                     f"Reassembly failed {e}: {combined}",
                     f"{message_type.lower()}Generator",
-                    level=LOG_LEVEL["DEBUG"],
+                    level=LOG_LEVEL["WARNING"]
                 )
 
             # forget the partial message, it can't be useful anymore
@@ -375,16 +375,12 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
             msg = None
             try:
                 msg = json.loads(part)
-            except ValueError as e:
+            except ValueError:
                 if part == split_json[-1]:
                     # last element in the list, could be a partial json object
                     partial_message = part
-
                 acarshub_logging.log(
-                    f"JSON Error: {e}", f"{message_type.lower()}Generator", 1
-                )
-                acarshub_logging.log(
-                    f"Skipping Message: {part}", f"{message_type.lower()}Generator", 1
+                    f"Skipping Message: {part}", f"{message_type.lower()}Generator", LOG_LEVEL["DEBUG"]
                 )
                 continue
             except Exception as e:
