@@ -39,5 +39,5 @@ if [[ ${ENABLE_HFDL,,} =~ external ]]; then
 else
 
   # If here then HFDL is not enabled, sleep forever
-  sleep 86400
+  exec sleep 86400
 fi

@@ -9,7 +9,10 @@ if [[ ${ENABLE_WEB,,} =~ true ]]; then
 
     # shellcheck disable=SC2016
     mkdir -p /var/log/nginx
+
+    trap 'pkill -P $$' SIGTERM SIGINT SIGHUP SIGQUIT
+
     # shellcheck disable=SC2016
-    exec \
-    /usr/sbin/nginx 2>&1 | stdbuf -oL awk '{print "[nginx       ] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
+    /usr/sbin/nginx 2>&1 | stdbuf -oL awk '{print "[nginx       ] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}' &
+    wait || true
 fi

@@ -126,5 +126,5 @@ if [[ ${ENABLE_WEB,,} =~ true ]]; then
         sleep 60
     done
 else
-    sleep 86400
+    exec sleep 86400
 fi
