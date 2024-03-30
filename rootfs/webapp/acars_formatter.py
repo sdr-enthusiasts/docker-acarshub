@@ -96,7 +96,7 @@ def format_jaero_imsl_message(unformatted_message):
                 imsl_message["fromaddr"] = addr
 
         if refno := isu.get("refno"):
-            imsl_message["msgno"] = refno
+            imsl_message["msgno"] = str(refno)
 
     return imsl_message
 
@@ -155,7 +155,7 @@ def format_satdump_imsl_message(unformatted_message):
         if ges_id := sigunit.get("ges_id"):
             imsl_message["fromaddr"] = ges_id
         if ref_no := sigunit.get("ref_no"):
-            imsl_message["msgno"] = ref_no
+            imsl_message["msgno"] = str(ref_no)
 
     return imsl_message
 
