@@ -324,7 +324,7 @@ def service_check():
 
                         continue
 
-            match = re.search("^(?:acars|vdlm2)_server", line)
+            match = re.search("^(?:acars|vdlm2|hfdl|imsl)_server", line)
 
             if match:
                 if match.group(0) not in servers:
@@ -349,7 +349,7 @@ def service_check():
 
                 continue
 
-            match = re.search("\\d+\\s+(?:ACARS|VDLM2) messages", line)
+            match = re.search("\\d+\\s+(?:ACARS|VDLM2|HFDL|IMSL) messages", line)
 
             if match:
                 if line.find("ACARS") != -1 and "ACARS" not in receivers:
@@ -380,10 +380,38 @@ def service_check():
                     else:
                         system_error = True
                         receivers["VDLM2"]["Status"] = "Unknown"
+                if line.find("HFDL") != -1 and "HFDL" not in receivers:
+                    receivers["HFDL"] = dict()
+                    receivers["HFDL"]["Count"] = line.split(" ")[0]
+                    if line.endswith("UNHEALTHY"):
+                        if time.time() - start_time > 300.0:
+                            system_error = True
+                            receivers["HFDL"]["Status"] = "Bad"
+                        else:
+                            receivers["HFDL"]["Status"] = "Waiting for first message"
+                    elif line.endswith("HEALTHY"):
+                        receivers["HFDL"]["Status"] = "Ok"
+                    else:
+                        system_error = True
+                        receivers["HFDL"]["Status"] = "Unknown"
+                if line.find("IMSL") != -1 and "IMSL" not in receivers:
+                    receivers["IMSL"] = dict()
+                    receivers["IMSL"]["Count"] = line.split(" ")[0]
+                    if line.endswith("UNHEALTHY"):
+                        if time.time() - start_time > 300.0:
+                            system_error = True
+                            receivers["IMSL"]["Status"] = "Bad"
+                        else:
+                            receivers["IMSL"]["Status"] = "Waiting for first message"
+                    elif line.endswith("HEALTHY"):
+                        receivers["IMSL"]["Status"] = "Ok"
+                    else:
+                        system_error = True
+                        receivers["IMSL"]["Status"] = "Unknown"
 
                 continue
 
-            match = re.search("^(acars|vdlm2)_stats", line)
+            match = re.search("^(acars|vdlm2|hfdl|imsl)_stats", line)
 
             if match:
                 if match.group(0) not in stats:

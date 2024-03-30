@@ -26,7 +26,138 @@ def format_acars_message(acars_message):
     if "hfdl" in acars_message:
         return format_hfdl_message(acars_message)
 
+    if acars_message.get("source", {}).get("app", {}).get("name") == "SatDump":
+        if acars_message.get("msg_name") == "ACARS":
+            return format_satdump_imsl_message(acars_message)
+        else:
+            return None
+
+    if acars_message.get("app", {}).get("name") == "JAERO":
+        return format_jaero_imsl_message(acars_message)
+
     return acars_message
+
+
+def count_errors(unformatted_message):
+    total_errors = 0
+    for key, value in unformatted_message.items():
+        if type(value) is dict:
+            total_errors += count_errors(value)
+        else:
+            if key == "err" and value:
+                total_errors += 1
+    return total_errors
+
+
+def format_jaero_imsl_message(unformatted_message):
+    imsl_message = dict()
+
+    imsl_message["error"] = count_errors(unformatted_message)
+
+    if t := unformatted_message.get("t"):
+        if sec := t.get("sec"):
+            imsl_message["timestamp"] = sec
+
+    if station := unformatted_message.get("station"):
+        imsl_message["station_id"] = station
+
+    if isu := unformatted_message.get("isu"):
+        if acars := isu.get("acars"):
+            if msg_text := acars.get("msg_text"):
+                imsl_message["text"] = msg_text
+
+            if arinc622 := acars.get("arinc622"):
+                imsl_message["libacars"] = json.dumps(arinc622)
+                if gs_addr := arinc622.get("gs_addr"):
+                    imsl_message["fromaddr_decoded"] = gs_addr
+
+            if ack := acars.get("ack"):
+                imsl_message["ack"] = ack
+
+            if blk_id := acars.get("blk_id"):
+                imsl_message["block_id"] = blk_id
+
+            if label := acars.get("label"):
+                imsl_message["label"] = label
+
+            if mode := acars.get("mode"):
+                imsl_message["mode"] = mode
+
+            if reg := acars.get("reg"):
+                imsl_message["tail"] = reg
+
+        if dst := isu.get("dst"):
+            if addr := dst.get("addr"):
+                imsl_message["toaddr"] = int(addr, 16)
+                imsl_message["icao"] = int(addr, 16)
+
+        if src := isu.get("src"):
+            if addr := src.get("addr"):
+                imsl_message["fromaddr"] = addr
+
+        if refno := isu.get("refno"):
+            imsl_message["msgno"] = refno
+
+    return imsl_message
+
+
+def format_satdump_imsl_message(unformatted_message):
+    imsl_message = dict()
+
+    if timestamp := unformatted_message.get("timestamp"):
+        imsl_message["timestamp"] = timestamp
+
+    if station_id := unformatted_message.get("source", {}).get("station_id"):
+        imsl_message["station_id"] = station_id
+
+    if freq := unformatted_message.get("freq"):
+        imsl_message["freq"] = freq
+
+    if level := unformatted_message.get("level"):
+        imsl_message["level"] = level
+
+    imsl_message["error"] = count_errors(unformatted_message)
+
+    if mode := unformatted_message.get("mode"):
+        imsl_message["mode"] = mode
+
+    if label := unformatted_message.get("label"):
+        imsl_message["label"] = label.replace("\x7f", "d")
+
+    if bi := unformatted_message.get("bi"):
+        imsl_message["block_id"] = bi
+
+    if message := unformatted_message.get("message"):
+        imsl_message["text"] = message
+
+    if more_to_come := unformatted_message.get("more_to_come"):
+        imsl_message["end"] = not more_to_come
+
+    if plane_reg := unformatted_message.get("plane_reg"):
+        imsl_message["tail"] = plane_reg.replace(".", "")
+
+    if tak := unformatted_message.get("tak"):
+        imsl_message["ack"] = chr(tak).replace(chr(0x15), "!")
+
+    if libacars := unformatted_message.get("libacars"):
+        imsl_message["libacars"] = json.dumps(libacars)
+
+    if flight := unformatted_message.get("flight"):
+        imsl_message["flight"] = flight
+
+    if fromaddr_decoded := unformatted_message.get("fromaddr_decoded"):
+        imsl_message["fromaddr_decoded"] = fromaddr_decoded
+
+    if sigunit := unformatted_message.get("signal_unit"):
+        if aes_id := sigunit.get("aes_id"):
+            imsl_message["toaddr"] = aes_id
+            imsl_message["icao"] = aes_id
+        if ges_id := sigunit.get("ges_id"):
+            imsl_message["fromaddr"] = ges_id
+        if ref_no := sigunit.get("ref_no"):
+            imsl_message["msgno"] = ref_no
+
+    return imsl_message
 
 
 def format_hfdl_freq(unformatted_freq):
@@ -43,17 +174,6 @@ def format_hfdl_freq(unformatted_freq):
     return truncated
 
 
-def count_hfdl_errors(unformatted_message):
-    total_errors = 0
-    for key, value in unformatted_message.items():
-        if type(value) is dict:
-            total_errors += count_hfdl_errors(value)
-        else:
-            if key == "err" and value:
-                total_errors += 1
-    return total_errors
-
-
 def format_hfdl_message(unformatted_message):
     hfdl_message = dict()
     libacars = dict()
@@ -66,7 +186,7 @@ def format_hfdl_message(unformatted_message):
 
     # error
     # walk the entire message and look for err fields. Count the total of trues
-    hfdl_message["error"] = count_hfdl_errors(unformatted_message["hfdl"])
+    hfdl_message["error"] = count_errors(unformatted_message["hfdl"])
 
     # freq
     if "freq" in unformatted_message["hfdl"]:

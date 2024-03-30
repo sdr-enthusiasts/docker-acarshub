@@ -50,6 +50,114 @@ EXITCODE=0
 
 # }
 
+# ===== Check imsl_server, imsl_feeder, imsl_stats processes =====
+
+if [[ ${ENABLE_IMSL,,} =~ external ]]; then
+
+  echo "==== Checking imsl_server ====="
+
+  # Check imsl_server is listening for TCP on 127.0.0.1:15557
+  imsl_pidof_imsl_tcp_server=$(pgrep -f 'ncat -4 --keep-open --listen 0.0.0.0 15557')
+  if ! check_tcp4_socket_listening_for_pid "0.0.0.0" "15557" "${imsl_pidof_imsl_tcp_server}"; then
+    echo "imsl_server TCP not listening on port 15557 (pid $imsl_pidof_imsl_tcp_server): UNHEALTHY"
+    EXITCODE=1
+  else
+    echo "imsl_server TCP listening on port 15557 (pid $imsl_pidof_imsl_tcp_server): HEALTHY"
+  fi
+
+  if [[ ${ENABLE_WEB,,} =~ true ]]; then
+    if ! netstat -anp | grep -P "tcp\s+\d+\s+\d+\s+127.0.0.1:[0-9]+\s+127.0.0.1:15557\s+ESTABLISHED\s+[0-9]+/python3" > /dev/null 2>&1; then
+      echo "TCP4 connection between 127.0.0.1:ANY and 127.0.0.1:15557 for python3 established: FAIL"
+      echo "imsl_server TCP connected to python server on port 15557 (pid $imsl_pidof_imsl_tcp_server): UNHEALTHY"
+      EXITCODE=1
+    else
+      echo "TCP4 connection between 127.0.0.1:ANY and 127.0.0.1:15557 for python3 established: PASS"
+      echo "imsl_server TCP connected to python server on port 15557: HEALTHY"
+    fi
+  fi
+
+  echo "==== Checking imsl_stats ====="
+
+  # Check imsl_stats:
+  imsl_pidof_imsl_stats=$(pgrep -fx 'socat -u TCP:127.0.0.1:15557 CREATE:/database/imsl.past5min.json')
+
+  # Ensure TCP connection to imsl_server at 127.0.0.1:15557
+  if ! check_tcp4_connection_established_for_pid "127.0.0.1" "ANY" "127.0.0.1" "15557" "${imsl_pidof_imsl_stats}"; then
+    echo "imsl_stats (pid $imsl_pidof_imsl_stats) not connected to imsl_server (pid $imsl_pidof_imsl_tcp_server) at 127.0.0.1:15557: UNHEALTHY"
+    EXITCODE=1
+  else
+    echo "imsl_stats (pid $imsl_pidof_imsl_stats) connected to imsl_server (pid $imsl_pidof_imsl_tcp_server) at 127.0.0.1:15557: HEALTHY"
+  fi
+
+  echo "==== Check for IMSL activity ====="
+
+  # Check for activity
+  # read .json files, ensure messages received in past hour
+
+  imsl_num_msgs_past_hour=$(find /database -type f -name 'imsl.*.json' -cmin -60 -exec cat {} \; | sed -e 's/}{/}\n{/g' | wc -l)
+  if [[ "$imsl_num_msgs_past_hour" -gt 0 ]]; then
+    echo "$imsl_num_msgs_past_hour IMSL messages received in past hour: HEALTHY"
+  else
+    echo "$imsl_num_msgs_past_hour IMSL messages received in past hour: UNHEALTHY"
+    EXITCODE=1
+  fi
+
+fi
+
+# ===== Check hfdl_server, hfdl_feeder, hfdl_stats processes =====
+
+if [[ ${ENABLE_HFDL,,} =~ external ]]; then
+
+  echo "==== Checking hfdl_server ====="
+
+  # Check hfdl_server is listening for TCP on 127.0.0.1:15556
+  hfdl_pidof_hfdl_tcp_server=$(pgrep -f 'ncat -4 --keep-open --listen 0.0.0.0 15556')
+  if ! check_tcp4_socket_listening_for_pid "0.0.0.0" "15556" "${hfdl_pidof_hfdl_tcp_server}"; then
+    echo "hfdl_server TCP not listening on port 15556 (pid $hfdl_pidof_hfdl_tcp_server): UNHEALTHY"
+    EXITCODE=1
+  else
+    echo "hfdl_server TCP listening on port 15556 (pid $hfdl_pidof_hfdl_tcp_server): HEALTHY"
+  fi
+
+  if [[ ${ENABLE_WEB,,} =~ true ]]; then
+    if ! netstat -anp | grep -P "tcp\s+\d+\s+\d+\s+127.0.0.1:[0-9]+\s+127.0.0.1:15556\s+ESTABLISHED\s+[0-9]+/python3" > /dev/null 2>&1; then
+      echo "TCP4 connection between 127.0.0.1:ANY and 127.0.0.1:15556 for python3 established: FAIL"
+      echo "hfdl_server TCP connected to python server on port 15556 (pid $hfdl_pidof_hfdl_tcp_server): UNHEALTHY"
+      EXITCODE=1
+    else
+      echo "TCP4 connection between 127.0.0.1:ANY and 127.0.0.1:15556 for python3 established: PASS"
+      echo "hfdl_server TCP connected to python server on port 15556: HEALTHY"
+    fi
+  fi
+
+  echo "==== Checking hfdl_stats ====="
+
+  # Check hfdl_stats:
+  hfdl_pidof_hfdl_stats=$(pgrep -fx 'socat -u TCP:127.0.0.1:15556 CREATE:/database/hfdl.past5min.json')
+
+  # Ensure TCP connection to hfdl_server at 127.0.0.1:15556
+  if ! check_tcp4_connection_established_for_pid "127.0.0.1" "ANY" "127.0.0.1" "15556" "${hfdl_pidof_hfdl_stats}"; then
+    echo "hfdl_stats (pid $hfdl_pidof_hfdl_stats) not connected to hfdl_server (pid $hfdl_pidof_hfdl_tcp_server) at 127.0.0.1:15556: UNHEALTHY"
+    EXITCODE=1
+  else
+    echo "hfdl_stats (pid $hfdl_pidof_hfdl_stats) connected to hfdl_server (pid $hfdl_pidof_hfdl_tcp_server) at 127.0.0.1:15556: HEALTHY"
+  fi
+
+  echo "==== Check for HFDL activity ====="
+
+  # Check for activity
+  # read .json files, ensure messages received in past hour
+
+  hfdl_num_msgs_past_hour=$(find /database -type f -name 'hfdl.*.json' -cmin -60 -exec cat {} \; | sed -e 's/}{/}\n{/g' | wc -l)
+  if [[ "$hfdl_num_msgs_past_hour" -gt 0 ]]; then
+    echo "$hfdl_num_msgs_past_hour HFDL messages received in past hour: HEALTHY"
+  else
+    echo "$hfdl_num_msgs_past_hour HFDL messages received in past hour: UNHEALTHY"
+    EXITCODE=1
+  fi
+
+fi
+
 # ===== Check vdlm2_server, vdlm2_feeder, vdlm2_stats processes =====
 
 if [[ ${ENABLE_VDLM,,} =~ external ]]; then
@@ -83,10 +191,10 @@ if [[ ${ENABLE_VDLM,,} =~ external ]]; then
 
   # Ensure TCP connection to vdlm2_server at 127.0.0.1:15555
   if ! check_tcp4_connection_established_for_pid "127.0.0.1" "ANY" "127.0.0.1" "15555" "${vdlm2_pidof_vdlm2_stats}"; then
-    echo "vdlm2_stats (pid $vdlm2_pidof_vdlm2_stats) not connected to acars_server (pid $vdlm2_pidof_vdlm2_tcp_server) at 127.0.0.1:15555: UNHEALTHY"
+    echo "vdlm2_stats (pid $vdlm2_pidof_vdlm2_stats) not connected to vdlm2_server (pid $vdlm2_pidof_vdlm2_tcp_server) at 127.0.0.1:15555: UNHEALTHY"
     EXITCODE=1
   else
-    echo "vdlm2_stats (pid $vdlm2_pidof_vdlm2_stats) connected to acars_server (pid $vdlm2_pidof_vdlm2_tcp_server) at 127.0.0.1:15555: HEALTHY"
+    echo "vdlm2_stats (pid $vdlm2_pidof_vdlm2_stats) connected to vdlm2_server (pid $vdlm2_pidof_vdlm2_tcp_server) at 127.0.0.1:15555: HEALTHY"
   fi
 
   echo "==== Check for VDLM2 activity ====="
@@ -157,8 +265,8 @@ if [[ ${ENABLE_ACARS,,} =~ external ]]; then
 
 fi
 
-# If either ENABLE_VDLM or ENABLE_ACARS is set:
-if [[ ${ENABLE_ACARS,,} =~ external ]] || [[ ${ENABLE_VDLM,,} =~ external ]]; then
+# If ENABLE_VDLM or ENABLE_ACARS or ENABLE_HFDL is set:
+if [[ ${ENABLE_ACARS,,} =~ external ]] || [[ ${ENABLE_VDLM,,} =~ external ]] || [[ ${ENABLE_HFDL,,} =~ external ]]; then
 
   echo "==== Check webapp ====="
 

@@ -12,6 +12,7 @@ if [[ ${ENABLE_WEB,,} =~ true ]]; then
     ARGS_VDLM=("-a" "PNG" "-w" "1000" "-h" "200"  "--vertical-label" "Messages" "--slope-mode")
     ARGS_ACARS=("-a" "PNG" "-w" "1000" "-h" "200"  "--vertical-label" "Messages" "--slope-mode")
     ARGS_HFDL=("-a" "PNG" "-w" "1000" "-h" "200"  "--vertical-label" "Messages" "--slope-mode")
+    ARGS_IMSL=("-a" "PNG" "-w" "1000" "-h" "200"  "--vertical-label" "Messages" "--slope-mode")
 
     total_enabled=0
 
@@ -33,7 +34,13 @@ if [[ ${ENABLE_WEB,,} =~ true ]]; then
         total_enabled=$((total_enabled + 1))
     fi
 
-    # if any two or more of ENABLE_ACARS, ENABLE_VDLM, ENABLE_HFDL is external then we need a totals graph
+    if [[ ${ENABLE_IMSL,,} =~ external ]]; then
+        ARGS_ALL+=("DEF:messages-imsl=/run/acars/acarshub.rrd:IMSL:AVERAGE" "LINE1:messages-imsl#DA70D6:IMSL")
+        ARGS_IMSL+=("DEF:messages-imsl=/run/acars/acarshub.rrd:IMSL:AVERAGE" "LINE1:messages-imsl#DA70D6:IMSL")
+        total_enabled=$((total_enabled + 1))
+    fi
+
+    # if any two or more of ENABLE_ACARS, ENABLE_VDLM, ENABLE_HFDL, ENABLE_IMSL is external then we need a totals graph
     if [[ ${total_enabled} -ge 2 ]]; then
         ARGS_ALL+=("DEF:messages-total=/run/acars/acarshub.rrd:TOTAL:AVERAGE" "LINE1:messages-total#00FF00:Total")
     fi
@@ -114,6 +121,21 @@ if [[ ${ENABLE_WEB,,} =~ true ]]; then
                     rrdtool graph "${OUTPUT_DIR}/hfdl30days.png" --title "1 Month" --start "-1mon" "${ARGS_HFDL[@]}" >/dev/null 2>&1
                     rrdtool graph "${OUTPUT_DIR}/hfdl6months.png" --title "6 Months" --start "-6mon" "${ARGS_HFDL[@]}" >/dev/null 2>&1
                     rrdtool graph "${OUTPUT_DIR}/hfdl1year.png" --title "1 Year" --start "-1y" "${ARGS_HFDL[@]}" >/dev/null 2>&1
+                fi
+            fi
+
+            if [[ ${ENABLE_IMSL,,} =~ external ]]; then
+                # IMSL Graphs
+
+                rrdtool graph "${OUTPUT_DIR}/imsl1hour.png" --title "1 Hour" --start "-1h" "${ARGS_IMSL[@]}" >/dev/null 2>&1
+                rrdtool graph "${OUTPUT_DIR}/imsl6hour.png" --title "6 Hours" --start "-6h" "${ARGS_IMSL[@]}" >/dev/null 2>&1
+                rrdtool graph "${OUTPUT_DIR}/imsl12hour.png" --title "12 Hours" --start "-12h" "${ARGS_IMSL[@]}" >/dev/null 2>&1
+                rrdtool graph "${OUTPUT_DIR}/imsl24hours.png" --title "1 Day" --start "-1d" "${ARGS_IMSL[@]}" >/dev/null 2>&1
+                rrdtool graph "${OUTPUT_DIR}/imsl1week.png" --title "1 Week" --start "-7d" "${ARGS_IMSL[@]}" >/dev/null 2>&1
+                if [[ "${STARTING_UP}" == "TRUE" || $(date +%M) == "00" ]]; then
+                    rrdtool graph "${OUTPUT_DIR}/imsl30days.png" --title "1 Month" --start "-1mon" "${ARGS_IMSL[@]}" >/dev/null 2>&1
+                    rrdtool graph "${OUTPUT_DIR}/imsl6months.png" --title "6 Months" --start "-6mon" "${ARGS_IMSL[@]}" >/dev/null 2>&1
+                    rrdtool graph "${OUTPUT_DIR}/imsl1year.png" --title "1 Year" --start "-1y" "${ARGS_IMSL[@]}" >/dev/null 2>&1
                 fi
             fi
         fi
