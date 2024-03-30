@@ -55,11 +55,11 @@ def format_jaero_imsl_message(unformatted_message):
     imsl_message["error"] = count_errors(unformatted_message)
 
     if t := unformatted_message.get("t"):
-        if "sec" in t:
-            imsl_message["timestamp"] = t["sec"]
+        if sec := t.get("sec"):
+            imsl_message["timestamp"] = sec
 
-    if "station" in unformatted_message:
-        imsl_message["station_id"] = unformatted_message["station"]
+    if station := unformatted_message.get("station"):
+        imsl_message["station_id"] = station
 
     if isu := unformatted_message.get("isu"):
         if acars := isu.get("acars"):
@@ -104,17 +104,17 @@ def format_jaero_imsl_message(unformatted_message):
 def format_satdump_imsl_message(unformatted_message):
     imsl_message = dict()
 
-    imsl_message["timestamp"] = unformatted_message["timestamp"]
+    if timestamp := unformatted_message.get("timestamp"):
+        imsl_message["timestamp"] = timestamp
 
-    if "station_id" in unformatted_message.get("source", {}):
-        imsl_message["station_id"] = unformatted_message["source"]["station_id"]
+    if station_id := unformatted_message.get("source", {}).get("station_id"):
+        imsl_message["station_id"] = station_id
 
-    if "freq" in unformatted_message:
-        imsl_message["freq"] = unformatted_message["freq"]
+    if freq := unformatted_message.get("freq"):
+        imsl_message["freq"] = freq
 
-# not currently exposed by satdump, but probably could be in the future
-#    if "level" in unformatted_message:
-#        imsl_message["level"] = unformatted_message["level"]
+    if level := unformatted_message.get("level"):
+        imsl_message["level"] = level
 
     imsl_message["error"] = count_errors(unformatted_message)
 
