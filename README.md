@@ -32,6 +32,7 @@ Builds and runs on `amd64`, `arm64`, `arm/v7`, `arm/v6` and `386` architectures.
     - [VDLM2](#vdlm2)
     - [HFDL](#hfdl)
     - [Inmarsat L-Band](#inmarsat-l-band)
+    - [Iridium](#iridium)
   - [Viewing the messages](#viewing-the-messages)
   - [Which frequencies should you monitor](#which-frequencies-should-you-monitor)
   - [A note about data sources used for the web site](#a-note-about-data-sources-used-for-the-web-site)
@@ -77,7 +78,7 @@ I am missing a boat load of people who have provided feed back as this project h
 
 ## Getting valid ACARS/VDLM2 data
 
-External to ACARS Hub you need to be running an ACARS, VDLM2, HFDL, and/or Inmarsat L-Band decoder for ACARS Hub, and have that decoder connect to ACARS Hub to send over the messages for processing.
+External to ACARS Hub you need to be running an ACARS, VDLM2, HFDL, Inmarsat L-Band and/or Iridium decoder for ACARS Hub, and have that decoder connect to ACARS Hub to send over the messages for processing.
 
 The following decoders are supported:
 
@@ -85,7 +86,9 @@ The following decoders are supported:
 - [dumpvdl2](https://github.com/szpajder/dumpvdl2). Run the decoder with the option `--output decoded:json:udp:address=<youracarshubip>,port=5555`, ensuring that port `5555` is mapped to the container if your source is external to the docker network.
 - [vdlm2dec](https://github.com/TLeconte/vdlm2dec). Run the decoder with the option `-j youracarshubip:5555`, ensuring that port `5555` is mapped to the container if the source is external to the docker network.
 - [dumphfdl](https://github.com/szpajder/dumphfdl). Run the decoder with the option `--output decoded:json:udp:address=<youracarshubip>,port=5556`, ensuring that port `5556` is mapped to the container if the source is external to the docker network.
-- [satdump](https://github.com/SatDump/SatDump). Run the decoder with the Inmarsat.json options for `udp_sinks` set to `"address": "127.0.0.1"` and `"port": "5557"` , ensuring that port `5557` is mapped to the container..
+- [satdump](https://github.com/SatDump/SatDump). Run the decoder with the Inmarsat.json options for `udp_sinks` set to `"address": "127.0.0.1"` and `"port": "5557"` , ensuring that port `5557` is mapped to the container.
+- [JAERO](https://github.com/jontio/JAERO). Run the decoder with the JSONdump format for UDP output.
+- [gr-iridium](https://github.com/muccc/gr-iridium) and [iridium-toolkit](https://github.com/muccc/iridium-toolkit). Pipe the output of reassembler.py into something like `nc -u acarshub 5558`.
 
 For VDLM decoding `dumpvdl2` is preferred as the decoder provides richer data and is more modern than `vdlm2dec`.
 
@@ -96,6 +99,8 @@ For ease of use I have provided docker images set up to work with ACARS Hub. Thi
 - [docker-vdlm2dec](https://github.com/sdr-enthusiasts/docker-vdlm2dec) as an alternative for VDLM decoding. This decoder is far less feature-rich compared to `dumpvdl2` and is provided only as an alternative if you have a strong preference for using this over `dumpvdl2`.
 - [docker-dumphfdl](https://github.com/sdr-enthusiasts/docker-dumphfdl) for HFDL decoding.
 - [docker-satdump](https://github.com/rpatel3001/docker-satdump) for Inmarsat L-Band decoding.
+- [docker-jaero](https://github.com/sdr-enthusiasts/docker-jaero) for Inamrsat L-Band decoding.
+- [docker-gr-iridium-toolkit](https://github.com/rpatel3001/docker-gr-iridium-toolkit) for Iridium decoding.
 - [acars_router](https://github.com/sdr-enthusiasts/acars_router) for routing ACARS messages from one source to another. This is useful if you have a decoder that can only send messages to one destination, but you want to send messages to multiple destinations. This is the preferred way to get data in to ACARS Hub.
 
 ## Up-and-Running
@@ -111,10 +116,12 @@ The document below covers a lot of configuration options, however, most of them 
 | `5555/udp` | Port used for pushing VDLM2 JSON data to           |
 | `5556/udp` | Port used for pushing HFDL JSON data to            |
 | `5557/udp` | Port used for pushing Inmarsat L-Band JSON data to |
+| `5558/udp` | Port used for pushing Iridium JSON data to         |
 | `15550`    | Port used for exposing JSON ACARS data             |
 | `15555`    | Port used for exposing JSON VDLM2 data             |
 | `15556`    | Port used for exposing JSON HFDL data              |
 | `15557`    | Port used for exposing JSON Inmarsat L-Band data   |
+| `15558`    | Port used for exposing JSON Iridium data           |
 
 ## Volumes / Database
 
@@ -208,6 +215,12 @@ In the configuration options for tar1090. Setting this will include additional a
 | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------- |
 | `ENABLE_IMSL` | Toggle Inmarsat L-Band decoding on. If set to `external` this will enable IMSL processing in the container. Push valid `IMSL` data to UDP port 5557 (needs port mapping 5557:5557/udp). | No       | `false` |
 
+### Iridium
+
+| Variable      | Description                                                                                                                                                                  | Required | Default |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------- |
+| `ENABLE_IRDM` | Toggle Iridium decoding on. If set to `external` this will enable IRDM processing in the container. Push valid `IRDM` data to UDP port 5558 (needs port mapping 5558:5558/udp). | No       | `false` |
+
 ## Viewing the messages
 
 The container implements a basic web interface, listening on port `80`, which will show messages as they are received.
@@ -264,6 +277,7 @@ If there are airlines you notice that are wrong because the data used is wrong (
 If you wish to access the JSON data that the decoders `acarsdec` and `dumpvdl2` generate with an external program expose the following ports in your docker-compose configuration:
 
 - Port 80 for the web site
+- Port 15558 for UDP Iridium JSON
 - Port 15557 for UDP Inmarsat L-Band JSON
 - Port 15556 for UDP HFDL JSON
 - Port 15555 for UDP VDLM2 JSON
@@ -278,10 +292,12 @@ ports:
   - 5555:5555/udp
   - 5556:5556/udp
   - 5557:5557/udp
+  - 5558:5558/udp
   - 15550:15550
   - 15555:15555
   - 15556:15556
   - 15557:15557
+  - 15558:15558
 ```
 
 And then you will be able to connect to `yourpisipaddress:15555` or `yourpisipaddress:15550` respectively, in whatever program can decode ACARS/VDLM JSON.
