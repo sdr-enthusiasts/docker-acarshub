@@ -52,6 +52,60 @@ EXITCODE=0
 
 # ===== Check imsl_server, imsl_feeder, imsl_stats processes =====
 
+if [[ ${ENABLE_IRDM,,} =~ external ]]; then
+
+  echo "==== Checking irdm_server ====="
+
+  # Check irdm_server is listening for TCP on 127.0.0.1:15558
+  irdm_pidof_irdm_tcp_server=$(pgrep -f 'ncat -4 --keep-open --listen 0.0.0.0 15558')
+  if ! check_tcp4_socket_listening_for_pid "0.0.0.0" "15558" "${irdm_pidof_irdm_tcp_server}"; then
+    echo "irdm_server TCP not listening on port 15558 (pid $irdm_pidof_irdm_tcp_server): UNHEALTHY"
+    EXITCODE=1
+  else
+    echo "irdm_server TCP listening on port 15558 (pid $irdm_pidof_irdm_tcp_server): HEALTHY"
+  fi
+
+  if [[ ${ENABLE_WEB,,} =~ true ]]; then
+    if ! netstat -anp | grep -P "tcp\s+\d+\s+\d+\s+127.0.0.1:[0-9]+\s+127.0.0.1:15558\s+ESTABLISHED\s+[0-9]+/python3" > /dev/null 2>&1; then
+      echo "TCP4 connection between 127.0.0.1:ANY and 127.0.0.1:15558 for python3 established: FAIL"
+      echo "irdm_server TCP connected to python server on port 15558 (pid $irdm_pidof_irdm_tcp_server): UNHEALTHY"
+      EXITCODE=1
+    else
+      echo "TCP4 connection between 127.0.0.1:ANY and 127.0.0.1:15558 for python3 established: PASS"
+      echo "irdm_server TCP connected to python server on port 15558: HEALTHY"
+    fi
+  fi
+
+  echo "==== Checking irdm_stats ====="
+
+  # Check irdm_stats:
+  irdm_pidof_irdm_stats=$(pgrep -fx 'socat -u TCP:127.0.0.1:15558 CREATE:/database/irdm.past5min.json')
+
+  # Ensure TCP connection to irdm_server at 127.0.0.1:15558
+  if ! check_tcp4_connection_established_for_pid "127.0.0.1" "ANY" "127.0.0.1" "15558" "${irdm_pidof_irdm_stats}"; then
+    echo "irdm_stats (pid $irdm_pidof_irdm_stats) not connected to irdm_server (pid $irdm_pidof_irdm_tcp_server) at 127.0.0.1:15558: UNHEALTHY"
+    EXITCODE=1
+  else
+    echo "irdm_stats (pid $irdm_pidof_irdm_stats) connected to irdm_server (pid $irdm_pidof_irdm_tcp_server) at 127.0.0.1:15558: HEALTHY"
+  fi
+
+  echo "==== Check for IRDM activity ====="
+
+  # Check for activity
+  # read .json files, ensure messages received in past hour
+
+  irdm_num_msgs_past_hour=$(find /database -type f -name 'irdm.*.json' -cmin -60 -exec cat {} \; | sed -e 's/}{/}\n{/g' | wc -l)
+  if [[ "$irdm_num_msgs_past_hour" -gt 0 ]]; then
+    echo "$irdm_num_msgs_past_hour IRDM messages received in past hour: HEALTHY"
+  else
+    echo "$irdm_num_msgs_past_hour IRDM messages received in past hour: UNHEALTHY"
+    EXITCODE=1
+  fi
+
+fi
+
+# ===== Check imsl_server, imsl_feeder, imsl_stats processes =====
+
 if [[ ${ENABLE_IMSL,,} =~ external ]]; then
 
   echo "==== Checking imsl_server ====="
@@ -265,8 +319,8 @@ if [[ ${ENABLE_ACARS,,} =~ external ]]; then
 
 fi
 
-# If ENABLE_VDLM or ENABLE_ACARS or ENABLE_HFDL is set:
-if [[ ${ENABLE_ACARS,,} =~ external ]] || [[ ${ENABLE_VDLM,,} =~ external ]] || [[ ${ENABLE_HFDL,,} =~ external ]]; then
+# If ENABLE_VDLM or ENABLE_ACARS or ENABLE_HFDL or ENABLE_IMSL or ENABLE_IRDM is set:
+if [[ ${ENABLE_ACARS,,} =~ external ]] || [[ ${ENABLE_VDLM,,} =~ external ]] || [[ ${ENABLE_HFDL,,} =~ external ]] || [[ ${ENABLE_IMSL,,} =~ external ]] || [[ ${ENABLE_IRDM,,} =~ external ]]; then
 
   echo "==== Check webapp ====="
 

@@ -32,6 +32,7 @@ ENABLE_ACARS = False
 ENABLE_VDLM = False
 ENABLE_HFDL = False
 ENABLE_IMSL = False
+ENABLE_IRDM = False
 DB_SAVEALL = False
 ACARSHUB_DB = ""
 IATA_OVERRIDE = ""
@@ -47,6 +48,7 @@ ACARS_SOURCE_PORT = 15550
 VDLM_SOURCE_PORT = 15555
 HFDL_SOURCE_PORT = 15556
 IMSL_SOURCE_PORT = 15557
+IRDM_SOURCE_PORT = 15558
 LIVE_DATA_SOURCE = "127.0.0.1"  # This is to switch from localhost for ACARS/VDLM to connecting to a remote data source
 ACARSHUB_VERSION = "0"
 ACARSHUB_BUILD = "0"
@@ -111,6 +113,12 @@ if (
     ENABLE_IMSL = True
 
 if (
+    os.getenv("ENABLE_IRDM", default=False)
+    and str(os.getenv("ENABLE_IRDM")).upper() == "EXTERNAL"
+):
+    ENABLE_IRDM = True
+
+if (
     os.getenv("DB_SAVEALL", default=False)
     and str(os.getenv("DB_SAVEALL")).upper() == "TRUE"
 ):
@@ -127,6 +135,9 @@ if os.getenv("HFDL_SOURCE_PORT", default=False):
 
 if os.getenv("IMSL_SOURCE_PORT", default=False):
     IMSL_SOURCE_PORT = int(os.getenv("IMSL_SOURCE_PORT"))
+
+if os.getenv("IRDM_SOURCE_PORT", default=False):
+    IRDM_SOURCE_PORT = int(os.getenv("IRDM_SOURCE_PORT"))
 
 # Application Settings
 

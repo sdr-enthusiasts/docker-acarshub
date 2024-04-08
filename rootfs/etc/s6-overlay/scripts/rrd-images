@@ -13,6 +13,7 @@ if [[ ${ENABLE_WEB,,} =~ true ]]; then
     ARGS_ACARS=("-a" "PNG" "-w" "1000" "-h" "200"  "--vertical-label" "Messages" "--slope-mode")
     ARGS_HFDL=("-a" "PNG" "-w" "1000" "-h" "200"  "--vertical-label" "Messages" "--slope-mode")
     ARGS_IMSL=("-a" "PNG" "-w" "1000" "-h" "200"  "--vertical-label" "Messages" "--slope-mode")
+    ARGS_IRDM=("-a" "PNG" "-w" "1000" "-h" "200"  "--vertical-label" "Messages" "--slope-mode")
 
     total_enabled=0
 
@@ -37,6 +38,12 @@ if [[ ${ENABLE_WEB,,} =~ true ]]; then
     if [[ ${ENABLE_IMSL,,} =~ external ]]; then
         ARGS_ALL+=("DEF:messages-imsl=/run/acars/acarshub.rrd:IMSL:AVERAGE" "LINE1:messages-imsl#DA70D6:IMSL")
         ARGS_IMSL+=("DEF:messages-imsl=/run/acars/acarshub.rrd:IMSL:AVERAGE" "LINE1:messages-imsl#DA70D6:IMSL")
+        total_enabled=$((total_enabled + 1))
+    fi
+
+    if [[ ${ENABLE_IRDM,,} =~ external ]]; then
+        ARGS_ALL+=("DEF:messages-irdm=/run/acars/acarshub.rrd:IRDM:AVERAGE" "LINE1:messages-irdm#800080:IRDM")
+        ARGS_IRDM+=("DEF:messages-irdm=/run/acars/acarshub.rrd:IRDM:AVERAGE" "LINE1:messages-irdm#800080:IRDM")
         total_enabled=$((total_enabled + 1))
     fi
 
@@ -136,6 +143,21 @@ if [[ ${ENABLE_WEB,,} =~ true ]]; then
                     rrdtool graph "${OUTPUT_DIR}/imsl30days.png" --title "1 Month" --start "-1mon" "${ARGS_IMSL[@]}" >/dev/null 2>&1
                     rrdtool graph "${OUTPUT_DIR}/imsl6months.png" --title "6 Months" --start "-6mon" "${ARGS_IMSL[@]}" >/dev/null 2>&1
                     rrdtool graph "${OUTPUT_DIR}/imsl1year.png" --title "1 Year" --start "-1y" "${ARGS_IMSL[@]}" >/dev/null 2>&1
+                fi
+            fi
+
+            if [[ ${ENABLE_IRDM,,} =~ external ]]; then
+                # IRDM Graphs
+
+                rrdtool graph "${OUTPUT_DIR}/irdm1hour.png" --title "1 Hour" --start "-1h" "${ARGS_IRDM[@]}" >/dev/null 2>&1
+                rrdtool graph "${OUTPUT_DIR}/irdm6hour.png" --title "6 Hours" --start "-6h" "${ARGS_IRDM[@]}" >/dev/null 2>&1
+                rrdtool graph "${OUTPUT_DIR}/irdm12hour.png" --title "12 Hours" --start "-12h" "${ARGS_IRDM[@]}" >/dev/null 2>&1
+                rrdtool graph "${OUTPUT_DIR}/irdm24hours.png" --title "1 Day" --start "-1d" "${ARGS_IRDM[@]}" >/dev/null 2>&1
+                rrdtool graph "${OUTPUT_DIR}/irdm1week.png" --title "1 Week" --start "-7d" "${ARGS_IRDM[@]}" >/dev/null 2>&1
+                if [[ "${STARTING_UP}" == "TRUE" || $(date +%M) == "00" ]]; then
+                    rrdtool graph "${OUTPUT_DIR}/irdm30days.png" --title "1 Month" --start "-1mon" "${ARGS_IRDM[@]}" >/dev/null 2>&1
+                    rrdtool graph "${OUTPUT_DIR}/irdm6months.png" --title "6 Months" --start "-6mon" "${ARGS_IRDM[@]}" >/dev/null 2>&1
+                    rrdtool graph "${OUTPUT_DIR}/irdm1year.png" --title "1 Year" --start "-1y" "${ARGS_IRDM[@]}" >/dev/null 2>&1
                 fi
             fi
         fi

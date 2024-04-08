@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
+from datetime import datetime, timezone
 import json
 
 
@@ -35,6 +36,9 @@ def format_acars_message(acars_message):
     if acars_message.get("app", {}).get("name") == "JAERO":
         return format_jaero_imsl_message(acars_message)
 
+    if acars_message.get("app", {}).get("name") == "iridium-toolkit":
+        return format_irdm_message(acars_message)
+
     return acars_message
 
 
@@ -47,6 +51,56 @@ def count_errors(unformatted_message):
             if key == "err" and value:
                 total_errors += 1
     return total_errors
+
+
+def format_irdm_message(unformatted_message):
+    irdm_message = dict()
+
+    if freq := unformatted_message.get("freq"):
+        irdm_message["freq"] = f"{float(freq)/1e6:.6f}"
+
+    if level := unformatted_message.get("level"):
+        irdm_message["level"] = level
+
+    if source := unformatted_message.get("source"):
+        if station_id := source.get("station_id"):
+            irdm_message["station_id"] = station_id
+
+    if acars := unformatted_message.get("acars"):
+        if timestamp := acars.get("timestamp"):
+            irdm_message["timestamp"] = datetime.strptime(timestamp, "%Y-%m-%dT%H:%M:%S").replace(tzinfo=timezone.utc).timestamp()
+
+        if errors := acars.get("errors"):
+            irdm_message["error"] = errors
+
+        if block_end := acars.get("block_end"):
+            irdm_message["end"] = block_end
+
+        if mode := acars.get("mode"):
+            irdm_message["mode"] = mode
+
+        if tail := acars.get("tail"):
+            irdm_message["tail"] = tail
+
+        if flight := acars.get("flight"):
+            irdm_message["flight"] = flight
+
+        if label := acars.get("label"):
+            irdm_message["label"] = label
+
+        if block_id := acars.get("block_id"):
+            irdm_message["block_id"] = block_id
+
+        if message_number := acars.get("message_number"):
+            irdm_message["msgno"] = message_number
+
+        if ack := acars.get("ack"):
+            irdm_message["ack"] = ack
+
+        if text := acars.get("text"):
+            irdm_message["text"] = text
+
+    return irdm_message
 
 
 def format_jaero_imsl_message(unformatted_message):
