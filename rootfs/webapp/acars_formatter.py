@@ -60,7 +60,7 @@ def format_irdm_message(unformatted_message):
         irdm_message["freq"] = f"{float(freq)/1e6:.6f}"
 
     if level := unformatted_message.get("level"):
-        irdm_message["level"] = level
+        irdm_message["level"] = f"{level:.1f}"
 
     if source := unformatted_message.get("source"):
         if station_id := source.get("station_id"):
