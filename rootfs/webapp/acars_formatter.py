@@ -53,11 +53,18 @@ def count_errors(unformatted_message):
     return total_errors
 
 
+def irdm_channelize_freq(freq):
+    base = 1616e6
+    chwid = 10e6/(30*8)
+    offs = freq - base
+    return base + chwid * round(offs/chwid)
+
+
 def format_irdm_message(unformatted_message):
     irdm_message = dict()
 
     if freq := unformatted_message.get("freq"):
-        irdm_message["freq"] = f"{float(freq)/1e6:.6f}"
+        irdm_message["freq"] = f"{irdm_channelize_freq(float(freq))/1e6:.6f}"
 
     if level := unformatted_message.get("level"):
         irdm_message["level"] = f"{level:.1f}"
