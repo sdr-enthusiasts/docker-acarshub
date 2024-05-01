@@ -450,13 +450,13 @@ export let stats_page = {
 
         // The data for our dataset
         data: {
-          labels: freq_labels,
+          labels: output_labels,
           datasets: [
             {
               label: `${label} Frequencies`,
               backgroundColor: this.rainbox,
               borderColor: "rgb(0, 0, 0)",
-              data: freq_data,
+              data: output_data,
               //pointRadius: 0,
               borderWidth: 1,
             },
