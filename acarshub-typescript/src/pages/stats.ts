@@ -408,6 +408,35 @@ export let stats_page = {
     canvas_id: string,
     graph_id: string
   ) {
+    let output_labels: string[] = [];
+    let output_data: number[] = [];
+
+    // If freq_data length is < 15, then we can just use the data as is
+    // Otherwise, we need to aggregate the data. No need to sort, ACARS Hub already sorts the data before it's sent.
+    // We will take the top 14 as is, and aggregate the rest into a single "Other" category
+    // This is a hack.
+    // Perhaps utilize the tooltips to show the user what freqs were aggregated into "Other". This is ugly, as possibly
+    // the number of freqs aggregated into "Other" could be quite large.
+    // Or lastly, keep creating new graphs with the aggregated data until we have less than 15 data points. This is ugly because
+    // The UI/UX experience would be quite jarring.
+    // I don't like any of these options, tbh.
+
+    if (freq_data.length > 15) {
+      let other_count: number = 0;
+      for (let i = 0; i < 14; i++) {
+        output_labels.push(freq_labels[i]);
+        output_data.push(freq_data[i]);
+      }
+      for (let i = 14; i < freq_data.length; i++) {
+        other_count += freq_data[i];
+      }
+      output_labels.push("Other");
+      output_data.push(other_count);
+    } else {
+      output_labels = freq_labels;
+      output_data = freq_data;
+    }
+
     const canvas: HTMLCanvasElement = <HTMLCanvasElement>(
       document.getElementById(canvas_id)
     );
@@ -590,9 +619,7 @@ export let stats_page = {
                     " (" +
                     // count_labels[context.dataIndex] +
                     // "\n" +
-                    ((value / data_total) * 100)
-                      .toFixed(2)
-                      .toLocaleString() +
+                    ((value / data_total) * 100).toFixed(2).toLocaleString() +
                     "%) "
                   );
                 },
@@ -683,7 +710,13 @@ export let stats_page = {
     this.irdm_on = msg.irdm;
 
     if (this.stats_page_active)
-      generate_stat_submenu(this.acars_on, this.vdlm_on, this.hfdl_on, this.imsl_on, this.irdm_on);
+      generate_stat_submenu(
+        this.acars_on,
+        this.vdlm_on,
+        this.hfdl_on,
+        this.imsl_on,
+        this.irdm_on
+      );
   },
 
   signals: function (msg: signal): void {
@@ -866,7 +899,13 @@ export let stats_page = {
       Chart.register(...registerables);
       // page is active
       this.set_html();
-      generate_stat_submenu(this.acars_on, this.vdlm_on, this.hfdl_on, this.imsl_on, this.irdm_on);
+      generate_stat_submenu(
+        this.acars_on,
+        this.vdlm_on,
+        this.hfdl_on,
+        this.imsl_on,
+        this.irdm_on
+      );
       this.show_signal_chart();
       this.show_alert_chart();
       this.show_count();
