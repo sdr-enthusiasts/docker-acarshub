@@ -491,9 +491,9 @@ export let stats_page = {
               },
               formatter: (value, context) => {
                 return (
-                  freq_data[context.dataIndex].toLocaleString() +
+                  output_data[context.dataIndex].toLocaleString() +
                   " (" +
-                  ((freq_data[context.dataIndex] / total_count) * 100)
+                  ((output_data[context.dataIndex] / total_count) * 100)
                     .toFixed(2)
                     .toLocaleString() +
                   "%)"
