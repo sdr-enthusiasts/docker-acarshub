@@ -62,18 +62,20 @@ export let menu = {
     acars: boolean = false,
     vdlm: boolean = false,
     hfdl: boolean = false,
-    imsl: boolean = false
+    imsl: boolean = false,
+    irdm: boolean = false
   ): void {
     let text: string = "";
 
-    let ennum = [acars, vdlm, hfdl, imsl].filter(x => x).length;
-    // if any two of acars, vdlm, hfdl, imsl are true, set show_combined to true
+    let ennum = [acars, vdlm, hfdl, imsl, irdm].filter(x => x).length;
+    // if any two of acars, vdlm, hfdl, imsl, irdm are true, set show_combined to true
     let show_combined = ennum > 1;
 
     const acars_prefix = show_combined ? "'acars'" : "''";
     const vdlm_prefix  = show_combined ? "'vdlm'"  : "''";
     const hfdl_prefix  = show_combined ? "'hfdl'"  : "''";
     const imsl_prefix  = show_combined ? "'imsl'"  : "''";
+    const irdm_prefix  = show_combined ? "'irdm'"  : "''";
 
     if (show_combined) {
       text =
@@ -102,6 +104,12 @@ export let menu = {
       text += `${
         show_combined ? " | " : ""
       }<a href="javascript:update_prefix(${imsl_prefix})" id="imsl_graphs" class="spread_text">IMSL Graphs</a>`;
+    }
+
+    if (irdm) {
+      text += `${
+        show_combined ? " | " : ""
+      }<a href="javascript:update_prefix(${irdm_prefix})" id="irdm_graphs" class="spread_text">IRDM Graphs</a>`;
     }
 
     text +=

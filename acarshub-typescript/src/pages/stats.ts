@@ -45,6 +45,7 @@ export let stats_page = {
   chart_frequency_data_vdlm: (<unknown>null) as Chart,
   chart_frequency_data_hfdl: (<unknown>null) as Chart,
   chart_frequency_data_imsl: (<unknown>null) as Chart,
+  chart_frequency_data_irdm: (<unknown>null) as Chart,
   chart_message_counts_data: (<unknown>null) as Chart,
   chart_message_counts_empty: (<unknown>null) as Chart,
 
@@ -57,6 +58,7 @@ export let stats_page = {
   vdlm_on: false as boolean,
   hfdl_on: false as boolean,
   imsl_on: false as boolean,
+  irdm_on: false as boolean,
   width: 1000 as number,
 
   tol: new palette("tol", 12, 0, "").map(function (hex: any) {
@@ -207,31 +209,37 @@ export let stats_page = {
       let freq_data_vdlm: number[] = [];
       let freq_data_hfdl: number[] = [];
       let freq_data_imsl: number[] = [];
+      let freq_data_irdm: number[] = [];
 
       let freq_labels_acars: string[] = [];
       let freq_labels_vdlm: string[] = [];
       let freq_labels_hfdl: string[] = [];
       let freq_labels_imsl: string[] = [];
+      let freq_labels_irdm: string[] = [];
 
       let freq_labels_acars_positions: string[] = [];
       let freq_labels_vdlm_positions: string[] = [];
       let freq_labels_hfdl_positions: string[] = [];
       let freq_labels_imsl_positions: string[] = [];
+      let freq_labels_irdm_positions: string[] = [];
 
       let freq_labels_acars_offset: number[] = [];
       let freq_labels_vdlm_offset: number[] = [];
       let freq_labels_hfdl_offset: number[] = [];
       let freq_labels_imsl_offset: number[] = [];
+      let freq_labels_irdm_offset: number[] = [];
 
       let total_count_acars: number = 0;
       let total_count_vdlm: number = 0;
       let total_count_hfdl: number = 0;
       let total_count_imsl: number = 0;
+      let total_count_irdm: number = 0;
 
       let acars_offset: number = 5;
       let vdlm_offset: number = 5;
       let hfdl_offset: number = 5;
       let imsl_offset: number = 5;
+      let irdm_offset: number = 5;
 
       Object.entries(this.freqs_data.freqs).forEach(([key, value]) => {
         if (value.freq_type === "ACARS") {
@@ -242,6 +250,8 @@ export let stats_page = {
           total_count_hfdl += value.count;
         } else if (value.freq_type === "IMS-L") {
           total_count_imsl += value.count;
+        } else if (value.freq_type === "IRDM") {
+          total_count_irdm += value.count;
         } else {
           console.error("Unknown freq type: " + value.freq_type);
         }
@@ -296,6 +306,18 @@ export let stats_page = {
             freq_labels_imsl_offset.push(imsl_offset);
             imsl_offset += 60;
           }
+        } else if (value.freq_type === "IRDM") {
+          freq_data_irdm.push(value.count);
+          freq_labels_irdm.push(value.freq);
+
+          if (value.count / total_count_irdm > 0.2) {
+            freq_labels_irdm_positions.push("center");
+            freq_labels_irdm_offset.push(0);
+          } else {
+            freq_labels_irdm_positions.push("end");
+            freq_labels_irdm_offset.push(irdm_offset);
+            irdm_offset += 60;
+          }
         } else {
           console.error("Unknown freq type: " + value.freq_type);
         }
@@ -315,6 +337,10 @@ export let stats_page = {
 
       if (this.chart_frequency_data_imsl !== null) {
         this.chart_frequency_data_imsl.destroy();
+      }
+
+      if (this.chart_frequency_data_irdm !== null) {
+        this.chart_frequency_data_irdm.destroy();
       }
 
       if (freq_data_acars.length > 0) {
@@ -360,6 +386,17 @@ export let stats_page = {
           "#imsl_freq_graph"
         );
       }
+
+      if (freq_data_irdm.length > 0) {
+        this.render_freq_graph(
+          "IRDM",
+          freq_labels_irdm,
+          freq_data_irdm,
+          total_count_irdm,
+          "frequencies_irdm",
+          "#irdm_freq_graph"
+        );
+      }
     }
   },
 
@@ -371,6 +408,35 @@ export let stats_page = {
     canvas_id: string,
     graph_id: string
   ) {
+    let output_labels: string[] = [];
+    let output_data: number[] = [];
+
+    // If freq_data length is < 15, then we can just use the data as is
+    // Otherwise, we need to aggregate the data. No need to sort, ACARS Hub already sorts the data before it's sent.
+    // We will take the top 14 as is, and aggregate the rest into a single "Other" category
+    // This is a hack.
+    // Perhaps utilize the tooltips to show the user what freqs were aggregated into "Other". This is ugly, as possibly
+    // the number of freqs aggregated into "Other" could be quite large.
+    // Or lastly, keep creating new graphs with the aggregated data until we have less than 15 data points. This is ugly because
+    // The UI/UX experience would be quite jarring.
+    // I don't like any of these options, tbh.
+
+    if (freq_data.length > 15) {
+      let other_count: number = 0;
+      for (let i = 0; i < 14; i++) {
+        output_labels.push(freq_labels[i]);
+        output_data.push(freq_data[i]);
+      }
+      for (let i = 14; i < freq_data.length; i++) {
+        other_count += freq_data[i];
+      }
+      output_labels.push("Other");
+      output_data.push(other_count);
+    } else {
+      output_labels = freq_labels;
+      output_data = freq_data;
+    }
+
     const canvas: HTMLCanvasElement = <HTMLCanvasElement>(
       document.getElementById(canvas_id)
     );
@@ -384,13 +450,13 @@ export let stats_page = {
 
         // The data for our dataset
         data: {
-          labels: freq_labels,
+          labels: output_labels,
           datasets: [
             {
               label: `${label} Frequencies`,
               backgroundColor: this.rainbox,
               borderColor: "rgb(0, 0, 0)",
-              data: freq_data,
+              data: output_data,
               //pointRadius: 0,
               borderWidth: 1,
             },
@@ -425,9 +491,9 @@ export let stats_page = {
               },
               formatter: (value, context) => {
                 return (
-                  freq_data[context.dataIndex].toLocaleString() +
+                  output_data[context.dataIndex].toLocaleString() +
                   " (" +
-                  ((freq_data[context.dataIndex] / total_count) * 100)
+                  ((output_data[context.dataIndex] / total_count) * 100)
                     .toFixed(2)
                     .toLocaleString() +
                   "%)"
@@ -459,6 +525,8 @@ export let stats_page = {
         this.chart_frequency_data_hfdl = temp_chart;
       } else if (label === "IMSL") {
         this.chart_frequency_data_imsl = temp_chart;
+      } else if (label === "IRDM") {
+        this.chart_frequency_data_irdm = temp_chart;
       }
       // clamp the height of the parent container to the height of the chart based on the number of elements
       // this is a hack to get the chart to display properly
@@ -551,9 +619,7 @@ export let stats_page = {
                     " (" +
                     // count_labels[context.dataIndex] +
                     // "\n" +
-                    ((value / data_total) * 100)
-                      .toFixed(2)
-                      .toLocaleString() +
+                    ((value / data_total) * 100).toFixed(2).toLocaleString() +
                     "%) "
                   );
                 },
@@ -641,9 +707,16 @@ export let stats_page = {
     this.vdlm_on = msg.vdlm;
     this.hfdl_on = msg.hfdl;
     this.imsl_on = msg.imsl;
+    this.irdm_on = msg.irdm;
 
     if (this.stats_page_active)
-      generate_stat_submenu(this.acars_on, this.vdlm_on, this.hfdl_on, this.imsl_on);
+      generate_stat_submenu(
+        this.acars_on,
+        this.vdlm_on,
+        this.hfdl_on,
+        this.imsl_on,
+        this.irdm_on
+      );
   },
 
   signals: function (msg: signal): void {
@@ -772,6 +845,11 @@ export let stats_page = {
         ? '<div id="imsl_freq_graph" class="chart-container"><div>&nbsp;</div><canvas id="frequencies_imsl"></canvas></div>'
         : ""
     }
+    ${
+      this.irdm_on
+        ? '<div id="irdm_freq_graph" class="chart-container"><div>&nbsp;</div><canvas id="frequencies_irdm"></canvas></div>'
+        : ""
+    }
 
     <div id="chart_msg_good" class="chart-container"><div>&nbsp;</div><canvas id="msg_count_data"></div>
     <div id="chart_msg_empty" class="chart-container"><div>&nbsp;</div><canvas id="msg_count_empty"></div>
@@ -821,7 +899,13 @@ export let stats_page = {
       Chart.register(...registerables);
       // page is active
       this.set_html();
-      generate_stat_submenu(this.acars_on, this.vdlm_on, this.hfdl_on, this.imsl_on);
+      generate_stat_submenu(
+        this.acars_on,
+        this.vdlm_on,
+        this.hfdl_on,
+        this.imsl_on,
+        this.irdm_on
+      );
       this.show_signal_chart();
       this.show_alert_chart();
       this.show_count();

@@ -26,3 +26,9 @@ if ! rrdtool info "${RRD_FILE}" | grep -q 'IMSL'; then
     rrdtool tune "${RRD_FILE}" DS:IMSL:GAUGE:120:U:U
     echo "[04-rrdvalidator] Added IMSL to ${RRD_FILE}"
 fi
+
+# check and see if the grep output of rrdinfo containers 'IRDM'. If it does, exit 0
+if ! rrdtool info "${RRD_FILE}" | grep -q 'IRDM'; then
+    rrdtool tune "${RRD_FILE}" DS:IRDM:GAUGE:120:U:U
+    echo "[04-rrdvalidator] Added IRDM to ${RRD_FILE}"
+fi

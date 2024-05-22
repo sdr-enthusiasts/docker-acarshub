@@ -631,9 +631,10 @@ export function generate_stat_submenu(
   acars: boolean = false,
   vdlm: boolean = false,
   hfdl: boolean = false,
-  imsl: boolean = false
+  imsl: boolean = false,
+  irdm: boolean = false
 ): void {
-  menu.generate_stat_submenu(acars, vdlm, hfdl, imsl);
+  menu.generate_stat_submenu(acars, vdlm, hfdl, imsl, irdm);
 }
 
 export function find_matches(): plane_data {

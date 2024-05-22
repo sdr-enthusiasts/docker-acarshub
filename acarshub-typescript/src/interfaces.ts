@@ -71,6 +71,7 @@ export interface decoders {
   vdlm: boolean;
   hfdl: boolean;
   imsl: boolean;
+  irdm: boolean;
   arch: string;
   allow_remote_updates: boolean;
   adsb: {

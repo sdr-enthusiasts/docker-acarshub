@@ -67,6 +67,7 @@ thread_acars_listener = Thread()
 thread_vdlm2_listener = Thread()
 thread_hfdl_listener = Thread()
 thread_imsl_listener = Thread()
+thread_irdm_listener = Thread()
 thread_message_listener_stop_event = Event()
 
 # db thread
@@ -92,6 +93,7 @@ vdlm_messages_last_minute = 0
 acars_messages_last_minute = 0
 hfdl_messages_last_minute = 0
 imsl_messages_last_minute = 0
+irdm_messages_last_minute = 0
 error_messages_last_minute = 0
 
 # all namespaces
@@ -121,6 +123,7 @@ def update_rrd_db():
     global error_messages_last_minute
     global hfdl_messages_last_minute
     global imsl_messages_last_minute
+    global irdm_messages_last_minute
 
     acarshub_rrd_database.update_db(
         vdlm=vdlm_messages_last_minute,
@@ -128,12 +131,14 @@ def update_rrd_db():
         error=error_messages_last_minute,
         hfdl=hfdl_messages_last_minute,
         imsl=imsl_messages_last_minute,
+        irdm=irdm_messages_last_minute,
     )
     vdlm_messages_last_minute = 0
     acars_messages_last_minute = 0
     error_messages_last_minute = 0
     hfdl_messages_last_minute = 0
     imsl_messages_last_minute = 0
+    irdm_messages_last_minute = 0
 
 
 def generateClientMessage(message_type, json_message):
@@ -160,6 +165,8 @@ def getQueType(message_type):
         return "HFDL"
     elif message_type == "IMSL":
         return "IMS-L"
+    elif message_type == "IRDM":
+        return "IRDM"
     elif message_type is not None:
         return str(message_type)
     else:
@@ -254,6 +261,8 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
         global hfdl_messages_last_minute
     elif message_type == "IMSL":
         global imsl_messages_last_minute
+    elif message_type == "IRDM":
+        global irdm_messages_last_minute
 
     disconnected = True
 
@@ -405,6 +414,8 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
                     hfdl_messages_last_minute += 1
                 elif message_type == "IMSL":
                     imsl_messages_last_minute += 1
+                elif message_type == "IRDM":
+                    irdm_messages_last_minute += 1
 
                 if "error" in msg:
                     if msg["error"] > 0:
@@ -436,6 +447,7 @@ def init_listeners(special_message=""):
     global thread_vdlm2_listener
     global thread_hfdl_listener
     global thread_imsl_listener
+    global thread_irdm_listener
     global thread_database
     global thread_scheduler
     global thread_html_generator
@@ -542,6 +554,22 @@ def init_listeners(special_message=""):
             ),
         )
         thread_imsl_listener.start()
+
+    if not thread_irdm_listener.is_alive() and acarshub_configuration.ENABLE_IRDM:
+        acarshub_logging.log(
+            f"{special_message}Starting IRDM listener",
+            "init",
+            level=LOG_LEVEL["INFO"] if special_message == "" else LOG_LEVEL["ERROR"],
+        )
+        thread_irdm_listener = Thread(
+            target=message_listener,
+            args=(
+                "IRDM",
+                acarshub_configuration.LIVE_DATA_SOURCE,
+                acarshub_configuration.IRDM_SOURCE_PORT,
+            ),
+        )
+        thread_irdm_listener.start()
 
     status = acarshub_helpers.get_service_status()  # grab system status
 
@@ -680,6 +708,7 @@ def main_connect():
                 "acars": acarshub_configuration.ENABLE_ACARS,
                 "hfdl": acarshub_configuration.ENABLE_HFDL,
                 "imsl": acarshub_configuration.ENABLE_IMSL,
+                "irdm": acarshub_configuration.ENABLE_IRDM,
                 "arch": acarshub_configuration.ARCH,
                 "allow_remote_updates": acarshub_configuration.ALLOW_REMOTE_UPDATES,
                 "adsb": {

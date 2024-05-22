@@ -1,0 +1,43 @@
+#!/command/with-contenv bash
+#shellcheck shell=bash
+
+if [[ ${ENABLE_IRDM,,} =~ external ]]; then
+
+  set -o pipefail
+
+  # Require that irdm_server is running
+  if ! netstat -an | grep -P '^\s*tcp\s+\d+\s+\d+\s+0\.0\.0\.0:15558\s+(?>\d{1,3}\.{0,1}){4}:\*\s+LISTEN\s*$' > /dev/null; then
+    if [[ $((MIN_LOG_LEVEL)) -ge 4 ]]; then
+      # shellcheck disable=SC2016
+      echo "Waiting for irdm_server" | stdbuf -oL awk '{print "[irdm_stats ] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
+    fi
+    sleep 1
+    exit
+  fi
+  if [[ $((MIN_LOG_LEVEL)) -ge 4 ]]; then
+    # shellcheck disable=SC2016
+    echo "irdm_server ready, starting service" | stdbuf -oL awk '{print "[irdm_stats ] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
+  fi
+
+  # Start our stats loop
+  while true; do
+
+    # capture 5 mins of flows
+    timeout --foreground 300s socat -u TCP:127.0.0.1:15558 CREATE:/database/irdm.past5min.json
+
+    # shellcheck disable=SC2016
+    echo "$(sed 's/}{/}\n{/g' /database/irdm.past5min.json | wc -l) IRDM messages received in last 5 mins" | stdbuf -oL awk '{print "[irdm_stats ] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
+
+    # rotate files keeping last 2 hours
+    for i in {24..1}; do
+      mv "/database/irdm.$((i-1)).json" "/database/irdm.$i.json" > /dev/null 2>&1 || true
+    done
+    mv "/database/irdm.past5min.json" "/database/irdm.0.json" > /dev/null 2>&1 || true
+
+  done
+
+else
+
+  # If here then IRDM is not enabled, sleep forever
+  sleep 86400
+fi
