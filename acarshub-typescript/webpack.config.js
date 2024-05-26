@@ -107,7 +107,9 @@ let config = {
     },
   },
   plugins: [
-    new NodePolyfillPlugin(),
+    new NodePolyfillPlugin({
+      additionalAliases: ["process"],
+    }),
     new FaviconsWebpackPlugin({
       logo: path.resolve(__dirname, "./src/assets/images") + "/acarshub.svg",
       inject: true,
