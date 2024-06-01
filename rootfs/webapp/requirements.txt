@@ -4,5 +4,5 @@ Flask-SocketIO==5.3.6
 gunicorn[eventlet]==22.0.0
 requests==2.32.2
 rrdtool==0.1.16
-schedule==1.2.1
+schedule==1.2.2
 sqlalchemy==2.0.30
