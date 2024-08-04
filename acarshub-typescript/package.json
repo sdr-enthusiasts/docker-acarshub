@@ -13,7 +13,7 @@
   "author": "Fred Clausen",
   "license": "GPL-3.0-only",
   "devDependencies": {
-    "@babel/core": "^7.24.9",
+    "@babel/core": "^7.25.2",
     "@babel/preset-env": "^7.25.3",
     "@types/jquery": "^3.5.30",
     "@types/js-cookie": "^3.0.6",
