@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This document is designed to show the most common `compose.yaml` setup that requires minimal, if any, modifications.
+This document is designed to show the most common `docker-compose.yaml` setup that requires minimal, if any, modifications.
 
 ### Migrating from v2 to v3/NextGen
 
@@ -42,9 +42,11 @@ If you have chosen to decode VDLM Data and have a RTL-SDR device dedicated to it
 
 Otherwise, remove the `dumpvdl2` section
 
-### compose.yaml
+### docker-compose.yaml
 
 ```yaml
+version: "3.8"
+
 volumes:
   acars_data:
 
