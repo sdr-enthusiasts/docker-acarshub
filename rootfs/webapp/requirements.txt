@@ -1,8 +1,8 @@
 eventlet==0.36.1
 Flask==3.0.3
-Flask-SocketIO==5.3.6
+Flask-SocketIO==5.3.7
 gunicorn[eventlet]==23.0.0
 requests==2.32.3
 rrdtool==0.1.16
 schedule==1.2.2
-sqlalchemy==2.0.32
+sqlalchemy==2.0.34
