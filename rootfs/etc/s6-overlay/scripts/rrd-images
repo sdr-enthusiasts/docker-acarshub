@@ -165,14 +165,16 @@ if [[ ${ENABLE_WEB,,} =~ true ]]; then
         irdm_msgs=$(find /database -type f -name 'irdm.*.json' -cmin -60 -exec cat {} \; | sed -e 's/}{/}\n{/g' | wc -l)
 
         stats_file=/webapp/data/stats.json
-        echo "{" > ${stats_file}
-        echo "  \"acars\": ${acars_msgs}," >> ${stats_file}
-        echo "  \"vdlm2\": ${vdlm2_msgs}," >> ${stats_file}
-        echo "  \"hfdl\": ${hfdl_msgs}," >> ${stats_file}
-        echo "  \"imsl\": ${imsl_msgs}," >> ${stats_file}
-        echo "  \"irdm\": ${irdm_msgs}," >> ${stats_file}
-        echo "  \"total\": $((${acars_msgs} + ${vdlm2_msgs} + ${hfdl_msgs} + ${imsl_msgs} + ${irdm_msgs}))" >> ${stats_file}
-        echo "}" >> ${stats_file}
+       {
+          echo "{"
+          echo "  \"acars\": ${acars_msgs},"
+          echo "  \"vdlm2\": ${vdlm2_msgs},"
+          echo "  \"hfdl\": ${hfdl_msgs},"
+          echo "  \"imsl\": ${imsl_msgs},"
+          echo "  \"irdm\": ${irdm_msgs},"
+          echo "  \"total\": $((acars_msgs + vdlm2_msgs + hfdl_msgs + imsl_msgs + irdm_msgs))"
+          echo "}"
+        } > ${stats_file}
 
         if [[ $((MIN_LOG_LEVEL)) -ge 4 ]]; then
             #shellcheck disable=SC2016
