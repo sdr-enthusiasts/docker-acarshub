@@ -103,7 +103,6 @@ if [[ ${ENABLE_WEB,,} =~ true ]]; then
 
             if [[ ${ENABLE_VDLM,,} =~ external ]]; then
                 # VDLM Graphs
-
                 rrdtool graph "${OUTPUT_DIR}/vdlm1hour.png" --title "1 Hour" --start "-1h" "${ARGS_VDLM[@]}" >/dev/null 2>&1
                 rrdtool graph "${OUTPUT_DIR}/vdlm6hour.png" --title "6 Hours" --start "-6h" "${ARGS_VDLM[@]}" >/dev/null 2>&1
                 rrdtool graph "${OUTPUT_DIR}/vdlm12hour.png" --title "12 Hours" --start "-12h" "${ARGS_VDLM[@]}" >/dev/null 2>&1
@@ -118,7 +117,6 @@ if [[ ${ENABLE_WEB,,} =~ true ]]; then
 
             if [[ ${ENABLE_HFDL,,} =~ external ]]; then
                 # HFDL Graphs
-
                 rrdtool graph "${OUTPUT_DIR}/hfdl1hour.png" --title "1 Hour" --start "-1h" "${ARGS_HFDL[@]}" >/dev/null 2>&1
                 rrdtool graph "${OUTPUT_DIR}/hfdl6hour.png" --title "6 Hours" --start "-6h" "${ARGS_HFDL[@]}" >/dev/null 2>&1
                 rrdtool graph "${OUTPUT_DIR}/hfdl12hour.png" --title "12 Hours" --start "-12h" "${ARGS_HFDL[@]}" >/dev/null 2>&1
@@ -133,7 +131,6 @@ if [[ ${ENABLE_WEB,,} =~ true ]]; then
 
             if [[ ${ENABLE_IMSL,,} =~ external ]]; then
                 # IMSL Graphs
-
                 rrdtool graph "${OUTPUT_DIR}/imsl1hour.png" --title "1 Hour" --start "-1h" "${ARGS_IMSL[@]}" >/dev/null 2>&1
                 rrdtool graph "${OUTPUT_DIR}/imsl6hour.png" --title "6 Hours" --start "-6h" "${ARGS_IMSL[@]}" >/dev/null 2>&1
                 rrdtool graph "${OUTPUT_DIR}/imsl12hour.png" --title "12 Hours" --start "-12h" "${ARGS_IMSL[@]}" >/dev/null 2>&1
@@ -148,7 +145,6 @@ if [[ ${ENABLE_WEB,,} =~ true ]]; then
 
             if [[ ${ENABLE_IRDM,,} =~ external ]]; then
                 # IRDM Graphs
-
                 rrdtool graph "${OUTPUT_DIR}/irdm1hour.png" --title "1 Hour" --start "-1h" "${ARGS_IRDM[@]}" >/dev/null 2>&1
                 rrdtool graph "${OUTPUT_DIR}/irdm6hour.png" --title "6 Hours" --start "-6h" "${ARGS_IRDM[@]}" >/dev/null 2>&1
                 rrdtool graph "${OUTPUT_DIR}/irdm12hour.png" --title "12 Hours" --start "-12h" "${ARGS_IRDM[@]}" >/dev/null 2>&1
@@ -161,6 +157,24 @@ if [[ ${ENABLE_WEB,,} =~ true ]]; then
                 fi
             fi
         fi
+
+        acars_msgs=$(find /database -type f -name 'acars.*.json' -cmin -60 -exec cat {} \; | sed -e 's/}{/}\n{/g' | wc -l)
+        vdlm2_msgs=$(find /database -type f -name 'vdlm2.*.json' -cmin -60 -exec cat {} \; | sed -e 's/}{/}\n{/g' | wc -l)
+        hfdl_msgs=$(find /database -type f -name 'hfdl.*.json' -cmin -60 -exec cat {} \; | sed -e 's/}{/}\n{/g' | wc -l)
+        imsl_msgs=$(find /database -type f -name 'imsl.*.json' -cmin -60 -exec cat {} \; | sed -e 's/}{/}\n{/g' | wc -l)
+        irdm_msgs=$(find /database -type f -name 'irdm.*.json' -cmin -60 -exec cat {} \; | sed -e 's/}{/}\n{/g' | wc -l)
+
+        stats_file=/webapp/data/stats.json
+       {
+          echo "{"
+          echo "  \"acars\": ${acars_msgs},"
+          echo "  \"vdlm2\": ${vdlm2_msgs},"
+          echo "  \"hfdl\": ${hfdl_msgs},"
+          echo "  \"imsl\": ${imsl_msgs},"
+          echo "  \"irdm\": ${irdm_msgs},"
+          echo "  \"total\": $((acars_msgs + vdlm2_msgs + hfdl_msgs + imsl_msgs + irdm_msgs))"
+          echo "}"
+        } > ${stats_file}
 
         if [[ $((MIN_LOG_LEVEL)) -ge 4 ]]; then
             #shellcheck disable=SC2016
