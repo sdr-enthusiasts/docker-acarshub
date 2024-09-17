@@ -75,7 +75,7 @@ def format_irdm_message(unformatted_message):
 
     if acars := unformatted_message.get("acars"):
         if timestamp := acars.get("timestamp"):
-            irdm_message["timestamp"] = datetime.strptime(timestamp, "%Y-%m-%dT%H:%M:%S").replace(tzinfo=timezone.utc).timestamp()
+            irdm_message["timestamp"] = datetime.strptime(timestamp, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc).timestamp()
 
         if errors := acars.get("errors"):
             irdm_message["error"] = errors
