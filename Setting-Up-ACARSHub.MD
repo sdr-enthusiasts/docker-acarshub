@@ -56,8 +56,6 @@ services:
     tty: true
     container_name: acarshub
     restart: always
-    devices:
-      - /dev/bus/usb:/dev/bus/usb
     ports:
       - 8080:80
       - 5550:5550/udp
@@ -88,8 +86,6 @@ services:
     tty: true
     container_name: acarsdec
     restart: always
-    devices:
-      - /dev/bus/usb:/dev/bus/usb
     environment:
       - QUIET_LOGS=true
       - TZ=Etc/UTC
@@ -102,6 +98,10 @@ services:
     tmpfs:
       - /run:exec,size=64M
       - /var/log:size=64M
+    device_cgroup_rules:
+      - 'c 189:* rwm'
+    volumes:
+      - /dev/bus/usb:/dev/bus/usb:ro
   #####
 
   ### Remove this section if you are NOT decoding VDLM
@@ -111,8 +111,6 @@ services:
     tty: true
     container_name: dumpvdl2
     restart: always
-    devices:
-      - /dev/bus/usb:/dev/bus/usb
     environment:
       - QUIET_LOGS=true
       - TZ=Etc/UTC
@@ -128,6 +126,10 @@ services:
     tmpfs:
       - /run:exec,size=64M
       - /var/log:size=64M
+    device_cgroup_rules:
+      - 'c 189:* rwm'
+    volumes:
+      - /dev/bus/usb:/dev/bus/usb:ro
   #####
 
   acars_router:
