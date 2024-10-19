@@ -5,4 +5,4 @@ gunicorn[eventlet]==23.0.0
 requests==2.32.3
 rrdtool==0.1.16
 schedule==1.2.2
-sqlalchemy==2.0.35
+sqlalchemy==2.0.36
