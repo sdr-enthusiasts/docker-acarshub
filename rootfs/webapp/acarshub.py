@@ -40,7 +40,7 @@ if acarshub_configuration.LOCAL_TEST:
 # regarding async_handlers=True, see: https://github.com/miguelgrinberg/Flask-SocketIO/issues/348
 socketio = SocketIO(
     app,
-    async_mode=None,
+    async_mode="gevent",
     async_handlers=True,
     logger=False,
     engineio_logger=False,
@@ -56,6 +56,7 @@ thread_scheduler_stop_event = Event()
 # thread for processing the incoming data
 
 thread_html_generator = Thread()
+thread_html_generator_active = False
 thread_html_generator_event = Event()
 
 # web thread
@@ -171,8 +172,11 @@ def getQueType(message_type):
 
 
 def htmlListener():
+    global thread_html_generator_active
     import time
     import sys
+
+    thread_html_generator_active = True
 
     # Run while requested...
     while not thread_html_generator_event.is_set():
@@ -190,6 +194,7 @@ def htmlListener():
     acarshub_logging.log(
         "Exiting HTML Listener thread", "htmlListener", level=LOG_LEVEL["DEBUG"]
     )
+    thread_html_generator_active = False
 
 
 def scheduled_tasks():
@@ -483,7 +488,7 @@ def init_listeners(special_message=""):
         thread_scheduler.start()
 
     # check if 'g' is not in thread_html_generator
-    if not hasattr(thread_html_generator, "g"):
+    if thread_html_generator_active is False:
         acarshub_logging.log(
             f"{special_message}Starting htmlListener",
             "init",
@@ -824,7 +829,7 @@ def main_connect():
         acarshub_logging.acars_traceback(e, "webapp")
 
     # Start the htmlGenerator thread only if the thread has not been started before.
-    if not hasattr(thread_html_generator, "g"):
+    if thread_html_generator_active is False:
         sys.stdout.flush()
         thread_html_generator_event.clear()
         thread_html_generator = socketio.start_background_task(htmlListener)
