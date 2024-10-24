@@ -16,9 +16,6 @@
 # You should have received a copy of the GNU General Public License
 # along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-import eventlet
-
-eventlet.monkey_patch()
 import acarshub_helpers  # noqa: E402
 import acarshub_configuration  # noqa: E402
 import acarshub_logging  # noqa: E402
@@ -362,14 +359,14 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
                 acarshub_logging.log(
                     "Reassembly successful, message not skipped after all!",
                     f"{message_type.lower()}Generator",
-                    level=LOG_LEVEL["DEBUG"]
+                    level=LOG_LEVEL["DEBUG"],
                 )
             except Exception as e:
                 # reassembly didn't work, don't do anything but print an error when debug is enabled
                 acarshub_logging.log(
                     f"Reassembly failed {e}: {combined}",
                     f"{message_type.lower()}Generator",
-                    level=LOG_LEVEL["WARNING"]
+                    level=LOG_LEVEL["WARNING"],
                 )
 
             # forget the partial message, it can't be useful anymore
@@ -389,7 +386,9 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
                     # last element in the list, could be a partial json object
                     partial_message = part
                 acarshub_logging.log(
-                    f"Skipping Message: {part}", f"{message_type.lower()}Generator", LOG_LEVEL["DEBUG"]
+                    f"Skipping Message: {part}",
+                    f"{message_type.lower()}Generator",
+                    LOG_LEVEL["DEBUG"],
                 )
                 continue
             except Exception as e:
@@ -432,9 +431,7 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
                 if not acarshub_configuration.QUIET_MESSAGES:
                     print(f"MESSAGE:{message_type.lower()}Generator: {msg}")
 
-                client_message = generateClientMessage(
-                    que_type, formatted_message
-                )
+                client_message = generateClientMessage(que_type, formatted_message)
 
                 # add to recent message que for anyone fresh loading the page
                 list_of_recent_messages.append(client_message)
@@ -460,9 +457,11 @@ def init_listeners(special_message=""):
 
     # show log message if this is container startup
     acarshub_logging.log(
-        "Starting Data Listeners"
-        if special_message == ""
-        else "Checking Data Listeners",
+        (
+            "Starting Data Listeners"
+            if special_message == ""
+            else "Checking Data Listeners"
+        ),
         "init",
         level=LOG_LEVEL["INFO"] if special_message == "" else LOG_LEVEL["DEBUG"],
     )

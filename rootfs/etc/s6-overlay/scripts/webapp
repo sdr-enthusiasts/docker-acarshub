@@ -14,7 +14,7 @@ if [[ ${ENABLE_WEB,,} =~ true ]]; then
       -b "0.0.0.0:8888" \
       -w 1 \
       --no-sendfile \
-      -k eventlet \
+      -k gevent \
       acarshub:app \
       --timeout 120 \
     2>&1 | stdbuf -oL sed --unbuffered '/^$/d' | \
