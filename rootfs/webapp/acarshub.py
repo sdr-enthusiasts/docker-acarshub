@@ -40,7 +40,7 @@ if acarshub_configuration.LOCAL_TEST:
 # regarding async_handlers=True, see: https://github.com/miguelgrinberg/Flask-SocketIO/issues/348
 socketio = SocketIO(
     app,
-    async_mode=None,
+    async_mode="gevent",
     async_handlers=True,
     logger=False,
     engineio_logger=False,
