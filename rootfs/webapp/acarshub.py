@@ -483,7 +483,7 @@ def init_listeners(special_message=""):
         thread_scheduler.start()
 
     # check if 'g' is not in thread_html_generator
-    if not hasattr(thread_html_generator, "g"):
+    if not thread_html_generator.is_alive():
         acarshub_logging.log(
             f"{special_message}Starting htmlListener",
             "init",
