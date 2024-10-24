@@ -1,6 +1,6 @@
 {
   "name": "acarshub-typescript",
-  "version": "3.6.0",
+  "version": "3.7.0",
   "description": "Web front end for the docker-acarshub project",
   "main": "index.js",
   "repository": "https://github.com/sdr-enthusiasts/docker-acarshub",
