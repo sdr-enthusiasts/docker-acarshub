@@ -54,7 +54,7 @@ RUN set -x && \
     KEPT_PACKAGES+=(python3-cryptography) && \
     # libffi arm build fix
     TEMP_PACKAGES+=(libffi-dev) && \
-    KEPT_PACKAGES+=(libffi6) && \
+    KEPT_PACKAGES+=(libffi8) && \
     # stats
     KEPT_PACKAGES+=(rrdtool) && \
     TEMP_PACKAGES+=(librrd-dev) && \
