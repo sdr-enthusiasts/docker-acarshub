@@ -1,4 +1,4 @@
-Flask==3.0.3
+Flask==3.1.0
 Flask-SocketIO==5.4.1
 gevent==24.10.3
 gunicorn[gevent]==23.0.0
