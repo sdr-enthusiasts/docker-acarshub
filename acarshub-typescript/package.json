@@ -40,7 +40,7 @@
     "webpack-image-loader": "0.1.2"
   },
   "dependencies": {
-    "@airframes/acars-decoder": "^1.6.14",
+    "@airframes/acars-decoder": "^1.6.16",
     "@fortawesome/fontawesome-free": "6.6.0",
     "@fortawesome/fontawesome-svg-core": "6.6.0",
     "@fortawesome/free-regular-svg-icons": "6.6.0",
