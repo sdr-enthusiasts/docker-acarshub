@@ -53,7 +53,6 @@ volumes:
 services:
   acarshub:
     image: ghcr.io/sdr-enthusiasts/docker-acarshub:latest
-    tty: true
     container_name: acarshub
     restart: always
     ports:
@@ -83,7 +82,6 @@ services:
   ### Remove this section if you are NOT decoding ACARS
   acarsdec:
     image: ghcr.io/sdr-enthusiasts/docker-acarsdec:latest
-    tty: true
     container_name: acarsdec
     restart: always
     environment:
@@ -108,7 +106,6 @@ services:
 
   dumpvdl2:
     image: ghcr.io/sdr-enthusiasts/docker-dumpvdl2:latest
-    tty: true
     container_name: dumpvdl2
     restart: always
     environment:
@@ -136,7 +133,6 @@ services:
     image: ghcr.io/sdr-enthusiasts/acars_router:latest
     labels:
       - "autoheal=true"
-    tty: true
     ports:
       - 55555:15555
       - 55550:15550
