@@ -547,16 +547,17 @@ def add_message(params, message_type, message_from_json, backup=False):
         # We'll see if the level is in the database already, and if so, increment the counter
         # If not, we'll add it in
 
-        found_level = (
-            session.query(messagesLevel)
-            .filter(messagesLevel.level == params["level"])
-            .first()
-        )
+        if params["level"] != "":
+            found_level = (
+                session.query(messagesLevel)
+                .filter(messagesLevel.level == params["level"])
+                .first()
+            )
 
-        if found_level is not None:
-            found_level.count += 1
-        else:
-            session.add(messagesLevel(level=params["level"], count=1))
+            if found_level is not None:
+                found_level.count += 1
+            else:
+                session.add(messagesLevel(level=params["level"], count=1))
 
         if len(params["text"]) > 0 and alert_terms:
             for search_term in alert_terms:
