@@ -1,5 +1,5 @@
 Flask==3.1.0
-Flask-SocketIO==5.4.1
+Flask-SocketIO==5.5.0
 gevent==24.11.1
 gunicorn[gevent]==23.0.0
 requests==2.32.3
