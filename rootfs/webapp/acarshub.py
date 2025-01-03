@@ -1007,7 +1007,7 @@ def reset_alert_counts(message, namespace):
 
 
 @socketio.on("disconnect", namespace="/main")
-def main_disconnect():
+def main_disconnect(reason):
     pass
 
 
