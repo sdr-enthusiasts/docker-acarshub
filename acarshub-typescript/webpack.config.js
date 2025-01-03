@@ -12,6 +12,16 @@ let config = {
   module: {
     rules: [
       {
+        test: /\.m?js/,
+        type: "javascript/auto",
+      },
+      {
+        test: /\.m?js/,
+        resolve: {
+          fullySpecified: false,
+        },
+      },
+      {
         test: /\.tsx?$/,
         use: "ts-loader",
         exclude: /node_modules|\.d\.ts$/,
