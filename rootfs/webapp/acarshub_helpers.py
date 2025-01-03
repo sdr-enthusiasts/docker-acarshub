@@ -105,15 +105,7 @@ def update_keys(json_message):
         json_message["libacars"] = libacars_formatted(json_message["libacars"])
 
     if has_specified_key(json_message, "icao"):
-        try:
-            json_message["icao_hex"] = format(int(json_message["icao"]), "X")
-        except Exception as e:
-            acarshub_logging.log(
-                f"Unable to convert icao to hex: {json_message['icao']}",
-                "update_keys",
-                LOG_LEVEL["WARNING"],
-            )
-            acarshub_logging.acars_traceback(e, "update_keys")
+        json_message["icao_hex"] = try_format_as_int(json_message["icao"], "icao")
 
     if has_specified_key(json_message, "flight") and has_specified_key(
         json_message, "icao_hex"
@@ -129,7 +121,7 @@ def update_keys(json_message):
         json_message["icao_url"] = flight_finder(hex_code=json_message["icao_hex"])
 
     if has_specified_key(json_message, "toaddr"):
-        json_message["toaddr_hex"] = format(int(json_message["toaddr"]), "X")
+        json_message["toaddr_hex"] = try_format_as_int(json_message["toaddr"], "toaddr")
 
         toaddr_icao, toaddr_name = acarshub_database.lookup_groundstation(
             json_message["toaddr_hex"]
@@ -139,7 +131,9 @@ def update_keys(json_message):
             json_message["toaddr_decoded"] = f"{toaddr_name} ({toaddr_icao})"
 
     if has_specified_key(json_message, "fromaddr"):
-        json_message["fromaddr_hex"] = format(int(json_message["fromaddr"]), "X")
+        json_message["fromaddr_hex"] = try_format_as_int(
+            json_message["fromaddr"], "fromaddr"
+        )
 
         fromaddr_icao, fromaddr_name = acarshub_database.lookup_groundstation(
             json_message["fromaddr_hex"]
@@ -155,6 +149,19 @@ def update_keys(json_message):
             json_message["label_type"] = label_type
         else:
             json_message["label_type"] = "Unknown Message Label"
+
+
+def try_format_as_int(value, key, as_type="X"):
+    try:
+        return format(int(value), as_type)
+    except Exception as e:
+        acarshub_logging.log(
+            f"Unable to convert {key}:{value} to hex. Using 0",
+            "try_format_as_int",
+            LOG_LEVEL["WARNING"],
+        )
+        acarshub_logging.acars_traceback(e, "try_format_as_int")
+        return "0"
 
 
 def flight_finder(callsign=None, hex_code=None, url=True):

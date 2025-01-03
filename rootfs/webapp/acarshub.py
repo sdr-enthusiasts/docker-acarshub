@@ -148,7 +148,7 @@ def generateClientMessage(message_type, json_message):
     # add in the message_type key because the parent object didn't have it
     client_message.update({"message_type": message_type})
 
-    # enrich message using udpate_keys
+    # enrich message using update_keys
     acarshub_helpers.update_keys(client_message)
 
     return client_message
@@ -453,8 +453,8 @@ def init_listeners(special_message=""):
     global thread_database
     global thread_scheduler
     global thread_html_generator
-    global thread_adsb_listner
-    global thread_adsb
+    # global thread_adsb_listner
+    # global thread_adsb
     # REMOVE AFTER AIRFRAMES IS UPDATED ####
     global vdlm2_feeder_thread
     global acars_feeder_thread
@@ -697,8 +697,8 @@ def main_connect():
 
     # need visibility of the global thread object
     global thread_html_generator
-    global thread_adsb
-    global thread_adsb_stop_event
+    # global thread_adsb
+    # global thread_adsb_stop_event
 
     recent_options = {"loading": True, "done_loading": False}
 
