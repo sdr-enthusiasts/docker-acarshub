@@ -471,13 +471,8 @@ def create_db_safe_params(message_from_json):
         # FIXME: acarsdec now appears to support message reassembly?
         # https://github.com/TLeconte/acarsdec/commit/b2d0a4c27c6092a1c38943da48319a3406db74f2
         # do we need to do anything here for reassembled messages?
-        elif index == "assstat":
-            acarshub_logging.log(
-                f"assstat key: {index}: {value}", "database", level=LOG_LEVEL["DEBUG"]
-            )
-            acarshub_logging.log(
-                message_from_json, "database", level=LOG_LEVEL["DEBUG"]
-            )
+        elif index == "assstat" or index == "app":
+            pass
         # We have a key that we aren't saving the database. Log it
         else:
             acarshub_logging.log(
@@ -1230,6 +1225,11 @@ def prune_database():
         )
 
         acarshub_logging.log("Pruned %s messages" % result, "database")
+        acarshub_logging.log("Optimizing database", "database")
+        session.execute(
+            text("insert into messages_fts(messages_fts) values('optimize')")
+        )
+        acarshub_logging.log("Database optimized", "database")
 
         session.commit()
     except Exception as e:
