@@ -483,6 +483,12 @@ def normalize_freqs(cur):
         )
 
 
+def optimize_db(cur):
+    global upgraded
+    acarshub_logging.log("Optimizing database", "db_upgrade", level=LOG_LEVEL["INFO"])
+    cur.execute("insert into messages_fts(messages_fts) value('optimize')")
+
+
 if __name__ == "__main__":
     try:
         if not os.path.isfile(path_to_db):
@@ -501,6 +507,8 @@ if __name__ == "__main__":
         add_indexes(cur)
         conn.commit()
         normalize_freqs(cur)
+        conn.commit()
+        optimize_db(cur)
         conn.commit()
 
         result = [i for i in cur.execute("PRAGMA auto_vacuum")]
