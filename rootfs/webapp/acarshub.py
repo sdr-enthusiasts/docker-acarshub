@@ -210,6 +210,7 @@ def scheduled_tasks():
 
     schedule.every().hour.at(":05").do(acarshub_configuration.check_github_version)
     schedule.every().hour.at(":01").do(send_version)
+    schedule.every().hour.at(":30").do(acarshub_helpers.acarshub_database.optimize_db)
     schedule.every().minute.at(":30").do(
         acarshub_helpers.acarshub_database.prune_database
     )

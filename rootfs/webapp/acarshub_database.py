@@ -1237,3 +1237,19 @@ def prune_database():
     finally:
         if session:
             session.close()
+
+
+def optimize_db():
+    try:
+        acarshub_logging.log("Optimizing database", "database")
+        session = db_session()
+        session.execute(
+            text("insert into messages_fts(messages_fts) values('optimize')")
+        )
+        acarshub_logging.log("Database optimized", "database")
+        session.commit()
+    except Exception as e:
+        acarshub_logging.acars_traceback(e, "database")
+    finally:
+        if session:
+            session.close()
