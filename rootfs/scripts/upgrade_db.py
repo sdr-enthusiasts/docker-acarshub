@@ -484,9 +484,8 @@ def normalize_freqs(cur):
 
 
 def optimize_db(cur):
-    global upgraded
     acarshub_logging.log("Optimizing database", "db_upgrade", level=LOG_LEVEL["INFO"])
-    cur.execute("insert into messages_fts(messages_fts) value('optimize')")
+    cur.execute("insert into messages_fts(messages_fts) values('optimize')")
 
 
 if __name__ == "__main__":
@@ -535,7 +534,7 @@ if __name__ == "__main__":
             level=LOG_LEVEL["INFO"],
         )
     except Exception as e:
-        acarshub_logging.acars_traceback(e, "db_upgrade", level=LOG_LEVEL["ERROR"])
+        acarshub_logging.acars_traceback(e, "db_upgrade")
         exit_code = 1
     finally:
         if conn:
