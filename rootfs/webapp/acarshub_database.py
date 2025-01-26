@@ -1225,10 +1225,6 @@ def prune_database():
         )
 
         acarshub_logging.log("Pruned %s messages" % result, "database")
-        acarshub_logging.log("Optimizing database", "database")
-        session.execute(
-            text("insert into messages_fts(messages_fts) values('optimize')")
-        )
 
         session.commit()
     except Exception as e:
