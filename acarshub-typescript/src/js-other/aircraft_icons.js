@@ -1255,8 +1255,8 @@ export function svgShapeToURI(shape, strokeWidth, scale) {
 
   if (!shape.path) {
     let svg = shape.svg
-      .replace("fillColor", fillColor)
-      .replace("strokeColor", strokeColor)
+      .replace("fillColor", "#ffffff")
+      .replace("strokeColor", "#000000")
       .replace("strokeWidth", strokeWidth);
     svg = svg.replace("SIZE", 'width="' + wi + 'px" height="' + he + 'px"');
     return "data:image/svg+xml;base64," + btoa(svg);
