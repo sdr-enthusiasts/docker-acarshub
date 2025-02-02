@@ -1209,9 +1209,9 @@ def prune_database():
         session = db_session()
         result = session.query(messages).filter(messages.time < cutoff).delete()
 
-        acarshub_logging.log("Pruned %s messages" % result, "database")
-
         session.commit()
+
+        acarshub_logging.log("Pruned %s messages" % result, "database")
 
         acarshub_logging.log("Pruning alert database", "database")
 
@@ -1224,9 +1224,10 @@ def prune_database():
             session.query(messages_saved).filter(messages_saved.time < cutoff).delete()
         )
 
+        session.commit()
+
         acarshub_logging.log("Pruned %s messages" % result, "database")
 
-        session.commit()
     except Exception as e:
         acarshub_logging.acars_traceback(e, "database")
     finally:
