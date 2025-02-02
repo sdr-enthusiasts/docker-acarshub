@@ -13,6 +13,8 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "../webapp/"))
 
 import acarshub_logging  # noqa: E402
 from acarshub_logging import LOG_LEVEL  # noqa: E402
+import acarshub_configuration
+import datetime
 
 # Current schema:
 # LEGACY DBS WILL NOT HAVE COLUMNS SET AS NOT NULLABLE BUT WE TAKE CARE OF THAT BELOW
@@ -445,10 +447,61 @@ def normalize_freqs(cur):
         )
 
 
-def optimize_db(cur):
-    acarshub_logging.log("Optimizing database", "db_upgrade", level=LOG_LEVEL["INFO"])
-    cur.execute("insert into messages_fts(messages_fts) values('optimize')")
+def optimize_db(session, cur):
+    try:
+        acarshub_logging.log("Optimizing database", "db_upgrade")
+        cur.execute(
+            "insert into messages_fts(messages_fts) values('optimize');"
+        )
+        cur.execute(
+            "PRAGMA optimize;"
+        )
+        session.commit()
+        acarshub_logging.log("Database optimized", "db_upgrade")
+    except Exception as e:
+        acarshub_logging.acars_traceback(e, "db_upgrade")
 
+def prune_database(session, cur):
+    try:
+        acarshub_logging.log("Pruning database", "db_upgrade")
+        cutoff = (
+            datetime.datetime.now()
+            - datetime.timedelta(days=acarshub_configuration.DB_SAVE_DAYS)
+        ).timestamp()
+
+        result = cur.execute(
+            f"select count(*) from messages where msg_time < {cutoff};"
+        )
+
+        count = result.fetchone()[0]
+        if count > 100000:
+            acarshub_logging.log(
+                f"Deleting {count} messages ... this might take a while",
+                "db_upgrade",
+                level=LOG_LEVEL["WARNING"]
+            )
+        else:
+            acarshub_logging.log(f"Deleting {count} messages", "db_upgrade")
+
+        result = cur.execute(
+            f"delete from messages where msg_time < {cutoff};"
+        )
+
+
+        # prune messages_saved as well
+        cutoff = (
+            datetime.datetime.now()
+            - datetime.timedelta(days=acarshub_configuration.DB_ALERT_SAVE_DAYS)
+        ).timestamp()
+
+        result = cur.execute(
+            f"delete from messages_saved where msg_time < {cutoff};"
+        )
+
+        session.commit()
+        acarshub_logging.log("Database pruned", "db_upgrade")
+    except Exception as e:
+        acarshub_logging.acars_traceback(e, "db_upgrade")
 
 if __name__ == "__main__":
     try:
@@ -460,15 +513,14 @@ if __name__ == "__main__":
             conn = sqlite3.connect(path_to_db)
             cur = conn.cursor()
 
-        conn.commit()
+        optimize_db(conn, cur)
+        prune_database(conn, cur)
+
         check_tables(conn, cur)
-        conn.commit()
         conn.commit()
         add_indexes(cur)
         conn.commit()
         normalize_freqs(cur)
-        conn.commit()
-        optimize_db(cur)
         conn.commit()
 
         result = [i for i in cur.execute("PRAGMA auto_vacuum")]
@@ -477,7 +529,7 @@ if __name__ == "__main__":
             and str(os.getenv("AUTO_VACUUM")).upper() == "TRUE"
         ):
             acarshub_logging.log(
-                "Reclaiming disk space", "db_upgrade", level=LOG_LEVEL["INFO"]
+                "Reclaiming disk space (consider turning off AUTO_VACUUM it's usually not needed)", "db_upgrade", level=LOG_LEVEL["WARNING"]
             )
             cur.execute("PRAGMA auto_vacuum = '0';")
             cur.execute("VACUUM;")

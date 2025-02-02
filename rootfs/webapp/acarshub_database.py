@@ -1241,6 +1241,9 @@ def optimize_db():
         session.execute(
             text("insert into messages_fts(messages_fts) values('optimize')")
         )
+        session.execute(
+            text("PRAGMA optimize;")
+        )
         acarshub_logging.log("Database optimized", "database")
         session.commit()
     except Exception as e:
