@@ -501,14 +501,16 @@ if __name__ == "__main__":
         conn.commit()
         check_tables(conn, cur)
         conn.commit()
-        de_null(cur)
-        conn.commit()
         add_indexes(cur)
-        conn.commit()
-        normalize_freqs(cur)
         conn.commit()
         optimize_db(cur)
         conn.commit()
+
+        if acarshub_configuration.DB_LEGACY_FIX:
+            de_null(cur)
+            conn.commit()
+            normalize_freqs(cur)
+            conn.commit()
 
         result = [i for i in cur.execute("PRAGMA auto_vacuum")]
         if result[0][0] != 0 or (

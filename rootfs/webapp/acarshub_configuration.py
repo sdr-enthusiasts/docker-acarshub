@@ -59,6 +59,7 @@ ENABLE_RANGE_RINGS = True
 ARCH = "unknown"
 DB_SAVE_DAYS = 7
 DB_ALERT_SAVE_DAYS = 120
+DB_LEGACY_FIX = False
 ALLOW_REMOTE_UPDATES = True
 FLIGHT_TRACKING_URL = "https://flightaware.com/live/flight/"
 
@@ -208,6 +209,9 @@ if os.getenv("DB_SAVE_DAYS", default=False):
 
 if os.getenv("DB_ALERT_SAVE_DAYS", default=False):
     DB_ALERT_SAVE_DAYS = int(os.getenv("DB_ALERT_SAVE_DAYS"))
+
+if str(os.getenv("DB_LEGACY_FIX")).upper() == "TRUE":
+    DB_LEGACY_FIX = True
 
 if LOCAL_TEST:
     version_path = "../../version"
