@@ -553,6 +553,18 @@ if __name__ == "__main__":
         add_indexes(cur)
         conn.commit()
 
+        if upgraded:
+            acarshub_logging.log(
+                "Completed upgrading database structure",
+                "db_upgrade",
+                level=LOG_LEVEL["INFO"],
+            )
+        acarshub_logging.log(
+            "Database structure did not require upgrades",
+            "db_upgrade",
+            level=LOG_LEVEL["INFO"],
+        )
+
         if acarshub_configuration.DB_LEGACY_FIX:
             de_null(cur)
             conn.commit()
@@ -576,17 +588,6 @@ if __name__ == "__main__":
             cur.execute("VACUUM;")
         conn.commit()
 
-        if upgraded:
-            acarshub_logging.log(
-                "Completed upgrading database structure",
-                "db_upgrade",
-                level=LOG_LEVEL["INFO"],
-            )
-        acarshub_logging.log(
-            "Database structure did not require upgrades",
-            "db_upgrade",
-            level=LOG_LEVEL["INFO"],
-        )
     except Exception as e:
         acarshub_logging.acars_traceback(e, "db_upgrade")
         exit_code = 1
