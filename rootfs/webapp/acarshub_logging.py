@@ -33,15 +33,15 @@ LOG_LEVEL = {"ERROR": 1, "CRITICAL": 2, "WARNING": 3, "INFO": 4, "DEBUG": 5}
 def log(msg, source, level=4):
     # line length 20
     if level == 1:
-        print(f"ERROR:[{source}]:".ljust(25, " ") + f"{msg}")
+        print(f"ERROR:[{source}]:".ljust(25, " ") + f"{msg}", flush=True)
     elif level == 2:
-        print(f"CRITICAL:[{source}]:".ljust(25, " ") + f"{msg}")
+        print(f"CRITICAL:[{source}]:".ljust(25, " ") + f"{msg}", flush=True)
     elif level == 3:
-        print(f"WARNING:[{source}]:".ljust(25, " ") + f"{msg}")
+        print(f"WARNING:[{source}]:".ljust(25, " ") + f"{msg}", flush=True)
     elif level == 4 and level <= MIN_LOG_LEVEL:
-        print(f"INFO:[{source}]:".ljust(25, " ") + f"{msg}")
+        print(f"INFO:[{source}]:".ljust(25, " ") + f"{msg}", flush=True)
     elif level == 5 and level <= MIN_LOG_LEVEL:
-        print(f"DEBUG:[{source}]:".ljust(25, " ") + f"{msg}")
+        print(f"DEBUG:[{source}]:".ljust(25, " ") + f"{msg}", flush=True)
 
 
 def acars_traceback(e, source):
@@ -53,6 +53,6 @@ if os.getenv("MIN_LOG_LEVEL", default=False):
     if os.getenv("MIN_LOG_LEVEL").isdigit():
         MIN_LOG_LEVEL = int(os.getenv("MIN_LOG_LEVEL"))
         if MIN_LOG_LEVEL > 3:
-            print(f"LOG_LEVEL set to {MIN_LOG_LEVEL}")
+            print(f"LOG_LEVEL set to {MIN_LOG_LEVEL}", flush=True)
     else:
-        print(f"LOG_LEVEL is not a number: {os.getenv('MIN_LOG_LEVEL')}")
+        print(f"LOG_LEVEL is not a number: {os.getenv('MIN_LOG_LEVEL')}", flush=True)
