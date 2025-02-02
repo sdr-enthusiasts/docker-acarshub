@@ -262,6 +262,44 @@ def check_tables(conn, cur):
     add_triggers(cur, conn, "messages", columns)
 
 
+def de_null(cur):
+    # we need to ensure the columns don't have any NULL values
+    # Legacy db problems...
+    acarshub_logging.log(
+        "Ensuring no columns contain NULL values", "db_upgrade", level=LOG_LEVEL["INFO"]
+    )
+    cur.execute('UPDATE messages SET toaddr = "" WHERE toaddr is NULL')
+    cur.execute('UPDATE messages SET fromaddr = "" WHERE toaddr is NULL')
+    cur.execute('UPDATE messages SET depa = "" WHERE depa IS NULL')
+    cur.execute('UPDATE messages SET dsta = "" WHERE dsta IS NULL')
+    cur.execute('UPDATE messages SET depa = "" WHERE depa IS NULL')
+    cur.execute('UPDATE messages SET eta = "" WHERE eta IS NULL')
+    cur.execute('UPDATE messages SET gtout = "" WHERE gtout IS NULL')
+    cur.execute('UPDATE messages SET gtin = "" WHERE gtin IS NULL')
+    cur.execute('UPDATE messages SET wloff = "" WHERE wloff IS NULL')
+    cur.execute('UPDATE messages SET wlin = "" WHERE wlin IS NULL')
+    cur.execute('UPDATE messages SET lat = "" WHERE lat IS NULL')
+    cur.execute('UPDATE messages SET lon = "" WHERE lon IS NULL')
+    cur.execute('UPDATE messages SET alt = "" WHERE alt IS NULL')
+    cur.execute('UPDATE messages SET dsta = "" WHERE dsta IS NULL')
+    cur.execute('UPDATE messages SET msg_text = "" WHERE msg_text IS NULL')
+    cur.execute('UPDATE messages SET tail = "" WHERE tail IS NULL')
+    cur.execute('UPDATE messages SET flight = "" WHERE flight IS NULL')
+    cur.execute('UPDATE messages SET icao = "" WHERE icao IS NULL')
+    cur.execute('UPDATE messages SET freq = "" WHERE freq IS NULL')
+    cur.execute('UPDATE messages SET ack = "" WHERE ack IS NULL')
+    cur.execute('UPDATE messages SET mode = "" WHERE mode IS NULL')
+    cur.execute('UPDATE messages SET label = "" WHERE label IS NULL')
+    cur.execute('UPDATE messages SET block_id = "" WHERE block_id IS NULL')
+    cur.execute('UPDATE messages SET msgno = "" WHERE msgno IS NULL')
+    cur.execute('UPDATE messages SET is_response = "" WHERE is_response IS NULL')
+    cur.execute('UPDATE messages SET is_onground = "" WHERE is_onground IS NULL')
+    cur.execute('UPDATE messages SET error = "" WHERE error IS NULL')
+    cur.execute('UPDATE messages SET libacars = "" WHERE libacars IS NULL')
+    cur.execute('UPDATE messages SET level = "" WHERE level IS NULL')
+    acarshub_logging.log("done with de-nulling", "db_upgrade", level=LOG_LEVEL["INFO"])
+
+
 def add_indexes(cur):
     global upgraded
 
@@ -463,6 +501,7 @@ if __name__ == "__main__":
         conn.commit()
         check_tables(conn, cur)
         conn.commit()
+        de_null(cur)
         conn.commit()
         add_indexes(cur)
         conn.commit()
