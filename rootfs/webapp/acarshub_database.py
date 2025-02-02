@@ -1209,9 +1209,9 @@ def prune_database():
         session = db_session()
         result = session.query(messages).filter(messages.time < cutoff).delete()
 
-        acarshub_logging.log("Pruned %s messages" % result, "database")
-
         session.commit()
+
+        acarshub_logging.log("Pruned %s messages" % result, "database")
 
         acarshub_logging.log("Pruning alert database", "database")
 
@@ -1224,9 +1224,30 @@ def prune_database():
             session.query(messages_saved).filter(messages_saved.time < cutoff).delete()
         )
 
+        session.commit()
+
         acarshub_logging.log("Pruned %s messages" % result, "database")
 
+    except Exception as e:
+        acarshub_logging.acars_traceback(e, "database")
+    finally:
+        if session:
+            session.close()
+
+
+def optimize_db_start():
+    try:
+        acarshub_logging.log("Optimizing Database start", "database", level=LOG_LEVEL["DEBUG"])
+        session = db_session()
+        # start the FTS optimization with a merge with negative limit
+        session.execute(
+            text("insert into messages_fts(messages_fts, rank) values('merge', -500)")
+        )
+        session.execute(
+            text("PRAGMA optimize;")
+        )
         session.commit()
+        acarshub_logging.log("Database optimized", "database", level=LOG_LEVEL["DEBUG"])
     except Exception as e:
         acarshub_logging.acars_traceback(e, "database")
     finally:
@@ -1236,13 +1257,21 @@ def prune_database():
 
 def optimize_db():
     try:
-        acarshub_logging.log("Optimizing database", "database")
+        acarshub_logging.log("Optimizing Database", "database", level=LOG_LEVEL["DEBUG"])
         session = db_session()
+        # finish the FTS optimization with many merges with a positive limit
+        # usually the number of changes need to be monitored to know when it's done
+        # but once the operation is done, this operation is very fast / cheap
+        # thus we can just run this operation over and over and sometimes call merge with negative
+        # argument to start over
         session.execute(
-            text("insert into messages_fts(messages_fts) values('optimize')")
+            text("insert into messages_fts(messages_fts, rank) values('merge', 500)")
         )
-        acarshub_logging.log("Database optimized", "database")
+        session.execute(
+            text("PRAGMA optimize;")
+        )
         session.commit()
+        acarshub_logging.log("Database optimized", "database", level=LOG_LEVEL["DEBUG"])
     except Exception as e:
         acarshub_logging.acars_traceback(e, "database")
     finally:

@@ -13,6 +13,8 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "../webapp/"))
 
 import acarshub_logging  # noqa: E402
 from acarshub_logging import LOG_LEVEL  # noqa: E402
+import acarshub_configuration
+import datetime
 
 # Current schema:
 # LEGACY DBS WILL NOT HAVE COLUMNS SET AS NOT NULLABLE BUT WE TAKE CARE OF THAT BELOW
@@ -262,6 +264,44 @@ def check_tables(conn, cur):
     add_triggers(cur, conn, "messages", columns)
 
 
+def de_null(cur):
+    # we need to ensure the columns don't have any NULL values
+    # Legacy db problems...
+    acarshub_logging.log(
+        "Ensuring no columns contain NULL values", "db_upgrade", level=LOG_LEVEL["INFO"]
+    )
+    cur.execute('UPDATE messages SET toaddr = "" WHERE toaddr is NULL')
+    cur.execute('UPDATE messages SET fromaddr = "" WHERE toaddr is NULL')
+    cur.execute('UPDATE messages SET depa = "" WHERE depa IS NULL')
+    cur.execute('UPDATE messages SET dsta = "" WHERE dsta IS NULL')
+    cur.execute('UPDATE messages SET depa = "" WHERE depa IS NULL')
+    cur.execute('UPDATE messages SET eta = "" WHERE eta IS NULL')
+    cur.execute('UPDATE messages SET gtout = "" WHERE gtout IS NULL')
+    cur.execute('UPDATE messages SET gtin = "" WHERE gtin IS NULL')
+    cur.execute('UPDATE messages SET wloff = "" WHERE wloff IS NULL')
+    cur.execute('UPDATE messages SET wlin = "" WHERE wlin IS NULL')
+    cur.execute('UPDATE messages SET lat = "" WHERE lat IS NULL')
+    cur.execute('UPDATE messages SET lon = "" WHERE lon IS NULL')
+    cur.execute('UPDATE messages SET alt = "" WHERE alt IS NULL')
+    cur.execute('UPDATE messages SET dsta = "" WHERE dsta IS NULL')
+    cur.execute('UPDATE messages SET msg_text = "" WHERE msg_text IS NULL')
+    cur.execute('UPDATE messages SET tail = "" WHERE tail IS NULL')
+    cur.execute('UPDATE messages SET flight = "" WHERE flight IS NULL')
+    cur.execute('UPDATE messages SET icao = "" WHERE icao IS NULL')
+    cur.execute('UPDATE messages SET freq = "" WHERE freq IS NULL')
+    cur.execute('UPDATE messages SET ack = "" WHERE ack IS NULL')
+    cur.execute('UPDATE messages SET mode = "" WHERE mode IS NULL')
+    cur.execute('UPDATE messages SET label = "" WHERE label IS NULL')
+    cur.execute('UPDATE messages SET block_id = "" WHERE block_id IS NULL')
+    cur.execute('UPDATE messages SET msgno = "" WHERE msgno IS NULL')
+    cur.execute('UPDATE messages SET is_response = "" WHERE is_response IS NULL')
+    cur.execute('UPDATE messages SET is_onground = "" WHERE is_onground IS NULL')
+    cur.execute('UPDATE messages SET error = "" WHERE error IS NULL')
+    cur.execute('UPDATE messages SET libacars = "" WHERE libacars IS NULL')
+    cur.execute('UPDATE messages SET level = "" WHERE level IS NULL')
+    acarshub_logging.log("done with de-nulling", "db_upgrade", level=LOG_LEVEL["INFO"])
+
+
 def add_indexes(cur):
     global upgraded
 
@@ -446,9 +486,55 @@ def normalize_freqs(cur):
 
 
 def optimize_db(cur):
-    acarshub_logging.log("Optimizing database", "db_upgrade", level=LOG_LEVEL["INFO"])
-    cur.execute("insert into messages_fts(messages_fts) values('optimize')")
+    try:
+        acarshub_logging.log("Optimizing database", "db_upgrade")
+        cur.execute(
+            "insert into messages_fts(messages_fts) values('optimize');"
+        )
+        acarshub_logging.log("Database optimized", "db_upgrade")
+    except Exception as e:
+        acarshub_logging.acars_traceback(e, "db_upgrade")
 
+def prune_database(cur):
+    try:
+        acarshub_logging.log("Pruning database", "db_upgrade")
+        cutoff = (
+            datetime.datetime.now()
+            - datetime.timedelta(days=acarshub_configuration.DB_SAVE_DAYS)
+        ).timestamp()
+
+        result = cur.execute(
+            f"select count(*) from messages where msg_time < {cutoff};"
+        )
+
+        count = result.fetchone()[0]
+        if count > 100000:
+            acarshub_logging.log(
+                f"Deleting {count} messages ... this might take a while",
+                "db_upgrade",
+                level=LOG_LEVEL["WARNING"]
+            )
+        else:
+            acarshub_logging.log(f"Deleting {count} messages", "db_upgrade")
+
+        result = cur.execute(
+            f"delete from messages where msg_time < {cutoff};"
+        )
+
+
+        # prune messages_saved as well
+        cutoff = (
+            datetime.datetime.now()
+            - datetime.timedelta(days=acarshub_configuration.DB_ALERT_SAVE_DAYS)
+        ).timestamp()
+
+        result = cur.execute(
+            f"delete from messages_saved where msg_time < {cutoff};"
+        )
+
+        acarshub_logging.log("Database pruned", "db_upgrade")
+    except Exception as e:
+        acarshub_logging.acars_traceback(e, "db_upgrade")
 
 if __name__ == "__main__":
     try:
@@ -461,26 +547,10 @@ if __name__ == "__main__":
             cur = conn.cursor()
 
         conn.commit()
+
         check_tables(conn, cur)
         conn.commit()
-        conn.commit()
         add_indexes(cur)
-        conn.commit()
-        normalize_freqs(cur)
-        conn.commit()
-        optimize_db(cur)
-        conn.commit()
-
-        result = [i for i in cur.execute("PRAGMA auto_vacuum")]
-        if result[0][0] != 0 or (
-            os.getenv("AUTO_VACUUM", default=False)
-            and str(os.getenv("AUTO_VACUUM")).upper() == "TRUE"
-        ):
-            acarshub_logging.log(
-                "Reclaiming disk space", "db_upgrade", level=LOG_LEVEL["INFO"]
-            )
-            cur.execute("PRAGMA auto_vacuum = '0';")
-            cur.execute("VACUUM;")
         conn.commit()
 
         if upgraded:
@@ -494,6 +564,30 @@ if __name__ == "__main__":
             "db_upgrade",
             level=LOG_LEVEL["INFO"],
         )
+
+        if acarshub_configuration.DB_LEGACY_FIX:
+            de_null(cur)
+            conn.commit()
+            normalize_freqs(cur)
+            conn.commit()
+
+        prune_database(cur)
+        conn.commit()
+
+        result = [i for i in cur.execute("PRAGMA auto_vacuum")]
+        if result[0][0] != 0 or (
+            os.getenv("AUTO_VACUUM", default=False)
+            and str(os.getenv("AUTO_VACUUM")).upper() == "TRUE"
+        ):
+            acarshub_logging.log(
+                "Reclaiming disk space (consider turning off AUTO_VACUUM it's usually not needed)", "db_upgrade", level=LOG_LEVEL["WARNING"]
+            )
+            optimize_db(cur)
+            conn.commit()
+            cur.execute("PRAGMA auto_vacuum = '0';")
+            cur.execute("VACUUM;")
+        conn.commit()
+
     except Exception as e:
         acarshub_logging.acars_traceback(e, "db_upgrade")
         exit_code = 1
