@@ -75,9 +75,11 @@ RUN set -x && \
     && \
     popd && \
     # Clean up
-    apt-get remove -y "${TEMP_PACKAGES[@]}" && \
-    apt-get autoremove -y && \
-    rm -rf /src/* /tmp/* /var/lib/apt/lists/* && \
+    # remove pycache
+    { find /usr | grep -E "/__pycache__$" | xargs rm -rf || true; } && \
+    apt-get autoremove -q -o APT::Autoremove::RecommendsImportant=0 -o APT::Autoremove::SuggestsImportant=0 -y "${TEMP_PACKAGES[@]}" && \
+    apt-get clean -q -y && \
+    rm -rf /src/* /tmp/* /var/lib/apt/lists/* /var/cache/* && \
     rm -rf /root/.cargo
 
 COPY --from=acarshub-typescript-builder /webapp/static/ /webapp/static/

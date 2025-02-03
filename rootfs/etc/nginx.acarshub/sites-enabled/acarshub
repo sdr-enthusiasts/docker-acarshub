@@ -30,7 +30,7 @@ server {
 
   # point the stat image files to the dir they're dumped in, mark as no cache
   location ~ (.*hour.*|.*week.*|.*month.*|.*year.*|.*days.*).png {
-    add_header Cache-Control 'no-store';
+    add_header Cache-Control 'no-cache';
     root /database/images;
   }
 
@@ -55,7 +55,7 @@ server {
 
   # index page
   location = / {
-    add_header Cache-Control 'no-store';
+    add_header Cache-Control 'no-cache';
     try_files /templates/index.html =404;
   }
 
@@ -67,7 +67,7 @@ server {
 
   # valid URL paths for pages serve index.html
   location ~ ^/(search|alerts|stats|adsb|about|status)$ {
-    add_header Cache-Control 'no-store';
+    add_header Cache-Control 'no-cache';
     try_files /templates/index.html =404;
   }
 }
