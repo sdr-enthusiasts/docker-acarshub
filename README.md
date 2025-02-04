@@ -183,6 +183,16 @@ The following options will set the options for ADSB
 
 If you run Mike's tar1090 container on the same machine as ACARS Hub then the default value for `ADSB_URL` is fine. If you don't, the formatting for `ADSB_URL` should be the full URL path to `aircraft.json` from your readsb source.
 
+Testing the ADSB_URL. The URL is served via the container (nginx reverse proxy), so to test what's
+wrong if it doesn't work, you can test loading the json from within the container and check for
+errors:
+
+```
+docker exec -it acarshub with-contenv bash
+echo "$ADSB_URL"
+curl "$ADSB_URL" -sS | cat | head -n3
+```
+
 If you desire enhanced ADSB and ACARS message matching and thus show coloured aircraft icons on Live Map, and are running Mike's tar1090 container, you can enable the following option:
 
 ```yaml
