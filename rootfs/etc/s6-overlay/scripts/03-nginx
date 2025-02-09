@@ -15,7 +15,7 @@ if [[ ! -e /nginx-ranonce ]]; then
     sed -i 's\error_log .*\error_log /dev/null crit;\' /etc/nginx/nginx.conf
 
     #write the ADSB URL in to the nginx config file
-    if [[ "${ENABLE_ADSB}" == "true" ]]; then
+    if [[ "${ENABLE_ADSB,,}" == "true" ]]; then
         sed -i "s\<>\\${ADSB_URL}\\" /etc/nginx/sites-enabled/acarshub
         if [[ $((MIN_LOG_LEVEL)) -ge 4 ]]; then
             echo "ADSB enabled with ${ADSB_URL}" | awk '{print "[03-nginx    ] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
