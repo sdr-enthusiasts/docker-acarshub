@@ -39,7 +39,7 @@ jobs:
     if: |
       github.event_name == 'workflow_dispatch' &&
       github.event.inputs.reason != ''
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Log dispatch reason
         env:
@@ -53,7 +53,7 @@ jobs:
 
   patch_acars_hub_verison:
     name: "patch acars-hub version"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     outputs:
       acarshub_version: ${{ steps.patch.outputs.acarshub_version }}
       version: ${{ steps.patch.outputs.version }}
@@ -133,7 +133,7 @@ jobs:
   release:
     name: Release
     needs: [deploy, patch_acars_hub_verison]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     if: |
       (github.event.inputs.use_test_image == 'false' ||
       github.event.inputs.use_test_image == '' ) &&
