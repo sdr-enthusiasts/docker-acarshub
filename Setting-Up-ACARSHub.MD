@@ -97,7 +97,7 @@ services:
       - /run:exec,size=64M
       - /var/log:size=64M
     device_cgroup_rules:
-      - 'c 189:* rwm'
+      - "c 189:* rwm"
     volumes:
       - /dev/bus/usb:/dev/bus/usb:ro
   #####
@@ -124,7 +124,7 @@ services:
       - /run:exec,size=64M
       - /var/log:size=64M
     device_cgroup_rules:
-      - 'c 189:* rwm'
+      - "c 189:* rwm"
     volumes:
       - /dev/bus/usb:/dev/bus/usb:ro
   #####

@@ -67,15 +67,15 @@ export let menu = {
   ): void {
     let text: string = "";
 
-    let ennum = [acars, vdlm, hfdl, imsl, irdm].filter(x => x).length;
+    let ennum = [acars, vdlm, hfdl, imsl, irdm].filter((x) => x).length;
     // if any two of acars, vdlm, hfdl, imsl, irdm are true, set show_combined to true
     let show_combined = ennum > 1;
 
     const acars_prefix = show_combined ? "'acars'" : "''";
-    const vdlm_prefix  = show_combined ? "'vdlm'"  : "''";
-    const hfdl_prefix  = show_combined ? "'hfdl'"  : "''";
-    const imsl_prefix  = show_combined ? "'imsl'"  : "''";
-    const irdm_prefix  = show_combined ? "'irdm'"  : "''";
+    const vdlm_prefix = show_combined ? "'vdlm'" : "''";
+    const hfdl_prefix = show_combined ? "'hfdl'" : "''";
+    const imsl_prefix = show_combined ? "'imsl'" : "''";
+    const irdm_prefix = show_combined ? "'irdm'" : "''";
 
     if (show_combined) {
       text =

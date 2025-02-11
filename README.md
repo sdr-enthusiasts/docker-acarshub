@@ -221,14 +221,14 @@ In the configuration options for tar1090. Setting this will include additional a
 
 ### Inmarsat L-Band
 
-| Variable      | Description                                                                                                                                                                  | Required | Default |
-| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------- |
+| Variable      | Description                                                                                                                                                                             | Required | Default |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------- |
 | `ENABLE_IMSL` | Toggle Inmarsat L-Band decoding on. If set to `external` this will enable IMSL processing in the container. Push valid `IMSL` data to UDP port 5557 (needs port mapping 5557:5557/udp). | No       | `false` |
 
 ### Iridium
 
-| Variable      | Description                                                                                                                                                                  | Required | Default |
-| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------- |
+| Variable      | Description                                                                                                                                                                     | Required | Default |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------- |
 | `ENABLE_IRDM` | Toggle Iridium decoding on. If set to `external` this will enable IRDM processing in the container. Push valid `IRDM` data to UDP port 5558 (needs port mapping 5558:5558/udp). | No       | `false` |
 
 ## Viewing the messages

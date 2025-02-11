@@ -55,9 +55,9 @@ def count_errors(unformatted_message):
 
 def irdm_channelize_freq(freq):
     base = 1616e6
-    chwid = 10e6/(30*8)
+    chwid = 10e6 / (30 * 8)
     offs = freq - base
-    return base + chwid * round(offs/chwid)
+    return base + chwid * round(offs / chwid)
 
 
 def format_irdm_message(unformatted_message):
@@ -75,7 +75,11 @@ def format_irdm_message(unformatted_message):
 
     if acars := unformatted_message.get("acars"):
         if timestamp := acars.get("timestamp"):
-            irdm_message["timestamp"] = datetime.fromisoformat(timestamp).replace(tzinfo=timezone.utc).timestamp()
+            irdm_message["timestamp"] = (
+                datetime.fromisoformat(timestamp)
+                .replace(tzinfo=timezone.utc)
+                .timestamp()
+            )
 
         if errors := acars.get("errors"):
             irdm_message["error"] = errors

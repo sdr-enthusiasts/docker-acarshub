@@ -13,8 +13,8 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "../webapp/"))
 
 import acarshub_logging  # noqa: E402
 from acarshub_logging import LOG_LEVEL  # noqa: E402
-import acarshub_configuration
-import datetime
+import acarshub_configuration  # noqa: E402
+import datetime  # noqa: E402
 
 # Current schema:
 # LEGACY DBS WILL NOT HAVE COLUMNS SET AS NOT NULLABLE BUT WE TAKE CARE OF THAT BELOW
@@ -488,12 +488,11 @@ def normalize_freqs(cur):
 def optimize_db(cur):
     try:
         acarshub_logging.log("Optimizing database", "db_upgrade")
-        cur.execute(
-            "insert into messages_fts(messages_fts) values('optimize');"
-        )
+        cur.execute("insert into messages_fts(messages_fts) values('optimize');")
         acarshub_logging.log("Database optimized", "db_upgrade")
     except Exception as e:
         acarshub_logging.acars_traceback(e, "db_upgrade")
+
 
 def prune_database(cur):
     try:
@@ -512,15 +511,12 @@ def prune_database(cur):
             acarshub_logging.log(
                 f"Deleting {count} messages ... this might take a while",
                 "db_upgrade",
-                level=LOG_LEVEL["WARNING"]
+                level=LOG_LEVEL["WARNING"],
             )
         else:
             acarshub_logging.log(f"Deleting {count} messages", "db_upgrade")
 
-        result = cur.execute(
-            f"delete from messages where msg_time < {cutoff};"
-        )
-
+        result = cur.execute(f"delete from messages where msg_time < {cutoff};")
 
         # prune messages_saved as well
         cutoff = (
@@ -528,13 +524,12 @@ def prune_database(cur):
             - datetime.timedelta(days=acarshub_configuration.DB_ALERT_SAVE_DAYS)
         ).timestamp()
 
-        result = cur.execute(
-            f"delete from messages_saved where msg_time < {cutoff};"
-        )
+        result = cur.execute(f"delete from messages_saved where msg_time < {cutoff};")
 
         acarshub_logging.log("Database pruned", "db_upgrade")
     except Exception as e:
         acarshub_logging.acars_traceback(e, "db_upgrade")
+
 
 if __name__ == "__main__":
     try:
@@ -580,7 +575,9 @@ if __name__ == "__main__":
             and str(os.getenv("AUTO_VACUUM")).upper() == "TRUE"
         ):
             acarshub_logging.log(
-                "Reclaiming disk space (consider turning off AUTO_VACUUM it's usually not needed)", "db_upgrade", level=LOG_LEVEL["WARNING"]
+                "Reclaiming disk space (consider turning off AUTO_VACUUM it's usually not needed)",
+                "db_upgrade",
+                level=LOG_LEVEL["WARNING"],
             )
             optimize_db(cur)
             conn.commit()
