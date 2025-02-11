@@ -183,14 +183,6 @@ if (
     ENABLE_ADSB = True
     if os.getenv("ADSB_URL", default=False):
         ADSB_URL = os.getenv("ADSB_URL", default=False)
-
-        if not ADSB_URL.startswith("http") and not ADSB_URL.endswith("aircraft.json"):
-            ENABLE_ADSB = False
-            acarshub_logging.log(
-                f"ADSB URL ({ADSB_URL}) appears to be malformed. Disabling ADSB",
-                "init",
-                level=LOG_LEVEL["ERROR"],
-            )
     if os.getenv("ADSB_LON", default=False):
         ADSB_LON = float(os.getenv("ADSB_LON"))
     if os.getenv("ADSB_LAT", default=False):
