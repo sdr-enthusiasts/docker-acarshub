@@ -212,7 +212,10 @@ export function display_message_group(
             "To Address",
             message.toaddr +
               (typeof message.toaddr_hex !== "undefined"
-                ? "/" + message.toaddr_hex
+                ? "/" +
+                  html_functions.ensure_hex_is_uppercase_and_six_chars(
+                    message.toaddr_hex
+                  )
                 : "/?")
           )
         : "";
@@ -231,7 +234,10 @@ export function display_message_group(
             "From Address",
             message.fromaddr +
               (typeof message.fromaddr_hex !== "undefined"
-                ? "/" + message.fromaddr_hex
+                ? "/" +
+                  html_functions.ensure_hex_is_uppercase_and_six_chars(
+                    message.fromaddr_hex
+                  )
                 : "/?")
           )
         : "";

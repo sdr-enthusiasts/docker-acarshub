@@ -265,13 +265,17 @@ export let html_functions = {
           : "";
       html_output +=
         typeof message.matched_icao === "object"
-          ? this.replace_text(message.matched_icao, message.icao.toString()) +
-            `${!footer ? "<br>" : ""}`
+          ? this.replace_text(
+              message.matched_icao,
+              this.ensure_hex_is_uppercase_and_six_chars(
+                message.icao.toString()
+              )
+            ) + `${!footer ? "<br>" : ""}`
           : `${message.icao}`;
       html_output +=
         typeof message.icao_hex !== "undefined" &&
         typeof message.matched_icao === "undefined"
-          ? `/${message.icao_hex}`
+          ? `/${this.ensure_hex_is_uppercase_and_six_chars(message.icao_hex)}`
           : "";
       html_output +=
         typeof message.icao_hex !== "undefined" &&
@@ -280,7 +284,9 @@ export let html_functions = {
           ? "/" +
             this.replace_text(
               message.matched_icao,
-              message.icao_hex.toString()
+              this.ensure_hex_is_uppercase_and_six_chars(
+                message.icao_hex.toString()
+              )
             ) +
             `${!footer ? "<br>" : ""}`
           : "";
@@ -381,5 +387,9 @@ export let html_functions = {
     html_output += "</td></tr>";
 
     return html_output;
+  },
+
+  ensure_hex_is_uppercase_and_six_chars: function (hex: string): string {
+    return hex.toUpperCase().padStart(6, "0");
   },
 };
