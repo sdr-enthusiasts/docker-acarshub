@@ -390,6 +390,6 @@ export let html_functions = {
   },
 
   ensure_hex_is_uppercase_and_six_chars: function (hex: string): string {
-    return "0x" + hex.toUpperCase().padStart(6, "0");
+    return hex.toUpperCase().padStart(6, "0");
   },
 };
