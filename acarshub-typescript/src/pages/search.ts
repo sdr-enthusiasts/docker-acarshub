@@ -15,8 +15,8 @@
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
 import { display_messages } from "../helpers/html_generator";
-import { MessageDecoder } from "@airframes/acars-decoder";
-//const { MessageDecoder } = require("@airframes/acars-decoder");
+//import { MessageDecoder } from "@airframes/acars-decoder";
+const { MessageDecoder } = require("@airframes/acars-decoder");
 import {
   search_html_msg,
   database_size,
@@ -116,7 +116,6 @@ export let search_page = {
         let msg_json = this.search_msgs_received[i][j];
         // Check and see if the text field is decodable in to human readable format
         try {
-          // @ts-expect-error
           let decoded_msg = this.search_md.decode(msg_json);
           if (decoded_msg.decoded == true) {
             msg_json.decodedText = decoded_msg;

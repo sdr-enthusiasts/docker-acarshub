@@ -14,8 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-import { MessageDecoder } from "@airframes/acars-decoder";
-//const { MessageDecoder } = require("@airframes/acars-decoder");
+//import { MessageDecoder } from "@airframes/acars-decoder";
+const { MessageDecoder } = require("@airframes/acars-decoder");
 import Cookies from "js-cookie";
 import {
   display_messages,
@@ -601,7 +601,6 @@ export let live_messages_page = {
       if ("text" in new_msg) {
         // see if we can run it through the text decoder
         try {
-          // @ts-expect-error
           let decoded_msg = this.lm_md.decode(new_msg);
           if (decoded_msg.decoded == true) {
             new_msg.decodedText = decoded_msg;
@@ -769,10 +768,8 @@ export let live_messages_page = {
 
                 // Re-run the text decoder against the text field we've updated
                 try {
-                  // @ts-expect-error
                   let decoded_msg = this.lm_md.decode(message);
                   if (decoded_msg.decoded == true) {
-                    // @ts-expect-error
                     message["decoded_msg"] = decoded_msg;
                   }
                 } catch (e) {

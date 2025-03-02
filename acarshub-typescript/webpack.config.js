@@ -117,6 +117,9 @@ let config = {
     },
   },
   plugins: [
+    new webpack.NormalModuleReplacementPlugin(/^node:/, (resource) => {
+      resource.request = resource.request.replace(/^node:/, "");
+    }),
     new NodePolyfillPlugin({
       additionalAliases: ["process"],
     }),
