@@ -51,6 +51,7 @@ RUN set -x && \
     # Packages for nginx+python
     KEPT_PACKAGES+=(nginx-light) && \
     TEMP_PACKAGES+=(python3-dev) && \
+    TEMP_PACKAGES+=(python3-pip) && \
     KEPT_PACKAGES+=(python3-cryptography) && \
     # libffi arm build fix
     TEMP_PACKAGES+=(libffi-dev) && \
