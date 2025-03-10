@@ -130,7 +130,8 @@ ENV FEED="" \
     QUIET_MESSAGES="true" \
     DB_SAVEALL="true" \
     ENABLE_RANGE_RINGS="true" \
-    ADSB_URL="http://tar1090/data/aircraft.json"
+    ADSB_URL="http://tar1090/data/aircraft.json" \
+    DB_FTS_OPTIMIZE="off"
 
 
 # Add healthcheck
