@@ -210,13 +210,13 @@ def scheduled_tasks():
 
     schedule.every().hour.at(":05").do(acarshub_configuration.check_github_version)
     schedule.every().hour.at(":01").do(send_version)
-    schedule.every().hour.at(":30").do(
-        acarshub_helpers.acarshub_database.optimize_db_start
+    schedule.every(6).hours.do(
+        acarshub_helpers.acarshub_database.optimize_db_regular
     )
     schedule.every().minute.at(":30").do(
         acarshub_helpers.acarshub_database.prune_database
     )
-    schedule.every().minute.at(":45").do(acarshub_helpers.acarshub_database.optimize_db)
+    schedule.every().minute.at(":42").do(acarshub_helpers.acarshub_database.optimize_db_merge)
 
     # Check for dead threads and restart
     schedule.every().minute.at(":45").do(
@@ -627,9 +627,6 @@ def init():
         "Completed grabbing messages from database, starting up rest of services",
         "init",
     )
-
-    # run this once, then every hour
-    acarshub_helpers.acarshub_database.optimize_db_start()
 
     init_listeners()
 

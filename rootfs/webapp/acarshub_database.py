@@ -1235,16 +1235,21 @@ def prune_database():
             session.close()
 
 
-def optimize_db_start():
+def optimize_db_regular():
     try:
         acarshub_logging.log(
-            "Optimizing Database start", "database", level=LOG_LEVEL["DEBUG"]
+            f"Optimizing Database start (DB_FTS_OPTIMIZE: {acarshub_configuration.DB_FTS_OPTIMIZE})", "database", level=LOG_LEVEL["DEBUG"]
         )
         session = db_session()
         # start the FTS optimization with a merge with negative limit
-        session.execute(
-            text("insert into messages_fts(messages_fts, rank) values('merge', -500)")
-        )
+        if acarshub_configuration.DB_FTS_OPTIMIZE == "merge":
+            session.execute(
+                text("insert into messages_fts(messages_fts, rank) values('merge', -500)")
+            )
+        if acarshub_configuration.DB_FTS_OPTIMIZE == "optimize":
+            session.execute(
+                text("insert into messages_fts(messages_fts) values('optimize'")
+            )
         session.execute(text("PRAGMA optimize;"))
         session.commit()
         acarshub_logging.log("Database optimized", "database", level=LOG_LEVEL["DEBUG"])
@@ -1255,10 +1260,12 @@ def optimize_db_start():
             session.close()
 
 
-def optimize_db():
+def optimize_db_merge():
+    if acarshub_configuration.DB_FTS_OPTIMIZE != "merge":
+        return
     try:
         acarshub_logging.log(
-            "Optimizing Database", "database", level=LOG_LEVEL["DEBUG"]
+            "Optimizing Database: fts merge 500", "database", level=LOG_LEVEL["DEBUG"]
         )
         session = db_session()
         # finish the FTS optimization with many merges with a positive limit
@@ -1269,7 +1276,6 @@ def optimize_db():
         session.execute(
             text("insert into messages_fts(messages_fts, rank) values('merge', 500)")
         )
-        session.execute(text("PRAGMA optimize;"))
         session.commit()
         acarshub_logging.log("Database optimized", "database", level=LOG_LEVEL["DEBUG"])
     except Exception as e:
