@@ -216,7 +216,7 @@ def scheduled_tasks():
     schedule.every().minute.at(":30").do(
         acarshub_helpers.acarshub_database.prune_database
     )
-    schedule.every().minute.at(":42").do(acarshub_helpers.acarshub_database.optimize_db_merge)
+    schedule.every(5).minutes.do(acarshub_helpers.acarshub_database.optimize_db_merge)
 
     # Check for dead threads and restart
     schedule.every().minute.at(":45").do(
