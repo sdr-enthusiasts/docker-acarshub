@@ -531,7 +531,7 @@ export let stats_page = {
       // clamp the height of the parent container to the height of the chart based on the number of elements
       // this is a hack to get the chart to display properly
 
-      $(graph_id).css("height", `${freq_data.length * 50}px`);
+      $(graph_id).css("height", `${output_data.length * 50}px`);
     }
   },
 
