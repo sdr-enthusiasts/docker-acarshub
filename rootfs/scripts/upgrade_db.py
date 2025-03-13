@@ -531,6 +531,18 @@ def prune_database(cur):
     except Exception as e:
         acarshub_logging.acars_traceback(e, "db_upgrade")
 
+def delete_fts(cur):
+    cur.execute("DROP TRIGGER 'messages_fts_delete';")
+    cur.execute("DROP TRIGGER 'messages_fts_insert';")
+    cur.execute("DROP TRIGGER 'messages_fts_update';")
+    cur.execute("DROP TABLE 'messages_fts_config';")
+    cur.execute("DROP TABLE 'messages_fts_data';")
+    cur.execute("DROP TABLE 'messages_fts_docsize';")
+    cur.execute("DROP TABLE 'messages_fts_idx';")
+    cur.execute("PRAGMA writable_schema = ON;")
+    cur.execute("DELETE FROM sqlite_master WHERE type = 'table' AND name = 'messages_fts';")
+    cur.execute("PRAGMA writable_schema = OFF;")
+
 
 if __name__ == "__main__":
     try:
@@ -543,6 +555,28 @@ if __name__ == "__main__":
             cur = conn.cursor()
 
         conn.commit()
+
+        try:
+            result = cur.execute(
+                f"select count(*) from messages_fts;"
+            )
+            count = result.fetchone()[0]
+        except sqlite3.DatabaseError as ex:
+            message = getattr(ex, 'message', repr(ex))
+            acarshub_logging.log(f"ERROR: sqlite3.DatabaseError: {message}", "db_upgrade")
+            if "vtable constructor failed: messages_fts" in message:
+                acarshub_logging.log("Deleting fts data ...", "db_upgrade")
+                delete_fts(cur)
+                conn.commit()
+
+                # reconnect to database, otherwise the recreation of the fts table in
+                # check_tables does not work for some reason
+                conn.close()
+                conn = sqlite3.connect(path_to_db)
+                cur = conn.cursor()
+
+                acarshub_logging.log("Deleting fts data ... done", "db_upgrade")
+
 
         check_tables(conn, cur)
         conn.commit()
