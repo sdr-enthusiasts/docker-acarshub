@@ -206,8 +206,8 @@ if str(os.getenv("DB_LEGACY_FIX")).upper() == "TRUE":
     DB_LEGACY_FIX = True
 
 DB_FTS_OPTIMIZE = os.getenv("DB_FTS_OPTIMIZE", default="").lower()
-if DB_FTS_OPTIMIZE not in [ "optimize", "merge", "off" ]:
-    DB_FTS_OPTIMIZE = "off" # default
+if DB_FTS_OPTIMIZE not in ["optimize", "merge", "off"]:
+    DB_FTS_OPTIMIZE = "off"  # default
 
 if LOCAL_TEST:
     version_path = "../../version"

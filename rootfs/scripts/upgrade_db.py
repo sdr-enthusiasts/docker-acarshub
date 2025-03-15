@@ -531,6 +531,7 @@ def prune_database(cur):
     except Exception as e:
         acarshub_logging.acars_traceback(e, "db_upgrade")
 
+
 def delete_fts(cur):
     cur.execute("DROP TRIGGER 'messages_fts_delete';")
     cur.execute("DROP TRIGGER 'messages_fts_insert';")
@@ -558,9 +559,7 @@ if __name__ == "__main__":
 
         fts_rebuild = False
         try:
-            result = cur.execute(
-                f"select count(*) from messages_fts;"
-            )
+            result = cur.execute("select count(*) from messages_fts;")
             count = result.fetchone()[0]
         except sqlite3.DatabaseError as ex:
             message = getattr(ex, 'message', repr(ex))
@@ -580,7 +579,6 @@ if __name__ == "__main__":
             cur = conn.cursor()
 
             acarshub_logging.log("Deleting fts data ... done", "db_upgrade")
-
 
         check_tables(conn, cur)
         conn.commit()
