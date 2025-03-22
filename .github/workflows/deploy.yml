@@ -51,7 +51,7 @@ jobs:
           echo "Use test image: $INPUTS_USE_TEST_IMAGE"
           echo "Build latest as test: $INPUTS_BUILD_LATEST_AS_TEST"
 
-  patch_acars_hub_verison:
+  patch_acars_hub_version:
     name: "patch acars-hub version"
     runs-on: ubuntu-22.04
     outputs:
@@ -83,7 +83,7 @@ jobs:
       github.event.inputs.build_latest_as_test == 'false' ||
       github.event.inputs.build_latest_as_test == ''
     uses: sdr-enthusiasts/common-github-workflows/.github/workflows/build_and_push_image.yml@main
-    needs: patch_acars_hub_verison
+    needs: patch_acars_hub_version
     with:
       push_enabled: true
       push_destinations: ghcr.io
@@ -93,13 +93,13 @@ jobs:
       build_latest: ${{ github.event.inputs.use_test_image == 'false' || github.event.inputs.use_test_image == ''  }}
       build_baseimage_test: ${{ github.event.inputs.use_test_image == 'true' }}
       # only build the entire stack if we are not using the test image
-      build_version_specific: ${{ github.event.inputs.use_test_image == 'false' || github.event.inputs.use_test_image == ''  }}
-      build_platform_specific: ${{ github.event.inputs.use_test_image == 'false' || github.event.inputs.use_test_image == ''  }}
-      build_nohealthcheck: ${{ github.event.inputs.use_test_image == 'false' || github.event.inputs.use_test_image == ''  }}
+      build_version_specific: false
+      build_platform_specific: false
+      build_nohealthcheck: false
       build_baseimage_url: :python/:python-test-pr
       get_version_method: file_in_container:file=/acarshub_version
       dockerfile_changes: |
-        \# patch acarshub version/sed -i \"s\/Pre-Release\/${{ needs.patch_acars_hub_verison.outputs.acarshub_version}}\/g\" \/acarshub-typescript\/src\/helpers\/menu.ts
+        \# patch acarshub version/sed -i \"s\/Pre-Release\/${{ needs.patch_acars_hub_version.outputs.acarshub_version}}\/g\" \/acarshub-typescript\/src\/helpers\/menu.ts
     secrets:
       ghcr_token: ${{ secrets.GITHUB_TOKEN }}
   deploy_test:
@@ -108,7 +108,7 @@ jobs:
       github.event.inputs.build_latest_as_test == 'true' &&
       (github.event.inputs.use_test_image == 'false' || github.event.inputs.use_test_image == '')
     uses: sdr-enthusiasts/common-github-workflows/.github/workflows/build_and_push_image.yml@main
-    needs: patch_acars_hub_verison
+    needs: patch_acars_hub_version
     with:
       push_enabled: true
       push_destinations: ghcr.io
@@ -125,14 +125,14 @@ jobs:
       get_version_method: file_in_container:file=/acarshub_version
       docker_latest_tag: test
       dockerfile_changes: |
-        \# patch acarshub version/sed -i \"s\/Pre-Release\/${{ needs.patch_acars_hub_verison.outputs.acarshub_version}}\/g\" \/acarshub-typescript\/src\/helpers\/menu.ts
+        \# patch acarshub version/sed -i \"s\/Pre-Release\/${{ needs.patch_acars_hub_version.outputs.acarshub_version}}\/g\" \/acarshub-typescript\/src\/helpers\/menu.ts
     secrets:
       ghcr_token: ${{ secrets.GITHUB_TOKEN }}
 
   # generate a release
   release:
     name: Release
-    needs: [deploy, patch_acars_hub_verison]
+    needs: [deploy, patch_acars_hub_version]
     runs-on: ubuntu-22.04
     if: |
       (github.event.inputs.use_test_image == 'false' ||
@@ -148,7 +148,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag: ${{ needs.patch_acars_hub_verison.outputs.version }}Build${{ needs.patch_acars_hub_verison.outputs.build_number }}
-          name: ${{ needs.patch_acars_hub_verison.outputs.version }} Build ${{ needs.patch_acars_hub_verison.outputs.build_number }}
+          tag: ${{ needs.patch_acars_hub_version.outputs.version }}Build${{ needs.patch_acars_hub_version.outputs.build_number }}
+          name: ${{ needs.patch_acars_hub_version.outputs.version }} Build ${{ needs.patch_acars_hub_version.outputs.build_number }}
           draft: false
           prerelease: false
