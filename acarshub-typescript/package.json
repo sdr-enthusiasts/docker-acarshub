@@ -18,7 +18,7 @@
     "@types/jquery": "^3.5.32",
     "@types/js-cookie": "3.0.6",
     "@types/leaflet": "^1.9.16",
-    "@types/node": "^22.13.9",
+    "@types/node": "^22.13.11",
     "@types/showdown": "2.0.6",
     "autoprefixer": "10.4.20",
     "babel-loader": "^10.0.0",
