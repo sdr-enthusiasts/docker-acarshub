@@ -45,7 +45,7 @@
     "@fortawesome/fontawesome-svg-core": "^6.7.2",
     "@fortawesome/free-regular-svg-icons": "^6.7.2",
     "@fortawesome/free-solid-svg-icons": "^6.7.2",
-    "bootstrap": "5.3.3",
+    "bootstrap": "5.3.5",
     "chart.js": "^4.4.8",
     "chartjs-plugin-datalabels": "2.2.0",
     "extract-css-chunks-webpack-plugin": "4.10.0",
