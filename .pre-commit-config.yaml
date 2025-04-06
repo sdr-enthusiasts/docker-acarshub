@@ -50,7 +50,7 @@ repos:
         exclude: ^(rootfs/webapp/|acarshub-typescript/node_modules/|Dockerfile*)
 
   - repo: https://github.com/pre-commit/mirrors-eslint
-    rev: 0ae6881abe7a4b8b9351b2f8d65bf9ac4512ef1c  # frozen: v9.23.0
+    rev: 17130126a1ebcbb5fcd2362c568b13a866d52cce  # frozen: v9.24.0
     hooks:
       - id: eslint
         files: \.[j]sx?$ # *.js, *.jsx, *.ts and *.tsx
