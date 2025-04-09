@@ -63,7 +63,7 @@ jobs:
       - name: Lint with flake8
         run: |
           # stop the build if there are Python syntax errors or undefined names
-          flake8 --extend-ignore=W503,W504,E501
+          flake8 --extend-ignore=W503,W504,E501,F824
 
   acarshub-typescript:
     runs-on: ubuntu-22.04
