@@ -1,6 +1,6 @@
 Flask==3.1.0
 Flask-SocketIO==5.5.1
-gevent==24.11.1
+gevent==25.4.1
 gunicorn[gevent]==23.0.0
 requests==2.32.3
 rrdtool @git+https://github.com/fredclausen/python-rrdtool.git
