@@ -17,15 +17,6 @@ on:
         type: boolean
         description: "Build latest as test"
         default: false
-  push:
-    branches:
-      - main
-    paths:
-      - "acarshub-typescript/**"
-      - "Dockerfile.acarshub"
-      - "Dockerfile.acarshub-nextgen"
-      - "rootfs/**"
-      - "version"
 
 env:
   REGISTRY: ghcr.io
