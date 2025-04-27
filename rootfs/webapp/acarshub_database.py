@@ -260,7 +260,10 @@ class messages_saved(Messages):
 
 Messages.metadata.create_all(database)
 if backup:
+    acarshub_logging.log("Creating backup database if needed", "database")
     Messages.metadata.create_all(database_backup)
+else:
+    acarshub_logging.log("No backup database defined", "database")
 
 
 # database is init, now check and see if the fts table is there
@@ -599,6 +602,11 @@ def add_message_from_json(message_type, message_from_json):
     params = create_db_safe_params(message_from_json)
     add_message(params, message_type, message_from_json)
     if backup:
+        acarshub_logging.log(
+            "Adding message to backup database",
+            "database",
+            level=LOG_LEVEL["DEBUG"],
+        )
         add_message(params, message_type, message_from_json, backup=True)
 
 
@@ -1238,13 +1246,17 @@ def prune_database():
 def optimize_db_regular():
     try:
         acarshub_logging.log(
-            f"Optimizing Database start (DB_FTS_OPTIMIZE: {acarshub_configuration.DB_FTS_OPTIMIZE})", "database", level=LOG_LEVEL["DEBUG"]
+            f"Optimizing Database start (DB_FTS_OPTIMIZE: {acarshub_configuration.DB_FTS_OPTIMIZE})",
+            "database",
+            level=LOG_LEVEL["DEBUG"],
         )
         session = db_session()
         # start the FTS optimization with a merge with negative limit
         if acarshub_configuration.DB_FTS_OPTIMIZE == "merge":
             session.execute(
-                text("insert into messages_fts(messages_fts, rank) values('merge', -500)")
+                text(
+                    "insert into messages_fts(messages_fts, rank) values('merge', -500)"
+                )
             )
         if acarshub_configuration.DB_FTS_OPTIMIZE == "optimize":
             session.execute(
