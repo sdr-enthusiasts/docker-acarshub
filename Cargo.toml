@@ -1,5 +1,7 @@
+[workspace]
+members = ["rust/backend"]
+
 [workspace.package]
-members = ["rust/web"]
 name = "acarshub"
 version = "5.0.0"
 edition = "2024"
