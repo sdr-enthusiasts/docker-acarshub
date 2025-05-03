@@ -146,3 +146,4 @@ rootfs/webapp/pyvenv.cfg
 
 /target
 .direnv
+test.db
