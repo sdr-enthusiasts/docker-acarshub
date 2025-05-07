@@ -7,3 +7,6 @@ version = "5.0.0"
 edition = "2024"
 
 [workspace.dependencies]
+diesel = { version = "2.2.10", features = ["sqlite"] }
+diesel_migrations = { version = "2.2.0", features = ["sqlite"] }
+libsqlite3-sys = { version = "0.33.0", features = ["bundled"] }
