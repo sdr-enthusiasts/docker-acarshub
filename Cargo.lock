@@ -6,12 +6,7 @@ version = 4
 name = "acarshub"
 version = "5.0.0"
 dependencies = [
- "diesel",
- "diesel_migrations",
- "libsqlite3-sys",
- "tracing",
- "tracing-log",
- "tracing-subscriber",
+ "database",
 ]
 
 [[package]]
@@ -83,6 +78,18 @@ dependencies = [
  "darling_core",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "database"
+version = "2.0.0"
+dependencies = [
+ "diesel",
+ "diesel_migrations",
+ "libsqlite3-sys",
+ "tracing",
+ "tracing-log",
+ "tracing-subscriber",
 ]
 
 [[package]]
