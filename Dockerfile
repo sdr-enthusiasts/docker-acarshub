@@ -1,3 +1,18 @@
+FROM rust:1.86.0 AS builder
+WORKDIR /tmp/acarshub
+# hadolint ignore=DL3008,DL3003,SC1091
+# RUN set -x && \
+#     apt-get update && \
+#     apt-get install -y --no-install-recommends libzmq3-dev
+
+RUN set -x && \
+    cargo build --release && \
+    # clean up the apt-cache
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* && \
+    cp /tmp/acarshub/target/release/acarshub . && \
+    cargo clean
+
 FROM node:23.11.0-slim AS acarshub-typescript-builder
 # pushd/popd
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
@@ -98,6 +113,7 @@ RUN set -x && \
     rm -rf /src/* /tmp/* /var/lib/apt/lists/*
 
 COPY rootfs/ /
+COPY --from=builder /tmp/acarshub/acarshub /opt/acars-bridge
 
 RUN set -x && \
     # find the latest version of acarshub from /webapp/static/js/acarshub.*.js
