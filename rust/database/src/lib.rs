@@ -14,22 +14,27 @@
 
 extern crate diesel;
 
-#[macro_use]
-extern crate tracing;
-use tracing::Level;
-use tracing_subscriber::{
-    EnvFilter,
-    fmt::{self, layer},
-    layer::SubscriberExt,
-    util::SubscriberInitExt,
-};
+// Import tracing macros directly
+use tracing::{debug, error, info, warn};
 
+use anyhow::Result;
 use diesel::prelude::*;
 use diesel_migrations::{EmbeddedMigrations, MigrationHarness, embed_migrations};
 use std::env;
 
+pub struct AcarsHubDatabase {
+    connection: SqliteConnection,
+}
+
+impl AcarsHubDatabase {
+    #[must_use]
+    pub const fn new(connection: SqliteConnection) -> Self {
+        Self { connection }
+    }
+}
+
 pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("../../migrations");
-fn establish_connection() -> SqliteConnection {
+fn establish_connection() -> Result<SqliteConnection> {
     let mut database_url =
         env::var("DATABASE_URL").unwrap_or_else(|_| "/opt/acarshub/messages.sqlite".to_string());
 
@@ -43,24 +48,20 @@ fn establish_connection() -> SqliteConnection {
 
     info!("Connecting to database at {database_url}");
 
-    SqliteConnection::establish(&database_url)
-        .unwrap_or_else(|_| panic!("Error connecting to {database_url}"))
+    match SqliteConnection::establish(&database_url) {
+        Ok(conn) => {
+            debug!("Connected to database at {database_url}");
+            Ok(conn)
+        }
+        Err(e) => {
+            error!("Error connecting to database: {e}");
+            Err(e.into())
+        }
+    }
 }
 
-pub fn init_db() {
-    let env_filter = EnvFilter::builder()
-        .with_default_directive(Level::INFO.into())
-        .from_env_lossy();
-
-    let subscriber = tracing_subscriber::registry().with(env_filter);
-    let std_out_layer = layer()
-        .with_line_number(true)
-        .with_span_events(fmt::format::FmtSpan::ACTIVE)
-        .compact();
-
-    subscriber.with(std_out_layer).init();
-
-    let mut conn = establish_connection();
+pub fn init_db() -> Result<AcarsHubDatabase> {
+    let mut conn = establish_connection()?;
 
     // Run the migrations
     match conn.run_pending_migrations(MIGRATIONS) {
@@ -73,6 +74,10 @@ pub fn init_db() {
                 }
             }
         }
-        Err(e) => error!("Error running database  migrations: {e}"),
+        Err(e) => {
+            return Err(anyhow::anyhow!("Error running database migrations: {e}"));
+        }
     }
+
+    Ok(AcarsHubDatabase::new(conn))
 }

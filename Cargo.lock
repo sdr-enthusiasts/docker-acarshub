@@ -7,6 +7,9 @@ name = "acarshub"
 version = "5.0.0"
 dependencies = [
  "database",
+ "tracing",
+ "tracing-log",
+ "tracing-subscriber",
 ]
 
 [[package]]
@@ -17,6 +20,12 @@ checksum = "8e60d3430d3a69478ad0993f19238d2df97c507009a52b3c10addcd7f6bcb916"
 dependencies = [
  "memchr",
 ]
+
+[[package]]
+name = "anyhow"
+version = "1.0.98"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e16d2d3311acee920a9eb8d33b8cbc1787ce4a264e85f964c2404b969bdcd487"
 
 [[package]]
 name = "autocfg"
@@ -84,12 +93,11 @@ dependencies = [
 name = "database"
 version = "2.0.0"
 dependencies = [
+ "anyhow",
  "diesel",
  "diesel_migrations",
  "libsqlite3-sys",
  "tracing",
- "tracing-log",
- "tracing-subscriber",
 ]
 
 [[package]]

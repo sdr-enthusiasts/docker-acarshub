@@ -5,3 +5,6 @@ edition.workspace = true
 
 [dependencies]
 database = { path = "../database" }
+tracing.workspace = true
+tracing-log.workspace = true
+tracing-subscriber.workspace = true
