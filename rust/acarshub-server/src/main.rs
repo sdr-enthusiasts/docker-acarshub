@@ -23,7 +23,7 @@ use tracing_subscriber::{
     util::SubscriberInitExt,
 };
 
-use database::init_db;
+use database::AcarsHubDatabase;
 
 fn main() {
     // init logging

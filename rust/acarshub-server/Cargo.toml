@@ -1,5 +1,5 @@
 [package]
-name = "acarshub"
+name = "acarshub-server"
 version.workspace = true
 edition.workspace = true
 

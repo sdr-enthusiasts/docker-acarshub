@@ -1,5 +1,5 @@
 [workspace]
-members = ["rust/acarshub", "rust/database"]
+members = ["./rust/acarshub-server", "./rust/database"]
 resolver = "3"
 
 [workspace.package]
@@ -17,3 +17,6 @@ tracing-subscriber = { version = "0.3.19", features = [
     "env-filter",
     "parking_lot",
 ] }
+
+[[workspace.bin]]
+name = "acarshub-server"
