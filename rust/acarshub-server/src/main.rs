@@ -11,19 +11,19 @@
     clippy::expect_used
 )]
 // #![warn(missing_docs)]
-#![macro_use]
+#[macro_use]
 extern crate tracing;
+
 use tracing::Level;
-use tracing::{debug, error, info, warn};
+// use tracing::{debug, error, info, warn};
 use tracing_subscriber::{
     EnvFilter,
-    filter::Directive,
     fmt::{self, layer},
     layer::SubscriberExt,
     util::SubscriberInitExt,
 };
 
-use database::AcarsHubDatabase;
+use acarshub_database::AcarsHubDatabase;
 
 fn main() {
     // init logging
@@ -39,7 +39,7 @@ fn main() {
 
     subscriber.with(std_out_layer).init();
 
-    let mut database = match init_db() {
+    let mut database = match AcarsHubDatabase::new() {
         Ok(db) => db,
         Err(_e) => {
             error!("Error creating db. Exiting");

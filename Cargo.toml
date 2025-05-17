@@ -1,5 +1,5 @@
 [workspace]
-members = ["./rust/acarshub-server", "./rust/database"]
+members = ["./rust/acarshub-server", "./rust/acarshub-database"]
 resolver = "3"
 
 [workspace.package]
@@ -8,6 +8,7 @@ edition = "2024"
 
 [workspace.dependencies]
 anyhow = "1.0.98"
+acarshub-database = { path = "./rust/acarshub-database" }
 diesel = { version = "2.2.10", features = ["sqlite"] }
 diesel_migrations = { version = "2.2.0", features = ["sqlite"] }
 libsqlite3-sys = { version = "0.33.0", features = ["bundled"] }
@@ -17,6 +18,3 @@ tracing-subscriber = { version = "0.3.19", features = [
     "env-filter",
     "parking_lot",
 ] }
-
-[[workspace.bin]]
-name = "acarshub-server"

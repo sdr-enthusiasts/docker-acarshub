@@ -29,8 +29,13 @@ pub struct AcarsHubDatabase {
 }
 
 impl AcarsHubDatabase {
-    #[must_use]
-    pub fn new(connection: SqliteConnection) -> Result<Self> {
+    /// Creates a new instance of `AcarsHubDatabase` and establishes a connection to the `SQLite` database.
+    /// # Returns
+    /// Returns a `Result` containing the `AcarsHubDatabase` instance if successful, or an error if the connection fails.
+    ///
+    /// # Errors
+    /// If the connection to the database fails, an error is returned.
+    pub fn new() -> Result<Self> {
         let mut database_url = env::var("DATABASE_URL")
             .unwrap_or_else(|_| "/opt/acarshub/messages.sqlite".to_string());
 

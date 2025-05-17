@@ -3,10 +3,21 @@
 version = 4
 
 [[package]]
+name = "acarshub-database"
+version = "2.0.0"
+dependencies = [
+ "anyhow",
+ "diesel",
+ "diesel_migrations",
+ "libsqlite3-sys",
+ "tracing",
+]
+
+[[package]]
 name = "acarshub-server"
 version = "5.0.0"
 dependencies = [
- "database",
+ "acarshub-database",
  "tracing",
  "tracing-log",
  "tracing-subscriber",
@@ -87,17 +98,6 @@ dependencies = [
  "darling_core",
  "quote",
  "syn",
-]
-
-[[package]]
-name = "database"
-version = "2.0.0"
-dependencies = [
- "anyhow",
- "diesel",
- "diesel_migrations",
- "libsqlite3-sys",
- "tracing",
 ]
 
 [[package]]
