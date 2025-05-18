@@ -33,6 +33,7 @@ use acarshub_database::AcarsHubDatabase;
 use anyhow::Result;
 use axum::{Router, routing::get};
 use parking_lot::FairMutex;
+use tokio::net::TcpListener;
 
 pub struct AcarsHubWebServer {
     database: FairMutex<AcarsHubDatabase>,
@@ -50,7 +51,7 @@ impl AcarsHubWebServer {
         let app = Router::new().route("/", get(|| async { "Hello, World!" }));
 
         // run our app with hyper, listening globally on port 3000
-        let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await?;
+        let listener = TcpListener::bind("0.0.0.0:3000").await?;
         axum::serve(listener, app).await?;
 
         Ok(())
