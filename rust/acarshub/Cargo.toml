@@ -1,10 +1,13 @@
 [package]
-name = "acarshub-server"
+name = "acarshub"
 version.workspace = true
 edition.workspace = true
 
 [dependencies]
 acarshub-database = { path = "../acarshub-database" }
+acarshub-webserver = { path = "../acarshub-webserver" }
+parking_lot.workspace = true
+tokio.workspace = true
 tracing.workspace = true
 tracing-log.workspace = true
 tracing-subscriber.workspace = true

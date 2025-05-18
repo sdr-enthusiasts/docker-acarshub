@@ -1,4 +1,18 @@
-//
+// Copyright (C) 2022-2025 Frederick Clausen II
+// This file is part of acarshub <https://github.com/sdr-enthusiasts/docker-acarshub>.
+
+// acarshub is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+
+// acarshub is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+
+// You should have received a copy of the GNU General Public License
+// along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
 #![deny(
     clippy::pedantic,
@@ -49,33 +63,41 @@ impl AcarsHubDatabase {
 
         info!("Connecting to database at {database_url}");
 
-        let mut conn = match SqliteConnection::establish(&database_url) {
-            Ok(conn) => {
-                debug!("Connected to database at {database_url}");
-                conn
-            }
-            Err(e) => {
-                error!("Error connecting to database: {e}");
-                return Err(e.into());
-            }
-        };
+        let mut conn = establish_connection(&database_url)?;
 
         // Run the migrations
-        match conn.run_pending_migrations(MIGRATIONS) {
-            Ok(info) => {
-                if info.is_empty() {
-                    info!("No database migrations to run");
-                } else {
-                    for migration in info {
-                        info!("Database migration {migration} ran successfully");
-                    }
-                }
-            }
-            Err(e) => {
-                return Err(anyhow::anyhow!("Error running database migrations: {e}"));
-            }
-        }
+        run_migrations(&mut conn)?;
 
         Ok(Self { connection: conn })
+    }
+}
+
+fn establish_connection(database_url: &str) -> Result<SqliteConnection> {
+    match SqliteConnection::establish(database_url) {
+        Ok(conn) => {
+            debug!("Connected to database at {database_url}");
+            Ok(conn)
+        }
+        Err(e) => {
+            error!("Error connecting to database: {e}");
+            Err(e.into())
+        }
+    }
+}
+
+fn run_migrations(conn: &mut SqliteConnection) -> Result<()> {
+    match conn.run_pending_migrations(MIGRATIONS) {
+        Ok(info) => {
+            if info.is_empty() {
+                info!("No database migrations to run");
+            } else {
+                for migration in info {
+                    info!("Database migration {migration} ran successfully");
+                }
+            }
+
+            Ok(())
+        }
+        Err(e) => Err(anyhow::anyhow!("Error running database migrations: {e}")),
     }
 }

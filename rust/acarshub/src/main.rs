@@ -1,4 +1,18 @@
-//
+// Copyright (C) 2022-2025 Frederick Clausen II
+// This file is part of acarshub <https://github.com/sdr-enthusiasts/docker-acarshub>.
+
+// acarshub is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+
+// acarshub is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+
+// You should have received a copy of the GNU General Public License
+// along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
 #![deny(
     clippy::pedantic,
@@ -14,6 +28,7 @@
 #[macro_use]
 extern crate tracing;
 
+use parking_lot::FairMutex;
 use tracing::Level;
 // use tracing::{debug, error, info, warn};
 use tracing_subscriber::{
@@ -24,8 +39,10 @@ use tracing_subscriber::{
 };
 
 use acarshub_database::AcarsHubDatabase;
+use acarshub_webserver::AcarsHubWebServer;
 
-fn main() {
+#[tokio::main]
+async fn main() {
     // init logging
     let env_filter = EnvFilter::builder()
         .with_default_directive(Level::INFO.into())
@@ -40,10 +57,15 @@ fn main() {
     subscriber.with(std_out_layer).init();
 
     let mut database = match AcarsHubDatabase::new() {
-        Ok(db) => db,
+        Ok(db) => FairMutex::new(db),
         Err(_e) => {
             error!("Error creating db. Exiting");
             std::process::exit(69);
         }
     };
+
+    let mut webserver = AcarsHubWebServer::new(database);
+
+    // run the web server
+    webserver.run().await.expect("Error running web server");
 }
