@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (C) 2022-2024 Frederick Clausen II
+# Copyright (C) 2022-2025 Frederick Clausen II
 # This file is part of acarshub <https://github.com/sdr-enthusiasts/docker-acarshub>.
 #
 # acarshub is free software: you can redistribute it and/or modify
@@ -210,9 +210,7 @@ def scheduled_tasks():
 
     schedule.every().hour.at(":05").do(acarshub_configuration.check_github_version)
     schedule.every().hour.at(":01").do(send_version)
-    schedule.every(6).hours.do(
-        acarshub_helpers.acarshub_database.optimize_db_regular
-    )
+    schedule.every(6).hours.do(acarshub_helpers.acarshub_database.optimize_db_regular)
     schedule.every().minute.at(":30").do(
         acarshub_helpers.acarshub_database.prune_database
     )
