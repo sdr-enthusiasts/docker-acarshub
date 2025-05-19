@@ -5,8 +5,11 @@ WORKDIR /tmp/acarshub
 #     apt-get update && \
 #     apt-get install -y --no-install-recommends libzmq3-dev
 
-COPY . .
+COPY rust ./rust
+COPY Cargo.toml .
+COPY Cargo.lock .
 RUN set -x && \
+    ls && \
     cargo build --release && \
     # clean up the apt-cache
     apt-get clean && \
@@ -113,8 +116,8 @@ RUN set -x && \
     # Clean up
     rm -rf /src/* /tmp/* /var/lib/apt/lists/*
 
-COPY rootfs/ /
-COPY --from=builder /tmp/acarshub/acarshub /opt/acars-bridge
+COPY rust_rootfs/ /
+COPY --from=builder /tmp/acarshub/acarshub /opt/acarshub
 
 RUN set -x && \
     # find the latest version of acarshub from /webapp/static/js/acarshub.*.js
@@ -132,12 +135,6 @@ RUN set -x && \
     printf "v%sBuild%s" "$ACARS_VERSION" "$ACARS_BUILD" > /acarshub_version && \
     printf "v%s Build %s\nv%sBuild%s" "$ACARS_VERSION" "$ACARS_BUILD" "$ACARS_VERSION" "$ACARS_BUILD" > /version
 
-EXPOSE 80
-EXPOSE 5550
-EXPOSE 5555
-EXPOSE 15550
-EXPOSE 15555
-
 ENV FEED="" \
     ENABLE_ACARS="false" \
     ENABLE_VDLM="false" \
@@ -149,7 +146,3 @@ ENV FEED="" \
     ENABLE_RANGE_RINGS="true" \
     ADSB_URL="http://tar1090/data/aircraft.json" \
     DB_FTS_OPTIMIZE="off"
-
-
-# Add healthcheck
-HEALTHCHECK --start-period=3600s --interval=600s CMD /scripts/healthcheck.sh

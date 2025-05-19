@@ -3,6 +3,7 @@ members = [
     "./rust/acarshub",
     "./rust/acarshub-database",
     "./rust/acarshub-webserver",
+    "./rust/acarshub-message-processing",
 ]
 resolver = "3"
 

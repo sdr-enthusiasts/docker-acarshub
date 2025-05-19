@@ -1,0 +1,73 @@
+server {
+  listen 80 default_server;
+  root /webapp;
+  server_name _;
+
+  proxy_http_version 1.1;
+  proxy_set_header Upgrade $http_upgrade;
+  proxy_set_header Connection $http_connection;
+  proxy_set_header Host $host;
+  proxy_set_header  X-Real-IP $remote_addr;
+  proxy_set_header  X-Real-Port $remote_port;
+  include /etc/nginx/mime.types;
+
+  # mjs is not in default mime types, add in here
+  types {
+    application/javascript mjs;
+  }
+	default_type application/octet-stream;
+  access_log off;
+
+  #Catch 40x errors:
+  #error_page 400 401 402 403 404 = @RedirectToHome;
+
+  #Catch 50x errors:
+  #error_page 500 501 502 503 504 = @RedirectToHome;
+
+  #location @RedirectToHome {
+  #  return 302 $scheme://$http_host;
+  #}
+
+  # point the stat image files to the dir they're dumped in, mark as no cache
+  location ~ (.*hour.*|.*week.*|.*month.*|.*year.*|.*days.*).png {
+    add_header Cache-Control 'no-cache';
+    root /database/images;
+  }
+
+  # cache all of the files
+  location ~ \.(css|js|png|jpg|jpeg|gif|ico|woff|woff2|ttf|svg|eot|otf|map|mjs|mp3)$ {
+    expires 30d;
+    add_header Cache-Control "public";
+    root /webapp;
+  }
+
+  # proxy pass the web socket to gunicorn
+  location /socket.io {
+    proxy_pass http://127.0.0.1:8888/socket.io;
+  }
+
+  # proxy pass the aircraft.json file to tar1090
+  # <> is used as a place holder that the container startup rewrites to the correct URL
+  location /data/aircraft.json {
+    proxy_pass <>;
+    proxy_set_header Referer "";
+  }
+
+  # index page
+  location = / {
+    add_header Cache-Control 'no-cache';
+    try_files /templates/index.html =404;
+  }
+
+  # pass the request for about.md to the correct file
+  location /aboutmd {
+    expires 30d;
+    try_files /templates/helppage.MD =404;
+  }
+
+  # valid URL paths for pages serve index.html
+  location ~ ^/(search|alerts|stats|adsb|about|status)$ {
+    add_header Cache-Control 'no-cache';
+    try_files /templates/index.html =404;
+  }
+}

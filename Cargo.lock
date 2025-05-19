@@ -27,6 +27,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "acarshub-message-processing"
+version = "5.0.0"
+dependencies = [
+ "acarshub-database",
+ "anyhow",
+ "parking_lot",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "acarshub-webserver"
 version = "5.0.0"
 dependencies = [

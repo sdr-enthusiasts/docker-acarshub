@@ -51,7 +51,7 @@ impl AcarsHubDatabase {
     /// If the connection to the database fails, an error is returned.
     pub fn new() -> Result<Self> {
         let mut database_url = env::var("DATABASE_URL")
-            .unwrap_or_else(|_| "/opt/acarshub/messages.sqlite".to_string());
+            .unwrap_or_else(|_| "/opt/acarshub-data/messages.sqlite".to_string());
 
         // we need to see if we're on an old version of ACARS Hub. If /run/acarshub/messages.db exists, we need to use that and
         // inform the user that they need to migrate their database

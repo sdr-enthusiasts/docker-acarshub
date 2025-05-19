@@ -1,0 +1,12 @@
+# THIS IS A TEST FILE
+# For a pre-release version. It will not work for the release version. Please see documentation for
+# correct usage.
+
+services:
+  acarshub:
+    image: fredclausen/acarshub
+    container_name: acarshub
+    # volumes:
+    #   - /var/run/docker.sock:/var/run/docker.sock:ro
+    # ports:
+    #   - 7007:7007

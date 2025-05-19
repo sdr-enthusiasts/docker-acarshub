@@ -1,0 +1,11 @@
+[package]
+name = "acarshub-message-processing"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+acarshub-database = { path = "../acarshub-database" }
+anyhow.workspace = true
+parking_lot.workspace = true
+tokio.workspace = true
+tracing.workspace = true
