@@ -1,188 +1,188 @@
 #!/command/with-contenv bash
 # shellcheck shell=bash
+# shellcheck disable=SC2154
 
-if [[ ${ENABLE_WEB,,} =~ true ]]; then
-    while [[ ! -e /run/acars/acarshub.rrd ]]; do
-        sleep 5
-    done
-    STARTING_UP="TRUE"
-    OUTPUT_DIR="/database/images/static/images"
-    ARGS_ALL=("-a" "PNG" "-w" "1000" "-h" "200"  "--vertical-label" "Messages" "--slope-mode")
-    ARGS_ERROR=("-a" "PNG" "-w" "1000" "-h" "200"  "--vertical-label" "Messages" "--slope-mode")
-    ARGS_VDLM=("-a" "PNG" "-w" "1000" "-h" "200"  "--vertical-label" "Messages" "--slope-mode")
-    ARGS_ACARS=("-a" "PNG" "-w" "1000" "-h" "200"  "--vertical-label" "Messages" "--slope-mode")
-    ARGS_HFDL=("-a" "PNG" "-w" "1000" "-h" "200"  "--vertical-label" "Messages" "--slope-mode")
-    ARGS_IMSL=("-a" "PNG" "-w" "1000" "-h" "200"  "--vertical-label" "Messages" "--slope-mode")
-    ARGS_IRDM=("-a" "PNG" "-w" "1000" "-h" "200"  "--vertical-label" "Messages" "--slope-mode")
+# shellcheck disable=SC1091
+source /scripts/common
 
-    total_enabled=0
+while [[ ! -e /run/acars/acarshub.rrd ]]; do
+    sleep 5
+done
+STARTING_UP="TRUE"
+OUTPUT_DIR="/database/images/static/images"
+ARGS_ALL=("-a" "PNG" "-w" "1000" "-h" "200"  "--vertical-label" "Messages" "--slope-mode")
+ARGS_ERROR=("-a" "PNG" "-w" "1000" "-h" "200"  "--vertical-label" "Messages" "--slope-mode")
+ARGS_VDLM=("-a" "PNG" "-w" "1000" "-h" "200"  "--vertical-label" "Messages" "--slope-mode")
+ARGS_ACARS=("-a" "PNG" "-w" "1000" "-h" "200"  "--vertical-label" "Messages" "--slope-mode")
+ARGS_HFDL=("-a" "PNG" "-w" "1000" "-h" "200"  "--vertical-label" "Messages" "--slope-mode")
+ARGS_IMSL=("-a" "PNG" "-w" "1000" "-h" "200"  "--vertical-label" "Messages" "--slope-mode")
+ARGS_IRDM=("-a" "PNG" "-w" "1000" "-h" "200"  "--vertical-label" "Messages" "--slope-mode")
 
-    if [[ ${ENABLE_ACARS,,} =~ external ]]; then
-        ARGS_ALL+=("DEF:messages-acars=/run/acars/acarshub.rrd:ACARS:AVERAGE" "LINE1:messages-acars#000000:ACARS")
-        ARGS_ACARS+=("DEF:messages-acars=/run/acars/acarshub.rrd:ACARS:AVERAGE" "LINE1:messages-acars#000000:ACARS")
-        total_enabled=$((total_enabled + 1))
-    fi
+total_enabled=0
 
-    if [[ ${ENABLE_VDLM,,} =~ external ]]; then
-        ARGS_ALL+=("DEF:messages-vdlm=/run/acars/acarshub.rrd:VDLM:AVERAGE" "LINE1:messages-vdlm#0000FF:VDLM")
-        ARGS_VDLM+=("DEF:messages-vdlm=/run/acars/acarshub.rrd:VDLM:AVERAGE" "LINE1:messages-vdlm#0000FF:VDLM")
-        total_enabled=$((total_enabled + 1))
-    fi
-
-    if [[ ${ENABLE_HFDL,,} =~ external ]]; then
-        ARGS_ALL+=("DEF:messages-hfdl=/run/acars/acarshub.rrd:HFDL:AVERAGE" "LINE1:messages-hfdl#F05E16:HFDL")
-        ARGS_HFDL+=("DEF:messages-hfdl=/run/acars/acarshub.rrd:HFDL:AVERAGE" "LINE1:messages-hfdl#F05E16:HFDL")
-        total_enabled=$((total_enabled + 1))
-    fi
-
-    if [[ ${ENABLE_IMSL,,} =~ external ]]; then
-        ARGS_ALL+=("DEF:messages-imsl=/run/acars/acarshub.rrd:IMSL:AVERAGE" "LINE1:messages-imsl#DA70D6:IMSL")
-        ARGS_IMSL+=("DEF:messages-imsl=/run/acars/acarshub.rrd:IMSL:AVERAGE" "LINE1:messages-imsl#DA70D6:IMSL")
-        total_enabled=$((total_enabled + 1))
-    fi
-
-    if [[ ${ENABLE_IRDM,,} =~ external ]]; then
-        ARGS_ALL+=("DEF:messages-irdm=/run/acars/acarshub.rrd:IRDM:AVERAGE" "LINE1:messages-irdm#800080:IRDM")
-        ARGS_IRDM+=("DEF:messages-irdm=/run/acars/acarshub.rrd:IRDM:AVERAGE" "LINE1:messages-irdm#800080:IRDM")
-        total_enabled=$((total_enabled + 1))
-    fi
-
-    # if any two or more of ENABLE_ACARS, ENABLE_VDLM, ENABLE_HFDL, ENABLE_IMSL is external then we need a totals graph
-    if [[ ${total_enabled} -ge 2 ]]; then
-        ARGS_ALL+=("DEF:messages-total=/run/acars/acarshub.rrd:TOTAL:AVERAGE" "LINE1:messages-total#00FF00:Total")
-    fi
-
-    ARGS_ALL+=("DEF:messages-error=/run/acars/acarshub.rrd:ERROR:AVERAGE" "LINE1:messages-error#ff0000:Error")
-    ARGS_ERROR+=("DEF:messages-error=/run/acars/acarshub.rrd:ERROR:AVERAGE" "LINE1:messages-error#ff0000:Error")
-
-    while true; do
-        if [[ $((MIN_LOG_LEVEL)) -ge 4 ]]; then
-            #shellcheck disable=SC2016
-            echo "starting graph generation" | stdbuf -oL awk '{print "[rrd-graph   ] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
-        fi
-        # regular graphs
-        rrdtool graph "${OUTPUT_DIR}/1hour.png" --title "1 Hour" --start "-1h" "${ARGS_ALL[@]}" >/dev/null 2>&1
-        rrdtool graph "${OUTPUT_DIR}/6hour.png" --title "6 Hours" --start "-6h" "${ARGS_ALL[@]}" >/dev/null 2>&1
-        rrdtool graph "${OUTPUT_DIR}/12hour.png" --title "12 Hours" --start "-12h" "${ARGS_ALL[@]}" >/dev/null 2>&1
-        rrdtool graph "${OUTPUT_DIR}/24hours.png" --title "1 Day" --start "-1d" "${ARGS_ALL[@]}" >/dev/null 2>&1
-        rrdtool graph "${OUTPUT_DIR}/1week.png" --title "1 Week" --start "-7d" "${ARGS_ALL[@]}" >/dev/null 2>&1
-        if [[ "${STARTING_UP}" == "TRUE" || $(date +%M) == "00" ]]; then
-            #shellcheck disable=SC2016
-            rrdtool graph "${OUTPUT_DIR}/30days.png" --title "1 Month" --start "-1mon" "${ARGS_ALL[@]}" >/dev/null 2>&1
-            rrdtool graph "${OUTPUT_DIR}/6months.png" --title "6 Months" --start "-6mon" "${ARGS_ALL[@]}" >/dev/null 2>&1
-            rrdtool graph "${OUTPUT_DIR}/1year.png" --title "1 Year" --start "-1y" "${ARGS_ALL[@]}" >/dev/null 2>&1
-        fi
-
-        # error graphs
-
-        rrdtool graph "${OUTPUT_DIR}/error1hour.png" --title "1 Hour" --start "-1h" "${ARGS_ERROR[@]}" >/dev/null 2>&1
-        rrdtool graph "${OUTPUT_DIR}/error6hour.png" --title "6 Hours" --start "-6h" "${ARGS_ERROR[@]}" >/dev/null 2>&1
-        rrdtool graph "${OUTPUT_DIR}/error12hour.png" --title "12 Hours" --start "-12h" "${ARGS_ERROR[@]}" >/dev/null 2>&1
-        rrdtool graph "${OUTPUT_DIR}/error24hours.png" --title "1 Day" --start "-1d" "${ARGS_ERROR[@]}" >/dev/null 2>&1
-        rrdtool graph "${OUTPUT_DIR}/error1week.png" --title "1 Week" --start "-7d" "${ARGS_ERROR[@]}" >/dev/null 2>&1
-        if [[ "${STARTING_UP}" == "TRUE" || $(date +%M) == "00" ]]; then
-            rrdtool graph "${OUTPUT_DIR}/error30days.png" --title "1 Month" --start "-1mon" "${ARGS_ERROR[@]}" >/dev/null 2>&1
-            rrdtool graph "${OUTPUT_DIR}/error6months.png" --title "6 Months" --start "-6mon" "${ARGS_ERROR[@]}" >/dev/null 2>&1
-            rrdtool graph "${OUTPUT_DIR}/error1year.png" --title "1 Year" --start "-1y" "${ARGS_ERROR[@]}" >/dev/null 2>&1
-        fi
-
-        if [[ ${total_enabled} -ge 2 ]]; then
-            if [[ ${ENABLE_ACARS,,} =~ external ]]; then
-                # ACARS Graphs
-                rrdtool graph "${OUTPUT_DIR}/acars1hour.png" --title "1 Hour" --start "-1h" "${ARGS_ACARS[@]}" >/dev/null 2>&1
-                rrdtool graph "${OUTPUT_DIR}/acars6hour.png" --title "6 Hours" --start "-6h" "${ARGS_ACARS[@]}" >/dev/null 2>&1
-                rrdtool graph "${OUTPUT_DIR}/acars12hour.png" --title "12 Hours" --start "-12h" "${ARGS_ACARS[@]}" >/dev/null 2>&1
-                rrdtool graph "${OUTPUT_DIR}/acars24hours.png" --title "1 Day" --start "-1d" "${ARGS_ACARS[@]}" >/dev/null 2>&1
-                rrdtool graph "${OUTPUT_DIR}/acars1week.png" --title "1 Week" --start "-7d" "${ARGS_ACARS[@]}" >/dev/null 2>&1
-                if [[ "${STARTING_UP}" == "TRUE" || $(date +%M) == "00" ]]; then
-                    rrdtool graph "${OUTPUT_DIR}/acars30days.png" --title "1 Month" --start "-1mon" "${ARGS_ACARS[@]}" >/dev/null 2>&1
-                    rrdtool graph "${OUTPUT_DIR}/acars6months.png" --title "6 Months" --start "-6mon" "${ARGS_ACARS[@]}" >/dev/null 2>&1
-                    rrdtool graph "${OUTPUT_DIR}/acars1year.png" --title "1 Year" --start "-1y" "${ARGS_ACARS[@]}" >/dev/null 2>&1
-                fi
-            fi
-
-            if [[ ${ENABLE_VDLM,,} =~ external ]]; then
-                # VDLM Graphs
-                rrdtool graph "${OUTPUT_DIR}/vdlm1hour.png" --title "1 Hour" --start "-1h" "${ARGS_VDLM[@]}" >/dev/null 2>&1
-                rrdtool graph "${OUTPUT_DIR}/vdlm6hour.png" --title "6 Hours" --start "-6h" "${ARGS_VDLM[@]}" >/dev/null 2>&1
-                rrdtool graph "${OUTPUT_DIR}/vdlm12hour.png" --title "12 Hours" --start "-12h" "${ARGS_VDLM[@]}" >/dev/null 2>&1
-                rrdtool graph "${OUTPUT_DIR}/vdlm24hours.png" --title "1 Day" --start "-1d" "${ARGS_VDLM[@]}" >/dev/null 2>&1
-                rrdtool graph "${OUTPUT_DIR}/vdlm1week.png" --title "1 Week" --start "-7d" "${ARGS_VDLM[@]}" >/dev/null 2>&1
-                if [[ "${STARTING_UP}" == "TRUE" || $(date +%M) == "00" ]]; then
-                    rrdtool graph "${OUTPUT_DIR}/vdlm30days.png" --title "1 Month" --start "-1mon" "${ARGS_VDLM[@]}" >/dev/null 2>&1
-                    rrdtool graph "${OUTPUT_DIR}/vdlm6months.png" --title "6 Months" --start "-6mon" "${ARGS_VDLM[@]}" >/dev/null 2>&1
-                    rrdtool graph "${OUTPUT_DIR}/vdlm1year.png" --title "1 Year" --start "-1y" "${ARGS_VDLM[@]}" >/dev/null 2>&1
-                fi
-            fi
-
-            if [[ ${ENABLE_HFDL,,} =~ external ]]; then
-                # HFDL Graphs
-                rrdtool graph "${OUTPUT_DIR}/hfdl1hour.png" --title "1 Hour" --start "-1h" "${ARGS_HFDL[@]}" >/dev/null 2>&1
-                rrdtool graph "${OUTPUT_DIR}/hfdl6hour.png" --title "6 Hours" --start "-6h" "${ARGS_HFDL[@]}" >/dev/null 2>&1
-                rrdtool graph "${OUTPUT_DIR}/hfdl12hour.png" --title "12 Hours" --start "-12h" "${ARGS_HFDL[@]}" >/dev/null 2>&1
-                rrdtool graph "${OUTPUT_DIR}/hfdl24hours.png" --title "1 Day" --start "-1d" "${ARGS_HFDL[@]}" >/dev/null 2>&1
-                rrdtool graph "${OUTPUT_DIR}/hfdl1week.png" --title "1 Week" --start "-7d" "${ARGS_HFDL[@]}" >/dev/null 2>&1
-                if [[ "${STARTING_UP}" == "TRUE" || $(date +%M) == "00" ]]; then
-                    rrdtool graph "${OUTPUT_DIR}/hfdl30days.png" --title "1 Month" --start "-1mon" "${ARGS_HFDL[@]}" >/dev/null 2>&1
-                    rrdtool graph "${OUTPUT_DIR}/hfdl6months.png" --title "6 Months" --start "-6mon" "${ARGS_HFDL[@]}" >/dev/null 2>&1
-                    rrdtool graph "${OUTPUT_DIR}/hfdl1year.png" --title "1 Year" --start "-1y" "${ARGS_HFDL[@]}" >/dev/null 2>&1
-                fi
-            fi
-
-            if [[ ${ENABLE_IMSL,,} =~ external ]]; then
-                # IMSL Graphs
-                rrdtool graph "${OUTPUT_DIR}/imsl1hour.png" --title "1 Hour" --start "-1h" "${ARGS_IMSL[@]}" >/dev/null 2>&1
-                rrdtool graph "${OUTPUT_DIR}/imsl6hour.png" --title "6 Hours" --start "-6h" "${ARGS_IMSL[@]}" >/dev/null 2>&1
-                rrdtool graph "${OUTPUT_DIR}/imsl12hour.png" --title "12 Hours" --start "-12h" "${ARGS_IMSL[@]}" >/dev/null 2>&1
-                rrdtool graph "${OUTPUT_DIR}/imsl24hours.png" --title "1 Day" --start "-1d" "${ARGS_IMSL[@]}" >/dev/null 2>&1
-                rrdtool graph "${OUTPUT_DIR}/imsl1week.png" --title "1 Week" --start "-7d" "${ARGS_IMSL[@]}" >/dev/null 2>&1
-                if [[ "${STARTING_UP}" == "TRUE" || $(date +%M) == "00" ]]; then
-                    rrdtool graph "${OUTPUT_DIR}/imsl30days.png" --title "1 Month" --start "-1mon" "${ARGS_IMSL[@]}" >/dev/null 2>&1
-                    rrdtool graph "${OUTPUT_DIR}/imsl6months.png" --title "6 Months" --start "-6mon" "${ARGS_IMSL[@]}" >/dev/null 2>&1
-                    rrdtool graph "${OUTPUT_DIR}/imsl1year.png" --title "1 Year" --start "-1y" "${ARGS_IMSL[@]}" >/dev/null 2>&1
-                fi
-            fi
-
-            if [[ ${ENABLE_IRDM,,} =~ external ]]; then
-                # IRDM Graphs
-                rrdtool graph "${OUTPUT_DIR}/irdm1hour.png" --title "1 Hour" --start "-1h" "${ARGS_IRDM[@]}" >/dev/null 2>&1
-                rrdtool graph "${OUTPUT_DIR}/irdm6hour.png" --title "6 Hours" --start "-6h" "${ARGS_IRDM[@]}" >/dev/null 2>&1
-                rrdtool graph "${OUTPUT_DIR}/irdm12hour.png" --title "12 Hours" --start "-12h" "${ARGS_IRDM[@]}" >/dev/null 2>&1
-                rrdtool graph "${OUTPUT_DIR}/irdm24hours.png" --title "1 Day" --start "-1d" "${ARGS_IRDM[@]}" >/dev/null 2>&1
-                rrdtool graph "${OUTPUT_DIR}/irdm1week.png" --title "1 Week" --start "-7d" "${ARGS_IRDM[@]}" >/dev/null 2>&1
-                if [[ "${STARTING_UP}" == "TRUE" || $(date +%M) == "00" ]]; then
-                    rrdtool graph "${OUTPUT_DIR}/irdm30days.png" --title "1 Month" --start "-1mon" "${ARGS_IRDM[@]}" >/dev/null 2>&1
-                    rrdtool graph "${OUTPUT_DIR}/irdm6months.png" --title "6 Months" --start "-6mon" "${ARGS_IRDM[@]}" >/dev/null 2>&1
-                    rrdtool graph "${OUTPUT_DIR}/irdm1year.png" --title "1 Year" --start "-1y" "${ARGS_IRDM[@]}" >/dev/null 2>&1
-                fi
-            fi
-        fi
-
-        acars_msgs=$(find /database -type f -name 'acars.*.json' -cmin -60 -exec cat {} \; | sed -e 's/}{/}\n{/g' | wc -l)
-        vdlm2_msgs=$(find /database -type f -name 'vdlm2.*.json' -cmin -60 -exec cat {} \; | sed -e 's/}{/}\n{/g' | wc -l)
-        hfdl_msgs=$(find /database -type f -name 'hfdl.*.json' -cmin -60 -exec cat {} \; | sed -e 's/}{/}\n{/g' | wc -l)
-        imsl_msgs=$(find /database -type f -name 'imsl.*.json' -cmin -60 -exec cat {} \; | sed -e 's/}{/}\n{/g' | wc -l)
-        irdm_msgs=$(find /database -type f -name 'irdm.*.json' -cmin -60 -exec cat {} \; | sed -e 's/}{/}\n{/g' | wc -l)
-
-        stats_file=/webapp/data/stats.json
-       {
-          echo "{"
-          echo "  \"acars\": ${acars_msgs},"
-          echo "  \"vdlm2\": ${vdlm2_msgs},"
-          echo "  \"hfdl\": ${hfdl_msgs},"
-          echo "  \"imsl\": ${imsl_msgs},"
-          echo "  \"irdm\": ${irdm_msgs},"
-          echo "  \"total\": $((acars_msgs + vdlm2_msgs + hfdl_msgs + imsl_msgs + irdm_msgs))"
-          echo "}"
-        } > ${stats_file}
-
-        if [[ $((MIN_LOG_LEVEL)) -ge 4 ]]; then
-            #shellcheck disable=SC2016
-            echo "completed graph generation" | stdbuf -oL awk '{print "[rrd-graph   ] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
-        fi
-        STARTING_UP="FALSE"
-        sleep 60
-    done
-else
-    sleep 86400
+if [[ ${ENABLE_ACARS,,} =~ external ]]; then
+    ARGS_ALL+=("DEF:messages-acars=/run/acars/acarshub.rrd:ACARS:AVERAGE" "LINE1:messages-acars#000000:ACARS")
+    ARGS_ACARS+=("DEF:messages-acars=/run/acars/acarshub.rrd:ACARS:AVERAGE" "LINE1:messages-acars#000000:ACARS")
+    total_enabled=$((total_enabled + 1))
 fi
+
+if [[ ${ENABLE_VDLM,,} =~ external ]]; then
+    ARGS_ALL+=("DEF:messages-vdlm=/run/acars/acarshub.rrd:VDLM:AVERAGE" "LINE1:messages-vdlm#0000FF:VDLM")
+    ARGS_VDLM+=("DEF:messages-vdlm=/run/acars/acarshub.rrd:VDLM:AVERAGE" "LINE1:messages-vdlm#0000FF:VDLM")
+    total_enabled=$((total_enabled + 1))
+fi
+
+if [[ ${ENABLE_HFDL,,} =~ external ]]; then
+    ARGS_ALL+=("DEF:messages-hfdl=/run/acars/acarshub.rrd:HFDL:AVERAGE" "LINE1:messages-hfdl#F05E16:HFDL")
+    ARGS_HFDL+=("DEF:messages-hfdl=/run/acars/acarshub.rrd:HFDL:AVERAGE" "LINE1:messages-hfdl#F05E16:HFDL")
+    total_enabled=$((total_enabled + 1))
+fi
+
+if [[ ${ENABLE_IMSL,,} =~ external ]]; then
+    ARGS_ALL+=("DEF:messages-imsl=/run/acars/acarshub.rrd:IMSL:AVERAGE" "LINE1:messages-imsl#DA70D6:IMSL")
+    ARGS_IMSL+=("DEF:messages-imsl=/run/acars/acarshub.rrd:IMSL:AVERAGE" "LINE1:messages-imsl#DA70D6:IMSL")
+    total_enabled=$((total_enabled + 1))
+fi
+
+if [[ ${ENABLE_IRDM,,} =~ external ]]; then
+    ARGS_ALL+=("DEF:messages-irdm=/run/acars/acarshub.rrd:IRDM:AVERAGE" "LINE1:messages-irdm#800080:IRDM")
+    ARGS_IRDM+=("DEF:messages-irdm=/run/acars/acarshub.rrd:IRDM:AVERAGE" "LINE1:messages-irdm#800080:IRDM")
+    total_enabled=$((total_enabled + 1))
+fi
+
+# if any two or more of ENABLE_ACARS, ENABLE_VDLM, ENABLE_HFDL, ENABLE_IMSL is external then we need a totals graph
+if [[ ${total_enabled} -ge 2 ]]; then
+    ARGS_ALL+=("DEF:messages-total=/run/acars/acarshub.rrd:TOTAL:AVERAGE" "LINE1:messages-total#00FF00:Total")
+fi
+
+ARGS_ALL+=("DEF:messages-error=/run/acars/acarshub.rrd:ERROR:AVERAGE" "LINE1:messages-error#ff0000:Error")
+ARGS_ERROR+=("DEF:messages-error=/run/acars/acarshub.rrd:ERROR:AVERAGE" "LINE1:messages-error#ff0000:Error")
+
+while true; do
+    if [[ $((MIN_LOG_LEVEL)) -ge 4 ]]; then
+        #shellcheck disable=SC2016
+        "${s6wrap[@]}" echo "starting graph generation"
+    fi
+    # regular graphs
+    "${s6wrap[@]}" rrdtool graph "${OUTPUT_DIR}/1hour.png" --title "1 Hour" --start "-1h" "${ARGS_ALL[@]}" > /dev/null
+    "${s6wrap[@]}" rrdtool graph "${OUTPUT_DIR}/6hour.png" --title "6 Hours" --start "-6h" "${ARGS_ALL[@]}" > /dev/null
+    "${s6wrap[@]}" rrdtool graph "${OUTPUT_DIR}/12hour.png" --title "12 Hours" --start "-12h" "${ARGS_ALL[@]}" > /dev/null
+    "${s6wrap[@]}" rrdtool graph "${OUTPUT_DIR}/24hours.png" --title "1 Day" --start "-1d" "${ARGS_ALL[@]}" > /dev/null
+    "${s6wrap[@]}" rrdtool graph "${OUTPUT_DIR}/1week.png" --title "1 Week" --start "-7d" "${ARGS_ALL[@]}" > /dev/null
+    if [[ "${STARTING_UP}" == "TRUE" || $(date +%M) == "00" ]]; then
+        #shellcheck disable=SC2016
+        "${s6wrap[@]}" rrdtool graph "${OUTPUT_DIR}/30days.png" --title "1 Month" --start "-1mon" "${ARGS_ALL[@]}" > /dev/null
+        "${s6wrap[@]}" rrdtool graph "${OUTPUT_DIR}/6months.png" --title "6 Months" --start "-6mon" "${ARGS_ALL[@]}" > /dev/null
+        "${s6wrap[@]}" rrdtool graph "${OUTPUT_DIR}/1year.png" --title "1 Year" --start "-1y" "${ARGS_ALL[@]}" > /dev/null
+    fi
+
+    # error graphs
+
+    "${s6wrap[@]}" rrdtool graph "${OUTPUT_DIR}/error1hour.png" --title "1 Hour" --start "-1h" "${ARGS_ERROR[@]}" > /dev/null
+    "${s6wrap[@]}" rrdtool graph "${OUTPUT_DIR}/error6hour.png" --title "6 Hours" --start "-6h" "${ARGS_ERROR[@]}" > /dev/null
+    "${s6wrap[@]}" rrdtool graph "${OUTPUT_DIR}/error12hour.png" --title "12 Hours" --start "-12h" "${ARGS_ERROR[@]}" > /dev/null
+    "${s6wrap[@]}" rrdtool graph "${OUTPUT_DIR}/error24hours.png" --title "1 Day" --start "-1d" "${ARGS_ERROR[@]}" > /dev/null
+    "${s6wrap[@]}" rrdtool graph "${OUTPUT_DIR}/error1week.png" --title "1 Week" --start "-7d" "${ARGS_ERROR[@]}" > /dev/null
+    if [[ "${STARTING_UP}" == "TRUE" || $(date +%M) == "00" ]]; then
+        "${s6wrap[@]}" rrdtool graph "${OUTPUT_DIR}/error30days.png" --title "1 Month" --start "-1mon" "${ARGS_ERROR[@]}" > /dev/null
+        "${s6wrap[@]}" rrdtool graph "${OUTPUT_DIR}/error6months.png" --title "6 Months" --start "-6mon" "${ARGS_ERROR[@]}" > /dev/null
+        "${s6wrap[@]}" rrdtool graph "${OUTPUT_DIR}/error1year.png" --title "1 Year" --start "-1y" "${ARGS_ERROR[@]}" > /dev/null
+    fi
+
+    if [[ ${total_enabled} -ge 2 ]]; then
+        if [[ ${ENABLE_ACARS,,} =~ external ]]; then
+            # ACARS Graphs
+            "${s6wrap[@]}" rrdtool graph "${OUTPUT_DIR}/acars1hour.png" --title "1 Hour" --start "-1h" "${ARGS_ACARS[@]}" > /dev/null
+            "${s6wrap[@]}" rrdtool graph "${OUTPUT_DIR}/acars6hour.png" --title "6 Hours" --start "-6h" "${ARGS_ACARS[@]}" > /dev/null
+            "${s6wrap[@]}" rrdtool graph "${OUTPUT_DIR}/acars12hour.png" --title "12 Hours" --start "-12h" "${ARGS_ACARS[@]}" > /dev/null
+            "${s6wrap[@]}" rrdtool graph "${OUTPUT_DIR}/acars24hours.png" --title "1 Day" --start "-1d" "${ARGS_ACARS[@]}" > /dev/null
+            "${s6wrap[@]}" rrdtool graph "${OUTPUT_DIR}/acars1week.png" --title "1 Week" --start "-7d" "${ARGS_ACARS[@]}" > /dev/null
+            if [[ "${STARTING_UP}" == "TRUE" || $(date +%M) == "00" ]]; then
+                "${s6wrap[@]}" rrdtool graph "${OUTPUT_DIR}/acars30days.png" --title "1 Month" --start "-1mon" "${ARGS_ACARS[@]}" > /dev/null
+                "${s6wrap[@]}" rrdtool graph "${OUTPUT_DIR}/acars6months.png" --title "6 Months" --start "-6mon" "${ARGS_ACARS[@]}" > /dev/null
+                "${s6wrap[@]}" rrdtool graph "${OUTPUT_DIR}/acars1year.png" --title "1 Year" --start "-1y" "${ARGS_ACARS[@]}" > /dev/null
+            fi
+        fi
+
+        if [[ ${ENABLE_VDLM,,} =~ external ]]; then
+            # VDLM Graphs
+            "${s6wrap[@]}" rrdtool graph "${OUTPUT_DIR}/vdlm1hour.png" --title "1 Hour" --start "-1h" "${ARGS_VDLM[@]}" > /dev/null
+            "${s6wrap[@]}" rrdtool graph "${OUTPUT_DIR}/vdlm6hour.png" --title "6 Hours" --start "-6h" "${ARGS_VDLM[@]}" > /dev/null
+            "${s6wrap[@]}" rrdtool graph "${OUTPUT_DIR}/vdlm12hour.png" --title "12 Hours" --start "-12h" "${ARGS_VDLM[@]}" > /dev/null
+            "${s6wrap[@]}" rrdtool graph "${OUTPUT_DIR}/vdlm24hours.png" --title "1 Day" --start "-1d" "${ARGS_VDLM[@]}" > /dev/null
+            "${s6wrap[@]}" rrdtool graph "${OUTPUT_DIR}/vdlm1week.png" --title "1 Week" --start "-7d" "${ARGS_VDLM[@]}" > /dev/null
+            if [[ "${STARTING_UP}" == "TRUE" || $(date +%M) == "00" ]]; then
+                "${s6wrap[@]}" rrdtool graph "${OUTPUT_DIR}/vdlm30days.png" --title "1 Month" --start "-1mon" "${ARGS_VDLM[@]}" > /dev/null
+                "${s6wrap[@]}" rrdtool graph "${OUTPUT_DIR}/vdlm6months.png" --title "6 Months" --start "-6mon" "${ARGS_VDLM[@]}" > /dev/null
+                "${s6wrap[@]}" rrdtool graph "${OUTPUT_DIR}/vdlm1year.png" --title "1 Year" --start "-1y" "${ARGS_VDLM[@]}" > /dev/null
+            fi
+        fi
+
+        if [[ ${ENABLE_HFDL,,} =~ external ]]; then
+            # HFDL Graphs
+            "${s6wrap[@]}" rrdtool graph "${OUTPUT_DIR}/hfdl1hour.png" --title "1 Hour" --start "-1h" "${ARGS_HFDL[@]}" > /dev/null
+            "${s6wrap[@]}" rrdtool graph "${OUTPUT_DIR}/hfdl6hour.png" --title "6 Hours" --start "-6h" "${ARGS_HFDL[@]}" > /dev/null
+            "${s6wrap[@]}" rrdtool graph "${OUTPUT_DIR}/hfdl12hour.png" --title "12 Hours" --start "-12h" "${ARGS_HFDL[@]}" > /dev/null
+            "${s6wrap[@]}" rrdtool graph "${OUTPUT_DIR}/hfdl24hours.png" --title "1 Day" --start "-1d" "${ARGS_HFDL[@]}" > /dev/null
+            "${s6wrap[@]}" rrdtool graph "${OUTPUT_DIR}/hfdl1week.png" --title "1 Week" --start "-7d" "${ARGS_HFDL[@]}" > /dev/null
+            if [[ "${STARTING_UP}" == "TRUE" || $(date +%M) == "00" ]]; then
+                "${s6wrap[@]}" rrdtool graph "${OUTPUT_DIR}/hfdl30days.png" --title "1 Month" --start "-1mon" "${ARGS_HFDL[@]}" > /dev/null
+                "${s6wrap[@]}" rrdtool graph "${OUTPUT_DIR}/hfdl6months.png" --title "6 Months" --start "-6mon" "${ARGS_HFDL[@]}" > /dev/null
+                "${s6wrap[@]}" rrdtool graph "${OUTPUT_DIR}/hfdl1year.png" --title "1 Year" --start "-1y" "${ARGS_HFDL[@]}" > /dev/null
+            fi
+        fi
+
+        if [[ ${ENABLE_IMSL,,} =~ external ]]; then
+            # IMSL Graphs
+            "${s6wrap[@]}" rrdtool graph "${OUTPUT_DIR}/imsl1hour.png" --title "1 Hour" --start "-1h" "${ARGS_IMSL[@]}" > /dev/null
+            "${s6wrap[@]}" rrdtool graph "${OUTPUT_DIR}/imsl6hour.png" --title "6 Hours" --start "-6h" "${ARGS_IMSL[@]}" > /dev/null
+            "${s6wrap[@]}" rrdtool graph "${OUTPUT_DIR}/imsl12hour.png" --title "12 Hours" --start "-12h" "${ARGS_IMSL[@]}" > /dev/null
+            "${s6wrap[@]}" rrdtool graph "${OUTPUT_DIR}/imsl24hours.png" --title "1 Day" --start "-1d" "${ARGS_IMSL[@]}" > /dev/null
+            "${s6wrap[@]}" rrdtool graph "${OUTPUT_DIR}/imsl1week.png" --title "1 Week" --start "-7d" "${ARGS_IMSL[@]}" > /dev/null
+            if [[ "${STARTING_UP}" == "TRUE" || $(date +%M) == "00" ]]; then
+                "${s6wrap[@]}" rrdtool graph "${OUTPUT_DIR}/imsl30days.png" --title "1 Month" --start "-1mon" "${ARGS_IMSL[@]}" > /dev/null
+                "${s6wrap[@]}" rrdtool graph "${OUTPUT_DIR}/imsl6months.png" --title "6 Months" --start "-6mon" "${ARGS_IMSL[@]}" > /dev/null
+                "${s6wrap[@]}" rrdtool graph "${OUTPUT_DIR}/imsl1year.png" --title "1 Year" --start "-1y" "${ARGS_IMSL[@]}" > /dev/null
+            fi
+        fi
+
+        if [[ ${ENABLE_IRDM,,} =~ external ]]; then
+            # IRDM Graphs
+            "${s6wrap[@]}" rrdtool graph "${OUTPUT_DIR}/irdm1hour.png" --title "1 Hour" --start "-1h" "${ARGS_IRDM[@]}" > /dev/null
+            "${s6wrap[@]}" rrdtool graph "${OUTPUT_DIR}/irdm6hour.png" --title "6 Hours" --start "-6h" "${ARGS_IRDM[@]}" > /dev/null
+            "${s6wrap[@]}" rrdtool graph "${OUTPUT_DIR}/irdm12hour.png" --title "12 Hours" --start "-12h" "${ARGS_IRDM[@]}" > /dev/null
+            "${s6wrap[@]}" rrdtool graph "${OUTPUT_DIR}/irdm24hours.png" --title "1 Day" --start "-1d" "${ARGS_IRDM[@]}" > /dev/null
+            "${s6wrap[@]}" rrdtool graph "${OUTPUT_DIR}/irdm1week.png" --title "1 Week" --start "-7d" "${ARGS_IRDM[@]}" > /dev/null
+            if [[ "${STARTING_UP}" == "TRUE" || $(date +%M) == "00" ]]; then
+                "${s6wrap[@]}" rrdtool graph "${OUTPUT_DIR}/irdm30days.png" --title "1 Month" --start "-1mon" "${ARGS_IRDM[@]}" > /dev/null
+                "${s6wrap[@]}" rrdtool graph "${OUTPUT_DIR}/irdm6months.png" --title "6 Months" --start "-6mon" "${ARGS_IRDM[@]}" > /dev/null
+                "${s6wrap[@]}" rrdtool graph "${OUTPUT_DIR}/irdm1year.png" --title "1 Year" --start "-1y" "${ARGS_IRDM[@]}" > /dev/null
+            fi
+        fi
+    fi
+
+    acars_msgs=$(find /database -type f -name 'acars.*.json' -cmin -60 -exec cat {} \; | sed -e 's/}{/}\n{/g' | wc -l)
+    vdlm2_msgs=$(find /database -type f -name 'vdlm2.*.json' -cmin -60 -exec cat {} \; | sed -e 's/}{/}\n{/g' | wc -l)
+    hfdl_msgs=$(find /database -type f -name 'hfdl.*.json' -cmin -60 -exec cat {} \; | sed -e 's/}{/}\n{/g' | wc -l)
+    imsl_msgs=$(find /database -type f -name 'imsl.*.json' -cmin -60 -exec cat {} \; | sed -e 's/}{/}\n{/g' | wc -l)
+    irdm_msgs=$(find /database -type f -name 'irdm.*.json' -cmin -60 -exec cat {} \; | sed -e 's/}{/}\n{/g' | wc -l)
+
+    stats_file=/webapp/data/stats.json
+    {
+        echo "{"
+        echo "  \"acars\": ${acars_msgs},"
+        echo "  \"vdlm2\": ${vdlm2_msgs},"
+        echo "  \"hfdl\": ${hfdl_msgs},"
+        echo "  \"imsl\": ${imsl_msgs},"
+        echo "  \"irdm\": ${irdm_msgs},"
+        echo "  \"total\": $((acars_msgs + vdlm2_msgs + hfdl_msgs + imsl_msgs + irdm_msgs))"
+        echo "}"
+    } > ${stats_file}
+
+    if [[ $((MIN_LOG_LEVEL)) -ge 4 ]]; then
+        #shellcheck disable=SC2016
+        "${s6wrap[@]}" echo "completed graph generation"
+    fi
+    STARTING_UP="FALSE"
+    sleep 60
+done

@@ -1,15 +1,19 @@
 #!/command/with-contenv bash
 # shellcheck shell=bash
+# shellcheck disable=SC2154
+
+# shellcheck disable=SC1091
+source /scripts/common
 
 if [[ -n "${QUIET_LOGS}" ]]; then
-    echo "########################################################"
-    echo "QUIET_LOGS has been deprecated. Please use MIN_LOG_LEVEL"
+    "${s6wrap[@]}" echo "########################################################"
+    "${s6wrap[@]}" echo "QUIET_LOGS has been deprecated. Please use MIN_LOG_LEVEL"
     if [[ ${QUIET_LOGS,,} =~ false ]]; then
-        echo "Please remove QUIET_LOGS to remove this warning and set MIN_LOG_LEVEL=4 to get back the logs you are expecting"
+        "${s6wrap[@]}" echo "Please remove QUIET_LOGS to remove this warning and set MIN_LOG_LEVEL=4 to get back the logs you are expecting"
     else
-        echo "Please remove QUIET_LOGS to remove this warning and set MIN_LOG_LEVEL=3 to get back the logs you are expecting"
+        "${s6wrap[@]}" echo "Please remove QUIET_LOGS to remove this warning and set MIN_LOG_LEVEL=3 to get back the logs you are expecting"
     fi
-    echo "########################################################"
+    "${s6wrap[@]}" echo "########################################################"
 fi
 
 # Ensure /database dir is present

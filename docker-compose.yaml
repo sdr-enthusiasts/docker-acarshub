@@ -6,6 +6,11 @@ services:
   acarshub:
     image: fredclausen/acarshub
     container_name: acarshub
+    environment:
+      - TZ=UTC
+      - ENABLE_ADSB=true
+      - MIN_LOG_LEVEL=4
+      - ADSB_URL=http://192.168.31.20/tar1090/data/aircraft.json
     # volumes:
     #   - /var/run/docker.sock:/var/run/docker.sock:ro
     # ports:
