@@ -5,6 +5,7 @@ WORKDIR /tmp/acarshub
 #     apt-get update && \
 #     apt-get install -y --no-install-recommends libzmq3-dev
 
+COPY . .
 RUN set -x && \
     cargo build --release && \
     # clean up the apt-cache

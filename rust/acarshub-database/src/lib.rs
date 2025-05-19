@@ -28,8 +28,8 @@
 
 extern crate diesel;
 
-// Import tracing macros directly
-use tracing::{debug, error, info, warn};
+#[macro_use]
+extern crate tracing;
 
 use anyhow::Result;
 use diesel::prelude::*;
