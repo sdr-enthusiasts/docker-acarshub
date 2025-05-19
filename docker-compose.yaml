@@ -11,6 +11,7 @@ services:
       - ENABLE_ADSB=true
       - MIN_LOG_LEVEL=4
       - ADSB_URL=http://192.168.31.20/tar1090/data/aircraft.json
+      - ENABLE_ACARS=true
     # volumes:
     #   - /var/run/docker.sock:/var/run/docker.sock:ro
     # ports:

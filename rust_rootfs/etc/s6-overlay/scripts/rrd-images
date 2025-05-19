@@ -20,31 +20,31 @@ ARGS_IRDM=("-a" "PNG" "-w" "1000" "-h" "200"  "--vertical-label" "Messages" "--s
 
 total_enabled=0
 
-if [[ ${ENABLE_ACARS,,} =~ external ]]; then
+if [[ ${ENABLE_ACARS,,} =~ external ]] || chk_enabled "$ENABLE_ACARS"; then
     ARGS_ALL+=("DEF:messages-acars=/run/acars/acarshub.rrd:ACARS:AVERAGE" "LINE1:messages-acars#000000:ACARS")
     ARGS_ACARS+=("DEF:messages-acars=/run/acars/acarshub.rrd:ACARS:AVERAGE" "LINE1:messages-acars#000000:ACARS")
     total_enabled=$((total_enabled + 1))
 fi
 
-if [[ ${ENABLE_VDLM,,} =~ external ]]; then
+if [[ ${ENABLE_VDLM,,} =~ external ]] || chk_enabled "$ENABLE_VDLM"; then
     ARGS_ALL+=("DEF:messages-vdlm=/run/acars/acarshub.rrd:VDLM:AVERAGE" "LINE1:messages-vdlm#0000FF:VDLM")
     ARGS_VDLM+=("DEF:messages-vdlm=/run/acars/acarshub.rrd:VDLM:AVERAGE" "LINE1:messages-vdlm#0000FF:VDLM")
     total_enabled=$((total_enabled + 1))
 fi
 
-if [[ ${ENABLE_HFDL,,} =~ external ]]; then
+if [[ ${ENABLE_HFDL,,} =~ external ]] || chk_enabled "$ENABLE_HFDL"; then
     ARGS_ALL+=("DEF:messages-hfdl=/run/acars/acarshub.rrd:HFDL:AVERAGE" "LINE1:messages-hfdl#F05E16:HFDL")
     ARGS_HFDL+=("DEF:messages-hfdl=/run/acars/acarshub.rrd:HFDL:AVERAGE" "LINE1:messages-hfdl#F05E16:HFDL")
     total_enabled=$((total_enabled + 1))
 fi
 
-if [[ ${ENABLE_IMSL,,} =~ external ]]; then
+if [[ ${ENABLE_IMSL,,} =~ external ]] || chk_enabled "$ENABLE_IMSL"; then
     ARGS_ALL+=("DEF:messages-imsl=/run/acars/acarshub.rrd:IMSL:AVERAGE" "LINE1:messages-imsl#DA70D6:IMSL")
     ARGS_IMSL+=("DEF:messages-imsl=/run/acars/acarshub.rrd:IMSL:AVERAGE" "LINE1:messages-imsl#DA70D6:IMSL")
     total_enabled=$((total_enabled + 1))
 fi
 
-if [[ ${ENABLE_IRDM,,} =~ external ]]; then
+if [[ ${ENABLE_IRDM,,} =~ external ]] || chk_enabled "$ENABLE_IRDM"; then
     ARGS_ALL+=("DEF:messages-irdm=/run/acars/acarshub.rrd:IRDM:AVERAGE" "LINE1:messages-irdm#800080:IRDM")
     ARGS_IRDM+=("DEF:messages-irdm=/run/acars/acarshub.rrd:IRDM:AVERAGE" "LINE1:messages-irdm#800080:IRDM")
     total_enabled=$((total_enabled + 1))
@@ -90,7 +90,7 @@ while true; do
     fi
 
     if [[ ${total_enabled} -ge 2 ]]; then
-        if [[ ${ENABLE_ACARS,,} =~ external ]]; then
+        if [[ ${ENABLE_ACARS,,} =~ external ]] || chk_enabled "$ENABLE_ACARS"; then
             # ACARS Graphs
             "${s6wrap[@]}" rrdtool graph "${OUTPUT_DIR}/acars1hour.png" --title "1 Hour" --start "-1h" "${ARGS_ACARS[@]}" > /dev/null
             "${s6wrap[@]}" rrdtool graph "${OUTPUT_DIR}/acars6hour.png" --title "6 Hours" --start "-6h" "${ARGS_ACARS[@]}" > /dev/null
@@ -104,7 +104,7 @@ while true; do
             fi
         fi
 
-        if [[ ${ENABLE_VDLM,,} =~ external ]]; then
+        if [[ ${ENABLE_VDLM,,} =~ external ]] || chk_enabled "$ENABLE_VDLM"; then
             # VDLM Graphs
             "${s6wrap[@]}" rrdtool graph "${OUTPUT_DIR}/vdlm1hour.png" --title "1 Hour" --start "-1h" "${ARGS_VDLM[@]}" > /dev/null
             "${s6wrap[@]}" rrdtool graph "${OUTPUT_DIR}/vdlm6hour.png" --title "6 Hours" --start "-6h" "${ARGS_VDLM[@]}" > /dev/null
@@ -118,7 +118,7 @@ while true; do
             fi
         fi
 
-        if [[ ${ENABLE_HFDL,,} =~ external ]]; then
+        if [[ ${ENABLE_HFDL,,} =~ external ]] || chk_enabled "$ENABLE_HFDL"; then
             # HFDL Graphs
             "${s6wrap[@]}" rrdtool graph "${OUTPUT_DIR}/hfdl1hour.png" --title "1 Hour" --start "-1h" "${ARGS_HFDL[@]}" > /dev/null
             "${s6wrap[@]}" rrdtool graph "${OUTPUT_DIR}/hfdl6hour.png" --title "6 Hours" --start "-6h" "${ARGS_HFDL[@]}" > /dev/null
@@ -132,7 +132,7 @@ while true; do
             fi
         fi
 
-        if [[ ${ENABLE_IMSL,,} =~ external ]]; then
+        if [[ ${ENABLE_IMSL,,} =~ external ]] || chk_enabled "$ENABLE_IMSL"; then
             # IMSL Graphs
             "${s6wrap[@]}" rrdtool graph "${OUTPUT_DIR}/imsl1hour.png" --title "1 Hour" --start "-1h" "${ARGS_IMSL[@]}" > /dev/null
             "${s6wrap[@]}" rrdtool graph "${OUTPUT_DIR}/imsl6hour.png" --title "6 Hours" --start "-6h" "${ARGS_IMSL[@]}" > /dev/null
@@ -146,7 +146,7 @@ while true; do
             fi
         fi
 
-        if [[ ${ENABLE_IRDM,,} =~ external ]]; then
+        if [[ ${ENABLE_IRDM,,} =~ external ]] || chk_enabled "$ENABLE_IRDM"; then
             # IRDM Graphs
             "${s6wrap[@]}" rrdtool graph "${OUTPUT_DIR}/irdm1hour.png" --title "1 Hour" --start "-1h" "${ARGS_IRDM[@]}" > /dev/null
             "${s6wrap[@]}" rrdtool graph "${OUTPUT_DIR}/irdm6hour.png" --title "6 Hours" --start "-6h" "${ARGS_IRDM[@]}" > /dev/null

@@ -16,6 +16,26 @@ if [[ -n "${QUIET_LOGS}" ]]; then
     "${s6wrap[@]}" echo "########################################################"
 fi
 
+if [[ ${ENABLE_ACARS,,} =~ "external" ]]; then
+    "${s6wrap[@]}" echo "\"external\" for ENABLE_ACARS is deprecated. Please use \"true\" instead"
+fi
+
+if [[ ${ENABLE_VDLM,,} =~ "external" ]]; then
+    "${s6wrap[@]}" echo "\"external\" for ENABLE_VDLM is deprecated. Please use \"true\" instead"
+fi
+
+if [[ ${ENABLE_HFDL,,} =~ "external" ]]; then
+    "${s6wrap[@]}" echo "\"external\" for ENABLE_HFDL is deprecated. Please use \"true\" instead"
+fi
+
+if [[ ${ENABLE_IMSL,,} =~ "external" ]]; then
+    "${s6wrap[@]}" echo "\"external\" for ENABLE_IMSL is deprecated. Please use \"true\" instead"
+fi
+
+if [[ ${ENABLE_IRDM,,} =~ "external" ]]; then
+    "${s6wrap[@]}" echo "\"external\" for ENABLE_IRDM is deprecated. Please use \"true\" instead"
+fi
+
 # Ensure /database dir is present
 
 mkdir -p /database/images/static/images
