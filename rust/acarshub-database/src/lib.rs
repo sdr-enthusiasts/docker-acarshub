@@ -36,7 +36,7 @@ use diesel::prelude::*;
 use diesel_migrations::{EmbeddedMigrations, MigrationHarness, embed_migrations};
 use std::env;
 
-pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("../../migrations");
+pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations");
 
 pub struct AcarsHubDatabase {
     connection: SqliteConnection,
