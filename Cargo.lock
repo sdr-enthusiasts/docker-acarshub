@@ -7,6 +7,7 @@ name = "acarshub"
 version = "5.0.0"
 dependencies = [
  "acarshub-database",
+ "acarshub-message-processing",
  "acarshub-webserver",
  "parking_lot",
  "tokio",

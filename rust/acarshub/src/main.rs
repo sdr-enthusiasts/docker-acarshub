@@ -39,6 +39,7 @@ use tracing_subscriber::{
 };
 
 use acarshub_database::AcarsHubDatabase;
+use acarshub_message_processing::{AcarsHubMessageProcessing, EnabledFeatures};
 use acarshub_webserver::AcarsHubWebServer;
 
 #[tokio::main]
@@ -63,6 +64,11 @@ async fn main() {
             std::process::exit(69);
         }
     };
+
+    // create the message processing object
+    let mut message_processing = AcarsHubMessageProcessing::new(vec![EnabledFeatures::Acars]);
+    // run the message processing
+    message_processing.run_listener();
 
     let mut webserver = AcarsHubWebServer::new(database);
 
