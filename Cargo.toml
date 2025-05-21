@@ -12,6 +12,7 @@ version = "5.0.0"
 edition = "2024"
 
 [workspace.dependencies]
+acars_vdlm2_parser = { git = "https://github.com/jcdeimos/acars_vdlm2_parser", version = "0.4.0" }
 anyhow = "1.0.98"
 axum = "0.8.4"
 acarshub-database = { path = "./rust/acarshub-database" }

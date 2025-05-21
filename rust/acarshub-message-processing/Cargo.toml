@@ -4,6 +4,7 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
+acars_vdlm2_parser.workspace = true
 acarshub-database = { path = "../acarshub-database" }
 anyhow.workspace = true
 parking_lot.workspace = true

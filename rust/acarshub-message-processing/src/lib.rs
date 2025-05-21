@@ -25,11 +25,13 @@
     clippy::expect_used
 )]
 
+use acars_vdlm2_parser::DecodeMessage;
 use core::fmt;
 // #![warn(missing_docs)]
 #[macro_use]
 extern crate tracing;
 
+#[derive(Debug, Clone, Copy)]
 pub enum Protocols {
     Acars,
     Vdlm,
@@ -46,7 +48,7 @@ impl fmt::Display for Protocols {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Acars => write!(f, "ACARS"),
-            Self::Vdlm => write!(f, "VDLM"),
+            Self::Vdlm => write!(f, "VDL-M2"),
             Self::Hfdl => write!(f, "HFDL"),
             Self::Imsl => write!(f, "IMSL"),
             Self::Irdm => write!(f, "IRDM"),
@@ -66,41 +68,50 @@ impl AcarsHubMessageProcessing {
         // for each enabled feature, spawn a task
 
         for feature in &self.enabled_features {
-            match feature {
-                Protocols::Acars => {
-                    // spawn acars listener
-                    tokio::spawn(async {
-                        info!("Starting ACARS listener");
+            start_udp_listener(*feature);
+        }
+    }
+}
 
-                        // spawn a UDP Tokio listener
+fn start_udp_listener(feature: Protocols) {
+    tokio::spawn(async move {
+        // spawn a UDP Tokio listener
 
-                        let socket = match tokio::net::UdpSocket::bind("0.0.0.0:5550").await {
-                            Ok(sock) => sock,
-                            Err(e) => {
-                                error!("Failed to bind UDP ACARS socket: {}", e);
-                                return;
-                            }
-                        };
+        let port: u32 = match feature {
+            Protocols::Acars => 5550,
+            Protocols::Vdlm => 5555,
+            Protocols::Hfdl => 5556,
+            Protocols::Imsl => 5557,
+            Protocols::Irdm => 5558,
+        };
 
-                        let mut buf = [0; 8192];
-                        loop {
-                            match socket.recv_from(&mut buf).await {
-                                Ok((len, addr)) => {
-                                    let message = String::from_utf8_lossy(&buf[..len]);
-                                    info!("Received ACARS message from {}: {}", addr, message);
-                                }
-                                Err(e) => {
-                                    error!("Failed to receive data: {}", e);
-                                    break;
-                                }
-                            }
-                        }
-                    });
+        info!("Starting {feature} listener on port {port}");
+
+        let socket = match tokio::net::UdpSocket::bind(format!("0.0.0.0:{port}")).await {
+            Ok(sock) => sock,
+            Err(e) => {
+                error!("Failed to bind UDP {} socket: {}", feature, e);
+                return;
+            }
+        };
+
+        let mut buf = [0; 8192];
+        loop {
+            match socket.recv_from(&mut buf).await {
+                Ok((len, addr)) => {
+                    let message = String::from_utf8_lossy(&buf[..len]); // FIXME: I need to patch the parser to accept bytes and display
+                    // serialize the message to JSON
+                    let json_message = message.decode_message();
+                    debug!(
+                        "Received {} message from {}: {:?}",
+                        feature, addr, json_message
+                    );
                 }
-                _ => {
-                    error!("Feature not implemented: {}", feature);
+                Err(e) => {
+                    error!("Failed to receive data: {}", e);
+                    break;
                 }
             }
         }
-    }
+    });
 }
