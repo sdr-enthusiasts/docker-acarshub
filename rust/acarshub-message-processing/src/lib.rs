@@ -25,8 +25,9 @@
     clippy::expect_used
 )]
 
-use acars_vdlm2_parser::DecodeMessage;
+use acars_vdlm2_parser::{AcarsVdlm2Message, DecodeMessage};
 use core::fmt;
+use tokio::sync::mpsc::UnboundedSender;
 // #![warn(missing_docs)]
 #[macro_use]
 extern crate tracing;
@@ -76,16 +77,16 @@ impl AcarsHubMessageProcessing {
         }
     }
 
-    pub fn run_listener(&mut self) {
+    pub fn run_listener(&mut self, sender: &UnboundedSender<AcarsVdlm2Message>) {
         // for each enabled feature, spawn a task
 
         for feature in &self.enabled_features {
-            start_udp_listener(*feature);
+            start_udp_listener(*feature, sender.clone());
         }
     }
 }
 
-fn start_udp_listener(feature: Protocols) {
+fn start_udp_listener(feature: Protocols, sender: UnboundedSender<AcarsVdlm2Message>) {
     tokio::spawn(async move {
         // spawn a UDP Tokio listener
 
@@ -116,6 +117,10 @@ fn start_udp_listener(feature: Protocols) {
                     };
 
                     debug!("Received {feature} message from {addr}: {json_message:?}");
+                    // send the message to the database listener
+                    if let Err(e) = sender.send(json_message) {
+                        error!("Failed to send message to database listener: {e}");
+                    }
                 }
                 Err(e) => {
                     error!("Failed to receive data: {e}");

@@ -14,48 +14,35 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-#![deny(
-    clippy::pedantic,
-    //clippy::cargo,
-    clippy::nursery,
-    clippy::style,
-    clippy::correctness,
-    clippy::all,
-    clippy::unwrap_used,
-    clippy::expect_used
-)]
-// #![warn(missing_docs)]
-
-#[macro_use]
-extern crate tracing;
-
 use std::sync::Arc;
 
-use acarshub_database::AcarsHubDatabase;
-use anyhow::Result;
-use axum::{Router, routing::get};
+use acars_vdlm2_parser::AcarsVdlm2Message;
 use parking_lot::FairMutex;
-use tokio::net::TcpListener;
+use tokio::sync::mpsc::UnboundedReceiver;
 
-pub struct AcarsHubWebServer {
+use crate::AcarsHubDatabase;
+pub struct DatabaseListener {
     database: Arc<FairMutex<AcarsHubDatabase>>,
 }
 
-impl AcarsHubWebServer {
-    /// Create a new instance of the web server
+impl DatabaseListener {
+    /// Creates a new instance of `DatabaseListener`.
+    /// # Arguments
+    /// * `database` - A reference to the `AcarsHubDatabase` instance.
+    /// * `sender` - An `UnboundedSender` for sending messages.
     pub const fn new(database: Arc<FairMutex<AcarsHubDatabase>>) -> Self {
         Self { database }
     }
 
-    pub async fn run(&mut self) -> Result<()> {
-        info!("Starting web server...");
-        // build our application with a single route
-        let app = Router::new().route("/", get(|| async { "Hello, World!" }));
-
-        // run our app with hyper, listening globally on port 3000
-        let listener = TcpListener::bind("0.0.0.0:3000").await?;
-        axum::serve(listener, app).await?;
-
-        Ok(())
+    /// Starts the database listener.
+    pub fn start(&self, mut receiver: UnboundedReceiver<AcarsVdlm2Message>) {
+        let database = self.database.clone();
+        tokio::spawn(async move {
+            while let Some(message) = receiver.recv().await {
+                // Process the message and store it in the database
+                //let mut db = database.lock();
+                info!("Received message: {:?}", message);
+            }
+        });
     }
 }

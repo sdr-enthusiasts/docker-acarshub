@@ -31,6 +31,9 @@ extern crate diesel;
 #[macro_use]
 extern crate tracing;
 
+pub mod db_listener;
+
+use acars_vdlm2_parser::AcarsVdlm2Message;
 use anyhow::Result;
 use diesel::prelude::*;
 use diesel_migrations::{EmbeddedMigrations, MigrationHarness, embed_migrations};
@@ -49,10 +52,8 @@ impl AcarsHubDatabase {
     ///
     /// # Errors
     /// If the connection to the database fails, an error is returned.
-    pub fn new() -> Result<Self> {
-        let mut database_url = env::var("DATABASE_URL")
-            .unwrap_or_else(|_| "/opt/acarshub-data/messages.sqlite".to_string());
-
+    pub fn new(database_url: &str) -> Result<Self> {
+        let mut database_url = database_url.to_string();
         // we need to see if we're on an old version of ACARS Hub. If /run/acarshub/messages.db exists, we need to use that and
         // inform the user that they need to migrate their database
 

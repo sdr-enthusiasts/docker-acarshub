@@ -31,6 +31,8 @@ extern crate tracing;
 use parking_lot::FairMutex;
 use tracing::Level;
 // use tracing::{debug, error, info, warn};
+use std::sync::Arc;
+use tokio::sync::mpsc::unbounded_channel;
 use tracing_subscriber::{
     EnvFilter,
     fmt::{self, layer},
@@ -38,7 +40,7 @@ use tracing_subscriber::{
     util::SubscriberInitExt,
 };
 
-use acarshub_database::AcarsHubDatabase;
+use acarshub_database::{AcarsHubDatabase, db_listener::DatabaseListener};
 use acarshub_message_processing::{AcarsHubMessageProcessing, Protocols};
 use acarshub_settings::{Input, clap::Parser};
 use acarshub_webserver::AcarsHubWebServer;
@@ -65,13 +67,20 @@ async fn main() {
         input.log_level().as_str()
     );
 
-    let mut database = match AcarsHubDatabase::new() {
-        Ok(db) => FairMutex::new(db),
+    let mut database = match AcarsHubDatabase::new(&input.database) {
+        Ok(db) => Arc::new(FairMutex::new(db)),
         Err(_e) => {
             error!("Error creating db. Exiting");
             std::process::exit(69);
         }
     };
+
+    // create the database listener
+    let db_listener = DatabaseListener::new(database.clone());
+    // create the channel for the database listener
+    let (sender, receiver) = unbounded_channel();
+    // start the database listener
+    db_listener.start(receiver);
 
     let protocols = input.enabled_to_vec();
 
@@ -83,7 +92,7 @@ async fn main() {
     // create the message processing object
     let mut message_processing = AcarsHubMessageProcessing::new(protocols);
     // run the message processing
-    message_processing.run_listener();
+    message_processing.run_listener(&sender);
 
     let mut webserver = AcarsHubWebServer::new(database);
 

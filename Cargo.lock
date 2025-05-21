@@ -33,10 +33,13 @@ dependencies = [
 name = "acarshub-database"
 version = "2.0.0"
 dependencies = [
+ "acars_vdlm2_parser",
  "anyhow",
  "diesel",
  "diesel_migrations",
  "libsqlite3-sys",
+ "parking_lot",
+ "tokio",
  "tracing",
 ]
 
