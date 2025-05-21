@@ -1,4 +1,4 @@
-FROM rust:1.86.0 AS builder
+FROM rust:1.87.0 AS builder
 WORKDIR /tmp/acarshub
 # hadolint ignore=DL3008,DL3003,SC1091
 # RUN set -x && \
@@ -17,7 +17,7 @@ RUN set -x && \
     cp /tmp/acarshub/target/release/acarshub . && \
     cargo clean
 
-FROM node:23.11.0-slim AS acarshub-typescript-builder
+FROM node:24.0.2-slim AS acarshub-typescript-builder
 # pushd/popd
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 

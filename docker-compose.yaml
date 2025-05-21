@@ -4,7 +4,9 @@
 
 services:
   acarshub:
-    image: fredclausen/acarshub
+    build:
+      context: .
+      dockerfile: Dockerfile.develop
     container_name: acarshub
     environment:
       - TZ=UTC
@@ -14,10 +16,11 @@ services:
       - ENABLE_ACARS=true
       - ENABLE_VDLM=true
       - ENABLE_HFDL=true
-    # volumes:
-    #   - /var/run/docker.sock:/var/run/docker.sock:ro
-    # ports:
-    #   - 7007:7007
+    volumes:
+      - ./compose-data:/opt/acarshub-data
+    tmpfs:
+      - /run:exec,size=64M
+      - /var/log
 
   acars_router:
     image: ghcr.io/sdr-enthusiasts/acars_router:latest-build-530
@@ -29,7 +32,7 @@ services:
       - AR_STATS_VERBOSE=true
       - AR_STATS_EVERY=60
       # - AR_VERBOSITY=debug
-      - TZ=${FEEDER_TZ}
+      - TZ=UTC
       - AR_ENABLE_DEDUPE=true
       # 5.161.21.38 is feed.airframes.io Using this to stop infinity DNS lookups
       - AR_RECV_TCP_ACARS=192.168.31.20:15550
