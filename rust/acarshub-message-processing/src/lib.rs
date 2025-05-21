@@ -30,7 +30,7 @@ use core::fmt;
 #[macro_use]
 extern crate tracing;
 
-pub enum EnabledFeatures {
+pub enum Protocols {
     Acars,
     Vdlm,
     Hfdl,
@@ -39,15 +39,15 @@ pub enum EnabledFeatures {
 }
 
 pub struct AcarsHubMessageProcessing {
-    pub enabled_features: Vec<EnabledFeatures>,
+    pub enabled_features: Vec<Protocols>,
 }
 
-impl fmt::Display for EnabledFeatures {
+impl fmt::Display for Protocols {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Acars => write!(f, "ACARS"),
             Self::Vdlm => write!(f, "VDLM"),
-            Self::Hfdl => write!(f, "HF/DFL"),
+            Self::Hfdl => write!(f, "HFDL"),
             Self::Imsl => write!(f, "IMSL"),
             Self::Irdm => write!(f, "IRDM"),
         }
@@ -56,7 +56,7 @@ impl fmt::Display for EnabledFeatures {
 
 impl AcarsHubMessageProcessing {
     #[must_use]
-    pub const fn new(features: Vec<EnabledFeatures>) -> Self {
+    pub const fn new(features: Vec<Protocols>) -> Self {
         Self {
             enabled_features: features,
         }
@@ -67,7 +67,7 @@ impl AcarsHubMessageProcessing {
 
         for feature in &self.enabled_features {
             match feature {
-                EnabledFeatures::Acars => {
+                Protocols::Acars => {
                     // spawn acars listener
                     tokio::spawn(async {
                         info!("Starting ACARS listener");
