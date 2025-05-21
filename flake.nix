@@ -20,7 +20,7 @@
           # new! 👇
           nativeBuildInputs = with pkgs; [ rustToolchain ];
           # also new! 👇
-          buildInputs = with pkgs; [ diesel-cli ];
+          buildInputs = with pkgs; [ diesel-cli diesel-cli-ext ];
           RUST_SRC_PATH = "${pkgs.rust.packages.stable.rustPlatform.rustLibSrc}";
           LD_LIBRARY_PATH = libPath;
         in

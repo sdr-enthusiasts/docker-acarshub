@@ -26,18 +26,15 @@
 )]
 // #![warn(missing_docs)]
 
-extern crate diesel;
-
 #[macro_use]
 extern crate tracing;
 
 pub mod db_listener;
-
-use acars_vdlm2_parser::AcarsVdlm2Message;
+mod models; // diesel_ext --model > rust/acarshub-database/src/models.rs
+mod schema;
 use anyhow::Result;
 use diesel::prelude::*;
 use diesel_migrations::{EmbeddedMigrations, MigrationHarness, embed_migrations};
-use std::env;
 
 pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations");
 

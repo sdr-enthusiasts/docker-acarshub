@@ -18,4 +18,4 @@ Version 5 is a complete rewrite of ACARS Hub. This went through many fits and st
 
 ### New Features
 
-- Database is going to be migrated, and more data is going to be stored
+- Database is going to be migrated, and more data is going to be stored.

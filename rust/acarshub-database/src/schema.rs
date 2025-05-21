@@ -36,7 +36,8 @@ diesel::table! {
 diesel::table! {
     level (id) {
         id -> Integer,
-        level -> Nullable<Integer>,
+        #[sql_name = "level"]
+        level_data -> Nullable<Integer>,
         count -> Nullable<Integer>,
     }
 }
@@ -88,7 +89,8 @@ diesel::table! {
         icao -> Nullable<Binary>,
         freq -> Nullable<Binary>,
         label -> Nullable<Binary>,
-        messages_fts -> Nullable<Binary>,
+        #[sql_name = "messages_fts"]
+        messages_fts_data -> Nullable<Binary>,
         rank -> Nullable<Binary>,
     }
 }
