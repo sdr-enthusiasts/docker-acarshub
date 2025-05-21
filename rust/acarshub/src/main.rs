@@ -29,8 +29,6 @@
 extern crate tracing;
 
 use parking_lot::FairMutex;
-use tracing::Level;
-// use tracing::{debug, error, info, warn};
 use std::sync::Arc;
 use tokio::sync::mpsc::unbounded_channel;
 use tracing_subscriber::{
@@ -41,7 +39,7 @@ use tracing_subscriber::{
 };
 
 use acarshub_database::{AcarsHubDatabase, db_listener::DatabaseListener};
-use acarshub_message_processing::{AcarsHubMessageProcessing, Protocols};
+use acarshub_message_processing::AcarsHubMessageProcessing;
 use acarshub_settings::{Input, clap::Parser};
 use acarshub_webserver::AcarsHubWebServer;
 
@@ -67,7 +65,7 @@ async fn main() {
         input.log_level().as_str()
     );
 
-    let mut database = match AcarsHubDatabase::new(&input.database) {
+    let database = match AcarsHubDatabase::new(&input.database) {
         Ok(db) => Arc::new(FairMutex::new(db)),
         Err(_e) => {
             error!("Error creating db. Exiting");

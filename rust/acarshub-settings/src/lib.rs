@@ -25,8 +25,6 @@
     clippy::expect_used
 )]
 // #![warn(missing_docs)]
-#[macro_use]
-extern crate tracing;
 
 pub extern crate clap as clap;
 use tracing::Level;

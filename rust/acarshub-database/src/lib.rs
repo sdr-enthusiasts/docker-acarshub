@@ -28,6 +28,7 @@
 
 #[macro_use]
 extern crate tracing;
+extern crate conv;
 
 pub mod db_listener;
 mod models; // diesel_ext --model > rust/acarshub-database/src/models.rs

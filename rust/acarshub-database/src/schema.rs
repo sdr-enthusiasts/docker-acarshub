@@ -36,7 +36,6 @@ diesel::table! {
 diesel::table! {
     level (id) {
         id -> Integer,
-        #[sql_name = "level"]
         level_data -> Nullable<Integer>,
         count -> Nullable<Integer>,
     }

@@ -6,6 +6,7 @@ edition.workspace = true
 [dependencies]
 acars_vdlm2_parser.workspace = true
 anyhow.workspace = true
+conv.workspace = true
 diesel.workspace = true
 diesel_migrations.workspace = true
 libsqlite3-sys.workspace = true

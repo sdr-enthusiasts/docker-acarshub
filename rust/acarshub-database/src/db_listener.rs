@@ -16,15 +16,13 @@
 
 use std::sync::Arc;
 
-use acars_vdlm2_parser::AcarsVdlm2Message;
+use acars_vdlm2_parser::{AcarsVdlm2Message, acars::AcarsMessage};
+use conv::ConvUtil;
 use diesel::prelude::*;
 use parking_lot::FairMutex;
 use tokio::sync::mpsc::UnboundedReceiver;
 
-use crate::{
-    AcarsHubDatabase,
-    models::{Messages, NewMessage},
-};
+use crate::{AcarsHubDatabase, models::NewMessage};
 pub struct DatabaseListener {
     database: Arc<FairMutex<AcarsHubDatabase>>,
 }
@@ -44,7 +42,7 @@ impl DatabaseListener {
             while let Some(message) = receiver.recv().await {
                 // Process the message and store it in the database
 
-                let message_processed = message.into_message();
+                let message_processed = message.to_message();
                 if let Some(ref message) = message_processed {
                     let mut db = database.lock();
                     if let Err(e) = diesel::insert_into(crate::schema::messages::table)
@@ -60,60 +58,75 @@ impl DatabaseListener {
 }
 
 pub trait IntoMessage {
-    fn into_message(self) -> Option<NewMessage>;
+    fn to_message(&self) -> Option<NewMessage>;
+    fn acars_message(&self, msg: AcarsMessage) -> NewMessage;
 }
 
 impl IntoMessage for AcarsVdlm2Message {
-    fn into_message(self) -> Option<NewMessage> {
+    fn to_message(&self) -> Option<NewMessage> {
         match self {
-            AcarsVdlm2Message::AcarsMessage(msg) => Some(NewMessage {
-                message_type: "ACARS".to_string(),
-                msg_time: msg.timestamp.unwrap_or_default() as i32,
-                station_id: msg.station_id.unwrap_or_default(),
-                ack: match msg.ack {
-                    Some(ack) => match ack {
-                        acars_vdlm2_parser::acars::AckType::String(ack) => ack.to_string(),
-                        acars_vdlm2_parser::acars::AckType::Bool(ack) => ack.to_string(),
-                    },
-                    None => "".to_string(),
-                },
-                toaddr: msg.toaddr.unwrap_or_default().to_string(),
-                fromaddr: "".to_string(),
-                depa: "".to_string(),
-                dsta: "".to_string(),
-                eta: "".to_string(),
-                gtout: "".to_string(),
-                gtin: "".to_string(),
-                wloff: "".to_string(),
-                wlin: "".to_string(),
-                lat: "".to_string(),
-                lon: "".to_string(),
-                alt: "".to_string(),
-                msg_text: msg.text.unwrap_or_default(),
-                tail: msg.tail.unwrap_or_default(),
-                flight: msg.flight.unwrap_or_default(),
-                icao: msg.icao.unwrap_or_default().to_string(), // FIXME: I think this needs processing to match the formatting we already have
-                freq: msg.freq.to_string(), // FIXME: I think this needs processing to match the formatting we already have
-                mode: msg.mode.unwrap_or_default(),
-                label: msg.label.unwrap_or_default(),
-                block_id: msg.block_id.unwrap_or_default(),
-                msgno: msg.msgno.unwrap_or_default(),
-                is_onground: msg.is_onground.unwrap_or_default().to_string(),
-                is_response: msg.is_response.unwrap_or_default().to_string(),
-                error: msg.error.unwrap_or_default().to_string(),
-                libacars: "".to_string(),
-                level: match msg.level {
-                    Some(level) => match level {
-                        acars_vdlm2_parser::acars::LevelType::I32(level) => level.to_string(),
-                        acars_vdlm2_parser::acars::LevelType::Float64(level) => level.to_string(),
-                    },
-                    None => "".to_string(),
-                },
-            }),
-            _ => {
-                warn!("Received cannot insert {:?} into database", self);
+            Self::AcarsMessage(msg) => Some(self.acars_message(msg.clone())),
+            Self::Vdlm2Message(_msg) => {
+                warn!("Vdlm2Message not yet implemented");
                 None
             }
+            Self::HfdlMessage(_msg) => {
+                warn!("HfdlMessage not yet implemented");
+                None
+            }
+            Self::IrdmMessage(_msg) => {
+                warn!("IrdmMessage not yet implemented");
+                None
+            }
+            Self::ImslMessage(_msg) => {
+                warn!("ImslMessage not yet implemented");
+                None
+            }
+        }
+    }
+
+    fn acars_message(&self, msg: AcarsMessage) -> NewMessage {
+        NewMessage {
+            message_type: "ACARS".to_string(),
+            msg_time: msg
+                .timestamp
+                .unwrap_or_default()
+                .approx_as::<i32>()
+                .unwrap_or_default(),
+            station_id: msg.station_id.unwrap_or_default(),
+            ack: msg.ack.map_or_else(String::new, |ack| match ack {
+                acars_vdlm2_parser::acars::AckType::String(ack) => ack,
+                acars_vdlm2_parser::acars::AckType::Bool(ack) => ack.to_string(),
+            }),
+            toaddr: msg.toaddr.unwrap_or_default().to_string(),
+            fromaddr: String::new(),
+            depa: String::new(),
+            dsta: String::new(),
+            eta: String::new(),
+            gtout: String::new(),
+            gtin: String::new(),
+            wloff: String::new(),
+            wlin: String::new(),
+            lat: String::new(),
+            lon: String::new(),
+            alt: String::new(),
+            msg_text: msg.text.unwrap_or_default(),
+            tail: msg.tail.unwrap_or_default(),
+            flight: msg.flight.unwrap_or_default(),
+            icao: msg.icao.unwrap_or_default().to_string(), // FIXME: I think this needs processing to match the formatting we already have
+            freq: msg.freq.to_string(), // FIXME: I think this needs processing to match the formatting we already have
+            mode: msg.mode.unwrap_or_default(),
+            label: msg.label.unwrap_or_default(),
+            block_id: msg.block_id.unwrap_or_default(),
+            msgno: msg.msgno.unwrap_or_default(),
+            is_onground: msg.is_onground.unwrap_or_default().to_string(),
+            is_response: msg.is_response.unwrap_or_default().to_string(),
+            error: msg.error.unwrap_or_default().to_string(),
+            libacars: String::new(),
+            level: msg.level.map_or_else(String::new, |level| match level {
+                acars_vdlm2_parser::acars::LevelType::I32(level) => level.to_string(),
+                acars_vdlm2_parser::acars::LevelType::Float64(level) => level.to_string(),
+            }),
         }
     }
 }

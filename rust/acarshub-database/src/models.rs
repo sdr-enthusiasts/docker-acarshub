@@ -44,7 +44,9 @@ pub struct Count {
 #[diesel(check_for_backend(diesel::sqlite::SqLite))]
 pub struct Freq {
     pub it: i32,
+    #[allow(clippy::struct_field_names)]
     pub freq: Option<String>,
+    #[allow(clippy::struct_field_names)]
     pub freq_type: Option<String>,
     pub count: Option<i32>,
 }
@@ -62,6 +64,7 @@ pub struct IgnoreAlertTerm {
 #[diesel(check_for_backend(diesel::sqlite::Sqlite))]
 pub struct Level {
     pub id: i32,
+    #[allow(clippy::struct_field_names)]
     pub level: Option<i32>,
     pub count: Option<i32>,
 }
