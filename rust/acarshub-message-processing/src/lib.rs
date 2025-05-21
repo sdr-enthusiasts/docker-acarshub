@@ -40,10 +40,6 @@ pub enum Protocols {
     Irdm,
 }
 
-pub struct AcarsHubMessageProcessing {
-    pub enabled_features: Vec<Protocols>,
-}
-
 impl fmt::Display for Protocols {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -54,6 +50,22 @@ impl fmt::Display for Protocols {
             Self::Irdm => write!(f, "IRDM"),
         }
     }
+}
+
+impl Protocols {
+    const fn to_tcp_udp_port(self) -> u32 {
+        match self {
+            Self::Acars => 5550,
+            Self::Vdlm => 5555,
+            Self::Hfdl => 5556,
+            Self::Imsl => 5557,
+            Self::Irdm => 5558,
+        }
+    }
+}
+
+pub struct AcarsHubMessageProcessing {
+    pub enabled_features: Vec<Protocols>,
 }
 
 impl AcarsHubMessageProcessing {
@@ -77,20 +89,14 @@ fn start_udp_listener(feature: Protocols) {
     tokio::spawn(async move {
         // spawn a UDP Tokio listener
 
-        let port: u32 = match feature {
-            Protocols::Acars => 5550,
-            Protocols::Vdlm => 5555,
-            Protocols::Hfdl => 5556,
-            Protocols::Imsl => 5557,
-            Protocols::Irdm => 5558,
-        };
+        let port: u32 = feature.to_tcp_udp_port();
 
         info!("Starting {feature} listener on port {port}");
 
         let socket = match tokio::net::UdpSocket::bind(format!("0.0.0.0:{port}")).await {
             Ok(sock) => sock,
             Err(e) => {
-                error!("Failed to bind UDP {} socket: {}", feature, e);
+                error!("Failed to bind UDP {feature} socket: {e}");
                 return;
             }
         };
@@ -101,14 +107,18 @@ fn start_udp_listener(feature: Protocols) {
                 Ok((len, addr)) => {
                     let message = String::from_utf8_lossy(&buf[..len]); // FIXME: I need to patch the parser to accept bytes and display
                     // serialize the message to JSON
-                    let json_message = message.decode_message();
-                    debug!(
-                        "Received {} message from {}: {:?}",
-                        feature, addr, json_message
-                    );
+                    let json_message = match message.decode_message() {
+                        Ok(json) => json,
+                        Err(e) => {
+                            error!("Failed to decode message: {e}");
+                            continue;
+                        }
+                    };
+
+                    debug!("Received {feature} message from {addr}: {json_message:?}");
                 }
                 Err(e) => {
-                    error!("Failed to receive data: {}", e);
+                    error!("Failed to receive data: {e}");
                     break;
                 }
             }
