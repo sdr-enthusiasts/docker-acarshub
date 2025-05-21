@@ -5,6 +5,7 @@ edition.workspace = true
 
 [dependencies]
 acarshub-database = { path = "../acarshub-database" }
+acarshub-settings = { path = "../acarshub-settings" }
 acarshub-webserver = { path = "../acarshub-webserver" }
 acarshub-message-processing = { path = "../acarshub-message-processing" }
 parking_lot.workspace = true

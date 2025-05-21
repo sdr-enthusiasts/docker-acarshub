@@ -40,13 +40,16 @@ use tracing_subscriber::{
 
 use acarshub_database::AcarsHubDatabase;
 use acarshub_message_processing::{AcarsHubMessageProcessing, Protocols};
+use acarshub_settings::{Input, clap::Parser};
 use acarshub_webserver::AcarsHubWebServer;
 
 #[tokio::main]
 async fn main() {
+    let input = Input::parse();
+
     // init logging
     let env_filter = EnvFilter::builder()
-        .with_default_directive(Level::INFO.into())
+        .with_default_directive(input.log_level().into())
         .from_env_lossy();
 
     let subscriber = tracing_subscriber::registry().with(env_filter);
@@ -57,6 +60,11 @@ async fn main() {
 
     subscriber.with(std_out_layer).init();
 
+    info!(
+        "Starting ACARS Hub with log level {}",
+        input.log_level().as_str()
+    );
+
     let mut database = match AcarsHubDatabase::new() {
         Ok(db) => FairMutex::new(db),
         Err(_e) => {
@@ -65,8 +73,15 @@ async fn main() {
         }
     };
 
+    let protocols = input.enabled_to_vec();
+
+    if protocols.is_empty() {
+        error!("No protocols enabled. Exiting");
+        std::process::exit(420);
+    }
+
     // create the message processing object
-    let mut message_processing = AcarsHubMessageProcessing::new(vec![Protocols::Acars]);
+    let mut message_processing = AcarsHubMessageProcessing::new(protocols);
     // run the message processing
     message_processing.run_listener();
 

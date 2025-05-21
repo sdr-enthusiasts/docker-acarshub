@@ -58,7 +58,9 @@ impl AcarsHubDatabase {
 
         if std::path::Path::new("/run/acarshub/messages.db").exists() {
             database_url = "/run/acarshub/messages.db".to_string();
-            warn!("Using old database at /run/acarshub/messages.db. Please migrate your database.");
+            warn!(
+                "Using old database at /run/acarshub/messages.db. Please migrate your database to /opt/acarshub-data/messages.sqlite"
+            );
         }
 
         info!("Connecting to database at {database_url}");

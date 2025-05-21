@@ -12,6 +12,8 @@ services:
       - MIN_LOG_LEVEL=4
       - ADSB_URL=http://192.168.31.20/tar1090/data/aircraft.json
       - ENABLE_ACARS=true
+      - ENABLE_VDLM=true
+      - ENABLE_HFDL=true
     # volumes:
     #   - /var/run/docker.sock:/var/run/docker.sock:ro
     # ports:
@@ -26,14 +28,16 @@ services:
       - AR_ADD_PROXY_ID=true
       - AR_STATS_VERBOSE=true
       - AR_STATS_EVERY=60
-      - AR_VERBOSITY=debug
+      # - AR_VERBOSITY=debug
       - TZ=${FEEDER_TZ}
       - AR_ENABLE_DEDUPE=true
       # 5.161.21.38 is feed.airframes.io Using this to stop infinity DNS lookups
       - AR_RECV_TCP_ACARS=192.168.31.20:15550
+      - AR_RECV_TCP_VDLM2=192.168.31.20:15555
+      - AR_RECV_TCP_HFDL=192.168.31.20:15556
       - AR_SEND_UDP_ACARS=acarshub:5550
-      - AR_SEND_UDP_VDLM2=localhost:5555
-      - AR_SEND_UDP_HFDL=localhost:5556
+      - AR_SEND_UDP_VDLM2=acarshub:5555
+      - AR_SEND_UDP_HFDL=acarshub:5556
       # - AR_SEND_TCP_ACARS=82.180.133.237:5550
       # - AR_SEND_TCP_VDLM2=82.180.133.237:5555;feed.airframes.io:5553
       # - AR_SEND_TCP_HFDL=82.180.133.237:5556;feed.airframes.io:5556

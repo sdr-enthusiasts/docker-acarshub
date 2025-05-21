@@ -46,8 +46,8 @@ impl fmt::Display for Protocols {
             Self::Acars => write!(f, "ACARS"),
             Self::Vdlm => write!(f, "VDL-M2"),
             Self::Hfdl => write!(f, "HFDL"),
-            Self::Imsl => write!(f, "IMSL"),
-            Self::Irdm => write!(f, "IRDM"),
+            Self::Imsl => write!(f, "Inmarsat L-Band"),
+            Self::Irdm => write!(f, "Iridium"),
         }
     }
 }
@@ -91,7 +91,7 @@ fn start_udp_listener(feature: Protocols) {
 
         let port: u32 = feature.to_tcp_udp_port();
 
-        info!("Starting {feature} listener on port {port}");
+        info!("Starting {feature} UDP listener on port {port}");
 
         let socket = match tokio::net::UdpSocket::bind(format!("0.0.0.0:{port}")).await {
             Ok(sock) => sock,
