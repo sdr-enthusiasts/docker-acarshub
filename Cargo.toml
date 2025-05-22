@@ -1,23 +1,36 @@
 [workspace]
 members = [
-    "./rust/acarshub",
-    "./rust/acarshub_common",
-    "./rust/acarshub_database",
-    "./rust/acarshub_message_processing",
-    "./rust/acarshub_settings",
-    "./rust/acarshub_webserver",
+    "rust/bin/acarshub",
+    "rust/libraries/acarshub_common",
+    "rust/libraries/acarshub_database",
+    "rust/libraries/acarshub_message_processing",
+    "rust/libraries/acarshub_settings",
+    "rust/libraries/acarshub_webserver",
 ]
 resolver = "3"
 
 [workspace.package]
 version = "5.0.0"
 edition = "2024"
+authors = ["Fred Clausen"]
+description = "ACARS Hub"
+documentation = "https://github.com/sdr-enthusiasts/docker-acarshub"
+homepage = "https://github.com/sdr-enthusiasts/docker-acarshub"
+repository = "https://github.com/sdr-enthusiasts/docker-acarshub"
+readme = "README.md"
+license = "GPL-3.0-or-later"
+rust-version = "1.87.0"
 
 [workspace.dependencies]
+acarshub_common = { path = "rust/libraries/acarshub_common" }
+acarshub_database = { path = "rust/libraries/acarshub_database" }
+acarshub_message_processing = { path = "rust/libraries/acarshub_message_processing" }
+acarshub_settings = { path = "rust/libraries/acarshub_settings" }
+acarshub_webserver = { path = "rust/libraries/acarshub_webserver" }
+
 acars_vdlm2_parser = { git = "https://github.com/jcdeimos/acars_vdlm2_parser", version = "0.4.0" }
 anyhow = "1.0.98"
 axum = "0.8.4"
-acarshub-database = { path = "./rust/acarshub-database" }
 clap = { version = "4.5.38", features = ["derive", "env"] }
 conv = "0.3.3"
 diesel = { version = "2.2.10", features = ["sqlite", "64-column-tables"] }

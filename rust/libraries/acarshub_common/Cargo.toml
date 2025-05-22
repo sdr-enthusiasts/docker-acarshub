@@ -1,0 +1,15 @@
+[package]
+name = "acarshub_common"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description.workspace = true
+documentation.workspace = true
+homepage.workspace = true
+repository.workspace = true
+readme.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+acars_vdlm2_parser.workspace = true

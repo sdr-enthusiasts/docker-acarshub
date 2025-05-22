@@ -1,0 +1,21 @@
+[package]
+name = "acarshub_message_processing"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description.workspace = true
+documentation.workspace = true
+homepage.workspace = true
+repository.workspace = true
+readme.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+acars_vdlm2_parser.workspace = true
+acarshub_common.workspace = true
+acarshub_database.workspace = true
+anyhow.workspace = true
+parking_lot.workspace = true
+tokio.workspace = true
+tracing.workspace = true

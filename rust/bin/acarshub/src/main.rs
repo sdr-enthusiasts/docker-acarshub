@@ -95,5 +95,13 @@ async fn main() {
     let mut webserver = AcarsHubWebServer::new(database);
 
     // run the web server
-    webserver.run().await.expect("Error running web server");
+    match webserver.run().await {
+        Ok(()) => {
+            info!("Web server started");
+        }
+        Err(e) => {
+            error!("Error starting web server: {}", e);
+            std::process::exit(1);
+        }
+    }
 }
