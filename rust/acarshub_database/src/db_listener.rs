@@ -17,6 +17,7 @@
 use std::sync::Arc;
 
 use acars_vdlm2_parser::{AcarsVdlm2Message, acars::AcarsMessage};
+use acarshub_common::{FoundMessage, Protocols};
 use conv::ConvUtil;
 use parking_lot::FairMutex;
 use tokio::sync::mpsc::UnboundedReceiver;
@@ -35,7 +36,7 @@ impl DatabaseListener {
     }
 
     /// Starts the database listener.
-    pub fn start(&self, mut receiver: UnboundedReceiver<AcarsVdlm2Message>) {
+    pub fn start(&self, mut receiver: UnboundedReceiver<FoundMessage>) {
         let database = self.database.clone();
         tokio::spawn(async move {
             while let Some(message) = receiver.recv().await {
@@ -57,35 +58,37 @@ impl DatabaseListener {
 
 pub trait IntoMessage {
     fn to_message(&self) -> Option<NewMessage>;
-    fn acars_message(&self, msg: AcarsMessage) -> NewMessage;
+    fn acars_message(&self, msg: AcarsMessage, protocol: Protocols) -> NewMessage;
 }
 
-impl IntoMessage for AcarsVdlm2Message {
+impl IntoMessage for FoundMessage {
     fn to_message(&self) -> Option<NewMessage> {
-        match self {
-            Self::AcarsMessage(msg) => Some(self.acars_message(msg.clone())),
-            Self::Vdlm2Message(_msg) => {
+        match &self.message {
+            AcarsVdlm2Message::AcarsMessage(msg) => {
+                Some(self.acars_message(msg.clone(), self.protocol))
+            }
+            AcarsVdlm2Message::Vdlm2Message(_msg) => {
                 warn!("Vdlm2Message not yet implemented");
                 None
             }
-            Self::HfdlMessage(_msg) => {
+            AcarsVdlm2Message::HfdlMessage(_msg) => {
                 warn!("HfdlMessage not yet implemented");
                 None
             }
-            Self::IrdmMessage(_msg) => {
+            AcarsVdlm2Message::IrdmMessage(_msg) => {
                 warn!("IrdmMessage not yet implemented");
                 None
             }
-            Self::ImslMessage(_msg) => {
+            AcarsVdlm2Message::ImslMessage(_msg) => {
                 warn!("ImslMessage not yet implemented");
                 None
             }
         }
     }
 
-    fn acars_message(&self, msg: AcarsMessage) -> NewMessage {
+    fn acars_message(&self, msg: AcarsMessage, protocol: Protocols) -> NewMessage {
         NewMessage {
-            message_type: "ACARS".to_string(),
+            message_type: protocol.to_string(),
             msg_time: msg
                 .timestamp
                 .unwrap_or_default()

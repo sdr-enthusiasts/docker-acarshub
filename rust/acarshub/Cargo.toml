@@ -4,10 +4,10 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-acarshub-database = { path = "../acarshub-database" }
-acarshub-settings = { path = "../acarshub-settings" }
-acarshub-webserver = { path = "../acarshub-webserver" }
-acarshub-message-processing = { path = "../acarshub-message-processing" }
+acarshub_database = { path = "../acarshub_database" }
+acarshub_settings = { path = "../acarshub_settings" }
+acarshub_webserver = { path = "../acarshub_webserver" }
+acarshub_message_processing = { path = "../acarshub_message_processing" }
 parking_lot.workspace = true
 tokio.workspace = true
 tracing.workspace = true

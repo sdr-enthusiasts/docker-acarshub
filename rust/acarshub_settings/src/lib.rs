@@ -29,7 +29,7 @@
 pub extern crate clap as clap;
 use tracing::Level;
 
-use acarshub_message_processing::Protocols;
+use acarshub_common::Protocols;
 use clap::Parser;
 
 #[allow(clippy::struct_excessive_bools)]

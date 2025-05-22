@@ -1,10 +1,11 @@
 [package]
-name = "acarshub-database"
+name = "acarshub_database"
 version = "2.0.0"
 edition.workspace = true
 
 [dependencies]
 acars_vdlm2_parser.workspace = true
+acarshub_common = { path = "../acarshub_common" }
 anyhow.workspace = true
 conv.workspace = true
 diesel.workspace = true

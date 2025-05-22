@@ -25,45 +25,12 @@
     clippy::expect_used
 )]
 
-use acars_vdlm2_parser::{AcarsVdlm2Message, DecodeMessage};
-use core::fmt;
+use acars_vdlm2_parser::DecodeMessage;
+use acarshub_common::{FoundMessage, Protocols};
 use tokio::sync::mpsc::UnboundedSender;
 // #![warn(missing_docs)]
 #[macro_use]
 extern crate tracing;
-
-#[derive(Debug, Clone, Copy)]
-pub enum Protocols {
-    Acars,
-    Vdlm,
-    Hfdl,
-    Imsl,
-    Irdm,
-}
-
-impl fmt::Display for Protocols {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Acars => write!(f, "ACARS"),
-            Self::Vdlm => write!(f, "VDL-M2"),
-            Self::Hfdl => write!(f, "HFDL"),
-            Self::Imsl => write!(f, "Inmarsat L-Band"),
-            Self::Irdm => write!(f, "Iridium"),
-        }
-    }
-}
-
-impl Protocols {
-    const fn to_tcp_udp_port(self) -> u32 {
-        match self {
-            Self::Acars => 5550,
-            Self::Vdlm => 5555,
-            Self::Hfdl => 5556,
-            Self::Imsl => 5557,
-            Self::Irdm => 5558,
-        }
-    }
-}
 
 pub struct AcarsHubMessageProcessing {
     pub enabled_features: Vec<Protocols>,
@@ -77,7 +44,7 @@ impl AcarsHubMessageProcessing {
         }
     }
 
-    pub fn run_listener(&mut self, sender: &UnboundedSender<AcarsVdlm2Message>) {
+    pub fn run_listener(&mut self, sender: &UnboundedSender<FoundMessage>) {
         // for each enabled feature, spawn a task
 
         for feature in &self.enabled_features {
@@ -86,7 +53,7 @@ impl AcarsHubMessageProcessing {
     }
 }
 
-fn start_udp_listener(feature: Protocols, sender: UnboundedSender<AcarsVdlm2Message>) {
+fn start_udp_listener(feature: Protocols, sender: UnboundedSender<FoundMessage>) {
     tokio::spawn(async move {
         // spawn a UDP Tokio listener
 
@@ -116,9 +83,13 @@ fn start_udp_listener(feature: Protocols, sender: UnboundedSender<AcarsVdlm2Mess
                         }
                     };
 
-                    debug!("Received {feature} message from {addr}: {json_message:?}");
+                    trace!("Received {feature} message from {addr}: {json_message:?}");
+                    let found_message = FoundMessage {
+                        protocol: feature,
+                        message: json_message,
+                    };
                     // send the message to the database listener
-                    if let Err(e) = sender.send(json_message) {
+                    if let Err(e) = sender.send(found_message) {
                         error!("Failed to send message to database listener: {e}");
                     }
                 }

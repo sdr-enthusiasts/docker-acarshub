@@ -1,10 +1,11 @@
 [workspace]
 members = [
     "./rust/acarshub",
-    "./rust/acarshub-database",
-    "./rust/acarshub-message-processing",
-    "./rust/acarshub-settings",
-    "./rust/acarshub-webserver",
+    "./rust/acarshub_common",
+    "./rust/acarshub_database",
+    "./rust/acarshub_message_processing",
+    "./rust/acarshub_settings",
+    "./rust/acarshub_webserver",
 ]
 resolver = "3"
 

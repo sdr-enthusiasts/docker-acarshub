@@ -1,0 +1,11 @@
+[package]
+name = "acarshub_settings"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+acarshub_common = { path = "../acarshub_common" }
+acarshub_message_processing = { path = "../acarshub_message_processing" }
+anyhow.workspace = true
+clap.workspace = true
+tracing.workspace = true

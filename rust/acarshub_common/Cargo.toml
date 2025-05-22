@@ -1,0 +1,7 @@
+[package]
+name = "acarshub_common"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+acars_vdlm2_parser.workspace = true

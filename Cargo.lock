@@ -18,10 +18,10 @@ dependencies = [
 name = "acarshub"
 version = "5.0.0"
 dependencies = [
- "acarshub-database",
- "acarshub-message-processing",
- "acarshub-settings",
- "acarshub-webserver",
+ "acarshub_database",
+ "acarshub_message_processing",
+ "acarshub_settings",
+ "acarshub_webserver",
  "parking_lot",
  "tokio",
  "tracing",
@@ -30,10 +30,18 @@ dependencies = [
 ]
 
 [[package]]
-name = "acarshub-database"
+name = "acarshub_common"
+version = "5.0.0"
+dependencies = [
+ "acars_vdlm2_parser",
+]
+
+[[package]]
+name = "acarshub_database"
 version = "2.0.0"
 dependencies = [
  "acars_vdlm2_parser",
+ "acarshub_common",
  "anyhow",
  "conv",
  "diesel",
@@ -45,11 +53,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "acarshub-message-processing"
+name = "acarshub_message_processing"
 version = "5.0.0"
 dependencies = [
  "acars_vdlm2_parser",
- "acarshub-database",
+ "acarshub_common",
+ "acarshub_database",
  "anyhow",
  "parking_lot",
  "tokio",
@@ -57,20 +66,21 @@ dependencies = [
 ]
 
 [[package]]
-name = "acarshub-settings"
+name = "acarshub_settings"
 version = "5.0.0"
 dependencies = [
- "acarshub-message-processing",
+ "acarshub_common",
+ "acarshub_message_processing",
  "anyhow",
  "clap",
  "tracing",
 ]
 
 [[package]]
-name = "acarshub-webserver"
+name = "acarshub_webserver"
 version = "5.0.0"
 dependencies = [
- "acarshub-database",
+ "acarshub_database",
  "anyhow",
  "axum",
  "parking_lot",
