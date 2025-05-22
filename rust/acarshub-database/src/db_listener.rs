@@ -18,7 +18,6 @@ use std::sync::Arc;
 
 use acars_vdlm2_parser::{AcarsVdlm2Message, acars::AcarsMessage};
 use conv::ConvUtil;
-use diesel::prelude::*;
 use parking_lot::FairMutex;
 use tokio::sync::mpsc::UnboundedReceiver;
 
@@ -44,13 +43,12 @@ impl DatabaseListener {
 
                 let message_processed = message.to_message();
                 if let Some(ref message) = message_processed {
-                    let mut db = database.lock();
-                    if let Err(e) = diesel::insert_into(crate::schema::messages::table)
-                        .values(message)
-                        .execute(&mut db.connection)
-                    {
-                        error!("Error inserting new message: {}", e);
-                    }
+                    let mut db: parking_lot::lock_api::MutexGuard<
+                        '_,
+                        parking_lot::RawFairMutex,
+                        AcarsHubDatabase,
+                    > = database.lock();
+                    db.insert_message(message);
                 }
             }
         });

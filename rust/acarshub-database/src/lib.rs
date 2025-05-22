@@ -36,6 +36,7 @@ mod schema;
 use anyhow::Result;
 use diesel::prelude::*;
 use diesel_migrations::{EmbeddedMigrations, MigrationHarness, embed_migrations};
+use models::NewMessage;
 
 pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations");
 
@@ -70,6 +71,15 @@ impl AcarsHubDatabase {
         run_migrations(&mut conn)?;
 
         Ok(Self { connection: conn })
+    }
+
+    pub fn insert_message(&mut self, message: &NewMessage) {
+        if let Err(e) = diesel::insert_into(crate::schema::messages::table)
+            .values(message)
+            .execute(&mut self.connection)
+        {
+            error!("Error inserting new message: {}", e);
+        }
     }
 }
 
