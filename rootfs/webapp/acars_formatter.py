@@ -158,7 +158,7 @@ def format_jaero_imsl_message(unformatted_message):
 
         if src := isu.get("src"):
             if addr := src.get("addr"):
-                imsl_message["fromaddr"] = addr
+                imsl_message["fromaddr"] = int(addr, 16)
 
         if refno := isu.get("refno"):
             imsl_message["msgno"] = str(refno)
