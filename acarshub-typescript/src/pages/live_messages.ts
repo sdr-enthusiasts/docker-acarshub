@@ -939,6 +939,13 @@ export let live_messages_page = {
           has_alerts: alert,
           num_alerts: num_alerts,
         };
+        if (identifier.includes("-")) {
+          output[identifier.replace("-", "")] = {
+            count: length_of_messages,
+            has_alerts: alert,
+            num_alerts: num_alerts,
+          };
+        }
       });
     }
     return output;
