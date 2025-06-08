@@ -46,6 +46,12 @@ server {
     proxy_pass http://127.0.0.1:8888/socket.io;
   }
 
+  # proxy pass the metrics endpoint to gunicorn
+  location /metrics {
+    proxy_pass http://127.0.0.1:8888/metrics;
+    add_header Cache-Control 'no-cache';
+  }
+
   # proxy pass the aircraft.json file to tar1090
   # <> is used as a place holder that the container startup rewrites to the correct URL
   location /data/aircraft.json {
