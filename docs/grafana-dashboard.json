@@ -1,0 +1,686 @@
+{
+  "__inputs": [
+    {
+      "name": "DS_PROMETHEUS",
+      "label": "Prometheus",
+      "description": "",
+      "type": "datasource",
+      "pluginId": "prometheus",
+      "pluginName": "Prometheus"
+    }
+  ],
+  "id": null,
+  "uid": "rk6p2qh",
+  "title": "ACARSHub Dashboard",
+  "tags": ["acarshub", "vdlm2", "acars"],
+  "style": "dark",
+  "timezone": "browser",
+  "editable": true,
+  "graphTooltip": 0,
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "timepicker": {
+    "refresh_intervals": [
+      "5s",
+      "10s",
+      "30s",
+      "1m",
+      "5m",
+      "15m",
+      "30m",
+      "1h",
+      "2h",
+      "1d"
+    ]
+  },
+  "templating": {
+    "list": []
+  },
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "refresh": "10s",
+  "schemaVersion": 37,
+  "version": 3,
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": null,
+      "panels": [],
+      "title": "Message & Database Stats",
+      "type": "row"
+    },
+    {
+      "title": "Messages Per Minute",
+      "type": "timeseries",
+      "description": "A 1-minute moving average of the rate of different message types being processed.",
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 1
+      },
+      "id": 2,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "pluginVersion": "12.1.0-89438",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisPlacement": "auto",
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "spanNulls": false
+          },
+          "unit": "msgs/min"
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "acarshub_rrd_acars_messages_per_minute",
+          "legendFormat": "ACARS"
+        },
+        {
+          "refId": "B",
+          "expr": "acarshub_rrd_vdlm_messages_per_minute",
+          "legendFormat": "VDL-M2"
+        },
+        {
+          "refId": "C",
+          "expr": "acarshub_rrd_hfdl_messages_per_minute",
+          "legendFormat": "HFDL"
+        },
+        {
+          "refId": "F",
+          "expr": "acarshub_rrd_total_messages_per_minute",
+          "legendFormat": "Total"
+        },
+        {
+          "refId": "G",
+          "expr": "acarshub_rrd_error_messages_per_minute",
+          "legendFormat": "Errors"
+        }
+      ]
+    },
+    {
+      "title": "Database - Total Messages",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 5,
+        "x": 0,
+        "y": 10
+      },
+      "id": 3,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "pluginVersion": "12.1.0-89438",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"]
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "acarshub_database_messages_total",
+          "legendFormat": "Total Messages"
+        }
+      ]
+    },
+    {
+      "title": "Database - Size",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 5,
+        "x": 5,
+        "y": 10
+      },
+      "id": 4,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "pluginVersion": "12.1.0-89438",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"]
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "acarshub_database_size_bytes",
+          "legendFormat": "Database Size"
+        }
+      ]
+    },
+    {
+      "title": "Message Type Breakdown",
+      "type": "piechart",
+      "gridPos": {
+        "h": 8,
+        "w": 7,
+        "x": 10,
+        "y": 10
+      },
+      "id": 5,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "pluginVersion": "12.1.0-89438",
+      "options": {
+        "displayLabels": ["name", "percent"],
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "pieType": "pie",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"]
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "acarshub_database_non_empty_messages_total",
+          "legendFormat": "Non-Empty"
+        },
+        {
+          "refId": "B",
+          "expr": "acarshub_database_empty_messages_total",
+          "legendFormat": "Empty"
+        }
+      ]
+    },
+    {
+      "title": "Message Error Breakdown",
+      "type": "piechart",
+      "gridPos": {
+        "h": 8,
+        "w": 7,
+        "x": 17,
+        "y": 10
+      },
+      "id": 6,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "pluginVersion": "12.1.0-89438",
+      "options": {
+        "displayLabels": ["name", "percent"],
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "pieType": "pie",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"]
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "acarshub_database_non_empty_errors_total",
+          "legendFormat": "Non-Empty Errors"
+        },
+        {
+          "refId": "B",
+          "expr": "acarshub_database_empty_errors_total",
+          "legendFormat": "Empty Errors"
+        }
+      ]
+    },
+    {
+      "title": "Application Uptime",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 5,
+        "x": 0,
+        "y": 14
+      },
+      "id": 7,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "pluginVersion": "12.1.0-89438",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"]
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "time() - process_start_time_seconds{instance=\"acarshub\"}",
+          "legendFormat": "Uptime"
+        }
+      ]
+    },
+    {
+      "title": "Alerts",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 5,
+        "x": 5,
+        "y": 14
+      },
+      "id": 8,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "pluginVersion": "12.1.0-89438",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"]
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(acarshub_alert_term_matches)",
+          "legendFormat": "Matches"
+        },
+        {
+          "refId": "B",
+          "expr": "acarshub_alert_saved_messages_total",
+          "legendFormat": "Saved"
+        },
+        {
+          "refId": "C",
+          "expr": "acarshub_alert_terms_configured",
+          "legendFormat": "Configured"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 18
+      },
+      "id": null,
+      "panels": [],
+      "title": "Signal & Frequency Analysis",
+      "type": "row"
+    },
+    {
+      "title": "Signal-level Distribution (dB)",
+      "type": "heatmap",
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 19
+      },
+      "id": 18,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "pluginVersion": "12.1.0-89438",
+      "options": {
+        "calculate": false,
+        "cellGap": 1,
+        "color": {
+          "scheme": "Oranges"
+        },
+        "legend": {
+          "show": true
+        },
+        "tooltip": {
+          "mode": "single"
+        },
+        "yAxis": {
+          "axisPlacement": "left"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "acarshub_signal_level_distribution",
+          "legendFormat": "{{level}} dB"
+        }
+      ]
+    },
+    {
+      "title": "Message Frequency Distribution",
+      "type": "bargauge",
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 27
+      },
+      "id": 19,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "pluginVersion": "12.1.0-89438",
+      "fieldConfig": {
+        "defaults": {
+          "min": 0
+        }
+      },
+      "options": {
+        "displayMode": "gradient",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"]
+        },
+        "showUnfilled": true
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "topk(20, acarshub_frequency_distribution)",
+          "legendFormat": "{{frequency}} MHz ({{type}})"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 37
+      },
+      "id": null,
+      "panels": [],
+      "title": "Application Health & Internals",
+      "type": "row"
+    },
+    {
+      "title": "CPU Seconds / sec",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 0,
+        "y": 38
+      },
+      "id": 20,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "pluginVersion": "12.1.0-89438",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "lineWidth": 1
+          }
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by(__name__) (rate(process_cpu_seconds_total[$__rate_interval]))",
+          "legendFormat": "CPU"
+        }
+      ]
+    },
+    {
+      "title": "Process Memory Usage",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 38
+      },
+      "id": 14,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "pluginVersion": "12.1.0-89438",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 2
+          },
+          "unit": "bytes"
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(process_virtual_memory_bytes)",
+          "legendFormat": "Virtual"
+        },
+        {
+          "refId": "B",
+          "expr": "sum(process_resident_memory_bytes)",
+          "legendFormat": "Resident"
+        }
+      ]
+    },
+    {
+      "title": "Open File Descriptors",
+      "type": "bargauge",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 38
+      },
+      "id": 15,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "pluginVersion": "12.1.0-89438",
+      "options": {
+        "displayMode": "lcd",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"]
+        },
+        "showUnfilled": true
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "process_open_fds / process_max_fds * 100",
+          "legendFormat": "Used %"
+        },
+        {
+          "refId": "B",
+          "expr": "process_open_fds",
+          "legendFormat": "Open"
+        },
+        {
+          "refId": "C",
+          "expr": "process_max_fds",
+          "legendFormat": "Max"
+        }
+      ]
+    },
+    {
+      "title": "Python GC Collections Rate",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 46
+      },
+      "id": 16,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "pluginVersion": "12.1.0-89438",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "lineWidth": 2
+          }
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(python_gc_collections_total[$__rate_interval]))",
+          "legendFormat": "Gen {{generation}}"
+        }
+      ]
+    },
+    {
+      "title": "Application & Python Information",
+      "type": "table",
+      "gridPos": {
+        "h": 8,
+        "w": 16,
+        "x": 8,
+        "y": 46
+      },
+      "id": 17,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "pluginVersion": "12.1.0-89438",
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        },
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "acarshub_application_info",
+          "format": "table",
+          "instant": true
+        }
+      ]
+    }
+  ]
+}
