@@ -50,7 +50,7 @@ repos:
         exclude: ^(rootfs/webapp/|acarshub-typescript/node_modules/|Dockerfile*)
 
   - repo: https://github.com/pre-commit/mirrors-eslint
-    rev: 44396eea258841c0f9635b47fecb36fa30bd66e4  # frozen: v9.26.0
+    rev: 44396eea258841c0f9635b47fecb36fa30bd66e4 # frozen: v9.26.0
     hooks:
       - id: eslint
         files: \.[j]sx?$ # *.js, *.jsx, *.ts and *.tsx
@@ -74,7 +74,7 @@ repos:
     hooks:
       - id: shellcheck
   - repo: https://github.com/sirosen/check-jsonschema
-    rev: 06e4cc849d03f3a59ca223a4046f4bb5bb2aba6d  # frozen: 0.33.0
+    rev: 06e4cc849d03f3a59ca223a4046f4bb5bb2aba6d # frozen: 0.33.0
     hooks:
       - id: check-github-actions
       - id: check-github-workflows

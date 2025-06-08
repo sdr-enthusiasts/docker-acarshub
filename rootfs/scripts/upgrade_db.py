@@ -541,7 +541,9 @@ def delete_fts(cur):
     cur.execute("DROP TABLE 'messages_fts_docsize';")
     cur.execute("DROP TABLE 'messages_fts_idx';")
     cur.execute("PRAGMA writable_schema = ON;")
-    cur.execute("DELETE FROM sqlite_master WHERE type = 'table' AND name = 'messages_fts';")
+    cur.execute(
+        "DELETE FROM sqlite_master WHERE type = 'table' AND name = 'messages_fts';"
+    )
     cur.execute("PRAGMA writable_schema = OFF;")
 
 
@@ -562,8 +564,10 @@ if __name__ == "__main__":
             result = cur.execute("select count(*) from messages_fts;")
             count = result.fetchone()[0]
         except sqlite3.DatabaseError as ex:
-            message = getattr(ex, 'message', repr(ex))
-            acarshub_logging.log(f"ERROR: sqlite3.DatabaseError: {message}", "db_upgrade")
+            message = getattr(ex, "message", repr(ex))
+            acarshub_logging.log(
+                f"ERROR: sqlite3.DatabaseError: {message}", "db_upgrade"
+            )
             if "vtable constructor failed: messages_fts" in message:
                 fts_rebuild = True
 
