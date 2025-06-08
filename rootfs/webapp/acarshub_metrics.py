@@ -18,6 +18,9 @@
 
 from prometheus_client import Gauge, Info, generate_latest
 
+# Debug metric for RRD status
+RRD_DEBUG = Gauge("acarshub_rrd_debug_info", "RRD debug information", ["status"])
+
 # Database statistics
 DB_METRICS = {
     "total_messages": Gauge(
@@ -111,18 +114,64 @@ def update_metrics():
 
     # Update RRD data
     try:
-        rrd_data = rrdtool.fetch("/run/acars/acarshub.rrd", "AVERAGE", "-s", "-60s")
-        if rrd_data and len(rrd_data[2]) > 0:
-            latest = rrd_data[2][-1]
-            RRD_GAUGES["acars"].set(latest[0] or 0)
-            RRD_GAUGES["vdlm"].set(latest[1] or 0)
-            RRD_GAUGES["total"].set(latest[2] or 0)
-            RRD_GAUGES["error"].set(latest[3] or 0)
-            RRD_GAUGES["hfdl"].set(latest[4] or 0)
-            RRD_GAUGES["imsl"].set(latest[5] or 0)
-            RRD_GAUGES["irdm"].set(latest[6] or 0)
-    except (rrdtool.error, FileNotFoundError):
-        pass  # RRD data might not be available yet
+        import os
+
+        rrd_path = "/run/acars/acarshub.rrd"
+
+        # Check if RRD file exists
+        if not os.path.exists(rrd_path):
+            RRD_DEBUG.labels(status="file_not_found").set(1)
+            return
+
+        RRD_DEBUG.labels(status="file_exists").set(1)
+
+        # Try to fetch the most recent data point
+        # Use a longer time range to ensure we get data
+        rrd_data = rrdtool.fetch(rrd_path, "AVERAGE", "-s", "-300s", "-e", "now")
+
+        if not rrd_data:
+            RRD_DEBUG.labels(status="no_data_returned").set(1)
+            return
+
+        if len(rrd_data) < 3:
+            RRD_DEBUG.labels(status="invalid_data_structure").set(1)
+            return
+
+        if not rrd_data[2]:
+            RRD_DEBUG.labels(status="empty_data_array").set(1)
+            return
+
+        RRD_DEBUG.labels(status="data_points_found").set(len(rrd_data[2]))
+
+        # RRD data sources order: ACARS:VDLM:TOTAL:ERROR:HFDL:IMSL:IRDM
+        # Find the most recent non-None data point
+        latest = None
+        for i, data_point in enumerate(reversed(rrd_data[2])):
+            if data_point and any(x is not None for x in data_point):
+                latest = data_point
+                RRD_DEBUG.labels(status="latest_data_index").set(
+                    len(rrd_data[2]) - 1 - i
+                )
+                break
+
+        if latest:
+            RRD_DEBUG.labels(status="data_successfully_parsed").set(1)
+            RRD_GAUGES["acars"].set(latest[0] or 0)  # ACARS
+            RRD_GAUGES["vdlm"].set(latest[1] or 0)  # VDLM
+            RRD_GAUGES["total"].set(latest[2] or 0)  # TOTAL
+            RRD_GAUGES["error"].set(latest[3] or 0)  # ERROR
+            RRD_GAUGES["hfdl"].set(latest[4] or 0)  # HFDL
+            RRD_GAUGES["imsl"].set(latest[5] or 0)  # IMSL
+            RRD_GAUGES["irdm"].set(latest[6] or 0)  # IRDM
+        else:
+            RRD_DEBUG.labels(status="no_valid_data_points").set(1)
+
+    except rrdtool.error:
+        RRD_DEBUG.labels(status="rrdtool_error").set(1)
+    except FileNotFoundError:
+        RRD_DEBUG.labels(status="file_not_found_exception").set(1)
+    except Exception:
+        RRD_DEBUG.labels(status="unknown_error").set(1)
 
     # Update database statistics
     try:
