@@ -16,7 +16,7 @@
 
 use std::sync::Arc;
 
-use acars_vdlm2_parser::{AcarsVdlm2Message, acars::AcarsMessage};
+use acars_vdlm2_parser::{AcarsVdlm2Message, acars::AcarsMessage, vdlm2::Vdlm2Message};
 use acarshub_common::{FoundMessage, Protocols};
 use conv::ConvUtil;
 use parking_lot::FairMutex;
@@ -58,47 +58,75 @@ impl DatabaseListener {
 
 pub trait IntoMessage {
     fn to_message(&self) -> Option<NewMessage>;
-    fn acars_message(&self, msg: AcarsMessage, protocol: Protocols) -> NewMessage;
 }
 
-impl IntoMessage for FoundMessage {
-    fn to_message(&self) -> Option<NewMessage> {
-        match &self.message {
-            AcarsVdlm2Message::AcarsMessage(msg) => {
-                Some(self.acars_message(msg.clone(), self.protocol))
+pub trait MessageDetails {
+    fn get_message_time(&self) -> i32;
+    fn get_station_id(&self) -> String;
+    fn get_ack(&self) -> String;
+}
+
+impl MessageDetails for AcarsVdlm2Message {
+    fn get_ack(&self) -> String {
+        match self {
+            AcarsVdlm2Message::AcarsMessage(msg) => msg.ack.map_or_else(String::new, |ack| match ack {
+                acars_vdlm2_parser::acars::AckType::String(ack) => ack,
+                acars_vdlm2_parser::acars::AckType::Bool(ack) => ack.to_string(),
+            }),
+            AcarsVdlm2Message::Vdlm2Message(msg) => {}
+            AcarsVdlm2Message::HfdlMessage(msg) => {
+                if let Some(lpdu) = &msg.hfdl.lpdu {
+                    if let Some(acars) = &lpdu.hfnpdu {
+
+
+                    }
+                }
+
+                String::new() // Return an empty string if no ACK is found
             }
-            AcarsVdlm2Message::Vdlm2Message(_msg) => {
-                warn!("Vdlm2Message not yet implemented");
-                None
-            }
-            AcarsVdlm2Message::HfdlMessage(_msg) => {
-                warn!("HfdlMessage not yet implemented");
-                None
-            }
-            AcarsVdlm2Message::IrdmMessage(_msg) => {
-                warn!("IrdmMessage not yet implemented");
-                None
-            }
-            AcarsVdlm2Message::ImslMessage(_msg) => {
-                warn!("ImslMessage not yet implemented");
-                None
-            }
+            _ => unimplemented!("get_ack not implemented for this message type"),
         }
     }
-
-    fn acars_message(&self, msg: AcarsMessage, protocol: Protocols) -> NewMessage {
-        NewMessage {
-            message_type: protocol.to_string(),
-            msg_time: msg
+    fn get_message_time(&self) -> i32 {
+        match self {
+            AcarsVdlm2Message::AcarsMessage(msg) => msg
                 .timestamp
                 .unwrap_or_default()
                 .approx_as::<i32>()
                 .unwrap_or_default(),
-            station_id: msg.station_id.unwrap_or_default(),
-            ack: msg.ack.map_or_else(String::new, |ack| match ack {
-                acars_vdlm2_parser::acars::AckType::String(ack) => ack,
-                acars_vdlm2_parser::acars::AckType::Bool(ack) => ack.to_string(),
-            }),
+            AcarsVdlm2Message::Vdlm2Message(msg) => match &msg.vdl2.t {
+                Some(vdl2) => vdl2.sec as i32,
+                None => 0, // Default value if timestamp is not available
+            },
+            AcarsVdlm2Message::HfdlMessage(msg) => match &msg.hfdl.t {
+                Some(hfdl) => hfdl.sec as i32,
+                None => 0, // Default value if timestamp is not available
+            },
+
+            _ => unimplemented!("get_message_time not implemented for this message type"),
+        }
+    }
+
+    fn get_station_id(&self) -> String {
+        match self {
+            AcarsVdlm2Message::AcarsMessage(msg) => msg.station_id.clone().unwrap_or_default(),
+            AcarsVdlm2Message::Vdlm2Message(msg) => msg.vdl2.station.clone().unwrap_or_default(),
+            AcarsVdlm2Message::HfdlMessage(msg) => msg.hfdl.station.clone().unwrap_or_default(),
+            _ => unimplemented!("get_station_id not implemented for this message type"),
+        }
+    }
+}
+
+impl IntoMessage for FoundMessage {
+    fn to_message(&self) -> Option<NewMessage> {
+        let protocol = self.protocol.clone();
+        let msg = self.message.clone();
+
+        Some(NewMessage {
+            message_type: protocol.to_string(),
+            msg_time: msg.get_message_time(),
+            station_id: msg.get_station_id(),
+            ack: ,
             toaddr: msg.toaddr.unwrap_or_default().to_string(),
             fromaddr: String::new(),
             depa: String::new(),
@@ -128,6 +156,6 @@ impl IntoMessage for FoundMessage {
                 acars_vdlm2_parser::acars::LevelType::I32(level) => level.to_string(),
                 acars_vdlm2_parser::acars::LevelType::Float64(level) => level.to_string(),
             }),
-        }
+        })
     }
 }
