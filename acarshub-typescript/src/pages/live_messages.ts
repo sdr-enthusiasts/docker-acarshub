@@ -839,7 +839,12 @@ export let live_messages_page = {
         let ids = [];
         if (new_icao_hex) ids.push(new_icao_hex);
         if (new_icao_flight) ids.push(new_icao_flight);
-        if (new_tail) ids.push(new_tail);
+        if (new_tail) {
+          ids.push(new_tail);
+          if (new_tail.includes("-")) {
+            ids.push(new_tail.replace("-", ""));
+          }
+        }
         this.lm_msgs_received.unshift({
           has_alerts: matched.was_found,
           num_alerts: matched.was_found ? 1 : 0,

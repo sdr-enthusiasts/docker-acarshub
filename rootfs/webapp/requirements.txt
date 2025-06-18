@@ -3,7 +3,7 @@ Flask-SocketIO==5.5.1
 gevent==25.5.1
 gunicorn[gevent]==23.0.0
 prometheus-client==0.20.0
-requests==2.32.3
+requests==2.32.4
 rrdtool @git+https://github.com/fredclausen/python-rrdtool.git
 schedule==1.2.2
 sqlalchemy==2.0.41
