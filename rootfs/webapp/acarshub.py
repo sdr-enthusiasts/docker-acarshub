@@ -21,12 +21,20 @@ import acarshub_configuration  # noqa: E402
 import acarshub_logging  # noqa: E402
 from acarshub_logging import LOG_LEVEL  # noqa: E402
 import acars_formatter  # noqa: E402
+import acarshub_metrics  # noqa: E402
 
 if not acarshub_configuration.LOCAL_TEST:
     import acarshub_rrd_database  # noqa: E402
 
 from flask_socketio import SocketIO  # noqa: E402
-from flask import Flask, render_template, request, redirect, url_for  # noqa: E402
+from flask import (
+    Flask,
+    render_template,
+    request,
+    redirect,
+    url_for,
+    Response,
+)  # noqa: E402
 from threading import Thread, Event  # noqa: E402
 from collections import deque  # noqa: E402
 import time  # noqa: E402
@@ -210,9 +218,7 @@ def scheduled_tasks():
 
     schedule.every().hour.at(":05").do(acarshub_configuration.check_github_version)
     schedule.every().hour.at(":01").do(send_version)
-    schedule.every(6).hours.do(
-        acarshub_helpers.acarshub_database.optimize_db_regular
-    )
+    schedule.every(6).hours.do(acarshub_helpers.acarshub_database.optimize_db_regular)
     schedule.every().minute.at(":30").do(
         acarshub_helpers.acarshub_database.prune_database
     )
@@ -684,6 +690,12 @@ def adsb():
         return render_template("index.html")
     else:
         return redirect(url_for("index"))
+
+
+@app.route("/metrics")
+def metrics():
+    """Expose Prometheus metrics"""
+    return Response(acarshub_metrics.get_metrics(), mimetype="text/plain")
 
 
 @app.errorhandler(404)
