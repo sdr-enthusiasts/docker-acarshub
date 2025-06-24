@@ -4,8 +4,7 @@ version = 4
 
 [[package]]
 name = "acars_vdlm2_parser"
-version = "0.4.0"
-source = "git+https://github.com/jcdeimos/acars_vdlm2_parser#079fa2e77fbed357ed8520725dc8da9f74bfaa44"
+version = "0.5.0"
 dependencies = [
  "chrono",
  "log",

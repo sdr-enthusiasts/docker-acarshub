@@ -28,7 +28,8 @@ acarshub_message_processing = { path = "rust/libraries/acarshub_message_processi
 acarshub_settings = { path = "rust/libraries/acarshub_settings" }
 acarshub_webserver = { path = "rust/libraries/acarshub_webserver" }
 
-acars_vdlm2_parser = { git = "https://github.com/jcdeimos/acars_vdlm2_parser", version = "0.4.0" }
+#acars_vdlm2_parser = { git = "https://github.com/jcdeimos/acars_vdlm2_parser", version = "0.4.0" }
+acars_vdlm2_parser = { path = "../acars_vdlm2_parser" }
 anyhow = "1.0.98"
 axum = "0.8.4"
 clap = { version = "4.5.40", features = ["derive", "env"] }
