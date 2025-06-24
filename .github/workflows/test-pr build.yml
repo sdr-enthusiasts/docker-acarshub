@@ -71,7 +71,7 @@ jobs:
 
   deploy:
     name: Deploy
-    uses: sdr-enthusiasts/common-github-workflows/.github/workflows/build_and_push_image.yml@main
+    uses: sdr-enthusiasts/common-github-workflows/.github/workflows/sdre.yml@main
     with:
       push_enabled: false
       push_destinations: ghcr.io
@@ -80,10 +80,5 @@ jobs:
       # set build_latest to true if github.event.inputs.use_test_image is false
       build_latest: true
       build_baseimage_test: false
-      # only build the entire stack if we are not using the test image
-      build_version_specific: false
-      build_platform_specific: false
-      build_nohealthcheck: false
-      get_version_method: file_in_container:file=/acarshub_version
     secrets:
       ghcr_token: ${{ secrets.GITHUB_TOKEN }}
