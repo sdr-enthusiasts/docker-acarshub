@@ -62,6 +62,7 @@ DB_ALERT_SAVE_DAYS = 120
 DB_LEGACY_FIX = False
 ALLOW_REMOTE_UPDATES = True
 FLIGHT_TRACKING_URL = "https://flightaware.com/live/flight/"
+HIDE_VERSION_UPDATE = False
 
 if os.getenv("FLIGHT_TRACKING_URL", default=False):
     FLIGHT_TRACKING_URL = os.getenv("FLIGHT_TRACKING_URL", default=False)
@@ -205,6 +206,12 @@ if os.getenv("DB_ALERT_SAVE_DAYS", default=False):
 if str(os.getenv("DB_LEGACY_FIX")).upper() == "TRUE":
     DB_LEGACY_FIX = True
 
+if os.getenv("HIDE_VERSION_UPDATE", default=False):
+    if str(os.getenv("HIDE_VERSION_UPDATE")).upper() == "TRUE":
+        HIDE_VERSION_UPDATE = True
+    else:
+        HIDE_VERSION_UPDATE = False
+
 DB_FTS_OPTIMIZE = os.getenv("DB_FTS_OPTIMIZE", default="").lower()
 if DB_FTS_OPTIMIZE not in ["optimize", "merge", "off"]:
     DB_FTS_OPTIMIZE = "off"  # default
@@ -236,6 +243,16 @@ def check_github_version():
     global CURRENT_ACARS_HUB_BUILD
     # FIXME: This is a hack to get around the fact that the version file is not updated on the build server
     if not LOCAL_TEST:
+        if HIDE_VERSION_UPDATE:
+            CURRENT_ACARS_HUB_BUILD = ACARSHUB_BUILD
+            CURRENT_ACARS_HUB_VERSION = ACARSHUB_VERSION
+            acarshub_logging.log(
+                "HIDE_VERSION_UPDATE is enabled, skipping version check",
+                "version_checker",
+                level=LOG_LEVEL["DEBUG"],
+            )
+            return
+
         try:
             operUrl = urllib.request.urlopen(
                 "https://api.github.com/repos/sdr-enthusiasts/docker-acarshub/releases/latest"
