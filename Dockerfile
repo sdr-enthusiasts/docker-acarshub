@@ -47,13 +47,14 @@ RUN set -x && \
     TEMP_PACKAGES+=(cmake) && \
     TEMP_PACKAGES+=(automake) && \
     TEMP_PACKAGES+=(autoconf) && \
-    TEMP_PACKAGES+=(python3-setuptools) && \
     TEMP_PACKAGES+=(git) && \
     # Packages for nginx+python
     KEPT_PACKAGES+=(nginx-light) && \
     TEMP_PACKAGES+=(python3-dev) && \
     TEMP_PACKAGES+=(python3-pip) && \
     KEPT_PACKAGES+=(python3-cryptography) && \
+    TEMP_PACKAGES+=(python3-setuptools) && \
+    KEPT_PACKAGES+=(python3-packaging) && \
     # libffi arm build fix
     TEMP_PACKAGES+=(libffi-dev) && \
     KEPT_PACKAGES+=(libffi8) && \
