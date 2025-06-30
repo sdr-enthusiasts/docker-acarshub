@@ -1,4 +1,4 @@
-name: Deploy
+name: Deploy Trixie Test
 
 on:
   # Build and deploy the image on pushes to main branch
@@ -83,53 +83,8 @@ jobs:
       # set build_latest to true if github.event.inputs.use_test_image is false
       build_latest: ${{ github.event.inputs.use_test_image == 'false' || github.event.inputs.use_test_image == ''  }}
       build_baseimage_test: ${{ github.event.inputs.use_test_image == 'true' }}
-      build_baseimage_url: :base/:base-test-pr
+      build_baseimage_url: :base/:trixie-base
       dockerfile_changes: |
         \# patch acarshub version/sed -i \"s\/Pre-Release\/${{ needs.patch_acars_hub_version.outputs.acarshub_version}}\/g\" \/acarshub-typescript\/src\/helpers\/menu.ts
     secrets:
       ghcr_token: ${{ secrets.GITHUB_TOKEN }}
-  deploy_test:
-    name: Deploy as test
-    if: |
-      github.event.inputs.build_latest_as_test == 'true' &&
-      (github.event.inputs.use_test_image == 'false' || github.event.inputs.use_test_image == '')
-    uses: sdr-enthusiasts/common-github-workflows/.github/workflows/sdre.yml@main
-    needs: patch_acars_hub_version
-    with:
-      push_enabled: true
-      push_destinations: ghcr.io
-      ghcr_repo_owner: ${{ github.repository_owner }}
-      ghcr_repo: ${{ github.repository }}
-      # set build_latest to true if github.event.inputs.use_test_image is false
-      build_latest: true
-      build_baseimage_test: false
-      build_baseimage_url: :base/:base-test-pr
-      docker_latest_tag: test
-      dockerfile_changes: |
-        \# patch acarshub version/sed -i \"s\/Pre-Release\/${{ needs.patch_acars_hub_version.outputs.acarshub_version}}\/g\" \/acarshub-typescript\/src\/helpers\/menu.ts
-    secrets:
-      ghcr_token: ${{ secrets.GITHUB_TOKEN }}
-
-  # generate a release
-  release:
-    name: Release
-    needs: [deploy, patch_acars_hub_version]
-    runs-on: ubuntu-22.04
-    if: |
-      (github.event.inputs.use_test_image == 'false' ||
-      github.event.inputs.use_test_image == '' ) &&
-      (github.event.inputs.build_latest_as_test == 'false' ||
-      github.event.inputs.build_latest_as_test == '' )
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4.2.2
-      - name: Create Release
-        uses: ncipollo/release-action@v1.16.0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag: ${{ needs.patch_acars_hub_version.outputs.version }}Build${{ needs.patch_acars_hub_version.outputs.build_number }}
-          name: ${{ needs.patch_acars_hub_version.outputs.version }} Build ${{ needs.patch_acars_hub_version.outputs.build_number }}
-          draft: false
-          prerelease: false

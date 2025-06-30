@@ -47,6 +47,7 @@ RUN set -x && \
     TEMP_PACKAGES+=(cmake) && \
     TEMP_PACKAGES+=(automake) && \
     TEMP_PACKAGES+=(autoconf) && \
+    TEMP_PACKAGES+=(python3-setuptools) && \
     TEMP_PACKAGES+=(git) && \
     # Packages for nginx+python
     KEPT_PACKAGES+=(nginx-light) && \
