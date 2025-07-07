@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 rm -f ../rootfs/webapp/static/images/*hour.png
 rm -f ../rootfs/webapp/static/images/*hours.png

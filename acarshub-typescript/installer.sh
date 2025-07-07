@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Clean up the install dir
 rm -rf ../rootfs/webapp/static/images/* || exit 1
