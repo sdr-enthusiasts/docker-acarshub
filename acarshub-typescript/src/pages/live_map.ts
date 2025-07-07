@@ -79,7 +79,7 @@ export let live_map_page = {
     isolateScroll: true,
     animation: "zoomIn",
     draggable: "title",
-    closeButton: "box",
+    // closeButton: "box",
     overlay: false,
     reposition: true,
     repositionOnOpen: false,
@@ -1215,7 +1215,7 @@ export let live_map_page = {
     }
 
     const html =
-      '<div style="background:white">' +
+      '<div style="background:var(--table-background)">' +
       display_messages([matches], this.modal_current_tab, true) +
       "</div>";
     if (this.modal_content !== html) {
