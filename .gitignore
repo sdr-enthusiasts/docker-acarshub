@@ -140,3 +140,9 @@ rootfs/webapp/lib64
 rootfs/webapp/include
 rootfs/webapp/__pycache__
 rootfs/webapp/pyvenv.cfg
+
+.direnv
+.dream2nix
+docker_acarshub.egg-info
+.pdm-python
+*.sqlite

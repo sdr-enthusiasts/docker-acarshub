@@ -1029,7 +1029,17 @@ def main_disconnect(reason):
 
 
 if __name__ == "__main__":
-    socketio.run(app, host="0.0.0.0", port=acarshub_configuration.ACARS_WEB_PORT)
+    acarshub_logging.log(
+        f"Starting ACARS Hub Web App on port {acarshub_configuration.ACARS_WEB_PORT}",
+        "webapp",
+        level=LOG_LEVEL["DEBUG"],
+    )
+    socketio.run(
+        app,
+        host="0.0.0.0",
+        port=acarshub_configuration.ACARS_WEB_PORT,
+        debug=True if acarshub_configuration.LOCAL_TEST else False,
+    )
 
 
 @socketio.on_error()

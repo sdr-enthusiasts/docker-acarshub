@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # echo "==== Checking acarsdec-00012095 ====="
 # echo "UDP4 connection between 127.0.0.1:ANY and 127.0.0.1:5550 for PID 361 established: PASS"
