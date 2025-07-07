@@ -20,11 +20,8 @@ declare const window: any;
 
 import "jquery";
 
-// import 'bootstrap'
 import "bootstrap/dist/css/bootstrap.min.css";
-import "./css/leaftlet.legend.css";
 import "leaflet/dist/leaflet.css";
-import "./css/leaftlet.radar.css";
 import "jbox/dist/jBox.all.css";
 import "./css/site.scss";
 

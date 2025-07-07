@@ -4,6 +4,7 @@ const HtmlWebpackPlugin = require("html-webpack-plugin");
 const FaviconsWebpackPlugin = require("favicons-webpack-plugin");
 const InjectBodyPlugin = require("inject-body-webpack-plugin").default;
 const NodePolyfillPlugin = require("node-polyfill-webpack-plugin");
+const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 
 let config = {
   entry: {
@@ -32,7 +33,7 @@ let config = {
       },
       {
         test: /\.(sass|css|scss)$/,
-        use: ["style-loader", "css-loader", "sass-loader"],
+        use: [MiniCssExtractPlugin.loader, "css-loader", "sass-loader"],
       },
       {
         test: /\.js$/,
@@ -100,19 +101,6 @@ let config = {
           name: "acarshub",
           minChunks: 2,
         },
-        vendor: {
-          test: /[\\/]node_modules[\\/]/,
-          name: (module) => {
-            // get the name. E.g. node_modules/packageName/not/this/part.js
-            // or node_modules/packageName
-            const packageName = module.context.match(
-              /[\\/]node_modules[\\/](.*?)([\\/]|$)/
-            )[1];
-
-            // npm package names are URL-safe, but some servers don't like @ symbols
-            return `npm.${packageName.replace("@", "")}`;
-          },
-        },
       },
     },
   },
@@ -131,6 +119,7 @@ let config = {
       publicPath: "../../static/images/favicons",
       prefix: "",
     }),
+    new MiniCssExtractPlugin(),
     new HtmlWebpackPlugin({
       title: "ACARS Hub",
       filename: "../index.html",
@@ -168,5 +157,6 @@ module.exports = (env, argv) => {
     config.devtool = "source-map";
     config.output.filename = "[name].[chunkhash].js";
   }
+
   return config;
 };
