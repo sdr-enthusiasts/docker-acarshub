@@ -32,7 +32,7 @@ let config = {
       },
       {
         test: /\.(sass|css|scss)$/,
-        use: ["style-loader", "css-loader"],
+        use: ["style-loader", "css-loader", "sass-loader"],
       },
       {
         test: /\.js$/,

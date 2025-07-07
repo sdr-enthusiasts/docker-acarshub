@@ -26,7 +26,7 @@ import "./css/leaftlet.legend.css";
 import "leaflet/dist/leaflet.css";
 import "./css/leaftlet.radar.css";
 import "jbox/dist/jBox.all.css";
-import "./css/site.css";
+import "./css/site.scss";
 
 import { menu } from "./helpers/menu";
 import { live_messages_page } from "./pages/live_messages";
@@ -202,6 +202,14 @@ $((): void => {
   // setScrollers();
   // Observe one or multiple elements
   // time to set everything on the page up
+
+  if (
+    window.matchMedia &&
+    window.matchMedia("(prefers-color-scheme: dark)").matches
+  ) {
+    // log it
+    console.log("Dark mode enabled");
+  }
 
   menu.generate_menu(); // generate the top menu
   menu.generate_footer(); // generate the footer

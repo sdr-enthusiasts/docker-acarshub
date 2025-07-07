@@ -1,33 +1,34 @@
-:root {
-  --site-fonts: "Helvetica Neue", Helvetica, Arial, sans-serif;
-  --mono-fonts: Menlo, Monaco, Consolas, "Courier New", monospace;
-  --blue-highlight: hsl(193, 81%, 41%);
-  --body-bg: hsl(0, 0%, 96%);
-  --grey-bg: hsl(0, 0%, 24%);
-  --grey-highlight: hsl(0, 0%, 75%);
-  --full-black: hsl(0, 0%, 0%);
-  --full-red: hsl(0, 100%, 50%);
-  --full-brown: hsl(0, 51%, 33%);
-  --full-orange: hsl(39, 100%, 50%);
-  --full-yellow: hsl(60, 100%, 50%);
-  --full-green: hsl(120, 100%, 25%);
-  --full-darkgreen: hsl(120, 100%, 13%);
-  --full-limegreen: hsl(120, 61%, 50%);
-  --full-white: hsl(250, 100%, 100%);
-  --datablock-bg: hsla(0, 0%, 100%, 0.2);
-  --datablock-border: hsla(0, 0%, 0%, 0.3);
-  --transparent: hsla(0, 0%, 0%, 0);
-  --light-wight: hsl(0, 0%, 93%);
-  --creamy-white: hsl(0, 0%, 80%);
-  --pale-white: hsl(0, 0%, 73%);
-  --mostly-transparent: hsla(0, 0%, 0%, 0.2);
-  --decor-banner-green: hsl(149, 29%, 56%);
-  --nav-text-shadow: hsl(0, 0%, 5%);
-  --egg-white: hsl(0, 0%, 80%);
-  --tabs-grey-shadow: hsl(0, 0%, 58%);
-  --jbox-shadow: hsla(0, 0%, 0%, 0.25);
-  --mapbackground: hsl(0, 0%, 60%);
-}
+@use "modules/colors";
+@use "modules/fonts";
+
+// :root {
+//   --blue-highlight: hsl(193, 81%, 41%);
+//   --body-bg: hsl(0, 0%, 96%);
+//   --grey-bg: hsl(0, 0%, 24%);
+//   --grey-highlight: hsl(0, 0%, 75%);
+//   --full-black: hsl(0, 0%, 0%);
+//   --full-red: hsl(0, 100%, 50%);
+//   --full-brown: hsl(0, 51%, 33%);
+//   --full-orange: hsl(39, 100%, 50%);
+//   --full-yellow: hsl(60, 100%, 50%);
+//   --full-green: hsl(120, 100%, 25%);
+//   --full-darkgreen: hsl(120, 100%, 13%);
+//   --full-limegreen: hsl(120, 61%, 50%);
+//   --full-white: hsl(250, 100%, 100%);
+//   --datablock-bg: hsla(0, 0%, 100%, 0.2);
+//   --datablock-border: hsla(0, 0%, 0%, 0.3);
+//   --transparent: hsla(0, 0%, 0%, 0);
+//   --light-wight: hsl(0, 0%, 93%);
+//   --creamy-white: hsl(0, 0%, 80%);
+//   --pale-white: hsl(0, 0%, 73%);
+//   --mostly-transparent: hsla(0, 0%, 0%, 0.2);
+//   --decor-banner-green: hsl(149, 29%, 56%);
+//   --nav-text-shadow: hsl(0, 0%, 5%);
+//   --egg-white: hsl(0, 0%, 80%);
+//   --tabs-grey-shadow: hsl(0, 0%, 58%);
+//   --jbox-shadow: hsla(0, 0%, 0%, 0.25);
+//   --mapbackground: hsl(0, 0%, 60%);
+// }
 
 /*div * {
   scrollbar-width: none; /* Firefox
@@ -67,15 +68,15 @@ div *::-webkit-scrollbar-thumb {
 }*/
 
 table {
-  border: 1px solid var(--full-black);
+  border: 1px solid colors.$full-black;
   border-collapse: collapse;
   width: 100%;
   table-layout: fixed;
-  background-color: var(--full-white);
+  background-color: colors.$full-white;
 }
 
 thead {
-  border: 1px solid var(--full-black);
+  border: 1px solid colors.$full-black;
 }
 
 th {
@@ -87,7 +88,7 @@ th {
 }
 
 table.search {
-  border: 1px solid var(--full-black);
+  border: 1px solid colors.$full-black;
   border-collapse: collapse;
   width: 100%;
   table-layout: fixed;
@@ -100,7 +101,7 @@ table.message {
   border-collapse: collapse;
   width: 100%;
   table-layout: fixed;
-  background-color: var(--full-white);
+  background-color: colors.$full-white;
   vertical-align: top;
 }
 
@@ -121,7 +122,7 @@ img {
 }
 
 .boxed {
-  background-color: var(--full-white);
+  background-color: colors.$full-white;
   box-sizing: border-box;
   display: inline-block;
   padding-top: 8px;
@@ -130,12 +131,12 @@ img {
   padding-left: 10px;
   width: 45px;
   text-align: center;
-  color: var(--full-black);
+  color: colors.$full-black;
   margin-bottom: -1px;
-  border-left: 1px solid var(--full-black);
-  border-right: 1px solid var(--full-black);
-  border-top: 1px solid var(--full-black);
-  border-bottom: 1px solid var(--full-black);
+  border-left: 1px solid colors.$full-black;
+  border-right: 1px solid colors.$full-black;
+  border-top: 1px solid colors.$full-black;
+  border-bottom: 1px solid colors.$full-black;
   font-weight: bold;
 }
 
@@ -150,43 +151,43 @@ img {
 }
 
 .monofont {
-  font-family: var(--mono-fonts);
+  font-family: fonts.$mono-fonts;
 }
 
 .red,
 .red_body {
-  color: var(--full-red);
+  color: colors.$full-red;
 }
 
 span.red_important strong {
-  color: var(--full-red) !important;
+  color: colors.$full-red !important;
 }
 
 .orange {
-  color: var(--full-orange);
+  color: colors.$full-orange;
 }
 
 .green {
-  color: var(--full-limegreen);
+  color: colors.$full-limegreen;
 }
 
 @media not all and (pointer: coarse) {
   .red:hover {
-    color: var(--full-white);
+    color: colors.$full-white;
   }
 }
 
 .footer strong {
-  color: var(--blue-highlight);
+  color: colors.$blue-highlight;
 }
 
 .sidebar_link {
-  color: var(--blue-highlight);
+  color: colors.$blue-highlight;
 }
 
 @media not all and (pointer: coarse) {
   .sidebar_link:hover {
-    color: var(--full-white);
+    color: colors.$full-white;
   }
 }
 
@@ -214,20 +215,20 @@ hr {
   margin-left: auto;
   margin-right: auto;
   border-style: inset;
-  border-top: 0.1em solid var(--grey-bg);
-  color: var(--body-bg);
+  border-top: 0.1em solid colors.$grey-bg;
+  color: colors.$body-bg;
 }
 
 body {
   height: 100vh;
   width: 100vw;
-  background-color: var(--body-bg);
+  background-color: colors.$body-bg;
   padding-left: 20px;
   padding-right: 20px;
   min-width: 400px;
   margin-left: auto;
   margin-right: auto;
-  font-family: var(--site-fonts);
+  font-family: fonts.$site-fonts;
   font-size: 14px;
   line-height: 1.42857143;
   -ms-overflow-style: none; /* for Internet Explorer, Edge */
@@ -305,11 +306,11 @@ div#log.left {
 }
 
 #size {
-  color: var(--blue-highlight);
+  color: colors.$blue-highlight;
 }
 
 #database {
-  color: var(--blue-highlight);
+  color: colors.$blue-highlight;
 }
 
 #log {
@@ -319,7 +320,7 @@ div#log.left {
 .search_label {
   width: 30%;
   vertical-align: middle;
-  color: var(--blue-highlight);
+  color: colors.$blue-highlight;
 }
 
 .search_term {
@@ -384,16 +385,16 @@ div#log.left {
 
 @media not all and (pointer: coarse) {
   a.spread_text:hover {
-    color: var(--full-black);
+    color: colors.$full-black;
   }
 }
 
 .red {
-  color: var(--full-red);
+  color: colors.$full-red;
 }
 
 .white {
-  color: var(--full-white);
+  color: colors.$full-white;
 }
 select {
   min-width: 100%;
@@ -402,7 +403,7 @@ select {
 input {
   min-width: 100%;
   width: 30px;
-  color: var(--full-black);
+  color: colors.$full-black;
 }
 
 label {
@@ -410,7 +411,7 @@ label {
 }
 
 .menu_non_link {
-  color: var(--blue-highlight);
+  color: colors.$blue-highlight;
   text-transform: uppercase;
 }
 
@@ -419,9 +420,9 @@ label {
   left: 0;
   bottom: 0;
   width: 100%;
-  background-color: var(--grey-bg);
+  background-color: colors.$grey-bg;
   text-align: left;
-  border: 1px solid var(--full-black);
+  border: 1px solid colors.$full-black;
   padding-right: 15px;
   padding-left: 15px;
   margin-right: auto;
@@ -432,23 +433,23 @@ label {
 
 @media not all and (pointer: coarse) {
   .footer a:hover {
-    color: var(--full-white);
+    color: colors.$full-white;
     transition: all 0.25s ease-out;
   }
 }
 
 .footer div {
   display: inline-block;
-  border-right: 1px solid var(--grey-highlight);
+  border-right: 1px solid colors.$grey-highlight;
   padding-right: 5px;
 }
 
 .shadow {
-  box-shadow: 2px 2px 2px 1px var(--mostly-transparent);
+  box-shadow: 2px 2px 2px 1px colors.$mostly-transparent;
 }
 
 pre {
-  box-shadow: 2px 2px 2px 1px var(--mostly-transparent);
+  box-shadow: 2px 2px 2px 1px colors.$mostly-transparent;
   white-space: pre-wrap; /* Since CSS 2.1 */
   white-space: -moz-pre-wrap; /* Mozilla, since 1999 */
   white-space: -pre-wrap; /* Opera 4-6 */
@@ -467,7 +468,7 @@ pre {
 }
 
 a {
-  color: var(--blue-highlight);
+  color: colors.$blue-highlight;
   text-decoration: none;
   text-transform: uppercase;
   text-decoration: none;
@@ -475,53 +476,53 @@ a {
 
 @media not all and (pointer: coarse) {
   a:hover {
-    color: var(--full-black);
+    color: colors.$full-black;
     text-decoration: none;
   }
 }
 
 a:active {
-  color: var(--blue-highlight);
+  color: colors.$blue-highlight;
   text-decoration: none;
 }
 
 a:visited {
-  color: var(--blue-highlight);
+  color: colors.$blue-highlight;
   text-decoration: none;
 }
 
 .wrap {
   display: block;
   position: relative;
-  -webkit-box-shadow: 0 0 70px var(--full-white);
-  -moz-box-shadow: 0 0 70px var(--full-white);
-  box-shadow: 0 0 70px var(--full-white);
+  -webkit-box-shadow: 0 0 70px colors.$full-white;
+  -moz-box-shadow: 0 0 70px colors.$full-white;
+  box-shadow: 0 0 70px colors.$full-white;
   margin-left: auto;
   margin-right: auto;
   top: 0;
 }
 
 .decor {
-  background: var(--decor-banner-green);
+  background: colors.$decor-banner-green;
   background: -webkit-linear-gradient(
     left,
-    var(--grey-bg) 50%,
-    var(--blue-highlight) 50%
+    colors.$grey-bg 50%,
+    colors.$blue-highlight 50%
   );
   background: -moz-linear-gradient(
     left,
-    var(--grey-bg) 50%,
-    var(--blue-highlight) 50%
+    colors.$grey-bg 50%,
+    colors.$blue-highlight 50%
   );
   background: -o-linear-gradient(
     left,
-    var(--grey-bg) 50%,
-    var(--blue-highlight) 50%
+    colors.$grey-bg 50%,
+    colors.$blue-highlight 50%
   );
   background: linear-gradient(
     to left,
-    var(--grey-bg) 50%,
-    var(--blue-highlight) 50%
+    colors.$grey-bg 50%,
+    colors.$blue-highlight 50%
   );
   background-size: 50px 25%;
   padding: 2px;
@@ -558,10 +559,10 @@ ul::after {
 
 nav {
   position: relative;
-  background: var(--grey-bg);
+  background: colors.$grey-bg;
   text-align: center;
   letter-spacing: 3px;
-  text-shadow: 1px 1px 1px var(--nav-text-shadow);
+  text-shadow: 1px 1px 1px colors.$nav-text-shadow;
   border-bottom-right-radius: 8px;
   border-bottom-left-radius: 8px;
   z-index: 10;
@@ -574,13 +575,13 @@ nav {
   padding-bottom: 10px;
   padding-right: 20px;
   padding-left: 20px;
-  color: var(--blue-highlight);
+  color: colors.$blue-highlight;
   text-transform: uppercase;
 }
 
 ul.primary li a.invert_a,
 ul.primary li a.invert_a:visited {
-  color: var(--full-white) !important;
+  color: colors.$full-white !important;
 }
 
 /* prime */
@@ -599,12 +600,12 @@ ul.primary li:last-child a {
 
 @media not all and (pointer: coarse) {
   ul.primary li a.invert_a:hover {
-    color: var(--blue-highlight) !important;
+    color: colors.$blue-highlight !important;
     transition: all 0.25s ease-in;
   }
   ul.primary li a:hover,
   ul.primary li a:active {
-    color: var(--full-white);
+    color: colors.$full-white;
     transition: all 0.25s ease-in;
   }
 }
@@ -613,7 +614,7 @@ ul.primary li:last-child a {
 ul.sub {
   position: absolute;
   z-index: 200;
-  box-shadow: 2px 2px 0 var(--grey-highlight);
+  box-shadow: 2px 2px 0 colors.$grey-highlight;
   width: 35%;
   display: none;
 }
@@ -624,9 +625,9 @@ ul.sub li {
 }
 
 ul.sub li a {
-  border-bottom: 1px dotted var(--creamy-white);
+  border-bottom: 1px dotted colors.$creamy-white;
   border-right: none;
-  color: var(--full-black);
+  color: colors.$full-black;
   padding: 15px 0;
 }
 
@@ -635,8 +636,8 @@ ul.sub li:last-child a {
 }
 
 ul.sub li a:hover {
-  color: var(--full-white);
-  background: var(--light-white);
+  color: colors.$full-white;
+  background: colors.$light-white;
 }
 
 /* sub display */
@@ -646,12 +647,12 @@ ul.primary li:hover ul {
 
 /* keeps the tab background white */
 ul.primary li:hover a {
-  color: var(--full-white);
+  color: colors.$full-white;
   text-shadow: none;
 }
 
 ul.primary li:hover > a {
-  color: var(--full-white);
+  color: colors.$full-white;
 }
 
 /* Collapse */
@@ -668,7 +669,7 @@ input[type="checkbox"] {
   display: block;
   text-transform: uppercase;
   text-align: left;
-  color: var(--blue-highlight);
+  color: colors.$blue-highlight;
   background: transparent;
   cursor: pointer;
   transition: all 0.25s ease-out;
@@ -677,7 +678,7 @@ input[type="checkbox"] {
 }
 
 .lbl-toggle:hover {
-  color: var(--full-white);
+  color: colors.$full-white;
 }
 
 .lbl-toggle::before {
@@ -714,7 +715,7 @@ input[type="checkbox"] {
 
 .collapsible-content .content-inner {
   background: transparent;
-  color: var(--blue-highlight);
+  color: colors.$blue-highlight;
   padding-right: 10px;
   padding-left: 10px;
   overflow: scroll;
@@ -735,7 +736,7 @@ input[type="checkbox"] {
 }
 
 .tabinator label {
-  background-color: var(--full-white);
+  background-color: colors.$full-white;
   box-sizing: border-box;
   display: inline-block;
   padding-top: 8px;
@@ -744,15 +745,15 @@ input[type="checkbox"] {
   padding-left: 10px;
   width: 90px;
   text-align: center;
-  color: var(--full-black);
+  color: colors.$full-black;
   margin-top: 0px;
   margin-bottom: -1px;
   margin-left: -1px;
   font-weight: bold;
-  border-left: 1px solid var(--full-black);
-  border-top: 1px solid var(--full-black);
-  border-right: 1px solid var(--full-black);
-  border-bottom: 1px solid var(--full-black);
+  border-left: 1px solid colors.$full-black;
+  border-top: 1px solid colors.$full-black;
+  border-right: 1px solid colors.$full-black;
+  border-bottom: 1px solid colors.$full-black;
 }
 
 .tabinator label::before {
@@ -767,17 +768,17 @@ input[type="checkbox"] {
 }
 
 .tabinator label:hover {
-  color: var(--grey-bg);
+  color: colors.$grey-bg;
   cursor: pointer;
 }
 
 .tabinator input:checked + label {
   position: relative;
-  color: var(--full-white);
-  background: var(--full-black);
-  border-left: 1px solid var(--full-black);
-  border-top: 1px solid var(--full-black);
-  border-right: 1px solid var(--full-black);
+  color: colors.$full-white;
+  background: colors.$full-black;
+  border-left: 1px solid colors.$full-black;
+  border-top: 1px solid colors.$full-black;
+  border-right: 1px solid colors.$full-black;
   font-weight: bold;
   font-style: normal;
 }
@@ -790,17 +791,17 @@ input[type="checkbox"] {
   right: 0;
   bottom: 0;
   left: 0;
-  box-shadow: 0 0 15px var(--tabs-grey-shadow);
+  box-shadow: 0 0 15px colors.$tabs-grey-shadow;
 }
 
 [id^="message"] {
   display: none;
-  border-top: 1px solid var(--grey-highlight);
+  border-top: 1px solid colors.$grey-highlight;
 }
 
 .checked {
   display: block;
-  box-shadow: 0 0 15px var(--grey-highlight);
+  box-shadow: 0 0 15px colors.$grey-highlight;
 }
 
 .circle_red {
@@ -808,7 +809,7 @@ input[type="checkbox"] {
   height: 11px;
   border-radius: 50%;
   border: 1px solid;
-  background-color: var(--full-red);
+  background-color: colors.$full-red;
   display: inline-block;
 }
 
@@ -817,7 +818,7 @@ input[type="checkbox"] {
   height: 11px;
   border-radius: 50%;
   border: 1px solid;
-  background-color: var(--full-orange);
+  background-color: colors.$full-orange;
   display: inline-block;
 }
 
@@ -826,7 +827,7 @@ input[type="checkbox"] {
   height: 11px;
   border-radius: 50%;
   border: 1px solid;
-  background-color: var(--full-yellow);
+  background-color: colors.$full-yellow;
   display: inline-block;
 }
 
@@ -835,7 +836,7 @@ input[type="checkbox"] {
   height: 11px;
   border-radius: 50%;
   border: 1px solid;
-  background-color: var(--full-green);
+  background-color: colors.$full-green;
   display: inline-block;
 }
 
@@ -850,9 +851,9 @@ li.img_box {
   display: block;
   padding-top: 5px;
   padding-bottom: 0;
-  border-right: 1px solid var(--grey-bg);
+  border-right: 1px solid colors.$grey-bg;
   text-align: center;
-  color: var(--grey-bg);
+  color: colors.$grey-bg;
   text-shadow: none;
 }
 
@@ -892,21 +893,21 @@ li.img_box svg {
 /* modal window stuff */
 
 #set_modal.jBox-wrapper .jBox-title {
-  background-color: var(--egg-white);
-  color: var(--blue-highlight);
-  font-family: var(--site-fonts);
+  background-color: colors.$egg-white;
+  color: colors.$blue-highlight;
+  font-family: fonts.$site-fonts;
   font-size: 20px;
   text-transform: uppercase;
   text-align: center;
 }
 
 #set_modal.jBox-wrapper .jBox-content {
-  background-color: var(--grey-bg);
-  font-family: var(--site-fonts);
+  background-color: colors.$grey-bg;
+  font-family: fonts.$site-fonts;
 }
 
 #airplane .jBox-content {
-  font-family: var(--mono-fonts) !important;
+  font-family: fonts.$mono-fonts !important;
   text-transform: uppercase;
 }
 
@@ -917,12 +918,12 @@ li.img_box svg {
 
 .jBox-wrapper {
   border-radius: 15px;
-  border: 2px solid var(--datablock-border);
+  border: 2px solid colors.$datablock-border;
   padding: 5px;
   border-radius: 15px;
   -moz-border-radius: 15px;
-  background-color: var(--grey-bg);
-  box-shadow: 0 0 3px var(--jbox-shadow);
+  background-color: colors.$grey-bg;
+  box-shadow: 0 0 3px colors.$jbox-shadow;
 }
 
 .jBox-Modal {
@@ -935,27 +936,27 @@ li.img_box svg {
 }
 
 .jBox-container {
-  background-color: var(--grey-bg);
+  background-color: colors.$grey-bg;
   border-radius: 0;
-  box-shadow: 0 0 0 var(--transparent) !important;
+  box-shadow: 0 0 0 colors.$transparent !important;
   width: inherit;
   height: inherit;
 }
 
 .jBox-Mouse.jBox-wrapper .jBox-content,
 .jBox-Tooltip.jBox-wrapper .jBox-content {
-  background-color: var(--grey-bg);
-  color: var(--blue-highlight);
+  background-color: colors.$grey-bg;
+  color: colors.$blue-highlight;
   font-size: 12px;
   font-weight: bold;
-  font-family: var(--site-fonts);
+  font-family: fonts.$site-fonts;
   box-shadow: none;
 }
 
 .jBox-wrapper .jBox-title {
-  background-color: var(--egg-white);
-  color: var(--blue-highlight);
-  font-family: var(--site-fonts);
+  background-color: colors.$egg-white;
+  color: colors.$blue-highlight;
+  font-family: fonts.$site-fonts;
   font-size: 15px;
   text-transform: uppercase;
   text-align: center;
@@ -1066,7 +1067,7 @@ a[x-apple-data-detectors] {
   }
 
   ul.sub li a:hover {
-    color: var(--egg-white);
+    color: colors.$egg-white;
     background: none;
   }
 
@@ -1136,7 +1137,7 @@ a[x-apple-data-detectors] {
 
 .show_strong {
   font-weight: bold;
-  font-family: var(--mono-fonts);
+  font-family: fonts.$mono-fonts;
 }
 
 #search_results {
@@ -1158,7 +1159,7 @@ a[x-apple-data-detectors] {
   height: calc(100vh - 160px);
   max-height: calc(100vh - 160px);
   width: 100%;
-  background-color: var(--mapbackground);
+  background-color: colors.$mapbackground;
   float: left;
   max-width: calc(100vw - 435px);
   flex: 1 1 auto;
@@ -1170,43 +1171,43 @@ a[x-apple-data-detectors] {
 .airplane_red:hover,
 .airplane_darkgreen:hover,
 .airplane_brown:hover {
-  fill: var(--full-orange);
+  fill: colors.$full-orange;
   paint-order: stroke;
 }
 
 .airplane_brown {
-  fill: var(--full-brown);
-  stroke: var(--full-black);
+  fill: colors.$full-brown;
+  stroke: colors.$full-black;
   paint-order: stroke;
 }
 
 .airplane_green {
-  fill: var(--full-green);
-  stroke: var(--full-black);
+  fill: colors.$full-green;
+  stroke: colors.$full-black;
   paint-order: stroke;
 }
 
 .airplane_blue {
-  fill: var(--blue-highlight);
-  stroke: var(--full-black);
+  fill: colors.$blue-highlight;
+  stroke: colors.$full-black;
   paint-order: stroke;
 }
 
 .airplane_orange {
-  fill: var(--full-orange);
-  stroke: var(--full-black);
+  fill: colors.$full-orange;
+  stroke: colors.$full-black;
   paint-order: stroke;
 }
 
 .airplane_red {
-  fill: var(--full-red);
-  stroke: var(--full-black);
+  fill: colors.$full-red;
+  stroke: colors.$full-black;
   paint-order: stroke;
 }
 
 .airplane_darkgreen {
-  fill: var(--full-darkgreen);
-  stroke: var(--full-black);
+  fill: colors.$full-darkgreen;
+  stroke: colors.$full-black;
   paint-order: stroke;
 }
 
@@ -1238,55 +1239,55 @@ div.plane_list_no_hover,
 div.plane_list {
   display: inline-block;
   width: 100%;
-  border-top: 1px solid var(--full-black);
-  border-bottom: 1px solid var(--full-black);
-  color: var(--full-white);
-  background-color: var(--blue-highlight);
+  border-top: 1px solid colors.$full-black;
+  border-bottom: 1px solid colors.$full-black;
+  color: colors.$full-white;
+  background-color: colors.$blue-highlight;
   font-weight: bold;
 }
 
 div.plane_list:hover {
-  background-color: var(--datablock-bg);
-  color: var(--blue-highlight);
+  background-color: colors.$datablock-bg;
+  color: colors.$blue-highlight;
 }
 
 div.plane_element {
   display: inline-block;
   position: relative;
   padding-left: 5px;
-  border-left: 2px solid var(--full-black);
+  border-left: 2px solid colors.$full-black;
 }
 
 .plane_header a {
-  color: var(--blue-highlight) !important;
+  color: colors.$blue-highlight !important;
   text-decoration: none;
   text-transform: uppercase;
   font-weight: bold;
 }
 
 .noleft {
-  border-left: 0 solid var(--transparent) !important;
+  border-left: 0 solid colors.$transparent !important;
 }
 
 .sidebar_hovered_from_map_acars {
-  background-color: var(--datablock-bg) !important;
-  color: var(--full-green) !important;
+  background-color: colors.$datablock-bg !important;
+  color: colors.$full-green !important;
 }
 
 .sidebar_hovered_from_map_no_acars {
-  background-color: var(--datablock-bg) !important;
-  color: var(--blue-highlight) !important;
+  background-color: colors.$datablock-bg !important;
+  color: colors.$blue-highlight !important;
 }
 
 .sidebar_no_hover_with_acars {
-  background-color: var(--full-green) !important;
-  color: var(--full-white) !important;
+  background-color: colors.$full-green !important;
+  color: colors.$full-white !important;
   font-weight: bold !important;
 }
 
 .sidebar_no_hover_with_unread {
-  background-color: var(--full-darkgreen) !important;
-  color: var(--full-white) !important;
+  background-color: colors.$full-darkgreen !important;
+  color: colors.$full-white !important;
   font-weight: bold !important;
 }
 
@@ -1296,8 +1297,8 @@ div.plane_element {
 .sidebar_no_hover_with_unread:focus a,
 .sidebar_hovered_from_map_with_unread,
 .sidebar_hovered_from_map_with_unread a {
-  background-color: var(--datablock-bg) !important;
-  color: var(--full-darkgreen) !important;
+  background-color: colors.$datablock-bg !important;
+  color: colors.$full-darkgreen !important;
   font-weight: bold !important;
 }
 
@@ -1305,8 +1306,8 @@ div.plane_element {
 .sidebar_no_hover_with_acars:focus,
 .sidebar_no_hover_with_acars:hover a,
 .sidebar_no_hover_with_acars:focus a {
-  background-color: var(--datablock-bg) !important;
-  color: var(--full-green) !important;
+  background-color: colors.$datablock-bg !important;
+  color: colors.$full-green !important;
 }
 
 .sidebar_alert_unread_hovered_from_map,
@@ -1315,8 +1316,8 @@ div.plane_element {
 .sidebar_alert_unread:focus,
 .sidebar_alert_unread:hover a,
 .sidebar_alert_unread:focus a {
-  background-color: var(--datablock-bg) !important;
-  color: var(--full-red) !important;
+  background-color: colors.$datablock-bg !important;
+  color: colors.$full-red !important;
 }
 
 .sidebar_alert_read_hovered_from_map,
@@ -1325,29 +1326,29 @@ div.plane_element {
 .sidebar_alert_read:focus,
 .sidebar_alert_read:hover a,
 .sidebar_alert_read:focus a {
-  background-color: var(--datablock-bg) !important;
-  color: var(--full-brown) !important;
+  background-color: colors.$datablock-bg !important;
+  color: colors.$full-brown !important;
 }
 
 .sidebar_hovered_from_map_acars .plane_element a {
-  color: var(--full-green) !important;
+  color: colors.$full-green !important;
 }
 
 .sidebar_alert_unread {
-  background-color: var(--full-red) !important;
+  background-color: colors.$full-red !important;
 }
 
 .sidebar_alert_read {
-  background-color: var(--full-brown) !important;
+  background-color: colors.$full-brown !important;
 }
 
 .plane_element a {
-  color: var(--full-white);
+  color: colors.$full-white;
 }
 
 .airplane_datablock {
-  background: var(--datablock-bg);
-  color: var(--full-black);
+  background: colors.$datablock-bg;
+  color: colors.$full-black;
   font-weight: bold;
   text-transform: uppercase;
   max-width: 120px;
@@ -1355,7 +1356,7 @@ div.plane_element {
   width: max-content;
   padding: 4px;
   border-radius: 15px;
-  border: 2px solid var(--datablock-border);
+  border: 2px solid colors.$datablock-border;
   -moz-border-radius: 15px;
-  font-family: var(--mono-fonts);
+  font-family: fonts.$mono-fonts;
 }
