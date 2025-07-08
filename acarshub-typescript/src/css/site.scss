@@ -285,7 +285,7 @@ div#content.container {
   width: calc(100vw - 40px);
   margin-bottom: 40px;
   overflow: scroll;
-  height: calc(100vh - 125px);
+  height: calc(100vh - 130px);
 }
 
 div#main_block.row {
@@ -1261,7 +1261,7 @@ div#stat_images > div:last-child {
 
 div#planes {
   width: 340px;
-  max-height: calc(100vh - 160px);
+  max-height: calc(100vh - 130px);
   overflow: scroll;
   position: relative;
   float: right;
