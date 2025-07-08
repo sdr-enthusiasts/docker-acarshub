@@ -903,6 +903,7 @@ li.img_box svg {
   width: 100%;
   max-width: 1000px !important;
   height: 300px;
+  padding: 5px;
   /* overflow: hidden; */
 }
 
@@ -1243,6 +1244,14 @@ svg {
 
 div#stat_images {
   max-width: 1000px;
+}
+
+div#stat_images img {
+  padding: 5px;
+}
+
+div#stat_images img:last-child {
+  padding-bottom: 0;
 }
 
 div#planes {
