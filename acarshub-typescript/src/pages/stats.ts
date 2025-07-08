@@ -765,7 +765,7 @@ export let stats_page = {
       console.log("Server disconnected, skipping image updates");
       return;
     }
-    console.log(`${window.matchMedia}`);
+
     let prefix =
       window.matchMedia &&
       window.matchMedia("(prefers-color-scheme: dark)").matches
@@ -827,16 +827,22 @@ export let stats_page = {
   },
 
   set_html: function (): void {
+    let prefix =
+      window.matchMedia &&
+      window.matchMedia("(prefers-color-scheme: dark)").matches
+        ? "-dark"
+        : "";
+
     $("#log").html(`<p><div id="stat_menu"></div></p>
     <div id="stat_images">
-    <img src="static/images/1hour.png" id="1hr" alt="1 Hour"><br>
-    <img src="static/images/6hour.png" id="6hr" alt="6 Hours"><br>
-    <img src="static/images/12hour.png" id="12hr" alt="12 Hours"><br>
-    <img src="static/images/24hours.png" id="24hr" alt="24 Hours"><br>
-    <img src="static/images/1week.png" id="1wk" alt="1 Week"><br>
-    <img src="static/images/30days.png" id="30day" alt="30 Days"><br>
-    <img src="static/images/6months.png" id="6mon" alt="6 Months"><br>
-    <img src="static/images/1year.png" id="1yr" alt="1 Year"><br>
+    <img src="static/images/1hour${prefix}.png" id="1hr" alt="1 Hour"><br>
+    <img src="static/images/6hour${prefix}.png" id="6hr" alt="6 Hours"><br>
+    <img src="static/images/12hour${prefix}.png" id="12hr" alt="12 Hours"><br>
+    <img src="static/images/24hours${prefix}.png" id="24hr" alt="24 Hours"><br>
+    <img src="static/images/1week${prefix}.png" id="1wk" alt="1 Week"><br>
+    <img src="static/images/30days${prefix}.png" id="30day" alt="30 Days"><br>
+    <img src="static/images/6months${prefix}.png" id="6mon" alt="6 Months"><br>
+    <img src="static/images/1year${prefix}.png" id="1yr" alt="1 Year"><br>
     </div>
     <div class="chart-container"><div>&nbsp;</div><canvas id="signallevels"></canvas></div>
     <div class="chart-container"><div>&nbsp;</div><canvas id="alertterms"></canvas></div>
