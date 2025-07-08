@@ -765,6 +765,7 @@ export let stats_page = {
       console.log("Server disconnected, skipping image updates");
       return;
     }
+    console.log(`${window.matchMedia}`);
     let prefix =
       window.matchMedia &&
       window.matchMedia("(prefers-color-scheme: dark)").matches
