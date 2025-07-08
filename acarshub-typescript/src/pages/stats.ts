@@ -86,6 +86,14 @@ export let stats_page = {
       const canvas_alerts: HTMLCanvasElement = <HTMLCanvasElement>(
         document.getElementById("alertterms")
       );
+      let background_color =
+        window.matchMedia &&
+        window.matchMedia("(prefers-color-scheme: dark)").matches
+          ? "#3d3d3d"
+          : "#ffffff";
+
+      canvas_alerts.style.backgroundColor = background_color;
+
       const ctx_alerts: CanvasRenderingContext2D =
         canvas_alerts.getContext("2d")!;
       if (ctx_alerts != null) {
@@ -169,6 +177,15 @@ export let stats_page = {
       const canvas: HTMLCanvasElement = <HTMLCanvasElement>(
         document.getElementById("signallevels")
       );
+
+      let background_color =
+        window.matchMedia &&
+        window.matchMedia("(prefers-color-scheme: dark)").matches
+          ? "#3d3d3d"
+          : "#ffffff";
+
+      canvas.style.backgroundColor = background_color;
+
       const ctx: CanvasRenderingContext2D = canvas.getContext("2d")!;
       if (ctx != null) {
         this.chart_signals = new Chart(ctx, {
@@ -440,6 +457,14 @@ export let stats_page = {
     const canvas: HTMLCanvasElement = <HTMLCanvasElement>(
       document.getElementById(canvas_id)
     );
+    let background_color =
+      window.matchMedia &&
+      window.matchMedia("(prefers-color-scheme: dark)").matches
+        ? "#3d3d3d"
+        : "#ffffff";
+
+    canvas.style.backgroundColor = background_color;
+
     const ctx: CanvasRenderingContext2D = canvas
       ? canvas.getContext("2d")!
       : null!;
@@ -566,6 +591,14 @@ export let stats_page = {
       const canvas_data: HTMLCanvasElement = <HTMLCanvasElement>(
         document.getElementById("msg_count_data")
       );
+      let background_color =
+        window.matchMedia &&
+        window.matchMedia("(prefers-color-scheme: dark)").matches
+          ? "#3d3d3d"
+          : "#ffffff";
+
+      canvas_data.style.backgroundColor = background_color;
+
       const ctx_data: CanvasRenderingContext2D = canvas_data.getContext("2d")!;
       if (ctx_data != null) {
         this.chart_message_counts_data = new Chart(ctx_data, {
@@ -634,6 +667,8 @@ export let stats_page = {
       const canvas_empty: HTMLCanvasElement = <HTMLCanvasElement>(
         document.getElementById("msg_count_empty")
       );
+      canvas_empty.style.backgroundColor = background_color;
+
       const ctx_empty: CanvasRenderingContext2D =
         canvas_empty.getContext("2d")!;
       if (ctx_empty != null) {
