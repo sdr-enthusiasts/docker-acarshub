@@ -5,7 +5,6 @@ gevent==25.5.1
 gunicorn[gevent]==23.0.0
 prometheus-client==0.22.1
 requests==2.32.4
-rrdtool==0.1.16
-#rrdtool @git+https://github.com/fredclausen/python-rrdtool.git
+rrdtool @git+https://github.com/fredclausen/python-rrdtool.git
 schedule==1.2.2
 sqlalchemy==2.0.41
