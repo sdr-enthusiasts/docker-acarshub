@@ -903,7 +903,10 @@ li.img_box svg {
   width: 100%;
   max-width: 1000px !important;
   height: 300px;
-  padding: 5px;
+  margin: 5px;
+  border-width: 2px;
+  border-color: colors.$stat-border;
+  border-style: groove;
   /* overflow: hidden; */
 }
 
@@ -1247,11 +1250,11 @@ div#stat_images {
 }
 
 div#stat_images > img {
-  padding: 5px;
+  margin: 5px;
 }
 
 div#stat_images > img:last-child {
-  padding-bottom: 0;
+  margin: 0;
 }
 
 div#planes {
