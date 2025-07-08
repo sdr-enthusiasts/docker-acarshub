@@ -765,37 +765,51 @@ export let stats_page = {
       console.log("Server disconnected, skipping image updates");
       return;
     }
+    let prefix =
+      window.matchMedia &&
+      window.matchMedia("(prefers-color-scheme: dark)").matches
+        ? "-dark"
+        : "";
+
     $("#1hr").prop(
       "src",
-      `static/images/${this.image_prefix}1hour.png?rand=` + Math.random()
+      `static/images/${this.image_prefix}1hour${prefix}.png?rand=` +
+        Math.random()
     );
     $("#6hr").prop(
       "src",
-      `static/images/${this.image_prefix}6hour.png?rand=` + Math.random()
+      `static/images/${this.image_prefix}6hour${prefix}.png?rand=` +
+        Math.random()
     );
     $("#12hr").prop(
       "src",
-      `static/images/${this.image_prefix}12hour.png?rand=` + Math.random()
+      `static/images/${this.image_prefix}12hour${prefix}.png?rand=` +
+        Math.random()
     );
     $("#24hr").prop(
       "src",
-      `static/images/${this.image_prefix}24hours.png?rand=` + Math.random()
+      `static/images/${this.image_prefix}24hours${prefix}.png?rand=` +
+        Math.random()
     );
     $("#1wk").prop(
       "src",
-      `static/images/${this.image_prefix}1week.png?rand=` + Math.random()
+      `static/images/${this.image_prefix}1week${prefix}.png?rand=` +
+        Math.random()
     );
     $("#30day").prop(
       "src",
-      `static/images/${this.image_prefix}30days.png?rand=` + Math.random()
+      `static/images/${this.image_prefix}30days${prefix}.png?rand=` +
+        Math.random()
     );
     $("#6mon").prop(
       "src",
-      `static/images/${this.image_prefix}6months.png?rand=` + Math.random()
+      `static/images/${this.image_prefix}6months${prefix}.png?rand=` +
+        Math.random()
     );
     $("#1yr").prop(
       "src",
-      `static/images/${this.image_prefix}1year.png?rand=` + Math.random()
+      `static/images/${this.image_prefix}1year${prefix}.png?rand=` +
+        Math.random()
     );
   },
 

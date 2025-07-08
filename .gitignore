@@ -146,3 +146,4 @@ rootfs/webapp/pyvenv.cfg
 docker_acarshub.egg-info
 .pdm-python
 *.sqlite
+*.rrd

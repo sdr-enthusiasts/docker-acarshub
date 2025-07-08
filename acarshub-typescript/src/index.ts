@@ -204,8 +204,7 @@ $((): void => {
     window.matchMedia &&
     window.matchMedia("(prefers-color-scheme: dark)").matches
   ) {
-    // add the dark mode class to the body
-    $("body").addClass("dark-mode");
+    console.log("Dark mode enabled");
   }
 
   menu.generate_menu(); // generate the top menu
