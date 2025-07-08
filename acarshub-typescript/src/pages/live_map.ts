@@ -1477,7 +1477,6 @@ export let live_map_page = {
 
   set_html: function (): void {
     $("#modal_text").html("");
-    $("#page_name").html("");
     if (this.adsb_enabled)
       $("#log").html(
         '<div style="display: flex;height: 100%;" ><div id="mapid"></div><div id="planes"></div>'

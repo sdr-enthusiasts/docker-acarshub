@@ -580,7 +580,6 @@ export let alerts_page = {
         '<a href="javascript:show_page_modal()">Page Settings</a>'
       );
     }
-    $("#page_name").html("");
     $("#log").html("");
   },
 

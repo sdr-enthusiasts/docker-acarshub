@@ -523,7 +523,6 @@ export let live_messages_page = {
     $("#modal_text").html(
       '<a href="javascript:show_page_modal()">Page Settings</a>'
     );
-    $("#page_name").html("Messages will appear here, newest first:");
   },
 
   new_labels: function (msg: labels): void {

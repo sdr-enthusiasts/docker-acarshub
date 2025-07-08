@@ -62,7 +62,6 @@ export let about = {
     );
 
     $("#modal_text").html("");
-    $("#page_name").html("");
     $("#log").html("");
   },
 };

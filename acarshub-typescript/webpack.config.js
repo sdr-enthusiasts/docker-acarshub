@@ -133,9 +133,6 @@ let config = {
       <div class="row" id="links"></div>
     </div> <!-- /#header -->
     <div class="container" id="content">
-      <div class="row" id="main_block">
-        <h3><span id="page_name"></span></h3>
-      </div> <!-- Main block -->
       <div class="left" id="log">
       </div> <!-- /#log -->
     </div> <!-- /#content -->

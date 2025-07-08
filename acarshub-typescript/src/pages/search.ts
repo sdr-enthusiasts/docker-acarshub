@@ -490,7 +490,6 @@ export let search_page = {
 
   set_html: function (): void {
     $("#modal_text").html("");
-    $("#page_name").html("").css("display", "none");
     this.update_size();
   },
 };

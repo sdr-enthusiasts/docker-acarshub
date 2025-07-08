@@ -911,7 +911,6 @@ export let stats_page = {
     <div id="chart_msg_empty" class="chart-container"><canvas id="msg_count_empty"></div>
     </p>`); // show the messages we've received
     $("#modal_text").html("");
-    $("#page_name").html("");
     this.resize();
   },
 
