@@ -49,7 +49,8 @@
         inputsFrom = [self.packages.${system}.default.devShell];
         # add extra packages
         packages = [
-          nixpkgs.legacyPackages.${system}.hello
+          nixpkgs.legacyPackages.${system}.pdm
+          nixpkgs.legacyPackages.${system}.rrdtool
         ];
       };
     });

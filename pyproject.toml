@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "docker-acarshub"
 description = "acarshub"
-version = "1.0.0"
+version = "3.11.0"
 dependencies = [
     "Flask==3.1.1",
     "Flask-SocketIO==5.5.1",
@@ -13,8 +13,10 @@ dependencies = [
     "gunicorn[gevent]==23.0.0",
     "prometheus-client==0.22.1",
     "requests==2.32.4",
-    # "rrdtool",
+    #"rrdtool @git+https://github.com/fredclausen/python-rrdtool.git",
+    #"rrdtool @file:/home/fred/GitHub/python-rrdtool",
     "schedule==1.2.2",
     "sqlalchemy==2.0.41",
+    "django==5.2.4",
 ]
 requires-python = ">=3.13"
