@@ -879,7 +879,7 @@ export let stats_page = {
     <img src="static/images/6months${prefix}.png" id="6mon" alt="6 Months"><br>
     <img src="static/images/1year${prefix}.png" id="1yr" alt="1 Year"><br>
     </div>
-    <div class="chart-container"><div>&nbsp;</div><canvas id="signallevels"></canvas></div>
+    <div class="chart-container"><canvas id="signallevels"></canvas></div>
     <div class="chart-container"><div>&nbsp;</div><canvas id="alertterms"></canvas></div>
     ${
       this.acars_on
