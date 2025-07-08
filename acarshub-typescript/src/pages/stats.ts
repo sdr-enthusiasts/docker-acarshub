@@ -883,32 +883,32 @@ export let stats_page = {
     <div class="chart-container"><canvas id="alertterms"></canvas></div>
     ${
       this.acars_on
-        ? '<div id="acars_freq_graph" class="chart-container"><div>&nbsp;</div><canvas id="frequencies_acars"></canvas></div>'
+        ? '<div id="acars_freq_graph" class="chart-container"><canvas id="frequencies_acars"></canvas></div>'
         : ""
     }
     ${
       this.vdlm_on
-        ? '<div id="vdlm_freq_graph" class="chart-container"><div>&nbsp;</div><canvas id="frequencies_vdlm"></canvas></div>'
+        ? '<div id="vdlm_freq_graph" class="chart-container"><canvas id="frequencies_vdlm"></canvas></div>'
         : ""
     }
     ${
       this.hfdl_on
-        ? '<div id="hfdl_freq_graph" class="chart-container"><div>&nbsp;</div><canvas id="frequencies_hfdl"></canvas></div>'
+        ? '<div id="hfdl_freq_graph" class="chart-container"><canvas id="frequencies_hfdl"></canvas></div>'
         : ""
     }
     ${
       this.imsl_on
-        ? '<div id="imsl_freq_graph" class="chart-container"><div>&nbsp;</div><canvas id="frequencies_imsl"></canvas></div>'
+        ? '<div id="imsl_freq_graph" class="chart-container"><canvas id="frequencies_imsl"></canvas></div>'
         : ""
     }
     ${
       this.irdm_on
-        ? '<div id="irdm_freq_graph" class="chart-container"><div>&nbsp;</div><canvas id="frequencies_irdm"></canvas></div>'
+        ? '<div id="irdm_freq_graph" class="chart-container"><canvas id="frequencies_irdm"></canvas></div>'
         : ""
     }
 
-    <div id="chart_msg_good" class="chart-container"><div>&nbsp;</div><canvas id="msg_count_data"></div>
-    <div id="chart_msg_empty" class="chart-container"><div>&nbsp;</div><canvas id="msg_count_empty"></div>
+    <div id="chart_msg_good" class="chart-container"><canvas id="msg_count_data"></div>
+    <div id="chart_msg_empty" class="chart-container"><canvas id="msg_count_empty"></div>
     </p>'`); // show the messages we've received
     $("#modal_text").html("");
     $("#page_name").html("");
