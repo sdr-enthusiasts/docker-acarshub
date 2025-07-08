@@ -136,9 +136,27 @@ export function display_message_group(
     }
   }
 
+  msgs_string += inner_message_html(msg_to_process, unique_id, active_tab);
+
+  if (msg_to_process.length > 1) {
+    msgs_string += html_functions.end_message_tabs();
+  }
+
+  msgs_string += html_functions.end_message();
+
+  return msgs_string;
+}
+
+function inner_message_html(
+  msg_to_process: acars_msg[],
+  unique_id: string,
+  active_tab: string
+): string {
+  let html_output = "";
+
   msg_to_process.forEach((message) => {
     // Now we'll generate the HTML for each message in the group
-    let html_output = "";
+    let skip = false;
     if (msg_to_process.length > 1) {
       // If we have multiple messages in this group we need to set the non-selected tabs to invisible
       let tab_uid = unique_id;
@@ -153,8 +171,11 @@ export function display_message_group(
         html_output += html_functions.message_div(unique_id, tab_uid);
       // User has selected a tab for the group and it is this message. Set to be vis
       // Hide the selected tab if the previous cases don't match
-      else html_output += html_functions.message_div(unique_id, tab_uid, false);
+      else skip = true;
     }
+
+    if (skip) return;
+
     // variable to hold the current message
     html_output += html_functions.start_message_box();
     html_output += html_functions.message_station_and_type(
@@ -330,14 +351,8 @@ export function display_message_group(
       html_output += html_functions.end_message_div();
     }
 
-    msgs_string = msgs_string + html_output;
+    //msgs_string = msgs_string + html_output;
   });
 
-  if (msg_to_process.length > 1) {
-    msgs_string += html_functions.end_message_tabs();
-  }
-
-  msgs_string += html_functions.end_message();
-
-  return msgs_string;
+  return html_output;
 }

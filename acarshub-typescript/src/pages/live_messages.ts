@@ -221,6 +221,8 @@ export let live_messages_page = {
     // Find the next / previous tabs
     // This is UGLY
     // FIXME....deuglify it
+    let matched_index: number | undefined = undefined;
+
     for (let i = 0; i < this.lm_msgs_received.planes.length; i++) {
       if (
         this.lm_msgs_received.planes[i].messages.length > 1 &&
@@ -228,6 +230,8 @@ export let live_messages_page = {
           this.lm_msgs_received.planes[i].messages.length - 1
         ].uid == uid
       ) {
+        matched_index = i;
+
         let active_tab = String(
           this.lm_msgs_received.planes[i].messages.findIndex(
             (sub_msg: acars_msg) => {
@@ -300,6 +304,25 @@ export let live_messages_page = {
       this.selected_tabs = uid + ";" + element_id;
     } else if (!added) {
       this.selected_tabs += "," + uid + ";" + element_id;
+    }
+
+    // get the messages for the plane and generate new html
+    if (matched_index !== undefined) {
+      let messages = this.lm_msgs_received.planes[matched_index].messages;
+      // Generate new HTML for the messages
+
+      console.log(
+        `Updating message group ${uid} with ${messages.length} messages`
+      );
+      let replacement_message = display_message_group(
+        messages,
+        this.selected_tabs,
+        true
+      );
+      console.log(`Replacement message HTML: ${replacement_message}`);
+
+      $(`#acarsmsg_${uid}_container`).replaceWith(replacement_message);
+      resize_tabs();
     }
   },
 

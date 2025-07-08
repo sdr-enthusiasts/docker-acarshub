@@ -79,12 +79,13 @@ export let html_functions = {
     }${matched ? "</span>" : ""}</label>`;
   },
 
+  // FIXME: tab uid and checked should be factored out
   message_div: function (
     unique_id: string,
     tab_uid: string,
     checked: boolean = true
   ): string {
-    return `<div id = "message_${unique_id}_${tab_uid}" class="sub_msg${unique_id}${
+    return `<div id = "message_${unique_id}" class="sub_msg${unique_id}${
       checked ? " checked" : ""
     }">`;
   },
