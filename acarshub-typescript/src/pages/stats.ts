@@ -870,14 +870,14 @@ export let stats_page = {
 
     $("#log").html(`<p><div id="stat_menu"></div></p>
     <div id="stat_images">
-    <img src="static/images/1hour${prefix}.png" id="1hr" alt="1 Hour"><br>
-    <img src="static/images/6hour${prefix}.png" id="6hr" alt="6 Hours"><br>
-    <img src="static/images/12hour${prefix}.png" id="12hr" alt="12 Hours"><br>
-    <img src="static/images/24hours${prefix}.png" id="24hr" alt="24 Hours"><br>
-    <img src="static/images/1week${prefix}.png" id="1wk" alt="1 Week"><br>
-    <img src="static/images/30days${prefix}.png" id="30day" alt="30 Days"><br>
-    <img src="static/images/6months${prefix}.png" id="6mon" alt="6 Months"><br>
-    <img src="static/images/1year${prefix}.png" id="1yr" alt="1 Year"><br>
+    <div><img src="static/images/1hour${prefix}.png" id="1hr" alt="1 Hour"></div>
+    <div><img src="static/images/6hour${prefix}.png" id="6hr" alt="6 Hours"></div>
+    <div><img src="static/images/12hour${prefix}.png" id="12hr" alt="12 Hours"></div>
+    <div><img src="static/images/24hours${prefix}.png" id="24hr" alt="24 Hours"></div>
+    <div><img src="static/images/1week${prefix}.png" id="1wk" alt="1 Week"></div>
+    <div><img src="static/images/30days${prefix}.png" id="30day" alt="30 Days"></div>
+    <div><img src="static/images/6months${prefix}.png" id="6mon" alt="6 Months"></div>
+    <div><img src="static/images/1year${prefix}.png" id="1yr" alt="1 Year"></div>
     </div>
     <div class="chart-container"><canvas id="signallevels"></canvas></div>
     <div class="chart-container"><canvas id="alertterms"></canvas></div>
@@ -920,32 +920,6 @@ export let stats_page = {
       this.width = width;
     }
     $("#counts").css("padding-top", "10px");
-    // if (this.width >= 1000) {
-    //   $("#acars_freq_graph").css("float", "left");
-    //   $("#vdlm_freq_graph").css("float", "left");
-    //   $("#vdlm_freq_graph").css("padding-top", "0px");
-    //   $("#frequencies_acars").css("float", "right");
-    //   $("#frequencies_vdlm").css("float", "right");
-
-    //   $("#chart_msg_good").css("float", "left");
-    //   $("#chart_msg_empty").css("float", "left");
-    //   $("#chart_msg_empty").css("padding-top", "0px");
-    //   $("#msg_count_data").css("float", "right");
-    //   $("#msg_count_empty").css("float", "right");
-    // } else {
-    // TODO: fix this
-    // $("#acars_freq_graph").css("float", "none");
-    // $("#vdlm_freq_graph").css("float", "none");
-    // $("#vdlm_freq_graph").css("padding-top", "10px");
-    // $("#frequencies_acars").css("float", "none");
-    // $("#frequencies_vdlm").css("float", "none");
-
-    // $("#chart_msg_good").css("float", "none");
-    // $("#chart_msg_empty").css("float", "none");
-    // $("#chart_msg_empty").css("padding-top", "10px");
-    // $("#msg_count_data").css("float", "none");
-    // $("#msg_count_empty").css("float", "none");
-    //}
   },
 
   stats_active: function (state = false): void {

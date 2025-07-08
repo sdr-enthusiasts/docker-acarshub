@@ -142,7 +142,7 @@ textarea {
 }
 
 img {
-  max-width: 100%;
+  max-width: 1000px;
 }
 
 .boxed {
@@ -1249,12 +1249,14 @@ div#stat_images {
   max-width: 1000px;
 }
 
-div#stat_images > img {
-  margin: 5px;
+div#stat_images > div {
+  margin-left: 5px;
+  margin-top: 5px;
+  margin-bottom: 5px;
 }
 
-div#stat_images > img:last-child {
-  margin: 0;
+div#stat_images > div:last-child {
+  margin-bottom: 0;
 }
 
 div#planes {
