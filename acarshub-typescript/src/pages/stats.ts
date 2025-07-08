@@ -880,7 +880,7 @@ export let stats_page = {
     <img src="static/images/1year${prefix}.png" id="1yr" alt="1 Year"><br>
     </div>
     <div class="chart-container"><canvas id="signallevels"></canvas></div>
-    <div class="chart-container"><div>&nbsp;</div><canvas id="alertterms"></canvas></div>
+    <div class="chart-container"><canvas id="alertterms"></canvas></div>
     ${
       this.acars_on
         ? '<div id="acars_freq_graph" class="chart-container"><div>&nbsp;</div><canvas id="frequencies_acars"></canvas></div>'
