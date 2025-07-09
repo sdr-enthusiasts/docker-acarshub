@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
-    "lib": ["ES2019", "DOM"],
-    "module": "ES6",
+    "lib": ["ES2022", "DOM"],
+    "module": "ES2022",
     "jsx": "react",
     "moduleResolution": "node",
     "noEmit": false,
@@ -17,7 +17,7 @@
     "outDir": "dist",
     "sourceMap": false,
     "strict": true,
-    "target": "ES2020",
+    "target": "ES2022",
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "baseUrl": ".",
