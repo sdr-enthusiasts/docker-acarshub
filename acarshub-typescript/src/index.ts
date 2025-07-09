@@ -27,7 +27,8 @@ import "./css/site.scss";
 
 import { menu } from "./helpers/menu";
 import { live_messages_page } from "./pages/live_messages";
-import { search_page } from "./pages/search";
+import { live_map_page } from "./pages/live_map";
+import { SearchPage } from "./pages/search";
 import { StatsPage } from "./pages/stats";
 import { AboutPage } from "./pages/about";
 import { StatusPage } from "./pages/status";
@@ -52,12 +53,10 @@ import {
   window_size,
   alert_matched,
   plane_data,
-  acars_msg,
   plane_match,
   acarshub_version,
 } from "./interfaces";
 
-import { live_map_page } from "./pages/live_map";
 import Cookies from "js-cookie";
 
 let socket: Socket = <any>null;
@@ -71,7 +70,6 @@ let old_window_width: number = 0;
 let old_window_height: number = 0;
 
 let adsb_url: string = "";
-let adsb_getting_data: boolean = false;
 let adsb_interval: any;
 let connection_good: boolean = true;
 let adsb_enabled = false;
@@ -85,6 +83,7 @@ let wakelock: any | null = null;
 let about: AboutPage = new AboutPage();
 let status: StatusPage = new StatusPage();
 let stats: StatsPage = new StatsPage();
+let search: SearchPage = new SearchPage();
 
 // @ts-expect-error
 var hidden, visibilityChange;
@@ -248,11 +247,11 @@ $((): void => {
   });
 
   socket.on("database", function (msg: database_size): void {
-    search_page.database_size_details(msg);
+    search.database_size_details(msg);
   });
 
   socket.on("database_search_results", function (msg: search_html_msg): void {
-    search_page.database_search_results(msg);
+    search.database_search_results(msg);
   });
 
   socket.on("acarshub-version", function (version: acarshub_version): void {
@@ -381,7 +380,6 @@ $((): void => {
 
   // init all page backgrounding functions
   live_messages_page.live_messages();
-  search_page.search();
   stats.stats();
   alerts_page.alert();
   toggle_pages();
@@ -445,12 +443,10 @@ function set_connection_good(): void {
 async function update_adsb(): Promise<void> {
   fetch(adsb_url, adsb_request_options)
     .then((response) => {
-      adsb_getting_data = true;
       return response.json();
     })
     .then((planes) => live_map_page.set_targets(planes as adsb))
     .catch((err) => {
-      adsb_getting_data = false;
       status.update_adsb_status({
         adsb_enabled: true,
         adsb_getting_data: false,
@@ -469,7 +465,7 @@ function update_url(): void {
   index_acars_url = document.location.origin + index_acars_path;
 
   live_messages_page.set_live_page_urls(index_acars_path, index_acars_url);
-  search_page.set_search_page_urls(index_acars_path, index_acars_url);
+  search.set_page_urls(index_acars_path, index_acars_url);
   stats.set_page_urls(index_acars_path, index_acars_url);
   about.set_page_urls(index_acars_path, index_acars_url);
   status.set_page_urls(index_acars_path, index_acars_url);
@@ -491,10 +487,10 @@ function toggle_pages(is_backgrounded = false): void {
       live_messages_page.live_message_active();
     } else if (pages[page] === "/search" && index_acars_page === pages[page]) {
       $("#search_link").addClass("invert_a");
-      search_page.search_active(!is_backgrounded);
+      search.active(!is_backgrounded);
     } else if (pages[page] === "/search") {
       $("#search_link").removeClass("invert_a");
-      search_page.search_active();
+      search.active();
     } else if (pages[page] === "/stats" && index_acars_page === pages[page]) {
       $("#stats_link").addClass("invert_a");
       stats.active(!is_backgrounded);
@@ -709,15 +705,15 @@ window.update_prefix = function (prefix: string): void {
 };
 
 window.showall = function (): void {
-  search_page.showall();
+  search.showall();
 };
 
 window.jumppage = function (): void {
-  search_page.jumppage();
+  search.jumppage();
 };
 
 window.runclick = function (page: number): void {
-  search_page.runclick(page);
+  search.runclick(page);
 };
 
 window.handle_radio = function (element_id: string, uid: string): void {
@@ -786,7 +782,7 @@ window.mark_all_messages_read = function (): void {
 };
 
 window.query = function (): void {
-  search_page.query();
+  search.query();
 };
 
 window.hide_libseccomp2_warning = function (): void {
