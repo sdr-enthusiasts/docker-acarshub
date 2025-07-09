@@ -23,23 +23,25 @@ import {
   acarshub_version,
   status_external_formats,
 } from "../interfaces";
+import { ACARSHubPage } from "./master";
 
-export let status = {
-  status_acars_path: "" as string,
-  status_acars_url: "" as string,
+export class StatusPage extends ACARSHubPage {
+  #adsb_status: adsb_status = {
+    adsb_enabled: false,
+    adsb_getting_data: false,
+  };
+  #current_status: system_status = {} as system_status;
+  #current_version: acarshub_version = {} as acarshub_version;
 
-  status_page_active: false as boolean,
-  current_status: {} as system_status,
-  adsb_status: { adsb_enabled: false, adsb_getting_data: false } as adsb_status,
-  current_version: {} as acarshub_version,
+  constructor() {
+    super();
+  }
 
-  status: function (): void {},
-
-  status_received: function (msg: system_status): void {
-    this.current_status = msg;
+  status_received(msg: system_status): void {
+    this.#current_status = msg;
     this.update_status_bar();
-    if (this.status_page_active) this.show_status();
-  },
+    if (this.page_active) this.show_status();
+  }
 
   update_adsb_status(
     adsb_status = {
@@ -47,19 +49,19 @@ export let status = {
       adsb_getting_data: false,
     } as adsb_status
   ): void {
-    this.adsb_status = adsb_status;
-  },
+    this.#adsb_status = adsb_status;
+  }
 
   set_version(version: acarshub_version): void {
-    this.current_version = version;
-    if (this.status_page_active) this.show_status();
-  },
+    this.#current_version = version;
+    if (this.page_active) this.show_status();
+  }
 
-  update_status_bar: function (): void {
+  update_status_bar(): void {
     if (
-      this.current_status.status.error_state == true ||
-      (this.adsb_status.adsb_enabled === true &&
-        this.adsb_status.adsb_getting_data === false)
+      this.#current_status.status.error_state == true ||
+      (this.#adsb_status.adsb_enabled === true &&
+        this.#adsb_status.adsb_getting_data === false)
     ) {
       $("#system_status").html(
         `<a href="javascript:new_page('Status')">System Status: <span class="red_body">Error</a></span>`
@@ -69,26 +71,27 @@ export let status = {
         `<a href="javascript:new_page('Status')">System Status: <span class="green">Okay</a></span>`
       );
     }
-  },
+  }
 
-  show_status: function (): void {
+  show_status(): void {
     if (
-      typeof this.current_status !== "undefined" &&
-      typeof this.current_status.status !== "undefined"
+      typeof this.#current_status !== "undefined" &&
+      typeof this.#current_status.status !== "undefined"
     ) {
       $("#log").html(
         this.decode_status(
-          this.current_status.status.error_state,
-          this.current_status.status.decoders,
-          this.current_status.status.servers,
-          this.current_status.status.global,
-          this.current_status.status.stats,
-          this.current_status.status.external_formats
+          this.#current_status.status.error_state,
+          this.#current_status.status.decoders,
+          this.#current_status.status.servers,
+          this.#current_status.status.global,
+          this.#current_status.status.stats,
+          this.#current_status.status.external_formats
         )
       );
     }
-  },
-  decode_status: function (
+  }
+
+  decode_status(
     status: boolean,
     decoders: status_decoder,
     servers: status_server,
@@ -104,24 +107,26 @@ export let status = {
     const keys_external_formats = Object.keys(external_formats);
 
     html_output += '<span class="monofont">';
-    if (this.current_version.container_version) {
+    if (this.#current_version.container_version) {
       html_output +=
         "Installed ACARS Hub Version:".padEnd(55, ".") +
         `<span class='${
-          this.current_version.is_outdated ? "red_body" : "green"
+          this.#current_version.is_outdated ? "red_body" : "green"
         }'><strong>${
-          this.current_version.container_version
+          this.#current_version.container_version
         }</span></strong><br>`;
-      html_output += this.current_version.is_outdated
+      html_output += this.#current_version.is_outdated
         ? "Most Recent ACARS Hub Version:".padEnd(55, ".") +
-          `<span class='red_body'><strong>${this.current_version.github_version}</span></strong><br>`
+          `<span class='red_body'><strong>${
+            this.#current_version.github_version
+          }</span></strong><br>`
         : "";
     }
     html_output += "System:".padEnd(55, ".");
     if (
       status ||
-      (this.adsb_status.adsb_enabled &&
-        this.adsb_status.adsb_getting_data === false)
+      (this.#adsb_status.adsb_enabled &&
+        this.#adsb_status.adsb_getting_data === false)
     ) {
       html_output += '<strong><span class="red_body">DEGRADED</span></strong>';
     } else {
@@ -187,16 +192,16 @@ export let status = {
 
     let adsb_string = "ADSB Enabled".padEnd(55, ".");
     adsb_string += `<strong><span class="green">${
-      this.adsb_status.adsb_enabled ? "OK" : "Disabled"
+      this.#adsb_status.adsb_enabled ? "OK" : "Disabled"
     }</span></strong><br>`;
 
-    if (this.adsb_status.adsb_enabled) {
+    if (this.#adsb_status.adsb_enabled) {
       let class_string = "";
-      if (this.adsb_status.adsb_getting_data == true) class_string = '"green"';
+      if (this.#adsb_status.adsb_getting_data == true) class_string = '"green"';
       else class_string = "red_body";
       let adsb_status_string = "ADSB Receiving Data".padEnd(55, ".");
       adsb_status_string += `<strong><span class=${class_string}>${
-        this.adsb_status.adsb_getting_data ? "OK" : "Bad"
+        this.#adsb_status.adsb_getting_data ? "OK" : "Bad"
       }</span></strong>`;
       adsb_string += adsb_status_string;
     }
@@ -204,26 +209,18 @@ export let status = {
     html_output += adsb_string + "</span>";
 
     return html_output;
-  },
+  }
 
-  status_active: function (state = false): void {
-    this.status_page_active = state;
-    if (this.status_page_active) {
+  status_active(state = false): void {
+    this.page_active = state;
+    if (this.page_active) {
       // page is active
       this.set_html();
       this.show_status(); // show the messages we've received
     }
-  },
+  }
 
-  set_status_page_urls: function (
-    documentPath: string,
-    documentUrl: string
-  ): void {
-    this.status_acars_path = documentPath;
-    this.status_acars_url = documentUrl;
-  },
-
-  set_html: function (): void {
+  set_html(): void {
     $("#right").html(
       `<div class="fixed_results">
   </div>`
@@ -231,5 +228,5 @@ export let status = {
 
     $("#modal_text").html("");
     $("#log").html("");
-  },
-};
+  }
+}
