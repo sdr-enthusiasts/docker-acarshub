@@ -29,7 +29,7 @@ import { menu } from "./helpers/menu";
 import { live_messages_page } from "./pages/live_messages";
 import { search_page } from "./pages/search";
 import { stats_page } from "./pages/stats";
-import { about } from "./pages/about";
+import { AboutPage } from "./pages/about";
 import { status } from "./pages/status";
 import { alerts_page } from "./pages/alerts";
 import { tooltip } from "./helpers/tooltips";
@@ -80,6 +80,9 @@ let adsb_request_options = {
 } as RequestInit;
 let allow_remote_updates = false;
 let flight_tracking_url: string | undefined = undefined;
+let wakelock: any | null = null;
+
+let about: AboutPage = new AboutPage();
 
 // @ts-expect-error
 var hidden, visibilityChange;
@@ -378,7 +381,6 @@ $((): void => {
   live_messages_page.live_messages();
   search_page.search();
   stats_page.stats();
-  about.about();
   status.status();
   alerts_page.alert();
   toggle_pages();
@@ -399,7 +401,24 @@ $((): void => {
     document.addEventListener(
       // @ts-expect-error
       visibilityChange,
-      () => {
+      async () => {
+        // if (wakelock !== null && document.visibilityState === "visible") {
+        //   console.log("Reacquiring wake lock");
+        //   wakelock = await navigator.wakeLock.request("screen");
+        // } else if (wakelock === null && document.visibilityState === "visible") {
+        //   try {
+        //     console.log("Requesting wake lock. Initial.");
+        //     wakelock = await navigator.wakeLock.request("screen");
+        //   } catch (err: any) {
+        //     // The Wake Lock request has failed - usually system related, such as battery.
+        //     console.error(`${err.name}, ${err.message}`);
+        //   }
+        // } else if (wakelock !== null) {
+        //   console.log("Releasing wake lock");
+        //   wakelock.release();
+        //   wakelock = null;
+        // }
+
         // @ts-expect-error
         toggle_pages(document[hidden]);
       },
@@ -451,7 +470,7 @@ function update_url(): void {
   live_messages_page.set_live_page_urls(index_acars_path, index_acars_url);
   search_page.set_search_page_urls(index_acars_path, index_acars_url);
   stats_page.set_stats_page_urls(index_acars_path, index_acars_url);
-  about.set_about_page_urls(index_acars_path, index_acars_url);
+  about.set_page_urls(index_acars_path, index_acars_url);
   status.set_status_page_urls(index_acars_path, index_acars_url);
   alerts_page.set_alert_page_urls(index_acars_path, index_acars_url);
   live_map_page.set_live_map_page_urls(index_acars_path, index_acars_url);
