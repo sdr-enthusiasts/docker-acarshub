@@ -17,6 +17,10 @@ export class ACARSHubPage {
 
   set_html(): void {}
 
+  active(state = false): void {
+    this.page_active = state;
+  }
+
   set_page_urls(documentPath: string, documentUrl: string): void {
     this.#document_path = documentPath;
     this.#document_url = documentUrl;

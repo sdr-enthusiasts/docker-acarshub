@@ -28,7 +28,7 @@ import "./css/site.scss";
 import { menu } from "./helpers/menu";
 import { live_messages_page } from "./pages/live_messages";
 import { search_page } from "./pages/search";
-import { stats_page } from "./pages/stats";
+import { StatsPage } from "./pages/stats";
 import { AboutPage } from "./pages/about";
 import { StatusPage } from "./pages/status";
 import { alerts_page } from "./pages/alerts";
@@ -84,6 +84,7 @@ let wakelock: any | null = null;
 
 let about: AboutPage = new AboutPage();
 let status: StatusPage = new StatusPage();
+let stats: StatsPage = new StatsPage();
 
 // @ts-expect-error
 var hidden, visibilityChange;
@@ -123,7 +124,7 @@ let robserver: ResizeObserver = new ResizeObserver((entries) => {
           height: cr.height,
         } as window_size);
       else if (index_acars_page === "/stats") {
-        stats_page.resize(cr.width);
+        stats.resize(cr.width);
       }
     }
 
@@ -263,7 +264,7 @@ $((): void => {
   // stats
 
   socket.on("features_enabled", function (msg: decoders): void {
-    stats_page.decoders_enabled(msg);
+    stats.decoders_enabled(msg);
     menu.set_arch(msg.arch);
     allow_remote_updates = msg.allow_remote_updates;
     flight_tracking_url = msg.adsb.flight_tracking_url;
@@ -322,17 +323,17 @@ $((): void => {
 
   // signal level graph
   socket.on("signal", function (msg: signal): void {
-    stats_page.signals(msg);
+    stats.signals(msg);
   });
 
   // alert term graph
   socket.on("alert_terms", function (msg: alert_term): void {
-    stats_page.alert_terms(msg);
+    stats.alert_terms(msg);
   });
 
   // sidebar frequency count
   socket.on("signal_freqs", function (msg: signal_freq_data): void {
-    stats_page.signal_freqs(msg);
+    stats.signal_freqs(msg);
   });
 
   socket.on("system_status", function (msg: system_status): void {
@@ -340,7 +341,7 @@ $((): void => {
   });
 
   socket.on("signal_count", function (msg: signal_count_data): void {
-    stats_page.signal_count(msg);
+    stats.signal_count(msg);
   });
 
   // socket errors
@@ -381,12 +382,12 @@ $((): void => {
   // init all page backgrounding functions
   live_messages_page.live_messages();
   search_page.search();
-  stats_page.stats();
+  stats.stats();
   alerts_page.alert();
   toggle_pages();
 
   setInterval(function () {
-    stats_page.updatePage();
+    stats.updatePage();
   }, 60000);
 
   if (
@@ -469,7 +470,7 @@ function update_url(): void {
 
   live_messages_page.set_live_page_urls(index_acars_path, index_acars_url);
   search_page.set_search_page_urls(index_acars_path, index_acars_url);
-  stats_page.set_stats_page_urls(index_acars_path, index_acars_url);
+  stats.set_page_urls(index_acars_path, index_acars_url);
   about.set_page_urls(index_acars_path, index_acars_url);
   status.set_page_urls(index_acars_path, index_acars_url);
   alerts_page.set_alert_page_urls(index_acars_path, index_acars_url);
@@ -496,18 +497,18 @@ function toggle_pages(is_backgrounded = false): void {
       search_page.search_active();
     } else if (pages[page] === "/stats" && index_acars_page === pages[page]) {
       $("#stats_link").addClass("invert_a");
-      stats_page.stats_active(!is_backgrounded);
+      stats.active(!is_backgrounded);
     } else if (pages[page] === "/stats") {
       $("#stats_link").removeClass("invert_a");
-      stats_page.stats_active();
+      stats.active();
     } else if (pages[page] === "/about" && index_acars_page === pages[page]) {
-      about.about_active(!is_backgrounded);
+      about.active(!is_backgrounded);
     } else if (pages[page] === "/about") {
-      about.about_active();
+      about.active();
     } else if (pages[page] === "/status" && index_acars_page === pages[page]) {
-      status.status_active(!is_backgrounded);
+      status.active(!is_backgrounded);
     } else if (pages[page] === "/status") {
-      status.status_active();
+      status.active();
     } else if (pages[page] === "/alerts" && index_acars_page === pages[page]) {
       $("#alerts_link").addClass("invert_a");
       alerts_page.alert_active(!is_backgrounded, allow_remote_updates);
@@ -704,7 +705,7 @@ window.toggle_playsound = function (status: boolean): void {
   alerts_page.toggle_playsound(status);
 };
 window.update_prefix = function (prefix: string): void {
-  stats_page.update_prefix(prefix);
+  stats.update_prefix(prefix);
 };
 
 window.showall = function (): void {

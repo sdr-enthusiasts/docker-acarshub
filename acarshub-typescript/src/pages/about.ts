@@ -28,16 +28,17 @@ export class AboutPage extends ACARSHubPage {
       .then((data) => {
         this.save_html(converter.makeHtml(data));
       });
-    if (this.page_active) this.about_active(true);
+    if (this.page_active) this.active(true);
   }
 
   save_html(html: string): void {
     this.page_html = html;
-    this.about_active(this.page_active);
+    this.active(this.page_active);
   }
 
-  about_active(state = false): void {
-    this.page_active = state;
+  active(state = false): void {
+    super.active(state);
+
     if (this.page_active) {
       // page is active
       this.set_html();

@@ -211,8 +211,9 @@ export class StatusPage extends ACARSHubPage {
     return html_output;
   }
 
-  status_active(state = false): void {
-    this.page_active = state;
+  active(state = false): void {
+    super.active(state);
+
     if (this.page_active) {
       // page is active
       this.set_html();
