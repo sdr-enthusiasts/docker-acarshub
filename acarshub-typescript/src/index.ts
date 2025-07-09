@@ -32,7 +32,7 @@ import { SearchPage } from "./pages/search";
 import { StatsPage } from "./pages/stats";
 import { AboutPage } from "./pages/about";
 import { StatusPage } from "./pages/status";
-import { alerts_page } from "./pages/alerts";
+import { AlertsPage } from "./pages/alerts";
 import { tooltip } from "./helpers/tooltips";
 import { io, Socket } from "socket.io-client";
 
@@ -85,6 +85,7 @@ let status: StatusPage = new StatusPage();
 let stats: StatsPage = new StatsPage();
 let search: SearchPage = new SearchPage();
 let live_messages: LiveMessagePage = new LiveMessagePage();
+let alerts_page: AlertsPage;
 
 // @ts-expect-error
 var hidden, visibilityChange;
@@ -216,6 +217,7 @@ $((): void => {
   menu.generate_footer(); // generate the footer
 
   robserver.observe(<Element>document.querySelector("body"));
+
   update_url(); // update the urls for everyone
   adsb_url = index_acars_url + "data/aircraft.json";
   //connect to the socket server.
@@ -381,8 +383,8 @@ $((): void => {
 
   // init all page backgrounding functions
 
+  alerts_page = new AlertsPage();
   stats.stats();
-  alerts_page.alert();
   toggle_pages();
 
   setInterval(function () {
@@ -425,6 +427,9 @@ $((): void => {
       false
     );
   }
+
+  // FIXME: this is a hack to make the alerts page work right. We have to construct alerts page after the socket is connected, which means it can't be done in the main load like everyone else
+  update_url(); // update the urls for everyone
 });
 
 export function get_flight_tracking_url(): string {
@@ -470,7 +475,7 @@ function update_url(): void {
   stats.set_page_urls(index_acars_path, index_acars_url);
   about.set_page_urls(index_acars_path, index_acars_url);
   status.set_page_urls(index_acars_path, index_acars_url);
-  alerts_page.set_alert_page_urls(index_acars_path, index_acars_url);
+  if (alerts_page) alerts_page.set_page_urls(index_acars_path, index_acars_url);
   live_map_page.set_live_map_page_urls(index_acars_path, index_acars_url);
   menu.set_about_page_urls(index_acars_path, index_acars_url);
 }
@@ -509,10 +514,10 @@ function toggle_pages(is_backgrounded = false): void {
       status.active();
     } else if (pages[page] === "/alerts" && index_acars_page === pages[page]) {
       $("#alerts_link").addClass("invert_a");
-      alerts_page.alert_active(!is_backgrounded, allow_remote_updates);
+      alerts_page.alerts_active(!is_backgrounded, allow_remote_updates);
     } else if (pages[page] === "/alerts") {
       $("#alerts_link").removeClass("invert_a");
-      alerts_page.alert_active(false, allow_remote_updates);
+      alerts_page.alerts_active(false, allow_remote_updates);
     } else if (pages[page] === "/adsb" && index_acars_page === pages[page]) {
       $("#live_map_link").addClass("invert_a");
       live_map_page.live_map_active(!is_backgrounded, {

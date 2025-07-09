@@ -1,6 +1,6 @@
 export class ACARSHubPage {
-  #document_path: string = "";
-  #document_url: string = "";
+  document_path: string = "";
+  document_url: string = "";
 
   // Private properties
   page_html: string = "";
@@ -22,7 +22,7 @@ export class ACARSHubPage {
   }
 
   set_page_urls(documentPath: string, documentUrl: string): void {
-    this.#document_path = documentPath;
-    this.#document_url = documentUrl;
+    this.document_path = documentPath;
+    this.document_url = documentUrl;
   }
 }
