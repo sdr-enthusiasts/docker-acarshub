@@ -26,7 +26,7 @@ import "jbox/dist/jBox.all.css";
 import "./css/site.scss";
 
 import { menu } from "./helpers/menu";
-import { live_messages_page } from "./pages/live_messages";
+import { LiveMessagePage } from "./pages/live_messages";
 import { live_map_page } from "./pages/live_map";
 import { SearchPage } from "./pages/search";
 import { StatsPage } from "./pages/stats";
@@ -84,6 +84,7 @@ let about: AboutPage = new AboutPage();
 let status: StatusPage = new StatusPage();
 let stats: StatsPage = new StatsPage();
 let search: SearchPage = new SearchPage();
+let live_messages: LiveMessagePage = new LiveMessagePage();
 
 // @ts-expect-error
 var hidden, visibilityChange;
@@ -224,13 +225,13 @@ $((): void => {
 
   socket.on("labels", function (msg: labels) {
     // Msg labels
-    live_messages_page.new_labels(msg); // send to live messages
+    live_messages.new_labels(msg); // send to live messages
   });
 
   socket.on("acars_msg", function (msg: html_msg) {
     // New acars message.
     if (connection_good || typeof msg.loading == "undefined") {
-      live_messages_page.new_acars_message(msg); // send the message to live messages
+      live_messages.new_acars_message(msg); // send the message to live messages
       // if (adsb_enabled && typeof msg.loading == "undefined")
       //   live_map_page.redraw_map();
       if (typeof msg.loading == "undefined" || msg.loading === false)
@@ -379,7 +380,7 @@ $((): void => {
   });
 
   // init all page backgrounding functions
-  live_messages_page.live_messages();
+
   stats.stats();
   alerts_page.alert();
   toggle_pages();
@@ -464,7 +465,7 @@ function update_url(): void {
   index_acars_path += index_acars_path.endsWith("/") ? "" : "/";
   index_acars_url = document.location.origin + index_acars_path;
 
-  live_messages_page.set_live_page_urls(index_acars_path, index_acars_url);
+  live_messages.set_page_urls(index_acars_path, index_acars_url);
   search.set_page_urls(index_acars_path, index_acars_url);
   stats.set_page_urls(index_acars_path, index_acars_url);
   about.set_page_urls(index_acars_path, index_acars_url);
@@ -478,13 +479,14 @@ function toggle_pages(is_backgrounded = false): void {
   index_acars_page =
     "/" + document.location.pathname.replace(index_acars_path, "");
   live_map_page.plane_message_modal.close();
+
   for (let page in pages) {
     if (pages[page] === "/" && index_acars_page === pages[page]) {
       $("#live_messages_link").addClass("invert_a");
-      live_messages_page.live_message_active(!is_backgrounded);
+      live_messages.active(!is_backgrounded);
     } else if (pages[page] === "/") {
       $("#live_messages_link").removeClass("invert_a");
-      live_messages_page.live_message_active();
+      live_messages.active();
     } else if (pages[page] === "/search" && index_acars_page === pages[page]) {
       $("#search_link").addClass("invert_a");
       search.active(!is_backgrounded);
@@ -658,7 +660,7 @@ export function generate_stat_submenu(
 }
 
 export function find_matches(): plane_data {
-  return live_messages_page.find_matches();
+  return live_messages.find_matches();
 }
 
 export function get_match(
@@ -666,7 +668,7 @@ export function get_match(
   hex: string = "",
   tail: string = ""
 ): plane_match {
-  return live_messages_page.get_match(callsign, hex, tail);
+  return live_messages.get_match(callsign, hex, tail);
 }
 
 export function is_adsb_enabled() {
@@ -683,7 +685,7 @@ window.show_page_modal = function (): void {
   if (index_acars_page === "/alerts") {
     alerts_page.show_alert_message_modal();
   } else if (index_acars_page === "/") {
-    live_messages_page.show_live_message_modal();
+    live_messages.show_live_message_modal();
   }
 };
 
@@ -717,22 +719,21 @@ window.runclick = function (page: number): void {
 };
 
 window.handle_radio = function (element_id: string, uid: string): void {
-  if (index_acars_page === "/")
-    live_messages_page.handle_radio(element_id, uid);
+  if (index_acars_page === "/") live_messages.handle_radio(element_id, uid);
   else if (index_acars_page === "/adsb")
     live_map_page.handle_radio(element_id, uid);
 };
 
 window.pause_updates = function (toggle_pause: boolean = true): void {
-  live_messages_page.pause_updates(toggle_pause);
+  live_messages.pause_updates(toggle_pause);
 };
 
 window.filter_notext = function (toggle_filter: boolean = true): void {
-  live_messages_page.filter_notext(toggle_filter);
+  live_messages.filter_notext(toggle_filter);
 };
 
 window.toggle_label = function (key: string): void {
-  live_messages_page.toggle_label(key);
+  live_messages.toggle_label(key);
 };
 
 window.setSort = function (sort: string = ""): void {
