@@ -79,7 +79,7 @@ Pre-requisites:
 
 ```shell
 cd acars_git_path/rootfs/webapp
-env ACARSHUB_DB=sqlite:////pathwhereyouwantyourdbsaved.sqlite LOCAL_TEST=True ENABLE_ACARS=True FREQS_ACARS="130.025;130.450;131.125;131.550" ENABLE_ADSB=true ADSB_URL=ipforyourtar1090instance ADSB_BYPASS_URL=true LIVE_DATA_SOURCE=ipforyouracarssource ADSB_LAT=yourlat ADSB_LON=-yourlon ENABLE_VDLM=true FREQS_VDLM="135.0" python3 acarshub.py
+env ACARSHUB_DB=sqlite:////path/to/test.sqlite LOCAL_TEST=True ENABLE_ACARS=external ENABLE_ADSB=true ADSB_URL=https://url/tar1090/data/aircraft.json  ADSB_BYPASS_URL=true LIVE_DATA_SOURCE=acarshub.app ADSB_LAT=lat ADSB_LON=lon ENABLE_VDLM=external ENABLE_HFDL=external  python3 acarshub.py
 ```
 
 `LOCAL_TEST` env variable disables a few features in ACARS Hub (namely some socket settings that caused problems and the rrd python because that build fails on Mac...)
