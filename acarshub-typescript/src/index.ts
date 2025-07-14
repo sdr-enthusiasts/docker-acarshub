@@ -27,7 +27,7 @@ import "./css/site.scss";
 
 import { menu } from "./helpers/menu";
 import { LiveMessagePage } from "./pages/live_messages";
-import { live_map_page } from "./pages/live_map";
+import { LiveMapPage } from "./pages/live_map";
 import { SearchPage } from "./pages/search";
 import { StatsPage } from "./pages/stats";
 import { AboutPage } from "./pages/about";
@@ -85,7 +85,8 @@ let status: StatusPage = new StatusPage();
 let stats: StatsPage = new StatsPage();
 let search: SearchPage = new SearchPage();
 let live_messages: LiveMessagePage = new LiveMessagePage();
-let alerts_page: AlertsPage;
+let alerts: AlertsPage;
+let live_map: LiveMapPage;
 
 // @ts-expect-error
 var hidden, visibilityChange;
@@ -119,8 +120,8 @@ let robserver: ResizeObserver = new ResizeObserver((entries) => {
     if (cr.width !== old_window_width) {
       old_window_width = cr.width - 50;
       if (index_acars_page === "/") resize_tabs(cr.width - 50);
-      else if (index_acars_page === "/adsb")
-        live_map_page.updateModalSize({
+      else if (index_acars_page === "/adsb" && live_map)
+        live_map.updateModalSize({
           width: cr.width,
           height: cr.height,
         } as window_size);
@@ -237,16 +238,16 @@ $((): void => {
       // if (adsb_enabled && typeof msg.loading == "undefined")
       //   live_map_page.redraw_map();
       if (typeof msg.loading == "undefined" || msg.loading === false)
-        alerts_page.alerts_acars_message(msg); // send the message to alerts for processing
+        alerts.alerts_acars_message(msg); // send the message to alerts for processing
     }
   });
 
   socket.on("terms", function (msg: terms): void {
-    alerts_page.alerts_terms(msg); // send the terms over to the alert page
+    alerts.alerts_terms(msg); // send the terms over to the alert page
   });
 
   socket.on("alert_matches", function (msg: html_msg): void {
-    alerts_page.alerts_acars_message(msg);
+    alerts.alerts_acars_message(msg);
   });
 
   socket.on("database", function (msg: database_size): void {
@@ -271,15 +272,19 @@ $((): void => {
     allow_remote_updates = msg.allow_remote_updates;
     flight_tracking_url = msg.adsb.flight_tracking_url;
     if (msg.adsb.enabled === true) {
+      live_map = new LiveMapPage(
+        msg.adsb.lat,
+        msg.adsb.lon,
+        msg.adsb.range_rings
+      );
       adsb_enabled = true;
       menu.set_adsb(true);
       toggle_pages();
-      alerts_page.updateAlertCounter();
-      live_map_page.is_adsb_enabled(true, {
+      alerts.updateAlertCounter();
+      live_map.is_adsb_enabled(true, {
         width: old_window_width,
         height: old_window_height,
       } as window_size);
-      live_map_page.live_map(msg.adsb.lat, msg.adsb.lon, msg.adsb.range_rings);
 
       status.update_adsb_status({
         adsb_enabled: true,
@@ -314,12 +319,12 @@ $((): void => {
       adsb_interval = null;
       menu.set_adsb(false);
       toggle_pages();
-      alerts_page.updateAlertCounter();
-      live_map_page.is_adsb_enabled(false, {
+      alerts.updateAlertCounter();
+      live_map.is_adsb_enabled(false, {
         width: old_window_width,
         height: old_window_height,
       } as window_size);
-      live_map_page.destroy_maps();
+      live_map.destroy_maps();
     }
   });
 
@@ -383,7 +388,7 @@ $((): void => {
 
   // init all page backgrounding functions
 
-  alerts_page = new AlertsPage();
+  alerts = new AlertsPage();
   stats.stats();
   toggle_pages();
 
@@ -451,7 +456,7 @@ async function update_adsb(): Promise<void> {
     .then((response) => {
       return response.json();
     })
-    .then((planes) => live_map_page.set_targets(planes as adsb))
+    .then((planes) => live_map.set_targets(planes as adsb))
     .catch((err) => {
       status.update_adsb_status({
         adsb_enabled: true,
@@ -475,15 +480,15 @@ function update_url(): void {
   stats.set_page_urls(index_acars_path, index_acars_url);
   about.set_page_urls(index_acars_path, index_acars_url);
   status.set_page_urls(index_acars_path, index_acars_url);
-  if (alerts_page) alerts_page.set_page_urls(index_acars_path, index_acars_url);
-  live_map_page.set_live_map_page_urls(index_acars_path, index_acars_url);
+  if (alerts) alerts.set_page_urls(index_acars_path, index_acars_url);
+  if (live_map) live_map.set_page_urls(index_acars_path, index_acars_url);
   menu.set_about_page_urls(index_acars_path, index_acars_url);
 }
 
 function toggle_pages(is_backgrounded = false): void {
   index_acars_page =
     "/" + document.location.pathname.replace(index_acars_path, "");
-  live_map_page.plane_message_modal.close();
+  if (live_map) live_map.plane_message_modal.close();
 
   for (let page in pages) {
     if (pages[page] === "/" && index_acars_page === pages[page]) {
@@ -514,19 +519,23 @@ function toggle_pages(is_backgrounded = false): void {
       status.active();
     } else if (pages[page] === "/alerts" && index_acars_page === pages[page]) {
       $("#alerts_link").addClass("invert_a");
-      alerts_page.alerts_active(!is_backgrounded, allow_remote_updates);
+      alerts.alerts_active(!is_backgrounded, allow_remote_updates);
     } else if (pages[page] === "/alerts") {
       $("#alerts_link").removeClass("invert_a");
-      alerts_page.alerts_active(false, allow_remote_updates);
-    } else if (pages[page] === "/adsb" && index_acars_page === pages[page]) {
+      alerts.alerts_active(false, allow_remote_updates);
+    } else if (
+      pages[page] === "/adsb" &&
+      index_acars_page === pages[page] &&
+      live_map
+    ) {
       $("#live_map_link").addClass("invert_a");
-      live_map_page.live_map_active(!is_backgrounded, {
+      live_map.live_map_active(!is_backgrounded, {
         width: old_window_width,
         height: old_window_height,
       } as window_size);
-    } else if (pages[page] === "/adsb") {
+    } else if (pages[page] === "/adsb" && live_map) {
       $("#live_map_link").removeClass("invert_a");
-      live_map_page.live_map_active(false, {
+      live_map.live_map_active(false, {
         width: old_window_width,
         height: old_window_height,
       } as window_size);
@@ -647,11 +656,11 @@ export function is_connected(): boolean {
 // functions to pass values between objects
 
 export function match_alert(msg: html_msg): alert_matched {
-  return alerts_page.match_alert(msg);
+  return alerts.match_alert(msg);
 }
 
 export function sound_alert(): void {
-  alerts_page.sound_alert();
+  alerts.sound_alert();
 }
 
 export function generate_stat_submenu(
@@ -681,14 +690,14 @@ export function is_adsb_enabled() {
 }
 
 export function get_current_planes() {
-  return live_map_page.get_current_planes();
+  return live_map.get_current_planes();
 }
 
 // functions that need to be registered to window object
 
 window.show_page_modal = function (): void {
   if (index_acars_page === "/alerts") {
-    alerts_page.show_alert_message_modal();
+    alerts.show_alert_message_modal();
   } else if (index_acars_page === "/") {
     live_messages.show_live_message_modal();
   }
@@ -699,13 +708,13 @@ window.show_menu_modal = function (): void {
 };
 
 window.updateAlerts = function (): void {
-  alerts_page.updateAlerts();
+  alerts.updateAlerts();
 };
 window.default_alert_values = function (): void {
-  alerts_page.default_alert_values();
+  alerts.default_alert_values();
 };
 window.toggle_playsound = function (status: boolean): void {
-  alerts_page.toggle_playsound(status);
+  alerts.toggle_playsound(status);
 };
 window.update_prefix = function (prefix: string): void {
   stats.update_prefix(prefix);
@@ -725,8 +734,7 @@ window.runclick = function (page: number): void {
 
 window.handle_radio = function (element_id: string, uid: string): void {
   if (index_acars_page === "/") live_messages.handle_radio(element_id, uid);
-  else if (index_acars_page === "/adsb")
-    live_map_page.handle_radio(element_id, uid);
+  else if (index_acars_page === "/adsb") live_map.handle_radio(element_id, uid);
 };
 
 window.pause_updates = function (toggle_pause: boolean = true): void {
@@ -742,19 +750,19 @@ window.toggle_label = function (key: string): void {
 };
 
 window.setSort = function (sort: string = ""): void {
-  live_map_page.setSort(sort);
+  live_map.setSort(sort);
 };
 
 window.toggle_acars_only = function (): void {
-  live_map_page.toggle_acars_only();
+  live_map.toggle_acars_only();
 };
 
 window.toggle_datablocks = function (): void {
-  live_map_page.toggle_datablocks();
+  live_map.toggle_datablocks();
 };
 
 window.toggle_extended_datablocks = function (): void {
-  live_map_page.toggle_extended_datablocks();
+  live_map.toggle_extended_datablocks();
 };
 
 $(window).on("popstate", (): void => {
@@ -768,23 +776,23 @@ window.close_modal = function (): void {
 };
 
 window.close_live_map_modal = function (): void {
-  live_map_page.close_live_map_modal();
+  live_map.close_live_map_modal();
 };
 
 window.zoom_in = function (): void {
-  live_map_page.zoom_in();
+  live_map.zoom_in();
 };
 
 window.zoom_out = function (): void {
-  live_map_page.zoom_out();
+  live_map.zoom_out();
 };
 
 window.toggle_unread_messages = function (): void {
-  live_map_page.toggle_unread_messages();
+  live_map.toggle_unread_messages();
 };
 
 window.mark_all_messages_read = function (): void {
-  live_map_page.mark_all_messages_read();
+  live_map.mark_all_messages_read();
 };
 
 window.query = function (): void {
@@ -814,11 +822,11 @@ window.showPlaneMessages = function (
     console.error("ERROR", callsign, tail);
     return;
   }
-  live_map_page.showPlaneMessages(callsign, hex, tail);
+  live_map.showPlaneMessages(callsign, hex, tail);
 };
 
 window.toggleNexrad = function (): void {
-  live_map_page.toggle_nexrad();
+  live_map.toggle_nexrad();
 };
 
 export function showPlaneMessages(
@@ -826,5 +834,5 @@ export function showPlaneMessages(
   plane_hex: string = "",
   plane_tail: string = ""
 ): void {
-  live_map_page.showPlaneMessages(plane_callsign, plane_hex, plane_tail);
+  live_map.showPlaneMessages(plane_callsign, plane_hex, plane_tail);
 }
