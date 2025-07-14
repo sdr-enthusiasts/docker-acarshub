@@ -18,7 +18,7 @@
     "@types/jquery": "^3.5.32",
     "@types/js-cookie": "3.0.6",
     "@types/leaflet": "1.9.20",
-    "@types/node": "^24.0.12",
+    "@types/node": "^24.0.13",
     "@types/showdown": "2.0.6",
     "autoprefixer": "^10.4.21",
     "babel-loader": "^10.0.0",
@@ -36,7 +36,7 @@
     "ts-loader": "^9.5.2",
     "ts-node": "10.9.2",
     "typescript": "^5.8.3",
-    "webpack": "^5.100.0",
+    "webpack": "^5.100.1",
     "webpack-cli": "^6.0.1",
     "webpack-dev-server": "^5.2.2",
     "webpack-image-loader": "0.1.2"
