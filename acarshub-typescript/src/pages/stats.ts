@@ -32,55 +32,80 @@ import {
   signal_count_data,
   signal_freq_data,
 } from "../interfaces";
+import { ACARSHubPage } from "./master";
 
-export let stats_page = {
-  image_prefix: "" as string,
-  stats_acars_path: "" as string,
-  stats_acars_url: "" as string,
-  stats_page_active: false as boolean,
+export class StatsPage extends ACARSHubPage {
+  #image_prefix: string = "";
 
-  chart_alerts: (<unknown>null) as Chart,
-  chart_signals: (<unknown>null) as Chart,
-  chart_frequency_data_acars: (<unknown>null) as Chart,
-  chart_frequency_data_vdlm: (<unknown>null) as Chart,
-  chart_frequency_data_hfdl: (<unknown>null) as Chart,
-  chart_frequency_data_imsl: (<unknown>null) as Chart,
-  chart_frequency_data_irdm: (<unknown>null) as Chart,
-  chart_message_counts_data: (<unknown>null) as Chart,
-  chart_message_counts_empty: (<unknown>null) as Chart,
+  #chart_alerts: Chart = (<unknown>null) as Chart;
+  #chart_signals: Chart = (<unknown>null) as Chart;
+  #chart_frequency_data_acars: Chart = (<unknown>null) as Chart;
+  #chart_frequency_data_vdlm: Chart = (<unknown>null) as Chart;
+  #chart_frequency_data_hfdl: Chart = (<unknown>null) as Chart;
+  #chart_frequency_data_imsl: Chart = (<unknown>null) as Chart;
+  #chart_frequency_data_irdm: Chart = (<unknown>null) as Chart;
+  #chart_message_counts_data: Chart = (<unknown>null) as Chart;
+  #chart_message_counts_empty: Chart = (<unknown>null) as Chart;
 
-  alert_data: {} as alert_term,
-  signal_data: {} as signal,
-  freqs_data: {} as signal_freq_data,
-  count_data: {} as signal_count_data,
+  #alert_data: alert_term = {} as alert_term;
+  #signal_data: signal = {} as signal;
+  #freqs_data: signal_freq_data = {} as signal_freq_data;
+  #count_data: signal_count_data = {} as signal_count_data;
 
-  acars_on: false as boolean,
-  vdlm_on: false as boolean,
-  hfdl_on: false as boolean,
-  imsl_on: false as boolean,
-  irdm_on: false as boolean,
-  width: 1000 as number,
+  #acars_on: boolean = false;
+  #vdlm_on: boolean = false;
+  #hfdl_on: boolean = false;
+  #imsl_on: boolean = false;
+  #irdm_on: boolean = false;
+  #width: number = 1000;
 
-  tol: new palette("tol", 12, 0, "").map(function (hex: any) {
+  #tol: string[] = new palette("tol", 12, 0, "").map(function (hex: any) {
     return "#" + hex;
-  }),
+  });
 
-  rainbox: new palette("cb-Dark2", 8, 0, "").map(function (hex: any) {
+  #rainbox: string[] = new palette("cb-Dark2", 8, 0, "").map(function (
+    hex: any
+  ) {
     return "#" + hex;
-  }),
+  });
 
-  show_alert_chart: function (): void {
-    if (typeof this.alert_data !== "undefined") {
+  constructor() {
+    super();
+  }
+
+  active(state = false): void {
+    super.active(state);
+
+    if (this.page_active) {
+      Chart.register(...registerables);
+      // page is active
+      this.set_html();
+      generate_stat_submenu(
+        this.#acars_on,
+        this.#vdlm_on,
+        this.#hfdl_on,
+        this.#imsl_on,
+        this.#irdm_on
+      );
+      this.show_signal_chart();
+      this.show_alert_chart();
+      this.show_count();
+      this.show_freqs();
+    }
+  }
+
+  show_alert_chart(): void {
+    if (typeof this.#alert_data !== "undefined") {
       let labels: string[] = [];
       let alert_chart_data: number[] = [];
-      for (let i in this.alert_data.data) {
+      for (let i in this.#alert_data.data) {
         // for now checking if count > 0 is a hack to get it to work
         // ideally, it should list out 0 term items
-        labels.push(this.alert_data.data[i].term);
-        alert_chart_data.push(this.alert_data.data[i].count);
+        labels.push(this.#alert_data.data[i].term);
+        alert_chart_data.push(this.#alert_data.data[i].count);
       }
-      if (this.chart_alerts !== null) {
-        this.chart_alerts.destroy();
+      if (this.#chart_alerts !== null) {
+        this.#chart_alerts.destroy();
       }
 
       const canvas_alerts: HTMLCanvasElement = <HTMLCanvasElement>(
@@ -97,7 +122,7 @@ export let stats_page = {
       const ctx_alerts: CanvasRenderingContext2D =
         canvas_alerts.getContext("2d")!;
       if (ctx_alerts != null) {
-        this.chart_alerts = new Chart(ctx_alerts, {
+        this.#chart_alerts = new Chart(ctx_alerts, {
           // The type of chart we want to create
           type: "bar",
 
@@ -107,7 +132,7 @@ export let stats_page = {
             datasets: [
               {
                 label: "Received Alert Terms",
-                backgroundColor: this.tol,
+                backgroundColor: this.#tol,
                 //borderColor: 'rgb(0, 0, 0)',
                 data: alert_chart_data,
                 //borderWidth: 1
@@ -140,12 +165,12 @@ export let stats_page = {
         });
       }
     }
-  },
+  }
 
-  show_signal_chart: function (): void {
+  show_signal_chart(): void {
     if (
-      typeof this.signal_data !== "undefined" &&
-      typeof this.signal_data.levels !== "undefined"
+      typeof this.#signal_data !== "undefined" &&
+      typeof this.#signal_data.levels !== "undefined"
     ) {
       let input_labels: string[] = [];
       let input_data: number[] = [];
@@ -159,19 +184,19 @@ export let stats_page = {
       // that skews the graph significantly. Removing those values smooths the graph and is more representative of what
       // really has been received with the newer, better signal levels
 
-      for (let i in this.signal_data.levels) {
+      for (let i in this.#signal_data.levels) {
         if (
-          this.signal_data.levels[i].level != null &&
-          this.isFloat(this.signal_data.levels[i].level)
+          this.#signal_data.levels[i].level != null &&
+          this.isFloat(this.#signal_data.levels[i].level)
         ) {
           input_labels.push(
-            `${this.signal_data.levels[i].level.toLocaleString()}`
+            `${this.#signal_data.levels[i].level.toLocaleString()}`
           );
-          input_data.push(this.signal_data.levels[i].count);
+          input_data.push(this.#signal_data.levels[i].count);
         }
       }
-      if (this.chart_signals) {
-        this.chart_signals.destroy();
+      if (this.#chart_signals) {
+        this.#chart_signals.destroy();
       }
 
       const canvas: HTMLCanvasElement = <HTMLCanvasElement>(
@@ -188,7 +213,7 @@ export let stats_page = {
 
       const ctx: CanvasRenderingContext2D = canvas.getContext("2d")!;
       if (ctx != null) {
-        this.chart_signals = new Chart(ctx, {
+        this.#chart_signals = new Chart(ctx, {
           // The type of chart we want to create
           type: "line",
 
@@ -215,12 +240,12 @@ export let stats_page = {
         });
       }
     }
-  },
+  }
 
-  show_freqs: function (): void {
+  show_freqs(): void {
     if (
-      typeof this.freqs_data !== "undefined" &&
-      typeof this.freqs_data.freqs !== "undefined"
+      typeof this.#freqs_data !== "undefined" &&
+      typeof this.#freqs_data.freqs !== "undefined"
     ) {
       let freq_data_acars: number[] = [];
       let freq_data_vdlm: number[] = [];
@@ -258,7 +283,7 @@ export let stats_page = {
       let imsl_offset: number = 5;
       let irdm_offset: number = 5;
 
-      Object.entries(this.freqs_data.freqs).forEach(([key, value]) => {
+      Object.entries(this.#freqs_data.freqs).forEach(([key, value]) => {
         if (value.freq_type === "ACARS") {
           total_count_acars += value.count;
         } else if (value.freq_type === "VDL-M2") {
@@ -274,7 +299,7 @@ export let stats_page = {
         }
       });
 
-      Object.entries(this.freqs_data.freqs).forEach(([key, value]) => {
+      Object.entries(this.#freqs_data.freqs).forEach(([key, value]) => {
         if (value.freq_type === "ACARS") {
           freq_data_acars.push(value.count);
           freq_labels_acars.push(value.freq);
@@ -340,24 +365,24 @@ export let stats_page = {
         }
       });
 
-      if (this.chart_frequency_data_acars !== null) {
-        this.chart_frequency_data_acars.destroy();
+      if (this.#chart_frequency_data_acars !== null) {
+        this.#chart_frequency_data_acars.destroy();
       }
 
-      if (this.chart_frequency_data_vdlm !== null) {
-        this.chart_frequency_data_vdlm.destroy();
+      if (this.#chart_frequency_data_vdlm !== null) {
+        this.#chart_frequency_data_vdlm.destroy();
       }
 
-      if (this.chart_frequency_data_hfdl !== null) {
-        this.chart_frequency_data_hfdl.destroy();
+      if (this.#chart_frequency_data_hfdl !== null) {
+        this.#chart_frequency_data_hfdl.destroy();
       }
 
-      if (this.chart_frequency_data_imsl !== null) {
-        this.chart_frequency_data_imsl.destroy();
+      if (this.#chart_frequency_data_imsl !== null) {
+        this.#chart_frequency_data_imsl.destroy();
       }
 
-      if (this.chart_frequency_data_irdm !== null) {
-        this.chart_frequency_data_irdm.destroy();
+      if (this.#chart_frequency_data_irdm !== null) {
+        this.#chart_frequency_data_irdm.destroy();
       }
 
       if (freq_data_acars.length > 0) {
@@ -415,9 +440,9 @@ export let stats_page = {
         );
       }
     }
-  },
+  }
 
-  render_freq_graph: function (
+  render_freq_graph(
     label: string,
     freq_labels: string[],
     freq_data: number[],
@@ -479,7 +504,7 @@ export let stats_page = {
           datasets: [
             {
               label: `${label} Frequencies`,
-              backgroundColor: this.rainbox,
+              backgroundColor: this.#rainbox,
               borderColor: "rgb(0, 0, 0)",
               data: output_data,
               //pointRadius: 0,
@@ -543,34 +568,34 @@ export let stats_page = {
       });
 
       if (label === "ACARS") {
-        this.chart_frequency_data_acars = temp_chart;
+        this.#chart_frequency_data_acars = temp_chart;
       } else if (label === "VDLM") {
-        this.chart_frequency_data_vdlm = temp_chart;
+        this.#chart_frequency_data_vdlm = temp_chart;
       } else if (label === "HFDL") {
-        this.chart_frequency_data_hfdl = temp_chart;
+        this.#chart_frequency_data_hfdl = temp_chart;
       } else if (label === "IMSL") {
-        this.chart_frequency_data_imsl = temp_chart;
+        this.#chart_frequency_data_imsl = temp_chart;
       } else if (label === "IRDM") {
-        this.chart_frequency_data_irdm = temp_chart;
+        this.#chart_frequency_data_irdm = temp_chart;
       }
       // clamp the height of the parent container to the height of the chart based on the number of elements
       // this is a hack to get the chart to display properly
 
       $(graph_id).css("height", `${output_data.length * 50}px`);
     }
-  },
+  }
 
-  show_count: function (): void {
+  show_count(): void {
     if (
-      typeof this.count_data !== "undefined" &&
-      typeof this.count_data.count !== "undefined"
+      typeof this.#count_data !== "undefined" &&
+      typeof this.#count_data.count !== "undefined"
     ) {
-      const data_error: number = this.count_data.count.non_empty_errors;
-      const data_good: number = this.count_data.count.non_empty_total;
+      const data_error: number = this.#count_data.count.non_empty_errors;
+      const data_good: number = this.#count_data.count.non_empty_total;
       const data_total: number = data_error + data_good;
 
-      const empty_error: number = this.count_data.count.empty_errors;
-      const empty_good: number = this.count_data.count.empty_total;
+      const empty_error: number = this.#count_data.count.empty_errors;
+      const empty_good: number = this.#count_data.count.empty_total;
       const empty_total: number = empty_error + empty_good;
 
       const counts_data: number[] = [data_good, data_error];
@@ -581,12 +606,12 @@ export let stats_page = {
         "Messages (W/Errors)",
       ];
 
-      if (this.chart_message_counts_data !== null) {
-        this.chart_message_counts_data.destroy();
+      if (this.#chart_message_counts_data !== null) {
+        this.#chart_message_counts_data.destroy();
       }
 
-      if (this.chart_message_counts_empty !== null) {
-        this.chart_message_counts_empty.destroy();
+      if (this.#chart_message_counts_empty !== null) {
+        this.#chart_message_counts_empty.destroy();
       }
       const canvas_data: HTMLCanvasElement = <HTMLCanvasElement>(
         document.getElementById("msg_count_data")
@@ -601,7 +626,7 @@ export let stats_page = {
 
       const ctx_data: CanvasRenderingContext2D = canvas_data.getContext("2d")!;
       if (ctx_data != null) {
-        this.chart_message_counts_data = new Chart(ctx_data, {
+        this.#chart_message_counts_data = new Chart(ctx_data, {
           // The type of chart we want to create
           type: "bar",
 
@@ -611,7 +636,7 @@ export let stats_page = {
             datasets: [
               {
                 label: "Frequency Count for Messages",
-                backgroundColor: this.rainbox,
+                backgroundColor: this.#rainbox,
                 borderColor: "rgb(0, 0, 0)",
                 data: counts_data,
                 //pointRadius: 0,
@@ -672,7 +697,7 @@ export let stats_page = {
       const ctx_empty: CanvasRenderingContext2D =
         canvas_empty.getContext("2d")!;
       if (ctx_empty != null) {
-        this.chart_message_counts_empty = new Chart(ctx_empty, {
+        this.#chart_message_counts_empty = new Chart(ctx_empty, {
           // The type of chart we want to create
           type: "bar",
 
@@ -682,7 +707,7 @@ export let stats_page = {
             datasets: [
               {
                 label: "Frequency Count for Empty Messages",
-                backgroundColor: this.rainbox,
+                backgroundColor: this.#rainbox,
                 borderColor: "rgb(0, 0, 0)",
                 data: counts_empty,
                 //pointRadius: 0,
@@ -735,67 +760,67 @@ export let stats_page = {
         });
       }
     }
-  },
+  }
 
-  decoders_enabled: function (msg: decoders): void {
-    this.acars_on = msg.acars;
-    this.vdlm_on = msg.vdlm;
-    this.hfdl_on = msg.hfdl;
-    this.imsl_on = msg.imsl;
-    this.irdm_on = msg.irdm;
+  decoders_enabled(msg: decoders): void {
+    this.#acars_on = msg.acars;
+    this.#vdlm_on = msg.vdlm;
+    this.#hfdl_on = msg.hfdl;
+    this.#imsl_on = msg.imsl;
+    this.#irdm_on = msg.irdm;
 
-    if (this.stats_page_active)
+    if (this.page_active)
       generate_stat_submenu(
-        this.acars_on,
-        this.vdlm_on,
-        this.hfdl_on,
-        this.imsl_on,
-        this.irdm_on
+        this.#acars_on,
+        this.#vdlm_on,
+        this.#hfdl_on,
+        this.#imsl_on,
+        this.#irdm_on
       );
-  },
+  }
 
-  signals: function (msg: signal): void {
-    this.signal_data = msg;
-    if (this.stats_page_active) this.show_signal_chart();
-  },
+  signals(msg: signal): void {
+    this.#signal_data = msg;
+    if (this.page_active) this.show_signal_chart();
+  }
 
-  alert_terms: function (msg: alert_term): void {
-    this.alert_data = msg;
-    if (this.stats_page_active) this.show_alert_chart();
-  },
+  alert_terms(msg: alert_term): void {
+    this.#alert_data = msg;
+    if (this.page_active) this.show_alert_chart();
+  }
 
-  signal_freqs: function (msg: signal_freq_data): void {
-    this.freqs_data = msg;
-    if (this.stats_page_active) this.show_freqs();
-  },
+  signal_freqs(msg: signal_freq_data): void {
+    this.#freqs_data = msg;
+    if (this.page_active) this.show_freqs();
+  }
 
-  signal_count: function (msg: signal_count_data): void {
-    this.count_data = msg;
-    if (this.stats_page_active) this.show_count();
-  },
+  signal_count(msg: signal_count_data): void {
+    this.#count_data = msg;
+    if (this.page_active) this.show_count();
+  }
 
-  stats: function (): void {
+  stats(): void {
     this.grab_freqs();
     this.grab_message_count();
-  },
+  }
 
-  isFloat: function (n: number): boolean {
+  isFloat(n: number): boolean {
     return Number(n) === n && n % 1 !== 0;
-  },
+  }
 
-  updatePage: function (): void {
+  updatePage(): void {
     this.grab_images();
     this.grab_freqs();
     this.grab_message_count();
     this.grab_updated_graphs();
-  },
+  }
 
-  update_prefix: function (prefix: string): void {
-    this.image_prefix = prefix;
+  update_prefix(prefix: string): void {
+    this.#image_prefix = prefix;
     this.grab_images();
-  },
+  }
 
-  grab_images: function (): void {
+  grab_images(): void {
     if (!is_connected()) {
       console.log("Server disconnected, skipping image updates");
       return;
@@ -809,59 +834,59 @@ export let stats_page = {
 
     $("#1hr").prop(
       "src",
-      `static/images/${this.image_prefix}1hour${prefix}.png?rand=` +
+      `static/images/${this.#image_prefix}1hour${prefix}.png?rand=` +
         Math.random()
     );
     $("#6hr").prop(
       "src",
-      `static/images/${this.image_prefix}6hour${prefix}.png?rand=` +
+      `static/images/${this.#image_prefix}6hour${prefix}.png?rand=` +
         Math.random()
     );
     $("#12hr").prop(
       "src",
-      `static/images/${this.image_prefix}12hour${prefix}.png?rand=` +
+      `static/images/${this.#image_prefix}12hour${prefix}.png?rand=` +
         Math.random()
     );
     $("#24hr").prop(
       "src",
-      `static/images/${this.image_prefix}24hours${prefix}.png?rand=` +
+      `static/images/${this.#image_prefix}24hours${prefix}.png?rand=` +
         Math.random()
     );
     $("#1wk").prop(
       "src",
-      `static/images/${this.image_prefix}1week${prefix}.png?rand=` +
+      `static/images/${this.#image_prefix}1week${prefix}.png?rand=` +
         Math.random()
     );
     $("#30day").prop(
       "src",
-      `static/images/${this.image_prefix}30days${prefix}.png?rand=` +
+      `static/images/${this.#image_prefix}30days${prefix}.png?rand=` +
         Math.random()
     );
     $("#6mon").prop(
       "src",
-      `static/images/${this.image_prefix}6months${prefix}.png?rand=` +
+      `static/images/${this.#image_prefix}6months${prefix}.png?rand=` +
         Math.random()
     );
     $("#1yr").prop(
       "src",
-      `static/images/${this.image_prefix}1year${prefix}.png?rand=` +
+      `static/images/${this.#image_prefix}1year${prefix}.png?rand=` +
         Math.random()
     );
-  },
+  }
 
-  grab_freqs: function (): void {
+  grab_freqs(): void {
     signal_grab_freqs();
-  },
+  }
 
-  grab_message_count: function (): void {
+  grab_message_count(): void {
     signal_grab_message_count();
-  },
+  }
 
-  grab_updated_graphs: function (): void {
+  grab_updated_graphs(): void {
     signal_grab_updated_graphs();
-  },
+  }
 
-  set_html: function (): void {
+  set_html(): void {
     let prefix =
       window.matchMedia &&
       window.matchMedia("(prefers-color-scheme: dark)").matches
@@ -882,27 +907,27 @@ export let stats_page = {
     <div class="chart-container"><canvas id="signallevels"></canvas></div>
     <div class="chart-container"><canvas id="alertterms"></canvas></div>
     ${
-      this.acars_on
+      this.#acars_on
         ? '<div id="acars_freq_graph" class="chart-container"><canvas id="frequencies_acars"></canvas></div>'
         : ""
     }
     ${
-      this.vdlm_on
+      this.#vdlm_on
         ? '<div id="vdlm_freq_graph" class="chart-container"><canvas id="frequencies_vdlm"></canvas></div>'
         : ""
     }
     ${
-      this.hfdl_on
+      this.#hfdl_on
         ? '<div id="hfdl_freq_graph" class="chart-container"><canvas id="frequencies_hfdl"></canvas></div>'
         : ""
     }
     ${
-      this.imsl_on
+      this.#imsl_on
         ? '<div id="imsl_freq_graph" class="chart-container"><canvas id="frequencies_imsl"></canvas></div>'
         : ""
     }
     ${
-      this.irdm_on
+      this.#irdm_on
         ? '<div id="irdm_freq_graph" class="chart-container"><canvas id="frequencies_irdm"></canvas></div>'
         : ""
     }
@@ -912,41 +937,12 @@ export let stats_page = {
     </p>`); // show the messages we've received
     $("#modal_text").html("");
     this.resize();
-  },
+  }
 
   resize(width: number = 0): void {
     if (width) {
-      this.width = width;
+      this.#width = width;
     }
     $("#counts").css("padding-top", "10px");
-  },
-
-  stats_active: function (state = false): void {
-    this.stats_page_active = state;
-
-    if (this.stats_page_active) {
-      Chart.register(...registerables);
-      // page is active
-      this.set_html();
-      generate_stat_submenu(
-        this.acars_on,
-        this.vdlm_on,
-        this.hfdl_on,
-        this.imsl_on,
-        this.irdm_on
-      );
-      this.show_signal_chart();
-      this.show_alert_chart();
-      this.show_count();
-      this.show_freqs();
-    }
-  },
-
-  set_stats_page_urls: function (
-    documentPath: string,
-    documentUrl: string
-  ): void {
-    this.stats_acars_path = documentPath;
-    this.stats_acars_url = documentUrl;
-  },
-};
+  }
+}

@@ -46,32 +46,31 @@ import {
 } from "../index";
 import { tooltip } from "../helpers/tooltips";
 import { images } from "../assets/assets";
+import { ACARSHubPage } from "./master";
 declare const window: any;
-export let live_map_page = {
-  livemap_acars_path: "" as string,
-  livemap_acars_url: "" as string,
-  adsb_enabled: false as boolean,
-  range_rings: true as boolean,
-  live_map_page_active: false as boolean,
-  adsb_planes: {} as { [key: string]: adsb_target },
-  adsb_plane_tails: [] as Array<string>,
-  adsb_plane_hex: [] as Array<string>,
-  adsb_plane_callsign: [] as Array<string>,
-  had_targets: false as boolean,
-  last_updated: 0 as number,
-  map: (<unknown>null) as LeafLet.Map,
-  map_controls: (<unknown>null) as LeafLet.Control,
-  legend: (<unknown>null) as LeafLet.Control,
-  layerGroupPlanes: (<unknown>null) as LeafLet.LayerGroup,
-  layerGroupPlaneDatablocks: (<unknown>null) as LeafLet.LayerGroup,
-  layerGroupRangeRings: (<unknown>null) as LeafLet.LayerGroup,
-  plane_markers: {} as { [key: string]: LeafLet.Marker },
-  lat: 0 as number,
-  lon: 0 as number,
-  station_lat: 0 as number,
-  station_lon: 0 as number,
-  ignored_keys: ["trk", "alt", "call"] as string[],
-  plane_message_modal: new jBox("Modal", {
+
+export class LiveMapPage extends ACARSHubPage {
+  #adsb_enabled: boolean = false;
+  #range_rings: boolean = true;
+  #adsb_planes = {} as { [key: string]: adsb_target };
+  #adsb_plane_tails = [] as Array<string>;
+  #adsb_plane_hex = [] as Array<string>;
+  #adsb_plane_callsign = [] as Array<string>;
+  #had_targets: boolean = false;
+  #last_updated: number = 0;
+  #map = (<unknown>null) as LeafLet.Map;
+  #map_controls = (<unknown>null) as LeafLet.Control;
+  #legend = (<unknown>null) as LeafLet.Control;
+  #layerGroupPlanes = (<unknown>null) as LeafLet.LayerGroup;
+  #layerGroupPlaneDatablocks = (<unknown>null) as LeafLet.LayerGroup;
+  #layerGroupRangeRings = (<unknown>null) as LeafLet.LayerGroup;
+  #plane_markers = {} as { [key: string]: LeafLet.Marker };
+  #lat = 0 as number;
+  #lon = 0 as number;
+  #station_lat = 0 as number;
+  #station_lon = 0 as number;
+  #ignored_keys = ["trk", "alt", "call"] as string[];
+  plane_message_modal = new jBox("Modal", {
     id: "set_modal",
     // width: 350,
     // height: 400,
@@ -86,155 +85,155 @@ export let live_map_page = {
     title: "Messages",
     content: "",
     onClose: () => window.close_live_map_modal(),
-  }),
-  current_sort: Cookies.get("current_sort") || ("callsign" as string),
-  ascending: true as boolean,
-  window_size: (<unknown>null) as window_size,
-  show_only_acars: false as boolean,
-  show_datablocks: false as boolean,
-  show_extended_datablocks: false as boolean,
-  show_unread_messages: true as boolean,
-  show_nexrad: false as boolean,
-  current_modal_terms: (<unknown>null) as {
+  });
+  #current_sort = Cookies.get("current_sort") || ("callsign" as string);
+  #ascending = true as boolean;
+  #window_size = (<unknown>null) as window_size;
+  #show_only_acars = false as boolean;
+  #show_datablocks = false as boolean;
+  #show_extended_datablocks = false as boolean;
+  #show_unread_messages = true as boolean;
+  #show_nexrad = false as boolean;
+  #current_modal_terms = (<unknown>null) as {
     callsign: string;
     hex: string;
     tail: string;
-  },
-  current_hovered_from_map: "" as string,
-  current_hovered_from_sidebar: "" as string,
-  modal_content: "" as string,
-  modal_current_tab: "" as string,
-  current_scale: Number(Cookies.get("live_map_zoom")) || (8 as number),
+  };
+  #current_hovered_from_map = "" as string;
+  #current_hovered_from_sidebar = "" as string;
+  #modal_content = "" as string;
+  #modal_current_tab = "" as string;
+  #current_scale = Number(Cookies.get("live_map_zoom")) || (8 as number);
 
-  get_cookie_value: function (): void {
-    this.show_only_acars = Cookies.get("only_acars") == "true" ? true : false;
-    this.show_datablocks =
+  get_cookie_value(): void {
+    this.#show_only_acars = Cookies.get("only_acars") == "true" ? true : false;
+    this.#show_datablocks =
       Cookies.get("show_datablocks") == "true" ? true : false;
-    this.show_extended_datablocks =
+    this.#show_extended_datablocks =
       Cookies.get("show_extended_datablocks") == "true" ? true : false;
-    this.current_sort = Cookies.get("current_sort") || "callsign";
-    this.ascending =
+    this.#current_sort = Cookies.get("current_sort") || "callsign";
+    this.#ascending =
       !Cookies.get("sort_direction") || Cookies.get("sort_direction") == "true"
         ? true
         : false;
-    this.show_unread_messages =
+    this.#show_unread_messages =
       !Cookies.get("show_unread_messages") ||
       Cookies.get("show_unread_messages") == "true"
         ? true
         : false;
-    this.show_nexrad = Cookies.get("show_nexrad") == "true" ? true : false;
-  },
+    this.#show_nexrad = Cookies.get("show_nexrad") == "true" ? true : false;
+  }
 
-  toggle_unread_messages: function (): void {
-    this.show_unread_messages = !this.show_unread_messages;
-    Cookies.set("show_unread_messages", String(this.show_unread_messages), {
+  toggle_unread_messages(): void {
+    this.#show_unread_messages = !this.#show_unread_messages;
+    Cookies.set("show_unread_messages", String(this.#show_unread_messages), {
       expires: 365,
       sameSite: "Strict",
     });
     this.redraw_map();
     this.set_controls();
-  },
+  }
 
-  toggle_acars_only: function (): void {
-    this.show_only_acars = !this.show_only_acars;
-    Cookies.set("only_acars", String(this.show_only_acars), {
+  toggle_acars_only(): void {
+    this.#show_only_acars = !this.#show_only_acars;
+    Cookies.set("only_acars", String(this.#show_only_acars), {
       expires: 365,
       sameSite: "Strict",
     });
 
-    if (this.live_map_page_active) {
+    if (this.page_active) {
       $("#toggle-acars").html(
         `${
-          !this.show_only_acars
+          !this.#show_only_acars
             ? images.toggle_acars_only_show_acars
             : images.toggle_acars_only_show_all
         }`
       );
       this.redraw_map();
     }
-  },
+  }
 
-  toggle_datablocks: function (): void {
-    this.show_datablocks = !this.show_datablocks;
+  toggle_datablocks(): void {
+    this.#show_datablocks = !this.#show_datablocks;
 
-    Cookies.set("show_datablocks", String(this.show_datablocks), {
+    Cookies.set("show_datablocks", String(this.#show_datablocks), {
       expires: 365,
       sameSite: "Strict",
     });
 
-    if (this.live_map_page_active) {
+    if (this.page_active) {
       $("#toggle-datablocks").html(
         `${
-          this.show_datablocks
+          this.#show_datablocks
             ? images.toggle_datablocks_on
             : images.toggle_datablocks_off
         }`
       );
       this.redraw_map();
     }
-  },
+  }
 
-  toggle_extended_datablocks: function (): void {
-    this.show_extended_datablocks = !this.show_extended_datablocks;
+  toggle_extended_datablocks(): void {
+    this.#show_extended_datablocks = !this.#show_extended_datablocks;
 
     Cookies.set(
       "show_extended_datablocks",
-      String(this.show_extended_datablocks),
+      String(this.#show_extended_datablocks),
       {
         expires: 365,
         sameSite: "Strict",
       }
     );
 
-    if (this.live_map_page_active) {
+    if (this.page_active) {
       $("#toggle-extended-datablocks").html(
         `${
-          this.show_extended_datablocks
+          this.#show_extended_datablocks
             ? images.toggle_extended_datablocks_on
             : images.toggle_extended_datablocks_off
         }`
       );
       this.redraw_map();
     }
-  },
+  }
 
-  toggle_nexrad: function (): void {
-    this.show_nexrad = !this.show_nexrad;
+  toggle_nexrad(): void {
+    this.#show_nexrad = !this.#show_nexrad;
 
-    Cookies.set("show_nexrad", String(this.show_nexrad), {
+    Cookies.set("show_nexrad", String(this.#show_nexrad), {
       expires: 365,
       sameSite: "Strict",
     });
-  },
+  }
 
-  redraw_map: function (): void {
-    if (this.live_map_page_active) {
-      if (this.current_modal_terms != null) {
+  redraw_map(): void {
+    if (this.page_active) {
+      if (this.#current_modal_terms != null) {
         this.showPlaneMessages(
-          this.current_modal_terms.callsign,
-          this.current_modal_terms.hex,
-          this.current_modal_terms.tail
+          this.#current_modal_terms.callsign,
+          this.#current_modal_terms.hex,
+          this.#current_modal_terms.tail
         );
       }
       this.update_targets();
       this.airplaneList();
       tooltip.attach_all_tooltips();
     }
-  },
+  }
 
-  set_targets: function (adsb_targets: adsb): void {
-    if (this.last_updated < adsb_targets.now) {
-      this.last_updated = adsb_targets.now;
-      this.adsb_plane_hex = [];
-      this.adsb_plane_callsign = [];
-      this.adsb_plane_tails = [];
+  set_targets(adsb_targets: adsb): void {
+    if (this.#last_updated < adsb_targets.now) {
+      this.#last_updated = adsb_targets.now;
+      this.#adsb_plane_hex = [];
+      this.#adsb_plane_callsign = [];
+      this.#adsb_plane_tails = [];
       // Loop through all of the planes in the new data and save them to the target object
       adsb_targets.aircraft.forEach((aircraft) => {
-        this.adsb_plane_hex.push(this.get_hex(aircraft));
-        this.adsb_plane_callsign.push(this.get_callsign(aircraft));
-        this.adsb_plane_tails.push(this.get_tail(aircraft));
+        this.#adsb_plane_hex.push(this.get_hex(aircraft));
+        this.#adsb_plane_callsign.push(this.get_callsign(aircraft));
+        this.#adsb_plane_tails.push(this.get_tail(aircraft));
         if (
-          this.adsb_planes[
+          this.#adsb_planes[
             aircraft.hex
               .replace("-", "")
               .replace(".", "")
@@ -242,7 +241,7 @@ export let live_map_page = {
               .toUpperCase()
           ] == undefined
         ) {
-          this.adsb_planes[
+          this.#adsb_planes[
             aircraft.hex
               .replace("-", "")
               .replace(".", "")
@@ -250,7 +249,7 @@ export let live_map_page = {
               .toUpperCase()
           ] = {
             position: aircraft,
-            last_updated: this.last_updated,
+            last_updated: this.#last_updated,
             id: aircraft.hex
               .replace("-", "")
               .replace(".", "")
@@ -262,77 +261,74 @@ export let live_map_page = {
             icon: null,
           };
         } else {
-          this.adsb_planes[
+          this.#adsb_planes[
             aircraft.hex
               .replace("-", "")
               .replace(".", "")
               .replace("~", "")
               .toUpperCase()
           ].position = aircraft;
-          this.adsb_planes[
+          this.#adsb_planes[
             aircraft.hex
               .replace("-", "")
               .replace(".", "")
               .replace("~", "")
               .toUpperCase()
-          ].last_updated = this.last_updated;
+          ].last_updated = this.#last_updated;
         }
       });
       // Now loop through the target object and expire any that are no longer there
-      for (let plane in this.adsb_planes) {
-        if (this.adsb_planes[plane].last_updated < this.last_updated) {
+      for (let plane in this.#adsb_planes) {
+        if (this.#adsb_planes[plane].last_updated < this.#last_updated) {
           if (
-            this.adsb_planes[plane].position_marker != null &&
-            this.layerGroupPlanes.hasLayer(
-              this.adsb_planes[plane].position_marker!
+            this.#adsb_planes[plane].position_marker != null &&
+            this.#layerGroupPlanes.hasLayer(
+              this.#adsb_planes[plane].position_marker!
             )
           ) {
-            this.layerGroupPlanes.removeLayer(
-              this.adsb_planes[plane].position_marker!
+            this.#layerGroupPlanes.removeLayer(
+              this.#adsb_planes[plane].position_marker!
             );
           }
           if (
-            this.adsb_planes[plane].datablock_marker != null &&
-            this.layerGroupPlaneDatablocks.hasLayer(
-              this.adsb_planes[plane].datablock_marker!
+            this.#adsb_planes[plane].datablock_marker != null &&
+            this.#layerGroupPlaneDatablocks.hasLayer(
+              this.#adsb_planes[plane].datablock_marker!
             )
           ) {
-            this.layerGroupPlaneDatablocks.removeLayer(
-              this.adsb_planes[plane].datablock_marker!
+            this.#layerGroupPlaneDatablocks.removeLayer(
+              this.#adsb_planes[plane].datablock_marker!
             );
           }
-          delete this.adsb_planes[plane];
+          delete this.#adsb_planes[plane];
         }
       }
-      if (!this.had_targets) this.mark_all_messages_read();
-      if (this.live_map_page_active) {
+      if (!this.#had_targets) this.mark_all_messages_read();
+      if (this.page_active) {
         this.redraw_map();
       }
-      this.had_targets = true;
+      this.#had_targets = true;
     }
-  },
+  }
 
-  live_map: function (
-    lat_in: number,
-    lon_in: number,
-    range_rings: boolean
-  ): void {
-    this.lat = lat_in;
-    this.lon = lon_in;
-    this.station_lat = this.lat;
-    this.station_lon = this.lon;
-    this.range_rings = range_rings;
-    if (this.live_map_page_active && this.adsb_enabled) {
-      this.map.setView([this.lat, this.lon]);
+  constructor(lat_in: number, lon_in: number, range_rings: boolean) {
+    super();
+    this.#lat = lat_in;
+    this.#lon = lon_in;
+    this.#station_lat = this.#lat;
+    this.#station_lon = this.#lon;
+    this.#range_rings = range_rings;
+    if (this.page_active && this.#adsb_enabled) {
+      this.#map.setView([this.#lat, this.#lon]);
       this.set_range_markers();
     }
-  },
+  }
 
-  set_range_markers: function (): void {
-    if (this.layerGroupRangeRings == null)
-      this.layerGroupRangeRings = L.layerGroup();
-    this.layerGroupRangeRings.clearLayers();
-    if (!this.range_rings) return;
+  set_range_markers(): void {
+    if (this.#layerGroupRangeRings == null)
+      this.#layerGroupRangeRings = L.layerGroup();
+    this.#layerGroupRangeRings.clearLayers();
+    if (!this.#range_rings) return;
 
     const nautical_miles_to_meters = 1852;
     const ring_radius = [
@@ -344,40 +340,40 @@ export let live_map_page = {
     ];
 
     ring_radius.forEach((radius) => {
-      LeafLet.circle([this.station_lat, this.station_lon], {
+      LeafLet.circle([this.#station_lat, this.#station_lon], {
         radius: radius,
         fill: false,
         interactive: false,
         weight: 1,
         color: "hsl(0, 0%, 0%)",
-      }).addTo(this.layerGroupRangeRings);
+      }).addTo(this.#layerGroupRangeRings);
     });
 
-    this.map.addLayer(this.layerGroupRangeRings);
-  },
+    this.#map.addLayer(this.#layerGroupRangeRings);
+  }
 
-  setSort: function (sort: string = ""): void {
+  setSort(sort: string = ""): void {
     if (sort === "") return;
-    if (sort === this.current_sort) this.ascending = !this.ascending;
-    else if (sort === "msgs" || sort === "alerts") this.ascending = false;
+    if (sort === this.#current_sort) this.#ascending = !this.#ascending;
+    else if (sort === "msgs" || sort === "alerts") this.#ascending = false;
     // two special cases where we want the default sort to be reversed
-    else this.ascending = true;
-    this.current_sort = sort;
+    else this.#ascending = true;
+    this.#current_sort = sort;
 
-    Cookies.set("current_sort", String(this.current_sort), {
+    Cookies.set("current_sort", String(this.#current_sort), {
       expires: 365,
       sameSite: "Strict",
     });
 
-    Cookies.set("sort_direction", String(this.ascending), {
+    Cookies.set("sort_direction", String(this.#ascending), {
       expires: 365,
       sameSite: "Strict",
     });
 
     this.airplaneList();
-  },
+  }
 
-  match_plane: function (
+  match_plane(
     plane_data: plane_data,
     callsign: string,
     tail: string,
@@ -418,10 +414,10 @@ export let live_map_page = {
       has_alerts: alert,
       num_alerts: num_alerts || 0,
     };
-  },
+  }
 
-  sort_list: function (plane_data: plane_data): adsb_target[] {
-    return Object.values(this.adsb_planes).sort((a, b) => {
+  sort_list(plane_data: plane_data): adsb_target[] {
+    return Object.values(this.#adsb_planes).sort((a, b) => {
       const callsign_a: string = this.get_callsign(a.position);
       const callsign_b: string = this.get_callsign(b.position);
       const alt_a: number | string = this.get_alt(a.position);
@@ -439,7 +435,7 @@ export let live_map_page = {
       const has_alerts_a = details_a.num_alerts;
       const has_alerts_b = details_b.num_alerts;
 
-      if (this.current_sort === "alt") {
+      if (this.#current_sort === "alt") {
         if (alt_a == alt_b) {
           if (callsign_a != callsign_b) {
             if (callsign_a < callsign_b) {
@@ -449,7 +445,7 @@ export let live_map_page = {
             }
           }
         }
-        if (this.ascending) {
+        if (this.#ascending) {
           if (String(alt_a) == "GROUND" && String(alt_b) != "GROUND") return -1;
           else if (String(alt_b) == "ground" && String(alt_a) != "GROUND")
             return 1;
@@ -467,7 +463,7 @@ export let live_map_page = {
           }
           return Number(alt_b) - Number(alt_a);
         }
-      } else if (this.current_sort === "alerts") {
+      } else if (this.#current_sort === "alerts") {
         if (has_alerts_a == has_alerts_b) {
           if (callsign_a != callsign_b) {
             if (callsign_a < callsign_b) {
@@ -477,12 +473,12 @@ export let live_map_page = {
             }
           }
         }
-        if (this.ascending) {
+        if (this.#ascending) {
           return has_alerts_a - has_alerts_b;
         } else {
           return has_alerts_b - has_alerts_a;
         }
-      } else if (this.current_sort === "speed") {
+      } else if (this.#current_sort === "speed") {
         if (speed_a == speed_b) {
           if (callsign_a != callsign_b) {
             if (callsign_a < callsign_b) {
@@ -492,12 +488,12 @@ export let live_map_page = {
             }
           }
         }
-        if (this.ascending) {
+        if (this.#ascending) {
           return speed_a - speed_b;
         } else {
           return speed_b - speed_a;
         }
-      } else if (this.current_sort === "msgs") {
+      } else if (this.#current_sort === "msgs") {
         if (num_msgs_a == num_msgs_b) {
           if (callsign_a != callsign_b) {
             if (callsign_a < callsign_b) {
@@ -507,13 +503,13 @@ export let live_map_page = {
             }
           }
         }
-        if (this.ascending) {
+        if (this.#ascending) {
           return num_msgs_a - num_msgs_b;
         } else {
           return num_msgs_b - num_msgs_a;
         }
       } else {
-        if (this.ascending) {
+        if (this.#ascending) {
           if (callsign_a < callsign_b) {
             return -1;
           } else {
@@ -528,9 +524,9 @@ export let live_map_page = {
         }
       }
     });
-  },
+  }
 
-  get_callsign: function (plane: adsb_plane): string {
+  get_callsign(plane: adsb_plane): string {
     return (
       plane.flight && plane.flight.trim() !== ""
         ? plane.flight.trim()
@@ -542,27 +538,27 @@ export let live_map_page = {
       .replace(".", "")
       .replace("-", "")
       .toUpperCase();
-  },
+  }
 
-  get_sqwk: function (plane: adsb_plane): number {
+  get_sqwk(plane: adsb_plane): number {
     return plane.squawk || 0;
-  },
+  }
 
-  get_alt: function (plane: adsb_plane): string | number {
+  get_alt(plane: adsb_plane): string | number {
     return plane.alt_baro ? String(plane.alt_baro).toUpperCase() : 0;
-  },
+  }
 
-  get_speed: function (plane: adsb_plane): number {
+  get_speed(plane: adsb_plane): number {
     return plane.gs ? plane.gs : 0;
-  },
+  }
 
-  get_tail: function (plane: adsb_plane): string {
+  get_tail(plane: adsb_plane): string {
     return plane.r
       ? plane.r.replace("-", "").replace(".", "").replace("~", "")
       : <any>undefined;
-  },
+  }
 
-  get_hex: function (plane: adsb_plane): string {
+  get_hex(plane: adsb_plane): string {
     return plane.hex
       ? plane.hex
           .replace("-", "")
@@ -570,53 +566,53 @@ export let live_map_page = {
           .replace("~", "")
           .toUpperCase()
       : <any>undefined;
-  },
+  }
 
-  get_baro_rate: function (plane: adsb_plane): number {
+  get_baro_rate(plane: adsb_plane): number {
     return plane.baro_rate ? plane.baro_rate : 0;
-  },
+  }
 
-  get_heading: function (plane: adsb_plane): number {
+  get_heading(plane: adsb_plane): number {
     return plane.track || 0;
-  },
+  }
 
-  get_ac_type: function (plane: adsb_plane): string {
+  get_ac_type(plane: adsb_plane): string {
     return plane.t || <any>undefined;
-  },
+  }
 
-  get_icon: function (plane: string): aircraft_icon | null {
-    return this.adsb_planes[plane].icon || <any>undefined;
-  },
+  get_icon(plane: string): aircraft_icon | null {
+    return this.#adsb_planes[plane].icon || <any>undefined;
+  }
 
-  get_lat: function (plane: adsb_plane): number {
+  get_lat(plane: adsb_plane): number {
     return plane.lat || 0;
-  },
+  }
 
-  get_lon: function (plane: adsb_plane): number {
+  get_lon(plane: adsb_plane): number {
     return plane.lon || 0;
-  },
+  }
 
-  set_old_messages: function (plane: string, new_messages: number) {
-    this.adsb_planes[plane].num_messages = new_messages;
-  },
+  set_old_messages(plane: string, new_messages: number) {
+    this.#adsb_planes[plane].num_messages = new_messages;
+  }
 
-  get_old_messages: function (plane: string): number {
-    return this.adsb_planes[plane].num_messages;
-  },
+  get_old_messages(plane: string): number {
+    return this.#adsb_planes[plane].num_messages;
+  }
 
-  get_current_planes: function (): {
+  get_current_planes(): {
     callsigns: Array<string>;
     hex: Array<string>;
     tail: Array<string>;
   } {
     return {
-      callsigns: this.adsb_plane_callsign,
-      hex: this.adsb_plane_hex,
-      tail: this.adsb_plane_tails,
+      callsigns: this.#adsb_plane_callsign,
+      hex: this.#adsb_plane_hex,
+      tail: this.#adsb_plane_tails,
     };
-  },
+  }
 
-  airplaneList: function (): void {
+  airplaneList(): void {
     const plane_data = find_matches();
     let num_planes = 0;
     let num_planes_targets = 0;
@@ -672,19 +668,19 @@ export let live_map_page = {
         }
       }
 
-      if (!this.show_only_acars || num_messages) {
+      if (!this.#show_only_acars || num_messages) {
         let styles = "";
         if (
-          this.current_hovered_from_map !== "" &&
-          this.current_hovered_from_map == callsign &&
+          this.#current_hovered_from_map !== "" &&
+          this.#current_hovered_from_map == callsign &&
           callsign &&
           num_messages
         ) {
           if (!num_alerts) styles = " sidebar_hovered_from_map_acars";
           else styles = " sidebar_hovered_from_map_with_unread";
-        } else if (this.current_hovered_from_map == callsign && !num_alerts) {
+        } else if (this.#current_hovered_from_map == callsign && !num_alerts) {
           styles = " sidebar_hovered_from_map_no_acars";
-        } else if (num_alerts && this.current_hovered_from_map == callsign) {
+        } else if (num_alerts && this.#current_hovered_from_map == callsign) {
           styles = has_new_messages
             ? " sidebar_alert_unread_hovered_from_map"
             : " sidebar_alert_unread_hovered_from_map";
@@ -720,7 +716,7 @@ export let live_map_page = {
           num_alerts || "&nbsp;"
         }</div>
         <div class="plane_element" style="width: ${msgs_width}%;">${
-          this.show_unread_messages && num_messages
+          this.#show_unread_messages && num_messages
             ? num_messages - old_messages + " / "
             : ""
         }${num_messages || "&nbsp;"}</div></div>`;
@@ -742,9 +738,9 @@ export let live_map_page = {
       const hex_list = plane_callsigns[id].hex;
       if (plane_list && hex_list) {
         const current_plane =
-          this.adsb_planes[hex_list] !== undefined &&
-          this.adsb_planes[hex_list].position !== undefined
-            ? this.adsb_planes[hex_list].position
+          this.#adsb_planes[hex_list] !== undefined &&
+          this.#adsb_planes[hex_list].position !== undefined
+            ? this.#adsb_planes[hex_list].position
             : null;
         if (
           current_plane !== null &&
@@ -773,8 +769,8 @@ export let live_map_page = {
 
           $(`#${callsign}`).on({
             mouseenter: () => {
-              if (this.current_hovered_from_sidebar !== hex) {
-                this.current_hovered_from_sidebar = callsign;
+              if (this.#current_hovered_from_sidebar !== hex) {
+                this.#current_hovered_from_sidebar = callsign;
                 $(`#${hex}_marker`).removeClass(
                   this.find_plane_color(
                     callsign,
@@ -791,7 +787,7 @@ export let live_map_page = {
               }
             },
             mouseleave: () => {
-              this.current_hovered_from_sidebar = "";
+              this.#current_hovered_from_sidebar = "";
               $("div").removeClass("airplane_orange");
               $(`#${hex}_marker`).addClass(
                 this.find_plane_color(
@@ -812,17 +808,17 @@ export let live_map_page = {
     }
     $("#num_planes").html(`Planes: ${num_planes}`);
     $("#num_planes_targets").html(`Planes w/ Targets: ${num_planes_targets}`);
-  },
+  }
 
-  metersperpixel: function (): number {
+  metersperpixel(): number {
     return (
       (40075016.686 *
-        Math.abs(Math.cos((this.map.getCenter().lat * Math.PI) / 180))) /
-      Math.pow(2, this.map.getZoom() + 8)
+        Math.abs(Math.cos((this.#map.getCenter().lat * Math.PI) / 180))) /
+      Math.pow(2, this.#map.getZoom() + 8)
     );
-  },
+  }
 
-  offset_datablock: function (centerpoint: [number, number]): [number, number] {
+  offset_datablock(centerpoint: [number, number]): [number, number] {
     const mtp: number = this.metersperpixel();
     const offset_y: number = 0;
     const offset_x: number = mtp * 30;
@@ -839,9 +835,9 @@ export let live_map_page = {
       centerpoint[0] + (dLat * 180) / Math.PI,
       centerpoint[1] + (dLon * 180) / Math.PI,
     ] as [number, number];
-  },
+  }
 
-  find_plane_color: function (
+  find_plane_color(
     callsign: string,
     alert: boolean,
     num_messages: number,
@@ -852,10 +848,10 @@ export let live_map_page = {
     skip_hovered: boolean = false
   ): string {
     let color: string = "airplane_blue";
-    if (!skip_hovered && this.current_hovered_from_sidebar == callsign)
+    if (!skip_hovered && this.#current_hovered_from_sidebar == callsign)
       color = "airplane_orange";
     else if (
-      (alert && this.show_unread_messages && num_messages !== old_messages) ||
+      (alert && this.#show_unread_messages && num_messages !== old_messages) ||
       squawk == 7500 ||
       squawk == 7600 ||
       squawk == 7700
@@ -876,30 +872,30 @@ export let live_map_page = {
         num_messages = old_messages;
       }
 
-      if (this.show_unread_messages && num_messages !== old_messages)
+      if (this.#show_unread_messages && num_messages !== old_messages)
         color = "airplane_darkgreen";
       else color = "airplane_green";
     }
     return color;
-  },
+  }
 
-  update_targets: function (): void {
+  update_targets(): void {
     if (
-      typeof this.map !== null &&
-      this.layerGroupPlanes !== null &&
-      this.adsb_planes !== null
+      typeof this.#map !== null &&
+      this.#layerGroupPlanes !== null &&
+      this.#adsb_planes !== null
     ) {
       // clear old planes
       // this.layerGroupPlanes.clearLayers();
       // this.layerGroupPlaneDatablocks.clearLayers();
       const plane_data: plane_data = find_matches();
 
-      for (const plane in this.adsb_planes) {
+      for (const plane in this.#adsb_planes) {
         if (
-          this.adsb_planes[plane].position.lat != null &&
-          this.adsb_planes[plane].position.lon != null
+          this.#adsb_planes[plane].position.lat != null &&
+          this.#adsb_planes[plane].position.lon != null
         ) {
-          const current_plane = this.adsb_planes[plane].position;
+          const current_plane = this.#adsb_planes[plane].position;
           const callsign = this.get_callsign(current_plane);
           if (callsign.includes("@@")) {
             console.error("CALLSIGN CONTAINS @s. Skipping target.");
@@ -952,7 +948,7 @@ export let live_map_page = {
 
           let datablock = `${callsign}`;
 
-          if (this.show_extended_datablocks) {
+          if (this.#show_extended_datablocks) {
             datablock += `<br>${alt}`;
             if (ac_type || speed) {
               datablock += `<br>${ac_type !== undefined ? ac_type + " " : ""}${
@@ -965,7 +961,7 @@ export let live_map_page = {
             }
           }
 
-          if (this.adsb_planes[plane].position_marker === null) {
+          if (this.#adsb_planes[plane].position_marker === null) {
             if (icon == null) {
               const type_shape: svg_icon = getBaseMarker(
                 String(current_plane.category),
@@ -981,7 +977,7 @@ export let live_map_page = {
                 0.5,
                 type_shape.scale * 1.5
               ) as aircraft_icon;
-              this.adsb_planes[hex].icon = icon;
+              this.#adsb_planes[hex].icon = icon;
             }
             const marker_icon_text = `<div><div id="${hex}_marker" class="datablock ${color}" data-jbox-content="${popup_text}" style="-webkit-transform:rotate(${rotate}deg); -moz-transform: rotate(${rotate}deg); -ms-transform: rotate(${rotate}deg); -o-transform: rotate(${rotate}deg); transform: rotate(${rotate}deg);">${icon.svg}</div></div>`;
 
@@ -995,25 +991,25 @@ export let live_map_page = {
               icon: plane_icon,
               riseOnHover: true,
             });
-            this.adsb_planes[plane].position_marker = plane_marker;
+            this.#adsb_planes[plane].position_marker = plane_marker;
           }
 
           // All fields generated. Time to determine if the marker needs to be displayed
 
-          if (!this.show_only_acars || num_messages) {
+          if (!this.#show_only_acars || num_messages) {
             // Marker Should be displayed
             if (
-              !this.layerGroupPlanes.hasLayer(
-                this.adsb_planes[plane].position_marker!
+              !this.#layerGroupPlanes.hasLayer(
+                this.#adsb_planes[plane].position_marker!
               )
             ) {
               // Marker is missing, add it
-              this.adsb_planes[plane].position_marker!.addTo(
-                this.layerGroupPlanes
+              this.#adsb_planes[plane].position_marker!.addTo(
+                this.#layerGroupPlanes
               );
               if (num_messages) {
                 // Add in click event for showing messages
-                this.adsb_planes[plane].position_marker!.on("click", () => {
+                this.#adsb_planes[plane].position_marker!.on("click", () => {
                   this.showPlaneMessages(callsign, hex, tail);
                   const color = this.find_plane_color(
                     callsign,
@@ -1032,19 +1028,19 @@ export let live_map_page = {
               }
               $(`#${hex}_marker`).on({
                 mouseenter: () => {
-                  if (this.current_hovered_from_map !== callsign) {
-                    this.current_hovered_from_map = callsign;
+                  if (this.#current_hovered_from_map !== callsign) {
+                    this.#current_hovered_from_map = callsign;
                     this.airplaneList();
                   }
                 },
                 mouseleave: () => {
-                  this.current_hovered_from_map = "";
+                  this.#current_hovered_from_map = "";
                   this.airplaneList();
                 },
               });
             } else {
               // Marker is present, update it
-              this.adsb_planes[plane].position_marker!.setLatLng([lat, lon]);
+              this.#adsb_planes[plane].position_marker!.setLatLng([lat, lon]);
               $(`#${hex}_marker`).removeClass();
               $(`#${hex}_marker`).removeAttr("style");
               $(`#${hex}_marker`).removeAttr("data-jbox-content");
@@ -1063,8 +1059,8 @@ export let live_map_page = {
                 // If the plane previously didn't have messages when it was generated the click event is never added
                 // So we need to add it here
                 // But we'll hit a snag if the plane already had a click event, so we'll remove it first
-                this.adsb_planes[plane].position_marker!.off("click");
-                this.adsb_planes[plane].position_marker!.on("click", () => {
+                this.#adsb_planes[plane].position_marker!.off("click");
+                this.#adsb_planes[plane].position_marker!.on("click", () => {
                   this.showPlaneMessages(callsign, hex, tail);
                   const color = this.find_plane_color(
                     callsign,
@@ -1083,19 +1079,19 @@ export let live_map_page = {
               }
             }
           } else if (
-            this.show_only_acars &&
-            this.layerGroupPlanes.hasLayer(
-              this.adsb_planes[plane].position_marker!
+            this.#show_only_acars &&
+            this.#layerGroupPlanes.hasLayer(
+              this.#adsb_planes[plane].position_marker!
             )
           ) {
             // remove the marker if present
-            this.layerGroupPlanes.removeLayer(
-              this.adsb_planes[plane].position_marker!
+            this.#layerGroupPlanes.removeLayer(
+              this.#adsb_planes[plane].position_marker!
             );
           }
 
           // Now determine if datablocks need to be displayed
-          if (this.adsb_planes[plane].datablock_marker === null) {
+          if (this.#adsb_planes[plane].datablock_marker === null) {
             // datablock is missing, add it
             let datablock_icon = new LeafLet.DivIcon({
               className: "airplane",
@@ -1104,7 +1100,7 @@ export let live_map_page = {
                 datablock +
                 "</div>",
             });
-            this.adsb_planes[plane].datablock_marker = new LeafLet.Marker(
+            this.#adsb_planes[plane].datablock_marker = new LeafLet.Marker(
               this.offset_datablock([lat, lon]) as LeafLet.LatLngTuple,
               { icon: datablock_icon }
             );
@@ -1112,68 +1108,68 @@ export let live_map_page = {
 
           // Datablock is present, update it
           if (
-            this.show_datablocks &&
-            (!this.show_only_acars || num_messages) &&
-            this.layerGroupPlaneDatablocks.hasLayer(
-              this.adsb_planes[plane].datablock_marker!
+            this.#show_datablocks &&
+            (!this.#show_only_acars || num_messages) &&
+            this.#layerGroupPlaneDatablocks.hasLayer(
+              this.#adsb_planes[plane].datablock_marker!
             )
           ) {
-            this.adsb_planes[plane].datablock_marker!.setLatLng(
+            this.#adsb_planes[plane].datablock_marker!.setLatLng(
               this.offset_datablock([lat, lon])
             );
             $(`#${hex}_datablock`).html(datablock);
           } else if (
-            this.show_datablocks &&
-            (!this.show_only_acars || num_messages)
+            this.#show_datablocks &&
+            (!this.#show_only_acars || num_messages)
           ) {
             // datablock is missing and should be displayed, add it to the map
-            this.adsb_planes[plane].datablock_marker!.addTo(
-              this.layerGroupPlaneDatablocks
+            this.#adsb_planes[plane].datablock_marker!.addTo(
+              this.#layerGroupPlaneDatablocks
             );
           } else if (
-            this.layerGroupPlaneDatablocks.hasLayer(
-              this.adsb_planes[plane].datablock_marker!
+            this.#layerGroupPlaneDatablocks.hasLayer(
+              this.#adsb_planes[plane].datablock_marker!
             )
           ) {
             // datablock is present and should not be displayed, remove it from the map
-            this.layerGroupPlaneDatablocks.removeLayer(
-              this.adsb_planes[plane].datablock_marker!
+            this.#layerGroupPlaneDatablocks.removeLayer(
+              this.#adsb_planes[plane].datablock_marker!
             );
           }
         } else {
           // hide the plane marker if it exists
           // I doubt we could ever end up in this branch but who knows
           if (
-            this.adsb_planes[plane].position_marker !== null &&
-            this.layerGroupPlanes.hasLayer(
-              this.adsb_planes[plane].position_marker!
+            this.#adsb_planes[plane].position_marker !== null &&
+            this.#layerGroupPlanes.hasLayer(
+              this.#adsb_planes[plane].position_marker!
             )
           ) {
-            this.layerGroupPlanes.removeLayer(
-              this.adsb_planes[plane].position_marker!
+            this.#layerGroupPlanes.removeLayer(
+              this.#adsb_planes[plane].position_marker!
             );
           }
 
           // hide the datablock if it exists
           if (
-            this.adsb_planes[plane].datablock_marker !== null &&
-            this.layerGroupPlaneDatablocks.hasLayer(
-              this.adsb_planes[plane].datablock_marker!
+            this.#adsb_planes[plane].datablock_marker !== null &&
+            this.#layerGroupPlaneDatablocks.hasLayer(
+              this.#adsb_planes[plane].datablock_marker!
             )
           ) {
-            this.layerGroupPlaneDatablocks.removeLayer(
-              this.adsb_planes[plane].datablock_marker!
+            this.#layerGroupPlaneDatablocks.removeLayer(
+              this.#adsb_planes[plane].datablock_marker!
             );
           }
         }
       }
     }
-  },
+  }
 
-  mark_all_messages_read: function (): void {
+  mark_all_messages_read(): void {
     const plane_data: plane_data = find_matches();
-    for (const plane in this.adsb_planes) {
-      const current_plane = this.adsb_planes[plane].position;
+    for (const plane in this.#adsb_planes) {
+      const current_plane = this.#adsb_planes[plane].position;
       const callsign = this.get_callsign(current_plane);
       const hex: string = this.get_hex(current_plane);
       if (hex === undefined) {
@@ -1184,18 +1180,18 @@ export let live_map_page = {
       const details = this.match_plane(plane_data, callsign, tail, hex);
       const num_messages = details.num_messages;
 
-      this.adsb_planes[plane].num_messages = num_messages;
+      this.#adsb_planes[plane].num_messages = num_messages;
     }
     this.redraw_map();
-  },
+  }
 
-  showPlaneMessages: function (
+  showPlaneMessages(
     plane_callsign: string = "",
     plane_hex: string = "",
     plane_tail: string = ""
   ): void {
     if (plane_callsign === "" && plane_hex === "") return;
-    this.current_modal_terms = {
+    this.#current_modal_terms = {
       callsign: plane_callsign,
       hex: plane_hex,
       tail: plane_tail,
@@ -1209,17 +1205,17 @@ export let live_map_page = {
 
     const matches = plane_details.messages;
     if (matches.length === 0) return;
-    if (this.modal_content == "") {
-      this.modal_current_tab ==
+    if (this.#modal_content == "") {
+      this.#modal_current_tab ==
         matches[matches.length - 1].uid + ";" + matches[0];
     }
 
     const html =
       '<div style="background:var(--table-background)">' +
-      display_messages([matches], this.modal_current_tab, true) +
+      display_messages([matches], this.#modal_current_tab, true) +
       "</div>";
-    if (this.modal_content !== html) {
-      this.modal_content = html;
+    if (this.#modal_content !== html) {
+      this.#modal_content = html;
       this.plane_message_modal.setContent(html);
     }
     this.plane_message_modal.setTitle(`Messages for ${plane_callsign}`);
@@ -1229,86 +1225,88 @@ export let live_map_page = {
     this.plane_message_modal.setHeight(window_height);
     this.plane_message_modal.setWidth(window_width);
     this.plane_message_modal.open();
-    this.adsb_planes[plane_hex].num_messages = matches.length;
+    this.#adsb_planes[plane_hex].num_messages = matches.length;
     this.airplaneList();
     resize_tabs(window_width - 40, false);
     $(".show_when_small").css("display", `inline-block`);
     $(".show_when_big").css("display", "none");
     $(".dont_show").css("display", "none");
     tooltip.attach_all_tooltips();
-  },
+  }
 
-  close_live_map_modal: function (): void {
-    this.current_modal_terms = (<unknown>null) as {
+  close_live_map_modal(): void {
+    this.#current_modal_terms = (<unknown>null) as {
       callsign: string;
       hex: string;
       tail: string;
     };
-    this.modal_content = "";
-  },
+    this.#modal_content = "";
+  }
 
-  handle_radio: function (element_id: string, uid: string): void {
-    this.modal_current_tab = uid + ";" + element_id;
-    if (this.current_modal_terms != null) {
+  handle_radio(element_id: string, uid: string): void {
+    this.#modal_current_tab = uid + ";" + element_id;
+    if (this.#current_modal_terms != null) {
       this.showPlaneMessages(
-        this.current_modal_terms.callsign,
-        this.current_modal_terms.hex,
-        this.current_modal_terms.tail
+        this.#current_modal_terms.callsign,
+        this.#current_modal_terms.hex,
+        this.#current_modal_terms.tail
       );
     }
     tooltip.cycle_tooltip();
-  },
+  }
 
-  updateModalSize: function (new_window_size: window_size): void {
-    this.window_size = new_window_size;
-    if (this.map) {
-      this.map.invalidateSize();
+  updateModalSize(new_window_size: window_size): void {
+    this.#window_size = new_window_size;
+    if (this.#map) {
+      this.#map.invalidateSize();
     }
     const window_width = this.get_modal_width();
     const window_height = this.get_modal_height();
     this.plane_message_modal.setHeight(window_height);
     this.plane_message_modal.setWidth(window_width);
     resize_tabs(
-      (this.window_size.height > 500 ? this.window_size.height : 500) - 40,
+      (this.#window_size.height > 500 ? this.#window_size.height : 500) - 40,
       false
     );
     $(".show_when_small").css("display", `inline-block`);
     $(".show_when_big").css("display", "none");
     tooltip.attach_all_tooltips();
-  },
+  }
 
-  get_modal_height: function () {
-    return this.window_size.height < 500 ? this.window_size.height : 500;
-  },
+  get_modal_height(): number {
+    return this.#window_size.height < 500 ? this.#window_size.height : 500;
+  }
 
-  get_modal_width: function () {
-    return this.window_size.width < 500 ? this.window_size.width : 500;
-  },
+  get_modal_width(): number {
+    return this.#window_size.width < 500 ? this.#window_size.width : 500;
+  }
 
-  zoom_in: function (): void {
-    this.map.setZoom(this.map.getZoom() + 1);
-  },
+  zoom_in(): void {
+    this.#map.setZoom(this.#map.getZoom() + 1);
+  }
 
-  zoom_out: function (): void {
-    this.map.setZoom(this.map.getZoom() - 1);
-  },
+  zoom_out(): void {
+    this.#map.setZoom(this.#map.getZoom() - 1);
+  }
 
-  live_map_active: function (state = false, window_size: window_size): void {
-    this.live_map_page_active = state;
-    this.window_size = window_size;
+  live_map_active(state = false, window_size: window_size): void {
+    this.active(state);
+
+    this.page_active = state;
+    this.#window_size = window_size;
     this.get_cookie_value();
     let leafletRadarAttribution =
       '<a href="https://github.com/rwev/leaflet-radar">Radar</a>';
-    if (this.live_map_page_active && this.adsb_enabled) {
-      Object.keys(this.adsb_planes).forEach((plane) => {
-        this.adsb_planes[plane].datablock_marker = null;
-        this.adsb_planes[plane].position_marker = null;
+    if (this.page_active && this.#adsb_enabled) {
+      Object.keys(this.#adsb_planes).forEach((plane) => {
+        this.#adsb_planes[plane].datablock_marker = null;
+        this.#adsb_planes[plane].position_marker = null;
       });
       this.set_html();
-      this.map = LeafLet.map("mapid", {
+      this.#map = LeafLet.map("mapid", {
         zoomDelta: 0.2,
-        center: [this.lat, this.lon],
-        zoom: this.current_scale,
+        center: [this.#lat, this.#lon],
+        zoom: this.#current_scale,
         scrollWheelZoom: false,
         smoothWheelZoom: true,
         smoothSensitivity: 1,
@@ -1336,7 +1334,7 @@ export let live_map_page = {
           '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors',
           leafletRadarAttribution,
         ].join(" | "),
-      }).addTo(this.map);
+      }).addTo(this.#map);
       this.set_range_markers();
 
       LeafLet.control
@@ -1353,38 +1351,38 @@ export let live_map_page = {
           },
           events: {},
         })
-        .addTo(this.map);
+        .addTo(this.#map);
 
-      this.layerGroupPlanes = LeafLet.layerGroup().addTo(this.map);
-      this.layerGroupPlaneDatablocks = LeafLet.layerGroup().addTo(this.map);
+      this.#layerGroupPlanes = LeafLet.layerGroup().addTo(this.#map);
+      this.#layerGroupPlaneDatablocks = LeafLet.layerGroup().addTo(this.#map);
 
       LeafLet.control
-        .radar({ position: "bottomleft", start_active: this.show_nexrad })
-        .addTo(this.map);
+        .radar({ position: "bottomleft", start_active: this.#show_nexrad })
+        .addTo(this.#map);
       this.set_controls();
-      this.map.on({
+      this.#map.on({
         zoom: () => {
-          this.current_scale = this.map.getZoom();
-          Cookies.set("live_map_zoom", String(this.current_scale), {
+          this.#current_scale = this.#map.getZoom();
+          Cookies.set("live_map_zoom", String(this.#current_scale), {
             expires: 365,
             sameSite: "Strict",
           });
         },
         move: () => {
-          const center = this.map.getCenter();
-          this.lat = center.lat;
-          this.lon = center.lng;
+          const center = this.#map.getCenter();
+          this.#lat = center.lat;
+          this.#lon = center.lng;
         },
       });
 
       this.redraw_map();
     }
     tooltip.cycle_tooltip();
-  },
+  }
 
-  set_controls: function (): void {
-    if (this.legend) this.legend.remove();
-    this.legend = LeafLet.control.Legend({
+  set_controls(): void {
+    if (this.#legend) this.#legend.remove();
+    this.#legend = LeafLet.control.Legend({
       position: "bottomleft",
       symbolWidth: 45,
       symbolHeight: 45,
@@ -1418,30 +1416,30 @@ export let live_map_page = {
         },
       ],
     });
-    this.legend.addTo(this.map);
+    this.#legend.addTo(this.#map);
 
-    if (this.map_controls) this.map_controls.remove();
+    if (this.#map_controls) this.#map_controls.remove();
 
-    this.map_controls = LeafLet.control.custom({
+    this.#map_controls = LeafLet.control.custom({
       position: "topright",
       content:
         '<button type="button" id="toggle-acars" class="btn btn-default toggle-acars bg-white" onclick="toggle_acars_only()">' +
         `    ${
-          !this.show_only_acars
+          !this.#show_only_acars
             ? images.toggle_acars_only_show_acars
             : images.toggle_acars_only_show_all
         }` +
         "</button>" +
         '<button type="button" id="toggle-datablocks" class="btn btn-info toggle-datablocks" onclick="toggle_datablocks()">' +
         `    ${
-          this.show_datablocks
+          this.#show_datablocks
             ? images.toggle_datablocks_on
             : images.toggle_datablocks_off
         }` +
         "</button>" +
         '<button type="button" id="toggle-extended-datablocks" class="btn btn-primary toggle-extended-datablocks" onclick="toggle_extended_datablocks()">' +
         `    ${
-          this.show_extended_datablocks
+          this.#show_extended_datablocks
             ? images.toggle_extended_datablocks_on
             : images.toggle_extended_datablocks_off
         }` +
@@ -1449,7 +1447,7 @@ export let live_map_page = {
         '<button type="button" class="btn btn-success toggle-unread-messages" onclick="toggle_unread_messages()">' +
         `    ${images.toggle_unread_messages_on}` +
         "</button>" +
-        (this.show_unread_messages
+        (this.#show_unread_messages
           ? `<button type="button" class="btn btn-danger mark-all-messages-read" onclick="mark_all_messages_read()">    ${images.mark_all_messages_read}</button>`
           : ""),
       //+
@@ -1464,50 +1462,39 @@ export let live_map_page = {
       },
       events: {},
     });
-    this.map_controls.addTo(this.map);
-  },
+    this.#map_controls.addTo(this.#map);
+  }
 
-  set_live_map_page_urls: function (
-    documentPath: string,
-    documentUrl: string
-  ): void {
-    this.livemap_acars_path = documentPath;
-    this.livemap_acars_url = documentUrl;
-  },
-
-  set_html: function (): void {
+  set_html(): void {
     $("#modal_text").html("");
-    if (this.adsb_enabled)
+    if (this.#adsb_enabled)
       $("#log").html(
         '<div style="display: flex;height: 100%;" ><div id="mapid"></div><div id="planes"></div>'
       );
     else $("#log").html("ADSB Disabled");
     //setScrollers();
-  },
+  }
 
-  destroy_maps: function (): void {
-    this.map = (<unknown>null) as LeafLet.Map;
-    this.layerGroupPlanes = (<unknown>null) as LeafLet.LayerGroup;
-    this.layerGroupPlaneDatablocks = (<unknown>null) as LeafLet.LayerGroup;
-    this.layerGroupRangeRings = (<unknown>null) as LeafLet.LayerGroup;
-    this.adsb_planes = {};
-    this.map_controls = (<unknown>null) as LeafLet.Control;
-    this.legend = (<unknown>null) as LeafLet.Control;
+  destroy_maps(): void {
+    this.#map = (<unknown>null) as LeafLet.Map;
+    this.#layerGroupPlanes = (<unknown>null) as LeafLet.LayerGroup;
+    this.#layerGroupPlaneDatablocks = (<unknown>null) as LeafLet.LayerGroup;
+    this.#layerGroupRangeRings = (<unknown>null) as LeafLet.LayerGroup;
+    this.#adsb_planes = {};
+    this.#map_controls = (<unknown>null) as LeafLet.Control;
+    this.#legend = (<unknown>null) as LeafLet.Control;
 
-    if (this.live_map_page_active) this.set_html();
-  },
+    if (this.page_active) this.set_html();
+  }
 
-  is_adsb_enabled: function (
-    is_enabled: boolean = false,
-    window_size: window_size
-  ): void {
-    this.adsb_enabled = is_enabled;
-    if (this.live_map_page_active) {
+  is_adsb_enabled(is_enabled: boolean = false, window_size: window_size): void {
+    this.#adsb_enabled = is_enabled;
+    if (this.page_active) {
       this.set_html();
 
-      if (this.live_map_page_active) {
+      if (this.page_active) {
         this.live_map_active(true, window_size);
       }
     }
-  },
-};
+  }
+}

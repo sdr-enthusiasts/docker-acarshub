@@ -26,12 +26,13 @@ import "jbox/dist/jBox.all.css";
 import "./css/site.scss";
 
 import { menu } from "./helpers/menu";
-import { live_messages_page } from "./pages/live_messages";
-import { search_page } from "./pages/search";
-import { stats_page } from "./pages/stats";
-import { about } from "./pages/about";
-import { status } from "./pages/status";
-import { alerts_page } from "./pages/alerts";
+import { LiveMessagePage } from "./pages/live_messages";
+import { LiveMapPage } from "./pages/live_map";
+import { SearchPage } from "./pages/search";
+import { StatsPage } from "./pages/stats";
+import { AboutPage } from "./pages/about";
+import { StatusPage } from "./pages/status";
+import { AlertsPage } from "./pages/alerts";
 import { tooltip } from "./helpers/tooltips";
 import { io, Socket } from "socket.io-client";
 
@@ -52,12 +53,10 @@ import {
   window_size,
   alert_matched,
   plane_data,
-  acars_msg,
   plane_match,
   acarshub_version,
 } from "./interfaces";
 
-import { live_map_page } from "./pages/live_map";
 import Cookies from "js-cookie";
 
 let socket: Socket = <any>null;
@@ -71,7 +70,6 @@ let old_window_width: number = 0;
 let old_window_height: number = 0;
 
 let adsb_url: string = "";
-let adsb_getting_data: boolean = false;
 let adsb_interval: any;
 let connection_good: boolean = true;
 let adsb_enabled = false;
@@ -80,6 +78,15 @@ let adsb_request_options = {
 } as RequestInit;
 let allow_remote_updates = false;
 let flight_tracking_url: string | undefined = undefined;
+let wakelock: any | null = null;
+
+let about: AboutPage = new AboutPage();
+let status: StatusPage = new StatusPage();
+let stats: StatsPage = new StatsPage();
+let search: SearchPage = new SearchPage();
+let live_messages: LiveMessagePage = new LiveMessagePage();
+let alerts: AlertsPage;
+let live_map: LiveMapPage;
 
 // @ts-expect-error
 var hidden, visibilityChange;
@@ -113,13 +120,13 @@ let robserver: ResizeObserver = new ResizeObserver((entries) => {
     if (cr.width !== old_window_width) {
       old_window_width = cr.width - 50;
       if (index_acars_page === "/") resize_tabs(cr.width - 50);
-      else if (index_acars_page === "/adsb")
-        live_map_page.updateModalSize({
+      else if (index_acars_page === "/adsb" && live_map)
+        live_map.updateModalSize({
           width: cr.width,
           height: cr.height,
         } as window_size);
       else if (index_acars_page === "/stats") {
-        stats_page.resize(cr.width);
+        stats.resize(cr.width);
       }
     }
 
@@ -211,6 +218,7 @@ $((): void => {
   menu.generate_footer(); // generate the footer
 
   robserver.observe(<Element>document.querySelector("body"));
+
   update_url(); // update the urls for everyone
   adsb_url = index_acars_url + "data/aircraft.json";
   //connect to the socket server.
@@ -220,34 +228,34 @@ $((): void => {
 
   socket.on("labels", function (msg: labels) {
     // Msg labels
-    live_messages_page.new_labels(msg); // send to live messages
+    live_messages.new_labels(msg); // send to live messages
   });
 
   socket.on("acars_msg", function (msg: html_msg) {
     // New acars message.
     if (connection_good || typeof msg.loading == "undefined") {
-      live_messages_page.new_acars_message(msg); // send the message to live messages
+      live_messages.new_acars_message(msg); // send the message to live messages
       // if (adsb_enabled && typeof msg.loading == "undefined")
       //   live_map_page.redraw_map();
       if (typeof msg.loading == "undefined" || msg.loading === false)
-        alerts_page.alerts_acars_message(msg); // send the message to alerts for processing
+        alerts.alerts_acars_message(msg); // send the message to alerts for processing
     }
   });
 
   socket.on("terms", function (msg: terms): void {
-    alerts_page.alerts_terms(msg); // send the terms over to the alert page
+    alerts.alerts_terms(msg); // send the terms over to the alert page
   });
 
   socket.on("alert_matches", function (msg: html_msg): void {
-    alerts_page.alerts_acars_message(msg);
+    alerts.alerts_acars_message(msg);
   });
 
   socket.on("database", function (msg: database_size): void {
-    search_page.database_size_details(msg);
+    search.database_size_details(msg);
   });
 
   socket.on("database_search_results", function (msg: search_html_msg): void {
-    search_page.database_search_results(msg);
+    search.database_search_results(msg);
   });
 
   socket.on("acarshub-version", function (version: acarshub_version): void {
@@ -259,20 +267,24 @@ $((): void => {
   // stats
 
   socket.on("features_enabled", function (msg: decoders): void {
-    stats_page.decoders_enabled(msg);
+    stats.decoders_enabled(msg);
     menu.set_arch(msg.arch);
     allow_remote_updates = msg.allow_remote_updates;
     flight_tracking_url = msg.adsb.flight_tracking_url;
     if (msg.adsb.enabled === true) {
+      live_map = new LiveMapPage(
+        msg.adsb.lat,
+        msg.adsb.lon,
+        msg.adsb.range_rings
+      );
       adsb_enabled = true;
       menu.set_adsb(true);
       toggle_pages();
-      alerts_page.updateAlertCounter();
-      live_map_page.is_adsb_enabled(true, {
+      alerts.updateAlertCounter();
+      live_map.is_adsb_enabled(true, {
         width: old_window_width,
         height: old_window_height,
       } as window_size);
-      live_map_page.live_map(msg.adsb.lat, msg.adsb.lon, msg.adsb.range_rings);
 
       status.update_adsb_status({
         adsb_enabled: true,
@@ -307,28 +319,28 @@ $((): void => {
       adsb_interval = null;
       menu.set_adsb(false);
       toggle_pages();
-      alerts_page.updateAlertCounter();
-      live_map_page.is_adsb_enabled(false, {
+      alerts.updateAlertCounter();
+      live_map.is_adsb_enabled(false, {
         width: old_window_width,
         height: old_window_height,
       } as window_size);
-      live_map_page.destroy_maps();
+      live_map.destroy_maps();
     }
   });
 
   // signal level graph
   socket.on("signal", function (msg: signal): void {
-    stats_page.signals(msg);
+    stats.signals(msg);
   });
 
   // alert term graph
   socket.on("alert_terms", function (msg: alert_term): void {
-    stats_page.alert_terms(msg);
+    stats.alert_terms(msg);
   });
 
   // sidebar frequency count
   socket.on("signal_freqs", function (msg: signal_freq_data): void {
-    stats_page.signal_freqs(msg);
+    stats.signal_freqs(msg);
   });
 
   socket.on("system_status", function (msg: system_status): void {
@@ -336,7 +348,7 @@ $((): void => {
   });
 
   socket.on("signal_count", function (msg: signal_count_data): void {
-    stats_page.signal_count(msg);
+    stats.signal_count(msg);
   });
 
   // socket errors
@@ -375,16 +387,13 @@ $((): void => {
   });
 
   // init all page backgrounding functions
-  live_messages_page.live_messages();
-  search_page.search();
-  stats_page.stats();
-  about.about();
-  status.status();
-  alerts_page.alert();
+
+  alerts = new AlertsPage();
+  stats.stats();
   toggle_pages();
 
   setInterval(function () {
-    stats_page.updatePage();
+    stats.updatePage();
   }, 60000);
 
   if (
@@ -399,13 +408,33 @@ $((): void => {
     document.addEventListener(
       // @ts-expect-error
       visibilityChange,
-      () => {
+      async () => {
+        // if (wakelock !== null && document.visibilityState === "visible") {
+        //   console.log("Reacquiring wake lock");
+        //   wakelock = await navigator.wakeLock.request("screen");
+        // } else if (wakelock === null && document.visibilityState === "visible") {
+        //   try {
+        //     console.log("Requesting wake lock. Initial.");
+        //     wakelock = await navigator.wakeLock.request("screen");
+        //   } catch (err: any) {
+        //     // The Wake Lock request has failed - usually system related, such as battery.
+        //     console.error(`${err.name}, ${err.message}`);
+        //   }
+        // } else if (wakelock !== null) {
+        //   console.log("Releasing wake lock");
+        //   wakelock.release();
+        //   wakelock = null;
+        // }
+
         // @ts-expect-error
         toggle_pages(document[hidden]);
       },
       false
     );
   }
+
+  // FIXME: this is a hack to make the alerts page work right. We have to construct alerts page after the socket is connected, which means it can't be done in the main load like everyone else
+  update_url(); // update the urls for everyone
 });
 
 export function get_flight_tracking_url(): string {
@@ -425,12 +454,10 @@ function set_connection_good(): void {
 async function update_adsb(): Promise<void> {
   fetch(adsb_url, adsb_request_options)
     .then((response) => {
-      adsb_getting_data = true;
       return response.json();
     })
-    .then((planes) => live_map_page.set_targets(planes as adsb))
+    .then((planes) => live_map.set_targets(planes as adsb))
     .catch((err) => {
-      adsb_getting_data = false;
       status.update_adsb_status({
         adsb_enabled: true,
         adsb_getting_data: false,
@@ -448,62 +475,67 @@ function update_url(): void {
   index_acars_path += index_acars_path.endsWith("/") ? "" : "/";
   index_acars_url = document.location.origin + index_acars_path;
 
-  live_messages_page.set_live_page_urls(index_acars_path, index_acars_url);
-  search_page.set_search_page_urls(index_acars_path, index_acars_url);
-  stats_page.set_stats_page_urls(index_acars_path, index_acars_url);
-  about.set_about_page_urls(index_acars_path, index_acars_url);
-  status.set_status_page_urls(index_acars_path, index_acars_url);
-  alerts_page.set_alert_page_urls(index_acars_path, index_acars_url);
-  live_map_page.set_live_map_page_urls(index_acars_path, index_acars_url);
+  live_messages.set_page_urls(index_acars_path, index_acars_url);
+  search.set_page_urls(index_acars_path, index_acars_url);
+  stats.set_page_urls(index_acars_path, index_acars_url);
+  about.set_page_urls(index_acars_path, index_acars_url);
+  status.set_page_urls(index_acars_path, index_acars_url);
+  if (alerts) alerts.set_page_urls(index_acars_path, index_acars_url);
+  if (live_map) live_map.set_page_urls(index_acars_path, index_acars_url);
   menu.set_about_page_urls(index_acars_path, index_acars_url);
 }
 
 function toggle_pages(is_backgrounded = false): void {
   index_acars_page =
     "/" + document.location.pathname.replace(index_acars_path, "");
-  live_map_page.plane_message_modal.close();
+  if (live_map) live_map.plane_message_modal.close();
+
   for (let page in pages) {
     if (pages[page] === "/" && index_acars_page === pages[page]) {
       $("#live_messages_link").addClass("invert_a");
-      live_messages_page.live_message_active(!is_backgrounded);
+      live_messages.active(!is_backgrounded);
     } else if (pages[page] === "/") {
       $("#live_messages_link").removeClass("invert_a");
-      live_messages_page.live_message_active();
+      live_messages.active();
     } else if (pages[page] === "/search" && index_acars_page === pages[page]) {
       $("#search_link").addClass("invert_a");
-      search_page.search_active(!is_backgrounded);
+      search.active(!is_backgrounded);
     } else if (pages[page] === "/search") {
       $("#search_link").removeClass("invert_a");
-      search_page.search_active();
+      search.active();
     } else if (pages[page] === "/stats" && index_acars_page === pages[page]) {
       $("#stats_link").addClass("invert_a");
-      stats_page.stats_active(!is_backgrounded);
+      stats.active(!is_backgrounded);
     } else if (pages[page] === "/stats") {
       $("#stats_link").removeClass("invert_a");
-      stats_page.stats_active();
+      stats.active();
     } else if (pages[page] === "/about" && index_acars_page === pages[page]) {
-      about.about_active(!is_backgrounded);
+      about.active(!is_backgrounded);
     } else if (pages[page] === "/about") {
-      about.about_active();
+      about.active();
     } else if (pages[page] === "/status" && index_acars_page === pages[page]) {
-      status.status_active(!is_backgrounded);
+      status.active(!is_backgrounded);
     } else if (pages[page] === "/status") {
-      status.status_active();
+      status.active();
     } else if (pages[page] === "/alerts" && index_acars_page === pages[page]) {
       $("#alerts_link").addClass("invert_a");
-      alerts_page.alert_active(!is_backgrounded, allow_remote_updates);
+      alerts.alerts_active(!is_backgrounded, allow_remote_updates);
     } else if (pages[page] === "/alerts") {
       $("#alerts_link").removeClass("invert_a");
-      alerts_page.alert_active(false, allow_remote_updates);
-    } else if (pages[page] === "/adsb" && index_acars_page === pages[page]) {
+      alerts.alerts_active(false, allow_remote_updates);
+    } else if (
+      pages[page] === "/adsb" &&
+      index_acars_page === pages[page] &&
+      live_map
+    ) {
       $("#live_map_link").addClass("invert_a");
-      live_map_page.live_map_active(!is_backgrounded, {
+      live_map.live_map_active(!is_backgrounded, {
         width: old_window_width,
         height: old_window_height,
       } as window_size);
-    } else if (pages[page] === "/adsb") {
+    } else if (pages[page] === "/adsb" && live_map) {
       $("#live_map_link").removeClass("invert_a");
-      live_map_page.live_map_active(false, {
+      live_map.live_map_active(false, {
         width: old_window_width,
         height: old_window_height,
       } as window_size);
@@ -624,11 +656,11 @@ export function is_connected(): boolean {
 // functions to pass values between objects
 
 export function match_alert(msg: html_msg): alert_matched {
-  return alerts_page.match_alert(msg);
+  return alerts.match_alert(msg);
 }
 
 export function sound_alert(): void {
-  alerts_page.sound_alert();
+  alerts.sound_alert();
 }
 
 export function generate_stat_submenu(
@@ -642,7 +674,7 @@ export function generate_stat_submenu(
 }
 
 export function find_matches(): plane_data {
-  return live_messages_page.find_matches();
+  return live_messages.find_matches();
 }
 
 export function get_match(
@@ -650,7 +682,7 @@ export function get_match(
   hex: string = "",
   tail: string = ""
 ): plane_match {
-  return live_messages_page.get_match(callsign, hex, tail);
+  return live_messages.get_match(callsign, hex, tail);
 }
 
 export function is_adsb_enabled() {
@@ -658,16 +690,16 @@ export function is_adsb_enabled() {
 }
 
 export function get_current_planes() {
-  return live_map_page.get_current_planes();
+  return live_map.get_current_planes();
 }
 
 // functions that need to be registered to window object
 
 window.show_page_modal = function (): void {
   if (index_acars_page === "/alerts") {
-    alerts_page.show_alert_message_modal();
+    alerts.show_alert_message_modal();
   } else if (index_acars_page === "/") {
-    live_messages_page.show_live_message_modal();
+    live_messages.show_live_message_modal();
   }
 };
 
@@ -676,63 +708,61 @@ window.show_menu_modal = function (): void {
 };
 
 window.updateAlerts = function (): void {
-  alerts_page.updateAlerts();
+  alerts.updateAlerts();
 };
 window.default_alert_values = function (): void {
-  alerts_page.default_alert_values();
+  alerts.default_alert_values();
 };
 window.toggle_playsound = function (status: boolean): void {
-  alerts_page.toggle_playsound(status);
+  alerts.toggle_playsound(status);
 };
 window.update_prefix = function (prefix: string): void {
-  stats_page.update_prefix(prefix);
+  stats.update_prefix(prefix);
 };
 
 window.showall = function (): void {
-  search_page.showall();
+  search.showall();
 };
 
 window.jumppage = function (): void {
-  search_page.jumppage();
+  search.jumppage();
 };
 
 window.runclick = function (page: number): void {
-  search_page.runclick(page);
+  search.runclick(page);
 };
 
 window.handle_radio = function (element_id: string, uid: string): void {
-  if (index_acars_page === "/")
-    live_messages_page.handle_radio(element_id, uid);
-  else if (index_acars_page === "/adsb")
-    live_map_page.handle_radio(element_id, uid);
+  if (index_acars_page === "/") live_messages.handle_radio(element_id, uid);
+  else if (index_acars_page === "/adsb") live_map.handle_radio(element_id, uid);
 };
 
 window.pause_updates = function (toggle_pause: boolean = true): void {
-  live_messages_page.pause_updates(toggle_pause);
+  live_messages.pause_updates(toggle_pause);
 };
 
 window.filter_notext = function (toggle_filter: boolean = true): void {
-  live_messages_page.filter_notext(toggle_filter);
+  live_messages.filter_notext(toggle_filter);
 };
 
 window.toggle_label = function (key: string): void {
-  live_messages_page.toggle_label(key);
+  live_messages.toggle_label(key);
 };
 
 window.setSort = function (sort: string = ""): void {
-  live_map_page.setSort(sort);
+  live_map.setSort(sort);
 };
 
 window.toggle_acars_only = function (): void {
-  live_map_page.toggle_acars_only();
+  live_map.toggle_acars_only();
 };
 
 window.toggle_datablocks = function (): void {
-  live_map_page.toggle_datablocks();
+  live_map.toggle_datablocks();
 };
 
 window.toggle_extended_datablocks = function (): void {
-  live_map_page.toggle_extended_datablocks();
+  live_map.toggle_extended_datablocks();
 };
 
 $(window).on("popstate", (): void => {
@@ -746,27 +776,27 @@ window.close_modal = function (): void {
 };
 
 window.close_live_map_modal = function (): void {
-  live_map_page.close_live_map_modal();
+  live_map.close_live_map_modal();
 };
 
 window.zoom_in = function (): void {
-  live_map_page.zoom_in();
+  live_map.zoom_in();
 };
 
 window.zoom_out = function (): void {
-  live_map_page.zoom_out();
+  live_map.zoom_out();
 };
 
 window.toggle_unread_messages = function (): void {
-  live_map_page.toggle_unread_messages();
+  live_map.toggle_unread_messages();
 };
 
 window.mark_all_messages_read = function (): void {
-  live_map_page.mark_all_messages_read();
+  live_map.mark_all_messages_read();
 };
 
 window.query = function (): void {
-  search_page.query();
+  search.query();
 };
 
 window.hide_libseccomp2_warning = function (): void {
@@ -792,11 +822,11 @@ window.showPlaneMessages = function (
     console.error("ERROR", callsign, tail);
     return;
   }
-  live_map_page.showPlaneMessages(callsign, hex, tail);
+  live_map.showPlaneMessages(callsign, hex, tail);
 };
 
 window.toggleNexrad = function (): void {
-  live_map_page.toggle_nexrad();
+  live_map.toggle_nexrad();
 };
 
 export function showPlaneMessages(
@@ -804,5 +834,5 @@ export function showPlaneMessages(
   plane_hex: string = "",
   plane_tail: string = ""
 ): void {
-  live_map_page.showPlaneMessages(plane_callsign, plane_hex, plane_tail);
+  live_map.showPlaneMessages(plane_callsign, plane_hex, plane_tail);
 }

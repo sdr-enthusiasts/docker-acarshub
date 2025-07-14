@@ -28,15 +28,16 @@ import {
 import { acars_msg, alert_matched, html_msg, terms } from "../interfaces";
 import jBox from "jbox";
 import { tooltip } from "../helpers/tooltips";
+import { ACARSHubPage } from "./master";
 
-export let alerts_page = {
-  alerts: 0 as number,
-  alert_text: [] as string[],
-  ignore_text: [] as string[],
-  alert_callsigns: [] as string[],
-  alert_tail: [] as string[],
-  alert_icao: [] as string[],
-  alert_msgs_received: {
+export class AlertsPage extends ACARSHubPage {
+  #alerts: number = 0;
+  #alert_text: string[] = [];
+  #ignore_text: string[] = [];
+  #alert_callsigns: string[] = [];
+  #alert_tail: string[] = [];
+  #alert_icao: string[] = [];
+  #alert_msgs_received = {
     value: [] as acars_msg[][],
     unshift: function (a: acars_msg[]) {
       if (this.value.length >= 50) {
@@ -44,11 +45,9 @@ export let alerts_page = {
       }
       return Array.prototype.unshift.apply(this.value, [a] as acars_msg[][]);
     },
-  },
-  alert_acars_path: "" as string,
-  alert_acars_url: "" as string,
-  alert_page_active: false as boolean,
-  default_text_values: [
+  };
+
+  #default_text_values: string[] = [
     "cop",
     "police",
     "authorities",
@@ -66,9 +65,9 @@ export let alerts_page = {
     "emergency",
     "pan",
     "red coat",
-  ] as string[],
+  ] as string[];
 
-  alert_message_modal: new jBox("Modal", {
+  #alert_message_modal = new jBox("Modal", {
     id: "set_modal",
     width: 350,
     height: 450,
@@ -95,38 +94,39 @@ export let alerts_page = {
       <p><a href="javascript:default_alert_values()" class="spread_text">Default alert values</a><br>
       <a href="javascript:reset_alert_counts()" class="spread_text red">Reset ALL alert counts in data base</a></p>
     </span>`,
-  }),
+  });
 
-  alert_sound: "" as any,
-  play_sound: false as boolean,
+  #alert_sound: any = "";
+  #play_sound: boolean = false;
 
-  show_modal_values: function (): void {
-    this.show_sound();
-    $("#alert_text").val(this.combineArray(this.alert_text).toUpperCase());
-    $("#alert_text_ignore").val(
-      this.combineArray(this.ignore_text).toUpperCase()
-    );
-    $("#alert_callsigns").val(
-      this.combineArray(this.alert_callsigns).toUpperCase()
-    );
-    $("#alert_tail").val(this.combineArray(this.alert_tail).toUpperCase());
-    $("#alert_icao").val(this.combineArray(this.alert_icao).toUpperCase());
-  },
-
-  alert: function (): void {
+  constructor() {
+    super();
     // Document on ready new syntax....or something. Passing a function directly to jquery
     // Update the cookies so the expiration date pushes out in to the future
     // Also sets all of the user saved prefs
     this.onInit();
-    alert_term_query(this.alert_icao, this.alert_callsigns, this.alert_tail);
-  },
+    alert_term_query(this.#alert_icao, this.#alert_callsigns, this.#alert_tail);
+  }
 
-  alerts_terms: function (msg: terms) {
-    this.alert_text = msg.terms;
-    this.ignore_text = msg.ignore;
-  },
+  show_modal_values(): void {
+    this.show_sound();
+    $("#alert_text").val(this.combineArray(this.#alert_text).toUpperCase());
+    $("#alert_text_ignore").val(
+      this.combineArray(this.#ignore_text).toUpperCase()
+    );
+    $("#alert_callsigns").val(
+      this.combineArray(this.#alert_callsigns).toUpperCase()
+    );
+    $("#alert_tail").val(this.combineArray(this.#alert_tail).toUpperCase());
+    $("#alert_icao").val(this.combineArray(this.#alert_icao).toUpperCase());
+  }
 
-  alerts_acars_message: function (msg: html_msg): void {
+  alerts_terms(msg: terms): void {
+    this.#alert_text = msg.terms;
+    this.#ignore_text = msg.ignore;
+  }
+
+  alerts_acars_message(msg: html_msg): void {
     let matched: alert_matched = this.match_alert(msg, true);
     if (matched.was_found) {
       if (msg.loading != true) this.sound_alert();
@@ -135,127 +135,127 @@ export let alerts_page = {
       msg.msghtml.matched_flight =
         matched.flight !== null ? matched.flight : [];
       msg.msghtml.matched_tail = matched.tail !== null ? matched.tail : [];
-      this.alert_msgs_received.unshift([msg.msghtml]);
+      this.#alert_msgs_received.unshift([msg.msghtml]);
       if (
-        this.alert_page_active &&
+        this.page_active &&
         (typeof msg.done_loading === "undefined" || msg.done_loading === true)
       ) {
-        $("#log").html(display_messages(this.alert_msgs_received.value));
+        $("#log").html(display_messages(this.#alert_msgs_received.value));
         tooltip.close_all_tooltips();
         tooltip.attach_all_tooltips();
       } else if (matched.was_found && msg.loading != true) {
-        this.alerts += 1;
+        this.#alerts += 1;
         this.updateAlertCounter();
         this.sound_alert();
       }
     }
-  },
+  }
 
-  updateAlertCounter: function (): void {
-    if (this.alerts)
-      $("#alert_count").html(` <span class="red">(${this.alerts})</span>`);
-  },
+  updateAlertCounter(): void {
+    if (this.#alerts)
+      $("#alert_count").html(` <span class="red">(${this.#alerts})</span>`);
+  }
 
-  updateAlerts: function (): void {
+  updateAlerts(): void {
     if ($("#alert_text").val()) {
       let split = String($("#alert_text").val()).split(",");
-      this.alert_text = [];
+      this.#alert_text = [];
       for (let i = 0; i < split.length; i++) {
         if (
           split[i].trim().length > 0 &&
-          !this.alert_text.includes(split[i].trim().toUpperCase())
+          !this.#alert_text.includes(split[i].trim().toUpperCase())
         )
-          this.alert_text.push(split[i].trim().toUpperCase());
+          this.#alert_text.push(split[i].trim().toUpperCase());
       }
     } else {
-      this.alert_text = [];
+      this.#alert_text = [];
     }
 
     if ($("#alert_text_ignore").val()) {
       const split = String($("#alert_text_ignore").val()).split(",");
-      this.ignore_text = [];
+      this.#ignore_text = [];
       Object.values(split).forEach((value) => {
         if (
           value.trim().length > 0 &&
-          !this.ignore_text.includes(value.trim().toUpperCase())
+          !this.#ignore_text.includes(value.trim().toUpperCase())
         )
-          this.ignore_text.push(value.trim().toUpperCase());
+          this.#ignore_text.push(value.trim().toUpperCase());
       });
     } else {
-      this.ignore_text = [];
+      this.#ignore_text = [];
     }
 
     if ($("#alert_callsigns").val()) {
       let split = String($("#alert_callsigns").val()).split(",");
-      this.alert_callsigns = [];
+      this.#alert_callsigns = [];
       for (let i = 0; i < split.length; i++) {
         if (
           split[i].trim().length > 0 &&
-          !this.alert_callsigns.includes(split[i].trim().toUpperCase())
+          !this.#alert_callsigns.includes(split[i].trim().toUpperCase())
         )
-          this.alert_callsigns.push(split[i].trim().toUpperCase());
+          this.#alert_callsigns.push(split[i].trim().toUpperCase());
       }
     } else {
-      this.alert_callsigns = [];
+      this.#alert_callsigns = [];
     }
 
     if ($("#alert_tail").val()) {
       let split = String($("#alert_tail").val()).split(",");
-      this.alert_tail = [];
+      this.#alert_tail = [];
       for (let i = 0; i < split.length; i++) {
         if (
           split[i].trim().length > 0 &&
-          !this.alert_tail.includes(split[i].trim().toUpperCase())
+          !this.#alert_tail.includes(split[i].trim().toUpperCase())
         )
-          this.alert_tail.push(split[i].trim().toUpperCase());
+          this.#alert_tail.push(split[i].trim().toUpperCase());
       }
     } else {
-      this.alert_tail = [];
+      this.#alert_tail = [];
     }
 
     if ($("#alert_icao").val()) {
       let split = String($("#alert_icao").val()).split(",");
-      this.alert_icao = [];
+      this.#alert_icao = [];
       for (let i = 0; i < split.length; i++) {
         if (
           split[i].trim().length > 0 &&
-          !this.alert_icao.includes(split[i].trim().toUpperCase())
+          !this.#alert_icao.includes(split[i].trim().toUpperCase())
         )
-          this.alert_icao.push(split[i].trim().toUpperCase());
+          this.#alert_icao.push(split[i].trim().toUpperCase());
       }
     } else {
-      this.alert_icao = [];
+      this.#alert_icao = [];
     }
 
-    $("#alert_text").val(this.combineArray(this.alert_text).toUpperCase());
+    $("#alert_text").val(this.combineArray(this.#alert_text).toUpperCase());
     $("#alert_callsigns").val(
-      this.combineArray(this.alert_callsigns).toUpperCase()
+      this.combineArray(this.#alert_callsigns).toUpperCase()
     );
-    $("#alert_tail").val(this.combineArray(this.alert_tail).toUpperCase());
-    $("#alert_icao").val(this.combineArray(this.alert_icao).toUpperCase());
+    $("#alert_tail").val(this.combineArray(this.#alert_tail).toUpperCase());
+    $("#alert_icao").val(this.combineArray(this.#alert_icao).toUpperCase());
 
-    alert_text_update(this.alert_text, this.ignore_text);
+    alert_text_update(this.#alert_text, this.#ignore_text);
 
-    Cookies.set("alert_callsigns", this.combineArray(this.alert_callsigns), {
+    Cookies.set("alert_callsigns", this.combineArray(this.#alert_callsigns), {
       expires: 365,
       sameSite: "Strict",
     });
-    Cookies.set("alert_tail", this.combineArray(this.alert_tail), {
+    Cookies.set("alert_tail", this.combineArray(this.#alert_tail), {
       expires: 365,
       sameSite: "Strict",
     });
-    Cookies.set("alert_icao", this.combineArray(this.alert_icao), {
+    Cookies.set("alert_icao", this.combineArray(this.#alert_icao), {
       expires: 365,
       sameSite: "Strict",
     });
-  },
+  }
 
-  onInit: function (): void {
-    this.alerts = Cookies.get("alert_unread")
+  onInit(): void {
+    this.#alerts = Cookies.get("alert_unread")
       ? Number(Cookies.get("alert_unread"))
       : 0;
-    this.play_sound = Cookies.get("play_sound") == "true" ? true : false;
-    Cookies.set("play_sound", this.play_sound == true ? "true" : "false", {
+    this.#play_sound = Cookies.get("play_sound") == "true" ? true : false;
+    Cookies.set("play_sound", this.#play_sound == true ? "true" : "false", {
       expires: 365,
       sameSite: "Strict",
     });
@@ -268,12 +268,12 @@ export let alerts_page = {
       for (let i = 0; i < split.length; i++) {
         if (
           split[i].trim().length > 0 &&
-          !this.alert_callsigns.includes(split[i].trim().toUpperCase())
+          !this.#alert_callsigns.includes(split[i].trim().toUpperCase())
         )
-          this.alert_callsigns.push(split[i].toUpperCase());
+          this.#alert_callsigns.push(split[i].toUpperCase());
       }
     } else {
-      this.alert_callsigns = [];
+      this.#alert_callsigns = [];
     }
 
     if (Cookies.get("alert_tail") && Cookies.get("alert_tail")!.length > 0) {
@@ -281,12 +281,12 @@ export let alerts_page = {
       for (let i = 0; i < split.length; i++) {
         if (
           split[i].trim().length > 0 &&
-          !this.alert_tail.includes(split[i].trim().toUpperCase())
+          !this.#alert_tail.includes(split[i].trim().toUpperCase())
         )
-          this.alert_tail.push(split[i].toUpperCase());
+          this.#alert_tail.push(split[i].toUpperCase());
       }
     } else {
-      this.alert_tail = [];
+      this.#alert_tail = [];
     }
 
     if (Cookies.get("alert_icao") && Cookies.get("alert_icao")!.length > 0) {
@@ -294,29 +294,29 @@ export let alerts_page = {
       for (let i = 0; i < split.length; i++) {
         if (
           split[i].trim().length > 0 &&
-          !this.alert_icao.includes(split[i].trim().toUpperCase())
+          !this.#alert_icao.includes(split[i].trim().toUpperCase())
         )
-          this.alert_icao.push(split[i].toUpperCase());
+          this.#alert_icao.push(split[i].toUpperCase());
       }
     } else {
-      this.alert_icao = [];
+      this.#alert_icao = [];
     }
 
-    Cookies.set("alert_callsigns", this.combineArray(this.alert_callsigns), {
+    Cookies.set("alert_callsigns", this.combineArray(this.#alert_callsigns), {
       expires: 365,
       sameSite: "Strict",
     });
-    Cookies.set("alert_tail", this.combineArray(this.alert_tail), {
+    Cookies.set("alert_tail", this.combineArray(this.#alert_tail), {
       expires: 365,
       sameSite: "Strict",
     });
-    Cookies.set("alert_icao", this.combineArray(this.alert_icao), {
+    Cookies.set("alert_icao", this.combineArray(this.#alert_icao), {
       expires: 365,
       sameSite: "Strict",
     });
-  },
+  }
 
-  combineArray: function (input: string[]): string {
+  combineArray(input: string[]): string {
     let output = "";
 
     for (let i = 0; i < input.length; i++) {
@@ -324,13 +324,10 @@ export let alerts_page = {
     }
 
     return output;
-  },
+  }
 
   // FIXME: Rewrite this with forEach
-  match_alert: function (
-    msg: html_msg,
-    show_alert: boolean = false
-  ): alert_matched {
+  match_alert(msg: html_msg, show_alert: boolean = false): alert_matched {
     let found = false;
     let matched_tail = [];
     let matched_flight = [];
@@ -342,15 +339,15 @@ export let alerts_page = {
       typeof msg.msghtml.text !== "undefined"
     ) {
       let dont_ignore_msg = true;
-      for (let i = 0; i < this.alert_text.length; i++) {
+      for (let i = 0; i < this.#alert_text.length; i++) {
         if (
           msg.msghtml.text
             .toUpperCase()
             .search(
-              new RegExp("\\b" + this.alert_text[i].toUpperCase() + "\\b")
+              new RegExp("\\b" + this.#alert_text[i].toUpperCase() + "\\b")
             ) != -1
         ) {
-          const ignore_not_found = Object.values(this.ignore_text).every(
+          const ignore_not_found = Object.values(this.#ignore_text).every(
             (text) => {
               return (
                 msg.msghtml
@@ -362,11 +359,11 @@ export let alerts_page = {
           if (!ignore_not_found) dont_ignore_msg = false;
           if (ignore_not_found && dont_ignore_msg) {
             found = true;
-            matched_text.push(this.alert_text[i]);
+            matched_text.push(this.#alert_text[i]);
             term_string =
               term_string.length > 0
-                ? ", " + this.alert_text[i]
-                : this.alert_text[i];
+                ? ", " + this.#alert_text[i]
+                : this.#alert_text[i];
           }
         }
       }
@@ -376,18 +373,18 @@ export let alerts_page = {
       msg.msghtml.hasOwnProperty("flight") &&
       typeof msg.msghtml.flight !== "undefined"
     ) {
-      for (let i = 0; i < this.alert_callsigns.length; i++) {
+      for (let i = 0; i < this.#alert_callsigns.length; i++) {
         if (
           msg.msghtml.flight
             .toUpperCase()
-            .includes(this.alert_callsigns[i].toUpperCase())
+            .includes(this.#alert_callsigns[i].toUpperCase())
         ) {
           found = true;
-          matched_flight.push(this.alert_callsigns[i]);
+          matched_flight.push(this.#alert_callsigns[i]);
           term_string =
             term_string.length > 0
-              ? ", " + this.alert_callsigns[i]
-              : this.alert_callsigns[i];
+              ? ", " + this.#alert_callsigns[i]
+              : this.#alert_callsigns[i];
         }
       }
     }
@@ -396,18 +393,18 @@ export let alerts_page = {
       msg.msghtml.hasOwnProperty("tail") &&
       typeof msg.msghtml.tail !== "undefined"
     ) {
-      for (let i = 0; i < this.alert_tail.length; i++) {
+      for (let i = 0; i < this.#alert_tail.length; i++) {
         if (
           msg.msghtml.tail
             .toUpperCase()
-            .includes(this.alert_tail[i].toUpperCase())
+            .includes(this.#alert_tail[i].toUpperCase())
         ) {
           found = true;
-          matched_tail.push(this.alert_tail[i]);
+          matched_tail.push(this.#alert_tail[i]);
           term_string =
             term_string.length > 0
-              ? ", " + this.alert_tail[i]
-              : this.alert_tail[i];
+              ? ", " + this.#alert_tail[i]
+              : this.#alert_tail[i];
         }
       }
     }
@@ -416,24 +413,24 @@ export let alerts_page = {
       msg.msghtml.hasOwnProperty("icao") &&
       typeof msg.msghtml.icao !== "undefined"
     ) {
-      for (let i = 0; i < this.alert_icao.length; i++) {
+      for (let i = 0; i < this.#alert_icao.length; i++) {
         if (
           msg.msghtml.icao
             .toString()
             .toUpperCase()
-            .includes(this.alert_icao[i].toUpperCase()) ||
+            .includes(this.#alert_icao[i].toUpperCase()) ||
           (msg.msghtml.hasOwnProperty("icao_hex") &&
             typeof msg.msghtml.icao_hex !== "undefined" &&
             msg.msghtml.icao_hex
               .toUpperCase()
-              .includes(this.alert_icao[i].toUpperCase()))
+              .includes(this.#alert_icao[i].toUpperCase()))
         ) {
           found = true;
-          matched_icao.push(this.alert_icao[i]);
+          matched_icao.push(this.#alert_icao[i]);
           term_string =
             term_string.length > 0
-              ? ", " + this.alert_icao[i]
-              : this.alert_icao[i];
+              ? ", " + this.#alert_icao[i]
+              : this.#alert_icao[i];
         }
       }
     }
@@ -496,95 +493,93 @@ export let alerts_page = {
       flight: matched_flight.length > 0 ? matched_flight : null,
       tail: matched_tail.length > 0 ? matched_tail : null,
     } as alert_matched;
-  },
+  }
 
-  default_alert_values: function (): void {
+  default_alert_values(): void {
     let current = String($("#alert_text").val());
 
-    this.default_text_values.forEach((element) => {
-      if (!this.alert_text.includes(element.toUpperCase())) {
+    this.#default_text_values.forEach((element) => {
+      if (!this.#alert_text.includes(element.toUpperCase())) {
         current += `${current.length > 0 ? "," + element : element}`;
       }
     });
     $("#alert_text").val(current);
     this.updateAlerts();
-  },
+  }
 
-  show_sound: function (): void {
-    if (this.play_sound) {
+  show_sound(): void {
+    if (this.#play_sound) {
       $("#playsound_link").html("Turn Off Alert Sound");
     } else {
       $("#playsound_link").html("Turn On Alert Sound");
     }
-  },
+  }
 
-  toggle_playsound: function (loading = false): void {
-    if (this.play_sound) {
+  toggle_playsound(loading = false): void {
+    if (this.#play_sound) {
       $("#playsound_link").html("Turn On Alert Sound");
     } else {
       $("#playsound_link").html("Turn Off Alert Sound");
     }
-    this.play_sound = !this.play_sound;
-    Cookies.set("play_sound", this.play_sound == true ? "true" : "false", {
+    this.#play_sound = !this.#play_sound;
+    Cookies.set("play_sound", this.#play_sound == true ? "true" : "false", {
       expires: 365,
       sameSite: "Strict",
     });
 
     if (!loading) this.sound_alert();
-  },
+  }
 
-  sound_alert: async function (): Promise<void> {
-    if (this.play_sound) {
+  async sound_alert(): Promise<void> {
+    if (this.#play_sound) {
       try {
-        await this.alert_sound.play();
+        await this.#alert_sound.play();
       } catch (err) {
         console.log(err);
       }
     }
-  },
+  }
 
-  alert_active: function (state = false, show_modal_link: boolean): void {
-    this.alert_page_active = state;
-    if (this.alert_page_active) {
+  alerts_active(state = false, show_modal_link: boolean): void {
+    super.active(state);
+
+    if (this.page_active) {
       // page is active
-      this.set_html(show_modal_link);
+      this.alerts_set_html(show_modal_link);
       Cookies.set("alert_unread", "0", {
         expires: 365,
         sameSite: "Strict",
       });
-      this.alerts = 0;
+      this.#alerts = 0;
       $("#alert_count").html(` <span class="red"></span>`);
 
       // temporarily toggle the play_sound variable so we can set the UI correctly
-      this.play_sound = !this.play_sound;
+      this.#play_sound = !this.#play_sound;
       this.toggle_playsound(true);
 
-      $("#log").html(display_messages(this.alert_msgs_received.value));
+      $("#log").html(display_messages(this.#alert_msgs_received.value));
     }
-  },
+  }
 
-  set_alert_page_urls: function (
-    documentPath: string,
-    documentUrl: string
-  ): void {
-    this.alert_acars_path = documentPath;
-    this.alert_acars_url = documentUrl;
-    this.alert_sound = new Audio(
-      `${this.alert_acars_url}static/sounds/alert.mp3`
+  set_page_urls(documentPath: string, documentUrl: string): void {
+    super.set_page_urls(documentPath, documentUrl);
+
+    this.#alert_sound = new Audio(
+      `${this.document_url}static/sounds/alert.mp3`
     );
-  },
+  }
 
-  set_html: function (show_menu_modal: boolean): void {
+  alerts_set_html(show_menu_modal: boolean): void {
     if (show_menu_modal) {
       $("#modal_text").html(
         '<a href="javascript:show_page_modal()">Page Settings</a>'
       );
     }
     $("#log").html("");
-  },
+  }
 
-  show_alert_message_modal: function (): void {
-    this.alert_message_modal.open();
+  show_alert_message_modal(): void {
+    this.#alert_message_modal.open();
     this.show_modal_values();
-  },
-};
+  }
+}
