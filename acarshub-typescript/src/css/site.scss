@@ -845,12 +845,8 @@ details {
   }
 
   // any td under message
-  td {
-    padding: 0;
-  }
-
-  td.text_top {
-    padding: 7px !important;
+  td:first-child {
+    padding-left: 0;
   }
 }
 
