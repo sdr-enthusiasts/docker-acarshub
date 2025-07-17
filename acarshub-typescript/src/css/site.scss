@@ -813,6 +813,13 @@ input[type="checkbox"] {
   margin-bottom: 0.75rem;
 }
 
+details {
+  span {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+}
+
 [id^="message"] {
   display: flex;
   flex-wrap: wrap;
@@ -840,6 +847,10 @@ input[type="checkbox"] {
   // any td under message
   td {
     padding: 0;
+  }
+
+  td.text_top {
+    padding: 7px !important;
   }
 }
 
