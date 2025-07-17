@@ -190,158 +190,152 @@ function inner_message_html(
     html_output += html_functions.message_timestamp(timestamp);
     // Table content
     html_output += html_functions.start_message_body();
+    html_output += html_functions.show_msg_details(message);
 
     // // Special keys used by the JS files calling this function
     // // Duplicates is used to indicate the number of copies received for this message
     // // msgno_parts is the list of MSGID fields used to construct the multi-part message
 
-    // html_output +=
-    //   typeof message.duplicates !== "undefined"
-    //     ? html_functions.add_message_field(
-    //         "Duplicate(s) Received",
-    //         message.duplicates
-    //       )
-    //     : "";
-    // html_output +=
-    //   typeof message.msgno_parts !== "undefined"
-    //     ? html_functions.add_message_field("Message Parts", message.msgno_parts)
-    //     : "";
-    // html_output +=
-    //   typeof message.label !== "undefined"
-    //     ? html_functions.add_message_field(
-    //         "Message Label",
-    //         message.label +
-    //           " " +
-    //           (typeof message.label_type !== "undefined"
-    //             ? message.label_type.trim()
-    //             : "")
-    //       )
-    //     : "";
+    html_output +=
+      typeof message.duplicates !== "undefined"
+        ? html_functions.add_message_field(
+            "Duplicate(s) Received",
+            message.duplicates
+          )
+        : "";
+    html_output +=
+      typeof message.msgno_parts !== "undefined"
+        ? html_functions.add_message_field("Message Parts", message.msgno_parts)
+        : "";
+    html_output +=
+      typeof message.label !== "undefined"
+        ? html_functions.add_message_field(
+            "Message Label",
+            message.label +
+              " " +
+              (typeof message.label_type !== "undefined"
+                ? message.label_type.trim()
+                : "")
+          )
+        : "";
 
-    // // to/fromaddr is a pre-processed field
-    // // if possible, we'll have an appended hex representation of the decimal address
+    // to/fromaddr is a pre-processed field
+    // if possible, we'll have an appended hex representation of the decimal address
 
-    // html_output +=
-    //   typeof message.toaddr !== "undefined"
-    //     ? html_functions.add_message_field(
-    //         "To Address",
-    //         message.toaddr +
-    //           (typeof message.toaddr_hex !== "undefined"
-    //             ? "/" +
-    //               html_functions.ensure_hex_is_uppercase_and_six_chars(
-    //                 message.toaddr_hex
-    //               )
-    //             : "/?")
-    //       )
-    //     : "";
-    // html_output +=
-    //   typeof message.toaddr_decoded !== "undefined"
-    //     ? html_functions.add_message_field(
-    //         "To Address Station ID",
-    //         message.toaddr_decoded
-    //       )
-    //     : "";
+    html_output +=
+      typeof message.toaddr !== "undefined"
+        ? html_functions.add_message_field(
+            "To Address",
+            message.toaddr +
+              (typeof message.toaddr_hex !== "undefined"
+                ? "/" +
+                  html_functions.ensure_hex_is_uppercase_and_six_chars(
+                    message.toaddr_hex
+                  )
+                : "/?")
+          )
+        : "";
+    html_output +=
+      typeof message.toaddr_decoded !== "undefined"
+        ? html_functions.add_message_field(
+            "To Address Station ID",
+            message.toaddr_decoded
+          )
+        : "";
 
-    // //
-    // html_output +=
-    //   typeof message.fromaddr !== "undefined"
-    //     ? html_functions.add_message_field(
-    //         "From Address",
-    //         message.fromaddr +
-    //           (typeof message.fromaddr_hex !== "undefined"
-    //             ? "/" +
-    //               html_functions.ensure_hex_is_uppercase_and_six_chars(
-    //                 message.fromaddr_hex
-    //               )
-    //             : "/?")
-    //       )
-    //     : "";
-    // html_output +=
-    //   typeof message.fromaddr_decoded !== "undefined"
-    //     ? html_functions.add_message_field(
-    //         "From Address Station ID",
-    //         message.fromaddr_decoded
-    //       )
-    //     : "";
-    // html_output +=
-    //   typeof message.depa !== "undefined"
-    //     ? html_functions.add_message_field("Departing", message.depa)
-    //     : "";
-    // html_output +=
-    //   typeof message.dsta !== "undefined"
-    //     ? html_functions.add_message_field("Destination", message.dsta)
-    //     : "";
-    // html_output +=
-    //   typeof message.eta !== "undefined"
-    //     ? html_functions.add_message_field(
-    //         "Estimated time of arrival",
-    //         message.eta
-    //       )
-    //     : "";
-    // html_output +=
-    //   typeof message.gtout !== "undefined"
-    //     ? html_functions.add_message_field("Pushback from gate", message.gtout)
-    //     : "";
-    // html_output +=
-    //   typeof message.gtin !== "undefined"
-    //     ? html_functions.add_message_field("Arrived at gate", message.gtin)
-    //     : "";
-    // html_output +=
-    //   typeof message.wloff !== "undefined"
-    //     ? html_functions.add_message_field("Wheels off", message.wloff)
-    //     : "";
-    // html_output +=
-    //   typeof message.wlin !== "undefined"
-    //     ? html_functions.add_message_field("Departing", message.wlin)
-    //     : "";
-    // html_output +=
-    //   typeof message.lat !== "undefined"
-    //     ? html_functions.add_message_field(
-    //         "Latitude",
-    //         message.lat.toLocaleString(undefined, {
-    //           maximumFractionDigits: 2,
-    //           minimumFractionDigits: 2,
-    //         })
-    //       )
-    //     : "";
-    // html_output +=
-    //   typeof message.lon !== "undefined"
-    //     ? html_functions.add_message_field(
-    //         "Longitude",
-    //         message.lon.toLocaleString(undefined, {
-    //           maximumFractionDigits: 2,
-    //           minimumFractionDigits: 2,
-    //         })
-    //       )
-    //     : "";
+    //
+    html_output +=
+      typeof message.fromaddr !== "undefined"
+        ? html_functions.add_message_field(
+            "From Address",
+            message.fromaddr +
+              (typeof message.fromaddr_hex !== "undefined"
+                ? "/" +
+                  html_functions.ensure_hex_is_uppercase_and_six_chars(
+                    message.fromaddr_hex
+                  )
+                : "/?")
+          )
+        : "";
+    html_output +=
+      typeof message.fromaddr_decoded !== "undefined"
+        ? html_functions.add_message_field(
+            "From Address Station ID",
+            message.fromaddr_decoded
+          )
+        : "";
+    html_output +=
+      typeof message.depa !== "undefined"
+        ? html_functions.add_message_field("Departing", message.depa)
+        : "";
+    html_output +=
+      typeof message.dsta !== "undefined"
+        ? html_functions.add_message_field("Destination", message.dsta)
+        : "";
+    html_output +=
+      typeof message.eta !== "undefined"
+        ? html_functions.add_message_field(
+            "Estimated time of arrival",
+            message.eta
+          )
+        : "";
+    html_output +=
+      typeof message.gtout !== "undefined"
+        ? html_functions.add_message_field("Pushback from gate", message.gtout)
+        : "";
+    html_output +=
+      typeof message.gtin !== "undefined"
+        ? html_functions.add_message_field("Arrived at gate", message.gtin)
+        : "";
+    html_output +=
+      typeof message.wloff !== "undefined"
+        ? html_functions.add_message_field("Wheels off", message.wloff)
+        : "";
+    html_output +=
+      typeof message.wlin !== "undefined"
+        ? html_functions.add_message_field("Departing", message.wlin)
+        : "";
+    html_output +=
+      typeof message.lat !== "undefined"
+        ? html_functions.add_message_field(
+            "Latitude",
+            message.lat.toLocaleString(undefined, {
+              maximumFractionDigits: 2,
+              minimumFractionDigits: 2,
+            })
+          )
+        : "";
+    html_output +=
+      typeof message.lon !== "undefined"
+        ? html_functions.add_message_field(
+            "Longitude",
+            message.lon.toLocaleString(undefined, {
+              maximumFractionDigits: 2,
+              minimumFractionDigits: 2,
+            })
+          )
+        : "";
 
-    // html_output +=
-    //   typeof message.alt !== "undefined"
-    //     ? html_functions.add_message_field("Altitude", String(message.alt))
-    //     : "";
+    html_output +=
+      typeof message.alt !== "undefined"
+        ? html_functions.add_message_field("Altitude", String(message.alt))
+        : "";
 
-    // // Table footer row, tail & flight info, displayed in main body if screen is too small
-    // html_output += html_functions.show_footer_and_sidebar_text(
-    //   message,
-    //   get_flight_tracking_url(),
-    //   false
-    // );
-    // //html_output += "</td></tr>";
-    // html_output += html_functions.message_text(message);
+    html_output += html_functions.end_message_body();
+    html_output += html_functions.message_text(message);
 
     // // Text field is pre-processed
     // // we have a sub-table for the raw text field and if it was decoded, the decoded text as well
 
     // // Table footer row, tail & flight info
-    // html_output += html_functions.show_footer_and_sidebar_text(
-    //   message,
-    //   get_flight_tracking_url()
-    // );
+    html_output += html_functions.show_footer_and_sidebar_text(
+      message,
+      get_flight_tracking_url()
+    );
 
     // Finish table html
-    html_output += html_functions.end_message_div();
 
-    //msgs_string = msgs_string + html_output;
+    html_output += html_functions.end_message_div();
   });
 
   return html_output;

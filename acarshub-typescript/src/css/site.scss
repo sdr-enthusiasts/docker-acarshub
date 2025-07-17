@@ -134,7 +134,7 @@ textarea {
 }
 
 img {
-  max-width: 1000px;
+  max-width: 100%;
 }
 
 .boxed {
@@ -822,6 +822,25 @@ input[type="checkbox"] {
   border-collapse: collapse;
   width: 100%;
   background-color: var(--table-background);
+
+  // the last child of message
+
+  &:last-child {
+    span {
+      padding-left: 0.25rem;
+      padding-right: 0.25rem;
+    }
+
+    // first span
+    span:first-child {
+      padding-left: 0;
+    }
+  }
+
+  // any td under message
+  td {
+    padding: 0;
+  }
 }
 
 .msg_line {
@@ -831,6 +850,7 @@ input[type="checkbox"] {
   flex-wrap: wrap;
   padding-left: 0.5rem;
   padding-right: 0.5rem;
+  width: 100%;
 
   > span {
     white-space: nowrap;

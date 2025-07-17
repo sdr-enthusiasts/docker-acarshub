@@ -133,7 +133,11 @@ export let html_functions = {
   },
 
   start_message_body: function (): string {
-    return '<tr><td class="text_top msg_body">';
+    return '<div class="msg_line"><details><summary>Message Details</summary>';
+  },
+
+  end_message_body: function (): string {
+    return "</details></div>";
   },
 
   add_message_field: function (
@@ -146,8 +150,20 @@ export let html_functions = {
     }`;
   },
 
+  add_message_field_with_tooltip: function (
+    field_name: string,
+    field_value: string,
+    tooltip_text: string,
+    data_jbox_content: string = ""
+  ): string {
+    let extra_content = data_jbox_content
+      ? ` data-jbox-content="${data_jbox_content}"`
+      : "";
+    return `<span class="${tooltip_text}"${extra_content}>${field_name}: <strong>${field_value}</strong></span><br>`;
+  },
+
   message_text: function (message: acars_msg): string {
-    let html_output: string = '<tr><td colspan="2">';
+    let html_output: string = '<div class="msg_line">';
     if (message.hasOwnProperty("text") && typeof message.text !== "undefined") {
       let text = message["text"];
       text = text.replace("\\r\\n", "<br>");
@@ -203,11 +219,35 @@ export let html_functions = {
         '<p><pre class="shadow show_strong"><i>No text</i></pre></p>';
     }
 
-    if (message.hasOwnProperty("libacars")) {
-      html_output += message["libacars"];
-    }
+    html_output += "</div>";
 
-    html_output += "</td></tr>";
+    if (message.hasOwnProperty("libacars")) {
+      console.log("Libacars message detected:", message["libacars"]);
+      let data = message["libacars"];
+      // replace all \\ with nothing
+      data = data.replace(/\\/g, "");
+      // replace <p>Decoded:</p><p><pre>
+      data = data.replace(/<p>Decoded:<\/p><p><pre>\('"/, "");
+      // replace </pre></p> with </pre>
+      data = data.replace(/\)<\/pre><\/p>/, "");
+      // replace ' with nothing
+      data = data.replace(/"'/g, "");
+      // replace '\n\s' with nothing
+      data = data.replace(/'\n\s'/g, "");
+      console.log("Libacars data after processing:", data);
+      try {
+        // Try to parse the data as JSON
+        data = JSON.parse(data);
+        html_output += `<div class="msg_line">`;
+
+        // loop through the data object
+        html_output += `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+      } catch (e) {
+        console.error("Error parsing Libacars data:", e);
+      }
+
+      html_output += `</div>`;
+    }
 
     return html_output;
   },
@@ -240,17 +280,123 @@ export let html_functions = {
     return html_output;
   },
 
+  show_msg_details: function (message: acars_msg): string {
+    let html_output: string = "";
+
+    // field_name: string,
+    // field_value: string,
+    // use_br: boolean = true
+
+    // Table footer row, metadata
+    if (typeof message.freq !== "undefined") {
+      html_output += this.add_message_field_with_tooltip(
+        "Frequency",
+        `${message.freq}`,
+        "freq-tooltip"
+      );
+    }
+
+    if (typeof message.level !== "undefined") {
+      let level = message.level;
+      let circle = "";
+      if (level >= -10.0) {
+        circle = "circle_green";
+      } else if (level >= -20.0) {
+        circle = "circle_yellow";
+      } else if (level >= -30.0) {
+        circle = "circle_orange";
+      } else {
+        circle = "circle_red";
+      }
+      html_output += this.add_message_field_with_tooltip(
+        "Level",
+        `<strong>${level}</strong> <div class="${circle}"></div>`,
+        "level-tooltip",
+        `The signal level (${level}) of the received message.`
+      );
+    }
+
+    if (typeof message.ack !== "undefined") {
+      html_output += this.add_message_field_with_tooltip(
+        "Acknowledgement",
+        `${String(message.ack).toUpperCase()}`,
+        "ack-tooltip"
+      );
+    }
+
+    if (typeof message.mode !== "undefined") {
+      html_output += this.add_message_field_with_tooltip(
+        "Mode",
+        `${message.mode}`,
+        "mode-tooltip"
+      );
+    }
+
+    if (typeof message.block_id !== "undefined") {
+      html_output += this.add_message_field_with_tooltip(
+        "Block ID",
+        `${message.block_id}`,
+        "blockid-tooltip"
+      );
+    }
+
+    if (typeof message.msgno !== "undefined") {
+      html_output += this.add_message_field_with_tooltip(
+        "Message Number",
+        `${message.msgno}`,
+        "msgno-tooltip"
+      );
+    }
+
+    if (typeof message.is_response !== "undefined") {
+      html_output += this.add_message_field_with_tooltip(
+        "Response",
+        `${message.is_response}`,
+        "response-tooltip"
+      );
+    }
+
+    if (typeof message.is_onground !== "undefined") {
+      // We need to watch this to make sure I have this right. After spelunking through vdlm2dec source code
+      // Input always appears to be a 0 or 2...for reasons I don't get. I could have this backwards
+      // 0 indicates the plane is airborne
+      // 2 indicates the plane is on the ground
+      // https://github.com/TLeconte/vdlm2dec/blob/1ea300d40d66ecb969f1f463506859e36f62ef5c/out.c#L457
+      // variable naming in vdlm2dec is inconsistent, but "ground" and "gnd" seem to be used
+      let is_onground = message["is_onground"] === 0 ? "False" : "True";
+
+      html_output += this.add_message_field_with_tooltip(
+        "On Ground",
+        `<strong>${is_onground}</strong>`,
+        "ground-tooltip"
+      );
+    }
+
+    if (typeof message.error !== "undefined") {
+      if (Number(message.error) !== 0) {
+        // html_output += '<span class="error-tooltip"><span style="color:red;">';
+        // html_output += `<strong>E: ${
+        //   message["error"]
+        // }</strong> `;
+        // html_output += "</span></span>";
+
+        html_output += this.add_message_field_with_tooltip(
+          "Error",
+          `<span style="color:red;">${message.error}</span>`,
+          "error-tooltip"
+        );
+      }
+    }
+
+    return html_output;
+  },
+
   show_footer_and_sidebar_text: function (
     message: acars_msg,
-    flight_tracking_url: string,
-    footer: boolean = true
+    flight_tracking_url: string
   ): string {
     let html_output = "";
-    html_output += footer
-      ? '<tr class="show_when_big"><td>'
-      : '<td class="text_top">';
-
-    html_output += !footer ? '<div class="show_when_small">' : "";
+    html_output += '<div class="msg_line">';
 
     if (typeof message.tail !== "undefined") {
       html_output += `<span class="tail-tooltip">Tail: <strong><a href=\"${flight_tracking_url}${
@@ -260,7 +406,7 @@ export let html_functions = {
         typeof message.tail !== "undefined"
           ? this.replace_text(message.matched_tail, message.tail)
           : message.tail
-      }</a></strong>${!footer ? "</span><br>" : "</span> "}`;
+      }</a></strong>${"</span> "}`;
     }
 
     if (
@@ -269,9 +415,8 @@ export let html_functions = {
     ) {
       html_output +=
         typeof message.matched_flight === "object"
-          ? this.replace_text(message.matched_flight, message.flight) +
-            `${!footer ? "<br>" : ""}`
-          : message.flight + `${!footer ? "<br>" : " "}`;
+          ? this.replace_text(message.matched_flight, message.flight) + " "
+          : message.flight + " ";
     }
 
     if (typeof message.icao !== "undefined") {
@@ -287,7 +432,7 @@ export let html_functions = {
               this.ensure_hex_is_uppercase_and_six_chars(
                 message.icao.toString()
               )
-            ) + `${!footer ? "<br>" : ""}`
+            ) + " "
           : `${message.icao}`;
       html_output +=
         typeof message.icao_hex !== "undefined" &&
@@ -304,104 +449,15 @@ export let html_functions = {
               this.ensure_hex_is_uppercase_and_six_chars(
                 message.icao_hex.toString()
               )
-            ) +
-            `${!footer ? "<br>" : ""}`
+            )
           : "";
       html_output +=
         typeof message.icao_url !== "undefined"
-          ? `</a></strong></span>${!footer ? "<br>" : " "}`
-          : `</strong></span>${!footer ? "<br>" : " "}`;
+          ? `</a></strong></span>${" "}`
+          : `</strong></span>${" "}`;
     }
 
-    html_output += footer ? '</td><td style="text-align: right">' : "";
-
-    // Table footer row, metadata
-    if (typeof message.freq !== "undefined") {
-      html_output += `<span class="freq-tooltip">${
-        footer ? "F" : "Frequency"
-      }: <strong>${message.freq}</strong></span>${!footer ? "<br>" : " "}`;
-    }
-
-    if (typeof message.level !== "undefined") {
-      let level = message.level;
-      let circle = "";
-      if (level >= -10.0) {
-        circle = "circle_green";
-      } else if (level >= -20.0) {
-        circle = "circle_yellow";
-      } else if (level >= -30.0) {
-        circle = "circle_orange";
-      } else {
-        circle = "circle_red";
-      }
-      html_output += `<span class="level-tooltip" data-jbox-content="The signal level (${
-        message.level
-      }) of the received message.">${
-        footer ? "L" : "Level"
-      }: <strong>${level}</strong> <div class="${circle}"></div></span>${
-        !footer ? "<br>" : " "
-      }`;
-    }
-
-    if (typeof message.ack !== "undefined") {
-      html_output += `<span class="ack-tooltip">${
-        footer ? "A" : "Acknowledgement"
-      }: <strong>${String(message.ack).toUpperCase()}</strong></span>${
-        !footer ? "<br>" : " "
-      }`;
-    }
-
-    if (typeof message.mode !== "undefined") {
-      html_output += `<span class="mode-tooltip">${
-        footer ? "M" : "Mode"
-      }: <strong>${message.mode}</strong></span>${!footer ? "<br>" : " "}`;
-    }
-
-    if (typeof message.block_id !== "undefined") {
-      html_output += `<span class="blockid-tooltip">${
-        footer ? "B" : "Block ID"
-      }: <strong>${message.block_id}</strong></span>${!footer ? "<br>" : " "}`;
-    }
-
-    if (typeof message.msgno !== "undefined") {
-      html_output += `<span class="msgno-tooltip">${
-        footer ? "M#" : "Message #"
-      }: <strong>${message.msgno}</strong></span>${!footer ? "<br>" : " "}`;
-    }
-
-    if (typeof message.is_response !== "undefined") {
-      html_output += `<span class="response-tooltip">${
-        footer ? "R" : "Response"
-      }: <strong>${message.is_response}</strong></span>${
-        !footer ? "<br>" : " "
-      }`;
-    }
-
-    if (typeof message.is_onground !== "undefined") {
-      // We need to watch this to make sure I have this right. After spelunking through vdlm2dec source code
-      // Input always appears to be a 0 or 2...for reasons I don't get. I could have this backwards
-      // 0 indicates the plane is airborne
-      // 2 indicates the plane is on the ground
-      // https://github.com/TLeconte/vdlm2dec/blob/1ea300d40d66ecb969f1f463506859e36f62ef5c/out.c#L457
-      // variable naming in vdlm2dec is inconsistent, but "ground" and "gnd" seem to be used
-      let is_onground = message["is_onground"] === 0 ? "False" : "True";
-
-      html_output += `<span class="ground-tooltip">${
-        footer ? "G" : "Ground"
-      }: <strong>${is_onground}</strong></span>${!footer ? "<br>" : " "}`;
-    }
-
-    if (typeof message.error !== "undefined") {
-      if (Number(message.error) !== 0) {
-        html_output += '<span class="error-tooltip"><span style="color:red;">';
-        html_output += `<strong>${footer ? "E" : "Error"}: ${
-          message["error"]
-        }</strong> `;
-        html_output += "</span></span>";
-      }
-    }
-    html_output += !footer ? "</div>" : "";
-    html_output += "</td></tr>";
+    html_output += "</div>";
 
     return html_output;
   },
