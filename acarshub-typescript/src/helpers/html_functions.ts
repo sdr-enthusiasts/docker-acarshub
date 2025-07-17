@@ -29,7 +29,7 @@ export let html_functions = {
   },
 
   end_message_tabs: function (): string {
-    return "</div><!-- tabs -->";
+    return "</div>";
   },
 
   create_message_nav_arrows: function (
@@ -91,15 +91,7 @@ export let html_functions = {
   },
 
   end_message_div: function (): string {
-    return "</div><!-- message -->";
-  },
-
-  start_message_box: function (): string {
-    return '<div><table class="shadow">';
-  },
-
-  end_message_box: function (): string {
-    return "</table></div><!-- table -->";
+    return "</div></div></div>";
   },
 
   message_station_and_type: function (
@@ -107,13 +99,37 @@ export let html_functions = {
     station_id: string,
     matched: boolean = false
   ): string {
-    return `<tr${
-      matched ? ' class="red_body"' : ""
-    }><td><strong>${message_type}</strong> from <strong>${station_id}</strong></td>`;
+    return `<div class="msg_line"><span${
+      matched ? ' class="red_body left_item"' : ' class="left_item"'
+    }><strong>${message_type}</strong> from <strong>${station_id}</strong></span>`;
+  },
+
+  prefers24HourClock: function (): boolean {
+    const date = new Date(Date.UTC(2020, 0, 1, 20, 0)); // 8:00 PM UTC
+    const formatted = new Intl.DateTimeFormat(undefined, {
+      hour: "numeric",
+      hourCycle: "h23", // Try to force 24h to detect if it works
+      timeZone: "UTC",
+    }).format(date);
+
+    return !formatted.match(/AM|PM/i);
   },
 
   message_timestamp: function (timestamp: Date): string {
-    return `<td style=\"text-align: right\"><strong>${timestamp}</strong></td></tr>`;
+    const prefers_24HourClock = this.prefers24HourClock();
+
+    const formatted = timestamp.toLocaleString(undefined, {
+      weekday: "short",
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "numeric",
+      second: "numeric",
+      hour12: !prefers_24HourClock, // Use 24-hour clock if prefers_24HourClock is true
+    });
+
+    return `<span><strong>${formatted}</strong></span></div>`;
   },
 
   start_message_body: function (): string {

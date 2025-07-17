@@ -90,14 +90,6 @@
   }
 }
 
-table {
-  border: 1px solid var(--table-border);
-  border-collapse: collapse;
-  width: 100%;
-  table-layout: fixed;
-  background-color: var(--table-background);
-}
-
 thead {
   border: 1px solid var(--full-black);
 }
@@ -816,13 +808,41 @@ input[type="checkbox"] {
   box-shadow: 0 0 15px var(--tabs-grey-shadow);
 }
 
+.acars_message_container {
+  margin-top: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
 [id^="message"] {
-  display: none;
+  display: flex;
+  flex-wrap: wrap;
   border-top: 0px solid var(--grey-highlight);
+
+  border: 1px solid var(--table-border);
+  border-collapse: collapse;
+  width: 100%;
+  background-color: var(--table-background);
+}
+
+.msg_line {
+  display: flex;
+  align-items: flex-end;
+  flex-grow: 1;
+  flex-wrap: wrap;
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+
+  > span {
+    white-space: nowrap;
+  }
+
+  .left_item {
+    flex-grow: 1;
+  }
 }
 
 .checked {
-  display: block;
+  display: flex;
 }
 
 .circle_red {
