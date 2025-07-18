@@ -834,7 +834,6 @@ details {
 
   &:last-child {
     span {
-      padding-left: 0.25rem;
       padding-right: 0.25rem;
     }
 
@@ -848,6 +847,10 @@ details {
   td:first-child {
     padding-left: 0;
   }
+
+  .msg_line:last-child {
+    padding-top: 0;
+  }
 }
 
 .msg_line {
@@ -855,8 +858,7 @@ details {
   align-items: flex-end;
   flex-grow: 1;
   flex-wrap: wrap;
-  padding-left: 0.5rem;
-  padding-right: 0.5rem;
+  padding: 0.5rem;
   width: 100%;
 
   > span {

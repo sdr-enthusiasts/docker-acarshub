@@ -20,6 +20,7 @@ import { faArrowUp } from "@fortawesome/free-solid-svg-icons/faArrowUp";
 import { faArrowDown } from "@fortawesome/free-solid-svg-icons/faArrowDown";
 import { faPlus } from "@fortawesome/free-solid-svg-icons/faPlus";
 import { faMinus } from "@fortawesome/free-solid-svg-icons/faMinus";
+import { faCaretDown } from "@fortawesome/free-solid-svg-icons/faCaretDown";
 
 library.add(faCheck);
 library.add(faPlane);
@@ -34,6 +35,7 @@ library.add(faArrowUp);
 library.add(faArrowDown);
 library.add(faPlus);
 library.add(faMinus);
+library.add(faCaretDown);
 
 dom.watch();
 
