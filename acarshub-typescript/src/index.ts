@@ -543,6 +543,8 @@ function toggle_pages(is_backgrounded = false): void {
 }
 
 window.new_page = function (page: string): void {
+  // remove the open attribute from menu_details
+  $("#menu_details").removeAttr("open");
   document.title = page;
   let sub_url = "";
   if (page === "Live Messages") sub_url = "";

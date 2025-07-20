@@ -26,7 +26,16 @@ export let menu = {
 
   generate_menu: function (): void {
     let html = '<div class="wrap"><span class="decor"></span>';
-    html += '<nav><ul class="primary">';
+    html += '<details class="show_when_small small_nav" id="menu_details">';
+    html += `<summary class="menu_non_link">Menu</summary>`;
+    html += `<a href="javascript:new_page('Live Messages')" id="live_messages_link">Live Messages</a><br>`;
+    if (this.menu_adsb)
+      html += `<a href="javascript:new_page('Live Map')" id="live_map_link">Live Map</a><br>`;
+    html += `<a href="javascript:new_page('Search')" id="search_link">Search Database</a><br>`;
+    html += `<a href="javascript:new_page('Alerts')" id="alerts_link">Alerts<span id="alert_count"></span></a><br>`;
+    html += `<a href="javascript:new_page('Stats')" id="stats_link">Statistics</a><br>`;
+    html += "</details>";
+    html += '<nav class="hide_when_small"><ul class="primary">';
     html += `<li class="img_box" id="logo_image">${images.acars_hub_logo}"</li>`;
     html += `<li><a href="javascript:new_page('Live Messages')" id="live_messages_link">Live Messages</a></li>`;
     if (this.menu_adsb)
