@@ -224,16 +224,18 @@ export let html_functions = {
     if (message.hasOwnProperty("libacars")) {
       console.log("Libacars message detected:", message["libacars"]);
       let data = message["libacars"];
+
+      // remove all characters before the first {
+      data = data.substring(data.indexOf("{"));
       // replace all \\ with nothing
       data = data.replace(/\\/g, "");
-      // replace <p>Decoded:</p><p><pre>
-      data = data.replace(/<p>Decoded:<\/p><p><pre>\('"/, "");
-      // replace </pre></p> with </pre>
-      data = data.replace(/\)<\/pre><\/p>/, "");
       // replace ' with nothing
       data = data.replace(/"'/g, "");
       // replace '\n\s' with nothing
       data = data.replace(/'\n\s'/g, "");
+      // make sure the last character is a }, if not, remove everything after the last }
+      data = data.substring(0, data.lastIndexOf("}") + 1);
+
       console.log("Libacars data after processing:", data);
       try {
         // Try to parse the data as JSON
@@ -243,6 +245,8 @@ export let html_functions = {
         // loop through the data object
         html_output += `<pre>${JSON.stringify(data, null, 2)}</pre>`;
       } catch (e) {
+        html_output += `<div class="msg_line red">`;
+        html_output += `<pre>Error parsing Libacars data: Please see browser console for more details and submit a bug report.</pre>`;
         console.error("Error parsing Libacars data:", e);
       }
 
