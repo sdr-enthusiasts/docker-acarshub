@@ -730,7 +730,6 @@ def main_connect():
                 "hfdl": acarshub_configuration.ENABLE_HFDL,
                 "imsl": acarshub_configuration.ENABLE_IMSL,
                 "irdm": acarshub_configuration.ENABLE_IRDM,
-                "arch": acarshub_configuration.ARCH,
                 "allow_remote_updates": acarshub_configuration.ALLOW_REMOTE_UPDATES,
                 "adsb": {
                     "enabled": acarshub_configuration.ENABLE_ADSB,

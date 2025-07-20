@@ -268,7 +268,6 @@ $((): void => {
 
   socket.on("features_enabled", function (msg: decoders): void {
     stats.decoders_enabled(msg);
-    menu.set_arch(msg.arch);
     allow_remote_updates = msg.allow_remote_updates;
     flight_tracking_url = msg.adsb.flight_tracking_url;
     if (msg.adsb.enabled === true) {
@@ -703,10 +702,6 @@ window.show_page_modal = function (): void {
   }
 };
 
-window.show_menu_modal = function (): void {
-  menu.show_menu_modal();
-};
-
 window.updateAlerts = function (): void {
   alerts.updateAlerts();
 };
@@ -797,11 +792,6 @@ window.mark_all_messages_read = function (): void {
 
 window.query = function (): void {
   search.query();
-};
-
-window.hide_libseccomp2_warning = function (): void {
-  Cookies.set("hide_libseccomp2_warning", "true", { expires: 365 });
-  menu.generate_footer();
 };
 
 window.reset_alert_counts = function (): void {
