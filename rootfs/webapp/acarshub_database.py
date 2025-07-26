@@ -642,6 +642,15 @@ def database_search(search_term, page=0):
         session = db_session()
         match_string = ""
 
+        icao_hex = search_term["icao"]
+        if icao_hex and len(icao_hex) == 6:
+            try:
+                search_term["icao"] = int(icao_hex, 16)
+            except Exception as e:
+                acarshub_logging.log(
+                    f"can't convert icao from hex to decimal: {icao_hex} ({str(e)})", "database", level=LOG_LEVEL["DEBUG"]
+                )
+
         if "station_id" in search_term and search_term["station_id"] != "":
             # we need to search outside of FTS
             conditions = []
@@ -661,6 +670,8 @@ def database_search(search_term, page=0):
                     conditions.append(messages.label.contains(search_term[key]))
                 elif key == "tail":
                     conditions.append(messages.tail.contains(search_term[key]))
+                elif key == "icao":
+                    conditions.append(messages.icao.contains(search_term[key]))
                 elif key == "msg_text":
                     conditions.append(messages.text.contains(search_term[key]))
                 elif key == "station_id":

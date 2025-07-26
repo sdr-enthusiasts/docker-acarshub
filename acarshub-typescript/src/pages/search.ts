@@ -37,6 +37,7 @@ export class SearchPage extends ACARSHubPage {
     label: "",
     msgno: "",
     tail: "",
+    icao: "",
     msg_text: "",
     station_id: "",
   } as current_search;
@@ -48,6 +49,7 @@ export class SearchPage extends ACARSHubPage {
     label: "",
     msgno: "",
     tail: "",
+    icao: "",
     msg_text: "",
     station_id: "",
   } as current_search;
@@ -148,6 +150,7 @@ export class SearchPage extends ACARSHubPage {
       label: $("#search_msglbl").val(),
       msgno: $("#search_msgno").val(),
       tail: $("#search_tail").val(),
+      icao: $("#search_icao").val(),
       msg_text: $("#search_text").val(),
       station_id: $("#search_station_id").val(),
     } as current_search;
@@ -161,6 +164,7 @@ export class SearchPage extends ACARSHubPage {
     $("#search_msglbl").val(this.#typed_searches.label);
     $("#search_msgno").val(this.#typed_searches.msgno);
     $("#search_tail").val(this.#typed_searches.tail);
+    $("#search_icao").val(this.#typed_searches.icao);
     $("#search_text").val(this.#typed_searches.msg_text);
     $("#search_station_id").val(this.#typed_searches.station_id);
   }
@@ -180,6 +184,7 @@ export class SearchPage extends ACARSHubPage {
     $("#search_msglbl").val("");
     $("#search_msgno").val("");
     $("#search_tail").val("");
+    $("#search_icao").val("");
     $("#search_text").val("");
     $("#search_station_id").val("");
   }
@@ -448,6 +453,15 @@ export class SearchPage extends ACARSHubPage {
           </td>
           <td class="search_term">
             <input type="text" id="search_tail">
+          </td>
+        </tr>
+
+        <tr class="search_label">
+          <td>
+            <label>Icao:</label>
+          </td>
+          <td class="search_term">
+            <input type="text" id="search_icao">
           </td>
         </tr>
 
