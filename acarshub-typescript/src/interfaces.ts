@@ -136,6 +136,7 @@ export interface current_search {
   label: string;
   msgno: string;
   tail: string;
+  icao: string;
   msg_text: string;
   station_id: string;
 }
