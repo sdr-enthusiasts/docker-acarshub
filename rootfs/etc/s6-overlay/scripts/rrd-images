@@ -9,45 +9,45 @@ if [[ ${ENABLE_WEB,,} =~ true ]]; then
     STARTING_UP="TRUE"
     OUTPUT_DIR="/database/images/static/images"
     ARGS_ALL=("-a" "PNG" "-w" "1000" "-h" "200"  "--vertical-label" "Messages" "--slope-mode")
-    ARGS_ALL_DARK=("-a" "PNG" "-w" "1000" "-h" "200"  "--vertical-label" "Messages" "--slope-mode" "--color" "BACK#3d3d3d" "--color" "CANVAS#3d3d3d")
+    ARGS_ALL_DARK=("-a" "PNG" "-w" "1000" "-h" "200"  "--vertical-label" "Messages" "--slope-mode" "--color" "BACK#2a2e31" "--color" "CANVAS#161616" "--color" "AXIS#f2f5f4" "--color" "FONT#f2f5f4" "--color" "FRAME#888888" "--color" "GRID#444444" "--color" "MGRID#444444" "--color" "SHADEA#212427" "--color" "SHADEB#171a1c")
 
     ARGS_ERROR=("-a" "PNG" "-w" "1000" "-h" "200"  "--vertical-label" "Messages" "--slope-mode")
-    ARGS_ERROR_DARK=("-a" "PNG" "-w" "1000" "-h" "200"  "--vertical-label" "Messages" "--slope-mode" "--color" "BACK#3d3d3d" "--color" "CANVAS#3d3d3d")
+    ARGS_ERROR_DARK=("-a" "PNG" "-w" "1000" "-h" "200"  "--vertical-label" "Messages" "--slope-mode" "--color" "BACK#2a2e31" "--color" "CANVAS#161616" "--color" "AXIS#f2f5f4" "--color" "FONT#f2f5f4" "--color" "FRAME#888888" "--color" "GRID#444444" "--color" "MGRID#444444" "--color" "SHADEA#212427" "--color" "SHADEB#171a1c")
 
     ARGS_VDLM=("-a" "PNG" "-w" "1000" "-h" "200"  "--vertical-label" "Messages" "--slope-mode")
-    ARGS_VDLM_DARK=("-a" "PNG" "-w" "1000" "-h" "200"  "--vertical-label" "Messages" "--slope-mode" "--color" "BACK#3d3d3d" "--color" "CANVAS#3d3d3d")
+    ARGS_VDLM_DARK=("-a" "PNG" "-w" "1000" "-h" "200"  "--vertical-label" "Messages" "--slope-mode" "--color" "BACK#2a2e31" "--color" "CANVAS#161616" "--color" "AXIS#f2f5f4" "--color" "FONT#f2f5f4" "--color" "FRAME#888888" "--color" "GRID#444444" "--color" "MGRID#444444" "--color" "SHADEA#212427" "--color" "SHADEB#171a1c")
 
     ARGS_ACARS=("-a" "PNG" "-w" "1000" "-h" "200"  "--vertical-label" "Messages" "--slope-mode")
-    ARGS_ACARS_DARK=("-a" "PNG" "-w" "1000" "-h" "200"  "--vertical-label" "Messages" "--slope-mode" "--color" "BACK#3d3d3d" "--color" "CANVAS#3d3d3d")
+    ARGS_ACARS_DARK=("-a" "PNG" "-w" "1000" "-h" "200"  "--vertical-label" "Messages" "--slope-mode" "--color" "BACK#2a2e31" "--color" "CANVAS#161616" "--color" "AXIS#f2f5f4" "--color" "FONT#f2f5f4" "--color" "FRAME#888888" "--color" "GRID#444444" "--color" "MGRID#444444" "--color" "SHADEA#212427" "--color" "SHADEB#171a1c")
 
     ARGS_HFDL=("-a" "PNG" "-w" "1000" "-h" "200"  "--vertical-label" "Messages" "--slope-mode")
-    ARGS_HFDL_DARK=("-a" "PNG" "-w" "1000" "-h" "200"  "--vertical-label" "Messages" "--slope-mode" "--color" "BACK#3d3d3d" "--color" "CANVAS#3d3d3d")
+    ARGS_HFDL_DARK=("-a" "PNG" "-w" "1000" "-h" "200"  "--vertical-label" "Messages" "--slope-mode" "--color" "BACK#2a2e31" "--color" "CANVAS#161616" "--color" "AXIS#f2f5f4" "--color" "FONT#f2f5f4" "--color" "FRAME#888888" "--color" "GRID#444444" "--color" "MGRID#444444" "--color" "SHADEA#212427" "--color" "SHADEB#171a1c")
 
     ARGS_IMSL=("-a" "PNG" "-w" "1000" "-h" "200"  "--vertical-label" "Messages" "--slope-mode")
-    ARGS_IMSL_DARK=("-a" "PNG" "-w" "1000" "-h" "200"  "--vertical-label" "Messages" "--slope-mode" "--color" "BACK#3d3d3d" "--color" "CANVAS#3d3d3d")
+    ARGS_IMSL_DARK=("-a" "PNG" "-w" "1000" "-h" "200"  "--vertical-label" "Messages" "--slope-mode" "--color" "BACK#2a2e31" "--color" "CANVAS#161616" "--color" "AXIS#f2f5f4" "--color" "FONT#f2f5f4" "--color" "FRAME#888888" "--color" "GRID#444444" "--color" "MGRID#444444" "--color" "SHADEA#212427" "--color" "SHADEB#171a1c")
 
     ARGS_IRDM=("-a" "PNG" "-w" "1000" "-h" "200"  "--vertical-label" "Messages" "--slope-mode")
-    ARGS_IRDM_DARK=("-a" "PNG" "-w" "1000" "-h" "200"  "--vertical-label" "Messages" "--slope-mode" "--color" "BACK#3d3d3d" "--color" "CANVAS#3d3d3d")
+    ARGS_IRDM_DARK=("-a" "PNG" "-w" "1000" "-h" "200"  "--vertical-label" "Messages" "--slope-mode" "--color" "BACK#2a2e31" "--color" "CANVAS#161616" "--color" "AXIS#f2f5f4" "--color" "FONT#f2f5f4" "--color" "FRAME#888888" "--color" "GRID#444444" "--color" "MGRID#444444" "--color" "SHADEA#212427" "--color" "SHADEB#171a1c")
 
 
     total_enabled=0
 
     if [[ ${ENABLE_ACARS,,} =~ external ]]; then
         ARGS_ALL+=("DEF:messages-acars=${RRD_PATH}:ACARS:AVERAGE" "LINE1:messages-acars#000000:ACARS")
-        ARGS_ALL_DARK+=("DEF:messages-acars=${RRD_PATH}:ACARS:AVERAGE" "LINE1:messages-acars#000000:ACARS")
+        ARGS_ALL_DARK+=("DEF:messages-acars=${RRD_PATH}:ACARS:AVERAGE" "LINE1:messages-acars#bbcccc:ACARS")
 
         ARGS_ACARS+=("DEF:messages-acars=${RRD_PATH}:ACARS:AVERAGE" "LINE1:messages-acars#000000:ACARS")
-        ARGS_ACARS_DARK+=("DEF:messages-acars=${RRD_PATH}:ACARS:AVERAGE" "LINE1:messages-acars#000000:ACARS")
+        ARGS_ACARS_DARK+=("DEF:messages-acars=${RRD_PATH}:ACARS:AVERAGE" "LINE1:messages-acars#bbcccc:ACARS")
 
         total_enabled=$((total_enabled + 1))
     fi
 
     if [[ ${ENABLE_VDLM,,} =~ external ]]; then
         ARGS_ALL+=("DEF:messages-vdlm=${RRD_PATH}:VDLM:AVERAGE" "LINE1:messages-vdlm#0000FF:VDLM")
-        ARGS_ALL_DARK+=("DEF:messages-vdlm=${RRD_PATH}:VDLM:AVERAGE" "LINE1:messages-vdlm#0000FF:VDLM")
+        ARGS_ALL_DARK+=("DEF:messages-vdlm=${RRD_PATH}:VDLM:AVERAGE" "LINE1:messages-vdlm#4c4cFF:VDLM")
 
         ARGS_VDLM+=("DEF:messages-vdlm=${RRD_PATH}:VDLM:AVERAGE" "LINE1:messages-vdlm#0000FF:VDLM")
-        ARGS_VDLM_DARK+=("DEF:messages-vdlm=${RRD_PATH}:VDLM:AVERAGE" "LINE1:messages-vdlm#0000FF:VDLM")
+        ARGS_VDLM_DARK+=("DEF:messages-vdlm=${RRD_PATH}:VDLM:AVERAGE" "LINE1:messages-vdlm#4c4cff:VDLM")
 
         total_enabled=$((total_enabled + 1))
     fi
