@@ -7,4 +7,4 @@ prometheus-client==0.22.1
 requests==2.32.4
 rrdtool @git+https://github.com/fredclausen/python-rrdtool.git
 schedule==1.2.2
-sqlalchemy==2.0.41
+sqlalchemy==2.0.42
