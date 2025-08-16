@@ -51,7 +51,7 @@ jobs:
       build_number: ${{ steps.patch.outputs.build_number }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@v5.0.0
       - name: patch
         id: patch
         run: |
@@ -123,7 +123,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@v5.0.0
       - name: Create Release
         uses: ncipollo/release-action@v1.18.0
         env:
