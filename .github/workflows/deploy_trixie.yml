@@ -51,7 +51,7 @@ jobs:
       build_number: ${{ steps.patch.outputs.build_number }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@v5.0.0
       - name: patch
         id: patch
         run: |
