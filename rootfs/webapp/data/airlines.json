@@ -1123,6 +1123,10 @@
     "ICAO": "JEX",
     "NAME": "JAL Express"
   },
+  "JD": {
+    "ICAO": "CBJ",
+    "NAME": "Beijing Capital Airlines"
+  },
   "JE": {
     "ICAO": "MNO",
     "NAME": "Mango"
@@ -1130,6 +1134,10 @@
   "JF": {
     "ICAO": "LAB",
     "NAME": "L.A.B. Flying Service"
+  },
+  "JG": {
+    "ICAO": "JDL",
+    "NAME": "Jingdong Cargo Airlines"
   },
   "JH": {
     "ICAO": "FDA",
@@ -1654,6 +1662,10 @@
   "NR": {
     "ICAO": "PIR",
     "NAME": "Pamir Airways"
+  },
+  "NS": {
+    "ICAO": "HBH",
+    "NAME": "Hebei Airlines"
   },
   "NT": {
     "ICAO": "IBB",
@@ -2399,6 +2411,10 @@
   "UP": {
     "ICAO": "BHS",
     "NAME": "Bahamasair"
+  },
+  "UQ": {
+    "ICAO": "CUH",
+    "NAME": "Urumqi Airlines"
   },
   "US": {
     "ICAO": "AAL",
