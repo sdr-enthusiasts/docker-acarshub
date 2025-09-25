@@ -144,10 +144,10 @@ services:
       #- AR_SEND_UDP_ACARS=acarshub:5550
       # The line below should be uncommented if you are receiving acars data from acarsdec AND want to feed airframes
       #- AR_SEND_UDP_ACARS=acarshub:5550;feed.airframes.io:5550
-      # The line below should uncommented if you are receiving VDLM and DO NOT want to feed aiframes
+      # The line below should uncommented if you are receiving VDLM, using dumpvdl2 OR using vdlm2dec and not want to feed
       #- AR_SEND_UDP_VDLM2=acarshub:5555
       # The line below should uncommented if you are receiving VDLM, using dumpvdl2 AND want to feed airframes
-      #- AR_SEND_UDP_VDLM2=acarshub:5555;feed.airframes.io:5552
+      #- AR_SEND_TCP_VDLM2=feed.airframes.io:5553
       # The line below should uncommented if you are receiving VDLM, using vdlm2dec AND want to feed airframes
       #- AR_SEND_UDP_VDLM2=acarshub:5555;feed.airframes.io:5555
       # The line below should uncommented if you are receiving dumpvdl2 AND using ZMQ (recommended)
