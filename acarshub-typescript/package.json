@@ -44,7 +44,7 @@
   "dependencies": {
     "@airframes/acars-decoder": "^1.6.19",
     "@fortawesome/fontawesome-free": "^7.0.1",
-    "@fortawesome/fontawesome-svg-core": "^7.0.1",
+    "@fortawesome/fontawesome-svg-core": "^7.1.0",
     "@fortawesome/free-regular-svg-icons": "^7.0.1",
     "@fortawesome/free-solid-svg-icons": "^7.0.1",
     "bootstrap": "^5.3.8",
