@@ -125,7 +125,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5.0.0
       - name: Create Release
-        uses: ncipollo/release-action@v1.18.0
+        uses: ncipollo/release-action@v1.20.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
