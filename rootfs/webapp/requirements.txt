@@ -1,5 +1,5 @@
 django==5.2.4
-Flask==3.1.1
+Flask==3.1.2
 Flask-SocketIO==5.5.1
 gevent==25.9.1
 gunicorn[gevent]==23.0.0
