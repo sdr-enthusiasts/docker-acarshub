@@ -3,6 +3,7 @@
   config,
   lib,
   dream2nix,
+  pkgs,
   ...
 }: let
   python = config.deps.python;
