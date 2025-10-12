@@ -49,6 +49,7 @@
         inputsFrom = [self.packages.${system}.default.devShell];
         # add extra packages
         packages = [
+          nixpkgs.legacyPackages.${system}.python313
           nixpkgs.legacyPackages.${system}.pdm
           nixpkgs.legacyPackages.${system}.rrdtool
         ];
