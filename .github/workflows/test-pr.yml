@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
-      - uses: actions/checkout@v6.0.0
+      - uses: actions/checkout@v6.0.1
       - name: Pull koalaman/shellcheck:stable Image
         run: docker pull koalaman/shellcheck:stable
       - name: Run Shellcheck against shell scripts
@@ -35,7 +35,7 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
-      - uses: actions/checkout@v6.0.0
+      - uses: actions/checkout@v6.0.1
       - name: Pull markdownlint/markdownlint:latest Image
         run: docker pull markdownlint/markdownlint:latest
       - name: Run markdownlint against *.md files
@@ -49,7 +49,7 @@ jobs:
       fail-fast: false
 
     steps:
-      - uses: actions/checkout@v6.0.0
+      - uses: actions/checkout@v6.0.1
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v6.1.0
         with:
@@ -72,7 +72,7 @@ jobs:
     steps:
       # Check out our code
       - name: Checkout
-        uses: actions/checkout@v6.0.0
+        uses: actions/checkout@v6.0.1
 
       # Get version tag
       # git log -1 : get the latest commit
@@ -116,7 +116,7 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
-      - uses: actions/checkout@v6.0.0
+      - uses: actions/checkout@v6.0.1
       - name: Pull hadolint/hadolint:latest Image
         run: docker pull hadolint/hadolint:latest
       - name: Run hadolint against Dockerfiles
