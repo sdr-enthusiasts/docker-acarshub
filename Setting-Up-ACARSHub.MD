@@ -46,9 +46,6 @@ Otherwise, remove the `dumpvdl2` section
 
 ```yaml
 
-volumes:
-  acars_data:
-
 services:
   acarshub:
     image: ghcr.io/sdr-enthusiasts/docker-acarshub:latest
@@ -61,7 +58,7 @@ services:
       - 15550:15550
       - 15555:15555
     volumes:
-      - acars_data:/run/acars
+      - ./acars_data:/run/acars
     tmpfs:
       - /database:exec,size=64M
       - /run:exec,size=64M
