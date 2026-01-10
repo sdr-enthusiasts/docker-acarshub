@@ -1,4 +1,4 @@
-django==6.0
+django==6.0.1
 Flask==3.1.2
 Flask-SocketIO==5.5.1
 gevent==25.9.1
