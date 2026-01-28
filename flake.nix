@@ -72,6 +72,8 @@
           nixpkgs.legacyPackages.${system}.python313
           nixpkgs.legacyPackages.${system}.pdm
           nixpkgs.legacyPackages.${system}.rrdtool
+          nixpkgs.legacyPackages.${system}.npm-check
+          nixpkgs.legacyPackages.${system}.nodejs
         ];
       };
     });
