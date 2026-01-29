@@ -620,10 +620,10 @@ export class LiveMapPage extends ACARSHubPage {
     let plane_callsigns = [];
     let acars_planes = 0;
     let acars_message_count = 0;
-    const alt_width = 20;
-    const alert_width = 15;
-    const speed_width = 16;
-    const msgs_width = 21;
+    const alt_width = 25;
+    const alert_width = 18;
+    const speed_width = 11;
+    const msgs_width = 18;
     const callsign_width = 23;
     //const callsign_width = 100 - alt_width - code_width - speed_width - msgs_width;
     let html: string = "";
@@ -728,7 +728,7 @@ export class LiveMapPage extends ACARSHubPage {
     <div class="plane_list_no_hover" style="font-weight: bold;border-bottom: 1px solid black;color: var(--blue-highlight) !important;background-color: var(--grey-bg)">
     <div class="plane_element plane_header noleft" style="width: ${callsign_width}%"><a href="javascript:setSort('callsign')">Callsign</a></div>
     <div class="plane_element plane_header" style="width: ${alt_width}%;"><a href="javascript:setSort('alt')">Alt</a></div>
-    <div class="plane_element plane_header" style="width: ${speed_width}%;"><a href="javascript:setSort('speed')">Speed</a></div>
+    <div class="plane_element plane_header" style="width: ${speed_width}%;"><a href="javascript:setSort('speed')">Spd</a></div>
     <div class="plane_element plane_header" style="width: ${alert_width}%;"><a href="javascript:setSort('alerts')">Alert</a></div>
     <div class="plane_element plane_header" style="width: ${msgs_width}%;"><a href="javascript:setSort('msgs')">Msgs</a></div></div>` +
       html;
