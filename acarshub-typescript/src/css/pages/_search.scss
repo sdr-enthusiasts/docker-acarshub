@@ -1,0 +1,54 @@
+@use "../modules/colors" as colors;
+
+// Search-specific styles
+#search_results {
+  width: calc(100vw - 440px);
+  max-height: 100%;
+  margin-left: 5px;
+  overflow: auto;
+  float: left;
+
+  @media only screen and (max-width: 969px) {
+    width: calc(100vw - 295px) !important;
+  }
+
+  @media only screen and (max-width: 700px) {
+    width: 100% !important;
+  }
+}
+
+#side_pane {
+  width: 340px;
+  max-height: 100%;
+  overflow: auto;
+  float: left;
+
+  @media only screen and (max-width: 969px) {
+    width: 200px !important;
+  }
+
+  @media only screen and (max-width: 700px) {
+    width: 100% !important;
+  }
+}
+
+.search_label {
+  width: 30%;
+  vertical-align: middle;
+  color: colors.$blue-highlight;
+}
+
+.search_term {
+  width: 70%;
+  padding-left: 15px;
+  padding-right: 20px;
+}
+
+#size,
+#database {
+  color: colors.$blue-highlight;
+}
+
+#log {
+  margin-right: 5px;
+}

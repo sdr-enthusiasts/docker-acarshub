@@ -1,0 +1,296 @@
+@use "../modules/colors" as colors;
+@use "../modules/fonts" as fonts;
+
+// Map container
+#mapid {
+  height: calc(100vh - 130px);
+  max-height: calc(100vh - 130px);
+  width: 100%;
+  background-color: colors.$mapbackground;
+  float: left;
+  max-width: calc(100vw - 435px);
+  flex: 1 1 auto;
+  position: relative;
+
+  @media only screen and (max-width: 1200px) {
+    height: calc(100vh - 130px) !important;
+    max-height: calc(100vh - 130px) !important;
+  }
+
+  @media only screen and (max-width: 969px) {
+    height: calc(100vh - 170px) !important;
+    max-height: calc(100vh - 170px) !important;
+  }
+
+  @media only screen and (max-width: 700px) {
+    width: 100%;
+    max-width: 100% !important;
+  }
+}
+
+// Airplane icons and markers
+.airplane_blue,
+.airplane_green,
+.airplane_red,
+.airplane_darkgreen,
+.airplane_brown,
+.airplane_orange {
+  stroke: colors.$full-black;
+  paint-order: stroke;
+
+  @media not all and (pointer: coarse) {
+    &:hover {
+      fill: colors.$full-orange;
+      paint-order: stroke;
+    }
+  }
+}
+
+.airplane_brown {
+  fill: colors.$full-brown;
+}
+
+.airplane_green {
+  fill: colors.$full-green;
+}
+
+.airplane_blue {
+  fill: colors.$blue-highlight;
+}
+
+.airplane_orange {
+  fill: colors.$full-orange;
+}
+
+.airplane_red {
+  fill: colors.$full-red;
+}
+
+.airplane_darkgreen {
+  fill: colors.$full-darkgreen;
+}
+
+.airplane_datablock {
+  background: colors.$datablock-bg;
+  color: colors.$full-black;
+  font-weight: bold;
+  text-transform: uppercase;
+  max-width: 120px;
+  max-height: 120px;
+  width: max-content;
+  padding: 4px;
+  border-radius: 15px;
+  border: 2px solid colors.$datablock-border;
+  -moz-border-radius: 15px;
+  font-family: fonts.$mono-fonts;
+}
+
+.rotate-icon {
+  -webkit-transform-origin: center;
+  -moz-transform-origin: center;
+  -ms-transform-origin: center;
+  -o-transform-origin: center;
+  transform-origin: center;
+}
+
+// Plane list sidebar
+div#planes {
+  width: 340px;
+  max-height: calc(100vh - 130px);
+  overflow: scroll;
+  position: relative;
+  float: right;
+  display: flex;
+  flex-direction: column;
+  left: 5px !important;
+
+  @media only screen and (max-width: 1200px) {
+    max-height: calc(100vh - 130px) !important;
+  }
+
+  @media only screen and (max-width: 969px) {
+    max-height: calc(100vh - 170px) !important;
+  }
+
+  @media only screen and (max-width: 700px) {
+    display: none !important;
+  }
+}
+
+div.plane_list_no_hover,
+div.plane_list {
+  display: inline-block;
+  width: 100%;
+  border-top: 1px solid colors.$full-black;
+  border-bottom: 1px solid colors.$full-black;
+  color: colors.$full-white;
+  background-color: colors.$blue-highlight;
+  font-weight: bold;
+}
+
+div.plane_list {
+  &:hover {
+    background-color: colors.$datablock-bg;
+    color: colors.$blue-highlight;
+  }
+}
+
+div.plane_element {
+  display: inline-block;
+  position: relative;
+  padding-left: 5px;
+  border-left: 2px solid colors.$full-black;
+
+  a {
+    color: colors.$full-white;
+  }
+}
+
+.plane_header a {
+  color: colors.$blue-highlight !important;
+  text-decoration: none;
+  text-transform: uppercase;
+  font-weight: bold;
+}
+
+// Plane list column widths
+.plane-element-width-callsign {
+  width: 23%;
+}
+
+.plane-element-width-alt {
+  width: 25%;
+}
+
+.plane-element-width-speed {
+  width: 11%;
+}
+
+.plane-element-width-alert {
+  width: 18%;
+}
+
+.plane-element-width-msgs {
+  width: 18%;
+}
+
+// Plane list headers
+.plane-header-title {
+  font-weight: bold;
+  border-bottom: 1px solid colors.$full-black;
+  color: colors.$blue-highlight !important;
+  background-color: colors.$grey-bg !important;
+
+  .plane_element,
+  .plane_header {
+    color: colors.$blue-highlight !important;
+  }
+
+  a {
+    color: colors.$blue-highlight !important;
+  }
+}
+
+.plane-stats-header {
+  color: colors.$blue-highlight !important;
+  background-color: colors.$grey-bg !important;
+
+  .plane_element {
+    color: colors.$blue-highlight !important;
+  }
+}
+
+// Sidebar state classes
+.sidebar_hovered_from_map_acars {
+  background-color: colors.$datablock-bg !important;
+  color: colors.$full-green !important;
+
+  .plane_element a {
+    color: colors.$full-green !important;
+  }
+}
+
+.sidebar_hovered_from_map_no_acars {
+  background-color: colors.$datablock-bg !important;
+  color: colors.$blue-highlight !important;
+}
+
+.sidebar_no_hover_with_acars {
+  background-color: colors.$full-green !important;
+  color: colors.$full-white !important;
+  font-weight: bold !important;
+
+  @media not all and (pointer: coarse) {
+    &:hover,
+    &:focus,
+    &:hover a,
+    &:focus a {
+      background-color: colors.$datablock-bg !important;
+      color: colors.$full-green !important;
+    }
+  }
+}
+
+.sidebar_no_hover_with_unread {
+  background-color: colors.$full-darkgreen !important;
+  color: colors.$full-white !important;
+  font-weight: bold !important;
+
+  @media not all and (pointer: coarse) {
+    &:hover,
+    &:focus,
+    &:hover a,
+    &:focus a {
+      background-color: colors.$datablock-bg !important;
+      color: colors.$full-darkgreen !important;
+      font-weight: bold !important;
+    }
+  }
+}
+
+.sidebar_hovered_from_map_with_unread,
+.sidebar_hovered_from_map_with_unread a {
+  background-color: colors.$datablock-bg !important;
+  color: colors.$full-darkgreen !important;
+  font-weight: bold !important;
+}
+
+.sidebar_alert_unread {
+  background-color: colors.$full-red !important;
+
+  @media not all and (pointer: coarse) {
+    &:hover,
+    &:focus,
+    &:hover a,
+    &:focus a {
+      background-color: colors.$datablock-bg !important;
+      color: colors.$full-red !important;
+    }
+  }
+}
+
+.sidebar_alert_unread_hovered_from_map,
+.sidebar_alert_unread_hovered_from_map a {
+  background-color: colors.$datablock-bg !important;
+  color: colors.$full-red !important;
+}
+
+.sidebar_alert_read {
+  background-color: colors.$full-brown !important;
+
+  @media not all and (pointer: coarse) {
+    &:hover,
+    &:focus,
+    &:hover a,
+    &:focus a {
+      background-color: colors.$datablock-bg !important;
+      color: colors.$full-brown !important;
+    }
+  }
+}
+
+.sidebar_alert_read_hovered_from_map,
+.sidebar_alert_read_hovered_from_map a {
+  background-color: colors.$datablock-bg !important;
+  color: colors.$full-brown !important;
+}

@@ -1,0 +1,178 @@
+@use "modules/colors" as colors;
+@use "modules/fonts" as fonts;
+
+// Flexbox utilities
+.flex-container {
+  display: flex;
+}
+
+.flex-space-between {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.flex-gap-2 {
+  display: flex;
+  gap: 2px;
+}
+
+.flex-height-100 {
+  display: flex;
+  height: 100%;
+}
+
+// Display utilities
+.display-inline-block {
+  display: inline-block;
+}
+
+.display-none {
+  display: none;
+}
+
+// Width utilities
+.width-100 {
+  width: 100%;
+}
+
+.width-50 {
+  width: 50%;
+}
+
+// Spacing utilities
+.padding-top-10 {
+  padding-top: 10px;
+}
+
+// Text alignment
+.text-top {
+  vertical-align: top;
+}
+
+.vertical-text-top {
+  vertical-align: text-top;
+}
+
+.align-right {
+  float: right;
+}
+
+// Color utilities
+.text-red {
+  color: colors.$full-red;
+}
+
+.red,
+.red_body {
+  color: colors.$full-red;
+
+  @media not all and (pointer: coarse) {
+    &:hover {
+      color: colors.$full-white;
+    }
+  }
+}
+
+span.red_important strong {
+  color: colors.$full-red !important;
+}
+
+.orange {
+  color: colors.$full-orange;
+}
+
+.green {
+  color: colors.$full-limegreen;
+}
+
+.white {
+  color: colors.$full-white;
+}
+
+// Background utilities
+.bg-table {
+  background: colors.$full-white;
+
+  @media (prefers-color-scheme: dark) {
+    background: colors.$grey-bg;
+  }
+}
+
+// Shadow utilities
+.shadow {
+  box-shadow: 2px 2px 2px 1px colors.$mostly-transparent;
+}
+
+// Font utilities
+.monofont {
+  font-family: fonts.$mono-fonts;
+}
+
+.show_strong {
+  font-weight: bold;
+  font-family: fonts.$mono-fonts;
+}
+
+// Miscellaneous utilities
+.small_img {
+  height: 14px;
+  vertical-align: middle;
+  padding-bottom: 3px;
+}
+
+.boxed {
+  box-sizing: border-box;
+  display: inline-block;
+  padding-top: 8px;
+  padding-bottom: 6px;
+  padding-right: 10px;
+  padding-left: 10px;
+  width: 45px;
+  text-align: center;
+  margin-bottom: -1px;
+  background-color: colors.$full-white;
+  border: 1px solid colors.$full-black;
+  font-weight: bold;
+  color: colors.$text-color;
+
+  @media (prefers-color-scheme: dark) {
+    background-color: colors.$grey-bg;
+    border-color: colors.$grey-highlight;
+    color: colors.$mapbackground;
+  }
+}
+
+.boxed_right_arrow {
+  margin-left: -1px;
+}
+
+.spread_text {
+  letter-spacing: 1px;
+  padding-left: 4px;
+
+  @media not all and (pointer: coarse) {
+    &:hover {
+      color: colors.$full-black;
+    }
+  }
+}
+
+.menu_non_link {
+  color: colors.$blue-highlight;
+  text-transform: uppercase;
+}
+
+.sidebar_link {
+  color: colors.$blue-highlight;
+
+  @media not all and (pointer: coarse) {
+    &:hover {
+      color: colors.$full-white;
+    }
+  }
+}
+
+.noleft {
+  border-left: 0 solid colors.$transparent !important;
+}

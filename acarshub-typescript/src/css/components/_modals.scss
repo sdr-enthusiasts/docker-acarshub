@@ -1,0 +1,80 @@
+@use "../modules/colors" as colors;
+@use "../modules/fonts" as fonts;
+
+// jBox Modal and Tooltip styles
+#set_modal.jBox-wrapper {
+  .jBox-title {
+    background-color: colors.$egg-white;
+    color: colors.$blue-highlight;
+    font-family: fonts.$site-fonts;
+    font-size: 20px;
+    text-transform: uppercase;
+    text-align: center;
+  }
+
+  .jBox-content {
+    background-color: colors.$grey-bg;
+    font-family: fonts.$site-fonts;
+  }
+}
+
+#airplane {
+  .jBox-content {
+    font-family: fonts.$mono-fonts !important;
+    text-transform: uppercase;
+  }
+
+  &.jBox-Tooltip.jBox-wrapper .jBox-content {
+    border-radius: 0 0 15px 15px;
+    -moz-border-radius: 0 0 15px 15px;
+  }
+}
+
+.jBox-wrapper {
+  border-radius: 15px;
+  border: 2px solid colors.$datablock-border;
+  padding: 5px;
+  -moz-border-radius: 15px;
+  background-color: colors.$grey-bg;
+  box-shadow: 0 0 3px colors.$jbox-shadow;
+
+  &.jBox-Tooltip,
+  &.jBox-Mouse {
+    max-width: 250px;
+  }
+
+  .jBox-title {
+    background-color: colors.$egg-white;
+    color: colors.$blue-highlight;
+    font-family: fonts.$site-fonts;
+    font-size: 15px;
+    text-transform: uppercase;
+    text-align: center;
+    border-radius: 15px 15px 0 0;
+    -moz-border-radius: 15px 15px 0 0;
+    padding: 0;
+    width: 100%;
+  }
+}
+
+.jBox-Modal {
+  max-height: 80%;
+}
+
+.jBox-container {
+  background-color: colors.$grey-bg;
+  border-radius: 0;
+  box-shadow: 0 0 0 colors.$transparent !important;
+  width: inherit;
+  height: inherit;
+}
+
+.jBox-Mouse.jBox-wrapper .jBox-content,
+.jBox-Tooltip.jBox-wrapper .jBox-content {
+  background-color: colors.$grey-bg;
+  color: colors.$blue-highlight;
+  font-size: 12px;
+  font-weight: bold;
+  font-family: fonts.$site-fonts;
+  box-shadow: none;
+}

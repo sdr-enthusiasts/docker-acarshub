@@ -1,0 +1,248 @@
+@use "modules/colors" as colors;
+@use "modules/fonts" as fonts;
+
+// Base HTML elements and typography
+body {
+  height: 100vh;
+  width: 100vw;
+  background-color: colors.$body-bg;
+  padding-left: 0px;
+  padding-right: 0px;
+  min-width: 400px;
+  margin-left: auto;
+  margin-right: auto;
+  font-family: fonts.$site-fonts;
+  font-size: 14px;
+  line-height: 1.42857143;
+  color: colors.$text-color;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  overflow-y: scroll;
+
+  @media (prefers-color-scheme: dark) {
+    background-color: colors.$body-bg-dark;
+    color: colors.$creamy-white;
+  }
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+
+  @media only screen and (max-width: 700px) {
+    padding-left: 5px;
+    padding-right: 5px;
+    margin-left: 0px;
+    margin-right: 0px;
+  }
+}
+
+// Tables
+thead {
+  border: 1px solid colors.$full-black;
+}
+
+th {
+  padding-left: 5px;
+}
+
+table {
+  &.search {
+    border: 1px solid colors.$full-black;
+    border-collapse: collapse;
+    width: 100%;
+    table-layout: fixed;
+    background-color: transparent;
+    vertical-align: middle;
+
+    thead {
+      border: 0;
+    }
+  }
+
+  &.message {
+    border: none;
+    border-collapse: collapse;
+    width: 100%;
+    table-layout: fixed;
+    background-color: colors.$full-white;
+    vertical-align: top;
+
+    @media (prefers-color-scheme: dark) {
+      background-color: colors.$grey-bg;
+    }
+  }
+}
+
+td {
+  background-color: colors.$full-white;
+  padding: 7px;
+
+  @media (prefers-color-scheme: dark) {
+    background-color: colors.$grey-bg;
+  }
+
+  &:first-child {
+    padding-left: 0;
+  }
+}
+
+// Lists
+ol {
+  list-style-type: circle;
+  margin-left: 0;
+  padding-left: 1em;
+  margin-left: 1em;
+
+  > li {
+    width: 100%;
+    margin-left: 0;
+    padding-left: 0;
+  }
+}
+
+ul {
+  list-style: none;
+  position: relative;
+  text-align: left;
+  padding-left: 10px;
+
+  &::after {
+    clear: both;
+  }
+
+  &::before,
+  &::after {
+    content: " ";
+    display: table;
+  }
+}
+
+li {
+  float: left;
+
+  @media only screen and (max-width: 969px) {
+    float: none;
+  }
+}
+
+// Images
+img {
+  max-width: 100%;
+
+  &.banner_img {
+    max-width: 70px;
+    max-height: 70px;
+  }
+}
+
+// Forms
+textarea {
+  width: 95%;
+}
+
+select {
+  min-width: 100%;
+}
+
+input {
+  min-width: 100%;
+  width: 30px;
+  color: colors.$full-black;
+
+  &[type="checkbox"] {
+    display: none;
+  }
+}
+
+label {
+  padding-top: 5px;
+}
+
+// Dividers
+hr {
+  display: block;
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+  margin-left: auto;
+  margin-right: auto;
+  border-style: inset;
+  border-top: 0.1em solid colors.$grey-bg;
+  color: colors.$body-bg;
+
+  @media (prefers-color-scheme: dark) {
+    color: colors.$body-bg-dark;
+  }
+}
+
+// Pre-formatted text
+pre {
+  box-shadow: 2px 2px 2px 1px colors.$mostly-transparent;
+  white-space: pre-wrap;
+  white-space: -moz-pre-wrap;
+  white-space: -pre-wrap;
+  white-space: -o-pre-wrap;
+  word-wrap: break-word;
+  display: block;
+  padding: 9.5px;
+  margin: 0 0 10px;
+  font-size: 13px;
+  line-height: 1.42857143;
+  color: colors.$pre-color;
+  word-break: break-all;
+  background-color: colors.$pre;
+  border: 1px solid colors.$pre-border;
+  border-radius: 4px;
+
+  @media (prefers-color-scheme: dark) {
+    color: colors.$creamy-white;
+    background-color: colors.$pre-dark;
+    border-color: colors.$pre-border-dark;
+  }
+}
+
+// Links
+a {
+  color: colors.$blue-highlight;
+  text-decoration: none;
+  text-transform: uppercase;
+
+  @media not all and (pointer: coarse) {
+    &:hover {
+      color: colors.$full-black;
+      text-decoration: none;
+    }
+  }
+
+  &:active,
+  &:visited {
+    color: colors.$blue-highlight;
+    text-decoration: none;
+  }
+
+  &[x-apple-data-detectors] {
+    color: inherit !important;
+    text-decoration: none !important;
+    font-size: inherit !important;
+    font-family: inherit !important;
+    font-weight: inherit !important;
+    line-height: inherit !important;
+  }
+}
+
+// Details/Summary
+details {
+  span {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+}
+
+// SVG
+svg {
+  position: relative;
+  display: block;
+  margin-top: auto;
+  margin-bottom: auto;
+  margin-left: auto;
+  margin-right: auto;
+}
