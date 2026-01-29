@@ -32,7 +32,7 @@ RUN set -xe && \
     cp -r ./dist/static/js /webapp/static/ && \
     mv ./dist/static/index.html /webapp/templates/
 
-FROM ghcr.io/sdr-enthusiasts/docker-baseimage:base
+FROM ghcr.io/sdr-enthusiasts/docker-baseimage:trixie-base
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 COPY rootfs/webapp/requirements.txt /src/requirements.txt
