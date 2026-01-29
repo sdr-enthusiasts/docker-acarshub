@@ -84,6 +84,7 @@ jobs:
       build_latest: ${{ github.event.inputs.use_test_image == 'false' || github.event.inputs.use_test_image == ''  }}
       build_baseimage_test: ${{ github.event.inputs.use_test_image == 'true' }}
       build_baseimage_url: :base/:base-test-pr
+      platform_linux_arm32v7_enabled: false
       dockerfile_changes: |
         \# patch acarshub version/sed -i \"s\/Pre-Release\/${{ needs.patch_acars_hub_version.outputs.acarshub_version}}\/g\" \/acarshub-typescript\/src\/helpers\/menu.ts
     secrets:
@@ -104,6 +105,7 @@ jobs:
       build_latest: true
       build_baseimage_test: false
       build_baseimage_url: :base/:base-test-pr
+      platform_linux_arm32v7_enabled: false
       docker_latest_tag: test
       dockerfile_changes: |
         \# patch acarshub version/sed -i \"s\/Pre-Release\/${{ needs.patch_acars_hub_version.outputs.acarshub_version}}\/g\" \/acarshub-typescript\/src\/helpers\/menu.ts
