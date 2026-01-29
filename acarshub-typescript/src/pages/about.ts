@@ -49,7 +49,7 @@ export class AboutPage extends ACARSHubPage {
   set_html(): void {
     $("#right").html(
       `<div class="fixed_results">
-  </div>`
+  </div>`,
     );
 
     $("#modal_text").html("");

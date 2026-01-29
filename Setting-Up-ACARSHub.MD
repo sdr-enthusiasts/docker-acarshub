@@ -45,7 +45,6 @@ Otherwise, remove the `dumpvdl2` section
 ### docker-compose.yaml
 
 ```yaml
-
 services:
   acarshub:
     image: ghcr.io/sdr-enthusiasts/docker-acarshub:latest

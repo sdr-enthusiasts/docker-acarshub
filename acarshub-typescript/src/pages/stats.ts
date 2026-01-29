@@ -64,7 +64,7 @@ export class StatsPage extends ACARSHubPage {
   });
 
   #rainbox: string[] = new palette("cb-Dark2", 8, 0, "").map(function (
-    hex: any
+    hex: any,
   ) {
     return "#" + hex;
   });
@@ -85,7 +85,7 @@ export class StatsPage extends ACARSHubPage {
         this.#vdlm_on,
         this.#hfdl_on,
         this.#imsl_on,
-        this.#irdm_on
+        this.#irdm_on,
       );
       this.show_signal_chart();
       this.show_alert_chart();
@@ -190,7 +190,7 @@ export class StatsPage extends ACARSHubPage {
           this.isFloat(this.#signal_data.levels[i].level)
         ) {
           input_labels.push(
-            `${this.#signal_data.levels[i].level.toLocaleString()}`
+            `${this.#signal_data.levels[i].level.toLocaleString()}`,
           );
           input_data.push(this.#signal_data.levels[i].count);
         }
@@ -392,7 +392,7 @@ export class StatsPage extends ACARSHubPage {
           freq_data_acars,
           total_count_acars,
           "frequencies_acars",
-          "#acars_freq_graph"
+          "#acars_freq_graph",
         );
       }
 
@@ -403,7 +403,7 @@ export class StatsPage extends ACARSHubPage {
           freq_data_vdlm,
           total_count_vdlm,
           "frequencies_vdlm",
-          "#vdlm_freq_graph"
+          "#vdlm_freq_graph",
         );
       }
 
@@ -414,7 +414,7 @@ export class StatsPage extends ACARSHubPage {
           freq_data_hfdl,
           total_count_hfdl,
           "frequencies_hfdl",
-          "#hfdl_freq_graph"
+          "#hfdl_freq_graph",
         );
       }
 
@@ -425,7 +425,7 @@ export class StatsPage extends ACARSHubPage {
           freq_data_imsl,
           total_count_imsl,
           "frequencies_imsl",
-          "#imsl_freq_graph"
+          "#imsl_freq_graph",
         );
       }
 
@@ -436,7 +436,7 @@ export class StatsPage extends ACARSHubPage {
           freq_data_irdm,
           total_count_irdm,
           "frequencies_irdm",
-          "#irdm_freq_graph"
+          "#irdm_freq_graph",
         );
       }
     }
@@ -448,7 +448,7 @@ export class StatsPage extends ACARSHubPage {
     freq_data: number[],
     total_count: number,
     canvas_id: string,
-    graph_id: string
+    graph_id: string,
   ) {
     let output_labels: string[] = [];
     let output_data: number[] = [];
@@ -775,7 +775,7 @@ export class StatsPage extends ACARSHubPage {
         this.#vdlm_on,
         this.#hfdl_on,
         this.#imsl_on,
-        this.#irdm_on
+        this.#irdm_on,
       );
   }
 
@@ -835,42 +835,42 @@ export class StatsPage extends ACARSHubPage {
     $("#1hr").prop(
       "src",
       `static/images/${this.#image_prefix}1hour${prefix}.png?rand=` +
-        Math.random()
+        Math.random(),
     );
     $("#6hr").prop(
       "src",
       `static/images/${this.#image_prefix}6hour${prefix}.png?rand=` +
-        Math.random()
+        Math.random(),
     );
     $("#12hr").prop(
       "src",
       `static/images/${this.#image_prefix}12hour${prefix}.png?rand=` +
-        Math.random()
+        Math.random(),
     );
     $("#24hr").prop(
       "src",
       `static/images/${this.#image_prefix}24hours${prefix}.png?rand=` +
-        Math.random()
+        Math.random(),
     );
     $("#1wk").prop(
       "src",
       `static/images/${this.#image_prefix}1week${prefix}.png?rand=` +
-        Math.random()
+        Math.random(),
     );
     $("#30day").prop(
       "src",
       `static/images/${this.#image_prefix}30days${prefix}.png?rand=` +
-        Math.random()
+        Math.random(),
     );
     $("#6mon").prop(
       "src",
       `static/images/${this.#image_prefix}6months${prefix}.png?rand=` +
-        Math.random()
+        Math.random(),
     );
     $("#1yr").prop(
       "src",
       `static/images/${this.#image_prefix}1year${prefix}.png?rand=` +
-        Math.random()
+        Math.random(),
     );
   }
 

@@ -37,7 +37,7 @@ export interface status_external_formats {
     {
       Status: string;
       type: string;
-    }
+    },
   ];
 }
 

@@ -147,7 +147,7 @@ export class LiveMapPage extends ACARSHubPage {
           !this.#show_only_acars
             ? images.toggle_acars_only_show_acars
             : images.toggle_acars_only_show_all
-        }`
+        }`,
       );
       this.redraw_map();
     }
@@ -167,7 +167,7 @@ export class LiveMapPage extends ACARSHubPage {
           this.#show_datablocks
             ? images.toggle_datablocks_on
             : images.toggle_datablocks_off
-        }`
+        }`,
       );
       this.redraw_map();
     }
@@ -182,7 +182,7 @@ export class LiveMapPage extends ACARSHubPage {
       {
         expires: 365,
         sameSite: "Strict",
-      }
+      },
     );
 
     if (this.page_active) {
@@ -191,7 +191,7 @@ export class LiveMapPage extends ACARSHubPage {
           this.#show_extended_datablocks
             ? images.toggle_extended_datablocks_on
             : images.toggle_extended_datablocks_off
-        }`
+        }`,
       );
       this.redraw_map();
     }
@@ -212,7 +212,7 @@ export class LiveMapPage extends ACARSHubPage {
         this.showPlaneMessages(
           this.#current_modal_terms.callsign,
           this.#current_modal_terms.hex,
-          this.#current_modal_terms.tail
+          this.#current_modal_terms.tail,
         );
       }
       this.update_targets();
@@ -283,21 +283,21 @@ export class LiveMapPage extends ACARSHubPage {
           if (
             this.#adsb_planes[plane].position_marker != null &&
             this.#layerGroupPlanes.hasLayer(
-              this.#adsb_planes[plane].position_marker!
+              this.#adsb_planes[plane].position_marker!,
             )
           ) {
             this.#layerGroupPlanes.removeLayer(
-              this.#adsb_planes[plane].position_marker!
+              this.#adsb_planes[plane].position_marker!,
             );
           }
           if (
             this.#adsb_planes[plane].datablock_marker != null &&
             this.#layerGroupPlaneDatablocks.hasLayer(
-              this.#adsb_planes[plane].datablock_marker!
+              this.#adsb_planes[plane].datablock_marker!,
             )
           ) {
             this.#layerGroupPlaneDatablocks.removeLayer(
-              this.#adsb_planes[plane].datablock_marker!
+              this.#adsb_planes[plane].datablock_marker!,
             );
           }
           delete this.#adsb_planes[plane];
@@ -377,7 +377,7 @@ export class LiveMapPage extends ACARSHubPage {
     plane_data: plane_data,
     callsign: string,
     tail: string,
-    hex: string
+    hex: string,
   ): plane_num_msgs_and_alert {
     let num_messages: number = <any>undefined;
     let alert: boolean = false;
@@ -531,8 +531,8 @@ export class LiveMapPage extends ACARSHubPage {
       plane.flight && plane.flight.trim() !== ""
         ? plane.flight.trim()
         : plane.r && plane.r !== ""
-        ? plane.r
-        : plane.hex
+          ? plane.r
+          : plane.hex
     )
       .replace("~", "")
       .replace(".", "")
@@ -660,7 +660,7 @@ export class LiveMapPage extends ACARSHubPage {
             hex,
             tail,
             num_messages,
-            old_messages
+            old_messages,
           );
           this.set_old_messages(hex, num_messages);
         } else if (num_messages !== old_messages) {
@@ -751,7 +751,7 @@ export class LiveMapPage extends ACARSHubPage {
 
           if (callsign.includes("@@")) {
             console.error(
-              "CALLSIGN CONTAINS @@. Not adding mouse hover handlers."
+              "CALLSIGN CONTAINS @@. Not adding mouse hover handlers.",
             );
             continue;
           }
@@ -780,8 +780,8 @@ export class LiveMapPage extends ACARSHubPage {
                     old_messages,
                     hex,
                     tail,
-                    true
-                  )
+                    true,
+                  ),
                 );
                 $(`#${hex}_marker`).addClass("airplane_orange");
               }
@@ -797,8 +797,8 @@ export class LiveMapPage extends ACARSHubPage {
                   squawk,
                   old_messages,
                   hex,
-                  tail
-                )
+                  tail,
+                ),
               );
               tooltip.attach_all_tooltips();
             },
@@ -845,7 +845,7 @@ export class LiveMapPage extends ACARSHubPage {
     old_messages: number,
     hex: string,
     tail: string,
-    skip_hovered: boolean = false
+    skip_hovered: boolean = false,
   ): string {
     let color: string = "airplane_blue";
     if (!skip_hovered && this.#current_hovered_from_sidebar == callsign)
@@ -866,7 +866,7 @@ export class LiveMapPage extends ACARSHubPage {
           hex,
           tail,
           num_messages,
-          old_messages
+          old_messages,
         );
         this.set_old_messages(hex, num_messages);
         num_messages = old_messages;
@@ -928,7 +928,7 @@ export class LiveMapPage extends ACARSHubPage {
             squawk,
             old_messages,
             hex,
-            tail
+            tail,
           );
 
           const popup_text = `<div>${
@@ -969,13 +969,13 @@ export class LiveMapPage extends ACARSHubPage {
                 null,
                 null,
                 current_plane.type,
-                alt
+                alt,
               );
 
               icon = svgShapeToURI(
                 type_shape.name,
                 0.5,
-                type_shape.scale * 1.5
+                type_shape.scale * 1.5,
               ) as aircraft_icon;
               this.#adsb_planes[hex].icon = icon;
             }
@@ -1000,12 +1000,12 @@ export class LiveMapPage extends ACARSHubPage {
             // Marker Should be displayed
             if (
               !this.#layerGroupPlanes.hasLayer(
-                this.#adsb_planes[plane].position_marker!
+                this.#adsb_planes[plane].position_marker!,
               )
             ) {
               // Marker is missing, add it
               this.#adsb_planes[plane].position_marker!.addTo(
-                this.#layerGroupPlanes
+                this.#layerGroupPlanes,
               );
               if (num_messages) {
                 // Add in click event for showing messages
@@ -1018,11 +1018,11 @@ export class LiveMapPage extends ACARSHubPage {
                     squawk,
                     num_messages || 0,
                     hex,
-                    tail
+                    tail,
                   );
                   $(`#${hex}_marker`).removeClass();
                   $(`#${hex}_marker`).addClass(
-                    `datablock ${color} data-jbox-content="${popup_text}`
+                    `datablock ${color} data-jbox-content="${popup_text}`,
                   );
                 });
               }
@@ -1048,7 +1048,7 @@ export class LiveMapPage extends ACARSHubPage {
               $(`#${hex}_marker`).attr("data-jbox-content", popup_text);
               $(`#${hex}_marker`).css(
                 "-webkit-transform",
-                `:rotate(${rotate}deg)`
+                `:rotate(${rotate}deg)`,
               );
               $(`#${hex}_marker`).css("-moz-transform", `rotate(${rotate}deg)`);
               $(`#${hex}_marker`).css("-ms-transform", `rotate(${rotate}deg)`);
@@ -1069,11 +1069,11 @@ export class LiveMapPage extends ACARSHubPage {
                     squawk,
                     num_messages || 0,
                     hex,
-                    tail
+                    tail,
                   );
                   $(`#${hex}_marker`).removeClass();
                   $(`#${hex}_marker`).addClass(
-                    `datablock ${color} data-jbox-content="${popup_text}`
+                    `datablock ${color} data-jbox-content="${popup_text}`,
                   );
                 });
               }
@@ -1081,12 +1081,12 @@ export class LiveMapPage extends ACARSHubPage {
           } else if (
             this.#show_only_acars &&
             this.#layerGroupPlanes.hasLayer(
-              this.#adsb_planes[plane].position_marker!
+              this.#adsb_planes[plane].position_marker!,
             )
           ) {
             // remove the marker if present
             this.#layerGroupPlanes.removeLayer(
-              this.#adsb_planes[plane].position_marker!
+              this.#adsb_planes[plane].position_marker!,
             );
           }
 
@@ -1102,7 +1102,7 @@ export class LiveMapPage extends ACARSHubPage {
             });
             this.#adsb_planes[plane].datablock_marker = new LeafLet.Marker(
               this.offset_datablock([lat, lon]) as LeafLet.LatLngTuple,
-              { icon: datablock_icon }
+              { icon: datablock_icon },
             );
           }
 
@@ -1111,11 +1111,11 @@ export class LiveMapPage extends ACARSHubPage {
             this.#show_datablocks &&
             (!this.#show_only_acars || num_messages) &&
             this.#layerGroupPlaneDatablocks.hasLayer(
-              this.#adsb_planes[plane].datablock_marker!
+              this.#adsb_planes[plane].datablock_marker!,
             )
           ) {
             this.#adsb_planes[plane].datablock_marker!.setLatLng(
-              this.offset_datablock([lat, lon])
+              this.offset_datablock([lat, lon]),
             );
             $(`#${hex}_datablock`).html(datablock);
           } else if (
@@ -1124,16 +1124,16 @@ export class LiveMapPage extends ACARSHubPage {
           ) {
             // datablock is missing and should be displayed, add it to the map
             this.#adsb_planes[plane].datablock_marker!.addTo(
-              this.#layerGroupPlaneDatablocks
+              this.#layerGroupPlaneDatablocks,
             );
           } else if (
             this.#layerGroupPlaneDatablocks.hasLayer(
-              this.#adsb_planes[plane].datablock_marker!
+              this.#adsb_planes[plane].datablock_marker!,
             )
           ) {
             // datablock is present and should not be displayed, remove it from the map
             this.#layerGroupPlaneDatablocks.removeLayer(
-              this.#adsb_planes[plane].datablock_marker!
+              this.#adsb_planes[plane].datablock_marker!,
             );
           }
         } else {
@@ -1142,11 +1142,11 @@ export class LiveMapPage extends ACARSHubPage {
           if (
             this.#adsb_planes[plane].position_marker !== null &&
             this.#layerGroupPlanes.hasLayer(
-              this.#adsb_planes[plane].position_marker!
+              this.#adsb_planes[plane].position_marker!,
             )
           ) {
             this.#layerGroupPlanes.removeLayer(
-              this.#adsb_planes[plane].position_marker!
+              this.#adsb_planes[plane].position_marker!,
             );
           }
 
@@ -1154,11 +1154,11 @@ export class LiveMapPage extends ACARSHubPage {
           if (
             this.#adsb_planes[plane].datablock_marker !== null &&
             this.#layerGroupPlaneDatablocks.hasLayer(
-              this.#adsb_planes[plane].datablock_marker!
+              this.#adsb_planes[plane].datablock_marker!,
             )
           ) {
             this.#layerGroupPlaneDatablocks.removeLayer(
-              this.#adsb_planes[plane].datablock_marker!
+              this.#adsb_planes[plane].datablock_marker!,
             );
           }
         }
@@ -1188,7 +1188,7 @@ export class LiveMapPage extends ACARSHubPage {
   showPlaneMessages(
     plane_callsign: string = "",
     plane_hex: string = "",
-    plane_tail: string = ""
+    plane_tail: string = "",
   ): void {
     if (plane_callsign === "" && plane_hex === "") return;
     this.#current_modal_terms = {
@@ -1200,7 +1200,7 @@ export class LiveMapPage extends ACARSHubPage {
     const plane_details: plane_match = get_match(
       plane_callsign,
       plane_hex,
-      plane_tail
+      plane_tail,
     );
 
     const matches = plane_details.messages;
@@ -1249,7 +1249,7 @@ export class LiveMapPage extends ACARSHubPage {
       this.showPlaneMessages(
         this.#current_modal_terms.callsign,
         this.#current_modal_terms.hex,
-        this.#current_modal_terms.tail
+        this.#current_modal_terms.tail,
       );
     }
     tooltip.cycle_tooltip();
@@ -1266,7 +1266,7 @@ export class LiveMapPage extends ACARSHubPage {
     this.plane_message_modal.setWidth(window_width);
     resize_tabs(
       (this.#window_size.height > 500 ? this.#window_size.height : 500) - 40,
-      false
+      false,
     );
     $(".show_when_small").css("display", `inline-block`);
     $(".show_when_big").css("display", "none");
@@ -1313,14 +1313,14 @@ export class LiveMapPage extends ACARSHubPage {
         zoomControl: false,
         click:
           /Android|webOS|iPhone|iPad|iPod|BlackBerry/i.test(
-            navigator.userAgent
+            navigator.userAgent,
           ) ||
           /Android|webOS|iPhone|iPad|iPod|BlackBerry/i.test(navigator.platform)
             ? false
             : true,
         tap:
           /Android|webOS|iPhone|iPad|iPod|BlackBerry/i.test(
-            navigator.userAgent
+            navigator.userAgent,
           ) ||
           /Android|webOS|iPhone|iPad|iPod|BlackBerry/i.test(navigator.platform)
             ? true
@@ -1469,7 +1469,7 @@ export class LiveMapPage extends ACARSHubPage {
     $("#modal_text").html("");
     if (this.#adsb_enabled)
       $("#log").html(
-        '<div style="display: flex;height: 100%;" ><div id="mapid"></div><div id="planes"></div>'
+        '<div style="display: flex;height: 100%;" ><div id="mapid"></div><div id="planes"></div>',
       );
     else $("#log").html("ADSB Disabled");
     //setScrollers();

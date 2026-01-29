@@ -112,10 +112,10 @@ export class AlertsPage extends ACARSHubPage {
     this.show_sound();
     $("#alert_text").val(this.combineArray(this.#alert_text).toUpperCase());
     $("#alert_text_ignore").val(
-      this.combineArray(this.#ignore_text).toUpperCase()
+      this.combineArray(this.#ignore_text).toUpperCase(),
     );
     $("#alert_callsigns").val(
-      this.combineArray(this.#alert_callsigns).toUpperCase()
+      this.combineArray(this.#alert_callsigns).toUpperCase(),
     );
     $("#alert_tail").val(this.combineArray(this.#alert_tail).toUpperCase());
     $("#alert_icao").val(this.combineArray(this.#alert_icao).toUpperCase());
@@ -229,7 +229,7 @@ export class AlertsPage extends ACARSHubPage {
 
     $("#alert_text").val(this.combineArray(this.#alert_text).toUpperCase());
     $("#alert_callsigns").val(
-      this.combineArray(this.#alert_callsigns).toUpperCase()
+      this.combineArray(this.#alert_callsigns).toUpperCase(),
     );
     $("#alert_tail").val(this.combineArray(this.#alert_tail).toUpperCase());
     $("#alert_icao").val(this.combineArray(this.#alert_icao).toUpperCase());
@@ -344,7 +344,7 @@ export class AlertsPage extends ACARSHubPage {
           msg.msghtml.text
             .toUpperCase()
             .search(
-              new RegExp("\\b" + this.#alert_text[i].toUpperCase() + "\\b")
+              new RegExp("\\b" + this.#alert_text[i].toUpperCase() + "\\b"),
             ) != -1
         ) {
           const ignore_not_found = Object.values(this.#ignore_text).every(
@@ -354,7 +354,7 @@ export class AlertsPage extends ACARSHubPage {
                   .text!.toUpperCase()
                   .search(new RegExp("\\b" + text + "\\b")) == -1
               );
-            }
+            },
           );
           if (!ignore_not_found) dont_ignore_msg = false;
           if (ignore_not_found && dont_ignore_msg) {
@@ -442,7 +442,7 @@ export class AlertsPage extends ACARSHubPage {
     ) {
       // get random number between 1000 and 10000000000
       const random_number = String(
-        Math.floor(Math.random() * (1000000000 - 1000 + 1)) + 1000
+        Math.floor(Math.random() * (1000000000 - 1000 + 1)) + 1000,
       );
       const msg_text: string =
         "A new message matched with the following term(s): " + term_string;
@@ -565,14 +565,14 @@ export class AlertsPage extends ACARSHubPage {
     super.set_page_urls(documentPath, documentUrl);
 
     this.#alert_sound = new Audio(
-      `${this.document_url}static/sounds/alert.mp3`
+      `${this.document_url}static/sounds/alert.mp3`,
     );
   }
 
   alerts_set_html(show_menu_modal: boolean): void {
     if (show_menu_modal) {
       $("#modal_text").html(
-        '<a href="javascript:show_page_modal()">Page Settings</a>'
+        '<a href="javascript:show_page_modal()">Page Settings</a>',
       );
     }
     $("#log").html("");

@@ -43,7 +43,7 @@
           this.container,
           event,
           this.options.events[event],
-          this.container
+          this.container,
         );
       }
 
@@ -56,7 +56,7 @@
           this.container,
           event,
           this.options.events[event],
-          this.container
+          this.container,
         );
       }
     },

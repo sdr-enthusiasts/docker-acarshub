@@ -53,7 +53,7 @@ export let menu = {
     vdlm: boolean = false,
     hfdl: boolean = false,
     imsl: boolean = false,
-    irdm: boolean = false
+    irdm: boolean = false,
   ): void {
     let text: string = "";
 
@@ -128,13 +128,13 @@ export let menu = {
     if (version.is_outdated) {
       $("#release_version").attr(
         "data-jbox-content",
-        `Latest non-development version of ACARS Hub is ${version.github_version}`
+        `Latest non-development version of ACARS Hub is ${version.github_version}`,
       );
       $("#release_version").addClass("red_important");
     } else {
       $("#release_version").attr(
         "data-jbox-content",
-        `ACARS Hub is up to date. Current version is ${version.github_version}`
+        `ACARS Hub is up to date. Current version is ${version.github_version}`,
       );
       $("#release_version").removeClass("red_important");
     }
@@ -142,7 +142,7 @@ export let menu = {
 
   set_about_page_urls: function (
     documentPath: string,
-    documentUrl: string
+    documentUrl: string,
   ): void {
     this.acars_path = documentPath;
     this.acars_url = documentUrl;

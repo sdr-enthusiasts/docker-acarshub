@@ -278,8 +278,8 @@ export class LiveMessagePage extends ACARSHubPage {
               if (sub_msg.uid === element_id) {
                 return true;
               }
-            }
-          )
+            },
+          ),
         );
 
         active_tab = active_tab === "-1" ? "0" : active_tab;
@@ -315,11 +315,11 @@ export class LiveMessagePage extends ACARSHubPage {
     // Update the buttons for the previous / next message
     $(`#tab${uid}_previous`).attr(
       "href",
-      `javascript:handle_radio("${previous_tab}", "${uid}")`
+      `javascript:handle_radio("${previous_tab}", "${uid}")`,
     );
     $(`#tab${uid}_next`).attr(
       "href",
-      `javascript:handle_radio("${next_tab}", "${uid}")`
+      `javascript:handle_radio("${next_tab}", "${uid}")`,
     );
 
     let added = false;
@@ -352,12 +352,12 @@ export class LiveMessagePage extends ACARSHubPage {
       // Generate new HTML for the messages
 
       console.log(
-        `Updating message group ${uid} with ${messages.length} messages`
+        `Updating message group ${uid} with ${messages.length} messages`,
       );
       let replacement_message = display_message_group(
         messages,
         this.#selected_tabs,
-        true
+        true,
       );
       console.log(`Replacement message HTML: ${replacement_message}`);
 
@@ -379,15 +379,15 @@ export class LiveMessagePage extends ACARSHubPage {
         display_messages(
           this.#lm_msgs_received.get_all_messages(),
           this.#selected_tabs,
-          true
-        )
+          true,
+        ),
       );
       resize_tabs();
     } else {
       this.#pause = true;
       $("#pause_updates").html('<span class="red">Unpause Updates</span>');
       $("#received").html(
-        'Received messages <span class="red">(paused)</span>: '
+        'Received messages <span class="red">(paused)</span>: ',
       );
     }
   }
@@ -414,7 +414,7 @@ export class LiveMessagePage extends ACARSHubPage {
       this.#text_filter = true;
 
       $("#filtered").html(
-        '<div><span class="menu_non_link">Filtered Messages:&nbsp;</span><span class="green" id="filteredmessages"></span></div>'
+        '<div><span class="menu_non_link">Filtered Messages:&nbsp;</span><span class="green" id="filteredmessages"></span></div>',
       );
 
       $("#filteredmessages").html(String(this.#filtered_messages));
@@ -464,7 +464,7 @@ export class LiveMessagePage extends ACARSHubPage {
 
     if (this.#exclude.length > 0 || this.#text_filter) {
       $("#filtered").html(
-        '<div><span class="menu_non_link">Filtered Messages:&nbsp;</span><span class="green" id="filteredmessages"></span></div>'
+        '<div><span class="menu_non_link">Filtered Messages:&nbsp;</span><span class="green" id="filteredmessages"></span></div>',
       );
 
       $("#filteredmessages").html(String(this.#filtered_messages));
@@ -493,9 +493,9 @@ export class LiveMessagePage extends ACARSHubPage {
           ? display_messages(
               this.#lm_msgs_received.get_all_messages(),
               this.#selected_tabs,
-              true
+              true,
             )
-          : this.#current_message_string
+          : this.#current_message_string,
       ); // show the messages we've received
       resize_tabs();
       $(document).on("keyup", (event: any) => {
@@ -516,7 +516,7 @@ export class LiveMessagePage extends ACARSHubPage {
 
   set_html(): void {
     $("#modal_text").html(
-      '<a href="javascript:show_page_modal()">Page Settings</a>'
+      '<a href="javascript:show_page_modal()">Page Settings</a>',
     );
   }
 
@@ -593,7 +593,7 @@ export class LiveMessagePage extends ACARSHubPage {
   property_checker(
     message: acars_msg,
     new_msg: acars_msg,
-    property: string
+    property: string,
   ): boolean {
     return property in message && property in new_msg;
   }
@@ -836,9 +836,8 @@ export class LiveMessagePage extends ACARSHubPage {
               this.#lm_msgs_received.planes[index_of_found_plane].has_alerts =
                 true;
             if (matched.was_found)
-              this.#lm_msgs_received.planes[
-                index_of_found_plane
-              ].num_alerts += 1;
+              this.#lm_msgs_received.planes[index_of_found_plane].num_alerts +=
+                1;
           }
 
           this.#lm_msgs_received.planes.forEach((item, i) => {
@@ -896,8 +895,8 @@ export class LiveMessagePage extends ACARSHubPage {
           display_message_group(
             this.#lm_msgs_received.get_first_message(),
             this.#selected_tabs,
-            true
-          )
+            true,
+          ),
         );
         // After updating the tree we may exceed the length. If so, remove the last element
         if ($("#log .acars_message_container").length > 20) {
@@ -910,7 +909,7 @@ export class LiveMessagePage extends ACARSHubPage {
         this.#current_message_string = display_messages(
           this.#lm_msgs_received.get_all_messages(),
           this.#selected_tabs,
-          true
+          true,
         );
         $("#log").html(this.#current_message_string);
       }
@@ -923,7 +922,7 @@ export class LiveMessagePage extends ACARSHubPage {
   get_match(
     callsign: string = "",
     hex: string = "",
-    tail: string = ""
+    tail: string = "",
   ): plane_match {
     if (callsign === "" && hex === "" && tail === "")
       return { messages: [] as acars_msg[], has_alerts: false } as plane_match;

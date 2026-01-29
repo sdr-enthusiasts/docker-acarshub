@@ -25,7 +25,7 @@ import { get_flight_tracking_url } from "../index";
 export function display_messages(
   msgs_to_process: acars_msg[][],
   selected_tabs: string = "",
-  live_page: boolean = false
+  live_page: boolean = false,
 ): string {
   let html_string = "";
 
@@ -39,7 +39,7 @@ export function display_messages(
 export function display_message_group(
   msg_to_process: acars_msg[],
   selected_tabs: string = "",
-  live_page: boolean = false
+  live_page: boolean = false,
 ): string {
   let msgs_string = ""; // output string that gets returned
   let message_tab_splits: string[] = []; // variable to save the split output of selected_tabs
@@ -74,7 +74,7 @@ export function display_message_group(
               ) {
                 return true;
               }
-            })
+            }),
           );
         }
       }
@@ -94,44 +94,41 @@ export function display_message_group(
       }
 
       msgs_string += html_functions.start_message_tabs();
-      for (let j = 0; j < msg_to_process.length; j++) {
-        // Loop through all messages in the group to show all of the tabs
-        let tab_uid = unique_id;
 
-        tab_uid = msg_to_process[j].uid;
+      // Add navigation arrows
+      msgs_string += html_functions.create_message_nav_arrows(
+        previous_tab,
+        unique_id,
+      );
 
-        // If there is no active tab set by the user we'll set the newest message to be active/checked
-
-        msgs_string +=
-          j === 0
-            ? html_functions.create_message_nav_arrows(
-                previous_tab,
-                unique_id
-              ) +
-              html_functions.create_message_nav_arrows(
-                next_tab,
-                unique_id,
-                false
-              )
-            : "";
-
-        if (active_tab === "0" && j === 0)
-          msgs_string += html_functions.create_message_tab(tab_uid, unique_id);
-        else if (tab_uid === String(active_tab))
-          msgs_string += html_functions.create_message_tab(tab_uid, unique_id);
-        else
-          msgs_string += html_functions.create_message_tab(
-            tab_uid,
-            unique_id,
-            false
-          );
-        msgs_string += html_functions.message_tab_label(
-          j,
-          typeof msg_to_process[j].matched !== "undefined",
-          tab_uid,
-          unique_id
-        );
+      // Determine the active message index
+      let active_index = 0;
+      if (array_index_tab !== "0") {
+        active_index = Number(array_index_tab);
       }
+
+      // Create a single tab for the active message
+      let active_tab_uid = msg_to_process[active_index].uid;
+      msgs_string += html_functions.create_message_tab(
+        active_tab_uid,
+        unique_id,
+      );
+
+      // Show message number as "X/Total"
+      const matched =
+        typeof msg_to_process[active_index].matched !== "undefined";
+      msgs_string += `<label for="tab${active_tab_uid}_${unique_id}" class="msg${active_index}">${
+        matched ? '<span class="red_body">' : ""
+      }<span class="show_when_big">Message</span><span class="show_when_small">M#</span> ${
+        active_index + 1
+      }/${msg_to_process.length}${matched ? "</span>" : ""}</label>`;
+
+      // Add next arrow
+      msgs_string += html_functions.create_message_nav_arrows(
+        next_tab,
+        unique_id,
+        false,
+      );
     }
   }
 
@@ -149,7 +146,7 @@ export function display_message_group(
 function inner_message_html(
   msg_to_process: acars_msg[],
   unique_id: string,
-  active_tab: string
+  active_tab: string,
 ): string {
   let html_output = "";
 
@@ -175,7 +172,7 @@ function inner_message_html(
     html_output += html_functions.message_station_and_type(
       message.message_type,
       message.station_id,
-      msg_to_process.length === 1 && typeof message.matched !== "undefined"
+      msg_to_process.length === 1 && typeof message.matched !== "undefined",
     );
     let timestamp: Date; // variable to save the timestamp We need this because the database saves the time as 'time' and live messages have it as 'timestamp' (blame Fred for this silly misnaming of db columns)
 
@@ -184,7 +181,7 @@ function inner_message_html(
       timestamp = new Date(message.timestamp * 1000);
     else
       timestamp = new Date(
-        (typeof message.msg_time !== "undefined" ? message.msg_time : 0) * 1000
+        (typeof message.msg_time !== "undefined" ? message.msg_time : 0) * 1000,
       );
 
     html_output += html_functions.message_timestamp(timestamp);
@@ -200,7 +197,7 @@ function inner_message_html(
       typeof message.duplicates !== "undefined"
         ? html_functions.add_message_field(
             "Duplicate(s) Received",
-            message.duplicates
+            message.duplicates,
           )
         : "";
     html_output +=
@@ -215,7 +212,7 @@ function inner_message_html(
               " " +
               (typeof message.label_type !== "undefined"
                 ? message.label_type.trim()
-                : "")
+                : ""),
           )
         : "";
 
@@ -230,16 +227,16 @@ function inner_message_html(
               (typeof message.toaddr_hex !== "undefined"
                 ? "/" +
                   html_functions.ensure_hex_is_uppercase_and_six_chars(
-                    message.toaddr_hex
+                    message.toaddr_hex,
                   )
-                : "/?")
+                : "/?"),
           )
         : "";
     html_output +=
       typeof message.toaddr_decoded !== "undefined"
         ? html_functions.add_message_field(
             "To Address Station ID",
-            message.toaddr_decoded
+            message.toaddr_decoded,
           )
         : "";
 
@@ -252,16 +249,16 @@ function inner_message_html(
               (typeof message.fromaddr_hex !== "undefined"
                 ? "/" +
                   html_functions.ensure_hex_is_uppercase_and_six_chars(
-                    message.fromaddr_hex
+                    message.fromaddr_hex,
                   )
-                : "/?")
+                : "/?"),
           )
         : "";
     html_output +=
       typeof message.fromaddr_decoded !== "undefined"
         ? html_functions.add_message_field(
             "From Address Station ID",
-            message.fromaddr_decoded
+            message.fromaddr_decoded,
           )
         : "";
     html_output +=
@@ -276,7 +273,7 @@ function inner_message_html(
       typeof message.eta !== "undefined"
         ? html_functions.add_message_field(
             "Estimated time of arrival",
-            message.eta
+            message.eta,
           )
         : "";
     html_output +=
@@ -302,7 +299,7 @@ function inner_message_html(
             message.lat.toLocaleString(undefined, {
               maximumFractionDigits: 2,
               minimumFractionDigits: 2,
-            })
+            }),
           )
         : "";
     html_output +=
@@ -312,7 +309,7 @@ function inner_message_html(
             message.lon.toLocaleString(undefined, {
               maximumFractionDigits: 2,
               minimumFractionDigits: 2,
-            })
+            }),
           )
         : "";
 
@@ -330,7 +327,7 @@ function inner_message_html(
     // // Table footer row, tail & flight info
     html_output += html_functions.show_footer_and_sidebar_text(
       message,
-      get_flight_tracking_url()
+      get_flight_tracking_url(),
     );
 
     // Finish table html

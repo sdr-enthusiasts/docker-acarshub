@@ -50,7 +50,7 @@ L.Control.Radar = L.Control.extend({
     checkbox_div = L.DomUtil.create(
       `div`,
       `leaflet-radar-toggle`,
-      this.container
+      this.container,
     );
 
     this.checkbox = document.createElement(`input`);
@@ -69,7 +69,7 @@ L.Control.Radar = L.Control.extend({
     this.timestamp_div = L.DomUtil.create(
       `div`,
       `leaflet-radar-timestamp`,
-      this.container
+      this.container,
     );
 
     this.setDisabled(this.options.start_active);
@@ -147,7 +147,7 @@ L.Control.Radar = L.Control.extend({
 
   removeLayers: function () {
     this.timeLayers.forEach((timeLayer) =>
-      timeLayer.tileLayer.removeFrom(this.map)
+      timeLayer.tileLayer.removeFrom(this.map),
     );
     this.timeLayers = [];
     this.timeLayerIndex = 0;
@@ -187,7 +187,7 @@ L.Control.Radar = L.Control.extend({
       });
 
       const timeString = new Date(
-        currentTime.valueOf() - timeDiffMins * 60 * 1000
+        currentTime.valueOf() - timeDiffMins * 60 * 1000,
       ).toLocaleTimeString();
       timeLayers.push({
         timestamp: `${timeString}`,

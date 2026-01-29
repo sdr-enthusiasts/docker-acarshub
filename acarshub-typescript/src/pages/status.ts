@@ -47,7 +47,7 @@ export class StatusPage extends ACARSHubPage {
     adsb_status = {
       adsb_enabled: false,
       adsb_getting_data: false,
-    } as adsb_status
+    } as adsb_status,
   ): void {
     this.#adsb_status = adsb_status;
   }
@@ -64,11 +64,11 @@ export class StatusPage extends ACARSHubPage {
         this.#adsb_status.adsb_getting_data === false)
     ) {
       $("#system_status").html(
-        `<a href="javascript:new_page('Status')">System Status: <span class="red_body">Error</a></span>`
+        `<a href="javascript:new_page('Status')">System Status: <span class="red_body">Error</a></span>`,
       );
     } else {
       $("#system_status").html(
-        `<a href="javascript:new_page('Status')">System Status: <span class="green">Okay</a></span>`
+        `<a href="javascript:new_page('Status')">System Status: <span class="green">Okay</a></span>`,
       );
     }
   }
@@ -85,8 +85,8 @@ export class StatusPage extends ACARSHubPage {
           this.#current_status.status.servers,
           this.#current_status.status.global,
           this.#current_status.status.stats,
-          this.#current_status.status.external_formats
-        )
+          this.#current_status.status.external_formats,
+        ),
       );
     }
   }
@@ -97,7 +97,7 @@ export class StatusPage extends ACARSHubPage {
     servers: status_server,
     receivers: status_global,
     stats: status_decoder,
-    external_formats: status_external_formats
+    external_formats: status_external_formats,
   ): string {
     let html_output = "<h2>ACARS Hub System Status</h2>";
     const keys_decoder = Object.keys(decoders);
@@ -183,7 +183,7 @@ export class StatusPage extends ACARSHubPage {
 
       html_output += `${sub_string.padEnd(
         55,
-        "."
+        ".",
       )}<strong><span class=${class_string}>${
         receivers[key].Status
       }</span></strong>`;
@@ -224,7 +224,7 @@ export class StatusPage extends ACARSHubPage {
   set_html(): void {
     $("#right").html(
       `<div class="fixed_results">
-  </div>`
+  </div>`,
     );
 
     $("#modal_text").html("");

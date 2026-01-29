@@ -131,7 +131,7 @@ export class SearchPage extends ACARSHubPage {
       display = display_messages(results.reverse());
       display_nav_results = this.display_search(
         this.#current_page,
-        this.#num_results[i]
+        this.#num_results[i],
       );
       $("#search_results").html(display);
       $("#num_results").html(display_nav_results);
@@ -246,7 +246,7 @@ export class SearchPage extends ACARSHubPage {
     if (typeof page === "undefined" || page === null) return;
     if (page > this.#total_pages || page < 1) {
       $("#error_message").html(
-        `Please enter a value less than ${this.#total_pages} and greater than 1`
+        `Please enter a value less than ${this.#total_pages} and greater than 1`,
       );
       return;
     }
@@ -273,7 +273,7 @@ export class SearchPage extends ACARSHubPage {
     html +=
       '<table class="search"><thead><th class="search_label"></th><th class="search_term"></th></thead>';
     html += `<tr><td colspan="2"><span class="menu_non_link">Query Time: ${this.#query_time.toFixed(
-      4
+      4,
     )} Seconds</span></td></tr>`;
     html += `<tr><td colspan="2"><span class="menu_non_link">Found <strong>${total}</strong> result(s) in <strong>${
       this.#total_pages

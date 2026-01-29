@@ -132,7 +132,7 @@ var palette = (function () {
     if (typeof scheme !== function_type) {
       var arr = palette.listSchemes(
         /** @type {string|palette.Palette} */ (scheme),
-        number
+        number,
       );
       if (!arr.length) {
         return null;
@@ -242,7 +242,7 @@ var palette = (function () {
               },
               _number,
               0,
-              colors.length - 1
+              colors.length - 1,
             );
           }
         }
@@ -257,7 +257,7 @@ var palette = (function () {
           _number,
           0,
           1,
-          self.color_func_cyclic
+          self.color_func_cyclic,
         );
       } else {
         return null;
@@ -456,7 +456,7 @@ var palette = (function () {
     groups,
     palettes,
     opt_max,
-    opt_cbf_max
+    opt_cbf_max,
   ) {
     var scheme = palette.Scheme(name, groups);
     scheme.addPalettes.apply(scheme, slice(arguments, 2));
@@ -484,7 +484,7 @@ var palette = (function () {
     groups,
     func,
     opt_is_cbf,
-    opt_cyclic
+    opt_cyclic,
   ) {
     var scheme = palette.Scheme(name, groups);
     scheme.setColorFunction.apply(scheme, slice(arguments, 2));
@@ -509,11 +509,11 @@ var palette = (function () {
     registered_schemes["n-" + scheme.scheme_name] = [scheme];
     scheme.groups.forEach(function (g) {
       (registered_schemes["g-" + g] = registered_schemes["g-" + g] || []).push(
-        scheme
+        scheme,
       );
     });
     (registered_schemes["g-all"] = registered_schemes["g-all"] || []).push(
-      scheme
+      scheme,
     );
   };
 
@@ -692,7 +692,7 @@ var palette = (function () {
     number,
     opt_start,
     opt_end,
-    opt_cyclic
+    opt_cyclic,
   ) {
     if (Math.abs(number) < 1) {
       return [];
@@ -803,8 +803,8 @@ var palette = (function () {
       "qualitative",
       palette.hsvColor,
       false,
-      true
-    )
+      true,
+    ),
   );
 
   return palette;
@@ -1031,8 +1031,8 @@ palette.SchemeType;
         ],
       ],
       12,
-      12
-    )
+      12,
+    ),
   );
 
   /**
@@ -1045,7 +1045,7 @@ palette.SchemeType;
     return rgb(
       1 - 0.392 * (1 + erf((x - 0.869) / 0.255)),
       1.021 - 0.456 * (1 + erf((x - 0.527) / 0.376)),
-      1 - 0.493 * (1 + erf((x - 0.272) / 0.309))
+      1 - 0.493 * (1 + erf((x - 0.272) / 0.309)),
     );
   };
 
@@ -1054,8 +1054,8 @@ palette.SchemeType;
       "tol-sq",
       "sequential",
       palette.tolSequentialColor,
-      true
-    )
+      true,
+    ),
   );
 
   /**
@@ -1069,7 +1069,7 @@ palette.SchemeType;
     return rgb(
       poly(x, 0.235, -2.13, 26.92, -65.5, 63.5, -22.36),
       g * g,
-      1 / poly(x, 1.579, -4.03, 12.92, -31.4, 48.6, -23.36)
+      1 / poly(x, 1.579, -4.03, 12.92, -31.4, 48.6, -23.36),
     );
   };
 
@@ -1078,8 +1078,8 @@ palette.SchemeType;
       "tol-dv",
       "diverging",
       palette.tolDivergingColor,
-      true
-    )
+      true,
+    ),
   );
 
   /**
@@ -1092,7 +1092,7 @@ palette.SchemeType;
     return rgb(
       poly(x, 0.472, -0.567, 4.05) / poly(x, 1, 8.72, -19.17, 14.1),
       poly(x, 0.108932, -1.22635, 27.284, -98.577, 163.3, -131.395, 40.634),
-      1 / poly(x, 1.97, 3.54, -68.5, 243, -297, 125)
+      1 / poly(x, 1.97, 3.54, -68.5, 243, -297, 125),
     );
   };
 
@@ -1101,8 +1101,8 @@ palette.SchemeType;
       "tol-rainbow",
       "qualitative",
       palette.tolRainbowColor,
-      true
-    )
+      true,
+    ),
   );
 })();
 
@@ -1131,8 +1131,8 @@ palette.SchemeType;
         ],
       ],
       1,
-      8
-    )
+      8,
+    ),
   );
   palette.register(
     palette.Scheme.fromPalettes("sol-accent", "qualitative", [
@@ -1146,7 +1146,7 @@ palette.SchemeType;
         "2aa198",
         "859900",
       ],
-    ])
+    ]),
   );
 })();
 
@@ -2473,7 +2473,7 @@ palette.SchemeType;
       [scheme.type, "cb-" + scheme.type],
       scheme,
       12,
-      scheme.cbf
+      scheme.cbf,
     );
     palette.register(scheme);
   }

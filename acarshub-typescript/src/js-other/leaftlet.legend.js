@@ -225,7 +225,7 @@
     _buildContainer: function () {
       this._container = L.DomUtil.create(
         "div",
-        "leaflet-legend leaflet-bar leaflet-control"
+        "leaflet-legend leaflet-bar leaflet-control",
       );
       this._container.style.backgroundColor =
         "rgba(255,255,255, " + this.options.opacity + ")";
@@ -233,12 +233,12 @@
       this._contents = L.DomUtil.create(
         "section",
         "leaflet-legend-contents",
-        this._container
+        this._container,
       );
       this._link = L.DomUtil.create(
         "a",
         "leaflet-legend-toggle",
-        this._container
+        this._container,
       );
       this._link.title = "Legend";
       this._link.href = "#";
@@ -246,7 +246,7 @@
       var title = L.DomUtil.create(
         "h3",
         "leaflet-legend-title",
-        this._contents
+        this._contents,
       );
       title.innerText = this.options.title || "Legend";
 
@@ -258,7 +258,7 @@
           legendContainer = L.DomUtil.create(
             "div",
             "leaflet-legend-column",
-            this._contents
+            this._contents,
           );
         }
         var legend = this.options.legends[i];
@@ -270,7 +270,7 @@
       var legendItemDiv = L.DomUtil.create(
         "div",
         "leaflet-legend-item",
-        legendContainer
+        legendContainer,
       );
       if (legend.inactive) {
         L.DomUtil.addClass(legendItemDiv, "leaflet-legend-item-inactive");
@@ -307,7 +307,7 @@
           function () {
             this._toggleLegend.call(this, legendItemDiv, legend.layers);
           },
-          this
+          this,
         );
       }
     },
@@ -325,7 +325,7 @@
             mouseenter: this.expand,
             mouseleave: this.collapse,
           },
-          this
+          this,
         );
       } else {
         this.expand();

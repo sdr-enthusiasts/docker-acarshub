@@ -138,7 +138,7 @@ let robserver: ResizeObserver = new ResizeObserver((entries) => {
 
 export function resize_tabs(
   window_width: number = 0,
-  set_new_width: boolean = true
+  set_new_width: boolean = true,
 ): void {
   if (set_new_width && (!window_width || window_width <= 0))
     window_width = old_window_width;
@@ -171,10 +171,10 @@ export function resize_tabs(
   tab_width -= 1; // Why?! Everything gets off by at least a pixel if we don't do this!?
   $(".tabinator label").css("width", `${tab_width}px`); // CSS to set the widths everywhere
   $(".boxed").css("width", `${sub_tab_width}px`);
-  $(".acarshub-message-group").css(
-    "width",
-    `${tab_width * num_tabs - (num_tabs - 1)}px`
-  );
+  // $(".acarshub-message-group").css(
+  //   "width",
+  //   `${tab_width * num_tabs - (num_tabs - 1)}px`,
+  // );
   // Fix 10 rows of tabs
   for (let i = 1; i <= 10; i++) {
     // #7
@@ -274,7 +274,7 @@ $((): void => {
       live_map = new LiveMapPage(
         msg.adsb.lat,
         msg.adsb.lon,
-        msg.adsb.range_rings
+        msg.adsb.range_rings,
       );
       adsb_enabled = true;
       menu.set_adsb(true);
@@ -401,7 +401,7 @@ $((): void => {
     hidden === undefined
   ) {
     console.error(
-      "This webapp requires a browser, such as Safari, Google Chrome or Firefox, that supports the Page Visibility API."
+      "This webapp requires a browser, such as Safari, Google Chrome or Firefox, that supports the Page Visibility API.",
     );
   } else {
     document.addEventListener(
@@ -428,7 +428,7 @@ $((): void => {
         // @ts-expect-error
         toggle_pages(document[hidden]);
       },
-      false
+      false,
     );
   }
 
@@ -469,7 +469,7 @@ async function update_adsb(): Promise<void> {
 function update_url(): void {
   index_acars_path = document.location.pathname.replace(
     /about|search|stats|status|alerts|adsb/gi,
-    ""
+    "",
   );
   index_acars_path += index_acars_path.endsWith("/") ? "" : "/";
   index_acars_url = document.location.origin + index_acars_path;
@@ -557,7 +557,7 @@ window.new_page = function (page: string): void {
   window.history.pushState(
     { path: index_acars_path + sub_url },
     page,
-    index_acars_path + sub_url
+    index_acars_path + sub_url,
   );
   toggle_pages();
 };
@@ -572,7 +572,7 @@ function connection_status(connected = false): void {
   $("#disconnect").html(
     !connected
       ? '<strong><span class="red_body">DISCONNECTED FROM WEB SERVER</strong>'
-      : ""
+      : "",
   );
 
   if (connected) {
@@ -591,7 +591,7 @@ function connection_status(connected = false): void {
 export function alert_term_query(
   alert_icao: string[],
   alert_callsigns: string[],
-  alert_tail: string[]
+  alert_tail: string[],
 ): void {
   socket.emit(
     "query_terms",
@@ -600,13 +600,13 @@ export function alert_term_query(
       flight: alert_callsigns.length > 0 ? alert_callsigns : null,
       tail: alert_tail.length > 0 ? alert_tail : null,
     },
-    "/main"
+    "/main",
   );
 }
 
 export function alert_text_update(
   alert_text: string[],
-  ignore_text: string[]
+  ignore_text: string[],
 ): void {
   socket.emit(
     "update_alerts",
@@ -614,26 +614,26 @@ export function alert_text_update(
       terms: alert_text,
       ignore: ignore_text,
     },
-    "/main"
+    "/main",
   );
 }
 
 export function search_database(
   current_search: current_search,
   show_all = false,
-  page = 0
+  page = 0,
 ): void {
   if (!show_all)
     socket.emit(
       "query_search",
       { search_term: current_search, results_after: page },
-      "/main"
+      "/main",
     );
   else {
     socket.emit(
       "query_search",
       { show_all: true, results_after: page },
-      "/main"
+      "/main",
     );
   }
 }
@@ -669,7 +669,7 @@ export function generate_stat_submenu(
   vdlm: boolean = false,
   hfdl: boolean = false,
   imsl: boolean = false,
-  irdm: boolean = false
+  irdm: boolean = false,
 ): void {
   menu.generate_stat_submenu(acars, vdlm, hfdl, imsl, irdm);
 }
@@ -681,7 +681,7 @@ export function find_matches(): plane_data {
 export function get_match(
   callsign: string = "",
   hex: string = "",
-  tail: string = ""
+  tail: string = "",
 ): plane_match {
   return live_messages.get_match(callsign, hex, tail);
 }
@@ -798,7 +798,7 @@ window.query = function (): void {
 
 window.reset_alert_counts = function (): void {
   const reset_alerts = confirm(
-    "This will reset the alert term counts in your database. This action cannot be undone. Are you sure you want to continue?"
+    "This will reset the alert term counts in your database. This action cannot be undone. Are you sure you want to continue?",
   );
   if (reset_alerts) {
     socket.emit("reset_alert_counts", { reset_alerts: true }, "/main");
@@ -808,7 +808,7 @@ window.reset_alert_counts = function (): void {
 window.showPlaneMessages = function (
   callsign: string,
   hex: string,
-  tail: string
+  tail: string,
 ): void {
   if (hex === undefined) {
     console.error("ERROR", callsign, tail);
@@ -824,7 +824,7 @@ window.toggleNexrad = function (): void {
 export function showPlaneMessages(
   plane_callsign: string = "",
   plane_hex: string = "",
-  plane_tail: string = ""
+  plane_tail: string = "",
 ): void {
   live_map.showPlaneMessages(plane_callsign, plane_hex, plane_tail);
 }

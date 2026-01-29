@@ -35,7 +35,7 @@ export let html_functions = {
   create_message_nav_arrows: function (
     tab_to_nav: string,
     unique_id: string,
-    direction_back: boolean = true
+    direction_back: boolean = true,
   ): string {
     return (
       `<a href="javascript:handle_radio('` +
@@ -53,7 +53,7 @@ export let html_functions = {
   create_message_tab: function (
     tab_uid: string,
     unique_id: string,
-    checked: boolean = true
+    checked: boolean = true,
   ): string {
     return (
       `<input type = "radio" id = "tab${tab_uid}_${unique_id}" class = "tabs_${unique_id}" ${
@@ -70,7 +70,7 @@ export let html_functions = {
     message_number: number,
     matched: boolean,
     tab_uid: string,
-    unique_id: string
+    unique_id: string,
   ): string {
     return `<label for = "tab${tab_uid}_${unique_id}" class="msg${message_number}">${
       matched ? '<span class="red_body">' : ""
@@ -83,7 +83,7 @@ export let html_functions = {
   message_div: function (
     unique_id: string,
     tab_uid: string,
-    checked: boolean = true
+    checked: boolean = true,
   ): string {
     return `<div id = "message_${unique_id}" class="sub_msg${unique_id}${
       checked ? " checked" : ""
@@ -97,7 +97,7 @@ export let html_functions = {
   message_station_and_type: function (
     message_type: string,
     station_id: string,
-    matched: boolean = false
+    matched: boolean = false,
   ): string {
     return `<div class="msg_line"><span${
       matched ? ' class="red_body left_item"' : ' class="left_item"'
@@ -143,7 +143,7 @@ export let html_functions = {
   add_message_field: function (
     field_name: string,
     field_value: string,
-    use_br: boolean = true
+    use_br: boolean = true,
   ): string {
     return `${field_name}:&nbsp;<strong>${field_value}</strong>${
       use_br ? "<br>" : ""
@@ -154,7 +154,7 @@ export let html_functions = {
     field_name: string,
     field_value: string,
     tooltip_text: string,
-    data_jbox_content: string = ""
+    data_jbox_content: string = "",
   ): string {
     let extra_content = data_jbox_content
       ? ` data-jbox-content="${data_jbox_content}"`
@@ -183,7 +183,7 @@ export let html_functions = {
           typeof message.matched_text === "object"
             ? this.replace_text(
                 message.matched_text,
-                this.loop_array(message["decodedText"].formatted)
+                this.loop_array(message["decodedText"].formatted),
               )
             : this.loop_array(message["decodedText"].formatted); // get the formatted html of the decoded text
         //html_output += `${message['decodedText'].raw}`;
@@ -292,39 +292,11 @@ export let html_functions = {
     // use_br: boolean = true
 
     // Table footer row, metadata
-    if (typeof message.freq !== "undefined") {
-      html_output += this.add_message_field_with_tooltip(
-        "Frequency",
-        `${message.freq}`,
-        "freq-tooltip"
-      );
-    }
-
-    if (typeof message.level !== "undefined") {
-      let level = message.level;
-      let circle = "";
-      if (level >= -10.0) {
-        circle = "circle_green";
-      } else if (level >= -20.0) {
-        circle = "circle_yellow";
-      } else if (level >= -30.0) {
-        circle = "circle_orange";
-      } else {
-        circle = "circle_red";
-      }
-      html_output += this.add_message_field_with_tooltip(
-        "Level",
-        `<strong>${level}</strong> <div class="${circle}"></div>`,
-        "level-tooltip",
-        `The signal level (${level}) of the received message.`
-      );
-    }
-
     if (typeof message.ack !== "undefined") {
       html_output += this.add_message_field_with_tooltip(
         "Acknowledgement",
         `${String(message.ack).toUpperCase()}`,
-        "ack-tooltip"
+        "ack-tooltip",
       );
     }
 
@@ -332,7 +304,7 @@ export let html_functions = {
       html_output += this.add_message_field_with_tooltip(
         "Mode",
         `${message.mode}`,
-        "mode-tooltip"
+        "mode-tooltip",
       );
     }
 
@@ -340,7 +312,7 @@ export let html_functions = {
       html_output += this.add_message_field_with_tooltip(
         "Block ID",
         `${message.block_id}`,
-        "blockid-tooltip"
+        "blockid-tooltip",
       );
     }
 
@@ -348,7 +320,7 @@ export let html_functions = {
       html_output += this.add_message_field_with_tooltip(
         "Message Number",
         `${message.msgno}`,
-        "msgno-tooltip"
+        "msgno-tooltip",
       );
     }
 
@@ -356,7 +328,7 @@ export let html_functions = {
       html_output += this.add_message_field_with_tooltip(
         "Response",
         `${message.is_response}`,
-        "response-tooltip"
+        "response-tooltip",
       );
     }
 
@@ -372,7 +344,7 @@ export let html_functions = {
       html_output += this.add_message_field_with_tooltip(
         "On Ground",
         `<strong>${is_onground}</strong>`,
-        "ground-tooltip"
+        "ground-tooltip",
       );
     }
 
@@ -387,7 +359,7 @@ export let html_functions = {
         html_output += this.add_message_field_with_tooltip(
           "Error",
           `<span style="color:red;">${message.error}</span>`,
-          "error-tooltip"
+          "error-tooltip",
         );
       }
     }
@@ -397,10 +369,12 @@ export let html_functions = {
 
   show_footer_and_sidebar_text: function (
     message: acars_msg,
-    flight_tracking_url: string
+    flight_tracking_url: string,
   ): string {
     let html_output = "";
-    html_output += '<div class="msg_line">';
+    html_output +=
+      '<div class="msg_line" style="display: flex; justify-content: space-between; align-items: center;">';
+    html_output += "<div>";
 
     if (typeof message.tail !== "undefined") {
       html_output += `<span class="tail-tooltip">Tail: <strong><a href=\"${flight_tracking_url}${
@@ -434,8 +408,8 @@ export let html_functions = {
           ? this.replace_text(
               message.matched_icao,
               this.ensure_hex_is_uppercase_and_six_chars(
-                message.icao.toString()
-              )
+                message.icao.toString(),
+              ),
             ) + " "
           : `${message.icao}`;
       html_output +=
@@ -451,8 +425,8 @@ export let html_functions = {
             this.replace_text(
               message.matched_icao,
               this.ensure_hex_is_uppercase_and_six_chars(
-                message.icao_hex.toString()
-              )
+                message.icao_hex.toString(),
+              ),
             )
           : "";
       html_output +=
@@ -461,6 +435,40 @@ export let html_functions = {
           : `</strong></span>${" "}`;
     }
 
+    html_output += "</div>";
+
+    // Right-aligned frequency and level fields
+    html_output += '<div style="display: flex; gap: 2px;">';
+
+    if (typeof message.freq !== "undefined") {
+      html_output += this.add_message_field_with_tooltip(
+        "Frequency",
+        `${message.freq}`,
+        "freq-tooltip",
+      );
+    }
+
+    if (typeof message.level !== "undefined") {
+      let level = message.level;
+      let circle = "";
+      if (level >= -10.0) {
+        circle = "circle_green";
+      } else if (level >= -20.0) {
+        circle = "circle_yellow";
+      } else if (level >= -30.0) {
+        circle = "circle_orange";
+      } else {
+        circle = "circle_red";
+      }
+      html_output += this.add_message_field_with_tooltip(
+        "Level",
+        `<strong>${level}</strong> <div class="${circle}"></div>`,
+        "level-tooltip",
+        `The signal level (${level}) of the received message.`,
+      );
+    }
+
+    html_output += "</div>";
     html_output += "</div>";
 
     return html_output;

@@ -3,17 +3,18 @@
   config,
   lib,
   dream2nix,
-  pkgs,
   ...
-}: let
-  python = config.deps.python;
+}:
+let
+  inherit (config.deps) python;
   nixpkgsTorch = python.pkgs.torch;
-  torchWheel = config.deps.runCommand "torch-wheel" {} ''
+  torchWheel = config.deps.runCommand "torch-wheel" { } ''
     file="$(ls "${nixpkgsTorch.dist}")"
     mkdir "$out"
     cp "${nixpkgsTorch.dist}/$file" "$out/$file"
   '';
-in {
+in
+{
   imports = [
     dream2nix.modules.dream2nix.WIP-python-pdm
   ];
@@ -21,7 +22,8 @@ in {
   mkDerivation = {
     src = lib.cleanSourceWith {
       src = lib.cleanSource ./.;
-      filter = name: type:
+      filter =
+        name:
         !(builtins.any (x: x) [
           (lib.hasSuffix ".nix" name)
           (lib.hasPrefix "." (builtins.baseNameOf name))
@@ -29,8 +31,10 @@ in {
         ]);
     };
   };
-  pdm.lockfile = ./pdm.lock;
-  pdm.pyproject = ./pyproject.toml;
+  pdm = {
+    lockfile = ./pdm.lock;
+    pyproject = ./pyproject.toml;
+  };
 
   buildPythonPackage = {
     pythonImportsCheck = [
@@ -40,15 +44,17 @@ in {
 
   # Override for torch to pick the wheel from nixpkgs instead of pypi
   overrides.torch = {
-    mkDerivation.src = torchWheel;
+    mkDerivation = {
+      src = torchWheel;
+      prePhases = [ "selectWheelFile" ];
+      inherit (nixpkgsTorch) buildInputs;
+    };
     # This hack is needed to put the right filename into the src attribute.
     # We cannot know the exact wheel filename upfront, as it is system dependent.
-    mkDerivation.prePhases = ["selectWheelFile"];
     env.selectWheelFile = ''
       export src="$src/$(ls $src)"
     '';
     # The original build inputs of torch are required for the autoPatchelf phase
-    mkDerivation.buildInputs = nixpkgsTorch.buildInputs;
     buildPythonPackage = {
       format = "wheel";
       pyproject = null;

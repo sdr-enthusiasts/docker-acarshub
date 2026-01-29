@@ -33,7 +33,7 @@ L.Map.SmoothWheelZoom = L.Handler.extend({
     this._centerPoint = map.getSize()._divideBy(2);
     this._startLatLng = map.containerPointToLatLng(this._centerPoint);
     this._wheelStartLatLng = map.containerPointToLatLng(
-      this._wheelMousePosition
+      this._wheelMousePosition,
     );
     this._startZoom = map.getZoom();
     this._moved = false;
@@ -47,7 +47,7 @@ L.Map.SmoothWheelZoom = L.Handler.extend({
     this._prevZoom = map.getZoom();
 
     this._zoomAnimationId = requestAnimationFrame(
-      this._updateWheelZoom.bind(this)
+      this._updateWheelZoom.bind(this),
     );
   },
 
@@ -98,7 +98,7 @@ L.Map.SmoothWheelZoom = L.Handler.extend({
     } else {
       this._center = map.unproject(
         map.project(this._wheelStartLatLng, this._zoom).subtract(delta),
-        this._zoom
+        this._zoom,
       );
     }
 
@@ -112,7 +112,7 @@ L.Map.SmoothWheelZoom = L.Handler.extend({
     this._prevZoom = map.getZoom();
 
     this._zoomAnimationId = requestAnimationFrame(
-      this._updateWheelZoom.bind(this)
+      this._updateWheelZoom.bind(this),
     );
   },
 });

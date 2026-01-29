@@ -1255,7 +1255,7 @@ export function getBaseMarker(
   typeDescription,
   wtc,
   addrtype,
-  altitude
+  altitude,
 ) {
   if (typeDesignator in TypeDesignatorIcons) {
     let shape = TypeDesignatorIcons[typeDesignator][0];

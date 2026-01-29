@@ -147,3 +147,5 @@ docker_acarshub.egg-info
 .pdm-python
 *.sqlite
 *.rrd
+.pre-commit-config.yaml
+*.db
