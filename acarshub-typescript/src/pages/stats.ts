@@ -581,7 +581,7 @@ export class StatsPage extends ACARSHubPage {
       // clamp the height of the parent container to the height of the chart based on the number of elements
       // this is a hack to get the chart to display properly
 
-      $(graph_id).css("height", `${output_data.length * 50}px`);
+      $(graph_id).height(output_data.length * 50);
     }
   }
 
@@ -943,6 +943,6 @@ export class StatsPage extends ACARSHubPage {
     if (width) {
       this.#width = width;
     }
-    $("#counts").css("padding-top", "10px");
+    $("#counts").addClass("padding-top-10");
   }
 }

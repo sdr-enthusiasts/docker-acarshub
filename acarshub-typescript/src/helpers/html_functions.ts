@@ -358,7 +358,7 @@ export let html_functions = {
 
         html_output += this.add_message_field_with_tooltip(
           "Error",
-          `<span style="color:red;">${message.error}</span>`,
+          `<span class="text-red">${message.error}</span>`,
           "error-tooltip",
         );
       }
@@ -372,8 +372,7 @@ export let html_functions = {
     flight_tracking_url: string,
   ): string {
     let html_output = "";
-    html_output +=
-      '<div class="msg_line" style="display: flex; justify-content: space-between; align-items: center;">';
+    html_output += '<div class="msg_line flex-space-between">';
     html_output += "<div>";
 
     if (typeof message.tail !== "undefined") {
@@ -438,7 +437,7 @@ export let html_functions = {
     html_output += "</div>";
 
     // Right-aligned frequency and level fields
-    html_output += '<div style="display: flex; gap: 2px;">';
+    html_output += '<div class="flex-gap-2">';
 
     if (typeof message.freq !== "undefined") {
       html_output += this.add_message_field_with_tooltip(

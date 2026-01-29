@@ -847,7 +847,7 @@ nav {
         right: 0;
         bottom: 0;
         left: 0;
-        box-shadow: 0 0 15px colors.$tabs-grey-shadow;
+        box-shadow: none;
       }
     }
   }
@@ -882,6 +882,10 @@ nav {
       bottom: 0;
       left: 0;
       z-index: 10;
+    }
+
+    &::after {
+      box-shadow: none;
     }
   }
 }
@@ -1160,6 +1164,116 @@ details {
   #acarshub_help {
     display: none;
   }
+}
+
+// Utility classes for inline styles
+.flex-container {
+  display: flex;
+}
+
+.flex-space-between {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.flex-gap-2 {
+  display: flex;
+  gap: 2px;
+}
+
+.flex-height-100 {
+  display: flex;
+  height: 100%;
+}
+
+.text-red {
+  color: colors.$full-red;
+}
+
+.bg-table {
+  background: colors.$full-white;
+
+  @media (prefers-color-scheme: dark) {
+    background: colors.$grey-bg;
+  }
+}
+
+.vertical-text-top {
+  vertical-align: text-top;
+}
+
+.width-100 {
+  width: 100%;
+}
+
+.width-50 {
+  width: 50%;
+}
+
+.padding-top-10 {
+  padding-top: 10px;
+}
+
+.display-inline-block {
+  display: inline-block;
+}
+
+.display-none {
+  display: none;
+}
+
+.plane-element-width-callsign {
+  width: 23%;
+}
+
+.plane-element-width-alt {
+  width: 25%;
+}
+
+.plane-element-width-speed {
+  width: 11%;
+}
+
+.plane-element-width-alert {
+  width: 18%;
+}
+
+.plane-element-width-msgs {
+  width: 18%;
+}
+
+.plane-header-title {
+  font-weight: bold;
+  border-bottom: 1px solid colors.$full-black;
+  color: colors.$blue-highlight !important;
+  background-color: colors.$grey-bg !important;
+
+  .plane_element,
+  .plane_header {
+    color: colors.$blue-highlight !important;
+  }
+
+  a {
+    color: colors.$blue-highlight !important;
+  }
+}
+
+.plane-stats-header {
+  color: colors.$blue-highlight !important;
+  background-color: colors.$grey-bg !important;
+
+  .plane_element {
+    color: colors.$blue-highlight !important;
+  }
+}
+
+.rotate-icon {
+  -webkit-transform-origin: center;
+  -moz-transform-origin: center;
+  -ms-transform-origin: center;
+  -o-transform-origin: center;
+  transform-origin: center;
 }
 
 // Responsive visibility helpers

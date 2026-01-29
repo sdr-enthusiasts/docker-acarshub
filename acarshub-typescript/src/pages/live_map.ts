@@ -693,14 +693,12 @@ export class LiveMapPage extends ACARSHubPage {
           else styles = " sidebar_no_hover_with_unread";
         }
         html += `<div id="${callsign}" class="plane_list${styles}">
-        <div class="plane_element noleft" style="width:${callsign_width}%">${
+        <div class="plane_element noleft plane-element-width-callsign">${
           callsign && num_messages
             ? `<a href="javascript:showPlaneMessages('${callsign}', '${hex}', '${tail}');">${callsign}</a>`
             : callsign || "&nbsp;"
         }</div>
-        <div class="plane_element" style="width: ${alt_width}%;">${
-          alt || "&nbsp;"
-        }${
+        <div class="plane_element plane-element-width-alt">${alt || "&nbsp;"}${
           alt && alt !== "GROUND" && baro_rate > 100
             ? '&nbsp;<i class="fas fa-arrow-up"></i>'
             : ""
@@ -709,13 +707,13 @@ export class LiveMapPage extends ACARSHubPage {
             ? '&nbsp;<i class="fas fa-arrow-down"></i>'
             : ""
         }</div>
-        <div class="plane_element" style="width: ${speed_width}%;">${
+        <div class="plane_element plane-element-width-speed">${
           Math.round(speed) || "&nbsp;"
         }</div>
-        <div class="plane_element" style="width: ${alert_width}%;">${
+        <div class="plane_element plane-element-width-alert">${
           num_alerts || "&nbsp;"
         }</div>
-        <div class="plane_element" style="width: ${msgs_width}%;">${
+        <div class="plane_element plane-element-width-msgs">${
           this.#show_unread_messages && num_messages
             ? num_messages - old_messages + " / "
             : ""
@@ -723,14 +721,14 @@ export class LiveMapPage extends ACARSHubPage {
       }
     }
     html =
-      `<div class="plane_list_no_hover" style="color: var(--blue-highlight) !important;background-color: var(--grey-bg)"><div class="plane_element noleft" id="num_planes" style="width: 50%"></div><div class="plane_element noleft" id="num_planes_targets" style="width: 50%"></div></div>
-    <div class="plane_list_no_hover" style="color: var(--blue-highlight) !important;background-color: var(--grey-bg)"><div class="plane_element noleft" id="num_acars_planes" style="vertical-align: text-top;width: 100%">Planes with ACARS Msgs: ${acars_planes}<br>Total ACARS Messages: ${acars_message_count}</div></div>
-    <div class="plane_list_no_hover" style="font-weight: bold;border-bottom: 1px solid black;color: var(--blue-highlight) !important;background-color: var(--grey-bg)">
-    <div class="plane_element plane_header noleft" style="width: ${callsign_width}%"><a href="javascript:setSort('callsign')">Callsign</a></div>
-    <div class="plane_element plane_header" style="width: ${alt_width}%;"><a href="javascript:setSort('alt')">Alt</a></div>
-    <div class="plane_element plane_header" style="width: ${speed_width}%;"><a href="javascript:setSort('speed')">Spd</a></div>
-    <div class="plane_element plane_header" style="width: ${alert_width}%;"><a href="javascript:setSort('alerts')">Alert</a></div>
-    <div class="plane_element plane_header" style="width: ${msgs_width}%;"><a href="javascript:setSort('msgs')">Msgs</a></div></div>` +
+      `<div class="plane_list_no_hover plane-stats-header"><div class="plane_element noleft width-50" id="num_planes"></div><div class="plane_element noleft width-50" id="num_planes_targets"></div></div>
+    <div class="plane_list_no_hover plane-stats-header"><div class="plane_element noleft vertical-text-top width-100" id="num_acars_planes">Planes with ACARS Msgs: ${acars_planes}<br>Total ACARS Messages: ${acars_message_count}</div></div>
+    <div class="plane_list_no_hover plane-header-title">
+    <div class="plane_element plane_header noleft plane-element-width-callsign"><a href="javascript:setSort('callsign')">Callsign</a></div>
+    <div class="plane_element plane_header plane-element-width-alt"><a href="javascript:setSort('alt')">Alt</a></div>
+    <div class="plane_element plane_header plane-element-width-speed"><a href="javascript:setSort('speed')">Spd</a></div>
+    <div class="plane_element plane_header plane-element-width-alert"><a href="javascript:setSort('alerts')">Alert</a></div>
+    <div class="plane_element plane_header plane-element-width-msgs"><a href="javascript:setSort('msgs')">Msgs</a></div></div>` +
       html;
     $("#planes").html(html);
     for (const id in plane_callsigns) {
@@ -979,7 +977,7 @@ export class LiveMapPage extends ACARSHubPage {
               ) as aircraft_icon;
               this.#adsb_planes[hex].icon = icon;
             }
-            const marker_icon_text = `<div><div id="${hex}_marker" class="datablock ${color}" data-jbox-content="${popup_text}" style="-webkit-transform:rotate(${rotate}deg); -moz-transform: rotate(${rotate}deg); -ms-transform: rotate(${rotate}deg); -o-transform: rotate(${rotate}deg); transform: rotate(${rotate}deg);">${icon.svg}</div></div>`;
+            const marker_icon_text = `<div><div id="${hex}_marker" class="datablock ${color} rotate-icon" data-jbox-content="${popup_text}" data-rotate="${rotate}">${icon.svg}</div></div>`;
 
             let plane_icon = LeafLet.divIcon({
               className: "airplane",
@@ -1046,14 +1044,14 @@ export class LiveMapPage extends ACARSHubPage {
               $(`#${hex}_marker`).removeAttr("data-jbox-content");
               $(`#${hex}_marker`).addClass(`datablock ${color}`);
               $(`#${hex}_marker`).attr("data-jbox-content", popup_text);
-              $(`#${hex}_marker`).css(
-                "-webkit-transform",
-                `:rotate(${rotate}deg)`,
-              );
-              $(`#${hex}_marker`).css("-moz-transform", `rotate(${rotate}deg)`);
-              $(`#${hex}_marker`).css("-ms-transform", `rotate(${rotate}deg)`);
-              $(`#${hex}_marker`).css("-o-transform", `rotate(${rotate}deg)`);
-              $(`#${hex}_marker`).css("transform", `rotate(${rotate}deg)`);
+              $(`#${hex}_marker`).attr("data-rotate", rotate);
+              $(`#${hex}_marker`).css({
+                "-webkit-transform": `rotate(${rotate}deg)`,
+                "-moz-transform": `rotate(${rotate}deg)`,
+                "-ms-transform": `rotate(${rotate}deg)`,
+                "-o-transform": `rotate(${rotate}deg)`,
+                transform: `rotate(${rotate}deg)`,
+              });
               if (num_messages) {
                 // Add in click event for showing messages
                 // If the plane previously didn't have messages when it was generated the click event is never added
@@ -1211,7 +1209,7 @@ export class LiveMapPage extends ACARSHubPage {
     }
 
     const html =
-      '<div style="background:var(--table-background)">' +
+      '<div class="bg-table">' +
       display_messages([matches], this.#modal_current_tab, true) +
       "</div>";
     if (this.#modal_content !== html) {
@@ -1228,9 +1226,13 @@ export class LiveMapPage extends ACARSHubPage {
     this.#adsb_planes[plane_hex].num_messages = matches.length;
     this.airplaneList();
     resize_tabs(window_width - 40, false);
-    $(".show_when_small").css("display", `inline-block`);
-    $(".show_when_big").css("display", "none");
-    $(".dont_show").css("display", "none");
+    $(".show_when_small")
+      .addClass("display-inline-block")
+      .removeClass("display-none");
+    $(".show_when_big")
+      .addClass("display-none")
+      .removeClass("display-inline-block");
+    $(".dont_show").addClass("display-none");
     tooltip.attach_all_tooltips();
   }
 
@@ -1268,8 +1270,12 @@ export class LiveMapPage extends ACARSHubPage {
       (this.#window_size.height > 500 ? this.#window_size.height : 500) - 40,
       false,
     );
-    $(".show_when_small").css("display", `inline-block`);
-    $(".show_when_big").css("display", "none");
+    $(".show_when_small")
+      .addClass("display-inline-block")
+      .removeClass("display-none");
+    $(".show_when_big")
+      .addClass("display-none")
+      .removeClass("display-inline-block");
     tooltip.attach_all_tooltips();
   }
 
@@ -1469,7 +1475,7 @@ export class LiveMapPage extends ACARSHubPage {
     $("#modal_text").html("");
     if (this.#adsb_enabled)
       $("#log").html(
-        '<div style="display: flex;height: 100%;" ><div id="mapid"></div><div id="planes"></div>',
+        '<div class="flex-height-100"><div id="mapid"></div><div id="planes"></div>',
       );
     else $("#log").html("ADSB Disabled");
     //setScrollers();

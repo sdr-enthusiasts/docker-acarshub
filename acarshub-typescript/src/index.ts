@@ -169,8 +169,8 @@ export function resize_tabs(
   tab_width % 2 === 0 ? (tab_width -= 0) : (tab_width += 1); // #3 above
   const sub_tab_width = Math.floor(tab_width / 2); // #4 above
   tab_width -= 1; // Why?! Everything gets off by at least a pixel if we don't do this!?
-  $(".tabinator label").css("width", `${tab_width}px`); // CSS to set the widths everywhere
-  $(".boxed").css("width", `${sub_tab_width}px`);
+  $(".tabinator label").width(tab_width); // CSS to set the widths everywhere
+  $(".boxed").width(sub_tab_width);
   // $(".acarshub-message-group").css(
   //   "width",
   //   `${tab_width * num_tabs - (num_tabs - 1)}px`,
@@ -178,7 +178,7 @@ export function resize_tabs(
   // Fix 10 rows of tabs
   for (let i = 1; i <= 10; i++) {
     // #7
-    $(`.msg${num_tabs * i - 1}`).css("margin-left", "0");
+    $(`.msg${num_tabs * i - 1}`).css("margin-left", 0);
   }
 }
 
@@ -576,13 +576,21 @@ function connection_status(connected = false): void {
   );
 
   if (connected) {
-    $("#received").css("display", "inline-block");
-    $("#system_status").css("display", "inline-block");
-    $("#receivedmessages").css("display", "inline-block");
+    $("#received").addClass("display-inline-block").removeClass("display-none");
+    $("#system_status")
+      .addClass("display-inline-block")
+      .removeClass("display-none");
+    $("#receivedmessages")
+      .addClass("display-inline-block")
+      .removeClass("display-none");
   } else {
-    $("#received").css("display", "none");
-    $("#system_status").css("display", "none");
-    $("#receivedmessages").css("display", "none");
+    $("#received").addClass("display-none").removeClass("display-inline-block");
+    $("#system_status")
+      .addClass("display-none")
+      .removeClass("display-inline-block");
+    $("#receivedmessages")
+      .addClass("display-none")
+      .removeClass("display-inline-block");
   }
 }
 
