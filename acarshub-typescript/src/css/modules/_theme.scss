@@ -27,7 +27,7 @@
   --pre-bg: #{colors.$pre};
   --pre-text: #{colors.$pre-color};
   --pre-border: #{colors.$pre-border};
-  --message-bg: #{colors.$catppuccin-latte-mantle};
+  --message-bg: #{colors.$full-white};
   --grey-bg: #{colors.$full-white};
   --grey-highlight: #{colors.$grey-highlight};
   --header-text: #{colors.$full-black};
@@ -115,7 +115,6 @@
   --color-white: #{colors.$catppuccin-mocha-text};
   --color-black: #{colors.$catppuccin-mocha-text};
   --color-blue: #{colors.$blue-highlight};
-  --airplane-stroke: #{colors.$catppuccin-black};
 
   // Background and border colors
   --bg-grey: #{colors.$catppuccin-mocha-surface0};
@@ -126,7 +125,7 @@
     0.9
   );
   --bg-mapbackground: #{colors.$catppuccin-mocha-surface1};
-  --border-datablock: #{colors.$catppuccin-mocha-overlay0};
+  --border-datablock: #{colors.$catppuccin-mocha-overlay2};
   --border-black: #{colors.$catppuccin-mocha-crust};
   --border-grey: #{colors.$catppuccin-mocha-surface0};
 
@@ -193,7 +192,6 @@
     --color-white: #{colors.$catppuccin-mocha-text};
     --color-black: #{colors.$catppuccin-mocha-text};
     --color-blue: #{colors.$blue-highlight};
-    --airplane-stroke: #{colors.$catppuccin-black};
 
     // Background and border colors
     --bg-grey: #{colors.$catppuccin-mocha-surface0};
@@ -204,7 +202,7 @@
       0.9
     );
     --bg-mapbackground: #{colors.$catppuccin-mocha-surface1};
-    --border-datablock: #{colors.$catppuccin-mocha-overlay0};
+    --border-datablock: #{colors.$catppuccin-mocha-overlay2};
     --border-black: #{colors.$catppuccin-mocha-crust};
     --border-grey: #{colors.$catppuccin-mocha-surface0};
 

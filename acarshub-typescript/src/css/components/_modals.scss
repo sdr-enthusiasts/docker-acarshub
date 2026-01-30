@@ -554,3 +554,76 @@
     max-height: none !important;
   }
 }
+
+// Alert notification popup (jBox Notice)
+.jBox-Notice.jBox-wrapper {
+  background-color: var(--color-green) !important;
+  border: 2px solid var(--color-green) !important;
+  border-radius: 15px;
+  padding: 5px;
+  overflow: hidden;
+
+  .jBox-container {
+    background-color: var(--color-green) !important;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .jBox-content {
+    background-color: var(--color-green) !important;
+    color: var(--modal-title-text) !important;
+    font-family: fonts.$site-fonts;
+    font-weight: bold;
+    font-size: 14px;
+    padding: 12px 16px;
+    border-radius: 10px;
+    position: relative;
+  }
+
+  // Countdown progress bar - shows time remaining before auto-dismiss
+  // Use filter instead of background-color to preserve animation
+  .jBox-Notice-countdown,
+  .jbox-countdown,
+  div[class*="countdown"] {
+    filter: brightness(1.5) contrast(1.2) !important;
+    opacity: 0.9 !important;
+    height: 4px !important;
+    border-radius: 2px !important;
+    max-width: 100% !important;
+  }
+
+  // Countdown container background
+  .jBox-Notice-countdown-container,
+  div[class*="countdown-container"] {
+    background-color: rgba(255, 255, 255, 0.2) !important;
+    height: 4px !important;
+    border-radius: 2px !important;
+    overflow: hidden !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+}
+
+// Support for different alert severity levels (future enhancement)
+.jBox-Notice.jBox-wrapper[id^="alert_popup_"] {
+  &.alert-warning {
+    background-color: var(--color-orange) !important;
+    border-color: var(--color-orange) !important;
+
+    .jBox-container,
+    .jBox-content {
+      background-color: var(--color-orange) !important;
+    }
+  }
+
+  &.alert-danger {
+    background-color: var(--color-red) !important;
+    border-color: var(--color-red) !important;
+
+    .jBox-container,
+    .jBox-content {
+      background-color: var(--color-red) !important;
+    }
+  }
+}

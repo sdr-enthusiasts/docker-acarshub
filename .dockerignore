@@ -40,3 +40,5 @@ rootfs/webapp/lib64
 rootfs/webapp/include
 rootfs/webapp/__pycache__
 rootfs/webapp/pyvenv.cfg
+rootfs/webapp/static
+rootfs/webapp/templates

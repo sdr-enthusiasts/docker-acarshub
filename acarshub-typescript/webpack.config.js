@@ -91,7 +91,7 @@ module.exports = (_env, argv) => {
     output: {
       //filename: "[name].[chunkhash].js",
       path: path.resolve(__dirname, "dist/static/js"),
-      publicPath: "static/js/",
+      publicPath: "/static/js/",
       clean: true,
     },
 
@@ -184,7 +184,7 @@ module.exports = (_env, argv) => {
         inject: true,
         cache: true,
         outputPath: "../images/favicons",
-        publicPath: "../../static/images/favicons",
+        publicPath: "/static/images/favicons",
         prefix: "",
       }),
       new MiniCssExtractPlugin({
