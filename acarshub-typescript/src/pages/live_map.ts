@@ -397,13 +397,17 @@ export class LiveMapPage extends ACARSHubPage {
       200 * nautical_miles_to_meters,
     ];
 
+    // Use theme-aware color for range rings
+    const isDark = this.isDarkTheme();
+    const ringColor = isDark ? "hsl(0, 0%, 70%)" : "hsl(0, 0%, 20%)";
+
     ring_radius.forEach((radius) => {
       LeafLet.circle([this.#station_lat, this.#station_lon], {
         radius: radius,
         fill: false,
         interactive: false,
         weight: 1,
-        color: "hsl(0, 0%, 0%)",
+        color: ringColor,
       }).addTo(this.#layerGroupRangeRings);
     });
 
@@ -1490,9 +1494,10 @@ export class LiveMapPage extends ACARSHubPage {
 
       this.redraw_map();
 
-      // Listen for theme changes and update map layer
+      // Listen for theme changes and update map layer and range rings
       const observer = new MutationObserver(() => {
         this.updateMapTileLayer();
+        this.set_range_markers();
       });
       observer.observe(document.documentElement, {
         attributes: true,
