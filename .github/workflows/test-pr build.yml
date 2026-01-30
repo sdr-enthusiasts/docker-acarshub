@@ -15,7 +15,7 @@ env:
 
 jobs:
   acarshub-typescript:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       # Check out our code
       - name: Checkout
@@ -60,7 +60,7 @@ jobs:
             ./webapp.tar.gz
 
   hadolint:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
 
     steps:
       - uses: actions/checkout@v6.0.2

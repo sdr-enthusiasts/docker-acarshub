@@ -30,7 +30,7 @@ jobs:
     if: |
       github.event_name == 'workflow_dispatch' &&
       github.event.inputs.reason != ''
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Log dispatch reason
         env:
@@ -44,7 +44,7 @@ jobs:
 
   patch_acars_hub_version:
     name: "patch acars-hub version"
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     outputs:
       acarshub_version: ${{ steps.patch.outputs.acarshub_version }}
       version: ${{ steps.patch.outputs.version }}
