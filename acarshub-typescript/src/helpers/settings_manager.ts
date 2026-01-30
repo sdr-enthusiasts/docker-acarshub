@@ -24,9 +24,8 @@ export interface SettingsSection {
 }
 
 export class SettingsManager {
-  #modal: any = null;
+  #modal: unknown = null;
   #allSections: SettingsSection[] = [];
-  #currentPage: string = "";
 
   constructor() {
     this.initializeModal();
@@ -90,10 +89,14 @@ export class SettingsManager {
       resizeTimer = setTimeout(() => {
         const newDimensions = getModalDimensions();
         if (this.#modal) {
-          this.#modal.options.width = newDimensions.width;
-          this.#modal.options.height = newDimensions.height;
-          if (this.#modal.isOpen !== false) {
-            this.#modal.position();
+          // biome-ignore lint/suspicious/noExplicitAny: jBox doesn't export proper types
+          (this.#modal as any).options.width = newDimensions.width;
+          // biome-ignore lint/suspicious/noExplicitAny: jBox doesn't export proper types
+          (this.#modal as any).options.height = newDimensions.height;
+          // biome-ignore lint/suspicious/noExplicitAny: jBox doesn't export proper types
+          if ((this.#modal as any).isOpen !== false) {
+            // biome-ignore lint/suspicious/noExplicitAny: jBox doesn't export proper types
+            (this.#modal as any).position();
           }
         }
       }, 250);
@@ -121,10 +124,10 @@ export class SettingsManager {
     );
   }
 
-  public openSettings(page: string): void {
-    this.#currentPage = page;
+  public openSettings(_page: string): void {
     if (this.#modal) {
-      this.#modal.open();
+      // biome-ignore lint/suspicious/noExplicitAny: jBox doesn't export proper types
+      (this.#modal as any).open();
     }
   }
 
@@ -165,7 +168,7 @@ export class SettingsManager {
     $("#settings_content").html(html);
 
     // Call onShow callback for the first section
-    if (sections[0] && sections[0].onShow) {
+    if (sections[0]?.onShow) {
       sections[0].onShow();
     }
 
@@ -179,9 +182,9 @@ export class SettingsManager {
           const section = sections.find((s) => s.id === sectionId);
 
           // Remove active class from all tabs and panels
-          document
-            .querySelectorAll(".nav-link")
-            .forEach((tab) => tab.classList.remove("active"));
+          document.querySelectorAll(".nav-link").forEach((tab) => {
+            tab.classList.remove("active");
+          });
           document.querySelectorAll(".tab-pane").forEach((pane) => {
             pane.classList.remove("show", "active");
           });
@@ -194,7 +197,7 @@ export class SettingsManager {
           }
 
           // Call onShow callback
-          if (section && section.onShow) {
+          if (section?.onShow) {
             section.onShow();
           }
         }
@@ -204,7 +207,8 @@ export class SettingsManager {
 
   public close(): void {
     if (this.#modal) {
-      this.#modal.close();
+      // biome-ignore lint/suspicious/noExplicitAny: jBox doesn't export proper types
+      (this.#modal as any).close();
     }
   }
 }

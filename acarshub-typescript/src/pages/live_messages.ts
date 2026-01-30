@@ -17,17 +17,16 @@
 //import { MessageDecoder } from "@airframes/acars-decoder";
 const { MessageDecoder } = require("@airframes/acars-decoder");
 
-import jBox from "jbox";
 import Cookies from "js-cookie";
 import {
   display_message_group,
   display_messages,
 } from "../helpers/html_generator";
-import { tooltip } from "../helpers/tooltips";
 import {
-  settingsManager,
   type SettingsSection,
+  settingsManager,
 } from "../helpers/settings_manager";
+import { tooltip } from "../helpers/tooltips";
 import {
   get_current_planes,
   is_adsb_enabled,

@@ -23,11 +23,11 @@ import jBox from "jbox";
 import Cookies from "js-cookie";
 import { images } from "../assets/assets";
 import { display_messages } from "../helpers/html_generator";
-import { tooltip } from "../helpers/tooltips";
 import {
-  settingsManager,
   type SettingsSection,
+  settingsManager,
 } from "../helpers/settings_manager";
+import { tooltip } from "../helpers/tooltips";
 import {
   //showPlaneMessages,
   find_matches,

@@ -143,6 +143,126 @@ export const html_functions = {
     return `<span class="${tooltip_text}"${extra_content}>${field_name}: <strong>${field_value}</strong></span><br>`;
   },
 
+  format_libacars_frequency_data: function (data: any): string {
+    let html = '<div class="libacars-freq-data">';
+    html += "<strong>Ground Station Frequency Information:</strong><br>";
+
+    if (data.freq_data && Array.isArray(data.freq_data)) {
+      for (const station of data.freq_data) {
+        if (station.gs && station.gs.name) {
+          html += `<div style="margin-left: 20px; margin-top: 10px;">`;
+          html += `<strong>${station.gs.name}</strong>`;
+
+          if (
+            station.listening_on_freqs &&
+            station.listening_on_freqs.length > 0
+          ) {
+            html += `<br><span style="margin-left: 20px;">Listening on: `;
+            const freqs = station.listening_on_freqs
+              .map((f: any) => `${f.freq} kHz`)
+              .join(", ");
+            html += `${freqs}</span>`;
+          }
+
+          if (station.heard_on_freqs && station.heard_on_freqs.length > 0) {
+            html += `<br><span style="margin-left: 20px;">Heard on: `;
+            const heard = station.heard_on_freqs
+              .map((f: any) => `${f.freq} kHz`)
+              .join(", ");
+            html += `${heard}</span>`;
+          }
+
+          html += `</div>`;
+        }
+      }
+    }
+
+    html += "</div>";
+    return html;
+  },
+
+  format_libacars_value: function (
+    key: string,
+    value: any,
+    indent: number = 0,
+  ): string {
+    let html = "";
+    const indentStyle = `margin-left: ${indent * 20}px;`;
+
+    // Format the key nicely (convert snake_case to Title Case)
+    const formattedKey = key
+      .split("_")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ");
+
+    if (value === null || value === undefined) {
+      html += `<div style="${indentStyle}"><strong>${formattedKey}:</strong> <em>null</em></div>`;
+    } else if (typeof value === "boolean") {
+      html += `<div style="${indentStyle}"><strong>${formattedKey}:</strong> ${value ? "Yes" : "No"}</div>`;
+    } else if (typeof value === "number" || typeof value === "string") {
+      // Special formatting for specific fields
+      if (key === "timestamp" && typeof value === "object") {
+        // This is handled in the object case below
+      } else {
+        html += `<div style="${indentStyle}"><strong>${formattedKey}:</strong> ${value}</div>`;
+      }
+    } else if (Array.isArray(value)) {
+      html += `<div style="${indentStyle}"><strong>${formattedKey}:</strong></div>`;
+      for (let i = 0; i < value.length; i++) {
+        if (typeof value[i] === "object" && value[i] !== null) {
+          html += `<div style="margin-left: ${(indent + 1) * 20}px;"><em>Item ${i + 1}:</em></div>`;
+          for (const [subKey, subValue] of Object.entries(value[i])) {
+            html += this.format_libacars_value(subKey, subValue, indent + 2);
+          }
+        } else {
+          html += `<div style="margin-left: ${(indent + 1) * 20}px;">• ${value[i]}</div>`;
+        }
+      }
+    } else if (typeof value === "object") {
+      // Special handling for timestamp objects
+      if (
+        value.hour !== undefined &&
+        value.min !== undefined &&
+        value.sec !== undefined
+      ) {
+        html += `<div style="${indentStyle}"><strong>${formattedKey}:</strong> ${String(value.hour).padStart(2, "0")}:${String(value.min).padStart(2, "0")}:${String(value.sec).padStart(2, "0")} UTC</div>`;
+      } else {
+        html += `<div style="${indentStyle}"><strong>${formattedKey}:</strong></div>`;
+        for (const [subKey, subValue] of Object.entries(value)) {
+          html += this.format_libacars_value(subKey, subValue, indent + 1);
+        }
+      }
+    }
+
+    return html;
+  },
+
+  format_libacars_cpdlc: function (data: any): string {
+    let html = '<div class="libacars-cpdlc">';
+    html += "<strong>CPDLC Message:</strong><br>";
+
+    // Loop through all fields in the data
+    for (const [key, value] of Object.entries(data)) {
+      html += this.format_libacars_value(key, value, 1);
+    }
+
+    html += "</div>";
+    return html;
+  },
+
+  format_libacars_generic: function (data: any): string {
+    let html = '<div class="libacars-generic">';
+    html += "<strong>Decoded Libacars Data:</strong><br>";
+
+    // Use the recursive formatter to display all fields
+    for (const [key, value] of Object.entries(data)) {
+      html += this.format_libacars_value(key, value, 1);
+    }
+
+    html += "</div>";
+    return html;
+  },
+
   message_text: function (message: acars_msg): string {
     let html_output: string = '<div class="msg_line">';
     if (Object.hasOwn(message, "text") && typeof message.text !== "undefined") {
@@ -220,9 +340,22 @@ export const html_functions = {
         // Try to parse the data as JSON
         const parsed_data = JSON.parse(data);
         html_output += `<div class="msg_line">`;
+        html_output += `<div style="padding: 10px;">`;
 
-        // loop through the data object
-        html_output += `<pre>${JSON.stringify(parsed_data, null, 2)}</pre>`;
+        // Determine the type of libacars message and format accordingly
+        if (parsed_data.freq_data) {
+          html_output += this.format_libacars_frequency_data(parsed_data);
+        } else if (
+          parsed_data.msg_type &&
+          parsed_data.msg_type.includes("cpdlc")
+        ) {
+          html_output += this.format_libacars_cpdlc(parsed_data);
+        } else {
+          // Generic formatter for unknown types
+          html_output += this.format_libacars_generic(parsed_data);
+        }
+
+        html_output += `</div>`;
       } catch (e) {
         html_output += `<div class="msg_line red">`;
         html_output += `<pre>Error parsing Libacars data: Please see browser console for more details and submit a bug report.</pre>`;
