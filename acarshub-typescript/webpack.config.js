@@ -136,22 +136,28 @@ module.exports = (_env, argv) => {
               const packageName = match[1];
 
               // Group large libraries separately for better caching
-              if (packageName.includes("chart")) {
+              if (packageName.startsWith("chart")) {
                 return "chart";
               }
-              if (packageName.includes("leaflet")) {
+              if (packageName.startsWith("leaflet")) {
                 return "leaflet";
               }
-              if (packageName.includes("bootstrap")) {
+              if (packageName.startsWith("bootstrap")) {
                 return "bootstrap";
               }
-              if (packageName.includes("socket.io")) {
+              if (
+                packageName.startsWith("socket.io") ||
+                packageName.startsWith("@socketio")
+              ) {
                 return "socket-io";
               }
-              if (packageName.includes("showdown")) {
+              if (packageName.startsWith("showdown")) {
                 return "showdown";
               }
-              if (packageName.includes("fontawesome")) {
+              if (
+                packageName.startsWith("@fortawesome") ||
+                packageName.startsWith("fontawesome")
+              ) {
                 return "fontawesome";
               }
 
