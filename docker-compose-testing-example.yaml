@@ -1,0 +1,68 @@
+services:
+  # ACARS Related Services
+  acarshub:
+    #image: ghcr.io/sdr-enthusiasts/docker-acarshub:latest-build-1444
+    image: ah:test
+    tty: true
+    container_name: acarshub
+    restart: always
+    ports:
+      - 8085:80
+    environment:
+      - ENABLE_VDLM=EXTERNAL
+      - ENABLE_ACARS=EXTERNAL
+      - ENABLE_HFDL=EXTERNAL
+      - FLIGHT_TRACKING_URL=https://www.radarbox.com/data/flights/
+      - STATION_ID_ACARS=CS-KABQ-ACARS
+      - STATION_ID_VDLM=CS-KABQ-VDLM
+      - IATA_OVERRIDE=UP|UPS|United Parcel Service;GS|FTH|Mountain Aviation (Foothills);GS|EJA|ExecJet
+      - ENABLE_ADSB=true
+      - ADSB_LAT=0
+      - ADSB_LON=0
+      - ADSB_URL=http://192.168.31.20/tar1090/data/aircraft.json
+      - ADSB_BYPASS_URL=true
+      #- MIN_LOG_LEVEL=5
+      - DB_SAVE_DAYS=1000
+      - DB_ALERT_SAVE_DAYS=1000
+    volumes:
+      - "./acars_data:/run/acars"
+    tmpfs:
+      - /database:exec,size=64M
+      - /run:exec,size=64M
+      - /var/log
+
+  acars_router:
+    image: ghcr.io/sdr-enthusiasts/acars_router:trixie-latest-build-3
+    tty: true
+    ports:
+      - 15550:15550
+      - 15555:15555
+      - 15556:15556
+      - 35550:35550
+      - 35555:35555
+      - 35556:35556
+      - 45550:45550
+      - 45555:45555
+      - 45556:45556
+      - 5550:5550
+      - 5556:5556
+    container_name: acars_router
+    restart: always
+    environment:
+      - AR_ADD_PROXY_ID=true
+      - AR_STATS_VERBOSE=true
+      - AR_STATS_EVERY=60
+      - AR_VERBOSITY=debug
+      - TZ=${FEEDER_TZ}
+      - AR_ENABLE_DEDUPE=true
+      # 5.161.21.38 is feed.airframes.io Using this to stop infinity DNS lookups
+      - AR_SEND_UDP_ACARS=acarshub:5550
+      - AR_SEND_UDP_VDLM2=acarshub:5555
+      - AR_SEND_UDP_HFDL=acarshub:5556
+      - AR_RECV_TCP_ACARS=192.168.31.20:15550
+      - AR_RECV_TCP_VDLM2=192.168.31.20:15555
+      - AR_RECV_TCP_HFDL=192.168.31.20:15556
+      - AR_SKEW_WINDOW=20
+    tmpfs:
+      - /run:exec,size=64M
+      - /var/log
