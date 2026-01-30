@@ -26,6 +26,7 @@ export interface SettingsSection {
 export class SettingsManager {
   #modal: unknown = null;
   #allSections: SettingsSection[] = [];
+  #globalSections: SettingsSection[] = [];
 
   constructor() {
     this.initializeModal();
@@ -103,6 +104,11 @@ export class SettingsManager {
     });
   }
 
+  public registerGlobalSettings(sections: SettingsSection[]): void {
+    // Replace all global sections
+    this.#globalSections = sections;
+  }
+
   public registerPageSettings(page: string, sections: SettingsSection[]): void {
     // Remove existing sections for this page
     this.#allSections = this.#allSections.filter(
@@ -132,7 +138,8 @@ export class SettingsManager {
   }
 
   private renderCurrentSettings(): void {
-    const sections = this.#allSections;
+    // Combine global sections (first) with page-specific sections
+    const sections = [...this.#globalSections, ...this.#allSections];
     if (!sections || sections.length === 0) {
       $("#settings_content").html(
         '<p class="text-center">No settings available.</p>',

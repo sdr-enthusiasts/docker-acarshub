@@ -1,5 +1,6 @@
 @use "modules/colors" as colors;
 @use "modules/fonts" as fonts;
+@use "modules/theme";
 
 // Container and main layout
 .container {
@@ -66,11 +67,7 @@ div#header {
 
   h3 {
     margin-top: 0;
-    color: colors.$full-black;
-
-    @media (prefers-color-scheme: dark) {
-      color: colors.$creamy-white;
-    }
+    color: var(--header-text);
   }
 }
 
@@ -418,11 +415,7 @@ li {
 }
 
 .small_nav {
-  background: colors.$full-white;
-
-  @media (prefers-color-scheme: dark) {
-    background: colors.$grey-bg;
-  }
+  background: var(--message-bg);
 }
 
 .fixed_results {

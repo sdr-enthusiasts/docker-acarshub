@@ -1,5 +1,6 @@
 @use "modules/colors" as colors;
 @use "modules/fonts" as fonts;
+@use "modules/theme";
 
 // Flexbox utilities
 .flex-container {
@@ -69,7 +70,7 @@
 
   @media not all and (pointer: coarse) {
     &:hover {
-      color: colors.$full-white;
+      color: var(--hover-text);
     }
   }
 }
@@ -92,11 +93,7 @@ span.red_important strong {
 
 // Background utilities
 .bg-table {
-  background: colors.$full-white;
-
-  @media (prefers-color-scheme: dark) {
-    background: colors.$grey-bg;
-  }
+  background: var(--message-bg);
 }
 
 // Shadow utilities
@@ -133,14 +130,10 @@ span.red_important strong {
   margin-bottom: -1px;
   background-color: colors.$full-white;
   border: 1px solid colors.$full-black;
+  border: 1px solid var(--grey-highlight);
   font-weight: bold;
-  color: colors.$text-color;
-
-  @media (prefers-color-scheme: dark) {
-    background-color: colors.$grey-bg;
-    border-color: colors.$grey-highlight;
-    color: colors.$mapbackground;
-  }
+  color: var(--body-text);
+  background-color: var(--grey-bg);
 }
 
 .boxed_right_arrow {

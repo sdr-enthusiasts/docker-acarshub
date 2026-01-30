@@ -15,8 +15,8 @@
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
 import { Chart, registerables } from "chart.js";
-
 import ChartDataLabels from "chartjs-plugin-datalabels";
+import { themeManager } from "../helpers/theme_manager";
 import {
   generate_stat_submenu,
   is_connected,
@@ -66,6 +66,25 @@ export class StatsPage extends ACARSHubPage {
     (hex: string) => "#" + hex,
   );
 
+  constructor() {
+    super();
+
+    // Listen for theme changes to update chart backgrounds
+    window.addEventListener("themeChanged", () => {
+      if (this.page_active) {
+        this.refreshChartsForTheme();
+      }
+    });
+  }
+
+  private refreshChartsForTheme(): void {
+    // Redraw charts with updated background colors
+    this.show_signal_chart();
+    this.show_alert_chart();
+    this.show_count();
+    this.show_freqs();
+  }
+
   active(state = false): void {
     super.active(state);
 
@@ -104,9 +123,7 @@ export class StatsPage extends ACARSHubPage {
       const canvas_alerts: HTMLCanvasElement = <HTMLCanvasElement>(
         document.getElementById("alertterms")
       );
-      const background_color = window.matchMedia?.(
-        "(prefers-color-scheme: dark)",
-      ).matches
+      const background_color = themeManager.isDarkMode()
         ? "#3d3d3d"
         : "#ffffff";
 
@@ -196,9 +213,7 @@ export class StatsPage extends ACARSHubPage {
         document.getElementById("signallevels")
       );
 
-      const background_color = window.matchMedia?.(
-        "(prefers-color-scheme: dark)",
-      ).matches
+      const background_color = themeManager.isDarkMode()
         ? "#3d3d3d"
         : "#ffffff";
 

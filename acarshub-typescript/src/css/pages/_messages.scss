@@ -1,5 +1,6 @@
 @use "../modules/colors" as colors;
 @use "../modules/fonts" as fonts;
+@use "../modules/theme";
 
 // Message containers
 .acarshub-message-group {
@@ -28,11 +29,8 @@
       border: 1px solid colors.$full-black;
       font-weight: bold;
       font-style: normal;
-
-      @media (prefers-color-scheme: dark) {
-        background-color: colors.$grey-bg;
-        border-color: colors.$grey-highlight;
-      }
+      background-color: var(--message-bg);
+      border-color: var(--grey-highlight);
 
       &::after {
         display: block;
@@ -62,11 +60,8 @@
     margin-left: -1px;
     font-weight: bold;
     border: 1px solid colors.$full-black;
-
-    @media (prefers-color-scheme: dark) {
-      background-color: colors.$grey-bg;
-      border-color: colors.$grey-highlight;
-    }
+    background-color: var(--grey-bg);
+    border-color: var(--grey-highlight);
 
     &::before {
       content: "";
@@ -93,12 +88,8 @@
   border: 1px solid colors.$full-black;
   border-collapse: collapse;
   width: 100%;
-  background-color: colors.$full-white;
-
-  @media (prefers-color-scheme: dark) {
-    border-color: colors.$grey-highlight;
-    background-color: colors.$grey-bg;
-  }
+  background-color: var(--message-bg);
+  border-color: var(--grey-highlight);
 
   &:last-child {
     span {
@@ -188,23 +179,15 @@
   flex-wrap: wrap;
   border: none;
   width: 100%;
-  background-color: colors.$full-white;
-
-  @media (prefers-color-scheme: dark) {
-    background-color: colors.$grey-bg;
-  }
+  background-color: var(--message-bg);
 }
 
 .text_top {
   flex: 1;
   min-width: 0;
   padding: 7px;
-  background-color: colors.$full-white;
+  background-color: var(--message-bg);
   vertical-align: top;
-
-  @media (prefers-color-scheme: dark) {
-    background-color: colors.$grey-bg;
-  }
 
   &:first-child {
     padding-left: 0;
