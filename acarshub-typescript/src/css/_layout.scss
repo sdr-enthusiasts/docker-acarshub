@@ -329,16 +329,47 @@ li {
   z-index: 20;
   font-weight: bold;
   box-sizing: border-box;
-  overflow: hidden;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
 
   strong {
     color: var(--color-blue);
   }
 
-  div {
+  div,
+  span {
     display: inline-block;
+  }
+
+  // Only show borders on specific footer elements, not conditionally empty ones
+  #acarshub_help,
+  #github_link,
+  #discord_badge,
+  #system_status_container,
+  div:has(#received) {
     border-right: 1px solid var(--grey-highlight);
     padding-right: 5px;
+  }
+
+  // No border on hidden/empty elements
+  #disconnect,
+  #filtered {
+    border-right: none;
+    padding-right: 0;
+  }
+
+  // Hide empty spans so they don't take up gap space
+  #disconnect:empty,
+  #filtered:empty {
+    display: none;
+  }
+
+  #release_version {
+    margin-left: auto;
+    border-right: none;
+    padding-right: 0;
   }
 
   @media not all and (pointer: coarse) {

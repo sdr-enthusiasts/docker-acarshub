@@ -612,7 +612,7 @@ function connection_status(connected = false): void {
 
   if (connected) {
     $("#received").addClass("display-inline-block").removeClass("display-none");
-    $("#system_status")
+    $("#system_status_container")
       .addClass("display-inline-block")
       .removeClass("display-none");
     $("#receivedmessages")
@@ -620,7 +620,7 @@ function connection_status(connected = false): void {
       .removeClass("display-none");
   } else {
     $("#received").addClass("display-none").removeClass("display-inline-block");
-    $("#system_status")
+    $("#system_status_container")
       .addClass("display-none")
       .removeClass("display-inline-block");
     $("#receivedmessages")
