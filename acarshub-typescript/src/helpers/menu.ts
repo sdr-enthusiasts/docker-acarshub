@@ -41,7 +41,7 @@ export const menu = {
     html += `<li><a href="javascript:new_page('Search')" id="search_link">Search Database</a></li>`;
     html += `<li><a href="javascript:new_page('Alerts')" id="alerts_link">Alerts<span id="alert_count"></span></li>`;
     html += `<li><a href="javascript:new_page('Stats')" id="stats_link">Statistics</a></li>`;
-    html += `<li class="right_side"><span id="modal_text"></span></li>`;
+    html += `<li class="right_side"><span id="modal_text"><a href="javascript:show_page_modal()">Settings</a></span></li>`;
     html += "</ul></nav></div>";
     $("#links").html(html);
   },

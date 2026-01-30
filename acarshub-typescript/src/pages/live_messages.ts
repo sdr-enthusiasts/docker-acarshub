@@ -25,6 +25,10 @@ import {
 } from "../helpers/html_generator";
 import { tooltip } from "../helpers/tooltips";
 import {
+  settingsManager,
+  type SettingsSection,
+} from "../helpers/settings_manager";
+import {
   get_current_planes,
   is_adsb_enabled,
   match_alert,
@@ -134,31 +138,6 @@ export class LiveMessagePage extends ACARSHubPage {
   ];
   #filtered_messages: number = 0;
   #received_messages: number = 0;
-  #live_message_modal = new jBox("Modal", {
-    id: "set_modal",
-    width: 350,
-    height: 200,
-    blockScroll: false,
-    isolateScroll: true,
-    animation: "zoomIn",
-    closeButton: "box",
-    overlay: true,
-    reposition: false,
-    repositionOnOpen: true,
-    content: `<p><a href="javascript:pause_updates()" id="pause_updates" class="spread_text">Pause updates</a></p>
-      <a href="javascript:filter_notext()" id="filter_notext" class="spread_text">Filter out "No Text" messages</a>
-      <!--<div class="fixed_menu" id="fixed_menu"> --!>
-    <div class="wrap-collapsible">
-          <input id="collapsible" class="toggle" type="checkbox">
-          <label for="collapsible" class="lbl-toggle">Filter Message Labels</label>
-          <div class="collapsible-content" id="collapsible-content">
-          <div class="content-inner" id="label_links">
-          <!-- <p>&nbsp;</p> --!>
-          </div>
-          </div>
-          </div>
-          <!--</div> --!>`,
-  });
 
   constructor() {
     super();
@@ -200,6 +179,9 @@ export class LiveMessagePage extends ACARSHubPage {
       if (this.#exclude.length > 0) this.#exclude = exclude_cookie.split(" ");
       else this.#exclude = [];
     }
+
+    // Register settings immediately
+    this.registerSettings();
   }
 
   setting_modal_on(): void {
@@ -225,15 +207,16 @@ export class LiveMessagePage extends ACARSHubPage {
 
   show_labels(): void {
     let label_html = "";
-    if (this.#filter_labels !== null && this.page_active) {
+    if (this.#filter_labels !== null) {
       for (const key in this.#filter_labels.labels) {
-        const link_class: string =
-          this.#exclude.indexOf(key.toString()) !== -1 ? "red" : "sidebar_link";
-        label_html += `<a href="javascript:toggle_label('${key.toString()}');" id="${key}" class="${link_class}">${key} ${
-          this.#filter_labels.labels[key].name
-        }</a><br>`;
+        const isExcluded = this.#exclude.indexOf(key.toString()) !== -1;
+        label_html += `
+          <div class="settings-option label-option">
+            <label class="settings-label" for="label_${key}">${key} - ${this.#filter_labels.labels[key].name}</label>
+            <input type="checkbox" id="label_${key}" ${isExcluded ? "checked" : ""} onchange="toggle_label('${key.toString()}')" />
+          </div>`;
       }
-      $("#label_links").html(label_html);
+      $("#label_checkboxes").html(label_html);
     }
   }
 
@@ -371,11 +354,15 @@ export class LiveMessagePage extends ACARSHubPage {
   // Function to toggle pausing visual update of the page
 
   pause_updates(toggle_pause: boolean = true): void {
-    if (!toggle_pause) this.#pause = !this.#pause;
+    if (toggle_pause) this.#pause = !this.#pause;
+
+    this.updateSettingsUI();
 
     if (this.#pause) {
-      this.#pause = false;
-      $("#pause_updates").html("Pause Updates");
+      $("#received").html(
+        'Received messages <span class="red">(paused)</span>: ',
+      );
+    } else {
       $("#received").html("Received messages: ");
       $("#log").html(
         display_messages(
@@ -385,23 +372,27 @@ export class LiveMessagePage extends ACARSHubPage {
         ),
       );
       resize_tabs();
-    } else {
-      this.#pause = true;
-      $("#pause_updates").html('<span class="red">Unpause Updates</span>');
-      $("#received").html(
-        'Received messages <span class="red">(paused)</span>: ',
-      );
     }
   }
 
   // function to toggle the filtering of empty/no text messages
 
   filter_notext(toggle_filter: boolean = true): void {
-    if (!toggle_filter) this.#text_filter = !this.#text_filter;
+    if (toggle_filter) this.#text_filter = !this.#text_filter;
+
+    this.updateSettingsUI();
 
     if (this.#text_filter) {
-      this.#text_filter = false;
-      $("#filter_notext").html("Hide Empty Messages");
+      $("#filtered").html(
+        '<div><span class="menu_non_link">Filtered Messages:&nbsp;</span><span class="green" id="filteredmessages"></span></div>',
+      );
+
+      $("#filteredmessages").html(String(this.#filtered_messages));
+      Cookies.set("filter", "true", {
+        expires: 365,
+        sameSite: "Strict",
+      });
+    } else {
       Cookies.set("filter", "false", {
         expires: 365,
         sameSite: "Strict",
@@ -412,19 +403,6 @@ export class LiveMessagePage extends ACARSHubPage {
 
         $("#filtered").html("");
       }
-    } else {
-      this.#text_filter = true;
-
-      $("#filtered").html(
-        '<div><span class="menu_non_link">Filtered Messages:&nbsp;</span><span class="green" id="filteredmessages"></span></div>',
-      );
-
-      $("#filteredmessages").html(String(this.#filtered_messages));
-      $("#filter_notext").html('<span class="red">Show All Messages</span>');
-      Cookies.set("filter", "true", {
-        expires: 365,
-        sameSite: "Strict",
-      });
     }
   }
 
@@ -513,14 +491,47 @@ export class LiveMessagePage extends ACARSHubPage {
   }
 
   show_live_message_modal(): void {
-    this.#live_message_modal.open();
-    this.setting_modal_on();
+    settingsManager.openSettings("live_messages");
   }
 
   set_html(): void {
     $("#modal_text").html(
-      '<a href="javascript:show_page_modal()">Page Settings</a>',
+      '<a href="javascript:show_page_modal()">Settings</a>',
     );
+  }
+
+  private registerSettings(): void {
+    const sections: SettingsSection[] = [
+      {
+        id: "general",
+        title: "Live Messages",
+        content: `
+          <div class="settings-option">
+            <label class="settings-label" for="pause_checkbox">Pause updates</label>
+            <input type="checkbox" id="pause_checkbox" onclick="pause_updates()" />
+          </div>
+          <div class="settings-option">
+            <label class="settings-label" for="filter_checkbox">Filter out "No Text" messages</label>
+            <input type="checkbox" id="filter_checkbox" onclick="filter_notext()" />
+          </div>
+          <h4 class="settings-section-header">Message Labels</h4>
+          <div id="label_checkboxes" class="label-checkboxes">
+          </div>
+        `,
+        onShow: () => {
+          this.updateSettingsUI();
+          resize_tabs();
+        },
+      },
+    ];
+
+    settingsManager.registerPageSettings("live_messages", sections);
+  }
+
+  private updateSettingsUI(): void {
+    $("#pause_checkbox").prop("checked", this.#pause);
+    $("#filter_checkbox").prop("checked", this.#text_filter);
+    this.show_labels();
   }
 
   new_labels(msg: labels): void {

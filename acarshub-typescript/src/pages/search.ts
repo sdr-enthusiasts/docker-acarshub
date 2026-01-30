@@ -495,7 +495,9 @@ export class SearchPage extends ACARSHubPage {
   }
 
   set_html(): void {
-    $("#modal_text").html("");
+    $("#modal_text").html(
+      '<a href="javascript:show_page_modal()">Settings</a>',
+    );
     this.update_size();
   }
 }

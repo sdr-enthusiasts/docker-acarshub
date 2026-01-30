@@ -78,3 +78,342 @@
   font-family: fonts.$site-fonts;
   box-shadow: none;
 }
+
+// Unified Settings Modal
+#unified_settings_modal.jBox-wrapper {
+  .jBox-title {
+    background-color: colors.$egg-white;
+    color: colors.$blue-highlight;
+    font-family: fonts.$site-fonts;
+    font-size: 20px;
+    text-transform: uppercase;
+    text-align: center;
+  }
+
+  .jBox-content {
+    background-color: colors.$grey-bg;
+    font-family: fonts.$site-fonts;
+    padding: 15px;
+    overflow-y: auto;
+  }
+
+  // Override global checkbox hiding and width
+  input[type="checkbox"] {
+    display: inline-block !important;
+    min-width: auto !important;
+    width: auto !important;
+  }
+}
+
+.settings-container {
+  width: 100%;
+  height: 100%;
+
+  .settings-section {
+    margin-bottom: 20px;
+
+    &-title {
+      color: colors.$blue-highlight;
+      font-family: fonts.$site-fonts;
+      font-size: 18px;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid colors.$datablock-border;
+    }
+
+    &-content {
+      padding: 5px 10px;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+
+      p {
+        margin-bottom: 4px;
+        line-height: 1.2;
+      }
+
+      a {
+        display: inline-block;
+        padding: 2px 0;
+        margin-bottom: 2px;
+        text-align: left;
+        transition: opacity 0.2s;
+
+        &:hover {
+          opacity: 0.8;
+        }
+      }
+
+      label {
+        display: inline-block;
+        margin-bottom: 2px;
+        color: colors.$blue-highlight;
+        font-weight: normal;
+      }
+
+      > textarea,
+      > input[type="text"] {
+        width: 100%;
+        padding: 4px;
+        margin-bottom: 4px;
+        background-color: colors.$egg-white;
+        border: 1px solid colors.$datablock-border;
+        border-radius: 4px;
+        font-family: fonts.$site-fonts;
+        font-size: 13px;
+        color: colors.$blue-highlight;
+        resize: vertical;
+
+        &:focus {
+          outline: none;
+          border-color: colors.$blue-highlight;
+        }
+      }
+
+      > button {
+        padding: 8px 16px;
+        background-color: colors.$blue-highlight;
+        color: colors.$egg-white;
+        border: none;
+        border-radius: 5px;
+        font-family: fonts.$site-fonts;
+        font-weight: bold;
+        cursor: pointer;
+        transition: opacity 0.2s;
+        margin-top: 4px;
+        margin-bottom: 4px;
+        width: 100%;
+
+        &:hover {
+          opacity: 0.9;
+        }
+
+        &:active {
+          opacity: 0.8;
+        }
+      }
+    }
+  }
+
+  .settings-tabs {
+    width: 100%;
+
+    .nav-tabs {
+      border-bottom: 2px solid colors.$datablock-border;
+      margin-bottom: 5px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 3px;
+
+      .nav-item {
+        margin-bottom: 0;
+
+        .nav-link {
+          padding: 8px 16px;
+          border: 2px solid colors.$datablock-border;
+          border-radius: 5px 5px 0 0;
+          background: colors.$egg-white;
+          color: colors.$blue-highlight;
+          font-family: fonts.$site-fonts;
+          font-weight: bold;
+          cursor: pointer;
+          transition: all 0.2s;
+
+          &:hover {
+            background-color: rgba(colors.$blue-highlight, 0.15);
+            border-color: colors.$blue-highlight;
+          }
+
+          &.active {
+            color: colors.$egg-white;
+            background-color: colors.$blue-highlight;
+            border-color: colors.$blue-highlight;
+            border-bottom-color: colors.$blue-highlight;
+          }
+        }
+      }
+    }
+
+    .settings-tab-content {
+      padding: 5px 0 0 0;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+
+      .tab-pane {
+        display: none;
+        flex: 1;
+        overflow: hidden;
+
+        &.active {
+          display: flex;
+          flex-direction: column;
+        }
+      }
+    }
+  }
+}
+
+// Settings section headers
+.settings-section-header {
+  color: colors.$blue-highlight;
+  font-family: fonts.$site-fonts;
+  font-size: 13px;
+  font-weight: bold;
+  margin: 8px 0 4px 0;
+  padding: 0;
+  text-align: left;
+  flex-shrink: 0;
+}
+
+// Settings option rows with checkboxes
+.settings-option {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+  margin-bottom: 1px;
+  flex-shrink: 0;
+
+  &.label-option {
+    padding: 3px 0;
+    margin-bottom: 0;
+  }
+
+  .settings-label {
+    flex: 1;
+    margin: 0;
+    padding-right: 10px;
+    font-weight: normal;
+    font-size: 13px;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  input[type="checkbox"] {
+    flex-shrink: 0;
+    width: 18px !important;
+    min-width: 18px !important;
+    max-width: 18px !important;
+    height: 18px;
+    cursor: pointer;
+    margin: 0;
+    appearance: auto;
+    -webkit-appearance: checkbox;
+    -moz-appearance: checkbox;
+    display: inline-block !important;
+    opacity: 1;
+    visibility: visible;
+  }
+
+  textarea {
+    width: 100%;
+    margin-top: 4px;
+  }
+
+  button,
+  a {
+    width: 100%;
+    text-align: left;
+  }
+
+  p {
+    width: 100%;
+    margin: 0;
+    text-align: left;
+  }
+}
+
+.label-checkboxes {
+  margin-top: 4px;
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 6px;
+  border: 1px solid colors.$datablock-border;
+  border-radius: 4px;
+  background-color: rgba(colors.$egg-white, 0.3);
+  min-height: 100px;
+
+  // Force scrollbar to always show for mouse wheel detection
+  &::-webkit-scrollbar {
+    width: 8px;
+    display: block;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: rgba(colors.$datablock-border, 0.2);
+    border-radius: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: colors.$blue-highlight;
+    border-radius: 4px;
+
+    &:hover {
+      background: colors.$datablock-border;
+    }
+  }
+}
+
+// Responsive adjustments for settings modal
+@media (max-width: 768px) {
+  #unified_settings_modal.jBox-wrapper {
+    .jBox-content {
+      padding: 10px;
+    }
+  }
+
+  .settings-container {
+    .settings-tabs {
+      .nav-tabs {
+        .nav-item {
+          flex: 1 1 auto;
+
+          .nav-link {
+            padding: 8px 10px;
+            font-size: 14px;
+          }
+        }
+      }
+    }
+
+    .settings-section-content {
+      textarea,
+      input[type="text"] {
+        font-size: 14px;
+      }
+
+      button {
+        width: 100%;
+        padding: 12px;
+      }
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .settings-container {
+    .settings-tabs {
+      .nav-tabs {
+        flex-direction: column;
+
+        .nav-item {
+          width: 100%;
+
+          .nav-link {
+            text-align: left;
+            border-left: 3px solid transparent;
+            border-bottom: none;
+
+            &.active {
+              border-left-color: colors.$blue-highlight;
+              border-bottom-color: transparent;
+            }
+          }
+        }
+      }
+    }
+  }
+}

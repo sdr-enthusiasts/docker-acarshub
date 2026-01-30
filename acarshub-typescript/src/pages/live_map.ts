@@ -25,6 +25,10 @@ import { images } from "../assets/assets";
 import { display_messages } from "../helpers/html_generator";
 import { tooltip } from "../helpers/tooltips";
 import {
+  settingsManager,
+  type SettingsSection,
+} from "../helpers/settings_manager";
+import {
   //showPlaneMessages,
   find_matches,
   get_match,
@@ -48,6 +52,58 @@ import { getBaseMarker, svgShapeToURI } from "../js-other/aircraft_icons";
 import { ACARSHubPage } from "./master";
 
 export class LiveMapPage extends ACARSHubPage {
+  show_map_modal(): void {
+    settingsManager.openSettings("live_map");
+  }
+
+  private registerSettings(): void {
+    const sections: SettingsSection[] = [
+      {
+        id: "map_settings",
+        title: "Live Map",
+        content: `
+          <div class="settings-option">
+            <label class="settings-label" for="acars_checkbox">Show Only Aircraft with ACARS Messages</label>
+            <input type="checkbox" id="acars_checkbox" onclick="toggle_acars_only()" />
+          </div>
+          <div class="settings-option">
+            <label class="settings-label" for="datablocks_checkbox">Show Data Blocks</label>
+            <input type="checkbox" id="datablocks_checkbox" onclick="toggle_datablocks()" />
+          </div>
+          <div class="settings-option">
+            <label class="settings-label" for="extended_checkbox">Show Extended Data Blocks</label>
+            <input type="checkbox" id="extended_checkbox" onclick="toggle_extended_datablocks()" />
+          </div>
+          <div class="settings-option">
+            <label class="settings-label" for="nexrad_checkbox">Show NEXRAD Weather Radar</label>
+            <input type="checkbox" id="nexrad_checkbox" onclick="toggleNexrad()" />
+          </div>
+          <div class="settings-option">
+            <label class="settings-label" for="unread_checkbox">Show Only Unread Messages</label>
+            <input type="checkbox" id="unread_checkbox" onclick="toggle_unread_messages()" />
+          </div>
+          <h4 class="settings-section-header">Actions</h4>
+          <div class="settings-option">
+            <a href="javascript:mark_all_messages_read()" class="spread_text">Mark All Messages as Read</a>
+          </div>
+        `,
+        onShow: () => {
+          this.updateSettingsUI();
+        },
+      },
+    ];
+
+    settingsManager.registerPageSettings("live_map", sections);
+  }
+
+  private updateSettingsUI(): void {
+    $("#acars_checkbox").prop("checked", this.#show_only_acars);
+    $("#datablocks_checkbox").prop("checked", this.#show_datablocks);
+    $("#extended_checkbox").prop("checked", this.#show_extended_datablocks);
+    $("#nexrad_checkbox").prop("checked", this.#show_nexrad);
+    $("#unread_checkbox").prop("checked", this.#show_unread_messages);
+  }
+
   #adsb_enabled: boolean = false;
   #range_rings: boolean = true;
   #adsb_planes = {} as { [key: string]: adsb_target };
@@ -101,24 +157,9 @@ export class LiveMapPage extends ACARSHubPage {
   #modal_current_tab = "" as string;
   #current_scale = Number(Cookies.get("live_map_zoom")) || (8 as number);
 
-  get_cookie_value(): void {
-    this.#show_only_acars = Cookies.get("only_acars") === "true";
-    this.#show_datablocks = Cookies.get("show_datablocks") === "true";
-    this.#show_extended_datablocks =
-      Cookies.get("show_extended_datablocks") === "true";
-    this.#current_sort = Cookies.get("current_sort") || "callsign";
-    this.#ascending = !!(
-      !Cookies.get("sort_direction") || Cookies.get("sort_direction") === "true"
-    );
-    this.#show_unread_messages = !!(
-      !Cookies.get("show_unread_messages") ||
-      Cookies.get("show_unread_messages") === "true"
-    );
-    this.#show_nexrad = Cookies.get("show_nexrad") === "true";
-  }
-
   toggle_unread_messages(): void {
     this.#show_unread_messages = !this.#show_unread_messages;
+    this.updateSettingsUI();
     Cookies.set("show_unread_messages", String(this.#show_unread_messages), {
       expires: 365,
       sameSite: "Strict",
@@ -129,6 +170,7 @@ export class LiveMapPage extends ACARSHubPage {
 
   toggle_acars_only(): void {
     this.#show_only_acars = !this.#show_only_acars;
+    this.updateSettingsUI();
     Cookies.set("only_acars", String(this.#show_only_acars), {
       expires: 365,
       sameSite: "Strict",
@@ -148,6 +190,7 @@ export class LiveMapPage extends ACARSHubPage {
 
   toggle_datablocks(): void {
     this.#show_datablocks = !this.#show_datablocks;
+    this.updateSettingsUI();
 
     Cookies.set("show_datablocks", String(this.#show_datablocks), {
       expires: 365,
@@ -168,6 +211,7 @@ export class LiveMapPage extends ACARSHubPage {
 
   toggle_extended_datablocks(): void {
     this.#show_extended_datablocks = !this.#show_extended_datablocks;
+    this.updateSettingsUI();
 
     Cookies.set(
       "show_extended_datablocks",
@@ -192,6 +236,7 @@ export class LiveMapPage extends ACARSHubPage {
 
   toggle_nexrad(): void {
     this.#show_nexrad = !this.#show_nexrad;
+    this.updateSettingsUI();
 
     Cookies.set("show_nexrad", String(this.#show_nexrad), {
       expires: 365,
@@ -306,6 +351,25 @@ export class LiveMapPage extends ACARSHubPage {
 
   constructor(lat_in: number, lon_in: number, range_rings: boolean) {
     super();
+
+    // Load cookie values
+    this.#show_only_acars = Cookies.get("only_acars") === "true";
+    this.#show_datablocks = Cookies.get("show_datablocks") === "true";
+    this.#show_extended_datablocks =
+      Cookies.get("show_extended_datablocks") === "true";
+    this.#current_sort = Cookies.get("current_sort") || "callsign";
+    this.#ascending = !!(
+      !Cookies.get("sort_direction") || Cookies.get("sort_direction") === "true"
+    );
+    this.#show_unread_messages = !!(
+      !Cookies.get("show_unread_messages") ||
+      Cookies.get("show_unread_messages") === "true"
+    );
+    this.#show_nexrad = Cookies.get("show_nexrad") === "true";
+
+    // Register settings immediately
+    this.registerSettings();
+
     this.#lat = lat_in;
     this.#lon = lon_in;
     this.#station_lat = this.#lat;
@@ -1301,7 +1365,7 @@ export class LiveMapPage extends ACARSHubPage {
 
     this.page_active = state;
     this.#window_size = window_size;
-    this.get_cookie_value();
+
     const leafletRadarAttribution =
       '<a href="https://github.com/rwev/leaflet-radar">Radar</a>';
     if (this.page_active && this.#adsb_enabled) {
@@ -1471,7 +1535,9 @@ export class LiveMapPage extends ACARSHubPage {
   }
 
   set_html(): void {
-    $("#modal_text").html("");
+    $("#modal_text").html(
+      '<a href="javascript:show_page_modal()">Settings</a>',
+    );
     if (this.#adsb_enabled)
       $("#log").html(
         '<div class="flex-height-100"><div id="mapid"></div><div id="planes"></div>',

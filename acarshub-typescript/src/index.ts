@@ -735,9 +735,16 @@ export function get_current_planes() {
 // functions that need to be registered to window object
 
 window.show_page_modal = (): void => {
+  // Open the settings modal - it contains all settings from all pages
   if (index_acars_page === "/alerts") {
     alerts.show_alert_message_modal();
   } else if (index_acars_page === "/") {
+    live_messages.show_live_message_modal();
+  } else if (index_acars_page === "/adsb" && live_map) {
+    live_map.show_map_modal();
+  } else {
+    // For pages without their own settings, open via any registered page
+    // Since all settings are always visible, it doesn't matter which one we call
     live_messages.show_live_message_modal();
   }
 };

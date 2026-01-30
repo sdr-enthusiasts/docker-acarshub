@@ -22,6 +22,10 @@ import {
 } from "../helpers/html_generator";
 import { tooltip } from "../helpers/tooltips";
 import {
+  settingsManager,
+  type SettingsSection,
+} from "../helpers/settings_manager";
+import {
   alert_term_query,
   alert_text_update,
   get_window_size,
@@ -67,35 +71,6 @@ export class AlertsPage extends ACARSHubPage {
     "red coat",
   ] as string[];
 
-  #alert_message_modal = new jBox("Modal", {
-    id: "set_modal",
-    width: 350,
-    height: 450,
-    blockScroll: false,
-    isolateScroll: true,
-    animation: "zoomIn",
-    closeButton: "box",
-    overlay: true,
-    reposition: false,
-    repositionOnOpen: true,
-    content: `  <p><a href="javascript:toggle_playsound()" id="playsound_link" class="spread_text">Turn On Alert Sound</a></p>
-    <span id="stat_menu">
-      <label for="alert_text" class="menu_non_link">Text Field:</label><br />
-      <textarea rows="2" id="alert_text"></textarea><br />
-      <label for="alert_text_ignore" class="menu_non_link">Text Field to Ignore:</label><br />
-      <textarea rows="2" id="alert_text_ignore"></textarea><br />
-      <label for="alert_callsigns" class="menu_non_link">Callsign:</label><br />
-      <textarea rows="2" id="alert_callsigns"></textarea><br />
-      <label for="alert_tail" class="menu_non_link">Tail Number:</label><br />
-      <textarea rows="2" id="alert_tail"></textarea><br />
-      <label for="alert_icao" class="menu_non_link">ICAO Address:</label><br />
-      <textarea rows="2" id="alert_icao"></textarea><br />
-      <button type="submit" value="Submit" onclick="javascript:updateAlerts()">Update</button>
-      <p><a href="javascript:default_alert_values()" class="spread_text">Default alert values</a><br>
-      <a href="javascript:reset_alert_counts()" class="spread_text red">Reset ALL alert counts in data base</a></p>
-    </span>`,
-  });
-
   #alert_sound: HTMLAudioElement = null as unknown as HTMLAudioElement;
   #play_sound: boolean = false;
 
@@ -106,6 +81,9 @@ export class AlertsPage extends ACARSHubPage {
     // Also sets all of the user saved prefs
     this.onInit();
     alert_term_query(this.#alert_icao, this.#alert_callsigns, this.#alert_tail);
+
+    // Register settings immediately
+    this.registerSettings();
   }
 
   show_modal_values(): void {
@@ -511,20 +489,12 @@ export class AlertsPage extends ACARSHubPage {
   }
 
   show_sound(): void {
-    if (this.#play_sound) {
-      $("#playsound_link").html("Turn Off Alert Sound");
-    } else {
-      $("#playsound_link").html("Turn On Alert Sound");
-    }
+    this.updateSettingsUI();
   }
 
   toggle_playsound(loading = false): void {
-    if (this.#play_sound) {
-      $("#playsound_link").html("Turn On Alert Sound");
-    } else {
-      $("#playsound_link").html("Turn Off Alert Sound");
-    }
     this.#play_sound = !this.#play_sound;
+    this.updateSettingsUI();
     Cookies.set("play_sound", this.#play_sound === true ? "true" : "false", {
       expires: 365,
       sameSite: "Strict",
@@ -575,14 +545,67 @@ export class AlertsPage extends ACARSHubPage {
   alerts_set_html(show_menu_modal: boolean): void {
     if (show_menu_modal) {
       $("#modal_text").html(
-        '<a href="javascript:show_page_modal()">Page Settings</a>',
+        '<a href="javascript:show_page_modal()">Settings</a>',
       );
     }
     $("#log").html("");
   }
 
   show_alert_message_modal(): void {
-    this.#alert_message_modal.open();
-    this.show_modal_values();
+    settingsManager.openSettings("alerts");
+  }
+
+  private registerSettings(): void {
+    const sections: SettingsSection[] = [
+      {
+        id: "alerts_settings",
+        title: "Alerts",
+        content: `
+          <div class="settings-option">
+            <label class="settings-label" for="sound_checkbox">Alert Sound</label>
+            <input type="checkbox" id="sound_checkbox" onclick="toggle_playsound()" />
+          </div>
+          <h4 class="settings-section-header">Alert Filters</h4>
+          <div class="settings-option">
+            <label class="settings-label" for="alert_text">Text Field:</label>
+          </div>
+          <textarea rows="2" id="alert_text"></textarea>
+          <div class="settings-option">
+            <label class="settings-label" for="alert_text_ignore">Text Field to Ignore:</label>
+          </div>
+          <textarea rows="2" id="alert_text_ignore"></textarea>
+          <div class="settings-option">
+            <label class="settings-label" for="alert_callsigns">Callsign:</label>
+          </div>
+          <textarea rows="2" id="alert_callsigns"></textarea>
+          <div class="settings-option">
+            <label class="settings-label" for="alert_tail">Tail Number:</label>
+          </div>
+          <textarea rows="2" id="alert_tail"></textarea>
+          <div class="settings-option">
+            <label class="settings-label" for="alert_icao">ICAO Address:</label>
+          </div>
+          <textarea rows="2" id="alert_icao"></textarea>
+          <button type="submit" value="Submit" onclick="javascript:updateAlerts()">Update</button>
+          <h4 class="settings-section-header">Actions</h4>
+          <div class="settings-option">
+            <a href="javascript:default_alert_values()" class="spread_text">Default alert values</a>
+          </div>
+          <div class="settings-option">
+            <a href="javascript:reset_alert_counts()" class="spread_text red">Reset ALL alert counts in data base</a>
+          </div>
+        `,
+        onShow: () => {
+          this.updateSettingsUI();
+          this.show_modal_values();
+        },
+      },
+    ];
+
+    settingsManager.registerPageSettings("alerts", sections);
+  }
+
+  private updateSettingsUI(): void {
+    $("#sound_checkbox").prop("checked", this.#play_sound);
   }
 }

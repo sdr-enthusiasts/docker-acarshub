@@ -224,7 +224,9 @@ export class StatusPage extends ACARSHubPage {
   </div>`,
     );
 
-    $("#modal_text").html("");
+    $("#modal_text").html(
+      '<a href="javascript:show_page_modal()">Settings</a>',
+    );
     $("#log").html("");
   }
 }
