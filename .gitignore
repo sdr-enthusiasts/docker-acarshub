@@ -149,3 +149,4 @@ docker_acarshub.egg-info
 *.rrd
 .pre-commit-config.yaml
 *.db
+.env

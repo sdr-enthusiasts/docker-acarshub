@@ -215,6 +215,28 @@ module.exports = (env, argv) => {
   if (argv.mode === "development") {
     config.devtool = "source-map";
     config.output.filename = "[name].js";
+
+    // Add dev server configuration
+    config.devServer = {
+      static: {
+        directory: path.join(__dirname, "dist"),
+      },
+      compress: true,
+      port: 9000,
+      hot: true,
+      proxy: [
+        {
+          context: ["/socket.io", "/main", "/metrics"],
+          target: "http://localhost:5000",
+          ws: true,
+          changeOrigin: true,
+        },
+      ],
+      historyApiFallback: {
+        index: "/static/index.html",
+      },
+      watchFiles: ["src/**/*", "dist/**/*"],
+    };
   } else {
     config.devtool = "source-map";
     config.output.filename = "[name].[chunkhash].js";

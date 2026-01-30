@@ -7,6 +7,8 @@
   "scripts": {
     "build": "webpack --mode production",
     "build-dev": "webpack --mode development",
+    "watch": "webpack --mode development --watch",
+    "dev": "webpack serve --mode development --hot --open",
     "copy_test": "./copy_test_assets.sh",
     "installer": "./installer.sh"
   },

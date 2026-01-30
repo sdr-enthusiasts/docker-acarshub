@@ -648,7 +648,9 @@ def database_search(search_term, page=0):
                 search_term["icao"] = int(icao_hex, 16)
             except Exception as e:
                 acarshub_logging.log(
-                    f"can't convert icao from hex to decimal: {icao_hex} ({str(e)})", "database", level=LOG_LEVEL["DEBUG"]
+                    f"can't convert icao from hex to decimal: {icao_hex} ({str(e)})",
+                    "database",
+                    level=LOG_LEVEL["DEBUG"],
                 )
 
         if "station_id" in search_term and search_term["station_id"] != "":

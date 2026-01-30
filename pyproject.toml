@@ -21,3 +21,18 @@ dependencies = [
 
 [tool.setuptools.package-dir]
 "" = "rootfs/webapp"
+
+[tool.pdm.scripts]
+# Development scripts
+dev = {cmd = "python run_dev.py"}
+dev-backend = {cmd = "python run_dev.py"}
+dev-watch-frontend = {shell = "cd acarshub-typescript && npm run watch"}
+dev-full = {composite = ["dev-watch-frontend", "dev-backend"]}
+
+# Frontend build scripts
+build-frontend = {shell = "cd acarshub-typescript && npm run build"}
+build-frontend-dev = {shell = "cd acarshub-typescript && npm run build-dev"}
+watch-frontend = {shell = "./dev-watch.sh"}
+
+# Install frontend dependencies
+install-frontend = {shell = "cd acarshub-typescript && npm install"}

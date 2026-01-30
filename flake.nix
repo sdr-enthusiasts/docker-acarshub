@@ -62,6 +62,15 @@
 
           src = ./.;
 
+          check_javascript = true;
+          check_python = true;
+
+          javascript = {
+            enableBiome = true;
+            enableTsc = true;
+            tsConfig = "acarshub-typescript/tsconfig.json";
+          };
+
           extraExcludes = [
             "secrets.yaml"
             "tsconfig.json"

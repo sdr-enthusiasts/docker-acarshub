@@ -34,6 +34,7 @@ from flask import (
     redirect,
     url_for,
     Response,
+    send_from_directory,
 )  # noqa: E402
 from threading import Thread, Event  # noqa: E402
 from collections import deque  # noqa: E402
@@ -43,6 +44,8 @@ app = Flask(__name__)
 # Make the browser not cache files if running in dev mode
 if acarshub_configuration.LOCAL_TEST:
     app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0
+    app.config["TEMPLATES_AUTO_RELOAD"] = True
+    app.config["DEBUG"] = True
 
 # turn the flask app into a socketio app
 # regarding async_handlers=True, see: https://github.com/miguelgrinberg/Flask-SocketIO/issues/348
@@ -696,6 +699,17 @@ def adsb():
 def metrics():
     """Expose Prometheus metrics"""
     return Response(acarshub_metrics.get_metrics(), mimetype="text/plain")
+
+
+@app.route("/static/<path:filename>")
+def serve_static(filename):
+    """Serve static files without caching in dev mode"""
+    response = send_from_directory(app.static_folder, filename)
+    if acarshub_configuration.LOCAL_TEST:
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+    return response
 
 
 @app.errorhandler(404)
