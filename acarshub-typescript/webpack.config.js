@@ -183,8 +183,8 @@ module.exports = (_env, argv) => {
         logo: path.resolve(__dirname, "./src/assets/images") + "/acarshub.svg",
         inject: true,
         cache: true,
-        outputPath: "../images/favicons",
-        publicPath: "../../static/images/favicons",
+        outputPath: "../../images/favicons",
+        publicPath: "/static/images/favicons",
         prefix: "",
       }),
       new MiniCssExtractPlugin({

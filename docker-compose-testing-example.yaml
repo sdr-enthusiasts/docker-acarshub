@@ -52,7 +52,7 @@ services:
       - AR_ADD_PROXY_ID=true
       - AR_STATS_VERBOSE=true
       - AR_STATS_EVERY=60
-      - AR_VERBOSITY=debug
+      - AR_VERBOSITY=info
       - TZ=${FEEDER_TZ}
       - AR_ENABLE_DEDUPE=true
       # 5.161.21.38 is feed.airframes.io Using this to stop infinity DNS lookups

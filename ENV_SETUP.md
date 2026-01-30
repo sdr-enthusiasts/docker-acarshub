@@ -33,12 +33,14 @@
 
 ### ACARS Data Sources
 
-| Variable           | Description                | Options                |
-| ------------------ | -------------------------- | ---------------------- |
-| `ENABLE_ACARS`     | Enable ACARS messages      | `external`, `disabled` |
-| `ENABLE_VDLM`      | Enable VDLM messages       | `external`, `disabled` |
-| `ENABLE_HFDL`      | Enable HFDL messages       | `external`, `disabled` |
-| `LIVE_DATA_SOURCE` | IP/hostname of data source | `192.168.1.100`        |
+| Variable           | Description                | Options                                            |
+| ------------------ | -------------------------- | -------------------------------------------------- |
+| `ENABLE_ACARS`     | Enable ACARS messages      | `true`, `false` (legacy: `external` is deprecated) |
+| `ENABLE_VDLM`      | Enable VDLM messages       | `true`, `false` (legacy: `external` is deprecated) |
+| `ENABLE_HFDL`      | Enable HFDL messages       | `true`, `false` (legacy: `external` is deprecated) |
+| `ENABLE_IMSL`      | Enable IMSL messages       | `true`, `false` (legacy: `external` is deprecated) |
+| `ENABLE_IRDM`      | Enable IRDM messages       | `true`, `false` (legacy: `external` is deprecated) |
+| `LIVE_DATA_SOURCE` | IP/hostname of data source | `192.168.1.100`                                    |
 
 ### ADSB Configuration
 
@@ -95,9 +97,9 @@ env LOCAL_TEST=true ACARSHUB_DB=sqlite:///test.db ... python rootfs/webapp/acars
 ```env
 LOCAL_TEST=true
 ACARSHUB_DB=sqlite:////home/user/acarshub-dev.db
-ENABLE_ACARS=external
-ENABLE_VDLM=external
-ENABLE_HFDL=external
+ENABLE_ACARS=true
+ENABLE_VDLM=true
+ENABLE_HFDL=true
 LIVE_DATA_SOURCE=192.168.1.100
 ENABLE_ADSB=true
 ADSB_URL=http://192.168.1.100/tar1090/data/aircraft.json
@@ -108,9 +110,9 @@ ADSB_URL=http://192.168.1.100/tar1090/data/aircraft.json
 ```env
 LOCAL_TEST=true
 ACARSHUB_DB=sqlite:///test.db
-ENABLE_ACARS=disabled
-ENABLE_VDLM=disabled
-ENABLE_HFDL=disabled
+ENABLE_ACARS=false
+ENABLE_VDLM=false
+ENABLE_HFDL=false
 ENABLE_ADSB=false
 ```
 
@@ -119,7 +121,7 @@ ENABLE_ADSB=false
 ```env
 LOCAL_TEST=true
 ACARSHUB_DB=postgresql://user:password@localhost/acarshub_dev
-ENABLE_ACARS=external
+ENABLE_ACARS=true
 LIVE_DATA_SOURCE=192.168.1.100
 ```
 

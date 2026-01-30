@@ -3,24 +3,12 @@
 
 // Map container
 #mapid {
-  height: calc(100vh - 130px);
-  max-height: calc(100vh - 130px);
+  height: 100%;
+  max-height: 100%;
   width: 100%;
-  background-color: colors.$mapbackground;
-  float: left;
-  max-width: calc(100vw - 435px);
+  background-color: var(--bg-mapbackground);
   flex: 1 1 auto;
   position: relative;
-
-  @media only screen and (max-width: 1200px) {
-    height: calc(100vh - 130px) !important;
-    max-height: calc(100vh - 130px) !important;
-  }
-
-  @media only screen and (max-width: 969px) {
-    height: calc(100vh - 170px) !important;
-    max-height: calc(100vh - 170px) !important;
-  }
 
   @media only screen and (max-width: 700px) {
     width: 100%;
@@ -35,44 +23,44 @@
 .airplane_darkgreen,
 .airplane_brown,
 .airplane_orange {
-  stroke: colors.$full-black;
+  stroke: var(--airplane-stroke);
   paint-order: stroke;
 
   @media not all and (pointer: coarse) {
     &:hover {
-      fill: colors.$full-orange;
+      fill: var(--color-orange);
       paint-order: stroke;
     }
   }
 }
 
 .airplane_brown {
-  fill: colors.$full-brown;
+  fill: var(--color-brown);
 }
 
 .airplane_green {
-  fill: colors.$full-green;
+  fill: var(--color-green);
 }
 
 .airplane_blue {
-  fill: colors.$blue-highlight;
+  fill: var(--color-blue);
 }
 
 .airplane_orange {
-  fill: colors.$full-orange;
+  fill: var(--color-orange);
 }
 
 .airplane_red {
-  fill: colors.$full-red;
+  fill: var(--color-red);
 }
 
 .airplane_darkgreen {
-  fill: colors.$full-darkgreen;
+  fill: var(--color-darkgreen);
 }
 
 .airplane_datablock {
-  background: colors.$datablock-bg;
-  color: colors.$full-black;
+  background: var(--bg-datablock);
+  color: var(--color-black);
   font-weight: bold;
   text-transform: uppercase;
   max-width: 120px;
@@ -80,7 +68,7 @@
   width: max-content;
   padding: 4px;
   border-radius: 15px;
-  border: 2px solid colors.$datablock-border;
+  border: 2px solid var(--border-datablock);
   -moz-border-radius: 15px;
   font-family: fonts.$mono-fonts;
 }
@@ -96,21 +84,11 @@
 // Plane list sidebar
 div#planes {
   width: 340px;
-  max-height: calc(100vh - 130px);
-  overflow: scroll;
-  position: relative;
-  float: right;
+  max-height: 100%;
+  overflow: auto;
   display: flex;
   flex-direction: column;
-  left: 5px !important;
-
-  @media only screen and (max-width: 1200px) {
-    max-height: calc(100vh - 130px) !important;
-  }
-
-  @media only screen and (max-width: 969px) {
-    max-height: calc(100vh - 170px) !important;
-  }
+  flex-shrink: 0;
 
   @media only screen and (max-width: 700px) {
     display: none !important;
@@ -121,17 +99,17 @@ div.plane_list_no_hover,
 div.plane_list {
   display: inline-block;
   width: 100%;
-  border-top: 1px solid colors.$full-black;
-  border-bottom: 1px solid colors.$full-black;
-  color: colors.$full-white;
-  background-color: colors.$blue-highlight;
+  border-top: 1px solid var(--border-black);
+  border-bottom: 1px solid var(--border-black);
+  color: var(--modal-title-text);
+  background-color: var(--color-blue);
   font-weight: bold;
 }
 
 div.plane_list {
   &:hover {
-    background-color: colors.$datablock-bg;
-    color: colors.$blue-highlight;
+    background-color: var(--bg-datablock);
+    color: var(--color-blue);
   }
 }
 
@@ -139,15 +117,15 @@ div.plane_element {
   display: inline-block;
   position: relative;
   padding-left: 5px;
-  border-left: 2px solid colors.$full-black;
+  border-left: 2px solid var(--border-black);
 
   a {
-    color: colors.$full-white;
+    color: var(--modal-title-text);
   }
 }
 
 .plane_header a {
-  color: colors.$blue-highlight !important;
+  color: var(--color-blue) !important;
   text-decoration: none;
   text-transform: uppercase;
   font-weight: bold;
@@ -177,47 +155,47 @@ div.plane_element {
 // Plane list headers
 .plane-header-title {
   font-weight: bold;
-  border-bottom: 1px solid colors.$full-black;
-  color: colors.$blue-highlight !important;
-  background-color: colors.$grey-bg !important;
+  border-bottom: 1px solid var(--border-black);
+  color: var(--color-blue) !important;
+  background-color: var(--bg-grey) !important;
 
   .plane_element,
   .plane_header {
-    color: colors.$blue-highlight !important;
+    color: var(--color-blue) !important;
   }
 
   a {
-    color: colors.$blue-highlight !important;
+    color: var(--color-blue) !important;
   }
 }
 
 .plane-stats-header {
-  color: colors.$blue-highlight !important;
-  background-color: colors.$grey-bg !important;
+  color: var(--color-blue) !important;
+  background-color: var(--bg-grey) !important;
 
   .plane_element {
-    color: colors.$blue-highlight !important;
+    color: var(--color-blue) !important;
   }
 }
 
 // Sidebar state classes
 .sidebar_hovered_from_map_acars {
-  background-color: colors.$datablock-bg !important;
-  color: colors.$full-green !important;
+  background-color: var(--bg-datablock) !important;
+  color: var(--color-green) !important;
 
   .plane_element a {
-    color: colors.$full-green !important;
+    color: var(--color-green) !important;
   }
 }
 
 .sidebar_hovered_from_map_no_acars {
-  background-color: colors.$datablock-bg !important;
-  color: colors.$blue-highlight !important;
+  background-color: var(--bg-datablock) !important;
+  color: var(--color-blue) !important;
 }
 
 .sidebar_no_hover_with_acars {
-  background-color: colors.$full-green !important;
-  color: colors.$full-white !important;
+  background-color: var(--color-green) !important;
+  color: var(--modal-title-text) !important;
   font-weight: bold !important;
 
   @media not all and (pointer: coarse) {
@@ -225,15 +203,15 @@ div.plane_element {
     &:focus,
     &:hover a,
     &:focus a {
-      background-color: colors.$datablock-bg !important;
-      color: colors.$full-green !important;
+      background-color: var(--bg-datablock) !important;
+      color: var(--color-green) !important;
     }
   }
 }
 
 .sidebar_no_hover_with_unread {
-  background-color: colors.$full-darkgreen !important;
-  color: colors.$full-white !important;
+  background-color: var(--color-darkgreen) !important;
+  color: var(--modal-title-text) !important;
   font-weight: bold !important;
 
   @media not all and (pointer: coarse) {
@@ -241,8 +219,8 @@ div.plane_element {
     &:focus,
     &:hover a,
     &:focus a {
-      background-color: colors.$datablock-bg !important;
-      color: colors.$full-darkgreen !important;
+      background-color: var(--bg-datablock) !important;
+      color: var(--color-darkgreen) !important;
       font-weight: bold !important;
     }
   }
@@ -250,47 +228,47 @@ div.plane_element {
 
 .sidebar_hovered_from_map_with_unread,
 .sidebar_hovered_from_map_with_unread a {
-  background-color: colors.$datablock-bg !important;
-  color: colors.$full-darkgreen !important;
+  background-color: var(--bg-datablock) !important;
+  color: var(--color-darkgreen) !important;
   font-weight: bold !important;
 }
 
 .sidebar_alert_unread {
-  background-color: colors.$full-red !important;
+  background-color: var(--color-red) !important;
 
   @media not all and (pointer: coarse) {
     &:hover,
     &:focus,
     &:hover a,
     &:focus a {
-      background-color: colors.$datablock-bg !important;
-      color: colors.$full-red !important;
+      background-color: var(--bg-datablock) !important;
+      color: var(--color-red) !important;
     }
   }
 }
 
 .sidebar_alert_unread_hovered_from_map,
 .sidebar_alert_unread_hovered_from_map a {
-  background-color: colors.$datablock-bg !important;
-  color: colors.$full-red !important;
+  background-color: var(--bg-datablock) !important;
+  color: var(--color-red) !important;
 }
 
 .sidebar_alert_read {
-  background-color: colors.$full-brown !important;
+  background-color: var(--color-brown) !important;
 
   @media not all and (pointer: coarse) {
     &:hover,
     &:focus,
     &:hover a,
     &:focus a {
-      background-color: colors.$datablock-bg !important;
-      color: colors.$full-brown !important;
+      background-color: var(--bg-datablock) !important;
+      color: var(--color-brown) !important;
     }
   }
 }
 
 .sidebar_alert_read_hovered_from_map,
 .sidebar_alert_read_hovered_from_map a {
-  background-color: colors.$datablock-bg !important;
-  color: colors.$full-brown !important;
+  background-color: var(--bg-datablock) !important;
+  color: var(--color-brown) !important;
 }

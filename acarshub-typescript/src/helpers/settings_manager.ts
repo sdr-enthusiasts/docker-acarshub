@@ -26,6 +26,7 @@ export interface SettingsSection {
 export class SettingsManager {
   #modal: unknown = null;
   #allSections: SettingsSection[] = [];
+  #globalSections: SettingsSection[] = [];
 
   constructor() {
     this.initializeModal();
@@ -33,7 +34,7 @@ export class SettingsManager {
 
   private initializeModal(): void {
     // Determine modal dimensions based on screen size
-    const getModalDimensions = (): { width: number; height: number } => {
+    const getModalDimensions = (): { width: number; maxHeight: number } => {
       const windowWidth = window.innerWidth;
       const windowHeight = window.innerHeight;
 
@@ -41,21 +42,21 @@ export class SettingsManager {
       if (windowWidth < 768) {
         return {
           width: Math.min(windowWidth - 40, 500),
-          height: Math.min(windowHeight - 100, 600),
+          maxHeight: windowHeight - 100,
         };
       }
       // Tablet: reasonable width, taller height
       else if (windowWidth < 1024) {
         return {
           width: 600,
-          height: Math.min(windowHeight - 100, 650),
+          maxHeight: windowHeight - 100,
         };
       }
       // Desktop: wider modal, avoid scrolling if possible
       else {
         return {
           width: 750,
-          height: Math.min(windowHeight - 100, 700),
+          maxHeight: windowHeight - 100,
         };
       }
     };
@@ -65,7 +66,7 @@ export class SettingsManager {
     this.#modal = new jBox("Modal", {
       id: "unified_settings_modal",
       width: dimensions.width,
-      height: dimensions.height,
+      maxHeight: dimensions.maxHeight,
       blockScroll: false,
       isolateScroll: true,
       animation: "zoomIn",
@@ -75,6 +76,14 @@ export class SettingsManager {
       repositionOnOpen: true,
       responsiveWidth: true,
       responsiveHeight: true,
+      position: {
+        x: "center",
+        y: "top",
+      },
+      offset: {
+        x: 0,
+        y: 20,
+      },
       title: "Settings",
       content: '<div id="settings_content">Loading...</div>',
       onOpen: () => {
@@ -92,7 +101,7 @@ export class SettingsManager {
           // biome-ignore lint/suspicious/noExplicitAny: jBox doesn't export proper types
           (this.#modal as any).options.width = newDimensions.width;
           // biome-ignore lint/suspicious/noExplicitAny: jBox doesn't export proper types
-          (this.#modal as any).options.height = newDimensions.height;
+          (this.#modal as any).options.maxHeight = newDimensions.maxHeight;
           // biome-ignore lint/suspicious/noExplicitAny: jBox doesn't export proper types
           if ((this.#modal as any).isOpen !== false) {
             // biome-ignore lint/suspicious/noExplicitAny: jBox doesn't export proper types
@@ -101,6 +110,11 @@ export class SettingsManager {
         }
       }, 250);
     });
+  }
+
+  public registerGlobalSettings(sections: SettingsSection[]): void {
+    // Replace all global sections
+    this.#globalSections = sections;
   }
 
   public registerPageSettings(page: string, sections: SettingsSection[]): void {
@@ -132,7 +146,8 @@ export class SettingsManager {
   }
 
   private renderCurrentSettings(): void {
-    const sections = this.#allSections;
+    // Combine global sections (first) with page-specific sections
+    const sections = [...this.#globalSections, ...this.#allSections];
     if (!sections || sections.length === 0) {
       $("#settings_content").html(
         '<p class="text-center">No settings available.</p>',

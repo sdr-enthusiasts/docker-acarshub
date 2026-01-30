@@ -441,7 +441,6 @@ export class AlertsPage extends ACARSHubPage {
           close: "zoomIn",
         },
         content: msg_text,
-        color: "green",
         autoClose: 10000,
       });
 

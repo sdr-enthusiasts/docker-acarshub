@@ -1,5 +1,6 @@
 @use "modules/colors" as colors;
 @use "modules/fonts" as fonts;
+@use "modules/theme";
 
 // Flexbox utilities
 .flex-container {
@@ -20,15 +21,17 @@
 .flex-height-100 {
   display: flex;
   height: 100%;
+  overflow: hidden;
+  gap: 5px;
 }
 
 // Display utilities
 .display-inline-block {
-  display: inline-block;
+  display: inline-block !important;
 }
 
 .display-none {
-  display: none;
+  display: none !important;
 }
 
 // Width utilities
@@ -60,48 +63,44 @@
 
 // Color utilities
 .text-red {
-  color: colors.$full-red;
+  color: var(--color-red);
 }
 
 .red,
 .red_body {
-  color: colors.$full-red;
+  color: var(--color-red);
 
   @media not all and (pointer: coarse) {
     &:hover {
-      color: colors.$full-white;
+      color: var(--hover-text);
     }
   }
 }
 
 span.red_important strong {
-  color: colors.$full-red !important;
+  color: var(--color-red) !important;
 }
 
 .orange {
-  color: colors.$full-orange;
+  color: var(--color-orange);
 }
 
 .green {
-  color: colors.$full-limegreen;
+  color: var(--color-green);
 }
 
 .white {
-  color: colors.$full-white;
+  color: var(--color-white);
 }
 
 // Background utilities
 .bg-table {
-  background: colors.$full-white;
-
-  @media (prefers-color-scheme: dark) {
-    background: colors.$grey-bg;
-  }
+  background: var(--message-bg);
 }
 
 // Shadow utilities
 .shadow {
-  box-shadow: 2px 2px 2px 1px colors.$mostly-transparent;
+  box-shadow: 2px 2px 2px 1px var(--shadow-mostly-transparent);
 }
 
 // Font utilities
@@ -131,16 +130,11 @@ span.red_important strong {
   width: 45px;
   text-align: center;
   margin-bottom: -1px;
-  background-color: colors.$full-white;
-  border: 1px solid colors.$full-black;
+  background-color: var(--message-bg);
+  border: 1px solid var(--border-black);
+  border: 1px solid var(--grey-highlight);
   font-weight: bold;
-  color: colors.$text-color;
-
-  @media (prefers-color-scheme: dark) {
-    background-color: colors.$grey-bg;
-    border-color: colors.$grey-highlight;
-    color: colors.$mapbackground;
-  }
+  color: var(--body-text);
 }
 
 .boxed_right_arrow {
@@ -153,26 +147,26 @@ span.red_important strong {
 
   @media not all and (pointer: coarse) {
     &:hover {
-      color: colors.$full-black;
+      color: var(--color-black);
     }
   }
 }
 
 .menu_non_link {
-  color: colors.$blue-highlight;
+  color: var(--color-blue);
   text-transform: uppercase;
 }
 
 .sidebar_link {
-  color: colors.$blue-highlight;
+  color: var(--color-blue);
 
   @media not all and (pointer: coarse) {
     &:hover {
-      color: colors.$full-white;
+      color: var(--color-white);
     }
   }
 }
 
 .noleft {
-  border-left: 0 solid colors.$transparent !important;
+  border-left: 0 solid transparent !important;
 }

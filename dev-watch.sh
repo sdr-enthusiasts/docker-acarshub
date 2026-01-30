@@ -48,9 +48,9 @@ copy_assets() {
     fi
 
     # Copy index.html to templates
-    if [ -f "$TS_DIR/dist/index.html" ]; then
+    if [ -f "$TS_DIR/dist/static/index.html" ]; then
         echo "  → Copying index.html..."
-        cp "$TS_DIR/dist/index.html" "$TEMPLATES_DIR/index.html"
+        cp "$TS_DIR/dist/static/index.html" "$TEMPLATES_DIR/index.html"
     fi
 
     # Copy helppage.MD to templates

@@ -48,6 +48,7 @@ declare global {
       uid: string,
     ) => void;
     toggleNexrad: () => void;
+    toggleTheme: () => void;
   }
 }
 
@@ -62,6 +63,11 @@ import "./css/site.scss";
 
 import { io, type Socket } from "socket.io-client";
 import { menu } from "./helpers/menu";
+import {
+  type SettingsSection,
+  settingsManager,
+} from "./helpers/settings_manager";
+import { themeManager } from "./helpers/theme_manager";
 import { tooltip } from "./helpers/tooltips";
 import type {
   acarshub_version,
@@ -240,9 +246,8 @@ $((): void => {
   // Observe one or multiple elements
   // time to set everything on the page up
 
-  if (window.matchMedia?.("(prefers-color-scheme: dark)").matches) {
-    console.log("Dark mode enabled");
-  }
+  // Register global settings (theme, etc.)
+  registerGlobalSettings();
 
   menu.generate_menu(); // generate the top menu
   menu.generate_footer(); // generate the footer
@@ -607,7 +612,7 @@ function connection_status(connected = false): void {
 
   if (connected) {
     $("#received").addClass("display-inline-block").removeClass("display-none");
-    $("#system_status")
+    $("#system_status_container")
       .addClass("display-inline-block")
       .removeClass("display-none");
     $("#receivedmessages")
@@ -615,7 +620,7 @@ function connection_status(connected = false): void {
       .removeClass("display-none");
   } else {
     $("#received").addClass("display-none").removeClass("display-inline-block");
-    $("#system_status")
+    $("#system_status_container")
       .addClass("display-none")
       .removeClass("display-inline-block");
     $("#receivedmessages")
@@ -850,6 +855,34 @@ window.reset_alert_counts = (): void => {
   }
 };
 
+// Register global settings for theme management
+function registerGlobalSettings(): void {
+  const globalSections: SettingsSection[] = [
+    {
+      id: "global_settings",
+      title: "Global",
+      content: `
+        <div class="settings-option">
+          <label class="settings-label" for="theme_toggle">Dark Mode</label>
+          <input type="checkbox" id="theme_toggle" onchange="window.toggleTheme()" />
+        </div>
+      `,
+      onShow: () => {
+        // Update checkbox to reflect current theme
+        $("#theme_toggle").prop("checked", themeManager.isDarkMode());
+      },
+    },
+  ];
+
+  settingsManager.registerGlobalSettings(globalSections);
+}
+
+// Global function for theme toggle
+window.toggleTheme = (): void => {
+  themeManager.toggleTheme();
+  // Update checkbox if settings modal is open
+  $("#theme_toggle").prop("checked", themeManager.isDarkMode());
+};
 window.showPlaneMessages = (
   callsign: string,
   hex: string,

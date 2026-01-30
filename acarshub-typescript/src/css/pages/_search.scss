@@ -1,4 +1,5 @@
 @use "../modules/colors" as colors;
+@use "../modules/theme";
 
 // Search-specific styles
 #search_results {
@@ -22,6 +23,9 @@
   max-height: 100%;
   overflow: auto;
   float: left;
+  font-weight: bold;
+  border: 1px solid var(--grey-highlight);
+  margin-top: 12px;
 
   @media only screen and (max-width: 969px) {
     width: 200px !important;
@@ -29,6 +33,10 @@
 
   @media only screen and (max-width: 700px) {
     width: 100% !important;
+  }
+
+  span.menu_non_link {
+    color: var(--body-text);
   }
 }
 
@@ -38,11 +46,15 @@
   display: grid;
   grid-template-columns: 30% 70%;
   width: 100%;
-  border: 1px solid colors.$full-black;
+  border-top: 1px solid var(--grey-highlight);
   border-collapse: collapse;
   background-color: transparent;
   padding-left: 0 !important;
   padding-right: 0 !important;
+
+  &:first-child {
+    border-top: none;
+  }
 }
 
 .search-row {
@@ -53,48 +65,34 @@
   padding: 7px;
   padding-left: 5px;
   vertical-align: middle;
-  color: colors.$blue-highlight;
-  background-color: colors.$full-white;
-
-  @media (prefers-color-scheme: dark) {
-    background-color: colors.$grey-bg;
-  }
+  color: var(--body-text);
+  background-color: var(--message-bg);
 }
 
 .search_term {
   padding: 7px 20px 7px 15px;
-  background-color: colors.$full-white;
-
-  @media (prefers-color-scheme: dark) {
-    background-color: colors.$grey-bg;
-  }
+  background-color: var(--message-bg);
 }
 
 .search-info-row {
   grid-column: 1 / -1;
   padding: 7px;
   padding-left: 5px;
-  background-color: colors.$full-white;
-
-  @media (prefers-color-scheme: dark) {
-    background-color: colors.$grey-bg;
-  }
+  background-color: var(--message-bg);
+  color: var(--color-black);
 }
 
 .search-pagination {
   grid-column: 1 / -1;
   padding: 7px;
   padding-left: 5px;
-  background-color: colors.$full-white;
-
-  @media (prefers-color-scheme: dark) {
-    background-color: colors.$grey-bg;
-  }
+  background-color: var(--message-bg);
+  color: var(--color-black);
 }
 
 #size,
 #database {
-  color: colors.$blue-highlight;
+  color: var(--color-black);
 }
 
 #log {

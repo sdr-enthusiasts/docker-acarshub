@@ -8,7 +8,7 @@
   height: 300px;
   margin: 5px;
   border-width: 2px;
-  border-color: colors.$stat-border;
+  border-color: var(--stat-border);
   border-style: groove;
 }
 

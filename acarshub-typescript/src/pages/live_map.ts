@@ -118,6 +118,7 @@ export class LiveMapPage extends ACARSHubPage {
   #layerGroupPlanes = (<unknown>null) as LeafLet.LayerGroup;
   #layerGroupPlaneDatablocks = (<unknown>null) as LeafLet.LayerGroup;
   #layerGroupRangeRings = (<unknown>null) as LeafLet.LayerGroup;
+  #tileLayer = (<unknown>null) as LeafLet.TileLayer;
   #lat = 0 as number;
   #lon = 0 as number;
   #station_lat = 0 as number;
@@ -396,13 +397,17 @@ export class LiveMapPage extends ACARSHubPage {
       200 * nautical_miles_to_meters,
     ];
 
+    // Use theme-aware color for range rings
+    const isDark = this.isDarkTheme();
+    const ringColor = isDark ? "hsl(0, 0%, 70%)" : "hsl(0, 0%, 20%)";
+
     ring_radius.forEach((radius) => {
       LeafLet.circle([this.#station_lat, this.#station_lon], {
         radius: radius,
         fill: false,
         interactive: false,
         weight: 1,
-        color: "hsl(0, 0%, 0%)",
+        color: ringColor,
       }).addTo(this.#layerGroupRangeRings);
     });
 
@@ -1360,14 +1365,64 @@ export class LiveMapPage extends ACARSHubPage {
     this.#map.setZoom(this.#map.getZoom() - 1);
   }
 
+  /**
+   * Detects if the current theme is dark mode
+   * Checks data-theme attribute or system preference
+   */
+  private isDarkTheme(): boolean {
+    const themeAttr = document.documentElement.getAttribute("data-theme");
+    if (themeAttr === "dark") {
+      return true;
+    }
+    if (themeAttr === "light") {
+      return false;
+    }
+    // No explicit theme set, check system preference
+    return window.matchMedia("(prefers-color-scheme: dark)").matches;
+  }
+
+  /**
+   * Updates the map tile layer based on current theme
+   * Removes existing layer and adds appropriate light/dark layer
+   */
+  private updateMapTileLayer(): void {
+    if (!this.#map) {
+      return;
+    }
+
+    const leafletRadarAttribution =
+      '<a href="https://github.com/rwev/leaflet-radar">Radar</a>';
+
+    // Remove existing tile layer if it exists
+    if (this.#tileLayer) {
+      this.#map.removeLayer(this.#tileLayer);
+    }
+
+    // Determine which tile layer to use based on theme
+    const isDark = this.isDarkTheme();
+    const tileUrl = isDark
+      ? "https://tiles.stadiamaps.com/styles/stamen_toner_dark/{z}/{x}/{y}.png"
+      : "https://tiles.stadiamaps.com/styles/stamen_toner/{z}/{x}/{y}.png";
+
+    // Create and add new tile layer
+    this.#tileLayer = LeafLet.tileLayer(tileUrl, {
+      detectRetina: false,
+      opacity: 0.8,
+      attribution: [
+        '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors',
+        leafletRadarAttribution,
+      ].join(" | "),
+    });
+
+    this.#tileLayer.addTo(this.#map);
+  }
+
   live_map_active(state = false, window_size: window_size): void {
     this.active(state);
 
     this.page_active = state;
     this.#window_size = window_size;
 
-    const leafletRadarAttribution =
-      '<a href="https://github.com/rwev/leaflet-radar">Radar</a>';
     if (this.page_active && this.#adsb_enabled) {
       Object.keys(this.#adsb_planes).forEach((plane) => {
         this.#adsb_planes[plane].datablock_marker = null;
@@ -1396,14 +1451,7 @@ export class LiveMapPage extends ACARSHubPage {
         ),
       } as MapOptionsWithNewConfig);
 
-      LeafLet.tileLayer("https://{s}.tile.osm.org/{z}/{x}/{y}.png", {
-        detectRetina: false,
-        opacity: 0.6,
-        attribution: [
-          '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors',
-          leafletRadarAttribution,
-        ].join(" | "),
-      }).addTo(this.#map);
+      this.updateMapTileLayer();
       this.set_range_markers();
 
       LeafLet.control
@@ -1445,6 +1493,16 @@ export class LiveMapPage extends ACARSHubPage {
       });
 
       this.redraw_map();
+
+      // Listen for theme changes and update map layer and range rings
+      const observer = new MutationObserver(() => {
+        this.updateMapTileLayer();
+        this.set_range_markers();
+      });
+      observer.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ["data-theme"],
+      });
     }
     tooltip.cycle_tooltip();
   }
@@ -1455,7 +1513,7 @@ export class LiveMapPage extends ACARSHubPage {
       position: "bottomleft",
       symbolWidth: 45,
       symbolHeight: 45,
-      opacity: 0.6,
+      opacity: 0.8,
       collapsed: true,
       legends: [
         {
@@ -1540,7 +1598,7 @@ export class LiveMapPage extends ACARSHubPage {
     );
     if (this.#adsb_enabled)
       $("#log").html(
-        '<div class="flex-height-100"><div id="mapid"></div><div id="planes"></div>',
+        '<div class="flex-height-100"><div id="mapid"></div><div id="planes"></div></div>',
       );
     else $("#log").html("ADSB Disabled");
     //setScrollers();

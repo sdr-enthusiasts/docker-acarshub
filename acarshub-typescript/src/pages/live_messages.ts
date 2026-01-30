@@ -343,7 +343,6 @@ export class LiveMessagePage extends ACARSHubPage {
         this.#selected_tabs,
         true,
       );
-      console.log(`Replacement message HTML: ${replacement_message}`);
 
       $(`#acarsmsg_${uid}_container`).replaceWith(replacement_message);
       resize_tabs();

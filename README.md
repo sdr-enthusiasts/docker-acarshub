@@ -207,33 +207,33 @@ In the configuration options for tar1090. Setting this will include additional a
 
 ### ACARS
 
-| Variable       | Description                                                                                                                                                                          | Required | Default |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------- | ------- |
-| `ENABLE_ACARS` | Toggle ACARS decoding on. If set to `external` this will enable ACARS processing in the container. Push valid `ACARS` json data to UDP port 5550 (needs port mapping 5550:5550/udp). | No       | `false` |
+| Variable       | Description                                                                                                                                                                                                                                                                | Required | Default |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------- |
+| `ENABLE_ACARS` | Toggle ACARS decoding on. Set to `true` to enable ACARS processing in the container. Push valid `ACARS` json data to UDP port 5550 (needs port mapping 5550:5550/udp). **Note:** The legacy value `external` is deprecated but still supported for backward compatibility. | No       | `false` |
 
 ### VDLM2
 
-| Variable      | Description                                                                                                                                                                   | Required | Default |
-| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------- |
-| `ENABLE_VDLM` | Toggle VDLM decoding on. If set to `external` this will enable VDLM processing in the container. Push valid `VDLM2` data to UDP port 5555 (needs port mapping 5555:5555/udp). | No       | `false` |
+| Variable      | Description                                                                                                                                                                                                                                                         | Required | Default |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------- |
+| `ENABLE_VDLM` | Toggle VDLM decoding on. Set to `true` to enable VDLM processing in the container. Push valid `VDLM2` data to UDP port 5555 (needs port mapping 5555:5555/udp). **Note:** The legacy value `external` is deprecated but still supported for backward compatibility. | No       | `false` |
 
 ### HFDL
 
-| Variable      | Description                                                                                                                                                                  | Required | Default |
-| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------- |
-| `ENABLE_HFDL` | Toggle HFDL decoding on. If set to `external` this will enable HFDL processing in the container. Push valid `HFDL` data to UDP port 5556 (needs port mapping 5556:5556/udp). | No       | `false` |
+| Variable      | Description                                                                                                                                                                                                                                                        | Required | Default |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------- | ------- |
+| `ENABLE_HFDL` | Toggle HFDL decoding on. Set to `true` to enable HFDL processing in the container. Push valid `HFDL` data to UDP port 5556 (needs port mapping 5556:5556/udp). **Note:** The legacy value `external` is deprecated but still supported for backward compatibility. | No       | `false` |
 
 ### Inmarsat L-Band
 
-| Variable      | Description                                                                                                                                                                             | Required | Default |
-| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------- |
-| `ENABLE_IMSL` | Toggle Inmarsat L-Band decoding on. If set to `external` this will enable IMSL processing in the container. Push valid `IMSL` data to UDP port 5557 (needs port mapping 5557:5557/udp). | No       | `false` |
+| Variable      | Description                                                                                                                                                                                                                                                                   | Required | Default |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------- |
+| `ENABLE_IMSL` | Toggle Inmarsat L-Band decoding on. Set to `true` to enable IMSL processing in the container. Push valid `IMSL` data to UDP port 5557 (needs port mapping 5557:5557/udp). **Note:** The legacy value `external` is deprecated but still supported for backward compatibility. | No       | `false` |
 
 ### Iridium
 
-| Variable      | Description                                                                                                                                                                     | Required | Default |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------- |
-| `ENABLE_IRDM` | Toggle Iridium decoding on. If set to `external` this will enable IRDM processing in the container. Push valid `IRDM` data to UDP port 5558 (needs port mapping 5558:5558/udp). | No       | `false` |
+| Variable      | Description                                                                                                                                                                                                                                                           | Required | Default |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------- |
+| `ENABLE_IRDM` | Toggle Iridium decoding on. Set to `true` to enable IRDM processing in the container. Push valid `IRDM` data to UDP port 5558 (needs port mapping 5558:5558/udp). **Note:** The legacy value `external` is deprecated but still supported for backward compatibility. | No       | `false` |
 
 ## Viewing the messages
 

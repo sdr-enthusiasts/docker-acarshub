@@ -251,27 +251,73 @@ export const html_functions = {
   },
 
   format_libacars_generic: function (data: any): string {
+    console.log("Processing Generic: ", data);
     let html = '<div class="libacars-generic">';
     html += "<strong>Decoded Libacars Data:</strong><br>";
-    html += `<div style="margin-left: 20px;">`;
 
-    // Display top-level fields in a readable format
+    // Use format_libacars_value to handle all fields including nested objects
     for (const [key, value] of Object.entries(data)) {
-      if (typeof value === "object" && value !== null) {
-        // Skip complex nested objects for the generic formatter
-        continue;
-      }
-
-      // Format the key nicely (convert snake_case to Title Case)
-      const formattedKey = key
-        .split("_")
-        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(" ");
-
-      html += `<strong>${formattedKey}:</strong> ${value}<br>`;
+      html += this.format_libacars_value(key, value, 1);
     }
 
-    html += `</div></div>`;
+    html += `</div>`;
+    return html;
+  },
+
+  format_decoded_text: function (message: acars_msg): string {
+    let html = '<div class="text_top">';
+    let decodedStatus = "Full";
+    if (message.decodedText.decoder.decodeLevel !== "full")
+      decodedStatus = "Partial";
+    html += `<strong>Decoded Text (${decodedStatus}):</strong></p>`;
+    html += '<pre class="shadow show_strong">';
+    html +=
+      typeof message.matched_text === "object"
+        ? this.replace_text(
+            message.matched_text,
+            this.loop_array(message.decodedText.formatted),
+          )
+        : this.loop_array(message.decodedText.formatted);
+    html += "</pre>";
+    html += "</div>";
+    return html;
+  },
+
+  format_non_decoded_text: function (
+    text: string,
+    matched_text?: string[] | object,
+    hideOnSmallScreen: boolean = false,
+  ): string {
+    let html = hideOnSmallScreen
+      ? '<div class="text_top dont_show">'
+      : '<div class="text_top">';
+    html += "<strong>Non-Decoded Text:</strong><p>";
+    html += `<pre class="shadow show_strong">${
+      typeof matched_text === "object"
+        ? this.replace_text(matched_text as string[], text)
+        : text
+    }</pre>`;
+    html += "</div>";
+    return html;
+  },
+
+  format_data: function (
+    data: string,
+    matched_text?: string[] | object,
+  ): string {
+    // Format newlines properly for display
+    let formatted_data = data.replace(/\\r\\n/g, "<br>");
+
+    let html = '<div class="message-container">';
+    html += '<div class="text_top">';
+    html += "<strong>Data:</strong><p>";
+    html += `<pre class="shadow show_strong">${
+      typeof matched_text === "object"
+        ? this.replace_text(matched_text as string[], formatted_data)
+        : formatted_data
+    }</pre>`;
+    html += "</div>";
+    html += "</div>";
     return html;
   },
 
@@ -280,51 +326,23 @@ export const html_functions = {
     if (Object.hasOwn(message, "text") && typeof message.text !== "undefined") {
       let text = message.text;
       text = text.replace("\\r\\n", "<br>");
-      //html_output += "<p>";
       html_output += '<div class="message-container">';
 
-      //html_output += "</p>";
       if (Object.hasOwn(message, "decodedText")) {
-        //html_output += "<p>";
-        let decodedStatus = "Full";
-        if (message.decodedText.decoder.decodeLevel !== "full")
-          decodedStatus = "Partial";
-        html_output += '<div class="text_top">';
-        html_output += `<strong>Decoded Text (${decodedStatus}):</strong></p>`;
-        html_output += '<pre class="shadow show_strong">';
-        html_output +=
-          typeof message.matched_text === "object"
-            ? this.replace_text(
-                message.matched_text,
-                this.loop_array(message.decodedText.formatted),
-              )
-            : this.loop_array(message.decodedText.formatted); // get the formatted html of the decoded text
-        //html_output += `${message['decodedText'].raw}`;
-        html_output += "</pre>";
-        html_output += "</div>";
-        //html_output += "</p>";
+        html_output += this.format_decoded_text(message);
       }
 
-      html_output += Object.hasOwn(message, "decodedText")
-        ? '<div class="text_top dont_show">'
-        : '<div class="text_top">'; // If screen size is too small, and we have decoded text, hide this element
-      html_output += "<strong>Non-Decoded Text:</strong><p>";
-      html_output += `<pre class="shadow show_strong">${
-        typeof message.matched_text === "object"
-          ? this.replace_text(message.matched_text, text)
-          : text
-      }</pre>`;
-      html_output += "</div>";
+      html_output += this.format_non_decoded_text(
+        text,
+        message.matched_text,
+        Object.hasOwn(message, "decodedText"),
+      );
       html_output += "</div>";
     } else if (
       Object.hasOwn(message, "data") &&
       typeof message.data !== "undefined"
     ) {
-      let data = message.data;
-      data = data.replace("\\r\\n", "<br>");
-      html_output += "<p>";
-      html_output += `<pre class="shadow show_strong">${data}</pre>`;
-      html_output += "</p>";
+      html_output += this.format_data(message.data, message.matched_text);
     } else {
       html_output +=
         '<p><pre class="shadow show_strong"><i>No text</i></pre></p>';
@@ -347,12 +365,13 @@ export const html_functions = {
       // make sure the last character is a }, if not, remove everything after the last }
       data = data.substring(0, data.lastIndexOf("}") + 1);
 
-      console.log("Libacars data after processing:", data);
       try {
         // Try to parse the data as JSON
         const parsed_data = JSON.parse(data);
         html_output += `<div class="msg_line">`;
-        html_output += `<div style="padding: 10px;">`;
+        html_output += `<div class="message-container">`;
+        html_output += `<div class="text_top">`;
+        html_output += `<pre class="shadow show_strong">`;
 
         // Determine the type of libacars message and format accordingly
         if (parsed_data.freq_data) {
@@ -367,14 +386,16 @@ export const html_functions = {
           html_output += this.format_libacars_generic(parsed_data);
         }
 
+        html_output += `</pre>`;
+        html_output += `</div>`;
+        html_output += `</div>`;
         html_output += `</div>`;
       } catch (e) {
         html_output += `<div class="msg_line red">`;
-        html_output += `<pre>Error parsing Libacars data: Please see browser console for more details and submit a bug report.</pre>`;
+        html_output += `<pre class="shadow show_strong">Error parsing Libacars data: Please see browser console for more details and submit a bug report.</pre>`;
         console.error("Error parsing Libacars data:", e);
+        html_output += `</div>`;
       }
-
-      html_output += `</div>`;
     }
 
     return html_output;

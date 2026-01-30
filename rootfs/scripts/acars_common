@@ -1,0 +1,30 @@
+#!/command/with-contenv bash
+# shellcheck shell=bash
+
+# ACARS Hub common functions
+# This file sources the base image's /scripts/common and adds ACARS Hub specific functions
+
+# Source the base common functions
+# shellcheck disable=SC1091
+# shellcheck source=/scripts/common
+source /scripts/common
+
+# ACARS-specific chk_enabled that extends the base function to support 'external' for backwards compatibility
+function chk_enabled() {
+    case "${1,,}" in
+    1 | true | on | enabled | enable | yes | y | ok | always | set | external)
+        return 0
+        ;;
+    esac
+    return 1
+}
+
+# Override chk_disabled (no changes needed, but included for completeness)
+function chk_disabled() {
+    case "${1,,}" in
+    0 | false | off | disabled | disable | no | n | never | not | nope | unset)
+        return 0
+        ;;
+    esac
+    return 1
+}

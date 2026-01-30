@@ -1,5 +1,6 @@
 @use "modules/colors" as colors;
 @use "modules/fonts" as fonts;
+@use "modules/theme";
 
 // Container and main layout
 .container {
@@ -23,54 +24,43 @@
 }
 
 div#content.container {
-  position: fixed;
-  top: 105px;
+  flex: 1 1 auto;
   padding-left: 20px;
   padding-right: 20px;
-  width: calc(100vw - 40px);
-  margin-bottom: 40px;
-  overflow: scroll;
-  height: calc(100vh - 130px);
-
-  @media only screen and (max-width: 1200px) {
-    top: 77px;
-    height: calc(100vh - 98px);
-  }
+  width: 100%;
+  margin: 0;
+  overflow: auto;
+  position: relative;
 
   @media only screen and (max-width: 969px) {
-    top: 30px;
-    height: calc(100vh - 50px);
     padding-left: 5px;
     padding-right: 5px;
   }
 
   @media only screen and (max-width: 700px) {
-    top: 20px;
-    height: calc(100vh - 43px);
-    padding-left: 0px;
+    padding-left: 5px;
     padding-right: 5px;
   }
 }
 
 div#main_block.row {
-  margin-left: 0;
-  padding-top: 5px;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
 }
 
 // Header
 div#header {
+  flex: 0 0 auto;
   margin: 0;
-  width: calc(100vw - 40px);
-  position: fixed;
+  width: 100%;
+  position: relative;
   z-index: 1000;
 
   h3 {
     margin-top: 0;
-    color: colors.$full-black;
-
-    @media (prefers-color-scheme: dark) {
-      color: colors.$creamy-white;
-    }
+    color: var(--header-text);
   }
 }
 
@@ -90,18 +80,23 @@ div#num_results.row {
   position: relative;
   width: 100%;
   height: inherit;
-  padding-top: 10px;
   margin-right: 0;
   margin-left: 0;
   margin-bottom: 0;
+
+  &:not(:empty) {
+    /* padding-top: 10px; */
+    border-top: 1px solid var(--grey-highlight);
+  }
 }
 
 div#log.left {
   position: relative;
-  margin-left: auto;
-  margin-right: auto;
-  padding-right: 0;
-  padding-left: 0;
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  overflow: auto;
 }
 
 // Navigation
@@ -126,26 +121,26 @@ div#log.left {
 }
 
 .decor {
-  background: colors.$decor-banner-green;
+  background: var(--color-darkgreen);
   background: -webkit-linear-gradient(
     left,
-    colors.$grey-bg 50%,
-    colors.$blue-highlight 50%
+    var(--bg-grey) 50%,
+    var(--color-blue) 50%
   );
   background: -moz-linear-gradient(
     left,
-    colors.$grey-bg 50%,
-    colors.$blue-highlight 50%
+    var(--bg-grey) 50%,
+    var(--color-blue) 50%
   );
   background: -o-linear-gradient(
     left,
-    colors.$grey-bg 50%,
-    colors.$blue-highlight 50%
+    var(--bg-grey) 50%,
+    var(--color-blue) 50%
   );
   background: linear-gradient(
     to left,
-    colors.$grey-bg 50%,
-    colors.$blue-highlight 50%
+    var(--bg-grey) 50%,
+    var(--color-blue) 50%
   );
   background-size: 50px 25%;
   padding: 2px;
@@ -168,10 +163,10 @@ div#log.left {
 
 nav {
   position: relative;
-  background: colors.$grey-bg;
+  background: var(--bg-grey);
   text-align: center;
   letter-spacing: 3px;
-  text-shadow: 1px 1px 1px colors.$nav-text-shadow;
+  text-shadow: 1px 1px 1px var(--nav-text-shadow);
   border-bottom-right-radius: 8px;
   border-bottom-left-radius: 8px;
   z-index: 10;
@@ -188,7 +183,7 @@ nav {
   padding-bottom: 10px;
   padding-right: 20px;
   padding-left: 20px;
-  color: colors.$blue-highlight;
+  color: var(--color-blue);
   text-transform: uppercase;
 }
 
@@ -217,11 +212,11 @@ ul {
 
       a.invert_a,
       a.invert_a:visited {
-        color: colors.$full-white !important;
+        color: var(--color-white) !important;
 
         @media not all and (pointer: coarse) {
           &:hover {
-            color: colors.$blue-highlight !important;
+            color: var(--color-blue) !important;
             transition: all 0.25s ease-in;
           }
         }
@@ -230,7 +225,7 @@ ul {
       @media not all and (pointer: coarse) {
         a:hover,
         a:active {
-          color: colors.$full-white;
+          color: var(--color-white);
           transition: all 0.25s ease-in;
         }
       }
@@ -245,12 +240,12 @@ ul {
         }
 
         a {
-          color: colors.$full-white;
+          color: var(--color-white);
           text-shadow: none;
         }
 
         > a {
-          color: colors.$full-white;
+          color: var(--color-white);
         }
       }
     }
@@ -259,7 +254,7 @@ ul {
   &.sub {
     position: absolute;
     z-index: 200;
-    box-shadow: 2px 2px 0 colors.$grey-highlight;
+    box-shadow: 2px 2px 0 var(--grey-highlight);
     width: 35%;
     display: none;
 
@@ -268,17 +263,17 @@ ul {
       margin: 0;
 
       a {
-        border-bottom: 1px dotted colors.$creamy-white;
+        border-bottom: 1px dotted var(--text-creamy-white);
         border-right: none;
-        color: colors.$full-black;
+        color: var(--color-black);
         padding: 15px 0;
 
         &:hover {
-          color: colors.$full-white;
-          background: colors.$light-white;
+          color: var(--color-white);
+          background: var(--text-light-white);
 
           @media only screen and (max-width: 969px) {
-            color: colors.$egg-white;
+            color: var(--text-egg-white);
             background: none;
           }
         }
@@ -298,48 +293,88 @@ li {
     display: block;
     padding-top: 5px;
     padding-bottom: 0;
-    border-right: 1px solid colors.$grey-bg;
+    border-right: 1px solid var(--bg-grey);
     text-align: center;
-    color: colors.$grey-bg;
+    color: var(--bg-grey);
     text-shadow: none;
 
     svg {
       max-width: 85%;
       max-height: 80px;
       letter-spacing: 0;
+
+      // Override hardcoded SVG colors to match theme
+      path.st1,
+      g path {
+        fill: var(--color-blue) !important;
+      }
     }
   }
 }
 
 // Footer
 .footer {
-  position: fixed;
-  left: 0;
-  bottom: 0;
+  flex: 0 0 auto;
+  position: relative;
   width: 100%;
-  background-color: colors.$grey-bg;
+  background-color: var(--bg-grey);
   text-align: left;
-  border: 1px solid colors.$full-black;
+  border: 1px solid var(--border-black);
   padding-right: 15px;
   padding-left: 15px;
+  padding-top: 5px;
+  padding-bottom: 5px;
   margin-right: auto;
   margin-left: auto;
   z-index: 20;
   font-weight: bold;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
 
   strong {
-    color: colors.$blue-highlight;
+    color: var(--color-blue);
   }
 
-  div {
+  div,
+  span {
     display: inline-block;
-    border-right: 1px solid colors.$grey-highlight;
+  }
+
+  // Only show borders on specific footer elements, not conditionally empty ones
+  #acarshub_help,
+  #github_link,
+  #discord_badge,
+  #system_status_container,
+  div:has(#received) {
+    border-right: 1px solid var(--grey-highlight);
     padding-right: 5px;
+  }
+
+  // No border on hidden/empty elements
+  #disconnect,
+  #filtered {
+    border-right: none;
+    padding-right: 0;
+  }
+
+  // Hide empty spans so they don't take up gap space
+  #disconnect:empty,
+  #filtered:empty {
+    display: none;
+  }
+
+  #release_version {
+    margin-left: auto;
+    border-right: none;
+    padding-right: 0;
   }
 
   @media not all and (pointer: coarse) {
     a:hover {
-      color: colors.$full-white;
+      color: var(--color-white);
       transition: all 0.25s ease-out;
     }
   }
@@ -354,7 +389,7 @@ li {
   display: block;
   text-transform: uppercase;
   text-align: left;
-  color: colors.$blue-highlight;
+  color: var(--color-blue);
   background: transparent;
   cursor: pointer;
   transition: all 0.25s ease-out;
@@ -362,7 +397,7 @@ li {
   padding-top: 10px;
 
   &:hover {
-    color: colors.$full-white;
+    color: var(--color-white);
   }
 
   &::before {
@@ -395,16 +430,16 @@ li {
 
 .collapsible-content {
   max-height: 0;
-  overflow: scroll;
+  overflow: auto;
   height: calc(100% - 250px);
   transition: max-height 0.25s ease-in-out;
 
   .content-inner {
     background: transparent;
-    color: colors.$blue-highlight;
+    color: var(--color-blue);
     padding-right: 10px;
     padding-left: 10px;
-    overflow: scroll;
+    overflow: auto;
   }
 
   p {
@@ -418,17 +453,13 @@ li {
 }
 
 .small_nav {
-  background: colors.$full-white;
-
-  @media (prefers-color-scheme: dark) {
-    background: colors.$grey-bg;
-  }
+  background: var(--message-bg);
 }
 
 .fixed_results {
-  position: fixed;
-  top: 60px;
-  bottom: 30px;
+  position: absolute;
+  top: 0;
+  bottom: 0;
   padding-top: 0;
   margin-bottom: 10px;
   width: 280px;
@@ -441,16 +472,15 @@ li {
 }
 
 .fixed_menu {
-  position: fixed;
-  top: 170px;
-  bottom: 30px;
+  position: absolute;
+  top: 65px;
+  bottom: 0;
   padding-top: 0;
   margin-bottom: 10px;
   width: 280px;
   margin-top: 0;
   margin-right: 5px;
   margin-left: 10px;
-  margin-bottom: 30px;
   padding-right: 5px;
   padding-top: 0;
   overflow-y: auto;
@@ -458,16 +488,15 @@ li {
 }
 
 .fixed_menu_short {
-  position: fixed;
-  top: 150px;
-  bottom: 30px;
+  position: absolute;
+  top: 45px;
+  bottom: 0;
   padding-top: 0;
   margin-bottom: 10px;
   width: 280px;
   margin-top: 0;
   margin-right: 5px;
   margin-left: 10px;
-  margin-bottom: 30px;
   padding-right: 5px;
   padding-top: 0;
   overflow-y: auto;
