@@ -91,7 +91,7 @@ module.exports = (_env, argv) => {
     output: {
       //filename: "[name].[chunkhash].js",
       path: path.resolve(__dirname, "dist/static/js"),
-      publicPath: "/static/js/",
+      publicPath: "static/js/",
       clean: true,
     },
 
@@ -183,7 +183,7 @@ module.exports = (_env, argv) => {
         logo: path.resolve(__dirname, "./src/assets/images") + "/acarshub.svg",
         inject: true,
         cache: true,
-        outputPath: "../images/favicons",
+        outputPath: "../../images/favicons",
         publicPath: "/static/images/favicons",
         prefix: "",
       }),
