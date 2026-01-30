@@ -5,7 +5,13 @@ Development server launcher with .env file support
 import os
 import sys
 import subprocess
+import signal
+import warnings
 from pathlib import Path
+
+# Suppress gevent shutdown warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+os.environ["PYTHONWARNINGS"] = "ignore::DeprecationWarning"
 
 
 def load_env_file(env_file=".env"):
@@ -64,13 +70,40 @@ if __name__ == "__main__":
     webapp_dir = script_dir / "rootfs" / "webapp"
 
     # Run acarshub.py as a subprocess with the loaded environment
+    # Use Popen instead of run() for better signal handling
+    process = None
     try:
-        result = subprocess.run(
+        process = subprocess.Popen(
             [sys.executable, "acarshub.py"],
             cwd=str(webapp_dir),
             env=env_vars,
+            # Redirect stderr to suppress gevent shutdown warnings
+            stderr=subprocess.PIPE if sys.stderr.isatty() else None,
         )
-        sys.exit(result.returncode)
+
+        # Wait for the process to complete
+        returncode = process.wait()
+        sys.exit(returncode)
+
     except KeyboardInterrupt:
         print("\n\nShutting down development server...")
+        if process and process.poll() is None:
+            # Send SIGINT first (same as Ctrl+C) for cleaner gevent shutdown
+            process.send_signal(signal.SIGINT)
+            try:
+                # Wait up to 3 seconds for graceful shutdown
+                process.wait(timeout=3)
+                print("Server stopped cleanly.")
+            except subprocess.TimeoutExpired:
+                # Try SIGTERM next
+                print("Sending termination signal...")
+                process.terminate()
+                try:
+                    process.wait(timeout=2)
+                    print("Server terminated.")
+                except subprocess.TimeoutExpired:
+                    # Force kill as last resort
+                    print("Forcing shutdown...")
+                    process.kill()
+                    process.wait()
         sys.exit(0)
