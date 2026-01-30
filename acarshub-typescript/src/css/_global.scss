@@ -16,13 +16,7 @@ body {
   font-size: 14px;
   line-height: 1.42857143;
   color: var(--body-text);
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-  overflow-y: scroll;
-
-  &::-webkit-scrollbar {
-    display: none;
-  }
+  overflow: hidden;
 
   @media only screen and (max-width: 700px) {
     padding-left: 5px;
@@ -93,7 +87,11 @@ select {
 input {
   min-width: 100%;
   width: 30px;
-  color: colors.$full-black;
+  background-color: var(--modal-input-bg);
+  border: 1px solid var(--modal-border);
+  border-radius: 4px;
+  padding: 4px;
+  color: var(--modal-input-text);
 
   &[type="checkbox"] {
     display: none;
@@ -118,7 +116,7 @@ hr {
 
 // Pre-formatted text
 pre {
-  box-shadow: 2px 2px 2px 1px colors.$mostly-transparent;
+  box-shadow: 2px 2px 2px 1px var(--shadow-mostly-transparent);
   white-space: pre-wrap;
   white-space: -moz-pre-wrap;
   white-space: -pre-wrap;
@@ -138,20 +136,20 @@ pre {
 
 // Links
 a {
-  color: colors.$blue-highlight;
+  color: var(--color-blue);
   text-decoration: none;
   text-transform: uppercase;
 
   @media not all and (pointer: coarse) {
     &:hover {
-      color: colors.$full-black;
+      color: var(--color-black);
       text-decoration: none;
     }
   }
 
   &:active,
   &:visited {
-    color: colors.$blue-highlight;
+    color: var(--color-blue);
     text-decoration: none;
   }
 

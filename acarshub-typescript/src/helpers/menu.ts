@@ -32,6 +32,7 @@ export const menu = {
     html += `<a href="javascript:new_page('Search')" id="search_link">Search Database</a><br>`;
     html += `<a href="javascript:new_page('Alerts')" id="alerts_link">Alerts<span id="alert_count"></span></a><br>`;
     html += `<a href="javascript:new_page('Stats')" id="stats_link">Statistics</a><br>`;
+    html += `<a href="javascript:show_page_modal()">Settings</a><br>`;
     html += "</details>";
     html += '<nav class="hide_when_small"><ul class="primary">';
     html += `<li class="img_box" id="logo_image">${images.acars_hub_logo}"</li>`;

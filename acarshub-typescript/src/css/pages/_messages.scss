@@ -25,8 +25,8 @@
 
     &:checked + label {
       position: relative;
-      background-color: colors.$full-white;
-      border: 1px solid colors.$full-black;
+      background-color: var(--color-white);
+      border: 1px solid var(--border-black);
       font-weight: bold;
       font-style: normal;
       background-color: var(--message-bg);
@@ -46,7 +46,7 @@
   }
 
   label {
-    background-color: colors.$full-white;
+    background-color: var(--color-white);
     box-sizing: border-box;
     display: inline-block;
     padding-top: 8px;
@@ -59,7 +59,7 @@
     margin-bottom: -1px;
     margin-left: -1px;
     font-weight: bold;
-    border: 1px solid colors.$full-black;
+    border: 1px solid var(--border-black);
     background-color: var(--grey-bg);
     border-color: var(--grey-highlight);
 
@@ -84,8 +84,8 @@
 [id^="message"] {
   display: flex;
   flex-wrap: wrap;
-  border-top: 0px solid colors.$grey-highlight;
-  border: 1px solid colors.$full-black;
+  border-top: 0px solid var(--grey-highlight);
+  border: 1px solid var(--border-black);
   border-collapse: collapse;
   width: 100%;
   background-color: var(--message-bg);
@@ -137,7 +137,7 @@
   height: 11px;
   border-radius: 50%;
   border: 1px solid;
-  background-color: colors.$full-red;
+  background-color: var(--color-red);
   display: inline-block;
 }
 
@@ -146,7 +146,7 @@
   height: 11px;
   border-radius: 50%;
   border: 1px solid;
-  background-color: colors.$full-orange;
+  background-color: var(--color-orange);
   display: inline-block;
 }
 
@@ -155,7 +155,7 @@
   height: 11px;
   border-radius: 50%;
   border: 1px solid;
-  background-color: colors.$full-yellow;
+  background-color: var(--color-yellow);
   display: inline-block;
 }
 
@@ -164,7 +164,7 @@
   height: 11px;
   border-radius: 50%;
   border: 1px solid;
-  background-color: colors.$full-green;
+  background-color: var(--color-green);
   display: inline-block;
 }
 

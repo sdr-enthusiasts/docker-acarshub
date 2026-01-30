@@ -1540,7 +1540,7 @@ export class LiveMapPage extends ACARSHubPage {
     );
     if (this.#adsb_enabled)
       $("#log").html(
-        '<div class="flex-height-100"><div id="mapid"></div><div id="planes"></div>',
+        '<div class="flex-height-100"><div id="mapid"></div><div id="planes"></div></div>',
       );
     else $("#log").html("ADSB Disabled");
     //setScrollers();
