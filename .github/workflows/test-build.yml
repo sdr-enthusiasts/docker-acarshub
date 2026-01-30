@@ -21,5 +21,20 @@ jobs:
       ghcr_repo: ${{ github.repository }}
       build_latest: true
       build_baseimage_test: false
+      platform_linux_arm32v7_enabled: false
     secrets:
       ghcr_token: ${{ secrets.GITHUB_TOKEN }}
+
+  test-build-summary:
+    name: Test Build Summary
+    needs: deploy
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Check deploy status
+        run: |
+          if [ "${{ needs.deploy.result }}" != "success" ]; then
+            echo "Deploy job failed or was cancelled"
+            exit 1
+          fi
+          echo "All deploy jobs completed successfully"
