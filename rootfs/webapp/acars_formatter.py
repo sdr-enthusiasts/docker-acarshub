@@ -64,7 +64,7 @@ def format_irdm_message(unformatted_message):
     irdm_message = dict()
 
     if freq := unformatted_message.get("freq"):
-        irdm_message["freq"] = f"{irdm_channelize_freq(float(freq))/1e6:.6f}"
+        irdm_message["freq"] = f"{irdm_channelize_freq(float(freq)) / 1e6:.6f}"
 
     if level := unformatted_message.get("level"):
         irdm_message["level"] = f"{level:.1f}"

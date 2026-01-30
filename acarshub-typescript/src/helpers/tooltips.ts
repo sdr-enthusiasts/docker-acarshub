@@ -16,7 +16,7 @@
 
 import jBox from "jbox";
 
-export let tooltip = {
+export const tooltip = {
   freq_tooltip: new jBox("Mouse", {
     title: "Frequency",
     content: "The frequency this message was received on",

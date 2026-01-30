@@ -334,9 +334,7 @@ def query_to_dict(obj):
 def update_frequencies(freq, message_type, session):
     found_freq = (
         session.query(messagesFreq)
-        .filter(
-            messagesFreq.freq == f"{freq}" and messagesFreq.freq_type == message_type
-        )
+        .filter(messagesFreq.freq == f"{freq}", messagesFreq.freq_type == message_type)
         .first()
     )
 
@@ -491,9 +489,6 @@ def create_db_safe_params(message_from_json):
 
 
 def add_message(params, message_type, message_from_json, backup=False):
-    global database
-    global alert_terms
-
     try:
         if backup:
             session = db_session_backup()
@@ -825,7 +820,6 @@ def database_search(search_term, page=0):
 # FIXME: Rolled back to old search_alerts. We should wrap this in SQL Alchemy goodness
 def search_alerts(icao=None, tail=None, flight=None):
     result = None
-    global alert_terms
     if (
         icao is not None
         or tail is not None
@@ -1115,7 +1109,6 @@ def get_signal_levels():
 
 
 def get_alert_counts():
-    global alert_terms
     result_list = []
     try:
         session = db_session()
@@ -1210,12 +1203,10 @@ def reset_alert_counts():
 
 
 def get_alert_ignore():
-    global alert_terms_ignore
     return alert_terms_ignore
 
 
 def get_alert_terms():
-    global alert_terms
     return alert_terms
 
 
@@ -1236,6 +1227,7 @@ def prune_database():
 
         acarshub_logging.log("Pruning alert database", "database")
 
+        # prune messages_saved as well
         cutoff = (
             datetime.datetime.now()
             - datetime.timedelta(days=acarshub_configuration.DB_ALERT_SAVE_DAYS)

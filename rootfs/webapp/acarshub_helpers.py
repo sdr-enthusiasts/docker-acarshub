@@ -165,7 +165,6 @@ def try_format_as_int(value, key, as_type="X"):
 
 
 def flight_finder(callsign=None, hex_code=None, url=True):
-    global ADSB_URL
 
     # If there is only a hex code, we'll return just the ADSB url
     # Front end will format correctly.
@@ -283,7 +282,6 @@ def service_check():
     global receivers
     global system_error
     global stats
-    global start_time
     global external_formats
 
     if os.getenv("LOCAL_TEST", default=False):
@@ -509,13 +507,6 @@ if os.getenv("LOCAL_TEST", default=False):
 
 
 def get_service_status():
-    global decoders
-    global servers
-    global receivers
-    global system_error
-    global stats
-    global external_formats
-
     return {
         "decoders": decoders,
         "servers": servers,

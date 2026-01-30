@@ -14,14 +14,14 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-import {
+import type {
+  acarshub_version,
+  adsb_status,
   status_decoder,
+  status_external_formats,
   status_global,
   status_server,
   system_status,
-  adsb_status,
-  acarshub_version,
-  status_external_formats,
 } from "../interfaces";
 import { ACARSHubPage } from "./master";
 
@@ -32,10 +32,6 @@ export class StatusPage extends ACARSHubPage {
   };
   #current_status: system_status = {} as system_status;
   #current_version: acarshub_version = {} as acarshub_version;
-
-  constructor() {
-    super();
-  }
 
   status_received(msg: system_status): void {
     this.#current_status = msg;
@@ -59,7 +55,7 @@ export class StatusPage extends ACARSHubPage {
 
   update_status_bar(): void {
     if (
-      this.#current_status.status.error_state == true ||
+      this.#current_status.status.error_state === true ||
       (this.#adsb_status.adsb_enabled === true &&
         this.#adsb_status.adsb_getting_data === false)
     ) {
@@ -135,9 +131,9 @@ export class StatusPage extends ACARSHubPage {
     html_output += "<br>";
 
     keys_decoder.forEach((key) => {
-      let sub_string = `SDR ${key}:`;
+      const sub_string = `SDR ${key}:`;
       html_output += `${sub_string.padEnd(55, ".")}<strong><span class=${
-        decoders[key].Status == "Ok" ? "green" : "red_body"
+        decoders[key].Status === "Ok" ? "green" : "red_body"
       }>${decoders[key].Status}</span></strong>`;
       html_output += "<br>";
     });
@@ -145,20 +141,20 @@ export class StatusPage extends ACARSHubPage {
     keys_servers.forEach((key) => {
       let sub_string = `Internal Server ${key}:`;
       html_output += `${sub_string.padEnd(55, ".")}<strong><span class=${
-        servers[key].Status == "Ok" ? "green" : "red_body"
+        servers[key].Status === "Ok" ? "green" : "red_body"
       }>${servers[key].Status}</span></strong>`;
       html_output += "<br>";
       sub_string = `Internal Server ${key} to Python Connection:`;
       html_output += `${sub_string.padEnd(55, ".")}<strong><span class=${
-        servers[key].Web == "Ok" ? "green" : "red_body"
+        servers[key].Web === "Ok" ? "green" : "red_body"
       }>${servers[key].Web}</span></strong>`;
       html_output += "<br>";
     });
 
     keys_stats.forEach((key) => {
-      let sub_string = `Internal Stat Server ${key}:`;
+      const sub_string = `Internal Stat Server ${key}:`;
       html_output += `${sub_string.padEnd(55, ".")}<strong><span class=${
-        stats[key].Status == "Ok" ? "green" : "red_body"
+        stats[key].Status === "Ok" ? "green" : "red_body"
       }>${stats[key].Status}</span></strong>`;
       html_output += "<br>";
     });
@@ -166,20 +162,20 @@ export class StatusPage extends ACARSHubPage {
     keys_external_formats.forEach((key) => {
       const decoder_types = external_formats[key];
       decoder_types.forEach((sub_key) => {
-        let sub_string = `External Decoder ${key}/${sub_key.type}:`;
+        const sub_string = `External Decoder ${key}/${sub_key.type}:`;
         html_output += `${sub_string.padEnd(55, ".")}<strong><span class=${
-          sub_key.Status == "Ok" ? "green" : "red_body"
+          sub_key.Status === "Ok" ? "green" : "red_body"
         }>${sub_key.Status}</span></strong>`;
         html_output += "<br>";
       });
     });
 
     keys_receivers.forEach((key) => {
-      let sub_string = `${key} Received ${receivers[key].Count} Messages In the Last Hour:`;
+      const sub_string = `${key} Received ${receivers[key].Count} Messages In the Last Hour:`;
       let class_string = "";
-      if (receivers[key].Status == "Ok") class_string = '"green"';
+      if (receivers[key].Status === "Ok") class_string = '"green"';
       else
-        class_string = receivers[key].Status == "Bad" ? "red_body" : "orange";
+        class_string = receivers[key].Status === "Bad" ? "red_body" : "orange";
 
       html_output += `${sub_string.padEnd(
         55,
@@ -197,7 +193,8 @@ export class StatusPage extends ACARSHubPage {
 
     if (this.#adsb_status.adsb_enabled) {
       let class_string = "";
-      if (this.#adsb_status.adsb_getting_data == true) class_string = '"green"';
+      if (this.#adsb_status.adsb_getting_data === true)
+        class_string = '"green"';
       else class_string = "red_body";
       let adsb_status_string = "ADSB Receiving Data".padEnd(55, ".");
       adsb_status_string += `<strong><span class=${class_string}>${

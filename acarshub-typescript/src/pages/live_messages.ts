@@ -16,29 +16,30 @@
 
 //import { MessageDecoder } from "@airframes/acars-decoder";
 const { MessageDecoder } = require("@airframes/acars-decoder");
+
+import jBox from "jbox";
 import Cookies from "js-cookie";
 import {
-  display_messages,
   display_message_group,
+  display_messages,
 } from "../helpers/html_generator";
+import { tooltip } from "../helpers/tooltips";
 import {
-  html_msg,
+  get_current_planes,
+  is_adsb_enabled,
+  match_alert,
+  resize_tabs,
+  sound_alert,
+} from "../index";
+import type {
   acars_msg,
+  alert_matched,
+  html_msg,
   labels,
   plane,
   plane_data,
-  alert_matched,
   plane_match,
 } from "../interfaces";
-import jBox from "jbox";
-import { tooltip } from "../helpers/tooltips";
-import {
-  resize_tabs,
-  match_alert,
-  sound_alert,
-  is_adsb_enabled,
-  get_current_planes,
-} from "../index";
 import { ACARSHubPage } from "./master";
 
 export class LiveMessagePage extends ACARSHubPage {
@@ -56,7 +57,7 @@ export class LiveMessagePage extends ACARSHubPage {
         if (!is_adsb_enabled()) {
           this.planes.pop();
         } else {
-          let indexes_to_delete: Array<number> = [];
+          const indexes_to_delete: Array<number> = [];
           const current_planes_adsb = get_current_planes();
           for (let i = 49; i < this.planes.length; i++) {
             let delete_index = true;
@@ -96,7 +97,7 @@ export class LiveMessagePage extends ACARSHubPage {
       return Array.prototype.unshift.apply(this.planes, [a]);
     },
     get_all_messages: function (): acars_msg[][] {
-      let output = [] as acars_msg[][];
+      const output = [] as acars_msg[][];
       for (const msgList of this.planes) {
         if (output.length < 20) {
           // 20 is the maximum number of message groups we ever want to display on the page
@@ -167,8 +168,8 @@ export class LiveMessagePage extends ACARSHubPage {
     // This is necessary because Safari doesn't respect the expiration date of more than 7 days. It will set it to 7 days even though we've set 365 days
     // This also just keeps moving the expiration date moving forward every time the page is loaded
 
-    let filter = Cookies.get("filter");
-    if (filter == "true") {
+    const filter = Cookies.get("filter");
+    if (filter === "true") {
       Cookies.set("filter", "true", {
         expires: 365,
         sameSite: "Strict",
@@ -185,7 +186,7 @@ export class LiveMessagePage extends ACARSHubPage {
 
     // Grab the current cookie value for the message labels being filtered
     // Same restrictions as the 'filter'
-    let exclude_cookie = Cookies.get("exclude");
+    const exclude_cookie = Cookies.get("exclude");
     if (exclude_cookie == null) {
       Cookies.set("exclude", "", {
         expires: 365,
@@ -225,8 +226,8 @@ export class LiveMessagePage extends ACARSHubPage {
   show_labels(): void {
     let label_html = "";
     if (this.#filter_labels !== null && this.page_active) {
-      for (let key in this.#filter_labels.labels) {
-        let link_class: string =
+      for (const key in this.#filter_labels.labels) {
+        const link_class: string =
           this.#exclude.indexOf(key.toString()) !== -1 ? "red" : "sidebar_link";
         label_html += `<a href="javascript:toggle_label('${key.toString()}');" id="${key}" class="${link_class}">${key} ${
           this.#filter_labels.labels[key].name
@@ -261,14 +262,14 @@ export class LiveMessagePage extends ACARSHubPage {
     // Find the next / previous tabs
     // This is UGLY
     // FIXME....deuglify it
-    let matched_index: number | undefined = undefined;
+    let matched_index: number | undefined;
 
     for (let i = 0; i < this.#lm_msgs_received.planes.length; i++) {
       if (
         this.#lm_msgs_received.planes[i].messages.length > 1 &&
         this.#lm_msgs_received.planes[i].messages[
           this.#lm_msgs_received.planes[i].messages.length - 1
-        ].uid == uid
+        ].uid === uid
       ) {
         matched_index = i;
 
@@ -278,6 +279,7 @@ export class LiveMessagePage extends ACARSHubPage {
               if (sub_msg.uid === element_id) {
                 return true;
               }
+              return false;
             },
           ),
         );
@@ -323,24 +325,24 @@ export class LiveMessagePage extends ACARSHubPage {
     );
 
     let added = false;
-    if (this.#selected_tabs != "") {
-      let split = this.#selected_tabs.split(",");
+    if (this.#selected_tabs !== "") {
+      const split = this.#selected_tabs.split(",");
       for (let i = 0; i < split.length; i++) {
-        let sub_split = split[i].split(";");
+        const sub_split = split[i].split(";");
 
-        if (sub_split[0] == uid && i == 0) {
+        if (sub_split[0] === uid && i === 0) {
           this.#selected_tabs = uid + ";" + element_id;
           added = true;
-        } else if (sub_split[0] == uid) {
+        } else if (sub_split[0] === uid) {
           this.#selected_tabs += "," + uid + ";" + element_id;
           added = true;
-        } else if (i == 0)
+        } else if (i === 0)
           this.#selected_tabs = sub_split[0] + ";" + sub_split[1];
         else this.#selected_tabs += "," + sub_split[0] + ";" + sub_split[1];
       }
     }
 
-    if (this.#selected_tabs.length == 0) {
+    if (this.#selected_tabs.length === 0) {
       this.#selected_tabs = uid + ";" + element_id;
     } else if (!added) {
       this.#selected_tabs += "," + uid + ";" + element_id;
@@ -348,13 +350,13 @@ export class LiveMessagePage extends ACARSHubPage {
 
     // get the messages for the plane and generate new html
     if (matched_index !== undefined) {
-      let messages = this.#lm_msgs_received.planes[matched_index].messages;
+      const messages = this.#lm_msgs_received.planes[matched_index].messages;
       // Generate new HTML for the messages
 
       console.log(
         `Updating message group ${uid} with ${messages.length} messages`,
       );
-      let replacement_message = display_message_group(
+      const replacement_message = display_message_group(
         messages,
         this.#selected_tabs,
         true,
@@ -405,7 +407,7 @@ export class LiveMessagePage extends ACARSHubPage {
         sameSite: "Strict",
       });
       // Only reset the counter if no filters are active
-      if (this.#exclude.length == 0) {
+      if (this.#exclude.length === 0) {
         this.#filtered_messages = 0;
 
         $("#filtered").html("");
@@ -430,7 +432,7 @@ export class LiveMessagePage extends ACARSHubPage {
   // Input is the message label ID that should be filtered
 
   toggle_label(key: string): void {
-    if (this.#exclude.indexOf(key.toString()) == -1) {
+    if (this.#exclude.indexOf(key.toString()) === -1) {
       this.#exclude.push(key.toString());
       $(`#${key.toString()}`).removeClass("sidebar_link").addClass("red");
       let exclude_string = "";
@@ -446,12 +448,12 @@ export class LiveMessagePage extends ACARSHubPage {
       let exclude_string = "";
       $(`#${key.toString()}`).removeClass("red").addClass("sidebar_link");
       for (let i = 0; i < this.#exclude.length; i++) {
-        if (this.#exclude[i] != key.toString() && key !== " " && key !== "")
+        if (this.#exclude[i] !== key.toString() && key !== " " && key !== "")
           exclude_string += this.#exclude[i] + " ";
       }
       if (
-        exclude_string.trim().split(" ").length == 1 &&
-        exclude_string.trim().split(" ")[0] == ""
+        exclude_string.trim().split(" ").length === 1 &&
+        exclude_string.trim().split(" ")[0] === ""
       )
         this.#exclude = [];
       else this.#exclude = exclude_string.trim().split(" ");
@@ -498,10 +500,11 @@ export class LiveMessagePage extends ACARSHubPage {
           : this.#current_message_string,
       ); // show the messages we've received
       resize_tabs();
+      // biome-ignore lint/suspicious/noExplicitAny: jQuery event type is complex
       $(document).on("keyup", (event: any) => {
         if (this.page_active) {
           // key code for escape is 27
-          if (event.keyCode == 80) {
+          if (event.keyCode === 80) {
             this.pause_updates();
           }
         }
@@ -528,7 +531,7 @@ export class LiveMessagePage extends ACARSHubPage {
   skip_message(msg: acars_msg): boolean {
     // The message has a label and it's in the group to exclude
     let skip_message = true;
-    if ("label" in msg == true && this.#exclude.indexOf(msg.label!) != -1)
+    if ("label" in msg && msg.label && this.#exclude.indexOf(msg.label) !== -1)
       return true;
 
     // The user is not filtering empty messages, return
@@ -547,42 +550,42 @@ export class LiveMessagePage extends ACARSHubPage {
   check_for_message_match(message: acars_msg, new_msg: acars_msg): boolean {
     if (
       this.property_checker(message, new_msg, "tail") &&
-      new_msg.tail == message.tail &&
+      new_msg.tail === message.tail &&
       ((this.property_checker(message, new_msg, "icao") &&
-        message.icao == new_msg.icao) ||
+        message.icao === new_msg.icao) ||
         !this.property_checker(message, new_msg, "icao")) &&
       ((this.property_checker(message, new_msg, "flight") &&
-        message.flight == new_msg.flight) ||
+        message.flight === new_msg.flight) ||
         !this.property_checker(message, new_msg, "flight"))
     ) {
       return true;
     } else if (
       this.property_checker(message, new_msg, "icao") &&
-      new_msg.icao == message.icao &&
+      new_msg.icao === message.icao &&
       ((this.property_checker(message, new_msg, "tail") &&
-        message.tail == new_msg.tail) ||
+        message.tail === new_msg.tail) ||
         !this.property_checker(message, new_msg, "tail")) &&
       ((this.property_checker(message, new_msg, "flight") &&
-        message.flight == new_msg.flight) ||
+        message.flight === new_msg.flight) ||
         !this.property_checker(message, new_msg, "flight"))
     ) {
       return true;
     } else if (
       this.property_checker(message, new_msg, "flight") &&
-      new_msg.flight == message.flight &&
+      new_msg.flight === message.flight &&
       ((this.property_checker(message, new_msg, "icao") &&
-        message.icao == new_msg.icao) ||
+        message.icao === new_msg.icao) ||
         !this.property_checker(message, new_msg, "icao")) &&
       ((this.property_checker(message, new_msg, "tail") &&
-        message.tail == new_msg.tail) ||
+        message.tail === new_msg.tail) ||
         !this.property_checker(message, new_msg, "tail"))
     ) {
       return true;
     } else if (
       this.property_checker(message, new_msg, "text") &&
-      new_msg.label == "SQ" &&
-      message.label == "SQ" &&
-      new_msg.text == message.text
+      new_msg.label === "SQ" &&
+      message.label === "SQ" &&
+      new_msg.text === message.text
     ) {
       return true;
     }
@@ -601,7 +604,7 @@ export class LiveMessagePage extends ACARSHubPage {
   check_for_dup(message: acars_msg, new_msg: acars_msg): boolean {
     return Object.values(this.#msg_tags).every((tag) => {
       if (tag in message && tag in new_msg) {
-        if (message[tag] == new_msg[tag]) return true;
+        if (message[tag] === new_msg[tag]) return true;
       } else if (!(tag in message) && !(tag in new_msg)) {
         return true;
       }
@@ -610,16 +613,16 @@ export class LiveMessagePage extends ACARSHubPage {
   }
 
   new_acars_message(msg: html_msg): void {
-    let new_msg = msg.msghtml;
-    let move_or_delete_id: undefined | string = undefined;
+    const new_msg = msg.msghtml;
+    let move_or_delete_id: undefined | string;
     let dont_update_page = false;
     if (!this.skip_message(new_msg)) {
       // if the message filter is not set or the message is not in the exclude list, continue
       if ("text" in new_msg) {
         // see if we can run it through the text decoder
         try {
-          let decoded_msg = this.#lm_md.decode(new_msg);
-          if (decoded_msg.decoded == true) {
+          const decoded_msg = this.#lm_md.decode(new_msg);
+          if (decoded_msg.decoded === true) {
             new_msg.decodedText = decoded_msg;
           }
         } catch (e) {
@@ -628,7 +631,7 @@ export class LiveMessagePage extends ACARSHubPage {
       }
 
       // See if the message matches any alerts
-      let matched: alert_matched = match_alert(msg);
+      const matched: alert_matched = match_alert(msg);
       if (matched.was_found) {
         new_msg.matched = true;
         new_msg.matched_text = matched.text !== null ? matched.text : [];
@@ -638,9 +641,9 @@ export class LiveMessagePage extends ACARSHubPage {
       }
 
       const new_tail = new_msg.tail;
-      const new_icao = new_msg.icao;
+      const _new_icao = new_msg.icao;
       const new_icao_hex = new_msg.icao_hex;
-      const new_flight = new_msg.flight;
+      const _new_flight = new_msg.flight;
       const new_icao_flight = new_msg.icao_flight;
       let found = false; // variable to track if the new message was found in previous messages
       let rejected = false; // variable to track if the new message was rejected for being a duplicate
@@ -648,7 +651,7 @@ export class LiveMessagePage extends ACARSHubPage {
       new_msg.uid = this.getRandomInt(1000000).toString(); // Each message gets a unique ID. Used to track tab selection
       // Loop through the received messages. If a message is found we'll break out of the for loop
 
-      for (let planes of this.#lm_msgs_received.planes) {
+      for (const planes of this.#lm_msgs_received.planes) {
         // Now we loop through all of the messages in the message group to find a match in case the first doesn't
         // Have the field we need
         // There is a possibility that (for reasons I cannot fathom) aircraft will broadcast the same flight information
@@ -676,7 +679,7 @@ export class LiveMessagePage extends ACARSHubPage {
         // if it is, we'll reject the new message and append a counter to the old/saved message
         if (found) {
           index_of_found_plane = this.#lm_msgs_received.planes.indexOf(planes);
-          for (let message of this.#lm_msgs_received.planes[
+          for (const message of this.#lm_msgs_received.planes[
             index_of_found_plane
           ].messages) {
             // First check is to see if the message is the same by checking all fields and seeing if they match
@@ -698,7 +701,7 @@ export class LiveMessagePage extends ACARSHubPage {
               // check if text fields are the same
               "text" in message &&
               "text" in new_msg &&
-              message.text == new_msg.text
+              message.text === new_msg.text
             ) {
               // it's the same message
               message.timestamp = new_msg.timestamp;
@@ -710,13 +713,13 @@ export class LiveMessagePage extends ACARSHubPage {
                     .length - 1
                 ].uid;
             } else if (
-              new_msg.station_id == message.station_id && // Is the message from the same station id? Keep ACARS/VDLM separate
+              new_msg.station_id === message.station_id && // Is the message from the same station id? Keep ACARS/VDLM separate
               new_msg.timestamp - message.timestamp < 8.0 && // We'll assume the message is not a multi-part message if the time from the new message is too great from the rest of the group
               typeof new_msg.msgno !== "undefined" && // For reasons unknown to me TS is throwing an error if we don't check for undefined
               typeof message.msgno !== "undefined" && // Even though we can't reach this point if the message doesn't have a msgno
-              ((new_msg.msgno.charAt(0) == message.msgno.charAt(0) && // Next two lines match on AzzA pattern
-                new_msg.msgno.charAt(3) == message.msgno.charAt(3)) ||
-                new_msg.msgno.substring(0, 3) == message.msgno.substring(0, 3))
+              ((new_msg.msgno.charAt(0) === message.msgno.charAt(0) && // Next two lines match on AzzA pattern
+                new_msg.msgno.charAt(3) === message.msgno.charAt(3)) ||
+                new_msg.msgno.substring(0, 3) === message.msgno.substring(0, 3))
             ) {
               // This check matches if the group is a AAAz counter
               // We have a multi part message. Now we need to see if it is a dup
@@ -730,37 +733,39 @@ export class LiveMessagePage extends ACARSHubPage {
 
               if ("msgno_parts" in message) {
                 // Now we'll see if the multi-part message is a dup
-                let split = message.msgno_parts!.toString().split(" "); // format of stored parts is "MSGID MSGID2" etc
+                const split = message.msgno_parts?.toString().split(" "); // format of stored parts is "MSGID MSGID2" etc
 
-                for (let a = 0; a < split.length; a++) {
-                  // Loop through the msg IDs present
-                  if (split[a].substring(0, 4) == new_msg.msgno) {
-                    // Found a match in the message IDs already present
-                    add_multi = false; // Ensure later checks know we've found a duplicate and to not add the message
+                if (split !== undefined) {
+                  for (let a = 0; a < split.length; a++) {
+                    // Loop through the msg IDs present
+                    if (split[a].substring(0, 4) === new_msg.msgno) {
+                      // Found a match in the message IDs already present
+                      add_multi = false; // Ensure later checks know we've found a duplicate and to not add the message
 
-                    if (a == 0 && split[a].length == 4) {
-                      // Match, first element of the array with no previous matches so we don't want a leading space
-                      message.msgno_parts = split[a] + "x2";
-                    } else if (split[a].length == 4) {
-                      // Match, not first element, and doesn't have previous matches
-                      message.msgno_parts += " " + split[a] + "x2";
-                    } else if (a == 0) {
-                      // Match, first element of the array so no leading space, has previous other matches so we increment the counter
-                      let count = parseInt(split[a].substring(5)) + 1;
-                      message.msgno_parts =
-                        split[a].substring(0, 4) + "x" + count;
+                      if (a === 0 && split[a].length === 4) {
+                        // Match, first element of the array with no previous matches so we don't want a leading space
+                        message.msgno_parts = split[a] + "x2";
+                      } else if (split[a].length === 4) {
+                        // Match, not first element, and doesn't have previous matches
+                        message.msgno_parts += " " + split[a] + "x2";
+                      } else if (a === 0) {
+                        // Match, first element of the array so no leading space, has previous other matches so we increment the counter
+                        const count = parseInt(split[a].substring(5), 10) + 1;
+                        message.msgno_parts =
+                          split[a].substring(0, 4) + "x" + count;
+                      } else {
+                        // Match, has previous other matches so we increment the counter
+                        const count = parseInt(split[a].substring(5), 10) + 1;
+                        message.msgno_parts +=
+                          " " + split[a].substring(0, 4) + "x" + count;
+                      }
                     } else {
-                      // Match, has previous other matches so we increment the counter
-                      let count = parseInt(split[a].substring(5)) + 1;
-                      message.msgno_parts +=
-                        " " + split[a].substring(0, 4) + "x" + count;
-                    }
-                  } else {
-                    // No match, re-add the MSG ID to the parent message
-                    if (a == 0) {
-                      message.msgno_parts = split[a];
-                    } else {
-                      message.msgno_parts += " " + split[a];
+                      // No match, re-add the MSG ID to the parent message
+                      if (a === 0) {
+                        message.msgno_parts = split[a];
+                      } else {
+                        message.msgno_parts += " " + split[a];
+                      }
                     }
                   }
                 }
@@ -786,9 +791,9 @@ export class LiveMessagePage extends ACARSHubPage {
 
                 // Re-run the text decoder against the text field we've updated
                 try {
-                  let decoded_msg = this.#lm_md.decode(message);
-                  if (decoded_msg.decoded == true) {
-                    message["decoded_msg"] = decoded_msg;
+                  const decoded_msg = this.#lm_md.decode(message);
+                  if (decoded_msg.decoded === true) {
+                    message.decoded_msg = decoded_msg;
                   }
                 } catch (e) {
                   console.error(`Decoder Error${e}`);
@@ -803,9 +808,10 @@ export class LiveMessagePage extends ACARSHubPage {
               // Promote the message back to the front
               this.#lm_msgs_received.planes[
                 index_of_found_plane
+                // biome-ignore lint/suspicious/noExplicitAny: array contains acars_msg which is complex type
               ].messages.forEach((item: any, i: number) => {
                 if (
-                  i ==
+                  i ===
                   this.#lm_msgs_received.planes[
                     index_of_found_plane
                   ].messages.indexOf(message)
@@ -841,7 +847,7 @@ export class LiveMessagePage extends ACARSHubPage {
           }
 
           this.#lm_msgs_received.planes.forEach((item, i) => {
-            if (i == index_of_found_plane) {
+            if (i === index_of_found_plane) {
               this.#lm_msgs_received.planes.splice(i, 1);
               this.#lm_msgs_received.planes.unshift(item);
             }
@@ -853,7 +859,7 @@ export class LiveMessagePage extends ACARSHubPage {
       }
       if (!found && !rejected) {
         if (matched.was_found && !msg.loading) sound_alert();
-        let ids = [];
+        const ids = [];
         if (new_icao_hex) ids.push(new_icao_hex);
         if (new_icao_flight) ids.push(new_icao_flight);
         if (new_tail) {
@@ -884,10 +890,10 @@ export class LiveMessagePage extends ACARSHubPage {
         // this is not loading and we should already have a valid DOM tree to play with
         // If this was a matched message delete the element from the tree so it can be moved to the front
         if (move_or_delete_id) {
-          let counter = 1;
+          let _counter = 1;
           while ($(`#acarsmsg_${move_or_delete_id}_container`).length > 0) {
             $(`#acarsmsg_${move_or_delete_id}_container`).remove();
-            counter++;
+            _counter++;
           }
         }
         // Display the new message at the front of the DOM tree
@@ -950,7 +956,7 @@ export class LiveMessagePage extends ACARSHubPage {
   }
 
   find_matches(): plane_data {
-    let output: plane_data = {};
+    const output: plane_data = {};
     for (const planes of this.#lm_msgs_received.planes) {
       const length_of_messages = planes.messages.length;
       const alert = planes.has_alerts;

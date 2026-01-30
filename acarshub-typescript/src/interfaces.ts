@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-import * as LeafLet from "leaflet";
+import type * as LeafLet from "leaflet";
 
 export interface database_size {
   size: string;
@@ -196,7 +196,7 @@ export interface acars_msg {
   is_response?: number;
   is_onground?: number;
   error?: number | string;
-  libacars?: any;
+  libacars?: unknown;
   level?: number;
   matched?: boolean; // This line and below are custom parameters injected by javascript or from the backend
   matched_text?: string[];
@@ -204,6 +204,7 @@ export interface acars_msg {
   matched_flight?: string[];
   matched_tail?: string[];
   uid: string;
+  // biome-ignore lint/suspicious/noExplicitAny: external library without type definitions
   decodedText?: any; // no type for typescript acars decoder; so set to any
   data?: string;
   message_type: string;
@@ -352,7 +353,7 @@ export interface MapOptionsWithNewConfig extends LeafLet.MapOptions {
 
 declare global {
   namespace L.control {
-    function custom(options: any): any;
-    function Legend(options: any): any;
+    function custom(options: Record<string, unknown>): L.Control;
+    function Legend(options: Record<string, unknown>): L.Control;
   }
 }

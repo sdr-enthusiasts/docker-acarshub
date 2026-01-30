@@ -6,11 +6,6 @@ export class ACARSHubPage {
   page_html: string = "";
   page_active: boolean = false;
 
-  // Public methods
-  constructor() {
-    // Initialize the page
-  }
-
   get_this() {
     return this;
   }

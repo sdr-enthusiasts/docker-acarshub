@@ -15,17 +15,18 @@
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
 import { display_messages } from "../helpers/html_generator";
+
 const { MessageDecoder } = require("@airframes/acars-decoder");
-import {
-  search_html_msg,
-  database_size,
-  current_search,
-  acars_msg,
-} from "../interfaces";
-import { search_database } from "../index";
+
 import { tooltip } from "../helpers/tooltips";
+import { search_database } from "../index";
+import type {
+  acars_msg,
+  current_search,
+  database_size,
+  search_html_msg,
+} from "../interfaces";
 import { ACARSHubPage } from "./master";
-declare const window: any;
 
 export class SearchPage extends ACARSHubPage {
   #db_size: database_size = (<unknown>null) as database_size;
@@ -57,16 +58,9 @@ export class SearchPage extends ACARSHubPage {
   #total_pages: number = 0; // number of pages of results
   #show_all: boolean = false; // variable to indicate we are doing a 'show all' search and not of a specific term
   #query_time: number = 0.0;
-
-  #search_acars_path: string = "";
-  #search_acars_url: string = "";
   #search_msgs_received: acars_msg[][] = [];
   #num_results: number[] = [];
   #search_md = new MessageDecoder();
-
-  constructor() {
-    super();
-  }
 
   database_size_details(msg: database_size): void {
     this.#db_size = msg;
@@ -83,20 +77,18 @@ export class SearchPage extends ACARSHubPage {
     }
 
     if (
-      msg.hasOwnProperty("query_time") &&
+      Object.hasOwn(msg, "query_time") &&
       typeof msg.query_time !== "undefined"
     )
-      this.#query_time = msg["query_time"];
+      this.#query_time = msg.query_time;
     // Lets check and see if the results match the current search string
 
     // Show the results if the returned results match the current search string (in case user kept typing after search emitted)
     // or the user has executed a 'show all'
 
-    if (true) {
-      this.#search_msgs_received.push(msg.msghtml);
-      this.#num_results.push(msg.num_results);
-      this.show_search();
-    }
+    this.#search_msgs_received.push(msg.msghtml);
+    this.#num_results.push(msg.num_results);
+    this.show_search();
   }
 
   key_event(): void {
@@ -108,17 +100,17 @@ export class SearchPage extends ACARSHubPage {
   show_search(): void {
     let display = "";
     let display_nav_results = "";
-    let results = []; // temp variable to store the JSON formatted JS object
+    const results = []; // temp variable to store the JSON formatted JS object
 
     for (let i = 0; i < this.#search_msgs_received.length; i++) {
       // Loop through the received message blob.
       for (let j = 0; j < this.#search_msgs_received[i].length; j++) {
         // Loop through the individual messages in the blob
-        let msg_json = this.#search_msgs_received[i][j];
+        const msg_json = this.#search_msgs_received[i][j];
         // Check and see if the text field is decodable in to human readable format
         try {
-          let decoded_msg = this.#search_md.decode(msg_json);
-          if (decoded_msg.decoded == true) {
+          const decoded_msg = this.#search_md.decode(msg_json);
+          if (decoded_msg.decoded === true) {
             msg_json.decodedText = decoded_msg;
           }
         } catch (e) {
@@ -170,8 +162,8 @@ export class SearchPage extends ACARSHubPage {
   }
 
   is_everything_blank(): boolean {
-    for (let [key, value] of Object.entries(this.get_search_terms())) {
-      if (value != "") return false;
+    for (const [_key, value] of Object.entries(this.get_search_terms())) {
+      if (value !== "") return false;
     }
     return true;
   }
@@ -242,7 +234,7 @@ export class SearchPage extends ACARSHubPage {
 
   // Sanity checker to ensure the page typed in the jump box makes sense. If it does, call the runclick function to send it off to the DB
   jumppage(): void {
-    let page: number = Number($("#jump").val());
+    const page: number = Number($("#jump").val());
     if (typeof page === "undefined" || page === null) return;
     if (page > this.#total_pages || page < 1) {
       $("#error_message").html(
@@ -259,7 +251,7 @@ export class SearchPage extends ACARSHubPage {
     let html = "";
     this.#total_pages = 0;
 
-    if (total == 0)
+    if (total === 0)
       return html + '<span class="menu_non_link">No results</span>';
 
     // Determine the number of pages to display.
@@ -267,7 +259,7 @@ export class SearchPage extends ACARSHubPage {
     // We don't want a float for the total pages, and javascript (at least in my googling) doesn't have the ability to cast
     // a result from float to int. We what we are doing is applying the ~ operator, which (IIRC) reverses the bits of the element it is applied to
     // in doing so, it magically is cast to an int. For reasons I don't get but they work...then we reverse it again
-    if (total % 50 != 0) this.#total_pages = ~~(total / 50) + 1;
+    if (total % 50 !== 0) this.#total_pages = ~~(total / 50) + 1;
     else this.#total_pages = ~~(total / 50);
 
     html += '<div class="search-results-info">';
@@ -287,37 +279,37 @@ export class SearchPage extends ACARSHubPage {
 
     if (high_end > this.#total_pages) high_end = this.#total_pages;
 
-    if (this.#total_pages != 1) {
+    if (this.#total_pages !== 1) {
       html += '<div class="search-pagination">';
 
       if (low_end > 0) {
         if (low_end > 5)
-          html += `<a href=\"#\" id=\"search_page\" onclick=\"runclick(${
+          html += `<a href="#" id="search_page" onclick="runclick(${
             low_end - 5
-          })\"><< </a>`;
+          })"><< </a>`;
         else
-          html += `<a href=\"#\" id=\"search_page\" onclick=\"runclick(0)\"><< </a>`;
+          html += `<a href="#" id="search_page" onclick="runclick(0)"><< </a>`;
       }
 
       for (let i = low_end; i < high_end; i++) {
-        if (i == current) {
+        if (i === current) {
           html += ` <span class="menu_non_link"><strong>${
             i + 1
           }</strong></span> `;
         } else {
-          html += ` <a href=\"#\" id=\"search_page\" onclick=\"runclick(${i})\">${
+          html += ` <a href="#" id="search_page" onclick="runclick(${i})">${
             i + 1
           }</a> `;
         }
       }
 
-      if (high_end != this.#total_pages) {
+      if (high_end !== this.#total_pages) {
         if (high_end + 5 < this.#total_pages)
-          html += `<a href=\"#\" id=\"search_page\" onclick=\"runclick(${
+          html += `<a href="#" id="search_page" onclick="runclick(${
             high_end + 4
-          })\" >>></a>`;
+          })" >>></a>`;
         else
-          html += `<a href=\"#\" id=\"search_page\" onclick=\"runclick(${high_end}\")> >></a>`;
+          html += `<a href="#" id="search_page" onclick="runclick(${high_end}")> >></a>`;
       }
     }
 
@@ -352,7 +344,7 @@ export class SearchPage extends ACARSHubPage {
       output = (bytes / 1024).toFixed(2) + " KB";
     } else if (bytes > 1) {
       output = bytes + " bytes";
-    } else if (bytes == 1) {
+    } else if (bytes === 1) {
       output = bytes + " byte";
     } else {
       output = "0 bytes";
@@ -363,8 +355,8 @@ export class SearchPage extends ACARSHubPage {
   update_size(): void {
     if (this.page_active && this.#db_size !== null) {
       $("#database").html(String(this.#db_size.count).trim() + " rows");
-      if (parseInt(this.#db_size.size) > 0) {
-        $("#size").html(this.formatSizeUnits(parseInt(this.#db_size.size)));
+      if (parseInt(this.#db_size.size, 10) > 0) {
+        $("#size").html(this.formatSizeUnits(parseInt(this.#db_size.size, 10)));
       } else {
         $("#size").html("Error getting DB size");
       }

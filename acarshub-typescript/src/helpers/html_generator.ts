@@ -14,13 +14,13 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
+import { get_flight_tracking_url } from "../index";
+import type { acars_msg } from "../interfaces";
 // Function to generate the HTML for an array of messages
 // Input: msgs_to_process - the array of messages. Format is array of message groups, with each group being an array of message(s) that create a group of submessages
 // Input: selected_tabs - if present, we'll process. Format is uid1;elementid1,uid2;elementid2 etc
 // Input: live_page - default is false. This toggles on the checks for selected tabs
 import { html_functions } from "./html_functions";
-import { acars_msg } from "../interfaces";
-import { get_flight_tracking_url } from "../index";
 
 export function display_messages(
   msgs_to_process: acars_msg[][],
@@ -64,7 +64,7 @@ export function display_message_group(
       // Loop through the selected tabs on the page. If we find a match for the current UID we'll set the active tab to what has been selected
       for (let q = 0; q < message_tab_splits.length; q++) {
         if (message_tab_splits[q].startsWith(unique_id.toString())) {
-          let split = message_tab_splits[q].split(";");
+          const split = message_tab_splits[q].split(";");
           active_tab = split[1];
           array_index_tab = String(
             msg_to_process.findIndex((sub_element: acars_msg) => {
@@ -74,6 +74,8 @@ export function display_message_group(
               ) {
                 return true;
               }
+
+              return false;
             }),
           );
         }
@@ -108,7 +110,7 @@ export function display_message_group(
       }
 
       // Create a single tab for the active message
-      let active_tab_uid = msg_to_process[active_index].uid;
+      const active_tab_uid = msg_to_process[active_index].uid;
       msgs_string += html_functions.create_message_tab(
         active_tab_uid,
         unique_id,

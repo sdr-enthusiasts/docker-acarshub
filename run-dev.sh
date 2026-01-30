@@ -3,7 +3,10 @@
 # Load environment variables from .env file
 if [ -f .env ]; then
     echo "Loading environment variables from .env..."
-    export $(grep -v '^#' .env | xargs)
+    set -a
+    # shellcheck source=/dev/null
+    . .env
+    set +a
 else
     echo "Warning: .env file not found!"
     echo "Copy .env.example to .env and configure it."

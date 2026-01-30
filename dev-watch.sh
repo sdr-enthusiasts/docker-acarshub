@@ -7,7 +7,6 @@
 set -e
 
 # Colors for output
-RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
@@ -84,13 +83,13 @@ if command -v inotifywait &>/dev/null; then
 
     # Watch the dist directory for changes and copy
     inotifywait -m -r -e close_write,moved_to,create "$TS_DIR/dist" |
-        while read -r directory event filename; do
+        while read -r _ _ filename; do
             echo -e "${YELLOW}Detected change: $filename${NC}"
             copy_assets
         done
 
     # Cleanup on exit
-    trap "kill $WEBPACK_PID 2>/dev/null" EXIT
+    trap 'kill $WEBPACK_PID 2>/dev/null' EXIT
 else
     echo -e "${YELLOW}inotifywait not found. Using webpack watch with manual copy.${NC}"
     echo -e "${YELLOW}Install inotify-tools for automatic asset copying:${NC}"

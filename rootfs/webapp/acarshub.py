@@ -469,8 +469,6 @@ def init_listeners(special_message=""):
     # global thread_adsb_listner
     # global thread_adsb
     # REMOVE AFTER AIRFRAMES IS UPDATED ####
-    global vdlm2_feeder_thread
-    global acars_feeder_thread
     # REMOVE AFTER AIRFRAMES IS UPDATED ####
 
     # show log message if this is container startup
@@ -596,7 +594,7 @@ def init_listeners(special_message=""):
 
 
 def init():
-    global list_of_recent_messages
+
     # grab recent messages from db and fill the most recent array
     # then turn on the listeners
     acarshub_logging.log("Grabbing most recent messages from database", "init")

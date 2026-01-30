@@ -14,20 +14,20 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
+import jBox from "jbox";
 import Cookies from "js-cookie";
 import {
-  display_messages,
   display_message_group,
+  display_messages,
 } from "../helpers/html_generator";
+import { tooltip } from "../helpers/tooltips";
 import {
   alert_term_query,
   alert_text_update,
   get_window_size,
   resize_tabs,
 } from "../index";
-import { acars_msg, alert_matched, html_msg, terms } from "../interfaces";
-import jBox from "jbox";
-import { tooltip } from "../helpers/tooltips";
+import type { acars_msg, alert_matched, html_msg, terms } from "../interfaces";
 import { ACARSHubPage } from "./master";
 
 export class AlertsPage extends ACARSHubPage {
@@ -96,7 +96,7 @@ export class AlertsPage extends ACARSHubPage {
     </span>`,
   });
 
-  #alert_sound: any = "";
+  #alert_sound: HTMLAudioElement = null as unknown as HTMLAudioElement;
   #play_sound: boolean = false;
 
   constructor() {
@@ -127,9 +127,9 @@ export class AlertsPage extends ACARSHubPage {
   }
 
   alerts_acars_message(msg: html_msg): void {
-    let matched: alert_matched = this.match_alert(msg, true);
+    const matched: alert_matched = this.match_alert(msg, true);
     if (matched.was_found) {
-      if (msg.loading != true) this.sound_alert();
+      if (msg.loading !== true) this.sound_alert();
       msg.msghtml.matched_text = matched.text !== null ? matched.text : [];
       msg.msghtml.matched_icao = matched.icao !== null ? matched.icao : [];
       msg.msghtml.matched_flight =
@@ -143,7 +143,7 @@ export class AlertsPage extends ACARSHubPage {
         $("#log").html(display_messages(this.#alert_msgs_received.value));
         tooltip.close_all_tooltips();
         tooltip.attach_all_tooltips();
-      } else if (matched.was_found && msg.loading != true) {
+      } else if (matched.was_found && msg.loading !== true) {
         this.#alerts += 1;
         this.updateAlertCounter();
         this.sound_alert();
@@ -158,7 +158,7 @@ export class AlertsPage extends ACARSHubPage {
 
   updateAlerts(): void {
     if ($("#alert_text").val()) {
-      let split = String($("#alert_text").val()).split(",");
+      const split = String($("#alert_text").val()).split(",");
       this.#alert_text = [];
       for (let i = 0; i < split.length; i++) {
         if (
@@ -186,7 +186,7 @@ export class AlertsPage extends ACARSHubPage {
     }
 
     if ($("#alert_callsigns").val()) {
-      let split = String($("#alert_callsigns").val()).split(",");
+      const split = String($("#alert_callsigns").val()).split(",");
       this.#alert_callsigns = [];
       for (let i = 0; i < split.length; i++) {
         if (
@@ -200,7 +200,7 @@ export class AlertsPage extends ACARSHubPage {
     }
 
     if ($("#alert_tail").val()) {
-      let split = String($("#alert_tail").val()).split(",");
+      const split = String($("#alert_tail").val()).split(",");
       this.#alert_tail = [];
       for (let i = 0; i < split.length; i++) {
         if (
@@ -214,7 +214,7 @@ export class AlertsPage extends ACARSHubPage {
     }
 
     if ($("#alert_icao").val()) {
-      let split = String($("#alert_icao").val()).split(",");
+      const split = String($("#alert_icao").val()).split(",");
       this.#alert_icao = [];
       for (let i = 0; i < split.length; i++) {
         if (
@@ -254,30 +254,32 @@ export class AlertsPage extends ACARSHubPage {
     this.#alerts = Cookies.get("alert_unread")
       ? Number(Cookies.get("alert_unread"))
       : 0;
-    this.#play_sound = Cookies.get("play_sound") == "true" ? true : false;
-    Cookies.set("play_sound", this.#play_sound == true ? "true" : "false", {
+    this.#play_sound = Cookies.get("play_sound") === "true";
+    Cookies.set("play_sound", this.#play_sound === true ? "true" : "false", {
       expires: 365,
       sameSite: "Strict",
     });
 
-    if (
-      Cookies.get("alert_callsigns") &&
-      Cookies.get("alert_callsigns")!.length > 0
-    ) {
-      let split = Cookies.get("alert_callsigns")!.split(",");
-      for (let i = 0; i < split.length; i++) {
-        if (
-          split[i].trim().length > 0 &&
-          !this.#alert_callsigns.includes(split[i].trim().toUpperCase())
-        )
-          this.#alert_callsigns.push(split[i].toUpperCase());
+    let c = Cookies.get("alert_callsigns");
+    if (c !== undefined && c.length > 0) {
+      const split = c.split(",");
+
+      if (split !== undefined) {
+        for (let i = 0; i < split.length; i++) {
+          if (
+            split[i].trim().length > 0 &&
+            !this.#alert_callsigns.includes(split[i].trim().toUpperCase())
+          )
+            this.#alert_callsigns.push(split[i].toUpperCase());
+        }
       }
     } else {
       this.#alert_callsigns = [];
     }
 
-    if (Cookies.get("alert_tail") && Cookies.get("alert_tail")!.length > 0) {
-      let split = Cookies.get("alert_tail")!.split(",");
+    c = Cookies.get("alert_tail");
+    if (c !== undefined && c.length > 0) {
+      const split = c.split(",");
       for (let i = 0; i < split.length; i++) {
         if (
           split[i].trim().length > 0 &&
@@ -289,8 +291,9 @@ export class AlertsPage extends ACARSHubPage {
       this.#alert_tail = [];
     }
 
-    if (Cookies.get("alert_icao") && Cookies.get("alert_icao")!.length > 0) {
-      let split = Cookies.get("alert_icao")!.split(",");
+    c = Cookies.get("alert_icao");
+    if (c !== undefined && c.length > 0) {
+      const split = c.split(",");
       for (let i = 0; i < split.length; i++) {
         if (
           split[i].trim().length > 0 &&
@@ -320,7 +323,7 @@ export class AlertsPage extends ACARSHubPage {
     let output = "";
 
     for (let i = 0; i < input.length; i++) {
-      output += `${i != 0 ? "," + input[i] : input[i]}`;
+      output += `${i !== 0 ? `,${input[i]}` : input[i]}`;
     }
 
     return output;
@@ -329,13 +332,13 @@ export class AlertsPage extends ACARSHubPage {
   // FIXME: Rewrite this with forEach
   match_alert(msg: html_msg, show_alert: boolean = false): alert_matched {
     let found = false;
-    let matched_tail = [];
-    let matched_flight = [];
-    let matched_icao = [];
-    let matched_text = [];
+    const matched_tail = [];
+    const matched_flight = [];
+    const matched_icao = [];
+    const matched_text = [];
     let term_string: string = "";
     if (
-      msg.msghtml.hasOwnProperty("text") &&
+      Object.hasOwn(msg.msghtml, "text") &&
       typeof msg.msghtml.text !== "undefined"
     ) {
       let dont_ignore_msg = true;
@@ -344,15 +347,15 @@ export class AlertsPage extends ACARSHubPage {
           msg.msghtml.text
             .toUpperCase()
             .search(
-              new RegExp("\\b" + this.#alert_text[i].toUpperCase() + "\\b"),
-            ) != -1
+              new RegExp(`\\b${this.#alert_text[i].toUpperCase()}\\b`),
+            ) !== -1
         ) {
           const ignore_not_found = Object.values(this.#ignore_text).every(
             (text) => {
               return (
-                msg.msghtml
-                  .text!.toUpperCase()
-                  .search(new RegExp("\\b" + text + "\\b")) == -1
+                msg.msghtml.text
+                  ?.toUpperCase()
+                  .search(new RegExp("\\b" + text + "\\b")) === -1
               );
             },
           );
@@ -370,7 +373,7 @@ export class AlertsPage extends ACARSHubPage {
     }
 
     if (
-      msg.msghtml.hasOwnProperty("flight") &&
+      Object.hasOwn(msg.msghtml, "flight") &&
       typeof msg.msghtml.flight !== "undefined"
     ) {
       for (let i = 0; i < this.#alert_callsigns.length; i++) {
@@ -390,7 +393,7 @@ export class AlertsPage extends ACARSHubPage {
     }
 
     if (
-      msg.msghtml.hasOwnProperty("tail") &&
+      Object.hasOwn(msg.msghtml, "tail") &&
       typeof msg.msghtml.tail !== "undefined"
     ) {
       for (let i = 0; i < this.#alert_tail.length; i++) {
@@ -410,7 +413,7 @@ export class AlertsPage extends ACARSHubPage {
     }
 
     if (
-      msg.msghtml.hasOwnProperty("icao") &&
+      Object.hasOwn(msg.msghtml, "icao") &&
       typeof msg.msghtml.icao !== "undefined"
     ) {
       for (let i = 0; i < this.#alert_icao.length; i++) {
@@ -419,7 +422,7 @@ export class AlertsPage extends ACARSHubPage {
             .toString()
             .toUpperCase()
             .includes(this.#alert_icao[i].toUpperCase()) ||
-          (msg.msghtml.hasOwnProperty("icao_hex") &&
+          (Object.hasOwn(msg.msghtml, "icao_hex") &&
             typeof msg.msghtml.icao_hex !== "undefined" &&
             msg.msghtml.icao_hex
               .toUpperCase()
@@ -465,8 +468,8 @@ export class AlertsPage extends ACARSHubPage {
       });
 
       $("#alert_popup_" + random_number).on("click", () => {
-        const window_size = get_window_size();
-        let box = new jBox("Modal", {
+        const _window_size = get_window_size();
+        const box = new jBox("Modal", {
           id: "set_modal" + random_number,
           blockScroll: false,
           isolateScroll: true,
@@ -522,7 +525,7 @@ export class AlertsPage extends ACARSHubPage {
       $("#playsound_link").html("Turn Off Alert Sound");
     }
     this.#play_sound = !this.#play_sound;
-    Cookies.set("play_sound", this.#play_sound == true ? "true" : "false", {
+    Cookies.set("play_sound", this.#play_sound === true ? "true" : "false", {
       expires: 365,
       sameSite: "Strict",
     });

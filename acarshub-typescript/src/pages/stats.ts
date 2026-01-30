@@ -17,21 +17,21 @@
 import { Chart, registerables } from "chart.js";
 
 import ChartDataLabels from "chartjs-plugin-datalabels";
-import { generate_stat_submenu } from "../index";
-import palette from "../js-other/palette";
 import {
+  generate_stat_submenu,
+  is_connected,
   signal_grab_freqs,
   signal_grab_message_count,
   signal_grab_updated_graphs,
-  is_connected,
 } from "../index";
-import {
+import type {
   alert_term,
   decoders,
   signal,
   signal_count_data,
   signal_freq_data,
 } from "../interfaces";
+import palette from "../js-other/palette";
 import { ACARSHubPage } from "./master";
 
 export class StatsPage extends ACARSHubPage {
@@ -57,21 +57,14 @@ export class StatsPage extends ACARSHubPage {
   #hfdl_on: boolean = false;
   #imsl_on: boolean = false;
   #irdm_on: boolean = false;
-  #width: number = 1000;
 
-  #tol: string[] = new palette("tol", 12, 0, "").map(function (hex: any) {
-    return "#" + hex;
-  });
+  #tol: string[] = new palette("tol", 12, 0, "").map(
+    (hex: string) => "#" + hex,
+  );
 
-  #rainbox: string[] = new palette("cb-Dark2", 8, 0, "").map(function (
-    hex: any,
-  ) {
-    return "#" + hex;
-  });
-
-  constructor() {
-    super();
-  }
+  #rainbox: string[] = new palette("cb-Dark2", 8, 0, "").map(
+    (hex: string) => "#" + hex,
+  );
 
   active(state = false): void {
     super.active(state);
@@ -96,9 +89,9 @@ export class StatsPage extends ACARSHubPage {
 
   show_alert_chart(): void {
     if (typeof this.#alert_data !== "undefined") {
-      let labels: string[] = [];
-      let alert_chart_data: number[] = [];
-      for (let i in this.#alert_data.data) {
+      const labels: string[] = [];
+      const alert_chart_data: number[] = [];
+      for (const i in this.#alert_data.data) {
         // for now checking if count > 0 is a hack to get it to work
         // ideally, it should list out 0 term items
         labels.push(this.#alert_data.data[i].term);
@@ -111,16 +104,16 @@ export class StatsPage extends ACARSHubPage {
       const canvas_alerts: HTMLCanvasElement = <HTMLCanvasElement>(
         document.getElementById("alertterms")
       );
-      let background_color =
-        window.matchMedia &&
-        window.matchMedia("(prefers-color-scheme: dark)").matches
-          ? "#3d3d3d"
-          : "#ffffff";
+      const background_color = window.matchMedia?.(
+        "(prefers-color-scheme: dark)",
+      ).matches
+        ? "#3d3d3d"
+        : "#ffffff";
 
       canvas_alerts.style.backgroundColor = background_color;
 
-      const ctx_alerts: CanvasRenderingContext2D =
-        canvas_alerts.getContext("2d")!;
+      const ctx_alerts: CanvasRenderingContext2D | null =
+        canvas_alerts.getContext("2d");
       if (ctx_alerts != null) {
         this.#chart_alerts = new Chart(ctx_alerts, {
           // The type of chart we want to create
@@ -146,9 +139,9 @@ export class StatsPage extends ACARSHubPage {
             maintainAspectRatio: false,
             plugins: {
               datalabels: {
-                backgroundColor: function (context: any) {
-                  return context.dataset.backgroundColor;
-                },
+                // biome-ignore lint/suspicious/noExplicitAny: chartjs-plugin-datalabels lacks proper typing
+                backgroundColor: (context: any) =>
+                  context.dataset.backgroundColor,
                 borderRadius: 4,
                 color: "white",
                 font: {
@@ -172,8 +165,8 @@ export class StatsPage extends ACARSHubPage {
       typeof this.#signal_data !== "undefined" &&
       typeof this.#signal_data.levels !== "undefined"
     ) {
-      let input_labels: string[] = [];
-      let input_data: number[] = [];
+      const input_labels: string[] = [];
+      const input_data: number[] = [];
 
       // This float check is a hack and will discard good data. However, for reasons I don't understand
       // The database stores whole numbers not as the input float but as an int
@@ -184,7 +177,7 @@ export class StatsPage extends ACARSHubPage {
       // that skews the graph significantly. Removing those values smooths the graph and is more representative of what
       // really has been received with the newer, better signal levels
 
-      for (let i in this.#signal_data.levels) {
+      for (const i in this.#signal_data.levels) {
         if (
           this.#signal_data.levels[i].level != null &&
           this.isFloat(this.#signal_data.levels[i].level)
@@ -203,15 +196,15 @@ export class StatsPage extends ACARSHubPage {
         document.getElementById("signallevels")
       );
 
-      let background_color =
-        window.matchMedia &&
-        window.matchMedia("(prefers-color-scheme: dark)").matches
-          ? "#3d3d3d"
-          : "#ffffff";
+      const background_color = window.matchMedia?.(
+        "(prefers-color-scheme: dark)",
+      ).matches
+        ? "#3d3d3d"
+        : "#ffffff";
 
       canvas.style.backgroundColor = background_color;
 
-      const ctx: CanvasRenderingContext2D = canvas.getContext("2d")!;
+      const ctx: CanvasRenderingContext2D | null = canvas.getContext("2d");
       if (ctx != null) {
         this.#chart_signals = new Chart(ctx, {
           // The type of chart we want to create
@@ -247,29 +240,29 @@ export class StatsPage extends ACARSHubPage {
       typeof this.#freqs_data !== "undefined" &&
       typeof this.#freqs_data.freqs !== "undefined"
     ) {
-      let freq_data_acars: number[] = [];
-      let freq_data_vdlm: number[] = [];
-      let freq_data_hfdl: number[] = [];
-      let freq_data_imsl: number[] = [];
-      let freq_data_irdm: number[] = [];
+      const freq_data_acars: number[] = [];
+      const freq_data_vdlm: number[] = [];
+      const freq_data_hfdl: number[] = [];
+      const freq_data_imsl: number[] = [];
+      const freq_data_irdm: number[] = [];
 
-      let freq_labels_acars: string[] = [];
-      let freq_labels_vdlm: string[] = [];
-      let freq_labels_hfdl: string[] = [];
-      let freq_labels_imsl: string[] = [];
-      let freq_labels_irdm: string[] = [];
+      const freq_labels_acars: string[] = [];
+      const freq_labels_vdlm: string[] = [];
+      const freq_labels_hfdl: string[] = [];
+      const freq_labels_imsl: string[] = [];
+      const freq_labels_irdm: string[] = [];
 
-      let freq_labels_acars_positions: string[] = [];
-      let freq_labels_vdlm_positions: string[] = [];
-      let freq_labels_hfdl_positions: string[] = [];
-      let freq_labels_imsl_positions: string[] = [];
-      let freq_labels_irdm_positions: string[] = [];
+      const freq_labels_acars_positions: string[] = [];
+      const freq_labels_vdlm_positions: string[] = [];
+      const freq_labels_hfdl_positions: string[] = [];
+      const freq_labels_imsl_positions: string[] = [];
+      const freq_labels_irdm_positions: string[] = [];
 
-      let freq_labels_acars_offset: number[] = [];
-      let freq_labels_vdlm_offset: number[] = [];
-      let freq_labels_hfdl_offset: number[] = [];
-      let freq_labels_imsl_offset: number[] = [];
-      let freq_labels_irdm_offset: number[] = [];
+      const freq_labels_acars_offset: number[] = [];
+      const freq_labels_vdlm_offset: number[] = [];
+      const freq_labels_hfdl_offset: number[] = [];
+      const freq_labels_imsl_offset: number[] = [];
+      const freq_labels_irdm_offset: number[] = [];
 
       let total_count_acars: number = 0;
       let total_count_vdlm: number = 0;
@@ -283,7 +276,7 @@ export class StatsPage extends ACARSHubPage {
       let imsl_offset: number = 5;
       let irdm_offset: number = 5;
 
-      Object.entries(this.#freqs_data.freqs).forEach(([key, value]) => {
+      Object.entries(this.#freqs_data.freqs).forEach(([_key, value]) => {
         if (value.freq_type === "ACARS") {
           total_count_acars += value.count;
         } else if (value.freq_type === "VDL-M2") {
@@ -299,7 +292,7 @@ export class StatsPage extends ACARSHubPage {
         }
       });
 
-      Object.entries(this.#freqs_data.freqs).forEach(([key, value]) => {
+      Object.entries(this.#freqs_data.freqs).forEach(([_key, value]) => {
         if (value.freq_type === "ACARS") {
           freq_data_acars.push(value.count);
           freq_labels_acars.push(value.freq);
@@ -482,19 +475,16 @@ export class StatsPage extends ACARSHubPage {
     const canvas: HTMLCanvasElement = <HTMLCanvasElement>(
       document.getElementById(canvas_id)
     );
-    let background_color =
-      window.matchMedia &&
-      window.matchMedia("(prefers-color-scheme: dark)").matches
-        ? "#3d3d3d"
-        : "#ffffff";
+    const background_color = window.matchMedia?.("(prefers-color-scheme: dark)")
+      .matches
+      ? "#3d3d3d"
+      : "#ffffff";
 
     canvas.style.backgroundColor = background_color;
 
-    const ctx: CanvasRenderingContext2D = canvas
-      ? canvas.getContext("2d")!
-      : null!;
+    const ctx: CanvasRenderingContext2D | null = canvas.getContext("2d");
     if (ctx != null) {
-      let temp_chart = new Chart(ctx, {
+      const temp_chart = new Chart(ctx, {
         // The type of chart we want to create
         type: "bar",
 
@@ -530,16 +520,16 @@ export class StatsPage extends ACARSHubPage {
               text: `${label} Frequency Message Counts  (${total_count.toLocaleString()})`,
             },
             datalabels: {
-              backgroundColor: function (context: any) {
-                return context.dataset.backgroundColor;
-              },
+              // biome-ignore lint/suspicious/noExplicitAny: chartjs-plugin-datalabels lacks proper typing
+              backgroundColor: (context: any) =>
+                context.dataset.backgroundColor,
               borderRadius: 4,
               color: "white",
               clamp: true,
               font: {
                 weight: "bold",
               },
-              formatter: (value, context) => {
+              formatter: (_value, context) => {
                 return (
                   output_data[context.dataIndex].toLocaleString() +
                   " (" +
@@ -616,15 +606,16 @@ export class StatsPage extends ACARSHubPage {
       const canvas_data: HTMLCanvasElement = <HTMLCanvasElement>(
         document.getElementById("msg_count_data")
       );
-      let background_color =
-        window.matchMedia &&
-        window.matchMedia("(prefers-color-scheme: dark)").matches
-          ? "#3d3d3d"
-          : "#ffffff";
+      const background_color = window.matchMedia?.(
+        "(prefers-color-scheme: dark)",
+      ).matches
+        ? "#3d3d3d"
+        : "#ffffff";
 
       canvas_data.style.backgroundColor = background_color;
 
-      const ctx_data: CanvasRenderingContext2D = canvas_data.getContext("2d")!;
+      const ctx_data: CanvasRenderingContext2D | null =
+        canvas_data.getContext("2d");
       if (ctx_data != null) {
         this.#chart_message_counts_data = new Chart(ctx_data, {
           // The type of chart we want to create
@@ -662,16 +653,16 @@ export class StatsPage extends ACARSHubPage {
                 text: `Non-Empty Messages (${data_total.toLocaleString()})`,
               },
               datalabels: {
-                backgroundColor: function (context: any) {
-                  return context.dataset.backgroundColor;
-                },
+                // biome-ignore lint/suspicious/noExplicitAny: chartjs-plugin-datalabels lacks proper typing
+                backgroundColor: (context: any) =>
+                  context.dataset.backgroundColor,
                 borderRadius: 4,
                 color: "white",
                 font: {
                   weight: "bold",
                 },
                 align: "right",
-                formatter: (value, context) => {
+                formatter: (value, _context) => {
                   return (
                     value.toLocaleString() +
                     " (" +
@@ -694,8 +685,8 @@ export class StatsPage extends ACARSHubPage {
       );
       canvas_empty.style.backgroundColor = background_color;
 
-      const ctx_empty: CanvasRenderingContext2D =
-        canvas_empty.getContext("2d")!;
+      const ctx_empty: CanvasRenderingContext2D | null =
+        canvas_empty.getContext("2d");
       if (ctx_empty != null) {
         this.#chart_message_counts_empty = new Chart(ctx_empty, {
           // The type of chart we want to create
@@ -733,16 +724,16 @@ export class StatsPage extends ACARSHubPage {
                 text: `Empty Messages (${empty_total.toLocaleString()})`,
               },
               datalabels: {
-                backgroundColor: function (context: any) {
-                  return context.dataset.backgroundColor;
-                },
+                // biome-ignore lint/suspicious/noExplicitAny: chartjs-plugin-datalabels lacks proper typing
+                backgroundColor: (context: any) =>
+                  context.dataset.backgroundColor,
                 borderRadius: 4,
                 color: "white",
                 font: {
                   weight: "bold",
                 },
                 align: "right",
-                formatter: (value, context) => {
+                formatter: (value, _context) => {
                   return (
                     value.toLocaleString() +
                     " (" +
@@ -826,11 +817,9 @@ export class StatsPage extends ACARSHubPage {
       return;
     }
 
-    let prefix =
-      window.matchMedia &&
-      window.matchMedia("(prefers-color-scheme: dark)").matches
-        ? "-dark"
-        : "";
+    const prefix = window.matchMedia?.("(prefers-color-scheme: dark)").matches
+      ? "-dark"
+      : "";
 
     $("#1hr").prop(
       "src",
@@ -887,11 +876,9 @@ export class StatsPage extends ACARSHubPage {
   }
 
   set_html(): void {
-    let prefix =
-      window.matchMedia &&
-      window.matchMedia("(prefers-color-scheme: dark)").matches
-        ? "-dark"
-        : "";
+    const prefix = window.matchMedia?.("(prefers-color-scheme: dark)").matches
+      ? "-dark"
+      : "";
 
     $("#log").html(`<p><div id="stat_menu"></div></p>
     <div id="stat_images">
@@ -939,10 +926,7 @@ export class StatsPage extends ACARSHubPage {
     this.resize();
   }
 
-  resize(width: number = 0): void {
-    if (width) {
-      this.#width = width;
-    }
+  resize(_width: number = 0): void {
     $("#counts").addClass("padding-top-10");
   }
 }

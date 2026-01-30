@@ -20,16 +20,18 @@ See [ENV_SETUP.md](ENV_SETUP.md) for detailed configuration options.
 **Run these in separate terminal windows:**
 
 ### Terminal 1: Frontend Watch + Auto-Copy
+
 ```bash
 ./dev-watch.sh
 ```
 
 ### Terminal 2: Flask Backend
+
 ```bash
 pdm run dev
 ```
 
-**Then open:** http://localhost:5000
+**Then open:** <http://localhost:5000>
 
 ---
 
@@ -69,11 +71,13 @@ cd acarshub-typescript && ./copy_test_assets.sh
 ## 🐛 Troubleshooting
 
 ### Assets not updating?
+
 1. Hard refresh: `Ctrl+Shift+R` (or `Cmd+Shift+R` on Mac)
 2. Check DevTools → Network → "Disable cache"
 3. Verify files copied: `ls -la rootfs/webapp/static/js/`
 
 ### Watch script not working?
+
 ```bash
 # Install inotify-tools (Linux)
 sudo apt-get install inotify-tools
@@ -84,6 +88,7 @@ cd acarshub-typescript && npm run watch
 ```
 
 ### Flask not reloading?
+
 - Check `LOCAL_TEST=True` is set
 - Check terminal for Python errors
 - Restart: `Ctrl+C` and `pdm run dev` again
@@ -111,14 +116,17 @@ cd acarshub-typescript && npm run watch
 ---
 
 For full documentation:
+
 - [DEVELOPMENT.md](DEVELOPMENT.md) - Complete dev guide
 - [ENV_SETUP.md](ENV_SETUP.md) - Environment variables reference
+
 ---
 
 ## 🌐 Server Address
 
 When running in development mode (`LOCAL_TEST=true`):
-- **URL**: http://localhost:8080
+
+- **URL**: <http://localhost:8080>
 - **Port**: 8080 (not 5000!)
 
 The port is automatically set when `LOCAL_TEST=true` is in your `.env` file.

@@ -15,10 +15,8 @@
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
 import { images } from "../assets/assets";
-import { acarshub_version } from "../interfaces";
-import jBox from "jbox";
-import Cookies from "js-cookie";
-export let menu = {
+import type { acarshub_version } from "../interfaces";
+export const menu = {
   acars_path: "" as string,
   acars_url: "" as string,
 
@@ -48,18 +46,18 @@ export let menu = {
     $("#links").html(html);
   },
 
-  generate_stat_submenu: function (
+  generate_stat_submenu: (
     acars: boolean = false,
     vdlm: boolean = false,
     hfdl: boolean = false,
     imsl: boolean = false,
     irdm: boolean = false,
-  ): void {
+  ): void => {
     let text: string = "";
 
-    let ennum = [acars, vdlm, hfdl, imsl, irdm].filter((x) => x).length;
+    const ennum = [acars, vdlm, hfdl, imsl, irdm].filter((x) => x).length;
     // if any two of acars, vdlm, hfdl, imsl, irdm are true, set show_combined to true
-    let show_combined = ennum > 1;
+    const show_combined = ennum > 1;
 
     const acars_prefix = show_combined ? "'acars'" : "''";
     const vdlm_prefix = show_combined ? "'vdlm'" : "''";
@@ -107,8 +105,8 @@ export let menu = {
     $("#stat_menu").html(text);
   },
 
-  generate_footer: function (): void {
-    let html: string = `<div id="acarshub_help"><a href="javascript:new_page('About')">ACARS Hub Help/About</a></div> \
+  generate_footer: (): void => {
+    const html: string = `<div id="acarshub_help"><a href="javascript:new_page('About')">ACARS Hub Help/About</a></div> \
       <div id="github_link"><a href="https://github.com/sdr-enthusiasts/docker-acarshub" target="_blank">Project Github</a></div> \
       <div id="discord_badge"><a href="https://discord.gg/sTf9uYF"><img src="https://img.shields.io/discord/734090820684349521" alt="discord"></a></div> \
       <div><span id="system_status"><a href="javascript:new_page('Status')">System Status: <span class="green">Okay</a></span></span> \
@@ -124,7 +122,7 @@ export let menu = {
     this.generate_menu();
   },
 
-  set_version: function (version: acarshub_version): void {
+  set_version: (version: acarshub_version): void => {
     if (version.is_outdated) {
       $("#release_version").attr(
         "data-jbox-content",

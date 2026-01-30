@@ -21,11 +21,13 @@ This guide explains how to set up a development environment with hot reloading f
 ### Initial Setup
 
 1. **Install backend dependencies:**
+
    ```bash
    pdm install
    ```
 
 2. **Install frontend dependencies:**
+
    ```bash
    pdm run install-frontend
    # Or manually:
@@ -33,6 +35,7 @@ This guide explains how to set up a development environment with hot reloading f
    ```
 
 3. **Build frontend assets:**
+
    ```bash
    pdm run build-frontend-dev
    ```
@@ -42,16 +45,19 @@ This guide explains how to set up a development environment with hot reloading f
 #### Option 1: Recommended - Backend with Frontend Watch (Two Terminals)
 
 **Terminal 1 - Start the watch script (auto-copies assets to Flask):**
+
 ```bash
 ./dev-watch.sh
 ```
 
 **Terminal 2 - Run Flask backend:**
+
 ```bash
 pdm run dev
 ```
 
 This setup provides:
+
 - ✅ Automatic frontend rebuilds on file changes
 - ✅ Automatic asset copying to Flask static directory
 - ✅ Flask serves fresh assets (no caching in dev mode)
@@ -60,17 +66,20 @@ This setup provides:
 #### Option 2: Manual Frontend Builds
 
 **Terminal 1 - Run webpack watch:**
+
 ```bash
 cd acarshub-typescript
 npm run watch
 ```
 
 **Terminal 2 - Run Flask backend:**
+
 ```bash
 pdm run dev
 ```
 
 Then manually copy assets after each build:
+
 ```bash
 cd acarshub-typescript
 ./copy_test_assets.sh
@@ -79,12 +88,13 @@ cd acarshub-typescript
 #### Option 3: Webpack Dev Server (Frontend Only)
 
 For frontend-only development with mock backend:
+
 ```bash
 cd acarshub-typescript
 npm run dev
 ```
 
-This starts webpack-dev-server on http://localhost:9000 with hot module replacement.
+This starts webpack-dev-server on <http://localhost:9000> with hot module replacement.
 
 ## Development Workflow
 
@@ -114,7 +124,7 @@ This ensures you always get fresh assets without manual cache clearing.
 
 ## Architecture Overview
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────┐
 │                    Development Setup                         │
 └─────────────────────────────────────────────────────────────┘
@@ -155,6 +165,7 @@ The `dev-watch.sh` script provides automated asset management:
 4. **Asset sync**: Copies changed files to Flask's `static/` and `templates/` directories
 
 **What gets copied:**
+
 - `dist/static/js/*` → `rootfs/webapp/static/js/`
 - `dist/static/images/*` → `rootfs/webapp/static/images/`
 - `dist/static/sounds/*` → `rootfs/webapp/static/sounds/`
@@ -201,10 +212,12 @@ For automatic browser refresh without manual page reload, you can use:
 ### Option 1: Browser Extension
 
 Install a live reload extension:
+
 - **Chrome/Edge**: [LiveReload](https://chrome.google.com/webstore/detail/livereload)
 - **Firefox**: [LiveReload](https://addons.mozilla.org/en-US/firefox/addon/livereload-web-extension/)
 
 Then run a live reload server alongside the dev setup:
+
 ```bash
 # Install globally
 npm install -g live-server
@@ -328,6 +341,7 @@ cd acarshub-typescript
 ```
 
 This creates minified, optimized bundles with:
+
 - Code splitting
 - CSS minimization
 - JS minification (Terser)

@@ -22,7 +22,7 @@ export class AboutPage extends ACARSHubPage {
   constructor() {
     super();
 
-    let converter: showdown.Converter = new showdown.Converter();
+    const converter: showdown.Converter = new showdown.Converter();
     fetch(helpfile)
       .then((response) => response.text())
       .then((data) => {

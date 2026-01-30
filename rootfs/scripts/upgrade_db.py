@@ -435,11 +435,7 @@ def add_triggers(cur, db: Connection, table: str, columns: List[str]):
 
 
 def create_db(cur):
-    global count_table
-    global freq_table
-    global level_table
-    global messages_table
-    global messages_saved_table
+
     cur.execute(count_table)
     cur.execute(freq_table)
     cur.execute(level_table)
@@ -449,7 +445,7 @@ def create_db(cur):
 
 def normalize_freqs(cur):
     global upgraded
-    global be_quiet
+
     # select freqs from messages and ensure there are three decimal places
     tables = ["messages", "messages_saved", "freqs"]
     for table in tables:

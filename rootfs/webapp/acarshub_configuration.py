@@ -230,11 +230,9 @@ with open(version_path, "r") as f:
 
 def check_github_version():
     global IS_UPDATE_AVAILABLE
-    IS_UPDATE_AVAILABLE = False
     global CURRENT_ACARS_HUB_VERSION
-    global ACARSHUB_VERSION
-    global ACARSHUB_BUILD
     global CURRENT_ACARS_HUB_BUILD
+    IS_UPDATE_AVAILABLE = False
     # FIXME: This is a hack to get around the fact that the version file is not updated on the build server
     if not LOCAL_TEST:
         if HIDE_VERSION_UPDATE:
@@ -303,16 +301,10 @@ def check_github_version():
 
 
 def get_version():
-    global CURRENT_ACARS_HUB_VERSION
-    global CURRENT_ACARS_HUB_BUILD
-    global ACARSHUB_VERSION
-    global ACARSHUB_BUILD
-    global IS_UPDATE_AVAILABLE
     return {
-        "github_version": "v"
-        + CURRENT_ACARS_HUB_VERSION
-        + " Build "
-        + CURRENT_ACARS_HUB_BUILD,
+        "github_version": (
+            "v" + CURRENT_ACARS_HUB_VERSION + " Build " + CURRENT_ACARS_HUB_BUILD
+        ),
         "container_version": "v" + ACARSHUB_VERSION + " Build " + ACARSHUB_BUILD,
         "is_outdated": IS_UPDATE_AVAILABLE,
     }

@@ -8,7 +8,7 @@ const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 const CssMinimizerPlugin = require("css-minimizer-webpack-plugin");
 const TerserPlugin = require("terser-webpack-plugin");
 
-let config = {
+const config = {
   entry: {
     acarshub: path.resolve(__dirname, "src") + "/index.ts",
   },
@@ -211,7 +211,7 @@ let config = {
   ],
 };
 
-module.exports = (env, argv) => {
+module.exports = (_env, argv) => {
   if (argv.mode === "development") {
     config.devtool = "source-map";
     config.output.filename = "[name].js";

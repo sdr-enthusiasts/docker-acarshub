@@ -14,7 +14,42 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-declare const window: any;
+declare global {
+  interface Window {
+    new_page: (page: string) => void;
+    show_page_modal: () => void;
+    updateAlerts: () => void;
+    default_alert_values: () => void;
+    toggle_playsound: (status: boolean) => void;
+    update_prefix: (prefix: string) => void;
+    showall: () => void;
+    jumppage: () => void;
+    runclick: (page: number) => void;
+    handle_radio: (element_id: string, uid: string) => void;
+    pause_updates: (toggle_pause?: boolean) => void;
+    filter_notext: (toggle_filter?: boolean) => void;
+    toggle_label: (key: string) => void;
+    setSort: (sort?: string) => void;
+    toggle_acars_only: () => void;
+    toggle_datablocks: () => void;
+    toggle_extended_datablocks: () => void;
+    close_modal: () => void;
+    close_live_map_modal: () => void;
+    zoom_in: () => void;
+    zoom_out: () => void;
+    toggle_unread_messages: () => void;
+    mark_all_messages_read: () => void;
+    query: () => void;
+    reset_alert_counts: () => void;
+    showPlaneMessages: (
+      icao_hex: string,
+      tail: string,
+      flight: string,
+      uid: string,
+    ) => void;
+    toggleNexrad: () => void;
+  }
+}
 
 // CSS loading
 
@@ -25,41 +60,38 @@ import "leaflet/dist/leaflet.css";
 import "jbox/dist/jBox.all.css";
 import "./css/site.scss";
 
+import { io, type Socket } from "socket.io-client";
 import { menu } from "./helpers/menu";
-import { LiveMessagePage } from "./pages/live_messages";
-import { LiveMapPage } from "./pages/live_map";
-import { SearchPage } from "./pages/search";
-import { StatsPage } from "./pages/stats";
-import { AboutPage } from "./pages/about";
-import { StatusPage } from "./pages/status";
-import { AlertsPage } from "./pages/alerts";
 import { tooltip } from "./helpers/tooltips";
-import { io, Socket } from "socket.io-client";
-
-import {
-  labels,
-  system_status,
-  html_msg,
-  terms,
-  database_size,
-  current_search,
-  search_html_msg,
-  decoders,
-  signal,
-  alert_term,
-  signal_freq_data,
-  signal_count_data,
+import type {
+  acarshub_version,
   adsb,
-  window_size,
   alert_matched,
+  alert_term,
+  current_search,
+  database_size,
+  decoders,
+  html_msg,
+  labels,
   plane_data,
   plane_match,
-  acarshub_version,
+  search_html_msg,
+  signal,
+  signal_count_data,
+  signal_freq_data,
+  system_status,
+  terms,
+  window_size,
 } from "./interfaces";
+import { AboutPage } from "./pages/about";
+import { AlertsPage } from "./pages/alerts";
+import { LiveMapPage } from "./pages/live_map";
+import { LiveMessagePage } from "./pages/live_messages";
+import { SearchPage } from "./pages/search";
+import { StatsPage } from "./pages/stats";
+import { StatusPage } from "./pages/status";
 
-import Cookies from "js-cookie";
-
-let socket: Socket = <any>null;
+let socket: Socket = null as unknown as Socket;
 let socket_status: boolean = false;
 
 let index_acars_url: string = "";
@@ -70,26 +102,25 @@ let old_window_width: number = 0;
 let old_window_height: number = 0;
 
 let adsb_url: string = "";
-let adsb_interval: any;
+let adsb_interval: NodeJS.Timeout | undefined;
 let connection_good: boolean = true;
 let adsb_enabled = false;
-let adsb_request_options = {
+const adsb_request_options = {
   method: "GET",
 } as RequestInit;
 let allow_remote_updates = false;
-let flight_tracking_url: string | undefined = undefined;
-let wakelock: any | null = null;
+let flight_tracking_url: string | undefined;
+const _wakelock: WakeLockSentinel | null = null;
 
-let about: AboutPage = new AboutPage();
-let status: StatusPage = new StatusPage();
-let stats: StatsPage = new StatsPage();
-let search: SearchPage = new SearchPage();
-let live_messages: LiveMessagePage = new LiveMessagePage();
+const about: AboutPage = new AboutPage();
+const status: StatusPage = new StatusPage();
+const stats: StatsPage = new StatsPage();
+const search: SearchPage = new SearchPage();
+const live_messages: LiveMessagePage = new LiveMessagePage();
 let alerts: AlertsPage;
 let live_map: LiveMapPage;
 
-// @ts-expect-error
-var hidden, visibilityChange;
+var hidden: string, visibilityChange: string;
 if (typeof document.hidden !== "undefined") {
   // Opera 12.10 and Firefox 18 and later support
   hidden = "hidden";
@@ -114,8 +145,8 @@ const pages: string[] = [
   "/adsb", // live_map page
 ];
 
-let robserver: ResizeObserver = new ResizeObserver((entries) => {
-  for (let entry of entries) {
+const robserver: ResizeObserver = new ResizeObserver((entries) => {
+  for (const entry of entries) {
     const cr = entry.contentRect;
     if (cr.width !== old_window_width) {
       old_window_width = cr.width - 50;
@@ -166,7 +197,9 @@ export function resize_tabs(
   // Because fucking reasons.
   // Plz CSS gurus tell me what I'm missing here.
   let tab_width = Math.floor(window_width / num_tabs); // #2 above
-  tab_width % 2 === 0 ? (tab_width -= 0) : (tab_width += 1); // #3 above
+  if (tab_width % 2 !== 0) {
+    tab_width += 1;
+  } // #3 above
   const sub_tab_width = Math.floor(tab_width / 2); // #4 above
   tab_width -= 1; // Why?! Everything gets off by at least a pixel if we don't do this!?
   $(".tabinator label").width(tab_width); // CSS to set the widths everywhere
@@ -207,10 +240,7 @@ $((): void => {
   // Observe one or multiple elements
   // time to set everything on the page up
 
-  if (
-    window.matchMedia &&
-    window.matchMedia("(prefers-color-scheme: dark)").matches
-  ) {
+  if (window.matchMedia?.("(prefers-color-scheme: dark)").matches) {
     console.log("Dark mode enabled");
   }
 
@@ -220,45 +250,45 @@ $((): void => {
   robserver.observe(<Element>document.querySelector("body"));
 
   update_url(); // update the urls for everyone
-  adsb_url = index_acars_url + "data/aircraft.json";
+  adsb_url = `${index_acars_url}data/aircraft.json`;
   //connect to the socket server.
   socket = io(`${document.location.origin}/main`, {
-    path: index_acars_path + "socket.io",
+    path: `${index_acars_path}socket.io`,
   });
 
-  socket.on("labels", function (msg: labels) {
+  socket.on("labels", (msg: labels) => {
     // Msg labels
     live_messages.new_labels(msg); // send to live messages
   });
 
-  socket.on("acars_msg", function (msg: html_msg) {
+  socket.on("acars_msg", (msg: html_msg) => {
     // New acars message.
-    if (connection_good || typeof msg.loading == "undefined") {
+    if (connection_good || typeof msg.loading === "undefined") {
       live_messages.new_acars_message(msg); // send the message to live messages
       // if (adsb_enabled && typeof msg.loading == "undefined")
       //   live_map_page.redraw_map();
-      if (typeof msg.loading == "undefined" || msg.loading === false)
+      if (typeof msg.loading === "undefined" || msg.loading === false)
         alerts.alerts_acars_message(msg); // send the message to alerts for processing
     }
   });
 
-  socket.on("terms", function (msg: terms): void {
+  socket.on("terms", (msg: terms): void => {
     alerts.alerts_terms(msg); // send the terms over to the alert page
   });
 
-  socket.on("alert_matches", function (msg: html_msg): void {
+  socket.on("alert_matches", (msg: html_msg): void => {
     alerts.alerts_acars_message(msg);
   });
 
-  socket.on("database", function (msg: database_size): void {
+  socket.on("database", (msg: database_size): void => {
     search.database_size_details(msg);
   });
 
-  socket.on("database_search_results", function (msg: search_html_msg): void {
+  socket.on("database_search_results", (msg: search_html_msg): void => {
     search.database_search_results(msg);
   });
 
-  socket.on("acarshub-version", function (version: acarshub_version): void {
+  socket.on("acarshub-version", (version: acarshub_version): void => {
     menu.set_version(version);
     status.set_version(version);
     tooltip.cycle_tooltip();
@@ -266,7 +296,7 @@ $((): void => {
 
   // stats
 
-  socket.on("features_enabled", function (msg: decoders): void {
+  socket.on("features_enabled", (msg: decoders): void => {
     stats.decoders_enabled(msg);
     allow_remote_updates = msg.allow_remote_updates;
     flight_tracking_url = msg.adsb.flight_tracking_url;
@@ -292,7 +322,7 @@ $((): void => {
 
       if (msg.adsb.bypass) {
         adsb_url = msg.adsb.url;
-        adsb_request_options["mode"] = "cors";
+        adsb_request_options.mode = "cors";
       }
 
       // Check to see if the adsb interval already exists.
@@ -315,7 +345,7 @@ $((): void => {
     if (!msg.adsb.enabled && adsb_interval != null) {
       adsb_enabled = false;
       clearInterval(adsb_interval);
-      adsb_interval = null;
+      adsb_interval = undefined;
       menu.set_adsb(false);
       toggle_pages();
       alerts.updateAlertCounter();
@@ -328,60 +358,60 @@ $((): void => {
   });
 
   // signal level graph
-  socket.on("signal", function (msg: signal): void {
+  socket.on("signal", (msg: signal): void => {
     stats.signals(msg);
   });
 
   // alert term graph
-  socket.on("alert_terms", function (msg: alert_term): void {
+  socket.on("alert_terms", (msg: alert_term): void => {
     stats.alert_terms(msg);
   });
 
   // sidebar frequency count
-  socket.on("signal_freqs", function (msg: signal_freq_data): void {
+  socket.on("signal_freqs", (msg: signal_freq_data): void => {
     stats.signal_freqs(msg);
   });
 
-  socket.on("system_status", function (msg: system_status): void {
+  socket.on("system_status", (msg: system_status): void => {
     status.status_received(msg);
   });
 
-  socket.on("signal_count", function (msg: signal_count_data): void {
+  socket.on("signal_count", (msg: signal_count_data): void => {
     stats.signal_count(msg);
   });
 
   // socket errors
 
-  socket.on("disconnect", function (): void {
+  socket.on("disconnect", (): void => {
     connection_good = false;
     connection_status();
   });
 
-  socket.on("connect_error", function (): void {
+  socket.on("connect_error", (): void => {
     connection_good = false;
     connection_status();
   });
 
-  socket.on("connect_timeout", function (): void {
+  socket.on("connect_timeout", (): void => {
     connection_good = false;
     connection_status();
   });
 
-  socket.on("connect", function (): void {
+  socket.on("connect", (): void => {
     set_connection_good();
     connection_status(true);
   });
 
-  socket.on("reconnect", function (): void {
+  socket.on("reconnect", (): void => {
     set_connection_good();
     connection_status(true);
   });
 
-  socket.on("reconnecting", function (): void {
+  socket.on("reconnecting", (): void => {
     console.error("reconnecting");
   });
 
-  socket.on("error", function (e): void {
+  socket.on("error", (e): void => {
     console.error(e);
   });
 
@@ -391,13 +421,12 @@ $((): void => {
   stats.stats();
   toggle_pages();
 
-  setInterval(function () {
+  setInterval(() => {
     stats.updatePage();
   }, 60000);
 
   if (
     typeof document.addEventListener === "undefined" ||
-    // @ts-expect-error
     hidden === undefined
   ) {
     console.error(
@@ -405,7 +434,6 @@ $((): void => {
     );
   } else {
     document.addEventListener(
-      // @ts-expect-error
       visibilityChange,
       async () => {
         // if (wakelock !== null && document.visibilityState === "visible") {
@@ -447,7 +475,9 @@ export function get_window_size(): window_size {
 }
 
 function set_connection_good(): void {
-  setTimeout(() => (connection_good = socket.connected), 5000);
+  setTimeout(() => {
+    connection_good = socket.connected;
+  }, 5000);
 }
 
 async function update_adsb(): Promise<void> {
@@ -489,7 +519,7 @@ function toggle_pages(is_backgrounded = false): void {
     "/" + document.location.pathname.replace(index_acars_path, "");
   if (live_map) live_map.plane_message_modal.close();
 
-  for (let page in pages) {
+  for (const page in pages) {
     if (pages[page] === "/" && index_acars_page === pages[page]) {
       $("#live_messages_link").addClass("invert_a");
       live_messages.active(!is_backgrounded);
@@ -542,7 +572,7 @@ function toggle_pages(is_backgrounded = false): void {
   }
 }
 
-window.new_page = function (page: string): void {
+window.new_page = (page: string): void => {
   // remove the open attribute from menu_details
   $("#menu_details").removeAttr("open");
   document.title = page;
@@ -704,7 +734,7 @@ export function get_current_planes() {
 
 // functions that need to be registered to window object
 
-window.show_page_modal = function (): void {
+window.show_page_modal = (): void => {
   if (index_acars_page === "/alerts") {
     alerts.show_alert_message_modal();
   } else if (index_acars_page === "/") {
@@ -712,61 +742,61 @@ window.show_page_modal = function (): void {
   }
 };
 
-window.updateAlerts = function (): void {
+window.updateAlerts = (): void => {
   alerts.updateAlerts();
 };
-window.default_alert_values = function (): void {
+window.default_alert_values = (): void => {
   alerts.default_alert_values();
 };
-window.toggle_playsound = function (status: boolean): void {
+window.toggle_playsound = (status: boolean): void => {
   alerts.toggle_playsound(status);
 };
-window.update_prefix = function (prefix: string): void {
+window.update_prefix = (prefix: string): void => {
   stats.update_prefix(prefix);
 };
 
-window.showall = function (): void {
+window.showall = (): void => {
   search.showall();
 };
 
-window.jumppage = function (): void {
+window.jumppage = (): void => {
   search.jumppage();
 };
 
-window.runclick = function (page: number): void {
+window.runclick = (page: number): void => {
   search.runclick(page);
 };
 
-window.handle_radio = function (element_id: string, uid: string): void {
+window.handle_radio = (element_id: string, uid: string): void => {
   if (index_acars_page === "/") live_messages.handle_radio(element_id, uid);
   else if (index_acars_page === "/adsb") live_map.handle_radio(element_id, uid);
 };
 
-window.pause_updates = function (toggle_pause: boolean = true): void {
+window.pause_updates = (toggle_pause: boolean = true): void => {
   live_messages.pause_updates(toggle_pause);
 };
 
-window.filter_notext = function (toggle_filter: boolean = true): void {
+window.filter_notext = (toggle_filter: boolean = true): void => {
   live_messages.filter_notext(toggle_filter);
 };
 
-window.toggle_label = function (key: string): void {
+window.toggle_label = (key: string): void => {
   live_messages.toggle_label(key);
 };
 
-window.setSort = function (sort: string = ""): void {
+window.setSort = (sort: string = ""): void => {
   live_map.setSort(sort);
 };
 
-window.toggle_acars_only = function (): void {
+window.toggle_acars_only = (): void => {
   live_map.toggle_acars_only();
 };
 
-window.toggle_datablocks = function (): void {
+window.toggle_datablocks = (): void => {
   live_map.toggle_datablocks();
 };
 
-window.toggle_extended_datablocks = function (): void {
+window.toggle_extended_datablocks = (): void => {
   live_map.toggle_extended_datablocks();
 };
 
@@ -774,37 +804,37 @@ $(window).on("popstate", (): void => {
   toggle_pages();
 });
 
-window.close_modal = function (): void {
+window.close_modal = (): void => {
   if (index_acars_page === "/search") {
     $("input").off(); // Turn off the event listener for keys in the search modal
   }
 };
 
-window.close_live_map_modal = function (): void {
+window.close_live_map_modal = (): void => {
   live_map.close_live_map_modal();
 };
 
-window.zoom_in = function (): void {
+window.zoom_in = (): void => {
   live_map.zoom_in();
 };
 
-window.zoom_out = function (): void {
+window.zoom_out = (): void => {
   live_map.zoom_out();
 };
 
-window.toggle_unread_messages = function (): void {
+window.toggle_unread_messages = (): void => {
   live_map.toggle_unread_messages();
 };
 
-window.mark_all_messages_read = function (): void {
+window.mark_all_messages_read = (): void => {
   live_map.mark_all_messages_read();
 };
 
-window.query = function (): void {
+window.query = (): void => {
   search.query();
 };
 
-window.reset_alert_counts = function (): void {
+window.reset_alert_counts = (): void => {
   const reset_alerts = confirm(
     "This will reset the alert term counts in your database. This action cannot be undone. Are you sure you want to continue?",
   );
@@ -813,11 +843,11 @@ window.reset_alert_counts = function (): void {
   }
 };
 
-window.showPlaneMessages = function (
+window.showPlaneMessages = (
   callsign: string,
   hex: string,
   tail: string,
-): void {
+): void => {
   if (hex === undefined) {
     console.error("ERROR", callsign, tail);
     return;
@@ -825,7 +855,7 @@ window.showPlaneMessages = function (
   live_map.showPlaneMessages(callsign, hex, tail);
 };
 
-window.toggleNexrad = function (): void {
+window.toggleNexrad = (): void => {
   live_map.toggle_nexrad();
 };
 
