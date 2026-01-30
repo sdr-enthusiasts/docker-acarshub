@@ -19,10 +19,53 @@
 
 import json
 import os
+import sys
 
 import urllib
 import acarshub_logging
 from acarshub_logging import LOG_LEVEL
+
+
+# Helper function to check if a value is enabled
+# Supports both new true/false pattern and deprecated 'external' value
+def is_enabled(value):
+    """
+    Check if an environment variable value indicates 'enabled'.
+
+    Args:
+        value: The value to check (typically from os.getenv)
+
+    Returns:
+        bool: True if enabled, False otherwise
+    """
+    if not value:
+        return False
+
+    value_str = str(value).lower().strip()
+
+    # Check for deprecated 'external' value
+    if value_str == "external":
+        print(
+            "WARNING: Using 'external' is deprecated. Please use 'true' or 'false' instead.",
+            file=sys.stderr,
+        )
+        return True
+
+    # Check for enabled values (matching shell script pattern)
+    enabled_values = [
+        "1",
+        "true",
+        "on",
+        "enabled",
+        "enable",
+        "yes",
+        "y",
+        "ok",
+        "always",
+        "set",
+    ]
+    return value_str in enabled_values
+
 
 # debug levels
 
@@ -90,33 +133,19 @@ if (
     ACARS_WEB_PORT = 8080
 if os.getenv("LIVE_DATA_SOURCE", default=False):
     LIVE_DATA_SOURCE = os.getenv("LIVE_DATA_SOURCE")
-if (
-    os.getenv("ENABLE_ACARS", default=False)
-    and str(os.getenv("ENABLE_ACARS")).upper() == "EXTERNAL"
-):
+if is_enabled(os.getenv("ENABLE_ACARS", default=False)):
     ENABLE_ACARS = True
-if (
-    os.getenv("ENABLE_VDLM", default=False)
-    and str(os.getenv("ENABLE_VDLM")).upper() == "EXTERNAL"
-):
+
+if is_enabled(os.getenv("ENABLE_VDLM", default=False)):
     ENABLE_VDLM = True
 
-if (
-    os.getenv("ENABLE_HFDL", default=False)
-    and str(os.getenv("ENABLE_HFDL")).upper() == "EXTERNAL"
-):
+if is_enabled(os.getenv("ENABLE_HFDL", default=False)):
     ENABLE_HFDL = True
 
-if (
-    os.getenv("ENABLE_IMSL", default=False)
-    and str(os.getenv("ENABLE_IMSL")).upper() == "EXTERNAL"
-):
+if is_enabled(os.getenv("ENABLE_IMSL", default=False)):
     ENABLE_IMSL = True
 
-if (
-    os.getenv("ENABLE_IRDM", default=False)
-    and str(os.getenv("ENABLE_IRDM")).upper() == "EXTERNAL"
-):
+if is_enabled(os.getenv("ENABLE_IRDM", default=False)):
     ENABLE_IRDM = True
 
 if (
