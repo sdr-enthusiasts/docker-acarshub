@@ -1,4 +1,4 @@
-FROM node:25.4.0-slim AS acarshub-typescript-builder
+FROM node:25.5.0-slim@sha256:ec5e27581e578ec3d25b81f4d9f9088fc2efa3087a78d1bf278f051db67c5b5b AS acarshub-typescript-builder
 # pushd/popd
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
