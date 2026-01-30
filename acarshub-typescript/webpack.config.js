@@ -5,6 +5,8 @@ const FaviconsWebpackPlugin = require("favicons-webpack-plugin");
 const InjectBodyPlugin = require("inject-body-webpack-plugin").default;
 const NodePolyfillPlugin = require("node-polyfill-webpack-plugin");
 const MiniCssExtractPlugin = require("mini-css-extract-plugin");
+const CssMinimizerPlugin = require("css-minimizer-webpack-plugin");
+const TerserPlugin = require("terser-webpack-plugin");
 
 let config = {
   entry: {
@@ -92,17 +94,80 @@ let config = {
 
   optimization: {
     runtimeChunk: "single",
+    usedExports: true,
+    sideEffects: true,
+    minimize: true,
+    minimizer: [
+      new TerserPlugin({
+        terserOptions: {
+          compress: {
+            drop_console: false,
+          },
+        },
+      }),
+      new CssMinimizerPlugin(),
+    ],
     splitChunks: {
       chunks: "all",
       maxInitialRequests: Infinity,
-      minSize: 0,
+      minSize: 20000,
       cacheGroups: {
-        acarshub: {
-          name: "acarshub",
+        defaultVendors: {
+          test: /[\\/]node_modules[\\/]/,
+          priority: -10,
+          reuseExistingChunk: true,
+          name(module) {
+            // Get the package name from node_modules path
+            if (!module.context) {
+              return "vendors";
+            }
+
+            const match = module.context.match(
+              /[\\/]node_modules[\\/](.*?)([\\/]|$)/,
+            );
+
+            if (!match || !match[1]) {
+              return "vendors";
+            }
+
+            const packageName = match[1];
+
+            // Group large libraries separately for better caching
+            if (packageName.includes("chart")) {
+              return "chart";
+            }
+            if (packageName.includes("leaflet")) {
+              return "leaflet";
+            }
+            if (packageName.includes("bootstrap")) {
+              return "bootstrap";
+            }
+            if (packageName.includes("socket.io")) {
+              return "socket-io";
+            }
+            if (packageName.includes("showdown")) {
+              return "showdown";
+            }
+            if (packageName.includes("fontawesome")) {
+              return "fontawesome";
+            }
+
+            // Everything else goes into a common vendor chunk
+            return "vendors";
+          },
+        },
+        default: {
           minChunks: 2,
+          priority: -20,
+          reuseExistingChunk: true,
         },
       },
     },
+  },
+  performance: {
+    maxEntrypointSize: 2000000,
+    maxAssetSize: 1500000,
+    hints: "warning",
   },
   plugins: [
     new webpack.NormalModuleReplacementPlugin(/^node:/, (resource) => {
