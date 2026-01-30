@@ -168,7 +168,7 @@ export let html_functions = {
       let text = message["text"];
       text = text.replace("\\r\\n", "<br>");
       //html_output += "<p>";
-      html_output += '<table class="message">';
+      html_output += '<div class="message-container">';
 
       //html_output += "</p>";
       if (message.hasOwnProperty("decodedText")) {
@@ -176,7 +176,7 @@ export let html_functions = {
         let decodedStatus = "Full";
         if (message["decodedText"].decoder.decodeLevel != "full")
           decodedStatus = "Partial";
-        html_output += '<td class="text_top">';
+        html_output += '<div class="text_top">';
         html_output += `<strong>Decoded Text (${decodedStatus}):</strong></p>`;
         html_output += '<pre class="shadow show_strong">';
         html_output +=
@@ -188,23 +188,21 @@ export let html_functions = {
             : this.loop_array(message["decodedText"].formatted); // get the formatted html of the decoded text
         //html_output += `${message['decodedText'].raw}`;
         html_output += "</pre>";
-        html_output += "</td>";
+        html_output += "</div>";
         //html_output += "</p>";
-      } else {
-        html_output += "<tr>";
       }
 
       html_output += message.hasOwnProperty("decodedText")
-        ? '<td class="text_top dont_show">'
-        : '<td class="text_top">'; // If screen size is too small, and we have decoded text, hide this element
+        ? '<div class="text_top dont_show">'
+        : '<div class="text_top">'; // If screen size is too small, and we have decoded text, hide this element
       html_output += "<strong>Non-Decoded Text:</strong><p>";
       html_output += `<pre class="shadow show_strong">${
         typeof message.matched_text === "object"
           ? this.replace_text(message.matched_text, text)
           : text
       }</pre>`;
-      html_output += "</td>";
-      html_output += "</tr></table>";
+      html_output += "</div>";
+      html_output += "</div>";
     } else if (
       message.hasOwnProperty("data") &&
       typeof message.data !== "undefined"

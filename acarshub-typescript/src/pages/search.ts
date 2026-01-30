@@ -270,14 +270,13 @@ export class SearchPage extends ACARSHubPage {
     if (total % 50 != 0) this.#total_pages = ~~(total / 50) + 1;
     else this.#total_pages = ~~(total / 50);
 
-    html +=
-      '<table class="search"><thead><th class="search_label"></th><th class="search_term"></th></thead>';
-    html += `<tr><td colspan="2"><span class="menu_non_link">Query Time: ${this.#query_time.toFixed(
+    html += '<div class="search-results-info">';
+    html += `<div class="search-info-row"><span class="menu_non_link">Query Time: ${this.#query_time.toFixed(
       4,
-    )} Seconds</span></td></tr>`;
-    html += `<tr><td colspan="2"><span class="menu_non_link">Found <strong>${total}</strong> result(s) in <strong>${
+    )} Seconds</span></div>`;
+    html += `<div class="search-info-row"><span class="menu_non_link">Found <strong>${total}</strong> result(s) in <strong>${
       this.#total_pages
-    }</strong> page(s).</span></td></tr>`;
+    }</strong> page(s).</span></div>`;
 
     // Determine -/+ range. We want to show -/+ 5 pages from current index
 
@@ -289,7 +288,7 @@ export class SearchPage extends ACARSHubPage {
     if (high_end > this.#total_pages) high_end = this.#total_pages;
 
     if (this.#total_pages != 1) {
-      html += '<tr><td colspan="2">';
+      html += '<div class="search-pagination">';
 
       if (low_end > 0) {
         if (low_end > 5)
@@ -323,13 +322,20 @@ export class SearchPage extends ACARSHubPage {
     }
 
     if (this.#total_pages > 5) {
+      html += "</div>";
+      html += '<div class="search-row">';
+      html += '<div class="search_label"><label>Page:</label></div>';
+      html += '<div class="search_term"><input type="text" id="jump"></div>';
+      html += "</div>";
+      html += '<div class="search-row">';
+      html += '<div class="search_label"></div>';
       html +=
-        '</td></tr><tr><td class="search_label"><label>Page:</label></td><td class="search_term"><input type="text" id="jump"><p></td></tr>';
-      html +=
-        '<tr><td class="search_label"></td><td class=search_term><a href="#" onclick="jumppage()">Jump to page</a></td></tr></table>';
+        '<div class="search_term"><a href="#" onclick="jumppage()">Jump to page</a></div>';
+      html += "</div>";
+      html += "</div>";
       html += '<div id="error_message"></div></div>';
     } else {
-      html += "</td></tr></table>";
+      html += "</div></div>";
       html += '<div id="error_message"></div></div>';
     }
 
@@ -375,114 +381,114 @@ export class SearchPage extends ACARSHubPage {
       $("#side_pane")
         .html(`<p><a href="javascript:showall()" class="spread_text">Most Recent Messages</a></p>
       <p><a href="javascript:query()" class="spread_text">Search</a></p>
-      <table class="search">
-        <tr>
-          <td class="search_label">
+      <div class="search-form">
+        <div class="search-row">
+          <div class="search_label">
             <label>Database Rows:</label>
-          </td>
-          <td class="search_term">
+          </div>
+          <div class="search_term">
             <span id="database"></span>
-          </td>
-        </tr>
-        <tr>
-          <td class="search_label">
+          </div>
+        </div>
+        <div class="search-row">
+          <div class="search_label">
             <label>Database Size:</label>
-          </td>
-          <td class="search_term">
+          </div>
+          <div class="search_term">
             <span id="size"></span>
-          </td>
-        </tr>
+          </div>
+        </div>
 
-        <tr>
-          <td class="search_label">
+        <div class="search-row">
+          <div class="search_label">
             <label>Callsign:</label>
-          </td>
-          <td class="search_term">
+          </div>
+          <div class="search_term">
             <input type="text" id="search_flight">
-          </td>
-        </tr>
+          </div>
+        </div>
 
-        <tr class="search_label">
-          <td>
+        <div class="search-row">
+          <div class="search_label">
             <label>DEPA:</label>
-          </td>
-          <td class="search_term">
+          </div>
+          <div class="search_term">
             <input type="text" id="search_depa">
-          </td>
-        </tr>
+          </div>
+        </div>
 
-        <tr class="search_label">
-          <td>
+        <div class="search-row">
+          <div class="search_label">
             <label>DSTA:</label>
-          </td>
-          <td class="search_term">
+          </div>
+          <div class="search_term">
             <input type="text" id="search_dsta">
-          </td>
-        </tr>
+          </div>
+        </div>
 
-        <tr class="search_label">
-          <td>
+        <div class="search-row">
+          <div class="search_label">
             <label>Frequency:</label>
-          </td>
-          <td class="search_term">
+          </div>
+          <div class="search_term">
             <input type="text" id="search_freq">
-          </td>
-        </tr>
+          </div>
+        </div>
 
-        <tr class="search_label">
-          <td>
+        <div class="search-row">
+          <div class="search_label">
             <label>Label:</label>
-          </td>
-          <td class="search_term">
+          </div>
+          <div class="search_term">
             <input type="text" id="search_msglbl">
-          </td>
-        </tr>
+          </div>
+        </div>
 
-        <!-- <tr class="search_label">
-          <td>
+        <!-- <div class="search-row">
+          <div class="search_label">
             <label>Message Number:</label>
-          </td>
-          <td class="search_term">
+          </div>
+          <div class="search_term">
             <input type="text" id="search_msgno">
-          </td>
-        </tr> --!>
+          </div>
+        </div> -->
 
-        <tr class="search_label">
-          <td>
+        <div class="search-row">
+          <div class="search_label">
             <label>Tail Number:</label>
-          </td>
-          <td class="search_term">
+          </div>
+          <div class="search_term">
             <input type="text" id="search_tail">
-          </td>
-        </tr>
+          </div>
+        </div>
 
-        <tr class="search_label">
-          <td>
+        <div class="search-row">
+          <div class="search_label">
             <label>Icao:</label>
-          </td>
-          <td class="search_term">
+          </div>
+          <div class="search_term">
             <input type="text" id="search_icao">
-          </td>
-        </tr>
+          </div>
+        </div>
 
-        <tr class="search_label">
-          <td>
+        <div class="search-row">
+          <div class="search_label">
             <label>Text:</label>
-          </td>
-          <td class="search_term">
+          </div>
+          <div class="search_term">
             <input type="text" id="search_text">
-          </td>
-        </tr>
-        <tr class="search_label">
-          <td>
+          </div>
+        </div>
+        <div class="search-row">
+          <div class="search_label">
             <label>Station ID:</label>
-          </td>
-          <td class="search_term">
+          </div>
+          <div class="search_term">
             <input type="text" id="search_station_id">
-          </td>
-        </tr>
+          </div>
+        </div>
 
-      </table>
+      </div>
       <div class="row" id="num_results"></div>`);
       this.show_search();
       this.update_size();

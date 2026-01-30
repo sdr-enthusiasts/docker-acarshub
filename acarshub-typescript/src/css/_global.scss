@@ -36,56 +36,6 @@ body {
   }
 }
 
-// Tables
-thead {
-  border: 1px solid colors.$full-black;
-}
-
-th {
-  padding-left: 5px;
-}
-
-table {
-  &.search {
-    border: 1px solid colors.$full-black;
-    border-collapse: collapse;
-    width: 100%;
-    table-layout: fixed;
-    background-color: transparent;
-    vertical-align: middle;
-
-    thead {
-      border: 0;
-    }
-  }
-
-  &.message {
-    border: none;
-    border-collapse: collapse;
-    width: 100%;
-    table-layout: fixed;
-    background-color: colors.$full-white;
-    vertical-align: top;
-
-    @media (prefers-color-scheme: dark) {
-      background-color: colors.$grey-bg;
-    }
-  }
-}
-
-td {
-  background-color: colors.$full-white;
-  padding: 7px;
-
-  @media (prefers-color-scheme: dark) {
-    background-color: colors.$grey-bg;
-  }
-
-  &:first-child {
-    padding-left: 0;
-  }
-}
-
 // Lists
 ol {
   list-style-type: circle;

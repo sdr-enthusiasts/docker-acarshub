@@ -181,3 +181,38 @@
 #msg_body {
   column-span: inherit;
 }
+
+// Message text container (replaces table layout)
+.message-container {
+  display: flex;
+  flex-wrap: wrap;
+  border: none;
+  width: 100%;
+  background-color: colors.$full-white;
+
+  @media (prefers-color-scheme: dark) {
+    background-color: colors.$grey-bg;
+  }
+}
+
+.text_top {
+  flex: 1;
+  min-width: 0;
+  padding: 7px;
+  background-color: colors.$full-white;
+  vertical-align: top;
+
+  @media (prefers-color-scheme: dark) {
+    background-color: colors.$grey-bg;
+  }
+
+  &:first-child {
+    padding-left: 0;
+  }
+
+  &.dont_show {
+    @media only screen and (max-width: 700px) {
+      display: none;
+    }
+  }
+}
