@@ -34,6 +34,10 @@
   @media only screen and (max-width: 700px) {
     width: 100% !important;
   }
+
+  span.menu_non_link {
+    color: var(--body-text);
+  }
 }
 
 // Search form grid layout
