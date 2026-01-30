@@ -253,13 +253,25 @@ export const html_functions = {
   format_libacars_generic: function (data: any): string {
     let html = '<div class="libacars-generic">';
     html += "<strong>Decoded Libacars Data:</strong><br>";
+    html += `<div style="margin-left: 20px;">`;
 
-    // Use the recursive formatter to display all fields
+    // Display top-level fields in a readable format
     for (const [key, value] of Object.entries(data)) {
-      html += this.format_libacars_value(key, value, 1);
+      if (typeof value === "object" && value !== null) {
+        // Skip complex nested objects for the generic formatter
+        continue;
+      }
+
+      // Format the key nicely (convert snake_case to Title Case)
+      const formattedKey = key
+        .split("_")
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(" ");
+
+      html += `<strong>${formattedKey}:</strong> ${value}<br>`;
     }
 
-    html += "</div>";
+    html += `</div></div>`;
     return html;
   },
 

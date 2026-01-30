@@ -34,10 +34,10 @@ server {
     root /database/images;
   }
 
-  # cache all of the files
+  # cache hashed assets immutably (they have content hashes in filenames)
   location ~ \.(css|js|png|jpg|jpeg|gif|ico|woff|woff2|ttf|svg|eot|otf|map|mjs|mp3)$ {
-    expires 30d;
-    add_header Cache-Control "public";
+    expires 1y;
+    add_header Cache-Control "public, immutable";
     root /webapp;
   }
 
@@ -59,9 +59,11 @@ server {
     proxy_set_header Referer "";
   }
 
-  # index page
+  # index page - must not be cached so new builds are picked up immediately
   location = / {
-    add_header Cache-Control 'no-cache';
+    add_header Cache-Control 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0';
+    add_header Pragma 'no-cache';
+    add_header Expires '0';
     try_files /templates/index.html =404;
   }
 
@@ -71,9 +73,11 @@ server {
     try_files /templates/helppage.MD =404;
   }
 
-  # valid URL paths for pages serve index.html
+  # valid URL paths for pages serve index.html - must not be cached
   location ~ ^/(search|alerts|stats|adsb|about|status)$ {
-    add_header Cache-Control 'no-cache';
+    add_header Cache-Control 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0';
+    add_header Pragma 'no-cache';
+    add_header Expires '0';
     try_files /templates/index.html =404;
   }
 }
