@@ -65,6 +65,10 @@
   --color-focus: #{$mocha-blue};
   --color-disabled: #{$mocha-overlay0};
   --color-muted: #{$mocha-subtext0};
+
+  // Card-specific colors
+  --color-card-header: #{$mocha-mantle};
+  --color-card-body: #{$mocha-base};
 }
 
 @mixin theme-latte {
@@ -110,6 +114,10 @@
   --color-focus: #{$latte-blue};
   --color-disabled: #{$latte-overlay0};
   --color-muted: #{$latte-subtext0};
+
+  // Card-specific colors
+  --color-card-header: #{$latte-mantle};
+  --color-card-body: #{$latte-base};
 }
 
 /**

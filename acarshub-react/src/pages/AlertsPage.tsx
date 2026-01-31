@@ -36,16 +36,16 @@ export const AlertsPage = () => {
 
   return (
     <div className="page alerts-page">
-      <div className="page-header">
-        <h1>Alerts</h1>
-        <div className="page-stats">
+      <div className="page__header">
+        <h1 className="page__title">Alerts</h1>
+        <div className="page__stats">
           <span className="stat">
             <strong>{alertCount}</strong> matching messages
           </span>
         </div>
       </div>
 
-      <div className="page-content">
+      <div className="page__content">
         <div className="placeholder-message">
           <h2>Alerts View</h2>
           <p>

@@ -35,11 +35,11 @@ export const StatusPage = () => {
 
   return (
     <div className="page status-page">
-      <div className="page-header">
-        <h1>System Status</h1>
+      <div className="page__header">
+        <h1 className="page__title">System Status</h1>
       </div>
 
-      <div className="page-content">
+      <div className="page__content">
         <div className="placeholder-message">
           <h2>System Status Dashboard</h2>
           <p>

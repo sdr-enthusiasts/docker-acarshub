@@ -35,11 +35,11 @@ export const StatsPage = () => {
 
   return (
     <div className="page stats-page">
-      <div className="page-header">
-        <h1>Statistics</h1>
+      <div className="page__header">
+        <h1 className="page__title">Statistics</h1>
       </div>
 
-      <div className="page-content">
+      <div className="page__content">
         <div className="placeholder-message">
           <h2>Statistics Dashboard</h2>
           <p>This page will display charts and graphs showing:</p>

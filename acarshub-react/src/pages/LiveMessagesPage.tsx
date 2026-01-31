@@ -41,9 +41,9 @@ export const LiveMessagesPage = () => {
 
   return (
     <div className="page live-messages-page">
-      <div className="page-header">
-        <h1>Live Messages</h1>
-        <div className="page-stats">
+      <div className="page__header">
+        <h1 className="page__title">Live Messages</h1>
+        <div className="page__stats">
           <span className="stat">
             <strong>{messageCount}</strong> aircraft
           </span>
@@ -53,7 +53,7 @@ export const LiveMessagesPage = () => {
         </div>
       </div>
 
-      <div className="page-content">
+      <div className="page__content">
         <div className="placeholder-message">
           <h2>Live Messages View</h2>
           <p>This page will display real-time ACARS messages from aircraft.</p>

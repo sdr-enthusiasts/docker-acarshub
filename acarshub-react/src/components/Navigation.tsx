@@ -15,6 +15,7 @@
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
 import { NavLink } from "react-router-dom";
+import acarsLogo from "../assets/images/acarshub.svg";
 import {
   selectAdsbEnabled,
   selectAlertCount,
@@ -63,6 +64,8 @@ export const Navigation = () => {
           <br />
           <NavLink to="/stats">Statistics</NavLink>
           <br />
+          <NavLink to="/about">About</NavLink>
+          <br />
           <button
             type="button"
             onClick={handleSettingsClick}
@@ -76,7 +79,10 @@ export const Navigation = () => {
         <nav className="hide_when_small">
           <ul className="primary">
             <li className="img_box" id="logo_image">
-              <span className="logo-text">ACARS Hub</span>
+              <NavLink to="/" className="logo-link">
+                <img src={acarsLogo} alt="ACARS Hub" className="logo-image" />
+                <span className="logo-text">ACARS Hub</span>
+              </NavLink>
             </li>
             <li>
               <NavLink to="/live-messages">Live Messages</NavLink>
@@ -99,6 +105,9 @@ export const Navigation = () => {
             </li>
             <li>
               <NavLink to="/stats">Statistics</NavLink>
+            </li>
+            <li>
+              <NavLink to="/about">About</NavLink>
             </li>
             <li className="right_side">
               <ThemeSwitcher />

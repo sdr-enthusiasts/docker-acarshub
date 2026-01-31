@@ -37,11 +37,13 @@
 @use "components/navigation";
 @use "components/button";
 @use "components/modal";
+@use "components/card";
 @use "components/connection-status";
 @use "components/settings-modal";
 
 /* Pages */
 @use "pages/common";
+@use "pages/about";
 
 /* Global Layout */
 .app {

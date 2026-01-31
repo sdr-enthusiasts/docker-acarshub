@@ -24,26 +24,25 @@
  */
 
 .page {
-  @include container;
-  margin-top: $spacing-xl;
-  margin-bottom: $spacing-xl;
-  background-color: var(--color-surface0);
-  border-radius: $radius-lg;
-  box-shadow: $shadow-lg;
+  margin-top: $spacing-lg;
+  margin-bottom: $spacing-lg;
+  background-color: var(--color-card-body);
+  border-radius: $radius-xl;
   overflow: hidden;
 
   @include fade-in($transition-base);
 }
 
 .page__header {
-  padding: $spacing-xl $spacing-2xl;
-  background-color: var(--color-surface1);
+  padding: $card-padding;
+  background-color: var(--color-card-header);
   border-bottom: 1px solid var(--color-overlay0);
   display: flex;
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
   gap: $spacing-lg;
+  border-radius: $radius-xl $radius-xl 0 0;
 }
 
 .page__title {
@@ -93,7 +92,7 @@
 }
 
 .page__content {
-  padding: $spacing-2xl;
+  padding: $card-padding;
 }
 
 /**
@@ -159,13 +158,10 @@
 
 .info-box {
   margin-top: $spacing-xl;
-  padding: $spacing-lg;
+  padding: $card-padding;
   background-color: var(--color-surface1);
-  border-radius: $radius-md;
+  border-radius: $radius-lg;
   border-left: 4px solid var(--color-info);
-  max-width: 600px;
-  margin-left: auto;
-  margin-right: auto;
 }
 
 .info-box--warning {
@@ -246,13 +242,13 @@
 
 @media (max-width: #{$breakpoint-md - 1px}) {
   .page {
-    margin-top: $spacing-md;
-    margin-bottom: $spacing-md;
-    border-radius: 0;
+    margin-top: $spacing-sm;
+    margin-bottom: $spacing-sm;
+    border-radius: $radius-md;
   }
 
   .page__header {
-    padding: $spacing-lg $spacing-lg;
+    padding: $card-padding-sm;
   }
 
   .page__title {
@@ -278,7 +274,7 @@
   }
 
   .page__content {
-    padding: $spacing-lg;
+    padding: $card-padding-sm;
   }
 
   .placeholder {
@@ -291,7 +287,7 @@
 
   .info-box {
     margin-top: $spacing-lg;
-    padding: $spacing-md;
+    padding: $card-padding-sm;
   }
 }
 

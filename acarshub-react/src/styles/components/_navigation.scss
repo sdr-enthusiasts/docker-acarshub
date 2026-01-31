@@ -32,7 +32,8 @@
   z-index: $z-index-sticky;
 
   .wrap {
-    @include container;
+    padding-left: 0;
+    padding-right: 0;
   }
 
   .decor {
@@ -55,13 +56,13 @@
   nav .link-button {
     @include button-reset;
     display: block;
-    padding: $spacing-md $spacing-lg;
+    padding: $spacing-sm $spacing-md;
     color: var(--color-text);
     text-decoration: none;
     transition: background-color $transition-fast;
     font-size: $font-size-base;
     font-weight: $font-weight-medium;
-    border-radius: $radius-sm;
+    border-radius: $radius-md;
 
     &:hover {
       background-color: var(--color-surface0);
@@ -82,11 +83,31 @@
     }
   }
 
+  .logo-link {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    padding: $spacing-sm $spacing-md;
+    text-decoration: none;
+    transition: opacity $transition-fast;
+
+    &:hover {
+      opacity: 0.9;
+      background-color: transparent !important;
+    }
+
+    @include focus-visible;
+  }
+
+  .logo-image {
+    height: 48px;
+    width: auto;
+    display: block;
+  }
+
   .logo-text {
     font-weight: $font-weight-bold;
     font-size: $font-size-xl;
-    padding: $spacing-md $spacing-lg;
-    display: block;
     color: var(--color-primary);
   }
 

@@ -35,10 +35,10 @@ export const SearchPage = () => {
 
   return (
     <div className="page search-page">
-      <div className="page-header">
-        <h1>Search Database</h1>
+      <div className="page__header">
+        <h1 className="page__title">Search Database</h1>
         {databaseSize && (
-          <div className="page-stats">
+          <div className="page__stats">
             <span className="stat">
               <strong>{databaseSize.count.toLocaleString()}</strong> messages
             </span>
@@ -49,7 +49,7 @@ export const SearchPage = () => {
         )}
       </div>
 
-      <div className="page-content">
+      <div className="page__content">
         <div className="placeholder-message">
           <h2>Database Search</h2>
           <p>This page will allow searching historical ACARS messages by:</p>
