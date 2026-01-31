@@ -43,20 +43,20 @@ export interface ServerToClientEvents {
   acars_msg: (data: AcarsMsg) => void;
 
   // Configuration and metadata
-  labels: (data: Labels) => void;
+  labels: (data: { labels: Labels }) => void;
   terms: (data: Terms) => void;
-  decoders: (data: Decoders) => void;
+  features_enabled: (data: Decoders) => void;
 
   // Search and database
   database_search_results: (data: SearchHtmlMsg) => void;
-  database_size: (data: DatabaseSize) => void;
+  database: (data: DatabaseSize) => void;
 
   // System status and monitoring
   system_status: (data: SystemStatus) => void;
   version: (data: AcarshubVersion) => void;
 
   // Signal information
-  signal: (data: Signal) => void;
+  signal: (data: { levels: Signal }) => void;
   signal_freqs: (data: SignalFreqData) => void;
   signal_count: (data: SignalCountData) => void;
 
@@ -65,7 +65,7 @@ export interface ServerToClientEvents {
   adsb_status: (data: AdsbStatus) => void;
 
   // Alert data
-  alert_terms: (data: AlertTerm) => void;
+  alert_terms: (data: { data: AlertTerm }) => void;
 
   // Connection events
   connect: () => void;
@@ -83,7 +83,8 @@ export interface ClientToServerEvents {
   update_alerts: (data: { terms: string[]; ignore: string[] }) => void;
 
   // Signal queries
-  signal_freqs: (data: { decoder: string }) => void;
+  signal_freqs: (data: { freqs: boolean }) => void;
+  signal_count: (data: { count: boolean }) => void;
 
   // Page change notification
   page_change: (data: { page: string }) => void;
@@ -122,7 +123,8 @@ class SocketService {
 
     // Initialize socket connection
     // The path will be proxied by nginx to the backend
-    this.socket = io({
+    // Backend uses /main namespace
+    this.socket = io("/main", {
       path: "/socket.io",
       transports: ["websocket", "polling"],
       reconnection: true,
@@ -228,10 +230,22 @@ class SocketService {
   }
 
   /**
-   * Request signal frequency data for a specific decoder
+   * Request signal frequency data from backend
+   * Backend doesn't care about the message content, it returns all frequencies
    */
-  requestSignalFreqs(decoder: string): void {
-    this.socket?.emit("signal_freqs", { decoder });
+  requestSignalFreqs(): void {
+    // Legacy style: pass namespace as third argument
+    // @ts-expect-error - Legacy Socket.IO syntax requires namespace as third arg
+    this.socket?.emit("signal_freqs", { freqs: true }, "/main");
+  }
+
+  /**
+   * Request signal count data from backend
+   */
+  requestSignalCount(): void {
+    // Legacy style: pass namespace as third argument
+    // @ts-expect-error - Legacy Socket.IO syntax requires namespace as third arg
+    this.socket?.emit("signal_count", { count: true }, "/main");
   }
 
   /**

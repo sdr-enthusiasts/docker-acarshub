@@ -19,11 +19,14 @@ import type {
   AcarshubVersion,
   AcarsMsg,
   AdsbStatus,
+  AlertTerm,
   DatabaseSize,
   Decoders,
   Labels,
   Plane,
   Signal,
+  SignalCountData,
+  SignalFreqData,
   SystemStatus,
   Terms,
 } from "../types";
@@ -76,6 +79,14 @@ interface AppState {
   // Signal levels
   signalLevels: Signal | null;
   setSignalLevels: (signal: Signal) => void;
+
+  // Statistics data
+  alertTermData: AlertTerm | null;
+  setAlertTermData: (data: AlertTerm) => void;
+  signalFreqData: SignalFreqData | null;
+  setSignalFreqData: (data: SignalFreqData) => void;
+  signalCountData: SignalCountData | null;
+  setSignalCountData: (data: SignalCountData) => void;
 
   // UI state
   currentPage: string;
@@ -181,6 +192,14 @@ export const useAppStore = create<AppState>((set) => ({
   // Signal levels
   signalLevels: null,
   setSignalLevels: (signal) => set({ signalLevels: signal }),
+
+  // Statistics data
+  alertTermData: null,
+  setAlertTermData: (data) => set({ alertTermData: data }),
+  signalFreqData: null,
+  setSignalFreqData: (data) => set({ signalFreqData: data }),
+  signalCountData: null,
+  setSignalCountData: (data) => set({ signalCountData: data }),
 
   // UI state
   currentPage: "Live Messages",

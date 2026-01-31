@@ -43,10 +43,12 @@
 @use "components/toggle";
 @use "components/radio";
 @use "components/settings-modal";
+@use "components/chart";
 
 /* Pages */
 @use "pages/common";
 @use "pages/about";
+@use "pages/stats";
 
 /* Global Layout */
 .app {

@@ -39,6 +39,9 @@ export const useSocketIO = () => {
   const setAdsbStatus = useAppStore((state) => state.setAdsbStatus);
   const setSignalLevels = useAppStore((state) => state.setSignalLevels);
   const setAlertCount = useAppStore((state) => state.setAlertCount);
+  const setAlertTermData = useAppStore((state) => state.setAlertTermData);
+  const setSignalFreqData = useAppStore((state) => state.setSignalFreqData);
+  const setSignalCountData = useAppStore((state) => state.setSignalCountData);
 
   useEffect(() => {
     // Connect to Socket.IO backend
@@ -63,29 +66,29 @@ export const useSocketIO = () => {
     });
 
     // Configuration and metadata events
-    socket.on("labels", (labels) => {
-      setLabels(labels);
+    socket.on("labels", (data) => {
+      setLabels(data.labels);
     });
 
     socket.on("terms", (terms) => {
       setAlertTerms(terms);
     });
 
-    socket.on("decoders", (decoders) => {
+    socket.on("features_enabled", (decoders) => {
       setDecoders(decoders);
     });
 
     // System status and monitoring
-    socket.on("system_status", (status) => {
-      setSystemStatus(status);
+    socket.on("system_status", (data) => {
+      setSystemStatus(data);
     });
 
     socket.on("version", (version) => {
       setVersion(version);
     });
 
-    socket.on("database_size", (size) => {
-      setDatabaseSize(size);
+    socket.on("database", (data) => {
+      setDatabaseSize(data);
     });
 
     // ADS-B events
@@ -94,18 +97,33 @@ export const useSocketIO = () => {
     });
 
     // Signal information
-    socket.on("signal", (signal) => {
-      setSignalLevels(signal);
+    socket.on("signal", (data) => {
+      setSignalLevels(data.levels);
     });
 
     // Alert terms update
-    socket.on("alert_terms", (alertTerms) => {
+    socket.on("alert_terms", (data) => {
+      // Store the full alert term data for the Stats page
+      // Backend sends { data: { 0: {term, count, id}, 1: {...}, ... } }
+      setAlertTermData(data.data);
+
       // Calculate total alert count from alert_terms data
       let count = 0;
-      for (const key in alertTerms.data) {
-        count += alertTerms.data[key].count;
+      if (data.data) {
+        for (const key in data.data) {
+          count += data.data[key].count;
+        }
       }
       setAlertCount(count);
+    });
+
+    // Statistics events for Stats page
+    socket.on("signal_freqs", (freqData) => {
+      setSignalFreqData(freqData);
+    });
+
+    socket.on("signal_count", (countData) => {
+      setSignalCountData(countData);
     });
 
     // Cleanup on unmount
@@ -117,13 +135,15 @@ export const useSocketIO = () => {
       socket.off("acars_msg");
       socket.off("labels");
       socket.off("terms");
-      socket.off("decoders");
+      socket.off("features_enabled");
       socket.off("system_status");
       socket.off("version");
-      socket.off("database_size");
+      socket.off("database");
       socket.off("adsb_status");
       socket.off("signal");
       socket.off("alert_terms");
+      socket.off("signal_freqs");
+      socket.off("signal_count");
 
       // Only disconnect on actual unmount, not StrictMode cleanup
       // StrictMode will call this cleanup in dev, but we keep the socket alive
@@ -145,6 +165,9 @@ export const useSocketIO = () => {
     setAdsbStatus,
     setSignalLevels,
     setAlertCount,
+    setAlertTermData,
+    setSignalFreqData,
+    setSignalCountData,
   ]);
 
   return {

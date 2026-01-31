@@ -1,0 +1,204 @@
+// Copyright (C) 2022-2026 Frederick Clausen II
+// This file is part of acarshub <https://github.com/sdr-enthusiasts/docker-acarshub>.
+
+// acarshub is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+
+// acarshub is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+
+// You should have received a copy of the GNU General Public License
+// along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
+
+@use "../mixins" as *;
+@use "../variables" as *;
+
+// =============================================================================
+// Stats Page
+// =============================================================================
+
+.stats-page {
+  // Page content wrapper
+  .page__content {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: var(--spacing-lg);
+
+    @media (max-width: 767px) {
+      padding: var(--spacing-md);
+    }
+  }
+
+  // Static graph images
+  .stats-image {
+    width: 100%;
+    height: auto;
+    display: block;
+    border-radius: var(--border-radius-md);
+    background-color: var(--color-surface0);
+
+    // Smooth transition for theme changes
+    transition: opacity 0.2s ease;
+
+    // Loading state
+    &:not([src]) {
+      min-height: 200px;
+      background: var(--color-surface1);
+    }
+
+    // Error state (broken image)
+    &[alt] {
+      font-size: var(--font-size-sm);
+      color: var(--color-subtext1);
+      padding: var(--spacing-lg);
+      text-align: center;
+    }
+  }
+
+  // Image container cards
+  .card:has(.stats-image) {
+    padding: 0;
+    overflow: hidden;
+
+    // Hover effect
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-lg);
+    }
+
+    // Smooth transitions
+    transition:
+      transform 0.2s ease,
+      box-shadow 0.2s ease;
+  }
+
+  // Chart sections with headers
+  .chart-section {
+    &:last-child {
+      margin-bottom: 0;
+    }
+
+    &__header {
+      @media (max-width: 767px) {
+        padding-bottom: var(--spacing-xs);
+      }
+    }
+
+    &__title {
+      @media (max-width: 767px) {
+        font-size: var(--font-size-lg);
+      }
+    }
+
+    &__description {
+      @media (max-width: 767px) {
+        font-size: var(--font-size-sm);
+      }
+    }
+  }
+
+  // Responsive grid adjustments for stats images
+  .chart-grid--two-col {
+    // Mobile: single column
+    @media (max-width: 767px) {
+      grid-template-columns: 1fr;
+    }
+
+    // Tablet: two columns
+    @include media-md {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    // Desktop: maintain two columns for better readability
+    @include media-lg {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+}
+
+// =============================================================================
+// Density Mode Adjustments
+// =============================================================================
+
+[data-density="compact"] {
+  .stats-page {
+    .page__content {
+      padding: var(--spacing-md);
+
+      @media (max-width: 767px) {
+        padding: var(--spacing-sm);
+      }
+    }
+
+    .stats-image {
+      &:not([src]) {
+        min-height: 150px;
+      }
+    }
+  }
+}
+
+[data-density="spacious"] {
+  .stats-page {
+    .page__content {
+      padding: var(--spacing-xl);
+
+      @media (max-width: 767px) {
+        padding: var(--spacing-lg);
+      }
+    }
+
+    .stats-image {
+      &:not([src]) {
+        min-height: 250px;
+      }
+    }
+  }
+}
+
+// =============================================================================
+// Animation States
+// =============================================================================
+
+[data-animations="true"] {
+  .stats-image {
+    // Fade in when loaded
+    animation: fadeIn 0.3s ease;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+}
+
+// =============================================================================
+// Print Styles
+// =============================================================================
+
+@media print {
+  .stats-page {
+    .chart-grid {
+      grid-template-columns: 1fr;
+      gap: var(--spacing-md);
+    }
+
+    .stats-image {
+      max-height: 400px;
+      object-fit: contain;
+    }
+
+    .chart-section {
+      page-break-inside: avoid;
+      margin-bottom: var(--spacing-lg);
+    }
+  }
+}

@@ -71,12 +71,10 @@ export interface Terms {
 }
 
 export interface AlertTerm {
-  data: {
-    [index: number]: {
-      count: number;
-      id: number;
-      term: string;
-    };
+  [index: number]: {
+    count: number;
+    id: number;
+    term: string;
   };
 }
 
@@ -109,12 +107,10 @@ export interface Decoders {
 
 // Signal Types
 export interface Signal {
-  levels: {
-    [index: number]: {
-      count: number;
-      id: number;
-      level: number;
-    };
+  [index: number]: {
+    count: number;
+    id: number;
+    level: number;
   };
 }
 
