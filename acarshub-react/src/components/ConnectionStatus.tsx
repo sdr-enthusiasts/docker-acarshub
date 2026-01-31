@@ -14,6 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
+import { useSettingsStore } from "../store/useSettingsStore";
+
 interface ConnectionStatusProps {
   isConnected: boolean;
 }
@@ -22,8 +24,19 @@ interface ConnectionStatusProps {
  * ConnectionStatus Component
  * Displays a visual indicator of the Socket.IO connection state
  * Shows a warning banner when disconnected from the backend
+ * Respects user's visibility preference from settings
  */
 export const ConnectionStatus = ({ isConnected }: ConnectionStatusProps) => {
+  const showConnectionStatus = useSettingsStore(
+    (state) => state.settings.appearance.showConnectionStatus,
+  );
+
+  // Don't show if user has disabled it in settings
+  if (!showConnectionStatus) {
+    return null;
+  }
+
+  // Don't show when connected
   if (isConnected) {
     return null;
   }

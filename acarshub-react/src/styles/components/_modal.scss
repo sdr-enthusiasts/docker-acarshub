@@ -38,6 +38,11 @@
   &:focus {
     outline: none;
   }
+
+  // Remove padding on mobile for full-screen modals
+  @media (max-width: #{$breakpoint-md - 1px}) {
+    padding: 0;
+  }
 }
 
 .modal {
@@ -86,6 +91,8 @@
 .modal__header {
   padding: $spacing-lg $spacing-xl;
   border-bottom: 1px solid var(--color-overlay0);
+  border-top-left-radius: $radius-lg;
+  border-top-right-radius: $radius-lg;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -131,6 +138,8 @@
 .modal__footer {
   padding: $spacing-lg $spacing-xl;
   border-top: 1px solid var(--color-overlay0);
+  border-bottom-left-radius: $radius-lg;
+  border-bottom-right-radius: $radius-lg;
   display: flex;
   align-items: center;
   justify-content: flex-end;

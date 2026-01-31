@@ -27,6 +27,7 @@ import type {
   SystemStatus,
   Terms,
 } from "../types";
+import { useSettingsStore } from "./useSettingsStore";
 
 /**
  * Application State Interface
@@ -84,10 +85,12 @@ interface AppState {
 }
 
 /**
- * Maximum number of messages to keep per aircraft
+ * Get maximum number of messages to keep per aircraft from settings
  * Prevents memory bloat from long-running sessions
  */
-const MAX_MESSAGES_PER_AIRCRAFT = 50;
+const getMaxMessages = (): number => {
+  return useSettingsStore.getState().settings.data.maxMessagesPerAircraft;
+};
 
 /**
  * Main Application Store
@@ -123,9 +126,10 @@ export const useAppStore = create<AppState>((set) => ({
       if (message.icao) identifiers.add(message.icao.toString());
 
       // Add new message to beginning of array (newest first)
+      // Limit to user's configured max messages per aircraft
       const updatedMessages = [message, ...existingPlane.messages].slice(
         0,
-        MAX_MESSAGES_PER_AIRCRAFT,
+        getMaxMessages(),
       );
 
       // Check for alerts (message.matched flag set by backend)

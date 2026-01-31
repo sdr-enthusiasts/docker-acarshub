@@ -14,9 +14,12 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
+import type { DateFormat, TimeFormat } from "../types";
+
 /**
  * Date and Time Utility Functions
  * Provides consistent date/time formatting across the application
+ * Respects user settings from the settings store
  */
 
 /**
@@ -35,55 +38,118 @@ export function prefers24HourClock(): boolean {
 }
 
 /**
- * Formats a timestamp for display according to user's locale preferences
+ * Resolves time format preference to actual format
+ * @param timeFormat - User's time format preference
+ * @returns Resolved time format (12h or 24h)
+ */
+export function resolveTimeFormat(timeFormat: TimeFormat): "12h" | "24h" {
+  if (timeFormat === "auto") {
+    return prefers24HourClock() ? "24h" : "12h";
+  }
+  return timeFormat;
+}
+
+/**
+ * Formats a timestamp for display according to user preferences
  * @param timestamp - Date object or timestamp number
+ * @param timeFormat - Optional time format preference (defaults to auto-detect)
+ * @param dateFormat - Optional date format preference (defaults to auto-detect)
  * @returns Formatted date/time string
  */
-export function formatTimestamp(timestamp: Date | number): string {
+export function formatTimestamp(
+  timestamp: Date | number,
+  timeFormat: TimeFormat = "auto",
+  dateFormat: DateFormat = "auto",
+): string {
   const date = typeof timestamp === "number" ? new Date(timestamp) : timestamp;
-  const prefers24Hour = prefers24HourClock();
+  const use24Hour = resolveTimeFormat(timeFormat) === "24h";
 
-  return date.toLocaleString(undefined, {
-    weekday: "short",
-    year: "numeric",
-    month: "short",
-    day: "numeric",
+  // Build date/time format options based on dateFormat preference
+  const options: Intl.DateTimeFormatOptions = {
     hour: "numeric",
     minute: "numeric",
     second: "numeric",
-    hour12: !prefers24Hour,
-  });
+    hour12: !use24Hour,
+  };
+
+  // Add date formatting based on preference
+  if (dateFormat === "auto" || dateFormat === "short") {
+    options.weekday = "short";
+    options.year = "numeric";
+    options.month = "short";
+    options.day = "numeric";
+  } else if (dateFormat === "long") {
+    options.weekday = "long";
+    options.year = "numeric";
+    options.month = "long";
+    options.day = "numeric";
+  } else {
+    // For specific formats (mdy, dmy, ymd), just use short style
+    options.year = "numeric";
+    options.month = "short";
+    options.day = "numeric";
+  }
+
+  return date.toLocaleString(undefined, options);
 }
 
 /**
  * Formats a date for short display (date only, no time)
  * @param timestamp - Date object or timestamp number
+ * @param dateFormat - Optional date format preference (defaults to auto-detect)
  * @returns Formatted date string
  */
-export function formatDate(timestamp: Date | number): string {
+export function formatDate(
+  timestamp: Date | number,
+  dateFormat: DateFormat = "auto",
+): string {
   const date = typeof timestamp === "number" ? new Date(timestamp) : timestamp;
 
-  return date.toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
+  // Build options based on date format preference
+  let options: Intl.DateTimeFormatOptions;
+
+  if (dateFormat === "long") {
+    options = {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    };
+  } else if (dateFormat === "short" || dateFormat === "auto") {
+    options = {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    };
+  } else {
+    // For mdy, dmy, ymd - use numeric format
+    options = {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    };
+  }
+
+  return date.toLocaleDateString(undefined, options);
 }
 
 /**
  * Formats time only (no date)
  * @param timestamp - Date object or timestamp number
+ * @param timeFormat - Optional time format preference (defaults to auto-detect)
  * @returns Formatted time string
  */
-export function formatTime(timestamp: Date | number): string {
+export function formatTime(
+  timestamp: Date | number,
+  timeFormat: TimeFormat = "auto",
+): string {
   const date = typeof timestamp === "number" ? new Date(timestamp) : timestamp;
-  const prefers24Hour = prefers24HourClock();
+  const use24Hour = resolveTimeFormat(timeFormat) === "24h";
 
   return date.toLocaleTimeString(undefined, {
     hour: "numeric",
     minute: "numeric",
     second: "numeric",
-    hour12: !prefers24Hour,
+    hour12: !use24Hour,
   });
 }
 

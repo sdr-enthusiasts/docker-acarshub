@@ -7,6 +7,7 @@ ACARS Hub is a web application for receiving, decoding, and displaying ACARS (Ai
 Files:
 
 - acarshub-react/README.md - React frontend documentation
+- acarshub-react/DESIGN_LANGUAGE.md - **Visual design language and component usage guide**
 - acarshub-react/CATPPUCCIN.md - Catppuccin color reference for React frontend
 - acarshub-typescript/ - Current jQuery/TypeScript frontend (legacy)
 
@@ -575,6 +576,7 @@ Target modern browsers with ES6+ support:
 - No summary markdown documents allowed
 - Comments must explain complex logic and business rules
 - Keep documentation close to code (JSDoc, inline comments)
+- **Visual design patterns documented in DESIGN_LANGUAGE.md**
 - Update this AGENTS.md file when project goals change
 
 ## Questions to Ask Before Making Changes
@@ -674,7 +676,7 @@ Target modern browsers with ES6+ support:
 - Keyboard shortcut reference section
 - All content sections: About, Navigation Overview, ACARS explanation, Field Definitions, General Tips, Alerts guide, Feedback/Help, Version Info, License
 
-### Phase 5: Settings System and User Preferences (Next Phase)
+### Phase 5: Settings System and User Preferences ✅ COMPLETE
 
 **Goal**: Create a persistent settings system before building feature-heavy pages
 
@@ -687,36 +689,69 @@ Target modern browsers with ES6+ support:
 
 #### Settings Tasks
 
-- [ ] Create Settings store with Zustand (persistent via localStorage)
-- [ ] Define settings interface:
-  - [ ] Theme preference (Mocha/Latte) - already implemented
-  - [ ] Time format preference (12hr/24hr/auto-detect)
-  - [ ] Date format preference (locale-based options)
-  - [ ] Additional locale overrides as needed
-- [ ] Create Settings modal/page component
-- [ ] Settings form sections:
-  - [ ] Appearance (theme, display density)
-  - [ ] Regional & Time (time format, date format, timezone)
-  - [ ] Notifications (future: sound alerts, desktop notifications)
-  - [ ] Data & Privacy (future: data retention, export)
-- [ ] Integrate settings into utility functions:
-  - [ ] `formatTimestamp()` respects time format preference
-  - [ ] `formatDate()` respects date format preference
-  - [ ] Make auto-detect optional based on user override
-- [ ] Add "Settings" link to Navigation
-- [ ] Create reusable form components:
-  - [ ] Radio group component
-  - [ ] Select/dropdown component
-  - [ ] Toggle/switch component
-  - [ ] Form section/fieldset component
-- [ ] Settings persistence to localStorage
-- [ ] Settings import/export functionality
-- [ ] Mobile-responsive settings layout
-- [ ] Keyboard shortcuts for settings modal (e.g., Cmd/Ctrl+,)
+- ✅ Create Settings store with Zustand (persistent via localStorage)
+- ✅ Define settings interface:
+  - ✅ Theme preference (Mocha/Latte)
+  - ✅ Time format preference (12hr/24hr/auto-detect)
+  - ✅ Date format preference (locale-based options)
+  - ✅ Display density (compact/comfortable/spacious)
+  - ✅ Animations toggle
+  - ✅ Connection status visibility
+  - ✅ Notification preferences (desktop, sound, volume, alerts-only)
+  - ✅ Data management (max messages, caching, auto-clear)
+- ✅ Create Settings modal component with tabbed interface
+- ✅ Settings form sections:
+  - ✅ Appearance (theme, display density, animations, connection status)
+  - ✅ Regional & Time (time format, date format, timezone)
+  - ✅ Notifications (desktop, sound alerts, volume slider, alerts-only)
+  - ✅ Data & Privacy (max messages slider, caching toggle, auto-clear slider)
+- ✅ Integrate settings into utility functions:
+  - ✅ `formatTimestamp()` accepts time/date format parameters
+  - ✅ `formatDate()` respects date format preference
+  - ✅ `formatTime()` respects time format preference
+  - ✅ Auto-detect remains available as option
+- ✅ Settings already integrated in Navigation (button existed)
+- ✅ Create reusable form components:
+  - ✅ RadioGroup component with Catppuccin styling
+  - ✅ Select/dropdown component with custom styling
+  - ✅ Toggle/switch component with smooth animations
+  - ✅ All components support density modes and mobile-first design
+- ✅ Settings persistence to localStorage via Zustand middleware
+- ✅ Settings import/export functionality (JSON)
+- ✅ Mobile-responsive tabbed layout with scrollable tabs
+- ✅ Keyboard shortcuts (Escape to close modal)
+- ✅ ThemeSwitcher updated to use settings store
+- ✅ App.tsx applies settings to document root (density, animations, theme)
 
-**Deliverable**: Complete settings system with persistent user preferences that subsequent pages will consume
+**Deliverable**: Complete settings system with persistent user preferences that subsequent pages will consume ✅
 
-### Phase 6: Statistics and Graphs
+**Completed Components**:
+
+- Settings store (useSettingsStore) with full CRUD operations
+- Select, Toggle, RadioGroup form components
+- Settings modal with 4 tabs (Appearance, Regional & Time, Notifications, Data & Privacy)
+- Card-based layout matching About page visual language
+- Import/Export settings functionality
+- Reset to defaults with confirmation
+- All components fully typed with zero `any` usage
+- Mobile-first responsive design throughout
+- Full-screen modal on mobile (no wasted space)
+- Visible scrollbar on mobile for tab navigation
+- Density mode support (compact/comfortable/spacious)
+- Animation toggle support
+- Consistent button sizing in footer
+
+**Design Language Documentation**:
+
+- Created comprehensive DESIGN_LANGUAGE.md
+- Documents all component patterns and usage
+- Mobile UX patterns (scrollable containers, full-screen modals)
+- Accessibility guidelines
+- Spacing, typography, and color systems
+- Anti-patterns and what to avoid
+- Real examples from codebase
+
+### Phase 6: Statistics and Graphs (Next Phase)
 
 - Migrate Stats page with react-chartjs-2 or Recharts
 - Implement real-time chart updates via Socket.IO
@@ -819,17 +854,21 @@ Before moving to the next phase:
 ### Before Starting Work
 
 1. Read AGENTS.md (this file) completely
-2. Understand which phase of migration is active
-3. Check if new tooling is needed → update flake.nix → wait for user
-4. Review quality requirements
+2. **Read DESIGN_LANGUAGE.md for visual patterns and component usage**
+3. Understand which phase of migration is active
+4. Check if new tooling is needed → update flake.nix → wait for user
+5. Review quality requirements
 
 ### During Development
 
 1. Make incremental changes
 2. Run quality checks frequently (`biome check`, `tsc --noEmit`)
 3. Test in browser regularly
-4. Document complex logic with comments
-5. Ask clarifying questions if requirements are unclear
+4. **Follow patterns in DESIGN_LANGUAGE.md for consistent UI**
+5. Use Card component for content organization
+6. Ensure mobile responsiveness (test at 375px, 768px, 1024px widths)
+7. Document complex logic with comments
+8. Ask clarifying questions if requirements are unclear
 
 ### Before Completing Work
 
@@ -837,8 +876,10 @@ Before moving to the next phase:
 2. Verify no `any` types introduced
 3. Ensure proper TypeScript typing
 4. Confirm no inline styles
-5. Run `git --no-pager diff` to review changes
-6. Suggest next steps or improvements
+5. Verify mobile responsiveness works
+6. Check that patterns match DESIGN_LANGUAGE.md
+7. Run `git --no-pager diff` to review changes
+8. Suggest next steps or improvements
 
 ### Communication Style
 

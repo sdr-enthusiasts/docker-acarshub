@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
+import { useEffect } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { ConnectionStatus } from "./components/ConnectionStatus.tsx";
 import { Navigation } from "./components/Navigation.tsx";
@@ -26,14 +27,44 @@ import { LiveMessagesPage } from "./pages/LiveMessagesPage.tsx";
 import { SearchPage } from "./pages/SearchPage.tsx";
 import { StatsPage } from "./pages/StatsPage.tsx";
 import { StatusPage } from "./pages/StatusPage.tsx";
+import { useSettingsStore } from "./store/useSettingsStore.ts";
 
 /**
  * Main Application Component
  * Manages routing, Socket.IO connection, and application layout
+ * Applies user settings (density, animations, theme) to document root
  */
 function App() {
   // Initialize Socket.IO connection and wire up event handlers
   const { isConnected } = useSocketIO();
+
+  // Get settings from store
+  const settings = useSettingsStore((state) => state.settings);
+
+  // Apply settings to document root
+  useEffect(() => {
+    const root = document.documentElement;
+
+    // Apply density setting
+    root.setAttribute("data-density", settings.appearance.density);
+
+    // Apply animations setting
+    root.setAttribute(
+      "data-animations",
+      settings.appearance.animations.toString(),
+    );
+
+    // Apply theme (handled by ThemeSwitcher, but we ensure consistency)
+    if (settings.appearance.theme === "latte") {
+      root.setAttribute("data-theme", "light");
+    } else {
+      root.removeAttribute("data-theme");
+    }
+  }, [
+    settings.appearance.density,
+    settings.appearance.animations,
+    settings.appearance.theme,
+  ]);
 
   return (
     <BrowserRouter>

@@ -37,8 +37,9 @@
 /**
  * Smooth theme transitions
  * Apply to elements that should animate on theme change
+ * Respects both user's animation preference and system preference
  */
-* {
+[data-animations="true"] * {
   transition-property: background-color, border-color, color;
   transition-duration: 200ms;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
@@ -46,4 +47,8 @@
   @media (prefers-reduced-motion: reduce) {
     transition: none;
   }
+}
+
+[data-animations="false"] * {
+  transition: none;
 }
