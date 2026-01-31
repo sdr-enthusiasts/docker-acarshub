@@ -4,6 +4,12 @@
 
 ACARS Hub is a web application for receiving, decoding, and displaying ACARS (Aircraft Communications Addressing and Reporting System) messages. The application consists of a Python backend (Flask/Socket.IO) and a TypeScript frontend that displays live aviation messages, maps, statistics, and alerts.
 
+Files:
+
+- acarshub-react/README.md - React frontend documentation
+- acarshub-react/CATPPUCCIN.md - Catppuccin color reference for React frontend
+- acarshub-typescript/ - Current jQuery/TypeScript frontend (legacy)
+
 ## Current State
 
 - **Backend**: Python Flask application with Socket.IO for real-time communication
@@ -234,7 +240,20 @@ git --no-pager show
    - Write all styles from scratch using SCSS
    - Create custom components and utilities as needed
 
-3. **CATPPUCCIN THEMING REQUIRED**:
+3. **MOBILE-FIRST RESPONSIVE DESIGN IS PARAMOUNT** ⚠️ CRITICAL
+   - **All layouts MUST be fully responsive and mobile-friendly**
+   - **Mobile experience is first-class, not an afterthought**
+   - Use mobile-first approach: base styles for mobile, `min-width` media queries for larger screens
+   - Test all features on mobile devices (phones and tablets)
+   - Touch targets must be at least 44x44px for accessibility
+   - Navigation must work seamlessly on small screens
+   - Tables and data displays must adapt to narrow viewports (stack, scroll, or truncate)
+   - Forms must be usable on mobile keyboards
+   - Modals and dialogs must fit mobile screens
+   - No horizontal scrolling on any screen size
+   - Performance matters: optimize for mobile network speeds
+
+4. **CATPPUCCIN THEMING REQUIRED**:
    - **Dark Theme**: Catppuccin Mocha (default)
    - **Light Theme**: Catppuccin Latte
    - Use SCSS mixins and CSS variables from Catppuccin color palettes
@@ -242,7 +261,7 @@ git --no-pager show
    - Follow Catppuccin color naming conventions: base, mantle, crust, text, subtext0, subtext1, overlay0, overlay1, overlay2, surface0, surface1, surface2, blue, lavender, sapphire, sky, teal, green, yellow, peach, maroon, red, mauve, pink, flamingo, rosewater
    - Reference: <https://github.com/catppuccin/catppuccin>
 
-4. **SCSS Requirements**:
+5. **SCSS Requirements**:
    - Use SCSS for all styling (not plain CSS)
    - Organize styles with partials: `_variables.scss`, `_mixins.scss`, `_themes.scss`, `_components.scss`
    - Use nesting, variables, and mixins appropriately
@@ -521,10 +540,12 @@ Use SCSS mixins to define themes. Only variable names should change:
 1. **No arbitrary colors** - Every color must be from Catppuccin palette
 2. **Use CSS custom properties** - Define in mixins, use in components
 3. **Component-scoped styles** - Each component has its own SCSS partial
-4. **Mobile-first responsive design** - Use `min-width` media queries
-5. **Accessibility** - Maintain WCAG AA contrast ratios, focus states, ARIA support
+4. **MOBILE-FIRST RESPONSIVE DESIGN** ⚠️ PARAMOUNT - Use `min-width` media queries, test on mobile devices
+5. **Accessibility** - Maintain WCAG AA contrast ratios, focus states, ARIA support, 44px touch targets
 6. **No !important** - Structure CSS to avoid specificity wars
 7. **Semantic class names** - Use BEM: `.block__element--modifier`
+8. **No horizontal scroll** - All content must fit viewport width at any screen size
+9. **Performance** - Optimize for mobile network speeds, minimize bundle size
 
 ## Testing Strategy (Future)
 
@@ -585,20 +606,23 @@ Target modern browsers with ES6+ support:
 
 **Next Steps**: Remove Bootstrap, implement SCSS with Catppuccin theming
 
-### Phase 2: Styling System and Theme Implementation
+### Phase 2: Styling System and Theme Implementation ✅ COMPLETE
 
-- Remove Bootstrap dependency
-- Set up SCSS file structure (partials, components, pages)
-- Implement Catppuccin Mocha (dark) theme with full color palette
-- Implement Catppuccin Latte (light) theme with full color palette
-- Create theme switching mechanism using SCSS mixins and CSS variables
-- Build custom button components with Catppuccin colors
-- Build custom form components (inputs, selects, checkboxes)
-- Build custom modal/dialog components
-- Create responsive navigation with Catppuccin styling
-- Establish reusable SCSS mixins for common patterns
-- Set up testing infrastructure (Vitest + React Testing Library)
-- **Deliverable**: Complete custom styling system with Catppuccin theming
+- ✅ Remove Bootstrap dependency
+- ✅ Set up SCSS file structure (partials, components, pages)
+- ✅ Implement Catppuccin Mocha (dark) theme with full color palette
+- ✅ Implement Catppuccin Latte (light) theme with full color palette
+- ✅ Create theme switching mechanism using SCSS mixins and CSS variables
+- ✅ Build custom button components with Catppuccin colors (11 variants, 3 sizes, loading state)
+- ✅ Build custom modal/dialog components (accessible, keyboard support)
+- ✅ Create responsive navigation with Catppuccin styling
+- ✅ Establish reusable SCSS mixins for common patterns (30+ utility mixins)
+- ✅ ThemeSwitcher component with localStorage persistence
+- ✅ Modern CSS reset with Catppuccin integration
+- ✅ Modern @use/@forward SCSS module system (no deprecated @import)
+- **Deliverable**: Complete custom styling system with Catppuccin theming ✅
+
+**Next Steps**: Form components will be added in Phase 3 as needed; Testing infrastructure deferred to Phase 10
 
 ### Phase 3: Type System and Shared Utilities
 
@@ -711,7 +735,9 @@ Before moving to the next phase:
 4. Biome checks passing
 5. No console errors or warnings
 6. Performance benchmarked (no regressions)
-7. Accessibility checked (keyboard navigation, ARIA labels)
+7. Accessibility checked (keyboard navigation, ARIA labels, 44px touch targets)
+8. **Mobile responsiveness verified** - Test on actual mobile devices or browser DevTools mobile emulation
+9. **No horizontal scroll** - Verified at 320px, 375px, 768px, 1024px, and 1920px widths
 
 ## Agent Workflow Guidelines
 

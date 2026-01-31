@@ -1,0 +1,401 @@
+/* Copyright (C) 2022-2026 Frederick Clausen II
+ * This file is part of acarshub <https://github.com/sdr-enthusiasts/docker-acarshub>.
+ *
+ * acarshub is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * acarshub is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+@use "variables" as *;
+
+/**
+ * Theme Mixins
+ * Define CSS custom properties for each Catppuccin theme
+ */
+
+@mixin theme-mocha {
+  // Backgrounds
+  --color-base: #{$mocha-base};
+  --color-mantle: #{$mocha-mantle};
+  --color-crust: #{$mocha-crust};
+  --color-surface0: #{$mocha-surface0};
+  --color-surface1: #{$mocha-surface1};
+  --color-surface2: #{$mocha-surface2};
+
+  // Text
+  --color-text: #{$mocha-text};
+  --color-subtext1: #{$mocha-subtext1};
+  --color-subtext0: #{$mocha-subtext0};
+
+  // Overlays & Borders
+  --color-overlay0: #{$mocha-overlay0};
+  --color-overlay1: #{$mocha-overlay1};
+  --color-overlay2: #{$mocha-overlay2};
+
+  // Semantic colors
+  --color-primary: #{$mocha-blue};
+  --color-success: #{$mocha-green};
+  --color-warning: #{$mocha-yellow};
+  --color-danger: #{$mocha-red};
+  --color-info: #{$mocha-sky};
+
+  // Accent colors
+  --color-accent-mauve: #{$mocha-mauve};
+  --color-accent-lavender: #{$mocha-lavender};
+  --color-accent-teal: #{$mocha-teal};
+  --color-accent-pink: #{$mocha-pink};
+  --color-accent-peach: #{$mocha-peach};
+  --color-accent-sapphire: #{$mocha-sapphire};
+  --color-accent-rosewater: #{$mocha-rosewater};
+  --color-accent-flamingo: #{$mocha-flamingo};
+  --color-accent-maroon: #{$mocha-maroon};
+
+  // Additional semantic mappings
+  --color-link: #{$mocha-sapphire};
+  --color-link-hover: #{$mocha-blue};
+  --color-focus: #{$mocha-blue};
+  --color-disabled: #{$mocha-overlay0};
+  --color-muted: #{$mocha-subtext0};
+}
+
+@mixin theme-latte {
+  // Backgrounds
+  --color-base: #{$latte-base};
+  --color-mantle: #{$latte-mantle};
+  --color-crust: #{$latte-crust};
+  --color-surface0: #{$latte-surface0};
+  --color-surface1: #{$latte-surface1};
+  --color-surface2: #{$latte-surface2};
+
+  // Text
+  --color-text: #{$latte-text};
+  --color-subtext1: #{$latte-subtext1};
+  --color-subtext0: #{$latte-subtext0};
+
+  // Overlays & Borders
+  --color-overlay0: #{$latte-overlay0};
+  --color-overlay1: #{$latte-overlay1};
+  --color-overlay2: #{$latte-overlay2};
+
+  // Semantic colors
+  --color-primary: #{$latte-blue};
+  --color-success: #{$latte-green};
+  --color-warning: #{$latte-yellow};
+  --color-danger: #{$latte-red};
+  --color-info: #{$latte-sky};
+
+  // Accent colors
+  --color-accent-mauve: #{$latte-mauve};
+  --color-accent-lavender: #{$latte-lavender};
+  --color-accent-teal: #{$latte-teal};
+  --color-accent-pink: #{$latte-pink};
+  --color-accent-peach: #{$latte-peach};
+  --color-accent-sapphire: #{$latte-sapphire};
+  --color-accent-rosewater: #{$latte-rosewater};
+  --color-accent-flamingo: #{$latte-flamingo};
+  --color-accent-maroon: #{$latte-maroon};
+
+  // Additional semantic mappings
+  --color-link: #{$latte-sapphire};
+  --color-link-hover: #{$latte-blue};
+  --color-focus: #{$latte-blue};
+  --color-disabled: #{$latte-overlay0};
+  --color-muted: #{$latte-subtext0};
+}
+
+/**
+ * Responsive Breakpoint Mixins
+ */
+
+@mixin media-sm {
+  @media (min-width: $breakpoint-sm) {
+    @content;
+  }
+}
+
+@mixin media-md {
+  @media (min-width: $breakpoint-md) {
+    @content;
+  }
+}
+
+@mixin media-lg {
+  @media (min-width: $breakpoint-lg) {
+    @content;
+  }
+}
+
+@mixin media-xl {
+  @media (min-width: $breakpoint-xl) {
+    @content;
+  }
+}
+
+@mixin media-2xl {
+  @media (min-width: $breakpoint-2xl) {
+    @content;
+  }
+}
+
+/**
+ * Utility Mixins
+ */
+
+// Focus ring for accessibility
+@mixin focus-ring {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+// Focus visible (only show on keyboard navigation)
+@mixin focus-visible {
+  &:focus-visible {
+    @include focus-ring;
+  }
+}
+
+// Truncate text with ellipsis
+@mixin truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// Multi-line truncate
+@mixin truncate-lines($lines: 2) {
+  display: -webkit-box;
+  -webkit-line-clamp: $lines;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+// Visually hidden (accessible to screen readers)
+@mixin visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+// Remove visually hidden
+@mixin not-visually-hidden {
+  position: static;
+  width: auto;
+  height: auto;
+  padding: initial;
+  margin: initial;
+  overflow: visible;
+  clip: auto;
+  white-space: normal;
+}
+
+// Smooth scrolling
+@mixin smooth-scroll {
+  scroll-behavior: smooth;
+
+  @media (prefers-reduced-motion: reduce) {
+    scroll-behavior: auto;
+  }
+}
+
+// Custom scrollbar
+@mixin custom-scrollbar {
+  &::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: var(--color-surface0);
+    border-radius: $radius-md;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: var(--color-overlay1);
+    border-radius: $radius-md;
+    border: 2px solid var(--color-surface0);
+
+    &:hover {
+      background: var(--color-overlay2);
+    }
+  }
+
+  // Firefox scrollbar
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-overlay1) var(--color-surface0);
+}
+
+// Container with max-width and centering
+@mixin container {
+  max-width: $container-max-width;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: $container-padding;
+  padding-right: $container-padding;
+}
+
+// Flex center
+@mixin flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+// Flex column center
+@mixin flex-column-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+// Absolute positioning (all sides)
+@mixin absolute-full {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+}
+
+// Fixed positioning (all sides)
+@mixin fixed-full {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+}
+
+// Card/surface with shadow
+@mixin surface {
+  background-color: var(--color-surface0);
+  border-radius: $radius-md;
+  box-shadow: $shadow-base;
+}
+
+// Elevated surface
+@mixin surface-elevated {
+  @include surface;
+  box-shadow: $shadow-lg;
+}
+
+// Interactive element (hover, active states)
+@mixin interactive {
+  cursor: pointer;
+  transition: all $transition-fast;
+  user-select: none;
+
+  &:hover {
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+    transform: none !important;
+  }
+}
+
+// Button reset
+@mixin button-reset {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  outline: inherit;
+}
+
+// Link reset
+@mixin link-reset {
+  color: inherit;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: none;
+  }
+}
+
+// Skeleton loading animation
+@mixin skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-surface0) 0%,
+    var(--color-surface1) 50%,
+    var(--color-surface0) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-loading 1.5s ease-in-out infinite;
+
+  @keyframes skeleton-loading {
+    0% {
+      background-position: 200% 0;
+    }
+    100% {
+      background-position: -200% 0;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+    background: var(--color-surface1);
+  }
+}
+
+// Fade in animation
+@mixin fade-in($duration: $transition-base) {
+  animation: fade-in $duration ease-in;
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+// Slide in from bottom
+@mixin slide-in-bottom($duration: $transition-base) {
+  animation: slide-in-bottom $duration ease-out;
+
+  @keyframes slide-in-bottom {
+    from {
+      transform: translateY(20px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}

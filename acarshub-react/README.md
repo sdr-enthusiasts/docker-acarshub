@@ -1,305 +1,377 @@
 # ACARS Hub React Frontend
 
-This is the React-based frontend for ACARS Hub, a complete rewrite of the legacy jQuery/TypeScript frontend.
+This is the React-based frontend for ACARS Hub, currently under active development as part of the migration from jQuery to React.
 
-## Project Overview
+## 🚧 Project Status
 
-**Status**: Phase 1 Complete ✅
+**Phase 2 Complete**: Styling System and Theme Implementation ✅
 
-This is an independent React application being built alongside the legacy frontend (`acarshub-typescript/`). The goal is to achieve functional parity with improved architecture, maintainability, and modern best practices.
+- Custom SCSS with Catppuccin theming (Mocha dark / Latte light)
+- Reusable Button, Modal, and ThemeSwitcher components
+- No Bootstrap - all custom styling
+- Modern React 19 with TypeScript
 
-## Tech Stack
+**Next**: Phase 3 - Type System and Shared Utilities
 
-- **React 19** - UI framework
-- **TypeScript 5.9** - Type safety (strict mode enabled)
-- **Vite 7** - Build tool and dev server
-- **Zustand** - State management
-- **Socket.IO Client** - Real-time communication with backend
-- **React Router** - Client-side routing
-- **SCSS** - Styling (NO third-party CSS frameworks)
-- **Catppuccin** - Color scheme (Mocha dark theme, Latte light theme)
-- **Biome** - Linter and formatter
+See [PHASE-2-COMPLETE.md](./PHASE-2-COMPLETE.md) for detailed Phase 2 accomplishments.
 
-## Development
+## 🚀 Development Setup
 
 ### Prerequisites
 
-Development environment is managed via Nix flakes. All required tools are provided by the Nix development shell.
+- Node.js 18+ and npm
+- Python backend running (see below)
 
-### Available Scripts
+### Quick Start
 
 ```bash
+# Install dependencies
+npm install
+
 # Start development server
 npm run dev
+```
 
-# Build for production
+The app will be available at <http://localhost:5173>
+
+### Running with Backend
+
+The React frontend needs the Flask backend running to connect via Socket.IO.
+
+#### Option 1: Use the legacy frontend's backend
+
+From the project root:
+
+```bash
+# Terminal 1: Start Flask backend
+pdm run dev
+
+# Terminal 2: Start React dev server
+cd acarshub-react && npm run dev
+```
+
+Backend runs on `http://localhost:8080` (proxied by Vite)
+
+#### Option 2: Docker development environment
+
+See main project [DEV-QUICK-START.md](../DEV-QUICK-START.md)
+
+### Without Backend (UI Development Only)
+
+You can view the UI components without a backend connection:
+
+1. Start dev server: `npm run dev`
+2. Navigate to **About** page to see component showcase
+3. Theme switching and UI components work without backend
+
+The app will show "Disconnected" status but UI is fully functional.
+
+## 📁 Project Structure
+
+```text
+acarshub-react/
+├── src/
+│   ├── components/       # Reusable React components
+│   │   ├── Button.tsx
+│   │   ├── Modal.tsx
+│   │   ├── ThemeSwitcher.tsx
+│   │   ├── Navigation.tsx
+│   │   └── ConnectionStatus.tsx
+│   ├── hooks/            # Custom React hooks
+│   │   └── useSocketIO.ts
+│   ├── pages/            # Page components (routes)
+│   │   ├── AboutPage.tsx
+│   │   ├── LiveMessagesPage.tsx
+│   │   ├── LiveMapPage.tsx
+│   │   ├── SearchPage.tsx
+│   │   ├── AlertsPage.tsx
+│   │   ├── StatsPage.tsx
+│   │   └── StatusPage.tsx
+│   ├── services/         # API and Socket.IO services
+│   │   └── socket.ts
+│   ├── store/            # Zustand state management
+│   │   └── useAppStore.ts
+│   ├── styles/           # SCSS styling system
+│   │   ├── _variables.scss
+│   │   ├── _mixins.scss
+│   │   ├── _themes.scss
+│   │   ├── _reset.scss
+│   │   ├── components/
+│   │   ├── pages/
+│   │   └── main.scss
+│   ├── types/            # TypeScript type definitions
+│   ├── utils/            # Utility functions
+│   ├── App.tsx           # Root component
+│   └── main.tsx          # Entry point
+├── public/               # Static assets
+├── dist/                 # Production build output
+├── package.json
+├── tsconfig.json
+└── vite.config.ts
+```
+
+## 🛠 Available Scripts
+
+```bash
+# Development server with hot reload
+npm run dev
+
+# Production build
 npm run build
 
 # Preview production build
 npm run preview
 
-# Type check (no emit)
+# Type checking
+npm run type-check
+# or
 npx tsc --noEmit
 
-# Lint and format (use project root biome)
-cd .. && biome check acarshub-react/src/ --write
+# Linting and formatting (Biome)
+npx biome check .
+npx biome check --write .
+
+# Full quality check
+npx tsc --noEmit && npx biome check .
 ```
 
-### Project Structure
+## 🎨 Styling System
 
-```text
-acarshub-react/
-├── src/
-│   ├── components/         # Reusable React components
-│   │   ├── Navigation.tsx
-│   │   └── ConnectionStatus.tsx
-│   ├── pages/              # Page components (route handlers)
-│   │   ├── LiveMessagesPage.tsx
-│   │   ├── SearchPage.tsx
-│   │   ├── AlertsPage.tsx
-│   │   ├── StatsPage.tsx
-│   │   ├── LiveMapPage.tsx
-│   │   ├── StatusPage.tsx
-│   │   └── AboutPage.tsx
-│   ├── hooks/              # Custom React hooks
-│   │   └── useSocketIO.ts
-│   ├── services/           # External services (Socket.IO)
-│   │   └── socket.ts
-│   ├── store/              # Zustand state management
-│   │   └── useAppStore.ts
-│   ├── types/              # TypeScript type definitions
-│   │   └── index.ts
-│   ├── styles/             # SCSS styles (Catppuccin themed)
-│   │   ├── _variables.scss     # Catppuccin color variables
-│   │   ├── _mixins.scss        # Theme mixins and utilities
-│   │   ├── _themes.scss        # Theme definitions (mocha/latte)
-│   │   ├── _reset.scss         # CSS reset
-│   │   ├── components/         # Component-specific styles
-│   │   ├── pages/              # Page-specific styles
-│   │   └── main.scss           # Main import file
-│   ├── utils/              # Utility functions
-│   ├── App.tsx             # Root component
-│   └── main.tsx            # Application entry point
-├── public/                 # Static assets
-├── dist/                   # Build output (gitignored)
-├── package.json
-├── tsconfig.json
-├── tsconfig.app.json
-└── vite.config.ts
+### Catppuccin Themes
+
+- **Mocha (Dark)**: Default theme - warm dark colors
+- **Latte (Light)**: Light theme - soft pastel colors
+
+Switch themes using the sun/moon icon in the navigation bar.
+
+### SCSS Architecture
+
+All styling uses custom SCSS with no third-party frameworks:
+
+- `_variables.scss` - Colors, spacing, typography, breakpoints
+- `_mixins.scss` - Utility mixins (30+ helpers including responsive breakpoints)
+- `_themes.scss` - Theme switching logic
+- `components/` - Component-specific styles
+- `pages/` - Page layout styles
+
+**Mobile-First Approach:**
+
+- Base styles target mobile devices (320px+)
+- Use `@include media-sm`, `@include media-md`, etc. for larger screens
+- Breakpoints: sm (640px), md (768px), lg (1024px), xl (1280px), 2xl (1536px)
+
+See [CATPPUCCIN.md](./CATPPUCCIN.md) for color reference.
+
+### Adding Styles
+
+1. Create component SCSS in `src/styles/components/`
+2. Import in `src/styles/main.scss`
+3. Use CSS variables: `var(--color-primary)`, `var(--color-text)`, etc.
+4. Use mixins: `@use "../mixins" as *;`
+5. **Use mobile-first approach**: Base styles for mobile, `min-width` media queries for larger screens
+6. **Test on mobile devices**: Use DevTools mobile emulation or real devices
+
+**Critical Requirements:**
+
+- **No inline styles allowed** - all styling must be in SCSS files
+- **Mobile-first responsive design is PARAMOUNT** - all layouts must work on mobile devices first
+- **No horizontal scrolling** - content must fit viewport at any screen size
+
+## 🧩 Components
+
+### Button
+
+```tsx
+import { Button } from './components/Button';
+
+<Button variant="primary" size="lg">Click me</Button>
+<Button variant="outline-danger" loading>Saving...</Button>
+<Button variant="success" disabled>Done</Button>
 ```
 
-## Architecture
+**Variants**: primary, secondary, success, danger, warning, info, ghost, outline-\*
 
-### State Management
+### Modal
 
-**Zustand Store** (`src/store/useAppStore.ts`):
+```tsx
+import { Modal } from "./components/Modal";
 
-- Single source of truth for application state
-- Type-safe selectors
-- Reactive updates trigger component re-renders
-- Stores messages, configuration, system status, UI state
-
-### Real-time Communication
-
-**Socket.IO Service** (`src/services/socket.ts`):
-
-- Type-safe event definitions (`ServerToClientEvents`, `ClientToServerEvents`)
-- Singleton service managing WebSocket connection
-- Auto-reconnection with exponential backoff
-- Connection state monitoring
-
-**Socket Integration Hook** (`src/hooks/useSocketIO.ts`):
-
-- Initializes Socket.IO connection on app mount
-- Wires Socket.IO events to Zustand store updates
-- Handles cleanup on unmount
-
-### Routing
-
-**React Router**:
-
-- Hash-based routing for SPA
-- Routes: `/live-messages`, `/search`, `/alerts`, `/stats`, `/adsb`, `/status`, `/about`
-- Default redirect to `/live-messages`
-- Conditional routes (e.g., `/adsb` only shown if ADS-B enabled)
-
-## Phase 1 Deliverables ✅
-
-- [x] Project setup with Vite + React + TypeScript
-- [x] Biome configuration (uses project root config)
-- [x] TypeScript strict mode enabled
-- [x] Socket.IO client integration with type-safe events
-- [x] Base layout shell with navigation
-- [x] React Router setup with all routes
-- [x] Zustand state management
-- [x] All page placeholders created
-- [x] Connection status indicator
-- [x] Quality checks passing (Biome, TypeScript)
-- [x] Production build successful
-
-## Phase 2 Goals (Current)
-
-- [ ] Remove Bootstrap dependency
-- [ ] Set up SCSS file structure (partials, components, pages)
-- [ ] Implement Catppuccin Mocha (dark) theme variables
-- [ ] Implement Catppuccin Latte (light) theme variables
-- [ ] Create theme switching mechanism with SCSS mixins
-- [ ] Build custom button components (no Bootstrap)
-- [ ] Build custom form components (inputs, selects, checkboxes)
-- [ ] Build custom modal/dialog components (replaces jBox)
-- [ ] Restyle navigation with Catppuccin colors
-- [ ] Create reusable SCSS mixins for common patterns
-- [ ] Set up testing infrastructure (Vitest + React Testing Library)
-
-## Styling Requirements
-
-### Theme System
-
-The application uses **Catppuccin** color schemes exclusively:
-
-- **Catppuccin Mocha** (Dark theme) - Default
-- **Catppuccin Latte** (Light theme) - User switchable
-
-### Rules
-
-1. **NO third-party CSS frameworks** - No Bootstrap, Tailwind, Material-UI, etc.
-2. **SCSS only** - All styles must be written in SCSS
-3. **NO inline styles** - All styling in SCSS files
-4. **Catppuccin colors only** - Every color must come from the Catppuccin palette
-5. **Theme switching via mixins** - Only variable names should change between themes
-
-### Catppuccin Color Palette
-
-**Available Colors**: rosewater, flamingo, pink, mauve, red, maroon, peach, yellow, green, teal, sky, sapphire, blue, lavender, text, subtext1, subtext0, overlay2, overlay1, overlay0, surface2, surface1, surface0, base, mantle, crust
-
-Reference: <https://github.com/catppuccin/catppuccin>
-
-### SCSS Structure
-
-```scss
-// _mixins.scss - Theme mixin pattern
-@mixin theme-mocha {
-  --color-base: #{$mocha-base};
-  --color-text: #{$mocha-text};
-  --color-primary: #{$mocha-blue};
-  // ... all Catppuccin colors
-}
-
-@mixin theme-latte {
-  --color-base: #{$latte-base};
-  --color-text: #{$latte-text};
-  --color-primary: #{$latte-blue};
-  // ... all Catppuccin colors
-}
-
-// _themes.scss - Apply themes
-:root {
-  @include theme-mocha; // Default
-}
-
-[data-theme="light"] {
-  @include theme-latte;
-}
-
-// Components use CSS variables
-.button {
-  background-color: var(--color-primary);
-  color: var(--color-base);
-}
+<Modal
+  isOpen={isOpen}
+  onClose={() => setIsOpen(false)}
+  title="Settings"
+  footer={<Button variant="primary">Save</Button>}
+>
+  <p>Modal content</p>
+</Modal>;
 ```
 
-### Styling Guidelines
+### ThemeSwitcher
 
-- **Component-scoped**: Each component has its own SCSS partial
-- **BEM naming**: Use `.block__element--modifier` convention
-- **Mobile-first**: Use `min-width` media queries
-- **Accessibility**: WCAG AA contrast, focus states, ARIA support
-- **Low specificity**: Max 3-4 levels of nesting
-- **No !important**: Structure to avoid specificity conflicts
+```tsx
+import { ThemeSwitcher } from "./components/ThemeSwitcher";
 
-## Code Quality Standards
+<ThemeSwitcher />;
+```
+
+Automatically persists theme preference to localStorage.
+
+## 📊 State Management
+
+Uses **Zustand** for global state:
+
+```tsx
+import { useAppStore } from "./store/useAppStore";
+
+const messages = useAppStore((state) => state.messages);
+const addMessage = useAppStore((state) => state.addMessage);
+```
+
+State is synchronized with Socket.IO events from the backend.
+
+## 🔌 Socket.IO Connection
+
+Connection is managed automatically via `useSocketIO` hook in `App.tsx`.
+
+Backend endpoints:
+
+- **Development**: `http://localhost:8080/socket.io`
+- **Production**: Proxied by nginx
+
+Connection status visible in header banner.
+
+## 🧪 Testing
+
+Testing infrastructure planned for Phase 10:
+
+- Vitest for unit tests
+- React Testing Library for component tests
+- Playwright for E2E tests
+
+## 🏗 Building for Production
+
+```bash
+# Build optimized production bundle
+npm run build
+
+# Output in dist/ directory
+dist/
+├── index.html
+├── assets/
+│   ├── index-[hash].css
+│   └── index-[hash].js
+```
+
+Bundle is optimized and tree-shaken. Gzipped sizes:
+
+- CSS: ~4.5 KB
+- JS: ~114 KB (includes React, Socket.IO, etc.)
+
+## 📝 Code Quality Standards
 
 All code must pass:
 
-1. **TypeScript compilation** - Strict mode, no errors
-2. **Biome checks** - No linting errors
-3. **No `any` types** - Use proper TypeScript types or `unknown` with type guards
-4. **No inline styles** - All styling in SCSS files
-5. **Catppuccin colors only** - No arbitrary colors
-
-### Running Quality Checks
+1. **TypeScript**: Strict mode, no `any` types
+2. **Biome**: Linter and formatter
+3. **Build**: Production build must succeed
+4. **Mobile Responsiveness**: Test at 320px, 375px, 768px, 1024px, 1920px widths
+5. **No horizontal scroll**: Verified at all breakpoints
+6. **Touch targets**: Minimum 44x44px for interactive elements
 
 ```bash
-# From project root
-cd docker-acarshub
-
-# TypeScript check
-cd acarshub-react && npx tsc --noEmit
-
-# Biome check
-biome check acarshub-react/src/
-
-# Biome check with auto-fix
-biome check acarshub-react/src/ --write
+# Run all checks
+npm run build && npx tsc --noEmit && npx biome check .
 ```
 
-## Socket.IO Events
+### Testing Responsive Design
 
-### Received from Backend
+```bash
+# Start dev server
+npm run dev
 
-- `acars_msg` - New ACARS message
-- `labels` - Message label definitions
-- `terms` - Alert term updates
-- `decoders` - Decoder configuration
-- `database_search_results` - Search results
-- `database_size` - Database statistics
-- `system_status` - System health
-- `version` - Version information
-- `signal` - Signal level data
-- `adsb` - ADS-B aircraft data
-- `adsb_status` - ADS-B availability
-- `alert_terms` - Alert term statistics
+# Then test in browser DevTools:
+# 1. Open DevTools (F12)
+# 2. Toggle device toolbar (Ctrl+Shift+M)
+# 3. Test these widths: 320px, 375px, 768px, 1024px, 1920px
+# 4. Verify no horizontal scroll
+# 5. Check touch target sizes (44x44px minimum)
+```
 
-### Emitted to Backend
+## 🎯 Development Guidelines
 
-- `query_search` - Database search request
-- `update_alerts` - Update alert configuration
-- `signal_freqs` - Request frequency data
-- `page_change` - Notify page navigation (analytics)
+1. **No `any` types** - Use proper TypeScript types
+2. **No inline styles** - All styles in SCSS files
+3. **No third-party CSS** - Custom components only
+4. **Catppuccin colors only** - No arbitrary hex values
+5. **MOBILE-FIRST RESPONSIVE DESIGN IS PARAMOUNT** ⚠️ CRITICAL
+   - Mobile experience is first-class, not an afterthought
+   - Base styles for mobile, use `min-width` media queries
+   - Test on mobile devices (phones and tablets)
+   - Touch targets must be at least 44x44px
+   - No horizontal scrolling at any screen size
+   - All features must work seamlessly on small screens
+6. **Accessibility** - ARIA labels, keyboard support, focus states, 44px touch targets
+7. **Performance** - Optimize for mobile network speeds
 
-## Dependencies to Remove
+See [../AGENTS.md](../AGENTS.md) for complete development guidelines.
 
-- [ ] Bootstrap (will be replaced with custom SCSS)
-- [ ] Any other CSS frameworks or libraries
+## 🐛 Troubleshooting
 
-## Migration Strategy
+### "Socket not initialized" error
 
-This React app is built **independently** from the legacy frontend to allow:
+Backend is not running. Start Flask backend first:
 
-- Clean architecture without legacy constraints
-- Side-by-side comparison during development
-- A/B testing before cutover
-- Gradual feature migration
-- Easy rollback if needed
+```bash
+pdm run dev
+```
 
-Once complete, nginx will be updated to serve this React build instead of the legacy frontend, and Python will only handle WebSocket endpoints.
+### Port 5173 already in use
 
-## Contributing
+Another Vite server is running:
 
-Follow the guidelines in `/AGENTS.md` at the project root. Key points:
+```bash
+# Find and kill the process
+lsof -ti:5173 | xargs kill -9
+```
 
-- **No inline styles** - All styling in SCSS files
-- **No third-party CSS** - Write custom styles with Catppuccin theming
-- **No `any` types** - Proper TypeScript typing
-- **Catppuccin colors only** - No arbitrary colors
-- Document complex logic with comments
-- Keep functions small and focused (<50 lines preferred)
-- Use existing type definitions from `src/types/`
-- Run quality checks before committing
-- Follow BEM naming convention for CSS classes
+### Hot reload not working
 
-## License
+1. Check Vite dev server is running
+2. Hard refresh: `Ctrl+Shift+R`
+3. Clear browser cache
 
-GPL-3.0-only
+### Build errors
+
+```bash
+# Clean install
+rm -rf node_modules package-lock.json
+npm install
+npm run build
+```
+
+### Theme not persisting
+
+Check browser localStorage is enabled and not in private mode.
+
+## 📚 Documentation
+
+- [AGENTS.md](../AGENTS.md) - Complete project guide for AI agents
+- [CATPPUCCIN.md](./CATPPUCCIN.md) - Color palette reference
+- [PHASE-2-COMPLETE.md](./PHASE-2-COMPLETE.md) - Phase 2 accomplishments
+
+## 🤝 Contributing
+
+This is an active migration project. See [../AGENTS.md](../AGENTS.md) for:
+
+- Migration phases and current status
+- Code quality requirements
+- Development workflow
+- Architecture decisions
+
+## 📄 License
+
+GNU General Public License v3.0
 
 Copyright (C) 2022-2024 Frederick Clausen II
+
+See [../LICENSE](../LICENSE) for full license text.

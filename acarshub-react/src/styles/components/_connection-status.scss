@@ -1,0 +1,130 @@
+/* Copyright (C) 2022-2026 Frederick Clausen II
+ * This file is part of acarshub <https://github.com/sdr-enthusiasts/docker-acarshub>.
+ *
+ * acarshub is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * acarshub is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+@use "../variables" as *;
+@use "../mixins" as *;
+
+/**
+ * Connection Status Component
+ * Shows WebSocket connection state to backend
+ */
+
+.connection-status {
+  padding: $spacing-md $spacing-lg;
+  text-align: center;
+  font-weight: $font-weight-medium;
+  font-size: $font-size-sm;
+  transition: all $transition-base;
+  border-bottom: 2px solid transparent;
+}
+
+.connection-status--connected {
+  background-color: var(--color-success);
+  color: var(--color-base);
+  border-bottom-color: var(--color-accent-teal);
+}
+
+.connection-status--disconnected {
+  background-color: var(--color-warning);
+  color: var(--color-base);
+  border-bottom-color: var(--color-accent-peach);
+  animation: pulse-warning 2s ease-in-out infinite;
+}
+
+.connection-status--error {
+  background-color: var(--color-danger);
+  color: var(--color-base);
+  border-bottom-color: var(--color-accent-maroon);
+}
+
+.connection-status__content {
+  @include container;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-md;
+}
+
+.connection-status__icon {
+  font-size: $font-size-lg;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  svg {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+.connection-status__text {
+  font-weight: $font-weight-medium;
+}
+
+.connection-status__details {
+  font-size: $font-size-xs;
+  opacity: 0.9;
+  margin-left: $spacing-sm;
+}
+
+/**
+ * Pulse animation for disconnected state
+ */
+
+@keyframes pulse-warning {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .connection-status--disconnected {
+    animation: none;
+  }
+}
+
+/**
+ * Mobile optimizations
+ */
+
+@media (max-width: #{$breakpoint-md - 1px}) {
+  .connection-status {
+    padding: $spacing-sm $spacing-md;
+    font-size: $font-size-xs;
+  }
+
+  .connection-status__content {
+    gap: $spacing-sm;
+  }
+
+  .connection-status__icon {
+    font-size: $font-size-base;
+
+    svg {
+      width: 16px;
+      height: 16px;
+    }
+  }
+
+  .connection-status__details {
+    display: none;
+  }
+}

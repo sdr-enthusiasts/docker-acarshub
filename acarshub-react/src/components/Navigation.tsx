@@ -1,4 +1,4 @@
-// Copyright (C) 2022-2024 Frederick Clausen II
+// Copyright (C) 2022-2026 Frederick Clausen II
 // This file is part of acarshub <https://github.com/sdr-enthusiasts/docker-acarshub>.
 
 // acarshub is free software: you can redistribute it and/or modify
@@ -20,6 +20,7 @@ import {
   selectAlertCount,
   useAppStore,
 } from "../store/useAppStore";
+import { ThemeSwitcher } from "./ThemeSwitcher";
 
 /**
  * Navigation Component
@@ -100,6 +101,7 @@ export const Navigation = () => {
               <NavLink to="/stats">Statistics</NavLink>
             </li>
             <li className="right_side">
+              <ThemeSwitcher />
               <span id="modal_text">
                 <button
                   type="button"

@@ -1,0 +1,173 @@
+/* Copyright (C) 2022-2026 Frederick Clausen II
+ * This file is part of acarshub <https://github.com/sdr-enthusiasts/docker-acarshub>.
+ *
+ * acarshub is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * acarshub is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+/**
+ * Catppuccin Color Variables
+ * Reference: https://github.com/catppuccin/catppuccin
+ */
+
+/* ============================================
+ * Catppuccin Mocha (Dark Theme)
+ * ============================================ */
+
+$mocha-rosewater: #f5e0dc;
+$mocha-flamingo: #f2cdcd;
+$mocha-pink: #f5c2e7;
+$mocha-mauve: #cba6f7;
+$mocha-red: #f38ba8;
+$mocha-maroon: #eba0ac;
+$mocha-peach: #fab387;
+$mocha-yellow: #f9e2af;
+$mocha-green: #a6e3a1;
+$mocha-teal: #94e2d5;
+$mocha-sky: #89dceb;
+$mocha-sapphire: #74c7ec;
+$mocha-blue: #89b4fa;
+$mocha-lavender: #b4befe;
+$mocha-text: #cdd6f4;
+$mocha-subtext1: #bac2de;
+$mocha-subtext0: #a6adc8;
+$mocha-overlay2: #9399b2;
+$mocha-overlay1: #7f849c;
+$mocha-overlay0: #6c7086;
+$mocha-surface2: #585b70;
+$mocha-surface1: #45475a;
+$mocha-surface0: #313244;
+$mocha-base: #1e1e2e;
+$mocha-mantle: #181825;
+$mocha-crust: #11111b;
+
+/* ============================================
+ * Catppuccin Latte (Light Theme)
+ * ============================================ */
+
+$latte-rosewater: #dc8a78;
+$latte-flamingo: #dd7878;
+$latte-pink: #ea76cb;
+$latte-mauve: #8839ef;
+$latte-red: #d20f39;
+$latte-maroon: #e64553;
+$latte-peach: #fe640b;
+$latte-yellow: #df8e1d;
+$latte-green: #40a02b;
+$latte-teal: #179299;
+$latte-sky: #04a5e5;
+$latte-sapphire: #209fb5;
+$latte-blue: #1e66f5;
+$latte-lavender: #7287fd;
+$latte-text: #4c4f69;
+$latte-subtext1: #5c5f77;
+$latte-subtext0: #6c6f85;
+$latte-overlay2: #7c7f93;
+$latte-overlay1: #8c8fa1;
+$latte-overlay0: #9ca0b0;
+$latte-surface2: #acb0be;
+$latte-surface1: #bcc0cc;
+$latte-surface0: #ccd0da;
+$latte-base: #eff1f5;
+$latte-mantle: #e6e9ef;
+$latte-crust: #dce0e8;
+
+/* ============================================
+ * Layout & Typography Variables
+ * ============================================ */
+
+/* Spacing scale (based on 8px grid) */
+$spacing-xs: 0.25rem; // 4px
+$spacing-sm: 0.5rem; // 8px
+$spacing-md: 1rem; // 16px
+$spacing-lg: 1.5rem; // 24px
+$spacing-xl: 2rem; // 32px
+$spacing-2xl: 3rem; // 48px
+$spacing-3xl: 4rem; // 64px
+
+/* Border radius */
+$radius-sm: 4px;
+$radius-md: 8px;
+$radius-lg: 12px;
+$radius-xl: 16px;
+$radius-full: 9999px;
+
+/* Font sizes */
+$font-size-xs: 0.75rem; // 12px
+$font-size-sm: 0.875rem; // 14px
+$font-size-base: 1rem; // 16px
+$font-size-lg: 1.125rem; // 18px
+$font-size-xl: 1.25rem; // 20px
+$font-size-2xl: 1.5rem; // 24px
+$font-size-3xl: 1.875rem; // 30px
+$font-size-4xl: 2.25rem; // 36px
+
+/* Font weights */
+$font-weight-normal: 400;
+$font-weight-medium: 500;
+$font-weight-semibold: 600;
+$font-weight-bold: 700;
+
+/* Line heights */
+$line-height-tight: 1.25;
+$line-height-normal: 1.5;
+$line-height-relaxed: 1.75;
+
+/* Font family */
+$font-family-sans:
+  -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu",
+  "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+$font-family-mono:
+  ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo,
+  monospace;
+
+/* Breakpoints */
+$breakpoint-sm: 640px;
+$breakpoint-md: 768px;
+$breakpoint-lg: 1024px;
+$breakpoint-xl: 1280px;
+$breakpoint-2xl: 1536px;
+
+/* Z-index layers */
+$z-index-dropdown: 1000;
+$z-index-sticky: 1020;
+$z-index-fixed: 1030;
+$z-index-modal-backdrop: 1040;
+$z-index-modal: 1050;
+$z-index-popover: 1060;
+$z-index-tooltip: 1070;
+
+/* Transitions */
+$transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+$transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+$transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+
+/* Shadows */
+$shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+$shadow-base:
+  0 1px 3px 0 rgba(0, 0, 0, 0.1),
+  0 1px 2px -1px rgba(0, 0, 0, 0.1);
+$shadow-md:
+  0 4px 6px -1px rgba(0, 0, 0, 0.1),
+  0 2px 4px -2px rgba(0, 0, 0, 0.1);
+$shadow-lg:
+  0 10px 15px -3px rgba(0, 0, 0, 0.1),
+  0 4px 6px -4px rgba(0, 0, 0, 0.1);
+$shadow-xl:
+  0 20px 25px -5px rgba(0, 0, 0, 0.1),
+  0 8px 10px -6px rgba(0, 0, 0, 0.1);
+$shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+
+/* Content width */
+$container-max-width: 1400px;
+$container-padding: 20px;

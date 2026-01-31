@@ -1,0 +1,49 @@
+/* Copyright (C) 2022-2026 Frederick Clausen II
+ * This file is part of acarshub <https://github.com/sdr-enthusiasts/docker-acarshub>.
+ *
+ * acarshub is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * acarshub is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+@use "mixins" as *;
+
+/**
+ * Theme Definitions
+ *
+ * Default theme: Catppuccin Mocha (dark)
+ * Alternative theme: Catppuccin Latte (light)
+ *
+ * Theme switching is done via [data-theme] attribute on root element
+ */
+
+:root {
+  @include theme-mocha;
+}
+
+[data-theme="light"] {
+  @include theme-latte;
+}
+
+/**
+ * Smooth theme transitions
+ * Apply to elements that should animate on theme change
+ */
+* {
+  transition-property: background-color, border-color, color;
+  transition-duration: 200ms;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+}

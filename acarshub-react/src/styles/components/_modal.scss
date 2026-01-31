@@ -1,0 +1,208 @@
+/* Copyright (C) 2022-2026 Frederick Clausen II
+ * This file is part of acarshub <https://github.com/sdr-enthusiasts/docker-acarshub>.
+ *
+ * acarshub is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * acarshub is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+@use "../variables" as *;
+@use "../mixins" as *;
+
+/**
+ * Modal Component
+ * Accessible modal dialog with backdrop
+ */
+
+.modal-backdrop {
+  @include fixed-full;
+  background-color: rgba(0, 0, 0, 0.6);
+  z-index: $z-index-modal-backdrop;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-lg;
+  overflow-y: auto;
+
+  @include fade-in($transition-base);
+
+  &:focus {
+    outline: none;
+  }
+}
+
+.modal {
+  background-color: var(--color-surface0);
+  border-radius: $radius-lg;
+  box-shadow: $shadow-2xl;
+  max-width: 600px;
+  width: 100%;
+  position: relative;
+  z-index: $z-index-modal;
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+  margin: auto;
+
+  @include slide-in-bottom($transition-slow);
+
+  @include media-md {
+    max-width: 700px;
+  }
+
+  @include media-lg {
+    max-width: 800px;
+  }
+}
+
+.modal--sm {
+  max-width: 400px;
+}
+
+.modal--lg {
+  max-width: 900px;
+}
+
+.modal--xl {
+  max-width: 1200px;
+}
+
+.modal--full {
+  max-width: none;
+  width: calc(100% - #{$spacing-xl});
+  height: calc(100% - #{$spacing-xl});
+  max-height: none;
+}
+
+.modal__header {
+  padding: $spacing-lg $spacing-xl;
+  border-bottom: 1px solid var(--color-overlay0);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-md;
+  flex-shrink: 0;
+}
+
+.modal__title {
+  font-size: $font-size-2xl;
+  font-weight: $font-weight-semibold;
+  color: var(--color-text);
+  margin: 0;
+}
+
+.modal__close {
+  @include button-reset;
+  width: 32px;
+  height: 32px;
+  border-radius: $radius-md;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-subtext1);
+  transition: all $transition-fast;
+  flex-shrink: 0;
+
+  &:hover {
+    background-color: var(--color-surface1);
+    color: var(--color-text);
+  }
+
+  @include focus-visible;
+}
+
+.modal__body {
+  padding: $spacing-xl;
+  overflow-y: auto;
+  flex: 1;
+
+  @include custom-scrollbar;
+}
+
+.modal__footer {
+  padding: $spacing-lg $spacing-xl;
+  border-top: 1px solid var(--color-overlay0);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: $spacing-md;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+/**
+ * Modal animations
+ */
+
+@keyframes modal-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modal-slide-up {
+  from {
+    transform: translateY(30px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/**
+ * Prevent body scroll when modal is open
+ */
+
+body.modal-open {
+  overflow: hidden;
+}
+
+/**
+ * Mobile optimizations
+ */
+
+@media (max-width: #{$breakpoint-md - 1px}) {
+  .modal {
+    max-width: none;
+    width: 100%;
+    max-height: 100vh;
+    border-radius: $radius-lg $radius-lg 0 0;
+    margin-top: auto;
+  }
+
+  .modal--full {
+    width: 100%;
+    height: 100%;
+    border-radius: 0;
+  }
+
+  .modal__header {
+    padding: $spacing-md $spacing-lg;
+  }
+
+  .modal__title {
+    font-size: $font-size-xl;
+  }
+
+  .modal__body {
+    padding: $spacing-lg;
+  }
+
+  .modal__footer {
+    padding: $spacing-md $spacing-lg;
+  }
+}

@@ -14,7 +14,6 @@
     "@fortawesome/free-regular-svg-icons": "^7.1.0",
     "@fortawesome/free-solid-svg-icons": "^7.1.0",
     "@fortawesome/react-fontawesome": "^3.1.1",
-    "bootstrap": "^5.3.8",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-router-dom": "^7.13.0",
@@ -32,6 +31,7 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
+    "sass": "^1.97.3",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.4",
     "vite": "^7.2.4"
