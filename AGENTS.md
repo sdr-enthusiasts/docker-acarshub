@@ -961,3 +961,12 @@ Before moving to the next phase:
 - Highlight trade-offs when they exist
 - Point out potential issues proactively
 - Provide code examples when explaining concepts
+
+## Bugs before final release
+
+- Global:
+  - Page Denisity switch is inconsistent. We've ended up hard coding some sizes in places rather than using the density settings from the store. Need to audit and fix, OR remove the density setting entirely if it's not feasible to implement everywhere. Likely choice: remove the density setting entirely.
+
+- Stats page:
+  - Stats page, on theme switch, does not completely honor the theme when dynamically switched on the page. Labels are the wrong color until more data comes in from the websocket
+  - Bar chart number labels for the bar value should be dark on all themes for readability

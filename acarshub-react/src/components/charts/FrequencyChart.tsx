@@ -27,6 +27,7 @@ import {
 import ChartDataLabels from "chartjs-plugin-datalabels";
 import { useEffect, useMemo } from "react";
 import { Bar } from "react-chartjs-2";
+import { useSettingsStore } from "../../store/useSettingsStore";
 import type { SignalData } from "../../types";
 import { ChartContainer } from "./ChartContainer";
 
@@ -67,23 +68,41 @@ interface FrequencyChartProps {
  * Note: Limits to top 14 frequencies, aggregates the rest into "Other"
  * to prevent overcrowded charts
  */
-// Catppuccin Rainbow color palette (8 colors from legacy palette.js) - defined outside component to prevent recreation
-const rainbowColors = [
-  "#1B9E77",
-  "#D95F02",
-  "#7570B3",
-  "#E7298A",
-  "#66A61E",
-  "#E6AB02",
-  "#A6761D",
-  "#666666",
-];
-
 export const FrequencyChart = ({
   frequencyData,
   decoderType,
   className = "",
 }: FrequencyChartProps) => {
+  const theme = useSettingsStore((state) => state.settings.appearance.theme);
+  const isDark = theme === "mocha";
+
+  // Catppuccin Rainbow color palette - theme-aware
+  const rainbowColors = useMemo(() => {
+    if (isDark) {
+      // Catppuccin Mocha colors
+      return [
+        "#89b4fa", // Blue
+        "#a6e3a1", // Green
+        "#f9e2af", // Yellow
+        "#f5c2e7", // Pink
+        "#94e2d5", // Teal
+        "#fab387", // Peach
+        "#cba6f7", // Mauve
+        "#f38ba8", // Red
+      ];
+    }
+    // Catppuccin Latte colors
+    return [
+      "#1e66f5", // Blue
+      "#40a02b", // Green
+      "#df8e1d", // Yellow
+      "#ea76cb", // Pink
+      "#179299", // Teal
+      "#fe640b", // Peach
+      "#8839ef", // Mauve
+      "#d20f39", // Red
+    ];
+  }, [isDark]);
   // Diagnostic logging to detect mount/unmount cycles
   useEffect(() => {
     console.log(`[FrequencyChart] ${decoderType} MOUNTED`);
@@ -145,7 +164,7 @@ export const FrequencyChart = ({
       ],
       totalCount,
     };
-  }, [frequencyData, decoderType]);
+  }, [frequencyData, decoderType, rainbowColors]);
 
   // Calculate dynamic height based on number of bars - stabilized to prevent layout shifts
   const chartHeight = useMemo(() => {
@@ -157,15 +176,16 @@ export const FrequencyChart = ({
 
     const calculatedHeight = barCount * barHeight + paddingHeight;
     return Math.min(Math.max(minHeight, calculatedHeight), maxHeight);
-  }, [chartData?.labels.length]); // Only depend on label count, not entire chartData
+  }, [chartData?.labels.length]);
+
+  // Get current theme colors from CSS variables - read fresh on every render
+  const styles = getComputedStyle(document.documentElement);
+  const textColor = styles.getPropertyValue("--color-text").trim();
+  const gridColor = styles.getPropertyValue("--color-surface2").trim();
+  const surface0 = styles.getPropertyValue("--color-surface0").trim();
 
   // Chart options with Catppuccin theming - memoized with stable dependencies
   const options = useMemo(() => {
-    // Get current theme colors from CSS variables
-    const styles = getComputedStyle(document.documentElement);
-    const textColor = styles.getPropertyValue("--color-text").trim();
-    const gridColor = styles.getPropertyValue("--color-surface2").trim();
-    const surface0 = styles.getPropertyValue("--color-surface0").trim();
     const totalCount = chartData?.totalCount || 1;
 
     return {
@@ -223,7 +243,7 @@ export const FrequencyChart = ({
             return rainbowColors[context.dataIndex % rainbowColors.length];
           },
           borderRadius: 4,
-          color: "white",
+          color: isDark ? "white" : "black",
           clamp: true,
           font: {
             weight: "bold" as const,
@@ -273,7 +293,15 @@ export const FrequencyChart = ({
         },
       },
     };
-  }, [decoderType, chartData?.totalCount]);
+  }, [
+    decoderType,
+    chartData?.totalCount,
+    rainbowColors,
+    isDark,
+    textColor,
+    gridColor,
+    surface0,
+  ]);
 
   // Show empty state if no data
   if (!chartData) {
@@ -305,7 +333,12 @@ export const FrequencyChart = ({
           contain: "layout style",
         }}
       >
-        <Bar data={chartData} options={options} redraw={false} />
+        <Bar
+          key={`freq-${decoderType}-${theme}`}
+          data={chartData}
+          options={options}
+          redraw={false}
+        />
       </div>
     </ChartContainer>
   );

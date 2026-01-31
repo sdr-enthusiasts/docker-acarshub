@@ -112,6 +112,7 @@
     border: 1px solid var(--color-surface2);
     border-radius: $radius-lg;
     padding: $spacing-lg;
+    margin-top: $spacing-lg;
     min-height: 250px; // Prevent layout shifts that cause scroll jumps
     contain: layout style paint; // Strict containment to prevent reflows
     overflow-anchor: none; // Disable browser scroll anchoring
@@ -214,6 +215,7 @@
     }
 
     .chart-wrapper {
+      margin-top: $spacing-sm;
       padding: $spacing-sm;
     }
 
@@ -236,6 +238,7 @@
     }
 
     .chart-wrapper {
+      margin-top: $spacing-xl;
       padding: $spacing-xl;
     }
 

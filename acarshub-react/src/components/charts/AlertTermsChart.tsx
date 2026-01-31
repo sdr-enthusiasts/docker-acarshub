@@ -27,6 +27,7 @@ import {
 import ChartDataLabels from "chartjs-plugin-datalabels";
 import { useEffect, useMemo } from "react";
 import { Bar } from "react-chartjs-2";
+import { useSettingsStore } from "../../store/useSettingsStore";
 import type { AlertTerm } from "../../types";
 import { ChartContainer } from "./ChartContainer";
 
@@ -62,26 +63,49 @@ interface AlertTermsChartProps {
  * - Responsive design
  * - Mobile-friendly with horizontal bars
  */
-// Catppuccin Tol color palette (12 colors from legacy palette.js) - defined outside component to prevent recreation
-const tolColors = [
-  "#332288",
-  "#117733",
-  "#44AA99",
-  "#88CCEE",
-  "#DDCC77",
-  "#CC6677",
-  "#AA4499",
-  "#882255",
-  "#661100",
-  "#6699CC",
-  "#999933",
-  "#888888",
-];
-
 export const AlertTermsChart = ({
   alertTermData,
   className = "",
 }: AlertTermsChartProps) => {
+  const theme = useSettingsStore((state) => state.settings.appearance.theme);
+  const isDark = theme === "mocha";
+
+  // Catppuccin color palette - theme-aware
+  const chartColors = useMemo(() => {
+    if (isDark) {
+      // Catppuccin Mocha colors
+      return [
+        "#89b4fa", // Blue
+        "#a6e3a1", // Green
+        "#f9e2af", // Yellow
+        "#f5c2e7", // Pink
+        "#94e2d5", // Teal
+        "#fab387", // Peach
+        "#cba6f7", // Mauve
+        "#f38ba8", // Red
+        "#eba0ac", // Maroon
+        "#74c7ec", // Sapphire
+        "#89dceb", // Sky
+        "#b4befe", // Lavender
+      ];
+    }
+    // Catppuccin Latte colors
+    return [
+      "#1e66f5", // Blue
+      "#40a02b", // Green
+      "#df8e1d", // Yellow
+      "#ea76cb", // Pink
+      "#179299", // Teal
+      "#fe640b", // Peach
+      "#8839ef", // Mauve
+      "#d20f39", // Red
+      "#e64553", // Maroon
+      "#209fb5", // Sapphire
+      "#04a5e5", // Sky
+      "#7287fd", // Lavender
+    ];
+  }, [isDark]);
+
   // Diagnostic logging to detect mount/unmount cycles
   useEffect(() => {
     console.log("[AlertTermsChart] MOUNTED");
@@ -119,13 +143,13 @@ export const AlertTermsChart = ({
         {
           label: "Received Alert Terms",
           data,
-          backgroundColor: tolColors,
+          backgroundColor: chartColors,
           borderWidth: 0,
         },
       ],
       totalCount,
     };
-  }, [alertTermData]);
+  }, [alertTermData, chartColors]);
 
   // Calculate dynamic height based on number of bars - stabilized to prevent layout shifts
   const chartHeight = useMemo(() => {
@@ -139,13 +163,14 @@ export const AlertTermsChart = ({
     return Math.min(Math.max(minHeight, calculatedHeight), maxHeight);
   }, [chartData?.labels.length]); // Only depend on label count, not entire chartData
 
+  // Get current theme colors from CSS variables - read fresh on every render
+  const styles = getComputedStyle(document.documentElement);
+  const textColor = styles.getPropertyValue("--color-text").trim();
+  const gridColor = styles.getPropertyValue("--color-surface2").trim();
+  const surface0 = styles.getPropertyValue("--color-surface0").trim();
+
   // Chart options with Catppuccin theming - memoized with stable dependencies
   const options = useMemo(() => {
-    // Get current theme colors from CSS variables
-    const styles = getComputedStyle(document.documentElement);
-    const textColor = styles.getPropertyValue("--color-text").trim();
-    const gridColor = styles.getPropertyValue("--color-surface2").trim();
-    const surface0 = styles.getPropertyValue("--color-surface0").trim();
     const totalCount = chartData?.totalCount || 1;
 
     return {
@@ -200,10 +225,10 @@ export const AlertTermsChart = ({
         datalabels: {
           backgroundColor: (context: { dataIndex: number }) => {
             // Use same color as bar by accessing from the dataset
-            return tolColors[context.dataIndex % tolColors.length];
+            return chartColors[context.dataIndex % chartColors.length];
           },
           borderRadius: 4,
-          color: "white",
+          color: isDark ? "white" : "black",
           clamp: true,
           font: {
             weight: "bold" as const,
@@ -253,7 +278,14 @@ export const AlertTermsChart = ({
         },
       },
     };
-  }, [chartData?.totalCount]);
+  }, [
+    chartData?.totalCount,
+    chartColors,
+    isDark,
+    textColor,
+    gridColor,
+    surface0,
+  ]);
 
   // Show empty state if no data
   if (!chartData) {
@@ -281,7 +313,12 @@ export const AlertTermsChart = ({
           contain: "layout style",
         }}
       >
-        <Bar data={chartData} options={options} redraw={false} />
+        <Bar
+          key={`alert-terms-${theme}`}
+          data={chartData}
+          options={options}
+          redraw={false}
+        />
       </div>
     </ChartContainer>
   );

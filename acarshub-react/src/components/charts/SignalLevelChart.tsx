@@ -28,6 +28,7 @@ import {
 } from "chart.js";
 import { useEffect, useMemo } from "react";
 import { Line } from "react-chartjs-2";
+import { useSettingsStore } from "../../store/useSettingsStore";
 import type { Signal } from "../../types";
 import { ChartContainer } from "./ChartContainer";
 
@@ -70,6 +71,9 @@ export const SignalLevelChart = ({
   signalData,
   className = "",
 }: SignalLevelChartProps) => {
+  const theme = useSettingsStore((state) => state.settings.appearance.theme);
+  const isDark = theme === "mocha";
+
   // Diagnostic logging to detect mount/unmount cycles
   useEffect(() => {
     console.log("[SignalLevelChart] MOUNTED");
@@ -105,14 +109,20 @@ export const SignalLevelChart = ({
       return null;
     }
 
+    // Theme-aware colors
+    const greenColor = isDark ? "rgb(166, 227, 161)" : "rgb(64, 160, 43)"; // Mocha vs Latte green
+    const greenBg = isDark
+      ? "rgba(166, 227, 161, 0.1)"
+      : "rgba(64, 160, 43, 0.1)";
+
     return {
       labels,
       datasets: [
         {
           label: "Received Signal Levels",
           data,
-          borderColor: "rgb(166, 227, 161)", // Catppuccin Mocha Green
-          backgroundColor: "rgba(166, 227, 161, 0.1)",
+          borderColor: greenColor,
+          backgroundColor: greenBg,
           borderWidth: 2,
           pointRadius: 0,
           pointHoverRadius: 4,
@@ -121,16 +131,16 @@ export const SignalLevelChart = ({
         },
       ],
     };
-  }, [signalData]);
+  }, [signalData, isDark]);
+
+  // Get current theme colors from CSS variables - read fresh on every render
+  const styles = getComputedStyle(document.documentElement);
+  const textColor = styles.getPropertyValue("--color-text").trim();
+  const gridColor = styles.getPropertyValue("--color-surface2").trim();
+  const surface0 = styles.getPropertyValue("--color-surface0").trim();
 
   // Chart options with Catppuccin theming - memoized with stable dependencies
   const options = useMemo(() => {
-    // Get current theme colors from CSS variables
-    const styles = getComputedStyle(document.documentElement);
-    const textColor = styles.getPropertyValue("--color-text").trim();
-    const gridColor = styles.getPropertyValue("--color-surface2").trim();
-    const surface0 = styles.getPropertyValue("--color-surface0").trim();
-
     return {
       responsive: true,
       maintainAspectRatio: false,
@@ -212,7 +222,7 @@ export const SignalLevelChart = ({
         axis: "x" as const,
       },
     };
-  }, []);
+  }, [textColor, gridColor, surface0]);
 
   // Show empty state if no data
   if (!chartData) {
@@ -233,7 +243,11 @@ export const SignalLevelChart = ({
   return (
     <ChartContainer className={className}>
       <div key="signal-level-chart-wrapper">
-        <Line data={chartData} options={options} />
+        <Line
+          key={`signal-level-${theme}`}
+          data={chartData}
+          options={options}
+        />
       </div>
     </ChartContainer>
   );

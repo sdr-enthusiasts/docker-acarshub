@@ -27,6 +27,7 @@ import {
 import ChartDataLabels from "chartjs-plugin-datalabels";
 import { useEffect, useMemo } from "react";
 import { Bar } from "react-chartjs-2";
+import { useSettingsStore } from "../../store/useSettingsStore";
 import type { SignalCountData } from "../../types";
 import { ChartContainer } from "./ChartContainer";
 
@@ -69,6 +70,9 @@ export const MessageCountChart = ({
   showEmptyMessages,
   className = "",
 }: MessageCountChartProps) => {
+  const theme = useSettingsStore((state) => state.settings.appearance.theme);
+  const isDark = theme === "mocha";
+
   // Diagnostic logging to detect mount/unmount cycles
   useEffect(() => {
     console.log(
@@ -112,6 +116,11 @@ export const MessageCountChart = ({
     const labels = ["Good Messages", "Errors", "Total"];
     const data = [goodCount, errorCount, totalCount];
 
+    // Theme-aware colors
+    const goodColor = isDark ? "rgb(166, 227, 161)" : "rgb(64, 160, 43)"; // Green
+    const errorColor = isDark ? "rgb(243, 139, 168)" : "rgb(210, 15, 57)"; // Red
+    const totalColor = isDark ? "rgb(137, 180, 250)" : "rgb(30, 102, 245)"; // Blue
+
     return {
       labels,
       datasets: [
@@ -120,25 +129,21 @@ export const MessageCountChart = ({
             ? "Empty Message Counts"
             : "Data Message Counts",
           data,
-          backgroundColor: [
-            "rgb(166, 227, 161)", // Catppuccin Mocha Green (good)
-            "rgb(243, 139, 168)", // Catppuccin Mocha Red (errors)
-            "rgb(137, 180, 250)", // Catppuccin Mocha Blue (total)
-          ],
+          backgroundColor: [goodColor, errorColor, totalColor],
           borderWidth: 0,
         },
       ],
     };
-  }, [countData, showEmptyMessages]);
+  }, [countData, showEmptyMessages, isDark]);
+
+  // Get current theme colors from CSS variables - read fresh on every render
+  const styles = getComputedStyle(document.documentElement);
+  const textColor = styles.getPropertyValue("--color-text").trim();
+  const gridColor = styles.getPropertyValue("--color-surface2").trim();
+  const surface0 = styles.getPropertyValue("--color-surface0").trim();
 
   // Chart options with Catppuccin theming - memoized with stable dependencies
   const options = useMemo(() => {
-    // Get current theme colors from CSS variables
-    const styles = getComputedStyle(document.documentElement);
-    const textColor = styles.getPropertyValue("--color-text").trim();
-    const gridColor = styles.getPropertyValue("--color-surface2").trim();
-    const surface0 = styles.getPropertyValue("--color-surface0").trim();
-
     return {
       responsive: true,
       maintainAspectRatio: false,
@@ -246,7 +251,7 @@ export const MessageCountChart = ({
         },
       },
     };
-  }, [showEmptyMessages]);
+  }, [showEmptyMessages, textColor, gridColor, surface0]);
 
   // Show empty state if no data
   if (!chartData) {
@@ -269,7 +274,11 @@ export const MessageCountChart = ({
       <div
         key={`message-count-chart-wrapper-${showEmptyMessages ? "empty" : "data"}`}
       >
-        <Bar data={chartData} options={options} />
+        <Bar
+          key={`message-count-${showEmptyMessages ? "empty" : "data"}-${theme}`}
+          data={chartData}
+          options={options}
+        />
       </div>
     </ChartContainer>
   );

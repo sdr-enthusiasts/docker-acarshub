@@ -116,9 +116,11 @@ export const TimeSeriesChart = ({
     [isDark],
   );
 
-  // Text colors for theme - memoized to prevent recreation
-  const textColor = useMemo(() => (isDark ? "#cdd6f4" : "#4c4f69"), [isDark]);
-  const gridColor = useMemo(() => (isDark ? "#45475a" : "#ccd0da"), [isDark]);
+  // Get current theme colors from CSS variables - read fresh on every render
+  const styles = getComputedStyle(document.documentElement);
+  const textColor = styles.getPropertyValue("--color-text").trim();
+  const gridColor = styles.getPropertyValue("--color-surface2").trim();
+  const backgroundColor = isDark ? "#1e1e2e" : "#eff1f5";
 
   // Determine which datasets to show based on decoder type - memoized
   const chartData = useMemo(() => {
@@ -244,10 +246,10 @@ export const TimeSeriesChart = ({
         },
         tooltip: {
           position: "nearest",
-          backgroundColor: isDark ? "#1e1e2e" : "#eff1f5",
+          backgroundColor: backgroundColor,
           titleColor: textColor,
           bodyColor: textColor,
-          borderColor: isDark ? "#45475a" : "#ccd0da",
+          borderColor: gridColor,
           borderWidth: 1,
           padding: 12,
           displayColors: true,
@@ -301,7 +303,7 @@ export const TimeSeriesChart = ({
         },
       },
     }),
-    [timePeriod, textColor, gridColor, isDark],
+    [timePeriod, textColor, gridColor, backgroundColor],
   );
 
   if (error) {
@@ -327,7 +329,12 @@ export const TimeSeriesChart = ({
   return (
     <ChartContainer>
       <div key="timeseries-chart-wrapper" className="chart__canvas-wrapper">
-        <Line data={chartData} options={options} redraw={false} />
+        <Line
+          key={`timeseries-${theme}`}
+          data={chartData}
+          options={options}
+          redraw={false}
+        />
       </div>
     </ChartContainer>
   );
