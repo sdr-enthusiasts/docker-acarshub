@@ -1,0 +1,256 @@
+// Copyright (C) 2022-2026 Frederick Clausen II
+// This file is part of acarshub <https://github.com/sdr-enthusiasts/docker-acarshub>.
+
+// acarshub is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+
+// acarshub is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+
+// You should have received a copy of the GNU General Public License
+// along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
+
+@use "../mixins" as *;
+@use "../variables" as *;
+
+/**
+ * Settings Modal Styles
+ * Provides styling for the settings modal with Catppuccin theming
+ */
+
+.settings-modal {
+  .modal-content {
+    max-width: 600px;
+    width: 100%;
+  }
+
+  // Mobile responsiveness
+  @media (max-width: 768px) {
+    .modal-content {
+      max-width: 100%;
+      margin: 0;
+      border-radius: 0;
+      height: 100vh;
+      max-height: 100vh;
+    }
+  }
+}
+
+.settings-content {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xl;
+  padding: $spacing-md 0;
+
+  @media (max-width: 768px) {
+    gap: $spacing-lg;
+    padding: $spacing-sm 0;
+  }
+}
+
+// Settings section
+.settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+  padding-bottom: $spacing-lg;
+  border-bottom: 1px solid var(--color-surface1);
+
+  &:last-of-type {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+}
+
+.settings-section-title {
+  margin: 0 0 $spacing-sm 0;
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: var(--color-text);
+}
+
+// Settings field
+.settings-field {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+
+  label {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    color: var(--color-subtext0);
+    cursor: pointer;
+
+    &:has(input[type="checkbox"]) {
+      display: flex;
+      align-items: center;
+      gap: $spacing-sm;
+      cursor: pointer;
+    }
+  }
+
+  select,
+  input[type="text"],
+  input[type="number"] {
+    padding: $spacing-sm $spacing-md;
+    border: 1px solid var(--color-surface2);
+    border-radius: $radius-sm;
+    background-color: var(--color-surface0);
+    color: var(--color-text);
+    font-size: $font-size-base;
+    font-family: inherit;
+    transition: all 0.2s ease;
+
+    &:hover {
+      border-color: var(--color-surface2);
+      background-color: var(--color-surface1);
+    }
+
+    &:focus {
+      outline: none;
+      border-color: var(--color-blue);
+      box-shadow: 0 0 0 3px rgba(var(--color-blue-rgb), 0.1);
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+
+  input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: var(--color-blue);
+    margin: 0;
+
+    &:focus {
+      outline: 2px solid var(--color-blue);
+      outline-offset: 2px;
+    }
+  }
+
+  // Mobile: make touch targets larger
+  @media (max-width: 768px) {
+    input[type="checkbox"] {
+      width: 24px;
+      height: 24px;
+    }
+
+    select,
+    input[type="text"],
+    input[type="number"] {
+      padding: $spacing-md;
+      font-size: $font-size-base;
+    }
+  }
+}
+
+// Settings actions row
+.settings-actions {
+  display: flex;
+  gap: $spacing-md;
+  justify-content: flex-end;
+  padding-top: $spacing-lg;
+  border-top: 1px solid var(--color-surface1);
+  margin-top: auto;
+
+  @media (max-width: 768px) {
+    flex-direction: column-reverse;
+    gap: $spacing-sm;
+
+    .btn {
+      width: 100%;
+    }
+  }
+
+  @media (min-width: 769px) and (max-width: 1024px) {
+    flex-wrap: wrap;
+
+    .btn {
+      flex: 1;
+      min-width: 120px;
+    }
+  }
+}
+
+// Help text for settings
+.settings-help-text {
+  font-size: $font-size-sm;
+  color: var(--color-subtext1);
+  margin-top: $spacing-xs;
+  line-height: 1.5;
+}
+
+// Warning/info boxes in settings
+.settings-info {
+  padding: $spacing-md;
+  border-radius: $radius-sm;
+  background-color: var(--color-surface0);
+  border-left: 3px solid var(--color-blue);
+  font-size: $font-size-sm;
+  color: var(--color-subtext0);
+  line-height: 1.5;
+
+  &.warning {
+    border-left-color: var(--color-yellow);
+    background-color: rgba(var(--color-yellow-rgb), 0.1);
+  }
+
+  &.error {
+    border-left-color: var(--color-red);
+    background-color: rgba(var(--color-red-rgb), 0.1);
+  }
+}
+
+// Settings toggle group (for radio-like options)
+.settings-toggle-group {
+  display: flex;
+  gap: $spacing-sm;
+  flex-wrap: wrap;
+
+  .toggle-option {
+    flex: 1;
+    min-width: 100px;
+    padding: $spacing-sm $spacing-md;
+    border: 2px solid var(--color-surface2);
+    border-radius: $radius-sm;
+    background-color: var(--color-surface0);
+    color: var(--color-text);
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-weight: $font-weight-medium;
+
+    &:hover {
+      border-color: var(--color-blue);
+      background-color: var(--color-surface1);
+    }
+
+    &.active {
+      border-color: var(--color-blue);
+      background-color: var(--color-blue);
+      color: var(--color-base);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--color-blue);
+      outline-offset: 2px;
+    }
+  }
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+
+    .toggle-option {
+      width: 100%;
+      min-width: 0;
+      padding: $spacing-md;
+    }
+  }
+}

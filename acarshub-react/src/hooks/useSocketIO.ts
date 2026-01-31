@@ -24,6 +24,8 @@ import { useAppStore } from "../store/useAppStore";
  *
  * This hook should be called once at the application root level
  * It connects to the backend and wires up all event handlers to update the store
+ *
+ * Note: Handles React StrictMode double-invocation gracefully
  */
 export const useSocketIO = () => {
   const setConnected = useAppStore((state) => state.setConnected);
@@ -108,6 +110,7 @@ export const useSocketIO = () => {
 
     // Cleanup on unmount
     return () => {
+      // Remove all event listeners
       socket.off("connect");
       socket.off("disconnect");
       socket.off("reconnect");
@@ -122,9 +125,14 @@ export const useSocketIO = () => {
       socket.off("signal");
       socket.off("alert_terms");
 
-      // Disconnect socket when app unmounts
-      socketService.disconnect();
+      // Only disconnect on actual unmount, not StrictMode cleanup
+      // StrictMode will call this cleanup in dev, but we keep the socket alive
+      if (!import.meta.env.DEV) {
+        socketService.disconnect();
+      }
     };
+    // Empty dependency array - this effect should only run once
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     setConnected,
     addMessage,

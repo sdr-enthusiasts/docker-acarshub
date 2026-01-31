@@ -326,8 +326,391 @@ export interface AcarshubVersion {
   is_outdated: boolean;
 }
 
+// HTML Message Types (for Socket.IO communication)
+export interface HtmlMsg {
+  msghtml: AcarsMsg;
+  loading?: boolean;
+  done_loading?: boolean;
+}
+
+// Map and Leaflet Types (will be used with react-leaflet)
+export interface AircraftIcon {
+  svg: string;
+  width: number;
+  height: number;
+}
+
+export interface SvgIcon {
+  name: string;
+  scale: number;
+}
+
+// Leaflet-specific types for ADS-B targets (using react-leaflet)
+export interface AdsbTarget {
+  id: string;
+  position: AdsbPlane;
+  last_updated: number;
+  num_messages: number;
+  messages?: AcarsMsg[];
+  icon: AircraftIcon | null;
+  // Note: Leaflet markers will be handled differently in React
+  // These properties are for reference only during migration
+  position_marker?: unknown;
+  datablock_marker?: unknown;
+}
+
 // Utility Types
 export interface WindowSize {
   height: number;
   width: number;
+}
+
+/**
+ * Socket.IO Event Types
+ * These define the structure of events sent and received via Socket.IO
+ */
+
+// Events received from backend
+export interface SocketEvents {
+  // ACARS message events
+  acars_msg: (data: HtmlMsg) => void;
+  newmsg: (data: { new: boolean }) => void;
+
+  // Label and term updates
+  labels: (data: Labels) => void;
+  terms: (data: Terms) => void;
+
+  // Search results
+  database_search_results: (data: SearchHtmlMsg) => void;
+
+  // System status and monitoring
+  system_status: (data: SystemStatus) => void;
+  signal: (data: Signal) => void;
+  signal_freqs: (data: SignalFreqData) => void;
+  signal_count: (data: SignalCountData) => void;
+
+  // ADS-B events
+  adsb: (data: Adsb) => void;
+
+  // Configuration
+  decoders: (data: Decoders) => void;
+
+  // Alert statistics
+  alert_terms_stats: (data: AlertTerm) => void;
+
+  // Database size
+  database_size: (data: DatabaseSize) => void;
+
+  // Version information
+  acarshub_version: (data: AcarshubVersion) => void;
+}
+
+// Events emitted to backend
+export interface SocketEmitEvents {
+  query_search: (params: CurrentSearch) => void;
+  update_alerts: (terms: Terms) => void;
+  signal_freqs: () => void;
+  signal_count: () => void;
+  alert_term_query: (params: {
+    icao: string;
+    flight: string;
+    tail: string;
+  }) => void;
+}
+
+/**
+ * React Component Prop Types
+ * Common prop interfaces for React components
+ */
+
+export interface BaseComponentProps {
+  className?: string;
+  style?: React.CSSProperties;
+  children?: React.ReactNode;
+}
+
+export interface MessageComponentProps extends BaseComponentProps {
+  message: AcarsMsg;
+  showDetails?: boolean;
+  onToggleDetails?: () => void;
+}
+
+export interface PlaneComponentProps extends BaseComponentProps {
+  plane: Plane;
+  expanded?: boolean;
+  onToggle?: () => void;
+}
+
+/**
+ * UI State Types
+ * Types for managing UI state in components
+ */
+
+export interface TabState {
+  activeTab: string;
+  tabs: TabConfig[];
+}
+
+export interface TabConfig {
+  id: string;
+  label: string;
+  icon?: string;
+  badge?: number;
+}
+
+export interface ModalState {
+  isOpen: boolean;
+  title?: string;
+  content?: React.ReactNode;
+  onClose?: () => void;
+}
+
+export interface TooltipConfig {
+  content: string | React.ReactNode;
+  position?: "top" | "bottom" | "left" | "right";
+  trigger?: "hover" | "click" | "focus";
+}
+
+/**
+ * Form and Input Types
+ */
+
+export interface FormFieldConfig {
+  name: string;
+  label: string;
+  type: "text" | "number" | "select" | "checkbox" | "textarea";
+  placeholder?: string;
+  required?: boolean;
+  defaultValue?: string | number | boolean;
+  options?: SelectOption[];
+}
+
+export interface SelectOption {
+  value: string | number;
+  label: string;
+  disabled?: boolean;
+}
+
+/**
+ * Statistics and Chart Types
+ */
+
+export interface ChartDataPoint {
+  timestamp: number;
+  value: number;
+  label?: string;
+}
+
+export interface ChartSeries {
+  name: string;
+  data: ChartDataPoint[];
+  color?: string;
+}
+
+export interface StatisticCard {
+  title: string;
+  value: string | number;
+  subtitle?: string;
+  trend?: "up" | "down" | "neutral";
+  trendValue?: string;
+}
+
+/**
+ * Theme Types
+ */
+
+export type Theme = "mocha" | "latte";
+
+export interface ThemeConfig {
+  theme: Theme;
+  setTheme: (theme: Theme) => void;
+}
+
+/**
+ * Error and Loading States
+ */
+
+export interface LoadingState {
+  isLoading: boolean;
+  message?: string;
+}
+
+export interface ErrorState {
+  hasError: boolean;
+  message?: string;
+  code?: string;
+}
+
+export interface ApiResponse<T> {
+  data?: T;
+  error?: ErrorState;
+  loading: LoadingState;
+}
+
+/**
+ * Pagination Types
+ */
+
+export interface PaginationConfig {
+  currentPage: number;
+  pageSize: number;
+  totalItems: number;
+  totalPages: number;
+}
+
+/**
+ * Filter and Sort Types
+ */
+
+export type SortDirection = "asc" | "desc";
+
+export interface SortConfig {
+  field: string;
+  direction: SortDirection;
+}
+
+export interface FilterConfig {
+  field: string;
+  operator: "equals" | "contains" | "startsWith" | "endsWith" | "gt" | "lt";
+  value: string | number | boolean;
+}
+
+/**
+ * User Settings and Preferences Types
+ */
+
+/**
+ * Time format options
+ * - auto: Detect from user's locale
+ * - 12h: 12-hour format with AM/PM
+ * - 24h: 24-hour format
+ */
+export type TimeFormat = "auto" | "12h" | "24h";
+
+/**
+ * Date format presets
+ */
+export type DateFormat =
+  | "auto" // Locale default
+  | "mdy" // MM/DD/YYYY (US)
+  | "dmy" // DD/MM/YYYY (Europe)
+  | "ymd" // YYYY-MM-DD (ISO)
+  | "long" // January 1, 2024
+  | "short"; // Jan 1, 2024
+
+/**
+ * Display density options
+ */
+export type DisplayDensity = "comfortable" | "compact" | "spacious";
+
+/**
+ * Notification preferences
+ */
+export interface NotificationSettings {
+  /** Enable desktop notifications */
+  desktop: boolean;
+  /** Enable sound alerts for matched messages */
+  sound: boolean;
+  /** Sound volume (0-100) */
+  volume: number;
+  /** Only notify for alert matches */
+  alertsOnly: boolean;
+}
+
+/**
+ * Regional and locale settings
+ */
+export interface RegionalSettings {
+  /** Time format preference */
+  timeFormat: TimeFormat;
+  /** Date format preference */
+  dateFormat: DateFormat;
+  /** Timezone display (future: allow override) */
+  timezone: "local" | "utc";
+  /** Locale override (undefined = auto-detect) */
+  locale?: string;
+}
+
+/**
+ * Appearance settings
+ */
+export interface AppearanceSettings {
+  /** Theme (Mocha/Latte) */
+  theme: Theme;
+  /** Display density */
+  density: DisplayDensity;
+  /** Show connection status indicator */
+  showConnectionStatus: boolean;
+  /** Enable animations */
+  animations: boolean;
+}
+
+/**
+ * Data and privacy settings
+ */
+export interface DataSettings {
+  /** Maximum messages to keep in memory per aircraft */
+  maxMessagesPerAircraft: number;
+  /** Enable local data caching */
+  enableCaching: boolean;
+  /** Auto-clear old data after N minutes */
+  autoClearMinutes: number;
+}
+
+/**
+ * Complete user settings object
+ */
+export interface UserSettings {
+  /** Appearance preferences */
+  appearance: AppearanceSettings;
+  /** Regional and time preferences */
+  regional: RegionalSettings;
+  /** Notification preferences */
+  notifications: NotificationSettings;
+  /** Data management preferences */
+  data: DataSettings;
+  /** Last updated timestamp */
+  updatedAt: number;
+  /** Settings version for migration */
+  version: number;
+}
+
+/**
+ * Default settings values
+ */
+export const DEFAULT_SETTINGS: UserSettings = {
+  appearance: {
+    theme: "mocha",
+    density: "comfortable",
+    showConnectionStatus: true,
+    animations: true,
+  },
+  regional: {
+    timeFormat: "auto",
+    dateFormat: "auto",
+    timezone: "local",
+  },
+  notifications: {
+    desktop: false,
+    sound: false,
+    volume: 50,
+    alertsOnly: true,
+  },
+  data: {
+    maxMessagesPerAircraft: 50,
+    enableCaching: true,
+    autoClearMinutes: 60,
+  },
+  updatedAt: Date.now(),
+  version: 1,
+};
+
+/**
+ * Settings section for UI organization
+ */
+export interface SettingsSection {
+  id: string;
+  title: string;
+  description?: string;
+  icon?: string;
 }

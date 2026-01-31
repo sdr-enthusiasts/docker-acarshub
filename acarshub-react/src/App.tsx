@@ -17,6 +17,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { ConnectionStatus } from "./components/ConnectionStatus.tsx";
 import { Navigation } from "./components/Navigation.tsx";
+import { SettingsModal } from "./components/SettingsModal.tsx";
 import { useSocketIO } from "./hooks/useSocketIO.ts";
 import { AboutPage } from "./pages/AboutPage.tsx";
 import { AlertsPage } from "./pages/AlertsPage.tsx";
@@ -42,6 +43,9 @@ function App() {
 
         {/* Connection status indicator */}
         <ConnectionStatus isConnected={isConnected} />
+
+        {/* Settings modal */}
+        <SettingsModal />
 
         {/* Main content area with routing */}
         <main className="app-content">

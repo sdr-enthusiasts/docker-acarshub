@@ -101,15 +101,24 @@ export type TypedSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 class SocketService {
   private socket: TypedSocket | null = null;
   private maxReconnectAttempts = 10;
+  private isInitializing = false;
 
   /**
    * Initialize Socket.IO connection
    * Should be called once when the application starts
+   * Handles React StrictMode double-invocation gracefully
    */
   connect(): TypedSocket {
-    if (this.socket?.connected) {
+    // Return existing socket if already connected or initializing
+    if (this.socket?.connected || this.isInitializing) {
+      if (!this.socket) {
+        throw new Error("Socket is initializing but instance is null");
+      }
       return this.socket;
     }
+
+    // Prevent multiple simultaneous initializations (StrictMode double-invocation)
+    this.isInitializing = true;
 
     // Initialize socket connection
     // The path will be proxied by nginx to the backend
@@ -120,34 +129,53 @@ class SocketService {
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
       reconnectionAttempts: this.maxReconnectAttempts,
+      // Suppress console warnings in development
+      autoConnect: true,
     });
 
     this.setupConnectionHandlers();
+
+    // Reset initialization flag after connection attempt
+    this.socket.on("connect", () => {
+      this.isInitializing = false;
+    });
+
+    this.socket.on("connect_error", () => {
+      this.isInitializing = false;
+    });
 
     return this.socket;
   }
 
   /**
    * Set up connection event handlers
-   * Logs connection state changes for debugging
+   * Logs connection state changes for debugging (only in development)
    */
   private setupConnectionHandlers(): void {
     if (!this.socket) return;
 
     this.socket.on("connect", () => {
-      console.log("[Socket.IO] Connected to ACARS Hub backend");
+      if (import.meta.env.DEV) {
+        console.log("[Socket.IO] Connected to ACARS Hub backend");
+      }
     });
 
     this.socket.on("disconnect", (reason) => {
-      console.warn("[Socket.IO] Disconnected:", reason);
+      if (import.meta.env.DEV) {
+        console.warn("[Socket.IO] Disconnected:", reason);
+      }
     });
 
     this.socket.on("reconnect", (attemptNumber) => {
-      console.log(`[Socket.IO] Reconnected after ${attemptNumber} attempts`);
+      if (import.meta.env.DEV) {
+        console.log(`[Socket.IO] Reconnected after ${attemptNumber} attempts`);
+      }
     });
 
     this.socket.on("error", (error) => {
-      console.error("[Socket.IO] Connection error:", error);
+      if (import.meta.env.DEV) {
+        console.error("[Socket.IO] Connection error:", error);
+      }
     });
   }
 
@@ -172,11 +200,16 @@ class SocketService {
   /**
    * Manually disconnect the socket
    * Should be called when the application unmounts
+   * Note: In StrictMode, this may be called during development cleanup
    */
   disconnect(): void {
     if (this.socket) {
+      if (import.meta.env.DEV) {
+        console.log("[Socket.IO] Disconnecting socket");
+      }
       this.socket.disconnect();
       this.socket = null;
+      this.isInitializing = false;
     }
   }
 

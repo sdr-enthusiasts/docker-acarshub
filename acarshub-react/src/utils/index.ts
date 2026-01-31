@@ -14,31 +14,17 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-import { StrictMode } from "react";
-import { createRoot } from "react-dom/client";
-import "./styles/main.scss";
-import App from "./App.tsx";
+/**
+ * Utility Functions Barrel Export
+ * Provides centralized access to all utility modules
+ */
 
-// Suppress React DevTools message in development
-if (import.meta.env.DEV) {
-  // biome-ignore lint/suspicious/noExplicitAny: Console type doesn't have __REACT_DEVTOOLS_GLOBAL_HOOK__
-  (console as any).__REACT_DEVTOOLS_GLOBAL_HOOK__ = {
-    ...console,
-    checkDCE: () => {},
-    supportsFiber: true,
-    inject: () => {},
-    onCommitFiberRoot: () => {},
-    onCommitFiberUnmount: () => {},
-  };
-}
+// Array and object utilities
+export * from "./arrayUtils";
+// Date utilities
+export * from "./dateUtils";
+// String utilities
+export * from "./stringUtils";
 
-const rootElement = document.getElementById("root");
-if (!rootElement) {
-  throw new Error("Root element not found");
-}
-
-createRoot(rootElement).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-);
+// Validation utilities
+export * from "./validationUtils";
