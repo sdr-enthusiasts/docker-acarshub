@@ -1,0 +1,748 @@
+# AGENTS.md - ACARS Hub Project Guide for AI Agents
+
+## Project Overview
+
+ACARS Hub is a web application for receiving, decoding, and displaying ACARS (Aircraft Communications Addressing and Reporting System) messages. The application consists of a Python backend (Flask/Socket.IO) and a TypeScript frontend that displays live aviation messages, maps, statistics, and alerts.
+
+## Current State
+
+- **Backend**: Python Flask application with Socket.IO for real-time communication
+- **Frontend (Legacy)**: ~7,929 lines of TypeScript using jQuery, Bootstrap 5, Leaflet, Chart.js
+- **Frontend (React)**: Custom SCSS with Catppuccin theming, no third-party CSS frameworks
+- **Build System (Legacy)**: Webpack with TypeScript, SASS
+- **Build System (React)**: Vite with TypeScript, SCSS
+- **Dependencies (Legacy)**: jQuery 3.7, jBox 1.3.3 (modals), Leaflet (maps), Socket.IO client
+- **Dependencies (React)**: React 19, Zustand, Socket.IO client, React Router
+
+## Project Goals
+
+### Primary Goal: React Migration
+
+The project is planned for a **complete rewrite in React** due to:
+
+1. **Architectural Issues**:
+   - Global state management problems (20+ global variables)
+   - Window object pollution with global functions
+   - Manual DOM manipulation throughout
+   - String-based HTML generation prone to errors
+   - No clear event architecture
+
+2. **Maintainability Issues**:
+   - Heavy jQuery usage with direct DOM manipulation
+   - jBox dependency with TypeScript type issues
+   - Monolithic components (e.g., LiveMessagePage is 991 lines)
+   - Overuse of `any` type defeating TypeScript benefits
+
+3. **Target Outcome**:
+   - Functionally identical application with visual improvements
+   - Proper TypeScript conventions (eliminate all `any` usage)
+   - Component-based architecture
+   - Reactive state management
+   - Easier to maintain and extend
+   - Better testing capabilities
+
+### Interim Improvements
+
+While planning the React migration, incremental improvements to the current codebase are acceptable:
+
+- Create custom formatters for consistent HTML generation
+- Refactor large functions into smaller, logical units
+- Add comprehensive comments explaining complex logic
+- Improve type safety where possible
+- Extract reusable utilities
+
+## Project Structure
+
+### React Migration Directory
+
+The React migration will be built **independently** from the current frontend in a new top-level directory:
+
+```text
+docker-acarshub/
+├── acarshub-typescript/    # Current jQuery/TypeScript frontend (legacy)
+├── acarshub-react/         # New React frontend (migration target)
+│   ├── src/
+│   │   ├── components/     # React components
+│   │   ├── pages/          # Page components
+│   │   ├── hooks/          # Custom React hooks
+│   │   ├── store/          # State management (Zustand)
+│   │   ├── services/       # Socket.IO and API services
+│   │   ├── types/          # TypeScript interfaces (migrated from legacy)
+│   │   ├── utils/          # Utility functions
+│   │   ├── assets/         # Static assets
+│   │   └── App.tsx         # Root component
+│   ├── public/             # Public assets
+│   ├── package.json
+│   ├── tsconfig.json
+│   ├── vite.config.ts      # Vite build configuration
+│   └── index.html
+├── rootfs/
+│   ├── etc/nginx.acarshub/ # nginx configuration
+│   └── webapp/             # Python Flask backend
+└── flake.nix               # Nix development environment
+```
+
+**Rationale for Separate Directory**:
+
+- Clean slate without legacy code interference
+- Independent build pipeline (Vite vs Webpack)
+- Easy A/B testing and gradual rollout
+- Legacy frontend remains functional during migration
+- Clear separation of old vs new code for review
+
+## Deployment Architecture
+
+### Current State (Legacy)
+
+- Flask serves static assets via `send_from_directory`
+- nginx proxies to Flask/Gunicorn on port 8888
+- Mixed responsibility between Python and nginx
+
+### Target State (React Migration)
+
+Flask/Python backend **ONLY** handles:
+
+- WebSocket communication (Socket.IO)
+- `/socket.io/*` endpoints
+- `/metrics` endpoint
+- Business logic and data processing
+
+nginx **ONLY** handles:
+
+- Serving static assets (HTML, CSS, JS, images)
+- Asset caching with proper headers
+- Routing SPA paths to `index.html`
+- Proxying WebSocket connections to Python backend
+
+**Benefits**:
+
+- Clear separation of concerns
+- Better performance (nginx is optimized for static files)
+- Simplified Python codebase
+- Standard production deployment pattern
+- Easier horizontal scaling
+
+### nginx Configuration Updates Required
+
+The existing nginx configuration at `rootfs/etc/nginx.acarshub/sites-enabled/acarshub` already implements most of this pattern. For React migration:
+
+- Update root path to point to React build output
+- Ensure all React Router paths serve `index.html`
+- Maintain existing proxy rules for `/socket.io` and `/metrics`
+
+## Tooling and Environment Management
+
+### Development Environment: Nix Flakes
+
+All development tooling is managed via `flake.nix`. This includes:
+
+- Node.js and npm
+- TypeScript compiler
+- Python and PDM
+- Biome (linter/formatter)
+- Pre-commit hooks
+
+### Adding New Tools
+
+**For basic npm packages** (libraries, React dependencies):
+
+- Add to `package.json` in the appropriate directory
+- Install normally with `npm install`
+
+**For system-level tools** (compilers, formatters, build tools):
+
+1. Add the tool to `flake.nix` in the `packages` or `buildInputs` list
+2. **STOP** and notify the user: "I need to add [tool] to flake.nix. Please reload your environment with `nix develop` or `direnv allow`, then I can continue."
+3. Wait for user confirmation before proceeding
+4. Continue with the task after environment reload
+
+**Examples of tools requiring flake.nix**:
+
+- Vite, esbuild, or other build tools
+- Test runners (Jest, Vitest, Playwright)
+- Additional linters or formatters
+- Database tools or CLIs
+- Any binary that runs outside of npm scripts
+
+### Git Commands
+
+When using git programmatically (for inspecting changes, logs, etc.), **always** use the `--no-pager` flag:
+
+```bash
+git --no-pager diff
+git --no-pager log --oneline -10
+git --no-pager show HEAD
+```
+
+This prevents pagination that blocks automated processes.
+
+## Code Quality Requirements
+
+All code changes MUST pass the following checks before committing:
+
+### 1. Biome (Linter/Formatter)
+
+```bash
+biome check
+```
+
+### 2. TypeScript Compilation
+
+```bash
+tsc --noEmit -p acarshub-typescript/tsconfig.json
+```
+
+### 3. Pre-commit Hooks
+
+```bash
+pre-commit run --all-files
+```
+
+### 4. Git Usage
+
+When using git commands programmatically, use the `--no-pager` flag:
+
+```bash
+git --no-pager diff
+git --no-pager log
+git --no-pager show
+```
+
+## Development Guidelines
+
+### TypeScript Standards
+
+1. **No `any` Type**: Eliminate all uses of `any` in new code
+   - Use proper type definitions
+   - Create interfaces for complex objects
+   - Use generics where appropriate
+   - For external libraries without types, create `.d.ts` declarations
+
+2. **Proper Typing**:
+   - All function parameters must be typed
+   - All function return types must be explicit
+   - Use strict TypeScript settings
+   - Leverage type inference only when obvious
+
+3. **Interfaces**: Use existing interfaces in `src/interfaces.ts` and add new ones as needed
+
+### Style Standards
+
+1. **NO INLINE STYLES** - All styling must be in SCSS files
+
+2. **NO THIRD-PARTY CSS FRAMEWORKS** - Do not use Bootstrap, Tailwind, Material-UI, or any other CSS framework
+   - Write all styles from scratch using SCSS
+   - Create custom components and utilities as needed
+
+3. **CATPPUCCIN THEMING REQUIRED**:
+   - **Dark Theme**: Catppuccin Mocha (default)
+   - **Light Theme**: Catppuccin Latte
+   - Use SCSS mixins and CSS variables from Catppuccin color palettes
+   - Theme switching should only swap variable names in mixins
+   - Follow Catppuccin color naming conventions: base, mantle, crust, text, subtext0, subtext1, overlay0, overlay1, overlay2, surface0, surface1, surface2, blue, lavender, sapphire, sky, teal, green, yellow, peach, maroon, red, mauve, pink, flamingo, rosewater
+   - Reference: <https://github.com/catppuccin/catppuccin>
+
+4. **SCSS Requirements**:
+   - Use SCSS for all styling (not plain CSS)
+   - Organize styles with partials: `_variables.scss`, `_mixins.scss`, `_themes.scss`, `_components.scss`
+   - Use nesting, variables, and mixins appropriately
+   - Follow BEM or similar naming convention for class names
+   - Keep specificity low, avoid deep nesting (max 3-4 levels)
+
+### Code Organization
+
+1. **Separation of Concerns**:
+   - HTML generation separate from business logic
+   - Data processing separate from presentation
+   - Event handlers separate from state management
+
+2. **Function Size**:
+   - Keep functions small and focused (prefer <50 lines)
+   - Extract complex logic into helper functions
+   - Use meaningful function and variable names
+
+3. **Comments**:
+   - Document WHY, not WHAT
+   - Explain complex algorithms or business logic
+   - Add JSDoc comments for public functions
+   - No summary markdown documents allowed
+
+### HTML Generation
+
+Current approach uses string concatenation (will be eliminated in React migration):
+
+```typescript
+// Current pattern in html_functions.ts
+function generate_html(data: SomeType): string {
+  let html = "<div>";
+  html += `<span>${data.value}</span>`;
+  html += "</div>";
+  return html;
+}
+```
+
+When adding new formatters:
+
+- Follow existing patterns for consistency
+- Use template literals for readability
+- Properly escape user input
+- Keep formatters focused on single responsibility
+
+### State Management
+
+Current architecture (to be replaced):
+
+- Global variables in `index.ts`
+- Window object methods
+- Page classes with internal state
+
+Avoid adding new global state. Prefer passing data through function parameters.
+
+### Event Handling
+
+Current system uses:
+
+- Socket.IO events for backend communication
+- jQuery event handlers
+- Window object global functions
+
+For new code:
+
+- Document event flow clearly
+- Avoid creating new global functions on window
+- Keep event handlers simple, delegate to methods
+
+## File Structure
+
+```text
+acarshub-typescript/
+├── src/
+│   ├── assets/          # Images, icons, static assets
+│   ├── css/             # SCSS styles (modules, components, pages)
+│   ├── helpers/         # Utility functions and helpers
+│   │   ├── html_functions.ts      # HTML generation utilities
+│   │   ├── html_generator.ts      # Message display logic
+│   │   ├── menu.ts                # Navigation menu
+│   │   ├── settings_manager.ts    # Settings modal system
+│   │   └── tooltips.ts            # jBox tooltip definitions
+│   ├── js-other/        # Third-party JS utilities
+│   ├── pages/           # Page classes
+│   │   ├── master.ts              # Base page class
+│   │   ├── live_messages.ts       # Main message display
+│   │   ├── live_map.ts            # Aircraft map view
+│   │   ├── alerts.ts              # Alert filtering
+│   │   ├── search.ts              # Database search
+│   │   ├── stats.ts               # Statistics/graphs
+│   │   ├── status.ts              # System status
+│   │   └── about.ts               # About/help page
+│   ├── index.ts         # Main entry point
+│   ├── interfaces.ts    # TypeScript type definitions
+│   └── typings.d.ts     # External library type declarations
+├── package.json
+├── tsconfig.json
+└── webpack.config.js
+```
+
+## Key Interfaces
+
+All message and data types are defined in `src/interfaces.ts`:
+
+- `acars_msg`: Core ACARS message structure
+- `plane`: Aircraft with messages
+- `adsb_plane`: ADS-B aircraft position data
+- `decoders`: Enabled decoders configuration
+- `system_status`: Backend system status
+- And many more...
+
+Always use these interfaces. Add new interfaces to this file when needed.
+
+## Socket.IO Communication
+
+Backend communicates via Socket.IO with these key events:
+
+**Received Events**:
+
+- `acars_msg`: New ACARS message
+- `labels`: Message label definitions
+- `terms`: Alert term updates
+- `database_search_results`: Search results
+- `system_status`: System health status
+- `signal`: Signal level data
+- And more...
+
+**Emitted Events**:
+
+- `query_search`: Database search request
+- `update_alerts`: Update alert terms
+- `signal_freqs`: Request frequency data
+- And more...
+
+See `src/index.ts` lines 257-416 for complete event handling.
+
+## Dependencies to Replace in React Migration
+
+1. **jBox** → Custom React modals (no third-party library)
+2. **jQuery** → React + vanilla JS
+3. **Manual DOM manipulation** → React components
+4. **String HTML generation** → JSX
+5. **Global state** → Zustand
+6. **Bootstrap 5** → Custom SCSS with Catppuccin theming
+7. **Chart.js** → Recharts or react-chartjs-2
+8. **Leaflet** → react-leaflet
+
+## Styling Guidelines (React Migration)
+
+### Theme System
+
+The React application uses **Catppuccin** color schemes exclusively:
+
+- **Catppuccin Mocha** (Dark theme) - default
+- **Catppuccin Latte** (Light theme)
+
+### Color Palette Variables
+
+All colors must come from Catppuccin palettes. Do not use arbitrary colors.
+
+**Mocha (Dark) Colors**:
+
+```scss
+$mocha-rosewater: #f5e0dc;
+$mocha-flamingo: #f2cdcd;
+$mocha-pink: #f5c2e7;
+$mocha-mauve: #cba6f7;
+$mocha-red: #f38ba8;
+$mocha-maroon: #eba0ac;
+$mocha-peach: #fab387;
+$mocha-yellow: #f9e2af;
+$mocha-green: #a6e3a1;
+$mocha-teal: #94e2d5;
+$mocha-sky: #89dceb;
+$mocha-sapphire: #74c7ec;
+$mocha-blue: #89b4fa;
+$mocha-lavender: #b4befe;
+$mocha-text: #cdd6f4;
+$mocha-subtext1: #bac2de;
+$mocha-subtext0: #a6adc8;
+$mocha-overlay2: #9399b2;
+$mocha-overlay1: #7f849c;
+$mocha-overlay0: #6c7086;
+$mocha-surface2: #585b70;
+$mocha-surface1: #45475a;
+$mocha-surface0: #313244;
+$mocha-base: #1e1e2e;
+$mocha-mantle: #181825;
+$mocha-crust: #11111b;
+```
+
+**Latte (Light) Colors**:
+
+```scss
+$latte-rosewater: #dc8a78;
+$latte-flamingo: #dd7878;
+$latte-pink: #ea76cb;
+$latte-mauve: #8839ef;
+$latte-red: #d20f39;
+$latte-maroon: #e64553;
+$latte-peach: #fe640b;
+$latte-yellow: #df8e1d;
+$latte-green: #40a02b;
+$latte-teal: #179299;
+$latte-sky: #04a5e5;
+$latte-sapphire: #209fb5;
+$latte-blue: #1e66f5;
+$latte-lavender: #7287fd;
+$latte-text: #4c4f69;
+$latte-subtext1: #5c5f77;
+$latte-subtext0: #6c6f85;
+$latte-overlay2: #7c7f93;
+$latte-overlay1: #8c8fa1;
+$latte-overlay0: #9ca0b0;
+$latte-surface2: #acb0be;
+$latte-surface1: #bcc0cc;
+$latte-surface0: #ccd0da;
+$latte-base: #eff1f5;
+$latte-mantle: #e6e9ef;
+$latte-crust: #dce0e8;
+```
+
+### SCSS File Structure
+
+```text
+src/
+├── styles/
+│   ├── _variables.scss      # Catppuccin color variables
+│   ├── _mixins.scss          # Theme mixins and utilities
+│   ├── _themes.scss          # Theme definitions (mocha/latte)
+│   ├── _reset.scss           # CSS reset
+│   ├── components/
+│   │   ├── _navigation.scss
+│   │   ├── _button.scss
+│   │   ├── _modal.scss
+│   │   └── ...
+│   ├── pages/
+│   │   ├── _live-messages.scss
+│   │   ├── _search.scss
+│   │   └── ...
+│   └── main.scss             # Main import file
+```
+
+### Theme Switching Pattern
+
+Use SCSS mixins to define themes. Only variable names should change:
+
+```scss
+// _mixins.scss
+@mixin theme-mocha {
+  --color-base: #{$mocha-base};
+  --color-text: #{$mocha-text};
+  --color-primary: #{$mocha-blue};
+  // ... etc
+}
+
+@mixin theme-latte {
+  --color-base: #{$latte-base};
+  --color-text: #{$latte-text};
+  --color-primary: #{$latte-blue};
+  // ... etc
+}
+
+// _themes.scss
+:root {
+  @include theme-mocha; // Default dark theme
+}
+
+[data-theme="light"] {
+  @include theme-latte;
+}
+```
+
+### Styling Rules
+
+1. **No arbitrary colors** - Every color must be from Catppuccin palette
+2. **Use CSS custom properties** - Define in mixins, use in components
+3. **Component-scoped styles** - Each component has its own SCSS partial
+4. **Mobile-first responsive design** - Use `min-width` media queries
+5. **Accessibility** - Maintain WCAG AA contrast ratios, focus states, ARIA support
+6. **No !important** - Structure CSS to avoid specificity wars
+7. **Semantic class names** - Use BEM: `.block__element--modifier`
+
+## Testing Strategy (Future)
+
+React migration should include:
+
+- Component unit tests (Jest + React Testing Library)
+- Integration tests for Socket.IO communication
+- E2E tests for critical user flows (Playwright/Cypress)
+
+## Performance Considerations
+
+- Application handles real-time message streams
+- Live map may show 100+ aircraft simultaneously
+- Message history limited to 50 messages per aircraft
+- Efficient re-rendering critical for user experience
+
+## Browser Support
+
+Target modern browsers with ES6+ support:
+
+- Chrome/Edge (latest)
+- Firefox (latest)
+- Safari (latest)
+
+## Documentation Standards
+
+- No summary markdown documents allowed
+- Comments must explain complex logic and business rules
+- Keep documentation close to code (JSDoc, inline comments)
+- Update this AGENTS.md file when project goals change
+
+## Questions to Ask Before Making Changes
+
+1. Does this align with the React migration goal?
+2. Will this code be throwaway or reusable in React?
+3. Does it pass all quality checks (biome, tsc, pre-commit)?
+4. Does it introduce new global state? (Avoid if possible)
+5. Does it use `any` type? (Eliminate if possible)
+6. Is it properly commented?
+7. Does it follow existing patterns for consistency?
+
+## React Migration Phases
+
+### Phase 1: Project Setup and Foundation ✅ COMPLETE
+
+- ✅ Create `acarshub-react/` directory structure
+- ✅ Initialize Vite + React + TypeScript project
+- ✅ Configure Biome for React (extends existing config)
+- ✅ Set up TypeScript with strict mode
+- ✅ Integrate Socket.IO client with type-safe events
+- ✅ Create base layout shell with navigation
+- ✅ Implement routing with React Router (7 routes)
+- ✅ Set up Zustand for state management
+- ✅ All page placeholders created
+- ✅ Connection status indicator
+- ✅ Production build successful
+- **Deliverable**: Empty app shell with navigation and Socket.IO connection ✅
+
+**Next Steps**: Remove Bootstrap, implement SCSS with Catppuccin theming
+
+### Phase 2: Styling System and Theme Implementation
+
+- Remove Bootstrap dependency
+- Set up SCSS file structure (partials, components, pages)
+- Implement Catppuccin Mocha (dark) theme with full color palette
+- Implement Catppuccin Latte (light) theme with full color palette
+- Create theme switching mechanism using SCSS mixins and CSS variables
+- Build custom button components with Catppuccin colors
+- Build custom form components (inputs, selects, checkboxes)
+- Build custom modal/dialog components
+- Create responsive navigation with Catppuccin styling
+- Establish reusable SCSS mixins for common patterns
+- Set up testing infrastructure (Vitest + React Testing Library)
+- **Deliverable**: Complete custom styling system with Catppuccin theming
+
+### Phase 3: Type System and Shared Utilities
+
+- Complete migration of remaining interfaces from `acarshub-typescript/src/interfaces.ts`
+- Port utility functions that will be reused
+- Create reusable UI components (cards, badges, tooltips)
+- **Deliverable**: Complete type definitions and utility foundations
+
+### Phase 4: About Page (Simplest Page - Proof of Concept)
+
+- Migrate About page content from legacy system
+- Implement markdown rendering for help documentation
+- Create settings modal with Catppuccin-styled components
+- Build theme switcher UI (Mocha ↔ Latte)
+- Implement version display and update checker
+- Document component patterns and conventions
+- **Deliverable**: Fully functional About page with settings and theme switching
+
+### Phase 5: Statistics and Graphs
+
+- Migrate Stats page with react-chartjs-2 or Recharts
+- Implement real-time chart updates via Socket.IO
+- Create reusable chart components
+- Handle historical data loading
+- **Deliverable**: Interactive statistics dashboard
+
+### Phase 6: Live Map (Complex Visualization)
+
+- Migrate LiveMap page with react-leaflet
+- Handle 100+ aircraft markers efficiently
+- Implement clustering and filtering
+- Connect to ADS-B data streams
+- Optimize re-rendering for performance
+- **Deliverable**: Real-time aircraft map
+
+### Phase 7: Live Messages (Core Functionality)
+
+- Migrate LiveMessages page (most complex)
+- Break down 991-line component into smaller pieces
+- Implement message list virtualization for performance
+- Create message detail components
+- Handle real-time message streams
+- Implement filtering and search
+- **Deliverable**: Fully functional message viewer
+
+### Phase 8: Alerts and Search
+
+- Migrate Alerts page with term filtering
+- Migrate Search page with database queries
+- Implement alert notification system
+- **Deliverable**: Alert management and database search
+
+### Phase 9: System Status
+
+- Migrate Status page
+- Display decoder health and statistics
+- Implement system monitoring UI
+- **Deliverable**: System status dashboard
+
+### Phase 10: Testing, Polish, and Deployment
+
+- Comprehensive component tests
+- Integration tests for Socket.IO flows
+- E2E tests for critical user journeys (Playwright)
+- Performance optimization and bundle analysis
+- Accessibility audit and fixes
+- Update nginx configuration for production
+- Remove Flask static file serving code
+- Documentation updates
+- **Deliverable**: Production-ready React application
+
+### Phase 11: Cutover and Cleanup
+
+- Deploy React build alongside legacy frontend
+- A/B testing period
+- Monitor for issues
+- Full cutover to React frontend
+- Archive `acarshub-typescript/` directory
+- Remove legacy build tooling
+
+## Current Focus
+
+### During React Migration
+
+- Focus on one phase at a time
+- Maintain functional parity with legacy frontend
+- Eliminate all `any` types in React code
+- Write tests alongside components
+- Document component APIs with JSDoc
+- Regular check-ins on bundle size and performance
+
+### For Legacy Codebase (acarshub-typescript/)
+
+Until migration is complete:
+
+- Bug fixes only (minimal changes)
+- No new features in legacy code
+- Small refactorings that improve maintainability are acceptable
+- Type safety improvements are acceptable
+- Keep legacy frontend functional during migration
+- Avoid large architectural changes
+
+### Quality Gates for React Migration
+
+Before moving to the next phase:
+
+1. All TypeScript strict mode errors resolved
+2. No `any` types (use `unknown` with type guards if necessary)
+3. Component tests written and passing
+4. Biome checks passing
+5. No console errors or warnings
+6. Performance benchmarked (no regressions)
+7. Accessibility checked (keyboard navigation, ARIA labels)
+
+## Agent Workflow Guidelines
+
+### Before Starting Work
+
+1. Read AGENTS.md (this file) completely
+2. Understand which phase of migration is active
+3. Check if new tooling is needed → update flake.nix → wait for user
+4. Review quality requirements
+
+### During Development
+
+1. Make incremental changes
+2. Run quality checks frequently (`biome check`, `tsc --noEmit`)
+3. Test in browser regularly
+4. Document complex logic with comments
+5. Ask clarifying questions if requirements are unclear
+
+### Before Completing Work
+
+1. Run all quality checks
+2. Verify no `any` types introduced
+3. Ensure proper TypeScript typing
+4. Confirm no inline styles
+5. Run `git --no-pager diff` to review changes
+6. Suggest next steps or improvements
+
+### Communication Style
+
+- Be direct and technical
+- Explain architectural decisions
+- Highlight trade-offs when they exist
+- Point out potential issues proactively
+- Provide code examples when explaining concepts

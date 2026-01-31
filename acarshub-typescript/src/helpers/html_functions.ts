@@ -143,13 +143,13 @@ export const html_functions = {
     return `<span class="${tooltip_text}"${extra_content}>${field_name}: <strong>${field_value}</strong></span><br>`;
   },
 
-  format_libacars_frequency_data: function (data: any): string {
+  format_libacars_frequency_data: (data: any): string => {
     let html = '<div class="libacars-freq-data">';
     html += "<strong>Ground Station Frequency Information:</strong><br>";
 
     if (data.freq_data && Array.isArray(data.freq_data)) {
       for (const station of data.freq_data) {
-        if (station.gs && station.gs.name) {
+        if (station.gs?.name) {
           html += `<div style="margin-left: 20px; margin-top: 10px;">`;
           html += `<strong>${station.gs.name}</strong>`;
 
@@ -306,7 +306,7 @@ export const html_functions = {
     matched_text?: string[] | object,
   ): string {
     // Format newlines properly for display
-    let formatted_data = data.replace(/\\r\\n/g, "<br>");
+    const formatted_data = data.replace(/\\r\\n/g, "<br>");
 
     let html = '<div class="message-container">';
     html += '<div class="text_top">';
@@ -376,10 +376,7 @@ export const html_functions = {
         // Determine the type of libacars message and format accordingly
         if (parsed_data.freq_data) {
           html_output += this.format_libacars_frequency_data(parsed_data);
-        } else if (
-          parsed_data.msg_type &&
-          parsed_data.msg_type.includes("cpdlc")
-        ) {
+        } else if (parsed_data.msg_type?.includes("cpdlc")) {
           html_output += this.format_libacars_cpdlc(parsed_data);
         } else {
           // Generic formatter for unknown types

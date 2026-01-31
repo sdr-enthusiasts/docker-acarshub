@@ -1,0 +1,118 @@
+// Copyright (C) 2022-2024 Frederick Clausen II
+// This file is part of acarshub <https://github.com/sdr-enthusiasts/docker-acarshub>.
+
+// acarshub is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+
+// acarshub is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+
+// You should have received a copy of the GNU General Public License
+// along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
+
+import { NavLink } from "react-router-dom";
+import {
+  selectAdsbEnabled,
+  selectAlertCount,
+  useAppStore,
+} from "../store/useAppStore";
+
+/**
+ * Navigation Component
+ * Displays the main navigation menu with links to all pages
+ * Conditionally shows ADS-B link based on decoder configuration
+ */
+export const Navigation = () => {
+  const adsbEnabled = useAppStore(selectAdsbEnabled);
+  const alertCount = useAppStore(selectAlertCount);
+  const setSettingsOpen = useAppStore((state) => state.setSettingsOpen);
+
+  const handleSettingsClick = () => {
+    setSettingsOpen(true);
+  };
+
+  return (
+    <header className="navigation">
+      <div className="wrap">
+        <span className="decor"></span>
+
+        {/* Mobile menu */}
+        <details className="show_when_small small_nav" id="menu_details">
+          <summary className="menu_non_link">Menu</summary>
+          <NavLink to="/live-messages">Live Messages</NavLink>
+          <br />
+          {adsbEnabled && (
+            <>
+              <NavLink to="/adsb">Live Map</NavLink>
+              <br />
+            </>
+          )}
+          <NavLink to="/search">Search Database</NavLink>
+          <br />
+          <NavLink to="/alerts">
+            Alerts
+            {alertCount > 0 && (
+              <span className="alert-count"> ({alertCount})</span>
+            )}
+          </NavLink>
+          <br />
+          <NavLink to="/stats">Statistics</NavLink>
+          <br />
+          <button
+            type="button"
+            onClick={handleSettingsClick}
+            className="link-button"
+          >
+            Settings
+          </button>
+        </details>
+
+        {/* Desktop menu */}
+        <nav className="hide_when_small">
+          <ul className="primary">
+            <li className="img_box" id="logo_image">
+              <span className="logo-text">ACARS Hub</span>
+            </li>
+            <li>
+              <NavLink to="/live-messages">Live Messages</NavLink>
+            </li>
+            {adsbEnabled && (
+              <li>
+                <NavLink to="/adsb">Live Map</NavLink>
+              </li>
+            )}
+            <li>
+              <NavLink to="/search">Search Database</NavLink>
+            </li>
+            <li>
+              <NavLink to="/alerts">
+                Alerts
+                {alertCount > 0 && (
+                  <span className="alert-count"> ({alertCount})</span>
+                )}
+              </NavLink>
+            </li>
+            <li>
+              <NavLink to="/stats">Statistics</NavLink>
+            </li>
+            <li className="right_side">
+              <span id="modal_text">
+                <button
+                  type="button"
+                  onClick={handleSettingsClick}
+                  className="link-button"
+                >
+                  Settings
+                </button>
+              </span>
+            </li>
+          </ul>
+        </nav>
+      </div>
+    </header>
+  );
+};
