@@ -22,14 +22,61 @@
 // =============================================================================
 
 .stats-page {
+  // Prevent scroll anchoring on the entire page
+  overflow-anchor: none;
+  position: relative;
+  isolation: isolate; // Create new stacking context to isolate reflows
+
   // Page content wrapper
   .page__content {
     max-width: 1400px;
     margin: 0 auto;
     padding: var(--spacing-lg);
+    overflow-anchor: none; // Prevent browser scroll anchoring
 
     @media (max-width: 767px) {
       padding: var(--spacing-md);
+    }
+  }
+
+  // Section navigation
+  &__section-nav {
+    margin-top: $spacing-md;
+    margin-bottom: $spacing-md;
+    background-color: var(--color-surface0);
+    border-radius: $radius-lg;
+    padding: $spacing-sm;
+    border: 1px solid var(--color-surface2);
+
+    @media (max-width: 767px) {
+      padding: $spacing-xs;
+      margin-bottom: $spacing-sm;
+    }
+  }
+
+  // Section content wrapper
+  &__section-content {
+    // Single card view - no scrolling
+    min-height: 600px;
+
+    @media (max-width: 767px) {
+      min-height: 400px;
+    }
+  }
+
+  // Card spacing
+  .card {
+    margin-bottom: $spacing-xl;
+    overflow-anchor: none; // Prevent scroll anchoring in cards
+    contain: layout style; // Isolate card layout from siblings
+    transform: translateZ(0); // Force GPU layer
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+
+    @media (max-width: 767px) {
+      margin-bottom: $spacing-lg;
     }
   }
 
@@ -56,6 +103,38 @@
       color: var(--color-subtext1);
       padding: var(--spacing-lg);
       text-align: center;
+    }
+  }
+
+  // Chart wrapper with rounded borders and padding
+  .chart-wrapper {
+    background-color: var(--color-surface0);
+    border: 1px solid var(--color-surface2);
+    border-radius: $radius-lg;
+    padding: $spacing-lg;
+    min-height: 250px; // Prevent layout shifts that cause scroll jumps
+    contain: layout style paint; // Strict containment to prevent reflows
+    overflow-anchor: none; // Disable browser scroll anchoring
+    margin-top: 0; // Add top margin for spacing from card header
+    content-visibility: auto; // Optimize rendering and prevent layout thrashing
+    transform: translateZ(0); // Force GPU acceleration and create new layer
+    backface-visibility: hidden; // Optimize for transforms
+
+    // Nested divs should also prevent anchoring
+    > div {
+      overflow-anchor: none;
+      position: relative; // Create positioning context
+    }
+
+    @media (max-width: 767px) {
+      padding: $spacing-md;
+      min-height: 200px;
+      margin-top: $spacing-md;
+    }
+
+    // First chart wrapper in a card should have top margin
+    .chart-section__header + & {
+      margin-top: $spacing-md;
     }
   }
 
@@ -134,6 +213,10 @@
       }
     }
 
+    .chart-wrapper {
+      padding: $spacing-sm;
+    }
+
     .stats-image {
       &:not([src]) {
         min-height: 150px;
@@ -150,6 +233,10 @@
       @media (max-width: 767px) {
         padding: var(--spacing-lg);
       }
+    }
+
+    .chart-wrapper {
+      padding: $spacing-xl;
     }
 
     .stats-image {

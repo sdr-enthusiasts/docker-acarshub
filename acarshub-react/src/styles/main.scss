@@ -44,6 +44,7 @@
 @use "components/radio";
 @use "components/settings-modal";
 @use "components/chart";
+@use "components/tab-switcher";
 
 /* Pages */
 @use "pages/common";
@@ -61,6 +62,7 @@
 .app-content {
   flex: 1;
   overflow-y: auto;
+  overflow-anchor: none; // Prevent scroll anchoring
   background-color: var(--color-mantle);
 
   // Custom scrollbar

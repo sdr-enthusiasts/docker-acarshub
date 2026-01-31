@@ -25,7 +25,7 @@ import {
   type TooltipItem,
 } from "chart.js";
 import ChartDataLabels from "chartjs-plugin-datalabels";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { Bar } from "react-chartjs-2";
 import type { SignalCountData } from "../../types";
 import { ChartContainer } from "./ChartContainer";
@@ -69,6 +69,18 @@ export const MessageCountChart = ({
   showEmptyMessages,
   className = "",
 }: MessageCountChartProps) => {
+  // Diagnostic logging to detect mount/unmount cycles
+  useEffect(() => {
+    console.log(
+      `[MessageCountChart] ${showEmptyMessages ? "EMPTY" : "DATA"} MOUNTED`,
+    );
+    return () => {
+      console.log(
+        `[MessageCountChart] ${showEmptyMessages ? "EMPTY" : "DATA"} UNMOUNTED`,
+      );
+    };
+  }, [showEmptyMessages]);
+
   // Process count data and prepare for chart
   const chartData = useMemo(() => {
     if (!countData || !countData.count) {
@@ -119,24 +131,34 @@ export const MessageCountChart = ({
     };
   }, [countData, showEmptyMessages]);
 
-  // Chart options with Catppuccin theming
+  // Chart options with Catppuccin theming - memoized with stable dependencies
   const options = useMemo(() => {
     // Get current theme colors from CSS variables
     const styles = getComputedStyle(document.documentElement);
     const textColor = styles.getPropertyValue("--color-text").trim();
     const gridColor = styles.getPropertyValue("--color-surface2").trim();
+    const surface0 = styles.getPropertyValue("--color-surface0").trim();
 
     return {
       responsive: true,
       maintainAspectRatio: false,
-      indexAxis: "y" as const, // Horizontal bars
+      maxBarThickness: 15, // Limit bar width to 15px
+      animation: {
+        duration: 0, // Disable animations to prevent layout shifts
+      },
+      layout: {
+        padding: {
+          right: 70, // Add padding to prevent label clipping
+        },
+      },
       plugins: {
         legend: {
           display: false, // Hide legend for cleaner look
         },
         tooltip: {
           enabled: true,
-          backgroundColor: styles.getPropertyValue("--color-surface0").trim(),
+          position: "nearest" as const,
+          backgroundColor: surface0,
           titleColor: textColor,
           bodyColor: textColor,
           borderColor: gridColor,
@@ -229,15 +251,7 @@ export const MessageCountChart = ({
   // Show empty state if no data
   if (!chartData) {
     return (
-      <ChartContainer
-        title={
-          showEmptyMessages
-            ? "Empty Message Statistics"
-            : "Data Message Statistics"
-        }
-        subtitle="Message count breakdown"
-        className={className}
-      >
+      <ChartContainer className={className}>
         <div className="chart-no-data">
           <p className="chart-no-data__message">
             No message count data available
@@ -252,7 +266,11 @@ export const MessageCountChart = ({
 
   return (
     <ChartContainer className={className}>
-      <Bar data={chartData} options={options} />
+      <div
+        key={`message-count-chart-wrapper-${showEmptyMessages ? "empty" : "data"}`}
+      >
+        <Bar data={chartData} options={options} />
+      </div>
     </ChartContainer>
   );
 };

@@ -60,6 +60,24 @@ export interface ServerToClientEvents {
   signal_freqs: (data: SignalFreqData) => void;
   signal_count: (data: SignalCountData) => void;
 
+  // RRD time-series data
+  rrd_timeseries_data: (data: {
+    data: Array<{
+      timestamp: number;
+      acars: number;
+      vdlm: number;
+      hfdl: number;
+      imsl: number;
+      irdm: number;
+      total: number;
+      error: number;
+    }>;
+    time_period?: string;
+    resolution?: string;
+    data_sources?: string[];
+    error?: string;
+  }) => void;
+
   // ADS-B data
   adsb: (data: Adsb) => void;
   adsb_status: (data: AdsbStatus) => void;
@@ -85,6 +103,9 @@ export interface ClientToServerEvents {
   // Signal queries
   signal_freqs: (data: { freqs: boolean }) => void;
   signal_count: (data: { count: boolean }) => void;
+
+  // RRD time-series queries
+  rrd_timeseries: (data: { time_period: string }) => void;
 
   // Page change notification
   page_change: (data: { page: string }) => void;
@@ -158,25 +179,51 @@ class SocketService {
 
     this.socket.on("connect", () => {
       if (import.meta.env.DEV) {
-        console.log("[Socket.IO] Connected to ACARS Hub backend");
+        console.log("[Socket.IO] ✓ Connected to ACARS Hub backend");
+        console.log("[Socket.IO] Socket ID:", this.socket?.id);
+        console.log(
+          "[Socket.IO] Transport:",
+          this.socket?.io.engine.transport.name,
+        );
       }
     });
 
     this.socket.on("disconnect", (reason) => {
       if (import.meta.env.DEV) {
-        console.warn("[Socket.IO] Disconnected:", reason);
+        console.warn("[Socket.IO] ✗ Disconnected:", reason);
       }
     });
 
     this.socket.on("reconnect", (attemptNumber) => {
       if (import.meta.env.DEV) {
-        console.log(`[Socket.IO] Reconnected after ${attemptNumber} attempts`);
+        console.log(
+          `[Socket.IO] ↻ Reconnected after ${attemptNumber} attempts`,
+        );
+      }
+    });
+
+    this.socket.on("connect_error", (error: Error) => {
+      if (import.meta.env.DEV) {
+        console.error("[Socket.IO] ⚠ Connection error:", error.message);
+        console.error("[Socket.IO] Error details:", error);
       }
     });
 
     this.socket.on("error", (error) => {
       if (import.meta.env.DEV) {
-        console.error("[Socket.IO] Connection error:", error);
+        console.error("[Socket.IO] ✗ Socket error:", error);
+      }
+    });
+
+    this.socket.io.on("reconnect_attempt", () => {
+      if (import.meta.env.DEV) {
+        console.log("[Socket.IO] ↻ Attempting to reconnect...");
+      }
+    });
+
+    this.socket.io.on("reconnect_failed", () => {
+      if (import.meta.env.DEV) {
+        console.error("[Socket.IO] ✗ Reconnection failed after max attempts");
       }
     });
   }

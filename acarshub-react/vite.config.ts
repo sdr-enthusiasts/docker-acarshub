@@ -12,7 +12,8 @@ export default defineConfig({
       "/socket.io": {
         target: "http://localhost:8080",
         changeOrigin: true,
-        ws: true, // Enable WebSocket proxying
+        ws: true,
+        rewrite: (path) => path,
       },
       // Proxy metrics endpoint
       "/metrics": {

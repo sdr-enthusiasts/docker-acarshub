@@ -1,0 +1,311 @@
+// Copyright (C) 2022-2026 Frederick Clausen II
+// This file is part of acarshub <https://github.com/sdr-enthusiasts/docker-acarshub>.
+
+// acarshub is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+
+// acarshub is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+
+// You should have received a copy of the GNU General Public License
+// along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
+
+@use "../mixins" as *;
+@use "../variables" as *;
+
+/**
+ * TabSwitcher Component Styles
+ * Mobile-first tabbed navigation with horizontal scrolling
+ */
+
+.tab-switcher {
+  width: 100%;
+  margin-bottom: $spacing-sm;
+
+  &__container {
+    position: relative;
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch; // Smooth scrolling on iOS
+
+    // Show scrollbar on mobile for better UX
+    &::-webkit-scrollbar {
+      height: 4px;
+
+      @include media-md {
+        height: 6px;
+      }
+    }
+
+    &::-webkit-scrollbar-track {
+      background-color: var(--color-surface0);
+      border-radius: $radius-md;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background-color: var(--color-overlay0);
+      border-radius: $radius-md;
+
+      &:hover {
+        background-color: var(--color-overlay1);
+      }
+    }
+  }
+
+  &__list {
+    display: flex;
+    flex-direction: row;
+    gap: $spacing-sm;
+    min-width: min-content;
+    padding: $spacing-sm $spacing-xs;
+    border-bottom: 2px solid var(--color-surface1);
+
+    @include media-md {
+      gap: $spacing-md;
+      padding: $spacing-sm;
+    }
+  }
+
+  &__tab {
+    // Reset button styles
+    appearance: none;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-family: inherit;
+
+    // Tab styling
+    position: relative;
+    padding: $spacing-sm $spacing-md;
+    min-width: max-content;
+    white-space: nowrap;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    color: var(--color-subtext1);
+    border-radius: $radius-md $radius-md 0 0;
+    transition:
+      background-color $transition-base,
+      color $transition-base,
+      transform $transition-fast;
+
+    // Touch target sizing for mobile
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    @include media-md {
+      padding: $spacing-md $spacing-lg;
+      font-size: $font-size-base;
+      min-height: auto;
+    }
+
+    // Hover state
+    &:hover:not(&--disabled):not(&--active) {
+      background-color: var(--color-surface0);
+      color: var(--color-text);
+    }
+
+    // Focus state
+    &:focus-visible {
+      outline: 2px solid var(--color-primary);
+      outline-offset: 2px;
+      z-index: 1;
+    }
+
+    // Active state
+    &--active {
+      color: var(--color-primary);
+      font-weight: $font-weight-semibold;
+
+      // Active indicator line
+      &::after {
+        content: "";
+        position: absolute;
+        bottom: -2px;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background-color: var(--color-primary);
+        border-radius: $radius-md $radius-md 0 0;
+      }
+    }
+
+    // Disabled state
+    &--disabled {
+      color: var(--color-overlay0);
+      cursor: not-allowed;
+      opacity: 0.5;
+
+      &:hover {
+        background-color: transparent;
+      }
+    }
+
+    // Active press state
+    &:active:not(&--disabled) {
+      transform: translateY(1px);
+    }
+  }
+
+  &__tab-label {
+    display: block;
+    user-select: none;
+  }
+
+  // Variant: Compact (smaller spacing)
+  &--compact {
+    margin-bottom: $spacing-sm;
+
+    .tab-switcher__tab {
+      padding: $spacing-xs $spacing-sm;
+      font-size: $font-size-xs;
+      min-height: 36px;
+
+      @include media-md {
+        padding: $spacing-sm $spacing-md;
+        font-size: $font-size-sm;
+      }
+    }
+  }
+
+  // Variant: Pills (rounded tabs)
+  &--pills {
+    .tab-switcher__list {
+      border-bottom: none;
+      padding: $spacing-sm;
+      gap: $spacing-sm;
+    }
+
+    .tab-switcher__tab {
+      border-radius: $radius-lg;
+      background-color: var(--color-surface0);
+
+      &:hover:not(&--disabled):not(&--active) {
+        background-color: var(--color-surface1);
+      }
+
+      &--active {
+        background-color: var(--color-primary);
+        color: var(--color-base);
+
+        &::after {
+          display: none;
+        }
+      }
+
+      &:active:not(&--disabled) {
+        transform: scale(0.98);
+      }
+    }
+  }
+
+  // Variant: Centered tabs
+  &--centered {
+    .tab-switcher__list {
+      justify-content: center;
+    }
+  }
+
+  // Variant: Primary (larger, more prominent for main navigation)
+  &--primary {
+    margin-bottom: 0;
+
+    .tab-switcher__list {
+      border-bottom: none;
+      padding: $spacing-sm;
+      gap: $spacing-sm;
+      background-color: transparent;
+    }
+
+    .tab-switcher__tab {
+      padding: $spacing-sm $spacing-md;
+      font-size: $font-size-sm;
+      font-weight: $font-weight-semibold;
+      border-radius: $radius-lg;
+      background-color: var(--color-surface1);
+      border: 2px solid transparent;
+
+      @include media-md {
+        padding: $spacing-sm $spacing-lg;
+        font-size: $font-size-base;
+      }
+
+      &:hover:not(&--disabled):not(&--active) {
+        background-color: var(--color-surface2);
+        border-color: var(--color-overlay0);
+      }
+
+      &--active {
+        background-color: var(--color-primary);
+        color: var(--color-base);
+        border-color: var(--color-primary);
+        box-shadow: var(--shadow-md);
+
+        &::after {
+          display: none;
+        }
+      }
+
+      &:active:not(&--disabled) {
+        transform: scale(0.98);
+      }
+    }
+  }
+
+  // Print styles
+  @media print {
+    .tab-switcher {
+      display: none;
+    }
+  }
+}
+
+// Density mode support
+.density-compact {
+  .tab-switcher {
+    margin-bottom: $spacing-sm;
+
+    &__tab {
+      padding: $spacing-xs $spacing-sm;
+      font-size: $font-size-xs;
+
+      @include media-md {
+        padding: $spacing-sm $spacing-md;
+        font-size: $font-size-sm;
+      }
+    }
+  }
+}
+
+.density-spacious {
+  .tab-switcher {
+    margin-bottom: $spacing-2xl;
+
+    &__tab {
+      padding: $spacing-md $spacing-xl;
+      font-size: $font-size-base;
+
+      @include media-md {
+        padding: $spacing-lg $spacing-2xl;
+        font-size: $font-size-lg;
+      }
+    }
+  }
+}
+
+// Animation support
+.reduce-motion {
+  .tab-switcher__tab {
+    transition: none;
+  }
+
+  .tab-switcher__container {
+    scroll-behavior: auto;
+  }
+}

@@ -26,7 +26,7 @@ import {
   Tooltip,
   type TooltipItem,
 } from "chart.js";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { Line } from "react-chartjs-2";
 import type { Signal } from "../../types";
 import { ChartContainer } from "./ChartContainer";
@@ -70,6 +70,14 @@ export const SignalLevelChart = ({
   signalData,
   className = "",
 }: SignalLevelChartProps) => {
+  // Diagnostic logging to detect mount/unmount cycles
+  useEffect(() => {
+    console.log("[SignalLevelChart] MOUNTED");
+    return () => {
+      console.log("[SignalLevelChart] UNMOUNTED");
+    };
+  }, []);
+
   // Process signal data and prepare for chart
   const chartData = useMemo(() => {
     if (!signalData) {
@@ -106,7 +114,7 @@ export const SignalLevelChart = ({
           borderColor: "rgb(166, 227, 161)", // Catppuccin Mocha Green
           backgroundColor: "rgba(166, 227, 161, 0.1)",
           borderWidth: 2,
-          pointRadius: 2,
+          pointRadius: 0,
           pointHoverRadius: 4,
           tension: 0.2, // Slight curve for smoother line
           fill: true,
@@ -115,23 +123,31 @@ export const SignalLevelChart = ({
     };
   }, [signalData]);
 
-  // Chart options with Catppuccin theming
+  // Chart options with Catppuccin theming - memoized with stable dependencies
   const options = useMemo(() => {
     // Get current theme colors from CSS variables
     const styles = getComputedStyle(document.documentElement);
     const textColor = styles.getPropertyValue("--color-text").trim();
     const gridColor = styles.getPropertyValue("--color-surface2").trim();
+    const surface0 = styles.getPropertyValue("--color-surface0").trim();
 
     return {
       responsive: true,
       maintainAspectRatio: false,
+      animation: {
+        duration: 0, // Disable animations to prevent layout shifts
+      },
       plugins: {
+        datalabels: {
+          display: false, // Disable count labels at each point
+        },
         legend: {
           display: false, // Hide legend for cleaner look
         },
         tooltip: {
           enabled: true,
-          backgroundColor: styles.getPropertyValue("--color-surface0").trim(),
+          position: "nearest" as const, // Position tooltip closer to cursor
+          backgroundColor: surface0,
           titleColor: textColor,
           bodyColor: textColor,
           borderColor: gridColor,
@@ -191,8 +207,9 @@ export const SignalLevelChart = ({
         },
       },
       interaction: {
-        mode: "index" as const,
+        mode: "nearest" as const,
         intersect: false,
+        axis: "x" as const,
       },
     };
   }, []);
@@ -200,11 +217,7 @@ export const SignalLevelChart = ({
   // Show empty state if no data
   if (!chartData) {
     return (
-      <ChartContainer
-        title="Signal Levels"
-        subtitle="Distribution of received signal strengths"
-        className={className}
-      >
+      <ChartContainer className={className}>
         <div className="chart-no-data">
           <p className="chart-no-data__message">
             No signal level data available
@@ -218,12 +231,10 @@ export const SignalLevelChart = ({
   }
 
   return (
-    <ChartContainer
-      title="Signal Levels"
-      subtitle="Distribution of received signal strengths"
-      className={className}
-    >
-      <Line data={chartData} options={options} />
+    <ChartContainer className={className}>
+      <div key="signal-level-chart-wrapper">
+        <Line data={chartData} options={options} />
+      </div>
     </ChartContainer>
   );
 };

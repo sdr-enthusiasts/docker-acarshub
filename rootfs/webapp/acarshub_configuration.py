@@ -78,6 +78,7 @@ ENABLE_IMSL = False
 ENABLE_IRDM = False
 DB_SAVEALL = False
 ACARSHUB_DB = ""
+RRD_DB_PATH = ""
 IATA_OVERRIDE = ""
 DB_BACKUP = ""
 ALERT_STAT_TERMS = []
@@ -175,6 +176,11 @@ if os.getenv("ACARSHUB_DB", default=False):
     ACARSHUB_DB = os.getenv("ACARSHUB_DB", default=False)
 else:
     ACARSHUB_DB = "sqlite:////run/acars/messages.db"
+
+if os.getenv("RRD_DB_PATH", default=False):
+    RRD_DB_PATH = os.getenv("RRD_DB_PATH", default=False)
+else:
+    RRD_DB_PATH = os.getenv("RRD_DB_PATH", default="/run/acars/")
 
 if os.getenv("DB_BACKUP", default=False):
     DB_BACKUP = os.getenv("DB_BACKUP")

@@ -23,8 +23,7 @@ from acarshub_logging import LOG_LEVEL  # noqa: E402
 import acars_formatter  # noqa: E402
 import acarshub_metrics  # noqa: E402
 
-if not acarshub_configuration.LOCAL_TEST:
-    import acarshub_rrd_database  # noqa: E402
+import acarshub_rrd_database  # noqa: E402
 
 from flask_socketio import SocketIO  # noqa: E402
 from flask import (
@@ -141,6 +140,7 @@ def update_rrd_db():
         hfdl=hfdl_messages_last_minute,
         imsl=imsl_messages_last_minute,
         irdm=irdm_messages_last_minute,
+        path=acarshub_configuration.RRD_DB_PATH,
     )
     vdlm_messages_last_minute = 0
     acars_messages_last_minute = 0
@@ -217,8 +217,8 @@ def scheduled_tasks():
     acarshub_configuration.check_github_version()
     if not acarshub_configuration.LOCAL_TEST:
         schedule.every().minute.at(":15").do(acarshub_helpers.service_check)
-        schedule.every().minute.at(":00").do(update_rrd_db)
 
+    schedule.every().minute.at(":00").do(update_rrd_db)
     schedule.every().hour.at(":05").do(acarshub_configuration.check_github_version)
     schedule.every().hour.at(":01").do(send_version)
     schedule.every(6).hours.do(acarshub_helpers.acarshub_database.optimize_db_regular)
@@ -609,13 +609,14 @@ def init():
             level=LOG_LEVEL["ERROR"],
         )
         acarshub_logging.acars_traceback(e, "init")
-    if not acarshub_configuration.LOCAL_TEST:
-        try:
-            acarshub_logging.log("Initializing RRD Database", "init")
-            acarshub_rrd_database.create_db()  # make sure the RRD DB is created / there
-        except Exception as e:
-            acarshub_logging.log(f"Startup Error creating RRD Database {e}", "init")
-            acarshub_logging.acars_traceback(e, "init")
+    try:
+        acarshub_logging.log("Initializing RRD Database", "init")
+        acarshub_rrd_database.create_db(
+            acarshub_configuration.RRD_DB_PATH
+        )  # make sure the RRD DB is created / there
+    except Exception as e:
+        acarshub_logging.log(f"Startup Error creating RRD Database {e}", "init")
+        acarshub_logging.acars_traceback(e, "init")
     if results is not None:
         for json_message in results:
             try:
@@ -968,6 +969,147 @@ def request_graphs(message, namespace):
         "request_graphs",
         level=LOG_LEVEL["DEBUG"],
     )
+
+
+@socketio.on("rrd_timeseries", namespace="/main")
+def request_rrd_timeseries(message, namespace):
+    """
+    Fetch RRD time-series data for a specific time period.
+    Returns JSON data for all decoders (ACARS, VDLM, HFDL, IMSL, IRDM, TOTAL, ERROR).
+
+    Message format: { "time_period": "1hr" | "6hr" | "12hr" | "24hr" | "1wk" | "30day" | "6mon" | "1yr" }
+    """
+
+    pt = time.time()
+    requester = request.sid
+    time_period = message.get("time_period", "24hr")
+
+    # Map time periods to RRD fetch parameters
+    # Format: (start_offset_seconds, resolution_hint)
+    period_map = {
+        "1hr": (3600, "1min"),  # 1 hour, 1-minute resolution
+        "6hr": (21600, "1min"),  # 6 hours, 1-minute resolution
+        "12hr": (43200, "1min"),  # 12 hours, 1-minute resolution
+        "24hr": (86400, "1min"),  # 24 hours, 1-minute resolution
+        "1wk": (604800, "5min"),  # 1 week, 5-minute resolution
+        "30day": (2592000, "1hr"),  # 30 days, 1-hour resolution
+        "6mon": (15768000, "1hr"),  # 6 months, 1-hour resolution
+        "1yr": (31536000, "6hr"),  # 1 year, 6-hour resolution
+    }
+
+    if time_period not in period_map:
+        socketio.emit(
+            "rrd_timeseries_data",
+            {"error": f"Invalid time period: {time_period}", "data": []},
+            to=requester,
+            namespace="/main",
+        )
+        return
+
+    start_offset, resolution = period_map[time_period]
+
+    try:
+        import rrdtool
+        import os
+
+        rrd_path = acarshub_configuration.RRD_DB_PATH + "acarshub.rrd"
+
+        acarshub_logging.log(
+            f"Checking for RRD database at: {rrd_path}",
+            "rrd_timeseries",
+            level=LOG_LEVEL["DEBUG"],
+        )
+
+        if not os.path.exists(rrd_path):
+            socketio.emit(
+                "rrd_timeseries_data",
+                {
+                    "error": "RRD database not found",
+                    "data": [],
+                    "time_period": time_period,
+                },
+                to=requester,
+                namespace="/main",
+            )
+            return
+
+        # Fetch data from RRD
+        # Data sources in order: ACARS, VDLM, TOTAL, ERROR, HFDL, IMSL, IRDM
+        result = rrdtool.fetch(
+            rrd_path, "AVERAGE", "--start", f"end-{start_offset}", "--end", "now"
+        )
+
+        # Parse the result
+        # result[0] is (start_time, end_time, step)
+        # result[1] is tuple of data source names
+        # result[2] is list of tuples with values
+        start_time, end_time, step = result[0]
+        ds_names = result[1]
+        data_rows = result[2]
+
+        # Build the response data
+        timeseries_data = []
+        current_time = start_time
+
+        for row in data_rows:
+            # Skip rows where all values are None
+            if all(v is None for v in row):
+                current_time += step
+                continue
+
+            data_point = {
+                "timestamp": current_time * 1000
+            }  # Convert to milliseconds for JavaScript
+
+            # Map data source names to values
+            for i, ds_name in enumerate(ds_names):
+                value = row[i]
+                # Convert None to 0 for consistency
+                data_point[ds_name.lower()] = 0 if value is None else float(value)
+
+            timeseries_data.append(data_point)
+            current_time += step
+
+        # Check if we have any data
+        if len(timeseries_data) == 0:
+            socketio.emit(
+                "rrd_timeseries_data",
+                {
+                    "error": "No data available yet. The RRD database is collecting data. Please wait a few minutes.",
+                    "data": [],
+                    "time_period": time_period,
+                },
+                to=requester,
+                namespace="/main",
+            )
+        else:
+            socketio.emit(
+                "rrd_timeseries_data",
+                {
+                    "data": timeseries_data,
+                    "time_period": time_period,
+                    "resolution": resolution,
+                    "data_sources": [name.lower() for name in ds_names],
+                },
+                to=requester,
+                namespace="/main",
+            )
+
+        pt = time.time() - pt
+        acarshub_logging.log(
+            f"request_rrd_timeseries ({time_period}) took {pt * 1000:.0f}ms, returned {len(timeseries_data)} points",
+            "rrd_timeseries",
+            level=LOG_LEVEL["DEBUG"],
+        )
+
+    except Exception as e:
+        acarshub_logging.acars_traceback(e, "rrd_timeseries")
+        socketio.emit(
+            "rrd_timeseries_data",
+            {"error": str(e), "data": [], "time_period": time_period},
+            to=requester,
+            namespace="/main",
+        )
 
 
 # handle a query request from the browser

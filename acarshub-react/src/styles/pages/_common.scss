@@ -29,6 +29,7 @@
   background-color: var(--color-card-body);
   border-radius: $radius-xl;
   overflow: hidden;
+  overflow-anchor: none; // Prevent scroll anchoring
 
   @include fade-in($transition-base);
 }

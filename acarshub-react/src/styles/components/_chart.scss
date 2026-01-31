@@ -64,7 +64,6 @@
   &__canvas {
     position: relative;
     width: 100%;
-    min-height: 300px;
 
     // Ensure canvas is responsive
     canvas {
@@ -85,24 +84,6 @@
 
     &__title {
       font-size: var(--font-size-md);
-    }
-
-    &__canvas {
-      min-height: 250px;
-    }
-  }
-
-  // Tablet adjustments
-  @include media-md {
-    &__canvas {
-      min-height: 280px;
-    }
-  }
-
-  // Desktop adjustments
-  @include media-lg {
-    &__canvas {
-      min-height: 350px;
     }
   }
 
@@ -272,10 +253,6 @@
     &__title {
       font-size: var(--font-size-md);
     }
-
-    &__canvas {
-      min-height: 250px;
-    }
   }
 
   .chart-grid {
@@ -294,10 +271,6 @@
 
     &__header {
       margin-bottom: var(--spacing-lg);
-    }
-
-    &__canvas {
-      min-height: 400px;
     }
   }
 

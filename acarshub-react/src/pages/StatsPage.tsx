@@ -21,24 +21,40 @@ import {
   FrequencyChart,
   MessageCountChart,
   SignalLevelChart,
+  TimeSeriesChart,
 } from "../components/charts";
+import type { DecoderType } from "../components/charts/TimeSeriesChart";
+import { TabSwitcher } from "../components/TabSwitcher";
+import {
+  type TimePeriod,
+  useRRDTimeSeriesData,
+} from "../hooks/useRRDTimeSeriesData";
 import { socketService } from "../services/socket";
 import { useAppStore } from "../store/useAppStore";
-import { useSettingsStore } from "../store/useSettingsStore";
 import type { SignalData } from "../types";
+
+/**
+ * Main stats section types
+ */
+type StatsSection =
+  | "reception"
+  | "signal"
+  | "alerts"
+  | "frequency"
+  | "messages";
 
 /**
  * StatsPage Component
  * Displays statistics and graphs for ACARS message reception
  *
+ * Redesigned to show one graph section at a time to avoid scroll issues
+ * and provide better focus on each visualization.
+ *
  * Features:
- * - Static image graphs (1hr, 6hr, 12hr, 24hr, 1wk, 30day, 6mon, 1yr)
- * - Signal level distribution chart
- * - Alert terms frequency chart
- * - Frequency distribution charts per decoder
- * - Message count statistics (data and empty messages)
- * - Automatic chart updates via Socket.IO
- * - Theme-aware image loading (dark/light variants)
+ * - Top-level section navigation (5 main sections)
+ * - Sub-navigation within sections (time periods, decoders)
+ * - No scrolling - single focused view
+ * - Catppuccin theming throughout
  * - Mobile-first responsive design
  */
 export const StatsPage = () => {
@@ -49,16 +65,28 @@ export const StatsPage = () => {
   const signalFreqData = useAppStore((state) => state.signalFreqData);
   const signalCountData = useAppStore((state) => state.signalCountData);
 
-  // Get theme setting for image variants
-  const theme = useSettingsStore((state) => state.settings.appearance.theme);
+  // Main section selection
+  const [activeSection, setActiveSection] = useState<StatsSection>("reception");
 
-  // Track image refresh timestamps to force reload
-  const [imageTimestamp, setImageTimestamp] = useState(Date.now());
+  // Sub-navigation state for Reception Over Time
+  const [selectedTimePeriod, setSelectedTimePeriod] =
+    useState<TimePeriod>("24hr");
+  const [selectedDecoder, setSelectedDecoder] =
+    useState<DecoderType>("combined");
 
-  // Determine image suffix based on theme
-  const imageSuffix = theme === "latte" ? "" : "-dark";
+  // Sub-navigation state for Frequency Distribution
+  const [selectedFreqDecoder, setSelectedFreqDecoder] = useState<
+    "acars" | "vdlm" | "hfdl" | "imsl" | "irdm"
+  >("acars");
 
-  // Request frequency data when decoders are available
+  // Fetch RRD time-series data for Reception Over Time
+  const {
+    data: rrdData,
+    loading: rrdLoading,
+    error: rrdError,
+  } = useRRDTimeSeriesData(selectedTimePeriod, activeSection !== "reception");
+
+  // Request frequency and count data when decoders are available
   useEffect(() => {
     setCurrentPage("Statistics");
     socketService.notifyPageChange("Statistics");
@@ -66,7 +94,6 @@ export const StatsPage = () => {
     // Request initial frequency and count data
     const requestData = () => {
       if (decoders) {
-        // Request frequency and count data (backend returns all decoders)
         socketService.requestSignalFreqs();
         socketService.requestSignalCount();
       }
@@ -78,7 +105,6 @@ export const StatsPage = () => {
     // Set up periodic refresh (every 30 seconds)
     const refreshInterval = setInterval(() => {
       requestData();
-      setImageTimestamp(Date.now()); // Force image reload
     }, 30000);
 
     return () => {
@@ -106,11 +132,20 @@ export const StatsPage = () => {
       irdm: [],
     };
 
+    // Map backend freq_type values to our keys
+    const typeMap: Record<string, string> = {
+      ACARS: "acars",
+      "VDL-M2": "vdlm",
+      HFDL: "hfdl",
+      "IMS-L": "imsl",
+      IRDM: "irdm",
+    };
+
     // Group frequencies by decoder type
     for (const freq of signalFreqData.freqs) {
-      const type = freq.freq_type.toLowerCase();
-      if (grouped[type]) {
-        grouped[type].push(freq);
+      const mappedType = typeMap[freq.freq_type];
+      if (mappedType && grouped[mappedType]) {
+        grouped[mappedType].push(freq);
       }
     }
 
@@ -138,6 +173,260 @@ export const StatsPage = () => {
     };
   }, [decoders]);
 
+  // Build main section tabs
+  const sectionTabs = [
+    { id: "reception", label: "Reception Over Time" },
+    { id: "signal", label: "Signal Levels" },
+    { id: "alerts", label: "Alert Terms" },
+    { id: "frequency", label: "Frequency Distribution" },
+    { id: "messages", label: "Message Statistics" },
+  ];
+
+  // Build tabs for time periods (Reception Over Time)
+  const timePeriodTabs = [
+    { id: "1hr", label: "1 Hour" },
+    { id: "6hr", label: "6 Hours" },
+    { id: "12hr", label: "12 Hours" },
+    { id: "24hr", label: "24 Hours" },
+    { id: "1wk", label: "1 Week" },
+    { id: "30day", label: "30 Days" },
+    { id: "6mon", label: "6 Months" },
+    { id: "1yr", label: "1 Year" },
+  ];
+
+  // Build tabs for decoders (Reception Over Time)
+  const decoderTabs = useMemo(() => {
+    const tabs = [{ id: "combined", label: "Combined" }];
+
+    if (enabledDecoders.acars) {
+      tabs.push({ id: "acars", label: "ACARS" });
+    }
+    if (enabledDecoders.vdlm) {
+      tabs.push({ id: "vdlm", label: "VDLM" });
+    }
+    if (enabledDecoders.hfdl) {
+      tabs.push({ id: "hfdl", label: "HFDL" });
+    }
+    if (enabledDecoders.imsl) {
+      tabs.push({ id: "imsl", label: "IMSL" });
+    }
+    if (enabledDecoders.irdm) {
+      tabs.push({ id: "irdm", label: "IRDM" });
+    }
+
+    // Always show error tab
+    tabs.push({ id: "error", label: "Errors" });
+
+    return tabs;
+  }, [enabledDecoders]);
+
+  // Build tabs for frequency distribution decoder selection
+  const frequencyDecoderTabs = useMemo(() => {
+    const tabs = [];
+
+    if (enabledDecoders.acars) {
+      tabs.push({ id: "acars", label: "ACARS" });
+    }
+    if (enabledDecoders.vdlm) {
+      tabs.push({ id: "vdlm", label: "VDLM" });
+    }
+    if (enabledDecoders.hfdl) {
+      tabs.push({ id: "hfdl", label: "HFDL" });
+    }
+    if (enabledDecoders.imsl) {
+      tabs.push({ id: "imsl", label: "IMSL" });
+    }
+    if (enabledDecoders.irdm) {
+      tabs.push({ id: "irdm", label: "IRDM" });
+    }
+
+    return tabs;
+  }, [enabledDecoders]);
+
+  // Ensure selected frequency decoder is valid when decoders change
+  useEffect(() => {
+    if (frequencyDecoderTabs.length > 0) {
+      const selectedExists = frequencyDecoderTabs.some(
+        (tab) => tab.id === selectedFreqDecoder,
+      );
+      if (!selectedExists) {
+        setSelectedFreqDecoder(
+          frequencyDecoderTabs[0].id as
+            | "acars"
+            | "vdlm"
+            | "hfdl"
+            | "imsl"
+            | "irdm",
+        );
+      }
+    }
+  }, [frequencyDecoderTabs, selectedFreqDecoder]);
+
+  // Render content based on active section
+  const renderSectionContent = () => {
+    switch (activeSection) {
+      case "reception":
+        return (
+          <Card>
+            <div className="chart-section__header">
+              <h2 className="chart-section__title">
+                Message Reception Over Time
+              </h2>
+              <p className="chart-section__description">
+                Historical message counts from RRD database
+              </p>
+            </div>
+
+            {/* Time Period Selector */}
+            <TabSwitcher
+              tabs={timePeriodTabs}
+              activeTab={selectedTimePeriod}
+              onTabChange={(tabId) =>
+                setSelectedTimePeriod(tabId as TimePeriod)
+              }
+              ariaLabel="Select time period"
+            />
+
+            {/* Decoder Type Selector */}
+            <TabSwitcher
+              tabs={decoderTabs}
+              activeTab={selectedDecoder}
+              onTabChange={(tabId) => setSelectedDecoder(tabId as DecoderType)}
+              ariaLabel="Select decoder type"
+              className="tab-switcher--pills"
+            />
+
+            {/* Time-Series Chart */}
+            <div className="chart-wrapper">
+              <TimeSeriesChart
+                data={rrdData}
+                timePeriod={selectedTimePeriod}
+                decoderType={selectedDecoder}
+                loading={rrdLoading}
+                error={rrdError}
+              />
+            </div>
+          </Card>
+        );
+
+      case "signal":
+        return (
+          <Card>
+            <div className="chart-section__header">
+              <h2 className="chart-section__title">Signal Levels</h2>
+              <p className="chart-section__description">
+                Distribution of received signal strengths
+              </p>
+            </div>
+            <div className="chart-wrapper">
+              <SignalLevelChart signalData={signalLevels} />
+            </div>
+          </Card>
+        );
+
+      case "alerts":
+        return (
+          <Card>
+            <div className="chart-section__header">
+              <h2 className="chart-section__title">Alert Terms</h2>
+              <p className="chart-section__description">
+                Frequency of matched alert terms
+              </p>
+            </div>
+            <div className="chart-wrapper">
+              <AlertTermsChart alertTermData={alertTermData} />
+            </div>
+          </Card>
+        );
+
+      case "frequency":
+        if (frequencyDecoderTabs.length === 0) {
+          return (
+            <Card>
+              <div className="chart-section__header">
+                <h2 className="chart-section__title">Frequency Distribution</h2>
+                <p className="chart-section__description">
+                  No decoders enabled
+                </p>
+              </div>
+              <div className="chart-wrapper">
+                <div className="chart-no-data">
+                  <p className="chart-no-data__message">
+                    No frequency data available
+                  </p>
+                  <p className="chart-no-data__hint">
+                    Enable decoders to see frequency distribution
+                  </p>
+                </div>
+              </div>
+            </Card>
+          );
+        }
+
+        return (
+          <Card>
+            <div className="chart-section__header">
+              <h2 className="chart-section__title">Frequency Distribution</h2>
+              <p className="chart-section__description">
+                Message distribution across frequencies
+              </p>
+            </div>
+
+            {/* Decoder Selector */}
+            <TabSwitcher
+              tabs={frequencyDecoderTabs}
+              activeTab={selectedFreqDecoder}
+              onTabChange={(tabId) =>
+                setSelectedFreqDecoder(
+                  tabId as "acars" | "vdlm" | "hfdl" | "imsl" | "irdm",
+                )
+              }
+              ariaLabel="Select decoder for frequency distribution"
+              className="tab-switcher--pills"
+            />
+
+            <div className="chart-wrapper">
+              <FrequencyChart
+                frequencyData={frequencyDataByDecoder[selectedFreqDecoder]}
+                decoderType={selectedFreqDecoder.toUpperCase()}
+              />
+            </div>
+          </Card>
+        );
+
+      case "messages":
+        return (
+          <Card>
+            <div className="chart-section__header">
+              <h2 className="chart-section__title">Message Statistics</h2>
+              <p className="chart-section__description">
+                Breakdown of received messages (good vs errors)
+              </p>
+            </div>
+
+            <div className="chart-wrapper">
+              <div className="chart-grid chart-grid--two-col">
+                {/* Data Messages Chart */}
+                <MessageCountChart
+                  countData={signalCountData}
+                  showEmptyMessages={false}
+                />
+
+                {/* Empty Messages Chart */}
+                <MessageCountChart
+                  countData={signalCountData}
+                  showEmptyMessages={true}
+                />
+              </div>
+            </div>
+          </Card>
+        );
+
+      default:
+        return null;
+    }
+  };
+
   return (
     <div className="page stats-page">
       <div className="page__header">
@@ -149,188 +438,20 @@ export const StatsPage = () => {
       </div>
 
       <div className="page__content">
-        {/* Static Graph Images Section */}
-        <div className="chart-section">
-          <div className="chart-section__header">
-            <h2 className="chart-section__title">
-              Message Reception Over Time
-            </h2>
-            <p className="chart-section__description">
-              Historical message counts across different time periods
-            </p>
-          </div>
-
-          <div className="chart-grid chart-grid--two-col">
-            {/* 1 Hour Graph */}
-            <Card padded={false}>
-              <img
-                src={`/1hour${imageSuffix}.png?t=${imageTimestamp}`}
-                alt="1 Hour Message Graph"
-                className="stats-image"
-              />
-            </Card>
-
-            {/* 6 Hour Graph */}
-            <Card padded={false}>
-              <img
-                src={`/6hour${imageSuffix}.png?t=${imageTimestamp}`}
-                alt="6 Hour Message Graph"
-                className="stats-image"
-              />
-            </Card>
-
-            {/* 12 Hour Graph */}
-            <Card padded={false}>
-              <img
-                src={`/12hour${imageSuffix}.png?t=${imageTimestamp}`}
-                alt="12 Hour Message Graph"
-                className="stats-image"
-              />
-            </Card>
-
-            {/* 24 Hour Graph */}
-            <Card padded={false}>
-              <img
-                src={`/24hours${imageSuffix}.png?t=${imageTimestamp}`}
-                alt="24 Hour Message Graph"
-                className="stats-image"
-              />
-            </Card>
-
-            {/* 1 Week Graph */}
-            <Card padded={false}>
-              <img
-                src={`/1week${imageSuffix}.png?t=${imageTimestamp}`}
-                alt="1 Week Message Graph"
-                className="stats-image"
-              />
-            </Card>
-
-            {/* 30 Day Graph */}
-            <Card padded={false}>
-              <img
-                src={`/30days${imageSuffix}.png?t=${imageTimestamp}`}
-                alt="30 Day Message Graph"
-                className="stats-image"
-              />
-            </Card>
-
-            {/* 6 Month Graph */}
-            <Card padded={false}>
-              <img
-                src={`/6months${imageSuffix}.png?t=${imageTimestamp}`}
-                alt="6 Month Message Graph"
-                className="stats-image"
-              />
-            </Card>
-
-            {/* 1 Year Graph */}
-            <Card padded={false}>
-              <img
-                src={`/1year${imageSuffix}.png?t=${imageTimestamp}`}
-                alt="1 Year Message Graph"
-                className="stats-image"
-              />
-            </Card>
-          </div>
+        {/* Main Section Navigation */}
+        <div className="stats-page__section-nav">
+          <TabSwitcher
+            tabs={sectionTabs}
+            activeTab={activeSection}
+            onTabChange={(tabId) => setActiveSection(tabId as StatsSection)}
+            ariaLabel="Select statistics section"
+            className="tab-switcher--primary"
+          />
         </div>
 
-        {/* Real-time Charts Section */}
-        <div className="chart-section">
-          <div className="chart-section__header">
-            <h2 className="chart-section__title">Real-time Statistics</h2>
-            <p className="chart-section__description">
-              Live signal levels and alert term frequency
-            </p>
-          </div>
-
-          {/* Signal Levels Chart */}
-          <SignalLevelChart signalData={signalLevels} />
-
-          {/* Alert Terms Chart */}
-          <AlertTermsChart alertTermData={alertTermData} />
-        </div>
-
-        {/* Frequency Distribution Section */}
-        {(enabledDecoders.acars ||
-          enabledDecoders.vdlm ||
-          enabledDecoders.hfdl ||
-          enabledDecoders.imsl ||
-          enabledDecoders.irdm) && (
-          <div className="chart-section">
-            <div className="chart-section__header">
-              <h2 className="chart-section__title">Frequency Distribution</h2>
-              <p className="chart-section__description">
-                Message distribution across monitored frequencies by decoder
-                type
-              </p>
-            </div>
-
-            {/* ACARS Frequency Chart */}
-            {enabledDecoders.acars &&
-              frequencyDataByDecoder.acars.length > 0 && (
-                <FrequencyChart
-                  frequencyData={frequencyDataByDecoder.acars}
-                  decoderType="ACARS"
-                />
-              )}
-
-            {/* VDLM Frequency Chart */}
-            {enabledDecoders.vdlm && frequencyDataByDecoder.vdlm.length > 0 && (
-              <FrequencyChart
-                frequencyData={frequencyDataByDecoder.vdlm}
-                decoderType="VDLM"
-              />
-            )}
-
-            {/* HFDL Frequency Chart */}
-            {enabledDecoders.hfdl && frequencyDataByDecoder.hfdl.length > 0 && (
-              <FrequencyChart
-                frequencyData={frequencyDataByDecoder.hfdl}
-                decoderType="HFDL"
-              />
-            )}
-
-            {/* IMSL Frequency Chart */}
-            {enabledDecoders.imsl && frequencyDataByDecoder.imsl.length > 0 && (
-              <FrequencyChart
-                frequencyData={frequencyDataByDecoder.imsl}
-                decoderType="IMSL"
-              />
-            )}
-
-            {/* IRDM Frequency Chart */}
-            {enabledDecoders.irdm && frequencyDataByDecoder.irdm.length > 0 && (
-              <FrequencyChart
-                frequencyData={frequencyDataByDecoder.irdm}
-                decoderType="IRDM"
-              />
-            )}
-          </div>
-        )}
-
-        {/* Message Count Statistics Section */}
-        <div className="chart-section">
-          <div className="chart-section__header">
-            <h2 className="chart-section__title">Message Statistics</h2>
-            <p className="chart-section__description">
-              Breakdown of received messages (good vs errors)
-            </p>
-          </div>
-
-          <div className="chart-grid chart-grid--two-col">
-            {/* Data Messages Chart */}
-            <MessageCountChart
-              countData={signalCountData}
-              showEmptyMessages={false}
-            />
-
-            {/* Empty Messages Chart */}
-            <MessageCountChart
-              countData={signalCountData}
-              showEmptyMessages={true}
-            />
-          </div>
+        {/* Section Content */}
+        <div className="stats-page__section-content">
+          {renderSectionContent()}
         </div>
       </div>
     </div>

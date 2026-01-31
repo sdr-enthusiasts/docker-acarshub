@@ -25,3 +25,4 @@ export { ChartContainer } from "./ChartContainer";
 export { FrequencyChart } from "./FrequencyChart";
 export { MessageCountChart } from "./MessageCountChart";
 export { SignalLevelChart } from "./SignalLevelChart";
+export { TimeSeriesChart } from "./TimeSeriesChart";

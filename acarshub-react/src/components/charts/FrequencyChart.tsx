@@ -25,7 +25,7 @@ import {
   type TooltipItem,
 } from "chart.js";
 import ChartDataLabels from "chartjs-plugin-datalabels";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { Bar } from "react-chartjs-2";
 import type { SignalData } from "../../types";
 import { ChartContainer } from "./ChartContainer";
@@ -67,22 +67,30 @@ interface FrequencyChartProps {
  * Note: Limits to top 14 frequencies, aggregates the rest into "Other"
  * to prevent overcrowded charts
  */
+// Catppuccin Rainbow color palette (8 colors from legacy palette.js) - defined outside component to prevent recreation
+const rainbowColors = [
+  "#1B9E77",
+  "#D95F02",
+  "#7570B3",
+  "#E7298A",
+  "#66A61E",
+  "#E6AB02",
+  "#A6761D",
+  "#666666",
+];
+
 export const FrequencyChart = ({
   frequencyData,
   decoderType,
   className = "",
 }: FrequencyChartProps) => {
-  // Catppuccin Rainbow color palette (8 colors from legacy palette.js)
-  const rainbowColors = [
-    "#1B9E77",
-    "#D95F02",
-    "#7570B3",
-    "#E7298A",
-    "#66A61E",
-    "#E6AB02",
-    "#A6761D",
-    "#666666",
-  ];
+  // Diagnostic logging to detect mount/unmount cycles
+  useEffect(() => {
+    console.log(`[FrequencyChart] ${decoderType} MOUNTED`);
+    return () => {
+      console.log(`[FrequencyChart] ${decoderType} UNMOUNTED`);
+    };
+  }, [decoderType]);
 
   // Process frequency data and prepare for chart
   const chartData = useMemo(() => {
@@ -139,24 +147,48 @@ export const FrequencyChart = ({
     };
   }, [frequencyData, decoderType]);
 
-  // Chart options with Catppuccin theming
+  // Calculate dynamic height based on number of bars - stabilized to prevent layout shifts
+  const chartHeight = useMemo(() => {
+    const barCount = chartData?.labels.length || 0;
+    const minHeight = 300; // Increased min height for stability
+    const maxHeight = 600; // Cap maximum height to prevent huge jumps
+    const barHeight = 25; // Space per bar (includes bar + padding)
+    const paddingHeight = 150; // Increased padding for labels
+
+    const calculatedHeight = barCount * barHeight + paddingHeight;
+    return Math.min(Math.max(minHeight, calculatedHeight), maxHeight);
+  }, [chartData?.labels.length]); // Only depend on label count, not entire chartData
+
+  // Chart options with Catppuccin theming - memoized with stable dependencies
   const options = useMemo(() => {
     // Get current theme colors from CSS variables
     const styles = getComputedStyle(document.documentElement);
     const textColor = styles.getPropertyValue("--color-text").trim();
     const gridColor = styles.getPropertyValue("--color-surface2").trim();
+    const surface0 = styles.getPropertyValue("--color-surface0").trim();
+    const totalCount = chartData?.totalCount || 1;
 
     return {
       responsive: true,
       maintainAspectRatio: false,
       indexAxis: "y" as const, // Horizontal bars
+      maxBarThickness: 15, // Limit bar height to 15px
+      animation: {
+        duration: 0, // Disable animations to prevent layout shifts
+      },
+      layout: {
+        padding: {
+          right: 70, // Add padding to prevent label clipping
+        },
+      },
       plugins: {
         legend: {
           display: false, // Hide legend for cleaner look
         },
         tooltip: {
           enabled: true,
-          backgroundColor: styles.getPropertyValue("--color-surface0").trim(),
+          position: "nearest" as const,
+          backgroundColor: surface0,
           titleColor: textColor,
           bodyColor: textColor,
           borderColor: gridColor,
@@ -167,8 +199,7 @@ export const FrequencyChart = ({
             label: (context: TooltipItem<"bar">) => {
               const count = context.parsed.x;
               if (count === null) return "Count: N/A";
-              const total = chartData?.totalCount || 1;
-              const percentage = ((count / total) * 100).toFixed(1);
+              const percentage = ((count / totalCount) * 100).toFixed(1);
               return `Count: ${count.toLocaleString()} (${percentage}%)`;
             },
           },
@@ -189,8 +220,7 @@ export const FrequencyChart = ({
         datalabels: {
           backgroundColor: (context: { dataIndex: number }) => {
             // Use same color as bar by accessing from the dataset
-            const colors = rainbowColors;
-            return colors[context.dataIndex % colors.length];
+            return rainbowColors[context.dataIndex % rainbowColors.length];
           },
           borderRadius: 4,
           color: "white",
@@ -202,9 +232,9 @@ export const FrequencyChart = ({
           formatter: (value: number) => {
             return value.toLocaleString();
           },
-          align: "end" as const,
+          align: "start" as const,
           anchor: "end" as const,
-          clip: true,
+          clip: false,
         },
       },
       scales: {
@@ -243,7 +273,7 @@ export const FrequencyChart = ({
         },
       },
     };
-  }, [chartData?.totalCount, decoderType]);
+  }, [decoderType, chartData?.totalCount]);
 
   // Show empty state if no data
   if (!chartData) {
@@ -267,7 +297,16 @@ export const FrequencyChart = ({
 
   return (
     <ChartContainer className={className}>
-      <Bar data={chartData} options={options} />
+      <div
+        key={`freq-chart-wrapper-${decoderType}`}
+        style={{
+          height: `${chartHeight}px`,
+          willChange: "contents",
+          contain: "layout style",
+        }}
+      >
+        <Bar data={chartData} options={options} redraw={false} />
+      </div>
     </ChartContainer>
   );
 };
