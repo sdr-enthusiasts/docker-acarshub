@@ -64,7 +64,56 @@ cd acarshub-typescript && npm run watch
 
 # Manual asset copy
 cd acarshub-typescript && ./copy_test_assets.sh
+
+# Testing (React app)
+just test                # Run all tests
+just test-watch          # Run tests in watch mode
+just test-ui             # Run tests with UI
+just test-coverage       # Run tests with coverage report
+just check               # Run tests + pre-commit hooks
+just ci                  # Full CI check (TypeScript + Biome + tests + pre-commit)
 ```
+
+---
+
+---
+
+## 🧪 Testing Commands (just)
+
+The project uses `just` (command runner) for convenient testing:
+
+```bash
+# Run tests once
+just test
+
+# Watch mode (auto-rerun on file changes)
+just test-watch
+
+# Interactive UI mode
+just test-ui
+
+# Coverage report
+just test-coverage
+
+# Quick check (tests + pre-commit hooks)
+just check
+
+# Full CI-like check (all quality checks)
+just ci
+```
+
+**Direct npm commands** (from `acarshub-react/`):
+
+```bash
+cd acarshub-react
+
+npm test                  # Run tests once
+npm run test:watch        # Watch mode
+npm run test:ui           # UI mode
+npm run test:coverage     # Coverage report
+```
+
+**Current test status**: 156 tests passing (string utils + date utils)
 
 ---
 
