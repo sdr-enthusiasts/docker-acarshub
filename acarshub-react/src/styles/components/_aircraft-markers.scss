@@ -210,6 +210,42 @@
     transform: translateX(-50%) rotate(0deg);
   }
 
+  // Align left when near left edge of viewport
+  &--align-left {
+    left: 0 !important;
+    right: auto !important;
+
+    &.aircraft-tooltip--above {
+      bottom: 100%;
+      margin-bottom: 10px;
+      transform: translateX(0) rotate(0deg) !important;
+    }
+
+    &.aircraft-tooltip--below {
+      top: 100%;
+      margin-top: 10px;
+      transform: translateX(0) rotate(0deg) !important;
+    }
+  }
+
+  // Align right when near right edge of viewport
+  &--align-right {
+    left: auto !important;
+    right: 0 !important;
+
+    &.aircraft-tooltip--above {
+      bottom: 100%;
+      margin-bottom: 10px;
+      transform: translateX(0) rotate(0deg) !important;
+    }
+
+    &.aircraft-tooltip--below {
+      top: 100%;
+      margin-top: 10px;
+      transform: translateX(0) rotate(0deg) !important;
+    }
+  }
+
   &__content {
     background: var(--color-surface0);
     border: 1px solid var(--color-surface2);

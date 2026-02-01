@@ -26,6 +26,8 @@ import { useSettingsStore, useTheme } from "../../store/useSettingsStore";
 import latteStyle from "../../styles/map-styles/catppuccin-latte.json";
 import mochaStyle from "../../styles/map-styles/catppuccin-mocha.json";
 import { AircraftMarkers } from "./AircraftMarkers";
+import { RangeRings } from "./RangeRings";
+import { StationMarker } from "./StationMarker";
 import "../../styles/components/_map.scss";
 
 interface MapComponentProps {
@@ -174,6 +176,12 @@ export function MapComponent({
 
         {/* Scale control */}
         <ScaleControl position="bottom-right" unit="nautical" />
+
+        {/* Range rings (reception coverage) */}
+        <RangeRings viewState={viewState} />
+
+        {/* Station marker (ground receiver location) */}
+        <StationMarker />
 
         {/* Aircraft markers */}
         <AircraftMarkers hoveredAircraftHex={hoveredAircraftHex} />

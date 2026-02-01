@@ -56,6 +56,8 @@ interface AircraftMarkerData {
 interface TooltipState {
   hex: string;
   showBelow: boolean;
+  alignLeft: boolean;
+  alignRight: boolean;
 }
 
 /**
@@ -207,9 +209,40 @@ export function AircraftMarkers({
                   const distanceFromTop = rect.top;
                   const showBelow = distanceFromTop < 280; // Show below if within 280px of top (accounts for full tooltip height)
 
+                  // Get the map container bounds (not window bounds - accounts for sidebar)
+                  const mapContainer =
+                    e.currentTarget.closest(".maplibregl-map");
+                  const mapBounds = mapContainer
+                    ? mapContainer.getBoundingClientRect()
+                    : { left: 0, right: window.innerWidth };
+
+                  // Calculate if tooltip should align left or right based on horizontal position
+                  const tooltipWidth = 280; // Approximate tooltip width
+                  const halfTooltipWidth = tooltipWidth / 2;
+
+                  // Calculate where the tooltip will actually be positioned relative to map container
+                  const markerCenterX = rect.left + rect.width / 2;
+                  const tooltipLeftEdgeIfCentered =
+                    markerCenterX - halfTooltipWidth;
+                  const tooltipRightEdgeIfCentered =
+                    markerCenterX + halfTooltipWidth;
+
+                  // Check if the centered tooltip would clip map container edges
+                  const wouldClipLeft =
+                    tooltipLeftEdgeIfCentered < mapBounds.left;
+                  const wouldClipRight =
+                    tooltipRightEdgeIfCentered > mapBounds.right;
+
+                  // Only align left/right if tooltip would actually clip, otherwise center
+                  // Mutually exclusive: can't be both left AND right aligned
+                  const alignLeft = wouldClipLeft && !wouldClipRight;
+                  const alignRight = wouldClipRight && !wouldClipLeft;
+
                   setLocalHoveredAircraft({
                     hex: markerData.hex,
                     showBelow,
+                    alignLeft,
+                    alignRight,
                   });
                   // Don't call onAircraftHover - pulsing glow is only for list hover
                 }}
@@ -233,7 +266,20 @@ export function AircraftMarkers({
                 localHoveredAircraft.hex === markerData.hex && (
                   <div
                     className={`aircraft-tooltip ${localHoveredAircraft.showBelow ? "aircraft-tooltip--below" : "aircraft-tooltip--above"}`}
-                    style={{ pointerEvents: "none" }}
+                    style={{
+                      pointerEvents: "none",
+                      left: localHoveredAircraft.alignLeft
+                        ? "0"
+                        : localHoveredAircraft.alignRight
+                          ? "auto"
+                          : "50%",
+                      right: localHoveredAircraft.alignRight ? "0" : "auto",
+                      transform:
+                        localHoveredAircraft.alignLeft ||
+                        localHoveredAircraft.alignRight
+                          ? "translateX(0) rotate(0deg)"
+                          : "translateX(-50%) rotate(0deg)",
+                    }}
                   >
                     <div className="aircraft-tooltip__content">
                       <div className="aircraft-tooltip__header">

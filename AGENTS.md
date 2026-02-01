@@ -1139,9 +1139,28 @@ Target modern browsers with ES6+ support:
 
 #### Map Features & Overlays
 
-- ⏳ Range rings from station location (configurable radii)
+- ✅ **Range rings from station location** (dynamic viewport-based sizing)
+  - ✅ GeoJSON-based circle rendering (64-point polygon with great circle formula)
+  - ✅ **Dynamic radii calculation** - automatically adjusts to viewport zoom level
+  - ✅ Always shows 3 rings that fit current view perfectly
+  - ✅ **Distance to nearest edge calculation** - prevents clipping at viewport boundaries
+  - ✅ **70% safety margin** - optimal balance between ring size and clipping prevention
+  - ✅ Smart interval rounding (multiples of 10, 20, 50, 100, 200, 500, etc.)
+  - ✅ Real-time recalculation as user zooms/pans the map
+  - ✅ Theme-aware styling with Catppuccin colors
+  - ✅ **Cardinal direction labels** - distance text at N, S, E, W positions on each ring (5% outside ring)
+  - ✅ Bold text with strong halos for readability on any background
+  - ✅ **Privacy protection** - completely disabled if backend sets `ENABLE_RANGE_RINGS=false`
+  - ✅ Toggle button hidden when backend disables range rings
+  - ✅ Station location from settings or backend decoder config
+  - ✅ Fallback to static rings from settings if viewport unavailable
 - ⏳ NEXRAD weather radar overlay (migrate from Leaflet plugin)
-- ⏳ Station marker (ground receiver location)
+- ✅ **Station marker (ground receiver location)**
+  - ✅ Pulsing animated marker showing receiver position
+  - ✅ Theme-aware with Catppuccin red color scheme
+  - ✅ Respects reduced motion preferences
+  - ✅ Station location priority: user settings → backend config
+  - ✅ Accessible with ARIA labels and SVG title
 - ✅ **Aircraft list sidebar** (sortable, filterable)
   - ✅ Sortable by callsign, altitude, speed, messages, alerts
   - ✅ Text search across callsign, hex, tail, type
@@ -1157,13 +1176,14 @@ Target modern browsers with ES6+ support:
 #### Filtering & Display Options
 
 - ✅ Show only aircraft with ACARS messages toggle (in aircraft list)
-- ⏳ Show/hide data blocks toggle
-- ⏳ Show/hide extended data blocks toggle
-- ⏳ Show/hide NEXRAD overlay toggle
+- ✅ Show/hide range rings toggle (MapControls component, hidden if backend disables)
 - ✅ Show only alerts toggle (in aircraft list)
 - ⏳ Show only unread messages toggle
 - ⏳ Mark all messages as read action
 - ✅ Filter persistence to localStorage (aircraft list filters)
+- ❌ Show/hide data blocks toggle (removed - not implemented)
+- ❌ Show/hide extended data blocks toggle (removed - not implemented)
+- ⏳ Show/hide NEXRAD overlay toggle (future implementation)
 
 #### Aircraft List & Sorting ✅ COMPLETE
 
@@ -1243,7 +1263,10 @@ Target modern browsers with ES6+ support:
 - ✅ **Hover tooltips complete** (comprehensive aircraft details, theme-aware, accessible)
 - ✅ **Click handlers complete** (AircraftMessagesModal opens on click, full message display)
 - ✅ **Aircraft list sidebar complete** (sortable, filterable, hover sync, localStorage persistence)
-- 🔜 Next: Range rings, NEXRAD overlay, station marker, map filter controls
+- ✅ **Station marker complete** (pulsing animation, theme-aware, accessible)
+- ✅ **Range rings complete** (dynamic sizing, 70% margin, cardinal labels, privacy protection)
+- ✅ **Map controls complete** (MapControls component with privacy-aware toggle buttons)
+- 🔜 Next: NEXRAD overlay
 
 ### Phase 9: Alerts and Search
 

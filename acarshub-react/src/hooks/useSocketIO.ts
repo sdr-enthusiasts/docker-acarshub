@@ -112,16 +112,8 @@ export const useSocketIO = () => {
     });
 
     socket.on("adsb_aircraft", (data) => {
-      console.log("📡 Socket.IO received adsb_aircraft:", {
-        aircraftCount: data?.aircraft?.length || 0,
-        timestamp: data?.now,
-        sampleAircraft: data?.aircraft?.[0],
-      });
       setAdsbAircraft(data);
-      console.log("✅ Called setAdsbAircraft with data");
     });
-
-    console.log("👂 Registered listener for 'adsb_aircraft' event");
 
     // Signal information
     socket.on("signal", (data) => {
@@ -152,26 +144,6 @@ export const useSocketIO = () => {
     socket.on("signal_count", (countData) => {
       setSignalCountData(countData);
     });
-
-    // Log all registered event listeners
-    console.log("👂 All Socket.IO event listeners registered:", [
-      "connect",
-      "disconnect",
-      "reconnect",
-      "acars_msg",
-      "labels",
-      "terms",
-      "features_enabled",
-      "system_status",
-      "version",
-      "database",
-      "adsb_status",
-      "adsb_aircraft",
-      "signal",
-      "alert_terms",
-      "signal_freqs",
-      "signal_count",
-    ]);
 
     // Cleanup on unmount
     return () => {

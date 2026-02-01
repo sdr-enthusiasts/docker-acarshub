@@ -17,11 +17,9 @@
 import {
   faCircleDot,
   faEnvelope,
-  faLayerGroup,
-  faList,
   faPlane,
-  faSquare,
 } from "@fortawesome/free-solid-svg-icons";
+import { useAppStore } from "../../store/useAppStore";
 import { useSettingsStore } from "../../store/useSettingsStore";
 import { MapControlButton } from "./MapControlButton";
 import "./MapControls.scss";
@@ -33,21 +31,18 @@ import "./MapControls.scss";
  * Positioned below the zoom controls in the top-right corner.
  */
 export function MapControls() {
+  const decoders = useAppStore((state) => state.decoders);
   const mapSettings = useSettingsStore((state) => state.settings.map);
   const setShowOnlyAcars = useSettingsStore((state) => state.setShowOnlyAcars);
-  const setShowDatablocks = useSettingsStore(
-    (state) => state.setShowDatablocks,
-  );
-  const setShowExtendedDatablocks = useSettingsStore(
-    (state) => state.setShowExtendedDatablocks,
-  );
-  const setShowNexrad = useSettingsStore((state) => state.setShowNexrad);
   const setShowRangeRings = useSettingsStore(
     (state) => state.setShowRangeRings,
   );
   const setShowOnlyUnread = useSettingsStore(
     (state) => state.setShowOnlyUnread,
   );
+
+  // Check if range rings are allowed by backend (privacy protection)
+  const backendAllowsRangeRings = decoders?.adsb?.range_rings ?? true;
 
   return (
     <div className="map-controls">
@@ -58,39 +53,27 @@ export function MapControls() {
           onClick={() => setShowOnlyAcars(!mapSettings.showOnlyAcars)}
           tooltip="Show Only Aircraft with ACARS"
         />
-
-        <MapControlButton
-          icon={faSquare}
-          active={mapSettings.showDatablocks}
-          onClick={() => setShowDatablocks(!mapSettings.showDatablocks)}
-          tooltip="Show Data Blocks"
-        />
-
-        <MapControlButton
-          icon={faLayerGroup}
-          active={mapSettings.showExtendedDatablocks}
-          onClick={() =>
-            setShowExtendedDatablocks(!mapSettings.showExtendedDatablocks)
-          }
-          tooltip="Show Extended Data Blocks"
-          disabled={!mapSettings.showDatablocks}
-        />
       </div>
 
+      {backendAllowsRangeRings && (
+        <div className="map-controls__group">
+          <MapControlButton
+            icon={faCircleDot}
+            active={mapSettings.showRangeRings}
+            onClick={() => setShowRangeRings(!mapSettings.showRangeRings)}
+            tooltip="Show Range Rings"
+          />
+        </div>
+      )}
+
       <div className="map-controls__group">
-        <MapControlButton
+        {/* NEXRAD overlay - future implementation */}
+        {/* <MapControlButton
           icon={faList}
           active={mapSettings.showNexrad}
           onClick={() => setShowNexrad(!mapSettings.showNexrad)}
           tooltip="Show NEXRAD Weather Radar"
-        />
-
-        <MapControlButton
-          icon={faCircleDot}
-          active={mapSettings.showRangeRings}
-          onClick={() => setShowRangeRings(!mapSettings.showRangeRings)}
-          tooltip="Show Range Rings"
-        />
+        /> */}
       </div>
 
       <div className="map-controls__group">

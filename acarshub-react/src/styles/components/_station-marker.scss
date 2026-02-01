@@ -1,0 +1,93 @@
+// Copyright (C) 2022-2026 Frederick Clausen II
+// This file is part of acarshub <https://github.com/sdr-enthusiasts/docker-acarshub>.
+
+// acarshub is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+
+// acarshub is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+
+// You should have received a copy of the GNU General Public License
+// along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
+
+@use "../mixins" as *;
+
+/**
+ * Station Marker
+ *
+ * Displays the ground station (receiver) location on the map
+ * with animated pulsing rings to indicate radio transmission.
+ */
+
+.station-marker {
+  cursor: pointer;
+  z-index: 100; // Above aircraft markers but below tooltips
+
+  // Ensure SVG is not affected by parent transforms
+  svg {
+    display: block;
+    overflow: visible;
+  }
+
+  // Pulsing animation for radio waves
+  &__pulse {
+    transform-origin: center;
+
+    // Respect reduced motion preference
+    @media (prefers-reduced-motion: reduce) {
+      animation: none !important;
+      opacity: 0.3 !important;
+    }
+
+    // Only animate if animations are enabled
+    .animations-enabled & {
+      // First pulse (fastest, most visible)
+      &--1 {
+        animation: station-pulse 2s ease-out infinite;
+      }
+
+      // Second pulse (medium speed)
+      &--2 {
+        animation: station-pulse 2s ease-out infinite 0.66s;
+      }
+
+      // Third pulse (slowest, most subtle)
+      &--3 {
+        animation: station-pulse 2s ease-out infinite 1.33s;
+      }
+    }
+  }
+
+  // Hover effect
+  &:hover {
+    svg circle:nth-child(2) {
+      fill: var(--color-maroon);
+      transition: fill 0.2s ease;
+    }
+  }
+}
+
+/**
+ * Keyframe animation for pulsing radio waves
+ * Expands from center and fades out
+ */
+@keyframes station-pulse {
+  0% {
+    r: 6;
+    opacity: 0.6;
+  }
+
+  50% {
+    r: 13;
+    opacity: 0.3;
+  }
+
+  100% {
+    r: 14;
+    opacity: 0;
+  }
+}
