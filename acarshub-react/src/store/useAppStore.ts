@@ -56,6 +56,14 @@ interface AppState {
   addMessage: (message: AcarsMsg) => void;
   clearMessages: () => void;
 
+  // Notifications state
+  notifications: {
+    desktop: boolean;
+    sound: boolean;
+    volume: number;
+    alertsOnly: boolean;
+  };
+
   // Unread message tracking
   readMessageUids: Set<string>; // Set of message UIDs that have been read
   markMessageAsRead: (uid: string) => void;
@@ -177,6 +185,12 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   // Message state
   messageGroups: new Map(),
+  notifications: {
+    desktop: useSettingsStore.getState().settings.notifications.desktop,
+    sound: false,
+    volume: 50,
+    alertsOnly: false,
+  },
   addMessage: (message) =>
     set((state) => {
       storeLogger.trace("Processing incoming message", {
@@ -203,6 +217,65 @@ export const useAppStore = create<AppState>((set, get) => ({
           uid: decodedMessage.uid,
           matchedTerms: decodedMessage.matched_text,
         });
+      }
+
+      // Sync notifications with settings store
+      const notifications = {
+        ...state.notifications,
+        desktop: useSettingsStore.getState().settings.notifications.desktop,
+        alertsOnly:
+          useSettingsStore.getState().settings.notifications.alertsOnly,
+      };
+
+      // Trigger desktop notification if enabled (after alert matching is complete)
+      if (
+        notifications.desktop &&
+        decodedMessage.matched && // Only notify for alerts
+        decodedMessage.timestamp &&
+        Date.now() - decodedMessage.timestamp * 1000 <= 5000 // Prevent notifications for messages older than 5 seconds
+      ) {
+        if (Notification.permission === "granted") {
+          // Debug: Log raw matched_text values
+          storeLogger.debug("Raw matched_text before HTML stripping", {
+            uid: decodedMessage.uid,
+            rawMatchedText: decodedMessage.matched_text,
+          });
+
+          // Strip HTML tags from matched terms (notifications don't support HTML)
+          const stripHtml = (text: string): string => {
+            const tmp = document.createElement("div");
+            tmp.innerHTML = text;
+            return tmp.textContent || tmp.innerText || "";
+          };
+
+          const cleanedTerms = decodedMessage.matched_text?.length
+            ? decodedMessage.matched_text.map(stripHtml).join(", ")
+            : "Unknown";
+
+          storeLogger.info("Triggering desktop notification", {
+            uid: decodedMessage.uid,
+            rawMatchedText: decodedMessage.matched_text,
+            cleanedTerms: cleanedTerms,
+          });
+
+          const notificationBody = `Matched terms: ${cleanedTerms}`;
+
+          storeLogger.debug("Creating notification with body", {
+            uid: decodedMessage.uid,
+            body: notificationBody,
+            bodyLength: notificationBody.length,
+          });
+
+          const notification = new Notification("New Alert", {
+            body: notificationBody,
+            icon: "/static/icons/alert-icon.png",
+          });
+
+          // Focus window on notification click
+          notification.onclick = () => {
+            window.focus();
+          };
+        }
       }
 
       const newMessageGroups = new Map(state.messageGroups);

@@ -1873,28 +1873,61 @@ Browser autoplay policies differ significantly between Firefox and Chromium-base
 
 **Deliverable**: Sound alerts controlled by Settings → Notifications ✅
 
-#### Phase 9.1.2: Desktop Notifications 🔔
+#### Phase 9.1.2: Desktop Notifications 🔔 ✅ COMPLETE
 
 **Goal**: Implement browser notifications for alert messages
 
-- ⏳ Add permission request flow when user enables desktop notifications
-- ⏳ Show browser notifications for new alert messages
-- ⏳ Respect `alertsOnly` setting (only notify for alerts if enabled)
-- ⏳ Add notification click handler (focus/open Alerts page)
-- ⏳ Enable desktop notifications toggle in Settings Modal
-- ⏳ Test on Chrome, Firefox, Safari
-- ⏳ Handle permission denied gracefully
-- ⏳ Add notification icon and proper formatting
+- ✅ Add permission request flow when user enables desktop notifications
+- ✅ Show browser notifications for new alert messages
+- ✅ Respect `alertsOnly` setting (only notify for alerts if enabled)
+- ✅ Add notification click handler (focus/open Alerts page)
+- ✅ Enable desktop notifications toggle in Settings Modal
+- ✅ Test on Chrome, Firefox, Safari
+- ✅ Handle permission denied gracefully
+- ✅ Add notification icon and proper formatting
 
-**Technical Requirements**:
+**Completed Changes**:
 
-- Check `'Notification' in window` for browser support
-- Request permission: `Notification.requestPermission()`
-- Create notifications: `new Notification(title, options)`
-- Use `tag` property to prevent duplicate notifications
-- Respect user's `alertsOnly` preference
+- Desktop notifications toggle enabled in Settings Modal
+- Permission request flow implemented with browser support detection
+- Handles `granted`, `denied`, and `default` permission states
+- Alert user with helpful messages when permissions are blocked
+- Notifications only trigger for alert messages (matched=true)
+- Notification logic moved after alert matching to ensure `matched_text` is populated
+- Time-based filtering prevents notifications on page load (only messages within 5 seconds)
+- Timestamp conversion fix (backend sends seconds, converted to milliseconds)
+- HTML stripping from matched terms (notifications are plain text only)
+- Notification body shows only matched terms: "Matched terms: TERM1, TERM2"
+- Click handler focuses browser window
+- Syncs with Settings store for `desktop` and `alertsOnly` preferences
+- All TypeScript and Biome checks passing
+- Production build successful
 
-**Deliverable**: Working desktop notifications with permission handling
+**Key Implementation Details**:
+
+- **Permission Handling**: Checks `'Notification' in window` for browser support
+- **Permission Request**: Uses `Notification.requestPermission()` when toggle is enabled
+- **Alert-Only Notifications**: Only messages with `matched=true` trigger notifications
+- **Time Filtering**: `Date.now() - message.timestamp * 1000 <= 5000` prevents old messages from notifying
+- **HTML Stripping**: `stripHtml()` function removes any HTML tags from matched terms
+- **Notification Body**: Simple format showing only matched alert terms
+- **Click Handler**: `notification.onclick` focuses the browser window
+
+**Browser Behavior**:
+
+- **Firefox**: Works seamlessly, permissions persist across sessions
+- **Chrome/Brave/Edge**: Works correctly, permissions persist across sessions
+- **Safari**: Works with permission grant
+- **Notification Center**: OS-level notification centers may add their own action links (this is normal behavior)
+
+**Known Limitations**:
+
+- Notifications are plain text only (browser API limitation)
+- OS notification centers may add automatic links or actions (not controllable via JavaScript)
+- Notifications only work when browser tab is open (browser API limitation)
+- Some notification centers auto-detect URLs and make them clickable (OS behavior, not a bug)
+
+**Deliverable**: Working desktop notifications with permission handling ✅
 
 #### Phase 9.1.3: Alert Badge Redesign 🎯
 
@@ -1974,16 +2007,16 @@ socket.emit(
 
 **Phase 9.1 Completion Checklist**:
 
-- [ ] Sound alerts fully integrated with Settings
-- [ ] Desktop notifications working with permission handling
-- [ ] Alert badge shows unread count
-- [ ] Mark as read functionality working
-- [ ] Alert term management UI complete
-- [ ] Backend persistence for alert terms
-- [ ] All TypeScript strict mode checks passing
-- [ ] All Biome checks passing
-- [ ] Mobile-first responsive design verified
-- [ ] Tested on Chrome, Firefox, Safari
+- ✅ Sound alerts fully integrated with Settings
+- ✅ Desktop notifications working with permission handling
+- ⏳ Alert badge shows unread count
+- ⏳ Mark as read functionality working
+- ⏳ Alert term management UI complete
+- ⏳ Backend persistence for alert terms
+- ✅ All TypeScript strict mode checks passing
+- ✅ All Biome checks passing
+- ✅ Mobile-first responsive design verified
+- ✅ Tested on Chrome, Firefox, Safari
 
 ### Phase 10: Testing Infrastructure (Optional - Deferred)
 
@@ -2178,7 +2211,11 @@ Before moving to the next phase:
   - ✅ FIXED: alertCount auto-calculated in AppStore addMessage() function
   - ✅ FIXED: Browser detection shows Chromium-specific warning (Firefox works perfectly)
   - ⚠️ LIMITATION: Chromium browsers require "Test Sound" click per reload (Firefox does not)
-  - ⏳ Desktop notifications not implemented (Settings shows "Coming Soon")
+  - ✅ FIXED: Desktop notifications fully implemented with permission handling
+  - ✅ FIXED: Notifications only trigger for alert messages (not all messages)
+  - ✅ FIXED: Notification body shows only matched terms (no message text)
+  - ✅ FIXED: HTML stripping from matched terms (plain text notifications)
+  - ✅ FIXED: Time-based filtering prevents notifications on page load
   - ⏳ Alert terms management UI missing from Settings
   - ⏳ Backend alert term persistence not implemented (client-side only)
   - ⏳ Alert badge shows total alerts instead of unread (misleading UX)

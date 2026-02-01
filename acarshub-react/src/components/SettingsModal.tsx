@@ -451,17 +451,41 @@ export const SettingsModal = () => {
                 </div>
               )}
 
-              <div className="settings-info settings-info--warning">
-                ℹ️ Desktop notifications and alert term management coming soon
+              <div className="settings-info settings-info--success">
+                ✓ Desktop notifications are now available. Ensure you grant
+                browser permissions when enabling this feature.
               </div>
 
               <Toggle
                 id="desktop-notifications"
-                label="Desktop Notifications (Coming Soon)"
+                label="Desktop Notifications"
                 checked={settings.notifications.desktop}
-                onChange={setDesktopNotifications}
+                onChange={(checked) => {
+                  if ("Notification" in window) {
+                    if (Notification.permission === "default") {
+                      Notification.requestPermission().then((permission) => {
+                        if (permission === "granted") {
+                          setDesktopNotifications(checked);
+                        } else {
+                          alert(
+                            "Desktop notifications permission was denied. Please enable it in your browser settings.",
+                          );
+                        }
+                      });
+                    } else if (Notification.permission === "granted") {
+                      setDesktopNotifications(checked);
+                    } else {
+                      alert(
+                        "Desktop notifications are blocked. Please enable them in your browser settings.",
+                      );
+                    }
+                  } else {
+                    alert(
+                      "Your browser does not support desktop notifications.",
+                    );
+                  }
+                }}
                 helpText="Show browser notifications for new alert messages (requires permission)"
-                disabled
               />
 
               <Toggle
