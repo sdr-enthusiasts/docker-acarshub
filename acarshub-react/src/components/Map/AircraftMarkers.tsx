@@ -14,15 +14,24 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Marker } from "react-map-gl/maplibre";
 import { useAppStore } from "../../store/useAppStore";
+import { useSettingsStore } from "../../store/useSettingsStore";
 import {
   getAircraftColor,
   getBaseMarker,
   shouldRotate,
   svgShapeToURI,
 } from "../../utils/aircraftIcons";
+import {
+  formatAltitude,
+  formatGroundSpeed,
+  formatHeading,
+  getDisplayCallsign,
+  type PairedAircraft,
+  pairADSBWithACARSMessages,
+} from "../../utils/aircraftPairing";
 import "./AircraftMarkers.scss";
 
 interface AircraftMarkerData {
@@ -34,68 +43,86 @@ interface AircraftMarkerData {
   width: number;
   height: number;
   shouldRotate: boolean;
+  aircraft: PairedAircraft;
+}
+
+interface TooltipState {
+  hex: string;
+  showBelow: boolean;
 }
 
 /**
  * AircraftMarkers Component
  *
  * Renders MapLibre markers for all ADS-B aircraft positions.
- * - Consumes aircraft data from Zustand store
+ * - Pairs ADS-B aircraft with ACARS message groups (hex > callsign > tail)
  * - Generates SVG icons based on aircraft type/category
  * - Rotates markers based on heading
  * - Colors markers based on alerts/messages
+ * - Shows hover tooltips with aircraft details
  * - Efficiently updates only changed markers
  */
 export function AircraftMarkers() {
   const adsbAircraft = useAppStore((state) => state.adsbAircraft);
   const messageGroups = useAppStore((state) => state.messageGroups);
+  const altitudeUnit = useSettingsStore(
+    (state) => state.settings.regional.altitudeUnit,
+  );
+  const locale = useSettingsStore((state) => state.settings.regional.locale);
+  const [hoveredAircraft, setHoveredAircraft] = useState<TooltipState | null>(
+    null,
+  );
+
+  // Pair ADS-B aircraft with ACARS message groups
+  const pairedAircraft = useMemo(() => {
+    const aircraft = adsbAircraft?.aircraft || [];
+    return pairADSBWithACARSMessages(aircraft, messageGroups);
+  }, [adsbAircraft, messageGroups]);
 
   // Prepare marker data using useMemo to avoid infinite loops
   const aircraftMarkers = useMemo(() => {
-    const aircraft = adsbAircraft?.aircraft || [];
     const markers: AircraftMarkerData[] = [];
 
-    for (const ac of aircraft) {
+    for (const aircraft of pairedAircraft) {
       // Skip aircraft without position
-      if (ac.lat === undefined || ac.lon === undefined) {
+      if (aircraft.lat === undefined || aircraft.lon === undefined) {
         continue;
       }
 
-      // Check if aircraft has ACARS messages or alerts
-      const acarsGroup = messageGroups.get(ac.hex.toUpperCase());
-      const hasMessages =
-        acarsGroup !== undefined && acarsGroup.messages.length > 0;
-      const hasAlerts = acarsGroup?.has_alerts || false;
-
       // Get icon for this aircraft
       const { name: shapeName, scale } = getBaseMarker(
-        ac.category,
-        ac.type,
+        aircraft.category,
+        aircraft.type,
         undefined, // typeDescription - not available from ADS-B
         undefined, // wtc - not available from ADS-B
-        ac.alt_baro,
+        aircraft.alt_baro,
       );
 
       // Get color based on state
-      const color = getAircraftColor(hasAlerts, hasMessages, ac.alt_baro);
+      const color = getAircraftColor(
+        aircraft.hasAlerts,
+        aircraft.hasMessages,
+        aircraft.alt_baro,
+      );
 
       // Generate SVG icon
       const iconData = svgShapeToURI(shapeName, 0.5, scale * 1.5, color);
 
       markers.push({
-        hex: ac.hex,
-        lat: ac.lat,
-        lon: ac.lon,
-        track: ac.track,
+        hex: aircraft.hex,
+        lat: aircraft.lat,
+        lon: aircraft.lon,
+        track: aircraft.track,
         iconHtml: iconData.svg,
         width: iconData.width,
         height: iconData.height,
         shouldRotate: shouldRotate(shapeName),
+        aircraft,
       });
     }
 
     return markers;
-  }, [adsbAircraft, messageGroups]);
+  }, [pairedAircraft]);
 
   // No aircraft data yet
   if (!adsbAircraft) {
@@ -104,37 +131,153 @@ export function AircraftMarkers() {
 
   return (
     <>
-      {aircraftMarkers.map((aircraft) => {
+      {aircraftMarkers.map((markerData) => {
         const rotation =
-          aircraft.shouldRotate && aircraft.track !== undefined
-            ? aircraft.track
+          markerData.shouldRotate && markerData.track !== undefined
+            ? markerData.track
             : 0;
 
         return (
           <Marker
-            key={aircraft.hex}
-            longitude={aircraft.lon}
-            latitude={aircraft.lat}
+            key={markerData.hex}
+            longitude={markerData.lon}
+            latitude={markerData.lat}
             anchor="center"
+            style={{
+              zIndex: hoveredAircraft?.hex === markerData.hex ? 10000 : 10,
+            }}
           >
             <div
-              className="aircraft-marker"
               style={{
-                width: `${aircraft.width}px`,
-                height: `${aircraft.height}px`,
-                transform: `rotate(${rotation}deg)`,
-                transformOrigin: "center center",
+                position: "relative",
+                zIndex: hoveredAircraft?.hex === markerData.hex ? 10000 : 10,
               }}
             >
-              <img
-                src={aircraft.iconHtml}
-                alt={`Aircraft ${aircraft.hex}`}
+              <button
+                type="button"
+                className="aircraft-marker"
+                aria-label={`Aircraft ${markerData.hex}`}
                 style={{
-                  width: "100%",
-                  height: "100%",
-                  pointerEvents: "none",
+                  width: `${markerData.width}px`,
+                  height: `${markerData.height}px`,
+                  transform: `rotate(${rotation}deg)`,
+                  transformOrigin: "center center",
                 }}
-              />
+                onMouseEnter={(e) => {
+                  // Calculate if tooltip should appear above or below marker
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const distanceFromTop = rect.top;
+                  const showBelow = distanceFromTop < 280; // Show below if within 280px of top (accounts for full tooltip height)
+
+                  setHoveredAircraft({
+                    hex: markerData.hex,
+                    showBelow,
+                  });
+                }}
+                onMouseLeave={() => {
+                  setHoveredAircraft(null);
+                }}
+              >
+                <img
+                  src={markerData.iconHtml}
+                  alt={`Aircraft ${markerData.hex}`}
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    pointerEvents: "none",
+                  }}
+                />
+              </button>
+              {/* Tooltip outside rotated button */}
+              {hoveredAircraft && hoveredAircraft.hex === markerData.hex && (
+                <div
+                  className={`aircraft-tooltip ${hoveredAircraft.showBelow ? "aircraft-tooltip--below" : "aircraft-tooltip--above"}`}
+                  style={{ pointerEvents: "none" }}
+                >
+                  <div className="aircraft-tooltip__content">
+                    <div className="aircraft-tooltip__header">
+                      <strong>{getDisplayCallsign(markerData.aircraft)}</strong>
+                      {markerData.aircraft.matchStrategy !== "none" && (
+                        <span className="aircraft-tooltip__match-badge">
+                          {markerData.aircraft.matchStrategy}
+                        </span>
+                      )}
+                    </div>
+
+                    {markerData.aircraft.tail &&
+                      markerData.aircraft.tail !==
+                        getDisplayCallsign(markerData.aircraft) && (
+                        <div className="aircraft-tooltip__row">
+                          <span className="aircraft-tooltip__label">Tail:</span>
+                          <span className="aircraft-tooltip__value">
+                            {markerData.aircraft.tail}
+                          </span>
+                        </div>
+                      )}
+
+                    <div className="aircraft-tooltip__row">
+                      <span className="aircraft-tooltip__label">Hex:</span>
+                      <span className="aircraft-tooltip__value">
+                        {markerData.aircraft.hex.toUpperCase()}
+                      </span>
+                    </div>
+
+                    {markerData.aircraft.type && (
+                      <div className="aircraft-tooltip__row">
+                        <span className="aircraft-tooltip__label">Type:</span>
+                        <span className="aircraft-tooltip__value">
+                          {markerData.aircraft.type}
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="aircraft-tooltip__row">
+                      <span className="aircraft-tooltip__label">Altitude:</span>
+                      <span className="aircraft-tooltip__value">
+                        {formatAltitude(
+                          markerData.aircraft.alt_baro,
+                          altitudeUnit,
+                          locale,
+                        )}
+                      </span>
+                    </div>
+
+                    <div className="aircraft-tooltip__row">
+                      <span className="aircraft-tooltip__label">Speed:</span>
+                      <span className="aircraft-tooltip__value">
+                        {formatGroundSpeed(markerData.aircraft.gs)}
+                      </span>
+                    </div>
+
+                    <div className="aircraft-tooltip__row">
+                      <span className="aircraft-tooltip__label">Heading:</span>
+                      <span className="aircraft-tooltip__value">
+                        {formatHeading(markerData.aircraft.track)}
+                      </span>
+                    </div>
+
+                    {markerData.aircraft.hasMessages && (
+                      <div className="aircraft-tooltip__row aircraft-tooltip__row--highlight">
+                        <span className="aircraft-tooltip__label">
+                          Messages:
+                        </span>
+                        <span className="aircraft-tooltip__value">
+                          {markerData.aircraft.messageCount}
+                        </span>
+                      </div>
+                    )}
+
+                    {markerData.aircraft.hasAlerts && (
+                      <div className="aircraft-tooltip__row aircraft-tooltip__row--alert">
+                        <span className="aircraft-tooltip__label">Alerts:</span>
+                        <span className="aircraft-tooltip__value">
+                          {markerData.aircraft.alertCount}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </Marker>
         );

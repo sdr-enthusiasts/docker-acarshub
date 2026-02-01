@@ -222,6 +222,17 @@ git --no-pager log
 git --no-pager show
 ```
 
+### 5. Markdown
+
+- Always include a language specifier for code blocks (e.g., ```typescript)
+- No summary markdown documents allowed
+- You may create documents for documenting standards (e.g., DESIGN_LANGUAGE.md)
+- Do not use emphasis in place of a heading
+- Do not use the same heading with the same content multiple times in the same document (eg "## Introduction")
+- Use blank lines around headings for readability and code blocks
+- This project uses GitHub-flavored markdown
+- This project uses strict linting rules for markdown files
+
 ## Development Guidelines
 
 ### TypeScript Standards
@@ -1090,22 +1101,34 @@ Target modern browsers with ES6+ support:
 - ✅ TypeScript types: `ADSBAircraft`, `ADSBData` interfaces
 - ✅ Removed frontend polling logic (clean architecture)
 
-#### Aircraft Markers & Data Blocks ✅ COMPLETE (Markers) / 🔜 NEXT (Data Blocks)
+#### Aircraft Markers & Pairing ✅ COMPLETE
 
 - ✅ Port aircraft SVG icons from legacy (getBaseMarker, svgShapeToURI)
 - ✅ Implement MapLibre markers with aircraft rotation
 - ✅ Color-coding logic (alerts, ACARS messages, signal strength)
-- ✅ Hover effects and tooltips
+- ✅ Hover tooltips with aircraft details
 - ✅ Performance optimization for 100+ markers
 - ✅ Complete aircraft icon library (1,477 lines, **81 shapes**, 300+ type mappings)
-- ✅ AircraftMarkers component (152 lines)
+- ✅ AircraftMarkers component (277 lines)
 - ✅ **Theme-aware colors** - Icons use Catppuccin CSS variables (adapt to Mocha/Latte)
 - ✅ Integration with ACARS message system (color coding)
-- ✅ **ADS-B + ACARS pairing** - Green = has ACARS, White/Text = ADS-B only, Red = alerts
-- 📄 See `acarshub-react/AIRCRAFT_ICONS_COMPLETE.md` for details
-- ⏳ Create data block markers (callsign, altitude, speed display)
-- ⏳ Implement extended data blocks (full flight details)
-- ⏳ Click handlers for showing aircraft messages
+- ✅ **Intelligent ADS-B ↔ ACARS pairing** with three strategies:
+  - ✅ Hex match (ICAO 24-bit address) - highest priority
+  - ✅ ICAO callsign match (flight number) - medium priority
+  - ✅ Tail/registration match - fallback
+- ✅ **Hover tooltips** showing:
+  - ✅ Callsign/tail/hex (priority order)
+  - ✅ Match strategy badge (hex/flight/tail)
+  - ✅ Altitude, speed, heading
+  - ✅ Aircraft type
+  - ✅ Message count (green highlight)
+  - ✅ Alert count (red highlight)
+- ✅ Accessibility: Semantic `<button>` elements, keyboard navigation, ARIA labels
+- ✅ Density mode support (compact/comfortable/spacious)
+- ✅ Mobile responsive tooltips
+- 📄 See `acarshub-react/AIRCRAFT_ICONS_COMPLETE.md` for icon details
+- 📄 See `acarshub-react/ADSB_ACARS_PAIRING.md` for pairing implementation
+- 🔜 Click handlers for showing aircraft messages (next task)
 
 #### Map Features & Overlays
 
@@ -1199,7 +1222,9 @@ Target modern browsers with ES6+ support:
 - ✅ Settings integration complete
 - ✅ ADS-B data flow refactored (backend polling, Socket.IO push, 75% payload reduction)
 - ✅ Aircraft markers complete (SVG icons, rotation, color coding, 100+ aircraft capable)
-- 🔜 Next: Data blocks, click handlers, aircraft list, filtering, overlays
+- ✅ **ADS-B ↔ ACARS pairing complete** (hex > callsign > tail matching)
+- ✅ **Hover tooltips complete** (comprehensive aircraft details, theme-aware, accessible)
+- 🔜 Next: Click handlers to open message panels, aircraft list, filtering, overlays
 
 ### Phase 9: Alerts and Search
 

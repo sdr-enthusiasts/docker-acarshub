@@ -114,8 +114,9 @@ export interface ADSBAircraft {
   squawk?: string; // Transponder code
   baro_rate?: number; // Climb/descent rate (ft/min)
   category?: string; // Aircraft category (for icon shape)
-  t?: string; // Tail/registration
-  type?: string; // Aircraft type
+  t?: string; // Aircraft type designator
+  r?: string; // Registration/tail number
+  type?: string; // Aircraft type (usually same as t)
   seen?: number; // Seconds since last update
 }
 
@@ -676,7 +677,14 @@ export interface FilterConfig {
  */
 
 /**
- * Time format options
+ * Altitude unit preference
+ * - feet: Imperial feet (default - used by most of the world)
+ * - meters: Metric meters (used by Russia and a few others)
+ */
+export type AltitudeUnit = "feet" | "meters";
+
+/**
+ * Time format preference
  * - auto: Detect from user's locale
  * - 12h: 12-hour format with AM/PM
  * - 24h: 24-hour format
@@ -771,6 +779,8 @@ export interface RegionalSettings {
   timezone: "local" | "utc";
   /** Locale override (undefined = auto-detect) */
   locale?: string;
+  /** Altitude unit preference (feet/meters/auto) */
+  altitudeUnit: AltitudeUnit;
 }
 
 /**
@@ -835,6 +845,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
     timeFormat: "auto",
     dateFormat: "auto",
     timezone: "local",
+    altitudeUnit: "feet",
   },
   notifications: {
     desktop: false,

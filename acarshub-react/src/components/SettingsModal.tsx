@@ -17,7 +17,13 @@
 import { useCallback, useEffect, useState } from "react";
 import { useAppStore } from "../store/useAppStore";
 import { useSettingsStore } from "../store/useSettingsStore";
-import type { DateFormat, DisplayDensity, Theme, TimeFormat } from "../types";
+import type {
+  AltitudeUnit,
+  DateFormat,
+  DisplayDensity,
+  Theme,
+  TimeFormat,
+} from "../types";
 import { Button } from "./Button";
 import { Card } from "./Card";
 import { Modal } from "./Modal";
@@ -40,6 +46,7 @@ export const SettingsModal = () => {
   const setTimeFormat = useSettingsStore((state) => state.setTimeFormat);
   const setDateFormat = useSettingsStore((state) => state.setDateFormat);
   const setTimezone = useSettingsStore((state) => state.setTimezone);
+  const setAltitudeUnit = useSettingsStore((state) => state.setAltitudeUnit);
   const setAnimations = useSettingsStore((state) => state.setAnimations);
   const setShowConnectionStatus = useSettingsStore(
     (state) => state.setShowConnectionStatus,
@@ -343,6 +350,26 @@ export const SettingsModal = () => {
                 ]}
                 onChange={(value) => setTimezone(value as "local" | "utc")}
                 helpText="Choose which timezone to use for displaying message timestamps"
+              />
+
+              <RadioGroup
+                name="altitude-unit"
+                label="Altitude Units"
+                value={settings.regional.altitudeUnit}
+                options={[
+                  {
+                    value: "feet",
+                    label: "Feet",
+                    description: "Imperial units (ft) - default",
+                  },
+                  {
+                    value: "meters",
+                    label: "Metres",
+                    description: "Metric units (m)",
+                  },
+                ]}
+                onChange={(value) => setAltitudeUnit(value as AltitudeUnit)}
+                helpText="Choose units for displaying aircraft altitude (most of the world uses feet)"
               />
             </Card>
           </div>

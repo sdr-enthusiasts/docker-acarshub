@@ -17,6 +17,15 @@
 @use "../../styles/mixins" as *;
 
 .aircraft-marker {
+  // Button reset styles
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  outline: none;
+
   // Position and transform
   position: relative;
   display: flex;
@@ -31,6 +40,13 @@
 
   // Ensure markers render above map tiles
   z-index: 10;
+
+  // Remove default button focus outline, we'll add our own
+  &:focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
 
   // Image inside marker
   img {
@@ -133,6 +149,206 @@
 // Print styles - hide markers when printing
 @media print {
   .aircraft-marker {
+    display: none;
+  }
+}
+
+// Aircraft tooltip styles
+.aircraft-tooltip {
+  // Absolute positioning relative to marker button
+  position: absolute;
+  left: 50%;
+  z-index: 10000;
+  pointer-events: none;
+
+  // Default: show above marker
+  &--above {
+    bottom: 100%;
+    margin-bottom: 10px;
+    transform: translateX(-50%) rotate(0deg);
+  }
+
+  // Alternative: show below marker (when near top of viewport)
+  &--below {
+    top: 100%;
+    margin-top: 10px;
+    transform: translateX(-50%) rotate(0deg);
+  }
+
+  &__content {
+    background: var(--color-surface0);
+    border: 1px solid var(--color-surface2);
+    border-radius: 6px;
+    padding: 8px 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    min-width: 180px;
+    font-size: 13px;
+    line-height: 1.4;
+    white-space: nowrap;
+
+    // Smooth fade-in animation
+    animation: tooltip-fade-in 0.15s ease-out;
+
+    @media (prefers-reduced-motion: reduce) {
+      animation: none;
+    }
+  }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 6px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--color-surface1);
+    color: var(--color-text);
+    font-size: 14px;
+  }
+
+  &__match-badge {
+    display: inline-block;
+    padding: 2px 6px;
+    background: var(--color-surface2);
+    color: var(--color-subtext1);
+    border-radius: 3px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  &__row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin: 4px 0;
+    color: var(--color-text);
+
+    &--highlight {
+      background: rgba(var(--color-green-rgb), 0.1);
+      padding: 2px 4px;
+      border-radius: 3px;
+      margin: 6px -4px 0;
+
+      .aircraft-tooltip__label,
+      .aircraft-tooltip__value {
+        color: var(--color-green);
+        font-weight: 600;
+      }
+    }
+
+    &--alert {
+      background: rgba(var(--color-red-rgb), 0.1);
+      padding: 2px 4px;
+      border-radius: 3px;
+      margin: 6px -4px 0;
+
+      .aircraft-tooltip__label,
+      .aircraft-tooltip__value {
+        color: var(--color-red);
+        font-weight: 600;
+      }
+    }
+  }
+
+  &__label {
+    color: var(--color-subtext1);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+  }
+
+  &__value {
+    color: var(--color-text);
+    font-weight: 500;
+    text-align: right;
+  }
+}
+
+// Tooltip fade-in animation
+@keyframes tooltip-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+// Density mode adjustments for tooltips
+[data-density="compact"] .aircraft-tooltip {
+  &__content {
+    padding: 6px 10px;
+    font-size: 12px;
+    min-width: 160px;
+  }
+
+  &__header {
+    font-size: 13px;
+    margin-bottom: 4px;
+    padding-bottom: 4px;
+  }
+
+  &__row {
+    margin: 3px 0;
+  }
+
+  &__label {
+    font-size: 10px;
+  }
+}
+
+[data-density="spacious"] .aircraft-tooltip {
+  &__content {
+    padding: 10px 14px;
+    font-size: 14px;
+    min-width: 200px;
+  }
+
+  &__header {
+    font-size: 15px;
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+  }
+
+  &__row {
+    margin: 5px 0;
+  }
+
+  &__label {
+    font-size: 12px;
+  }
+}
+
+// Mobile responsive tooltip
+@include breakpoint-max(sm) {
+  .aircraft-tooltip {
+    &__content {
+      min-width: 150px;
+      font-size: 12px;
+      padding: 6px 10px;
+    }
+
+    &__header {
+      font-size: 13px;
+    }
+
+    &__label {
+      font-size: 10px;
+    }
+
+    &__value {
+      font-size: 12px;
+    }
+  }
+}
+
+// Print styles - hide tooltips when printing
+@media print {
+  .aircraft-tooltip {
     display: none;
   }
 }

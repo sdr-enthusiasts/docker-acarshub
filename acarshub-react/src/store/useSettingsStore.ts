@@ -17,6 +17,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type {
+  AltitudeUnit,
   AppearanceSettings,
   DataSettings,
   DateFormat,
@@ -48,6 +49,7 @@ interface SettingsState {
   setDateFormat: (format: DateFormat) => void;
   setTimezone: (timezone: "local" | "utc") => void;
   setLocale: (locale: string | undefined) => void;
+  setAltitudeUnit: (unit: AltitudeUnit) => void;
 
   // Notification actions
   setDesktopNotifications: (enabled: boolean) => void;
@@ -103,6 +105,7 @@ const getDefaultSettings = (): UserSettings => {
       timeFormat: "auto",
       dateFormat: "auto",
       timezone: "local",
+      altitudeUnit: "feet",
     },
     notifications: {
       desktop: false,
@@ -223,6 +226,15 @@ export const useSettingsStore = create<SettingsState>()(
           settings: {
             ...state.settings,
             regional: { ...state.settings.regional, locale },
+            updatedAt: Date.now(),
+          },
+        })),
+
+      setAltitudeUnit: (unit) =>
+        set((state) => ({
+          settings: {
+            ...state.settings,
+            regional: { ...state.settings.regional, altitudeUnit: unit },
             updatedAt: Date.now(),
           },
         })),
