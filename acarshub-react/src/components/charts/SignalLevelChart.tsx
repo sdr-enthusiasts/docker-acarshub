@@ -17,6 +17,7 @@
 import {
   CategoryScale,
   Chart as ChartJS,
+  type ChartOptions,
   Filler,
   Legend,
   LinearScale,
@@ -133,14 +134,16 @@ export const SignalLevelChart = ({
     };
   }, [signalData, isDark]);
 
-  // Get current theme colors from CSS variables - read fresh on every render
-  const styles = getComputedStyle(document.documentElement);
-  const textColor = styles.getPropertyValue("--color-text").trim();
-  const gridColor = styles.getPropertyValue("--color-surface2").trim();
-  const surface0 = styles.getPropertyValue("--color-surface0").trim();
-
   // Chart options with Catppuccin theming - memoized with stable dependencies
-  const options = useMemo(() => {
+  const options: ChartOptions<"line"> = useMemo(() => {
+    // Get current theme colors from CSS variables - read fresh when theme changes
+    // Explicitly reference theme to trigger re-computation on theme changes
+    void theme; // Used to force re-read of CSS variables
+    const styles = getComputedStyle(document.documentElement);
+    const textColor = styles.getPropertyValue("--color-text").trim();
+    const gridColor = styles.getPropertyValue("--color-surface2").trim();
+    const surface0 = styles.getPropertyValue("--color-surface0").trim();
+
     return {
       responsive: true,
       maintainAspectRatio: false,
@@ -222,7 +225,7 @@ export const SignalLevelChart = ({
         axis: "x" as const,
       },
     };
-  }, [textColor, gridColor, surface0]);
+  }, [theme]);
 
   // Show empty state if no data
   if (!chartData) {

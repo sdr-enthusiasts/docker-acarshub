@@ -129,17 +129,45 @@ export const TimeSeriesChart = ({
       pointRadius: 0,
       pointHoverRadius: 4,
       tension: 0.1,
+      spanGaps: false, // Don't connect gaps - show breaks in data
+    };
+
+    // Process data to insert null values for large gaps
+    // This prevents connecting long periods of no data with a line
+    const processDataWithGaps = (
+      dataPoints: Array<{ x: number; y: number }>,
+    ): Array<{ x: number; y: number | null }> => {
+      if (dataPoints.length === 0) return [];
+
+      const processed: Array<{ x: number; y: number | null }> = [];
+      const maxGapMs = getMaxGapDuration(timePeriod);
+
+      for (let i = 0; i < dataPoints.length; i++) {
+        const current = dataPoints[i];
+        const previous = i > 0 ? dataPoints[i - 1] : null;
+
+        // Check if there's a large time gap between points
+        if (previous && current.x - previous.x > maxGapMs) {
+          // Insert a null point just after the previous point to break the line
+          processed.push({ x: previous.x + 1000, y: null });
+        }
+
+        processed.push(current);
+      }
+
+      return processed;
     };
 
     let datasets: Array<{
       label: string;
-      data: Array<{ x: number; y: number }>;
+      data: Array<{ x: number; y: number | null }>;
       borderColor: string;
       backgroundColor: string;
       borderWidth: number;
       pointRadius: number;
       pointHoverRadius: number;
       tension: number;
+      spanGaps: boolean;
     }> = [];
 
     if (decoderType === "combined") {
@@ -148,42 +176,54 @@ export const TimeSeriesChart = ({
         {
           ...baseDataset,
           label: "ACARS",
-          data: data.map((d) => ({ x: d.timestamp, y: d.acars })),
+          data: processDataWithGaps(
+            data.map((d) => ({ x: d.timestamp, y: d.acars })),
+          ),
           borderColor: decoderColors.acars,
           backgroundColor: `${decoderColors.acars}33`,
         },
         {
           ...baseDataset,
           label: "VDLM",
-          data: data.map((d) => ({ x: d.timestamp, y: d.vdlm })),
+          data: processDataWithGaps(
+            data.map((d) => ({ x: d.timestamp, y: d.vdlm })),
+          ),
           borderColor: decoderColors.vdlm,
           backgroundColor: `${decoderColors.vdlm}33`,
         },
         {
           ...baseDataset,
           label: "HFDL",
-          data: data.map((d) => ({ x: d.timestamp, y: d.hfdl })),
+          data: processDataWithGaps(
+            data.map((d) => ({ x: d.timestamp, y: d.hfdl })),
+          ),
           borderColor: decoderColors.hfdl,
           backgroundColor: `${decoderColors.hfdl}33`,
         },
         {
           ...baseDataset,
           label: "IMSL",
-          data: data.map((d) => ({ x: d.timestamp, y: d.imsl })),
+          data: processDataWithGaps(
+            data.map((d) => ({ x: d.timestamp, y: d.imsl })),
+          ),
           borderColor: decoderColors.imsl,
           backgroundColor: `${decoderColors.imsl}33`,
         },
         {
           ...baseDataset,
           label: "IRDM",
-          data: data.map((d) => ({ x: d.timestamp, y: d.irdm })),
+          data: processDataWithGaps(
+            data.map((d) => ({ x: d.timestamp, y: d.irdm })),
+          ),
           borderColor: decoderColors.irdm,
           backgroundColor: `${decoderColors.irdm}33`,
         },
         {
           ...baseDataset,
           label: "Total",
-          data: data.map((d) => ({ x: d.timestamp, y: d.total })),
+          data: processDataWithGaps(
+            data.map((d) => ({ x: d.timestamp, y: d.total })),
+          ),
           borderColor: decoderColors.total,
           backgroundColor: `${decoderColors.total}33`,
           borderWidth: 3, // Thicker line for total
@@ -194,7 +234,9 @@ export const TimeSeriesChart = ({
         {
           ...baseDataset,
           label: "Error Messages",
-          data: data.map((d) => ({ x: d.timestamp, y: d.error })),
+          data: processDataWithGaps(
+            data.map((d) => ({ x: d.timestamp, y: d.error })),
+          ),
           borderColor: decoderColors.error,
           backgroundColor: `${decoderColors.error}33`,
         },
@@ -206,10 +248,12 @@ export const TimeSeriesChart = ({
         {
           ...baseDataset,
           label: `${decoderType.toUpperCase()} Messages`,
-          data: data.map((d) => ({
-            x: d.timestamp,
-            y: d[decoderKey as keyof RRDDataPoint] as number,
-          })),
+          data: processDataWithGaps(
+            data.map((d) => ({
+              x: d.timestamp,
+              y: d[decoderKey as keyof RRDDataPoint] as number,
+            })),
+          ),
           borderColor: decoderColors[decoderKey as keyof typeof decoderColors],
           backgroundColor: `${decoderColors[decoderKey as keyof typeof decoderColors]}33`,
         },
@@ -217,7 +261,7 @@ export const TimeSeriesChart = ({
     }
 
     return { datasets };
-  }, [data, decoderType, decoderColors]);
+  }, [data, decoderType, decoderColors, timePeriod]);
 
   // Chart.js options - memoized with stable dependencies
   const options: ChartOptions<"line"> = useMemo(
@@ -362,5 +406,34 @@ function getTimeUnit(
       return "month";
     default:
       return "hour";
+  }
+}
+
+/**
+ * Get the maximum acceptable gap duration for a time period
+ * Gaps larger than this will show as breaks in the chart line
+ *
+ * @param timePeriod - The time period being displayed
+ * @returns Maximum gap duration in milliseconds
+ */
+function getMaxGapDuration(timePeriod: TimePeriod): number {
+  // Allow gaps up to 2x the expected data point interval
+  // RRD typically has regular intervals based on consolidation
+  switch (timePeriod) {
+    case "1hr":
+    case "6hr":
+      return 5 * 60 * 1000; // 5 minutes for short periods
+    case "12hr":
+    case "24hr":
+      return 10 * 60 * 1000; // 10 minutes for daily views
+    case "1wk":
+      return 30 * 60 * 1000; // 30 minutes for weekly
+    case "30day":
+      return 2 * 60 * 60 * 1000; // 2 hours for monthly
+    case "6mon":
+    case "1yr":
+      return 24 * 60 * 60 * 1000; // 1 day for long periods
+    default:
+      return 10 * 60 * 1000; // 10 minutes default
   }
 }

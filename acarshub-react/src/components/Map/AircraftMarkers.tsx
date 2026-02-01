@@ -51,6 +51,7 @@ interface AircraftMarkerData {
   height: number;
   shouldRotate: boolean;
   aircraft: PairedAircraft;
+  hasUnreadMessages: boolean;
 }
 
 interface TooltipState {
@@ -120,6 +121,13 @@ export function AircraftMarkers({
         continue;
       }
 
+      // Check if aircraft has unread messages
+      const hasUnreadMessages = aircraft.matchedGroup
+        ? aircraft.matchedGroup.messages.some(
+            (msg) => !readMessageUids.has(msg.uid),
+          )
+        : false;
+
       // Get icon for this aircraft
       const { name: shapeName, scale } = getBaseMarker(
         aircraft.category,
@@ -149,11 +157,12 @@ export function AircraftMarkers({
         height: iconData.height,
         shouldRotate: shouldRotate(shapeName),
         aircraft,
+        hasUnreadMessages,
       });
     }
 
     return markers;
-  }, [filteredPairedAircraft]);
+  }, [filteredPairedAircraft, readMessageUids]);
 
   // Handle marker click
   const handleMarkerClick = (aircraft: PairedAircraft) => {
@@ -211,7 +220,7 @@ export function AircraftMarkers({
                   hoveredAircraftHex === markerData.hex
                     ? "aircraft-marker--hovered"
                     : ""
-                }`}
+                } ${markerData.hasUnreadMessages ? "aircraft-marker--unread" : ""}`}
                 aria-label={`Aircraft ${markerData.hex}${markerData.aircraft.hasMessages ? " - Click to view messages" : ""}`}
                 style={{
                   width: `${markerData.width}px`,

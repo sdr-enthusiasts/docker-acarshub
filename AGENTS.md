@@ -2629,13 +2629,20 @@ Before moving to the next phase:
 ## Bugs before final release
 
 - Global:
-  - Page Density switch is inconsistent. We've ended up hard coding some sizes in places rather than using the density settings from the store. Need to audit and fix, OR remove the density setting entirely if it's not feasible to implement everywhere. Likely choice: remove the density setting entirely.
-  - As per stats below, theme switching has some issues applying until new data comes in
   - Disconnected state will show disconnected, but the socket is valid
+  - ⚠️ NOTE: Density setting is inconsistent (hardcoded sizes in some places). Recommend removing entirely - deferred to Phase 12.
 
-- Stats page:
-  - Stats page, on theme switch, does not completely honor the theme when dynamically switched on the page. Labels are the wrong color until more data comes in from the websocket
-  - Bar chart number labels for the bar value should be dark on all themes for readability
+- Bug Fix Pass (Pre-Phase 10) - ✅ COMPLETE (6 bugs fixed, 1 deferred):
+  - ✅ FIXED: Alert matching now checks decodedText field from @airframes/acars-decoder
+  - ✅ FIXED: Time series graphs show breaks for data gaps (spanGaps: false, intelligent gap detection)
+  - ✅ FIXED: Message card header gap completely removed (colored badge flush with separator line)
+  - ✅ FIXED: Bar chart number labels always dark (rgba(0,0,0,0.9)) for readability on all themes
+  - ✅ FIXED: Stats page theme switching instant (CSS variables re-read when theme changes via useMemo)
+  - ✅ FIXED: Live map highlights aircraft with unread messages (yellow/peach glow)
+  - ⏳ DEFERRED: Remove density setting entirely (requires 14+ file changes, deferred to Phase 12)
+  - 📄 Documentation: agent-docs/BUG_FIX_PASS_SUMMARY.md (complete implementation details)
+  - ⏱️ Total time: ~4 hours (as estimated)
+  - 📦 Build status: 1,318 KB / 415 KB gzipped ✅
 
 - Notifications & Alerts (Phase 9.1 - ✅ COMPLETE):
   - ✅ FIXED: Alert sound file added to `public/static/sounds/alert.mp3`

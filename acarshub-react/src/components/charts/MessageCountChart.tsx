@@ -136,14 +136,16 @@ export const MessageCountChart = ({
     };
   }, [countData, showEmptyMessages, isDark]);
 
-  // Get current theme colors from CSS variables - read fresh on every render
-  const styles = getComputedStyle(document.documentElement);
-  const textColor = styles.getPropertyValue("--color-text").trim();
-  const gridColor = styles.getPropertyValue("--color-surface2").trim();
-  const surface0 = styles.getPropertyValue("--color-surface0").trim();
-
   // Chart options with Catppuccin theming - memoized with stable dependencies
   const options = useMemo(() => {
+    // Get current theme colors from CSS variables - read fresh when theme changes
+    // Explicitly reference theme to trigger re-computation on theme changes
+    void theme; // Used to force re-read of CSS variables
+    const styles = getComputedStyle(document.documentElement);
+    const textColor = styles.getPropertyValue("--color-text").trim();
+    const gridColor = styles.getPropertyValue("--color-surface2").trim();
+    const surface0 = styles.getPropertyValue("--color-surface0").trim();
+
     return {
       responsive: true,
       maintainAspectRatio: false,
@@ -203,7 +205,7 @@ export const MessageCountChart = ({
             return colors[context.dataIndex];
           },
           borderRadius: 4,
-          color: "white",
+          color: "rgba(0, 0, 0, 0.9)",
           font: {
             weight: "bold" as const,
             size: 11,
@@ -251,7 +253,7 @@ export const MessageCountChart = ({
         },
       },
     };
-  }, [showEmptyMessages, textColor, gridColor, surface0]);
+  }, [showEmptyMessages, theme]);
 
   // Show empty state if no data
   if (!chartData) {

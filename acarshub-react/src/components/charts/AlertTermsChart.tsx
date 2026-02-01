@@ -163,14 +163,16 @@ export const AlertTermsChart = ({
     return Math.min(Math.max(minHeight, calculatedHeight), maxHeight);
   }, [chartData?.labels.length]); // Only depend on label count, not entire chartData
 
-  // Get current theme colors from CSS variables - read fresh on every render
-  const styles = getComputedStyle(document.documentElement);
-  const textColor = styles.getPropertyValue("--color-text").trim();
-  const gridColor = styles.getPropertyValue("--color-surface2").trim();
-  const surface0 = styles.getPropertyValue("--color-surface0").trim();
-
   // Chart options with Catppuccin theming - memoized with stable dependencies
   const options = useMemo(() => {
+    // Get current theme colors from CSS variables - read fresh when theme changes
+    // Explicitly reference theme to trigger re-computation on theme changes
+    void theme; // Used to force re-read of CSS variables
+    const styles = getComputedStyle(document.documentElement);
+    const textColor = styles.getPropertyValue("--color-text").trim();
+    const gridColor = styles.getPropertyValue("--color-surface2").trim();
+    const surface0 = styles.getPropertyValue("--color-surface0").trim();
+
     const totalCount = chartData?.totalCount || 1;
 
     return {
@@ -228,7 +230,7 @@ export const AlertTermsChart = ({
             return chartColors[context.dataIndex % chartColors.length];
           },
           borderRadius: 4,
-          color: isDark ? "white" : "black",
+          color: "rgba(0, 0, 0, 0.9)",
           clamp: true,
           font: {
             weight: "bold" as const,
@@ -278,14 +280,7 @@ export const AlertTermsChart = ({
         },
       },
     };
-  }, [
-    chartData?.totalCount,
-    chartColors,
-    isDark,
-    textColor,
-    gridColor,
-    surface0,
-  ]);
+  }, [chartData?.totalCount, chartColors, theme]);
 
   // Show empty state if no data
   if (!chartData) {

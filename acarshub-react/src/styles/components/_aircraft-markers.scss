@@ -124,6 +124,17 @@
   }
 }
 
+.aircraft-marker--unread {
+  // Yellow/peach glow for aircraft with unread messages
+  img {
+    filter: drop-shadow(0 0 5px rgba(250, 179, 135, 0.8));
+  }
+
+  &:hover img {
+    filter: drop-shadow(0 0 7px rgba(250, 179, 135, 1));
+  }
+}
+
 .aircraft-marker--selected {
   // Highlight selected aircraft
   z-index: 200;

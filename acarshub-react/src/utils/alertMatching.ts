@@ -43,10 +43,19 @@ export function checkMessageForAlerts(
   }
 
   // Get searchable text from message (check all text fields)
+  // Extract text from decodedText field (label and value pairs from acars-decoder)
+  let decodedTextContent = "";
+  if (message.decodedText?.formatted) {
+    decodedTextContent = message.decodedText.formatted
+      .map((item) => `${item.label || ""} ${item.value || ""}`)
+      .join(" ");
+  }
+
   const searchableText = [
     message.text || "",
     message.data || "",
     message.decoded_msg || "",
+    decodedTextContent,
   ]
     .join(" ")
     .toUpperCase();
