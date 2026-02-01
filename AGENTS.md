@@ -1154,7 +1154,14 @@ Target modern browsers with ES6+ support:
   - ✅ Toggle button hidden when backend disables range rings
   - ✅ Station location from settings or backend decoder config
   - ✅ Fallback to static rings from settings if viewport unavailable
-- ⏳ NEXRAD weather radar overlay (migrate from Leaflet plugin)
+- ✅ **NEXRAD weather radar overlay** (WMS tiles from Iowa State Mesonet)
+  - ✅ MapLibre GL JS raster layer integration with Source/Layer components
+  - ✅ Auto-refresh every 5 minutes with timestamp display
+  - ✅ Theme-aware timestamp styling (Catppuccin Mocha/Latte)
+  - ✅ Toggle button in MapControls (cloud-sun-rain icon)
+  - ✅ Settings store integration (showNexrad preference)
+  - ✅ Mobile-responsive timestamp positioning
+  - ✅ Reduced motion support
 - ✅ **Station marker (ground receiver location)**
   - ✅ Pulsing animated marker showing receiver position
   - ✅ Theme-aware with Catppuccin red color scheme
@@ -1183,7 +1190,7 @@ Target modern browsers with ES6+ support:
 - ✅ Filter persistence to localStorage (aircraft list filters)
 - ❌ Show/hide data blocks toggle (removed - not implemented)
 - ❌ Show/hide extended data blocks toggle (removed - not implemented)
-- ⏳ Show/hide NEXRAD overlay toggle (future implementation)
+- ✅ Show/hide NEXRAD overlay toggle (MapControls component)
 
 #### Aircraft List & Sorting ✅ COMPLETE
 
@@ -1266,10 +1273,12 @@ Target modern browsers with ES6+ support:
 - ✅ **Station marker complete** (pulsing animation, theme-aware, accessible)
 - ✅ **Range rings complete** (dynamic sizing, 70% margin, cardinal labels, privacy protection)
 - ✅ **Map controls complete** (MapControls component with privacy-aware toggle buttons)
-- 🔜 Next: NEXRAD overlay
+- ✅ NEXRAD overlay complete (WMS raster tiles, auto-refresh, timestamp display)
+- 🔜 Next: Complete remaining map features (unread messages, mark as read)
 
 ### Phase 9: Alerts and Search
 
+- Look at optimizing the search query structure, calls, and API end points
 - Migrate Alerts page with term filtering
 - Migrate Search page with database queries
 - Implement alert notification system

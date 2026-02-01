@@ -16,6 +16,7 @@
 
 import {
   faCircleDot,
+  faCloudSunRain,
   faEnvelope,
   faPlane,
 } from "@fortawesome/free-solid-svg-icons";
@@ -37,6 +38,7 @@ export function MapControls() {
   const setShowRangeRings = useSettingsStore(
     (state) => state.setShowRangeRings,
   );
+  const setShowNexrad = useSettingsStore((state) => state.setShowNexrad);
   const setShowOnlyUnread = useSettingsStore(
     (state) => state.setShowOnlyUnread,
   );
@@ -67,13 +69,12 @@ export function MapControls() {
       )}
 
       <div className="map-controls__group">
-        {/* NEXRAD overlay - future implementation */}
-        {/* <MapControlButton
-          icon={faList}
+        <MapControlButton
+          icon={faCloudSunRain}
           active={mapSettings.showNexrad}
           onClick={() => setShowNexrad(!mapSettings.showNexrad)}
           tooltip="Show NEXRAD Weather Radar"
-        /> */}
+        />
       </div>
 
       <div className="map-controls__group">

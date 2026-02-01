@@ -26,6 +26,7 @@ import { useSettingsStore, useTheme } from "../../store/useSettingsStore";
 import latteStyle from "../../styles/map-styles/catppuccin-latte.json";
 import mochaStyle from "../../styles/map-styles/catppuccin-mocha.json";
 import { AircraftMarkers } from "./AircraftMarkers";
+import { NexradOverlay } from "./NexradOverlay";
 import { RangeRings } from "./RangeRings";
 import { StationMarker } from "./StationMarker";
 import "../../styles/components/_map.scss";
@@ -183,9 +184,14 @@ export function MapComponent({
         {/* Station marker (ground receiver location) */}
         <StationMarker />
 
+        {/* NEXRAD weather radar overlay */}
+        <NexradOverlay />
+
         {/* Aircraft markers */}
         <AircraftMarkers hoveredAircraftHex={hoveredAircraftHex} />
       </MapLibreMap>
+
+      {/* NEXRAD overlay renders its own timestamp outside the map */}
     </div>
   );
 }
