@@ -19,9 +19,11 @@
     "chartjs-adapter-date-fns": "^3.0.0",
     "chartjs-plugin-datalabels": "^2.2.0",
     "date-fns": "^4.1.0",
+    "maplibre-gl": "^5.17.0",
     "react": "^19.2.0",
     "react-chartjs-2": "^5.3.1",
     "react-dom": "^19.2.0",
+    "react-map-gl": "^8.1.0",
     "react-router-dom": "^7.13.0",
     "socket.io-client": "^4.8.3",
     "zustand": "^5.0.10"

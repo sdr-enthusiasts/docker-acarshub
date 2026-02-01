@@ -23,9 +23,11 @@ Files:
 
 ## Project Goals
 
-### Primary Goal: React Migration
+### Primary Goal: React Migration (Legacy Code No Longer Maintained)
 
-The project is planned for a **complete rewrite in React** due to:
+The project is undergoing a **complete rewrite in React**. The legacy jQuery/TypeScript frontend is **no longer maintained**. All development efforts focus exclusively on the React migration.
+
+**Rationale for rewrite**:
 
 1. **Architectural Issues**:
    - Global state management problems (20+ global variables)
@@ -48,15 +50,17 @@ The project is planned for a **complete rewrite in React** due to:
    - Easier to maintain and extend
    - Better testing capabilities
 
-### Interim Improvements
+### Backend API Changes Permitted
 
-While planning the React migration, incremental improvements to the current codebase are acceptable:
+As part of the React migration, **backend API endpoints and data structures may be modified**:
 
-- Create custom formatters for consistent HTML generation
-- Refactor large functions into smaller, logical units
-- Add comprehensive comments explaining complex logic
-- Improve type safety where possible
-- Extract reusable utilities
+- Refactor or remove Flask routes that only served legacy frontend needs
+- Simplify JSON response structures for cleaner React integration
+- Remove HTML generation from Python backend (presentation logic belongs in frontend)
+- Update Socket.IO event payloads to eliminate legacy-specific fields
+- Add new API endpoints as needed for React features
+- Breaking changes to backend APIs are acceptable (no legacy compatibility required)
+- Focus: Clean separation of data layer (Python) and presentation layer (React)
 
 ## Project Structure
 
@@ -113,6 +117,8 @@ Flask/Python backend **ONLY** handles:
 - `/socket.io/*` endpoints
 - `/metrics` endpoint
 - Business logic and data processing
+- **No HTML generation** - All presentation logic in React
+- **No legacy route compatibility** - Clean API design for React
 
 nginx **ONLY** handles:
 
@@ -125,9 +131,10 @@ nginx **ONLY** handles:
 
 - Clear separation of concerns
 - Better performance (nginx is optimized for static files)
-- Simplified Python codebase
+- Simplified Python codebase (remove legacy code paths)
 - Standard production deployment pattern
 - Easier horizontal scaling
+- Freedom to redesign APIs without legacy constraints
 
 ### nginx Configuration Updates Required
 
@@ -1013,14 +1020,154 @@ Target modern browsers with ES6+ support:
 
 **Deliverable**: Fully functional message viewer with proper architecture and clean backend API ✅
 
-### Phase 8: Live Map
+### Phase 8: Live Map 🚧 IN PROGRESS
 
-- Migrate LiveMap page with react-leaflet
-- Handle 100+ aircraft markers efficiently
-- Implement clustering and filtering
-- Connect to ADS-B data streams
-- Optimize re-rendering for performance
-- **Deliverable**: Real-time aircraft map
+**Goal**: High-performance aircraft map with custom Catppuccin theming
+
+**Technology Stack**:
+
+- **MapLibre GL JS** - WebGL-based map rendering (high performance)
+- **react-map-gl** - React wrapper for MapLibre
+- **CartoDB** - Default tile provider (free, no API key required)
+- **Maptiler** - Optional tile provider (requires free/paid API key)
+
+**Why MapLibre over Leaflet**:
+
+- ✅ **GPU-accelerated rendering** - Smooth with 100+ aircraft markers
+- ✅ **Better performance** - 60fps with many markers vs Leaflet's 30fps
+- ✅ **Flexible tile support** - Raster tiles (CartoDB) or vector tiles (Maptiler)
+- ✅ **Theme-aware** - Dark (Mocha) and Light (Latte) map styles
+- ✅ **Modern stack** - Future-proof, actively maintained
+
+#### Map Providers Strategy
+
+##### Default: CartoDB (No API Key Required)
+
+- Free raster tiles: Dark Matter (dark theme) and Light All (light theme)
+- No signup, no API key, unlimited use
+- CORS-friendly (works from localhost and any domain)
+- Professional-looking dark/light map styles
+- Widely used in aviation and tracking applications
+
+##### Optional: Maptiler (API Key in Settings)\*\*
+
+- Users can add free/paid Maptiler API key in Settings
+- Unlocks vector tiles and additional professional styles
+- Free tier: 100,000 map loads/month
+- Settings UI: "Map Provider: CartoDB (default) | Maptiler (requires API key)"
+
+**Implementation Tasks**:
+
+#### Map Rendering & Theming
+
+- ✅ Install `maplibre-gl` and `react-map-gl` dependencies
+- ✅ Create MapLibre map component with CartoDB raster tiles
+- ✅ Create Catppuccin Mocha style JSON (dark theme with CartoDB Dark Matter)
+  - Uses CartoDB Dark Matter raster tiles with Catppuccin background
+- ✅ Create Catppuccin Latte style JSON (light theme with CartoDB Light All)
+  - Uses CartoDB Light All raster tiles with Catppuccin background
+- ✅ Implement theme switching (loads appropriate style JSON)
+- ✅ Add Maptiler provider option in Settings store
+- ✅ Add Maptiler API key input in Settings modal
+- ✅ Implement provider switching logic (CartoDB vs Maptiler)
+
+#### Aircraft Markers & Data Blocks
+
+- ✅ Port aircraft SVG icons from legacy (getBaseMarker, svgShapeToURI)
+- ✅ Implement MapLibre markers with aircraft rotation
+- ✅ Create data block markers (callsign, altitude, speed display)
+- ✅ Implement extended data blocks (full flight details)
+- ✅ Color-coding logic (alerts, ACARS messages, signal strength)
+- ✅ Click handlers for showing aircraft messages
+- ✅ Hover effects and tooltips
+- ✅ Performance optimization for 100+ markers
+
+#### Map Features & Overlays
+
+- ✅ Range rings from station location (configurable radii)
+- ✅ NEXRAD weather radar overlay (migrate from Leaflet plugin)
+- ✅ Station marker (ground receiver location)
+- ✅ Aircraft list sidebar (sortable, filterable)
+- ✅ Map controls (zoom, compass, fullscreen)
+
+#### Filtering & Display Options
+
+- ✅ Show only aircraft with ACARS messages toggle
+- ✅ Show/hide data blocks toggle
+- ✅ Show/hide extended data blocks toggle
+- ✅ Show/hide NEXRAD overlay toggle
+- ✅ Show only unread messages toggle
+- ✅ Mark all messages as read action
+- ✅ Filter persistence to localStorage
+
+#### Aircraft List & Sorting
+
+- ✅ Sortable columns (callsign, altitude, speed, messages, alerts)
+- ✅ Ascending/descending toggle
+- ✅ Highlight selected aircraft
+- ✅ Click to center map on aircraft
+- ✅ Hover sync between list and map markers
+
+#### Integration with Message System
+
+- ✅ Connect to messageGroupsStore (shared with Live Messages)
+- ✅ Display ACARS message count per aircraft
+- ✅ Show alert indicators for aircraft with alerts
+- ✅ Click aircraft → open messages modal/panel
+- ✅ Unread message tracking
+- ✅ Real-time updates via Socket.IO (ADS-B positions)
+
+#### Settings Integration
+
+- ✅ Map provider selection (Protomaps/Maptiler)
+- ✅ Maptiler API key input
+- ✅ Station lat/lon configuration
+- ✅ Range ring radii configuration
+- ✅ Default map center/zoom
+- ✅ Display preferences persistence
+
+**Style JSON Files** (New):
+
+- `acarshub-react/src/styles/map-styles/catppuccin-mocha.json` - Dark theme
+- `acarshub-react/src/styles/map-styles/catppuccin-latte.json` - Light theme
+
+**Dependencies to Add**:
+
+```json
+{
+  "maplibre-gl": "^4.7.1",
+  "react-map-gl": "^7.1.7"
+}
+```
+
+**Performance Expectations**:
+
+- 100+ aircraft markers at 60fps (vs Leaflet ~30fps)
+- Smooth zoom/pan with GPU acceleration
+- Native rotation support (no CSS transform hacks)
+- MapLibre bundle: ~1MB (275KB gzipped)
+
+**CartoDB Free Tier**:
+
+- Truly unlimited tile requests (reasonable use policy)
+- No API key or signup required
+- CORS-enabled for browser access
+- Suitable for personal/hobbyist aviation tracking
+- Fallback: Users can add Maptiler key for vector tiles
+
+**Testing Requirements**:
+
+- Test with 0, 1, 10, 50, 100, 200+ aircraft
+- Verify smooth performance on mobile devices
+- Test theme switching (Mocha ↔ Latte)
+- Test provider switching (CartoDB ↔ Maptiler)
+- Verify all legacy features work (data blocks, NEXRAD, etc.)
+- Test keyboard navigation and accessibility
+- Test CORS access from localhost and production domains
+
+**Deliverable**: High-performance real-time aircraft map with Catppuccin-aware theming (CartoDB Dark/Light), no API key required by default
+
+**Status**: Map rendering complete with CartoDB raster tiles, theme switching functional, settings integration complete, migration from Protomaps to CartoDB due to CORS restrictions
 
 ### Phase 9: Alerts and Search
 
@@ -1029,14 +1176,56 @@ Target modern browsers with ES6+ support:
 - Implement alert notification system
 - **Deliverable**: Alert management and database search
 
-### Phase 10: System Status
+### Phase 10: Legacy Code Cleanup
+
+**Goal**: Eliminate all unused legacy code paths from both React and Python codebases
+
+#### React Codebase Audit (`acarshub-react/`)
+
+- Review all components for unused props, functions, or imports
+- Remove any legacy compatibility shims or workarounds
+- Eliminate dead code paths that were never used
+- Clean up commented-out code blocks
+- Verify all TypeScript types are used (no orphaned interfaces)
+- Remove unused dependencies from `package.json`
+- Audit and remove unused SCSS partials or rules
+
+#### Python Backend Cleanup (`rootfs/webapp/`)
+
+- **Remove legacy HTML generation functions** - All presentation in React now
+- **Remove unused Flask routes** - Only keep Socket.IO, `/metrics`, and necessary API endpoints
+- **Simplify JSON responses** - Remove fields that were only for legacy frontend
+- **Remove legacy-specific helpers** - Functions like tooltip generation, HTML formatting
+- **Clean up `acarshub_helpers.py`** - Remove presentation logic
+- **Audit Socket.IO events** - Remove deprecated events, clean up payloads
+- **Remove unused imports and dependencies**
+- **Update comments** - Remove references to legacy frontend
+
+#### Documentation Updates
+
+- Update code comments to reflect React-only architecture
+- Remove legacy workaround explanations
+- Document new API contracts between React and Python
+- Update inline TODOs and FIXMEs
+
+#### Quality Gates
+
+- All Biome checks passing
+- All TypeScript strict mode checks passing
+- No unused imports or variables
+- Python backend tests passing (if they exist)
+- `git grep` for "legacy", "TODO", "FIXME" to catch stragglers
+
+**Deliverable**: Clean, minimal codebase with no legacy cruft
+
+### Phase 11: System Status
 
 - Migrate Status page
 - Display decoder health and statistics
 - Implement system monitoring UI
 - **Deliverable**: System status dashboard
 
-### Phase 11: Testing, Polish, and Deployment
+### Phase 12: Testing, Polish, and Deployment
 
 - Comprehensive component tests
 - Integration tests for Socket.IO flows
@@ -1044,42 +1233,50 @@ Target modern browsers with ES6+ support:
 - Performance optimization and bundle analysis
 - Accessibility audit and fixes
 - Update nginx configuration for production
-- Remove Flask static file serving code
 - Documentation updates
 - **Deliverable**: Production-ready React application
 
-### Phase 12: Cutover and Cleanup
+### Phase 13: Final Cutover
 
-- Deploy React build alongside legacy frontend
-- A/B testing period
-- Monitor for issues
-- Full cutover to React frontend
-- Archive `acarshub-typescript/` directory
-- Remove legacy build tooling
+- Update Docker build to only include React frontend
+- Remove `acarshub-typescript/` directory entirely
+- Remove legacy build tooling (Webpack configs, etc.)
+- Update documentation to remove all legacy references
+- Final production deployment
+- **Deliverable**: React-only application in production
 
 ## Current Focus
 
 **Current Phase**: Phase 8 - Live Map
 
+**Development Philosophy**:
+
+- React migration is the only active development effort
+- Legacy codebase is frozen and will be deleted
+- Backend API changes are acceptable and encouraged for cleaner architecture
+- Focus on building the best React application, not maintaining legacy compatibility
+
 ### During React Migration
 
 - Focus on one phase at a time
-- Maintain functional parity with legacy frontend
+- Aim for functional parity with legacy frontend (as baseline)
+- Improvements and redesigns beyond legacy are encouraged
 - Eliminate all `any` types in React code
 - Write tests alongside components
 - Document component APIs with JSDoc
 - Regular check-ins on bundle size and performance
+- **Backend changes permitted** - Refactor APIs as needed for clean React integration
 
-### For Legacy Codebase (acarshub-typescript/)
+### Legacy Codebase Status
 
-Until migration is complete:
+**The legacy codebase (`acarshub-typescript/`) is NO LONGER MAINTAINED**:
 
-- Bug fixes only (minimal changes)
-- No new features in legacy code
-- Small refactorings that improve maintainability are acceptable
-- Type safety improvements are acceptable
-- Keep legacy frontend functional during migration
-- Avoid large architectural changes
+- No bug fixes
+- No new features
+- No refactoring efforts
+- Will be deleted in Phase 13
+- Exists only as reference during migration
+- All development effort goes to React migration
 
 ### Quality Gates for React Migration
 

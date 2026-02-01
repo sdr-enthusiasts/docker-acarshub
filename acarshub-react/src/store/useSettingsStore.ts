@@ -21,6 +21,8 @@ import type {
   DataSettings,
   DateFormat,
   DisplayDensity,
+  MapProvider,
+  MapSettings,
   NotificationSettings,
   RegionalSettings,
   Theme,
@@ -59,11 +61,25 @@ interface SettingsState {
   setEnableCaching: (enabled: boolean) => void;
   setAutoClearMinutes: (minutes: number) => void;
 
+  // Map actions
+  setMapProvider: (provider: MapProvider) => void;
+  setMaptilerApiKey: (key: string | undefined) => void;
+  setStationLocation: (lat: number, lon: number) => void;
+  setRangeRings: (rings: number[]) => void;
+  setDefaultMapView: (lat: number, lon: number, zoom: number) => void;
+  setShowOnlyAcars: (enabled: boolean) => void;
+  setShowDatablocks: (enabled: boolean) => void;
+  setShowExtendedDatablocks: (enabled: boolean) => void;
+  setShowNexrad: (enabled: boolean) => void;
+  setShowOnlyUnread: (enabled: boolean) => void;
+  setShowRangeRings: (enabled: boolean) => void;
+
   // Batch update actions
   updateAppearanceSettings: (settings: Partial<AppearanceSettings>) => void;
   updateRegionalSettings: (settings: Partial<RegionalSettings>) => void;
   updateNotificationSettings: (settings: Partial<NotificationSettings>) => void;
   updateDataSettings: (settings: Partial<DataSettings>) => void;
+  updateMapSettings: (settings: Partial<MapSettings>) => void;
 
   // Utility actions
   resetToDefaults: () => void;
@@ -100,8 +116,24 @@ const getDefaultSettings = (): UserSettings => {
       enableCaching: true,
       autoClearMinutes: 60,
     },
+    map: {
+      provider: "carto",
+      maptilerApiKey: undefined,
+      stationLat: 0,
+      stationLon: 0,
+      rangeRings: [100, 200, 300],
+      defaultCenterLat: 0,
+      defaultCenterLon: 0,
+      defaultZoom: 7,
+      showOnlyAcars: false,
+      showDatablocks: true,
+      showExtendedDatablocks: false,
+      showNexrad: false,
+      showOnlyUnread: false,
+      showRangeRings: true,
+    },
     updatedAt: Date.now(),
-    version: 1,
+    version: 2,
   };
   return defaults;
 };
@@ -287,6 +319,111 @@ export const useSettingsStore = create<SettingsState>()(
           },
         })),
 
+      // Map actions
+      setMapProvider: (provider) =>
+        set((state) => ({
+          settings: {
+            ...state.settings,
+            map: { ...state.settings.map, provider },
+            updatedAt: Date.now(),
+          },
+        })),
+
+      setMaptilerApiKey: (key) =>
+        set((state) => ({
+          settings: {
+            ...state.settings,
+            map: { ...state.settings.map, maptilerApiKey: key },
+            updatedAt: Date.now(),
+          },
+        })),
+
+      setStationLocation: (lat, lon) =>
+        set((state) => ({
+          settings: {
+            ...state.settings,
+            map: { ...state.settings.map, stationLat: lat, stationLon: lon },
+            updatedAt: Date.now(),
+          },
+        })),
+
+      setRangeRings: (rings) =>
+        set((state) => ({
+          settings: {
+            ...state.settings,
+            map: { ...state.settings.map, rangeRings: rings },
+            updatedAt: Date.now(),
+          },
+        })),
+
+      setDefaultMapView: (lat, lon, zoom) =>
+        set((state) => ({
+          settings: {
+            ...state.settings,
+            map: {
+              ...state.settings.map,
+              defaultCenterLat: lat,
+              defaultCenterLon: lon,
+              defaultZoom: zoom,
+            },
+            updatedAt: Date.now(),
+          },
+        })),
+
+      setShowOnlyAcars: (enabled) =>
+        set((state) => ({
+          settings: {
+            ...state.settings,
+            map: { ...state.settings.map, showOnlyAcars: enabled },
+            updatedAt: Date.now(),
+          },
+        })),
+
+      setShowDatablocks: (enabled) =>
+        set((state) => ({
+          settings: {
+            ...state.settings,
+            map: { ...state.settings.map, showDatablocks: enabled },
+            updatedAt: Date.now(),
+          },
+        })),
+
+      setShowExtendedDatablocks: (enabled) =>
+        set((state) => ({
+          settings: {
+            ...state.settings,
+            map: { ...state.settings.map, showExtendedDatablocks: enabled },
+            updatedAt: Date.now(),
+          },
+        })),
+
+      setShowNexrad: (enabled) =>
+        set((state) => ({
+          settings: {
+            ...state.settings,
+            map: { ...state.settings.map, showNexrad: enabled },
+            updatedAt: Date.now(),
+          },
+        })),
+
+      setShowOnlyUnread: (enabled) =>
+        set((state) => ({
+          settings: {
+            ...state.settings,
+            map: { ...state.settings.map, showOnlyUnread: enabled },
+            updatedAt: Date.now(),
+          },
+        })),
+
+      setShowRangeRings: (enabled) =>
+        set((state) => ({
+          settings: {
+            ...state.settings,
+            map: { ...state.settings.map, showRangeRings: enabled },
+            updatedAt: Date.now(),
+          },
+        })),
+
       // Batch update actions
       updateAppearanceSettings: (updates) =>
         set((state) => ({
@@ -324,6 +461,15 @@ export const useSettingsStore = create<SettingsState>()(
           },
         })),
 
+      updateMapSettings: (updates) =>
+        set((state) => ({
+          settings: {
+            ...state.settings,
+            map: { ...state.settings.map, ...updates },
+            updatedAt: Date.now(),
+          },
+        })),
+
       // Utility actions
       resetToDefaults: () =>
         set({
@@ -344,7 +490,8 @@ export const useSettingsStore = create<SettingsState>()(
             !imported.appearance ||
             !imported.regional ||
             !imported.notifications ||
-            !imported.data
+            !imported.data ||
+            !imported.map
           ) {
             console.error("Invalid settings format");
             return false;
@@ -355,7 +502,7 @@ export const useSettingsStore = create<SettingsState>()(
             settings: {
               ...imported,
               updatedAt: Date.now(),
-              version: 1, // Current version
+              version: 2, // Current version
             },
           });
 
@@ -368,14 +515,29 @@ export const useSettingsStore = create<SettingsState>()(
     }),
     {
       name: "acarshub-settings",
-      version: 1,
+      version: 2,
       // Migrate old settings if needed
       migrate: (persistedState: unknown, version: number) => {
+        const state = persistedState as SettingsState;
+
+        // Version 0 -> 2: Reset to defaults
         if (version === 0) {
-          // Migration from version 0 to 1
-          // For now, just return defaults
           return { settings: getDefaultSettings() };
         }
+
+        // Version 1 -> 2: Add map settings
+        if (version === 1) {
+          const defaults = getDefaultSettings();
+          return {
+            ...state,
+            settings: {
+              ...state.settings,
+              map: defaults.map,
+              version: 2,
+            },
+          };
+        }
+
         return persistedState as SettingsState;
       },
     },

@@ -701,6 +701,45 @@ export interface NotificationSettings {
 }
 
 /**
+ * Map provider types
+ */
+export type MapProvider = "carto" | "maptiler";
+
+/**
+ * Map settings
+ */
+export interface MapSettings {
+  /** Map tile provider */
+  provider: MapProvider;
+  /** Maptiler API key (optional, only used if provider is 'maptiler') */
+  maptilerApiKey?: string;
+  /** Station latitude for range rings and center */
+  stationLat: number;
+  /** Station longitude for range rings and center */
+  stationLon: number;
+  /** Range ring radii in nautical miles */
+  rangeRings: number[];
+  /** Default map center latitude */
+  defaultCenterLat: number;
+  /** Default map center longitude */
+  defaultCenterLon: number;
+  /** Default map zoom level */
+  defaultZoom: number;
+  /** Show only aircraft with ACARS messages */
+  showOnlyAcars: boolean;
+  /** Show data blocks */
+  showDatablocks: boolean;
+  /** Show extended data blocks */
+  showExtendedDatablocks: boolean;
+  /** Show NEXRAD weather radar */
+  showNexrad: boolean;
+  /** Show only unread messages */
+  showOnlyUnread: boolean;
+  /** Show range rings */
+  showRangeRings: boolean;
+}
+
+/**
  * Regional and locale settings
  */
 export interface RegionalSettings {
@@ -754,6 +793,8 @@ export interface UserSettings {
   notifications: NotificationSettings;
   /** Data management preferences */
   data: DataSettings;
+  /** Map preferences */
+  map: MapSettings;
   /** Last updated timestamp */
   updatedAt: number;
   /** Settings version for migration */
@@ -787,8 +828,24 @@ export const DEFAULT_SETTINGS: UserSettings = {
     enableCaching: true,
     autoClearMinutes: 60,
   },
+  map: {
+    provider: "carto",
+    maptilerApiKey: undefined,
+    stationLat: 0,
+    stationLon: 0,
+    rangeRings: [100, 200, 300],
+    defaultCenterLat: 0,
+    defaultCenterLon: 0,
+    defaultZoom: 7,
+    showOnlyAcars: false,
+    showDatablocks: true,
+    showExtendedDatablocks: false,
+    showNexrad: false,
+    showOnlyUnread: false,
+    showRangeRings: true,
+  },
   updatedAt: Date.now(),
-  version: 1,
+  version: 2,
 };
 
 /**

@@ -1,0 +1,248 @@
+// Copyright (C) 2022-2026 Frederick Clausen II
+// This file is part of acarshub <https://github.com/sdr-enthusiasts/docker-acarshub>.
+
+// acarshub is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+
+// acarshub is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+
+// You should have received a copy of the GNU General Public License
+// along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
+
+@use "../styles/mixins" as *;
+@use "../styles/variables" as *;
+
+.live-map-page {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+
+  &__container {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    gap: 0;
+  }
+
+  // Optional sidebar - hidden by default, can show station info
+  &__sidebar {
+    flex-shrink: 0;
+    width: 280px;
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    background-color: var(--color-mantle);
+    border-right: 1px solid var(--color-surface0);
+
+    @include scrollbar-thin;
+
+    // Hide sidebar if no ADS-B status (no station info to show)
+    &:empty {
+      display: none;
+    }
+  }
+
+  &__controls {
+    padding: var(--spacing-lg);
+  }
+
+  &__controls-title {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: var(--spacing-lg);
+    color: var(--color-text);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 0.875rem;
+    color: var(--color-subtext0);
+  }
+
+  &__control-group {
+    margin-bottom: var(--spacing-lg);
+    padding-bottom: var(--spacing-lg);
+    border-bottom: 1px solid var(--color-surface0);
+
+    &:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+  }
+
+  &__control-group-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: var(--spacing-sm);
+    color: var(--color-subtext0);
+  }
+
+  &__info {
+    font-size: 0.875rem;
+  }
+
+  &__info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-sm) 0;
+
+    &:not(:last-child) {
+      border-bottom: 1px solid var(--color-surface0);
+    }
+  }
+
+  &__info-label {
+    font-weight: 500;
+    color: var(--color-subtext1);
+  }
+
+  &__info-value {
+    font-family: var(--font-mono);
+    color: var(--color-text);
+
+    &--active {
+      color: var(--color-green);
+    }
+
+    &--inactive {
+      color: var(--color-overlay1);
+    }
+  }
+
+  &__aircraft-list {
+    min-height: 200px;
+  }
+
+  &__placeholder-text {
+    font-size: 0.875rem;
+    text-align: center;
+    padding: var(--spacing-xl);
+    color: var(--color-subtext0);
+  }
+
+  // Map container
+  &__map {
+    flex: 1;
+    position: relative;
+    height: 100%;
+    overflow: hidden;
+    background-color: var(--color-base);
+  }
+
+  &__map-loading {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    z-index: 1000;
+
+    p {
+      margin-top: var(--spacing-md);
+      font-size: 0.875rem;
+      color: var(--color-subtext1);
+    }
+  }
+
+  &__spinner {
+    width: 48px;
+    height: 48px;
+    border: 4px solid var(--color-overlay0);
+    border-top-color: var(--color-blue);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto;
+  }
+
+  &__map-info {
+    position: absolute;
+    top: var(--spacing-md);
+    left: var(--spacing-md);
+    z-index: 10;
+    padding: var(--spacing-sm) var(--spacing-md);
+    border-radius: var(--border-radius-md);
+    font-size: 0.75rem;
+    font-family: var(--font-mono);
+    pointer-events: none;
+    background-color: rgba(var(--color-surface0-rgb), 0.9);
+    color: var(--color-subtext1);
+    border: 1px solid var(--color-overlay0);
+  }
+
+  &__map-provider {
+    white-space: nowrap;
+  }
+}
+
+// Spinner animation
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+// Mobile responsive - stack sidebar below map
+@include breakpoint-max(md) {
+  .live-map-page {
+    &__container {
+      flex-direction: column-reverse;
+    }
+
+    &__sidebar {
+      width: 100%;
+      max-height: 30vh;
+      border-right: none;
+      border-top: 1px solid var(--color-surface0);
+    }
+
+    &__map {
+      height: 70vh;
+    }
+  }
+}
+
+// Tablet - narrower sidebar
+@include breakpoint(md) {
+  @include breakpoint-max(lg) {
+    .live-map-page {
+      &__sidebar {
+        width: 240px;
+      }
+    }
+  }
+}
+
+// Large screens - hide sidebar completely if empty, full map
+@include breakpoint(lg) {
+  .live-map-page {
+    &__sidebar:empty,
+    &__sidebar:not(:has(*)) {
+      display: none;
+      width: 0;
+    }
+  }
+}
+
+// Print styles
+@media print {
+  .live-map-page {
+    &__sidebar {
+      display: none;
+    }
+
+    &__map {
+      width: 100%;
+    }
+
+    &__map-loading,
+    &__map-info {
+      display: none;
+    }
+  }
+}
