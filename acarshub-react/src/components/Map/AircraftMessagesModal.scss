@@ -1,0 +1,194 @@
+// Copyright (C) 2022-2026 Frederick Clausen II
+// This file is part of acarshub <https://github.com/sdr-enthusiasts/docker-acarshub>.
+
+// acarshub is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+
+// acarshub is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+
+// You should have received a copy of the GNU General Public License
+// along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
+
+@use "../../styles/mixins" as *;
+
+// Aircraft Messages Modal
+// Modal overlay for displaying ACARS messages when clicking aircraft markers
+// - Full-screen on mobile (max viewport usage)
+// - Centered dialog on desktop
+// - Smooth animations with reduced-motion support
+// - Theme-aware with Catppuccin colors
+
+.aircraft-messages-modal__backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+
+  // Animation
+  animation: fade-in 0.15s ease-out;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+
+  // Desktop: add padding
+  @include breakpoint(md) {
+    padding: 2rem;
+  }
+}
+
+.aircraft-messages-modal {
+  background-color: var(--color-base);
+  border-radius: 0;
+  border: 1px solid var(--color-surface-2);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  max-height: 100vh;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+
+  // Animation
+  animation: slide-up 0.2s ease-out;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+
+  // Desktop: rounded corners, constrained size
+  @include breakpoint(md) {
+    border-radius: 12px;
+    border: 2px solid var(--color-surface-2);
+    max-width: 800px;
+    max-height: 90vh;
+    height: auto;
+    width: 90vw;
+    animation: scale-in 0.2s ease-out;
+
+    @media (prefers-reduced-motion: reduce) {
+      animation: none;
+    }
+  }
+
+  @include breakpoint(lg) {
+    max-width: 1000px;
+  }
+}
+
+.aircraft-messages-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem;
+  border-bottom: 1px solid var(--color-surface-1);
+  background-color: var(--color-surface-0);
+  flex-shrink: 0;
+
+  @include breakpoint(md) {
+    padding: 1.5rem;
+  }
+}
+
+.aircraft-messages-modal__title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--color-text);
+  line-height: 1.2;
+
+  @include breakpoint(md) {
+    font-size: 1.5rem;
+  }
+}
+
+.aircraft-messages-modal__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: var(--color-subtext-0);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+
+  &:hover {
+    background-color: var(--color-surface-1);
+    color: var(--color-text);
+  }
+
+  &:active {
+    background-color: var(--color-surface-2);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-blue);
+    outline-offset: 2px;
+  }
+
+  svg {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+  }
+}
+
+.aircraft-messages-modal__content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem;
+  @include scrollbar-thin();
+
+  @include breakpoint(md) {
+    padding: 1.5rem;
+  }
+}
+
+// Animations
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slide-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}

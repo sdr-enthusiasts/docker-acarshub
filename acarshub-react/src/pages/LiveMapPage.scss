@@ -21,6 +21,8 @@
   width: 100%;
   height: 100%;
   overflow: hidden;
+  margin: 0 !important; // Override .page margins for full-viewport map
+  border-radius: 0 !important; // Override .page border-radius for full-viewport map
 
   &__container {
     display: flex;

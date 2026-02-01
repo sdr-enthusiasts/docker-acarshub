@@ -18,6 +18,7 @@ import { useMemo, useState } from "react";
 import { Marker } from "react-map-gl/maplibre";
 import { useAppStore } from "../../store/useAppStore";
 import { useSettingsStore } from "../../store/useSettingsStore";
+import type { MessageGroup } from "../../types";
 import {
   getAircraftColor,
   getBaseMarker,
@@ -32,6 +33,7 @@ import {
   type PairedAircraft,
   pairADSBWithACARSMessages,
 } from "../../utils/aircraftPairing";
+import { AircraftMessagesModal } from "./AircraftMessagesModal";
 import "./AircraftMarkers.scss";
 
 interface AircraftMarkerData {
@@ -72,6 +74,8 @@ export function AircraftMarkers() {
   const [hoveredAircraft, setHoveredAircraft] = useState<TooltipState | null>(
     null,
   );
+  const [selectedMessageGroup, setSelectedMessageGroup] =
+    useState<MessageGroup | null>(null);
 
   // Pair ADS-B aircraft with ACARS message groups
   const pairedAircraft = useMemo(() => {
@@ -124,6 +128,19 @@ export function AircraftMarkers() {
     return markers;
   }, [pairedAircraft]);
 
+  // Handle marker click
+  const handleMarkerClick = (aircraft: PairedAircraft) => {
+    // Only open modal if aircraft has ACARS messages
+    if (aircraft.matchedGroup) {
+      setSelectedMessageGroup(aircraft.matchedGroup);
+    }
+  };
+
+  // Handle modal close
+  const handleCloseModal = () => {
+    setSelectedMessageGroup(null);
+  };
+
   // No aircraft data yet
   if (!adsbAircraft) {
     return null;
@@ -156,13 +173,17 @@ export function AircraftMarkers() {
               <button
                 type="button"
                 className="aircraft-marker"
-                aria-label={`Aircraft ${markerData.hex}`}
+                aria-label={`Aircraft ${markerData.hex}${markerData.aircraft.hasMessages ? " - Click to view messages" : ""}`}
                 style={{
                   width: `${markerData.width}px`,
                   height: `${markerData.height}px`,
                   transform: `rotate(${rotation}deg)`,
                   transformOrigin: "center center",
+                  cursor: markerData.aircraft.hasMessages
+                    ? "pointer"
+                    : "default",
                 }}
+                onClick={() => handleMarkerClick(markerData.aircraft)}
                 onMouseEnter={(e) => {
                   // Calculate if tooltip should appear above or below marker
                   const rect = e.currentTarget.getBoundingClientRect();
@@ -282,6 +303,12 @@ export function AircraftMarkers() {
           </Marker>
         );
       })}
+
+      {/* Aircraft Messages Modal */}
+      <AircraftMessagesModal
+        messageGroup={selectedMessageGroup}
+        onClose={handleCloseModal}
+      />
     </>
   );
 }

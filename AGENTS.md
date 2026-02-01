@@ -1126,9 +1126,16 @@ Target modern browsers with ES6+ support:
 - ✅ Accessibility: Semantic `<button>` elements, keyboard navigation, ARIA labels
 - ✅ Density mode support (compact/comfortable/spacious)
 - ✅ Mobile responsive tooltips
-- 📄 See `acarshub-react/AIRCRAFT_ICONS_COMPLETE.md` for icon details
-- 📄 See `acarshub-react/ADSB_ACARS_PAIRING.md` for pairing implementation
-- 🔜 Click handlers for showing aircraft messages (next task)
+- ✅ **Click handlers for aircraft messages**:
+  - ✅ Click marker → open ACARS messages modal
+  - ✅ Modal displays MessageGroup component (reuses Live Messages display)
+  - ✅ Keyboard support (Escape to close)
+  - ✅ Click outside to close
+  - ✅ Focus management for accessibility
+  - ✅ Mobile-first full-screen modal layout
+  - ✅ Desktop centered dialog with animations
+  - ✅ Theme-aware with Catppuccin colors
+  - ✅ Only aircraft with paired messages are clickable
 
 #### Map Features & Overlays
 
@@ -1158,10 +1165,10 @@ Target modern browsers with ES6+ support:
 
 #### Integration with Message System
 
-- ⏳ Connect to messageGroupsStore (shared with Live Messages)
-- ⏳ Display ACARS message count per aircraft
-- ⏳ Show alert indicators for aircraft with alerts
-- ⏳ Click aircraft → open messages modal/panel
+- ✅ Connect to messageGroupsStore (shared with Live Messages)
+- ✅ Display ACARS message count per aircraft (in hover tooltip)
+- ✅ Show alert indicators for aircraft with alerts (color coding + tooltip)
+- ✅ Click aircraft → open messages modal (AircraftMessagesModal component)
 - ⏳ Unread message tracking
 - ✅ Real-time updates via Socket.IO (ADS-B positions via `adsb_aircraft` event)
 
@@ -1224,7 +1231,8 @@ Target modern browsers with ES6+ support:
 - ✅ Aircraft markers complete (SVG icons, rotation, color coding, 100+ aircraft capable)
 - ✅ **ADS-B ↔ ACARS pairing complete** (hex > callsign > tail matching)
 - ✅ **Hover tooltips complete** (comprehensive aircraft details, theme-aware, accessible)
-- 🔜 Next: Click handlers to open message panels, aircraft list, filtering, overlays
+- ✅ **Click handlers complete** (AircraftMessagesModal opens on click, full message display)
+- 🔜 Next: Aircraft list sidebar, filtering options, range rings, NEXRAD overlay
 
 ### Phase 9: Alerts and Search
 
