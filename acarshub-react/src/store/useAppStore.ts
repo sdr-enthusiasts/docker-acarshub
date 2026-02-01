@@ -25,6 +25,7 @@ import {
 import type {
   AcarshubVersion,
   AcarsMsg,
+  ADSBData,
   AdsbStatus,
   AlertTerm,
   DatabaseSize,
@@ -95,6 +96,10 @@ interface AppState {
   setSignalFreqData: (data: SignalFreqData) => void;
   signalCountData: SignalCountData | null;
   setSignalCountData: (data: SignalCountData) => void;
+
+  // ADS-B aircraft data
+  adsbAircraft: ADSBData | null;
+  setAdsbAircraft: (data: ADSBData) => void;
 
   // UI state
   currentPage: string;
@@ -372,6 +377,10 @@ export const useAppStore = create<AppState>((set) => ({
   setSignalFreqData: (data) => set({ signalFreqData: data }),
   signalCountData: null,
   setSignalCountData: (data) => set({ signalCountData: data }),
+
+  // ADS-B aircraft data
+  adsbAircraft: null,
+  setAdsbAircraft: (data) => set({ adsbAircraft: data }),
 
   // UI state
   currentPage: "Live Messages",

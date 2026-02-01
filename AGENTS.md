@@ -1039,26 +1039,36 @@ Target modern browsers with ES6+ support:
 - ✅ **Theme-aware** - Dark (Mocha) and Light (Latte) map styles
 - ✅ **Modern stack** - Future-proof, actively maintained
 
-#### Map Providers Strategy
+**Map Providers Strategy**:
 
-##### Default: CartoDB (No API Key Required)
+- Default: CartoDB (No API Key Required)
+  - Free raster tiles: Dark Matter (dark theme) and Light All (light theme)
+  - No signup, no API key, unlimited use
+  - CORS-friendly (works from localhost and any domain)
+  - Professional-looking dark/light map styles
+  - Widely used in aviation and tracking applications
 
-- Free raster tiles: Dark Matter (dark theme) and Light All (light theme)
-- No signup, no API key, unlimited use
-- CORS-friendly (works from localhost and any domain)
-- Professional-looking dark/light map styles
-- Widely used in aviation and tracking applications
+- Optional: Maptiler (API Key in Settings)
+  - Users can add free/paid Maptiler API key in Settings
+  - Unlocks vector tiles and additional professional styles
+  - Free tier: 100,000 map loads/month
+  - Settings UI: "Map Provider: CartoDB (default) | Maptiler (requires API key)"
 
-##### Optional: Maptiler (API Key in Settings)\*\*
+**ADS-B Data Flow Refactoring** ✅ COMPLETE:
 
-- Users can add free/paid Maptiler API key in Settings
-- Unlocks vector tiles and additional professional styles
-- Free tier: 100,000 map loads/month
-- Settings UI: "Map Provider: CartoDB (default) | Maptiler (requires API key)"
+- ✅ Backend polls aircraft.json every 5 seconds (via background task)
+- ✅ Backend optimizes payload (52 fields → 13 fields = 75% reduction)
+- ✅ Backend broadcasts via Socket.IO `adsb_aircraft` event
+- ✅ Frontend receives data via Socket.IO (no polling, no fetch)
+- ✅ Clean separation: backend owns data fetching, frontend just displays
+- ✅ Removed `url`, `bypass`, `flight_tracking_url` from `features_enabled` event
+- ✅ TypeScript types updated (`ADSBAircraft`, `ADSBData`)
+- ✅ All quality checks passing (TypeScript, build)
+- 📄 See `acarshub-react/ADSB_DATA_FLOW_REFACTOR.md` for full details
 
 **Implementation Tasks**:
 
-#### Map Rendering & Theming
+#### Map Rendering & Theming ✅ COMPLETE
 
 - ✅ Install `maplibre-gl` and `react-map-gl` dependencies
 - ✅ Create MapLibre map component with CartoDB raster tiles
@@ -1071,51 +1081,66 @@ Target modern browsers with ES6+ support:
 - ✅ Add Maptiler API key input in Settings modal
 - ✅ Implement provider switching logic (CartoDB vs Maptiler)
 
-#### Aircraft Markers & Data Blocks
+#### ADS-B Data Flow ✅ COMPLETE
+
+- ✅ Backend background task polls aircraft.json every 5 seconds
+- ✅ Field optimization (13 essential fields from 52 total)
+- ✅ Socket.IO `adsb_aircraft` event with optimized payload
+- ✅ Frontend Socket.IO listener and Zustand store integration
+- ✅ TypeScript types: `ADSBAircraft`, `ADSBData` interfaces
+- ✅ Removed frontend polling logic (clean architecture)
+
+#### Aircraft Markers & Data Blocks ✅ COMPLETE (Markers) / 🔜 NEXT (Data Blocks)
 
 - ✅ Port aircraft SVG icons from legacy (getBaseMarker, svgShapeToURI)
 - ✅ Implement MapLibre markers with aircraft rotation
-- ✅ Create data block markers (callsign, altitude, speed display)
-- ✅ Implement extended data blocks (full flight details)
 - ✅ Color-coding logic (alerts, ACARS messages, signal strength)
-- ✅ Click handlers for showing aircraft messages
 - ✅ Hover effects and tooltips
 - ✅ Performance optimization for 100+ markers
+- ✅ Complete aircraft icon library (1,477 lines, **81 shapes**, 300+ type mappings)
+- ✅ AircraftMarkers component (152 lines)
+- ✅ **Theme-aware colors** - Icons use Catppuccin CSS variables (adapt to Mocha/Latte)
+- ✅ Integration with ACARS message system (color coding)
+- ✅ **ADS-B + ACARS pairing** - Green = has ACARS, White/Text = ADS-B only, Red = alerts
+- 📄 See `acarshub-react/AIRCRAFT_ICONS_COMPLETE.md` for details
+- ⏳ Create data block markers (callsign, altitude, speed display)
+- ⏳ Implement extended data blocks (full flight details)
+- ⏳ Click handlers for showing aircraft messages
 
 #### Map Features & Overlays
 
-- ✅ Range rings from station location (configurable radii)
-- ✅ NEXRAD weather radar overlay (migrate from Leaflet plugin)
-- ✅ Station marker (ground receiver location)
-- ✅ Aircraft list sidebar (sortable, filterable)
-- ✅ Map controls (zoom, compass, fullscreen)
+- ⏳ Range rings from station location (configurable radii)
+- ⏳ NEXRAD weather radar overlay (migrate from Leaflet plugin)
+- ⏳ Station marker (ground receiver location)
+- ⏳ Aircraft list sidebar (sortable, filterable)
+- ⏳ Map controls (zoom, compass, fullscreen)
 
 #### Filtering & Display Options
 
-- ✅ Show only aircraft with ACARS messages toggle
-- ✅ Show/hide data blocks toggle
-- ✅ Show/hide extended data blocks toggle
-- ✅ Show/hide NEXRAD overlay toggle
-- ✅ Show only unread messages toggle
-- ✅ Mark all messages as read action
-- ✅ Filter persistence to localStorage
+- ⏳ Show only aircraft with ACARS messages toggle
+- ⏳ Show/hide data blocks toggle
+- ⏳ Show/hide extended data blocks toggle
+- ⏳ Show/hide NEXRAD overlay toggle
+- ⏳ Show only unread messages toggle
+- ⏳ Mark all messages as read action
+- ⏳ Filter persistence to localStorage
 
 #### Aircraft List & Sorting
 
-- ✅ Sortable columns (callsign, altitude, speed, messages, alerts)
-- ✅ Ascending/descending toggle
-- ✅ Highlight selected aircraft
-- ✅ Click to center map on aircraft
-- ✅ Hover sync between list and map markers
+- ⏳ Sortable columns (callsign, altitude, speed, messages, alerts)
+- ⏳ Ascending/descending toggle
+- ⏳ Highlight selected aircraft
+- ⏳ Click to center map on aircraft
+- ⏳ Hover sync between list and map markers
 
 #### Integration with Message System
 
-- ✅ Connect to messageGroupsStore (shared with Live Messages)
-- ✅ Display ACARS message count per aircraft
-- ✅ Show alert indicators for aircraft with alerts
-- ✅ Click aircraft → open messages modal/panel
-- ✅ Unread message tracking
-- ✅ Real-time updates via Socket.IO (ADS-B positions)
+- ⏳ Connect to messageGroupsStore (shared with Live Messages)
+- ⏳ Display ACARS message count per aircraft
+- ⏳ Show alert indicators for aircraft with alerts
+- ⏳ Click aircraft → open messages modal/panel
+- ⏳ Unread message tracking
+- ✅ Real-time updates via Socket.IO (ADS-B positions via `adsb_aircraft` event)
 
 #### Settings Integration
 
@@ -1167,7 +1192,14 @@ Target modern browsers with ES6+ support:
 
 **Deliverable**: High-performance real-time aircraft map with Catppuccin-aware theming (CartoDB Dark/Light), no API key required by default
 
-**Status**: Map rendering complete with CartoDB raster tiles, theme switching functional, settings integration complete, migration from Protomaps to CartoDB due to CORS restrictions
+**Status**:
+
+- ✅ Map rendering complete with CartoDB raster tiles
+- ✅ Theme switching functional (Mocha/Latte)
+- ✅ Settings integration complete
+- ✅ ADS-B data flow refactored (backend polling, Socket.IO push, 75% payload reduction)
+- ✅ Aircraft markers complete (SVG icons, rotation, color coding, 100+ aircraft capable)
+- 🔜 Next: Data blocks, click handlers, aircraft list, filtering, overlays
 
 ### Phase 9: Alerts and Search
 

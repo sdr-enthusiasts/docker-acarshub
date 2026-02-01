@@ -17,6 +17,7 @@
 import { io, type Socket } from "socket.io-client";
 import type {
   AcarshubVersion,
+  ADSBData,
   Adsb,
   AdsbStatus,
   AlertTerm,
@@ -81,6 +82,7 @@ export interface ServerToClientEvents {
   // ADS-B data
   adsb: (data: Adsb) => void;
   adsb_status: (data: AdsbStatus) => void;
+  adsb_aircraft: (data: ADSBData) => void;
 
   // Alert data
   alert_terms: (data: { data: AlertTerm }) => void;

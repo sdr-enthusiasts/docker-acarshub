@@ -38,6 +38,7 @@ from flask import (
 from threading import Thread, Event  # noqa: E402
 from collections import deque  # noqa: E402
 import time  # noqa: E402
+import requests  # noqa: E402
 
 app = Flask(__name__)
 # Make the browser not cache files if running in dev mode
@@ -123,6 +124,105 @@ def get_cached(func, validSecs):
 
     function_cache[fname] = (result, time.time())
     return result
+
+
+def optimize_adsb_data(raw_data):
+    """
+    Optimize ADS-B aircraft.json data by pruning unused fields.
+    Reduces payload from ~52 fields to 13 essential fields.
+
+    Args:
+        raw_data: Raw aircraft.json response dict
+
+    Returns:
+        Optimized dict with 'now' timestamp and trimmed 'aircraft' list
+    """
+    # Fields actually used by frontend (13 of ~52 total)
+    keep_fields = [
+        "hex",  # ICAO hex code (required, unique ID)
+        "flight",  # Callsign
+        "lat",  # Latitude
+        "lon",  # Longitude
+        "track",  # Heading for icon rotation
+        "alt_baro",  # Altitude
+        "gs",  # Ground speed
+        "squawk",  # Transponder code
+        "baro_rate",  # Climb/descent rate
+        "category",  # Aircraft category (for icon shape)
+        "t",  # Tail/registration
+        "type",  # Aircraft type
+        "seen",  # Seconds since last update
+    ]
+
+    aircraft = []
+    for plane in raw_data.get("aircraft", []):
+        # Only keep essential fields
+        optimized = {k: plane[k] for k in keep_fields if k in plane}
+
+        # Must have hex field at minimum
+        if "hex" in optimized:
+            aircraft.append(optimized)
+
+    return {"now": raw_data.get("now"), "aircraft": aircraft}
+
+
+def poll_adsb_data():
+    """
+    Background task to poll ADS-B aircraft.json data every 5 seconds.
+    Fetches from ADSB_URL, optimizes payload, and broadcasts via Socket.IO.
+    """
+    acarshub_logging.log(
+        "ADS-B polling background task started",
+        "poll_adsb_data",
+        level=LOG_LEVEL["INFO"],
+    )
+
+    while True:
+        if acarshub_configuration.ENABLE_ADSB:
+            try:
+                response = requests.get(acarshub_configuration.ADSB_URL, timeout=5)
+
+                if response.status_code == 200:
+                    raw_data = response.json()
+                    optimized_data = optimize_adsb_data(raw_data)
+
+                    # Broadcast to all connected clients
+                    socketio.emit("adsb_aircraft", optimized_data, namespace="/main")
+
+                    acarshub_logging.log(
+                        f"ADS-B data broadcast: {len(optimized_data['aircraft'])} aircraft",
+                        "poll_adsb_data",
+                        level=LOG_LEVEL["DEBUG"],
+                    )
+                else:
+                    acarshub_logging.log(
+                        f"ADS-B fetch failed: HTTP {response.status_code}",
+                        "poll_adsb_data",
+                        level=LOG_LEVEL["WARNING"],
+                    )
+
+            except requests.exceptions.Timeout:
+                acarshub_logging.log(
+                    "ADS-B fetch timeout (5s)",
+                    "poll_adsb_data",
+                    level=LOG_LEVEL["WARNING"],
+                )
+            except requests.exceptions.RequestException as e:
+                acarshub_logging.log(
+                    f"ADS-B fetch failed: {e}",
+                    "poll_adsb_data",
+                    level=LOG_LEVEL["ERROR"],
+                )
+            except Exception as e:
+                acarshub_logging.log(
+                    f"ADS-B processing error: {e}",
+                    "poll_adsb_data",
+                    level=LOG_LEVEL["ERROR"],
+                )
+                acarshub_logging.acars_traceback(e, "poll_adsb_data")
+
+        # Sleep for 5 seconds before next poll
+        socketio.sleep(5)
 
 
 def update_rrd_db():
@@ -748,10 +848,7 @@ def main_connect():
                     "enabled": acarshub_configuration.ENABLE_ADSB,
                     "lat": acarshub_configuration.ADSB_LAT,
                     "lon": acarshub_configuration.ADSB_LON,
-                    "url": acarshub_configuration.ADSB_URL,
-                    "bypass": acarshub_configuration.ADSB_BYPASS_URL,
                     "range_rings": acarshub_configuration.ENABLE_RANGE_RINGS,
-                    "flight_tracking_url": acarshub_configuration.FLIGHT_TRACKING_URL,
                 },
             },
             to=requester,
@@ -862,6 +959,18 @@ def main_connect():
         sys.stdout.flush()
         thread_html_generator_event.clear()
         thread_html_generator = socketio.start_background_task(htmlListener)
+
+    # Start the ADS-B polling background task if enabled (only once)
+    if acarshub_configuration.ENABLE_ADSB:
+        # Check if already started by looking for a global flag
+        if not hasattr(main_connect, "_adsb_task_started"):
+            acarshub_logging.log(
+                "Starting ADS-B polling background task",
+                "main_connect",
+                level=LOG_LEVEL["INFO"],
+            )
+            socketio.start_background_task(poll_adsb_data)
+            main_connect._adsb_task_started = True
 
     pt = time.time() - pt
     acarshub_logging.log(

@@ -43,21 +43,33 @@ export const useSocketIO = () => {
   const setAlertTermData = useAppStore((state) => state.setAlertTermData);
   const setSignalFreqData = useAppStore((state) => state.setSignalFreqData);
   const setSignalCountData = useAppStore((state) => state.setSignalCountData);
+  const setAdsbAircraft = useAppStore((state) => state.setAdsbAircraft);
 
   useEffect(() => {
+    console.log("🔌 useSocketIO: Setting up Socket.IO connection...");
+
     // Connect to Socket.IO backend
     const socket = socketService.connect();
 
+    console.log("🔌 Socket instance:", {
+      connected: socket.connected,
+      id: socket.id,
+      namespace: "/main",
+    });
+
     // Connection event handlers
     socket.on("connect", () => {
+      console.log("✅ Socket.IO connected! ID:", socket.id);
       setConnected(true);
     });
 
     socket.on("disconnect", () => {
+      console.log("❌ Socket.IO disconnected");
       setConnected(false);
     });
 
     socket.on("reconnect", () => {
+      console.log("🔄 Socket.IO reconnected");
       setConnected(true);
     });
 
@@ -99,6 +111,18 @@ export const useSocketIO = () => {
       setAdsbStatus(status);
     });
 
+    socket.on("adsb_aircraft", (data) => {
+      console.log("📡 Socket.IO received adsb_aircraft:", {
+        aircraftCount: data?.aircraft?.length || 0,
+        timestamp: data?.now,
+        sampleAircraft: data?.aircraft?.[0],
+      });
+      setAdsbAircraft(data);
+      console.log("✅ Called setAdsbAircraft with data");
+    });
+
+    console.log("👂 Registered listener for 'adsb_aircraft' event");
+
     // Signal information
     socket.on("signal", (data) => {
       setSignalLevels(data.levels);
@@ -129,6 +153,26 @@ export const useSocketIO = () => {
       setSignalCountData(countData);
     });
 
+    // Log all registered event listeners
+    console.log("👂 All Socket.IO event listeners registered:", [
+      "connect",
+      "disconnect",
+      "reconnect",
+      "acars_msg",
+      "labels",
+      "terms",
+      "features_enabled",
+      "system_status",
+      "version",
+      "database",
+      "adsb_status",
+      "adsb_aircraft",
+      "signal",
+      "alert_terms",
+      "signal_freqs",
+      "signal_count",
+    ]);
+
     // Cleanup on unmount
     return () => {
       // Remove all event listeners
@@ -143,6 +187,7 @@ export const useSocketIO = () => {
       socket.off("version");
       socket.off("database");
       socket.off("adsb_status");
+      socket.off("adsb_aircraft");
       socket.off("signal");
       socket.off("alert_terms");
       socket.off("signal_freqs");
@@ -171,6 +216,7 @@ export const useSocketIO = () => {
     setAlertTermData,
     setSignalFreqData,
     setSignalCountData,
+    setAdsbAircraft,
   ]);
 
   return {

@@ -24,6 +24,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import { useSettingsStore, useTheme } from "../../store/useSettingsStore";
 import latteStyle from "../../styles/map-styles/catppuccin-latte.json";
 import mochaStyle from "../../styles/map-styles/catppuccin-mocha.json";
+import { AircraftMarkers } from "./AircraftMarkers";
 import "./Map.scss";
 
 interface MapComponentProps {
@@ -130,6 +131,9 @@ export function MapComponent({
 
         {/* Scale control */}
         <ScaleControl position="bottom-right" unit="nautical" />
+
+        {/* Aircraft markers */}
+        <AircraftMarkers />
       </MapLibreMap>
     </div>
   );

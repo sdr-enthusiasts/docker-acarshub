@@ -98,11 +98,30 @@ export interface Decoders {
     enabled: boolean;
     lat: number;
     lon: number;
-    url: string;
-    bypass: boolean;
     range_rings: boolean;
-    flight_tracking_url: string;
   };
+}
+
+// ADS-B Aircraft Types
+export interface ADSBAircraft {
+  hex: string; // ICAO hex code (required, unique ID)
+  flight?: string; // Callsign
+  lat?: number; // Latitude
+  lon?: number; // Longitude
+  track?: number; // Heading for icon rotation (degrees)
+  alt_baro?: number; // Altitude (feet)
+  gs?: number; // Ground speed (knots)
+  squawk?: string; // Transponder code
+  baro_rate?: number; // Climb/descent rate (ft/min)
+  category?: string; // Aircraft category (for icon shape)
+  t?: string; // Tail/registration
+  type?: string; // Aircraft type
+  seen?: number; // Seconds since last update
+}
+
+export interface ADSBData {
+  now: number; // Unix timestamp
+  aircraft: ADSBAircraft[];
 }
 
 // Signal Types
@@ -462,6 +481,7 @@ export interface SocketEvents {
 
   // ADS-B events
   adsb: (data: Adsb) => void;
+  adsb_aircraft: (data: ADSBData) => void;
 
   // Configuration
   decoders: (data: Decoders) => void;

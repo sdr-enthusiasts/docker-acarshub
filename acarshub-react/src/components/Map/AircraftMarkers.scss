@@ -1,0 +1,138 @@
+// Copyright (C) 2022-2026 Frederick Clausen II
+// This file is part of acarshub <https://github.com/sdr-enthusiasts/docker-acarshub>.
+
+// acarshub is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+
+// acarshub is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+
+// You should have received a copy of the GNU General Public License
+// along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
+
+@use "../../styles/mixins" as *;
+
+.aircraft-marker {
+  // Position and transform
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  // Enable smooth rotation transitions
+  transition: transform 0.5s ease-out;
+
+  // Cursor indicates clickable
+  cursor: pointer;
+
+  // Ensure markers render above map tiles
+  z-index: 10;
+
+  // Image inside marker
+  img {
+    display: block;
+    user-select: none;
+    -webkit-user-drag: none;
+  }
+
+  // Hover effect - slight scale up
+  &:hover {
+    z-index: 100;
+    transform-origin: center center;
+
+    img {
+      filter: drop-shadow(0 0 4px rgba(0, 0, 0, 0.8));
+    }
+  }
+
+  // Active/clicked state
+  &:active {
+    img {
+      filter: brightness(1.2) drop-shadow(0 0 6px rgba(0, 0, 0, 1));
+    }
+  }
+
+  // Disable animations if user prefers reduced motion
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+
+    &:hover img {
+      filter: none;
+    }
+  }
+}
+
+// Aircraft marker variants based on state
+.aircraft-marker--alert {
+  // Red glow for aircraft with alerts
+  img {
+    filter: drop-shadow(0 0 6px rgba(255, 0, 0, 0.8));
+  }
+
+  &:hover img {
+    filter: drop-shadow(0 0 8px rgba(255, 0, 0, 1));
+  }
+}
+
+.aircraft-marker--message {
+  // Green glow for aircraft with ACARS messages
+  img {
+    filter: drop-shadow(0 0 4px rgba(0, 255, 0, 0.6));
+  }
+
+  &:hover img {
+    filter: drop-shadow(0 0 6px rgba(0, 255, 0, 0.8));
+  }
+}
+
+.aircraft-marker--selected {
+  // Highlight selected aircraft
+  z-index: 200;
+
+  img {
+    filter: drop-shadow(0 0 8px rgba(255, 255, 0, 1));
+  }
+
+  // Pulsing animation for selected aircraft
+  @keyframes pulse {
+    0%,
+    100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.1);
+    }
+  }
+
+  animation: pulse 2s ease-in-out infinite;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+// Density mode support
+[data-density="compact"] .aircraft-marker {
+  // Slightly smaller markers in compact mode
+  img {
+    transform: scale(0.9);
+  }
+}
+
+[data-density="spacious"] .aircraft-marker {
+  // Slightly larger markers in spacious mode
+  img {
+    transform: scale(1.1);
+  }
+}
+
+// Print styles - hide markers when printing
+@media print {
+  .aircraft-marker {
+    display: none;
+  }
+}
