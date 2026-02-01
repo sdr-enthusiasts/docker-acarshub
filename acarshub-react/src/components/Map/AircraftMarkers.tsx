@@ -34,7 +34,12 @@ import {
   pairADSBWithACARSMessages,
 } from "../../utils/aircraftPairing";
 import { AircraftMessagesModal } from "./AircraftMessagesModal";
-import "./AircraftMarkers.scss";
+import "../../styles/components/_aircraft-markers.scss";
+
+interface AircraftMarkersProps {
+  /** Hex of currently hovered aircraft (from list) */
+  hoveredAircraftHex?: string | null;
+}
 
 interface AircraftMarkerData {
   hex: string;
@@ -64,16 +69,16 @@ interface TooltipState {
  * - Shows hover tooltips with aircraft details
  * - Efficiently updates only changed markers
  */
-export function AircraftMarkers() {
+export function AircraftMarkers({
+  hoveredAircraftHex,
+}: AircraftMarkersProps = {}) {
   const adsbAircraft = useAppStore((state) => state.adsbAircraft);
   const messageGroups = useAppStore((state) => state.messageGroups);
   const altitudeUnit = useSettingsStore(
     (state) => state.settings.regional.altitudeUnit,
   );
-  const locale = useSettingsStore((state) => state.settings.regional.locale);
-  const [hoveredAircraft, setHoveredAircraft] = useState<TooltipState | null>(
-    null,
-  );
+  const [localHoveredAircraft, setLocalHoveredAircraft] =
+    useState<TooltipState | null>(null);
   const [selectedMessageGroup, setSelectedMessageGroup] =
     useState<MessageGroup | null>(null);
 
@@ -161,18 +166,30 @@ export function AircraftMarkers() {
             latitude={markerData.lat}
             anchor="center"
             style={{
-              zIndex: hoveredAircraft?.hex === markerData.hex ? 10000 : 10,
+              zIndex:
+                localHoveredAircraft?.hex === markerData.hex ||
+                hoveredAircraftHex === markerData.hex
+                  ? 10000
+                  : 10,
             }}
           >
             <div
               style={{
                 position: "relative",
-                zIndex: hoveredAircraft?.hex === markerData.hex ? 10000 : 10,
+                zIndex:
+                  localHoveredAircraft?.hex === markerData.hex ||
+                  hoveredAircraftHex === markerData.hex
+                    ? 10000
+                    : 10,
               }}
             >
               <button
                 type="button"
-                className="aircraft-marker"
+                className={`aircraft-marker ${
+                  hoveredAircraftHex === markerData.hex
+                    ? "aircraft-marker--hovered"
+                    : ""
+                }`}
                 aria-label={`Aircraft ${markerData.hex}${markerData.aircraft.hasMessages ? " - Click to view messages" : ""}`}
                 style={{
                   width: `${markerData.width}px`,
@@ -190,13 +207,15 @@ export function AircraftMarkers() {
                   const distanceFromTop = rect.top;
                   const showBelow = distanceFromTop < 280; // Show below if within 280px of top (accounts for full tooltip height)
 
-                  setHoveredAircraft({
+                  setLocalHoveredAircraft({
                     hex: markerData.hex,
                     showBelow,
                   });
+                  // Don't call onAircraftHover - pulsing glow is only for list hover
                 }}
                 onMouseLeave={() => {
-                  setHoveredAircraft(null);
+                  setLocalHoveredAircraft(null);
+                  // Don't call onAircraftHover - pulsing glow is only for list hover
                 }}
               >
                 <img
@@ -210,95 +229,105 @@ export function AircraftMarkers() {
                 />
               </button>
               {/* Tooltip outside rotated button */}
-              {hoveredAircraft && hoveredAircraft.hex === markerData.hex && (
-                <div
-                  className={`aircraft-tooltip ${hoveredAircraft.showBelow ? "aircraft-tooltip--below" : "aircraft-tooltip--above"}`}
-                  style={{ pointerEvents: "none" }}
-                >
-                  <div className="aircraft-tooltip__content">
-                    <div className="aircraft-tooltip__header">
-                      <strong>{getDisplayCallsign(markerData.aircraft)}</strong>
-                      {markerData.aircraft.matchStrategy !== "none" && (
-                        <span className="aircraft-tooltip__match-badge">
-                          {markerData.aircraft.matchStrategy}
-                        </span>
-                      )}
-                    </div>
+              {localHoveredAircraft &&
+                localHoveredAircraft.hex === markerData.hex && (
+                  <div
+                    className={`aircraft-tooltip ${localHoveredAircraft.showBelow ? "aircraft-tooltip--below" : "aircraft-tooltip--above"}`}
+                    style={{ pointerEvents: "none" }}
+                  >
+                    <div className="aircraft-tooltip__content">
+                      <div className="aircraft-tooltip__header">
+                        <strong>
+                          {getDisplayCallsign(markerData.aircraft)}
+                        </strong>
+                        {markerData.aircraft.matchStrategy !== "none" && (
+                          <span className="aircraft-tooltip__match-badge">
+                            {markerData.aircraft.matchStrategy}
+                          </span>
+                        )}
+                      </div>
 
-                    {markerData.aircraft.tail &&
-                      markerData.aircraft.tail !==
-                        getDisplayCallsign(markerData.aircraft) && (
+                      {markerData.aircraft.tail &&
+                        markerData.aircraft.tail !==
+                          getDisplayCallsign(markerData.aircraft) && (
+                          <div className="aircraft-tooltip__row">
+                            <span className="aircraft-tooltip__label">
+                              Tail:
+                            </span>
+                            <span className="aircraft-tooltip__value">
+                              {markerData.aircraft.tail}
+                            </span>
+                          </div>
+                        )}
+
+                      <div className="aircraft-tooltip__row">
+                        <span className="aircraft-tooltip__label">Hex:</span>
+                        <span className="aircraft-tooltip__value">
+                          {markerData.aircraft.hex.toUpperCase()}
+                        </span>
+                      </div>
+
+                      {markerData.aircraft.type && (
                         <div className="aircraft-tooltip__row">
-                          <span className="aircraft-tooltip__label">Tail:</span>
+                          <span className="aircraft-tooltip__label">Type:</span>
                           <span className="aircraft-tooltip__value">
-                            {markerData.aircraft.tail}
+                            {markerData.aircraft.type}
                           </span>
                         </div>
                       )}
 
-                    <div className="aircraft-tooltip__row">
-                      <span className="aircraft-tooltip__label">Hex:</span>
-                      <span className="aircraft-tooltip__value">
-                        {markerData.aircraft.hex.toUpperCase()}
-                      </span>
-                    </div>
-
-                    {markerData.aircraft.type && (
                       <div className="aircraft-tooltip__row">
-                        <span className="aircraft-tooltip__label">Type:</span>
-                        <span className="aircraft-tooltip__value">
-                          {markerData.aircraft.type}
-                        </span>
-                      </div>
-                    )}
-
-                    <div className="aircraft-tooltip__row">
-                      <span className="aircraft-tooltip__label">Altitude:</span>
-                      <span className="aircraft-tooltip__value">
-                        {formatAltitude(
-                          markerData.aircraft.alt_baro,
-                          altitudeUnit,
-                          locale,
-                        )}
-                      </span>
-                    </div>
-
-                    <div className="aircraft-tooltip__row">
-                      <span className="aircraft-tooltip__label">Speed:</span>
-                      <span className="aircraft-tooltip__value">
-                        {formatGroundSpeed(markerData.aircraft.gs)}
-                      </span>
-                    </div>
-
-                    <div className="aircraft-tooltip__row">
-                      <span className="aircraft-tooltip__label">Heading:</span>
-                      <span className="aircraft-tooltip__value">
-                        {formatHeading(markerData.aircraft.track)}
-                      </span>
-                    </div>
-
-                    {markerData.aircraft.hasMessages && (
-                      <div className="aircraft-tooltip__row aircraft-tooltip__row--highlight">
                         <span className="aircraft-tooltip__label">
-                          Messages:
+                          Altitude:
                         </span>
                         <span className="aircraft-tooltip__value">
-                          {markerData.aircraft.messageCount}
+                          {formatAltitude(
+                            markerData.aircraft.alt_baro,
+                            altitudeUnit,
+                          )}
                         </span>
                       </div>
-                    )}
 
-                    {markerData.aircraft.hasAlerts && (
-                      <div className="aircraft-tooltip__row aircraft-tooltip__row--alert">
-                        <span className="aircraft-tooltip__label">Alerts:</span>
+                      <div className="aircraft-tooltip__row">
+                        <span className="aircraft-tooltip__label">Speed:</span>
                         <span className="aircraft-tooltip__value">
-                          {markerData.aircraft.alertCount}
+                          {formatGroundSpeed(markerData.aircraft.gs)}
                         </span>
                       </div>
-                    )}
+
+                      <div className="aircraft-tooltip__row">
+                        <span className="aircraft-tooltip__label">
+                          Heading:
+                        </span>
+                        <span className="aircraft-tooltip__value">
+                          {formatHeading(markerData.aircraft.track)}
+                        </span>
+                      </div>
+
+                      {markerData.aircraft.hasMessages && (
+                        <div className="aircraft-tooltip__row aircraft-tooltip__row--highlight">
+                          <span className="aircraft-tooltip__label">
+                            Messages:
+                          </span>
+                          <span className="aircraft-tooltip__value">
+                            {markerData.aircraft.messageCount}
+                          </span>
+                        </div>
+                      )}
+
+                      {markerData.aircraft.hasAlerts && (
+                        <div className="aircraft-tooltip__row aircraft-tooltip__row--alert">
+                          <span className="aircraft-tooltip__label">
+                            Alerts:
+                          </span>
+                          <span className="aircraft-tooltip__value">
+                            {markerData.aircraft.alertCount}
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
             </div>
           </Marker>
         );

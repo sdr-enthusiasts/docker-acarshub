@@ -17,7 +17,7 @@
 import { useEffect, useRef } from "react";
 import type { MessageGroup as MessageGroupType } from "../../types";
 import { MessageGroup } from "../MessageGroup";
-import "./AircraftMessagesModal.scss";
+import "../../styles/components/_aircraft-messages-modal.scss";
 
 interface AircraftMessagesModalProps {
   messageGroup: MessageGroupType | null;

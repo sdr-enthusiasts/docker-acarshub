@@ -31,101 +31,21 @@
     gap: 0;
   }
 
-  // Optional sidebar - hidden by default, can show station info
+  // Aircraft list sidebar
   &__sidebar {
     flex-shrink: 0;
-    width: 280px;
+    width: 320px;
     height: 100%;
-    overflow-y: auto;
-    overflow-x: hidden;
+    overflow: hidden;
     background-color: var(--color-mantle);
-    border-right: 1px solid var(--color-surface0);
+    border-right: 1px solid var(--color-surface-1);
+    display: flex;
+    flex-direction: column;
 
-    @include scrollbar-thin;
-
-    // Hide sidebar if no ADS-B status (no station info to show)
-    &:empty {
+    // Mobile: hide by default, can be toggled
+    @include breakpoint-max(md) {
       display: none;
     }
-  }
-
-  &__controls {
-    padding: var(--spacing-lg);
-  }
-
-  &__controls-title {
-    font-size: 1rem;
-    font-weight: 600;
-    margin-bottom: var(--spacing-lg);
-    color: var(--color-text);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    font-size: 0.875rem;
-    color: var(--color-subtext0);
-  }
-
-  &__control-group {
-    margin-bottom: var(--spacing-lg);
-    padding-bottom: var(--spacing-lg);
-    border-bottom: 1px solid var(--color-surface0);
-
-    &:last-child {
-      border-bottom: none;
-      padding-bottom: 0;
-    }
-  }
-
-  &__control-group-title {
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    margin-bottom: var(--spacing-sm);
-    color: var(--color-subtext0);
-  }
-
-  &__info {
-    font-size: 0.875rem;
-  }
-
-  &__info-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: var(--spacing-sm) 0;
-
-    &:not(:last-child) {
-      border-bottom: 1px solid var(--color-surface0);
-    }
-  }
-
-  &__info-label {
-    font-weight: 500;
-    color: var(--color-subtext1);
-  }
-
-  &__info-value {
-    font-family: var(--font-mono);
-    color: var(--color-text);
-
-    &--active {
-      color: var(--color-green);
-    }
-
-    &--inactive {
-      color: var(--color-overlay1);
-    }
-  }
-
-  &__aircraft-list {
-    min-height: 200px;
-  }
-
-  &__placeholder-text {
-    font-size: 0.875rem;
-    text-align: center;
-    padding: var(--spacing-xl);
-    color: var(--color-subtext0);
   }
 
   // Map container
@@ -189,44 +109,13 @@
   }
 }
 
-// Mobile responsive - stack sidebar below map
-@include breakpoint-max(md) {
-  .live-map-page {
-    &__container {
-      flex-direction: column-reverse;
-    }
-
-    &__sidebar {
-      width: 100%;
-      max-height: 30vh;
-      border-right: none;
-      border-top: 1px solid var(--color-surface0);
-    }
-
-    &__map {
-      height: 70vh;
-    }
-  }
-}
-
 // Tablet - narrower sidebar
 @include breakpoint(md) {
   @include breakpoint-max(lg) {
     .live-map-page {
       &__sidebar {
-        width: 240px;
+        width: 280px;
       }
-    }
-  }
-}
-
-// Large screens - hide sidebar completely if empty, full map
-@include breakpoint(lg) {
-  .live-map-page {
-    &__sidebar:empty,
-    &__sidebar:not(:has(*)) {
-      display: none;
-      width: 0;
     }
   }
 }

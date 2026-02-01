@@ -1142,26 +1142,36 @@ Target modern browsers with ES6+ support:
 - ⏳ Range rings from station location (configurable radii)
 - ⏳ NEXRAD weather radar overlay (migrate from Leaflet plugin)
 - ⏳ Station marker (ground receiver location)
-- ⏳ Aircraft list sidebar (sortable, filterable)
+- ✅ **Aircraft list sidebar** (sortable, filterable)
+  - ✅ Sortable by callsign, altitude, speed, messages, alerts
+  - ✅ Text search across callsign, hex, tail, type
+  - ✅ Filter toggles (ACARS-only, alerts-only)
+  - ✅ Hover sync with map markers
+  - ✅ Click to center map on aircraft
+  - ✅ Persistent filter/sort preferences to localStorage
+  - ✅ Mobile-responsive table layout
+  - ✅ Theme-aware with Catppuccin colors
+  - ✅ Real-time updates from Socket.IO
 - ⏳ Map controls (zoom, compass, fullscreen)
 
 #### Filtering & Display Options
 
-- ⏳ Show only aircraft with ACARS messages toggle
+- ✅ Show only aircraft with ACARS messages toggle (in aircraft list)
 - ⏳ Show/hide data blocks toggle
 - ⏳ Show/hide extended data blocks toggle
 - ⏳ Show/hide NEXRAD overlay toggle
+- ✅ Show only alerts toggle (in aircraft list)
 - ⏳ Show only unread messages toggle
 - ⏳ Mark all messages as read action
-- ⏳ Filter persistence to localStorage
+- ✅ Filter persistence to localStorage (aircraft list filters)
 
-#### Aircraft List & Sorting
+#### Aircraft List & Sorting ✅ COMPLETE
 
-- ⏳ Sortable columns (callsign, altitude, speed, messages, alerts)
-- ⏳ Ascending/descending toggle
-- ⏳ Highlight selected aircraft
-- ⏳ Click to center map on aircraft
-- ⏳ Hover sync between list and map markers
+- ✅ Sortable columns (callsign, altitude, speed, messages, alerts)
+- ✅ Ascending/descending toggle (click same column to toggle)
+- ✅ Highlight hovered aircraft (from list or map)
+- ✅ Click to center map on aircraft (with flyTo animation)
+- ✅ Hover sync between list and map markers (bidirectional)
 
 #### Integration with Message System
 
@@ -1232,7 +1242,8 @@ Target modern browsers with ES6+ support:
 - ✅ **ADS-B ↔ ACARS pairing complete** (hex > callsign > tail matching)
 - ✅ **Hover tooltips complete** (comprehensive aircraft details, theme-aware, accessible)
 - ✅ **Click handlers complete** (AircraftMessagesModal opens on click, full message display)
-- 🔜 Next: Aircraft list sidebar, filtering options, range rings, NEXRAD overlay
+- ✅ **Aircraft list sidebar complete** (sortable, filterable, hover sync, localStorage persistence)
+- 🔜 Next: Range rings, NEXRAD overlay, station marker, map filter controls
 
 ### Phase 9: Alerts and Search
 

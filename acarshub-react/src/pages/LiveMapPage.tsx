@@ -14,12 +14,15 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { MapRef } from "react-map-gl/maplibre";
 import { MapComponent, MapControls } from "../components/Map";
+import { AircraftList } from "../components/Map/AircraftList";
 import { socketService } from "../services/socket";
 import { useAppStore } from "../store/useAppStore";
 import { useSettingsStore } from "../store/useSettingsStore";
+import type { PairedAircraft } from "../utils/aircraftPairing";
+import { pairADSBWithACARSMessages } from "../utils/aircraftPairing";
 import "./LiveMapPage.scss";
 
 /**
@@ -38,11 +41,21 @@ import "./LiveMapPage.scss";
  */
 export const LiveMapPage = () => {
   const setCurrentPage = useAppStore((state) => state.setCurrentPage);
-  const adsbStatus = useAppStore((state) => state.adsbStatus);
+  const adsbAircraft = useAppStore((state) => state.adsbAircraft);
+  const messageGroups = useAppStore((state) => state.messageGroups);
   const mapSettings = useSettingsStore((state) => state.settings.map);
 
   const mapRef = useRef<MapRef>(null);
   const [isMapLoaded, setIsMapLoaded] = useState(false);
+  const [hoveredAircraftHex, setHoveredAircraftHex] = useState<string | null>(
+    null,
+  );
+
+  // Pair ADS-B aircraft with ACARS message groups
+  const pairedAircraft = useMemo(() => {
+    const aircraft = adsbAircraft?.aircraft || [];
+    return pairADSBWithACARSMessages(aircraft, messageGroups);
+  }, [adsbAircraft, messageGroups]);
 
   useEffect(() => {
     setCurrentPage("Live Map");
@@ -54,65 +67,42 @@ export const LiveMapPage = () => {
     console.log("Map loaded successfully");
   };
 
+  // Handle aircraft click from list
+  const handleAircraftClick = (aircraft: PairedAircraft) => {
+    // Center map on aircraft if position available
+    if (aircraft.lat && aircraft.lon && mapRef.current) {
+      mapRef.current.flyTo({
+        center: [aircraft.lon, aircraft.lat],
+        zoom: 10,
+        duration: 1000,
+      });
+    }
+  };
+
+  // Handle aircraft hover from list
+  const handleAircraftHover = (aircraft: PairedAircraft | null) => {
+    setHoveredAircraftHex(aircraft?.hex || null);
+  };
+
   return (
     <div className="page live-map-page">
       <div className="live-map-page__container">
-        {/* Optional sidebar - minimized or removed */}
-        {adsbStatus && (
-          <aside className="live-map-page__sidebar">
-            <div className="live-map-page__controls">
-              <h2 className="live-map-page__controls-title">Station Info</h2>
-
-              {/* Station info */}
-              <div className="live-map-page__control-group">
-                <div className="live-map-page__info">
-                  <div className="live-map-page__info-row">
-                    <span className="live-map-page__info-label">Status:</span>
-                    <span
-                      className={`live-map-page__info-value ${
-                        adsbStatus.adsb_getting_data
-                          ? "live-map-page__info-value--active"
-                          : "live-map-page__info-value--inactive"
-                      }`}
-                    >
-                      {adsbStatus.adsb_getting_data ? "Active" : "Inactive"}
-                    </span>
-                  </div>
-                  <div className="live-map-page__info-row">
-                    <span className="live-map-page__info-label">Latitude:</span>
-                    <span className="live-map-page__info-value">
-                      {mapSettings.stationLat.toFixed(4)}°
-                    </span>
-                  </div>
-                  <div className="live-map-page__info-row">
-                    <span className="live-map-page__info-label">
-                      Longitude:
-                    </span>
-                    <span className="live-map-page__info-value">
-                      {mapSettings.stationLon.toFixed(4)}°
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Aircraft list placeholder */}
-              <div className="live-map-page__control-group">
-                <h3 className="live-map-page__control-group-title">Aircraft</h3>
-                <div className="live-map-page__aircraft-list">
-                  <p className="live-map-page__placeholder-text">
-                    Aircraft list coming soon...
-                  </p>
-                </div>
-              </div>
-            </div>
-          </aside>
-        )}
+        {/* Aircraft list sidebar */}
+        <aside className="live-map-page__sidebar">
+          <AircraftList
+            aircraft={pairedAircraft}
+            onAircraftClick={handleAircraftClick}
+            onAircraftHover={handleAircraftHover}
+            hoveredAircraft={hoveredAircraftHex}
+          />
+        </aside>
 
         {/* Map container (main area) */}
         <main className="live-map-page__map">
           <MapComponent
             mapRef={mapRef}
             onLoad={handleMapLoad}
+            hoveredAircraftHex={hoveredAircraftHex}
             className={isMapLoaded ? "live-map-page__map--loaded" : ""}
           />
 

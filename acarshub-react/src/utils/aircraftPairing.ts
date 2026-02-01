@@ -183,27 +183,12 @@ export function getDisplayCallsign(aircraft: PairedAircraft): string {
 }
 
 /**
- * Get locale-aware spelling for meters/metres
- * US and few others use "meters", most of world uses "metres"
- */
-function getMetersSpelling(locale?: string): string {
-  const detectedLocale = locale || navigator.language || "en-US";
-  // US, Liberia, Myanmar use "meters"
-  const usesMeters =
-    detectedLocale.startsWith("en-US") ||
-    detectedLocale.startsWith("en-LR") ||
-    detectedLocale.startsWith("my");
-  return usesMeters ? "meters" : "metres";
-}
-
-/**
  * Format altitude for display
- * Supports feet/meters with locale-aware spelling
+ * Supports feet/meters (no unit suffix for space savings)
  */
 export function formatAltitude(
   altBaro?: number,
   unit: AltitudeUnit = "feet",
-  locale?: string,
 ): string {
   if (altBaro === undefined || altBaro === null) {
     return "N/A";
@@ -216,23 +201,22 @@ export function formatAltitude(
   if (unit === "meters") {
     // Convert feet to meters (1 ft = 0.3048 m)
     const meters = Math.round(altBaro * 0.3048);
-    const spelling = getMetersSpelling(locale);
-    return `${meters.toLocaleString()} ${spelling}`;
+    return `${meters.toLocaleString()}`;
   }
 
-  // Default: feet
-  return `${altBaro.toLocaleString()} ft`;
+  // Default: feet (no unit suffix for space savings)
+  return `${altBaro.toLocaleString()}`;
 }
 
 /**
  * Format ground speed for display
- * Returns speed in knots
+ * Returns speed in knots (no unit suffix for space savings)
  */
 export function formatGroundSpeed(gs?: number): string {
   if (gs === undefined || gs === null) {
     return "N/A";
   }
-  return `${Math.round(gs)} kts`;
+  return `${Math.round(gs)}`;
 }
 
 /**

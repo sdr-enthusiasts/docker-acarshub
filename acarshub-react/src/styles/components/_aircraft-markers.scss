@@ -55,13 +55,32 @@
     -webkit-user-drag: none;
   }
 
-  // Hover effect - slight scale up
-  &:hover {
+  // Hover effect - slight scale up (but no pulsing glow)
+  &:hover:not(.aircraft-marker--hovered) {
     z-index: 100;
     transform-origin: center center;
 
     img {
       filter: drop-shadow(0 0 4px rgba(0, 0, 0, 0.8));
+    }
+  }
+
+  // Hovered from list - pulsing glow effect
+  &--hovered {
+    z-index: 150;
+
+    img {
+      filter: drop-shadow(0 0 12px var(--color-blue))
+        drop-shadow(0 0 6px var(--color-blue));
+      animation: marker-pulse 1.5s ease-in-out infinite;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      img {
+        filter: drop-shadow(0 0 12px var(--color-blue))
+          drop-shadow(0 0 6px var(--color-blue));
+        animation: none;
+      }
     }
   }
 
@@ -128,6 +147,22 @@
 
   @media (prefers-reduced-motion: reduce) {
     animation: none;
+  }
+}
+
+// Pulsing animation for hovered aircraft (from list)
+@keyframes marker-pulse {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 12px var(--color-blue))
+      drop-shadow(0 0 6px var(--color-blue));
+    transform: scale(1);
+  }
+  50% {
+    filter: drop-shadow(0 0 20px var(--color-blue))
+      drop-shadow(0 0 10px var(--color-blue))
+      drop-shadow(0 0 4px var(--color-blue));
+    transform: scale(1.15);
   }
 }
 

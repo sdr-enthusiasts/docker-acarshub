@@ -21,11 +21,12 @@ import MapLibreMap, {
   ScaleControl,
 } from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
+import { useAppStore } from "../../store/useAppStore";
 import { useSettingsStore, useTheme } from "../../store/useSettingsStore";
 import latteStyle from "../../styles/map-styles/catppuccin-latte.json";
 import mochaStyle from "../../styles/map-styles/catppuccin-mocha.json";
 import { AircraftMarkers } from "./AircraftMarkers";
-import "./Map.scss";
+import "../../styles/components/_map.scss";
 
 interface MapComponentProps {
   /** Optional className for styling */
@@ -36,6 +37,8 @@ interface MapComponentProps {
   onLoad?: () => void;
   /** Callback when map view changes */
   onViewStateChange?: (viewState: ViewState) => void;
+  /** Hex of currently hovered aircraft (from list) */
+  hoveredAircraftHex?: string | null;
 }
 
 /**
@@ -49,33 +52,73 @@ export function MapComponent({
   mapRef,
   onLoad,
   onViewStateChange,
+  hoveredAircraftHex,
 }: MapComponentProps) {
   const theme = useTheme();
+  const decoders = useAppStore((state) => state.decoders);
   const mapSettings = useSettingsStore((state) => state.settings.map);
 
-  // Map view state
-  const [viewState, setViewState] = useState<ViewState>({
-    longitude: mapSettings.defaultCenterLon,
-    latitude: mapSettings.defaultCenterLat,
-    zoom: mapSettings.defaultZoom,
-    bearing: 0,
-    pitch: 0,
-    padding: { top: 0, bottom: 0, left: 0, right: 0 },
-  });
+  // Get initial view state from localStorage or ADSB location
+  const getInitialViewState = (): ViewState => {
+    // Try to restore from localStorage
+    const saved = localStorage.getItem("map.viewState");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        return {
+          longitude: parsed.longitude,
+          latitude: parsed.latitude,
+          zoom: parsed.zoom,
+          bearing: 0,
+          pitch: 0,
+          padding: { top: 0, bottom: 0, left: 0, right: 0 },
+        };
+      } catch {
+        // Fall through to defaults
+      }
+    }
 
-  // Update view state when settings change
+    // Use ADSB location if available
+    if (decoders?.adsb?.lat && decoders?.adsb?.lon) {
+      return {
+        longitude: decoders.adsb.lon,
+        latitude: decoders.adsb.lat,
+        zoom: 7,
+        bearing: 0,
+        pitch: 0,
+        padding: { top: 0, bottom: 0, left: 0, right: 0 },
+      };
+    }
+
+    // Final fallback: center of world
+    return {
+      longitude: 0,
+      latitude: 0,
+      zoom: 2,
+      bearing: 0,
+      pitch: 0,
+      padding: { top: 0, bottom: 0, left: 0, right: 0 },
+    };
+  };
+
+  // Map view state
+  const [viewState, setViewState] = useState<ViewState>(getInitialViewState);
+
+  // Save view state to localStorage when it changes
   useEffect(() => {
-    setViewState((prev) => ({
-      ...prev,
-      longitude: mapSettings.defaultCenterLon,
-      latitude: mapSettings.defaultCenterLat,
-      zoom: mapSettings.defaultZoom,
-    }));
-  }, [
-    mapSettings.defaultCenterLon,
-    mapSettings.defaultCenterLat,
-    mapSettings.defaultZoom,
-  ]);
+    const saveTimeout = setTimeout(() => {
+      localStorage.setItem(
+        "map.viewState",
+        JSON.stringify({
+          longitude: viewState.longitude,
+          latitude: viewState.latitude,
+          zoom: viewState.zoom,
+        }),
+      );
+    }, 1000); // Debounce saves by 1 second
+
+    return () => clearTimeout(saveTimeout);
+  }, [viewState.longitude, viewState.latitude, viewState.zoom]);
 
   // Get map style based on theme and provider
   const mapStyle = useMemo(() => {
@@ -133,7 +176,7 @@ export function MapComponent({
         <ScaleControl position="bottom-right" unit="nautical" />
 
         {/* Aircraft markers */}
-        <AircraftMarkers />
+        <AircraftMarkers hoveredAircraftHex={hoveredAircraftHex} />
       </MapLibreMap>
     </div>
   );
