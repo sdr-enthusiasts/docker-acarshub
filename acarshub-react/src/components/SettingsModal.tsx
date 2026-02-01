@@ -14,7 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { audioService } from "../services/audioService";
 import { useAppStore } from "../store/useAppStore";
 import { useSettingsStore } from "../store/useSettingsStore";
 import type {
@@ -77,6 +78,18 @@ export const SettingsModal = () => {
 
   const [activeTab, setActiveTab] = useState<string>("appearance");
 
+  // Detect if browser is Chromium-based (Chrome, Brave, Edge, etc.)
+  const isChromium = useMemo(() => {
+    const userAgent = navigator.userAgent.toLowerCase();
+    const isChrome = userAgent.includes("chrome");
+    const isEdge = userAgent.includes("edg");
+    const isBrave = "brave" in navigator && navigator.brave !== undefined;
+    const isFirefox = userAgent.includes("firefox");
+
+    // Chromium-based if Chrome/Edge/Brave but NOT Firefox
+    return (isChrome || isEdge || isBrave) && !isFirefox;
+  }, []);
+
   const handleClose = useCallback(() => {
     setSettingsOpen(false);
   }, [setSettingsOpen]);
@@ -123,6 +136,30 @@ export const SettingsModal = () => {
       }
     };
     input.click();
+  };
+
+  const handleTestSound = async () => {
+    try {
+      await audioService.playAlertSound(settings.notifications.volume);
+      alert("Test sound played successfully! Alert sounds are now enabled.");
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      if (errorMessage === "AUTOPLAY_BLOCKED") {
+        alert(
+          "Sound blocked by browser. Please check your browser settings:\n\n" +
+            "• Chrome/Brave: Check site permissions (lock icon in address bar)\n" +
+            "• Firefox: Check autoplay settings in Preferences\n" +
+            "• Safari: Check Settings → Websites → Auto-Play",
+        );
+      } else {
+        alert(
+          "Failed to play sound: " +
+            errorMessage +
+            "\n\nPlease check your audio settings.",
+        );
+      }
+    }
   };
 
   // Keyboard shortcut: Escape to close
@@ -400,11 +437,22 @@ export const SettingsModal = () => {
             <Card
               title="Notifications"
               subtitle="Configure how you receive alerts and notifications"
-              variant="warning"
+              variant="success"
             >
+              <div className="settings-info settings-info--success">
+                ✓ Sound alerts are fully functional
+              </div>
+
+              {isChromium && (
+                <div className="settings-info settings-info--warning">
+                  ⚠️ Your browser (Chrome, Brave, or Edge) requires clicking
+                  "Test Sound" after each page reload due to browser security
+                  policies. Consider using Firefox for a better experience.
+                </div>
+              )}
+
               <div className="settings-info settings-info--warning">
-                ℹ️ Notification features are not yet implemented. Settings will
-                be saved for future use.
+                ℹ️ Desktop notifications and alert term management coming soon
               </div>
 
               <Toggle
@@ -412,39 +460,54 @@ export const SettingsModal = () => {
                 label="Desktop Notifications (Coming Soon)"
                 checked={settings.notifications.desktop}
                 onChange={setDesktopNotifications}
-                helpText="Show browser notifications for new messages (requires permission)"
+                helpText="Show browser notifications for new alert messages (requires permission)"
                 disabled
               />
 
               <Toggle
                 id="sound-alerts"
-                label="Sound Alerts (Coming Soon)"
+                label="Sound Alerts"
                 checked={settings.notifications.sound}
                 onChange={setSoundAlerts}
-                helpText="Play sound when new messages arrive"
-                disabled
+                helpText="Play sound when new alert messages arrive"
               />
 
               {settings.notifications.sound && (
-                <div className="settings-field-group">
-                  <label htmlFor="volume-slider" className="settings-label">
-                    Volume: {settings.notifications.volume}%
-                  </label>
-                  <input
-                    id="volume-slider"
-                    type="range"
-                    min="0"
-                    max="100"
-                    step="5"
-                    value={settings.notifications.volume}
-                    onChange={(e) => setVolume(Number(e.target.value))}
-                    className="settings-slider"
-                    disabled
-                  />
-                  <p className="settings-help-text">
-                    Adjust the volume of notification sounds
-                  </p>
-                </div>
+                <>
+                  <div className="settings-field-group">
+                    <label htmlFor="volume-slider" className="settings-label">
+                      Volume: {settings.notifications.volume}%
+                    </label>
+                    <input
+                      id="volume-slider"
+                      type="range"
+                      min="0"
+                      max="100"
+                      step="5"
+                      value={settings.notifications.volume}
+                      onChange={(e) => setVolume(Number(e.target.value))}
+                      className="settings-slider"
+                    />
+                    <p className="settings-help-text">
+                      Adjust the volume of alert notification sounds
+                    </p>
+                  </div>
+
+                  <div className="settings-field-group">
+                    <Button
+                      variant="secondary"
+                      onClick={handleTestSound}
+                      aria-label="Test alert sound"
+                    >
+                      Test Sound
+                    </Button>
+                    <p className="settings-help-text">
+                      {isChromium
+                        ? "Play a test sound to unlock audio for this browser session. You'll need to click this after each page reload due to browser security policies."
+                        : "Play a test sound to verify alert sounds are working."}
+                    </p>
+                  </div>
+                </>
               )}
 
               <Toggle
@@ -452,7 +515,7 @@ export const SettingsModal = () => {
                 label="Alerts Only (Coming Soon)"
                 checked={settings.notifications.alertsOnly}
                 onChange={setAlertsOnly}
-                helpText="Only notify for messages that match alert terms"
+                helpText="Only notify for messages that match alert terms (when enabled, ignores non-alert messages)"
                 disabled
               />
             </Card>

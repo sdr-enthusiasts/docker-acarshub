@@ -1,0 +1,162 @@
+// Copyright (C) 2022-2026 Frederick Clausen II
+// This file is part of acarshub <https://github.com/sdr-enthusiasts/docker-acarshub>.
+
+// acarshub is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+
+// acarshub is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+
+// You should have received a copy of the GNU General Public License
+// along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
+
+@use "../styles/mixins" as *;
+@use "../styles/variables" as *;
+
+.alerts-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+
+  // Empty state (no terms or no matches)
+  &__empty-state {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-2xl);
+    min-height: 400px;
+
+    @include breakpoint(md) {
+      min-height: 500px;
+    }
+  }
+
+  &__empty-state-content {
+    text-align: center;
+    max-width: 600px;
+
+    h2 {
+      margin-bottom: var(--spacing-md);
+      color: var(--color-text);
+      font-size: var(--font-size-2xl);
+    }
+
+    p {
+      margin-bottom: var(--spacing-md);
+      color: var(--color-subtext0);
+      font-size: var(--font-size-md);
+      line-height: 1.6;
+
+      &:last-of-type {
+        margin-bottom: 0;
+      }
+    }
+
+    .text-muted {
+      color: var(--color-overlay1);
+      font-size: var(--font-size-sm);
+    }
+  }
+
+  // Current terms display in empty state
+  &__current-terms {
+    margin-top: var(--spacing-xl);
+    padding: var(--spacing-lg);
+    background: var(--color-surface0);
+    border-radius: var(--border-radius-lg);
+    text-align: left;
+
+    h3 {
+      margin-bottom: var(--spacing-sm);
+      color: var(--color-subtext1);
+      font-size: var(--font-size-md);
+      font-weight: 600;
+
+      &:not(:first-child) {
+        margin-top: var(--spacing-md);
+      }
+    }
+  }
+
+  &__term-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-xs);
+  }
+
+  &__term-badge {
+    display: inline-block;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    background: var(--color-blue);
+    color: var(--color-base);
+    border-radius: var(--border-radius-sm);
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    text-transform: uppercase;
+
+    &--ignore {
+      background: var(--color-overlay1);
+      color: var(--color-text);
+    }
+  }
+
+  // Messages container
+  &__messages {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+    padding-bottom: var(--spacing-lg);
+
+    // Mobile: full width
+    @include breakpoint-max(md) {
+      gap: var(--spacing-sm);
+    }
+  }
+
+  // Density mode support
+  [data-density="compact"] & {
+    &__empty-state {
+      padding: var(--spacing-lg);
+      min-height: 300px;
+    }
+
+    &__current-terms {
+      padding: var(--spacing-md);
+    }
+
+    &__messages {
+      gap: var(--spacing-xs);
+    }
+  }
+
+  [data-density="spacious"] & {
+    &__empty-state {
+      padding: var(--spacing-3xl);
+      min-height: 600px;
+    }
+
+    &__current-terms {
+      padding: var(--spacing-xl);
+    }
+
+    &__messages {
+      gap: var(--spacing-lg);
+    }
+  }
+
+  // Print styles
+  @media print {
+    &__empty-state {
+      min-height: auto;
+      padding: var(--spacing-md);
+    }
+
+    &__messages {
+      gap: var(--spacing-sm);
+    }
+  }
+}

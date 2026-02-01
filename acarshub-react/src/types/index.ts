@@ -499,7 +499,11 @@ export interface SocketEvents {
 
 // Events emitted to backend
 export interface SocketEmitEvents {
-  query_search: (params: CurrentSearch) => void;
+  query_search: (params: {
+    search_term: CurrentSearch;
+    results_after?: number;
+    show_all?: boolean;
+  }) => void;
   update_alerts: (terms: Terms) => void;
   signal_freqs: () => void;
   signal_count: () => void;

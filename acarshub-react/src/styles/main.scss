@@ -48,6 +48,8 @@
 @use "components/station-marker";
 @use "components/nexrad-overlay";
 @use "components/logs-viewer";
+@use "components/message-card";
+@use "components/message-group";
 
 /* Pages */
 @use "pages/common";

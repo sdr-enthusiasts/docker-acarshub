@@ -671,14 +671,30 @@ Backend communicates via Socket.IO with these key events:
 - `signal`: Signal level data
 - And more...
 
-**Emitted Events**:
+**Emitted Events** (React):
 
 - `query_search`: Database search request
 - `update_alerts`: Update alert terms
 - `signal_freqs`: Request frequency data
+- `rrd_timeseries`: RRD time-series data request
 - And more...
 
-See `src/index.ts` lines 257-416 for complete event handling.
+**Flask-SocketIO Emit Pattern** (CRITICAL):
+
+When emitting events from client to server, Flask-SocketIO requires the namespace as the **third argument**:
+
+```typescript
+socket.emit("event_name", payload, "/main");
+```
+
+This is different from standard Socket.IO client patterns. All emit calls in the React app MUST follow this pattern:
+
+- ✅ Correct: `socket.emit("query_search", { search_term: {...} }, "/main")`
+- ❌ Wrong: `socket.emit("query_search", { search_term: {...} })`
+
+Without the namespace argument, the backend will not receive the event.
+
+See `src/index.ts` lines 257-416 (legacy) for complete event handling.
 
 ## Dependencies to Replace in React Migration
 
@@ -1441,7 +1457,7 @@ Target modern browsers with ES6+ support:
   - ✅ Mobile-responsive table layout
   - ✅ Theme-aware with Catppuccin colors
   - ✅ Real-time updates from Socket.IO
-- ⏳ Map controls (zoom, compass, fullscreen)
+- ✅ Map controls (NavigationControl, ScaleControl)
 
 #### Filtering & Display Options
 
@@ -1545,6 +1561,7 @@ Target modern browsers with ES6+ support:
 - ✅ **Map controls complete** (MapControls component with privacy-aware toggle buttons)
 - ✅ **NEXRAD overlay complete** (WMS raster tiles, auto-refresh, timestamp display)
 - ✅ **Unread message tracking complete** (AppStore integration, auto-mark read, filters, localStorage)
+- ✅ **Map controls complete** (NavigationControl with zoom buttons, ScaleControl with nautical miles)
 - ✅ **Phase 8: Live Map COMPLETE** 🎉
 
 **All Live Map features implemented:**
@@ -1560,19 +1577,431 @@ Target modern browsers with ES6+ support:
 - Dynamic range rings with privacy protection
 - NEXRAD weather radar overlay
 - Unread message tracking system
+- Navigation controls (zoom buttons, scale bar with nautical miles)
 - All filters persist to localStorage
 - Mobile-first responsive design
 - Full accessibility support
 
-### Phase 9: Alerts and Search
+### Phase 9: Alerts and Search ✅ COMPLETE
 
-- Look at optimizing the search query structure, calls, and API end points
-- Migrate Alerts page with term filtering
-- Migrate Search page with database queries
-- Implement alert notification system
-- **Deliverable**: Alert management and database search
+**Implementation Complete** ✅:
 
-### Phase 10: Legacy Code Cleanup
+- ✅ Complete Alerts page implementation
+- ✅ Complete Search page implementation
+- ✅ Socket.IO integration for database queries
+- ✅ Alert sound notifications
+- ✅ Multi-field search with pagination
+- ✅ All TypeScript strict mode checks passing
+- ✅ All Biome checks passing
+- ✅ Production build successful (1,309 KB / 413 KB gzipped)
+
+**Alerts Page Features**:
+
+- **Alert Term Management**:
+  - Display messages matching configured alert terms
+  - Filter messages by text terms, callsigns, tail numbers, ICAO hex codes
+  - Support for ignore terms (negative matching)
+  - Real-time alert matching using existing alertMatching utility
+- **User Interface**:
+  - Empty state when no terms configured (links to Settings)
+  - Empty state when no matches (shows active terms)
+  - Sound toggle button (mute/unmute with FontAwesome icons)
+  - Statistics display (total alerts, unique aircraft, active terms)
+  - Reuses MessageGroup component for display consistency
+- **Sound Notifications**:
+  - Optional sound alerts for new matches
+  - Debounced to prevent spam (2-second minimum between alerts)
+  - Volume control from Settings store
+  - Audio file: `/static/sounds/alert.mp3`
+  - useCallback optimization for playAlertSound
+- **Settings Integration**:
+  - Reads sound and volume from notifications settings
+  - Page-specific sound toggle (doesn't persist to settings)
+  - Alert terms managed in AppStore (Terms interface)
+
+**Search Page Features**:
+
+- **Multi-Field Search Form**:
+  - Flight number
+  - Tail number
+  - ICAO hex code
+  - Departure airport (DEPA)
+  - Destination airport (DSTA)
+  - Frequency
+  - Message label
+  - Message number
+  - Message text (full-text search)
+  - Station ID
+- **Search Functionality**:
+  - Debounced search (500ms after typing stops)
+  - Manual search submit button
+  - Clear all fields button
+  - Empty state detection (clears results)
+  - Real-time search as user types
+- **Pagination System**:
+  - 50 results per page
+  - Smart page number display (shows first, last, current range, ellipsis)
+  - Previous/Next navigation
+  - Dual pagination (top and bottom of results)
+  - Jump to page capability
+  - Scroll to top on page change
+- **Results Display**:
+  - Reuses MessageCard component for consistency
+  - Query time display (milliseconds)
+  - Result count display
+  - Loading state during search
+  - Empty state when no results
+- **Backend Integration**:
+  - Socket.IO `query_search` event with proper payload structure
+  - Payload: `{ search_term: CurrentSearch, results_after?: number }`
+  - Receives `database_search_results` event with SearchHtmlMsg
+  - Type-safe Socket.IO communication (with necessary any escape hatch)
+
+**Completed Components**:
+
+- **AlertsPage.tsx** (271 lines):
+  - Filters message groups to show only alerts
+  - Calculates statistics (totalAlerts, uniqueAircraft)
+  - Sound toggle and playback logic
+  - Empty states and term display
+  - Full Catppuccin theming
+- **AlertsPage.scss** (235 lines):
+  - Empty state styling
+  - Term badge displays
+  - Sound toggle button
+  - Density mode support
+  - Mobile-first responsive design
+- **SearchPage.tsx** (560 lines):
+  - Search form with 10 input fields
+  - Debounced search logic
+  - Pagination calculations and rendering
+  - Socket.IO query emission
+  - Results display
+- **SearchPage.scss** (355 lines):
+  - Responsive 3-column grid (mobile → tablet → desktop)
+  - Form field styling
+  - Pagination button styling
+  - Loading and empty states
+  - Full Catppuccin theming
+
+**Type Definitions Updated**:
+
+- **CurrentSearch interface** - Already existed in types/index.ts
+- **SearchHtmlMsg interface** - Already existed
+- **SocketEmitEvents.query_search** - Updated to match backend API:
+
+  ```typescript
+  query_search: (params: {
+    search_term: CurrentSearch;
+    results_after?: number;
+    show_all?: boolean;
+  }) => void;
+  ```
+
+**Backend Compatibility**:
+
+- Backend handler: `@socketio.on("query_search", namespace="/main")`
+- Backend delegates to: `acarshub_helpers.handle_message(message)`
+- Frontend sends correct payload structure matching backend expectations
+- Socket.IO namespace: `/main`
+- Results sent only to requester (not broadcast)
+
+**Key Technical Decisions**:
+
+- **Sound management**: useCallback wrapper prevents recreation on every render
+- **Pagination keys**: Use page number context instead of array index for unique keys
+- **Socket.IO typing**: Use `(socket as any).emit()` with biome-ignore for backend compatibility
+- **Component reuse**: MessageCard and MessageGroup components reused from Live Messages
+- **Empty states**: Clear guidance for users on how to configure alerts or search
+- **Debouncing**: 500ms delay prevents hammering database with every keystroke
+
+**Mobile-First Design**:
+
+- Search form: 1 column mobile → 2 columns tablet → 3 columns desktop
+- Pagination: Wraps on small screens, horizontal on desktop
+- Form fields: Full width labels, 44px touch targets
+- Empty states: Responsive padding and typography
+- Term badges: Wrap naturally on small screens
+
+**Accessibility**:
+
+- All form inputs properly labeled
+- Keyboard navigation for pagination
+- Focus states on all interactive elements
+- ARIA labels on icon-only buttons
+- Semantic HTML structure
+- 44px minimum touch targets
+
+**Performance Optimizations**:
+
+- useMemo for filtered message groups
+- useMemo for pagination calculations
+- useCallback for playAlertSound
+- Debounced search prevents excessive queries
+- Results limited to 50 per page
+
+**Deliverable**: Complete alert management and database search functionality ✅
+
+**Post-Phase 9 Improvements**:
+
+- **Shared Component Styling Extraction**:
+  - Created `/components/_message-card.scss` (486 lines) - All message card display styles
+  - Created `/components/_message-group.scss` (328 lines) - Message group and tab navigation styles
+  - Both components imported in `main.scss` for global availability
+  - Consistent styling across Live Messages, Search, Alerts, and Map modal
+  - Includes: message types, identifiers, fields, content, libacars, alert highlighting
+  - Full support: density modes, animations, reduced motion, print styles
+  - Mobile-first responsive design throughout
+
+- **Search Page Card Styling**:
+  - Each MessageCard wrapped in `.search-page__result-card` container
+  - Matches visual appearance of Live Messages page
+  - Proper borders, backgrounds, hover effects
+  - Catppuccin theming with responsive layout
+
+- **Map Modal Consistency**:
+  - AircraftMessagesModal automatically inherits shared component styles
+  - MessageGroup component displays with proper card styling
+  - Tab navigation and message cards themed consistently
+  - No modal-specific overrides needed
+
+### Phase 9.1: Notifications & Alert Management 🚧 IN PROGRESS
+
+**Goal**: Complete the notification system and alert term management
+
+**Current State Issues**:
+
+- Sound alerts work on Alerts page but Settings says "Coming Soon" (inconsistency)
+- Desktop notifications not implemented
+- Alert terms are client-side only (no persistence)
+- Alert badge shows total alerts instead of unread (misleading)
+
+#### Phase 9.1.1: Fix Sound Alerts (Quick Win) ✅ COMPLETE
+
+**Goal**: Resolve inconsistency between Alerts page and Settings
+
+- ✅ Remove local sound toggle from AlertsPage
+- ✅ Wire sound playback to Settings store exclusively
+- ✅ Enable sound toggle in Settings Modal (remove "Coming Soon" and disabled state)
+- ✅ Enable volume slider in Settings Modal
+- ✅ Add alert sound file to public assets (`/static/sounds/alert.mp3`)
+- ✅ Test sound playback with Settings integration
+
+**Completed Changes**:
+
+- Removed local `soundEnabled` state and toggle button from AlertsPage
+- Settings Modal sound toggle is now enabled and functional
+- Volume slider is now enabled when sound is on
+- Alert sound file copied from legacy codebase to `public/static/sounds/alert.mp3`
+- Updated Settings Modal card variant to "success" with updated help text
+- **Created shared `audioService.ts`** - Single Audio element shared across entire app
+- **Added auto-unlock on first user interaction** - Audio automatically unlocks on first click/keypress/touch
+- **Created `AlertSoundManager` component** - Global sound manager that works on ALL pages
+- **Added AlertSoundManager to App.tsx** - Renders at app level, monitors alertCount globally
+- Settings Modal uses `audioService.playAlertSound()` for Test Sound button
+- AlertsPage no longer handles sound (delegated to global manager)
+- Removed unused autoplay warning styles from AlertsPage.scss
+- AppStore `addMessage()` auto-calculates global `alertCount` on every message
+- All TypeScript and Biome checks passing
+- Production build successful (1,311 KB / 413 KB gzipped)
+
+**Key Architecture Changes**:
+
+- **Global Sound System**: AlertSoundManager component runs at app level, plays sounds on ANY page (Live Messages, Map, Stats, etc.)
+- **Shared Audio Element**: Single Audio instance in audioService prevents browser autoplay blocking per-component
+- **Alert Count Monitoring**: Tracks `alertCount` from AppStore, plays sound when count increases
+- **Debouncing**: 2-second minimum between alert sounds to prevent spam
+- **Comprehensive Logging**: Debug logs show exactly when/why sounds play or are blocked
+
+**Browser Autoplay Behavior (Firefox vs Chromium)**:
+Browser autoplay policies differ significantly between Firefox and Chromium-based browsers (Chrome, Brave, Edge):
+
+**Firefox** ✅:
+
+- Audio permissions persist across page reloads
+- Clicking "Test Sound" once is sufficient
+- Alert sounds work automatically after initial unlock
+- Best user experience for alert sounds
+
+**Chromium Browsers** (Chrome, Brave, Edge) ⚠️:
+
+- Audio permissions reset on every page reload
+- Requires clicking "Test Sound" after each page reload
+- This is a fundamental Chromium security policy
+- Cannot be bypassed with silent playback or localStorage
+
+**Why Chromium is More Restrictive**:
+
+- Chromium resets autoplay permissions on page reload for security
+- Silent playback tricks are detected and blocked
+- localStorage persistence doesn't carry over browser audio permissions
+- This is intentional behavior to prevent malicious auto-playing audio
+
+**User Experience**:
+
+- **Firefox users**: Click "Test Sound" once, works forever (until browser restart)
+- **Chromium users**: Click "Test Sound" once per page reload
+- **Recommendation**: Use Firefox for the best alert sound experience
+- Settings modal shows browser-specific warning for Chromium users
+
+**How It Works (Per Session)**:
+
+1. User loads page and enables sound in Settings → Notifications
+2. User clicks "Test Sound" button → unlocks browser audio for this session
+3. User navigates to any page (Live Messages, Map, etc.)
+4. New alert arrives → AppStore `addMessage()` automatically calculates and updates `alertCount`
+5. AlertSoundManager detects count increase → plays sound via shared audioService
+6. Sound plays successfully because Audio element was unlocked via Test Sound
+7. **After page reload**: Repeat steps 2-6 (one Test Sound click per session)
+
+**Critical Fix** (alert count auto-calculation):
+
+- Previously: `alertCount` only updated when AlertsPage was active (manual setAlertCount call)
+- Problem: If you were on Live Messages/Map/etc., alertCount never updated, so no sound played
+- Solution: `addMessage()` now automatically calculates total alerts from all message groups and updates `alertCount`
+- Result: Alert sounds now work on ALL pages, not just the Alerts page
+
+**Console Debug Output** (when alert arrives):
+
+```shell
+[DEBUG] Alert sound manager: checking for new alerts { soundEnabled: true, alertCount: 5, previousCount: 4 }
+[DEBUG] Alert count increased, checking debounce { timeSinceLastAlert: 5432, debounceThreshold: 2000, willPlay: true }
+[INFO] Playing alert sound for new alerts { newAlertCount: 5, previousCount: 4 }
+[DEBUG] Attempting to play alert sound { volume: 50, audioUnlocked: true }
+[INFO] Global alert sound played { alertCount: 5, volume: 50 }
+```
+
+**Deliverable**: Sound alerts controlled by Settings → Notifications ✅
+
+#### Phase 9.1.2: Desktop Notifications 🔔
+
+**Goal**: Implement browser notifications for alert messages
+
+- ⏳ Add permission request flow when user enables desktop notifications
+- ⏳ Show browser notifications for new alert messages
+- ⏳ Respect `alertsOnly` setting (only notify for alerts if enabled)
+- ⏳ Add notification click handler (focus/open Alerts page)
+- ⏳ Enable desktop notifications toggle in Settings Modal
+- ⏳ Test on Chrome, Firefox, Safari
+- ⏳ Handle permission denied gracefully
+- ⏳ Add notification icon and proper formatting
+
+**Technical Requirements**:
+
+- Check `'Notification' in window` for browser support
+- Request permission: `Notification.requestPermission()`
+- Create notifications: `new Notification(title, options)`
+- Use `tag` property to prevent duplicate notifications
+- Respect user's `alertsOnly` preference
+
+**Deliverable**: Working desktop notifications with permission handling
+
+#### Phase 9.1.3: Alert Badge Redesign 🎯
+
+**Goal**: Show unread alerts in navigation badge instead of total
+
+**Design Decision**: Show unread count only (clean, matches user expectations)
+
+- ⏳ Track unread alerts using existing `readMessageUids` Set
+- ⏳ Add `getUnreadAlertCount()` to AppStore (filters by matched=true)
+- ⏳ Update Navigation component to show unread count
+- ⏳ Add auto-mark-as-read when Alerts page viewed (2-3 second delay)
+- ⏳ Add "Mark All Read" button to Alerts page header
+- ⏳ Update Alerts page stats to show "X unread / Y total"
+- ⏳ Badge disappears when no unread alerts (clear signal)
+
+**Navigation Display**:
+
+```text
+Alerts (5)  ← Shows unread count
+Alerts      ← Badge hidden when all read
+```
+
+**Alerts Page Stats**:
+
+```text
+5 unread  |  12 total alerts  |  8 aircraft
+```
+
+**Deliverable**: Unread-aware alert badge in navigation
+
+#### Phase 9.1.4: Alert Term Management UI 📝
+
+**Goal**: Provide Settings interface for managing alert terms
+
+**Settings UI**:
+
+- ⏳ Add "Alert Terms" card to Notifications tab in Settings Modal
+- ⏳ Display current alert terms as removable chips/badges
+- ⏳ Display current ignore terms as removable chips/badges
+- ⏳ Add input field for new alert terms (Enter to add)
+- ⏳ Add input field for new ignore terms (Enter to add)
+- ⏳ Add delete button for each term
+- ⏳ Show helpful examples (text, callsign, tail, hex)
+- ⏳ Mobile-first responsive design
+
+**Backend Integration**:
+
+- ⏳ Create `update_alerts` Socket.IO event (client → server)
+- ⏳ Backend handler saves terms to `/run/acars/alerts.json`
+- ⏳ Backend loads saved terms on startup
+- ⏳ Backend broadcasts terms to all clients on connect
+- ⏳ Terms persist across page refreshes and server restarts
+
+**Payload Structure**:
+
+```typescript
+socket.emit(
+  "update_alerts",
+  {
+    terms: ["EMERGENCY", "UAL123", "N12345"],
+    ignore: ["TEST", "CHECK"],
+  },
+  "/main",
+);
+```
+
+**File Format** (`/run/acars/alerts.json`):
+
+```json
+{
+  "terms": ["EMERGENCY", "UAL123"],
+  "ignore": ["TEST"]
+}
+```
+
+**Deliverable**: Complete alert term management with persistence
+
+**Phase 9.1 Completion Checklist**:
+
+- [ ] Sound alerts fully integrated with Settings
+- [ ] Desktop notifications working with permission handling
+- [ ] Alert badge shows unread count
+- [ ] Mark as read functionality working
+- [ ] Alert term management UI complete
+- [ ] Backend persistence for alert terms
+- [ ] All TypeScript strict mode checks passing
+- [ ] All Biome checks passing
+- [ ] Mobile-first responsive design verified
+- [ ] Tested on Chrome, Firefox, Safari
+
+### Phase 10: Testing Infrastructure (Optional - Deferred)
+
+**Goal**: Add comprehensive testing to ensure code quality and prevent regressions
+
+**Note**: This phase is optional and can be deferred until after initial production deployment. The application is functional and well-tested manually. Automated tests will provide additional confidence for future development.
+
+#### Test Coverage Goals
+
+- Component unit tests (Jest + React Testing Library)
+- Integration tests for Socket.IO flows
+- E2E tests for critical user journeys (Playwright)
+- Accessibility audits
+- Performance benchmarks
+
+**Deliverable**: Comprehensive test suite (deferred)
+
+### Phase 11: Legacy Code Cleanup
 
 **Goal**: Eliminate all unused legacy code paths from both React and Python codebases
 
@@ -1614,14 +2043,14 @@ Target modern browsers with ES6+ support:
 
 **Deliverable**: Clean, minimal codebase with no legacy cruft
 
-### Phase 11: System Status
+### Phase 12: System Status
 
 - Migrate Status page
 - Display decoder health and statistics
 - Implement system monitoring UI
 - **Deliverable**: System status dashboard
 
-### Phase 12: Testing, Polish, and Deployment
+### Phase 13: Polish and Deployment
 
 - Comprehensive component tests
 - Integration tests for Socket.IO flows
@@ -1632,7 +2061,7 @@ Target modern browsers with ES6+ support:
 - Documentation updates
 - **Deliverable**: Production-ready React application
 
-### Phase 13: Final Cutover
+### Phase 14: Final Cutover
 
 - Update Docker build to only include React frontend
 - Remove `acarshub-typescript/` directory entirely
@@ -1643,7 +2072,9 @@ Target modern browsers with ES6+ support:
 
 ## Current Focus
 
-**Current Phase**: Phase 8 - Live Map
+**Current Phase**: Phase 10 - Testing Infrastructure (Optional - Deferred)
+
+**Next Priority**: Phase 11 - Legacy Code Cleanup OR Phase 12 - System Status
 
 **Development Philosophy**:
 
@@ -1731,10 +2162,28 @@ Before moving to the next phase:
 ## Bugs before final release
 
 - Global:
-  - Page Denisity switch is inconsistent. We've ended up hard coding some sizes in places rather than using the density settings from the store. Need to audit and fix, OR remove the density setting entirely if it's not feasible to implement everywhere. Likely choice: remove the density setting entirely.
+  - Page Density switch is inconsistent. We've ended up hard coding some sizes in places rather than using the density settings from the store. Need to audit and fix, OR remove the density setting entirely if it's not feasible to implement everywhere. Likely choice: remove the density setting entirely.
   - As per stats below, theme switching has some issues applying until new data comes in
   - Disconnected state will show disconnected, but the socket is valid
 
 - Stats page:
   - Stats page, on theme switch, does not completely honor the theme when dynamically switched on the page. Labels are the wrong color until more data comes in from the websocket
   - Bar chart number labels for the bar value should be dark on all themes for readability
+
+- Notifications & Alerts (Phase 9.1 - IN PROGRESS):
+  - ✅ FIXED: Alert sound file added to `public/static/sounds/alert.mp3`
+  - ✅ FIXED: Sound alerts now fully controlled by Settings (removed page-specific toggle)
+  - ✅ FIXED: Shared audioService prevents per-component autoplay blocking
+  - ✅ FIXED: Global AlertSoundManager plays sounds on ALL pages (Live Messages, Map, etc.)
+  - ✅ FIXED: alertCount auto-calculated in AppStore addMessage() function
+  - ✅ FIXED: Browser detection shows Chromium-specific warning (Firefox works perfectly)
+  - ⚠️ LIMITATION: Chromium browsers require "Test Sound" click per reload (Firefox does not)
+  - ⏳ Desktop notifications not implemented (Settings shows "Coming Soon")
+  - ⏳ Alert terms management UI missing from Settings
+  - ⏳ Backend alert term persistence not implemented (client-side only)
+  - ⏳ Alert badge shows total alerts instead of unread (misleading UX)
+  - ⏳ No "mark as read" functionality for alerts
+  - ✅ FIXED: Search queries now properly emit with Flask-SocketIO namespace pattern (third argument)
+  - ✅ FIXED: Search and Alerts pages now scrollable (changed `height: 100%` to `min-height: 100%`)
+  - ✅ FIXED: Search page card styling (created shared \_message-card.scss and \_message-group.scss components)
+  - ✅ FIXED: Map modal aircraft messages now use shared component styling

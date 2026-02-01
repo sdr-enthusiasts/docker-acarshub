@@ -14,68 +14,177 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
+import { MessageGroup } from "../components/MessageGroup";
 import { socketService } from "../services/socket";
 import { useAppStore } from "../store/useAppStore";
+import type { MessageGroup as MessageGroupType } from "../types";
+import { uiLogger } from "../utils/logger";
+import "./AlertsPage.scss";
 
 /**
  * AlertsPage Component
- * Displays messages matching configured alert terms
+ * Displays messages that match configured alert terms
  *
- * This is a placeholder for Phase 1. Full implementation will come in Phase 7.
+ * Features:
+ * - Shows only messages with alert matches
+ * - Displays matched terms highlighting
+ * - Sound notifications for new alerts (handled by global AlertSoundManager)
+ * - Statistics (total alerts, unique aircraft)
+ * - Mobile-first responsive design
  */
 export const AlertsPage = () => {
   const setCurrentPage = useAppStore((state) => state.setCurrentPage);
+  const messageGroups = useAppStore((state) => state.messageGroups);
   const alertTerms = useAppStore((state) => state.alertTerms);
-  const alertCount = useAppStore((state) => state.alertCount);
+
+  const setAlertCount = useAppStore((state) => state.setAlertCount);
+
+  // Filter message groups to only show those with alerts
+  const alertMessageGroups = useMemo(() => {
+    const filtered = new Map<string, MessageGroupType>();
+
+    for (const [key, group] of messageGroups.entries()) {
+      // Only include groups with alerts
+      if (group.has_alerts) {
+        // Filter messages to only show those with alerts
+        const alertMessages = group.messages.filter(
+          (msg) => msg.matched === true,
+        );
+
+        if (alertMessages.length > 0) {
+          filtered.set(key, {
+            ...group,
+            messages: alertMessages,
+          });
+        }
+      }
+    }
+
+    return filtered;
+  }, [messageGroups]);
+
+  // Count total alert messages and unique aircraft
+  const stats = useMemo(() => {
+    let totalAlerts = 0;
+    const uniqueAircraft = new Set<string>();
+
+    for (const group of alertMessageGroups.values()) {
+      totalAlerts += group.messages.length;
+      // Use first identifier as unique key
+      if (group.identifiers.length > 0) {
+        uniqueAircraft.add(group.identifiers[0]);
+      }
+    }
+
+    return {
+      totalAlerts,
+      uniqueAircraft: uniqueAircraft.size,
+    };
+  }, [alertMessageGroups]);
+
+  // Update alert count when stats change
+  useEffect(() => {
+    setAlertCount(stats.totalAlerts);
+  }, [stats.totalAlerts, setAlertCount]);
 
   useEffect(() => {
     setCurrentPage("Alerts");
     socketService.notifyPageChange("Alerts");
-  }, [setCurrentPage]);
+    uiLogger.info("Alerts page loaded", {
+      termCount: alertTerms.terms.length,
+      ignoreCount: alertTerms.ignore.length,
+      alertGroups: alertMessageGroups.size,
+    });
+  }, [setCurrentPage, alertTerms, alertMessageGroups.size]);
+
+  // Convert messageGroups Map to array for rendering
+  const alertGroupsArray = useMemo(
+    () => Array.from(alertMessageGroups.values()),
+    [alertMessageGroups],
+  );
 
   return (
     <div className="page alerts-page">
       <div className="page__header">
         <h1 className="page__title">Alerts</h1>
+
         <div className="page__stats">
           <span className="stat">
-            <strong>{alertCount}</strong> matching messages
+            <strong>{stats.totalAlerts}</strong> alert
+            {stats.totalAlerts !== 1 ? "s" : ""}
+          </span>
+          <span className="stat">
+            <strong>{stats.uniqueAircraft}</strong> aircraft
+          </span>
+          <span className="stat">
+            <strong>{alertTerms.terms.length}</strong> active term
+            {alertTerms.terms.length !== 1 ? "s" : ""}
           </span>
         </div>
       </div>
 
       <div className="page__content">
-        <div className="placeholder-message">
-          <h2>Alerts View</h2>
-          <p>
-            This page will display messages matching your configured alert
-            terms.
-          </p>
-          <p className="text-muted">
-            Full implementation coming in Phase 7 of the React migration.
-          </p>
-          {alertTerms.terms.length > 0 && (
-            <div className="debug-info">
-              <h3>Current Alert Terms</h3>
-              <ul>
-                {alertTerms.terms.map((term) => (
-                  <li key={term}>{term}</li>
-                ))}
-              </ul>
+        {alertTerms.terms.length === 0 ? (
+          <div className="alerts-page__empty-state">
+            <div className="alerts-page__empty-state-content">
+              <h2>No Alert Terms Configured</h2>
+              <p>
+                Configure alert terms in Settings → Notifications to start
+                receiving alerts for specific keywords, aircraft, or flight
+                numbers.
+              </p>
+              <p className="text-muted">
+                Alert terms can match message text, callsigns, tail numbers, or
+                ICAO hex codes.
+              </p>
             </div>
-          )}
-          {alertTerms.ignore.length > 0 && (
-            <div className="debug-info">
-              <h3>Ignore Terms</h3>
-              <ul>
-                {alertTerms.ignore.map((term) => (
-                  <li key={term}>{term}</li>
-                ))}
-              </ul>
+          </div>
+        ) : stats.totalAlerts === 0 ? (
+          <div className="alerts-page__empty-state">
+            <div className="alerts-page__empty-state-content">
+              <h2>No Matching Messages</h2>
+              <p>
+                No messages have been received that match your configured alert
+                terms.
+              </p>
+              <div className="alerts-page__current-terms">
+                <h3>Active Alert Terms</h3>
+                <div className="alerts-page__term-list">
+                  {alertTerms.terms.map((term) => (
+                    <span key={term} className="alerts-page__term-badge">
+                      {term}
+                    </span>
+                  ))}
+                </div>
+                {alertTerms.ignore.length > 0 && (
+                  <>
+                    <h3>Ignore Terms</h3>
+                    <div className="alerts-page__term-list">
+                      {alertTerms.ignore.map((term) => (
+                        <span
+                          key={term}
+                          className="alerts-page__term-badge alerts-page__term-badge--ignore"
+                        >
+                          {term}
+                        </span>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
-          )}
-        </div>
+          </div>
+        ) : (
+          <div className="alerts-page__messages">
+            {alertGroupsArray.map((plane) => (
+              <MessageGroup
+                key={plane.identifiers[0] || "unknown"}
+                plane={plane}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

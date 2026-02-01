@@ -424,7 +424,18 @@ export const useAppStore = create<AppState>((set, get) => ({
         }
       }
 
-      return { messageGroups: newMessageGroups };
+      // Calculate total alert count across all message groups
+      let totalAlerts = 0;
+      for (const group of newMessageGroups.values()) {
+        totalAlerts += group.num_alerts;
+      }
+
+      storeLogger.trace("Updated global alert count", {
+        totalAlerts,
+        totalGroups: newMessageGroups.size,
+      });
+
+      return { messageGroups: newMessageGroups, alertCount: totalAlerts };
     }),
   clearMessages: () => {
     storeLogger.info("Clearing all message groups");

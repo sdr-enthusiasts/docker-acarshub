@@ -16,6 +16,7 @@
 
 import { useEffect, useRef } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { AlertSoundManager } from "./components/AlertSoundManager.tsx";
 import { ConnectionStatus } from "./components/ConnectionStatus.tsx";
 import { Navigation } from "./components/Navigation.tsx";
 import { SettingsModal } from "./components/SettingsModal.tsx";
@@ -98,6 +99,9 @@ function App() {
 
         {/* Settings modal */}
         <SettingsModal />
+
+        {/* Global alert sound manager (works on all pages) */}
+        <AlertSoundManager />
 
         {/* Main content area with routing */}
         <main className="app-content">
