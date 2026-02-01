@@ -715,6 +715,11 @@ export type Timezone = "local" | "utc";
 export type DisplayDensity = "comfortable" | "compact" | "spacious";
 
 /**
+ * Log level for application logging
+ */
+export type LogLevel = "trace" | "debug" | "info" | "warn" | "error" | "silent";
+
+/**
  * Notification preferences
  */
 export interface NotificationSettings {
@@ -812,6 +817,16 @@ export interface DataSettings {
 }
 
 /**
+ * Advanced settings (logging, debugging)
+ */
+export interface AdvancedSettings {
+  /** Log level for console and buffer */
+  logLevel: LogLevel;
+  /** Persist logs to localStorage across page refreshes */
+  persistLogs: boolean;
+}
+
+/**
  * Complete user settings object
  */
 export interface UserSettings {
@@ -825,6 +840,8 @@ export interface UserSettings {
   data: DataSettings;
   /** Map preferences */
   map: MapSettings;
+  /** Advanced settings (logging, debugging) */
+  advanced: AdvancedSettings;
   /** Last updated timestamp */
   updatedAt: number;
   /** Settings version for migration */
@@ -874,6 +891,10 @@ export const DEFAULT_SETTINGS: UserSettings = {
     showNexrad: false,
     showOnlyUnread: false,
     showRangeRings: true,
+  },
+  advanced: {
+    logLevel: "info",
+    persistLogs: false,
   },
   updatedAt: Date.now(),
   version: 2,

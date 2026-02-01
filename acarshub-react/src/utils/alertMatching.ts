@@ -15,6 +15,9 @@
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
 import type { AcarsMsg, Terms } from "../types";
+import { createLogger } from "./logger";
+
+const logger = createLogger("alerts");
 
 /**
  * Check if a message matches any alert terms
@@ -35,6 +38,7 @@ export function checkMessageForAlerts(
 
   // If no alert terms configured or message has no text, return no match
   if (!alertTerms.terms || alertTerms.terms.length === 0) {
+    logger.trace("No alert terms configured, skipping alert check");
     return { matched: false, matchedTerms: [] };
   }
 
@@ -49,6 +53,7 @@ export function checkMessageForAlerts(
 
   // If no searchable text, return no match
   if (!searchableText.trim()) {
+    logger.trace("No searchable text in message", { uid: message.uid });
     return { matched: false, matchedTerms: [] };
   }
 
@@ -79,6 +84,16 @@ export function checkMessageForAlerts(
 
       if (!shouldIgnore) {
         matchedTerms.push(term);
+        logger.debug("Alert term matched", {
+          uid: message.uid,
+          term,
+          wasIgnored: false,
+        });
+      } else {
+        logger.trace("Alert term matched but ignored", {
+          uid: message.uid,
+          term,
+        });
       }
     }
   }
@@ -114,6 +129,13 @@ export function applyAlertMatching(
 
   message.matched = matched;
   message.matched_text = matchedTerms;
+
+  if (matched) {
+    logger.info("Alert match applied to message", {
+      uid: message.uid,
+      matchedTerms,
+    });
+  }
 
   return message;
 }

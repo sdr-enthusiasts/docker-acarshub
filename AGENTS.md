@@ -9,6 +9,7 @@ Files:
 - acarshub-react/README.md - React frontend documentation
 - acarshub-react/DESIGN_LANGUAGE.md - **Visual design language and component usage guide**
 - acarshub-react/CATPPUCCIN.md - Catppuccin color reference for React frontend
+- acarshub-react/LOGGING.md - **Logging system usage, API reference, and troubleshooting**
 - acarshub-typescript/ - Current jQuery/TypeScript frontend (legacy)
 
 ## Current State
@@ -80,12 +81,14 @@ docker-acarshub/
 │   │   ├── services/       # Socket.IO and API services
 │   │   ├── types/          # TypeScript interfaces (migrated from legacy)
 │   │   ├── utils/          # Utility functions
+│   │   │   └── logger.ts   # Logging system (loglevel + in-memory buffer)
 │   │   ├── assets/         # Static assets
 │   │   └── App.tsx         # Root component
 │   ├── public/             # Public assets
 │   ├── package.json
 │   ├── tsconfig.json
 │   ├── vite.config.ts      # Vite build configuration
+│   ├── LOGGING.md          # Logging documentation
 │   └── index.html
 ├── rootfs/
 │   ├── etc/nginx.acarshub/ # nginx configuration
@@ -232,6 +235,266 @@ git --no-pager show
 - Use blank lines around headings for readability and code blocks
 - This project uses GitHub-flavored markdown
 - This project uses strict linting rules for markdown files
+
+## Logging Guidelines
+
+### Overview
+
+ACARS Hub uses **loglevel** with a custom in-memory buffer for application logging. All logging must follow these guidelines to ensure consistency, debuggability, and performance.
+
+**📚 Full Documentation**: See [`acarshub-react/LOGGING.md`](acarshub-react/LOGGING.md) for:
+
+- Detailed usage examples
+- Complete API reference
+- Module logger patterns
+- Export capabilities
+- User support workflows
+- Troubleshooting guide
+
+### Core Principles
+
+1. **No `console.*` statements** - Always use the logger
+2. **Use appropriate log levels** - Match severity to the event
+3. **Module-specific loggers** - Create loggers for different subsystems
+4. **Provide context** - Include relevant data in log messages
+5. **Performance aware** - Use trace for high-frequency events
+
+### Log Levels
+
+| Level    | When to Use                                          | Examples                                                             | Production Default     |
+| -------- | ---------------------------------------------------- | -------------------------------------------------------------------- | ---------------------- |
+| `error`  | Critical failures, errors that prevent functionality | Socket connection failures, decoder crashes, data corruption         | ✅ Shown               |
+| `warn`   | Potential issues, degraded functionality             | Socket disconnections, rate limit warnings, missing optional data    | ✅ Shown               |
+| `info`   | Important state changes, major events                | Connections established, version info, alert matches, initialization | ✅ Shown (dev default) |
+| `debug`  | Detailed debugging, state transitions                | Configuration updates, duplicate detection, message grouping         | ❌ Hidden              |
+| `trace`  | Very verbose, high-frequency events                  | Every message received, skip conditions, signal updates              | ❌ Hidden              |
+| `silent` | No logging                                           | N/A                                                                  | ❌ Never use           |
+
+**Default Levels**:
+
+- Development: `info`
+- Production: `warn`
+- User-configurable in Settings → Advanced
+
+### Module-Specific Loggers
+
+Create dedicated loggers for different subsystems:
+
+```typescript
+import { createLogger } from "@/utils/logger";
+
+const logger = createLogger("moduleName");
+```
+
+**Pre-configured loggers** (use these when appropriate):
+
+```typescript
+import { socketLogger, mapLogger, storeLogger, uiLogger } from "@/utils/logger";
+```
+
+**Existing Module Loggers**:
+
+- `socket` - Socket.IO communication, connection lifecycle
+- `decoder` - ACARS message decoding, duplicate detection, multi-part messages
+- `store` - Zustand state management, message processing
+- `alerts` - Alert term matching logic
+- `map` - Map operations and rendering
+- `ui` - UI lifecycle, component mounting, settings changes
+
+### Usage Patterns
+
+#### ✅ Good Examples
+
+```typescript
+// Error with full context
+logger.error("Failed to decode message", {
+  uid: message.uid,
+  label: message.label,
+  text: message.text?.substring(0, 50),
+  error: error instanceof Error ? error.message : String(error),
+  stack: error instanceof Error ? error.stack : undefined,
+});
+
+// Info for important events
+logger.info("Socket.IO connected", {
+  socketId: socket.id,
+  transport: socket.io.engine.transport.name,
+});
+
+// Debug for state changes
+logger.debug("Duplicate message detected", {
+  existingUid: existingMessage.uid,
+  newUid: newMessage.uid,
+  duplicateCount,
+});
+
+// Trace for high-frequency events
+logger.trace("Received acars_msg event", {
+  uid: data.msghtml?.uid,
+  station: data.msghtml?.station_id,
+});
+```
+
+#### ❌ Bad Examples
+
+```typescript
+// ❌ Using console instead of logger
+console.log("Message received");
+
+// ❌ Wrong log level (not an error)
+logger.error("Button clicked");
+
+// ❌ No context
+logger.error("Error occurred");
+
+// ❌ Sensitive data
+logger.debug("Login attempt", { username, password });
+
+// ❌ Too verbose for info level
+logger.info("Processing pixel", { x, y, rgb });
+```
+
+### When to Add Logging
+
+Add logging at these key points:
+
+1. **Module initialization** (info)
+
+   ```typescript
+   logger.info("Module initialized", { config });
+   ```
+
+2. **Network events** (info for success, warn for disconnect, error for failures)
+
+   ```typescript
+   logger.info("Connected to backend", { socketId });
+   logger.warn("Disconnected from backend", { reason });
+   logger.error("Connection error", { message, stack });
+   ```
+
+3. **State changes** (debug)
+
+   ```typescript
+   logger.debug("State updated", { previousValue, newValue });
+   ```
+
+4. **Error handling** (error with full context)
+
+   ```typescript
+   try {
+     // operation
+   } catch (error) {
+     logger.error("Operation failed", {
+       operation: "decode",
+       input,
+       error: error instanceof Error ? error.message : String(error),
+       stack: error instanceof Error ? error.stack : undefined,
+     });
+   }
+   ```
+
+5. **High-frequency events** (trace only)
+
+   ```typescript
+   socket.on("frequent_event", (data) => {
+     logger.trace("Event received", { dataSize: data.length });
+     // process
+   });
+   ```
+
+6. **Alert/important business logic** (info)
+
+   ```typescript
+   logger.info("Alert match detected", {
+     uid: message.uid,
+     matchedTerms,
+   });
+   ```
+
+### Performance Considerations
+
+1. **Use trace for frequent events**
+   - Message reception
+   - Mouse/scroll events
+   - Animation frames
+   - Signal updates
+
+2. **Avoid expensive operations in log calls**
+
+   ```typescript
+   // ❌ Bad - serializes even if not logged
+   logger.debug("Data", JSON.stringify(largeObject));
+
+   // ✅ Good - only if debug level active
+   if (log.getLevel() <= log.levels.DEBUG) {
+     logger.debug("Data", expensiveToSerialize());
+   }
+   ```
+
+3. **Be mindful of log buffer size**
+   - Buffer stores last 1000 logs
+   - Excessive trace logging can push out important logs
+   - Use appropriate levels
+
+### Error Logging Best Practices
+
+Always include:
+
+- **Operation context** - What were you trying to do?
+- **Input data** - What was being processed? (sanitize sensitive data)
+- **Error details** - Message and stack trace
+- **Unique identifiers** - UIDs, IDs, keys
+
+```typescript
+logger.error("Failed to process message", {
+  operation: "decode",
+  uid: message.uid,
+  label: message.label,
+  text: message.text?.substring(0, 100), // Truncate long text
+  error: error instanceof Error ? error.message : String(error),
+  stack: error instanceof Error ? error.stack : undefined,
+});
+```
+
+### Testing Logging
+
+When testing code that logs:
+
+1. Set log level to `trace` in Settings → Advanced
+2. Reproduce the scenario
+3. Check logs in Settings → Advanced → Log Viewer
+4. Verify appropriate levels are used
+5. Verify context is sufficient for debugging
+
+### User Support Workflow
+
+For non-technical users reporting issues:
+
+1. Ask user to open Settings → Advanced
+2. Set Log Level to Debug or Trace
+3. Ask them to reproduce the issue
+4. Click "Export TXT" button
+5. Send the exported file to support
+
+This captures all necessary debugging information without requiring DevTools access.
+
+### Migration from Console Statements
+
+When you encounter `console.log/warn/error`:
+
+```typescript
+// Before
+console.log("Message received");
+console.error("Error:", error);
+
+// After
+import log from "@/utils/logger";
+// or
+import { socketLogger } from "@/utils/logger";
+
+log.info("Message received");
+logger.error("Error occurred", { error });
+```
 
 ## Development Guidelines
 
@@ -574,7 +837,7 @@ React migration should include:
 - Integration tests for Socket.IO communication
 - E2E tests for critical user flows (Playwright/Cypress)
 
-## Performance Considerations
+## Application Performance Considerations
 
 - Application handles real-time message streams
 - Live map may show 100+ aircraft simultaneously
@@ -1470,6 +1733,7 @@ Before moving to the next phase:
 - Global:
   - Page Denisity switch is inconsistent. We've ended up hard coding some sizes in places rather than using the density settings from the store. Need to audit and fix, OR remove the density setting entirely if it's not feasible to implement everywhere. Likely choice: remove the density setting entirely.
   - As per stats below, theme switching has some issues applying until new data comes in
+  - Disconnected state will show disconnected, but the socket is valid
 
 - Stats page:
   - Stats page, on theme switch, does not completely honor the theme when dynamically switched on the page. Labels are the wrong color until more data comes in from the websocket

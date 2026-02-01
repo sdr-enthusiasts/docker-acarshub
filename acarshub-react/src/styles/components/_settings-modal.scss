@@ -442,6 +442,28 @@
     border-left-color: var(--color-green);
     background-color: var(--color-surface0);
   }
+
+  &--info {
+    border-left-color: var(--color-blue);
+    background-color: var(--color-surface0);
+  }
+}
+
+// Settings Divider
+.settings-divider {
+  height: 1px;
+  background: var(--color-surface1);
+  margin: 2rem 0 1.5rem 0;
+  border: none;
+}
+
+// Settings Subsection Title
+.settings-subsection-title {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--color-text);
+  letter-spacing: -0.01em;
 }
 
 // Compact mode adjustments

@@ -19,6 +19,7 @@
     "chartjs-adapter-date-fns": "^3.0.0",
     "chartjs-plugin-datalabels": "^2.2.0",
     "date-fns": "^4.1.0",
+    "loglevel": "^1.9.2",
     "maplibre-gl": "^5.17.0",
     "react": "^19.2.0",
     "react-chartjs-2": "^5.3.1",
@@ -31,6 +32,7 @@
   "devDependencies": {
     "@biomejs/biome": "^2.3.13",
     "@eslint/js": "^9.39.1",
+    "@types/loglevel": "^1.5.4",
     "@types/node": "^24.10.9",
     "@types/react": "^19.2.5",
     "@types/react-dom": "^19.2.3",

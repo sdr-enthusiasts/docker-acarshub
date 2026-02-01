@@ -117,6 +117,7 @@
               nixpkgs.legacyPackages.${system}.rrdtool
               nixpkgs.legacyPackages.${system}.npm-check
               nixpkgs.legacyPackages.${system}.nodejs
+              nixpkgs.legacyPackages.${system}.just
             ];
 
             buildInputs =

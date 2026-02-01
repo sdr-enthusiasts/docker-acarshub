@@ -21,11 +21,13 @@ import type {
   AltitudeUnit,
   DateFormat,
   DisplayDensity,
+  LogLevel,
   Theme,
   TimeFormat,
 } from "../types";
 import { Button } from "./Button";
 import { Card } from "./Card";
+import { LogsViewer } from "./LogsViewer";
 import { Modal } from "./Modal";
 import { RadioGroup } from "./RadioGroup";
 import { Select } from "./Select";
@@ -70,6 +72,8 @@ export const SettingsModal = () => {
   const resetToDefaults = useSettingsStore((state) => state.resetToDefaults);
   const exportSettings = useSettingsStore((state) => state.exportSettings);
   const importSettings = useSettingsStore((state) => state.importSettings);
+  const setLogLevel = useSettingsStore((state) => state.setLogLevel);
+  const setPersistLogs = useSettingsStore((state) => state.setPersistLogs);
 
   const [activeTab, setActiveTab] = useState<string>("appearance");
 
@@ -182,6 +186,16 @@ export const SettingsModal = () => {
             onClick={() => setActiveTab("data")}
           >
             Data & Privacy
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === "advanced"}
+            aria-controls="advanced-panel"
+            className={`settings-tab ${activeTab === "advanced" ? "settings-tab--active" : ""}`}
+            onClick={() => setActiveTab("advanced")}
+          >
+            Advanced
           </button>
         </div>
 
@@ -538,6 +552,80 @@ export const SettingsModal = () => {
                   disabled)
                 </p>
               </div>
+            </Card>
+          </div>
+        )}
+
+        {/* Advanced Panel */}
+        {activeTab === "advanced" && (
+          <div
+            id="advanced-panel"
+            role="tabpanel"
+            aria-labelledby="advanced-tab"
+            className="settings-panel"
+          >
+            <Card
+              title="Logging & Debugging"
+              subtitle="Configure application logging and view system logs"
+              variant="info"
+            >
+              <div className="settings-info settings-info--info">
+                ℹ️ Logging helps diagnose issues. Share exported logs with
+                support if you experience problems.
+              </div>
+
+              <Select
+                id="log-level"
+                label="Log Level"
+                value={settings.advanced.logLevel}
+                options={[
+                  {
+                    value: "silent",
+                    label: "Silent - No logging",
+                  },
+                  {
+                    value: "error",
+                    label: "Error - Critical issues only",
+                  },
+                  {
+                    value: "warn",
+                    label: "Warning - Errors and warnings",
+                  },
+                  {
+                    value: "info",
+                    label: "Info - General information (default)",
+                  },
+                  {
+                    value: "debug",
+                    label: "Debug - Detailed debugging info",
+                  },
+                  {
+                    value: "trace",
+                    label: "Trace - Very verbose (performance impact)",
+                  },
+                ]}
+                onChange={(value) => setLogLevel(value as LogLevel)}
+                helpText="Control how much information is logged to the console and buffer"
+                fullWidth
+              />
+
+              <Toggle
+                id="persist-logs"
+                label="Persist Logs Across Page Refreshes"
+                checked={settings.advanced.persistLogs}
+                onChange={setPersistLogs}
+                helpText="Save logs to localStorage so they survive page reloads (uses browser storage)"
+              />
+
+              <div className="settings-divider" />
+
+              <h3 className="settings-subsection-title">Application Logs</h3>
+              <p className="settings-help-text">
+                View recent application logs. Use the controls to filter,
+                search, and export logs for troubleshooting.
+              </p>
+
+              <LogsViewer maxHeight={400} showStats={true} />
             </Card>
           </div>
         )}

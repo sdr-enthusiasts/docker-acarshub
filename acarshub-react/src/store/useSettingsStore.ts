@@ -17,11 +17,13 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type {
+  AdvancedSettings,
   AltitudeUnit,
   AppearanceSettings,
   DataSettings,
   DateFormat,
   DisplayDensity,
+  LogLevel,
   MapProvider,
   MapSettings,
   NotificationSettings,
@@ -30,6 +32,7 @@ import type {
   TimeFormat,
   UserSettings,
 } from "../types";
+import { syncLoggerWithSettings } from "../utils/logger";
 
 /**
  * Settings Store State
@@ -76,12 +79,17 @@ interface SettingsState {
   setShowOnlyUnread: (enabled: boolean) => void;
   setShowRangeRings: (enabled: boolean) => void;
 
+  // Advanced actions
+  setLogLevel: (level: LogLevel) => void;
+  setPersistLogs: (enabled: boolean) => void;
+
   // Batch update actions
   updateAppearanceSettings: (settings: Partial<AppearanceSettings>) => void;
   updateRegionalSettings: (settings: Partial<RegionalSettings>) => void;
   updateNotificationSettings: (settings: Partial<NotificationSettings>) => void;
   updateDataSettings: (settings: Partial<DataSettings>) => void;
   updateMapSettings: (settings: Partial<MapSettings>) => void;
+  updateAdvancedSettings: (settings: Partial<AdvancedSettings>) => void;
 
   // Utility actions
   resetToDefaults: () => void;
@@ -134,6 +142,10 @@ const getDefaultSettings = (): UserSettings => {
       showNexrad: false,
       showOnlyUnread: false,
       showRangeRings: true,
+    },
+    advanced: {
+      logLevel: import.meta.env.PROD ? "warn" : "info",
+      persistLogs: false,
     },
     updatedAt: Date.now(),
     version: 2,
@@ -436,6 +448,25 @@ export const useSettingsStore = create<SettingsState>()(
           },
         })),
 
+      // Advanced actions
+      setLogLevel: (level) =>
+        set((state) => ({
+          settings: {
+            ...state.settings,
+            advanced: { ...state.settings.advanced, logLevel: level },
+            updatedAt: Date.now(),
+          },
+        })),
+
+      setPersistLogs: (enabled) =>
+        set((state) => ({
+          settings: {
+            ...state.settings,
+            advanced: { ...state.settings.advanced, persistLogs: enabled },
+            updatedAt: Date.now(),
+          },
+        })),
+
       // Batch update actions
       updateAppearanceSettings: (updates) =>
         set((state) => ({
@@ -478,6 +509,15 @@ export const useSettingsStore = create<SettingsState>()(
           settings: {
             ...state.settings,
             map: { ...state.settings.map, ...updates },
+            updatedAt: Date.now(),
+          },
+        })),
+
+      updateAdvancedSettings: (updates) =>
+        set((state) => ({
+          settings: {
+            ...state.settings,
+            advanced: { ...state.settings.advanced, ...updates },
             updatedAt: Date.now(),
           },
         })),
@@ -537,7 +577,7 @@ export const useSettingsStore = create<SettingsState>()(
           return { settings: getDefaultSettings() };
         }
 
-        // Version 1 -> 2: Add map settings
+        // Version 1 -> 2: Add map settings and advanced settings
         if (version === 1) {
           const defaults = getDefaultSettings();
           return {
@@ -545,6 +585,7 @@ export const useSettingsStore = create<SettingsState>()(
             settings: {
               ...state.settings,
               map: defaults.map,
+              advanced: defaults.advanced,
               version: 2,
             },
           };
@@ -554,6 +595,21 @@ export const useSettingsStore = create<SettingsState>()(
       },
     },
   ),
+);
+
+// Subscribe to settings changes to sync logger
+useSettingsStore.subscribe((state) => {
+  syncLoggerWithSettings(
+    state.settings.advanced.logLevel,
+    state.settings.advanced.persistLogs,
+  );
+});
+
+// Initialize logger with current settings
+const initialSettings = useSettingsStore.getState().settings;
+syncLoggerWithSettings(
+  initialSettings.advanced.logLevel,
+  initialSettings.advanced.persistLogs,
 );
 
 /**

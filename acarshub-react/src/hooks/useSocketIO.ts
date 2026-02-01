@@ -18,6 +18,7 @@ import { useEffect } from "react";
 import { socketService } from "../services/socket";
 import { useAppStore } from "../store/useAppStore";
 import type { HtmlMsg, Labels } from "../types";
+import { socketLogger } from "../utils/logger";
 
 /**
  * Custom hook to integrate Socket.IO with Zustand store
@@ -46,12 +47,12 @@ export const useSocketIO = () => {
   const setAdsbAircraft = useAppStore((state) => state.setAdsbAircraft);
 
   useEffect(() => {
-    console.log("🔌 useSocketIO: Setting up Socket.IO connection...");
+    socketLogger.info("Setting up Socket.IO connection");
 
     // Connect to Socket.IO backend
     const socket = socketService.connect();
 
-    console.log("🔌 Socket instance:", {
+    socketLogger.debug("Socket instance created", {
       connected: socket.connected,
       id: socket.id,
       namespace: "/main",
@@ -59,22 +60,26 @@ export const useSocketIO = () => {
 
     // Connection event handlers
     socket.on("connect", () => {
-      console.log("✅ Socket.IO connected! ID:", socket.id);
+      socketLogger.info("Socket.IO connected", { socketId: socket.id });
       setConnected(true);
     });
 
     socket.on("disconnect", () => {
-      console.log("❌ Socket.IO disconnected");
+      socketLogger.warn("Socket.IO disconnected");
       setConnected(false);
     });
 
     socket.on("reconnect", () => {
-      console.log("🔄 Socket.IO reconnected");
+      socketLogger.info("Socket.IO reconnected");
       setConnected(true);
     });
 
     // Core message event - most frequent event
     socket.on("acars_msg", (data: HtmlMsg) => {
+      socketLogger.trace("Received acars_msg event", {
+        uid: data.msghtml?.uid,
+        station: data.msghtml?.station_id,
+      });
       // Unwrap msghtml wrapper from Socket.IO message
       const message = data.msghtml;
       addMessage(message);
@@ -82,41 +87,72 @@ export const useSocketIO = () => {
 
     // Configuration and metadata events
     socket.on("labels", (data) => {
+      socketLogger.debug("Received labels configuration", {
+        labelCount: Object.keys(data).length,
+      });
       setLabels(data as unknown as Labels);
     });
 
     socket.on("terms", (terms) => {
+      socketLogger.debug("Received alert terms", {
+        termCount: terms.terms?.length || 0,
+        ignoreCount: terms.ignore?.length || 0,
+      });
       setAlertTerms(terms);
     });
 
     socket.on("features_enabled", (decoders) => {
+      socketLogger.info("Received decoder configuration", {
+        acars: decoders.acars,
+        vdlm: decoders.vdlm,
+        hfdl: decoders.hfdl,
+        imsl: decoders.imsl,
+        irdm: decoders.irdm,
+        adsbEnabled: decoders.adsb?.enabled,
+      });
       setDecoders(decoders);
     });
 
     // System status and monitoring
     socket.on("system_status", (data) => {
+      socketLogger.debug("Received system status update", {
+        hasErrors: data.status?.error_state,
+      });
       setSystemStatus(data);
     });
 
     socket.on("version", (version) => {
+      socketLogger.info("Received version information", { version });
       setVersion(version);
     });
 
     socket.on("database", (data) => {
+      socketLogger.debug("Received database size", {
+        size: data.size,
+        count: data.count,
+      });
       setDatabaseSize(data);
     });
 
     // ADS-B events
     socket.on("adsb_status", (status) => {
+      socketLogger.debug("Received ADS-B status", status);
       setAdsbStatus(status);
     });
 
     socket.on("adsb_aircraft", (data) => {
+      socketLogger.trace("Received ADS-B aircraft data", {
+        aircraftCount: data.aircraft?.length || 0,
+        now: data.now,
+      });
       setAdsbAircraft(data);
     });
 
     // Signal information
     socket.on("signal", (data) => {
+      socketLogger.trace("Received signal level data", {
+        levelCount: data.levels ? Object.keys(data.levels).length : 0,
+      });
       setSignalLevels(data.levels);
     });
 
@@ -133,20 +169,28 @@ export const useSocketIO = () => {
           count += data.data[key].count;
         }
       }
+      socketLogger.debug("Received alert terms update", {
+        termCount: Object.keys(data.data || {}).length,
+        totalAlerts: count,
+      });
       setAlertCount(count);
     });
 
     // Statistics events for Stats page
     socket.on("signal_freqs", (freqData) => {
+      socketLogger.trace("Received signal frequency data");
       setSignalFreqData(freqData);
     });
 
     socket.on("signal_count", (countData) => {
+      socketLogger.trace("Received signal count data");
       setSignalCountData(countData);
     });
 
     // Cleanup on unmount
     return () => {
+      socketLogger.debug("Cleaning up Socket.IO event listeners");
+
       // Remove all event listeners
       socket.off("connect");
       socket.off("disconnect");
@@ -168,7 +212,12 @@ export const useSocketIO = () => {
       // Only disconnect on actual unmount, not StrictMode cleanup
       // StrictMode will call this cleanup in dev, but we keep the socket alive
       if (!import.meta.env.DEV) {
+        socketLogger.info("Disconnecting Socket.IO (production unmount)");
         socketService.disconnect();
+      } else {
+        socketLogger.debug(
+          "Skipping disconnect in development (React StrictMode)",
+        );
       }
     };
     // Empty dependency array - this effect should only run once

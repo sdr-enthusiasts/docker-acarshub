@@ -32,6 +32,7 @@ import type {
   SystemStatus,
   Terms,
 } from "../types";
+import { socketLogger } from "../utils/logger";
 
 /**
  * Socket.IO Event Definitions
@@ -180,53 +181,39 @@ class SocketService {
     if (!this.socket) return;
 
     this.socket.on("connect", () => {
-      if (import.meta.env.DEV) {
-        console.log("[Socket.IO] ✓ Connected to ACARS Hub backend");
-        console.log("[Socket.IO] Socket ID:", this.socket?.id);
-        console.log(
-          "[Socket.IO] Transport:",
-          this.socket?.io.engine.transport.name,
-        );
-      }
+      socketLogger.info("Connected to ACARS Hub backend", {
+        socketId: this.socket?.id,
+        transport: this.socket?.io.engine.transport.name,
+      });
     });
 
     this.socket.on("disconnect", (reason) => {
-      if (import.meta.env.DEV) {
-        console.warn("[Socket.IO] ✗ Disconnected:", reason);
-      }
+      socketLogger.warn("Disconnected from backend", { reason });
     });
 
     this.socket.on("reconnect", (attemptNumber) => {
-      if (import.meta.env.DEV) {
-        console.log(
-          `[Socket.IO] ↻ Reconnected after ${attemptNumber} attempts`,
-        );
-      }
+      socketLogger.info("Reconnected to backend", { attemptNumber });
     });
 
     this.socket.on("connect_error", (error: Error) => {
-      if (import.meta.env.DEV) {
-        console.error("[Socket.IO] ⚠ Connection error:", error.message);
-        console.error("[Socket.IO] Error details:", error);
-      }
+      socketLogger.error("Connection error", {
+        message: error.message,
+        stack: error.stack,
+      });
     });
 
     this.socket.on("error", (error) => {
-      if (import.meta.env.DEV) {
-        console.error("[Socket.IO] ✗ Socket error:", error);
-      }
+      socketLogger.error("Socket error", error);
     });
 
     this.socket.io.on("reconnect_attempt", () => {
-      if (import.meta.env.DEV) {
-        console.log("[Socket.IO] ↻ Attempting to reconnect...");
-      }
+      socketLogger.debug("Attempting to reconnect to backend");
     });
 
     this.socket.io.on("reconnect_failed", () => {
-      if (import.meta.env.DEV) {
-        console.error("[Socket.IO] ✗ Reconnection failed after max attempts");
-      }
+      socketLogger.error("Reconnection failed after maximum attempts", {
+        maxAttempts: this.maxReconnectAttempts,
+      });
     });
   }
 
@@ -255,9 +242,7 @@ class SocketService {
    */
   disconnect(): void {
     if (this.socket) {
-      if (import.meta.env.DEV) {
-        console.log("[Socket.IO] Disconnecting socket");
-      }
+      socketLogger.info("Disconnecting socket");
       this.socket.disconnect();
       this.socket = null;
       this.isInitializing = false;
@@ -268,6 +253,7 @@ class SocketService {
    * Emit a database search query
    */
   searchDatabase(query: Record<string, string>): void {
+    socketLogger.debug("Emitting database search query", { query });
     this.socket?.emit("query_search", query);
   }
 
@@ -275,6 +261,10 @@ class SocketService {
    * Update alert terms and ignore list
    */
   updateAlerts(terms: string[], ignore: string[]): void {
+    socketLogger.debug("Updating alert terms", {
+      termCount: terms.length,
+      ignoreCount: ignore.length,
+    });
     this.socket?.emit("update_alerts", { terms, ignore });
   }
 
@@ -283,6 +273,7 @@ class SocketService {
    * Backend doesn't care about the message content, it returns all frequencies
    */
   requestSignalFreqs(): void {
+    socketLogger.trace("Requesting signal frequency data");
     // Legacy style: pass namespace as third argument
     // @ts-expect-error - Legacy Socket.IO syntax requires namespace as third arg
     this.socket?.emit("signal_freqs", { freqs: true }, "/main");
@@ -292,6 +283,7 @@ class SocketService {
    * Request signal count data from backend
    */
   requestSignalCount(): void {
+    socketLogger.trace("Requesting signal count data");
     // Legacy style: pass namespace as third argument
     // @ts-expect-error - Legacy Socket.IO syntax requires namespace as third arg
     this.socket?.emit("signal_count", { count: true }, "/main");
@@ -302,9 +294,12 @@ class SocketService {
    * Used for analytics and connection management
    */
   notifyPageChange(page: string): void {
+    socketLogger.debug("Notifying backend of page change", { page });
     this.socket?.emit("page_change", { page });
   }
 }
 
 // Export singleton instance
 export const socketService = new SocketService();
+
+socketLogger.info("Socket service module loaded");

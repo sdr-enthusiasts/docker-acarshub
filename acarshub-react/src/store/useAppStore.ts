@@ -39,6 +39,7 @@ import type {
   Terms,
 } from "../types";
 import { applyAlertMatching } from "../utils/alertMatching";
+import { storeLogger } from "../utils/logger";
 import { useSettingsStore } from "./useSettingsStore";
 
 /**
@@ -157,8 +158,11 @@ const saveReadMessageUids = (readUids: Set<string>) => {
       "acarshub.readMessages",
       JSON.stringify(Array.from(readUids)),
     );
+    storeLogger.trace("Saved read message UIDs to localStorage", {
+      count: readUids.size,
+    });
   } catch (error) {
-    console.error("Failed to save read messages to localStorage:", error);
+    storeLogger.error("Failed to save read messages to localStorage", error);
   }
 };
 
@@ -175,10 +179,17 @@ export const useAppStore = create<AppState>((set, get) => ({
   messageGroups: new Map(),
   addMessage: (message) =>
     set((state) => {
+      storeLogger.trace("Processing incoming message", {
+        station: message.station_id,
+        label: message.label,
+        hasText: !!message.text,
+      });
+
       // Generate UID if not present (backend doesn't send UIDs)
       // Format: timestamp-random to ensure uniqueness
       if (!message.uid) {
         message.uid = `${message.timestamp || Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+        storeLogger.trace("Generated UID for message", { uid: message.uid });
       }
 
       // Decode the message if it has text
@@ -186,6 +197,13 @@ export const useAppStore = create<AppState>((set, get) => ({
 
       // Apply alert matching (check against alert terms)
       decodedMessage = applyAlertMatching(decodedMessage, state.alertTerms);
+
+      if (decodedMessage.matched) {
+        storeLogger.info("Alert match detected in message", {
+          uid: decodedMessage.uid,
+          matchedTerms: decodedMessage.matched_text,
+        });
+      }
 
       const newMessageGroups = new Map(state.messageGroups);
 
@@ -199,6 +217,8 @@ export const useAppStore = create<AppState>((set, get) => ({
         tail: decodedMessage.tail?.trim() || null,
         icao_hex: decodedMessage.icao_hex?.toUpperCase() || null,
       };
+
+      storeLogger.trace("Extracted message identifiers", messageKeys);
 
       // Find existing message group that matches any of the message's identifiers
       let matchedGroupKey: string | null = null;
@@ -215,8 +235,22 @@ export const useAppStore = create<AppState>((set, get) => ({
         if (matches) {
           matchedGroupKey = groupKey;
           matchedGroup = group;
+          storeLogger.trace("Found existing message group", {
+            groupKey,
+            existingMessages: group.messages.length,
+          });
           break;
         }
+      }
+
+      if (!matchedGroup) {
+        storeLogger.debug("Creating new message group", {
+          primaryKey:
+            messageKeys.flight ||
+            messageKeys.tail ||
+            messageKeys.icao_hex ||
+            "unknown",
+        });
       }
 
       // Determine the primary key for this aircraft (priority: flight > tail > icao_hex)
@@ -260,11 +294,16 @@ export const useAppStore = create<AppState>((set, get) => ({
           // Check 1: Full field duplicate
           if (checkForDuplicate(existingMsg, decodedMessage)) {
             isDuplicate = true;
+            const duplicateCount = Number(existingMsg.duplicates || 0) + 1;
+            storeLogger.debug("Full field duplicate detected", {
+              uid: existingMsg.uid,
+              duplicateCount,
+            });
             // Update timestamp and increment duplicate counter
             updatedMessages[i] = {
               ...existingMsg,
               timestamp: decodedMessage.timestamp,
-              duplicates: String(Number(existingMsg.duplicates || 0) + 1),
+              duplicates: String(duplicateCount),
             };
             // Move this message to the front
             const movedMsg = updatedMessages[i];
@@ -280,11 +319,16 @@ export const useAppStore = create<AppState>((set, get) => ({
             existingMsg.text === decodedMessage.text
           ) {
             isDuplicate = true;
+            const duplicateCount = Number(existingMsg.duplicates || 0) + 1;
+            storeLogger.debug("Text field duplicate detected", {
+              uid: existingMsg.uid,
+              duplicateCount,
+            });
             // Update timestamp and increment duplicate counter
             updatedMessages[i] = {
               ...existingMsg,
               timestamp: decodedMessage.timestamp,
-              duplicates: String(Number(existingMsg.duplicates || 0) + 1),
+              duplicates: String(duplicateCount),
             };
             // Move this message to the front
             const movedMsg = updatedMessages[i];
@@ -296,6 +340,10 @@ export const useAppStore = create<AppState>((set, get) => ({
           // Check 3: Multi-part message
           if (isMultiPartMessage(existingMsg, decodedMessage)) {
             isMultiPart = true;
+            storeLogger.debug("Multi-part message detected", {
+              existingMsgno: existingMsg.msgno,
+              newMsgno: decodedMessage.msgno,
+            });
 
             // Check if this specific part already exists
             if (existingMsg.msgno_parts && decodedMessage.msgno) {
@@ -378,7 +426,10 @@ export const useAppStore = create<AppState>((set, get) => ({
 
       return { messageGroups: newMessageGroups };
     }),
-  clearMessages: () => set({ messageGroups: new Map() }),
+  clearMessages: () => {
+    storeLogger.info("Clearing all message groups");
+    set({ messageGroups: new Map() });
+  },
 
   // Labels and metadata
   labels: { labels: {} },
@@ -386,33 +437,72 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   // Alert configuration
   alertTerms: { terms: [], ignore: [] },
-  setAlertTerms: (terms) => set({ alertTerms: terms }),
+  setAlertTerms: (terms) => {
+    storeLogger.debug("Alert terms updated", {
+      terms: terms.terms?.length || 0,
+      ignore: terms.ignore?.length || 0,
+    });
+    set({ alertTerms: terms });
+  },
   alertCount: 0,
-  setAlertCount: (count) => set({ alertCount: count }),
+  setAlertCount: (count) => {
+    storeLogger.trace("Alert count updated", { count });
+    set({ alertCount: count });
+  },
 
   // Decoder configuration
   decoders: null,
-  setDecoders: (decoders) => set({ decoders }),
+  setDecoders: (decoders) => {
+    storeLogger.info("Decoder configuration updated", {
+      acars: decoders.acars,
+      vdlm: decoders.vdlm,
+      hfdl: decoders.hfdl,
+      imsl: decoders.imsl,
+      irdm: decoders.irdm,
+      adsbEnabled: decoders.adsb?.enabled,
+    });
+    set({ decoders });
+  },
 
   // System status
   systemStatus: null,
-  setSystemStatus: (status) => set({ systemStatus: status }),
+  setSystemStatus: (status) => {
+    storeLogger.trace("System status updated", {
+      hasErrors: status.status?.error_state,
+    });
+    set({ systemStatus: status });
+  },
 
   // Database info
   databaseSize: null,
-  setDatabaseSize: (size) => set({ databaseSize: size }),
+  setDatabaseSize: (size) => {
+    storeLogger.debug("Database size updated", {
+      size: size.size,
+      count: size.count,
+    });
+    set({ databaseSize: size });
+  },
 
   // Version info
   version: null,
-  setVersion: (version) => set({ version }),
+  setVersion: (version) => {
+    storeLogger.info("Version information set", { version });
+    set({ version });
+  },
 
   // ADS-B status
   adsbStatus: null,
-  setAdsbStatus: (status) => set({ adsbStatus: status }),
+  setAdsbStatus: (status) => {
+    storeLogger.trace("ADS-B status updated", status);
+    set({ adsbStatus: status });
+  },
 
   // Signal levels
   signalLevels: null,
-  setSignalLevels: (signal) => set({ signalLevels: signal }),
+  setSignalLevels: (signal) => {
+    storeLogger.trace("Signal levels updated");
+    set({ signalLevels: signal });
+  },
 
   // Statistics data
   alertTermData: null,
@@ -424,7 +514,12 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   // ADS-B aircraft data
   adsbAircraft: null,
-  setAdsbAircraft: (data) => set({ adsbAircraft: data }),
+  setAdsbAircraft: (data) => {
+    storeLogger.trace("ADS-B aircraft data updated", {
+      aircraftCount: data.aircraft?.length || 0,
+    });
+    set({ adsbAircraft: data });
+  },
 
   // UI state
   currentPage: "Live Messages",
@@ -436,19 +531,23 @@ export const useAppStore = create<AppState>((set, get) => ({
   readMessageUids: loadReadMessageUids(),
 
   markMessageAsRead: (uid) => {
-    const newReadUids = new Set(get().readMessageUids);
-    newReadUids.add(uid);
-    saveReadMessageUids(newReadUids);
-    set({ readMessageUids: newReadUids });
+    storeLogger.trace("Marking message as read", { uid });
+    const readUids = new Set(get().readMessageUids);
+    readUids.add(uid);
+    saveReadMessageUids(readUids);
+    set({ readMessageUids: readUids });
   },
 
   markMessagesAsRead: (uids) => {
-    const newReadUids = new Set(get().readMessageUids);
+    storeLogger.debug("Marking multiple messages as read", {
+      count: uids.length,
+    });
+    const readUids = new Set(get().readMessageUids);
     for (const uid of uids) {
-      newReadUids.add(uid);
+      readUids.add(uid);
     }
-    saveReadMessageUids(newReadUids);
-    set({ readMessageUids: newReadUids });
+    saveReadMessageUids(readUids);
+    set({ readMessageUids: readUids });
   },
 
   markAllMessagesAsRead: () => {

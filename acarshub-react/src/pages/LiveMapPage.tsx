@@ -23,6 +23,7 @@ import { useAppStore } from "../store/useAppStore";
 import { useSettingsStore } from "../store/useSettingsStore";
 import type { PairedAircraft } from "../utils/aircraftPairing";
 import { pairADSBWithACARSMessages } from "../utils/aircraftPairing";
+import { mapLogger } from "../utils/logger";
 import "./LiveMapPage.scss";
 
 /**
@@ -64,7 +65,7 @@ export const LiveMapPage = () => {
 
   const handleMapLoad = () => {
     setIsMapLoaded(true);
-    console.log("Map loaded successfully");
+    mapLogger.info("Map loaded successfully");
   };
 
   // Handle aircraft click from list

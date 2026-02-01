@@ -17,6 +17,9 @@
 import type { MessageDecoder as MessageDecoderType } from "@airframes/acars-decoder";
 import { MessageDecoder } from "@airframes/acars-decoder";
 import type { AcarsMsg, DecodedText } from "../types";
+import { createLogger } from "../utils/logger";
+
+const logger = createLogger("decoder");
 
 /**
  * Fields to check for duplicate detection
@@ -56,6 +59,7 @@ class AcarsMessageDecoder {
 
   constructor() {
     this.decoder = new MessageDecoder();
+    logger.debug("ACARS Message Decoder initialized");
   }
 
   /**
@@ -66,8 +70,18 @@ class AcarsMessageDecoder {
   public decode(message: AcarsMsg): AcarsMsg {
     // Only attempt to decode if message has text
     if (!message.text) {
+      logger.trace("Skipping decode - no text field", {
+        uid: message.uid,
+        label: message.label,
+      });
       return message;
     }
+
+    logger.trace("Attempting to decode message", {
+      uid: message.uid,
+      label: message.label,
+      textLength: message.text.length,
+    });
 
     try {
       // The decoder requires a Message object with text: string (not optional)
@@ -87,8 +101,22 @@ class AcarsMessageDecoder {
       // }
       const result = this.decoder.decode(messageForDecoder);
 
+      logger.trace("Decode result", {
+        uid: message.uid,
+        decoded: result.decoded,
+        decoderName: result.decoder.name,
+        decodeLevel: result.decoder.decodeLevel,
+      });
+
       // Only add decodedText if decoding was successful
       if (result.decoded === true) {
+        logger.debug("Successfully decoded message", {
+          uid: message.uid,
+          decoderName: result.decoder.name,
+          decodeLevel: result.decoder.decodeLevel,
+          itemCount: result.formatted.items.length,
+        });
+
         // Convert the DecodeResult to our DecodedText format
         const decodedText: DecodedText = {
           decoder: {
@@ -113,9 +141,23 @@ class AcarsMessageDecoder {
         };
       }
 
+      logger.trace("Message not decoded (no decoder matched)", {
+        uid: message.uid,
+        label: message.label,
+      });
+
       return message;
     } catch (error) {
-      console.error("Decoder Error:", error);
+      logger.error(
+        "Decoder error - message will be returned without decoding",
+        {
+          uid: message.uid,
+          label: message.label,
+          text: message.text?.substring(0, 50),
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+        },
+      );
       return message;
     }
   }
@@ -124,6 +166,7 @@ class AcarsMessageDecoder {
    * Reset the decoder instance (if needed for testing or reinitialization)
    */
   public reset(): void {
+    logger.info("Resetting ACARS Message Decoder");
     this.decoder = new MessageDecoder();
   }
 }
@@ -140,7 +183,12 @@ export function checkForDuplicate(
   existingMessage: AcarsMsg,
   newMessage: AcarsMsg,
 ): boolean {
-  return DUPLICATE_CHECK_FIELDS.every((field) => {
+  logger.trace("Checking for duplicate message", {
+    existingUid: existingMessage.uid,
+    newUid: newMessage.uid,
+  });
+
+  const isDuplicate = DUPLICATE_CHECK_FIELDS.every((field) => {
     const existingValue = existingMessage[field];
     const newValue = newMessage[field];
 
@@ -163,6 +211,15 @@ export function checkForDuplicate(
     // Both have values - compare them
     return existingValue === newValue;
   });
+
+  if (isDuplicate) {
+    logger.debug("Duplicate message detected", {
+      existingUid: existingMessage.uid,
+      newUid: newMessage.uid,
+    });
+  }
+
+  return isDuplicate;
 }
 
 /**
@@ -176,6 +233,13 @@ export function isMultiPartMessage(
   existingMessage: AcarsMsg,
   newMessage: AcarsMsg,
 ): boolean {
+  logger.trace("Checking if messages are multi-part", {
+    existingUid: existingMessage.uid,
+    existingMsgno: existingMessage.msgno,
+    newUid: newMessage.uid,
+    newMsgno: newMessage.msgno,
+  });
+
   // Must have same station_id (keep ACARS/VDLM separate)
   if (existingMessage.station_id !== newMessage.station_id) {
     return false;
@@ -189,6 +253,10 @@ export function isMultiPartMessage(
   // Timestamp must be within 8 seconds
   const timeDiff = newMessage.timestamp - existingMessage.timestamp;
   if (timeDiff >= 8.0) {
+    logger.trace("Messages too far apart in time", {
+      timeDiff,
+      threshold: 8.0,
+    });
     return false;
   }
 
@@ -201,12 +269,20 @@ export function isMultiPartMessage(
     newMsgno.charAt(0) === existingMsgno.charAt(0) &&
     newMsgno.charAt(3) === existingMsgno.charAt(3)
   ) {
+    logger.debug("Multi-part message detected (AzzA pattern)", {
+      existingMsgno,
+      newMsgno,
+    });
     return true;
   }
 
   // Check for AAAz pattern (e.g., AAA1, AAA2, AAA3)
   // First three characters match
   if (newMsgno.substring(0, 3) === existingMsgno.substring(0, 3)) {
+    logger.debug("Multi-part message detected (AAAz pattern)", {
+      existingMsgno,
+      newMsgno,
+    });
     return true;
   }
 
@@ -269,6 +345,14 @@ export function mergeMultiPartMessage(
   newMessage: AcarsMsg,
   decoder: AcarsMessageDecoder,
 ): AcarsMsg {
+  logger.debug("Merging multi-part messages", {
+    existingUid: existingMessage.uid,
+    existingMsgno: existingMessage.msgno,
+    existingParts: existingMessage.msgno_parts,
+    newUid: newMessage.uid,
+    newMsgno: newMessage.msgno,
+  });
+
   const updated = { ...existingMessage };
 
   // Update timestamp to newest message
@@ -294,11 +378,22 @@ export function mergeMultiPartMessage(
 
   // Re-decode the merged text
   if (updated.text) {
+    logger.debug("Re-decoding merged multi-part message", {
+      uid: updated.uid,
+      textLength: updated.text.length,
+      parts: updated.msgno_parts,
+    });
     const decoded = decoder.decode(updated);
     if (decoded.decodedText) {
       updated.decodedText = decoded.decodedText;
     }
   }
+
+  logger.info("Multi-part message merged successfully", {
+    uid: updated.uid,
+    parts: updated.msgno_parts,
+    textLength: updated.text?.length || 0,
+  });
 
   return updated;
 }
@@ -308,3 +403,5 @@ export function mergeMultiPartMessage(
  * Export a single instance to be used throughout the application
  */
 export const messageDecoder = new AcarsMessageDecoder();
+
+logger.info("Message decoder module loaded");

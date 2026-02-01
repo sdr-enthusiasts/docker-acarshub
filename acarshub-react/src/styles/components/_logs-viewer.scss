@@ -1,0 +1,355 @@
+// Copyright (C) 2022-2026 Frederick Clausen II
+// This file is part of acarshub <https://github.com/sdr-enthusiasts/docker-acarshub>.
+
+// acarshub is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+
+// acarshub is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+
+// You should have received a copy of the GNU General Public License
+// along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
+
+@use "../mixins" as *;
+@use "../variables" as *;
+
+.logs-viewer-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.logs-viewer-controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.logs-viewer-filters {
+  display: flex;
+  gap: var(--spacing-md);
+  flex-wrap: wrap;
+  align-items: flex-end;
+
+  label {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+  }
+}
+
+.logs-viewer-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-subtext0);
+}
+
+.logs-viewer-select,
+.logs-viewer-input {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background: var(--color-surface0);
+  border: 1px solid var(--color-overlay0);
+  border-radius: var(--border-radius-sm);
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: 0.875rem;
+  min-width: 150px;
+
+  &:focus {
+    outline: 2px solid var(--color-blue);
+    outline-offset: 2px;
+    border-color: var(--color-blue);
+  }
+
+  &:hover {
+    border-color: var(--color-overlay1);
+  }
+}
+
+.logs-viewer-input {
+  min-width: 200px;
+
+  &::placeholder {
+    color: var(--color-overlay1);
+  }
+}
+
+.logs-viewer-checkbox {
+  flex-direction: row !important;
+  align-items: center;
+  gap: var(--spacing-xs) !important;
+  cursor: pointer;
+  user-select: none;
+
+  input[type="checkbox"] {
+    cursor: pointer;
+    width: 18px;
+    height: 18px;
+    accent-color: var(--color-blue);
+  }
+
+  span {
+    font-size: 0.875rem;
+    color: var(--color-text);
+  }
+}
+
+.logs-viewer-actions {
+  display: flex;
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
+}
+
+.logs-viewer-stats {
+  display: flex;
+  gap: var(--spacing-lg);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--color-surface0);
+  border-radius: var(--border-radius-md);
+  font-size: 0.875rem;
+  flex-wrap: wrap;
+
+  span {
+    color: var(--color-subtext0);
+
+    strong {
+      color: var(--color-text);
+      font-weight: 600;
+    }
+  }
+
+  &--error strong {
+    color: var(--color-red);
+  }
+
+  &--warn strong {
+    color: var(--color-yellow);
+  }
+
+  &--info strong {
+    color: var(--color-blue);
+  }
+
+  &--debug strong {
+    color: var(--color-green);
+  }
+}
+
+.logs-viewer-stat {
+  &--error strong {
+    color: var(--color-red);
+  }
+
+  &--warn strong {
+    color: var(--color-yellow);
+  }
+
+  &--info strong {
+    color: var(--color-blue);
+  }
+
+  &--debug strong {
+    color: var(--color-green);
+  }
+}
+
+.logs-viewer-display {
+  overflow-y: auto;
+  font-family: "Courier New", "Monaco", "Menlo", monospace;
+  font-size: 0.813rem;
+  background: var(--color-mantle);
+  border: 1px solid var(--color-surface0);
+  border-radius: var(--border-radius-md);
+  padding: var(--spacing-sm);
+
+  @include scrollbar-thin;
+}
+
+.logs-viewer-empty {
+  padding: var(--spacing-xl);
+  text-align: center;
+  color: var(--color-overlay1);
+  font-style: italic;
+}
+
+.log-entry {
+  display: flex;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-left: 3px solid transparent;
+  word-break: break-word;
+  line-height: 1.5;
+
+  &:hover {
+    background: var(--color-surface0);
+  }
+
+  &__timestamp {
+    color: var(--color-overlay1);
+    white-space: nowrap;
+    flex-shrink: 0;
+    font-size: 0.75rem;
+  }
+
+  &__level {
+    font-weight: 700;
+    min-width: 60px;
+    flex-shrink: 0;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+  }
+
+  &__module {
+    color: var(--color-lavender);
+    flex-shrink: 0;
+    font-weight: 600;
+  }
+
+  &__message {
+    flex: 1;
+    color: var(--color-text);
+  }
+
+  &__stack {
+    display: block;
+    width: 100%;
+    margin: var(--spacing-xs) 0 0;
+    padding: var(--spacing-xs);
+    background: var(--color-crust);
+    border-radius: var(--border-radius-sm);
+    font-size: 0.688rem;
+    color: var(--color-red);
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+
+  // Level-specific styling
+  &--error {
+    border-left-color: var(--color-red);
+
+    .log-entry__level {
+      color: var(--color-red);
+    }
+  }
+
+  &--warn {
+    border-left-color: var(--color-yellow);
+
+    .log-entry__level {
+      color: var(--color-yellow);
+    }
+  }
+
+  &--info {
+    border-left-color: var(--color-blue);
+
+    .log-entry__level {
+      color: var(--color-blue);
+    }
+  }
+
+  &--debug {
+    border-left-color: var(--color-green);
+
+    .log-entry__level {
+      color: var(--color-green);
+    }
+  }
+
+  &--trace {
+    border-left-color: var(--color-overlay0);
+
+    .log-entry__level {
+      color: var(--color-overlay0);
+    }
+  }
+}
+
+// Mobile responsive
+@include breakpoint(md-max) {
+  .logs-viewer-display {
+    font-size: 0.75rem;
+  }
+
+  .log-entry {
+    flex-wrap: wrap;
+    gap: var(--spacing-xs);
+
+    &__timestamp,
+    &__level,
+    &__module {
+      min-width: auto;
+    }
+
+    &__message {
+      width: 100%;
+    }
+  }
+
+  .logs-viewer-filters {
+    flex-direction: column;
+
+    label {
+      width: 100%;
+    }
+  }
+
+  .logs-viewer-select,
+  .logs-viewer-input {
+    width: 100%;
+  }
+
+  .logs-viewer-stats {
+    flex-direction: column;
+    gap: var(--spacing-xs);
+  }
+}
+
+// Compact density mode
+.density--compact {
+  .logs-viewer-display {
+    font-size: 0.75rem;
+  }
+
+  .log-entry {
+    padding: 2px var(--spacing-xs);
+    gap: var(--spacing-xs);
+
+    &__timestamp,
+    &__level {
+      font-size: 0.688rem;
+    }
+  }
+
+  .logs-viewer-stats {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    font-size: 0.75rem;
+  }
+}
+
+// Spacious density mode
+.density--spacious {
+  .logs-viewer-display {
+    font-size: 0.875rem;
+  }
+
+  .log-entry {
+    padding: var(--spacing-sm) var(--spacing-md);
+    gap: var(--spacing-md);
+
+    &__timestamp,
+    &__level {
+      font-size: 0.813rem;
+    }
+  }
+
+  .logs-viewer-stats {
+    padding: var(--spacing-md) var(--spacing-lg);
+    font-size: 0.938rem;
+  }
+}
