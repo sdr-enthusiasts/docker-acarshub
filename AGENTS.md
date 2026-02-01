@@ -6,10 +6,10 @@ ACARS Hub is a web application for receiving, decoding, and displaying ACARS (Ai
 
 Files:
 
-- acarshub-react/README.md - React frontend documentation
-- acarshub-react/DESIGN_LANGUAGE.md - **Visual design language and component usage guide**
-- acarshub-react/CATPPUCCIN.md - Catppuccin color reference for React frontend
-- acarshub-react/LOGGING.md - **Logging system usage, API reference, and troubleshooting**
+- agent-docs/DESIGN_LANGUAGE.md - **Visual design language and component usage guide**
+- agent-docs/CATPPUCCIN.md - Catppuccin color reference for React frontend
+- agent-docs/LOGGING.md - **Logging system usage, API reference, and troubleshooting**
+- agent-docs/\* - Other documentation files. MAKE SURE YOU REFER TO THESE
 - acarshub-typescript/ - Current jQuery/TypeScript frontend (legacy)
 
 ## Current State
@@ -242,7 +242,7 @@ git --no-pager show
 
 ACARS Hub uses **loglevel** with a custom in-memory buffer for application logging. All logging must follow these guidelines to ensure consistency, debuggability, and performance.
 
-**📚 Full Documentation**: See [`acarshub-react/LOGGING.md`](acarshub-react/LOGGING.md) for:
+**📚 Full Documentation**: See [`agent-docs/LOGGING.md`](agent-docs/LOGGING.md) for:
 
 - Detailed usage examples
 - Complete API reference
@@ -1354,7 +1354,6 @@ Target modern browsers with ES6+ support:
 - ✅ Removed `url`, `bypass`, `flight_tracking_url` from `features_enabled` event
 - ✅ TypeScript types updated (`ADSBAircraft`, `ADSBData`)
 - ✅ All quality checks passing (TypeScript, build)
-- 📄 See `acarshub-react/ADSB_DATA_FLOW_REFACTOR.md` for full details
 
 **Implementation Tasks**:
 
@@ -1999,28 +1998,32 @@ Alerts       ← Badge hidden when all alerts marked as read
 
 **Deliverable**: Explicit alert read controls with unread badge count and no auto-mark behavior ✅
 
-#### Phase 9.1.4: Alert Term Management UI 📝
+#### Phase 9.1.4: Alert Term Management UI 📝 ✅ COMPLETE
 
 **Goal**: Provide Settings interface for managing alert terms
 
-**Settings UI**:
+**Implementation Complete** ✅:
 
-- ⏳ Add "Alert Terms" card to Notifications tab in Settings Modal
-- ⏳ Display current alert terms as removable chips/badges
-- ⏳ Display current ignore terms as removable chips/badges
-- ⏳ Add input field for new alert terms (Enter to add)
-- ⏳ Add input field for new ignore terms (Enter to add)
-- ⏳ Add delete button for each term
-- ⏳ Show helpful examples (text, callsign, tail, hex)
-- ⏳ Mobile-first responsive design
+- ✅ Added "Alert Terms" card to Notifications tab in Settings Modal
+- ✅ Display current alert terms as removable chips/badges (red chips)
+- ✅ Display current ignore terms as removable chips/badges (gray chips)
+- ✅ Add input field for new alert terms (Enter to add)
+- ✅ Add input field for new ignore terms (Enter to add)
+- ✅ Delete button for each term (× button on chips)
+- ✅ Helpful examples shown (text, callsign, tail, hex)
+- ✅ Mobile-first responsive design with larger touch targets
+- ✅ Terms automatically converted to uppercase on add
+- ✅ Duplicate prevention (can't add same term twice)
+- ✅ Empty input validation (Add button disabled when empty)
 
-**Backend Integration**:
+**Backend Integration** ✅:
 
-- ⏳ Create `update_alerts` Socket.IO event (client → server)
-- ⏳ Backend handler saves terms to `/run/acars/alerts.json`
-- ⏳ Backend loads saved terms on startup
-- ⏳ Backend broadcasts terms to all clients on connect
-- ⏳ Terms persist across page refreshes and server restarts
+- ✅ Backend `update_alerts` Socket.IO event already existed
+- ✅ Backend handler saves terms to SQLite database (not JSON file)
+- ✅ Backend loads saved terms from database on startup
+- ✅ Backend broadcasts `terms` event to all clients on connect
+- ✅ Terms persist across page refreshes and server restarts
+- ✅ Real-time sync: changes immediately sent to backend and saved
 
 **Payload Structure**:
 
@@ -2035,47 +2038,396 @@ socket.emit(
 );
 ```
 
-**File Format** (`/run/acars/alerts.json`):
+**Implementation Details**:
 
-```json
-{
-  "terms": ["EMERGENCY", "UAL123"],
-  "ignore": ["TEST"]
-}
-```
+- Alert terms stored in AppStore (`alertTerms: Terms`)
+- Settings Modal includes state for `newAlertTerm` and `newIgnoreTerm`
+- Handlers: `handleAddAlertTerm`, `handleRemoveAlertTerm`, `handleAddIgnoreTerm`, `handleRemoveIgnoreTerm`
+- Enter key support for adding terms
+- Socket.IO emit on every add/remove operation
+- SCSS styling with Catppuccin theming (red chips for alerts, gray for ignore)
+- Density mode support (compact/comfortable/spacious)
+- Animation toggle support
+- Mobile: larger touch targets (28px × button vs 20px desktop)
+- Chips use monospace font for better readability
+- Input field responsive font sizing (1rem on mobile for better keyboard UX)
 
-**Deliverable**: Complete alert term management with persistence
+**Completed Components**:
+
+- **SettingsModal.tsx**: Alert terms management UI with state and handlers
+- **\_settings-modal.scss**: Complete styling for chips, input groups, density modes
+- All TypeScript strict mode checks passing
+- All Biome checks passing
+- Production build successful (1,318 KB / 415 KB gzipped)
+
+**Deliverable**: Complete alert term management with database persistence ✅
 
 **Phase 9.1 Completion Checklist**:
 
 - ✅ Sound alerts fully integrated with Settings
 - ✅ Desktop notifications working with permission handling
-- ⏳ Alert badge shows unread count
-- ⏳ Mark as read functionality working
-- ⏳ Alert term management UI complete
-- ⏳ Backend persistence for alert terms
+- ✅ Alert badge shows unread count (Phase 9.1.3)
+- ✅ Mark as read functionality working (Phase 9.1.3)
+- ✅ Alert term management UI complete
+- ✅ Backend persistence for alert terms (SQLite database)
 - ✅ All TypeScript strict mode checks passing
 - ✅ All Biome checks passing
 - ✅ Mobile-first responsive design verified
-- ✅ Tested on Chrome, Firefox, Safari
+- ✅ Real-time sync with backend via Socket.IO
 
-### Phase 10: Testing Infrastructure (Optional - Deferred)
+**Phase 9.1: Notifications & Alert Management COMPLETE** 🎉
 
-**Goal**: Add comprehensive testing to ensure code quality and prevent regressions
+### Phase 10: Testing Infrastructure 🧪
 
-**Note**: This phase is optional and can be deferred until after initial production deployment. The application is functional and well-tested manually. Automated tests will provide additional confidence for future development.
+**Goal**: Add comprehensive automated testing to ensure code quality and prevent regressions
 
-#### Test Coverage Goals
+**Priority**: High - Required before production deployment
 
-- Component unit tests (Jest + React Testing Library)
-- Integration tests for Socket.IO flows
-- E2E tests for critical user journeys (Playwright)
-- Accessibility audits
-- Performance benchmarks
+**Why Now**:
 
-**Deliverable**: Comprehensive test suite (deferred)
+- Application has reached feature completeness for MVP
+- Tests will catch regressions during backend migration
+- Provides confidence for refactoring legacy code
+- Essential for desktop app packaging validation
 
-### Phase 11: Legacy Code Cleanup
+#### Phase 10.1: Unit Testing Setup
+
+**Testing Framework**:
+
+- **Vitest** - Fast, Vite-native test runner
+- **React Testing Library** - Component testing
+- **@testing-library/user-event** - User interaction simulation
+
+**Coverage Goals**:
+
+- Utility functions: 90%+ coverage
+- Store logic: 80%+ coverage
+- Components: 70%+ coverage
+
+**Tasks**:
+
+- ⏳ Configure Vitest with TypeScript
+- ⏳ Set up React Testing Library
+- ⏳ Add test scripts to package.json
+- ⏳ Configure coverage reporting
+- ⏳ Add GitHub Actions CI integration
+
+**Test Files to Create**:
+
+```text
+acarshub-react/src/
+├── utils/__tests__/
+│   ├── dateUtils.test.ts
+│   ├── stringUtils.test.ts
+│   ├── alertMatching.test.ts
+│   └── decoderUtils.test.ts
+├── store/__tests__/
+│   ├── useAppStore.test.ts
+│   └── useSettingsStore.test.ts
+└── components/__tests__/
+    ├── Button.test.tsx
+    ├── Card.test.tsx
+    ├── MessageCard.test.tsx
+    └── SettingsModal.test.tsx
+```
+
+**Deliverable**: Unit test suite with 80%+ coverage
+
+#### Phase 10.2: Integration Testing
+
+**Focus Areas**:
+
+- Socket.IO event flow (mock backend)
+- Store state management (message processing, alert matching)
+- Component integration (form submissions, navigation)
+
+**Tools**:
+
+- Vitest with mock Socket.IO server
+- MSW (Mock Service Worker) for API mocking
+
+**Critical Test Cases**:
+
+- ⏳ Message reception and decoding flow
+- ⏳ Alert matching and notification triggers
+- ⏳ Settings persistence and restoration
+- ⏳ Search query and pagination
+- ⏳ Alert term management (add/remove/persist)
+
+**Deliverable**: Integration test suite covering critical user flows
+
+#### Phase 10.3: End-to-End Testing
+
+**Framework**: Playwright
+
+**Test Scenarios**:
+
+- ⏳ User journey: First visit → Configure alerts → Receive messages
+- ⏳ User journey: Search historical messages → View details
+- ⏳ User journey: Settings → Theme switch → Verify persistence
+- ⏳ User journey: Map → Click aircraft → View messages
+- ⏳ Mobile responsiveness validation (320px to 2560px)
+
+**Browser Coverage**:
+
+- Chrome/Chromium
+- Firefox
+- Safari (WebKit)
+- Mobile Safari (iOS)
+- Chrome Mobile (Android)
+
+**Deliverable**: E2E test suite for critical user journeys
+
+#### Phase 10.4: Accessibility & Performance Testing
+
+**Accessibility**:
+
+- ⏳ Automated WCAG 2.1 AA audits (axe-core)
+- ⏳ Keyboard navigation testing
+- ⏳ Screen reader compatibility (VoiceOver, NVDA)
+- ⏳ Color contrast validation
+
+**Performance**:
+
+- ⏳ Lighthouse CI integration
+- ⏳ Bundle size monitoring (fail if >500KB gzipped)
+- ⏳ Rendering performance (100+ aircraft on map)
+- ⏳ Memory leak detection
+
+**Deliverable**: Automated accessibility and performance checks in CI
+
+**Phase 10 Completion Checklist**:
+
+- ⏳ All utility functions have unit tests
+- ⏳ All stores have comprehensive tests
+- ⏳ Critical components have integration tests
+- ⏳ E2E tests cover main user journeys
+- ⏳ CI/CD pipeline runs all tests on PR
+- ⏳ Coverage reports published
+- ⏳ WCAG AA compliance verified
+- ⏳ Performance budgets enforced
+
+### Phase 11: Backend Evaluation & Migration Planning 🔧
+
+**Goal**: Evaluate backend architecture and plan migration strategy
+
+**Priority**: Critical - Determines deployment and maintenance strategy for next 5+ years
+
+**Current State Analysis**:
+
+**Python/Flask Backend**:
+
+- ✅ Mature, stable codebase
+- ✅ Extensive library ecosystem (SQLAlchemy, Flask-SocketIO, rrdtool)
+- ✅ Well-documented, easy to maintain
+- ❌ No built-in migration system (custom `upgrade_db.py` script)
+- ❌ Packaging for desktop apps complex (PyInstaller, py2app)
+- ❌ Large runtime footprint (~50MB Python + dependencies)
+- ❌ SQLAlchemy configured without Alembic migrations
+
+**Evaluation Criteria**:
+
+1. **Database Migrations** (Critical)
+   - ORM with migration support required
+   - Must support upgrading existing SQLite database
+   - Schema changes must be versioned and reversible
+
+2. **Desktop App Packaging** (Future Requirement)
+   - Ability to bundle backend + frontend into single executable
+   - Small binary size (<100MB total)
+   - Fast startup time (<2 seconds)
+   - Cross-platform support (Windows, macOS, Linux)
+
+3. **Maintainability**
+   - Developer experience
+   - Community support
+   - Long-term viability
+   - Learning curve for contributors
+
+4. **Performance**
+   - Message throughput (500+ messages/sec)
+   - WebSocket handling
+   - Database query performance
+
+#### Migration Options Analysis
+
+**Option 1: Keep Python + Add Alembic Migrations** ✅ RECOMMENDED
+
+**Pros**:
+
+- ✅ Minimal migration effort (~1-2 weeks)
+- ✅ SQLAlchemy + Alembic is industry standard
+- ✅ Existing codebase remains stable
+- ✅ Preserves institutional knowledge
+- ✅ Alembic provides full migration history
+- ✅ Can autogenerate migrations from model changes
+- ✅ Desktop packaging possible with PyInstaller/Nuitka
+
+**Cons**:
+
+- ❌ Python runtime adds ~50MB to desktop app
+- ❌ Slower startup than compiled languages
+- ❌ Two-process architecture (Python + Node/Electron for desktop)
+
+**Implementation Plan**:
+
+1. Install Alembic: `pip install alembic`
+2. Initialize Alembic in project: `alembic init migrations`
+3. Configure Alembic to use existing database
+4. Create initial migration from current schema
+5. Test migration on fresh database
+6. Replace `upgrade_db.py` with Alembic migrations
+7. Document migration workflow for developers
+
+**Desktop App Strategy** (Python):
+
+- Nuitka or PyInstaller for Python bundling
+- Electron or Tauri for frontend shell
+- Two-process architecture: Python backend + Frontend webview
+- Total size: ~100-150MB (acceptable)
+
+---
+
+#### Option 2: Migrate to Node.js + Prisma ORM
+
+**Pros**:
+
+- ✅ Single-language stack (TypeScript everywhere)
+- ✅ Prisma has excellent migration system
+- ✅ Better desktop app integration (Electron, Tauri)
+- ✅ Smaller total bundle size (~80MB with Electron)
+- ✅ Unified tooling and dependencies
+
+**Cons**:
+
+- ❌ Major migration effort (~4-6 weeks)
+- ❌ Rewrite all backend logic in TypeScript
+- ❌ RRD database integration unclear (need C bindings or alternative)
+- ❌ Flight data APIs may need reimplementation
+- ❌ Risk of introducing bugs during migration
+- ❌ Community has Python expertise, not Node for backend
+
+**Implementation Plan**:
+
+1. Set up Node.js project with Express + Socket.IO
+2. Configure Prisma ORM with SQLite
+3. Port database models to Prisma schema
+4. Rewrite Flask routes as Express routes
+5. Migrate message processing logic
+6. Migrate alert matching logic
+7. Migrate RRD integration (or replace with alternative)
+8. Migrate decoder integrations
+9. Comprehensive testing
+10. Gradual rollout with feature flags
+
+---
+
+#### Option 3: Migrate to Rust + SeaORM/Diesel
+
+**Pros**:
+
+- ✅ Extremely fast (~10x Python performance)
+- ✅ Tiny binary size (~20MB total)
+- ✅ Near-instant startup (<100ms)
+- ✅ Single executable (no runtime needed)
+- ✅ Memory safe, prevents common bugs
+- ✅ Best desktop app story (Tauri native)
+- ✅ SeaORM has migration support
+- ✅ Excellent WebSocket libraries (tokio-tungstenite)
+
+**Cons**:
+
+- ❌ Massive migration effort (~8-12 weeks)
+- ❌ Steep learning curve for contributors
+- ❌ Smaller ecosystem for aviation libraries
+- ❌ Requires rewriting all backend logic
+- ❌ Community may lack Rust expertise
+- ❌ RRD bindings need custom FFI wrapper
+- ❌ Higher development velocity cost
+
+**Implementation Plan**:
+
+1. Set up Rust project with Actix-Web/Axum + SocketIO
+2. Configure SeaORM with SQLite
+3. Create database migrations
+4. Port message processing to Rust
+5. Port alert logic
+6. Create RRD FFI bindings
+7. Port all Flask routes
+8. Comprehensive testing
+9. Performance benchmarking
+10. Gradual rollout
+
+---
+
+#### Recommendation: Python + Alembic ✅
+
+**Rationale**:
+
+1. **Lowest Risk**: Minimal code changes, preserves stability
+2. **Fast Implementation**: 1-2 weeks vs 4-12 weeks for rewrites
+3. **Proven Stack**: SQLAlchemy + Alembic is battle-tested
+4. **Desktop App Viable**: Nuitka/PyInstaller proven solutions
+5. **Team Familiarity**: Existing Python expertise preserved
+6. **Migration Safety**: Alembic provides rollback capabilities
+
+**When to Reconsider**:
+
+- If desktop app becomes primary deployment (then consider Rust + Tauri)
+- If performance becomes bottleneck (unlikely with current load)
+- If team composition shifts to primarily JS/TS developers
+
+#### Phase 11 Tasks
+
+**Database Migration System** (Week 1):
+
+- ⏳ Install and configure Alembic
+- ⏳ Create initial migration from current schema
+- ⏳ **Create FTS5 migration** (replaces `upgrade_db.py` FTS logic)
+  - Virtual table creation via `op.execute()` raw SQL
+  - INSERT/UPDATE/DELETE triggers for auto-sync
+  - Rebuild command to populate existing data
+  - Full rollback support in `downgrade()`
+- ⏳ Create index migration (port `add_indexes()` from upgrade_db.py)
+- ⏳ Create data cleanup migrations (port `de_null()`, `normalize_freqs()`)
+- ⏳ Test migration on fresh database
+- ⏳ Test migration on production database copy
+- ⏳ Verify FTS search works after migration
+- ⏳ Document migration workflow
+- ⏳ Remove `upgrade_db.py` script
+- ⏳ Create separate maintenance scripts for VACUUM and pruning
+
+**Signal Level Table Refactoring** (Week 2):
+
+- ⏳ Create Alembic migration to DROP existing `level` table
+- ⏳ Create new tables: `level_acars`, `level_vdlm`, `level_hfdl`, `level_imsl`, `level_irdm`
+- ⏳ Update backend code to write to decoder-specific tables
+- ⏳ Update Stats page queries to read from decoder-specific tables
+- ⏳ Update React frontend to display per-decoder signal charts
+- ⏳ Test migration with existing data (if any)
+
+**Backend Code Cleanup**:
+
+- ⏳ Remove legacy HTML generation functions
+- ⏳ Remove unused Flask routes
+- ⏳ Simplify JSON responses (remove legacy fields)
+- ⏳ Clean up acarshub_helpers.py
+- ⏳ Audit Socket.IO events (remove deprecated)
+- ⏳ Update inline documentation
+
+**Desktop App Proof of Concept** (Optional):
+
+- ⏳ Create Nuitka build configuration
+- ⏳ Test bundling Python backend
+- ⏳ Test Electron/Tauri shell integration
+- ⏳ Measure bundle size and startup time
+- ⏳ Document packaging workflow
+
+**Deliverable**: Alembic-based migration system, refactored signal level tables, clean backend codebase
+
+---
+
+### Phase 12: Legacy Code Cleanup
 
 **Goal**: Eliminate all unused legacy code paths from both React and Python codebases
 
@@ -2117,14 +2469,18 @@ socket.emit(
 
 **Deliverable**: Clean, minimal codebase with no legacy cruft
 
-### Phase 12: System Status
+---
+
+### Phase 13: System Status
 
 - Migrate Status page
 - Display decoder health and statistics
 - Implement system monitoring UI
-- **Deliverable**: System status dashboard
+  **Deliverable**: System status dashboard
 
-### Phase 13: Polish and Deployment
+---
+
+### Phase 14: Polish and Deployment
 
 - Comprehensive component tests
 - Integration tests for Socket.IO flows
@@ -2133,9 +2489,32 @@ socket.emit(
 - Accessibility audit and fixes
 - Update nginx configuration for production
 - Documentation updates
-- **Deliverable**: Production-ready React application
+  **Deliverable**: Production-ready React application
 
-### Phase 14: Final Cutover
+---
+
+### Phase 15: Documentation & User Guide
+
+- Create user documentation (setup, configuration, troubleshooting)
+- Create developer documentation (architecture, contributing guide)
+- Create deployment guide (Docker, bare metal, cloud)
+- Create migration guide (from legacy to React)
+- Record video tutorials (optional)
+- **Deliverable**: Complete documentation suite
+
+---
+
+### Phase 16: Beta Release & Feedback
+
+- Deploy to beta testers
+- Collect feedback on UX, performance, bugs
+- Iterate on critical issues
+- Performance tuning based on real-world load
+- **Deliverable**: Stable beta release with user feedback incorporated
+
+---
+
+### Phase 17: Final Cutover (Production Release)
 
 - Update Docker build to only include React frontend
 - Remove `acarshub-typescript/` directory entirely
@@ -2146,9 +2525,23 @@ socket.emit(
 
 ## Current Focus
 
-**Current Phase**: Phase 10 - Testing Infrastructure (Optional - Deferred)
+**Current Phase**: Phase 10 - Testing Infrastructure 🧪
 
-**Next Priority**: Phase 11 - Legacy Code Cleanup OR Phase 12 - System Status
+**Next Priority**:
+
+1. **Phase 10**: Set up automated testing (unit, integration, E2E)
+2. **Phase 11**: Backend evaluation and Alembic migration integration
+3. **Phase 12**: Legacy code cleanup
+4. **Phase 13**: System Status page
+
+**Recently Completed**:
+
+- ✅ Phase 9.1: Notifications & Alert Management (complete alert system with sound, desktop notifications, unread tracking, and term management)
+
+**Critical Decision Point**: Phase 11 (Backend Migration Strategy)
+
+- **Recommendation**: Python + Alembic (lowest risk, fast implementation)
+- **Future Option**: Rust + Tauri (if desktop app becomes primary deployment)
 
 **Development Philosophy**:
 
@@ -2244,7 +2637,7 @@ Before moving to the next phase:
   - Stats page, on theme switch, does not completely honor the theme when dynamically switched on the page. Labels are the wrong color until more data comes in from the websocket
   - Bar chart number labels for the bar value should be dark on all themes for readability
 
-- Notifications & Alerts (Phase 9.1 - IN PROGRESS):
+- Notifications & Alerts (Phase 9.1 - ✅ COMPLETE):
   - ✅ FIXED: Alert sound file added to `public/static/sounds/alert.mp3`
   - ✅ FIXED: Sound alerts now fully controlled by Settings (removed page-specific toggle)
   - ✅ FIXED: Shared audioService prevents per-component autoplay blocking
@@ -2264,8 +2657,8 @@ Before moving to the next phase:
   - ✅ FIXED: Manual "Mark All Alerts Read" button added to Alerts page
   - ✅ FIXED: "Mark All Read" only visible when unread > 0
   - ✅ FIXED: No auto-mark behavior - explicit user control only
-  - ⏳ Alert terms management UI missing from Settings (Phase 9.1.4)
-  - ⏳ Backend alert term persistence not implemented (client-side only, Phase 9.1.4)
+  - ✅ FIXED: Alert terms management UI complete (Phase 9.1.4)
+  - ✅ FIXED: Backend alert term persistence working (SQLite database, real-time sync)
   - ✅ FIXED: Search queries now properly emit with Flask-SocketIO namespace pattern (third argument)
   - ✅ FIXED: Search and Alerts pages now scrollable (changed `height: 100%` to `min-height: 100%`)
   - ✅ FIXED: Search page card styling (created shared \_message-card.scss and \_message-group.scss components)

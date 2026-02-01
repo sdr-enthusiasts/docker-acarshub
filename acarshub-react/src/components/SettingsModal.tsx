@@ -44,6 +44,10 @@ export const SettingsModal = () => {
   const setSettingsOpen = useAppStore((state) => state.setSettingsOpen);
 
   const settings = useSettingsStore((state) => state.settings);
+
+  // Alert terms from AppStore
+  const alertTerms = useAppStore((state) => state.alertTerms);
+  const setAlertTerms = useAppStore((state) => state.setAlertTerms);
   const setTheme = useSettingsStore((state) => state.setTheme);
   const setDensity = useSettingsStore((state) => state.setDensity);
   const setTimeFormat = useSettingsStore((state) => state.setTimeFormat);
@@ -77,6 +81,10 @@ export const SettingsModal = () => {
   const setPersistLogs = useSettingsStore((state) => state.setPersistLogs);
 
   const [activeTab, setActiveTab] = useState<string>("appearance");
+
+  // Alert terms management state
+  const [newAlertTerm, setNewAlertTerm] = useState("");
+  const [newIgnoreTerm, setNewIgnoreTerm] = useState("");
 
   // Detect if browser is Chromium-based (Chrome, Brave, Edge, etc.)
   const isChromium = useMemo(() => {
@@ -161,6 +169,101 @@ export const SettingsModal = () => {
       }
     }
   };
+
+  // Alert terms handlers
+  const handleAddAlertTerm = useCallback(() => {
+    const term = newAlertTerm.trim().toUpperCase();
+    if (term && !alertTerms.terms.includes(term)) {
+      const newTerms = {
+        terms: [...alertTerms.terms, term],
+        ignore: alertTerms.ignore,
+      };
+      setAlertTerms(newTerms);
+      setNewAlertTerm("");
+
+      // Emit to backend via Socket.IO
+      import("../services/socket").then((socketModule) => {
+        const socket = socketModule.socketService.getSocket();
+        // biome-ignore lint/suspicious/noExplicitAny: Flask-SocketIO requires namespace as third argument
+        (socket as any).emit("update_alerts", newTerms, "/main");
+      });
+    }
+  }, [newAlertTerm, alertTerms, setAlertTerms]);
+
+  const handleRemoveAlertTerm = useCallback(
+    (term: string) => {
+      const newTerms = {
+        terms: alertTerms.terms.filter((t) => t !== term),
+        ignore: alertTerms.ignore,
+      };
+      setAlertTerms(newTerms);
+
+      // Emit to backend via Socket.IO
+      import("../services/socket").then((socketModule) => {
+        const socket = socketModule.socketService.getSocket();
+        // biome-ignore lint/suspicious/noExplicitAny: Flask-SocketIO requires namespace as third argument
+        (socket as any).emit("update_alerts", newTerms, "/main");
+      });
+    },
+    [alertTerms, setAlertTerms],
+  );
+
+  const handleAlertTermKeyPress = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        handleAddAlertTerm();
+      }
+    },
+    [handleAddAlertTerm],
+  );
+
+  const handleAddIgnoreTerm = useCallback(() => {
+    const term = newIgnoreTerm.trim().toUpperCase();
+    if (term && !alertTerms.ignore.includes(term)) {
+      const newTerms = {
+        terms: alertTerms.terms,
+        ignore: [...alertTerms.ignore, term],
+      };
+      setAlertTerms(newTerms);
+      setNewIgnoreTerm("");
+
+      // Emit to backend via Socket.IO
+      import("../services/socket").then((socketModule) => {
+        const socket = socketModule.socketService.getSocket();
+        // biome-ignore lint/suspicious/noExplicitAny: Flask-SocketIO requires namespace as third argument
+        (socket as any).emit("update_alerts", newTerms, "/main");
+      });
+    }
+  }, [newIgnoreTerm, alertTerms, setAlertTerms]);
+
+  const handleRemoveIgnoreTerm = useCallback(
+    (term: string) => {
+      const newTerms = {
+        terms: alertTerms.terms,
+        ignore: alertTerms.ignore.filter((t) => t !== term),
+      };
+      setAlertTerms(newTerms);
+
+      // Emit to backend via Socket.IO
+      import("../services/socket").then((socketModule) => {
+        const socket = socketModule.socketService.getSocket();
+        // biome-ignore lint/suspicious/noExplicitAny: Flask-SocketIO requires namespace as third argument
+        (socket as any).emit("update_alerts", newTerms, "/main");
+      });
+    },
+    [alertTerms, setAlertTerms],
+  );
+
+  const handleIgnoreTermKeyPress = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        handleAddIgnoreTerm();
+      }
+    },
+    [handleAddIgnoreTerm],
+  );
 
   // Keyboard shortcut: Escape to close
   useEffect(() => {
@@ -542,6 +645,123 @@ export const SettingsModal = () => {
                 helpText="Only notify for messages that match alert terms (when enabled, ignores non-alert messages)"
                 disabled
               />
+            </Card>
+
+            <Card
+              title="Alert Terms"
+              subtitle="Manage alert terms for message filtering"
+              variant="warning"
+            >
+              <div className="settings-info settings-info--info">
+                Configure terms to highlight and notify you about specific
+                messages. Terms can be text phrases, callsigns, tail numbers, or
+                ICAO hex codes.
+              </div>
+
+              {/* Alert Terms */}
+              <div className="settings-field-group">
+                <label htmlFor="alert-terms-input" className="settings-label">
+                  Alert Terms
+                </label>
+                <div className="alert-terms-input-group">
+                  <input
+                    id="alert-terms-input"
+                    type="text"
+                    value={newAlertTerm}
+                    onChange={(e) => setNewAlertTerm(e.target.value)}
+                    onKeyPress={handleAlertTermKeyPress}
+                    placeholder="Enter term and press Enter"
+                    className="alert-terms-input"
+                  />
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={handleAddAlertTerm}
+                    disabled={!newAlertTerm.trim()}
+                    aria-label="Add alert term"
+                  >
+                    Add
+                  </Button>
+                </div>
+                <p className="settings-help-text">
+                  Examples: EMERGENCY, UAL123, N12345, A1B2C3 (hex code)
+                </p>
+
+                {alertTerms.terms.length > 0 && (
+                  <div className="alert-terms-chips">
+                    {alertTerms.terms.map((term) => (
+                      <span key={term} className="alert-term-chip">
+                        {term}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveAlertTerm(term)}
+                          aria-label={`Remove alert term ${term}`}
+                          className="alert-term-chip__remove"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Ignore Terms */}
+              <div className="settings-field-group">
+                <label htmlFor="ignore-terms-input" className="settings-label">
+                  Ignore Terms
+                </label>
+                <div className="alert-terms-input-group">
+                  <input
+                    id="ignore-terms-input"
+                    type="text"
+                    value={newIgnoreTerm}
+                    onChange={(e) => setNewIgnoreTerm(e.target.value)}
+                    onKeyPress={handleIgnoreTermKeyPress}
+                    placeholder="Enter term and press Enter"
+                    className="alert-terms-input"
+                  />
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={handleAddIgnoreTerm}
+                    disabled={!newIgnoreTerm.trim()}
+                    aria-label="Add ignore term"
+                  >
+                    Add
+                  </Button>
+                </div>
+                <p className="settings-help-text">
+                  Messages matching these terms will NOT trigger alerts, even if
+                  they match alert terms above
+                </p>
+
+                {alertTerms.ignore.length > 0 && (
+                  <div className="alert-terms-chips">
+                    {alertTerms.ignore.map((term) => (
+                      <span
+                        key={term}
+                        className="alert-term-chip alert-term-chip--ignore"
+                      >
+                        {term}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveIgnoreTerm(term)}
+                          aria-label={`Remove ignore term ${term}`}
+                          className="alert-term-chip__remove"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="settings-info settings-info--success">
+                ✓ Alert terms are saved automatically and persist across
+                sessions
+              </div>
             </Card>
           </div>
         )}
