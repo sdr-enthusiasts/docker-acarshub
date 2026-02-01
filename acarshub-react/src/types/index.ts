@@ -155,12 +155,68 @@ export interface SearchHtmlMsg {
 
 // Label Types
 export interface Labels {
-  [index: string]: {
-    [index: string]: {
+  labels: {
+    [labelId: string]: {
       name: string;
     };
   };
 }
+
+// Decoder Types for ACARS Messages
+
+// DecodedText from @airframes/acars-decoder
+// The actual library returns items with this structure
+export interface DecodedTextItem {
+  type: string;
+  code: string;
+  label: string;
+  value: string;
+  // Additional fields may exist
+  [key: string]: string | unknown;
+}
+
+export interface DecodedText {
+  decoder: {
+    decodeLevel: "full" | "partial" | "none";
+    name?: string;
+  };
+  formatted: DecodedTextItem[];
+}
+
+// Libacars decoder types
+export interface LibacarsTimestamp {
+  hour: number;
+  min: number;
+  sec: number;
+}
+
+export interface LibacarsFreqData {
+  freq: number;
+}
+
+export interface LibacarsGroundStation {
+  name?: string;
+  listening_on_freqs?: LibacarsFreqData[];
+  heard_on_freqs?: LibacarsFreqData[];
+}
+
+export interface LibacarsFrequencyData {
+  freq_data?: Array<{
+    gs?: LibacarsGroundStation;
+  }>;
+  [key: string]: unknown;
+}
+
+export interface LibacarsCPDLC {
+  msg_type?: string;
+  [key: string]: unknown;
+}
+
+// Generic libacars data structure
+export type LibacarsData =
+  | LibacarsFrequencyData
+  | LibacarsCPDLC
+  | Record<string, unknown>;
 
 // Core ACARS Message Type
 export interface AcarsMsg {
@@ -191,7 +247,7 @@ export interface AcarsMsg {
   is_response?: number;
   is_onground?: number;
   error?: number | string;
-  libacars?: unknown;
+  libacars?: string; // JSON string that needs parsing
   level?: number;
   // Custom parameters injected by JavaScript or from the backend
   matched?: boolean;
@@ -200,7 +256,7 @@ export interface AcarsMsg {
   matched_flight?: string[];
   matched_tail?: string[];
   uid: string;
-  decodedText?: unknown; // External ACARS decoder library - type unavailable
+  decodedText?: DecodedText;
   data?: string;
   message_type: string;
   msg_time?: number;
@@ -217,15 +273,22 @@ export interface AcarsMsg {
   icao_flight?: string;
 }
 
-// Plane/Aircraft Types
-export interface Plane {
+// Message Group Types
+// A message group represents a collection of messages from a single source
+// This can be an aircraft, ground station, or unknown source
+// Groups are matched by identifiers (flight, tail, icao_hex)
+export interface MessageGroup {
   identifiers: string[];
   has_alerts: boolean;
   num_alerts: number;
   messages: AcarsMsg[];
+  lastUpdated: number; // Unix timestamp of most recent message (for culling)
 }
 
-export interface PlaneData {
+// Legacy alias for backward compatibility during migration
+export type Plane = MessageGroup;
+
+export interface MessageGroupData {
   [index: string]: {
     count: number;
     has_alerts: boolean;
@@ -233,17 +296,26 @@ export interface PlaneData {
   };
 }
 
-export interface PlaneMatch {
+// Legacy alias
+export type PlaneData = MessageGroupData;
+
+export interface MessageGroupMatch {
   messages: AcarsMsg[];
   has_alerts: boolean;
   num_alerts: number;
 }
 
-export interface PlaneNumMsgsAndAlert {
+// Legacy alias
+export type PlaneMatch = MessageGroupMatch;
+
+export interface MessageGroupStats {
   num_messages: number;
   has_alerts: boolean;
   num_alerts: number;
 }
+
+// Legacy alias
+export type PlaneNumMsgsAndAlert = MessageGroupStats;
 
 export interface Matches {
   value: string;
@@ -431,11 +503,16 @@ export interface MessageComponentProps extends BaseComponentProps {
   onToggleDetails?: () => void;
 }
 
-export interface PlaneComponentProps extends BaseComponentProps {
-  plane: Plane;
+export interface MessageGroupComponentProps extends BaseComponentProps {
+  messageGroup: MessageGroup;
   expanded?: boolean;
   onToggle?: () => void;
 }
+
+// Legacy alias
+export type PlaneComponentProps = MessageGroupComponentProps & {
+  plane: MessageGroup;
+};
 
 /**
  * UI State Types
@@ -645,8 +722,10 @@ export interface AppearanceSettings {
  * Data and privacy settings
  */
 export interface DataSettings {
-  /** Maximum messages to keep in memory per aircraft */
+  /** Maximum messages to keep in memory per message group (aircraft/station) */
   maxMessagesPerAircraft: number;
+  /** Maximum number of message groups to keep in memory (total sources) */
+  maxMessageGroups: number;
   /** Enable local data caching */
   enableCaching: boolean;
   /** Auto-clear old data after N minutes */
@@ -694,6 +773,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
   },
   data: {
     maxMessagesPerAircraft: 50,
+    maxMessageGroups: 50,
     enableCaching: true,
     autoClearMinutes: 60,
   },

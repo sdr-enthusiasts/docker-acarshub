@@ -830,7 +830,172 @@ Target modern browsers with ES6+ support:
 - All Biome lint/format checks passing
 - Production build successful (648 KB gzipped)
 
-### Phase 7: Live Map (Next Phase)
+### Phase 7: Live Messages (Core Functionality) ✅ COMPLETE
+
+**Implementation Complete** ✅:
+
+- ✅ Created MessageCard component for individual ACARS message display
+- ✅ Created MessageGroup component with tab navigation for multiple messages per aircraft
+- ✅ Created MessageFilters component with:
+  - Text search across message content
+  - Label filtering (exclude specific message types via modal)
+  - Filter no-text messages toggle
+  - Show alerts-only toggle
+  - Pause/resume live updates
+- ✅ Complete LiveMessagesPage implementation with:
+  - Real-time message updates via Socket.IO
+  - Filtering by text, label, alerts, and no-text messages
+  - Pause functionality (freezes display while continuing to receive in background)
+  - Statistics display (aircraft count, message count, alert count)
+  - localStorage persistence for filter preferences
+  - Mobile-first responsive design
+- ✅ Comprehensive SCSS styling with Catppuccin theming
+- ✅ All message fields displayed:
+  - Aircraft identifiers (tail, flight, ICAO)
+  - Message metadata (timestamp, station, type, label)
+  - Addresses (to/from with hex conversion)
+  - Flight information (DEPA, DSTA, ETA, gate times, runway times)
+  - Position data (lat/lon/altitude)
+  - Technical details (frequency, ACK, mode, block ID, message number)
+  - Signal level, error status, duplicates, multi-part messages
+  - Message content (text, data, decoded)
+  - **Decoder Support**: decodedText from @airframes/acars-decoder with full/partial decode levels
+  - **Libacars Support**: Parsed and formatted libacars data (CPDLC, frequency info, generic)
+  - **Alert Highlighting**: Matched alert terms highlighted in red within message content
+  - Alert match information with matched terms highlighted
+- ✅ Tab navigation for aircraft with multiple messages
+- ✅ Keyboard navigation support (arrow keys, focus management)
+- ✅ Accessibility features (ARIA labels, roles, 44px touch targets)
+- ✅ Performance optimizations:
+  - React.memo for MessageCard and MessageGroup
+  - useMemo for filtered message lists
+  - Efficient re-rendering with proper keys
+- ✅ Settings integration (time/date format, density mode, animations)
+- ✅ All TypeScript strict mode checks passing
+- ✅ All Biome checks passing
+- ✅ Production build successful (1,086 KB / 336 KB gzipped)
+- ✅ Client-side ACARS decoding with @airframes/acars-decoder library
+- ✅ Node.js polyfills configured for browser compatibility (events, stream, buffer, util, zlib)
+- ✅ zlib polyfill required for minizlib dependency (used by decoder)
+- ✅ Duplicate detection with three strategies (full field, text, multi-part)
+- ✅ Multi-part message merging with re-decoding
+- ✅ **Message Groups (not Aircraft)** - proper terminology for all message sources
+- ✅ **Global state architecture** - message groups shared between Live Messages and Live Map
+- ✅ **Two-level culling system** - messages per group + total groups limit
+- ✅ **Accurate group counting** - reflects actual groups in memory, not total received
+
+**Completed Components**:
+
+- **MessageCard**: Displays single ACARS message with all fields, decoder output, libacars data
+- **MessageGroup**: Handles message groups (aircraft/stations) with multiple messages, tab navigation
+- **MessageFilters**: Filter toolbar with search, toggles, label modal
+- **LiveMessagesPage**: Main page with filtering logic, statistics, state management
+- **MessageGroup Type** (formerly Plane):
+  - `identifiers[]` - All known IDs (flight, tail, icao_hex)
+  - `messages[]` - Array of messages (newest first, limited by settings)
+  - `lastUpdated` - Unix timestamp for culling oldest groups
+  - `has_alerts`, `num_alerts` - Alert tracking
+- **messageDecoder**: Singleton service for client-side ACARS message decoding
+  - Wraps `@airframes/acars-decoder` library
+  - Decodes messages in Zustand store before display
+  - Type-safe wrapper with error handling
+  - Only adds `decodedText` if decoding successful
+  - **Duplicate Detection Functions**:
+    - `checkForDuplicate()` - Full field comparison (text, data, libacars, location, times)
+    - `isMultiPartMessage()` - Detect multi-part sequences (AzzA, AAAz patterns)
+    - `checkMultiPartDuplicate()` - Track duplicate parts with counters
+    - `mergeMultiPartMessage()` - Merge text and re-decode combined message
+- **decoderUtils**: Complete decoder formatting utilities for decodedText and libacars
+  - `formatDecodedText()` - Process @airframes/acars-decoder output
+  - `parseAndFormatLibacars()` - Parse and format libacars JSON strings
+  - `highlightMatchedText()` - Highlight alert terms in message content
+  - `loopDecodedArray()` - Process decoded text item structures
+- **Type Definitions**:
+  - `DecodedText`, `DecodedTextItem` - Proper typing for ACARS decoder output
+  - `LibacarsData`, `LibacarsFrequencyData`, `LibacarsCPDLC` - Libacars decoder types
+- **SCSS**: Complete styling in `pages/_live-messages.scss` with 1000+ lines
+  - Alert highlighting styles (`.alert-highlight`)
+  - Libacars content styles (`.libacars-content`, `.libacars-freq-data`, etc.)
+  - Responsive visibility (`.message-content--hide-small`)
+- **Mixins**: Added `breakpoint()`, `breakpoint-max()`, and `scrollbar-thin` mixins
+- **Theme**: Added color shortcuts and RGB variables to theme mixins
+- **Settings Integration**:
+  - `maxMessagesPerAircraft` (10-200, default 50) - Messages per group
+  - `maxMessageGroups` (10-200, default 50) - Total groups in memory
+  - Culling system automatically removes oldest groups when limit exceeded
+
+**Key Features**:
+
+- **Real-time Updates**: Messages appear instantly via Socket.IO
+- **Comprehensive Filtering**: Text search, label exclusion, alerts-only, no-text filter
+- **Pause Functionality**:
+  - **Freezes display** on pause - takes snapshot of current message state
+  - **Background processing continues** - messages decoded, duplicates detected, multi-part merged
+  - **Instant resume** - display immediately shows all messages that arrived during pause
+  - **Persistent state** - pause state saved to localStorage across page refreshes
+  - **Performance optimized** - frozen snapshot via useMemo prevents unnecessary re-renders
+- **Statistics**: Live counters for aircraft, messages, hidden messages, alerts
+- **Persistent Preferences**: Filter settings saved to localStorage
+- **Advanced Decoding**:
+  - **Client-side decoding** with @airframes/acars-decoder library (matches legacy implementation)
+  - Decoding happens in Zustand store when messages received via Socket.IO
+  - Full support for formatted label/value pairs from decoder
+  - Complete libacars decoder integration (CPDLC messages, frequency data, generic types)
+  - Alert term highlighting within message text/data with visual emphasis
+  - Smart display logic: hide raw text on mobile when decoded text available
+  - Node.js polyfills (events, stream, buffer) for browser compatibility
+- **Duplicate Detection & Multi-Part Messages**:
+  - **Three detection strategies**: Full field match, text match, multi-part sequence
+  - **Full field duplicate**: Compares 13 fields (text, data, libacars, location, times)
+  - **Multi-part detection**: Matches AzzA (e.g., M01A, M02A) and AAAz (e.g., AAA1, AAA2) patterns
+  - **Multi-part merging**: Appends text fields, tracks parts in `msgno_parts` (e.g., "M01A M02A")
+  - **Duplicate tracking**: Increments counter (e.g., duplicates: "1", "2", "3")
+  - **Part duplicate tracking**: Shows duplicate parts (e.g., msgno_parts: "M01A M02Ax2 M03A")
+  - **Re-decoding**: Merged multi-part text re-decoded for accurate output
+  - **Message promotion**: Duplicate/multi-part messages moved to front of aircraft list
+  - **Time-based filtering**: Multi-part messages must be within 8 seconds
+  - **Station separation**: ACARS and VDLM messages kept separate
+- **Message Group Architecture** (Critical):
+  - **Terminology**: Message Group (not Aircraft) - can be aircraft, ground station, or unknown source
+  - **Global state**: Stored in Zustand (shared between Live Messages and Live Map)
+  - **Two-level culling**:
+    - Level 1: `maxMessagesPerAircraft` (default 50) - messages per group
+    - Level 2: `maxMessageGroups` (default 50) - total groups in memory
+  - **Automatic culling**: Oldest groups (by `lastUpdated`) removed when limit exceeded
+  - **Accurate counting**: "Aircraft" count = actual groups in memory (not total received)
+  - **Future ready**: Count will include ADS-B-only aircraft when integrated
+- **Client-Side Alert Matching**:
+  - **Alert term checking** - Messages checked against alert terms on arrival
+  - **Word boundary matching** - Uses regex `\b{term}\b` (same as backend logic)
+  - **Ignore terms support** - Excludes matches when ignore terms also present
+  - **Multi-field search** - Checks text, data, and decoded_msg fields
+  - **Automatic flagging** - Sets `matched=true` and `matched_text[]` on messages
+  - **Alert highlighting** - Matched terms highlighted in red within message content
+  - **Live statistics** - Alert count updated in navigation bar in real-time
+  - **Type-safe implementation** - Zero `any` usage with proper regex escaping
+- **Comprehensive Text Search**:
+  - **40+ searchable fields** - text, data, identifiers, metadata, flight info, numeric fields
+  - **Smart filtering** - identifier match shows all messages, otherwise filters individual messages
+  - **Live filtering** - new messages appear only if they match active search
+  - **Clear button** - instant search reset
+  - **Type-safe helpers** - `fieldMatches()` for strings, `numberMatches()` for numbers
+  - **Performance optimized** - useMemo prevents unnecessary re-filtering
+  - **Works with other filters** - combines with pause, labels, alerts, no-text filters
+- **Mobile-First**: Fully responsive from 320px to 4K displays
+- **Accessibility**: WCAG AA compliant with keyboard navigation
+- **Performance**: Bounded memory usage, efficient culling, handles sustained load
+
+**Documentation**:
+
+- `PAUSE_FUNCTIONALITY.md` - Complete pause/resume implementation details
+- `MESSAGE_GROUPS_AND_CULLING.md` - Critical architecture for message groups and memory management
+- `DECODER_FEATURES.md` - Complete decoder implementation (decodedText, libacars, duplicates, multi-part)
+- `SEARCH_FUNCTIONALITY.md` - Comprehensive text search across 40+ message fields
+- `acarshub-react/src/utils/alertMatching.ts` - Client-side alert matching implementation
+
+**Deliverable**: Fully functional message viewer with proper architecture ✅
+
+### Phase 8: Live Map
 
 - Migrate LiveMap page with react-leaflet
 - Handle 100+ aircraft markers efficiently
@@ -838,16 +1003,6 @@ Target modern browsers with ES6+ support:
 - Connect to ADS-B data streams
 - Optimize re-rendering for performance
 - **Deliverable**: Real-time aircraft map
-
-### Phase 8: Live Messages (Core Functionality)
-
-- Migrate LiveMessages page (most complex)
-- Break down 991-line component into smaller pieces
-- Implement message list virtualization for performance
-- Create message detail components
-- Handle real-time message streams
-- Implement filtering and search
-- **Deliverable**: Fully functional message viewer
 
 ### Phase 9: Alerts and Search
 
@@ -886,7 +1041,7 @@ Target modern browsers with ES6+ support:
 
 ## Current Focus
 
-**Current Phase**: Phase 7 - Live Map
+**Current Phase**: Phase 8 - Live Map
 
 ### During React Migration
 
@@ -966,6 +1121,7 @@ Before moving to the next phase:
 
 - Global:
   - Page Denisity switch is inconsistent. We've ended up hard coding some sizes in places rather than using the density settings from the store. Need to audit and fix, OR remove the density setting entirely if it's not feasible to implement everywhere. Likely choice: remove the density setting entirely.
+  - As per stats below, theme switching has some issues applying until new data comes in
 
 - Stats page:
   - Stats page, on theme switch, does not completely honor the theme when dynamically switched on the page. Labels are the wrong color until more data comes in from the websocket

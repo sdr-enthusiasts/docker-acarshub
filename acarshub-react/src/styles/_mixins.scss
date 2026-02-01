@@ -69,6 +69,28 @@
   // Card-specific colors
   --color-card-header: #{$mocha-mantle};
   --color-card-body: #{$mocha-base};
+
+  // Catppuccin color shortcuts
+  --color-rosewater: #{$mocha-rosewater};
+  --color-flamingo: #{$mocha-flamingo};
+  --color-pink: #{$mocha-pink};
+  --color-mauve: #{$mocha-mauve};
+  --color-red: #{$mocha-red};
+  --color-maroon: #{$mocha-maroon};
+  --color-peach: #{$mocha-peach};
+  --color-yellow: #{$mocha-yellow};
+  --color-green: #{$mocha-green};
+  --color-teal: #{$mocha-teal};
+  --color-sky: #{$mocha-sky};
+  --color-sapphire: #{$mocha-sapphire};
+  --color-blue: #{$mocha-blue};
+  --color-lavender: #{$mocha-lavender};
+
+  // RGB values for alpha channel usage
+  --color-red-rgb: 243, 139, 168;
+  --color-yellow-rgb: 249, 226, 175;
+  --color-blue-rgb: 137, 180, 250;
+  --color-green-rgb: 166, 227, 161;
 }
 
 @mixin theme-latte {
@@ -118,6 +140,28 @@
   // Card-specific colors
   --color-card-header: #{$latte-mantle};
   --color-card-body: #{$latte-base};
+
+  // Catppuccin color shortcuts
+  --color-rosewater: #{$latte-rosewater};
+  --color-flamingo: #{$latte-flamingo};
+  --color-pink: #{$latte-pink};
+  --color-mauve: #{$latte-mauve};
+  --color-red: #{$latte-red};
+  --color-maroon: #{$latte-maroon};
+  --color-peach: #{$latte-peach};
+  --color-yellow: #{$latte-yellow};
+  --color-green: #{$latte-green};
+  --color-teal: #{$latte-teal};
+  --color-sky: #{$latte-sky};
+  --color-sapphire: #{$latte-sapphire};
+  --color-blue: #{$latte-blue};
+  --color-lavender: #{$latte-lavender};
+
+  // RGB values for alpha channel usage
+  --color-red-rgb: 210, 15, 57;
+  --color-yellow-rgb: 223, 142, 29;
+  --color-blue-rgb: 30, 102, 245;
+  --color-green-rgb: 64, 160, 43;
 }
 
 /**
@@ -151,6 +195,57 @@
 @mixin media-2xl {
   @media (min-width: $breakpoint-2xl) {
     @content;
+  }
+}
+
+// Generic breakpoint mixin with size parameter (min-width)
+@mixin breakpoint($size) {
+  @if $size == sm {
+    @include media-sm {
+      @content;
+    }
+  } @else if $size == md {
+    @include media-md {
+      @content;
+    }
+  } @else if $size == lg {
+    @include media-lg {
+      @content;
+    }
+  } @else if $size == xl {
+    @include media-xl {
+      @content;
+    }
+  } @else if $size == 2xl {
+    @include media-2xl {
+      @content;
+    }
+  }
+}
+
+// Generic breakpoint-max mixin with size parameter (max-width)
+// Used to hide content or apply styles only on screens smaller than breakpoint
+@mixin breakpoint-max($size) {
+  @if $size == sm {
+    @media (max-width: #{$breakpoint-sm - 1px}) {
+      @content;
+    }
+  } @else if $size == md {
+    @media (max-width: #{$breakpoint-md - 1px}) {
+      @content;
+    }
+  } @else if $size == lg {
+    @media (max-width: #{$breakpoint-lg - 1px}) {
+      @content;
+    }
+  } @else if $size == xl {
+    @media (max-width: #{$breakpoint-xl - 1px}) {
+      @content;
+    }
+  } @else if $size == 2xl {
+    @media (max-width: #{$breakpoint-2xl - 1px}) {
+      @content;
+    }
   }
 }
 
@@ -245,6 +340,31 @@
   // Firefox scrollbar
   scrollbar-width: thin;
   scrollbar-color: var(--color-overlay1) var(--color-surface0);
+}
+
+// Thin scrollbar (more subtle)
+@mixin scrollbar-thin {
+  &::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: var(--color-overlay0);
+    border-radius: $radius-sm;
+
+    &:hover {
+      background: var(--color-overlay1);
+    }
+  }
+
+  // Firefox scrollbar
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-overlay0) transparent;
 }
 
 // Container with max-width and centering

@@ -55,6 +55,7 @@ interface SettingsState {
 
   // Data actions
   setMaxMessagesPerAircraft: (max: number) => void;
+  setMaxMessageGroups: (max: number) => void;
   setEnableCaching: (enabled: boolean) => void;
   setAutoClearMinutes: (minutes: number) => void;
 
@@ -95,6 +96,7 @@ const getDefaultSettings = (): UserSettings => {
     },
     data: {
       maxMessagesPerAircraft: 50,
+      maxMessageGroups: 50,
       enableCaching: true,
       autoClearMinutes: 60,
     },
@@ -247,6 +249,18 @@ export const useSettingsStore = create<SettingsState>()(
             data: {
               ...state.settings.data,
               maxMessagesPerAircraft: Math.max(1, max),
+            },
+            updatedAt: Date.now(),
+          },
+        })),
+
+      setMaxMessageGroups: (max) =>
+        set((state) => ({
+          settings: {
+            ...state.settings,
+            data: {
+              ...state.settings.data,
+              maxMessageGroups: Math.max(1, max),
             },
             updatedAt: Date.now(),
           },

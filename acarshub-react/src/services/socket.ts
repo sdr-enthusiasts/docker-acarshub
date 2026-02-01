@@ -17,12 +17,12 @@
 import { io, type Socket } from "socket.io-client";
 import type {
   AcarshubVersion,
-  AcarsMsg,
   Adsb,
   AdsbStatus,
   AlertTerm,
   DatabaseSize,
   Decoders,
+  HtmlMsg,
   Labels,
   SearchHtmlMsg,
   Signal,
@@ -40,7 +40,7 @@ import type {
 // Events received from backend
 export interface ServerToClientEvents {
   // Core message events
-  acars_msg: (data: AcarsMsg) => void;
+  acars_msg: (data: HtmlMsg) => void;
 
   // Configuration and metadata
   labels: (data: { labels: Labels }) => void;

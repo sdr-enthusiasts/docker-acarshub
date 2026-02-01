@@ -17,6 +17,7 @@
 import { useEffect } from "react";
 import { socketService } from "../services/socket";
 import { useAppStore } from "../store/useAppStore";
+import type { HtmlMsg, Labels } from "../types";
 
 /**
  * Custom hook to integrate Socket.IO with Zustand store
@@ -61,13 +62,15 @@ export const useSocketIO = () => {
     });
 
     // Core message event - most frequent event
-    socket.on("acars_msg", (message) => {
+    socket.on("acars_msg", (data: HtmlMsg) => {
+      // Unwrap msghtml wrapper from Socket.IO message
+      const message = data.msghtml;
       addMessage(message);
     });
 
     // Configuration and metadata events
     socket.on("labels", (data) => {
-      setLabels(data.labels);
+      setLabels(data as unknown as Labels);
     });
 
     socket.on("terms", (terms) => {

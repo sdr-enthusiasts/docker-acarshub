@@ -53,6 +53,9 @@ export const SettingsModal = () => {
   const setMaxMessagesPerAircraft = useSettingsStore(
     (state) => state.setMaxMessagesPerAircraft,
   );
+  const setMaxMessageGroups = useSettingsStore(
+    (state) => state.setMaxMessageGroups,
+  );
   const setEnableCaching = useSettingsStore((state) => state.setEnableCaching);
   const setAutoClearMinutes = useSettingsStore(
     (state) => state.setAutoClearMinutes,
@@ -434,7 +437,7 @@ export const SettingsModal = () => {
 
               <div className="settings-field-group">
                 <label htmlFor="max-messages" className="settings-label">
-                  Max Messages per Aircraft:{" "}
+                  Max Messages per Source:{" "}
                   {settings.data.maxMessagesPerAircraft}
                 </label>
                 <input
@@ -450,7 +453,27 @@ export const SettingsModal = () => {
                   className="settings-slider"
                 />
                 <p className="settings-help-text">
-                  Maximum number of messages to keep in memory for each aircraft
+                  Maximum messages to keep per source (aircraft, station, etc.)
+                </p>
+              </div>
+
+              <div className="settings-field-group">
+                <label htmlFor="max-groups" className="settings-label">
+                  Max Message Groups: {settings.data.maxMessageGroups}
+                </label>
+                <input
+                  id="max-groups"
+                  type="range"
+                  min="10"
+                  max="200"
+                  step="10"
+                  value={settings.data.maxMessageGroups}
+                  onChange={(e) => setMaxMessageGroups(Number(e.target.value))}
+                  className="settings-slider"
+                />
+                <p className="settings-help-text">
+                  Maximum number of message sources to track (oldest groups are
+                  culled)
                 </p>
               </div>
 

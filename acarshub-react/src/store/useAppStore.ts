@@ -15,6 +15,13 @@
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
 import { create } from "zustand";
+import {
+  checkForDuplicate,
+  checkMultiPartDuplicate,
+  isMultiPartMessage,
+  mergeMultiPartMessage,
+  messageDecoder,
+} from "../services/messageDecoder";
 import type {
   AcarshubVersion,
   AcarsMsg,
@@ -23,13 +30,14 @@ import type {
   DatabaseSize,
   Decoders,
   Labels,
-  Plane,
+  MessageGroup,
   Signal,
   SignalCountData,
   SignalFreqData,
   SystemStatus,
   Terms,
 } from "../types";
+import { applyAlertMatching } from "../utils/alertMatching";
 import { useSettingsStore } from "./useSettingsStore";
 
 /**
@@ -42,7 +50,7 @@ interface AppState {
   setConnected: (connected: boolean) => void;
 
   // Message state
-  messages: Map<string, Plane>; // Key: aircraft identifier (tail/icao/flight)
+  messageGroups: Map<string, MessageGroup>; // Key: primary identifier (flight/tail/icao_hex)
   addMessage: (message: AcarsMsg) => void;
   clearMessages: () => void;
 
@@ -96,11 +104,19 @@ interface AppState {
 }
 
 /**
- * Get maximum number of messages to keep per aircraft from settings
+ * Get maximum number of messages to keep per message group from settings
  * Prevents memory bloat from long-running sessions
  */
-const getMaxMessages = (): number => {
+const getMaxMessagesPerGroup = (): number => {
   return useSettingsStore.getState().settings.data.maxMessagesPerAircraft;
+};
+
+/**
+ * Get maximum number of message groups to keep in memory from settings
+ * Used for culling old groups that haven't been updated recently
+ */
+const getMaxMessageGroups = (): number => {
+  return useSettingsStore.getState().settings.data.maxMessageGroups;
 };
 
 /**
@@ -113,54 +129,206 @@ export const useAppStore = create<AppState>((set) => ({
   setConnected: (connected) => set({ isConnected: connected }),
 
   // Message state
-  messages: new Map(),
+  messageGroups: new Map(),
   addMessage: (message) =>
     set((state) => {
-      const newMessages = new Map(state.messages);
+      // Decode the message if it has text
+      let decodedMessage = messageDecoder.decode(message);
 
-      // Determine aircraft identifier priority: tail > flight > icao
-      const identifier =
-        message.tail || message.flight || message.icao?.toString() || "unknown";
+      // Apply alert matching (check against alert terms)
+      decodedMessage = applyAlertMatching(decodedMessage, state.alertTerms);
 
-      // Get existing plane or create new one
-      const existingPlane = newMessages.get(identifier) || {
+      const newMessageGroups = new Map(state.messageGroups);
+
+      // Extract all possible identifiers from the message
+      const messageKeys = {
+        flight: decodedMessage.flight?.trim() || null,
+        tail: decodedMessage.tail?.trim() || null,
+        icao_hex: decodedMessage.icao_hex?.toUpperCase() || null,
+      };
+
+      // Find existing message group that matches any of the message's identifiers
+      let matchedGroupKey: string | null = null;
+      let matchedGroup: MessageGroup | null = null;
+
+      for (const [groupKey, group] of newMessageGroups) {
+        const matches =
+          (messageKeys.flight &&
+            group.identifiers.includes(messageKeys.flight)) ||
+          (messageKeys.tail && group.identifiers.includes(messageKeys.tail)) ||
+          (messageKeys.icao_hex &&
+            group.identifiers.includes(messageKeys.icao_hex));
+
+        if (matches) {
+          matchedGroupKey = groupKey;
+          matchedGroup = group;
+          break;
+        }
+      }
+
+      // Determine the primary key for this aircraft (priority: flight > tail > icao_hex)
+      const primaryKey =
+        messageKeys.flight ||
+        messageKeys.tail ||
+        messageKeys.icao_hex ||
+        "unknown";
+
+      // If we found a match but the primary key has changed, we need to update the map key
+      if (matchedGroup && matchedGroupKey && matchedGroupKey !== primaryKey) {
+        // Remove old key entry
+        newMessageGroups.delete(matchedGroupKey);
+      }
+
+      // Get the message group data (existing or new)
+      const group = matchedGroup || {
         identifiers: [],
         has_alerts: false,
         num_alerts: 0,
         messages: [],
+        lastUpdated: 0,
       };
 
-      // Update identifiers array with all known identifiers for this aircraft
-      const identifiers = new Set(existingPlane.identifiers);
-      if (message.tail) identifiers.add(message.tail);
-      if (message.flight) identifiers.add(message.flight);
-      if (message.icao) identifiers.add(message.icao.toString());
+      // Merge identifiers: add any new identifiers from this message
+      const identifiers = new Set(group.identifiers);
+      if (messageKeys.flight) identifiers.add(messageKeys.flight);
+      if (messageKeys.tail) identifiers.add(messageKeys.tail);
+      if (messageKeys.icao_hex) identifiers.add(messageKeys.icao_hex);
 
-      // Add new message to beginning of array (newest first)
-      // Limit to user's configured max messages per aircraft
-      const updatedMessages = [message, ...existingPlane.messages].slice(
-        0,
-        getMaxMessages(),
-      );
+      // Duplicate detection and multi-part message handling
+      let isDuplicate = false;
+      let isMultiPart = false;
+      let updatedMessages = [...group.messages];
 
-      // Check for alerts (message.matched flag set by backend)
+      // Check for duplicates or multi-part messages in existing group messages
+      if (matchedGroup && group.messages.length > 0) {
+        for (let i = 0; i < group.messages.length; i++) {
+          const existingMsg = group.messages[i];
+
+          // Check 1: Full field duplicate
+          if (checkForDuplicate(existingMsg, decodedMessage)) {
+            isDuplicate = true;
+            // Update timestamp and increment duplicate counter
+            updatedMessages[i] = {
+              ...existingMsg,
+              timestamp: decodedMessage.timestamp,
+              duplicates: String(Number(existingMsg.duplicates || 0) + 1),
+            };
+            // Move this message to the front
+            const movedMsg = updatedMessages[i];
+            updatedMessages.splice(i, 1);
+            updatedMessages.unshift(movedMsg);
+            break;
+          }
+
+          // Check 2: Text field duplicate
+          if (
+            existingMsg.text &&
+            decodedMessage.text &&
+            existingMsg.text === decodedMessage.text
+          ) {
+            isDuplicate = true;
+            // Update timestamp and increment duplicate counter
+            updatedMessages[i] = {
+              ...existingMsg,
+              timestamp: decodedMessage.timestamp,
+              duplicates: String(Number(existingMsg.duplicates || 0) + 1),
+            };
+            // Move this message to the front
+            const movedMsg = updatedMessages[i];
+            updatedMessages.splice(i, 1);
+            updatedMessages.unshift(movedMsg);
+            break;
+          }
+
+          // Check 3: Multi-part message
+          if (isMultiPartMessage(existingMsg, decodedMessage)) {
+            isMultiPart = true;
+
+            // Check if this specific part already exists
+            if (existingMsg.msgno_parts && decodedMessage.msgno) {
+              const dupCheck = checkMultiPartDuplicate(
+                existingMsg.msgno_parts,
+                decodedMessage.msgno,
+              );
+
+              if (dupCheck.exists) {
+                // This part already exists - just update the duplicate counter
+                updatedMessages[i] = {
+                  ...existingMsg,
+                  timestamp: decodedMessage.timestamp,
+                  msgno_parts: dupCheck.updatedParts,
+                };
+              } else {
+                // New part - merge it
+                updatedMessages[i] = mergeMultiPartMessage(
+                  existingMsg,
+                  decodedMessage,
+                  messageDecoder,
+                );
+              }
+            } else {
+              // First multi-part - merge
+              updatedMessages[i] = mergeMultiPartMessage(
+                existingMsg,
+                decodedMessage,
+                messageDecoder,
+              );
+            }
+
+            // Move this message to the front
+            const movedMsg = updatedMessages[i];
+            updatedMessages.splice(i, 1);
+            updatedMessages.unshift(movedMsg);
+            break;
+          }
+        }
+      }
+
+      // If not a duplicate or multi-part, add as new message
+      if (!isDuplicate && !isMultiPart) {
+        updatedMessages = [decodedMessage, ...updatedMessages];
+      }
+
+      // Limit to user's configured max messages per group
+      updatedMessages = updatedMessages.slice(0, getMaxMessagesPerGroup());
+
+      // Check for alerts (message.matched flag set by client-side alert matching)
       const hasAlerts = updatedMessages.some((msg) => msg.matched);
       const numAlerts = updatedMessages.filter((msg) => msg.matched).length;
 
-      // Update plane data
-      newMessages.set(identifier, {
+      // Update message group data with the primary key and current timestamp
+      newMessageGroups.set(primaryKey, {
         identifiers: Array.from(identifiers),
         has_alerts: hasAlerts,
         num_alerts: numAlerts,
         messages: updatedMessages,
+        lastUpdated: decodedMessage.timestamp || Date.now() / 1000,
       });
 
-      return { messages: newMessages };
+      // Cull old message groups if we exceed the limit
+      const maxGroups = getMaxMessageGroups();
+      if (newMessageGroups.size > maxGroups) {
+        // Sort groups by lastUpdated (oldest first)
+        const sortedGroups = Array.from(newMessageGroups.entries()).sort(
+          (a, b) => a[1].lastUpdated - b[1].lastUpdated,
+        );
+
+        // Remove oldest groups until we're at the limit
+        const groupsToRemove = sortedGroups.slice(
+          0,
+          newMessageGroups.size - maxGroups,
+        );
+        for (const [key] of groupsToRemove) {
+          newMessageGroups.delete(key);
+        }
+      }
+
+      return { messageGroups: newMessageGroups };
     }),
-  clearMessages: () => set({ messages: new Map() }),
+  clearMessages: () => set({ messageGroups: new Map() }),
 
   // Labels and metadata
-  labels: {},
+  labels: { labels: {} },
   setLabels: (labels) => set({ labels }),
 
   // Alert configuration
@@ -213,9 +381,9 @@ export const useAppStore = create<AppState>((set) => ({
  * Helps prevent unnecessary re-renders by selecting only needed state
  */
 export const selectIsConnected = (state: AppState) => state.isConnected;
-export const selectMessages = (state: AppState) => state.messages;
-export const selectCurrentPage = (state: AppState) => state.currentPage;
-export const selectDecoders = (state: AppState) => state.decoders;
+export const selectMessageGroups = (state: AppState) => state.messageGroups;
+export const selectLabels = (state: AppState) => state.labels;
+export const selectSystemStatus = (state: AppState) => state.systemStatus;
 export const selectAlertCount = (state: AppState) => state.alertCount;
 export const selectAdsbEnabled = (state: AppState) =>
   state.decoders?.adsb.enabled ?? false;

@@ -10,6 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@airframes/acars-decoder": "^1.8.3",
     "@fortawesome/fontawesome-svg-core": "^7.1.0",
     "@fortawesome/free-regular-svg-icons": "^7.1.0",
     "@fortawesome/free-solid-svg-icons": "^7.1.0",
@@ -39,6 +40,7 @@
     "sass": "^1.97.3",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.4",
-    "vite": "^7.2.4"
+    "vite": "^7.2.4",
+    "vite-plugin-node-polyfills": "^0.25.0"
   }
 }
