@@ -1929,34 +1929,75 @@ Browser autoplay policies differ significantly between Firefox and Chromium-base
 
 **Deliverable**: Working desktop notifications with permission handling ✅
 
-#### Phase 9.1.3: Alert Badge Redesign 🎯
+#### Phase 9.1.3: Alert Badge & Manual Read Controls 🎯 ✅ COMPLETE
 
-**Goal**: Show unread alerts in navigation badge instead of total
+**Goal**: Add explicit "Mark as Read" controls for alert messages
 
-**Design Decision**: Show unread count only (clean, matches user expectations)
+**Design Decision**: Unread alert count in badge, NO auto-mark, explicit user control only
 
-- ⏳ Track unread alerts using existing `readMessageUids` Set
-- ⏳ Add `getUnreadAlertCount()` to AppStore (filters by matched=true)
-- ⏳ Update Navigation component to show unread count
-- ⏳ Add auto-mark-as-read when Alerts page viewed (2-3 second delay)
-- ⏳ Add "Mark All Read" button to Alerts page header
-- ⏳ Update Alerts page stats to show "X unread / Y total"
-- ⏳ Badge disappears when no unread alerts (clear signal)
+- ✅ Navigation badge shows **unread alerts** (count of alert messages NOT marked as read)
+- ✅ NO auto-mark-as-read when visiting Alerts page
+- ✅ Add "Mark Read" button on each individual alert message
+- ✅ Add "Mark All Alerts Read" button to Alerts page header
+- ✅ Alert stats show "X unread / Y total"
+- ✅ Read messages have visual styling (reduced opacity)
+- ✅ Badge disappears when all alerts marked as read
 
 **Navigation Display**:
 
 ```text
-Alerts (5)  ← Shows unread count
-Alerts      ← Badge hidden when all read
+Alerts (5)   ← Shows UNREAD alert count
+Alerts       ← Badge hidden when all alerts marked as read
 ```
 
 **Alerts Page Stats**:
 
 ```text
-5 unread  |  12 total alerts  |  8 aircraft
+5 unread  |  12 total alerts  |  8 aircraft  |  [Mark All Read]
 ```
 
-**Deliverable**: Unread-aware alert badge in navigation
+**Individual Message Controls**:
+
+- Each alert message has a "Mark Read" button in the header
+- Button changes to "Read" badge after clicking
+- Read messages have reduced opacity (60%)
+
+**Completed Changes**:
+
+- Added `getUnreadAlertCount()` method to AppStore (counts only unread matched messages)
+- Added `markAllAlertsAsRead()` method to AppStore (marks only alert messages as read)
+- Added `showMarkReadButton` prop to MessageCard component
+- Added `showMarkReadButton` prop to MessageGroup component (passes to MessageCard)
+- AlertsPage passes `showMarkReadButton={true}` to all MessageGroup components
+- Navigation badge uses `selectUnreadAlertCount` (unread alerts only, reactive to readMessageUids changes)
+- MessageCard subscribes to `readMessageUids` Set to trigger re-render when read state changes
+- Removed auto-mark-as-read logic from AlertsPage (NO automatic marking)
+- MessageCard header displays "Mark Read" button or "Read" badge based on read state
+- Button disappears immediately when clicked (component re-renders on readMessageUids update)
+- Added `.message-card--read` CSS class (60% opacity for read messages)
+- Added `.message-card__mark-read-btn` styling (green button with 44px touch target)
+- Added `.message-card__read-badge` styling (gray badge for read state)
+- Added `.message-card__header-right` flex container for timestamp/button layout
+- Updated page stats display to show "X unread | Y total alerts | Z aircraft"
+- "Mark All Alerts Read" button only visible when `unreadAlerts > 0`
+- Alert message groups sorted by most recent message timestamp (newest first)
+- Fixed React compiler warning (impure Date.now() call) using useState with lazy initialization
+- All TypeScript strict mode checks passing
+- All Biome checks passing
+- Production build successful (1,314 KB / 414 KB gzipped)
+
+**Key Implementation Details**:
+
+- **Unread Count**: Badge shows only unread alerts, disappears when all marked as read
+- **Explicit Control**: User MUST click "Mark Read" or "Mark All Read" - no auto-mark behavior
+- **Reactive Updates**: MessageCard subscribes to `readMessageUids` Set for immediate UI updates
+- **Visual Feedback**: Read messages appear dimmed (60% opacity) but remain visible
+- **Per-Message Control**: Each alert can be marked individually for granular management
+- **Persistent State**: Read state persists in localStorage via `readMessageUids` Set
+- **Sound/Notification Triggers**: Based on alert matching in addMessage(), NOT count changes
+- **Sorting**: Alert groups sorted by most recent message timestamp (newest alerts at top)
+
+**Deliverable**: Explicit alert read controls with unread badge count and no auto-mark behavior ✅
 
 #### Phase 9.1.4: Alert Term Management UI 📝
 
@@ -2216,10 +2257,15 @@ Before moving to the next phase:
   - ✅ FIXED: Notification body shows only matched terms (no message text)
   - ✅ FIXED: HTML stripping from matched terms (plain text notifications)
   - ✅ FIXED: Time-based filtering prevents notifications on page load
-  - ⏳ Alert terms management UI missing from Settings
-  - ⏳ Backend alert term persistence not implemented (client-side only)
-  - ⏳ Alert badge shows total alerts instead of unread (misleading UX)
-  - ⏳ No "mark as read" functionality for alerts
+  - ✅ FIXED: Alert badge shows unread alert count (Phase 9.1.3 complete)
+  - ✅ FIXED: Badge disappears when all alerts marked as read
+  - ✅ FIXED: Individual "Mark Read" buttons added to each alert message
+  - ✅ FIXED: Mark Read button disappears immediately when clicked (reactive state updates)
+  - ✅ FIXED: Manual "Mark All Alerts Read" button added to Alerts page
+  - ✅ FIXED: "Mark All Read" only visible when unread > 0
+  - ✅ FIXED: No auto-mark behavior - explicit user control only
+  - ⏳ Alert terms management UI missing from Settings (Phase 9.1.4)
+  - ⏳ Backend alert term persistence not implemented (client-side only, Phase 9.1.4)
   - ✅ FIXED: Search queries now properly emit with Flask-SocketIO namespace pattern (third argument)
   - ✅ FIXED: Search and Alerts pages now scrollable (changed `height: 100%` to `min-height: 100%`)
   - ✅ FIXED: Search page card styling (created shared \_message-card.scss and \_message-group.scss components)

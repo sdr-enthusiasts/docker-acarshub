@@ -14,7 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-import { memo } from "react";
+import { memo, useState } from "react";
+import { useAppStore } from "../store/useAppStore";
 import { useSettingsStore } from "../store/useSettingsStore";
 import type { AcarsMsg } from "../types";
 import { formatTimestamp } from "../utils/dateUtils";
@@ -30,6 +31,7 @@ interface MessageCardProps {
   isAlert?: boolean;
   showDuplicates?: string;
   showMessageParts?: string;
+  showMarkReadButton?: boolean;
 }
 
 /**
@@ -49,13 +51,24 @@ export const MessageCard = memo(
     isAlert = false,
     showDuplicates,
     showMessageParts,
+    showMarkReadButton = false,
   }: MessageCardProps) => {
     const settings = useSettingsStore((state) => state.settings);
+    const readMessageUids = useAppStore((state) => state.readMessageUids);
+    const markMessageAsRead = useAppStore((state) => state.markMessageAsRead);
+
+    const isRead = readMessageUids.has(message.uid);
+
+    const handleMarkAsRead = () => {
+      markMessageAsRead(message.uid);
+    };
 
     // Format timestamp using user's preferred format
     // Handle both timestamp and msg_time fields from ACARS messages
+    // Use useState with lazy initialization to get a stable fallback timestamp
+    const [fallbackTimestamp] = useState(() => Math.floor(Date.now() / 1000));
     const timestamp =
-      message.timestamp || message.msg_time || Math.floor(Date.now() / 1000);
+      message.timestamp || message.msg_time || fallbackTimestamp;
     const formattedTimestamp = formatTimestamp(
       timestamp * 1000, // Convert Unix timestamp to milliseconds
       settings.regional.timeFormat,
@@ -77,7 +90,9 @@ export const MessageCard = memo(
     };
 
     return (
-      <div className={`message-card ${isAlert ? "message-card--alert" : ""}`}>
+      <div
+        className={`message-card ${isAlert ? "message-card--alert" : ""} ${isRead ? "message-card--read" : ""}`}
+      >
         {/* Message Header */}
         <div className="message-card__header">
           <div className="message-card__type-badge">
@@ -90,7 +105,22 @@ export const MessageCard = memo(
               <span className="message-station">{message.station_id}</span>
             )}
           </div>
-          <div className="message-card__timestamp">{formattedTimestamp}</div>
+          <div className="message-card__header-right">
+            <div className="message-card__timestamp">{formattedTimestamp}</div>
+            {showMarkReadButton && !isRead && (
+              <button
+                type="button"
+                onClick={handleMarkAsRead}
+                className="message-card__mark-read-btn"
+                title="Mark this alert as read"
+              >
+                Mark Read
+              </button>
+            )}
+            {showMarkReadButton && isRead && (
+              <span className="message-card__read-badge">Read</span>
+            )}
+          </div>
         </div>
 
         {/* Aircraft Identifiers */}

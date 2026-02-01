@@ -47,6 +47,12 @@
     gap: var(--spacing-sm);
   }
 
+  &__header-right {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+  }
+
   &__type-badge {
     display: flex;
     align-items: center;
@@ -58,7 +64,68 @@
     color: var(--color-subtext0);
     font-size: var(--font-size-sm);
     font-weight: 700;
-    padding-right: var(--spacing-md);
+  }
+
+  &__mark-read-btn {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    background: var(--color-green);
+    color: var(--color-base);
+    border: none;
+    border-radius: var(--border-radius-sm);
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    white-space: nowrap;
+
+    &:hover {
+      background: var(--color-teal);
+      transform: translateY(-1px);
+    }
+
+    &:active {
+      transform: translateY(0);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--color-green);
+      outline-offset: 2px;
+    }
+
+    // Mobile: larger touch target
+    @include breakpoint-max(md) {
+      min-height: 44px;
+      padding: var(--spacing-xs) var(--spacing-md);
+    }
+
+    // Reduced motion
+    @media (prefers-reduced-motion: reduce) {
+      transition: none;
+
+      &:hover,
+      &:active {
+        transform: none;
+      }
+    }
+  }
+
+  &__read-badge {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    background: var(--color-overlay0);
+    color: var(--color-text);
+    border-radius: var(--border-radius-sm);
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  // Read state styling
+  &--read {
+    opacity: 0.6;
+
+    .message-card__header {
+      border-bottom-color: var(--color-surface0);
+    }
   }
 
   &__identifiers {

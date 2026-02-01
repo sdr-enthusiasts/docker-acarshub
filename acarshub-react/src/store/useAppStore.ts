@@ -69,8 +69,10 @@ interface AppState {
   markMessageAsRead: (uid: string) => void;
   markMessagesAsRead: (uids: string[]) => void;
   markAllMessagesAsRead: () => void;
+  markAllAlertsAsRead: () => void;
   isMessageRead: (uid: string) => boolean;
   getUnreadCount: () => number;
+  getUnreadAlertCount: () => number;
 
   // Labels and metadata
   labels: Labels;
@@ -649,6 +651,26 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ readMessageUids: newReadUids });
   },
 
+  markAllAlertsAsRead: () => {
+    const messageGroups = get().messageGroups;
+    const newReadUids = new Set(get().readMessageUids);
+
+    // Mark all alert messages in all groups as read
+    for (const group of messageGroups.values()) {
+      for (const message of group.messages) {
+        if (message.matched === true) {
+          newReadUids.add(message.uid);
+        }
+      }
+    }
+
+    saveReadMessageUids(newReadUids);
+    set({ readMessageUids: newReadUids });
+    storeLogger.info("Marked all alert messages as read", {
+      totalReadUids: newReadUids.size,
+    });
+  },
+
   isMessageRead: (uid) => {
     return get().readMessageUids.has(uid);
   },
@@ -668,6 +690,23 @@ export const useAppStore = create<AppState>((set, get) => ({
 
     return unreadCount;
   },
+
+  getUnreadAlertCount: () => {
+    const messageGroups = get().messageGroups;
+    const readUids = get().readMessageUids;
+    let unreadAlertCount = 0;
+
+    for (const group of messageGroups.values()) {
+      for (const message of group.messages) {
+        // Only count unread messages that match alert terms
+        if (message.matched === true && !readUids.has(message.uid)) {
+          unreadAlertCount++;
+        }
+      }
+    }
+
+    return unreadAlertCount;
+  },
 }));
 
 /**
@@ -679,5 +718,7 @@ export const selectMessageGroups = (state: AppState) => state.messageGroups;
 export const selectLabels = (state: AppState) => state.labels;
 export const selectSystemStatus = (state: AppState) => state.systemStatus;
 export const selectAlertCount = (state: AppState) => state.alertCount;
+export const selectUnreadAlertCount = (state: AppState) =>
+  state.getUnreadAlertCount();
 export const selectAdsbEnabled = (state: AppState) =>
   state.decoders?.adsb.enabled ?? false;

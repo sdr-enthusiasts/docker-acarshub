@@ -18,7 +18,7 @@ import { NavLink } from "react-router-dom";
 import acarsLogo from "../assets/images/acarshub.svg";
 import {
   selectAdsbEnabled,
-  selectAlertCount,
+  selectUnreadAlertCount,
   useAppStore,
 } from "../store/useAppStore";
 import { ThemeSwitcher } from "./ThemeSwitcher";
@@ -30,7 +30,7 @@ import { ThemeSwitcher } from "./ThemeSwitcher";
  */
 export const Navigation = () => {
   const adsbEnabled = useAppStore(selectAdsbEnabled);
-  const alertCount = useAppStore(selectAlertCount);
+  const unreadAlertCount = useAppStore(selectUnreadAlertCount);
   const setSettingsOpen = useAppStore((state) => state.setSettingsOpen);
 
   const handleSettingsClick = () => {
@@ -57,8 +57,8 @@ export const Navigation = () => {
           <br />
           <NavLink to="/alerts">
             Alerts
-            {alertCount > 0 && (
-              <span className="alert-count"> ({alertCount})</span>
+            {unreadAlertCount > 0 && (
+              <span className="alert-count"> ({unreadAlertCount})</span>
             )}
           </NavLink>
           <br />
@@ -98,8 +98,8 @@ export const Navigation = () => {
             <li>
               <NavLink to="/alerts">
                 Alerts
-                {alertCount > 0 && (
-                  <span className="alert-count"> ({alertCount})</span>
+                {unreadAlertCount > 0 && (
+                  <span className="alert-count"> ({unreadAlertCount})</span>
                 )}
               </NavLink>
             </li>

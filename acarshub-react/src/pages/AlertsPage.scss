@@ -104,6 +104,52 @@
     }
   }
 
+  // Mark All Read button
+  &__mark-read-button {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    background: var(--color-green);
+    color: var(--color-base);
+    border: none;
+    border-radius: var(--border-radius-sm);
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+
+    &:hover {
+      background: var(--color-teal);
+      transform: translateY(-1px);
+    }
+
+    &:active {
+      transform: translateY(0);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--color-green);
+      outline-offset: 2px;
+    }
+
+    // Mobile: full width touch target
+    @include breakpoint-max(md) {
+      min-height: 44px;
+      min-width: 120px;
+    }
+
+    // Reduced motion
+    @media (prefers-reduced-motion: reduce) {
+      transition: none;
+
+      &:hover {
+        transform: none;
+      }
+
+      &:active {
+        transform: none;
+      }
+    }
+  }
+
   // Messages container
   &__messages {
     display: flex;

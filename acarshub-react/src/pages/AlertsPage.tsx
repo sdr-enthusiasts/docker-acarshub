@@ -30,15 +30,17 @@ import "./AlertsPage.scss";
  * - Shows only messages with alert matches
  * - Displays matched terms highlighting
  * - Sound notifications for new alerts (handled by global AlertSoundManager)
- * - Statistics (total alerts, unique aircraft)
+ * - Statistics (unread/total alerts, unique aircraft)
+ * - Manual "Mark All Read" button
+ * - Individual "Mark Read" buttons per message
  * - Mobile-first responsive design
  */
 export const AlertsPage = () => {
   const setCurrentPage = useAppStore((state) => state.setCurrentPage);
   const messageGroups = useAppStore((state) => state.messageGroups);
   const alertTerms = useAppStore((state) => state.alertTerms);
-
-  const setAlertCount = useAppStore((state) => state.setAlertCount);
+  const readMessageUids = useAppStore((state) => state.readMessageUids);
+  const markAllAlertsAsRead = useAppStore((state) => state.markAllAlertsAsRead);
 
   // Filter message groups to only show those with alerts
   const alertMessageGroups = useMemo(() => {
@@ -64,9 +66,10 @@ export const AlertsPage = () => {
     return filtered;
   }, [messageGroups]);
 
-  // Count total alert messages and unique aircraft
+  // Count total alert messages, unread alerts, and unique aircraft
   const stats = useMemo(() => {
     let totalAlerts = 0;
+    let unreadAlerts = 0;
     const uniqueAircraft = new Set<string>();
 
     for (const group of alertMessageGroups.values()) {
@@ -75,18 +78,22 @@ export const AlertsPage = () => {
       if (group.identifiers.length > 0) {
         uniqueAircraft.add(group.identifiers[0]);
       }
+      // Count unread alerts
+      for (const message of group.messages) {
+        if (!readMessageUids.has(message.uid)) {
+          unreadAlerts++;
+        }
+      }
     }
 
     return {
       totalAlerts,
+      unreadAlerts,
       uniqueAircraft: uniqueAircraft.size,
     };
-  }, [alertMessageGroups]);
+  }, [alertMessageGroups, readMessageUids]);
 
-  // Update alert count when stats change
-  useEffect(() => {
-    setAlertCount(stats.totalAlerts);
-  }, [stats.totalAlerts, setAlertCount]);
+  // No longer needed - alertCount is calculated in AppStore addMessage()
 
   useEffect(() => {
     setCurrentPage("Alerts");
@@ -95,14 +102,28 @@ export const AlertsPage = () => {
       termCount: alertTerms.terms.length,
       ignoreCount: alertTerms.ignore.length,
       alertGroups: alertMessageGroups.size,
+      unreadAlerts: stats.unreadAlerts,
     });
-  }, [setCurrentPage, alertTerms, alertMessageGroups.size]);
+  }, [setCurrentPage, alertTerms, alertMessageGroups.size, stats.unreadAlerts]);
 
-  // Convert messageGroups Map to array for rendering
-  const alertGroupsArray = useMemo(
-    () => Array.from(alertMessageGroups.values()),
-    [alertMessageGroups],
-  );
+  // Convert messageGroups Map to array and sort by most recent message (newest first)
+  const alertGroupsArray = useMemo(() => {
+    const groups = Array.from(alertMessageGroups.values());
+    return groups.sort((a, b) => {
+      // Get the most recent message timestamp from each group
+      const aTimestamp = a.messages[0]?.timestamp || 0;
+      const bTimestamp = b.messages[0]?.timestamp || 0;
+      // Sort descending (newest first)
+      return bTimestamp - aTimestamp;
+    });
+  }, [alertMessageGroups]);
+
+  const handleMarkAllRead = () => {
+    markAllAlertsAsRead();
+    uiLogger.info("User manually marked all alerts as read", {
+      count: stats.unreadAlerts,
+    });
+  };
 
   return (
     <div className="page alerts-page">
@@ -111,16 +132,30 @@ export const AlertsPage = () => {
 
         <div className="page__stats">
           <span className="stat">
-            <strong>{stats.totalAlerts}</strong> alert
+            <strong>{stats.unreadAlerts}</strong> unread
+          </span>
+          <span className="stat-separator">|</span>
+          <span className="stat">
+            <strong>{stats.totalAlerts}</strong> total alert
             {stats.totalAlerts !== 1 ? "s" : ""}
           </span>
+          <span className="stat-separator">|</span>
           <span className="stat">
             <strong>{stats.uniqueAircraft}</strong> aircraft
           </span>
-          <span className="stat">
-            <strong>{alertTerms.terms.length}</strong> active term
-            {alertTerms.terms.length !== 1 ? "s" : ""}
-          </span>
+          {stats.unreadAlerts > 0 && (
+            <>
+              <span className="stat-separator">|</span>
+              <button
+                type="button"
+                onClick={handleMarkAllRead}
+                className="alerts-page__mark-read-button"
+                title="Mark all alerts as read"
+              >
+                Mark All Read
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -181,6 +216,7 @@ export const AlertsPage = () => {
               <MessageGroup
                 key={plane.identifiers[0] || "unknown"}
                 plane={plane}
+                showMarkReadButton={true}
               />
             ))}
           </div>

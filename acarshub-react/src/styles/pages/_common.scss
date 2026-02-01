@@ -74,6 +74,12 @@
   align-items: center;
 }
 
+.stat-separator {
+  color: var(--color-overlay1);
+  font-weight: $font-weight-normal;
+  user-select: none;
+}
+
 .page__stat {
   display: flex;
   flex-direction: column;
