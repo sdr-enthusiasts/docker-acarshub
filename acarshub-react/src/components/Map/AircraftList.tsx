@@ -15,6 +15,7 @@
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
 import { useMemo, useState } from "react";
+import { useAppStore } from "../../store/useAppStore";
 import { useSettingsStore } from "../../store/useSettingsStore";
 import type { PairedAircraft } from "../../utils/aircraftPairing";
 import {
@@ -66,6 +67,10 @@ export function AircraftList({
   const altitudeUnit = useSettingsStore(
     (state) => state.settings.regional.altitudeUnit,
   );
+  const readMessageUids = useAppStore((state) => state.readMessageUids);
+  const markAllMessagesAsRead = useAppStore(
+    (state) => state.markAllMessagesAsRead,
+  );
 
   // Filter and sort state (persisted to localStorage)
   const [textFilter, setTextFilter] = useState(() => {
@@ -79,6 +84,11 @@ export function AircraftList({
 
   const [showAlertsOnly, setShowAlertsOnly] = useState(() => {
     const saved = localStorage.getItem("aircraftList.showAlertsOnly");
+    return saved === "true";
+  });
+
+  const [showUnreadOnly, setShowUnreadOnly] = useState(() => {
+    const saved = localStorage.getItem("aircraftList.showUnreadOnly");
     return saved === "true";
   });
 
@@ -112,6 +122,15 @@ export function AircraftList({
     localStorage.setItem("aircraftList.showAlertsOnly", String(value));
   };
 
+  const handleShowUnreadOnlyChange = (value: boolean) => {
+    setShowUnreadOnly(value);
+    localStorage.setItem("aircraftList.showUnreadOnly", String(value));
+  };
+
+  const handleMarkAllAsRead = () => {
+    markAllMessagesAsRead();
+  };
+
   const handleSortChange = (field: SortField) => {
     if (sortField === field) {
       // Toggle direction if same field
@@ -126,6 +145,21 @@ export function AircraftList({
       localStorage.setItem("aircraftList.sortDirection", "asc");
     }
   };
+
+  // Calculate total unread messages
+  const totalUnreadCount = useMemo(() => {
+    let count = 0;
+    for (const a of aircraft) {
+      if (a.matchedGroup) {
+        for (const msg of a.matchedGroup.messages) {
+          if (!readMessageUids.has(msg.uid)) {
+            count++;
+          }
+        }
+      }
+    }
+    return count;
+  }, [aircraft, readMessageUids]);
 
   // Filter aircraft
   const filteredAircraft = useMemo(() => {
@@ -159,8 +193,25 @@ export function AircraftList({
       filtered = filtered.filter((a) => a.hasAlerts);
     }
 
+    // Unread-only filter
+    if (showUnreadOnly) {
+      filtered = filtered.filter((a) => {
+        if (!a.matchedGroup) return false;
+        return a.matchedGroup.messages.some(
+          (msg) => !readMessageUids.has(msg.uid),
+        );
+      });
+    }
+
     return filtered;
-  }, [aircraft, textFilter, showAcarsOnly, showAlertsOnly]);
+  }, [
+    aircraft,
+    textFilter,
+    showAcarsOnly,
+    showAlertsOnly,
+    showUnreadOnly,
+    readMessageUids,
+  ]);
 
   // Sort aircraft
   const sortedAircraft = useMemo(() => {
@@ -219,12 +270,15 @@ export function AircraftList({
     setTextFilter("");
     setShowAcarsOnly(false);
     setShowAlertsOnly(false);
+    setShowUnreadOnly(false);
     localStorage.removeItem("aircraftList.textFilter");
     localStorage.removeItem("aircraftList.showAcarsOnly");
     localStorage.removeItem("aircraftList.showAlertsOnly");
+    localStorage.removeItem("aircraftList.showUnreadOnly");
   };
 
-  const hasActiveFilters = textFilter || showAcarsOnly || showAlertsOnly;
+  const hasActiveFilters =
+    textFilter || showAcarsOnly || showAlertsOnly || showUnreadOnly;
 
   return (
     <div className="aircraft-list">
@@ -260,7 +314,7 @@ export function AircraftList({
               checked={showAcarsOnly}
               onChange={(e) => handleShowAcarsOnlyChange(e.target.checked)}
             />
-            <span>ACARS Only</span>
+            <span>ACARS</span>
           </label>
 
           <label className="aircraft-list__filter-toggle">
@@ -269,19 +323,41 @@ export function AircraftList({
               checked={showAlertsOnly}
               onChange={(e) => handleShowAlertsOnlyChange(e.target.checked)}
             />
-            <span>Alerts Only</span>
+            <span>Alerts</span>
+          </label>
+
+          <label className="aircraft-list__filter-toggle">
+            <input
+              type="checkbox"
+              checked={showUnreadOnly}
+              onChange={(e) => handleShowUnreadOnlyChange(e.target.checked)}
+            />
+            <span>Unread</span>
           </label>
         </div>
 
-        {hasActiveFilters && (
-          <button
-            type="button"
-            className="aircraft-list__clear-filters"
-            onClick={handleClearFilters}
-          >
-            Clear Filters
-          </button>
-        )}
+        <div className="aircraft-list__actions">
+          {totalUnreadCount > 0 && (
+            <button
+              type="button"
+              className="aircraft-list__mark-all-read"
+              onClick={handleMarkAllAsRead}
+              title={`Mark ${totalUnreadCount} message${totalUnreadCount === 1 ? "" : "s"} as read`}
+            >
+              Mark All Read ({totalUnreadCount})
+            </button>
+          )}
+
+          {hasActiveFilters && (
+            <button
+              type="button"
+              className="aircraft-list__clear-filters"
+              onClick={handleClearFilters}
+            >
+              Clear Filters
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Aircraft table */}

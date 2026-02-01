@@ -55,6 +55,14 @@ interface AppState {
   addMessage: (message: AcarsMsg) => void;
   clearMessages: () => void;
 
+  // Unread message tracking
+  readMessageUids: Set<string>; // Set of message UIDs that have been read
+  markMessageAsRead: (uid: string) => void;
+  markMessagesAsRead: (uids: string[]) => void;
+  markAllMessagesAsRead: () => void;
+  isMessageRead: (uid: string) => boolean;
+  getUnreadCount: () => number;
+
   // Labels and metadata
   labels: Labels;
   setLabels: (labels: Labels) => void;
@@ -125,10 +133,40 @@ const getMaxMessageGroups = (): number => {
 };
 
 /**
+ * Load read message UIDs from localStorage
+ */
+const loadReadMessageUids = (): Set<string> => {
+  try {
+    const stored = localStorage.getItem("acarshub.readMessages");
+    if (stored) {
+      const parsed = JSON.parse(stored) as string[];
+      return new Set(parsed);
+    }
+  } catch (error) {
+    console.error("Failed to load read messages from localStorage:", error);
+  }
+  return new Set();
+};
+
+/**
+ * Save read message UIDs to localStorage
+ */
+const saveReadMessageUids = (readUids: Set<string>) => {
+  try {
+    localStorage.setItem(
+      "acarshub.readMessages",
+      JSON.stringify(Array.from(readUids)),
+    );
+  } catch (error) {
+    console.error("Failed to save read messages to localStorage:", error);
+  }
+};
+
+/**
  * Main Application Store
  * Uses Zustand for reactive state management
  */
-export const useAppStore = create<AppState>((set) => ({
+export const useAppStore = create<AppState>((set, get) => ({
   // Connection state
   isConnected: false,
   setConnected: (connected) => set({ isConnected: connected }),
@@ -137,6 +175,12 @@ export const useAppStore = create<AppState>((set) => ({
   messageGroups: new Map(),
   addMessage: (message) =>
     set((state) => {
+      // Generate UID if not present (backend doesn't send UIDs)
+      // Format: timestamp-random to ensure uniqueness
+      if (!message.uid) {
+        message.uid = `${message.timestamp || Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+      }
+
       // Decode the message if it has text
       let decodedMessage = messageDecoder.decode(message);
 
@@ -387,6 +431,60 @@ export const useAppStore = create<AppState>((set) => ({
   setCurrentPage: (page) => set({ currentPage: page }),
   settingsOpen: false,
   setSettingsOpen: (open) => set({ settingsOpen: open }),
+
+  // Unread message tracking
+  readMessageUids: loadReadMessageUids(),
+
+  markMessageAsRead: (uid) => {
+    const newReadUids = new Set(get().readMessageUids);
+    newReadUids.add(uid);
+    saveReadMessageUids(newReadUids);
+    set({ readMessageUids: newReadUids });
+  },
+
+  markMessagesAsRead: (uids) => {
+    const newReadUids = new Set(get().readMessageUids);
+    for (const uid of uids) {
+      newReadUids.add(uid);
+    }
+    saveReadMessageUids(newReadUids);
+    set({ readMessageUids: newReadUids });
+  },
+
+  markAllMessagesAsRead: () => {
+    const messageGroups = get().messageGroups;
+    const newReadUids = new Set(get().readMessageUids);
+
+    // Mark all messages in all groups as read
+    for (const group of messageGroups.values()) {
+      for (const message of group.messages) {
+        newReadUids.add(message.uid);
+      }
+    }
+
+    saveReadMessageUids(newReadUids);
+    set({ readMessageUids: newReadUids });
+  },
+
+  isMessageRead: (uid) => {
+    return get().readMessageUids.has(uid);
+  },
+
+  getUnreadCount: () => {
+    const messageGroups = get().messageGroups;
+    const readUids = get().readMessageUids;
+    let unreadCount = 0;
+
+    for (const group of messageGroups.values()) {
+      for (const message of group.messages) {
+        if (!readUids.has(message.uid)) {
+          unreadCount++;
+        }
+      }
+    }
+
+    return unreadCount;
+  },
 }));
 
 /**

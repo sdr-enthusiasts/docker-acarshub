@@ -82,7 +82,7 @@ export function MapControls() {
           icon={faEnvelope}
           active={mapSettings.showOnlyUnread}
           onClick={() => setShowOnlyUnread(!mapSettings.showOnlyUnread)}
-          tooltip="Show Only Unread Messages"
+          tooltip="Show Only Aircraft with Unread Messages"
         />
       </div>
     </div>

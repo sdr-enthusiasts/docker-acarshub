@@ -15,6 +15,7 @@
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
 import { useEffect, useRef } from "react";
+import { useAppStore } from "../../store/useAppStore";
 import type { MessageGroup as MessageGroupType } from "../../types";
 import { MessageGroup } from "../MessageGroup";
 import "../../styles/components/_aircraft-messages-modal.scss";
@@ -45,6 +46,29 @@ export function AircraftMessagesModal({
 }: AircraftMessagesModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const markMessagesAsRead = useAppStore((state) => state.markMessagesAsRead);
+
+  // Track which message group we've already marked as read
+  const lastMarkedGroupRef = useRef<string | null>(null);
+
+  // Mark all messages in this group as read when modal opens
+  // biome-ignore lint/correctness/useExhaustiveDependencies: markMessagesAsRead creates new reference on every store update, causing infinite loop if included
+  useEffect(() => {
+    if (messageGroup && messageGroup.messages.length > 0) {
+      // Create a stable identifier for this message group
+      const groupId = messageGroup.identifiers.join(",");
+
+      // Only mark as read if this is a different group than last time
+      if (groupId !== lastMarkedGroupRef.current) {
+        const messageUids = messageGroup.messages.map((msg) => msg.uid);
+        markMessagesAsRead(messageUids);
+        lastMarkedGroupRef.current = groupId;
+      }
+    } else if (!messageGroup) {
+      // Reset when modal closes
+      lastMarkedGroupRef.current = null;
+    }
+  }, [messageGroup]);
 
   // Handle Escape key
   useEffect(() => {

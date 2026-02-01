@@ -76,9 +76,11 @@ export function AircraftMarkers({
 }: AircraftMarkersProps = {}) {
   const adsbAircraft = useAppStore((state) => state.adsbAircraft);
   const messageGroups = useAppStore((state) => state.messageGroups);
+  const readMessageUids = useAppStore((state) => state.readMessageUids);
   const altitudeUnit = useSettingsStore(
     (state) => state.settings.regional.altitudeUnit,
   );
+  const mapSettings = useSettingsStore((state) => state.settings.map);
   const [localHoveredAircraft, setLocalHoveredAircraft] =
     useState<TooltipState | null>(null);
   const [selectedMessageGroup, setSelectedMessageGroup] =
@@ -90,11 +92,29 @@ export function AircraftMarkers({
     return pairADSBWithACARSMessages(aircraft, messageGroups);
   }, [adsbAircraft, messageGroups]);
 
+  // Filter aircraft based on map settings
+  const filteredPairedAircraft = useMemo(() => {
+    let filtered = pairedAircraft;
+
+    // Filter: Show only unread messages
+    if (mapSettings.showOnlyUnread) {
+      filtered = filtered.filter((aircraft) => {
+        if (!aircraft.matchedGroup) return false;
+        // Check if aircraft has at least one unread message
+        return aircraft.matchedGroup.messages.some(
+          (msg) => !readMessageUids.has(msg.uid),
+        );
+      });
+    }
+
+    return filtered;
+  }, [pairedAircraft, mapSettings.showOnlyUnread, readMessageUids]);
+
   // Prepare marker data using useMemo to avoid infinite loops
   const aircraftMarkers = useMemo(() => {
     const markers: AircraftMarkerData[] = [];
 
-    for (const aircraft of pairedAircraft) {
+    for (const aircraft of filteredPairedAircraft) {
       // Skip aircraft without position
       if (aircraft.lat === undefined || aircraft.lon === undefined) {
         continue;
@@ -133,7 +153,7 @@ export function AircraftMarkers({
     }
 
     return markers;
-  }, [pairedAircraft]);
+  }, [filteredPairedAircraft]);
 
   // Handle marker click
   const handleMarkerClick = (aircraft: PairedAircraft) => {

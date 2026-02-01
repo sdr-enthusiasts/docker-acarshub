@@ -1191,6 +1191,8 @@ Target modern browsers with ES6+ support:
 - ❌ Show/hide data blocks toggle (removed - not implemented)
 - ❌ Show/hide extended data blocks toggle (removed - not implemented)
 - ✅ Show/hide NEXRAD overlay toggle (MapControls component)
+- ✅ **Show only unread messages toggle** (aircraft list filter)
+- ✅ **Mark all messages as read action** (aircraft list button with unread count)
 
 #### Aircraft List & Sorting ✅ COMPLETE
 
@@ -1206,7 +1208,12 @@ Target modern browsers with ES6+ support:
 - ✅ Display ACARS message count per aircraft (in hover tooltip)
 - ✅ Show alert indicators for aircraft with alerts (color coding + tooltip)
 - ✅ Click aircraft → open messages modal (AircraftMessagesModal component)
-- ⏳ Unread message tracking
+- ✅ **Unread message tracking** (complete system with localStorage persistence)
+  - ✅ Read state tracked in AppStore (Set of message UIDs)
+  - ✅ Automatic marking as read when modal opened
+  - ✅ Mark all messages as read button with live unread count
+  - ✅ Unread-only filter in aircraft list
+  - ✅ Persistent read state across page refreshes
 - ✅ Real-time updates via Socket.IO (ADS-B positions via `adsb_aircraft` event)
 
 #### Settings Integration
@@ -1273,8 +1280,26 @@ Target modern browsers with ES6+ support:
 - ✅ **Station marker complete** (pulsing animation, theme-aware, accessible)
 - ✅ **Range rings complete** (dynamic sizing, 70% margin, cardinal labels, privacy protection)
 - ✅ **Map controls complete** (MapControls component with privacy-aware toggle buttons)
-- ✅ NEXRAD overlay complete (WMS raster tiles, auto-refresh, timestamp display)
-- 🔜 Next: Complete remaining map features (unread messages, mark as read)
+- ✅ **NEXRAD overlay complete** (WMS raster tiles, auto-refresh, timestamp display)
+- ✅ **Unread message tracking complete** (AppStore integration, auto-mark read, filters, localStorage)
+- ✅ **Phase 8: Live Map COMPLETE** 🎉
+
+**All Live Map features implemented:**
+
+- High-performance MapLibre GL JS rendering
+- Catppuccin-themed map styles (Mocha/Latte)
+- Aircraft markers with rotation and color coding
+- ADS-B ↔ ACARS pairing (hex > callsign > tail)
+- Hover tooltips with aircraft details
+- Click handlers to open message modals
+- Sortable, filterable aircraft list sidebar
+- Station marker with pulsing animation
+- Dynamic range rings with privacy protection
+- NEXRAD weather radar overlay
+- Unread message tracking system
+- All filters persist to localStorage
+- Mobile-first responsive design
+- Full accessibility support
 
 ### Phase 9: Alerts and Search
 

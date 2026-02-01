@@ -134,8 +134,51 @@
   }
 }
 
+.aircraft-list__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.aircraft-list__mark-all-read {
+  padding: 0.5rem 1rem;
+  background-color: var(--color-blue);
+  border: 1px solid var(--color-blue);
+  border-radius: 6px;
+  color: var(--color-base);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+
+  &:hover {
+    background-color: var(--color-sapphire);
+    border-color: var(--color-sapphire);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(var(--color-blue-rgb), 0.3);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &:hover {
+      transform: none;
+    }
+
+    &:active {
+      transform: none;
+    }
+  }
+}
+
 .aircraft-list__clear-filters {
-  align-self: flex-start;
   padding: 0.5rem 1rem;
   background-color: var(--color-surface0);
   border: 1px solid var(--color-surface2);
