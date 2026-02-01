@@ -157,9 +157,12 @@ export const LiveMessagesPage = () => {
               // Identifiers
               fieldMatches(msg.tail, "tail") ||
               fieldMatches(msg.flight, "flight") ||
+              fieldMatches(msg.icao_flight, "icao_flight") ||
+              fieldMatches(msg.iata_flight, "iata_flight") ||
+              fieldMatches(msg.airline, "airline") ||
+              fieldMatches(msg.flight_number, "flight_number") ||
               numberMatches(msg.icao, "icao") ||
               fieldMatches(msg.icao_hex, "icao_hex") ||
-              fieldMatches(msg.icao_flight, "icao_flight") ||
               // Message metadata
               fieldMatches(msg.label, "label") ||
               fieldMatches(msg.label_type, "label_type") ||

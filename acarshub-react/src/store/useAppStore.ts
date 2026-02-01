@@ -141,8 +141,12 @@ export const useAppStore = create<AppState>((set) => ({
       const newMessageGroups = new Map(state.messageGroups);
 
       // Extract all possible identifiers from the message
+      // Prefer icao_flight (normalized ICAO format) over flight (could be IATA or ICAO)
       const messageKeys = {
-        flight: decodedMessage.flight?.trim() || null,
+        flight:
+          decodedMessage.icao_flight?.trim() ||
+          decodedMessage.flight?.trim() ||
+          null,
         tail: decodedMessage.tail?.trim() || null,
         icao_hex: decodedMessage.icao_hex?.toUpperCase() || null,
       };

@@ -68,10 +68,13 @@ The search is **comprehensive** and checks nearly every field in the ACARS messa
 ### Identifiers
 
 - `tail` - Aircraft registration
-- `flight` - Flight number/callsign
+- `flight` - Flight number/callsign (original format)
+- `icao_flight` - ICAO flight identifier (normalized ICAO format, e.g., "UAL123")
+- `iata_flight` - IATA flight identifier (normalized IATA format, e.g., "UA123")
+- `airline` - Airline name (e.g., "United Airlines")
+- `flight_number` - Flight number only (e.g., "123")
 - `icao` - ICAO address (numeric)
 - `icao_hex` - ICAO address (hex string)
-- `icao_flight` - ICAO flight identifier
 
 ### Message Metadata
 

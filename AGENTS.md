@@ -985,15 +985,33 @@ Target modern browsers with ES6+ support:
 - **Accessibility**: WCAG AA compliant with keyboard navigation
 - **Performance**: Bounded memory usage, efficient culling, handles sustained load
 
+**Backend Refactoring** ✅:
+
+- **flight_finder() cleanup** (rootfs/webapp/acarshub_helpers.py):
+  - **Removed**: All HTML generation, tooltips, and ADSB URL embedding
+  - **Removed**: `url` parameter and `hex_code` parameter
+  - **Now returns**: Clean data tuple `(airline_name, iata_flight, icao_flight)`
+  - **Breaking change**: Always returns structured data, no URL generation
+  - **Benefits**: Complete separation of data and presentation layers
+- **New JSON fields** sent to frontend:
+  - `airline` - Airline name (e.g., "United Airlines")
+  - `iata_flight` - IATA format flight number (e.g., "UA123")
+  - `icao_flight` - ICAO format flight number (e.g., "UAL123")
+- **Display logic**:
+  - Top identifiers section: Shows ICAO flight only (clean, no airline)
+  - Message fields section: Shows IATA callsign and airline name separately
+  - Search: All three fields searchable (icao_flight, iata_flight, airline)
+  - Grouping: Uses icao_flight for proper message grouping (IATA/ICAO variants group together)
+
 **Documentation**:
 
 - `PAUSE_FUNCTIONALITY.md` - Complete pause/resume implementation details
 - `MESSAGE_GROUPS_AND_CULLING.md` - Critical architecture for message groups and memory management
 - `DECODER_FEATURES.md` - Complete decoder implementation (decodedText, libacars, duplicates, multi-part)
-- `SEARCH_FUNCTIONALITY.md` - Comprehensive text search across 40+ message fields
+- `SEARCH_FUNCTIONALITY.md` - Comprehensive text search across 40+ message fields (includes airline, iata_flight, icao_flight)
 - `acarshub-react/src/utils/alertMatching.ts` - Client-side alert matching implementation
 
-**Deliverable**: Fully functional message viewer with proper architecture ✅
+**Deliverable**: Fully functional message viewer with proper architecture and clean backend API ✅
 
 ### Phase 8: Live Map
 

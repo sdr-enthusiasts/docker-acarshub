@@ -107,18 +107,14 @@ def update_keys(json_message):
     if has_specified_key(json_message, "icao"):
         json_message["icao_hex"] = try_format_as_int(json_message["icao"], "icao")
 
-    if has_specified_key(json_message, "flight") and has_specified_key(
-        json_message, "icao_hex"
-    ):
-        json_message["flight"], json_message["icao_flight"] = flight_finder(
-            callsign=json_message["flight"], hex_code=json_message["icao_hex"]
+    if has_specified_key(json_message, "flight"):
+        airline, iata_flight, icao_flight, flight_number = flight_finder(
+            callsign=json_message["flight"]
         )
-    elif has_specified_key(json_message, "flight"):
-        json_message["flight"], json_message["icao_flight"] = flight_finder(
-            callsign=json_message["flight"], url=False
-        )
-    elif has_specified_key(json_message, "icao_hex"):
-        json_message["icao_url"] = flight_finder(hex_code=json_message["icao_hex"])
+        json_message["airline"] = airline
+        json_message["iata_flight"] = iata_flight
+        json_message["icao_flight"] = icao_flight
+        json_message["flight_number"] = flight_number
 
     if has_specified_key(json_message, "toaddr"):
         json_message["toaddr_hex"] = try_format_as_int(json_message["toaddr"], "toaddr")
@@ -164,13 +160,17 @@ def try_format_as_int(value, key, as_type="X"):
         return "0"
 
 
-def flight_finder(callsign=None, hex_code=None, url=True):
+def flight_finder(callsign=None):
+    """
+    Resolve flight callsign to airline name, IATA flight, ICAO flight, and flight number.
 
-    # If there is only a hex code, we'll return just the ADSB url
-    # Front end will format correctly.
+    Args:
+        callsign: Flight callsign in either IATA (e.g., "UA123") or ICAO (e.g., "UAL123") format
 
-    if callsign is None and hex_code is not None:
-        return f"{ADSB_URL}{hex_code}"
+    Returns:
+        Tuple of (airline_name, iata_flight, icao_flight, flight_number)
+        Returns (None, None, None, None) if callsign is None or invalid
+    """
 
     if callsign is not None:
         # Check the ICAO DB to see if we know what it is
@@ -183,46 +183,25 @@ def flight_finder(callsign=None, hex_code=None, url=True):
         # check the first three characters for letters
         icao_flight = ""
         iata_flight = ""
-
-        found_flight = False
+        airline = None
 
         if callsign[:3].isalpha():
+            # ICAO format (e.g., UAL123)
             icao_flight = callsign
             iata, airline = acarshub_database.find_airline_code_from_icao(callsign[:3])
             flight_number = callsign[3:]
             iata_flight = iata + flight_number
-            found_flight = True
         else:
+            # IATA format (e.g., UA123)
             icao, airline = acarshub_database.find_airline_code_from_iata(callsign[:2])
             flight_number = callsign[2:]
             icao_flight = icao + flight_number
             iata_flight = callsign
-            found_flight = True
-        tooltip_text = ""
 
-        if found_flight:
-            html = f"<strong>{icao_flight}/{iata_flight}</strong> "
-            tooltip_text = (
-                f"<p>The aircraft's callsign.</p>{airline} Flight {flight_number}"
-            )
-        else:
-            html = f"<strong>{callsign}</strong> "
-            tooltip_text = f"<p>The aircraft's callsign was not found in the database for decoding.</p>{icao_flight}"
-
-        # If the iata and icao variables are not equal, airline was found in the database and we'll add in the tool-tip for the decoded airline
-        # Otherwise, no tool-tip, no FA link, and use the IATA code for display
-        if url:
-            return (
-                f'<span class="flight-tooltip" data-jbox-content="{tooltip_text}">Flight: <strong><a href="{ADSB_URL}{hex_code}" target="_blank">{html}</a></strong></span>',
-                icao_flight,
-            )
-        else:
-            return (
-                f'<span class="flight-tooltip" data-jbox-content="{tooltip_text}">Flight: {html}</span>',
-                icao_flight,
-            )
-    else:  # We should never run in to this condition, I don't think, but we'll add a case for it
-        return ("Flight: Error", None)
+        return (airline, iata_flight, icao_flight, flight_number)
+    else:
+        # We should never run in to this condition, I don't think, but we'll add a case for it
+        return (None, None, None, None)
 
 
 def handle_message(message=None):

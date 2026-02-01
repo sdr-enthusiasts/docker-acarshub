@@ -271,6 +271,9 @@ export interface AcarsMsg {
   icao_hex?: string;
   decoded_msg?: string;
   icao_flight?: string;
+  airline?: string;
+  iata_flight?: string;
+  flight_number?: string;
 }
 
 // Message Group Types
@@ -670,6 +673,13 @@ export type DateFormat =
   | "ymd" // YYYY-MM-DD (ISO)
   | "long" // January 1, 2024
   | "short"; // Jan 1, 2024
+
+/**
+ * Timezone preference
+ * - local: Use browser's local timezone
+ * - utc: Use UTC timezone
+ */
+export type Timezone = "local" | "utc";
 
 /**
  * Display density options

@@ -566,24 +566,28 @@
   &__timestamp {
     color: var(--color-subtext0);
     font-size: var(--font-size-sm);
-    font-family: var(--font-mono);
+    font-weight: 700;
+    padding-right: var(--spacing-md);
   }
 
   &__identifiers {
     display: flex;
     flex-wrap: wrap;
-    gap: var(--spacing-md);
-    margin-bottom: var(--spacing-md);
-    padding-bottom: var(--spacing-sm);
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-sm);
+    padding-bottom: var(--spacing-xs);
+    padding-left: var(--spacing-md);
     border-bottom: 1px solid var(--color-surface1);
   }
 
   &__fields {
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-sm);
+    gap: var(--spacing-xs);
     margin: 0;
-    padding: 0;
+    padding-left: var(--spacing-md);
+    padding-right: var(--spacing-md);
+    padding-bottom: var(--spacing-sm);
   }
 
   &__content {
@@ -645,7 +649,7 @@
 .message-station {
   color: var(--color-subtext1);
   font-size: var(--font-size-sm);
-  font-family: var(--font-mono);
+  font-weight: 700;
 }
 
 .identifier {

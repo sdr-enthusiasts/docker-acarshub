@@ -60,6 +60,7 @@ export const MessageCard = memo(
       timestamp * 1000, // Convert Unix timestamp to milliseconds
       settings.regional.timeFormat,
       settings.regional.dateFormat,
+      settings.regional.timezone,
     );
 
     // Message type badge color mapping
@@ -100,10 +101,13 @@ export const MessageCard = memo(
               <span className="identifier__value">{message.tail}</span>
             </div>
           )}
-          {message.flight && (
+          {(message.icao_flight || message.flight) && (
             <div className="identifier">
               <span className="identifier__label">Flight:</span>
-              <span className="identifier__value">{message.flight}</span>
+              <span className="identifier__value">
+                {message.icao_flight || message.flight}
+                {message.airline && ` ${message.airline}`}
+              </span>
             </div>
           )}
           {message.icao && (
@@ -145,6 +149,25 @@ export const MessageCard = memo(
               </dd>
             </div>
           )}
+
+          {/* IATA Callsign */}
+          {message.iata_flight &&
+            message.iata_flight !== message.icao_flight && (
+              <div className="message-field">
+                <dt className="message-field__label">IATA Callsign</dt>
+                <dd className="message-field__value">{message.iata_flight}</dd>
+              </div>
+            )}
+
+          {/* Airline */}
+          {message.airline &&
+            message.airline !== "Unknown Airline" &&
+            message.airline !== "UNKNOWN AIRLINE" && (
+              <div className="message-field">
+                <dt className="message-field__label">Airline</dt>
+                <dd className="message-field__value">{message.airline}</dd>
+              </div>
+            )}
 
           {/* Addresses */}
           {message.toaddr && (

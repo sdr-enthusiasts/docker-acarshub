@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-import type { DateFormat, TimeFormat } from "../types";
+import type { DateFormat, TimeFormat, Timezone } from "../types";
 
 /**
  * Date and Time Utility Functions
@@ -54,12 +54,14 @@ export function resolveTimeFormat(timeFormat: TimeFormat): "12h" | "24h" {
  * @param timestamp - Date object or timestamp number
  * @param timeFormat - Optional time format preference (defaults to auto-detect)
  * @param dateFormat - Optional date format preference (defaults to auto-detect)
+ * @param timezone - Optional timezone preference (defaults to local)
  * @returns Formatted date/time string
  */
 export function formatTimestamp(
   timestamp: Date | number,
   timeFormat: TimeFormat = "auto",
   dateFormat: DateFormat = "auto",
+  timezone: Timezone = "local",
 ): string {
   const date = typeof timestamp === "number" ? new Date(timestamp) : timestamp;
   const use24Hour = resolveTimeFormat(timeFormat) === "24h";
@@ -70,7 +72,69 @@ export function formatTimestamp(
     minute: "numeric",
     second: "numeric",
     hour12: !use24Hour,
+    timeZone: timezone === "utc" ? "UTC" : undefined,
   };
+
+  // Handle specific date format ordering (mdy, dmy, ymd)
+  if (dateFormat === "mdy") {
+    // Force MM/DD/YYYY order
+    const month = String(
+      timezone === "utc" ? date.getUTCMonth() + 1 : date.getMonth() + 1,
+    ).padStart(2, "0");
+    const day = String(
+      timezone === "utc" ? date.getUTCDate() : date.getDate(),
+    ).padStart(2, "0");
+    const year =
+      timezone === "utc" ? date.getUTCFullYear() : date.getFullYear();
+    const timeStr = date.toLocaleTimeString(undefined, {
+      hour: "numeric",
+      minute: "numeric",
+      second: "numeric",
+      hour12: !use24Hour,
+      timeZone: timezone === "utc" ? "UTC" : undefined,
+    });
+    return `${month}/${day}/${year}, ${timeStr}`;
+  }
+
+  if (dateFormat === "dmy") {
+    // Force DD/MM/YYYY order
+    const day = String(
+      timezone === "utc" ? date.getUTCDate() : date.getDate(),
+    ).padStart(2, "0");
+    const month = String(
+      timezone === "utc" ? date.getUTCMonth() + 1 : date.getMonth() + 1,
+    ).padStart(2, "0");
+    const year =
+      timezone === "utc" ? date.getUTCFullYear() : date.getFullYear();
+    const timeStr = date.toLocaleTimeString(undefined, {
+      hour: "numeric",
+      minute: "numeric",
+      second: "numeric",
+      hour12: !use24Hour,
+      timeZone: timezone === "utc" ? "UTC" : undefined,
+    });
+    return `${day}/${month}/${year}, ${timeStr}`;
+  }
+
+  if (dateFormat === "ymd") {
+    // Force YYYY-MM-DD order (ISO 8601)
+    const year =
+      timezone === "utc" ? date.getUTCFullYear() : date.getFullYear();
+    const month = String(
+      timezone === "utc" ? date.getUTCMonth() + 1 : date.getMonth() + 1,
+    ).padStart(2, "0");
+    const day = String(
+      timezone === "utc" ? date.getUTCDate() : date.getDate(),
+    ).padStart(2, "0");
+    const timeStr = date.toLocaleTimeString(undefined, {
+      hour: "numeric",
+      minute: "numeric",
+      second: "numeric",
+      hour12: !use24Hour,
+      timeZone: timezone === "utc" ? "UTC" : undefined,
+    });
+    return `${year}-${month}-${day}, ${timeStr}`;
+  }
 
   // Add date formatting based on preference
   if (dateFormat === "auto" || dateFormat === "short") {
@@ -83,11 +147,6 @@ export function formatTimestamp(
     options.year = "numeric";
     options.month = "long";
     options.day = "numeric";
-  } else {
-    // For specific formats (mdy, dmy, ymd), just use short style
-    options.year = "numeric";
-    options.month = "short";
-    options.day = "numeric";
   }
 
   return date.toLocaleString(undefined, options);
@@ -97,13 +156,52 @@ export function formatTimestamp(
  * Formats a date for short display (date only, no time)
  * @param timestamp - Date object or timestamp number
  * @param dateFormat - Optional date format preference (defaults to auto-detect)
+ * @param timezone - Optional timezone preference (defaults to local)
  * @returns Formatted date string
  */
 export function formatDate(
   timestamp: Date | number,
   dateFormat: DateFormat = "auto",
+  timezone: Timezone = "local",
 ): string {
   const date = typeof timestamp === "number" ? new Date(timestamp) : timestamp;
+
+  // Handle specific date format ordering
+  if (dateFormat === "mdy") {
+    const month = String(
+      timezone === "utc" ? date.getUTCMonth() + 1 : date.getMonth() + 1,
+    ).padStart(2, "0");
+    const day = String(
+      timezone === "utc" ? date.getUTCDate() : date.getDate(),
+    ).padStart(2, "0");
+    const year =
+      timezone === "utc" ? date.getUTCFullYear() : date.getFullYear();
+    return `${month}/${day}/${year}`;
+  }
+
+  if (dateFormat === "dmy") {
+    const day = String(
+      timezone === "utc" ? date.getUTCDate() : date.getDate(),
+    ).padStart(2, "0");
+    const month = String(
+      timezone === "utc" ? date.getUTCMonth() + 1 : date.getMonth() + 1,
+    ).padStart(2, "0");
+    const year =
+      timezone === "utc" ? date.getUTCFullYear() : date.getFullYear();
+    return `${day}/${month}/${year}`;
+  }
+
+  if (dateFormat === "ymd") {
+    const year =
+      timezone === "utc" ? date.getUTCFullYear() : date.getFullYear();
+    const month = String(
+      timezone === "utc" ? date.getUTCMonth() + 1 : date.getMonth() + 1,
+    ).padStart(2, "0");
+    const day = String(
+      timezone === "utc" ? date.getUTCDate() : date.getDate(),
+    ).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }
 
   // Build options based on date format preference
   let options: Intl.DateTimeFormatOptions;
@@ -113,19 +211,15 @@ export function formatDate(
       year: "numeric",
       month: "long",
       day: "numeric",
+      timeZone: timezone === "utc" ? "UTC" : undefined,
     };
-  } else if (dateFormat === "short" || dateFormat === "auto") {
+  } else {
+    // short or auto
     options = {
       year: "numeric",
       month: "short",
       day: "numeric",
-    };
-  } else {
-    // For mdy, dmy, ymd - use numeric format
-    options = {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
+      timeZone: timezone === "utc" ? "UTC" : undefined,
     };
   }
 
@@ -136,11 +230,13 @@ export function formatDate(
  * Formats time only (no date)
  * @param timestamp - Date object or timestamp number
  * @param timeFormat - Optional time format preference (defaults to auto-detect)
+ * @param timezone - Optional timezone preference (defaults to local)
  * @returns Formatted time string
  */
 export function formatTime(
   timestamp: Date | number,
   timeFormat: TimeFormat = "auto",
+  timezone: Timezone = "local",
 ): string {
   const date = typeof timestamp === "number" ? new Date(timestamp) : timestamp;
   const use24Hour = resolveTimeFormat(timeFormat) === "24h";
@@ -150,6 +246,7 @@ export function formatTime(
     minute: "numeric",
     second: "numeric",
     hour12: !use24Hour,
+    timeZone: timezone === "utc" ? "UTC" : undefined,
   });
 }
 
