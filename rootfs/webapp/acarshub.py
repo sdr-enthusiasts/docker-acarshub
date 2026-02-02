@@ -75,9 +75,9 @@ thread_scheduler_stop_event = Event()
 
 # thread for processing the incoming data
 
-thread_html_generator = Thread()
-thread_html_generator_active = False
-thread_html_generator_event = Event()
+thread_message_relay = Thread()
+thread_message_relay_active = False
+thread_message_relay_event = Event()
 
 # web thread
 
@@ -291,15 +291,24 @@ def getQueType(message_type):
         return "UNKNOWN"
 
 
-def htmlListener():
-    global thread_html_generator_active
+def messageRelayListener():
+    """
+    Background thread that relays ACARS messages from the message queue to connected clients.
+
+    This function continuously monitors the message queue (que_messages) and broadcasts
+    new messages to all connected Socket.IO clients via the 'acars_msg' event.
+
+    Note: Despite the historical name, this does NOT generate HTML - it relays raw JSON data.
+    React frontend handles all HTML rendering.
+    """
+    global thread_message_relay_active
     import time
     import sys
 
-    thread_html_generator_active = True
+    thread_message_relay_active = True
 
     # Run while requested...
-    while not thread_html_generator_event.is_set():
+    while not thread_message_relay_event.is_set():
         sys.stdout.flush()
         time.sleep(1)
 
@@ -309,12 +318,12 @@ def htmlListener():
             client_message = generateClientMessage(message_source, json_message)
 
             socketio.emit("acars_msg", {"msghtml": client_message}, namespace="/main")
-            # acarshub_logging.log(f"EMIT: {client_message}", "htmlListener", level=LOG_LEVEL["DEBUG"])
+            # acarshub_logging.log(f"EMIT: {client_message}", "messageRelayListener", level=LOG_LEVEL["DEBUG"])
 
     acarshub_logging.log(
-        "Exiting HTML Listener thread", "htmlListener", level=LOG_LEVEL["DEBUG"]
+        "Exiting message relay thread", "messageRelayListener", level=LOG_LEVEL["DEBUG"]
     )
-    thread_html_generator_active = False
+    thread_message_relay_active = False
 
 
 def scheduled_tasks():
@@ -574,7 +583,7 @@ def init_listeners(special_message=""):
     global thread_irdm_listener
     global thread_database
     global thread_scheduler
-    global thread_html_generator
+    global thread_message_relay
     # global thread_adsb_listner
     # global thread_adsb
     # REMOVE AFTER AIRFRAMES IS UPDATED ####
@@ -607,14 +616,14 @@ def init_listeners(special_message=""):
         thread_scheduler = Thread(target=scheduled_tasks)
         thread_scheduler.start()
 
-    # check if 'g' is not in thread_html_generator
-    if thread_html_generator_active is False:
+    # check if 'g' is not in thread_message_relay
+    if thread_message_relay_active is False:
         acarshub_logging.log(
-            f"{special_message}Starting htmlListener",
+            f"{special_message}Starting messageRelayListener",
             "init",
             level=LOG_LEVEL["INFO"] if special_message == "" else LOG_LEVEL["ERROR"],
         )
-        thread_html_generator = socketio.start_background_task(htmlListener)
+        thread_message_relay = socketio.start_background_task(messageRelayListener)
     if not thread_acars_listener.is_alive() and acarshub_configuration.ENABLE_ACARS:
         acarshub_logging.log(
             f"{special_message}Starting ACARS listener",
@@ -783,7 +792,7 @@ def main_connect():
     import sys
 
     # need visibility of the global thread object
-    global thread_html_generator
+    global thread_message_relay
     # global thread_adsb
     # global thread_adsb_stop_event
 
@@ -912,10 +921,10 @@ def main_connect():
         acarshub_logging.acars_traceback(e, "webapp")
 
     # Start the htmlGenerator thread only if the thread has not been started before.
-    if thread_html_generator_active is False:
+    if thread_message_relay_active is False:
         sys.stdout.flush()
-        thread_html_generator_event.clear()
-        thread_html_generator = socketio.start_background_task(htmlListener)
+        thread_message_relay_event.clear()
+        thread_message_relay = socketio.start_background_task(messageRelayListener)
 
     # Start the ADS-B polling background task if enabled (only once)
     if acarshub_configuration.ENABLE_ADSB:
@@ -931,7 +940,9 @@ def main_connect():
 
     pt = time.time() - pt
     acarshub_logging.log(
-        f"main_connect took {pt * 1000:.0f}ms", "htmlListener", level=LOG_LEVEL["DEBUG"]
+        f"main_connect took {pt * 1000:.0f}ms",
+        "messageRelayListener",
+        level=LOG_LEVEL["DEBUG"],
     )
 
 
