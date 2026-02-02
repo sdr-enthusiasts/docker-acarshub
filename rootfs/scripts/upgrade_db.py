@@ -222,14 +222,8 @@ def upgrade_database():
         result = run_alembic_command(["current"], check=False)
         current = result.stdout.strip()
 
-        # Check head revision
-        result = run_alembic_command(["heads"], check=False)
-        head = result.stdout.strip()
-
         if "(head)" in current:
-            acarshub_logging.log(
-                "Database is already at latest revision", "db_upgrade"
-            )
+            acarshub_logging.log("Database is already at latest revision", "db_upgrade")
             return True
 
         # Run migrations
@@ -285,9 +279,7 @@ def prune_database(conn):
                     level=LOG_LEVEL["WARNING"],
                 )
             else:
-                acarshub_logging.log(
-                    f"Deleting {count} old messages", "db_upgrade"
-                )
+                acarshub_logging.log(f"Deleting {count} old messages", "db_upgrade")
 
             cur.execute(f"DELETE FROM messages WHERE msg_time < {cutoff};")
 
@@ -384,9 +376,7 @@ def main():
     """Main database initialization and migration workflow."""
     global exit_code
 
-    acarshub_logging.log(
-        "Starting database initialization and migration", "db_upgrade"
-    )
+    acarshub_logging.log("Starting database initialization and migration", "db_upgrade")
 
     conn = None
     try:

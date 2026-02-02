@@ -722,3 +722,13 @@ export const selectUnreadAlertCount = (state: AppState) =>
   state.getUnreadAlertCount();
 export const selectAdsbEnabled = (state: AppState) =>
   state.decoders?.adsb.enabled ?? false;
+
+/**
+ * Expose store to window in development/test mode for E2E testing
+ * This allows Playwright tests to inject state (e.g., decoder configuration)
+ * Production builds will tree-shake this away
+ */
+if (import.meta.env.MODE === "development" || import.meta.env.MODE === "test") {
+  // biome-ignore lint/suspicious/noExplicitAny: Required for E2E testing window exposure
+  (window as any).__ACARS_STORE__ = useAppStore;
+}

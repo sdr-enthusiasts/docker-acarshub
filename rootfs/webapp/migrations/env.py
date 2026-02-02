@@ -1,36 +1,35 @@
+import os
+import sys
 from logging.config import fileConfig
 
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
-
 from alembic import context
-
-# Import our SQLAlchemy models
-import sys
-import os
+from sqlalchemy import engine_from_config, pool
 
 # Add parent directory to path so we can import acarshub_database
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # CRITICAL: Set this flag BEFORE importing acarshub_database
 # This prevents the module from auto-creating tables and checking FTS
-os.environ['ALEMBIC_MIGRATION_MODE'] = '1'
+os.environ["ALEMBIC_MIGRATION_MODE"] = "1"
 
 # Set environment variables to avoid configuration file loading issues
 # during migrations (we don't need the full app config, just the DB models)
-os.environ.setdefault('ACARSHUB_DB', 'sqlite:////run/acars/acars.db')
-os.environ.setdefault('LOCAL_TEST', 'True')  # Use local test mode
+os.environ.setdefault("ACARSHUB_DB", "sqlite:////run/acars/acars.db")
+os.environ.setdefault("LOCAL_TEST", "True")  # Use local test mode
 
 # Create a minimal version file if it doesn't exist (for development)
-version_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'version')
+version_path = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+    "version",
+)
 if not os.path.exists(version_path):
     # Create version file with a placeholder version
     os.makedirs(os.path.dirname(version_path), exist_ok=True)
-    with open(version_path, 'w') as f:
-        f.write('v0.0.0-dev\n')
+    with open(version_path, "w") as f:
+        f.write("v0.0.0-dev\n")
 
 # Import the declarative base and all models
-from acarshub_database import Messages
+from acarshub_database import Messages  # noqa: E402
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

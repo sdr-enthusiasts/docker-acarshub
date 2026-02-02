@@ -73,7 +73,7 @@ ci-e2e:
     @echo "Running all CI checks..."
     just ci
     @echo "Running E2E tests..."
-    cd acarshub-react && npm run test:e2e
+    cd acarshub-react && npx playwright test --reporter=line
     @echo "✅ All checks and E2E tests passed!"
 
 # prepare for commit

@@ -5,16 +5,16 @@ Revises: a589d271a0a4
 Create Date: 2026-02-02 12:01:49.662490
 
 """
+
 from typing import Sequence, Union
 
 from alembic import op
-import sqlalchemy as sa
 from sqlalchemy import text
 
 
 # revision identifiers, used by Alembic.
-revision: str = '94d97e655180'
-down_revision: Union[str, Sequence[str], None] = 'a589d271a0a4'
+revision: str = "94d97e655180"
+down_revision: Union[str, Sequence[str], None] = "a589d271a0a4"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -41,7 +41,9 @@ def upgrade() -> None:
     # Check if FTS table already exists (for databases migrated from legacy upgrade_db.py)
     connection = op.get_bind()
     result = connection.execute(
-        text("SELECT name FROM sqlite_master WHERE type='table' AND name='messages_fts'")
+        text(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='messages_fts'"
+        )
     ).fetchone()
 
     if result:
@@ -50,7 +52,8 @@ def upgrade() -> None:
 
     # Create the FTS5 virtual table
     # Using content=messages and content_rowid=id to link to messages table
-    op.execute("""
+    op.execute(
+        """
         CREATE VIRTUAL TABLE messages_fts USING fts5
         (
             message_type UNINDEXED,
@@ -86,10 +89,12 @@ def upgrade() -> None:
             content=messages,
             content_rowid=id
         )
-    """)
+    """
+    )
 
     # Create trigger for INSERT operations
-    op.execute("""
+    op.execute(
+        """
         CREATE TRIGGER messages_fts_insert AFTER INSERT ON messages
         BEGIN
             INSERT INTO messages_fts (
@@ -104,10 +109,12 @@ def upgrade() -> None:
                 new.block_id, new.msgno, new.is_response, new.is_onground, new.error, new.libacars, new.level
             );
         END;
-    """)
+    """
+    )
 
     # Create trigger for DELETE operations
-    op.execute("""
+    op.execute(
+        """
         CREATE TRIGGER messages_fts_delete AFTER DELETE ON messages
         BEGIN
             INSERT INTO messages_fts (
@@ -122,10 +129,12 @@ def upgrade() -> None:
                 old.block_id, old.msgno, old.is_response, old.is_onground, old.error, old.libacars, old.level
             );
         END;
-    """)
+    """
+    )
 
     # Create trigger for UPDATE operations
-    op.execute("""
+    op.execute(
+        """
         CREATE TRIGGER messages_fts_update AFTER UPDATE ON messages
         BEGIN
             INSERT INTO messages_fts (
@@ -151,7 +160,8 @@ def upgrade() -> None:
                 new.block_id, new.msgno, new.is_response, new.is_onground, new.error, new.libacars, new.level
             );
         END;
-    """)
+    """
+    )
 
     # Populate FTS table from existing messages
     # This uses the FTS5 rebuild command to efficiently populate the table

@@ -10,17 +10,17 @@ RUN set -xe && \
     apt-get install -y --no-install-recommends make python3 g++ && \
     rm -rf /src/* /tmp/* /var/lib/apt/lists/*
 
-COPY acarshub-typescript/package.json /acarshub-typescript/package.json
-COPY acarshub-typescript/package-lock.json /acarshub-typescript/package-lock.json
+COPY acarshub-react/package.json /acarshub-react/package.json
+COPY acarshub-react/package-lock.json /acarshub-react/package-lock.json
 
 RUN set -xe && \
-    pushd /acarshub-typescript && \
+    pushd /acarshub-react && \
     npm install
 
-COPY acarshub-typescript/ /acarshub-typescript/
+COPY acarshub-react/ /acarshub-react/
 
 RUN set -xe && \
-    pushd /acarshub-typescript && \
+    pushd /acarshub-react && \
     mkdir -p /webapp/static/images && \
     mkdir -p /webapp/static/js && \
     mkdir -p /webapp/static/sounds && \
@@ -32,7 +32,7 @@ RUN set -xe && \
     cp -r ./dist/static/js /webapp/static/ && \
     mv ./dist/static/index.html /webapp/templates/
 
-FROM ghcr.io/sdr-enthusiasts/docker-baseimage:trixie-base
+FROM ghcr.io/sdr-enthusiasts/docker-baseimage:base
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 COPY rootfs/webapp/requirements.txt /src/requirements.txt

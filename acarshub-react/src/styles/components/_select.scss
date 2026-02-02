@@ -108,7 +108,7 @@
     padding: 0.5rem;
 
     &:disabled {
-      color: var(--color-overlay0);
+      color: var(--color-subtext0);
     }
   }
 }
@@ -119,7 +119,7 @@
   top: 50%;
   transform: translateY(-50%);
   pointer-events: none;
-  color: var(--color-overlay0);
+  color: var(--color-subtext0);
   font-size: 0.75rem;
   transition: color 0.2s ease;
 

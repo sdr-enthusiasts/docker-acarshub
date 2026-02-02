@@ -2,15 +2,15 @@
   "ci": {
     "collect": {
       "startServerCommand": "npm run preview",
-      "startServerReadyPattern": "Local:.*http://localhost:4173",
+      "startServerReadyPattern": "Local:.*http://localhost:3000",
       "startServerReadyTimeout": 30000,
       "url": [
-        "http://localhost:4173/",
-        "http://localhost:4173/stats",
-        "http://localhost:4173/live-map",
-        "http://localhost:4173/alerts",
-        "http://localhost:4173/search",
-        "http://localhost:4173/about"
+        "http://localhost:3000/",
+        "http://localhost:3000/stats",
+        "http://localhost:3000/adsb",
+        "http://localhost:3000/alerts",
+        "http://localhost:3000/search",
+        "http://localhost:3000/about"
       ],
       "numberOfRuns": 3,
       "settings": {

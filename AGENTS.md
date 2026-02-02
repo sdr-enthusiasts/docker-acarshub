@@ -2587,6 +2587,7 @@ npm run test:e2e:chromium
   - See `agent-docs/PHASE_11_ALEMBIC_KICKOFF.md` Week 4 for implementation details
 
 **All Issues Resolved**:
+
 - ✅ Signal level API working (per-decoder format implemented)
 - ✅ Frequency API working (already aggregates from per-decoder tables)
 - ✅ Stats page signal level chart displays data for all enabled decoders
@@ -2854,6 +2855,32 @@ Before moving to the next phase:
 - Provide code examples when explaining concepts
 
 ## Bugs before final release
+
+- Accessibility (Phase 10.4 - 🚧 IN PROGRESS):
+  - ⚠️ WCAG AA Compliance Issues: 16/20 E2E accessibility tests failing due to color contrast violations
+  - 📄 Complete audit: `acarshub-react/ACCESSIBILITY_AUDIT.md`
+  - Root cause: Using Catppuccin `overlay0` and `overlay1` colors for text (3.3:1 and 4.0:1 contrast)
+  - Required: WCAG AA minimum 4.5:1 contrast ratio for normal text
+  - ✅ FIXED: Store exposure for E2E testing (window.**ACARS_STORE** in dev/test mode)
+  - ✅ FIXED: E2E decoder state injection (injectDecoderState helper for consistent test state)
+  - ✅ FIXED: Navigation conditional rendering restored (Live Map link properly conditional on adsbEnabled)
+  - ⏳ IN PROGRESS: Alert highlight contrast fix (currently 4.05:1, needs 4.5:1)
+  - ⏳ TODO: Systematic color replacements (overlay → subtext for all text colors)
+  - Affected components:
+    - Message Group Header: aircraft-id, counter-text, alert-count badges
+    - Message Card: station names, type badges, timestamps, field labels
+    - Settings Modal: placeholder text, disabled states
+    - Form Controls: disabled inputs, placeholder text
+    - Navigation: muted text states
+  - Safe color mapping (Mocha dark theme):
+    - ✅ `var(--color-text)` → 12.3:1 contrast (main text)
+    - ✅ `var(--color-subtext1)` → 9.1:1 contrast (secondary text, labels)
+    - ✅ `var(--color-subtext0)` → 6.7:1 contrast (tertiary text, muted)
+    - ✅ `var(--color-overlay2)` → 5.2:1 contrast (very muted, minimum safe)
+    - ❌ `var(--color-overlay1)` → 4.0:1 contrast (UNSAFE for text)
+    - ❌ `var(--color-overlay0)` → 3.3:1 contrast (UNSAFE for text)
+  - Estimated fix time: 1-2 hours for systematic replacements
+  - Testing: `npx playwright test e2e/accessibility.spec.ts --reporter=line`
 
 - Global:
   - Disconnected state will show disconnected, but the socket is valid

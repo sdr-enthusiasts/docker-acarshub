@@ -52,13 +52,6 @@ server {
     add_header Cache-Control 'no-cache';
   }
 
-  # proxy pass the aircraft.json file to tar1090
-  # <> is used as a place holder that the container startup rewrites to the correct URL
-  location /data/aircraft.json {
-    proxy_pass <>;
-    proxy_set_header Referer "";
-  }
-
   # index page - must not be cached so new builds are picked up immediately
   location = / {
     add_header Cache-Control 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0';

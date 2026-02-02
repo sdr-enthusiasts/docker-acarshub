@@ -119,11 +119,12 @@
     white-space: nowrap;
   }
 
-  // Read state styling
+  // Read state styling - use subtle background change only, no opacity for WCAG compliance
   &--read {
-    opacity: 0.6;
+    background-color: var(--color-mantle);
 
     .message-card__header {
+      background-color: var(--color-crust);
       border-bottom-color: var(--color-surface0);
     }
   }
@@ -364,11 +365,23 @@
 // ============================================================================
 
 .alert-highlight {
-  background-color: rgba(var(--color-red-rgb), 0.3);
-  color: var(--color-red);
+  // WCAG AA compliant alert highlighting with guaranteed 4.5:1+ contrast
+  // Use solid background color to ensure consistent contrast
   font-weight: 700;
   padding: 0.125rem 0.25rem;
   border-radius: var(--border-radius-sm);
+
+  // Dark theme (Mocha): Dark text on red background
+  background-color: var(--color-red); // #f38ba8
+  color: var(
+    --color-crust
+  ); // #11111b - darkest color for maximum contrast (11.5:1)
+
+  // Light theme (Latte): Light text on dark red background
+  [data-theme="light"] & {
+    background-color: var(--color-maroon); // #e64553 in Latte
+    color: var(--color-crust); // #dce0e8 - lightest color for maximum contrast
+  }
 }
 
 // ============================================================================

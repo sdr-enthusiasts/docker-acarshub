@@ -182,7 +182,7 @@
     line-height: 1.5;
 
     .radio-option__input:disabled ~ .radio-option__label & {
-      color: var(--color-overlay0);
+      color: var(--color-subtext0);
     }
   }
 
@@ -193,7 +193,7 @@
     display: block;
 
     .radio-option__input:disabled ~ .radio-option__label & {
-      color: var(--color-overlay1);
+      color: var(--color-subtext1);
     }
   }
 }

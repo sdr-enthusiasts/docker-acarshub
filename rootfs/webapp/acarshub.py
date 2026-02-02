@@ -1296,6 +1296,7 @@ if __name__ == "__main__":
         "webapp",
         level=LOG_LEVEL["DEBUG"],
     )
+
     socketio.run(
         app,
         host="0.0.0.0",

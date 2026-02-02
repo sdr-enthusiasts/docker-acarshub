@@ -75,7 +75,7 @@
 }
 
 .stat-separator {
-  color: var(--color-overlay1);
+  color: var(--color-subtext1);
   font-weight: $font-weight-normal;
   user-select: none;
 }
@@ -114,7 +114,7 @@
 
 .placeholder__icon {
   font-size: 4rem;
-  color: var(--color-overlay1);
+  color: var(--color-subtext1);
   margin-bottom: $spacing-lg;
 
   svg {

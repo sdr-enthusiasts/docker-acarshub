@@ -74,7 +74,7 @@
   min-width: 200px;
 
   &::placeholder {
-    color: var(--color-overlay1);
+    color: var(--color-subtext1);
   }
 }
 
@@ -172,7 +172,7 @@
 .logs-viewer-empty {
   padding: var(--spacing-xl);
   text-align: center;
-  color: var(--color-overlay1);
+  color: var(--color-subtext1);
   font-style: italic;
 }
 
@@ -189,7 +189,7 @@
   }
 
   &__timestamp {
-    color: var(--color-overlay1);
+    color: var(--color-subtext1);
     white-space: nowrap;
     flex-shrink: 0;
     font-size: 0.75rem;
@@ -265,7 +265,7 @@
     border-left-color: var(--color-overlay0);
 
     .log-entry__level {
-      color: var(--color-overlay0);
+      color: var(--color-subtext0);
     }
   }
 }

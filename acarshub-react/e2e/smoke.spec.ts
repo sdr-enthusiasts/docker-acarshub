@@ -1,4 +1,41 @@
-import { expect, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
+
+/**
+ * Test utility to inject decoder state into the app store
+ * This ensures Live Map navigation is available in tests
+ */
+async function injectDecoderState(page: Page) {
+  await page.evaluate(() => {
+    // Wait for store to be available (it's exposed to window in dev/test mode)
+    return new Promise<void>((resolve) => {
+      const checkStore = () => {
+        // biome-ignore lint/suspicious/noExplicitAny: Required for E2E testing window access
+        const store = (window as any).__ACARS_STORE__;
+        if (store) {
+          store.getState().setDecoders({
+            acars: true,
+            vdlm: true,
+            hfdl: true,
+            imsl: false,
+            irdm: false,
+            allow_remote_updates: false,
+            adsb: {
+              enabled: true,
+              lat: 0,
+              lon: 0,
+              range_rings: false,
+            },
+          });
+          resolve();
+        } else {
+          // Store not ready yet, try again
+          setTimeout(checkStore, 50);
+        }
+      };
+      checkStore();
+    });
+  });
+}
 
 /**
  * Smoke tests - Basic E2E test suite to verify Playwright setup
@@ -19,6 +56,7 @@ test.describe("Smoke Tests", () => {
 
   test("should have navigation menu", async ({ page }) => {
     await page.goto("/");
+    await injectDecoderState(page); // Enable all decoders including ADS-B
 
     // Check for navigation links
     await expect(
@@ -33,6 +71,7 @@ test.describe("Smoke Tests", () => {
 
   test("should navigate to different pages", async ({ page }) => {
     await page.goto("/");
+    await injectDecoderState(page); // Enable all decoders including ADS-B
 
     // Navigate to About page
     await page.getByRole("link", { name: /about/i }).click();
