@@ -20,6 +20,7 @@ from sqlalchemy import (
     create_engine,
     Column,
     Integer,
+    Float,
     String,
     Text,
     desc,
@@ -123,21 +124,81 @@ for item in iata_override:
 # Class for storing the count of messages received on each frequency
 
 
-class messagesFreq(Messages):
-    __tablename__ = "freqs"
-    it = Column(Integer, primary_key=True)
+# Classes to store frequency statistics per decoder type
+# Split into per-decoder tables for better performance (no freq_type column filtering needed)
+
+
+class messagesFreqACARS(Messages):
+    __tablename__ = "freqs_acars"
+    id = Column(Integer, primary_key=True)
     freq = Column("freq", String(32))
-    freq_type = Column("freq_type", String(32))
     count = Column("count", Integer)
 
 
-# Class to store a count of how many messages are received at what signal level
-
-
-class messagesLevel(Messages):
-    __tablename__ = "level"
+class messagesFreqVDLM2(Messages):
+    __tablename__ = "freqs_vdlm2"
     id = Column(Integer, primary_key=True)
-    level = Column("level", Integer)
+    freq = Column("freq", String(32))
+    count = Column("count", Integer)
+
+
+class messagesFreqHFDL(Messages):
+    __tablename__ = "freqs_hfdl"
+    id = Column(Integer, primary_key=True)
+    freq = Column("freq", String(32))
+    count = Column("count", Integer)
+
+
+class messagesFreqIMSL(Messages):
+    __tablename__ = "freqs_imsl"
+    id = Column(Integer, primary_key=True)
+    freq = Column("freq", String(32))
+    count = Column("count", Integer)
+
+
+class messagesFreqIRDM(Messages):
+    __tablename__ = "freqs_irdm"
+    id = Column(Integer, primary_key=True)
+    freq = Column("freq", String(32))
+    count = Column("count", Integer)
+
+
+# Classes to store a count of how many messages are received at what signal level
+# Split into per-decoder tables for better performance (no decoder column filtering needed)
+
+
+class messagesLevelACARS(Messages):
+    __tablename__ = "level_acars"
+    id = Column(Integer, primary_key=True)
+    level = Column("level", Float)
+    count = Column("count", Integer)
+
+
+class messagesLevelVDLM2(Messages):
+    __tablename__ = "level_vdlm2"
+    id = Column(Integer, primary_key=True)
+    level = Column("level", Float)
+    count = Column("count", Integer)
+
+
+class messagesLevelHFDL(Messages):
+    __tablename__ = "level_hfdl"
+    id = Column(Integer, primary_key=True)
+    level = Column("level", Float)
+    count = Column("count", Integer)
+
+
+class messagesLevelIMSL(Messages):
+    __tablename__ = "level_imsl"
+    id = Column(Integer, primary_key=True)
+    level = Column("level", Float)
+    count = Column("count", Integer)
+
+
+class messagesLevelIRDM(Messages):
+    __tablename__ = "level_irdm"
+    id = Column(Integer, primary_key=True)
+    level = Column("level", Float)
     count = Column("count", Integer)
 
 
@@ -257,25 +318,29 @@ class messages_saved(Messages):
 
 # Now we've created the classes for the database, we'll associate the class with the database and create any missing tables
 
+# Skip table creation and FTS check when running Alembic migrations
+if not os.environ.get("ALEMBIC_MIGRATION_MODE"):
+    Messages.metadata.create_all(database)
+    if backup:
+        acarshub_logging.log("Creating backup database if needed", "database")
+        Messages.metadata.create_all(database_backup)
+    else:
+        acarshub_logging.log("No backup database defined", "database")
 
-Messages.metadata.create_all(database)
-if backup:
-    acarshub_logging.log("Creating backup database if needed", "database")
-    Messages.metadata.create_all(database_backup)
+    # database is init, now check and see if the fts table is there
+
+    inspector = Inspector.from_engine(database)
+    if "messages_fts" not in inspector.get_table_names():
+        import sys
+
+        acarshub_logging.log(
+            "Missing FTS TABLE! Aborting!", "database", level=LOG_LEVEL["ERROR"]
+        )
+        sys.exit(1)
 else:
-    acarshub_logging.log("No backup database defined", "database")
-
-
-# database is init, now check and see if the fts table is there
-
-inspector = Inspector.from_engine(database)
-if "messages_fts" not in inspector.get_table_names():
-    import sys
-
     acarshub_logging.log(
-        "Missing FTS TABLE! Aborting!", "database", level=LOG_LEVEL["ERROR"]
+        "Skipping auto-table creation (Alembic migration mode)", "database"
     )
-    sys.exit(1)
 
 # messages_idx = Table(
 #     "messages_fts",
@@ -296,21 +361,23 @@ if "messages_fts" not in inspector.get_table_names():
 
 # Class used to convert any search query objects to JSON
 
-try:
-    session = db_session()
-    terms = session.query(alertStats).all()
+# Skip database initialization during Alembic migrations
+if not os.environ.get("ALEMBIC_MIGRATION_MODE"):
+    try:
+        session = db_session()
+        terms = session.query(alertStats).all()
 
-    for t in terms:
-        alert_terms.append(t.term.upper())
+        for t in terms:
+            alert_terms.append(t.term.upper())
 
-    terms = session.query(ignoreAlertTerms).all()
-    for t in terms:
-        alert_terms_ignore.append(t.term.upper())
+        terms = session.query(ignoreAlertTerms).all()
+        for t in terms:
+            alert_terms_ignore.append(t.term.upper())
 
-except Exception as e:
-    acarshub_logging.acars_traceback(e, "database")
-finally:
-    session.close()
+    except Exception as e:
+        acarshub_logging.acars_traceback(e, "database")
+    finally:
+        session.close()
 
 
 def query_to_dict(obj):
@@ -332,16 +399,30 @@ def query_to_dict(obj):
 
 
 def update_frequencies(freq, message_type, session):
-    found_freq = (
-        session.query(messagesFreq)
-        .filter(messagesFreq.freq == f"{freq}", messagesFreq.freq_type == message_type)
-        .first()
-    )
+    """Update frequency statistics in the appropriate per-decoder table."""
+
+    # Map message_type to the appropriate model class
+    freq_model_map = {
+        "ACARS": messagesFreqACARS,
+        "VDL-M2": messagesFreqVDLM2,
+        "VDLM2": messagesFreqVDLM2,  # Handle both naming conventions
+        "HFDL": messagesFreqHFDL,
+        "IMSL": messagesFreqIMSL,
+        "IRDM": messagesFreqIRDM,
+    }
+
+    # Get the appropriate model class for this decoder
+    freq_model = freq_model_map.get(message_type)
+    if freq_model is None:
+        # Unknown decoder type, skip frequency update
+        return
+
+    found_freq = session.query(freq_model).filter(freq_model.freq == f"{freq}").first()
 
     if found_freq is not None:
         found_freq.count += 1
     else:
-        session.add(messagesFreq(freq=f"{freq}", freq_type=message_type, count=1))
+        session.add(freq_model(freq=f"{freq}", count=1))
 
 
 def is_message_not_empty(json_message):
@@ -539,18 +620,38 @@ def add_message(params, message_type, message_from_json, backup=False):
         # Log the level count
         # We'll see if the level is in the database already, and if so, increment the counter
         # If not, we'll add it in
+        # Now using per-decoder tables for better performance
 
         if params["level"] != "":
-            found_level = (
-                session.query(messagesLevel)
-                .filter(messagesLevel.level == params["level"])
-                .first()
-            )
+            # Map message_type to appropriate signal level model class
+            decoder_map = {
+                "ACARS": messagesLevelACARS,
+                "VDL-M2": messagesLevelVDLM2,
+                "VDLM2": messagesLevelVDLM2,  # Alternative spelling
+                "HFDL": messagesLevelHFDL,
+                "IMSL": messagesLevelIMSL,
+                "IRDM": messagesLevelIRDM,
+            }
 
-            if found_level is not None:
-                found_level.count += 1
+            level_model = decoder_map.get(message_type)
+
+            if level_model is not None:
+                found_level = (
+                    session.query(level_model)
+                    .filter(level_model.level == params["level"])
+                    .first()
+                )
+
+                if found_level is not None:
+                    found_level.count += 1
+                else:
+                    session.add(level_model(level=params["level"], count=1))
             else:
-                session.add(messagesLevel(level=params["level"], count=1))
+                acarshub_logging.log(
+                    f"Unknown message_type for signal level: {message_type}",
+                    "database",
+                    level=LOG_LEVEL["WARNING"],
+                )
 
         if len(params["text"]) > 0 and alert_terms:
             for search_term in alert_terms:
@@ -982,17 +1083,26 @@ def show_all(page=0):
 
 
 def get_freq_count():
+    """Get frequency statistics from all per-decoder frequency tables."""
     freq_count = []
-    found_freq = []
 
     try:
         session = db_session()
 
-        for item in session.query(messagesFreq).all():
-            if item.freq not in found_freq:
+        # Query each per-decoder table and add freq_type to results
+        decoder_tables = [
+            ("ACARS", messagesFreqACARS),
+            ("VDL-M2", messagesFreqVDLM2),
+            ("HFDL", messagesFreqHFDL),
+            ("IMSL", messagesFreqIMSL),
+            ("IRDM", messagesFreqIRDM),
+        ]
+
+        for freq_type, model_class in decoder_tables:
+            for item in session.query(model_class).all():
                 freq_count.append(
                     {
-                        "freq_type": f"{item.freq_type}",
+                        "freq_type": freq_type,
                         "freq": f"{item.freq}",
                         "count": item.count,
                     }
@@ -1089,11 +1199,45 @@ def get_message_label_json():
     return message_labels["labels"]
 
 
-def get_signal_levels():
+def get_signal_levels(decoder=None):
+    """Get signal level statistics for a specific decoder.
+
+    Args:
+        decoder: Decoder type ('ACARS', 'VDL-M2', 'HFDL', 'IMSL', 'IRDM')
+                 If None, returns empty list (legacy behavior)
+
+    Returns:
+        List of dicts with 'level' and 'count' keys
+    """
     try:
         output = []
         session = db_session()
-        result = session.query(messagesLevel).order_by(messagesLevel.level)
+
+        # Map decoder types to their corresponding model classes
+        decoder_map = {
+            "ACARS": messagesLevelACARS,
+            "VDL-M2": messagesLevelVDLM2,
+            "VDLM2": messagesLevelVDLM2,  # Alternative spelling
+            "HFDL": messagesLevelHFDL,
+            "IMSL": messagesLevelIMSL,
+            "IRDM": messagesLevelIRDM,
+        }
+
+        if decoder is None:
+            # No decoder specified, return empty list
+            return []
+
+        if decoder not in decoder_map:
+            acarshub_logging.log(
+                f"Unknown decoder type: {decoder}",
+                "database",
+                level=LOG_LEVEL["WARNING"],
+            )
+            return []
+
+        model_class = decoder_map[decoder]
+        result = session.query(model_class).order_by(model_class.level)
+
         if result.count() > 0:
             output = [query_to_dict(d) for d in result]
 
@@ -1106,6 +1250,36 @@ def get_signal_levels():
             return output
         else:
             return []
+
+
+def get_all_signal_levels():
+    """Get signal level statistics for all enabled decoders.
+
+    Returns:
+        Dict mapping decoder names to their signal level data.
+        Format: { "ACARS": [...], "VDL-M2": [...], "HFDL": [...], etc. }
+    """
+    import acarshub_configuration
+
+    result = {}
+
+    # Map of decoder types to check
+    decoder_map = {
+        "ACARS": acarshub_configuration.ENABLE_ACARS,
+        "VDL-M2": acarshub_configuration.ENABLE_VDLM,
+        "HFDL": acarshub_configuration.ENABLE_HFDL,
+        "IMSL": acarshub_configuration.ENABLE_IMSL,
+        "IRDM": acarshub_configuration.ENABLE_IRDM,
+    }
+
+    # Get signal levels for each enabled decoder
+    for decoder, is_enabled in decoder_map.items():
+        if is_enabled:
+            levels = get_signal_levels(decoder)
+            if levels:  # Only include if there's data
+                result[decoder] = levels
+
+    return result
 
 
 def get_alert_counts():

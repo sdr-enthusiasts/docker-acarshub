@@ -8,3 +8,4 @@ requests==2.32.5
 rrdtool @git+https://github.com/fredclausen/python-rrdtool.git@b522cab1db4039b21ef6e34e2221c2828ca72174
 schedule==1.2.2
 sqlalchemy==2.0.46
+alembic==1.18.2

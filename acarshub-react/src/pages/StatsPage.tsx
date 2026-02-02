@@ -94,6 +94,7 @@ export const StatsPage = () => {
     // Request initial frequency and count data
     const requestData = () => {
       if (decoders) {
+        socketService.requestSignalGraphs(); // Requests signal levels and alert terms
         socketService.requestSignalFreqs();
         socketService.requestSignalCount();
       }

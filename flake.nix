@@ -106,28 +106,42 @@
       devShells = eachSystem (
         system:
         let
-          overlay = _: _: {
+          overlay = _final: prev: {
             inherit (playwright.packages.${system}) playwright-test playwright-driver;
+
+            python313Packages = prev.python313Packages.override {
+              overrides = _pyFinal: pyPrev: {
+                alembic = pyPrev.alembic.overridePythonAttrs (_old: rec {
+                  version = "1.18.2";
+                  src = prev.fetchPypi {
+                    pname = "alembic";
+                    inherit version;
+                    hash = "sha256-HD3bY18m77yAsbkMVlJUggICLU52D2p41thZWSgONoQ=";
+                  };
+                });
+              };
+            };
           };
+
           pkgs = import nixpkgs {
             inherit system;
             overlays = [ overlay ];
           };
+
           inherit (self.checks.${system}.pre-commit-check) shellHook enabledPackages;
         in
         {
-          default = nixpkgs.legacyPackages.${system}.mkShell {
-            # inherit from the dream2nix generated dev shell
-            #inputsFrom = [self.packages.${system}.default.devShell];
-            # add extra packages
+          default = pkgs.mkShell {
             packages = [
-              nixpkgs.legacyPackages.${system}.python313
-              nixpkgs.legacyPackages.${system}.pdm
-              nixpkgs.legacyPackages.${system}.rrdtool
-              nixpkgs.legacyPackages.${system}.npm-check
-              nixpkgs.legacyPackages.${system}.nodejs
-              nixpkgs.legacyPackages.${system}.just
+              pkgs.python313
+              pkgs.python313Packages.alembic
+              pkgs.pdm
+              pkgs.rrdtool
+              pkgs.npm-check
+              pkgs.nodejs
+              pkgs.just
               pkgs.playwright-test
+              pkgs.sqlite
             ];
 
             buildInputs =
@@ -138,10 +152,8 @@
               ]);
 
             shellHook = ''
-                export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
-                export PLAYWRIGHT_BROWSERS_PATH="${pkgs.playwright-driver.browsers}"
-
-              # Run git-hooks.nix setup (creates .pre-commit-config.yaml)
+              export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+              export PLAYWRIGHT_BROWSERS_PATH="${pkgs.playwright-driver.browsers}"
               ${shellHook}
             '';
           };

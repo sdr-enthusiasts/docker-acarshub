@@ -26,9 +26,9 @@ import type {
   HtmlMsg,
   Labels,
   SearchHtmlMsg,
-  Signal,
   SignalCountData,
   SignalFreqData,
+  SignalLevelData,
   SystemStatus,
   Terms,
 } from "../types";
@@ -58,7 +58,7 @@ export interface ServerToClientEvents {
   version: (data: AcarshubVersion) => void;
 
   // Signal information
-  signal: (data: { levels: Signal }) => void;
+  signal: (data: { levels: SignalLevelData }) => void;
   signal_freqs: (data: SignalFreqData) => void;
   signal_count: (data: SignalCountData) => void;
 
@@ -106,6 +106,7 @@ export interface ClientToServerEvents {
   // Signal queries
   signal_freqs: (data: { freqs: boolean }) => void;
   signal_count: (data: { count: boolean }) => void;
+  signal_graphs: (data: Record<string, unknown>) => void;
 
   // RRD time-series queries
   rrd_timeseries: (data: { time_period: string }) => void;
@@ -287,6 +288,17 @@ class SocketService {
     // Legacy style: pass namespace as third argument
     // @ts-expect-error - Legacy Socket.IO syntax requires namespace as third arg
     this.socket?.emit("signal_count", { count: true }, "/main");
+  }
+
+  /**
+   * Request signal graphs data from backend
+   * This triggers the backend to send signal levels, alert terms, and other graph data
+   */
+  requestSignalGraphs(): void {
+    socketLogger.trace("Requesting signal graphs data");
+    // Legacy style: pass namespace as third argument
+    // @ts-expect-error - Legacy Socket.IO syntax requires namespace as third arg
+    this.socket?.emit("signal_graphs", {}, "/main");
   }
 
   /**

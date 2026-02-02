@@ -32,9 +32,9 @@ import type {
   Decoders,
   Labels,
   MessageGroup,
-  Signal,
   SignalCountData,
   SignalFreqData,
+  SignalLevelData,
   SystemStatus,
   Terms,
 } from "../types";
@@ -105,8 +105,8 @@ interface AppState {
   setAdsbStatus: (status: AdsbStatus) => void;
 
   // Signal levels
-  signalLevels: Signal | null;
-  setSignalLevels: (signal: Signal) => void;
+  signalLevels: SignalLevelData | null;
+  setSignalLevels: (signal: SignalLevelData) => void;
 
   // Statistics data
   alertTermData: AlertTerm | null;

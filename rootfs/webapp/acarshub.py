@@ -1067,7 +1067,7 @@ def request_graphs(message, namespace):
         "signal",
         {
             "levels": get_cached(
-                acarshub_helpers.acarshub_database.get_signal_levels, 30
+                acarshub_helpers.acarshub_database.get_all_signal_levels, 30
             )
         },
         namespace="/main",

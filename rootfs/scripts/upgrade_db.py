@@ -16,633 +16,441 @@
 # You should have received a copy of the GNU General Public License
 # along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-# This script is designed to ensure the database for the user
-# Is on the current schema
+"""
+Database initialization and migration script using Alembic.
 
-import sqlite3
-from sqlite3 import Connection
-from typing import List
+This script replaces the legacy upgrade_db.py approach with proper Alembic migrations.
+
+Workflow:
+1. Check if database exists
+2. If new database: Run all migrations from scratch
+3. If existing database:
+   - Check for alembic_version table
+   - If no version: Stamp at initial revision (e7991f1644b1)
+   - Run any pending migrations
+4. Prune old messages (housekeeping)
+5. Optimize FTS (if enabled)
+
+Exit codes:
+0 - Success
+1 - Critical error (database creation/migration failed)
+"""
+
 import os
 import sys
+import sqlite3
+import datetime
+import subprocess
 
+# Add webapp directory to path for imports
 sys.path.append(os.path.join(os.path.dirname(__file__), "../webapp/"))
 
 import acarshub_logging  # noqa: E402
 from acarshub_logging import LOG_LEVEL  # noqa: E402
 import acarshub_configuration  # noqa: E402
-import datetime  # noqa: E402
 
-# Current schema:
-# LEGACY DBS WILL NOT HAVE COLUMNS SET AS NOT NULLABLE BUT WE TAKE CARE OF THAT BELOW
-# AND ALSO WITH UPDATED writes in acarshub_db.py
-
-# __tablename__ = 'messages'
-# id = Column(Integer, primary_key=True)
-# # ACARS or VDLM
-# message_type = Column('message_type', String(32), nullable=False)
-# # message time
-# time = Column('msg_time', Integer, nullable=False)
-# station_id = Column('station_id', String(32), nullable=False)
-# toaddr = Column('toaddr', String(32), nullable=False)
-# fromaddr = Column('fromaddr', String(32), nullable=False)
-# depa = Column('depa', String(32), index=True, nullable=False)
-# dsta = Column('dsta', String(32), index=True, nullable=False)
-# eta = Column('eta', String(32), nullable=False)
-# gtout = Column('gtout', String(32), nullable=False)
-# gtin = Column('gtin', String(32), nullable=False)
-# wloff = Column('wloff', String(32), nullable=False)
-# wlin = Column('wlin', String(32), nullable=False)
-# lat = Column('lat', String(32), nullable=False)
-# lon = Column('lon', String(32), nullable=False)
-# alt = Column('alt', String(32), nullable=False)
-# text = Column('msg_text', Text, index=True, nullable=False)
-# tail = Column('tail', String(32), index=True, nullable=False)
-# flight = Column('flight', String(32), index=True, nullable=False)
-# icao = Column('icao', String(32), index=True, nullable=False)
-# freq = Column('freq', String(32), index=True, nullable=False)
-# ack = Column('ack', String(32), nullable=False)
-# mode = Column('mode', String(32), nullable=False)
-# label = Column('label', String(32), index=True, nullable=False)
-# block_id = Column('block_id', String(32), nullable=False)
-# msgno = Column('msgno', String(32), index=True, nullable=False)
-# is_response = Column('is_response', String(32), nullable=False)
-# is_onground = Column('is_onground', String(32), nullable=False)
-# error = Column('error', String(32), nullable=False)
-# libacars = Column('libacars', Text, nullable=False)
-# level = Column('level', String(32), nullable=False)
-
-# __tablename__ = "messages_saved"
-# id = Column(Integer, primary_key=True)
-# # ACARS or VDLM
-# message_type = Column("message_type", String(32), nullable=False)
-# # message time
-# time = Column("msg_time", Integer, nullable=False)
-# station_id = Column("station_id", String(32), nullable=False)
-# toaddr = Column("toaddr", String(32), nullable=False)
-# fromaddr = Column("fromaddr", String(32), nullable=False)
-# depa = Column("depa", String(32), index=True, nullable=False)
-# dsta = Column("dsta", String(32), index=True, nullable=False)
-# eta = Column("eta", String(32), nullable=False)
-# gtout = Column("gtout", String(32), nullable=False)
-# gtin = Column("gtin", String(32), nullable=False)
-# wloff = Column("wloff", String(32), nullable=False)
-# wlin = Column("wlin", String(32), nullable=False)
-# lat = Column("lat", String(32), nullable=False)
-# lon = Column("lon", String(32), nullable=False)
-# alt = Column("alt", String(32), nullable=False)
-# text = Column("msg_text", Text, index=True, nullable=False)
-# tail = Column("tail", String(32), index=True, nullable=False)
-# flight = Column("flight", String(32), index=True, nullable=False)
-# icao = Column("icao", String(32), index=True, nullable=False)
-# freq = Column("freq", String(32), index=True, nullable=False)
-# ack = Column("ack", String(32), nullable=False)
-# mode = Column("mode", String(32), nullable=False)
-# label = Column("label", String(32), index=True, nullable=False)
-# block_id = Column("block_id", String(32), nullable=False)
-# msgno = Column("msgno", String(32), index=True, nullable=False)
-# is_response = Column("is_response", String(32), nullable=False)
-# is_onground = Column("is_onground", String(32), nullable=False)
-# error = Column("error", String(32), nullable=False)
-# libacars = Column("libacars", Text, nullable=False)
-# level = Column("level", String(32), nullable=False)
-# term = Column("term", String(32), nullable=False)
-# type_of_match = Column("type_of_match", String(32), nullable=False)
-
+# Determine database path
 if (
     os.getenv("LOCAL_TEST", default=False)
     and str(os.getenv("LOCAL_TEST", default=False)).upper() == "TRUE"
 ):
-    path_to_db = os.getenv("DB_PATH")
+    path_to_db = os.getenv("DB_PATH", "/run/acars/messages.db")
 else:
     path_to_db = "/run/acars/messages.db"
 
-acarshub_logging.log("Checking to see if database needs upgrades", "db_upgrade")
+# Set SQLALCHEMY_URL for Alembic
+os.environ["SQLALCHEMY_URL"] = f"sqlite:///{path_to_db}"
+os.environ["ACARSHUB_DB"] = f"sqlite:///{path_to_db}"
 
-upgraded = False
+# Path to Alembic configuration
+ALEMBIC_DIR = os.path.join(os.path.dirname(__file__), "../webapp")
+INITIAL_REVISION = "e7991f1644b1"  # Initial schema revision
+
 exit_code = 0
-count_table = 'CREATE TABLE "count" ("id" INTEGER NOT NULL,"total" INTEGER, "errors" INTEGER, "good" INTEGER, PRIMARY KEY("id"));'
-freq_table = 'CREATE TABLE "freqs" ("it" INTEGER NOT NULL, "freq" VARCHAR(32), "freq_type" VARCHAR(32), "count" INTEGER, PRIMARY KEY("it"));'
-level_table = 'CREATE TABLE "level" ("id" INTEGER NOT NULL, "level" INTEGER, "count" INTEGER, PRIMARY KEY("id"));'
-messages_table = 'CREATE TABLE "messages" ("id" INTEGER NOT NULL, "message_type" VARCHAR(32) NOT NULL, "msg_time" INTEGER NOT NULL, \
-                "station_id" VARCHAR(32) NOT NULL, "toaddr" VARCHAR(32) NOT NULL, "fromaddr" VARCHAR(32) NOT NULL, "depa" VARCHAR(32) NOT NULL, \
-                "dsta" VARCHAR(32) NOT NULL, "eta" VARCHAR(32) NOT NULL, "gtout" VARCHAR(32) NOT NULL, "gtin" VARCHAR(32) NOT NULL, \
-                "wloff" VARCHAR(32) NOT NULL, "wlin" VARCHAR(32) NOT NULL, "lat" VARCHAR(32) NOT NULL, "lon" VARCHAR(32) NOT NULL, \
-                "alt" VARCHAR(32) NOT NULL, "msg_text" TEXT NOT NULL, "tail" VARCHAR(32) NOT NULL, "flight" VARCHAR(32) NOT NULL, \
-                "icao" VARCHAR(32) NOT NULL, "freq" VARCHAR(32) NOT NULL, "ack" VARCHAR(32) NOT NULL, "mode" VARCHAR(32) NOT NULL, \
-                "label" VARCHAR(32) NOT NULL, "block_id" VARCHAR(32) NOT NULL, "msgno" VARCHAR(32) NOT NULL, "is_response" VARCHAR(32) NOT NULL, \
-                "is_onground" VARCHAR(32) NOT NULL, "error" VARCHAR(32) NOT NULL, "libacars" TEXT NOT NULL,"level" VARCHAR(32) NOT NULL, \
-                PRIMARY KEY("id"));'
-messages_saved_table = 'CREATE TABLE "messages_saved" ("id" INTEGER NOT NULL, "message_type" VARCHAR(32) NOT NULL, "msg_time" INTEGER NOT NULL, \
-                "station_id" VARCHAR(32) NOT NULL, "toaddr" VARCHAR(32) NOT NULL, "fromaddr" VARCHAR(32) NOT NULL, "depa" VARCHAR(32) NOT NULL, \
-                "dsta" VARCHAR(32) NOT NULL, "eta" VARCHAR(32) NOT NULL, "gtout" VARCHAR(32) NOT NULL, "gtin" VARCHAR(32) NOT NULL, "wloff" VARCHAR(32) NOT NULL, \
-             "wlin" VARCHAR(32) NOT NULL, "lat" VARCHAR(32) NOT NULL, "lon" VARCHAR(32) NOT NULL, "alt" VARCHAR(32) NOT NULL, "msg_text" TEXT NOT NULL,\
-                "tail" VARCHAR(32) NOT NULL, "flight" VARCHAR(32) NOT NULL, "icao" VARCHAR(32) NOT NULL, "freq" VARCHAR(32) NOT NULL, "ack" VARCHAR(32) NOT NULL, \
-             "mode" VARCHAR(32) NOT NULL, "label" VARCHAR(32) NOT NULL, "block_id" VARCHAR(32) NOT NULL, "msgno" VARCHAR(32) NOT NULL, "is_response" VARCHAR(32) NOT NULL, \
-                "is_onground" VARCHAR(32) NOT NULL, "error" VARCHAR(32) NOT NULL, "libacars" TEXT NOT NULL, "level" VARCHAR(32) NOT NULL, "term" VARCHAR(32) NOT NULL, \
-                "type_of_match" VARCHAR(32) NOT NULL, PRIMARY KEY("id"));'
 
 
-def enable_fts(db: Connection, table: str, columns: List[str]):
-    column_list_without = ",".join(
-        f"{c}" for c in columns if c.find(" UNINDEXED") == -1
-    )
+def run_alembic_command(args, check=True):
+    """Run an Alembic command and return the result.
+
+    Args:
+        args: List of command arguments (e.g., ["current"], ["upgrade", "head"])
+        check: If True, raise exception on non-zero exit code
+
+    Returns:
+        subprocess.CompletedProcess result
+    """
+    cmd = ["alembic"] + args
     acarshub_logging.log(
-        "Creating new FTS table", "db_upgrade", level=LOG_LEVEL["INFO"]
+        f"Running: {' '.join(cmd)}", "db_upgrade", level=LOG_LEVEL["DEBUG"]
     )
 
-    db.executescript(
-        """
-        CREATE VIRTUAL TABLE {table}_fts USING fts5
-        (
-            {column_list},
-            content={table},
-            content_rowid={rowid}
-        )""".format(
-            table=table, column_list=column_list_without, rowid="id"
-        )
-    )
-    acarshub_logging.log("Creating new triggers", "db_upgrade", level=LOG_LEVEL["INFO"])
-
-    db.executescript(
-        """
-        CREATE TRIGGER {table}_fts_insert AFTER INSERT ON messages
-        BEGIN
-            INSERT INTO {table}_fts (rowid, {column_list}) VALUES (new.id, {new_columns});
-        END;
-        CREATE TRIGGER {table}_fts_delete AFTER DELETE ON messages
-        BEGIN
-            INSERT INTO {table}_fts ({table}_fts, rowid, {column_list}) VALUES ('delete', old.id, {old_columns});
-        END;
-        CREATE TRIGGER {table}_fts_update AFTER UPDATE ON messages
-        BEGIN
-            INSERT INTO {table}_fts ({table}_fts, rowid, {column_list}) VALUES ('delete', old.id, {old_columns});
-            INSERT INTO {table}_fts (rowid, {column_list}) VALUES (new.id, {new_columns});
-        END;
-    """.format(
-            table=table,
-            column_list=column_list_without,
-            new_columns=",".join(
-                f"new.{c}" for c in columns if c.find(" UNINDEXED") == -1
-            ),
-            old_columns=",".join(
-                f"old.{c}" for c in columns if c.find(" UNINDEXED") == -1
-            ),
-        )
-    )
-    acarshub_logging.log(
-        "Populating new FTS table with data", "db_upgrade", level=LOG_LEVEL["INFO"]
-    )
-    db.executescript('INSERT INTO messages_fts(messages_fts) VALUES ("rebuild")')
-
-
-def check_tables(conn, cur):
-    global upgraded
-    columns = [
-        "message_type UNINDEXED",
-        "msg_time," "station_id UNINDEXED",
-        "toaddr UNINDEXED",
-        "fromaddr UNINDEXED",
-        "depa",
-        "dsta",
-        "eta UNINDEXED",
-        "gtout UNINDEXED",
-        "gtin UNINDEXED",
-        "wloff UNINDEXED",
-        "wlin UNINDEXED",
-        "lat UNINDEXED",
-        "lon UNINDEXED",
-        "alt UNINDEXED",
-        "msg_text",
-        "tail",
-        "flight",
-        "icao",
-        "freq",
-        "ack UNINDEXED",
-        "mode UNINDEXED",
-        "label",
-        "block_id UNINDEXED",
-        "msgno UNINDEXED",
-        "is_response UNINDEXED",
-        "is_onground UNINDEXED",
-        "error UNINDEXED",
-        "libacars UNINDEXED",
-        "level UNINDEXED",
-    ]
-    tables = [
-        i[0]
-        for i in cur.execute(
-            'SELECT name FROM sqlite_master WHERE type ="table" AND name NOT LIKE "sqlite_%"'
-        )
-    ]
-    triggers = [
-        i[1] for i in cur.execute("select * from sqlite_master where type = 'trigger';")
-    ]
-
-    if "text_fts" in tables:
-        upgraded = True
-        acarshub_logging.log(
-            "Removing old FTS table", "db_upgrade", level=LOG_LEVEL["INFO"]
-        )
-        cur.execute('DROP TABLE "main"."text_fts";')
-
-    if "message_ad" in triggers:
-        upgraded = True
-        acarshub_logging.log(
-            "Removing AD trigger", "db_upgrade", level=LOG_LEVEL["INFO"]
-        )
-        cur.execute('DROP TRIGGER "main"."message_ad";')
-    if "message_ai" in triggers:
-        upgraded = True
-        acarshub_logging.log(
-            "Removing AI trigger", "db_upgrade", level=LOG_LEVEL["INFO"]
-        )
-        cur.execute('DROP TRIGGER "main"."message_ai";')
-    if "message_au" in triggers:
-        upgraded = True
-        acarshub_logging.log(
-            "Removing AU trigger", "db_upgrade", level=LOG_LEVEL["INFO"]
-        )
-        cur.execute('DROP TRIGGER "main"."message_au";')
-
-    if "messages_fts" not in tables:
-        upgraded = True
-        acarshub_logging.log(
-            "Adding in text search tables....may take a while",
-            "db_upgrade",
-            level=LOG_LEVEL["INFO"],
-        )
-
-        acarshub_logging.log(
-            "creating virtual table", "db_upgrade", level=LOG_LEVEL["INFO"]
-        )
-        enable_fts(conn, "messages", columns)
-
-    add_triggers(cur, conn, "messages", columns)
-
-
-def de_null(cur):
-    # we need to ensure the columns don't have any NULL values
-    # Legacy db problems...
-    acarshub_logging.log(
-        "Ensuring no columns contain NULL values", "db_upgrade", level=LOG_LEVEL["INFO"]
-    )
-    cur.execute('UPDATE messages SET toaddr = "" WHERE toaddr is NULL')
-    cur.execute('UPDATE messages SET fromaddr = "" WHERE toaddr is NULL')
-    cur.execute('UPDATE messages SET depa = "" WHERE depa IS NULL')
-    cur.execute('UPDATE messages SET dsta = "" WHERE dsta IS NULL')
-    cur.execute('UPDATE messages SET depa = "" WHERE depa IS NULL')
-    cur.execute('UPDATE messages SET eta = "" WHERE eta IS NULL')
-    cur.execute('UPDATE messages SET gtout = "" WHERE gtout IS NULL')
-    cur.execute('UPDATE messages SET gtin = "" WHERE gtin IS NULL')
-    cur.execute('UPDATE messages SET wloff = "" WHERE wloff IS NULL')
-    cur.execute('UPDATE messages SET wlin = "" WHERE wlin IS NULL')
-    cur.execute('UPDATE messages SET lat = "" WHERE lat IS NULL')
-    cur.execute('UPDATE messages SET lon = "" WHERE lon IS NULL')
-    cur.execute('UPDATE messages SET alt = "" WHERE alt IS NULL')
-    cur.execute('UPDATE messages SET dsta = "" WHERE dsta IS NULL')
-    cur.execute('UPDATE messages SET msg_text = "" WHERE msg_text IS NULL')
-    cur.execute('UPDATE messages SET tail = "" WHERE tail IS NULL')
-    cur.execute('UPDATE messages SET flight = "" WHERE flight IS NULL')
-    cur.execute('UPDATE messages SET icao = "" WHERE icao IS NULL')
-    cur.execute('UPDATE messages SET freq = "" WHERE freq IS NULL')
-    cur.execute('UPDATE messages SET ack = "" WHERE ack IS NULL')
-    cur.execute('UPDATE messages SET mode = "" WHERE mode IS NULL')
-    cur.execute('UPDATE messages SET label = "" WHERE label IS NULL')
-    cur.execute('UPDATE messages SET block_id = "" WHERE block_id IS NULL')
-    cur.execute('UPDATE messages SET msgno = "" WHERE msgno IS NULL')
-    cur.execute('UPDATE messages SET is_response = "" WHERE is_response IS NULL')
-    cur.execute('UPDATE messages SET is_onground = "" WHERE is_onground IS NULL')
-    cur.execute('UPDATE messages SET error = "" WHERE error IS NULL')
-    cur.execute('UPDATE messages SET libacars = "" WHERE libacars IS NULL')
-    cur.execute('UPDATE messages SET level = "" WHERE level IS NULL')
-    acarshub_logging.log("done with de-nulling", "db_upgrade", level=LOG_LEVEL["INFO"])
-
-
-def add_indexes(cur):
-    global upgraded
-
-    indexes = [i[1] for i in cur.execute("PRAGMA index_list(messages)")]
-
-    if "ix_messages_msg_text" not in indexes:
-        acarshub_logging.log("Adding text index", "db_upgrade", level=LOG_LEVEL["INFO"])
-        upgraded = True
-        cur.execute(
-            'CREATE INDEX "ix_messages_msg_text" ON "messages" ("msg_text" DESC)'
-        )
-
-    if "ix_messages_icao" not in indexes:
-        acarshub_logging.log("Adding icao index", "db_upgrade", level=LOG_LEVEL["INFO"])
-        upgraded = True
-        cur.execute('CREATE INDEX "ix_messages_icao" ON "messages" ("icao" DESC)')
-
-    if "ix_messages_flight" not in indexes:
-        acarshub_logging.log(
-            "Adding flight index", "db_upgrade", level=LOG_LEVEL["INFO"]
-        )
-        upgraded = True
-        cur.execute('CREATE INDEX "ix_messages_flight" ON "messages" ("flight" DESC)')
-
-    if "ix_messages_tail" not in indexes:
-        acarshub_logging.log("Adding tail index", "db_upgrade", level=LOG_LEVEL["INFO"])
-        upgraded = True
-        cur.execute('CREATE INDEX "ix_messages_tail" ON "messages" ("tail" DESC)')
-
-    if "ix_messages_depa" not in indexes:
-        acarshub_logging.log("Adding depa index", "db_upgrade", level=LOG_LEVEL["INFO"])
-        upgraded = True
-        cur.execute('CREATE INDEX "ix_messages_depa" ON "messages" ("depa" DESC)')
-
-    if "ix_messages_dsta" not in indexes:
-        acarshub_logging.log("Adding dsta index", "db_upgrade", level=LOG_LEVEL["INFO"])
-        upgraded = True
-        cur.execute('CREATE INDEX "ix_messages_dsta" ON "messages" ("dsta" DESC)')
-
-    if "ix_messages_msgno" not in indexes:
-        acarshub_logging.log(
-            "Adding msgno index", "db_upgrade", level=LOG_LEVEL["INFO"]
-        )
-        upgraded = True
-        cur.execute('CREATE INDEX "ix_messages_msgno" ON "messages" ("msgno" DESC)')
-
-    if "ix_messages_freq" not in indexes:
-        acarshub_logging.log("Adding freq index", "db_upgrade", level=LOG_LEVEL["INFO"])
-        upgraded = True
-        cur.execute('CREATE INDEX "ix_messages_freq" ON "messages" ("freq" DESC)')
-
-    if "ix_messages_label" not in indexes:
-        acarshub_logging.log(
-            "Adding label index", "db_upgrade", level=LOG_LEVEL["INFO"]
-        )
-        upgraded = True
-        cur.execute('CREATE INDEX "ix_messages_label" ON "messages" ("label" DESC)')
-    if "ix_messages_label" not in indexes:
-        acarshub_logging.log(
-            "Adding msg time index", "db_upgrade", level=LOG_LEVEL["INFO"]
-        )
-        upgraded = True
-        cur.execute(
-            'CREATE INDEX "ix_messages_msgtime" ON "messages" ("msg_time" DESC)'
-        )
-
-
-def add_triggers(cur, db: Connection, table: str, columns: List[str]):
-    global upgraded
-    column_list_without = ",".join(
-        f"{c}" for c in columns if c.find(" UNINDEXED") == -1
+    result = subprocess.run(
+        cmd,
+        cwd=ALEMBIC_DIR,
+        capture_output=True,
+        text=True,
+        check=False,
     )
 
-    triggers = [
-        i[1] for i in cur.execute("select * from sqlite_master where type = 'trigger';")
-    ]
-    execute_script = ""
+    # Log output
+    if result.stdout:
+        for line in result.stdout.strip().split("\n"):
+            acarshub_logging.log(line, "db_upgrade", level=LOG_LEVEL["DEBUG"])
 
-    if f"{table}_fts_insert" not in triggers:
-        execute_script += """
-        CREATE TRIGGER {table}_fts_insert AFTER INSERT ON messages
-        BEGIN
-            INSERT INTO {table}_fts (rowid, {column_list}) VALUES (new.id, {new_columns});
-        END;
-        """.format(
-            table=table,
-            column_list=column_list_without,
-            new_columns=",".join(
-                f"new.{c}" for c in columns if c.find(" UNINDEXED") == -1
-            ),
+    if result.stderr:
+        for line in result.stderr.strip().split("\n"):
+            acarshub_logging.log(
+                f"STDERR: {line}", "db_upgrade", level=LOG_LEVEL["WARNING"]
+            )
+
+    if check and result.returncode != 0:
+        raise subprocess.CalledProcessError(
+            result.returncode, cmd, result.stdout, result.stderr
         )
 
-    if f"{table}_fts_delete" not in triggers:
-        execute_script += """
-        CREATE TRIGGER {table}_fts_delete AFTER DELETE ON messages
-        BEGIN
-            INSERT INTO {table}_fts ({table}_fts, rowid, {column_list}) VALUES ('delete', old.id, {old_columns});
-        END;
-        """.format(
-            table=table,
-            column_list=column_list_without,
-            old_columns=",".join(
-                f"old.{c}" for c in columns if c.find(" UNINDEXED") == -1
-            ),
-        )
-
-    if f"{table}_fts_update" not in triggers:
-        execute_script += """
-        CREATE TRIGGER {table}_fts_update AFTER UPDATE ON messages
-        BEGIN
-            INSERT INTO {table}_fts ({table}_fts, rowid, {column_list}) VALUES ('delete', old.id, {old_columns});
-            INSERT INTO {table}_fts (rowid, {column_list}) VALUES (new.id, {new_columns});
-        END;
-        """.format(
-            table=table,
-            column_list=column_list_without,
-            new_columns=",".join(
-                f"new.{c}" for c in columns if c.find(" UNINDEXED") == -1
-            ),
-            old_columns=",".join(
-                f"old.{c}" for c in columns if c.find(" UNINDEXED") == -1
-            ),
-        )
-    if execute_script != "":
-        upgraded = True
-        acarshub_logging.log(
-            "Inserting FTS triggers", "db_upgrade", level=LOG_LEVEL["INFO"]
-        )
-        db.executescript(execute_script)
-        conn.executescript('INSERT INTO messages_fts(messages_fts) VALUES ("rebuild")')
+    return result
 
 
-def create_db(cur):
-
-    cur.execute(count_table)
-    cur.execute(freq_table)
-    cur.execute(level_table)
-    cur.execute(messages_table)
-    cur.execute(messages_saved_table)
+def database_exists():
+    """Check if database file exists."""
+    return os.path.isfile(path_to_db)
 
 
-def normalize_freqs(cur):
-    global upgraded
-
-    # select freqs from messages and ensure there are three decimal places
-    tables = ["messages", "messages_saved", "freqs"]
-    for table in tables:
-        acarshub_logging.log(
-            f"Normalizing frequencies in {table}", "db_upgrade", level=LOG_LEVEL["INFO"]
-        )
-        cur.execute(
-            f"""
-            SELECT freq, count(*) as cnt
-            FROM {table}
-            GROUP BY freq
-            """
-        )
-        freqs = cur.fetchall()
-        for freq in freqs:
-            freq_in_table = freq[0]
-            if len(freq_in_table) != 7:
-                upgraded = True
-                adjusted_freq = freq_in_table.ljust(7, "0")
-                cur.execute(
-                    f"""
-                    UPDATE {table}
-                    SET freq = ?
-                    WHERE freq = ?
-                    """,
-                    (adjusted_freq, freq_in_table),
-                )
-
-        acarshub_logging.log(
-            f"Normalizing frequencies in {table} complete",
-            "db_upgrade",
-            level=LOG_LEVEL["INFO"],
-        )
-
-
-def optimize_db(cur):
+def has_alembic_version_table(conn):
+    """Check if database has alembic_version table."""
     try:
-        if os.getenv("DB_FTS_OPTIMIZE", default="").lower() != "off":
-            acarshub_logging.log("Optimizing fts", "db_upgrade")
-            cur.execute("insert into messages_fts(messages_fts) values('optimize');")
-            acarshub_logging.log("fts optimized", "db_upgrade")
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='alembic_version';"
+        )
+        return cur.fetchone() is not None
     except Exception as e:
-        acarshub_logging.acars_traceback(e, "db_upgrade")
+        acarshub_logging.log(
+            f"Error checking alembic_version table: {e}",
+            "db_upgrade",
+            level=LOG_LEVEL["WARNING"],
+        )
+        return False
 
 
-def prune_database(cur):
+def get_current_revision(conn):
+    """Get current Alembic revision from database.
+
+    Returns:
+        str: Current revision ID, or None if no revision
+    """
     try:
-        acarshub_logging.log("Pruning database", "db_upgrade")
+        cur = conn.cursor()
+        cur.execute("SELECT version_num FROM alembic_version;")
+        result = cur.fetchone()
+        return result[0] if result else None
+    except Exception:
+        return None
+
+
+def has_legacy_tables(conn):
+    """Check if database has legacy tables (messages, count, etc.).
+
+    This helps detect databases that were created before Alembic but have content.
+    """
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='messages';"
+        )
+        return cur.fetchone() is not None
+    except Exception:
+        return False
+
+
+def initialize_new_database():
+    """Initialize a new database with all migrations."""
+    acarshub_logging.log(
+        "Database does not exist - creating new database with Alembic migrations",
+        "db_upgrade",
+        level=LOG_LEVEL["INFO"],
+    )
+
+    try:
+        # Run all migrations from scratch
+        run_alembic_command(["upgrade", "head"])
+
+        acarshub_logging.log(
+            "Database created successfully", "db_upgrade", level=LOG_LEVEL["INFO"]
+        )
+        return True
+    except subprocess.CalledProcessError as e:
+        acarshub_logging.log(
+            f"Failed to create database: {e}", "db_upgrade", level=LOG_LEVEL["ERROR"]
+        )
+        return False
+
+
+def stamp_existing_database(conn):
+    """Stamp an existing database at the initial revision.
+
+    This is for databases that were created before Alembic was introduced.
+    """
+    acarshub_logging.log(
+        f"Existing database has no Alembic version - stamping at initial revision ({INITIAL_REVISION})",
+        "db_upgrade",
+        level=LOG_LEVEL["INFO"],
+    )
+
+    try:
+        run_alembic_command(["stamp", INITIAL_REVISION])
+
+        acarshub_logging.log(
+            "Database stamped successfully", "db_upgrade", level=LOG_LEVEL["INFO"]
+        )
+        return True
+    except subprocess.CalledProcessError as e:
+        acarshub_logging.log(
+            f"Failed to stamp database: {e}", "db_upgrade", level=LOG_LEVEL["ERROR"]
+        )
+        return False
+
+
+def upgrade_database():
+    """Run pending Alembic migrations."""
+    acarshub_logging.log(
+        "Checking for pending migrations", "db_upgrade", level=LOG_LEVEL["INFO"]
+    )
+
+    try:
+        # Check current revision
+        result = run_alembic_command(["current"], check=False)
+        current = result.stdout.strip()
+
+        # Check head revision
+        result = run_alembic_command(["heads"], check=False)
+        head = result.stdout.strip()
+
+        if "(head)" in current:
+            acarshub_logging.log(
+                "Database is already at latest revision", "db_upgrade"
+            )
+            return True
+
+        # Run migrations
+        acarshub_logging.log(
+            "Running database migrations", "db_upgrade", level=LOG_LEVEL["INFO"]
+        )
+        run_alembic_command(["upgrade", "head"])
+
+        acarshub_logging.log(
+            "Database migrations completed", "db_upgrade", level=LOG_LEVEL["INFO"]
+        )
+        return True
+    except subprocess.CalledProcessError as e:
+        acarshub_logging.log(
+            f"Failed to upgrade database: {e}", "db_upgrade", level=LOG_LEVEL["ERROR"]
+        )
+        return False
+
+
+def prune_database(conn):
+    """Remove old messages from database (housekeeping)."""
+    try:
+        acarshub_logging.log("Pruning old messages", "db_upgrade")
+
+        cur = conn.cursor()
+
+        # Check if messages table exists
+        cur.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='messages';"
+        )
+        if cur.fetchone() is None:
+            acarshub_logging.log(
+                "Messages table not found - skipping pruning", "db_upgrade"
+            )
+            return True
+
+        # Prune main messages table
         cutoff = (
             datetime.datetime.now()
             - datetime.timedelta(days=acarshub_configuration.DB_SAVE_DAYS)
         ).timestamp()
 
         result = cur.execute(
-            f"select count(*) from messages where msg_time < {cutoff};"
+            f"SELECT COUNT(*) FROM messages WHERE msg_time < {cutoff};"
         )
-
         count = result.fetchone()[0]
-        if count > 100000:
-            acarshub_logging.log(
-                f"Deleting {count} messages ... this might take a while",
-                "db_upgrade",
-                level=LOG_LEVEL["WARNING"],
-            )
-        else:
-            acarshub_logging.log(f"Deleting {count} messages", "db_upgrade")
 
-        result = cur.execute(f"delete from messages where msg_time < {cutoff};")
+        if count > 0:
+            if count > 100000:
+                acarshub_logging.log(
+                    f"Deleting {count} old messages ... this might take a while",
+                    "db_upgrade",
+                    level=LOG_LEVEL["WARNING"],
+                )
+            else:
+                acarshub_logging.log(
+                    f"Deleting {count} old messages", "db_upgrade"
+                )
 
-        # prune messages_saved as well
-        cutoff = (
-            datetime.datetime.now()
-            - datetime.timedelta(days=acarshub_configuration.DB_ALERT_SAVE_DAYS)
-        ).timestamp()
+            cur.execute(f"DELETE FROM messages WHERE msg_time < {cutoff};")
 
-        result = cur.execute(f"delete from messages_saved where msg_time < {cutoff};")
+        # Prune saved messages (alerts) table if it exists
+        cur.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='messages_saved';"
+        )
+        if cur.fetchone() is not None:
+            alert_cutoff = (
+                datetime.datetime.now()
+                - datetime.timedelta(days=acarshub_configuration.DB_ALERT_SAVE_DAYS)
+            ).timestamp()
+
+            cur.execute(f"DELETE FROM messages_saved WHERE msg_time < {alert_cutoff};")
+
+        conn.commit()
 
         acarshub_logging.log("Database pruned", "db_upgrade")
+        return True
     except Exception as e:
-        acarshub_logging.acars_traceback(e, "db_upgrade")
-
-
-def delete_fts(cur):
-    cur.execute("DROP TRIGGER 'messages_fts_delete';")
-    cur.execute("DROP TRIGGER 'messages_fts_insert';")
-    cur.execute("DROP TRIGGER 'messages_fts_update';")
-    cur.execute("DROP TABLE 'messages_fts_config';")
-    cur.execute("DROP TABLE 'messages_fts_data';")
-    cur.execute("DROP TABLE 'messages_fts_docsize';")
-    cur.execute("DROP TABLE 'messages_fts_idx';")
-    cur.execute("PRAGMA writable_schema = ON;")
-    cur.execute(
-        "DELETE FROM sqlite_master WHERE type = 'table' AND name = 'messages_fts';"
-    )
-    cur.execute("PRAGMA writable_schema = OFF;")
-
-
-if __name__ == "__main__":
-    try:
-        if not os.path.isfile(path_to_db):
-            conn = sqlite3.connect(path_to_db)
-            cur = conn.cursor()
-            create_db(cur)
-        else:
-            conn = sqlite3.connect(path_to_db)
-            cur = conn.cursor()
-
-        conn.commit()
-
-        fts_rebuild = False
-        try:
-            result = cur.execute("select count(*) from messages_fts;")
-            count = result.fetchone()[0]
-        except sqlite3.DatabaseError as ex:
-            message = getattr(ex, "message", repr(ex))
-            acarshub_logging.log(
-                f"ERROR: sqlite3.DatabaseError: {message}", "db_upgrade"
-            )
-            if "vtable constructor failed: messages_fts" in message:
-                fts_rebuild = True
-
-        if fts_rebuild or os.getenv("DB_FTS_REBUILD", default="").lower() == "true":
-            acarshub_logging.log("Deleting fts data ...", "db_upgrade")
-            delete_fts(cur)
-            conn.commit()
-
-            # reconnect to database, otherwise the recreation of the fts table in
-            # check_tables does not work for some reason
-            conn.close()
-            conn = sqlite3.connect(path_to_db)
-            cur = conn.cursor()
-
-            acarshub_logging.log("Deleting fts data ... done", "db_upgrade")
-
-        check_tables(conn, cur)
-        conn.commit()
-        add_indexes(cur)
-        conn.commit()
-
-        if upgraded:
-            acarshub_logging.log(
-                "Completed upgrading database structure",
-                "db_upgrade",
-                level=LOG_LEVEL["INFO"],
-            )
         acarshub_logging.log(
-            "Database structure did not require upgrades",
+            f"Error pruning database: {e}",
             "db_upgrade",
-            level=LOG_LEVEL["INFO"],
+            level=LOG_LEVEL["WARNING"],
         )
+        return False
 
-        if acarshub_configuration.DB_LEGACY_FIX:
-            de_null(cur)
-            conn.commit()
-            normalize_freqs(cur)
-            conn.commit()
 
-        prune_database(cur)
+def optimize_fts(conn):
+    """Optimize FTS tables (if enabled)."""
+    try:
+        if os.getenv("DB_FTS_OPTIMIZE", default="").lower() == "off":
+            return True
+
+        cur = conn.cursor()
+
+        # Check if FTS table exists
+        cur.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='messages_fts';"
+        )
+        if cur.fetchone() is None:
+            acarshub_logging.log(
+                "FTS table not found - skipping optimization", "db_upgrade"
+            )
+            return True
+
+        acarshub_logging.log("Optimizing FTS tables", "db_upgrade")
+        cur.execute("INSERT INTO messages_fts(messages_fts) VALUES('optimize');")
         conn.commit()
 
-        result = [i for i in cur.execute("PRAGMA auto_vacuum")]
-        if result[0][0] != 0 or (
+        acarshub_logging.log("FTS optimization complete", "db_upgrade")
+        return True
+    except Exception as e:
+        acarshub_logging.log(
+            f"Error optimizing FTS: {e}", "db_upgrade", level=LOG_LEVEL["WARNING"]
+        )
+        return False
+
+
+def vacuum_database(conn):
+    """Run VACUUM if auto_vacuum is enabled."""
+    try:
+        cur = conn.cursor()
+
+        result = cur.execute("PRAGMA auto_vacuum;").fetchone()
+        auto_vacuum = result[0] if result else 0
+
+        if auto_vacuum != 0 or (
             os.getenv("AUTO_VACUUM", default=False)
             and str(os.getenv("AUTO_VACUUM")).upper() == "TRUE"
         ):
             acarshub_logging.log(
-                "Reclaiming disk space (consider turning off AUTO_VACUUM it's usually not needed)",
+                "Reclaiming disk space (consider turning off AUTO_VACUUM - it's usually not needed)",
                 "db_upgrade",
                 level=LOG_LEVEL["WARNING"],
             )
-            optimize_db(cur)
-            conn.commit()
-            cur.execute("PRAGMA auto_vacuum = '0';")
+
+            # Disable auto_vacuum and run VACUUM
+            cur.execute("PRAGMA auto_vacuum = 0;")
             cur.execute("VACUUM;")
-        conn.commit()
+            conn.commit()
+
+            acarshub_logging.log("Disk space reclaimed", "db_upgrade")
+
+        return True
+    except Exception as e:
+        acarshub_logging.log(
+            f"Error running VACUUM: {e}", "db_upgrade", level=LOG_LEVEL["WARNING"]
+        )
+        return False
+
+
+def main():
+    """Main database initialization and migration workflow."""
+    global exit_code
+
+    acarshub_logging.log(
+        "Starting database initialization and migration", "db_upgrade"
+    )
+
+    conn = None
+    try:
+        # Check if database exists
+        db_exists = database_exists()
+
+        if not db_exists:
+            # NEW DATABASE: Run all migrations from scratch
+            if not initialize_new_database():
+                exit_code = 1
+                return
+        else:
+            # EXISTING DATABASE: Check version and upgrade if needed
+            conn = sqlite3.connect(path_to_db)
+
+            has_version = has_alembic_version_table(conn)
+            has_legacy = has_legacy_tables(conn)
+
+            if not has_version and has_legacy:
+                # Legacy database - stamp at initial revision
+                if not stamp_existing_database(conn):
+                    exit_code = 1
+                    return
+            elif not has_version and not has_legacy:
+                # Empty database created outside of this script
+                acarshub_logging.log(
+                    "Empty database found - initializing with migrations",
+                    "db_upgrade",
+                    level=LOG_LEVEL["INFO"],
+                )
+                if not initialize_new_database():
+                    exit_code = 1
+                    return
+
+            # Run any pending migrations
+            if not upgrade_database():
+                exit_code = 1
+                return
+
+        # Re-open connection if needed
+        if conn is None or not db_exists:
+            conn = sqlite3.connect(path_to_db)
+
+        # HOUSEKEEPING: Prune, optimize, vacuum
+        prune_database(conn)
+        optimize_fts(conn)
+        vacuum_database(conn)
+
+        acarshub_logging.log(
+            "Database initialization and migration complete",
+            "db_upgrade",
+            level=LOG_LEVEL["INFO"],
+        )
 
     except Exception as e:
         acarshub_logging.acars_traceback(e, "db_upgrade")
         exit_code = 1
+
     finally:
         if conn:
             conn.close()
 
     sys.exit(exit_code)
+
+
+if __name__ == "__main__":
+    main()

@@ -30,7 +30,7 @@ import {
 import { useEffect, useMemo } from "react";
 import { Line } from "react-chartjs-2";
 import { useSettingsStore } from "../../store/useSettingsStore";
-import type { Signal } from "../../types";
+import type { SignalLevelData } from "../../types";
 import { ChartContainer } from "./ChartContainer";
 
 // Register Chart.js components
@@ -49,20 +49,20 @@ ChartJS.register(
  * SignalLevelChart Component Props
  */
 interface SignalLevelChartProps {
-  /** Signal level data from backend */
-  signalData: Signal | null;
+  /** Signal level data from backend (per-decoder format) */
+  signalData: SignalLevelData | null;
   /** Optional CSS class name */
   className?: string;
 }
 
 /**
  * SignalLevelChart Component
- * Displays received signal levels as a line chart
+ * Displays received signal levels as a line chart with per-decoder datasets
  *
  * Features:
- * - Line chart showing signal level distribution
+ * - Multi-line chart showing signal level distribution per decoder
  * - Filters out whole numbers to avoid spikes from legacy data
- * - Catppuccin themed
+ * - Catppuccin themed with consistent decoder colors
  * - Responsive design
  *
  * Note: The float check is a legacy workaround. Old acarsdec stored whole numbers
@@ -85,52 +85,98 @@ export const SignalLevelChart = ({
 
   // Process signal data and prepare for chart
   const chartData = useMemo(() => {
-    if (!signalData) {
+    if (!signalData || Object.keys(signalData).length === 0) {
       return null;
     }
 
-    const labels: string[] = [];
-    const data: number[] = [];
+    // Decoder color palette (consistent with other charts)
+    const decoderColors: Record<string, { border: string; bg: string }> = {
+      ACARS: {
+        border: isDark ? "rgb(137, 180, 250)" : "rgb(30, 102, 245)", // Blue
+        bg: isDark ? "rgba(137, 180, 250, 0.1)" : "rgba(30, 102, 245, 0.1)",
+      },
+      "VDL-M2": {
+        border: isDark ? "rgb(166, 227, 161)" : "rgb(64, 160, 43)", // Green
+        bg: isDark ? "rgba(166, 227, 161, 0.1)" : "rgba(64, 160, 43, 0.1)",
+      },
+      HFDL: {
+        border: isDark ? "rgb(245, 194, 231)" : "rgb(234, 118, 203)", // Pink
+        bg: isDark ? "rgba(245, 194, 231, 0.1)" : "rgba(234, 118, 203, 0.1)",
+      },
+      IMSL: {
+        border: isDark ? "rgb(249, 226, 175)" : "rgb(223, 142, 29)", // Yellow
+        bg: isDark ? "rgba(249, 226, 175, 0.1)" : "rgba(223, 142, 29, 0.1)",
+      },
+      IRDM: {
+        border: isDark ? "rgb(203, 166, 247)" : "rgb(136, 57, 239)", // Mauve
+        bg: isDark ? "rgba(203, 166, 247, 0.1)" : "rgba(136, 57, 239, 0.1)",
+      },
+    };
 
-    // Filter and process signal level data
-    // Skip whole numbers to avoid legacy database artifacts
-    for (const key in signalData) {
-      const level = signalData[key].level;
-      const count = signalData[key].count;
-
-      // Only include float values (skip whole numbers)
-      if (Number(level) === level && level % 1 !== 0) {
-        labels.push(level.toFixed(1));
-        data.push(count);
+    // Collect all unique signal levels across all decoders
+    const allLevels = new Set<number>();
+    for (const decoder in signalData) {
+      const decoderData = signalData[decoder];
+      if (Array.isArray(decoderData)) {
+        for (const item of decoderData) {
+          const level = item.level;
+          // Only include float values (skip whole numbers to avoid legacy artifacts)
+          if (Number(level) === level && level % 1 !== 0) {
+            allLevels.add(level);
+          }
+        }
       }
     }
 
     // Return null if no valid data after filtering
-    if (labels.length === 0) {
+    if (allLevels.size === 0) {
       return null;
     }
 
-    // Theme-aware colors
-    const greenColor = isDark ? "rgb(166, 227, 161)" : "rgb(64, 160, 43)"; // Mocha vs Latte green
-    const greenBg = isDark
-      ? "rgba(166, 227, 161, 0.1)"
-      : "rgba(64, 160, 43, 0.1)";
+    // Sort levels for x-axis
+    const sortedLevels = Array.from(allLevels).sort((a, b) => a - b);
+    const labels = sortedLevels.map((level) => level.toFixed(1));
+
+    // Build datasets for each decoder
+    const datasets = [];
+    for (const decoder in signalData) {
+      const decoderData = signalData[decoder];
+      if (!Array.isArray(decoderData) || decoderData.length === 0) {
+        continue;
+      }
+
+      // Create a map of level -> count for this decoder
+      const levelMap = new Map<number, number>();
+      for (const item of decoderData) {
+        const level = item.level;
+        // Only include float values
+        if (Number(level) === level && level % 1 !== 0) {
+          levelMap.set(level, item.count);
+        }
+      }
+
+      // Map sorted levels to counts (0 if level not present for this decoder)
+      const data = sortedLevels.map((level) => levelMap.get(level) || 0);
+
+      // Get colors for this decoder (fallback to blue if unknown)
+      const colors = decoderColors[decoder] || decoderColors.ACARS;
+
+      datasets.push({
+        label: decoder,
+        data,
+        borderColor: colors.border,
+        backgroundColor: colors.bg,
+        borderWidth: 2,
+        pointRadius: 0,
+        pointHoverRadius: 4,
+        tension: 0.2, // Slight curve for smoother line
+        fill: true,
+      });
+    }
 
     return {
       labels,
-      datasets: [
-        {
-          label: "Received Signal Levels",
-          data,
-          borderColor: greenColor,
-          backgroundColor: greenBg,
-          borderWidth: 2,
-          pointRadius: 0,
-          pointHoverRadius: 4,
-          tension: 0.2, // Slight curve for smoother line
-          fill: true,
-        },
-      ],
+      datasets,
     };
   }, [signalData, isDark]);
 
@@ -155,7 +201,16 @@ export const SignalLevelChart = ({
           display: false, // Disable count labels at each point
         },
         legend: {
-          display: false, // Hide legend for cleaner look
+          display: true, // Show legend to identify decoders
+          position: "top" as const,
+          labels: {
+            color: textColor,
+            usePointStyle: true,
+            padding: 15,
+            font: {
+              size: 12,
+            },
+          },
         },
         tooltip: {
           enabled: true,
@@ -170,7 +225,8 @@ export const SignalLevelChart = ({
           callbacks: {
             label: (context: TooltipItem<"line">) => {
               const value = context.parsed.y;
-              return `Count: ${value !== null ? value.toLocaleString() : "N/A"}`;
+              const datasetLabel = context.dataset.label || "";
+              return `${datasetLabel}: ${value !== null ? value.toLocaleString() : "N/A"}`;
             },
           },
         },

@@ -2514,41 +2514,95 @@ npm run test:e2e:chromium
 
 **Phase 10.4 Complete**: ✅ 25+ accessibility tests, Lighthouse CI, bundle analysis - all automation infrastructure ready for Phase 14 CI integration
 
-### Phase 11: Backend Migration to Node.js + TypeScript 🔧
+### Phase 11: Backend Database Migrations with Alembic ✅ COMPLETE
 
-**Status**: ⏳ Planning & Implementation
-**Decision**: Migrate from Python/Flask to Node.js/TypeScript/Prisma
-**Timeline**: 10-12 weeks (with AI assistance)
+**Status**: ✅ COMPLETE
+**Decision**: Add Alembic migrations to existing Python/Flask backend
+**Timeline**: 4 weeks (all weeks complete)
 
 **Decision Rationale**:
 
-1. **Single Language Stack** - TypeScript everywhere (frontend + backend)
-2. **Desktop App Possibility** - Electron is viable path (keep React frontend as-is)
-3. **Contributor Accessibility** - TypeScript/Node.js more accessible than Rust
-4. **Better Migrations** - Prisma > Alembic (auto-generation, type-safe)
-5. **No Future Rewrite** - This is the last backend rewrite
+1. **Pragmatic Approach** - Solve immediate pain point (database migrations) without massive rewrite
+2. **Low Risk** - No backend language change, no breaking changes to React frontend
+3. **Proven Technology** - Alembic is battle-tested SQLAlchemy migration tool
+4. **Desktop App Still Possible** - Tauri can bundle Python backend as sidecar process
+5. **Focus on React** - Don't derail React migration with backend rewrite
 
-**Alternatives Rejected**:
+**What This Phase Delivers**:
 
-- **Python + Alembic**: Closes desktop app door forever
-- **Rust + Tauri**: Requires React rewrite, higher learning curve
+- ✅ **Proper database migrations** - Replace custom `upgrade_db.py` with Alembic (COMPLETE)
+- ✅ **Signal level table refactoring** - Split into per-decoder tables with automatic data rebuild (COMPLETE)
+- ✅ **Frequency table refactoring** - Split `freqs` into per-decoder tables (COMPLETE)
+- ✅ **Version control for schema** - Track all schema changes in git (COMPLETE)
+- ✅ **Rollback capability** - `alembic downgrade` tested and working (COMPLETE)
+- ✅ **FTS (Full-Text Search) support** - Handle SQLite FTS tables in migrations (COMPLETE)
+- ✅ **API Integration** - Update backend handlers and React frontend for per-decoder signal levels (COMPLETE)
 
-**Key Architecture Changes**:
+**Key Changes**:
 
-| Component         | Python                 | Node.js            |
-| ----------------- | ---------------------- | ------------------ |
-| **Web Framework** | Flask                  | Express            |
-| **ORM**           | SQLAlchemy             | Prisma             |
-| **Database**      | SQLite                 | SQLite (no change) |
-| **Socket.IO**     | Flask-SocketIO         | Socket.IO          |
-| **Migrations**    | Custom `upgrade_db.py` | Prisma migrations  |
-| **Type Safety**   | None                   | Full TypeScript    |
+| Component             | Before                 | After                   | Status  |
+| --------------------- | ---------------------- | ----------------------- | ------- |
+| **Migrations**        | Custom `upgrade_db.py` | Alembic                 | ✅ Done |
+| **Signal Tables**     | Single `level` table   | 5 per-decoder tables    | ✅ Done |
+| **Freq Tables**       | Single `freqs` table   | 5 per-decoder tables    | ✅ Done |
+| **FTS Tables**        | Manual creation        | Alembic managed         | ✅ Done |
+| **Schema Versioning** | Manual tracking        | Alembic version history | ✅ Done |
+| **Rollback**          | Not possible           | `alembic downgrade`     | ✅ Done |
+| **API Integration**   | N/A                    | Per-decoder format      | ✅ Done |
 
-**React Frontend**: ✅ Zero changes required (Socket.IO events stay the same)
+**React Frontend**: ✅ Updated for per-decoder signal level API
 
-**Detailed Plan**: See `agent-docs/BACKEND_MIGRATION_NODEJS.md` for complete migration strategy, timeline, and technical details.
+**Detailed Plan**: See `agent-docs/PHASE_11_ALEMBIC_KICKOFF.md` for complete implementation guide
 
-**Deliverable**: Production-ready Node.js backend with Prisma migrations, desktop app ready (Electron)
+**Progress Summary**:
+
+- ✅ **Week 1 Complete**: Alembic integration, initial migration, database stamping
+- ✅ **Week 2 Complete**: Signal level table split with automatic data rebuild from messages
+  - Migration drops old `level` table (no decoder column)
+  - Creates 5 new per-decoder tables: `level_acars`, `level_vdlm2`, `level_hfdl`, `level_imsl`, `level_irdm`
+  - Automatically rebuilds statistics from `messages` table (one-time cost on upgrade)
+  - Updated `add_message()` and `get_signal_levels(decoder)` functions
+- ✅ **Week 2.5 Complete**: Frequency table refactoring
+  - Migration splits `freqs` table into 5 per-decoder tables: `freqs_acars`, `freqs_vdlm2`, `freqs_hfdl`, `freqs_imsl`, `freqs_irdm`
+  - Migrates all existing data using `freq_type` column (handles both VDL-M2 and VDLM2 naming)
+  - Creates indexes on `freq` columns for fast lookups
+  - Updated `update_frequencies()` and `get_freq_count()` functions
+  - Tested rollback capability - full data restoration working
+- ✅ **Week 3 Complete**: FTS handling and production deployment
+  - Migration creates `messages_fts` virtual table with FTS5
+  - Creates three triggers (INSERT, UPDATE, DELETE) to keep FTS in sync
+  - Idempotent migration - skips creation if FTS table already exists (for legacy databases)
+  - Tested on fresh database (creates FTS) and legacy database (skips creation)
+  - Verified FTS search works correctly (tested with 49,894 messages)
+  - Tested rollback capability - cleanly removes FTS tables and triggers
+  - Migration file: `94d97e655180_create_messages_fts_table_and_triggers.py`
+- ✅ **Week 4 Complete**: API integration and frontend updates
+  - Added `get_all_signal_levels()` helper function in backend
+  - Updated `signal_graphs` Socket.IO handler to send per-decoder data
+  - Updated React types: `SignalLevelData`, `SignalLevelItem`
+  - Updated SignalLevelChart component to display multiple decoder datasets
+  - Added `socketService.requestSignalGraphs()` method
+  - Stats page now requests and displays per-decoder signal levels
+  - All TypeScript compilation and Biome checks passing
+  - See `agent-docs/PHASE_11_ALEMBIC_KICKOFF.md` Week 4 for implementation details
+
+**All Issues Resolved**:
+- ✅ Signal level API working (per-decoder format implemented)
+- ✅ Frequency API working (already aggregates from per-decoder tables)
+- ✅ Stats page signal level chart displays data for all enabled decoders
+
+**Future Consideration**: Desktop app packaging with Tauri (bundles Python as sidecar) remains viable path forward
+
+**Migrations Created**:
+
+1. `e7991f1644b1` - Initial schema
+2. `0fc8b7cae596` - Split signal level table into per-decoder tables
+3. `a589d271a0a4` - Split freqs table into per-decoder tables
+4. `94d97e655180` - Create messages_fts table and triggers
+
+**Deliverable**: ✅ Production-ready Alembic migrations with per-decoder signal/frequency tables, FTS support, AND working API integration
+
+**Status**: Phase 11 complete - Ready for production deployment
 
 ---
 
@@ -2649,9 +2703,19 @@ npm run test:e2e:chromium
 
 ## Current Focus
 
-**Current Phase**: Phase 11 - Backend Evaluation & Migration Planning 🔧
+**Current Phase**: Phase 12 - Legacy Code Cleanup
 
-**Current Progress**:
+**Recently Completed**:
+
+- ✅ Phase 10 Complete: All testing infrastructure (505 unit tests, 603/605 integration tests, 15 E2E tests, 25+ a11y tests)
+- ✅ Phase 11 Complete: Backend Database Migrations with Alembic (4 weeks)
+  - ✅ Week 1: Alembic integration
+  - ✅ Week 2: Signal level table split
+  - ✅ Week 2.5: Frequency table split
+  - ✅ Week 3: FTS handling and idempotent migration
+  - ✅ Week 4: API integration and frontend updates
+
+**Testing Infrastructure (Phase 10)**:
 
 - ✅ Phase 10.1 Complete: 505 tests passing
   - ✅ All utilities tested (282 tests, 100% coverage)
@@ -2676,9 +2740,10 @@ npm run test:e2e:chromium
 
 **Next Priority**:
 
-1. **Phase 11**: Backend evaluation and Alembic migration integration (Python + Alembic recommended)
-2. **Phase 12**: Legacy code cleanup (remove unused code, simplify backend APIs)
+1. **Phase 12**: Legacy code cleanup (remove unused code, simplify backend APIs)
+2. **Phase 13**: System Status page (React migration)
 3. **Phase 14**: GitHub Actions CI integration (all tests automated in CI/CD pipeline)
+4. **Phase 15**: Documentation & User Guide
 
 **Recently Completed**:
 
@@ -2686,19 +2751,28 @@ npm run test:e2e:chromium
 - ✅ Phase 10.2: Integration Testing (603/605 tests passing - MessageCard, SettingsModal integration tests complete)
 - ✅ Phase 10.3: E2E Testing (Playwright setup complete, Chromium-only, 15 tests created and working in CI)
 - ✅ Phase 10.4: Accessibility & Performance Testing (25+ a11y tests, Lighthouse CI, bundle analysis)
-  </text>
+- ✅ Phase 11: Backend Database Migrations with Alembic (Complete)
+  - Week 1: Alembic integration ✅
+  - Week 2: Signal level table split with automatic data rebuild ✅
+  - Week 2.5: Frequency table split with data migration ✅
+  - Week 3: FTS table creation with idempotent migration ✅
+  - Week 4: API integration (per-decoder signal levels working) ✅
+    </text>
 
-**Critical Decision Point**: Phase 11 (Backend Migration Strategy)
+**Phase 11 Decision**: Python + Alembic (CONFIRMED)
 
-- **Recommendation**: Python + Alembic (lowest risk, fast implementation)
-- **Future Option**: Rust + Tauri (if desktop app becomes primary deployment)
+- **Approach**: Add Alembic to existing Python backend (no language change)
+- **Timeline**: 2-3 weeks vs 10-12 weeks for full backend rewrite
+- **Desktop App**: Still possible with Tauri (Python sidecar process)
+- **Documentation**: See `agent-docs/BACKEND_MIGRATION_ANALYSIS.md` Option 1
 
 **Development Philosophy**:
 
-- React migration is the only active development effort
-- Legacy codebase is frozen and will be deleted
-- Backend API changes are acceptable and encouraged for cleaner architecture
-- Focus on building the best React application, not maintaining legacy compatibility
+- React migration is complete (Phases 1-10 done)
+- Python backend stays but gets proper migrations (Alembic)
+- Legacy jQuery/TypeScript codebase will be deleted in Phase 17
+- Backend API already cleaned up during React migration
+- Focus: Add Alembic without breaking React frontend
 
 ### During React Migration
 

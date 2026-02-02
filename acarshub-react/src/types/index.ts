@@ -126,6 +126,17 @@ export interface ADSBData {
 }
 
 // Signal Types
+export interface SignalLevelItem {
+  level: number;
+  count: number;
+  id?: number;
+}
+
+export interface SignalLevelData {
+  [decoder: string]: SignalLevelItem[];
+}
+
+// Legacy single-array format (deprecated, kept for backwards compatibility)
 export interface Signal {
   [index: number]: {
     count: number;
@@ -476,7 +487,7 @@ export interface SocketEvents {
 
   // System status and monitoring
   system_status: (data: SystemStatus) => void;
-  signal: (data: Signal) => void;
+  signal: (data: { levels: SignalLevelData }) => void;
   signal_freqs: (data: SignalFreqData) => void;
   signal_count: (data: SignalCountData) => void;
 
