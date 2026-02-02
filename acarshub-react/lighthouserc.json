@@ -1,0 +1,69 @@
+{
+  "ci": {
+    "collect": {
+      "startServerCommand": "npm run preview",
+      "startServerReadyPattern": "Local:.*http://localhost:4173",
+      "startServerReadyTimeout": 30000,
+      "url": [
+        "http://localhost:4173/",
+        "http://localhost:4173/stats",
+        "http://localhost:4173/live-map",
+        "http://localhost:4173/alerts",
+        "http://localhost:4173/search",
+        "http://localhost:4173/about"
+      ],
+      "numberOfRuns": 3,
+      "settings": {
+        "preset": "desktop",
+        "throttling": {
+          "rttMs": 40,
+          "throughputKbps": 10240,
+          "cpuSlowdownMultiplier": 1
+        },
+        "screenEmulation": {
+          "mobile": false,
+          "width": 1350,
+          "height": 940,
+          "deviceScaleFactor": 1,
+          "disabled": false
+        }
+      }
+    },
+    "assert": {
+      "preset": "lighthouse:recommended",
+      "assertions": {
+        "categories:performance": ["warn", { "minScore": 0.85 }],
+        "categories:accessibility": ["error", { "minScore": 0.95 }],
+        "categories:best-practices": ["warn", { "minScore": 0.9 }],
+        "categories:seo": ["warn", { "minScore": 0.9 }],
+        "first-contentful-paint": ["warn", { "maxNumericValue": 2000 }],
+        "largest-contentful-paint": ["warn", { "maxNumericValue": 3000 }],
+        "cumulative-layout-shift": ["warn", { "maxNumericValue": 0.1 }],
+        "total-blocking-time": ["warn", { "maxNumericValue": 300 }],
+        "speed-index": ["warn", { "maxNumericValue": 3500 }],
+        "interactive": ["warn", { "maxNumericValue": 4000 }],
+        "max-potential-fid": ["warn", { "maxNumericValue": 200 }],
+        "uses-responsive-images": "off",
+        "offscreen-images": "off",
+        "render-blocking-resources": "off",
+        "unminified-css": "off",
+        "unminified-javascript": "off",
+        "unused-css-rules": "off",
+        "unused-javascript": "off",
+        "modern-image-formats": "off",
+        "uses-optimized-images": "off",
+        "uses-text-compression": "off",
+        "uses-rel-preconnect": "off",
+        "font-display": "off",
+        "dom-size": ["warn", { "maxNumericValue": 1500 }],
+        "bootup-time": ["warn", { "maxNumericValue": 3500 }],
+        "mainthread-work-breakdown": ["warn", { "maxNumericValue": 4000 }],
+        "network-rtt": "off",
+        "network-server-latency": "off"
+      }
+    },
+    "upload": {
+      "target": "temporary-public-storage"
+    }
+  }
+}

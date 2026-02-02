@@ -151,3 +151,8 @@ docker_acarshub.egg-info
 *.db
 .env
 __pycache__/
+
+# Playwright E2E testing artifacts
+acarshub-react/playwright-report/
+acarshub-react/test-results/
+acarshub-react/.playwright/

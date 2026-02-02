@@ -606,7 +606,7 @@ Total Size: ~50-60MB
   "build": {
     "beforeDevCommand": "npm run dev",
     "beforeBuildCommand": "npm run build",
-    "devPath": "http://localhost:5173",
+    "devPath": "http://localhost:3000",
     "distDir": "../dist"
   },
   "tauri": {

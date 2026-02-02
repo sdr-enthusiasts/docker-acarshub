@@ -15,6 +15,8 @@
       url = "github:FredSystems/pre-commit-checks";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    playwright.url = "github:pietdevries94/playwright-web-flake";
   };
 
   outputs =
@@ -23,6 +25,7 @@
       dream2nix,
       precommit-base,
       nixpkgs,
+      playwright,
     }:
     let
       # A helper that helps us define the attributes below for
@@ -103,7 +106,13 @@
       devShells = eachSystem (
         system:
         let
-          pkgs = import nixpkgs { inherit system; };
+          overlay = _: _: {
+            inherit (playwright.packages.${system}) playwright-test playwright-driver;
+          };
+          pkgs = import nixpkgs {
+            inherit system;
+            overlays = [ overlay ];
+          };
           inherit (self.checks.${system}.pre-commit-check) shellHook enabledPackages;
         in
         {
@@ -118,6 +127,7 @@
               nixpkgs.legacyPackages.${system}.npm-check
               nixpkgs.legacyPackages.${system}.nodejs
               nixpkgs.legacyPackages.${system}.just
+              pkgs.playwright-test
             ];
 
             buildInputs =
@@ -128,6 +138,9 @@
               ]);
 
             shellHook = ''
+                export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+                export PLAYWRIGHT_BROWSERS_PATH="${pkgs.playwright-driver.browsers}"
+
               # Run git-hooks.nix setup (creates .pre-commit-config.yaml)
               ${shellHook}
             '';

@@ -32,7 +32,7 @@ npm install
 npm run dev
 ```
 
-The app will be available at <http://localhost:5173>
+The app will be available at <http://localhost:3000>
 
 ### Running with Backend
 
@@ -325,13 +325,13 @@ Backend is not running. Start Flask backend first:
 pdm run dev
 ```
 
-### Port 5173 already in use
+### Port 3000 already in use
 
 Another Vite server is running:
 
 ```bash
 # Find and kill the process
-lsof -ti:5173 | xargs kill -9
+lsof -ti:3000 | xargs kill -9
 ```
 
 ### Hot reload not working

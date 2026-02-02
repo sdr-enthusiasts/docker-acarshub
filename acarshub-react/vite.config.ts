@@ -1,4 +1,5 @@
 import react from "@vitejs/plugin-react";
+import { visualizer } from "rollup-plugin-visualizer";
 import { defineConfig } from "vite";
 import { nodePolyfills } from "vite-plugin-node-polyfills";
 
@@ -16,7 +17,30 @@ export default defineConfig({
         process: true,
       },
     }),
+    // Bundle size visualization (only in build mode)
+    visualizer({
+      filename: "./dist/stats.html",
+      open: false,
+      gzipSize: true,
+      brotliSize: true,
+      template: "treemap", // sunburst, treemap, network
+    }),
   ],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Split vendor chunks for better caching
+          react: ["react", "react-dom", "react-router-dom"],
+          charts: ["chart.js", "react-chartjs-2", "chartjs-adapter-date-fns"],
+          map: ["maplibre-gl", "react-map-gl"],
+          decoder: ["@airframes/acars-decoder"],
+        },
+      },
+    },
+    // Warn if chunk size exceeds 500KB
+    chunkSizeWarningLimit: 500,
+  },
   server: {
     host: "0.0.0.0",
     port: 3000,
