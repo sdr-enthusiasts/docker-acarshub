@@ -198,16 +198,6 @@
   }
 }
 
-// Legacy section styles - now handled by Card component
-// Keeping for backwards compatibility if needed
-.settings-section-title {
-  margin: 0 0 0.5rem 0;
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: var(--color-text);
-  letter-spacing: -0.015em;
-}
-
 .settings-section-description {
   margin: 0 0 2rem 0;
   font-size: 0.875rem;
