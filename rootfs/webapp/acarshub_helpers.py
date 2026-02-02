@@ -46,19 +46,6 @@ else:
     ADSB_URL = "https://globe.adsbexchange.com/?icao="
 
 
-def libacars_formatted(libacars=None):
-    import pprint
-
-    html_output = "<p>Decoded:</p>"
-    html_output += "<p>"
-    html_output += "<pre>{libacars}</pre>".format(
-        libacars=pprint.pformat(libacars, indent=2)
-    )
-    html_output += "</p>"
-
-    return html_output
-
-
 def has_specified_key_not_none(message=None, key=None):
     if (key is None or message is None) or (
         key not in message or message[key] is None or message[key] == ""
@@ -101,8 +88,8 @@ def update_keys(json_message):
         json_message["timestamp"] = json_message["time"]
         del json_message["time"]
 
-    if has_specified_key(json_message, "libacars"):
-        json_message["libacars"] = libacars_formatted(json_message["libacars"])
+    # libacars is kept as raw JSON string for React frontend to parse
+    # React has its own parseAndFormatLibacars() function in decoderUtils.ts
 
     if has_specified_key(json_message, "icao"):
         json_message["icao_hex"] = try_format_as_int(json_message["icao"], "icao")

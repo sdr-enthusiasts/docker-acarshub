@@ -16,6 +16,19 @@
 # You should have received a copy of the GNU General Public License
 # along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
+# ============================================================================
+# BACKEND ARCHITECTURE (Post React Migration)
+# ============================================================================
+# This Python backend is API-ONLY:
+#   - Socket.IO handlers for real-time messaging
+#   - /metrics endpoint for Prometheus monitoring
+#
+# nginx serves the React frontend (static HTML/CSS/JS) from acarshub-react/dist/
+# nginx proxies /socket.io/* and /metrics to this Python backend
+#
+# NO HTML templates are served by Flask - all presentation logic is in React
+# ============================================================================
+
 import acarshub_helpers  # noqa: E402
 import acarshub_configuration  # noqa: E402
 import acarshub_logging  # noqa: E402
@@ -28,12 +41,8 @@ import acarshub_rrd_database  # noqa: E402
 from flask_socketio import SocketIO  # noqa: E402
 from flask import (
     Flask,
-    render_template,
     request,
-    redirect,
-    url_for,
     Response,
-    send_from_directory,
 )  # noqa: E402
 from threading import Thread, Event  # noqa: E402
 from collections import deque  # noqa: E402
@@ -748,72 +757,20 @@ def send_version():
 init()
 
 
-@app.route("/")
-def index():
-    # only by sending this page first will the client be connected to the socketio instance
-    return render_template("index.html")
-
-
-@app.route("/stats")
-def stats():
-    return render_template("index.html")
-
-
-@app.route("/search")
-def search():
-    return render_template("index.html")
-
-
-@app.route("/about")
-def about():
-    return render_template("index.html")
-
-
-@app.route("/aboutmd")
-def aboutmd():
-    return render_template("helppage.MD")
-
-
-@app.route("/alerts")
-def alerts():
-    return render_template("index.html")
-
-
-@app.route("/status")
-def status():
-    return render_template("index.html")
-
-
-@app.route("/adsb")
-def adsb():
-    # For now we're going to redirect the ADSB url always to live messages
-    # ADSB Page loading causes problems
-    if acarshub_configuration.ENABLE_ADSB:
-        return render_template("index.html")
-    else:
-        return redirect(url_for("index"))
+# ============================================================================
+# API-ONLY ROUTES
+# ============================================================================
+# All HTML/CSS/JS is served by nginx from the React build (acarshub-react/dist/)
+# This backend only provides:
+#   1. /metrics endpoint (Prometheus monitoring)
+#   2. Socket.IO handlers (real-time messaging - see below)
+# ============================================================================
 
 
 @app.route("/metrics")
 def metrics():
     """Expose Prometheus metrics"""
     return Response(acarshub_metrics.get_metrics(), mimetype="text/plain")
-
-
-@app.route("/static/<path:filename>")
-def serve_static(filename):
-    """Serve static files without caching in dev mode"""
-    response = send_from_directory(app.static_folder, filename)
-    if acarshub_configuration.LOCAL_TEST:
-        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
-        response.headers["Pragma"] = "no-cache"
-        response.headers["Expires"] = "0"
-    return response
-
-
-@app.errorhandler(404)
-def not_found(e):
-    return redirect(url_for("index"))
 
 
 # The listener for the live message page
