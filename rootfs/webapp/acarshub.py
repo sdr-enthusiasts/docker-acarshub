@@ -44,7 +44,7 @@ from flask import (
     request,
     Response,
 )  # noqa: E402
-from threading import Thread, Event  # noqa: E402
+from threading import Thread, Event, Lock  # noqa: E402
 from collections import deque  # noqa: E402
 import time  # noqa: E402
 import requests  # noqa: E402
@@ -114,10 +114,77 @@ imsl_messages_last_minute = 0
 irdm_messages_last_minute = 0
 error_messages_last_minute = 0
 
+# Connection state tracking for real-time status
+# Thread-safe dictionary tracking decoder connection status
+decoder_connections = {
+    "ACARS": False,
+    "VDLM2": False,
+    "HFDL": False,
+    "IMSL": False,
+    "IRDM": False,
+}
+decoder_connections_lock = Lock()
+
+# Cumulative message counters (never reset, for total counts)
+acars_messages_total = 0
+vdlm_messages_total = 0
+hfdl_messages_total = 0
+imsl_messages_total = 0
+irdm_messages_total = 0
+error_messages_total = 0
+
 # all namespaces
 
 acars_namespaces = ["/main"]
 function_cache = dict()
+
+
+def get_status_data():
+    """
+    Helper function to collect all status data for get_realtime_status().
+    Returns a tuple of (threads, connections, message_counts_last_minute, message_counts_total)
+    """
+    # Thread references
+    threads_data = {
+        "acars": thread_acars_listener,
+        "vdlm2": thread_vdlm2_listener,
+        "hfdl": thread_hfdl_listener,
+        "imsl": thread_imsl_listener,
+        "irdm": thread_irdm_listener,
+        "database": thread_database,
+        "scheduler": thread_scheduler,
+    }
+
+    # Connection states (thread-safe copy)
+    with decoder_connections_lock:
+        connections_data = decoder_connections.copy()
+
+    # Message counts - last minute
+    message_counts_last_minute = {
+        "acars": acars_messages_last_minute,
+        "vdlm2": vdlm_messages_last_minute,
+        "hfdl": hfdl_messages_last_minute,
+        "imsl": imsl_messages_last_minute,
+        "irdm": irdm_messages_last_minute,
+        "errors": error_messages_last_minute,
+    }
+
+    # Message counts - total
+    message_counts_total = {
+        "acars": acars_messages_total,
+        "vdlm2": vdlm_messages_total,
+        "hfdl": hfdl_messages_total,
+        "imsl": imsl_messages_total,
+        "irdm": irdm_messages_total,
+        "errors": error_messages_total,
+    }
+
+    return (
+        threads_data,
+        connections_data,
+        message_counts_last_minute,
+        message_counts_total,
+    )
 
 
 def get_cached(func, validSecs):
@@ -333,9 +400,17 @@ def scheduled_tasks():
     schedule = SafeScheduler()
     # init the dbs if not already there
     acarshub_configuration.check_github_version()
-    if not acarshub_configuration.LOCAL_TEST:
-        schedule.every().minute.at(":15").do(acarshub_helpers.service_check)
 
+    # Emit real-time status every 30 seconds
+    def emit_status():
+        threads_data, connections_data, msg_last_min, msg_total = get_status_data()
+        status = acarshub_helpers.get_realtime_status(
+            threads_data, connections_data, msg_last_min, msg_total
+        )
+        for page in acars_namespaces:
+            socketio.emit("system_status", {"status": status}, namespace=page)
+
+    schedule.every(30).seconds.do(emit_status)
     schedule.every().minute.at(":00").do(update_rrd_db)
     schedule.every().hour.at(":05").do(acarshub_configuration.check_github_version)
     schedule.every().hour.at(":01").do(send_version)
@@ -385,17 +460,23 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
     import json
 
     global error_messages_last_minute
+    global error_messages_total
 
     if message_type == "VDLM2":
         global vdlm_messages_last_minute
+        global vdlm_messages_total
     elif message_type == "ACARS":
         global acars_messages_last_minute
+        global acars_messages_total
     elif message_type == "HFDL":
         global hfdl_messages_last_minute
+        global hfdl_messages_total
     elif message_type == "IMSL":
         global imsl_messages_last_minute
+        global imsl_messages_total
     elif message_type == "IRDM":
         global irdm_messages_last_minute
+        global irdm_messages_total
 
     disconnected = True
 
@@ -423,11 +504,25 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
                 # Connect to the sender
                 receiver.connect((ip, port))
                 disconnected = False
+
+                # Update connection state (thread-safe)
+                with decoder_connections_lock:
+                    decoder_connections[message_type] = True
+
                 acarshub_logging.log(
                     f"{message_type.lower()}_receiver connected to {ip}:{port}",
                     f"{message_type.lower()}Generator",
                     level=LOG_LEVEL["DEBUG"],
                 )
+
+                # Emit status update on connection
+                threads_data, connections_data, msg_last_min, msg_total = (
+                    get_status_data()
+                )
+                status = acarshub_helpers.get_realtime_status(
+                    threads_data, connections_data, msg_last_min, msg_total
+                )
+                socketio.emit("system_status", {"status": status}, namespace="/main")
 
             if acarshub_configuration.LOCAL_TEST is True:
                 data, addr = receiver.recvfrom(65527)
@@ -444,13 +539,39 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
             )
             acarshub_logging.acars_traceback(e, f"{message_type.lower()}Generator")
             disconnected = True
+
+            # Update connection state (thread-safe)
+            with decoder_connections_lock:
+                decoder_connections[message_type] = False
+
             receiver.close()
+
+            # Emit status update on disconnection
+            threads_data, connections_data, msg_last_min, msg_total = get_status_data()
+            status = acarshub_helpers.get_realtime_status(
+                threads_data, connections_data, msg_last_min, msg_total
+            )
+            socketio.emit("system_status", {"status": status}, namespace="/main")
+
             time.sleep(1)
             continue
         except Exception as e:
             acarshub_logging.acars_traceback(e, f"{message_type.lower()}Generator")
             disconnected = True
+
+            # Update connection state (thread-safe)
+            with decoder_connections_lock:
+                decoder_connections[message_type] = False
+
             receiver.close()
+
+            # Emit status update on disconnection
+            threads_data, connections_data, msg_last_min, msg_total = get_status_data()
+            status = acarshub_helpers.get_realtime_status(
+                threads_data, connections_data, msg_last_min, msg_total
+            )
+            socketio.emit("system_status", {"status": status}, namespace="/main")
+
             time.sleep(1)
             continue
 
@@ -463,7 +584,20 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
 
         if decoded == "":
             disconnected = True
+
+            # Update connection state (thread-safe)
+            with decoder_connections_lock:
+                decoder_connections[message_type] = False
+
             receiver.close()
+
+            # Emit status update on disconnection
+            threads_data, connections_data, msg_last_min, msg_total = get_status_data()
+            status = acarshub_helpers.get_realtime_status(
+                threads_data, connections_data, msg_last_min, msg_total
+            )
+            socketio.emit("system_status", {"status": status}, namespace="/main")
+
             continue
 
         # Decode json
@@ -543,18 +677,24 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
             if formatted_message:
                 if message_type == "VDLM2":
                     vdlm_messages_last_minute += 1
+                    vdlm_messages_total += 1
                 elif message_type == "ACARS":
                     acars_messages_last_minute += 1
+                    acars_messages_total += 1
                 elif message_type == "HFDL":
                     hfdl_messages_last_minute += 1
+                    hfdl_messages_total += 1
                 elif message_type == "IMSL":
                     imsl_messages_last_minute += 1
+                    imsl_messages_total += 1
                 elif message_type == "IRDM":
                     irdm_messages_last_minute += 1
+                    irdm_messages_total += 1
 
                 if "error" in msg:
                     if msg["error"] > 0:
                         error_messages_last_minute += msg["error"]
+                        error_messages_total += msg["error"]
 
                 que_messages.append((que_type, formatted_message))
                 que_database.append((que_type, formatted_message))
@@ -704,7 +844,11 @@ def init_listeners(special_message=""):
         )
         thread_irdm_listener.start()
 
-    status = acarshub_helpers.get_service_status()  # grab system status
+    # Grab real-time system status
+    threads_data, connections_data, msg_last_min, msg_total = get_status_data()
+    status = acarshub_helpers.get_realtime_status(
+        threads_data, connections_data, msg_last_min, msg_total
+    )
 
     # emit to all namespaces
     for page in acars_namespaces:
@@ -990,6 +1134,30 @@ def update_alerts(message, namespace):
     )
     acarshub_helpers.acarshub_database.set_alert_terms(message["terms"])
     acarshub_helpers.acarshub_database.set_alert_ignore(message["ignore"])
+
+
+@socketio.on("request_status", namespace="/main")
+def request_status(message, namespace):
+    """
+    Handle real-time status requests from React frontend.
+    Returns current system status without shell script execution.
+    """
+    requester = request.sid
+    threads_data, connections_data, msg_last_min, msg_total = get_status_data()
+    status = acarshub_helpers.get_realtime_status(
+        threads_data, connections_data, msg_last_min, msg_total
+    )
+    socketio.emit(
+        "system_status",
+        {"status": status},
+        to=requester,
+        namespace="/main",
+    )
+    acarshub_logging.log(
+        "Real-time status requested",
+        "request_status",
+        level=LOG_LEVEL["DEBUG"],
+    )
 
 
 @socketio.on("signal_freqs", namespace="/main")

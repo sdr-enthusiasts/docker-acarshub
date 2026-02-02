@@ -473,6 +473,12 @@ if os.getenv("LOCAL_TEST", default=False):
 
 
 def get_service_status():
+    """
+    DEPRECATED: Legacy shell-script based status check.
+    Use get_realtime_status() instead for real-time data.
+
+    This function is kept for backwards compatibility during migration.
+    """
     return {
         "decoders": decoders,
         "servers": servers,
@@ -480,4 +486,220 @@ def get_service_status():
         "error_state": system_error,
         "stats": stats,
         "external_formats": external_formats,
+    }
+
+
+def get_realtime_status(
+    threads,
+    connections,
+    message_counts_last_minute,
+    message_counts_total,
+):
+    """
+    Get real-time system status without shell script execution.
+
+    Returns status data from Python runtime state:
+    - Thread health (alive/dead)
+    - Connection states (connected/disconnected)
+    - Message counters (per-minute and total)
+
+    This replaces the legacy service_check() shell script approach.
+
+    Args:
+        threads: Dict of thread objects (acars, vdlm2, hfdl, imsl, irdm, database, scheduler)
+        connections: Dict of connection states (ACARS, VDLM2, HFDL, IMSL, IRDM)
+        message_counts_last_minute: Dict of per-minute message counts
+        message_counts_total: Dict of total message counts
+
+    Returns:
+        dict: Status dictionary compatible with legacy format
+    """
+    import acarshub_configuration
+
+    decoders_status = {}
+    servers_status = {}
+    global_status = {}
+    error_state = False
+
+    # ACARS status
+    if acarshub_configuration.ENABLE_ACARS:
+        thread_alive = threads.get("acars") and threads["acars"].is_alive()
+        connected = connections.get("ACARS", False)
+
+        if not thread_alive:
+            status = "Dead"
+            error_state = True
+        elif not connected:
+            status = "Disconnected"
+            error_state = True
+        else:
+            status = "Ok"
+
+        decoders_status["ACARS"] = {
+            "Status": status,
+            "Connected": connected,
+            "Alive": thread_alive,
+        }
+
+        servers_status["acars_server"] = {
+            "Status": status,
+            "Messages": message_counts_total.get("acars", 0),
+        }
+
+        global_status["ACARS"] = {
+            "Status": status,
+            "Count": message_counts_total.get("acars", 0),
+            "LastMinute": message_counts_last_minute.get("acars", 0),
+        }
+
+    # VDLM2 status
+    if acarshub_configuration.ENABLE_VDLM:
+        thread_alive = threads.get("vdlm2") and threads["vdlm2"].is_alive()
+        connected = connections.get("VDLM2", False)
+
+        if not thread_alive:
+            status = "Dead"
+            error_state = True
+        elif not connected:
+            status = "Disconnected"
+            error_state = True
+        else:
+            status = "Ok"
+
+        decoders_status["VDLM2"] = {
+            "Status": status,
+            "Connected": connected,
+            "Alive": thread_alive,
+        }
+
+        servers_status["vdlm2_server"] = {
+            "Status": status,
+            "Messages": message_counts_total.get("vdlm2", 0),
+        }
+
+        global_status["VDLM2"] = {
+            "Status": status,
+            "Count": message_counts_total.get("vdlm2", 0),
+            "LastMinute": message_counts_last_minute.get("vdlm2", 0),
+        }
+
+    # HFDL status
+    if acarshub_configuration.ENABLE_HFDL:
+        thread_alive = threads.get("hfdl") and threads["hfdl"].is_alive()
+        connected = connections.get("HFDL", False)
+
+        if not thread_alive:
+            status = "Dead"
+            error_state = True
+        elif not connected:
+            status = "Disconnected"
+            error_state = True
+        else:
+            status = "Ok"
+
+        decoders_status["HFDL"] = {
+            "Status": status,
+            "Connected": connected,
+            "Alive": thread_alive,
+        }
+
+        servers_status["hfdl_server"] = {
+            "Status": status,
+            "Messages": message_counts_total.get("hfdl", 0),
+        }
+
+        global_status["HFDL"] = {
+            "Status": status,
+            "Count": message_counts_total.get("hfdl", 0),
+            "LastMinute": message_counts_last_minute.get("hfdl", 0),
+        }
+
+    # IMSL status
+    if acarshub_configuration.ENABLE_IMSL:
+        thread_alive = threads.get("imsl") and threads["imsl"].is_alive()
+        connected = connections.get("IMSL", False)
+
+        if not thread_alive:
+            status = "Dead"
+            error_state = True
+        elif not connected:
+            status = "Disconnected"
+            error_state = True
+        else:
+            status = "Ok"
+
+        decoders_status["IMSL"] = {
+            "Status": status,
+            "Connected": connected,
+            "Alive": thread_alive,
+        }
+
+        servers_status["imsl_server"] = {
+            "Status": status,
+            "Messages": message_counts_total.get("imsl", 0),
+        }
+
+        global_status["IMSL"] = {
+            "Status": status,
+            "Count": message_counts_total.get("imsl", 0),
+            "LastMinute": message_counts_last_minute.get("imsl", 0),
+        }
+
+    # IRDM status
+    if acarshub_configuration.ENABLE_IRDM:
+        thread_alive = threads.get("irdm") and threads["irdm"].is_alive()
+        connected = connections.get("IRDM", False)
+
+        if not thread_alive:
+            status = "Dead"
+            error_state = True
+        elif not connected:
+            status = "Disconnected"
+            error_state = True
+        else:
+            status = "Ok"
+
+        decoders_status["IRDM"] = {
+            "Status": status,
+            "Connected": connected,
+            "Alive": thread_alive,
+        }
+
+        servers_status["irdm_server"] = {
+            "Status": status,
+            "Messages": message_counts_total.get("irdm", 0),
+        }
+
+        global_status["IRDM"] = {
+            "Status": status,
+            "Count": message_counts_total.get("irdm", 0),
+            "LastMinute": message_counts_last_minute.get("irdm", 0),
+        }
+
+    # Database thread status
+    if threads.get("database") and not threads["database"].is_alive():
+        error_state = True
+
+    # Scheduler thread status
+    if threads.get("scheduler") and not threads["scheduler"].is_alive():
+        error_state = True
+
+    # Error messages tracking
+    error_stats = {
+        "Total": message_counts_total.get("errors", 0),
+        "LastMinute": message_counts_last_minute.get("errors", 0),
+    }
+
+    return {
+        "decoders": decoders_status,
+        "servers": servers_status,
+        "global": global_status,
+        "error_state": error_state,
+        "stats": {},  # Legacy compatibility (empty for now)
+        "external_formats": {},  # Legacy compatibility (empty for now)
+        "errors": error_stats,
+        "threads": {
+            "database": threads.get("database") and threads["database"].is_alive(),
+            "scheduler": threads.get("scheduler") and threads["scheduler"].is_alive(),
+        },
     }

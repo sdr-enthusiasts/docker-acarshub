@@ -32,8 +32,16 @@ export interface SystemStatus {
     decoders: StatusDecoder;
     servers: StatusServer;
     global: StatusGlobal;
-    stats: StatusDecoder;
-    external_formats: StatusExternalFormats;
+    stats: StatusDecoder; // Legacy compatibility (empty)
+    external_formats: StatusExternalFormats; // Legacy compatibility (empty)
+    errors?: {
+      Total: number;
+      LastMinute: number;
+    };
+    threads?: {
+      database: boolean;
+      scheduler: boolean;
+    };
   };
 }
 
@@ -47,13 +55,15 @@ export interface StatusExternalFormats {
 export interface StatusServer {
   [index: string]: {
     Status: string;
-    Web: string;
+    Messages: number;
   };
 }
 
 export interface StatusDecoder {
   [index: string]: {
     Status: string;
+    Connected?: boolean;
+    Alive?: boolean;
   };
 }
 
@@ -61,6 +71,7 @@ export interface StatusGlobal {
   [index: string]: {
     Status: string;
     Count: number;
+    LastMinute?: number;
   };
 }
 
@@ -523,6 +534,7 @@ export interface SocketEmitEvents {
     flight: string;
     tail: string;
   }) => void;
+  request_status: () => void;
 }
 
 /**

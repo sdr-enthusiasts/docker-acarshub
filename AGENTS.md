@@ -2670,25 +2670,87 @@ npm run test:e2e:chromium
 
 ---
 
-### Phase 13: System Status
+### Phase 13: System Status ✅ COMPLETE
 
-- Migrate Status page
-- Display decoder health and statistics
-- Implement system monitoring UI
-  **Deliverable**: System status dashboard
+**Status**: ✅ COMPLETE
+**Timeline**: 1 day (completed)
+
+**Completed Tasks**:
+
+- ✅ **Backend: Real-Time Status System**
+  - Replaced shell script (`healthcheck.sh`) with real-time Python status
+  - Added connection state tracking (thread-safe with locks)
+  - Added cumulative message counters (total + per-minute)
+  - Created `get_realtime_status()` function reading Python runtime state
+  - Added Socket.IO endpoint `request_status` for on-demand requests
+  - Automatic status broadcasts every 30 seconds + on decoder connect/disconnect
+
+- ✅ **Frontend: Complete StatusPage Implementation**
+  - Real-time status dashboard with 10-second refresh interval
+  - Decoder Status cards (connection state, thread health, messages)
+  - Message Statistics cards (total counts + per-minute activity)
+  - Server Status cards (TCP listener health)
+  - System Threads status (database, scheduler)
+  - Decoding Errors tracking (signal quality issues from radio decoders)
+  - Configuration summary (enabled decoders)
+
+- ✅ **Navigation Enhancement**
+  - Added Status link to navigation menu
+  - Pulsing red ⚠ indicator when system has errors
+  - Error state tracked in real-time from backend
+
+**Key Improvements**:
+
+- **No Shell Scripts** - Status built from Python runtime state (threads, connections, counters)
+- **Real-Time Updates** - Automatic refresh, event-driven on connect/disconnect
+- **Works in Local Test Mode** - No dummy script needed
+- **Thread-Safe** - Connection state protected with locks
+- **Fully Typed** - Zero `any` usage, proper TypeScript throughout
+
+**Files Modified**:
+
+- `rootfs/webapp/acarshub.py` - Connection tracking, status data collection, Socket.IO endpoint
+- `rootfs/webapp/acarshub_helpers.py` - Real-time status function
+- `acarshub-react/src/pages/StatusPage.tsx` - Complete implementation (294 lines)
+- `acarshub-react/src/styles/pages/_status.scss` - Catppuccin styling (249 lines)
+- `acarshub-react/src/services/socket.ts` - Added `requestStatus()` method
+- `acarshub-react/src/types/index.ts` - Updated SystemStatus interfaces
+- `acarshub-react/src/components/Navigation.tsx` - Status link + error indicator
+
+**Deliverable**: ✅ Real-time system status dashboard with navigation indicator
 
 ---
 
-### Phase 14: Polish and Deployment
+### Phase 14: Docker Deployment & Production Build
 
-- Comprehensive component tests
-- Integration tests for Socket.IO flows
-- E2E tests for critical user journeys (Playwright)
-- Performance optimization and bundle analysis
-- Accessibility audit and fixes
+**Goal**: Package React application for production deployment in Docker container
+
+**Tasks**:
+
+- Update Dockerfile to build React application
+  - Add Node.js build stage for `npm run build`
+  - Copy `acarshub-react/dist/` to container image
+  - Place React build output in `/webapp/dist/` or similar
+- Update nginx configuration
+  - Serve React static assets from build output directory
+  - Ensure SPA routing works (all routes serve `index.html`)
+  - Verify `/socket.io/*` and `/metrics` proxying still works
+- Asset handling
+  - Copy static assets (sounds, images) to correct location
+  - Verify `/static/sounds/alert.mp3` is accessible
+  - Test all asset paths in production build
+- Docker build verification
+  - Build complete Docker image
+  - Test in container environment
+  - Verify all features work (Socket.IO, static assets, routing)
+- Performance optimization
+  - Bundle analysis with rollup-plugin-visualizer
+  - Code splitting verification
+  - Gzip/Brotli compression in nginx
 - Update nginx configuration for production
-- Documentation updates
-  **Deliverable**: Production-ready React application
+- Documentation updates for deployment
+
+**Deliverable**: Working Docker container with React frontend + Python backend
 
 ---
 
@@ -2703,7 +2765,38 @@ npm run test:e2e:chromium
 
 ---
 
-### Phase 16: Beta Release & Feedback
+### Phase 16: Bug Fix & Refinement Pass
+
+- Determine if healhcheck.sh meets its objectives for determining container health
+- See ## Bugs before final release for details.
+
+---
+
+### Phase 16: E2E Testing & Quality Assurance
+
+**Goal**: Comprehensive end-to-end testing with Playwright
+
+**Tasks**:
+
+- Examine the utility of employing docker to get all browser tests working.
+- We need to mock the back end for tests. Right now the tests relies on having a server spun up and running, and the tests can pass/fail based on what is being shown in real time data. We will need message types for various kinds of messages (alerts, non-alerts, ACARS, HFDL, VDLM2 for now), and a snapshot of valid ADSB data that pairs up with those messages to test live map accessibility.
+- E2E tests for critical user journeys (Playwright)
+- Full user flow testing (first visit → configure alerts → receive messages)
+- Search and database interaction tests
+- Map interaction tests (click aircraft → view messages)
+- Mobile responsiveness validation (320px to 2560px viewports)
+- Real message processing tests (feed raw JSONL files → backend → Socket.IO → React UI)
+- Performance validation (process 2,860+ messages, verify UI responsiveness)
+- Edge case detection (multi-part merging, duplicates, libacars decoding)
+- Browser compatibility testing (Chromium, Firefox, WebKit)
+- GitHub Actions CI integration for E2E tests
+- Ensure ALL E2E tests that assert accessibility test both light and dark mode
+
+**Deliverable**: Comprehensive E2E test suite with CI automation
+
+---
+
+### Phase 17: Beta Release & Feedback
 
 - Deploy to beta testers
 - Collect feedback on UX, performance, bugs
@@ -2713,21 +2806,25 @@ npm run test:e2e:chromium
 
 ---
 
-### Phase 17: Final Cutover (Production Release)
+### Phase 18: Final Cutover (Production Release)
 
-- Update Docker build to only include React frontend
-- Remove `acarshub-typescript/` directory entirely
-- Remove legacy build tooling (Webpack configs, etc.)
-- Update documentation to remove all legacy references
 - Final production deployment
+- Update documentation to remove all legacy references
+- Release notes and changelog
+- Version tagging
 - **Deliverable**: React-only application in production
 
 ## Current Focus
 
-**Current Phase**: Phase 13 - System Status (Next)
+**Current Phase**: Phase 14 - Docker Deployment & Production Build (Next)
 
 **Recently Completed**:
 
+- ✅ Phase 13 Complete: System Status (1 day)
+  - ✅ Replaced shell script with real-time Python status
+  - ✅ Complete StatusPage with decoder health, statistics, threads
+  - ✅ Navigation warning indicator (pulsing red ⚠ when errors)
+  - ✅ Real-time updates (10s page refresh, 30s broadcasts, event-driven)
 - ✅ Phase 12 Complete: Legacy Code Cleanup (5 days)
   - ✅ Day 1: Backend API cleanup (deleted HTML generation, routes)
   - ✅ Day 2: Refactoring (htmlListener → messageRelayListener)
@@ -2905,8 +3002,9 @@ Before moving to the next phase:
 
 - Global:
   - Disconnected state will show disconnected, but the socket is valid
-  - ⚠️ NOTE: Density setting is inconsistent (hardcoded sizes in some places). Recommend removing entirely - deferred to Phase 12.
-  - We should NOT be discarding messages for aircraft we are currently tracking via ADSB.
+  - Padding/margin values are all over the place. At least, they feel like that because they're hard coded. Refine, be consistent, use variables
+  - Density setting is inconsistent (hardcoded sizes in some places). Remove the setting, and SCSS selectors. Use the compact density setting where the selector was doing work before.
+  - We should NOT be discarding messages for aircraft we are currently tracking via ADSB. The message discard workflow should be (page load) -> get the messages -> if adsb is enabled wait for the first ADSB message -> pair up ADSB and messages, like it does now -> purge pass should keep all message groups that are active on ADSB. If we are in excess of the max messages, remove the oldest message groups that are not paired with ADSB, always keeping the most recent <user selected max message per source>
 
 - Bug Fix Pass (Pre-Phase 10) - ✅ COMPLETE (6 bugs fixed, 1 deferred):
   - ✅ FIXED: Alert matching now checks decodedText field from @airframes/acars-decoder

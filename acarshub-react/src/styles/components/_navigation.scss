@@ -130,6 +130,32 @@
     text-align: center;
     display: inline-block;
   }
+
+  .error-indicator {
+    color: var(--color-red);
+    font-size: 1.125rem;
+    font-weight: $font-weight-bold;
+    margin-left: $spacing-xs;
+    display: inline-block;
+    animation: pulse-error 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse-error {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.6;
+    }
+  }
+
+  // Disable animation if user prefers reduced motion
+  @media (prefers-reduced-motion: reduce) {
+    .error-indicator {
+      animation: none;
+    }
+  }
 }
 
 /**

@@ -108,6 +108,9 @@ export interface ClientToServerEvents {
   signal_count: (data: { count: boolean }) => void;
   signal_graphs: (data: Record<string, unknown>) => void;
 
+  // System status queries
+  request_status: (data: Record<string, unknown>) => void;
+
   // RRD time-series queries
   rrd_timeseries: (data: { time_period: string }) => void;
 
@@ -299,6 +302,17 @@ class SocketService {
     // Legacy style: pass namespace as third argument
     // @ts-expect-error - Legacy Socket.IO syntax requires namespace as third arg
     this.socket?.emit("signal_graphs", {}, "/main");
+  }
+
+  /**
+   * Request real-time system status from backend
+   * Returns decoder health, connection states, and message statistics
+   */
+  requestStatus(): void {
+    socketLogger.debug("Requesting real-time system status");
+    // Legacy style: pass namespace as third argument
+    // @ts-expect-error - Legacy Socket.IO syntax requires namespace as third arg
+    this.socket?.emit("request_status", {}, "/main");
   }
 
   /**

@@ -21,6 +21,14 @@ import {
   selectUnreadAlertCount,
   useAppStore,
 } from "../store/useAppStore";
+
+/**
+ * Selector for system error state
+ */
+const selectSystemErrorState = (
+  state: ReturnType<typeof useAppStore.getState>,
+) => state.systemStatus?.status.error_state ?? false;
+
 import { ThemeSwitcher } from "./ThemeSwitcher";
 
 /**
@@ -31,6 +39,7 @@ import { ThemeSwitcher } from "./ThemeSwitcher";
 export const Navigation = () => {
   const adsbEnabled = useAppStore(selectAdsbEnabled);
   const unreadAlertCount = useAppStore(selectUnreadAlertCount);
+  const systemHasError = useAppStore(selectSystemErrorState);
   const setSettingsOpen = useAppStore((state) => state.setSettingsOpen);
 
   const handleSettingsClick = () => {
@@ -63,6 +72,11 @@ export const Navigation = () => {
           </NavLink>
           <br />
           <NavLink to="/stats">Statistics</NavLink>
+          <br />
+          <NavLink to="/status">
+            Status
+            {systemHasError && <span className="error-indicator"> ⚠</span>}
+          </NavLink>
           <br />
           <NavLink to="/about">About</NavLink>
           <br />
@@ -105,6 +119,12 @@ export const Navigation = () => {
             </li>
             <li>
               <NavLink to="/stats">Statistics</NavLink>
+            </li>
+            <li>
+              <NavLink to="/status">
+                Status
+                {systemHasError && <span className="error-indicator"> ⚠</span>}
+              </NavLink>
             </li>
             <li>
               <NavLink to="/about">About</NavLink>
