@@ -68,7 +68,7 @@
           javascript = {
             enableBiome = true;
             enableTsc = true;
-            tsConfig = "acarshub-typescript/tsconfig.json";
+            tsConfig = "acarshub-react/tsconfig.json";
           };
 
           extraExcludes = [

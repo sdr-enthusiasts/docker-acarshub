@@ -391,99 +391,94 @@ export const MessageCard = memo(
         </dl>
 
         {/* Message Content */}
-        {(message.text ||
-          message.data ||
-          message.decoded_msg ||
-          message.decodedText) && (
-          <div className="message-card__content">
-            {/* Decoded Text from @airframes/acars-decoder */}
-            {message.decodedText && (
-              <div className="message-content message-content--decoded">
-                <div className="message-content__label">
-                  Decoded Text (
-                  {message.decodedText.decoder.decodeLevel === "full"
-                    ? "Full"
-                    : "Partial"}
-                  ):
-                </div>
-                <pre
-                  className="message-content__text"
-                  // biome-ignore lint/security/noDangerouslySetInnerHtml: needed for formatted decoder output
-                  dangerouslySetInnerHTML={{
-                    __html: formatDecodedText(
-                      message.decodedText,
-                      message.matched_text,
-                    ),
-                  }}
-                />
+        <div className="message-card__content">
+          {/* Decoded Text from @airframes/acars-decoder */}
+          {message.decodedText && (
+            <div className="message-content message-content--decoded">
+              <div className="message-content__label">
+                Decoded Text (
+                {message.decodedText.decoder.decodeLevel === "full"
+                  ? "Full"
+                  : "Partial"}
+                ):
               </div>
-            )}
+              <pre
+                className="message-content__text"
+                // biome-ignore lint/security/noDangerouslySetInnerHtml: needed for formatted decoder output
+                dangerouslySetInnerHTML={{
+                  __html: formatDecodedText(
+                    message.decodedText,
+                    message.matched_text,
+                  ),
+                }}
+              />
+            </div>
+          )}
 
-            {/* Raw Text (hidden on small screens if decoded text exists) */}
-            {message.text && (
-              <div
-                className={`message-content ${message.decodedText ? "message-content--hide-small" : ""}`}
-              >
-                <div className="message-content__label">
-                  {message.decodedText ? "Non-Decoded Text:" : "Text:"}
-                </div>
-                <pre
-                  className="message-content__text"
-                  // biome-ignore lint/security/noDangerouslySetInnerHtml: needed for alert term highlighting
-                  dangerouslySetInnerHTML={{
-                    __html: message.matched_text
-                      ? highlightMatchedText(
-                          message.matched_text,
-                          message.text.replace(/\\r\\n/g, "<br>"),
-                        )
-                      : message.text.replace(/\\r\\n/g, "<br>"),
-                  }}
-                />
+          {/* Raw Text (hidden on small screens if decoded text exists) */}
+          {message.text && (
+            <div
+              className={`message-content ${message.decodedText ? "message-content--hide-small" : ""}`}
+            >
+              <div className="message-content__label">
+                {message.decodedText ? "Non-Decoded Text:" : "Text:"}
               </div>
-            )}
+              <pre
+                className="message-content__text"
+                // biome-ignore lint/security/noDangerouslySetInnerHtml: needed for alert term highlighting
+                dangerouslySetInnerHTML={{
+                  __html: message.matched_text
+                    ? highlightMatchedText(
+                        message.matched_text,
+                        message.text.replace(/\\r\\n/g, "<br>"),
+                      )
+                    : message.text.replace(/\\r\\n/g, "<br>"),
+                }}
+              />
+            </div>
+          )}
 
-            {/* Data field */}
-            {message.data && (
-              <div className="message-content">
-                <div className="message-content__label">Data:</div>
-                <pre
-                  className="message-content__data"
-                  // biome-ignore lint/security/noDangerouslySetInnerHtml: needed for alert term highlighting
-                  dangerouslySetInnerHTML={{
-                    __html: message.matched_text
-                      ? highlightMatchedText(
-                          message.matched_text,
-                          message.data.replace(/\\r\\n/g, "<br>"),
-                        )
-                      : message.data.replace(/\\r\\n/g, "<br>"),
-                  }}
-                />
-              </div>
-            )}
+          {/* Data field */}
+          {message.data && (
+            <div className="message-content">
+              <div className="message-content__label">Data:</div>
+              <pre
+                className="message-content__data"
+                // biome-ignore lint/security/noDangerouslySetInnerHtml: needed for alert term highlighting
+                dangerouslySetInnerHTML={{
+                  __html: message.matched_text
+                    ? highlightMatchedText(
+                        message.matched_text,
+                        message.data.replace(/\\r\\n/g, "<br>"),
+                      )
+                    : message.data.replace(/\\r\\n/g, "<br>"),
+                }}
+              />
+            </div>
+          )}
 
-            {/* Decoded message field */}
-            {message.decoded_msg && (
-              <div className="message-content">
-                <div className="message-content__label">Decoded:</div>
-                <pre className="message-content__decoded">
-                  {message.decoded_msg}
+          {/* Decoded message field */}
+          {message.decoded_msg && (
+            <div className="message-content">
+              <div className="message-content__label">Decoded:</div>
+              <pre className="message-content__decoded">
+                {message.decoded_msg}
+              </pre>
+            </div>
+          )}
+
+          {/* No content message */}
+          {!message.text &&
+            !message.data &&
+            !message.decoded_msg &&
+            !message.decodedText && (
+              <div className="message-content message-content--empty">
+                <pre className="message-content__text">
+                  <em>No text</em>
                 </pre>
               </div>
             )}
-
-            {/* No content message */}
-            {!message.text &&
-              !message.data &&
-              !message.decoded_msg &&
-              !message.decodedText && (
-                <div className="message-content message-content--empty">
-                  <pre className="message-content__text">
-                    <em>No text</em>
-                  </pre>
-                </div>
-              )}
-          </div>
-        )}
+        </div>
 
         {/* Libacars Decoded Data */}
         {message.libacars &&
