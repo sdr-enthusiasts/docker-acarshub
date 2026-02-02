@@ -82,7 +82,7 @@ test.describe("Accessibility - Core Pages", () => {
     // Navigate to Statistics
     await page.goto("/");
     await injectDecoderState(page); // Enable all decoders including ADS-B
-    await page.locator('a:has-text("Statistics")').first().click();
+    await page.getByRole("link", { name: "Statistics" }).click();
     await expect(page).toHaveURL(/\/stats$/);
     await page.waitForTimeout(500); // Wait for charts to render
 
@@ -99,7 +99,7 @@ test.describe("Accessibility - Core Pages", () => {
     // Navigate to Live Map
     await page.goto("/");
     await injectDecoderState(page); // Enable ADS-B decoder so Live Map link is visible
-    await page.locator('a:has-text("Live Map")').first().click();
+    await page.getByRole("link", { name: "Live Map" }).click();
     await expect(page).toHaveURL(/\/adsb$/);
     await page.waitForTimeout(1000); // Wait for map to initialize
 
@@ -116,7 +116,7 @@ test.describe("Accessibility - Core Pages", () => {
     // Navigate to Alerts
     await page.goto("/");
     await injectDecoderState(page); // Enable all decoders including ADS-B
-    await page.locator('a:has-text("Alerts")').first().click();
+    await page.getByRole("link", { name: "Alerts" }).click();
     await expect(page).toHaveURL(/\/alerts$/);
 
     const accessibilityScanResults = await new AxeBuilder({ page })
@@ -132,7 +132,7 @@ test.describe("Accessibility - Core Pages", () => {
     // Navigate to Search
     await page.goto("/");
     await injectDecoderState(page); // Enable all decoders including ADS-B
-    await page.locator('a:has-text("Search")').first().click();
+    await page.getByRole("link", { name: "Search" }).click();
     await expect(page).toHaveURL(/\/search$/);
 
     const accessibilityScanResults = await new AxeBuilder({ page })
@@ -148,7 +148,7 @@ test.describe("Accessibility - Core Pages", () => {
     // Navigate to About
     await page.goto("/");
     await injectDecoderState(page); // Enable all decoders including ADS-B
-    await page.locator('a:has-text("About")').first().click();
+    await page.getByRole("link", { name: "About" }).click();
     await expect(page).toHaveURL(/\/about$/);
 
     const accessibilityScanResults = await new AxeBuilder({ page })
@@ -173,7 +173,7 @@ test.describe("Accessibility - Settings Modal", () => {
     await injectDecoderState(page);
 
     // Open settings modal
-    await page.click('button[aria-label="Settings"]');
+    await page.getByRole("button", { name: "Settings" }).click();
     await page.waitForSelector(".modal", { state: "visible" });
 
     // Run axe accessibility scan
@@ -186,7 +186,7 @@ test.describe("Accessibility - Settings Modal", () => {
 
   test("All Settings tabs should be accessible", async ({ page }) => {
     // Open Settings modal
-    await page.locator('button[aria-label="Settings"]').first().click();
+    await page.getByRole("button", { name: "Settings" }).click();
     await page.waitForSelector(".modal", { state: "visible" });
 
     const tabs = [
@@ -275,7 +275,7 @@ test.describe("Accessibility - Keyboard Navigation", () => {
 
   test("Should navigate Settings tabs with keyboard", async ({ page }) => {
     // Open Settings
-    await page.locator('button[aria-label="Settings"]').first().click();
+    await page.getByRole("button", { name: "Settings" }).click();
     await page.waitForSelector(".modal", { state: "visible" });
 
     // Tab to first tab button
@@ -357,9 +357,9 @@ test.describe("Accessibility - Color Contrast", () => {
     await injectDecoderState(page);
 
     // Switch to light theme
-    await page.locator('button[aria-label="Settings"]').first().click();
+    await page.getByRole("button", { name: "Settings" }).click();
     await page.waitForSelector(".modal", { state: "visible" });
-    await page.click('label:has-text("Light (Latte)")');
+    await page.getByRole("radio", { name: "Catppuccin Latte (Light)" }).click();
     await page.keyboard.press("Escape");
     await page.waitForTimeout(300);
 

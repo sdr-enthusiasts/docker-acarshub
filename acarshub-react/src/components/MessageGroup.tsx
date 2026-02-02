@@ -110,7 +110,7 @@ export const MessageGroup = memo(
 
         {/* Tab Navigation (only for multiple messages) */}
         {hasMultipleMessages && (
-          <div className="message-group__tabs" role="tablist">
+          <div className="message-group__tabs">
             <button
               type="button"
               className="tab-nav tab-nav--prev"
@@ -121,7 +121,7 @@ export const MessageGroup = memo(
               ‹
             </button>
 
-            <div className="tab-list">
+            <div className="tab-list" role="tablist">
               {plane.messages.map((msg, index) => (
                 <button
                   key={msg.uid || `msg-${index}`}
