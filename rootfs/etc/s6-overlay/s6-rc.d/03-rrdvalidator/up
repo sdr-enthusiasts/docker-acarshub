@@ -1,2 +1,2 @@
 #!/bin/sh
-exec /etc/s6-overlay/scripts/03-rrdvalidator
+exec /etc/s6-overlay/scripts/03-rrdvalidator.sh

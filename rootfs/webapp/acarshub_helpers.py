@@ -17,7 +17,6 @@
 # along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import subprocess
 import acarshub_database
 import time
 import acarshub_logging
@@ -37,11 +36,12 @@ system_error = False
 # But we'll at least check and see if the user put a trailing slash or not
 
 
-if os.getenv("TAR1090_URL", default=False):
-    if os.getenv("TAR1090_URL").endswith("/"):
-        ADSB_URL = os.getenv("TAR1090_URL") + "?icao="
+tar1090_url = os.getenv("TAR1090_URL")
+if tar1090_url:
+    if tar1090_url.endswith("/"):
+        ADSB_URL = tar1090_url + "?icao="
     else:
-        ADSB_URL = os.getenv("TAR1090_URL") + "/?icao="
+        ADSB_URL = tar1090_url + "/?icao="
 else:
     ADSB_URL = "https://globe.adsbexchange.com/?icao="
 
@@ -196,6 +196,7 @@ def handle_message(message=None):
         total_results = 0
         serialized_json = []
         search_term = ""
+        results = None
         # If the user has cleared the search bar, we'll execute the else statement
         # And the browsers clears the data
         # otherwise, run the search and format the results

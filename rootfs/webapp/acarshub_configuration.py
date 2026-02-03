@@ -17,11 +17,8 @@
 # along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
 
-import json
 import os
-import sys
 
-import urllib
 import acarshub_logging
 from acarshub_logging import LOG_LEVEL
 
@@ -45,9 +42,10 @@ def is_enabled(value):
 
     # Check for deprecated 'external' value
     if value_str == "external":
-        print(
+        acarshub_logging.log(
             "WARNING: Using 'external' is deprecated. Please use 'true' or 'false' instead.",
-            file=sys.stderr,
+            "config",
+            LOG_LEVEL["WARNING"],
         )
         return True
 
@@ -155,41 +153,51 @@ if (
 ):
     DB_SAVEALL = True
 
-if os.getenv("ACARS_SOURCE_PORT", default=False):
-    ACARS_SOURCE_PORT = int(os.getenv("ACARS_SOURCE_PORT"))
+acars_source_port = os.getenv("ACARS_SOURCE_PORT")
+if acars_source_port:
+    ACARS_SOURCE_PORT = int(acars_source_port)
 
-if os.getenv("VDLM_SOURCE_PORT", default=False):
-    VDLM_SOURCE_PORT = int(os.getenv("VDLM_SOURCE_PORT"))
+vdlm_source_port = os.getenv("VDLM_SOURCE_PORT")
+if vdlm_source_port:
+    VDLM_SOURCE_PORT = int(vdlm_source_port)
 
-if os.getenv("HFDL_SOURCE_PORT", default=False):
-    HFDL_SOURCE_PORT = int(os.getenv("HFDL_SOURCE_PORT"))
+hfdl_source_port = os.getenv("HFDL_SOURCE_PORT")
+if hfdl_source_port:
+    HFDL_SOURCE_PORT = int(hfdl_source_port)
 
-if os.getenv("IMSL_SOURCE_PORT", default=False):
-    IMSL_SOURCE_PORT = int(os.getenv("IMSL_SOURCE_PORT"))
+imsl_source_port = os.getenv("IMSL_SOURCE_PORT")
+if imsl_source_port:
+    IMSL_SOURCE_PORT = int(imsl_source_port)
 
-if os.getenv("IRDM_SOURCE_PORT", default=False):
-    IRDM_SOURCE_PORT = int(os.getenv("IRDM_SOURCE_PORT"))
+irdm_source_port = os.getenv("IRDM_SOURCE_PORT")
+if irdm_source_port:
+    IRDM_SOURCE_PORT = int(irdm_source_port)
 
 # Application Settings
 
-if os.getenv("ACARSHUB_DB", default=False):
-    ACARSHUB_DB = os.getenv("ACARSHUB_DB", default=False)
+acarshub_db = os.getenv("ACARSHUB_DB")
+if acarshub_db:
+    ACARSHUB_DB = acarshub_db
 else:
     ACARSHUB_DB = "sqlite:////run/acars/messages.db"
 
-if os.getenv("RRD_DB_PATH", default=False):
-    RRD_DB_PATH = os.getenv("RRD_DB_PATH", default=False)
+rrd_db_path = os.getenv("RRD_DB_PATH")
+if rrd_db_path:
+    RRD_DB_PATH = rrd_db_path
 else:
-    RRD_DB_PATH = os.getenv("RRD_DB_PATH", default="/run/acars/")
+    RRD_DB_PATH = "/run/acars/"
 
-if os.getenv("DB_BACKUP", default=False):
-    DB_BACKUP = os.getenv("DB_BACKUP")
+db_backup = os.getenv("DB_BACKUP")
+if db_backup:
+    DB_BACKUP = db_backup
 
-if os.getenv("IATA_OVERRIDE", default=False):
-    IATA_OVERRIDE = os.getenv("IATA_OVERRIDE")
+iata_override = os.getenv("IATA_OVERRIDE")
+if iata_override:
+    IATA_OVERRIDE = iata_override
 
-if os.getenv("ALERT_STAT_TERMS", default=False):
-    ALERT_STAT_TERMS = os.getenv("ALERT_STAT_TERMS").split(",")
+alert_stat_terms = os.getenv("ALERT_STAT_TERMS")
+if alert_stat_terms:
+    ALERT_STAT_TERMS = alert_stat_terms.split(",")
 else:
     ALERT_STAT_TERMS = [
         "cop",
@@ -216,12 +224,15 @@ if (
     and str(os.getenv("ENABLE_ADSB")).upper() == "TRUE"
 ):
     ENABLE_ADSB = True
-    if os.getenv("ADSB_URL", default=False):
-        ADSB_URL = os.getenv("ADSB_URL", default=False)
-    if os.getenv("ADSB_LON", default=False):
-        ADSB_LON = float(os.getenv("ADSB_LON"))
-    if os.getenv("ADSB_LAT", default=False):
-        ADSB_LAT = float(os.getenv("ADSB_LAT"))
+    adsb_url = os.getenv("ADSB_URL")
+    if adsb_url:
+        ADSB_URL = adsb_url
+    adsb_lon = os.getenv("ADSB_LON")
+    if adsb_lon:
+        ADSB_LON = float(adsb_lon)
+    adsb_lat = os.getenv("ADSB_LAT")
+    if adsb_lat:
+        ADSB_LAT = float(adsb_lat)
     if (
         os.getenv("DISABLE_RANGE_RINGS", default=False)
         and str(os.getenv("DISABLE_RANGE_RINGS")).upper() == "TRUE"
@@ -231,11 +242,13 @@ if (
 if os.getenv("ADSB_BYPASS_URL", default=False):
     ADSB_BYPASS_URL = True
 
-if os.getenv("DB_SAVE_DAYS", default=False):
-    DB_SAVE_DAYS = int(os.getenv("DB_SAVE_DAYS"))
+db_save_days = os.getenv("DB_SAVE_DAYS")
+if db_save_days:
+    DB_SAVE_DAYS = int(db_save_days)
 
-if os.getenv("DB_ALERT_SAVE_DAYS", default=False):
-    DB_ALERT_SAVE_DAYS = int(os.getenv("DB_ALERT_SAVE_DAYS"))
+db_alert_save_days = os.getenv("DB_ALERT_SAVE_DAYS")
+if db_alert_save_days:
+    DB_ALERT_SAVE_DAYS = int(db_alert_save_days)
 
 if str(os.getenv("DB_LEGACY_FIX")).upper() == "TRUE":
     DB_LEGACY_FIX = True

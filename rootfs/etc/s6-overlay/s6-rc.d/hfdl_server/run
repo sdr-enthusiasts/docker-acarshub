@@ -1,2 +1,2 @@
 #!/bin/sh
-exec /etc/s6-overlay/scripts/hfdl_server
+exec /etc/s6-overlay/scripts/hfdl_server.sh
