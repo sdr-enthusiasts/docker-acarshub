@@ -42,5 +42,5 @@ rootfs/webapp/__pycache__
 rootfs/webapp/pyvenv.cfg
 rootfs/webapp/static
 rootfs/webapp/templates
-*node_modules*
+acarshub-react/node_modules
 test-results

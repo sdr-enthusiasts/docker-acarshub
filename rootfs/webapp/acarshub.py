@@ -38,6 +38,7 @@ import acarshub_metrics  # noqa: E402
 
 import acarshub_rrd_database  # noqa: E402
 
+
 from flask_socketio import SocketIO  # noqa: E402
 from flask import (
     Flask,
@@ -399,7 +400,6 @@ def scheduled_tasks():
 
     schedule = SafeScheduler()
     # init the dbs if not already there
-    acarshub_configuration.check_github_version()
 
     # Emit real-time status every 30 seconds
     def emit_status():
@@ -412,8 +412,6 @@ def scheduled_tasks():
 
     schedule.every(30).seconds.do(emit_status)
     schedule.every().minute.at(":00").do(update_rrd_db)
-    schedule.every().hour.at(":05").do(acarshub_configuration.check_github_version)
-    schedule.every().hour.at(":01").do(send_version)
     schedule.every(6).hours.do(acarshub_helpers.acarshub_database.optimize_db_regular)
     schedule.every().minute.at(":30").do(
         acarshub_helpers.acarshub_database.prune_database
@@ -901,12 +899,6 @@ def init():
     init_listeners()
 
 
-def send_version():
-    socketio.emit(
-        "acarshub-version", acarshub_configuration.get_version(), namespace="/main"
-    )
-
-
 init()
 
 
@@ -1042,19 +1034,6 @@ def main_connect():
             acarshub_logging.acars_traceback(e, "webapp")
 
     try:
-        socketio.emit(
-            "system_status",
-            {"status": acarshub_helpers.get_service_status()},
-            to=requester,
-            namespace="/main",
-        )
-    except Exception as e:
-        acarshub_logging.log(
-            f"Main Connect: Error sending system_status: {e}", "webapp"
-        )
-        acarshub_logging.acars_traceback(e, "webapp")
-
-    try:
         rows, size = get_cached(
             acarshub_helpers.acarshub_database.database_get_row_count, 30
         )
@@ -1086,7 +1065,7 @@ def main_connect():
             to=requester,
             namespace="/main",
         )
-        send_version()
+
     except Exception as e:
         acarshub_logging.log(
             f"Main Connect: Error sending signal levels: {e}", "webapp"
