@@ -54,7 +54,7 @@ jobs:
       ghcr_repo: ${{ github.repository }}
       build_latest: true
       docker_latest_tag: v4-
-      build_baseimage_test: true
+      build_baseimage_test: false
       platform_linux_arm32v7_enabled: false
       build_baseimage_url: :base/:base-test-pr
     secrets:
