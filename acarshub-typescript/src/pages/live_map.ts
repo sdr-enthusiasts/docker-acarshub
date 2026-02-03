@@ -1407,10 +1407,9 @@ export class LiveMapPage extends ACARSHubPage {
       : "https://tiles.stadiamaps.com/styles/stamen_toner/{z}/{x}/{y}.png";
 
     // If a Stadia API key is available, append it to the tile URL; otherwise use the base URL
-    const apiKey = window.stadia_api_key;
     const tileUrl =
-      apiKey && apiKey.length > 0
-        ? `${baseTileUrl}?api_key=${encodeURIComponent(apiKey)}`
+      window.override_tile_url && window.override_tile_url.length > 0
+        ? window.override_tile_url
         : baseTileUrl;
 
     // Create and add new tile layer

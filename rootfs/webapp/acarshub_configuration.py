@@ -86,7 +86,7 @@ ADSB_URL = "http://tar1090/data/aircraft.json"
 ADSB_LAT = 0
 ADSB_LON = 0
 ADSB_BYPASS_URL = False
-STADIA_API_KEY = None  # Optional Stadia Maps API key for Live Map tiles
+OVERRIDE_TILE_URL = None  # Optional Stadia Maps API key for Live Map tiles
 ACARS_WEB_PORT = 8888  # default port for nginx proxying. LOCAL_TEST will change this to 8080 for running outside of docker
 ACARS_SOURCE_PORT = 15550
 VDLM_SOURCE_PORT = 15555
@@ -226,8 +226,8 @@ if (
 if os.getenv("ADSB_BYPASS_URL", default=False):
     ADSB_BYPASS_URL = True
 
-if os.getenv("STADIA_API_KEY", default=False):
-    STADIA_API_KEY = os.getenv("STADIA_API_KEY")
+if os.getenv("OVERRIDE_TILE_URL", default=False):
+    OVERRIDE_TILE_URL = os.getenv("OVERRIDE_TILE_URL")
 
 if os.getenv("DB_SAVE_DAYS", default=False):
     DB_SAVE_DAYS = int(os.getenv("DB_SAVE_DAYS"))

@@ -73,7 +73,7 @@ services:
   #      - ADSB_LAT=
   #      - ADSB_LON=
   #      - ADSB_URL=
-  #      - STADIA_API_KEY=pk_your_stadia_public_key_here
+  #      - OVERRIDE_TILE_URL=https://tiles.stadiamaps.com/styles/stamen_toner/{z}/{x}/{y}.png
 
   ### Remove this section if you are NOT decoding ACARS
   acarsdec:
