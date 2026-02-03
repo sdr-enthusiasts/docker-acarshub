@@ -312,13 +312,14 @@ if chk_enabled "${ENABLE_ACARS}" || chk_enabled "${ENABLE_VDLM}" || chk_enabled 
 
     echo "==== Check webapp ====="
 
-    # Check webapp HTTP endpoint and Socket.IO availability
-    # Both must respond for the webapp to be considered healthy
-    if curl --silent --fail --max-time 2 http://127.0.0.1:80/ >/dev/null 2>&1 &&
-        curl --silent --fail --max-time 2 http://127.0.0.1:80/socket.io/ >/dev/null 2>&1; then
-        echo "webapp (HTTP and Socket.IO) available: HEALTHY"
+    # Check webapp HTTP endpoint is responding
+    # Note: We only check the main HTTP endpoint, not Socket.IO directly
+    # Probing /socket.io/ with curl triggers incomplete WebSocket handshakes
+    # which generate false "unsupported version" warnings in the logs
+    if curl --silent --fail --max-time 2 http://127.0.0.1:80/ >/dev/null 2>&1; then
+        echo "webapp HTTP endpoint available: HEALTHY"
     else
-        echo "webapp (HTTP and/or Socket.IO) not available: UNHEALTHY"
+        echo "webapp HTTP endpoint not available: UNHEALTHY"
         EXITCODE=1
     fi
 
