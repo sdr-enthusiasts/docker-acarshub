@@ -653,34 +653,71 @@ def add_message(params, message_type, message_from_json, backup=False):
                     level=LOG_LEVEL["WARNING"],
                 )
 
-        if len(params["text"]) > 0 and alert_terms:
-            for search_term in alert_terms:
-                if re.findall(r"\b{}\b".format(search_term), params["text"]):
-                    should_add = True
-                    for ignore_term in alert_terms_ignore:
-                        if re.findall(r"\b{}\b".format(ignore_term), params["text"]):
-                            should_add = False
-                            break
-                    if should_add:
-                        found_term = (
-                            session.query(alertStats)
-                            .filter(alertStats.term == search_term.upper())
-                            .first()
-                        )
-                        if found_term is not None:
-                            found_term.count += 1
-                        else:
-                            session.add(alertStats(term=search_term.upper(), count=1))
+        if alert_terms:
+            # Helper function to save alert match
+            def save_alert_match(term, match_type):
+                found_term = (
+                    session.query(alertStats)
+                    .filter(alertStats.term == term.upper())
+                    .first()
+                )
+                if found_term is not None:
+                    found_term.count += 1
+                else:
+                    session.add(alertStats(term=term.upper(), count=1))
 
-                        session.add(
-                            messages_saved(
-                                message_type=message_type,
-                                **params,
-                                term=search_term.upper(),
-                                type_of_match="text",
-                            )
-                        )
-                        session.commit()
+                session.add(
+                    messages_saved(
+                        message_type=message_type,
+                        **params,
+                        term=term.upper(),
+                        type_of_match=match_type,
+                    )
+                )
+                session.commit()
+
+            # Check message text for alert terms
+            if len(params["text"]) > 0:
+                for search_term in alert_terms:
+                    if re.findall(r"\b{}\b".format(search_term), params["text"]):
+                        should_add = True
+                        for ignore_term in alert_terms_ignore:
+                            if re.findall(
+                                r"\b{}\b".format(ignore_term), params["text"]
+                            ):
+                                should_add = False
+                                break
+                        if should_add:
+                            save_alert_match(search_term, "text")
+
+            # Check ICAO hex for alert terms (supports partial matching)
+            if len(params["icao"]) > 0:
+                icao_upper = params["icao"].upper()
+                for search_term in alert_terms:
+                    term_upper = search_term.upper()
+                    # Support both full match and partial prefix match
+                    if icao_upper == term_upper or icao_upper.startswith(term_upper):
+                        save_alert_match(search_term, "icao")
+
+            # Check tail number for alert terms (supports partial matching)
+            if len(params["tail"]) > 0:
+                tail_upper = params["tail"].upper()
+                for search_term in alert_terms:
+                    term_upper = search_term.upper()
+                    # Support both full match and partial prefix match
+                    if tail_upper == term_upper or tail_upper.startswith(term_upper):
+                        save_alert_match(search_term, "tail")
+
+            # Check flight number for alert terms (supports partial matching)
+            if len(params["flight"]) > 0:
+                flight_upper = params["flight"].upper()
+                for search_term in alert_terms:
+                    term_upper = search_term.upper()
+                    # Support both full match and partial prefix match
+                    if flight_upper == term_upper or flight_upper.startswith(
+                        term_upper
+                    ):
+                        save_alert_match(search_term, "flight")
 
         # commit the db change and close the session
         session.commit()

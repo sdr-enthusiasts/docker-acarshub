@@ -56,6 +56,9 @@ describe("alertMatching", () => {
     num_alerts: 0,
     matched: false,
     matched_text: [],
+    matched_icao: [],
+    matched_tail: [],
+    matched_flight: [],
     duplicates: "0",
     msgno_parts: null,
     libacars: null,
@@ -63,6 +66,7 @@ describe("alertMatching", () => {
     airline: null,
     iata_flight: null,
     icao_flight: null,
+    icao_hex: null,
     decodedText: null,
     ...overrides,
   });
@@ -74,75 +78,269 @@ describe("alertMatching", () => {
   });
 
   describe("checkMessageForAlerts", () => {
-    describe("basic matching", () => {
-      it("should return no match when no alert terms configured", () => {
-        const message = createMessage({ text: "EMERGENCY" });
-        const terms = createTerms([]);
+    it("should return no match when no alert terms configured", () => {
+      const message = createMessage({ text: "EMERGENCY LANDING" });
+      const alertTerms: Terms = { terms: [], ignore: [] };
 
-        const result = checkMessageForAlerts(message, terms);
+      const result = checkMessageForAlerts(message, alertTerms);
 
-        expect(result.matched).toBe(false);
+      expect(result.matched).toBe(false);
+      expect(result.matchedTerms).toEqual([]);
+      expect(result.matchedIcao).toEqual([]);
+      expect(result.matchedTail).toEqual([]);
+      expect(result.matchedFlight).toEqual([]);
+    });
+
+    it("should return no match when message has no searchable text", () => {
+      const message = createMessage({ text: null });
+      const terms = createTerms(["EMERGENCY"]);
+
+      const result = checkMessageForAlerts(message, terms);
+
+      expect(result.matched).toBe(false);
+      expect(result.matchedTerms).toEqual([]);
+    });
+
+    it("should match alert term in text", () => {
+      const message = createMessage({ text: "EMERGENCY DESCENT" });
+      const terms = createTerms(["EMERGENCY"]);
+
+      const result = checkMessageForAlerts(message, terms);
+
+      expect(result.matched).toBe(true);
+      expect(result.matchedTerms).toEqual(["EMERGENCY"]);
+    });
+
+    it("should match alert term in data field", () => {
+      const message = createMessage({ data: "EMERGENCY SITUATION" });
+      const terms = createTerms(["EMERGENCY"]);
+
+      const result = checkMessageForAlerts(message, terms);
+
+      expect(result.matched).toBe(true);
+      expect(result.matchedTerms).toEqual(["EMERGENCY"]);
+    });
+
+    it("should match alert term in decoded_msg field", () => {
+      const message = createMessage({ decoded_msg: "EMERGENCY ALERT" });
+      const terms = createTerms(["EMERGENCY"]);
+
+      const result = checkMessageForAlerts(message, terms);
+
+      expect(result.matched).toBe(true);
+      expect(result.matchedTerms).toEqual(["EMERGENCY"]);
+    });
+
+    it("should match multiple alert terms", () => {
+      const message = createMessage({ text: "EMERGENCY MAYDAY" });
+      const terms = createTerms(["EMERGENCY", "MAYDAY"]);
+
+      const result = checkMessageForAlerts(message, terms);
+
+      expect(result.matched).toBe(true);
+      expect(result.matchedTerms).toEqual(["EMERGENCY", "MAYDAY"]);
+    });
+
+    it("should match only some of the configured terms", () => {
+      const message = createMessage({ text: "EMERGENCY DESCENT" });
+      const terms = createTerms(["EMERGENCY", "MAYDAY", "PAN"]);
+
+      const result = checkMessageForAlerts(message, terms);
+
+      expect(result.matched).toBe(true);
+      expect(result.matchedTerms).toEqual(["EMERGENCY"]);
+    });
+
+    describe("ICAO hex matching", () => {
+      it("should match full ICAO hex", () => {
+        const message = createMessage({ icao_hex: "ABF308" });
+        const alertTerms: Terms = { terms: ["ABF308"], ignore: [] };
+
+        const result = checkMessageForAlerts(message, alertTerms);
+
+        expect(result.matched).toBe(true);
+        expect(result.matchedIcao).toEqual(["ABF308"]);
         expect(result.matchedTerms).toEqual([]);
       });
 
-      it("should return no match when message has no searchable text", () => {
-        const message = createMessage({ text: null });
-        const terms = createTerms(["EMERGENCY"]);
+      it("should match partial ICAO hex prefix", () => {
+        const message = createMessage({ icao_hex: "ABF308" });
+        const alertTerms: Terms = { terms: ["ABF"], ignore: [] };
 
-        const result = checkMessageForAlerts(message, terms);
+        const result = checkMessageForAlerts(message, alertTerms);
+
+        expect(result.matched).toBe(true);
+        expect(result.matchedIcao).toEqual(["ABF"]);
+      });
+
+      it("should be case-insensitive for ICAO", () => {
+        const message = createMessage({ icao_hex: "ABF308" });
+        const alertTerms: Terms = { terms: ["abf308", "abf"], ignore: [] };
+
+        const result = checkMessageForAlerts(message, alertTerms);
+
+        expect(result.matched).toBe(true);
+        expect(result.matchedIcao).toContain("abf308");
+        expect(result.matchedIcao).toContain("abf");
+      });
+
+      it("should not match non-prefix ICAO", () => {
+        const message = createMessage({ icao_hex: "ABF308" });
+        const alertTerms: Terms = { terms: ["F308"], ignore: [] };
+
+        const result = checkMessageForAlerts(message, alertTerms);
 
         expect(result.matched).toBe(false);
+        expect(result.matchedIcao).toEqual([]);
+      });
+
+      it("should handle ICAO from icao field (numeric)", () => {
+        const message = createMessage({ icao: 11268872 }); // ABF308 in decimal
+        const alertTerms: Terms = { terms: ["ABF308"], ignore: [] };
+
+        const result = checkMessageForAlerts(message, alertTerms);
+
+        expect(result.matched).toBe(true);
+        expect(result.matchedIcao).toEqual(["ABF308"]);
+      });
+
+      it("should respect ignore terms for ICAO", () => {
+        const message = createMessage({ icao_hex: "ABF308" });
+        const alertTerms: Terms = { terms: ["ABF"], ignore: ["ABF308"] };
+
+        const result = checkMessageForAlerts(message, alertTerms);
+
+        expect(result.matched).toBe(false);
+        expect(result.matchedIcao).toEqual([]);
+      });
+    });
+
+    describe("Tail number matching", () => {
+      it("should match full tail number", () => {
+        const message = createMessage({ tail: "N12345" });
+        const alertTerms: Terms = { terms: ["N12345"], ignore: [] };
+
+        const result = checkMessageForAlerts(message, alertTerms);
+
+        expect(result.matched).toBe(true);
+        expect(result.matchedTail).toEqual(["N12345"]);
         expect(result.matchedTerms).toEqual([]);
       });
 
-      it("should match a term in message text", () => {
-        const message = createMessage({ text: "EMERGENCY DESCENT" });
-        const terms = createTerms(["EMERGENCY"]);
+      it("should match partial tail number prefix", () => {
+        const message = createMessage({ tail: "N12345" });
+        const alertTerms: Terms = { terms: ["N123"], ignore: [] };
 
-        const result = checkMessageForAlerts(message, terms);
+        const result = checkMessageForAlerts(message, alertTerms);
+
+        expect(result.matched).toBe(true);
+        expect(result.matchedTail).toEqual(["N123"]);
+      });
+
+      it("should be case-insensitive for tail", () => {
+        const message = createMessage({ tail: "N12345" });
+        const alertTerms: Terms = { terms: ["n12345"], ignore: [] };
+
+        const result = checkMessageForAlerts(message, alertTerms);
+
+        expect(result.matched).toBe(true);
+        expect(result.matchedTail).toEqual(["n12345"]);
+      });
+
+      it("should respect ignore terms for tail", () => {
+        const message = createMessage({ tail: "N12345" });
+        const alertTerms: Terms = { terms: ["N123"], ignore: ["N12345"] };
+
+        const result = checkMessageForAlerts(message, alertTerms);
+
+        expect(result.matched).toBe(false);
+        expect(result.matchedTail).toEqual([]);
+      });
+    });
+
+    describe("Flight number matching", () => {
+      it("should match full flight number", () => {
+        const message = createMessage({ icao_flight: "UAL123" });
+        const alertTerms: Terms = { terms: ["UAL123"], ignore: [] };
+
+        const result = checkMessageForAlerts(message, alertTerms);
+
+        expect(result.matched).toBe(true);
+        expect(result.matchedFlight).toEqual(["UAL123"]);
+        expect(result.matchedTerms).toEqual([]);
+      });
+
+      it("should match partial flight number prefix", () => {
+        const message = createMessage({ icao_flight: "UAL123" });
+        const alertTerms: Terms = { terms: ["UAL"], ignore: [] };
+
+        const result = checkMessageForAlerts(message, alertTerms);
+
+        expect(result.matched).toBe(true);
+        expect(result.matchedFlight).toEqual(["UAL"]);
+      });
+
+      it("should be case-insensitive for flight", () => {
+        const message = createMessage({ icao_flight: "UAL123" });
+        const alertTerms: Terms = { terms: ["ual123"], ignore: [] };
+
+        const result = checkMessageForAlerts(message, alertTerms);
+
+        expect(result.matched).toBe(true);
+        expect(result.matchedFlight).toEqual(["ual123"]);
+      });
+
+      it("should use flight field if icao_flight not available", () => {
+        const message = createMessage({ flight: "UAL123" });
+        const alertTerms: Terms = { terms: ["UAL"], ignore: [] };
+
+        const result = checkMessageForAlerts(message, alertTerms);
+
+        expect(result.matched).toBe(true);
+        expect(result.matchedFlight).toEqual(["UAL"]);
+      });
+
+      it("should respect ignore terms for flight", () => {
+        const message = createMessage({ icao_flight: "UAL123" });
+        const alertTerms: Terms = { terms: ["UAL"], ignore: ["UAL123"] };
+
+        const result = checkMessageForAlerts(message, alertTerms);
+
+        expect(result.matched).toBe(false);
+        expect(result.matchedFlight).toEqual([]);
+      });
+    });
+
+    describe("Multiple field matching", () => {
+      it("should match across text, ICAO, tail, and flight", () => {
+        const message = createMessage({
+          text: "EMERGENCY",
+          icao_hex: "ABF308",
+          tail: "N12345",
+          icao_flight: "UAL123",
+        });
+        const alertTerms: Terms = {
+          terms: ["EMERGENCY", "ABF", "N123", "UAL"],
+          ignore: [],
+        };
+
+        const result = checkMessageForAlerts(message, alertTerms);
 
         expect(result.matched).toBe(true);
         expect(result.matchedTerms).toEqual(["EMERGENCY"]);
+        expect(result.matchedIcao).toEqual(["ABF"]);
+        expect(result.matchedTail).toEqual(["N123"]);
+        expect(result.matchedFlight).toEqual(["UAL"]);
       });
 
-      it("should match a term in message data", () => {
-        const message = createMessage({ data: "EMERGENCY ALERT" });
-        const terms = createTerms(["EMERGENCY"]);
+      it("should not duplicate matches", () => {
+        const message = createMessage({ icao_hex: "ABF308" });
+        const alertTerms: Terms = { terms: ["ABF308", "ABF308"], ignore: [] };
 
-        const result = checkMessageForAlerts(message, terms);
-
-        expect(result.matched).toBe(true);
-        expect(result.matchedTerms).toEqual(["EMERGENCY"]);
-      });
-
-      it("should match a term in decoded_msg", () => {
-        const message = createMessage({ decoded_msg: "EMERGENCY LANDING" });
-        const terms = createTerms(["EMERGENCY"]);
-
-        const result = checkMessageForAlerts(message, terms);
+        const result = checkMessageForAlerts(message, alertTerms);
 
         expect(result.matched).toBe(true);
-        expect(result.matchedTerms).toEqual(["EMERGENCY"]);
-      });
-
-      it("should match multiple terms", () => {
-        const message = createMessage({ text: "EMERGENCY MAYDAY DESCENT" });
-        const terms = createTerms(["EMERGENCY", "MAYDAY"]);
-
-        const result = checkMessageForAlerts(message, terms);
-
-        expect(result.matched).toBe(true);
-        expect(result.matchedTerms).toEqual(["EMERGENCY", "MAYDAY"]);
-      });
-
-      it("should match only some of the configured terms", () => {
-        const message = createMessage({ text: "EMERGENCY DESCENT" });
-        const terms = createTerms(["EMERGENCY", "MAYDAY", "PAN"]);
-
-        const result = checkMessageForAlerts(message, terms);
-
-        expect(result.matched).toBe(true);
-        expect(result.matchedTerms).toEqual(["EMERGENCY"]);
+        expect(result.matchedIcao).toEqual(["ABF308"]); // Should only appear once
       });
     });
 
@@ -683,6 +881,41 @@ describe("alertMatching", () => {
       expect(result).toBe(message); // Same object reference
       expect(result.matched).toBe(true);
       expect(result.matched_text).toEqual(["EMERGENCY"]);
+      expect(result.matched_icao).toEqual([]);
+      expect(result.matched_tail).toEqual([]);
+      expect(result.matched_flight).toEqual([]);
+    });
+
+    it("should apply ICAO matches to message", () => {
+      const message = createMessage({ icao_hex: "ABF308" });
+      const alertTerms: Terms = { terms: ["ABF"], ignore: [] };
+
+      const applied = applyAlertMatching(message, alertTerms);
+
+      expect(applied.matched).toBe(true);
+      expect(applied.matched_icao).toEqual(["ABF"]);
+      expect(applied.matched_text).toEqual([]);
+    });
+
+    it("should apply all match types to message", () => {
+      const message = createMessage({
+        text: "EMERGENCY",
+        icao_hex: "ABF308",
+        tail: "N12345",
+        icao_flight: "UAL123",
+      });
+      const alertTerms: Terms = {
+        terms: ["EMERGENCY", "ABF", "N123", "UAL"],
+        ignore: [],
+      };
+
+      const applied = applyAlertMatching(message, alertTerms);
+
+      expect(applied.matched).toBe(true);
+      expect(applied.matched_text).toEqual(["EMERGENCY"]);
+      expect(applied.matched_icao).toEqual(["ABF"]);
+      expect(applied.matched_tail).toEqual(["N123"]);
+      expect(applied.matched_flight).toEqual(["UAL"]);
     });
 
     it("should mutate message with matched=false when no match", () => {
