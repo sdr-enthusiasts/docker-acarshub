@@ -142,7 +142,7 @@ const getDefaultSettings = (): UserSettings => {
     },
     advanced: {
       logLevel: import.meta.env.PROD ? "warn" : "info",
-      persistLogs: false,
+      persistLogs: true,
     },
     updatedAt: Date.now(),
     version: 2,
