@@ -18,9 +18,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { MapRef } from "react-map-gl/maplibre";
 import { MapComponent, MapControls, MapLegend } from "../components/Map";
 import { AircraftList } from "../components/Map/AircraftList";
+import { getProviderConfig } from "../config/mapProviders";
 import { socketService } from "../services/socket";
 import { useAppStore } from "../store/useAppStore";
-import { useSettingsStore } from "../store/useSettingsStore";
+import { useSettingsStore, useTheme } from "../store/useSettingsStore";
 import type { PairedAircraft } from "../utils/aircraftPairing";
 import { pairADSBWithACARSMessages } from "../utils/aircraftPairing";
 import { mapLogger } from "../utils/logger";
@@ -45,6 +46,7 @@ export const LiveMapPage = () => {
   const adsbAircraft = useAppStore((state) => state.adsbAircraft);
   const messageGroups = useAppStore((state) => state.messageGroups);
   const mapSettings = useSettingsStore((state) => state.settings.map);
+  const theme = useTheme();
 
   const mapRef = useRef<MapRef>(null);
   const [isMapLoaded, setIsMapLoaded] = useState(false);
@@ -125,9 +127,15 @@ export const LiveMapPage = () => {
             <div className="live-map-page__map-info">
               <div className="live-map-page__map-provider">
                 Provider:{" "}
-                {mapSettings.provider === "carto"
-                  ? "CartoDB (Free)"
-                  : "Maptiler"}
+                {getProviderConfig(mapSettings.provider)?.name ||
+                  (mapSettings.provider === "custom"
+                    ? "Custom"
+                    : "Theme-Aware")}
+                {!mapSettings.userSelectedProvider && (
+                  <span className="live-map-page__theme-badge">
+                    🎨 {theme === "mocha" ? "Dark" : "Light"}
+                  </span>
+                )}
               </div>
             </div>
           )}

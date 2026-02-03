@@ -97,19 +97,28 @@ export function AircraftMarkers({
   const filteredPairedAircraft = useMemo(() => {
     let filtered = pairedAircraft;
 
-    // Filter: Show only unread messages
+    // Filter: Show only aircraft with ACARS messages
+    if (mapSettings.showOnlyAcars) {
+      filtered = filtered.filter((a) => a.hasMessages);
+    }
+
+    // Filter: Show only aircraft with unread messages
     if (mapSettings.showOnlyUnread) {
-      filtered = filtered.filter((aircraft) => {
-        if (!aircraft.matchedGroup) return false;
-        // Check if aircraft has at least one unread message
-        return aircraft.matchedGroup.messages.some(
+      filtered = filtered.filter((a) => {
+        if (!a.matchedGroup) return false;
+        return a.matchedGroup.messages.some(
           (msg) => !readMessageUids.has(msg.uid),
         );
       });
     }
 
     return filtered;
-  }, [pairedAircraft, mapSettings.showOnlyUnread, readMessageUids]);
+  }, [
+    pairedAircraft,
+    mapSettings.showOnlyAcars,
+    mapSettings.showOnlyUnread,
+    readMessageUids,
+  ]);
 
   // Prepare marker data using useMemo to avoid infinite loops
   const aircraftMarkers = useMemo(() => {

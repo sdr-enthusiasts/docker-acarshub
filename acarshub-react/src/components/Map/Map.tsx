@@ -21,10 +21,13 @@ import MapLibreMap, {
   ScaleControl,
 } from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
+import {
+  getProviderConfig,
+  getProviderTileUrl,
+} from "../../config/mapProviders";
 import { useAppStore } from "../../store/useAppStore";
-import { useSettingsStore, useTheme } from "../../store/useSettingsStore";
-import latteStyle from "../../styles/map-styles/catppuccin-latte.json";
-import mochaStyle from "../../styles/map-styles/catppuccin-mocha.json";
+import { useSettingsStore } from "../../store/useSettingsStore";
+import { mapLogger } from "../../utils/logger";
 import { AircraftMarkers } from "./AircraftMarkers";
 import { NexradOverlay } from "./NexradOverlay";
 import { RangeRings } from "./RangeRings";
@@ -47,8 +50,8 @@ interface MapComponentProps {
 /**
  * Map Component
  *
- * High-performance map using MapLibre GL JS with Catppuccin theming.
- * Supports multiple tile providers (Protomaps by default, Maptiler optional).
+ * High-performance map using MapLibre GL JS.
+ * Supports multiple tile providers: OpenStreetMap, CARTO, OpenFreeMap, ESRI, aviation charts, and custom URLs.
  */
 export function MapComponent({
   className = "",
@@ -57,7 +60,6 @@ export function MapComponent({
   onViewStateChange,
   hoveredAircraftHex,
 }: MapComponentProps) {
-  const theme = useTheme();
   const decoders = useAppStore((state) => state.decoders);
   const mapSettings = useSettingsStore((state) => state.settings.map);
 
@@ -123,24 +125,134 @@ export function MapComponent({
     return () => clearTimeout(saveTimeout);
   }, [viewState.longitude, viewState.latitude, viewState.zoom]);
 
-  // Get map style based on theme and provider
-  const mapStyle = useMemo(() => {
+  // Get map style based on provider
+  // biome-ignore lint/suspicious/noExplicitAny: MapLibre StyleSpecification type is complex
+  const mapStyle = useMemo((): string | any => {
     const provider = mapSettings.provider;
+    const providerConfig = getProviderConfig(provider);
 
-    if (provider === "maptiler" && mapSettings.maptilerApiKey) {
-      // Maptiler style URLs
-      const baseUrl = "https://api.maptiler.com/maps";
-      const apiKey = mapSettings.maptilerApiKey;
-      const styleId = theme === "mocha" ? "streets-v2-dark" : "streets-v2";
-      return `${baseUrl}/${styleId}/style.json?key=${apiKey}`;
+    // For vector tile providers (OpenFreeMap), use the style URL directly
+    if (providerConfig?.isVector) {
+      mapLogger.debug("Using vector tile provider", {
+        provider,
+        url: providerConfig.url,
+      });
+      return providerConfig.url;
     }
 
-    // Protomaps with Catppuccin theming (default)
-    // Cast to unknown first to bypass TypeScript's strict type checking
-    return theme === "mocha"
-      ? (mochaStyle as unknown as string)
-      : (latteStyle as unknown as string);
-  }, [theme, mapSettings.provider, mapSettings.maptilerApiKey]);
+    // For raster tile providers, create a minimal style JSON
+    const tileUrl = getProviderTileUrl(provider, mapSettings.customTileUrl);
+
+    if (!tileUrl) {
+      mapLogger.warn(
+        "No tile URL for provider, falling back to CARTO English",
+        { provider },
+      );
+      return {
+        version: 8,
+        sources: {
+          "raster-tiles": {
+            type: "raster",
+            tiles: [
+              "https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",
+            ],
+            tileSize: 256,
+            attribution: providerConfig?.attribution || "",
+          },
+        },
+        layers: [
+          {
+            id: "simple-tiles",
+            type: "raster",
+            source: "raster-tiles",
+            minzoom: 0,
+            maxzoom: 22,
+          },
+        ],
+      };
+    }
+
+    mapLogger.info("Using raster tile provider", {
+      provider,
+      url: tileUrl,
+      minZoom: providerConfig?.minZoom,
+      maxZoom: providerConfig?.maxZoom,
+      currentZoom: viewState.zoom,
+    });
+
+    // Check if this provider has strict zoom constraints (aviation charts)
+    const hasZoomConstraints =
+      providerConfig?.minZoom && providerConfig?.minZoom > 0;
+
+    // For aviation charts: hybrid approach with base map + overlay
+    // MapLibre GL doesn't support raster tile overzooming like OpenLayers does
+    // So we show a base map everywhere and overlay charts only where they exist
+    if (hasZoomConstraints) {
+      mapLogger.info("Using hybrid base + overlay for aviation charts", {
+        provider,
+        chartMinZoom: providerConfig.minZoom,
+        chartMaxZoom: providerConfig.maxZoom,
+      });
+
+      return {
+        version: 8,
+        sources: {
+          "base-tiles": {
+            type: "raster",
+            tiles: [
+              "https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",
+            ],
+            tileSize: 256,
+            attribution: 'Powered by <a href="https://carto.com">CARTO.com</a>',
+          },
+          "chart-tiles": {
+            type: "raster",
+            tiles: [tileUrl],
+            tileSize: 256,
+            attribution: providerConfig?.attribution || "",
+          },
+        },
+        layers: [
+          {
+            id: "base-layer",
+            type: "raster",
+            source: "base-tiles",
+            minzoom: 0,
+            maxzoom: 22,
+          },
+          {
+            id: "chart-layer",
+            type: "raster",
+            source: "chart-tiles",
+            minzoom: providerConfig.minZoom,
+            maxzoom: providerConfig.maxZoom,
+          },
+        ],
+      };
+    }
+
+    // For all other raster providers, use simple single-layer style
+    return {
+      version: 8,
+      sources: {
+        "raster-tiles": {
+          type: "raster",
+          tiles: [tileUrl],
+          tileSize: 256,
+          attribution: providerConfig?.attribution || "",
+        },
+      },
+      layers: [
+        {
+          id: "simple-tiles",
+          type: "raster",
+          source: "raster-tiles",
+          minzoom: 0,
+          maxzoom: 22,
+        },
+      ],
+    };
+  }, [mapSettings.provider, mapSettings.customTileUrl, viewState.zoom]);
 
   // Handle view state changes
   const handleMove = useCallback(
@@ -159,6 +271,7 @@ export function MapComponent({
   return (
     <div className={`map-container ${className}`}>
       <MapLibreMap
+        key={mapSettings.provider}
         ref={mapRef}
         {...viewState}
         onMove={handleMove}
@@ -166,8 +279,8 @@ export function MapComponent({
         mapStyle={mapStyle}
         style={{ width: "100%", height: "100%" }}
         attributionControl={{}}
-        maxZoom={18}
-        minZoom={2}
+        maxZoom={20}
+        minZoom={1}
         dragRotate={false}
         touchZoomRotate={false}
         keyboard={true}

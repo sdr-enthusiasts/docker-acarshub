@@ -65,8 +65,8 @@ interface SettingsState {
   setAutoClearMinutes: (minutes: number) => void;
 
   // Map actions
-  setMapProvider: (provider: MapProvider) => void;
-  setMaptilerApiKey: (key: string | undefined) => void;
+  setMapProvider: (provider: MapProvider, userSelected?: boolean) => void;
+  setCustomTileUrl: (url: string | undefined) => void;
   setStationLocation: (lat: number, lon: number) => void;
   setRangeRings: (rings: number[]) => void;
   setDefaultMapView: (lat: number, lon: number, zoom: number) => void;
@@ -74,7 +74,6 @@ interface SettingsState {
   setShowDatablocks: (enabled: boolean) => void;
   setShowExtendedDatablocks: (enabled: boolean) => void;
   setShowNexrad: (enabled: boolean) => void;
-  setShowOnlyUnread: (enabled: boolean) => void;
   setShowRangeRings: (enabled: boolean) => void;
 
   // Advanced actions
@@ -125,8 +124,9 @@ const getDefaultSettings = (): UserSettings => {
       autoClearMinutes: 60,
     },
     map: {
-      provider: "carto",
-      maptilerApiKey: undefined,
+      provider: "carto_dark_all",
+      customTileUrl: undefined,
+      userSelectedProvider: false,
       stationLat: 0,
       stationLon: 0,
       rangeRings: [100, 200, 300],
@@ -137,8 +137,8 @@ const getDefaultSettings = (): UserSettings => {
       showDatablocks: true,
       showExtendedDatablocks: false,
       showNexrad: false,
-      showOnlyUnread: false,
       showRangeRings: true,
+      showOnlyUnread: false,
     },
     advanced: {
       logLevel: import.meta.env.PROD ? "warn" : "info",
@@ -332,21 +332,24 @@ export const useSettingsStore = create<SettingsState>()(
         })),
 
       // Map actions
-      setMapProvider: (provider) =>
+      setMapProvider: (provider, userSelected = true) =>
         set((state) => ({
           settings: {
             ...state.settings,
-            map: { ...state.settings.map, provider },
+            map: {
+              ...state.settings.map,
+              provider,
+              userSelectedProvider: userSelected,
+            },
             updatedAt: Date.now(),
           },
         })),
 
-      setMaptilerApiKey: (key) =>
+      setCustomTileUrl: (url) =>
         set((state) => ({
           settings: {
             ...state.settings,
-            map: { ...state.settings.map, maptilerApiKey: key },
-            updatedAt: Date.now(),
+            map: { ...state.settings.map, customTileUrl: url },
           },
         })),
 
@@ -364,6 +367,24 @@ export const useSettingsStore = create<SettingsState>()(
           settings: {
             ...state.settings,
             map: { ...state.settings.map, rangeRings: rings },
+            updatedAt: Date.now(),
+          },
+        })),
+
+      setShowRangeRings: (show) =>
+        set((state) => ({
+          settings: {
+            ...state.settings,
+            map: { ...state.settings.map, showRangeRings: show },
+            updatedAt: Date.now(),
+          },
+        })),
+
+      setShowOnlyUnread: (show) =>
+        set((state) => ({
+          settings: {
+            ...state.settings,
+            map: { ...state.settings.map, showOnlyUnread: show },
             updatedAt: Date.now(),
           },
         })),
@@ -414,24 +435,6 @@ export const useSettingsStore = create<SettingsState>()(
           settings: {
             ...state.settings,
             map: { ...state.settings.map, showNexrad: enabled },
-            updatedAt: Date.now(),
-          },
-        })),
-
-      setShowOnlyUnread: (enabled) =>
-        set((state) => ({
-          settings: {
-            ...state.settings,
-            map: { ...state.settings.map, showOnlyUnread: enabled },
-            updatedAt: Date.now(),
-          },
-        })),
-
-      setShowRangeRings: (enabled) =>
-        set((state) => ({
-          settings: {
-            ...state.settings,
-            map: { ...state.settings.map, showRangeRings: enabled },
             updatedAt: Date.now(),
           },
         })),

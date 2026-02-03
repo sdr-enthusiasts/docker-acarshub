@@ -15,13 +15,15 @@
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { ALL_PROVIDERS, getProvidersByCategory } from "../config/mapProviders";
 import { audioService } from "../services/audioService";
 import { useAppStore } from "../store/useAppStore";
-import { useSettingsStore } from "../store/useSettingsStore";
+import { useSettingsStore, useTheme } from "../store/useSettingsStore";
 import type {
   AltitudeUnit,
   DateFormat,
   LogLevel,
+  MapProvider,
   Theme,
   TimeFormat,
 } from "../types";
@@ -79,6 +81,18 @@ export const SettingsModal = () => {
   const setPersistLogs = useSettingsStore((state) => state.setPersistLogs);
 
   const [activeTab, setActiveTab] = useState<string>("appearance");
+
+  // Map settings
+  const theme = useTheme();
+  const mapProvider = useSettingsStore((state) => state.settings.map.provider);
+  const customTileUrl = useSettingsStore(
+    (state) => state.settings.map.customTileUrl,
+  );
+  const userSelectedProvider = useSettingsStore(
+    (state) => state.settings.map.userSelectedProvider,
+  );
+  const setMapProvider = useSettingsStore((state) => state.setMapProvider);
+  const setCustomTileUrl = useSettingsStore((state) => state.setCustomTileUrl);
 
   // Alert terms management state
   const [newAlertTerm, setNewAlertTerm] = useState("");
@@ -385,6 +399,16 @@ export const SettingsModal = () => {
             onClick={() => setActiveTab("data")}
           >
             Data & Privacy
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === "map"}
+            aria-controls="map-panel"
+            className={`settings-tab ${activeTab === "map" ? "settings-tab--active" : ""}`}
+            onClick={() => setActiveTab("map")}
+          >
+            Map
           </button>
           <button
             type="button"
@@ -880,6 +904,217 @@ export const SettingsModal = () => {
                 />
                 <p className="settings-help-text">
                   Automatically clear old data after specified time (0 = never)
+                </p>
+              </div>
+            </Card>
+          </div>
+        )}
+
+        {/* Map Panel */}
+        {activeTab === "map" && (
+          <div
+            id="map-panel"
+            role="tabpanel"
+            aria-labelledby="map-tab"
+            className="settings-panel"
+          >
+            <Card
+              title="Map Provider"
+              variant="default"
+              className="settings-card"
+            >
+              <div className="settings-card__content">
+                <p className="settings-card__help">
+                  Choose your preferred map tile provider. All providers are
+                  free and do not require API keys.
+                </p>
+
+                {!userSelectedProvider && (
+                  <div className="settings-card__info">
+                    <p>
+                      <strong>🎨 Theme-Aware Mode Active:</strong> Map
+                      automatically switches between light/dark variants when
+                      you change themes. Select a provider below to override.
+                    </p>
+                  </div>
+                )}
+
+                <div className="settings-form-field">
+                  <Select
+                    id="map-provider-worldwide"
+                    label="Worldwide Providers"
+                    value={
+                      !userSelectedProvider
+                        ? ""
+                        : getProvidersByCategory("worldwide").some(
+                              (p) => p.id === mapProvider,
+                            )
+                          ? mapProvider
+                          : ""
+                    }
+                    onChange={(value) => {
+                      if (value === "") {
+                        // Reset to theme-aware mode - trigger immediate theme switch
+                        const themeProvider =
+                          theme === "mocha"
+                            ? "carto_dark_all"
+                            : "carto_light_all";
+                        setMapProvider(themeProvider as MapProvider, false);
+                      } else {
+                        setMapProvider(value as MapProvider);
+                      }
+                    }}
+                    options={[
+                      { value: "", label: "Select a provider..." },
+                      ...getProvidersByCategory("worldwide").map((p) => ({
+                        value: p.id,
+                        label: p.name,
+                      })),
+                    ]}
+                  />
+                </div>
+
+                <div className="settings-form-field">
+                  <Select
+                    id="map-provider-us"
+                    label="US Aviation Charts"
+                    value={
+                      !userSelectedProvider
+                        ? ""
+                        : getProvidersByCategory("us").some(
+                              (p) => p.id === mapProvider,
+                            )
+                          ? mapProvider
+                          : ""
+                    }
+                    onChange={(value) => {
+                      if (value === "") {
+                        // Reset to theme-aware mode - trigger immediate theme switch
+                        const themeProvider =
+                          theme === "mocha"
+                            ? "carto_dark_all"
+                            : "carto_light_all";
+                        setMapProvider(themeProvider as MapProvider, false);
+                      } else {
+                        setMapProvider(value as MapProvider);
+                      }
+                    }}
+                    options={[
+                      { value: "", label: "Select a chart..." },
+                      ...getProvidersByCategory("us").map((p) => ({
+                        value: p.id,
+                        label: p.name,
+                      })),
+                    ]}
+                  />
+                </div>
+
+                <div className="settings-form-field">
+                  <label htmlFor="custom-tile-url">Custom Tile URL</label>
+                </div>
+                <div className="settings-form-field">
+                  <input
+                    id="custom-tile-url"
+                    type="text"
+                    className="settings-input"
+                    style={{ width: "100%" }}
+                    placeholder="https://example.com/{z}/{x}/{y}.png"
+                    value={customTileUrl || ""}
+                    onChange={(e) => {
+                      setCustomTileUrl(e.target.value || undefined);
+                      if (e.target.value) {
+                        setMapProvider("custom");
+                      }
+                    }}
+                  />
+                  <p className="settings-card__help">
+                    Enter a custom tile URL template. Use {"{z}"}, {"{x}"}, and{" "}
+                    {"{y}"} placeholders. Selecting this will automatically set
+                    the provider to "Custom".
+                  </p>
+                </div>
+
+                <div className="settings-card__info">
+                  <p>
+                    <strong>Current Provider:</strong>{" "}
+                    {ALL_PROVIDERS.find((p) => p.id === mapProvider)?.name ||
+                      (mapProvider === "custom" ? "Custom" : "Theme-Aware")}
+                  </p>
+                  {mapProvider === "custom" && customTileUrl && (
+                    <p className="settings-card__help">
+                      Custom URL: {customTileUrl}
+                    </p>
+                  )}
+                  {!userSelectedProvider && (
+                    <p className="settings-card__help">
+                      Automatically switching between light/dark maps based on
+                      theme
+                    </p>
+                  )}
+                  {userSelectedProvider && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setMapProvider(mapProvider, false)}
+                    >
+                      Reset to Theme-Aware Mode
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </Card>
+
+            <Card
+              title="Map Provider Reference"
+              variant="info"
+              className="settings-card"
+            >
+              <div className="settings-card__content">
+                <p className="settings-card__help">
+                  <strong>Worldwide Providers:</strong>
+                </p>
+                <ul className="settings-list">
+                  <li>
+                    <strong>OpenStreetMap:</strong> Community-driven open map
+                  </li>
+                  <li>
+                    <strong>CARTO.com:</strong> Clean, professional maps with
+                    light/dark variants
+                  </li>
+                  <li>
+                    <strong>OpenFreeMap:</strong> Vector tile maps with multiple
+                    styles
+                  </li>
+                  <li>
+                    <strong>ESRI.com:</strong> Satellite imagery and street maps
+                  </li>
+                  <li>
+                    <strong>GIBS Clouds:</strong> NASA satellite imagery from
+                    yesterday
+                  </li>
+                </ul>
+
+                <p className="settings-card__help">
+                  <strong>US Aviation Charts:</strong>
+                </p>
+                <ul className="settings-list">
+                  <li>
+                    <strong>VFR Sectional:</strong> Visual flight rules charts
+                    (zoom 8-12)
+                  </li>
+                  <li>
+                    <strong>VFR Terminal:</strong> Terminal area charts (zoom
+                    10-12)
+                  </li>
+                  <li>
+                    <strong>IFR Low/High:</strong> Instrument flight rules
+                    enroute charts
+                  </li>
+                </ul>
+
+                <p className="settings-card__help">
+                  All providers are free to use and do not require API keys.
+                  Based on tar1090's map provider selection.
                 </p>
               </div>
             </Card>

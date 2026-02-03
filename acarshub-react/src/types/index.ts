@@ -761,9 +761,75 @@ export interface NotificationSettings {
 }
 
 /**
- * Map provider types
+ * Map provider types - organized by category like tar1090
  */
-export type MapProvider = "carto" | "maptiler";
+export type MapProviderCategory = "worldwide" | "us" | "europe" | "custom";
+
+/**
+ * Worldwide map providers (no API key required)
+ */
+export type WorldwideMapProvider =
+  | "osm" // OpenStreetMap
+  | "carto_english" // CARTO.com English (Voyager)
+  | "osm_de" // OpenStreetMap DE
+  | "openfreemap_bright" // OpenFreeMap Bright
+  | "openfreemap_liberty" // OpenFreeMap Liberty
+  | "openfreemap_positron" // OpenFreeMap Positron
+  | "openfreemap_dark" // OpenFreeMap Dark
+  | "openfreemap_fiord" // OpenFreeMap Fiord
+  | "esri_satellite" // ESRI.com Satellite
+  | "esri_gray" // ESRI.com Gray
+  | "esri_streets" // ESRI.com Streets
+  | "gibs_clouds" // GIBS Clouds (yesterday)
+  | "carto_dark_all" // CARTO.com dark_all
+  | "carto_dark_nolabels" // CARTO.com dark_nolabels
+  | "carto_light_all" // CARTO.com light_all
+  | "carto_light_nolabels"; // CARTO.com light_nolabels
+
+/**
+ * US-specific map providers (aviation charts)
+ */
+export type USMapProvider =
+  | "vfr_sectional" // VFR Sectional Chart
+  | "vfr_terminal" // VFR Terminal Chart
+  | "ifr_low" // IFR Enroute Chart Low
+  | "ifr_high"; // IFR Enroute Chart High
+
+/**
+ * Europe-specific map providers
+ */
+export type EuropeMapProvider = never; // No tile layers, only overlays in tar1090
+
+/**
+ * All available map providers
+ */
+export type MapProvider =
+  | WorldwideMapProvider
+  | USMapProvider
+  | EuropeMapProvider
+  | "custom";
+
+/**
+ * Map provider configuration
+ */
+export interface MapProviderConfig {
+  /** Provider ID */
+  id: MapProvider;
+  /** Display name */
+  name: string;
+  /** Category for grouping */
+  category: MapProviderCategory;
+  /** Tile URL template */
+  url: string;
+  /** Attribution text */
+  attribution?: string;
+  /** Maximum zoom level */
+  maxZoom?: number;
+  /** Minimum zoom level */
+  minZoom?: number;
+  /** Whether this is a vector tile layer (false = raster) */
+  isVector?: boolean;
+}
 
 /**
  * Map settings
@@ -771,32 +837,34 @@ export type MapProvider = "carto" | "maptiler";
 export interface MapSettings {
   /** Map tile provider */
   provider: MapProvider;
-  /** Maptiler API key (optional, only used if provider is 'maptiler') */
-  maptilerApiKey?: string;
+  /** Custom tile URL (only used if provider is 'custom') */
+  customTileUrl?: string;
+  /** User has explicitly selected a provider (don't auto-switch with theme) */
+  userSelectedProvider: boolean;
   /** Station latitude for range rings and center */
   stationLat: number;
   /** Station longitude for range rings and center */
   stationLon: number;
   /** Range ring radii in nautical miles */
   rangeRings: number[];
-  /** Default map center latitude */
+  /** Default center latitude */
   defaultCenterLat: number;
-  /** Default map center longitude */
+  /** Default center longitude */
   defaultCenterLon: number;
-  /** Default map zoom level */
+  /** Default zoom level */
   defaultZoom: number;
-  /** Show only aircraft with ACARS messages */
+  /** Show only ACARS aircraft on map */
   showOnlyAcars: boolean;
   /** Show data blocks */
   showDatablocks: boolean;
   /** Show extended data blocks */
   showExtendedDatablocks: boolean;
-  /** Show NEXRAD weather radar */
+  /** Show NEXRAD overlay */
   showNexrad: boolean;
-  /** Show only unread messages */
-  showOnlyUnread: boolean;
   /** Show range rings */
   showRangeRings: boolean;
+  /** Show only aircraft with unread messages */
+  showOnlyUnread: boolean;
 }
 
 /**
@@ -901,8 +969,9 @@ export const DEFAULT_SETTINGS: UserSettings = {
     autoClearMinutes: 60,
   },
   map: {
-    provider: "carto",
-    maptilerApiKey: undefined,
+    provider: "carto_dark_all", // Default for Mocha theme
+    customTileUrl: undefined,
+    userSelectedProvider: false, // Allow theme-aware switching
     stationLat: 0,
     stationLon: 0,
     rangeRings: [100, 200, 300],
@@ -913,7 +982,6 @@ export const DEFAULT_SETTINGS: UserSettings = {
     showDatablocks: true,
     showExtendedDatablocks: false,
     showNexrad: false,
-    showOnlyUnread: false,
     showRangeRings: true,
   },
   advanced: {

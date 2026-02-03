@@ -59,8 +59,7 @@ describe("useSettingsStore", () => {
       expect(settings.data.enableCaching).toBe(true);
       expect(settings.data.autoClearMinutes).toBe(60);
 
-      expect(settings.map.provider).toBe("carto");
-      expect(settings.map.maptilerApiKey).toBeUndefined();
+      expect(settings.map.provider).toBe("carto_dark_all");
       expect(settings.map.stationLat).toBe(0);
       expect(settings.map.stationLon).toBe(0);
       expect(settings.map.rangeRings).toEqual([100, 200, 300]);
@@ -375,25 +374,6 @@ describe("useSettingsStore", () => {
       expect(settings.map.provider).toBe("maptiler");
     });
 
-    it("should update Maptiler API key", () => {
-      const { setMaptilerApiKey } = useSettingsStore.getState();
-
-      setMaptilerApiKey("test-api-key-123");
-
-      const { settings } = useSettingsStore.getState();
-      expect(settings.map.maptilerApiKey).toBe("test-api-key-123");
-    });
-
-    it("should allow clearing Maptiler API key", () => {
-      const { setMaptilerApiKey } = useSettingsStore.getState();
-
-      setMaptilerApiKey("test-key");
-      setMaptilerApiKey(undefined);
-
-      const { settings } = useSettingsStore.getState();
-      expect(settings.map.maptilerApiKey).toBeUndefined();
-    });
-
     it("should update station location", () => {
       const { setStationLocation } = useSettingsStore.getState();
 
@@ -458,15 +438,6 @@ describe("useSettingsStore", () => {
 
       const { settings } = useSettingsStore.getState();
       expect(settings.map.showNexrad).toBe(true);
-    });
-
-    it("should update showOnlyUnread", () => {
-      const { setShowOnlyUnread } = useSettingsStore.getState();
-
-      setShowOnlyUnread(true);
-
-      const { settings } = useSettingsStore.getState();
-      expect(settings.map.showOnlyUnread).toBe(true);
     });
 
     it("should update showRangeRings", () => {
@@ -841,7 +812,7 @@ describe("useSettingsStore", () => {
       expect(migrated.settings.data.maxMessagesPerAircraft).toBe(100);
       // New sections added with defaults
       expect(migrated.settings.map).toBeDefined();
-      expect(migrated.settings.map.provider).toBe("carto");
+      expect(migrated.settings.map.provider).toBe("carto_dark_all");
       expect(migrated.settings.advanced).toBeDefined();
       expect(migrated.settings.advanced.logLevel).toBeDefined();
     });

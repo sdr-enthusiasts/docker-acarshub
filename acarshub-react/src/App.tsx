@@ -21,6 +21,7 @@ import { ConnectionStatus } from "./components/ConnectionStatus.tsx";
 import { Navigation } from "./components/Navigation.tsx";
 import { SettingsModal } from "./components/SettingsModal.tsx";
 import { useSocketIO } from "./hooks/useSocketIO.ts";
+import { useThemeAwareMapProvider } from "./hooks/useThemeAwareMapProvider.ts";
 import { AboutPage } from "./pages/AboutPage.tsx";
 import { AlertsPage } from "./pages/AlertsPage.tsx";
 import { LiveMapPage } from "./pages/LiveMapPage.tsx";
@@ -39,6 +40,9 @@ import { uiLogger } from "./utils/logger";
 function App() {
   // Initialize Socket.IO connection and wire up event handlers
   useSocketIO();
+
+  // Enable theme-aware map provider switching (only if user hasn't selected a provider)
+  useThemeAwareMapProvider();
 
   // Subscribe to connection state directly (not from hook to avoid stale closures)
   const isConnected = useAppStore((state) => state.isConnected);

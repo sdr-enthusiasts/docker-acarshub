@@ -99,6 +99,19 @@
 
   &__map-provider {
     white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+  }
+
+  &__theme-badge {
+    display: inline-block;
+    font-size: 0.75rem;
+    padding: 0.125rem 0.375rem;
+    background-color: var(--color-surface-0);
+    color: var(--color-subtext-1);
+    border-radius: var(--border-radius-sm);
+    font-weight: 500;
   }
 }
 
