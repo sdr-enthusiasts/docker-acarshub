@@ -82,6 +82,7 @@ export const MessageCard = memo(
       const typeMap: Record<string, string> = {
         ACARS: "message-type--acars",
         VDLM: "message-type--vdlm",
+        "VDL-M2": "message-type--vdlm",
         HFDL: "message-type--hfdl",
         IMSL: "message-type--imsl",
         IRDM: "message-type--irdm",
