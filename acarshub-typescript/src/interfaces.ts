@@ -81,6 +81,7 @@ export interface decoders {
     bypass: boolean;
     range_rings: boolean;
     flight_tracking_url: string;
+    override_tile_url?: string | null;
   };
 }
 

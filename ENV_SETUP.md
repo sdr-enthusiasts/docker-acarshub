@@ -51,6 +51,7 @@
 | `ADSB_LAT`        | Base station latitude  | `37.7749`                              |
 | `ADSB_LON`        | Base station longitude | `-122.4194`                            |
 | `ADSB_BYPASS_URL` | Skip URL validation    | `true`, `false`                        |
+| `OVERRIDE_TILE_URL`  | Override URL for Live Map tile layer | `https://tiles.stadiamaps.com/styles/stamen_toner_dark/{z}/{x}/{y}.png` |
 
 ## Usage Methods
 

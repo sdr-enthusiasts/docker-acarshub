@@ -1400,9 +1400,17 @@ export class LiveMapPage extends ACARSHubPage {
 
     // Determine which tile layer to use based on theme
     const isDark = this.isDarkTheme();
-    const tileUrl = isDark
+
+    // Base Stadia tile URL (without authentication)
+    const baseTileUrl = isDark
       ? "https://tiles.stadiamaps.com/styles/stamen_toner_dark/{z}/{x}/{y}.png"
       : "https://tiles.stadiamaps.com/styles/stamen_toner/{z}/{x}/{y}.png";
+
+    // If a Stadia API key is available, append it to the tile URL; otherwise use the base URL
+    const tileUrl =
+      window.override_tile_url && window.override_tile_url.length > 0
+        ? window.override_tile_url
+        : baseTileUrl;
 
     // Create and add new tile layer
     this.#tileLayer = LeafLet.tileLayer(tileUrl, {
