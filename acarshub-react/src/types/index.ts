@@ -832,6 +832,36 @@ export interface MapProviderConfig {
 }
 
 /**
+ * GeoJSON overlay configuration
+ */
+export interface GeoJSONOverlay {
+  /** Unique identifier (e.g., "us_a2a_refueling") */
+  id: string;
+  /** Display name (e.g., "Air-to-Air Refueling") */
+  name: string;
+  /** File path (e.g., "/geojson/US_A2A_refueling.geojson") */
+  path: string;
+  /** Geographic category (e.g., "United States") */
+  category: string;
+  /** Visibility state */
+  enabled: boolean;
+  /** Line/fill color (hex format) */
+  color?: string;
+  /** Opacity (0-1) */
+  opacity?: number;
+}
+
+/**
+ * GeoJSON category grouping
+ */
+export interface GeoJSONCategory {
+  /** Category name (e.g., "United States") */
+  name: string;
+  /** Overlays in this category */
+  overlays: GeoJSONOverlay[];
+}
+
+/**
  * Map settings
  */
 export interface MapSettings {
@@ -865,6 +895,8 @@ export interface MapSettings {
   showRangeRings: boolean;
   /** Show only aircraft with unread messages */
   showOnlyUnread: boolean;
+  /** Enabled GeoJSON overlay IDs */
+  enabledGeoJSONOverlays: string[];
 }
 
 /**
@@ -984,6 +1016,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
     showNexrad: false,
     showRangeRings: true,
     showOnlyUnread: false,
+    enabledGeoJSONOverlays: [],
   },
   advanced: {
     logLevel: "info",

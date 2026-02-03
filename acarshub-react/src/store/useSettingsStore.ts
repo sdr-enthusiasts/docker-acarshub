@@ -16,6 +16,7 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { getOverlaysByCategory } from "../config/geojsonOverlays";
 import type {
   AdvancedSettings,
   AltitudeUnit,
@@ -76,6 +77,11 @@ interface SettingsState {
   setShowNexrad: (enabled: boolean) => void;
   setShowRangeRings: (enabled: boolean) => void;
   setShowOnlyUnread: (enabled: boolean) => void;
+
+  // GeoJSON overlay actions
+  setGeoJSONOverlay: (overlayId: string, enabled: boolean) => void;
+  toggleGeoJSONOverlay: (overlayId: string) => void;
+  setGeoJSONCategoryEnabled: (category: string, enabled: boolean) => void;
 
   // Advanced actions
   setLogLevel: (level: LogLevel) => void;
@@ -140,6 +146,7 @@ const getDefaultSettings = (): UserSettings => {
       showNexrad: false,
       showRangeRings: true,
       showOnlyUnread: false,
+      enabledGeoJSONOverlays: [],
     },
     advanced: {
       logLevel: import.meta.env.PROD ? "warn" : "info",
@@ -381,15 +388,6 @@ export const useSettingsStore = create<SettingsState>()(
           },
         })),
 
-      setShowOnlyUnread: (show: boolean) =>
-        set((state) => ({
-          settings: {
-            ...state.settings,
-            map: { ...state.settings.map, showOnlyUnread: show },
-            updatedAt: Date.now(),
-          },
-        })),
-
       setDefaultMapView: (lat, lon, zoom) =>
         set((state) => ({
           settings: {
@@ -439,6 +437,70 @@ export const useSettingsStore = create<SettingsState>()(
             updatedAt: Date.now(),
           },
         })),
+
+      setShowOnlyUnread: (enabled) =>
+        set((state) => ({
+          settings: {
+            ...state.settings,
+            map: { ...state.settings.map, showOnlyUnread: enabled },
+            updatedAt: Date.now(),
+          },
+        })),
+
+      // GeoJSON overlay actions
+      setGeoJSONOverlay: (overlayId, enabled) =>
+        set((state) => {
+          const current = state.settings.map.enabledGeoJSONOverlays;
+          const updated = enabled
+            ? [...current, overlayId].filter(
+                (id, index, arr) => arr.indexOf(id) === index,
+              ) // Remove duplicates
+            : current.filter((id) => id !== overlayId);
+
+          return {
+            settings: {
+              ...state.settings,
+              map: { ...state.settings.map, enabledGeoJSONOverlays: updated },
+              updatedAt: Date.now(),
+            },
+          };
+        }),
+
+      toggleGeoJSONOverlay: (overlayId) =>
+        set((state) => {
+          const current = state.settings.map.enabledGeoJSONOverlays;
+          const isEnabled = current.includes(overlayId);
+          const updated = isEnabled
+            ? current.filter((id) => id !== overlayId)
+            : [...current, overlayId];
+
+          return {
+            settings: {
+              ...state.settings,
+              map: { ...state.settings.map, enabledGeoJSONOverlays: updated },
+              updatedAt: Date.now(),
+            },
+          };
+        }),
+
+      setGeoJSONCategoryEnabled: (category, enabled) =>
+        set((state) => {
+          const overlaysInCategory = getOverlaysByCategory(category);
+          const overlayIds = overlaysInCategory.map((o) => o.id);
+
+          const current = state.settings.map.enabledGeoJSONOverlays;
+          const updated = enabled
+            ? [...current, ...overlayIds.filter((id) => !current.includes(id))]
+            : current.filter((id) => !overlayIds.includes(id));
+
+          return {
+            settings: {
+              ...state.settings,
+              map: { ...state.settings.map, enabledGeoJSONOverlays: updated },
+              updatedAt: Date.now(),
+            },
+          };
+        }),
 
       // Advanced actions
       setLogLevel: (level) =>
