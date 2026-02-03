@@ -1,7 +1,7 @@
 services:
   # ACARS Related Services
   acarshub:
-    #image: ghcr.io/sdr-enthusiasts/docker-acarshub:latest-build-1444
+    #image: ghcr.io/sdr-enthusiasts/docker-acarshub:v4-latest
     image: ah:test
     tty: true
     container_name: acarshub
@@ -9,9 +9,9 @@ services:
     ports:
       - 8085:80
     environment:
-      - ENABLE_VDLM=EXTERNAL
-      - ENABLE_ACARS=EXTERNAL
-      - ENABLE_HFDL=EXTERNAL
+      - ENABLE_VDLM=external
+      - ENABLE_ACARS=true
+      - ENABLE_HFDL=true
       - FLIGHT_TRACKING_URL=https://www.radarbox.com/data/flights/
       - STATION_ID_ACARS=CS-KABQ-ACARS
       - STATION_ID_VDLM=CS-KABQ-VDLM
