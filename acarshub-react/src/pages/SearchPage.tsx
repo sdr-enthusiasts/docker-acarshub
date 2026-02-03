@@ -32,6 +32,7 @@ import "./SearchPage.scss";
 
 const RESULTS_PER_PAGE = 50;
 const SEARCH_STATE_KEY = "acarshub_search_state";
+const NAVIGATION_FLAG_KEY = "acarshub_navigation_active";
 
 // Interface for persisted search state
 interface PersistedSearchState {
@@ -59,11 +60,23 @@ export const SearchPage = () => {
   const setActivePageName = useAppStore((state) => state.setCurrentPage);
   const databaseSize = useAppStore((state) => state.databaseSize);
 
-  // Load persisted state from localStorage
+  // Load persisted state only if this is in-app navigation (not a fresh page load)
   const loadPersistedState = (): Partial<PersistedSearchState> => {
+    // Check if this is in-app navigation vs fresh page load
+    const isInAppNavigation = sessionStorage.getItem(NAVIGATION_FLAG_KEY);
+
+    if (!isInAppNavigation) {
+      // Fresh page load - clear any old search state
+      sessionStorage.removeItem(SEARCH_STATE_KEY);
+      uiLogger.debug("Fresh page load detected - cleared search state");
+      return {};
+    }
+
+    // In-app navigation - restore previous search state
     try {
-      const stored = localStorage.getItem(SEARCH_STATE_KEY);
+      const stored = sessionStorage.getItem(SEARCH_STATE_KEY);
       if (stored) {
+        uiLogger.debug("Restored search state from in-app navigation");
         return JSON.parse(stored);
       }
     } catch (error) {
@@ -73,6 +86,19 @@ export const SearchPage = () => {
   };
 
   const persistedState = loadPersistedState();
+
+  // Set navigation flag for subsequent page navigations
+  useEffect(() => {
+    sessionStorage.setItem(NAVIGATION_FLAG_KEY, "true");
+
+    // Clear flag on page unload (browser close/refresh)
+    const handleBeforeUnload = () => {
+      sessionStorage.removeItem(NAVIGATION_FLAG_KEY);
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, []);
 
   // Search form state
   const [searchParams, setSearchParams] = useState<CurrentSearch>(
@@ -164,8 +190,8 @@ export const SearchPage = () => {
     };
 
     try {
-      localStorage.setItem(SEARCH_STATE_KEY, JSON.stringify(stateToSave));
-      uiLogger.debug("Persisted search state to localStorage");
+      sessionStorage.setItem(SEARCH_STATE_KEY, JSON.stringify(stateToSave));
+      uiLogger.debug("Persisted search state to sessionStorage");
     } catch (error) {
       uiLogger.warn("Failed to persist search state", { error });
     }
