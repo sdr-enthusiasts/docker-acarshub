@@ -27,6 +27,7 @@ import { socketService } from "../services/socket";
 import { useAppStore } from "../store/useAppStore";
 import type { AcarsMsg, CurrentSearch, SearchHtmlMsg } from "../types";
 import { uiLogger } from "../utils/logger";
+import { formatBytes } from "../utils/stringUtils";
 import "./SearchPage.scss";
 
 const RESULTS_PER_PAGE = 50;
@@ -287,7 +288,7 @@ export const SearchPage = () => {
               database
             </span>
             <span className="stat">
-              <strong>{databaseSize.size}</strong> database size
+              <strong>{formatBytes(databaseSize.size)}</strong> database size
             </span>
           </div>
         )}

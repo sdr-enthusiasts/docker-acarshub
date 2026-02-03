@@ -458,4 +458,55 @@ describe("stringUtils", () => {
       expect(getInitials("John   Doe")).toBe("JD");
     });
   });
+
+  describe("formatBytes", () => {
+    it("should format bytes", () => {
+      expect(formatBytes(0)).toBe("0 Bytes");
+      expect(formatBytes(1024)).toBe("1 KB");
+      expect(formatBytes(1536)).toBe("1.5 KB");
+    });
+
+    it("should format kilobytes", () => {
+      expect(formatBytes(1024 * 1024)).toBe("1 MB");
+      expect(formatBytes(1024 * 500)).toBe("500 KB");
+    });
+
+    it("should format megabytes", () => {
+      expect(formatBytes(1024 * 1024 * 1024)).toBe("1 GB");
+      expect(formatBytes(1024 * 1024 * 5.5)).toBe("5.5 MB");
+    });
+
+    it("should format gigabytes", () => {
+      expect(formatBytes(1024 * 1024 * 1024 * 5.26)).toBe("5.26 GB");
+      expect(formatBytes(5652230144)).toBe("5.26 GB");
+    });
+
+    it("should format terabytes", () => {
+      expect(formatBytes(1024 * 1024 * 1024 * 1024)).toBe("1 TB");
+      expect(formatBytes(1024 * 1024 * 1024 * 1024 * 2.5)).toBe("2.5 TB");
+    });
+
+    it("should respect decimals parameter", () => {
+      expect(formatBytes(1536, 0)).toBe("2 KB");
+      expect(formatBytes(1536, 1)).toBe("1.5 KB");
+      expect(formatBytes(1536, 3)).toBe("1.5 KB");
+    });
+
+    it("should handle negative decimals", () => {
+      expect(formatBytes(1536, -1)).toBe("2 KB");
+    });
+
+    it("should handle zero", () => {
+      expect(formatBytes(0)).toBe("0 Bytes");
+    });
+
+    it("should handle negative bytes", () => {
+      expect(formatBytes(-1024)).toBe("N/A");
+    });
+
+    it("should handle null/undefined", () => {
+      expect(formatBytes(null as unknown as number)).toBe("N/A");
+      expect(formatBytes(undefined as unknown as number)).toBe("N/A");
+    });
+  });
 });

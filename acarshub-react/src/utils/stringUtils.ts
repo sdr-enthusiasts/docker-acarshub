@@ -50,6 +50,25 @@ export function capitalize(str: string): string {
 }
 
 /**
+ * Formats bytes to human-readable size (KB, MB, GB, TB)
+ * @param bytes - Number of bytes
+ * @param decimals - Number of decimal places (default: 2)
+ * @returns Formatted string (e.g., "5.26 GB")
+ */
+export function formatBytes(bytes: number, decimals = 2): string {
+  if (bytes === 0) return "0 Bytes";
+  if (!bytes || bytes < 0) return "N/A";
+
+  const k = 1024;
+  const dm = decimals < 0 ? 0 : decimals;
+  const sizes = ["Bytes", "KB", "MB", "GB", "TB", "PB"];
+
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+
+  return `${Number.parseFloat((bytes / k ** i).toFixed(dm))} ${sizes[i]}`;
+}
+
+/**
  * Capitalizes the first letter of each word in a string
  * @param str - String to title case
  * @returns String with each word capitalized
@@ -204,22 +223,6 @@ export function escapeRegex(str: string): string {
  */
 export function formatNumber(num: number, locale?: string): string {
   return new Intl.NumberFormat(locale).format(num);
-}
-
-/**
- * Formats bytes to human-readable size (KB, MB, GB, etc.)
- * @param bytes - Number of bytes
- * @param decimals - Number of decimal places (default: 2)
- * @returns Formatted size string
- */
-export function formatBytes(bytes: number, decimals = 2): string {
-  if (bytes === 0) return "0 Bytes";
-
-  const k = 1024;
-  const sizes = ["Bytes", "KB", "MB", "GB", "TB", "PB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-
-  return `${parseFloat((bytes / k ** i).toFixed(decimals))} ${sizes[i]}`;
 }
 
 /**

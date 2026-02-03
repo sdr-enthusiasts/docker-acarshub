@@ -21,7 +21,7 @@
 
 // Database Types
 export interface DatabaseSize {
-  size: string;
+  size: number; // Size in bytes
   count: number;
 }
 

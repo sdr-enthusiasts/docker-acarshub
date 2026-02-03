@@ -709,7 +709,7 @@ describe("useAppStore", () => {
 
     it("should set database size", () => {
       const size = {
-        size: "10.5 MB",
+        size: 11010048, // 10.5 MB in bytes
         count: 5000,
       };
 
