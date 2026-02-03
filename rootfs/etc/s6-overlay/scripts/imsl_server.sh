@@ -20,6 +20,7 @@ if chk_enabled "${ENABLE_IMSL}"; then
     # Listen for the output of acars_router / imsl, and make it available for multiple processes at TCP port 15557
     # shellcheck disable=SC2016
     {
+        echo "starting imsl"
         socat -T 60 -u udp-listen:5557,fork,reuseaddr stdout | {
             cat
             kill -s INT 0

@@ -31,6 +31,17 @@ import { formatBytes } from "../utils/stringUtils";
 import "./SearchPage.scss";
 
 const RESULTS_PER_PAGE = 50;
+const SEARCH_STATE_KEY = "acarshub_search_state";
+
+// Interface for persisted search state
+interface PersistedSearchState {
+  searchParams: CurrentSearch;
+  currentPage: number;
+  results: AcarsMsg[];
+  totalResults: number;
+  queryTime: number | null;
+  activeSearch: CurrentSearch | null;
+}
 
 /**
  * SearchPage Component
@@ -48,29 +59,56 @@ export const SearchPage = () => {
   const setActivePageName = useAppStore((state) => state.setCurrentPage);
   const databaseSize = useAppStore((state) => state.databaseSize);
 
+  // Load persisted state from localStorage
+  const loadPersistedState = (): Partial<PersistedSearchState> => {
+    try {
+      const stored = localStorage.getItem(SEARCH_STATE_KEY);
+      if (stored) {
+        return JSON.parse(stored);
+      }
+    } catch (error) {
+      uiLogger.warn("Failed to load persisted search state", { error });
+    }
+    return {};
+  };
+
+  const persistedState = loadPersistedState();
+
   // Search form state
-  const [searchParams, setSearchParams] = useState<CurrentSearch>({
-    flight: "",
-    depa: "",
-    dsta: "",
-    freq: "",
-    label: "",
-    msgno: "",
-    tail: "",
-    icao: "",
-    msg_text: "",
-    station_id: "",
-  });
+  const [searchParams, setSearchParams] = useState<CurrentSearch>(
+    persistedState.searchParams || {
+      flight: "",
+      depa: "",
+      dsta: "",
+      freq: "",
+      label: "",
+      msgno: "",
+      tail: "",
+      icao: "",
+      msg_text: "",
+      station_id: "",
+    },
+  );
 
   // Search results state
-  const [results, setResults] = useState<AcarsMsg[]>([]);
-  const [totalResults, setTotalResults] = useState(0);
-  const [queryTime, setQueryTime] = useState<number | null>(null);
-  const [currentPage, setCurrentPage] = useState(0);
+  const [results, setResults] = useState<AcarsMsg[]>(
+    persistedState.results || [],
+  );
+  const [totalResults, setTotalResults] = useState(
+    persistedState.totalResults || 0,
+  );
+  const [queryTime, setQueryTime] = useState<number | null>(
+    persistedState.queryTime || null,
+  );
+  const [currentPage, setCurrentPage] = useState(
+    persistedState.currentPage || 0,
+  );
   const [isSearching, setIsSearching] = useState(false);
 
   // Track active search parameters (to compare with typed values)
-  const [activeSearch, setActiveSearch] = useState<CurrentSearch | null>(null);
+  const [activeSearch, setActiveSearch] = useState<CurrentSearch | null>(
+    persistedState.activeSearch || null,
+  );
 
   // Debounce timer ref
   const searchDebounceTimer = useRef<ReturnType<typeof setTimeout> | null>(
@@ -113,6 +151,32 @@ export const SearchPage = () => {
       return () => {};
     }
   }, []);
+
+  // Persist state to localStorage whenever it changes
+  useEffect(() => {
+    const stateToSave: PersistedSearchState = {
+      searchParams,
+      currentPage,
+      results,
+      totalResults,
+      queryTime,
+      activeSearch,
+    };
+
+    try {
+      localStorage.setItem(SEARCH_STATE_KEY, JSON.stringify(stateToSave));
+      uiLogger.debug("Persisted search state to localStorage");
+    } catch (error) {
+      uiLogger.warn("Failed to persist search state", { error });
+    }
+  }, [
+    searchParams,
+    currentPage,
+    results,
+    totalResults,
+    queryTime,
+    activeSearch,
+  ]);
 
   useEffect(() => {
     setActivePageName("Search");

@@ -7,6 +7,7 @@
 source /scripts/acars_common
 
 if chk_enabled "${ENABLE_IMSL}"; then
+    sleep 86400
 
     set -o pipefail
 
