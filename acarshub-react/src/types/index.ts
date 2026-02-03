@@ -821,8 +821,6 @@ export interface RegionalSettings {
 export interface AppearanceSettings {
   /** Theme (Mocha/Latte) */
   theme: Theme;
-  /** Display density */
-  density: DisplayDensity;
   /** Show connection status indicator */
   showConnectionStatus: boolean;
   /** Enable animations */
@@ -881,7 +879,6 @@ export interface UserSettings {
 export const DEFAULT_SETTINGS: UserSettings = {
   appearance: {
     theme: "mocha",
-    density: "comfortable",
     showConnectionStatus: true,
     animations: true,
   },

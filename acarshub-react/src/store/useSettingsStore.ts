@@ -22,7 +22,6 @@ import type {
   AppearanceSettings,
   DataSettings,
   DateFormat,
-  DisplayDensity,
   LogLevel,
   MapProvider,
   MapSettings,
@@ -43,7 +42,6 @@ interface SettingsState {
 
   // Appearance actions
   setTheme: (theme: Theme) => void;
-  setDensity: (density: DisplayDensity) => void;
   setShowConnectionStatus: (show: boolean) => void;
   setAnimations: (enabled: boolean) => void;
 
@@ -105,7 +103,6 @@ const getDefaultSettings = (): UserSettings => {
   const defaults: UserSettings = {
     appearance: {
       theme: "mocha",
-      density: "comfortable",
       showConnectionStatus: true,
       animations: true,
     },
@@ -171,15 +168,6 @@ export const useSettingsStore = create<SettingsState>()(
           settings: {
             ...state.settings,
             appearance: { ...state.settings.appearance, theme },
-            updatedAt: Date.now(),
-          },
-        })),
-
-      setDensity: (density) =>
-        set((state) => ({
-          settings: {
-            ...state.settings,
-            appearance: { ...state.settings.appearance, density },
             updatedAt: Date.now(),
           },
         })),

@@ -35,7 +35,7 @@ import { uiLogger } from "./utils/logger";
 /**
  * Main Application Component
  * Manages routing, Socket.IO connection, and application layout
- * Applies user settings (density, animations, theme) to document root
+ * Applies user settings (animations, theme) to document root
  */
 function App() {
   // Initialize Socket.IO connection and wire up event handlers
@@ -55,7 +55,6 @@ function App() {
       hasInitialized.current = true;
       uiLogger.info("ACARS Hub React application initialized", {
         theme: settings.appearance.theme,
-        density: settings.appearance.density,
         animations: settings.appearance.animations,
       });
     }
@@ -66,13 +65,9 @@ function App() {
     const root = document.documentElement;
 
     uiLogger.debug("Applying settings to document root", {
-      density: settings.appearance.density,
       animations: settings.appearance.animations,
       theme: settings.appearance.theme,
     });
-
-    // Apply density setting
-    root.setAttribute("data-density", settings.appearance.density);
 
     // Apply animations setting
     root.setAttribute(
@@ -86,11 +81,7 @@ function App() {
     } else {
       root.removeAttribute("data-theme");
     }
-  }, [
-    settings.appearance.density,
-    settings.appearance.animations,
-    settings.appearance.theme,
-  ]);
+  }, [settings.appearance.theme, settings.appearance.animations]);
 
   return (
     <BrowserRouter>

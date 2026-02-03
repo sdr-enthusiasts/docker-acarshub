@@ -47,11 +47,11 @@
 
   &__header {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    padding: var(--spacing-md);
-    background-color: var(--color-surface1);
-    border-bottom: 1px solid var(--color-surface2);
+    justify-content: space-between;
+    padding: var(--spacing-sm);
+    background: var(--color-surface0);
+    border-bottom: 2px solid var(--color-surface2);
   }
 
   &__aircraft {
@@ -92,7 +92,7 @@
     display: flex;
     align-items: center;
     gap: var(--spacing-xs);
-    padding: var(--spacing-sm) var(--spacing-md);
+    padding: var(--spacing-xs) var(--spacing-sm);
     background-color: var(--color-base);
     border-bottom: 1px solid var(--color-surface2);
     overflow-x: auto;
@@ -100,11 +100,7 @@
   }
 
   &__content {
-    padding: var(--spacing-md);
-
-    @include breakpoint(md) {
-      padding: var(--spacing-lg);
-    }
+    padding: var(--spacing-sm);
   }
 }
 
@@ -119,12 +115,12 @@
   padding: var(--spacing-xs) var(--spacing-sm);
   border-radius: var(--border-radius-md);
   cursor: pointer;
-  font-size: var(--font-size-lg);
+  font-size: var(--font-size-md);
   font-weight: 700;
   line-height: 1;
   transition: all 0.2s ease;
-  min-width: 44px;
-  min-height: 44px;
+  min-width: 36px;
+  min-height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -158,19 +154,19 @@
 }
 
 .tab {
-  position: relative;
-  background-color: var(--color-surface0);
+  background: none;
   border: 1px solid var(--color-surface2);
   color: var(--color-text);
-  padding: var(--spacing-sm) var(--spacing-md);
+  padding: var(--spacing-xs) var(--spacing-sm);
   border-radius: var(--border-radius-md);
   cursor: pointer;
-  font-size: var(--font-size-sm);
-  font-weight: 500;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  line-height: 1.2;
   transition: all 0.2s ease;
   white-space: nowrap;
-  min-width: 44px;
-  min-height: 44px;
+  min-width: 36px;
+  min-height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -213,68 +209,6 @@
 
   &__alert-indicator {
     font-size: var(--font-size-xs);
-  }
-}
-
-// ============================================================================
-// Density Mode Support
-// ============================================================================
-
-[data-density="compact"] {
-  .message-group {
-    &__header {
-      padding: var(--spacing-sm);
-    }
-
-    &__tabs {
-      padding: var(--spacing-xs) var(--spacing-sm);
-    }
-
-    &__content {
-      padding: var(--spacing-sm);
-    }
-  }
-
-  .tab-nav {
-    min-width: 36px;
-    min-height: 36px;
-    font-size: var(--font-size-md);
-  }
-
-  .tab {
-    min-width: 36px;
-    min-height: 36px;
-    padding: var(--spacing-xs) var(--spacing-sm);
-    font-size: var(--font-size-xs);
-  }
-}
-
-[data-density="spacious"] {
-  .message-group {
-    &__header {
-      padding: var(--spacing-lg);
-    }
-
-    &__tabs {
-      padding: var(--spacing-md) var(--spacing-lg);
-    }
-
-    &__content {
-      padding: var(--spacing-xl);
-    }
-  }
-
-  .tab-nav {
-    min-width: 52px;
-    min-height: 52px;
-    font-size: var(--font-size-xl);
-  }
-
-  .tab {
-    min-width: 52px;
-    min-height: 52px;
-    padding: var(--spacing-md) var(--spacing-lg);
-    font-size: var(--font-size-md);
   }
 }
 

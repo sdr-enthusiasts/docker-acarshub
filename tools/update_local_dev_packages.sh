@@ -1,9 +1,0 @@
-#!/bin/bash
-
-pushd ../rootfs/webapp || exit 1
-
-grep < requirements.txt -v 'rrdtool' | xargs -I {} sudo python3 -m pip install {}
-
-popd || exit 1
-pushd ../acarshub-typescript || exit 1
-npm i

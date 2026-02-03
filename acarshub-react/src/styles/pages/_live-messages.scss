@@ -503,84 +503,9 @@
 }
 
 // ============================================================================
-// Density Mode Support
+// Component styles use spacing variables defined in _variables.scss
+// No density overrides needed - components adapt via CSS variables
 // ============================================================================
-
-[data-density="compact"] {
-  .message-card {
-    &__header {
-      margin-bottom: var(--spacing-sm);
-      padding-bottom: var(--spacing-xs);
-    }
-
-    &__identifiers {
-      margin-bottom: var(--spacing-sm);
-      padding-bottom: var(--spacing-xs);
-    }
-
-    &__fields {
-      gap: var(--spacing-xs);
-    }
-  }
-
-  .message-field {
-    padding: var(--spacing-xs) 0;
-  }
-
-  .message-group {
-    &__header {
-      padding: var(--spacing-sm);
-    }
-
-    &__content {
-      padding: var(--spacing-sm);
-    }
-  }
-
-  .message-filters {
-    padding: var(--spacing-sm);
-  }
-}
-
-[data-density="spacious"] {
-  .message-card {
-    &__header {
-      margin-bottom: var(--spacing-lg);
-      padding-bottom: var(--spacing-md);
-    }
-
-    &__identifiers {
-      margin-bottom: var(--spacing-lg);
-      padding-bottom: var(--spacing-md);
-    }
-
-    &__fields {
-      gap: var(--spacing-md);
-    }
-  }
-
-  .message-field {
-    padding: var(--spacing-md) 0;
-  }
-
-  .message-group {
-    &__header {
-      padding: var(--spacing-lg);
-    }
-
-    &__content {
-      padding: var(--spacing-xl);
-    }
-  }
-
-  .message-filters {
-    padding: var(--spacing-lg);
-  }
-
-  .message-list {
-    gap: var(--spacing-xl);
-  }
-}
 
 // ============================================================================
 // Animation Support

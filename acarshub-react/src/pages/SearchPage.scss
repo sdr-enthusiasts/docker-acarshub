@@ -25,7 +25,7 @@
   // Search form
   &__form {
     margin-bottom: var(--spacing-xl);
-    padding: var(--spacing-lg);
+    padding: var(--spacing-md);
     background: var(--color-surface0);
     border-radius: var(--border-radius-lg);
     border: 1px solid var(--color-surface2);
@@ -34,8 +34,8 @@
   &__form-grid {
     display: grid;
     grid-template-columns: 1fr;
-    gap: var(--spacing-md);
-    margin-bottom: var(--spacing-lg);
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-md);
 
     // Tablet: 2 columns
     @include breakpoint(md) {
@@ -62,12 +62,12 @@
     }
 
     input {
-      padding: var(--spacing-sm) var(--spacing-md);
+      padding: var(--spacing-xs) var(--spacing-sm);
       background: var(--color-base);
       border: 2px solid var(--color-surface2);
       border-radius: var(--border-radius-md);
       color: var(--color-text);
-      font-size: var(--font-size-md);
+      font-size: var(--font-size-sm);
       transition: all var(--transition-normal);
 
       &::placeholder {
@@ -110,7 +110,7 @@
   // Results info
   &__results-info {
     margin-bottom: var(--spacing-md);
-    padding: var(--spacing-md);
+    padding: var(--spacing-sm);
     background: var(--color-surface0);
     border-radius: var(--border-radius-md);
     border-left: 4px solid var(--color-blue);
@@ -151,14 +151,14 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    min-width: 44px;
-    height: 44px;
+    min-width: 36px;
+    height: 36px;
     padding: var(--spacing-xs) var(--spacing-sm);
     background: var(--color-surface0);
     border: 2px solid var(--color-surface2);
     border-radius: var(--border-radius-md);
     color: var(--color-text);
-    font-size: var(--font-size-sm);
+    font-size: var(--font-size-xs);
     font-weight: 600;
     cursor: pointer;
     transition: all var(--transition-normal);
@@ -201,8 +201,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    min-width: 44px;
-    height: 44px;
+    min-width: 36px;
+    height: 36px;
     color: var(--color-subtext0);
     font-size: var(--font-size-sm);
     font-weight: 600;
@@ -212,7 +212,7 @@
   &__results {
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-md);
+    gap: var(--spacing-xs);
 
     @include breakpoint-max(md) {
       gap: var(--spacing-sm);
@@ -238,7 +238,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: var(--spacing-3xl);
+    padding: var(--spacing-xl);
     color: var(--color-subtext0);
     font-size: var(--font-size-lg);
   }
@@ -248,95 +248,10 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: var(--spacing-3xl);
+    padding: var(--spacing-xl);
     color: var(--color-subtext0);
     font-size: var(--font-size-md);
     text-align: center;
-  }
-
-  // Density mode support
-  [data-density="compact"] & {
-    &__form {
-      padding: var(--spacing-md);
-    }
-
-    &__form-grid {
-      gap: var(--spacing-sm);
-      margin-bottom: var(--spacing-md);
-    }
-
-    &__form-field {
-      input {
-        padding: var(--spacing-xs) var(--spacing-sm);
-        font-size: var(--font-size-sm);
-      }
-    }
-
-    &__results-info {
-      padding: var(--spacing-sm);
-    }
-
-    &__pagination-button {
-      min-width: 36px;
-      height: 36px;
-      font-size: var(--font-size-xs);
-    }
-
-    &__pagination-ellipsis {
-      min-width: 36px;
-      height: 36px;
-    }
-
-    &__results {
-      gap: var(--spacing-xs);
-    }
-
-    &__loading,
-    &__empty {
-      padding: var(--spacing-xl);
-    }
-  }
-
-  [data-density="spacious"] & {
-    &__form {
-      padding: var(--spacing-xl);
-    }
-
-    &__form-grid {
-      gap: var(--spacing-lg);
-      margin-bottom: var(--spacing-xl);
-    }
-
-    &__form-field {
-      input {
-        padding: var(--spacing-md) var(--spacing-lg);
-        font-size: var(--font-size-lg);
-      }
-    }
-
-    &__results-info {
-      padding: var(--spacing-lg);
-    }
-
-    &__pagination-button {
-      min-width: 52px;
-      height: 52px;
-      font-size: var(--font-size-md);
-    }
-
-    &__pagination-ellipsis {
-      min-width: 52px;
-      height: 52px;
-    }
-
-    &__results {
-      gap: var(--spacing-lg);
-    }
-
-    &__loading,
-    &__empty {
-      padding: var(--spacing-4xl);
-    }
   }
 
   // Reduced motion support

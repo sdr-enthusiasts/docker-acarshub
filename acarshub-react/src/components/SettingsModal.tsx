@@ -21,7 +21,6 @@ import { useSettingsStore } from "../store/useSettingsStore";
 import type {
   AltitudeUnit,
   DateFormat,
-  DisplayDensity,
   LogLevel,
   Theme,
   TimeFormat,
@@ -49,7 +48,6 @@ export const SettingsModal = () => {
   const alertTerms = useAppStore((state) => state.alertTerms);
   const setAlertTerms = useAppStore((state) => state.setAlertTerms);
   const setTheme = useSettingsStore((state) => state.setTheme);
-  const setDensity = useSettingsStore((state) => state.setDensity);
   const setTimeFormat = useSettingsStore((state) => state.setTimeFormat);
   const setDateFormat = useSettingsStore((state) => state.setDateFormat);
   const setTimezone = useSettingsStore((state) => state.setTimezone);
@@ -348,14 +346,10 @@ export const SettingsModal = () => {
             className="settings-panel"
           >
             <Card
-              title="Appearance"
-              subtitle="Customize the look and feel of the application"
+              title="Theme"
+              subtitle="Choose your preferred color scheme"
               variant="success"
             >
-              <div className="settings-info settings-info--success">
-                ✓ All appearance settings are fully functional
-              </div>
-
               <RadioGroup
                 name="theme"
                 label="Theme"
@@ -375,21 +369,13 @@ export const SettingsModal = () => {
                 onChange={(value) => setTheme(value as Theme)}
                 helpText="Choose your preferred color scheme"
               />
+            </Card>
 
-              <Select
-                id="density"
-                label="Display Density"
-                value={settings.appearance.density}
-                options={[
-                  { value: "compact", label: "Compact - More content" },
-                  { value: "comfortable", label: "Comfortable - Balanced" },
-                  { value: "spacious", label: "Spacious - More spacing" },
-                ]}
-                onChange={(value) => setDensity(value as DisplayDensity)}
-                helpText="Adjust spacing and sizing of UI elements"
-                fullWidth
-              />
-
+            <Card
+              title="Miscellaneous"
+              subtitle="Additional appearance options"
+              variant="info"
+            >
               <Toggle
                 id="animations"
                 label="Enable Animations"
@@ -422,11 +408,6 @@ export const SettingsModal = () => {
               subtitle="Configure time, date, and regional preferences"
               variant="info"
             >
-              <div className="settings-info">
-                ℹ️ These settings are saved but not yet used by message
-                displays. They will be applied in future updates.
-              </div>
-
               <Select
                 id="time-format"
                 label="Time Format"
@@ -542,10 +523,6 @@ export const SettingsModal = () => {
               subtitle="Configure how you receive alerts and notifications"
               variant="success"
             >
-              <div className="settings-info settings-info--success">
-                ✓ Sound alerts are fully functional
-              </div>
-
               {isChromium && (
                 <div className="settings-info settings-info--warning">
                   ⚠️ Your browser (Chrome, Brave, or Edge) requires clicking
@@ -553,11 +530,6 @@ export const SettingsModal = () => {
                   policies. Consider using Firefox for a better experience.
                 </div>
               )}
-
-              <div className="settings-info settings-info--success">
-                ✓ Desktop notifications are now available. Ensure you grant
-                browser permissions when enabling this feature.
-              </div>
 
               <Toggle
                 id="desktop-notifications"
@@ -652,12 +624,6 @@ export const SettingsModal = () => {
               subtitle="Manage alert terms for message filtering"
               variant="warning"
             >
-              <div className="settings-info settings-info--info">
-                Configure terms to highlight and notify you about specific
-                messages. Terms can be text phrases, callsigns, tail numbers, or
-                ICAO hex codes.
-              </div>
-
               {/* Alert Terms */}
               <div className="settings-field-group">
                 <label htmlFor="alert-terms-input" className="settings-label">
@@ -757,11 +723,6 @@ export const SettingsModal = () => {
                   </div>
                 )}
               </div>
-
-              <div className="settings-info settings-info--success">
-                ✓ Alert terms are saved automatically and persist across
-                sessions
-              </div>
             </Card>
           </div>
         )}
@@ -779,10 +740,6 @@ export const SettingsModal = () => {
               subtitle="Manage data storage and privacy preferences"
               variant="default"
             >
-              <div className="settings-info settings-info--success">
-                ✓ Max messages setting is active and working
-              </div>
-
               <div className="settings-field-group">
                 <label htmlFor="max-messages" className="settings-label">
                   Max Messages per Source:{" "}
@@ -825,10 +782,6 @@ export const SettingsModal = () => {
                 </p>
               </div>
 
-              <div className="settings-info settings-info--warning">
-                ℹ️ Caching and auto-clear features not yet implemented
-              </div>
-
               <Toggle
                 id="enable-caching"
                 label="Enable Local Caching (Coming Soon)"
@@ -855,8 +808,7 @@ export const SettingsModal = () => {
                   disabled
                 />
                 <p className="settings-help-text">
-                  Automatically clear old messages after this many minutes (0 =
-                  disabled)
+                  Automatically clear old data after specified time (0 = never)
                 </p>
               </div>
             </Card>
@@ -876,11 +828,6 @@ export const SettingsModal = () => {
               subtitle="Configure application logging and view system logs"
               variant="info"
             >
-              <div className="settings-info settings-info--info">
-                ℹ️ Logging helps diagnose issues. Share exported logs with
-                support if you experience problems.
-              </div>
-
               <Select
                 id="log-level"
                 label="Log Level"

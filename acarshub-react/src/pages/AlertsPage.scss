@@ -27,8 +27,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: var(--spacing-2xl);
-    min-height: 400px;
+    padding: var(--spacing-lg);
+    min-height: 300px;
 
     @include breakpoint(md) {
       min-height: 500px;
@@ -65,7 +65,7 @@
   // Current terms display in empty state
   &__current-terms {
     margin-top: var(--spacing-xl);
-    padding: var(--spacing-lg);
+    padding: var(--spacing-md);
     background: var(--color-surface0);
     border-radius: var(--border-radius-lg);
     text-align: left;
@@ -154,43 +154,12 @@
   &__messages {
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-md);
+    gap: var(--spacing-xs);
     padding-bottom: var(--spacing-lg);
 
     // Mobile: full width
     @include breakpoint-max(md) {
       gap: var(--spacing-sm);
-    }
-  }
-
-  // Density mode support
-  [data-density="compact"] & {
-    &__empty-state {
-      padding: var(--spacing-lg);
-      min-height: 300px;
-    }
-
-    &__current-terms {
-      padding: var(--spacing-md);
-    }
-
-    &__messages {
-      gap: var(--spacing-xs);
-    }
-  }
-
-  [data-density="spacious"] & {
-    &__empty-state {
-      padding: var(--spacing-3xl);
-      min-height: 600px;
-    }
-
-    &__current-terms {
-      padding: var(--spacing-xl);
-    }
-
-    &__messages {
-      gap: var(--spacing-lg);
     }
   }
 

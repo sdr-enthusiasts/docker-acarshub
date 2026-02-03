@@ -31,11 +31,11 @@
   .page__content {
     max-width: 1400px;
     margin: 0 auto;
-    padding: var(--spacing-lg);
+    padding: var(--spacing-md);
     overflow-anchor: none; // Prevent browser scroll anchoring
 
     @media (max-width: 767px) {
-      padding: var(--spacing-md);
+      padding: var(--spacing-sm);
     }
   }
 
@@ -93,7 +93,7 @@
 
     // Loading state
     &:not([src]) {
-      min-height: 200px;
+      min-height: 150px;
       background: var(--color-surface1);
     }
 
@@ -111,8 +111,8 @@
     background-color: var(--color-surface0);
     border: 1px solid var(--color-surface2);
     border-radius: $radius-lg;
-    padding: $spacing-lg;
-    margin-top: $spacing-lg;
+    padding: $spacing-sm;
+    margin-top: $spacing-sm;
     min-height: 250px; // Prevent layout shifts that cause scroll jumps
     contain: layout style paint; // Strict containment to prevent reflows
     overflow-anchor: none; // Disable browser scroll anchoring
@@ -203,52 +203,6 @@
 // =============================================================================
 // Density Mode Adjustments
 // =============================================================================
-
-[data-density="compact"] {
-  .stats-page {
-    .page__content {
-      padding: var(--spacing-md);
-
-      @media (max-width: 767px) {
-        padding: var(--spacing-sm);
-      }
-    }
-
-    .chart-wrapper {
-      margin-top: $spacing-sm;
-      padding: $spacing-sm;
-    }
-
-    .stats-image {
-      &:not([src]) {
-        min-height: 150px;
-      }
-    }
-  }
-}
-
-[data-density="spacious"] {
-  .stats-page {
-    .page__content {
-      padding: var(--spacing-xl);
-
-      @media (max-width: 767px) {
-        padding: var(--spacing-lg);
-      }
-    }
-
-    .chart-wrapper {
-      margin-top: $spacing-xl;
-      padding: $spacing-xl;
-    }
-
-    .stats-image {
-      &:not([src]) {
-        min-height: 250px;
-      }
-    }
-  }
-}
 
 // =============================================================================
 // Animation States

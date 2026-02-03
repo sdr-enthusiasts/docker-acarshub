@@ -1,6 +1,0 @@
-{
-  "python.pythonPath": "/usr/bin/python3",
-  "hadolint.hadolintPath": "/opt/homebrew/bin/hadolint",
-  "hadolint.cliOptions": ["--no-color"],
-  "python.analysis.extraPaths": ["./rootfs/webapp"]
-}

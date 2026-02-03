@@ -41,7 +41,6 @@ describe("useSettingsStore", () => {
       const { settings } = useSettingsStore.getState();
 
       expect(settings.appearance.theme).toBe("mocha");
-      expect(settings.appearance.density).toBe("comfortable");
       expect(settings.appearance.showConnectionStatus).toBe(true);
       expect(settings.appearance.animations).toBe(true);
 
@@ -102,15 +101,6 @@ describe("useSettingsStore", () => {
       vi.useRealTimers();
     });
 
-    it("should update density", () => {
-      const { setDensity } = useSettingsStore.getState();
-
-      setDensity("compact");
-
-      const { settings } = useSettingsStore.getState();
-      expect(settings.appearance.density).toBe("compact");
-    });
-
     it("should update showConnectionStatus", () => {
       const { setShowConnectionStatus } = useSettingsStore.getState();
 
@@ -134,13 +124,11 @@ describe("useSettingsStore", () => {
 
       updateAppearanceSettings({
         theme: "latte",
-        density: "spacious",
         animations: false,
       });
 
       const { settings } = useSettingsStore.getState();
       expect(settings.appearance.theme).toBe("latte");
-      expect(settings.appearance.density).toBe("spacious");
       expect(settings.appearance.animations).toBe(false);
       // showConnectionStatus should remain at default since not updated
       expect(settings.appearance.showConnectionStatus).toBe(true);
@@ -593,7 +581,6 @@ describe("useSettingsStore", () => {
       const validSettings: UserSettings = {
         appearance: {
           theme: "latte",
-          density: "spacious",
           showConnectionStatus: false,
           animations: false,
         },
@@ -693,7 +680,6 @@ describe("useSettingsStore", () => {
       const validSettings: UserSettings = {
         appearance: {
           theme: "latte",
-          density: "comfortable",
           showConnectionStatus: true,
           animations: true,
         },
@@ -818,7 +804,6 @@ describe("useSettingsStore", () => {
         settings: {
           appearance: {
             theme: "latte",
-            density: "spacious",
             showConnectionStatus: false,
             animations: false,
           },
@@ -1048,17 +1033,15 @@ describe("useSettingsStore", () => {
     });
 
     it("should preserve other settings when batch updating", () => {
-      const { setTheme, setDensity, updateAppearanceSettings } =
+      const { setTheme, updateAppearanceSettings } =
         useSettingsStore.getState();
 
       setTheme("latte");
-      setDensity("spacious");
 
       updateAppearanceSettings({ animations: false });
 
       const { settings } = useSettingsStore.getState();
       expect(settings.appearance.theme).toBe("latte");
-      expect(settings.appearance.density).toBe("spacious");
       expect(settings.appearance.animations).toBe(false);
     });
 

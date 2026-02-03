@@ -24,7 +24,7 @@
 
 .toggle-wrapper {
   display: flex;
-  gap: 1rem;
+  gap: 0.75rem;
   align-items: center;
   align-self: center;
 
@@ -66,8 +66,8 @@
     position: relative;
     display: flex;
     align-items: center;
-    width: 3rem;
-    height: 1.5rem;
+    width: 2.75rem;
+    height: 1.375rem;
     background-color: var(--color-surface1);
     border-radius: 1.5rem;
     transition: background-color 0.2s ease;
@@ -98,8 +98,8 @@
   }
 
   &__thumb {
-    width: 1.25rem;
-    height: 1.25rem;
+    width: 1.125rem;
+    height: 1.125rem;
     margin-left: 0.125rem;
     background-color: #ffffff;
     border-radius: 50%;
@@ -110,7 +110,7 @@
 
     // Checked state - move thumb to right
     .toggle-input:checked ~ .toggle-slider & {
-      transform: translateX(1.375rem);
+      transform: translateX(1.25rem);
       background-color: #ffffff;
       box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
     }
@@ -130,7 +130,7 @@
 }
 
 .toggle-label {
-  font-size: 0.9375rem;
+  font-size: 0.875rem;
   font-weight: 600;
   color: var(--color-text);
   cursor: pointer;
@@ -138,7 +138,7 @@
 }
 
 .toggle-help-text {
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   color: var(--color-subtext0);
   margin: 0;
   line-height: 1.5;
@@ -199,80 +199,10 @@
 
 // Mobile responsive adjustments
 @media (max-width: 768px) {
-  .toggle-wrapper {
-    gap: 0.875rem;
-  }
-
   .toggle-slider__track {
     // Larger tap target for mobile
     min-width: 3.5rem;
     min-height: 1.75rem;
-  }
-
-  .toggle-label {
-    font-size: 1rem;
-  }
-
-  .toggle-help-text {
-    font-size: 0.875rem;
-  }
-}
-
-// Compact mode
-[data-density="compact"] {
-  .toggle-wrapper {
-    gap: 0.75rem;
-  }
-
-  .toggle-slider__track {
-    width: 2.75rem;
-    height: 1.375rem;
-  }
-
-  .toggle-slider__thumb {
-    width: 1.125rem;
-    height: 1.125rem;
-
-    .toggle-input:checked ~ .toggle-slider & {
-      transform: translateX(1.25rem);
-    }
-  }
-
-  .toggle-label {
-    font-size: 0.875rem;
-  }
-
-  .toggle-help-text {
-    font-size: 0.75rem;
-  }
-}
-
-// Spacious mode
-[data-density="spacious"] {
-  .toggle-wrapper {
-    gap: 1.25rem;
-  }
-
-  .toggle-slider__track {
-    width: 3.5rem;
-    height: 1.75rem;
-  }
-
-  .toggle-slider__thumb {
-    width: 1.5rem;
-    height: 1.5rem;
-
-    .toggle-input:checked ~ .toggle-slider & {
-      transform: translateX(1.625rem);
-    }
-  }
-
-  .toggle-label {
-    font-size: 1rem;
-  }
-
-  .toggle-help-text {
-    font-size: 0.9375rem;
   }
 }
 

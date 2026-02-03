@@ -177,21 +177,6 @@
   }
 }
 
-// Density mode support
-[data-density="compact"] .aircraft-marker {
-  // Slightly smaller markers in compact mode
-  img {
-    transform: scale(0.9);
-  }
-}
-
-[data-density="spacious"] .aircraft-marker {
-  // Slightly larger markers in spacious mode
-  img {
-    transform: scale(1.1);
-  }
-}
-
 // Print styles - hide markers when printing
 @media print {
   .aircraft-marker {
@@ -261,10 +246,10 @@
     background: var(--color-surface0);
     border: 1px solid var(--color-surface2);
     border-radius: 6px;
-    padding: 8px 12px;
+    padding: 6px 10px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    min-width: 180px;
-    font-size: 13px;
+    min-width: 160px;
+    font-size: 12px;
     line-height: 1.4;
     white-space: nowrap;
 
@@ -281,11 +266,11 @@
     align-items: center;
     justify-content: space-between;
     gap: 8px;
-    margin-bottom: 6px;
-    padding-bottom: 6px;
+    margin-bottom: 4px;
+    padding-bottom: 4px;
     border-bottom: 1px solid var(--color-surface1);
     color: var(--color-text);
-    font-size: 14px;
+    font-size: 13px;
   }
 
   &__match-badge {
@@ -305,7 +290,7 @@
     justify-content: space-between;
     align-items: center;
     gap: 12px;
-    margin: 4px 0;
+    margin: 3px 0;
     color: var(--color-text);
 
     &--highlight {
@@ -337,7 +322,7 @@
 
   &__label {
     color: var(--color-subtext1);
-    font-size: 11px;
+    font-size: 10px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     white-space: nowrap;
@@ -357,51 +342,6 @@
   }
   to {
     opacity: 1;
-  }
-}
-
-// Density mode adjustments for tooltips
-[data-density="compact"] .aircraft-tooltip {
-  &__content {
-    padding: 6px 10px;
-    font-size: 12px;
-    min-width: 160px;
-  }
-
-  &__header {
-    font-size: 13px;
-    margin-bottom: 4px;
-    padding-bottom: 4px;
-  }
-
-  &__row {
-    margin: 3px 0;
-  }
-
-  &__label {
-    font-size: 10px;
-  }
-}
-
-[data-density="spacious"] .aircraft-tooltip {
-  &__content {
-    padding: 10px 14px;
-    font-size: 14px;
-    min-width: 200px;
-  }
-
-  &__header {
-    font-size: 15px;
-    margin-bottom: 8px;
-    padding-bottom: 8px;
-  }
-
-  &__row {
-    margin: 5px 0;
-  }
-
-  &__label {
-    font-size: 12px;
   }
 }
 

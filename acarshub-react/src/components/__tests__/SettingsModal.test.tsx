@@ -258,18 +258,6 @@ describe("SettingsModal", () => {
         useSettingsStore.getState().settings.appearance.showConnectionStatus,
       ).toBe(false);
     });
-
-    it("should update display density", async () => {
-      const user = userEvent.setup();
-      render(<SettingsModal />);
-
-      const densitySelect = screen.getByLabelText("Display Density");
-      await user.selectOptions(densitySelect, "compact");
-
-      expect(useSettingsStore.getState().settings.appearance.density).toBe(
-        "compact",
-      );
-    });
   });
 
   describe("Regional & Time Settings", () => {
@@ -915,7 +903,6 @@ describe("SettingsModal", () => {
         version: 2,
         appearance: {
           theme: "latte",
-          density: "compact",
           animations: false,
           showConnectionStatus: false,
         },
@@ -1247,7 +1234,6 @@ describe("SettingsModal", () => {
             version: 2,
             appearance: {
               theme: "latte",
-              density: "compact",
               animations: false,
               showConnectionStatus: true,
             },

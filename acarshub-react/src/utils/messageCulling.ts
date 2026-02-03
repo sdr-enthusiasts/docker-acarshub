@@ -43,21 +43,30 @@ export function isGroupPairedWithADSB(
     // Strategy 1: Match by hex (ICAO 24-bit address)
     const aircraftHex = aircraft.hex.toUpperCase().trim();
     if (group.identifiers.includes(aircraftHex)) {
-      storeLogger.trace("Message group paired with ADS-B aircraft (hex match)", {
-        groupId: group.identifiers[0],
-        aircraftHex,
-      });
+      storeLogger.trace(
+        "Message group paired with ADS-B aircraft (hex match)",
+        {
+          groupId: group.identifiers[0],
+          aircraftHex,
+        },
+      );
       return true;
     }
 
     // Strategy 2: Match by ICAO callsign (flight number)
     if (aircraft.flight) {
       const aircraftFlight = aircraft.flight.trim().toUpperCase();
-      if (aircraftFlight.length > 0 && group.identifiers.includes(aircraftFlight)) {
-        storeLogger.trace("Message group paired with ADS-B aircraft (flight match)", {
-          groupId: group.identifiers[0],
-          aircraftFlight,
-        });
+      if (
+        aircraftFlight.length > 0 &&
+        group.identifiers.includes(aircraftFlight)
+      ) {
+        storeLogger.trace(
+          "Message group paired with ADS-B aircraft (flight match)",
+          {
+            groupId: group.identifiers[0],
+            aircraftFlight,
+          },
+        );
         return true;
       }
     }
@@ -66,10 +75,13 @@ export function isGroupPairedWithADSB(
     if (aircraft.r) {
       const aircraftTail = aircraft.r.trim().toUpperCase();
       if (aircraftTail.length > 0 && group.identifiers.includes(aircraftTail)) {
-        storeLogger.trace("Message group paired with ADS-B aircraft (tail match)", {
-          groupId: group.identifiers[0],
-          aircraftTail,
-        });
+        storeLogger.trace(
+          "Message group paired with ADS-B aircraft (tail match)",
+          {
+            groupId: group.identifiers[0],
+            aircraftTail,
+          },
+        );
         return true;
       }
     }
@@ -136,9 +148,10 @@ export function cullMessageGroups(
     const notPairedToKeepCount = maxGroups - pairedGroups.length;
 
     // Keep newest not-paired groups (handle slice(-0) edge case)
-    const notPairedToKeep = notPairedToKeepCount > 0
-      ? notPairedGroups.slice(-notPairedToKeepCount)
-      : [];
+    const notPairedToKeep =
+      notPairedToKeepCount > 0
+        ? notPairedGroups.slice(-notPairedToKeepCount)
+        : [];
 
     // Build new map with paired + kept not-paired
     const culledMap = new Map<string, MessageGroup>();
