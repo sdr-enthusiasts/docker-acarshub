@@ -136,8 +136,8 @@ export const MessageCard = memo(
             <div className="identifier">
               <span className="identifier__label">Flight:</span>
               <span className="identifier__value">
-                {message.icao_flight || message.flight}
-                {message.airline && ` ${message.airline}`}
+                {message.airline && ` ${message.airline}`}&nbsp;
+                {message.flight_number}
               </span>
             </div>
           )}
