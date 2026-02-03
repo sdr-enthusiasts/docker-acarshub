@@ -51,6 +51,7 @@
 | `ADSB_LAT`        | Base station latitude  | `37.7749`                              |
 | `ADSB_LON`        | Base station longitude | `-122.4194`                            |
 | `ADSB_BYPASS_URL` | Skip URL validation    | `true`, `false`                        |
+| `STADIA_API_KEY`  | Stadia Maps API key used for the Live Map tile layer (optional) | `pk_your_stadia_public_key_here` |
 
 ## Usage Methods
 

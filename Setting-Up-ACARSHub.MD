@@ -73,6 +73,7 @@ services:
   #      - ADSB_LAT=
   #      - ADSB_LON=
   #      - ADSB_URL=
+  #      - STADIA_API_KEY=pk_your_stadia_public_key_here
 
   ### Remove this section if you are NOT decoding ACARS
   acarsdec:

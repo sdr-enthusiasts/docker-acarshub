@@ -49,6 +49,9 @@ declare global {
     ) => void;
     toggleNexrad: () => void;
     toggleTheme: () => void;
+
+    // Optional Stadia Maps API key used by the Live Map tile layer
+    stadia_api_key?: string;
   }
 }
 
@@ -305,6 +308,12 @@ $((): void => {
     stats.decoders_enabled(msg);
     allow_remote_updates = msg.allow_remote_updates;
     flight_tracking_url = msg.adsb.flight_tracking_url;
+
+    // If the backend provides a Stadia Maps API key, expose it on window for the Live Map
+    if (msg.adsb.stadia_api_key) {
+      window.stadia_api_key = msg.adsb.stadia_api_key;
+    }
+
     if (msg.adsb.enabled === true) {
       live_map = new LiveMapPage(
         msg.adsb.lat,

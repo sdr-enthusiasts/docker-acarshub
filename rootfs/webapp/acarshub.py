@@ -751,6 +751,7 @@ def main_connect():
                     "bypass": acarshub_configuration.ADSB_BYPASS_URL,
                     "range_rings": acarshub_configuration.ENABLE_RANGE_RINGS,
                     "flight_tracking_url": acarshub_configuration.FLIGHT_TRACKING_URL,
+                    "stadia_api_key": acarshub_configuration.STADIA_API_KEY,
                 },
             },
             to=requester,

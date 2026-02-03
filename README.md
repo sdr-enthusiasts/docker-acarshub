@@ -184,6 +184,7 @@ The following options will set the options for ADSB
 | `ADSB_LAT`            | The latitude of your ADSB site                                          | No, but recommended              | 0                                   |
 | `ADSB_LON`            | The longitude of your ADSB site                                         | No, but recommended              | 0                                   |
 | `DISABLE_RANGE_RINGS` | Turn off range rings on your map. Set to `true` to disable range rings. | No                               | `false`                             |
+| `STADIA_API_KEY`      | Optional Stadia Maps API key used by the Live Map tile layer. If set, ACARS Hub will include this key when requesting tiles from Stadia Maps; this is recommended when accessing the web UI via VPNs, reverse proxies, or non-localhost hostnames to avoid `401 Invalid Authentication` responses from the tile server. | No       | Blank                               |
 
 If you run Mike's tar1090 container on the same machine as ACARS Hub then the default value for `ADSB_URL` is fine. If you don't, the formatting for `ADSB_URL` should be the full URL path to `aircraft.json` from your readsb source.
 
