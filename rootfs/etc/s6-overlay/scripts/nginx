@@ -11,5 +11,5 @@ if [[ ${ENABLE_WEB,,} =~ true ]]; then
     mkdir -p /var/log/nginx
     # shellcheck disable=SC2016
     exec \
-    /usr/sbin/nginx 2>&1 | stdbuf -oL awk '{print "[nginx       ] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
+        /usr/sbin/nginx -c /etc/nginx.acarshub/nginx.conf 2>&1 | stdbuf -oL awk '{print "[nginx       ] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
 fi

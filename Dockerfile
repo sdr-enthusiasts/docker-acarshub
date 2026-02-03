@@ -1,6 +1,10 @@
-FROM node:25.5.0-slim@sha256:ec5e27581e578ec3d25b81f4d9f9088fc2efa3087a78d1bf278f051db67c5b5b AS acarshub-typescript-builder
+FROM node:25.5.0-slim@sha256:ec5e27581e578ec3d25b81f4d9f9088fc2efa3087a78d1bf278f051db67c5b5b AS acarshub-react-builder
 # pushd/popd
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
+# Accept version and build number as build args
+ARG VERSION=0.0.0
+ARG BUILD_NUMBER=0
 
 ENV DOCKER_BUILD="true"
 
@@ -21,19 +25,17 @@ COPY acarshub-react/ /acarshub-react/
 
 RUN set -xe && \
     pushd /acarshub-react && \
-    mkdir -p /webapp/static/images && \
-    mkdir -p /webapp/static/js && \
-    mkdir -p /webapp/static/sounds && \
-    mkdir -p /webapp/templates && \
-    # patch acarshub version && \
     npm run build && \
-    cp -r ./dist/static/images /webapp/static/ && \
-    cp -r ./dist/static/sounds /webapp/static/ && \
-    cp -r ./dist/static/js /webapp/static/ && \
-    mv ./dist/static/index.html /webapp/templates/
+    # Copy entire React build output to /webapp/dist
+    mkdir -p /webapp/dist && \
+    cp -r ./dist/* /webapp/dist/
 
 FROM ghcr.io/sdr-enthusiasts/docker-baseimage:base
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
+# Accept version and build number as build args
+ARG VERSION=0.0.0
+ARG BUILD_NUMBER=0
 
 COPY rootfs/webapp/requirements.txt /src/requirements.txt
 
@@ -85,8 +87,7 @@ RUN set -x && \
     rm -rf /src/* /tmp/* /var/lib/apt/lists/* /var/cache/* && \
     rm -rf /root/.cargo
 
-COPY --from=acarshub-typescript-builder /webapp/static/ /webapp/static/
-COPY --from=acarshub-typescript-builder /webapp/templates/ /webapp/templates/
+COPY --from=acarshub-react-builder /webapp/dist/ /webapp/dist/
 
 RUN set -x && \
     mkdir -p /run/acars && \
@@ -102,18 +103,12 @@ RUN set -x && \
 COPY rootfs/ /
 
 RUN set -x && \
-    # find the latest version of acarshub from /webapp/static/js/acarshub.*.js
-    # it is in the format ACARS Hub: v0.0.0 Build 0000
-    # and we want to extract the version number and echo it out to /acarshub_version
-    # get the acarshub version from the js file along with the build number
-    { ACARS_VERSION=$(grep -oP 'ACARS Hub: v\K[0-9\.]+' /webapp/static/js/acarshub.*.js) || $(echo ""); } && \
-    { ACARS_BUILD=$(grep -oP 'ACARS Hub: v\K[0-9\.]+ Build \K[0-9]+' /webapp/static/js/acarshub.*.js) || $(echo ""); } && \
+    # Use version and build number from build args
+    # These are passed from CI or default to 0.0.0/0 for local builds
+    ACARS_VERSION="${VERSION}" && \
+    ACARS_BUILD="${BUILD_NUMBER}" && \
     echo "ACARS Hub: v${ACARS_VERSION} Build ${ACARS_BUILD}" && \
-    # echo the version and build number to /acarshub_version
-    # check and see if we have a build number and version. If not, set it to 0
-    # This will be for local non-github versions
-    if [ -z "${ACARS_VERSION}" ]; then ACARS_VERSION="0.0.0"; fi && \
-    if [ -z "${ACARS_BUILD}" ]; then ACARS_BUILD="0"; fi && \
+    # Write version files for runtime display
     printf "v%sBuild%s" "$ACARS_VERSION" "$ACARS_BUILD" > /acarshub_version && \
     printf "v%s Build %s\nv%sBuild%s" "$ACARS_VERSION" "$ACARS_BUILD" "$ACARS_VERSION" "$ACARS_BUILD" > /version
 

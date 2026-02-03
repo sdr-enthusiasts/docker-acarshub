@@ -5,6 +5,14 @@ import { nodePolyfills } from "vite-plugin-node-polyfills";
 
 // https://vite.dev/config/
 export default defineConfig({
+  resolve: {
+    alias: {
+      "@": "/src",
+    },
+  },
+  ssr: {
+    noExternal: ["react-map-gl", "maplibre-gl"],
+  },
   plugins: [
     react(),
     nodePolyfills({
@@ -33,7 +41,7 @@ export default defineConfig({
           // Split vendor chunks for better caching
           react: ["react", "react-dom", "react-router-dom"],
           charts: ["chart.js", "react-chartjs-2", "chartjs-adapter-date-fns"],
-          map: ["maplibre-gl", "react-map-gl"],
+          map: ["maplibre-gl"],
           decoder: ["@airframes/acars-decoder"],
         },
       },

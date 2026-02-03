@@ -2721,54 +2721,77 @@ npm run test:e2e:chromium
 
 ---
 
-### Phase 14: Docker Deployment & Production Build
+### Phase 14: Docker Deployment & Production Build ✅ COMPLETE
+
+**Status**: ✅ Complete - Docker container tested and working
+
+**Timeline**: 1 day
 
 **Goal**: Package React application for production deployment in Docker container
 
-**Tasks**:
+**Completed Tasks**:
 
-- Update Dockerfile to build React application
-  - Add Node.js build stage for `npm run build`
-  - Copy `acarshub-react/dist/` to container image
-  - Place React build output in `/webapp/dist/` or similar
-- Update nginx configuration
-  - Serve React static assets from build output directory
-  - Ensure SPA routing works (all routes serve `index.html`)
-  - Verify `/socket.io/*` and `/metrics` proxying still works
-- Asset handling
-  - Copy static assets (sounds, images) to correct location
-  - Verify `/static/sounds/alert.mp3` is accessible
-  - Test all asset paths in production build
-- Docker build verification
-  - Build complete Docker image
-  - Test in container environment
-  - Verify all features work (Socket.IO, static assets, routing)
-- Performance optimization
-  - Bundle analysis with rollup-plugin-visualizer
-  - Code splitting verification
-  - Gzip/Brotli compression in nginx
-- Update nginx configuration for production
-- Documentation updates for deployment
+- ✅ **Vite Configuration Fixes**:
+  - Fixed `react-map-gl` build/dev issues with SSR noExternal config
+  - Added proper alias configuration (`@` → `/src`)
+  - Verified both dev and production builds work
+  - Bundle size: 1,021 KB (map chunk), 588 KB (index), 455 KB (decoder)
+  - Total gzipped: ~730 KB
+- ✅ **Dockerfile Updates**:
+  - Updated build stage name: `acarshub-typescript-builder` → `acarshub-react-builder`
+  - Simplified asset copying: `cp -r ./dist/* /webapp/dist/`
+  - Fixed version extraction to use build args (`VERSION`, `BUILD_NUMBER`) instead of parsing legacy JS files
+  - React build output copied to `/webapp/dist/`
+- ✅ **nginx Configuration Updates**:
+  - Changed server root from `/webapp` to `/webapp/dist`
+  - Updated index.html path: `/templates/index.html` → `/index.html`
+  - Fixed SPA routing paths to match React Router (`/live-messages`, `/live-map`, etc.)
+  - Removed legacy `/aboutmd` route
+  - Added fallback SPA routing: `try_files $uri $uri/ /index.html`
+  - `/socket.io/*` and `/metrics` proxy rules preserved
+  - Fixed nginx.conf to include sites from `/etc/nginx.acarshub/sites-enabled/`
+  - Removed redundant `root` directive from asset location block
+- ✅ **s6-overlay Service Fixes**:
+  - Fixed nginx startup script to use custom config: `-c /etc/nginx.acarshub/nginx.conf`
+  - Resolved dual nginx process issue (one from system, one from s6)
+  - nginx now starts cleanly without bind errors
+- ✅ **Docker Build & Testing**:
+  - Built complete Docker image with React frontend
+  - Verified container starts and runs without errors
+  - Tested all critical endpoints:
+    - ✅ React app serves at `/` with correct title
+    - ✅ SPA routing works (`/live-messages`, `/live-map`, etc.)
+    - ✅ Static assets accessible (`/static/sounds/alert.mp3`)
+    - ✅ Socket.IO proxy responding (`/socket.io`)
+    - ✅ Metrics endpoint working (`/metrics`)
+  - Container healthy and stable
 
-**Deliverable**: Working Docker container with React frontend + Python backend
+**Key Fixes Applied**:
+
+1. **nginx script** (`rootfs/etc/s6-overlay/scripts/nginx`):
+   - Added `-c /etc/nginx.acarshub/nginx.conf` flag to use custom config
+
+2. **nginx.conf** (`rootfs/etc/nginx.acarshub/nginx.conf`):
+   - Changed `include /etc/nginx/sites-enabled/*;` → `include /etc/nginx.acarshub/sites-enabled/*;`
+
+3. **nginx site config** (`rootfs/etc/nginx.acarshub/sites-enabled/acarshub`):
+   - Removed `root /webapp;` from asset location block (inherits from server root)
+
+**Documentation Created**:
+
+- `docs/PHASE_14_DEPLOYMENT.md` - Complete deployment guide with troubleshooting
+
+**Deliverable**: ✅ Working Docker container with React frontend + Python backend
 
 ---
 
-### Phase 15: Documentation & User Guide
-
-- Create user documentation (setup, configuration, troubleshooting)
-- Create developer documentation (architecture, contributing guide)
-- Create deployment guide (Docker, bare metal, cloud)
-- Create migration guide (from legacy to React)
-- Record video tutorials (optional)
-- **Deliverable**: Complete documentation suite
-
----
-
-### Phase 16: Bug Fix & Refinement Pass
+### Phase 15: Bug Fix & Refinement Pass
 
 - Determine if healhcheck.sh meets its objectives for determining container health
 - See ## Bugs before final release for details.
+- GitHub Actions with current CI workflow
+  - Use `lint.yml`
+  - For all actions we want passed, if we do multiple steps, have a summary action for Gating Auto Merge that depends on the success of all the actions
 
 ---
 
@@ -2796,7 +2819,18 @@ npm run test:e2e:chromium
 
 ---
 
-### Phase 17: Beta Release & Feedback
+### Phase 17: Documentation & User Guide
+
+- Create user documentation (setup, configuration, troubleshooting)
+- Create developer documentation (architecture, contributing guide)
+- Create deployment guide (Docker, bare metal, cloud)
+- Create migration guide (from legacy to React)
+- Record video tutorials (optional)
+- **Deliverable**: Complete documentation suite
+
+---
+
+### Phase 18: Beta Release & Feedback
 
 - Deploy to beta testers
 - Collect feedback on UX, performance, bugs
@@ -2806,7 +2840,7 @@ npm run test:e2e:chromium
 
 ---
 
-### Phase 18: Final Cutover (Production Release)
+### Phase 19: Final Cutover (Production Release)
 
 - Final production deployment
 - Update documentation to remove all legacy references
@@ -2816,10 +2850,17 @@ npm run test:e2e:chromium
 
 ## Current Focus
 
-**Current Phase**: Phase 14 - Docker Deployment & Production Build (Next)
+**Current Phase**: Phase 15
 
 **Recently Completed**:
 
+- ✅ Phase 14 Complete: Docker Deployment & Production Build (1 day)
+  - ✅ Vite configuration fixes for react-map-gl
+  - ✅ Dockerfile updated for React build
+  - ✅ nginx configuration updated (root, SPA routing, includes)
+  - ✅ s6-overlay nginx service fixed
+  - ✅ Docker container tested and verified
+  - ✅ All endpoints working (app, SPA routing, assets, Socket.IO, metrics)
 - ✅ Phase 13 Complete: System Status (1 day)
   - ✅ Replaced shell script with real-time Python status
   - ✅ Complete StatusPage with decoder health, statistics, threads
@@ -2859,24 +2900,11 @@ npm run test:e2e:chromium
 
 **Next Priority**:
 
-1. **Phase 12**: Legacy code cleanup (remove unused code, simplify backend APIs)
-2. **Phase 13**: System Status page (React migration)
-3. **Phase 14**: GitHub Actions CI integration (all tests automated in CI/CD pipeline)
-4. **Phase 15**: Documentation & User Guide
+1. **Phase 15**
 
 **Recently Completed**:
 
-- ✅ Phase 10.1: Unit Testing Setup (505 tests passing - utilities, stores, basic components fully tested)
-- ✅ Phase 10.2: Integration Testing (603/605 tests passing - MessageCard, SettingsModal integration tests complete)
-- ✅ Phase 10.3: E2E Testing (Playwright setup complete, Chromium-only, 15 tests created and working in CI)
-- ✅ Phase 10.4: Accessibility & Performance Testing (25+ a11y tests, Lighthouse CI, bundle analysis)
-- ✅ Phase 11: Backend Database Migrations with Alembic (Complete)
-  - Week 1: Alembic integration ✅
-  - Week 2: Signal level table split with automatic data rebuild ✅
-  - Week 2.5: Frequency table split with data migration ✅
-  - Week 3: FTS table creation with idempotent migration ✅
-  - Week 4: API integration (per-decoder signal levels working) ✅
-    </text>
+- Phase 14
 
 **Phase 11 Decision**: Python + Alembic (CONFIRMED)
 
@@ -3005,6 +3033,12 @@ Before moving to the next phase:
   - Padding/margin values are all over the place. At least, they feel like that because they're hard coded. Refine, be consistent, use variables
   - Density setting is inconsistent (hardcoded sizes in some places). Remove the setting, and SCSS selectors. Use the compact density setting where the selector was doing work before.
   - We should NOT be discarding messages for aircraft we are currently tracking via ADSB. The message discard workflow should be (page load) -> get the messages -> if adsb is enabled wait for the first ADSB message -> pair up ADSB and messages, like it does now -> purge pass should keep all message groups that are active on ADSB. If we are in excess of the max messages, remove the oldest message groups that are not paired with ADSB, always keeping the most recent <user selected max message per source>
+
+- System Status:
+  - Time Updated does not respect the users' locale settings.
+
+- Message Card:
+  - Timestamp in the Decoder Kind - Station Name - Time header bar needs right padding
 
 - Bug Fix Pass (Pre-Phase 10) - ✅ COMPLETE (6 bugs fixed, 1 deferred):
   - ✅ FIXED: Alert matching now checks decodedText field from @airframes/acars-decoder

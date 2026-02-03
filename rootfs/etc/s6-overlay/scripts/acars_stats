@@ -29,7 +29,7 @@ if chk_enabled "${ENABLE_ACARS}"; then
 
         # capture 5 mins of flows
         #timeout 300s socat -u TCP:127.0.0.1:15550 CREATE:/database/acars.past5min.json
-        timeout --foreground 300s socat -u TCP:127.0.0.1:15550 CREATE:/database/acars.past5min.json
+        timeout --foreground 300s socat -u TCP:127.0.0.1:15550 CREATE:/database/acars.past5min.json 2>/dev/null || true
 
         # if the port isn't reachable, this file isn't created, either container is shutting down or acars_server isn't reachable
         # in both cases let's exit, if this should still be running it will be restarted

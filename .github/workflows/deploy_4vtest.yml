@@ -82,9 +82,8 @@ jobs:
       ghcr_repo: ${{ github.repository }}
       # set build_latest to true if github.event.inputs.use_test_image is false
       build_latest: true
-      docker_latest_tag: trixie-latest
+      docker_latest_tag: v4-latest
       build_baseimage_test: true
-      build_baseimage_url: :base/:trixie-base
       platform_linux_arm32v7_enabled: false
       dockerfile_changes: |
         \# patch acarshub version/sed -i \"s\/Pre-Release\/${{ needs.patch_acars_hub_version.outputs.acarshub_version}}\/g\" \/acarshub-typescript\/src\/helpers\/menu.ts

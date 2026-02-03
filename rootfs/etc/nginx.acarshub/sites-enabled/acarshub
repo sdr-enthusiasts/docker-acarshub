@@ -1,6 +1,6 @@
 server {
   listen 80 default_server;
-  root /webapp;
+  root /webapp/dist;
   server_name _;
 
   proxy_http_version 1.1;
@@ -38,7 +38,6 @@ server {
   location ~ \.(css|js|png|jpg|jpeg|gif|ico|woff|woff2|ttf|svg|eot|otf|map|mjs|mp3)$ {
     expires 1y;
     add_header Cache-Control "public, immutable";
-    root /webapp;
   }
 
   # proxy pass the web socket to gunicorn
@@ -57,20 +56,19 @@ server {
     add_header Cache-Control 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0';
     add_header Pragma 'no-cache';
     add_header Expires '0';
-    try_files /templates/index.html =404;
+    try_files /index.html =404;
   }
 
-  # pass the request for about.md to the correct file
-  location /aboutmd {
-    expires 30d;
-    try_files /templates/helppage.MD =404;
-  }
-
-  # valid URL paths for pages serve index.html - must not be cached
-  location ~ ^/(search|alerts|stats|adsb|about|status)$ {
+  # SPA routing - all React Router paths serve index.html - must not be cached
+  location ~ ^/(live-messages|live-map|search|alerts|stats|about|status)$ {
     add_header Cache-Control 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0';
     add_header Pragma 'no-cache';
     add_header Expires '0';
-    try_files /templates/index.html =404;
+    try_files /index.html =404;
+  }
+
+  # Fallback for any other routes (SPA routing)
+  location / {
+    try_files $uri $uri/ /index.html;
   }
 }
