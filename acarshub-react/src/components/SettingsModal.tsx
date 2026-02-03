@@ -168,7 +168,68 @@ export const SettingsModal = () => {
     }
   };
 
+  // Default alert terms (common interesting messages)
+  const defaultAlertTerms = [
+    "COP",
+    "POLICE",
+    "AUTHORITIES",
+    "FIRE",
+    "CHOP",
+    "TURBULENCE",
+    "TURB",
+    "FAULT",
+    "DIVERT",
+    "MASK",
+    "CSR",
+    "AGENT",
+    "MEDICAL",
+    "SECURITY",
+    "MAYDAY",
+    "EMERGENCY",
+    "PAN",
+    "RED COAT",
+    "RED",
+    "OXYGEN",
+    "DOCTOR",
+    "LEAK",
+    "COAT",
+    "SIGMET",
+    "ASH",
+    "DIPS",
+    "PAX",
+    "DOG",
+  ];
+
   // Alert terms handlers
+  const handleLoadDefaultTerms = useCallback(() => {
+    // Only add terms that aren't already present
+    const newTermsToAdd = defaultAlertTerms.filter(
+      (term) => !alertTerms.terms.includes(term),
+    );
+
+    if (newTermsToAdd.length === 0) {
+      alert("All default alert terms are already loaded.");
+      return;
+    }
+
+    const newTerms = {
+      terms: [...alertTerms.terms, ...newTermsToAdd],
+      ignore: alertTerms.ignore,
+    };
+    setAlertTerms(newTerms);
+
+    // Emit to backend via Socket.IO
+    import("../services/socket").then((socketModule) => {
+      const socket = socketModule.socketService.getSocket();
+      // biome-ignore lint/suspicious/noExplicitAny: Flask-SocketIO requires namespace as third argument
+      (socket as any).emit("update_alerts", newTerms, "/main");
+    });
+
+    alert(
+      `Added ${newTermsToAdd.length} default alert term${newTermsToAdd.length !== 1 ? "s" : ""}.`,
+    );
+  }, [alertTerms, setAlertTerms]);
+
   const handleAddAlertTerm = useCallback(() => {
     const term = newAlertTerm.trim().toUpperCase();
     if (term && !alertTerms.terms.includes(term)) {
@@ -626,9 +687,19 @@ export const SettingsModal = () => {
             >
               {/* Alert Terms */}
               <div className="settings-field-group">
-                <label htmlFor="alert-terms-input" className="settings-label">
-                  Alert Terms
-                </label>
+                <div className="settings-label-row">
+                  <label htmlFor="alert-terms-input" className="settings-label">
+                    Alert Terms
+                  </label>
+                  <Button
+                    variant="info"
+                    size="sm"
+                    onClick={handleLoadDefaultTerms}
+                    aria-label="Load default alert terms"
+                  >
+                    Load Defaults
+                  </Button>
+                </div>
                 <div className="alert-terms-input-group">
                   <input
                     id="alert-terms-input"
