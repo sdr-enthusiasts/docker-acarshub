@@ -3,12 +3,23 @@ server {
   root /webapp/dist;
   server_name _;
 
+  # Trust X-Forwarded-For from reverse proxies (all private networks + localhost)
+  set_real_ip_from 10.0.0.0/8;
+  set_real_ip_from 172.16.0.0/12;
+  set_real_ip_from 192.168.0.0/16;
+  set_real_ip_from 127.0.0.1/32;
+  real_ip_header X-Forwarded-For;
+  real_ip_recursive on;
+
   proxy_http_version 1.1;
   proxy_set_header Upgrade $http_upgrade;
   proxy_set_header Connection $http_connection;
   proxy_set_header Host $host;
-  proxy_set_header  X-Real-IP $remote_addr;
-  proxy_set_header  X-Real-Port $remote_port;
+  proxy_set_header X-Real-IP $remote_addr;
+  proxy_set_header X-Real-Port $remote_port;
+  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+  proxy_set_header X-Forwarded-Proto $scheme;
+  proxy_set_header X-Forwarded-Host $host;
   include /etc/nginx/mime.types;
 
   # mjs is not in default mime types, add in here
@@ -43,11 +54,25 @@ server {
   # proxy pass the web socket to gunicorn
   location /socket.io {
     proxy_pass http://127.0.0.1:8888/socket.io;
+    # Explicit WebSocket upgrade headers for reverse proxy compatibility
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-Host $host;
   }
 
   # proxy pass the metrics endpoint to gunicorn
   location /metrics {
     proxy_pass http://127.0.0.1:8888/metrics;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-Host $host;
     add_header Cache-Control 'no-cache';
   }
 
