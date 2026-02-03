@@ -77,6 +77,7 @@ export const SearchPage = () => {
   );
 
   // Register Socket.IO listener for search results
+  // Wait for socket to be initialized before subscribing
   useEffect(() => {
     const handleSearchResults = (data: SearchHtmlMsg) => {
       uiLogger.debug("Received search results", {
@@ -91,15 +92,25 @@ export const SearchPage = () => {
       setIsSearching(false);
     };
 
-    socketService
-      .getSocket()
-      .on("database_search_results", handleSearchResults);
+    // Check if socket service is initialized
+    if (!socketService.isInitialized()) {
+      uiLogger.debug("Socket not initialized yet, waiting for connection");
+      return () => {};
+    }
 
-    return () => {
-      socketService
-        .getSocket()
-        .off("database_search_results", handleSearchResults);
-    };
+    try {
+      const socket = socketService.getSocket();
+      socket.on("database_search_results", handleSearchResults);
+      uiLogger.debug("Subscribed to database_search_results event");
+
+      return () => {
+        socket.off("database_search_results", handleSearchResults);
+        uiLogger.debug("Unsubscribed from database_search_results event");
+      };
+    } catch (error) {
+      uiLogger.warn("Failed to subscribe to search results", { error });
+      return () => {};
+    }
   }, []);
 
   useEffect(() => {

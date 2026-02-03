@@ -247,6 +247,14 @@ class SocketService {
   }
 
   /**
+   * Check if socket has been initialized
+   * Returns true if socket exists (even if not connected yet)
+   */
+  isInitialized(): boolean {
+    return this.socket !== null;
+  }
+
+  /**
    * Check if socket is currently connected
    * Returns actual socket.connected state with diagnostic logging
    */
