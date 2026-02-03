@@ -28,6 +28,7 @@ import { LiveMessagesPage } from "./pages/LiveMessagesPage.tsx";
 import { SearchPage } from "./pages/SearchPage.tsx";
 import { StatsPage } from "./pages/StatsPage.tsx";
 import { StatusPage } from "./pages/StatusPage.tsx";
+import { useAppStore } from "./store/useAppStore.ts";
 import { useSettingsStore } from "./store/useSettingsStore.ts";
 import { uiLogger } from "./utils/logger";
 
@@ -38,7 +39,10 @@ import { uiLogger } from "./utils/logger";
  */
 function App() {
   // Initialize Socket.IO connection and wire up event handlers
-  const { isConnected } = useSocketIO();
+  useSocketIO();
+
+  // Subscribe to connection state directly (not from hook to avoid stale closures)
+  const isConnected = useAppStore((state) => state.isConnected);
 
   // Get settings from store
   const settings = useSettingsStore((state) => state.settings);

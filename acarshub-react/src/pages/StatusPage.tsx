@@ -18,6 +18,8 @@ import { useEffect, useState } from "react";
 import { Card } from "../components/Card";
 import { socketService } from "../services/socket";
 import { useAppStore } from "../store/useAppStore";
+import { useSettingsStore } from "../store/useSettingsStore";
+import { formatTimestamp } from "../utils/dateUtils";
 
 /**
  * StatusPage Component
@@ -28,6 +30,17 @@ export const StatusPage = () => {
   const systemStatus = useAppStore((state) => state.systemStatus);
   const decoders = useAppStore((state) => state.decoders);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
+
+  // Get user's locale preferences from settings
+  const timeFormat = useSettingsStore(
+    (state) => state.settings.regional.timeFormat,
+  );
+  const dateFormat = useSettingsStore(
+    (state) => state.settings.regional.dateFormat,
+  );
+  const timezone = useSettingsStore(
+    (state) => state.settings.regional.timezone,
+  );
 
   useEffect(() => {
     setCurrentPage("Status");
@@ -101,7 +114,13 @@ export const StatusPage = () => {
             )}
           </span>
           <span className="status-last-update">
-            Last updated: {lastUpdate.toLocaleTimeString()}
+            Last updated:{" "}
+            {formatTimestamp(
+              lastUpdate.getTime(),
+              timeFormat,
+              dateFormat,
+              timezone,
+            )}
           </span>
         </div>
       </div>
@@ -161,7 +180,7 @@ export const StatusPage = () => {
                   <div className="status-detail">
                     <span className="status-detail__label">Total:</span>
                     <span className="status-detail__value">
-                      {stats.Count.toLocaleString()}
+                      {stats.Count?.toLocaleString() ?? 0}
                     </span>
                   </div>
                   <div className="status-detail">
@@ -193,7 +212,7 @@ export const StatusPage = () => {
                   <div className="status-detail">
                     <span className="status-detail__label">Messages:</span>
                     <span className="status-detail__value">
-                      {server.Messages.toLocaleString()}
+                      {server.Messages?.toLocaleString() ?? 0}
                     </span>
                   </div>
                 </div>
@@ -243,9 +262,9 @@ export const StatusPage = () => {
                 </div>
                 <div className="status-item__details">
                   <div className="status-detail">
-                    <span className="status-detail__label">All Time:</span>
+                    <span className="status-detail__label">Total Errors:</span>
                     <span className="status-detail__value">
-                      {status.errors.Total.toLocaleString()}
+                      {status.errors.Total?.toLocaleString() ?? 0}
                     </span>
                   </div>
                   <div className="status-detail">

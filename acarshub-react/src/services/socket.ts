@@ -188,21 +188,35 @@ class SocketService {
       socketLogger.info("Connected to ACARS Hub backend", {
         socketId: this.socket?.id,
         transport: this.socket?.io.engine.transport.name,
+        connected: this.socket?.connected,
+        disconnected: this.socket?.disconnected,
       });
     });
 
     this.socket.on("disconnect", (reason) => {
-      socketLogger.warn("Disconnected from backend", { reason });
+      socketLogger.warn("Disconnected from backend", {
+        reason,
+        connected: this.socket?.connected,
+        disconnected: this.socket?.disconnected,
+        socketId: this.socket?.id,
+      });
     });
 
     this.socket.on("reconnect", (attemptNumber) => {
-      socketLogger.info("Reconnected to backend", { attemptNumber });
+      socketLogger.info("Reconnected to backend", {
+        attemptNumber,
+        socketId: this.socket?.id,
+        connected: this.socket?.connected,
+        disconnected: this.socket?.disconnected,
+      });
     });
 
     this.socket.on("connect_error", (error: Error) => {
       socketLogger.error("Connection error", {
         message: error.message,
         stack: error.stack,
+        connected: this.socket?.connected,
+        disconnected: this.socket?.disconnected,
       });
     });
 
@@ -234,9 +248,23 @@ class SocketService {
 
   /**
    * Check if socket is currently connected
+   * Returns actual socket.connected state with diagnostic logging
    */
   isConnected(): boolean {
-    return this.socket?.connected ?? false;
+    const connected = this.socket?.connected ?? false;
+    const disconnected = this.socket?.disconnected ?? true;
+
+    // Log mismatch between connected state and expectations
+    if (this.socket && !connected && !disconnected) {
+      socketLogger.warn("Socket state inconsistency detected", {
+        connected,
+        disconnected,
+        socketId: this.socket.id,
+        hasSocket: !!this.socket,
+      });
+    }
+
+    return connected;
   }
 
   /**

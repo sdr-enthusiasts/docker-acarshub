@@ -60,17 +60,40 @@ export const useSocketIO = () => {
 
     // Connection event handlers
     socket.on("connect", () => {
-      socketLogger.info("Socket.IO connected", { socketId: socket.id });
+      socketLogger.info("Socket.IO connected", {
+        socketId: socket.id,
+        connected: socket.connected,
+        disconnected: socket.disconnected,
+      });
+      socketLogger.debug("Updating store connection state", {
+        connected: true,
+      });
       setConnected(true);
     });
 
-    socket.on("disconnect", () => {
-      socketLogger.warn("Socket.IO disconnected");
+    socket.on("disconnect", (reason) => {
+      socketLogger.warn("Socket.IO disconnected", {
+        reason,
+        connected: socket.connected,
+        disconnected: socket.disconnected,
+        socketId: socket.id,
+      });
+      socketLogger.debug("Updating store connection state", {
+        connected: false,
+      });
       setConnected(false);
     });
 
-    socket.on("reconnect", () => {
-      socketLogger.info("Socket.IO reconnected");
+    socket.on("reconnect", (attemptNumber) => {
+      socketLogger.info("Socket.IO reconnected", {
+        attemptNumber,
+        socketId: socket.id,
+        connected: socket.connected,
+        disconnected: socket.disconnected,
+      });
+      socketLogger.debug("Updating store connection state", {
+        connected: true,
+      });
       setConnected(true);
     });
 
@@ -240,7 +263,7 @@ export const useSocketIO = () => {
     setAdsbAircraft,
   ]);
 
-  return {
-    isConnected: useAppStore((state) => state.isConnected),
-  };
+  // Don't return store state - let consumers subscribe directly to avoid stale closures
+  // This prevents race conditions where the hook's selector doesn't update properly
+  return undefined;
 };

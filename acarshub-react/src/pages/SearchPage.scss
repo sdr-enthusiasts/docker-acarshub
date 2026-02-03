@@ -71,7 +71,7 @@
       transition: all var(--transition-normal);
 
       &::placeholder {
-        color: var(--color-overlay1);
+        color: var(--color-subtext0);
       }
 
       &:focus {
@@ -128,7 +128,7 @@
   }
 
   &__query-time {
-    color: var(--color-overlay1);
+    color: var(--color-subtext0);
     font-size: var(--font-size-sm);
   }
 
@@ -203,7 +203,7 @@
     justify-content: center;
     min-width: 44px;
     height: 44px;
-    color: var(--color-overlay1);
+    color: var(--color-subtext0);
     font-size: var(--font-size-sm);
     font-weight: 600;
   }
@@ -249,7 +249,7 @@
     align-items: center;
     justify-content: center;
     padding: var(--spacing-3xl);
-    color: var(--color-overlay1);
+    color: var(--color-subtext0);
     font-size: var(--font-size-md);
     text-align: center;
   }

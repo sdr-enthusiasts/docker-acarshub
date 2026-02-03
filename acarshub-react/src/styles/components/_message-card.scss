@@ -64,6 +64,7 @@
     color: var(--color-subtext0);
     font-size: var(--font-size-sm);
     font-weight: 700;
+    padding-right: 0.75rem;
   }
 
   &__mark-read-btn {
@@ -111,7 +112,7 @@
 
   &__read-badge {
     padding: var(--spacing-xs) var(--spacing-sm);
-    background: var(--color-overlay0);
+    background: var(--color-overlay2);
     color: var(--color-text);
     border-radius: var(--border-radius-sm);
     font-size: var(--font-size-xs);

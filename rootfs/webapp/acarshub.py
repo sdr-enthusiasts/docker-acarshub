@@ -991,6 +991,35 @@ def main_connect():
         acarshub_logging.log(f"Main Connect: Error sending labels: {e}", "webapp")
         acarshub_logging.acars_traceback(e, "webapp")
 
+    # Send initial ADS-B data immediately if enabled (BEFORE message flood)
+    # This ensures culling has ADS-B awareness from the start
+    if acarshub_configuration.ENABLE_ADSB:
+        try:
+            response = requests.get(acarshub_configuration.ADSB_URL, timeout=5)
+            if response.status_code == 200:
+                raw_data = response.json()
+                optimized_data = optimize_adsb_data(raw_data)
+                socketio.emit(
+                    "adsb_aircraft", optimized_data, to=requester, namespace="/main"
+                )
+                acarshub_logging.log(
+                    f"Initial ADS-B data sent to new client: {len(optimized_data['aircraft'])} aircraft",
+                    "main_connect",
+                    level=LOG_LEVEL["DEBUG"],
+                )
+            else:
+                acarshub_logging.log(
+                    f"Initial ADS-B fetch failed: HTTP {response.status_code}",
+                    "main_connect",
+                    level=LOG_LEVEL["WARNING"],
+                )
+        except Exception as e:
+            acarshub_logging.log(
+                f"Initial ADS-B fetch error: {e}",
+                "main_connect",
+                level=LOG_LEVEL["WARNING"],
+            )
+
     msg_index = 1
     for json_message in list_of_recent_messages:
         if msg_index == len(list_of_recent_messages):
@@ -1072,7 +1101,6 @@ def main_connect():
 
     # Start the ADS-B polling background task if enabled (only once)
     if acarshub_configuration.ENABLE_ADSB:
-        # Check if already started by looking for a global flag
         if not hasattr(main_connect, "_adsb_task_started"):
             acarshub_logging.log(
                 "Starting ADS-B polling background task",

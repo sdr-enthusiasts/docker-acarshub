@@ -40,6 +40,7 @@ import type {
 } from "../types";
 import { applyAlertMatching } from "../utils/alertMatching";
 import { storeLogger } from "../utils/logger";
+import { cullMessageGroups } from "../utils/messageCulling";
 import { useSettingsStore } from "./useSettingsStore";
 
 /**
@@ -180,534 +181,562 @@ const saveReadMessageUids = (readUids: Set<string>) => {
  * Main Application Store
  * Uses Zustand for reactive state management
  */
-export const useAppStore = create<AppState>((set, get) => ({
-  // Connection state
-  isConnected: false,
-  setConnected: (connected) => set({ isConnected: connected }),
+export const useAppStore = create<AppState>((set, get) => {
+  // Expose store to window in development for debugging
+  if (import.meta.env.DEV) {
+    // @ts-expect-error - Exposing store for dev debugging
+    window.__ACARS_STORE__ = { getState: get, setState: set };
+  }
 
-  // Message state
-  messageGroups: new Map(),
-  notifications: {
-    desktop: useSettingsStore.getState().settings.notifications.desktop,
-    sound: false,
-    volume: 50,
-    alertsOnly: false,
-  },
-  addMessage: (message) =>
-    set((state) => {
-      storeLogger.trace("Processing incoming message", {
-        station: message.station_id,
-        label: message.label,
-        hasText: !!message.text,
-      });
+  return {
+    // Connection state
+    isConnected: false,
+    setConnected: (connected) => set({ isConnected: connected }),
 
-      // Generate UID if not present (backend doesn't send UIDs)
-      // Format: timestamp-random to ensure uniqueness
-      if (!message.uid) {
-        message.uid = `${message.timestamp || Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-        storeLogger.trace("Generated UID for message", { uid: message.uid });
-      }
-
-      // Decode the message if it has text
-      let decodedMessage = messageDecoder.decode(message);
-
-      // Apply alert matching (check against alert terms)
-      decodedMessage = applyAlertMatching(decodedMessage, state.alertTerms);
-
-      if (decodedMessage.matched) {
-        storeLogger.info("Alert match detected in message", {
-          uid: decodedMessage.uid,
-          matchedTerms: decodedMessage.matched_text,
+    // Message state
+    messageGroups: new Map(),
+    notifications: {
+      desktop: useSettingsStore.getState().settings.notifications.desktop,
+      sound: false,
+      volume: 50,
+      alertsOnly: false,
+    },
+    addMessage: (message) =>
+      set((state) => {
+        storeLogger.trace("Processing incoming message", {
+          station: message.station_id,
+          label: message.label,
+          hasText: !!message.text,
         });
-      }
 
-      // Sync notifications with settings store
-      const notifications = {
-        ...state.notifications,
-        desktop: useSettingsStore.getState().settings.notifications.desktop,
-        alertsOnly:
-          useSettingsStore.getState().settings.notifications.alertsOnly,
-      };
-
-      // Trigger desktop notification if enabled (after alert matching is complete)
-      if (
-        notifications.desktop &&
-        decodedMessage.matched && // Only notify for alerts
-        decodedMessage.timestamp &&
-        Date.now() - decodedMessage.timestamp * 1000 <= 5000 // Prevent notifications for messages older than 5 seconds
-      ) {
-        if (Notification.permission === "granted") {
-          // Debug: Log raw matched_text values
-          storeLogger.debug("Raw matched_text before HTML stripping", {
-            uid: decodedMessage.uid,
-            rawMatchedText: decodedMessage.matched_text,
-          });
-
-          // Strip HTML tags from matched terms (notifications don't support HTML)
-          const stripHtml = (text: string): string => {
-            const tmp = document.createElement("div");
-            tmp.innerHTML = text;
-            return tmp.textContent || tmp.innerText || "";
-          };
-
-          const cleanedTerms = decodedMessage.matched_text?.length
-            ? decodedMessage.matched_text.map(stripHtml).join(", ")
-            : "Unknown";
-
-          storeLogger.info("Triggering desktop notification", {
-            uid: decodedMessage.uid,
-            rawMatchedText: decodedMessage.matched_text,
-            cleanedTerms: cleanedTerms,
-          });
-
-          const notificationBody = `Matched terms: ${cleanedTerms}`;
-
-          storeLogger.debug("Creating notification with body", {
-            uid: decodedMessage.uid,
-            body: notificationBody,
-            bodyLength: notificationBody.length,
-          });
-
-          const notification = new Notification("New Alert", {
-            body: notificationBody,
-            icon: "/static/icons/alert-icon.png",
-          });
-
-          // Focus window on notification click
-          notification.onclick = () => {
-            window.focus();
-          };
+        // Generate UID if not present (backend doesn't send UIDs)
+        // Format: timestamp-random to ensure uniqueness
+        if (!message.uid) {
+          message.uid = `${message.timestamp || Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+          storeLogger.trace("Generated UID for message", { uid: message.uid });
         }
-      }
 
-      const newMessageGroups = new Map(state.messageGroups);
+        // Decode the message if it has text
+        let decodedMessage = messageDecoder.decode(message);
 
-      // Extract all possible identifiers from the message
-      // Prefer icao_flight (normalized ICAO format) over flight (could be IATA or ICAO)
-      const messageKeys = {
-        flight:
-          decodedMessage.icao_flight?.trim() ||
-          decodedMessage.flight?.trim() ||
-          null,
-        tail: decodedMessage.tail?.trim() || null,
-        icao_hex: decodedMessage.icao_hex?.toUpperCase() || null,
-      };
+        // Apply alert matching (check against alert terms)
+        decodedMessage = applyAlertMatching(decodedMessage, state.alertTerms);
 
-      storeLogger.trace("Extracted message identifiers", messageKeys);
-
-      // Find existing message group that matches any of the message's identifiers
-      let matchedGroupKey: string | null = null;
-      let matchedGroup: MessageGroup | null = null;
-
-      for (const [groupKey, group] of newMessageGroups) {
-        const matches =
-          (messageKeys.flight &&
-            group.identifiers.includes(messageKeys.flight)) ||
-          (messageKeys.tail && group.identifiers.includes(messageKeys.tail)) ||
-          (messageKeys.icao_hex &&
-            group.identifiers.includes(messageKeys.icao_hex));
-
-        if (matches) {
-          matchedGroupKey = groupKey;
-          matchedGroup = group;
-          storeLogger.trace("Found existing message group", {
-            groupKey,
-            existingMessages: group.messages.length,
+        if (decodedMessage.matched) {
+          storeLogger.info("Alert match detected in message", {
+            uid: decodedMessage.uid,
+            matchedTerms: decodedMessage.matched_text,
           });
-          break;
         }
-      }
 
-      if (!matchedGroup) {
-        storeLogger.debug("Creating new message group", {
-          primaryKey:
-            messageKeys.flight ||
-            messageKeys.tail ||
-            messageKeys.icao_hex ||
-            "unknown",
-        });
-      }
+        // Sync notifications with settings store
+        const notifications = {
+          ...state.notifications,
+          desktop: useSettingsStore.getState().settings.notifications.desktop,
+          alertsOnly:
+            useSettingsStore.getState().settings.notifications.alertsOnly,
+        };
 
-      // Determine the primary key for this aircraft (priority: flight > tail > icao_hex)
-      const primaryKey =
-        messageKeys.flight ||
-        messageKeys.tail ||
-        messageKeys.icao_hex ||
-        "unknown";
-
-      // If we found a match but the primary key has changed, we need to update the map key
-      if (matchedGroup && matchedGroupKey && matchedGroupKey !== primaryKey) {
-        // Remove old key entry
-        newMessageGroups.delete(matchedGroupKey);
-      }
-
-      // Get the message group data (existing or new)
-      const group = matchedGroup || {
-        identifiers: [],
-        has_alerts: false,
-        num_alerts: 0,
-        messages: [],
-        lastUpdated: 0,
-      };
-
-      // Merge identifiers: add any new identifiers from this message
-      const identifiers = new Set(group.identifiers);
-      if (messageKeys.flight) identifiers.add(messageKeys.flight);
-      if (messageKeys.tail) identifiers.add(messageKeys.tail);
-      if (messageKeys.icao_hex) identifiers.add(messageKeys.icao_hex);
-
-      // Duplicate detection and multi-part message handling
-      let isDuplicate = false;
-      let isMultiPart = false;
-      let updatedMessages = [...group.messages];
-
-      // Check for duplicates or multi-part messages in existing group messages
-      if (matchedGroup && group.messages.length > 0) {
-        for (let i = 0; i < group.messages.length; i++) {
-          const existingMsg = group.messages[i];
-
-          // Check 1: Full field duplicate
-          if (checkForDuplicate(existingMsg, decodedMessage)) {
-            isDuplicate = true;
-            const duplicateCount = Number(existingMsg.duplicates || 0) + 1;
-            storeLogger.debug("Full field duplicate detected", {
-              uid: existingMsg.uid,
-              duplicateCount,
+        // Trigger desktop notification if enabled (after alert matching is complete)
+        if (
+          notifications.desktop &&
+          decodedMessage.matched && // Only notify for alerts
+          decodedMessage.timestamp &&
+          Date.now() - decodedMessage.timestamp * 1000 <= 5000 // Prevent notifications for messages older than 5 seconds
+        ) {
+          if (Notification.permission === "granted") {
+            // Debug: Log raw matched_text values
+            storeLogger.debug("Raw matched_text before HTML stripping", {
+              uid: decodedMessage.uid,
+              rawMatchedText: decodedMessage.matched_text,
             });
-            // Update timestamp and increment duplicate counter
-            updatedMessages[i] = {
-              ...existingMsg,
-              timestamp: decodedMessage.timestamp,
-              duplicates: String(duplicateCount),
+
+            // Strip HTML tags from matched terms (notifications don't support HTML)
+            const stripHtml = (text: string): string => {
+              const tmp = document.createElement("div");
+              tmp.innerHTML = text;
+              return tmp.textContent || tmp.innerText || "";
             };
-            // Move this message to the front
-            const movedMsg = updatedMessages[i];
-            updatedMessages.splice(i, 1);
-            updatedMessages.unshift(movedMsg);
+
+            const cleanedTerms = decodedMessage.matched_text?.length
+              ? decodedMessage.matched_text.map(stripHtml).join(", ")
+              : "Unknown";
+
+            storeLogger.info("Triggering desktop notification", {
+              uid: decodedMessage.uid,
+              rawMatchedText: decodedMessage.matched_text,
+              cleanedTerms: cleanedTerms,
+            });
+
+            const notificationBody = `Matched terms: ${cleanedTerms}`;
+
+            storeLogger.debug("Creating notification with body", {
+              uid: decodedMessage.uid,
+              body: notificationBody,
+              bodyLength: notificationBody.length,
+            });
+
+            const notification = new Notification("New Alert", {
+              body: notificationBody,
+              icon: "/static/icons/alert-icon.png",
+            });
+
+            // Focus window on notification click
+            notification.onclick = () => {
+              window.focus();
+            };
+          }
+        }
+
+        const newMessageGroups = new Map(state.messageGroups);
+
+        // Extract all possible identifiers from the message
+        // Prefer icao_flight (normalized ICAO format) over flight (could be IATA or ICAO)
+        const messageKeys = {
+          flight:
+            decodedMessage.icao_flight?.trim() ||
+            decodedMessage.flight?.trim() ||
+            null,
+          tail: decodedMessage.tail?.trim() || null,
+          icao_hex: decodedMessage.icao_hex?.toUpperCase() || null,
+        };
+
+        storeLogger.trace("Extracted message identifiers", messageKeys);
+
+        // Find existing message group that matches any of the message's identifiers
+        let matchedGroupKey: string | null = null;
+        let matchedGroup: MessageGroup | null = null;
+
+        for (const [groupKey, group] of newMessageGroups) {
+          const matches =
+            (messageKeys.flight &&
+              group.identifiers.includes(messageKeys.flight)) ||
+            (messageKeys.tail &&
+              group.identifiers.includes(messageKeys.tail)) ||
+            (messageKeys.icao_hex &&
+              group.identifiers.includes(messageKeys.icao_hex));
+
+          if (matches) {
+            matchedGroupKey = groupKey;
+            matchedGroup = group;
+            storeLogger.trace("Found existing message group", {
+              groupKey,
+              existingMessages: group.messages.length,
+            });
             break;
           }
+        }
 
-          // Check 2: Text field duplicate
-          if (
-            existingMsg.text &&
-            decodedMessage.text &&
-            existingMsg.text === decodedMessage.text
-          ) {
-            isDuplicate = true;
-            const duplicateCount = Number(existingMsg.duplicates || 0) + 1;
-            storeLogger.debug("Text field duplicate detected", {
-              uid: existingMsg.uid,
-              duplicateCount,
-            });
-            // Update timestamp and increment duplicate counter
-            updatedMessages[i] = {
-              ...existingMsg,
-              timestamp: decodedMessage.timestamp,
-              duplicates: String(duplicateCount),
-            };
-            // Move this message to the front
-            const movedMsg = updatedMessages[i];
-            updatedMessages.splice(i, 1);
-            updatedMessages.unshift(movedMsg);
-            break;
-          }
+        if (!matchedGroup) {
+          storeLogger.debug("Creating new message group", {
+            primaryKey:
+              messageKeys.flight ||
+              messageKeys.tail ||
+              messageKeys.icao_hex ||
+              "unknown",
+          });
+        }
 
-          // Check 3: Multi-part message
-          if (isMultiPartMessage(existingMsg, decodedMessage)) {
-            isMultiPart = true;
-            storeLogger.debug("Multi-part message detected", {
-              existingMsgno: existingMsg.msgno,
-              newMsgno: decodedMessage.msgno,
-            });
+        // Determine the primary key for this aircraft (priority: flight > tail > icao_hex)
+        const primaryKey =
+          messageKeys.flight ||
+          messageKeys.tail ||
+          messageKeys.icao_hex ||
+          "unknown";
 
-            // Check if this specific part already exists
-            if (existingMsg.msgno_parts && decodedMessage.msgno) {
-              const dupCheck = checkMultiPartDuplicate(
-                existingMsg.msgno_parts,
-                decodedMessage.msgno,
-              );
+        // If we found a match but the primary key has changed, we need to update the map key
+        if (matchedGroup && matchedGroupKey && matchedGroupKey !== primaryKey) {
+          // Remove old key entry
+          newMessageGroups.delete(matchedGroupKey);
+        }
 
-              if (dupCheck.exists) {
-                // This part already exists - just update the duplicate counter
-                updatedMessages[i] = {
-                  ...existingMsg,
-                  timestamp: decodedMessage.timestamp,
-                  msgno_parts: dupCheck.updatedParts,
-                };
+        // Get the message group data (existing or new)
+        const group = matchedGroup || {
+          identifiers: [],
+          has_alerts: false,
+          num_alerts: 0,
+          messages: [],
+          lastUpdated: 0,
+        };
+
+        // Merge identifiers: add any new identifiers from this message
+        const identifiers = new Set(group.identifiers);
+        if (messageKeys.flight) identifiers.add(messageKeys.flight);
+        if (messageKeys.tail) identifiers.add(messageKeys.tail);
+        if (messageKeys.icao_hex) identifiers.add(messageKeys.icao_hex);
+
+        // Duplicate detection and multi-part message handling
+        let isDuplicate = false;
+        let isMultiPart = false;
+        let updatedMessages = [...group.messages];
+
+        // Check for duplicates or multi-part messages in existing group messages
+        if (matchedGroup && group.messages.length > 0) {
+          for (let i = 0; i < group.messages.length; i++) {
+            const existingMsg = group.messages[i];
+
+            // Check 1: Full field duplicate
+            if (checkForDuplicate(existingMsg, decodedMessage)) {
+              isDuplicate = true;
+              const duplicateCount = Number(existingMsg.duplicates || 0) + 1;
+              storeLogger.debug("Full field duplicate detected", {
+                uid: existingMsg.uid,
+                duplicateCount,
+              });
+              // Update timestamp and increment duplicate counter
+              updatedMessages[i] = {
+                ...existingMsg,
+                timestamp: decodedMessage.timestamp,
+                duplicates: String(duplicateCount),
+              };
+              // Move this message to the front
+              const movedMsg = updatedMessages[i];
+              updatedMessages.splice(i, 1);
+              updatedMessages.unshift(movedMsg);
+              break;
+            }
+
+            // Check 2: Text field duplicate
+            if (
+              existingMsg.text &&
+              decodedMessage.text &&
+              existingMsg.text === decodedMessage.text
+            ) {
+              isDuplicate = true;
+              const duplicateCount = Number(existingMsg.duplicates || 0) + 1;
+              storeLogger.debug("Text field duplicate detected", {
+                uid: existingMsg.uid,
+                duplicateCount,
+              });
+              // Update timestamp and increment duplicate counter
+              updatedMessages[i] = {
+                ...existingMsg,
+                timestamp: decodedMessage.timestamp,
+                duplicates: String(duplicateCount),
+              };
+              // Move this message to the front
+              const movedMsg = updatedMessages[i];
+              updatedMessages.splice(i, 1);
+              updatedMessages.unshift(movedMsg);
+              break;
+            }
+
+            // Check 3: Multi-part message
+            if (isMultiPartMessage(existingMsg, decodedMessage)) {
+              isMultiPart = true;
+              storeLogger.debug("Multi-part message detected", {
+                existingMsgno: existingMsg.msgno,
+                newMsgno: decodedMessage.msgno,
+              });
+
+              // Check if this specific part already exists
+              if (existingMsg.msgno_parts && decodedMessage.msgno) {
+                const dupCheck = checkMultiPartDuplicate(
+                  existingMsg.msgno_parts,
+                  decodedMessage.msgno,
+                );
+
+                if (dupCheck.exists) {
+                  // This part already exists - just update the duplicate counter
+                  updatedMessages[i] = {
+                    ...existingMsg,
+                    timestamp: decodedMessage.timestamp,
+                    msgno_parts: dupCheck.updatedParts,
+                  };
+                } else {
+                  // New part - merge it
+                  updatedMessages[i] = mergeMultiPartMessage(
+                    existingMsg,
+                    decodedMessage,
+                    messageDecoder,
+                  );
+                }
               } else {
-                // New part - merge it
+                // First multi-part - merge
                 updatedMessages[i] = mergeMultiPartMessage(
                   existingMsg,
                   decodedMessage,
                   messageDecoder,
                 );
               }
-            } else {
-              // First multi-part - merge
-              updatedMessages[i] = mergeMultiPartMessage(
-                existingMsg,
-                decodedMessage,
-                messageDecoder,
-              );
-            }
 
-            // Move this message to the front
-            const movedMsg = updatedMessages[i];
-            updatedMessages.splice(i, 1);
-            updatedMessages.unshift(movedMsg);
-            break;
+              // Move this message to the front
+              const movedMsg = updatedMessages[i];
+              updatedMessages.splice(i, 1);
+              updatedMessages.unshift(movedMsg);
+              break;
+            }
+          }
+        }
+
+        // If not a duplicate or multi-part, add as new message
+        if (!isDuplicate && !isMultiPart) {
+          updatedMessages = [decodedMessage, ...updatedMessages];
+        }
+
+        // Limit to user's configured max messages per group
+        updatedMessages = updatedMessages.slice(0, getMaxMessagesPerGroup());
+
+        // Check for alerts (message.matched flag set by client-side alert matching)
+        const hasAlerts = updatedMessages.some((msg) => msg.matched);
+        const numAlerts = updatedMessages.filter((msg) => msg.matched).length;
+
+        // Update message group data with the primary key and current timestamp
+        newMessageGroups.set(primaryKey, {
+          identifiers: Array.from(identifiers),
+          has_alerts: hasAlerts,
+          num_alerts: numAlerts,
+          messages: updatedMessages,
+          lastUpdated: decodedMessage.timestamp || Date.now() / 1000,
+        });
+
+        // Cull old message groups if we exceed the limit
+        // ADS-B-aware culling: NEVER remove groups paired with active ADS-B aircraft
+        const maxGroups = getMaxMessageGroups();
+        if (newMessageGroups.size > maxGroups) {
+          // If ADS-B is enabled but no data received yet, SKIP culling
+          // Wait for first ADS-B data to arrive before culling with awareness
+          const adsbEnabled = state.decoders?.adsb?.enabled;
+          const hasAdsbData = state.adsbAircraft !== null;
+
+          if (adsbEnabled && !hasAdsbData) {
+            storeLogger.debug(
+              "Skipping culling - ADS-B enabled but no data received yet",
+              {
+                currentGroups: newMessageGroups.size,
+                maxGroups,
+              },
+            );
+            // Don't cull yet - wait for ADS-B data
+            // Continue with normal flow (calculate alert count and return)
+          } else {
+            // Either ADS-B is disabled OR we have ADS-B data - safe to cull
+            const culledGroups = cullMessageGroups(
+              newMessageGroups,
+              maxGroups,
+              state.adsbAircraft,
+            );
+
+            return {
+              messageGroups: culledGroups,
+              alertCount: Array.from(culledGroups.values()).reduce(
+                (sum, group) => sum + group.num_alerts,
+                0,
+              ),
+            };
+          }
+        }
+
+        // Calculate total alert count across all message groups
+        let totalAlerts = 0;
+        for (const group of newMessageGroups.values()) {
+          totalAlerts += group.num_alerts;
+        }
+
+        storeLogger.trace("Updated global alert count", {
+          totalAlerts,
+          totalGroups: newMessageGroups.size,
+        });
+
+        return { messageGroups: newMessageGroups, alertCount: totalAlerts };
+      }),
+    clearMessages: () => {
+      storeLogger.info("Clearing all message groups");
+      set({ messageGroups: new Map() });
+    },
+
+    // Labels and metadata
+    labels: { labels: {} },
+    setLabels: (labels) => set({ labels }),
+
+    // Alert configuration
+    alertTerms: { terms: [], ignore: [] },
+    setAlertTerms: (terms) => {
+      storeLogger.debug("Alert terms updated", {
+        terms: terms.terms?.length || 0,
+        ignore: terms.ignore?.length || 0,
+      });
+      set({ alertTerms: terms });
+    },
+    alertCount: 0,
+    setAlertCount: (count) => {
+      storeLogger.trace("Alert count updated", { count });
+      set({ alertCount: count });
+    },
+
+    // Decoder configuration
+    decoders: null,
+    setDecoders: (decoders) => {
+      storeLogger.info("Decoder configuration updated", {
+        acars: decoders.acars,
+        vdlm: decoders.vdlm,
+        hfdl: decoders.hfdl,
+        imsl: decoders.imsl,
+        irdm: decoders.irdm,
+        adsbEnabled: decoders.adsb?.enabled,
+      });
+      set({ decoders });
+    },
+
+    // System status
+    systemStatus: null,
+    setSystemStatus: (status) => {
+      storeLogger.trace("System status updated", {
+        hasErrors: status.status?.error_state,
+      });
+      set({ systemStatus: status });
+    },
+
+    // Database info
+    databaseSize: null,
+    setDatabaseSize: (size) => {
+      storeLogger.debug("Database size updated", {
+        size: size.size,
+        count: size.count,
+      });
+      set({ databaseSize: size });
+    },
+
+    // Version info
+    version: null,
+    setVersion: (version) => {
+      storeLogger.info("Version information set", { version });
+      set({ version });
+    },
+
+    // ADS-B status
+    adsbStatus: null,
+    setAdsbStatus: (status) => {
+      storeLogger.trace("ADS-B status updated", status);
+      set({ adsbStatus: status });
+    },
+
+    // Signal levels
+    signalLevels: null,
+    setSignalLevels: (signal) => {
+      storeLogger.trace("Signal levels updated");
+      set({ signalLevels: signal });
+    },
+
+    // Statistics data
+    alertTermData: null,
+    setAlertTermData: (data) => set({ alertTermData: data }),
+    signalFreqData: null,
+    setSignalFreqData: (data) => set({ signalFreqData: data }),
+    signalCountData: null,
+    setSignalCountData: (data) => set({ signalCountData: data }),
+
+    // ADS-B aircraft data
+    adsbAircraft: null,
+    setAdsbAircraft: (data) => {
+      storeLogger.trace("ADS-B aircraft data updated", {
+        aircraftCount: data.aircraft?.length || 0,
+      });
+      set({ adsbAircraft: data });
+    },
+
+    // UI state
+    currentPage: "Live Messages",
+    setCurrentPage: (page) => set({ currentPage: page }),
+    settingsOpen: false,
+    setSettingsOpen: (open) => set({ settingsOpen: open }),
+
+    // Unread message tracking
+    readMessageUids: loadReadMessageUids(),
+
+    markMessageAsRead: (uid) => {
+      storeLogger.trace("Marking message as read", { uid });
+      const readUids = new Set(get().readMessageUids);
+      readUids.add(uid);
+      saveReadMessageUids(readUids);
+      set({ readMessageUids: readUids });
+    },
+
+    markMessagesAsRead: (uids) => {
+      storeLogger.debug("Marking multiple messages as read", {
+        count: uids.length,
+      });
+      const readUids = new Set(get().readMessageUids);
+      for (const uid of uids) {
+        readUids.add(uid);
+      }
+      saveReadMessageUids(readUids);
+      set({ readMessageUids: readUids });
+    },
+
+    markAllMessagesAsRead: () => {
+      const messageGroups = get().messageGroups;
+      const newReadUids = new Set(get().readMessageUids);
+
+      // Mark all messages in all groups as read
+      for (const group of messageGroups.values()) {
+        for (const message of group.messages) {
+          newReadUids.add(message.uid);
+        }
+      }
+
+      saveReadMessageUids(newReadUids);
+      set({ readMessageUids: newReadUids });
+    },
+
+    markAllAlertsAsRead: () => {
+      const messageGroups = get().messageGroups;
+      const newReadUids = new Set(get().readMessageUids);
+
+      // Mark all alert messages in all groups as read
+      for (const group of messageGroups.values()) {
+        for (const message of group.messages) {
+          if (message.matched === true) {
+            newReadUids.add(message.uid);
           }
         }
       }
 
-      // If not a duplicate or multi-part, add as new message
-      if (!isDuplicate && !isMultiPart) {
-        updatedMessages = [decodedMessage, ...updatedMessages];
-      }
-
-      // Limit to user's configured max messages per group
-      updatedMessages = updatedMessages.slice(0, getMaxMessagesPerGroup());
-
-      // Check for alerts (message.matched flag set by client-side alert matching)
-      const hasAlerts = updatedMessages.some((msg) => msg.matched);
-      const numAlerts = updatedMessages.filter((msg) => msg.matched).length;
-
-      // Update message group data with the primary key and current timestamp
-      newMessageGroups.set(primaryKey, {
-        identifiers: Array.from(identifiers),
-        has_alerts: hasAlerts,
-        num_alerts: numAlerts,
-        messages: updatedMessages,
-        lastUpdated: decodedMessage.timestamp || Date.now() / 1000,
+      saveReadMessageUids(newReadUids);
+      set({ readMessageUids: newReadUids });
+      storeLogger.info("Marked all alert messages as read", {
+        totalReadUids: newReadUids.size,
       });
+    },
 
-      // Cull old message groups if we exceed the limit
-      const maxGroups = getMaxMessageGroups();
-      if (newMessageGroups.size > maxGroups) {
-        // Sort groups by lastUpdated (oldest first)
-        const sortedGroups = Array.from(newMessageGroups.entries()).sort(
-          (a, b) => a[1].lastUpdated - b[1].lastUpdated,
-        );
+    isMessageRead: (uid) => {
+      return get().readMessageUids.has(uid);
+    },
 
-        // Remove oldest groups until we're at the limit
-        const groupsToRemove = sortedGroups.slice(
-          0,
-          newMessageGroups.size - maxGroups,
-        );
-        for (const [key] of groupsToRemove) {
-          newMessageGroups.delete(key);
+    getUnreadCount: () => {
+      const messageGroups = get().messageGroups;
+      const readUids = get().readMessageUids;
+      let unreadCount = 0;
+
+      for (const group of messageGroups.values()) {
+        for (const message of group.messages) {
+          if (!readUids.has(message.uid)) {
+            unreadCount++;
+          }
         }
       }
 
-      // Calculate total alert count across all message groups
-      let totalAlerts = 0;
-      for (const group of newMessageGroups.values()) {
-        totalAlerts += group.num_alerts;
-      }
+      return unreadCount;
+    },
 
-      storeLogger.trace("Updated global alert count", {
-        totalAlerts,
-        totalGroups: newMessageGroups.size,
-      });
+    getUnreadAlertCount: () => {
+      const messageGroups = get().messageGroups;
+      const readUids = get().readMessageUids;
+      let unreadAlertCount = 0;
 
-      return { messageGroups: newMessageGroups, alertCount: totalAlerts };
-    }),
-  clearMessages: () => {
-    storeLogger.info("Clearing all message groups");
-    set({ messageGroups: new Map() });
-  },
-
-  // Labels and metadata
-  labels: { labels: {} },
-  setLabels: (labels) => set({ labels }),
-
-  // Alert configuration
-  alertTerms: { terms: [], ignore: [] },
-  setAlertTerms: (terms) => {
-    storeLogger.debug("Alert terms updated", {
-      terms: terms.terms?.length || 0,
-      ignore: terms.ignore?.length || 0,
-    });
-    set({ alertTerms: terms });
-  },
-  alertCount: 0,
-  setAlertCount: (count) => {
-    storeLogger.trace("Alert count updated", { count });
-    set({ alertCount: count });
-  },
-
-  // Decoder configuration
-  decoders: null,
-  setDecoders: (decoders) => {
-    storeLogger.info("Decoder configuration updated", {
-      acars: decoders.acars,
-      vdlm: decoders.vdlm,
-      hfdl: decoders.hfdl,
-      imsl: decoders.imsl,
-      irdm: decoders.irdm,
-      adsbEnabled: decoders.adsb?.enabled,
-    });
-    set({ decoders });
-  },
-
-  // System status
-  systemStatus: null,
-  setSystemStatus: (status) => {
-    storeLogger.trace("System status updated", {
-      hasErrors: status.status?.error_state,
-    });
-    set({ systemStatus: status });
-  },
-
-  // Database info
-  databaseSize: null,
-  setDatabaseSize: (size) => {
-    storeLogger.debug("Database size updated", {
-      size: size.size,
-      count: size.count,
-    });
-    set({ databaseSize: size });
-  },
-
-  // Version info
-  version: null,
-  setVersion: (version) => {
-    storeLogger.info("Version information set", { version });
-    set({ version });
-  },
-
-  // ADS-B status
-  adsbStatus: null,
-  setAdsbStatus: (status) => {
-    storeLogger.trace("ADS-B status updated", status);
-    set({ adsbStatus: status });
-  },
-
-  // Signal levels
-  signalLevels: null,
-  setSignalLevels: (signal) => {
-    storeLogger.trace("Signal levels updated");
-    set({ signalLevels: signal });
-  },
-
-  // Statistics data
-  alertTermData: null,
-  setAlertTermData: (data) => set({ alertTermData: data }),
-  signalFreqData: null,
-  setSignalFreqData: (data) => set({ signalFreqData: data }),
-  signalCountData: null,
-  setSignalCountData: (data) => set({ signalCountData: data }),
-
-  // ADS-B aircraft data
-  adsbAircraft: null,
-  setAdsbAircraft: (data) => {
-    storeLogger.trace("ADS-B aircraft data updated", {
-      aircraftCount: data.aircraft?.length || 0,
-    });
-    set({ adsbAircraft: data });
-  },
-
-  // UI state
-  currentPage: "Live Messages",
-  setCurrentPage: (page) => set({ currentPage: page }),
-  settingsOpen: false,
-  setSettingsOpen: (open) => set({ settingsOpen: open }),
-
-  // Unread message tracking
-  readMessageUids: loadReadMessageUids(),
-
-  markMessageAsRead: (uid) => {
-    storeLogger.trace("Marking message as read", { uid });
-    const readUids = new Set(get().readMessageUids);
-    readUids.add(uid);
-    saveReadMessageUids(readUids);
-    set({ readMessageUids: readUids });
-  },
-
-  markMessagesAsRead: (uids) => {
-    storeLogger.debug("Marking multiple messages as read", {
-      count: uids.length,
-    });
-    const readUids = new Set(get().readMessageUids);
-    for (const uid of uids) {
-      readUids.add(uid);
-    }
-    saveReadMessageUids(readUids);
-    set({ readMessageUids: readUids });
-  },
-
-  markAllMessagesAsRead: () => {
-    const messageGroups = get().messageGroups;
-    const newReadUids = new Set(get().readMessageUids);
-
-    // Mark all messages in all groups as read
-    for (const group of messageGroups.values()) {
-      for (const message of group.messages) {
-        newReadUids.add(message.uid);
-      }
-    }
-
-    saveReadMessageUids(newReadUids);
-    set({ readMessageUids: newReadUids });
-  },
-
-  markAllAlertsAsRead: () => {
-    const messageGroups = get().messageGroups;
-    const newReadUids = new Set(get().readMessageUids);
-
-    // Mark all alert messages in all groups as read
-    for (const group of messageGroups.values()) {
-      for (const message of group.messages) {
-        if (message.matched === true) {
-          newReadUids.add(message.uid);
+      for (const group of messageGroups.values()) {
+        for (const message of group.messages) {
+          // Only count unread messages that match alert terms
+          if (message.matched === true && !readUids.has(message.uid)) {
+            unreadAlertCount++;
+          }
         }
       }
-    }
 
-    saveReadMessageUids(newReadUids);
-    set({ readMessageUids: newReadUids });
-    storeLogger.info("Marked all alert messages as read", {
-      totalReadUids: newReadUids.size,
-    });
-  },
-
-  isMessageRead: (uid) => {
-    return get().readMessageUids.has(uid);
-  },
-
-  getUnreadCount: () => {
-    const messageGroups = get().messageGroups;
-    const readUids = get().readMessageUids;
-    let unreadCount = 0;
-
-    for (const group of messageGroups.values()) {
-      for (const message of group.messages) {
-        if (!readUids.has(message.uid)) {
-          unreadCount++;
-        }
-      }
-    }
-
-    return unreadCount;
-  },
-
-  getUnreadAlertCount: () => {
-    const messageGroups = get().messageGroups;
-    const readUids = get().readMessageUids;
-    let unreadAlertCount = 0;
-
-    for (const group of messageGroups.values()) {
-      for (const message of group.messages) {
-        // Only count unread messages that match alert terms
-        if (message.matched === true && !readUids.has(message.uid)) {
-          unreadAlertCount++;
-        }
-      }
-    }
-
-    return unreadAlertCount;
-  },
-}));
+      return unreadAlertCount;
+    },
+  };
+});
 
 /**
  * Selectors for common state queries
