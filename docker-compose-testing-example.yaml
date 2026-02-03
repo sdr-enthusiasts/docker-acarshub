@@ -18,8 +18,8 @@ services:
       - STATION_ID_VDLM=CS-KABQ-VDLM
       - IATA_OVERRIDE=UP|UPS|United Parcel Service;GS|FTH|Mountain Aviation (Foothills);GS|EJA|ExecJet
       - ENABLE_ADSB=true
-      - ADSB_LAT=0
-      - ADSB_LON=0
+      - ADSB_LAT=35.043
+      - ADSB_LON=-106.715
       - ADSB_URL=http://192.168.31.20/tar1090/data/aircraft.json
       - ADSB_BYPASS_URL=true
       #- MIN_LOG_LEVEL=5
