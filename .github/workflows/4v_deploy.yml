@@ -29,7 +29,7 @@ jobs:
     if: |
       github.event_name == 'workflow_dispatch' &&
       github.event.inputs.reason != ''
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     steps:
       - name: Log dispatch reason
         env:
@@ -52,10 +52,10 @@ jobs:
       push_destinations: ghcr.io
       ghcr_repo_owner: ${{ github.repository_owner }}
       ghcr_repo: ${{ github.repository }}
-      # set build_latest to true if github.event.inputs.use_test_image is false
       build_latest: true
       docker_latest_tag: v4-
-      build_baseimage_test: true
+      build_baseimage_test: false
       platform_linux_arm32v7_enabled: false
+      build_baseimage_url: :base/:base-test-pr
     secrets:
       ghcr_token: ${{ secrets.GITHUB_TOKEN }}
