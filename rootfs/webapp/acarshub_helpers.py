@@ -92,7 +92,9 @@ def update_keys(json_message):
     # React has its own parseAndFormatLibacars() function in decoderUtils.ts
 
     if has_specified_key(json_message, "icao"):
-        json_message["icao_hex"] = try_format_as_int(json_message["icao"], "icao")
+        # ICAO is now stored as hex string directly (e.g., "ABF308")
+        # No conversion needed - just use it as-is
+        json_message["icao_hex"] = json_message["icao"]
 
     if has_specified_key(json_message, "flight"):
         airline, iata_flight, icao_flight, flight_number = flight_finder(

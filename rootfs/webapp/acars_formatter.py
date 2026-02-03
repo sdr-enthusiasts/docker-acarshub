@@ -154,7 +154,7 @@ def format_jaero_imsl_message(unformatted_message):
         if dst := isu.get("dst"):
             if addr := dst.get("addr"):
                 imsl_message["toaddr"] = int(addr, 16)
-                imsl_message["icao"] = int(addr, 16)
+                imsl_message["icao"] = addr.upper()
 
         if src := isu.get("src"):
             if addr := src.get("addr"):
@@ -282,9 +282,9 @@ def format_hfdl_message(unformatted_message):
         # icao
         if "ac_info" in unformatted_message["hfdl"]["lpdu"]:
             if "icao" in unformatted_message["hfdl"]["lpdu"]["ac_info"]:
-                hfdl_message["icao"] = int(
-                    unformatted_message["hfdl"]["lpdu"]["ac_info"]["icao"], 16
-                )
+                hfdl_message["icao"] = unformatted_message["hfdl"]["lpdu"]["ac_info"][
+                    "icao"
+                ].upper()
 
         if "hfnpdu" in unformatted_message["hfdl"]["lpdu"]:
             # flight
@@ -463,9 +463,9 @@ def format_dumpvdl2_message(unformatted_message):
         and "addr" in unformatted_message["vdl2"]["avlc"]["src"]
         and unformatted_message["vdl2"]["avlc"]["src"]["type"] == "Aircraft"
     ):
-        vdlm2_message["icao"] = int(
-            unformatted_message["vdl2"]["avlc"]["src"]["addr"], 16
-        )
+        vdlm2_message["icao"] = unformatted_message["vdl2"]["avlc"]["src"][
+            "addr"
+        ].upper()
     # freq = Column('freq', String(32), index=True, nullable=False)
     if "freq" in unformatted_message["vdl2"]:
         vdlm2_message["freq"] = reformat_dumpvdl2_freq(

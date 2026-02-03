@@ -738,16 +738,14 @@ def database_search(search_term, page=0):
         session = db_session()
         match_string = ""
 
-        icao_hex = search_term["icao"]
-        if icao_hex and len(icao_hex) == 6:
-            try:
-                search_term["icao"] = int(icao_hex, 16)
-            except Exception as e:
-                acarshub_logging.log(
-                    f"can't convert icao from hex to decimal: {icao_hex} ({str(e)})",
-                    "database",
-                    level=LOG_LEVEL["DEBUG"],
-                )
+        # ICAO is stored as uppercase hex string in the database (e.g., "ABF308")
+        # FTS5 is case-sensitive, so we need to uppercase the search term
+        if "icao" in search_term and search_term["icao"]:
+            search_term["icao"] = search_term["icao"].strip().upper()
+
+        # Tail numbers are stored as uppercase strings
+        if "tail" in search_term and search_term["tail"]:
+            search_term["tail"] = search_term["tail"].upper()
 
         if "station_id" in search_term and search_term["station_id"] != "":
             # we need to search outside of FTS

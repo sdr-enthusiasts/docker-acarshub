@@ -31,6 +31,13 @@ Workflow:
 4. Prune old messages (housekeeping)
 5. Optimize FTS (if enabled)
 
+Current migrations:
+- e7991f1644b1: Initial schema
+- 0fc8b7cae596: Split signal level table into per-decoder tables
+- a589d271a0a4: Split freqs table into per-decoder tables
+- 94d97e655180: Create messages_fts table and triggers
+- 3168c906fb9e: Convert ICAO from decimal to hex string (enables partial search)
+
 Exit codes:
 0 - Success
 1 - Critical error (database creation/migration failed)
