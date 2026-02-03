@@ -450,11 +450,9 @@ export const useSettingsStore = create<SettingsState>()(
       // GeoJSON overlay actions
       setGeoJSONOverlay: (overlayId, enabled) =>
         set((state) => {
-          const current = state.settings.map.enabledGeoJSONOverlays;
+          const current = state.settings.map.enabledGeoJSONOverlays || [];
           const updated = enabled
-            ? [...current, overlayId].filter(
-                (id, index, arr) => arr.indexOf(id) === index,
-              ) // Remove duplicates
+            ? [...current, overlayId]
             : current.filter((id) => id !== overlayId);
 
           return {
@@ -468,7 +466,7 @@ export const useSettingsStore = create<SettingsState>()(
 
       toggleGeoJSONOverlay: (overlayId) =>
         set((state) => {
-          const current = state.settings.map.enabledGeoJSONOverlays;
+          const current = state.settings.map.enabledGeoJSONOverlays || [];
           const isEnabled = current.includes(overlayId);
           const updated = isEnabled
             ? current.filter((id) => id !== overlayId)
@@ -488,7 +486,7 @@ export const useSettingsStore = create<SettingsState>()(
           const overlaysInCategory = getOverlaysByCategory(category);
           const overlayIds = overlaysInCategory.map((o) => o.id);
 
-          const current = state.settings.map.enabledGeoJSONOverlays;
+          const current = state.settings.map.enabledGeoJSONOverlays || [];
           const updated = enabled
             ? [...current, ...overlayIds.filter((id) => !current.includes(id))]
             : current.filter((id) => !overlayIds.includes(id));

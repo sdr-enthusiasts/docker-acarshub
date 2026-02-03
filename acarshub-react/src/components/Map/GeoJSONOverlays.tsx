@@ -15,6 +15,7 @@
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
 import type {
+  CircleLayerSpecification,
   FillLayerSpecification,
   GeoJSONSourceSpecification,
   LineLayerSpecification,
@@ -32,8 +33,9 @@ const EMPTY_ARRAY: string[] = [];
  *
  * Renders enabled GeoJSON overlays on the map (aviation zones, boundaries, etc.).
  * - MapLibre fetches GeoJSON files directly via URL (no manual fetch)
- * - Supports LineString and Polygon geometry types
+ * - Supports LineString, Polygon, and Point geometry types
  * - Applies custom colors and opacity from overlay configuration
+ * - Uses geometry type filters to render only appropriate layers
  *
  * Similar to NexradOverlay but for GeoJSON layers.
  */
@@ -66,7 +68,10 @@ export function GeoJSONOverlays() {
 
 /**
  * Single GeoJSON overlay layer renderer
- * Creates MapLibre Source and Layers (line + fill) for a single overlay
+ * Creates MapLibre Source and Layers for a single overlay:
+ * - Line layer (LineString, MultiLineString, Polygon outlines)
+ * - Fill layer (Polygon, MultiPolygon interiors only)
+ * - Circle layer (Point, MultiPoint features only)
  */
 function GeoJSONOverlayLayer({
   overlayId,
@@ -94,6 +99,14 @@ function GeoJSONOverlayLayer({
       id: `${overlayId}-line`,
       type: "line",
       source: `${overlayId}-source`,
+      filter: [
+        "in",
+        ["geometry-type"],
+        [
+          "literal",
+          ["LineString", "MultiLineString", "Polygon", "MultiPolygon"],
+        ],
+      ],
       paint: {
         "line-color": color,
         "line-width": 2,
@@ -103,12 +116,17 @@ function GeoJSONOverlayLayer({
     [overlayId, color, opacity],
   );
 
-  // Fill layer (for Polygon interiors)
+  // Fill layer (for Polygon interiors only - not LineString!)
   const fillLayer: FillLayerSpecification = useMemo(
     () => ({
       id: `${overlayId}-fill`,
       type: "fill",
       source: `${overlayId}-source`,
+      filter: [
+        "in",
+        ["geometry-type"],
+        ["literal", ["Polygon", "MultiPolygon"]],
+      ],
       paint: {
         "fill-color": color,
         "fill-opacity": opacity * 0.3, // Lighter fill (30% of line opacity)
@@ -117,12 +135,33 @@ function GeoJSONOverlayLayer({
     [overlayId, color, opacity],
   );
 
+  // Circle layer (for Point features)
+  const circleLayer: CircleLayerSpecification = useMemo(
+    () => ({
+      id: `${overlayId}-circle`,
+      type: "circle",
+      source: `${overlayId}-source`,
+      filter: ["in", ["geometry-type"], ["literal", ["Point", "MultiPoint"]]],
+      paint: {
+        "circle-color": color,
+        "circle-radius": 4,
+        "circle-opacity": opacity,
+        "circle-stroke-color": color,
+        "circle-stroke-width": 1,
+        "circle-stroke-opacity": opacity,
+      },
+    }),
+    [overlayId, color, opacity],
+  );
+
   return (
     <Source id={`${overlayId}-source`} {...source}>
-      {/* Fill layer first (below lines) */}
+      {/* Fill layer first (below lines) - Polygons only */}
       <Layer {...fillLayer} />
-      {/* Line layer on top */}
+      {/* Line layer - LineStrings and Polygon outlines */}
       <Layer {...lineLayer} />
+      {/* Circle layer - Points only */}
+      <Layer {...circleLayer} />
     </Source>
   );
 }

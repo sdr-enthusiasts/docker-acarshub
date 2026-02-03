@@ -22,6 +22,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { useAppStore } from "../../store/useAppStore";
 import { useSettingsStore } from "../../store/useSettingsStore";
+import { GeoJSONOverlayButton } from "./GeoJSONOverlayButton";
 import { MapControlButton } from "./MapControlButton";
 import { MapProviderSelector } from "./MapProviderSelector";
 import "./MapControls.scss";
@@ -80,6 +81,10 @@ export function MapControls() {
           onClick={() => setShowNexrad(!mapSettings.showNexrad)}
           tooltip="Show NEXRAD Weather Radar"
         />
+      </div>
+
+      <div className="map-controls__group">
+        <GeoJSONOverlayButton />
       </div>
 
       <div className="map-controls__group">
