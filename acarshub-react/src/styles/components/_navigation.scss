@@ -73,12 +73,12 @@
   }
 
   nav a.active {
-    background-color: var(--color-primary);
-    color: var(--color-base);
+    background-color: var(--color-surface0);
+    color: var(--color-primary);
     font-weight: $font-weight-semibold;
 
     &:hover {
-      background-color: var(--color-primary);
+      background-color: var(--color-surface0);
       opacity: 0.9;
     }
   }
@@ -93,7 +93,6 @@
 
     &:hover {
       opacity: 0.9;
-      background-color: transparent !important;
     }
 
     @include focus-visible;
@@ -103,6 +102,18 @@
     height: 48px;
     width: auto;
     display: block;
+
+    // Use CSS filter to colorize SVG to match primary color
+    // This works when SVG is loaded as <img src="...">
+    // Mocha (dark theme) - blue (#89b4fa)
+    filter: brightness(0) saturate(100%) invert(58%) sepia(68%) saturate(467%)
+      hue-rotate(192deg) brightness(103%) contrast(98%);
+
+    // Latte (light theme) - blue (#1e66f5)
+    [data-theme="light"] & {
+      filter: brightness(0) saturate(100%) invert(27%) sepia(89%)
+        saturate(1583%) hue-rotate(215deg) brightness(99%) contrast(101%);
+    }
   }
 
   .logo-text {

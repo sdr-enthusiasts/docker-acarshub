@@ -78,8 +78,6 @@ export const Navigation = () => {
             {systemHasError && <span className="error-indicator"> ⚠</span>}
           </NavLink>
           <br />
-          <NavLink to="/about">About</NavLink>
-          <br />
           <button
             type="button"
             onClick={handleSettingsClick}
@@ -93,7 +91,7 @@ export const Navigation = () => {
         <nav className="hide_when_small">
           <ul className="primary">
             <li className="img_box" id="logo_image">
-              <NavLink to="/" className="logo-link">
+              <NavLink to="/about" className="logo-link">
                 <img src={acarsLogo} alt="ACARS Hub" className="logo-image" />
                 <span className="logo-text">ACARS Hub</span>
               </NavLink>
@@ -125,9 +123,6 @@ export const Navigation = () => {
                 Status
                 {systemHasError && <span className="error-indicator"> ⚠</span>}
               </NavLink>
-            </li>
-            <li>
-              <NavLink to="/about">About</NavLink>
             </li>
             <li className="right_side">
               <ThemeSwitcher />

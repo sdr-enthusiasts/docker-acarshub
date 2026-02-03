@@ -16,7 +16,7 @@
     fill: none;
 }
 .st1 {
-    fill: #1496bb;
+    fill: var(--color-primary, #1496bb);
 }
     </style>
 <rect x="0" class="st0" width="2129.84" height="1162.44" />
