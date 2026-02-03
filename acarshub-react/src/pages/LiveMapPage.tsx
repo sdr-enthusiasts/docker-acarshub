@@ -16,7 +16,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { MapRef } from "react-map-gl/maplibre";
-import { MapComponent, MapControls } from "../components/Map";
+import { MapComponent, MapControls, MapLegend } from "../components/Map";
 import { AircraftList } from "../components/Map/AircraftList";
 import { socketService } from "../services/socket";
 import { useAppStore } from "../store/useAppStore";
@@ -109,6 +109,9 @@ export const LiveMapPage = () => {
 
           {/* Floating map controls */}
           {isMapLoaded && <MapControls />}
+
+          {/* Map legend */}
+          {isMapLoaded && <MapLegend />}
 
           {!isMapLoaded && (
             <div className="live-map-page__map-loading">
