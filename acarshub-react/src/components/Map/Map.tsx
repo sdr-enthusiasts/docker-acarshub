@@ -29,6 +29,7 @@ import { useAppStore } from "../../store/useAppStore";
 import { useSettingsStore } from "../../store/useSettingsStore";
 import { mapLogger } from "../../utils/logger";
 import { AircraftMarkers } from "./AircraftMarkers";
+import { GeoJSONOverlays } from "./GeoJSONOverlays";
 import { NexradOverlay } from "./NexradOverlay";
 import { RangeRings } from "./RangeRings";
 import { StationMarker } from "./StationMarker";
@@ -299,6 +300,9 @@ export function MapComponent({
 
         {/* NEXRAD weather radar overlay */}
         <NexradOverlay />
+
+        {/* GeoJSON overlays (aviation zones, boundaries, etc.) */}
+        <GeoJSONOverlays />
 
         {/* Aircraft markers */}
         <AircraftMarkers hoveredAircraftHex={hoveredAircraftHex} />
