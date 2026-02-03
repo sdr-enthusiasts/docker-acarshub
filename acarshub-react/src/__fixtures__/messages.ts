@@ -53,6 +53,7 @@ export const simpleAcarsMessage: AcarsMsg = {
   airline: "United Airlines",
   iata_flight: "UA123",
   icao_flight: "UAL123",
+  flight_number: "123",
 };
 
 /**
@@ -418,6 +419,7 @@ export const emptyMessage: AcarsMsg = {
   airline: "FedEx",
   iata_flight: "FX888",
   icao_flight: "FDX888",
+  flight_number: "888",
 };
 
 /**

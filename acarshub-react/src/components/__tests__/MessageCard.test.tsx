@@ -79,7 +79,7 @@ describe("MessageCard", () => {
       render(<MessageCard message={simpleAcarsMessage} />);
 
       expect(screen.getByText("N12345")).toBeInTheDocument();
-      expect(screen.getByText(/UAL123/)).toBeInTheDocument();
+      expect(screen.getByText("United Airlines 123")).toBeInTheDocument();
       expect(
         screen.getByText("United Airlines", {
           selector: ".message-field__value",
@@ -205,7 +205,7 @@ describe("MessageCard", () => {
       render(<MessageCard message={emptyMessage} />);
 
       expect(screen.getByText("N44444")).toBeInTheDocument();
-      expect(screen.getByText(/FDX888/)).toBeInTheDocument();
+      expect(screen.getByText("FedEx 888")).toBeInTheDocument();
     });
   });
 
