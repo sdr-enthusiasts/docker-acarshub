@@ -1179,10 +1179,12 @@ describe("SettingsModal", () => {
       const persistToggle = screen.getByLabelText(
         /Persist Logs Across Page Refreshes/i,
       );
+
+      // Default is now true, so clicking once turns it off
       await user.click(persistToggle);
 
       expect(useSettingsStore.getState().settings.advanced.persistLogs).toBe(
-        true,
+        false,
       );
     });
   });

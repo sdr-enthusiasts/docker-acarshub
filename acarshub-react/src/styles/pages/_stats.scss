@@ -225,6 +225,217 @@
 }
 
 // =============================================================================
+// Status Section Styles
+// =============================================================================
+
+.stats-page {
+  // Status overview header
+  .status-overview {
+    padding: $spacing-md;
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+
+    @include breakpoint(md) {
+      flex-direction: row;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    &__main {
+      flex: 1;
+    }
+
+    &__title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 0;
+      color: var(--color-text);
+    }
+
+    &__subtitle {
+      font-size: 0.875rem;
+      color: var(--color-subtext0);
+      text-align: right;
+
+      @include breakpoint(md) {
+        text-align: right;
+      }
+    }
+  }
+
+  // Status grid - responsive columns
+  .status-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: $spacing-md;
+
+    @include breakpoint(sm) {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    @include breakpoint(lg) {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+
+  // Individual status item
+  .status-item {
+    background-color: var(--color-surface0);
+    border: 1px solid var(--color-surface1);
+    border-radius: 0.5rem;
+    padding: $spacing-md;
+    transition: all 0.2s ease;
+
+    &:hover {
+      background-color: var(--color-surface1);
+      border-color: var(--color-overlay0);
+    }
+  }
+
+  .status-item__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: $spacing-sm;
+    padding-bottom: $spacing-sm;
+    border-bottom: 1px solid var(--color-surface1);
+  }
+
+  .status-item__name {
+    font-weight: 600;
+    font-size: 1rem;
+    color: var(--color-text);
+  }
+
+  .status-item__details {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+  }
+
+  // Status detail row
+  .status-detail {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.875rem;
+  }
+
+  .status-detail__label {
+    color: var(--color-subtext1);
+    font-weight: 500;
+  }
+
+  .status-detail__value {
+    color: var(--color-text);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  // Status badges
+  .status-badge {
+    display: inline-block;
+    padding: $spacing-xs $spacing-sm;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+
+    &--success {
+      background-color: rgba(var(--color-green-rgb), 0.15);
+      color: var(--color-green);
+      border: 1px solid rgba(var(--color-green-rgb), 0.3);
+    }
+
+    &--warning {
+      background-color: rgba(var(--color-yellow-rgb), 0.15);
+      color: var(--color-yellow);
+      border: 1px solid rgba(var(--color-yellow-rgb), 0.3);
+    }
+
+    &--error {
+      background-color: rgba(var(--color-red-rgb), 0.15);
+      color: var(--color-red);
+      border: 1px solid rgba(var(--color-red-rgb), 0.3);
+    }
+
+    &--default {
+      background-color: rgba(var(--color-overlay0-rgb), 0.15);
+      color: var(--color-subtext1);
+      border: 1px solid rgba(var(--color-overlay0-rgb), 0.3);
+    }
+  }
+
+  // Text color utilities
+  .text-success {
+    color: var(--color-green);
+  }
+
+  .text-warning {
+    color: var(--color-yellow);
+  }
+
+  .text-error {
+    color: var(--color-red);
+  }
+
+  .text-muted {
+    color: var(--color-subtext0);
+    font-style: italic;
+  }
+
+  // Configuration grid (simpler layout)
+  .config-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: $spacing-sm;
+
+    @include breakpoint(sm) {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    @include breakpoint(md) {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+
+  .config-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: $spacing-sm;
+    background-color: var(--color-surface0);
+    border-radius: 0.25rem;
+    font-size: 0.875rem;
+  }
+
+  .config-item__label {
+    color: var(--color-subtext1);
+    font-weight: 500;
+  }
+
+  .config-item__value {
+    color: var(--color-text);
+    font-weight: 600;
+  }
+}
+
+// =============================================================================
+// Reduced Motion Support
+// =============================================================================
+
+@media (prefers-reduced-motion: reduce) {
+  .stats-page {
+    .status-item {
+      transition: none;
+    }
+  }
+}
+
+// =============================================================================
 // Print Styles
 // =============================================================================
 
@@ -243,6 +454,10 @@
     .chart-section {
       page-break-inside: avoid;
       margin-bottom: var(--spacing-lg);
+    }
+
+    .status-badge {
+      border: 1px solid currentColor;
     }
   }
 }

@@ -27,7 +27,6 @@ import { LiveMapPage } from "./pages/LiveMapPage.tsx";
 import { LiveMessagesPage } from "./pages/LiveMessagesPage.tsx";
 import { SearchPage } from "./pages/SearchPage.tsx";
 import { StatsPage } from "./pages/StatsPage.tsx";
-import { StatusPage } from "./pages/StatusPage.tsx";
 import { useAppStore } from "./store/useAppStore.ts";
 import { useSettingsStore } from "./store/useSettingsStore.ts";
 import { uiLogger } from "./utils/logger";
@@ -111,9 +110,8 @@ function App() {
             <Route path="/live-messages" element={<LiveMessagesPage />} />
             <Route path="/search" element={<SearchPage />} />
             <Route path="/alerts" element={<AlertsPage />} />
-            <Route path="/stats" element={<StatsPage />} />
+            <Route path="/status" element={<StatsPage />} />
             <Route path="/adsb" element={<LiveMapPage />} />
-            <Route path="/status" element={<StatusPage />} />
             <Route path="/about" element={<AboutPage />} />
 
             {/* Catch-all redirect to Live Messages */}

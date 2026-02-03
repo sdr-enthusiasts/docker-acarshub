@@ -71,8 +71,6 @@ export const Navigation = () => {
             )}
           </NavLink>
           <br />
-          <NavLink to="/stats">Statistics</NavLink>
-          <br />
           <NavLink to="/status">
             Status
             {systemHasError && <span className="error-indicator"> ⚠</span>}
@@ -116,14 +114,12 @@ export const Navigation = () => {
               </NavLink>
             </li>
             <li>
-              <NavLink to="/stats">Statistics</NavLink>
-            </li>
-            <li>
               <NavLink to="/status">
                 Status
                 {systemHasError && <span className="error-indicator"> ⚠</span>}
               </NavLink>
             </li>
+
             <li className="right_side">
               <ThemeSwitcher />
               <span id="modal_text">

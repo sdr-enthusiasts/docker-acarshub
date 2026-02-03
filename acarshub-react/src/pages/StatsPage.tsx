@@ -31,7 +31,9 @@ import {
 } from "../hooks/useRRDTimeSeriesData";
 import { socketService } from "../services/socket";
 import { useAppStore } from "../store/useAppStore";
+import { useSettingsStore } from "../store/useSettingsStore";
 import type { SignalData } from "../types";
+import { formatTimestamp } from "../utils/dateUtils";
 
 /**
  * Main stats section types
@@ -41,17 +43,18 @@ type StatsSection =
   | "signal"
   | "alerts"
   | "frequency"
-  | "messages";
+  | "messages"
+  | "status";
 
 /**
  * StatsPage Component
- * Displays statistics and graphs for ACARS message reception
+ * Displays statistics, graphs, and system status for ACARS Hub
  *
- * Redesigned to show one graph section at a time to avoid scroll issues
+ * Redesigned to show one section at a time to avoid scroll issues
  * and provide better focus on each visualization.
  *
  * Features:
- * - Top-level section navigation (5 main sections)
+ * - Top-level section navigation (6 main sections including System Status)
  * - Sub-navigation within sections (time periods, decoders)
  * - No scrolling - single focused view
  * - Catppuccin theming throughout
@@ -60,13 +63,28 @@ type StatsSection =
 export const StatsPage = () => {
   const setCurrentPage = useAppStore((state) => state.setCurrentPage);
   const decoders = useAppStore((state) => state.decoders);
+  const systemStatus = useAppStore((state) => state.systemStatus);
   const signalLevels = useAppStore((state) => state.signalLevels);
   const alertTermData = useAppStore((state) => state.alertTermData);
   const signalFreqData = useAppStore((state) => state.signalFreqData);
   const signalCountData = useAppStore((state) => state.signalCountData);
 
+  // Get user's locale preferences from settings
+  const timeFormat = useSettingsStore(
+    (state) => state.settings.regional.timeFormat,
+  );
+  const dateFormat = useSettingsStore(
+    (state) => state.settings.regional.dateFormat,
+  );
+  const timezone = useSettingsStore(
+    (state) => state.settings.regional.timezone,
+  );
+
   // Main section selection
   const [activeSection, setActiveSection] = useState<StatsSection>("reception");
+
+  // Last update timestamp for system status
+  const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
 
   // Sub-navigation state for Reception Over Time
   const [selectedTimePeriod, setSelectedTimePeriod] =
@@ -88,8 +106,8 @@ export const StatsPage = () => {
 
   // Request frequency and count data when decoders are available
   useEffect(() => {
-    setCurrentPage("Statistics");
-    socketService.notifyPageChange("Statistics");
+    setCurrentPage("Status");
+    socketService.notifyPageChange("Status");
 
     // Request initial frequency and count data
     const requestData = () => {
@@ -100,16 +118,25 @@ export const StatsPage = () => {
       }
     };
 
+    // Request initial system status
+    socketService.requestStatus();
+
     // Request data immediately
     requestData();
 
-    // Set up periodic refresh (every 30 seconds)
-    const refreshInterval = setInterval(() => {
+    // Set up periodic refresh (every 30 seconds for stats, 10 seconds for status)
+    const statsRefreshInterval = setInterval(() => {
       requestData();
     }, 30000);
 
+    const statusRefreshInterval = setInterval(() => {
+      socketService.requestStatus();
+      setLastUpdate(new Date());
+    }, 10000);
+
     return () => {
-      clearInterval(refreshInterval);
+      clearInterval(statsRefreshInterval);
+      clearInterval(statusRefreshInterval);
     };
   }, [setCurrentPage, decoders]);
 
@@ -174,6 +201,24 @@ export const StatsPage = () => {
     };
   }, [decoders]);
 
+  // Helper function to get status badge variant
+  const getStatusVariant = (
+    status: string,
+  ): "success" | "warning" | "error" | "default" => {
+    if (status === "Ok") return "success";
+    if (status === "Disconnected" || status === "Waiting for first message")
+      return "warning";
+    if (status === "Dead" || status === "Bad") return "error";
+    return "default";
+  };
+
+  // Helper function to render status badge
+  const renderStatusBadge = (status: string) => {
+    const variant = getStatusVariant(status);
+    const className = `status-badge status-badge--${variant}`;
+    return <span className={className}>{status}</span>;
+  };
+
   // Build main section tabs
   const sectionTabs = [
     { id: "reception", label: "Reception Over Time" },
@@ -181,6 +226,7 @@ export const StatsPage = () => {
     { id: "alerts", label: "Alert Terms" },
     { id: "frequency", label: "Frequency Distribution" },
     { id: "messages", label: "Message Statistics" },
+    { id: "status", label: "System Status" },
   ];
 
   // Build tabs for time periods (Reception Over Time)
@@ -266,6 +312,255 @@ export const StatsPage = () => {
   // Render content based on active section
   const renderSectionContent = () => {
     switch (activeSection) {
+      case "status": {
+        if (!systemStatus) {
+          return (
+            <Card>
+              <p>Loading system status...</p>
+            </Card>
+          );
+        }
+
+        const { status } = systemStatus;
+        const hasError = status.error_state;
+
+        return (
+          <>
+            {/* Status Overview Header */}
+            <Card variant={hasError ? "error" : "success"}>
+              <div className="status-overview">
+                <div className="status-overview__main">
+                  <h2 className="status-overview__title">
+                    {hasError
+                      ? "System Error Detected"
+                      : "All Systems Operational"}
+                  </h2>
+                </div>
+                <p className="status-overview__subtitle">
+                  Last updated:{" "}
+                  {formatTimestamp(
+                    lastUpdate.getTime(),
+                    timeFormat,
+                    dateFormat,
+                    timezone,
+                  )}
+                </p>
+              </div>
+            </Card>
+
+            {/* Decoder Status */}
+            <Card>
+              <h2 className="card__title">Decoder Status</h2>
+              <div className="status-grid">
+                {Object.entries(status.decoders).map(([name, decoder]) => (
+                  <div key={name} className="status-item">
+                    <div className="status-item__header">
+                      <span className="status-item__name">{name}</span>
+                      {renderStatusBadge(decoder.Status)}
+                    </div>
+                    <div className="status-item__details">
+                      <div className="status-detail">
+                        <span className="status-detail__label">Connected:</span>
+                        <span
+                          className={`status-detail__value ${
+                            decoder.Connected ? "text-success" : "text-error"
+                          }`}
+                        >
+                          {decoder.Connected ? "Yes" : "No"}
+                        </span>
+                      </div>
+                      <div className="status-detail">
+                        <span className="status-detail__label">Thread:</span>
+                        <span
+                          className={`status-detail__value ${
+                            decoder.Alive ? "text-success" : "text-error"
+                          }`}
+                        >
+                          {decoder.Alive ? "Running" : "Stopped"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {Object.keys(status.decoders).length === 0 && (
+                <p className="text-muted">No decoders configured</p>
+              )}
+            </Card>
+
+            {/* Message Statistics */}
+            <Card>
+              <h2 className="card__title">Message Statistics</h2>
+              <div className="status-grid">
+                {Object.entries(status.global).map(([name, stats]) => (
+                  <div key={name} className="status-item">
+                    <div className="status-item__header">
+                      <span className="status-item__name">{name} Messages</span>
+                      {renderStatusBadge(stats.Status)}
+                    </div>
+                    <div className="status-item__details">
+                      <div className="status-detail">
+                        <span className="status-detail__label">Total:</span>
+                        <span className="status-detail__value">
+                          {stats.Count?.toLocaleString() ?? 0}
+                        </span>
+                      </div>
+                      <div className="status-detail">
+                        <span className="status-detail__label">
+                          Last Minute:
+                        </span>
+                        <span className="status-detail__value">
+                          {stats.LastMinute}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {Object.keys(status.global).length === 0 && (
+                <p className="text-muted">No message statistics available</p>
+              )}
+            </Card>
+
+            {/* Server Status */}
+            <Card>
+              <h2 className="card__title">Server Status</h2>
+              <div className="status-grid">
+                {Object.entries(status.servers).map(([name, server]) => (
+                  <div key={name} className="status-item">
+                    <div className="status-item__header">
+                      <span className="status-item__name">{name}</span>
+                      {renderStatusBadge(server.Status)}
+                    </div>
+                    <div className="status-item__details">
+                      <div className="status-detail">
+                        <span className="status-detail__label">Messages:</span>
+                        <span className="status-detail__value">
+                          {server.Messages?.toLocaleString() ?? 0}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {Object.keys(status.servers).length === 0 && (
+                <p className="text-muted">No servers configured</p>
+              )}
+            </Card>
+
+            {/* System Threads */}
+            {status.threads && (
+              <Card>
+                <h2 className="card__title">System Threads</h2>
+                <div className="status-grid">
+                  <div className="status-item">
+                    <div className="status-item__header">
+                      <span className="status-item__name">Database Thread</span>
+                      {renderStatusBadge(
+                        status.threads.database ? "Ok" : "Dead",
+                      )}
+                    </div>
+                  </div>
+                  <div className="status-item">
+                    <div className="status-item__header">
+                      <span className="status-item__name">
+                        Scheduler Thread
+                      </span>
+                      {renderStatusBadge(
+                        status.threads.scheduler ? "Ok" : "Dead",
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            )}
+
+            {/* Decoding Errors */}
+            {status.errors && (
+              <Card variant={status.errors.Total > 0 ? "warning" : "default"}>
+                <h2 className="card__title">Decoding Errors</h2>
+                <p className="text-muted" style={{ marginBottom: "1rem" }}>
+                  Signal quality errors from radio decoders (bit errors, CRC
+                  failures, RF interference)
+                </p>
+                <div className="status-grid">
+                  <div className="status-item">
+                    <div className="status-item__header">
+                      <span className="status-item__name">
+                        Signal Decoding Errors
+                      </span>
+                    </div>
+                    <div className="status-item__details">
+                      <div className="status-detail">
+                        <span className="status-detail__label">
+                          Total Errors:
+                        </span>
+                        <span className="status-detail__value">
+                          {status.errors.Total?.toLocaleString() ?? 0}
+                        </span>
+                      </div>
+                      <div className="status-detail">
+                        <span className="status-detail__label">
+                          Last Minute:
+                        </span>
+                        <span className="status-detail__value">
+                          {status.errors.LastMinute}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            )}
+
+            {/* Configuration Summary */}
+            {decoders && (
+              <Card>
+                <h2 className="card__title">Configuration</h2>
+                <div className="config-grid">
+                  <div className="config-item">
+                    <span className="config-item__label">ACARS Enabled:</span>
+                    <span className="config-item__value">
+                      {decoders.acars ? "Yes" : "No"}
+                    </span>
+                  </div>
+                  <div className="config-item">
+                    <span className="config-item__label">VDLM Enabled:</span>
+                    <span className="config-item__value">
+                      {decoders.vdlm ? "Yes" : "No"}
+                    </span>
+                  </div>
+                  <div className="config-item">
+                    <span className="config-item__label">HFDL Enabled:</span>
+                    <span className="config-item__value">
+                      {decoders.hfdl ? "Yes" : "No"}
+                    </span>
+                  </div>
+                  <div className="config-item">
+                    <span className="config-item__label">IMSL Enabled:</span>
+                    <span className="config-item__value">
+                      {decoders.imsl ? "Yes" : "No"}
+                    </span>
+                  </div>
+                  <div className="config-item">
+                    <span className="config-item__label">IRDM Enabled:</span>
+                    <span className="config-item__value">
+                      {decoders.irdm ? "Yes" : "No"}
+                    </span>
+                  </div>
+                  <div className="config-item">
+                    <span className="config-item__label">ADS-B Enabled:</span>
+                    <span className="config-item__value">
+                      {decoders.adsb.enabled ? "Yes" : "No"}
+                    </span>
+                  </div>
+                </div>
+              </Card>
+            )}
+          </>
+        );
+      }
+
       case "reception":
         return (
           <Card>
@@ -431,10 +726,9 @@ export const StatsPage = () => {
   return (
     <div className="page stats-page">
       <div className="page__header">
-        <h1 className="page__title">Statistics</h1>
+        <h1 className="page__title">System Status & Statistics</h1>
         <p className="page__description">
-          View reception statistics, signal levels, and frequency distribution
-          charts
+          Monitor system health and view reception statistics
         </p>
       </div>
 

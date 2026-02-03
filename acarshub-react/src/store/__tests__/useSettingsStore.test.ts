@@ -72,7 +72,7 @@ describe("useSettingsStore", () => {
       expect(settings.map.showOnlyUnread).toBe(false);
       expect(settings.map.showRangeRings).toBe(true);
 
-      expect(settings.advanced.persistLogs).toBe(false);
+      expect(settings.advanced.persistLogs).toBe(true);
       expect(settings.version).toBe(2);
       expect(settings.updatedAt).toBeGreaterThan(0);
     });
