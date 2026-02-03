@@ -1,0 +1,315 @@
+// Copyright (C) 2022-2026 Frederick Clausen II
+// This file is part of acarshub <https://github.com/sdr-enthusiasts/docker-acarshub>.
+
+// acarshub is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+
+// acarshub is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+
+// You should have received a copy of the GNU General Public License
+// along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
+
+@use "../../styles/variables" as *;
+@use "../../styles/mixins" as *;
+
+/**
+ * MapProviderSelector Component Styles
+ *
+ * Dropdown menu for selecting map tile provider.
+ * Inspired by tar1090's base layer selector.
+ */
+
+.map-provider-selector {
+  position: relative;
+  display: inline-block;
+
+  /**
+   * Trigger button
+   */
+  &__button {
+    @include button-reset;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background-color: var(--color-surface0);
+    border: 2px solid var(--color-overlay0);
+    border-radius: var(--border-radius-sm);
+    color: var(--color-subtext1);
+    font-size: 1rem;
+    padding: 0;
+    cursor: pointer;
+    transition:
+      background-color $transition-fast,
+      opacity $transition-fast;
+
+    &:hover {
+      background-color: var(--color-surface1);
+      color: var(--color-text);
+      border-color: var(--color-overlay2);
+    }
+
+    &:active {
+      background-color: var(--color-surface2);
+      transform: scale(0.95);
+    }
+
+    &:focus-visible {
+      @include focus-ring;
+    }
+
+    // Reduce motion support
+    @media (prefers-reduced-motion: reduce) {
+      transition: none;
+    }
+  }
+
+  /**
+   * Dropdown menu
+   */
+  &__menu {
+    position: absolute;
+    top: calc(100% + 0.5rem);
+    right: 0;
+    z-index: 1000;
+    width: 280px;
+    max-height: 500px;
+    overflow-y: auto;
+    background-color: var(--color-base);
+    border: 1px solid var(--color-overlay0);
+    border-radius: var(--border-radius);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+
+    @include scrollbar-thin;
+
+    // Animation
+    animation: map-provider-menu-slide-in 0.15s ease-out;
+
+    @keyframes map-provider-menu-slide-in {
+      from {
+        opacity: 0;
+        transform: translateY(-8px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    // Reduce motion support
+    @media (prefers-reduced-motion: reduce) {
+      animation: none;
+    }
+
+    // Mobile responsiveness
+    @include breakpoint-max(sm) {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      right: auto;
+      transform: translate(-50%, -50%);
+      width: 90vw;
+      max-width: 320px;
+      max-height: 80vh;
+
+      animation: map-provider-menu-modal-in 0.2s ease-out;
+
+      @keyframes map-provider-menu-modal-in {
+        from {
+          opacity: 0;
+          transform: translate(-50%, -50%) scale(0.95);
+        }
+        to {
+          opacity: 1;
+          transform: translate(-50%, -50%) scale(1);
+        }
+      }
+    }
+  }
+
+  /**
+   * Header
+   */
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--color-overlay0);
+    background-color: var(--color-mantle);
+  }
+
+  &__title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--color-text);
+  }
+
+  &__close {
+    @include button-reset;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    color: var(--color-subtext0);
+    font-size: 16px;
+    cursor: pointer;
+    border-radius: var(--border-radius-sm);
+    transition: color $transition-fast;
+
+    &:hover {
+      color: var(--color-text);
+      background-color: var(--color-surface0);
+    }
+
+    &:focus-visible {
+      @include focus-ring;
+    }
+  }
+
+  /**
+   * Current selection display
+   */
+  &__current {
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+    color: var(--color-subtext1);
+    border-bottom: 1px solid var(--color-overlay0);
+    background-color: var(--color-surface0);
+
+    strong {
+      color: var(--color-text);
+      font-weight: 600;
+    }
+  }
+
+  /**
+   * Provider groups
+   */
+  &__group {
+    border-bottom: 1px solid var(--color-overlay0);
+
+    &:last-of-type {
+      border-bottom: none;
+    }
+  }
+
+  &__group-title {
+    padding: 0.625rem 1rem 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-subtext0);
+    background-color: var(--color-mantle);
+  }
+
+  &__items {
+    display: flex;
+    flex-direction: column;
+  }
+
+  /**
+   * Provider items
+   */
+  &__item {
+    @include button-reset;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.625rem 1rem;
+    text-align: left;
+    font-size: 0.875rem;
+    color: var(--color-text);
+    cursor: pointer;
+    border-left: 3px solid transparent;
+    transition:
+      background-color $transition-fast,
+      color $transition-fast;
+
+    // Minimum touch target (44px)
+    min-height: 44px;
+
+    &:hover {
+      background-color: var(--color-surface0);
+      color: var(--color-text);
+    }
+
+    &:active {
+      background-color: var(--color-surface1);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--color-blue);
+      outline-offset: -2px;
+    }
+
+    // Active (selected) state
+    &--active {
+      background-color: var(--color-surface0);
+      border-left-color: var(--color-blue);
+      font-weight: 600;
+      color: var(--color-blue);
+
+      &:hover {
+        background-color: var(--color-surface1);
+      }
+    }
+
+    // Reduce motion support
+    @media (prefers-reduced-motion: reduce) {
+      transition: none;
+    }
+  }
+
+  /**
+   * Badge (e.g., "Vector")
+   */
+  &__badge {
+    display: inline-block;
+    padding: 0.125rem 0.375rem;
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-mantle);
+    background-color: var(--color-green);
+    border-radius: var(--border-radius-sm);
+  }
+
+  /**
+   * Footer
+   */
+  &__footer {
+    padding: 0.625rem 1rem;
+    font-size: 0.75rem;
+    color: var(--color-subtext0);
+    text-align: center;
+    border-top: 1px solid var(--color-overlay0);
+    background-color: var(--color-mantle);
+  }
+}
+
+/**
+ * Mobile responsiveness
+ */
+@include breakpoint-max(md) {
+  .map-provider-selector {
+    &__button {
+      width: 44px;
+      height: 44px;
+      font-size: 1.125rem;
+    }
+  }
+}

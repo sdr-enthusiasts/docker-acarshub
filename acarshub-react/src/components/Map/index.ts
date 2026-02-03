@@ -18,3 +18,4 @@ export { MapComponent } from "./Map";
 export { MapControlButton } from "./MapControlButton";
 export { MapControls } from "./MapControls";
 export { MapLegend } from "./MapLegend";
+export { MapProviderSelector } from "./MapProviderSelector";

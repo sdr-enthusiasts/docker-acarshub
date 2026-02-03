@@ -983,6 +983,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
     showExtendedDatablocks: false,
     showNexrad: false,
     showRangeRings: true,
+    showOnlyUnread: false,
   },
   advanced: {
     logLevel: "info",

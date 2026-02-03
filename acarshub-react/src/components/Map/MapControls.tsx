@@ -23,6 +23,7 @@ import {
 import { useAppStore } from "../../store/useAppStore";
 import { useSettingsStore } from "../../store/useSettingsStore";
 import { MapControlButton } from "./MapControlButton";
+import { MapProviderSelector } from "./MapProviderSelector";
 import "./MapControls.scss";
 
 /**
@@ -48,6 +49,10 @@ export function MapControls() {
 
   return (
     <div className="map-controls">
+      <div className="map-controls__group">
+        <MapProviderSelector />
+      </div>
+
       <div className="map-controls__group">
         <MapControlButton
           icon={faPlane}

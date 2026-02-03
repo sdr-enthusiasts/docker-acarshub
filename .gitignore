@@ -157,3 +157,6 @@ acarshub-react/playwright-report/
 acarshub-react/test-results/
 acarshub-react/.playwright/
 test-results
+
+# GeoJSON data files
+geojson/

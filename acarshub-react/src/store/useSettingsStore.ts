@@ -75,6 +75,7 @@ interface SettingsState {
   setShowExtendedDatablocks: (enabled: boolean) => void;
   setShowNexrad: (enabled: boolean) => void;
   setShowRangeRings: (enabled: boolean) => void;
+  setShowOnlyUnread: (enabled: boolean) => void;
 
   // Advanced actions
   setLogLevel: (level: LogLevel) => void;
@@ -380,7 +381,7 @@ export const useSettingsStore = create<SettingsState>()(
           },
         })),
 
-      setShowOnlyUnread: (show) =>
+      setShowOnlyUnread: (show: boolean) =>
         set((state) => ({
           settings: {
             ...state.settings,
