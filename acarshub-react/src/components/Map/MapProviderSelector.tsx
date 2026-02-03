@@ -49,7 +49,13 @@ export function MapProviderSelector() {
   const currentProvider = useSettingsStore(
     (state) => state.settings.map.provider,
   );
+  const userSelectedProvider = useSettingsStore(
+    (state) => state.settings.map.userSelectedProvider,
+  );
   const setMapProvider = useSettingsStore((state) => state.setMapProvider);
+  const resetMapProviderToDefault = useSettingsStore(
+    (state) => state.resetMapProviderToDefault,
+  );
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -90,6 +96,17 @@ export function MapProviderSelector() {
 
     // Mark as user-selected to prevent auto theme switching
     setMapProvider(providerId, true);
+    setIsOpen(false);
+    buttonRef.current?.focus();
+  };
+
+  const handleDefaultSelect = () => {
+    mapLogger.info("Map provider reset to default (auto theme switching)", {
+      previousProvider: currentProvider,
+    });
+
+    // Reset to default provider with auto theme switching enabled
+    resetMapProviderToDefault();
     setIsOpen(false);
     buttonRef.current?.focus();
   };
@@ -137,6 +154,24 @@ export function MapProviderSelector() {
           {/* Current selection display */}
           <div className="map-provider-selector__current">
             Current: <strong>{currentProviderName}</strong>
+          </div>
+
+          {/* Default option */}
+          <div className="map-provider-selector__group">
+            <div className="map-provider-selector__items">
+              <button
+                type="button"
+                className={`map-provider-selector__item ${
+                  !userSelectedProvider
+                    ? "map-provider-selector__item--active"
+                    : ""
+                }`}
+                onClick={handleDefaultSelect}
+                role="menuitem"
+              >
+                Default (Auto Theme)
+              </button>
+            </div>
           </div>
 
           {/* Worldwide Providers */}

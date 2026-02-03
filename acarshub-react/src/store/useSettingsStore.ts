@@ -67,6 +67,7 @@ interface SettingsState {
 
   // Map actions
   setMapProvider: (provider: MapProvider, userSelected?: boolean) => void;
+  resetMapProviderToDefault: () => void;
   setCustomTileUrl: (url: string | undefined) => void;
   setStationLocation: (lat: number, lon: number) => void;
   setRangeRings: (rings: number[]) => void;
@@ -348,6 +349,19 @@ export const useSettingsStore = create<SettingsState>()(
               ...state.settings.map,
               provider,
               userSelectedProvider: userSelected,
+            },
+            updatedAt: Date.now(),
+          },
+        })),
+
+      resetMapProviderToDefault: () =>
+        set((state) => ({
+          settings: {
+            ...state.settings,
+            map: {
+              ...state.settings.map,
+              provider: "carto_dark_all",
+              userSelectedProvider: false,
             },
             updatedAt: Date.now(),
           },

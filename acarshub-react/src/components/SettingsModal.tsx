@@ -15,7 +15,7 @@
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ALL_PROVIDERS, getProvidersByCategory } from "../config/mapProviders";
+import { ALL_PROVIDERS } from "../config/mapProviders";
 import { audioService } from "../services/audioService";
 import { useAppStore } from "../store/useAppStore";
 import { useSettingsStore, useTheme } from "../store/useSettingsStore";
@@ -941,17 +941,9 @@ export const SettingsModal = () => {
 
                 <div className="settings-form-field">
                   <Select
-                    id="map-provider-worldwide"
-                    label="Worldwide Providers"
-                    value={
-                      !userSelectedProvider
-                        ? ""
-                        : getProvidersByCategory("worldwide").some(
-                              (p) => p.id === mapProvider,
-                            )
-                          ? mapProvider
-                          : ""
-                    }
+                    id="map-provider"
+                    label="Map Provider"
+                    value={!userSelectedProvider ? "" : mapProvider}
                     onChange={(value) => {
                       if (value === "") {
                         // Reset to theme-aware mode - trigger immediate theme switch
@@ -965,43 +957,8 @@ export const SettingsModal = () => {
                       }
                     }}
                     options={[
-                      { value: "", label: "Select a provider..." },
-                      ...getProvidersByCategory("worldwide").map((p) => ({
-                        value: p.id,
-                        label: p.name,
-                      })),
-                    ]}
-                  />
-                </div>
-
-                <div className="settings-form-field">
-                  <Select
-                    id="map-provider-us"
-                    label="US Aviation Charts"
-                    value={
-                      !userSelectedProvider
-                        ? ""
-                        : getProvidersByCategory("us").some(
-                              (p) => p.id === mapProvider,
-                            )
-                          ? mapProvider
-                          : ""
-                    }
-                    onChange={(value) => {
-                      if (value === "") {
-                        // Reset to theme-aware mode - trigger immediate theme switch
-                        const themeProvider =
-                          theme === "mocha"
-                            ? "carto_dark_all"
-                            : "carto_light_all";
-                        setMapProvider(themeProvider as MapProvider, false);
-                      } else {
-                        setMapProvider(value as MapProvider);
-                      }
-                    }}
-                    options={[
-                      { value: "", label: "Select a chart..." },
-                      ...getProvidersByCategory("us").map((p) => ({
+                      { value: "", label: "Default (Theme Aware)" },
+                      ...ALL_PROVIDERS.map((p) => ({
                         value: p.id,
                         label: p.name,
                       })),
@@ -1071,7 +1028,12 @@ export const SettingsModal = () => {
             >
               <div className="settings-card__content">
                 <p className="settings-card__help">
-                  <strong>Worldwide Providers:</strong>
+                  <strong>Default (Theme Aware):</strong> Automatically switches
+                  between dark/light map variants when you change themes.
+                </p>
+
+                <p className="settings-card__help">
+                  <strong>Available Providers:</strong>
                 </p>
                 <ul className="settings-list">
                   <li>
@@ -1092,12 +1054,6 @@ export const SettingsModal = () => {
                     <strong>GIBS Clouds:</strong> NASA satellite imagery from
                     yesterday
                   </li>
-                </ul>
-
-                <p className="settings-card__help">
-                  <strong>US Aviation Charts:</strong>
-                </p>
-                <ul className="settings-list">
                   <li>
                     <strong>VFR Sectional:</strong> Visual flight rules charts
                     (zoom 8-12)
