@@ -19,128 +19,34 @@ import type {
   GeoJSONSourceSpecification,
   LineLayerSpecification,
 } from "maplibre-gl";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo } from "react";
 import { Layer, Source } from "react-map-gl/maplibre";
 import { getOverlayById } from "../../config/geojsonOverlays";
 import { useSettingsStore } from "../../store/useSettingsStore";
-import { mapLogger } from "../../utils/logger";
+
+// Stable empty array to prevent re-renders
+const EMPTY_ARRAY: string[] = [];
 
 /**
  * GeoJSONOverlays Component
  *
  * Renders enabled GeoJSON overlays on the map (aviation zones, boundaries, etc.).
- * - Lazy loads GeoJSON files only when enabled
+ * - MapLibre fetches GeoJSON files directly via URL (no manual fetch)
  * - Supports LineString and Polygon geometry types
  * - Applies custom colors and opacity from overlay configuration
- * - Handles loading states and fetch errors gracefully
  *
- * Similar to NexradOverlay but supports multiple independent layers.
+ * Similar to NexradOverlay but for GeoJSON layers.
  */
 export function GeoJSONOverlays() {
   const enabledOverlayIds = useSettingsStore(
-    (state) => state.settings.map.enabledGeoJSONOverlays || [],
+    (state) => state.settings?.map?.enabledGeoJSONOverlays || EMPTY_ARRAY,
   );
 
-  // Track loaded GeoJSON data and errors
-  const [loadedData, setLoadedData] = useState<
-    Record<string, GeoJSON.FeatureCollection>
-  >({});
-  const [errors, setErrors] = useState<Record<string, string>>({});
-
-  // Track which overlays we've attempted to fetch to prevent duplicate fetches
-  const fetchedRef = useRef<Set<string>>(new Set());
-
-  // Fetch GeoJSON data when overlays are enabled
-  useEffect(() => {
-    for (const overlayId of enabledOverlayIds) {
-      // Skip if already fetched (loading or loaded or errored)
-      if (fetchedRef.current.has(overlayId)) {
-        continue;
-      }
-
-      const overlay = getOverlayById(overlayId);
-      if (!overlay) {
-        mapLogger.warn("Unknown overlay ID", { overlayId });
-        continue;
-      }
-
-      // Mark as fetched immediately to prevent duplicate requests
-      fetchedRef.current.add(overlayId);
-
-      mapLogger.debug("Fetching GeoJSON overlay", {
-        id: overlay.id,
-        path: overlay.path,
-      });
-
-      // Fetch GeoJSON data
-      fetch(overlay.path)
-        .then((response) => {
-          if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-          }
-          return response.json();
-        })
-        .then((data: GeoJSON.FeatureCollection) => {
-          mapLogger.info("GeoJSON overlay loaded", {
-            id: overlay.id,
-            features: data.features?.length || 0,
-          });
-          setLoadedData((prev) => ({ ...prev, [overlayId]: data }));
-        })
-        .catch((error) => {
-          const errorMsg =
-            error instanceof Error ? error.message : String(error);
-          mapLogger.error("Failed to load GeoJSON overlay", {
-            id: overlay.id,
-            path: overlay.path,
-            error: errorMsg,
-          });
-          setErrors((prev) => ({ ...prev, [overlayId]: errorMsg }));
-        });
-    }
-
-    // Cleanup disabled overlays
-    const currentIds = new Set(enabledOverlayIds);
-    setLoadedData((prev) => {
-      const next = { ...prev };
-      let changed = false;
-      for (const id of Object.keys(next)) {
-        if (!currentIds.has(id)) {
-          delete next[id];
-          fetchedRef.current.delete(id);
-          changed = true;
-        }
-      }
-      return changed ? next : prev;
-    });
-    setErrors((prev) => {
-      const next = { ...prev };
-      let changed = false;
-      for (const id of Object.keys(next)) {
-        if (!currentIds.has(id)) {
-          delete next[id];
-          changed = true;
-        }
-      }
-      return changed ? next : prev;
-    });
-  }, [enabledOverlayIds]);
-
-  // Render each enabled overlay
   return (
     <>
       {enabledOverlayIds.map((overlayId) => {
         const overlay = getOverlayById(overlayId);
-        const data = loadedData[overlayId];
-        const error = errors[overlayId];
-
-        // Skip if overlay not found
         if (!overlay) {
-          return null;
-        }
-
-        // Skip if still loading or errored
-        if (!data || error) {
           return null;
         }
 
@@ -148,7 +54,7 @@ export function GeoJSONOverlays() {
           <GeoJSONOverlayLayer
             key={overlayId}
             overlayId={overlayId}
-            data={data}
+            path={overlay.path}
             color={overlay.color || "#00ff00"}
             opacity={overlay.opacity || 0.7}
           />
@@ -164,22 +70,22 @@ export function GeoJSONOverlays() {
  */
 function GeoJSONOverlayLayer({
   overlayId,
-  data,
+  path,
   color,
   opacity,
 }: {
   overlayId: string;
-  data: GeoJSON.FeatureCollection;
+  path: string;
   color: string;
   opacity: number;
 }) {
-  // GeoJSON source
+  // GeoJSON source - MapLibre fetches the URL automatically
   const source: GeoJSONSourceSpecification = useMemo(
     () => ({
       type: "geojson",
-      data,
+      data: path, // MapLibre accepts URL strings
     }),
-    [data],
+    [path],
   );
 
   // Line layer (for LineString and Polygon outlines)
