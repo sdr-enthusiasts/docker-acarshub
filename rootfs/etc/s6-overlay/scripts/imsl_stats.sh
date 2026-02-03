@@ -29,7 +29,7 @@ if chk_enabled "${ENABLE_IMSL}"; then
     while true; do
 
         # capture 5 mins of flows
-        timeout --foreground 300s socat -u TCP:127.0.0.1:35555 CREATE:/database/imsl.past5min.json 2>/dev/null || true
+        timeout --foreground 300s socat -u TCP:127.0.0.1:15557 CREATE:/database/imsl.past5min.json 2>/dev/null || true
 
         # shellcheck disable=SC2016
         echo "$(sed 's/}{/}\n{/g' /database/imsl.past5min.json | wc -l) IMSL messages received in last 5 mins" | stdbuf -oL awk '{print "[imsl_stats ] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
