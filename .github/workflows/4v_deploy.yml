@@ -47,7 +47,6 @@ jobs:
       github.event.inputs.build_latest_as_test == 'false' ||
       github.event.inputs.build_latest_as_test == ''
     uses: sdr-enthusiasts/common-github-workflows/.github/workflows/sdre.yml@main
-    needs: patch_acars_hub_version
     with:
       push_enabled: true
       push_destinations: ghcr.io
