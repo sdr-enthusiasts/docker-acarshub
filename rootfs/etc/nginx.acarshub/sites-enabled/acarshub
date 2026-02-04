@@ -51,8 +51,9 @@ server {
     add_header Cache-Control "public, immutable";
   }
 
-  # proxy pass the web socket to gunicorn
-  location /socket.io {
+  # proxy pass the web socket to gunicorn (supports any base path)
+  # Matches /socket.io or /any/path/socket.io
+  location ~ ^(.*)/socket\.io {
     proxy_pass http://127.0.0.1:8888/socket.io;
 
     # WebSocket upgrade headers (Safari compatibility)
@@ -78,8 +79,9 @@ server {
     proxy_redirect off;
   }
 
-  # proxy pass the metrics endpoint to gunicorn
-  location /metrics {
+  # proxy pass the metrics endpoint to gunicorn (supports any base path)
+  # Matches /metrics or /any/path/metrics
+  location ~ ^(.*)/metrics$ {
     proxy_pass http://127.0.0.1:8888/metrics;
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
