@@ -13,7 +13,7 @@ server {
 
   proxy_http_version 1.1;
   proxy_set_header Upgrade $http_upgrade;
-  proxy_set_header Connection $http_connection;
+  proxy_set_header Connection $connection_upgrade;
   proxy_set_header Host $host;
   proxy_set_header X-Real-IP $remote_addr;
   proxy_set_header X-Real-Port $remote_port;
@@ -54,15 +54,28 @@ server {
   # proxy pass the web socket to gunicorn
   location /socket.io {
     proxy_pass http://127.0.0.1:8888/socket.io;
-    # Explicit WebSocket upgrade headers for reverse proxy compatibility
+
+    # WebSocket upgrade headers (Safari compatibility)
     proxy_http_version 1.1;
     proxy_set_header Upgrade $http_upgrade;
-    proxy_set_header Connection "upgrade";
+    proxy_set_header Connection $connection_upgrade;
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
     proxy_set_header X-Forwarded-Host $host;
+
+    # Safari-specific WebSocket timeouts and buffering
+    proxy_connect_timeout 7d;
+    proxy_send_timeout 7d;
+    proxy_read_timeout 7d;
+
+    # Disable buffering for WebSocket (critical for Safari)
+    proxy_buffering off;
+    proxy_cache off;
+
+    # Prevent nginx from closing connections
+    proxy_redirect off;
   }
 
   # proxy pass the metrics endpoint to gunicorn

@@ -161,12 +161,13 @@ class SocketService {
 
     this.socket = io(`${document.location.origin}/main`, {
       path: `${index_acars_path}socket.io`,
-      transports: ["websocket", "polling"],
+      transports: ["polling", "websocket"],
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
       reconnectionAttempts: this.maxReconnectAttempts,
       autoConnect: true,
+      upgrade: true,
     });
 
     this.setupConnectionHandlers();
