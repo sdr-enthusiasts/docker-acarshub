@@ -55,7 +55,14 @@ interface RainViewerAPIResponse {
  *
  * Data source: https://www.rainviewer.com/api.html
  */
-export function RainViewerOverlay() {
+interface RainViewerOverlayProps {
+  /** If true, only render the timestamp (not the map layer) */
+  renderTimestampOnly?: boolean;
+}
+
+export function RainViewerOverlay({
+  renderTimestampOnly = false,
+}: RainViewerOverlayProps = {}) {
   const showRainViewer = useSettingsStore(
     (state) => state.settings.map.showRainViewer,
   );
@@ -167,19 +174,20 @@ export function RainViewerOverlay() {
     return null;
   }
 
-  return (
-    <>
-      <Source id="rainviewer-source" {...rainViewerSource}>
-        <Layer {...rainViewerLayer} />
-      </Source>
+  // If renderTimestampOnly is true, only render the timestamp
+  if (renderTimestampOnly) {
+    return timestamp ? (
+      <div className="rainviewer-timestamp">
+        <span className="rainviewer-timestamp__label">RainViewer:</span>
+        <span className="rainviewer-timestamp__time">{timestamp}</span>
+      </div>
+    ) : null;
+  }
 
-      {/* Timestamp display */}
-      {timestamp && (
-        <div className="rainviewer-timestamp">
-          <span className="rainviewer-timestamp__label">RainViewer:</span>
-          <span className="rainviewer-timestamp__time">{timestamp}</span>
-        </div>
-      )}
-    </>
+  // Otherwise, render the map layer (without timestamp)
+  return (
+    <Source id="rainviewer-source" {...rainViewerSource}>
+      <Layer {...rainViewerLayer} />
+    </Source>
   );
 }

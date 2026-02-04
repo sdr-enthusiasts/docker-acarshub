@@ -19,16 +19,17 @@
 
 .map-legend {
   position: absolute;
-  bottom: $spacing-md;
-  left: $spacing-md;
+  bottom: 0.5rem; // Align with weather timestamps
+  left: 0.5rem;
   z-index: 1000;
-  display: flex;
+  display: none; // Hide on mobile
   flex-direction: column;
   gap: $spacing-sm;
 
   @include breakpoint(md) {
-    bottom: $spacing-lg;
-    left: $spacing-lg;
+    display: flex; // Show on desktop
+    bottom: 0.5rem; // Align with weather timestamps
+    left: 0.5rem;
   }
 
   // Toggle button

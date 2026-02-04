@@ -272,7 +272,11 @@ export function MapComponent({
   }, [onLoad]);
 
   return (
-    <div className={`map-container ${className}`}>
+    <div
+      className={`map-container ${className}`}
+      data-nexrad-visible={mapSettings.showNexrad}
+      data-rainviewer-visible={mapSettings.showRainViewer}
+    >
       <MapLibreMap
         key={mapSettings.provider}
         ref={mapRef}
@@ -300,10 +304,10 @@ export function MapComponent({
         {/* Station marker (ground receiver location) */}
         <StationMarker />
 
-        {/* NEXRAD weather radar overlay */}
+        {/* NEXRAD weather radar overlay (layer only) */}
         <NexradOverlay />
 
-        {/* RainViewer weather radar overlay */}
+        {/* RainViewer weather radar overlay (layer only) */}
         <RainViewerOverlay />
 
         {/* OpenAIP aeronautical charts overlay */}
@@ -316,7 +320,9 @@ export function MapComponent({
         <AircraftMarkers hoveredAircraftHex={hoveredAircraftHex} />
       </MapLibreMap>
 
-      {/* NEXRAD overlay renders its own timestamp outside the map */}
+      {/* Weather overlay timestamps rendered outside map for proper positioning */}
+      <NexradOverlay renderTimestampOnly />
+      <RainViewerOverlay renderTimestampOnly />
     </div>
   );
 }

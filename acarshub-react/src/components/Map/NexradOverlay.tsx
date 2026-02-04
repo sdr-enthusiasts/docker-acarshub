@@ -33,7 +33,14 @@ import { useSettingsStore } from "../../store/useSettingsStore";
  *
  * Data source: https://mesonet.agron.iastate.edu/ogc/
  */
-export function NexradOverlay() {
+interface NexradOverlayProps {
+  /** If true, only render the timestamp (not the map layer) */
+  renderTimestampOnly?: boolean;
+}
+
+export function NexradOverlay({
+  renderTimestampOnly = false,
+}: NexradOverlayProps = {}) {
   const showNexrad = useSettingsStore((state) => state.settings.map.showNexrad);
 
   const [timestamp, setTimestamp] = useState<string>("");
@@ -106,19 +113,20 @@ export function NexradOverlay() {
     return null;
   }
 
-  return (
-    <>
-      <Source id="nexrad-source" {...nexradSource}>
-        <Layer {...nexradLayer} />
-      </Source>
+  // If renderTimestampOnly is true, only render the timestamp
+  if (renderTimestampOnly) {
+    return timestamp ? (
+      <div className="nexrad-timestamp">
+        <span className="nexrad-timestamp__label">NEXRAD:</span>
+        <span className="nexrad-timestamp__time">{timestamp}</span>
+      </div>
+    ) : null;
+  }
 
-      {/* Timestamp display */}
-      {timestamp && (
-        <div className="nexrad-timestamp">
-          <span className="nexrad-timestamp__label">NEXRAD:</span>
-          <span className="nexrad-timestamp__time">{timestamp}</span>
-        </div>
-      )}
-    </>
+  // Otherwise, render the map layer (without timestamp)
+  return (
+    <Source id="nexrad-source" {...nexradSource}>
+      <Layer {...nexradLayer} />
+    </Source>
   );
 }
