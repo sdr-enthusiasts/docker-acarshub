@@ -782,7 +782,13 @@ def database_search(search_term, page=0):
         if "tail" in search_term and search_term["tail"]:
             search_term["tail"] = search_term["tail"].upper()
 
-        if "station_id" in search_term and search_term["station_id"] != "":
+        # Use non-FTS search (which supports substring matching with .contains())
+        # when searching for station_id OR icao hex codes
+        # FTS5 only supports prefix matching (e.g., "AB*" finds "ABC" but not "CAB")
+        # ICAO hex searches need to match substrings (e.g., "BF3" should find "ABF308")
+        if ("station_id" in search_term and search_term["station_id"] != "") or (
+            "icao" in search_term and search_term["icao"] != ""
+        ):
             # we need to search outside of FTS
             conditions = []
             query = session.query(messages)
