@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
+import { useRef } from "react";
 import { NavLink } from "react-router-dom";
 import acarsLogo from "../assets/images/acarshub.svg";
 import {
@@ -41,9 +42,21 @@ export const Navigation = () => {
   const unreadAlertCount = useAppStore(selectUnreadAlertCount);
   const systemHasError = useAppStore(selectSystemErrorState);
   const setSettingsOpen = useAppStore((state) => state.setSettingsOpen);
+  const menuDetailsRef = useRef<HTMLDetailsElement>(null);
 
   const handleSettingsClick = () => {
     setSettingsOpen(true);
+    // Close mobile menu if open
+    if (menuDetailsRef.current) {
+      menuDetailsRef.current.open = false;
+    }
+  };
+
+  const handleMobileNavClick = () => {
+    // Close mobile menu when a link is clicked
+    if (menuDetailsRef.current) {
+      menuDetailsRef.current.open = false;
+    }
   };
 
   return (
@@ -52,26 +65,36 @@ export const Navigation = () => {
         <span className="decor"></span>
 
         {/* Mobile menu */}
-        <details className="show_when_small small_nav" id="menu_details">
+        <details
+          className="show_when_small small_nav"
+          id="menu_details"
+          ref={menuDetailsRef}
+        >
           <summary className="menu_non_link">Menu</summary>
-          <NavLink to="/live-messages">Live Messages</NavLink>
+          <NavLink to="/live-messages" onClick={handleMobileNavClick}>
+            Live Messages
+          </NavLink>
           <br />
           {adsbEnabled && (
             <>
-              <NavLink to="/adsb">Live Map</NavLink>
+              <NavLink to="/adsb" onClick={handleMobileNavClick}>
+                Live Map
+              </NavLink>
               <br />
             </>
           )}
-          <NavLink to="/search">Search Database</NavLink>
+          <NavLink to="/search" onClick={handleMobileNavClick}>
+            Search Database
+          </NavLink>
           <br />
-          <NavLink to="/alerts">
+          <NavLink to="/alerts" onClick={handleMobileNavClick}>
             Alerts
             {unreadAlertCount > 0 && (
               <span className="alert-count"> ({unreadAlertCount})</span>
             )}
           </NavLink>
           <br />
-          <NavLink to="/status">
+          <NavLink to="/status" onClick={handleMobileNavClick}>
             Status
             {systemHasError && <span className="error-indicator"> ⚠</span>}
           </NavLink>

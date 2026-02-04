@@ -33,6 +33,7 @@ import "./SearchPage.scss";
 const RESULTS_PER_PAGE = 50;
 const SEARCH_STATE_KEY = "acarshub_search_state";
 const NAVIGATION_FLAG_KEY = "acarshub_navigation_active";
+const MOBILE_BREAKPOINT = 768; // Match SCSS breakpoint
 
 // Interface for persisted search state
 interface PersistedSearchState {
@@ -140,6 +141,9 @@ export const SearchPage = () => {
   const searchDebounceTimer = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
+
+  // Results section ref for scrolling
+  const resultsRef = useRef<HTMLDivElement>(null);
 
   // Register Socket.IO listener for search results
   // Wait for socket to be initialized before subscribing
@@ -283,6 +287,18 @@ export const SearchPage = () => {
     }
 
     executeSearch(searchParams, 0);
+
+    // On mobile, scroll to results section after a short delay to allow results to load
+    if (window.innerWidth < MOBILE_BREAKPOINT) {
+      setTimeout(() => {
+        if (resultsRef.current) {
+          resultsRef.current.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+          });
+        }
+      }, 300); // Small delay to allow search to start and UI to update
+    }
   };
 
   // Clear all search fields
@@ -533,9 +549,9 @@ export const SearchPage = () => {
           </div>
         </form>
 
-        {/* Results Info */}
+        {/* Results Info - Scroll target for mobile */}
         {totalResults > 0 && (
-          <div className="search-page__results-info">
+          <div className="search-page__results-info" ref={resultsRef}>
             <p>
               Found <strong>{totalResults.toLocaleString()}</strong> result
               {totalResults !== 1 ? "s" : ""}

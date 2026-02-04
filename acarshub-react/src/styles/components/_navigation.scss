@@ -177,12 +177,12 @@
 }
 
 .small_nav {
-  padding: $spacing-md $spacing-lg;
+  padding: $spacing-sm $spacing-lg;
 
   summary {
     cursor: pointer;
     font-weight: $font-weight-bold;
-    padding: $spacing-md 0;
+    padding: $spacing-sm 0;
     list-style: none;
     color: var(--color-text);
     user-select: none;
