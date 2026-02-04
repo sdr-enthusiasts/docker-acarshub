@@ -14,6 +14,9 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
+// FIXME: Maybe? https://developer.mozilla.org/en-US/docs/Web/API/EventSource can we
+// use this + API end points for client requests, as opposed to websockets?
+
 import { io, type Socket } from "socket.io-client";
 import type {
   AcarshubVersion,
@@ -150,16 +153,19 @@ class SocketService {
     this.isInitializing = true;
 
     // Initialize socket connection
-    // The path will be proxied by nginx to the backend
-    // Backend uses /main namespace
-    this.socket = io("/main", {
-      path: "/socket.io",
+
+    const index_acars_path = document.location.pathname.replace(
+      /about|search|stats|status|alerts|adsb|live-messages/gi,
+      "",
+    );
+
+    this.socket = io(`${document.location.origin}/main`, {
+      path: `${index_acars_path}socket.io`,
       transports: ["websocket", "polling"],
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
       reconnectionAttempts: this.maxReconnectAttempts,
-      // Suppress console warnings in development
       autoConnect: true,
     });
 
@@ -185,11 +191,13 @@ class SocketService {
     if (!this.socket) return;
 
     this.socket.on("connect", () => {
-      socketLogger.info("Connected to ACARS Hub backend", {
+      socketLogger.info("✅ Connected to ACARS Hub backend", {
         socketId: this.socket?.id,
         transport: this.socket?.io.engine.transport.name,
         connected: this.socket?.connected,
         disconnected: this.socket?.disconnected,
+        // biome-ignore lint/suspicious/noExplicitAny: Socket.IO internal property not typed
+        engineUrl: (this.socket?.io as any)?.uri,
       });
     });
 
@@ -212,11 +220,15 @@ class SocketService {
     });
 
     this.socket.on("connect_error", (error: Error) => {
-      socketLogger.error("Connection error", {
+      socketLogger.error("❌ Connection error", {
         message: error.message,
         stack: error.stack,
         connected: this.socket?.connected,
         disconnected: this.socket?.disconnected,
+        // biome-ignore lint/suspicious/noExplicitAny: Socket.IO internal property not typed
+        engineUrl: (this.socket?.io as any)?.uri,
+        socketPath,
+        namespace: "/main",
       });
     });
 
