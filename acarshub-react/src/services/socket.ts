@@ -227,7 +227,6 @@ class SocketService {
         disconnected: this.socket?.disconnected,
         // biome-ignore lint/suspicious/noExplicitAny: Socket.IO internal property not typed
         engineUrl: (this.socket?.io as any)?.uri,
-        socketPath,
         namespace: "/main",
       });
     });
