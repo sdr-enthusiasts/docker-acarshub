@@ -153,14 +153,27 @@ class SocketService {
     this.isInitializing = true;
 
     // Initialize socket connection
-
+    // Calculate base path from current location (strips React Router route names)
     const index_acars_path = document.location.pathname.replace(
-      /about|search|stats|status|alerts|adsb|live-messages/gi,
+      /\/(live-messages|search|alerts|status|adsb|about)(\/.*)?$/i,
       "",
     );
 
+    // Ensure path ends with / for socket.io (unless it's empty root)
+    const socketPath = index_acars_path
+      ? `${index_acars_path}/socket.io`
+      : "/socket.io";
+
+    socketLogger.info("Initializing Socket.IO connection", {
+      origin: document.location.origin,
+      pathname: document.location.pathname,
+      basePath: index_acars_path,
+      socketPath: socketPath,
+      namespace: "/main",
+    });
+
     this.socket = io(`${document.location.origin}/main`, {
-      path: `${index_acars_path}socket.io`,
+      path: socketPath,
       transports: ["polling", "websocket"],
       reconnection: true,
       reconnectionDelay: 1000,

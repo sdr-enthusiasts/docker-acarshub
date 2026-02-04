@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useMemo } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AlertSoundManager } from "./components/AlertSoundManager.tsx";
 import { ConnectionStatus } from "./components/ConnectionStatus.tsx";
@@ -38,6 +38,16 @@ import { uiLogger } from "./utils/logger";
  * Applies user settings (animations, theme) to document root
  */
 function App() {
+  // Calculate base path for reverse proxy support
+  // Strips React Router route names to get the base path
+  const basename = useMemo(() => {
+    const path = window.location.pathname.replace(
+      /\/(live-messages|search|alerts|status|adsb|about)(\/.*)?$/i,
+      "",
+    );
+    return path || "/";
+  }, []);
+
   // Initialize Socket.IO connection and wire up event handlers
   useSocketIO();
 
@@ -87,7 +97,7 @@ function App() {
   }, [settings.appearance.theme, settings.appearance.animations]);
 
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={basename}>
       <div className="app">
         {/* Navigation header */}
         <Navigation />

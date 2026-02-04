@@ -5,7 +5,11 @@ import { nodePolyfills } from "vite-plugin-node-polyfills";
 
 // https://vite.dev/config/
 export default defineConfig({
+  // For production builds (Docker/nginx): use relative paths
   base: "./",
+
+  // For local reverse proxy testing: uncomment line below and comment out line above
+  // base: "/acarshub-test/",
   resolve: {
     alias: {
       "@": "/src",
@@ -54,15 +58,28 @@ export default defineConfig({
     host: "0.0.0.0",
     port: 3000,
     proxy: {
-      // Proxy Socket.IO requests to Flask backend
-      "/socket.io": {
+      // Proxy Socket.IO requests to Flask backend (with base path support)
+      "^/acarshub-test/socket.io": {
+        target: "http://localhost:8080",
+        changeOrigin: true,
+        ws: true,
+        rewrite: (path) => path.replace(/^\/acarshub-test/, ""),
+      },
+      // Fallback Socket.IO proxy (no base path)
+      "^/socket.io": {
         target: "http://localhost:8080",
         changeOrigin: true,
         ws: true,
         rewrite: (path) => path,
       },
-      // Proxy metrics endpoint
-      "/metrics": {
+      // Proxy metrics endpoint (with base path support)
+      "^/acarshub-test/metrics": {
+        target: "http://localhost:8080",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/acarshub-test/, ""),
+      },
+      // Fallback metrics proxy (no base path)
+      "^/metrics": {
         target: "http://localhost:8080",
         changeOrigin: true,
       },
