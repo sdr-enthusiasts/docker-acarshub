@@ -184,14 +184,14 @@ describe("alertMatching", () => {
         expect(result.matchedIcao).toContain("abf");
       });
 
-      it("should not match non-prefix ICAO", () => {
+      it("should match ICAO substring (not just prefix)", () => {
         const message = createMessage({ icao_hex: "ABF308" });
         const alertTerms: Terms = { terms: ["F308"], ignore: [] };
 
         const result = checkMessageForAlerts(message, alertTerms);
 
-        expect(result.matched).toBe(false);
-        expect(result.matchedIcao).toEqual([]);
+        expect(result.matched).toBe(true);
+        expect(result.matchedIcao).toEqual(["F308"]);
       });
 
       it("should handle ICAO from icao field (numeric)", () => {
