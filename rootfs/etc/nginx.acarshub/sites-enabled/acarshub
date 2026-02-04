@@ -54,7 +54,8 @@ server {
   # proxy pass the web socket to gunicorn (supports any base path)
   # Matches /socket.io or /any/path/socket.io
   location ~ ^(.*)/socket\.io {
-    proxy_pass http://127.0.0.1:8888/socket.io;
+    rewrite ^(.*)/socket\.io(.*)$ /socket.io$2 break;
+    proxy_pass http://127.0.0.1:8888;
 
     # WebSocket upgrade headers (Safari compatibility)
     proxy_http_version 1.1;
@@ -82,7 +83,8 @@ server {
   # proxy pass the metrics endpoint to gunicorn (supports any base path)
   # Matches /metrics or /any/path/metrics
   location ~ ^(.*)/metrics$ {
-    proxy_pass http://127.0.0.1:8888/metrics;
+    rewrite ^(.*)/metrics$ /metrics break;
+    proxy_pass http://127.0.0.1:8888;
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
