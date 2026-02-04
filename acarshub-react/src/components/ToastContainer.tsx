@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useAppStore } from "../store/useAppStore";
 import { useSettingsStore } from "../store/useSettingsStore";
 import { uiLogger } from "../utils/logger";
@@ -103,11 +103,11 @@ export const ToastContainer = () => {
     previousAlertCount.current = alertCount;
   }, [alertCount, messageGroups, onPageAlerts]);
 
-  const handleDismiss = (id: string) => {
+  const handleDismiss = useCallback((id: string) => {
     toasts.current = toasts.current.filter((toast) => toast.id !== id);
     forceUpdate((prev) => ({ ...prev }));
     uiLogger.debug("Toast dismissed", { toastId: id });
-  };
+  }, []);
 
   // Don't render container if on-page alerts are disabled or no toasts
   if (!onPageAlerts || toasts.current.length === 0) {

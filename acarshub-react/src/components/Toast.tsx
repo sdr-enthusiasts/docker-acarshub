@@ -65,14 +65,18 @@ export const Toast = ({
 
     // Auto-dismiss after duration
     const dismissTimer = setTimeout(() => {
-      handleDismiss();
+      setIsExiting(true);
+      // Wait for exit animation to complete before removing from DOM
+      setTimeout(() => {
+        onDismiss(id);
+      }, 300);
     }, duration);
 
     return () => {
       clearTimeout(showTimer);
       clearTimeout(dismissTimer);
     };
-  }, [duration, handleDismiss]);
+  }, [duration, id, onDismiss]);
 
   return (
     <div
