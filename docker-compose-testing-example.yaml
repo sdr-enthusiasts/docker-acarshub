@@ -9,7 +9,7 @@ services:
     ports:
       - 8085:80
     environment:
-      - ENABLE_VDLM=external
+      - ENABLE_VDLM=true
       - ENABLE_ACARS=true
       - ENABLE_HFDL=true
       - ENABLE_IMSL=true
@@ -22,7 +22,6 @@ services:
       - ADSB_LON=-106.715
       - ADSB_URL=http://192.168.31.20/tar1090/data/aircraft.json
       - ADSB_BYPASS_URL=true
-      #- MIN_LOG_LEVEL=5
       - DB_SAVE_DAYS=1000
       - DB_ALERT_SAVE_DAYS=1000
     volumes:
@@ -33,7 +32,7 @@ services:
       - /var/log
 
   acars_router:
-    image: ghcr.io/sdr-enthusiasts/acars_router:trixie-latest-build-3
+    image: ghcr.io/sdr-enthusiasts/acars_router:latest
     tty: true
     ports:
       - 15550:15550
