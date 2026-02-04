@@ -78,6 +78,8 @@ interface SettingsState {
   setShowNexrad: (enabled: boolean) => void;
   setShowRangeRings: (enabled: boolean) => void;
   setShowOnlyUnread: (enabled: boolean) => void;
+  setShowOnlyMilitary: (enabled: boolean) => void;
+  setShowOnlyInteresting: (enabled: boolean) => void;
 
   // GeoJSON overlay actions
   setGeoJSONOverlay: (overlayId: string, enabled: boolean) => void;
@@ -147,6 +149,8 @@ const getDefaultSettings = (): UserSettings => {
       showNexrad: false,
       showRangeRings: true,
       showOnlyUnread: false,
+      showOnlyMilitary: false,
+      showOnlyInteresting: false,
       enabledGeoJSONOverlays: [],
     },
     advanced: {
@@ -154,7 +158,7 @@ const getDefaultSettings = (): UserSettings => {
       persistLogs: true,
     },
     updatedAt: Date.now(),
-    version: 2,
+    version: 3,
   };
   return defaults;
 };
@@ -461,6 +465,24 @@ export const useSettingsStore = create<SettingsState>()(
           },
         })),
 
+      setShowOnlyMilitary: (enabled) =>
+        set((state) => ({
+          settings: {
+            ...state.settings,
+            map: { ...state.settings.map, showOnlyMilitary: enabled },
+            updatedAt: Date.now(),
+          },
+        })),
+
+      setShowOnlyInteresting: (enabled) =>
+        set((state) => ({
+          settings: {
+            ...state.settings,
+            map: { ...state.settings.map, showOnlyInteresting: enabled },
+            updatedAt: Date.now(),
+          },
+        })),
+
       // GeoJSON overlay actions
       setGeoJSONOverlay: (overlayId, enabled) =>
         set((state) => {
@@ -620,7 +642,7 @@ export const useSettingsStore = create<SettingsState>()(
             settings: {
               ...imported,
               updatedAt: Date.now(),
-              version: 2, // Current version
+              version: 3, // Current version
             },
           });
 
@@ -633,17 +655,17 @@ export const useSettingsStore = create<SettingsState>()(
     }),
     {
       name: "acarshub-settings",
-      version: 2,
+      version: 3,
       // Migrate old settings if needed
       migrate: (persistedState: unknown, version: number) => {
         const state = persistedState as SettingsState;
 
-        // Version 0 -> 2: Reset to defaults
+        // Version 0 -> 3: Reset to defaults
         if (version === 0) {
           return { settings: getDefaultSettings() };
         }
 
-        // Version 1 -> 2: Add map settings and advanced settings
+        // Version 1 -> 3: Add map settings and advanced settings
         if (version === 1) {
           const defaults = getDefaultSettings();
           return {
@@ -652,7 +674,23 @@ export const useSettingsStore = create<SettingsState>()(
               ...state.settings,
               map: defaults.map,
               advanced: defaults.advanced,
-              version: 2,
+              version: 3,
+            },
+          };
+        }
+
+        // Version 2 -> 3: Add showOnlyMilitary and showOnlyInteresting to map settings
+        if (version === 2) {
+          return {
+            ...state,
+            settings: {
+              ...state.settings,
+              map: {
+                ...state.settings.map,
+                showOnlyMilitary: false,
+                showOnlyInteresting: false,
+              },
+              version: 3,
             },
           };
         }

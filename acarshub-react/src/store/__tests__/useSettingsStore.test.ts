@@ -72,7 +72,7 @@ describe("useSettingsStore", () => {
       expect(settings.map.showRangeRings).toBe(true);
 
       expect(settings.advanced.persistLogs).toBe(true);
-      expect(settings.version).toBe(2);
+      expect(settings.version).toBe(3);
       expect(settings.updatedAt).toBeGreaterThan(0);
     });
 
@@ -543,7 +543,7 @@ describe("useSettingsStore", () => {
       expect(typeof exported).toBe("string");
       const parsed = JSON.parse(exported) as UserSettings;
       expect(parsed.appearance.theme).toBe("latte");
-      expect(parsed.version).toBe(2);
+      expect(parsed.version).toBe(3);
     });
 
     it("should import valid settings JSON", () => {
@@ -594,7 +594,7 @@ describe("useSettingsStore", () => {
           persistLogs: true,
         },
         updatedAt: Date.now(),
-        version: 2,
+        version: 3,
       };
 
       const result = importSettings(JSON.stringify(validSettings));
@@ -701,7 +701,7 @@ describe("useSettingsStore", () => {
       const afterImport = Date.now();
 
       const { settings } = useSettingsStore.getState();
-      expect(settings.version).toBe(2); // Updated to current version
+      expect(settings.version).toBe(3); // Updated to current version
       expect(settings.updatedAt).toBeGreaterThanOrEqual(beforeImport);
       expect(settings.updatedAt).toBeLessThanOrEqual(afterImport);
     });
@@ -748,7 +748,7 @@ describe("useSettingsStore", () => {
   });
 
   describe("Migration Logic", () => {
-    it("should migrate from version 0 to version 2 (reset to defaults)", () => {
+    it("should migrate from version 0 to version 3 (reset to defaults)", () => {
       // biome-ignore lint/suspicious/noExplicitAny: Zustand persist API doesn't expose migrate type
       const { migrate } = (useSettingsStore as any).persist.getOptions();
 
@@ -761,13 +761,13 @@ describe("useSettingsStore", () => {
 
       const migrated = migrate(oldState, 0);
 
-      expect(migrated.settings.version).toBe(2);
+      expect(migrated.settings.version).toBe(3);
       expect(migrated.settings.appearance.theme).toBe("mocha"); // Reset to default
       expect(migrated.settings.map).toBeDefined();
       expect(migrated.settings.advanced).toBeDefined();
     });
 
-    it("should migrate from version 1 to version 2 (add map and advanced)", () => {
+    it("should migrate from version 1 to version 3 (add map and advanced)", () => {
       // biome-ignore lint/suspicious/noExplicitAny: Zustand persist API doesn't expose migrate type
       const { migrate } = (useSettingsStore as any).persist.getOptions();
 
@@ -804,7 +804,7 @@ describe("useSettingsStore", () => {
 
       const migrated = migrate(v1State, 1);
 
-      expect(migrated.settings.version).toBe(2);
+      expect(migrated.settings.version).toBe(3);
       // Existing settings preserved
       expect(migrated.settings.appearance.theme).toBe("latte");
       expect(migrated.settings.regional.timeFormat).toBe("24h");
@@ -959,7 +959,7 @@ describe("useSettingsStore", () => {
       if (!stored) throw new Error("Expected stored to be truthy");
       const parsed = JSON.parse(stored);
 
-      expect(parsed.version).toBe(2);
+      expect(parsed.version).toBe(3);
     });
   });
 

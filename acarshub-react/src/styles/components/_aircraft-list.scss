@@ -103,24 +103,109 @@
   }
 }
 
-.aircraft-list__filter-toggles {
+// Filter Dropdown
+.aircraft-list__filter-dropdown {
+  position: relative;
+}
+
+.aircraft-list__filter-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  background-color: var(--color-base);
+  border: 1px solid var(--color-surface2);
+  border-radius: 6px;
+  color: var(--color-text);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+
+  &:hover {
+    border-color: var(--color-blue);
+    background-color: var(--color-surface0);
+  }
+
+  &--open {
+    border-color: var(--color-blue);
+    background-color: var(--color-surface0);
+  }
+
+  svg:first-child {
+    color: var(--color-blue);
+  }
+}
+
+.aircraft-list__filter-badge {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  background-color: var(--color-blue);
+  color: var(--color-base);
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 10px;
+}
+
+.aircraft-list__filter-chevron {
+  font-size: 0.75rem;
+  color: var(--color-subtext0);
+  transition: transform 0.15s ease;
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+
+  .aircraft-list__filter-button--open & {
+    transform: rotate(180deg);
+  }
+}
+
+.aircraft-list__filter-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background-color: var(--color-surface0);
+  border: 1px solid var(--color-surface2);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 100;
+  padding: 0.5rem;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-
-  @include breakpoint(md) {
-    flex-direction: row;
-  }
 }
 
 .aircraft-list__filter-toggle {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  padding: 0.5rem;
   font-size: 0.875rem;
   color: var(--color-text);
   cursor: pointer;
   user-select: none;
+  border-radius: 4px;
+  transition: background-color 0.15s ease;
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+
+  &:hover {
+    background-color: var(--color-surface1);
+  }
 
   input[type="checkbox"] {
     width: 18px;
@@ -129,8 +214,35 @@
     accent-color: var(--color-blue);
   }
 
+  span {
+    flex: 1;
+  }
+}
+
+.aircraft-list__filter-divider {
+  height: 1px;
+  background-color: var(--color-surface2);
+  margin: 0.25rem 0;
+}
+
+.aircraft-list__filter-clear {
+  padding: 0.5rem;
+  background-color: transparent;
+  border: none;
+  border-radius: 4px;
+  color: var(--color-red);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  transition: background-color 0.15s ease;
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+
   &:hover {
-    color: var(--color-blue);
+    background-color: var(--color-surface1);
   }
 }
 

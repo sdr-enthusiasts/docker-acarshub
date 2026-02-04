@@ -14,7 +14,9 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-import { useMemo, useState } from "react";
+import { faChevronDown, faFilter } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useAppStore } from "../../store/useAppStore";
 import { useSettingsStore } from "../../store/useSettingsStore";
 import type { PairedAircraft } from "../../utils/aircraftPairing";
@@ -92,6 +94,38 @@ export function AircraftList({
     return saved === "true";
   });
 
+  const [showMilitaryOnly, setShowMilitaryOnly] = useState(() => {
+    const saved = localStorage.getItem("aircraftList.showMilitaryOnly");
+    return saved === "true";
+  });
+
+  const [showInterestingOnly, setShowInterestingOnly] = useState(() => {
+    const saved = localStorage.getItem("aircraftList.showInterestingOnly");
+    return saved === "true";
+  });
+
+  const [filterDropdownOpen, setFilterDropdownOpen] = useState(false);
+  const filterDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        filterDropdownRef.current &&
+        !filterDropdownRef.current.contains(event.target as Node)
+      ) {
+        setFilterDropdownOpen(false);
+      }
+    };
+
+    if (filterDropdownOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => {
+        document.removeEventListener("mousedown", handleClickOutside);
+      };
+    }
+  }, [filterDropdownOpen]);
+
   const [sortField, setSortField] = useState<SortField>(() => {
     return (
       (localStorage.getItem("aircraftList.sortField") as SortField) ||
@@ -125,6 +159,16 @@ export function AircraftList({
   const handleShowUnreadOnlyChange = (value: boolean) => {
     setShowUnreadOnly(value);
     localStorage.setItem("aircraftList.showUnreadOnly", String(value));
+  };
+
+  const handleShowMilitaryOnlyChange = (value: boolean) => {
+    setShowMilitaryOnly(value);
+    localStorage.setItem("aircraftList.showMilitaryOnly", String(value));
+  };
+
+  const handleShowInterestingOnlyChange = (value: boolean) => {
+    setShowInterestingOnly(value);
+    localStorage.setItem("aircraftList.showInterestingOnly", String(value));
   };
 
   const handleMarkAllAsRead = () => {
@@ -203,6 +247,26 @@ export function AircraftList({
       });
     }
 
+    // Military-only filter (dbFlags & 1)
+    if (showMilitaryOnly) {
+      filtered = filtered.filter((a) => {
+        if (a.dbFlags === undefined || a.dbFlags === null) return false;
+        const flags =
+          typeof a.dbFlags === "string" ? parseInt(a.dbFlags, 10) : a.dbFlags;
+        return !Number.isNaN(flags) && (flags & 1) !== 0;
+      });
+    }
+
+    // Interesting-only filter (dbFlags & 2)
+    if (showInterestingOnly) {
+      filtered = filtered.filter((a) => {
+        if (a.dbFlags === undefined || a.dbFlags === null) return false;
+        const flags =
+          typeof a.dbFlags === "string" ? parseInt(a.dbFlags, 10) : a.dbFlags;
+        return !Number.isNaN(flags) && (flags & 2) !== 0;
+      });
+    }
+
     return filtered;
   }, [
     aircraft,
@@ -210,6 +274,8 @@ export function AircraftList({
     showAcarsOnly,
     showAlertsOnly,
     showUnreadOnly,
+    showMilitaryOnly,
+    showInterestingOnly,
     readMessageUids,
   ]);
 
@@ -271,14 +337,31 @@ export function AircraftList({
     setShowAcarsOnly(false);
     setShowAlertsOnly(false);
     setShowUnreadOnly(false);
+    setShowMilitaryOnly(false);
+    setShowInterestingOnly(false);
     localStorage.removeItem("aircraftList.textFilter");
     localStorage.removeItem("aircraftList.showAcarsOnly");
     localStorage.removeItem("aircraftList.showAlertsOnly");
     localStorage.removeItem("aircraftList.showUnreadOnly");
+    localStorage.removeItem("aircraftList.showMilitaryOnly");
+    localStorage.removeItem("aircraftList.showInterestingOnly");
   };
 
   const hasActiveFilters =
-    textFilter || showAcarsOnly || showAlertsOnly || showUnreadOnly;
+    textFilter ||
+    showAcarsOnly ||
+    showAlertsOnly ||
+    showUnreadOnly ||
+    showMilitaryOnly ||
+    showInterestingOnly;
+
+  const activeFilterCount = [
+    showAcarsOnly,
+    showAlertsOnly,
+    showUnreadOnly,
+    showMilitaryOnly,
+    showInterestingOnly,
+  ].filter(Boolean).length;
 
   return (
     <div className="aircraft-list">
@@ -307,33 +390,95 @@ export function AircraftList({
           onChange={(e) => handleTextFilterChange(e.target.value)}
         />
 
-        <div className="aircraft-list__filter-toggles">
-          <label className="aircraft-list__filter-toggle">
-            <input
-              type="checkbox"
-              checked={showAcarsOnly}
-              onChange={(e) => handleShowAcarsOnlyChange(e.target.checked)}
+        <div className="aircraft-list__filter-dropdown" ref={filterDropdownRef}>
+          <button
+            type="button"
+            className={`aircraft-list__filter-button ${filterDropdownOpen ? "aircraft-list__filter-button--open" : ""}`}
+            onClick={() => setFilterDropdownOpen(!filterDropdownOpen)}
+            aria-label="Filter aircraft"
+            aria-expanded={filterDropdownOpen}
+          >
+            <FontAwesomeIcon icon={faFilter} />
+            <span>Filters</span>
+            {activeFilterCount > 0 && (
+              <span className="aircraft-list__filter-badge">
+                {activeFilterCount}
+              </span>
+            )}
+            <FontAwesomeIcon
+              icon={faChevronDown}
+              className="aircraft-list__filter-chevron"
             />
-            <span>ACARS</span>
-          </label>
+          </button>
 
-          <label className="aircraft-list__filter-toggle">
-            <input
-              type="checkbox"
-              checked={showAlertsOnly}
-              onChange={(e) => handleShowAlertsOnlyChange(e.target.checked)}
-            />
-            <span>Alerts</span>
-          </label>
+          {filterDropdownOpen && (
+            <div className="aircraft-list__filter-menu">
+              <label className="aircraft-list__filter-toggle">
+                <input
+                  type="checkbox"
+                  checked={showAcarsOnly}
+                  onChange={(e) => handleShowAcarsOnlyChange(e.target.checked)}
+                />
+                <span>ACARS Messages</span>
+              </label>
 
-          <label className="aircraft-list__filter-toggle">
-            <input
-              type="checkbox"
-              checked={showUnreadOnly}
-              onChange={(e) => handleShowUnreadOnlyChange(e.target.checked)}
-            />
-            <span>Unread</span>
-          </label>
+              <label className="aircraft-list__filter-toggle">
+                <input
+                  type="checkbox"
+                  checked={showAlertsOnly}
+                  onChange={(e) => handleShowAlertsOnlyChange(e.target.checked)}
+                />
+                <span>Alerts Only</span>
+              </label>
+
+              <label className="aircraft-list__filter-toggle">
+                <input
+                  type="checkbox"
+                  checked={showUnreadOnly}
+                  onChange={(e) => handleShowUnreadOnlyChange(e.target.checked)}
+                />
+                <span>Unread Messages</span>
+              </label>
+
+              <label className="aircraft-list__filter-toggle">
+                <input
+                  type="checkbox"
+                  checked={showMilitaryOnly}
+                  onChange={(e) =>
+                    handleShowMilitaryOnlyChange(e.target.checked)
+                  }
+                />
+                <span>Military Aircraft</span>
+              </label>
+
+              <label className="aircraft-list__filter-toggle">
+                <input
+                  type="checkbox"
+                  checked={showInterestingOnly}
+                  onChange={(e) =>
+                    handleShowInterestingOnlyChange(e.target.checked)
+                  }
+                />
+                <span>Interesting Aircraft</span>
+              </label>
+
+              {hasActiveFilters && (
+                <>
+                  <div className="aircraft-list__filter-divider" />
+                  <button
+                    type="button"
+                    className="aircraft-list__filter-clear"
+                    onClick={() => {
+                      handleClearFilters();
+                      setFilterDropdownOpen(false);
+                    }}
+                  >
+                    Clear All Filters
+                  </button>
+                </>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="aircraft-list__actions">

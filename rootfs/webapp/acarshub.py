@@ -206,7 +206,7 @@ def get_cached(func, validSecs):
 def optimize_adsb_data(raw_data):
     """
     Optimize ADS-B aircraft.json data by pruning unused fields.
-    Reduces payload from ~52 fields to 13 essential fields.
+    Reduces payload from ~52 fields to 14 essential fields.
 
     Args:
         raw_data: Raw aircraft.json response dict
@@ -214,7 +214,7 @@ def optimize_adsb_data(raw_data):
     Returns:
         Optimized dict with 'now' timestamp and trimmed 'aircraft' list
     """
-    # Fields actually used by frontend (13 of ~52 total)
+    # Fields actually used by frontend (14 of ~52 total)
     keep_fields = [
         "hex",  # ICAO hex code (required, unique ID)
         "flight",  # Callsign
@@ -229,6 +229,7 @@ def optimize_adsb_data(raw_data):
         "t",  # Tail/registration
         "type",  # Aircraft type
         "seen",  # Seconds since last update
+        "dbFlags",  # Database flags (military=1, interesting=2, PIA=4, LADD=8)
     ]
 
     aircraft = []

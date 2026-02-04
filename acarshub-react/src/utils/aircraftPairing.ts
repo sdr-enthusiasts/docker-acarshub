@@ -32,6 +32,7 @@ export interface PairedAircraft {
   track?: number; // Heading
   category?: string; // Aircraft category (string in ADSBAircraft)
   type?: string; // Aircraft type code (from 't' or 'type' field)
+  dbFlags?: number; // Bitfield: military=1, interesting=2, PIA=4, LADD=8
 
   // ACARS pairing data
   hasMessages: boolean;
@@ -156,6 +157,7 @@ export function pairADSBWithACARSMessages(
       track: aircraft.track,
       category: aircraft.category,
       type: aircraft.t || aircraft.type, // 't' field contains aircraft type
+      dbFlags: aircraft.dbFlags, // Bitfield: military=1, interesting=2, PIA=4, LADD=8
       hasMessages: group !== undefined && group.messages.length > 0,
       hasAlerts: group?.has_alerts || false,
       messageCount: group?.messages.length || 0,

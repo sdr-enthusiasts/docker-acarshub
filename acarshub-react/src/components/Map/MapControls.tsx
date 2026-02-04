@@ -18,7 +18,9 @@ import {
   faCircleDot,
   faCloudSunRain,
   faEnvelope,
+  faFighterJet,
   faPlane,
+  faStar,
 } from "@fortawesome/free-solid-svg-icons";
 import { useAppStore } from "../../store/useAppStore";
 import { useSettingsStore } from "../../store/useSettingsStore";
@@ -44,37 +46,34 @@ export function MapControls() {
   const setShowOnlyUnread = useSettingsStore(
     (state) => state.setShowOnlyUnread,
   );
+  const setShowOnlyMilitary = useSettingsStore(
+    (state) => state.setShowOnlyMilitary,
+  );
+  const setShowOnlyInteresting = useSettingsStore(
+    (state) => state.setShowOnlyInteresting,
+  );
 
   // Check if range rings are allowed by backend (privacy protection)
   const backendAllowsRangeRings = decoders?.adsb?.range_rings ?? true;
 
   return (
     <div className="map-controls">
+      {/* Map Layers: Map Provider + GeoJSON */}
       <div className="map-controls__group">
         <MapProviderSelector />
+        <GeoJSONOverlayButton />
       </div>
 
+      {/* Map Overlays: Range Rings + NEXRAD */}
       <div className="map-controls__group">
-        <MapControlButton
-          icon={faPlane}
-          active={mapSettings.showOnlyAcars}
-          onClick={() => setShowOnlyAcars(!mapSettings.showOnlyAcars)}
-          tooltip="Show Only Aircraft with ACARS"
-        />
-      </div>
-
-      {backendAllowsRangeRings && (
-        <div className="map-controls__group">
+        {backendAllowsRangeRings && (
           <MapControlButton
             icon={faCircleDot}
             active={mapSettings.showRangeRings}
             onClick={() => setShowRangeRings(!mapSettings.showRangeRings)}
             tooltip="Show Range Rings"
           />
-        </div>
-      )}
-
-      <div className="map-controls__group">
+        )}
         <MapControlButton
           icon={faCloudSunRain}
           active={mapSettings.showNexrad}
@@ -83,16 +82,33 @@ export function MapControls() {
         />
       </div>
 
+      {/* Aircraft Filters: ACARS + Unread + Military + Interesting */}
       <div className="map-controls__group">
-        <GeoJSONOverlayButton />
-      </div>
-
-      <div className="map-controls__group">
+        <MapControlButton
+          icon={faPlane}
+          active={mapSettings.showOnlyAcars}
+          onClick={() => setShowOnlyAcars(!mapSettings.showOnlyAcars)}
+          tooltip="Show Only Aircraft with ACARS"
+        />
         <MapControlButton
           icon={faEnvelope}
           active={mapSettings.showOnlyUnread}
           onClick={() => setShowOnlyUnread(!mapSettings.showOnlyUnread)}
           tooltip="Show Only Aircraft with Unread Messages"
+        />
+        <MapControlButton
+          icon={faFighterJet}
+          active={mapSettings.showOnlyMilitary}
+          onClick={() => setShowOnlyMilitary(!mapSettings.showOnlyMilitary)}
+          tooltip="Show Only Military Aircraft"
+        />
+        <MapControlButton
+          icon={faStar}
+          active={mapSettings.showOnlyInteresting}
+          onClick={() =>
+            setShowOnlyInteresting(!mapSettings.showOnlyInteresting)
+          }
+          tooltip="Show Only Interesting Aircraft"
         />
       </div>
     </div>

@@ -112,11 +112,33 @@ export function AircraftMarkers({
       });
     }
 
+    // Filter: Show only military aircraft (dbFlags & 1)
+    if (mapSettings.showOnlyMilitary) {
+      filtered = filtered.filter((a) => {
+        if (a.dbFlags === undefined || a.dbFlags === null) return false;
+        const flags =
+          typeof a.dbFlags === "string" ? parseInt(a.dbFlags, 10) : a.dbFlags;
+        return !Number.isNaN(flags) && (flags & 1) !== 0;
+      });
+    }
+
+    // Filter: Show only interesting aircraft (dbFlags & 2)
+    if (mapSettings.showOnlyInteresting) {
+      filtered = filtered.filter((a) => {
+        if (a.dbFlags === undefined || a.dbFlags === null) return false;
+        const flags =
+          typeof a.dbFlags === "string" ? parseInt(a.dbFlags, 10) : a.dbFlags;
+        return !Number.isNaN(flags) && (flags & 2) !== 0;
+      });
+    }
+
     return filtered;
   }, [
     pairedAircraft,
     mapSettings.showOnlyAcars,
     mapSettings.showOnlyUnread,
+    mapSettings.showOnlyMilitary,
+    mapSettings.showOnlyInteresting,
     readMessageUids,
   ]);
 

@@ -129,6 +129,7 @@ export interface ADSBAircraft {
   r?: string; // Registration/tail number
   type?: string; // Aircraft type (usually same as t)
   seen?: number; // Seconds since last update
+  dbFlags?: number; // Bitfield: military=1, interesting=2, PIA=4, LADD=8
 }
 
 export interface ADSBData {
@@ -425,6 +426,7 @@ export interface AdsbPlane {
   tat?: number;
   t?: string;
   r?: string;
+  dbFlags?: number; // Bitfield: military=1, interesting=2, PIA=4, LADD=8
 }
 
 export interface AdsbStatus {
@@ -895,6 +897,10 @@ export interface MapSettings {
   showRangeRings: boolean;
   /** Show only aircraft with unread messages */
   showOnlyUnread: boolean;
+  /** Show only military aircraft (dbFlags & 1) */
+  showOnlyMilitary: boolean;
+  /** Show only interesting aircraft (dbFlags & 2) */
+  showOnlyInteresting: boolean;
   /** Enabled GeoJSON overlay IDs */
   enabledGeoJSONOverlays: string[];
 }
@@ -1016,6 +1022,8 @@ export const DEFAULT_SETTINGS: UserSettings = {
     showNexrad: false,
     showRangeRings: true,
     showOnlyUnread: false,
+    showOnlyMilitary: false,
+    showOnlyInteresting: false,
     enabledGeoJSONOverlays: [],
   },
   advanced: {
@@ -1023,7 +1031,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
     persistLogs: false,
   },
   updatedAt: Date.now(),
-  version: 2,
+  version: 3,
 };
 
 /**
