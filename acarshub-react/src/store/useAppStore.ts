@@ -62,7 +62,7 @@ interface AppState {
     desktop: boolean;
     sound: boolean;
     volume: number;
-    alertsOnly: boolean;
+    onPageAlerts: boolean;
   };
 
   // Unread message tracking
@@ -199,7 +199,7 @@ export const useAppStore = create<AppState>((set, get) => {
       desktop: useSettingsStore.getState().settings.notifications.desktop,
       sound: false,
       volume: 50,
-      alertsOnly: false,
+      onPageAlerts: false,
     },
     addMessage: (message) =>
       set((state) => {
@@ -233,8 +233,8 @@ export const useAppStore = create<AppState>((set, get) => {
         const notifications = {
           ...state.notifications,
           desktop: useSettingsStore.getState().settings.notifications.desktop,
-          alertsOnly:
-            useSettingsStore.getState().settings.notifications.alertsOnly,
+          onPageAlerts:
+            useSettingsStore.getState().settings.notifications.onPageAlerts,
         };
 
         // Trigger desktop notification if enabled (after alert matching is complete)

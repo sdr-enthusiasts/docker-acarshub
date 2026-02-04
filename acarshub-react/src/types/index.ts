@@ -758,8 +758,8 @@ export interface NotificationSettings {
   sound: boolean;
   /** Sound volume (0-100) */
   volume: number;
-  /** Only notify for alert matches */
-  alertsOnly: boolean;
+  /** Show on-page toast notifications for alert matches */
+  onPageAlerts: boolean;
 }
 
 /**
@@ -1002,7 +1002,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
     desktop: false,
     sound: false,
     volume: 50,
-    alertsOnly: true,
+    onPageAlerts: false,
   },
   data: {
     maxMessagesPerAircraft: 50,

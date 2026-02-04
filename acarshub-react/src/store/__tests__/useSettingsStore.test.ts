@@ -52,7 +52,7 @@ describe("useSettingsStore", () => {
       expect(settings.notifications.desktop).toBe(false);
       expect(settings.notifications.sound).toBe(false);
       expect(settings.notifications.volume).toBe(50);
-      expect(settings.notifications.alertsOnly).toBe(true);
+      expect(settings.notifications.onPageAlerts).toBe(false);
 
       expect(settings.data.maxMessagesPerAircraft).toBe(50);
       expect(settings.data.maxMessageGroups).toBe(50);
@@ -246,13 +246,13 @@ describe("useSettingsStore", () => {
       expect(settings.notifications.volume).toBe(100);
     });
 
-    it("should update alertsOnly", () => {
-      const { setAlertsOnly } = useSettingsStore.getState();
+    it("should update onPageAlerts", () => {
+      const { setOnPageAlerts } = useSettingsStore.getState();
 
-      setAlertsOnly(false);
+      setOnPageAlerts(false);
 
       const { settings } = useSettingsStore.getState();
-      expect(settings.notifications.alertsOnly).toBe(false);
+      expect(settings.notifications.onPageAlerts).toBe(false);
     });
 
     it("should batch update notification settings", () => {
@@ -262,14 +262,14 @@ describe("useSettingsStore", () => {
         desktop: true,
         sound: true,
         volume: 80,
-        alertsOnly: false,
+        onPageAlerts: false,
       });
 
       const { settings } = useSettingsStore.getState();
       expect(settings.notifications.desktop).toBe(true);
       expect(settings.notifications.sound).toBe(true);
       expect(settings.notifications.volume).toBe(80);
-      expect(settings.notifications.alertsOnly).toBe(false);
+      expect(settings.notifications.onPageAlerts).toBe(false);
     });
   });
 
@@ -565,7 +565,7 @@ describe("useSettingsStore", () => {
           desktop: true,
           sound: true,
           volume: 75,
-          alertsOnly: false,
+          onPageAlerts: false,
         },
         data: {
           maxMessagesPerAircraft: 100,
@@ -664,7 +664,7 @@ describe("useSettingsStore", () => {
           desktop: false,
           sound: false,
           volume: 50,
-          alertsOnly: true,
+          onPageAlerts: false,
         },
         data: {
           maxMessagesPerAircraft: 50,
@@ -788,7 +788,7 @@ describe("useSettingsStore", () => {
             desktop: true,
             sound: true,
             volume: 80,
-            alertsOnly: false,
+            onPageAlerts: false,
           },
           data: {
             maxMessagesPerAircraft: 100,
@@ -838,7 +838,7 @@ describe("useSettingsStore", () => {
             desktop: false,
             sound: false,
             volume: 50,
-            alertsOnly: true,
+            onPageAlerts: false,
           },
           data: {
             maxMessagesPerAircraft: 50,

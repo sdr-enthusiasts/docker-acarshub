@@ -57,7 +57,7 @@ interface SettingsState {
   setDesktopNotifications: (enabled: boolean) => void;
   setSoundAlerts: (enabled: boolean) => void;
   setVolume: (volume: number) => void;
-  setAlertsOnly: (enabled: boolean) => void;
+  setOnPageAlerts: (enabled: boolean) => void;
 
   // Data actions
   setMaxMessagesPerAircraft: (max: number) => void;
@@ -127,7 +127,7 @@ const getDefaultSettings = (): UserSettings => {
       desktop: false,
       sound: false,
       volume: 50,
-      alertsOnly: true,
+      onPageAlerts: false,
     },
     data: {
       maxMessagesPerAircraft: 50,
@@ -290,16 +290,16 @@ export const useSettingsStore = create<SettingsState>()(
           },
         })),
 
-      setAlertsOnly: (enabled) =>
+      setOnPageAlerts: (enabled) =>
         set((state) => ({
           settings: {
             ...state.settings,
             notifications: {
               ...state.settings.notifications,
-              alertsOnly: enabled,
+              onPageAlerts: enabled,
             },
-            updatedAt: Date.now(),
           },
+          updatedAt: Date.now(),
         })),
 
       // Data actions

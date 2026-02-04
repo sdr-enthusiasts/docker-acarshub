@@ -63,7 +63,7 @@ export const SettingsModal = () => {
   );
   const setSoundAlerts = useSettingsStore((state) => state.setSoundAlerts);
   const setVolume = useSettingsStore((state) => state.setVolume);
-  const setAlertsOnly = useSettingsStore((state) => state.setAlertsOnly);
+  const setOnPageAlerts = useSettingsStore((state) => state.setOnPageAlerts);
   const setMaxMessagesPerAircraft = useSettingsStore(
     (state) => state.setMaxMessagesPerAircraft,
   );
@@ -695,12 +695,11 @@ export const SettingsModal = () => {
               )}
 
               <Toggle
-                id="alerts-only"
-                label="Alerts Only (Coming Soon)"
-                checked={settings.notifications.alertsOnly}
-                onChange={setAlertsOnly}
-                helpText="Only notify for messages that match alert terms (when enabled, ignores non-alert messages)"
-                disabled
+                id="on-page-alerts"
+                label="On Page Alerts"
+                checked={settings.notifications.onPageAlerts}
+                onChange={setOnPageAlerts}
+                helpText="Show toast notifications in the bottom-right corner when alert terms are matched (auto-dismisses after 5 seconds)"
               />
             </Card>
 

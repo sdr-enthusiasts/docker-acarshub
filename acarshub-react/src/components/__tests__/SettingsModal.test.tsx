@@ -353,10 +353,8 @@ describe("SettingsModal", () => {
       ).toBeInTheDocument();
       expect(screen.getByLabelText("Sound Alerts")).toBeInTheDocument();
       // Note: Volume slider only appears when sound is enabled
-      // Alerts Only is disabled ("Coming Soon")
-      expect(
-        screen.getByLabelText(/Alerts Only \(Coming Soon\)/i),
-      ).toBeInTheDocument();
+      // On Page Alerts shows toast notifications
+      expect(screen.getByLabelText(/On Page Alerts/i)).toBeInTheDocument();
     });
 
     it("should toggle desktop notifications", async () => {
@@ -410,24 +408,25 @@ describe("SettingsModal", () => {
       });
     });
 
-    it("should toggle alerts only mode", async () => {
+    it("should toggle on page alerts mode", async () => {
       const user = userEvent.setup();
       render(<SettingsModal />);
 
+      // Open notifications tab
       await user.click(screen.getByRole("tab", { name: "Notifications" }));
 
-      const alertsOnlyToggle = screen.getByRole("switch", {
-        name: /Alerts Only/i,
+      const onPageAlertsToggle = screen.getByRole("switch", {
+        name: /On Page Alerts/i,
       });
 
-      // This toggle is disabled ("Coming Soon") - test that it's disabled
-      expect(alertsOnlyToggle).toBeDisabled();
+      // Should be enabled and toggleable
+      expect(onPageAlertsToggle).not.toBeDisabled();
 
-      // Verify it's checked by default but can't be changed
-      expect(alertsOnlyToggle).toBeChecked();
-      expect(
-        useSettingsStore.getState().settings.notifications.alertsOnly,
-      ).toBe(true);
+      // Toggle it on
+      await user.click(onPageAlertsToggle);
+
+      // Verify it's checked
+      expect(onPageAlertsToggle).toBeChecked();
     });
 
     // TODO: Fix conditional rendering issue with Zustand store updates in tests

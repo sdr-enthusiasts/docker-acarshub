@@ -20,6 +20,7 @@ import { AlertSoundManager } from "./components/AlertSoundManager.tsx";
 import { ConnectionStatus } from "./components/ConnectionStatus.tsx";
 import { Navigation } from "./components/Navigation.tsx";
 import { SettingsModal } from "./components/SettingsModal.tsx";
+import { ToastContainer } from "./components/ToastContainer.tsx";
 import { useSocketIO } from "./hooks/useSocketIO.ts";
 import { useThemeAwareMapProvider } from "./hooks/useThemeAwareMapProvider.ts";
 import { AboutPage } from "./pages/AboutPage.tsx";
@@ -110,6 +111,9 @@ function App() {
 
         {/* Global alert sound manager (works on all pages) */}
         <AlertSoundManager />
+
+        {/* Toast notifications for on-page alerts */}
+        <ToastContainer />
 
         {/* Main content area with routing */}
         <main className="app-content">
