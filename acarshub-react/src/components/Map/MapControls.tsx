@@ -19,7 +19,9 @@ import {
   faCloudRain,
   faCloudSunRain,
   faEnvelope,
+  faEyeSlash,
   faFighterJet,
+  faLock,
   faPlane,
   faPlaneUp,
   faStar,
@@ -31,6 +33,48 @@ import { MapControlButton } from "./MapControlButton";
 import { MapProviderSelector } from "./MapProviderSelector";
 
 /**
+ * Handle ACARS filter toggle with mutual exclusivity
+ * When enabling ACARS filter, disable Unread filter
+ */
+const useAcarsFilterToggle = () => {
+  const mapSettings = useSettingsStore((state) => state.settings.map);
+  const setShowOnlyAcars = useSettingsStore((state) => state.setShowOnlyAcars);
+  const setShowOnlyUnread = useSettingsStore(
+    (state) => state.setShowOnlyUnread,
+  );
+
+  return () => {
+    const newValue = !mapSettings.showOnlyAcars;
+    setShowOnlyAcars(newValue);
+    // If enabling ACARS filter, disable Unread filter (mutually exclusive)
+    if (newValue && mapSettings.showOnlyUnread) {
+      setShowOnlyUnread(false);
+    }
+  };
+};
+
+/**
+ * Handle Unread filter toggle with mutual exclusivity
+ * When enabling Unread filter, disable ACARS filter
+ */
+const useUnreadFilterToggle = () => {
+  const mapSettings = useSettingsStore((state) => state.settings.map);
+  const setShowOnlyAcars = useSettingsStore((state) => state.setShowOnlyAcars);
+  const setShowOnlyUnread = useSettingsStore(
+    (state) => state.setShowOnlyUnread,
+  );
+
+  return () => {
+    const newValue = !mapSettings.showOnlyUnread;
+    setShowOnlyUnread(newValue);
+    // If enabling Unread filter, disable ACARS filter (mutually exclusive)
+    if (newValue && mapSettings.showOnlyAcars) {
+      setShowOnlyAcars(false);
+    }
+  };
+};
+
+/**
  * MapControls Component
  *
  * Floating control panel for map display options.
@@ -39,7 +83,6 @@ import { MapProviderSelector } from "./MapProviderSelector";
 export function MapControls() {
   const decoders = useAppStore((state) => state.decoders);
   const mapSettings = useSettingsStore((state) => state.settings.map);
-  const setShowOnlyAcars = useSettingsStore((state) => state.setShowOnlyAcars);
   const setShowRangeRings = useSettingsStore(
     (state) => state.setShowRangeRings,
   );
@@ -48,15 +91,18 @@ export function MapControls() {
   const setShowRainViewer = useSettingsStore(
     (state) => state.setShowRainViewer,
   );
-  const setShowOnlyUnread = useSettingsStore(
-    (state) => state.setShowOnlyUnread,
-  );
   const setShowOnlyMilitary = useSettingsStore(
     (state) => state.setShowOnlyMilitary,
   );
   const setShowOnlyInteresting = useSettingsStore(
     (state) => state.setShowOnlyInteresting,
   );
+  const setShowOnlyPIA = useSettingsStore((state) => state.setShowOnlyPIA);
+  const setShowOnlyLADD = useSettingsStore((state) => state.setShowOnlyLADD);
+
+  // Mutually exclusive filter toggles
+  const handleAcarsToggle = useAcarsFilterToggle();
+  const handleUnreadToggle = useUnreadFilterToggle();
 
   // Check if range rings are allowed by backend (privacy protection)
   const backendAllowsRangeRings = decoders?.adsb?.range_rings ?? true;
@@ -99,18 +145,18 @@ export function MapControls() {
         />
       </div>
 
-      {/* Aircraft Filters: ACARS + Unread + Military + Interesting */}
+      {/* Aircraft Filters: ACARS + Unread + Military + Interesting + PIA + LADD */}
       <div className="map-controls__group">
         <MapControlButton
           icon={faPlane}
           active={mapSettings.showOnlyAcars}
-          onClick={() => setShowOnlyAcars(!mapSettings.showOnlyAcars)}
+          onClick={handleAcarsToggle}
           tooltip="Show Only Aircraft with ACARS"
         />
         <MapControlButton
           icon={faEnvelope}
           active={mapSettings.showOnlyUnread}
-          onClick={() => setShowOnlyUnread(!mapSettings.showOnlyUnread)}
+          onClick={handleUnreadToggle}
           tooltip="Show Only Aircraft with Unread Messages"
         />
         <MapControlButton
@@ -126,6 +172,18 @@ export function MapControls() {
             setShowOnlyInteresting(!mapSettings.showOnlyInteresting)
           }
           tooltip="Show Only Interesting Aircraft"
+        />
+        <MapControlButton
+          icon={faEyeSlash}
+          active={mapSettings.showOnlyPIA}
+          onClick={() => setShowOnlyPIA(!mapSettings.showOnlyPIA)}
+          tooltip="Show Only PIA Aircraft"
+        />
+        <MapControlButton
+          icon={faLock}
+          active={mapSettings.showOnlyLADD}
+          onClick={() => setShowOnlyLADD(!mapSettings.showOnlyLADD)}
+          tooltip="Show Only LADD Aircraft"
         />
       </div>
     </div>

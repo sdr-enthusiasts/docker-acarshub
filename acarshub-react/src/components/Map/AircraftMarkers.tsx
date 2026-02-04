@@ -97,13 +97,13 @@ export function AircraftMarkers({
   const filteredPairedAircraft = useMemo(() => {
     let filtered = pairedAircraft;
 
-    // Filter: Show only aircraft with ACARS messages
+    // ACARS filters (mutually exclusive: only one should be active at a time)
+    // If ACARS-only filter is enabled
     if (mapSettings.showOnlyAcars) {
       filtered = filtered.filter((a) => a.hasMessages);
     }
-
-    // Filter: Show only aircraft with unread messages
-    if (mapSettings.showOnlyUnread) {
+    // If Unread-only filter is enabled (mutually exclusive with ACARS-only)
+    else if (mapSettings.showOnlyUnread) {
       filtered = filtered.filter((a) => {
         if (!a.matchedGroup) return false;
         return a.matchedGroup.messages.some(
@@ -112,23 +112,27 @@ export function AircraftMarkers({
       });
     }
 
-    // Filter: Show only military aircraft (dbFlags & 1)
-    if (mapSettings.showOnlyMilitary) {
-      filtered = filtered.filter((a) => {
-        if (a.dbFlags === undefined || a.dbFlags === null) return false;
-        const flags =
-          typeof a.dbFlags === "string" ? parseInt(a.dbFlags, 10) : a.dbFlags;
-        return !Number.isNaN(flags) && (flags & 1) !== 0;
-      });
-    }
+    // dbFlags filters (additive: aircraft matching ANY of these should be shown)
+    const hasDbFlagsFilters =
+      mapSettings.showOnlyMilitary ||
+      mapSettings.showOnlyInteresting ||
+      mapSettings.showOnlyPIA ||
+      mapSettings.showOnlyLADD;
 
-    // Filter: Show only interesting aircraft (dbFlags & 2)
-    if (mapSettings.showOnlyInteresting) {
+    if (hasDbFlagsFilters) {
       filtered = filtered.filter((a) => {
         if (a.dbFlags === undefined || a.dbFlags === null) return false;
         const flags =
           typeof a.dbFlags === "string" ? parseInt(a.dbFlags, 10) : a.dbFlags;
-        return !Number.isNaN(flags) && (flags & 2) !== 0;
+        if (Number.isNaN(flags)) return false;
+
+        // Check if aircraft matches ANY of the enabled dbFlags filters
+        return (
+          (mapSettings.showOnlyMilitary && (flags & 1) !== 0) ||
+          (mapSettings.showOnlyInteresting && (flags & 2) !== 0) ||
+          (mapSettings.showOnlyPIA && (flags & 4) !== 0) ||
+          (mapSettings.showOnlyLADD && (flags & 8) !== 0)
+        );
       });
     }
 
@@ -139,6 +143,8 @@ export function AircraftMarkers({
     mapSettings.showOnlyUnread,
     mapSettings.showOnlyMilitary,
     mapSettings.showOnlyInteresting,
+    mapSettings.showOnlyPIA,
+    mapSettings.showOnlyLADD,
     readMessageUids,
   ]);
 

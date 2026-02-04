@@ -80,6 +80,8 @@ interface SettingsState {
   setShowOnlyUnread: (enabled: boolean) => void;
   setShowOnlyMilitary: (enabled: boolean) => void;
   setShowOnlyInteresting: (enabled: boolean) => void;
+  setShowOnlyPIA: (enabled: boolean) => void;
+  setShowOnlyLADD: (enabled: boolean) => void;
   setShowOpenAIP: (enabled: boolean) => void;
   setShowRainViewer: (enabled: boolean) => void;
 
@@ -153,6 +155,8 @@ const getDefaultSettings = (): UserSettings => {
       showOnlyUnread: false,
       showOnlyMilitary: false,
       showOnlyInteresting: false,
+      showOnlyPIA: false,
+      showOnlyLADD: false,
       enabledGeoJSONOverlays: [],
       showOpenAIP: false,
       showRainViewer: false,
@@ -460,6 +464,24 @@ export const useSettingsStore = create<SettingsState>()(
           },
         })),
 
+      setShowOnlyPIA: (enabled) =>
+        set((state) => ({
+          settings: {
+            ...state.settings,
+            map: { ...state.settings.map, showOnlyPIA: enabled },
+            updatedAt: Date.now(),
+          },
+        })),
+
+      setShowOnlyLADD: (enabled) =>
+        set((state) => ({
+          settings: {
+            ...state.settings,
+            map: { ...state.settings.map, showOnlyLADD: enabled },
+            updatedAt: Date.now(),
+          },
+        })),
+
       setShowOpenAIP: (enabled) =>
         set((state) => ({
           settings: {
@@ -711,6 +733,8 @@ export const useSettingsStore = create<SettingsState>()(
                 ...state.settings.map,
                 showOnlyMilitary: false,
                 showOnlyInteresting: false,
+                showOnlyPIA: false,
+                showOnlyLADD: false,
                 showOpenAIP: false,
                 showRainViewer: false,
               },

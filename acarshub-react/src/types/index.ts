@@ -901,6 +901,10 @@ export interface MapSettings {
   showOnlyMilitary: boolean;
   /** Show only interesting aircraft (dbFlags & 2) */
   showOnlyInteresting: boolean;
+  /** Show only PIA aircraft (dbFlags & 4) */
+  showOnlyPIA: boolean;
+  /** Show only LADD aircraft (dbFlags & 8) */
+  showOnlyLADD: boolean;
   /** Enabled GeoJSON overlay IDs */
   enabledGeoJSONOverlays: string[];
   /** Show OpenAIP aeronautical charts overlay */
@@ -1028,6 +1032,8 @@ export const DEFAULT_SETTINGS: UserSettings = {
     showOnlyUnread: false,
     showOnlyMilitary: false,
     showOnlyInteresting: false,
+    showOnlyPIA: false,
+    showOnlyLADD: false,
     enabledGeoJSONOverlays: [],
     showOpenAIP: false,
     showRainViewer: false,

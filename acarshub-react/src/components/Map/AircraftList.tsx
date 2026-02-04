@@ -104,6 +104,16 @@ export function AircraftList({
     return saved === "true";
   });
 
+  const [showPIAOnly, setShowPIAOnly] = useState(() => {
+    const saved = localStorage.getItem("aircraftList.showPIAOnly");
+    return saved === "true";
+  });
+
+  const [showLADDOnly, setShowLADDOnly] = useState(() => {
+    const saved = localStorage.getItem("aircraftList.showLADDOnly");
+    return saved === "true";
+  });
+
   const [filterDropdownOpen, setFilterDropdownOpen] = useState(false);
   const filterDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -148,6 +158,11 @@ export function AircraftList({
 
   const handleShowAcarsOnlyChange = (value: boolean) => {
     setShowAcarsOnly(value);
+    // If enabling ACARS filter, disable Unread filter (mutually exclusive)
+    if (value && showUnreadOnly) {
+      setShowUnreadOnly(false);
+      localStorage.setItem("aircraftList.showUnreadOnly", "false");
+    }
     localStorage.setItem("aircraftList.showAcarsOnly", String(value));
   };
 
@@ -158,6 +173,11 @@ export function AircraftList({
 
   const handleShowUnreadOnlyChange = (value: boolean) => {
     setShowUnreadOnly(value);
+    // If enabling Unread filter, disable ACARS filter (mutually exclusive)
+    if (value && showAcarsOnly) {
+      setShowAcarsOnly(false);
+      localStorage.setItem("aircraftList.showAcarsOnly", "false");
+    }
     localStorage.setItem("aircraftList.showUnreadOnly", String(value));
   };
 
@@ -169,6 +189,16 @@ export function AircraftList({
   const handleShowInterestingOnlyChange = (value: boolean) => {
     setShowInterestingOnly(value);
     localStorage.setItem("aircraftList.showInterestingOnly", String(value));
+  };
+
+  const handleShowPIAOnlyChange = (value: boolean) => {
+    setShowPIAOnly(value);
+    localStorage.setItem("aircraftList.showPIAOnly", String(value));
+  };
+
+  const handleShowLADDOnlyChange = (value: boolean) => {
+    setShowLADDOnly(value);
+    localStorage.setItem("aircraftList.showLADDOnly", String(value));
   };
 
   const handleMarkAllAsRead = () => {
@@ -227,18 +257,13 @@ export function AircraftList({
       });
     }
 
-    // ACARS-only filter
+    // ACARS filters (mutually exclusive: only one should be active at a time)
+    // If ACARS-only filter is enabled
     if (showAcarsOnly) {
       filtered = filtered.filter((a) => a.hasMessages);
     }
-
-    // Alerts-only filter
-    if (showAlertsOnly) {
-      filtered = filtered.filter((a) => a.hasAlerts);
-    }
-
-    // Unread-only filter
-    if (showUnreadOnly) {
+    // If Unread-only filter is enabled (mutually exclusive with ACARS-only)
+    else if (showUnreadOnly) {
       filtered = filtered.filter((a) => {
         if (!a.matchedGroup) return false;
         return a.matchedGroup.messages.some(
@@ -247,23 +272,29 @@ export function AircraftList({
       });
     }
 
-    // Military-only filter (dbFlags & 1)
-    if (showMilitaryOnly) {
-      filtered = filtered.filter((a) => {
-        if (a.dbFlags === undefined || a.dbFlags === null) return false;
-        const flags =
-          typeof a.dbFlags === "string" ? parseInt(a.dbFlags, 10) : a.dbFlags;
-        return !Number.isNaN(flags) && (flags & 1) !== 0;
-      });
+    // Alerts-only filter (independent)
+    if (showAlertsOnly) {
+      filtered = filtered.filter((a) => a.hasAlerts);
     }
 
-    // Interesting-only filter (dbFlags & 2)
-    if (showInterestingOnly) {
+    // dbFlags filters (additive: aircraft matching ANY of these should be shown)
+    const hasDbFlagsFilters =
+      showMilitaryOnly || showInterestingOnly || showPIAOnly || showLADDOnly;
+
+    if (hasDbFlagsFilters) {
       filtered = filtered.filter((a) => {
         if (a.dbFlags === undefined || a.dbFlags === null) return false;
         const flags =
           typeof a.dbFlags === "string" ? parseInt(a.dbFlags, 10) : a.dbFlags;
-        return !Number.isNaN(flags) && (flags & 2) !== 0;
+        if (Number.isNaN(flags)) return false;
+
+        // Check if aircraft matches ANY of the enabled dbFlags filters
+        return (
+          (showMilitaryOnly && (flags & 1) !== 0) ||
+          (showInterestingOnly && (flags & 2) !== 0) ||
+          (showPIAOnly && (flags & 4) !== 0) ||
+          (showLADDOnly && (flags & 8) !== 0)
+        );
       });
     }
 
@@ -276,6 +307,8 @@ export function AircraftList({
     showUnreadOnly,
     showMilitaryOnly,
     showInterestingOnly,
+    showPIAOnly,
+    showLADDOnly,
     readMessageUids,
   ]);
 
@@ -339,12 +372,16 @@ export function AircraftList({
     setShowUnreadOnly(false);
     setShowMilitaryOnly(false);
     setShowInterestingOnly(false);
+    setShowPIAOnly(false);
+    setShowLADDOnly(false);
     localStorage.removeItem("aircraftList.textFilter");
     localStorage.removeItem("aircraftList.showAcarsOnly");
     localStorage.removeItem("aircraftList.showAlertsOnly");
     localStorage.removeItem("aircraftList.showUnreadOnly");
     localStorage.removeItem("aircraftList.showMilitaryOnly");
     localStorage.removeItem("aircraftList.showInterestingOnly");
+    localStorage.removeItem("aircraftList.showPIAOnly");
+    localStorage.removeItem("aircraftList.showLADDOnly");
   };
 
   const hasActiveFilters =
@@ -353,7 +390,9 @@ export function AircraftList({
     showAlertsOnly ||
     showUnreadOnly ||
     showMilitaryOnly ||
-    showInterestingOnly;
+    showInterestingOnly ||
+    showPIAOnly ||
+    showLADDOnly;
 
   const activeFilterCount = [
     showAcarsOnly,
@@ -361,6 +400,8 @@ export function AircraftList({
     showUnreadOnly,
     showMilitaryOnly,
     showInterestingOnly,
+    showPIAOnly,
+    showLADDOnly,
   ].filter(Boolean).length;
 
   return (
@@ -460,6 +501,24 @@ export function AircraftList({
                   }
                 />
                 <span>Interesting Aircraft</span>
+              </label>
+
+              <label className="aircraft-list__filter-toggle">
+                <input
+                  type="checkbox"
+                  checked={showPIAOnly}
+                  onChange={(e) => handleShowPIAOnlyChange(e.target.checked)}
+                />
+                <span>PIA Aircraft</span>
+              </label>
+
+              <label className="aircraft-list__filter-toggle">
+                <input
+                  type="checkbox"
+                  checked={showLADDOnly}
+                  onChange={(e) => handleShowLADDOnlyChange(e.target.checked)}
+                />
+                <span>LADD Aircraft</span>
               </label>
 
               {hasActiveFilters && (
