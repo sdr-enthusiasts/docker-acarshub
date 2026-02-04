@@ -92,9 +92,40 @@ def update_keys(json_message):
     # React has its own parseAndFormatLibacars() function in decoderUtils.ts
 
     if has_specified_key(json_message, "icao"):
-        # ICAO is now stored as hex string directly (e.g., "ABF308")
-        # No conversion needed - just use it as-is
-        json_message["icao_hex"] = json_message["icao"]
+        # ICAO can be either:
+        # 1. Hex string (e.g., "ABF308") from VDLM2/HFDL formatters
+        # 2. Numeric value from raw ACARS messages
+        # Always ensure icao_hex is a hex string for frontend consistency
+        icao_value = json_message["icao"]
+
+        if isinstance(icao_value, str):
+            # Already a string - check if it's hex or decimal
+            try:
+                # Check if it's a hex string (6 chars, all hex digits)
+                is_hex_format = len(icao_value) == 6 and all(
+                    c in "0123456789ABCDEFabcdef" for c in icao_value
+                )
+
+                if is_hex_format:
+                    # Already in hex format - just uppercase it
+                    json_message["icao_hex"] = icao_value.upper()
+                else:
+                    # It's a decimal string - convert to hex
+                    icao_int = int(icao_value)
+                    json_message["icao_hex"] = format(icao_int, "06X")
+            except (ValueError, TypeError):
+                # Not a valid number - use as-is (probably already hex)
+                json_message["icao_hex"] = (
+                    icao_value.upper()
+                    if isinstance(icao_value, str)
+                    else str(icao_value)
+                )
+        elif isinstance(icao_value, int):
+            # Numeric ICAO - convert to 6-character hex string
+            json_message["icao_hex"] = format(icao_value, "06X")
+        else:
+            # Unknown type - convert to string and uppercase
+            json_message["icao_hex"] = str(icao_value).upper()
 
     if has_specified_key(json_message, "flight"):
         airline, iata_flight, icao_flight, flight_number = flight_finder(

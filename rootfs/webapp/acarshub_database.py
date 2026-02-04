@@ -695,8 +695,8 @@ def add_message(params, message_type, message_from_json, backup=False):
                 icao_upper = params["icao"].upper()
                 for search_term in alert_terms:
                     term_upper = search_term.upper()
-                    # Support both full match and partial prefix match
-                    if icao_upper == term_upper or icao_upper.startswith(term_upper):
+                    # Support both full match and partial substring match (anywhere in ICAO)
+                    if icao_upper == term_upper or term_upper in icao_upper:
                         save_alert_match(search_term, "icao")
 
             # Check tail number for alert terms (supports partial matching)
@@ -704,8 +704,8 @@ def add_message(params, message_type, message_from_json, backup=False):
                 tail_upper = params["tail"].upper()
                 for search_term in alert_terms:
                     term_upper = search_term.upper()
-                    # Support both full match and partial prefix match
-                    if tail_upper == term_upper or tail_upper.startswith(term_upper):
+                    # Support both full match and partial substring match (anywhere in tail)
+                    if tail_upper == term_upper or term_upper in tail_upper:
                         save_alert_match(search_term, "tail")
 
             # Check flight number for alert terms (supports partial matching)
@@ -713,10 +713,8 @@ def add_message(params, message_type, message_from_json, backup=False):
                 flight_upper = params["flight"].upper()
                 for search_term in alert_terms:
                     term_upper = search_term.upper()
-                    # Support both full match and partial prefix match
-                    if flight_upper == term_upper or flight_upper.startswith(
-                        term_upper
-                    ):
+                    # Support both full match and partial substring match (anywhere in flight)
+                    if flight_upper == term_upper or term_upper in flight_upper:
                         save_alert_match(search_term, "flight")
 
         # commit the db change and close the session

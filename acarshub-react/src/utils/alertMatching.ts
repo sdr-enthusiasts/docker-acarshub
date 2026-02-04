@@ -130,8 +130,8 @@ export function checkMessageForAlerts(
     for (const term of alertTerms.terms) {
       const upperTerm = term.toUpperCase();
 
-      // Support both full match and partial prefix match
-      if (icaoUpper === upperTerm || icaoUpper.startsWith(upperTerm)) {
+      // Support both full match and partial substring match (anywhere in ICAO)
+      if (icaoUpper === upperTerm || icaoUpper.includes(upperTerm)) {
         // Check if it should be ignored
         let shouldIgnore = false;
 
@@ -139,7 +139,7 @@ export function checkMessageForAlerts(
           const upperIgnoreTerm = ignoreTerm.toUpperCase();
           if (
             icaoUpper === upperIgnoreTerm ||
-            icaoUpper.startsWith(upperIgnoreTerm)
+            icaoUpper.includes(upperIgnoreTerm)
           ) {
             shouldIgnore = true;
             break;
@@ -169,8 +169,8 @@ export function checkMessageForAlerts(
     for (const term of alertTerms.terms) {
       const upperTerm = term.toUpperCase();
 
-      // Support both full match and partial prefix match
-      if (tailUpper === upperTerm || tailUpper.startsWith(upperTerm)) {
+      // Support both full match and partial substring match (anywhere in tail)
+      if (tailUpper === upperTerm || tailUpper.includes(upperTerm)) {
         // Check if it should be ignored
         let shouldIgnore = false;
 
@@ -178,7 +178,7 @@ export function checkMessageForAlerts(
           const upperIgnoreTerm = ignoreTerm.toUpperCase();
           if (
             tailUpper === upperIgnoreTerm ||
-            tailUpper.startsWith(upperIgnoreTerm)
+            tailUpper.includes(upperIgnoreTerm)
           ) {
             shouldIgnore = true;
             break;
@@ -209,8 +209,8 @@ export function checkMessageForAlerts(
     for (const term of alertTerms.terms) {
       const upperTerm = term.toUpperCase();
 
-      // Support both full match and partial prefix match
-      if (flightUpper === upperTerm || flightUpper.startsWith(upperTerm)) {
+      // Support both full match and partial substring match (anywhere in flight)
+      if (flightUpper === upperTerm || flightUpper.includes(upperTerm)) {
         // Check if it should be ignored
         let shouldIgnore = false;
 
@@ -218,7 +218,7 @@ export function checkMessageForAlerts(
           const upperIgnoreTerm = ignoreTerm.toUpperCase();
           if (
             flightUpper === upperIgnoreTerm ||
-            flightUpper.startsWith(upperIgnoreTerm)
+            flightUpper.includes(upperIgnoreTerm)
           ) {
             shouldIgnore = true;
             break;

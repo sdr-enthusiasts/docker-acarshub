@@ -39,6 +39,30 @@ def format_acars_message(acars_message):
     if acars_message.get("app", {}).get("name") == "iridium-toolkit":
         return format_irdm_message(acars_message)
 
+    # Raw ACARS message - normalize ICAO to hex string
+    if "icao" in acars_message and acars_message["icao"] is not None:
+        icao_value = acars_message["icao"]
+        if isinstance(icao_value, int):
+            # Convert numeric ICAO to 6-character hex string
+            acars_message["icao"] = format(icao_value, "06X")
+        elif isinstance(icao_value, str):
+            # Ensure hex string is uppercase and properly formatted
+            try:
+                # Check if it's a hex string (6 chars, all hex digits)
+                is_hex_format = len(icao_value) == 6 and all(
+                    c in "0123456789ABCDEFabcdef" for c in icao_value
+                )
+
+                if is_hex_format:
+                    # Already in hex format - just uppercase it
+                    acars_message["icao"] = icao_value.upper()
+                else:
+                    # It's a decimal string - convert to hex
+                    acars_message["icao"] = format(int(icao_value), "06X")
+            except (ValueError, TypeError):
+                # Can't convert - leave as-is but uppercase
+                acars_message["icao"] = str(icao_value).upper()
+
     return acars_message
 
 
