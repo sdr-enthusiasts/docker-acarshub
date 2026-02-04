@@ -17,7 +17,6 @@
 import { faTimes } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useCallback, useEffect, useState } from "react";
-import "./Toast.scss";
 
 export interface ToastProps {
   /** Unique ID for this toast */

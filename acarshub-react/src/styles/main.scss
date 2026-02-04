@@ -51,6 +51,12 @@
 @use "components/logs-viewer";
 @use "components/message-card";
 @use "components/message-group";
+@use "components/toast";
+@use "components/map-control-button";
+@use "components/map-controls";
+@use "components/map-legend";
+@use "components/map-provider-selector";
+@use "components/geojson-overlay-button";
 
 /* Pages */
 @use "pages/common";
@@ -58,6 +64,9 @@
 @use "pages/stats";
 @use "pages/live-messages";
 @use "pages/status";
+@use "pages/alerts";
+@use "pages/search";
+@use "pages/live-map";
 
 /* Global Layout */
 .app {

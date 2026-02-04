@@ -25,7 +25,6 @@ import { useSettingsStore, useTheme } from "../store/useSettingsStore";
 import type { PairedAircraft } from "../utils/aircraftPairing";
 import { pairADSBWithACARSMessages } from "../utils/aircraftPairing";
 import { mapLogger } from "../utils/logger";
-import "./LiveMapPage.scss";
 
 /**
  * LiveMapPage Component

@@ -29,7 +29,6 @@ import { useSettingsStore } from "../../store/useSettingsStore";
 import { GeoJSONOverlayButton } from "./GeoJSONOverlayButton";
 import { MapControlButton } from "./MapControlButton";
 import { MapProviderSelector } from "./MapProviderSelector";
-import "./MapControls.scss";
 
 /**
  * MapControls Component

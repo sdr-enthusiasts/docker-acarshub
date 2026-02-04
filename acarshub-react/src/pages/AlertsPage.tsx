@@ -20,7 +20,6 @@ import { socketService } from "../services/socket";
 import { useAppStore } from "../store/useAppStore";
 import type { MessageGroup as MessageGroupType } from "../types";
 import { uiLogger } from "../utils/logger";
-import "./AlertsPage.scss";
 
 /**
  * AlertsPage Component

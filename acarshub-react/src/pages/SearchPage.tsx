@@ -28,7 +28,6 @@ import { useAppStore } from "../store/useAppStore";
 import type { AcarsMsg, CurrentSearch, SearchHtmlMsg } from "../types";
 import { uiLogger } from "../utils/logger";
 import { formatBytes } from "../utils/stringUtils";
-import "./SearchPage.scss";
 
 const RESULTS_PER_PAGE = 50;
 const SEARCH_STATE_KEY = "acarshub_search_state";

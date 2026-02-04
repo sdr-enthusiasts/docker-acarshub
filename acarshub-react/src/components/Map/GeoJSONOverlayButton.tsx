@@ -19,7 +19,6 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { GEOJSON_OVERLAYS } from "../../config/geojsonOverlays";
 import { useSettingsStore } from "../../store/useSettingsStore";
-import "./GeoJSONOverlayButton.scss";
 
 // Stable empty array to prevent re-renders
 const EMPTY_ARRAY: string[] = [];

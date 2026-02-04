@@ -26,7 +26,6 @@ import {
 import { useSettingsStore } from "../../store/useSettingsStore";
 import type { MapProvider } from "../../types";
 import { mapLogger } from "../../utils/logger";
-import "./MapProviderSelector.scss";
 
 /**
  * MapProviderSelector Component

@@ -14,8 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-@use "../styles/mixins" as *;
-@use "../styles/variables" as *;
+@use "../mixins" as *;
+@use "../variables" as *;
 
 .live-map-page {
   width: 100%;

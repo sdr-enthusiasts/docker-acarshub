@@ -17,7 +17,6 @@
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useState } from "react";
-import "./MapControlButton.scss";
 
 interface MapControlButtonProps {
   /** Font Awesome icon to display */
