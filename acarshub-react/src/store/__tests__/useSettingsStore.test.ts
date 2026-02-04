@@ -72,7 +72,7 @@ describe("useSettingsStore", () => {
       expect(settings.map.showRangeRings).toBe(true);
 
       expect(settings.advanced.persistLogs).toBe(true);
-      expect(settings.version).toBe(3);
+      expect(settings.version).toBe(4);
       expect(settings.updatedAt).toBeGreaterThan(0);
     });
 
@@ -543,7 +543,7 @@ describe("useSettingsStore", () => {
       expect(typeof exported).toBe("string");
       const parsed = JSON.parse(exported) as UserSettings;
       expect(parsed.appearance.theme).toBe("latte");
-      expect(parsed.version).toBe(3);
+      expect(parsed.version).toBe(4);
     });
 
     it("should import valid settings JSON", () => {
@@ -761,13 +761,13 @@ describe("useSettingsStore", () => {
 
       const migrated = migrate(oldState, 0);
 
-      expect(migrated.settings.version).toBe(3);
+      expect(migrated.settings.version).toBe(4);
       expect(migrated.settings.appearance.theme).toBe("mocha"); // Reset to default
       expect(migrated.settings.map).toBeDefined();
       expect(migrated.settings.advanced).toBeDefined();
     });
 
-    it("should migrate from version 1 to version 3 (add map and advanced)", () => {
+    it("should migrate from version 1 to version 4 (add map and advanced)", () => {
       // biome-ignore lint/suspicious/noExplicitAny: Zustand persist API doesn't expose migrate type
       const { migrate } = (useSettingsStore as any).persist.getOptions();
 
@@ -804,7 +804,7 @@ describe("useSettingsStore", () => {
 
       const migrated = migrate(v1State, 1);
 
-      expect(migrated.settings.version).toBe(3);
+      expect(migrated.settings.version).toBe(4);
       // Existing settings preserved
       expect(migrated.settings.appearance.theme).toBe("latte");
       expect(migrated.settings.regional.timeFormat).toBe("24h");
@@ -817,6 +817,76 @@ describe("useSettingsStore", () => {
       expect(migrated.settings.advanced.logLevel).toBeDefined();
     });
 
+    it("should migrate from version 3 to version 4 (add showOpenAIP and showRainViewer)", () => {
+      // biome-ignore lint/suspicious/noExplicitAny: Zustand persist API doesn't expose migrate type
+      const { migrate } = (useSettingsStore as any).persist.getOptions();
+
+      const v3State = {
+        settings: {
+          appearance: {
+            theme: "mocha",
+            showConnectionStatus: true,
+            animations: true,
+          },
+          regional: {
+            timeFormat: "auto",
+            dateFormat: "auto",
+            timezone: "local",
+            altitudeUnit: "feet",
+          },
+          notifications: {
+            desktop: false,
+            sound: false,
+            volume: 50,
+            alertsOnly: true,
+          },
+          data: {
+            maxMessagesPerAircraft: 50,
+            maxMessageGroups: 50,
+            enableCaching: true,
+            autoClearMinutes: 60,
+          },
+          map: {
+            provider: "carto_dark_all",
+            userSelectedProvider: false,
+            stationLat: 0,
+            stationLon: 0,
+            rangeRings: [100, 200, 300],
+            defaultCenterLat: 0,
+            defaultCenterLon: 0,
+            defaultZoom: 7,
+            showOnlyAcars: false,
+            showDatablocks: true,
+            showExtendedDatablocks: false,
+            showNexrad: false,
+            showRangeRings: true,
+            showOnlyUnread: false,
+            showOnlyMilitary: false,
+            showOnlyInteresting: false,
+            enabledGeoJSONOverlays: [],
+            // Missing showOpenAIP and showRainViewer
+          },
+          advanced: {
+            logLevel: "info",
+            persistLogs: true,
+          },
+          updatedAt: 123456,
+          version: 3,
+        },
+      };
+
+      const migrated = migrate(v3State, 3);
+
+      expect(migrated.settings.version).toBe(4);
+      // Existing settings preserved
+      expect(migrated.settings.map.showNexrad).toBe(false);
+      expect(migrated.settings.map.showOnlyMilitary).toBe(false);
+      expect(migrated.settings.map.showOnlyInteresting).toBe(false);
+      // New overlay settings added with defaults
+      expect(migrated.settings.map.showOpenAIP).toBe(false);
+      expect(migrated.settings.map.showRainViewer).toBe(false);
+    });
+
     it("should return unchanged state for current version", () => {
       // biome-ignore lint/suspicious/noExplicitAny: Zustand persist API doesn't expose migrate type
       const { migrate } = (useSettingsStore as any).persist.getOptions();
@@ -825,7 +895,7 @@ describe("useSettingsStore", () => {
         settings: useSettingsStore.getState().settings,
       };
 
-      const migrated = migrate(currentState, 2);
+      const migrated = migrate(currentState, 4);
 
       expect(migrated).toEqual(currentState);
     });
@@ -959,7 +1029,7 @@ describe("useSettingsStore", () => {
       if (!stored) throw new Error("Expected stored to be truthy");
       const parsed = JSON.parse(stored);
 
-      expect(parsed.version).toBe(3);
+      expect(parsed.version).toBe(4);
     });
   });
 

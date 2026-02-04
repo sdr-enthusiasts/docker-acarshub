@@ -903,6 +903,10 @@ export interface MapSettings {
   showOnlyInteresting: boolean;
   /** Enabled GeoJSON overlay IDs */
   enabledGeoJSONOverlays: string[];
+  /** Show OpenAIP aeronautical charts overlay */
+  showOpenAIP: boolean;
+  /** Show RainViewer weather radar overlay */
+  showRainViewer: boolean;
 }
 
 /**
@@ -1025,6 +1029,8 @@ export const DEFAULT_SETTINGS: UserSettings = {
     showOnlyMilitary: false,
     showOnlyInteresting: false,
     enabledGeoJSONOverlays: [],
+    showOpenAIP: false,
+    showRainViewer: false,
   },
   advanced: {
     logLevel: "info",

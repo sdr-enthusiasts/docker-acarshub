@@ -16,10 +16,12 @@
 
 import {
   faCircleDot,
+  faCloudRain,
   faCloudSunRain,
   faEnvelope,
   faFighterJet,
   faPlane,
+  faPlaneUp,
   faStar,
 } from "@fortawesome/free-solid-svg-icons";
 import { useAppStore } from "../../store/useAppStore";
@@ -43,6 +45,10 @@ export function MapControls() {
     (state) => state.setShowRangeRings,
   );
   const setShowNexrad = useSettingsStore((state) => state.setShowNexrad);
+  const setShowOpenAIP = useSettingsStore((state) => state.setShowOpenAIP);
+  const setShowRainViewer = useSettingsStore(
+    (state) => state.setShowRainViewer,
+  );
   const setShowOnlyUnread = useSettingsStore(
     (state) => state.setShowOnlyUnread,
   );
@@ -64,7 +70,7 @@ export function MapControls() {
         <GeoJSONOverlayButton />
       </div>
 
-      {/* Map Overlays: Range Rings + NEXRAD */}
+      {/* Map Overlays: Range Rings + Weather + Aviation Charts */}
       <div className="map-controls__group">
         {backendAllowsRangeRings && (
           <MapControlButton
@@ -79,6 +85,18 @@ export function MapControls() {
           active={mapSettings.showNexrad}
           onClick={() => setShowNexrad(!mapSettings.showNexrad)}
           tooltip="Show NEXRAD Weather Radar"
+        />
+        <MapControlButton
+          icon={faCloudRain}
+          active={mapSettings.showRainViewer}
+          onClick={() => setShowRainViewer(!mapSettings.showRainViewer)}
+          tooltip="Show RainViewer Radar"
+        />
+        <MapControlButton
+          icon={faPlaneUp}
+          active={mapSettings.showOpenAIP}
+          onClick={() => setShowOpenAIP(!mapSettings.showOpenAIP)}
+          tooltip="Show OpenAIP Aviation Charts"
         />
       </div>
 

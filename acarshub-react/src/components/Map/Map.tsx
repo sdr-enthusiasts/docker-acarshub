@@ -31,6 +31,8 @@ import { mapLogger } from "../../utils/logger";
 import { AircraftMarkers } from "./AircraftMarkers";
 import { GeoJSONOverlays } from "./GeoJSONOverlays";
 import { NexradOverlay } from "./NexradOverlay";
+import { OpenAIPOverlay } from "./OpenAIPOverlay";
+import { RainViewerOverlay } from "./RainViewerOverlay";
 import { RangeRings } from "./RangeRings";
 import { StationMarker } from "./StationMarker";
 import "../../styles/components/_map.scss";
@@ -300,6 +302,12 @@ export function MapComponent({
 
         {/* NEXRAD weather radar overlay */}
         <NexradOverlay />
+
+        {/* RainViewer weather radar overlay */}
+        <RainViewerOverlay />
+
+        {/* OpenAIP aeronautical charts overlay */}
+        <OpenAIPOverlay />
 
         {/* GeoJSON overlays (aviation zones, boundaries, etc.) */}
         <GeoJSONOverlays />
