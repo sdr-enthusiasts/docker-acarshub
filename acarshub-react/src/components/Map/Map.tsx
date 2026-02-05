@@ -157,7 +157,7 @@ export function MapComponent({
           "raster-tiles": {
             type: "raster",
             tiles: [
-              "https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",
+              "//a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",
             ],
             tileSize: 256,
             attribution: providerConfig?.attribution || "",
@@ -203,7 +203,7 @@ export function MapComponent({
           "base-tiles": {
             type: "raster",
             tiles: [
-              "https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",
+              "//a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",
             ],
             tileSize: 256,
             attribution: 'Powered by <a href="https://carto.com">CARTO.com</a>',
