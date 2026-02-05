@@ -148,12 +148,6 @@ export const SearchPage = () => {
   // Wait for socket to be initialized before subscribing
   useEffect(() => {
     const handleSearchResults = (data: SearchHtmlMsg) => {
-      uiLogger.debug("Received search results", {
-        messageCount: data.msghtml.length,
-        totalResults: data.num_results,
-        queryTime: data.query_time,
-      });
-
       setResults(data.msghtml);
       setTotalResults(data.num_results);
       setQueryTime(data.query_time);
@@ -381,6 +375,11 @@ export const SearchPage = () => {
 
     return pages;
   }, [currentPage, totalPages]);
+
+  // Sort results by timestamp (newest first) - memoized to avoid re-sorting on every render
+  const sortedResults = useMemo(() => {
+    return [...results].sort((a, b) => b.timestamp - a.timestamp);
+  }, [results]);
 
   return (
     <div className="page search-page">
@@ -626,7 +625,7 @@ export const SearchPage = () => {
           </div>
         ) : results.length > 0 ? (
           <div className="search-page__results">
-            {results.map((message) => (
+            {sortedResults.map((message) => (
               <div key={message.uid} className="search-page__result-card">
                 <MessageCard message={message} />
               </div>

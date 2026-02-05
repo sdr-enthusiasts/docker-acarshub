@@ -825,7 +825,6 @@ def database_search(search_term, page=0):
 
             if count > 0:
                 processed_results = [query_to_dict(d) for d in result]
-                processed_results.reverse()
             session.close()
             return (processed_results, count)
 
@@ -863,7 +862,13 @@ def database_search(search_term, page=0):
             return [None, 0]
 
         for row in result.mappings().all():
-            processed_results.append(dict(row))
+            row_dict = dict(row)
+            # FTS query returns 'msg_time' (column name), but update_keys() expects 'time' (model attribute name)
+            # Rename it here for consistency with non-FTS queries that use query_to_dict()
+            if "msg_time" in row_dict:
+                row_dict["time"] = row_dict["msg_time"]
+                del row_dict["msg_time"]
+            processed_results.append(row_dict)
 
         session.close()
         return (processed_results, final_count)
