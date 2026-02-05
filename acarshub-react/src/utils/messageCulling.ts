@@ -94,11 +94,11 @@ export function isGroupPairedWithADSB(
  * Cull old message groups to stay within memory limits
  *
  * Strategy:
- * 1. Separate groups into ADS-B-paired and not-paired
- * 2. NEVER cull ADS-B-paired groups (active aircraft)
- * 3. Only cull from not-paired groups (inactive aircraft)
- * 4. Sort not-paired groups by lastUpdated (oldest first)
- * 5. Remove oldest not-paired groups until we're at the limit
+ * 1. Sort all groups by lastUpdated (oldest first)
+ * 2. Keep all groups within maxGroups limit (newest groups)
+ * 3. Only consider groups beyond maxGroups for culling
+ * 4. NEVER cull ADS-B-paired groups (active aircraft)
+ * 5. Cull only non-paired groups from the overflow set
  *
  * @param messageGroups - Current message groups
  * @param maxGroups - Maximum number of groups to keep
@@ -122,60 +122,46 @@ export function cullMessageGroups(
     adsbAircraftCount: adsbData?.aircraft?.length || 0,
   });
 
-  // Separate groups into ADS-B-paired and not-paired
-  const pairedGroups: [string, MessageGroup][] = [];
-  const notPairedGroups: [string, MessageGroup][] = [];
+  // Sort all message groups by lastUpdated (oldest first)
+  const sortedGroups = Array.from(messageGroups.entries()).sort(
+    (a, b) => a[1].lastUpdated - b[1].lastUpdated,
+  );
 
-  for (const [key, group] of messageGroups) {
-    if (isGroupPairedWithADSB(group, adsbData)) {
-      pairedGroups.push([key, group]);
-    } else {
-      notPairedGroups.push([key, group]);
-    }
-  }
+  // Split into groups to keep (newest) and candidates for culling (oldest)
+  const groupsToKeep = sortedGroups.slice(-maxGroups); // Keep newest maxGroups
+  const candidatesForCulling = sortedGroups.slice(0, -maxGroups); // Oldest groups
 
-  storeLogger.debug("Categorized message groups for culling", {
-    pairedCount: pairedGroups.length,
-    notPairedCount: notPairedGroups.length,
+  storeLogger.debug("Split groups for culling", {
+    toKeep: groupsToKeep.length,
+    candidates: candidatesForCulling.length,
   });
 
-  // If all paired groups fit within limit, keep all paired + some not-paired
-  if (pairedGroups.length <= maxGroups) {
-    // Sort not-paired groups by lastUpdated (oldest first)
-    notPairedGroups.sort((a, b) => a[1].lastUpdated - b[1].lastUpdated);
-
-    // Determine how many not-paired groups we can keep
-    const notPairedToKeepCount = maxGroups - pairedGroups.length;
-
-    // Keep newest not-paired groups (handle slice(-0) edge case)
-    const notPairedToKeep =
-      notPairedToKeepCount > 0
-        ? notPairedGroups.slice(-notPairedToKeepCount)
-        : [];
-
-    // Build new map with paired + kept not-paired
-    const culledMap = new Map<string, MessageGroup>();
-    for (const [key, group] of pairedGroups) {
-      culledMap.set(key, group);
-    }
-    for (const [key, group] of notPairedToKeep) {
-      culledMap.set(key, group);
-    }
-
-    const removedCount = notPairedGroups.length - notPairedToKeep.length;
-    if (removedCount > 0) {
-      storeLogger.info("Culled message groups (kept all ADS-B-paired)", {
-        removedCount,
-        keptPaired: pairedGroups.length,
-        keptNotPaired: notPairedToKeep.length,
-        totalKept: culledMap.size,
-      });
-    }
-
-    return culledMap;
+  // Build result map starting with all groups we're keeping
+  const culledMap = new Map<string, MessageGroup>();
+  for (const [key, group] of groupsToKeep) {
+    culledMap.set(key, group);
   }
 
-  // All message groups are ADSB paired. This is valid.
+  // From candidates, also keep any that are ADS-B-paired (never cull active aircraft)
+  let rescuedCount = 0;
+  for (const [key, group] of candidatesForCulling) {
+    if (isGroupPairedWithADSB(group, adsbData)) {
+      culledMap.set(key, group);
+      rescuedCount++;
+      storeLogger.trace("Rescued ADS-B-paired group from culling", {
+        groupId: group.identifiers[0],
+      });
+    }
+  }
 
-  return messageGroups;
+  const removedCount = candidatesForCulling.length - rescuedCount;
+  if (removedCount > 0) {
+    storeLogger.info("Culled message groups", {
+      removedCount,
+      rescuedPaired: rescuedCount,
+      totalKept: culledMap.size,
+    });
+  }
+
+  return culledMap;
 }

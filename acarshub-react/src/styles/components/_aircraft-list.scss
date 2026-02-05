@@ -358,23 +358,16 @@
   font-size: 0.875rem;
 
   thead {
+    // Safari fix: sticky positioning on thead with explicit tr positioning
     position: sticky;
     top: 0;
     z-index: 10;
-    background-color: var(--color-surface0);
-    border-bottom: 2px solid var(--color-surface2);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 
-    // Ensure solid background with ::before pseudo-element
-    &::before {
-      content: "";
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
+    tr {
+      // Safari fix: Apply background to tr instead of thead
       background-color: var(--color-surface0);
-      z-index: -1;
+      border-bottom: 2px solid var(--color-surface2);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
     }
   }
 
@@ -383,9 +376,11 @@
     text-align: left;
     font-weight: 600;
     color: var(--color-subtext-1);
+    // Safari fix: Explicit background on each th cell
     background-color: var(--color-surface0);
+    // Safari fix: Add backdrop-filter to force layer creation
+    backdrop-filter: blur(0);
     position: relative;
-    z-index: 1;
 
     // Column widths using min-width for flexibility
     &:nth-child(1) {

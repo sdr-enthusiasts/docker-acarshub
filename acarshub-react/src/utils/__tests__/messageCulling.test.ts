@@ -363,14 +363,14 @@ describe("messageCulling", () => {
 
       const result = cullMessageGroups(messageGroups, 2, mockAdsbData);
 
-      // Should keep: UAL123, DAL456 (paired, despite being old)
-      expect(result.size).toBe(2);
+      // Should keep: UAL123, DAL456 (paired, rescued from culling)
+      // Should also keep: NEW1, NEW2 (newest 2 groups within limit)
+      // Total: 4 groups (exceeds limit because we never cull paired aircraft)
+      expect(result.size).toBe(4);
       expect(result.has("UAL123")).toBe(true);
       expect(result.has("DAL456")).toBe(true);
-
-      // Should remove: NEW1, NEW2 (not paired, even though newer)
-      expect(result.has("NEW1")).toBe(false);
-      expect(result.has("NEW2")).toBe(false);
+      expect(result.has("NEW1")).toBe(true);
+      expect(result.has("NEW2")).toBe(true);
     });
 
     it("should handle case when all groups are ADS-B-paired (exceed limit)", () => {
