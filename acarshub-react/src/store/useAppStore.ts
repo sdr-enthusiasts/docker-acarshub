@@ -57,6 +57,11 @@ interface AppState {
   addMessage: (message: AcarsMsg) => void;
   clearMessages: () => void;
 
+  // Alert message storage (separate from regular messages, longer persistence)
+  alertMessageGroups: Map<string, MessageGroup>; // Key: primary identifier (flight/tail/icao_hex)
+  addAlertMessage: (message: AcarsMsg) => void;
+  clearAlertMessages: () => void;
+
   // Notifications state
   notifications: {
     desktop: boolean;
@@ -201,6 +206,9 @@ export const useAppStore = create<AppState>((set, get) => {
       volume: 50,
       onPageAlerts: false,
     },
+
+    // Alert message storage
+    alertMessageGroups: new Map(),
     addMessage: (message) =>
       set((state) => {
         storeLogger.trace("Processing incoming message", {
@@ -227,6 +235,32 @@ export const useAppStore = create<AppState>((set, get) => {
             uid: decodedMessage.uid,
             matchedTerms: decodedMessage.matched_text,
           });
+
+          // Add to separate alert storage for longer persistence
+          // This happens AFTER regular message processing below
+          // Check for duplicate in alert storage and add if not present
+          const alertGroups = state.alertMessageGroups;
+          let isDuplicateInAlerts = false;
+
+          // Check if this message already exists in alert storage
+          for (const group of alertGroups.values()) {
+            if (group.messages.some((msg) => msg.uid === decodedMessage.uid)) {
+              isDuplicateInAlerts = true;
+              storeLogger.debug("Message already in alert storage, skipping", {
+                uid: decodedMessage.uid,
+              });
+              break;
+            }
+          }
+
+          // Only add to alert storage if not already present
+          if (!isDuplicateInAlerts) {
+            // Use get() to call addAlertMessage after state update completes
+            // We'll do this via a separate set() call after the main message processing
+            storeLogger.trace("Will add message to alert storage", {
+              uid: decodedMessage.uid,
+            });
+          }
         }
 
         // Sync notifications with settings store
@@ -538,11 +572,283 @@ export const useAppStore = create<AppState>((set, get) => {
           totalGroups: newMessageGroups.size,
         });
 
+        // If this message matched an alert term, also add to alert storage
+        if (decodedMessage.matched) {
+          // Check if message already exists in alert storage
+          const alertGroups = state.alertMessageGroups;
+          let isDuplicateInAlerts = false;
+
+          for (const group of alertGroups.values()) {
+            if (group.messages.some((msg) => msg.uid === decodedMessage.uid)) {
+              isDuplicateInAlerts = true;
+              break;
+            }
+          }
+
+          // Add to alert storage if not a duplicate
+          if (!isDuplicateInAlerts) {
+            storeLogger.debug("Adding alert message to separate storage", {
+              uid: decodedMessage.uid,
+            });
+
+            // Call addAlertMessage to store in separate alert storage
+            // We need to do this as a nested set() call
+            const currentAlertGroups = new Map(state.alertMessageGroups);
+
+            // Extract identifiers
+            const messageKeys = {
+              flight:
+                decodedMessage.icao_flight?.trim() ||
+                decodedMessage.flight?.trim() ||
+                null,
+              tail: decodedMessage.tail?.trim() || null,
+              icao_hex: decodedMessage.icao_hex?.toUpperCase() || null,
+            };
+
+            // Find existing alert group
+            let matchedGroupKey: string | null = null;
+            let matchedGroup: MessageGroup | null = null;
+
+            for (const [groupKey, group] of currentAlertGroups) {
+              const matches =
+                (messageKeys.flight &&
+                  group.identifiers.includes(messageKeys.flight)) ||
+                (messageKeys.tail &&
+                  group.identifiers.includes(messageKeys.tail)) ||
+                (messageKeys.icao_hex &&
+                  group.identifiers.includes(messageKeys.icao_hex));
+
+              if (matches) {
+                matchedGroupKey = groupKey;
+                matchedGroup = group;
+                break;
+              }
+            }
+
+            const primaryKey =
+              messageKeys.flight ||
+              messageKeys.tail ||
+              messageKeys.icao_hex ||
+              "unknown";
+
+            if (
+              matchedGroup &&
+              matchedGroupKey &&
+              matchedGroupKey !== primaryKey
+            ) {
+              currentAlertGroups.delete(matchedGroupKey);
+            }
+
+            const group = matchedGroup || {
+              identifiers: [],
+              has_alerts: true,
+              num_alerts: 0,
+              messages: [],
+              lastUpdated: 0,
+            };
+
+            const identifiers = new Set(group.identifiers);
+            if (messageKeys.flight) identifiers.add(messageKeys.flight);
+            if (messageKeys.tail) identifiers.add(messageKeys.tail);
+            if (messageKeys.icao_hex) identifiers.add(messageKeys.icao_hex);
+
+            let updatedMessages = [decodedMessage, ...group.messages];
+            updatedMessages = updatedMessages.slice(
+              0,
+              getMaxMessagesPerGroup(),
+            );
+
+            currentAlertGroups.set(primaryKey, {
+              identifiers: Array.from(identifiers),
+              has_alerts: true,
+              num_alerts: updatedMessages.length,
+              messages: updatedMessages,
+              lastUpdated: decodedMessage.timestamp || Date.now() / 1000,
+            });
+
+            // Cull alert groups if needed
+            const maxGroups = getMaxMessageGroups();
+            if (currentAlertGroups.size > maxGroups) {
+              const sortedGroups = Array.from(
+                currentAlertGroups.entries(),
+              ).sort((a, b) => a[1].lastUpdated - b[1].lastUpdated);
+
+              const groupsToRemove = sortedGroups.slice(
+                0,
+                currentAlertGroups.size - maxGroups,
+              );
+
+              for (const [key] of groupsToRemove) {
+                currentAlertGroups.delete(key);
+              }
+            }
+
+            return {
+              messageGroups: newMessageGroups,
+              alertCount: totalAlerts,
+              alertMessageGroups: currentAlertGroups,
+            };
+          }
+        }
+
         return { messageGroups: newMessageGroups, alertCount: totalAlerts };
       }),
     clearMessages: () => {
       storeLogger.info("Clearing all message groups");
       set({ messageGroups: new Map() });
+    },
+
+    // Alert message handling (separate storage for longer persistence)
+    addAlertMessage: (message) =>
+      set((state) => {
+        storeLogger.trace("Processing incoming alert message", {
+          station: message.station_id,
+          label: message.label,
+          uid: message.uid,
+        });
+
+        // Generate UID if not present
+        if (!message.uid) {
+          message.uid = `${message.timestamp || Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+          storeLogger.trace("Generated UID for alert message", {
+            uid: message.uid,
+          });
+        }
+
+        // Decode the message if it has text
+        const decodedMessage = messageDecoder.decode(message);
+
+        const newAlertGroups = new Map(state.alertMessageGroups);
+
+        // Extract all possible identifiers from the message
+        const messageKeys = {
+          flight:
+            decodedMessage.icao_flight?.trim() ||
+            decodedMessage.flight?.trim() ||
+            null,
+          tail: decodedMessage.tail?.trim() || null,
+          icao_hex: decodedMessage.icao_hex?.toUpperCase() || null,
+        };
+
+        // Find existing alert group that matches any of the message's identifiers
+        let matchedGroupKey: string | null = null;
+        let matchedGroup: MessageGroup | null = null;
+
+        for (const [groupKey, group] of newAlertGroups) {
+          const matches =
+            (messageKeys.flight &&
+              group.identifiers.includes(messageKeys.flight)) ||
+            (messageKeys.tail &&
+              group.identifiers.includes(messageKeys.tail)) ||
+            (messageKeys.icao_hex &&
+              group.identifiers.includes(messageKeys.icao_hex));
+
+          if (matches) {
+            matchedGroupKey = groupKey;
+            matchedGroup = group;
+            storeLogger.trace("Found existing alert group", {
+              groupKey,
+              existingMessages: group.messages.length,
+            });
+            break;
+          }
+        }
+
+        // Determine the primary key for this aircraft
+        const primaryKey =
+          messageKeys.flight ||
+          messageKeys.tail ||
+          messageKeys.icao_hex ||
+          "unknown";
+
+        // If we found a match but the primary key has changed, update the map key
+        if (matchedGroup && matchedGroupKey && matchedGroupKey !== primaryKey) {
+          newAlertGroups.delete(matchedGroupKey);
+        }
+
+        // Get the message group data (existing or new)
+        const group = matchedGroup || {
+          identifiers: [],
+          has_alerts: true, // Alert groups always have alerts
+          num_alerts: 0,
+          messages: [],
+          lastUpdated: 0,
+        };
+
+        // Merge identifiers
+        const identifiers = new Set(group.identifiers);
+        if (messageKeys.flight) identifiers.add(messageKeys.flight);
+        if (messageKeys.tail) identifiers.add(messageKeys.tail);
+        if (messageKeys.icao_hex) identifiers.add(messageKeys.icao_hex);
+
+        // Check for duplicates by UID (don't add same message twice)
+        const isDuplicate = group.messages.some(
+          (msg) => msg.uid === decodedMessage.uid,
+        );
+
+        if (isDuplicate) {
+          storeLogger.debug("Skipping duplicate alert message", {
+            uid: decodedMessage.uid,
+          });
+          return { alertMessageGroups: newAlertGroups };
+        }
+
+        // Add the new alert message
+        let updatedMessages = [decodedMessage, ...group.messages];
+
+        // Limit to user's configured max messages per group
+        updatedMessages = updatedMessages.slice(0, getMaxMessagesPerGroup());
+
+        const numAlerts = updatedMessages.length; // All messages in alert groups are alerts
+
+        // Update alert group data
+        newAlertGroups.set(primaryKey, {
+          identifiers: Array.from(identifiers),
+          has_alerts: true,
+          num_alerts: numAlerts,
+          messages: updatedMessages,
+          lastUpdated: decodedMessage.timestamp || Date.now() / 1000,
+        });
+
+        // Cull old alert groups if we exceed the limit
+        // Alert culling is SIMPLER: no ADS-B consideration, just oldest groups
+        const maxGroups = getMaxMessageGroups();
+        if (newAlertGroups.size > maxGroups) {
+          storeLogger.debug("Culling alert groups", {
+            currentGroups: newAlertGroups.size,
+            maxGroups,
+          });
+
+          // Sort groups by lastUpdated timestamp (oldest first)
+          const sortedGroups = Array.from(newAlertGroups.entries()).sort(
+            (a, b) => a[1].lastUpdated - b[1].lastUpdated,
+          );
+
+          // Remove oldest groups until we're at the limit
+          const groupsToRemove = sortedGroups.slice(
+            0,
+            newAlertGroups.size - maxGroups,
+          );
+
+          for (const [key] of groupsToRemove) {
+            newAlertGroups.delete(key);
+            storeLogger.debug("Culled alert group", { key });
+          }
+        }
+
+        storeLogger.trace("Alert message added", {
+          totalAlertGroups: newAlertGroups.size,
+          totalAlertMessages: Array.from(newAlertGroups.values()).reduce(
+            (sum, group) => sum + group.messages.length,
+            0,
+          ),
+        });
+
+        return { alertMessageGroups: newAlertGroups };
+      }),
+    clearAlertMessages: () => {
+      storeLogger.info("Clearing all alert message groups");
+      set({ alertMessageGroups: new Map() });
     },
 
     // Labels and metadata

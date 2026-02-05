@@ -1073,6 +1073,34 @@ def main_connect():
         )
         acarshub_logging.acars_traceback(e, "webapp")
 
+    # Send initial alert matches (most recent alerts from database)
+    try:
+        alert_results = acarshub_helpers.acarshub_database.search_alerts(
+            icao=None, tail=None, flight=None
+        )
+
+        if alert_results is not None:
+            alert_results.reverse()
+            alert_options = {"loading": True, "done_loading": False}
+            alert_index = 1
+
+            for item in alert_results:
+                if alert_index == len(alert_results):
+                    alert_options["done_loading"] = True
+                alert_index += 1
+                acarshub_helpers.update_keys(item)
+                socketio.emit(
+                    "alert_matches",
+                    {"msghtml": item, **alert_options},
+                    to=requester,
+                    namespace="/main",
+                )
+    except Exception as e:
+        acarshub_logging.log(
+            f"Main Connect: Error sending alert matches: {e}", "webapp"
+        )
+        acarshub_logging.acars_traceback(e, "webapp")
+
     # Start the htmlGenerator thread only if the thread has not been started before.
     if thread_message_relay_active is False:
         sys.stdout.flush()
@@ -1096,33 +1124,6 @@ def main_connect():
         "messageRelayListener",
         level=LOG_LEVEL["DEBUG"],
     )
-
-
-@socketio.on("query_terms", namespace="/main")
-def get_alerts(message, namespace):
-    requester = request.sid
-    results = acarshub_helpers.acarshub_database.search_alerts(
-        icao=message["icao"],
-        # text=message["text"],
-        flight=message["flight"],
-        tail=message["tail"],
-    )
-    if results is not None:
-        results.reverse()
-
-    recent_options = {"loading": True, "done_loading": False}
-    msg_index = 1
-    for item in [item for item in (results or [])]:
-        if msg_index == len(results):
-            recent_options["done_loading"] = True
-        msg_index += 1
-        acarshub_helpers.update_keys(item)
-        socketio.emit(
-            "alert_matches",
-            {"msghtml": item, **recent_options},
-            to=requester,
-            namespace="/main",
-        )
 
 
 @socketio.on("update_alerts", namespace="/main")

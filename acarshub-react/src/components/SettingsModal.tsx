@@ -49,6 +49,10 @@ export const SettingsModal = () => {
   // Alert terms from AppStore
   const alertTerms = useAppStore((state) => state.alertTerms);
   const setAlertTerms = useAppStore((state) => state.setAlertTerms);
+
+  // Check if remote updates are allowed (from backend configuration)
+  const decoders = useAppStore((state) => state.decoders);
+  const allowRemoteUpdates = decoders?.allow_remote_updates ?? true;
   const setTheme = useSettingsStore((state) => state.setTheme);
   const setTimeFormat = useSettingsStore((state) => state.setTimeFormat);
   const setDateFormat = useSettingsStore((state) => state.setDateFormat);
@@ -69,10 +73,6 @@ export const SettingsModal = () => {
   );
   const setMaxMessageGroups = useSettingsStore(
     (state) => state.setMaxMessageGroups,
-  );
-  const setEnableCaching = useSettingsStore((state) => state.setEnableCaching);
-  const setAutoClearMinutes = useSettingsStore(
-    (state) => state.setAutoClearMinutes,
   );
   const resetToDefaults = useSettingsStore((state) => state.resetToDefaults);
   const exportSettings = useSettingsStore((state) => state.exportSettings);
@@ -708,6 +708,15 @@ export const SettingsModal = () => {
               subtitle="Manage alert terms for message filtering"
               variant="warning"
             >
+              {!allowRemoteUpdates && (
+                <p
+                  className="settings-help-text"
+                  style={{ marginBottom: "1rem", color: "var(--color-peach)" }}
+                >
+                  ⚠️ Alert term editing is disabled by the server administrator.
+                  Contact your system administrator to modify alert terms.
+                </p>
+              )}
               {/* Alert Terms */}
               <div className="settings-field-group">
                 <div className="settings-label-row">
@@ -718,6 +727,7 @@ export const SettingsModal = () => {
                     variant="info"
                     size="sm"
                     onClick={handleLoadDefaultTerms}
+                    disabled={!allowRemoteUpdates}
                     aria-label="Load default alert terms"
                   >
                     Load Defaults
@@ -732,12 +742,13 @@ export const SettingsModal = () => {
                     onKeyPress={handleAlertTermKeyPress}
                     placeholder="Enter term and press Enter"
                     className="alert-terms-input"
+                    disabled={!allowRemoteUpdates}
                   />
                   <Button
                     variant="primary"
                     size="sm"
                     onClick={handleAddAlertTerm}
-                    disabled={!newAlertTerm.trim()}
+                    disabled={!newAlertTerm.trim() || !allowRemoteUpdates}
                     aria-label="Add alert term"
                   >
                     Add
@@ -757,6 +768,7 @@ export const SettingsModal = () => {
                           onClick={() => handleRemoveAlertTerm(term)}
                           aria-label={`Remove alert term ${term}`}
                           className="alert-term-chip__remove"
+                          disabled={!allowRemoteUpdates}
                         >
                           ×
                         </button>
@@ -780,12 +792,13 @@ export const SettingsModal = () => {
                     onKeyPress={handleIgnoreTermKeyPress}
                     placeholder="Enter term and press Enter"
                     className="alert-terms-input"
+                    disabled={!allowRemoteUpdates}
                   />
                   <Button
                     variant="primary"
                     size="sm"
                     onClick={handleAddIgnoreTerm}
-                    disabled={!newIgnoreTerm.trim()}
+                    disabled={!newIgnoreTerm.trim() || !allowRemoteUpdates}
                     aria-label="Add ignore term"
                   >
                     Add
@@ -809,6 +822,7 @@ export const SettingsModal = () => {
                           onClick={() => handleRemoveIgnoreTerm(term)}
                           aria-label={`Remove ignore term ${term}`}
                           className="alert-term-chip__remove"
+                          disabled={!allowRemoteUpdates}
                         >
                           ×
                         </button>
@@ -873,36 +887,6 @@ export const SettingsModal = () => {
                 <p className="settings-help-text">
                   Maximum number of message sources to track (oldest groups are
                   culled)
-                </p>
-              </div>
-
-              <Toggle
-                id="enable-caching"
-                label="Enable Local Caching (Coming Soon)"
-                checked={settings.data.enableCaching}
-                onChange={setEnableCaching}
-                helpText="Cache data locally for faster loading (stored in browser)"
-                disabled
-              />
-
-              <div className="settings-field-group">
-                <label htmlFor="auto-clear" className="settings-label">
-                  Auto-clear after (Coming Soon):{" "}
-                  {settings.data.autoClearMinutes} minutes
-                </label>
-                <input
-                  id="auto-clear"
-                  type="range"
-                  min="0"
-                  max="240"
-                  step="15"
-                  value={settings.data.autoClearMinutes}
-                  onChange={(e) => setAutoClearMinutes(Number(e.target.value))}
-                  className="settings-slider"
-                  disabled
-                />
-                <p className="settings-help-text">
-                  Automatically clear old data after specified time (0 = never)
                 </p>
               </div>
             </Card>

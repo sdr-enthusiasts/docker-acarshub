@@ -519,10 +519,6 @@ describe("SettingsModal", () => {
 
       expect(screen.getByText(/Max Messages per Source:/i)).toBeInTheDocument();
       expect(screen.getByText(/Max Message Groups:/i)).toBeInTheDocument();
-      expect(
-        screen.getByLabelText(/Enable Local Caching/i),
-      ).toBeInTheDocument();
-      expect(screen.getByText(/Auto-clear after/i)).toBeInTheDocument();
     });
 
     it("should update max messages per aircraft", async () => {
@@ -557,40 +553,6 @@ describe("SettingsModal", () => {
           75,
         );
       });
-    });
-
-    it("should toggle caching", async () => {
-      const user = userEvent.setup();
-      render(<SettingsModal />);
-
-      await user.click(screen.getByRole("tab", { name: "Data & Privacy" }));
-
-      const cachingToggle = screen.getByLabelText(/Enable Local Caching/i);
-
-      // This toggle is disabled ("Coming Soon") - test that it's disabled
-      expect(cachingToggle).toBeDisabled();
-
-      // Verify default state remains unchanged since it can't be toggled
-      expect(useSettingsStore.getState().settings.data.enableCaching).toBe(
-        true,
-      );
-    });
-
-    it("should update auto-clear minutes", async () => {
-      const user = userEvent.setup();
-      render(<SettingsModal />);
-
-      await user.click(screen.getByRole("tab", { name: "Data & Privacy" }));
-
-      const slider = screen.getByLabelText(/Auto-clear after/i);
-
-      // This slider is disabled ("Coming Soon") - test that it's disabled
-      expect(slider).toBeDisabled();
-
-      // Verify default state remains unchanged since it can't be modified
-      expect(useSettingsStore.getState().settings.data.autoClearMinutes).toBe(
-        60,
-      );
     });
   });
 

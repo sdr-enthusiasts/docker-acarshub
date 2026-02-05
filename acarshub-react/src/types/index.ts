@@ -495,6 +495,9 @@ export interface SocketEvents {
   labels: (data: Labels) => void;
   terms: (data: Terms) => void;
 
+  // Alert matches (initial load from database)
+  alert_matches: (data: HtmlMsg) => void;
+
   // Search results
   database_search_results: (data: SearchHtmlMsg) => void;
 

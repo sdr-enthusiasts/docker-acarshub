@@ -36,34 +36,10 @@ import { uiLogger } from "../utils/logger";
  */
 export const AlertsPage = () => {
   const setCurrentPage = useAppStore((state) => state.setCurrentPage);
-  const messageGroups = useAppStore((state) => state.messageGroups);
+  const alertMessageGroups = useAppStore((state) => state.alertMessageGroups);
   const alertTerms = useAppStore((state) => state.alertTerms);
   const readMessageUids = useAppStore((state) => state.readMessageUids);
   const markAllAlertsAsRead = useAppStore((state) => state.markAllAlertsAsRead);
-
-  // Filter message groups to only show those with alerts
-  const alertMessageGroups = useMemo(() => {
-    const filtered = new Map<string, MessageGroupType>();
-
-    for (const [key, group] of messageGroups.entries()) {
-      // Only include groups with alerts
-      if (group.has_alerts) {
-        // Filter messages to only show those with alerts
-        const alertMessages = group.messages.filter(
-          (msg) => msg.matched === true,
-        );
-
-        if (alertMessages.length > 0) {
-          filtered.set(key, {
-            ...group,
-            messages: alertMessages,
-          });
-        }
-      }
-    }
-
-    return filtered;
-  }, [messageGroups]);
 
   // Count total alert messages, unread alerts, and unique aircraft
   const stats = useMemo(() => {
@@ -91,8 +67,6 @@ export const AlertsPage = () => {
       uniqueAircraft: uniqueAircraft.size,
     };
   }, [alertMessageGroups, readMessageUids]);
-
-  // No longer needed - alertCount is calculated in AppStore addMessage()
 
   useEffect(() => {
     setCurrentPage("Alerts");
