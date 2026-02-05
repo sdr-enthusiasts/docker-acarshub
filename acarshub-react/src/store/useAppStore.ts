@@ -758,6 +758,6 @@ export const selectAdsbEnabled = (state: AppState) =>
  * Production builds will tree-shake this away
  */
 if (import.meta.env.MODE === "development" || import.meta.env.MODE === "test") {
-  // biome-ignore lint/suspicious/noExplicitAny: Required for E2E testing window exposure
-  (window as any).__ACARS_STORE__ = useAppStore;
+  // @ts-expect-error - Required for E2E testing window exposure
+  window.__ACARS_STORE__ = useAppStore;
 }
