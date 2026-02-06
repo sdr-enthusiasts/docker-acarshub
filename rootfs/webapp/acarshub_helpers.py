@@ -68,9 +68,22 @@ def update_keys(json_message):
     # Santiztize the message of any empty/None vales
     # This won't occur for live messages but if the message originates from a DB query
     # It will return all keys, even ones where the original message didn't have a value
+
+    # Preserve backend-supplied alert metadata and UID (never delete these)
+    protected_keys = {
+        "uid",
+        "matched",
+        "matched_text",
+        "matched_icao",
+        "matched_tail",
+        "matched_flight",
+    }
+
     stale_keys = []
     for key in json_message:
-        if not has_specified_key_not_none(json_message, key):
+        if key not in protected_keys and not has_specified_key_not_none(
+            json_message, key
+        ):
             stale_keys.append(key)
 
     for key in stale_keys:

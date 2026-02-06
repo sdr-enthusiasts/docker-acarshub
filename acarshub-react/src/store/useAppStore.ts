@@ -38,7 +38,6 @@ import type {
   SystemStatus,
   Terms,
 } from "../types";
-import { applyAlertMatching } from "../utils/alertMatching";
 import { storeLogger } from "../utils/logger";
 import { cullMessageGroups } from "../utils/messageCulling";
 import { useSettingsStore } from "./useSettingsStore";
@@ -225,10 +224,10 @@ export const useAppStore = create<AppState>((set, get) => {
         }
 
         // Decode the message if it has text
-        let decodedMessage = messageDecoder.decode(message);
+        const decodedMessage = messageDecoder.decode(message);
 
-        // Apply alert matching (check against alert terms)
-        decodedMessage = applyAlertMatching(decodedMessage, state.alertTerms);
+        // Backend has already set matched flags - just trust them!
+        // No client-side matching needed
 
         if (decodedMessage.matched) {
           storeLogger.info("Alert match detected in message", {

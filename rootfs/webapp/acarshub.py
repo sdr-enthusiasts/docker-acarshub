@@ -386,6 +386,22 @@ def messageRelayListener():
 
             client_message = generateClientMessage(message_source, json_message)
 
+            # Retrieve alert metadata from cache (set by database_listener)
+            cache_key = f"{json_message.get('timestamp', '')}_{json_message.get('tail', '')}_{json_message.get('flight', '')}_{json_message.get('icao', '')}"
+            alert_metadata = alert_metadata_cache.get(cache_key)
+
+            # Add alert metadata to client message if available
+            if alert_metadata is not None:
+                client_message["uid"] = alert_metadata["uid"]
+                client_message["matched"] = alert_metadata["matched"]
+                client_message["matched_text"] = alert_metadata["matched_text"]
+                client_message["matched_icao"] = alert_metadata["matched_icao"]
+                client_message["matched_tail"] = alert_metadata["matched_tail"]
+                client_message["matched_flight"] = alert_metadata["matched_flight"]
+
+                # Remove from cache after use
+                del alert_metadata_cache[cache_key]
+
             socketio.emit("acars_msg", {"msghtml": client_message}, namespace="/main")
             # acarshub_logging.log(f"EMIT: {client_message}", "messageRelayListener", level=LOG_LEVEL["DEBUG"])
 
@@ -429,6 +445,11 @@ def scheduled_tasks():
         time.sleep(1)
 
 
+# Global dict to cache alert metadata by message timestamp + identifiers
+# Used to pass alert data from database_listener to messageRelayListener
+alert_metadata_cache = {}
+
+
 def database_listener():
     import sys
     import time
@@ -440,9 +461,25 @@ def database_listener():
         while len(que_database) != 0:
             sys.stdout.flush()
             message_type, message_as_json = que_database.pop()
-            acarshub_helpers.acarshub_database.add_message_from_json(
+
+            # Save to database and get alert metadata (includes UID)
+            alert_metadata = acarshub_helpers.acarshub_database.add_message_from_json(
                 message_type=message_type, message_from_json=message_as_json
             )
+
+            # Create cache key from message identifying fields
+            # Use timestamp + tail + flight + icao to uniquely identify message
+            cache_key = f"{message_as_json.get('timestamp', '')}_{message_as_json.get('tail', '')}_{message_as_json.get('flight', '')}_{message_as_json.get('icao', '')}"
+
+            # Store alert metadata in cache for messageRelayListener to retrieve
+            if alert_metadata is not None:
+                alert_metadata_cache[cache_key] = alert_metadata
+
+                # Clean old cache entries (keep last 1000)
+                if len(alert_metadata_cache) > 1000:
+                    # Remove oldest 200 entries
+                    for old_key in list(alert_metadata_cache.keys())[:200]:
+                        del alert_metadata_cache[old_key]
         else:
             pass
 
@@ -1196,6 +1233,131 @@ def request_count(message, namespace):
         "request_count",
         level=LOG_LEVEL["DEBUG"],
     )
+
+
+@socketio.on("request_recent_alerts", namespace="/main")
+def handle_recent_alerts_request(message, namespace):
+    """
+    Send recent alert messages to client on request.
+    Called when React app loads to populate initial alert state.
+
+    Uses normalized schema: JOINs messages with alert_matches table.
+    """
+    from sqlalchemy import desc
+
+    pt = time.time()
+    requester = request.sid
+    session = None
+
+    try:
+        session = acarshub_helpers.acarshub_database.db_session()
+
+        # Get distinct alert messages with their match metadata
+        # JOIN messages with alert_matches to get complete data
+        recent_alerts_query = (
+            session.query(
+                acarshub_helpers.acarshub_database.messages,
+                acarshub_helpers.acarshub_database.AlertMatch.term,
+                acarshub_helpers.acarshub_database.AlertMatch.match_type,
+            )
+            .join(
+                acarshub_helpers.acarshub_database.AlertMatch,
+                acarshub_helpers.acarshub_database.messages.uid
+                == acarshub_helpers.acarshub_database.AlertMatch.message_uid,
+            )
+            .order_by(desc(acarshub_helpers.acarshub_database.messages.time))
+            .limit(200)  # Increased limit since we'll deduplicate by UID
+            .all()
+        )
+
+        # Group matches by message UID (same message may match multiple terms)
+        alerts_by_uid = {}
+        for msg, term, match_type in recent_alerts_query:
+            msg_dict = {
+                "id": msg.id,
+                "uid": msg.uid,
+                "message_type": msg.message_type,
+                "time": msg.time,
+                "station_id": msg.station_id,
+                "toaddr": msg.toaddr,
+                "fromaddr": msg.fromaddr,
+                "depa": msg.depa,
+                "dsta": msg.dsta,
+                "eta": msg.eta,
+                "gtout": msg.gtout,
+                "gtin": msg.gtin,
+                "wloff": msg.wloff,
+                "wlin": msg.wlin,
+                "lat": msg.lat,
+                "lon": msg.lon,
+                "alt": msg.alt,
+                "msg_text": msg.text,
+                "tail": msg.tail,
+                "flight": msg.flight,
+                "icao": msg.icao,
+                "freq": msg.freq,
+                "ack": msg.ack,
+                "mode": msg.mode,
+                "label": msg.label,
+                "block_id": msg.block_id,
+                "msgno": msg.msgno,
+                "is_response": msg.is_response,
+                "is_onground": msg.is_onground,
+                "error": msg.error,
+                "libacars": msg.libacars,
+                "level": msg.level,
+            }
+
+            # Apply update_keys to format message for frontend
+            acarshub_helpers.update_keys(msg_dict)
+
+            uid = msg_dict["uid"]
+
+            if uid not in alerts_by_uid:
+                # First match for this message
+                alerts_by_uid[uid] = msg_dict
+                alerts_by_uid[uid]["matched"] = True
+                alerts_by_uid[uid]["matched_text"] = []
+                alerts_by_uid[uid]["matched_icao"] = []
+                alerts_by_uid[uid]["matched_tail"] = []
+                alerts_by_uid[uid]["matched_flight"] = []
+
+            # Append match to appropriate array
+            if match_type == "text":
+                if term not in alerts_by_uid[uid]["matched_text"]:
+                    alerts_by_uid[uid]["matched_text"].append(term)
+            elif match_type == "icao":
+                if term not in alerts_by_uid[uid]["matched_icao"]:
+                    alerts_by_uid[uid]["matched_icao"].append(term)
+            elif match_type == "tail":
+                if term not in alerts_by_uid[uid]["matched_tail"]:
+                    alerts_by_uid[uid]["matched_tail"].append(term)
+            elif match_type == "flight":
+                if term not in alerts_by_uid[uid]["matched_flight"]:
+                    alerts_by_uid[uid]["matched_flight"].append(term)
+
+        # Convert to list and limit to 100 unique messages
+        alerts_data = list(alerts_by_uid.values())[:100]
+
+        # Send to requesting client only (not broadcast)
+        socketio.emit(
+            "recent_alerts", {"alerts": alerts_data}, to=requester, namespace="/main"
+        )
+
+        pt = time.time() - pt
+        acarshub_logging.log(
+            f"request_recent_alerts took {pt * 1000:.0f}ms, returned {len(alerts_data)} alerts",
+            "request_recent_alerts",
+            level=LOG_LEVEL["DEBUG"],
+        )
+
+    except Exception as e:
+        acarshub_logging.acars_traceback(e, "request_recent_alerts")
+        # Send empty alerts on error
+        socketio.emit("recent_alerts", {"alerts": []}, to=requester, namespace="/main")
+    finally:
+        if session:
+            session.close()
 
 
 @socketio.on("signal_graphs", namespace="/main")

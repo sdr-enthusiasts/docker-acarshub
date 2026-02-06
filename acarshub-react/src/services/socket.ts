@@ -90,6 +90,7 @@ export interface ServerToClientEvents {
 
   // Alert data
   alert_terms: (data: { data: AlertTerm }) => void;
+  recent_alerts: (data: { alerts: AcarsMsg[] }) => void;
 
   // Connection events
   connect: () => void;
@@ -374,6 +375,22 @@ class SocketService {
     // Legacy style: pass namespace as third argument
     // @ts-expect-error - Legacy Socket.IO syntax requires namespace as third arg
     this.socket?.emit("request_status", {}, "/main");
+  }
+
+  /**
+   * Request recent alert messages from backend
+   * Called when React app loads to populate initial alert state
+   */
+  requestRecentAlerts(): void {
+    if (!this.socket?.connected) {
+      socketLogger.warn("Cannot request recent alerts - socket not connected");
+      return;
+    }
+
+    socketLogger.debug("Requesting recent alerts from backend");
+    // Legacy style: pass namespace as third argument
+    // @ts-expect-error - Legacy Socket.IO syntax requires namespace as third arg
+    this.socket.emit("request_recent_alerts", {}, "/main");
   }
 
   /**

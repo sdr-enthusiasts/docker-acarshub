@@ -38,6 +38,7 @@ import acarshub_logging
 from acarshub_logging import LOG_LEVEL
 import re
 import os
+import uuid
 
 groundStations = dict()  # dictionary of all ground stations
 alert_terms = list()  # dictionary of all alert terms monitored
@@ -242,6 +243,7 @@ class ignoreAlertTerms(Messages):
 class messages(Messages):
     __tablename__ = "messages"
     id = Column(Integer, primary_key=True)
+    uid = Column("uid", String(36), nullable=False, unique=True, index=True)
     # ACARS or VDLM
     message_type = Column("message_type", String(32), nullable=False)
     # message time
@@ -276,44 +278,15 @@ class messages(Messages):
     level = Column("level", String(32), nullable=False)
 
 
-# class to save messages that matched an alert
-class messages_saved(Messages):
-    __tablename__ = "messages_saved"
+# Normalized alert matches junction table
+# Links messages to their alert matches without duplicating message data
+class AlertMatch(Messages):
+    __tablename__ = "alert_matches"
     id = Column(Integer, primary_key=True)
-    # ACARS or VDLM
-    message_type = Column("message_type", String(32), nullable=False)
-    # message time
-    time = Column("msg_time", Integer, nullable=False)
-    station_id = Column("station_id", String(32), nullable=False)
-    toaddr = Column("toaddr", String(32), nullable=False)
-    fromaddr = Column("fromaddr", String(32), nullable=False)
-    depa = Column("depa", String(32), index=True, nullable=False)
-    dsta = Column("dsta", String(32), index=True, nullable=False)
-    eta = Column("eta", String(32), nullable=False)
-    gtout = Column("gtout", String(32), nullable=False)
-    gtin = Column("gtin", String(32), nullable=False)
-    wloff = Column("wloff", String(32), nullable=False)
-    wlin = Column("wlin", String(32), nullable=False)
-    lat = Column("lat", String(32), nullable=False)
-    lon = Column("lon", String(32), nullable=False)
-    alt = Column("alt", String(32), nullable=False)
-    text = Column("msg_text", Text, index=True, nullable=False)
-    tail = Column("tail", String(32), index=True, nullable=False)
-    flight = Column("flight", String(32), index=True, nullable=False)
-    icao = Column("icao", String(32), index=True, nullable=False)
-    freq = Column("freq", String(32), index=True, nullable=False)
-    ack = Column("ack", String(32), nullable=False)
-    mode = Column("mode", String(32), nullable=False)
-    label = Column("label", String(32), index=True, nullable=False)
-    block_id = Column("block_id", String(32), nullable=False)
-    msgno = Column("msgno", String(32), index=True, nullable=False)
-    is_response = Column("is_response", String(32), nullable=False)
-    is_onground = Column("is_onground", String(32), nullable=False)
-    error = Column("error", String(32), nullable=False)
-    libacars = Column("libacars", Text, nullable=False)
-    level = Column("level", String(32), nullable=False)
+    message_uid = Column("message_uid", String(36), nullable=False, index=True)
     term = Column("term", String(32), nullable=False)
-    type_of_match = Column("type_of_match", String(32), nullable=False)
+    match_type = Column("match_type", String(32), nullable=False)
+    matched_at = Column("matched_at", Integer, nullable=False)
 
 
 # Now we've created the classes for the database, we'll associate the class with the database and create any missing tables
@@ -570,6 +543,20 @@ def create_db_safe_params(message_from_json):
 
 
 def add_message(params, message_type, message_from_json, backup=False):
+    # Generate UUID for this message (use same UID for both tables if saved)
+    message_uid = str(uuid.uuid4())
+    params["uid"] = message_uid
+
+    # Initialize alert match tracking
+    alert_metadata = {
+        "uid": message_uid,
+        "matched": False,
+        "matched_text": [],
+        "matched_icao": [],
+        "matched_tail": [],
+        "matched_flight": [],
+    }
+
     try:
         if backup:
             session = db_session_backup()
@@ -656,6 +643,7 @@ def add_message(params, message_type, message_from_json, backup=False):
         if alert_terms:
             # Helper function to save alert match
             def save_alert_match(term, match_type):
+                # Update alert statistics
                 found_term = (
                     session.query(alertStats)
                     .filter(alertStats.term == term.upper())
@@ -666,21 +654,33 @@ def add_message(params, message_type, message_from_json, backup=False):
                 else:
                     session.add(alertStats(term=term.upper(), count=1))
 
+                # Add to normalized alert_matches table
                 session.add(
-                    messages_saved(
-                        message_type=message_type,
-                        **params,
+                    AlertMatch(
+                        message_uid=message_uid,
                         term=term.upper(),
-                        type_of_match=match_type,
+                        match_type=match_type,
+                        matched_at=params["time"],
                     )
                 )
-                session.commit()
+
+                # Update alert metadata for return value
+                alert_metadata["matched"] = True
+                if match_type == "text":
+                    alert_metadata["matched_text"].append(term.upper())
+                elif match_type == "icao":
+                    alert_metadata["matched_icao"].append(term.upper())
+                elif match_type == "tail":
+                    alert_metadata["matched_tail"].append(term.upper())
+                elif match_type == "flight":
+                    alert_metadata["matched_flight"].append(term.upper())
 
             # Check message text for alert terms
             if len(params["text"]) > 0:
                 for search_term in alert_terms:
                     if re.findall(r"\b{}\b".format(search_term), params["text"]):
                         should_add = True
+                        # Check ignore terms
                         for ignore_term in alert_terms_ignore:
                             if re.findall(
                                 r"\b{}\b".format(ignore_term), params["text"]
@@ -697,7 +697,15 @@ def add_message(params, message_type, message_from_json, backup=False):
                     term_upper = search_term.upper()
                     # Support both full match and partial substring match (anywhere in ICAO)
                     if icao_upper == term_upper or term_upper in icao_upper:
-                        save_alert_match(search_term, "icao")
+                        # Check ignore terms for ICAO
+                        should_add = True
+                        for ignore_term in alert_terms_ignore:
+                            ignore_upper = ignore_term.upper()
+                            if icao_upper == ignore_upper or ignore_upper in icao_upper:
+                                should_add = False
+                                break
+                        if should_add:
+                            save_alert_match(search_term, "icao")
 
             # Check tail number for alert terms (supports partial matching)
             if len(params["tail"]) > 0:
@@ -706,7 +714,15 @@ def add_message(params, message_type, message_from_json, backup=False):
                     term_upper = search_term.upper()
                     # Support both full match and partial substring match (anywhere in tail)
                     if tail_upper == term_upper or term_upper in tail_upper:
-                        save_alert_match(search_term, "tail")
+                        # Check ignore terms for tail
+                        should_add = True
+                        for ignore_term in alert_terms_ignore:
+                            ignore_upper = ignore_term.upper()
+                            if tail_upper == ignore_upper or ignore_upper in tail_upper:
+                                should_add = False
+                                break
+                        if should_add:
+                            save_alert_match(search_term, "tail")
 
             # Check flight number for alert terms (supports partial matching)
             if len(params["flight"]) > 0:
@@ -715,12 +731,35 @@ def add_message(params, message_type, message_from_json, backup=False):
                     term_upper = search_term.upper()
                     # Support both full match and partial substring match (anywhere in flight)
                     if flight_upper == term_upper or term_upper in flight_upper:
-                        save_alert_match(search_term, "flight")
+                        # Check ignore terms for flight
+                        should_add = True
+                        for ignore_term in alert_terms_ignore:
+                            ignore_upper = ignore_term.upper()
+                            if (
+                                flight_upper == ignore_upper
+                                or ignore_upper in flight_upper
+                            ):
+                                should_add = False
+                                break
+                        if should_add:
+                            save_alert_match(search_term, "flight")
 
         # commit the db change and close the session
         session.commit()
+
+        # Return alert metadata for caller (Socket.IO emission)
+        return alert_metadata
     except Exception as e:
         acarshub_logging.acars_traceback(e, "database")
+        # Return empty metadata on error
+        return {
+            "uid": message_uid,
+            "matched": False,
+            "matched_text": [],
+            "matched_icao": [],
+            "matched_tail": [],
+            "matched_flight": [],
+        }
     finally:
         if session:
             session.close()
@@ -731,14 +770,18 @@ def add_message_from_json(message_type, message_from_json):
     # all fields are set to a blank string. This is because all of the database fields
     # are set to be 'not null' so all fields require a value, even if it is blank
     params = create_db_safe_params(message_from_json)
-    add_message(params, message_type, message_from_json)
+    alert_metadata = add_message(params, message_type, message_from_json)
     if backup:
         acarshub_logging.log(
             "Adding message to backup database",
             "database",
             level=LOG_LEVEL["DEBUG"],
         )
+        # Backup database gets same UID (already in params from first add_message call)
         add_message(params, message_type, message_from_json, backup=True)
+
+    # Return alert metadata to caller (for Socket.IO emission)
+    return alert_metadata
 
 
 def find_airline_code_from_iata(iata):
@@ -993,8 +1036,11 @@ def search_alerts(icao=None, tail=None, flight=None):
                 query_string = f"SELECT * FROM messages WHERE id IN (SELECT rowid FROM messages_fts WHERE messages_fts MATCH '{query_string}')"
 
             if alert_terms is not None:
-                terms_string = """SELECT id, message_type, msg_time, station_id, toaddr, fromaddr, depa, dsta, eta, gtout, gtin, wloff, wlin,
-                                lat, lon, alt, msg_text, tail, flight, icao, freq, ack, mode, label, block_id, msgno, is_response, is_onground, error, libacars, level FROM messages_saved"""
+                # Query messages that have alert matches via JOIN
+                terms_string = """SELECT DISTINCT m.id, m.message_type, m.msg_time, m.station_id, m.toaddr, m.fromaddr, m.depa, m.dsta, m.eta, m.gtout, m.gtin, m.wloff, m.wlin,
+                                m.lat, m.lon, m.alt, m.msg_text, m.tail, m.flight, m.icao, m.freq, m.ack, m.mode, m.label, m.block_id, m.msgno, m.is_response, m.is_onground, m.error, m.libacars, m.level, m.uid
+                                FROM messages m
+                                INNER JOIN alert_matches am ON m.uid = am.message_uid"""
             else:
                 terms_string = ""
 
@@ -1041,8 +1087,8 @@ def search_alerts(icao=None, tail=None, flight=None):
 #     ):
 #         try:
 #             session = db_session()
-#             # FIXME: This should really be FTS searched on messages_saved. We need to do the following:
-#             # 1. Create a new fts table for messaged_saved
+#             # FIXME: This should really be FTS searched on alert_matches joined with messages.
+#             # 1. Create a new fts table for alert_matches (or use messages_fts with JOIN)
 #             # 2. Save ALL alert terms to the db so we can match properly and save
 #             # query_filter_icao = []
 #             # query_filter_tail = []
@@ -1393,9 +1439,7 @@ def set_alert_terms(terms=None):
         for item in result:
             if item.term not in terms:
                 session.query(alertStats).filter(alertStats.term == item.term).delete()
-                session.query(messages_saved).filter(
-                    messages_saved.term == item.term
-                ).delete()
+                session.query(AlertMatch).filter(AlertMatch.term == item.term).delete()
 
         session.commit()
     except Exception as e:
@@ -1445,14 +1489,16 @@ def prune_database():
 
         acarshub_logging.log("Pruning alert database", "database")
 
-        # prune messages_saved as well
-        cutoff = (
-            datetime.datetime.now()
-            - datetime.timedelta(days=acarshub_configuration.DB_ALERT_SAVE_DAYS)
-        ).timestamp()
+        # prune alert_matches as well (using matched_at timestamp)
+        cutoff = int(
+            (
+                datetime.datetime.now()
+                - datetime.timedelta(days=acarshub_configuration.DB_ALERT_SAVE_DAYS)
+            ).timestamp()
+        )
 
         result = (
-            session.query(messages_saved).filter(messages_saved.time < cutoff).delete()
+            session.query(AlertMatch).filter(AlertMatch.matched_at < cutoff).delete()
         )
 
         session.commit()

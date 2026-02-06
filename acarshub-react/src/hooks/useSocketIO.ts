@@ -17,7 +17,7 @@
 import { useEffect } from "react";
 import { socketService } from "../services/socket";
 import { useAppStore } from "../store/useAppStore";
-import type { HtmlMsg, Labels } from "../types";
+import type { AcarsMsg, HtmlMsg, Labels } from "../types";
 import { socketLogger } from "../utils/logger";
 
 /**
@@ -70,6 +70,9 @@ export const useSocketIO = () => {
         connected: true,
       });
       setConnected(true);
+
+      // Request recent alerts to populate initial state
+      socketService.requestRecentAlerts();
     });
 
     socket.on("disconnect", (reason) => {
@@ -96,6 +99,21 @@ export const useSocketIO = () => {
         connected: true,
       });
       setConnected(true);
+
+      // Request recent alerts after reconnection
+      socketService.requestRecentAlerts();
+    });
+
+    // Recent alerts event handler
+    socket.on("recent_alerts", (data: { alerts: AcarsMsg[] }) => {
+      socketLogger.info("Received recent alerts", {
+        count: data.alerts.length,
+      });
+
+      // Add alerts to store (they already have matched flags from backend)
+      data.alerts.forEach((alert) => {
+        addMessage(alert);
+      });
     });
 
     // Core message event - most frequent event
