@@ -32,7 +32,6 @@ import { socketLogger } from "../utils/logger";
 export const useSocketIO = () => {
   const setConnected = useAppStore((state) => state.setConnected);
   const addMessage = useAppStore((state) => state.addMessage);
-  const addAlertMessage = useAppStore((state) => state.addAlertMessage);
   const setLabels = useAppStore((state) => state.setLabels);
   const setAlertTerms = useAppStore((state) => state.setAlertTerms);
   const setDecoders = useAppStore((state) => state.setDecoders);
@@ -143,19 +142,6 @@ export const useSocketIO = () => {
       setAlertTerms(terms);
     });
 
-    // Alert matches event - initial load from database
-    socket.on("alert_matches", (data: HtmlMsg) => {
-      socketLogger.debug("Received alert_matches event", {
-        uid: data.msghtml?.uid,
-        station: data.msghtml?.station_id,
-        loading: data.loading,
-        doneLoading: data.done_loading,
-      });
-      // Unwrap msghtml wrapper and add to separate alert storage
-      const message = data.msghtml;
-      addAlertMessage(message);
-    });
-
     socket.on("features_enabled", (decoders) => {
       socketLogger.info("Received decoder configuration", {
         acars: decoders.acars,
@@ -253,7 +239,7 @@ export const useSocketIO = () => {
       socket.off("acars_msg");
       socket.off("labels");
       socket.off("terms");
-      socket.off("alert_matches");
+
       socket.off("features_enabled");
       socket.off("system_status");
       socket.off("version");
@@ -281,7 +267,6 @@ export const useSocketIO = () => {
   }, [
     setConnected,
     addMessage,
-    addAlertMessage,
     setLabels,
     setAlertTerms,
     setDecoders,

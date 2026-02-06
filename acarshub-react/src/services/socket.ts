@@ -20,6 +20,7 @@
 import { io, type Socket } from "socket.io-client";
 import type {
   AcarshubVersion,
+  AcarsMsg,
   ADSBData,
   Adsb,
   AdsbStatus,
