@@ -24,12 +24,45 @@
 
 **Goal**: Add stable UUID column to `messages` and `messages_saved` tables
 
+### ⚠️ Critical Bugfix (2025-02-06)
+
+**Issue Found**: Migration `204a67756b9a` failed in production with `UNIQUE constraint failed: messages.uid`
+
+**Root Cause**: SQLite's `randomblob()` function in UPDATE statements evaluates **once per statement**, not per row. The original backfill SQL:
+
+```sql
+UPDATE messages
+SET uid = (SELECT lower(hex(randomblob(4))) || '-' || ...)
+WHERE uid IS NULL
+```
+
+This generated **the same UUID for ALL rows**, causing duplicate UIDs.
+
+**Solution**: Changed backfill strategy to use Python loop with `uuid.uuid4()`:
+
+```python
+# Get all message IDs that need UIDs
+result = connection.execute(sa.text("SELECT id FROM messages WHERE uid IS NULL"))
+message_ids = [row[0] for row in result]
+
+# Generate and assign unique UUID to each message
+for msg_id in message_ids:
+    new_uid = str(uuid.uuid4())
+    connection.execute(
+        sa.text("UPDATE messages SET uid = :uid WHERE id = :id"),
+        {"uid": new_uid, "id": msg_id}
+    )
+```
+
+**Status**: ✅ Fixed in commit on `backend-authoritative-alerts` branch
+
 ### Tasks
 
 - [x] **Step 1.1**: Create Alembic migration file
   - [x] Migration adds `uid` column to `messages` table
   - [x] Migration adds `uid` column to `messages_saved` table
-  - [x] Backfill UUIDs for existing messages (SQLite UUID generation)
+  - [x] ~~Backfill UUIDs for existing messages (SQLite UUID generation)~~ ❌ BUGGY
+  - [x] **FIXED**: Backfill UUIDs using Python loop (ensures uniqueness)
   - [x] Make `uid` NOT NULL after backfill
   - [x] Create unique indexes on `uid` columns
   - [x] Test migration upgrade
@@ -77,7 +110,7 @@
 
 **Goal**: Backend generates UUIDs and returns alert match metadata
 
-### Tasks
+### Phase 2 Tasks
 
 - [x] **Step 2.1**: Generate UUIDs in `add_message()`
   - [x] Generate UUID before inserting message
@@ -97,7 +130,7 @@
   - [x] Preserve `matched_text`, `matched_icao`, `matched_tail`, `matched_flight`
   - [x] Add protected_keys set to prevent deletion of alert metadata
 
-### Acceptance Criteria
+### Phase 2 Acceptance Criteria
 
 - ✅ Every message gets a UUID
 - ✅ `add_message()` returns alert match metadata
@@ -113,6 +146,7 @@
   - Generates UUID v4 at start: `message_uid = str(uuid.uuid4())`
   - Adds `uid` to params dict before inserting message
   - Tracks alert matches in `alert_metadata` dict with structure:
+
     ```python
     {
         "uid": message_uid,
@@ -123,12 +157,14 @@
         "matched_flight": []
     }
     ```
+
   - Updates `save_alert_match()` helper to:
     - Write to normalized `AlertMatch` table (not old messages_saved)
     - Populate alert_metadata arrays based on match_type
     - Set `matched=True` when any term matches
   - Added ignore term checking for ICAO/tail/flight (not just text)
   - Returns alert_metadata to caller
+
 - Modified `add_message_from_json()` to capture and return alert metadata
 - Modified `update_keys()` in `acarshub_helpers.py`:
   - Added `protected_keys` set to prevent deletion of UID and alert fields
@@ -142,7 +178,7 @@
 
 **Goal**: Socket.IO events include alert metadata, add recent alerts endpoint
 
-### Tasks
+### Phase 3 Tasks
 
 - [x] **Step 3.1**: Modify Socket.IO Message Emission
   - [x] Update `messageRelayListener()` to include alert metadata
@@ -162,7 +198,7 @@
   - [x] Search already includes `uid` (added in migration)
   - [x] Alert metadata preserved via `update_keys()` protected_keys
 
-### Acceptance Criteria
+### Phase 3 Acceptance Criteria
 
 - ✅ Real-time messages include `uid` and alert metadata
 - ✅ `request_recent_alerts` returns last 100 alerts
@@ -197,7 +233,7 @@
 
 **Goal**: Remove client-side alert matching, trust backend
 
-### Tasks
+### Phase 4 Tasks
 
 - [x] **Step 4.1**: Update TypeScript Types
   - [x] `uid: string` already exists in `AcarsMsg` interface
@@ -234,7 +270,7 @@
   - [x] Emit to `/main` namespace with Flask-SocketIO pattern
   - [x] Add `recent_alerts` to ServerToClientEvents type
 
-### Acceptance Criteria
+### Phase 4 Acceptance Criteria
 
 - ✅ No client-side alert matching code remains
 - ✅ `addMessage()` trusts backend `matched` flag
@@ -283,7 +319,7 @@
 
 **Goal**: Comprehensive testing of new UID-based alert system
 
-### Tasks
+### Phase 5 Tasks
 
 - [ ] **Step 5.1**: Unit Tests
   - [ ] Backend: Test UUID generation
@@ -303,7 +339,7 @@
   - [ ] Verify app still works after downgrade
   - [ ] Test re-upgrade
 
-### Acceptance Criteria
+### Phase 5 Acceptance Criteria
 
 - ✅ All unit tests passing
 - ✅ Integration tests pass
@@ -314,7 +350,7 @@
 
 ## Known Issues / Blockers
 
-_None yet_
+No issues discovered yet.
 
 ---
 

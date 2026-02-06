@@ -7,6 +7,7 @@ Create Date: 2026-02-05 16:21:55.110703
 """
 
 from typing import Sequence, Union
+import uuid
 
 from alembic import op
 import sqlalchemy as sa
@@ -31,23 +32,25 @@ def upgrade() -> None:
     # Add uid column to messages table (nullable initially for backfill)
     op.add_column("messages", sa.Column("uid", sa.String(36), nullable=True))
 
-    # Backfill UUIDs for existing messages using SQLite's randomblob() function
-    # This generates UUID v4 format: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
-    # where y is one of [8, 9, a, b] (variant bits)
-    op.execute(
-        """
-        UPDATE messages
-        SET uid = (
-            SELECT lower(hex(randomblob(4))) || '-' ||
-                   lower(hex(randomblob(2))) || '-4' ||
-                   substr(lower(hex(randomblob(2))),2) || '-' ||
-                   substr('89ab',abs(random()) % 4 + 1, 1) ||
-                   substr(lower(hex(randomblob(2))),2) || '-' ||
-                   lower(hex(randomblob(6)))
+    # Backfill UUIDs for existing messages using Python to ensure uniqueness
+    # SQLite's randomblob() in UPDATE evaluates once per statement, not per row,
+    # which would create duplicate UIDs. We must use Python loop instead.
+    connection = op.get_bind()
+
+    # Get all message IDs that need UIDs
+    result = connection.execute(sa.text("SELECT id FROM messages WHERE uid IS NULL"))
+    message_ids = [row[0] for row in result]
+
+    # Generate and assign unique UUID to each message
+    for msg_id in message_ids:
+        new_uid = str(uuid.uuid4())
+        connection.execute(
+            sa.text("UPDATE messages SET uid = :uid WHERE id = :id"),
+            {"uid": new_uid, "id": msg_id},
         )
-        WHERE uid IS NULL
-    """
-    )
+
+    # Commit the backfill
+    connection.commit()
 
     # Make uid NOT NULL after backfill
     # SQLite requires table recreation for ALTER COLUMN
