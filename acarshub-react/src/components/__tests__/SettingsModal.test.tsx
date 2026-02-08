@@ -682,6 +682,115 @@ describe("SettingsModal", () => {
       );
     });
 
+    it("should split comma-delimited alert terms", async () => {
+      const user = userEvent.setup();
+      useAppStore.setState({ settingsOpen: true });
+
+      render(<SettingsModal />);
+
+      await user.click(screen.getByRole("tab", { name: "Notifications" }));
+
+      // Get all inputs, first is alert terms
+      const inputs = screen.getAllByPlaceholderText(
+        /Enter term and press Enter/i,
+      );
+      // Type multiple comma-separated terms
+      await user.type(inputs[0], "EMERGENCY, MAYDAY, PAN PAN");
+
+      // Trigger Enter key with fireEvent for more reliable key event
+      fireEvent.keyPress(inputs[0], {
+        key: "Enter",
+        code: "Enter",
+        charCode: 13,
+      });
+
+      // Wait for store update (dynamic Socket.IO import happens async)
+      await waitFor(
+        () => {
+          const currentTerms = useAppStore.getState().alertTerms.terms;
+          expect(currentTerms).toContain("EMERGENCY");
+          expect(currentTerms).toContain("MAYDAY");
+          expect(currentTerms).toContain("PAN PAN");
+          expect(currentTerms).toHaveLength(3);
+        },
+        { timeout: 3000 },
+      );
+    });
+
+    it("should trim whitespace when splitting comma-delimited terms", async () => {
+      const user = userEvent.setup();
+      useAppStore.setState({ settingsOpen: true });
+
+      render(<SettingsModal />);
+
+      await user.click(screen.getByRole("tab", { name: "Notifications" }));
+
+      // Get all inputs, first is alert terms
+      const inputs = screen.getAllByPlaceholderText(
+        /Enter term and press Enter/i,
+      );
+      // Type with irregular spacing
+      await user.type(inputs[0], "  EMERGENCY  ,  MAYDAY,PAN PAN  ");
+
+      // Trigger Enter key with fireEvent for more reliable key event
+      fireEvent.keyPress(inputs[0], {
+        key: "Enter",
+        code: "Enter",
+        charCode: 13,
+      });
+
+      // Wait for store update (dynamic Socket.IO import happens async)
+      await waitFor(
+        () => {
+          const currentTerms = useAppStore.getState().alertTerms.terms;
+          expect(currentTerms).toContain("EMERGENCY");
+          expect(currentTerms).toContain("MAYDAY");
+          expect(currentTerms).toContain("PAN PAN");
+          expect(currentTerms).toHaveLength(3);
+        },
+        { timeout: 3000 },
+      );
+    });
+
+    it("should filter out duplicate terms when splitting comma-delimited input", async () => {
+      const user = userEvent.setup();
+      useAppStore.setState({
+        settingsOpen: true,
+        alertTerms: { terms: ["MAYDAY"], ignore: [] },
+      });
+
+      render(<SettingsModal />);
+
+      await user.click(screen.getByRole("tab", { name: "Notifications" }));
+
+      // Get all inputs, first is alert terms
+      const inputs = screen.getAllByPlaceholderText(
+        /Enter term and press Enter/i,
+      );
+      // Type with some duplicates
+      await user.type(inputs[0], "EMERGENCY, MAYDAY, PAN");
+
+      // Trigger Enter key with fireEvent for more reliable key event
+      fireEvent.keyPress(inputs[0], {
+        key: "Enter",
+        code: "Enter",
+        charCode: 13,
+      });
+
+      // Wait for store update (dynamic Socket.IO import happens async)
+      await waitFor(
+        () => {
+          const currentTerms = useAppStore.getState().alertTerms.terms;
+          expect(currentTerms).toContain("EMERGENCY");
+          expect(currentTerms).toContain("MAYDAY");
+          expect(currentTerms).toContain("PAN");
+          // MAYDAY was already present, should only add EMERGENCY and PAN
+          expect(currentTerms).toHaveLength(3);
+        },
+        { timeout: 3000 },
+      );
+    });
+
     it("should not add duplicate alert terms", async () => {
       const user = userEvent.setup();
       useAppStore.setState({
@@ -745,6 +854,41 @@ describe("SettingsModal", () => {
           "/main",
         );
       });
+    });
+
+    it("should split comma-delimited ignore terms", async () => {
+      const user = userEvent.setup();
+      useAppStore.setState({ settingsOpen: true });
+
+      render(<SettingsModal />);
+
+      await user.click(screen.getByRole("tab", { name: "Notifications" }));
+
+      // Get all inputs, second is ignore terms
+      const inputs = screen.getAllByPlaceholderText(
+        /Enter term and press Enter/i,
+      );
+      // Type multiple comma-separated ignore terms
+      await user.type(inputs[1], "TEST, CHECK, IGNORE");
+
+      // Trigger Enter key with fireEvent for more reliable key event
+      fireEvent.keyPress(inputs[1], {
+        key: "Enter",
+        code: "Enter",
+        charCode: 13,
+      });
+
+      // Wait for store update (dynamic Socket.IO import happens async)
+      await waitFor(
+        () => {
+          const currentIgnore = useAppStore.getState().alertTerms.ignore;
+          expect(currentIgnore).toContain("TEST");
+          expect(currentIgnore).toContain("CHECK");
+          expect(currentIgnore).toContain("IGNORE");
+          expect(currentIgnore).toHaveLength(3);
+        },
+        { timeout: 3000 },
+      );
     });
 
     it("should add new ignore term", async () => {

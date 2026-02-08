@@ -245,10 +245,18 @@ export const SettingsModal = () => {
   }, [alertTerms, setAlertTerms]);
 
   const handleAddAlertTerm = useCallback(() => {
-    const term = newAlertTerm.trim().toUpperCase();
-    if (term && !alertTerms.terms.includes(term)) {
+    const input = newAlertTerm.trim();
+    if (!input) return;
+
+    // Split on commas and process each term
+    const termsToAdd = input
+      .split(",")
+      .map((t) => t.trim().toUpperCase())
+      .filter((t) => t && !alertTerms.terms.includes(t));
+
+    if (termsToAdd.length > 0) {
       const newTerms = {
-        terms: [...alertTerms.terms, term],
+        terms: [...alertTerms.terms, ...termsToAdd],
         ignore: alertTerms.ignore,
       };
       setAlertTerms(newTerms);
@@ -292,11 +300,19 @@ export const SettingsModal = () => {
   );
 
   const handleAddIgnoreTerm = useCallback(() => {
-    const term = newIgnoreTerm.trim().toUpperCase();
-    if (term && !alertTerms.ignore.includes(term)) {
+    const input = newIgnoreTerm.trim();
+    if (!input) return;
+
+    // Split on commas and process each term
+    const termsToAdd = input
+      .split(",")
+      .map((t) => t.trim().toUpperCase())
+      .filter((t) => t && !alertTerms.ignore.includes(t));
+
+    if (termsToAdd.length > 0) {
       const newTerms = {
         terms: alertTerms.terms,
-        ignore: [...alertTerms.ignore, term],
+        ignore: [...alertTerms.ignore, ...termsToAdd],
       };
       setAlertTerms(newTerms);
       setNewIgnoreTerm("");
@@ -755,7 +771,8 @@ export const SettingsModal = () => {
                   </Button>
                 </div>
                 <p className="settings-help-text">
-                  Examples: EMERGENCY, UAL123, N12345, A1B2C3 (hex code)
+                  Examples: EMERGENCY, UAL123, N12345, A1B2C3 (hex code). Use
+                  commas to add multiple terms at once.
                 </p>
 
                 {alertTerms.terms.length > 0 && (

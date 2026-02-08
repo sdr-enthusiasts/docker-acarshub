@@ -525,6 +525,9 @@
   border-radius: 0.375rem;
   border: 1px solid var(--color-surface1);
   min-height: 2.5rem;
+  max-height: 12rem;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .alert-term-chip {
@@ -540,6 +543,9 @@
   font-family: monospace;
   letter-spacing: 0.02em;
   transition: all 0.2s ease;
+  max-width: 100%;
+  word-break: break-word;
+  overflow-wrap: break-word;
 
   &--ignore {
     background-color: var(--color-overlay2);
