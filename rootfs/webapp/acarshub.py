@@ -1182,6 +1182,70 @@ def update_alerts(message, namespace):
     acarshub_helpers.acarshub_database.set_alert_ignore(message["ignore"])
 
 
+@socketio.on("regenerate_alert_matches", namespace="/main")
+def regenerate_alert_matches(message, namespace):
+    """
+    Regenerate all alert matches from scratch.
+
+    This is a destructive operation that:
+    1. Deletes all existing alert matches
+    2. Resets alert statistics
+    3. Re-processes all messages against current alert terms
+
+    Requires ALLOW_REMOTE_UPDATES permission.
+    Returns statistics about the operation to the requesting client.
+    """
+    if not acarshub_configuration.ALLOW_REMOTE_UPDATES:
+        acarshub_logging.log(
+            "Remote updates are disabled. Cannot regenerate alert matches.",
+            "regenerate_alert_matches",
+            level=LOG_LEVEL["ERROR"],
+        )
+        socketio.emit(
+            "regenerate_alert_matches_error",
+            {"error": "Remote updates are disabled"},
+            to=request.sid,
+            namespace="/main",
+        )
+        return
+
+    acarshub_logging.log(
+        "Starting alert match regeneration (requested via Socket.IO)",
+        "regenerate_alert_matches",
+        level=LOG_LEVEL["INFO"],
+    )
+
+    try:
+        # Run regeneration (this can take a long time on large databases)
+        stats = acarshub_helpers.acarshub_database.regenerate_all_alert_matches()
+
+        # Notify the requesting client of completion
+        socketio.emit(
+            "regenerate_alert_matches_complete",
+            {
+                "success": True,
+                "stats": stats,
+            },
+            to=request.sid,
+            namespace="/main",
+        )
+
+        acarshub_logging.log(
+            f"Alert match regeneration completed successfully: {stats}",
+            "regenerate_alert_matches",
+            level=LOG_LEVEL["INFO"],
+        )
+
+    except Exception as e:
+        acarshub_logging.acars_traceback(e, "regenerate_alert_matches")
+        socketio.emit(
+            "regenerate_alert_matches_error",
+            {"error": str(e)},
+            to=request.sid,
+            namespace="/main",
+        )
+
+
 @socketio.on("request_status", namespace="/main")
 def request_status(message, namespace):
     """

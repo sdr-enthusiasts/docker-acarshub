@@ -98,6 +98,10 @@ export const SettingsModal = () => {
   const [newAlertTerm, setNewAlertTerm] = useState("");
   const [newIgnoreTerm, setNewIgnoreTerm] = useState("");
 
+  // Regenerate alert matches state
+  const [isRegenerating, setIsRegenerating] = useState(false);
+  const [showRegenerateConfirm, setShowRegenerateConfirm] = useState(false);
+
   // Detect if browser is Chromium-based (Chrome, Brave, Edge, etc.)
   const isChromium = useMemo(() => {
     const userAgent = navigator.userAgent.toLowerCase();
@@ -353,6 +357,61 @@ export const SettingsModal = () => {
     },
     [handleAddIgnoreTerm],
   );
+
+  // Regenerate alert matches handler
+  const handleRegenerateAlertMatches = useCallback(() => {
+    setShowRegenerateConfirm(true);
+  }, []);
+
+  const handleConfirmRegenerate = useCallback(() => {
+    setShowRegenerateConfirm(false);
+    setIsRegenerating(true);
+
+    // Import socket service and trigger regeneration
+    import("../services/socket").then((socketModule) => {
+      const socket = socketModule.socketService.getSocket();
+
+      // Set up event listeners for completion/error
+      const handleComplete = (data: {
+        success: boolean;
+        stats: {
+          total_messages: number;
+          matched_messages: number;
+          total_matches: number;
+        };
+      }) => {
+        setIsRegenerating(false);
+        alert(
+          `Alert match regeneration complete!\n\n` +
+            `• Messages processed: ${data.stats.total_messages}\n` +
+            `• Matched messages: ${data.stats.matched_messages}\n` +
+            `• Total matches created: ${data.stats.total_matches}\n\n` +
+            `The page will now reload to show updated results.`,
+        );
+        // Reload page to fetch fresh data from backend
+        window.location.reload();
+      };
+
+      const handleError = (data: { error: string }) => {
+        setIsRegenerating(false);
+        alert(
+          `Error regenerating alert matches:\n\n${data.error}\n\n` +
+            `Please check the server logs and try again.`,
+        );
+      };
+
+      // Register one-time listeners
+      socket.once("regenerate_alert_matches_complete", handleComplete);
+      socket.once("regenerate_alert_matches_error", handleError);
+
+      // Trigger regeneration
+      socketModule.socketService.regenerateAlertMatches();
+    });
+  }, []);
+
+  const handleCancelRegenerate = useCallback(() => {
+    setShowRegenerateConfirm(false);
+  }, []);
 
   // Keyboard shortcut: Escape to close
   useEffect(() => {
@@ -848,6 +907,54 @@ export const SettingsModal = () => {
                   </div>
                 )}
               </div>
+
+              {/* Regenerate Alert Matches */}
+              <div
+                className="settings-field-group"
+                style={{
+                  marginTop: "2rem",
+                  paddingTop: "1.5rem",
+                  borderTop: "1px solid var(--color-surface0)",
+                }}
+              >
+                <div style={{ marginBottom: "1rem" }}>
+                  <h4
+                    style={{
+                      margin: "0 0 0.5rem 0",
+                      color: "var(--color-text)",
+                    }}
+                  >
+                    Regenerate Alert Matches
+                  </h4>
+                  <p
+                    className="settings-help-text"
+                    style={{ marginBottom: "1rem" }}
+                  >
+                    Re-process all messages in the database against current
+                    alert terms. This will delete all existing matches and
+                    rebuild them from scratch.
+                  </p>
+                  <p
+                    className="settings-help-text"
+                    style={{
+                      marginBottom: "1rem",
+                      color: "var(--color-peach)",
+                    }}
+                  >
+                    ⚠️ <strong>Warning:</strong> This operation can take a long
+                    time on large databases (10+ seconds for 10,000+ messages).
+                    The page will freeze during processing.
+                  </p>
+                </div>
+                <Button
+                  variant="warning"
+                  onClick={handleRegenerateAlertMatches}
+                  disabled={!allowRemoteUpdates || isRegenerating}
+                  aria-label="Regenerate all alert matches"
+                >
+                  {isRegenerating ? "Processing..." : "Regenerate All Matches"}
+                </Button>
+              </div>
             </Card>
           </div>
         )}
@@ -1166,6 +1273,125 @@ export const SettingsModal = () => {
           </div>
         </footer>
       </div>
+
+      {/* Regenerate Confirmation Modal */}
+      {showRegenerateConfirm && (
+        <div
+          className="modal-overlay"
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.7)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 10000,
+          }}
+        >
+          <div
+            className="confirm-content"
+            style={{
+              backgroundColor: "var(--color-base)",
+              padding: "2rem",
+              borderRadius: "0.5rem",
+              maxWidth: "500px",
+              margin: "1rem",
+              border: "2px solid var(--color-peach)",
+            }}
+          >
+            <h3 style={{ marginTop: 0, color: "var(--color-text)" }}>
+              Confirm Regenerate Alert Matches
+            </h3>
+            <p style={{ color: "var(--color-subtext1)" }}>
+              This will delete all existing alert matches and re-process every
+              message in the database.
+            </p>
+            <p style={{ color: "var(--color-peach)", fontWeight: "bold" }}>
+              This cannot be undone and may take several seconds to complete.
+            </p>
+            <p style={{ color: "var(--color-subtext1)" }}>
+              Do you want to continue?
+            </p>
+            <div
+              style={{
+                display: "flex",
+                gap: "1rem",
+                marginTop: "1.5rem",
+                justifyContent: "flex-end",
+              }}
+            >
+              <Button
+                variant="secondary"
+                onClick={handleCancelRegenerate}
+                aria-label="Cancel regenerate"
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="warning"
+                onClick={handleConfirmRegenerate}
+                aria-label="Confirm regenerate"
+              >
+                Yes, Regenerate
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Processing Overlay */}
+      {isRegenerating && (
+        <div
+          className="modal-overlay"
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.85)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 10001,
+          }}
+        >
+          <div
+            className="processing-content"
+            style={{
+              backgroundColor: "var(--color-base)",
+              padding: "3rem",
+              borderRadius: "0.5rem",
+              textAlign: "center",
+              border: "2px solid var(--color-blue)",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+            }}
+          >
+            <h3 style={{ margin: "0 0 0.5rem 0", color: "var(--color-text)" }}>
+              Processing Alert Matches...
+            </h3>
+            <p
+              style={{
+                margin: 0,
+                color: "var(--color-blue)",
+                fontSize: "2rem",
+                fontWeight: "bold",
+                animation: "pulse 1.5s ease-in-out infinite",
+              }}
+            >
+              ●●●
+            </p>
+            <p style={{ margin: "1rem 0 0 0", color: "var(--color-subtext1)" }}>
+              Please wait, this may take a while on large databases.
+            </p>
+          </div>
+        </div>
+      )}
     </Modal>
   );
 };

@@ -94,6 +94,17 @@ export interface ServerToClientEvents {
   recent_alerts: (data: { alerts: AcarsMsg[] }) => void;
   alert_matches: (data: HtmlMsg) => void;
 
+  // Alert match regeneration
+  regenerate_alert_matches_complete: (data: {
+    success: boolean;
+    stats: {
+      total_messages: number;
+      matched_messages: number;
+      total_matches: number;
+    };
+  }) => void;
+  regenerate_alert_matches_error: (data: { error: string }) => void;
+
   // Connection events
   connect: () => void;
   disconnect: () => void;
@@ -108,6 +119,7 @@ export interface ClientToServerEvents {
 
   // Alert management
   update_alerts: (data: { terms: string[]; ignore: string[] }) => void;
+  regenerate_alert_matches: (data: Record<string, unknown>) => void;
 
   // Signal queries
   signal_freqs: (data: { freqs: boolean }) => void;
@@ -393,6 +405,30 @@ class SocketService {
     // Legacy style: pass namespace as third argument
     // @ts-expect-error - Legacy Socket.IO syntax requires namespace as third arg
     this.socket.emit("request_recent_alerts", {}, "/main");
+  }
+
+  /**
+   * Regenerate all alert matches from scratch
+   * This is a destructive operation that:
+   * 1. Deletes all existing alert matches
+   * 2. Resets alert statistics
+   * 3. Re-processes all messages against current alert terms
+   *
+   * Returns a promise that resolves when complete or rejects on error
+   * Caller should listen for 'regenerate_alert_matches_complete' or 'regenerate_alert_matches_error' events
+   */
+  regenerateAlertMatches(): void {
+    if (!this.socket?.connected) {
+      socketLogger.warn(
+        "Cannot regenerate alert matches - socket not connected",
+      );
+      return;
+    }
+
+    socketLogger.info("Requesting alert match regeneration from backend");
+    // Legacy style: pass namespace as third argument
+    // @ts-expect-error - Legacy Socket.IO syntax requires namespace as third arg
+    this.socket.emit("regenerate_alert_matches", {}, "/main");
   }
 
   /**

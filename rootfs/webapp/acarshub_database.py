@@ -1495,6 +1495,237 @@ def reset_alert_counts():
             session.close()
 
 
+def regenerate_all_alert_matches():
+    """
+    Regenerate all alert matches from scratch.
+
+    This function:
+    1. Deletes all existing alert matches from alert_matches table
+    2. Resets alert statistics counts to 0
+    3. Re-processes all messages in the database against current alert terms
+    4. Saves new matches to alert_matches table and updates statistics
+
+    Returns:
+        dict: Statistics about the regeneration process
+            - total_messages: Total number of messages processed
+            - matched_messages: Number of messages that matched alert terms
+            - total_matches: Total number of alert matches created
+
+    Warning: This operation can take a long time on large databases (10+ seconds for 10k+ messages)
+    """
+    session = None
+    stats = {
+        "total_messages": 0,
+        "matched_messages": 0,
+        "total_matches": 0,
+    }
+
+    try:
+        acarshub_logging.log(
+            "Starting alert match regeneration",
+            "database",
+            level=LOG_LEVEL["INFO"],
+        )
+
+        session = db_session()
+
+        # Step 1: Delete all existing alert matches
+        deleted_count = session.query(AlertMatch).delete()
+        acarshub_logging.log(
+            f"Deleted {deleted_count} existing alert matches",
+            "database",
+            level=LOG_LEVEL["INFO"],
+        )
+
+        # Step 2: Reset alert statistics counts
+        result = session.query(alertStats).all()
+        for item in result:
+            item.count = 0
+
+        session.commit()
+
+        acarshub_logging.log(
+            "Reset alert statistics counts",
+            "database",
+            level=LOG_LEVEL["INFO"],
+        )
+
+        # Step 3: Process all messages against current alert terms
+        if not alert_terms:
+            acarshub_logging.log(
+                "No alert terms configured, skipping match regeneration",
+                "database",
+                level=LOG_LEVEL["WARNING"],
+            )
+            return stats
+
+        # Fetch all messages from database (process in batches to avoid memory issues)
+        batch_size = 1000
+        offset = 0
+
+        while True:
+            # Fetch batch of messages
+            message_batch = (
+                session.query(messages)
+                .order_by(messages.time.asc())
+                .limit(batch_size)
+                .offset(offset)
+                .all()
+            )
+
+            if not message_batch:
+                break  # No more messages
+
+            for message in message_batch:
+                stats["total_messages"] += 1
+                message_matched = False
+
+                # Helper function to save alert match for a message
+                def save_alert_match(term, match_type, msg_uid, msg_time):
+                    nonlocal message_matched
+
+                    # Update alert statistics
+                    found_term = (
+                        session.query(alertStats)
+                        .filter(alertStats.term == term.upper())
+                        .first()
+                    )
+                    if found_term is not None:
+                        found_term.count += 1
+                    else:
+                        session.add(alertStats(term=term.upper(), count=1))
+
+                    # Add to normalized alert_matches table
+                    session.add(
+                        AlertMatch(
+                            message_uid=msg_uid,
+                            term=term.upper(),
+                            match_type=match_type,
+                            matched_at=msg_time,
+                        )
+                    )
+
+                    message_matched = True
+                    stats["total_matches"] += 1
+
+                # Check message text for alert terms (same logic as add_message)
+                if message.text and len(message.text) > 0:
+                    for search_term in alert_terms:
+                        if re.findall(r"\b{}\b".format(search_term), message.text):
+                            should_add = True
+                            # Check ignore terms
+                            for ignore_term in alert_terms_ignore:
+                                if re.findall(
+                                    r"\b{}\b".format(ignore_term), message.text
+                                ):
+                                    should_add = False
+                                    break
+                            if should_add:
+                                save_alert_match(
+                                    search_term, "text", message.uid, message.time
+                                )
+
+                # Check ICAO hex for alert terms (supports partial matching)
+                if message.icao and len(message.icao) > 0:
+                    icao_upper = message.icao.upper()
+                    for search_term in alert_terms:
+                        term_upper = search_term.upper()
+                        if icao_upper == term_upper or term_upper in icao_upper:
+                            # Check ignore terms for ICAO
+                            should_add = True
+                            for ignore_term in alert_terms_ignore:
+                                ignore_upper = ignore_term.upper()
+                                if (
+                                    icao_upper == ignore_upper
+                                    or ignore_upper in icao_upper
+                                ):
+                                    should_add = False
+                                    break
+                            if should_add:
+                                save_alert_match(
+                                    search_term, "icao", message.uid, message.time
+                                )
+
+                # Check tail number for alert terms (supports partial matching)
+                if message.tail and len(message.tail) > 0:
+                    tail_upper = message.tail.upper()
+                    for search_term in alert_terms:
+                        term_upper = search_term.upper()
+                        if tail_upper == term_upper or term_upper in tail_upper:
+                            # Check ignore terms for tail
+                            should_add = True
+                            for ignore_term in alert_terms_ignore:
+                                ignore_upper = ignore_term.upper()
+                                if (
+                                    tail_upper == ignore_upper
+                                    or ignore_upper in tail_upper
+                                ):
+                                    should_add = False
+                                    break
+                            if should_add:
+                                save_alert_match(
+                                    search_term, "tail", message.uid, message.time
+                                )
+
+                # Check flight number for alert terms (supports partial matching)
+                if message.flight and len(message.flight) > 0:
+                    flight_upper = message.flight.upper()
+                    for search_term in alert_terms:
+                        term_upper = search_term.upper()
+                        if flight_upper == term_upper or term_upper in flight_upper:
+                            # Check ignore terms for flight
+                            should_add = True
+                            for ignore_term in alert_terms_ignore:
+                                ignore_upper = ignore_term.upper()
+                                if (
+                                    flight_upper == ignore_upper
+                                    or ignore_upper in flight_upper
+                                ):
+                                    should_add = False
+                                    break
+                            if should_add:
+                                save_alert_match(
+                                    search_term, "flight", message.uid, message.time
+                                )
+
+                if message_matched:
+                    stats["matched_messages"] += 1
+
+            # Commit this batch
+            session.commit()
+
+            # Log progress every 10 batches (10k messages)
+            if (offset // batch_size) % 10 == 0:
+                acarshub_logging.log(
+                    f"Processed {stats['total_messages']} messages, found {stats['matched_messages']} matches",
+                    "database",
+                    level=LOG_LEVEL["INFO"],
+                )
+
+            offset += batch_size
+
+        # Final commit
+        session.commit()
+
+        acarshub_logging.log(
+            f"Alert match regeneration complete: {stats['total_messages']} messages processed, "
+            f"{stats['matched_messages']} matched messages, {stats['total_matches']} total matches created",
+            "database",
+            level=LOG_LEVEL["INFO"],
+        )
+
+        return stats
+
+    except Exception as e:
+        acarshub_logging.acars_traceback(e, "database")
+        if session:
+            session.rollback()
+        raise  # Re-raise to signal failure to caller
+    finally:
+        if session:
+            session.close()
+
+
 def get_alert_ignore():
     return alert_terms_ignore
 
