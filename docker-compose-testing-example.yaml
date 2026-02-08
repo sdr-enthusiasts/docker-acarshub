@@ -20,7 +20,7 @@ services:
       - ENABLE_ADSB=true
       - ADSB_LAT=35.043
       - ADSB_LON=-106.715
-      - ADSB_URL=http://192.168.31.20/tar1090/data/aircraft.json
+      - ADSB_URL=http://fredclausen.com/tar1090/data/aircraft.json
       - ADSB_BYPASS_URL=true
       - DB_SAVE_DAYS=1000
       - DB_ALERT_SAVE_DAYS=1000
@@ -59,9 +59,9 @@ services:
       - AR_SEND_UDP_ACARS=acarshub:5550
       - AR_SEND_UDP_VDLM2=acarshub:5555
       - AR_SEND_UDP_HFDL=acarshub:5556
-      - AR_RECV_TCP_ACARS=192.168.31.20:15550
-      - AR_RECV_TCP_VDLM2=192.168.31.20:15555
-      - AR_RECV_TCP_HFDL=192.168.31.20:15556
+      - AR_RECV_TCP_ACARS=82.180.133.237:15550
+      - AR_RECV_TCP_VDLM2=82.180.133.237:15555
+      - AR_RECV_TCP_HFDL=82.180.133.237:15556
       - AR_SKEW_WINDOW=20
     tmpfs:
       - /run:exec,size=64M
