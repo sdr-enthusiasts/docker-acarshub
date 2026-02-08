@@ -917,7 +917,7 @@ docker run --rm -d \
 
 ## References
 
-- **Alembic Documentation**: https://alembic.sqlalchemy.org/
-- **UUID RFC 4122**: https://tools.ietf.org/html/rfc4122
-- **SQLite UUID Functions**: https://www.sqlite.org/lang_corefunc.html#randomblob
+- **Alembic Documentation**: <https://alembic.sqlalchemy.org/>
+- **UUID RFC 4122**: <https://tools.ietf.org/html/rfc4122>
+- **SQLite UUID Functions**: <https://www.sqlite.org/lang_corefunc.html#randomblob>
 - **React Query Invalidation**: Future consideration for cache management
