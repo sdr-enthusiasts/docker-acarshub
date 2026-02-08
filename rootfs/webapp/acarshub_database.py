@@ -1037,10 +1037,16 @@ def search_alerts(icao=None, tail=None, flight=None):
 
             if alert_terms is not None:
                 # Query messages that have alert matches via JOIN
+                # Aggregate matched terms using GROUP_CONCAT since alert_matches has one row per term
                 terms_string = """SELECT DISTINCT m.id, m.message_type, m.msg_time, m.station_id, m.toaddr, m.fromaddr, m.depa, m.dsta, m.eta, m.gtout, m.gtin, m.wloff, m.wlin,
-                                m.lat, m.lon, m.alt, m.msg_text, m.tail, m.flight, m.icao, m.freq, m.ack, m.mode, m.label, m.block_id, m.msgno, m.is_response, m.is_onground, m.error, m.libacars, m.level, m.uid
+                                m.lat, m.lon, m.alt, m.msg_text, m.tail, m.flight, m.icao, m.freq, m.ack, m.mode, m.label, m.block_id, m.msgno, m.is_response, m.is_onground, m.error, m.libacars, m.level, m.uid,
+                                GROUP_CONCAT(CASE WHEN am.match_type = 'text' THEN am.term END, ',') as matched_text,
+                                GROUP_CONCAT(CASE WHEN am.match_type = 'icao' THEN am.term END, ',') as matched_icao,
+                                GROUP_CONCAT(CASE WHEN am.match_type = 'tail' THEN am.term END, ',') as matched_tail,
+                                GROUP_CONCAT(CASE WHEN am.match_type = 'flight' THEN am.term END, ',') as matched_flight
                                 FROM messages m
-                                INNER JOIN alert_matches am ON m.uid = am.message_uid"""
+                                INNER JOIN alert_matches am ON m.uid = am.message_uid
+                                GROUP BY m.uid"""
             else:
                 terms_string = ""
 
@@ -1062,7 +1068,32 @@ def search_alerts(icao=None, tail=None, flight=None):
             processed_results = []
 
             for row in result.mappings().all():
-                processed_results.insert(0, dict(row))
+                msg_dict = dict(row)
+                # Add matched flag for frontend
+                # If we got here via alert_matches JOIN, the message is definitely matched
+                if alert_terms is not None:
+                    msg_dict["matched"] = True
+                    # Convert GROUP_CONCAT results to arrays (remove None and split by comma)
+                    # Frontend expects matched_text to be an array of matched terms
+                    if msg_dict.get("matched_text"):
+                        msg_dict["matched_text"] = [
+                            t.strip()
+                            for t in msg_dict["matched_text"].split(",")
+                            if t.strip()
+                        ]
+                    else:
+                        msg_dict["matched_text"] = []
+                    # Clean up matched_icao, matched_tail, matched_flight (can be None or empty)
+                    for field in ["matched_icao", "matched_tail", "matched_flight"]:
+                        if msg_dict.get(field):
+                            msg_dict[field] = [
+                                t.strip()
+                                for t in msg_dict[field].split(",")
+                                if t.strip()
+                            ]
+                        else:
+                            msg_dict[field] = None
+                processed_results.insert(0, msg_dict)
             if len(processed_results) == 0:
                 return None
             processed_results.reverse()

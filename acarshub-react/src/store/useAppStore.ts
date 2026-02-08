@@ -985,15 +985,14 @@ export const useAppStore = create<AppState>((set, get) => {
     },
 
     markAllAlertsAsRead: () => {
-      const messageGroups = get().messageGroups;
+      const alertMessageGroups = get().alertMessageGroups;
       const newReadUids = new Set(get().readMessageUids);
 
-      // Mark all alert messages in all groups as read
-      for (const group of messageGroups.values()) {
+      // Mark all alert messages in alert storage as read
+      for (const group of alertMessageGroups.values()) {
         for (const message of group.messages) {
-          if (message.matched === true) {
-            newReadUids.add(message.uid);
-          }
+          // All messages in alertMessageGroups are alerts
+          newReadUids.add(message.uid);
         }
       }
 
@@ -1025,14 +1024,14 @@ export const useAppStore = create<AppState>((set, get) => {
     },
 
     getUnreadAlertCount: () => {
-      const messageGroups = get().messageGroups;
+      const alertMessageGroups = get().alertMessageGroups;
       const readUids = get().readMessageUids;
       let unreadAlertCount = 0;
 
-      for (const group of messageGroups.values()) {
+      for (const group of alertMessageGroups.values()) {
         for (const message of group.messages) {
-          // Only count unread messages that match alert terms
-          if (message.matched === true && !readUids.has(message.uid)) {
+          // All messages in alertMessageGroups are alerts, no need to check matched flag
+          if (!readUids.has(message.uid)) {
             unreadAlertCount++;
           }
         }

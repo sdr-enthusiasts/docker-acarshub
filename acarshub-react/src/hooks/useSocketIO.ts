@@ -17,7 +17,7 @@
 import { useEffect } from "react";
 import { socketService } from "../services/socket";
 import { useAppStore } from "../store/useAppStore";
-import type { AcarsMsg, HtmlMsg, Labels } from "../types";
+import type { HtmlMsg, Labels } from "../types";
 import { socketLogger } from "../utils/logger";
 
 /**
@@ -103,16 +103,18 @@ export const useSocketIO = () => {
       socketService.requestRecentAlerts();
     });
 
-    // Recent alerts event handler
-    socket.on("recent_alerts", (data: { alerts: AcarsMsg[] }) => {
-      socketLogger.info("Received recent alerts", {
-        count: data.alerts.length,
+    // Historical alerts event handler (sent on connect)
+    socket.on("alert_matches", (data: HtmlMsg) => {
+      socketLogger.trace("Received alert_matches event", {
+        uid: data.msghtml?.uid,
+        station: data.msghtml?.station_id,
+        loading: data.loading,
+        done_loading: data.done_loading,
       });
 
-      // Add alerts to store (they already have matched flags from backend)
-      data.alerts.forEach((alert) => {
-        addMessage(alert);
-      });
+      // Unwrap msghtml wrapper and add to alert storage
+      const message = data.msghtml;
+      addMessage(message);
     });
 
     // Core message event - most frequent event
@@ -250,6 +252,7 @@ export const useSocketIO = () => {
       socket.off("alert_terms");
       socket.off("signal_freqs");
       socket.off("signal_count");
+      socket.off("alert_matches");
 
       // Only disconnect on actual unmount, not StrictMode cleanup
       // StrictMode will call this cleanup in dev, but we keep the socket alive

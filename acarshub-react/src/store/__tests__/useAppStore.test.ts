@@ -66,6 +66,7 @@ describe("useAppStore", () => {
     // Reset store to initial state
     useAppStore.setState({
       messageGroups: new Map(),
+      alertMessageGroups: new Map(),
       alertCount: 0,
       readMessageUids: new Set(),
     });
@@ -516,16 +517,19 @@ describe("useAppStore", () => {
       const message1 = createMessage({
         flight: "UAL123",
         uid: "uid-1",
+        text: "Alert message 1",
         matched: true,
       });
       const message2 = createMessage({
         flight: "UAL123",
         uid: "uid-2",
+        text: "Regular message",
         matched: false,
       });
       const message3 = createMessage({
         flight: "DAL456",
         uid: "uid-3",
+        text: "Alert message 2",
         matched: true,
       });
 
@@ -580,16 +584,19 @@ describe("useAppStore", () => {
       const message1 = createMessage({
         flight: "UAL123",
         uid: "uid-1",
+        text: "Alert message 1",
         matched: true,
       });
       const message2 = createMessage({
         flight: "UAL123",
         uid: "uid-2",
+        text: "Regular message",
         matched: false,
       });
       const message3 = createMessage({
         flight: "DAL456",
         uid: "uid-3",
+        text: "Alert message 2",
         matched: true,
       });
 
@@ -599,23 +606,9 @@ describe("useAppStore", () => {
 
       expect(useAppStore.getState().getUnreadAlertCount()).toBe(2);
 
-      // Get actual UID from first alert message
-      const groups = useAppStore.getState().messageGroups;
-      let firstAlertUid: string | undefined;
-      for (const group of groups.values()) {
-        for (const msg of group.messages) {
-          if (msg.matched === true && !firstAlertUid) {
-            firstAlertUid = msg.uid;
-            break;
-          }
-        }
-        if (firstAlertUid) break;
-      }
-
-      if (firstAlertUid) {
-        useAppStore.getState().markMessageAsRead(firstAlertUid);
-        expect(useAppStore.getState().getUnreadAlertCount()).toBe(1);
-      }
+      // Mark first alert as read
+      useAppStore.getState().markMessageAsRead("uid-1");
+      expect(useAppStore.getState().getUnreadAlertCount()).toBe(1);
 
       useAppStore.getState().markAllAlertsAsRead();
       expect(useAppStore.getState().getUnreadAlertCount()).toBe(0);
@@ -846,16 +839,16 @@ describe("useAppStore", () => {
     });
 
     it("should select unread alert count", async () => {
-      const { selectUnreadAlertCount } = await import("../useAppStore");
-
       const message1 = createMessage({
         flight: "UAL123",
         uid: "uid-1",
+        text: "Alert message 1",
         matched: true,
       });
       const message2 = createMessage({
-        flight: "DAL456",
+        flight: "UAL456",
         uid: "uid-2",
+        text: "Alert message 2",
         matched: true,
       });
 
@@ -863,6 +856,7 @@ describe("useAppStore", () => {
       useAppStore.getState().addMessage(message2);
       useAppStore.getState().markMessageAsRead("uid-1");
 
+      const { selectUnreadAlertCount } = await import("../useAppStore");
       expect(selectUnreadAlertCount(useAppStore.getState())).toBe(1);
     });
   });

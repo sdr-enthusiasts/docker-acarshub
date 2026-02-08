@@ -92,6 +92,7 @@ export interface ServerToClientEvents {
   // Alert data
   alert_terms: (data: { data: AlertTerm }) => void;
   recent_alerts: (data: { alerts: AcarsMsg[] }) => void;
+  alert_matches: (data: HtmlMsg) => void;
 
   // Connection events
   connect: () => void;
