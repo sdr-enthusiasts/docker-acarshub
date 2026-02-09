@@ -1631,6 +1631,81 @@ def handle_message(message, namespace):
     )
 
 
+@socketio.on("query_alerts_by_term", namespace="/main")
+def handle_alerts_by_term(message, namespace):
+    """
+    Query historical alerts by specific term with pagination.
+
+    Message format: {
+        "term": "ALERT_TERM",
+        "page": 0  # optional, defaults to 0
+    }
+
+    Returns: {
+        "total_count": 123,
+        "messages": [...],
+        "term": "ALERT_TERM",
+        "page": 0,
+        "query_time": 0.123
+    }
+    """
+    import time
+
+    start_time = time.time()
+
+    term = message.get("term", "")
+    page = message.get("page", 0)
+
+    if not term:
+        requester = request.sid
+        socketio.emit(
+            "alerts_by_term_results",
+            {
+                "total_count": 0,
+                "messages": [],
+                "term": "",
+                "page": 0,
+                "query_time": 0,
+            },
+            to=requester,
+            namespace="/main",
+        )
+        return
+
+    # Query database for alerts matching this term
+    total_count, messages = acarshub_helpers.acarshub_database.search_alerts_by_term(
+        term, page
+    )
+
+    # Format messages for frontend (same as query_search)
+    serialized_json = []
+    if messages:
+        for result in messages:
+            acarshub_helpers.update_keys(result)
+            serialized_json.append(result)
+
+    requester = request.sid
+    socketio.emit(
+        "alerts_by_term_results",
+        {
+            "total_count": total_count,
+            "messages": serialized_json,
+            "term": term,
+            "page": page,
+            "query_time": time.time() - start_time,
+        },
+        to=requester,
+        namespace="/main",
+    )
+
+    query_time = time.time() - start_time
+    acarshub_logging.log(
+        f"Alert term query took {query_time * 1000:.0f}ms: term={term}, page={page}, results={total_count}",
+        "query_alerts_by_term",
+        level=LOG_LEVEL["DEBUG"],
+    )
+
+
 @socketio.on("reset_alert_counts", namespace="/main")
 def reset_alert_counts(message, namespace):
     if not acarshub_configuration.ALLOW_REMOTE_UPDATES:

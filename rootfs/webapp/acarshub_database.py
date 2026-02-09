@@ -1734,6 +1734,106 @@ def get_alert_terms():
     return alert_terms
 
 
+def search_alerts_by_term(term, page=0, results_per_page=50):
+    """
+    Search for all messages matching a specific alert term.
+
+    Args:
+        term: The alert term to search for
+        page: Page number (0-indexed)
+        results_per_page: Number of results per page (default 50)
+
+    Returns:
+        tuple: (total_count, messages_list)
+        - total_count: Total number of matching messages
+        - messages_list: List of message dictionaries for the requested page
+    """
+    if not term:
+        return (0, [])
+
+    try:
+        session = db_session()
+
+        # First get total count
+        count_query = text(
+            """
+            SELECT COUNT(DISTINCT m.uid)
+            FROM messages m
+            INNER JOIN alert_matches am ON m.uid = am.message_uid
+            WHERE am.term = :term
+        """
+        )
+
+        count_result = session.execute(count_query, {"term": term.upper()}).scalar()
+        total_count = count_result or 0
+
+        if total_count == 0:
+            session.close()
+            return (0, [])
+
+        # Get paginated results
+        offset = page * results_per_page
+
+        results_query = text(
+            """
+            SELECT DISTINCT
+                m.id, m.message_type, m.msg_time, m.station_id, m.toaddr, m.fromaddr,
+                m.depa, m.dsta, m.eta, m.gtout, m.gtin, m.wloff, m.wlin,
+                m.lat, m.lon, m.alt, m.msg_text, m.tail, m.flight, m.icao, m.freq,
+                m.ack, m.mode, m.label, m.block_id, m.msgno, m.is_response,
+                m.is_onground, m.error, m.libacars, m.level, m.uid,
+                GROUP_CONCAT(CASE WHEN am.match_type = 'text' THEN am.term END, ',') as matched_text,
+                GROUP_CONCAT(CASE WHEN am.match_type = 'icao' THEN am.term END, ',') as matched_icao,
+                GROUP_CONCAT(CASE WHEN am.match_type = 'tail' THEN am.term END, ',') as matched_tail,
+                GROUP_CONCAT(CASE WHEN am.match_type = 'flight' THEN am.term END, ',') as matched_flight
+            FROM messages m
+            INNER JOIN alert_matches am ON m.uid = am.message_uid
+            WHERE am.term = :term
+            GROUP BY m.uid
+            ORDER BY m.msg_time DESC
+            LIMIT :limit OFFSET :offset
+        """
+        )
+
+        result = session.execute(
+            results_query,
+            {"term": term.upper(), "limit": results_per_page, "offset": offset},
+        )
+
+        processed_results = []
+
+        for row in result.mappings().all():
+            msg_dict = dict(row)
+            # Add matched flag for frontend
+            msg_dict["matched"] = True
+
+            # Convert GROUP_CONCAT results to arrays
+            if msg_dict.get("matched_text"):
+                msg_dict["matched_text"] = [
+                    t.strip() for t in msg_dict["matched_text"].split(",") if t.strip()
+                ]
+            else:
+                msg_dict["matched_text"] = []
+
+            # Clean up matched_icao, matched_tail, matched_flight
+            for field in ["matched_icao", "matched_tail", "matched_flight"]:
+                if msg_dict.get(field):
+                    msg_dict[field] = [
+                        t.strip() for t in msg_dict[field].split(",") if t.strip()
+                    ]
+                else:
+                    msg_dict[field] = None
+
+            processed_results.append(msg_dict)
+
+        session.close()
+        return (total_count, processed_results)
+
+    except Exception as e:
+        acarshub_logging.acars_traceback(e, "database")
+        return (0, [])
+
+
 def prune_database():
     try:
         acarshub_logging.log("Pruning database", "database")

@@ -57,6 +57,15 @@ export interface ServerToClientEvents {
   database_search_results: (data: SearchHtmlMsg) => void;
   database: (data: DatabaseSize) => void;
 
+  // Historical alerts by term
+  alerts_by_term_results: (data: {
+    total_count: number;
+    messages: AcarsMsg[];
+    term: string;
+    page: number;
+    query_time: number;
+  }) => void;
+
   // System status and monitoring
   system_status: (data: SystemStatus) => void;
   version: (data: AcarshubVersion) => void;
@@ -116,6 +125,9 @@ export interface ServerToClientEvents {
 export interface ClientToServerEvents {
   // Search queries
   query_search: (query: Record<string, string>) => void;
+
+  // Historical alert queries
+  query_alerts_by_term: (data: { term: string; page?: number }) => void;
 
   // Alert management
   update_alerts: (data: { terms: string[]; ignore: string[] }) => void;
@@ -346,6 +358,16 @@ class SocketService {
       ignoreCount: ignore.length,
     });
     this.socket?.emit("update_alerts", { terms, ignore });
+  }
+
+  /**
+   * Query historical alerts by specific term with pagination
+   */
+  queryAlertsByTerm(term: string, page = 0): void {
+    socketLogger.debug("Querying historical alerts by term", { term, page });
+    // Legacy style: pass namespace as third argument
+    // @ts-expect-error - Legacy Socket.IO syntax requires namespace as third arg
+    this.socket?.emit("query_alerts_by_term", { term, page }, "/main");
   }
 
   /**

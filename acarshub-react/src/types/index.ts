@@ -196,6 +196,14 @@ export interface SearchHtmlMsg {
   num_results: number;
 }
 
+export interface AlertsByTermResults {
+  total_count: number;
+  messages: AcarsMsg[];
+  term: string;
+  page: number;
+  query_time: number;
+}
+
 // Label Types
 export interface Labels {
   labels: {
@@ -501,6 +509,9 @@ export interface SocketEvents {
   // Search results
   database_search_results: (data: SearchHtmlMsg) => void;
 
+  // Historical alerts by term
+  alerts_by_term_results: (data: AlertsByTermResults) => void;
+
   // System status and monitoring
   system_status: (data: SystemStatus) => void;
   signal: (data: { levels: SignalLevelData }) => void;
@@ -540,6 +551,7 @@ export interface SocketEmitEvents {
     tail: string;
   }) => void;
   request_status: () => void;
+  query_alerts_by_term: (params: { term: string; page?: number }) => void;
 }
 
 /**
