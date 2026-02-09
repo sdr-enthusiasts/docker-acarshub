@@ -104,6 +104,7 @@ export interface ServerToClientEvents {
   alert_matches: (data: HtmlMsg) => void;
 
   // Alert match regeneration
+  regenerate_alert_matches_started: (data: { message: string }) => void;
   regenerate_alert_matches_complete: (data: {
     success: boolean;
     stats: {
@@ -436,8 +437,11 @@ class SocketService {
    * 2. Resets alert statistics
    * 3. Re-processes all messages against current alert terms
    *
-   * Returns a promise that resolves when complete or rejects on error
-   * Caller should listen for 'regenerate_alert_matches_complete' or 'regenerate_alert_matches_error' events
+   * Runs in a background thread on the backend to avoid blocking the gunicorn worker.
+   * Caller should listen for these events:
+   * - 'regenerate_alert_matches_started' - Operation has started in background
+   * - 'regenerate_alert_matches_complete' - Operation completed successfully
+   * - 'regenerate_alert_matches_error' - Operation failed with error
    */
   regenerateAlertMatches(): void {
     if (!this.socket?.connected) {

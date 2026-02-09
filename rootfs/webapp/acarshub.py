@@ -94,6 +94,67 @@ thread_message_listener_stop_event = Event()
 thread_database = Thread()
 thread_database_stop_event = Event()
 
+# alert regeneration thread
+
+thread_alert_regen = None
+thread_alert_regen_lock = Lock()
+alert_regen_requester_sid = None
+
+
+def alert_regeneration_worker(requester_sid):
+    """Background worker for alert match regeneration.
+
+    This runs in a separate thread to avoid blocking the gunicorn worker.
+    With large databases (10M+ messages), regeneration can take 30+ minutes.
+
+    Args:
+        requester_sid: Socket.IO session ID of the requesting client
+    """
+    global thread_alert_regen, alert_regen_requester_sid
+
+    acarshub_logging.log(
+        "Alert regeneration worker started",
+        "alert_regen_worker",
+        level=LOG_LEVEL["INFO"],
+    )
+
+    try:
+        # Run regeneration (can take a long time on large databases)
+        stats = acarshub_helpers.acarshub_database.regenerate_all_alert_matches()
+
+        # Notify the requesting client of completion
+        socketio.emit(
+            "regenerate_alert_matches_complete",
+            {
+                "success": True,
+                "stats": stats,
+            },
+            to=requester_sid,
+            namespace="/main",
+        )
+
+        acarshub_logging.log(
+            f"Alert match regeneration completed: {stats}",
+            "alert_regen_worker",
+            level=LOG_LEVEL["INFO"],
+        )
+
+    except Exception as e:
+        acarshub_logging.acars_traceback(e, "alert_regen_worker")
+        socketio.emit(
+            "regenerate_alert_matches_error",
+            {"error": str(e)},
+            to=requester_sid,
+            namespace="/main",
+        )
+
+    finally:
+        # Clean up thread reference
+        with thread_alert_regen_lock:
+            thread_alert_regen = None
+            alert_regen_requester_sid = None
+
+
 # maxlen is to keep the que from becoming ginormous
 # the messages will be in the que all the time, even if no one is using the website
 # old messages will automatically be removed
@@ -1209,38 +1270,41 @@ def regenerate_alert_matches(message, namespace):
         )
         return
 
-    acarshub_logging.log(
-        "Starting alert match regeneration (requested via Socket.IO)",
-        "regenerate_alert_matches",
-        level=LOG_LEVEL["INFO"],
-    )
+    global thread_alert_regen
 
-    try:
-        # Run regeneration (this can take a long time on large databases)
-        stats = acarshub_helpers.acarshub_database.regenerate_all_alert_matches()
+    # Check if regeneration is already running
+    with thread_alert_regen_lock:
+        if thread_alert_regen is not None and thread_alert_regen.is_alive():
+            acarshub_logging.log(
+                "Alert regeneration already in progress",
+                "regenerate_alert_matches",
+                level=LOG_LEVEL["WARNING"],
+            )
+            socketio.emit(
+                "regenerate_alert_matches_error",
+                {"error": "Alert regeneration already in progress"},
+                to=request.sid,
+                namespace="/main",
+            )
+            return
 
-        # Notify the requesting client of completion
-        socketio.emit(
-            "regenerate_alert_matches_complete",
-            {
-                "success": True,
-                "stats": stats,
-            },
-            to=request.sid,
-            namespace="/main",
-        )
-
+        # Spawn background thread for regeneration
         acarshub_logging.log(
-            f"Alert match regeneration completed successfully: {stats}",
+            "Starting alert match regeneration in background thread",
             "regenerate_alert_matches",
             level=LOG_LEVEL["INFO"],
         )
 
-    except Exception as e:
-        acarshub_logging.acars_traceback(e, "regenerate_alert_matches")
+        thread_alert_regen = Thread(
+            target=alert_regeneration_worker,
+            args=(request.sid,),
+        )
+        thread_alert_regen.start()
+
+        # Immediately notify client that regeneration has started
         socketio.emit(
-            "regenerate_alert_matches_error",
-            {"error": str(e)},
+            "regenerate_alert_matches_started",
+            {"message": "Alert regeneration started in background"},
             to=request.sid,
             namespace="/main",
         )

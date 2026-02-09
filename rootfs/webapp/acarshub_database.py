@@ -1496,29 +1496,22 @@ def reset_alert_counts():
 
 
 def regenerate_all_alert_matches():
-    """
-    Regenerate all alert matches from scratch.
+    """Regenerate all alert matches from scratch.
 
     This function:
-    1. Deletes all existing alert matches from alert_matches table
-    2. Resets alert statistics counts to 0
-    3. Re-processes all messages in the database against current alert terms
-    4. Saves new matches to alert_matches table and updates statistics
+    1. Deletes all existing alert matches
+    2. Resets alert statistics counts
+    3. Processes all messages in database against current alert terms
+    4. Creates new alert matches for all matching messages
 
     Returns:
         dict: Statistics about the regeneration process
-            - total_messages: Total number of messages processed
-            - matched_messages: Number of messages that matched alert terms
-            - total_matches: Total number of alert matches created
-
-    Warning: This operation can take a long time on large databases (10+ seconds for 10k+ messages)
+            - total_messages: Total messages processed
+            - matched_messages: Messages that matched at least one term
+            - total_matches: Total alert matches created (can be > matched_messages if message matches multiple terms)
     """
+    stats = {"total_messages": 0, "matched_messages": 0, "total_matches": 0}
     session = None
-    stats = {
-        "total_messages": 0,
-        "matched_messages": 0,
-        "total_matches": 0,
-    }
 
     try:
         acarshub_logging.log(
@@ -1558,6 +1551,38 @@ def regenerate_all_alert_matches():
                 level=LOG_LEVEL["WARNING"],
             )
             return stats
+
+        # PRE-COMPILE all regex patterns for alert terms (MASSIVE performance improvement)
+        # This avoids re-compiling the same regex thousands/millions of times
+        alert_patterns = {}
+        ignore_patterns = {}
+
+        for term in alert_terms:
+            try:
+                # Escape special regex characters, then compile
+                escaped_term = re.escape(term)
+                alert_patterns[term] = re.compile(
+                    r"\b{}\b".format(escaped_term), re.IGNORECASE
+                )
+            except re.error as e:
+                acarshub_logging.log(
+                    f"Invalid regex pattern for alert term '{term}': {e}",
+                    "database",
+                    level=LOG_LEVEL["WARNING"],
+                )
+
+        for term in alert_terms_ignore:
+            try:
+                escaped_term = re.escape(term)
+                ignore_patterns[term] = re.compile(
+                    r"\b{}\b".format(escaped_term), re.IGNORECASE
+                )
+            except re.error as e:
+                acarshub_logging.log(
+                    f"Invalid regex pattern for ignore term '{term}': {e}",
+                    "database",
+                    level=LOG_LEVEL["WARNING"],
+                )
 
         # Fetch all messages from database (process in batches to avoid memory issues)
         batch_size = 1000
@@ -1608,16 +1633,14 @@ def regenerate_all_alert_matches():
                     message_matched = True
                     stats["total_matches"] += 1
 
-                # Check message text for alert terms (same logic as add_message)
+                # Check message text for alert terms (use pre-compiled patterns)
                 if message.text and len(message.text) > 0:
-                    for search_term in alert_terms:
-                        if re.findall(r"\b{}\b".format(search_term), message.text):
+                    for search_term, pattern in alert_patterns.items():
+                        if pattern.search(message.text):
                             should_add = True
-                            # Check ignore terms
-                            for ignore_term in alert_terms_ignore:
-                                if re.findall(
-                                    r"\b{}\b".format(ignore_term), message.text
-                                ):
+                            # Check ignore terms (use pre-compiled patterns)
+                            for ignore_term, ignore_pattern in ignore_patterns.items():
+                                if ignore_pattern.search(message.text):
                                     should_add = False
                                     break
                             if should_add:
@@ -1835,40 +1858,84 @@ def search_alerts_by_term(term, page=0, results_per_page=50):
 
 
 def prune_database():
+    """
+    Prune old messages and alert matches from the database.
+
+    Important: Messages with active alert matches (within DB_ALERT_SAVE_DAYS) are preserved
+    even if they're older than DB_SAVE_DAYS. This prevents orphaned alert_match rows.
+    """
+    session = None
     try:
-        acarshub_logging.log("Pruning database", "database")
-        cutoff = (
-            datetime.datetime.now()
-            - datetime.timedelta(days=acarshub_configuration.DB_SAVE_DAYS)
-        ).timestamp()
-
         session = db_session()
-        result = session.query(messages).filter(messages.time < cutoff).delete()
 
-        session.commit()
+        # Calculate cutoff timestamps
+        message_cutoff = int(
+            (
+                datetime.datetime.now()
+                - datetime.timedelta(days=acarshub_configuration.DB_SAVE_DAYS)
+            ).timestamp()
+        )
 
-        acarshub_logging.log("Pruned %s messages" % result, "database")
-
-        acarshub_logging.log("Pruning alert database", "database")
-
-        # prune alert_matches as well (using matched_at timestamp)
-        cutoff = int(
+        alert_cutoff = int(
             (
                 datetime.datetime.now()
                 - datetime.timedelta(days=acarshub_configuration.DB_ALERT_SAVE_DAYS)
             ).timestamp()
         )
 
+        acarshub_logging.log(
+            f"Pruning database (message_cutoff: {message_cutoff}, alert_cutoff: {alert_cutoff})",
+            "database",
+        )
+
+        # Get UIDs of messages with active alert matches (within alert retention window)
+        # These messages must be preserved even if older than DB_SAVE_DAYS
+        protected_uids = (
+            session.query(AlertMatch.message_uid)
+            .filter(AlertMatch.matched_at >= alert_cutoff)
+            .distinct()
+            .all()
+        )
+        protected_uid_set = {uid[0] for uid in protected_uids}
+
+        if protected_uid_set:
+            acarshub_logging.log(
+                f"Protecting {len(protected_uid_set)} messages with active alert matches",
+                "database",
+            )
+            # Prune messages older than cutoff, EXCLUDING those with active alert matches
+            result = (
+                session.query(messages)
+                .filter(messages.time < message_cutoff)
+                .filter(~messages.uid.in_(protected_uid_set))
+                .delete(synchronize_session=False)
+            )
+        else:
+            # No protected messages, prune normally
+            result = (
+                session.query(messages)
+                .filter(messages.time < message_cutoff)
+                .delete(synchronize_session=False)
+            )
+
+        session.commit()
+        acarshub_logging.log(f"Pruned {result} messages", "database")
+
+        # Prune old alert_matches (using matched_at timestamp)
+        acarshub_logging.log("Pruning alert matches", "database")
         result = (
-            session.query(AlertMatch).filter(AlertMatch.matched_at < cutoff).delete()
+            session.query(AlertMatch)
+            .filter(AlertMatch.matched_at < alert_cutoff)
+            .delete(synchronize_session=False)
         )
 
         session.commit()
-
-        acarshub_logging.log("Pruned %s messages" % result, "database")
+        acarshub_logging.log(f"Pruned {result} alert matches", "database")
 
     except Exception as e:
         acarshub_logging.acars_traceback(e, "database")
+        if session:
+            session.rollback()
     finally:
         if session:
             session.close()

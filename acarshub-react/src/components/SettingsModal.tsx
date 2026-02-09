@@ -371,7 +371,12 @@ export const SettingsModal = () => {
     import("../services/socket").then((socketModule) => {
       const socket = socketModule.socketService.getSocket();
 
-      // Set up event listeners for completion/error
+      // Set up event listeners for started/completion/error
+      const handleStarted = (data: { message: string }) => {
+        // Regeneration has started in background thread
+        console.log("Alert regeneration started:", data.message);
+      };
+
       const handleComplete = (data: {
         success: boolean;
         stats: {
@@ -383,9 +388,9 @@ export const SettingsModal = () => {
         setIsRegenerating(false);
         alert(
           `Alert match regeneration complete!\n\n` +
-            `• Messages processed: ${data.stats.total_messages}\n` +
-            `• Matched messages: ${data.stats.matched_messages}\n` +
-            `• Total matches created: ${data.stats.total_matches}\n\n` +
+            `• Messages processed: ${data.stats.total_messages.toLocaleString()}\n` +
+            `• Matched messages: ${data.stats.matched_messages.toLocaleString()}\n` +
+            `• Total matches created: ${data.stats.total_matches.toLocaleString()}\n\n` +
             `The page will now reload to show updated results.`,
         );
         // Reload page to fetch fresh data from backend
@@ -400,11 +405,12 @@ export const SettingsModal = () => {
         );
       };
 
-      // Register one-time listeners
+      // Register one-time listeners for all events
+      socket.once("regenerate_alert_matches_started", handleStarted);
       socket.once("regenerate_alert_matches_complete", handleComplete);
       socket.once("regenerate_alert_matches_error", handleError);
 
-      // Trigger regeneration
+      // Trigger regeneration (runs in background thread)
       socketModule.socketService.regenerateAlertMatches();
     });
   }, []);
@@ -942,8 +948,9 @@ export const SettingsModal = () => {
                     }}
                   >
                     ⚠️ <strong>Warning:</strong> This operation can take a long
-                    time on large databases (10+ seconds for 10,000+ messages).
-                    The page will freeze during processing.
+                    time on large databases (minutes for millions of messages).
+                    Processing runs in the background - you can continue using
+                    the app while it completes.
                   </p>
                 </div>
                 <Button
@@ -952,7 +959,9 @@ export const SettingsModal = () => {
                   disabled={!allowRemoteUpdates || isRegenerating}
                   aria-label="Regenerate all alert matches"
                 >
-                  {isRegenerating ? "Processing..." : "Regenerate All Matches"}
+                  {isRegenerating
+                    ? "Regenerating in background..."
+                    : "Regenerate All Matches"}
                 </Button>
               </div>
             </Card>
@@ -1373,7 +1382,7 @@ export const SettingsModal = () => {
             }}
           >
             <h3 style={{ margin: "0 0 0.5rem 0", color: "var(--color-text)" }}>
-              Processing Alert Matches...
+              Regenerating Alert Matches
             </h3>
             <p
               style={{
@@ -1387,8 +1396,25 @@ export const SettingsModal = () => {
               ●●●
             </p>
             <p style={{ margin: "1rem 0 0 0", color: "var(--color-subtext1)" }}>
-              Please wait, this may take a while on large databases.
+              Processing in background... You can continue using the app.
             </p>
+            <p
+              style={{
+                margin: "0.5rem 0 0 0",
+                color: "var(--color-subtext0)",
+                fontSize: "0.875rem",
+              }}
+            >
+              You'll be notified when the operation completes.
+            </p>
+            <Button
+              variant="secondary"
+              onClick={() => setIsRegenerating(false)}
+              style={{ marginTop: "1.5rem" }}
+              aria-label="Continue using app"
+            >
+              Continue Using App
+            </Button>
           </div>
         </div>
       )}
