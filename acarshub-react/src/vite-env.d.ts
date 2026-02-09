@@ -17,6 +17,19 @@
 /// <reference types="vite/client" />
 
 /**
+ * Type definitions for Vite environment variables
+ */
+interface ImportMetaEnv {
+  readonly VITE_DOCKER_BUILD?: string;
+  readonly VITE_VERSION?: string;
+  readonly VITE_BUILD_NUMBER?: string;
+}
+
+interface ImportMeta {
+  readonly env: ImportMetaEnv;
+}
+
+/**
  * Type definitions for static asset imports in Vite
  */
 

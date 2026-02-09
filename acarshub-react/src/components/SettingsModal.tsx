@@ -27,6 +27,7 @@ import type {
   Theme,
   TimeFormat,
 } from "../types";
+import { getVersionInfo } from "../utils/version";
 import { Button } from "./Button";
 import { Card } from "./Card";
 import { LogsViewer } from "./LogsViewer";
@@ -1201,6 +1202,33 @@ export const SettingsModal = () => {
             aria-labelledby="advanced-tab"
             className="settings-panel"
           >
+            <Card
+              title="Version Information"
+              variant="default"
+              className="settings-card"
+            >
+              <div className="settings-card__content">
+                <p className="settings-help-text">
+                  <strong>ACARS Hub Version:</strong>{" "}
+                  {getVersionInfo().fullVersion}
+                </p>
+                <p className="settings-help-text">
+                  <strong>Frontend:</strong> React {getVersionInfo().version}
+                </p>
+                {getVersionInfo().isDockerBuild && (
+                  <p className="settings-help-text">
+                    <strong>Build:</strong> Docker Build{" "}
+                    {getVersionInfo().buildNumber}
+                  </p>
+                )}
+                {!getVersionInfo().isDockerBuild && (
+                  <p className="settings-help-text">
+                    <strong>Environment:</strong> Development
+                  </p>
+                )}
+              </div>
+            </Card>
+
             <Card
               title="Logging & Debugging"
               subtitle="Configure application logging and view system logs"

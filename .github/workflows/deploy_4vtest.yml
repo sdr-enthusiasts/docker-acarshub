@@ -85,5 +85,15 @@ jobs:
       docker_latest_tag: v4-
       build_baseimage_test: true
       platform_linux_arm32v7_enabled: false
+      # TODO: Pass VERSION and BUILD_NUMBER to Docker build
+      # The upstream sdre.yml workflow does not currently support build args
+      # Options:
+      # 1. Add build_args input to sdr-enthusiasts/common-github-workflows/.github/workflows/sdre.yml
+      # 2. Use a fork/wrapper of sdre.yml that supports build args
+      # 3. Set defaults in Dockerfile ARG (VERSION from version-nextgen, BUILD_NUMBER from metadata)
+      #
+      # For now, Dockerfile defaults are used:
+      # - VERSION=0.0.0 (should read from version-nextgen)
+      # - BUILD_NUMBER=0 (should use $GITHUB_RUN_NUMBER)
     secrets:
       ghcr_token: ${{ secrets.GITHUB_TOKEN }}

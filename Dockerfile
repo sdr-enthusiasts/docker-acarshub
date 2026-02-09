@@ -6,7 +6,11 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 ARG VERSION=0.0.0
 ARG BUILD_NUMBER=0
 
+# Set environment variables for Vite build
 ENV DOCKER_BUILD="true"
+ENV VITE_DOCKER_BUILD="true"
+ENV VITE_VERSION="${VERSION}"
+ENV VITE_BUILD_NUMBER="${BUILD_NUMBER}"
 
 #hadolint ignore=DL3008
 RUN set -xe && \
@@ -23,8 +27,16 @@ RUN set -xe && \
 
 COPY acarshub-react/ /acarshub-react/
 
+# Pass build args to environment variables for this stage
+ARG VERSION=0.0.0
+ARG BUILD_NUMBER=0
+
 RUN set -xe && \
     pushd /acarshub-react && \
+    # Set Vite env vars for build
+    export VITE_DOCKER_BUILD="true" && \
+    export VITE_VERSION="${VERSION}" && \
+    export VITE_BUILD_NUMBER="${BUILD_NUMBER}" && \
     npm run build && \
     # Copy entire React build output to /webapp/dist
     mkdir -p /webapp/dist && \
