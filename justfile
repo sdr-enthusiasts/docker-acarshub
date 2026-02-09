@@ -5,6 +5,21 @@ web:
 server:
     pdm run dev
 
+# Database migration commands
+
+# Usage: just db-init [path/to/db.db]
+db-init DB_PATH="test_working.db":
+    @echo "Creating fresh test database with all migrations..."
+    @rm -f {{ DB_PATH }}
+    @cd rootfs/webapp && alembic -x dbPath={{ absolute_path(DB_PATH) }} upgrade head
+    @echo "✅ Database initialized at {{ DB_PATH }}"
+
+# Usage: just db-migrate [path/to/db.db]
+db-migrate DB_PATH="test_working.db":
+    @echo "Applying latest migrations to existing database..."
+    @cd rootfs/webapp && alembic -x dbPath={{ absolute_path(DB_PATH) }} upgrade head
+    @echo "✅ Migrations applied to {{ DB_PATH }}"
+
 # Testing commands
 test:
     cd acarshub-react && npm test

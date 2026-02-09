@@ -63,8 +63,16 @@ def run_migrations_offline() -> None:
     script output.
 
     """
-    # Check for SQLALCHEMY_URL environment variable first, fall back to alembic.ini
-    url = os.environ.get("SQLALCHEMY_URL") or config.get_main_option("sqlalchemy.url")
+    # Check for custom database path from -x flag first
+    db_path = context.get_x_argument(as_dictionary=True).get("dbPath")
+    if db_path:
+        url = f"sqlite:///{db_path}"
+    else:
+        # Check for SQLALCHEMY_URL environment variable, fall back to alembic.ini
+        url = os.environ.get("SQLALCHEMY_URL") or config.get_main_option(
+            "sqlalchemy.url"
+        )
+
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -85,10 +93,18 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
-    # Check for SQLALCHEMY_URL environment variable first, fall back to alembic.ini
+    # Check for custom database path from -x flag first
+    db_path = context.get_x_argument(as_dictionary=True).get("dbPath")
+
     configuration = config.get_section(config.config_ini_section, {})
-    if "SQLALCHEMY_URL" in os.environ:
+
+    if db_path:
+        # Custom database path provided via -x flag
+        configuration["sqlalchemy.url"] = f"sqlite:///{db_path}"
+    elif "SQLALCHEMY_URL" in os.environ:
+        # Environment variable provided
         configuration["sqlalchemy.url"] = os.environ["SQLALCHEMY_URL"]
+    # else: fall back to alembic.ini configuration
 
     connectable = engine_from_config(
         configuration,
