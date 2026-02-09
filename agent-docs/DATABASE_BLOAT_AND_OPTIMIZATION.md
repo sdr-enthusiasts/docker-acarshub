@@ -263,3 +263,63 @@ result = (
 - A message from 45 days ago has an alert match
 - **Before fix**: Message deleted → orphaned alert_match row
 - **After fix**: Message preserved until 90 days (when alert_match is pruned)
+
+## Critical Fix: Gevent Compatibility
+
+### Initial Issue
+
+The first background thread implementation used Python's `Thread()` class, which **does not work** with Flask-SocketIO's `async_mode="gevent"`.
+
+**Problem**:
+
+- Flask-SocketIO uses **gevent greenlets** (cooperative multitasking)
+- Regular `Thread()` creates an OS thread that blocks the gevent event loop
+- Gunicorn worker still times out after 120 seconds
+- Worker gets SIGKILL'd by gunicorn
+
+### Correct Solution
+
+Use `socketio.start_background_task()` instead of `Thread()`:
+
+```python
+# ❌ WRONG - Blocks gevent event loop
+thread_alert_regen = Thread(
+    target=alert_regeneration_worker,
+    args=(request.sid,),
+)
+thread_alert_regen.start()
+
+# ✅ CORRECT - Gevent-compatible greenlet
+socketio.start_background_task(
+    alert_regeneration_worker,
+    request.sid,
+)
+```
+
+**Why this works**:
+
+- `socketio.start_background_task()` creates a **gevent greenlet**
+- Greenlets use **cooperative multitasking** (not preemptive like threads)
+- The gunicorn worker remains responsive and doesn't timeout
+- Background task runs in the same process but yields control appropriately
+
+**State tracking**:
+
+```python
+# Simple boolean flag instead of thread reference
+alert_regen_in_progress = False
+alert_regen_lock = Lock()
+
+# Set flag before starting task
+with alert_regen_lock:
+    if alert_regen_in_progress:
+        return  # Already running
+    alert_regen_in_progress = True
+
+# Clear flag in finally block
+finally:
+    with alert_regen_lock:
+        alert_regen_in_progress = False
+```
+
+**Result**: Alert regeneration now completes on 10M+ message databases without worker timeout.
