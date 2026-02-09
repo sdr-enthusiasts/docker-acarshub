@@ -323,3 +323,45 @@ finally:
 ```
 
 **Result**: Alert regeneration now completes on 10M+ message databases without worker timeout.
+
+### Critical: Yield Points Required
+
+Even with `socketio.start_background_task()`, the greenlet can still block if it never yields control.
+
+**The Problem**:
+
+```python
+# This greenlet never yields - blocks for 120+ seconds
+while True:
+    batch = query.limit(1000).all()
+    for message in batch:
+        # process message (synchronous database operations)
+    session.commit()
+    # NO YIELD HERE - event loop never gets control
+```
+
+**The Solution**:
+
+Add `gevent.sleep(0)` after each batch to yield to the event loop:
+
+```python
+import gevent
+
+while True:
+    batch = query.limit(1000).all()
+    for message in batch:
+        # process message
+    session.commit()
+
+    # Yield to event loop - critical for keeping worker responsive
+    gevent.sleep(0)
+```
+
+**Why `gevent.sleep(0)` works**:
+
+- `sleep(0)` means "yield immediately, but re-schedule me"
+- Gevent switches to other greenlets (Socket.IO keepalive, HTTP requests, etc.)
+- Prevents gunicorn worker timeout
+- Minimal performance impact (1000 yields over 10M messages)
+
+**Result**: With both `start_background_task()` AND `gevent.sleep(0)`, regeneration completes successfully on 10M+ databases.
