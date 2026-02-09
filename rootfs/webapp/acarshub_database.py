@@ -1510,6 +1510,8 @@ def regenerate_all_alert_matches():
             - matched_messages: Messages that matched at least one term
             - total_matches: Total alert matches created (can be > matched_messages if message matches multiple terms)
     """
+    import gevent
+
     stats = {"total_messages": 0, "matched_messages": 0, "total_matches": 0}
     session = None
 
@@ -1716,6 +1718,9 @@ def regenerate_all_alert_matches():
 
             # Commit this batch
             session.commit()
+
+            # Yield to gevent event loop to keep gunicorn worker responsive
+            gevent.sleep(0)
 
             # Log progress every 10 batches (10k messages)
             if (offset // batch_size) % 10 == 0:
