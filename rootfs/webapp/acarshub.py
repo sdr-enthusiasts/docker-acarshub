@@ -94,23 +94,22 @@ thread_message_listener_stop_event = Event()
 thread_database = Thread()
 thread_database_stop_event = Event()
 
-# alert regeneration thread
+# alert regeneration state
 
-thread_alert_regen = None
-thread_alert_regen_lock = Lock()
-alert_regen_requester_sid = None
+alert_regen_in_progress = False
+alert_regen_lock = Lock()
 
 
 def alert_regeneration_worker(requester_sid):
     """Background worker for alert match regeneration.
 
-    This runs in a separate thread to avoid blocking the gunicorn worker.
+    This runs as a gevent greenlet to avoid blocking the gunicorn worker.
     With large databases (10M+ messages), regeneration can take 30+ minutes.
 
     Args:
         requester_sid: Socket.IO session ID of the requesting client
     """
-    global thread_alert_regen, alert_regen_requester_sid
+    global alert_regen_in_progress
 
     acarshub_logging.log(
         "Alert regeneration worker started",
@@ -149,10 +148,9 @@ def alert_regeneration_worker(requester_sid):
         )
 
     finally:
-        # Clean up thread reference
-        with thread_alert_regen_lock:
-            thread_alert_regen = None
-            alert_regen_requester_sid = None
+        # Clean up in-progress flag
+        with alert_regen_lock:
+            alert_regen_in_progress = False
 
 
 # maxlen is to keep the que from becoming ginormous
@@ -1270,11 +1268,11 @@ def regenerate_alert_matches(message, namespace):
         )
         return
 
-    global thread_alert_regen
+    global alert_regen_in_progress
 
     # Check if regeneration is already running
-    with thread_alert_regen_lock:
-        if thread_alert_regen is not None and thread_alert_regen.is_alive():
+    with alert_regen_lock:
+        if alert_regen_in_progress:
             acarshub_logging.log(
                 "Alert regeneration already in progress",
                 "regenerate_alert_matches",
@@ -1288,26 +1286,28 @@ def regenerate_alert_matches(message, namespace):
             )
             return
 
-        # Spawn background thread for regeneration
-        acarshub_logging.log(
-            "Starting alert match regeneration in background thread",
-            "regenerate_alert_matches",
-            level=LOG_LEVEL["INFO"],
-        )
+        # Mark regeneration as in progress
+        alert_regen_in_progress = True
 
-        thread_alert_regen = Thread(
-            target=alert_regeneration_worker,
-            args=(request.sid,),
-        )
-        thread_alert_regen.start()
+    # Spawn background task using socketio (gevent-compatible)
+    acarshub_logging.log(
+        "Starting alert match regeneration in background task",
+        "regenerate_alert_matches",
+        level=LOG_LEVEL["INFO"],
+    )
 
-        # Immediately notify client that regeneration has started
-        socketio.emit(
-            "regenerate_alert_matches_started",
-            {"message": "Alert regeneration started in background"},
-            to=request.sid,
-            namespace="/main",
-        )
+    socketio.start_background_task(
+        alert_regeneration_worker,
+        request.sid,
+    )
+
+    # Immediately notify client that regeneration has started
+    socketio.emit(
+        "regenerate_alert_matches_started",
+        {"message": "Alert regeneration started in background"},
+        to=request.sid,
+        namespace="/main",
+    )
 
 
 @socketio.on("request_status", namespace="/main")
