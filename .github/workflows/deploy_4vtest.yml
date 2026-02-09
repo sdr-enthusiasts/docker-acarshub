@@ -42,31 +42,32 @@ jobs:
           echo "Use test image: $INPUTS_USE_TEST_IMAGE"
           echo "Build latest as test: $INPUTS_BUILD_LATEST_AS_TEST"
 
-  patch_acars_hub_version:
-    name: "patch acars-hub version"
+  get_version:
+    name: "Get version and build number"
     runs-on: ubuntu-24.04
     outputs:
-      acarshub_version: ${{ steps.patch.outputs.acarshub_version }}
-      version: ${{ steps.patch.outputs.version }}
-      build_number: ${{ steps.patch.outputs.build_number }}
+      version: ${{ steps.get_version.outputs.version }}
+      build_number: ${{ steps.get_version.outputs.build_number }}
+      sed_script: ${{ steps.get_version.outputs.sed_script }}
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - name: patch
-        id: patch
+      - name: Get version and build number
+        id: get_version
         run: |
-          # get the version from version-nextgen. First line only
+          # Get version from version-nextgen file
           VERSION=$(head -n 1 version-nextgen)
-          # get the build number from the github run
+          # Get build number from GitHub run
           BUILD_NUMBER=$GITHUB_RUN_NUMBER
-          echo "ACARS Hub: $VERSION Build $BUILD_NUMBER"
-          echo "sed statement in next step will look like"
-          echo "\#patch acarshub version/sed -i s\/Pre-Release\/$OUTPUT\/g"
-          OUTPUT="ACARS Hub: $VERSION Build $BUILD_NUMBER"
-          # set the output in github env
-          echo "acarshub_version=$OUTPUT" >> $GITHUB_OUTPUT
+          echo "ACARS Hub: v${VERSION} Build ${BUILD_NUMBER}"
+          # Create sed script to replace ARG defaults in Dockerfile
+          # Replace ARG VERSION=0.0.0 with ARG VERSION=<actual version>
+          # Replace ARG BUILD_NUMBER=0 with ARG BUILD_NUMBER=<actual build number>
+          SED_SCRIPT="s/ARG VERSION=0.0.0/ARG VERSION=${VERSION}/g; s/ARG BUILD_NUMBER=0/ARG BUILD_NUMBER=${BUILD_NUMBER}/g"
+          # Set outputs
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "build_number=$BUILD_NUMBER" >> $GITHUB_OUTPUT
+          echo "sed_script=$SED_SCRIPT" >> $GITHUB_OUTPUT
 
   deploy:
     name: Deploy
@@ -74,26 +75,17 @@ jobs:
       github.event.inputs.build_latest_as_test == 'false' ||
       github.event.inputs.build_latest_as_test == ''
     uses: sdr-enthusiasts/common-github-workflows/.github/workflows/sdre.yml@main
-    needs: patch_acars_hub_version
+    needs: get_version
     with:
       push_enabled: true
       push_destinations: ghcr.io
       ghcr_repo_owner: ${{ github.repository_owner }}
       ghcr_repo: ${{ github.repository }}
-      # set build_latest to true if github.event.inputs.use_test_image is false
       build_latest: true
       docker_latest_tag: v4-
       build_baseimage_test: true
       platform_linux_arm32v7_enabled: false
-      # TODO: Pass VERSION and BUILD_NUMBER to Docker build
-      # The upstream sdre.yml workflow does not currently support build args
-      # Options:
-      # 1. Add build_args input to sdr-enthusiasts/common-github-workflows/.github/workflows/sdre.yml
-      # 2. Use a fork/wrapper of sdre.yml that supports build args
-      # 3. Set defaults in Dockerfile ARG (VERSION from version-nextgen, BUILD_NUMBER from metadata)
-      #
-      # For now, Dockerfile defaults are used:
-      # - VERSION=0.0.0 (should read from version-nextgen)
-      # - BUILD_NUMBER=0 (should use $GITHUB_RUN_NUMBER)
+      # Inject VERSION and BUILD_NUMBER into Dockerfile via sed
+      dockerfile_changes: ${{ needs.get_version.outputs.sed_script }}
     secrets:
       ghcr_token: ${{ secrets.GITHUB_TOKEN }}
