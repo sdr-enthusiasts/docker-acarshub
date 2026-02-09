@@ -5,7 +5,7 @@
 groups = ["default"]
 strategy = ["inherit_metadata"]
 lock_version = "4.5.0"
-content_hash = "sha256:52bde3b3924a243f14b5aeaa95ede77740a88653e659b024f9d0dec0c6404b9a"
+content_hash = "sha256:24d31923158c896e2e8625063074dbc42407a0b5fc08c8f45e262f21d8050cd4"
 
 [[metadata.targets]]
 requires_python = ">=3.13"
@@ -304,7 +304,7 @@ files = [
 
 [[package]]
 name = "gunicorn"
-version = "24.1.1"
+version = "25.0.3"
 requires_python = ">=3.10"
 summary = "WSGI HTTP Server for UNIX"
 groups = ["default"]
@@ -313,13 +313,13 @@ dependencies = [
     "packaging",
 ]
 files = [
-    {file = "gunicorn-24.1.1-py3-none-any.whl", hash = "sha256:757f6b621fc4f7581a90600b2cd9df593461f06a41d7259cb9b94499dc4095a8"},
-    {file = "gunicorn-24.1.1.tar.gz", hash = "sha256:f006d110e5cb3102859b4f5cd48335dbd9cc28d0d27cd24ddbdafa6c60929408"},
+    {file = "gunicorn-25.0.3-py3-none-any.whl", hash = "sha256:aca364c096c81ca11acd4cede0aaeea91ba76ca74e2c0d7f879154db9d890f35"},
+    {file = "gunicorn-25.0.3.tar.gz", hash = "sha256:b53a7fff1a07b825b962af320554de44ae77a26abfa373711ff3f83d57d3506d"},
 ]
 
 [[package]]
 name = "gunicorn"
-version = "24.1.1"
+version = "25.0.3"
 extras = ["gevent"]
 requires_python = ">=3.10"
 summary = "WSGI HTTP Server for UNIX"
@@ -327,11 +327,11 @@ groups = ["default"]
 marker = "python_version >= \"3.13\""
 dependencies = [
     "gevent>=24.10.1",
-    "gunicorn==24.1.1",
+    "gunicorn==25.0.3",
 ]
 files = [
-    {file = "gunicorn-24.1.1-py3-none-any.whl", hash = "sha256:757f6b621fc4f7581a90600b2cd9df593461f06a41d7259cb9b94499dc4095a8"},
-    {file = "gunicorn-24.1.1.tar.gz", hash = "sha256:f006d110e5cb3102859b4f5cd48335dbd9cc28d0d27cd24ddbdafa6c60929408"},
+    {file = "gunicorn-25.0.3-py3-none-any.whl", hash = "sha256:aca364c096c81ca11acd4cede0aaeea91ba76ca74e2c0d7f879154db9d890f35"},
+    {file = "gunicorn-25.0.3.tar.gz", hash = "sha256:b53a7fff1a07b825b962af320554de44ae77a26abfa373711ff3f83d57d3506d"},
 ]
 
 [[package]]
