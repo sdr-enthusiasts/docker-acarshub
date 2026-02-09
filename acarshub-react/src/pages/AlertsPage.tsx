@@ -392,11 +392,9 @@ export const AlertsPage = () => {
           <>
             <div className="alerts-page__messages">
               {historicalResults.map((message) => (
-                <MessageCard
-                  key={message.uid}
-                  message={message}
-                  showMarkReadButton={false}
-                />
+                <div key={message.uid} className="alerts-page__result-card">
+                  <MessageCard message={message} showMarkReadButton={false} />
+                </div>
               ))}
             </div>
 

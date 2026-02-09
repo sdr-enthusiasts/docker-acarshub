@@ -367,6 +367,25 @@
     }
   }
 
+  // Individual result card wrapper for historical mode (matches .search-page__result-card styling)
+  &__result-card {
+    background-color: var(--color-surface0);
+    border: 1px solid var(--color-surface2);
+    border-radius: var(--border-radius-lg);
+    padding: var(--spacing-md);
+    overflow: hidden;
+    transition: all var(--transition-normal);
+
+    &:hover {
+      border-color: var(--color-overlay0);
+    }
+
+    // Reduced motion
+    @media (prefers-reduced-motion: reduce) {
+      transition: none;
+    }
+  }
+
   // Print styles
   @media print {
     &__mode-toggle,
