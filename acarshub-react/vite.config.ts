@@ -61,13 +61,14 @@ export default defineConfig({
           if (
             id.includes("chart.js") ||
             id.includes("react-chartjs-2") ||
-            id.includes("chartjs-adapter-date-fns")
+            id.includes("chartjs-adapter-date-fns") ||
+            id.includes("chartjs-plugin-datalabels")
           ) {
             return "charts";
           }
 
           // Map library
-          if (id.includes("maplibre-gl")) {
+          if (id.includes("maplibre-gl") || id.includes("react-maplibre")) {
             return "map";
           }
 
@@ -83,6 +84,11 @@ export default defineConfig({
             id.includes("lodash")
           ) {
             return "decoder-deps";
+          }
+
+          // socket.io
+          if (id.includes("socket.io-client")) {
+            return "socketio";
           }
         },
       },
