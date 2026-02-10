@@ -13,8 +13,6 @@ cp .env.example .env
 nano .env
 ```
 
-See [ENV_SETUP.md](ENV_SETUP.md) for detailed configuration options.
-
 ## 🔥 Development Mode (Recommended)
 
 **Run these in separate terminal windows:**
