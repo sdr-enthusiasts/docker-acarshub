@@ -87,7 +87,7 @@ class AcarsMessageDecoder {
       // The decoder requires a Message object with text: string (not optional)
       const messageForDecoder = {
         text: message.text,
-        label: message.label,
+        label: message.label || "",
         // sublabel is not in our AcarsMsg type but could be added if needed
       };
 

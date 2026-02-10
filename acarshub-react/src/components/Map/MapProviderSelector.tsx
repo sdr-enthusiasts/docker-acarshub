@@ -14,7 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-import { faLayerGroup, faXmark } from "@fortawesome/free-solid-svg-icons";
+import { faLayerGroup } from "@fortawesome/free-solid-svg-icons/faLayerGroup";
+import { faXmark } from "@fortawesome/free-solid-svg-icons/faXmark";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useEffect, useRef, useState } from "react";
 import {

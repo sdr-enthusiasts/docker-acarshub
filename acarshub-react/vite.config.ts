@@ -42,12 +42,48 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: {
-          // Split vendor chunks for better caching
-          react: ["react", "react-dom", "react-router-dom"],
-          charts: ["chart.js", "react-chartjs-2", "chartjs-adapter-date-fns"],
-          map: ["maplibre-gl"],
-          decoder: ["@airframes/acars-decoder"],
+        manualChunks: (id) => {
+          // React core
+          if (
+            id.includes("node_modules/react/") ||
+            id.includes("node_modules/react-dom/") ||
+            id.includes("node_modules/react-router-dom/")
+          ) {
+            return "react";
+          }
+
+          // Font Awesome - all icons and core into fonts chunk
+          if (id.includes("@fortawesome")) {
+            return "fonts";
+          }
+
+          // Charts
+          if (
+            id.includes("chart.js") ||
+            id.includes("react-chartjs-2") ||
+            id.includes("chartjs-adapter-date-fns")
+          ) {
+            return "charts";
+          }
+
+          // Map library
+          if (id.includes("maplibre-gl")) {
+            return "map";
+          }
+
+          // Decoder
+          if (id.includes("@airframes/acars-decoder")) {
+            return "decoder";
+          }
+
+          // Some decoder dependencies are large and not tree-shakeable, so we can mark them as external to reduce bundle size
+          if (
+            id.includes("pako") ||
+            id.includes("minizlib") ||
+            id.includes("lodash")
+          ) {
+            return "decoder-deps";
+          }
         },
       },
     },

@@ -14,18 +14,16 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-import {
-  faCircleDot,
-  faCloudRain,
-  faCloudSunRain,
-  faEnvelope,
-  faEyeSlash,
-  faFighterJet,
-  faLock,
-  faPlane,
-  faPlaneUp,
-  faStar,
-} from "@fortawesome/free-solid-svg-icons";
+import { faCircleDot } from "@fortawesome/free-solid-svg-icons/faCircleDot";
+import { faCloudRain } from "@fortawesome/free-solid-svg-icons/faCloudRain";
+import { faCloudSunRain } from "@fortawesome/free-solid-svg-icons/faCloudSunRain";
+import { faEnvelope } from "@fortawesome/free-solid-svg-icons/faEnvelope";
+import { faEyeSlash } from "@fortawesome/free-solid-svg-icons/faEyeSlash";
+import { faFighterJet } from "@fortawesome/free-solid-svg-icons/faFighterJet";
+import { faLock } from "@fortawesome/free-solid-svg-icons/faLock";
+import { faPlane } from "@fortawesome/free-solid-svg-icons/faPlane";
+import { faPlaneUp } from "@fortawesome/free-solid-svg-icons/faPlaneUp";
+import { faStar } from "@fortawesome/free-solid-svg-icons/faStar";
 import { useAppStore } from "../../store/useAppStore";
 import { useSettingsStore } from "../../store/useSettingsStore";
 import { GeoJSONOverlayButton } from "./GeoJSONOverlayButton";

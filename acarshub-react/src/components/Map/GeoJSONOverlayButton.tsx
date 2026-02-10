@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-import { faMap } from "@fortawesome/free-solid-svg-icons";
+import { faMap } from "@fortawesome/free-solid-svg-icons/faMap";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { GEOJSON_OVERLAYS } from "../../config/geojsonOverlays";

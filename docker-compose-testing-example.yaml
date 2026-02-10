@@ -7,7 +7,7 @@ services:
     container_name: acarshub
     restart: always
     ports:
-      - 3000:80
+      - 3001:80
     environment:
       - ENABLE_VDLM=true
       - ENABLE_ACARS=true

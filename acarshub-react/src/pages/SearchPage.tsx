@@ -14,12 +14,10 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-import {
-  faChevronLeft,
-  faChevronRight,
-  faSearch,
-  faTimes,
-} from "@fortawesome/free-solid-svg-icons";
+import { faChevronLeft } from "@fortawesome/free-solid-svg-icons/faChevronLeft";
+import { faChevronRight } from "@fortawesome/free-solid-svg-icons/faChevronRight";
+import { faSearch } from "@fortawesome/free-solid-svg-icons/faSearch";
+import { faTimes } from "@fortawesome/free-solid-svg-icons/faTimes";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { MessageCard } from "../components/MessageCard";

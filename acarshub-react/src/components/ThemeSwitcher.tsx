@@ -14,7 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-import { faLightbulb, faMoon } from "@fortawesome/free-solid-svg-icons";
+import { faLightbulb } from "@fortawesome/free-solid-svg-icons/faLightbulb";
+import { faMoon } from "@fortawesome/free-solid-svg-icons/faMoon";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useEffect } from "react";
 import { useSettingsStore, useTheme } from "../store/useSettingsStore";
