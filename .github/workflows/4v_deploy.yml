@@ -54,8 +54,8 @@ jobs:
       - name: Get version and build number
         id: get_version
         run: |
-          # Get version from version-nextgen file (strip any leading 'v')
-          VERSION=$(head -n 1 version-nextgen | sed 's/^v//')
+          # Get version from package.json
+          VERSION=$(grep -oP '(?<="version": ")[^"]*' acarshub-react/package.json)
           # Get build number from GitHub run
           BUILD_NUMBER=$GITHUB_RUN_NUMBER
           echo "ACARS Hub: v${VERSION} Build ${BUILD_NUMBER}"
