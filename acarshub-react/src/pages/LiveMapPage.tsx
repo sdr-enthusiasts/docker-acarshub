@@ -116,7 +116,7 @@ export const LiveMapPage = () => {
 
           {!isMapLoaded && (
             <div className="live-map-page__map-loading">
-              <div className="live-map-page__spinner" />
+              <p className="live-map-page__pulse-dots">●●●</p>
               <p>Loading map...</p>
             </div>
           )}
