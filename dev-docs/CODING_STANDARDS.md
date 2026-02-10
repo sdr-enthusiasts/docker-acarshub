@@ -164,10 +164,10 @@ function process(data: unknown) {
 
 ```scss
 // Standard breakpoints
-$mobile: 320px;   // Base (mobile-first)
-$tablet: 768px;   // Tablet
+$mobile: 320px; // Base (mobile-first)
+$tablet: 768px; // Tablet
 $desktop: 1024px; // Desktop
-$wide: 1920px;    // Wide screens
+$wide: 1920px; // Wide screens
 
 // Usage
 .container {
@@ -412,9 +412,7 @@ logger.info("User action", {
 });
 
 // ❌ Bad - String concatenation
-logger.info(
-  "User filtered by station KSEA and airline AAL, got 42 results",
-);
+logger.info("User filtered by station KSEA and airline AAL, got 42 results");
 ```
 
 ---

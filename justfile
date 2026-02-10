@@ -75,6 +75,8 @@ check:
 ci:
     @echo "Running TypeScript checks..."
     cd acarshub-react && npx tsc --noEmit
+    @echo "Running build..."
+    cd acarshub-react && npm run build
     @echo "Running Biome checks..."
     biome check --error-on-warnings acarshub-react/
     @echo "Running tests..."

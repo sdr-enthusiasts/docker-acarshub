@@ -76,13 +76,13 @@ Comprehensive guide to testing in ACARS Hub, including patterns, strategies, and
 
 ```typescript
 // src/utils/__tests__/formatDate.test.ts
-import { describe, it, expect } from 'vitest';
-import { formatDate } from '../formatDate';
+import { describe, it, expect } from "vitest";
+import { formatDate } from "../formatDate";
 
-describe('formatDate', () => {
-  it('formats date correctly', () => {
-    const date = new Date('2024-01-15T10:30:00Z');
-    expect(formatDate(date)).toBe('2024-01-15 10:30:00');
+describe("formatDate", () => {
+  it("formats date correctly", () => {
+    const date = new Date("2024-01-15T10:30:00Z");
+    expect(formatDate(date)).toBe("2024-01-15 10:30:00");
   });
 });
 ```
@@ -99,12 +99,12 @@ describe('formatDate', () => {
 
 ```typescript
 // src/pages/__tests__/integration/LiveMessages.test.tsx
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
-import { LiveMessagesPage } from '../LiveMessages';
+import { describe, it, expect, vi } from "vitest";
+import { render, screen, waitFor } from "@testing-library/react";
+import { LiveMessagesPage } from "../LiveMessages";
 
-describe('LiveMessagesPage integration', () => {
-  it('displays messages from store', async () => {
+describe("LiveMessagesPage integration", () => {
+  it("displays messages from store", async () => {
     // Test store + component integration
   });
 });
@@ -122,14 +122,14 @@ describe('LiveMessagesPage integration', () => {
 
 ```typescript
 // e2e/search.spec.ts
-import { test, expect } from '@playwright/test';
+import { test, expect } from "@playwright/test";
 
-test('user can search messages', async ({ page }) => {
-  await page.goto('http://localhost:8080');
-  await page.click('text=Search');
-  await page.fill('input[name="query"]', 'AAL123');
+test("user can search messages", async ({ page }) => {
+  await page.goto("http://localhost:8080");
+  await page.click("text=Search");
+  await page.fill('input[name="query"]', "AAL123");
   await page.click('button:has-text("Search")');
-  await expect(page.locator('.message-item')).toHaveCount(5);
+  await expect(page.locator(".message-item")).toHaveCount(5);
 });
 ```
 
@@ -205,27 +205,24 @@ npm test -- --coverage Button.test.tsx
 ### Testing Utility Functions
 
 ```typescript
-import { describe, it, expect } from 'vitest';
-import { calculateDistance } from '../geoUtils';
+import { describe, it, expect } from "vitest";
+import { calculateDistance } from "../geoUtils";
 
-describe('calculateDistance', () => {
-  it('calculates distance between two points', () => {
-    const result = calculateDistance(
-      { lat: 0, lon: 0 },
-      { lat: 1, lon: 1 }
-    );
+describe("calculateDistance", () => {
+  it("calculates distance between two points", () => {
+    const result = calculateDistance({ lat: 0, lon: 0 }, { lat: 1, lon: 1 });
     expect(result).toBeCloseTo(157.2, 1);
   });
 
-  it('returns 0 for same point', () => {
+  it("returns 0 for same point", () => {
     const point = { lat: 45.5, lon: -122.6 };
     expect(calculateDistance(point, point)).toBe(0);
   });
 
-  it('handles negative coordinates', () => {
+  it("handles negative coordinates", () => {
     const result = calculateDistance(
       { lat: -45, lon: -120 },
-      { lat: 45, lon: 120 }
+      { lat: 45, lon: 120 },
     );
     expect(result).toBeGreaterThan(0);
   });
@@ -254,33 +251,33 @@ describe('Button', () => {
   it('calls onClick handler', async () => {
     const user = userEvent.setup();
     const handleClick = vi.fn();
-    
+
     render(<Button onClick={handleClick}>Click</Button>);
     await user.click(screen.getByText('Click'));
-    
+
     expect(handleClick).toHaveBeenCalledTimes(1);
   });
 
   it('does not call onClick when disabled', async () => {
     const user = userEvent.setup();
     const handleClick = vi.fn();
-    
+
     render(<Button disabled onClick={handleClick}>Click</Button>);
     await user.click(screen.getByText('Click'));
-    
+
     expect(handleClick).not.toHaveBeenCalled();
   });
 
   it('is keyboard accessible', async () => {
     const user = userEvent.setup();
     const handleClick = vi.fn();
-    
+
     render(<Button onClick={handleClick}>Click</Button>);
-    
+
     // Tab to button
     await user.tab();
     expect(screen.getByText('Click')).toHaveFocus();
-    
+
     // Press Enter
     await user.keyboard('{Enter}');
     expect(handleClick).toHaveBeenCalled();
@@ -291,35 +288,35 @@ describe('Button', () => {
 ### Testing Custom Hooks
 
 ```typescript
-import { describe, it, expect } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
-import { useCounter } from '../useCounter';
+import { describe, it, expect } from "vitest";
+import { renderHook, act } from "@testing-library/react";
+import { useCounter } from "../useCounter";
 
-describe('useCounter', () => {
-  it('initializes with default value', () => {
+describe("useCounter", () => {
+  it("initializes with default value", () => {
     const { result } = renderHook(() => useCounter());
     expect(result.current.count).toBe(0);
   });
 
-  it('increments count', () => {
+  it("increments count", () => {
     const { result } = renderHook(() => useCounter());
-    
+
     act(() => {
       result.current.increment();
     });
-    
+
     expect(result.current.count).toBe(1);
   });
 
-  it('respects max value', () => {
+  it("respects max value", () => {
     const { result } = renderHook(() => useCounter({ max: 5 }));
-    
+
     act(() => {
       for (let i = 0; i < 10; i++) {
         result.current.increment();
       }
     });
-    
+
     expect(result.current.count).toBe(5);
   });
 });
@@ -328,49 +325,49 @@ describe('useCounter', () => {
 ### Testing Zustand Stores
 
 ```typescript
-import { describe, it, expect, beforeEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
-import { useSettingsStore } from '../useSettingsStore';
+import { describe, it, expect, beforeEach } from "vitest";
+import { renderHook, act } from "@testing-library/react";
+import { useSettingsStore } from "../useSettingsStore";
 
-describe('useSettingsStore', () => {
+describe("useSettingsStore", () => {
   beforeEach(() => {
     // Reset store before each test
     useSettingsStore.setState({
-      theme: 'mocha',
-      locale: 'en',
+      theme: "mocha",
+      locale: "en",
       notifications: true,
     });
   });
 
-  it('has correct initial state', () => {
+  it("has correct initial state", () => {
     const { result } = renderHook(() => useSettingsStore());
-    expect(result.current.theme).toBe('mocha');
+    expect(result.current.theme).toBe("mocha");
     expect(result.current.notifications).toBe(true);
   });
 
-  it('changes theme', () => {
+  it("changes theme", () => {
     const { result } = renderHook(() => useSettingsStore());
-    
+
     act(() => {
-      result.current.setTheme('latte');
+      result.current.setTheme("latte");
     });
-    
-    expect(result.current.theme).toBe('latte');
+
+    expect(result.current.theme).toBe("latte");
   });
 
-  it('toggles notifications', () => {
+  it("toggles notifications", () => {
     const { result } = renderHook(() => useSettingsStore());
-    
+
     act(() => {
       result.current.toggleNotifications();
     });
-    
+
     expect(result.current.notifications).toBe(false);
-    
+
     act(() => {
       result.current.toggleNotifications();
     });
-    
+
     expect(result.current.notifications).toBe(true);
   });
 });
@@ -407,7 +404,7 @@ describe('MessageList with store', () => {
 
     useAppStore.getState().addMessage(testMessage);
     render(<MessageList />);
-    
+
     expect(screen.getByText('Test message')).toBeInTheDocument();
   });
 
@@ -420,7 +417,7 @@ describe('MessageList with store', () => {
       text: 'New message',
       timestamp: Date.now(),
     });
-    
+
     rerender(<MessageList />);
     expect(screen.getByText('New message')).toBeInTheDocument();
   });
@@ -508,31 +505,31 @@ describe('LiveMessages with Socket.IO', () => {
 ### Basic E2E Test
 
 ```typescript
-import { test, expect } from '@playwright/test';
+import { test, expect } from "@playwright/test";
 
-test.describe('Live Messages', () => {
-  test('displays live messages page', async ({ page }) => {
-    await page.goto('http://localhost:8080');
-    
-    await expect(page.locator('h1')).toContainText('ACARS Hub');
-    await expect(page.locator('.message-list')).toBeVisible();
+test.describe("Live Messages", () => {
+  test("displays live messages page", async ({ page }) => {
+    await page.goto("http://localhost:8080");
+
+    await expect(page.locator("h1")).toContainText("ACARS Hub");
+    await expect(page.locator(".message-list")).toBeVisible();
   });
 
-  test('filters messages by station', async ({ page }) => {
-    await page.goto('http://localhost:8080/live');
-    
+  test("filters messages by station", async ({ page }) => {
+    await page.goto("http://localhost:8080/live");
+
     // Wait for messages to load
-    await page.waitForSelector('.message-item');
-    const initialCount = await page.locator('.message-item').count();
-    
+    await page.waitForSelector(".message-item");
+    const initialCount = await page.locator(".message-item").count();
+
     // Apply filter
     await page.click('button:has-text("Filter")');
-    await page.fill('input[name="station"]', 'KSEA');
+    await page.fill('input[name="station"]', "KSEA");
     await page.click('button:has-text("Apply")');
-    
+
     // Check filtered results
     await page.waitForTimeout(500);
-    const filteredCount = await page.locator('.message-item').count();
+    const filteredCount = await page.locator(".message-item").count();
     expect(filteredCount).toBeLessThan(initialCount);
   });
 });
@@ -541,58 +538,58 @@ test.describe('Live Messages', () => {
 ### Testing User Flows
 
 ```typescript
-import { test, expect } from '@playwright/test';
+import { test, expect } from "@playwright/test";
 
-test('complete search flow', async ({ page }) => {
+test("complete search flow", async ({ page }) => {
   // Navigate to search page
-  await page.goto('http://localhost:8080');
+  await page.goto("http://localhost:8080");
   await page.click('nav a:has-text("Search")');
   await expect(page).toHaveURL(/.*search/);
-  
+
   // Fill search form
-  await page.fill('input[name="flight"]', 'AAL123');
-  await page.selectOption('select[name="timeRange"]', '24h');
-  
+  await page.fill('input[name="flight"]', "AAL123");
+  await page.selectOption('select[name="timeRange"]', "24h");
+
   // Submit search
   await page.click('button:has-text("Search")');
-  
+
   // Wait for results
-  await page.waitForSelector('.search-results');
-  await expect(page.locator('.message-item')).toHaveCount(5);
-  
+  await page.waitForSelector(".search-results");
+  await expect(page.locator(".message-item")).toHaveCount(5);
+
   // Click on a message
-  await page.click('.message-item:first-child');
-  
+  await page.click(".message-item:first-child");
+
   // Verify details modal
-  await expect(page.locator('.modal')).toBeVisible();
-  await expect(page.locator('.modal h2')).toContainText('Message Details');
+  await expect(page.locator(".modal")).toBeVisible();
+  await expect(page.locator(".modal h2")).toContainText("Message Details");
 });
 ```
 
 ### Mobile E2E Testing
 
 ```typescript
-import { test, expect, devices } from '@playwright/test';
+import { test, expect, devices } from "@playwright/test";
 
-test.use(devices['iPhone 13']);
+test.use(devices["iPhone 13"]);
 
-test('mobile navigation', async ({ page }) => {
-  await page.goto('http://localhost:8080');
-  
+test("mobile navigation", async ({ page }) => {
+  await page.goto("http://localhost:8080");
+
   // Check mobile menu
   const menuButton = page.locator('button[aria-label="Menu"]');
   await expect(menuButton).toBeVisible();
-  
+
   // Open menu
   await menuButton.click();
-  await expect(page.locator('nav')).toBeVisible();
-  
+  await expect(page.locator("nav")).toBeVisible();
+
   // Navigate
   await page.click('nav a:has-text("Search")');
   await expect(page).toHaveURL(/.*search/);
-  
+
   // Menu should close
-  await expect(page.locator('nav')).not.toBeVisible();
+  await expect(page.locator("nav")).not.toBeVisible();
 });
 ```
 
@@ -603,27 +600,27 @@ test('mobile navigation', async ({ page }) => {
 ### Automated Accessibility Tests
 
 ```typescript
-import { test, expect } from '@playwright/test';
-import AxeBuilder from '@axe-core/playwright';
+import { test, expect } from "@playwright/test";
+import AxeBuilder from "@axe-core/playwright";
 
-test.describe('Accessibility', () => {
-  test('homepage is accessible', async ({ page }) => {
-    await page.goto('http://localhost:8080');
-    
+test.describe("Accessibility", () => {
+  test("homepage is accessible", async ({ page }) => {
+    await page.goto("http://localhost:8080");
+
     const results = await new AxeBuilder({ page })
-      .withTags(['wcag2a', 'wcag2aa'])
+      .withTags(["wcag2a", "wcag2aa"])
       .analyze();
-    
+
     expect(results.violations).toEqual([]);
   });
 
-  test('search page is accessible', async ({ page }) => {
-    await page.goto('http://localhost:8080/search');
-    
+  test("search page is accessible", async ({ page }) => {
+    await page.goto("http://localhost:8080/search");
+
     const results = await new AxeBuilder({ page })
-      .withTags(['wcag2a', 'wcag2aa'])
+      .withTags(["wcag2a", "wcag2aa"])
       .analyze();
-    
+
     expect(results.violations).toEqual([]);
   });
 });
@@ -632,24 +629,24 @@ test.describe('Accessibility', () => {
 ### Keyboard Navigation Testing
 
 ```typescript
-import { test, expect } from '@playwright/test';
+import { test, expect } from "@playwright/test";
 
-test('keyboard navigation works', async ({ page }) => {
-  await page.goto('http://localhost:8080');
-  
+test("keyboard navigation works", async ({ page }) => {
+  await page.goto("http://localhost:8080");
+
   // Tab through interactive elements
-  await page.keyboard.press('Tab');
-  await expect(page.locator('nav a:first-child')).toBeFocused();
-  
-  await page.keyboard.press('Tab');
-  await expect(page.locator('nav a:nth-child(2)')).toBeFocused();
-  
+  await page.keyboard.press("Tab");
+  await expect(page.locator("nav a:first-child")).toBeFocused();
+
+  await page.keyboard.press("Tab");
+  await expect(page.locator("nav a:nth-child(2)")).toBeFocused();
+
   // Press Enter to navigate
-  await page.keyboard.press('Enter');
+  await page.keyboard.press("Enter");
   await expect(page).toHaveURL(/.*search/);
-  
+
   // Test Escape key
-  await page.keyboard.press('Escape');
+  await page.keyboard.press("Escape");
   // Verify expected behavior (e.g., modal closes)
 });
 ```
@@ -657,25 +654,25 @@ test('keyboard navigation works', async ({ page }) => {
 ### Screen Reader Testing
 
 ```typescript
-import { test, expect } from '@playwright/test';
+import { test, expect } from "@playwright/test";
 
-test('screen reader labels are present', async ({ page }) => {
-  await page.goto('http://localhost:8080');
-  
+test("screen reader labels are present", async ({ page }) => {
+  await page.goto("http://localhost:8080");
+
   // Check ARIA labels
   const searchButton = page.locator('button[aria-label="Search messages"]');
   await expect(searchButton).toBeVisible();
-  
+
   // Check landmarks
   const main = page.locator('main[role="main"]');
   await expect(main).toBeVisible();
-  
+
   const nav = page.locator('nav[aria-label="Main navigation"]');
   await expect(nav).toBeVisible();
-  
+
   // Check live regions
   const status = page.locator('[role="status"]');
-  await expect(status).toHaveAttribute('aria-live', 'polite');
+  await expect(status).toHaveAttribute("aria-live", "polite");
 });
 ```
 
@@ -708,30 +705,32 @@ just analyze
 ### Runtime Performance Testing
 
 ```typescript
-import { test, expect } from '@playwright/test';
+import { test, expect } from "@playwright/test";
 
-test('renders 1000 messages performantly', async ({ page }) => {
-  await page.goto('http://localhost:8080/live');
-  
+test("renders 1000 messages performantly", async ({ page }) => {
+  await page.goto("http://localhost:8080/live");
+
   // Measure time to render
   const startTime = Date.now();
-  
+
   // Trigger rendering 1000 messages
   await page.evaluate(() => {
     for (let i = 0; i < 1000; i++) {
-      window.dispatchEvent(new CustomEvent('acars_msg', {
-        detail: {
-          uid: `msg-${i}`,
-          text: `Message ${i}`,
-          timestamp: Date.now(),
-        },
-      }));
+      window.dispatchEvent(
+        new CustomEvent("acars_msg", {
+          detail: {
+            uid: `msg-${i}`,
+            text: `Message ${i}`,
+            timestamp: Date.now(),
+          },
+        }),
+      );
     }
   });
-  
-  await page.waitForSelector('.message-item:nth-child(1000)');
+
+  await page.waitForSelector(".message-item:nth-child(1000)");
   const endTime = Date.now();
-  
+
   const renderTime = endTime - startTime;
   expect(renderTime).toBeLessThan(2000); // 2 seconds max
 });
@@ -744,14 +743,14 @@ test('renders 1000 messages performantly', async ({ page }) => {
 ### Arrange-Act-Assert (AAA)
 
 ```typescript
-it('adds two numbers', () => {
+it("adds two numbers", () => {
   // Arrange - Setup test data
   const a = 5;
   const b = 3;
-  
+
   // Act - Execute the code under test
   const result = add(a, b);
-  
+
   // Assert - Verify the result
   expect(result).toBe(8);
 });
@@ -763,22 +762,22 @@ it('adds two numbers', () => {
 // tests/fixtures/messages.ts
 export const mockMessages = {
   valid: {
-    uid: '123',
-    text: 'Test message',
+    uid: "123",
+    text: "Test message",
     timestamp: 1704067200000,
-    station: 'KSEA',
+    station: "KSEA",
   },
   invalid: {
-    uid: '',
-    text: '',
+    uid: "",
+    text: "",
     timestamp: 0,
   },
 };
 
 // Usage in test
-import { mockMessages } from '@/tests/fixtures/messages';
+import { mockMessages } from "@/tests/fixtures/messages";
 
-it('handles valid message', () => {
+it("handles valid message", () => {
   const result = processMessage(mockMessages.valid);
   expect(result).toBeDefined();
 });
@@ -823,31 +822,31 @@ it('renders with providers', () => {
 ### Mocking Functions
 
 ```typescript
-import { vi } from 'vitest';
+import { vi } from "vitest";
 
 // Mock a function
 const mockFn = vi.fn();
-mockFn('hello');
-expect(mockFn).toHaveBeenCalledWith('hello');
+mockFn("hello");
+expect(mockFn).toHaveBeenCalledWith("hello");
 
 // Mock implementation
 const mockAdd = vi.fn((a, b) => a + b);
 expect(mockAdd(2, 3)).toBe(5);
 
 // Mock return value
-const mockGetUser = vi.fn().mockReturnValue({ id: 1, name: 'John' });
-expect(mockGetUser().name).toBe('John');
+const mockGetUser = vi.fn().mockReturnValue({ id: 1, name: "John" });
+expect(mockGetUser().name).toBe("John");
 
 // Mock rejected promise
-const mockFetch = vi.fn().mockRejectedValue(new Error('Network error'));
-await expect(mockFetch()).rejects.toThrow('Network error');
+const mockFetch = vi.fn().mockRejectedValue(new Error("Network error"));
+await expect(mockFetch()).rejects.toThrow("Network error");
 ```
 
 ### Mocking Modules
 
 ```typescript
 // Mock entire module
-vi.mock('socket.io-client', () => ({
+vi.mock("socket.io-client", () => ({
   io: vi.fn(() => ({
     on: vi.fn(),
     off: vi.fn(),
@@ -856,8 +855,8 @@ vi.mock('socket.io-client', () => ({
 }));
 
 // Partial module mock
-vi.mock('@/utils/logger', async () => {
-  const actual = await vi.importActual('@/utils/logger');
+vi.mock("@/utils/logger", async () => {
+  const actual = await vi.importActual("@/utils/logger");
   return {
     ...actual,
     createLogger: vi.fn(() => ({
@@ -873,7 +872,7 @@ vi.mock('@/utils/logger', async () => {
 ### Mocking Timers
 
 ```typescript
-import { vi, beforeEach, afterEach } from 'vitest';
+import { vi, beforeEach, afterEach } from "vitest";
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -883,12 +882,12 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-it('delays execution', () => {
+it("delays execution", () => {
   const callback = vi.fn();
-  
+
   setTimeout(callback, 1000);
   expect(callback).not.toHaveBeenCalled();
-  
+
   vi.advanceTimersByTime(1000);
   expect(callback).toHaveBeenCalled();
 });
@@ -919,13 +918,13 @@ open acarshub-react/coverage/index.html
 export default defineConfig({
   test: {
     coverage: {
-      provider: 'v8',
-      reporter: ['text', 'html', 'json'],
-      include: ['src/**/*.{ts,tsx}'],
+      provider: "v8",
+      reporter: ["text", "html", "json"],
+      include: ["src/**/*.{ts,tsx}"],
       exclude: [
-        'src/**/*.test.{ts,tsx}',
-        'src/**/__tests__/**',
-        'src/types/**',
+        "src/**/*.test.{ts,tsx}",
+        "src/**/__tests__/**",
+        "src/types/**",
       ],
       thresholds: {
         lines: 70,
@@ -946,16 +945,16 @@ export default defineConfig({
 
 ```typescript
 // ❌ Bad - Race condition
-it('updates after async action', () => {
+it("updates after async action", () => {
   fireEvent.click(button);
-  expect(screen.getByText('Updated')).toBeInTheDocument();
+  expect(screen.getByText("Updated")).toBeInTheDocument();
 });
 
 // ✅ Good - Wait for update
-it('updates after async action', async () => {
+it("updates after async action", async () => {
   fireEvent.click(button);
   await waitFor(() => {
-    expect(screen.getByText('Updated')).toBeInTheDocument();
+    expect(screen.getByText("Updated")).toBeInTheDocument();
   });
 });
 ```
@@ -964,7 +963,7 @@ it('updates after async action', async () => {
 
 ```typescript
 // Increase timeout for slow tests
-it('handles large dataset', async () => {
+it("handles large dataset", async () => {
   // ... test code
 }, 10000); // 10 second timeout
 ```
@@ -973,19 +972,19 @@ it('handles large dataset', async () => {
 
 ```typescript
 // ❌ Bad - Mock after import
-import { fetchData } from './api';
-vi.mock('./api');
+import { fetchData } from "./api";
+vi.mock("./api");
 
 // ✅ Good - Mock before import
-vi.mock('./api');
-import { fetchData } from './api';
+vi.mock("./api");
+import { fetchData } from "./api";
 ```
 
 ### Component Not Updating
 
 ```typescript
 // Use act() for state updates
-import { act } from '@testing-library/react';
+import { act } from "@testing-library/react";
 
 await act(async () => {
   result.current.updateData();

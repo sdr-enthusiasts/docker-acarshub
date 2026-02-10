@@ -463,19 +463,19 @@ ADSB_LON=-122.3088
 
 ```typescript
 // ❌ Bad
-it('loads data', () => {
+it("loads data", () => {
   loadData();
   expect(data).toBeDefined();
 });
 
 // ✅ Good - Use async/await
-it('loads data', async () => {
+it("loads data", async () => {
   await loadData();
   expect(data).toBeDefined();
 });
 
 // Or increase timeout for slow tests
-it('slow test', async () => {
+it("slow test", async () => {
   // ... test code
 }, 10000); // 10 second timeout
 ```
@@ -488,15 +488,15 @@ it('slow test', async () => {
 
 ```typescript
 // ❌ Bad - Mock after import
-import { fetchData } from './api';
-vi.mock('./api');
+import { fetchData } from "./api";
+vi.mock("./api");
 
 // ✅ Good - Mock before import
-vi.mock('./api');
-import { fetchData } from './api';
+vi.mock("./api");
+import { fetchData } from "./api";
 
 // Reset mocks between tests
-import { afterEach, vi } from 'vitest';
+import { afterEach, vi } from "vitest";
 afterEach(() => {
   vi.clearAllMocks();
 });
@@ -513,13 +513,13 @@ afterEach(() => {
 export default defineConfig({
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
+      "@": path.resolve(__dirname, "./src"),
     },
   },
 });
 
 // Or use relative imports in tests
-import { foo } from '../../../utils/foo';
+import { foo } from "../../../utils/foo";
 ```
 
 ### E2E Test Issues
@@ -686,13 +686,13 @@ npm run build
 ```typescript
 // ✅ Good - Cleanup subscriptions
 useEffect(() => {
-  const subscription = socket.on('message', handler);
-  return () => subscription.off('message', handler);
+  const subscription = socket.on("message", handler);
+  return () => subscription.off("message", handler);
 }, [socket, handler]);
 
 // ❌ Bad - No cleanup
 useEffect(() => {
-  socket.on('message', handler);
+  socket.on("message", handler);
 }, [socket, handler]);
 ```
 
@@ -702,7 +702,7 @@ useEffect(() => {
 // Limit messages in state
 const MAX_MESSAGES = 1000;
 set((state) => ({
-  messages: [...newMessages, ...state.messages].slice(0, MAX_MESSAGES)
+  messages: [...newMessages, ...state.messages].slice(0, MAX_MESSAGES),
 }));
 ```
 

@@ -9,14 +9,12 @@ Docker container to view ACARS, VDLM2 and HFDL messages.
 
 We make extensive use of the [airframes](https://github.com/airframesio) work to make the messages more 'human-readable' as well as provide more detail for each of the messages.
 
-Builds and runs on `amd64`, `arm64`, `arm/v7`, `arm/v6` and `386` architectures.
+Builds and runs on `amd64`, and `arm64` architectures.
 
 ## Table of Contents
 
 - [sdr-enthusiasts/acarshub](#sdr-enthusiastsacarshub)
   - [Table of Contents](#table-of-contents)
-  - [Users of v2 that need to migrate to v3](#users-of-v2-that-need-to-migrate-to-v3)
-  - [IMPORTANT NOTE FOR BUSTER USERS](#important-note-for-buster-users)
   - [Pre-requisites/Totally new to docker but you think this looks cool](#pre-requisitestotally-new-to-docker-but-you-think-this-looks-cool)
   - [Supported tags and respective Dockerfiles](#supported-tags-and-respective-dockerfiles)
   - [Thanks](#thanks)
@@ -37,19 +35,8 @@ Builds and runs on `amd64`, `arm64`, `arm/v7`, `arm/v6` and `386` architectures.
   - [Which frequencies should you monitor](#which-frequencies-should-you-monitor)
   - [A note about data sources used for the web site](#a-note-about-data-sources-used-for-the-web-site)
     - [The Fix](#the-fix)
-  - [Accessing ACARS/VDLM data with external programs](#accessing-acarsvdlm-data-with-external-programs)
     - [YAML Configuration for Ports](#yaml-configuration-for-ports)
-  - [Website tips and tricks](#website-tips-and-tricks)
-  - [Future improvements](#future-improvements)
   - [Getting Help](#getting-help)
-
-## Users of v2 that need to migrate to v3
-
-Please see [this](Setting-Up-ACARSHub.MD) for an example `docker-compose.yaml` file to get you started. You should be able to copy/paste values quickly over in to the new config and be up and running very quickly.
-
-## IMPORTANT NOTE FOR BUSTER USERS
-
-Please see [this](https://github.com/sdr-enthusiasts/Buster-Docker-Fixes) if you encounter `RTC/Real Time Clock` issues.
 
 ## Pre-requisites/Totally new to docker but you think this looks cool
 
@@ -63,10 +50,8 @@ You will need the following:
 
 ## Supported tags and respective Dockerfiles
 
-- `latest` (`master` branch, `Dockerfile.acarshub`)
-- `latest_nohealthcheck (`master`branch,`Dockerfile.acarshub` patched to remove Heathcheck)
-- `version specific` (`master` branch at the time of build, `Dockerfile.acarshub`)
-- `version specific no healthcheck` (`master` branch at the time of build, `Dockerfile.acarshub`)
+- `latest` (`main` branch, `Dockerfile`)
+- `latest-build-x` where `x` is the build number (`main` branch, `Dockerfile`)
 
 ## Thanks
 
@@ -153,9 +138,7 @@ There are quite a few configuration options this container can accept.
 | `TAR1090_URL`          | Flights where the container is able to, it will generate a link to a tar1090 instance so that you can see the position of the aircraft that generated the message. By default, it will link to [ADSB Exchange](https://www.adsbexchange.com), but if desired, you can set the URL to be a local tar1090 instance.      | No       | Blank   |
 | `AUTO_VACUUM`          | If you find your database size to be too large you can temporarily enable this and on the next container startup the database will attempt to reduce itself in size. When you do this startup time will take a few minutes. It is recommended to leave this flag disabled and only enable it temporarily.              | No       | `False` |
 | `DB_FTS_OPTIMIZE`      | `off`, `optimize`, `merge` (use optimize if your database is becoming slow or too large, merge would be better but it's possibly buggy destroying the DB, maybe optimize is too, unknown at this point in time)                                                                                                        | No       | `off`   |
-| `DB_FTS_REBUILD`       | Rebuilds the FTS data, set this to true for one container start if you are having database errors                                                                                                                                                                                                                      | No       | `false` |
 | `ALLOW_REMOTE_UPDATES` | If you do not want to allow users to update the alert terms (and potentially other things in the future) via the web interface, set this to `False`                                                                                                                                                                    | No       | `True`  |
-| `FLIGHT_TRACKING_URL`  | If you want to link to a flight tracking site other than Flight Aware, set this to the URL of the site you want to link to. The url should be formatted to accept tail numbers at the end of the URL.                                                                                                                  | No       | Blank   |
 | `HIDE_VERSION_UPDATE`  | If you want to hide the version update notification on the web interface, set this to `True`. This is useful if you are running a custom build of ACARS Hub and do not want to see the version update notification.                                                                                                    | No       | `False` |
 
 Please note that for `TAR1090_URL` the required format is `http[s]://**HOSTNAME**` only. So if your tar1090 instance is at IP address `192.168.31.10` with no SSL, the TAR1090_URL would look like `http://192.168.31.10`
@@ -286,17 +269,6 @@ For anyone in the US, I suggest adding `IATA_OVERRIDE=UP|UPS|United Parcel Servi
 
 If there are airlines you notice that are wrong because the data used is wrong (IATA codes do change over time as airlines come and go), or airlines that are missing from the database that do have an IATA code, submit a PR above and I'll get it in there!
 
-## Accessing ACARS/VDLM data with external programs
-
-If you wish to access the JSON data that the decoders `acarsdec` and `dumpvdl2` generate with an external program expose the following ports in your docker-compose configuration:
-
-- Port 80 for the web site
-- Port 15558 for UDP Iridium JSON
-- Port 15557 for UDP Inmarsat L-Band JSON
-- Port 15556 for UDP HFDL JSON
-- Port 15555 for UDP VDLM2 JSON
-- Port 15550 for UDP ACARS JSON
-
 ### YAML Configuration for Ports
 
 ```yaml
@@ -315,20 +287,6 @@ ports:
 ```
 
 And then you will be able to connect to `yourpisipaddress:15555` or `yourpisipaddress:15550` respectively, in whatever program can decode ACARS/VDLM JSON.
-
-## Website tips and tricks
-
-- On the `Live Message` page pressing the `p` key on your keyboard will pause the message updates so you can catch up. Pressing `p` again will cause the page to refresh again and display messages as they come in.
-- On the search page enter your search terms and then press `enter` to start the search.
-
-## Future improvements
-
-ACARS decoding appears to be in active development, and as such, I expect a lot of movement in data-visualization and presentation to happen. This container will follow those developments and add in functionality as it appears.
-
-The following features are in active development:
-
-- A fresh new look to the website
-- Desktop application to view the data
 
 ## Getting Help
 

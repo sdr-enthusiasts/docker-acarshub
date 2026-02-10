@@ -332,9 +332,11 @@ Users requested ability to focus on specific stations when monitoring alerts (is
 ## Screenshots
 
 ### Desktop
+
 ![Desktop view](screenshots/desktop.png)
 
 ### Mobile
+
 ![Mobile view](screenshots/mobile.png)
 
 ## Closes

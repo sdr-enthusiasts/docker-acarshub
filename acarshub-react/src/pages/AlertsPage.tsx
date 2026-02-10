@@ -20,6 +20,7 @@ import { MessageGroup } from "../components/MessageGroup";
 import { socketService } from "../services/socket";
 import { useAppStore } from "../store/useAppStore";
 import type { AcarsMsg } from "../types";
+import { decodeMessages } from "../utils/decoderUtils";
 import { uiLogger } from "../utils/logger";
 
 const RESULTS_PER_PAGE = 50;
@@ -96,7 +97,9 @@ export const AlertsPage = () => {
       page: number;
       query_time: number;
     }) => {
-      setHistoricalResults(data.messages);
+      // Decode messages that don't have decodedText from database
+      const decodedResults = decodeMessages(data.messages);
+      setHistoricalResults(decodedResults);
       setHistoricalTotal(data.total_count);
       setHistoricalPage(data.page);
       setQueryTime(data.query_time);
