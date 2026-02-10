@@ -54,15 +54,16 @@ jobs:
       - name: Get version and build number
         id: get_version
         run: |
-          # Get version from version-nextgen file
-          VERSION=$(head -n 1 version-nextgen)
+          # Get version from version-nextgen file (strip any leading 'v')
+          VERSION=$(head -n 1 version-nextgen | sed 's/^v//')
           # Get build number from GitHub run
           BUILD_NUMBER=$GITHUB_RUN_NUMBER
           echo "ACARS Hub: v${VERSION} Build ${BUILD_NUMBER}"
           # Create sed script to replace ARG defaults in Dockerfile
           # Replace ARG VERSION=0.0.0 with ARG VERSION=<actual version>
           # Replace ARG BUILD_NUMBER=0 with ARG BUILD_NUMBER=<actual build number>
-          SED_SCRIPT="s/ARG VERSION=0.0.0/ARG VERSION=${VERSION}/g; s/ARG BUILD_NUMBER=0/ARG BUILD_NUMBER=${BUILD_NUMBER}/g"
+          # Use pipe delimiter to avoid escaping issues
+          SED_SCRIPT="s|ARG VERSION=0.0.0|ARG VERSION=${VERSION}|g; s|ARG BUILD_NUMBER=0|ARG BUILD_NUMBER=${BUILD_NUMBER}|g"
           # Set outputs
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "build_number=$BUILD_NUMBER" >> $GITHUB_OUTPUT
