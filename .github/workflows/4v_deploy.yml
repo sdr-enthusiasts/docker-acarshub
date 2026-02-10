@@ -80,7 +80,6 @@ jobs:
       platform_linux_arm32v7_enabled: false
       build_baseimage_url: :base/:base-test-pr
       dockerfile_changes: |
-        \# patch version/sed -i \"s\/ARG VERSION=0.0.0\/ARG VERSION=${{ needs.get_version.outputs.version }}\/g\" ./Dockerfile
-        \# patch build number/sed -i \"s\/ARG BUILD_NUMBER=0\/ARG BUILD_NUMBER=${{ needs.get_version.outputs.build_number }}\/g\" ./Dockerfile
+        ARG VERSION=0\.0\.0/ARG VERSION=${{ needs.get_version.outputs.version }}/g;s/ARG BUILD_NUMBER=0/ARG BUILD_NUMBER=${{ needs.get_version.outputs.build_number }}
     secrets:
       ghcr_token: ${{ secrets.GITHUB_TOKEN }}
