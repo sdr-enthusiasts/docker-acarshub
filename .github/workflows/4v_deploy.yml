@@ -41,42 +41,33 @@ jobs:
           echo "Use test image: $INPUTS_USE_TEST_IMAGE"
           echo "Build latest as test: $INPUTS_BUILD_LATEST_AS_TEST"
 
-  prepare_dockerfile:
-    name: "Prepare Dockerfile with version and build number"
+  get_version:
+    name: "Get version and build number"
     runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.get_version.outputs.version }}
+      build_number: ${{ steps.get_version.outputs.build_number }}
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - name: Update Dockerfile with version and build number
+      - name: Get version and build number
+        id: get_version
         run: |
           # Get version from version-nextgen file (strip any leading 'v')
           VERSION=$(head -n 1 version-nextgen | sed 's/^v//')
           # Get build number from GitHub run
           BUILD_NUMBER=$GITHUB_RUN_NUMBER
           echo "ACARS Hub: v${VERSION} Build ${BUILD_NUMBER}"
-
-          # Update Dockerfile ARG defaults
-          sed -i "s|ARG VERSION=0.0.0|ARG VERSION=${VERSION}|g" ./Dockerfile
-          sed -i "s|ARG BUILD_NUMBER=0|ARG BUILD_NUMBER=${BUILD_NUMBER}|g" ./Dockerfile
-
-          echo "Updated Dockerfile:"
-          grep -E "ARG (VERSION|BUILD_NUMBER)=" ./Dockerfile
-
-      - name: Commit and push Dockerfile changes
-        run: |
-          git config user.name "GitHub Actions Bot"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add Dockerfile
-          git commit -m "chore: update Dockerfile version to $(head -n 1 version-nextgen | sed 's/^v//') build $GITHUB_RUN_NUMBER [skip ci]"
-          git push
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "build_number=$BUILD_NUMBER" >> $GITHUB_OUTPUT
 
   deploy:
     name: Deploy
     if: |
       github.event.inputs.build_latest_as_test == 'false' ||
       github.event.inputs.build_latest_as_test == ''
-    needs: prepare_dockerfile
+    needs: get_version
     uses: sdr-enthusiasts/common-github-workflows/.github/workflows/sdre.yml@main
     with:
       push_enabled: true
@@ -88,5 +79,8 @@ jobs:
       build_baseimage_test: false
       platform_linux_arm32v7_enabled: false
       build_baseimage_url: :base/:base-test-pr
+      dockerfile_changes: |
+        \# patch version/sed -i "s|ARG VERSION=0.0.0|ARG VERSION=${{ needs.get_version.outputs.version }}|g" ./Dockerfile
+        \# patch build number/sed -i "s|ARG BUILD_NUMBER=0|ARG BUILD_NUMBER=${{ needs.get_version.outputs.build_number }}|g" ./Dockerfile
     secrets:
       ghcr_token: ${{ secrets.GITHUB_TOKEN }}
