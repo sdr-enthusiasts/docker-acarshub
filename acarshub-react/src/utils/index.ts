@@ -23,6 +23,8 @@
 export * from "./arrayUtils";
 // Date utilities
 export * from "./dateUtils";
+// Path utilities
+export * from "./pathUtils";
 // String utilities
 export * from "./stringUtils";
 

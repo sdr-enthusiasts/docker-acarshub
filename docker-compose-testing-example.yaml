@@ -1,4 +1,16 @@
 services:
+  # Nginx reverse proxy for testing subpath deployment
+  nginx:
+    image: nginx:alpine
+    container_name: acarshub-nginx
+    restart: always
+    ports:
+      - 3002:80
+    volumes:
+      - ./nginx-test.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - acarshub
+
   # ACARS Related Services
   acarshub:
     #image: ghcr.io/sdr-enthusiasts/docker-acarshub:v4-latest
@@ -8,6 +20,7 @@ services:
     restart: always
     ports:
       - 3001:80
+    # No need to expose port when using nginx proxy, but keeping for direct access
     environment:
       - ENABLE_VDLM=true
       - ENABLE_ACARS=true

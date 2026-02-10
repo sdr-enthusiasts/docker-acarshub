@@ -24,6 +24,7 @@ import { useMemo } from "react";
 import { Layer, Source } from "react-map-gl/maplibre";
 import { getOverlayById } from "../../config/geojsonOverlays";
 import { useSettingsStore } from "../../store/useSettingsStore";
+import { resolveBasePath } from "../../utils/pathUtils";
 
 // Stable empty array to prevent re-renders
 const EMPTY_ARRAY: string[] = [];
@@ -85,10 +86,11 @@ function GeoJSONOverlayLayer({
   opacity: number;
 }) {
   // GeoJSON source - MapLibre fetches the URL automatically
+  // Resolve path relative to BASE_URL for subpath deployments
   const source: GeoJSONSourceSpecification = useMemo(
     () => ({
       type: "geojson",
-      data: path, // MapLibre accepts URL strings
+      data: resolveBasePath(path), // Resolve relative to Vite's BASE_URL
     }),
     [path],
   );
