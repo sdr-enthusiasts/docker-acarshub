@@ -75,6 +75,13 @@ export const AlertsPage = () => {
       }
     }
 
+    uiLogger.debug("AlertsPage stats recalculated", {
+      totalAlerts,
+      unreadAlerts,
+      uniqueAircraft: uniqueAircraft.size,
+      groupCount: alertMessageGroups.size,
+    });
+
     return {
       totalAlerts,
       unreadAlerts,
@@ -150,13 +157,21 @@ export const AlertsPage = () => {
   // Convert messageGroups Map to array and sort by most recent message (newest first)
   const alertGroupsArray = useMemo(() => {
     const groups = Array.from(alertMessageGroups.values());
-    return groups.sort((a, b) => {
-      // Get the most recent message timestamp from each group
-      const aTimestamp = a.messages[0]?.timestamp || 0;
-      const bTimestamp = b.messages[0]?.timestamp || 0;
+    const sorted = groups.sort((a, b) => {
+      // Use lastUpdated field which tracks the most recent message timestamp
+      const aTimestamp = a.lastUpdated || 0;
+      const bTimestamp = b.lastUpdated || 0;
       // Sort descending (newest first)
       return bTimestamp - aTimestamp;
     });
+
+    uiLogger.debug("AlertsPage groups recalculated", {
+      groupCount: sorted.length,
+      firstGroupId: sorted[0]?.identifiers[0] || "none",
+      firstGroupLastUpdated: sorted[0]?.lastUpdated || 0,
+    });
+
+    return sorted;
   }, [alertMessageGroups]);
 
   const handleMarkAllRead = () => {

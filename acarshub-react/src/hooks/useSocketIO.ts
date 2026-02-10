@@ -17,7 +17,7 @@
 import { useEffect } from "react";
 import { socketService } from "../services/socket";
 import { useAppStore } from "../store/useAppStore";
-import type { HtmlMsg, Labels } from "../types";
+import type { AcarsMsg, HtmlMsg, Labels } from "../types";
 import { socketLogger } from "../utils/logger";
 
 /**
@@ -69,9 +69,6 @@ export const useSocketIO = () => {
         connected: true,
       });
       setConnected(true);
-
-      // Request recent alerts to populate initial state
-      socketService.requestRecentAlerts();
     });
 
     socket.on("disconnect", (reason) => {
@@ -98,9 +95,6 @@ export const useSocketIO = () => {
         connected: true,
       });
       setConnected(true);
-
-      // Request recent alerts after reconnection
-      socketService.requestRecentAlerts();
     });
 
     // Historical alerts event handler (sent on connect)
@@ -117,6 +111,33 @@ export const useSocketIO = () => {
       addMessage(message);
     });
 
+    // Batched alert matches event - used during initial connection load
+    socket.on(
+      "alert_matches_batch",
+      (data: {
+        messages: AcarsMsg[];
+        loading?: boolean;
+        done_loading?: boolean;
+      }) => {
+        socketLogger.debug("Received alert_matches_batch event", {
+          count: data.messages?.length || 0,
+          loading: data.loading,
+          done_loading: data.done_loading,
+        });
+        // Process all alert messages in the batch
+        for (const message of data.messages) {
+          socketLogger.debug("Processing alert message from batch", {
+            uid: message.uid,
+            hasText: !!message.text,
+            textLength: message.text?.length || 0,
+            textPreview: message.text?.substring(0, 50),
+            matched: message.matched,
+          });
+          addMessage(message);
+        }
+      },
+    );
+
     // Core message event - most frequent event
     socket.on("acars_msg", (data: HtmlMsg) => {
       socketLogger.trace("Received acars_msg event", {
@@ -127,6 +148,26 @@ export const useSocketIO = () => {
       const message = data.msghtml;
       addMessage(message);
     });
+
+    // Batched message event - used during initial connection load
+    socket.on(
+      "acars_msg_batch",
+      (data: {
+        messages: AcarsMsg[];
+        loading?: boolean;
+        done_loading?: boolean;
+      }) => {
+        socketLogger.debug("Received acars_msg_batch event", {
+          count: data.messages?.length || 0,
+          loading: data.loading,
+          done_loading: data.done_loading,
+        });
+        // Process all messages in the batch
+        for (const message of data.messages) {
+          addMessage(message);
+        }
+      },
+    );
 
     // Configuration and metadata events
     socket.on("labels", (data) => {
@@ -239,6 +280,9 @@ export const useSocketIO = () => {
       socket.off("disconnect");
       socket.off("reconnect");
       socket.off("acars_msg");
+      socket.off("acars_msg_batch");
+      socket.off("alert_matches");
+      socket.off("alert_matches_batch");
       socket.off("labels");
       socket.off("terms");
 
@@ -252,7 +296,6 @@ export const useSocketIO = () => {
       socket.off("alert_terms");
       socket.off("signal_freqs");
       socket.off("signal_count");
-      socket.off("alert_matches");
 
       // Only disconnect on actual unmount, not StrictMode cleanup
       // StrictMode will call this cleanup in dev, but we keep the socket alive

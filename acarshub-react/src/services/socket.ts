@@ -47,6 +47,11 @@ import { socketLogger } from "../utils/logger";
 export interface ServerToClientEvents {
   // Core message events
   acars_msg: (data: HtmlMsg) => void;
+  acars_msg_batch: (data: {
+    messages: AcarsMsg[];
+    loading?: boolean;
+    done_loading?: boolean;
+  }) => void;
 
   // Configuration and metadata
   labels: (data: { labels: Labels }) => void;
@@ -102,6 +107,11 @@ export interface ServerToClientEvents {
   alert_terms: (data: { data: AlertTerm }) => void;
   recent_alerts: (data: { alerts: AcarsMsg[] }) => void;
   alert_matches: (data: HtmlMsg) => void;
+  alert_matches_batch: (data: {
+    messages: AcarsMsg[];
+    loading?: boolean;
+    done_loading?: boolean;
+  }) => void;
 
   // Alert match regeneration
   regenerate_alert_matches_started: (data: { message: string }) => void;

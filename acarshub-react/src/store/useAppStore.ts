@@ -210,10 +210,21 @@ export const useAppStore = create<AppState>((set, get) => {
     alertMessageGroups: new Map(),
     addMessage: (message) =>
       set((state) => {
-        storeLogger.trace("Processing incoming message", {
+        storeLogger.debug("Processing incoming message", {
           station: message.station_id,
           label: message.label,
           hasText: !!message.text,
+          hasTextKey: "text" in message,
+          hasMsgText: "msg_text" in message,
+          textLength: message.text?.length || 0,
+          textPreview: message.text?.substring(0, 50) || "(no text)",
+          uid: message.uid,
+          matched: message.matched,
+          matchedType: typeof message.matched,
+          hasMatchedKey: "matched" in message,
+          flight: message.flight,
+          tail: message.tail,
+          icao_hex: message.icao_hex,
         });
 
         // Generate UID if not present (backend doesn't send UIDs)
@@ -226,41 +237,22 @@ export const useAppStore = create<AppState>((set, get) => {
         // Decode the message if it has text
         const decodedMessage = messageDecoder.decode(message);
 
+        // Log decoding result for alerts
+        if (message.matched) {
+          storeLogger.info("Alert message BEFORE/AFTER decoding", {
+            uid: decodedMessage.uid,
+            originalMatched: message.matched,
+            decodedMatched: decodedMessage.matched,
+            matchedPreserved: message.matched === decodedMessage.matched,
+            hadText: !!message.text,
+            hasDecodedText: !!decodedMessage.decodedText,
+            decodedTextLength:
+              decodedMessage.decodedText?.description?.length || 0,
+          });
+        }
+
         // Backend has already set matched flags - just trust them!
         // No client-side matching needed
-
-        if (decodedMessage.matched) {
-          storeLogger.info("Alert match detected in message", {
-            uid: decodedMessage.uid,
-            matchedTerms: decodedMessage.matched_text,
-          });
-
-          // Add to separate alert storage for longer persistence
-          // This happens AFTER regular message processing below
-          // Check for duplicate in alert storage and add if not present
-          const alertGroups = state.alertMessageGroups;
-          let isDuplicateInAlerts = false;
-
-          // Check if this message already exists in alert storage
-          for (const group of alertGroups.values()) {
-            if (group.messages.some((msg) => msg.uid === decodedMessage.uid)) {
-              isDuplicateInAlerts = true;
-              storeLogger.debug("Message already in alert storage, skipping", {
-                uid: decodedMessage.uid,
-              });
-              break;
-            }
-          }
-
-          // Only add to alert storage if not already present
-          if (!isDuplicateInAlerts) {
-            // Use get() to call addAlertMessage after state update completes
-            // We'll do this via a separate set() call after the main message processing
-            storeLogger.trace("Will add message to alert storage", {
-              uid: decodedMessage.uid,
-            });
-          }
-        }
 
         // Sync notifications with settings store
         const notifications = {
@@ -321,7 +313,7 @@ export const useAppStore = create<AppState>((set, get) => {
           }
         }
 
-        const newMessageGroups = new Map(state.messageGroups);
+        let newMessageGroups = new Map(state.messageGroups);
 
         // Extract all possible identifiers from the message
         // Prefer icao_flight (normalized ICAO format) over flight (could be IATA or ICAO)
@@ -407,6 +399,22 @@ export const useAppStore = create<AppState>((set, get) => {
         if (matchedGroup && group.messages.length > 0) {
           for (let i = 0; i < group.messages.length; i++) {
             const existingMsg = group.messages[i];
+
+            // Check 0: UID duplicate (exact same message)
+            if (
+              existingMsg.uid &&
+              decodedMessage.uid &&
+              existingMsg.uid === decodedMessage.uid
+            ) {
+              isDuplicate = true;
+              storeLogger.warn("UID duplicate detected - SKIPPING MESSAGE", {
+                uid: decodedMessage.uid,
+                existingMsgFlight: existingMsg.flight,
+                newMsgFlight: decodedMessage.flight,
+                groupKey: matchedGroupKey,
+              });
+              break;
+            }
 
             // Check 1: Full field duplicate
             if (checkForDuplicate(existingMsg, decodedMessage)) {
@@ -541,43 +549,45 @@ export const useAppStore = create<AppState>((set, get) => {
               },
             );
             // Don't cull yet - wait for ADS-B data
-            // Continue with normal flow (calculate alert count and return)
+            // Continue with normal flow (calculate alert count and process alerts below)
           } else {
             // Either ADS-B is disabled OR we have ADS-B data - safe to cull
-            const culledGroups = cullMessageGroups(
+            newMessageGroups = cullMessageGroups(
               newMessageGroups,
               maxGroups,
               state.adsbAircraft,
             );
-
-            return {
-              messageGroups: culledGroups,
-              alertCount: Array.from(culledGroups.values()).reduce(
-                (sum, group) => sum + group.num_alerts,
-                0,
-              ),
-            };
           }
         }
 
         // Calculate total alert count across all message groups
-        let totalAlerts = 0;
-        for (const group of newMessageGroups.values()) {
-          totalAlerts += group.num_alerts;
-        }
+        // Calculate total alert count across all message groups (if not already calculated during culling)
+        const totalAlerts = Array.from(newMessageGroups.values()).reduce(
+          (sum, group) => sum + group.num_alerts,
+          0,
+        );
 
         storeLogger.trace("Updated global alert count", {
           totalAlerts,
           totalGroups: newMessageGroups.size,
         });
 
-        // If this message matched an alert term, also add to alert storage
+        // Process alert storage BEFORE any early returns
+        // This ensures alerts are always added regardless of culling path
+        let updatedAlertGroups = state.alertMessageGroups;
+
         if (decodedMessage.matched) {
+          storeLogger.info(
+            "Message IS matched - proceeding to add to alertMessageGroups",
+            {
+              uid: decodedMessage.uid,
+            },
+          );
+
           // Check if message already exists in alert storage
-          const alertGroups = state.alertMessageGroups;
           let isDuplicateInAlerts = false;
 
-          for (const group of alertGroups.values()) {
+          for (const group of state.alertMessageGroups.values()) {
             if (group.messages.some((msg) => msg.uid === decodedMessage.uid)) {
               isDuplicateInAlerts = true;
               break;
@@ -586,12 +596,13 @@ export const useAppStore = create<AppState>((set, get) => {
 
           // Add to alert storage if not a duplicate
           if (!isDuplicateInAlerts) {
-            storeLogger.debug("Adding alert message to separate storage", {
+            storeLogger.info("Adding NEW alert message to alertMessageGroups", {
               uid: decodedMessage.uid,
+              flight: decodedMessage.flight,
+              tail: decodedMessage.tail,
+              currentAlertGroupCount: state.alertMessageGroups.size,
             });
 
-            // Call addAlertMessage to store in separate alert storage
-            // We need to do this as a nested set() call
             const currentAlertGroups = new Map(state.alertMessageGroups);
 
             // Extract identifiers
@@ -682,15 +693,36 @@ export const useAppStore = create<AppState>((set, get) => {
               }
             }
 
-            return {
-              messageGroups: newMessageGroups,
-              alertCount: totalAlerts,
-              alertMessageGroups: currentAlertGroups,
-            };
+            storeLogger.info("Updated alertMessageGroups", {
+              newAlertGroupCount: currentAlertGroups.size,
+              previousCount: state.alertMessageGroups.size,
+              groupsAdded:
+                currentAlertGroups.size - state.alertMessageGroups.size,
+            });
+
+            updatedAlertGroups = currentAlertGroups;
+          } else {
+            storeLogger.warn(
+              "Alert message is DUPLICATE in alert storage - skipping",
+              {
+                uid: decodedMessage.uid,
+                currentAlertGroupCount: state.alertMessageGroups.size,
+              },
+            );
           }
         }
 
-        return { messageGroups: newMessageGroups, alertCount: totalAlerts };
+        storeLogger.debug("Final return - message processing complete", {
+          uid: decodedMessage.uid,
+          matched: decodedMessage.matched,
+          returningAlertGroups: decodedMessage.matched,
+        });
+
+        return {
+          messageGroups: newMessageGroups,
+          alertCount: totalAlerts,
+          alertMessageGroups: updatedAlertGroups,
+        };
       }),
     clearMessages: () => {
       storeLogger.info("Clearing all message groups");
@@ -786,8 +818,12 @@ export const useAppStore = create<AppState>((set, get) => {
         );
 
         if (isDuplicate) {
-          storeLogger.debug("Skipping duplicate alert message", {
+          storeLogger.warn("SKIPPING DUPLICATE ALERT MESSAGE BY UID", {
             uid: decodedMessage.uid,
+            flight: decodedMessage.flight,
+            tail: decodedMessage.tail,
+            groupKey: primaryKey,
+            existingCount: group.messages.length,
           });
           return { alertMessageGroups: newAlertGroups };
         }

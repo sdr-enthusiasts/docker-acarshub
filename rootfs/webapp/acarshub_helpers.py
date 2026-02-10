@@ -69,7 +69,24 @@ def update_keys(json_message):
     # This won't occur for live messages but if the message originates from a DB query
     # It will return all keys, even ones where the original message didn't have a value
 
-    # Preserve backend-supplied alert metadata and UID (never delete these)
+    # FIRST: Convert field names BEFORE cleanup to ensure conversion happens even for empty values
+    # database tablename for the message text doesn't match up with typescript-decoder (needs it to be text)
+    # so we rewrite the key
+    if has_specified_key(json_message, "msg_text"):
+        acarshub_logging.log(
+            f"update_keys: Converting msg_text to text for UID {json_message.get('uid', 'unknown')}",
+            "update_keys",
+            level=LOG_LEVEL["DEBUG"],
+        )
+        json_message["text"] = json_message["msg_text"]
+        del json_message["msg_text"]
+
+    if has_specified_key(json_message, "time"):
+        json_message["timestamp"] = json_message["time"]
+        del json_message["time"]
+
+    # SECOND: Clean up empty/None values after field conversion
+    # Preserve backend-supplied alert metadata, UID, and converted fields (never delete these)
     protected_keys = {
         "uid",
         "matched",
@@ -77,6 +94,8 @@ def update_keys(json_message):
         "matched_icao",
         "matched_tail",
         "matched_flight",
+        "text",  # Protected after conversion from msg_text (even if empty - needed for decoder)
+        "timestamp",  # Protected after conversion from time
     }
 
     stale_keys = []
@@ -89,17 +108,7 @@ def update_keys(json_message):
     for key in stale_keys:
         del json_message[key]
 
-    # Now we process individual keys, if that key is present
-
-    # database tablename for the message text doesn't match up with typescript-decoder (needs it to be text)
-    # so we rewrite the key
-    if has_specified_key(json_message, "msg_text"):
-        json_message["text"] = json_message["msg_text"]
-        del json_message["msg_text"]
-
-    if has_specified_key(json_message, "time"):
-        json_message["timestamp"] = json_message["time"]
-        del json_message["time"]
+    # Now we process other individual keys, if that key is present
 
     # libacars is kept as raw JSON string for React frontend to parse
     # React has its own parseAndFormatLibacars() function in decoderUtils.ts

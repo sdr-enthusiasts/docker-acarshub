@@ -165,6 +165,16 @@ que_database = deque(maxlen=15)
 list_of_recent_messages = []  # list to store most recent msgs
 list_of_recent_messages_max = 150
 
+# ADS-B data cache (shared between poll_adsb_data and main_connect)
+cached_adsb_data = None
+cached_adsb_lock = Lock()
+
+# Alert message cache (shared between message processing and main_connect)
+# Stores enriched alert messages for quick delivery on connection
+list_of_recent_alerts = []
+list_of_recent_alerts_max = 50
+recent_alerts_lock = Lock()
+
 # counters for messages
 # will be reset once written to RRD
 vdlm_messages_last_minute = 0
@@ -306,8 +316,10 @@ def optimize_adsb_data(raw_data):
 def poll_adsb_data():
     """
     Background task to poll ADS-B aircraft.json data every 5 seconds.
-    Fetches from ADSB_URL, optimizes payload, and broadcasts via Socket.IO.
+    Fetches from ADSB_URL, optimizes payload, caches it, and broadcasts via Socket.IO.
     """
+    global cached_adsb_data
+
     acarshub_logging.log(
         "ADS-B polling background task started",
         "poll_adsb_data",
@@ -322,6 +334,10 @@ def poll_adsb_data():
                 if response.status_code == 200:
                     raw_data = response.json()
                     optimized_data = optimize_adsb_data(raw_data)
+
+                    # Cache the optimized data for new connections
+                    with cached_adsb_lock:
+                        cached_adsb_data = optimized_data
 
                     # Broadcast to all connected clients
                     socketio.emit("adsb_aircraft", optimized_data, namespace="/main")
@@ -385,6 +401,29 @@ def update_rrd_db():
     hfdl_messages_last_minute = 0
     imsl_messages_last_minute = 0
     irdm_messages_last_minute = 0
+
+
+def add_alert_to_cache(enriched_message):
+    """
+    Add a newly matched alert message to the in-memory cache.
+    Called by message_listener when a message matches alert terms.
+
+    Args:
+        enriched_message: Enriched message dict with matched alert metadata
+    """
+    with recent_alerts_lock:
+        # Add to recent alerts cache
+        list_of_recent_alerts.append(enriched_message)
+
+        # Maintain max cache size
+        if len(list_of_recent_alerts) > list_of_recent_alerts_max:
+            del list_of_recent_alerts[0]
+
+        acarshub_logging.log(
+            f"Added alert to cache (total: {len(list_of_recent_alerts)})",
+            "alert_cache",
+            level=LOG_LEVEL["DEBUG"],
+        )
 
 
 def generateClientMessage(message_type, json_message):
@@ -797,6 +836,10 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
                 if (
                     len(list_of_recent_messages) >= list_of_recent_messages_max
                 ):  # Keep the que size down
+                    # Before removing, check if it's an alert and move to alert cache
+                    oldest_message = list_of_recent_messages[0]
+                    if oldest_message.get("matched"):
+                        add_alert_to_cache(oldest_message)
                     del list_of_recent_messages[0]
 
                 if not acarshub_configuration.QUIET_MESSAGES:
@@ -818,6 +861,64 @@ def init_listeners(special_message=""):
     global thread_irdm_listener
     global thread_database
     global thread_scheduler
+
+    # Load recent alerts from database into cache on first init
+    # Strategy: Load recent messages first, count alerts in them, then load older alerts
+    # This prevents duplicates between recent messages and alert cache
+    if len(list_of_recent_alerts) == 0:
+        acarshub_logging.log(
+            "Initializing alert cache from database",
+            "startup",
+            level=LOG_LEVEL["INFO"],
+        )
+
+        # Count how many alerts are already in list_of_recent_messages
+        alerts_in_recent = sum(
+            1 for msg in list_of_recent_messages if msg.get("matched")
+        )
+
+        # Calculate how many additional alerts we need
+        alerts_needed = list_of_recent_alerts_max - alerts_in_recent
+
+        if alerts_needed > 0:
+            # Find oldest timestamp in recent messages to avoid overlap
+            oldest_recent_timestamp = None
+            if len(list_of_recent_messages) > 0:
+                # Messages have 'timestamp' after update_keys enrichment
+                # Check timestamp, msg_time, or time for compatibility
+                for msg in reversed(list_of_recent_messages):
+                    ts = msg.get("timestamp") or msg.get("msg_time") or msg.get("time")
+                    if ts:
+                        oldest_recent_timestamp = ts
+                        break
+
+            recent_alerts = acarshub_helpers.acarshub_database.load_recent_alerts(
+                limit=alerts_needed, before_timestamp=oldest_recent_timestamp
+            )
+
+            # Log first loaded alert to verify text field
+            if recent_alerts and len(recent_alerts) > 0:
+                first_alert = recent_alerts[0]
+                acarshub_logging.log(
+                    f"First loaded alert - UID: {first_alert.get('uid')}, has 'text': {('text' in first_alert)}, has 'msg_text': {('msg_text' in first_alert)}, text_length: {len(first_alert.get('text', '')) if first_alert.get('text') else 0}",
+                    "startup",
+                    level=LOG_LEVEL["DEBUG"],
+                )
+
+            with recent_alerts_lock:
+                list_of_recent_alerts.extend(recent_alerts)
+
+            acarshub_logging.log(
+                f"Alert cache initialized: {alerts_in_recent} alerts in recent messages, {len(recent_alerts)} loaded from DB, total in cache: {len(list_of_recent_alerts)}",
+                "startup",
+                level=LOG_LEVEL["INFO"],
+            )
+        else:
+            acarshub_logging.log(
+                f"Alert cache skipped: {alerts_in_recent} alerts already in recent messages (max: {list_of_recent_alerts_max})",
+                "startup",
+                level=LOG_LEVEL["INFO"],
+            )
     global thread_message_relay
     # global thread_adsb_listner
     # global thread_adsb
@@ -861,7 +962,7 @@ def init_listeners(special_message=""):
         thread_message_relay = socketio.start_background_task(messageRelayListener)
     if not thread_acars_listener.is_alive() and acarshub_configuration.ENABLE_ACARS:
         acarshub_logging.log(
-            f"{special_message}Starting ACARS listener",
+            f"{special_message}Starting ACARS listener (current thread alive: {thread_acars_listener.is_alive()})",
             "init",
             level=LOG_LEVEL["INFO"] if special_message == "" else LOG_LEVEL["ERROR"],
         )
@@ -874,6 +975,11 @@ def init_listeners(special_message=""):
             ),
         )
         thread_acars_listener.start()
+        acarshub_logging.log(
+            f"ACARS listener thread started: {thread_acars_listener.ident}",
+            "init",
+            level=LOG_LEVEL["DEBUG"],
+        )
 
     if not thread_vdlm2_listener.is_alive() and acarshub_configuration.ENABLE_VDLM:
         acarshub_logging.log(
@@ -951,6 +1057,18 @@ def init_listeners(special_message=""):
 
 
 def init():
+    import os
+
+    # When Flask reloader is active, this code runs in both parent and child process
+    # Only run initialization in the reloader child process (or when reloader disabled)
+    # WERKZEUG_RUN_MAIN is only set in the reloader child process
+    if not os.environ.get("WERKZEUG_RUN_MAIN") and acarshub_configuration.LOCAL_TEST:
+        acarshub_logging.log(
+            "Skipping init() in reloader parent process - will run in child",
+            "init",
+            level=LOG_LEVEL["DEBUG"],
+        )
+        return
 
     # grab recent messages from db and fill the most recent array
     # then turn on the listeners
@@ -1080,53 +1198,88 @@ def main_connect():
         acarshub_logging.log(f"Main Connect: Error sending labels: {e}", "webapp")
         acarshub_logging.acars_traceback(e, "webapp")
 
-    # Send initial ADS-B data immediately if enabled (BEFORE message flood)
+    # Send cached ADS-B data immediately if enabled (BEFORE message flood)
     # This ensures culling has ADS-B awareness from the start
     if acarshub_configuration.ENABLE_ADSB:
-        try:
-            response = requests.get(acarshub_configuration.ADSB_URL, timeout=5)
-            if response.status_code == 200:
-                raw_data = response.json()
-                optimized_data = optimize_adsb_data(raw_data)
-                socketio.emit(
-                    "adsb_aircraft", optimized_data, to=requester, namespace="/main"
-                )
+        with cached_adsb_lock:
+            if cached_adsb_data is not None:
+                try:
+                    socketio.emit(
+                        "adsb_aircraft",
+                        cached_adsb_data,
+                        to=requester,
+                        namespace="/main",
+                    )
+                    acarshub_logging.log(
+                        f"Cached ADS-B data sent to new client: {len(cached_adsb_data['aircraft'])} aircraft",
+                        "main_connect",
+                        level=LOG_LEVEL["DEBUG"],
+                    )
+                except Exception as e:
+                    acarshub_logging.log(
+                        f"Error sending cached ADS-B data: {e}",
+                        "main_connect",
+                        level=LOG_LEVEL["WARNING"],
+                    )
+            else:
                 acarshub_logging.log(
-                    f"Initial ADS-B data sent to new client: {len(optimized_data['aircraft'])} aircraft",
+                    "No cached ADS-B data available for new client (poll not ready yet)",
                     "main_connect",
                     level=LOG_LEVEL["DEBUG"],
                 )
-            else:
-                acarshub_logging.log(
-                    f"Initial ADS-B fetch failed: HTTP {response.status_code}",
-                    "main_connect",
-                    level=LOG_LEVEL["WARNING"],
-                )
-        except Exception as e:
+
+    # Send recent messages in chunks to reduce Socket.IO overhead
+    # Filter out alerts - they will be sent separately via alert_matches_batch to avoid duplicates
+    # Chunk size of 25 balances payload size vs round-trips
+    chunk_size = 25
+    non_alert_messages = [
+        msg for msg in list_of_recent_messages if not msg.get("matched")
+    ]
+    total_messages = len(non_alert_messages)
+
+    acarshub_logging.log(
+        f"Sending recent messages: {total_messages} non-alert messages (filtered {len(list_of_recent_messages) - total_messages} alerts)",
+        "main_connect",
+        level=LOG_LEVEL["DEBUG"],
+    )
+
+    for chunk_start in range(0, total_messages, chunk_size):
+        chunk_end = min(chunk_start + chunk_size, total_messages)
+        chunk = non_alert_messages[chunk_start:chunk_end]
+
+        # Mark the last chunk as done_loading
+        is_last_chunk = chunk_end == total_messages
+        if is_last_chunk:
+            recent_options["done_loading"] = True
+
+        # Log first message in chunk to verify text field is present
+        if chunk and len(chunk) > 0:
+            first_msg = chunk[0]
             acarshub_logging.log(
-                f"Initial ADS-B fetch error: {e}",
+                f"Message batch sample - UID: {first_msg.get('uid')}, has 'text': {('text' in first_msg)}, has 'msg_text': {('msg_text' in first_msg)}, text_length: {len(first_msg.get('text', '')) if first_msg.get('text') else 0}, matched: {first_msg.get('matched')}",
                 "main_connect",
-                level=LOG_LEVEL["WARNING"],
+                level=LOG_LEVEL["DEBUG"],
             )
 
-    msg_index = 1
-    for json_message in list_of_recent_messages:
-        if msg_index == len(list_of_recent_messages):
-            recent_options["done_loading"] = True
-        msg_index += 1
         try:
+            # Send chunk as array of messages
             socketio.emit(
-                "acars_msg",
+                "acars_msg_batch",
                 {
-                    "msghtml": json_message,
+                    "messages": chunk,
                     **recent_options,
                 },
                 to=requester,
                 namespace="/main",
             )
+            acarshub_logging.log(
+                f"Sent message chunk {chunk_start + 1}-{chunk_end} of {total_messages}",
+                "main_connect",
+                level=LOG_LEVEL["DEBUG"],
+            )
         except Exception as e:
             acarshub_logging.log(
-                f"Main Connect: Error sending acars_msg: {e}", "webapp"
+                f"Main Connect: Error sending acars_msg_batch: {e}", "webapp"
             )
             acarshub_logging.acars_traceback(e, "webapp")
 
@@ -1169,33 +1322,59 @@ def main_connect():
         )
         acarshub_logging.acars_traceback(e, "webapp")
 
-    # Send initial alert matches (most recent alerts from database)
-    try:
-        alert_results = acarshub_helpers.acarshub_database.search_alerts(
-            icao=None, tail=None, flight=None
+    # Send cached alert matches (most recent alerts from memory)
+    # Chunk size of 25 balances payload size vs round-trips
+    chunk_size = 25
+
+    with recent_alerts_lock:
+        total_alerts = len(list_of_recent_alerts)
+
+        acarshub_logging.log(
+            f"Sending alert cache to client: {total_alerts} alerts available",
+            "main_connect",
+            level=LOG_LEVEL["INFO"],
         )
 
-        if alert_results is not None:
-            alert_results.reverse()
-            alert_options = {"loading": True, "done_loading": False}
-            alert_index = 1
+        for chunk_start in range(0, total_alerts, chunk_size):
+            chunk_end = min(chunk_start + chunk_size, total_alerts)
+            chunk = list_of_recent_alerts[chunk_start:chunk_end]
 
-            for item in alert_results:
-                if alert_index == len(alert_results):
-                    alert_options["done_loading"] = True
-                alert_index += 1
-                acarshub_helpers.update_keys(item)
+            # Mark the last chunk as done_loading
+            is_last_chunk = chunk_end == total_alerts
+            alert_options = {
+                "loading": True,
+                "done_loading": is_last_chunk,
+            }
+
+            # Log first message in chunk to verify text field is present
+            if chunk and len(chunk) > 0:
+                first_msg = chunk[0]
+                acarshub_logging.log(
+                    f"Alert batch sample - UID: {first_msg.get('uid')}, has 'text': {('text' in first_msg)}, has 'msg_text': {('msg_text' in first_msg)}, text_length: {len(first_msg.get('text', '')) if first_msg.get('text') else 0}, matched: {first_msg.get('matched')}",
+                    "main_connect",
+                    level=LOG_LEVEL["DEBUG"],
+                )
+
+            try:
                 socketio.emit(
-                    "alert_matches",
-                    {"msghtml": item, **alert_options},
+                    "alert_matches_batch",
+                    {
+                        "messages": chunk,
+                        **alert_options,
+                    },
                     to=requester,
                     namespace="/main",
                 )
-    except Exception as e:
-        acarshub_logging.log(
-            f"Main Connect: Error sending alert matches: {e}", "webapp"
-        )
-        acarshub_logging.acars_traceback(e, "webapp")
+                acarshub_logging.log(
+                    f"Sent alert chunk {chunk_start + 1}-{chunk_end} of {total_alerts}",
+                    "main_connect",
+                    level=LOG_LEVEL["DEBUG"],
+                )
+            except Exception as e:
+                acarshub_logging.log(
+                    f"Main Connect: Error sending alert_matches_batch: {e}", "webapp"
+                )
+                acarshub_logging.acars_traceback(e, "webapp")
 
     # Start the htmlGenerator thread only if the thread has not been started before.
     if thread_message_relay_active is False:
@@ -1812,6 +1991,7 @@ if __name__ == "__main__":
         host="0.0.0.0",
         port=acarshub_configuration.ACARS_WEB_PORT,
         debug=True if acarshub_configuration.LOCAL_TEST else False,
+        use_reloader=True if acarshub_configuration.LOCAL_TEST else False,
     )
 
 

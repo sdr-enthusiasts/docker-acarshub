@@ -68,6 +68,14 @@ class AcarsMessageDecoder {
    * @returns Message with decodedText field added if decoding was successful
    */
   public decode(message: AcarsMsg): AcarsMsg {
+    // Log matched field BEFORE decoding
+    logger.info("Decoder input - checking matched field", {
+      uid: message.uid,
+      matched: message.matched,
+      matchedType: typeof message.matched,
+      hasMatched: "matched" in message,
+    });
+
     // Only attempt to decode if message has text
     if (!message.text) {
       logger.trace("Skipping decode - no text field", {
@@ -135,10 +143,21 @@ class AcarsMessageDecoder {
           })),
         };
 
-        return {
+        const decodedMessage = {
           ...message,
           decodedText,
         };
+
+        // Log matched field AFTER decoding
+        logger.info("Decoder output - checking matched field", {
+          uid: decodedMessage.uid,
+          matched: decodedMessage.matched,
+          matchedType: typeof decodedMessage.matched,
+          hasMatched: "matched" in decodedMessage,
+          inputMatched: message.matched,
+        });
+
+        return decodedMessage;
       }
 
       logger.trace("Message not decoded (no decoder matched)", {

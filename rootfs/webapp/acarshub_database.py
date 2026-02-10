@@ -1106,6 +1106,147 @@ def search_alerts(icao=None, tail=None, flight=None):
         return None
 
 
+def load_recent_alerts(limit=50, before_timestamp=None):
+    """
+    Load recent alert messages from database for cache initialization.
+    Called at startup to populate the in-memory alert cache.
+
+    Args:
+        limit: Maximum number of recent alerts to retrieve (default 50)
+        before_timestamp: Only load alerts older than this timestamp (exclusive)
+                         Used to avoid overlap with recent messages cache
+
+    Returns:
+        list: List of enriched alert message dictionaries, or empty list if none
+    """
+    try:
+        session = db_session()
+
+        # Query messages that have alert matches via JOIN
+        # Aggregate matched terms using GROUP_CONCAT since alert_matches has one row per term
+        # Optionally filter by timestamp to avoid overlap with recent messages
+        if before_timestamp is not None:
+            query = text(
+                """
+                SELECT DISTINCT m.id, m.message_type, m.msg_time, m.station_id, m.toaddr, m.fromaddr,
+                       m.depa, m.dsta, m.eta, m.gtout, m.gtin, m.wloff, m.wlin,
+                       m.lat, m.lon, m.alt, m.msg_text, m.tail, m.flight, m.icao, m.freq, m.ack,
+                       m.mode, m.label, m.block_id, m.msgno, m.is_response, m.is_onground, m.error,
+                       m.libacars, m.level, m.uid,
+                       GROUP_CONCAT(CASE WHEN am.match_type = 'text' THEN am.term END, ',') as matched_text,
+                       GROUP_CONCAT(CASE WHEN am.match_type = 'icao' THEN am.term END, ',') as matched_icao,
+                       GROUP_CONCAT(CASE WHEN am.match_type = 'tail' THEN am.term END, ',') as matched_tail,
+                       GROUP_CONCAT(CASE WHEN am.match_type = 'flight' THEN am.term END, ',') as matched_flight
+                FROM messages m
+                INNER JOIN alert_matches am ON m.uid = am.message_uid
+                WHERE m.msg_time < :before_timestamp
+                GROUP BY m.uid
+                ORDER BY m.msg_time DESC
+                LIMIT :limit
+            """
+            )
+            result = session.execute(
+                query, {"limit": limit, "before_timestamp": before_timestamp}
+            )
+        else:
+            query = text(
+                """
+                SELECT DISTINCT m.id, m.message_type, m.msg_time, m.station_id, m.toaddr, m.fromaddr,
+                       m.depa, m.dsta, m.eta, m.gtout, m.gtin, m.wloff, m.wlin,
+                       m.lat, m.lon, m.alt, m.msg_text, m.tail, m.flight, m.icao, m.freq, m.ack,
+                       m.mode, m.label, m.block_id, m.msgno, m.is_response, m.is_onground, m.error,
+                       m.libacars, m.level, m.uid,
+                       GROUP_CONCAT(CASE WHEN am.match_type = 'text' THEN am.term END, ',') as matched_text,
+                       GROUP_CONCAT(CASE WHEN am.match_type = 'icao' THEN am.term END, ',') as matched_icao,
+                       GROUP_CONCAT(CASE WHEN am.match_type = 'tail' THEN am.term END, ',') as matched_tail,
+                       GROUP_CONCAT(CASE WHEN am.match_type = 'flight' THEN am.term END, ',') as matched_flight
+                FROM messages m
+                INNER JOIN alert_matches am ON m.uid = am.message_uid
+                GROUP BY m.uid
+                ORDER BY m.msg_time DESC
+                LIMIT :limit
+            """
+            )
+            result = session.execute(query, {"limit": limit})
+        processed_results = []
+
+        for row in result.mappings().all():
+            msg_dict = dict(row)
+            # Add matched flag for frontend
+            msg_dict["matched"] = True
+
+            # Convert GROUP_CONCAT results to arrays (remove None and split by comma)
+            if msg_dict.get("matched_text"):
+                msg_dict["matched_text"] = [
+                    t.strip() for t in msg_dict["matched_text"].split(",") if t.strip()
+                ]
+            else:
+                msg_dict["matched_text"] = []
+
+            # Clean up matched_icao, matched_tail, matched_flight (can be None or empty)
+            for field in ["matched_icao", "matched_tail", "matched_flight"]:
+                if msg_dict.get(field):
+                    msg_dict[field] = [
+                        t.strip() for t in msg_dict[field].split(",") if t.strip()
+                    ]
+                else:
+                    msg_dict[field] = None
+
+            # Enrich message with update_keys (converts msg_text to text, etc.)
+            # Note: update_keys is called BEFORE adding to results to ensure proper field names
+            # Import locally to avoid circular dependency (acarshub_helpers imports acarshub_database)
+            try:
+                # Log BEFORE conversion
+                had_msg_text = "msg_text" in msg_dict
+                msg_text_value = msg_dict.get("msg_text", "")
+
+                import acarshub_helpers
+
+                acarshub_helpers.update_keys(msg_dict)
+
+                # Log AFTER conversion to verify it worked
+                has_text = "text" in msg_dict
+                has_msg_text = "msg_text" in msg_dict
+                text_value = msg_dict.get("text", "")
+
+                acarshub_logging.log(
+                    f"Alert enrichment - UID: {msg_dict.get('uid')}, had_msg_text: {had_msg_text}, msg_text_len: {len(msg_text_value) if msg_text_value else 0}, has_text: {has_text}, has_msg_text: {has_msg_text}, text_len: {len(text_value) if text_value else 0}",
+                    "database",
+                    level=LOG_LEVEL["DEBUG"],
+                )
+            except Exception as e:
+                acarshub_logging.log(
+                    f"Error enriching alert message: {e}",
+                    "database",
+                    level=LOG_LEVEL["WARNING"],
+                )
+                acarshub_logging.acars_traceback(e, "database")
+
+            processed_results.append(msg_dict)
+
+        session.close()
+
+        # Reverse to get oldest-to-newest order (like list_of_recent_messages)
+        processed_results.reverse()
+
+        acarshub_logging.log(
+            f"Loaded {len(processed_results)} recent alerts from database",
+            "database",
+            level=LOG_LEVEL["INFO"],
+        )
+
+        return processed_results
+
+    except Exception as e:
+        acarshub_logging.log(
+            f"Error loading recent alerts: {e}",
+            "database",
+            level=LOG_LEVEL["ERROR"],
+        )
+        acarshub_logging.acars_traceback(e, "database")
+        return []
+
+
 # def search_alerts(icao=None, tail=None, flight=None):
 #     result = None
 #     processed_results = []
