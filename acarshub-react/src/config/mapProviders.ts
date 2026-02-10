@@ -30,7 +30,7 @@ export const WORLDWIDE_PROVIDERS: MapProviderConfig[] = [
     id: "osm",
     name: "OpenStreetMap",
     category: "worldwide",
-    url: "//tile.openstreetmap.org/{z}/{x}/{y}.png",
+    url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
     attribution:
       '&copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, <a href="http://www.openstreetmap.org/copyright">ODbL</a>',
     maxZoom: 19,
@@ -39,7 +39,7 @@ export const WORLDWIDE_PROVIDERS: MapProviderConfig[] = [
     id: "carto_english",
     name: "CARTO.com English",
     category: "worldwide",
-    url: "//a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",
+    url: "https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",
     attribution:
       'Powered by <a href="https://carto.com">CARTO.com</a> using data by <a href="http://openstreetmap.org">OpenStreetMap</a>, under <a href="http://www.openstreetmap.org/copyright">ODbL</a>',
     maxZoom: 19,
@@ -48,7 +48,7 @@ export const WORLDWIDE_PROVIDERS: MapProviderConfig[] = [
     id: "osm_de",
     name: "OpenStreetMap DE",
     category: "worldwide",
-    url: "//a.tile.openstreetmap.de/{z}/{x}/{y}.png",
+    url: "https://a.tile.openstreetmap.de/{z}/{x}/{y}.png",
     attribution:
       '&copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors',
     maxZoom: 18,
@@ -57,7 +57,7 @@ export const WORLDWIDE_PROVIDERS: MapProviderConfig[] = [
     id: "openfreemap_bright",
     name: "OpenFreeMap Bright",
     category: "worldwide",
-    url: "//tiles.openfreemap.org/styles/bright",
+    url: "https://tiles.openfreemap.org/styles/bright",
     attribution: '&copy; <a href="https://openfreemap.org">OpenFreeMap</a>',
     isVector: true,
   },
@@ -65,7 +65,7 @@ export const WORLDWIDE_PROVIDERS: MapProviderConfig[] = [
     id: "openfreemap_liberty",
     name: "OpenFreeMap Liberty",
     category: "worldwide",
-    url: "//tiles.openfreemap.org/styles/liberty",
+    url: "https://tiles.openfreemap.org/styles/liberty",
     attribution: '&copy; <a href="https://openfreemap.org">OpenFreeMap</a>',
     isVector: true,
   },
@@ -73,7 +73,7 @@ export const WORLDWIDE_PROVIDERS: MapProviderConfig[] = [
     id: "openfreemap_positron",
     name: "OpenFreeMap Positron",
     category: "worldwide",
-    url: "//tiles.openfreemap.org/styles/positron",
+    url: "https://tiles.openfreemap.org/styles/positron",
     attribution: '&copy; <a href="https://openfreemap.org">OpenFreeMap</a>',
     isVector: true,
   },
@@ -81,7 +81,7 @@ export const WORLDWIDE_PROVIDERS: MapProviderConfig[] = [
     id: "openfreemap_dark",
     name: "OpenFreeMap Dark",
     category: "worldwide",
-    url: "//tiles.openfreemap.org/styles/dark",
+    url: "https://tiles.openfreemap.org/styles/dark",
     attribution: '&copy; <a href="https://openfreemap.org">OpenFreeMap</a>',
     isVector: true,
   },
@@ -89,7 +89,7 @@ export const WORLDWIDE_PROVIDERS: MapProviderConfig[] = [
     id: "openfreemap_fiord",
     name: "OpenFreeMap Fiord",
     category: "worldwide",
-    url: "//tiles.openfreemap.org/styles/fiord",
+    url: "https://tiles.openfreemap.org/styles/fiord",
     attribution: '&copy; <a href="https://openfreemap.org">OpenFreeMap</a>',
     isVector: true,
   },
@@ -97,7 +97,7 @@ export const WORLDWIDE_PROVIDERS: MapProviderConfig[] = [
     id: "esri_satellite",
     name: "ESRI.com Sat.",
     category: "worldwide",
-    url: "//server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
     attribution:
       'Powered by <a href="https://www.esri.com">Esri.com</a> — Sources: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
     maxZoom: 19,
@@ -106,7 +106,7 @@ export const WORLDWIDE_PROVIDERS: MapProviderConfig[] = [
     id: "esri_gray",
     name: "ESRI.com Gray",
     category: "worldwide",
-    url: "//services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}",
+    url: "https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}",
     attribution:
       'Powered by <a href="https://www.esri.com">Esri.com</a> — Sources: Esri, HERE, Garmin, USGS, Intermap, INCREMENT P, NRCan, Esri Japan, METI, Esri China (Hong Kong), Esri Korea, Esri (Thailand), NGCC, (c) OpenStreetMap contributors, and the GIS User Community',
     maxZoom: 16,
@@ -115,7 +115,7 @@ export const WORLDWIDE_PROVIDERS: MapProviderConfig[] = [
     id: "esri_streets",
     name: "ESRI.com Streets",
     category: "worldwide",
-    url: "//services.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
+    url: "https://services.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
     attribution:
       'Powered by <a href="https://www.esri.com">Esri.com</a> — Sources: Esri, HERE, Garmin, USGS, Intermap, INCREMENT P, NRCan, Esri Japan, METI, Esri China (Hong Kong), Esri Korea, Esri (Thailand), NGCC, (c) OpenStreetMap contributors, and the GIS User Community',
     maxZoom: 20,
@@ -133,7 +133,7 @@ export const WORLDWIDE_PROVIDERS: MapProviderConfig[] = [
     id: "carto_dark_all",
     name: "CARTO.com Dark All",
     category: "worldwide",
-    url: "//a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
+    url: "https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
     attribution:
       'Powered by <a href="https://carto.com">CARTO.com</a> using data by <a href="http://openstreetmap.org">OpenStreetMap</a>, under <a href="http://www.openstreetmap.org/copyright">ODbL</a>',
     maxZoom: 20,
@@ -142,7 +142,7 @@ export const WORLDWIDE_PROVIDERS: MapProviderConfig[] = [
     id: "carto_dark_nolabels",
     name: "CARTO.com Dark No Labels",
     category: "worldwide",
-    url: "//a.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}.png",
+    url: "https://a.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}.png",
     attribution:
       'Powered by <a href="https://carto.com">CARTO.com</a> using data by <a href="http://openstreetmap.org">OpenStreetMap</a>, under <a href="http://www.openstreetmap.org/copyright">ODbL</a>',
     maxZoom: 20,
@@ -151,7 +151,7 @@ export const WORLDWIDE_PROVIDERS: MapProviderConfig[] = [
     id: "carto_light_all",
     name: "CARTO.com Light All",
     category: "worldwide",
-    url: "//a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
+    url: "https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
     attribution:
       'Powered by <a href="https://carto.com">CARTO.com</a> using data by <a href="http://openstreetmap.org">OpenStreetMap</a>, under <a href="http://www.openstreetmap.org/copyright">ODbL</a>',
     maxZoom: 20,
@@ -160,7 +160,7 @@ export const WORLDWIDE_PROVIDERS: MapProviderConfig[] = [
     id: "carto_light_nolabels",
     name: "CARTO.com Light No Labels",
     category: "worldwide",
-    url: "//a.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}.png",
+    url: "https://a.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}.png",
     attribution:
       'Powered by <a href="https://carto.com">CARTO.com</a> using data by <a href="http://openstreetmap.org">OpenStreetMap</a>, under <a href="http://www.openstreetmap.org/copyright">ODbL</a>',
     maxZoom: 20,
@@ -175,7 +175,7 @@ export const US_PROVIDERS: MapProviderConfig[] = [
     id: "vfr_sectional",
     name: "US VFR Sectional Chart",
     category: "us",
-    url: "//tiles.arcgis.com/tiles/ssFJjBXIUyZDrSYZ/arcgis/rest/services/VFR_Sectional/MapServer/tile/{z}/{y}/{x}",
+    url: "https://tiles.arcgis.com/tiles/ssFJjBXIUyZDrSYZ/arcgis/rest/services/VFR_Sectional/MapServer/tile/{z}/{y}/{x}",
     attribution:
       'Tiles courtesy of <a href="http://tiles.arcgis.com/">arcgis.com</a>',
     minZoom: 8,
@@ -185,7 +185,7 @@ export const US_PROVIDERS: MapProviderConfig[] = [
     id: "vfr_terminal",
     name: "US VFR Terminal Chart",
     category: "us",
-    url: "//tiles.arcgis.com/tiles/ssFJjBXIUyZDrSYZ/arcgis/rest/services/VFR_Terminal/MapServer/tile/{z}/{y}/{x}",
+    url: "https://tiles.arcgis.com/tiles/ssFJjBXIUyZDrSYZ/arcgis/rest/services/VFR_Terminal/MapServer/tile/{z}/{y}/{x}",
     attribution:
       'Tiles courtesy of <a href="http://tiles.arcgis.com/">arcgis.com</a>',
     minZoom: 10,
@@ -195,7 +195,7 @@ export const US_PROVIDERS: MapProviderConfig[] = [
     id: "ifr_low",
     name: "US IFR Enroute Chart Low",
     category: "us",
-    url: "//tiles.arcgis.com/tiles/ssFJjBXIUyZDrSYZ/arcgis/rest/services/IFR_AreaLow/MapServer/tile/{z}/{y}/{x}",
+    url: "https://tiles.arcgis.com/tiles/ssFJjBXIUyZDrSYZ/arcgis/rest/services/IFR_AreaLow/MapServer/tile/{z}/{y}/{x}",
     attribution:
       'Tiles courtesy of <a href="http://tiles.arcgis.com/">arcgis.com</a>',
     minZoom: 8,
@@ -205,7 +205,7 @@ export const US_PROVIDERS: MapProviderConfig[] = [
     id: "ifr_high",
     name: "US IFR Enroute Chart High",
     category: "us",
-    url: "//tiles.arcgis.com/tiles/ssFJjBXIUyZDrSYZ/arcgis/rest/services/IFR_High/MapServer/tile/{z}/{y}/{x}",
+    url: "https://tiles.arcgis.com/tiles/ssFJjBXIUyZDrSYZ/arcgis/rest/services/IFR_High/MapServer/tile/{z}/{y}/{x}",
     attribution:
       'Tiles courtesy of <a href="http://tiles.arcgis.com/">arcgis.com</a>',
     minZoom: 7,
@@ -245,7 +245,7 @@ export function getProvidersByCategory(
 export function getGibsCloudsUrl(): string {
   const date = new Date(Date.now() - 86400 * 1000);
   const yesterday = `${date.getUTCFullYear()}-${(date.getUTCMonth() + 1).toString().padStart(2, "0")}-${date.getUTCDate().toString().padStart(2, "0")}`;
-  return `//gibs-a.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Terra_CorrectedReflectance_TrueColor/default/${yesterday}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg`;
+  return `https://gibs-a.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Terra_CorrectedReflectance_TrueColor/default/${yesterday}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg`;
 }
 
 /**

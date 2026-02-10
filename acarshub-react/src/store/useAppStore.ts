@@ -247,7 +247,7 @@ export const useAppStore = create<AppState>((set, get) => {
             hadText: !!message.text,
             hasDecodedText: !!decodedMessage.decodedText,
             decodedTextLength:
-              decodedMessage.decodedText?.description?.length || 0,
+              decodedMessage.decodedText?.formatted?.length || 0,
           });
         }
 
