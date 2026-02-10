@@ -16,7 +16,7 @@ ACARS Hub is a web application for receiving, decoding, and displaying ACARS (Ai
 **Start here**, then refer to specialized docs:
 
 - **AGENTS.md** (this file) - Coding standards, quality requirements, workflow
-- **ARCHITECTURE.md** - System design, data flow, deployment architecture
+- **agent-docs/ARCHITECTURE.md** - System design, data flow, deployment architecture
 - **agent-docs/DESIGN_LANGUAGE.md** - UI/UX patterns, component usage, accessibility
 - **agent-docs/CATPPUCCIN.md** - Color palette reference for theming
 - **agent-docs/FEATURES.md** - Feature documentation (decoders, search, alerts, map)
