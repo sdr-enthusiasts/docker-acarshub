@@ -19,9 +19,6 @@
 
 import os
 
-import acarshub_logging
-from acarshub_logging import LOG_LEVEL
-
 
 # Helper function to check if a value is enabled
 # Supports both new true/false pattern and deprecated 'external' value
@@ -35,19 +32,11 @@ def is_enabled(value):
     Returns:
         bool: True if enabled, False otherwise
     """
+
     if not value:
         return False
 
     value_str = str(value).lower().strip()
-
-    # Check for deprecated 'external' value
-    if value_str == "external":
-        acarshub_logging.log(
-            "WARNING: Using 'external' is deprecated. Please use 'true' or 'false' instead.",
-            "config",
-            LOG_LEVEL["WARNING"],
-        )
-        return True
 
     # Check for enabled values (matching shell script pattern)
     enabled_values = [
@@ -61,6 +50,7 @@ def is_enabled(value):
         "ok",
         "always",
         "set",
+        "external",
     ]
     return value_str in enabled_values
 
