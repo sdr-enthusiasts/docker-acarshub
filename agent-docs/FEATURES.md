@@ -219,15 +219,31 @@ This document describes the key features of ACARS Hub.
 
 **Aircraft Markers**:
 
-- 81 different aircraft shapes
-- 300+ type mappings
+Two rendering modes (user-selectable toggle):
+
+1. **Sprite Markers** (default - pw-silhouettes):
+   - Professional aircraft silhouettes from plane-watch
+   - 300+ specific airframe types (B738, A320, etc.)
+   - Generic fallbacks by category (light, small, large, heavy, rotorcraft)
+   - Animated sprites for helicopters and turboprops
+   - Pre-colored sprite sheets (8 variants: 4 states × 2 themes)
+   - Generated at build time using sharp image processing
+   - License: CC BY-NC-SA 4.0 (non-commercial)
+
+2. **SVG Markers** (legacy fallback):
+   - 81 different aircraft shapes
+   - 300+ type mappings
+   - Programmatic color control
+
+**Both modes support**:
+
 - Rotation based on heading
-- Color-coded:
+- Color-coded by state:
   - Red: Alerts
-  - Yellow/Peach: Unread messages
-  - Green: Read messages
-  - Blue: ADS-B only (no messages)
-  - Signal strength gradient
+  - Green: Messages
+  - Gray: Low altitude (< 500ft)
+  - Default: Text color (blue/dark)
+- Theme-aware (Mocha dark / Latte light)
 
 **Hover Tooltips**:
 
@@ -245,6 +261,62 @@ This document describes the key features of ACARS Hub.
 - Keyboard support (Escape to close)
 - Click outside to close
 - Focus management for accessibility
+
+**Aircraft Sprite Animation**:
+
+- Multi-frame sprites (helicopters, turboprops) animate automatically
+- `requestAnimationFrame` for smooth 60fps
+- Configurable frame time (default 100ms)
+- Shared animation timer (efficient with 100+ aircraft)
+
+**Sprite Colorization (Automated)**:
+
+Build process generates 8 colored sprite sheets from base white/black sprite:
+
+- **Mocha (dark)**: default, messages, alerts, low-altitude
+- **Latte (light)**: default, messages, alerts, low-altitude
+
+Algorithm (`scripts/generate-colored-sprites.ts`):
+
+- Black pixels (outline) → stay black
+- White pixels (fill) → target Catppuccin color
+- Gray pixels (anti-aliasing) → interpolate between black and color
+- Transparent pixels → stay transparent
+
+Colors applied:
+
+- **Default**: #cdd6f4 (Mocha) / #4c4f69 (Latte)
+- **Messages**: #a6e3a1 (Mocha) / #40a02b (Latte)
+- **Alerts**: #f38ba8 (Mocha) / #d20f39 (Latte)
+- **Low-alt**: #7f849c (Mocha) / #8c8fa1 (Latte)
+
+**Sprite Selection Algorithm**:
+
+1. **Airframe lookup**: ICAO type designator (e.g., "B738" → Boeing 737-800 sprite)
+2. **Generic lookup**: ADS-B category code (e.g., A3 → 4/3 → large airliner sprite)
+3. **Shape-based override**: If generic doesn't match aircraft type
+   (e.g., turboprop for a jet), select better sprite:
+   - Small jets (CRJ7, E145, etc.) → E190 sprite instead of DH8B turboprop
+   - Prevents prop/jet visual mismatches
+4. **Fallback**: Default to generic large jet (4/3)
+
+**Updating Sprites**:
+
+```bash
+# Regenerate colored sprites (runs automatically on build)
+npm run generate-sprites
+```
+
+**Category Mapping** (ADS-B → pw-silhouettes):
+
+- A1 → 4/1 (light aircraft < 7t)
+- A2 → 4/2 (small aircraft < 34t)
+- A3/A4 → 4/3 (large aircraft < 136t)
+- A5 → 4/4 (heavy aircraft > 136t)
+- A6 → 4/6 (high performance)
+- A7 → 4/7 (rotorcraft/helicopter)
+- B1 → 3/1 (glider)
+- B2 → 2/1 (balloon/lighter-than-air)
 
 ### Map Features
 

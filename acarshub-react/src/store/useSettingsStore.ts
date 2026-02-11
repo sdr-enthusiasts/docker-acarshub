@@ -84,6 +84,7 @@ interface SettingsState {
   setShowOnlyLADD: (enabled: boolean) => void;
   setShowOpenAIP: (enabled: boolean) => void;
   setShowRainViewer: (enabled: boolean) => void;
+  setUseSprites: (enabled: boolean) => void;
 
   // GeoJSON overlay actions
   setGeoJSONOverlay: (overlayId: string, enabled: boolean) => void;
@@ -147,6 +148,7 @@ const getDefaultSettings = (): UserSettings => {
       defaultCenterLat: 0,
       defaultCenterLon: 0,
       defaultZoom: 7,
+      useSprites: true,
       showOnlyAcars: false,
       showDatablocks: true,
       showExtendedDatablocks: false,
@@ -496,6 +498,15 @@ export const useSettingsStore = create<SettingsState>()(
           settings: {
             ...state.settings,
             map: { ...state.settings.map, showRainViewer: enabled },
+            updatedAt: Date.now(),
+          },
+        })),
+
+      setUseSprites: (enabled) =>
+        set((state) => ({
+          settings: {
+            ...state.settings,
+            map: { ...state.settings.map, useSprites: enabled },
             updatedAt: Date.now(),
           },
         })),

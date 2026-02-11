@@ -20,6 +20,7 @@ import { faCloudSunRain } from "@fortawesome/free-solid-svg-icons/faCloudSunRain
 import { faEnvelope } from "@fortawesome/free-solid-svg-icons/faEnvelope";
 import { faEyeSlash } from "@fortawesome/free-solid-svg-icons/faEyeSlash";
 import { faFighterJet } from "@fortawesome/free-solid-svg-icons/faFighterJet";
+import { faImage } from "@fortawesome/free-solid-svg-icons/faImage";
 import { faLock } from "@fortawesome/free-solid-svg-icons/faLock";
 import { faPlane } from "@fortawesome/free-solid-svg-icons/faPlane";
 import { faPlaneUp } from "@fortawesome/free-solid-svg-icons/faPlaneUp";
@@ -97,6 +98,7 @@ export function MapControls() {
   );
   const setShowOnlyPIA = useSettingsStore((state) => state.setShowOnlyPIA);
   const setShowOnlyLADD = useSettingsStore((state) => state.setShowOnlyLADD);
+  const setUseSprites = useSettingsStore((state) => state.setUseSprites);
 
   // Mutually exclusive filter toggles
   const handleAcarsToggle = useAcarsFilterToggle();
@@ -111,6 +113,12 @@ export function MapControls() {
       <div className="map-controls__group">
         <MapProviderSelector />
         <GeoJSONOverlayButton />
+        <MapControlButton
+          icon={faImage}
+          active={mapSettings.useSprites}
+          onClick={() => setUseSprites(!mapSettings.useSprites)}
+          tooltip={`Aircraft Markers: ${mapSettings.useSprites ? "Sprites" : "SVG"}`}
+        />
       </div>
 
       {/* Map Overlays: Range Rings + Weather + Aviation Charts */}

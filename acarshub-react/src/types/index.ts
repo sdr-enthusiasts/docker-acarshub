@@ -900,6 +900,8 @@ export interface MapSettings {
   defaultCenterLon: number;
   /** Default zoom level */
   defaultZoom: number;
+  /** Use professional sprite silhouettes (true) or SVG markers (false) */
+  useSprites: boolean;
   /** Show only ACARS aircraft on map */
   showOnlyAcars: boolean;
   /** Show data blocks */
@@ -1039,6 +1041,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
     defaultCenterLat: 0,
     defaultCenterLon: 0,
     defaultZoom: 7,
+    useSprites: true,
     showOnlyAcars: false,
     showDatablocks: true,
     showExtendedDatablocks: false,
