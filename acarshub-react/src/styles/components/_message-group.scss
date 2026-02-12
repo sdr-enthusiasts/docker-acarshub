@@ -92,7 +92,6 @@
     text-decoration: none;
     cursor: pointer;
     transition: all 0.2s ease;
-    min-height: 44px; // Mobile touch target
 
     &:hover {
       background-color: var(--color-sky);
@@ -107,6 +106,12 @@
     &:focus-visible {
       outline: 2px solid var(--color-teal);
       outline-offset: 2px;
+    }
+
+    // Mobile: larger touch target (44px minimum)
+    @media (max-width: 768px) {
+      min-height: 44px;
+      padding: var(--spacing-sm) var(--spacing-md);
     }
 
     // Reduced motion
