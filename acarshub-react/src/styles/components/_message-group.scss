@@ -89,6 +89,35 @@
     font-weight: 600;
     border-radius: var(--border-radius-full);
     white-space: nowrap;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-height: 44px; // Mobile touch target
+
+    &:hover {
+      background-color: var(--color-sky);
+      transform: translateY(-1px);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    &:active {
+      transform: translateY(0);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--color-teal);
+      outline-offset: 2px;
+    }
+
+    // Reduced motion
+    @media (prefers-reduced-motion: reduce) {
+      transition: none;
+
+      &:hover,
+      &:active {
+        transform: none;
+      }
+    }
   }
 
   &__counter {

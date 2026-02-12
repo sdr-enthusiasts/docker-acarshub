@@ -15,6 +15,7 @@
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { useAppStore } from "../store/useAppStore";
 import type { Plane } from "../types";
 import { uiLogger } from "../utils/logger";
@@ -71,6 +72,18 @@ export const MessageGroup = ({
       });
     });
   }, [adsbAircraft, plane.identifiers]);
+
+  // Get the first identifier (preferably hex) for linking to map
+  const getPrimaryIdentifier = useCallback((): string => {
+    // Try to find a hex identifier (6 characters, all hex digits)
+    const hexId = plane.identifiers.find(
+      (id) => id.length === 6 && /^[0-9A-F]+$/i.test(id),
+    );
+    if (hexId) return hexId;
+
+    // Otherwise use the first identifier
+    return plane.identifiers[0] || "Unknown";
+  }, [plane.identifiers]);
 
   // Reset active index if it exceeds message count (messages may have been culled)
   useEffect(() => {
@@ -145,9 +158,13 @@ export const MessageGroup = ({
             </span>
           )}
           {isTrackedByAdsb && (
-            <span className="adsb-tracking" title="Tracked via ADS-B">
+            <Link
+              to={`/adsb?aircraft=${encodeURIComponent(getPrimaryIdentifier())}`}
+              className="adsb-tracking"
+              title="Click to view on map"
+            >
               ADS-B
-            </span>
+            </Link>
           )}
         </div>
         {hasMultipleMessages && (

@@ -16,6 +16,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { MapRef } from "react-map-gl/maplibre";
+import { useSearchParams } from "react-router-dom";
 import { MapComponent, MapControls, MapLegend } from "../components/Map";
 import { AircraftList } from "../components/Map/AircraftList";
 import { getProviderConfig } from "../config/mapProviders";
@@ -46,12 +47,14 @@ export const LiveMapPage = () => {
   const messageGroups = useAppStore((state) => state.messageGroups);
   const mapSettings = useSettingsStore((state) => state.settings.map);
   const theme = useTheme();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const mapRef = useRef<MapRef>(null);
   const [isMapLoaded, setIsMapLoaded] = useState(false);
   const [hoveredAircraftHex, setHoveredAircraftHex] = useState<string | null>(
     null,
   );
+  const [hasFocusedAircraft, setHasFocusedAircraft] = useState(false);
 
   // Pair ADS-B aircraft with ACARS message groups
   const pairedAircraft = useMemo(() => {
@@ -68,6 +71,48 @@ export const LiveMapPage = () => {
     setIsMapLoaded(true);
     mapLogger.info("Map loaded successfully");
   };
+
+  // Focus on aircraft from URL parameter
+  useEffect(() => {
+    if (!isMapLoaded || hasFocusedAircraft || !mapRef.current) return;
+
+    const aircraftParam = searchParams.get("aircraft");
+    if (!aircraftParam) return;
+
+    // Find the aircraft in the paired list
+    const targetAircraft = pairedAircraft.find(
+      (a) =>
+        a.hex.toUpperCase() === aircraftParam.toUpperCase() ||
+        a.flight?.toUpperCase() === aircraftParam.toUpperCase() ||
+        a.tail?.toUpperCase() === aircraftParam.toUpperCase(),
+    );
+
+    if (targetAircraft && targetAircraft.lat && targetAircraft.lon) {
+      mapLogger.info("Focusing on aircraft from URL", {
+        hex: targetAircraft.hex,
+        lat: targetAircraft.lat,
+        lon: targetAircraft.lon,
+      });
+
+      mapRef.current.flyTo({
+        center: [targetAircraft.lon, targetAircraft.lat],
+        zoom: 10,
+        duration: 1500,
+      });
+
+      setHasFocusedAircraft(true);
+
+      // Remove the query parameter after focusing
+      searchParams.delete("aircraft");
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [
+    isMapLoaded,
+    hasFocusedAircraft,
+    pairedAircraft,
+    searchParams,
+    setSearchParams,
+  ]);
 
   // Handle aircraft click from list
   const handleAircraftClick = (aircraft: PairedAircraft) => {
