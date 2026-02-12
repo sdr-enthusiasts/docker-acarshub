@@ -105,6 +105,12 @@ export const LiveMapPage = () => {
 
       setHasFocusedAircraft(true);
 
+      // Start following the aircraft
+      setFollowedAircraftHex(targetAircraft.hex);
+      mapLogger.info("Auto-following aircraft from URL", {
+        hex: targetAircraft.hex,
+      });
+
       // Remove the query parameter after focusing
       searchParams.delete("aircraft");
       setSearchParams(searchParams, { replace: true });
