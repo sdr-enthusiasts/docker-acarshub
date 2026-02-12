@@ -79,6 +79,18 @@
     white-space: nowrap;
   }
 
+  .adsb-tracking {
+    display: inline-flex;
+    align-items: center;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    background-color: var(--color-teal);
+    color: var(--color-crust);
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    border-radius: var(--border-radius-full);
+    white-space: nowrap;
+  }
+
   &__counter {
     font-size: var(--font-size-sm);
     color: var(--color-subtext1);

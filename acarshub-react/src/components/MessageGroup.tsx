@@ -14,7 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useAppStore } from "../store/useAppStore";
 import type { Plane } from "../types";
 import { uiLogger } from "../utils/logger";
 import { MessageCard } from "./MessageCard";
@@ -48,6 +49,28 @@ export const MessageGroup = ({
   const messageCount = plane.messages.length;
   const hasMultipleMessages = messageCount > 1;
   const activeMessage = plane.messages[activeMessageIndex];
+
+  // Check if this aircraft is being tracked via ADS-B
+  const adsbAircraft = useAppStore((state) => state.adsbAircraft);
+  const isTrackedByAdsb = useMemo(() => {
+    if (!adsbAircraft?.aircraft) return false;
+
+    // Check if any of the plane's identifiers match ADS-B aircraft
+    return adsbAircraft.aircraft.some((aircraft) => {
+      const adsbHex = aircraft.hex.toUpperCase().trim();
+      const adsbFlight = aircraft.flight?.trim().toUpperCase();
+      const adsbTail = aircraft.r?.trim().toUpperCase();
+
+      return plane.identifiers.some((identifier) => {
+        const normalizedId = identifier.toUpperCase().trim();
+        return (
+          normalizedId === adsbHex ||
+          (adsbFlight && normalizedId === adsbFlight) ||
+          (adsbTail && normalizedId === adsbTail)
+        );
+      });
+    });
+  }, [adsbAircraft, plane.identifiers]);
 
   // Reset active index if it exceeds message count (messages may have been culled)
   useEffect(() => {
@@ -119,6 +142,11 @@ export const MessageGroup = ({
           {plane.has_alerts && (
             <span className="alert-count" title="Alert matches">
               {plane.num_alerts} alert{plane.num_alerts !== 1 ? "s" : ""}
+            </span>
+          )}
+          {isTrackedByAdsb && (
+            <span className="adsb-tracking" title="Tracked via ADS-B">
+              ADS-B
             </span>
           )}
         </div>
