@@ -5,6 +5,12 @@ web:
 server:
     pdm run dev
 
+update:
+    cd acarshub-react && npm-check -us
+
+bump:
+    cd acarshub-react && npm i
+
 # Database migration commands
 
 # Usage: just db-init [path/to/db.db]
