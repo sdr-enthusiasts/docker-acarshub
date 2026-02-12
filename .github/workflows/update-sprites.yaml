@@ -1,0 +1,153 @@
+---
+# GitHub Action: Update Aircraft Sprites
+#
+# This workflow automatically monitors the plane-watch/pw-silhouettes repository
+# for new releases and creates a pull request when new sprite assets are available.
+#
+# What it does:
+# 1. Checks the current sprite version in acarshub-react/ATTRIBUTIONS.md
+# 2. Queries the GitHub API for the latest pw-silhouettes release
+# 3. If a new version is found:
+#    - Downloads spritesheet.json and spritesheet.png from the release
+#    - Updates the version number in ATTRIBUTIONS.md
+#    - Creates a pull request with the changes
+# 4. If already up to date, exits without changes
+#
+# Schedule: Runs daily at 2 AM UTC
+# Manual trigger: Available via workflow_dispatch
+#
+# Required secrets:
+# - PAT: Personal Access Token with repo and pull_request permissions
+#
+# Files updated:
+# - acarshub-react/public/static/sprites/spritesheet.json
+# - acarshub-react/public/static/sprites/spritesheet.png
+# - acarshub-react/ATTRIBUTIONS.md
+#
+# License: pw-silhouettes is licensed under CC BY-NC-SA 4.0
+# Source: https://github.com/plane-watch/pw-silhouettes
+
+name: Update Aircraft Sprites
+
+on:
+  schedule:
+    # Run daily at 2 AM UTC to check for new releases
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  check-and-update:
+    name: Check for new pw-silhouettes release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          persist-credentials: false
+          ref: main
+
+      - name: Get current sprite version
+        id: current-version
+        run: |
+          current_version=$(sed -n '/^### pw-silhouettes/,/^##/p' acarshub-react/ATTRIBUTIONS.md | grep '\*\*Version\*\*:' | sed 's/^.*: //')
+          echo "version=${current_version}" >> "$GITHUB_OUTPUT"
+          echo "Current version: ${current_version}"
+
+      - name: Get latest pw-silhouettes release
+        id: latest-release
+        run: |
+          latest_tag=$(curl -s https://api.github.com/repos/plane-watch/pw-silhouettes/releases/latest | jq -r '.tag_name')
+          echo "tag=${latest_tag}" >> "$GITHUB_OUTPUT"
+          echo "Latest release: ${latest_tag}"
+
+      - name: Compare versions
+        id: compare
+        run: |
+          current="${{ steps.current-version.outputs.version }}"
+          latest="${{ steps.latest-release.outputs.tag }}"
+
+          if [ "$current" = "$latest" ]; then
+            echo "needs_update=false" >> "$GITHUB_OUTPUT"
+            echo "No update needed - already at latest version: ${current}"
+          else
+            echo "needs_update=true" >> "$GITHUB_OUTPUT"
+            echo "Update needed - current: ${current}, latest: ${latest}"
+          fi
+
+      - name: Download new sprite assets
+        if: steps.compare.outputs.needs_update == 'true'
+        run: |
+          release_tag="${{ steps.latest-release.outputs.tag }}"
+          base_url="https://github.com/plane-watch/pw-silhouettes/releases/download/${release_tag}"
+
+          echo "Downloading spritesheet.json..."
+          curl -L -o acarshub-react/public/static/sprites/spritesheet.json \
+            "${base_url}/spritesheet.json"
+
+          echo "Downloading spritesheet.png..."
+          curl -L -o acarshub-react/public/static/sprites/spritesheet.png \
+            "${base_url}/spritesheet.png"
+
+          echo "Download complete"
+
+      - name: Update ATTRIBUTIONS.md version
+        if: steps.compare.outputs.needs_update == 'true'
+        run: |
+          new_version="${{ steps.latest-release.outputs.tag }}"
+          sed -i "/^### pw-silhouettes/,/^##/{s/^\(- \*\*Version\*\*:\).*/\1 ${new_version}/}" acarshub-react/ATTRIBUTIONS.md
+          echo "Updated ATTRIBUTIONS.md to version ${new_version}"
+
+      - name: Configure Git identity
+        if: steps.compare.outputs.needs_update == 'true'
+        run: |
+          git config --global user.email "noreply@github.com"
+          git config --global user.name "github[bot]"
+
+      - name: Create Pull Request
+        if: steps.compare.outputs.needs_update == 'true'
+        uses: peter-evans/create-pull-request@5e914681df9dc83aa4e4905692ca88beb2f9e91f # v7.0.5
+        with:
+          token: ${{ secrets.PAT }}
+          commit-message: "chore: update aircraft sprites to ${{ steps.latest-release.outputs.tag }}"
+          branch: update-sprites-${{ steps.latest-release.outputs.tag }}
+          delete-branch: true
+          title: "chore: update aircraft sprites to ${{ steps.latest-release.outputs.tag }}"
+          body: |
+            ## Aircraft Sprite Update
+
+            This PR updates the pw-silhouettes aircraft sprite assets to version **${{ steps.latest-release.outputs.tag }}**.
+
+            ### Changes
+            - ✅ Updated `spritesheet.json` from pw-silhouettes release
+            - ✅ Updated `spritesheet.png` from pw-silhouettes release
+            - ✅ Updated version in `ATTRIBUTIONS.md`
+
+            ### Source
+            - **Repository**: https://github.com/plane-watch/pw-silhouettes
+            - **Release**: https://github.com/plane-watch/pw-silhouettes/releases/tag/${{ steps.latest-release.outputs.tag }}
+            - **License**: CC BY-NC-SA 4.0
+
+            ### Testing Checklist
+            - [ ] Sprites render correctly on map
+            - [ ] All aircraft types display appropriate silhouettes
+            - [ ] No console errors related to sprite loading
+            - [ ] Mobile and desktop views both work
+
+            ---
+
+            *This PR was automatically created by the `update-sprites` GitHub Action.*
+          labels: |
+            dependencies
+            automated
+          draft: false
+
+      - name: No update needed
+        if: steps.compare.outputs.needs_update == 'false'
+        run: |
+          echo "✅ Aircraft sprites are already up to date at version ${{ steps.current-version.outputs.version }}"
