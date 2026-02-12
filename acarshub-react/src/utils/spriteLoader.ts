@@ -12,6 +12,7 @@
  *   const sprite = loader.getSprite('B738', '4/3');
  */
 
+import spritesheetData from "../../public/static/sprites/spritesheet.json";
 import type {
   SpriteLookupResult,
   SpritePosition,
@@ -43,12 +44,8 @@ export class SpriteLoader {
 
   private async _loadData(): Promise<void> {
     try {
-      const response = await fetch("/static/sprites/spritesheet.json");
-      if (!response.ok) {
-        throw new Error(`Failed to load spritesheet: ${response.statusText}`);
-      }
-
-      this.data = await response.json();
+      // Import spritesheet data directly - Vite handles base path
+      this.data = spritesheetData as SpritesheetData;
       logger.info("Spritesheet loaded", {
         version: this.data?.version,
         airframeCount: Object.keys(this.data?.airframeToSprite || {}).length,
