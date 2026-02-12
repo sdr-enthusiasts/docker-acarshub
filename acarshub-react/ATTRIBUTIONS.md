@@ -6,7 +6,7 @@ This document provides attribution for third-party assets, algorithms, and resou
 
 ### pw-silhouettes
 
-- **Source**: https://github.com/plane-watch/pw-silhouettes
+- **Source**: <https://github.com/plane-watch/pw-silhouettes>
 - **License**: CC BY-NC-SA 4.0 (Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International)
 - **Usage**: Aircraft sprite silhouettes for map markers
 - **Assets**: `public/static/sprites/spritesheet.png`, `public/static/sprites/spritesheet.json`
@@ -27,7 +27,7 @@ All silhouettes, artwork, and metadata from pw-silhouettes are licensed under CC
 
 ### HEX Color to CSS Filter Converter
 
-- **Source**: https://codepen.io/sosuke/pen/Pjoqqp
+- **Source**: <https://codepen.io/sosuke/pen/Pjoqqp>
 - **Author**: Barrett Sonntag (@sosuke)
 - **License**: MIT
 - **Usage**: Algorithm for computing CSS filter values to achieve exact color transformations
@@ -46,7 +46,7 @@ All computed filter values achieve Loss <5 (near-perfect color accuracy).
 
 ### @airframes/acars-decoder
 
-- **Source**: https://www.npmjs.com/package/@airframes/acars-decoder
+- **Source**: <https://www.npmjs.com/package/@airframes/acars-decoder>
 - **License**: MIT
 - **Usage**: Decoding ACARS messages
 - **Version**: See `package.json`
@@ -55,7 +55,7 @@ All computed filter values achieve Loss <5 (near-perfect color accuracy).
 
 ### Catppuccin
 
-- **Source**: https://github.com/catppuccin/catppuccin
+- **Source**: <https://github.com/catppuccin/catppuccin>
 - **License**: MIT
 - **Usage**: Color palette for theming (Mocha dark theme, Latte light theme)
 - **Implementation**: `src/styles/_variables.scss`, `src/styles/_mixins.scss`
@@ -66,7 +66,7 @@ All colors in ACARS Hub React frontend are sourced from the Catppuccin palette t
 
 ### Font Awesome Free
 
-- **Source**: https://fontawesome.com
+- **Source**: <https://fontawesome.com>
 - **License**: Font Awesome Free License
   - Icons: CC BY 4.0
   - Fonts: SIL OFL 1.1
@@ -78,7 +78,7 @@ All colors in ACARS Hub React frontend are sourced from the Catppuccin palette t
 
 ### CSS Filter Technique Reference
 
-- **Source**: https://stackoverflow.com/a/76502306
+- **Source**: <https://stackoverflow.com/a/76502306>
 - **Author**: mikemaccana (modified by community)
 - **License**: CC BY-SA 4.0
 - **Usage**: Initial research and validation of CSS filter colorization approach
