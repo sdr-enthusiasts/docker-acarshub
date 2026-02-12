@@ -20,7 +20,7 @@
  * Station Marker
  *
  * Displays the ground station (receiver) location on the map
- * with animated pulsing rings to indicate radio transmission.
+ * as a simple radio tower icon.
  */
 
 .station-marker {
@@ -33,61 +33,16 @@
     overflow: visible;
   }
 
-  // Pulsing animation for radio waves
-  &__pulse {
-    transform-origin: center;
-
-    // Respect reduced motion preference
-    @media (prefers-reduced-motion: reduce) {
-      animation: none !important;
-      opacity: 0.3 !important;
-    }
-
-    // Only animate if animations are enabled
-    .animations-enabled & {
-      // First pulse (fastest, most visible)
-      &--1 {
-        animation: station-pulse 2s ease-out infinite;
-      }
-
-      // Second pulse (medium speed)
-      &--2 {
-        animation: station-pulse 2s ease-out infinite 0.66s;
-      }
-
-      // Third pulse (slowest, most subtle)
-      &--3 {
-        animation: station-pulse 2s ease-out infinite 1.33s;
-      }
-    }
-  }
-
-  // Hover effect
+  // Subtle hover effect
   &:hover {
-    svg circle:nth-child(2) {
+    svg circle {
       fill: var(--color-maroon);
       transition: fill 0.2s ease;
     }
-  }
-}
 
-/**
- * Keyframe animation for pulsing radio waves
- * Expands from center and fades out
- */
-@keyframes station-pulse {
-  0% {
-    r: 6;
-    opacity: 0.6;
-  }
-
-  50% {
-    r: 13;
-    opacity: 0.3;
-  }
-
-  100% {
-    r: 14;
-    opacity: 0;
+    svg line {
+      stroke: var(--color-maroon);
+      transition: stroke 0.2s ease;
+    }
   }
 }

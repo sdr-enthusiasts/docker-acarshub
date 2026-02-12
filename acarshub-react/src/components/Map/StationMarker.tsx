@@ -51,58 +51,56 @@ export function StationMarker() {
     <Marker longitude={stationLon} latitude={stationLat} anchor="center">
       <div className="station-marker" title="Ground Station">
         <svg
-          width="32"
-          height="32"
-          viewBox="0 0 32 32"
+          width="20"
+          height="20"
+          viewBox="0 0 20 20"
           xmlns="http://www.w3.org/2000/svg"
           role="img"
           aria-label="Ground Station"
         >
           <title>Ground Station</title>
-          {/* Outer circle (base) */}
+          {/* Radio tower icon */}
+          {/* Base circle */}
           <circle
-            cx="16"
-            cy="16"
-            r="14"
+            cx="10"
+            cy="10"
+            r="3"
             fill="var(--color-red)"
-            fillOpacity="0.3"
-            stroke="var(--color-red)"
-            strokeWidth="2"
+            stroke="var(--color-surface0)"
+            strokeWidth="1"
           />
 
-          {/* Inner circle (core) */}
-          <circle cx="16" cy="16" r="6" fill="var(--color-red)" />
+          {/* Antenna mast */}
+          <line
+            x1="10"
+            y1="7"
+            x2="10"
+            y2="2"
+            stroke="var(--color-red)"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+          />
 
-          {/* Radio waves (animated pulses) */}
-          <circle
-            cx="16"
-            cy="16"
-            r="10"
-            fill="none"
+          {/* Left antenna arm */}
+          <line
+            x1="10"
+            y1="4"
+            x2="7"
+            y2="2"
             stroke="var(--color-red)"
-            strokeWidth="2"
-            opacity="0.6"
-            className="station-marker__pulse station-marker__pulse--1"
+            strokeWidth="1"
+            strokeLinecap="round"
           />
-          <circle
-            cx="16"
-            cy="16"
-            r="10"
-            fill="none"
+
+          {/* Right antenna arm */}
+          <line
+            x1="10"
+            y1="4"
+            x2="13"
+            y2="2"
             stroke="var(--color-red)"
-            strokeWidth="2"
-            opacity="0.4"
-            className="station-marker__pulse station-marker__pulse--2"
-          />
-          <circle
-            cx="16"
-            cy="16"
-            r="10"
-            fill="none"
-            stroke="var(--color-red)"
-            strokeWidth="2"
-            opacity="0.2"
-            className="station-marker__pulse station-marker__pulse--3"
+            strokeWidth="1"
+            strokeLinecap="round"
           />
         </svg>
       </div>
