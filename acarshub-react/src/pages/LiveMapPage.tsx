@@ -55,6 +55,9 @@ export const LiveMapPage = () => {
     null,
   );
   const [hasFocusedAircraft, setHasFocusedAircraft] = useState(false);
+  const [followedAircraftHex, setFollowedAircraftHex] = useState<string | null>(
+    null,
+  );
 
   // Pair ADS-B aircraft with ACARS message groups
   const pairedAircraft = useMemo(() => {
@@ -87,7 +90,7 @@ export const LiveMapPage = () => {
         a.tail?.toUpperCase() === aircraftParam.toUpperCase(),
     );
 
-    if (targetAircraft && targetAircraft.lat && targetAircraft.lon) {
+    if (targetAircraft?.lat && targetAircraft.lon) {
       mapLogger.info("Focusing on aircraft from URL", {
         hex: targetAircraft.hex,
         lat: targetAircraft.lat,
@@ -131,6 +134,81 @@ export const LiveMapPage = () => {
     setHoveredAircraftHex(aircraft?.hex || null);
   };
 
+  // Handle follow aircraft
+  const handleFollowAircraft = (hex: string | null) => {
+    setFollowedAircraftHex(hex);
+    if (hex) {
+      mapLogger.info("Following aircraft", { hex });
+    } else {
+      mapLogger.info("Unfollowed aircraft");
+    }
+  };
+
+  // Auto-center on followed aircraft when position updates
+  useEffect(() => {
+    if (!followedAircraftHex || !mapRef.current) return;
+
+    const followedAircraft = pairedAircraft.find(
+      (a) => a.hex === followedAircraftHex,
+    );
+
+    if (followedAircraft?.lat && followedAircraft.lon) {
+      const map = mapRef.current.getMap();
+      const currentCenter = map.getCenter();
+      const targetCenter: [number, number] = [
+        followedAircraft.lon,
+        followedAircraft.lat,
+      ];
+
+      // Only pan if the aircraft has moved significantly (more than 0.0001 degrees)
+      // This prevents jittery re-centering on every tiny position update
+      const distance = Math.sqrt(
+        (currentCenter.lng - targetCenter[0]) ** 2 +
+          (currentCenter.lat - targetCenter[1]) ** 2,
+      );
+
+      if (distance > 0.0001) {
+        // Use panTo instead of flyTo to preserve zoom level
+        // This keeps the aircraft centered even when user zooms
+        map.panTo(targetCenter, { duration: 500 });
+      }
+    } else if (followedAircraft === undefined) {
+      // Aircraft no longer in ADS-B data, stop following
+      mapLogger.info("Followed aircraft disappeared from ADS-B, unfollowing", {
+        hex: followedAircraftHex,
+      });
+      setFollowedAircraftHex(null);
+    }
+  }, [followedAircraftHex, pairedAircraft]);
+
+  // Re-center on followed aircraft when zooming
+  useEffect(() => {
+    if (!followedAircraftHex || !mapRef.current) return;
+
+    const map = mapRef.current.getMap();
+
+    const handleZoom = () => {
+      const followedAircraft = pairedAircraft.find(
+        (a) => a.hex === followedAircraftHex,
+      );
+
+      if (followedAircraft?.lat && followedAircraft.lon) {
+        // Immediately set center without animation during zoom
+        const center: [number, number] = [
+          followedAircraft.lon,
+          followedAircraft.lat,
+        ];
+        map.setCenter(center);
+      }
+    };
+
+    map.on("zoom", handleZoom);
+
+    return () => {
+      map.off("zoom", handleZoom);
+    };
+  }, [followedAircraftHex, pairedAircraft]);
+
   return (
     <div className="page live-map-page">
       <div className="live-map-page__container">
@@ -150,6 +228,8 @@ export const LiveMapPage = () => {
             mapRef={mapRef}
             onLoad={handleMapLoad}
             hoveredAircraftHex={hoveredAircraftHex}
+            followedAircraftHex={followedAircraftHex}
+            onFollowAircraft={handleFollowAircraft}
             className={isMapLoaded ? "live-map-page__map--loaded" : ""}
           />
 

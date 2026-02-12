@@ -14,7 +14,42 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-@use "../../styles/mixins" as *;
+@use "../variables" as *;
+@use "../mixins" as *;
+
+// Followed aircraft indicator
+.aircraft-marker--followed {
+  position: relative;
+
+  // Pulsing ring animation to indicate followed aircraft
+  &::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 150%;
+    height: 150%;
+    border: 3px solid var(--color-primary);
+    border-radius: 50%;
+    opacity: 0;
+    animation: followed-pulse 2s ease-out infinite;
+  }
+
+  // Add a subtle glow
+  filter: drop-shadow(0 0 8px var(--color-primary));
+}
+
+@keyframes followed-pulse {
+  0% {
+    opacity: 0.8;
+    transform: translate(-50%, -50%) scale(0.8);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.5);
+  }
+}
 
 .aircraft-marker {
   // Button reset styles

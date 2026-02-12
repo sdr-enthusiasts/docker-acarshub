@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
+import type maplibregl from "maplibre-gl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { MapRef, ViewState } from "react-map-gl/maplibre";
 import MapLibreMap, {
@@ -30,6 +31,7 @@ import { useSettingsStore } from "../../store/useSettingsStore";
 import { mapLogger } from "../../utils/logger";
 import { AircraftMarkers } from "./AircraftMarkers";
 import { GeoJSONOverlays } from "./GeoJSONOverlays";
+import { MapContextMenu } from "./MapContextMenu";
 import { NexradOverlay } from "./NexradOverlay";
 import { OpenAIPOverlay } from "./OpenAIPOverlay";
 import { RainViewerOverlay } from "./RainViewerOverlay";
@@ -48,6 +50,10 @@ interface MapComponentProps {
   onViewStateChange?: (viewState: ViewState) => void;
   /** Hex of currently hovered aircraft (from list) */
   hoveredAircraftHex?: string | null;
+  /** Hex of currently followed aircraft */
+  followedAircraftHex?: string | null;
+  /** Callback when follow/unfollow is requested */
+  onFollowAircraft?: (hex: string | null) => void;
 }
 
 /**
@@ -62,6 +68,8 @@ export function MapComponent({
   onLoad,
   onViewStateChange,
   hoveredAircraftHex,
+  followedAircraftHex,
+  onFollowAircraft,
 }: MapComponentProps) {
   const decoders = useAppStore((state) => state.decoders);
   const mapSettings = useSettingsStore((state) => state.settings.map);
@@ -111,6 +119,12 @@ export function MapComponent({
 
   // Map view state
   const [viewState, setViewState] = useState<ViewState>(getInitialViewState);
+
+  // Map context menu state
+  const [mapContextMenu, setMapContextMenu] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
 
   // Save view state to localStorage when it changes
   useEffect(() => {
@@ -271,6 +285,30 @@ export function MapComponent({
     onLoad?.();
   }, [onLoad]);
 
+  // Handle map right-click
+  const handleMapContextMenu = useCallback(
+    (event: maplibregl.MapMouseEvent) => {
+      event.preventDefault();
+      setMapContextMenu({
+        x: event.originalEvent.clientX,
+        y: event.originalEvent.clientY,
+      });
+    },
+    [],
+  );
+
+  // Handle map context menu close
+  const handleMapContextMenuClose = useCallback(() => {
+    setMapContextMenu(null);
+  }, []);
+
+  // Handle unfollow from map context menu
+  const handleUnfollowFromMap = useCallback(() => {
+    if (onFollowAircraft) {
+      onFollowAircraft(null);
+    }
+  }, [onFollowAircraft]);
+
   return (
     <div
       className={`map-container ${className}`}
@@ -291,6 +329,7 @@ export function MapComponent({
         dragRotate={false}
         touchZoomRotate={false}
         keyboard={true}
+        onContextMenu={handleMapContextMenu}
       >
         {/* Navigation controls (zoom, compass) */}
         <NavigationControl position="top-right" showCompass={false} />
@@ -317,12 +356,27 @@ export function MapComponent({
         <GeoJSONOverlays />
 
         {/* Aircraft markers */}
-        <AircraftMarkers hoveredAircraftHex={hoveredAircraftHex} />
+        <AircraftMarkers
+          hoveredAircraftHex={hoveredAircraftHex}
+          followedAircraftHex={followedAircraftHex}
+          onFollowAircraft={onFollowAircraft}
+        />
       </MapLibreMap>
 
       {/* Weather overlay timestamps rendered outside map for proper positioning */}
       <NexradOverlay renderTimestampOnly />
       <RainViewerOverlay renderTimestampOnly />
+
+      {/* Map context menu */}
+      {mapContextMenu && (
+        <MapContextMenu
+          x={mapContextMenu.x}
+          y={mapContextMenu.y}
+          isFollowingAircraft={!!followedAircraftHex}
+          onClose={handleMapContextMenuClose}
+          onUnfollowAircraft={handleUnfollowFromMap}
+        />
+      )}
     </div>
   );
 }

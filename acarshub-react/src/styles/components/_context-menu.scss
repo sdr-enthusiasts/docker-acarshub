@@ -1,0 +1,150 @@
+// Copyright (C) 2022-2026 Frederick Clausen II
+// This file is part of acarshub <https://github.com/sdr-enthusiasts/docker-acarshub>.
+
+// acarshub is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+
+// acarshub is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+
+// You should have received a copy of the GNU General Public License
+// along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
+
+@use "../variables" as *;
+@use "../mixins" as *;
+
+.context-menu {
+  position: fixed;
+  z-index: 10000;
+  min-width: 180px;
+  background-color: var(--color-surface0);
+  border: 1px solid var(--color-surface2);
+  border-radius: $radius-md;
+  box-shadow: $shadow-lg;
+  padding: $spacing-xs $spacing-sm;
+  opacity: 0;
+  transform: scale(0.95);
+  animation: context-menu-fade-in 0.15s ease-out forwards;
+
+  // Focus styles for keyboard navigation
+  &:focus {
+    outline: none;
+  }
+
+  // Mobile-first: Ensure menu is fully visible on small screens
+  @media (max-width: 375px) {
+    min-width: 160px;
+    max-width: calc(100vw - 16px);
+  }
+}
+
+@keyframes context-menu-fade-in {
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.context-menu__item {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  width: 100%;
+  padding: $spacing-sm $spacing-md $spacing-sm $spacing-xs;
+  background: none;
+  border: none;
+  border-radius: $radius-sm;
+  color: var(--color-text);
+  font-family: $font-family-sans;
+  font-size: $font-size-base;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  min-height: 44px; // WCAG 2.1 AA touch target minimum
+
+  // Remove default focus outline
+  &:focus {
+    outline: none;
+  }
+
+  // Hover state
+  &:hover:not(:disabled) {
+    background-color: var(--color-surface1);
+  }
+
+  // Focused state (keyboard navigation only)
+  &--focused:not(:disabled) {
+    background-color: var(--color-surface1);
+  }
+
+  // Disabled state
+  &:disabled {
+    color: var(--color-overlay0);
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  // Variant: Primary (highlighted action)
+  &--primary {
+    color: var(--color-primary);
+    font-weight: 500;
+
+    &:hover:not(:disabled) {
+      background-color: var(--color-primary);
+      color: var(--color-base);
+    }
+
+    &.context-menu__item--focused:not(:disabled) {
+      background-color: var(--color-primary);
+      color: var(--color-base);
+    }
+  }
+
+  // Variant: Danger (destructive action)
+  &--danger {
+    color: var(--color-error);
+
+    &:hover:not(:disabled) {
+      background-color: var(--color-error);
+      color: var(--color-base);
+    }
+
+    &.context-menu__item--focused:not(:disabled) {
+      background-color: var(--color-error);
+      color: var(--color-base);
+    }
+  }
+
+  // Tablet and desktop: Reduce padding slightly
+  @media (min-width: 768px) {
+    padding: $spacing-xs $spacing-md $spacing-xs $spacing-xs;
+    min-height: 36px;
+  }
+}
+
+.context-menu__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  font-size: 16px;
+}
+
+.context-menu__label {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.context-menu__divider {
+  height: 1px;
+  background-color: var(--color-surface2);
+  margin: $spacing-xs 0;
+}

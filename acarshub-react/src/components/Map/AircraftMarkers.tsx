@@ -34,6 +34,7 @@ import {
   pairADSBWithACARSMessages,
 } from "../../utils/aircraftPairing";
 import { getSpriteLoader } from "../../utils/spriteLoader";
+import { AircraftContextMenu } from "./AircraftContextMenu";
 import { AircraftMessagesModal } from "./AircraftMessagesModal";
 import { AnimatedSprite } from "./AnimatedSprite";
 import "../../styles/components/_aircraft-markers.scss";
@@ -42,6 +43,10 @@ import "./AircraftSprite.scss";
 interface AircraftMarkersProps {
   /** Hex of currently hovered aircraft (from list) */
   hoveredAircraftHex?: string | null;
+  /** Hex of currently followed aircraft */
+  followedAircraftHex?: string | null;
+  /** Callback when follow/unfollow is requested */
+  onFollowAircraft?: (hex: string | null) => void;
 }
 
 interface AircraftMarkerData {
@@ -73,6 +78,12 @@ interface TooltipState {
   showBelow: boolean;
   alignLeft: boolean;
   alignRight: boolean;
+}
+
+interface ContextMenuState {
+  aircraft: PairedAircraft;
+  x: number;
+  y: number;
 }
 
 /**
@@ -147,6 +158,8 @@ function getBetterGenericSprite(
 
 export function AircraftMarkers({
   hoveredAircraftHex,
+  followedAircraftHex,
+  onFollowAircraft,
 }: AircraftMarkersProps = {}) {
   const adsbAircraft = useAppStore((state) => state.adsbAircraft);
   const messageGroups = useAppStore((state) => state.messageGroups);
@@ -160,6 +173,7 @@ export function AircraftMarkers({
     useState<TooltipState | null>(null);
   const [selectedMessageGroup, setSelectedMessageGroup] =
     useState<MessageGroup | null>(null);
+  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
 
   // Preload spritesheet on mount
   useEffect(() => {
@@ -362,9 +376,48 @@ export function AircraftMarkers({
     }
   };
 
+  // Handle right-click on marker
+  const handleMarkerContextMenu = (
+    event: React.MouseEvent,
+    aircraft: PairedAircraft,
+  ) => {
+    event.preventDefault();
+    setContextMenu({
+      aircraft,
+      x: event.clientX,
+      y: event.clientY,
+    });
+  };
+
   // Handle modal close
   const handleCloseModal = () => {
     setSelectedMessageGroup(null);
+  };
+
+  // Handle context menu close
+  const handleContextMenuClose = () => {
+    setContextMenu(null);
+  };
+
+  // Handle view messages from context menu
+  const handleViewMessages = () => {
+    if (contextMenu?.aircraft.matchedGroup) {
+      setSelectedMessageGroup(contextMenu.aircraft.matchedGroup);
+    }
+  };
+
+  // Handle follow aircraft from context menu
+  const handleFollowAircraft = () => {
+    if (contextMenu?.aircraft && onFollowAircraft) {
+      onFollowAircraft(contextMenu.aircraft.hex);
+    }
+  };
+
+  // Handle unfollow aircraft from context menu
+  const handleUnfollowAircraft = () => {
+    if (onFollowAircraft) {
+      onFollowAircraft(null);
+    }
   };
 
   // No aircraft data yet
@@ -415,6 +468,9 @@ export function AircraftMarkers({
                     frameTime={markerData.spriteFrameTime || 100}
                     rotation={rotation}
                     onClick={() => handleMarkerClick(markerData.aircraft)}
+                    onContextMenu={(e) =>
+                      handleMarkerContextMenu(e, markerData.aircraft)
+                    }
                     onMouseEnter={(e) => {
                       const rect = e.currentTarget.getBoundingClientRect();
                       const distanceFromTop = rect.top;
@@ -446,6 +502,7 @@ export function AircraftMarkers({
                     }}
                     onMouseLeave={() => setLocalHoveredAircraft(null)}
                     isHovered={hoveredAircraftHex === markerData.hex}
+                    isFollowed={followedAircraftHex === markerData.hex}
                     hasUnreadMessages={markerData.hasUnreadMessages}
                     ariaLabel={`Aircraft ${markerData.hex}${markerData.aircraft.hasMessages ? " - Click to view messages" : ""}`}
                     cursorStyle={
@@ -459,7 +516,11 @@ export function AircraftMarkers({
                       hoveredAircraftHex === markerData.hex
                         ? "aircraft-marker--hovered"
                         : ""
-                    } ${markerData.hasUnreadMessages ? "aircraft-marker--unread" : ""}`}
+                    } ${markerData.hasUnreadMessages ? "aircraft-marker--unread" : ""} ${
+                      followedAircraftHex === markerData.hex
+                        ? "aircraft-marker--followed"
+                        : ""
+                    }`}
                     aria-label={`Aircraft ${markerData.hex}${markerData.aircraft.hasMessages ? " - Click to view messages" : ""}`}
                     style={{
                       backgroundPosition: `-${markerData.spritePosition.x}px -${markerData.spritePosition.y}px`,
@@ -472,6 +533,9 @@ export function AircraftMarkers({
                         : "default",
                     }}
                     onClick={() => handleMarkerClick(markerData.aircraft)}
+                    onContextMenu={(e) =>
+                      handleMarkerContextMenu(e, markerData.aircraft)
+                    }
                     onMouseEnter={(e) => {
                       // Calculate if tooltip should appear above or below marker
                       const rect = e.currentTarget.getBoundingClientRect();
@@ -529,7 +593,11 @@ export function AircraftMarkers({
                     hoveredAircraftHex === markerData.hex
                       ? "aircraft-marker--hovered"
                       : ""
-                  } ${markerData.hasUnreadMessages ? "aircraft-marker--unread" : ""}`}
+                  } ${markerData.hasUnreadMessages ? "aircraft-marker--unread" : ""} ${
+                    followedAircraftHex === markerData.hex
+                      ? "aircraft-marker--followed"
+                      : ""
+                  }`}
                   aria-label={`Aircraft ${markerData.hex}${markerData.aircraft.hasMessages ? " - Click to view messages" : ""}`}
                   style={{
                     width: `${markerData.width}px`,
@@ -541,6 +609,9 @@ export function AircraftMarkers({
                       : "default",
                   }}
                   onClick={() => handleMarkerClick(markerData.aircraft)}
+                  onContextMenu={(e) =>
+                    handleMarkerContextMenu(e, markerData.aircraft)
+                  }
                   onMouseEnter={(e) => {
                     // Calculate if tooltip should appear above or below marker
                     const rect = e.currentTarget.getBoundingClientRect();
@@ -723,6 +794,20 @@ export function AircraftMarkers({
         messageGroup={selectedMessageGroup}
         onClose={handleCloseModal}
       />
+
+      {/* Context menu for aircraft actions */}
+      {contextMenu && (
+        <AircraftContextMenu
+          aircraft={contextMenu.aircraft}
+          x={contextMenu.x}
+          y={contextMenu.y}
+          isFollowed={contextMenu.aircraft.hex === followedAircraftHex}
+          onClose={handleContextMenuClose}
+          onViewMessages={handleViewMessages}
+          onFollow={handleFollowAircraft}
+          onUnfollow={handleUnfollowAircraft}
+        />
+      )}
     </>
   );
 }

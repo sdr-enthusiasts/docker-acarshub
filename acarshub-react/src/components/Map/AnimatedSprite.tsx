@@ -24,9 +24,11 @@ interface AnimatedSpriteProps {
   frameTime: number;
   rotation: number;
   onClick: () => void;
+  onContextMenu?: (e: React.MouseEvent<HTMLButtonElement>) => void;
   onMouseEnter: (e: React.MouseEvent<HTMLButtonElement>) => void;
   onMouseLeave: () => void;
   isHovered: boolean;
+  isFollowed?: boolean;
   hasUnreadMessages: boolean;
   ariaLabel: string;
   cursorStyle: "pointer" | "default";
@@ -45,9 +47,11 @@ export function AnimatedSprite({
   frameTime,
   rotation,
   onClick,
+  onContextMenu,
   onMouseEnter,
   onMouseLeave,
   isHovered,
+  isFollowed = false,
   hasUnreadMessages,
   ariaLabel,
   cursorStyle,
@@ -95,7 +99,9 @@ export function AnimatedSprite({
       type="button"
       className={`aircraft-sprite ${spriteClass} ${
         isHovered ? "aircraft-marker--hovered" : ""
-      } ${hasUnreadMessages ? "aircraft-marker--unread" : ""}`}
+      } ${hasUnreadMessages ? "aircraft-marker--unread" : ""} ${
+        isFollowed ? "aircraft-marker--followed" : ""
+      }`}
       aria-label={ariaLabel}
       style={{
         backgroundPosition: `-${position.x}px -${position.y}px`,
@@ -106,6 +112,7 @@ export function AnimatedSprite({
         cursor: cursorStyle,
       }}
       onClick={onClick}
+      onContextMenu={onContextMenu}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     />
