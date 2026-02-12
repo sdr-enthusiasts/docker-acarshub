@@ -14,8 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import type { MapRef } from "react-map-gl/maplibre";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { MapRef, ViewState } from "react-map-gl/maplibre";
 import { useSearchParams } from "react-router-dom";
 import { MapComponent, MapControls, MapLegend } from "../components/Map";
 import { AircraftList } from "../components/Map/AircraftList";
@@ -58,12 +58,29 @@ export const LiveMapPage = () => {
   const [followedAircraftHex, setFollowedAircraftHex] = useState<string | null>(
     null,
   );
+  const [isZooming, setIsZooming] = useState(false);
+  const zoomCooldownTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
 
   // Pair ADS-B aircraft with ACARS message groups
   const pairedAircraft = useMemo(() => {
     const aircraft = adsbAircraft?.aircraft || [];
     return pairADSBWithACARSMessages(aircraft, messageGroups);
   }, [adsbAircraft, messageGroups]);
+
+  // Freeze aircraft positions during zoom
+  const frozenAircraftRef = useRef<PairedAircraft[]>(pairedAircraft);
+  const [displayedAircraft, setDisplayedAircraft] =
+    useState<PairedAircraft[]>(pairedAircraft);
+
+  // Update displayed aircraft only when not zooming
+  useEffect(() => {
+    if (!isZooming) {
+      setDisplayedAircraft(pairedAircraft);
+      frozenAircraftRef.current = pairedAircraft;
+    }
+  }, [pairedAircraft, isZooming]);
 
   useEffect(() => {
     setCurrentPage("Live Map");
@@ -150,11 +167,68 @@ export const LiveMapPage = () => {
     }
   };
 
-  // Auto-center on followed aircraft when position updates
-  useEffect(() => {
-    if (!followedAircraftHex || !mapRef.current) return;
+  // Handle zoom state tracking with cooldown
+  const previousZoomRef = useRef<number | null>(null);
 
-    const followedAircraft = pairedAircraft.find(
+  const handleViewStateChange = useCallback(
+    (viewState: ViewState) => {
+      const currentZoom = viewState.zoom;
+
+      // Initialize previous zoom on first call
+      if (previousZoomRef.current === null) {
+        previousZoomRef.current = currentZoom;
+        return;
+      }
+
+      // Detect zoom change
+      if (Math.abs(currentZoom - previousZoomRef.current) > 0.01) {
+        // Zoom is happening
+        if (!isZooming) {
+          mapLogger.debug("Zoom detected, freezing aircraft positions");
+          // Freeze current aircraft positions
+          frozenAircraftRef.current = pairedAircraft;
+          setDisplayedAircraft(frozenAircraftRef.current);
+        }
+        setIsZooming(true);
+
+        // Clear any existing cooldown timer
+        if (zoomCooldownTimerRef.current) {
+          clearTimeout(zoomCooldownTimerRef.current);
+        }
+
+        // Set a new cooldown timer (200ms after zoom stops)
+        zoomCooldownTimerRef.current = setTimeout(() => {
+          setIsZooming(false);
+          mapLogger.debug(
+            "Zoom cooldown complete, unfreezing aircraft positions",
+          );
+          // Unfreeze - the effect will update displayedAircraft with latest pairedAircraft
+        }, 200);
+      }
+
+      previousZoomRef.current = currentZoom;
+    },
+    [isZooming, pairedAircraft],
+  );
+
+  // Cleanup zoom cooldown timer on unmount
+  useEffect(() => {
+    return () => {
+      if (zoomCooldownTimerRef.current) {
+        clearTimeout(zoomCooldownTimerRef.current);
+      }
+    };
+  }, []);
+
+  // Auto-center on followed aircraft when position updates
+  // Skip updates during zoom operations to prevent race conditions
+  // Use displayedAircraft (frozen during zoom) to prevent jumps
+  useEffect(() => {
+    if (!followedAircraftHex || !mapRef.current || isZooming) {
+      return;
+    }
+
+    const followedAircraft = displayedAircraft.find(
       (a) => a.hex === followedAircraftHex,
     );
 
@@ -179,7 +253,7 @@ export const LiveMapPage = () => {
       });
       setFollowedAircraftHex(null);
     }
-  }, [followedAircraftHex, pairedAircraft]);
+  }, [followedAircraftHex, displayedAircraft, isZooming]);
 
   return (
     <div className="page live-map-page">
@@ -187,7 +261,7 @@ export const LiveMapPage = () => {
         {/* Aircraft list sidebar */}
         <aside className="live-map-page__sidebar">
           <AircraftList
-            aircraft={pairedAircraft}
+            aircraft={displayedAircraft}
             onAircraftClick={handleAircraftClick}
             onAircraftHover={handleAircraftHover}
             hoveredAircraft={hoveredAircraftHex}
@@ -199,9 +273,11 @@ export const LiveMapPage = () => {
           <MapComponent
             mapRef={mapRef}
             onLoad={handleMapLoad}
+            onViewStateChange={handleViewStateChange}
             hoveredAircraftHex={hoveredAircraftHex}
             followedAircraftHex={followedAircraftHex}
             onFollowAircraft={handleFollowAircraft}
+            aircraft={displayedAircraft}
             className={isMapLoaded ? "live-map-page__map--loaded" : ""}
           />
 

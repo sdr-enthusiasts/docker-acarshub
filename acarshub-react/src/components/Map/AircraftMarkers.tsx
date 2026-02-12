@@ -47,6 +47,8 @@ interface AircraftMarkersProps {
   followedAircraftHex?: string | null;
   /** Callback when follow/unfollow is requested */
   onFollowAircraft?: (hex: string | null) => void;
+  /** Optional pre-paired aircraft (for frozen positions during zoom) */
+  aircraft?: PairedAircraft[];
 }
 
 interface AircraftMarkerData {
@@ -160,6 +162,7 @@ export function AircraftMarkers({
   hoveredAircraftHex,
   followedAircraftHex,
   onFollowAircraft,
+  aircraft: externalAircraft,
 }: AircraftMarkersProps = {}) {
   const adsbAircraft = useAppStore((state) => state.adsbAircraft);
   const messageGroups = useAppStore((state) => state.messageGroups);
@@ -187,11 +190,14 @@ export function AircraftMarkers({
     }
   }, [useSprites]);
 
-  // Pair ADS-B aircraft with ACARS messages
+  // Pair ADS-B aircraft with ACARS messages (or use external aircraft if provided)
   const pairedAircraft = useMemo(() => {
+    if (externalAircraft) {
+      return externalAircraft;
+    }
     const aircraft = adsbAircraft?.aircraft || [];
     return pairADSBWithACARSMessages(aircraft, messageGroups);
-  }, [adsbAircraft, messageGroups]);
+  }, [adsbAircraft, messageGroups, externalAircraft]);
 
   // Filter aircraft based on map settings
   const filteredPairedAircraft = useMemo(() => {

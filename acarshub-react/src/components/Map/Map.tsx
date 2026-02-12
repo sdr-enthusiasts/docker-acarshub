@@ -16,7 +16,11 @@
 
 import type maplibregl from "maplibre-gl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { MapRef, ViewState } from "react-map-gl/maplibre";
+import type {
+  MapRef,
+  ViewState,
+  ViewStateChangeEvent,
+} from "react-map-gl/maplibre";
 import MapLibreMap, {
   NavigationControl,
   ScaleControl,
@@ -28,6 +32,7 @@ import {
 } from "../../config/mapProviders";
 import { useAppStore } from "../../store/useAppStore";
 import { useSettingsStore } from "../../store/useSettingsStore";
+import type { PairedAircraft } from "../../utils/aircraftPairing";
 import { mapLogger } from "../../utils/logger";
 import { AircraftMarkers } from "./AircraftMarkers";
 import { GeoJSONOverlays } from "./GeoJSONOverlays";
@@ -54,6 +59,8 @@ interface MapComponentProps {
   followedAircraftHex?: string | null;
   /** Callback when follow/unfollow is requested */
   onFollowAircraft?: (hex: string | null) => void;
+  /** Optional pre-paired aircraft (for frozen positions during zoom) */
+  aircraft?: PairedAircraft[];
 }
 
 /**
@@ -70,6 +77,7 @@ export function MapComponent({
   hoveredAircraftHex,
   followedAircraftHex,
   onFollowAircraft,
+  aircraft,
 }: MapComponentProps) {
   const decoders = useAppStore((state) => state.decoders);
   const mapSettings = useSettingsStore((state) => state.settings.map);
@@ -273,13 +281,8 @@ export function MapComponent({
   }, [mapSettings.provider, mapSettings.customTileUrl, viewState.zoom]);
 
   // Handle view state changes
-  // biome-ignore lint/correctness/useExhaustiveDependencies: refs don't need to be in dependencies
   const handleMove = useCallback(
-    (evt: {
-      viewState: ViewState;
-      target: { _zooming?: boolean };
-      originalEvent?: WheelEvent;
-    }) => {
+    (evt: ViewStateChangeEvent) => {
       // Check if zooming by detecting wheel events
       const isZooming = evt.originalEvent instanceof WheelEvent;
 
@@ -383,6 +386,7 @@ export function MapComponent({
           hoveredAircraftHex={hoveredAircraftHex}
           followedAircraftHex={followedAircraftHex}
           onFollowAircraft={onFollowAircraft}
+          aircraft={aircraft}
         />
       </MapLibreMap>
 
