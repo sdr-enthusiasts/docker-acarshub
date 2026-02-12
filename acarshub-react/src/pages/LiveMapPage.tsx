@@ -160,24 +160,18 @@ export const LiveMapPage = () => {
 
     if (followedAircraft?.lat && followedAircraft.lon) {
       const map = mapRef.current.getMap();
-      const currentCenter = map.getCenter();
       const targetCenter: [number, number] = [
         followedAircraft.lon,
         followedAircraft.lat,
       ];
 
-      // Only pan if the aircraft has moved significantly (more than 0.0001 degrees)
-      // This prevents jittery re-centering on every tiny position update
-      const distance = Math.sqrt(
-        (currentCenter.lng - targetCenter[0]) ** 2 +
-          (currentCenter.lat - targetCenter[1]) ** 2,
-      );
-
-      if (distance > 0.0001) {
-        // Use panTo instead of flyTo to preserve zoom level
-        // This keeps the aircraft centered even when user zooms
-        map.panTo(targetCenter, { duration: 500 });
-      }
+      // Always keep aircraft centered using flyTo (preserves zoom)
+      // Short duration for smooth continuous re-centering
+      map.flyTo({
+        center: targetCenter,
+        duration: 300,
+        essential: true, // This animation is considered essential with respect to prefers-reduced-motion
+      });
     } else if (followedAircraft === undefined) {
       // Aircraft no longer in ADS-B data, stop following
       mapLogger.info("Followed aircraft disappeared from ADS-B, unfollowing", {
@@ -185,34 +179,6 @@ export const LiveMapPage = () => {
       });
       setFollowedAircraftHex(null);
     }
-  }, [followedAircraftHex, pairedAircraft]);
-
-  // Re-center on followed aircraft when zooming
-  useEffect(() => {
-    if (!followedAircraftHex || !mapRef.current) return;
-
-    const map = mapRef.current.getMap();
-
-    const handleZoom = () => {
-      const followedAircraft = pairedAircraft.find(
-        (a) => a.hex === followedAircraftHex,
-      );
-
-      if (followedAircraft?.lat && followedAircraft.lon) {
-        // Immediately set center without animation during zoom
-        const center: [number, number] = [
-          followedAircraft.lon,
-          followedAircraft.lat,
-        ];
-        map.setCenter(center);
-      }
-    };
-
-    map.on("zoom", handleZoom);
-
-    return () => {
-      map.off("zoom", handleZoom);
-    };
   }, [followedAircraftHex, pairedAircraft]);
 
   return (

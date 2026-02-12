@@ -15,7 +15,7 @@
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
 import type maplibregl from "maplibre-gl";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { MapRef, ViewState } from "react-map-gl/maplibre";
 import MapLibreMap, {
   NavigationControl,
@@ -118,7 +118,8 @@ export function MapComponent({
   };
 
   // Map view state
-  const [viewState, setViewState] = useState<ViewState>(getInitialViewState);
+  const [viewState, setViewState] = useState<ViewState>(getInitialViewState());
+  const previousViewStateRef = useRef<ViewState>(getInitialViewState());
 
   // Map context menu state
   const [mapContextMenu, setMapContextMenu] = useState<{
@@ -272,12 +273,34 @@ export function MapComponent({
   }, [mapSettings.provider, mapSettings.customTileUrl, viewState.zoom]);
 
   // Handle view state changes
+  // biome-ignore lint/correctness/useExhaustiveDependencies: refs don't need to be in dependencies
   const handleMove = useCallback(
-    (evt: { viewState: ViewState }) => {
-      setViewState(evt.viewState);
-      onViewStateChange?.(evt.viewState);
+    (evt: {
+      viewState: ViewState;
+      target: { _zooming?: boolean };
+      originalEvent?: WheelEvent;
+    }) => {
+      // Check if zooming by detecting wheel events
+      const isZooming = evt.originalEvent instanceof WheelEvent;
+
+      // If following an aircraft and zooming, keep the old center (where aircraft is)
+      if (followedAircraftHex && isZooming) {
+        const lockedViewState = {
+          ...evt.viewState,
+          longitude: previousViewStateRef.current.longitude,
+          latitude: previousViewStateRef.current.latitude,
+        };
+        setViewState(lockedViewState);
+        onViewStateChange?.(lockedViewState);
+        // Don't update ref during zoom - keep the locked position
+      } else {
+        setViewState(evt.viewState);
+        onViewStateChange?.(evt.viewState);
+        // Update ref with new position when not zooming
+        previousViewStateRef.current = evt.viewState;
+      }
     },
-    [onViewStateChange],
+    [onViewStateChange, followedAircraftHex],
   );
 
   // Handle map load

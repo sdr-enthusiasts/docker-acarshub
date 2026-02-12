@@ -382,6 +382,7 @@ export function AircraftMarkers({
     aircraft: PairedAircraft,
   ) => {
     event.preventDefault();
+    event.stopPropagation(); // Prevent map context menu from also appearing
     setContextMenu({
       aircraft,
       x: event.clientX,
