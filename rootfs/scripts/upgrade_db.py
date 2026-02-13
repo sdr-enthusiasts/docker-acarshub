@@ -218,8 +218,12 @@ def stamp_existing_database(conn):
         return False
 
 
-def upgrade_database():
-    """Run pending Alembic migrations."""
+def upgrade_database(is_new_db=False):
+    """Run pending Alembic migrations.
+
+    Args:
+        is_new_db: True if this is a newly created database (no warning needed)
+    """
     acarshub_logging.log(
         "Checking for pending migrations", "db_upgrade", level=LOG_LEVEL["INFO"]
     )
@@ -232,6 +236,65 @@ def upgrade_database():
         if "(head)" in current:
             acarshub_logging.log("Database is already at latest revision", "db_upgrade")
             return True
+
+        # EXISTING DATABASE WITH PENDING MIGRATIONS - SHOW WARNING
+        if not is_new_db:
+            acarshub_logging.log("=" * 80, "db_upgrade", level=LOG_LEVEL["WARNING"])
+            acarshub_logging.log("=" * 80, "db_upgrade", level=LOG_LEVEL["WARNING"])
+            acarshub_logging.log("", "db_upgrade", level=LOG_LEVEL["WARNING"])
+            acarshub_logging.log(
+                "⚠️  DATABASE MIGRATION REQUIRED ⚠️",
+                "db_upgrade",
+                level=LOG_LEVEL["WARNING"],
+            )
+            acarshub_logging.log("", "db_upgrade", level=LOG_LEVEL["WARNING"])
+            acarshub_logging.log(
+                "Your database needs to be upgraded to the latest schema.",
+                "db_upgrade",
+                level=LOG_LEVEL["WARNING"],
+            )
+            acarshub_logging.log(
+                "This process will now run automatically.",
+                "db_upgrade",
+                level=LOG_LEVEL["WARNING"],
+            )
+            acarshub_logging.log("", "db_upgrade", level=LOG_LEVEL["WARNING"])
+            acarshub_logging.log(
+                "⏳ PLEASE DO NOT INTERRUPT THIS PROCESS ⏳",
+                "db_upgrade",
+                level=LOG_LEVEL["WARNING"],
+            )
+            acarshub_logging.log("", "db_upgrade", level=LOG_LEVEL["WARNING"])
+            acarshub_logging.log(
+                "The migration may take 10-30 minutes on large databases.",
+                "db_upgrade",
+                level=LOG_LEVEL["WARNING"],
+            )
+            acarshub_logging.log(
+                "The application will be unavailable during this time.",
+                "db_upgrade",
+                level=LOG_LEVEL["WARNING"],
+            )
+            acarshub_logging.log(
+                "Progress messages will be shown below.",
+                "db_upgrade",
+                level=LOG_LEVEL["WARNING"],
+            )
+            acarshub_logging.log("", "db_upgrade", level=LOG_LEVEL["WARNING"])
+            acarshub_logging.log(
+                "If the process appears stuck during VACUUM, it is still working.",
+                "db_upgrade",
+                level=LOG_LEVEL["WARNING"],
+            )
+            acarshub_logging.log(
+                "VACUUM can take 10-20 minutes and does not show progress.",
+                "db_upgrade",
+                level=LOG_LEVEL["WARNING"],
+            )
+            acarshub_logging.log("", "db_upgrade", level=LOG_LEVEL["WARNING"])
+            acarshub_logging.log("=" * 80, "db_upgrade", level=LOG_LEVEL["WARNING"])
+            acarshub_logging.log("=" * 80, "db_upgrade", level=LOG_LEVEL["WARNING"])
+            acarshub_logging.log("", "db_upgrade", level=LOG_LEVEL["WARNING"])
 
         # Run migrations
         acarshub_logging.log(
@@ -418,8 +481,8 @@ def main():
                     exit_code = 1
                     return
 
-            # Run any pending migrations
-            if not upgrade_database():
+            # Run any pending migrations (mark as existing database for warning)
+            if not upgrade_database(is_new_db=False):
                 exit_code = 1
                 return
 
