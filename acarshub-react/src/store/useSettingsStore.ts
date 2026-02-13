@@ -86,6 +86,7 @@ interface SettingsState {
   setShowRainViewer: (enabled: boolean) => void;
   setUseSprites: (enabled: boolean) => void;
   setColorByDecoder: (enabled: boolean) => void;
+  setGroundAltitudeThreshold: (altitude: number) => void;
 
   // GeoJSON overlay actions
   setGeoJSONOverlay: (overlayId: string, enabled: boolean) => void;
@@ -151,6 +152,7 @@ const getDefaultSettings = (): UserSettings => {
       defaultZoom: 7,
       useSprites: true,
       colorByDecoder: false,
+      groundAltitudeThreshold: 500,
       showOnlyAcars: false,
       showDatablocks: true,
       showExtendedDatablocks: false,
@@ -518,6 +520,18 @@ export const useSettingsStore = create<SettingsState>()(
           settings: {
             ...state.settings,
             map: { ...state.settings.map, colorByDecoder: enabled },
+            updatedAt: Date.now(),
+          },
+        })),
+
+      setGroundAltitudeThreshold: (altitude) =>
+        set((state) => ({
+          settings: {
+            ...state.settings,
+            map: {
+              ...state.settings.map,
+              groundAltitudeThreshold: Math.max(0, altitude),
+            },
             updatedAt: Date.now(),
           },
         })),

@@ -27,7 +27,7 @@ export interface PairedAircraft {
   tail?: string; // Registration/tail from ADS-B (via 'r' field)
   lat?: number;
   lon?: number;
-  alt_baro?: number;
+  alt_baro?: number | "ground"; // Altitude (feet) or "ground" literal
   gs?: number; // Ground speed
   track?: number; // Heading
   category?: string; // Aircraft category (string in ADSBAircraft)
@@ -189,14 +189,15 @@ export function getDisplayCallsign(aircraft: PairedAircraft): string {
  * Supports feet/meters (no unit suffix for space savings)
  */
 export function formatAltitude(
-  altBaro?: number,
+  altBaro?: number | "ground",
   unit: AltitudeUnit = "feet",
 ): string {
   if (altBaro === undefined || altBaro === null) {
     return "N/A";
   }
 
-  if (altBaro === 0) {
+  // Handle "ground" literal from ADS-B
+  if (altBaro === "ground" || altBaro === 0) {
     return "Ground";
   }
 

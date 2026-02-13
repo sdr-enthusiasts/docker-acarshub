@@ -1439,17 +1439,19 @@ export function svgShapeToURI(
  *
  * @param hasAlerts - Aircraft has active alerts
  * @param hasMessages - Aircraft has ACARS messages
- * @param altitude - Current altitude
+ * @param altitude - Current altitude (number or "ground" literal)
  * @param colorByDecoder - Color by decoder type instead of message state
  * @param decoderType - Decoder type (ACARS, VDLM, HFDL, IMSL, IRDM)
+ * @param groundThreshold - Altitude threshold (ft MSL) for "on ground" color
  * @returns Hex color code from current theme
  */
 export function getAircraftColor(
   hasAlerts: boolean,
   hasMessages: boolean,
-  altitude?: number,
+  altitude?: number | "ground",
   colorByDecoder = false,
   decoderType?: string,
+  groundThreshold = 500,
 ): string {
   // Get computed CSS variables from document root
   const root = document.documentElement;
@@ -1484,7 +1486,11 @@ export function getAircraftColor(
   }
 
   // Ground = Catppuccin overlay1 (gray)
-  if (altitude !== undefined && altitude < 500) {
+  // Check for "ground" literal OR altitude at/below threshold
+  if (
+    altitude === "ground" ||
+    (typeof altitude === "number" && altitude <= groundThreshold)
+  ) {
     return computedStyle.getPropertyValue("--color-overlay1").trim();
   }
 

@@ -204,6 +204,9 @@ export function AircraftMarkers({
   const colorByDecoder = useSettingsStore(
     (state) => state.settings.map.colorByDecoder,
   );
+  const groundAltitudeThreshold = useSettingsStore(
+    (state) => state.settings.map.groundAltitudeThreshold,
+  );
   const [localHoveredAircraft, setLocalHoveredAircraft] =
     useState<TooltipState | null>(null);
   const [selectedMessageGroup, setSelectedMessageGroup] =
@@ -323,6 +326,7 @@ export function AircraftMarkers({
         aircraft.alt_baro,
         colorByDecoder,
         decoderType,
+        groundAltitudeThreshold,
       );
 
       // Generate SVG icon (always generate as fallback)
@@ -403,8 +407,9 @@ export function AircraftMarkers({
               // Legacy behavior: use VDLM (green) sprite for any messages
               spriteClass = "decoder-vdlm";
             } else if (
-              aircraft.alt_baro !== undefined &&
-              aircraft.alt_baro < 500
+              aircraft.alt_baro === "ground" ||
+              (typeof aircraft.alt_baro === "number" &&
+                aircraft.alt_baro <= groundAltitudeThreshold)
             ) {
               spriteClass = "low-altitude";
             } else {
@@ -434,7 +439,13 @@ export function AircraftMarkers({
     }
 
     return markers;
-  }, [filteredPairedAircraft, readMessageUids, useSprites, colorByDecoder]);
+  }, [
+    filteredPairedAircraft,
+    readMessageUids,
+    useSprites,
+    colorByDecoder,
+    groundAltitudeThreshold,
+  ]);
 
   // Handle marker click
   const handleMarkerClick = (aircraft: PairedAircraft) => {

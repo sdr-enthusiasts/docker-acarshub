@@ -80,6 +80,9 @@ export const SettingsModal = () => {
   const importSettings = useSettingsStore((state) => state.importSettings);
   const setLogLevel = useSettingsStore((state) => state.setLogLevel);
   const setPersistLogs = useSettingsStore((state) => state.setPersistLogs);
+  const setGroundAltitudeThreshold = useSettingsStore(
+    (state) => state.setGroundAltitudeThreshold,
+  );
 
   const [activeTab, setActiveTab] = useState<string>("appearance");
 
@@ -1189,6 +1192,44 @@ export const SettingsModal = () => {
                   All providers are free to use and do not require API keys.
                   Based on tar1090's map provider selection.
                 </p>
+              </div>
+            </Card>
+
+            <Card
+              title="Map Display"
+              variant="default"
+              className="settings-card"
+            >
+              <div className="settings-card__content">
+                <p className="settings-card__help">
+                  Configure how aircraft markers are displayed on the map.
+                </p>
+
+                <div className="settings-form-field">
+                  <label htmlFor="ground-altitude-threshold">
+                    Ground Altitude Threshold (ft MSL)
+                  </label>
+                  <input
+                    id="ground-altitude-threshold"
+                    type="number"
+                    className="settings-input"
+                    min="0"
+                    max="10000"
+                    step="100"
+                    value={settings.map.groundAltitudeThreshold}
+                    onChange={(e) => {
+                      const value = parseInt(e.target.value, 10);
+                      if (!isNaN(value)) {
+                        setGroundAltitudeThreshold(value);
+                      }
+                    }}
+                  />
+                  <p className="settings-card__help">
+                    Aircraft at or below this altitude (or with ADS-B status
+                    "ground") will be displayed in gray. Adjust this based on
+                    your local terrain elevation. Default: 500 ft MSL.
+                  </p>
+                </div>
               </div>
             </Card>
           </div>

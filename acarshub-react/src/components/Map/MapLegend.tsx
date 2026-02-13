@@ -35,6 +35,9 @@ export function MapLegend() {
   const colorByDecoder = useSettingsStore(
     (state) => state.settings.map.colorByDecoder,
   );
+  const groundAltitudeThreshold = useSettingsStore(
+    (state) => state.settings.map.groundAltitudeThreshold,
+  );
 
   return (
     <div className="map-legend">
@@ -137,7 +140,7 @@ export function MapLegend() {
                 aria-hidden="true"
               />
               <span className="map-legend__label">
-                Aircraft on ground (&lt;500 ft)
+                Aircraft on ground (&le;{groundAltitudeThreshold} ft MSL)
               </span>
             </div>
 

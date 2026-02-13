@@ -120,7 +120,7 @@ export interface ADSBAircraft {
   lat?: number; // Latitude
   lon?: number; // Longitude
   track?: number; // Heading for icon rotation (degrees)
-  alt_baro?: number; // Altitude (feet)
+  alt_baro?: number | "ground"; // Altitude (feet) or "ground" literal
   gs?: number; // Ground speed (knots)
   squawk?: string; // Transponder code
   baro_rate?: number; // Climb/descent rate (ft/min)
@@ -904,6 +904,8 @@ export interface MapSettings {
   useSprites: boolean;
   /** Color aircraft markers by decoder type (ACARS=blue, VDLM=green, HFDL=yellow, etc.) instead of message state */
   colorByDecoder: boolean;
+  /** Altitude threshold (ft MSL) for "on ground" color (default: 500) */
+  groundAltitudeThreshold: number;
   /** Show only ACARS aircraft on map */
   showOnlyAcars: boolean;
   /** Show data blocks */
@@ -1045,6 +1047,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
     defaultZoom: 7,
     useSprites: true,
     colorByDecoder: false,
+    groundAltitudeThreshold: 500,
     showOnlyAcars: false,
     showDatablocks: true,
     showExtendedDatablocks: false,
