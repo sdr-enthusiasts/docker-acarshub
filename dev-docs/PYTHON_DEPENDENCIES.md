@@ -51,22 +51,28 @@ This ensures `requirements.txt` matches `pyproject.toml`.
 
 ### Git-Based Dependencies
 
-Git dependencies require special handling:
+Git dependencies use different strategies for development vs production:
 
-**pyproject.toml format:**
+**pyproject.toml (development):**
 ```toml
 rrdtool @ git+https://github.com/fredclausen/python-rrdtool.git
 ```
+- No commit hash = tracks HEAD/main
+- Always pulls latest for local development
+- Keeps you up-to-date with upstream changes
 
-**requirements.txt format:**
+**requirements.txt (production/Docker):**
 ```txt
 rrdtool @git+https://github.com/fredclausen/python-rrdtool.git@b522cab1db4039b21ef6e34e2221c2828ca72174
 ```
+- Pinned to specific commit hash
+- Ensures reproducible Docker builds
+- Prevents unexpected changes in production
 
 The sync script automatically:
-- Extracts the commit hash from PDM's export
-- Formats it correctly for Docker builds
-- Preserves the git URL from `pyproject.toml`
+- Preserves unpinned URL in `pyproject.toml`
+- Pins to hardcoded commit hash in `requirements.txt`
+- Provides instructions for updating the commit hash
 
 ---
 
@@ -122,16 +128,35 @@ Then sync:
 
 ### Update Git-Based Dependencies
 
+**For local development:**
 ```bash
-# Update to latest commit
+# PDM will pull latest from git
 pdm update rrdtool
 
-# Or specify a commit/tag in pyproject.toml:
-rrdtool @ git+https://github.com/fredclausen/python-rrdtool.git@v1.2.3
-
-# Then sync
-./sync-python-deps.sh
+# pyproject.toml stays unpinned (tracks HEAD/main)
 ```
+
+**To update the pinned commit in requirements.txt:**
+```bash
+# 1. Check latest commit hash
+git ls-remote https://github.com/fredclausen/python-rrdtool.git HEAD
+
+# 2. Edit sync-python-deps.sh and update RRDTOOL_COMMIT variable
+nano sync-python-deps.sh
+# Change: RRDTOOL_COMMIT="b522cab..."
+# To:     RRDTOOL_COMMIT="<new-hash>"
+
+# 3. Re-sync
+./sync-python-deps.sh
+
+# 4. Test in Docker with new version
+docker-compose build --no-cache
+```
+
+**Why this approach?**
+- **Development**: Always use latest (pyproject.toml unpinned)
+- **Production**: Pin to tested commit (requirements.txt pinned)
+- **Safety**: Docker builds are reproducible
 
 ---
 
@@ -288,12 +313,26 @@ version = "3.1.2"
 
 **Solution:**
 ```bash
-# Re-sync with correct commit hash
+# 1. Check if commit hash is valid
+git ls-remote https://github.com/fredclausen/python-rrdtool.git <commit-hash>
+
+# 2. If invalid, update to latest
+git ls-remote https://github.com/fredclausen/python-rrdtool.git HEAD
+
+# 3. Update RRDTOOL_COMMIT in sync-python-deps.sh
+nano sync-python-deps.sh
+
+# 4. Re-sync
 ./sync-python-deps.sh
 
-# Or manually fix in requirements.txt:
-rrdtool @git+https://github.com/fredclausen/python-rrdtool.git@<commit-hash>
+# 5. Test build
+docker-compose build --no-cache
 ```
+
+**Common causes:**
+- Commit was force-pushed or deleted
+- Wrong repository URL
+- Network/git access issues
 
 ### PDM Lock File Conflicts
 
@@ -369,12 +408,17 @@ dependencies = [
 ### 3. Test Both Environments
 
 ```bash
-# Test local (PDM)
+# Test local (PDM - uses unpinned git dependencies)
 pdm run dev
 
-# Test Docker (requirements.txt)
+# Test Docker (pip - uses pinned git dependencies)
+docker-compose build --no-cache
 docker-compose up
 ```
+
+**Note:** Git dependencies may differ between environments:
+- PDM tracks HEAD/main (latest)
+- Docker uses pinned commit (stable)
 
 ### 4. Review Updates Before Committing
 
@@ -462,6 +506,12 @@ A: Yes, always commit `pdm.lock` for reproducible builds.
 
 **Q: What about dev dependencies?**  
 A: Dev dependencies (testing, linting) go in `pyproject.toml` under `[tool.pdm.dev-dependencies]` and are NOT exported to `requirements.txt`.
+
+**Q: Why are git dependencies pinned in requirements.txt but not pyproject.toml?**  
+A: Development wants latest changes (unpinned), but production needs reproducibility (pinned). The sync script maintains both.
+
+**Q: How do I update the rrdtool commit hash?**  
+A: Get latest hash with `git ls-remote`, update `RRDTOOL_COMMIT` in `sync-python-deps.sh`, then re-run the script.
 
 ---
 
