@@ -165,8 +165,30 @@
       background-color: var(--color-red);
     }
 
+    // Legacy message state color
     &--messages {
       background-color: var(--color-green);
+    }
+
+    // Decoder-type colors (matching message card badges)
+    &--acars {
+      background-color: var(--color-blue);
+    }
+
+    &--vdlm {
+      background-color: var(--color-green);
+    }
+
+    &--hfdl {
+      background-color: var(--color-yellow);
+    }
+
+    &--imsl {
+      background-color: var(--color-peach);
+    }
+
+    &--irdm {
+      background-color: var(--color-mauve);
     }
 
     &--ground {
