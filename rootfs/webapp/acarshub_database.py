@@ -40,6 +40,16 @@ import re
 import os
 import uuid
 
+# Import query utilities for secure and performant queries
+from acarshub_query_builder import (
+    build_fts_search_query,
+    build_alert_matches_query,
+    build_alert_term_search_query,
+    parse_grouped_terms,
+    validate_search_params,
+)
+from acarshub_query_profiler import profile_query
+
 groundStations = dict()  # dictionary of all ground stations
 alert_terms = list()  # dictionary of all alert terms monitored
 # dictionary of all alert terms that should flag a message as a non-alert, even if alert matched
@@ -805,120 +815,141 @@ def find_airline_code_from_icao(icao):
 
 # FIXME: Rolled back to old database_search. Should wrap FTS table in SQL Alchemy engine
 def database_search(search_term, page=0):
-    result = None
+    """
+    Search messages table with FTS5 or standard SQL depending on search criteria.
+
+    This function uses two different search strategies:
+    1. FTS5 search: Fast prefix matching for most fields (flight, tail, label, etc.)
+    2. Standard SQL: Substring matching for station_id and ICAO (slower but more flexible)
+
+    Args:
+        search_term: Dictionary of field -> value to search
+        page: Page number (0-indexed)
+
+    Returns:
+        Tuple of (results_list, total_count)
+        - results_list: List of matching message dictionaries
+        - total_count: Total number of matches (for pagination)
+
+    Performance notes:
+        - FTS5 search is 10-100x faster but only supports prefix matching
+        - ICAO/station_id searches use LIKE '%value%' which cannot use indexes (slow)
+        - For large databases, ICAO substring searches may take several seconds
+
+    Security:
+        - All queries use parameterized queries to prevent SQL injection
+        - User input is sanitized before being used in FTS5 MATCH queries
+    """
+    session = None
 
     try:
+        # Validate and sanitize search parameters
+        search_term = validate_search_params(search_term)
+
         acarshub_logging.log(
             f"[database] Searching database for {search_term}",
             "database",
             level=LOG_LEVEL["DEBUG"],
         )
+
         session = db_session()
-        match_string = ""
-
-        # ICAO is stored as uppercase hex string in the database (e.g., "ABF308")
-        # FTS5 is case-sensitive, so we need to uppercase the search term
-        if "icao" in search_term and search_term["icao"]:
-            search_term["icao"] = search_term["icao"].strip().upper()
-
-        # Tail numbers are stored as uppercase strings
-        if "tail" in search_term and search_term["tail"]:
-            search_term["tail"] = search_term["tail"].upper()
 
         # Use non-FTS search (which supports substring matching with .contains())
         # when searching for station_id OR icao hex codes
         # FTS5 only supports prefix matching (e.g., "AB*" finds "ABC" but not "CAB")
         # ICAO hex searches need to match substrings (e.g., "BF3" should find "ABF308")
+        #
+        # WARNING: This path is SLOW on large databases (table scan with LIKE '%value%')
+        # Consider restricting to prefix-only searches in the future
         if ("station_id" in search_term and search_term["station_id"] != "") or (
             "icao" in search_term and search_term["icao"] != ""
         ):
-            # we need to search outside of FTS
-            conditions = []
-            query = session.query(messages)
-            for key in search_term:
-                if search_term[key] == "":
-                    continue
-                if key == "flight":
-                    conditions.append(messages.flight.contains(search_term[key]))
-                elif key == "depa":
-                    conditions.append(messages.depa.contains(search_term[key]))
-                elif key == "dsta":
-                    conditions.append(messages.dsta.contains(search_term[key]))
-                elif key == "freq":
-                    conditions.append(messages.freq.contains(search_term[key]))
-                elif key == "label":
-                    conditions.append(messages.label.contains(search_term[key]))
-                elif key == "tail":
-                    conditions.append(messages.tail.contains(search_term[key]))
-                elif key == "icao":
-                    conditions.append(messages.icao.contains(search_term[key]))
-                elif key == "msg_text":
-                    conditions.append(messages.text.contains(search_term[key]))
-                elif key == "station_id":
-                    conditions.append(messages.station_id.contains(search_term[key]))
+            with profile_query("database_search_non_fts", params={"page": page}):
+                # Build ORM query with conditions
+                conditions = []
+                query = session.query(messages)
 
-            result = (
-                query.filter(*conditions)
-                .order_by(messages.time.desc())
-                .limit(50)
-                .offset(page * 50)
+                for key in search_term:
+                    if search_term[key] == "":
+                        continue
+                    if key == "flight":
+                        conditions.append(messages.flight.contains(search_term[key]))
+                    elif key == "depa":
+                        conditions.append(messages.depa.contains(search_term[key]))
+                    elif key == "dsta":
+                        conditions.append(messages.dsta.contains(search_term[key]))
+                    elif key == "freq":
+                        conditions.append(messages.freq.contains(search_term[key]))
+                    elif key == "label":
+                        conditions.append(messages.label.contains(search_term[key]))
+                    elif key == "tail":
+                        conditions.append(messages.tail.contains(search_term[key]))
+                    elif key == "icao":
+                        conditions.append(messages.icao.contains(search_term[key]))
+                    elif key == "msg_text":
+                        conditions.append(messages.text.contains(search_term[key]))
+                    elif key == "station_id":
+                        conditions.append(
+                            messages.station_id.contains(search_term[key])
+                        )
+
+                # Execute paginated query
+                result = (
+                    query.filter(*conditions)
+                    .order_by(messages.time.desc())
+                    .limit(50)
+                    .offset(page * 50)
+                )
+
+                # Get total count for pagination
+                count = query.filter(*conditions).count()
+
+                processed_results = []
+                if count > 0:
+                    processed_results = [query_to_dict(d) for d in result]
+
+                return (processed_results, count)
+
+        # Use FTS5 for fast prefix matching search
+        # This path is 10-100x faster than the ORM path above
+        with profile_query("database_search_fts", params={"page": page}):
+            # Build secure FTS5 query using query builder
+            results_query, count_query, params = build_fts_search_query(
+                search_term, page=page, limit=50
             )
-            count = query.filter(*conditions).order_by(messages.time.desc()).count()
+
+            # No valid search terms
+            if results_query is None:
+                return (None, 0)
+
+            # Execute count query first
+            count_result = session.execute(count_query, params)
+            final_count = count_result.scalar()
+
+            if final_count == 0:
+                return (None, 0)
+
+            # Execute results query
+            result = session.execute(results_query, params)
+
             processed_results = []
+            for row in result.mappings().all():
+                row_dict = dict(row)
+                # FTS query returns 'msg_time' (column name), but update_keys() expects 'time' (model attribute name)
+                # Rename it here for consistency with non-FTS queries that use query_to_dict()
+                if "msg_time" in row_dict:
+                    row_dict["time"] = row_dict["msg_time"]
+                    del row_dict["msg_time"]
+                processed_results.append(row_dict)
 
-            if count > 0:
-                processed_results = [query_to_dict(d) for d in result]
-            session.close()
-            return (processed_results, count)
+            return (processed_results, final_count)
 
-        for key in search_term:
-            if search_term[key] is not None and search_term[key] != "":
-                if match_string == "":
-                    match_string += f'\'{key}:"{search_term[key]}"*'
-                else:
-                    match_string += f' AND {key}:"{search_term[key]}"*'
-
-        if match_string == "":
-            return [None, 0]
-
-        match_string += "'"
-
-        result = session.execute(
-            text(
-                f"SELECT * FROM messages WHERE id IN (SELECT rowid FROM messages_fts WHERE messages_fts MATCH {match_string} ORDER BY rowid DESC LIMIT 50 OFFSET {page * 50})"
-            )
-        )
-
-        count = session.execute(
-            text(
-                f"SELECT COUNT(*) FROM messages_fts WHERE messages_fts MATCH {match_string}"
-            )
-        )
-
-        processed_results = []
-        final_count = 0
-        for row in count:
-            final_count = row[0]
-
-        if final_count == 0:
-            session.close()
-            return [None, 0]
-
-        for row in result.mappings().all():
-            row_dict = dict(row)
-            # FTS query returns 'msg_time' (column name), but update_keys() expects 'time' (model attribute name)
-            # Rename it here for consistency with non-FTS queries that use query_to_dict()
-            if "msg_time" in row_dict:
-                row_dict["time"] = row_dict["msg_time"]
-                del row_dict["msg_time"]
-            processed_results.append(row_dict)
-
-        session.close()
-        return (processed_results, final_count)
     except Exception as e:
         acarshub_logging.acars_traceback(e, "database")
-        session.close()
-        return [None, 0]
+        return (None, 0)
+    finally:
+        if session:
+            session.close()
 
 
 # def database_search(search_term, page=0):
@@ -1119,123 +1150,69 @@ def load_recent_alerts(limit=50, before_timestamp=None):
     Returns:
         list: List of enriched alert message dictionaries, or empty list if none
     """
+    session = None
+
     try:
-        session = db_session()
+        with profile_query("load_recent_alerts", params={"limit": limit}):
+            session = db_session()
 
-        # Query messages that have alert matches via JOIN
-        # Aggregate matched terms using GROUP_CONCAT since alert_matches has one row per term
-        # Optionally filter by timestamp to avoid overlap with recent messages
-        if before_timestamp is not None:
-            query = text(
-                """
-                SELECT DISTINCT m.id, m.message_type, m.msg_time, m.station_id, m.toaddr, m.fromaddr,
-                       m.depa, m.dsta, m.eta, m.gtout, m.gtin, m.wloff, m.wlin,
-                       m.lat, m.lon, m.alt, m.msg_text, m.tail, m.flight, m.icao, m.freq, m.ack,
-                       m.mode, m.label, m.block_id, m.msgno, m.is_response, m.is_onground, m.error,
-                       m.libacars, m.level, m.uid,
-                       GROUP_CONCAT(CASE WHEN am.match_type = 'text' THEN am.term END, ',') as matched_text,
-                       GROUP_CONCAT(CASE WHEN am.match_type = 'icao' THEN am.term END, ',') as matched_icao,
-                       GROUP_CONCAT(CASE WHEN am.match_type = 'tail' THEN am.term END, ',') as matched_tail,
-                       GROUP_CONCAT(CASE WHEN am.match_type = 'flight' THEN am.term END, ',') as matched_flight
-                FROM messages m
-                INNER JOIN alert_matches am ON m.uid = am.message_uid
-                WHERE m.msg_time < :before_timestamp
-                GROUP BY m.uid
-                ORDER BY m.msg_time DESC
-                LIMIT :limit
-            """
+            # Build secure parameterized query using query builder
+            query, params = build_alert_matches_query(
+                limit=limit, offset=0, before_timestamp=before_timestamp
             )
-            result = session.execute(
-                query, {"limit": limit, "before_timestamp": before_timestamp}
+
+            # Execute query
+            result = session.execute(query, params)
+            processed_results = []
+
+            for row in result.mappings().all():
+                msg_dict = dict(row)
+
+                # Parse GROUP_CONCAT results into arrays
+                parse_grouped_terms(msg_dict)
+
+                # Enrich message with update_keys (converts msg_text to text, etc.)
+                # Note: update_keys is called BEFORE adding to results to ensure proper field names
+                # Import locally to avoid circular dependency (acarshub_helpers imports acarshub_database)
+                try:
+                    # Log BEFORE conversion
+                    had_msg_text = "msg_text" in msg_dict
+                    msg_text_value = msg_dict.get("msg_text", "")
+
+                    import acarshub_helpers
+
+                    acarshub_helpers.update_keys(msg_dict)
+
+                    # Log AFTER conversion to verify it worked
+                    has_text = "text" in msg_dict
+                    has_msg_text = "msg_text" in msg_dict
+                    text_value = msg_dict.get("text", "")
+
+                    acarshub_logging.log(
+                        f"Alert enrichment - UID: {msg_dict.get('uid')}, had_msg_text: {had_msg_text}, msg_text_len: {len(msg_text_value) if msg_text_value else 0}, has_text: {has_text}, has_msg_text: {has_msg_text}, text_len: {len(text_value) if text_value else 0}",
+                        "database",
+                        level=LOG_LEVEL["DEBUG"],
+                    )
+                except Exception as e:
+                    acarshub_logging.log(
+                        f"Error enriching alert message: {e}",
+                        "database",
+                        level=LOG_LEVEL["WARNING"],
+                    )
+                    acarshub_logging.acars_traceback(e, "database")
+
+                processed_results.append(msg_dict)
+
+            # Reverse to get oldest-to-newest order (like list_of_recent_messages)
+            processed_results.reverse()
+
+            acarshub_logging.log(
+                f"Loaded {len(processed_results)} recent alerts from database",
+                "database",
+                level=LOG_LEVEL["INFO"],
             )
-        else:
-            query = text(
-                """
-                SELECT DISTINCT m.id, m.message_type, m.msg_time, m.station_id, m.toaddr, m.fromaddr,
-                       m.depa, m.dsta, m.eta, m.gtout, m.gtin, m.wloff, m.wlin,
-                       m.lat, m.lon, m.alt, m.msg_text, m.tail, m.flight, m.icao, m.freq, m.ack,
-                       m.mode, m.label, m.block_id, m.msgno, m.is_response, m.is_onground, m.error,
-                       m.libacars, m.level, m.uid,
-                       GROUP_CONCAT(CASE WHEN am.match_type = 'text' THEN am.term END, ',') as matched_text,
-                       GROUP_CONCAT(CASE WHEN am.match_type = 'icao' THEN am.term END, ',') as matched_icao,
-                       GROUP_CONCAT(CASE WHEN am.match_type = 'tail' THEN am.term END, ',') as matched_tail,
-                       GROUP_CONCAT(CASE WHEN am.match_type = 'flight' THEN am.term END, ',') as matched_flight
-                FROM messages m
-                INNER JOIN alert_matches am ON m.uid = am.message_uid
-                GROUP BY m.uid
-                ORDER BY m.msg_time DESC
-                LIMIT :limit
-            """
-            )
-            result = session.execute(query, {"limit": limit})
-        processed_results = []
 
-        for row in result.mappings().all():
-            msg_dict = dict(row)
-            # Add matched flag for frontend
-            msg_dict["matched"] = True
-
-            # Convert GROUP_CONCAT results to arrays (remove None and split by comma)
-            if msg_dict.get("matched_text"):
-                msg_dict["matched_text"] = [
-                    t.strip() for t in msg_dict["matched_text"].split(",") if t.strip()
-                ]
-            else:
-                msg_dict["matched_text"] = []
-
-            # Clean up matched_icao, matched_tail, matched_flight (can be None or empty)
-            for field in ["matched_icao", "matched_tail", "matched_flight"]:
-                if msg_dict.get(field):
-                    msg_dict[field] = [
-                        t.strip() for t in msg_dict[field].split(",") if t.strip()
-                    ]
-                else:
-                    msg_dict[field] = None
-
-            # Enrich message with update_keys (converts msg_text to text, etc.)
-            # Note: update_keys is called BEFORE adding to results to ensure proper field names
-            # Import locally to avoid circular dependency (acarshub_helpers imports acarshub_database)
-            try:
-                # Log BEFORE conversion
-                had_msg_text = "msg_text" in msg_dict
-                msg_text_value = msg_dict.get("msg_text", "")
-
-                import acarshub_helpers
-
-                acarshub_helpers.update_keys(msg_dict)
-
-                # Log AFTER conversion to verify it worked
-                has_text = "text" in msg_dict
-                has_msg_text = "msg_text" in msg_dict
-                text_value = msg_dict.get("text", "")
-
-                acarshub_logging.log(
-                    f"Alert enrichment - UID: {msg_dict.get('uid')}, had_msg_text: {had_msg_text}, msg_text_len: {len(msg_text_value) if msg_text_value else 0}, has_text: {has_text}, has_msg_text: {has_msg_text}, text_len: {len(text_value) if text_value else 0}",
-                    "database",
-                    level=LOG_LEVEL["DEBUG"],
-                )
-            except Exception as e:
-                acarshub_logging.log(
-                    f"Error enriching alert message: {e}",
-                    "database",
-                    level=LOG_LEVEL["WARNING"],
-                )
-                acarshub_logging.acars_traceback(e, "database")
-
-            processed_results.append(msg_dict)
-
-        session.close()
-
-        # Reverse to get oldest-to-newest order (like list_of_recent_messages)
-        processed_results.reverse()
-
-        acarshub_logging.log(
-            f"Loaded {len(processed_results)} recent alerts from database",
-            "database",
-            level=LOG_LEVEL["INFO"],
-        )
-
-        return processed_results
+            return processed_results
 
     except Exception as e:
         acarshub_logging.log(
@@ -1245,6 +1222,9 @@ def load_recent_alerts(limit=50, before_timestamp=None):
         )
         acarshub_logging.acars_traceback(e, "database")
         return []
+    finally:
+        if session:
+            session.close()
 
 
 # def search_alerts(icao=None, tail=None, flight=None):
@@ -1920,87 +1900,44 @@ def search_alerts_by_term(term, page=0, results_per_page=50):
     if not term:
         return (0, [])
 
+    session = None
+
     try:
-        session = db_session()
+        with profile_query(
+            "search_alerts_by_term", params={"term": term, "page": page}
+        ):
+            session = db_session()
 
-        # First get total count
-        count_query = text(
-            """
-            SELECT COUNT(DISTINCT m.uid)
-            FROM messages m
-            INNER JOIN alert_matches am ON m.uid = am.message_uid
-            WHERE am.term = :term
-        """
-        )
+            # Build secure parameterized queries using query builder
+            results_query, count_query, params = build_alert_term_search_query(
+                term, page=page, results_per_page=results_per_page
+            )
 
-        count_result = session.execute(count_query, {"term": term.upper()}).scalar()
-        total_count = count_result or 0
+            # Get total count first
+            count_result = session.execute(count_query, params).scalar()
+            total_count = count_result or 0
 
-        if total_count == 0:
-            session.close()
-            return (0, [])
+            if total_count == 0:
+                return (0, [])
 
-        # Get paginated results
-        offset = page * results_per_page
+            # Get paginated results
+            result = session.execute(results_query, params)
 
-        results_query = text(
-            """
-            SELECT DISTINCT
-                m.id, m.message_type, m.msg_time, m.station_id, m.toaddr, m.fromaddr,
-                m.depa, m.dsta, m.eta, m.gtout, m.gtin, m.wloff, m.wlin,
-                m.lat, m.lon, m.alt, m.msg_text, m.tail, m.flight, m.icao, m.freq,
-                m.ack, m.mode, m.label, m.block_id, m.msgno, m.is_response,
-                m.is_onground, m.error, m.libacars, m.level, m.uid,
-                GROUP_CONCAT(CASE WHEN am.match_type = 'text' THEN am.term END, ',') as matched_text,
-                GROUP_CONCAT(CASE WHEN am.match_type = 'icao' THEN am.term END, ',') as matched_icao,
-                GROUP_CONCAT(CASE WHEN am.match_type = 'tail' THEN am.term END, ',') as matched_tail,
-                GROUP_CONCAT(CASE WHEN am.match_type = 'flight' THEN am.term END, ',') as matched_flight
-            FROM messages m
-            INNER JOIN alert_matches am ON m.uid = am.message_uid
-            WHERE am.term = :term
-            GROUP BY m.uid
-            ORDER BY m.msg_time DESC
-            LIMIT :limit OFFSET :offset
-        """
-        )
+            processed_results = []
+            for row in result.mappings().all():
+                msg_dict = dict(row)
+                # Parse GROUP_CONCAT results into arrays
+                parse_grouped_terms(msg_dict)
+                processed_results.append(msg_dict)
 
-        result = session.execute(
-            results_query,
-            {"term": term.upper(), "limit": results_per_page, "offset": offset},
-        )
-
-        processed_results = []
-
-        for row in result.mappings().all():
-            msg_dict = dict(row)
-            # Add matched flag for frontend
-            msg_dict["matched"] = True
-
-            # Convert GROUP_CONCAT results to arrays
-            if msg_dict.get("matched_text"):
-                msg_dict["matched_text"] = [
-                    t.strip() for t in msg_dict["matched_text"].split(",") if t.strip()
-                ]
-            else:
-                msg_dict["matched_text"] = []
-
-            # Clean up matched_icao, matched_tail, matched_flight
-            for field in ["matched_icao", "matched_tail", "matched_flight"]:
-                if msg_dict.get(field):
-                    msg_dict[field] = [
-                        t.strip() for t in msg_dict[field].split(",") if t.strip()
-                    ]
-                else:
-                    msg_dict[field] = None
-
-            processed_results.append(msg_dict)
-
-        session.close()
-        return (total_count, processed_results)
+            return (total_count, processed_results)
 
     except Exception as e:
         acarshub_logging.acars_traceback(e, "database")
         return (0, [])
+    finally:
+        if session:
+            session.close()
 
 
 def prune_database():
