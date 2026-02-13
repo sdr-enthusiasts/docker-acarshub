@@ -5,11 +5,36 @@ web:
 server:
     pdm run dev
 
+# Node.js dependency updates
 update:
     cd acarshub-react && npm-check -us
 
 bump:
     cd acarshub-react && npm i
+
+# Python dependency updates
+update-py:
+    @echo "Updating Python dependencies..."
+    pdm update
+    @echo "Syncing requirements.txt with pyproject.toml..."
+    ./sync-python-deps.sh
+    @echo "✅ Python dependencies updated!"
+
+bump-py:
+    @echo "Installing Python dependencies..."
+    pdm install
+    @echo "✅ Python dependencies installed!"
+
+# Update all dependencies (Node + Python)
+update-all:
+    @echo "Updating Node.js dependencies..."
+    just update
+    just bump
+    @echo ""
+    @echo "Updating Python dependencies..."
+    just update-py
+    @echo ""
+    @echo "✅ All dependencies updated!"
 
 # Database migration commands
 

@@ -161,6 +161,27 @@ just db-init test.db
 just db-migrate test.db
 ```
 
+### Dependency Updates
+
+```bash
+# Update Node.js dependencies (interactive)
+just update
+
+# Install Node.js dependencies
+just bump
+
+# Update Python dependencies
+just update-py
+
+# Install Python dependencies
+just bump-py
+
+# Update all dependencies (Node + Python)
+just update-all
+```
+
+**Note:** `just update-py` automatically syncs `pyproject.toml` and `requirements.txt`, including git-based dependencies.
+
 ---
 
 ## 🐛 Troubleshooting
