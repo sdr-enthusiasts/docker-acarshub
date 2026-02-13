@@ -85,6 +85,7 @@ interface SettingsState {
   setShowOpenAIP: (enabled: boolean) => void;
   setShowRainViewer: (enabled: boolean) => void;
   setUseSprites: (enabled: boolean) => void;
+  setColorByDecoder: (enabled: boolean) => void;
 
   // GeoJSON overlay actions
   setGeoJSONOverlay: (overlayId: string, enabled: boolean) => void;
@@ -149,6 +150,7 @@ const getDefaultSettings = (): UserSettings => {
       defaultCenterLon: 0,
       defaultZoom: 7,
       useSprites: true,
+      colorByDecoder: false,
       showOnlyAcars: false,
       showDatablocks: true,
       showExtendedDatablocks: false,
@@ -168,7 +170,7 @@ const getDefaultSettings = (): UserSettings => {
       persistLogs: true,
     },
     updatedAt: Date.now(),
-    version: 4,
+    version: 5,
   };
   return defaults;
 };
@@ -507,6 +509,15 @@ export const useSettingsStore = create<SettingsState>()(
           settings: {
             ...state.settings,
             map: { ...state.settings.map, useSprites: enabled },
+            updatedAt: Date.now(),
+          },
+        })),
+
+      setColorByDecoder: (enabled) =>
+        set((state) => ({
+          settings: {
+            ...state.settings,
+            map: { ...state.settings.map, colorByDecoder: enabled },
             updatedAt: Date.now(),
           },
         })),

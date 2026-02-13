@@ -22,6 +22,7 @@ import { faEyeSlash } from "@fortawesome/free-solid-svg-icons/faEyeSlash";
 import { faFighterJet } from "@fortawesome/free-solid-svg-icons/faFighterJet";
 import { faImage } from "@fortawesome/free-solid-svg-icons/faImage";
 import { faLock } from "@fortawesome/free-solid-svg-icons/faLock";
+import { faPalette } from "@fortawesome/free-solid-svg-icons/faPalette";
 import { faPlane } from "@fortawesome/free-solid-svg-icons/faPlane";
 import { faPlaneUp } from "@fortawesome/free-solid-svg-icons/faPlaneUp";
 import { faStar } from "@fortawesome/free-solid-svg-icons/faStar";
@@ -99,6 +100,9 @@ export function MapControls() {
   const setShowOnlyPIA = useSettingsStore((state) => state.setShowOnlyPIA);
   const setShowOnlyLADD = useSettingsStore((state) => state.setShowOnlyLADD);
   const setUseSprites = useSettingsStore((state) => state.setUseSprites);
+  const setColorByDecoder = useSettingsStore(
+    (state) => state.setColorByDecoder,
+  );
 
   // Mutually exclusive filter toggles
   const handleAcarsToggle = useAcarsFilterToggle();
@@ -118,6 +122,12 @@ export function MapControls() {
           active={mapSettings.useSprites}
           onClick={() => setUseSprites(!mapSettings.useSprites)}
           tooltip={`Aircraft Markers: ${mapSettings.useSprites ? "Sprites" : "SVG"}`}
+        />
+        <MapControlButton
+          icon={faPalette}
+          active={mapSettings.colorByDecoder}
+          onClick={() => setColorByDecoder(!mapSettings.colorByDecoder)}
+          tooltip={`Color By: ${mapSettings.colorByDecoder ? "Decoder Type" : "Message State"}`}
         />
       </div>
 

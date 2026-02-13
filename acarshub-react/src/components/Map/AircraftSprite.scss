@@ -32,11 +32,6 @@
   transform-origin: center center;
   will-change: transform;
 
-  // Message state - has ACARS messages (green)
-  &.has-messages {
-    background-image: url("/static/sprites/spritesheet-mocha-messages.png");
-  }
-
   // Alert state - has alert conditions (red)
   &.has-alerts {
     background-image: url("/static/sprites/spritesheet-mocha-alerts.png");
@@ -46,6 +41,27 @@
   // Low altitude state - below 500ft (gray)
   &.low-altitude {
     background-image: url("/static/sprites/spritesheet-mocha-lowalt.png");
+  }
+
+  // Decoder-type colors (when colorByDecoder is enabled)
+  &.decoder-acars {
+    background-image: url("/static/sprites/spritesheet-mocha-acars.png");
+  }
+
+  &.decoder-vdlm {
+    background-image: url("/static/sprites/spritesheet-mocha-vdlm.png");
+  }
+
+  &.decoder-hfdl {
+    background-image: url("/static/sprites/spritesheet-mocha-hfdl.png");
+  }
+
+  &.decoder-imsl {
+    background-image: url("/static/sprites/spritesheet-mocha-imsl.png");
+  }
+
+  &.decoder-irdm {
+    background-image: url("/static/sprites/spritesheet-mocha-irdm.png");
   }
 
   // Hover state - slight scale up
@@ -67,11 +83,6 @@
   // Default state - Latte
   background-image: url("/static/sprites/spritesheet-latte-default.png");
 
-  // Message state - Latte (green)
-  &.has-messages {
-    background-image: url("/static/sprites/spritesheet-latte-messages.png");
-  }
-
   // Alert state - Latte (red)
   &.has-alerts {
     background-image: url("/static/sprites/spritesheet-latte-alerts.png");
@@ -80,6 +91,27 @@
   // Low altitude state - Latte (gray)
   &.low-altitude {
     background-image: url("/static/sprites/spritesheet-latte-lowalt.png");
+  }
+
+  // Decoder-type colors (when colorByDecoder is enabled)
+  &.decoder-acars {
+    background-image: url("/static/sprites/spritesheet-latte-acars.png");
+  }
+
+  &.decoder-vdlm {
+    background-image: url("/static/sprites/spritesheet-latte-vdlm.png");
+  }
+
+  &.decoder-hfdl {
+    background-image: url("/static/sprites/spritesheet-latte-hfdl.png");
+  }
+
+  &.decoder-imsl {
+    background-image: url("/static/sprites/spritesheet-latte-imsl.png");
+  }
+
+  &.decoder-irdm {
+    background-image: url("/static/sprites/spritesheet-latte-irdm.png");
   }
 }
 

@@ -1433,31 +1433,52 @@ export function svgShapeToURI(
 }
 
 /**
- * Get aircraft icon color based on state
- * (alerts, ACARS messages, altitude, etc.)
+ * Get aircraft icon color based on state or decoder type
  *
  * Uses CSS variables for theme-aware colors
  *
  * @param hasAlerts - Aircraft has active alerts
  * @param hasMessages - Aircraft has ACARS messages
  * @param altitude - Current altitude
+ * @param colorByDecoder - Color by decoder type instead of message state
+ * @param decoderType - Decoder type (ACARS, VDLM, HFDL, IMSL, IRDM)
  * @returns Hex color code from current theme
  */
 export function getAircraftColor(
   hasAlerts: boolean,
   hasMessages: boolean,
   altitude?: number,
+  colorByDecoder = false,
+  decoderType?: string,
 ): string {
   // Get computed CSS variables from document root
   const root = document.documentElement;
   const computedStyle = getComputedStyle(root);
 
-  // Alert = Catppuccin red
+  // Alert always takes priority
   if (hasAlerts) {
     return computedStyle.getPropertyValue("--color-red").trim();
   }
 
-  // Has ACARS messages = Catppuccin green
+  // Color by decoder type (if enabled and decoder type is available)
+  if (colorByDecoder && decoderType) {
+    const normalizedType = decoderType.toUpperCase();
+    switch (normalizedType) {
+      case "ACARS":
+        return computedStyle.getPropertyValue("--color-blue").trim();
+      case "VDLM":
+      case "VDL-M2":
+        return computedStyle.getPropertyValue("--color-green").trim();
+      case "HFDL":
+        return computedStyle.getPropertyValue("--color-yellow").trim();
+      case "IMSL":
+        return computedStyle.getPropertyValue("--color-peach").trim();
+      case "IRDM":
+        return computedStyle.getPropertyValue("--color-mauve").trim();
+    }
+  }
+
+  // Has ACARS messages = Catppuccin green (legacy message state coloring)
   if (hasMessages) {
     return computedStyle.getPropertyValue("--color-green").trim();
   }

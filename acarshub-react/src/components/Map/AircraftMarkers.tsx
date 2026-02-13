@@ -129,6 +129,35 @@ function mapCategoryToSpriteCode(category?: string): string | undefined {
 }
 
 /**
+ * Get the decoder type from an aircraft's messages
+ * Returns the decoder type of the most recent message
+ *
+ * @param aircraft - Paired aircraft with potential messages
+ * @returns Decoder type (ACARS, VDLM, HFDL, etc.) or undefined
+ */
+function getAircraftDecoderType(aircraft: PairedAircraft): string | undefined {
+  if (!aircraft.matchedGroup || aircraft.matchedGroup.messages.length === 0) {
+    return undefined;
+  }
+
+  // Find the most recent message by timestamp
+  // Use msg_time or timestamp field, whichever is available
+  let mostRecentMessage = aircraft.matchedGroup.messages[0];
+  let mostRecentTime =
+    mostRecentMessage.timestamp || mostRecentMessage.msg_time || 0;
+
+  for (const message of aircraft.matchedGroup.messages) {
+    const messageTime = message.timestamp || message.msg_time || 0;
+    if (messageTime > mostRecentTime) {
+      mostRecentTime = messageTime;
+      mostRecentMessage = message;
+    }
+  }
+
+  return mostRecentMessage.message_type;
+}
+
+/**
  * Get better generic sprite name based on aircraft shape characteristics
  * Overrides pw-silhouettes generic mapping when it doesn't match aircraft type
  *
@@ -172,6 +201,9 @@ export function AircraftMarkers({
   );
   const mapSettings = useSettingsStore((state) => state.settings.map);
   const useSprites = useSettingsStore((state) => state.settings.map.useSprites);
+  const colorByDecoder = useSettingsStore(
+    (state) => state.settings.map.colorByDecoder,
+  );
   const [localHoveredAircraft, setLocalHoveredAircraft] =
     useState<TooltipState | null>(null);
   const [selectedMessageGroup, setSelectedMessageGroup] =
@@ -281,11 +313,16 @@ export function AircraftMarkers({
         aircraft.alt_baro,
       );
 
-      // Get color based on state
+      // Get decoder type for color-by-decoder mode
+      const decoderType = getAircraftDecoderType(aircraft);
+
+      // Get color based on state or decoder type
       const color = getAircraftColor(
         aircraft.hasAlerts,
         aircraft.hasMessages,
         aircraft.alt_baro,
+        colorByDecoder,
+        decoderType,
       );
 
       // Generate SVG icon (always generate as fallback)
@@ -336,10 +373,35 @@ export function AircraftMarkers({
             spriteFrameTime = position.frameTime;
 
             // Determine sprite state class
+            // Priority: alerts > decoder type/messages > low altitude > default
             if (aircraft.hasAlerts) {
               spriteClass = "has-alerts";
+            } else if (colorByDecoder && decoderType) {
+              // Color by decoder type (based on most recent message)
+              const normalizedType = decoderType.toUpperCase();
+              switch (normalizedType) {
+                case "ACARS":
+                  spriteClass = "decoder-acars";
+                  break;
+                case "VDLM":
+                case "VDL-M2":
+                  spriteClass = "decoder-vdlm";
+                  break;
+                case "HFDL":
+                  spriteClass = "decoder-hfdl";
+                  break;
+                case "IMSL":
+                  spriteClass = "decoder-imsl";
+                  break;
+                case "IRDM":
+                  spriteClass = "decoder-irdm";
+                  break;
+                default:
+                  spriteClass = "default";
+              }
             } else if (aircraft.hasMessages) {
-              spriteClass = "has-messages";
+              // Legacy behavior: use VDLM (green) sprite for any messages
+              spriteClass = "decoder-vdlm";
             } else if (
               aircraft.alt_baro !== undefined &&
               aircraft.alt_baro < 500
@@ -372,7 +434,7 @@ export function AircraftMarkers({
     }
 
     return markers;
-  }, [filteredPairedAircraft, readMessageUids, useSprites]);
+  }, [filteredPairedAircraft, readMessageUids, useSprites, colorByDecoder]);
 
   // Handle marker click
   const handleMarkerClick = (aircraft: PairedAircraft) => {

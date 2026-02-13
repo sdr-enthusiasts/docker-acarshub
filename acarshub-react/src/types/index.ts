@@ -902,6 +902,8 @@ export interface MapSettings {
   defaultZoom: number;
   /** Use professional sprite silhouettes (true) or SVG markers (false) */
   useSprites: boolean;
+  /** Color aircraft markers by decoder type (ACARS=blue, VDLM=green, HFDL=yellow, etc.) instead of message state */
+  colorByDecoder: boolean;
   /** Show only ACARS aircraft on map */
   showOnlyAcars: boolean;
   /** Show data blocks */
@@ -1042,6 +1044,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
     defaultCenterLon: 0,
     defaultZoom: 7,
     useSprites: true,
+    colorByDecoder: false,
     showOnlyAcars: false,
     showDatablocks: true,
     showExtendedDatablocks: false,
@@ -1061,7 +1064,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
     persistLogs: false,
   },
   updatedAt: Date.now(),
-  version: 3,
+  version: 5,
 };
 
 /**

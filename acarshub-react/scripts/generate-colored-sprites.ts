@@ -9,13 +9,21 @@
  *
  * Output:
  * - spritesheet-mocha-default.png (#cdd6f4)
- * - spritesheet-mocha-messages.png (#a6e3a1)
  * - spritesheet-mocha-alerts.png (#f38ba8)
  * - spritesheet-mocha-lowalt.png (#7f849c)
+ * - spritesheet-mocha-acars.png (#89b4fa)
+ * - spritesheet-mocha-vdlm.png (#a6e3a1)
+ * - spritesheet-mocha-hfdl.png (#f9e2af)
+ * - spritesheet-mocha-imsl.png (#fab387)
+ * - spritesheet-mocha-irdm.png (#cba6f7)
  * - spritesheet-latte-default.png (#4c4f69)
- * - spritesheet-latte-messages.png (#40a02b)
  * - spritesheet-latte-alerts.png (#d20f39)
  * - spritesheet-latte-lowalt.png (#8c8fa1)
+ * - spritesheet-latte-acars.png (#1e66f5)
+ * - spritesheet-latte-vdlm.png (#40a02b)
+ * - spritesheet-latte-hfdl.png (#df8e1d)
+ * - spritesheet-latte-imsl.png (#fe640b)
+ * - spritesheet-latte-irdm.png (#8839ef)
  */
 
 import * as fs from "node:fs";
@@ -27,19 +35,29 @@ import sharp from "sharp";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Color definitions
+// Color definitions - matching message card decoder type colors
 const COLORS = {
   mocha: {
     default: "#cdd6f4", // text
-    messages: "#a6e3a1", // green
     alerts: "#f38ba8", // red
     lowalt: "#7f849c", // overlay1
+    // Decoder types (matching message-card.scss)
+    acars: "#89b4fa", // blue
+    vdlm: "#a6e3a1", // green
+    hfdl: "#f9e2af", // yellow
+    imsl: "#fab387", // peach
+    irdm: "#cba6f7", // mauve
   },
   latte: {
     default: "#4c4f69", // text
-    messages: "#40a02b", // green
     alerts: "#d20f39", // red
     lowalt: "#8c8fa1", // overlay1
+    // Decoder types (matching message-card.scss)
+    acars: "#1e66f5", // blue
+    vdlm: "#40a02b", // green
+    hfdl: "#df8e1d", // yellow
+    imsl: "#fe640b", // peach
+    irdm: "#8839ef", // mauve
   },
 };
 
@@ -160,14 +178,24 @@ async function main() {
 
   console.log("\n✅ All colored sprite sheets generated successfully!");
   console.log(`\nGenerated files in: ${publicDir}`);
+  console.log("\nState-based sprites:");
   console.log("  - spritesheet-mocha-default.png");
-  console.log("  - spritesheet-mocha-messages.png");
   console.log("  - spritesheet-mocha-alerts.png");
   console.log("  - spritesheet-mocha-lowalt.png");
   console.log("  - spritesheet-latte-default.png");
-  console.log("  - spritesheet-latte-messages.png");
   console.log("  - spritesheet-latte-alerts.png");
   console.log("  - spritesheet-latte-lowalt.png");
+  console.log("\nDecoder-type sprites:");
+  console.log("  - spritesheet-mocha-acars.png (blue)");
+  console.log("  - spritesheet-mocha-vdlm.png (green)");
+  console.log("  - spritesheet-mocha-hfdl.png (yellow)");
+  console.log("  - spritesheet-mocha-imsl.png (peach)");
+  console.log("  - spritesheet-mocha-irdm.png (mauve)");
+  console.log("  - spritesheet-latte-acars.png (blue)");
+  console.log("  - spritesheet-latte-vdlm.png (green)");
+  console.log("  - spritesheet-latte-hfdl.png (yellow)");
+  console.log("  - spritesheet-latte-imsl.png (peach)");
+  console.log("  - spritesheet-latte-irdm.png (mauve)");
 }
 
 main().catch((error) => {
