@@ -1207,23 +1207,33 @@ export const SettingsModal = () => {
 
                 <div className="settings-form-field">
                   <label htmlFor="ground-altitude-threshold">
-                    Ground Altitude Threshold (ft MSL)
+                    Ground Altitude Threshold
                   </label>
-                  <input
-                    id="ground-altitude-threshold"
-                    type="number"
-                    className="settings-input"
-                    min="0"
-                    max="10000"
-                    step="100"
-                    value={settings.map.groundAltitudeThreshold}
-                    onChange={(e) => {
-                      const value = parseInt(e.target.value, 10);
-                      if (!isNaN(value)) {
-                        setGroundAltitudeThreshold(value);
-                      }
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.5rem",
                     }}
-                  />
+                  >
+                    <input
+                      id="ground-altitude-threshold"
+                      type="number"
+                      className="settings-input"
+                      min="0"
+                      max="10000"
+                      step="100"
+                      value={settings.map.groundAltitudeThreshold ?? 500}
+                      onChange={(e) => {
+                        const value = parseInt(e.target.value, 10);
+                        if (!isNaN(value)) {
+                          setGroundAltitudeThreshold(value);
+                        }
+                      }}
+                      style={{ width: "120px" }}
+                    />
+                    <span>ft MSL</span>
+                  </div>
                   <p className="settings-card__help">
                     Aircraft at or below this altitude (or with ADS-B status
                     "ground") will be displayed in gray. Adjust this based on
