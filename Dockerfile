@@ -81,7 +81,7 @@ RUN set -x && \
     "${TEMP_PACKAGES[@]}"\
     && \
     pushd /src/ && \
-    python3 -m pip install --no-cache-dir --break-system-packages \
+    python3 -m pip install --no-cache-dir --break-system-packages --ignore-installed \
     -r /src/requirements.txt \
     && \
     # Fix for Eventlet issues
