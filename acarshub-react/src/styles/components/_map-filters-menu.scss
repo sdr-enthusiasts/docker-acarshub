@@ -1,0 +1,170 @@
+// Copyright (C) 2022-2026 Frederick Clausen II
+// This file is part of acarshub <https://github.com/sdr-enthusiasts/docker-acarshub>.
+
+// acarshub is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+
+// acarshub is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+
+// You should have received a copy of the GNU General Public License
+// along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
+
+@use "../mixins" as *;
+@use "../variables" as *;
+
+.map-filters-menu {
+  position: relative;
+  display: none; // Hidden by default (desktop), shown on mobile
+
+  // Show on mobile only
+  @include breakpoint-max(md) {
+    display: block;
+  }
+
+  &__button {
+    position: relative;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--color-base);
+    border: 2px solid var(--color-overlay0);
+    color: var(--color-text);
+    cursor: pointer;
+    font-size: 1.125rem;
+    transition: all 0.2s ease;
+
+    @media (prefers-reduced-motion: reduce) {
+      transition: none;
+    }
+
+    &:hover {
+      background-color: var(--color-surface0);
+      border-color: var(--color-blue);
+      color: var(--color-blue);
+    }
+
+    &--open {
+      background-color: var(--color-surface0);
+      border-color: var(--color-blue);
+      color: var(--color-blue);
+    }
+
+    &:active {
+      background-color: var(--color-surface1);
+    }
+  }
+
+  &__badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    min-width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+    background-color: var(--color-blue);
+    color: var(--color-base);
+    font-size: 0.625rem;
+    font-weight: 700;
+    border-radius: 9px;
+    border: 2px solid var(--color-base);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+
+  &__dropdown {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    min-width: 200px;
+    background-color: var(--color-surface0);
+    border: 2px solid var(--color-overlay0);
+    border-radius: var(--border-radius-sm);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    z-index: 200;
+    padding: 0.5rem;
+    display: flex;
+    flex-direction: column-reverse; // Build upward
+    gap: 2px;
+
+    // Ensure dropdown doesn't overflow viewport top
+    max-height: calc(100vh - 200px);
+    overflow-y: auto;
+    @include scrollbar-thin();
+  }
+
+  &__item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    min-height: 44px;
+    cursor: pointer;
+    user-select: none;
+    border-radius: 4px;
+    transition: background-color 0.15s ease;
+
+    @media (prefers-reduced-motion: reduce) {
+      transition: none;
+    }
+
+    &:hover {
+      background-color: var(--color-surface1);
+    }
+
+    &:active {
+      background-color: var(--color-surface2);
+    }
+  }
+
+  &__icon {
+    flex-shrink: 0;
+    width: 20px;
+    text-align: center;
+    color: var(--color-subtext0);
+    font-size: 1rem;
+  }
+
+  &__label {
+    flex: 1;
+    color: var(--color-text);
+    font-size: 0.875rem;
+    font-weight: 500;
+  }
+
+  // Checkbox styling
+  input[type="checkbox"] {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    accent-color: var(--color-blue);
+    margin: 0;
+  }
+
+  // Active state - highlight icon when filter is active
+  input[type="checkbox"]:checked + .map-filters-menu__icon,
+  &__item:has(input[type="checkbox"]:checked) &__icon {
+    color: var(--color-blue);
+  }
+
+  &__item:has(input[type="checkbox"]:checked) &__label {
+    color: var(--color-blue);
+    font-weight: 600;
+  }
+}
+
+// Desktop: hide the flyout menu, show individual buttons
+@include breakpoint(md) {
+  .map-filters-menu {
+    display: none !important;
+  }
+}

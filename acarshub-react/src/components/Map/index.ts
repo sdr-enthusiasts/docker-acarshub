@@ -17,5 +17,6 @@
 export { MapComponent } from "./Map";
 export { MapControlButton } from "./MapControlButton";
 export { MapControls } from "./MapControls";
+export { MapFiltersMenu } from "./MapFiltersMenu";
 export { MapLegend } from "./MapLegend";
 export { MapProviderSelector } from "./MapProviderSelector";

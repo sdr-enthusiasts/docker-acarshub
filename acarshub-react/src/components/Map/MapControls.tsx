@@ -30,6 +30,7 @@ import { useAppStore } from "../../store/useAppStore";
 import { useSettingsStore } from "../../store/useSettingsStore";
 import { GeoJSONOverlayButton } from "./GeoJSONOverlayButton";
 import { MapControlButton } from "./MapControlButton";
+import { MapFiltersMenu } from "./MapFiltersMenu";
 import { MapProviderSelector } from "./MapProviderSelector";
 
 /**
@@ -162,7 +163,7 @@ export function MapControls() {
       </div>
 
       {/* Aircraft Filters: ACARS + Unread + Military + Interesting + PIA + LADD */}
-      <div className="map-controls__group">
+      <div className="map-controls__group map-controls__group--filters">
         <MapControlButton
           icon={faPlane}
           active={mapSettings.showOnlyAcars}
@@ -175,11 +176,13 @@ export function MapControls() {
           onClick={handleUnreadToggle}
           tooltip="Show Only Aircraft with Unread Messages"
         />
+        {/* Desktop: Show all filters as individual buttons */}
         <MapControlButton
           icon={faFighterJet}
           active={mapSettings.showOnlyMilitary}
           onClick={() => setShowOnlyMilitary(!mapSettings.showOnlyMilitary)}
           tooltip="Show Only Military Aircraft"
+          className="map-controls__filter--desktop"
         />
         <MapControlButton
           icon={faStar}
@@ -188,18 +191,56 @@ export function MapControls() {
             setShowOnlyInteresting(!mapSettings.showOnlyInteresting)
           }
           tooltip="Show Only Interesting Aircraft"
+          className="map-controls__filter--desktop"
         />
         <MapControlButton
           icon={faEyeSlash}
           active={mapSettings.showOnlyPIA}
           onClick={() => setShowOnlyPIA(!mapSettings.showOnlyPIA)}
           tooltip="Show Only PIA Aircraft"
+          className="map-controls__filter--desktop"
         />
         <MapControlButton
           icon={faLock}
           active={mapSettings.showOnlyLADD}
           onClick={() => setShowOnlyLADD(!mapSettings.showOnlyLADD)}
           tooltip="Show Only LADD Aircraft"
+          className="map-controls__filter--desktop"
+        />
+
+        {/* Mobile: Collapse into flyout menu */}
+        <MapFiltersMenu
+          filters={[
+            {
+              id: "military",
+              label: "Military",
+              icon: faFighterJet,
+              active: mapSettings.showOnlyMilitary,
+              onClick: () => setShowOnlyMilitary(!mapSettings.showOnlyMilitary),
+            },
+            {
+              id: "interesting",
+              label: "Interesting",
+              icon: faStar,
+              active: mapSettings.showOnlyInteresting,
+              onClick: () =>
+                setShowOnlyInteresting(!mapSettings.showOnlyInteresting),
+            },
+            {
+              id: "pia",
+              label: "PIA",
+              icon: faEyeSlash,
+              active: mapSettings.showOnlyPIA,
+              onClick: () => setShowOnlyPIA(!mapSettings.showOnlyPIA),
+            },
+            {
+              id: "ladd",
+              label: "LADD",
+              icon: faLock,
+              active: mapSettings.showOnlyLADD,
+              onClick: () => setShowOnlyLADD(!mapSettings.showOnlyLADD),
+            },
+          ]}
         />
       </div>
     </div>

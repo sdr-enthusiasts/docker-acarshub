@@ -72,6 +72,19 @@
     top: 106px; // Adjust for larger mobile zoom controls + extra spacing
     right: 10px;
   }
+
+  // Hide individual filter buttons on mobile (shown in flyout instead)
+  .map-controls__filter--desktop {
+    display: none;
+  }
+}
+
+// Desktop adjustments
+@include breakpoint(md) {
+  // Hide filter menu button on desktop (show individual buttons instead)
+  .map-controls__group--filters .map-filters-menu {
+    display: none;
+  }
 }
 
 // Print styles
