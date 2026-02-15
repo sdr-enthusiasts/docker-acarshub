@@ -134,13 +134,13 @@ class AcarsMessageDecoder {
               | "none",
             name: result.decoder.name,
           },
-          // Store the formatted structure as-is (matches our DecodedTextItem flexible type)
-          formatted: result.formatted.items.map((item) => ({
-            label: item.label,
-            value: item.value,
-            type: item.type,
-            code: item.code,
-          })),
+          // Store the formatted structure as we want it displayed)
+          formatted: [{label: 'Description', value: result.formatted.description}].concat(
+            result.formatted.items.map((item) => ({
+              label: item.label,
+              value: item.value,
+            }))
+          ),
         };
 
         const decodedMessage = {

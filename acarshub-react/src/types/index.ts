@@ -216,14 +216,10 @@ export interface Labels {
 // Decoder Types for ACARS Messages
 
 // DecodedText from @airframes/acars-decoder
-// The actual library returns items with this structure
+// The actual parts we care about
 export interface DecodedTextItem {
-  type: string;
-  code: string;
   label: string;
   value: string;
-  // Additional fields may exist
-  [key: string]: string | unknown;
 }
 
 export interface DecodedText {
