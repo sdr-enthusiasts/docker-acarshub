@@ -19,7 +19,30 @@ import { MessageFilters } from "../components/MessageFilters";
 import { MessageGroup as MessageGroupComponent } from "../components/MessageGroup";
 import { socketService } from "../services/socket";
 import { useAppStore } from "../store/useAppStore";
-import type { AcarsMsg, MessageGroup as MessageGroupType } from "../types";
+import type {
+  AcarsMsg,
+  Labels,
+  MessageGroup as MessageGroupType,
+} from "../types";
+
+// Global filter state for Navigation access
+let globalFilterProps: {
+  labels: Labels;
+  excludedLabels: string[];
+  onExcludedLabelsChange: (labels: string[]) => void;
+  filterNoText: boolean;
+  onFilterNoTextChange: (enabled: boolean) => void;
+  isPaused: boolean;
+  onPauseChange: (paused: boolean) => void;
+  textFilter: string;
+  onTextFilterChange: (text: string) => void;
+  showAlertsOnly: boolean;
+  onShowAlertsOnlyChange: (enabled: boolean) => void;
+} | null = null;
+
+export function getMessageFilterProps() {
+  return globalFilterProps;
+}
 
 /**
  * LiveMessagesPage Component
@@ -360,6 +383,42 @@ export const LiveMessagesPage = () => {
     setShowAlertsOnly(enabled);
   }, []);
 
+  // Expose filter props globally for Navigation
+  useEffect(() => {
+    globalFilterProps = {
+      labels,
+      excludedLabels,
+      onExcludedLabelsChange: handleExcludedLabelsChange,
+      filterNoText,
+      onFilterNoTextChange: handleFilterNoTextChange,
+      isPaused,
+      onPauseChange: handlePauseChange,
+      textFilter,
+      onTextFilterChange: handleTextFilterChange,
+      showAlertsOnly,
+      onShowAlertsOnlyChange: handleShowAlertsOnlyChange,
+    };
+
+    // Dispatch custom event to notify Navigation
+    window.dispatchEvent(new CustomEvent("messageFiltersUpdate"));
+
+    return () => {
+      globalFilterProps = null;
+    };
+  }, [
+    labels,
+    excludedLabels,
+    handleExcludedLabelsChange,
+    filterNoText,
+    handleFilterNoTextChange,
+    isPaused,
+    handlePauseChange,
+    textFilter,
+    handleTextFilterChange,
+    showAlertsOnly,
+    handleShowAlertsOnlyChange,
+  ]);
+
   return (
     <div className="page live-messages-page">
       {/* Page Header */}
@@ -397,7 +456,7 @@ export const LiveMessagesPage = () => {
         </div>
       </div>
 
-      {/* Filters */}
+      {/* Filters - mobile: in navbar flyout, desktop: inline */}
       <MessageFilters
         labels={labels}
         excludedLabels={excludedLabels}

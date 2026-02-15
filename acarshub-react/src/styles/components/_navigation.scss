@@ -34,6 +34,7 @@
   .wrap {
     padding-left: 0;
     padding-right: 0;
+    position: relative; // Make this the positioning context for flyout
   }
 
   .decor {
@@ -170,14 +171,125 @@
 }
 
 /**
+ * Filters Flyout (Live Messages Page)
+ */
+.navigation__filters-flyout {
+  position: absolute;
+  top: 100%; // Below navbar, not covering page content
+  left: 0;
+  right: 0;
+  background-color: var(--color-mantle);
+  border-bottom: 2px solid var(--color-surface1);
+  box-shadow: $shadow-lg;
+  z-index: $z-index-modal;
+  max-height: 80vh;
+  overflow-y: auto;
+
+  // Tablet and up: constrain width, position from left
+  @media (min-width: 768px) {
+    left: 0;
+    right: auto;
+    max-width: 600px;
+    border-right: 2px solid var(--color-surface1);
+  }
+}
+
+.filters-flyout__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-md $spacing-lg;
+  border-bottom: 1px solid var(--color-surface1);
+  background-color: var(--color-crust);
+
+  h3 {
+    margin: 0;
+    font-size: $font-size-lg;
+    font-weight: $font-weight-semibold;
+    color: var(--color-text);
+  }
+}
+
+.filters-flyout__close {
+  @include button-reset;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  color: var(--color-subtext0);
+  font-size: $font-size-xl;
+  cursor: pointer;
+  border-radius: $radius-md;
+  transition:
+    background-color $transition-fast,
+    color $transition-fast;
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+
+  &:hover {
+    background-color: var(--color-surface0);
+    color: var(--color-text);
+  }
+
+  &:active {
+    background-color: var(--color-surface1);
+  }
+
+  @include focus-visible;
+}
+
+.filters-flyout__content {
+  padding: $spacing-md;
+}
+
+.filters-flyout__filters-wrapper {
+  // Override the display:none on .message-filters for mobile
+  .message-filters {
+    display: block !important;
+  }
+}
+
+/**
  * Mobile Navigation
  */
 .show_when_small {
   display: none;
 }
 
-.small_nav {
+.mobile_nav_container {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
   padding: $spacing-sm $spacing-lg;
+}
+
+.mobile_nav_button {
+  @include button-reset;
+  cursor: pointer;
+  font-weight: $font-weight-bold;
+  padding: $spacing-sm 0 $spacing-sm $spacing-md;
+  list-style: none;
+  color: var(--color-text);
+  user-select: none;
+
+  &:hover {
+    color: var(--color-primary);
+  }
+
+  &.active {
+    color: var(--color-primary);
+  }
+
+  @include focus-visible;
+}
+
+.small_nav {
+  padding: 0;
+  display: inline-flex;
+  flex-direction: column;
 
   summary {
     cursor: pointer;
