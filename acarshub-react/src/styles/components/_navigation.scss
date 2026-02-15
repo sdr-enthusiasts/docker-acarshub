@@ -321,7 +321,7 @@
   .link-button {
     @include button-reset;
     display: block;
-    padding: $spacing-md 0;
+    padding: $spacing-sm 0;
     color: var(--color-text);
     text-decoration: none;
     text-align: left;
