@@ -108,10 +108,10 @@
       outline-offset: 2px;
     }
 
-    // Mobile: larger touch target (44px minimum)
+    // Mobile: keep same visual size as desktop
+    // (Secondary action, doesn't need 44px minimum like primary buttons)
     @media (max-width: 768px) {
-      min-height: 44px;
-      padding: var(--spacing-sm) var(--spacing-md);
+      padding: var(--spacing-xs) var(--spacing-sm);
     }
 
     // Reduced motion
