@@ -19,7 +19,7 @@ This document summarizes all database-related work completed for ACARSHUB v4, in
 
 **Migration sequence**:
 
-```
+```text
 e7991f1644b1 → 0fc8b7cae596 → a589d271a0a4 → 94d97e655180 →
 3168c906fb9e → 204a67756b9a → 171fe2c07bd9 → 40fd0618348d (NEW)
 ```
@@ -183,7 +183,7 @@ with profile_query("database_search", params={"page": 0}):
 
 ### New Files
 
-```
+```text
 rootfs/webapp/acarshub_query_builder.py          (426 lines)
 rootfs/webapp/acarshub_query_profiler.py         (358 lines)
 rootfs/webapp/migrations/versions/40fd0618348d_final_v4_optimization.py  (166 lines)
@@ -195,7 +195,7 @@ dev-docs/V4_DATABASE_SUMMARY.md                 (this file)
 
 ### Modified Files
 
-```
+```text
 rootfs/webapp/acarshub_database.py
   - Imports: Added query_builder and query_profiler imports
   - database_search(): Refactored with security fixes and profiling
@@ -352,7 +352,7 @@ For high-traffic deployments:
 | 5M            | 25 GB            | 15 GB           | 15 min      | 5 min      |
 | 10M           | 50 GB            | 30 GB           | 30 min      | 10 min     |
 
-_Times are estimates and vary by hardware_
+Times are estimates and vary by hardware
 
 ---
 
@@ -381,15 +381,9 @@ cp /backup/acarshub.db.backup /path/to/acarshub.db
 
 ## Support and Contact
 
-### Documentation
-
-- User guide: `WHATS_NEW_V4.md`
-- Troubleshooting: `TROUBLESHOOTING_V4.md`
-- Technical details: `DATABASE_OPTIMIZATION_V4.md`
-
 ### Community
 
-- GitHub Issues: https://github.com/sdr-enthusiasts/docker-acarshub/issues
+- GitHub Issues: <https://github.com/sdr-enthusiasts/docker-acarshub/issues>
 - Discussions: Use GitHub Discussions for questions
 
 ### Reporting Issues

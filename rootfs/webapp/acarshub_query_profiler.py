@@ -122,7 +122,7 @@ class QueryTimer:
         warn_threshold_ms = warn_threshold_ms or VERY_SLOW_QUERY_THRESHOLD_MS
 
         # Update global statistics
-        global query_stats
+        # global query_stats
         query_stats["total_queries"] += 1
         query_stats["total_time_ms"] += self.duration_ms
 

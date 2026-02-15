@@ -54,22 +54,27 @@ This ensures `requirements.txt` matches `pyproject.toml`.
 Git dependencies use different strategies for development vs production:
 
 **pyproject.toml (development):**
+
 ```toml
 rrdtool @ git+https://github.com/fredclausen/python-rrdtool.git
 ```
+
 - No commit hash = tracks HEAD/main
 - Always pulls latest for local development
 - Keeps you up-to-date with upstream changes
 
 **requirements.txt (production/Docker):**
+
 ```txt
 rrdtool @git+https://github.com/fredclausen/python-rrdtool.git@b522cab1db4039b21ef6e34e2221c2828ca72174
 ```
+
 - Pinned to specific commit hash
 - Ensures reproducible Docker builds
 - Prevents unexpected changes in production
 
 The sync script automatically:
+
 - Preserves unpinned URL in `pyproject.toml`
 - Pins to hardcoded commit hash in `requirements.txt`
 - Provides instructions for updating the commit hash
@@ -115,6 +120,7 @@ just update-py
 ### Pin a Specific Version
 
 **In pyproject.toml:**
+
 ```toml
 dependencies = [
     "flask==3.1.2",  # Pinned to specific version
@@ -122,6 +128,7 @@ dependencies = [
 ```
 
 Then sync:
+
 ```bash
 ./sync-python-deps.sh
 ```
@@ -129,6 +136,7 @@ Then sync:
 ### Update Git-Based Dependencies
 
 **For local development:**
+
 ```bash
 # PDM will pull latest from git
 pdm update rrdtool
@@ -137,6 +145,7 @@ pdm update rrdtool
 ```
 
 **To update the pinned commit in requirements.txt:**
+
 ```bash
 # 1. Check latest commit hash
 git ls-remote https://github.com/fredclausen/python-rrdtool.git HEAD
@@ -154,6 +163,7 @@ docker-compose build --no-cache
 ```
 
 **Why this approach?**
+
 - **Development**: Always use latest (pyproject.toml unpinned)
 - **Production**: Pin to tested commit (requirements.txt pinned)
 - **Safety**: Docker builds are reproducible
@@ -210,6 +220,7 @@ git commit -m "chore: update Python dependencies"
 ### What is PDM?
 
 PDM (Python Development Master) is a modern Python package manager that:
+
 - Uses PEP 582 (no need for virtualenv)
 - Manages dependencies via `pyproject.toml`
 - Creates lock files for reproducible builds (`pdm.lock`)
@@ -303,6 +314,7 @@ version = "3.1.2"
 **Problem:** `pyproject.toml` and `requirements.txt` have different versions
 
 **Solution:**
+
 ```bash
 ./sync-python-deps.sh
 ```
@@ -312,6 +324,7 @@ version = "3.1.2"
 **Problem:** Docker build fails with git dependency error
 
 **Solution:**
+
 ```bash
 # 1. Check if commit hash is valid
 git ls-remote https://github.com/fredclausen/python-rrdtool.git <commit-hash>
@@ -330,6 +343,7 @@ docker-compose build --no-cache
 ```
 
 **Common causes:**
+
 - Commit was force-pushed or deleted
 - Wrong repository URL
 - Network/git access issues
@@ -339,6 +353,7 @@ docker-compose build --no-cache
 **Problem:** Merge conflict in `pdm.lock`
 
 **Solution:**
+
 ```bash
 # Regenerate lock file
 pdm lock --update-reuse
@@ -353,6 +368,7 @@ pdm lock
 **Problem:** `pdm install` fails
 
 **Solution:**
+
 ```bash
 # Clear cache
 pdm cache clear
@@ -370,6 +386,7 @@ pdm lock
 **Problem:** Docker uses outdated packages
 
 **Solution:**
+
 ```bash
 # 1. Ensure requirements.txt is synced
 ./sync-python-deps.sh
@@ -417,6 +434,7 @@ docker-compose up
 ```
 
 **Note:** Git dependencies may differ between environments:
+
 - PDM tracks HEAD/main (latest)
 - Docker uses pinned commit (stable)
 
@@ -445,11 +463,13 @@ pdm lock --update-reuse
 ### Pre-commit Checks
 
 The project uses pre-commit hooks to ensure:
+
 - Code formatting (black)
 - Linting (flake8)
 - Type checking (pyright)
 
 To run manually:
+
 ```bash
 pre-commit run --all-files
 ```
@@ -457,6 +477,7 @@ pre-commit run --all-files
 ### CI Pipeline
 
 The CI pipeline should:
+
 1. Install from `pdm.lock` for reproducibility
 2. Run tests with exact versions
 3. Build Docker with `requirements.txt`
@@ -486,31 +507,31 @@ pdm install
 
 ## FAQ
 
-**Q: Why two files?**  
+**Q: Why two files?**
 A: PDM uses `pyproject.toml` for development, but Docker and many tools expect `requirements.txt`.
 
-**Q: Which file should I edit?**  
+**Q: Which file should I edit?**
 A: Always edit `pyproject.toml`, then run `./sync-python-deps.sh`.
 
-**Q: Can I edit requirements.txt directly?**  
+**Q: Can I edit requirements.txt directly?**
 A: No, it will be overwritten by the sync script. Edit `pyproject.toml` instead.
 
-**Q: What if sync script fails?**  
+**Q: What if sync script fails?**
 A: Check the error message. Usually it's a git dependency issue or PDM export failure.
 
-**Q: How do I update just one package?**  
+**Q: How do I update just one package?**
 A: `pdm update package-name` then `./sync-python-deps.sh`
 
-**Q: Should I commit pdm.lock?**  
+**Q: Should I commit pdm.lock?**
 A: Yes, always commit `pdm.lock` for reproducible builds.
 
-**Q: What about dev dependencies?**  
+**Q: What about dev dependencies?**
 A: Dev dependencies (testing, linting) go in `pyproject.toml` under `[tool.pdm.dev-dependencies]` and are NOT exported to `requirements.txt`.
 
-**Q: Why are git dependencies pinned in requirements.txt but not pyproject.toml?**  
+**Q: Why are git dependencies pinned in requirements.txt but not pyproject.toml?**
 A: Development wants latest changes (unpinned), but production needs reproducibility (pinned). The sync script maintains both.
 
-**Q: How do I update the rrdtool commit hash?**  
+**Q: How do I update the rrdtool commit hash?**
 A: Get latest hash with `git ls-remote`, update `RRDTOOL_COMMIT` in `sync-python-deps.sh`, then re-run the script.
 
 ---
@@ -522,7 +543,7 @@ A: Get latest hash with `git ls-remote`, update `RRDTOOL_COMMIT` in `sync-python
 just update      # Interactive update for Node packages
 just bump        # Install Node packages
 
-# Python dependency updates  
+# Python dependency updates
 just update-py   # Update and sync Python packages
 just bump-py     # Install Python packages
 
