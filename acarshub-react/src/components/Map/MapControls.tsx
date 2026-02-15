@@ -21,10 +21,13 @@ import { faEnvelope } from "@fortawesome/free-solid-svg-icons/faEnvelope";
 import { faEyeSlash } from "@fortawesome/free-solid-svg-icons/faEyeSlash";
 import { faFighterJet } from "@fortawesome/free-solid-svg-icons/faFighterJet";
 import { faImage } from "@fortawesome/free-solid-svg-icons/faImage";
+import { faLocationCrosshairs } from "@fortawesome/free-solid-svg-icons/faLocationCrosshairs";
 import { faLock } from "@fortawesome/free-solid-svg-icons/faLock";
 import { faPalette } from "@fortawesome/free-solid-svg-icons/faPalette";
+import { faPause } from "@fortawesome/free-solid-svg-icons/faPause";
 import { faPlane } from "@fortawesome/free-solid-svg-icons/faPlane";
 import { faPlaneUp } from "@fortawesome/free-solid-svg-icons/faPlaneUp";
+import { faPlay } from "@fortawesome/free-solid-svg-icons/faPlay";
 import { faStar } from "@fortawesome/free-solid-svg-icons/faStar";
 import { useAppStore } from "../../store/useAppStore";
 import { useSettingsStore } from "../../store/useSettingsStore";
@@ -75,13 +78,29 @@ const useUnreadFilterToggle = () => {
   };
 };
 
+interface MapControlsProps {
+  /** Whether updates are paused */
+  isPaused?: boolean;
+  /** Callback when pause button is clicked */
+  onTogglePause?: () => void;
+  /** Whether an aircraft is being followed */
+  isFollowingAircraft?: boolean;
+  /** Callback when unfollow button is clicked */
+  onUnfollowAircraft?: () => void;
+}
+
 /**
  * MapControls Component
  *
  * Floating control panel for map display options.
  * Positioned below the zoom controls in the top-right corner.
  */
-export function MapControls() {
+export function MapControls({
+  isPaused = false,
+  onTogglePause,
+  isFollowingAircraft = false,
+  onUnfollowAircraft,
+}: MapControlsProps = {}) {
   const decoders = useAppStore((state) => state.decoders);
   const mapSettings = useSettingsStore((state) => state.settings.map);
   const setShowRangeRings = useSettingsStore(
@@ -114,6 +133,28 @@ export function MapControls() {
 
   return (
     <div className="map-controls">
+      {/* Action Controls: Pause + Unfollow */}
+      {(onTogglePause || (isFollowingAircraft && onUnfollowAircraft)) && (
+        <div className="map-controls__group">
+          {onTogglePause && (
+            <MapControlButton
+              icon={isPaused ? faPlay : faPause}
+              active={isPaused}
+              onClick={onTogglePause}
+              tooltip={isPaused ? "Resume Updates" : "Pause Updates"}
+            />
+          )}
+          {isFollowingAircraft && onUnfollowAircraft && (
+            <MapControlButton
+              icon={faLocationCrosshairs}
+              active={true}
+              onClick={onUnfollowAircraft}
+              tooltip="Unfollow Aircraft"
+            />
+          )}
+        </div>
+      )}
+
       {/* Map Layers: Map Provider + GeoJSON */}
       <div className="map-controls__group">
         <MapProviderSelector />

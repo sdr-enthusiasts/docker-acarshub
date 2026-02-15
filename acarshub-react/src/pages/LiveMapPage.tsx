@@ -347,7 +347,14 @@ export const LiveMapPage = () => {
           />
 
           {/* Floating map controls */}
-          {isMapLoaded && <MapControls />}
+          {isMapLoaded && (
+            <MapControls
+              isPaused={isPaused}
+              onTogglePause={handlePauseToggle}
+              isFollowingAircraft={!!followedAircraftHex}
+              onUnfollowAircraft={() => handleFollowAircraft(null)}
+            />
+          )}
 
           {/* Map legend */}
           {isMapLoaded && <MapLegend />}
