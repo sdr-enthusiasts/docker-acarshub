@@ -1226,7 +1226,7 @@ export const SettingsModal = () => {
                       value={settings.map.groundAltitudeThreshold ?? 500}
                       onChange={(e) => {
                         const value = parseInt(e.target.value, 10);
-                        if (!isNaN(value)) {
+                        if (!Number.isNaN(value)) {
                           setGroundAltitudeThreshold(value);
                         }
                       }}

@@ -735,17 +735,17 @@ export const useSettingsStore = create<SettingsState>()(
     }),
     {
       name: "acarshub-settings",
-      version: 4,
+      version: 5,
       // Migrate old settings if needed
       migrate: (persistedState: unknown, version: number) => {
         const state = persistedState as SettingsState;
 
-        // Version 0 -> 4: Reset to defaults
+        // Version 0 -> 5: Reset to defaults
         if (version === 0) {
           return { settings: getDefaultSettings() };
         }
 
-        // Version 1 -> 4: Add map settings and advanced settings
+        // Version 1 -> 5: Add map settings and advanced settings
         if (version === 1) {
           const defaults = getDefaultSettings();
           return {
@@ -754,12 +754,12 @@ export const useSettingsStore = create<SettingsState>()(
               ...state.settings,
               map: defaults.map,
               advanced: defaults.advanced,
-              version: 4,
+              version: 5,
             },
           };
         }
 
-        // Version 2 -> 4: Add showOnlyMilitary and showOnlyInteresting to map settings
+        // Version 2 -> 5: Add showOnlyMilitary and showOnlyInteresting to map settings
         if (version === 2) {
           return {
             ...state,
@@ -774,12 +774,12 @@ export const useSettingsStore = create<SettingsState>()(
                 showOpenAIP: false,
                 showRainViewer: false,
               },
-              version: 4,
+              version: 5,
             },
           };
         }
 
-        // Version 3 -> 4: Add showOpenAIP and showRainViewer to map settings
+        // Version 3 -> 5: Add showOpenAIP and showRainViewer to map settings
         if (version === 3) {
           return {
             ...state,
@@ -790,7 +790,22 @@ export const useSettingsStore = create<SettingsState>()(
                 showOpenAIP: false,
                 showRainViewer: false,
               },
-              version: 4,
+              version: 5,
+            },
+          };
+        }
+
+        // Version 4 -> 5: Add groundAltitudeThreshold to map settings
+        if (version === 4) {
+          return {
+            ...state,
+            settings: {
+              ...state.settings,
+              map: {
+                ...state.settings.map,
+                groundAltitudeThreshold: 500,
+              },
+              version: 5,
             },
           };
         }

@@ -72,7 +72,7 @@ describe("useSettingsStore", () => {
       expect(settings.map.showRangeRings).toBe(true);
 
       expect(settings.advanced.persistLogs).toBe(true);
-      expect(settings.version).toBe(4);
+      expect(settings.version).toBe(5);
       expect(settings.updatedAt).toBeGreaterThan(0);
     });
 
@@ -543,7 +543,7 @@ describe("useSettingsStore", () => {
       expect(typeof exported).toBe("string");
       const parsed = JSON.parse(exported) as UserSettings;
       expect(parsed.appearance.theme).toBe("latte");
-      expect(parsed.version).toBe(4);
+      expect(parsed.version).toBe(5);
     });
 
     it("should import valid settings JSON", () => {
@@ -761,13 +761,13 @@ describe("useSettingsStore", () => {
 
       const migrated = migrate(oldState, 0);
 
-      expect(migrated.settings.version).toBe(4);
+      expect(migrated.settings.version).toBe(5);
       expect(migrated.settings.appearance.theme).toBe("mocha"); // Reset to default
       expect(migrated.settings.map).toBeDefined();
       expect(migrated.settings.advanced).toBeDefined();
     });
 
-    it("should migrate from version 1 to version 4 (add map and advanced)", () => {
+    it("should migrate from version 1 to version 5 (add map and advanced)", () => {
       // biome-ignore lint/suspicious/noExplicitAny: Zustand persist API doesn't expose migrate type
       const { migrate } = (useSettingsStore as any).persist.getOptions();
 
@@ -804,7 +804,7 @@ describe("useSettingsStore", () => {
 
       const migrated = migrate(v1State, 1);
 
-      expect(migrated.settings.version).toBe(4);
+      expect(migrated.settings.version).toBe(5);
       // Existing settings preserved
       expect(migrated.settings.appearance.theme).toBe("latte");
       expect(migrated.settings.regional.timeFormat).toBe("24h");
@@ -817,7 +817,7 @@ describe("useSettingsStore", () => {
       expect(migrated.settings.advanced.logLevel).toBeDefined();
     });
 
-    it("should migrate from version 3 to version 4 (add showOpenAIP and showRainViewer)", () => {
+    it("should migrate from version 3 to version 5 (add showOpenAIP and showRainViewer)", () => {
       // biome-ignore lint/suspicious/noExplicitAny: Zustand persist API doesn't expose migrate type
       const { migrate } = (useSettingsStore as any).persist.getOptions();
 
@@ -877,7 +877,7 @@ describe("useSettingsStore", () => {
 
       const migrated = migrate(v3State, 3);
 
-      expect(migrated.settings.version).toBe(4);
+      expect(migrated.settings.version).toBe(5);
       // Existing settings preserved
       expect(migrated.settings.map.showNexrad).toBe(false);
       expect(migrated.settings.map.showOnlyMilitary).toBe(false);
@@ -885,6 +885,78 @@ describe("useSettingsStore", () => {
       // New overlay settings added with defaults
       expect(migrated.settings.map.showOpenAIP).toBe(false);
       expect(migrated.settings.map.showRainViewer).toBe(false);
+    });
+
+    it("should migrate from version 4 to version 5 (add groundAltitudeThreshold)", () => {
+      // biome-ignore lint/suspicious/noExplicitAny: Zustand persist API doesn't expose migrate type
+      const { migrate } = (useSettingsStore as any).persist.getOptions();
+
+      const v4State = {
+        settings: {
+          appearance: {
+            theme: "mocha",
+            showConnectionStatus: true,
+            animations: true,
+          },
+          regional: {
+            timeFormat: "auto",
+            dateFormat: "auto",
+            timezone: "local",
+            altitudeUnit: "feet",
+          },
+          notifications: {
+            desktop: false,
+            sound: false,
+            volume: 50,
+            onPageAlerts: false,
+          },
+          data: {
+            maxMessagesPerAircraft: 50,
+            maxMessageGroups: 50,
+            enableCaching: true,
+            autoClearMinutes: 60,
+          },
+          map: {
+            provider: "carto_dark_all",
+            userSelectedProvider: false,
+            stationLat: 0,
+            stationLon: 0,
+            rangeRings: [100, 200, 300],
+            defaultCenterLat: 0,
+            defaultCenterLon: 0,
+            defaultZoom: 7,
+            showOnlyAcars: false,
+            showDatablocks: true,
+            showExtendedDatablocks: false,
+            showNexrad: false,
+            showRangeRings: true,
+            showOnlyUnread: false,
+            showOnlyMilitary: false,
+            showOnlyInteresting: false,
+            showOnlyPIA: false,
+            showOnlyLADD: false,
+            enabledGeoJSONOverlays: [],
+            showOpenAIP: false,
+            showRainViewer: false,
+            // Missing groundAltitudeThreshold
+          },
+          advanced: {
+            logLevel: "info",
+            persistLogs: true,
+          },
+          updatedAt: 123456,
+          version: 4,
+        },
+      };
+
+      const migrated = migrate(v4State, 4);
+
+      expect(migrated.settings.version).toBe(5);
+      // Existing settings preserved
+      expect(migrated.settings.map.showOpenAIP).toBe(false);
+      expect(migrated.settings.map.showRainViewer).toBe(false);
+      // New groundAltitudeThreshold setting added with default
+      expect(migrated.settings.map.groundAltitudeThreshold).toBe(500);
     });
 
     it("should return unchanged state for current version", () => {
@@ -1029,7 +1101,7 @@ describe("useSettingsStore", () => {
       if (!stored) throw new Error("Expected stored to be truthy");
       const parsed = JSON.parse(stored);
 
-      expect(parsed.version).toBe(4);
+      expect(parsed.version).toBe(5);
     });
   });
 
