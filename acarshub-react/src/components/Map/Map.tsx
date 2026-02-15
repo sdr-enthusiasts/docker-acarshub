@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-import type maplibregl from "maplibre-gl";
+import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
   MapRef,
@@ -140,6 +140,11 @@ export function MapComponent({
     x: number;
     y: number;
   } | null>(null);
+
+  // Long-press state for mobile
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const touchStartPosRef = useRef<{ x: number; y: number } | null>(null);
+  const isLongPressActiveRef = useRef(false);
 
   // Save view state to localStorage when it changes
   useEffect(() => {
@@ -317,21 +322,85 @@ export function MapComponent({
     onLoad?.();
   }, [onLoad]);
 
-  // Handle map right-click
-  const handleMapContextMenu = useCallback(
-    (event: maplibregl.MapMouseEvent) => {
-      event.preventDefault();
-      setMapContextMenu({
-        x: event.originalEvent.clientX,
-        y: event.originalEvent.clientY,
-      });
-    },
-    [],
-  );
-
   // Handle map context menu close
   const handleMapContextMenuClose = useCallback(() => {
     setMapContextMenu(null);
+  }, []);
+
+  // Handle touch start for long-press
+  const handleTouchStart = useCallback((event: React.TouchEvent) => {
+    // Only handle single touch
+    if (event.touches.length !== 1) return;
+
+    const touch = event.touches[0];
+    touchStartPosRef.current = { x: touch.clientX, y: touch.clientY };
+    isLongPressActiveRef.current = false;
+
+    // Start long-press timer (500ms)
+    longPressTimerRef.current = setTimeout(() => {
+      if (touchStartPosRef.current) {
+        isLongPressActiveRef.current = true;
+        setMapContextMenu({
+          x: touchStartPosRef.current.x,
+          y: touchStartPosRef.current.y,
+        });
+      }
+    }, 500);
+  }, []);
+
+  // Handle touch move - cancel long-press if finger moves too much
+  const handleTouchMove = useCallback((event: React.TouchEvent) => {
+    if (!touchStartPosRef.current || event.touches.length !== 1) return;
+
+    const touch = event.touches[0];
+    const deltaX = Math.abs(touch.clientX - touchStartPosRef.current.x);
+    const deltaY = Math.abs(touch.clientY - touchStartPosRef.current.y);
+
+    // Cancel if moved more than 10px
+    if (deltaX > 10 || deltaY > 10) {
+      if (longPressTimerRef.current) {
+        clearTimeout(longPressTimerRef.current);
+        longPressTimerRef.current = null;
+      }
+      touchStartPosRef.current = null;
+      isLongPressActiveRef.current = false;
+    }
+  }, []);
+
+  // Handle touch end - cancel long-press if finger lifted
+  const handleTouchEnd = useCallback(() => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+    touchStartPosRef.current = null;
+    isLongPressActiveRef.current = false;
+  }, []);
+
+  // Cleanup long-press timer on unmount
+  useEffect(() => {
+    return () => {
+      if (longPressTimerRef.current) {
+        clearTimeout(longPressTimerRef.current);
+      }
+    };
+  }, []);
+
+  // Prevent text selection during long-press
+  useEffect(() => {
+    const preventSelection = (event: Event) => {
+      if (isLongPressActiveRef.current || longPressTimerRef.current) {
+        event.preventDefault();
+      }
+    };
+
+    document.addEventListener("selectstart", preventSelection);
+    document.addEventListener("contextmenu", preventSelection);
+
+    return () => {
+      document.removeEventListener("selectstart", preventSelection);
+      document.removeEventListener("contextmenu", preventSelection);
+    };
   }, []);
 
   // Handle unfollow from map context menu
@@ -346,6 +415,10 @@ export function MapComponent({
       className={`map-container ${className}`}
       data-nexrad-visible={mapSettings.showNexrad}
       data-rainviewer-visible={mapSettings.showRainViewer}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      onTouchCancel={handleTouchEnd}
     >
       <MapLibreMap
         key={mapSettings.provider}
@@ -361,7 +434,6 @@ export function MapComponent({
         dragRotate={false}
         touchZoomRotate={false}
         keyboard={true}
-        onContextMenu={handleMapContextMenu}
       >
         {/* Navigation controls (zoom, compass) */}
         <NavigationControl position="top-right" showCompass={false} />

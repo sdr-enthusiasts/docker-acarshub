@@ -22,6 +22,9 @@
   height: 100%;
   position: relative;
   overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 
   // MapLibre attribution styling
   .maplibregl-ctrl-attrib {

@@ -40,6 +40,9 @@
     pointer-events: auto;
     touch-action: manipulation; // Prevent double-tap zoom on mobile Safari
     -webkit-tap-highlight-color: transparent; // Remove tap highlight on iOS
+    user-select: none; // Prevent text selection on mobile Safari
+    -webkit-user-select: none; // Prevent text selection on mobile Safari
+    -webkit-touch-callout: none; // Prevent callout menu on iOS
 
     // Remove border radius from middle buttons
     button {
@@ -52,6 +55,9 @@
       cursor: pointer;
       touch-action: manipulation; // Prevent double-tap zoom on mobile Safari
       -webkit-tap-highlight-color: transparent; // Remove tap highlight on iOS
+      user-select: none; // Prevent text selection on mobile Safari
+      -webkit-user-select: none; // Prevent text selection on mobile Safari
+      -webkit-touch-callout: none; // Prevent callout menu on iOS
 
       &:first-child {
         border-top-left-radius: var(--border-radius-sm);
