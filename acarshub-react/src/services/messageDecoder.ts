@@ -135,11 +135,13 @@ class AcarsMessageDecoder {
             name: result.decoder.name,
           },
           // Store the formatted structure as we want it displayed)
-          formatted: [{label: 'Description', value: result.formatted.description}].concat(
+          formatted: [
+            { label: "Description", value: result.formatted.description },
+          ].concat(
             result.formatted.items.map((item) => ({
               label: item.label,
               value: item.value,
-            }))
+            })),
           ),
         };
 
