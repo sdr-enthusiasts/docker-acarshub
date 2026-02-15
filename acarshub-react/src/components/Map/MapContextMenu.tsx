@@ -20,8 +20,10 @@ interface MapContextMenuProps {
   x: number;
   y: number;
   isFollowingAircraft: boolean;
+  isPaused: boolean;
   onClose: () => void;
   onUnfollowAircraft: () => void;
+  onTogglePause: () => void;
 }
 
 /**
@@ -30,36 +32,49 @@ interface MapContextMenuProps {
  * Context menu for right-clicking on the map (not on an aircraft).
  *
  * Actions:
+ * - Pause/Resume: Toggle aircraft updates
  * - Unfollow Aircraft: Stops tracking the currently followed aircraft (only shown when following)
  *
  * Design Notes:
  * - Uses generic ContextMenu component
- * - Currently minimal, designed to be extended with more map actions
- * - Only shows when there's a followed aircraft to unfollow
+ * - Always shows (at least pause/resume option)
+ * - Adapts menu items based on current state (paused, following)
  */
 export function MapContextMenu({
   x,
   y,
   isFollowingAircraft,
+  isPaused,
   onClose,
   onUnfollowAircraft,
+  onTogglePause,
 }: MapContextMenuProps) {
   const items: ContextMenuItem[] = [];
 
-  // Only show unfollow option if we're currently following an aircraft
+  // Always show pause/resume option
+  items.push({
+    id: "toggle-pause",
+    label: isPaused ? "Resume Updates" : "Pause Updates",
+    icon: isPaused ? "▶" : "⏸",
+    variant: "default",
+    onClick: () => {
+      onTogglePause();
+      onClose();
+    },
+  });
+
+  // Show unfollow option if we're currently following an aircraft
   if (isFollowingAircraft) {
     items.push({
       id: "unfollow",
       label: "Unfollow Aircraft",
       icon: "📍",
       variant: "default",
-      onClick: onUnfollowAircraft,
+      onClick: () => {
+        onUnfollowAircraft();
+        onClose();
+      },
     });
-  }
-
-  // If no items to show, don't render the menu
-  if (items.length === 0) {
-    return null;
   }
 
   return <ContextMenu x={x} y={y} items={items} onClose={onClose} />;

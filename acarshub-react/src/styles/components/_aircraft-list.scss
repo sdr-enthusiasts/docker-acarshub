@@ -41,6 +41,10 @@
   padding: 1rem;
   border-bottom: 1px solid var(--color-surface1);
   background-color: var(--color-mantle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
 }
 
 .aircraft-list__stats {
@@ -61,6 +65,52 @@
 
   &--muted {
     color: var(--color-subtext-0);
+  }
+}
+
+.aircraft-list__pause-button {
+  flex-shrink: 0;
+  padding: 0.25rem 0.5rem;
+  background-color: var(--color-surface0);
+  border: 1px solid var(--color-surface2);
+  border-radius: 4px;
+  color: var(--color-text);
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  min-height: 36px;
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+
+  &:hover {
+    background-color: var(--color-surface1);
+    border-color: var(--color-overlay0);
+  }
+
+  &:active {
+    background-color: var(--color-surface2);
+  }
+
+  &--paused {
+    background-color: var(--color-yellow);
+    border-color: var(--color-yellow);
+    color: var(--color-base);
+
+    &:hover {
+      background-color: var(--color-peach);
+      border-color: var(--color-peach);
+    }
+
+    &:active {
+      background-color: var(--color-maroon);
+      border-color: var(--color-maroon);
+    }
   }
 }
 

@@ -33,6 +33,10 @@ interface AircraftListProps {
   onAircraftClick?: (aircraft: PairedAircraft) => void;
   onAircraftHover?: (aircraft: PairedAircraft | null) => void;
   hoveredAircraft?: string | null; // hex of hovered aircraft
+  /** Whether updates are paused */
+  isPaused?: boolean;
+  /** Callback when pause button is clicked */
+  onPauseToggle?: () => void;
 }
 
 type SortField =
@@ -66,6 +70,8 @@ export function AircraftList({
   onAircraftClick,
   onAircraftHover,
   hoveredAircraft,
+  isPaused = false,
+  onPauseToggle,
 }: AircraftListProps) {
   const altitudeUnit = useSettingsStore(
     (state) => state.settings.regional.altitudeUnit,
@@ -407,7 +413,7 @@ export function AircraftList({
 
   return (
     <div className="aircraft-list">
-      {/* Header with stats */}
+      {/* Header with stats and pause button */}
       <div className="aircraft-list__header">
         <div className="aircraft-list__stats">
           <span className="aircraft-list__stat">
@@ -420,6 +426,20 @@ export function AircraftList({
             </span>
           )}
         </div>
+        {onPauseToggle && (
+          <button
+            type="button"
+            className={`aircraft-list__pause-button ${isPaused ? "aircraft-list__pause-button--paused" : ""}`}
+            onClick={onPauseToggle}
+            title={
+              isPaused
+                ? "Resume updates (or press 'p')"
+                : "Pause updates (or press 'p')"
+            }
+          >
+            {isPaused ? "▶" : "⏸"}
+          </button>
+        )}
       </div>
 
       {/* Filters */}

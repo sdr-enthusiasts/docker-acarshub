@@ -40,6 +40,7 @@ import { mapLogger } from "../utils/logger";
  * - Range rings from station
  * - Filtering (ACARS-only, unread messages)
  * - Sortable aircraft list
+ * - Pause/resume functionality with keyboard shortcut (p key)
  */
 export const LiveMapPage = () => {
   const setCurrentPage = useAppStore((state) => state.setCurrentPage);
@@ -63,29 +64,84 @@ export const LiveMapPage = () => {
     null,
   );
 
+  // Pause state (persisted to localStorage)
+  const [isPaused, setIsPaused] = useState(() => {
+    const saved = localStorage.getItem("liveMap.isPaused");
+    return saved === "true";
+  });
+
+  // Frozen aircraft snapshot when paused
+  const [frozenAircraft, setFrozenAircraft] = useState<PairedAircraft[]>([]);
+
+  // Persist pause state to localStorage
+  useEffect(() => {
+    localStorage.setItem("liveMap.isPaused", String(isPaused));
+  }, [isPaused]);
+
   // Pair ADS-B aircraft with ACARS message groups
   const pairedAircraft = useMemo(() => {
     const aircraft = adsbAircraft?.aircraft || [];
     return pairADSBWithACARSMessages(aircraft, messageGroups);
   }, [adsbAircraft, messageGroups]);
 
-  // Freeze aircraft positions during zoom
-  const frozenAircraftRef = useRef<PairedAircraft[]>(pairedAircraft);
-  const [displayedAircraft, setDisplayedAircraft] =
-    useState<PairedAircraft[]>(pairedAircraft);
+  // Use frozen aircraft when paused, live data when not paused
+  const effectiveAircraft = isPaused ? frozenAircraft : pairedAircraft;
 
-  // Update displayed aircraft only when not zooming
+  // Freeze aircraft positions during zoom
+  const frozenAircraftRef = useRef<PairedAircraft[]>(effectiveAircraft);
+  const [displayedAircraft, setDisplayedAircraft] =
+    useState<PairedAircraft[]>(effectiveAircraft);
+
+  // Update displayed aircraft only when not zooming and not paused
   useEffect(() => {
     if (!isZooming) {
-      setDisplayedAircraft(pairedAircraft);
-      frozenAircraftRef.current = pairedAircraft;
+      setDisplayedAircraft(effectiveAircraft);
+      frozenAircraftRef.current = effectiveAircraft;
     }
-  }, [pairedAircraft, isZooming]);
+  }, [effectiveAircraft, isZooming]);
+
+  // Capture aircraft snapshot when pausing (only when pause state changes)
+  // Use a ref to always get the latest pairedAircraft at the moment of pausing
+  const pairedAircraftRef = useRef(pairedAircraft);
+  pairedAircraftRef.current = pairedAircraft;
+
+  useEffect(() => {
+    if (isPaused) {
+      // Capture snapshot at the moment of pausing
+      setFrozenAircraft(pairedAircraftRef.current);
+      mapLogger.info("Aircraft updates paused", {
+        aircraftCount: pairedAircraftRef.current.length,
+      });
+    } else {
+      mapLogger.info("Aircraft updates resumed");
+    }
+  }, [isPaused]);
 
   useEffect(() => {
     setCurrentPage("Live Map");
     socketService.notifyPageChange("Live Map");
   }, [setCurrentPage]);
+
+  // Keyboard shortcut: 'p' to toggle pause
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Ignore if user is typing in an input field
+      if (
+        event.target instanceof HTMLInputElement ||
+        event.target instanceof HTMLTextAreaElement
+      ) {
+        return;
+      }
+
+      if (event.key === "p" || event.key === "P") {
+        event.preventDefault();
+        setIsPaused((prev) => !prev);
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   const handleMapLoad = () => {
     setIsMapLoaded(true);
@@ -99,7 +155,7 @@ export const LiveMapPage = () => {
     const aircraftParam = searchParams.get("aircraft");
     if (!aircraftParam) return;
 
-    // Find the aircraft in the paired list
+    // Find the aircraft in the paired list (use live data, not frozen)
     const targetAircraft = pairedAircraft.find(
       (a) =>
         a.hex.toUpperCase() === aircraftParam.toUpperCase() ||
@@ -255,6 +311,11 @@ export const LiveMapPage = () => {
     }
   }, [followedAircraftHex, displayedAircraft, isZooming]);
 
+  // Handle pause toggle from button
+  const handlePauseToggle = useCallback(() => {
+    setIsPaused((prev) => !prev);
+  }, []);
+
   return (
     <div className="page live-map-page">
       <div className="live-map-page__container">
@@ -265,6 +326,8 @@ export const LiveMapPage = () => {
             onAircraftClick={handleAircraftClick}
             onAircraftHover={handleAircraftHover}
             hoveredAircraft={hoveredAircraftHex}
+            isPaused={isPaused}
+            onPauseToggle={handlePauseToggle}
           />
         </aside>
 
@@ -278,6 +341,8 @@ export const LiveMapPage = () => {
             followedAircraftHex={followedAircraftHex}
             onFollowAircraft={handleFollowAircraft}
             aircraft={displayedAircraft}
+            isPaused={isPaused}
+            onTogglePause={handlePauseToggle}
             className={isMapLoaded ? "live-map-page__map--loaded" : ""}
           />
 
@@ -291,6 +356,16 @@ export const LiveMapPage = () => {
             <div className="live-map-page__map-loading">
               <p className="live-map-page__pulse-dots">●●●</p>
               <p>Loading map...</p>
+            </div>
+          )}
+
+          {/* Pause indicator */}
+          {isMapLoaded && isPaused && (
+            <div className="live-map-page__pause-notice">
+              <span className="pause-notice__icon">⏸</span>
+              <span className="pause-notice__text">
+                Updates paused. Press <kbd>p</kbd> or click Resume to continue.
+              </span>
             </div>
           )}
 

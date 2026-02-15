@@ -211,9 +211,10 @@ export const AboutPage = () => {
         <Card title="General Tips" variant="success">
           <ul>
             <li>
-              On the <code>Live Message</code> page press the <kbd>p</kbd> key
-              on your keyboard to quickly pause/unpause the website updates so
-              you can catch up on messages.
+              On the <code>Live Messages</code> and <code>Live Map</code> pages
+              press the <kbd>p</kbd> key on your keyboard to quickly
+              pause/unpause the website updates so you can catch up on messages
+              or freeze aircraft positions.
             </li>
             <li>
               On the bottom right corner of all pages you will get a little
@@ -234,8 +235,8 @@ export const AboutPage = () => {
           <p>Use these keyboard shortcuts for quick navigation and control:</p>
           <ul>
             <li>
-              <kbd>p</kbd> - Pause/unpause live message updates (Live Messages
-              page)
+              <kbd>p</kbd> - Pause/unpause live updates (Live Messages and Live
+              Map pages)
             </li>
             <li>
               <kbd>Esc</kbd> - Close modals and dialogs

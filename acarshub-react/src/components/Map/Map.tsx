@@ -61,6 +61,10 @@ interface MapComponentProps {
   onFollowAircraft?: (hex: string | null) => void;
   /** Optional pre-paired aircraft (for frozen positions during zoom) */
   aircraft?: PairedAircraft[];
+  /** Whether updates are paused */
+  isPaused?: boolean;
+  /** Callback when pause state should be toggled */
+  onTogglePause?: () => void;
 }
 
 /**
@@ -78,6 +82,8 @@ export function MapComponent({
   followedAircraftHex,
   onFollowAircraft,
   aircraft,
+  isPaused = false,
+  onTogglePause,
 }: MapComponentProps) {
   const decoders = useAppStore((state) => state.decoders);
   const mapSettings = useSettingsStore((state) => state.settings.map);
@@ -400,8 +406,13 @@ export function MapComponent({
           x={mapContextMenu.x}
           y={mapContextMenu.y}
           isFollowingAircraft={!!followedAircraftHex}
+          isPaused={isPaused}
           onClose={handleMapContextMenuClose}
           onUnfollowAircraft={handleUnfollowFromMap}
+          onTogglePause={() => {
+            onTogglePause?.();
+            handleMapContextMenuClose();
+          }}
         />
       )}
     </div>
