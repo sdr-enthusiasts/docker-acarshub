@@ -143,7 +143,7 @@
   &__fields {
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-xs);
+    gap: 0;
     margin: 0;
     padding-left: var(--spacing-md);
     padding-right: var(--spacing-md);
@@ -262,7 +262,7 @@
   display: grid;
   grid-template-columns: minmax(120px, auto) 1fr;
   gap: var(--spacing-md);
-  padding: var(--spacing-sm) 0;
+  padding: var(--spacing-xs) 0;
 
   @include breakpoint(md) {
     grid-template-columns: minmax(180px, auto) 1fr;
