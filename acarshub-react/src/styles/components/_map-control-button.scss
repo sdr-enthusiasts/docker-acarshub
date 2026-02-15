@@ -32,6 +32,8 @@
   transition: all 0.2s ease;
   font-size: 1rem;
   padding: 0;
+  touch-action: manipulation; // Prevent double-tap zoom on mobile Safari
+  -webkit-tap-highlight-color: transparent; // Remove tap highlight on iOS
 
   &:hover {
     background-color: var(--color-surface1);
