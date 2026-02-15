@@ -32,6 +32,14 @@ export function StationMarker() {
   const decoders = useAppStore((state) => state.decoders);
   const settings = useSettingsStore((state) => state.settings);
 
+  // Check if range rings are allowed by backend (privacy protection)
+  const backendAllowsRangeRings = decoders?.adsb?.range_rings ?? true;
+
+  // Don't render if backend disables range rings (station location privacy)
+  if (!backendAllowsRangeRings) {
+    return null;
+  }
+
   // Determine station location (settings override backend)
   let stationLat = settings.map.stationLat;
   let stationLon = settings.map.stationLon;
