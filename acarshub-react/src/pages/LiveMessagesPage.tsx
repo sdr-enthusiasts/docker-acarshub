@@ -93,6 +93,33 @@ export const LiveMessagesPage = () => {
     socketService.notifyPageChange("Live Messages");
   }, [setCurrentPage]);
 
+  // Keyboard shortcut: 'p' to toggle pause
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Ignore if user is typing in an input field
+      if (
+        event.target instanceof HTMLInputElement ||
+        event.target instanceof HTMLTextAreaElement
+      ) {
+        return;
+      }
+
+      if (event.key === "p" || event.key === "P") {
+        event.preventDefault();
+        setIsPaused((prev) => {
+          if (!prev) {
+            // About to pause - capture current message group state
+            setFrozenMessageGroups(new Map(messageGroups));
+          }
+          return !prev;
+        });
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [messageGroups]);
+
   // Convert message groups Map to array and sort by newest first
   // Use frozen snapshot when paused, live message groups when not paused
   const messageGroupsArray = useMemo(() => {
