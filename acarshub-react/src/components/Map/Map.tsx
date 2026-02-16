@@ -319,8 +319,14 @@ export function MapComponent({
 
   // Handle map load
   const handleLoad = useCallback(() => {
+    mapLogger.info("MapLibre load event fired");
     onLoad?.();
   }, [onLoad]);
+
+  // Handle map error
+  const handleError = useCallback((evt: { error: Error }) => {
+    mapLogger.error("MapLibre error event", { error: evt.error.message });
+  }, []);
 
   // Handle map context menu close
   const handleMapContextMenuClose = useCallback(() => {
@@ -426,6 +432,7 @@ export function MapComponent({
         {...viewState}
         onMove={handleMove}
         onLoad={handleLoad}
+        onError={handleError}
         mapStyle={mapStyle}
         style={{ width: "100%", height: "100%" }}
         attributionControl={{}}

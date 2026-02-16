@@ -45,7 +45,22 @@ export class SpriteLoader {
   private async _loadData(): Promise<void> {
     try {
       // Import spritesheet data directly - Vite handles base path
-      this.data = spritesheetData as SpritesheetData;
+      // Use a timeout to prevent mobile Safari from hanging
+      const loadPromise = new Promise<void>((resolve, reject) => {
+        try {
+          this.data = spritesheetData as SpritesheetData;
+          resolve();
+        } catch (error) {
+          reject(error);
+        }
+      });
+
+      const timeoutPromise = new Promise<void>((_, reject) => {
+        setTimeout(() => reject(new Error("Sprite load timeout")), 3000);
+      });
+
+      await Promise.race([loadPromise, timeoutPromise]);
+
       logger.info("Spritesheet loaded", {
         version: this.data?.version,
         airframeCount: Object.keys(this.data?.airframeToSprite || {}).length,
@@ -53,6 +68,9 @@ export class SpriteLoader {
       });
     } catch (error) {
       logger.error("Failed to load spritesheet", { error });
+      // Set data to null on error so isLoaded() returns false
+      this.data = null;
+      this.loadPromise = null;
       throw error;
     }
   }

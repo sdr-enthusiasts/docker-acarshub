@@ -212,15 +212,33 @@ export function AircraftMarkers({
   const [selectedMessageGroup, setSelectedMessageGroup] =
     useState<MessageGroup | null>(null);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
+  const [spriteLoadError, setSpriteLoadError] = useState(false);
 
-  // Preload spritesheet on mount
+  // Preload spritesheet on mount with timeout
   useEffect(() => {
     if (useSprites) {
       const loader = getSpriteLoader();
       if (!loader.isLoaded()) {
-        loader.load().catch((err) => {
-          console.error("Failed to preload spritesheet:", err);
-        });
+        // Set a timeout to prevent indefinite hanging
+        const timeoutId = setTimeout(() => {
+          if (!loader.isLoaded()) {
+            console.warn("Sprite loading timeout - continuing without sprites");
+            setSpriteLoadError(true);
+          }
+        }, 5000); // 5 second timeout
+
+        loader
+          .load()
+          .then(() => {
+            clearTimeout(timeoutId);
+          })
+          .catch((err) => {
+            clearTimeout(timeoutId);
+            console.error("Failed to preload spritesheet:", err);
+            setSpriteLoadError(true);
+          });
+
+        return () => clearTimeout(timeoutId);
       }
     }
   }, [useSprites]);
@@ -292,7 +310,8 @@ export function AircraftMarkers({
   // Prepare marker data using useMemo to avoid infinite loops
   const aircraftMarkers = useMemo(() => {
     const markers: AircraftMarkerData[] = [];
-    const spriteLoader = useSprites ? getSpriteLoader() : null;
+    const spriteLoader =
+      useSprites && !spriteLoadError ? getSpriteLoader() : null;
 
     for (const aircraft of filteredPairedAircraft) {
       // Skip aircraft without position
@@ -339,7 +358,7 @@ export function AircraftMarkers({
       let spriteFrames: number[] | undefined;
       let spriteFrameTime: number | undefined;
 
-      if (useSprites && spriteLoader?.isLoaded()) {
+      if (useSprites && !spriteLoadError && spriteLoader?.isLoaded()) {
         // Get sprite for this aircraft
         const categoryCode = mapCategoryToSpriteCode(aircraft.category);
         let spriteResult = spriteLoader.getSprite(aircraft.type, categoryCode);
@@ -445,6 +464,7 @@ export function AircraftMarkers({
     useSprites,
     colorByDecoder,
     groundAltitudeThreshold,
+    spriteLoadError,
   ]);
 
   // Handle marker click

@@ -143,10 +143,24 @@ export const LiveMapPage = () => {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  const handleMapLoad = () => {
+  const handleMapLoad = useCallback(() => {
     setIsMapLoaded(true);
     mapLogger.info("Map loaded successfully");
-  };
+  }, []);
+
+  // Fallback timeout for mobile Safari - if map doesn't fire load event within 10 seconds, assume it's loaded
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (!isMapLoaded) {
+        mapLogger.warn(
+          "Map load timeout - forcing loaded state for mobile Safari compatibility",
+        );
+        setIsMapLoaded(true);
+      }
+    }, 10000); // 10 second timeout
+
+    return () => clearTimeout(timeoutId);
+  }, [isMapLoaded]);
 
   // Focus on aircraft from URL parameter
   useEffect(() => {
