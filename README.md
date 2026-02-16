@@ -37,6 +37,7 @@ Builds and runs on `amd64`, and `arm64` architectures.
     - [The Fix](#the-fix)
     - [YAML Configuration for Ports](#yaml-configuration-for-ports)
   - [Getting Help](#getting-help)
+  - [Legacy Versions](#legacy-versions)
 
 ## Pre-requisites/Totally new to docker but you think this looks cool
 
@@ -291,3 +292,9 @@ And then you will be able to connect to `yourpisipaddress:15555` or `yourpisipad
 ## Getting Help
 
 You can [log an issue](https://github.com/sdr-enthusiasts/docker-acarshub/issues) on the project's GitHub or visit the [discord](https://discord.gg/sTf9uYF) server.
+
+## Legacy Versions
+
+The current major release version of ACARS Hub is version 4. If you need to continue running version 3 for whatever reason, you can pull the latest version 3 image with `docker pull ghcr.io/sdr-enthusiasts/docker-acarshub:latest-build-1477`. Please note that version 3 is no longer being developed and will not receive any updates, including security updates. It is recommended to upgrade to version 4 as soon as possible.
+
+In addition, v3 (mostly) supported `armhf`/`armv7` architecture, but that support was dropped at the very end of the v3 lifecycle, and was never supported for v4. If you need to run on `armhf`/`armv7` architecture `docker pull ghcr.io/sdr-enthusiasts/docker-acarshub:latest-build-1461`.
