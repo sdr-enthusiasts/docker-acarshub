@@ -125,7 +125,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag: ${{ needs.patch_acars_hub_version.outputs.version }}Build${{ needs.patch_acars_hub_version.outputs.build_number }}
-          name: ${{ needs.patch_acars_hub_version.outputs.version }} Build ${{ needs.patch_acars_hub_version.outputs.build_number }}
+          tag: ${{ needs.get_version.outputs.version }}Build${{ needs.get_version.outputs.build_number }}
+          name: ${{ needs.get_version.outputs.version }} Build ${{ needs.get_version.outputs.build_number }}
           draft: false
           prerelease: false
