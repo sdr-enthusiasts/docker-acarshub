@@ -17,7 +17,8 @@
     "github-actions",
     "dockerfile",
     "pip_requirements",
-    "npm"
+    "npm",
+    "pep621"
   ],
   "prConcurrentLimit": 0,
   "prHourlyLimit": 0,
@@ -29,7 +30,7 @@
   },
   "packageRules": [
     {
-      "matchManagers": ["pip_requirements", "npm"],
+      "matchManagers": ["pip_requirements", "pep621", "npm"],
       "automerge": false
     },
     {
