@@ -1,0 +1,8 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "files": [],
+  "references": [
+    { "path": "./acarshub-react" },
+    { "path": "./acarshub-backend" }
+  ]
+}

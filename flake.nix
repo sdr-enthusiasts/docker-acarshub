@@ -70,13 +70,11 @@
 
           javascript = {
             enableBiome = true;
-            enableTsc = true;
-            tsConfig = "acarshub-react/tsconfig.json";
+            enableTsc = false;
           };
 
           extraExcludes = [
             "secrets.yaml"
-            "tsconfig.json"
             "Logo-Sources"
             ".*.mp3"
           ];

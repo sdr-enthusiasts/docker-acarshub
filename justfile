@@ -64,6 +64,16 @@ test-ui:
 test-coverage:
     cd acarshub-react && npm run test:coverage
 
+# Backend Testing commands
+test-backend:
+    cd acarshub-backend && npm test
+
+test-backend-watch:
+    cd acarshub-backend && npm run test:watch
+
+test-backend-coverage:
+    cd acarshub-backend && npm run test:coverage
+
 # E2E Testing commands
 test-e2e:
     cd acarshub-react && npm run test:e2e
@@ -104,14 +114,20 @@ check:
 
 # Full CI-like check (unit/integration tests + linting + formatting)
 ci:
-    @echo "Running TypeScript checks..."
+    @echo "Running frontend TypeScript checks..."
     cd acarshub-react && npx tsc --noEmit
-    @echo "Running build..."
+    @echo "Running backend TypeScript checks..."
+    cd acarshub-backend && npx tsc --noEmit
+    @echo "Running frontend build..."
     cd acarshub-react && npm run build
+    @echo "Running backend build..."
+    cd acarshub-backend && npm run build
     @echo "Running Biome checks..."
-    biome check --error-on-warnings acarshub-react/
-    @echo "Running tests..."
+    biome check --error-on-warnings acarshub-react/ acarshub-backend/
+    @echo "Running frontend tests..."
     cd acarshub-react && npm test
+    @echo "Running backend tests..."
+    cd acarshub-backend && npm test
     @echo "Running pre-commit hooks..."
     pre-commit run --all-files
     @echo "✅ All checks passed!"

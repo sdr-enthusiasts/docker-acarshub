@@ -660,6 +660,9 @@ export function runMigrations(): void {
 
     for (let i = startIndex; i < MIGRATIONS.length; i++) {
       const migration = MIGRATIONS[i];
+      if (!migration) {
+        throw new Error(`Migration at index ${i} is undefined`);
+      }
       logger.info(`Applying migration ${i + 1}/${MIGRATIONS.length}`, {
         revision: migration.revision,
         name: migration.name,

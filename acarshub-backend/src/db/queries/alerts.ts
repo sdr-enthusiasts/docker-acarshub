@@ -285,3 +285,187 @@ export function getAlertMatchesForMessage(messageUid: string): AlertMatch[] {
     .where(eq(alertMatches.messageUid, messageUid))
     .all();
 }
+
+/**
+ * Regenerate all alert matches from scratch
+ *
+ * Equivalent to Python regenerate_all_alert_matches() function.
+ *
+ * This function:
+ * 1. Deletes all existing alert matches
+ * 2. Resets alert statistics to 0
+ * 3. Scans all messages and re-applies alert matching logic
+ * 4. Creates new AlertMatch rows for each match
+ * 5. Updates alert statistics counts
+ *
+ * This is an expensive operation and should only be run when:
+ * - Alert terms have been changed and historical matches need updating
+ * - Database has been corrupted and needs rebuilding
+ * - Migrating from old alert system
+ *
+ * @param alertTerms Array of alert terms to match
+ * @param alertTermsIgnore Array of ignore terms
+ * @returns Number of alert matches created
+ */
+export function regenerateAllAlertMatches(
+  alertTerms: string[],
+  alertTermsIgnore: string[],
+): number {
+  const db = getDatabase();
+  let matchCount = 0;
+
+  try {
+    // Step 1: Delete all existing alert matches
+    db.delete(alertMatches).run();
+
+    // Step 2: Reset alert statistics
+    resetAlertCounts();
+
+    // Step 3: Process all messages
+    const allMessages = db.select().from(messages).all();
+
+    for (const message of allMessages) {
+      // Helper function to save alert match
+      const saveAlertMatch = (term: string, matchType: string): void => {
+        // Update alert statistics
+        const foundTerm = db
+          .select()
+          .from(alertStats)
+          .where(eq(alertStats.term, term.toUpperCase()))
+          .get();
+
+        if (foundTerm) {
+          db.update(alertStats)
+            .set({ count: (foundTerm.count ?? 0) + 1 })
+            .where(eq(alertStats.term, term.toUpperCase()))
+            .run();
+        } else {
+          db.insert(alertStats)
+            .values({ term: term.toUpperCase(), count: 1 })
+            .run();
+        }
+
+        // Add to alert_matches table
+        db.insert(alertMatches)
+          .values({
+            messageUid: message.uid,
+            term: term.toUpperCase(),
+            matchType,
+            matchedAt: message.time,
+          })
+          .run();
+
+        matchCount++;
+      };
+
+      // Check message text for alert terms (word boundary match)
+      if (message.text && message.text.length > 0) {
+        for (const searchTerm of alertTerms) {
+          const regex = new RegExp(`\\b${searchTerm}\\b`, "i");
+          if (regex.test(message.text)) {
+            let shouldAdd = true;
+
+            // Check ignore terms
+            for (const ignoreTerm of alertTermsIgnore) {
+              const ignoreRegex = new RegExp(`\\b${ignoreTerm}\\b`, "i");
+              if (ignoreRegex.test(message.text)) {
+                shouldAdd = false;
+                break;
+              }
+            }
+
+            if (shouldAdd) {
+              saveAlertMatch(searchTerm, "text");
+            }
+          }
+        }
+      }
+
+      // Check ICAO hex for alert terms (substring match)
+      if (message.icao && message.icao.length > 0) {
+        const icaoUpper = message.icao.toUpperCase();
+        for (const searchTerm of alertTerms) {
+          const termUpper = searchTerm.toUpperCase();
+          if (icaoUpper === termUpper || icaoUpper.includes(termUpper)) {
+            let shouldAdd = true;
+
+            // Check ignore terms for ICAO
+            for (const ignoreTerm of alertTermsIgnore) {
+              const ignoreUpper = ignoreTerm.toUpperCase();
+              if (
+                icaoUpper === ignoreUpper ||
+                icaoUpper.includes(ignoreUpper)
+              ) {
+                shouldAdd = false;
+                break;
+              }
+            }
+
+            if (shouldAdd) {
+              saveAlertMatch(searchTerm, "icao");
+            }
+          }
+        }
+      }
+
+      // Check tail number for alert terms (substring match)
+      if (message.tail && message.tail.length > 0) {
+        const tailUpper = message.tail.toUpperCase();
+        for (const searchTerm of alertTerms) {
+          const termUpper = searchTerm.toUpperCase();
+          if (tailUpper === termUpper || tailUpper.includes(termUpper)) {
+            let shouldAdd = true;
+
+            // Check ignore terms for tail
+            for (const ignoreTerm of alertTermsIgnore) {
+              const ignoreUpper = ignoreTerm.toUpperCase();
+              if (
+                tailUpper === ignoreUpper ||
+                tailUpper.includes(ignoreUpper)
+              ) {
+                shouldAdd = false;
+                break;
+              }
+            }
+
+            if (shouldAdd) {
+              saveAlertMatch(searchTerm, "tail");
+            }
+          }
+        }
+      }
+
+      // Check flight number for alert terms (substring match)
+      if (message.flight && message.flight.length > 0) {
+        const flightUpper = message.flight.toUpperCase();
+        for (const searchTerm of alertTerms) {
+          const termUpper = searchTerm.toUpperCase();
+          if (flightUpper === termUpper || flightUpper.includes(termUpper)) {
+            let shouldAdd = true;
+
+            // Check ignore terms for flight
+            for (const ignoreTerm of alertTermsIgnore) {
+              const ignoreUpper = ignoreTerm.toUpperCase();
+              if (
+                flightUpper === ignoreUpper ||
+                flightUpper.includes(ignoreUpper)
+              ) {
+                shouldAdd = false;
+                break;
+              }
+            }
+
+            if (shouldAdd) {
+              saveAlertMatch(searchTerm, "flight");
+            }
+          }
+        }
+      }
+    }
+
+    return matchCount;
+  } catch (error) {
+    console.error("Failed to regenerate alert matches:", error);
+    return matchCount;
+  }
+}

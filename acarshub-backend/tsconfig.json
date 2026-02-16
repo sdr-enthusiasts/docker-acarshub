@@ -1,27 +1,11 @@
 {
+  "extends": "../tsconfig.base.json",
   "compilerOptions": {
-    "target": "ES2022",
-    "module": "ESNext",
-    "lib": ["ES2022"],
-    "moduleResolution": "bundler",
+    "composite": true,
     "outDir": "./dist",
     "rootDir": "./src",
-    "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true,
-    "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true,
-    "skipLibCheck": true,
-    "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": true,
-    "verbatimModuleSyntax": true,
-    "moduleDetection": "force",
-    "allowSyntheticDefaultImports": true,
-    "isolatedModules": true
+    "noEmit": false
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.spec.ts"]
+  "exclude": ["node_modules", "dist"]
 }
