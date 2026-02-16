@@ -107,11 +107,9 @@ export function AnimatedSprite({
         backgroundPosition: `-${position.x}px -${position.y}px`,
         width: `${position.width}px`,
         height: `${position.height}px`,
-        transform: `rotate(${rotation}deg) translateZ(0)`,
+        transform: `rotate(${rotation}deg)`,
         transformOrigin: "center center",
         cursor: cursorStyle,
-        WebkitBackfaceVisibility: "hidden",
-        backfaceVisibility: "hidden",
       }}
       onClick={onClick}
       onContextMenu={onContextMenu}
