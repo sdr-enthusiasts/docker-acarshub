@@ -740,12 +740,12 @@ export const useSettingsStore = create<SettingsState>()(
       migrate: (persistedState: unknown, version: number) => {
         const state = persistedState as SettingsState;
 
-        // Version 0 -> 5: Reset to defaults
+        // Version 0 -> 6: Reset to defaults
         if (version === 0) {
           return { settings: getDefaultSettings() };
         }
 
-        // Version 1 -> 5: Add map settings and advanced settings
+        // Version 1 -> 6: Add map settings and advanced settings
         if (version === 1) {
           const defaults = getDefaultSettings();
           return {
@@ -754,12 +754,12 @@ export const useSettingsStore = create<SettingsState>()(
               ...state.settings,
               map: defaults.map,
               advanced: defaults.advanced,
-              version: 5,
+              version: 6,
             },
           };
         }
 
-        // Version 2 -> 5: Add showOnlyMilitary and showOnlyInteresting to map settings
+        // Version 2 -> 6: Add showOnlyMilitary and showOnlyInteresting to map settings
         if (version === 2) {
           return {
             ...state,
@@ -774,12 +774,12 @@ export const useSettingsStore = create<SettingsState>()(
                 showOpenAIP: false,
                 showRainViewer: false,
               },
-              version: 5,
+              version: 6,
             },
           };
         }
 
-        // Version 3 -> 5: Add showOpenAIP and showRainViewer to map settings
+        // Version 3 -> 6: Add showOpenAIP and showRainViewer to map settings
         if (version === 3) {
           return {
             ...state,
@@ -790,7 +790,7 @@ export const useSettingsStore = create<SettingsState>()(
                 showOpenAIP: false,
                 showRainViewer: false,
               },
-              version: 5,
+              version: 6,
             },
           };
         }
