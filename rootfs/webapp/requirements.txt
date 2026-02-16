@@ -35,7 +35,7 @@ simple-websocket==1.1.0
 sqlalchemy==2.0.46
 sqlparse==0.5.5
 typing-extensions==4.15.0
-tzdata==2025.2
+tzdata==2025.3
 urllib3==2.6.3
 werkzeug==3.1.5
 wsproto==1.2.0
