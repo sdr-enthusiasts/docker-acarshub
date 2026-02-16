@@ -172,7 +172,7 @@ const getDefaultSettings = (): UserSettings => {
       persistLogs: true,
     },
     updatedAt: Date.now(),
-    version: 5,
+    version: 6,
   };
   return defaults;
 };
@@ -735,7 +735,7 @@ export const useSettingsStore = create<SettingsState>()(
     }),
     {
       name: "acarshub-settings",
-      version: 5,
+      version: 6,
       // Migrate old settings if needed
       migrate: (persistedState: unknown, version: number) => {
         const state = persistedState as SettingsState;
@@ -795,7 +795,7 @@ export const useSettingsStore = create<SettingsState>()(
           };
         }
 
-        // Version 4 -> 5: Add groundAltitudeThreshold to map settings
+        // Version 4 -> 6: Add groundAltitudeThreshold to map settings
         if (version === 4) {
           return {
             ...state,
@@ -804,8 +804,24 @@ export const useSettingsStore = create<SettingsState>()(
               map: {
                 ...state.settings.map,
                 groundAltitudeThreshold: 500,
+                useSprites: true,
               },
-              version: 5,
+              version: 6,
+            },
+          };
+        }
+
+        // Version 5 -> 6: Fix useSprites to default to true
+        if (version === 5) {
+          return {
+            ...state,
+            settings: {
+              ...state.settings,
+              map: {
+                ...state.settings.map,
+                useSprites: true,
+              },
+              version: 6,
             },
           };
         }
