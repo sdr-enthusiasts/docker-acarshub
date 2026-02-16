@@ -1,0 +1,50 @@
+{
+  "name": "@acarshub/types",
+  "version": "4.0.0",
+  "description": "Shared TypeScript type definitions for ACARS Hub frontend and backend",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./messages": {
+      "types": "./dist/messages.d.ts",
+      "import": "./dist/messages.js"
+    },
+    "./socket": {
+      "types": "./dist/socket.d.ts",
+      "import": "./dist/socket.js"
+    },
+    "./system": {
+      "types": "./dist/system.d.ts",
+      "import": "./dist/system.js"
+    },
+    "./search": {
+      "types": "./dist/search.d.ts",
+      "import": "./dist/search.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "lint": "biome check .",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "acars",
+    "types",
+    "typescript"
+  ],
+  "author": "Frederick Clausen II",
+  "license": "GPL-3.0-or-later",
+  "devDependencies": {
+    "@biomejs/biome": "2.4.1",
+    "typescript": "5.9.3"
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "name": "acarshub-workspace",
+  "version": "4.0.0",
+  "private": true,
+  "description": "ACARS Hub - Monorepo for frontend, backend, and shared types",
+  "workspaces": [
+    "acarshub-types",
+    "acarshub-react",
+    "acarshub-backend"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "ci": "npm run ci --workspace=acarshub-react",
+    "dev:frontend": "npm run dev --workspace=acarshub-react",
+    "dev:backend": "npm run dev --workspace=acarshub-backend",
+    "clean": "rm -rf node_modules acarshub-types/node_modules acarshub-react/node_modules acarshub-backend/node_modules"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sdr-enthusiasts/docker-acarshub.git"
+  },
+  "keywords": [
+    "acars",
+    "aviation",
+    "sdr",
+    "decoder"
+  ],
+  "author": "Frederick Clausen II",
+  "license": "GPL-3.0-or-later",
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  }
+}
