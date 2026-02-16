@@ -11,7 +11,7 @@ dependencies = [
     "Flask==3.1.2",
     "Flask-SocketIO==5.6.0",
     "gevent==25.9.1",
-    "gunicorn[gevent]==25.0.3",
+    "gunicorn[gevent]==25.1.0",
     "prometheus-client==0.24.1",
     "requests==2.32.5",
     "schedule==1.2.2",
