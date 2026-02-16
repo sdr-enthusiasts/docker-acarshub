@@ -28,9 +28,11 @@
   width: 43.2px; /* 60% of 72px */
   height: 43.2px; /* 60% of 72px */
   cursor: pointer;
-  transition: transform 0.1s ease;
+  transition:
+    filter 0.15s ease,
+    opacity 0.15s ease;
   transform-origin: center center;
-  will-change: transform;
+  will-change: transform, filter;
 
   // Alert state - has alert conditions (red)
   &.has-alerts {
@@ -65,9 +67,10 @@
   }
 
   // Hover state - slight scale up
+  // Note: Don't use transform here as it would override inline rotation
   &:hover {
     z-index: 1000;
-    transform: scale(1.15);
+    filter: brightness(1.1);
   }
 
   // Focus state for accessibility
@@ -135,18 +138,19 @@
 }
 
 // Hovered aircraft pulse animation
+// Note: Don't use transform in animations as it would override inline rotation
 @keyframes marker-pulse {
   0%,
   100% {
     filter: drop-shadow(0 0 12px var(--color-blue))
       drop-shadow(0 0 6px var(--color-blue));
-    transform: scale(1);
+    opacity: 1;
   }
   50% {
     filter: drop-shadow(0 0 20px var(--color-blue))
       drop-shadow(0 0 10px var(--color-blue))
       drop-shadow(0 0 4px var(--color-blue));
-    transform: scale(1.15);
+    opacity: 1;
   }
 }
 
@@ -188,14 +192,15 @@
 }
 
 // Pulse animation for alerts
+// Note: Don't use transform in animations as it would override inline rotation
 @keyframes pulse-alert {
   0%,
   100% {
-    transform: scale(1);
+    filter: brightness(1);
     opacity: 1;
   }
   50% {
-    transform: scale(1.08);
+    filter: brightness(1.1);
     opacity: 0.95;
   }
 }

@@ -223,9 +223,9 @@ export const LiveMapPage = () => {
   };
 
   // Handle aircraft hover from list
-  const handleAircraftHover = (aircraft: PairedAircraft | null) => {
+  const handleAircraftHover = useCallback((aircraft: PairedAircraft | null) => {
     setHoveredAircraftHex(aircraft?.hex || null);
-  };
+  }, []);
 
   // Handle follow aircraft
   const handleFollowAircraft = (hex: string | null) => {

@@ -67,8 +67,9 @@
   align-items: center;
   justify-content: center;
 
-  // Enable smooth rotation transitions
-  transition: transform 0.5s ease-out;
+  // Disable transform transitions to prevent rotation glitches during hover
+  // Aircraft positions update frequently enough that smooth transitions aren't needed
+  transition: none;
 
   // Cursor indicates clickable
   cursor: pointer;

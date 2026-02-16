@@ -56,6 +56,7 @@ interface AircraftMarkerData {
   lat: number;
   lon: number;
   track?: number;
+  rotation: number;
   iconHtml: string;
   width: number;
   height: number;
@@ -484,11 +485,31 @@ export function AircraftMarkers({
         });
       }
 
+      // Calculate rotation once to prevent recalculation on every render
+      // Defensive checks: ensure track is a valid number, default to 0 if not
+      let rotation = 0;
+      if (shouldRotate(shapeName) && aircraft.track !== undefined) {
+        const trackValue = Number(aircraft.track);
+        rotation = Number.isFinite(trackValue) ? trackValue : 0;
+      }
+
+      // Debug logging for rotation issues
+      if (markers.length === 0) {
+        console.log("[AircraftMarkers] First aircraft rotation debug:", {
+          hex: aircraft.hex,
+          track: aircraft.track,
+          trackType: typeof aircraft.track,
+          shouldRotate: shouldRotate(shapeName),
+          calculatedRotation: rotation,
+        });
+      }
+
       markers.push({
         hex: aircraft.hex,
         lat: aircraft.lat,
         lon: aircraft.lon,
         track: aircraft.track,
+        rotation: rotation,
         iconHtml: iconData.svg,
         width: iconData.width,
         height: iconData.height,
@@ -574,11 +595,6 @@ export function AircraftMarkers({
   return (
     <>
       {aircraftMarkers.map((markerData) => {
-        const rotation =
-          markerData.shouldRotate && markerData.track !== undefined
-            ? markerData.track
-            : 0;
-
         return (
           <Marker
             key={markerData.hex}
@@ -612,7 +628,7 @@ export function AircraftMarkers({
                     spriteClass={markerData.spriteClass || ""}
                     frames={markerData.spriteFrames}
                     frameTime={markerData.spriteFrameTime || 100}
-                    rotation={rotation}
+                    rotation={markerData.rotation}
                     onClick={() => handleMarkerClick(markerData.aircraft)}
                     onContextMenu={(e) =>
                       handleMarkerContextMenu(e, markerData.aircraft)
@@ -672,7 +688,7 @@ export function AircraftMarkers({
                       backgroundPosition: `-${markerData.spritePosition.x}px -${markerData.spritePosition.y}px`,
                       width: `${markerData.spritePosition.width}px`,
                       height: `${markerData.spritePosition.height}px`,
-                      transform: `rotate(${rotation}deg)`,
+                      transform: `rotate(${markerData.rotation}deg)`,
                       transformOrigin: "center center",
                       cursor: markerData.aircraft.hasMessages
                         ? "pointer"
@@ -748,7 +764,7 @@ export function AircraftMarkers({
                   style={{
                     width: `${markerData.width}px`,
                     height: `${markerData.height}px`,
-                    transform: `rotate(${rotation}deg)`,
+                    transform: `rotate(${markerData.rotation}deg)`,
                     transformOrigin: "center center",
                     cursor: markerData.aircraft.hasMessages
                       ? "pointer"

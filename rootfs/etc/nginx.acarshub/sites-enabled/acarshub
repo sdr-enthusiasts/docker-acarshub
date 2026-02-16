@@ -47,6 +47,12 @@ server {
     root /database/images;
   }
 
+  # serve stats.json from /webapp/data directory, mark as no cache
+  location /data/stats.json {
+    add_header Cache-Control 'no-cache';
+    root /webapp;
+  }
+
   # cache hashed assets immutably (they have content hashes in filenames)
   location ~ \.(css|js|png|jpg|jpeg|gif|ico|woff|woff2|ttf|svg|eot|otf|map|mjs|mp3)$ {
     expires 1y;

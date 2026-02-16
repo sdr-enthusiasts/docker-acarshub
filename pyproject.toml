@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "docker-acarshub"
 description = "acarshub"
-version = "4.0.0"
+version = "4.0.1"
 dependencies = [
     "django==6.0.2",
     "Flask==3.1.2",

@@ -439,7 +439,7 @@ export function MapComponent({
         maxZoom={20}
         minZoom={1}
         dragRotate={false}
-        touchZoomRotate={false}
+        touchZoomRotate={{ around: "center" }}
         keyboard={true}
       >
         {/* Navigation controls (zoom, compass) */}
