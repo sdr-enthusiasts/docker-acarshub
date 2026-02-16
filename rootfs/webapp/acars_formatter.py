@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# # Copyright (C) 2022-2024 Frederick Clausen II
+# # Copyright (C) 2022-2026 Frederick Clausen II
 # This file is part of acarshub <https://github.com/sdr-enthusiasts/docker-acarshub>.
 #
 # acarshub is free software: you can redistribute it and/or modify
@@ -38,6 +38,30 @@ def format_acars_message(acars_message):
 
     if acars_message.get("app", {}).get("name") == "iridium-toolkit":
         return format_irdm_message(acars_message)
+
+    # Raw ACARS message - normalize ICAO to hex string
+    if "icao" in acars_message and acars_message["icao"] is not None:
+        icao_value = acars_message["icao"]
+        if isinstance(icao_value, int):
+            # Convert numeric ICAO to 6-character hex string
+            acars_message["icao"] = format(icao_value, "06X")
+        elif isinstance(icao_value, str):
+            # Ensure hex string is uppercase and properly formatted
+            try:
+                # Check if it's a hex string (6 chars, all hex digits)
+                is_hex_format = len(icao_value) == 6 and all(
+                    c in "0123456789ABCDEFabcdef" for c in icao_value
+                )
+
+                if is_hex_format:
+                    # Already in hex format - just uppercase it
+                    acars_message["icao"] = icao_value.upper()
+                else:
+                    # It's a decimal string - convert to hex
+                    acars_message["icao"] = format(int(icao_value), "06X")
+            except (ValueError, TypeError):
+                # Can't convert - leave as-is but uppercase
+                acars_message["icao"] = str(icao_value).upper()
 
     return acars_message
 
@@ -154,7 +178,7 @@ def format_jaero_imsl_message(unformatted_message):
         if dst := isu.get("dst"):
             if addr := dst.get("addr"):
                 imsl_message["toaddr"] = int(addr, 16)
-                imsl_message["icao"] = int(addr, 16)
+                imsl_message["icao"] = addr.upper()
 
         if src := isu.get("src"):
             if addr := src.get("addr"):
@@ -282,9 +306,9 @@ def format_hfdl_message(unformatted_message):
         # icao
         if "ac_info" in unformatted_message["hfdl"]["lpdu"]:
             if "icao" in unformatted_message["hfdl"]["lpdu"]["ac_info"]:
-                hfdl_message["icao"] = int(
-                    unformatted_message["hfdl"]["lpdu"]["ac_info"]["icao"], 16
-                )
+                hfdl_message["icao"] = unformatted_message["hfdl"]["lpdu"]["ac_info"][
+                    "icao"
+                ].upper()
 
         if "hfnpdu" in unformatted_message["hfdl"]["lpdu"]:
             # flight
@@ -463,9 +487,9 @@ def format_dumpvdl2_message(unformatted_message):
         and "addr" in unformatted_message["vdl2"]["avlc"]["src"]
         and unformatted_message["vdl2"]["avlc"]["src"]["type"] == "Aircraft"
     ):
-        vdlm2_message["icao"] = int(
-            unformatted_message["vdl2"]["avlc"]["src"]["addr"], 16
-        )
+        vdlm2_message["icao"] = unformatted_message["vdl2"]["avlc"]["src"][
+            "addr"
+        ].upper()
     # freq = Column('freq', String(32), index=True, nullable=False)
     if "freq" in unformatted_message["vdl2"]:
         vdlm2_message["freq"] = reformat_dumpvdl2_freq(

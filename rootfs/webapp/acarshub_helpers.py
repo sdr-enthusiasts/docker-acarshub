@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (C) 2022-2024 Frederick Clausen II
+# Copyright (C) 2022-2026 Frederick Clausen II
 # File is part of acarshub <https://github.com/sdr-enthusiasts/docker-acarshub>.
 #
 # acarshub is free software: you can redistribute it and/or modify
@@ -17,7 +17,6 @@
 # along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import subprocess
 import acarshub_database
 import time
 import acarshub_logging
@@ -37,26 +36,14 @@ system_error = False
 # But we'll at least check and see if the user put a trailing slash or not
 
 
-if os.getenv("TAR1090_URL", default=False):
-    if os.getenv("TAR1090_URL").endswith("/"):
-        ADSB_URL = os.getenv("TAR1090_URL") + "?icao="
+tar1090_url = os.getenv("TAR1090_URL")
+if tar1090_url:
+    if tar1090_url.endswith("/"):
+        ADSB_URL = tar1090_url + "?icao="
     else:
-        ADSB_URL = os.getenv("TAR1090_URL") + "/?icao="
+        ADSB_URL = tar1090_url + "/?icao="
 else:
     ADSB_URL = "https://globe.adsbexchange.com/?icao="
-
-
-def libacars_formatted(libacars=None):
-    import pprint
-
-    html_output = "<p>Decoded:</p>"
-    html_output += "<p>"
-    html_output += "<pre>{libacars}</pre>".format(
-        libacars=pprint.pformat(libacars, indent=2)
-    )
-    html_output += "</p>"
-
-    return html_output
 
 
 def has_specified_key_not_none(message=None, key=None):
@@ -81,19 +68,16 @@ def update_keys(json_message):
     # Santiztize the message of any empty/None vales
     # This won't occur for live messages but if the message originates from a DB query
     # It will return all keys, even ones where the original message didn't have a value
-    stale_keys = []
-    for key in json_message:
-        if not has_specified_key_not_none(json_message, key):
-            stale_keys.append(key)
 
-    for key in stale_keys:
-        del json_message[key]
-
-    # Now we process individual keys, if that key is present
-
+    # FIRST: Convert field names BEFORE cleanup to ensure conversion happens even for empty values
     # database tablename for the message text doesn't match up with typescript-decoder (needs it to be text)
     # so we rewrite the key
     if has_specified_key(json_message, "msg_text"):
+        acarshub_logging.log(
+            f"update_keys: Converting msg_text to text for UID {json_message.get('uid', 'unknown')}",
+            "update_keys",
+            level=LOG_LEVEL["DEBUG"],
+        )
         json_message["text"] = json_message["msg_text"]
         del json_message["msg_text"]
 
@@ -101,24 +85,78 @@ def update_keys(json_message):
         json_message["timestamp"] = json_message["time"]
         del json_message["time"]
 
-    if has_specified_key(json_message, "libacars"):
-        json_message["libacars"] = libacars_formatted(json_message["libacars"])
+    # SECOND: Clean up empty/None values after field conversion
+    # Preserve backend-supplied alert metadata, UID, and converted fields (never delete these)
+    protected_keys = {
+        "uid",
+        "matched",
+        "matched_text",
+        "matched_icao",
+        "matched_tail",
+        "matched_flight",
+        "text",  # Protected after conversion from msg_text (even if empty - needed for decoder)
+        "timestamp",  # Protected after conversion from time
+    }
+
+    stale_keys = []
+    for key in json_message:
+        if key not in protected_keys and not has_specified_key_not_none(
+            json_message, key
+        ):
+            stale_keys.append(key)
+
+    for key in stale_keys:
+        del json_message[key]
+
+    # Now we process other individual keys, if that key is present
+
+    # libacars is kept as raw JSON string for React frontend to parse
+    # React has its own parseAndFormatLibacars() function in decoderUtils.ts
 
     if has_specified_key(json_message, "icao"):
-        json_message["icao_hex"] = try_format_as_int(json_message["icao"], "icao")
+        # ICAO can be either:
+        # 1. Hex string (e.g., "ABF308") from VDLM2/HFDL formatters
+        # 2. Numeric value from raw ACARS messages
+        # Always ensure icao_hex is a hex string for frontend consistency
+        icao_value = json_message["icao"]
 
-    if has_specified_key(json_message, "flight") and has_specified_key(
-        json_message, "icao_hex"
-    ):
-        json_message["flight"], json_message["icao_flight"] = flight_finder(
-            callsign=json_message["flight"], hex_code=json_message["icao_hex"]
+        if isinstance(icao_value, str):
+            # Already a string - check if it's hex or decimal
+            try:
+                # Check if it's a hex string (6 chars, all hex digits)
+                is_hex_format = len(icao_value) == 6 and all(
+                    c in "0123456789ABCDEFabcdef" for c in icao_value
+                )
+
+                if is_hex_format:
+                    # Already in hex format - just uppercase it
+                    json_message["icao_hex"] = icao_value.upper()
+                else:
+                    # It's a decimal string - convert to hex
+                    icao_int = int(icao_value)
+                    json_message["icao_hex"] = format(icao_int, "06X")
+            except (ValueError, TypeError):
+                # Not a valid number - use as-is (probably already hex)
+                json_message["icao_hex"] = (
+                    icao_value.upper()
+                    if isinstance(icao_value, str)
+                    else str(icao_value)
+                )
+        elif isinstance(icao_value, int):
+            # Numeric ICAO - convert to 6-character hex string
+            json_message["icao_hex"] = format(icao_value, "06X")
+        else:
+            # Unknown type - convert to string and uppercase
+            json_message["icao_hex"] = str(icao_value).upper()
+
+    if has_specified_key(json_message, "flight"):
+        airline, iata_flight, icao_flight, flight_number = flight_finder(
+            callsign=json_message["flight"]
         )
-    elif has_specified_key(json_message, "flight"):
-        json_message["flight"], json_message["icao_flight"] = flight_finder(
-            callsign=json_message["flight"], url=False
-        )
-    elif has_specified_key(json_message, "icao_hex"):
-        json_message["icao_url"] = flight_finder(hex_code=json_message["icao_hex"])
+        json_message["airline"] = airline
+        json_message["iata_flight"] = iata_flight
+        json_message["icao_flight"] = icao_flight
+        json_message["flight_number"] = flight_number
 
     if has_specified_key(json_message, "toaddr"):
         json_message["toaddr_hex"] = try_format_as_int(json_message["toaddr"], "toaddr")
@@ -164,13 +202,17 @@ def try_format_as_int(value, key, as_type="X"):
         return "0"
 
 
-def flight_finder(callsign=None, hex_code=None, url=True):
+def flight_finder(callsign=None):
+    """
+    Resolve flight callsign to airline name, IATA flight, ICAO flight, and flight number.
 
-    # If there is only a hex code, we'll return just the ADSB url
-    # Front end will format correctly.
+    Args:
+        callsign: Flight callsign in either IATA (e.g., "UA123") or ICAO (e.g., "UAL123") format
 
-    if callsign is None and hex_code is not None:
-        return f"{ADSB_URL}{hex_code}"
+    Returns:
+        Tuple of (airline_name, iata_flight, icao_flight, flight_number)
+        Returns (None, None, None, None) if callsign is None or invalid
+    """
 
     if callsign is not None:
         # Check the ICAO DB to see if we know what it is
@@ -183,46 +225,25 @@ def flight_finder(callsign=None, hex_code=None, url=True):
         # check the first three characters for letters
         icao_flight = ""
         iata_flight = ""
-
-        found_flight = False
+        airline = None
 
         if callsign[:3].isalpha():
+            # ICAO format (e.g., UAL123)
             icao_flight = callsign
             iata, airline = acarshub_database.find_airline_code_from_icao(callsign[:3])
             flight_number = callsign[3:]
             iata_flight = iata + flight_number
-            found_flight = True
         else:
+            # IATA format (e.g., UA123)
             icao, airline = acarshub_database.find_airline_code_from_iata(callsign[:2])
             flight_number = callsign[2:]
             icao_flight = icao + flight_number
             iata_flight = callsign
-            found_flight = True
-        tooltip_text = ""
 
-        if found_flight:
-            html = f"<strong>{icao_flight}/{iata_flight}</strong> "
-            tooltip_text = (
-                f"<p>The aircraft's callsign.</p>{airline} Flight {flight_number}"
-            )
-        else:
-            html = f"<strong>{callsign}</strong> "
-            tooltip_text = f"<p>The aircraft's callsign was not found in the database for decoding.</p>{icao_flight}"
-
-        # If the iata and icao variables are not equal, airline was found in the database and we'll add in the tool-tip for the decoded airline
-        # Otherwise, no tool-tip, no FA link, and use the IATA code for display
-        if url:
-            return (
-                f'<span class="flight-tooltip" data-jbox-content="{tooltip_text}">Flight: <strong><a href="{ADSB_URL}{hex_code}" target="_blank">{html}</a></strong></span>',
-                icao_flight,
-            )
-        else:
-            return (
-                f'<span class="flight-tooltip" data-jbox-content="{tooltip_text}">Flight: {html}</span>',
-                icao_flight,
-            )
-    else:  # We should never run in to this condition, I don't think, but we'll add a case for it
-        return ("Flight: Error", None)
+        return (airline, iata_flight, icao_flight, flight_number)
+    else:
+        # We should never run in to this condition, I don't think, but we'll add a case for it
+        return (None, None, None, None)
 
 
 def handle_message(message=None):
@@ -230,6 +251,7 @@ def handle_message(message=None):
         total_results = 0
         serialized_json = []
         search_term = ""
+        results = None
         # If the user has cleared the search bar, we'll execute the else statement
         # And the browsers clears the data
         # otherwise, run the search and format the results
@@ -274,244 +296,215 @@ def handle_message(message=None):
         return (None, None, None)
 
 
-def service_check():
-    import re
+def get_realtime_status(
+    threads,
+    connections,
+    message_counts_last_minute,
+    message_counts_total,
+):
+    """
+    Get real-time system status without shell script execution.
 
-    global decoders
-    global servers
-    global receivers
-    global system_error
-    global stats
-    global external_formats
+    Returns status data from Python runtime state:
+    - Thread health (alive/dead)
+    - Connection states (connected/disconnected)
+    - Message counters (per-minute and total)
 
-    if os.getenv("LOCAL_TEST", default=False):
-        healthcheck = subprocess.Popen(
-            ["../../tools/healthtest.sh"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
-    else:
-        healthcheck = subprocess.Popen(
-            ["/scripts/healthcheck.sh"], stdout=subprocess.PIPE, stderr=subprocess.PIPE
-        )
-    stdout, _ = healthcheck.communicate()
-    healthstatus = stdout.decode()
+    Args:
+        threads: Dict of thread objects (acars, vdlm2, hfdl, imsl, irdm, database, scheduler)
+        connections: Dict of connection states (ACARS, VDLM2, HFDL, IMSL, IRDM)
+        message_counts_last_minute: Dict of per-minute message counts
+        message_counts_total: Dict of total message counts
 
-    decoders = dict()
-    servers = dict()
-    receivers = dict()
-    stats = dict()
-    external_formats = dict()
-    system_error = False
+    Returns:
+        dict: Status dictionary compatible with legacy format
+    """
+    import acarshub_configuration
 
-    for line in healthstatus.split("\n"):
-        try:
-            match = re.search("(?:acarsdec|dumpvdl2)-.+ =", line)
-            if match:
-                if match.group(0).strip(" =") not in decoders:
-                    decoders[match.group(0).strip(" =")] = dict()
-                    continue
-            else:
-                for decoder in decoders:
-                    if line.find(decoder) != -1:
-                        if line.find(f"Decoder {decoder}") and line.endswith(
-                            "UNHEALTHY"
-                        ):
-                            decoders[decoder]["Status"] = "Bad"
-                            system_error = True
-                        elif line.find(f"Decoder {decoder}") == 0 and line.endswith(
-                            "HEALTHY"
-                        ):
-                            decoders[decoder]["Status"] = "Ok"
-                        elif line.find(f"Decoder {decoder}") == 0:
-                            system_error = True
-                            decoders[decoder]["Status"] = "Unknown"
+    decoders_status = {}
+    servers_status = {}
+    global_status = {}
+    error_state = False
 
-                        continue
+    # ACARS status
+    if acarshub_configuration.ENABLE_ACARS:
+        thread_alive = threads.get("acars") and threads["acars"].is_alive()
+        connected = connections.get("ACARS", False)
 
-            match = re.search("^(?:acars|vdlm2|hfdl|imsl|irdm)_server", line)
+        if not thread_alive:
+            status = "Dead"
+            error_state = True
+        elif not connected:
+            status = "Disconnected"
+            error_state = True
+        else:
+            status = "Ok"
 
-            if match:
-                if match.group(0) not in servers:
-                    servers[match.group(0)] = dict()
+        decoders_status["ACARS"] = {
+            "Status": status,
+            "Connected": connected,
+            "Alive": thread_alive,
+        }
 
-                if line.find("listening") != -1 and line.endswith("UNHEALTHY"):
-                    servers[match.group(0)]["Status"] = "Bad"
-                    system_error = True
-                elif line.find("listening") != -1 and line.endswith("HEALTHY"):
-                    servers[match.group(0)]["Status"] = "Ok"
-                elif line.find("listening") != -1:
-                    system_error = True
-                    servers[match.group(0)]["Status"] = "Unknown"
-                elif line.find("python") != -1 and line.endswith("UNHEALTHY"):
-                    system_error = True
-                    servers[match.group(0)]["Web"] = "Bad"
-                elif line.find("python") != -1 and line.endswith("HEALTHY"):
-                    servers[match.group(0)]["Web"] = "Ok"
-                elif line.find("python") != -1:
-                    system_error = True
-                    servers[match.group(0)]["Web"] = "Unknown"
+        servers_status["acars_server"] = {
+            "Status": status,
+            "Messages": message_counts_total.get("acars", 0),
+        }
 
-                continue
+        global_status["ACARS"] = {
+            "Status": status,
+            "Count": message_counts_total.get("acars", 0),
+            "LastMinute": message_counts_last_minute.get("acars", 0),
+        }
 
-            match = re.search("\\d+\\s+(?:ACARS|VDLM2|HFDL|IMSL|IRDM) messages", line)
+    # VDLM2 status
+    if acarshub_configuration.ENABLE_VDLM:
+        thread_alive = threads.get("vdlm2") and threads["vdlm2"].is_alive()
+        connected = connections.get("VDLM2", False)
 
-            if match:
-                if line.find("ACARS") != -1 and "ACARS" not in receivers:
-                    receivers["ACARS"] = dict()
-                    receivers["ACARS"]["Count"] = line.split(" ")[0]
-                    if line.endswith("UNHEALTHY"):
-                        if time.time() - start_time > 300.0:
-                            system_error = True
-                            receivers["ACARS"]["Status"] = "Bad"
-                        else:
-                            receivers["ACARS"]["Status"] = "Waiting for first message"
-                    elif line.endswith("HEALTHY"):
-                        receivers["ACARS"]["Status"] = "Ok"
-                    else:
-                        system_error = True
-                        receivers["ACARS"]["Status"] = "Unknown"
-                if line.find("VDLM2") != -1 and "VDLM2" not in receivers:
-                    receivers["VDLM2"] = dict()
-                    receivers["VDLM2"]["Count"] = line.split(" ")[0]
-                    if line.endswith("UNHEALTHY"):
-                        if time.time() - start_time > 300.0:
-                            system_error = True
-                            receivers["VDLM2"]["Status"] = "Bad"
-                        else:
-                            receivers["VDLM2"]["Status"] = "Waiting for first message"
-                    elif line.endswith("HEALTHY"):
-                        receivers["VDLM2"]["Status"] = "Ok"
-                    else:
-                        system_error = True
-                        receivers["VDLM2"]["Status"] = "Unknown"
-                if line.find("HFDL") != -1 and "HFDL" not in receivers:
-                    receivers["HFDL"] = dict()
-                    receivers["HFDL"]["Count"] = line.split(" ")[0]
-                    if line.endswith("UNHEALTHY"):
-                        if time.time() - start_time > 300.0:
-                            system_error = True
-                            receivers["HFDL"]["Status"] = "Bad"
-                        else:
-                            receivers["HFDL"]["Status"] = "Waiting for first message"
-                    elif line.endswith("HEALTHY"):
-                        receivers["HFDL"]["Status"] = "Ok"
-                    else:
-                        system_error = True
-                        receivers["HFDL"]["Status"] = "Unknown"
-                if line.find("IMSL") != -1 and "IMSL" not in receivers:
-                    receivers["IMSL"] = dict()
-                    receivers["IMSL"]["Count"] = line.split(" ")[0]
-                    if line.endswith("UNHEALTHY"):
-                        if time.time() - start_time > 300.0:
-                            system_error = True
-                            receivers["IMSL"]["Status"] = "Bad"
-                        else:
-                            receivers["IMSL"]["Status"] = "Waiting for first message"
-                    elif line.endswith("HEALTHY"):
-                        receivers["IMSL"]["Status"] = "Ok"
-                    else:
-                        system_error = True
-                        receivers["IMSL"]["Status"] = "Unknown"
-                if line.find("IRDM") != -1 and "IRDM" not in receivers:
-                    receivers["IRDM"] = dict()
-                    receivers["IRDM"]["Count"] = line.split(" ")[0]
-                    if line.endswith("UNHEALTHY"):
-                        if time.time() - start_time > 300.0:
-                            system_error = True
-                            receivers["IRDM"]["Status"] = "Bad"
-                        else:
-                            receivers["IRDM"]["Status"] = "Waiting for first message"
-                    elif line.endswith("HEALTHY"):
-                        receivers["IRDM"]["Status"] = "Ok"
-                    else:
-                        system_error = True
-                        receivers["IRDM"]["Status"] = "Unknown"
+        if not thread_alive:
+            status = "Dead"
+            error_state = True
+        elif not connected:
+            status = "Disconnected"
+            error_state = True
+        else:
+            status = "Ok"
 
-                continue
+        decoders_status["VDLM2"] = {
+            "Status": status,
+            "Connected": connected,
+            "Alive": thread_alive,
+        }
 
-            match = re.search("^(acars|vdlm2|hfdl|imsl|irdm)_stats", line)
+        servers_status["vdlm2_server"] = {
+            "Status": status,
+            "Messages": message_counts_total.get("vdlm2", 0),
+        }
 
-            if match:
-                if match.group(0) not in stats:
-                    stats[match.group(0)] = dict()
+        global_status["VDLM2"] = {
+            "Status": status,
+            "Count": message_counts_total.get("vdlm2", 0),
+            "LastMinute": message_counts_last_minute.get("vdlm2", 0),
+        }
 
-                if line.endswith("UNHEALTHY"):
-                    system_error = True
-                    stats[match.group(0)]["Status"] = "Bad"
-                elif line.endswith("HEALTHY"):
-                    stats[match.group(0)]["Status"] = "Ok"
-                else:
-                    system_error = True
-                    stats[match.group(0)]["Status"] = "Unknown"
+    # HFDL status
+    if acarshub_configuration.ENABLE_HFDL:
+        thread_alive = threads.get("hfdl") and threads["hfdl"].is_alive()
+        connected = connections.get("HFDL", False)
 
-            match = re.search("^planeplotter", line)
+        if not thread_alive:
+            status = "Dead"
+            error_state = True
+        elif not connected:
+            status = "Disconnected"
+            error_state = True
+        else:
+            status = "Ok"
 
-            if match:
-                if line.find("vdl2") != -1:
-                    pp_decoder = "VDLM2"
-                else:
-                    pp_decoder = "ACARS"
+        decoders_status["HFDL"] = {
+            "Status": status,
+            "Connected": connected,
+            "Alive": thread_alive,
+        }
 
-                if pp_decoder not in external_formats:
-                    external_formats[pp_decoder] = []
+        servers_status["hfdl_server"] = {
+            "Status": status,
+            "Messages": message_counts_total.get("hfdl", 0),
+        }
 
-                if line.endswith("UNHEALTHY"):
-                    system_error = True
-                    external_formats[pp_decoder].append(
-                        {"type": "planeplotter", "Status": "Bad"}
-                    )
-                elif line.endswith("HEALTHY"):
-                    external_formats[pp_decoder].append(
-                        {"type": "planeplotter", "Status": "Ok"}
-                    )
-                else:
-                    system_error = True
-                    external_formats[pp_decoder].append(
-                        {"type": "planeplotter", "Status": "Unknown"}
-                    )
+        global_status["HFDL"] = {
+            "Status": status,
+            "Count": message_counts_total.get("hfdl", 0),
+            "LastMinute": message_counts_last_minute.get("hfdl", 0),
+        }
 
-            match = re.search("dumpvdl2 and planeplotter", line)
+    # IMSL status
+    if acarshub_configuration.ENABLE_IMSL:
+        thread_alive = threads.get("imsl") and threads["imsl"].is_alive()
+        connected = connections.get("IMSL", False)
 
-            if match:
-                if line.find("vdl2") != -1:
-                    pp_decoder = "VDLM2"
-                else:
-                    pp_decoder = "ACARS"
+        if not thread_alive:
+            status = "Dead"
+            error_state = True
+        elif not connected:
+            status = "Disconnected"
+            error_state = True
+        else:
+            status = "Ok"
 
-                if pp_decoder not in external_formats:
-                    external_formats[pp_decoder] = []
+        decoders_status["IMSL"] = {
+            "Status": status,
+            "Connected": connected,
+            "Alive": thread_alive,
+        }
 
-                if line.endswith("UNHEALTHY"):
-                    system_error = True
-                    external_formats[pp_decoder].append(
-                        {"type": "dumpvdl2 to planeplotter", "Status": "Bad"}
-                    )
-                elif line.endswith("HEALTHY"):
-                    external_formats[pp_decoder].append(
-                        {"type": "dumpvdl2 to planeplotter", "Status": "Ok"}
-                    )
-                else:
-                    system_error = True
-                    external_formats[pp_decoder].append(
-                        {"type": "dumpvdl2 to planeplotter", "Status": "Unknown"}
-                    )
+        servers_status["imsl_server"] = {
+            "Status": status,
+            "Messages": message_counts_total.get("imsl", 0),
+        }
 
-        except Exception as e:
-            acarshub_logging.log(e, "service_check", level=LOG_LEVEL["ERROR"])
-            acarshub_logging.acars_traceback(e)
+        global_status["IMSL"] = {
+            "Status": status,
+            "Count": message_counts_total.get("imsl", 0),
+            "LastMinute": message_counts_last_minute.get("imsl", 0),
+        }
 
+    # IRDM status
+    if acarshub_configuration.ENABLE_IRDM:
+        thread_alive = threads.get("irdm") and threads["irdm"].is_alive()
+        connected = connections.get("IRDM", False)
 
-if os.getenv("LOCAL_TEST", default=False):
-    service_check()
+        if not thread_alive:
+            status = "Dead"
+            error_state = True
+        elif not connected:
+            status = "Disconnected"
+            error_state = True
+        else:
+            status = "Ok"
 
+        decoders_status["IRDM"] = {
+            "Status": status,
+            "Connected": connected,
+            "Alive": thread_alive,
+        }
 
-def get_service_status():
+        servers_status["irdm_server"] = {
+            "Status": status,
+            "Messages": message_counts_total.get("irdm", 0),
+        }
+
+        global_status["IRDM"] = {
+            "Status": status,
+            "Count": message_counts_total.get("irdm", 0),
+            "LastMinute": message_counts_last_minute.get("irdm", 0),
+        }
+
+    # Database thread status
+    if threads.get("database") and not threads["database"].is_alive():
+        error_state = True
+
+    # Scheduler thread status
+    if threads.get("scheduler") and not threads["scheduler"].is_alive():
+        error_state = True
+
+    # Error messages tracking
+    error_stats = {
+        "Total": message_counts_total.get("errors", 0),
+        "LastMinute": message_counts_last_minute.get("errors", 0),
+    }
+
     return {
-        "decoders": decoders,
-        "servers": servers,
-        "global": receivers,
-        "error_state": system_error,
-        "stats": stats,
-        "external_formats": external_formats,
+        "decoders": decoders_status,
+        "servers": servers_status,
+        "global": global_status,
+        "error_state": error_state,
+        "stats": {},  # Legacy compatibility (empty for now)
+        "external_formats": {},  # Legacy compatibility (empty for now)
+        "errors": error_stats,
+        "threads": {
+            "database": threads.get("database") and threads["database"].is_alive(),
+            "scheduler": threads.get("scheduler") and threads["scheduler"].is_alive(),
+        },
     }

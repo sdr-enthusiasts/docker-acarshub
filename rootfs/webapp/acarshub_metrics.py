@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (C) 2022-2024 Frederick Clausen II
+# Copyright (C) 2022-2026 Frederick Clausen II
 # This file is part of acarshub <https://github.com/sdr-enthusiasts/docker-acarshub>.
 #
 # acarshub is free software: you can redistribute it and/or modify
@@ -109,7 +109,6 @@ def update_metrics():
         get_alert_counts,
         get_alert_terms,
     )
-    from acarshub_configuration import get_version
     import acarshub_configuration
 
     # Update RRD data
@@ -242,10 +241,8 @@ def update_metrics():
 
     # Update application info
     try:
-        version_info = get_version()
         APP_INFO.info(
             {
-                "version": version_info.get("local", "unknown"),
                 "arch": getattr(acarshub_configuration, "ARCH", "unknown"),
                 "acars_enabled": str(
                     getattr(acarshub_configuration, "ENABLE_ACARS", False)

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (C) 2022-2024 Frederick Clausen II
+# Copyright (C) 2022-2026 Frederick Clausen II
 # This file is part of acarshub <https://github.com/sdr-enthusiasts/docker-acarshub>.
 #
 # acarshub is free software: you can redistribute it and/or modify
@@ -16,6 +16,19 @@
 # You should have received a copy of the GNU General Public License
 # along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
+# ============================================================================
+# BACKEND ARCHITECTURE (Post React Migration)
+# ============================================================================
+# This Python backend is API-ONLY:
+#   - Socket.IO handlers for real-time messaging
+#   - /metrics endpoint for Prometheus monitoring
+#
+# nginx serves the React frontend (static HTML/CSS/JS) from acarshub-react/dist/
+# nginx proxies /socket.io/* and /metrics to this Python backend
+#
+# NO HTML templates are served by Flask - all presentation logic is in React
+# ============================================================================
+
 import acarshub_helpers  # noqa: E402
 import acarshub_configuration  # noqa: E402
 import acarshub_logging  # noqa: E402
@@ -23,22 +36,19 @@ from acarshub_logging import LOG_LEVEL  # noqa: E402
 import acars_formatter  # noqa: E402
 import acarshub_metrics  # noqa: E402
 
-if not acarshub_configuration.LOCAL_TEST:
-    import acarshub_rrd_database  # noqa: E402
+import acarshub_rrd_database  # noqa: E402
+
 
 from flask_socketio import SocketIO  # noqa: E402
 from flask import (
     Flask,
-    render_template,
     request,
-    redirect,
-    url_for,
     Response,
-    send_from_directory,
 )  # noqa: E402
-from threading import Thread, Event  # noqa: E402
+from threading import Thread, Event, Lock  # noqa: E402
 from collections import deque  # noqa: E402
 import time  # noqa: E402
+import requests  # noqa: E402
 
 app = Flask(__name__)
 # Make the browser not cache files if running in dev mode
@@ -66,9 +76,9 @@ thread_scheduler_stop_event = Event()
 
 # thread for processing the incoming data
 
-thread_html_generator = Thread()
-thread_html_generator_active = False
-thread_html_generator_event = Event()
+thread_message_relay = Thread()
+thread_message_relay_active = False
+thread_message_relay_event = Event()
 
 # web thread
 
@@ -84,6 +94,65 @@ thread_message_listener_stop_event = Event()
 thread_database = Thread()
 thread_database_stop_event = Event()
 
+# alert regeneration state
+
+alert_regen_in_progress = False
+alert_regen_lock = Lock()
+
+
+def alert_regeneration_worker(requester_sid):
+    """Background worker for alert match regeneration.
+
+    This runs as a gevent greenlet to avoid blocking the gunicorn worker.
+    With large databases (10M+ messages), regeneration can take 30+ minutes.
+
+    Args:
+        requester_sid: Socket.IO session ID of the requesting client
+    """
+    global alert_regen_in_progress
+
+    acarshub_logging.log(
+        "Alert regeneration worker started",
+        "alert_regen_worker",
+        level=LOG_LEVEL["INFO"],
+    )
+
+    try:
+        # Run regeneration (can take a long time on large databases)
+        stats = acarshub_helpers.acarshub_database.regenerate_all_alert_matches()
+
+        # Notify the requesting client of completion
+        socketio.emit(
+            "regenerate_alert_matches_complete",
+            {
+                "success": True,
+                "stats": stats,
+            },
+            to=requester_sid,
+            namespace="/main",
+        )
+
+        acarshub_logging.log(
+            f"Alert match regeneration completed: {stats}",
+            "alert_regen_worker",
+            level=LOG_LEVEL["INFO"],
+        )
+
+    except Exception as e:
+        acarshub_logging.acars_traceback(e, "alert_regen_worker")
+        socketio.emit(
+            "regenerate_alert_matches_error",
+            {"error": str(e)},
+            to=requester_sid,
+            namespace="/main",
+        )
+
+    finally:
+        # Clean up in-progress flag
+        with alert_regen_lock:
+            alert_regen_in_progress = False
+
+
 # maxlen is to keep the que from becoming ginormous
 # the messages will be in the que all the time, even if no one is using the website
 # old messages will automatically be removed
@@ -96,6 +165,16 @@ que_database = deque(maxlen=15)
 list_of_recent_messages = []  # list to store most recent msgs
 list_of_recent_messages_max = 150
 
+# ADS-B data cache (shared between poll_adsb_data and main_connect)
+cached_adsb_data = None
+cached_adsb_lock = Lock()
+
+# Alert message cache (shared between message processing and main_connect)
+# Stores enriched alert messages for quick delivery on connection
+list_of_recent_alerts = []
+list_of_recent_alerts_max = 50
+recent_alerts_lock = Lock()
+
 # counters for messages
 # will be reset once written to RRD
 vdlm_messages_last_minute = 0
@@ -105,10 +184,77 @@ imsl_messages_last_minute = 0
 irdm_messages_last_minute = 0
 error_messages_last_minute = 0
 
+# Connection state tracking for real-time status
+# Thread-safe dictionary tracking decoder connection status
+decoder_connections = {
+    "ACARS": False,
+    "VDLM2": False,
+    "HFDL": False,
+    "IMSL": False,
+    "IRDM": False,
+}
+decoder_connections_lock = Lock()
+
+# Cumulative message counters (never reset, for total counts)
+acars_messages_total = 0
+vdlm_messages_total = 0
+hfdl_messages_total = 0
+imsl_messages_total = 0
+irdm_messages_total = 0
+error_messages_total = 0
+
 # all namespaces
 
 acars_namespaces = ["/main"]
 function_cache = dict()
+
+
+def get_status_data():
+    """
+    Helper function to collect all status data for get_realtime_status().
+    Returns a tuple of (threads, connections, message_counts_last_minute, message_counts_total)
+    """
+    # Thread references
+    threads_data = {
+        "acars": thread_acars_listener,
+        "vdlm2": thread_vdlm2_listener,
+        "hfdl": thread_hfdl_listener,
+        "imsl": thread_imsl_listener,
+        "irdm": thread_irdm_listener,
+        "database": thread_database,
+        "scheduler": thread_scheduler,
+    }
+
+    # Connection states (thread-safe copy)
+    with decoder_connections_lock:
+        connections_data = decoder_connections.copy()
+
+    # Message counts - last minute
+    message_counts_last_minute = {
+        "acars": acars_messages_last_minute,
+        "vdlm2": vdlm_messages_last_minute,
+        "hfdl": hfdl_messages_last_minute,
+        "imsl": imsl_messages_last_minute,
+        "irdm": irdm_messages_last_minute,
+        "errors": error_messages_last_minute,
+    }
+
+    # Message counts - total
+    message_counts_total = {
+        "acars": acars_messages_total,
+        "vdlm2": vdlm_messages_total,
+        "hfdl": hfdl_messages_total,
+        "imsl": imsl_messages_total,
+        "irdm": irdm_messages_total,
+        "errors": error_messages_total,
+    }
+
+    return (
+        threads_data,
+        connections_data,
+        message_counts_last_minute,
+        message_counts_total,
+    )
 
 
 def get_cached(func, validSecs):
@@ -126,6 +272,112 @@ def get_cached(func, validSecs):
     return result
 
 
+def optimize_adsb_data(raw_data):
+    """
+    Optimize ADS-B aircraft.json data by pruning unused fields.
+    Reduces payload from ~52 fields to 14 essential fields.
+
+    Args:
+        raw_data: Raw aircraft.json response dict
+
+    Returns:
+        Optimized dict with 'now' timestamp and trimmed 'aircraft' list
+    """
+    # Fields actually used by frontend (14 of ~52 total)
+    keep_fields = [
+        "hex",  # ICAO hex code (required, unique ID)
+        "flight",  # Callsign
+        "lat",  # Latitude
+        "lon",  # Longitude
+        "track",  # Heading for icon rotation
+        "alt_baro",  # Altitude
+        "gs",  # Ground speed
+        "squawk",  # Transponder code
+        "baro_rate",  # Climb/descent rate
+        "category",  # Aircraft category (for icon shape)
+        "t",  # Tail/registration
+        "type",  # Aircraft type
+        "seen",  # Seconds since last update
+        "dbFlags",  # Database flags (military=1, interesting=2, PIA=4, LADD=8)
+    ]
+
+    aircraft = []
+    for plane in raw_data.get("aircraft", []):
+        # Only keep essential fields
+        optimized = {k: plane[k] for k in keep_fields if k in plane}
+
+        # Must have hex field at minimum
+        if "hex" in optimized:
+            aircraft.append(optimized)
+
+    return {"now": raw_data.get("now"), "aircraft": aircraft}
+
+
+def poll_adsb_data():
+    """
+    Background task to poll ADS-B aircraft.json data every 5 seconds.
+    Fetches from ADSB_URL, optimizes payload, caches it, and broadcasts via Socket.IO.
+    """
+    global cached_adsb_data
+
+    acarshub_logging.log(
+        "ADS-B polling background task started",
+        "poll_adsb_data",
+        level=LOG_LEVEL["INFO"],
+    )
+
+    while True:
+        if acarshub_configuration.ENABLE_ADSB:
+            try:
+                response = requests.get(acarshub_configuration.ADSB_URL, timeout=5)
+
+                if response.status_code == 200:
+                    raw_data = response.json()
+                    optimized_data = optimize_adsb_data(raw_data)
+
+                    # Cache the optimized data for new connections
+                    with cached_adsb_lock:
+                        cached_adsb_data = optimized_data
+
+                    # Broadcast to all connected clients
+                    socketio.emit("adsb_aircraft", optimized_data, namespace="/main")
+
+                    acarshub_logging.log(
+                        f"ADS-B data broadcast: {len(optimized_data['aircraft'])} aircraft",
+                        "poll_adsb_data",
+                        level=LOG_LEVEL["DEBUG"],
+                    )
+                else:
+                    acarshub_logging.log(
+                        f"ADS-B fetch failed: HTTP {response.status_code}",
+                        "poll_adsb_data",
+                        level=LOG_LEVEL["WARNING"],
+                    )
+
+            except requests.exceptions.Timeout:
+                acarshub_logging.log(
+                    "ADS-B fetch timeout (5s)",
+                    "poll_adsb_data",
+                    level=LOG_LEVEL["WARNING"],
+                )
+            except requests.exceptions.RequestException as e:
+                acarshub_logging.log(
+                    f"ADS-B fetch failed: {e}",
+                    "poll_adsb_data",
+                    level=LOG_LEVEL["ERROR"],
+                )
+            except Exception as e:
+                acarshub_logging.log(
+                    f"ADS-B processing error: {e}",
+                    "poll_adsb_data",
+                    level=LOG_LEVEL["ERROR"],
+                )
+                acarshub_logging.acars_traceback(e, "poll_adsb_data")
+
+        # Sleep for 5 seconds before next poll
+        socketio.sleep(5)
+
+
 def update_rrd_db():
     global vdlm_messages_last_minute
     global acars_messages_last_minute
@@ -141,6 +393,7 @@ def update_rrd_db():
         hfdl=hfdl_messages_last_minute,
         imsl=imsl_messages_last_minute,
         irdm=irdm_messages_last_minute,
+        path=acarshub_configuration.RRD_DB_PATH,
     )
     vdlm_messages_last_minute = 0
     acars_messages_last_minute = 0
@@ -148,6 +401,29 @@ def update_rrd_db():
     hfdl_messages_last_minute = 0
     imsl_messages_last_minute = 0
     irdm_messages_last_minute = 0
+
+
+def add_alert_to_cache(enriched_message):
+    """
+    Add a newly matched alert message to the in-memory cache.
+    Called by message_listener when a message matches alert terms.
+
+    Args:
+        enriched_message: Enriched message dict with matched alert metadata
+    """
+    with recent_alerts_lock:
+        # Add to recent alerts cache
+        list_of_recent_alerts.append(enriched_message)
+
+        # Maintain max cache size
+        if len(list_of_recent_alerts) > list_of_recent_alerts_max:
+            del list_of_recent_alerts[0]
+
+        acarshub_logging.log(
+            f"Added alert to cache (total: {len(list_of_recent_alerts)})",
+            "alert_cache",
+            level=LOG_LEVEL["DEBUG"],
+        )
 
 
 def generateClientMessage(message_type, json_message):
@@ -182,15 +458,24 @@ def getQueType(message_type):
         return "UNKNOWN"
 
 
-def htmlListener():
-    global thread_html_generator_active
+def messageRelayListener():
+    """
+    Background thread that relays ACARS messages from the message queue to connected clients.
+
+    This function continuously monitors the message queue (que_messages) and broadcasts
+    new messages to all connected Socket.IO clients via the 'acars_msg' event.
+
+    Note: Despite the historical name, this does NOT generate HTML - it relays raw JSON data.
+    React frontend handles all HTML rendering.
+    """
+    global thread_message_relay_active
     import time
     import sys
 
-    thread_html_generator_active = True
+    thread_message_relay_active = True
 
     # Run while requested...
-    while not thread_html_generator_event.is_set():
+    while not thread_message_relay_event.is_set():
         sys.stdout.flush()
         time.sleep(1)
 
@@ -199,13 +484,29 @@ def htmlListener():
 
             client_message = generateClientMessage(message_source, json_message)
 
+            # Retrieve alert metadata from cache (set by database_listener)
+            cache_key = f"{json_message.get('timestamp', '')}_{json_message.get('tail', '')}_{json_message.get('flight', '')}_{json_message.get('icao', '')}"
+            alert_metadata = alert_metadata_cache.get(cache_key)
+
+            # Add alert metadata to client message if available
+            if alert_metadata is not None:
+                client_message["uid"] = alert_metadata["uid"]
+                client_message["matched"] = alert_metadata["matched"]
+                client_message["matched_text"] = alert_metadata["matched_text"]
+                client_message["matched_icao"] = alert_metadata["matched_icao"]
+                client_message["matched_tail"] = alert_metadata["matched_tail"]
+                client_message["matched_flight"] = alert_metadata["matched_flight"]
+
+                # Remove from cache after use
+                del alert_metadata_cache[cache_key]
+
             socketio.emit("acars_msg", {"msghtml": client_message}, namespace="/main")
-            # acarshub_logging.log(f"EMIT: {client_message}", "htmlListener", level=LOG_LEVEL["DEBUG"])
+            # acarshub_logging.log(f"EMIT: {client_message}", "messageRelayListener", level=LOG_LEVEL["DEBUG"])
 
     acarshub_logging.log(
-        "Exiting HTML Listener thread", "htmlListener", level=LOG_LEVEL["DEBUG"]
+        "Exiting message relay thread", "messageRelayListener", level=LOG_LEVEL["DEBUG"]
     )
-    thread_html_generator_active = False
+    thread_message_relay_active = False
 
 
 def scheduled_tasks():
@@ -214,13 +515,18 @@ def scheduled_tasks():
 
     schedule = SafeScheduler()
     # init the dbs if not already there
-    acarshub_configuration.check_github_version()
-    if not acarshub_configuration.LOCAL_TEST:
-        schedule.every().minute.at(":15").do(acarshub_helpers.service_check)
-        schedule.every().minute.at(":00").do(update_rrd_db)
 
-    schedule.every().hour.at(":05").do(acarshub_configuration.check_github_version)
-    schedule.every().hour.at(":01").do(send_version)
+    # Emit real-time status every 30 seconds
+    def emit_status():
+        threads_data, connections_data, msg_last_min, msg_total = get_status_data()
+        status = acarshub_helpers.get_realtime_status(
+            threads_data, connections_data, msg_last_min, msg_total
+        )
+        for page in acars_namespaces:
+            socketio.emit("system_status", {"status": status}, namespace=page)
+
+    schedule.every(30).seconds.do(emit_status)
+    schedule.every().minute.at(":00").do(update_rrd_db)
     schedule.every(6).hours.do(acarshub_helpers.acarshub_database.optimize_db_regular)
     schedule.every().minute.at(":30").do(
         acarshub_helpers.acarshub_database.prune_database
@@ -237,6 +543,11 @@ def scheduled_tasks():
         time.sleep(1)
 
 
+# Global dict to cache alert metadata by message timestamp + identifiers
+# Used to pass alert data from database_listener to messageRelayListener
+alert_metadata_cache = {}
+
+
 def database_listener():
     import sys
     import time
@@ -248,9 +559,25 @@ def database_listener():
         while len(que_database) != 0:
             sys.stdout.flush()
             message_type, message_as_json = que_database.pop()
-            acarshub_helpers.acarshub_database.add_message_from_json(
+
+            # Save to database and get alert metadata (includes UID)
+            alert_metadata = acarshub_helpers.acarshub_database.add_message_from_json(
                 message_type=message_type, message_from_json=message_as_json
             )
+
+            # Create cache key from message identifying fields
+            # Use timestamp + tail + flight + icao to uniquely identify message
+            cache_key = f"{message_as_json.get('timestamp', '')}_{message_as_json.get('tail', '')}_{message_as_json.get('flight', '')}_{message_as_json.get('icao', '')}"
+
+            # Store alert metadata in cache for messageRelayListener to retrieve
+            if alert_metadata is not None:
+                alert_metadata_cache[cache_key] = alert_metadata
+
+                # Clean old cache entries (keep last 1000)
+                if len(alert_metadata_cache) > 1000:
+                    # Remove oldest 200 entries
+                    for old_key in list(alert_metadata_cache.keys())[:200]:
+                        del alert_metadata_cache[old_key]
         else:
             pass
 
@@ -267,17 +594,23 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
     import json
 
     global error_messages_last_minute
+    global error_messages_total
 
     if message_type == "VDLM2":
         global vdlm_messages_last_minute
+        global vdlm_messages_total
     elif message_type == "ACARS":
         global acars_messages_last_minute
+        global acars_messages_total
     elif message_type == "HFDL":
         global hfdl_messages_last_minute
+        global hfdl_messages_total
     elif message_type == "IMSL":
         global imsl_messages_last_minute
+        global imsl_messages_total
     elif message_type == "IRDM":
         global irdm_messages_last_minute
+        global irdm_messages_total
 
     disconnected = True
 
@@ -305,11 +638,25 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
                 # Connect to the sender
                 receiver.connect((ip, port))
                 disconnected = False
+
+                # Update connection state (thread-safe)
+                with decoder_connections_lock:
+                    decoder_connections[message_type] = True
+
                 acarshub_logging.log(
                     f"{message_type.lower()}_receiver connected to {ip}:{port}",
                     f"{message_type.lower()}Generator",
                     level=LOG_LEVEL["DEBUG"],
                 )
+
+                # Emit status update on connection
+                threads_data, connections_data, msg_last_min, msg_total = (
+                    get_status_data()
+                )
+                status = acarshub_helpers.get_realtime_status(
+                    threads_data, connections_data, msg_last_min, msg_total
+                )
+                socketio.emit("system_status", {"status": status}, namespace="/main")
 
             if acarshub_configuration.LOCAL_TEST is True:
                 data, addr = receiver.recvfrom(65527)
@@ -326,13 +673,39 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
             )
             acarshub_logging.acars_traceback(e, f"{message_type.lower()}Generator")
             disconnected = True
+
+            # Update connection state (thread-safe)
+            with decoder_connections_lock:
+                decoder_connections[message_type] = False
+
             receiver.close()
+
+            # Emit status update on disconnection
+            threads_data, connections_data, msg_last_min, msg_total = get_status_data()
+            status = acarshub_helpers.get_realtime_status(
+                threads_data, connections_data, msg_last_min, msg_total
+            )
+            socketio.emit("system_status", {"status": status}, namespace="/main")
+
             time.sleep(1)
             continue
         except Exception as e:
             acarshub_logging.acars_traceback(e, f"{message_type.lower()}Generator")
             disconnected = True
+
+            # Update connection state (thread-safe)
+            with decoder_connections_lock:
+                decoder_connections[message_type] = False
+
             receiver.close()
+
+            # Emit status update on disconnection
+            threads_data, connections_data, msg_last_min, msg_total = get_status_data()
+            status = acarshub_helpers.get_realtime_status(
+                threads_data, connections_data, msg_last_min, msg_total
+            )
+            socketio.emit("system_status", {"status": status}, namespace="/main")
+
             time.sleep(1)
             continue
 
@@ -345,7 +718,20 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
 
         if decoded == "":
             disconnected = True
+
+            # Update connection state (thread-safe)
+            with decoder_connections_lock:
+                decoder_connections[message_type] = False
+
             receiver.close()
+
+            # Emit status update on disconnection
+            threads_data, connections_data, msg_last_min, msg_total = get_status_data()
+            status = acarshub_helpers.get_realtime_status(
+                threads_data, connections_data, msg_last_min, msg_total
+            )
+            socketio.emit("system_status", {"status": status}, namespace="/main")
+
             continue
 
         # Decode json
@@ -425,18 +811,24 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
             if formatted_message:
                 if message_type == "VDLM2":
                     vdlm_messages_last_minute += 1
+                    vdlm_messages_total += 1
                 elif message_type == "ACARS":
                     acars_messages_last_minute += 1
+                    acars_messages_total += 1
                 elif message_type == "HFDL":
                     hfdl_messages_last_minute += 1
+                    hfdl_messages_total += 1
                 elif message_type == "IMSL":
                     imsl_messages_last_minute += 1
+                    imsl_messages_total += 1
                 elif message_type == "IRDM":
                     irdm_messages_last_minute += 1
+                    irdm_messages_total += 1
 
                 if "error" in msg:
                     if msg["error"] > 0:
                         error_messages_last_minute += msg["error"]
+                        error_messages_total += msg["error"]
 
                 que_messages.append((que_type, formatted_message))
                 que_database.append((que_type, formatted_message))
@@ -444,6 +836,10 @@ def message_listener(message_type=None, ip="127.0.0.1", port=None):
                 if (
                     len(list_of_recent_messages) >= list_of_recent_messages_max
                 ):  # Keep the que size down
+                    # Before removing, check if it's an alert and move to alert cache
+                    oldest_message = list_of_recent_messages[0]
+                    if oldest_message.get("matched"):
+                        add_alert_to_cache(oldest_message)
                     del list_of_recent_messages[0]
 
                 if not acarshub_configuration.QUIET_MESSAGES:
@@ -465,7 +861,65 @@ def init_listeners(special_message=""):
     global thread_irdm_listener
     global thread_database
     global thread_scheduler
-    global thread_html_generator
+
+    # Load recent alerts from database into cache on first init
+    # Strategy: Load recent messages first, count alerts in them, then load older alerts
+    # This prevents duplicates between recent messages and alert cache
+    if len(list_of_recent_alerts) == 0:
+        acarshub_logging.log(
+            "Initializing alert cache from database",
+            "startup",
+            level=LOG_LEVEL["INFO"],
+        )
+
+        # Count how many alerts are already in list_of_recent_messages
+        alerts_in_recent = sum(
+            1 for msg in list_of_recent_messages if msg.get("matched")
+        )
+
+        # Calculate how many additional alerts we need
+        alerts_needed = list_of_recent_alerts_max - alerts_in_recent
+
+        if alerts_needed > 0:
+            # Find oldest timestamp in recent messages to avoid overlap
+            oldest_recent_timestamp = None
+            if len(list_of_recent_messages) > 0:
+                # Messages have 'timestamp' after update_keys enrichment
+                # Check timestamp, msg_time, or time for compatibility
+                for msg in reversed(list_of_recent_messages):
+                    ts = msg.get("timestamp") or msg.get("msg_time") or msg.get("time")
+                    if ts:
+                        oldest_recent_timestamp = ts
+                        break
+
+            recent_alerts = acarshub_helpers.acarshub_database.load_recent_alerts(
+                limit=alerts_needed, before_timestamp=oldest_recent_timestamp
+            )
+
+            # Log first loaded alert to verify text field
+            if recent_alerts and len(recent_alerts) > 0:
+                first_alert = recent_alerts[0]
+                acarshub_logging.log(
+                    f"First loaded alert - UID: {first_alert.get('uid')}, has 'text': {('text' in first_alert)}, has 'msg_text': {('msg_text' in first_alert)}, text_length: {len(first_alert.get('text', '')) if first_alert.get('text') else 0}",
+                    "startup",
+                    level=LOG_LEVEL["DEBUG"],
+                )
+
+            with recent_alerts_lock:
+                list_of_recent_alerts.extend(recent_alerts)
+
+            acarshub_logging.log(
+                f"Alert cache initialized: {alerts_in_recent} alerts in recent messages, {len(recent_alerts)} loaded from DB, total in cache: {len(list_of_recent_alerts)}",
+                "startup",
+                level=LOG_LEVEL["INFO"],
+            )
+        else:
+            acarshub_logging.log(
+                f"Alert cache skipped: {alerts_in_recent} alerts already in recent messages (max: {list_of_recent_alerts_max})",
+                "startup",
+                level=LOG_LEVEL["INFO"],
+            )
+    global thread_message_relay
     # global thread_adsb_listner
     # global thread_adsb
     # REMOVE AFTER AIRFRAMES IS UPDATED ####
@@ -498,17 +952,17 @@ def init_listeners(special_message=""):
         thread_scheduler = Thread(target=scheduled_tasks)
         thread_scheduler.start()
 
-    # check if 'g' is not in thread_html_generator
-    if thread_html_generator_active is False:
+    # check if 'g' is not in thread_message_relay
+    if thread_message_relay_active is False:
         acarshub_logging.log(
-            f"{special_message}Starting htmlListener",
+            f"{special_message}Starting messageRelayListener",
             "init",
             level=LOG_LEVEL["INFO"] if special_message == "" else LOG_LEVEL["ERROR"],
         )
-        thread_html_generator = socketio.start_background_task(htmlListener)
+        thread_message_relay = socketio.start_background_task(messageRelayListener)
     if not thread_acars_listener.is_alive() and acarshub_configuration.ENABLE_ACARS:
         acarshub_logging.log(
-            f"{special_message}Starting ACARS listener",
+            f"{special_message}Starting ACARS listener (current thread alive: {thread_acars_listener.is_alive()})",
             "init",
             level=LOG_LEVEL["INFO"] if special_message == "" else LOG_LEVEL["ERROR"],
         )
@@ -521,6 +975,11 @@ def init_listeners(special_message=""):
             ),
         )
         thread_acars_listener.start()
+        acarshub_logging.log(
+            f"ACARS listener thread started: {thread_acars_listener.ident}",
+            "init",
+            level=LOG_LEVEL["DEBUG"],
+        )
 
     if not thread_vdlm2_listener.is_alive() and acarshub_configuration.ENABLE_VDLM:
         acarshub_logging.log(
@@ -586,7 +1045,11 @@ def init_listeners(special_message=""):
         )
         thread_irdm_listener.start()
 
-    status = acarshub_helpers.get_service_status()  # grab system status
+    # Grab real-time system status
+    threads_data, connections_data, msg_last_min, msg_total = get_status_data()
+    status = acarshub_helpers.get_realtime_status(
+        threads_data, connections_data, msg_last_min, msg_total
+    )
 
     # emit to all namespaces
     for page in acars_namespaces:
@@ -594,6 +1057,18 @@ def init_listeners(special_message=""):
 
 
 def init():
+    import os
+
+    # When Flask reloader is active, this code runs in both parent and child process
+    # Only run initialization in the reloader child process (or when reloader disabled)
+    # WERKZEUG_RUN_MAIN is only set in the reloader child process
+    if not os.environ.get("WERKZEUG_RUN_MAIN") and acarshub_configuration.LOCAL_TEST:
+        acarshub_logging.log(
+            "Skipping init() in reloader parent process - will run in child",
+            "init",
+            level=LOG_LEVEL["DEBUG"],
+        )
+        return
 
     # grab recent messages from db and fill the most recent array
     # then turn on the listeners
@@ -609,13 +1084,14 @@ def init():
             level=LOG_LEVEL["ERROR"],
         )
         acarshub_logging.acars_traceback(e, "init")
-    if not acarshub_configuration.LOCAL_TEST:
-        try:
-            acarshub_logging.log("Initializing RRD Database", "init")
-            acarshub_rrd_database.create_db()  # make sure the RRD DB is created / there
-        except Exception as e:
-            acarshub_logging.log(f"Startup Error creating RRD Database {e}", "init")
-            acarshub_logging.acars_traceback(e, "init")
+    try:
+        acarshub_logging.log("Initializing RRD Database", "init")
+        acarshub_rrd_database.create_db(
+            acarshub_configuration.RRD_DB_PATH
+        )  # make sure the RRD DB is created / there
+    except Exception as e:
+        acarshub_logging.log(f"Startup Error creating RRD Database {e}", "init")
+        acarshub_logging.acars_traceback(e, "init")
     if results is not None:
         for json_message in results:
             try:
@@ -638,81 +1114,23 @@ def init():
     init_listeners()
 
 
-def send_version():
-    socketio.emit(
-        "acarshub-version", acarshub_configuration.get_version(), namespace="/main"
-    )
-
-
 init()
 
 
-@app.route("/")
-def index():
-    # only by sending this page first will the client be connected to the socketio instance
-    return render_template("index.html")
-
-
-@app.route("/stats")
-def stats():
-    return render_template("index.html")
-
-
-@app.route("/search")
-def search():
-    return render_template("index.html")
-
-
-@app.route("/about")
-def about():
-    return render_template("index.html")
-
-
-@app.route("/aboutmd")
-def aboutmd():
-    return render_template("helppage.MD")
-
-
-@app.route("/alerts")
-def alerts():
-    return render_template("index.html")
-
-
-@app.route("/status")
-def status():
-    return render_template("index.html")
-
-
-@app.route("/adsb")
-def adsb():
-    # For now we're going to redirect the ADSB url always to live messages
-    # ADSB Page loading causes problems
-    if acarshub_configuration.ENABLE_ADSB:
-        return render_template("index.html")
-    else:
-        return redirect(url_for("index"))
+# ============================================================================
+# API-ONLY ROUTES
+# ============================================================================
+# All HTML/CSS/JS is served by nginx from the React build (acarshub-react/dist/)
+# This backend only provides:
+#   1. /metrics endpoint (Prometheus monitoring)
+#   2. Socket.IO handlers (real-time messaging - see below)
+# ============================================================================
 
 
 @app.route("/metrics")
 def metrics():
     """Expose Prometheus metrics"""
     return Response(acarshub_metrics.get_metrics(), mimetype="text/plain")
-
-
-@app.route("/static/<path:filename>")
-def serve_static(filename):
-    """Serve static files without caching in dev mode"""
-    response = send_from_directory(app.static_folder, filename)
-    if acarshub_configuration.LOCAL_TEST:
-        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
-        response.headers["Pragma"] = "no-cache"
-        response.headers["Expires"] = "0"
-    return response
-
-
-@app.errorhandler(404)
-def not_found(e):
-    return redirect(url_for("index"))
 
 
 # The listener for the live message page
@@ -725,7 +1143,7 @@ def main_connect():
     import sys
 
     # need visibility of the global thread object
-    global thread_html_generator
+    global thread_message_relay
     # global thread_adsb
     # global thread_adsb_stop_event
 
@@ -747,11 +1165,7 @@ def main_connect():
                     "enabled": acarshub_configuration.ENABLE_ADSB,
                     "lat": acarshub_configuration.ADSB_LAT,
                     "lon": acarshub_configuration.ADSB_LON,
-                    "url": acarshub_configuration.ADSB_URL,
-                    "bypass": acarshub_configuration.ADSB_BYPASS_URL,
                     "range_rings": acarshub_configuration.ENABLE_RANGE_RINGS,
-                    "flight_tracking_url": acarshub_configuration.FLIGHT_TRACKING_URL,
-                    "override_tile_url": acarshub_configuration.OVERRIDE_TILE_URL,
                 },
             },
             to=requester,
@@ -784,39 +1198,90 @@ def main_connect():
         acarshub_logging.log(f"Main Connect: Error sending labels: {e}", "webapp")
         acarshub_logging.acars_traceback(e, "webapp")
 
-    msg_index = 1
-    for json_message in list_of_recent_messages:
-        if msg_index == len(list_of_recent_messages):
+    # Send cached ADS-B data immediately if enabled (BEFORE message flood)
+    # This ensures culling has ADS-B awareness from the start
+    if acarshub_configuration.ENABLE_ADSB:
+        with cached_adsb_lock:
+            if cached_adsb_data is not None:
+                try:
+                    socketio.emit(
+                        "adsb_aircraft",
+                        cached_adsb_data,
+                        to=requester,
+                        namespace="/main",
+                    )
+                    acarshub_logging.log(
+                        f"Cached ADS-B data sent to new client: {len(cached_adsb_data['aircraft'])} aircraft",
+                        "main_connect",
+                        level=LOG_LEVEL["DEBUG"],
+                    )
+                except Exception as e:
+                    acarshub_logging.log(
+                        f"Error sending cached ADS-B data: {e}",
+                        "main_connect",
+                        level=LOG_LEVEL["WARNING"],
+                    )
+            else:
+                acarshub_logging.log(
+                    "No cached ADS-B data available for new client (poll not ready yet)",
+                    "main_connect",
+                    level=LOG_LEVEL["DEBUG"],
+                )
+
+    # Send recent messages in chunks to reduce Socket.IO overhead
+    # Filter out alerts - they will be sent separately via alert_matches_batch to avoid duplicates
+    # Chunk size of 25 balances payload size vs round-trips
+    chunk_size = 25
+    non_alert_messages = [
+        msg for msg in list_of_recent_messages if not msg.get("matched")
+    ]
+    total_messages = len(non_alert_messages)
+
+    acarshub_logging.log(
+        f"Sending recent messages: {total_messages} non-alert messages (filtered {len(list_of_recent_messages) - total_messages} alerts)",
+        "main_connect",
+        level=LOG_LEVEL["DEBUG"],
+    )
+
+    for chunk_start in range(0, total_messages, chunk_size):
+        chunk_end = min(chunk_start + chunk_size, total_messages)
+        chunk = non_alert_messages[chunk_start:chunk_end]
+
+        # Mark the last chunk as done_loading
+        is_last_chunk = chunk_end == total_messages
+        if is_last_chunk:
             recent_options["done_loading"] = True
-        msg_index += 1
+
+        # Log first message in chunk to verify text field is present
+        if chunk and len(chunk) > 0:
+            first_msg = chunk[0]
+            acarshub_logging.log(
+                f"Message batch sample - UID: {first_msg.get('uid')}, has 'text': {('text' in first_msg)}, has 'msg_text': {('msg_text' in first_msg)}, text_length: {len(first_msg.get('text', '')) if first_msg.get('text') else 0}, matched: {first_msg.get('matched')}",
+                "main_connect",
+                level=LOG_LEVEL["DEBUG"],
+            )
+
         try:
+            # Send chunk as array of messages
             socketio.emit(
-                "acars_msg",
+                "acars_msg_batch",
                 {
-                    "msghtml": json_message,
+                    "messages": chunk,
                     **recent_options,
                 },
                 to=requester,
                 namespace="/main",
             )
+            acarshub_logging.log(
+                f"Sent message chunk {chunk_start + 1}-{chunk_end} of {total_messages}",
+                "main_connect",
+                level=LOG_LEVEL["DEBUG"],
+            )
         except Exception as e:
             acarshub_logging.log(
-                f"Main Connect: Error sending acars_msg: {e}", "webapp"
+                f"Main Connect: Error sending acars_msg_batch: {e}", "webapp"
             )
             acarshub_logging.acars_traceback(e, "webapp")
-
-    try:
-        socketio.emit(
-            "system_status",
-            {"status": acarshub_helpers.get_service_status()},
-            to=requester,
-            namespace="/main",
-        )
-    except Exception as e:
-        acarshub_logging.log(
-            f"Main Connect: Error sending system_status: {e}", "webapp"
-        )
-        acarshub_logging.acars_traceback(e, "webapp")
 
     try:
         rows, size = get_cached(
@@ -850,50 +1315,90 @@ def main_connect():
             to=requester,
             namespace="/main",
         )
-        send_version()
+
     except Exception as e:
         acarshub_logging.log(
             f"Main Connect: Error sending signal levels: {e}", "webapp"
         )
         acarshub_logging.acars_traceback(e, "webapp")
 
+    # Send cached alert matches (most recent alerts from memory)
+    # Chunk size of 25 balances payload size vs round-trips
+    chunk_size = 25
+
+    with recent_alerts_lock:
+        total_alerts = len(list_of_recent_alerts)
+
+        acarshub_logging.log(
+            f"Sending alert cache to client: {total_alerts} alerts available",
+            "main_connect",
+            level=LOG_LEVEL["INFO"],
+        )
+
+        for chunk_start in range(0, total_alerts, chunk_size):
+            chunk_end = min(chunk_start + chunk_size, total_alerts)
+            chunk = list_of_recent_alerts[chunk_start:chunk_end]
+
+            # Mark the last chunk as done_loading
+            is_last_chunk = chunk_end == total_alerts
+            alert_options = {
+                "loading": True,
+                "done_loading": is_last_chunk,
+            }
+
+            # Log first message in chunk to verify text field is present
+            if chunk and len(chunk) > 0:
+                first_msg = chunk[0]
+                acarshub_logging.log(
+                    f"Alert batch sample - UID: {first_msg.get('uid')}, has 'text': {('text' in first_msg)}, has 'msg_text': {('msg_text' in first_msg)}, text_length: {len(first_msg.get('text', '')) if first_msg.get('text') else 0}, matched: {first_msg.get('matched')}",
+                    "main_connect",
+                    level=LOG_LEVEL["DEBUG"],
+                )
+
+            try:
+                socketio.emit(
+                    "alert_matches_batch",
+                    {
+                        "messages": chunk,
+                        **alert_options,
+                    },
+                    to=requester,
+                    namespace="/main",
+                )
+                acarshub_logging.log(
+                    f"Sent alert chunk {chunk_start + 1}-{chunk_end} of {total_alerts}",
+                    "main_connect",
+                    level=LOG_LEVEL["DEBUG"],
+                )
+            except Exception as e:
+                acarshub_logging.log(
+                    f"Main Connect: Error sending alert_matches_batch: {e}", "webapp"
+                )
+                acarshub_logging.acars_traceback(e, "webapp")
+
     # Start the htmlGenerator thread only if the thread has not been started before.
-    if thread_html_generator_active is False:
+    if thread_message_relay_active is False:
         sys.stdout.flush()
-        thread_html_generator_event.clear()
-        thread_html_generator = socketio.start_background_task(htmlListener)
+        thread_message_relay_event.clear()
+        thread_message_relay = socketio.start_background_task(messageRelayListener)
+
+    # Start the ADS-B polling background task if enabled (only once)
+    if acarshub_configuration.ENABLE_ADSB:
+        if not hasattr(main_connect, "_adsb_task_started"):
+            acarshub_logging.log(
+                "Starting ADS-B polling background task",
+                "main_connect",
+                level=LOG_LEVEL["INFO"],
+            )
+            socketio.start_background_task(poll_adsb_data)
+            main_connect._adsb_task_started = True
 
     pt = time.time() - pt
     acarshub_logging.log(
-        f"main_connect took {pt * 1000:.0f}ms", "htmlListener", level=LOG_LEVEL["DEBUG"]
+        f"main_connect took {pt * 1000:.0f}ms",
+        "messageRelayListener",
+        level=LOG_LEVEL["DEBUG"],
     )
-
-
-@socketio.on("query_terms", namespace="/main")
-def get_alerts(message, namespace):
-    requester = request.sid
-    results = acarshub_helpers.acarshub_database.search_alerts(
-        icao=message["icao"],
-        # text=message["text"],
-        flight=message["flight"],
-        tail=message["tail"],
-    )
-    if results is not None:
-        results.reverse()
-
-    recent_options = {"loading": True, "done_loading": False}
-    msg_index = 1
-    for item in [item for item in (results or [])]:
-        if msg_index == len(results):
-            recent_options["done_loading"] = True
-        msg_index += 1
-        acarshub_helpers.update_keys(item)
-        socketio.emit(
-            "alert_matches",
-            {"msghtml": item, **recent_options},
-            to=requester,
-            namespace="/main",
-        )
 
 
 @socketio.on("update_alerts", namespace="/main")
@@ -913,6 +1418,99 @@ def update_alerts(message, namespace):
     )
     acarshub_helpers.acarshub_database.set_alert_terms(message["terms"])
     acarshub_helpers.acarshub_database.set_alert_ignore(message["ignore"])
+
+
+@socketio.on("regenerate_alert_matches", namespace="/main")
+def regenerate_alert_matches(message, namespace):
+    """
+    Regenerate all alert matches from scratch.
+
+    This is a destructive operation that:
+    1. Deletes all existing alert matches
+    2. Resets alert statistics
+    3. Re-processes all messages against current alert terms
+
+    Requires ALLOW_REMOTE_UPDATES permission.
+    Returns statistics about the operation to the requesting client.
+    """
+    if not acarshub_configuration.ALLOW_REMOTE_UPDATES:
+        acarshub_logging.log(
+            "Remote updates are disabled. Cannot regenerate alert matches.",
+            "regenerate_alert_matches",
+            level=LOG_LEVEL["ERROR"],
+        )
+        socketio.emit(
+            "regenerate_alert_matches_error",
+            {"error": "Remote updates are disabled"},
+            to=request.sid,
+            namespace="/main",
+        )
+        return
+
+    global alert_regen_in_progress
+
+    # Check if regeneration is already running
+    with alert_regen_lock:
+        if alert_regen_in_progress:
+            acarshub_logging.log(
+                "Alert regeneration already in progress",
+                "regenerate_alert_matches",
+                level=LOG_LEVEL["WARNING"],
+            )
+            socketio.emit(
+                "regenerate_alert_matches_error",
+                {"error": "Alert regeneration already in progress"},
+                to=request.sid,
+                namespace="/main",
+            )
+            return
+
+        # Mark regeneration as in progress
+        alert_regen_in_progress = True
+
+    # Spawn background task using socketio (gevent-compatible)
+    acarshub_logging.log(
+        "Starting alert match regeneration in background task",
+        "regenerate_alert_matches",
+        level=LOG_LEVEL["INFO"],
+    )
+
+    socketio.start_background_task(
+        alert_regeneration_worker,
+        request.sid,
+    )
+
+    # Immediately notify client that regeneration has started
+    socketio.emit(
+        "regenerate_alert_matches_started",
+        {"message": "Alert regeneration started in background"},
+        to=request.sid,
+        namespace="/main",
+    )
+
+
+@socketio.on("request_status", namespace="/main")
+def request_status(message, namespace):
+    """
+    Handle real-time status requests from React frontend.
+    Returns current system status without shell script execution.
+    """
+    requester = request.sid
+    threads_data, connections_data, msg_last_min, msg_total = get_status_data()
+    status = acarshub_helpers.get_realtime_status(
+        threads_data, connections_data, msg_last_min, msg_total
+    )
+    socketio.emit(
+        "system_status",
+        {"status": status},
+        to=requester,
+        namespace="/main",
+    )
+    acarshub_logging.log(
+        "Real-time status requested",
+        "request_status",
+        level=LOG_LEVEL["DEBUG"],
+    )
 
 
 @socketio.on("signal_freqs", namespace="/main")
@@ -944,6 +1542,131 @@ def request_count(message, namespace):
     )
 
 
+@socketio.on("request_recent_alerts", namespace="/main")
+def handle_recent_alerts_request(message, namespace):
+    """
+    Send recent alert messages to client on request.
+    Called when React app loads to populate initial alert state.
+
+    Uses normalized schema: JOINs messages with alert_matches table.
+    """
+    from sqlalchemy import desc
+
+    pt = time.time()
+    requester = request.sid
+    session = None
+
+    try:
+        session = acarshub_helpers.acarshub_database.db_session()
+
+        # Get distinct alert messages with their match metadata
+        # JOIN messages with alert_matches to get complete data
+        recent_alerts_query = (
+            session.query(
+                acarshub_helpers.acarshub_database.messages,
+                acarshub_helpers.acarshub_database.AlertMatch.term,
+                acarshub_helpers.acarshub_database.AlertMatch.match_type,
+            )
+            .join(
+                acarshub_helpers.acarshub_database.AlertMatch,
+                acarshub_helpers.acarshub_database.messages.uid
+                == acarshub_helpers.acarshub_database.AlertMatch.message_uid,
+            )
+            .order_by(desc(acarshub_helpers.acarshub_database.messages.time))
+            .limit(200)  # Increased limit since we'll deduplicate by UID
+            .all()
+        )
+
+        # Group matches by message UID (same message may match multiple terms)
+        alerts_by_uid = {}
+        for msg, term, match_type in recent_alerts_query:
+            msg_dict = {
+                "id": msg.id,
+                "uid": msg.uid,
+                "message_type": msg.message_type,
+                "time": msg.time,
+                "station_id": msg.station_id,
+                "toaddr": msg.toaddr,
+                "fromaddr": msg.fromaddr,
+                "depa": msg.depa,
+                "dsta": msg.dsta,
+                "eta": msg.eta,
+                "gtout": msg.gtout,
+                "gtin": msg.gtin,
+                "wloff": msg.wloff,
+                "wlin": msg.wlin,
+                "lat": msg.lat,
+                "lon": msg.lon,
+                "alt": msg.alt,
+                "msg_text": msg.text,
+                "tail": msg.tail,
+                "flight": msg.flight,
+                "icao": msg.icao,
+                "freq": msg.freq,
+                "ack": msg.ack,
+                "mode": msg.mode,
+                "label": msg.label,
+                "block_id": msg.block_id,
+                "msgno": msg.msgno,
+                "is_response": msg.is_response,
+                "is_onground": msg.is_onground,
+                "error": msg.error,
+                "libacars": msg.libacars,
+                "level": msg.level,
+            }
+
+            # Apply update_keys to format message for frontend
+            acarshub_helpers.update_keys(msg_dict)
+
+            uid = msg_dict["uid"]
+
+            if uid not in alerts_by_uid:
+                # First match for this message
+                alerts_by_uid[uid] = msg_dict
+                alerts_by_uid[uid]["matched"] = True
+                alerts_by_uid[uid]["matched_text"] = []
+                alerts_by_uid[uid]["matched_icao"] = []
+                alerts_by_uid[uid]["matched_tail"] = []
+                alerts_by_uid[uid]["matched_flight"] = []
+
+            # Append match to appropriate array
+            if match_type == "text":
+                if term not in alerts_by_uid[uid]["matched_text"]:
+                    alerts_by_uid[uid]["matched_text"].append(term)
+            elif match_type == "icao":
+                if term not in alerts_by_uid[uid]["matched_icao"]:
+                    alerts_by_uid[uid]["matched_icao"].append(term)
+            elif match_type == "tail":
+                if term not in alerts_by_uid[uid]["matched_tail"]:
+                    alerts_by_uid[uid]["matched_tail"].append(term)
+            elif match_type == "flight":
+                if term not in alerts_by_uid[uid]["matched_flight"]:
+                    alerts_by_uid[uid]["matched_flight"].append(term)
+
+        # Convert to list and limit to 100 unique messages
+        alerts_data = list(alerts_by_uid.values())[:100]
+
+        # Send to requesting client only (not broadcast)
+        socketio.emit(
+            "recent_alerts", {"alerts": alerts_data}, to=requester, namespace="/main"
+        )
+
+        pt = time.time() - pt
+        acarshub_logging.log(
+            f"request_recent_alerts took {pt * 1000:.0f}ms, returned {len(alerts_data)} alerts",
+            "request_recent_alerts",
+            level=LOG_LEVEL["DEBUG"],
+        )
+
+    except Exception as e:
+        acarshub_logging.acars_traceback(e, "request_recent_alerts")
+        # Send empty alerts on error
+        socketio.emit("recent_alerts", {"alerts": []}, to=requester, namespace="/main")
+    finally:
+        if session:
+            session.close()
+
+
 @socketio.on("signal_graphs", namespace="/main")
 def request_graphs(message, namespace):
     pt = time.time()
@@ -958,7 +1681,7 @@ def request_graphs(message, namespace):
         "signal",
         {
             "levels": get_cached(
-                acarshub_helpers.acarshub_database.get_signal_levels, 30
+                acarshub_helpers.acarshub_database.get_all_signal_levels, 30
             )
         },
         namespace="/main",
@@ -969,6 +1692,147 @@ def request_graphs(message, namespace):
         "request_graphs",
         level=LOG_LEVEL["DEBUG"],
     )
+
+
+@socketio.on("rrd_timeseries", namespace="/main")
+def request_rrd_timeseries(message, namespace):
+    """
+    Fetch RRD time-series data for a specific time period.
+    Returns JSON data for all decoders (ACARS, VDLM, HFDL, IMSL, IRDM, TOTAL, ERROR).
+
+    Message format: { "time_period": "1hr" | "6hr" | "12hr" | "24hr" | "1wk" | "30day" | "6mon" | "1yr" }
+    """
+
+    pt = time.time()
+    requester = request.sid
+    time_period = message.get("time_period", "24hr")
+
+    # Map time periods to RRD fetch parameters
+    # Format: (start_offset_seconds, resolution_hint)
+    period_map = {
+        "1hr": (3600, "1min"),  # 1 hour, 1-minute resolution
+        "6hr": (21600, "1min"),  # 6 hours, 1-minute resolution
+        "12hr": (43200, "1min"),  # 12 hours, 1-minute resolution
+        "24hr": (86400, "1min"),  # 24 hours, 1-minute resolution
+        "1wk": (604800, "5min"),  # 1 week, 5-minute resolution
+        "30day": (2592000, "1hr"),  # 30 days, 1-hour resolution
+        "6mon": (15768000, "1hr"),  # 6 months, 1-hour resolution
+        "1yr": (31536000, "6hr"),  # 1 year, 6-hour resolution
+    }
+
+    if time_period not in period_map:
+        socketio.emit(
+            "rrd_timeseries_data",
+            {"error": f"Invalid time period: {time_period}", "data": []},
+            to=requester,
+            namespace="/main",
+        )
+        return
+
+    start_offset, resolution = period_map[time_period]
+
+    try:
+        import rrdtool
+        import os
+
+        rrd_path = acarshub_configuration.RRD_DB_PATH + "acarshub.rrd"
+
+        acarshub_logging.log(
+            f"Checking for RRD database at: {rrd_path}",
+            "rrd_timeseries",
+            level=LOG_LEVEL["DEBUG"],
+        )
+
+        if not os.path.exists(rrd_path):
+            socketio.emit(
+                "rrd_timeseries_data",
+                {
+                    "error": "RRD database not found",
+                    "data": [],
+                    "time_period": time_period,
+                },
+                to=requester,
+                namespace="/main",
+            )
+            return
+
+        # Fetch data from RRD
+        # Data sources in order: ACARS, VDLM, TOTAL, ERROR, HFDL, IMSL, IRDM
+        result = rrdtool.fetch(
+            rrd_path, "AVERAGE", "--start", f"end-{start_offset}", "--end", "now"
+        )
+
+        # Parse the result
+        # result[0] is (start_time, end_time, step)
+        # result[1] is tuple of data source names
+        # result[2] is list of tuples with values
+        start_time, end_time, step = result[0]
+        ds_names = result[1]
+        data_rows = result[2]
+
+        # Build the response data
+        timeseries_data = []
+        current_time = start_time
+
+        for row in data_rows:
+            # Skip rows where all values are None
+            if all(v is None for v in row):
+                current_time += step
+                continue
+
+            data_point = {
+                "timestamp": current_time * 1000
+            }  # Convert to milliseconds for JavaScript
+
+            # Map data source names to values
+            for i, ds_name in enumerate(ds_names):
+                value = row[i]
+                # Convert None to 0 for consistency
+                data_point[ds_name.lower()] = 0 if value is None else float(value)
+
+            timeseries_data.append(data_point)
+            current_time += step
+
+        # Check if we have any data
+        if len(timeseries_data) == 0:
+            socketio.emit(
+                "rrd_timeseries_data",
+                {
+                    "error": "No data available yet. The RRD database is collecting data. Please wait a few minutes.",
+                    "data": [],
+                    "time_period": time_period,
+                },
+                to=requester,
+                namespace="/main",
+            )
+        else:
+            socketio.emit(
+                "rrd_timeseries_data",
+                {
+                    "data": timeseries_data,
+                    "time_period": time_period,
+                    "resolution": resolution,
+                    "data_sources": [name.lower() for name in ds_names],
+                },
+                to=requester,
+                namespace="/main",
+            )
+
+        pt = time.time() - pt
+        acarshub_logging.log(
+            f"request_rrd_timeseries ({time_period}) took {pt * 1000:.0f}ms, returned {len(timeseries_data)} points",
+            "rrd_timeseries",
+            level=LOG_LEVEL["DEBUG"],
+        )
+
+    except Exception as e:
+        acarshub_logging.acars_traceback(e, "rrd_timeseries")
+        socketio.emit(
+            "rrd_timeseries_data",
+            {"error": str(e), "data": [], "time_period": time_period},
+            to=requester,
+            namespace="/main",
+        )
 
 
 # handle a query request from the browser
@@ -1010,6 +1874,81 @@ def handle_message(message, namespace):
     )
 
 
+@socketio.on("query_alerts_by_term", namespace="/main")
+def handle_alerts_by_term(message, namespace):
+    """
+    Query historical alerts by specific term with pagination.
+
+    Message format: {
+        "term": "ALERT_TERM",
+        "page": 0  # optional, defaults to 0
+    }
+
+    Returns: {
+        "total_count": 123,
+        "messages": [...],
+        "term": "ALERT_TERM",
+        "page": 0,
+        "query_time": 0.123
+    }
+    """
+    import time
+
+    start_time = time.time()
+
+    term = message.get("term", "")
+    page = message.get("page", 0)
+
+    if not term:
+        requester = request.sid
+        socketio.emit(
+            "alerts_by_term_results",
+            {
+                "total_count": 0,
+                "messages": [],
+                "term": "",
+                "page": 0,
+                "query_time": 0,
+            },
+            to=requester,
+            namespace="/main",
+        )
+        return
+
+    # Query database for alerts matching this term
+    total_count, messages = acarshub_helpers.acarshub_database.search_alerts_by_term(
+        term, page
+    )
+
+    # Format messages for frontend (same as query_search)
+    serialized_json = []
+    if messages:
+        for result in messages:
+            acarshub_helpers.update_keys(result)
+            serialized_json.append(result)
+
+    requester = request.sid
+    socketio.emit(
+        "alerts_by_term_results",
+        {
+            "total_count": total_count,
+            "messages": serialized_json,
+            "term": term,
+            "page": page,
+            "query_time": time.time() - start_time,
+        },
+        to=requester,
+        namespace="/main",
+    )
+
+    query_time = time.time() - start_time
+    acarshub_logging.log(
+        f"Alert term query took {query_time * 1000:.0f}ms: term={term}, page={page}, results={total_count}",
+        "query_alerts_by_term",
+        level=LOG_LEVEL["DEBUG"],
+    )
+
+
 @socketio.on("reset_alert_counts", namespace="/main")
 def reset_alert_counts(message, namespace):
     if not acarshub_configuration.ALLOW_REMOTE_UPDATES:
@@ -1046,11 +1985,13 @@ if __name__ == "__main__":
         "webapp",
         level=LOG_LEVEL["DEBUG"],
     )
+
     socketio.run(
         app,
         host="0.0.0.0",
         port=acarshub_configuration.ACARS_WEB_PORT,
         debug=True if acarshub_configuration.LOCAL_TEST else False,
+        use_reloader=True if acarshub_configuration.LOCAL_TEST else False,
     )
 
 

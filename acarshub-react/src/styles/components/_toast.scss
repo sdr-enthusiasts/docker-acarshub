@@ -1,0 +1,192 @@
+/* Copyright (C) 2022-2026 Frederick Clausen II
+ * This file is part of acarshub <https://github.com/sdr-enthusiasts/docker-acarshub>.
+ *
+ * acarshub is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * acarshub is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+@use "../variables" as *;
+@use "../mixins" as *;
+
+/**
+ * Toast Notification Component
+ * Bottom-right corner notifications with slide-in animation
+ */
+
+.toast {
+  position: fixed;
+  bottom: $spacing-lg;
+  right: $spacing-lg;
+  min-width: 300px;
+  max-width: 400px;
+  background-color: var(--color-surface0);
+  border: 2px solid var(--color-danger);
+  border-radius: $radius-lg;
+  box-shadow: $shadow-xl;
+  opacity: 0;
+  transform: translateX(calc(100% + #{$spacing-lg}));
+  transition:
+    opacity $transition-slow,
+    transform $transition-slow;
+  z-index: $z-index-toast;
+  overflow: hidden;
+
+  // Visible state
+  &--visible {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  // Exiting state
+  &--exiting {
+    opacity: 0;
+    transform: translateX(calc(100% + #{$spacing-lg}));
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: opacity $transition-fast;
+    transform: none;
+
+    &--visible {
+      transform: none;
+    }
+
+    &--exiting {
+      transform: none;
+    }
+  }
+}
+
+.toast__content {
+  padding: $spacing-md;
+}
+
+.toast__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: $spacing-sm;
+}
+
+.toast__title {
+  font-weight: $font-weight-bold;
+  font-size: $font-size-base;
+  color: var(--color-danger);
+}
+
+.toast__close {
+  @include button-reset;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: $radius-md;
+  color: var(--color-text);
+  background-color: transparent;
+  transition: background-color $transition-fast;
+  cursor: pointer;
+
+  &:hover {
+    background-color: var(--color-surface1);
+  }
+
+  @include focus-visible;
+
+  svg {
+    width: 14px;
+    height: 14px;
+  }
+}
+
+.toast__body {
+  color: var(--color-text);
+  font-size: $font-size-sm;
+  line-height: 1.5;
+}
+
+.toast__terms {
+  font-family: $font-family-mono;
+  font-weight: $font-weight-semibold;
+  color: var(--color-danger);
+  word-break: break-word;
+}
+
+.toast__progress {
+  height: 4px;
+  background-color: var(--color-surface1);
+  overflow: hidden;
+}
+
+.toast__progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-danger), var(--color-red));
+  width: 100%;
+  animation: toast-progress linear forwards;
+  transform-origin: left;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+    display: none;
+  }
+}
+
+@keyframes toast-progress {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
+/**
+ * Toast Container
+ * Manages stacking of multiple toasts
+ */
+.toast-container {
+  position: fixed;
+  bottom: $spacing-lg;
+  right: $spacing-lg;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: $spacing-md;
+  z-index: $z-index-toast;
+  pointer-events: none;
+
+  .toast {
+    position: relative;
+    bottom: auto;
+    right: auto;
+    pointer-events: auto;
+  }
+}
+
+/**
+ * Mobile Responsive
+ */
+@media (max-width: #{$breakpoint-sm - 1px}) {
+  .toast {
+    left: $spacing-md;
+    right: $spacing-md;
+    bottom: $spacing-md;
+    min-width: auto;
+    max-width: none;
+  }
+
+  .toast-container {
+    left: $spacing-md;
+    right: $spacing-md;
+    bottom: $spacing-md;
+  }
+}

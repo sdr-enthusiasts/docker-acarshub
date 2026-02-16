@@ -1,2 +1,2 @@
 #!/bin/sh
-exec /etc/s6-overlay/scripts/01-acarshub
+exec /etc/s6-overlay/scripts/01-acarshub.sh

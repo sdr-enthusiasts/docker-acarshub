@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (C) 2022-2024 Frederick Clausen II
+# Copyright (C) 2022-2026 Frederick Clausen II
 # This file is part of acarshub <https://github.com/sdr-enthusiasts/docker-acarshub>.
 #
 # acarshub is free software: you can redistribute it and/or modify
@@ -17,13 +17,7 @@
 # along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
 
-import json
 import os
-import sys
-
-import urllib
-import acarshub_logging
-from acarshub_logging import LOG_LEVEL
 
 
 # Helper function to check if a value is enabled
@@ -38,18 +32,11 @@ def is_enabled(value):
     Returns:
         bool: True if enabled, False otherwise
     """
+
     if not value:
         return False
 
     value_str = str(value).lower().strip()
-
-    # Check for deprecated 'external' value
-    if value_str == "external":
-        print(
-            "WARNING: Using 'external' is deprecated. Please use 'true' or 'false' instead.",
-            file=sys.stderr,
-        )
-        return True
 
     # Check for enabled values (matching shell script pattern)
     enabled_values = [
@@ -63,6 +50,7 @@ def is_enabled(value):
         "ok",
         "always",
         "set",
+        "external",
     ]
     return value_str in enabled_values
 
@@ -78,6 +66,7 @@ ENABLE_IMSL = False
 ENABLE_IRDM = False
 DB_SAVEALL = False
 ACARSHUB_DB = ""
+RRD_DB_PATH = ""
 IATA_OVERRIDE = ""
 DB_BACKUP = ""
 ALERT_STAT_TERMS = []
@@ -86,7 +75,6 @@ ADSB_URL = "http://tar1090/data/aircraft.json"
 ADSB_LAT = 0
 ADSB_LON = 0
 ADSB_BYPASS_URL = False
-OVERRIDE_TILE_URL = None  # Optional Stadia Maps API key for Live Map tiles
 ACARS_WEB_PORT = 8888  # default port for nginx proxying. LOCAL_TEST will change this to 8080 for running outside of docker
 ACARS_SOURCE_PORT = 15550
 VDLM_SOURCE_PORT = 15555
@@ -155,36 +143,51 @@ if (
 ):
     DB_SAVEALL = True
 
-if os.getenv("ACARS_SOURCE_PORT", default=False):
-    ACARS_SOURCE_PORT = int(os.getenv("ACARS_SOURCE_PORT"))
+acars_source_port = os.getenv("ACARS_SOURCE_PORT")
+if acars_source_port:
+    ACARS_SOURCE_PORT = int(acars_source_port)
 
-if os.getenv("VDLM_SOURCE_PORT", default=False):
-    VDLM_SOURCE_PORT = int(os.getenv("VDLM_SOURCE_PORT"))
+vdlm_source_port = os.getenv("VDLM_SOURCE_PORT")
+if vdlm_source_port:
+    VDLM_SOURCE_PORT = int(vdlm_source_port)
 
-if os.getenv("HFDL_SOURCE_PORT", default=False):
-    HFDL_SOURCE_PORT = int(os.getenv("HFDL_SOURCE_PORT"))
+hfdl_source_port = os.getenv("HFDL_SOURCE_PORT")
+if hfdl_source_port:
+    HFDL_SOURCE_PORT = int(hfdl_source_port)
 
-if os.getenv("IMSL_SOURCE_PORT", default=False):
-    IMSL_SOURCE_PORT = int(os.getenv("IMSL_SOURCE_PORT"))
+imsl_source_port = os.getenv("IMSL_SOURCE_PORT")
+if imsl_source_port:
+    IMSL_SOURCE_PORT = int(imsl_source_port)
 
-if os.getenv("IRDM_SOURCE_PORT", default=False):
-    IRDM_SOURCE_PORT = int(os.getenv("IRDM_SOURCE_PORT"))
+irdm_source_port = os.getenv("IRDM_SOURCE_PORT")
+if irdm_source_port:
+    IRDM_SOURCE_PORT = int(irdm_source_port)
 
 # Application Settings
 
-if os.getenv("ACARSHUB_DB", default=False):
-    ACARSHUB_DB = os.getenv("ACARSHUB_DB", default=False)
+acarshub_db = os.getenv("ACARSHUB_DB")
+if acarshub_db:
+    ACARSHUB_DB = acarshub_db
 else:
     ACARSHUB_DB = "sqlite:////run/acars/messages.db"
 
-if os.getenv("DB_BACKUP", default=False):
-    DB_BACKUP = os.getenv("DB_BACKUP")
+rrd_db_path = os.getenv("RRD_DB_PATH")
+if rrd_db_path:
+    RRD_DB_PATH = rrd_db_path
+else:
+    RRD_DB_PATH = "/run/acars/"
 
-if os.getenv("IATA_OVERRIDE", default=False):
-    IATA_OVERRIDE = os.getenv("IATA_OVERRIDE")
+db_backup = os.getenv("DB_BACKUP")
+if db_backup:
+    DB_BACKUP = db_backup
 
-if os.getenv("ALERT_STAT_TERMS", default=False):
-    ALERT_STAT_TERMS = os.getenv("ALERT_STAT_TERMS").split(",")
+iata_override = os.getenv("IATA_OVERRIDE")
+if iata_override:
+    IATA_OVERRIDE = iata_override
+
+alert_stat_terms = os.getenv("ALERT_STAT_TERMS")
+if alert_stat_terms:
+    ALERT_STAT_TERMS = alert_stat_terms.split(",")
 else:
     ALERT_STAT_TERMS = [
         "cop",
@@ -211,12 +214,15 @@ if (
     and str(os.getenv("ENABLE_ADSB")).upper() == "TRUE"
 ):
     ENABLE_ADSB = True
-    if os.getenv("ADSB_URL", default=False):
-        ADSB_URL = os.getenv("ADSB_URL", default=False)
-    if os.getenv("ADSB_LON", default=False):
-        ADSB_LON = float(os.getenv("ADSB_LON"))
-    if os.getenv("ADSB_LAT", default=False):
-        ADSB_LAT = float(os.getenv("ADSB_LAT"))
+    adsb_url = os.getenv("ADSB_URL")
+    if adsb_url:
+        ADSB_URL = adsb_url
+    adsb_lon = os.getenv("ADSB_LON")
+    if adsb_lon:
+        ADSB_LON = float(adsb_lon)
+    adsb_lat = os.getenv("ADSB_LAT")
+    if adsb_lat:
+        ADSB_LAT = float(adsb_lat)
     if (
         os.getenv("DISABLE_RANGE_RINGS", default=False)
         and str(os.getenv("DISABLE_RANGE_RINGS")).upper() == "TRUE"
@@ -226,14 +232,13 @@ if (
 if os.getenv("ADSB_BYPASS_URL", default=False):
     ADSB_BYPASS_URL = True
 
-if os.getenv("OVERRIDE_TILE_URL", default=False):
-    OVERRIDE_TILE_URL = os.getenv("OVERRIDE_TILE_URL")
+db_save_days = os.getenv("DB_SAVE_DAYS")
+if db_save_days:
+    DB_SAVE_DAYS = int(db_save_days)
 
-if os.getenv("DB_SAVE_DAYS", default=False):
-    DB_SAVE_DAYS = int(os.getenv("DB_SAVE_DAYS"))
-
-if os.getenv("DB_ALERT_SAVE_DAYS", default=False):
-    DB_ALERT_SAVE_DAYS = int(os.getenv("DB_ALERT_SAVE_DAYS"))
+db_alert_save_days = os.getenv("DB_ALERT_SAVE_DAYS")
+if db_alert_save_days:
+    DB_ALERT_SAVE_DAYS = int(db_alert_save_days)
 
 if str(os.getenv("DB_LEGACY_FIX")).upper() == "TRUE":
     DB_LEGACY_FIX = True
@@ -259,85 +264,3 @@ with open(version_path, "r") as f:
     CURRENT_ACARS_HUB_VERSION = ACARSHUB_VERSION
     ACARSHUB_BUILD = lines.split("\n")[0].split(" ")[2].replace("v", "")
     CURRENT_ACARS_HUB_BUILD = ACARSHUB_BUILD
-
-
-def check_github_version():
-    global IS_UPDATE_AVAILABLE
-    global CURRENT_ACARS_HUB_VERSION
-    global CURRENT_ACARS_HUB_BUILD
-    IS_UPDATE_AVAILABLE = False
-    # FIXME: This is a hack to get around the fact that the version file is not updated on the build server
-    if not LOCAL_TEST:
-        if HIDE_VERSION_UPDATE:
-            CURRENT_ACARS_HUB_BUILD = ACARSHUB_BUILD
-            CURRENT_ACARS_HUB_VERSION = ACARSHUB_VERSION
-            acarshub_logging.log(
-                "HIDE_VERSION_UPDATE is enabled, skipping version check",
-                "version_checker",
-                level=LOG_LEVEL["DEBUG"],
-            )
-            return
-
-        try:
-            operUrl = urllib.request.urlopen(
-                "https://api.github.com/repos/sdr-enthusiasts/docker-acarshub/releases/latest"
-            )
-            if operUrl.getcode() == 200:
-                data = operUrl.read()
-                jsonData = json.loads(data)
-            else:
-                print("Error receiving data", operUrl.getcode())
-        except Exception as e:
-            acarshub_logging.log(
-                "Error getting latest version from github",
-                "version_checker",
-                level=LOG_LEVEL["ERROR"],
-            )
-            acarshub_logging.acars_traceback(e, "version_checker")
-            return
-
-        github_version_from_json = jsonData["name"]
-        print(github_version_from_json)
-
-        CURRENT_ACARS_HUB_VERSION = (
-            github_version_from_json.split("\n")[0].split(" ")[0].replace("v", "")
-        )
-        CURRENT_ACARS_HUB_BUILD = (
-            github_version_from_json.split("\n")[0].split(" ")[2].replace("v", "")
-        )
-
-        if ACARSHUB_BUILD == "0":
-            acarshub_logging.log(
-                "Detected a Pre-Release build.",
-                "version-checker",
-                level=LOG_LEVEL["WARNING"],
-            )
-            IS_UPDATE_AVAILABLE = False
-            return
-
-        if (
-            CURRENT_ACARS_HUB_VERSION != ACARSHUB_VERSION
-            and ACARSHUB_VERSION < CURRENT_ACARS_HUB_VERSION
-        ) or (
-            CURRENT_ACARS_HUB_BUILD != ACARSHUB_BUILD
-            and ACARSHUB_BUILD < CURRENT_ACARS_HUB_BUILD
-        ):
-            acarshub_logging.log(
-                "Update found", "version-checker", level=LOG_LEVEL["WARNING"]
-            )
-            IS_UPDATE_AVAILABLE = True
-        else:
-            acarshub_logging.log(
-                "No update found", "version-checker", level=LOG_LEVEL["DEBUG"]
-            )
-            IS_UPDATE_AVAILABLE = False
-
-
-def get_version():
-    return {
-        "github_version": (
-            "v" + CURRENT_ACARS_HUB_VERSION + " Build " + CURRENT_ACARS_HUB_BUILD
-        ),
-        "container_version": "v" + ACARSHUB_VERSION + " Build " + ACARSHUB_BUILD,
-        "is_outdated": IS_UPDATE_AVAILABLE,
-    }

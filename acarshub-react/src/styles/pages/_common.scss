@@ -1,0 +1,309 @@
+/* Copyright (C) 2022-2026 Frederick Clausen II
+ * This file is part of acarshub <https://github.com/sdr-enthusiasts/docker-acarshub>.
+ *
+ * acarshub is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * acarshub is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+@use "../variables" as *;
+@use "../mixins" as *;
+
+/**
+ * Common Page Styles
+ * Shared styles for all page layouts
+ */
+
+.page {
+  margin-top: $spacing-lg;
+  margin-bottom: $spacing-lg;
+  background-color: var(--color-card-body);
+  border-radius: $radius-xl;
+  overflow: hidden;
+  overflow-anchor: none; // Prevent scroll anchoring
+
+  @include fade-in($transition-base);
+}
+
+.page__header {
+  padding: $card-padding;
+  background-color: var(--color-card-header);
+  border-bottom: 1px solid var(--color-overlay0);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: $spacing-lg;
+  border-radius: $radius-xl $radius-xl 0 0;
+}
+
+.page__title {
+  margin: 0;
+  font-size: $font-size-3xl;
+  font-weight: $font-weight-semibold;
+  color: var(--color-text);
+}
+
+.page__subtitle {
+  margin: $spacing-sm 0 0;
+  font-size: $font-size-base;
+  font-weight: $font-weight-normal;
+  color: var(--color-subtext1);
+}
+
+.page__actions {
+  display: flex;
+  gap: $spacing-md;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.page__stats {
+  display: flex;
+  gap: $spacing-xl;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.stat-separator {
+  color: var(--color-subtext1);
+  font-weight: $font-weight-normal;
+  user-select: none;
+}
+
+.page__stat {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+}
+
+.page__stat-label {
+  font-size: $font-size-sm;
+  color: var(--color-subtext1);
+  font-weight: $font-weight-medium;
+}
+
+.page__stat-value {
+  font-size: $font-size-2xl;
+  font-weight: $font-weight-semibold;
+  color: var(--color-text);
+}
+
+.page__content {
+  padding: $card-padding;
+}
+
+/**
+ * Placeholder Message (for empty states)
+ */
+
+.placeholder {
+  text-align: center;
+  padding: $spacing-3xl $spacing-xl;
+  color: var(--color-subtext1);
+}
+
+.placeholder__icon {
+  font-size: 4rem;
+  color: var(--color-subtext1);
+  margin-bottom: $spacing-lg;
+
+  svg {
+    width: 64px;
+    height: 64px;
+  }
+}
+
+.placeholder__title {
+  font-size: $font-size-2xl;
+  font-weight: $font-weight-semibold;
+  color: var(--color-text);
+  margin-bottom: $spacing-md;
+}
+
+.placeholder__description {
+  font-size: $font-size-base;
+  color: var(--color-subtext1);
+  margin-bottom: $spacing-lg;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.placeholder__list {
+  text-align: left;
+  max-width: 500px;
+  margin: $spacing-lg auto;
+  list-style-position: inside;
+}
+
+.placeholder__list li {
+  margin-bottom: $spacing-sm;
+  color: var(--color-subtext1);
+}
+
+.placeholder__actions {
+  margin-top: $spacing-xl;
+  display: flex;
+  gap: $spacing-md;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/**
+ * Debug/Info Boxes
+ */
+
+.info-box {
+  margin-top: $spacing-xl;
+  padding: $card-padding;
+  background-color: var(--color-surface1);
+  border-radius: $radius-lg;
+  border-left: 4px solid var(--color-info);
+}
+
+.info-box--warning {
+  border-left-color: var(--color-warning);
+  background-color: var(--color-surface0);
+}
+
+.info-box--error {
+  border-left-color: var(--color-danger);
+  background-color: var(--color-surface0);
+}
+
+.info-box--success {
+  border-left-color: var(--color-success);
+  background-color: var(--color-surface0);
+}
+
+.info-box__title {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  margin-bottom: $spacing-md;
+  color: var(--color-text);
+}
+
+.info-box__content {
+  font-size: $font-size-base;
+  color: var(--color-subtext1);
+  line-height: $line-height-relaxed;
+
+  p {
+    margin: $spacing-sm 0;
+  }
+
+  code {
+    font-size: $font-size-sm;
+  }
+}
+
+/**
+ * Loading States
+ */
+
+.loading {
+  @include flex-center;
+  padding: $spacing-3xl;
+  min-height: 300px;
+}
+
+.loading__spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid var(--color-surface2);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spinner-rotate 0.8s linear infinite;
+
+  @keyframes spinner-rotate {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+    border-top-color: var(--color-primary);
+  }
+}
+
+.loading__text {
+  margin-top: $spacing-lg;
+  font-size: $font-size-base;
+  color: var(--color-subtext1);
+}
+
+/**
+ * Mobile optimizations
+ */
+
+@media (max-width: #{$breakpoint-md - 1px}) {
+  .page {
+    margin-top: $spacing-sm;
+    margin-bottom: $spacing-sm;
+    border-radius: $radius-md;
+  }
+
+  .page__header {
+    padding: $card-padding-sm;
+  }
+
+  .page__title {
+    font-size: $font-size-2xl;
+  }
+
+  .page__subtitle {
+    font-size: $font-size-sm;
+  }
+
+  .page__stats {
+    gap: $spacing-md;
+    width: 100%;
+  }
+
+  .page__stat {
+    flex: 1;
+    min-width: 100px;
+  }
+
+  .page__stat-value {
+    font-size: $font-size-xl;
+  }
+
+  .page__content {
+    padding: $card-padding-sm;
+  }
+
+  .placeholder {
+    padding: $spacing-2xl $spacing-md;
+  }
+
+  .placeholder__title {
+    font-size: $font-size-xl;
+  }
+
+  .info-box {
+    margin-top: $spacing-lg;
+    padding: $card-padding-sm;
+  }
+}
+
+/**
+ * Tablet optimizations
+ */
+
+@include media-md {
+  .page__stats {
+    flex-wrap: nowrap;
+  }
+}

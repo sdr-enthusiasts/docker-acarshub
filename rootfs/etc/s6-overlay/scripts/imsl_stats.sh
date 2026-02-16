@@ -1,0 +1,49 @@
+#!/command/with-contenv bash
+#shellcheck shell=bash
+
+# Source ACARS common functions
+# shellcheck disable=SC1091
+# shellcheck source=/scripts/acars_common
+source /scripts/acars_common
+
+if chk_enabled "${ENABLE_IMSL}"; then
+    sleep 86400
+
+    set -o pipefail
+
+    # Require that imsl_server is running
+    if ! netstat -an | grep -P '^\s*tcp\s+\d+\s+\d+\s+0\.0\.0\.0:15557\s+(?>\d{1,3}\.{0,1}){4}:\*\s+LISTEN\s*$' >/dev/null; then
+        if [[ $((MIN_LOG_LEVEL)) -ge 4 ]]; then
+            # shellcheck disable=SC2016
+            echo "Waiting for imsl_server" | stdbuf -oL awk '{print "[imsl_stats ] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
+        fi
+        sleep 1
+        exit
+    fi
+    if [[ $((MIN_LOG_LEVEL)) -ge 4 ]]; then
+        # shellcheck disable=SC2016
+        echo "imsl_server ready, starting service" | stdbuf -oL awk '{print "[imsl_stats ] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
+    fi
+
+    # Start our stats loop
+    while true; do
+
+        # capture 5 mins of flows
+        timeout --foreground 300s socat -u TCP:127.0.0.1:15557 CREATE:/database/imsl.past5min.json 2>/dev/null || true
+
+        # shellcheck disable=SC2016
+        echo "$(sed 's/}{/}\n{/g' /database/imsl.past5min.json | wc -l) IMSL messages received in last 5 mins" | stdbuf -oL awk '{print "[imsl_stats ] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
+
+        # rotate files keeping last 2 hours
+        for i in {24..1}; do
+            mv "/database/imsl.$((i - 1)).json" "/database/imsl.$i.json" >/dev/null 2>&1 || true
+        done
+        mv "/database/imsl.past5min.json" "/database/imsl.0.json" >/dev/null 2>&1 || true
+
+    done
+
+else
+
+    # If here then IMSL is not enabled, sleep forever
+    sleep 86400
+fi

@@ -1,0 +1,241 @@
+// Copyright (C) 2022-2026 Frederick Clausen II
+// This file is part of acarshub <https://github.com/sdr-enthusiasts/docker-acarshub>.
+
+// acarshub is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+
+// acarshub is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+
+// You should have received a copy of the GNU General Public License
+// along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
+
+@use "../mixins" as *;
+@use "../variables" as *;
+
+// =============================================================================
+// Chart Container Component
+// =============================================================================
+
+.chart-container {
+  // Base styles
+  width: 100%;
+  margin-bottom: var(--spacing-md);
+  background-color: var(--color-surface0);
+  border-radius: var(--border-radius-md);
+  padding: var(--spacing-sm);
+  box-shadow: var(--shadow-sm);
+
+  // Smooth transitions
+  transition: box-shadow 0.2s ease;
+
+  // Hover effect (subtle)
+  &:hover {
+    box-shadow: var(--shadow-md);
+  }
+
+  // Header section (title/subtitle)
+  &__header {
+    margin-bottom: var(--spacing-sm);
+    padding-bottom: var(--spacing-sm);
+    border-bottom: 1px solid var(--color-overlay0);
+  }
+
+  &__title {
+    margin: 0 0 var(--spacing-xs) 0;
+    font-size: var(--font-size-md);
+    font-weight: 600;
+    color: var(--color-text);
+    line-height: 1.4;
+  }
+
+  &__subtitle {
+    margin: 0;
+    font-size: var(--font-size-sm);
+    color: var(--color-subtext1);
+    line-height: 1.5;
+  }
+
+  // Canvas wrapper
+  &__canvas {
+    position: relative;
+    width: 100%;
+
+    // Ensure canvas is responsive
+    canvas {
+      width: 100% !important;
+      height: auto !important;
+      display: block;
+    }
+  }
+
+  // Mobile/small screen adjustments
+  @media (max-width: 767px) {
+    padding: var(--spacing-sm);
+    margin-bottom: var(--spacing-md);
+
+    &__header {
+      margin-bottom: var(--spacing-sm);
+    }
+
+    &__title {
+      font-size: var(--font-size-md);
+    }
+  }
+
+  // Loading state
+  &--loading {
+    position: relative;
+    min-height: 300px;
+
+    &::after {
+      content: "Loading chart data...";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: var(--color-subtext1);
+      font-size: var(--font-size-md);
+      text-align: center;
+    }
+  }
+
+  // Empty state
+  &--empty {
+    position: relative;
+    min-height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    &::after {
+      content: "No data available";
+      color: var(--color-subtext0);
+      font-size: var(--font-size-md);
+      text-align: center;
+    }
+  }
+}
+
+// =============================================================================
+// Chart Utilities and Helpers
+// =============================================================================
+
+// Chart grid for multi-chart layouts
+.chart-grid {
+  display: grid;
+  gap: var(--spacing-md);
+  grid-template-columns: 1fr;
+  width: 100%;
+
+  // Two columns on tablet and up
+  @include media-md {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  // Three columns on desktop
+  @include media-xl {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  // Single column variant (full width charts)
+  &--single {
+    grid-template-columns: 1fr;
+  }
+
+  // Two column variant
+  &--two-col {
+    @include media-md {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+}
+
+// Chart section wrapper
+.chart-section {
+  margin-bottom: var(--spacing-lg);
+
+  &__header {
+    margin-bottom: var(--spacing-md);
+    padding-bottom: var(--spacing-sm);
+    border-bottom: 2px solid var(--color-surface2);
+  }
+
+  &__title {
+    margin: 0;
+    font-size: var(--font-size-xl);
+    font-weight: 700;
+    color: var(--color-text);
+  }
+
+  &__description {
+    margin: var(--spacing-xs) 0 0 0;
+    font-size: var(--font-size-md);
+    color: var(--color-subtext1);
+  }
+}
+
+// Chart legend customization
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-md);
+  padding: var(--spacing-sm);
+  background-color: var(--color-mantle);
+  border-radius: var(--border-radius-sm);
+
+  &__item {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    font-size: var(--font-size-sm);
+    color: var(--color-text);
+  }
+
+  &__color {
+    width: 16px;
+    height: 16px;
+    border-radius: var(--border-radius-sm);
+    flex-shrink: 0;
+  }
+
+  &__label {
+    white-space: nowrap;
+  }
+}
+
+// No data placeholder
+.chart-no-data {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 250px;
+  padding: var(--spacing-lg);
+  text-align: center;
+  color: var(--color-subtext1);
+  background-color: var(--color-surface0);
+  border-radius: var(--border-radius-md);
+
+  &__icon {
+    font-size: 3rem;
+    margin-bottom: var(--spacing-md);
+    opacity: 0.5;
+  }
+
+  &__message {
+    font-size: var(--font-size-md);
+    margin: 0;
+  }
+
+  &__hint {
+    font-size: var(--font-size-sm);
+    color: var(--color-subtext0);
+    margin-top: var(--spacing-xs);
+  }
+}

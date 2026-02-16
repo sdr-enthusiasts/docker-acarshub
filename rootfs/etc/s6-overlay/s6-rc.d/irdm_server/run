@@ -1,2 +1,2 @@
 #!/bin/sh
-exec /etc/s6-overlay/scripts/irdm_server
+exec /etc/s6-overlay/scripts/irdm_server.sh

@@ -1,0 +1,243 @@
+// Copyright (C) 2022-2026 Frederick Clausen II
+// This file is part of acarshub <https://github.com/sdr-enthusiasts/docker-acarshub>.
+
+// acarshub is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+
+// acarshub is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+
+// You should have received a copy of the GNU General Public License
+// along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
+
+@use "../mixins" as *;
+@use "../variables" as *;
+
+.map-legend {
+  position: absolute;
+  bottom: 0.5rem; // Align with weather timestamps
+  left: 0.5rem;
+  z-index: 1000;
+  display: none; // Hide on mobile
+  flex-direction: column;
+  gap: $spacing-sm;
+
+  @include breakpoint(md) {
+    display: flex; // Show on desktop
+    bottom: 0.5rem; // Align with weather timestamps
+    left: 0.5rem;
+  }
+
+  // Toggle button
+  &__toggle {
+    width: 44px;
+    height: 44px;
+    background-color: var(--color-base);
+    border: 2px solid var(--color-surface2);
+    border-radius: $radius-md;
+    color: var(--color-text);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+
+    &:hover {
+      background-color: var(--color-surface0);
+      border-color: var(--color-primary);
+      color: var(--color-primary);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    &:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--color-primary);
+      outline-offset: 2px;
+    }
+  }
+
+  // Legend panel
+  &__panel {
+    background-color: var(--color-base);
+    border: 2px solid var(--color-surface2);
+    border-radius: $radius-md;
+    padding: $spacing-md;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+    min-width: 280px;
+    max-width: 320px;
+
+    @include breakpoint(md) {
+      min-width: 320px;
+    }
+
+    // Slide in animation
+    animation: slideIn 0.2s ease;
+  }
+
+  // Header with title and close button
+  &__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: $spacing-md;
+    padding-bottom: $spacing-sm;
+    border-bottom: 1px solid var(--color-surface1);
+  }
+
+  &__title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--color-text);
+    margin: 0;
+  }
+
+  &__close {
+    width: 32px;
+    height: 32px;
+    background: transparent;
+    border: none;
+    color: var(--color-subtext1);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    border-radius: $radius-sm;
+    transition: all 0.2s ease;
+
+    &:hover {
+      background-color: var(--color-surface1);
+      color: var(--color-text);
+    }
+
+    &:active {
+      background-color: var(--color-surface2);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--color-primary);
+      outline-offset: 2px;
+    }
+  }
+
+  // Legend content
+  &__content {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+  }
+
+  // Individual legend item
+  &__item {
+    display: flex;
+    align-items: center;
+    gap: $spacing-md;
+    padding: $spacing-xs;
+    border-radius: $radius-sm;
+    transition: background-color 0.2s ease;
+
+    &:hover {
+      background-color: var(--color-surface0);
+    }
+  }
+
+  // Color swatch
+  &__swatch {
+    width: 24px;
+    height: 24px;
+    border-radius: $radius-sm;
+    border: 2px solid var(--color-surface2);
+    flex-shrink: 0;
+
+    // Color variants matching aircraft colors
+    &--alert {
+      background-color: var(--color-red);
+    }
+
+    // Legacy message state color
+    &--messages {
+      background-color: var(--color-green);
+    }
+
+    // Decoder-type colors (matching message card badges)
+    &--acars {
+      background-color: var(--color-blue);
+    }
+
+    &--vdlm {
+      background-color: var(--color-green);
+    }
+
+    &--hfdl {
+      background-color: var(--color-yellow);
+    }
+
+    &--imsl {
+      background-color: var(--color-peach);
+    }
+
+    &--irdm {
+      background-color: var(--color-mauve);
+    }
+
+    &--ground {
+      background-color: var(--color-overlay1);
+    }
+
+    &--default {
+      background-color: var(--color-text);
+    }
+  }
+
+  // Label text
+  &__label {
+    font-size: 0.875rem;
+    color: var(--color-text);
+    line-height: 1.4;
+  }
+}
+
+// Animations
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// Reduced motion support
+@media (prefers-reduced-motion: reduce) {
+  .map-legend {
+    &__toggle,
+    &__close,
+    &__item {
+      transition: none;
+    }
+
+    &__panel {
+      animation: none;
+    }
+  }
+}
+
+// Print styles
+@media print {
+  .map-legend {
+    display: none;
+  }
+}

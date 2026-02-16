@@ -1,2 +1,2 @@
 #!/bin/sh
-exec /etc/s6-overlay/scripts/vdlm2_stats
+exec /etc/s6-overlay/scripts/vdlm2_stats.sh

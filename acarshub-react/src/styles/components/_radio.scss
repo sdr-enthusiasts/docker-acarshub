@@ -1,0 +1,238 @@
+// Copyright (C) 2022-2026 Frederick Clausen II
+// This file is part of acarshub <https://github.com/sdr-enthusiasts/docker-acarshub>.
+
+// acarshub is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+
+// acarshub is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+
+// You should have received a copy of the GNU General Public License
+// along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
+
+@use "../variables" as *;
+@use "../mixins" as *;
+
+/**
+ * RadioGroup Component Styles
+ * Custom-styled radio button group with Catppuccin theming
+ */
+
+.radio-group {
+  border: none;
+  padding: 0;
+  margin: 0 0 1rem 0;
+
+  &--disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  &__legend {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-text);
+    margin-bottom: 0.5rem;
+    padding: 0;
+  }
+
+  &__required {
+    color: var(--color-red);
+  }
+
+  &__help-text {
+    font-size: 0.75rem;
+    color: var(--color-subtext0);
+    margin: 0 0 0.5rem 0;
+    line-height: 1.5;
+  }
+
+  &__options {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  &--horizontal {
+    .radio-group__options {
+      flex-direction: row;
+      flex-wrap: wrap;
+      gap: 1.5rem;
+    }
+  }
+}
+
+.radio-option {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+
+  &__input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+    pointer-events: none;
+
+    // Focus state
+    &:focus-visible ~ .radio-option__label .radio-option__indicator {
+      outline: 2px solid var(--color-blue);
+      outline-offset: 2px;
+    }
+  }
+
+  &__label {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    cursor: pointer;
+    user-select: none;
+    padding: 0.375rem;
+    margin: -0.375rem;
+    border-radius: 0.5rem;
+    transition: all 0.15s ease;
+
+    &:hover {
+      background-color: var(--color-surface0);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+
+    .radio-option__input:disabled ~ & {
+      cursor: not-allowed;
+      opacity: 0.5;
+
+      &:hover {
+        background-color: transparent;
+      }
+    }
+  }
+
+  &__indicator {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.125rem;
+    height: 1.125rem;
+    flex-shrink: 0;
+    border: 2px solid var(--color-surface2);
+    border-radius: 50%;
+    background-color: var(--color-surface0);
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+
+    // Hover state
+    .radio-option__label:hover & {
+      border-color: var(--color-overlay0);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+    }
+
+    // Checked state
+    .radio-option__input:checked ~ .radio-option__label & {
+      border-color: var(--color-blue);
+      background-color: var(--color-blue);
+      box-shadow: 0 2px 4px rgba(137, 180, 250, 0.3);
+    }
+
+    // Disabled state
+    .radio-option__input:disabled ~ .radio-option__label & {
+      border-color: var(--color-surface1);
+      background-color: var(--color-surface0);
+    }
+  }
+
+  &__dot {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 0.4375rem;
+    height: 0.4375rem;
+    border-radius: 50%;
+    background-color: transparent;
+    transition: all 0.2s ease;
+
+    // Checked state - show white dot
+    .radio-option__input:checked ~ .radio-option__label & {
+      background-color: #ffffff;
+    }
+
+    // Disabled checked state
+    .radio-option__input:disabled:checked ~ .radio-option__label & {
+      background-color: var(--color-surface1);
+    }
+  }
+
+  &__content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__text {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-text);
+    line-height: 1.5;
+
+    .radio-option__input:disabled ~ .radio-option__label & {
+      color: var(--color-subtext0);
+    }
+  }
+
+  &__description {
+    font-size: 0.75rem;
+    color: var(--color-subtext0);
+    line-height: 1.4;
+    display: block;
+
+    .radio-option__input:disabled ~ .radio-option__label & {
+      color: var(--color-subtext1);
+    }
+  }
+}
+
+// Mobile responsive adjustments
+@media (max-width: 768px) {
+  .radio-group {
+    // Force vertical layout on mobile for better UX
+    &--horizontal .radio-group__options {
+      flex-direction: column;
+      gap: 0.875rem;
+    }
+  }
+
+  .radio-option {
+    &__indicator {
+      // Larger tap target for mobile
+      width: 1.5rem;
+      height: 1.5rem;
+      margin-top: 0.125rem;
+    }
+
+    &__dot {
+      width: 0.625rem;
+      height: 0.625rem;
+    }
+
+    &__label {
+      padding: 0.625rem;
+      margin: -0.625rem;
+    }
+  }
+}
+
+// Animation disable
+[data-animations="false"] {
+  .radio-option__indicator,
+  .radio-option__dot,
+  .radio-option__label {
+    transition: none;
+  }
+}

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (C) 2022-2024 Frederick Clausen II
+# Copyright (C) 2022-2026 Frederick Clausen II
 # This file is part of acarshub <https://github.com/sdr-enthusiasts/docker-acarshub>.
 #
 # acarshub is free software: you can redistribute it and/or modify
@@ -20,6 +20,7 @@ from sqlalchemy import (
     create_engine,
     Column,
     Integer,
+    Float,
     String,
     Text,
     desc,
@@ -37,6 +38,17 @@ import acarshub_logging
 from acarshub_logging import LOG_LEVEL
 import re
 import os
+import uuid
+
+# Import query utilities for secure and performant queries
+from acarshub_query_builder import (
+    build_fts_search_query,
+    build_alert_matches_query,
+    build_alert_term_search_query,
+    parse_grouped_terms,
+    validate_search_params,
+)
+from acarshub_query_profiler import profile_query
 
 groundStations = dict()  # dictionary of all ground stations
 alert_terms = list()  # dictionary of all alert terms monitored
@@ -123,21 +135,81 @@ for item in iata_override:
 # Class for storing the count of messages received on each frequency
 
 
-class messagesFreq(Messages):
-    __tablename__ = "freqs"
-    it = Column(Integer, primary_key=True)
+# Classes to store frequency statistics per decoder type
+# Split into per-decoder tables for better performance (no freq_type column filtering needed)
+
+
+class messagesFreqACARS(Messages):
+    __tablename__ = "freqs_acars"
+    id = Column(Integer, primary_key=True)
     freq = Column("freq", String(32))
-    freq_type = Column("freq_type", String(32))
     count = Column("count", Integer)
 
 
-# Class to store a count of how many messages are received at what signal level
-
-
-class messagesLevel(Messages):
-    __tablename__ = "level"
+class messagesFreqVDLM2(Messages):
+    __tablename__ = "freqs_vdlm2"
     id = Column(Integer, primary_key=True)
-    level = Column("level", Integer)
+    freq = Column("freq", String(32))
+    count = Column("count", Integer)
+
+
+class messagesFreqHFDL(Messages):
+    __tablename__ = "freqs_hfdl"
+    id = Column(Integer, primary_key=True)
+    freq = Column("freq", String(32))
+    count = Column("count", Integer)
+
+
+class messagesFreqIMSL(Messages):
+    __tablename__ = "freqs_imsl"
+    id = Column(Integer, primary_key=True)
+    freq = Column("freq", String(32))
+    count = Column("count", Integer)
+
+
+class messagesFreqIRDM(Messages):
+    __tablename__ = "freqs_irdm"
+    id = Column(Integer, primary_key=True)
+    freq = Column("freq", String(32))
+    count = Column("count", Integer)
+
+
+# Classes to store a count of how many messages are received at what signal level
+# Split into per-decoder tables for better performance (no decoder column filtering needed)
+
+
+class messagesLevelACARS(Messages):
+    __tablename__ = "level_acars"
+    id = Column(Integer, primary_key=True)
+    level = Column("level", Float)
+    count = Column("count", Integer)
+
+
+class messagesLevelVDLM2(Messages):
+    __tablename__ = "level_vdlm2"
+    id = Column(Integer, primary_key=True)
+    level = Column("level", Float)
+    count = Column("count", Integer)
+
+
+class messagesLevelHFDL(Messages):
+    __tablename__ = "level_hfdl"
+    id = Column(Integer, primary_key=True)
+    level = Column("level", Float)
+    count = Column("count", Integer)
+
+
+class messagesLevelIMSL(Messages):
+    __tablename__ = "level_imsl"
+    id = Column(Integer, primary_key=True)
+    level = Column("level", Float)
+    count = Column("count", Integer)
+
+
+class messagesLevelIRDM(Messages):
+    __tablename__ = "level_irdm"
+    id = Column(Integer, primary_key=True)
+    level = Column("level", Float)
     count = Column("count", Integer)
 
 
@@ -181,6 +253,7 @@ class ignoreAlertTerms(Messages):
 class messages(Messages):
     __tablename__ = "messages"
     id = Column(Integer, primary_key=True)
+    uid = Column("uid", String(36), nullable=False, unique=True, index=True)
     # ACARS or VDLM
     message_type = Column("message_type", String(32), nullable=False)
     # message time
@@ -215,67 +288,42 @@ class messages(Messages):
     level = Column("level", String(32), nullable=False)
 
 
-# class to save messages that matched an alert
-class messages_saved(Messages):
-    __tablename__ = "messages_saved"
+# Normalized alert matches junction table
+# Links messages to their alert matches without duplicating message data
+class AlertMatch(Messages):
+    __tablename__ = "alert_matches"
     id = Column(Integer, primary_key=True)
-    # ACARS or VDLM
-    message_type = Column("message_type", String(32), nullable=False)
-    # message time
-    time = Column("msg_time", Integer, nullable=False)
-    station_id = Column("station_id", String(32), nullable=False)
-    toaddr = Column("toaddr", String(32), nullable=False)
-    fromaddr = Column("fromaddr", String(32), nullable=False)
-    depa = Column("depa", String(32), index=True, nullable=False)
-    dsta = Column("dsta", String(32), index=True, nullable=False)
-    eta = Column("eta", String(32), nullable=False)
-    gtout = Column("gtout", String(32), nullable=False)
-    gtin = Column("gtin", String(32), nullable=False)
-    wloff = Column("wloff", String(32), nullable=False)
-    wlin = Column("wlin", String(32), nullable=False)
-    lat = Column("lat", String(32), nullable=False)
-    lon = Column("lon", String(32), nullable=False)
-    alt = Column("alt", String(32), nullable=False)
-    text = Column("msg_text", Text, index=True, nullable=False)
-    tail = Column("tail", String(32), index=True, nullable=False)
-    flight = Column("flight", String(32), index=True, nullable=False)
-    icao = Column("icao", String(32), index=True, nullable=False)
-    freq = Column("freq", String(32), index=True, nullable=False)
-    ack = Column("ack", String(32), nullable=False)
-    mode = Column("mode", String(32), nullable=False)
-    label = Column("label", String(32), index=True, nullable=False)
-    block_id = Column("block_id", String(32), nullable=False)
-    msgno = Column("msgno", String(32), index=True, nullable=False)
-    is_response = Column("is_response", String(32), nullable=False)
-    is_onground = Column("is_onground", String(32), nullable=False)
-    error = Column("error", String(32), nullable=False)
-    libacars = Column("libacars", Text, nullable=False)
-    level = Column("level", String(32), nullable=False)
+    message_uid = Column("message_uid", String(36), nullable=False, index=True)
     term = Column("term", String(32), nullable=False)
-    type_of_match = Column("type_of_match", String(32), nullable=False)
+    match_type = Column("match_type", String(32), nullable=False)
+    matched_at = Column("matched_at", Integer, nullable=False)
 
 
 # Now we've created the classes for the database, we'll associate the class with the database and create any missing tables
 
+# Skip table creation and FTS check when running Alembic migrations
+if not os.environ.get("ALEMBIC_MIGRATION_MODE"):
+    Messages.metadata.create_all(database)
+    if backup:
+        acarshub_logging.log("Creating backup database if needed", "database")
+        Messages.metadata.create_all(database_backup)
+    else:
+        acarshub_logging.log("No backup database defined", "database")
 
-Messages.metadata.create_all(database)
-if backup:
-    acarshub_logging.log("Creating backup database if needed", "database")
-    Messages.metadata.create_all(database_backup)
+    # database is init, now check and see if the fts table is there
+
+    inspector = Inspector.from_engine(database)
+    if "messages_fts" not in inspector.get_table_names():
+        import sys
+
+        acarshub_logging.log(
+            "Missing FTS TABLE! Aborting!", "database", level=LOG_LEVEL["ERROR"]
+        )
+        sys.exit(1)
 else:
-    acarshub_logging.log("No backup database defined", "database")
-
-
-# database is init, now check and see if the fts table is there
-
-inspector = Inspector.from_engine(database)
-if "messages_fts" not in inspector.get_table_names():
-    import sys
-
     acarshub_logging.log(
-        "Missing FTS TABLE! Aborting!", "database", level=LOG_LEVEL["ERROR"]
+        "Skipping auto-table creation (Alembic migration mode)", "database"
     )
-    sys.exit(1)
 
 # messages_idx = Table(
 #     "messages_fts",
@@ -296,21 +344,23 @@ if "messages_fts" not in inspector.get_table_names():
 
 # Class used to convert any search query objects to JSON
 
-try:
-    session = db_session()
-    terms = session.query(alertStats).all()
+# Skip database initialization during Alembic migrations
+if not os.environ.get("ALEMBIC_MIGRATION_MODE"):
+    try:
+        session = db_session()
+        terms = session.query(alertStats).all()
 
-    for t in terms:
-        alert_terms.append(t.term.upper())
+        for t in terms:
+            alert_terms.append(t.term.upper())
 
-    terms = session.query(ignoreAlertTerms).all()
-    for t in terms:
-        alert_terms_ignore.append(t.term.upper())
+        terms = session.query(ignoreAlertTerms).all()
+        for t in terms:
+            alert_terms_ignore.append(t.term.upper())
 
-except Exception as e:
-    acarshub_logging.acars_traceback(e, "database")
-finally:
-    session.close()
+    except Exception as e:
+        acarshub_logging.acars_traceback(e, "database")
+    finally:
+        session.close()
 
 
 def query_to_dict(obj):
@@ -332,16 +382,30 @@ def query_to_dict(obj):
 
 
 def update_frequencies(freq, message_type, session):
-    found_freq = (
-        session.query(messagesFreq)
-        .filter(messagesFreq.freq == f"{freq}", messagesFreq.freq_type == message_type)
-        .first()
-    )
+    """Update frequency statistics in the appropriate per-decoder table."""
+
+    # Map message_type to the appropriate model class
+    freq_model_map = {
+        "ACARS": messagesFreqACARS,
+        "VDL-M2": messagesFreqVDLM2,
+        "VDLM2": messagesFreqVDLM2,  # Handle both naming conventions
+        "HFDL": messagesFreqHFDL,
+        "IMSL": messagesFreqIMSL,
+        "IRDM": messagesFreqIRDM,
+    }
+
+    # Get the appropriate model class for this decoder
+    freq_model = freq_model_map.get(message_type)
+    if freq_model is None:
+        # Unknown decoder type, skip frequency update
+        return
+
+    found_freq = session.query(freq_model).filter(freq_model.freq == f"{freq}").first()
 
     if found_freq is not None:
         found_freq.count += 1
     else:
-        session.add(messagesFreq(freq=f"{freq}", freq_type=message_type, count=1))
+        session.add(freq_model(freq=f"{freq}", count=1))
 
 
 def is_message_not_empty(json_message):
@@ -489,6 +553,20 @@ def create_db_safe_params(message_from_json):
 
 
 def add_message(params, message_type, message_from_json, backup=False):
+    # Generate UUID for this message (use same UID for both tables if saved)
+    message_uid = str(uuid.uuid4())
+    params["uid"] = message_uid
+
+    # Initialize alert match tracking
+    alert_metadata = {
+        "uid": message_uid,
+        "matched": False,
+        "matched_text": [],
+        "matched_icao": [],
+        "matched_tail": [],
+        "matched_flight": [],
+    }
+
     try:
         if backup:
             session = db_session_backup()
@@ -539,52 +617,159 @@ def add_message(params, message_type, message_from_json, backup=False):
         # Log the level count
         # We'll see if the level is in the database already, and if so, increment the counter
         # If not, we'll add it in
+        # Now using per-decoder tables for better performance
 
         if params["level"] != "":
-            found_level = (
-                session.query(messagesLevel)
-                .filter(messagesLevel.level == params["level"])
-                .first()
-            )
+            # Map message_type to appropriate signal level model class
+            decoder_map = {
+                "ACARS": messagesLevelACARS,
+                "VDL-M2": messagesLevelVDLM2,
+                "VDLM2": messagesLevelVDLM2,  # Alternative spelling
+                "HFDL": messagesLevelHFDL,
+                "IMSL": messagesLevelIMSL,
+                "IRDM": messagesLevelIRDM,
+            }
 
-            if found_level is not None:
-                found_level.count += 1
+            level_model = decoder_map.get(message_type)
+
+            if level_model is not None:
+                found_level = (
+                    session.query(level_model)
+                    .filter(level_model.level == params["level"])
+                    .first()
+                )
+
+                if found_level is not None:
+                    found_level.count += 1
+                else:
+                    session.add(level_model(level=params["level"], count=1))
             else:
-                session.add(messagesLevel(level=params["level"], count=1))
+                acarshub_logging.log(
+                    f"Unknown message_type for signal level: {message_type}",
+                    "database",
+                    level=LOG_LEVEL["WARNING"],
+                )
 
-        if len(params["text"]) > 0 and alert_terms:
-            for search_term in alert_terms:
-                if re.findall(r"\b{}\b".format(search_term), params["text"]):
-                    should_add = True
-                    for ignore_term in alert_terms_ignore:
-                        if re.findall(r"\b{}\b".format(ignore_term), params["text"]):
-                            should_add = False
-                            break
-                    if should_add:
-                        found_term = (
-                            session.query(alertStats)
-                            .filter(alertStats.term == search_term.upper())
-                            .first()
-                        )
-                        if found_term is not None:
-                            found_term.count += 1
-                        else:
-                            session.add(alertStats(term=search_term.upper(), count=1))
+        if alert_terms:
+            # Helper function to save alert match
+            def save_alert_match(term, match_type):
+                # Update alert statistics
+                found_term = (
+                    session.query(alertStats)
+                    .filter(alertStats.term == term.upper())
+                    .first()
+                )
+                if found_term is not None:
+                    found_term.count += 1
+                else:
+                    session.add(alertStats(term=term.upper(), count=1))
 
-                        session.add(
-                            messages_saved(
-                                message_type=message_type,
-                                **params,
-                                term=search_term.upper(),
-                                type_of_match="text",
-                            )
-                        )
-                        session.commit()
+                # Add to normalized alert_matches table
+                session.add(
+                    AlertMatch(
+                        message_uid=message_uid,
+                        term=term.upper(),
+                        match_type=match_type,
+                        matched_at=params["time"],
+                    )
+                )
+
+                # Update alert metadata for return value
+                alert_metadata["matched"] = True
+                if match_type == "text":
+                    alert_metadata["matched_text"].append(term.upper())
+                elif match_type == "icao":
+                    alert_metadata["matched_icao"].append(term.upper())
+                elif match_type == "tail":
+                    alert_metadata["matched_tail"].append(term.upper())
+                elif match_type == "flight":
+                    alert_metadata["matched_flight"].append(term.upper())
+
+            # Check message text for alert terms
+            if len(params["text"]) > 0:
+                for search_term in alert_terms:
+                    if re.findall(r"\b{}\b".format(search_term), params["text"]):
+                        should_add = True
+                        # Check ignore terms
+                        for ignore_term in alert_terms_ignore:
+                            if re.findall(
+                                r"\b{}\b".format(ignore_term), params["text"]
+                            ):
+                                should_add = False
+                                break
+                        if should_add:
+                            save_alert_match(search_term, "text")
+
+            # Check ICAO hex for alert terms (supports partial matching)
+            if len(params["icao"]) > 0:
+                icao_upper = params["icao"].upper()
+                for search_term in alert_terms:
+                    term_upper = search_term.upper()
+                    # Support both full match and partial substring match (anywhere in ICAO)
+                    if icao_upper == term_upper or term_upper in icao_upper:
+                        # Check ignore terms for ICAO
+                        should_add = True
+                        for ignore_term in alert_terms_ignore:
+                            ignore_upper = ignore_term.upper()
+                            if icao_upper == ignore_upper or ignore_upper in icao_upper:
+                                should_add = False
+                                break
+                        if should_add:
+                            save_alert_match(search_term, "icao")
+
+            # Check tail number for alert terms (supports partial matching)
+            if len(params["tail"]) > 0:
+                tail_upper = params["tail"].upper()
+                for search_term in alert_terms:
+                    term_upper = search_term.upper()
+                    # Support both full match and partial substring match (anywhere in tail)
+                    if tail_upper == term_upper or term_upper in tail_upper:
+                        # Check ignore terms for tail
+                        should_add = True
+                        for ignore_term in alert_terms_ignore:
+                            ignore_upper = ignore_term.upper()
+                            if tail_upper == ignore_upper or ignore_upper in tail_upper:
+                                should_add = False
+                                break
+                        if should_add:
+                            save_alert_match(search_term, "tail")
+
+            # Check flight number for alert terms (supports partial matching)
+            if len(params["flight"]) > 0:
+                flight_upper = params["flight"].upper()
+                for search_term in alert_terms:
+                    term_upper = search_term.upper()
+                    # Support both full match and partial substring match (anywhere in flight)
+                    if flight_upper == term_upper or term_upper in flight_upper:
+                        # Check ignore terms for flight
+                        should_add = True
+                        for ignore_term in alert_terms_ignore:
+                            ignore_upper = ignore_term.upper()
+                            if (
+                                flight_upper == ignore_upper
+                                or ignore_upper in flight_upper
+                            ):
+                                should_add = False
+                                break
+                        if should_add:
+                            save_alert_match(search_term, "flight")
 
         # commit the db change and close the session
         session.commit()
+
+        # Return alert metadata for caller (Socket.IO emission)
+        return alert_metadata
     except Exception as e:
         acarshub_logging.acars_traceback(e, "database")
+        # Return empty metadata on error
+        return {
+            "uid": message_uid,
+            "matched": False,
+            "matched_text": [],
+            "matched_icao": [],
+            "matched_tail": [],
+            "matched_flight": [],
+        }
     finally:
         if session:
             session.close()
@@ -595,14 +780,18 @@ def add_message_from_json(message_type, message_from_json):
     # all fields are set to a blank string. This is because all of the database fields
     # are set to be 'not null' so all fields require a value, even if it is blank
     params = create_db_safe_params(message_from_json)
-    add_message(params, message_type, message_from_json)
+    alert_metadata = add_message(params, message_type, message_from_json)
     if backup:
         acarshub_logging.log(
             "Adding message to backup database",
             "database",
             level=LOG_LEVEL["DEBUG"],
         )
+        # Backup database gets same UID (already in params from first add_message call)
         add_message(params, message_type, message_from_json, backup=True)
+
+    # Return alert metadata to caller (for Socket.IO emission)
+    return alert_metadata
 
 
 def find_airline_code_from_iata(iata):
@@ -626,111 +815,141 @@ def find_airline_code_from_icao(icao):
 
 # FIXME: Rolled back to old database_search. Should wrap FTS table in SQL Alchemy engine
 def database_search(search_term, page=0):
-    result = None
+    """
+    Search messages table with FTS5 or standard SQL depending on search criteria.
+
+    This function uses two different search strategies:
+    1. FTS5 search: Fast prefix matching for most fields (flight, tail, label, etc.)
+    2. Standard SQL: Substring matching for station_id and ICAO (slower but more flexible)
+
+    Args:
+        search_term: Dictionary of field -> value to search
+        page: Page number (0-indexed)
+
+    Returns:
+        Tuple of (results_list, total_count)
+        - results_list: List of matching message dictionaries
+        - total_count: Total number of matches (for pagination)
+
+    Performance notes:
+        - FTS5 search is 10-100x faster but only supports prefix matching
+        - ICAO/station_id searches use LIKE '%value%' which cannot use indexes (slow)
+        - For large databases, ICAO substring searches may take several seconds
+
+    Security:
+        - All queries use parameterized queries to prevent SQL injection
+        - User input is sanitized before being used in FTS5 MATCH queries
+    """
+    session = None
 
     try:
+        # Validate and sanitize search parameters
+        search_term = validate_search_params(search_term)
+
         acarshub_logging.log(
             f"[database] Searching database for {search_term}",
             "database",
             level=LOG_LEVEL["DEBUG"],
         )
-        session = db_session()
-        match_string = ""
 
-        icao_hex = search_term["icao"]
-        if icao_hex and len(icao_hex) == 6:
-            try:
-                search_term["icao"] = int(icao_hex, 16)
-            except Exception as e:
-                acarshub_logging.log(
-                    f"can't convert icao from hex to decimal: {icao_hex} ({str(e)})",
-                    "database",
-                    level=LOG_LEVEL["DEBUG"],
+        session = db_session()
+
+        # Use non-FTS search (which supports substring matching with .contains())
+        # when searching for station_id OR icao hex codes
+        # FTS5 only supports prefix matching (e.g., "AB*" finds "ABC" but not "CAB")
+        # ICAO hex searches need to match substrings (e.g., "BF3" should find "ABF308")
+        #
+        # WARNING: This path is SLOW on large databases (table scan with LIKE '%value%')
+        # Consider restricting to prefix-only searches in the future
+        if ("station_id" in search_term and search_term["station_id"] != "") or (
+            "icao" in search_term and search_term["icao"] != ""
+        ):
+            with profile_query("database_search_non_fts", params={"page": page}):
+                # Build ORM query with conditions
+                conditions = []
+                query = session.query(messages)
+
+                for key in search_term:
+                    if search_term[key] == "":
+                        continue
+                    if key == "flight":
+                        conditions.append(messages.flight.contains(search_term[key]))
+                    elif key == "depa":
+                        conditions.append(messages.depa.contains(search_term[key]))
+                    elif key == "dsta":
+                        conditions.append(messages.dsta.contains(search_term[key]))
+                    elif key == "freq":
+                        conditions.append(messages.freq.contains(search_term[key]))
+                    elif key == "label":
+                        conditions.append(messages.label.contains(search_term[key]))
+                    elif key == "tail":
+                        conditions.append(messages.tail.contains(search_term[key]))
+                    elif key == "icao":
+                        conditions.append(messages.icao.contains(search_term[key]))
+                    elif key == "msg_text":
+                        conditions.append(messages.text.contains(search_term[key]))
+                    elif key == "station_id":
+                        conditions.append(
+                            messages.station_id.contains(search_term[key])
+                        )
+
+                # Execute paginated query
+                result = (
+                    query.filter(*conditions)
+                    .order_by(messages.time.desc())
+                    .limit(50)
+                    .offset(page * 50)
                 )
 
-        if "station_id" in search_term and search_term["station_id"] != "":
-            # we need to search outside of FTS
-            conditions = []
-            query = session.query(messages)
-            for key in search_term:
-                if search_term[key] == "":
-                    continue
-                if key == "flight":
-                    conditions.append(messages.flight.contains(search_term[key]))
-                elif key == "depa":
-                    conditions.append(messages.depa.contains(search_term[key]))
-                elif key == "dsta":
-                    conditions.append(messages.dsta.contains(search_term[key]))
-                elif key == "freq":
-                    conditions.append(messages.freq.contains(search_term[key]))
-                elif key == "label":
-                    conditions.append(messages.label.contains(search_term[key]))
-                elif key == "tail":
-                    conditions.append(messages.tail.contains(search_term[key]))
-                elif key == "icao":
-                    conditions.append(messages.icao.contains(search_term[key]))
-                elif key == "msg_text":
-                    conditions.append(messages.text.contains(search_term[key]))
-                elif key == "station_id":
-                    conditions.append(messages.station_id.contains(search_term[key]))
+                # Get total count for pagination
+                count = query.filter(*conditions).count()
 
-            result = (
-                query.filter(*conditions)
-                .order_by(messages.time.desc())
-                .limit(50)
-                .offset(page * 50)
+                processed_results = []
+                if count > 0:
+                    processed_results = [query_to_dict(d) for d in result]
+
+                return (processed_results, count)
+
+        # Use FTS5 for fast prefix matching search
+        # This path is 10-100x faster than the ORM path above
+        with profile_query("database_search_fts", params={"page": page}):
+            # Build secure FTS5 query using query builder
+            results_query, count_query, params = build_fts_search_query(
+                search_term, page=page, limit=50
             )
-            count = query.filter(*conditions).order_by(messages.time.desc()).count()
+
+            # No valid search terms
+            if results_query is None:
+                return (None, 0)
+
+            # Execute count query first
+            count_result = session.execute(count_query, params)
+            final_count = count_result.scalar()
+
+            if final_count == 0:
+                return (None, 0)
+
+            # Execute results query
+            result = session.execute(results_query, params)
+
             processed_results = []
+            for row in result.mappings().all():
+                row_dict = dict(row)
+                # FTS query returns 'msg_time' (column name), but update_keys() expects 'time' (model attribute name)
+                # Rename it here for consistency with non-FTS queries that use query_to_dict()
+                if "msg_time" in row_dict:
+                    row_dict["time"] = row_dict["msg_time"]
+                    del row_dict["msg_time"]
+                processed_results.append(row_dict)
 
-            if count > 0:
-                processed_results = [query_to_dict(d) for d in result]
-                processed_results.reverse()
-            session.close()
-            return (processed_results, count)
+            return (processed_results, final_count)
 
-        for key in search_term:
-            if search_term[key] is not None and search_term[key] != "":
-                if match_string == "":
-                    match_string += f'\'{key}:"{search_term[key]}"*'
-                else:
-                    match_string += f' AND {key}:"{search_term[key]}"*'
-
-        if match_string == "":
-            return [None, 0]
-
-        match_string += "'"
-
-        result = session.execute(
-            text(
-                f"SELECT * FROM messages WHERE id IN (SELECT rowid FROM messages_fts WHERE messages_fts MATCH {match_string} ORDER BY rowid DESC LIMIT 50 OFFSET {page * 50})"
-            )
-        )
-
-        count = session.execute(
-            text(
-                f"SELECT COUNT(*) FROM messages_fts WHERE messages_fts MATCH {match_string}"
-            )
-        )
-
-        processed_results = []
-        final_count = 0
-        for row in count:
-            final_count = row[0]
-
-        if final_count == 0:
-            session.close()
-            return [None, 0]
-
-        for row in result.mappings().all():
-            processed_results.append(dict(row))
-
-        session.close()
-        return (processed_results, final_count)
     except Exception as e:
         acarshub_logging.acars_traceback(e, "database")
-        session.close()
-        return [None, 0]
+        return (None, 0)
+    finally:
+        if session:
+            session.close()
 
 
 # def database_search(search_term, page=0):
@@ -848,8 +1067,17 @@ def search_alerts(icao=None, tail=None, flight=None):
                 query_string = f"SELECT * FROM messages WHERE id IN (SELECT rowid FROM messages_fts WHERE messages_fts MATCH '{query_string}')"
 
             if alert_terms is not None:
-                terms_string = """SELECT id, message_type, msg_time, station_id, toaddr, fromaddr, depa, dsta, eta, gtout, gtin, wloff, wlin,
-                                lat, lon, alt, msg_text, tail, flight, icao, freq, ack, mode, label, block_id, msgno, is_response, is_onground, error, libacars, level FROM messages_saved"""
+                # Query messages that have alert matches via JOIN
+                # Aggregate matched terms using GROUP_CONCAT since alert_matches has one row per term
+                terms_string = """SELECT DISTINCT m.id, m.message_type, m.msg_time, m.station_id, m.toaddr, m.fromaddr, m.depa, m.dsta, m.eta, m.gtout, m.gtin, m.wloff, m.wlin,
+                                m.lat, m.lon, m.alt, m.msg_text, m.tail, m.flight, m.icao, m.freq, m.ack, m.mode, m.label, m.block_id, m.msgno, m.is_response, m.is_onground, m.error, m.libacars, m.level, m.uid,
+                                GROUP_CONCAT(CASE WHEN am.match_type = 'text' THEN am.term END, ',') as matched_text,
+                                GROUP_CONCAT(CASE WHEN am.match_type = 'icao' THEN am.term END, ',') as matched_icao,
+                                GROUP_CONCAT(CASE WHEN am.match_type = 'tail' THEN am.term END, ',') as matched_tail,
+                                GROUP_CONCAT(CASE WHEN am.match_type = 'flight' THEN am.term END, ',') as matched_flight
+                                FROM messages m
+                                INNER JOIN alert_matches am ON m.uid = am.message_uid
+                                GROUP BY m.uid"""
             else:
                 terms_string = ""
 
@@ -871,7 +1099,32 @@ def search_alerts(icao=None, tail=None, flight=None):
             processed_results = []
 
             for row in result.mappings().all():
-                processed_results.insert(0, dict(row))
+                msg_dict = dict(row)
+                # Add matched flag for frontend
+                # If we got here via alert_matches JOIN, the message is definitely matched
+                if alert_terms is not None:
+                    msg_dict["matched"] = True
+                    # Convert GROUP_CONCAT results to arrays (remove None and split by comma)
+                    # Frontend expects matched_text to be an array of matched terms
+                    if msg_dict.get("matched_text"):
+                        msg_dict["matched_text"] = [
+                            t.strip()
+                            for t in msg_dict["matched_text"].split(",")
+                            if t.strip()
+                        ]
+                    else:
+                        msg_dict["matched_text"] = []
+                    # Clean up matched_icao, matched_tail, matched_flight (can be None or empty)
+                    for field in ["matched_icao", "matched_tail", "matched_flight"]:
+                        if msg_dict.get(field):
+                            msg_dict[field] = [
+                                t.strip()
+                                for t in msg_dict[field].split(",")
+                                if t.strip()
+                            ]
+                        else:
+                            msg_dict[field] = None
+                processed_results.insert(0, msg_dict)
             if len(processed_results) == 0:
                 return None
             processed_results.reverse()
@@ -882,6 +1135,96 @@ def search_alerts(icao=None, tail=None, flight=None):
             return None
     else:
         return None
+
+
+def load_recent_alerts(limit=50, before_timestamp=None):
+    """
+    Load recent alert messages from database for cache initialization.
+    Called at startup to populate the in-memory alert cache.
+
+    Args:
+        limit: Maximum number of recent alerts to retrieve (default 50)
+        before_timestamp: Only load alerts older than this timestamp (exclusive)
+                         Used to avoid overlap with recent messages cache
+
+    Returns:
+        list: List of enriched alert message dictionaries, or empty list if none
+    """
+    session = None
+
+    try:
+        with profile_query("load_recent_alerts", params={"limit": limit}):
+            session = db_session()
+
+            # Build secure parameterized query using query builder
+            query, params = build_alert_matches_query(
+                limit=limit, offset=0, before_timestamp=before_timestamp
+            )
+
+            # Execute query
+            result = session.execute(query, params)
+            processed_results = []
+
+            for row in result.mappings().all():
+                msg_dict = dict(row)
+
+                # Parse GROUP_CONCAT results into arrays
+                parse_grouped_terms(msg_dict)
+
+                # Enrich message with update_keys (converts msg_text to text, etc.)
+                # Note: update_keys is called BEFORE adding to results to ensure proper field names
+                # Import locally to avoid circular dependency (acarshub_helpers imports acarshub_database)
+                try:
+                    # Log BEFORE conversion
+                    had_msg_text = "msg_text" in msg_dict
+                    msg_text_value = msg_dict.get("msg_text", "")
+
+                    import acarshub_helpers
+
+                    acarshub_helpers.update_keys(msg_dict)
+
+                    # Log AFTER conversion to verify it worked
+                    has_text = "text" in msg_dict
+                    has_msg_text = "msg_text" in msg_dict
+                    text_value = msg_dict.get("text", "")
+
+                    acarshub_logging.log(
+                        f"Alert enrichment - UID: {msg_dict.get('uid')}, had_msg_text: {had_msg_text}, msg_text_len: {len(msg_text_value) if msg_text_value else 0}, has_text: {has_text}, has_msg_text: {has_msg_text}, text_len: {len(text_value) if text_value else 0}",
+                        "database",
+                        level=LOG_LEVEL["DEBUG"],
+                    )
+                except Exception as e:
+                    acarshub_logging.log(
+                        f"Error enriching alert message: {e}",
+                        "database",
+                        level=LOG_LEVEL["WARNING"],
+                    )
+                    acarshub_logging.acars_traceback(e, "database")
+
+                processed_results.append(msg_dict)
+
+            # Reverse to get oldest-to-newest order (like list_of_recent_messages)
+            processed_results.reverse()
+
+            acarshub_logging.log(
+                f"Loaded {len(processed_results)} recent alerts from database",
+                "database",
+                level=LOG_LEVEL["INFO"],
+            )
+
+            return processed_results
+
+    except Exception as e:
+        acarshub_logging.log(
+            f"Error loading recent alerts: {e}",
+            "database",
+            level=LOG_LEVEL["ERROR"],
+        )
+        acarshub_logging.acars_traceback(e, "database")
+        return []
+    finally:
+        if session:
+            session.close()
 
 
 # def search_alerts(icao=None, tail=None, flight=None):
@@ -896,8 +1239,8 @@ def search_alerts(icao=None, tail=None, flight=None):
 #     ):
 #         try:
 #             session = db_session()
-#             # FIXME: This should really be FTS searched on messages_saved. We need to do the following:
-#             # 1. Create a new fts table for messaged_saved
+#             # FIXME: This should really be FTS searched on alert_matches joined with messages.
+#             # 1. Create a new fts table for alert_matches (or use messages_fts with JOIN)
 #             # 2. Save ALL alert terms to the db so we can match properly and save
 #             # query_filter_icao = []
 #             # query_filter_tail = []
@@ -982,17 +1325,26 @@ def show_all(page=0):
 
 
 def get_freq_count():
+    """Get frequency statistics from all per-decoder frequency tables."""
     freq_count = []
-    found_freq = []
 
     try:
         session = db_session()
 
-        for item in session.query(messagesFreq).all():
-            if item.freq not in found_freq:
+        # Query each per-decoder table and add freq_type to results
+        decoder_tables = [
+            ("ACARS", messagesFreqACARS),
+            ("VDL-M2", messagesFreqVDLM2),
+            ("HFDL", messagesFreqHFDL),
+            ("IMSL", messagesFreqIMSL),
+            ("IRDM", messagesFreqIRDM),
+        ]
+
+        for freq_type, model_class in decoder_tables:
+            for item in session.query(model_class).all():
                 freq_count.append(
                     {
-                        "freq_type": f"{item.freq_type}",
+                        "freq_type": freq_type,
                         "freq": f"{item.freq}",
                         "count": item.count,
                     }
@@ -1089,11 +1441,45 @@ def get_message_label_json():
     return message_labels["labels"]
 
 
-def get_signal_levels():
+def get_signal_levels(decoder=None):
+    """Get signal level statistics for a specific decoder.
+
+    Args:
+        decoder: Decoder type ('ACARS', 'VDL-M2', 'HFDL', 'IMSL', 'IRDM')
+                 If None, returns empty list (legacy behavior)
+
+    Returns:
+        List of dicts with 'level' and 'count' keys
+    """
     try:
         output = []
         session = db_session()
-        result = session.query(messagesLevel).order_by(messagesLevel.level)
+
+        # Map decoder types to their corresponding model classes
+        decoder_map = {
+            "ACARS": messagesLevelACARS,
+            "VDL-M2": messagesLevelVDLM2,
+            "VDLM2": messagesLevelVDLM2,  # Alternative spelling
+            "HFDL": messagesLevelHFDL,
+            "IMSL": messagesLevelIMSL,
+            "IRDM": messagesLevelIRDM,
+        }
+
+        if decoder is None:
+            # No decoder specified, return empty list
+            return []
+
+        if decoder not in decoder_map:
+            acarshub_logging.log(
+                f"Unknown decoder type: {decoder}",
+                "database",
+                level=LOG_LEVEL["WARNING"],
+            )
+            return []
+
+        model_class = decoder_map[decoder]
+        result = session.query(model_class).order_by(model_class.level)
+
         if result.count() > 0:
             output = [query_to_dict(d) for d in result]
 
@@ -1106,6 +1492,36 @@ def get_signal_levels():
             return output
         else:
             return []
+
+
+def get_all_signal_levels():
+    """Get signal level statistics for all enabled decoders.
+
+    Returns:
+        Dict mapping decoder names to their signal level data.
+        Format: { "ACARS": [...], "VDL-M2": [...], "HFDL": [...], etc. }
+    """
+    import acarshub_configuration
+
+    result = {}
+
+    # Map of decoder types to check
+    decoder_map = {
+        "ACARS": acarshub_configuration.ENABLE_ACARS,
+        "VDL-M2": acarshub_configuration.ENABLE_VDLM,
+        "HFDL": acarshub_configuration.ENABLE_HFDL,
+        "IMSL": acarshub_configuration.ENABLE_IMSL,
+        "IRDM": acarshub_configuration.ENABLE_IRDM,
+    }
+
+    # Get signal levels for each enabled decoder
+    for decoder, is_enabled in decoder_map.items():
+        if is_enabled:
+            levels = get_signal_levels(decoder)
+            if levels:  # Only include if there's data
+                result[decoder] = levels
+
+    return result
 
 
 def get_alert_counts():
@@ -1175,9 +1591,7 @@ def set_alert_terms(terms=None):
         for item in result:
             if item.term not in terms:
                 session.query(alertStats).filter(alertStats.term == item.term).delete()
-                session.query(messages_saved).filter(
-                    messages_saved.term == item.term
-                ).delete()
+                session.query(AlertMatch).filter(AlertMatch.term == item.term).delete()
 
         session.commit()
     except Exception as e:
@@ -1202,6 +1616,265 @@ def reset_alert_counts():
             session.close()
 
 
+def regenerate_all_alert_matches():
+    """Regenerate all alert matches from scratch.
+
+    This function:
+    1. Deletes all existing alert matches
+    2. Resets alert statistics counts
+    3. Processes all messages in database against current alert terms
+    4. Creates new alert matches for all matching messages
+
+    Returns:
+        dict: Statistics about the regeneration process
+            - total_messages: Total messages processed
+            - matched_messages: Messages that matched at least one term
+            - total_matches: Total alert matches created (can be > matched_messages if message matches multiple terms)
+    """
+    import gevent
+
+    stats = {"total_messages": 0, "matched_messages": 0, "total_matches": 0}
+    session = None
+
+    try:
+        acarshub_logging.log(
+            "Starting alert match regeneration",
+            "database",
+            level=LOG_LEVEL["INFO"],
+        )
+
+        session = db_session()
+
+        # Step 1: Delete all existing alert matches
+        deleted_count = session.query(AlertMatch).delete()
+        acarshub_logging.log(
+            f"Deleted {deleted_count} existing alert matches",
+            "database",
+            level=LOG_LEVEL["INFO"],
+        )
+
+        # Step 2: Reset alert statistics counts
+        result = session.query(alertStats).all()
+        for item in result:
+            item.count = 0
+
+        session.commit()
+
+        acarshub_logging.log(
+            "Reset alert statistics counts",
+            "database",
+            level=LOG_LEVEL["INFO"],
+        )
+
+        # Step 3: Process all messages against current alert terms
+        if not alert_terms:
+            acarshub_logging.log(
+                "No alert terms configured, skipping match regeneration",
+                "database",
+                level=LOG_LEVEL["WARNING"],
+            )
+            return stats
+
+        # PRE-COMPILE all regex patterns for alert terms (MASSIVE performance improvement)
+        # This avoids re-compiling the same regex thousands/millions of times
+        alert_patterns = {}
+        ignore_patterns = {}
+
+        for term in alert_terms:
+            try:
+                # Escape special regex characters, then compile
+                escaped_term = re.escape(term)
+                alert_patterns[term] = re.compile(
+                    r"\b{}\b".format(escaped_term), re.IGNORECASE
+                )
+            except re.error as e:
+                acarshub_logging.log(
+                    f"Invalid regex pattern for alert term '{term}': {e}",
+                    "database",
+                    level=LOG_LEVEL["WARNING"],
+                )
+
+        for term in alert_terms_ignore:
+            try:
+                escaped_term = re.escape(term)
+                ignore_patterns[term] = re.compile(
+                    r"\b{}\b".format(escaped_term), re.IGNORECASE
+                )
+            except re.error as e:
+                acarshub_logging.log(
+                    f"Invalid regex pattern for ignore term '{term}': {e}",
+                    "database",
+                    level=LOG_LEVEL["WARNING"],
+                )
+
+        # Fetch all messages from database (process in batches to avoid memory issues)
+        batch_size = 1000
+        offset = 0
+
+        while True:
+            # Fetch batch of messages
+            message_batch = (
+                session.query(messages)
+                .order_by(messages.time.asc())
+                .limit(batch_size)
+                .offset(offset)
+                .all()
+            )
+
+            if not message_batch:
+                break  # No more messages
+
+            for message in message_batch:
+                stats["total_messages"] += 1
+                message_matched = False
+
+                # Helper function to save alert match for a message
+                def save_alert_match(term, match_type, msg_uid, msg_time):
+                    nonlocal message_matched
+
+                    # Update alert statistics
+                    found_term = (
+                        session.query(alertStats)
+                        .filter(alertStats.term == term.upper())
+                        .first()
+                    )
+                    if found_term is not None:
+                        found_term.count += 1
+                    else:
+                        session.add(alertStats(term=term.upper(), count=1))
+
+                    # Add to normalized alert_matches table
+                    session.add(
+                        AlertMatch(
+                            message_uid=msg_uid,
+                            term=term.upper(),
+                            match_type=match_type,
+                            matched_at=msg_time,
+                        )
+                    )
+
+                    message_matched = True
+                    stats["total_matches"] += 1
+
+                # Check message text for alert terms (use pre-compiled patterns)
+                if message.text and len(message.text) > 0:
+                    for search_term, pattern in alert_patterns.items():
+                        if pattern.search(message.text):
+                            should_add = True
+                            # Check ignore terms (use pre-compiled patterns)
+                            for ignore_term, ignore_pattern in ignore_patterns.items():
+                                if ignore_pattern.search(message.text):
+                                    should_add = False
+                                    break
+                            if should_add:
+                                save_alert_match(
+                                    search_term, "text", message.uid, message.time
+                                )
+
+                # Check ICAO hex for alert terms (supports partial matching)
+                if message.icao and len(message.icao) > 0:
+                    icao_upper = message.icao.upper()
+                    for search_term in alert_terms:
+                        term_upper = search_term.upper()
+                        if icao_upper == term_upper or term_upper in icao_upper:
+                            # Check ignore terms for ICAO
+                            should_add = True
+                            for ignore_term in alert_terms_ignore:
+                                ignore_upper = ignore_term.upper()
+                                if (
+                                    icao_upper == ignore_upper
+                                    or ignore_upper in icao_upper
+                                ):
+                                    should_add = False
+                                    break
+                            if should_add:
+                                save_alert_match(
+                                    search_term, "icao", message.uid, message.time
+                                )
+
+                # Check tail number for alert terms (supports partial matching)
+                if message.tail and len(message.tail) > 0:
+                    tail_upper = message.tail.upper()
+                    for search_term in alert_terms:
+                        term_upper = search_term.upper()
+                        if tail_upper == term_upper or term_upper in tail_upper:
+                            # Check ignore terms for tail
+                            should_add = True
+                            for ignore_term in alert_terms_ignore:
+                                ignore_upper = ignore_term.upper()
+                                if (
+                                    tail_upper == ignore_upper
+                                    or ignore_upper in tail_upper
+                                ):
+                                    should_add = False
+                                    break
+                            if should_add:
+                                save_alert_match(
+                                    search_term, "tail", message.uid, message.time
+                                )
+
+                # Check flight number for alert terms (supports partial matching)
+                if message.flight and len(message.flight) > 0:
+                    flight_upper = message.flight.upper()
+                    for search_term in alert_terms:
+                        term_upper = search_term.upper()
+                        if flight_upper == term_upper or term_upper in flight_upper:
+                            # Check ignore terms for flight
+                            should_add = True
+                            for ignore_term in alert_terms_ignore:
+                                ignore_upper = ignore_term.upper()
+                                if (
+                                    flight_upper == ignore_upper
+                                    or ignore_upper in flight_upper
+                                ):
+                                    should_add = False
+                                    break
+                            if should_add:
+                                save_alert_match(
+                                    search_term, "flight", message.uid, message.time
+                                )
+
+                if message_matched:
+                    stats["matched_messages"] += 1
+
+            # Commit this batch
+            session.commit()
+
+            # Yield to gevent event loop to keep gunicorn worker responsive
+            gevent.sleep(0)
+
+            # Log progress every 10 batches (10k messages)
+            if (offset // batch_size) % 10 == 0:
+                acarshub_logging.log(
+                    f"Processed {stats['total_messages']} messages, found {stats['matched_messages']} matches",
+                    "database",
+                    level=LOG_LEVEL["INFO"],
+                )
+
+            offset += batch_size
+
+        # Final commit
+        session.commit()
+
+        acarshub_logging.log(
+            f"Alert match regeneration complete: {stats['total_messages']} messages processed, "
+            f"{stats['matched_messages']} matched messages, {stats['total_matches']} total matches created",
+            "database",
+            level=LOG_LEVEL["INFO"],
+        )
+
+        return stats
+
+    except Exception as e:
+        acarshub_logging.acars_traceback(e, "database")
+        if session:
+            session.rollback()
+        raise  # Re-raise to signal failure to caller
+    finally:
+        if session:
+            session.close()
+
+
 def get_alert_ignore():
     return alert_terms_ignore
 
@@ -1210,39 +1883,142 @@ def get_alert_terms():
     return alert_terms
 
 
-def prune_database():
+def search_alerts_by_term(term, page=0, results_per_page=50):
+    """
+    Search for all messages matching a specific alert term.
+
+    Args:
+        term: The alert term to search for
+        page: Page number (0-indexed)
+        results_per_page: Number of results per page (default 50)
+
+    Returns:
+        tuple: (total_count, messages_list)
+        - total_count: Total number of matching messages
+        - messages_list: List of message dictionaries for the requested page
+    """
+    if not term:
+        return (0, [])
+
+    session = None
+
     try:
-        acarshub_logging.log("Pruning database", "database")
-        cutoff = (
-            datetime.datetime.now()
-            - datetime.timedelta(days=acarshub_configuration.DB_SAVE_DAYS)
-        ).timestamp()
+        with profile_query(
+            "search_alerts_by_term", params={"term": term, "page": page}
+        ):
+            session = db_session()
 
-        session = db_session()
-        result = session.query(messages).filter(messages.time < cutoff).delete()
+            # Build secure parameterized queries using query builder
+            results_query, count_query, params = build_alert_term_search_query(
+                term, page=page, results_per_page=results_per_page
+            )
 
-        session.commit()
+            # Get total count first
+            count_result = session.execute(count_query, params).scalar()
+            total_count = count_result or 0
 
-        acarshub_logging.log("Pruned %s messages" % result, "database")
+            if total_count == 0:
+                return (0, [])
 
-        acarshub_logging.log("Pruning alert database", "database")
+            # Get paginated results
+            result = session.execute(results_query, params)
 
-        # prune messages_saved as well
-        cutoff = (
-            datetime.datetime.now()
-            - datetime.timedelta(days=acarshub_configuration.DB_ALERT_SAVE_DAYS)
-        ).timestamp()
+            processed_results = []
+            for row in result.mappings().all():
+                msg_dict = dict(row)
+                # Parse GROUP_CONCAT results into arrays
+                parse_grouped_terms(msg_dict)
+                processed_results.append(msg_dict)
 
-        result = (
-            session.query(messages_saved).filter(messages_saved.time < cutoff).delete()
-        )
-
-        session.commit()
-
-        acarshub_logging.log("Pruned %s messages" % result, "database")
+            return (total_count, processed_results)
 
     except Exception as e:
         acarshub_logging.acars_traceback(e, "database")
+        return (0, [])
+    finally:
+        if session:
+            session.close()
+
+
+def prune_database():
+    """
+    Prune old messages and alert matches from the database.
+
+    Important: Messages with active alert matches (within DB_ALERT_SAVE_DAYS) are preserved
+    even if they're older than DB_SAVE_DAYS. This prevents orphaned alert_match rows.
+    """
+    session = None
+    try:
+        session = db_session()
+
+        # Calculate cutoff timestamps
+        message_cutoff = int(
+            (
+                datetime.datetime.now()
+                - datetime.timedelta(days=acarshub_configuration.DB_SAVE_DAYS)
+            ).timestamp()
+        )
+
+        alert_cutoff = int(
+            (
+                datetime.datetime.now()
+                - datetime.timedelta(days=acarshub_configuration.DB_ALERT_SAVE_DAYS)
+            ).timestamp()
+        )
+
+        acarshub_logging.log(
+            f"Pruning database (message_cutoff: {message_cutoff}, alert_cutoff: {alert_cutoff})",
+            "database",
+        )
+
+        # Get UIDs of messages with active alert matches (within alert retention window)
+        # These messages must be preserved even if older than DB_SAVE_DAYS
+        protected_uids = (
+            session.query(AlertMatch.message_uid)
+            .filter(AlertMatch.matched_at >= alert_cutoff)
+            .distinct()
+            .all()
+        )
+        protected_uid_set = {uid[0] for uid in protected_uids}
+
+        if protected_uid_set:
+            acarshub_logging.log(
+                f"Protecting {len(protected_uid_set)} messages with active alert matches",
+                "database",
+            )
+            # Prune messages older than cutoff, EXCLUDING those with active alert matches
+            result = (
+                session.query(messages)
+                .filter(messages.time < message_cutoff)
+                .filter(~messages.uid.in_(protected_uid_set))
+                .delete(synchronize_session=False)
+            )
+        else:
+            # No protected messages, prune normally
+            result = (
+                session.query(messages)
+                .filter(messages.time < message_cutoff)
+                .delete(synchronize_session=False)
+            )
+
+        session.commit()
+        acarshub_logging.log(f"Pruned {result} messages", "database")
+
+        # Prune old alert_matches (using matched_at timestamp)
+        acarshub_logging.log("Pruning alert matches", "database")
+        result = (
+            session.query(AlertMatch)
+            .filter(AlertMatch.matched_at < alert_cutoff)
+            .delete(synchronize_session=False)
+        )
+
+        session.commit()
+        acarshub_logging.log(f"Pruned {result} alert matches", "database")
+
+    except Exception as e:
+        acarshub_logging.acars_traceback(e, "database")
+        if session:
+            session.rollback()
     finally:
         if session:
             session.close()

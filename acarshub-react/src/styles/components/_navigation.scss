@@ -1,0 +1,367 @@
+/* Copyright (C) 2022-2026 Frederick Clausen II
+ * This file is part of acarshub <https://github.com/sdr-enthusiasts/docker-acarshub>.
+ *
+ * acarshub is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * acarshub is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+@use "../variables" as *;
+@use "../mixins" as *;
+
+/**
+ * Navigation Component
+ * Main application navigation bar with desktop and mobile layouts
+ */
+
+.navigation {
+  background-color: var(--color-crust);
+  color: var(--color-text);
+  box-shadow: $shadow-md;
+  position: sticky;
+  top: 0;
+  z-index: $z-index-sticky;
+
+  .wrap {
+    padding-left: 0;
+    padding-right: 0;
+    position: relative; // Make this the positioning context for flyout
+  }
+
+  .decor {
+    display: none;
+  }
+
+  nav ul {
+    list-style: none;
+    display: flex;
+    align-items: center;
+    margin: 0;
+    padding: 0;
+  }
+
+  nav li {
+    margin: 0;
+  }
+
+  nav a,
+  nav .link-button {
+    @include button-reset;
+    display: block;
+    padding: $spacing-sm $spacing-md;
+    color: var(--color-text);
+    text-decoration: none;
+    transition: background-color $transition-fast;
+    font-size: $font-size-base;
+    font-weight: $font-weight-medium;
+    border-radius: $radius-md;
+
+    &:hover {
+      background-color: var(--color-surface0);
+      color: var(--color-text);
+    }
+
+    @include focus-visible;
+  }
+
+  nav a.active {
+    background-color: var(--color-surface0);
+    color: var(--color-primary);
+    font-weight: $font-weight-semibold;
+
+    &:hover {
+      background-color: var(--color-surface0);
+      opacity: 0.9;
+    }
+  }
+
+  .logo-link {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    padding: $spacing-sm $spacing-md;
+    text-decoration: none;
+    transition: opacity $transition-fast;
+
+    &:hover {
+      opacity: 0.9;
+    }
+
+    @include focus-visible;
+  }
+
+  .logo-image {
+    height: 48px;
+    width: auto;
+    display: block;
+
+    // Use CSS filter to colorize SVG to match primary color
+    // This works when SVG is loaded as <img src="...">
+    // Mocha (dark theme) - blue (#89b4fa)
+    filter: brightness(0) saturate(100%) invert(58%) sepia(68%) saturate(467%)
+      hue-rotate(192deg) brightness(103%) contrast(98%);
+
+    // Latte (light theme) - blue (#1e66f5)
+    [data-theme="light"] & {
+      filter: brightness(0) saturate(100%) invert(27%) sepia(89%)
+        saturate(1583%) hue-rotate(215deg) brightness(99%) contrast(101%);
+    }
+  }
+
+  .logo-text {
+    font-weight: $font-weight-bold;
+    font-size: $font-size-xl;
+    color: var(--color-primary);
+  }
+
+  .right_side {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+  }
+
+  .alert-count {
+    background-color: var(--color-danger);
+    color: var(--color-base);
+    padding: $spacing-xs $spacing-sm;
+    border-radius: $radius-full;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-bold;
+    margin-left: $spacing-xs;
+    min-width: 20px;
+    text-align: center;
+    display: inline-block;
+  }
+
+  .error-indicator {
+    color: var(--color-red);
+    font-size: 1.125rem;
+    font-weight: $font-weight-bold;
+    margin-left: $spacing-xs;
+    display: inline-block;
+    animation: pulse-error 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse-error {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.6;
+    }
+  }
+
+  // Disable animation if user prefers reduced motion
+  @media (prefers-reduced-motion: reduce) {
+    .error-indicator {
+      animation: none;
+    }
+  }
+}
+
+/**
+ * Filters Flyout (Live Messages Page)
+ */
+.navigation__filters-flyout {
+  position: absolute;
+  top: 100%; // Below navbar, not covering page content
+  left: 0;
+  right: 0;
+  background-color: var(--color-mantle);
+  border-bottom: 2px solid var(--color-surface1);
+  box-shadow: $shadow-lg;
+  z-index: $z-index-modal;
+  max-height: 80vh;
+  overflow-y: auto;
+
+  // Tablet and up: constrain width, position from left
+  @media (min-width: 768px) {
+    left: 0;
+    right: auto;
+    max-width: 600px;
+    border-right: 2px solid var(--color-surface1);
+  }
+}
+
+.filters-flyout__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-md $spacing-lg;
+  border-bottom: 1px solid var(--color-surface1);
+  background-color: var(--color-crust);
+
+  h3 {
+    margin: 0;
+    font-size: $font-size-lg;
+    font-weight: $font-weight-semibold;
+    color: var(--color-text);
+  }
+}
+
+.filters-flyout__close {
+  @include button-reset;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  color: var(--color-subtext0);
+  font-size: $font-size-xl;
+  cursor: pointer;
+  border-radius: $radius-md;
+  transition:
+    background-color $transition-fast,
+    color $transition-fast;
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+
+  &:hover {
+    background-color: var(--color-surface0);
+    color: var(--color-text);
+  }
+
+  &:active {
+    background-color: var(--color-surface1);
+  }
+
+  @include focus-visible;
+}
+
+.filters-flyout__content {
+  padding: $spacing-md;
+}
+
+.filters-flyout__filters-wrapper {
+  // Override the display:none on .message-filters for mobile
+  .message-filters {
+    display: block !important;
+  }
+}
+
+/**
+ * Mobile Navigation
+ */
+.show_when_small {
+  display: none;
+}
+
+.mobile_nav_container {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  padding: $spacing-sm $spacing-lg;
+}
+
+.mobile_nav_button {
+  @include button-reset;
+  cursor: pointer;
+  font-weight: $font-weight-bold;
+  padding: $spacing-sm 0 $spacing-sm $spacing-md;
+  list-style: none;
+  color: var(--color-text);
+  user-select: none;
+
+  &:hover {
+    color: var(--color-primary);
+  }
+
+  &.active {
+    color: var(--color-primary);
+  }
+
+  @include focus-visible;
+}
+
+.small_nav {
+  padding: 0;
+  display: inline-flex;
+  flex-direction: column;
+
+  summary {
+    cursor: pointer;
+    font-weight: $font-weight-bold;
+    padding: $spacing-sm 0;
+    list-style: none;
+    color: var(--color-text);
+    user-select: none;
+
+    &::-webkit-details-marker {
+      display: none;
+    }
+
+    &::after {
+      content: "▼";
+      margin-left: $spacing-sm;
+      font-size: $font-size-sm;
+      transition: transform $transition-fast;
+    }
+
+    @include focus-visible;
+  }
+
+  &[open] summary::after {
+    transform: rotate(180deg);
+  }
+
+  a,
+  .link-button {
+    @include button-reset;
+    display: block;
+    padding: $spacing-sm 0;
+    color: var(--color-text);
+    text-decoration: none;
+    text-align: left;
+    width: 100%;
+    transition: color $transition-fast;
+
+    &:hover {
+      color: var(--color-primary);
+    }
+
+    @include focus-visible;
+  }
+
+  a.active {
+    color: var(--color-primary);
+    font-weight: $font-weight-semibold;
+  }
+}
+
+.hide_when_small {
+  display: block;
+}
+
+@include media-md {
+  .show_when_small {
+    display: none;
+  }
+
+  .hide_when_small {
+    display: block;
+  }
+}
+
+/* Mobile breakpoint */
+@media (max-width: #{$breakpoint-md - 1px}) {
+  .show_when_small {
+    display: block;
+  }
+
+  .hide_when_small {
+    display: none;
+  }
+}

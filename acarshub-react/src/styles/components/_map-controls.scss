@@ -1,0 +1,106 @@
+// Copyright (C) 2022-2026 Frederick Clausen II
+// This file is part of acarshub <https://github.com/sdr-enthusiasts/docker-acarshub>.
+
+// acarshub is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+
+// acarshub is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+
+// You should have received a copy of the GNU General Public License
+// along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
+
+@use "../mixins" as *;
+@use "../variables" as *;
+
+.map-controls {
+  position: absolute;
+  top: 94px; // Below zoom controls (32px height + borders + margins)
+  right: 10px;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  pointer-events: none;
+
+  // Each group of related controls
+  &__group {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    background-color: var(--color-overlay0);
+    border: 2px solid var(--color-overlay0);
+    border-radius: var(--border-radius-sm);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    overflow: visible; // Allow tooltips to overflow
+    pointer-events: auto;
+    touch-action: manipulation; // Prevent double-tap zoom on mobile Safari
+    -webkit-tap-highlight-color: transparent; // Remove tap highlight on iOS
+    user-select: none; // Prevent text selection on mobile Safari
+    -webkit-user-select: none; // Prevent text selection on mobile Safari
+    -webkit-touch-callout: none; // Prevent callout menu on iOS
+
+    // Remove border radius from middle buttons
+    button {
+      border-radius: 0;
+      // Keep the 2px border from MapControlButton but remove sides/top/bottom between buttons
+      border-left: 0 !important;
+      border-right: 0 !important;
+      border-top: 0 !important;
+      border-bottom: 1px solid var(--color-overlay0) !important;
+      cursor: pointer;
+      touch-action: manipulation; // Prevent double-tap zoom on mobile Safari
+      -webkit-tap-highlight-color: transparent; // Remove tap highlight on iOS
+      user-select: none; // Prevent text selection on mobile Safari
+      -webkit-user-select: none; // Prevent text selection on mobile Safari
+      -webkit-touch-callout: none; // Prevent callout menu on iOS
+
+      &:first-child {
+        border-top-left-radius: var(--border-radius-sm);
+        border-top-right-radius: var(--border-radius-sm);
+      }
+
+      &:last-child {
+        border-bottom-left-radius: var(--border-radius-sm);
+        border-bottom-right-radius: var(--border-radius-sm);
+        border-bottom: 0 !important;
+      }
+
+      &:only-child {
+        border-radius: var(--border-radius-sm);
+      }
+    }
+  }
+}
+
+// Mobile adjustments
+@include breakpoint-max(md) {
+  .map-controls {
+    top: 106px; // Adjust for larger mobile zoom controls + extra spacing
+    right: 10px;
+  }
+
+  // Hide individual filter buttons on mobile (shown in flyout instead)
+  .map-controls__filter--desktop {
+    display: none;
+  }
+}
+
+// Desktop adjustments
+@include breakpoint(md) {
+  // Hide filter menu button on desktop (show individual buttons instead)
+  .map-controls__group--filters .map-filters-menu {
+    display: none;
+  }
+}
+
+// Print styles
+@media print {
+  .map-controls {
+    display: none;
+  }
+}

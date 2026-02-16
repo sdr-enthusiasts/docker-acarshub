@@ -1,0 +1,308 @@
+// Copyright (C) 2022-2026 Frederick Clausen II
+// This file is part of acarshub <https://github.com/sdr-enthusiasts/docker-acarshub>.
+
+// acarshub is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+
+// acarshub is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+
+// You should have received a copy of the GNU General Public License
+// along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
+
+/**
+ * Message Group Component Styles
+ * Shared styles for grouped ACARS messages (multiple messages per aircraft)
+ * Used in Live Messages, Alerts, and Map modal
+ * Mobile-first responsive design with Catppuccin theming
+ */
+
+@use "../variables" as *;
+@use "../mixins" as *;
+
+// ============================================================================
+// Message Group Container
+// ============================================================================
+
+.message-group {
+  background-color: var(--color-surface0);
+  border: 1px solid var(--color-surface2);
+  border-radius: var(--border-radius-lg);
+  overflow: hidden;
+  transition: all 0.2s ease;
+
+  &:focus {
+    outline: 2px solid var(--color-blue);
+    outline-offset: 2px;
+  }
+
+  &--alert {
+    border-color: var(--color-red);
+    box-shadow: 0 0 0 1px rgba(var(--color-red-rgb), 0.2);
+  }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--spacing-sm);
+    background: var(--color-surface0);
+    border-bottom: 2px solid var(--color-surface2);
+  }
+
+  &__aircraft {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+  }
+
+  .aircraft-id {
+    font-weight: 700;
+    font-size: var(--font-size-md);
+    color: var(--color-text);
+    font-family: var(--font-mono);
+  }
+
+  .alert-count {
+    display: inline-flex;
+    align-items: center;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    background-color: var(--color-red);
+    color: var(--color-crust);
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    border-radius: var(--border-radius-full);
+    white-space: nowrap;
+  }
+
+  .adsb-tracking {
+    display: inline-flex;
+    align-items: center;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    background-color: var(--color-teal);
+    color: var(--color-crust);
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    border-radius: var(--border-radius-full);
+    white-space: nowrap;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:hover {
+      background-color: var(--color-sky);
+      transform: translateY(-1px);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    &:active {
+      transform: translateY(0);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--color-teal);
+      outline-offset: 2px;
+    }
+
+    // Mobile: keep same visual size as desktop
+    // (Secondary action, doesn't need 44px minimum like primary buttons)
+    @media (max-width: 768px) {
+      padding: var(--spacing-xs) var(--spacing-sm);
+    }
+
+    // Reduced motion
+    @media (prefers-reduced-motion: reduce) {
+      transition: none;
+
+      &:hover,
+      &:active {
+        transform: none;
+      }
+    }
+  }
+
+  &__counter {
+    font-size: var(--font-size-sm);
+    color: var(--color-subtext1);
+
+    .counter-text {
+      font-weight: 500;
+    }
+  }
+
+  &__tabs {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    background-color: var(--color-base);
+    border-bottom: 1px solid var(--color-surface2);
+    overflow-x: auto;
+    @include scrollbar-thin;
+  }
+
+  &__content {
+    padding: var(--spacing-sm);
+  }
+}
+
+// ============================================================================
+// Tab Navigation
+// ============================================================================
+
+.tab-nav {
+  background: none;
+  border: 1px solid var(--color-surface2);
+  color: var(--color-text);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--border-radius-md);
+  cursor: pointer;
+  font-size: var(--font-size-md);
+  font-weight: 700;
+  line-height: 1;
+  transition: all 0.2s ease;
+  min-width: 36px;
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover {
+    background-color: var(--color-surface1);
+    border-color: var(--color-blue);
+  }
+
+  &:focus {
+    outline: 2px solid var(--color-blue);
+    outline-offset: 2px;
+  }
+
+  &:active {
+    background-color: var(--color-surface2);
+  }
+
+  &--prev,
+  &--next {
+    flex-shrink: 0;
+  }
+}
+
+.tab-list {
+  display: flex;
+  gap: var(--spacing-xs);
+  flex: 1;
+  overflow-x: auto;
+  @include scrollbar-thin;
+}
+
+.tab {
+  background: none;
+  border: 1px solid var(--color-surface2);
+  color: var(--color-text);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--border-radius-md);
+  cursor: pointer;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  line-height: 1.2;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  min-width: 36px;
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-xs);
+
+  &:hover {
+    background-color: var(--color-surface1);
+    border-color: var(--color-blue);
+  }
+
+  &:focus {
+    outline: 2px solid var(--color-blue);
+    outline-offset: 2px;
+  }
+
+  &--active {
+    background-color: var(--color-blue);
+    border-color: var(--color-blue);
+    color: var(--color-base);
+    font-weight: 700;
+
+    &:hover {
+      background-color: var(--color-sapphire);
+      border-color: var(--color-sapphire);
+    }
+  }
+
+  &--alert {
+    border-color: var(--color-red);
+
+    &.tab--active {
+      background-color: var(--color-red);
+      border-color: var(--color-red);
+    }
+  }
+
+  &__number {
+    font-family: var(--font-mono);
+  }
+
+  &__alert-indicator {
+    font-size: var(--font-size-xs);
+  }
+}
+
+// ============================================================================
+// Animation Support
+// ============================================================================
+
+[data-animations="true"] {
+  .message-group {
+    animation: slideIn 0.3s ease-out;
+  }
+
+  .tab {
+    transition: all 0.15s ease;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+// ============================================================================
+// Print Styles
+// ============================================================================
+
+@media print {
+  .message-group {
+    page-break-inside: avoid;
+    border: 1px solid var(--color-surface2);
+    margin-bottom: var(--spacing-md);
+
+    &__tabs {
+      display: none;
+    }
+
+    &__header {
+      border-bottom: 2px solid var(--color-surface2);
+    }
+  }
+
+  .tab-nav {
+    display: none;
+  }
+}

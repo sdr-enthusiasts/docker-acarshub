@@ -1,0 +1,411 @@
+// Copyright (C) 2022-2026 Frederick Clausen II
+// This file is part of acarshub <https://github.com/sdr-enthusiasts/docker-acarshub>.
+
+// acarshub is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+
+// acarshub is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+
+// You should have received a copy of the GNU General Public License
+// along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
+
+@use "../variables" as *;
+@use "../mixins" as *;
+
+// Followed aircraft indicator
+.aircraft-marker--followed {
+  position: relative;
+
+  // Pulsing ring animation to indicate followed aircraft
+  &::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 150%;
+    height: 150%;
+    border: 3px solid var(--color-primary);
+    border-radius: 50%;
+    opacity: 0;
+    animation: followed-pulse 2s ease-out infinite;
+  }
+
+  // Add a subtle glow
+  filter: drop-shadow(0 0 8px var(--color-primary));
+}
+
+@keyframes followed-pulse {
+  0% {
+    opacity: 0.8;
+    transform: translate(-50%, -50%) scale(0.8);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.5);
+  }
+}
+
+.aircraft-marker {
+  // Button reset styles
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  outline: none;
+
+  // Position and transform
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  // Enable smooth rotation transitions
+  transition: transform 0.5s ease-out;
+
+  // Cursor indicates clickable
+  cursor: pointer;
+
+  // Ensure markers render above map tiles
+  z-index: 10;
+
+  // Remove default button focus outline, we'll add our own
+  &:focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  // Image inside marker
+  img {
+    display: block;
+    user-select: none;
+    -webkit-user-drag: none;
+  }
+
+  // Hover effect - slight scale up (but no pulsing glow)
+  &:hover:not(.aircraft-marker--hovered) {
+    z-index: 100;
+    transform-origin: center center;
+
+    img {
+      filter: drop-shadow(0 0 4px rgba(0, 0, 0, 0.8));
+    }
+  }
+
+  // Hovered from list - pulsing glow effect
+  &--hovered {
+    z-index: 150;
+
+    img {
+      filter: drop-shadow(0 0 12px var(--color-blue))
+        drop-shadow(0 0 6px var(--color-blue));
+      animation: marker-pulse 1.5s ease-in-out infinite;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      img {
+        filter: drop-shadow(0 0 12px var(--color-blue))
+          drop-shadow(0 0 6px var(--color-blue));
+        animation: none;
+      }
+    }
+  }
+
+  // Active/clicked state
+  &:active {
+    img {
+      filter: brightness(1.2) drop-shadow(0 0 6px rgba(0, 0, 0, 1));
+    }
+  }
+
+  // Disable animations if user prefers reduced motion
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+
+    &:hover img {
+      filter: none;
+    }
+  }
+}
+
+// Aircraft marker variants based on state
+.aircraft-marker--alert {
+  // Red glow for aircraft with alerts
+  img {
+    filter: drop-shadow(0 0 6px rgba(255, 0, 0, 0.8));
+  }
+
+  &:hover img {
+    filter: drop-shadow(0 0 8px rgba(255, 0, 0, 1));
+  }
+}
+
+.aircraft-marker--message {
+  // Green glow for aircraft with ACARS messages
+  img {
+    filter: drop-shadow(0 0 4px rgba(0, 255, 0, 0.6));
+  }
+
+  &:hover img {
+    filter: drop-shadow(0 0 6px rgba(0, 255, 0, 0.8));
+  }
+}
+
+.aircraft-marker--unread {
+  // Yellow/peach glow for aircraft with unread messages
+  img {
+    filter: drop-shadow(0 0 5px rgba(250, 179, 135, 0.8));
+  }
+
+  &:hover img {
+    filter: drop-shadow(0 0 7px rgba(250, 179, 135, 1));
+  }
+}
+
+.aircraft-marker--selected {
+  // Highlight selected aircraft
+  z-index: 200;
+
+  img {
+    filter: drop-shadow(0 0 8px rgba(255, 255, 0, 1));
+  }
+
+  // Pulsing animation for selected aircraft
+  @keyframes pulse {
+    0%,
+    100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.1);
+    }
+  }
+
+  animation: pulse 2s ease-in-out infinite;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+// Pulsing animation for hovered aircraft (from list)
+@keyframes marker-pulse {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 12px var(--color-blue))
+      drop-shadow(0 0 6px var(--color-blue));
+    transform: scale(1);
+  }
+  50% {
+    filter: drop-shadow(0 0 20px var(--color-blue))
+      drop-shadow(0 0 10px var(--color-blue))
+      drop-shadow(0 0 4px var(--color-blue));
+    transform: scale(1.15);
+  }
+}
+
+// Print styles - hide markers when printing
+@media print {
+  .aircraft-marker {
+    display: none;
+  }
+}
+
+// Aircraft tooltip styles
+.aircraft-tooltip {
+  // Absolute positioning relative to marker button
+  position: absolute;
+  left: 50%;
+  z-index: 10000;
+  pointer-events: none;
+
+  // Default: show above marker
+  &--above {
+    bottom: 100%;
+    margin-bottom: 10px;
+    transform: translateX(-50%) rotate(0deg);
+  }
+
+  // Alternative: show below marker (when near top of viewport)
+  &--below {
+    top: 100%;
+    margin-top: 10px;
+    transform: translateX(-50%) rotate(0deg);
+  }
+
+  // Align left when near left edge of viewport
+  &--align-left {
+    left: 0 !important;
+    right: auto !important;
+
+    &.aircraft-tooltip--above {
+      bottom: 100%;
+      margin-bottom: 10px;
+      transform: translateX(0) rotate(0deg) !important;
+    }
+
+    &.aircraft-tooltip--below {
+      top: 100%;
+      margin-top: 10px;
+      transform: translateX(0) rotate(0deg) !important;
+    }
+  }
+
+  // Align right when near right edge of viewport
+  &--align-right {
+    left: auto !important;
+    right: 0 !important;
+
+    &.aircraft-tooltip--above {
+      bottom: 100%;
+      margin-bottom: 10px;
+      transform: translateX(0) rotate(0deg) !important;
+    }
+
+    &.aircraft-tooltip--below {
+      top: 100%;
+      margin-top: 10px;
+      transform: translateX(0) rotate(0deg) !important;
+    }
+  }
+
+  &__content {
+    background: var(--color-surface0);
+    border: 1px solid var(--color-surface2);
+    border-radius: 6px;
+    padding: 6px 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    min-width: 160px;
+    font-size: 12px;
+    line-height: 1.4;
+    white-space: nowrap;
+
+    // Smooth fade-in animation
+    animation: tooltip-fade-in 0.15s ease-out;
+
+    @media (prefers-reduced-motion: reduce) {
+      animation: none;
+    }
+  }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 4px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--color-surface1);
+    color: var(--color-text);
+    font-size: 13px;
+  }
+
+  &__match-badge {
+    display: inline-block;
+    padding: 2px 6px;
+    background: var(--color-surface2);
+    color: var(--color-subtext1);
+    border-radius: 3px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  &__row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin: 3px 0;
+    color: var(--color-text);
+
+    &--highlight {
+      background: rgba(var(--color-green-rgb), 0.1);
+      padding: 2px 4px;
+      border-radius: 3px;
+      margin: 6px -4px 0;
+
+      .aircraft-tooltip__label,
+      .aircraft-tooltip__value {
+        color: var(--color-green);
+        font-weight: 600;
+      }
+    }
+
+    &--alert {
+      background: rgba(var(--color-red-rgb), 0.1);
+      padding: 2px 4px;
+      border-radius: 3px;
+      margin: 6px -4px 0;
+
+      .aircraft-tooltip__label,
+      .aircraft-tooltip__value {
+        color: var(--color-red);
+        font-weight: 600;
+      }
+    }
+  }
+
+  &__label {
+    color: var(--color-subtext1);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+  }
+
+  &__value {
+    color: var(--color-text);
+    font-weight: 500;
+    text-align: right;
+  }
+}
+
+// Tooltip fade-in animation
+@keyframes tooltip-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+// Mobile responsive tooltip
+@include breakpoint-max(sm) {
+  .aircraft-tooltip {
+    &__content {
+      min-width: 150px;
+      font-size: 12px;
+      padding: 6px 10px;
+    }
+
+    &__header {
+      font-size: 13px;
+    }
+
+    &__label {
+      font-size: 10px;
+    }
+
+    &__value {
+      font-size: 12px;
+    }
+  }
+}
+
+// Print styles - hide tooltips when printing
+@media print {
+  .aircraft-tooltip {
+    display: none;
+  }
+}

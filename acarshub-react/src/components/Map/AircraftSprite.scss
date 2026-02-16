@@ -1,0 +1,215 @@
+/**
+ * Aircraft Sprite Markers
+ *
+ * Renders aircraft markers using pre-colored pw-silhouettes sprite sheets.
+ *
+ * Sprites: https://github.com/plane-watch/pw-silhouettes
+ * License: CC BY-NC-SA 4.0
+ *
+ * Colored sprite sheets are generated at build time from the base white/black
+ * sprite sheet using scripts/generate-colored-sprites.ts
+ */
+
+@use "../../styles/variables" as *;
+@use "../../styles/mixins" as *;
+
+.aircraft-sprite {
+  // Button reset
+  position: relative;
+  padding: 0;
+  border: none;
+  background-color: transparent;
+  outline: none;
+
+  // Sprite background - default state (Mocha theme)
+  background-image: url("/static/sprites/spritesheet-mocha-default.png");
+  background-repeat: no-repeat;
+  background-size: 345.6px 1425.6px; /* 60% of 576px x 2376px */
+  width: 43.2px; /* 60% of 72px */
+  height: 43.2px; /* 60% of 72px */
+  cursor: pointer;
+  transition: transform 0.1s ease;
+  transform-origin: center center;
+  will-change: transform;
+
+  // Alert state - has alert conditions (red)
+  &.has-alerts {
+    background-image: url("/static/sprites/spritesheet-mocha-alerts.png");
+    animation: pulse-alert 2s ease-in-out infinite;
+  }
+
+  // Low altitude state - below 500ft (gray)
+  &.low-altitude {
+    background-image: url("/static/sprites/spritesheet-mocha-lowalt.png");
+  }
+
+  // Decoder-type colors (when colorByDecoder is enabled)
+  &.decoder-acars {
+    background-image: url("/static/sprites/spritesheet-mocha-acars.png");
+  }
+
+  &.decoder-vdlm {
+    background-image: url("/static/sprites/spritesheet-mocha-vdlm.png");
+  }
+
+  &.decoder-hfdl {
+    background-image: url("/static/sprites/spritesheet-mocha-hfdl.png");
+  }
+
+  &.decoder-imsl {
+    background-image: url("/static/sprites/spritesheet-mocha-imsl.png");
+  }
+
+  &.decoder-irdm {
+    background-image: url("/static/sprites/spritesheet-mocha-irdm.png");
+  }
+
+  // Hover state - slight scale up
+  &:hover {
+    z-index: 1000;
+    transform: scale(1.15);
+  }
+
+  // Focus state for accessibility
+  &:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 4px;
+    z-index: 1001;
+  }
+
+  // Unread messages highlight - yellow/peach glow
+  &.aircraft-marker--unread {
+    filter: drop-shadow(0 0 5px rgba(250, 179, 135, 0.8));
+
+    &:hover {
+      filter: drop-shadow(0 0 7px rgba(250, 179, 135, 1));
+    }
+  }
+
+  // Hovered state - pulsing blue glow
+  &.aircraft-marker--hovered {
+    z-index: 1000;
+    filter: drop-shadow(0 0 12px var(--color-blue))
+      drop-shadow(0 0 6px var(--color-blue));
+    animation: marker-pulse 1.5s ease-in-out infinite;
+
+    @media (prefers-reduced-motion: reduce) {
+      filter: drop-shadow(0 0 12px var(--color-blue))
+        drop-shadow(0 0 6px var(--color-blue));
+      animation: none;
+    }
+  }
+
+  // Followed aircraft - pulsing primary color glow
+  &.aircraft-marker--followed {
+    position: relative;
+    filter: drop-shadow(0 0 8px var(--color-primary));
+
+    // Pulsing ring animation
+    &::before {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 150%;
+      height: 150%;
+      border: 3px solid var(--color-primary);
+      border-radius: 50%;
+      opacity: 0;
+      animation: followed-pulse 2s ease-out infinite;
+    }
+  }
+}
+
+// Followed aircraft pulse animation
+@keyframes followed-pulse {
+  0% {
+    opacity: 0.8;
+    transform: translate(-50%, -50%) scale(0.8);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.5);
+  }
+}
+
+// Hovered aircraft pulse animation
+@keyframes marker-pulse {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 12px var(--color-blue))
+      drop-shadow(0 0 6px var(--color-blue));
+    transform: scale(1);
+  }
+  50% {
+    filter: drop-shadow(0 0 20px var(--color-blue))
+      drop-shadow(0 0 10px var(--color-blue))
+      drop-shadow(0 0 4px var(--color-blue));
+    transform: scale(1.15);
+  }
+}
+
+// Latte (light theme) overrides - use different colored sprite sheets
+[data-theme="light"] .aircraft-sprite {
+  // Default state - Latte
+  background-image: url("/static/sprites/spritesheet-latte-default.png");
+
+  // Alert state - Latte (red)
+  &.has-alerts {
+    background-image: url("/static/sprites/spritesheet-latte-alerts.png");
+  }
+
+  // Low altitude state - Latte (gray)
+  &.low-altitude {
+    background-image: url("/static/sprites/spritesheet-latte-lowalt.png");
+  }
+
+  // Decoder-type colors (when colorByDecoder is enabled)
+  &.decoder-acars {
+    background-image: url("/static/sprites/spritesheet-latte-acars.png");
+  }
+
+  &.decoder-vdlm {
+    background-image: url("/static/sprites/spritesheet-latte-vdlm.png");
+  }
+
+  &.decoder-hfdl {
+    background-image: url("/static/sprites/spritesheet-latte-hfdl.png");
+  }
+
+  &.decoder-imsl {
+    background-image: url("/static/sprites/spritesheet-latte-imsl.png");
+  }
+
+  &.decoder-irdm {
+    background-image: url("/static/sprites/spritesheet-latte-irdm.png");
+  }
+}
+
+// Pulse animation for alerts
+@keyframes pulse-alert {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 0.95;
+  }
+}
+
+// Animation frame cycling (for animated sprites like helicopters)
+.aircraft-sprite--animated {
+  // Animation will be handled by JavaScript frame cycling
+  // This class is just a marker for animated sprites
+}
+
+// Sprite positioning is handled via inline styles:
+// background-position: -${x}px -${y}px
+// transform: rotate(${heading}deg)
+
+// Accessibility: Pre-colored sprites with proper contrast
+// Each state has its own sprite sheet with Catppuccin theme colors
+// Black outlines preserved, fills properly colored

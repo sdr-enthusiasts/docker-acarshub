@@ -1,0 +1,584 @@
+// Copyright (C) 2022-2026 Frederick Clausen II
+// This file is part of acarshub <https://github.com/sdr-enthusiasts/docker-acarshub>.
+
+// acarshub is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+
+// acarshub is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+
+// You should have received a copy of the GNU General Public License
+// along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
+
+/**
+ * Live Messages Page Styles
+ * Mobile-first responsive design with Catppuccin theming
+ */
+
+@use "../variables" as *;
+@use "../mixins" as *;
+
+// ============================================================================
+// Page Layout
+// ============================================================================
+
+.live-messages-page {
+  // Override parent .page overflow to allow sticky positioning
+  overflow: visible !important;
+
+  .page__header {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-lg);
+
+    @include breakpoint(md) {
+      flex-direction: row;
+      justify-content: space-between;
+      align-items: center;
+    }
+  }
+
+  .page__stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-md);
+    font-size: var(--font-size-sm);
+
+    @include breakpoint(md) {
+      gap: var(--spacing-lg);
+    }
+  }
+
+  .stat {
+    display: flex;
+    align-items: baseline;
+    gap: var(--spacing-xs);
+
+    &__label {
+      color: var(--color-subtext1);
+      font-weight: 500;
+    }
+
+    &__value {
+      color: var(--color-text);
+      font-weight: 700;
+      font-size: var(--font-size-md);
+    }
+
+    &__secondary {
+      color: var(--color-subtext0);
+      font-weight: 400;
+      font-size: var(--font-size-sm);
+      margin-left: var(--spacing-xs);
+    }
+
+    &--alert {
+      .stat__value {
+        color: var(--color-red);
+      }
+    }
+  }
+
+  .page__notice {
+    padding: var(--spacing-md);
+    border-radius: var(--border-radius-md);
+    margin-bottom: var(--spacing-lg);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    background-color: var(--color-surface0);
+    border: 1px solid var(--color-surface2);
+
+    &--warning {
+      background-color: rgba(var(--color-yellow-rgb), 0.1);
+      border-color: var(--color-yellow);
+      color: var(--color-yellow);
+    }
+
+    .notice__icon {
+      font-size: var(--font-size-lg);
+      flex-shrink: 0;
+    }
+
+    .notice__text {
+      color: var(--color-text);
+      font-size: var(--font-size-sm);
+    }
+  }
+
+  .page__empty {
+    text-align: center;
+    padding: var(--spacing-3xl) var(--spacing-md);
+    color: var(--color-subtext0);
+
+    h2 {
+      color: var(--color-text);
+      margin-bottom: var(--spacing-md);
+      font-size: var(--font-size-xl);
+    }
+
+    p {
+      margin-bottom: var(--spacing-sm);
+    }
+
+    .text-muted {
+      color: var(--color-subtext1);
+      font-size: var(--font-size-sm);
+    }
+  }
+}
+
+// ============================================================================
+// Message Filters
+// ============================================================================
+
+.message-filters {
+  // Hide on mobile (shown in navbar flyout instead)
+  display: none;
+
+  // Show on desktop (inline, sticky)
+  @include breakpoint(md) {
+    display: block;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    margin-bottom: var(--spacing-lg);
+    background-color: var(--color-surface0);
+    border: 1px solid var(--color-surface2);
+    border-radius: var(--border-radius-lg);
+    padding: var(--spacing-md);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  // Enhanced shadow when scrolled
+  // Subtle shadow for depth perception and to separate from content when sticky
+
+  &__toolbar {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+
+    @include breakpoint(md) {
+      flex-direction: row;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+  }
+}
+
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+
+  &--search {
+    position: relative;
+    flex: 1 1 100%;
+    max-width: 100%;
+    align-self: center;
+
+    @include breakpoint(md) {
+      flex: 1 1 auto;
+      max-width: 400px;
+    }
+  }
+
+  &--toggles {
+    display: flex;
+    align-items: center;
+    align-self: center;
+    gap: var(--spacing-md);
+    flex-wrap: wrap;
+  }
+
+  &--actions {
+    display: flex;
+    align-items: center;
+    align-self: center;
+    gap: var(--spacing-sm);
+    flex: 1 1 100%;
+
+    @include breakpoint(md) {
+      flex: 0 0 auto;
+      margin-left: auto;
+    }
+  }
+}
+
+.filter-label {
+  color: var(--color-subtext1);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.filter-input {
+  padding: var(--spacing-sm) var(--spacing-md);
+  background-color: var(--color-base);
+  border: 1px solid var(--color-surface2);
+  border-radius: var(--border-radius-md);
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  transition: all 0.2s ease;
+  flex: 1;
+  min-width: 0;
+
+  &:focus {
+    outline: none;
+    border-color: var(--color-blue);
+    box-shadow: 0 0 0 3px rgba(var(--color-blue-rgb), 0.1);
+  }
+
+  &::placeholder {
+    color: var(--color-subtext0);
+  }
+
+  &--search {
+    padding-right: calc(var(--spacing-2xl) + var(--spacing-md));
+  }
+}
+
+.filter-clear {
+  position: absolute;
+  right: var(--spacing-sm);
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--color-subtext0);
+  cursor: pointer;
+  padding: var(--spacing-xs);
+  border-radius: var(--border-radius-sm);
+  font-size: var(--font-size-md);
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background-color: var(--color-surface1);
+    color: var(--color-text);
+  }
+
+  &:focus {
+    outline: 2px solid var(--color-blue);
+    outline-offset: 2px;
+  }
+}
+
+// ============================================================================
+// Label Filters Modal
+// ============================================================================
+
+.label-filters {
+  &__description {
+    margin-bottom: var(--spacing-lg);
+    color: var(--color-subtext1);
+    font-size: var(--font-size-sm);
+  }
+
+  &__list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+    max-height: 400px;
+    overflow-y: auto;
+    @include scrollbar-thin;
+    margin-bottom: var(--spacing-lg);
+  }
+
+  &__empty {
+    text-align: center;
+    padding: var(--spacing-2xl);
+    color: var(--color-subtext0);
+    font-size: var(--font-size-sm);
+  }
+
+  &__actions {
+    display: flex;
+    justify-content: flex-end;
+    padding-top: var(--spacing-md);
+    border-top: 1px solid var(--color-surface2);
+  }
+}
+
+.label-filter-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background-color: var(--color-base);
+  border: 1px solid var(--color-surface1);
+  border-radius: var(--border-radius-md);
+  transition: all 0.2s ease;
+
+  &:hover {
+    background-color: var(--color-surface0);
+    border-color: var(--color-surface2);
+  }
+
+  &__label {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    cursor: pointer;
+    flex: 1;
+  }
+
+  &__id {
+    font-family: var(--font-mono);
+    font-size: var(--font-size-sm);
+    color: var(--color-blue);
+    font-weight: 600;
+    min-width: 3ch;
+  }
+
+  &__name {
+    color: var(--color-text);
+    font-size: var(--font-size-sm);
+  }
+
+  &__checkbox {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    accent-color: var(--color-blue);
+  }
+}
+
+// ============================================================================
+// Message List
+// ============================================================================
+
+.message-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+// ============================================================================
+// Message Group & Tab Navigation styles are in components/_message-group.scss
+// Message Card styles are in components/_message-card.scss
+// ============================================================================
+
+// Message Content Modifiers (page-specific overrides)
+.message-content {
+  // Hide non-decoded text on small screens when decoded text exists
+  &--hide-small {
+    @include breakpoint-max(sm) {
+      display: none;
+    }
+  }
+
+  // Empty message content
+  &--empty {
+    .message-content__text {
+      color: var(--color-subtext0);
+      font-style: italic;
+    }
+  }
+}
+
+// Alert term highlighting in message content
+.alert-highlight {
+  // WCAG AA compliant alert highlighting with guaranteed 4.5:1+ contrast
+  // Use solid background color to ensure consistent contrast
+  font-weight: 700;
+  padding: 0.125rem 0.25rem;
+  border-radius: var(--border-radius-sm);
+
+  // Dark theme (Mocha): Dark text on red background
+  background-color: var(--color-red); // #f38ba8
+  color: var(
+    --color-crust
+  ); // #11111b - darkest color for maximum contrast (11.5:1)
+
+  // Light theme (Latte): Light text on dark red background
+  [data-theme="light"] & {
+    background-color: var(--color-maroon); // #e64553 in Latte
+    color: var(--color-crust); // #dce0e8 - lightest color for maximum contrast
+  }
+}
+
+// Libacars decoded data
+.message-card__libacars {
+  margin-top: var(--spacing-md);
+  padding: var(--spacing-md);
+  background-color: var(--color-surface0);
+  border: 1px solid var(--color-surface2);
+  border-left: 3px solid var(--color-lavender);
+  border-radius: var(--border-radius-md);
+
+  &--error {
+    border-left-color: var(--color-red);
+    background-color: rgba(var(--color-red-rgb), 0.05);
+  }
+}
+
+.libacars-content {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+  line-height: 1.6;
+
+  strong {
+    color: var(--color-subtext1);
+    font-weight: 600;
+  }
+
+  em {
+    color: var(--color-subtext0);
+    font-style: italic;
+  }
+
+  div {
+    margin-bottom: var(--spacing-xs);
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+}
+
+.libacars-error {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  color: var(--color-red);
+  white-space: pre-wrap;
+}
+
+.libacars-freq-data,
+.libacars-cpdlc,
+.libacars-generic {
+  line-height: 1.6;
+}
+
+.alert-badge {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-sm);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background-color: var(--color-red);
+  color: var(--color-base);
+  font-weight: 700;
+  border-radius: var(--border-radius-sm);
+
+  &__icon {
+    font-size: var(--font-size-lg);
+  }
+
+  &__text {
+    font-size: var(--font-size-sm);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+}
+
+// Light theme override for alert badge
+[data-theme="light"] {
+  .alert-badge {
+    background-color: var(--color-red);
+    color: var(--color-crust);
+  }
+}
+
+.alert-match {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  margin-bottom: var(--spacing-sm);
+  font-size: var(--font-size-sm);
+
+  @include breakpoint(md) {
+    flex-direction: row;
+    align-items: baseline;
+  }
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+
+  &__label {
+    color: var(--color-subtext1);
+    font-weight: 500;
+    min-width: 120px;
+  }
+
+  &__values {
+    color: var(--color-text);
+    font-family: var(--font-mono);
+    font-weight: 600;
+  }
+}
+
+// ============================================================================
+// Component styles use spacing variables defined in _variables.scss
+// No density overrides needed - components adapt via CSS variables
+// ============================================================================
+
+// ============================================================================
+// Animation Support
+// ============================================================================
+
+[data-animations="true"] {
+  .message-group {
+    animation: slideIn 0.3s ease-out;
+  }
+
+  .message-card {
+    animation: fadeIn 0.2s ease-out;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+// ============================================================================
+// Print Styles
+// ============================================================================
+
+@media print {
+  .message-filters,
+  .tab-nav,
+  .message-group__tabs {
+    display: none;
+  }
+
+  .message-group {
+    page-break-inside: avoid;
+    border: 1px solid #000;
+    margin-bottom: 1rem;
+  }
+
+  .message-card {
+    &__content pre {
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+  }
+}

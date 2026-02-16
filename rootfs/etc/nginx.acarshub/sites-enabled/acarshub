@@ -1,14 +1,27 @@
 server {
   listen 80 default_server;
-  root /webapp;
+  listen [::]:80 default_server;
+
+  root /webapp/dist;
   server_name _;
+
+  # Trust X-Forwarded-For from reverse proxies (all private networks + localhost)
+  set_real_ip_from 10.0.0.0/8;
+  set_real_ip_from 172.16.0.0/12;
+  set_real_ip_from 192.168.0.0/16;
+  set_real_ip_from 127.0.0.1/32;
+  real_ip_header X-Forwarded-For;
+  real_ip_recursive on;
 
   proxy_http_version 1.1;
   proxy_set_header Upgrade $http_upgrade;
-  proxy_set_header Connection $http_connection;
+  proxy_set_header Connection $connection_upgrade;
   proxy_set_header Host $host;
-  proxy_set_header  X-Real-IP $remote_addr;
-  proxy_set_header  X-Real-Port $remote_port;
+  proxy_set_header X-Real-IP $remote_addr;
+  proxy_set_header X-Real-Port $remote_port;
+  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+  proxy_set_header X-Forwarded-Proto $scheme;
+  proxy_set_header X-Forwarded-Host $host;
   include /etc/nginx/mime.types;
 
   # mjs is not in default mime types, add in here
@@ -38,25 +51,48 @@ server {
   location ~ \.(css|js|png|jpg|jpeg|gif|ico|woff|woff2|ttf|svg|eot|otf|map|mjs|mp3)$ {
     expires 1y;
     add_header Cache-Control "public, immutable";
-    root /webapp;
   }
 
-  # proxy pass the web socket to gunicorn
-  location /socket.io {
-    proxy_pass http://127.0.0.1:8888/socket.io;
+  # proxy pass the web socket to gunicorn (supports any base path)
+  # Matches /socket.io or /any/path/socket.io
+  location ~ ^(.*)/socket\.io {
+    rewrite ^(.*)/socket\.io(.*)$ /socket.io$2 break;
+    proxy_pass http://127.0.0.1:8888;
+
+    # WebSocket upgrade headers (Safari compatibility)
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection $connection_upgrade;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-Host $host;
+
+    # Safari-specific WebSocket timeouts and buffering
+    proxy_connect_timeout 7d;
+    proxy_send_timeout 7d;
+    proxy_read_timeout 7d;
+
+    # Disable buffering for WebSocket (critical for Safari)
+    proxy_buffering off;
+    proxy_cache off;
+
+    # Prevent nginx from closing connections
+    proxy_redirect off;
   }
 
-  # proxy pass the metrics endpoint to gunicorn
-  location /metrics {
-    proxy_pass http://127.0.0.1:8888/metrics;
+  # proxy pass the metrics endpoint to gunicorn (supports any base path)
+  # Matches /metrics or /any/path/metrics
+  location ~ ^(.*)/metrics$ {
+    rewrite ^(.*)/metrics$ /metrics break;
+    proxy_pass http://127.0.0.1:8888;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-Host $host;
     add_header Cache-Control 'no-cache';
-  }
-
-  # proxy pass the aircraft.json file to tar1090
-  # <> is used as a place holder that the container startup rewrites to the correct URL
-  location /data/aircraft.json {
-    proxy_pass <>;
-    proxy_set_header Referer "";
   }
 
   # index page - must not be cached so new builds are picked up immediately
@@ -64,20 +100,19 @@ server {
     add_header Cache-Control 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0';
     add_header Pragma 'no-cache';
     add_header Expires '0';
-    try_files /templates/index.html =404;
+    try_files /index.html =404;
   }
 
-  # pass the request for about.md to the correct file
-  location /aboutmd {
-    expires 30d;
-    try_files /templates/helppage.MD =404;
-  }
-
-  # valid URL paths for pages serve index.html - must not be cached
-  location ~ ^/(search|alerts|stats|adsb|about|status)$ {
+  # SPA routing - all React Router paths serve index.html - must not be cached
+  location ~ ^/(live-messages|live-map|search|alerts|stats|about|status)$ {
     add_header Cache-Control 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0';
     add_header Pragma 'no-cache';
     add_header Expires '0';
-    try_files /templates/index.html =404;
+    try_files /index.html =404;
+  }
+
+  # Fallback for any other routes (SPA routing)
+  location / {
+    try_files $uri $uri/ /index.html;
   }
 }

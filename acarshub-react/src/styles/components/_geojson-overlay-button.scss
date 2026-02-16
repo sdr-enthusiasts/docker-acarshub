@@ -1,0 +1,181 @@
+// Copyright (C) 2022-2026 Frederick Clausen II
+// This file is part of acarshub <https://github.com/sdr-enthusiasts/docker-acarshub>.
+
+// acarshub is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+
+// acarshub is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+
+// You should have received a copy of the GNU General Public License
+// along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
+
+@use "../mixins" as *;
+
+.geojson-overlay-button {
+  position: relative;
+
+  &__badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: 8px;
+    font-size: 10px;
+    font-weight: bold;
+    line-height: 16px;
+    text-align: center;
+    pointer-events: none;
+    background-color: var(--color-red);
+    color: var(--color-base);
+  }
+}
+
+.geojson-overlay-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 280px;
+  max-width: 320px;
+  max-height: 400px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+  z-index: 1000;
+  background-color: var(--color-base);
+  border: 1px solid var(--color-surface0);
+
+  // Mobile: full width, larger touch targets
+  @include breakpoint-max(md) {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    right: auto;
+    transform: translate(-50%, -50%);
+    min-width: 90vw;
+    max-width: 90vw;
+    max-height: 80vh;
+  }
+
+  &__header {
+    padding: 12px 16px;
+    font-size: 14px;
+    font-weight: 600;
+    border-bottom: 1px solid var(--color-surface0);
+    background-color: var(--color-mantle);
+    color: var(--color-text);
+  }
+
+  &__content {
+    max-height: 350px;
+    overflow-y: auto;
+    @include scrollbar-thin();
+
+    @include breakpoint-max(md) {
+      max-height: calc(80vh - 48px);
+    }
+  }
+}
+
+.overlay-category {
+  border-bottom: 1px solid var(--color-surface0);
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &__header {
+    padding: 8px 16px;
+    background-color: var(--color-mantle);
+  }
+
+  &__label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    user-select: none;
+
+    input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+      accent-color: var(--color-blue);
+    }
+
+    &:hover {
+      .overlay-category__name {
+        color: var(--color-blue);
+      }
+    }
+  }
+
+  &__name {
+    font-size: 13px;
+    font-weight: 600;
+    transition: color 0.15s ease;
+    color: var(--color-text);
+  }
+
+  &__overlays {
+    padding: 4px 0;
+  }
+}
+
+.overlay-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px 6px 40px;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.15s ease;
+
+  // Mobile: larger touch targets
+  @include breakpoint-max(md) {
+    padding: 10px 16px 10px 40px;
+    min-height: 44px;
+  }
+
+  &:hover {
+    background-color: var(--color-surface0);
+  }
+
+  input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: var(--color-blue);
+  }
+
+  &__color {
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+    flex-shrink: 0;
+    border: 1px solid var(--color-overlay0);
+  }
+
+  &__name {
+    font-size: 12px;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--color-subtext1);
+  }
+}
+
+// Reduced motion support
+@media (prefers-reduced-motion: reduce) {
+  .overlay-category__name,
+  .overlay-item {
+    transition: none;
+  }
+}

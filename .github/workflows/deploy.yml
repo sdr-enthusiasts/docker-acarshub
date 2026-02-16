@@ -42,29 +42,24 @@ jobs:
           echo "Use test image: $INPUTS_USE_TEST_IMAGE"
           echo "Build latest as test: $INPUTS_BUILD_LATEST_AS_TEST"
 
-  patch_acars_hub_version:
-    name: "patch acars-hub version"
+  get_version:
+    name: "Get version and build number"
     runs-on: ubuntu-24.04
     outputs:
-      acarshub_version: ${{ steps.patch.outputs.acarshub_version }}
-      version: ${{ steps.patch.outputs.version }}
-      build_number: ${{ steps.patch.outputs.build_number }}
+      version: ${{ steps.get_version.outputs.version }}
+      build_number: ${{ steps.get_version.outputs.build_number }}
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - name: patch
-        id: patch
+
+      - name: Get version and build number
+        id: get_version
         run: |
-          # get the version from version-nextgen. First line only
-          VERSION=$(head -n 1 version-nextgen)
-          # get the build number from the github run
+          # Get version from package.json
+          VERSION=$(grep -oP '(?<="version": ")[^"]*' acarshub-react/package.json)
+          # Get build number from GitHub run
           BUILD_NUMBER=$GITHUB_RUN_NUMBER
-          echo "ACARS Hub: $VERSION Build $BUILD_NUMBER"
-          echo "sed statement in next step will look like"
-          echo "\#patch acarshub version/sed -i s\/Pre-Release\/$OUTPUT\/g"
-          OUTPUT="ACARS Hub: $VERSION Build $BUILD_NUMBER"
-          # set the output in github env
-          echo "acarshub_version=$OUTPUT" >> $GITHUB_OUTPUT
+          echo "ACARS Hub: v${VERSION} Build ${BUILD_NUMBER}"
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "build_number=$BUILD_NUMBER" >> $GITHUB_OUTPUT
 
@@ -73,49 +68,48 @@ jobs:
     if: |
       github.event.inputs.build_latest_as_test == 'false' ||
       github.event.inputs.build_latest_as_test == ''
+    needs: get_version
     uses: sdr-enthusiasts/common-github-workflows/.github/workflows/sdre.yml@main
-    needs: patch_acars_hub_version
     with:
       push_enabled: true
       push_destinations: ghcr.io
       ghcr_repo_owner: ${{ github.repository_owner }}
       ghcr_repo: ${{ github.repository }}
-      # set build_latest to true if github.event.inputs.use_test_image is false
-      build_latest: ${{ github.event.inputs.use_test_image == 'false' || github.event.inputs.use_test_image == ''  }}
-      build_baseimage_test: ${{ github.event.inputs.use_test_image == 'true' }}
-      build_baseimage_url: :base/:base-test-pr
+      build_latest: true
+      build_baseimage_test: false
       platform_linux_arm32v7_enabled: false
+      build_baseimage_url: :base/:base-test-pr
       dockerfile_changes: |
-        \# patch acarshub version/sed -i \"s\/Pre-Release\/${{ needs.patch_acars_hub_version.outputs.acarshub_version}}\/g\" \/acarshub-typescript\/src\/helpers\/menu.ts
+        ARG VERSION=0\.0\.0/ARG VERSION=${{ needs.get_version.outputs.version }}/g;s/ARG BUILD_NUMBER=0/ARG BUILD_NUMBER=${{ needs.get_version.outputs.build_number }}
     secrets:
       ghcr_token: ${{ secrets.GITHUB_TOKEN }}
+
   deploy_test:
     name: Deploy as test
     if: |
       github.event.inputs.build_latest_as_test == 'true' &&
       (github.event.inputs.use_test_image == 'false' || github.event.inputs.use_test_image == '')
     uses: sdr-enthusiasts/common-github-workflows/.github/workflows/sdre.yml@main
-    needs: patch_acars_hub_version
+    needs: get_version
     with:
       push_enabled: true
       push_destinations: ghcr.io
       ghcr_repo_owner: ${{ github.repository_owner }}
       ghcr_repo: ${{ github.repository }}
-      # set build_latest to true if github.event.inputs.use_test_image is false
       build_latest: true
       build_baseimage_test: false
       build_baseimage_url: :base/:base-test-pr
       platform_linux_arm32v7_enabled: false
       docker_latest_tag: test
       dockerfile_changes: |
-        \# patch acarshub version/sed -i \"s\/Pre-Release\/${{ needs.patch_acars_hub_version.outputs.acarshub_version}}\/g\" \/acarshub-typescript\/src\/helpers\/menu.ts
+        ARG VERSION=0\.0\.0/ARG VERSION=${{ needs.get_version.outputs.version }}/g;s/ARG BUILD_NUMBER=0/ARG BUILD_NUMBER=${{ needs.get_version.outputs.build_number }}
     secrets:
       ghcr_token: ${{ secrets.GITHUB_TOKEN }}
 
   # generate a release
   release:
     name: Release
-    needs: [deploy, patch_acars_hub_version]
+    needs: [deploy, get_version]
     runs-on: ubuntu-24.04
     if: |
       (github.event.inputs.use_test_image == 'false' ||

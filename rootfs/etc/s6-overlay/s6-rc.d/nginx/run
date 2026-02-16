@@ -1,2 +1,2 @@
 #!/bin/sh
-exec /etc/s6-overlay/scripts/nginx
+exec /etc/s6-overlay/scripts/nginx.sh

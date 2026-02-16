@@ -1,2 +1,2 @@
 #!/bin/sh
-exec /etc/s6-overlay/scripts/webapp
+exec /etc/s6-overlay/scripts/webapp.sh

@@ -1,0 +1,306 @@
+// Copyright (C) 2022-2026 Frederick Clausen II
+// This file is part of acarshub <https://github.com/sdr-enthusiasts/docker-acarshub>.
+
+// acarshub is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+
+// acarshub is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+
+// You should have received a copy of the GNU General Public License
+// along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
+
+@use "../variables" as *;
+@use "../mixins" as *;
+
+.about-page {
+  // Mobile-first: single column layout
+  .page__content {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    padding-bottom: 2rem;
+
+    @include media-md {
+      gap: 2rem;
+      padding-bottom: 3rem;
+    }
+
+    @include media-lg {
+      gap: 2rem;
+      padding-bottom: 4rem;
+    }
+  }
+
+  // Card spacing override for About page
+  .card {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    transition: box-shadow $transition-base;
+
+    &:hover {
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+  }
+
+  // Link styling within cards
+  a {
+    color: var(--color-blue);
+    text-decoration: none;
+    transition: color 0.2s ease-in-out;
+
+    &:hover {
+      color: var(--color-sapphire);
+      text-decoration: underline;
+    }
+
+    &:focus {
+      outline: 2px solid var(--color-blue);
+      outline-offset: 2px;
+      border-radius: var(--border-radius-sm);
+    }
+  }
+
+  // Keyboard key styling
+  kbd {
+    background-color: var(--color-surface1);
+    border: 1px solid var(--color-surface2);
+    border-radius: $radius-sm;
+    padding: 0.125rem 0.5rem;
+    font-family: var(--font-mono);
+    font-size: 0.875em;
+    color: var(--color-text);
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
+    display: inline-block;
+    min-width: 1.5rem;
+    text-align: center;
+  }
+
+  // Ordered list styling - better spacing and readability
+  ol {
+    counter-reset: list-counter;
+    list-style: none;
+    padding-left: 0;
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+
+    > li {
+      counter-increment: list-counter;
+      position: relative;
+      padding-left: 2.5rem;
+      margin-bottom: 1.25rem;
+      line-height: 1.7;
+
+      &::before {
+        content: counter(list-counter) ".";
+        position: absolute;
+        left: 0;
+        top: 0.125rem;
+        color: var(--color-blue);
+        font-weight: 600;
+        font-size: 1rem;
+        width: 2rem;
+        text-align: right;
+      }
+
+      // Nested lists
+      ol,
+      ul {
+        margin-top: 0.75rem;
+        margin-bottom: 0.5rem;
+      }
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+    }
+
+    @include media-sm {
+      > li {
+        padding-left: 3rem;
+        margin-bottom: 1.5rem;
+
+        &::before {
+          width: 2.5rem;
+          font-size: 1.125rem;
+        }
+      }
+    }
+  }
+
+  // Unordered list styling - improved visual hierarchy
+  ul {
+    list-style: none;
+    padding-left: 0;
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+
+    > li {
+      position: relative;
+      padding-left: 1.75rem;
+      margin-bottom: 0.875rem;
+      line-height: 1.7;
+
+      &::before {
+        content: "▸";
+        position: absolute;
+        left: 0;
+        top: 0.125rem;
+        color: var(--color-blue);
+        font-weight: 600;
+        font-size: 0.875rem;
+      }
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+    }
+
+    @include media-sm {
+      > li {
+        padding-left: 2rem;
+        margin-bottom: 1rem;
+      }
+    }
+  }
+
+  // Image styling - better presentation
+  img {
+    max-width: 100%;
+    height: auto;
+    border-radius: $radius-lg;
+    border: 2px solid var(--color-surface2);
+    margin: 1.5rem 0;
+    display: block;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+
+    @include media-md {
+      max-width: 75%;
+      margin: 2rem auto;
+    }
+
+    @include media-lg {
+      max-width: 60%;
+      margin: 2.5rem auto;
+    }
+  }
+
+  // Code blocks - improved readability
+  code {
+    background-color: var(--color-surface1);
+    color: var(--color-mauve);
+    padding: 0.2rem 0.5rem;
+    border-radius: $radius-sm;
+    font-size: 0.9em;
+    font-family: var(--font-mono);
+    white-space: nowrap;
+    border: 1px solid var(--color-surface2);
+  }
+
+  // Strong text emphasis
+  strong {
+    color: var(--color-text);
+    font-weight: 600;
+  }
+
+  // Paragraph spacing within cards - improved rhythm
+  .card__content {
+    font-size: 1rem;
+    line-height: 1.7;
+
+    p {
+      margin-bottom: 1rem;
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+    }
+
+    p + p {
+      margin-top: 0;
+    }
+
+    p + ul,
+    p + ol {
+      margin-top: 0;
+    }
+
+    ul + p,
+    ol + p {
+      margin-top: 1rem;
+    }
+
+    // Better text hierarchy
+    strong {
+      font-weight: 600;
+      color: var(--color-text);
+    }
+
+    @include media-sm {
+      font-size: 1.0625rem;
+    }
+  }
+
+  // Version warning
+  .version-warning {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    background-color: rgba(var(--color-yellow-rgb), 0.1);
+    border: 1px solid var(--color-yellow);
+    border-radius: $radius-md;
+    margin-top: 1rem;
+
+    @include media-sm {
+      padding: 1rem;
+    }
+  }
+
+  // Responsive table of contents (if added later)
+  .toc {
+    background-color: var(--color-surface0);
+    border: 1px solid var(--color-surface1);
+    border-radius: $radius-lg;
+    padding: 1rem;
+
+    @include media-sm {
+      padding: 1.5rem;
+    }
+
+    h3 {
+      margin: 0 0 1rem;
+      font-size: 1.125rem;
+      color: var(--color-text);
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+
+      li {
+        padding-left: 0;
+        margin-bottom: 0.5rem;
+
+        &::before {
+          content: none;
+        }
+
+        a {
+          display: block;
+          padding: 0.5rem;
+          border-radius: $radius-sm;
+          transition: background-color 0.2s ease-in-out;
+
+          &:hover {
+            background-color: var(--color-surface1);
+            text-decoration: none;
+          }
+        }
+      }
+    }
+  }
+}

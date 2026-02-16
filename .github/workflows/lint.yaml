@@ -25,7 +25,7 @@ jobs:
       - name: Run flake pre-commit hooks
         run: |
           nix develop -c bash -c '
-            cd acarshub-typescript
+            cd acarshub-react
             npm i
-            pre-commit run --all-files
+            just ci-e2e
           '

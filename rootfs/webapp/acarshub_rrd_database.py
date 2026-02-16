@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (C) 2022-2024 Frederick Clausen II
+# Copyright (C) 2022-2026 Frederick Clausen II
 # This file is part of acarshub <https://github.com/sdr-enthusiasts/docker-acarshub>.
 #
 # acarshub is free software: you can redistribute it and/or modify
@@ -22,7 +22,11 @@ from acarshub_logging import LOG_LEVEL
 import os
 
 
-def update_db(vdlm=0, acars=0, error=0, hfdl=0, imsl=0, irdm=0):
+def update_db(vdlm=0, acars=0, error=0, hfdl=0, imsl=0, irdm=0, path: str = None):
+    if path is None:
+        import acarshub_configuration
+
+        path = acarshub_configuration.RRD_DB_PATH
     total = vdlm + acars + hfdl + imsl + irdm
     args = (
         "--template",
@@ -31,7 +35,7 @@ def update_db(vdlm=0, acars=0, error=0, hfdl=0, imsl=0, irdm=0):
     )
 
     try:
-        rrdtool.update("/run/acars/acarshub.rrd", *args)
+        rrdtool.update(f"{path}acarshub.rrd", *args)
         acarshub_logging.log(
             f"rrdtool.update: N:{acars}:{vdlm}:{total}:{error}:{hfdl}:{imsl}:{irdm}",
             "rrdtool",
@@ -41,12 +45,27 @@ def update_db(vdlm=0, acars=0, error=0, hfdl=0, imsl=0, irdm=0):
         acarshub_logging.acars_traceback(e, "rrdtool")
 
 
-def create_db():
+def create_db(path: str = None):
+    if path is None:
+        import acarshub_configuration
+
+        path = acarshub_configuration.RRD_DB_PATH
+    rrd_file = path + "acarshub.rrd"
+    file_exists = os.path.exists(rrd_file)
+
+    acarshub_logging.log(
+        f"Checking for RRD Database...{rrd_file} exists={file_exists}", "rrdtool"
+    )
+
     try:
-        if not os.path.exists("/run/acars/acarshub.rrd"):
-            acarshub_logging.log("creating the RRD Database", "rrdtool")
+        if not file_exists:
+            # Ensure directory exists
+            os.makedirs(path, exist_ok=True)
+
+            acarshub_logging.log(f"Creating RRD Database at {rrd_file}", "rrdtool")
+
             rrdtool.create(
-                "/run/acars/acarshub.rrd",
+                rrd_file,
                 "--start",
                 "N",
                 "--step",
@@ -63,7 +82,12 @@ def create_db():
                 "RRA:AVERAGE:0.5:60:4320",  # 6 months at 1 hour reso
                 "RRA:AVERAGE:0.5:360:4380",  # 3 year at 6 hour reso
             )
+
+            acarshub_logging.log("RRD Database created successfully", "rrdtool")
+        else:
+            acarshub_logging.log("RRD Database already exists", "rrdtool")
     except Exception as e:
+        acarshub_logging.log(
+            f"Error with RRD Database: {e}", "rrdtool", level=LOG_LEVEL["ERROR"]
+        )
         acarshub_logging.acars_traceback(e, "rrdtool")
-    else:
-        acarshub_logging.log("Database found", "rrdtool")

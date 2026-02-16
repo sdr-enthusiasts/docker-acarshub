@@ -1,27 +1,40 @@
 services:
+  # Nginx reverse proxy for testing subpath deployment
+  nginx:
+    image: nginx:alpine
+    container_name: acarshub-nginx
+    restart: always
+    ports:
+      - 3002:80
+    volumes:
+      - ./nginx-test.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - acarshub
+
   # ACARS Related Services
   acarshub:
-    #image: ghcr.io/sdr-enthusiasts/docker-acarshub:latest-build-1444
+    #image: ghcr.io/sdr-enthusiasts/docker-acarshub:v4-latest
     image: ah:test
     tty: true
     container_name: acarshub
     restart: always
     ports:
-      - 8085:80
+      - 3001:80
+    # No need to expose port when using nginx proxy, but keeping for direct access
     environment:
-      - ENABLE_VDLM=EXTERNAL
-      - ENABLE_ACARS=EXTERNAL
-      - ENABLE_HFDL=EXTERNAL
+      - ENABLE_VDLM=true
+      - ENABLE_ACARS=true
+      - ENABLE_HFDL=true
+      - ENABLE_IMSL=true
       - FLIGHT_TRACKING_URL=https://www.radarbox.com/data/flights/
       - STATION_ID_ACARS=CS-KABQ-ACARS
       - STATION_ID_VDLM=CS-KABQ-VDLM
       - IATA_OVERRIDE=UP|UPS|United Parcel Service;GS|FTH|Mountain Aviation (Foothills);GS|EJA|ExecJet
       - ENABLE_ADSB=true
-      - ADSB_LAT=0
-      - ADSB_LON=0
-      - ADSB_URL=http://192.168.31.20/tar1090/data/aircraft.json
+      - ADSB_LAT=35.043
+      - ADSB_LON=-106.715
+      - ADSB_URL=http://fredclausen.com/tar1090/data/aircraft.json
       - ADSB_BYPASS_URL=true
-      #- MIN_LOG_LEVEL=5
       - DB_SAVE_DAYS=1000
       - DB_ALERT_SAVE_DAYS=1000
     volumes:
@@ -32,7 +45,7 @@ services:
       - /var/log
 
   acars_router:
-    image: ghcr.io/sdr-enthusiasts/acars_router:trixie-latest-build-3
+    image: ghcr.io/sdr-enthusiasts/acars_router:latest
     tty: true
     ports:
       - 15550:15550
@@ -59,9 +72,9 @@ services:
       - AR_SEND_UDP_ACARS=acarshub:5550
       - AR_SEND_UDP_VDLM2=acarshub:5555
       - AR_SEND_UDP_HFDL=acarshub:5556
-      - AR_RECV_TCP_ACARS=192.168.31.20:15550
-      - AR_RECV_TCP_VDLM2=192.168.31.20:15555
-      - AR_RECV_TCP_HFDL=192.168.31.20:15556
+      - AR_RECV_TCP_ACARS=82.180.133.237:15550
+      - AR_RECV_TCP_VDLM2=82.180.133.237:15555
+      - AR_RECV_TCP_HFDL=82.180.133.237:15556
       - AR_SKEW_WINDOW=20
     tmpfs:
       - /run:exec,size=64M

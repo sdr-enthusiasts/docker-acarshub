@@ -1,0 +1,215 @@
+// Copyright (C) 2022-2026 Frederick Clausen II
+// This file is part of acarshub <https://github.com/sdr-enthusiasts/docker-acarshub>.
+
+// acarshub is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+
+// acarshub is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+
+// You should have received a copy of the GNU General Public License
+// along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
+
+@use "../variables" as *;
+@use "../mixins" as *;
+
+/**
+ * Toggle/Switch Component Styles
+ * Custom-styled toggle switch with Catppuccin theming
+ */
+
+.toggle-wrapper {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  align-self: center;
+
+  &--disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+
+    .toggle-slider,
+    .toggle-label {
+      cursor: not-allowed;
+    }
+  }
+}
+
+.toggle-control {
+  flex-shrink: 0;
+}
+
+.toggle-input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+
+  // Focus state - show outline on slider
+  &:focus-visible + .toggle-slider {
+    outline: 2px solid var(--color-blue);
+    outline-offset: 2px;
+  }
+}
+
+.toggle-slider {
+  display: inline-block;
+  cursor: pointer;
+  user-select: none;
+
+  &__track {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 2.75rem;
+    height: 1.375rem;
+    background-color: var(--color-surface1);
+    border-radius: 1.5rem;
+    transition: background-color 0.2s ease;
+    border: 2px solid var(--color-surface2);
+
+    // Checked state
+    .toggle-input:checked ~ .toggle-slider & {
+      background-color: var(--color-blue);
+      border-color: var(--color-blue);
+      box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
+    }
+
+    // Hover state
+    .toggle-slider:hover & {
+      background-color: var(--color-surface2);
+      border-color: var(--color-overlay0);
+    }
+
+    .toggle-input:checked ~ .toggle-slider:hover & {
+      background-color: var(--color-sapphire);
+      border-color: var(--color-sapphire);
+    }
+
+    // Disabled state
+    .toggle-wrapper--disabled & {
+      background-color: var(--color-surface0);
+    }
+  }
+
+  &__thumb {
+    width: 1.125rem;
+    height: 1.125rem;
+    margin-left: 0.125rem;
+    background-color: #ffffff;
+    border-radius: 50%;
+    transition:
+      transform 0.2s ease,
+      background-color 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+
+    // Checked state - move thumb to right
+    .toggle-input:checked ~ .toggle-slider & {
+      transform: translateX(1.25rem);
+      background-color: #ffffff;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+    }
+
+    // Disabled state
+    .toggle-wrapper--disabled & {
+      background-color: var(--color-overlay0);
+    }
+  }
+}
+
+.toggle-labels {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.toggle-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text);
+  cursor: pointer;
+  margin: 0;
+}
+
+.toggle-help-text {
+  font-size: 0.75rem;
+  color: var(--color-subtext0);
+  margin: 0;
+  line-height: 1.5;
+}
+
+// Size variants
+.toggle-wrapper--small {
+  gap: 0.75rem;
+
+  .toggle-slider__track {
+    width: 2.5rem;
+    height: 1.25rem;
+  }
+
+  .toggle-slider__thumb {
+    width: 1rem;
+    height: 1rem;
+
+    .toggle-input:checked ~ .toggle-slider & {
+      transform: translateX(1rem);
+    }
+  }
+
+  .toggle-label {
+    font-size: 0.875rem;
+  }
+
+  .toggle-help-text {
+    font-size: 0.75rem;
+  }
+}
+
+.toggle-wrapper--large {
+  gap: 1.25rem;
+
+  .toggle-slider__track {
+    width: 3.5rem;
+    height: 1.75rem;
+  }
+
+  .toggle-slider__thumb {
+    width: 1.5rem;
+    height: 1.5rem;
+
+    .toggle-input:checked ~ .toggle-slider & {
+      transform: translateX(1.625rem);
+    }
+  }
+
+  .toggle-label {
+    font-size: 1rem;
+  }
+
+  .toggle-help-text {
+    font-size: 0.875rem;
+  }
+}
+
+// Mobile responsive adjustments
+@media (max-width: 768px) {
+  .toggle-slider__track {
+    // Larger tap target for mobile
+    min-width: 3.5rem;
+    min-height: 1.75rem;
+  }
+}
+
+// Animation disable
+[data-animations="false"] {
+  .toggle-slider__track,
+  .toggle-slider__thumb {
+    transition: none;
+  }
+}

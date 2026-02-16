@@ -1,0 +1,493 @@
+// Copyright (C) 2022-2026 Frederick Clausen II
+// This file is part of acarshub <https://github.com/sdr-enthusiasts/docker-acarshub>.
+
+// acarshub is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+
+// acarshub is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+
+// You should have received a copy of the GNU General Public License
+// along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
+
+/**
+ * Message Card Component Styles
+ * Shared styles for ACARS message display across Live Messages, Search, and Alerts
+ * Mobile-first responsive design with Catppuccin theming
+ */
+
+@use "../variables" as *;
+@use "../mixins" as *;
+
+// ============================================================================
+// Message Card
+// ============================================================================
+
+.message-card {
+  background-color: var(--color-base);
+  border-radius: var(--border-radius-md);
+  overflow: hidden;
+
+  &--alert {
+    background-color: rgba(var(--color-red-rgb), 0.05);
+  }
+
+  &__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-sm);
+    padding-bottom: 0;
+    border-bottom: 1px solid var(--color-surface1);
+    flex-wrap: wrap;
+    gap: var(--spacing-sm);
+  }
+
+  &__header-right {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+  }
+
+  &__type-badge {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    flex-wrap: wrap;
+  }
+
+  &__timestamp {
+    color: var(--color-subtext0);
+    font-size: var(--font-size-sm);
+    font-weight: 700;
+    padding-right: 0.75rem;
+  }
+
+  &__mark-read-btn {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    background: var(--color-green);
+    color: var(--color-base);
+    border: none;
+    border-radius: var(--border-radius-sm);
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    white-space: nowrap;
+
+    &:hover {
+      background: var(--color-teal);
+      transform: translateY(-1px);
+    }
+
+    &:active {
+      transform: translateY(0);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--color-green);
+      outline-offset: 2px;
+    }
+
+    // Mobile: larger touch target
+    @include breakpoint-max(md) {
+      min-height: 44px;
+      padding: var(--spacing-xs) var(--spacing-md);
+    }
+
+    // Reduced motion
+    @media (prefers-reduced-motion: reduce) {
+      transition: none;
+
+      &:hover,
+      &:active {
+        transform: none;
+      }
+    }
+  }
+
+  &__read-badge {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    background: var(--color-overlay2);
+    color: var(--color-text);
+    border-radius: var(--border-radius-sm);
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  // Read state styling - use subtle background change only, no opacity for WCAG compliance
+  &--read {
+    background-color: var(--color-mantle);
+
+    .message-card__header {
+      background-color: var(--color-crust);
+      border-bottom-color: var(--color-surface0);
+    }
+  }
+
+  &__identifiers {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-sm);
+    padding-bottom: var(--spacing-xs);
+    padding-left: var(--spacing-md);
+    border-bottom: 1px solid var(--color-surface1);
+  }
+
+  &__fields {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin: 0;
+    padding-left: var(--spacing-md);
+    padding-right: var(--spacing-md);
+    padding-bottom: var(--spacing-sm);
+  }
+
+  &__content {
+    margin-top: var(--spacing-md);
+    padding-top: var(--spacing-md);
+    border-top: 1px solid var(--color-surface1);
+  }
+
+  &__alert-info {
+    margin-top: var(--spacing-md);
+    padding: var(--spacing-md);
+    background-color: rgba(var(--color-red-rgb), 0.1);
+    border: 1px solid var(--color-red);
+    border-radius: var(--border-radius-md);
+  }
+
+  &__libacars {
+    margin-top: var(--spacing-md);
+    padding: var(--spacing-md);
+    background-color: var(--color-surface0);
+    border: 1px solid var(--color-surface2);
+    border-left: 3px solid var(--color-lavender);
+    border-radius: var(--border-radius-md);
+
+    &--error {
+      border-left-color: var(--color-red);
+      background-color: rgba(var(--color-red-rgb), 0.05);
+    }
+  }
+}
+
+// ============================================================================
+// Message Type Badges
+// ============================================================================
+
+.message-type {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--border-radius-sm) 0 0 0;
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+
+  &--acars {
+    background-color: var(--color-blue);
+    color: var(--color-base);
+  }
+
+  &--vdlm {
+    background-color: var(--color-green);
+    color: var(--color-base);
+  }
+
+  &--hfdl {
+    background-color: var(--color-yellow);
+    color: var(--color-base);
+  }
+
+  &--imsl {
+    background-color: var(--color-peach);
+    color: var(--color-base);
+  }
+
+  &--irdm {
+    background-color: var(--color-mauve);
+    color: var(--color-base);
+  }
+
+  &--unknown {
+    background-color: var(--color-surface2);
+    color: var(--color-text);
+  }
+}
+
+.message-station {
+  color: var(--color-subtext1);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+}
+
+// ============================================================================
+// Message Identifiers
+// ============================================================================
+
+.identifier {
+  display: flex;
+  align-items: baseline;
+  gap: var(--spacing-xs);
+
+  &__label {
+    color: var(--color-subtext1);
+    font-size: var(--font-size-xs);
+    font-weight: 500;
+    text-transform: uppercase;
+  }
+
+  &__value {
+    color: var(--color-text);
+    font-size: var(--font-size-sm);
+    font-weight: 700;
+    font-family: var(--font-mono);
+  }
+}
+
+// ============================================================================
+// Message Fields
+// ============================================================================
+
+.message-field {
+  display: grid;
+  grid-template-columns: minmax(120px, auto) 1fr;
+  gap: var(--spacing-md);
+  padding: var(--spacing-xs) 0;
+
+  @include breakpoint(md) {
+    grid-template-columns: minmax(180px, auto) 1fr;
+  }
+
+  &--error {
+    .message-field__value {
+      color: var(--color-red);
+      font-weight: 700;
+    }
+  }
+
+  &__label {
+    color: var(--color-subtext1);
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    margin: 0;
+  }
+
+  &__value {
+    color: var(--color-text);
+    font-size: var(--font-size-sm);
+    font-family: var(--font-mono);
+    word-break: break-word;
+    margin: 0;
+  }
+}
+
+// ============================================================================
+// Message Content
+// ============================================================================
+
+.message-content {
+  margin-bottom: var(--spacing-md);
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+
+  &__label {
+    color: var(--color-subtext1);
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    margin-bottom: var(--spacing-xs);
+  }
+
+  &__text,
+  &__data,
+  &__decoded {
+    background-color: var(--color-surface0);
+    border: 1px solid var(--color-surface2);
+    border-radius: var(--border-radius-md);
+    padding: var(--spacing-md);
+    font-family: var(--font-mono);
+    font-size: var(--font-size-sm);
+    color: var(--color-text);
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow-x: auto;
+    @include scrollbar-thin;
+    margin: 0;
+  }
+
+  &__text {
+    border-left: 3px solid var(--color-green);
+  }
+
+  &__data {
+    border-left: 3px solid var(--color-yellow);
+  }
+
+  &__decoded {
+    border-left: 3px solid var(--color-blue);
+  }
+
+  // Decoded text from @airframes/acars-decoder
+  &--decoded {
+    .message-content__text {
+      border-left-color: var(--color-mauve);
+    }
+  }
+
+  // Hide non-decoded text on small screens when decoded text exists
+  &--hide-small {
+    @include breakpoint-max(sm) {
+      display: none;
+    }
+  }
+
+  // Empty message content
+  &--empty {
+    .message-content__text {
+      color: var(--color-subtext0);
+      font-style: italic;
+    }
+  }
+}
+
+// ============================================================================
+// Alert Highlighting
+// ============================================================================
+
+.alert-highlight {
+  // WCAG AA compliant alert highlighting with guaranteed 4.5:1+ contrast
+  // Use solid background color to ensure consistent contrast
+  font-weight: 700;
+  padding: 0.125rem 0.25rem;
+  border-radius: var(--border-radius-sm);
+
+  // Dark theme (Mocha): Dark text on red background
+  background-color: var(--color-red); // #f38ba8
+  color: var(
+    --color-crust
+  ); // #11111b - darkest color for maximum contrast (11.5:1)
+
+  // Light theme (Latte): Light text on dark red background
+  [data-theme="light"] & {
+    background-color: var(--color-maroon); // #e64553 in Latte
+    color: var(--color-crust); // #dce0e8 - lightest color for maximum contrast
+  }
+}
+
+// ============================================================================
+// Libacars Content
+// ============================================================================
+
+.libacars-content {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+
+  &__label {
+    color: var(--color-lavender);
+    font-weight: 700;
+    margin-bottom: var(--spacing-xs);
+  }
+
+  &__value {
+    margin-bottom: var(--spacing-md);
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  dl {
+    margin: 0;
+  }
+
+  dt {
+    color: var(--color-subtext1);
+    font-weight: 600;
+    margin-top: var(--spacing-sm);
+
+    &:first-child {
+      margin-top: 0;
+    }
+  }
+
+  dd {
+    margin-left: var(--spacing-md);
+    margin-bottom: var(--spacing-xs);
+    color: var(--color-text);
+  }
+}
+
+.libacars-freq-data {
+  margin-top: var(--spacing-sm);
+  padding: var(--spacing-sm);
+  background-color: var(--color-mantle);
+  border-radius: var(--border-radius-sm);
+
+  &__row {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: var(--spacing-md);
+    padding: var(--spacing-xs) 0;
+  }
+
+  &__label {
+    color: var(--color-subtext1);
+    font-weight: 500;
+  }
+
+  &__value {
+    color: var(--color-text);
+    font-weight: 700;
+  }
+}
+
+// ============================================================================
+// Animation Support
+// ============================================================================
+
+[data-animations="true"] {
+  .message-card {
+    animation: fadeIn 0.2s ease-out;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// ============================================================================
+// Print Styles
+// ============================================================================
+
+@media print {
+  .message-card {
+    page-break-inside: avoid;
+    border: 1px solid var(--color-surface2);
+    margin-bottom: var(--spacing-md);
+
+    &__content pre {
+      white-space: pre-wrap;
+      max-height: none;
+      overflow: visible;
+    }
+  }
+}

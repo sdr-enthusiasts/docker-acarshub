@@ -1,5 +1,30 @@
 #!/command/with-contenv bash
 # shellcheck shell=bash
+#
+# ACARS Hub Docker Healthcheck Script
+#
+# This script validates the health of all ACARS Hub components and is called by
+# Docker's HEALTHCHECK mechanism (see Dockerfile).
+#
+# What it checks:
+# 1. Decoder servers (ACARS, VDLM2, HFDL, IMSL, IRDM) - TCP listeners and connections
+# 2. Stats collectors - socat processes feeding database JSON files
+# 3. Message activity - validates actual message flow in past hour
+# 4. Webapp - HTTP endpoint and Socket.IO availability
+# 5. Service death tallies - abnormal process exits via s6-overlay
+#
+# Exit codes:
+# 0 = HEALTHY   - All enabled services are running and processing messages
+# 1 = UNHEALTHY - One or more services failed, or no message activity detected
+#
+# Note on message activity checks:
+# Zero messages in the past hour will cause UNHEALTHY status. This is intentional
+# and validates end-to-end data flow, not just service availability. In low-traffic
+# areas, this may cause false alarms, but ensures the system is actually working.
+#
+# Conditional checks:
+# Each decoder type (ENABLE_ACARS, ENABLE_VDLM, etc.) is only checked if enabled.
+# Webapp checks only run if ENABLE_WEB is true.
 
 # Import healthchecks-framework
 # shellcheck disable=SC1091
@@ -12,48 +37,6 @@ source /scripts/acars_common
 
 # Default original codes
 EXITCODE=0
-
-# ===== Local Helper Functions =====
-
-# function get_pid_of_decoder() {
-
-#   # $1: service_dir
-#   service_dir="$1"
-
-#   # Ensure variables are unset
-#   unset DEVICE_ID FREQS_VDLM VDLM_BIN FREQS_ACARS ACARS_BIN
-
-#   # Get DEVICE_ID
-#   eval "$(grep "DEVICE_ID=\"" "$service_dir"/run)"
-
-#   # Get FREQS_VDLM
-#   eval "$(grep "FREQS_VDLM=\"" "$service_dir"/run)"
-
-#   # Get VDLM_BIN
-#   eval "$(grep "VDLM_BIN=\"" "$service_dir"/run)"
-
-#   # Get FREQS_ACARS
-#   eval "$(grep "FREQS_ACARS=\"" "$service_dir"/run)"
-
-#   # Get ACARS_BIN
-#   eval "$(grep "ACARS_BIN=\"" "$service_dir"/run)"
-
-#   # Get PS output for the relevant process
-#   if [[ -n "$ACARS_BIN" ]]; then
-#     # shellcheck disable=SC2009
-#     ps_output=$(ps aux | grep "$ACARS_BIN" | grep " -r $DEVICE_ID " | grep " $FREQS_ACARS")
-#   elif [[ -n "$VDLM_BIN" ]]; then
-#     # shellcheck disable=SC2009
-#     ps_output=$(ps aux | grep "$VDLM_BIN" | grep " --rtlsdr $DEVICE_ID " | grep " $FREQS_VDLM")
-#   fi
-
-#   # Find the PID of the decoder based on command line
-#   process_pid=$(echo "$ps_output" | tr -s " " | cut -d " " -f 2)
-
-#   # Return the process_pid
-#   echo "$process_pid"
-
-# }
 
 # ===== Check imsl_server, imsl_feeder, imsl_stats processes =====
 
@@ -288,7 +271,7 @@ if chk_enabled "${ENABLE_ACARS}"; then
 
     if [[ ${ENABLE_WEB,,} =~ true ]]; then
         if ! netstat -anp | grep -P "tcp\s+\d+\s+\d+\s+127.0.0.1:[0-9]+\s+127.0.0.1:15550\s+ESTABLISHED\s+[0-9]+/python3" >/dev/null 2>&1; then
-            echo "acars_server TCP4 connection between 127.0.0.1:ANY and 127.0.0.1:15550 for python3 established: FAIL"
+            echo "TCP4 connection between 127.0.0.1:ANY and 127.0.0.1:15550 for python3 established: FAIL"
             echo "acars_server TCP not connected to python server on port 15550: UNHEALTHY"
             EXITCODE=1
         else
@@ -329,11 +312,14 @@ if chk_enabled "${ENABLE_ACARS}" || chk_enabled "${ENABLE_VDLM}" || chk_enabled 
 
     echo "==== Check webapp ====="
 
-    # check webapp
-    if curl --silent -o /dev/null --connect-timeout 1 http://127.0.0.1:80/; then
-        echo "webapp available: HEALTHY"
+    # Check webapp HTTP endpoint is responding
+    # Note: We only check the main HTTP endpoint, not Socket.IO directly
+    # Probing /socket.io/ with curl triggers incomplete WebSocket handshakes
+    # which generate false "unsupported version" warnings in the logs
+    if curl --silent --fail --max-time 2 http://127.0.0.1:80/ >/dev/null 2>&1; then
+        echo "webapp HTTP endpoint available: HEALTHY"
     else
-        echo "webapp not available: UNHEALTHY"
+        echo "webapp HTTP endpoint not available: UNHEALTHY"
         EXITCODE=1
     fi
 

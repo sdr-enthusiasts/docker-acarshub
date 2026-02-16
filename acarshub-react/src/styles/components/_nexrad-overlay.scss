@@ -1,0 +1,98 @@
+// Copyright (C) 2022-2026 Frederick Clausen II
+// This file is part of acarshub <https://github.com/sdr-enthusiasts/docker-acarshub>.
+
+// acarshub is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+
+// acarshub is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+
+// You should have received a copy of the GNU General Public License
+// along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
+
+@use "../mixins" as *;
+@use "../themes" as *;
+
+/**
+ * NEXRAD Overlay Timestamp Styles
+ *
+ * Floating timestamp display showing when the NEXRAD radar data was captured.
+ * Positioned in bottom-left corner above the map attribution.
+ */
+
+.nexrad-timestamp {
+  position: absolute;
+  bottom: 0.5rem; // Bottom of map container
+  left: 3.5rem; // To the right of legend toggle (reduced gap)
+  z-index: 10;
+  display: none; // Hide on mobile
+
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+
+  background-color: var(--color-surface0);
+  border: 1px solid var(--color-overlay0);
+  border-radius: 0.375rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text);
+
+  // Smooth transitions
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    box-shadow 0.2s ease,
+    left 0.2s ease;
+
+  // Respect reduced motion
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+
+  &__label {
+    color: var(--color-subtext1);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    font-size: 0.875rem; // Same size as container for alignment
+    line-height: 1;
+  }
+
+  &__time {
+    color: var(--color-text);
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    font-size: 0.875rem; // Explicit size for consistency
+    line-height: 1;
+  }
+
+  // Desktop: show timestamps
+  @include breakpoint(md) {
+    display: flex; // Show on desktop
+    bottom: 0.5rem; // Bottom of map container
+    left: 3.5rem; // Reduced gap from legend
+  }
+
+  // When RainViewer is NOT visible, NEXRAD can stay in its base position
+  // (No changes needed - base position is already correct)
+
+  // Hover effect
+  &:hover {
+    background-color: var(--color-surface1);
+    border-color: var(--color-overlay1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  }
+
+  // Print styles
+  @media print {
+    display: none;
+  }
+}

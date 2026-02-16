@@ -1,2 +1,2 @@
 #!/bin/sh
-exec /etc/s6-overlay/scripts/imsl_server
+exec /etc/s6-overlay/scripts/imsl_server.sh
