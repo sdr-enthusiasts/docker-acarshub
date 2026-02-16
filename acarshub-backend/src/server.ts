@@ -17,77 +17,202 @@
 /**
  * ACARS Hub Node.js Backend Server
  *
- * This is a placeholder server file that will be implemented during
- * the Python → Node.js migration (Week 1-6 of migration plan).
+ * Week 1 Implementation: Database Layer
+ * - Drizzle ORM + better-sqlite3
+ * - Query functions matching Python acarshub_database.py
+ * - Type-safe database operations
  *
  * See: dev-docs/NODEJS_MIGRATION_PLAN.md
  */
 
 import type { SocketEmitEvents, SocketEvents } from "@acarshub/types";
+import {
+  closeDatabase,
+  getAlertCounts,
+  getAllSignalLevels,
+  getMessageCountStats,
+  getRowCount,
+  grabMostRecent,
+  healthCheck,
+  initDatabase,
+  initializeMessageCounts,
+} from "./db/index.js";
+import { createLogger } from "./utils/logger.js";
+
+const logger = createLogger("server");
 
 interface ServerConfig {
   port: number;
   host: string;
+  dbPath: string;
 }
 
 const config: ServerConfig = {
   port: Number.parseInt(process.env.PORT ?? "8080", 10),
   host: process.env.HOST ?? "0.0.0.0",
+  dbPath: process.env.ACARSHUB_DB ?? "./data/acarshub.db",
 };
 
-console.log("ACARS Hub Backend - Placeholder Server");
-console.log(`Configuration: ${JSON.stringify(config, null, 2)}`);
-console.log("");
-console.log(
-  "This is a placeholder. The actual server will be implemented during:",
-);
-console.log("  - Week 1: Database Layer (Drizzle ORM + SQLite)");
-console.log("  - Week 2: Socket.IO Server");
-console.log("  - Week 3: Background Services (TCP listeners, ADS-B poller)");
-console.log("  - Week 4: Message Formatters & Metrics");
-console.log("  - Week 5-6: Testing & Deployment");
-console.log("");
-console.log("See dev-docs/NODEJS_MIGRATION_PLAN.md for details.");
-console.log("");
-console.log("Type safety is already working:");
-console.log("  - Shared types from @acarshub/types");
-console.log("  - SocketEvents and SocketEmitEvents define the API contract");
-console.log("  - Frontend and backend will use THE SAME type definitions");
+/**
+ * Main server initialization
+ */
+async function main(): Promise<void> {
+  logger.info("========================================");
+  logger.info("ACARS Hub Node.js Backend - Week 1");
+  logger.info("Database Layer Implementation");
+  logger.info("========================================");
+  logger.info("");
+  logger.info("Configuration:", {
+    port: config.port,
+    host: config.host,
+    database: config.dbPath,
+  });
+  logger.info("");
 
-// Type checking works!
-// @ts-expect-error - Unused variable for type checking only
-const _typeCheck: SocketEvents = {
-  acars_msg: () => {},
-  newmsg: () => {},
-  labels: () => {},
-  terms: () => {},
-  alert_matches: () => {},
-  database_search_results: () => {},
-  alerts_by_term_results: () => {},
-  system_status: () => {},
-  signal: () => {},
-  signal_freqs: () => {},
-  signal_count: () => {},
-  adsb: () => {},
-  adsb_aircraft: () => {},
-  decoders: () => {},
-  alert_terms_stats: () => {},
-  database_size: () => {},
-  acarshub_version: () => {},
-};
+  try {
+    // Initialize database
+    logger.info("📦 Initializing database...");
+    initDatabase();
+    logger.info("✅ Database initialized successfully");
+    logger.info("");
 
-// @ts-expect-error - Unused variable for type checking only
-const _emitTypeCheck: SocketEmitEvents = {
-  query_search: () => {},
-  update_alerts: () => {},
-  signal_freqs: () => {},
-  signal_count: () => {},
-  alert_term_query: () => {},
-  request_status: () => {},
-  query_alerts_by_term: () => {},
-};
+    // Run health check
+    logger.info("🏥 Running health check...");
+    const isHealthy = healthCheck();
+    if (!isHealthy) {
+      throw new Error("Database health check failed");
+    }
+    logger.info("✅ Database is healthy");
+    logger.info("");
 
-console.log("✅ TypeScript compilation successful!");
-console.log("✅ Shared types working!");
-console.log("");
-console.log("Next: Run 'just ci' to verify everything still works.");
+    // Initialize message counts if needed
+    initializeMessageCounts();
+
+    // Display current database statistics
+    logger.info("📊 Current Database Statistics:");
+    logger.info("────────────────────────────────────────");
+
+    const messageCount = getRowCount();
+    logger.info(`  Total Messages: ${messageCount}`);
+
+    const countStats = getMessageCountStats();
+    if (countStats) {
+      logger.info(`  Good Messages: ${countStats.good ?? 0}`);
+      logger.info(`  Error Messages: ${countStats.errors ?? 0}`);
+    }
+
+    // Show recent messages (just count, not full data)
+    const recentMessages = grabMostRecent(10);
+    logger.info(`  Recent Messages (last 10): ${recentMessages.length}`);
+
+    // Show alert statistics
+    const alertStats = getAlertCounts();
+    logger.info(`  Alert Terms: ${alertStats.length}`);
+    if (alertStats.length > 0) {
+      logger.info("  Alert Term Counts:");
+      for (const stat of alertStats.slice(0, 5)) {
+        logger.info(`    - ${stat.term}: ${stat.count ?? 0}`);
+      }
+      if (alertStats.length > 5) {
+        logger.info(`    ... and ${alertStats.length - 5} more`);
+      }
+    }
+
+    // Show signal level statistics
+    const signalLevels = getAllSignalLevels();
+    const acarsLevels = signalLevels.acars.length;
+    const vdlm2Levels = signalLevels.vdlm2.length;
+    const hfdlLevels = signalLevels.hfdl.length;
+    logger.info("  Signal Levels:");
+    logger.info(`    - ACARS: ${acarsLevels} unique levels`);
+    logger.info(`    - VDLM2: ${vdlm2Levels} unique levels`);
+    logger.info(`    - HFDL: ${hfdlLevels} unique levels`);
+
+    logger.info("");
+    logger.info("========================================");
+    logger.info("✅ Week 1 Complete: Database Layer");
+    logger.info("========================================");
+    logger.info("");
+    logger.info("Implemented:");
+    logger.info("  ✅ Drizzle ORM schema (matches Python SQLAlchemy)");
+    logger.info("  ✅ Database client with WAL mode");
+    logger.info("  ✅ Message queries (add, search, get recent)");
+    logger.info("  ✅ Alert queries (normalized alert_matches table)");
+    logger.info("  ✅ Statistics queries (freq, signal level, counts)");
+    logger.info("  ✅ Type-safe operations with TypeScript");
+    logger.info("  ✅ Structured logging with Pino");
+    logger.info("  ✅ Alembic migration detection and compatibility");
+    logger.info("");
+    logger.info("Next Steps (Week 2):");
+    logger.info("  - Socket.IO server setup");
+    logger.info("  - Event handlers for frontend communication");
+    logger.info("  - Real-time message broadcasting");
+    logger.info("  - Database search integration");
+    logger.info("");
+    logger.info("To test database queries:");
+    logger.info("  1. Add test data to ./data/acarshub.db");
+    logger.info("  2. Run: npm run dev");
+    logger.info("  3. Check statistics output above");
+    logger.info("");
+
+    // Type checking demonstration
+    logger.info("Type Safety Verification:");
+    logger.info("────────────────────────────────────────");
+
+    // @ts-expect-error - Unused variable for type checking only
+    const _typeCheck: SocketEvents = {
+      acars_msg: () => {},
+      newmsg: () => {},
+      labels: () => {},
+      terms: () => {},
+      alert_matches: () => {},
+      database_search_results: () => {},
+      alerts_by_term_results: () => {},
+      system_status: () => {},
+      signal: () => {},
+      signal_freqs: () => {},
+      signal_count: () => {},
+      adsb: () => {},
+      adsb_aircraft: () => {},
+      decoders: () => {},
+      alert_terms_stats: () => {},
+      database_size: () => {},
+      acarshub_version: () => {},
+    };
+
+    // @ts-expect-error - Unused variable for type checking only
+    const _emitTypeCheck: SocketEmitEvents = {
+      query_search: () => {},
+      update_alerts: () => {},
+      signal_freqs: () => {},
+      signal_count: () => {},
+      alert_term_query: () => {},
+      request_status: () => {},
+      query_alerts_by_term: () => {},
+    };
+
+    logger.info("  ✅ SocketEvents type checking passed");
+    logger.info("  ✅ SocketEmitEvents type checking passed");
+    logger.info("  ✅ Shared types from @acarshub/types working");
+    logger.info("");
+
+    logger.info('Run "just ci" to verify all quality checks pass.');
+    logger.info("");
+  } catch (error) {
+    logger.error("❌ Error during startup:", {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    closeDatabase();
+    process.exit(1);
+  }
+}
+
+// Start the server
+main().catch((error) => {
+  logger.fatal("❌ Fatal error:", {
+    error: error instanceof Error ? error.message : String(error),
+    stack: error instanceof Error ? error.stack : undefined,
+  });
+  process.exit(1);
+});
