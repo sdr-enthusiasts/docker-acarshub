@@ -469,7 +469,7 @@ export function set<T extends Record<string, unknown>>(
   const keys = path.split(".");
   const result = { ...obj };
 
-  // Prevent prototype pollution
+  // Prevent prototype pollution - check all keys including the final one
   if (keys.some(isUnsafeKey)) {
     return result;
   }
@@ -484,6 +484,13 @@ export function set<T extends Record<string, unknown>>(
     current = current[key] as Record<string, unknown>;
   }
 
-  current[keys[keys.length - 1]] = value;
+  const lastKey = keys[keys.length - 1];
+
+  // Double-check final key to satisfy static analyzers
+  if (isUnsafeKey(lastKey)) {
+    return result;
+  }
+
+  current[lastKey] = value;
   return result;
 }
