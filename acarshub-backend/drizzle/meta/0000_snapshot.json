@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "b69b1b56-4f4d-4975-9d0b-4f60760fdcbe",
+  "id": "478bd837-8976-43a2-9770-15d70e92e92d",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "alert_matches": {
@@ -47,6 +47,16 @@
         "ix_alert_matches_message_uid": {
           "name": "ix_alert_matches_message_uid",
           "columns": ["message_uid"],
+          "isUnique": false
+        },
+        "ix_alert_matches_term_time": {
+          "name": "ix_alert_matches_term_time",
+          "columns": ["term", "matched_at"],
+          "isUnique": false
+        },
+        "ix_alert_matches_uid_term": {
+          "name": "ix_alert_matches_uid_term",
+          "columns": ["message_uid", "term"],
           "isUnique": false
         }
       },
@@ -646,6 +656,13 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
+        },
+        "aircraft_id": {
+          "name": "aircraft_id",
+          "type": "text(36)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         }
       },
       "indexes": {
@@ -702,6 +719,31 @@
         "ix_messages_tail": {
           "name": "ix_messages_tail",
           "columns": ["tail"],
+          "isUnique": false
+        },
+        "ix_messages_aircraft_id": {
+          "name": "ix_messages_aircraft_id",
+          "columns": ["aircraft_id"],
+          "isUnique": false
+        },
+        "ix_messages_time_icao": {
+          "name": "ix_messages_time_icao",
+          "columns": ["msg_time", "icao"],
+          "isUnique": false
+        },
+        "ix_messages_tail_flight": {
+          "name": "ix_messages_tail_flight",
+          "columns": ["tail", "flight"],
+          "isUnique": false
+        },
+        "ix_messages_depa_dsta": {
+          "name": "ix_messages_depa_dsta",
+          "columns": ["depa", "dsta"],
+          "isUnique": false
+        },
+        "ix_messages_type_time": {
+          "name": "ix_messages_type_time",
+          "columns": ["message_type", "msg_time"],
           "isUnique": false
         }
       },

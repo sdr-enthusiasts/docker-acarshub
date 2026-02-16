@@ -504,8 +504,83 @@ function migration07_createAlertMatches(db: Database.Database): void {
  */
 function migration08_finalOptimization(db: Database.Database): void {
   logger.info("Applying migration 8: final_v4_optimization");
+
+  // 1. Add aircraft_id column for future aircraft tracking
+  logger.info("Adding aircraft_id column for future use...");
+  const columns = db.prepare("PRAGMA table_info(messages)").all() as Array<{
+    name: string;
+  }>;
+  const hasAircraftId = columns.some((col) => col.name === "aircraft_id");
+
+  if (!hasAircraftId) {
+    db.exec("ALTER TABLE messages ADD COLUMN aircraft_id TEXT");
+    db.exec("CREATE INDEX ix_messages_aircraft_id ON messages(aircraft_id)");
+    logger.info("✓ aircraft_id column added");
+  } else {
+    logger.info("aircraft_id column already exists, skipping");
+  }
+
+  // 2. Create composite indexes for query optimization
+  logger.info("Creating composite indexes for query optimization...");
+
+  const indexes = db
+    .prepare("SELECT name FROM sqlite_master WHERE type='index'")
+    .all() as Array<{ name: string }>;
+  const indexNames = new Set(indexes.map((idx) => idx.name));
+
+  // Time + ICAO: "recent messages from this aircraft"
+  if (!indexNames.has("ix_messages_time_icao")) {
+    db.exec(
+      "CREATE INDEX ix_messages_time_icao ON messages(msg_time DESC, icao)",
+    );
+  }
+
+  // Tail + Flight: "find messages by tail and flight number"
+  if (!indexNames.has("ix_messages_tail_flight")) {
+    db.exec("CREATE INDEX ix_messages_tail_flight ON messages(tail, flight)");
+  }
+
+  // Departure + Destination: route searches
+  if (!indexNames.has("ix_messages_depa_dsta")) {
+    db.exec("CREATE INDEX ix_messages_depa_dsta ON messages(depa, dsta)");
+  }
+
+  // Message type + Time: filtered time-series queries
+  if (!indexNames.has("ix_messages_type_time")) {
+    db.exec(
+      "CREATE INDEX ix_messages_type_time ON messages(message_type, msg_time DESC)",
+    );
+  }
+
+  // Alert matches: Term + time for efficient alert browsing
+  if (!indexNames.has("ix_alert_matches_term_time")) {
+    db.exec(
+      "CREATE INDEX ix_alert_matches_term_time ON alert_matches(term, matched_at DESC)",
+    );
+  }
+
+  // Alert matches: Message UID + Term for checking specific matches
+  if (!indexNames.has("ix_alert_matches_uid_term")) {
+    db.exec(
+      "CREATE INDEX ix_alert_matches_uid_term ON alert_matches(message_uid, term)",
+    );
+  }
+
+  logger.info("✓ Composite indexes created");
+
+  // 3. VACUUM - Reclaim disk space from all previous migrations
+  logger.info(
+    "Running VACUUM to reclaim disk space (this may take several minutes)...",
+  );
+  db.exec("VACUUM");
+  logger.info("✓ VACUUM complete - database file optimized");
+
+  // 4. ANALYZE - Update query planner statistics
+  logger.info("Running ANALYZE to optimize query planning...");
   db.exec("ANALYZE");
-  logger.info("Final optimization complete");
+  logger.info("✓ ANALYZE complete - query planner statistics updated");
+
+  logger.info("v4 migration complete - database is optimized for production");
 }
 
 /**

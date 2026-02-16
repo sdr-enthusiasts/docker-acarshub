@@ -7,6 +7,8 @@ CREATE TABLE `alert_matches` (
 );
 --> statement-breakpoint
 CREATE INDEX `ix_alert_matches_message_uid` ON `alert_matches` (`message_uid`);--> statement-breakpoint
+CREATE INDEX `ix_alert_matches_term_time` ON `alert_matches` (`term`,`matched_at`);--> statement-breakpoint
+CREATE INDEX `ix_alert_matches_uid_term` ON `alert_matches` (`message_uid`,`term`);--> statement-breakpoint
 CREATE TABLE `alert_stats` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`term` text(32),
@@ -110,7 +112,8 @@ CREATE TABLE `messages` (
 	`is_onground` text(32) NOT NULL,
 	`error` text(32) NOT NULL,
 	`libacars` text NOT NULL,
-	`level` text(32) NOT NULL
+	`level` text(32) NOT NULL,
+	`aircraft_id` text(36)
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX `messages_uid_unique` ON `messages` (`uid`);--> statement-breakpoint
@@ -124,6 +127,11 @@ CREATE INDEX `ix_messages_label` ON `messages` (`label`);--> statement-breakpoin
 CREATE INDEX `ix_messages_msg_text` ON `messages` (`msg_text`);--> statement-breakpoint
 CREATE INDEX `ix_messages_msgno` ON `messages` (`msgno`);--> statement-breakpoint
 CREATE INDEX `ix_messages_tail` ON `messages` (`tail`);--> statement-breakpoint
+CREATE INDEX `ix_messages_aircraft_id` ON `messages` (`aircraft_id`);--> statement-breakpoint
+CREATE INDEX `ix_messages_time_icao` ON `messages` (`msg_time`,`icao`);--> statement-breakpoint
+CREATE INDEX `ix_messages_tail_flight` ON `messages` (`tail`,`flight`);--> statement-breakpoint
+CREATE INDEX `ix_messages_depa_dsta` ON `messages` (`depa`,`dsta`);--> statement-breakpoint
+CREATE INDEX `ix_messages_type_time` ON `messages` (`message_type`,`msg_time`);--> statement-breakpoint
 CREATE TABLE `count` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`total` integer,

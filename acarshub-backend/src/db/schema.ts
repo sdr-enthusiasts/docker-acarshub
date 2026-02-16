@@ -36,6 +36,8 @@ import {
  * Indexes:
  * - uid: UNIQUE index for fast UID lookups
  * - depa, dsta, flight, freq, icao, label, msg_text, msgno, tail: Non-unique for searches
+ * - aircraft_id: For future aircraft tracking feature (v5+)
+ * - Composite indexes for common query patterns (added in migration 8)
  */
 export const messages = sqliteTable(
   "messages",
@@ -72,8 +74,10 @@ export const messages = sqliteTable(
     error: text("error", { length: 32 }).notNull(),
     libacars: text("libacars").notNull(),
     level: text("level", { length: 32 }).notNull(),
+    aircraftId: text("aircraft_id", { length: 36 }), // Added in migration 8, nullable for future use
   },
   (table) => ({
+    // Single-column indexes
     uidIdx: uniqueIndex("ix_messages_uid").on(table.uid),
     depaIdx: index("ix_messages_depa").on(table.depa),
     dstaIdx: index("ix_messages_dsta").on(table.dsta),
@@ -84,6 +88,18 @@ export const messages = sqliteTable(
     msgTextIdx: index("ix_messages_msg_text").on(table.text),
     msgnoIdx: index("ix_messages_msgno").on(table.msgno),
     tailIdx: index("ix_messages_tail").on(table.tail),
+    aircraftIdIdx: index("ix_messages_aircraft_id").on(table.aircraftId),
+    // Composite indexes (added in migration 8 for query optimization)
+    timeIcaoIdx: index("ix_messages_time_icao").on(table.time, table.icao),
+    tailFlightIdx: index("ix_messages_tail_flight").on(
+      table.tail,
+      table.flight,
+    ),
+    depaDstaIdx: index("ix_messages_depa_dsta").on(table.depa, table.dsta),
+    typeTimeIdx: index("ix_messages_type_time").on(
+      table.messageType,
+      table.time,
+    ),
   }),
 );
 
@@ -111,6 +127,15 @@ export const alertMatches = sqliteTable(
   },
   (table) => ({
     messageUidIdx: index("ix_alert_matches_message_uid").on(table.messageUid),
+    // Composite indexes (added in migration 8)
+    termTimeIdx: index("ix_alert_matches_term_time").on(
+      table.term,
+      table.matchedAt,
+    ),
+    uidTermIdx: index("ix_alert_matches_uid_term").on(
+      table.messageUid,
+      table.term,
+    ),
   }),
 );
 
