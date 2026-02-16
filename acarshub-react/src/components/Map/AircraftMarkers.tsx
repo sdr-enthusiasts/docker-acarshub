@@ -216,29 +216,46 @@ export function AircraftMarkers({
 
   // Preload spritesheet on mount with timeout
   useEffect(() => {
+    console.log("[AircraftMarkers] useSprites setting:", useSprites);
     if (useSprites) {
       const loader = getSpriteLoader();
+      console.log(
+        "[AircraftMarkers] Sprite loader isLoaded:",
+        loader.isLoaded(),
+      );
       if (!loader.isLoaded()) {
         // Set a timeout to prevent indefinite hanging
         const timeoutId = setTimeout(() => {
           if (!loader.isLoaded()) {
-            console.warn("Sprite loading timeout - continuing without sprites");
+            console.warn(
+              "[AircraftMarkers] Sprite loading timeout - continuing without sprites",
+            );
             setSpriteLoadError(true);
           }
         }, 5000); // 5 second timeout
 
+        console.log("[AircraftMarkers] Starting sprite load...");
         loader
           .load()
           .then(() => {
+            console.log(
+              "[AircraftMarkers] Sprite load SUCCESS, isLoaded:",
+              loader.isLoaded(),
+            );
             clearTimeout(timeoutId);
           })
           .catch((err) => {
+            console.error(
+              "[AircraftMarkers] Failed to preload spritesheet:",
+              err,
+            );
             clearTimeout(timeoutId);
-            console.error("Failed to preload spritesheet:", err);
             setSpriteLoadError(true);
           });
 
         return () => clearTimeout(timeoutId);
+      } else {
+        console.log("[AircraftMarkers] Sprites already loaded");
       }
     }
   }, [useSprites]);
@@ -313,6 +330,17 @@ export function AircraftMarkers({
     const spriteLoader =
       useSprites && !spriteLoadError ? getSpriteLoader() : null;
 
+    console.log(
+      "[AircraftMarkers] Building markers - useSprites:",
+      useSprites,
+      "spriteLoadError:",
+      spriteLoadError,
+      "spriteLoader:",
+      spriteLoader ? "present" : "null",
+      "isLoaded:",
+      spriteLoader?.isLoaded(),
+    );
+
     for (const aircraft of filteredPairedAircraft) {
       // Skip aircraft without position
       if (aircraft.lat === undefined || aircraft.lon === undefined) {
@@ -362,6 +390,15 @@ export function AircraftMarkers({
         // Get sprite for this aircraft
         const categoryCode = mapCategoryToSpriteCode(aircraft.category);
         let spriteResult = spriteLoader.getSprite(aircraft.type, categoryCode);
+
+        if (markers.length === 0) {
+          console.log("[AircraftMarkers] First aircraft sprite lookup:", {
+            hex: aircraft.hex,
+            type: aircraft.type,
+            categoryCode,
+            spriteResult: spriteResult ? "found" : "null",
+          });
+        }
 
         // If we didn't find an exact airframe match, try shape-based generic
         if (spriteResult && spriteResult.matchType !== "airframe") {
@@ -436,6 +473,14 @@ export function AircraftMarkers({
             }
           }
         }
+      }
+
+      if (markers.length === 0 && useSprites) {
+        console.log("[AircraftMarkers] First marker sprite data:", {
+          spriteName,
+          hasSpritePosition: !!spritePosition,
+          spriteClass,
+        });
       }
 
       markers.push({
