@@ -162,7 +162,14 @@ export function MapControls({
         <MapControlButton
           icon={faImage}
           active={mapSettings.useSprites}
-          onClick={() => setUseSprites(!mapSettings.useSprites)}
+          onClick={() => {
+            const newValue = !mapSettings.useSprites;
+            console.log("[MapControls] Toggling sprites:", {
+              from: mapSettings.useSprites,
+              to: newValue,
+            });
+            setUseSprites(newValue);
+          }}
           tooltip={`Aircraft Markers: ${mapSettings.useSprites ? "Sprites" : "SVG"}`}
         />
         <MapControlButton

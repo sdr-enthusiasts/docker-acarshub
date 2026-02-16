@@ -216,6 +216,7 @@ export function AircraftMarkers({
 
   // Preload spritesheet on mount with timeout
   useEffect(() => {
+    console.log("[AircraftMarkers] Full map settings:", mapSettings);
     console.log("[AircraftMarkers] useSprites setting:", useSprites);
     if (useSprites) {
       const loader = getSpriteLoader();
@@ -258,7 +259,7 @@ export function AircraftMarkers({
         console.log("[AircraftMarkers] Sprites already loaded");
       }
     }
-  }, [useSprites]);
+  }, [useSprites, mapSettings]);
 
   // Pair ADS-B aircraft with ACARS messages (or use external aircraft if provided)
   const pairedAircraft = useMemo(() => {
