@@ -53,9 +53,11 @@
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
   display: flex;
   flex-direction: column;
-  max-height: 100vh;
+  // Safari fix: use 100% instead of 100vh to avoid header cutoff
+  // 100vh on mobile Safari can exceed visible viewport when address bar is shown
+  max-height: 100%;
   width: 100vw;
-  height: 100vh;
+  height: 100%;
   overflow: hidden;
 
   // Animation
