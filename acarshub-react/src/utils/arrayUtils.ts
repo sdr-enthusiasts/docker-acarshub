@@ -415,6 +415,15 @@ export function isEmpty(obj: Record<string, unknown>): boolean {
 }
 
 /**
+ * Checks if a key is unsafe for prototype pollution prevention
+ * @param key - Key to check
+ * @returns true if key could cause prototype pollution
+ */
+function isUnsafeKey(key: string): boolean {
+  return key === "__proto__" || key === "constructor" || key === "prototype";
+}
+
+/**
  * Gets a nested value from an object using dot notation
  * @param obj - Source object
  * @param path - Path to value (e.g., "user.address.city")
@@ -427,6 +436,12 @@ export function get<T>(
   defaultValue?: T,
 ): T | undefined {
   const keys = path.split(".");
+
+  // Prevent prototype pollution
+  if (keys.some(isUnsafeKey)) {
+    return defaultValue;
+  }
+
   let result: unknown = obj;
 
   for (const key of keys) {
@@ -453,6 +468,12 @@ export function set<T extends Record<string, unknown>>(
 ): T {
   const keys = path.split(".");
   const result = { ...obj };
+
+  // Prevent prototype pollution
+  if (keys.some(isUnsafeKey)) {
+    return result;
+  }
+
   let current: Record<string, unknown> = result;
 
   for (let i = 0; i < keys.length - 1; i++) {
