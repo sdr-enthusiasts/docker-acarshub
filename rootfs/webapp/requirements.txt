@@ -33,7 +33,7 @@ schedule==1.2.2
 setuptools==80.9.0
 simple-websocket==1.1.0
 sqlalchemy==2.0.46
-sqlparse==0.5.4
+sqlparse==0.5.5
 typing-extensions==4.15.0
 tzdata==2025.2
 urllib3==2.6.3
