@@ -332,10 +332,30 @@ export function AircraftList({
           aVal = getDisplayCallsign(a);
           bVal = getDisplayCallsign(b);
           break;
-        case "altitude":
-          aVal = a.alt_baro ?? -9999;
-          bVal = b.alt_baro ?? -9999;
+        case "altitude": {
+          // Special handling for altitude: N/A, Ground, and numeric values
+          // Descending: highest → lowest → ground → N/A
+          // Ascending: ground → lowest → highest → N/A
+          const getAltitudeSortValue = (
+            alt?: number | "ground",
+            direction?: SortDirection,
+          ): number => {
+            if (alt === undefined || alt === null) {
+              // N/A always goes last regardless of sort direction
+              return direction === "asc"
+                ? Number.MAX_SAFE_INTEGER
+                : Number.MIN_SAFE_INTEGER;
+            }
+            if (alt === "ground" || alt === 0) {
+              // Ground goes before numeric altitudes in asc, after in desc
+              return direction === "asc" ? -1 : Number.MIN_SAFE_INTEGER + 1;
+            }
+            return alt; // Numeric altitude
+          };
+          aVal = getAltitudeSortValue(a.alt_baro, sortDirection);
+          bVal = getAltitudeSortValue(b.alt_baro, sortDirection);
           break;
+        }
         case "speed":
           aVal = a.gs ?? -1;
           bVal = b.gs ?? -1;
