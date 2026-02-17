@@ -339,7 +339,7 @@ describe("Migration from initial Alembic state", () => {
       .get() as { version_num: string } | undefined;
 
     expect(version).toBeDefined();
-    expect(version?.version_num).toBe("40fd0618348d");
+    expect(version?.version_num).toBe("a1b2c3d4e5f6");
 
     testDb.close();
   });
@@ -531,6 +531,50 @@ describe("Migration from initial Alembic state", () => {
     expect(indexNames).toContain("ix_messages_type_time");
     expect(indexNames).toContain("ix_alert_matches_term_time");
     expect(indexNames).toContain("ix_alert_matches_uid_term");
+
+    testDb.close();
+  });
+
+  test("should create timeseries_stats table", () => {
+    runMigrations(TEST_DB_PATH);
+
+    const testDb = new Database(TEST_DB_PATH);
+
+    // Check that timeseries_stats table exists
+    const table = testDb
+      .prepare(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='timeseries_stats'",
+      )
+      .get();
+
+    expect(table).toBeDefined();
+
+    // Check that table has correct columns
+    const columns = testDb
+      .prepare("PRAGMA table_info(timeseries_stats)")
+      .all() as Array<{ name: string }>;
+
+    const columnNames = columns.map((col) => col.name);
+    expect(columnNames).toContain("id");
+    expect(columnNames).toContain("timestamp");
+    expect(columnNames).toContain("resolution");
+    expect(columnNames).toContain("acars_count");
+    expect(columnNames).toContain("vdlm_count");
+    expect(columnNames).toContain("hfdl_count");
+    expect(columnNames).toContain("imsl_count");
+    expect(columnNames).toContain("irdm_count");
+    expect(columnNames).toContain("total_count");
+    expect(columnNames).toContain("error_count");
+    expect(columnNames).toContain("created_at");
+
+    // Check that indexes exist
+    const indexes = testDb
+      .prepare("SELECT name FROM sqlite_master WHERE type='index'")
+      .all() as Array<{ name: string }>;
+
+    const indexNames = indexes.map((idx) => idx.name);
+    expect(indexNames).toContain("idx_timeseries_timestamp_resolution");
+    expect(indexNames).toContain("idx_timeseries_resolution");
 
     testDb.close();
   });

@@ -44,6 +44,7 @@ import {
   initializeAlertCache,
   initializeMessageCounts,
 } from "./db/index.js";
+import { runMigrations } from "./db/migrate.js";
 import { createBackgroundServices } from "./services/index.js";
 import { migrateRrdToSqlite } from "./services/rrd-migration.js";
 import { startStatsWriter, stopStatsWriter } from "./services/stats-writer.js";
@@ -133,10 +134,20 @@ async function main(): Promise<void> {
   > | null = null;
 
   try {
-    // Initialize database
-    logger.info("📦 Initializing database...");
+    // Run database migrations
+    // CRITICAL: This must run BEFORE initDatabase() to ensure schema is up-to-date
+    // Migration 9 creates timeseries_stats table if it doesn't exist
+    // This fixes bug where stats writer fails with "no such table: timeseries_stats"
+    // when no RRD file is present (RRD migration is skipped, table never created)
+    logger.info("📦 Running database migrations...");
+    runMigrations();
+    logger.info("✅ Database migrations complete");
+    logger.info("");
+
+    // Initialize database connection
+    logger.info("📦 Initializing database connection...");
     initDatabase();
-    logger.info("✅ Database initialized successfully");
+    logger.info("✅ Database connection established");
     logger.info("");
 
     // Run health check

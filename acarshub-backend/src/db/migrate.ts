@@ -13,6 +13,7 @@
  * 6. 204a67756b9a - add_message_uids
  * 7. 171fe2c07bd9 - create_alert_matches_table
  * 8. 40fd0618348d - final_v4_optimization
+ * 9. a1b2c3d4e5f6 - add_timeseries_stats
  */
 
 import { randomUUID } from "node:crypto";
@@ -23,7 +24,7 @@ import { createLogger } from "../utils/logger.js";
 
 const logger = createLogger("migrations");
 const DB_PATH = process.env.ACARSHUB_DB || "./data/acarshub.db";
-const LATEST_REVISION = "40fd0618348d";
+const LATEST_REVISION = "a1b2c3d4e5f6";
 
 interface MigrationStep {
   revision: string;
@@ -727,6 +728,72 @@ function migration08_finalOptimization(db: Database.Database): void {
 }
 
 /**
+ * Migration 9: Add timeseries_stats table
+ *
+ * This migration adds the timeseries_stats table for storing time-series
+ * statistics that replace the RRD (Round Robin Database) system.
+ *
+ * For new databases, migration01_initialSchema already creates this table
+ * via drizzleMigrate, but for existing databases that were migrated from
+ * the Python version or early TypeScript versions, we need to manually
+ * create this table.
+ *
+ * We manually apply the SQL instead of using drizzleMigrate to avoid
+ * conflicts with already-existing tables from previous migrations.
+ */
+function migration09_addTimeseriesStats(db: Database.Database): void {
+  logger.info("Applying migration 9: add_timeseries_stats");
+
+  // Check if timeseries_stats table exists
+  const hasTimeseriesStats = db
+    .prepare(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='timeseries_stats'",
+    )
+    .get();
+
+  if (hasTimeseriesStats) {
+    logger.info("timeseries_stats table already exists, skipping");
+    return;
+  }
+
+  // Manually create timeseries_stats table
+  // This is the SQL from drizzle/0001_add_timeseries_stats.sql
+  logger.info("Creating timeseries_stats table");
+
+  const migrate = db.transaction(() => {
+    db.exec(`
+      CREATE TABLE timeseries_stats (
+        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+        timestamp INTEGER NOT NULL,
+        resolution TEXT NOT NULL,
+        acars_count INTEGER DEFAULT 0 NOT NULL,
+        vdlm_count INTEGER DEFAULT 0 NOT NULL,
+        hfdl_count INTEGER DEFAULT 0 NOT NULL,
+        imsl_count INTEGER DEFAULT 0 NOT NULL,
+        irdm_count INTEGER DEFAULT 0 NOT NULL,
+        total_count INTEGER DEFAULT 0 NOT NULL,
+        error_count INTEGER DEFAULT 0 NOT NULL,
+        created_at INTEGER NOT NULL
+      )
+    `);
+
+    db.exec(`
+      CREATE INDEX idx_timeseries_timestamp_resolution
+      ON timeseries_stats (timestamp, resolution)
+    `);
+
+    db.exec(`
+      CREATE INDEX idx_timeseries_resolution
+      ON timeseries_stats (resolution)
+    `);
+  });
+
+  migrate();
+
+  logger.info("✓ timeseries_stats table created successfully");
+}
+
+/**
  * All migrations in order
  */
 const MIGRATIONS: MigrationStep[] = [
@@ -769,6 +836,11 @@ const MIGRATIONS: MigrationStep[] = [
     revision: "40fd0618348d",
     name: "final_v4_optimization",
     upgrade: migration08_finalOptimization,
+  },
+  {
+    revision: "a1b2c3d4e5f6",
+    name: "add_timeseries_stats",
+    upgrade: migration09_addTimeseriesStats,
   },
 ];
 

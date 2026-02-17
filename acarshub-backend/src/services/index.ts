@@ -41,6 +41,26 @@ import {
   type TcpListener,
 } from "./tcp-listener.js";
 
+/**
+ * Convert MessageType enum to database format
+ * Matches Python getQueType() function behavior
+ *
+ * Python stores: "VDL-M2", "ACARS", "HFDL", "IMS-L", "IRDM"
+ * TypeScript receives: "VDLM2", "ACARS", "HFDL", "IMSL", "IRDM"
+ */
+function normalizeMessageType(type: MessageType): string {
+  switch (type) {
+    case "VDLM2":
+      return "VDL-M2";
+    case "IMSL":
+      return "IMS-L";
+    case "ACARS":
+    case "HFDL":
+    case "IRDM":
+      return type;
+  }
+}
+
 const logger = createLogger("services");
 
 export interface ServicesConfig {
@@ -312,8 +332,10 @@ export class BackgroundServices extends EventEmitter {
           return;
         }
 
-        // Add message type identifier
-        formattedMessage.message_type = queuedMessage.type;
+        // Add message type identifier (normalized to match Python database format)
+        formattedMessage.message_type = normalizeMessageType(
+          queuedMessage.type,
+        );
 
         logger.debug("Message formatted", {
           type: queuedMessage.type,
@@ -336,12 +358,6 @@ export class BackgroundServices extends EventEmitter {
           error: err instanceof Error ? err.message : String(err),
         });
       }
-    });
-
-    messageQueue.on("overflow", (droppedCount: number) => {
-      logger.warn("Message queue overflow", {
-        droppedCount,
-      });
     });
   }
 

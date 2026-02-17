@@ -101,14 +101,17 @@ export interface SocketEvents {
   adsb: (data: Adsb) => void;
   adsb_aircraft: (data: ADSBData) => void;
 
-  // Configuration
-  decoders: (data: Decoders) => void;
+  // Configuration (Python sends "features_enabled", not "decoders")
+  features_enabled: (data: Decoders) => void;
+  decoders: (data: Decoders) => void; // Legacy alias
 
-  // Alert statistics
-  alert_terms_stats: (data: AlertTerm) => void;
+  // Alert statistics (Python sends "alert_terms" with {data: ...}, not "alert_terms_stats")
+  alert_terms: (data: { data: AlertTerm }) => void;
+  alert_terms_stats: (data: AlertTerm) => void; // Legacy alias
 
-  // Database size
-  database_size: (data: DatabaseSize) => void;
+  // Database size (Python sends "database" with {count, size}, not "database_size")
+  database: (data: DatabaseSize) => void;
+  database_size: (data: DatabaseSize) => void; // Legacy alias
 
   // Version information
   acarshub_version: (data: AcarshubVersion) => void;

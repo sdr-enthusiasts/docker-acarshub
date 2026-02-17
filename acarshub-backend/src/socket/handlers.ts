@@ -136,6 +136,7 @@ function handleConnect(socket: TypedSocket, _io: TypedSocketServer): void {
 
   try {
     // 1. Send features/decoders configuration
+    // Python sends "features_enabled" event, NOT "decoders"
     const decoders: Decoders = {
       acars: config.enableAcars,
       vdlm: config.enableVdlm,
@@ -144,13 +145,13 @@ function handleConnect(socket: TypedSocket, _io: TypedSocketServer): void {
       irdm: config.enableIrdm,
       allow_remote_updates: config.allowRemoteUpdates,
       adsb: {
-        enabled: false, // TODO: Week 3 - ADS-B integration
-        lat: 0,
-        lon: 0,
-        range_rings: false,
+        enabled: config.enableAdsb,
+        lat: config.adsbLat,
+        lon: config.adsbLon,
+        range_rings: config.enableRangeRings,
       },
     };
-    socket.emit("decoders", decoders);
+    socket.emit("features_enabled", decoders);
 
     // 2. Send alert terms
     const terms: Terms = {
@@ -194,12 +195,13 @@ function handleConnect(socket: TypedSocket, _io: TypedSocketServer): void {
     }
 
     // 5. Send database size
+    // Python sends "database" event with {count, size}, NOT "database_size"
     const { count, size } = getRowCount();
     const dbSize: DatabaseSize = {
       count,
       size: size ?? 0,
     };
-    socket.emit("database_size", dbSize);
+    socket.emit("database", dbSize);
 
     // 6. Send signal levels
     const signalLevels = getAllSignalLevels();
@@ -232,7 +234,8 @@ function handleConnect(socket: TypedSocket, _io: TypedSocketServer): void {
         term: alertCounts[i].term ?? "",
       };
     }
-    socket.emit("alert_terms_stats", alertTermData);
+    // Python sends "alert_terms" with {data: ...}, NOT "alert_terms_stats"
+    socket.emit("alert_terms", { data: alertTermData });
 
     // 8. Send recent alerts in chunks
     const recentAlertsRaw = searchAlerts(100, 0);

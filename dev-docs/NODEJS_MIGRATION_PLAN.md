@@ -713,8 +713,8 @@ This transformation layer is critical for API parity with Python backend.
    - ✅ Unit tests for stats writer (10 test cases)
    - ✅ Drizzle migration: `0001_add_timeseries_stats.sql`
    - ✅ Documentation: `dev-docs/TIMESERIES_STRATEGY.md` (comprehensive strategy document)
-   - [ ] `rrd_timeseries` Socket.IO event handler (fetch from DB with downsampling)
-   - [ ] Integration test: Full migration with real RRD files (acarshub.rrd, acarshub_long.rrd)
+   - ✅ `rrd_timeseries` Socket.IO event handler (fetch from DB with downsampling)
+   - ✅ Integration tests: 6 tests with programmatically generated RRD (skipped in CI for performance)
 
    **RRDTool Output Format** (for parser implementation):
 

@@ -18,6 +18,7 @@
  */
 
 import { randomUUID } from "node:crypto";
+import { statSync } from "node:fs";
 import { and, asc, desc, eq, like, notInArray, sql } from "drizzle-orm";
 import { DB_SAVEALL } from "../../config.js";
 import { createLogger } from "../../utils/logger.js";
@@ -735,11 +736,10 @@ export function getRowCount(): { count: number; size: number | null } {
   // Get database file size
   let size: number | null = null;
   try {
-    const fs = require("node:fs");
     const dbPath = process.env.ACARSHUB_DB || "./data/acarshub.db";
     // Remove "sqlite:///" prefix if present (Python format)
     const cleanPath = dbPath.replace(/^sqlite:\/\/\//, "");
-    const stats = fs.statSync(cleanPath);
+    const stats = statSync(cleanPath);
     size = stats.size;
   } catch (error) {
     logger.warn("Failed to get database file size", {
