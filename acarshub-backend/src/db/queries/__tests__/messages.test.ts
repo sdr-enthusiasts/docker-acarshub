@@ -13,7 +13,7 @@ import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as clientModule from "../../client.js";
-import * as helpersModule from "../../helpers.js";
+import type * as helpersModule from "../../helpers.js";
 import * as schema from "../../schema.js";
 import { messages } from "../../schema.js";
 import {
