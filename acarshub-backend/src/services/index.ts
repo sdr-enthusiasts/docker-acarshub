@@ -21,6 +21,7 @@ import {
   optimizeDbRegular,
   pruneDatabase,
 } from "../db/index.js";
+import { formatAcarsMessage } from "../formatters/index.js";
 import { createLogger } from "../utils/logger.js";
 import {
   type AdsbData,
@@ -299,22 +300,34 @@ export class BackgroundServices extends EventEmitter {
 
     messageQueue.on("message", async (queuedMessage: QueuedMessage) => {
       try {
-        // TODO: Format message using appropriate formatter (Week 4)
-        // TODO: Save to database with alert matching
-        // TODO: Emit to connected clients via Socket.IO
+        // Format message using appropriate formatter
+        const rawMessage = queuedMessage.data as Record<string, unknown>;
+        const formattedMessage = formatAcarsMessage(rawMessage);
 
-        logger.debug("Message queued for processing", {
+        if (!formattedMessage) {
+          logger.debug("Message formatter returned null, skipping", {
+            type: queuedMessage.type,
+          });
+          return;
+        }
+
+        // Add message type identifier
+        formattedMessage.message_type = queuedMessage.type;
+
+        logger.debug("Message formatted", {
           type: queuedMessage.type,
-          timestamp: queuedMessage.timestamp,
+          timestamp: formattedMessage.timestamp,
+          hasText: !!formattedMessage.text,
+          hasIcao: !!formattedMessage.icao,
         });
 
-        // Placeholder: emit raw message to Socket.IO
-        // Real implementation in Week 4 after formatters are ported
+        // TODO: Save to database with alert matching (Week 5)
+        // TODO: Enrich message with additional fields (Week 5)
+        // TODO: Generate UID (Week 5)
+
+        // Emit formatted message to Socket.IO clients
         this.config.socketio.emit("acars_msg", {
-          msghtml: {
-            type: queuedMessage.type,
-            data: queuedMessage.data,
-          },
+          msghtml: formattedMessage,
         });
       } catch (err) {
         logger.error("Failed to process message", {

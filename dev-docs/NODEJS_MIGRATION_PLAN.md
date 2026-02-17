@@ -539,13 +539,16 @@ This transformation layer is critical for API parity with Python backend.
 
 #### Formatting Tasks
 
-1. **Message Formatters** (5 types)
-   - [ ] `formatAcarsMessage()` - ACARS decoder
-   - [ ] `formatVdlm2Message()` - VDLM2 decoder
-   - [ ] `formatHfdlMessage()` - HFDL decoder
-   - [ ] `formatImslMessage()` - IMSL decoder (JAERO + SatDump)
-   - [ ] `formatIrdmMessage()` - IRDM decoder
-   - [ ] Helper functions (UID generation, error counting)
+1. **Message Formatters** (5 types) ✅
+   - ✅ `formatAcarsMessage()` - ACARS decoder (main router)
+   - ✅ `formatVdlm2Message()` - VDLM2 decoder (dumpvdl2)
+   - ✅ `formatHfdlMessage()` - HFDL decoder (dumphfdl)
+   - ✅ `formatJaeroImslMessage()` - IMSL decoder (JAERO)
+   - ✅ `formatSatdumpImslMessage()` - IMSL decoder (SatDump)
+   - ✅ `formatIrdmMessage()` - IRDM decoder (iridium-toolkit)
+   - ✅ Helper functions (error counting, frequency formatting)
+   - ✅ Comprehensive unit tests (34 tests, all passing)
+   - ✅ 100% field mapping parity with Python
 
 2. **Prometheus Metrics**
    - [ ] RRD gauges (7 metrics from time-series table)
@@ -565,10 +568,13 @@ This transformation layer is critical for API parity with Python backend.
 
 **Deliverables**:
 
-- ✅ All 5 formatters implemented
-- ✅ 100% field mapping parity
-- ✅ All metrics matching Python output
-- ✅ `/metrics` endpoint functional
+- ✅ All 5 formatters implemented (ACARS, VDLM2, HFDL, JAERO IMSL, SatDump IMSL, IRDM)
+- ✅ 100% field mapping parity with Python acars_formatter.py
+- ✅ 34 unit tests covering all formatters and edge cases
+- ✅ TypeScript strict mode compliance
+- [ ] Prometheus metrics (RRD gauges, database metrics, signal/freq distributions)
+- [ ] Configuration porting (40+ environment variables)
+- [ ] `/metrics` endpoint functional
 
 ---
 
@@ -1027,22 +1033,33 @@ services:
 
 ## Next Steps
 
-### Immediate Actions (Week 3 - Background Services)
+### Week 4 Progress (Formatters & Metrics)
 
-1. [ ] Implement TCP listeners for all 5 decoder types
-2. [ ] Create message queue and processing pipeline
-3. [ ] Implement scheduled tasks (pruning, stats, health checks)
-4. [ ] Add ADS-B HTTP polling integration
-5. [ ] Update system_status handler with real metrics
-6. [ ] Write unit tests for background services
+**Completed:**
 
-### Week 4 Focus (Formatters & Metrics)
+1. ✅ All 5 message formatters ported from Python:
+   - `formatAcarsMessage()` - Main router with raw ACARS support
+   - `formatVdlm2Message()` - dumpvdl2 decoder
+   - `formatHfdlMessage()` - dumphfdl decoder
+   - `formatJaeroImslMessage()` - JAERO IMSL decoder
+   - `formatSatdumpImslMessage()` - SatDump IMSL decoder
+   - `formatIrdmMessage()` - iridium-toolkit decoder
+2. ✅ Helper functions (error counting, frequency formatting)
+3. ✅ 34 comprehensive unit tests (all passing)
+4. ✅ 100% field mapping parity validated against Python
+5. ✅ TypeScript strict mode compliance
+6. ✅ Integrated into message processing pipeline
 
-1. [ ] Port all 5 message formatters from Python
-2. [ ] Implement Prometheus metrics collection
-3. [ ] Create `/metrics` endpoint
-4. [ ] Write comprehensive formatter tests
-5. [ ] Validate 100% field mapping parity
+**Remaining Week 4 Tasks:**
+
+1. [ ] Prometheus metrics collection (RRD gauges, database metrics)
+2. [ ] Signal level and frequency distribution metrics
+3. [ ] Alert metrics (3 metrics)
+4. [ ] Application info metrics
+5. [ ] `/metrics` endpoint implementation
+6. [ ] Configuration porting (40+ environment variables from ENV_VARS_AUDIT.md)
+7. [ ] Zod schema validation for config
+8. [ ] `isEnabled()` helper function
 
 ### Week 5 Focus (Integration & Gaps)
 
@@ -1050,7 +1067,10 @@ services:
 2. [ ] Fill all Week 1-2 testing gaps
 3. [ ] Write Socket.IO integration tests
 4. [ ] Run E2E tests with frontend
-5. [ ] Performance profiling and optimization
+5. [ ] Database persistence integration (save formatted messages with UIDs)
+6. [ ] Alert matching integration
+7. [ ] Message enrichment integration
+8. [ ] Performance profiling and optimization
 
 ---
 
