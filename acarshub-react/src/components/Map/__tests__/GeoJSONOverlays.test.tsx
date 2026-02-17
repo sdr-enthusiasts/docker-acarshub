@@ -69,6 +69,9 @@ const getTestSettings = (overrides?: Partial<UserSettings>): UserSettings => ({
     enabledGeoJSONOverlays: [],
     showOpenAIP: false,
     showRainViewer: false,
+    useSprites: true,
+    colorByDecoder: false,
+    groundAltitudeThreshold: 5000,
   },
   advanced: {
     logLevel: "warn",

@@ -46,7 +46,7 @@ import { useSettingsStore } from "./useSettingsStore";
  * Application State Interface
  * Defines the complete state tree for ACARS Hub
  */
-interface AppState {
+export interface AppState {
   // Connection state
   isConnected: boolean;
   setConnected: (connected: boolean) => void;

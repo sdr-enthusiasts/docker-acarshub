@@ -70,7 +70,8 @@
 
           javascript = {
             enableBiome = true;
-            enableTsc = false;
+            enableTsc = true;
+            tsConfig = "./tsconfig.json";
           };
 
           extraExcludes = [

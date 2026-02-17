@@ -147,10 +147,10 @@ describe("useSettingsStore", () => {
     it("should update dateFormat", () => {
       const { setDateFormat } = useSettingsStore.getState();
 
-      setDateFormat("iso");
+      setDateFormat("ymd");
 
       const { settings } = useSettingsStore.getState();
-      expect(settings.regional.dateFormat).toBe("iso");
+      expect(settings.regional.dateFormat).toBe("ymd");
     });
 
     it("should update timezone", () => {
@@ -185,14 +185,14 @@ describe("useSettingsStore", () => {
 
       updateRegionalSettings({
         timeFormat: "12h",
-        dateFormat: "us",
+        dateFormat: "mdy",
         timezone: "utc",
         locale: "en-GB",
       });
 
       const { settings } = useSettingsStore.getState();
       expect(settings.regional.timeFormat).toBe("12h");
-      expect(settings.regional.dateFormat).toBe("us");
+      expect(settings.regional.dateFormat).toBe("mdy");
       expect(settings.regional.timezone).toBe("utc");
       expect(settings.regional.locale).toBe("en-GB");
       // altitudeUnit should remain at default
@@ -368,10 +368,10 @@ describe("useSettingsStore", () => {
     it("should update map provider", () => {
       const { setMapProvider } = useSettingsStore.getState();
 
-      setMapProvider("maptiler");
+      setMapProvider("carto_dark_all");
 
       const { settings } = useSettingsStore.getState();
-      expect(settings.map.provider).toBe("maptiler");
+      expect(settings.map.provider).toBe("carto_dark_all");
     });
 
     it("should update station location", () => {
@@ -453,8 +453,7 @@ describe("useSettingsStore", () => {
       const { updateMapSettings } = useSettingsStore.getState();
 
       updateMapSettings({
-        provider: "maptiler",
-        maptilerApiKey: "abc123",
+        provider: "carto_dark_all",
         stationLat: 37.7749,
         stationLon: -122.4194,
         rangeRings: [100, 200],
@@ -464,8 +463,7 @@ describe("useSettingsStore", () => {
       });
 
       const { settings } = useSettingsStore.getState();
-      expect(settings.map.provider).toBe("maptiler");
-      expect(settings.map.maptilerApiKey).toBe("abc123");
+      expect(settings.map.provider).toBe("carto_dark_all");
       expect(settings.map.stationLat).toBe(37.7749);
       expect(settings.map.stationLon).toBe(-122.4194);
       expect(settings.map.rangeRings).toEqual([100, 200]);
@@ -557,7 +555,7 @@ describe("useSettingsStore", () => {
         },
         regional: {
           timeFormat: "24h",
-          dateFormat: "iso",
+          dateFormat: "ymd",
           timezone: "utc",
           altitudeUnit: "meters",
         },
@@ -574,8 +572,9 @@ describe("useSettingsStore", () => {
           autoClearMinutes: 30,
         },
         map: {
-          provider: "maptiler",
-          maptilerApiKey: "test-key",
+          provider: "carto_dark_all",
+          customTileUrl: undefined,
+          userSelectedProvider: false,
           stationLat: 51.5,
           stationLon: -0.1,
           rangeRings: [50, 100, 150],
@@ -588,6 +587,16 @@ describe("useSettingsStore", () => {
           showNexrad: true,
           showOnlyUnread: true,
           showRangeRings: false,
+          showOnlyMilitary: false,
+          showOnlyInteresting: false,
+          showOnlyPIA: false,
+          showOnlyLADD: false,
+          showOpenAIP: false,
+          showRainViewer: false,
+          useSprites: true,
+          colorByDecoder: false,
+          groundAltitudeThreshold: 5000,
+          enabledGeoJSONOverlays: [],
         },
         advanced: {
           logLevel: "debug",
@@ -605,7 +614,7 @@ describe("useSettingsStore", () => {
       expect(settings.regional.timeFormat).toBe("24h");
       expect(settings.notifications.volume).toBe(75);
       expect(settings.data.maxMessagesPerAircraft).toBe(100);
-      expect(settings.map.provider).toBe("maptiler");
+      expect(settings.map.provider).toBe("carto_dark_all");
       expect(settings.advanced.logLevel).toBe("debug");
     });
 
@@ -673,8 +682,9 @@ describe("useSettingsStore", () => {
           autoClearMinutes: 60,
         },
         map: {
-          provider: "carto",
-          maptilerApiKey: undefined,
+          provider: "carto_dark_all",
+          customTileUrl: undefined,
+          userSelectedProvider: false,
           stationLat: 0,
           stationLon: 0,
           rangeRings: [100, 200, 300],
@@ -687,6 +697,16 @@ describe("useSettingsStore", () => {
           showNexrad: false,
           showOnlyUnread: false,
           showRangeRings: true,
+          showOnlyMilitary: false,
+          showOnlyInteresting: false,
+          showOnlyPIA: false,
+          showOnlyLADD: false,
+          showOpenAIP: false,
+          showRainViewer: false,
+          useSprites: true,
+          colorByDecoder: false,
+          groundAltitudeThreshold: 5000,
+          enabledGeoJSONOverlays: [],
         },
         advanced: {
           logLevel: "info",
@@ -780,7 +800,7 @@ describe("useSettingsStore", () => {
           },
           regional: {
             timeFormat: "24h",
-            dateFormat: "iso",
+            dateFormat: "ymd",
             timezone: "utc",
             altitudeUnit: "meters",
           },

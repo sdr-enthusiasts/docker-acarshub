@@ -1,6 +1,6 @@
 import "@testing-library/jest-dom";
 import { cleanup } from "@testing-library/react";
-import { afterEach, vi } from "vitest";
+import { afterEach, beforeEach, vi } from "vitest";
 
 // Cleanup after each test
 afterEach(() => {
@@ -23,7 +23,7 @@ Object.defineProperty(window, "matchMedia", {
 });
 
 // Mock IntersectionObserver
-global.IntersectionObserver = class IntersectionObserver {
+globalThis.IntersectionObserver = class IntersectionObserver {
   disconnect() {}
   observe() {}
   takeRecords() {
@@ -33,7 +33,7 @@ global.IntersectionObserver = class IntersectionObserver {
 } as unknown as typeof IntersectionObserver;
 
 // Mock ResizeObserver
-global.ResizeObserver = class ResizeObserver {
+globalThis.ResizeObserver = class ResizeObserver {
   disconnect() {}
   observe() {}
   unobserve() {}
@@ -68,7 +68,7 @@ HTMLCanvasElement.prototype.getContext = vi.fn(() => ({
 })) as unknown as typeof HTMLCanvasElement.prototype.getContext;
 
 // Mock Audio API for alert sounds
-global.Audio = class Audio {
+globalThis.Audio = class Audio {
   src = "";
   volume = 1;
   play = vi.fn(() => Promise.resolve());

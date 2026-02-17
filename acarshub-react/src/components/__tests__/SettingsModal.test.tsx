@@ -831,10 +831,12 @@ describe("SettingsModal", () => {
       await user.click(screen.getByRole("tab", { name: "Notifications" }));
 
       const maydayChip = screen.getByText("MAYDAY").closest(".alert-term-chip");
-      // biome-ignore lint/style/noNonNullAssertion: Test data is controlled, chip will always exist
-      const removeButton = within(maydayChip!).getByRole("button", {
-        name: /Remove alert term MAYDAY/i,
-      });
+      const removeButton = within(maydayChip as HTMLElement).getByRole(
+        "button",
+        {
+          name: /Remove alert term MAYDAY/i,
+        },
+      );
 
       await user.click(removeButton);
 
@@ -935,8 +937,7 @@ describe("SettingsModal", () => {
       await user.click(screen.getByRole("tab", { name: "Notifications" }));
 
       const testChip = screen.getByText("TEST").closest(".alert-term-chip");
-      // biome-ignore lint/style/noNonNullAssertion: Test data is controlled, chip will always exist
-      const removeButton = within(testChip!).getByRole("button", {
+      const removeButton = within(testChip as HTMLElement).getByRole("button", {
         name: /Remove ignore term TEST/i,
       });
 
@@ -1052,7 +1053,7 @@ describe("SettingsModal", () => {
       }
 
       // biome-ignore lint/suspicious/noExplicitAny: Global FileReader mock requires any for constructor override
-      global.FileReader = MockFileReader as any;
+      globalThis.FileReader = MockFileReader as any;
 
       // Mock file input creation and interaction
       const originalCreateElement = document.createElement.bind(document);
@@ -1135,7 +1136,7 @@ describe("SettingsModal", () => {
       }
 
       // biome-ignore lint/suspicious/noExplicitAny: Global FileReader mock requires any for constructor override
-      global.FileReader = MockFileReader as any;
+      globalThis.FileReader = MockFileReader as any;
 
       const originalCreateElement = document.createElement.bind(document);
       const mockCreateElement = vi.spyOn(document, "createElement");

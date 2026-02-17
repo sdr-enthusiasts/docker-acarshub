@@ -37,7 +37,7 @@ import { syncLoggerWithSettings } from "../utils/logger";
 /**
  * Settings Store State
  */
-interface SettingsState {
+export interface SettingsState {
   // Current settings
   settings: UserSettings;
 

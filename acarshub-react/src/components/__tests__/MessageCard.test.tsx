@@ -28,16 +28,74 @@ import {
   simpleAcarsMessage,
   vdlm2Message,
 } from "@/__fixtures__/messages";
+import type { AppState } from "@/store/useAppStore";
+import type { SettingsState } from "@/store/useSettingsStore";
 import { useSettingsStore } from "@/store/useSettingsStore";
 import { MessageCard } from "../MessageCard";
+
+// Create a comprehensive mock for AppState
+const createMockAppState = (
+  overrides: {
+    readMessageUids?: Set<string>;
+    markMessageAsRead?: ReturnType<typeof vi.fn>;
+  } = {},
+) => ({
+  isConnected: false,
+  setConnected: vi.fn(),
+  messageGroups: new Map(),
+  addMessage: vi.fn(),
+  clearMessages: vi.fn(),
+  alertMessageGroups: new Map(),
+  addAlertMessage: vi.fn(),
+  clearAlertMessages: vi.fn(),
+  notifications: {
+    desktop: false,
+    sound: false,
+    volume: 0.5,
+    onPageAlerts: true,
+  },
+  readMessageUids: overrides.readMessageUids || new Set<string>(),
+  markMessageAsRead: overrides.markMessageAsRead || vi.fn(),
+  markMessagesAsRead: vi.fn(),
+  markAllMessagesAsRead: vi.fn(),
+  markAllAlertsAsRead: vi.fn(),
+  isMessageRead: vi.fn(),
+  getUnreadCount: vi.fn(() => 0),
+  getUnreadAlertCount: vi.fn(() => 0),
+  labels: { labels: {} },
+  setLabels: vi.fn(),
+  alertTerms: { terms: [] },
+  setAlertTerms: vi.fn(),
+  alertCount: 0,
+  setAlertCount: vi.fn(),
+  decoders: null,
+  setDecoders: vi.fn(),
+  systemStatus: null,
+  setSystemStatus: vi.fn(),
+  databaseSize: null,
+  setDatabaseSize: vi.fn(),
+  version: null,
+  setVersion: vi.fn(),
+  adsbStatus: null,
+  setAdsbStatus: vi.fn(),
+  signalLevels: null,
+  setSignalLevels: vi.fn(),
+  alertTermData: null,
+  setAlertTermData: vi.fn(),
+  signalFreqData: null,
+  setSignalFreqData: vi.fn(),
+  signalCountData: null,
+  setSignalCountData: vi.fn(),
+  adsbAircraft: null,
+  setAdsbAircraft: vi.fn(),
+  currentPage: "live",
+  setCurrentPage: vi.fn(),
+});
 
 // Mock Zustand stores
 vi.mock("@/store/useAppStore", () => ({
   useAppStore: vi.fn((selector) => {
-    const state = {
-      readMessageUids: new Set<string>(),
-      markMessageAsRead: vi.fn(),
-    };
+    const state = createMockAppState();
     return selector(state);
   }),
 }));
@@ -49,12 +107,115 @@ const createMockSettings = (
   timezone: "local" | "utc" = "utc",
 ) => ({
   settings: {
+    appearance: {
+      theme: "mocha" as const,
+      showConnectionStatus: true,
+      animations: true,
+    },
     regional: {
       timeFormat,
       dateFormat,
       timezone,
+      locale: undefined,
+      altitudeUnit: "feet" as const,
     },
+    notifications: {
+      desktopNotifications: false,
+      soundAlerts: false,
+      volume: 0.5,
+      onPageAlerts: true,
+    },
+    data: {
+      maxMessagesPerAircraft: 50,
+      maxMessageGroups: 100,
+      enableCaching: true,
+      autoClearMinutes: 0,
+    },
+    map: {
+      provider: "carto_dark_all" as const,
+      customTileUrl: undefined,
+      userSelectedProvider: false,
+      stationLat: 0,
+      stationLon: 0,
+      rangeRings: [100, 200, 300],
+      defaultCenterLat: 0,
+      defaultCenterLon: 0,
+      defaultZoom: 6,
+      showOnlyAcars: false,
+      showDatablocks: true,
+      showExtendedDatablocks: false,
+      showNexrad: false,
+      showRangeRings: true,
+      showOnlyUnread: false,
+      showOnlyMilitary: false,
+      showOnlyInteresting: false,
+      showOnlyPIA: false,
+      showOnlyLADD: false,
+      showOpenAIP: false,
+      showRainViewer: false,
+      useSprites: true,
+      colorByDecoder: false,
+      groundAltitudeThreshold: 5000,
+    },
+    geoJSONOverlays: {},
+    advanced: {
+      logLevel: "info" as const,
+      persistLogs: false,
+    },
+    updatedAt: Date.now(),
+    version: 6,
   },
+  setTheme: vi.fn(),
+  setShowConnectionStatus: vi.fn(),
+  setAnimations: vi.fn(),
+  setTimeFormat: vi.fn(),
+  setDateFormat: vi.fn(),
+  setTimezone: vi.fn(),
+  setLocale: vi.fn(),
+  setAltitudeUnit: vi.fn(),
+  setDesktopNotifications: vi.fn(),
+  setSoundAlerts: vi.fn(),
+  setVolume: vi.fn(),
+  setOnPageAlerts: vi.fn(),
+  setMaxMessagesPerAircraft: vi.fn(),
+  setMaxMessageGroups: vi.fn(),
+  setEnableCaching: vi.fn(),
+  setAutoClearMinutes: vi.fn(),
+  setMapProvider: vi.fn(),
+  resetMapProviderToDefault: vi.fn(),
+  setCustomTileUrl: vi.fn(),
+  setStationLocation: vi.fn(),
+  setRangeRings: vi.fn(),
+  setDefaultMapView: vi.fn(),
+  setShowOnlyAcars: vi.fn(),
+  setShowDatablocks: vi.fn(),
+  setShowExtendedDatablocks: vi.fn(),
+  setShowNexrad: vi.fn(),
+  setShowRangeRings: vi.fn(),
+  setShowOnlyUnread: vi.fn(),
+  setShowOnlyMilitary: vi.fn(),
+  setShowOnlyInteresting: vi.fn(),
+  setShowOnlyPIA: vi.fn(),
+  setShowOnlyLADD: vi.fn(),
+  setShowOpenAIP: vi.fn(),
+  setShowRainViewer: vi.fn(),
+  setUseSprites: vi.fn(),
+  setColorByDecoder: vi.fn(),
+  setGroundAltitudeThreshold: vi.fn(),
+  setGeoJSONOverlay: vi.fn(),
+  toggleGeoJSONOverlay: vi.fn(),
+  setGeoJSONCategoryEnabled: vi.fn(),
+  setLogLevel: vi.fn(),
+  setPersistLogs: vi.fn(),
+  updateAppearanceSettings: vi.fn(),
+  updateRegionalSettings: vi.fn(),
+  updateNotificationSettings: vi.fn(),
+  updateDataSettings: vi.fn(),
+  updateMapSettings: vi.fn(),
+  updateAdvancedSettings: vi.fn(),
+  resetToDefaults: vi.fn(),
+  exportSettings: vi.fn(() => "{}"),
+  importSettings: vi.fn(),
 });
 
 vi.mock("@/store/useSettingsStore", () => ({
@@ -70,7 +231,7 @@ describe("MessageCard", () => {
     // Reset to default mock
     vi.mocked(useSettingsStore).mockImplementation((selector) => {
       const state = createMockSettings();
-      return selector(state);
+      return selector(state as unknown as SettingsState);
     });
   });
 
@@ -312,7 +473,7 @@ describe("MessageCard", () => {
             name: "test-decoder",
             decodeLevel: "full",
           },
-          formatted: "Decoded content here",
+          formatted: [{ label: "Content", value: "Decoded content here" }],
         },
       };
 
@@ -330,7 +491,7 @@ describe("MessageCard", () => {
             name: "test-decoder",
             decodeLevel: "partial",
           },
-          formatted: "Partial decode",
+          formatted: [{ label: "Content", value: "Partial decode" }],
         },
       };
 
@@ -347,7 +508,7 @@ describe("MessageCard", () => {
             name: "test-decoder",
             decodeLevel: "full",
           },
-          formatted: "Decoded content",
+          formatted: [{ label: "Content", value: "Decoded content" }],
         },
       };
 
@@ -369,7 +530,7 @@ describe("MessageCard", () => {
             name: "test-decoder",
             decodeLevel: "full",
           },
-          formatted: "Decoded content",
+          formatted: [{ label: "Content", value: "Decoded content" }],
         },
       };
 
@@ -400,11 +561,10 @@ describe("MessageCard", () => {
       // Mock the store to return this message as read
       const { useAppStore } = await import("@/store/useAppStore");
       vi.mocked(useAppStore).mockImplementation((selector) => {
-        const state = {
+        const state = createMockAppState({
           readMessageUids: new Set([simpleAcarsMessage.uid]),
-          markMessageAsRead: vi.fn(),
-        };
-        return selector(state);
+        });
+        return selector(state as unknown as AppState);
       });
 
       render(<MessageCard message={simpleAcarsMessage} showMarkReadButton />);
@@ -419,11 +579,10 @@ describe("MessageCard", () => {
       // Mock the store to return this message as read
       const { useAppStore } = await import("@/store/useAppStore");
       vi.mocked(useAppStore).mockImplementation((selector) => {
-        const state = {
+        const state = createMockAppState({
           readMessageUids: new Set([simpleAcarsMessage.uid]),
-          markMessageAsRead: vi.fn(),
-        };
-        return selector(state);
+        });
+        return selector(state as unknown as AppState);
       });
 
       const { container } = render(
@@ -434,17 +593,15 @@ describe("MessageCard", () => {
       expect(card).toHaveClass("message-card--read");
     });
 
-    it("calls markMessageAsRead when Mark Read button clicked", async () => {
+    it("calls markMessageAsRead when Mark Read button is clicked", async () => {
       const user = userEvent.setup();
       const mockMarkAsRead = vi.fn();
-
       const { useAppStore } = await import("@/store/useAppStore");
       vi.mocked(useAppStore).mockImplementation((selector) => {
-        const state = {
-          readMessageUids: new Set<string>(),
+        const state = createMockAppState({
           markMessageAsRead: mockMarkAsRead,
-        };
-        return selector(state);
+        });
+        return selector(state as unknown as AppState);
       });
 
       render(<MessageCard message={simpleAcarsMessage} showMarkReadButton />);
@@ -461,7 +618,7 @@ describe("MessageCard", () => {
       // Update the mock to return 12h format (without 'r')
       vi.mocked(useSettingsStore).mockImplementation((selector) => {
         const state = createMockSettings("12h", "ymd", "utc");
-        return selector(state);
+        return selector(state as unknown as SettingsState);
       });
 
       render(<MessageCard message={simpleAcarsMessage} />);
@@ -474,7 +631,7 @@ describe("MessageCard", () => {
       // Update the mock to return 24h format (without 'r')
       vi.mocked(useSettingsStore).mockImplementation((selector) => {
         const state = createMockSettings("24h", "ymd", "utc");
-        return selector(state);
+        return selector(state as unknown as SettingsState);
       });
 
       render(<MessageCard message={simpleAcarsMessage} />);
@@ -558,8 +715,8 @@ describe("MessageCard", () => {
     it("hides position when not available", () => {
       const messageWithoutPosition: AcarsMsg = {
         ...simpleAcarsMessage,
-        lat: "",
-        lon: "",
+        lat: undefined,
+        lon: undefined,
       };
 
       render(<MessageCard message={messageWithoutPosition} />);
@@ -624,10 +781,10 @@ describe("MessageCard", () => {
       ).not.toThrow();
     });
 
-    it("handles undefined message type", () => {
+    it("handles unknown message type", () => {
       const messageWithoutType: AcarsMsg = {
         ...simpleAcarsMessage,
-        message_type: undefined,
+        message_type: "UNKNOWN",
       };
 
       render(<MessageCard message={messageWithoutType} />);

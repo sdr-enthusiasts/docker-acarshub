@@ -114,10 +114,8 @@ check:
 
 # Full CI-like check (unit/integration tests + linting + formatting)
 ci:
-    @echo "Running frontend TypeScript checks..."
-    cd acarshub-react && npx tsc --noEmit
-    @echo "Running backend TypeScript checks..."
-    cd acarshub-backend && npx tsc --noEmit
+    @echo "Running TypeScript checks (all projects via project references)..."
+    npx tsc --build --force
     @echo "Running frontend build..."
     cd acarshub-react && npm run build
     @echo "Running backend build..."

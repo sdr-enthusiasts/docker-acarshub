@@ -83,44 +83,42 @@ describe("useAppStore", () => {
     station_id: "TEST-STATION",
     toaddr: "TEST",
     fromaddr: "TEST",
-    depa: null,
-    dsta: null,
-    eta: null,
-    gtout: null,
-    gtin: null,
-    wloff: null,
-    wlin: null,
-    lat: null,
-    lon: null,
-    alt: null,
+    depa: undefined,
+    dsta: undefined,
+    eta: undefined,
+    gtout: undefined,
+    gtin: undefined,
+    wloff: undefined,
+    wlin: undefined,
+    lat: undefined,
+    lon: undefined,
+    alt: undefined,
     text: "Test message",
-    data: null,
-    tail: null,
-    flight: null,
-    icao: null,
-    freq: null,
-    ack: null,
-    mode: null,
-    label: null,
-    block_id: null,
-    msgno: null,
-    is_response: null,
-    is_onground: null,
-    error: null,
-    level: null,
-    end: null,
-    has_alerts: false,
-    num_alerts: 0,
+    data: undefined,
+    tail: undefined,
+    flight: undefined,
+    icao: undefined,
+    freq: undefined,
+    ack: undefined,
+    mode: undefined,
+    label: undefined,
+    block_id: undefined,
+    msgno: undefined,
+    is_response: undefined,
+    is_onground: undefined,
+    error: undefined,
+    level: undefined,
+    message_type: "test",
     matched: false,
     matched_text: [],
     duplicates: "0",
-    msgno_parts: null,
-    libacars: null,
-    decoded_msg: null,
-    airline: null,
-    iata_flight: null,
-    icao_flight: null,
-    decodedText: null,
+    msgno_parts: undefined,
+    libacars: undefined,
+    decoded_msg: undefined,
+    airline: undefined,
+    iata_flight: undefined,
+    icao_flight: undefined,
+    decodedText: undefined,
     ...overrides,
   });
 
@@ -155,12 +153,20 @@ describe("useAppStore", () => {
     });
 
     it("should generate UID if message lacks one", () => {
-      // Create a message without uid property
-      const baseMessage = createMessage({ flight: "UAL123" });
-      // Remove uid property to test generation
-      delete baseMessage.uid;
+      // Create a message without uid property by using Partial type
+      const baseMessage: Partial<AcarsMsg> & {
+        flight: string;
+        timestamp: number;
+        station_id: string;
+        message_type: string;
+      } = {
+        flight: "UAL123",
+        timestamp: Date.now() / 1000,
+        station_id: "TEST-STATION",
+        message_type: "test",
+      };
 
-      useAppStore.getState().addMessage(baseMessage);
+      useAppStore.getState().addMessage(baseMessage as AcarsMsg);
 
       const messageGroups = useAppStore.getState().messageGroups;
       const group = messageGroups.get("UAL123");
@@ -646,8 +652,8 @@ describe("useAppStore", () => {
     it("should set labels", () => {
       const labels = {
         labels: {
-          H1: "Position Report",
-          Q0: "Flight Plan",
+          H1: { name: "Position Report" },
+          Q0: { name: "Flight Plan" },
         },
       };
 
@@ -678,8 +684,11 @@ describe("useAppStore", () => {
         irdm: false,
         adsb: {
           enabled: true,
-          url: "http://localhost:8080",
+          lat: 0,
+          lon: 0,
+          range_rings: true,
         },
+        allow_remote_updates: false,
       };
 
       useAppStore.getState().setDecoders(decoders);
@@ -691,7 +700,12 @@ describe("useAppStore", () => {
       const status = {
         status: {
           error_state: false,
-          messages_received: 1000,
+          messages_received: 1234,
+          decoders: {},
+          servers: {},
+          global: {},
+          stats: {},
+          external_formats: {},
         },
       };
 
@@ -711,10 +725,13 @@ describe("useAppStore", () => {
       expect(useAppStore.getState().databaseSize).toEqual(size);
     });
 
-    it("should set version info", () => {
+    it("should set version", () => {
       const version = {
         version: "1.0.0",
-        github: "https://github.com/sdr-enthusiasts/docker-acarshub",
+        github: "https://github.com/test/repo",
+        container_version: "1.0.0",
+        github_version: "1.0.0",
+        is_outdated: false,
       };
 
       useAppStore.getState().setVersion(version);
@@ -724,15 +741,17 @@ describe("useAppStore", () => {
   });
 
   describe("ADS-B data", () => {
-    it("should set ADS-B status", () => {
-      const status = {
+    it("should set ADSB status", () => {
+      const adsbStatus = {
         online: true,
         url: "http://localhost:8080",
+        adsb_enabled: true,
+        adsb_getting_data: true,
       };
 
-      useAppStore.getState().setAdsbStatus(status);
+      useAppStore.getState().setAdsbStatus(adsbStatus);
 
-      expect(useAppStore.getState().adsbStatus).toEqual(status);
+      expect(useAppStore.getState().adsbStatus).toEqual(adsbStatus);
     });
 
     it("should set ADS-B aircraft data", () => {
@@ -771,25 +790,28 @@ describe("useAppStore", () => {
     });
 
     it("should set signal frequency data", () => {
-      const data = {
-        freq1: 100,
-        freq2: 50,
+      const freqData = {
+        freqs: [],
       };
 
-      useAppStore.getState().setSignalFreqData(data);
+      useAppStore.getState().setSignalFreqData(freqData);
 
-      expect(useAppStore.getState().signalFreqData).toEqual(data);
+      expect(useAppStore.getState().signalFreqData).toEqual(freqData);
     });
 
     it("should set signal count data", () => {
-      const data = {
-        count1: 1000,
-        count2: 500,
+      const countData = {
+        count: {
+          non_empty_total: 100,
+          non_empty_errors: 5,
+          empty_total: 50,
+          empty_errors: 2,
+        },
       };
 
-      useAppStore.getState().setSignalCountData(data);
+      useAppStore.getState().setSignalCountData(countData);
 
-      expect(useAppStore.getState().signalCountData).toEqual(data);
+      expect(useAppStore.getState().signalCountData).toEqual(countData);
     });
   });
 
