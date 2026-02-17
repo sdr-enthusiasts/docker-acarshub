@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
+import type { AcarsMsg } from "@acarshub/types";
 import { render, screen } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -28,7 +29,6 @@ import {
   vdlm2Message,
 } from "@/__fixtures__/messages";
 import { useSettingsStore } from "@/store/useSettingsStore";
-import type { AcarsMsg } from "@/types";
 import { MessageCard } from "../MessageCard";
 
 // Mock Zustand stores
