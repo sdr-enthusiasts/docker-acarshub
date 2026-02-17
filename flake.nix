@@ -136,6 +136,7 @@
               pkgs.pdm
               pkgs.rrdtool
               pkgs.npm-check
+              pkgs.npm-check-updates
               pkgs.nodejs
               pkgs.just
               pkgs.playwright-test

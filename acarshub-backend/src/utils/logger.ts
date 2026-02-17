@@ -45,17 +45,14 @@ function getLogLevel(): LogLevel {
  */
 const pinoLogger = pino({
   level: getLogLevel(),
-  transport:
-    process.env.NODE_ENV === "development"
-      ? {
-          target: "pino-pretty",
-          options: {
-            colorize: true,
-            translateTime: "HH:MM:ss",
-            ignore: "pid,hostname",
-          },
-        }
-      : undefined,
+  transport: {
+    target: "pino-pretty",
+    options: {
+      colorize: true,
+      translateTime: "HH:MM:ss",
+      ignore: "pid,hostname",
+    },
+  },
 });
 
 /**

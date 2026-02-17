@@ -44,7 +44,7 @@
   "author": "Frederick Clausen II",
   "license": "GPL-3.0-or-later",
   "devDependencies": {
-    "@biomejs/biome": "2.4.1",
+    "@biomejs/biome": "2.4.2",
     "typescript": "5.9.3"
   }
 }
