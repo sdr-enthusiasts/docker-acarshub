@@ -5,6 +5,25 @@
  * matching Python acarshub_configuration.py
  */
 
+import { readFileSync } from "node:fs";
+
+/**
+ * Application version (read from version file)
+ */
+export const VERSION = (() => {
+  try {
+    return readFileSync("./version", "utf-8").trim();
+  } catch {
+    return "4.0.0-dev";
+  }
+})();
+
+/**
+ * Remote updates configuration
+ */
+export const ALLOW_REMOTE_UPDATES =
+  process.env.ALLOW_REMOTE_UPDATES?.toUpperCase() !== "FALSE";
+
 /**
  * Database configuration
  */
@@ -184,4 +203,32 @@ export async function initializeConfig(): Promise<void> {
     loadAirlines(),
   ]);
   parseIataOverrides();
+}
+
+/**
+ * Get configuration object
+ *
+ * Returns current runtime configuration including loaded data
+ */
+export function getConfig() {
+  return {
+    version: VERSION,
+    allowRemoteUpdates: ALLOW_REMOTE_UPDATES,
+    dbSaveAll: DB_SAVEALL,
+    dbSaveDays: DB_SAVE_DAYS,
+    dbAlertSaveDays: DB_ALERT_SAVE_DAYS,
+    dbPath: ACARSHUB_DB,
+    dbBackup: DB_BACKUP,
+    enableAcars: ENABLE_ACARS,
+    enableVdlm: ENABLE_VDLM,
+    enableHfdl: ENABLE_HFDL,
+    enableImsl: ENABLE_IMSL,
+    enableIrdm: ENABLE_IRDM,
+    alertTerms,
+    alertIgnoreTerms: alertTermsIgnore,
+    groundStations,
+    messageLabels,
+    airlines,
+    iataOverrides,
+  };
 }

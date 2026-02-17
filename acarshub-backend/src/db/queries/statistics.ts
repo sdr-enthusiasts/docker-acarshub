@@ -71,6 +71,42 @@ export function getFreqCount(
 }
 
 /**
+ * Get all frequency counts across all decoders
+ *
+ * Aggregates frequency data from all decoder types with decoder label.
+ *
+ * @returns Array of frequency counts with decoder type
+ */
+export function getAllFreqCounts(): Array<{
+  decoder: string;
+  freq: string | null;
+  count: number | null;
+}> {
+  const acars = getFreqCount("acars").map((item) => ({
+    decoder: "acars",
+    ...item,
+  }));
+  const vdlm2 = getFreqCount("vdlm2").map((item) => ({
+    decoder: "vdlm2",
+    ...item,
+  }));
+  const hfdl = getFreqCount("hfdl").map((item) => ({
+    decoder: "hfdl",
+    ...item,
+  }));
+  const imsl = getFreqCount("imsl").map((item) => ({
+    decoder: "imsl",
+    ...item,
+  }));
+  const irdm = getFreqCount("irdm").map((item) => ({
+    decoder: "irdm",
+    ...item,
+  }));
+
+  return [...acars, ...vdlm2, ...hfdl, ...imsl, ...irdm];
+}
+
+/**
  * Update frequency count for a specific decoder and frequency
  *
  * Increments count if frequency exists, creates new row if not.

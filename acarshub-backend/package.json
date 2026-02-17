@@ -27,6 +27,7 @@
   "license": "GPL-3.0-or-later",
   "dependencies": {
     "@acarshub/types": "*",
+    "@fastify/cors": "^11.2.0",
     "better-sqlite3": "12.6.2",
     "drizzle-orm": "0.45.1",
     "fastify": "5.7.4",

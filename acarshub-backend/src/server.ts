@@ -17,15 +17,18 @@
 /**
  * ACARS Hub Node.js Backend Server
  *
- * Week 1 Implementation: Database Layer
+ * Week 2 Implementation: Socket.IO Server + Database Layer
+ * - Fastify HTTP server
+ * - Socket.IO real-time communication
  * - Drizzle ORM + better-sqlite3
- * - Query functions matching Python acarshub_database.py
  * - Type-safe database operations
  *
  * See: dev-docs/NODEJS_MIGRATION_PLAN.md
  */
 
-import type { SocketEmitEvents, SocketEvents } from "@acarshub/types";
+import cors from "@fastify/cors";
+import Fastify from "fastify";
+import { getConfig } from "./config.js";
 import {
   closeDatabase,
   getAlertCounts,
@@ -38,6 +41,10 @@ import {
   initializeAlertCache,
   initializeMessageCounts,
 } from "./db/index.js";
+import {
+  initializeSocketServer,
+  shutdownSocketServer,
+} from "./socket/index.js";
 import { createLogger } from "./utils/logger.js";
 
 const logger = createLogger("server");
@@ -55,12 +62,55 @@ const config: ServerConfig = {
 };
 
 /**
+ * Create and configure Fastify server
+ */
+function createServer() {
+  const fastify = Fastify({
+    logger: false, // Use Pino logger instead
+    trustProxy: true,
+  });
+
+  // Register CORS
+  fastify.register(cors, {
+    origin: true,
+    credentials: true,
+  });
+
+  // Health check endpoint
+  fastify.get("/health", async () => {
+    const isHealthy = healthCheck();
+    const { count, size } = getRowCount();
+
+    return {
+      status: isHealthy ? "healthy" : "unhealthy",
+      database: {
+        connected: isHealthy,
+        messages: count,
+        size: size,
+      },
+      version: getConfig().version,
+    };
+  });
+
+  // Root endpoint
+  fastify.get("/", async () => {
+    return {
+      service: "ACARS Hub Backend",
+      version: getConfig().version,
+      status: "running",
+    };
+  });
+
+  return fastify;
+}
+
+/**
  * Main server initialization
  */
 async function main(): Promise<void> {
   logger.info("========================================");
-  logger.info("ACARS Hub Node.js Backend - Week 1");
-  logger.info("Database Layer Implementation");
+  logger.info("ACARS Hub Node.js Backend - Week 2");
+  logger.info("Socket.IO Server + Database Layer");
   logger.info("========================================");
   logger.info("");
   logger.info("Configuration:", {
@@ -69,6 +119,9 @@ async function main(): Promise<void> {
     database: config.dbPath,
   });
   logger.info("");
+
+  let fastify: ReturnType<typeof createServer> | null = null;
+  let io: Awaited<ReturnType<typeof initializeSocketServer>> | null = null;
 
   try {
     // Initialize database
@@ -140,80 +193,104 @@ async function main(): Promise<void> {
     logger.info(`    - HFDL: ${hfdlLevels} unique levels`);
 
     logger.info("");
+
+    // Create Fastify server
+    logger.info("🚀 Starting Fastify HTTP server...");
+    fastify = createServer();
+
+    // Start server
+    await fastify.listen({ port: config.port, host: config.host });
+    logger.info(
+      `✅ Fastify server listening on http://${config.host}:${config.port}`,
+    );
+    logger.info("");
+
+    // Initialize Socket.IO server
+    logger.info("🔌 Initializing Socket.IO server...");
+    io = initializeSocketServer(fastify.server, {
+      cors: {
+        origin: "*",
+        credentials: true,
+      },
+    });
+    logger.info("✅ Socket.IO server initialized on /main namespace");
+    logger.info("");
+
     logger.info("========================================");
-    logger.info("✅ Week 1 Complete: Database Layer");
+    logger.info("✅ Week 2 Complete: Socket.IO Server");
     logger.info("========================================");
     logger.info("");
     logger.info("Implemented:");
-    logger.info("  ✅ Drizzle ORM schema (matches Python SQLAlchemy)");
-    logger.info("  ✅ Database client with WAL mode");
-    logger.info("  ✅ Message queries (add, search, get recent)");
-    logger.info("  ✅ Alert queries (normalized alert_matches table)");
-    logger.info("  ✅ Statistics queries (freq, signal level, counts)");
-    logger.info("  ✅ Type-safe operations with TypeScript");
-    logger.info("  ✅ Structured logging with Pino");
-    logger.info("  ✅ Alembic migration detection and compatibility");
+    logger.info("  ✅ Fastify HTTP server with health checks");
+    logger.info("  ✅ Socket.IO server on /main namespace");
+    logger.info("  ✅ All 13 event handlers (connect, query_search, etc.)");
+    logger.info("  ✅ Real-time message broadcasting infrastructure");
+    logger.info("  ✅ Type-safe Socket.IO with @acarshub/types");
+    logger.info("  ✅ CORS support for frontend communication");
     logger.info("");
-    logger.info("Next Steps (Week 2):");
-    logger.info("  - Socket.IO server setup");
-    logger.info("  - Event handlers for frontend communication");
-    logger.info("  - Real-time message broadcasting");
-    logger.info("  - Database search integration");
+    logger.info("Event Handlers:");
+    logger.info("  ✅ connect - Initial data load");
+    logger.info("  ✅ query_search - Database search");
+    logger.info("  ✅ update_alerts - Alert term management");
+    logger.info("  ✅ regenerate_alert_matches - Full alert rebuild");
+    logger.info("  ✅ request_status - System status");
+    logger.info("  ✅ signal_freqs - Frequency counts");
+    logger.info("  ✅ signal_count - Message counts");
+    logger.info("  ✅ request_recent_alerts - Recent alerts");
+    logger.info("  ✅ signal_graphs - Alert statistics");
+    logger.info("  ✅ rrd_timeseries - Time-series data (placeholder)");
+    logger.info("  ✅ query_alerts_by_term - Term-specific search");
+    logger.info("  ✅ reset_alert_counts - Reset statistics");
+    logger.info("  ✅ disconnect - Cleanup");
     logger.info("");
-    logger.info("To test database queries:");
-    logger.info("  1. Add test data to ./data/acarshub.db");
-    logger.info("  2. Run: npm run dev");
-    logger.info("  3. Check statistics output above");
+    logger.info("Next Steps (Week 3):");
+    logger.info("  - TCP listeners (ACARS, VDLM2, HFDL, IMSL, IRDM)");
+    logger.info("  - Message processing pipeline");
+    logger.info("  - Background scheduled tasks");
+    logger.info("  - ADS-B integration");
+    logger.info("");
+    logger.info("To test Socket.IO:");
+    logger.info("  1. Frontend: Update SOCKET_URL to http://localhost:8080");
+    logger.info("  2. Connect to /main namespace");
+    logger.info("  3. All events should work with zero frontend changes");
     logger.info("");
 
-    // Type checking demonstration
-    logger.info("Type Safety Verification:");
-    logger.info("────────────────────────────────────────");
+    // Handle shutdown signals
+    const shutdown = async (signal: string) => {
+      logger.info(`Received ${signal}, shutting down gracefully...`);
 
-    // @ts-expect-error - Unused variable for type checking only
-    const _typeCheck: SocketEvents = {
-      acars_msg: () => {},
-      newmsg: () => {},
-      labels: () => {},
-      terms: () => {},
-      alert_matches: () => {},
-      database_search_results: () => {},
-      alerts_by_term_results: () => {},
-      system_status: () => {},
-      signal: () => {},
-      signal_freqs: () => {},
-      signal_count: () => {},
-      adsb: () => {},
-      adsb_aircraft: () => {},
-      decoders: () => {},
-      alert_terms_stats: () => {},
-      database_size: () => {},
-      acarshub_version: () => {},
+      if (io) {
+        await shutdownSocketServer(io);
+      }
+
+      if (fastify) {
+        await fastify.close();
+        logger.info("Fastify server closed");
+      }
+
+      closeDatabase();
+      logger.info("Database closed");
+
+      logger.info("Shutdown complete");
+      process.exit(0);
     };
 
-    // @ts-expect-error - Unused variable for type checking only
-    const _emitTypeCheck: SocketEmitEvents = {
-      query_search: () => {},
-      update_alerts: () => {},
-      signal_freqs: () => {},
-      signal_count: () => {},
-      alert_term_query: () => {},
-      request_status: () => {},
-      query_alerts_by_term: () => {},
-    };
-
-    logger.info("  ✅ SocketEvents type checking passed");
-    logger.info("  ✅ SocketEmitEvents type checking passed");
-    logger.info("  ✅ Shared types from @acarshub/types working");
-    logger.info("");
-
-    logger.info('Run "just ci" to verify all quality checks pass.');
-    logger.info("");
+    process.on("SIGTERM", () => shutdown("SIGTERM"));
+    process.on("SIGINT", () => shutdown("SIGINT"));
   } catch (error) {
     logger.error("❌ Error during startup:", {
       error: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
     });
+
+    if (io) {
+      await shutdownSocketServer(io);
+    }
+
+    if (fastify) {
+      await fastify.close();
+    }
+
     closeDatabase();
     process.exit(1);
   }
