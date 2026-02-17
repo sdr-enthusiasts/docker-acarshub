@@ -232,9 +232,9 @@ async function main(): Promise<void> {
 
     // Show signal level statistics
     const signalLevels = getAllSignalLevels();
-    const acarsLevels = signalLevels.acars.length;
-    const vdlm2Levels = signalLevels.vdlm2.length;
-    const hfdlLevels = signalLevels.hfdl.length;
+    const acarsLevels = signalLevels.ACARS.length;
+    const vdlm2Levels = signalLevels["VDL-M2"].length;
+    const hfdlLevels = signalLevels.HFDL.length;
     logger.info("  Signal Levels:");
     logger.info(`    - ACARS: ${acarsLevels} unique levels`);
     logger.info(`    - VDLM2: ${vdlm2Levels} unique levels`);

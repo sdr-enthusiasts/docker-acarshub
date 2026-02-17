@@ -235,7 +235,7 @@ describe("Database Helper Functions", () => {
 
     it("should return label info for valid label", () => {
       const result = lookupLabel("H1");
-      expect(result).toEqual({ name: "Position Report" });
+      expect(result).toBe("Position Report");
     });
 
     it("should return null for invalid label", () => {
@@ -244,13 +244,9 @@ describe("Database Helper Functions", () => {
     });
 
     it("should handle multiple labels", () => {
-      expect((lookupLabel("H1") as { name: string })?.name).toBe(
-        "Position Report",
-      );
-      expect((lookupLabel("Q0") as { name: string })?.name).toBe("Flight Plan");
-      expect((lookupLabel("SA") as { name: string })?.name).toBe(
-        "Satellite Report",
-      );
+      expect(lookupLabel("H1")).toBe("Position Report");
+      expect(lookupLabel("Q0")).toBe("Flight Plan");
+      expect(lookupLabel("SA")).toBe("Satellite Report");
     });
   });
 

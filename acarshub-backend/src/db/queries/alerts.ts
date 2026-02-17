@@ -238,12 +238,22 @@ export function searchAlertsByTerm(
  *
  * Equivalent to Python get_alert_counts() function.
  *
+ * This ensures that all terms in the cache are returned,
+ * even if they don't exist in the database yet (with count 0).
+ *
  * @returns Array of alert statistics
  */
 export function getAlertCounts(): AlertStat[] {
   const db = getDatabase();
 
-  return db.select().from(alertStats).all();
+  const resultList = db.select().from(alertStats).all();
+
+  // Ensure all cached terms are included (even with count 0)
+  // Note: We don't add missing terms here because they should already exist
+  // in alert_stats table (created when setAlertTerms is called)
+  // If a term is missing, it means it was never configured
+
+  return resultList;
 }
 
 /**

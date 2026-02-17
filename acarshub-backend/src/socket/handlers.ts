@@ -36,7 +36,6 @@ import type {
   SearchHtmlMsg,
   SignalCountData,
   SignalFreqData,
-  SignalLevelData,
   SystemStatus,
   Terms,
 } from "@acarshub/types";
@@ -103,6 +102,9 @@ export function registerHandlers(io: TypedSocketServer): void {
     socket.on("rrd_timeseries", (params) =>
       handleRRDTimeseries(socket, params),
     );
+    // Note: signal_graphs is not in SocketEmitEvents but Python supports it
+    // @ts-expect-error - Python backend supports this event
+    socket.on("signal_graphs", () => handleSignalGraphs(socket));
 
     socket.on("disconnect", (reason) => {
       logger.info("Client disconnected", {
@@ -231,22 +233,9 @@ function handleConnect(socket: TypedSocket, _io: TypedSocketServer): void {
     socket.emit("database", dbSize);
 
     // 7. Send signal levels
+    // Python sends raw object with uppercase decoder names: {"ACARS": [...], "VDL-M2": [...]}
     const signalLevels = getAllSignalLevels();
-    const signalLevelData: SignalLevelData = {
-      acars: signalLevels.acars.map((item) => ({
-        level: item.level ?? 0,
-        count: item.count ?? 0,
-      })),
-      vdlm2: signalLevels.vdlm2.map((item) => ({
-        level: item.level ?? 0,
-        count: item.count ?? 0,
-      })),
-      hfdl: signalLevels.hfdl.map((item) => ({
-        level: item.level ?? 0,
-        count: item.count ?? 0,
-      })),
-    };
-    socket.emit("signal", { levels: signalLevelData });
+    socket.emit("signal", { levels: signalLevels });
 
     // 8. Send alert statistics
     const alertCounts = getAlertCounts();
@@ -697,6 +686,61 @@ function handleQueryAlertsByTerm(
  *
  * @param socket - Socket.IO socket
  * @param params - Query parameters (start, end, downsample)
+ */
+/**
+ * Handle signal_graphs request
+ *
+ * Python implementation: acarshub.py request_graphs()
+ * Sends alert terms and signal levels to requesting client
+ */
+function handleSignalGraphs(socket: TypedSocket): void {
+  try {
+    // Send alert terms
+    const alertCounts = getAlertCounts();
+    const alertTermData: Record<
+      number,
+      { count: number; id: number; term: string }
+    > = {};
+    for (let i = 0; i < alertCounts.length; i++) {
+      alertTermData[i] = {
+        count: alertCounts[i].count ?? 0,
+        id: i,
+        term: alertCounts[i].term ?? "",
+      };
+    }
+    socket.emit("alert_terms", { data: alertTermData });
+
+    // Send signal levels
+    const signalLevels = getAllSignalLevels();
+    socket.emit("signal", { levels: signalLevels });
+
+    logger.debug("Signal graphs data sent", { socketId: socket.id });
+  } catch (error) {
+    logger.error("Failed to send signal graphs", {
+      socketId: socket.id,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+/**
+ * Handle rrd_timeseries request
+ *
+ * Python implementation: Not directly equivalent - Python used RRD files
+ * TypeScript uses timeseries_stats table populated by stats writer
+ *
+ * Request format: {
+ *   start?: number,  // Unix timestamp (defaults to 24h ago)
+ *   end?: number,    // Unix timestamp (defaults to now)
+ *   downsample?: number  // Seconds between points (defaults to 300 = 5min)
+ * }
+ *
+ * Response format: {
+ *   data: [
+ *     { timestamp, acars, vdlm, hfdl, imsl, irdm, total, error },
+ *     ...
+ *   ]
+ * }
  */
 async function handleRRDTimeseries(
   socket: TypedSocket,

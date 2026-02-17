@@ -182,18 +182,18 @@ export function getSignalLevels(
  * @returns Object with signal levels per decoder type
  */
 export function getAllSignalLevels(): {
-  acars: Array<{ level: number | null; count: number | null }>;
-  vdlm2: Array<{ level: number | null; count: number | null }>;
-  hfdl: Array<{ level: number | null; count: number | null }>;
-  imsl: Array<{ level: number | null; count: number | null }>;
-  irdm: Array<{ level: number | null; count: number | null }>;
+  ACARS: Array<{ level: number | null; count: number | null }>;
+  "VDL-M2": Array<{ level: number | null; count: number | null }>;
+  HFDL: Array<{ level: number | null; count: number | null }>;
+  IMSL: Array<{ level: number | null; count: number | null }>;
+  IRDM: Array<{ level: number | null; count: number | null }>;
 } {
   return {
-    acars: getSignalLevels("acars"),
-    vdlm2: getSignalLevels("vdlm2"),
-    hfdl: getSignalLevels("hfdl"),
-    imsl: getSignalLevels("imsl"),
-    irdm: getSignalLevels("irdm"),
+    ACARS: getSignalLevels("acars"),
+    "VDL-M2": getSignalLevels("vdlm2"),
+    HFDL: getSignalLevels("hfdl"),
+    IMSL: getSignalLevels("imsl"),
+    IRDM: getSignalLevels("irdm"),
   };
 }
 

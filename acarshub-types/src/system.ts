@@ -143,8 +143,8 @@ export interface Decoders {
  * Signal Level Item
  */
 export interface SignalLevelItem {
-  level: number;
-  count: number;
+  level: number | null;
+  count: number | null;
   id?: number;
 }
 
