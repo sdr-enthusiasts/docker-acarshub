@@ -117,7 +117,9 @@ beforeEach(() => {
     // Suppress React Testing Library warnings about act()
     if (
       typeof args[0] === "string" &&
-      args[0].includes("Warning: ReactDOM.render")
+      (args[0].includes("Warning: ReactDOM.render") ||
+        args[0].includes("An update to") ||
+        args[0].includes("was not wrapped in act"))
     ) {
       return;
     }
