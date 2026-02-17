@@ -12,7 +12,12 @@
  */
 
 import { eq, sql } from "drizzle-orm";
-import { groundStations, messageLabels } from "../config.js";
+import {
+  airlines,
+  groundStations,
+  iataOverrides,
+  messageLabels,
+} from "../config.js";
 import { createLogger } from "../utils/logger.js";
 import { getDatabase } from "./client.js";
 import {
@@ -22,6 +27,7 @@ import {
   freqsIrdm,
   freqsVdlm2,
   messagesCount,
+  messagesCountDropped,
 } from "./schema.js";
 
 const logger = createLogger("db:helpers");
@@ -208,21 +214,33 @@ export function getMessageLabelJson(label: string): string | null {
  *
  * Equivalent to Python find_airline_code_from_iata() function.
  *
- * Note: This is a placeholder implementation. The Python version queries
- * an airlines database or external API. Implement actual lookup logic
- * based on your data source.
+ * Checks overrides first, then falls back to airlines database.
  *
  * @param iataCode IATA airline code (e.g., "UA", "AA", "DL")
- * @returns Airline info or null if not found
+ * @returns Airline info or unknown airline
  */
 export function findAirlineCodeFromIata(iataCode: string): {
   icao: string;
   name: string;
-} | null {
-  // TODO: Implement actual airline lookup
-  // Python implementation queries airlines.json or similar
-  logger.debug("findAirlineCodeFromIata not fully implemented", { iataCode });
-  return null;
+} {
+  // Check overrides first
+  if (iataCode in iataOverrides) {
+    return iataOverrides[iataCode];
+  }
+
+  // Check airlines database
+  if (iataCode in airlines) {
+    return {
+      icao: airlines[iataCode].ICAO,
+      name: airlines[iataCode].NAME,
+    };
+  }
+
+  // Return unknown airline
+  return {
+    icao: iataCode,
+    name: "Unknown Airline",
+  };
 }
 
 /**
@@ -230,42 +248,75 @@ export function findAirlineCodeFromIata(iataCode: string): {
  *
  * Equivalent to Python find_airline_code_from_icao() function.
  *
- * Note: This is a placeholder implementation. The Python version queries
- * an airlines database or external API. Implement actual lookup logic
- * based on your data source.
+ * Searches through airlines database to find matching ICAO code.
  *
  * @param icaoCode ICAO airline code (e.g., "UAL", "AAL", "DAL")
- * @returns Airline info or null if not found
+ * @returns Airline info or unknown airline
  */
 export function findAirlineCodeFromIcao(icaoCode: string): {
   iata: string;
   name: string;
-} | null {
-  // TODO: Implement actual airline lookup
-  // Python implementation queries airlines.json or similar
-  logger.debug("findAirlineCodeFromIcao not fully implemented", { icaoCode });
-  return null;
+} {
+  // Search through airlines database for matching ICAO
+  for (const [iata, airline] of Object.entries(airlines)) {
+    if (airline.ICAO === icaoCode) {
+      return {
+        iata,
+        name: airline.NAME,
+      };
+    }
+  }
+
+  // Return unknown airline
+  return {
+    iata: icaoCode,
+    name: "UNKNOWN AIRLINE",
+  };
 }
 
 /**
- * Get error message count from database
+ * Get error and message statistics from database
  *
  * Equivalent to Python get_errors() function.
  *
- * @returns Number of error messages
+ * Returns full statistics matching Python format:
+ * - non_empty_total: Total non-empty messages
+ * - non_empty_errors: Non-empty messages with errors
+ * - empty_total: Total empty messages (dropped)
+ * - empty_errors: Empty messages with errors
+ *
+ * @returns Error and message statistics
  */
-export function getErrors(): number {
+export function getErrors(): {
+  non_empty_total: number;
+  non_empty_errors: number;
+  empty_total: number;
+  empty_errors: number;
+} {
   const db = getDatabase();
 
   try {
-    // Get the count record and return the errors field
-    const result = db.select().from(messagesCount).get();
+    // Get logged message counts
+    const count = db.select().from(messagesCount).get();
 
-    return result?.errors ?? 0;
+    // Get non-logged (empty) message counts
+    const nonlogged = db.select().from(messagesCountDropped).get();
+
+    return {
+      non_empty_total: count?.total ?? 0,
+      non_empty_errors: count?.errors ?? 0,
+      empty_total: nonlogged?.nonloggedGood ?? 0,
+      empty_errors: nonlogged?.nonloggedErrors ?? 0,
+    };
   } catch (error) {
-    logger.error("Failed to get error count", {
+    logger.error("Failed to get error statistics", {
       error: error instanceof Error ? error.message : String(error),
     });
-    return 0;
+    return {
+      non_empty_total: 0,
+      non_empty_errors: 0,
+      empty_total: 0,
+      empty_errors: 0,
+    };
   }
 }

@@ -19,7 +19,7 @@
 
 import { randomUUID } from "node:crypto";
 import { and, asc, desc, eq, like, notInArray, sql } from "drizzle-orm";
-import { alertTerms, alertTermsIgnore, DB_SAVEALL } from "../../config.js";
+import { DB_SAVEALL } from "../../config.js";
 import { createLogger } from "../../utils/logger.js";
 import { getDatabase } from "../client.js";
 import { isMessageNotEmpty, updateFrequencies } from "../helpers.js";
@@ -37,6 +37,7 @@ import {
   messagesCountDropped,
   type NewMessage,
 } from "../schema.js";
+import { getCachedAlertIgnoreTerms, getCachedAlertTerms } from "./alerts.js";
 
 const logger = createLogger("db:messages");
 
@@ -211,7 +212,10 @@ export function addMessage(
       }
     }
 
-    // Perform alert matching
+    // Perform alert matching (use cached terms to avoid DB hits)
+    const alertTerms = getCachedAlertTerms();
+    const alertTermsIgnore = getCachedAlertIgnoreTerms();
+
     if (alertTerms.length > 0) {
       // Helper function to save alert match
       const saveAlertMatch = (term: string, matchType: string): void => {
@@ -712,13 +716,13 @@ export function showAll(): Message[] {
 }
 
 /**
- * Get total message count
+ * Get total message count and database file size
  *
  * Equivalent to Python database_get_row_count() function.
  *
- * @returns Total number of messages in database
+ * @returns Tuple of [message count, database file size in bytes]
  */
-export function getRowCount(): number {
+export function getRowCount(): { count: number; size: number | null } {
   const db = getDatabase();
 
   const result = db
@@ -726,7 +730,24 @@ export function getRowCount(): number {
     .from(messages)
     .get();
 
-  return result?.count ?? 0;
+  const count = result?.count ?? 0;
+
+  // Get database file size
+  let size: number | null = null;
+  try {
+    const fs = require("node:fs");
+    const dbPath = process.env.ACARSHUB_DB || "./data/acarshub.db";
+    // Remove "sqlite:///" prefix if present (Python format)
+    const cleanPath = dbPath.replace(/^sqlite:\/\/\//, "");
+    const stats = fs.statSync(cleanPath);
+    size = stats.size;
+  } catch (error) {
+    logger.warn("Failed to get database file size", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+
+  return { count, size };
 }
 
 /**

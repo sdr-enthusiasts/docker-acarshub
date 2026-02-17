@@ -15,9 +15,16 @@
  * - Uses normalized alert_matches table (not denormalized messages_saved)
  * - JOIN messages table to get full message data
  * - Type-safe with TypeScript
+ *
+ * Alert Term Caching:
+ * - Maintains in-memory cache of alert_terms and alert_terms_ignore
+ * - Cache is loaded at startup via initializeAlertCache()
+ * - Cache is automatically updated when setAlertTerms() or setAlertIgnore() is called
+ * - This avoids hitting the database on every message ingestion
  */
 
 import { desc, eq, sql } from "drizzle-orm";
+import { createLogger } from "../../utils/logger.js";
 import { getDatabase } from "../client.js";
 import {
   type AlertMatch,
@@ -30,6 +37,95 @@ import {
   messages,
   type NewAlertMatch,
 } from "../schema.js";
+
+const logger = createLogger("db:alerts");
+
+// ============================================================================
+// In-Memory Alert Term Cache (matches Python module-level globals)
+// ============================================================================
+
+/**
+ * In-memory cache of monitored alert terms
+ * Loaded from database at startup, updated when setAlertTerms() is called
+ */
+let alertTermsCache: string[] = [];
+
+/**
+ * In-memory cache of alert ignore terms
+ * Loaded from database at startup, updated when setAlertIgnore() is called
+ */
+let alertTermsIgnoreCache: string[] = [];
+
+/**
+ * Flag to track if cache has been initialized
+ */
+let cacheInitialized = false;
+
+/**
+ * Initialize alert term cache from database
+ *
+ * Should be called at application startup.
+ * Loads alert_stats and ignore_alert_terms tables into memory.
+ */
+export function initializeAlertCache(): void {
+  try {
+    const db = getDatabase();
+
+    // Load alert terms from alert_stats table
+    const terms = db.select().from(alertStats).all();
+    alertTermsCache = terms
+      .filter((t): t is AlertStat & { term: string } => t.term !== null)
+      .map((t) => t.term.toUpperCase());
+
+    // Load ignore terms from ignore_alert_terms table
+    const ignoreTerms = db.select().from(ignoreAlertTerms).all();
+    alertTermsIgnoreCache = ignoreTerms
+      .filter((t): t is IgnoreAlertTerm & { term: string } => t.term !== null)
+      .map((t) => t.term.toUpperCase());
+
+    cacheInitialized = true;
+
+    logger.info("Alert term cache initialized", {
+      alertTerms: alertTermsCache.length,
+      ignoreTerms: alertTermsIgnoreCache.length,
+    });
+  } catch (error) {
+    logger.error("Failed to initialize alert cache", { error });
+    throw error;
+  }
+}
+
+/**
+ * Get cached alert terms (for message matching)
+ *
+ * Returns uppercase terms from in-memory cache.
+ * Equivalent to Python's global `alert_terms` list.
+ *
+ * @returns Array of alert terms (uppercase)
+ */
+export function getCachedAlertTerms(): string[] {
+  if (!cacheInitialized) {
+    logger.warn("Alert cache not initialized, initializing now");
+    initializeAlertCache();
+  }
+  return alertTermsCache;
+}
+
+/**
+ * Get cached alert ignore terms (for message matching)
+ *
+ * Returns uppercase terms from in-memory cache.
+ * Equivalent to Python's global `alert_terms_ignore` list.
+ *
+ * @returns Array of ignore terms (uppercase)
+ */
+export function getCachedAlertIgnoreTerms(): string[] {
+  if (!cacheInitialized) {
+    logger.warn("Alert cache not initialized, initializing now");
+    initializeAlertCache();
+  }
+  return alertTermsIgnoreCache;
+}
 
 /**
  * Alert match with full message data
@@ -169,21 +265,29 @@ export function getAlertIgnore(): IgnoreAlertTerm[] {
  * Equivalent to Python set_alert_terms() function.
  *
  * This replaces all alert statistics with the provided terms.
+ * Updates both database and in-memory cache.
  *
  * @param terms Array of alert terms
  */
 export function setAlertTerms(terms: string[]): void {
   const db = getDatabase();
 
+  // Normalize terms to uppercase
+  const upperTerms = terms.map((t) => t.toUpperCase());
+
   // Delete all existing alert stats
   db.delete(alertStats).run();
 
   // Insert new alert stats (count starts at 0)
-  if (terms.length > 0) {
+  if (upperTerms.length > 0) {
     db.insert(alertStats)
-      .values(terms.map((term) => ({ term, count: 0 })))
+      .values(upperTerms.map((term) => ({ term, count: 0 })))
       .run();
   }
+
+  // Update in-memory cache
+  alertTermsCache = upperTerms;
+  logger.info("Alert terms updated", { count: upperTerms.length });
 }
 
 /**
@@ -192,21 +296,29 @@ export function setAlertTerms(terms: string[]): void {
  * Equivalent to Python set_alert_ignore() function.
  *
  * This replaces all ignore terms with the provided list.
+ * Updates both database and in-memory cache.
  *
  * @param terms Array of ignore terms
  */
 export function setAlertIgnore(terms: string[]): void {
   const db = getDatabase();
 
+  // Normalize terms to uppercase
+  const upperTerms = terms.map((t) => t.toUpperCase());
+
   // Delete all existing ignore terms
   db.delete(ignoreAlertTerms).run();
 
   // Insert new ignore terms
-  if (terms.length > 0) {
+  if (upperTerms.length > 0) {
     db.insert(ignoreAlertTerms)
-      .values(terms.map((term) => ({ term })))
+      .values(upperTerms.map((term) => ({ term })))
       .run();
   }
+
+  // Update in-memory cache
+  alertTermsIgnoreCache = upperTerms;
+  logger.info("Alert ignore terms updated", { count: upperTerms.length });
 }
 
 /**

@@ -16,6 +16,7 @@ export const DB_ALERT_SAVE_DAYS = process.env.DB_ALERT_SAVE_DAYS
   ? Number.parseInt(process.env.DB_ALERT_SAVE_DAYS, 10)
   : 120;
 export const ACARSHUB_DB = process.env.ACARSHUB_DB || "./data/acarshub.db";
+export const DB_BACKUP = process.env.DB_BACKUP || "";
 
 /**
  * Decoder enablement
@@ -44,6 +45,18 @@ export const groundStations: Record<string, { icao: string; name: string }> =
  * Message labels (loaded from data file)
  */
 export const messageLabels: Record<string, unknown> = {};
+
+/**
+ * Airlines database (IATA code -> {ICAO, NAME})
+ */
+export const airlines: Record<string, { ICAO: string; NAME: string }> = {};
+
+/**
+ * IATA overrides (IATA -> {ICAO, NAME})
+ * Loaded from IATA_OVERRIDE environment variable
+ * Format: "IATA|ICAO|Name;IATA2|ICAO2|Name2"
+ */
+export const iataOverrides: Record<string, { icao: string; name: string }> = {};
 
 /**
  * Set alert terms at runtime
@@ -90,6 +103,9 @@ export async function loadGroundStations(
 
 /**
  * Load message labels from JSON file
+ *
+ * Metadata.json structure: { "attribution": {...}, "labels": {...} }
+ * We extract the "labels" object.
  */
 export async function loadMessageLabels(
   filePath = "./data/message-labels.json",
@@ -97,9 +113,64 @@ export async function loadMessageLabels(
   try {
     const fs = await import("node:fs/promises");
     const data = await fs.readFile(filePath, "utf-8");
-    Object.assign(messageLabels, JSON.parse(data));
+    const json = JSON.parse(data) as { labels?: Record<string, unknown> };
+
+    // Extract labels object from metadata structure
+    if (json.labels) {
+      Object.assign(messageLabels, json.labels);
+    } else {
+      // Fallback: treat entire JSON as labels (for backwards compatibility)
+      Object.assign(messageLabels, json);
+    }
   } catch (error) {
     console.error("Failed to load message labels:", error);
+  }
+}
+
+/**
+ * Load airlines from JSON file
+ */
+export async function loadAirlines(
+  filePath = "./rootfs/webapp/data/airlines.json",
+): Promise<void> {
+  try {
+    const fs = await import("node:fs/promises");
+    const data = await fs.readFile(filePath, "utf-8");
+    const json = JSON.parse(data) as Record<
+      string,
+      { ICAO: string; NAME: string }
+    >;
+
+    Object.assign(airlines, json);
+  } catch (error) {
+    console.error("Failed to load airlines:", error);
+  }
+}
+
+/**
+ * Parse IATA override configuration
+ *
+ * Format: "IATA|ICAO|Name;IATA2|ICAO2|Name2"
+ * Example: "UA|UAL|United Airlines;AA|AAL|American Airlines"
+ */
+export function parseIataOverrides(): void {
+  const overrideStr = process.env.IATA_OVERRIDE || "";
+  if (!overrideStr.trim()) {
+    return;
+  }
+
+  const overrides = overrideStr.split(";");
+  for (const item of overrides) {
+    const parts = item.split("|");
+    if (parts.length === 3) {
+      const [iata, icao, name] = parts;
+      iataOverrides[iata.trim()] = {
+        icao: icao.trim(),
+        name: name.trim(),
+      };
+    } else {
+      console.warn(`Invalid IATA override format: ${item}`);
+    }
   }
 }
 
@@ -107,5 +178,10 @@ export async function loadMessageLabels(
  * Initialize configuration (load data files)
  */
 export async function initializeConfig(): Promise<void> {
-  await Promise.all([loadGroundStations(), loadMessageLabels()]);
+  await Promise.all([
+    loadGroundStations(),
+    loadMessageLabels(),
+    loadAirlines(),
+  ]);
+  parseIataOverrides();
 }

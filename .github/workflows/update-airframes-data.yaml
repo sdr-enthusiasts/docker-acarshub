@@ -1,0 +1,244 @@
+---
+# GitHub Action: Update Airframes.io Data Files
+#
+# This workflow automatically monitors the airframesio/data repository
+# for changes to ground station and ACARS metadata files.
+#
+# What it does:
+# 1. Downloads the latest versions of:
+#    - ground-stations.json (VDL ground station database)
+#    - metadata.json (ACARS label definitions)
+# 2. Compares SHA256 hashes with current versions
+# 3. If changes detected:
+#    - Updates the files in rootfs/webapp/data/
+#    - Creates a pull request with the changes
+# 4. If no changes, exits without action
+#
+# Schedule: Runs weekly on Mondays at 3 AM UTC
+# Manual trigger: Available via workflow_dispatch
+#
+# Required secrets:
+# - PAT: Personal Access Token with repo and pull_request permissions
+#
+# Files updated:
+# - rootfs/webapp/data/ground-stations.json
+# - rootfs/webapp/data/metadata.json
+#
+# Source: https://github.com/airframesio/data
+# License: Check airframesio/data repository for license terms
+
+name: Update Airframes.io Data
+
+on:
+  schedule:
+    # Run weekly on Mondays at 3 AM UTC
+    - cron: "0 3 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  check-and-update:
+    name: Check for airframes.io data updates
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          persist-credentials: false
+          ref: main
+
+      - name: Get current file hashes
+        id: current-hashes
+        run: |
+          if [ -f rootfs/webapp/data/ground-stations.json ]; then
+            current_gs_hash=$(sha256sum rootfs/webapp/data/ground-stations.json | awk '{print $1}')
+          else
+            current_gs_hash="none"
+          fi
+
+          if [ -f rootfs/webapp/data/metadata.json ]; then
+            current_meta_hash=$(sha256sum rootfs/webapp/data/metadata.json | awk '{print $1}')
+          else
+            current_meta_hash="none"
+          fi
+
+          echo "ground_stations=${current_gs_hash}" >> "$GITHUB_OUTPUT"
+          echo "metadata=${current_meta_hash}" >> "$GITHUB_OUTPUT"
+          echo "Current ground-stations.json hash: ${current_gs_hash}"
+          echo "Current metadata.json hash: ${current_meta_hash}"
+
+      - name: Download latest data files
+        run: |
+          echo "Downloading latest ground-stations.json..."
+          curl -L -o /tmp/ground-stations.json \
+            https://raw.githubusercontent.com/airframesio/data/master/json/vdl/ground-stations.json
+
+          echo "Downloading latest metadata.json..."
+          curl -L -o /tmp/metadata.json \
+            https://raw.githubusercontent.com/airframesio/data/master/json/acars/metadata.json
+
+          echo "Download complete"
+
+      - name: Get new file hashes
+        id: new-hashes
+        run: |
+          new_gs_hash=$(sha256sum /tmp/ground-stations.json | awk '{print $1}')
+          new_meta_hash=$(sha256sum /tmp/metadata.json | awk '{print $1}')
+
+          echo "ground_stations=${new_gs_hash}" >> "$GITHUB_OUTPUT"
+          echo "metadata=${new_meta_hash}" >> "$GITHUB_OUTPUT"
+          echo "New ground-stations.json hash: ${new_gs_hash}"
+          echo "New metadata.json hash: ${new_meta_hash}"
+
+      - name: Compare hashes and determine if update needed
+        id: compare
+        run: |
+          current_gs="${{ steps.current-hashes.outputs.ground_stations }}"
+          current_meta="${{ steps.current-hashes.outputs.metadata }}"
+          new_gs="${{ steps.new-hashes.outputs.ground_stations }}"
+          new_meta="${{ steps.new-hashes.outputs.metadata }}"
+
+          gs_changed=false
+          meta_changed=false
+
+          if [ "$current_gs" != "$new_gs" ]; then
+            gs_changed=true
+            echo "✨ ground-stations.json has changes"
+          else
+            echo "✅ ground-stations.json unchanged"
+          fi
+
+          if [ "$current_meta" != "$new_meta" ]; then
+            meta_changed=true
+            echo "✨ metadata.json has changes"
+          else
+            echo "✅ metadata.json unchanged"
+          fi
+
+          if [ "$gs_changed" = true ] || [ "$meta_changed" = true ]; then
+            echo "needs_update=true" >> "$GITHUB_OUTPUT"
+            echo "ground_stations_changed=${gs_changed}" >> "$GITHUB_OUTPUT"
+            echo "metadata_changed=${meta_changed}" >> "$GITHUB_OUTPUT"
+            echo "📦 Update needed"
+          else
+            echo "needs_update=false" >> "$GITHUB_OUTPUT"
+            echo "✅ All files up to date"
+          fi
+
+      - name: Update data files
+        if: steps.compare.outputs.needs_update == 'true'
+        run: |
+          mkdir -p rootfs/webapp/data/
+
+          if [ "${{ steps.compare.outputs.ground_stations_changed }}" = "true" ]; then
+            echo "Updating ground-stations.json..."
+            cp /tmp/ground-stations.json rootfs/webapp/data/ground-stations.json
+          fi
+
+          if [ "${{ steps.compare.outputs.metadata_changed }}" = "true" ]; then
+            echo "Updating metadata.json..."
+            cp /tmp/metadata.json rootfs/webapp/data/metadata.json
+          fi
+
+          echo "Files updated"
+
+      - name: Get file statistics
+        if: steps.compare.outputs.needs_update == 'true'
+        id: stats
+        run: |
+          gs_size=$(wc -c < rootfs/webapp/data/ground-stations.json | numfmt --to=iec)
+          meta_size=$(wc -c < rootfs/webapp/data/metadata.json | numfmt --to=iec)
+
+          gs_stations=$(jq '.ground_stations | length' rootfs/webapp/data/ground-stations.json)
+          meta_labels=$(jq '.labels | length' rootfs/webapp/data/metadata.json)
+
+          echo "ground_stations_size=${gs_size}" >> "$GITHUB_OUTPUT"
+          echo "metadata_size=${meta_size}" >> "$GITHUB_OUTPUT"
+          echo "ground_stations_count=${gs_stations}" >> "$GITHUB_OUTPUT"
+          echo "metadata_labels_count=${meta_labels}" >> "$GITHUB_OUTPUT"
+
+      - name: Configure Git identity
+        if: steps.compare.outputs.needs_update == 'true'
+        run: |
+          git config --global user.email "noreply@github.com"
+          git config --global user.name "github[bot]"
+
+      - name: Generate commit message and PR body
+        if: steps.compare.outputs.needs_update == 'true'
+        id: pr-content
+        run: |
+          commit_msg="chore: update airframes.io data files"
+          pr_title="chore: update airframes.io data files"
+
+          # Build changes list
+          changes=""
+          if [ "${{ steps.compare.outputs.ground_stations_changed }}" = "true" ]; then
+            changes="${changes}- ✅ Updated \`ground-stations.json\` (${{ steps.stats.outputs.ground_stations_count }} stations, ${{ steps.stats.outputs.ground_stations_size }})\n"
+          fi
+          if [ "${{ steps.compare.outputs.metadata_changed }}" = "true" ]; then
+            changes="${changes}- ✅ Updated \`metadata.json\` (${{ steps.stats.outputs.metadata_labels_count }} ACARS labels, ${{ steps.stats.outputs.metadata_size }})\n"
+          fi
+
+          # Create PR body
+          cat > /tmp/pr-body.md <<EOF
+          ## Airframes.io Data Update
+
+          This PR updates the airframes.io data files with the latest versions from the upstream repository.
+
+          ### Changes
+          ${changes}
+
+          ### File Details
+          - **Ground Stations**: ${{ steps.stats.outputs.ground_stations_count }} VDL/ACARS ground stations
+          - **ACARS Labels**: ${{ steps.stats.outputs.metadata_labels_count }} message label definitions
+
+          ### Source
+          - **Repository**: https://github.com/airframesio/data
+          - **Ground Stations**: https://github.com/airframesio/data/blob/master/json/vdl/ground-stations.json
+          - **Metadata**: https://github.com/airframesio/data/blob/master/json/acars/metadata.json
+
+          ### Verification
+          The updated files have been downloaded directly from the airframes.io data repository and verified by SHA256 hash comparison.
+
+          ### Testing Checklist
+          - [ ] Ground station lookups work correctly
+          - [ ] ACARS label decoding displays proper names
+          - [ ] No errors in database initialization
+          - [ ] Integration tests pass
+
+          ---
+
+          *This PR was automatically created by the \`update-airframes-data\` GitHub Action.*
+          EOF
+
+          echo "commit_message=${commit_msg}" >> "$GITHUB_OUTPUT"
+          echo "pr_title=${pr_title}" >> "$GITHUB_OUTPUT"
+
+      - name: Create Pull Request
+        if: steps.compare.outputs.needs_update == 'true'
+        uses: peter-evans/create-pull-request@c0f553fe549906ede9cf27b5156039d195d2ece0 # v8.1.0
+        with:
+          token: ${{ secrets.PAT }}
+          commit-message: ${{ steps.pr-content.outputs.commit_message }}
+          branch: update-airframes-data-${{ github.run_number }}
+          delete-branch: true
+          title: ${{ steps.pr-content.outputs.pr_title }}
+          body-path: /tmp/pr-body.md
+          labels: |
+            dependencies
+            automated
+            data-update
+          draft: false
+
+      - name: No update needed
+        if: steps.compare.outputs.needs_update == 'false'
+        run: |
+          echo "✅ Airframes.io data files are already up to date"
+          echo "📊 Current files:"
+          echo "  - ground-stations.json: ${{ steps.current-hashes.outputs.ground_stations }}"
+          echo "  - metadata.json: ${{ steps.current-hashes.outputs.metadata }}"

@@ -24,10 +24,11 @@ const logger = createLogger("database");
 
 // Environment configuration
 const DB_PATH = process.env.ACARSHUB_DB || "./data/acarshub.db";
+const DB_BACKUP_PATH = process.env.DB_BACKUP || "";
 const DB_TIMEOUT = 5000; // 5 seconds
 
 /**
- * SQLite database connection
+ * SQLite database connection (primary)
  *
  * better-sqlite3 is synchronous and does not use connection pooling.
  * Multiple statement executions reuse the same connection.
@@ -35,11 +36,27 @@ const DB_TIMEOUT = 5000; // 5 seconds
 let sqliteConnection: Database.Database | null = null;
 
 /**
- * Drizzle ORM client instance
+ * SQLite database connection (backup)
+ *
+ * Optional secondary database for redundancy.
+ * Enabled if DB_BACKUP environment variable is set.
+ */
+let sqliteBackupConnection: Database.Database | null = null;
+
+/**
+ * Drizzle ORM client instance (primary)
  *
  * Provides type-safe query builder and schema operations.
  */
 let drizzleClient: ReturnType<typeof drizzle<typeof schema>> | null = null;
+
+/**
+ * Drizzle ORM client instance (backup)
+ *
+ * Optional backup database client.
+ */
+let drizzleBackupClient: ReturnType<typeof drizzle<typeof schema>> | null =
+  null;
 
 /**
  * Initialize database connection and Drizzle ORM client
@@ -48,19 +65,25 @@ let drizzleClient: ReturnType<typeof drizzle<typeof schema>> | null = null;
  * 1. Creates better-sqlite3 connection with WAL mode
  * 2. Sets pragmas for performance (WAL mode, synchronous=NORMAL)
  * 3. Initializes Drizzle ORM with schema
- * 4. Registers cleanup handlers for graceful shutdown
+ * 4. Optionally initializes backup database if DB_BACKUP is set
+ * 5. Registers cleanup handlers for graceful shutdown
  *
+ * @param dbPath Optional database path (defaults to ACARSHUB_DB env var)
  * @returns Drizzle ORM client instance
  * @throws Error if database connection fails
  */
-export function initDatabase(): ReturnType<typeof drizzle<typeof schema>> {
+export function initDatabase(
+  dbPath?: string,
+): ReturnType<typeof drizzle<typeof schema>> {
   if (drizzleClient) {
     return drizzleClient;
   }
 
   try {
+    const path = dbPath || DB_PATH;
+
     // Create SQLite connection
-    sqliteConnection = new Database(DB_PATH, {
+    sqliteConnection = new Database(path, {
       timeout: DB_TIMEOUT,
       verbose: process.env.NODE_ENV === "development" ? console.log : undefined,
     });
@@ -85,6 +108,32 @@ export function initDatabase(): ReturnType<typeof drizzle<typeof schema>> {
     // Initialize Drizzle ORM
     drizzleClient = drizzle(sqliteConnection, { schema });
 
+    // Initialize backup database if configured
+    if (DB_BACKUP_PATH && !dbPath) {
+      // Only init backup for primary database, not for test databases
+      logger.info("Initializing backup database", { path: DB_BACKUP_PATH });
+      try {
+        sqliteBackupConnection = new Database(DB_BACKUP_PATH, {
+          timeout: DB_TIMEOUT,
+        });
+
+        // Apply same pragmas to backup
+        sqliteBackupConnection.pragma("journal_mode = WAL");
+        sqliteBackupConnection.pragma("synchronous = NORMAL");
+        sqliteBackupConnection.pragma("foreign_keys = ON");
+        sqliteBackupConnection.pragma("cache_size = -10000");
+        sqliteBackupConnection.pragma("mmap_size = 268435456");
+
+        drizzleBackupClient = drizzle(sqliteBackupConnection, { schema });
+        logger.info("Backup database initialized successfully");
+      } catch (error) {
+        logger.error("Failed to initialize backup database", {
+          error: error instanceof Error ? error.message : String(error),
+        });
+        // Don't fail if backup init fails, just log it
+      }
+    }
+
     // Register cleanup handlers
     registerCleanupHandlers();
 
@@ -96,7 +145,29 @@ export function initDatabase(): ReturnType<typeof drizzle<typeof schema>> {
 }
 
 /**
- * Get the current Drizzle client instance
+ * Get the backup database client instance
+ *
+ * Returns the backup Drizzle client if configured, otherwise null.
+ *
+ * @returns Backup Drizzle client or null
+ */
+export function getBackupDatabase(): ReturnType<
+  typeof drizzle<typeof schema>
+> | null {
+  return drizzleBackupClient;
+}
+
+/**
+ * Check if backup database is enabled
+ *
+ * @returns true if backup database is configured and initialized
+ */
+export function hasBackupDatabase(): boolean {
+  return drizzleBackupClient !== null;
+}
+
+/**
+ * Get the current Drizzle client instance (primary)
  *
  * @returns Drizzle client or throws if not initialized
  * @throws Error if database not initialized
@@ -129,12 +200,13 @@ export function getSqliteConnection(): Database.Database {
  *
  * This function:
  * 1. Runs PRAGMA optimize to update query planner statistics
- * 2. Closes the SQLite connection
+ * 2. Closes the SQLite connection (both primary and backup)
  * 3. Cleans up client references
  *
  * Safe to call multiple times (idempotent).
  */
 export function closeDatabase(): void {
+  // Close primary database
   if (sqliteConnection) {
     try {
       // Run PRAGMA optimize to update statistics before closing
@@ -158,6 +230,28 @@ export function closeDatabase(): void {
 
     sqliteConnection = null;
     drizzleClient = null;
+  }
+
+  // Close backup database
+  if (sqliteBackupConnection) {
+    try {
+      sqliteBackupConnection.pragma("optimize");
+    } catch (error) {
+      logger.warn("Error running PRAGMA optimize on backup", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+
+    try {
+      sqliteBackupConnection.close();
+    } catch (error) {
+      logger.warn("Error closing backup database", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+
+    sqliteBackupConnection = null;
+    drizzleBackupClient = null;
   }
 }
 

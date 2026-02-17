@@ -43,5 +43,10 @@
     "tsx": "4.21.0",
     "typescript": "5.9.3",
     "vitest": "4.0.18"
+  },
+  "overrides": {
+    "rimraf": "6.1.3",
+    "glob": "13.0.0",
+    "inflight": "npm:@zkochan/inflight@2.0.0"
   }
 }

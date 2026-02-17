@@ -35,6 +35,7 @@ import {
   grabMostRecent,
   healthCheck,
   initDatabase,
+  initializeAlertCache,
   initializeMessageCounts,
 } from "./db/index.js";
 import { createLogger } from "./utils/logger.js";
@@ -88,12 +89,22 @@ async function main(): Promise<void> {
     // Initialize message counts if needed
     initializeMessageCounts();
 
+    // Initialize alert term cache (load from database)
+    logger.info("🚨 Initializing alert term cache...");
+    initializeAlertCache();
+    logger.info("✅ Alert term cache initialized");
+    logger.info("");
+
     // Display current database statistics
     logger.info("📊 Current Database Statistics:");
     logger.info("────────────────────────────────────────");
 
-    const messageCount = getRowCount();
+    const { count: messageCount, size: dbSize } = getRowCount();
     logger.info(`  Total Messages: ${messageCount}`);
+    if (dbSize !== null) {
+      const sizeMB = (dbSize / 1024 / 1024).toFixed(2);
+      logger.info(`  Database Size: ${sizeMB} MB`);
+    }
 
     const countStats = getMessageCountStats();
     if (countStats) {

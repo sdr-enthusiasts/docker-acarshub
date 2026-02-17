@@ -7,4 +7,5 @@
 export * from "../helpers.js";
 export * from "./alerts.js";
 export * from "./messages.js";
+export * from "./messageTransform.js";
 export * from "./statistics.js";

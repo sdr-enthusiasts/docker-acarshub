@@ -383,15 +383,19 @@ describe("Message Query Functions", () => {
   });
 
   describe("getRowCount()", () => {
-    it("should return total message count", () => {
-      const count = getRowCount();
-      expect(count).toBe(4);
+    it("should return total message count and file size", () => {
+      const result = getRowCount();
+      expect(result.count).toBe(4);
+      // File size may be null in test environment
+      expect(typeof result.size === "number" || result.size === null).toBe(
+        true,
+      );
     });
 
     it("should return 0 for empty database", () => {
       db.exec("DELETE FROM messages");
-      const count = getRowCount();
-      expect(count).toBe(0);
+      const result = getRowCount();
+      expect(result.count).toBe(0);
     });
   });
 
@@ -458,15 +462,15 @@ describe("Message Query Functions", () => {
 
   describe("deleteOldMessages()", () => {
     it("should delete messages before timestamp", () => {
-      const beforeCount = getRowCount();
-      expect(beforeCount).toBe(4);
+      const beforeResult = getRowCount();
+      expect(beforeResult.count).toBe(4);
 
       // Delete messages before 2024-01-01 00:01:30 (should delete first 2)
       const deleted = deleteOldMessages(1704067290);
       expect(deleted).toBe(2);
 
-      const afterCount = getRowCount();
-      expect(afterCount).toBe(2);
+      const afterResult = getRowCount();
+      expect(afterResult.count).toBe(2);
     });
 
     it("should return 0 when no messages match", () => {
