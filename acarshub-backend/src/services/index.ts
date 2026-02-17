@@ -34,6 +34,7 @@ import {
   type QueuedMessage,
 } from "./message-queue.js";
 import { destroyScheduler, getScheduler } from "./scheduler.js";
+import { startStatsPruning } from "./stats-pruning.js";
 import {
   createTcpListener,
   type MessageType,
@@ -393,6 +394,9 @@ export class BackgroundServices extends EventEmitter {
         });
       }
     }, "optimize_db_full");
+
+    // Prune old time-series stats (configurable retention, default 3 years)
+    startStatsPruning(scheduler);
 
     // Check thread health every minute (restart dead listeners)
     scheduler

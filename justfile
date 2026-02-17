@@ -5,6 +5,9 @@ web:
 server:
     pdm run dev
 
+server-node:
+    cd acarshub-backend && env $(grep -v '^#' ../.env | xargs) npm run dev
+
 # Node.js dependency updates
 update:
     cd acarshub-react && npm-check -us

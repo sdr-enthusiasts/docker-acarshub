@@ -28,7 +28,10 @@ export interface Logger {
  * Get log level from environment
  */
 function getLogLevel(): LogLevel {
-  const level = (process.env.LOG_LEVEL || "info").toLowerCase();
+  console.log(
+    `LOG_LEVEL: ${process.env.LOG_LEVEL || "not set (defaulting to 'info')"}`,
+  );
+  const level = process.env.LOG_LEVEL || "info";
   const validLevels: LogLevel[] = [
     "trace",
     "debug",
@@ -37,7 +40,27 @@ function getLogLevel(): LogLevel {
     "error",
     "fatal",
   ];
-  return validLevels.includes(level as LogLevel) ? (level as LogLevel) : "info";
+
+  // if the log level is a number, map the number to a log level string
+
+  if (!Number.isNaN(Number(level))) {
+    console.log(`LOG_LEVEL is a number: ${level}, mapping to log level string`);
+    const numericLevel = Number(level);
+    if (numericLevel > 6) return "fatal";
+    if (numericLevel === 6) return "trace";
+    if (numericLevel === 5) return "debug";
+    if (numericLevel === 4) return "info";
+    if (numericLevel === 3) return "warn";
+    if (numericLevel <= 2) return "error";
+  }
+
+  console.log(
+    `Will be returning ${validLevels.includes(level.toLowerCase() as LogLevel) ? (level as LogLevel) : "info"}`,
+  );
+
+  return validLevels.includes(level.toLowerCase() as LogLevel)
+    ? (level as LogLevel)
+    : "info";
 }
 
 /**

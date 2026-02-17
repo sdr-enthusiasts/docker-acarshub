@@ -45,6 +45,8 @@ import {
   initializeMessageCounts,
 } from "./db/index.js";
 import { createBackgroundServices } from "./services/index.js";
+import { migrateRrdToSqlite } from "./services/rrd-migration.js";
+import { startStatsWriter, stopStatsWriter } from "./services/stats-writer.js";
 import {
   initializeSocketServer,
   shutdownSocketServer,
@@ -144,6 +146,13 @@ async function main(): Promise<void> {
       throw new Error("Database health check failed");
     }
     logger.info("✅ Database is healthy");
+    logger.info("");
+
+    // Migrate RRD to SQLite (blocking startup task)
+    const rrdPath = process.env.RRD_PATH ?? "/run/acars/acarshub.rrd";
+    logger.info("📊 Checking for RRD migration...");
+    await migrateRrdToSqlite(rrdPath);
+    logger.info("✅ RRD migration check complete");
     logger.info("");
 
     // Initialize message counts if needed
@@ -248,6 +257,12 @@ async function main(): Promise<void> {
     logger.info("✅ Background services started");
     logger.info("");
 
+    // Start stats writer (minute-aligned timeseries insertion)
+    logger.info("📈 Starting stats writer...");
+    startStatsWriter();
+    logger.info("✅ Stats writer started (writes every 60s)");
+    logger.info("");
+
     logger.info("========================================");
     logger.info("✅ Week 3 Complete: Background Services");
     logger.info("========================================");
@@ -301,6 +316,9 @@ async function main(): Promise<void> {
     const shutdown = async (signal: string) => {
       logger.info(`Received ${signal}, shutting down gracefully...`);
 
+      stopStatsWriter();
+      logger.info("Stats writer stopped");
+
       if (backgroundServices) {
         backgroundServices.stop();
         logger.info("Background services stopped");
@@ -329,6 +347,8 @@ async function main(): Promise<void> {
       error: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
     });
+
+    stopStatsWriter();
 
     if (backgroundServices) {
       backgroundServices.stop();

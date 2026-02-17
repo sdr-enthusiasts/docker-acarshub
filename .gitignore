@@ -152,6 +152,8 @@ docker_acarshub.egg-info
 *.rrd
 .pre-commit-config.yaml
 *.db
+*.db-shm
+*.db-wal
 .env
 __pycache__/
 

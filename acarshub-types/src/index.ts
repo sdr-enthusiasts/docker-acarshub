@@ -67,7 +67,12 @@ export type {
   SearchHtmlMsg,
 } from "./search.js";
 // Re-export all Socket.IO event types
-export type { SocketEmitEvents, SocketEvents } from "./socket.js";
+export type {
+  RRDTimeseriesData,
+  RRDTimeseriesPoint,
+  SocketEmitEvents,
+  SocketEvents,
+} from "./socket.js";
 // Re-export all system and configuration types
 export type {
   AcarshubVersion,

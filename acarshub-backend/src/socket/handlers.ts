@@ -48,6 +48,7 @@ import {
   getAllSignalLevels,
   getCachedAlertIgnoreTerms,
   getCachedAlertTerms,
+  getDatabase,
   getMessageCountStats,
   getRowCount,
   grabMostRecent,
@@ -58,6 +59,7 @@ import {
   setAlertTerms,
 } from "../db/index.js";
 import { enrichMessage, enrichMessages } from "../formatters/enrichment.js";
+import { queryTimeseriesData } from "../services/rrd-migration.js";
 import { createLogger } from "../utils/logger.js";
 import type { TypedSocket, TypedSocketServer } from "./types.js";
 
@@ -96,6 +98,9 @@ export function registerHandlers(io: TypedSocketServer): void {
     );
     socket.on("query_alerts_by_term", (params) =>
       handleQueryAlertsByTerm(socket, params),
+    );
+    socket.on("rrd_timeseries", (params) =>
+      handleRRDTimeseries(socket, params),
     );
 
     socket.on("disconnect", (reason) => {
@@ -641,6 +646,130 @@ function handleQueryAlertsByTerm(
     });
   } catch (error) {
     logger.error("Error querying alerts by term", {
+      socketId: socket.id,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+/**
+ * Handle rrd_timeseries query - fetch time-series data from database
+ *
+ * Supports optional downsampling for long time ranges to reduce data transfer
+ * and improve chart rendering performance.
+ *
+ * @param socket - Socket.IO socket
+ * @param params - Query parameters (start, end, downsample)
+ */
+async function handleRRDTimeseries(
+  socket: TypedSocket,
+  params: {
+    start?: number; // Unix timestamp (seconds)
+    end?: number; // Unix timestamp (seconds)
+    downsample?: number; // Bucket size in seconds (e.g., 300 for 5-minute buckets)
+  },
+): Promise<void> {
+  try {
+    const now = Math.floor(Date.now() / 1000);
+    const start = params.start ?? now - 86400; // Default: last 24 hours
+    const end = params.end ?? now;
+    const downsample = params.downsample;
+
+    logger.debug("RRD timeseries query", {
+      socketId: socket.id,
+      start,
+      end,
+      downsample,
+      rangeHours: Math.round((end - start) / 3600),
+    });
+
+    // If downsampling requested, use raw SQL for better performance
+    if (downsample && downsample > 60) {
+      const db = getDatabase();
+      const { sql } = await import("drizzle-orm");
+
+      const results = db.all(
+        sql.raw(`
+          SELECT
+            (timestamp / ${downsample}) * ${downsample} as bucket_timestamp,
+            ROUND(AVG(acars_count)) as acars_count,
+            ROUND(AVG(vdlm_count)) as vdlm_count,
+            ROUND(AVG(hfdl_count)) as hfdl_count,
+            ROUND(AVG(imsl_count)) as imsl_count,
+            ROUND(AVG(irdm_count)) as irdm_count,
+            ROUND(AVG(total_count)) as total_count,
+            ROUND(AVG(error_count)) as error_count
+          FROM timeseries_stats
+          WHERE resolution = '1min'
+            AND timestamp >= ${start}
+            AND timestamp <= ${end}
+          GROUP BY bucket_timestamp
+          ORDER BY bucket_timestamp
+        `),
+      ) as Array<{
+        bucket_timestamp: number;
+        acars_count: number;
+        vdlm_count: number;
+        hfdl_count: number;
+        imsl_count: number;
+        irdm_count: number;
+        total_count: number;
+        error_count: number;
+      }>;
+
+      const formattedData = results.map((row) => ({
+        timestamp: row.bucket_timestamp,
+        acars: row.acars_count,
+        vdlm: row.vdlm_count,
+        hfdl: row.hfdl_count,
+        imsl: row.imsl_count,
+        irdm: row.irdm_count,
+        total: row.total_count,
+        error: row.error_count,
+      }));
+
+      socket.emit("rrd_timeseries_data", {
+        data: formattedData,
+        start,
+        end,
+        downsample,
+        points: formattedData.length,
+      });
+
+      logger.debug("RRD timeseries response (downsampled)", {
+        socketId: socket.id,
+        points: formattedData.length,
+        downsample,
+      });
+    } else {
+      // No downsampling - fetch raw 1-minute data
+      const data = await queryTimeseriesData("1min", start, end);
+
+      const formattedData = data.map((row) => ({
+        timestamp: row.timestamp,
+        acars: row.acarsCount,
+        vdlm: row.vdlmCount,
+        hfdl: row.hfdlCount,
+        imsl: row.imslCount,
+        irdm: row.irdmCount,
+        total: row.totalCount,
+        error: row.errorCount,
+      }));
+
+      socket.emit("rrd_timeseries_data", {
+        data: formattedData,
+        start,
+        end,
+        points: formattedData.length,
+      });
+
+      logger.debug("RRD timeseries response (raw)", {
+        socketId: socket.id,
+        points: formattedData.length,
+      });
+    }
+  } catch (error) {
+    logger.error("Failed to fetch RRD timeseries", {
       socketId: socket.id,
       error: error instanceof Error ? error.message : String(error),
     });

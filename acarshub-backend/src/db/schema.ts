@@ -285,6 +285,57 @@ export const ignoreAlertTerms = sqliteTable("ignore_alert_terms", {
 });
 
 // ============================================================================
+// Time-Series Statistics (RRD Migration)
+// ============================================================================
+
+/**
+ * Time-series statistics table for storing historical message rate data
+ *
+ * Replaces RRD (Round Robin Database) with SQLite for simpler management.
+ * Stores message counts at multiple resolutions:
+ * - 1min: 1-minute resolution (25 hours of data)
+ * - 5min: 5-minute resolution (1 month of data)
+ * - 1hour: 1-hour resolution (6 months of data)
+ * - 6hour: 6-hour resolution (3 years of data)
+ *
+ * Data sources match RRD structure:
+ * - ACARS, VDLM, HFDL, IMSL, IRDM (per-decoder counts)
+ * - TOTAL (sum of all decoders)
+ * - ERROR (error count)
+ *
+ * Indexes:
+ * - timestamp + resolution: For efficient time-range queries
+ * - resolution: For filtering by resolution
+ */
+export const timeseriesStats = sqliteTable(
+  "timeseries_stats",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    timestamp: integer("timestamp").notNull(), // Unix timestamp
+    resolution: text("resolution", {
+      enum: ["1min", "5min", "1hour", "6hour"],
+    }).notNull(),
+    acarsCount: integer("acars_count").notNull().default(0),
+    vdlmCount: integer("vdlm_count").notNull().default(0),
+    hfdlCount: integer("hfdl_count").notNull().default(0),
+    imslCount: integer("imsl_count").notNull().default(0),
+    irdmCount: integer("irdm_count").notNull().default(0),
+    totalCount: integer("total_count").notNull().default(0),
+    errorCount: integer("error_count").notNull().default(0),
+    createdAt: integer("created_at")
+      .notNull()
+      .$defaultFn(() => Date.now()),
+  },
+  (table) => ({
+    timestampResolutionIdx: index("idx_timeseries_timestamp_resolution").on(
+      table.timestamp,
+      table.resolution,
+    ),
+    resolutionIdx: index("idx_timeseries_resolution").on(table.resolution),
+  }),
+);
+
+// ============================================================================
 // TypeScript Types (Inferred from Schema)
 // ============================================================================
 
@@ -311,3 +362,6 @@ export type MessageCountDropped = typeof messagesCountDropped.$inferSelect;
 
 export type AlertStat = typeof alertStats.$inferSelect;
 export type IgnoreAlertTerm = typeof ignoreAlertTerms.$inferSelect;
+
+export type TimeseriesStat = typeof timeseriesStats.$inferSelect;
+export type NewTimeseriesStat = typeof timeseriesStats.$inferInsert;

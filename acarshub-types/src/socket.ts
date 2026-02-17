@@ -42,6 +42,31 @@ import type {
 } from "./system.js";
 
 /**
+ * Time-series data point from RRD database
+ */
+export interface RRDTimeseriesPoint {
+  timestamp: number; // Unix timestamp in seconds
+  acars: number;
+  vdlm: number;
+  hfdl: number;
+  imsl: number;
+  irdm: number;
+  total: number;
+  error: number;
+}
+
+/**
+ * Time-series data response
+ */
+export interface RRDTimeseriesData {
+  data: RRDTimeseriesPoint[];
+  start: number; // Query start timestamp
+  end: number; // Query end timestamp
+  downsample?: number; // Bucket size in seconds (if downsampled)
+  points: number; // Number of data points returned
+}
+
+/**
  * Events received from backend (server → client)
  * These are the events that the backend emits and the frontend listens for
  */
@@ -68,6 +93,9 @@ export interface SocketEvents {
   signal: (data: { levels: SignalLevelData }) => void;
   signal_freqs: (data: SignalFreqData) => void;
   signal_count: (data: SignalCountData) => void;
+
+  // Time-series data (RRD replacement)
+  rrd_timeseries_data: (data: RRDTimeseriesData) => void;
 
   // ADS-B events
   adsb: (data: Adsb) => void;
@@ -106,4 +134,9 @@ export interface SocketEmitEvents {
   }) => void;
   request_status: () => void;
   query_alerts_by_term: (params: { term: string; page?: number }) => void;
+  rrd_timeseries: (params: {
+    start?: number; // Unix timestamp in seconds
+    end?: number; // Unix timestamp in seconds
+    downsample?: number; // Bucket size in seconds (e.g., 300 for 5-minute buckets)
+  }) => void;
 }
