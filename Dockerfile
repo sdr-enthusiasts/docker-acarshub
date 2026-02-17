@@ -2,6 +2,9 @@ FROM node:25.6.1-slim@sha256:32f45869cf02c26971de72c383d5f99cab002905ed8b515b56d
 # pushd/popd
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
+# Set working directory to workspace root
+WORKDIR /workspace
+
 # Accept version and build number as build args
 ARG VERSION=0.0.0
 ARG BUILD_NUMBER=0
@@ -18,21 +21,22 @@ RUN set -xe && \
     apt-get install -y --no-install-recommends make python3 g++ && \
     rm -rf /src/* /tmp/* /var/lib/apt/lists/*
 
-COPY acarshub-react/package.json /acarshub-react/package.json
-COPY acarshub-react/package-lock.json /acarshub-react/package-lock.json
+# Copy entire workspace (needed for npm workspaces to resolve properly)
+COPY package.json package-lock.json tsconfig.json tsconfig.base.json ./
+COPY acarshub-react/ ./acarshub-react/
+COPY acarshub-backend/ ./acarshub-backend/
+COPY acarshub-types/ ./acarshub-types/
 
+# Install all workspace dependencies including devDependencies (needed for build tools like tsx)
 RUN set -xe && \
-    pushd /acarshub-react && \
-    npm install
-
-COPY acarshub-react/ /acarshub-react/
+    npm ci --include=dev
 
 # Pass build args to environment variables for this stage
 ARG VERSION=0.0.0
 ARG BUILD_NUMBER=0
 
 RUN set -xe && \
-    pushd /acarshub-react && \
+    cd acarshub-react && \
     # Set Vite env vars for build
     export VITE_DOCKER_BUILD="true" && \
     export VITE_VERSION="${VERSION}" && \
@@ -97,21 +101,13 @@ RUN set -x && \
     apt-get autoremove -q -o APT::Autoremove::RecommendsImportant=0 -o APT::Autoremove::SuggestsImportant=0 -y "${TEMP_PACKAGES[@]}" && \
     apt-get clean -q -y && \
     rm -rf /src/* /tmp/* /var/lib/apt/lists/* /var/cache/* && \
-    rm -rf /root/.cargo
+    rm -rf /root/.cargo && \
+    # Create runtime directories
+    mkdir -p /run/acars /webapp/data/
 
 COPY --from=acarshub-react-builder /webapp/dist/ /webapp/dist/
 
-RUN set -x && \
-    mkdir -p /run/acars && \
-    # grab the ground stations and other data from airframes
-    mkdir -p /webapp/data/ && \
-    # Download the airframes Ground Station and ACARS Label data
-    pushd /webapp/data/ && \
-    curl -O https://raw.githubusercontent.com/airframesio/data/master/json/vdl/ground-stations.json && \
-    curl -O https://raw.githubusercontent.com/airframesio/data/master/json/acars/metadata.json && \
-    # Clean up
-    rm -rf /src/* /tmp/* /var/lib/apt/lists/*
-
+# Copy rootfs (includes data files in rootfs/webapp/data/)
 COPY rootfs/ /
 
 RUN set -x && \
