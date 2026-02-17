@@ -13,6 +13,7 @@ import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as clientModule from "../../client.js";
+import * as helpersModule from "../../helpers.js";
 import * as schema from "../../schema.js";
 import { messages } from "../../schema.js";
 import {
@@ -23,6 +24,16 @@ import {
   getRowCount,
   grabMostRecent,
 } from "../messages.js";
+
+// Mock updateFrequencies to avoid errors from missing frequency tables in test DB
+vi.mock("../../helpers.js", async () => {
+  const actual =
+    await vi.importActual<typeof helpersModule>("../../helpers.js");
+  return {
+    ...actual,
+    updateFrequencies: vi.fn(),
+  };
+});
 
 describe("Message Query Functions", () => {
   let db: Database.Database;
