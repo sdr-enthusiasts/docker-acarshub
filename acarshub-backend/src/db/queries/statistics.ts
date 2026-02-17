@@ -16,6 +16,7 @@
  */
 
 import { count, eq } from "drizzle-orm";
+import { createLogger } from "../../utils/logger.js";
 import { getDatabase } from "../client.js";
 import {
   freqsAcars,
@@ -34,6 +35,28 @@ import {
   messagesCount,
   messagesCountDropped,
 } from "../schema.js";
+
+const logger = createLogger("db:statistics");
+
+/**
+ * In-memory message counters (avoids expensive COUNT(*) queries)
+ *
+ * Python backend maintains these as global variables that increment
+ * as messages arrive. TypeScript does the same for performance.
+ */
+let messageCounters = {
+  acars: 0,
+  vdlm2: 0,
+  hfdl: 0,
+  imsl: 0,
+  irdm: 0,
+  total: 0,
+};
+
+/**
+ * Flag to track if counters have been initialized from database
+ */
+let countersInitialized = false;
 
 // ============================================================================
 // Frequency Statistics
@@ -255,10 +278,118 @@ export function getMessageCountStats(): MessageCount | undefined {
 }
 
 /**
- * Get per-decoder message counts from messages table
+ * Initialize message counters from database
+ *
+ * Should be called once at startup to sync in-memory counters with database.
+ * After initialization, counters are incremented as messages are added.
+ */
+export function initializeMessageCounters(): void {
+  if (countersInitialized) {
+    logger.warn("Message counters already initialized, skipping");
+    return;
+  }
+
+  const db = getDatabase();
+
+  try {
+    // Count messages by messageType
+    const results = db
+      .select({
+        messageType: messages.messageType,
+        count: count(),
+      })
+      .from(messages)
+      .groupBy(messages.messageType)
+      .all() as Array<{ messageType: string | null; count: number }>;
+
+    // Reset counters
+    messageCounters = {
+      acars: 0,
+      vdlm2: 0,
+      hfdl: 0,
+      imsl: 0,
+      irdm: 0,
+      total: 0,
+    };
+
+    for (const row of results) {
+      const messageType = row.messageType?.toUpperCase();
+      const count = row.count ?? 0;
+
+      if (messageType === "ACARS") {
+        messageCounters.acars = count;
+      } else if (messageType === "VDLM2" || messageType === "VDL-M2") {
+        messageCounters.vdlm2 += count; // Use += to handle both formats
+      } else if (messageType === "HFDL") {
+        messageCounters.hfdl = count;
+      } else if (messageType === "IMSL" || messageType === "IMS-L") {
+        messageCounters.imsl += count; // Use += to handle both formats
+      } else if (messageType === "IRDM") {
+        messageCounters.irdm = count;
+      }
+
+      messageCounters.total += count;
+    }
+
+    countersInitialized = true;
+
+    logger.info("Message counters initialized", {
+      acars: messageCounters.acars,
+      vdlm2: messageCounters.vdlm2,
+      hfdl: messageCounters.hfdl,
+      imsl: messageCounters.imsl,
+      irdm: messageCounters.irdm,
+      total: messageCounters.total,
+    });
+  } catch (error) {
+    logger.error("Failed to initialize message counters", { error });
+    throw error;
+  }
+}
+
+/**
+ * Increment message counter for a specific decoder type
+ *
+ * Called when a new message is added to the database.
+ * Avoids expensive COUNT(*) queries by maintaining in-memory counters.
+ *
+ * @param messageType Decoder type (ACARS, VDLM2, HFDL, etc.)
+ */
+export function incrementMessageCounter(messageType: string | null): void {
+  if (!countersInitialized) {
+    logger.warn("Message counters not initialized, initializing now");
+    initializeMessageCounters();
+  }
+
+  if (!messageType) {
+    return;
+  }
+
+  const upperType = messageType.toUpperCase();
+
+  if (upperType === "ACARS") {
+    messageCounters.acars++;
+  } else if (upperType === "VDLM2" || upperType === "VDL-M2") {
+    messageCounters.vdlm2++;
+  } else if (upperType === "HFDL") {
+    messageCounters.hfdl++;
+  } else if (upperType === "IMSL" || upperType === "IMS-L") {
+    messageCounters.imsl++;
+  } else if (upperType === "IRDM") {
+    messageCounters.irdm++;
+  }
+
+  messageCounters.total++;
+}
+
+/**
+ * Get per-decoder message counts from in-memory counters
  *
  * Returns total message count for each decoder type.
  * This is used for system status display.
+ *
+ * Uses in-memory counters for performance instead of querying database.
+ * Counters are initialized at startup and incremented as messages arrive.
  *
  * @returns Object with counts per decoder type
  */
@@ -270,47 +401,12 @@ export function getPerDecoderMessageCounts(): {
   irdm: number;
   total: number;
 } {
-  const db = getDatabase();
-
-  // Count messages by messageType
-  const results = db
-    .select({
-      messageType: messages.messageType,
-      count: count(),
-    })
-    .from(messages)
-    .groupBy(messages.messageType)
-    .all() as Array<{ messageType: string | null; count: number }>;
-
-  const counts = {
-    acars: 0,
-    vdlm2: 0,
-    hfdl: 0,
-    imsl: 0,
-    irdm: 0,
-    total: 0,
-  };
-
-  for (const row of results) {
-    const messageType = row.messageType?.toUpperCase();
-    const count = row.count ?? 0;
-
-    if (messageType === "ACARS") {
-      counts.acars = count;
-    } else if (messageType === "VDLM2" || messageType === "VDL-M2") {
-      counts.vdlm2 += count; // Use += to handle both formats
-    } else if (messageType === "HFDL") {
-      counts.hfdl = count;
-    } else if (messageType === "IMSL" || messageType === "IMS-L") {
-      counts.imsl += count; // Use += to handle both formats
-    } else if (messageType === "IRDM") {
-      counts.irdm = count;
-    }
-
-    counts.total += count;
+  if (!countersInitialized) {
+    logger.warn("Message counters not initialized, initializing now");
+    initializeMessageCounters();
   }
 
-  return counts;
+  return { ...messageCounters };
 }
 
 /**

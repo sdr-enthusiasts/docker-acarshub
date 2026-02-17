@@ -39,6 +39,7 @@ import {
   type NewMessage,
 } from "../schema.js";
 import { getCachedAlertIgnoreTerms, getCachedAlertTerms } from "./alerts.js";
+import { incrementMessageCounter } from "./statistics.js";
 
 const logger = createLogger("db:messages");
 
@@ -112,6 +113,9 @@ export function addMessage(
           uid,
         })
         .run();
+
+      // Increment in-memory counter for system status
+      incrementMessageCounter(message.messageType);
     }
 
     // Update message counts

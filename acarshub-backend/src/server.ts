@@ -42,6 +42,7 @@ import {
   healthCheck,
   initDatabase,
   initializeAlertCache,
+  initializeMessageCounters,
   initializeMessageCounts,
 } from "./db/index.js";
 import { runMigrations } from "./db/migrate.js";
@@ -189,6 +190,12 @@ async function main(): Promise<void> {
 
     // Initialize message counts if needed
     initializeMessageCounts();
+
+    // Initialize in-memory message counters from database
+    logger.info("🔢 Initializing message counters...");
+    initializeMessageCounters();
+    logger.info("✅ Message counters initialized");
+    logger.info("");
 
     // Initialize alert term cache (load from database)
     logger.info("🚨 Initializing alert term cache...");
