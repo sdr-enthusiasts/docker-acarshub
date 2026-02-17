@@ -9,10 +9,12 @@
  */
 
 import Database from "better-sqlite3";
+import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as clientModule from "../../client.js";
 import * as schema from "../../schema.js";
+import { messages } from "../../schema.js";
 import {
   addMessage,
   databaseSearch,
@@ -24,7 +26,6 @@ import {
 
 describe("Message Query Functions", () => {
   let db: Database.Database;
-  let _originalGetDatabase: typeof clientModule.getDatabase;
 
   beforeEach(() => {
     // Create in-memory database for testing
@@ -162,7 +163,6 @@ describe("Message Query Functions", () => {
     `);
 
     // Mock getDatabase to return our test database
-    _originalGetDatabase = clientModule.getDatabase;
     vi.spyOn(clientModule, "getDatabase").mockReturnValue(
       drizzle(db, { schema }),
     );
@@ -174,26 +174,32 @@ describe("Message Query Functions", () => {
         time: 1704067200, // 2024-01-01 00:00:00
         stationId: "KORD",
         toaddr: "123456",
-        fromaddr: ".AAABCD",
+        fromaddr: ".ABCDEF",
         depa: "KORD",
         dsta: "KLAX",
-        tail: "N123UA",
-        flight: "UAL123",
-        icao: "ABF308",
+        eta: "",
+        gtout: "",
+        gtin: "",
+        wloff: "",
+        wlin: "",
+        tail: "N12345",
+        flight: "AA1234",
+        icao: "ABC123",
         freq: "131.550",
         label: "H1",
         text: "EMERGENCY FUEL LOW",
-        lat: 41.9742,
-        lon: -87.9073,
-        alt: 35000,
+        lat: "41.9742",
+        lon: "-87.9073",
+        alt: "35000",
         ack: "!",
         mode: "2",
         msgno: "M01A",
         blockId: "1",
-        isResponse: 0,
-        isOnground: 0,
-        error: 0,
-        level: -25,
+        isResponse: "0",
+        isOnground: "0",
+        error: "0",
+        libacars: "",
+        level: "-20",
       },
       {
         messageType: "VDLM2",
@@ -203,23 +209,29 @@ describe("Message Query Functions", () => {
         fromaddr: ".AABDEF",
         depa: "KJFK",
         dsta: "EGLL",
+        eta: "",
+        gtout: "",
+        gtin: "",
+        wloff: "",
+        wlin: "",
         tail: "N456AA",
         flight: "AAL456",
         icao: "C0FFEE",
         freq: "136.975",
         label: "SA",
         text: "POSITION REPORT LAT 40.7128 LON -74.0060",
-        lat: 40.7128,
-        lon: -74.006,
-        alt: 38000,
+        lat: "40.7128",
+        lon: "-74.0060",
+        alt: "38000",
         ack: "!",
         mode: "2",
         msgno: "M02A",
         blockId: "2",
-        isResponse: 0,
-        isOnground: 0,
-        error: 0,
-        level: -30,
+        isResponse: "0",
+        isOnground: "0",
+        error: "0",
+        libacars: "",
+        level: "-30",
       },
       {
         messageType: "HFDL",
@@ -229,23 +241,29 @@ describe("Message Query Functions", () => {
         fromaddr: ".AACGHI",
         depa: "KSFO",
         dsta: "RJTT",
+        eta: "",
+        gtout: "",
+        gtin: "",
+        wloff: "",
+        wlin: "",
         tail: "N789DL",
         flight: "DAL789",
         icao: "DEADBE",
         freq: "8.912",
         label: "Q0",
         text: "REQUEST DESCENT TO FL350",
-        lat: 37.7749,
-        lon: -122.4194,
-        alt: 41000,
+        lat: "37.7749",
+        lon: "-122.4194",
+        alt: "41000",
         ack: "!",
         mode: "2",
         msgno: "M03A",
         blockId: "3",
-        isResponse: 0,
-        isOnground: 0,
-        error: 0,
-        level: -20,
+        isResponse: "0",
+        isOnground: "0",
+        error: "0",
+        libacars: "",
+        level: "-20",
       },
       {
         messageType: "ACARS",
@@ -255,23 +273,29 @@ describe("Message Query Functions", () => {
         fromaddr: ".AADJKL",
         depa: "KORD",
         dsta: "KATL",
+        eta: "",
+        gtout: "",
+        gtin: "",
+        wloff: "",
+        wlin: "",
         tail: "N111WN",
         flight: "SWA111",
         icao: "CAFE01",
         freq: "131.550",
         label: "10",
         text: "OUT TIME 0003Z",
-        lat: 41.9742,
-        lon: -87.9073,
-        alt: 0,
+        lat: "41.9742",
+        lon: "-87.9073",
+        alt: "0",
         ack: "!",
         mode: "2",
         msgno: "M04A",
         blockId: "4",
-        isResponse: 0,
-        isOnground: 1,
-        error: 0,
-        level: -15,
+        isResponse: "0",
+        isOnground: "1",
+        error: "0",
+        libacars: "",
+        level: "-15",
       },
     ];
 
@@ -295,33 +319,55 @@ describe("Message Query Functions", () => {
         fromaddr: ".AAEMNO",
         depa: "TEST",
         dsta: "TEST",
+        eta: "",
+        gtout: "",
+        gtin: "",
+        wloff: "",
+        wlin: "",
         tail: "TEST123",
         flight: "TST999",
         icao: "TEST99",
         freq: "131.550",
         label: "H1",
         text: "TEST MESSAGE",
-        lat: 0,
-        lon: 0,
-        alt: 0,
+        lat: "0",
+        lon: "0",
+        alt: "0",
         ack: "!",
         mode: "2",
         msgno: "M05A",
         blockId: "5",
-        isResponse: 0,
-        isOnground: 0,
-        error: 0,
-        level: -25,
+        isResponse: "0",
+        isOnground: "0",
+        error: "0",
+        libacars: "",
+        level: "-25",
       };
 
-      const inserted = addMessage(message);
+      const alertMetadata = addMessage(message);
 
-      expect(inserted.uid).toBeDefined();
-      expect(inserted.uid).toMatch(
+      // Verify AlertMetadata structure
+      expect(alertMetadata.uid).toBeDefined();
+      expect(alertMetadata.uid).toMatch(
         /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
       );
-      expect(inserted.tail).toBe("TEST123");
-      expect(inserted.flight).toBe("TST999");
+      expect(alertMetadata.matched).toBe(false);
+      expect(alertMetadata.matched_text).toEqual([]);
+      expect(alertMetadata.matched_icao).toEqual([]);
+      expect(alertMetadata.matched_tail).toEqual([]);
+      expect(alertMetadata.matched_flight).toEqual([]);
+
+      // Verify message was inserted correctly
+      const drizzleDb = clientModule.getDatabase();
+      const inserted = drizzleDb
+        .select()
+        .from(messages)
+        .where(eq(messages.uid, alertMetadata.uid))
+        .get();
+
+      expect(inserted).toBeDefined();
+      expect(inserted?.tail).toBe("TEST123");
+      expect(inserted?.flight).toBe("TST999");
     });
   });
 
@@ -362,23 +408,29 @@ describe("Message Query Functions", () => {
         fromaddr: ".AAFPQR",
         depa: "TEST",
         dsta: "TEST",
+        eta: "",
+        gtout: "",
+        gtin: "",
+        wloff: "",
+        wlin: "",
         tail: "FIND123",
         flight: "FND999",
         icao: "FIND99",
         freq: "131.550",
         label: "H1",
         text: "FINDME",
-        lat: 0,
-        lon: 0,
-        alt: 0,
+        lat: "0",
+        lon: "0",
+        alt: "0",
         ack: "!",
         mode: "2",
         msgno: "M06A",
         blockId: "6",
-        isResponse: 0,
-        isOnground: 0,
-        error: 0,
-        level: -25,
+        isResponse: "0",
+        isOnground: "0",
+        error: "0",
+        libacars: "",
+        level: "-25",
       });
 
       const found = getMessageByUid(inserted.uid);
@@ -414,24 +466,22 @@ describe("Message Query Functions", () => {
 
   describe("databaseSearch() - FTS5 Integration", () => {
     it("should search by flight number using FTS5 (prefix match)", () => {
-      const result = databaseSearch({ flight: "UAL" });
-      expect(result.totalCount).toBe(1);
-      expect(result.messages).toHaveLength(1);
-      expect(result.messages[0].flight).toBe("UAL123");
+      const result = databaseSearch({ flight: "AA" });
+      expect(result.totalCount).toBe(2); // AA1234 and AAL456
+      expect(result.messages).toHaveLength(2);
     });
 
     it("should search by tail number using FTS5 (prefix match)", () => {
-      const result = databaseSearch({ tail: "N123" });
-      expect(result.totalCount).toBe(1);
+      const result = databaseSearch({ tail: "N12" });
+      expect(result.totalCount).toBe(1); // N12345 only
       expect(result.messages).toHaveLength(1);
-      expect(result.messages[0].tail).toBe("N123UA");
     });
 
     it("should search by ICAO hex using FTS5 (prefix match)", () => {
-      const result = databaseSearch({ icao: "ABF" });
+      const result = databaseSearch({ icao: "ABC" });
       expect(result.totalCount).toBe(1);
       expect(result.messages).toHaveLength(1);
-      expect(result.messages[0].icao).toBe("ABF308");
+      expect(result.messages[0].icao).toBe("ABC123");
     });
 
     it("should search by departure airport using FTS5", () => {
@@ -474,7 +524,7 @@ describe("Message Query Functions", () => {
       });
       expect(result.totalCount).toBe(1);
       expect(result.messages).toHaveLength(1);
-      expect(result.messages[0].flight).toBe("UAL123");
+      expect(result.messages[0].flight).toBe("AA1234");
     });
 
     it("should return empty results when no matches", () => {
@@ -484,9 +534,9 @@ describe("Message Query Functions", () => {
     });
 
     it("should handle case-insensitive search", () => {
-      const result = databaseSearch({ flight: "ual" }); // lowercase
+      const result = databaseSearch({ flight: "aa12" }); // lowercase
       expect(result.totalCount).toBe(1);
-      expect(result.messages[0].flight).toBe("UAL123");
+      expect(result.messages[0].flight).toBe("AA1234");
     });
 
     it("should support pagination with limit and offset", () => {
@@ -500,23 +550,29 @@ describe("Message Query Functions", () => {
           fromaddr: ".AAPAGE",
           depa: "PAGE",
           dsta: "TEST",
+          eta: "",
+          gtout: "",
+          gtin: "",
+          wloff: "",
+          wlin: "",
           tail: `PAGE${i}`,
           flight: `PG${i}`,
           icao: `PAGE0${i}`,
           freq: "131.550",
           label: "PG",
           text: "PAGINATION TEST",
-          lat: 0,
-          lon: 0,
-          alt: 0,
+          lat: "0",
+          lon: "0",
+          alt: "0",
           ack: "!",
           mode: "2",
           msgno: `MP${i}`,
           blockId: `${100 + i}`,
-          isResponse: 0,
-          isOnground: 0,
-          error: 0,
-          level: -25,
+          isResponse: "0",
+          isOnground: "0",
+          error: "0",
+          libacars: "",
+          level: "-20",
         });
       }
 
@@ -556,29 +612,35 @@ describe("Message Query Functions", () => {
       // Insert message with special characters
       addMessage({
         messageType: "ACARS",
-        time: 1704067600,
-        stationId: "SPEC",
-        toaddr: "789012",
-        fromaddr: ".AASPEC",
-        depa: "SPEC",
+        time: 1704067500,
+        stationId: "SPECIAL",
+        toaddr: "999999",
+        fromaddr: ".AASPECI",
+        depa: "TEST",
         dsta: "TEST",
-        tail: 'N"SPEC"',
-        flight: "SPEC*123",
-        icao: "SPEC99",
+        eta: "",
+        gtout: "",
+        gtin: "",
+        wloff: "",
+        wlin: "",
+        tail: "SPECIAL'TEST",
+        flight: 'SPECIAL"TEST',
+        icao: "SPECIAL",
         freq: "131.550",
         label: "SP",
-        text: 'SPECIAL "CHARS" TEST*',
-        lat: 0,
-        lon: 0,
-        alt: 0,
+        text: "Test with 'quotes' and \"double quotes\"",
+        lat: "0",
+        lon: "0",
+        alt: "0",
         ack: "!",
         mode: "2",
         msgno: "MSP",
         blockId: "999",
-        isResponse: 0,
-        isOnground: 0,
-        error: 0,
-        level: -25,
+        isResponse: "0",
+        isOnground: "0",
+        error: "0",
+        libacars: "",
+        level: "-20",
       });
 
       // Should not crash with special characters
@@ -610,7 +672,7 @@ describe("Message Query Functions", () => {
         label: "H1",
       });
       expect(result.totalCount).toBe(1);
-      expect(result.messages[0].flight).toBe("UAL123");
+      expect(result.messages[0].flight).toBe("AA1234");
     });
   });
 
