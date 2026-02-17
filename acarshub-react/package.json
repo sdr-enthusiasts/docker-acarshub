@@ -6,7 +6,7 @@
   "homepage": ".",
   "scripts": {
     "dev": "vite",
-    "build": "npm run generate-sprites && tsc -b && vite build",
+    "build": "npm run generate-sprites && vite build",
     "generate-sprites": "tsx scripts/generate-colored-sprites.ts",
     "lint": "biome check .",
     "preview": "vite preview",
