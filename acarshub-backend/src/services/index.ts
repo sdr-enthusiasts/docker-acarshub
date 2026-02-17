@@ -21,6 +21,7 @@ import {
   optimizeDbRegular,
   pruneDatabase,
 } from "../db/index.js";
+import { enrichMessage } from "../formatters/enrichment.js";
 import { formatAcarsMessage } from "../formatters/index.js";
 import { createLogger } from "../utils/logger.js";
 import {
@@ -344,13 +345,22 @@ export class BackgroundServices extends EventEmitter {
           hasIcao: !!formattedMessage.icao,
         });
 
+        // Enrich message with additional fields (ICAO hex, airline, ground stations, etc.)
+        const enrichedMessage = enrichMessage(formattedMessage);
+
+        logger.trace("Message enriched", {
+          type: queuedMessage.type,
+          hasIcaoHex: !!enrichedMessage.icao_hex,
+          hasToaddrHex: !!enrichedMessage.toaddr_hex,
+          hasFromaddrHex: !!enrichedMessage.fromaddr_hex,
+        });
+
         // TODO: Save to database with alert matching (Week 5)
-        // TODO: Enrich message with additional fields (Week 5)
         // TODO: Generate UID (Week 5)
 
-        // Emit formatted message to Socket.IO clients
+        // Emit enriched message to Socket.IO clients
         this.config.socketio.emit("acars_msg", {
-          msghtml: formattedMessage,
+          msghtml: enrichedMessage,
         });
       } catch (err) {
         logger.error("Failed to process message", {

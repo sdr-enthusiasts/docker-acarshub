@@ -181,10 +181,17 @@ export function lookupGroundstation(stationId: string): {
  * Equivalent to Python lookup_label() function.
  *
  * @param label ACARS label (e.g., "H1", "SA", "Q0")
- * @returns Label info or null if not found
+ * @returns Label name string or null if not found
  */
-export function lookupLabel(label: string): unknown {
-  return messageLabels[label] || null;
+export function lookupLabel(label: string): string | null {
+  const labelData = messageLabels[label];
+  if (!labelData || typeof labelData !== "object") {
+    return null;
+  }
+
+  // metadata.json structure: { "H1": { "name": "Label Name", "label": "H1" } }
+  const labelObj = labelData as { name?: string };
+  return labelObj.name || null;
 }
 
 /**

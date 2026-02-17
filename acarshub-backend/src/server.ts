@@ -31,7 +31,7 @@
 
 import cors from "@fastify/cors";
 import Fastify from "fastify";
-import { getConfig } from "./config.js";
+import { getConfig, initializeConfig } from "./config.js";
 import {
   closeDatabase,
   getAlertCounts,
@@ -134,6 +134,27 @@ async function main(): Promise<void> {
   > | null = null;
 
   try {
+    // Load enrichment data (airlines, ground stations, labels)
+    // CRITICAL: This must run BEFORE processing messages to enable proper enrichment
+    logger.info("📚 Loading enrichment data...");
+    await initializeConfig();
+
+    // Show what was loaded
+    let appConfig = getConfig();
+    const airlineCount = Object.keys(appConfig.airlines).length;
+    const groundStationCount = Object.keys(appConfig.groundStations).length;
+    const labelCount = Object.keys(appConfig.messageLabels).length;
+    const iataOverrideCount = Object.keys(appConfig.iataOverrides).length;
+
+    logger.info("✅ Enrichment data loaded:");
+    logger.info(`   - Airlines: ${airlineCount}`);
+    logger.info(`   - Ground Stations: ${groundStationCount}`);
+    logger.info(`   - Message Labels: ${labelCount}`);
+    if (iataOverrideCount > 0) {
+      logger.info(`   - IATA Overrides: ${iataOverrideCount}`);
+    }
+    logger.info("");
+
     // Run database migrations
     // CRITICAL: This must run BEFORE initDatabase() to ensure schema is up-to-date
     // Migration 9 creates timeseries_stats table if it doesn't exist
@@ -302,7 +323,7 @@ async function main(): Promise<void> {
     logger.info("  ✅ Continuous: ADS-B polling (5s intervals)");
     logger.info("");
     logger.info("Decoder Status:");
-    const appConfig = getConfig();
+    appConfig = getConfig();
     logger.info(`  - ACARS: ${appConfig.enableAcars ? "enabled" : "disabled"}`);
     logger.info(`  - VDLM2: ${appConfig.enableVdlm ? "enabled" : "disabled"}`);
     logger.info(`  - HFDL: ${appConfig.enableHfdl ? "enabled" : "disabled"}`);

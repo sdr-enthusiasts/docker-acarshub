@@ -44,6 +44,7 @@ const PROTECTED_KEYS = new Set([
   "text",
   "timestamp",
   "message_type",
+  "station_id",
 ]);
 
 /**
@@ -62,15 +63,56 @@ export function enrichMessage(message: Record<string, unknown>): AcarsMsg {
   const enriched = { ...message };
 
   // FIRST: Convert field names before cleanup
+  // Database column: msg_text -> Frontend: text
   if ("msg_text" in enriched && enriched.msg_text !== undefined) {
     logger.trace("Converting msg_text to text", { uid: enriched.uid });
     enriched.text = enriched.msg_text;
     delete enriched.msg_text;
   }
 
+  // Database column: msg_time -> Frontend: timestamp
   if ("time" in enriched && enriched.time !== undefined) {
     enriched.timestamp = enriched.time;
     delete enriched.time;
+  }
+
+  // Drizzle camelCase: messageType -> Frontend: message_type
+  if ("messageType" in enriched && enriched.messageType !== undefined) {
+    logger.trace("Converting messageType to message_type", {
+      uid: enriched.uid,
+    });
+    enriched.message_type = enriched.messageType;
+    delete enriched.messageType;
+  }
+
+  // Drizzle camelCase: stationId -> Frontend: station_id
+  if ("stationId" in enriched && enriched.stationId !== undefined) {
+    enriched.station_id = enriched.stationId;
+    delete enriched.stationId;
+  }
+
+  // Drizzle camelCase: blockId -> Frontend: block_id
+  if ("blockId" in enriched && enriched.blockId !== undefined) {
+    enriched.block_id = enriched.blockId;
+    delete enriched.blockId;
+  }
+
+  // Drizzle camelCase: isResponse -> Frontend: is_response
+  if ("isResponse" in enriched && enriched.isResponse !== undefined) {
+    enriched.is_response = enriched.isResponse;
+    delete enriched.isResponse;
+  }
+
+  // Drizzle camelCase: isOnground -> Frontend: is_onground
+  if ("isOnground" in enriched && enriched.isOnground !== undefined) {
+    enriched.is_onground = enriched.isOnground;
+    delete enriched.isOnground;
+  }
+
+  // Drizzle camelCase: aircraftId -> Frontend: aircraft_id
+  if ("aircraftId" in enriched && enriched.aircraftId !== undefined) {
+    enriched.aircraft_id = enriched.aircraftId;
+    delete enriched.aircraftId;
   }
 
   // SECOND: Clean up null/empty values (except protected keys)
@@ -116,12 +158,14 @@ function enrichIcaoFields(message: Record<string, unknown>): void {
 
   if (typeof icaoValue === "string") {
     // Already a string - check if it's hex or decimal
-    const isHexFormat =
-      icaoValue.length === 6 && /^[0-9A-Fa-f]{6}$/.test(icaoValue);
+    // ICAO hex addresses contain A-F characters (e.g., "ABCD", "ABF308")
+    // Pure decimal strings (e.g., "11269896") should be converted to hex
+    const hasHexChars = /[A-Fa-f]/.test(icaoValue);
+    const isAllHex = /^[0-9A-Fa-f]+$/.test(icaoValue);
 
-    if (isHexFormat) {
-      // Already in hex format - just uppercase it
-      message.icao_hex = icaoValue.toUpperCase();
+    if (hasHexChars && isAllHex) {
+      // Contains A-F, so it's definitely hex - uppercase and pad to 6 characters
+      message.icao_hex = icaoValue.toUpperCase().padStart(6, "0");
     } else {
       // It's a decimal string - convert to hex
       try {
@@ -129,7 +173,7 @@ function enrichIcaoFields(message: Record<string, unknown>): void {
         message.icao_hex = icaoInt.toString(16).toUpperCase().padStart(6, "0");
       } catch {
         // Not a valid number - use as-is (probably already hex)
-        message.icao_hex = icaoValue.toUpperCase();
+        message.icao_hex = icaoValue.toUpperCase().padStart(6, "0");
       }
     }
   } else if (typeof icaoValue === "number") {
@@ -239,11 +283,23 @@ function enrichAddressFields(message: Record<string, unknown>): void {
     message.toaddr !== null &&
     message.toaddr !== undefined
   ) {
+    logger.debug("Enriching toaddr", {
+      uid: message.uid,
+      toaddr: message.toaddr,
+      type: typeof message.toaddr,
+    });
+
     const toaddrHex = tryFormatAsHex(message.toaddr, "toaddr");
     if (toaddrHex) {
       message.toaddr_hex = toaddrHex;
 
       const groundStation = lookupGroundstation(toaddrHex);
+      logger.debug("Ground station lookup", {
+        uid: message.uid,
+        hex: toaddrHex,
+        found: groundStation !== null,
+      });
+
       if (groundStation) {
         message.toaddr_decoded = `${groundStation.name} (${groundStation.icao})`;
       }
@@ -256,11 +312,23 @@ function enrichAddressFields(message: Record<string, unknown>): void {
     message.fromaddr !== null &&
     message.fromaddr !== undefined
   ) {
+    logger.debug("Enriching fromaddr", {
+      uid: message.uid,
+      fromaddr: message.fromaddr,
+      type: typeof message.fromaddr,
+    });
+
     const fromaddrHex = tryFormatAsHex(message.fromaddr, "fromaddr");
     if (fromaddrHex) {
       message.fromaddr_hex = fromaddrHex;
 
       const groundStation = lookupGroundstation(fromaddrHex);
+      logger.debug("Ground station lookup", {
+        uid: message.uid,
+        hex: fromaddrHex,
+        found: groundStation !== null,
+      });
+
       if (groundStation) {
         message.fromaddr_decoded = `${groundStation.name} (${groundStation.icao})`;
       }
@@ -290,19 +358,34 @@ function enrichLabelField(message: Record<string, unknown>): void {
 function tryFormatAsHex(value: unknown, fieldName: string): string | null {
   try {
     if (typeof value === "number") {
-      return value.toString(16).toUpperCase();
+      const hex = value.toString(16).toUpperCase();
+      logger.trace("Converted number to hex", {
+        field: fieldName,
+        input: value,
+        output: hex,
+      });
+      return hex;
     }
 
     if (typeof value === "string") {
+      // Try parsing as decimal number first
       const num = Number.parseInt(value, 10);
       if (!Number.isNaN(num)) {
-        return num.toString(16).toUpperCase();
+        const hex = num.toString(16).toUpperCase();
+        logger.trace("Converted string to hex", {
+          field: fieldName,
+          input: value,
+          parsed: num,
+          output: hex,
+        });
+        return hex;
       }
     }
 
     logger.warn("Unable to convert to hex, using 0", {
       field: fieldName,
       value,
+      valueType: typeof value,
     });
     return "0";
   } catch (error) {

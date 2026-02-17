@@ -294,7 +294,7 @@ export async function loadGroundStations(
  * We extract the "labels" object.
  */
 export async function loadMessageLabels(
-  filePath = "./data/message-labels.json",
+  filePath = "./data/metadata.json",
 ): Promise<void> {
   try {
     const fs = await import("node:fs/promises");
@@ -364,10 +364,28 @@ export function parseIataOverrides(): void {
  * Initialize configuration (load data files)
  */
 export async function initializeConfig(): Promise<void> {
+  // Determine base path: when running from acarshub-backend/, go up one level
+  // When running from project root, use current directory
+  const fs = await import("node:fs");
+  const path = await import("node:path");
+
+  let basePath = "./rootfs/webapp/data";
+  if (!fs.existsSync(basePath)) {
+    basePath = "../rootfs/webapp/data"; // Running from acarshub-backend/
+  }
+
+  const ground_station_path =
+    process.env.GROUND_STATION_PATH ||
+    path.join(basePath, "ground-stations.json");
+  const message_labels_path =
+    process.env.MESSAGE_LABELS_PATH || path.join(basePath, "metadata.json");
+  const airlines_path =
+    process.env.AIRLINES_PATH || path.join(basePath, "airlines.json");
+
   await Promise.all([
-    loadGroundStations(),
-    loadMessageLabels(),
-    loadAirlines(),
+    loadGroundStations(ground_station_path),
+    loadMessageLabels(message_labels_path),
+    loadAirlines(airlines_path),
   ]);
   parseIataOverrides();
 }

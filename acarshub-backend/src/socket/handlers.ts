@@ -59,6 +59,7 @@ import {
   setAlertTerms,
 } from "../db/index.js";
 import { enrichMessage, enrichMessages } from "../formatters/enrichment.js";
+import { getAdsbPoller } from "../services/adsb-poller.js";
 import { queryTimeseriesData } from "../services/rrd-migration.js";
 import { createLogger } from "../utils/logger.js";
 import type { TypedSocket, TypedSocketServer } from "./types.js";
@@ -166,7 +167,33 @@ function handleConnect(socket: TypedSocket, _io: TypedSocketServer): void {
     };
     socket.emit("labels", labels);
 
-    // 4. Send recent messages in chunks (filter out alerts)
+    // 4. Send cached ADS-B data (if available)
+    // CRITICAL: Must send BEFORE messages so frontend can match ICAO addresses
+    if (config.enableAdsb) {
+      try {
+        const adsbPoller = getAdsbPoller({ url: config.adsbUrl });
+        const cachedAdsbData = adsbPoller.getCachedData();
+
+        if (cachedAdsbData) {
+          socket.emit("adsb_aircraft", cachedAdsbData);
+          logger.debug("Sent cached ADS-B data", {
+            socketId: socket.id,
+            aircraftCount: cachedAdsbData.aircraft.length,
+          });
+        } else {
+          logger.debug("No cached ADS-B data available", {
+            socketId: socket.id,
+          });
+        }
+      } catch (error) {
+        logger.warn("Failed to get cached ADS-B data", {
+          socketId: socket.id,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+
+    // 5. Send recent messages in chunks (filter out alerts)
     const recentMessagesRaw = grabMostRecent(250);
     const recentMessages = enrichMessages(recentMessagesRaw);
     const nonAlertMessages = recentMessages.filter((msg) => !msg.matched);
@@ -194,7 +221,7 @@ function handleConnect(socket: TypedSocket, _io: TypedSocketServer): void {
       });
     }
 
-    // 5. Send database size
+    // 6. Send database size
     // Python sends "database" event with {count, size}, NOT "database_size"
     const { count, size } = getRowCount();
     const dbSize: DatabaseSize = {
@@ -203,7 +230,7 @@ function handleConnect(socket: TypedSocket, _io: TypedSocketServer): void {
     };
     socket.emit("database", dbSize);
 
-    // 6. Send signal levels
+    // 7. Send signal levels
     const signalLevels = getAllSignalLevels();
     const signalLevelData: SignalLevelData = {
       acars: signalLevels.acars.map((item) => ({
@@ -221,7 +248,7 @@ function handleConnect(socket: TypedSocket, _io: TypedSocketServer): void {
     };
     socket.emit("signal", { levels: signalLevelData });
 
-    // 7. Send alert statistics
+    // 8. Send alert statistics
     const alertCounts = getAlertCounts();
     const alertTermData: Record<
       number,
@@ -237,7 +264,7 @@ function handleConnect(socket: TypedSocket, _io: TypedSocketServer): void {
     // Python sends "alert_terms" with {data: ...}, NOT "alert_terms_stats"
     socket.emit("alert_terms", { data: alertTermData });
 
-    // 8. Send recent alerts in chunks
+    // 9. Send recent alerts in chunks
     const recentAlertsRaw = searchAlerts(100, 0);
     const recentAlerts = recentAlertsRaw.map((alert) => {
       const enriched = enrichMessage(alert.message);
@@ -273,7 +300,7 @@ function handleConnect(socket: TypedSocket, _io: TypedSocketServer): void {
       });
     }
 
-    // 9. Send version information
+    // 10. Send version information
     const versionInfo: AcarshubVersion = {
       container_version: config.version,
       github_version: config.version, // TODO: Fetch from GitHub API
@@ -315,7 +342,13 @@ function handleQuerySearch(
     logger.debug("Processing database search", {
       socketId: socket.id,
       searchTerm: params.search_term,
+      resultsAfter: params.results_after,
     });
+
+    // Calculate pagination: results_after is the page number (0-indexed)
+    const page = params.results_after ?? 0;
+    const limit = 50;
+    const offset = page * limit;
 
     // Convert CurrentSearch to DatabaseSearchQuery format
     const searchQuery = {
@@ -323,13 +356,13 @@ function handleQuerySearch(
       icao: params.search_term.icao || undefined,
       tail: params.search_term.tail || undefined,
       flight: params.search_term.flight || undefined,
-      station_id: params.search_term.station_id || undefined,
+      stationId: params.search_term.station_id || undefined,
       depa: params.search_term.depa || undefined,
       dsta: params.search_term.dsta || undefined,
-      search_term: params.search_term.msg_text || undefined,
+      text: params.search_term.msg_text || undefined,
       label: params.search_term.label || undefined,
-      page: 0,
-      limit: 50,
+      limit,
+      offset,
     };
 
     const results = databaseSearch(searchQuery);
@@ -339,16 +372,17 @@ function handleQuerySearch(
 
     const response: SearchHtmlMsg = {
       msghtml: enrichedMessages,
-      query_time: elapsed,
-      num_results: enrichedMessages.length,
+      query_time: elapsed / 1000, // Convert milliseconds to seconds (Python uses time.time() which returns seconds)
+      num_results: results.totalCount,
     };
 
     socket.emit("database_search_results", response);
 
     logger.debug("Database search complete", {
       socketId: socket.id,
-      total: enrichedMessages.length,
+      total: results.totalCount,
       returned: enrichedMessages.length,
+      page,
       elapsed: `${elapsed.toFixed(2)}ms`,
     });
   } catch (error) {
@@ -635,7 +669,7 @@ function handleQueryAlertsByTerm(
       messages: enrichedAlerts,
       total_count: enrichedAlerts.length,
       page: params.page ?? 0,
-      query_time: elapsed,
+      query_time: elapsed / 1000, // Convert milliseconds to seconds (Python uses time.time() which returns seconds)
     };
 
     socket.emit("alerts_by_term_results", response);
