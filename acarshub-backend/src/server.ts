@@ -17,11 +17,14 @@
 /**
  * ACARS Hub Node.js Backend Server
  *
- * Week 2 Implementation: Socket.IO Server + Database Layer
+ * Week 3 Implementation: Background Services Integration
  * - Fastify HTTP server
  * - Socket.IO real-time communication
  * - Drizzle ORM + better-sqlite3
- * - Type-safe database operations
+ * - TCP listeners for all decoder types
+ * - Message processing pipeline
+ * - Scheduled background tasks
+ * - ADS-B integration
  *
  * See: dev-docs/NODEJS_MIGRATION_PLAN.md
  */
@@ -41,6 +44,7 @@ import {
   initializeAlertCache,
   initializeMessageCounts,
 } from "./db/index.js";
+import { createBackgroundServices } from "./services/index.js";
 import {
   initializeSocketServer,
   shutdownSocketServer,
@@ -109,8 +113,8 @@ function createServer() {
  */
 async function main(): Promise<void> {
   logger.info("========================================");
-  logger.info("ACARS Hub Node.js Backend - Week 2");
-  logger.info("Socket.IO Server + Database Layer");
+  logger.info("ACARS Hub Node.js Backend - Week 3");
+  logger.info("Background Services Integration");
   logger.info("========================================");
   logger.info("");
   logger.info("Configuration:", {
@@ -122,6 +126,9 @@ async function main(): Promise<void> {
 
   let fastify: ReturnType<typeof createServer> | null = null;
   let io: Awaited<ReturnType<typeof initializeSocketServer>> | null = null;
+  let backgroundServices: Awaited<
+    ReturnType<typeof createBackgroundServices>
+  > | null = null;
 
   try {
     // Initialize database
@@ -216,48 +223,88 @@ async function main(): Promise<void> {
     logger.info("✅ Socket.IO server initialized on /main namespace");
     logger.info("");
 
+    // Initialize background services
+    logger.info("⚙️  Initializing background services...");
+    backgroundServices = await createBackgroundServices({
+      socketio: {
+        emit: (event: string, data: unknown) => {
+          if (io) {
+            // Use type assertion to handle dynamic event emission
+            // Socket.IO's strict typing doesn't allow arbitrary event names at runtime
+            const namespace = io.of("/main") as unknown as {
+              emit: (event: string, data: unknown) => void;
+            };
+            namespace.emit(event, data);
+          }
+        },
+      },
+    });
+    logger.info("✅ Background services initialized");
+    logger.info("");
+
+    // Start background services
+    logger.info("🚀 Starting background services...");
+    backgroundServices.start();
+    logger.info("✅ Background services started");
+    logger.info("");
+
     logger.info("========================================");
-    logger.info("✅ Week 2 Complete: Socket.IO Server");
+    logger.info("✅ Week 3 Complete: Background Services");
     logger.info("========================================");
     logger.info("");
     logger.info("Implemented:");
     logger.info("  ✅ Fastify HTTP server with health checks");
     logger.info("  ✅ Socket.IO server on /main namespace");
     logger.info("  ✅ All 13 event handlers (connect, query_search, etc.)");
-    logger.info("  ✅ Real-time message broadcasting infrastructure");
-    logger.info("  ✅ Type-safe Socket.IO with @acarshub/types");
-    logger.info("  ✅ CORS support for frontend communication");
+    logger.info(
+      "  ✅ TCP listeners for all decoder types (ACARS, VDLM2, HFDL, IMSL, IRDM)",
+    );
+    logger.info("  ✅ Message queue with statistics tracking");
+    logger.info(
+      "  ✅ Scheduled background tasks (pruning, optimization, health checks)",
+    );
+    logger.info("  ✅ ADS-B integration with HTTP polling");
+    logger.info("  ✅ Real-time connection status tracking");
+    logger.info("  ✅ Auto-reconnect logic for decoder feeds");
     logger.info("");
-    logger.info("Event Handlers:");
-    logger.info("  ✅ connect - Initial data load");
-    logger.info("  ✅ query_search - Database search");
-    logger.info("  ✅ update_alerts - Alert term management");
-    logger.info("  ✅ regenerate_alert_matches - Full alert rebuild");
-    logger.info("  ✅ request_status - System status");
-    logger.info("  ✅ signal_freqs - Frequency counts");
-    logger.info("  ✅ signal_count - Message counts");
-    logger.info("  ✅ request_recent_alerts - Recent alerts");
-    logger.info("  ✅ signal_graphs - Alert statistics");
-    logger.info("  ✅ rrd_timeseries - Time-series data (placeholder)");
-    logger.info("  ✅ query_alerts_by_term - Term-specific search");
-    logger.info("  ✅ reset_alert_counts - Reset statistics");
-    logger.info("  ✅ disconnect - Cleanup");
+    logger.info("Background Tasks:");
+    logger.info("  ✅ Every 30s: Emit system status");
+    logger.info("  ✅ Every 1min: Prune old messages");
+    logger.info("  ✅ Every 5min: Optimize DB (merge FTS5 segments)");
+    logger.info("  ✅ Every 6hr: Full database optimization");
+    logger.info("  ✅ Every 1min: Check thread health");
+    logger.info("  ✅ Continuous: ADS-B polling (5s intervals)");
     logger.info("");
-    logger.info("Next Steps (Week 3):");
-    logger.info("  - TCP listeners (ACARS, VDLM2, HFDL, IMSL, IRDM)");
-    logger.info("  - Message processing pipeline");
-    logger.info("  - Background scheduled tasks");
-    logger.info("  - ADS-B integration");
+    logger.info("Decoder Status:");
+    const appConfig = getConfig();
+    logger.info(`  - ACARS: ${appConfig.enableAcars ? "enabled" : "disabled"}`);
+    logger.info(`  - VDLM2: ${appConfig.enableVdlm ? "enabled" : "disabled"}`);
+    logger.info(`  - HFDL: ${appConfig.enableHfdl ? "enabled" : "disabled"}`);
+    logger.info(`  - IMSL: ${appConfig.enableImsl ? "enabled" : "disabled"}`);
+    logger.info(`  - IRDM: ${appConfig.enableIrdm ? "enabled" : "disabled"}`);
+    logger.info(`  - ADS-B: ${appConfig.enableAdsb ? "enabled" : "disabled"}`);
     logger.info("");
-    logger.info("To test Socket.IO:");
+    logger.info("Next Steps (Week 4):");
+    logger.info("  - Port message formatters (ACARS, VDLM2, HFDL, IMSL, IRDM)");
+    logger.info("  - Implement message enrichment pipeline");
+    logger.info("  - Add alert matching logic");
+    logger.info("  - Implement RRD time-series metrics");
+    logger.info("");
+    logger.info("To test:");
     logger.info("  1. Frontend: Update SOCKET_URL to http://localhost:8080");
     logger.info("  2. Connect to /main namespace");
-    logger.info("  3. All events should work with zero frontend changes");
+    logger.info("  3. Messages should flow from decoders → queue → Socket.IO");
+    logger.info("  4. System status updates every 30 seconds");
     logger.info("");
 
     // Handle shutdown signals
     const shutdown = async (signal: string) => {
       logger.info(`Received ${signal}, shutting down gracefully...`);
+
+      if (backgroundServices) {
+        backgroundServices.stop();
+        logger.info("Background services stopped");
+      }
 
       if (io) {
         await shutdownSocketServer(io);
@@ -282,6 +329,10 @@ async function main(): Promise<void> {
       error: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
     });
+
+    if (backgroundServices) {
+      backgroundServices.stop();
+    }
 
     if (io) {
       await shutdownSocketServer(io);
