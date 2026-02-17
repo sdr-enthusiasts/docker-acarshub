@@ -352,72 +352,80 @@ export const StatsPage = () => {
             <Card>
               <h2 className="card__title">Decoder Status</h2>
               <div className="status-grid">
-                {Object.entries(status.decoders).map(([name, decoder]) => (
-                  <div key={name} className="status-item">
-                    <div className="status-item__header">
-                      <span className="status-item__name">{name}</span>
-                      {renderStatusBadge(decoder.Status)}
-                    </div>
-                    <div className="status-item__details">
-                      <div className="status-detail">
-                        <span className="status-detail__label">Connected:</span>
-                        <span
-                          className={`status-detail__value ${
-                            decoder.Connected ? "text-success" : "text-error"
-                          }`}
-                        >
-                          {decoder.Connected ? "Yes" : "No"}
-                        </span>
+                {status.decoders &&
+                  Object.entries(status.decoders).map(([name, decoder]) => (
+                    <div key={name} className="status-item">
+                      <div className="status-item__header">
+                        <span className="status-item__name">{name}</span>
+                        {renderStatusBadge(decoder.Status)}
                       </div>
-                      <div className="status-detail">
-                        <span className="status-detail__label">Thread:</span>
-                        <span
-                          className={`status-detail__value ${
-                            decoder.Alive ? "text-success" : "text-error"
-                          }`}
-                        >
-                          {decoder.Alive ? "Running" : "Stopped"}
-                        </span>
+                      <div className="status-item__details">
+                        <div className="status-detail">
+                          <span className="status-detail__label">
+                            Connected:
+                          </span>
+                          <span
+                            className={`status-detail__value ${
+                              decoder.Connected ? "text-success" : "text-error"
+                            }`}
+                          >
+                            {decoder.Connected ? "Yes" : "No"}
+                          </span>
+                        </div>
+                        <div className="status-detail">
+                          <span className="status-detail__label">Thread:</span>
+                          <span
+                            className={`status-detail__value ${
+                              decoder.Alive ? "text-success" : "text-error"
+                            }`}
+                          >
+                            {decoder.Alive ? "Running" : "Stopped"}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
               </div>
-              {Object.keys(status.decoders).length === 0 && (
+              {(!status.decoders ||
+                Object.keys(status.decoders).length === 0) && (
                 <p className="text-muted">No decoders configured</p>
               )}
             </Card>
 
             {/* Message Statistics */}
+            {/* Global Status */}
             <Card>
-              <h2 className="card__title">Message Statistics</h2>
+              <h2 className="card__title">Global Message Statistics</h2>
               <div className="status-grid">
-                {Object.entries(status.global).map(([name, stats]) => (
-                  <div key={name} className="status-item">
-                    <div className="status-item__header">
-                      <span className="status-item__name">{name} Messages</span>
-                      {renderStatusBadge(stats.Status)}
-                    </div>
-                    <div className="status-item__details">
-                      <div className="status-detail">
-                        <span className="status-detail__label">Total:</span>
-                        <span className="status-detail__value">
-                          {stats.Count?.toLocaleString() ?? 0}
+                {status.global &&
+                  Object.entries(status.global).map(([name, stats]) => (
+                    <div key={name} className="status-item">
+                      <div className="status-item__header">
+                        <span className="status-item__name">
+                          {name} Messages
                         </span>
+                        {renderStatusBadge(stats.Status)}
                       </div>
-                      <div className="status-detail">
-                        <span className="status-detail__label">
-                          Last Minute:
-                        </span>
-                        <span className="status-detail__value">
-                          {stats.LastMinute}
-                        </span>
+                      <div className="status-item__details">
+                        <div className="status-detail">
+                          <span className="status-detail__label">Total:</span>
+                          <span className="status-detail__value">
+                            {stats.Count?.toLocaleString() ?? 0}
+                          </span>
+                        </div>
+                        <div className="status-detail">
+                          <span className="status-detail__label">
+                            Last Minute:
+                          </span>
+                          <span className="status-detail__value">
+                            {stats.LastMinute}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
               </div>
-              {Object.keys(status.global).length === 0 && (
+              {(!status.global || Object.keys(status.global).length === 0) && (
                 <p className="text-muted">No message statistics available</p>
               )}
             </Card>
@@ -426,24 +434,28 @@ export const StatsPage = () => {
             <Card>
               <h2 className="card__title">Server Status</h2>
               <div className="status-grid">
-                {Object.entries(status.servers).map(([name, server]) => (
-                  <div key={name} className="status-item">
-                    <div className="status-item__header">
-                      <span className="status-item__name">{name}</span>
-                      {renderStatusBadge(server.Status)}
-                    </div>
-                    <div className="status-item__details">
-                      <div className="status-detail">
-                        <span className="status-detail__label">Messages:</span>
-                        <span className="status-detail__value">
-                          {server.Messages?.toLocaleString() ?? 0}
-                        </span>
+                {status.servers &&
+                  Object.entries(status.servers).map(([name, server]) => (
+                    <div key={name} className="status-item">
+                      <div className="status-item__header">
+                        <span className="status-item__name">{name}</span>
+                        {renderStatusBadge(server.Status)}
+                      </div>
+                      <div className="status-item__details">
+                        <div className="status-detail">
+                          <span className="status-detail__label">
+                            Messages:
+                          </span>
+                          <span className="status-detail__value">
+                            {server.Messages?.toLocaleString() ?? 0}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
               </div>
-              {Object.keys(status.servers).length === 0 && (
+              {(!status.servers ||
+                Object.keys(status.servers).length === 0) && (
                 <p className="text-muted">No servers configured</p>
               )}
             </Card>

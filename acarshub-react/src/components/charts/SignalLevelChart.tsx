@@ -149,9 +149,15 @@ export const SignalLevelChart = ({
       const levelMap = new Map<number, number>();
       for (const item of decoderData) {
         const level = item.level;
-        // Only include float values
-        if (Number(level) === level && level % 1 !== 0) {
-          levelMap.set(level, item.count);
+        const count = item.count;
+        // Only include float values (skip null)
+        if (
+          level !== null &&
+          count !== null &&
+          Number(level) === level &&
+          level % 1 !== 0
+        ) {
+          levelMap.set(level, count);
         }
       }
 
