@@ -1,0 +1,484 @@
+// Copyright (C) 2022-2026 Frederick Clausen II
+// This file is part of acarshub <https://github.com/sdr-enthusiasts/docker-acarshub>.
+//
+// acarshub is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// acarshub is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
+
+import { EventEmitter } from "node:events";
+import { getConfig } from "../config.js";
+import {
+  optimizeDbMerge,
+  optimizeDbRegular,
+  pruneDatabase,
+} from "../db/index.js";
+import { createLogger } from "../utils/logger.js";
+import {
+  type AdsbData,
+  destroyAdsbPoller,
+  getAdsbPoller,
+} from "./adsb-poller.js";
+import {
+  destroyMessageQueue,
+  getMessageQueue,
+  type QueuedMessage,
+} from "./message-queue.js";
+import { destroyScheduler, getScheduler } from "./scheduler.js";
+import {
+  createTcpListener,
+  type MessageType,
+  type TcpListener,
+} from "./tcp-listener.js";
+
+const logger = createLogger("services");
+
+export interface ServicesConfig {
+  socketio: {
+    emit: (event: string, data: unknown) => void;
+  };
+}
+
+export interface ConnectionStatus {
+  ACARS: boolean;
+  VDLM2: boolean;
+  HFDL: boolean;
+  IMSL: boolean;
+  IRDM: boolean;
+}
+
+/**
+ * Background services orchestrator
+ *
+ * Manages:
+ * - TCP listeners for all decoder types
+ * - Message queue and processing pipeline
+ * - Scheduled tasks (pruning, stats, health checks)
+ * - ADS-B data polling
+ * - Real-time status broadcasting
+ *
+ * Lifecycle:
+ * 1. initialize() - Set up all services
+ * 2. start() - Begin processing
+ * 3. stop() - Graceful shutdown
+ */
+export class BackgroundServices extends EventEmitter {
+  private config: ServicesConfig;
+  private tcpListeners: Map<MessageType, TcpListener> = new Map();
+  private connectionStatus: ConnectionStatus = {
+    ACARS: false,
+    VDLM2: false,
+    HFDL: false,
+    IMSL: false,
+    IRDM: false,
+  };
+  private isRunning = false;
+
+  constructor(config: ServicesConfig) {
+    super();
+    this.config = config;
+  }
+
+  /**
+   * Initialize all background services
+   * Does NOT start them - call start() to begin processing
+   */
+  public async initialize(): Promise<void> {
+    logger.info("Initializing background services");
+
+    const appConfig = getConfig();
+
+    // Initialize TCP listeners for enabled decoders
+    if (appConfig.enableAcars) {
+      this.setupListener(
+        "ACARS",
+        appConfig.feedAcarsHost,
+        appConfig.feedAcarsPort,
+      );
+    }
+
+    if (appConfig.enableVdlm) {
+      this.setupListener(
+        "VDLM2",
+        appConfig.feedVdlmHost,
+        appConfig.feedVdlmPort,
+      );
+    }
+
+    if (appConfig.enableHfdl) {
+      this.setupListener(
+        "HFDL",
+        appConfig.feedHfdlHost,
+        appConfig.feedHfdlPort,
+      );
+    }
+
+    if (appConfig.enableImsl) {
+      this.setupListener(
+        "IMSL",
+        appConfig.feedImslHost,
+        appConfig.feedImslPort,
+      );
+    }
+
+    if (appConfig.enableIrdm) {
+      this.setupListener(
+        "IRDM",
+        appConfig.feedIrdmHost,
+        appConfig.feedIrdmPort,
+      );
+    }
+
+    // Set up message queue processing
+    this.setupMessageQueue();
+
+    // Set up scheduled tasks
+    this.setupScheduledTasks();
+
+    // Set up ADS-B polling if enabled
+    if (appConfig.enableAdsb) {
+      this.setupAdsbPolling();
+    }
+
+    logger.info("Background services initialized", {
+      listeners: Array.from(this.tcpListeners.keys()),
+      adsbEnabled: appConfig.enableAdsb,
+    });
+  }
+
+  /**
+   * Start all background services
+   */
+  public start(): void {
+    if (this.isRunning) {
+      logger.warn("Background services already running");
+      return;
+    }
+
+    logger.info("Starting background services");
+
+    this.isRunning = true;
+
+    // Start all TCP listeners
+    for (const listener of this.tcpListeners.values()) {
+      listener.start();
+    }
+
+    // Start scheduler
+    const scheduler = getScheduler();
+    scheduler.start();
+
+    // Start ADS-B polling if configured
+    const appConfig = getConfig();
+    if (appConfig.enableAdsb) {
+      const adsbPoller = getAdsbPoller({
+        url: appConfig.adsbUrl,
+        pollInterval: 5000,
+        timeout: 5000,
+      });
+      adsbPoller.start();
+    }
+
+    logger.info("Background services started");
+  }
+
+  /**
+   * Stop all background services
+   */
+  public stop(): void {
+    if (!this.isRunning) {
+      return;
+    }
+
+    logger.info("Stopping background services");
+
+    this.isRunning = false;
+
+    // Stop all TCP listeners
+    for (const listener of this.tcpListeners.values()) {
+      listener.stop();
+    }
+
+    // Stop scheduler
+    destroyScheduler();
+
+    // Stop ADS-B polling
+    destroyAdsbPoller();
+
+    // Clear message queue
+    destroyMessageQueue();
+
+    logger.info("Background services stopped");
+  }
+
+  /**
+   * Get current connection status for all decoders
+   */
+  public getConnectionStatus(): ConnectionStatus {
+    return { ...this.connectionStatus };
+  }
+
+  /**
+   * Get cached ADS-B data (for new client connections)
+   */
+  public getCachedAdsbData(): AdsbData | null {
+    const appConfig = getConfig();
+    if (!appConfig.enableAdsb) {
+      return null;
+    }
+
+    const adsbPoller = getAdsbPoller({
+      url: appConfig.adsbUrl,
+    });
+    return adsbPoller.getCachedData();
+  }
+
+  /**
+   * Set up a TCP listener for a decoder type
+   */
+  private setupListener(type: MessageType, host: string, port: number): void {
+    const listener = createTcpListener({
+      type,
+      host,
+      port,
+      reconnectDelay: 1000,
+    });
+
+    // Handle connection state changes
+    listener.on("connected", (listenerType: MessageType) => {
+      this.connectionStatus[listenerType] = true;
+      this.emitSystemStatus();
+
+      logger.info(`${listenerType} connected`, {
+        type: listenerType,
+        host,
+        port,
+      });
+    });
+
+    listener.on("disconnected", (listenerType: MessageType) => {
+      this.connectionStatus[listenerType] = false;
+      this.emitSystemStatus();
+
+      logger.warn(`${listenerType} disconnected`, {
+        type: listenerType,
+      });
+    });
+
+    listener.on("error", (listenerType: MessageType, error: Error) => {
+      logger.error(`${listenerType} error`, {
+        type: listenerType,
+        error: error.message,
+      });
+    });
+
+    // Handle incoming messages
+    listener.on("message", (listenerType: MessageType, data: unknown) => {
+      // Add to message queue for processing
+      const messageQueue = getMessageQueue();
+      messageQueue.push(listenerType, data);
+    });
+
+    this.tcpListeners.set(type, listener);
+  }
+
+  /**
+   * Set up message queue processing
+   * Messages are processed by formatters and saved to database
+   */
+  private setupMessageQueue(): void {
+    const messageQueue = getMessageQueue(15);
+
+    messageQueue.on("message", async (queuedMessage: QueuedMessage) => {
+      try {
+        // TODO: Format message using appropriate formatter (Week 4)
+        // TODO: Save to database with alert matching
+        // TODO: Emit to connected clients via Socket.IO
+
+        logger.debug("Message queued for processing", {
+          type: queuedMessage.type,
+          timestamp: queuedMessage.timestamp,
+        });
+
+        // Placeholder: emit raw message to Socket.IO
+        // Real implementation in Week 4 after formatters are ported
+        this.config.socketio.emit("acars_msg", {
+          msghtml: {
+            type: queuedMessage.type,
+            data: queuedMessage.data,
+          },
+        });
+      } catch (err) {
+        logger.error("Failed to process message", {
+          type: queuedMessage.type,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    });
+
+    messageQueue.on("overflow", (droppedCount: number) => {
+      logger.warn("Message queue overflow", {
+        droppedCount,
+      });
+    });
+  }
+
+  /**
+   * Set up scheduled background tasks
+   */
+  private setupScheduledTasks(): void {
+    const scheduler = getScheduler();
+
+    // Emit system status every 30 seconds
+    scheduler.every(30, "seconds").do(async () => {
+      this.emitSystemStatus();
+    }, "emit_system_status");
+
+    // Prune old messages every 30 seconds
+    scheduler
+      .every(1, "minutes")
+      .at(":30")
+      .do(async () => {
+        try {
+          await pruneDatabase();
+          logger.debug("Database pruned");
+        } catch (err) {
+          logger.error("Failed to prune database", {
+            error: err instanceof Error ? err.message : String(err),
+          });
+        }
+      }, "prune_database");
+
+    // Optimize database (merge FTS5 segments) every 5 minutes
+    scheduler.every(5, "minutes").do(async () => {
+      try {
+        await optimizeDbMerge();
+        logger.debug("Database optimized (merge)");
+      } catch (err) {
+        logger.error("Failed to optimize database (merge)", {
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    }, "optimize_db_merge");
+
+    // Full database optimization every 6 hours
+    scheduler.every(6, "hours").do(async () => {
+      try {
+        await optimizeDbRegular();
+        logger.info("Database optimized (full)");
+      } catch (err) {
+        logger.error("Failed to optimize database (full)", {
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    }, "optimize_db_full");
+
+    // Check thread health every minute (restart dead listeners)
+    scheduler
+      .every(1, "minutes")
+      .at(":45")
+      .do(async () => {
+        this.checkThreadHealth();
+      }, "check_thread_health");
+
+    logger.info("Scheduled tasks configured", {
+      taskCount: scheduler.getTasks().length,
+    });
+  }
+
+  /**
+   * Set up ADS-B polling
+   */
+  private setupAdsbPolling(): void {
+    const appConfig = getConfig();
+    const adsbPoller = getAdsbPoller({
+      url: appConfig.adsbUrl,
+      pollInterval: 5000,
+      timeout: 5000,
+    });
+
+    adsbPoller.on("data", (data: AdsbData) => {
+      // Broadcast to all connected clients
+      this.config.socketio.emit("adsb_aircraft", data);
+
+      logger.debug("ADS-B data broadcast", {
+        aircraftCount: data.aircraft.length,
+      });
+    });
+
+    adsbPoller.on("error", (error: Error) => {
+      logger.error("ADS-B polling error", {
+        error: error.message,
+      });
+    });
+
+    logger.info("ADS-B polling configured", {
+      url: appConfig.adsbUrl,
+    });
+  }
+
+  /**
+   * Emit real-time system status to all connected clients
+   */
+  private emitSystemStatus(): void {
+    const messageQueue = getMessageQueue();
+    const stats = messageQueue.getStats();
+
+    const status = {
+      connections: this.connectionStatus,
+      messagesLastMinute: {
+        acars: stats.acars.lastMinute,
+        vdlm2: stats.vdlm2.lastMinute,
+        hfdl: stats.hfdl.lastMinute,
+        imsl: stats.imsl.lastMinute,
+        irdm: stats.irdm.lastMinute,
+        error: stats.error.lastMinute,
+      },
+      messagesTotal: {
+        acars: stats.acars.total,
+        vdlm2: stats.vdlm2.total,
+        hfdl: stats.hfdl.total,
+        imsl: stats.imsl.total,
+        irdm: stats.irdm.total,
+        error: stats.error.total,
+      },
+    };
+
+    this.config.socketio.emit("system_status", { status });
+  }
+
+  /**
+   * Check health of all listeners and restart if needed
+   */
+  private checkThreadHealth(): void {
+    for (const [type, listener] of this.tcpListeners.entries()) {
+      if (!listener.connected) {
+        logger.warn(
+          `${type} listener not connected, restart will be automatic`,
+          {
+            type,
+          },
+        );
+      }
+    }
+  }
+}
+
+/**
+ * Create and initialize background services
+ */
+export async function createBackgroundServices(
+  config: ServicesConfig,
+): Promise<BackgroundServices> {
+  const services = new BackgroundServices(config);
+  await services.initialize();
+  return services;
+}

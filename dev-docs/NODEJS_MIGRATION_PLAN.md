@@ -311,18 +311,18 @@ docker-acarshub/
    - ✅ TypeScript strict mode compliance (no `any` types)
    - ✅ All tests passing with proper type safety
 
-#### Missing / Not Started ❌
+#### Missing / Deferred to Week 5 ⏳
 
-1. **RRD Migration**
-   - ❌ `timeseries_stats` table schema
-   - ❌ Python export script (`export-rrd-to-sqlite.py`)
-   - ❌ Time-series query with downsampling
-   - ❌ RRD archive preservation
+1. **RRD Migration** → **Week 5**
+   - ⏳ `timeseries_stats` table schema
+   - ⏳ Python export script (`export-rrd-to-sqlite.py`)
+   - ⏳ Time-series query with downsampling
+   - ⏳ RRD archive preservation
 
-2. **Additional Testing**
-   - ❌ Parity tests vs Python output
-   - ❌ Unit tests for alert query functions
-   - ❌ Unit tests for statistics query functions
+2. **Additional Testing** → **Week 5**
+   - ⏳ Parity tests vs Python output
+   - ⏳ Unit tests for alert query functions
+   - ⏳ Unit tests for statistics query functions
 
 **Deliverables**:
 
@@ -337,22 +337,7 @@ docker-acarshub/
 - ✅ Migration system with initial state detection and auto-migration
 - ✅ Performance-optimized migration runner (3x faster than Alembic)
 - ✅ Comprehensive test coverage (43 tests passing, TypeScript strict mode)
-- ❌ RRD → SQLite migration script
-
-**Remaining Work**:
-
-1. Unit tests for alert query functions (searchAlerts, regenerateAllAlertMatches, etc.)
-2. Unit tests for statistics query functions (getFreqCount, getSignalLevels, etc.)
-3. Parity tests comparing Node output to Python output on identical inputs
-4. RRD → SQLite migration tooling (if needed for existing deployments)
-
-**Next Steps (Priority Order)**:
-
-1. ✅ **COMPLETED**: Migration system with initial state detection
-2. Write unit tests for alert and statistics query functions
-3. Add parity tests comparing Node output to Python output
-4. Begin Week 2: Socket.IO Server implementation
-5. Implement RRD migration tooling (if needed for existing deployments)
+- ⏳ RRD → SQLite migration script (Week 5)
 
 **Key Achievements**:
 
@@ -360,7 +345,7 @@ docker-acarshub/
 - Performance exceeds Python/Alembic by 3x on large databases
 - All 43 tests passing with TypeScript strict mode compliance
 - Zero `any` types, full type safety throughout codebase
-- Ready to proceed to Week 2: Socket.IO Server implementation
+- Ready to proceed with background services (Week 3)
 
 ---
 
@@ -442,20 +427,20 @@ This transformation layer is critical for API parity with Python backend.
 - ❌ Integration tests: NOT YET IMPLEMENTED
 - ❌ Frontend connection tests: NOT YET IMPLEMENTED
 
-#### Missing / Deferred
+#### Week 2 Deferred Items (moved to Week 5) ⏳
 
-1. **RRD Time-series Handler**
-   - ❌ `rrd_timeseries` event handler (placeholder only)
+1. **RRD Time-series Handler** → **Week 5**
+   - ⏳ `rrd_timeseries` event handler (placeholder only)
    - Reason: RRD → SQLite migration not complete (Week 1 deferred item)
 
-2. **Integration Testing**
-   - ❌ End-to-end tests with frontend
-   - ❌ Socket.IO event payload validation
-   - ❌ Parity tests vs Python output
+2. **Integration Testing** → **Week 5**
+   - ⏳ End-to-end tests with frontend
+   - ⏳ Socket.IO event payload validation
+   - ⏳ Parity tests vs Python output
 
-3. **System Monitoring**
-   - ❌ Real thread/connection status (Week 3 dependency)
-   - ❌ Messages per minute tracking (Week 3 dependency)
+3. **System Monitoring** → **Week 3**
+   - ⏳ Real thread/connection status (will implement in Week 3)
+   - ⏳ Messages per minute tracking (will implement in Week 3)
    - Placeholder status sent for now
 
 **Deliverables**:
@@ -464,7 +449,7 @@ This transformation layer is critical for API parity with Python backend.
 - ✅ All 13 handlers implemented (12 complete, 1 placeholder)
 - ✅ Event responses match Python format structure
 - ✅ Message enrichment layer complete
-- ❌ Integration tests (deferred to Week 5)
+- ⏳ Integration tests (deferred to Week 5)
 
 **Key Files**:
 
@@ -474,14 +459,6 @@ This transformation layer is critical for API parity with Python backend.
 - `acarshub-backend/src/formatters/enrichment.ts` (327 lines) - Message enrichment
 - `acarshub-backend/src/server.ts` - Fastify + Socket.IO integration
 - `acarshub-backend/src/config.ts` - Enhanced configuration
-
-**Next Steps (Week 3)**:
-
-1. TCP listeners to receive real-time messages from decoders
-2. Message processing pipeline to format and queue messages
-3. Message relay to broadcast via Socket.IO
-4. Background scheduled tasks
-5. System health monitoring
 
 ---
 
@@ -554,7 +531,7 @@ This transformation layer is critical for API parity with Python backend.
    - [ ] Update scheduler
 
 3. **Configuration**
-   - [ ] Port all 40+ environment variables
+   - [ ] Port all 40+ environment variables. Refer to dev-docs/ENV_VARS_AUDIT.md and discuss what needs to be ported, what can be removed, and what can be improved.
    - [ ] Zod schema validation
    - [ ] `isEnabled()` helper function
    - [ ] Default values matching Python
@@ -568,58 +545,124 @@ This transformation layer is critical for API parity with Python backend.
 
 ---
 
-### Week 5-6: Testing & Deployment
+### Week 5: Integration & Gap Filling
 
-**Goal**: Comprehensive testing and production deployment
+**Goal**: Complete deferred work from Weeks 1-2, RRD migration, and comprehensive integration testing
 
-#### Testing Tasks
+#### Gap Filling Tasks (Weeks 1-2 Deferred Items)
 
-1. **Unit Tests**
-   - [ ] Database queries (90%+ coverage)
-   - [ ] Message formatters (100% coverage)
-   - [ ] Helper functions
-   - [ ] Configuration parsing
+1. **RRD Time-Series Migration**
+   - [ ] Complete `timeseries_stats` table schema in Drizzle
+   - [ ] Python export script (`export-rrd-to-sqlite.py`)
+   - [ ] Time-series query functions with downsampling
+   - [ ] RRD archive preservation logic
+   - [ ] `rrd_timeseries` Socket.IO event handler (replace placeholder)
+   - [ ] Unit tests for time-series queries
 
-2. **Integration Tests**
-   - [ ] Socket.IO event handlers
-   - [ ] Message pipeline (TCP → DB → Socket)
-   - [ ] Alert matching system
-   - [ ] Time-series queries
+2. **Database Testing (Week 1 Gaps)**
+   - [ ] Parity tests vs Python output (database functions)
+   - [ ] Unit tests for alert query functions
+   - [ ] Unit tests for statistics query functions
+   - [ ] Performance benchmarks vs Python baseline
 
-3. **E2E Tests** (Playwright)
+3. **Socket.IO Integration Testing (Week 2 Gaps)**
+   - [ ] End-to-end Socket.IO event tests
+   - [ ] Event payload validation tests
+   - [ ] Parity tests vs Python Socket.IO responses
+   - [ ] Frontend-backend integration tests
+
+4. **System Monitoring Completion**
+   - [ ] Real thread/connection status (integrate Week 3 metrics)
+   - [ ] Messages per minute tracking
+   - [ ] Replace placeholder system_status with real data
+
+#### Integration Testing Tasks
+
+1. **Full Pipeline Integration Tests**
+   - [ ] TCP → Formatter → Database → Socket.IO
+   - [ ] Alert matching end-to-end
+   - [ ] Search with FTS5 fallback
+   - [ ] Time-series data flow
+
+2. **E2E Tests** (Playwright)
    - [ ] Frontend connects to Node backend
-   - [ ] Live messages display
-   - [ ] Database search works
+   - [ ] Live messages display correctly
+   - [ ] Database search produces correct results
    - [ ] Alert management works
    - [ ] Map displays ADS-B data
    - [ ] Graphs display time-series data
 
-4. **Migration Testing**
-   - [ ] Test RRD export script
+3. **Migration Testing**
+   - [ ] Test RRD export script on real data
    - [ ] Verify time-series data accuracy
-   - [ ] Test database migration
+   - [ ] Test database schema migrations
    - [ ] Test rollback procedure
 
-5. **Performance Testing**
-   - [ ] Load testing (1000+ messages/min)
-   - [ ] Memory leak detection
-   - [ ] Database query performance
-   - [ ] Socket.IO broadcast performance
+**Deliverables**:
 
-6. **Deployment**
+- ✅ RRD migration complete and tested
+- ✅ All Week 1-2 gaps filled
+- ✅ Integration tests passing
+- ✅ E2E tests passing with frontend
+- ✅ System monitoring complete with real data
+
+---
+
+### Week 6: Performance, Testing & Deployment
+
+**Goal**: Performance validation, comprehensive test coverage, and production deployment preparation
+
+#### Performance & Testing Tasks
+
+1. **Performance Testing**
+   - [ ] Load testing (1000+ messages/min)
+   - [ ] Memory leak detection (24hr+ runs)
+   - [ ] Database query performance profiling
+   - [ ] Socket.IO broadcast performance under load
+   - [ ] Compare Python vs Node benchmarks
+
+2. **Test Coverage**
+   - [ ] Database queries (90%+ coverage)
+   - [ ] Message formatters (100% coverage)
+   - [ ] Helper functions (90%+ coverage)
+   - [ ] Configuration parsing (100% coverage)
+   - [ ] Socket.IO handlers (80%+ coverage)
+
+3. **Code Quality**
+   - [ ] TypeScript strict mode: 100% compliance
+   - [ ] Biome linting: 0 errors
+   - [ ] Documentation review
+   - [ ] Security audit
+
+#### Deployment Tasks
+
+1. **Docker & Infrastructure**
    - [ ] Dockerfile (multi-stage build)
    - [ ] Docker Compose updates
    - [ ] nginx configuration
-   - [ ] CI/CD pipeline
-   - [ ] Documentation
+   - [ ] Health check endpoints
+   - [ ] Graceful shutdown handling
+
+2. **CI/CD Pipeline**
+   - [ ] GitHub Actions workflows
+   - [ ] Automated testing
+   - [ ] Docker image building
+   - [ ] Version tagging strategy
+
+3. **Documentation**
+   - [ ] User migration guide
+   - [ ] API compatibility documentation
+   - [ ] Troubleshooting guide
+   - [ ] Rollback procedures
 
 **Deliverables**:
 
 - ✅ 90%+ code coverage
-- ✅ All E2E tests passing
+- ✅ All tests passing (unit, integration, E2E)
 - ✅ Performance benchmarks documented
 - ✅ Complete Node.js Docker image
 - ✅ User migration guide
+- ✅ CI/CD pipeline functional
 
 ---
 
@@ -936,47 +979,51 @@ services:
 
 ## Timeline
 
-| Phase          | Duration    | Dates (Example) | Deliverable        |
-| -------------- | ----------- | --------------- | ------------------ |
-| 0: Setup       | 2 days      | Week 1          | Configured project |
-| 1: Database    | 8 days      | Week 1-2        | Working DB layer   |
-| 2: Socket.IO   | 7 days      | Week 2-3        | Real-time server   |
-| 3: Workers     | 4 days      | Week 3          | Message pipeline   |
-| 4: Formatters  | 4 days      | Week 3-4        | All formatters     |
-| 5: Time-Series | 3 days      | Week 4          | RRD replacement    |
-| 6: Services    | 3 days      | Week 4-5        | Background jobs    |
-| 7: Config      | 3 days      | Week 5          | Environment setup  |
-| 8: Testing     | 8 days      | Week 5-6        | Test suite         |
-| **Total**      | **42 days** | **6 weeks**     | Production-ready   |
+| Phase                   | Duration    | Dates (Example) | Deliverable            |
+| ----------------------- | ----------- | --------------- | ---------------------- |
+| 1: Database (Week 1)    | ✅ Complete | Week 1-2        | Working DB layer       |
+| 2: Socket.IO (Week 2)   | ✅ Complete | Week 2-3        | Real-time server       |
+| 3: Background Services  | 5 days      | Week 3          | TCP listeners, workers |
+| 4: Formatters & Metrics | 5 days      | Week 4          | All formatters         |
+| 5: Integration & Gaps   | 5 days      | Week 5          | Week 1-2 gaps, RRD     |
+| 6: Testing & Deployment | 5 days      | Week 6          | Production-ready       |
+| **Total**               | **20 days** | **4 weeks**     | Node backend complete  |
 
 **Additional Time**:
 
 - Code review: 1 week
 - Beta testing: 2-4 weeks
 - Documentation: Ongoing
-- **Total to Production**: 9-11 weeks
+- **Total to Production**: 7-9 weeks
 
 ---
 
 ## Next Steps
 
-### Immediate Actions (This Week)
+### Immediate Actions (Week 3 - Background Services)
 
-1. [ ] Create `acarshub-backend/` directory
-2. [ ] Initialize Node.js project
-3. [ ] Set up Drizzle ORM
-4. [ ] Define database schema
-5. [ ] Create first migration
-6. [ ] Write first query function test
+1. [ ] Implement TCP listeners for all 5 decoder types
+2. [ ] Create message queue and processing pipeline
+3. [ ] Implement scheduled tasks (pruning, stats, health checks)
+4. [ ] Add ADS-B HTTP polling integration
+5. [ ] Update system_status handler with real metrics
+6. [ ] Write unit tests for background services
 
-### Phase 1 Kickoff (Next Week)
+### Week 4 Focus (Formatters & Metrics)
 
-1. [ ] Complete database layer setup
-2. [ ] Port all table schemas
-3. [ ] Implement FTS5 queries
-4. [ ] Write comprehensive tests
-5. [ ] Create RRD export script
-6. [ ] Document progress
+1. [ ] Port all 5 message formatters from Python
+2. [ ] Implement Prometheus metrics collection
+3. [ ] Create `/metrics` endpoint
+4. [ ] Write comprehensive formatter tests
+5. [ ] Validate 100% field mapping parity
+
+### Week 5 Focus (Integration & Gaps)
+
+1. [ ] Complete RRD → SQLite migration tooling
+2. [ ] Fill all Week 1-2 testing gaps
+3. [ ] Write Socket.IO integration tests
+4. [ ] Run E2E tests with frontend
+5. [ ] Performance profiling and optimization
 
 ---
 

@@ -49,6 +49,49 @@ export const ENABLE_IRDM =
   process.env.ENABLE_IRDM?.toUpperCase() === "TRUE" || false;
 
 /**
+ * Decoder feed configuration (TCP ports)
+ */
+export const FEED_ACARS_HOST = process.env.FEED_ACARS_HOST || "127.0.0.1";
+export const FEED_ACARS_PORT = process.env.FEED_ACARS_PORT
+  ? Number.parseInt(process.env.FEED_ACARS_PORT, 10)
+  : 15550;
+
+export const FEED_VDLM_HOST = process.env.FEED_VDLM_HOST || "127.0.0.1";
+export const FEED_VDLM_PORT = process.env.FEED_VDLM_PORT
+  ? Number.parseInt(process.env.FEED_VDLM_PORT, 10)
+  : 15555;
+
+export const FEED_HFDL_HOST = process.env.FEED_HFDL_HOST || "127.0.0.1";
+export const FEED_HFDL_PORT = process.env.FEED_HFDL_PORT
+  ? Number.parseInt(process.env.FEED_HFDL_PORT, 10)
+  : 15556;
+
+export const FEED_IMSL_HOST = process.env.FEED_IMSL_HOST || "127.0.0.1";
+export const FEED_IMSL_PORT = process.env.FEED_IMSL_PORT
+  ? Number.parseInt(process.env.FEED_IMSL_PORT, 10)
+  : 15557;
+
+export const FEED_IRDM_HOST = process.env.FEED_IRDM_HOST || "127.0.0.1";
+export const FEED_IRDM_PORT = process.env.FEED_IRDM_PORT
+  ? Number.parseInt(process.env.FEED_IRDM_PORT, 10)
+  : 15558;
+
+/**
+ * ADS-B configuration
+ */
+export const ENABLE_ADSB = process.env.ENABLE_ADSB?.toUpperCase() === "TRUE";
+export const ADSB_URL =
+  process.env.ADSB_URL || "http://tar1090/data/aircraft.json";
+export const ADSB_LAT = process.env.ADSB_LAT
+  ? Number.parseFloat(process.env.ADSB_LAT)
+  : 0.0;
+export const ADSB_LON = process.env.ADSB_LON
+  ? Number.parseFloat(process.env.ADSB_LON)
+  : 0.0;
+export const ENABLE_RANGE_RINGS =
+  process.env.ENABLE_RANGE_RINGS?.toUpperCase() !== "FALSE";
+
+/**
  * Alert terms (loaded from environment or defaults)
  */
 export let alertTerms: string[] = [];
@@ -224,6 +267,21 @@ export function getConfig() {
     enableHfdl: ENABLE_HFDL,
     enableImsl: ENABLE_IMSL,
     enableIrdm: ENABLE_IRDM,
+    feedAcarsHost: FEED_ACARS_HOST,
+    feedAcarsPort: FEED_ACARS_PORT,
+    feedVdlmHost: FEED_VDLM_HOST,
+    feedVdlmPort: FEED_VDLM_PORT,
+    feedHfdlHost: FEED_HFDL_HOST,
+    feedHfdlPort: FEED_HFDL_PORT,
+    feedImslHost: FEED_IMSL_HOST,
+    feedImslPort: FEED_IMSL_PORT,
+    feedIrdmHost: FEED_IRDM_HOST,
+    feedIrdmPort: FEED_IRDM_PORT,
+    enableAdsb: ENABLE_ADSB,
+    adsbUrl: ADSB_URL,
+    adsbLat: ADSB_LAT,
+    adsbLon: ADSB_LON,
+    enableRangeRings: ENABLE_RANGE_RINGS,
     alertTerms,
     alertIgnoreTerms: alertTermsIgnore,
     groundStations,
