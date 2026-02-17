@@ -745,6 +745,7 @@ function handleSignalGraphs(socket: TypedSocket): void {
 async function handleRRDTimeseries(
   socket: TypedSocket,
   params: {
+    time_period?: string; // Python format: "1hr" | "6hr" | "12hr" | "24hr" | "1wk" | "30day" | "6mon" | "1yr"
     start?: number; // Unix timestamp (seconds)
     end?: number; // Unix timestamp (seconds)
     downsample?: number; // Bucket size in seconds (e.g., 300 for 5-minute buckets)
@@ -752,12 +753,52 @@ async function handleRRDTimeseries(
 ): Promise<void> {
   try {
     const now = Math.floor(Date.now() / 1000);
-    const start = params.start ?? now - 86400; // Default: last 24 hours
-    const end = params.end ?? now;
-    const downsample = params.downsample;
+    let start: number;
+    let end: number;
+    let downsample: number | undefined;
+    let timePeriod: string | undefined;
+
+    // Support Python-style time_period parameter
+    if (params.time_period) {
+      timePeriod = params.time_period;
+      const periodMap: Record<
+        string,
+        { startOffset: number; downsample: number }
+      > = {
+        "1hr": { startOffset: 3600, downsample: 60 }, // 1 hour, 1-minute buckets
+        "6hr": { startOffset: 21600, downsample: 60 }, // 6 hours, 1-minute buckets
+        "12hr": { startOffset: 43200, downsample: 60 }, // 12 hours, 1-minute buckets
+        "24hr": { startOffset: 86400, downsample: 300 }, // 24 hours, 5-minute buckets
+        "1wk": { startOffset: 604800, downsample: 1800 }, // 1 week, 30-minute buckets
+        "30day": { startOffset: 2592000, downsample: 3600 }, // 30 days, 1-hour buckets
+        "6mon": { startOffset: 15768000, downsample: 21600 }, // 6 months, 6-hour buckets
+        "1yr": { startOffset: 31536000, downsample: 43200 }, // 1 year, 12-hour buckets
+      };
+
+      const config = periodMap[params.time_period];
+      if (!config) {
+        socket.emit("rrd_timeseries_data", {
+          error: `Invalid time period: ${params.time_period}`,
+          data: [],
+          time_period: params.time_period,
+          points: 0,
+        });
+        return;
+      }
+
+      start = now - config.startOffset;
+      end = now;
+      downsample = config.downsample;
+    } else {
+      // Use explicit start/end/downsample parameters
+      start = params.start ?? now - 86400; // Default: last 24 hours
+      end = params.end ?? now;
+      downsample = params.downsample;
+    }
 
     logger.debug("RRD timeseries query", {
       socketId: socket.id,
+      timePeriod,
       start,
       end,
       downsample,
@@ -809,42 +850,86 @@ async function handleRRDTimeseries(
         error: row.error_count,
       }));
 
-      socket.emit("rrd_timeseries_data", {
+      const response: {
+        data: Array<{
+          timestamp: number;
+          acars: number;
+          vdlm: number;
+          hfdl: number;
+          imsl: number;
+          irdm: number;
+          total: number;
+          error: number;
+        }>;
+        time_period?: string;
+        start?: number;
+        end?: number;
+        downsample?: number;
+        points: number;
+      } = {
         data: formattedData,
-        start,
-        end,
-        downsample,
         points: formattedData.length,
-      });
+      };
+
+      if (timePeriod) {
+        response.time_period = timePeriod;
+      } else {
+        response.start = start;
+        response.end = end;
+        response.downsample = downsample;
+      }
+
+      socket.emit("rrd_timeseries_data", response);
 
       logger.debug("RRD timeseries response (downsampled)", {
         socketId: socket.id,
         points: formattedData.length,
-        downsample,
       });
     } else {
-      // No downsampling - fetch raw 1-minute data
+      // Use Drizzle ORM for non-downsampled queries (1-minute resolution)
       const data = await queryTimeseriesData("1min", start, end);
 
       const formattedData = data.map((row) => ({
         timestamp: row.timestamp,
-        acars: row.acarsCount,
-        vdlm: row.vdlmCount,
-        hfdl: row.hfdlCount,
-        imsl: row.imslCount,
-        irdm: row.irdmCount,
-        total: row.totalCount,
-        error: row.errorCount,
+        acars: row.acarsCount ?? 0,
+        vdlm: row.vdlmCount ?? 0,
+        hfdl: row.hfdlCount ?? 0,
+        imsl: row.imslCount ?? 0,
+        irdm: row.irdmCount ?? 0,
+        total: row.totalCount ?? 0,
+        error: row.errorCount ?? 0,
       }));
 
-      socket.emit("rrd_timeseries_data", {
+      const response: {
+        data: Array<{
+          timestamp: number;
+          acars: number;
+          vdlm: number;
+          hfdl: number;
+          imsl: number;
+          irdm: number;
+          total: number;
+          error: number;
+        }>;
+        time_period?: string;
+        start?: number;
+        end?: number;
+        points: number;
+      } = {
         data: formattedData,
-        start,
-        end,
         points: formattedData.length,
-      });
+      };
 
-      logger.debug("RRD timeseries response (raw)", {
+      if (timePeriod) {
+        response.time_period = timePeriod;
+      } else {
+        response.start = start;
+        response.end = end;
+      }
+
+      socket.emit("rrd_timeseries_data", response);
+
+      logger.debug("RRD timeseries response", {
         socketId: socket.id,
         points: formattedData.length,
       });

@@ -82,24 +82,25 @@ export function getAllFreqCounts(): Array<{
   freq: string | null;
   count: number | null;
 }> {
+  // Python sends uppercase decoder names: ACARS, VDL-M2, HFDL, IMSL, IRDM
   const acars = getFreqCount("acars").map((item) => ({
-    decoder: "acars",
+    decoder: "ACARS",
     ...item,
   }));
   const vdlm2 = getFreqCount("vdlm2").map((item) => ({
-    decoder: "vdlm2",
+    decoder: "VDL-M2",
     ...item,
   }));
   const hfdl = getFreqCount("hfdl").map((item) => ({
-    decoder: "hfdl",
+    decoder: "HFDL",
     ...item,
   }));
   const imsl = getFreqCount("imsl").map((item) => ({
-    decoder: "imsl",
+    decoder: "IMSL",
     ...item,
   }));
   const irdm = getFreqCount("irdm").map((item) => ({
-    decoder: "irdm",
+    decoder: "IRDM",
     ...item,
   }));
 

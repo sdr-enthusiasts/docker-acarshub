@@ -60,10 +60,14 @@ export interface RRDTimeseriesPoint {
  */
 export interface RRDTimeseriesData {
   data: RRDTimeseriesPoint[];
-  start: number; // Query start timestamp
-  end: number; // Query end timestamp
+  time_period?: string; // Python format: "1hr" | "6hr" | "12hr" | "24hr" | "1wk" | "30day" | "6mon" | "1yr"
+  start?: number; // Query start timestamp (alternative to time_period)
+  end?: number; // Query end timestamp (alternative to time_period)
   downsample?: number; // Bucket size in seconds (if downsampled)
   points: number; // Number of data points returned
+  error?: string; // Error message if query failed
+  resolution?: string; // Resolution hint (e.g., "1min", "5min", "1hr")
+  data_sources?: string[]; // List of data source names
 }
 
 /**
@@ -138,8 +142,9 @@ export interface SocketEmitEvents {
   request_status: () => void;
   query_alerts_by_term: (params: { term: string; page?: number }) => void;
   rrd_timeseries: (params: {
-    start?: number; // Unix timestamp in seconds
-    end?: number; // Unix timestamp in seconds
-    downsample?: number; // Bucket size in seconds (e.g., 300 for 5-minute buckets)
+    time_period?: string; // Python format: "1hr" | "6hr" | "12hr" | "24hr" | "1wk" | "30day" | "6mon" | "1yr"
+    start?: number; // Unix timestamp in seconds (alternative to time_period)
+    end?: number; // Unix timestamp in seconds (alternative to time_period)
+    downsample?: number; // Bucket size in seconds
   }) => void;
 }
