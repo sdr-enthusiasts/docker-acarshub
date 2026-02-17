@@ -49,6 +49,7 @@ import {
   getCachedAlertTerms,
   getDatabase,
   getMessageCountStats,
+  getPerDecoderMessageCounts,
   getRowCount,
   grabMostRecent,
   regenerateAllAlertMatches,
@@ -950,8 +951,8 @@ async function handleRRDTimeseries(
  * and includes per-decoder entries in global status
  */
 function getSystemStatus(): SystemStatus {
-  const { count: messageCount } = getRowCount();
   const config = getConfig();
+  const decoderCounts = getPerDecoderMessageCounts();
 
   const decodersStatus: Record<
     string,
@@ -973,11 +974,11 @@ function getSystemStatus(): SystemStatus {
     };
     serversStatus.acars_server = {
       Status: "Ok",
-      Messages: messageCount, // TODO: Track per-decoder counts
+      Messages: decoderCounts.acars,
     };
     globalStatus.ACARS = {
       Status: "Ok",
-      Count: messageCount,
+      Count: decoderCounts.acars,
       LastMinute: 0, // TODO: Track per-minute counts
     };
   }
@@ -991,12 +992,12 @@ function getSystemStatus(): SystemStatus {
     };
     serversStatus.vdlm2_server = {
       Status: "Ok",
-      Messages: 0, // TODO: Track per-decoder counts
+      Messages: decoderCounts.vdlm2,
     };
     globalStatus.VDLM2 = {
       Status: "Ok",
-      Count: 0,
-      LastMinute: 0,
+      Count: decoderCounts.vdlm2,
+      LastMinute: 0, // TODO: Track per-minute counts
     };
   }
 
@@ -1009,12 +1010,12 @@ function getSystemStatus(): SystemStatus {
     };
     serversStatus.hfdl_server = {
       Status: "Ok",
-      Messages: 0, // TODO: Track per-decoder counts
+      Messages: decoderCounts.hfdl,
     };
     globalStatus.HFDL = {
       Status: "Ok",
-      Count: 0,
-      LastMinute: 0,
+      Count: decoderCounts.hfdl,
+      LastMinute: 0, // TODO: Track per-minute counts
     };
   }
 
@@ -1027,12 +1028,12 @@ function getSystemStatus(): SystemStatus {
     };
     serversStatus.imsl_server = {
       Status: "Ok",
-      Messages: 0, // TODO: Track per-decoder counts
+      Messages: decoderCounts.imsl,
     };
     globalStatus.IMSL = {
       Status: "Ok",
-      Count: 0,
-      LastMinute: 0,
+      Count: decoderCounts.imsl,
+      LastMinute: 0, // TODO: Track per-minute counts
     };
   }
 
@@ -1045,12 +1046,12 @@ function getSystemStatus(): SystemStatus {
     };
     serversStatus.irdm_server = {
       Status: "Ok",
-      Messages: 0, // TODO: Track per-decoder counts
+      Messages: decoderCounts.irdm,
     };
     globalStatus.IRDM = {
       Status: "Ok",
-      Count: 0,
-      LastMinute: 0,
+      Count: decoderCounts.irdm,
+      LastMinute: 0, // TODO: Track per-minute counts
     };
   }
 
@@ -1068,7 +1069,7 @@ function getSystemStatus(): SystemStatus {
       },
       threads: {
         database: true,
-        scheduler: false,
+        scheduler: true, // TypeScript backend doesn't have separate scheduler thread
       },
     },
   };

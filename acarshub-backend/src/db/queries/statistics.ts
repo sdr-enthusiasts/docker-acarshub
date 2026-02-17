@@ -15,7 +15,7 @@
  * - Synchronous API
  */
 
-import { eq } from "drizzle-orm";
+import { count, eq } from "drizzle-orm";
 import { getDatabase } from "../client.js";
 import {
   freqsAcars,
@@ -30,6 +30,7 @@ import {
   levelVdlm2,
   type MessageCount,
   type MessageCountDropped,
+  messages,
   messagesCount,
   messagesCountDropped,
 } from "../schema.js";
@@ -251,6 +252,65 @@ export function getMessageCountStats(): MessageCount | undefined {
   const db = getDatabase();
 
   return db.select().from(messagesCount).get();
+}
+
+/**
+ * Get per-decoder message counts from messages table
+ *
+ * Returns total message count for each decoder type.
+ * This is used for system status display.
+ *
+ * @returns Object with counts per decoder type
+ */
+export function getPerDecoderMessageCounts(): {
+  acars: number;
+  vdlm2: number;
+  hfdl: number;
+  imsl: number;
+  irdm: number;
+  total: number;
+} {
+  const db = getDatabase();
+
+  // Count messages by messageType
+  const results = db
+    .select({
+      messageType: messages.messageType,
+      count: count(),
+    })
+    .from(messages)
+    .groupBy(messages.messageType)
+    .all() as Array<{ messageType: string | null; count: number }>;
+
+  const counts = {
+    acars: 0,
+    vdlm2: 0,
+    hfdl: 0,
+    imsl: 0,
+    irdm: 0,
+    total: 0,
+  };
+
+  for (const row of results) {
+    const messageType = row.messageType?.toUpperCase();
+    const count = row.count ?? 0;
+
+    if (messageType === "ACARS") {
+      counts.acars = count;
+    } else if (messageType === "VDLM2" || messageType === "VDL-M2") {
+      counts.vdlm2 += count; // Use += to handle both formats
+    } else if (messageType === "HFDL") {
+      counts.hfdl = count;
+    } else if (messageType === "IMSL" || messageType === "IMS-L") {
+      counts.imsl += count; // Use += to handle both formats
+    } else if (messageType === "IRDM") {
+      counts.irdm = count;
+    }
+
+    counts.total += count;
+  }
+
+  return counts;
 }
 
 /**
