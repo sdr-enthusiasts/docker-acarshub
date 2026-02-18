@@ -119,6 +119,14 @@ export interface SocketEvents {
 
   // Version information
   acarshub_version: (data: AcarshubVersion) => void;
+
+  // Alert regeneration responses
+  regenerate_alert_matches_started: (data: { message: string }) => void;
+  regenerate_alert_matches_complete: (data: {
+    success: boolean;
+    matched: number;
+  }) => void;
+  regenerate_alert_matches_error: (data: { error: string }) => void;
 }
 
 /**
@@ -132,6 +140,7 @@ export interface SocketEmitEvents {
     show_all?: boolean;
   }) => void;
   update_alerts: (terms: Terms) => void;
+  regenerate_alert_matches: () => void;
   signal_freqs: () => void;
   signal_count: () => void;
   alert_term_query: (params: {

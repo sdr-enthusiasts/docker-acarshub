@@ -86,8 +86,6 @@ export function registerHandlers(io: TypedSocketServer): void {
     socket.on("update_alerts", (terms) =>
       handleUpdateAlerts(socket, namespace.server, terms),
     );
-    // Note: regenerate_alert_matches is not in SocketEmitEvents but Python supports it
-    // @ts-expect-error - Python backend supports this event
     socket.on("regenerate_alert_matches", () =>
       handleRegenerateAlertMatches(socket, namespace.server),
     );
@@ -158,9 +156,13 @@ function handleConnect(socket: TypedSocket, _io: TypedSocketServer): void {
     socket.emit("features_enabled", decoders);
 
     // 2. Send alert terms
+    // Use the DB-backed cache (getCachedAlertTerms / getCachedAlertIgnoreTerms)
+    // rather than config.alertTerms, which is never populated from the database.
+    // This matches Python: get_alert_terms() / get_alert_ignore() return the
+    // in-memory globals that are loaded from the DB at startup.
     const terms: Terms = {
-      terms: config.alertTerms,
-      ignore: config.alertIgnoreTerms,
+      terms: getCachedAlertTerms(),
+      ignore: getCachedAlertIgnoreTerms(),
     };
     socket.emit("terms", terms);
 
@@ -409,14 +411,17 @@ function handleUpdateAlerts(
       ignoreCount: terms.ignore.length,
     });
 
-    // Update alert terms
+    // Update alert terms in DB and in-memory cache
     setAlertTerms(terms.terms);
     setAlertIgnore(terms.ignore);
 
-    // Broadcast updated terms to all clients
+    // Broadcast updated terms to all clients.
+    // Read back from the DB cache AFTER the update — config.alertTerms is a
+    // stale snapshot from before setAlertTerms() was called and would send the
+    // old values back to clients.
     const updatedTerms: Terms = {
-      terms: config.alertTerms,
-      ignore: config.alertIgnoreTerms,
+      terms: getCachedAlertTerms(),
+      ignore: getCachedAlertIgnoreTerms(),
     };
     io.of("/main").emit("terms", updatedTerms);
 
@@ -432,9 +437,29 @@ function handleUpdateAlerts(
 }
 
 /**
+ * Track whether an alert match regeneration is already running.
+ * better-sqlite3 is synchronous so Node is single-threaded here, but we still
+ * guard against a second client kicking off a second run while the first is
+ * executing inside a setImmediate callback.
+ */
+let alertRegenInProgress = false;
+
+/**
  * Handle regenerate alert matches request
  *
  * Mirrors Python: @socketio.on("regenerate_alert_matches", namespace="/main")
+ *
+ * Protocol (matches Python acarshub.py):
+ *  1. Permission denied  → emit regenerate_alert_matches_error to requester
+ *  2. Already in progress → emit regenerate_alert_matches_error to requester
+ *  3. Otherwise:
+ *     a. Set in-progress flag
+ *     b. Emit regenerate_alert_matches_started to requester
+ *     c. Run regeneration (deferred via setImmediate so the started event
+ *        is delivered before the synchronous DB work blocks the event loop)
+ *     d. Emit regenerate_alert_matches_complete (or _error) to requester
+ *     e. Broadcast updated alert_terms to all clients
+ *     f. Clear in-progress flag
  */
 function handleRegenerateAlertMatches(
   socket: TypedSocket,
@@ -443,49 +468,80 @@ function handleRegenerateAlertMatches(
   const config = getConfig();
 
   if (!config.allowRemoteUpdates) {
-    logger.error("Remote updates are disabled", {
+    logger.error("Remote updates are disabled, rejecting regenerate request", {
       socketId: socket.id,
+    });
+    socket.emit("regenerate_alert_matches_error", {
+      error: "Remote updates are disabled",
     });
     return;
   }
 
-  try {
-    logger.info("Starting alert matches regeneration", {
+  if (alertRegenInProgress) {
+    logger.warn("Alert regeneration already in progress", {
       socketId: socket.id,
     });
-
-    const startTime = performance.now();
-    const alertTerms = getCachedAlertTerms();
-    const alertIgnoreTerms = getCachedAlertIgnoreTerms();
-    const matched = regenerateAllAlertMatches(alertTerms, alertIgnoreTerms);
-    const elapsed = performance.now() - startTime;
-
-    logger.info("Alert matches regenerated", {
-      socketId: socket.id,
-      matched,
-      elapsed: `${elapsed.toFixed(2)}ms`,
+    socket.emit("regenerate_alert_matches_error", {
+      error: "Alert regeneration already in progress",
     });
-
-    // Send updated alert counts to all clients
-    const alertCounts = getAlertCounts();
-    const alertTermData: Record<
-      number,
-      { count: number; id: number; term: string }
-    > = {};
-    for (let i = 0; i < alertCounts.length; i++) {
-      alertTermData[i] = {
-        count: alertCounts[i].count ?? 0,
-        id: i,
-        term: alertCounts[i].term ?? "",
-      };
-    }
-    io.of("/main").emit("alert_terms_stats", alertTermData);
-  } catch (error) {
-    logger.error("Error regenerating alert matches", {
-      socketId: socket.id,
-      error: error instanceof Error ? error.message : String(error),
-    });
+    return;
   }
+
+  alertRegenInProgress = true;
+
+  logger.info("Starting alert match regeneration", { socketId: socket.id });
+
+  // Acknowledge immediately so the client knows work has started
+  socket.emit("regenerate_alert_matches_started", {
+    message: "Alert regeneration started in background",
+  });
+
+  // Defer the heavy synchronous work so Socket.IO can flush the started event
+  // before the DB work blocks the event loop (mirrors Python's background task)
+  setImmediate(() => {
+    try {
+      const startTime = performance.now();
+      const alertTerms = getCachedAlertTerms();
+      const alertIgnoreTerms = getCachedAlertIgnoreTerms();
+      const stats = regenerateAllAlertMatches(alertTerms, alertIgnoreTerms);
+      const elapsed = performance.now() - startTime;
+
+      logger.info("Alert match regeneration complete", {
+        socketId: socket.id,
+        stats,
+        elapsed: `${elapsed.toFixed(2)}ms`,
+      });
+
+      socket.emit("regenerate_alert_matches_complete", {
+        success: true,
+        matched: stats,
+      });
+
+      // Broadcast updated alert counts to ALL clients (matches Python behaviour)
+      const alertCounts = getAlertCounts();
+      const alertTermData: Record<
+        number,
+        { count: number; id: number; term: string }
+      > = {};
+      for (let i = 0; i < alertCounts.length; i++) {
+        alertTermData[i] = {
+          count: alertCounts[i].count ?? 0,
+          id: i,
+          term: alertCounts[i].term ?? "",
+        };
+      }
+      io.of("/main").emit("alert_terms", { data: alertTermData });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      logger.error("Error during alert match regeneration", {
+        socketId: socket.id,
+        error: message,
+      });
+      socket.emit("regenerate_alert_matches_error", { error: message });
+    } finally {
+      alertRegenInProgress = false;
+    }
+  });
 }
 
 /**
