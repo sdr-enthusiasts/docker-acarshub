@@ -112,6 +112,7 @@ export const SearchPage = () => {
       icao: "",
       msg_text: "",
       station_id: "",
+      msg_type: "",
     },
   );
 
@@ -308,6 +309,7 @@ export const SearchPage = () => {
       icao: "",
       msg_text: "",
       station_id: "",
+      msg_type: "",
     };
 
     setSearchParams(emptyParams);
@@ -511,6 +513,23 @@ export const SearchPage = () => {
                 }
                 placeholder="e.g., KJFK"
               />
+            </div>
+
+            {/* Decoder Type */}
+            <div className="search-page__form-field">
+              <label htmlFor="search-msg-type">Decoder Type</label>
+              <select
+                id="search-msg-type"
+                value={searchParams.msg_type}
+                onChange={(e) => handleInputChange("msg_type", e.target.value)}
+              >
+                <option value="">All</option>
+                <option value="ACARS">ACARS</option>
+                <option value="VDLM2">VDLM2</option>
+                <option value="HFDL">HFDL</option>
+                <option value="IMSL">IMSL</option>
+                <option value="IRDM">IRDM</option>
+              </select>
             </div>
 
             {/* Message Text - Full width */}

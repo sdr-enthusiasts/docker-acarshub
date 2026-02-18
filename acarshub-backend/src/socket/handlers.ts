@@ -58,6 +58,7 @@ import {
   setAlertIgnore,
   setAlertTerms,
 } from "../db/index.js";
+import type { SearchParams } from "../db/queries/messages.js";
 import { enrichMessage, enrichMessages } from "../formatters/enrichment.js";
 import { getAdsbPoller } from "../services/adsb-poller.js";
 import { getMessageQueue } from "../services/message-queue.js";
@@ -343,9 +344,9 @@ function handleQuerySearch(
     const limit = 50;
     const offset = page * limit;
 
-    // Convert CurrentSearch to DatabaseSearchQuery format
-    const searchQuery = {
-      msgType: undefined, // TODO: Map from CurrentSearch if needed
+    // Convert CurrentSearch to SearchParams format
+    const searchQuery: SearchParams = {
+      messageType: params.search_term.msg_type || undefined,
       icao: params.search_term.icao || undefined,
       tail: params.search_term.tail || undefined,
       flight: params.search_term.flight || undefined,
@@ -354,6 +355,8 @@ function handleQuerySearch(
       dsta: params.search_term.dsta || undefined,
       text: params.search_term.msg_text || undefined,
       label: params.search_term.label || undefined,
+      freq: params.search_term.freq || undefined,
+      msgno: params.search_term.msgno || undefined,
       limit,
       offset,
     };

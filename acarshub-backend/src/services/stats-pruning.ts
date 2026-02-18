@@ -94,26 +94,62 @@ export async function pruneOldStats(): Promise<void> {
 }
 
 /**
+ * Calculate milliseconds until the next occurrence of a given hour (local time).
+ *
+ * If the target hour has already passed today, returns the delay to that hour
+ * tomorrow. The result is always in the range (0, 86_400_000].
+ *
+ * @param targetHour - Hour of day in local time (0–23)
+ * @returns Milliseconds until the next occurrence of targetHour:00:00.000
+ */
+function msUntilNextHour(targetHour: number): number {
+  const now = new Date();
+  const next = new Date(now);
+  next.setHours(targetHour, 0, 0, 0);
+
+  if (next <= now) {
+    // Target hour already passed today — aim for tomorrow
+    next.setDate(next.getDate() + 1);
+  }
+
+  return next.getTime() - now.getTime();
+}
+
+/**
  * Start automatic stats pruning
  *
- * Schedules pruning to run every 24 hours.
- * First run occurs at the next 3:00 AM (local time), then every 24 hours after.
- * This timing is chosen to minimize impact on active usage periods.
+ * The first run is delayed until the next 3:00 AM local time to minimise
+ * impact on active usage. Subsequent runs recur every 24 hours via the
+ * scheduler so the window stays predictable across restarts.
  *
  * @param scheduler - Scheduler instance
  */
 export function startStatsPruning(scheduler: Scheduler): void {
   const retentionDays = getRetentionDays();
+  const TARGET_HOUR = 3; // 3:00 AM local time
 
-  logger.info("Starting stats pruning scheduler", {
-    schedule: "every 24 hours",
+  const delayMs = msUntilNextHour(TARGET_HOUR);
+  const nextRun = new Date(Date.now() + delayMs);
+
+  logger.info("Stats pruning scheduled", {
     retentionDays,
+    firstRunAt: nextRun.toISOString(),
+    delayHours: (delayMs / 3_600_000).toFixed(2),
   });
 
-  // Schedule to run every 24 hours
-  // Note: First run will be 24 hours from now
-  // TODO: Consider calculating delay to next 3 AM for first run
-  scheduler.every(24, "hours").do(async () => {
-    await pruneOldStats();
-  });
+  // Delay to next 3:00 AM, then hand off to the 24-hour scheduler
+  setTimeout(() => {
+    // Run immediately at the aligned time
+    pruneOldStats().catch((error: unknown) => {
+      logger.error("Scheduled stats pruning failed", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    });
+
+    // Register the recurring 24-hour task; the scheduler is guaranteed to be
+    // running by the time this callback fires.
+    scheduler.every(24, "hours").do(async () => {
+      await pruneOldStats();
+    }, "stats_pruning");
+  }, delayMs);
 }

@@ -35,6 +35,8 @@ export interface CurrentSearch {
   icao: string;
   msg_text: string;
   station_id: string;
+  /** Decoder type filter: "ACARS", "VDLM2", "HFDL", "IMSL", "IRDM", or "" for all */
+  msg_type: string;
 }
 
 /**
