@@ -48,7 +48,7 @@ import {
   getCachedAlertIgnoreTerms,
   getCachedAlertTerms,
   getDatabase,
-  getMessageCountStats,
+  getErrors,
   getPerDecoderMessageCounts,
   getRowCount,
   grabMostRecent,
@@ -603,13 +603,13 @@ function handleSignalFreqs(socket: TypedSocket): void {
  */
 function handleSignalCount(socket: TypedSocket): void {
   try {
-    const countStats = getMessageCountStats();
+    const errorStats = getErrors();
     const formatted: SignalCountData = {
       count: {
-        non_empty_total: countStats?.good ?? 0,
-        non_empty_errors: 0, // TODO: Separate error tracking
-        empty_total: 0, // TODO: Track empty messages
-        empty_errors: countStats?.errors ?? 0,
+        non_empty_total: errorStats.non_empty_total,
+        non_empty_errors: errorStats.non_empty_errors,
+        empty_total: errorStats.empty_total,
+        empty_errors: errorStats.empty_errors,
       },
     };
 

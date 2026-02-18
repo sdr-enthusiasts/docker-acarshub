@@ -312,7 +312,8 @@ export function getErrors(): {
     return {
       non_empty_total: count?.total ?? 0,
       non_empty_errors: count?.errors ?? 0,
-      empty_total: nonlogged?.nonloggedGood ?? 0,
+      empty_total:
+        (nonlogged?.nonloggedGood ?? 0) + (nonlogged?.nonloggedErrors ?? 0),
       empty_errors: nonlogged?.nonloggedErrors ?? 0,
     };
   } catch (error) {

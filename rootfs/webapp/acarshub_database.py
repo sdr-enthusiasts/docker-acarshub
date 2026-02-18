@@ -1385,7 +1385,7 @@ def get_errors():
         return {
             "non_empty_total": count_total,
             "non_empty_errors": count_errors,
-            "empty_total": nonlogged_good,
+            "empty_total": nonlogged_good + nonlogged_errors,
             "empty_errors": nonlogged_errors,
         }
 

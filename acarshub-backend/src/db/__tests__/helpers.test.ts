@@ -268,7 +268,7 @@ describe("Database Helper Functions", () => {
       expect(result).toEqual({
         non_empty_total: 100,
         non_empty_errors: 5,
-        empty_total: 20,
+        empty_total: 30,
         empty_errors: 10,
       });
     });
