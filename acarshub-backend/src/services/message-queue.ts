@@ -85,9 +85,6 @@ export class MessageQueue extends EventEmitter<MessageQueueEvents> {
   constructor(maxSize = 15) {
     super();
     this.maxSize = maxSize;
-
-    // Reset per-minute counters every 60 seconds
-    this.startStatsReset();
   }
 
   /**
@@ -198,7 +195,7 @@ export class MessageQueue extends EventEmitter<MessageQueueEvents> {
   }
 
   /**
-   * Stop statistics reset timer
+   * Stop the queue and clean up
    */
   public destroy(): void {
     if (this.resetInterval) {
@@ -247,30 +244,6 @@ export class MessageQueue extends EventEmitter<MessageQueueEvents> {
       "error" in data &&
       typeof (data as { error: unknown }).error === "number"
     );
-  }
-
-  /**
-   * Start automatic statistics reset every minute
-   */
-  private startStatsReset(): void {
-    // Reset at the top of each minute (aligned to :00 seconds)
-    const now = Date.now();
-    const nextMinute = Math.ceil(now / 60000) * 60000;
-    const delayToNextMinute = nextMinute - now;
-
-    // Schedule first reset at next minute boundary
-    setTimeout(() => {
-      this.resetMinuteStats();
-
-      // Then reset every 60 seconds
-      this.resetInterval = setInterval(() => {
-        this.resetMinuteStats();
-      }, 60000);
-    }, delayToNextMinute);
-
-    logger.debug("Statistics reset timer started", {
-      nextResetIn: delayToNextMinute,
-    });
   }
 }
 

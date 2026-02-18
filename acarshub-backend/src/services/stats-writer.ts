@@ -40,15 +40,28 @@ const logger = createLogger("stats-writer");
 let writeInterval: NodeJS.Timeout | null = null;
 
 /**
- * Write current statistics to timeseries_stats table
+ * Write current statistics to timeseries_stats table, then reset per-minute
+ * counters in the MessageQueue.
+ *
+ * The reset is done HERE (not in MessageQueue's own timer) so that the write
+ * always captures the full minute's data before it is cleared.  Both the
+ * MessageQueue auto-reset timer and this writer previously aligned to the same
+ * :00 boundary, creating a race where the reset could fire first and cause zeros
+ * to be written.  MessageQueue.startStatsReset() has been removed; this
+ * function is now the single point that owns the reset.
+ *
+ * NOTE: Drizzle ORM with better-sqlite3 is synchronous.  Queries are only
+ * executed when a terminal method (.run(), .get(), .all()) is called.
+ * Using `await db.insert(...).values(...)` without `.run()` silently does
+ * nothing — the insert is never sent to SQLite.
  */
-async function writeStats(): Promise<void> {
+function writeStats(): void {
   try {
     const messageQueue = getMessageQueue();
     const stats = messageQueue.getStats();
     const timestamp = Math.floor(Date.now() / 1000); // Unix timestamp in seconds
 
-    // Calculate total messages (excluding errors which are separate)
+    // Calculate total messages (excluding errors which are a separate counter)
     const totalCount =
       stats.acars.lastMinute +
       stats.vdlm2.lastMinute +
@@ -56,18 +69,21 @@ async function writeStats(): Promise<void> {
       stats.imsl.lastMinute +
       stats.irdm.lastMinute;
 
-    const db = getDatabase();
-    await db.insert(timeseriesStats).values({
-      timestamp,
-      resolution: "1min",
-      acarsCount: stats.acars.lastMinute,
-      vdlmCount: stats.vdlm2.lastMinute,
-      hfdlCount: stats.hfdl.lastMinute,
-      imslCount: stats.imsl.lastMinute,
-      irdmCount: stats.irdm.lastMinute,
-      totalCount,
-      errorCount: stats.error.lastMinute,
-    });
+    // .run() is required — without it Drizzle never executes the insert
+    getDatabase()
+      .insert(timeseriesStats)
+      .values({
+        timestamp,
+        resolution: "1min",
+        acarsCount: stats.acars.lastMinute,
+        vdlmCount: stats.vdlm2.lastMinute,
+        hfdlCount: stats.hfdl.lastMinute,
+        imslCount: stats.imsl.lastMinute,
+        irdmCount: stats.irdm.lastMinute,
+        totalCount,
+        errorCount: stats.error.lastMinute,
+      })
+      .run();
 
     logger.debug("Stats written to timeseries", {
       timestamp,
@@ -79,6 +95,9 @@ async function writeStats(): Promise<void> {
       total: totalCount,
       errors: stats.error.lastMinute,
     });
+
+    // Reset per-minute counters AFTER the write so we never lose a count
+    messageQueue.resetMinuteStats();
   } catch (error) {
     logger.error("Failed to write stats to timeseries", {
       error: error instanceof Error ? error.message : String(error),
@@ -106,21 +125,13 @@ export function startStatsWriter(): void {
     nextWriteIn: `${Math.round(delayToNextMinute / 1000)}s`,
   });
 
-  // Schedule first write at next minute boundary
+  // Schedule first write at next minute boundary, then every 60 seconds.
+  // writeStats() is synchronous (better-sqlite3) so no .catch() needed.
   setTimeout(() => {
-    writeStats().catch((error) => {
-      logger.error("Stats write failed", {
-        error: error instanceof Error ? error.message : String(error),
-      });
-    });
+    writeStats();
 
-    // Then write every 60 seconds
     writeInterval = setInterval(() => {
-      writeStats().catch((error) => {
-        logger.error("Stats write failed", {
-          error: error instanceof Error ? error.message : String(error),
-        });
-      });
+      writeStats();
     }, 60000);
 
     logger.info("Stats writer started (interval: 60s)");
@@ -141,7 +152,7 @@ export function stopStatsWriter(): void {
 /**
  * Write stats immediately (for testing or manual trigger)
  */
-export async function writeStatsNow(): Promise<void> {
+export function writeStatsNow(): void {
   logger.info("Manual stats write triggered");
-  await writeStats();
+  writeStats();
 }

@@ -142,14 +142,16 @@ describe("Stats Writer Service", () => {
         const result = originalInsert(...args);
         return {
           ...result,
-          values: vi.fn().mockImplementation(() => {
-            throw new Error("Database error");
-          }),
+          values: vi.fn().mockImplementation(() => ({
+            run: vi.fn().mockImplementation(() => {
+              throw new Error("Database error");
+            }),
+          })),
         };
       });
 
       // Should not throw, errors are logged
-      await expect(writeStatsNow()).resolves.toBeUndefined();
+      expect(() => writeStatsNow()).not.toThrow();
     });
   });
 

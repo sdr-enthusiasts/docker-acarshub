@@ -264,18 +264,29 @@ describe("MessageQueue", () => {
       expect(statsAfter.vdlm2.total).toBe(1);
     });
 
-    it("should automatically reset per-minute stats every minute", () => {
+    it("should reset per-minute stats when resetMinuteStats is called by stats-writer", () => {
+      // The auto-reset timer has been removed from MessageQueue.
+      // Per-minute counters are now reset by stats-writer.ts immediately
+      // after each timeseries write, eliminating the race condition where
+      // the queue reset could fire before the write and produce zeros.
       queue.push("ACARS", { test: 1 });
 
       const statsBefore = queue.getStats();
       expect(statsBefore.acars.lastMinute).toBe(1);
+      expect(statsBefore.acars.total).toBe(1);
 
-      // Advance time to next minute boundary
+      // Advancing time does NOT reset counters — stats-writer owns the reset
       vi.advanceTimersByTime(60000);
 
-      const statsAfter = queue.getStats();
-      expect(statsAfter.acars.lastMinute).toBe(0);
-      expect(statsAfter.acars.total).toBe(1);
+      const statsAfterTime = queue.getStats();
+      expect(statsAfterTime.acars.lastMinute).toBe(1); // still 1, no auto-reset
+
+      // Explicit call (as stats-writer does after each write) resets lastMinute
+      queue.resetMinuteStats();
+
+      const statsAfterReset = queue.getStats();
+      expect(statsAfterReset.acars.lastMinute).toBe(0);
+      expect(statsAfterReset.acars.total).toBe(1); // total is never reset by resetMinuteStats
     });
 
     it("should clear all statistics", () => {

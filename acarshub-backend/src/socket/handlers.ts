@@ -60,6 +60,7 @@ import {
 } from "../db/index.js";
 import { enrichMessage, enrichMessages } from "../formatters/enrichment.js";
 import { getAdsbPoller } from "../services/adsb-poller.js";
+import { getMessageQueue } from "../services/message-queue.js";
 import { queryTimeseriesData } from "../services/rrd-migration.js";
 import { createLogger } from "../utils/logger.js";
 import type { TypedSocket, TypedSocketServer } from "./types.js";
@@ -1009,6 +1010,7 @@ async function handleRRDTimeseries(
 function getSystemStatus(): SystemStatus {
   const config = getConfig();
   const decoderCounts = getPerDecoderMessageCounts();
+  const queueStats = getMessageQueue().getStats();
 
   const decodersStatus: Record<
     string,
@@ -1035,7 +1037,7 @@ function getSystemStatus(): SystemStatus {
     globalStatus.ACARS = {
       Status: "Ok",
       Count: decoderCounts.acars,
-      LastMinute: 0, // TODO: Track per-minute counts
+      LastMinute: queueStats.acars.lastMinute,
     };
   }
 
@@ -1053,7 +1055,7 @@ function getSystemStatus(): SystemStatus {
     globalStatus.VDLM2 = {
       Status: "Ok",
       Count: decoderCounts.vdlm2,
-      LastMinute: 0, // TODO: Track per-minute counts
+      LastMinute: queueStats.vdlm2.lastMinute,
     };
   }
 
@@ -1071,7 +1073,7 @@ function getSystemStatus(): SystemStatus {
     globalStatus.HFDL = {
       Status: "Ok",
       Count: decoderCounts.hfdl,
-      LastMinute: 0, // TODO: Track per-minute counts
+      LastMinute: queueStats.hfdl.lastMinute,
     };
   }
 
@@ -1089,7 +1091,7 @@ function getSystemStatus(): SystemStatus {
     globalStatus.IMSL = {
       Status: "Ok",
       Count: decoderCounts.imsl,
-      LastMinute: 0, // TODO: Track per-minute counts
+      LastMinute: queueStats.imsl.lastMinute,
     };
   }
 
@@ -1107,7 +1109,7 @@ function getSystemStatus(): SystemStatus {
     globalStatus.IRDM = {
       Status: "Ok",
       Count: decoderCounts.irdm,
-      LastMinute: 0, // TODO: Track per-minute counts
+      LastMinute: queueStats.irdm.lastMinute,
     };
   }
 
@@ -1120,8 +1122,8 @@ function getSystemStatus(): SystemStatus {
       stats: {}, // Legacy compatibility (empty)
       external_formats: {}, // Legacy compatibility (empty)
       errors: {
-        Total: 0,
-        LastMinute: 0,
+        Total: queueStats.error.total,
+        LastMinute: queueStats.error.lastMinute,
       },
       threads: {
         database: true,
