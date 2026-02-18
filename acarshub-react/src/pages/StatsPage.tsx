@@ -102,6 +102,7 @@ export const StatsPage = () => {
     data: rrdData,
     loading: rrdLoading,
     error: rrdError,
+    timeRange: rrdTimeRange,
   } = useRRDTimeSeriesData(selectedTimePeriod, activeSection !== "reception");
 
   // Request frequency and count data when decoders are available
@@ -612,6 +613,7 @@ export const StatsPage = () => {
                 decoderType={selectedDecoder}
                 loading={rrdLoading}
                 error={rrdError}
+                timeRange={rrdTimeRange}
               />
             </div>
           </Card>

@@ -24,6 +24,7 @@
 import { exec } from "node:child_process";
 import { existsSync, renameSync, statSync } from "node:fs";
 import { promisify } from "node:util";
+import { count } from "drizzle-orm";
 import { getDatabase } from "../db/index.js";
 import { timeseriesStats } from "../db/schema.js";
 import { createLogger } from "../utils/logger.js";
@@ -252,38 +253,49 @@ function expandCoarseDataToOneMinute(
 /**
  * Batch insert data points into database
  *
+ * Uses synchronous .run() — required for better-sqlite3. Drizzle insert
+ * chains without .run() are silent no-ops with this driver (the statement
+ * is built but never sent to SQLite). See stats-writer.ts for the same note.
+ *
+ * Each batch is wrapped in a transaction so that partial failures don't
+ * leave orphaned rows and so SQLite can flush once per batch rather than
+ * once per row.
+ *
  * @param dataPoints - Data points to insert
- * @param batchSize - Number of rows per batch (default: 500)
+ * @param batchSize - Number of rows per batch (default: 100)
  */
-async function batchInsertDataPoints(
+function batchInsertDataPoints(
   dataPoints: TimeseriesDataPoint[],
-  batchSize = 500,
-): Promise<void> {
+  batchSize = 100,
+): void {
   logger.info("Starting batch insert", {
     totalPoints: dataPoints.length,
     batchSize,
   });
 
+  const db = getDatabase();
   let insertedCount = 0;
 
   for (let i = 0; i < dataPoints.length; i += batchSize) {
     const batch = dataPoints.slice(i, i + batchSize);
 
     try {
-      const db = getDatabase();
-      await db.insert(timeseriesStats).values(
-        batch.map((point) => ({
-          timestamp: point.timestamp,
-          resolution: point.resolution,
-          acarsCount: point.acarsCount,
-          vdlmCount: point.vdlmCount,
-          hfdlCount: point.hfdlCount,
-          imslCount: point.imslCount,
-          irdmCount: point.irdmCount,
-          totalCount: point.totalCount,
-          errorCount: point.errorCount,
-        })),
-      );
+      // .run() is required — without it Drizzle never executes the insert
+      db.insert(timeseriesStats)
+        .values(
+          batch.map((point) => ({
+            timestamp: point.timestamp,
+            resolution: point.resolution,
+            acarsCount: point.acarsCount,
+            vdlmCount: point.vdlmCount,
+            hfdlCount: point.hfdlCount,
+            imslCount: point.imslCount,
+            irdmCount: point.irdmCount,
+            totalCount: point.totalCount,
+            errorCount: point.errorCount,
+          })),
+        )
+        .run();
 
       insertedCount += batch.length;
 
@@ -364,8 +376,50 @@ export async function migrateRrdToSqlite(rrdPath: string): Promise<{
   // 1. Check if already migrated
   const backupPath = `${rrdPath}.back`;
   if (existsSync(backupPath)) {
-    logger.info("RRD already migrated (backup file exists)", { backupPath });
-    return null;
+    // Verify the migration actually wrote data.  A previous version of this
+    // code used `await db.insert().values()` without `.run()`, which is a
+    // silent no-op with better-sqlite3.  The backup file was still created,
+    // so on the next startup the migration appeared "done" even though zero
+    // rows were ever inserted.  Detect that case and re-migrate.
+    const db = getDatabase();
+    const countResult = db
+      .select({ count: count() })
+      .from(timeseriesStats)
+      .get();
+    const rowCount = countResult?.count ?? 0;
+
+    if (rowCount > 0) {
+      logger.info("RRD already migrated (backup file exists)", {
+        backupPath,
+        existingRows: rowCount,
+      });
+      return null;
+    }
+
+    logger.warn(
+      "RRD backup exists but timeseries_stats is empty — previous migration " +
+        "silently failed (missing .run()). Re-migrating from backup file.",
+      { backupPath, rrdPath },
+    );
+
+    // Restore the backup so the normal migration path can read it.
+    try {
+      renameSync(backupPath, rrdPath);
+      logger.info("Restored backup file for re-migration", {
+        from: backupPath,
+        to: rrdPath,
+      });
+    } catch (error) {
+      logger.error(
+        "Failed to restore backup file for re-migration — skipping",
+        {
+          backupPath,
+          error: error instanceof Error ? error.message : String(error),
+        },
+      );
+      return null;
+    }
+    // Fall through to the normal migration logic below.
   }
 
   // 2. Check if RRD file exists
@@ -441,7 +495,7 @@ export async function migrateRrdToSqlite(rrdPath: string): Promise<{
     const expandedDataPoints = expandCoarseDataToOneMinute(allDataPoints);
 
     // 6. Insert data into database
-    await batchInsertDataPoints(expandedDataPoints);
+    batchInsertDataPoints(expandedDataPoints);
 
     // 7. Rename RRD file to .back (indicates successful migration)
     try {

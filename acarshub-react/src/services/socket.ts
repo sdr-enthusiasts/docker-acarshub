@@ -83,7 +83,7 @@ export interface ServerToClientEvents {
   // RRD time-series data
   rrd_timeseries_data: (data: {
     data: Array<{
-      timestamp: number;
+      timestamp: number; // Unix timestamp in milliseconds
       acars: number;
       vdlm: number;
       hfdl: number;
@@ -93,8 +93,13 @@ export interface ServerToClientEvents {
       error: number;
     }>;
     time_period?: string;
+    /** Range start in milliseconds — always present, used to pin chart x-axis */
+    start?: number;
+    /** Range end in milliseconds — always present, used to pin chart x-axis */
+    end?: number;
     resolution?: string;
     data_sources?: string[];
+    downsample?: number;
     error?: string;
   }) => void;
 

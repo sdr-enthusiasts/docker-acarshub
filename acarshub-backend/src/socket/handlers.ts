@@ -815,6 +815,96 @@ function handleSignalGraphs(socket: TypedSocket): void {
  *   ]
  * }
  */
+/**
+ * Zero-fill a time-series result set so every bucket in [start, end] has an
+ * entry.  DB rows that exist are kept as-is; missing buckets are synthesised
+ * with all-zero counts.  Both start/end and bucket timestamps are in Unix
+ * **seconds** at this stage (conversion to ms happens when we emit).
+ *
+ * @param dbRows   Rows already sorted by bucket_timestamp ascending
+ * @param start    Range start (Unix seconds, inclusive)
+ * @param end      Range end   (Unix seconds, inclusive)
+ * @param step     Bucket width in seconds (e.g. 60 for 1-minute buckets)
+ */
+function zeroFillBuckets(
+  dbRows: Array<{
+    timestamp: number;
+    acars: number;
+    vdlm: number;
+    hfdl: number;
+    imsl: number;
+    irdm: number;
+    total: number;
+    error: number;
+  }>,
+  start: number,
+  end: number,
+  step: number,
+): Array<{
+  timestamp: number;
+  acars: number;
+  vdlm: number;
+  hfdl: number;
+  imsl: number;
+  irdm: number;
+  total: number;
+  error: number;
+}> {
+  // Build a lookup map from bucket timestamp → row
+  const rowMap = new Map<
+    number,
+    {
+      timestamp: number;
+      acars: number;
+      vdlm: number;
+      hfdl: number;
+      imsl: number;
+      irdm: number;
+      total: number;
+      error: number;
+    }
+  >();
+  for (const row of dbRows) {
+    // Align the stored timestamp to the same bucket grid used during query
+    const bucketTs = Math.floor(row.timestamp / step) * step;
+    rowMap.set(bucketTs, { ...row, timestamp: bucketTs });
+  }
+
+  const filled: Array<{
+    timestamp: number;
+    acars: number;
+    vdlm: number;
+    hfdl: number;
+    imsl: number;
+    irdm: number;
+    total: number;
+    error: number;
+  }> = [];
+
+  // Align start to the bucket grid
+  const alignedStart = Math.floor(start / step) * step;
+
+  for (let ts = alignedStart; ts <= end; ts += step) {
+    const existing = rowMap.get(ts);
+    if (existing) {
+      filled.push(existing);
+    } else {
+      filled.push({
+        timestamp: ts,
+        acars: 0,
+        vdlm: 0,
+        hfdl: 0,
+        imsl: 0,
+        irdm: 0,
+        total: 0,
+        error: 0,
+      });
+    }
+  }
+
+  return filled;
+}
+
 async function handleRRDTimeseries(
   socket: TypedSocket,
   params: {
@@ -878,6 +968,9 @@ async function handleRRDTimeseries(
       rangeHours: Math.round((end - start) / 3600),
     });
 
+    // Bucket step for 1-minute resolution (used when not downsampling)
+    const minuteStep = 60;
+
     // If downsampling requested, use raw SQL for better performance
     if (downsample && downsample > 60) {
       const db = getDatabase();
@@ -912,7 +1005,8 @@ async function handleRRDTimeseries(
         error_count: number;
       }>;
 
-      const formattedData = results.map((row) => ({
+      // Map DB results to the common shape expected by zeroFillBuckets
+      const rawRows = results.map((row) => ({
         timestamp: row.bucket_timestamp,
         acars: row.acars_count,
         vdlm: row.vdlm_count,
@@ -921,6 +1015,17 @@ async function handleRRDTimeseries(
         irdm: row.irdm_count,
         total: row.total_count,
         error: row.error_count,
+      }));
+
+      // Zero-fill so every downsample-width bucket in [start, end] is present.
+      // Missing buckets get all-zero counts so the chart shows a flat baseline
+      // rather than connecting the tips of spikes across silent periods.
+      const filledRows = zeroFillBuckets(rawRows, start, end, downsample);
+
+      // Convert timestamps seconds → milliseconds for Chart.js time scale
+      const formattedData = filledRows.map((row) => ({
+        ...row,
+        timestamp: row.timestamp * 1000,
       }));
 
       const response: {
@@ -940,6 +1045,9 @@ async function handleRRDTimeseries(
         downsample?: number;
         points: number;
       } = {
+        // start/end in milliseconds so the frontend can pin the chart x-axis
+        start: start * 1000,
+        end: end * 1000,
         data: formattedData,
         points: formattedData.length,
       };
@@ -947,8 +1055,6 @@ async function handleRRDTimeseries(
       if (timePeriod) {
         response.time_period = timePeriod;
       } else {
-        response.start = start;
-        response.end = end;
         response.downsample = downsample;
       }
 
@@ -959,10 +1065,11 @@ async function handleRRDTimeseries(
         points: formattedData.length,
       });
     } else {
-      // Use Drizzle ORM for non-downsampled queries (1-minute resolution)
+      // Use Drizzle ORM for non-downsampled queries (1-minute resolution).
+      // This path handles 1hr / 6hr / 12hr (all have downsample = 60).
       const data = await queryTimeseriesData("1min", start, end);
 
-      const formattedData = data.map((row) => ({
+      const rawRows = data.map((row) => ({
         timestamp: row.timestamp,
         acars: row.acarsCount ?? 0,
         vdlm: row.vdlmCount ?? 0,
@@ -971,6 +1078,16 @@ async function handleRRDTimeseries(
         irdm: row.irdmCount ?? 0,
         total: row.totalCount ?? 0,
         error: row.errorCount ?? 0,
+      }));
+
+      // Zero-fill every 1-minute bucket so the chart drops to zero for quiet
+      // periods instead of connecting the peaks of adjacent busy minutes.
+      const filledRows = zeroFillBuckets(rawRows, start, end, minuteStep);
+
+      // Convert timestamps seconds → milliseconds for Chart.js time scale
+      const formattedData = filledRows.map((row) => ({
+        ...row,
+        timestamp: row.timestamp * 1000,
       }));
 
       const response: {
@@ -989,15 +1106,15 @@ async function handleRRDTimeseries(
         end?: number;
         points: number;
       } = {
+        // start/end in milliseconds so the frontend can pin the chart x-axis
+        start: start * 1000,
+        end: end * 1000,
         data: formattedData,
         points: formattedData.length,
       };
 
       if (timePeriod) {
         response.time_period = timePeriod;
-      } else {
-        response.start = start;
-        response.end = end;
       }
 
       socket.emit("rrd_timeseries_data", response);
