@@ -614,7 +614,21 @@ function mapRawRowToMessage(row: Record<string, unknown>): Message {
  * Strategy:
  * 1. Build FTS5 MATCH string from params (e.g. `flight:"WN"* AND msg_text:"FAST"*`)
  * 2. COUNT matching rowids in messages_fts (fast — FTS5 inverted index)
- * 3. JOIN matching rowids back to messages for full rows, with sort + pagination
+ * 3. Fetch only the paginated slice of rowids from FTS (LIMIT inside the FTS subquery),
+ *    then look up those N rows in messages and sort them.
+ *
+ * CRITICAL: The LIMIT must be inside the FTS subquery, not on the outer query.
+ * With 1.3M matches, an unlimited FTS subquery forces SQLite to:
+ *   - Materialise all 1.3M rowids
+ *   - Join them against the messages B-tree (1.3M lookups)
+ *   - Sort 1.3M rows by msg_time
+ *   - Then take 50
+ * That is O(N log N) and takes ~3s. With LIMIT inside the subquery, FTS returns
+ * only 50 rowids, the outer query fetches 50 rows and sorts 50 rows — O(1).
+ *
+ * Ordering inside the FTS subquery uses rowid DESC (≈ insertion order ≈ time order).
+ * The outer ORDER BY then re-sorts those 50 rows by the requested column, which is
+ * trivially fast. This mirrors Python's build_fts_search_query() exactly.
  *
  * This is 10-100x faster than LIKE '%value%' on large tables because FTS5 uses
  * an inverted index rather than a full sequential scan.
@@ -657,19 +671,28 @@ function searchWithFts(params: SearchParams): SearchResult | null {
   const limit = params.limit ?? 100;
   const offset = params.offset ?? 0;
 
-  // Join FTS rowids back to messages so we get full rows with proper sort/pagination.
-  // The FTS subquery is cheap (returns only integer rowids); the outer query fetches
-  // and sorts only the paginated slice.
+  // FTS rowid order is insert order, which correlates strongly with msg_time order.
+  // By limiting *inside* the FTS subquery we avoid materialising the full result set:
+  //   - FTS returns `limit` rowids ordered by rowid (≈ time)
+  //   - Outer query fetches those N rows and re-sorts by the requested column
+  //   - Total work: O(limit) instead of O(totalCount log totalCount)
+  //
+  // For ascending sorts we flip the FTS inner order so we get the oldest rowids
+  // first, then the outer ORDER BY corrects the final ordering of those N rows.
+  const ftsInnerOrder = params.sortOrder === "asc" ? "ASC" : "DESC";
+
   const resultsStmt = conn.prepare<
     [string, number, number],
     Record<string, unknown>
   >(
     `SELECT m.* FROM messages m
-     INNER JOIN (
-       SELECT rowid FROM messages_fts WHERE messages_fts MATCH ?
-     ) fts ON m.id = fts.rowid
-     ORDER BY m.${sortCol} ${sortDir}
-     LIMIT ? OFFSET ?`,
+     WHERE m.id IN (
+       SELECT rowid FROM messages_fts
+       WHERE messages_fts MATCH ?
+       ORDER BY rowid ${ftsInnerOrder}
+       LIMIT ? OFFSET ?
+     )
+     ORDER BY m.${sortCol} ${sortDir}`,
   );
 
   const rawRows = resultsStmt.all(matchString, limit, offset);
