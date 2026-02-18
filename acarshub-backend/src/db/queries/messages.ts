@@ -546,8 +546,10 @@ export function databaseSearch(params: SearchParams): SearchResult {
       });
       return ftsResult;
     }
-    // Fall through to LIKE search if FTS5 fails
-    logger.debug("FTS5 search returned no results, falling back to LIKE");
+    // null means no FTS-compatible terms were present (e.g. only stationId/icao
+    // fields which are intentionally routed to LIKE for substring matching).
+    // An actual zero-result FTS search returns a SearchResult, not null.
+    logger.debug("No FTS-compatible terms in params, falling back to LIKE");
   }
 
   // Fall back to LIKE-based search (ORM query)
@@ -556,26 +558,132 @@ export function databaseSearch(params: SearchParams): SearchResult {
 }
 
 /**
+ * Map a raw better-sqlite3 row (SQLite column names) to the Drizzle Message type
+ * (TypeScript camelCase property names).
+ *
+ * Drizzle ORM maps DB columns to TS properties automatically when using the ORM
+ * query builder, but raw SQL results use the native SQLite column names.
+ * This function bridges that gap so FTS5 raw-SQL results are type-compatible
+ * with the rest of the codebase.
+ */
+function mapRawRowToMessage(row: Record<string, unknown>): Message {
+  return {
+    id: row.id as number,
+    uid: row.uid as string,
+    messageType: row.message_type as string,
+    time: row.msg_time as number,
+    stationId: row.station_id as string,
+    toaddr: row.toaddr as string,
+    fromaddr: row.fromaddr as string,
+    depa: row.depa as string,
+    dsta: row.dsta as string,
+    eta: row.eta as string,
+    gtout: row.gtout as string,
+    gtin: row.gtin as string,
+    wloff: row.wloff as string,
+    wlin: row.wlin as string,
+    lat: row.lat as string,
+    lon: row.lon as string,
+    alt: row.alt as string,
+    text: row.msg_text as string,
+    tail: row.tail as string,
+    flight: row.flight as string,
+    icao: row.icao as string,
+    freq: row.freq as string,
+    ack: row.ack as string,
+    mode: row.mode as string,
+    label: row.label as string,
+    blockId: row.block_id as string,
+    msgno: row.msgno as string,
+    isResponse: row.is_response as string,
+    isOnground: row.is_onground as string,
+    error: row.error as string,
+    libacars: row.libacars as string,
+    level: row.level as string,
+    aircraftId: (row.aircraft_id as string | null) ?? null,
+  };
+}
+
+/**
  * Search using FTS5 full-text search (fast prefix matching)
  *
+ * Uses the raw better-sqlite3 connection to execute FTS5 MATCH queries directly,
+ * bypassing Drizzle ORM (which has no FTS5 MATCH support). The underlying
+ * better-sqlite3 connection is always available via getSqliteConnection().
+ *
+ * Strategy:
+ * 1. Build FTS5 MATCH string from params (e.g. `flight:"WN"* AND msg_text:"FAST"*`)
+ * 2. COUNT matching rowids in messages_fts (fast — FTS5 inverted index)
+ * 3. JOIN matching rowids back to messages for full rows, with sort + pagination
+ *
+ * This is 10-100x faster than LIKE '%value%' on large tables because FTS5 uses
+ * an inverted index rather than a full sequential scan.
+ *
  * @param params Search parameters
- * @returns Search result or null if no FTS-compatible terms
+ * @returns Search result or null if no FTS-compatible terms exist in params
  */
 function searchWithFts(params: SearchParams): SearchResult | null {
-  // Build FTS5 MATCH string
+  // Build FTS5 MATCH string — returns null when no searchable fields are present
   const matchString = buildFtsMatchString(params);
 
   if (!matchString) {
     return null;
   }
 
-  // Note: FTS5 search using raw SQL is only available with better-sqlite3 directly
-  // Drizzle ORM doesn't expose prepare() method, so we use a workaround
-  // For now, fall back to LIKE search
-  logger.debug(
-    "FTS5 raw SQL not available through Drizzle ORM, using fallback",
+  const conn = getSqliteConnection();
+
+  // COUNT is cheap: FTS5 scans its inverted index, never the messages table
+  const countStmt = conn.prepare<[string], { count: number }>(
+    "SELECT COUNT(*) as count FROM messages_fts WHERE messages_fts MATCH ?",
   );
-  return null;
+  const countRow = countStmt.get(matchString);
+  const totalCount = countRow?.count ?? 0;
+
+  if (totalCount === 0) {
+    return { messages: [], totalCount: 0 };
+  }
+
+  // Map sort column from TypeScript param names to actual SQLite column names
+  const sortCol =
+    params.sortBy === "tail"
+      ? "tail"
+      : params.sortBy === "flight"
+        ? "flight"
+        : params.sortBy === "label"
+          ? "label"
+          : "msg_time";
+
+  const sortDir = params.sortOrder === "asc" ? "ASC" : "DESC";
+  const limit = params.limit ?? 100;
+  const offset = params.offset ?? 0;
+
+  // Join FTS rowids back to messages so we get full rows with proper sort/pagination.
+  // The FTS subquery is cheap (returns only integer rowids); the outer query fetches
+  // and sorts only the paginated slice.
+  const resultsStmt = conn.prepare<
+    [string, number, number],
+    Record<string, unknown>
+  >(
+    `SELECT m.* FROM messages m
+     INNER JOIN (
+       SELECT rowid FROM messages_fts WHERE messages_fts MATCH ?
+     ) fts ON m.id = fts.rowid
+     ORDER BY m.${sortCol} ${sortDir}
+     LIMIT ? OFFSET ?`,
+  );
+
+  const rawRows = resultsStmt.all(matchString, limit, offset);
+
+  logger.debug("FTS5 search complete", {
+    matchString,
+    totalCount,
+    returned: rawRows.length,
+  });
+
+  return {
+    messages: rawRows.map(mapRawRowToMessage),
+    totalCount,
+  };
 }
 
 /**

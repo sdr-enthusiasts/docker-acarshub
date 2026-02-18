@@ -178,6 +178,10 @@ describe("Message Query Functions", () => {
       drizzle(db, { schema }),
     );
 
+    // Mock getSqliteConnection to return the raw in-memory connection
+    // Required now that searchWithFts uses the raw connection for FTS5 MATCH queries
+    vi.spyOn(clientModule, "getSqliteConnection").mockReturnValue(db);
+
     // Insert test messages
     const testMessages = [
       {
