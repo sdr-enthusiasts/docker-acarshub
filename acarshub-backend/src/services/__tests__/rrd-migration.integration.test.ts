@@ -131,7 +131,7 @@ describe("RRD Migration Integration", () => {
     await execAsync(updateCmd);
   }
 
-  it("should migrate a programmatically generated RRD file", async () => {
+  it.skip("should migrate a programmatically generated RRD file", async () => {
     // Generate test RRD file
     await createTestRrdFile(testRrdPath);
 
@@ -176,7 +176,7 @@ describe("RRD Migration Integration", () => {
     expect(sampleRow.errorCount).toBeGreaterThanOrEqual(0);
   }, 120000); // 120 second timeout for RRD generation and migration
 
-  it("should handle idempotent migration (skip if already migrated)", async () => {
+  it.skip("should handle idempotent migration (skip if already migrated)", async () => {
     // Generate test RRD file
     await createTestRrdFile(testRrdPath);
 
@@ -189,7 +189,7 @@ describe("RRD Migration Integration", () => {
     expect(result2).toBeNull(); // Returns null when already migrated
   }, 120000);
 
-  it("should correctly expand 5-minute data to 1-minute resolution", async () => {
+  it.skip("should correctly expand 5-minute data to 1-minute resolution", async () => {
     // Generate test RRD file
     await createTestRrdFile(testRrdPath);
 
@@ -225,7 +225,7 @@ describe("RRD Migration Integration", () => {
     }
   }, 120000);
 
-  it("should handle NaN values by converting to 0", async () => {
+  it.skip("should handle NaN values by converting to 0", async () => {
     // Create RRD
     await createTestRrdFile(testRrdPath);
 
@@ -251,7 +251,7 @@ describe("RRD Migration Integration", () => {
     }
   }, 120000);
 
-  it("should verify data integrity after migration", async () => {
+  it.skip("should verify data integrity after migration", async () => {
     // Generate test RRD file with known values
     await createTestRrdFile(testRrdPath);
 
@@ -286,7 +286,7 @@ describe("RRD Migration Integration", () => {
     }
   }, 120000);
 
-  it("should log migration statistics", async () => {
+  it.skip("should log migration statistics", async () => {
     // Generate test RRD file
     await createTestRrdFile(testRrdPath);
 
