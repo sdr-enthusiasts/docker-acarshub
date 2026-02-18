@@ -79,6 +79,7 @@ jobs:
       build_baseimage_test: false
       platform_linux_arm32v7_enabled: false
       build_baseimage_url: :base/:base-test-pr
+      docker_build_file: ./Node.Dockerfile
       dockerfile_changes: |
         ARG VERSION=0\.0\.0/ARG VERSION=${{ needs.get_version.outputs.version }}/g;s/ARG BUILD_NUMBER=0/ARG BUILD_NUMBER=${{ needs.get_version.outputs.build_number }}
     secrets:
