@@ -1,0 +1,35 @@
+// Copyright (C) 2022-2026 Frederick Clausen II
+// This file is part of acarshub <https://github.com/sdr-enthusiasts/docker-acarshub>.
+//
+// acarshub is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// acarshub is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
+
+/**
+ * Global Vitest setup file.
+ *
+ * Runs once before any test module is loaded. Used to configure Node.js
+ * process-level settings that must be in place before tests start.
+ *
+ * MaxListeners adjustment
+ * -----------------------
+ * prom-client's GC PerformanceObserver registers listeners on the process
+ * object (uncaughtException, unhandledRejection, exit, SIGINT, SIGTERM).
+ * Because metrics.test.ts calls resetMetricsForTesting() + collectMetrics()
+ * in each beforeEach — rebuilding the registry 25+ times per run — Node.js
+ * would emit a MaxListenersExceededWarning at the default limit of 10.
+ *
+ * Raising the limit to 128 is safe here: we are not hiding actual leaks
+ * (the listeners are intentionally re-added per-test in a controlled way)
+ * and 128 is well above the number of tests in the suite.
+ */
+process.setMaxListeners(128);

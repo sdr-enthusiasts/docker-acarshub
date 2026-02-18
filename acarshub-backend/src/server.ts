@@ -47,6 +47,7 @@ import {
 } from "./db/index.js";
 import { runMigrations } from "./db/migrate.js";
 import { createBackgroundServices } from "./services/index.js";
+import { collectMetrics, METRICS_CONTENT_TYPE } from "./services/metrics.js";
 import { migrateRrdToSqlite } from "./services/rrd-migration.js";
 import { startStatsWriter, stopStatsWriter } from "./services/stats-writer.js";
 import {
@@ -107,6 +108,20 @@ function createServer() {
       version: getConfig().version,
       status: "running",
     };
+  });
+
+  // Prometheus metrics endpoint
+  // Content-Type follows the Prometheus text format specification (version 0.0.4).
+  fastify.get("/metrics", async (_request, reply) => {
+    try {
+      const body = await collectMetrics();
+      return reply.header("Content-Type", METRICS_CONTENT_TYPE).send(body);
+    } catch (err) {
+      logger.error("Failed to generate metrics", {
+        error: err instanceof Error ? err.message : String(err),
+      });
+      return reply.status(500).send("Internal Server Error");
+    }
   });
 
   return fastify;

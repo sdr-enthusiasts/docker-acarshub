@@ -373,6 +373,26 @@ export function incrementAlertCount(term: string): void {
 }
 
 /**
+ * Get total count of saved alert matches
+ *
+ * Used for Prometheus metrics reporting.
+ * Returns the total number of rows in the alert_matches table,
+ * representing all historical alert matches.
+ *
+ * @returns Total number of saved alert matches
+ */
+export function getSavedAlertCount(): number {
+  const db = getDatabase();
+
+  const result = db
+    .select({ total: sql<number>`count(*)` })
+    .from(alertMatches)
+    .get();
+
+  return result?.total ?? 0;
+}
+
+/**
  * Delete alert matches older than a specific timestamp
  *
  * Used for database pruning/cleanup.
