@@ -15,9 +15,11 @@
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
 import { EventEmitter } from "node:events";
+import type { SystemStatus } from "@acarshub/types";
 import { getConfig } from "../config.js";
 import {
   addMessageFromJson,
+  getPerDecoderMessageCounts,
   optimizeDbMerge,
   optimizeDbRegular,
   pruneDatabase,
@@ -516,32 +518,145 @@ export class BackgroundServices extends EventEmitter {
 
   /**
    * Emit real-time system status to all connected clients
+   *
+   * Builds a SystemStatus-conforming payload (matching the shared @acarshub/types
+   * interface) so the frontend receives a consistent structure whether the status
+   * originates from a scheduled broadcast or a request_status event response.
+   *
+   * Also uses the actual TCP connection state tracked by this class rather than
+   * the hardcoded Connected:true/Alive:true values in getSystemStatus().
    */
   private emitSystemStatus(): void {
-    const messageQueue = getMessageQueue();
-    const stats = messageQueue.getStats();
+    const config = getConfig();
+    const decoderCounts = getPerDecoderMessageCounts();
+    const queueStats = getMessageQueue().getStats();
 
-    const status = {
-      connections: this.connectionStatus,
-      messagesLastMinute: {
-        acars: stats.acars.lastMinute,
-        vdlm2: stats.vdlm2.lastMinute,
-        hfdl: stats.hfdl.lastMinute,
-        imsl: stats.imsl.lastMinute,
-        irdm: stats.irdm.lastMinute,
-        error: stats.error.lastMinute,
-      },
-      messagesTotal: {
-        acars: stats.acars.total,
-        vdlm2: stats.vdlm2.total,
-        hfdl: stats.hfdl.total,
-        imsl: stats.imsl.total,
-        irdm: stats.irdm.total,
-        error: stats.error.total,
+    const decodersStatus: Record<
+      string,
+      { Status: string; Connected: boolean; Alive: boolean }
+    > = {};
+    const serversStatus: Record<string, { Status: string; Messages: number }> =
+      {};
+    const globalStatus: Record<
+      string,
+      { Status: string; Count: number; LastMinute?: number }
+    > = {};
+
+    if (config.enableAcars) {
+      const connected = this.connectionStatus.ACARS;
+      const statusText = connected ? "Ok" : "Not Connected";
+      decodersStatus.ACARS = {
+        Status: statusText,
+        Connected: connected,
+        Alive: connected,
+      };
+      serversStatus.acars_server = {
+        Status: statusText,
+        Messages: decoderCounts.acars,
+      };
+      globalStatus.ACARS = {
+        Status: statusText,
+        Count: decoderCounts.acars,
+        LastMinute: queueStats.acars.lastMinute,
+      };
+    }
+
+    if (config.enableVdlm) {
+      const connected = this.connectionStatus.VDLM2;
+      const statusText = connected ? "Ok" : "Not Connected";
+      decodersStatus.VDLM2 = {
+        Status: statusText,
+        Connected: connected,
+        Alive: connected,
+      };
+      serversStatus.vdlm2_server = {
+        Status: statusText,
+        Messages: decoderCounts.vdlm2,
+      };
+      globalStatus.VDLM2 = {
+        Status: statusText,
+        Count: decoderCounts.vdlm2,
+        LastMinute: queueStats.vdlm2.lastMinute,
+      };
+    }
+
+    if (config.enableHfdl) {
+      const connected = this.connectionStatus.HFDL;
+      const statusText = connected ? "Ok" : "Not Connected";
+      decodersStatus.HFDL = {
+        Status: statusText,
+        Connected: connected,
+        Alive: connected,
+      };
+      serversStatus.hfdl_server = {
+        Status: statusText,
+        Messages: decoderCounts.hfdl,
+      };
+      globalStatus.HFDL = {
+        Status: statusText,
+        Count: decoderCounts.hfdl,
+        LastMinute: queueStats.hfdl.lastMinute,
+      };
+    }
+
+    if (config.enableImsl) {
+      const connected = this.connectionStatus.IMSL;
+      const statusText = connected ? "Ok" : "Not Connected";
+      decodersStatus.IMSL = {
+        Status: statusText,
+        Connected: connected,
+        Alive: connected,
+      };
+      serversStatus.imsl_server = {
+        Status: statusText,
+        Messages: decoderCounts.imsl,
+      };
+      globalStatus.IMSL = {
+        Status: statusText,
+        Count: decoderCounts.imsl,
+        LastMinute: queueStats.imsl.lastMinute,
+      };
+    }
+
+    if (config.enableIrdm) {
+      const connected = this.connectionStatus.IRDM;
+      const statusText = connected ? "Ok" : "Not Connected";
+      decodersStatus.IRDM = {
+        Status: statusText,
+        Connected: connected,
+        Alive: connected,
+      };
+      serversStatus.irdm_server = {
+        Status: statusText,
+        Messages: decoderCounts.irdm,
+      };
+      globalStatus.IRDM = {
+        Status: statusText,
+        Count: decoderCounts.irdm,
+        LastMinute: queueStats.irdm.lastMinute,
+      };
+    }
+
+    const systemStatus: SystemStatus = {
+      status: {
+        error_state: false,
+        decoders: decodersStatus,
+        servers: serversStatus,
+        global: globalStatus,
+        stats: {},
+        external_formats: {},
+        errors: {
+          Total: queueStats.error.total,
+          LastMinute: queueStats.error.lastMinute,
+        },
+        threads: {
+          database: true,
+          scheduler: true,
+        },
       },
     };
 
-    this.config.socketio.emit("system_status", { status });
+    this.config.socketio.emit("system_status", systemStatus);
   }
 
   /**
