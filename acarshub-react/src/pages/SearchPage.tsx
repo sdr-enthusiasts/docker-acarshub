@@ -532,8 +532,8 @@ export const SearchPage = () => {
               </select>
             </div>
 
-            {/* Message Text - Full width */}
-            <div className="search-page__form-field search-page__form-field--full">
+            {/* Message Text - spans cols 2-3 on desktop, full width on mobile/tablet */}
+            <div className="search-page__form-field search-page__form-field--msg-text">
               <label htmlFor="search-text">Message Text</label>
               <input
                 id="search-text"

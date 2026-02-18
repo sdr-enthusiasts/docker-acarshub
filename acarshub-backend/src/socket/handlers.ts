@@ -344,9 +344,21 @@ function handleQuerySearch(
     const limit = 50;
     const offset = page * limit;
 
+    // Normalize msg_type from display values to database storage format.
+    // Python getQueType() and TypeScript normalizeMessageType() both store:
+    //   VDLM2 → "VDL-M2",  IMSL → "IMS-L",  all others unchanged.
+    const msgTypeNormalizationMap: Record<string, string> = {
+      VDLM2: "VDL-M2",
+      IMSL: "IMS-L",
+    };
+    const rawMsgType = params.search_term.msg_type || "";
+    const normalizedMsgType = rawMsgType
+      ? (msgTypeNormalizationMap[rawMsgType] ?? rawMsgType)
+      : undefined;
+
     // Convert CurrentSearch to SearchParams format
     const searchQuery: SearchParams = {
-      messageType: params.search_term.msg_type || undefined,
+      messageType: normalizedMsgType,
       icao: params.search_term.icao || undefined,
       tail: params.search_term.tail || undefined,
       flight: params.search_term.flight || undefined,
