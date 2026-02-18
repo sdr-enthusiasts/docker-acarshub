@@ -124,7 +124,11 @@ export interface SocketEvents {
   regenerate_alert_matches_started: (data: { message: string }) => void;
   regenerate_alert_matches_complete: (data: {
     success: boolean;
-    matched: number;
+    stats: {
+      total_messages: number;
+      matched_messages: number;
+      total_matches: number;
+    };
   }) => void;
   regenerate_alert_matches_error: (data: { error: string }) => void;
 }

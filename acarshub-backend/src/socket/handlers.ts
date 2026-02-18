@@ -514,7 +514,7 @@ function handleRegenerateAlertMatches(
 
       socket.emit("regenerate_alert_matches_complete", {
         success: true,
-        matched: stats,
+        stats,
       });
 
       // Broadcast updated alert counts to ALL clients (matches Python behaviour)

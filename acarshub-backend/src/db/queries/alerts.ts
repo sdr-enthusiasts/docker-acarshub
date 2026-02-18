@@ -429,12 +429,22 @@ export function getAlertMatchesForMessage(messageUid: string): AlertMatch[] {
  * @param alertTermsIgnore Array of ignore terms
  * @returns Number of alert matches created
  */
+export interface RegenerateStats {
+  total_messages: number;
+  matched_messages: number;
+  total_matches: number;
+}
+
 export function regenerateAllAlertMatches(
   alertTerms: string[],
   alertTermsIgnore: string[],
-): number {
+): RegenerateStats {
   const db = getDatabase();
-  let matchCount = 0;
+  const stats: RegenerateStats = {
+    total_messages: 0,
+    matched_messages: 0,
+    total_matches: 0,
+  };
 
   try {
     // Step 1: Delete all existing alert matches
@@ -448,6 +458,9 @@ export function regenerateAllAlertMatches(
 
     for (const message of allMessages) {
       // Helper function to save alert match
+      stats.total_messages++;
+      let messageMatched = false;
+
       const saveAlertMatch = (term: string, matchType: string): void => {
         // Update alert statistics
         const foundTerm = db
@@ -477,7 +490,8 @@ export function regenerateAllAlertMatches(
           })
           .run();
 
-        matchCount++;
+        messageMatched = true;
+        stats.total_matches++;
       };
 
       // Check message text for alert terms (word boundary match)
@@ -583,11 +597,14 @@ export function regenerateAllAlertMatches(
           }
         }
       }
+      if (messageMatched) {
+        stats.matched_messages++;
+      }
     }
 
-    return matchCount;
+    return stats;
   } catch (error) {
     console.error("Failed to regenerate alert matches:", error);
-    return matchCount;
+    return stats;
   }
 }
