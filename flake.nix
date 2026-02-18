@@ -17,6 +17,8 @@
     };
 
     playwright.url = "github:pietdevries94/playwright-web-flake";
+
+    npm-chck.url = "github:FredSystems/npm-chck";
   };
 
   outputs =
@@ -26,6 +28,7 @@
       precommit-base,
       nixpkgs,
       playwright,
+      npm-chck,
     }:
     let
       # A helper that helps us define the attributes below for
@@ -136,8 +139,7 @@
               pkgs.python313Packages.alembic
               pkgs.pdm
               pkgs.rrdtool
-              pkgs.npm-check
-              pkgs.npm-check-updates
+              npm-chck.packages.${system}.default
               pkgs.nodejs
               pkgs.just
               pkgs.playwright-test

@@ -10,7 +10,7 @@ server-node:
 
 # Node.js dependency updates
 update:
-    cd acarshub-react && npm-check -us
+    cd acarshub-react && npm-chck -usE
 
 bump:
     cd acarshub-react && npm i
