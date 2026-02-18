@@ -101,11 +101,15 @@ describe("RRD Migration Integration", () => {
 
     await execAsync(createCmd);
 
-    // Insert 2 hours of test data (one update per minute)
-    // Pattern: ACARS and VDLM vary, others are constant
+    // Insert 2 hours of test data as a single batched rrdtool update call.
+    // rrdtool supports multiple timestamp:value tuples in one invocation, so
+    // we avoid spawning 120 separate child processes (which exceeds the test
+    // timeout on slower machines).
+    // Pattern: ACARS and VDLM vary, others are constant.
     const now = Math.floor(Date.now() / 1000);
     const startTime = now - 7200; // 2 hours ago
 
+    const updates: string[] = [];
     for (let i = 0; i < 120; i++) {
       // 120 minutes = 2 hours
       const timestamp = startTime + i * 60;
@@ -117,9 +121,14 @@ describe("RRD Migration Integration", () => {
       const total = acars + vdlm + hfdl;
       const error = i % 100 === 0 ? 1 : 0; // Error every 100 minutes
 
-      const updateCmd = `rrdtool update ${path} ${timestamp}:${acars}:${vdlm}:${total}:${error}:${hfdl}:${imsl}:${irdm}`;
-      await execAsync(updateCmd);
+      updates.push(
+        `${timestamp}:${acars}:${vdlm}:${total}:${error}:${hfdl}:${imsl}:${irdm}`,
+      );
     }
+
+    // Single process spawn for all 120 data points
+    const updateCmd = `rrdtool update ${path} ${updates.join(" ")}`;
+    await execAsync(updateCmd);
   }
 
   it("should migrate a programmatically generated RRD file", async () => {
@@ -165,7 +174,7 @@ describe("RRD Migration Integration", () => {
     expect(sampleRow.totalCount).toBeGreaterThanOrEqual(0);
     expect(sampleRow.hfdlCount).toBeGreaterThanOrEqual(0);
     expect(sampleRow.errorCount).toBeGreaterThanOrEqual(0);
-  }, 30000); // 30 second timeout for RRD generation and migration
+  }, 120000); // 120 second timeout for RRD generation and migration
 
   it("should handle idempotent migration (skip if already migrated)", async () => {
     // Generate test RRD file
@@ -178,7 +187,7 @@ describe("RRD Migration Integration", () => {
     // Run migration second time (should skip)
     const result2 = await migrateRrdToSqlite(testRrdPath);
     expect(result2).toBeNull(); // Returns null when already migrated
-  }, 30000);
+  }, 120000);
 
   it("should correctly expand 5-minute data to 1-minute resolution", async () => {
     // Generate test RRD file
@@ -214,7 +223,7 @@ describe("RRD Migration Integration", () => {
       // Should be 60 seconds or multiples of 60
       expect(diff % 60).toBe(0);
     }
-  }, 30000);
+  }, 120000);
 
   it("should handle NaN values by converting to 0", async () => {
     // Create RRD
@@ -240,7 +249,7 @@ describe("RRD Migration Integration", () => {
       expect(Number.isNaN(row.totalCount)).toBe(false);
       expect(Number.isNaN(row.errorCount)).toBe(false);
     }
-  }, 30000);
+  }, 120000);
 
   it("should verify data integrity after migration", async () => {
     // Generate test RRD file with known values
@@ -275,7 +284,7 @@ describe("RRD Migration Integration", () => {
       expect(row.hfdlCount).toBeLessThanOrEqual(10);
       expect(row.totalCount).toBeGreaterThanOrEqual(0);
     }
-  }, 30000);
+  }, 120000);
 
   it("should log migration statistics", async () => {
     // Generate test RRD file
@@ -290,5 +299,5 @@ describe("RRD Migration Integration", () => {
     expect(result?.rowsInserted).toBeGreaterThan(0);
     expect(result?.duration).toBeGreaterThan(0);
     expect(result?.duration).toBeLessThan(30000); // Should complete in <30s
-  }, 30000);
+  }, 120000);
 });

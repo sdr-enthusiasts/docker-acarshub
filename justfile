@@ -117,6 +117,8 @@ check:
 
 # Full CI-like check (unit/integration tests + linting + formatting)
 ci:
+    @echo "Building shared types package (required before TypeScript project references check)..."
+    cd acarshub-types && npm run build
     @echo "Running TypeScript checks (all projects via project references)..."
     npx tsc --build --force
     @echo "Running frontend build..."

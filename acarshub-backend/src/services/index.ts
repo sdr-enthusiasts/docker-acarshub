@@ -17,10 +17,12 @@
 import { EventEmitter } from "node:events";
 import { getConfig } from "../config.js";
 import {
+  addMessageFromJson,
   optimizeDbMerge,
   optimizeDbRegular,
   pruneDatabase,
 } from "../db/index.js";
+import type { RawMessage } from "../db/queries/messageTransform.js";
 import { enrichMessage } from "../formatters/enrichment.js";
 import { formatAcarsMessage } from "../formatters/index.js";
 import { createLogger } from "../utils/logger.js";
@@ -322,7 +324,10 @@ export class BackgroundServices extends EventEmitter {
 
     messageQueue.on("message", async (queuedMessage: QueuedMessage) => {
       try {
-        // Format message using appropriate formatter
+        // Format message using appropriate formatter.
+        // The formatted message is a normalized flat dict matching Python's
+        // format_acars_message() output: keys like timestamp, station_id,
+        // text, icao (hex string), freq, level, etc.
         const rawMessage = queuedMessage.data as Record<string, unknown>;
         const formattedMessage = formatAcarsMessage(rawMessage);
 
@@ -333,10 +338,14 @@ export class BackgroundServices extends EventEmitter {
           return;
         }
 
-        // Add message type identifier (normalized to match Python database format)
-        formattedMessage.message_type = normalizeMessageType(
-          queuedMessage.type,
-        );
+        // Normalize message type to DB format BEFORE the DB call so the same
+        // string is used for both insertion and Socket.IO emission.
+        // Maps: VDLM2 → VDL-M2, IMSL → IMS-L, others unchanged.
+        // NOTE: We do NOT set formattedMessage.message_type yet — if that key
+        // is present when createDbSafeParams iterates the object it falls into
+        // the unrecognized-key debug-log branch (noise). The type is passed as
+        // the explicit first argument to addMessageFromJson instead.
+        const dbMessageType = normalizeMessageType(queuedMessage.type);
 
         logger.debug("Message formatted", {
           type: queuedMessage.type,
@@ -345,18 +354,51 @@ export class BackgroundServices extends EventEmitter {
           hasIcao: !!formattedMessage.icao,
         });
 
+        // Save to database with alert matching.
+        //
+        // Pass the *formatted* message (not rawMessage) — this matches the
+        // Python pipeline exactly:
+        //   format_acars_message(raw) → formatted_dict → add_message_from_json()
+        //
+        // createDbSafeParams() reads the same flat keys the formatter produces:
+        //   timestamp → msg_time (preserved as float or int per decoder)
+        //   text/data  → msg_text
+        //   icao       → icao  (already a hex string from the formatter)
+        //   freq       → freq  (padEnd(7,"0") normalization applied)
+        //   level      → level (stored as text, e.g. "-18.2")
+        //   error      → error (stored as text, e.g. "0")
+        //   …all other fields default to ""
+        const alertMetadata = addMessageFromJson(
+          dbMessageType,
+          formattedMessage as RawMessage,
+        );
+
+        // Attach uid and alert metadata BEFORE enrichment.
+        // enrichMessage() preserves these via PROTECTED_KEYS, so they will be
+        // present on the enriched message emitted to clients — matching the
+        // Python messageRelayListener which adds them to client_message after
+        // retrieving them from alert_metadata_cache.
+        formattedMessage.uid = alertMetadata.uid;
+        formattedMessage.matched = alertMetadata.matched;
+        formattedMessage.matched_text = alertMetadata.matched_text;
+        formattedMessage.matched_icao = alertMetadata.matched_icao;
+        formattedMessage.matched_tail = alertMetadata.matched_tail;
+        formattedMessage.matched_flight = alertMetadata.matched_flight;
+
+        // Set message_type now (after the DB call) for enrichment / Socket.IO.
+        formattedMessage.message_type = dbMessageType;
+
         // Enrich message with additional fields (ICAO hex, airline, ground stations, etc.)
         const enrichedMessage = enrichMessage(formattedMessage);
 
-        logger.trace("Message enriched", {
+        logger.trace("Message enriched and saved", {
           type: queuedMessage.type,
+          uid: alertMetadata.uid,
+          matched: alertMetadata.matched,
           hasIcaoHex: !!enrichedMessage.icao_hex,
           hasToaddrHex: !!enrichedMessage.toaddr_hex,
           hasFromaddrHex: !!enrichedMessage.fromaddr_hex,
         });
-
-        // TODO: Save to database with alert matching (Week 5)
-        // TODO: Generate UID (Week 5)
 
         // Emit enriched message to Socket.IO clients
         this.config.socketio.emit("acars_msg", {
