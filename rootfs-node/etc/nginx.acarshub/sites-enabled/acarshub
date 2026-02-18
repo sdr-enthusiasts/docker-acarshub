@@ -1,0 +1,124 @@
+server {
+  listen 80 default_server;
+  listen [::]:80 default_server;
+
+  root /webapp/dist;
+  server_name _;
+
+  # Trust X-Forwarded-For from reverse proxies (all private networks + localhost)
+  set_real_ip_from 10.0.0.0/8;
+  set_real_ip_from 172.16.0.0/12;
+  set_real_ip_from 192.168.0.0/16;
+  set_real_ip_from 127.0.0.1/32;
+  real_ip_header X-Forwarded-For;
+  real_ip_recursive on;
+
+  proxy_http_version 1.1;
+  proxy_set_header Upgrade $http_upgrade;
+  proxy_set_header Connection $connection_upgrade;
+  proxy_set_header Host $host;
+  proxy_set_header X-Real-IP $remote_addr;
+  proxy_set_header X-Real-Port $remote_port;
+  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+  proxy_set_header X-Forwarded-Proto $scheme;
+  proxy_set_header X-Forwarded-Host $host;
+  include /etc/nginx/mime.types;
+
+  # mjs is not in default mime types, add in here
+  types {
+    application/javascript mjs;
+  }
+	default_type application/octet-stream;
+  access_log off;
+
+  #Catch 40x errors:
+  #error_page 400 401 402 403 404 = @RedirectToHome;
+
+  #Catch 50x errors:
+  #error_page 500 501 502 503 504 = @RedirectToHome;
+
+  #location @RedirectToHome {
+  #  return 302 $scheme://$http_host;
+  #}
+
+  # point the stat image files to the dir they're dumped in, mark as no cache
+  location ~ (.*hour.*|.*week.*|.*month.*|.*year.*|.*days.*).png {
+    add_header Cache-Control 'no-cache';
+    root /database/images;
+  }
+
+  # serve stats.json from /webapp/data directory, mark as no cache
+  location /data/stats.json {
+    add_header Cache-Control 'no-cache';
+    root /webapp;
+  }
+
+  # cache hashed assets immutably (they have content hashes in filenames)
+  location ~ \.(css|js|png|jpg|jpeg|gif|ico|woff|woff2|ttf|svg|eot|otf|map|mjs|mp3)$ {
+    expires 1y;
+    add_header Cache-Control "public, immutable";
+  }
+
+  # proxy pass the web socket to Fastify/Socket.IO (Node.js backend on port 8080)
+  # Matches /socket.io or /any/path/socket.io
+  location ~ ^(.*)/socket\.io {
+    rewrite ^(.*)/socket\.io(.*)$ /socket.io$2 break;
+    proxy_pass http://127.0.0.1:8080;
+
+    # WebSocket upgrade headers (Safari compatibility)
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection $connection_upgrade;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-Host $host;
+
+    # Safari-specific WebSocket timeouts and buffering
+    proxy_connect_timeout 7d;
+    proxy_send_timeout 7d;
+    proxy_read_timeout 7d;
+
+    # Disable buffering for WebSocket (critical for Safari)
+    proxy_buffering off;
+    proxy_cache off;
+
+    # Prevent nginx from closing connections
+    proxy_redirect off;
+  }
+
+  # proxy pass the metrics endpoint to Fastify (Node.js backend on port 8080)
+  # Matches /metrics or /any/path/metrics
+  location ~ ^(.*)/metrics$ {
+    rewrite ^(.*)/metrics$ /metrics break;
+    proxy_pass http://127.0.0.1:8080;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-Host $host;
+    add_header Cache-Control 'no-cache';
+  }
+
+  # index page - must not be cached so new builds are picked up immediately
+  location = / {
+    add_header Cache-Control 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0';
+    add_header Pragma 'no-cache';
+    add_header Expires '0';
+    try_files /index.html =404;
+  }
+
+  # SPA routing - all React Router paths serve index.html - must not be cached
+  location ~ ^/(live-messages|live-map|search|alerts|stats|about|status)$ {
+    add_header Cache-Control 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0';
+    add_header Pragma 'no-cache';
+    add_header Expires '0';
+    try_files /index.html =404;
+  }
+
+  # Fallback for any other routes (SPA routing)
+  location / {
+    try_files $uri $uri/ /index.html;
+  }
+}

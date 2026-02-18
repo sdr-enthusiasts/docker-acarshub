@@ -82,6 +82,7 @@ async function fetchRrdArchive(
   try {
     const { stdout } = await execAsync(
       `rrdtool fetch "${rrdPath}" AVERAGE -s ${archive.timeRange} -e now -r ${archive.step}`,
+      { maxBuffer: 50 * 1024 * 1024 },
     );
 
     return parseRrdOutput(stdout, archive.resolution);
