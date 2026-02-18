@@ -20,9 +20,9 @@
 import { randomUUID } from "node:crypto";
 import { statSync } from "node:fs";
 import { and, asc, desc, eq, like, notInArray, sql } from "drizzle-orm";
-import { DB_SAVEALL } from "../../config.js";
+import { DB_ALERT_SAVE_DAYS, DB_SAVE_DAYS, DB_SAVEALL } from "../../config.js";
 import { createLogger } from "../../utils/logger.js";
-import { getDatabase } from "../client.js";
+import { getDatabase, getSqliteConnection } from "../client.js";
 import { isMessageNotEmpty, updateFrequencies } from "../helpers.js";
 import {
   alertMatches,
@@ -799,8 +799,8 @@ export function deleteOldMessages(beforeTimestamp: number): number {
  * @returns Object with counts of pruned messages and alert matches
  */
 export function pruneDatabase(
-  messageSaveDays = 7,
-  alertSaveDays = 2,
+  messageSaveDays = DB_SAVE_DAYS,
+  alertSaveDays = DB_ALERT_SAVE_DAYS,
 ): { prunedMessages: number; prunedAlerts: number } {
   const db = getDatabase();
 
@@ -941,14 +941,20 @@ export function optimizeDbRegular(): void {
  * @param mergeLevel FTS5 merge level (default: -16 for full merge)
  */
 export function optimizeDbMerge(mergeLevel = -16): void {
-  const db = getDatabase();
-
   try {
     logger.info("Running FTS5 merge optimization", { mergeLevel });
-    // Execute FTS5 merge using Drizzle's sql template
-    db.run(
-      sql`INSERT INTO messages_fts(messages_fts) VALUES (${`merge=${mergeLevel}`})`,
-    );
+    // FTS5 special commands require the raw SQLite connection - they do not work
+    // correctly through Drizzle's sql template because Drizzle binds values as
+    // parameterized placeholders (?), and FTS5 merge also requires TWO columns:
+    //   INSERT INTO messages_fts(messages_fts, rank) VALUES ('merge', <level>)
+    // This matches the Python reference: session.execute(text(
+    //   "insert into messages_fts(messages_fts, rank) values('merge', -500)"))
+    const conn = getSqliteConnection();
+    conn
+      .prepare(
+        "INSERT INTO messages_fts(messages_fts, rank) VALUES ('merge', ?)",
+      )
+      .run(mergeLevel);
     logger.info("FTS5 merge complete");
   } catch (error) {
     logger.error("Failed to run FTS5 merge", {

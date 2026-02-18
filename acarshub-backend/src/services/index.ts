@@ -430,7 +430,11 @@ export class BackgroundServices extends EventEmitter {
       .at(":30")
       .do(async () => {
         try {
-          await pruneDatabase();
+          const pruneConfig = getConfig();
+          await pruneDatabase(
+            pruneConfig.dbSaveDays,
+            pruneConfig.dbAlertSaveDays,
+          );
           logger.debug("Database pruned");
         } catch (err) {
           logger.error("Failed to prune database", {
