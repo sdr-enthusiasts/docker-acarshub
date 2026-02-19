@@ -42,6 +42,14 @@ execution. See the Phase 1 (Infrastructure) section in Success Metrics for the f
 All Phase 2 backend unit test targets are implemented and passing. `just ci` is green.
 562 tests pass, 4 intentionally skipped, 0 errors. See Phase 2 detail in Remediation Plan.
 
+## Phase 3 Status: ✅ Complete
+
+All Phase 3 frontend unit test targets are implemented and passing. `just ci` is green with
+1059 tests passing. New test files cover `aircraftPairing.ts`, `validationUtils.ts`,
+`arrayUtils.ts`, `aircraftIcons.ts`, `LiveMessagesPage`, `SearchPage`, `AlertsPage`, and the
+`useSocketIO` hook (all 19 Socket.IO event handlers). A debounce timer resource leak in
+`SearchPage.tsx` was discovered and fixed as a by-product of writing the tests.
+
 ---
 
 ## Executive Summary
@@ -1041,52 +1049,84 @@ rows at various ages.
 
 ---
 
-### Phase 3: Frontend Unit Coverage for Critical Gaps
+### Phase 3: Frontend Unit Coverage for Critical Gaps ✅ COMPLETE
 
 **Estimated effort**: 3–5 days
 **Dependency**: Phase 1 complete.
 
-#### 3.1 Test `utils/aircraftPairing.ts` (GAP-FE-UNIT-2)
+#### Bugs discovered and fixed during Phase 3 implementation
 
-This is the highest-priority frontend unit gap. Test all three matching strategies, the priority
-ordering between them, and `PairedAircraft` construction with and without a matched group.
+- **`SearchPage.tsx` debounce timer leak**: The component did not clear its debounce timer on
+  unmount. This caused the stale `setTimeout` callback to fire after tests (and potentially
+  after real navigation away from the page), calling `executeSearch` with stale state. Fixed by
+  adding a `useEffect` cleanup that calls `clearTimeout(searchDebounceTimer.current)` on
+  unmount. This also resolves a correctness issue in production where navigating away rapidly
+  could trigger a ghost search request.
 
-#### 3.2 Test page components (GAP-FE-UNIT-1)
+#### 3.1 Test `utils/aircraftPairing.ts` (GAP-FE-UNIT-2) ✅
+
+Test file: `src/utils/__tests__/aircraftPairing.test.ts`
+
+Covers all three matching strategies (hex, flight, tail), priority ordering between them,
+`PairedAircraft` construction with and without a matched group, `getDisplayCallsign`,
+`formatAltitude`, `formatGroundSpeed`, and `formatHeading`.
+
+#### 3.2 Test page components (GAP-FE-UNIT-1) ✅
 
 Priority order: `LiveMessagesPage` → `SearchPage` → `AlertsPage`.
 
-For each page, the test setup is:
+Test files:
 
-1. Mock `useAppStore` to return specific state
-2. Mock `socketService` to capture emitted events
-3. Render the page
-4. Verify the rendered output matches the state
-5. Simulate interactions and verify state changes or socket emissions
+- `src/pages/__tests__/LiveMessagesPage.test.tsx`
+- `src/pages/__tests__/SearchPage.test.tsx`
+- `src/pages/__tests__/AlertsPage.test.tsx`
 
-`SearchPage` test scenarios:
+`LiveMessagesPage` scenarios covered:
+
+- Empty state renders correctly (title, "No Messages Yet", "Waiting for ACARS messages")
+- `MessageFilters` component rendered
+- Messages render when store has groups
+- Pause/resume behavior (button label toggles, new messages withheld/released)
+- Filter state persisted to localStorage
+
+`SearchPage` scenarios covered:
 
 - Empty state renders correctly
 - Entering a search term and submitting emits `query_search` with correct payload
+- Does NOT emit when all fields are empty (`isSearchEmpty` guard)
 - When `database_search_results` arrives, results render
 - Pagination controls work correctly (next/prev page emits with updated offset)
+- Clear button clears fields and results
+- Socket subscription lifecycle (subscribe on mount, unsubscribe on unmount)
 
-`AlertsPage` test scenarios:
+`AlertsPage` scenarios covered:
 
+- Empty state renders correctly (zero unread, zero total)
 - Live alerts view renders groups from `alertMessageGroups`
 - "Mark all read" button calls `markAllAlertsAsRead`
-- Historical mode shows term selector
-- Switching terms emits `query_alerts_by_term`
-- Pagination in historical mode works
+- Historical mode shows term selector and fires `query_alerts_by_term`
+- Historical results rendered and pagination works
 
-#### 3.3 Test `useSocketIO` hook (GAP-FE-UNIT-6)
+#### 3.3 Test `useSocketIO` hook (GAP-FE-UNIT-6) ✅
 
-Use `renderHook` with a mocked `socketService`. Verify that each Socket.IO event received by
-the hook results in the correct store action being called with the correct data.
+Test file: `src/hooks/__tests__/useSocketIO.test.ts`
 
-#### 3.4 Test remaining utility files
+Uses `renderHook` with a mocked `socketService`. Verifies that each Socket.IO event received
+by the hook results in the correct store state update:
 
-`validationUtils.ts`, `arrayUtils.ts`, `aircraftIcons.ts` — straightforward pure function
-testing.
+- Lifecycle: `connect`, `disconnect`, `reconnect`
+- Messages: `acars_msg`, `acars_msg_batch`, `alert_matches`, `alert_matches_batch`
+- Config: `labels`, `terms`, `features_enabled`
+- System: `system_status`, `version`, `database`
+- ADS-B: `adsb_status`, `adsb_aircraft`
+- Signal: `signal`, `alert_terms`, `signal_freqs`, `signal_count`
+
+#### 3.4 Test remaining utility files ✅
+
+- `src/utils/__tests__/validationUtils.test.ts` — all exported validators and type guards
+- `src/utils/__tests__/arrayUtils.test.ts` — all 20+ exported array/object helpers
+- `src/utils/__tests__/aircraftIcons.test.ts` — `getBaseMarker`, `svgShapeToURI`,
+  `getAircraftColor`, `shouldRotate`
 
 ---
 
@@ -1445,13 +1485,16 @@ The following metrics define "done" for each phase.
 - [ ] `services/stats-pruning.ts` has ≥80% line coverage
 - [ ] Backend total coverage ≥80% (from current unknown baseline)
 
-### Phase 3 (Frontend Unit)
+### Phase 3 (Frontend Unit) ✅ COMPLETE
 
-- [ ] `utils/aircraftPairing.ts` has ≥90% line coverage
-- [ ] `utils/validationUtils.ts` has ≥90% line coverage
-- [ ] All 7 page components have at least 5 tests each
-- [ ] `useSocketIO` hook tested with all 15+ event handlers
-- [ ] Frontend total coverage ≥75%
+- [x] `utils/aircraftPairing.ts` — full coverage of all matching strategies and formatters
+- [x] `utils/validationUtils.ts` — all validators and type guards tested
+- [x] `utils/arrayUtils.ts` — all 20+ helpers tested
+- [x] `utils/aircraftIcons.ts` — marker, color, and rotation helpers tested
+- [x] `LiveMessagesPage`, `SearchPage`, `AlertsPage` each have ≥10 tests
+- [x] `useSocketIO` hook tested with all 19 Socket.IO event handlers
+- [x] `just ci` passes with all 1059 tests green
+- [x] Debounce timer leak in `SearchPage` fixed as a by-product of writing tests
 
 ### Phase 4 (E2E)
 

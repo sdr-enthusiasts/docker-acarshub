@@ -203,6 +203,15 @@ export const SearchPage = () => {
     activeSearch,
   ]);
 
+  // Clear debounce timer on unmount to prevent stale callbacks firing after tests / navigation
+  useEffect(() => {
+    return () => {
+      if (searchDebounceTimer.current) {
+        clearTimeout(searchDebounceTimer.current);
+      }
+    };
+  }, []);
+
   useEffect(() => {
     setActivePageName("Search");
     socketService.notifyPageChange("Search");
