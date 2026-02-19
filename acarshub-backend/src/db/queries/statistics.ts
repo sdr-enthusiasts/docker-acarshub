@@ -502,6 +502,27 @@ export function incrementMessageCount(hasError: boolean, logged = true): void {
 }
 
 /**
+ * Reset in-memory message counter state for testing purposes only.
+ *
+ * This resets the module-level `countersInitialized` flag and zeroes
+ * `messageCounters` so that `initializeMessageCounters()` can be called
+ * again in the next test with a fresh in-memory database.
+ *
+ * @internal - Do NOT call this in production code.
+ */
+export function resetCountersForTesting(): void {
+  countersInitialized = false;
+  messageCounters = {
+    acars: 0,
+    vdlm2: 0,
+    hfdl: 0,
+    imsl: 0,
+    irdm: 0,
+    total: 0,
+  };
+}
+
+/**
  * Reset all statistics tables
  *
  * WARNING: This deletes all frequency, signal level, and count data.

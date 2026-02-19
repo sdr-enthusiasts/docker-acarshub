@@ -39,6 +39,7 @@ import type {
   SystemStatus,
   Terms,
 } from "@acarshub/types";
+import { sql } from "drizzle-orm";
 import { getConfig } from "../config.js";
 import {
   databaseSearch,
@@ -974,7 +975,6 @@ async function handleRRDTimeseries(
     // If downsampling requested, use raw SQL for better performance
     if (downsample && downsample > 60) {
       const db = getDatabase();
-      const { sql } = await import("drizzle-orm");
 
       const results = db.all(
         sql.raw(`

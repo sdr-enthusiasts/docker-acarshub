@@ -67,6 +67,21 @@ let cacheInitialized = false;
  * Should be called at application startup.
  * Loads alert_stats and ignore_alert_terms tables into memory.
  */
+/**
+ * Reset in-memory alert cache state for testing purposes only.
+ *
+ * This resets the module-level `cacheInitialized` flag and empties both
+ * cache arrays so that `initializeAlertCache()` can be called again in
+ * the next test with a fresh in-memory database.
+ *
+ * @internal - Do NOT call this in production code.
+ */
+export function resetAlertCacheForTesting(): void {
+  cacheInitialized = false;
+  alertTermsCache = [];
+  alertTermsIgnoreCache = [];
+}
+
 export function initializeAlertCache(): void {
   try {
     const db = getDatabase();
