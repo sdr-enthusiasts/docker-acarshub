@@ -146,19 +146,30 @@ ci-e2e:
 # Run Playwright E2E tests inside Docker (supports Chromium + Firefox + WebKit)
 # Starts the Vite dev server on the host, then runs Playwright in the official
 # Playwright Docker image so all three browser engines have their system deps.
-
+#
 # Uses --network=host so the container can reach localhost:3000.
+#
+# Mounts the full monorepo root so `npm ci` can read the root package-lock.json.
+# Named volumes shadow the Nix-built host node_modules with Ubuntu-compatible
+# ones inside the container. Docker reuses the volumes on subsequent runs so
+
+# npm ci is fast after the first install.
 test-e2e-docker:
     @echo "Starting Vite dev server in background..."
-    cd acarshub-react && npm run dev &
+    npm run dev --workspace=acarshub-react &
     sleep 5
     @echo "Running Playwright in Docker (all browsers)..."
     docker run --rm --network=host \
-      -v $(pwd)/acarshub-react:/work -w /work \
+      -v $(pwd):/work \
+      -v acarshub-e2e-root-modules:/work/node_modules \
+      -v acarshub-e2e-react-modules:/work/acarshub-react/node_modules \
+      -v acarshub-e2e-backend-modules:/work/acarshub-backend/node_modules \
+      -v acarshub-e2e-types-modules:/work/acarshub-types/node_modules \
+      -w /work \
       -e CI=true \
       -e PLAYWRIGHT_DOCKER=true \
       mcr.microsoft.com/playwright:v1.58.2-noble \
-      npx playwright test --reporter=line || (pkill -f "vite" || true; exit 1)
+      bash -c "npm ci && cd acarshub-react && npx playwright test --reporter=line" || (pkill -f "vite" || true; exit 1)
     pkill -f "vite" || true
     @echo "✅ E2E tests passed!"
 

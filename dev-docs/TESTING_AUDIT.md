@@ -50,6 +50,56 @@ All Phase 3 frontend unit test targets are implemented and passing. `just ci` is
 `useSocketIO` hook (all 19 Socket.IO event handlers). A debounce timer resource leak in
 `SearchPage.tsx` was discovered and fixed as a by-product of writing the tests.
 
+## Phase 4 Status: 🔄 In Progress
+
+### 4.1 Docker Playwright Infrastructure — ✅ UNBLOCKED
+
+The `just test-e2e-docker` target is now functional. Two infrastructure blockers were
+discovered and resolved:
+
+1. **Nix/Ubuntu node_modules incompatibility** — The host Nix-built `node_modules/.bin/playwright`
+   shim references Nix store paths that do not exist inside the Ubuntu Playwright container.
+   `npx playwright` fell back to downloading the standalone `playwright` package (not
+   `@playwright/test`), which cannot load `playwright.config.ts`. Fixed by:
+   - Mounting the full monorepo root (not just `acarshub-react/`) so `npm ci` can read the
+     root `package-lock.json` (the project uses npm workspaces).
+   - Adding four named Docker volumes to shadow the Nix-built `node_modules` directories with
+     Ubuntu-compatible ones: `acarshub-e2e-root-modules`, `acarshub-e2e-react-modules`,
+     `acarshub-e2e-backend-modules`, `acarshub-e2e-types-modules`.
+   - Running `bash -c "npm ci && cd acarshub-react && npx playwright test"` inside the
+     container so packages are installed fresh for Ubuntu on first run (Docker reuses the
+     named volumes on subsequent runs for speed).
+
+2. **Missing `package-lock.json` in `acarshub-react/`** — `npm ci` requires a lockfile.
+   The lockfile lives at the monorepo root (`docker-acarshub/package-lock.json`), not in the
+   workspace subdirectory. Resolved by the root-mount approach above.
+
+**Confirmed working**: `just test-e2e-docker` starts the Vite dev server, pulls/runs the
+`mcr.microsoft.com/playwright:v1.58.2-noble` container with `--network=host`, and executes
+all 170 tests (34 spec tests × 5 browser projects: Chromium, Firefox, WebKit, Mobile Chrome,
+Mobile Safari). The `PLAYWRIGHT_DOCKER=true` env var correctly enables all five projects.
+
+### 4.1 Test Failures Observed (not yet fixed)
+
+The following categories of failures were observed in the first live run. These are **test
+content** failures, not infrastructure failures, and will be addressed in subsequent steps:
+
+- **`accessibility.spec.ts` `beforeEach` timeout** — `page.waitForSelector("nav",
+{ timeout: 5000 })` times out on first load in Docker. The app takes slightly longer to
+  hydrate in the container environment.
+- **Navigation link click timeouts** — Some tests click nav links (e.g., "Statistics") before
+  the React app has fully rendered the nav, causing 10 s action timeouts.
+- **Live Map accessibility violations** — `nested-interactive` axe rule fires on aircraft
+  sprite buttons inside the map container. These are real a11y issues to address separately.
+- **Full run time** — 170 tests × 1 worker (CI mode) × up to 3 retries each is very slow.
+  The per-browser Firefox/WebKit runs will need realistic timeout budgets.
+
+### Next Steps
+
+- [ ] 4.2 Seed database and fixture tooling
+- [ ] 4.3 Core user flow E2E tests
+- [ ] 4.4 Re-enable E2E in CI
+
 ---
 
 ## Executive Summary
@@ -1498,7 +1548,10 @@ The following metrics define "done" for each phase.
 
 ### Phase 4 (E2E)
 
-- [ ] Playwright runs Chromium, Firefox, and WebKit in CI (via Docker)
+- [x] Docker Playwright infrastructure working (`just test-e2e-docker` executes all 170 tests)
+- [x] All 5 browser projects enabled: Chromium, Firefox, WebKit, Mobile Chrome, Mobile Safari
+- [x] `npm ci` inside container correctly installs Ubuntu-compatible packages (named volumes)
+- [ ] Playwright runs cleanly with 0 infrastructure errors (test failures remain)
 - [ ] E2E tests are re-enabled in `ci-e2e` target
 - [ ] Live messages flow covered by at least 5 E2E tests
 - [ ] Search flow covered by at least 5 E2E tests
