@@ -1093,11 +1093,16 @@ export const selectAdsbEnabled = (state: AppState) =>
   state.decoders?.adsb.enabled ?? false;
 
 /**
- * Expose store to window in development/test mode for E2E testing
- * This allows Playwright tests to inject state (e.g., decoder configuration)
- * Production builds will tree-shake this away
+ * Expose store to window in development/test mode for E2E testing, and also
+ * when the build was created with VITE_E2E=true (used by `just test-e2e-docker`).
+ * This allows Playwright tests to inject state (e.g., decoder configuration).
+ * Production builds without VITE_E2E set will tree-shake this away.
  */
-if (import.meta.env.MODE === "development" || import.meta.env.MODE === "test") {
+if (
+  import.meta.env.MODE === "development" ||
+  import.meta.env.MODE === "test" ||
+  import.meta.env.VITE_E2E === "true"
+) {
   // @ts-expect-error - Required for E2E testing window exposure
   window.__ACARS_STORE__ = useAppStore;
 }

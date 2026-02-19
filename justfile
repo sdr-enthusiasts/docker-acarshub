@@ -155,9 +155,13 @@ ci-e2e:
 
 # npm ci is fast after the first install.
 test-e2e-docker:
-    @echo "Starting Vite dev server in background..."
-    npm run dev --workspace=acarshub-react &
-    sleep 5
+    @echo "Building frontend for E2E tests (VITE_E2E=true exposes __ACARS_STORE__)..."
+    VITE_E2E=true npm run build --workspace=acarshub-react
+    @echo "Killing any stale process on port 3000..."
+    fuser -k 3000/tcp 2>/dev/null || true
+    @echo "Starting vite preview server in background..."
+    cd acarshub-react && npx vite preview --port 3000 --strictPort &
+    sleep 3
     @echo "Running Playwright in Docker (all browsers)..."
     docker run --rm --network=host \
       -v $(pwd):/work \
@@ -169,9 +173,36 @@ test-e2e-docker:
       -e CI=true \
       -e PLAYWRIGHT_DOCKER=true \
       mcr.microsoft.com/playwright:v1.58.2-noble \
-      bash -c "npm ci && cd acarshub-react && npx playwright test --reporter=line" || (pkill -f "vite" || true; exit 1)
-    pkill -f "vite" || true
+      bash -c "npm ci && cd acarshub-react && npx playwright test --reporter=line" || (fuser -k 3000/tcp 2>/dev/null || true; exit 1)
+    fuser -k 3000/tcp 2>/dev/null || true
     @echo "✅ E2E tests passed!"
+
+# Debug runner for E2E tests — no CI mode so retries=0 and workers run in parallel.
+# Builds the app once, then serves it via vite preview (static bundle) so the
+# server handles concurrent browser workers without getting overwhelmed.
+
+# Accepts extra Playwright args via ARGS (e.g. just test-e2e-docker-debug --grep "smoke").
+test-e2e-docker-debug *ARGS='':
+    @echo "Building frontend for E2E tests (VITE_E2E=true exposes __ACARS_STORE__)..."
+    VITE_E2E=true npm run build --workspace=acarshub-react
+    @echo "Killing any stale process on port 3000..."
+    fuser -k 3000/tcp 2>/dev/null || true
+    @echo "Starting vite preview server in background..."
+    cd acarshub-react && npx vite preview --port 3000 --strictPort &
+    sleep 3
+    @echo "Running Playwright in Docker (debug mode, no retries)..."
+    docker run --rm --network=host \
+      -v $(pwd):/work \
+      -v acarshub-e2e-root-modules:/work/node_modules \
+      -v acarshub-e2e-react-modules:/work/acarshub-react/node_modules \
+      -v acarshub-e2e-backend-modules:/work/acarshub-backend/node_modules \
+      -v acarshub-e2e-types-modules:/work/acarshub-types/node_modules \
+      -w /work \
+      -e PLAYWRIGHT_DOCKER=true \
+      mcr.microsoft.com/playwright:v1.58.2-noble \
+      bash -c "npm ci && cd acarshub-react && npx playwright test --reporter=line {{ ARGS }}" || (fuser -k 3000/tcp 2>/dev/null || true; exit 1)
+    fuser -k 3000/tcp 2>/dev/null || true
+    @echo "✅ E2E tests done!"
 
 # Run full-stack integration E2E tests via Docker Compose
 

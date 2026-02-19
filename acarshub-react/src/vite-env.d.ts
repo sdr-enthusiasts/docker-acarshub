@@ -23,6 +23,8 @@ interface ImportMetaEnv {
   readonly VITE_DOCKER_BUILD?: string;
   readonly VITE_VERSION?: string;
   readonly VITE_BUILD_NUMBER?: string;
+  /** Set to "true" when building for E2E tests — exposes the app store on window for test injection */
+  readonly VITE_E2E?: string;
 }
 
 interface ImportMeta {

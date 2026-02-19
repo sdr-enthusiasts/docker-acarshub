@@ -18,8 +18,11 @@ export default defineConfig({
   /* Retry on CI only */
   retries: process.env.CI ? 2 : 0,
 
-  /* Opt out of parallel tests on CI. */
-  workers: process.env.CI ? 1 : undefined,
+  /* Allow up to 4 parallel workers in CI — enough to run all 5 browser projects
+   * concurrently without overwhelming the vite preview server or CI runner.
+   * Serial (workers=1) made multi-browser runs extremely slow: 7 tests × 5 browsers
+   * × 3 retries each = 105 sequential test slots. */
+  workers: process.env.CI ? 4 : undefined,
 
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: "html",
@@ -87,14 +90,24 @@ export default defineConfig({
   /* NOTE: Dev server must be started manually before running E2E tests */
   /* Run: npm run dev (in separate terminal) */
   /* Then: npm run test:e2e */
-  webServer: process.env.CI
-    ? {
-        command: "npm run dev",
-        url: "http://localhost:3000",
-        reuseExistingServer: true,
-        timeout: 60 * 1000,
-        stdout: "ignore",
-        stderr: "pipe",
-      }
-    : undefined,
+  /*
+   * When running inside Docker (PLAYWRIGHT_DOCKER=true) or CI, serve the
+   * pre-built static bundle via `vite preview` instead of the dev server.
+   * The dev server handles every module request individually — with 16+
+   * concurrent browser workers it gets overwhelmed and tests become flaky.
+   * A built bundle is served as plain static files and handles concurrency
+   * without issue.  The justfile targets build the app before starting the
+   * container, so the dist/ directory is always present.
+   */
+  webServer:
+    process.env.CI || process.env.PLAYWRIGHT_DOCKER
+      ? {
+          command: "npx vite preview --port 3000 --strictPort",
+          url: "http://localhost:3000",
+          reuseExistingServer: true,
+          timeout: 60 * 1000,
+          stdout: "ignore",
+          stderr: "pipe",
+        }
+      : undefined,
 });

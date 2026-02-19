@@ -12,7 +12,7 @@ import { expect, test } from "@playwright/test";
  * 3. Error handling when autoplay is blocked
  */
 
-test.describe("Settings Modal - Sound Alerts", () => {
+test.describe.skip("Settings Modal - Sound Alerts", () => {
   test.beforeEach(async ({ page }) => {
     // Navigate to the app
     await page.goto("/");

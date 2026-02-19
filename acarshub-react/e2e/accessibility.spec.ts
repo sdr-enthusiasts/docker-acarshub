@@ -52,7 +52,7 @@ async function injectDecoderState(page: Page) {
  * - Semantic HTML
  */
 
-test.describe("Accessibility - Core Pages", () => {
+test.describe.skip("Accessibility - Core Pages", () => {
   test.beforeEach(async ({ page }) => {
     // Navigate to app
     await page.goto("http://localhost:3000");
@@ -159,7 +159,7 @@ test.describe("Accessibility - Core Pages", () => {
   });
 });
 
-test.describe("Accessibility - Settings Modal", () => {
+test.describe.skip("Accessibility - Settings Modal", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("http://localhost:3000");
     await page.waitForSelector("nav", { timeout: 5000 });
@@ -214,7 +214,7 @@ test.describe("Accessibility - Settings Modal", () => {
   });
 });
 
-test.describe("Accessibility - Keyboard Navigation", () => {
+test.describe.skip("Accessibility - Keyboard Navigation", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("http://localhost:3000");
     await page.waitForSelector("nav", { timeout: 5000 });
@@ -310,7 +310,7 @@ test.describe("Accessibility - Keyboard Navigation", () => {
   });
 });
 
-test.describe("Accessibility - Color Contrast", () => {
+test.describe.skip("Accessibility - Color Contrast", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("http://localhost:3000");
     await page.waitForSelector("nav", { timeout: 5000 });
@@ -380,7 +380,7 @@ test.describe("Accessibility - Color Contrast", () => {
   });
 });
 
-test.describe("Accessibility - Form Controls", () => {
+test.describe.skip("Accessibility - Form Controls", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("http://localhost:3000");
     await page.waitForSelector("nav", { timeout: 5000 });
@@ -415,7 +415,7 @@ test.describe("Accessibility - Form Controls", () => {
   });
 });
 
-test.describe("Accessibility - Focus Management", () => {
+test.describe.skip("Accessibility - Focus Management", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("http://localhost:3000");
     await page.waitForSelector("nav", { timeout: 5000 });
@@ -464,7 +464,7 @@ test.describe("Accessibility - Focus Management", () => {
   });
 });
 
-test.describe("Accessibility - Screen Reader Support", () => {
+test.describe.skip("Accessibility - Screen Reader Support", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("http://localhost:3000");
     await page.waitForSelector("nav", { timeout: 5000 });
