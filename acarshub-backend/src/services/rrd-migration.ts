@@ -49,10 +49,17 @@ interface TimeseriesDataPoint {
 
 /**
  * RRD archive configuration
+ *
+ * `timeRange` is the start time passed to `rrdtool fetch -s` and may be a
+ * relative value (e.g. "-25h") or an absolute Unix timestamp string.
+ * `endTime` is optional; when omitted it defaults to "now", which is correct
+ * for production use. Tests override it to point at the fixture's actual data
+ * window so fetches return real rows rather than empty time slots.
  */
-interface RrdArchive {
+export interface RrdArchive {
   resolution: "1min" | "5min" | "1hour" | "6hour";
-  timeRange: string; // e.g., "-25h", "-30d", "-180d", "-3y"
+  timeRange: string; // start: relative (e.g., "-25h") or absolute Unix timestamp
+  endTime?: string; // end: defaults to "now" when omitted
   step: number; // seconds per data point
 }
 
@@ -74,14 +81,17 @@ async function fetchRrdArchive(
   rrdPath: string,
   archive: RrdArchive,
 ): Promise<TimeseriesDataPoint[]> {
+  const endTime = archive.endTime ?? "now";
+
   logger.debug("Fetching RRD archive", {
     resolution: archive.resolution,
     timeRange: archive.timeRange,
+    endTime,
   });
 
   try {
     const { stdout } = await execAsync(
-      `rrdtool fetch "${rrdPath}" AVERAGE -s ${archive.timeRange} -e now -r ${archive.step}`,
+      `rrdtool fetch "${rrdPath}" AVERAGE -s ${archive.timeRange} -e ${endTime} -r ${archive.step}`,
       { maxBuffer: 50 * 1024 * 1024 },
     );
 
@@ -365,11 +375,31 @@ function isValidRrdFile(rrdPath: string): boolean {
  * @param rrdPath - Path to RRD file (default from config)
  * @returns Migration statistics or null if already migrated/no file
  */
-export async function migrateRrdToSqlite(rrdPath: string): Promise<{
+/**
+ * Migrate RRD data to SQLite
+ *
+ * Main migration function that orchestrates the entire process.
+ * - Checks for RRD file and backup file
+ * - Fetches data from all 4 RRD archives using rrdtool CLI
+ * - Inserts data into database in batches
+ * - Renames RRD file to .rrd.back on success
+ *
+ * @param rrdPath - Path to RRD file (default from config)
+ * @param archiveConfig - Optional archive definitions. Defaults to the four
+ *   production archives (`RRD_ARCHIVES`). Tests pass compact absolute-timestamp
+ *   overrides so they only fetch the small slice of the fixture that contains
+ *   real data, keeping migration time well under 5 seconds.
+ * @returns Migration statistics or null if already migrated/no file
+ */
+export async function migrateRrdToSqlite(
+  rrdPath: string,
+  archiveConfig?: RrdArchive[],
+): Promise<{
   success: boolean;
   rowsInserted: number;
   duration: number;
 } | null> {
+  const archives = archiveConfig ?? RRD_ARCHIVES;
   const startTime = Date.now();
 
   logger.info("Starting RRD migration", { rrdPath });
@@ -454,7 +484,7 @@ export async function migrateRrdToSqlite(rrdPath: string): Promise<{
     logger.info("Fetching data from RRD archives");
     const allDataPoints: TimeseriesDataPoint[] = [];
 
-    for (const archive of RRD_ARCHIVES) {
+    for (const archive of archives) {
       try {
         const dataPoints = await fetchRrdArchive(rrdPath, archive);
         allDataPoints.push(...dataPoints);

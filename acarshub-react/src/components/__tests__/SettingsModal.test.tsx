@@ -429,35 +429,27 @@ describe("SettingsModal", () => {
       expect(onPageAlertsToggle).toBeChecked();
     });
 
-    // TODO: Fix conditional rendering issue with Zustand store updates in tests
-    // The Test Sound button is conditionally rendered when settings.notifications.sound === true
-    // Store updates successfully but React doesn't re-render the conditional content in test environment
-    // This appears to be a Zustand subscription limitation in jsdom/vitest
-    // See: agent-docs/PHASE_10_2_SETTINGSMODAL_PROGRESS.md for detailed investigation
-    it.skip("should play test sound when button clicked", async () => {
+    it("should play test sound when button clicked", async () => {
       const user = userEvent.setup();
       const mockPlay = vi.mocked(audioService.playAlertSound);
       mockPlay.mockResolvedValue();
 
-      // Enable sound BEFORE opening modal
-      useSettingsStore.setState({
-        settings: {
-          ...useSettingsStore.getState().settings,
-          notifications: {
-            ...useSettingsStore.getState().settings.notifications,
-            sound: true,
-          },
-        },
-      });
-
-      useAppStore.setState({ settingsOpen: true });
       render(<SettingsModal />);
 
       await user.click(screen.getByRole("tab", { name: "Notifications" }));
 
-      // Test Sound button should now be visible since sound is already enabled
-      const testButton = screen.getByRole("button", {
-        name: /Test Sound/i,
+      // Enable sound via user interaction — this triggers a Zustand state update
+      // that React observes, making the conditional "Test Sound" block visible.
+      // (Setting store state before render() does not reliably trigger the
+      // conditional re-render in jsdom because the persist middleware may
+      // rehydrate from empty localStorage after mount, resetting the value.)
+      const soundToggle = screen.getByRole("switch", {
+        name: /Sound Alerts/i,
+      });
+      await user.click(soundToggle);
+
+      const testButton = await screen.findByRole("button", {
+        name: /Test alert sound/i,
       });
       await user.click(testButton);
 
@@ -468,33 +460,25 @@ describe("SettingsModal", () => {
       });
     }, 10000);
 
-    // TODO: Fix conditional rendering issue (same as above test)
-    it.skip("should show error alert when sound test fails", async () => {
+    it("should show error alert when sound test fails", async () => {
       const user = userEvent.setup();
       const mockPlay = vi.mocked(audioService.playAlertSound);
       const mockAlert = vi.spyOn(window, "alert").mockImplementation(() => {});
 
       mockPlay.mockRejectedValue(new Error("AUTOPLAY_BLOCKED"));
 
-      // Enable sound BEFORE opening modal
-      useSettingsStore.setState({
-        settings: {
-          ...useSettingsStore.getState().settings,
-          notifications: {
-            ...useSettingsStore.getState().settings.notifications,
-            sound: true,
-          },
-        },
-      });
-
-      useAppStore.setState({ settingsOpen: true });
       render(<SettingsModal />);
 
       await user.click(screen.getByRole("tab", { name: "Notifications" }));
 
-      // Test Sound button should now be visible since sound is already enabled
-      const testButton = screen.getByRole("button", {
-        name: /Test Sound/i,
+      // Enable sound via user interaction (same reasoning as test above)
+      const soundToggle = screen.getByRole("switch", {
+        name: /Sound Alerts/i,
+      });
+      await user.click(soundToggle);
+
+      const testButton = await screen.findByRole("button", {
+        name: /Test alert sound/i,
       });
       await user.click(testButton);
 

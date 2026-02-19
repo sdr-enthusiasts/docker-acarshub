@@ -163,3 +163,12 @@ acarshub-react/playwright-report/
 acarshub-react/test-results/
 acarshub-react/.playwright/
 test-results
+
+# Vitest coverage output (generated HTML/JSON reports — not for commit)
+acarshub-react/coverage/
+acarshub-backend/coverage/
+
+# Test fixture exceptions — test-fixtures/test.rrd IS committed even though
+# *.rrd is globally ignored above (production RRD files must not be committed)
+!test-fixtures/test.rrd
+!test-fixtures/test.rrd.meta.json

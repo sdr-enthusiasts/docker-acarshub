@@ -1,39 +1,167 @@
 /**
  * Integration tests for RRD migration service
  *
- * These tests use rrdtool to programmatically generate a test RRD file,
- * run the migration, and verify the data is correctly imported into SQLite.
+ * WHY A PRE-BUILT FIXTURE
+ * -----------------------
+ * The original tests generated a fresh RRD file inside *each* `it` block by
+ * calling `createTestRrdFile()`, which spawns `rrdtool update` with 120 data
+ * points.  Six tests × ~20 s each pushed total runtime well past the CI
+ * threshold, so all six were permanently skipped.
  *
- * This approach avoids committing large binary RRD files to the repository.
+ * The fix: `just seed-test-rrd` generates `test-fixtures/test.rrd` once and
+ * commits it.  A single `beforeAll` copies that fixture into a temp path.
+ * Every test reads from the copy, which takes < 100 ms total instead of ~2 min.
+ *
+ * Run `just seed-test-rrd` and commit the result whenever the RRD schema
+ * changes.  See `scripts/generate-test-rrd.ts` for the fixture design.
  */
 
-import { exec } from "node:child_process";
-import { existsSync, unlinkSync } from "node:fs";
-import { promisify } from "node:util";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  rmdirSync,
+  unlinkSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+} from "vitest";
 import { closeDatabase, getDatabase, initDatabase } from "../../db/index.js";
 import { timeseriesStats } from "../../db/schema.js";
-import { migrateRrdToSqlite } from "../rrd-migration.js";
+import type { RrdArchive } from "../rrd-migration.js";
 
-const execAsync = promisify(exec);
+// ---------------------------------------------------------------------------
+// Resolve the committed fixture path and load its metadata
+// ---------------------------------------------------------------------------
+const __dirname = fileURLToPath(new URL(".", import.meta.url));
+const FIXTURE_RRD = resolve(__dirname, "../../../../test-fixtures/test.rrd");
+const FIXTURE_META_PATH = resolve(
+  __dirname,
+  "../../../../test-fixtures/test.rrd.meta.json",
+);
 
+/**
+ * Compact archive configuration for integration tests.
+ *
+ * WHY ABSOLUTE TIMESTAMPS
+ * -----------------------
+ * The production RRD_ARCHIVES use relative time ranges (e.g. "-25h") anchored
+ * to "now". The committed fixture has data from a fixed past date (2024-01-01),
+ * so a relative query like "-25h" returns only empty (NaN→0) time slots.
+ *
+ * We read the fixture metadata to obtain the exact start/end of the inserted
+ * data window and build four small archives that only span 2–12 hours of that
+ * window. Each archive fetches ≤120 points, the expansion yields ≤43 200 rows,
+ * and the entire migration completes in under 5 seconds.
+ */
+function buildTestArchives(): RrdArchive[] {
+  const meta = JSON.parse(readFileSync(FIXTURE_META_PATH, "utf-8")) as {
+    anchorUnix: number;
+    durationHours: number;
+    stepSeconds: number;
+  };
+
+  const dataEnd = meta.anchorUnix + meta.durationHours * 3600;
+
+  // Each archive covers a small window at the END of the fixture data so we
+  // are guaranteed to hit real (non-NaN) values.
+  return [
+    {
+      resolution: "1min",
+      timeRange: String(dataEnd - 2 * 3600), // last 2 h at 1-min  → 120 pts
+      endTime: String(dataEnd),
+      step: 60,
+    },
+    {
+      resolution: "5min",
+      timeRange: String(dataEnd - 4 * 3600), // last 4 h at 5-min  →  48 pts
+      endTime: String(dataEnd),
+      step: 300,
+    },
+    {
+      resolution: "1hour",
+      timeRange: String(dataEnd - 6 * 3600), // last 6 h at 1-hour →   6 pts
+      endTime: String(dataEnd),
+      step: 3600,
+    },
+    {
+      resolution: "6hour",
+      timeRange: String(dataEnd - 12 * 3600), // last 12 h at 6-hour → 2 pts
+      endTime: String(dataEnd),
+      step: 21600,
+    },
+  ];
+}
+
+// Each test suite gets its own working copy so tests cannot interfere with
+// each other even when run in parallel.
+const WORK_DIR = join(tmpdir(), `rrd-integration-${process.pid}`);
+const WORK_RRD = join(WORK_DIR, "test.rrd");
+
+// ---------------------------------------------------------------------------
+// Suite-level setup: copy fixture once, tear down after all tests
+// ---------------------------------------------------------------------------
+let TEST_ARCHIVES: RrdArchive[];
+
+beforeAll(() => {
+  if (!existsSync(FIXTURE_RRD)) {
+    throw new Error(
+      `RRD fixture not found at ${FIXTURE_RRD}.\n` +
+        "Run `just seed-test-rrd` to generate it and commit the result.",
+    );
+  }
+  if (!existsSync(FIXTURE_META_PATH)) {
+    throw new Error(
+      `RRD fixture metadata not found at ${FIXTURE_META_PATH}.\n` +
+        "Run `just seed-test-rrd` to regenerate it.",
+    );
+  }
+
+  TEST_ARCHIVES = buildTestArchives();
+
+  mkdirSync(WORK_DIR, { recursive: true });
+  copyFileSync(FIXTURE_RRD, WORK_RRD);
+});
+
+afterAll(() => {
+  // Clean up the working copy and its .back counterpart (if any)
+  for (const p of [WORK_RRD, `${WORK_RRD}.back`]) {
+    if (existsSync(p)) unlinkSync(p);
+  }
+  // Remove work dir (best-effort)
+  try {
+    rmdirSync(WORK_DIR);
+  } catch {
+    // Ignore — temp dir cleanup is not critical
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Per-test database setup
+// ---------------------------------------------------------------------------
 describe("RRD Migration Integration", () => {
-  const testRrdPath = "./test-integration.rrd";
-  const testDbPath = ":memory:";
-
   beforeEach(async () => {
-    // Clean up any leftover files
-    if (existsSync(testRrdPath)) {
-      unlinkSync(testRrdPath);
-    }
-    if (existsSync(`${testRrdPath}.back`)) {
-      unlinkSync(`${testRrdPath}.back`);
+    // Restore the working copy if a previous test renamed it to .back
+    if (!existsSync(WORK_RRD) && existsSync(`${WORK_RRD}.back`)) {
+      copyFileSync(FIXTURE_RRD, WORK_RRD);
+      if (existsSync(`${WORK_RRD}.back`)) {
+        unlinkSync(`${WORK_RRD}.back`);
+      }
     }
 
-    // Initialize in-memory database
-    initDatabase(testDbPath);
+    // Fresh in-memory database per test
+    initDatabase(":memory:");
 
-    // Create timeseries_stats table
     const db = getDatabase();
     db.run(`
       CREATE TABLE IF NOT EXISTS timeseries_stats (
@@ -63,97 +191,35 @@ describe("RRD Migration Integration", () => {
   afterEach(() => {
     closeDatabase();
 
-    // Clean up test files
-    if (existsSync(testRrdPath)) {
-      unlinkSync(testRrdPath);
-    }
-    if (existsSync(`${testRrdPath}.back`)) {
-      unlinkSync(`${testRrdPath}.back`);
+    // Restore working copy for the next test (migration renames it to .back)
+    if (!existsSync(WORK_RRD) && existsSync(`${WORK_RRD}.back`)) {
+      copyFileSync(FIXTURE_RRD, WORK_RRD);
+      unlinkSync(`${WORK_RRD}.back`);
     }
   });
 
-  /**
-   * Create a test RRD file with programmatic data
-   *
-   * This generates a small RRD file matching the ACARS Hub schema:
-   * - 7 data sources: ACARS, VDLM, TOTAL, ERROR, HFDL, IMSL, IRDM
-   * - 4 archives: 1min, 5min, 1hour, 6hour
-   * - Inserts 2 hours of test data (reduced for faster tests)
-   */
-  async function createTestRrdFile(path: string): Promise<void> {
-    // Create RRD with same structure as ACARS Hub but smaller archives
-    const createCmd = `
-      rrdtool create ${path} \\
-        --start $(date -d '1 day ago' +%s) \\
-        --step 60 \\
-        DS:ACARS:GAUGE:120:0:U \\
-        DS:VDLM:GAUGE:120:0:U \\
-        DS:TOTAL:GAUGE:120:0:U \\
-        DS:ERROR:GAUGE:120:0:U \\
-        DS:HFDL:GAUGE:120:0:U \\
-        DS:IMSL:GAUGE:120:0:U \\
-        DS:IRDM:GAUGE:120:0:U \\
-        RRA:AVERAGE:0.5:1:30 \\
-        RRA:AVERAGE:0.5:5:20 \\
-        RRA:AVERAGE:0.5:60:10 \\
-        RRA:AVERAGE:0.5:360:5
-    `;
+  // -------------------------------------------------------------------------
+  // Tests
+  // -------------------------------------------------------------------------
 
-    await execAsync(createCmd);
+  it("should migrate the pre-built RRD fixture", async () => {
+    const { migrateRrdToSqlite } = await import("../rrd-migration.js");
 
-    // Insert 2 hours of test data as a single batched rrdtool update call.
-    // rrdtool supports multiple timestamp:value tuples in one invocation, so
-    // we avoid spawning 120 separate child processes (which exceeds the test
-    // timeout on slower machines).
-    // Pattern: ACARS and VDLM vary, others are constant.
-    const now = Math.floor(Date.now() / 1000);
-    const startTime = now - 7200; // 2 hours ago
+    expect(existsSync(WORK_RRD)).toBe(true);
 
-    const updates: string[] = [];
-    for (let i = 0; i < 120; i++) {
-      // 120 minutes = 2 hours
-      const timestamp = startTime + i * 60;
-      const acars = Math.floor(10 + Math.sin(i / 60) * 5); // Varies 5-15
-      const vdlm = Math.floor(20 + Math.cos(i / 60) * 10); // Varies 10-30
-      const hfdl = 8;
-      const imsl = 0;
-      const irdm = 0;
-      const total = acars + vdlm + hfdl;
-      const error = i % 100 === 0 ? 1 : 0; // Error every 100 minutes
+    const result = await migrateRrdToSqlite(WORK_RRD, TEST_ARCHIVES);
 
-      updates.push(
-        `${timestamp}:${acars}:${vdlm}:${total}:${error}:${hfdl}:${imsl}:${irdm}`,
-      );
-    }
-
-    // Single process spawn for all 120 data points
-    const updateCmd = `rrdtool update ${path} ${updates.join(" ")}`;
-    await execAsync(updateCmd);
-  }
-
-  it.skip("should migrate a programmatically generated RRD file", async () => {
-    // Generate test RRD file
-    await createTestRrdFile(testRrdPath);
-
-    // Verify RRD file was created
-    expect(existsSync(testRrdPath)).toBe(true);
-
-    // Run migration
-    const result = await migrateRrdToSqlite(testRrdPath);
-
-    // Verify migration succeeded
     expect(result).not.toBeNull();
     expect(result?.success).toBe(true);
     expect(result?.rowsInserted).toBeGreaterThan(0);
 
-    // Verify RRD was renamed to .back
-    expect(existsSync(`${testRrdPath}.back`)).toBe(true);
-    expect(existsSync(testRrdPath)).toBe(false);
+    // Migration renames the file to .back
+    expect(existsSync(`${WORK_RRD}.back`)).toBe(true);
+    expect(existsSync(WORK_RRD)).toBe(false);
 
-    // Verify data was inserted into database
+    // At least some rows were written to the database
     const db = getDatabase();
     const { eq } = await import("drizzle-orm");
-
     const rows = db
       .select()
       .from(timeseriesStats)
@@ -162,41 +228,38 @@ describe("RRD Migration Integration", () => {
 
     expect(rows.length).toBeGreaterThan(0);
 
-    // Check that we have data from different archives (expanded)
-    // Should have 1min data (30 points) + 5min data (20*5) + 1hour data (10*60) + 6hour data (5*360)
-    // Total: 30 + 100 + 600 + 1800 = 2530 rows (approximately)
-    expect(rows.length).toBeGreaterThanOrEqual(30);
+    // All counts must be non-negative integers
+    for (const row of rows.slice(0, 20)) {
+      expect(row.acarsCount).toBeGreaterThanOrEqual(0);
+      expect(row.vdlmCount).toBeGreaterThanOrEqual(0);
+      expect(row.totalCount).toBeGreaterThanOrEqual(0);
+      expect(row.hfdlCount).toBeGreaterThanOrEqual(0);
+      expect(row.errorCount).toBeGreaterThanOrEqual(0);
+    }
+  }, 30000);
 
-    // Verify data values are reasonable
-    const sampleRow = rows[0];
-    expect(sampleRow.acarsCount).toBeGreaterThanOrEqual(0);
-    expect(sampleRow.vdlmCount).toBeGreaterThanOrEqual(0);
-    expect(sampleRow.totalCount).toBeGreaterThanOrEqual(0);
-    expect(sampleRow.hfdlCount).toBeGreaterThanOrEqual(0);
-    expect(sampleRow.errorCount).toBeGreaterThanOrEqual(0);
-  }, 120000); // 120 second timeout for RRD generation and migration
+  it("should handle idempotent migration (skip if already migrated)", async () => {
+    const { migrateRrdToSqlite } = await import("../rrd-migration.js");
 
-  it.skip("should handle idempotent migration (skip if already migrated)", async () => {
-    // Generate test RRD file
-    await createTestRrdFile(testRrdPath);
-
-    // Run migration first time
-    const result1 = await migrateRrdToSqlite(testRrdPath);
+    // First migration
+    const result1 = await migrateRrdToSqlite(WORK_RRD, TEST_ARCHIVES);
     expect(result1?.success).toBe(true);
 
-    // Run migration second time (should skip)
-    const result2 = await migrateRrdToSqlite(testRrdPath);
+    // Restore the RRD so the second call has a file to check
+    // (The migration renames it to .back, so we copy the original back)
+    copyFileSync(FIXTURE_RRD, WORK_RRD);
+
+    // Second call: the .back file exists AND timeseries_stats has rows,
+    // so migration should be skipped.
+    const result2 = await migrateRrdToSqlite(WORK_RRD, TEST_ARCHIVES);
     expect(result2).toBeNull(); // Returns null when already migrated
-  }, 120000);
+  }, 30000);
 
-  it.skip("should correctly expand 5-minute data to 1-minute resolution", async () => {
-    // Generate test RRD file
-    await createTestRrdFile(testRrdPath);
+  it("should correctly expand 5-minute archive data to 1-minute resolution", async () => {
+    const { migrateRrdToSqlite } = await import("../rrd-migration.js");
 
-    // Run migration
-    await migrateRrdToSqlite(testRrdPath);
+    await migrateRrdToSqlite(WORK_RRD, TEST_ARCHIVES);
 
-    // Query data and verify expansion
     const db = getDatabase();
     const { eq } = await import("drizzle-orm");
 
@@ -209,37 +272,30 @@ describe("RRD Migration Integration", () => {
 
     expect(rows.length).toBeGreaterThan(0);
 
-    // All rows should have resolution '1min'
+    // Every row in the result must carry the "1min" label
     for (const row of rows) {
       expect(row.resolution).toBe("1min");
     }
 
-    // Check that timestamps are in 60-second increments (1-minute resolution)
+    // Consecutive timestamps must differ by exactly 60 seconds (1-minute grid)
     if (rows.length > 1) {
-      const timestamp1 = rows[0].timestamp;
-      const timestamp2 = rows[1].timestamp;
-      const diff = Math.abs(timestamp2 - timestamp1);
-
-      // Should be 60 seconds or multiples of 60
-      expect(diff % 60).toBe(0);
+      const diff = Math.abs(rows[1].timestamp - rows[0].timestamp);
+      expect(diff).toBe(60);
     }
-  }, 120000);
+  }, 30000);
 
-  it.skip("should handle NaN values by converting to 0", async () => {
-    // Create RRD
-    await createTestRrdFile(testRrdPath);
+  it("should handle NaN values by converting them to 0", async () => {
+    const { migrateRrdToSqlite } = await import("../rrd-migration.js");
 
-    // Run migration (RRD will have -nan for data points outside our inserted range)
-    await migrateRrdToSqlite(testRrdPath);
+    // RRD archives that extend beyond inserted data contain -nan values.
+    // The migration must convert them to 0.
+    await migrateRrdToSqlite(WORK_RRD, TEST_ARCHIVES);
 
-    // Verify no NaN values in database
     const db = getDatabase();
-    const rows = db.select().from(timeseriesStats).limit(100).all();
+    const rows = db.select().from(timeseriesStats).limit(200).all();
 
-    // Should have some rows
     expect(rows.length).toBeGreaterThan(0);
 
-    // No NaN values should exist (they should be converted to 0)
     for (const row of rows) {
       expect(Number.isNaN(row.acarsCount)).toBe(false);
       expect(Number.isNaN(row.vdlmCount)).toBe(false);
@@ -249,55 +305,61 @@ describe("RRD Migration Integration", () => {
       expect(Number.isNaN(row.totalCount)).toBe(false);
       expect(Number.isNaN(row.errorCount)).toBe(false);
     }
-  }, 120000);
+  }, 30000);
 
-  it.skip("should verify data integrity after migration", async () => {
-    // Generate test RRD file with known values
-    await createTestRrdFile(testRrdPath);
+  it("should verify data values are within expected ranges", async () => {
+    const { migrateRrdToSqlite } = await import("../rrd-migration.js");
 
-    // Run migration first
-    await migrateRrdToSqlite(testRrdPath);
+    await migrateRrdToSqlite(WORK_RRD, TEST_ARCHIVES);
 
-    // Verify data in database - just check we have reasonable values
     const db = getDatabase();
     const { eq } = await import("drizzle-orm");
 
+    // The fixture was generated by generate-test-rrd.ts with deterministic
+    // sine/cosine values.  Known ranges (see dataValues() in the script):
+    //   ACARS  :  1 – 15  (10 ± 5)
+    //   VDLM   :  1 – 30  (20 ± 10)
+    //   HFDL   :  0 –  8  (5.5 ± 2.5)
+    //   IMSL   :  0 –  2
+    //   IRDM   :  0 –  1
+    //   TOTAL  = ACARS + VDLM + HFDL + IMSL + IRDM  ≤ ~56
+    //
+    // We only sample 1-min rows from the core of the dataset to avoid edge
+    // rows that carry RRD NaN-padding (which maps to 0 after conversion).
     const rows = db
       .select()
       .from(timeseriesStats)
       .where(eq(timeseriesStats.resolution, "1min"))
-      .limit(10)
+      .orderBy(timeseriesStats.timestamp)
       .all();
 
-    // Should have data
-    expect(rows.length).toBeGreaterThan(0);
+    // Filter to rows that look like real data (non-zero counts)
+    const realRows = rows.filter((r) => r.acarsCount > 0 || r.vdlmCount > 0);
+    expect(realRows.length).toBeGreaterThan(0);
 
-    // Values should be reasonable (based on our test data generation)
-    // Note: Expanded data from coarse resolutions may have 0 values for periods
-    // outside our inserted data range, so we just check for valid numbers
-    for (const row of rows) {
+    for (const row of realRows) {
       expect(row.acarsCount).toBeGreaterThanOrEqual(0);
       expect(row.acarsCount).toBeLessThanOrEqual(20);
       expect(row.vdlmCount).toBeGreaterThanOrEqual(0);
-      expect(row.vdlmCount).toBeLessThanOrEqual(40);
+      expect(row.vdlmCount).toBeLessThanOrEqual(35);
       expect(row.hfdlCount).toBeGreaterThanOrEqual(0);
       expect(row.hfdlCount).toBeLessThanOrEqual(10);
       expect(row.totalCount).toBeGreaterThanOrEqual(0);
     }
-  }, 120000);
+  }, 30000);
 
-  it.skip("should log migration statistics", async () => {
-    // Generate test RRD file
-    await createTestRrdFile(testRrdPath);
+  it("should return meaningful migration statistics", async () => {
+    const { migrateRrdToSqlite } = await import("../rrd-migration.js");
 
-    // Run migration
-    const result = await migrateRrdToSqlite(testRrdPath);
+    const result = await migrateRrdToSqlite(WORK_RRD, TEST_ARCHIVES);
 
-    // Verify statistics are returned
     expect(result).not.toBeNull();
     expect(result?.success).toBe(true);
     expect(result?.rowsInserted).toBeGreaterThan(0);
+    // Duration should be a positive finite number (in milliseconds)
     expect(result?.duration).toBeGreaterThan(0);
-    expect(result?.duration).toBeLessThan(30000); // Should complete in <30s
-  }, 120000);
+    expect(Number.isFinite(result?.duration)).toBe(true);
+    // Should complete within a reasonable time (30 s generous upper bound)
+    expect(result?.duration).toBeLessThan(30_000);
+  }, 30000);
 });

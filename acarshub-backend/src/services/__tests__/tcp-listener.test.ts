@@ -14,7 +14,11 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-import { createServer, type Server as NetServer } from "node:net";
+import {
+  createServer,
+  type Server as NetServer,
+  type Socket as NetSocket,
+} from "node:net";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { TcpListener } from "../tcp-listener.js";
 
@@ -29,22 +33,79 @@ describe("TcpListener", () => {
 
   afterEach(async () => {
     if (testServer) {
-      await new Promise<void>((resolve) => {
-        testServer?.close(() => resolve());
-      });
+      await closeTestServer(testServer);
       testServer = null;
     }
   });
 
   /**
-   * Create a test TCP server that sends JSON messages
+   * Close a test server and destroy all connected client sockets.
+   *
+   * `server.close()` only stops accepting new connections — existing sockets
+   * remain open until the client disconnects. The TcpListener therefore never
+   * sees a disconnect event when we call close() alone. Destroying all tracked
+   * client sockets forces the OS-level close so the TcpListener receives the
+   * expected 'close' / 'end' event immediately.
+   */
+  function closeTestServer(server: NetServer): Promise<void> {
+    return new Promise<void>((resolve) => {
+      // Destroy every live client socket first so the server can actually close
+      const sockets: Set<NetSocket> =
+        (server as NetServer & { __clientSockets?: Set<NetSocket> })
+          .__clientSockets ?? new Set();
+      for (const s of sockets) {
+        s.destroy();
+      }
+      server.close(() => resolve());
+    });
+  }
+
+  /**
+   * Wait for a named event on an EventEmitter, with an optional timeout.
+   * Rejects if the timeout expires before the event fires.
+   */
+  function waitForEvent<T>(
+    emitter: {
+      once(event: string, listener: (...args: unknown[]) => void): void;
+    },
+    event: string,
+    timeoutMs = 5000,
+  ): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        reject(
+          new Error(
+            `Timed out waiting for event "${event}" after ${timeoutMs}ms`,
+          ),
+        );
+      }, timeoutMs);
+
+      emitter.once(event, (...args: unknown[]) => {
+        clearTimeout(timer);
+        resolve(args[0] as T);
+      });
+    });
+  }
+
+  /**
+   * Create a test TCP server that sends JSON messages.
+   * Tracks all connected client sockets so closeTestServer() can force-close them.
    */
   function createTestServer(port: number): Promise<NetServer> {
     return new Promise((resolve, reject) => {
+      const clientSockets = new Set<NetSocket>();
+
       const server = createServer((socket) => {
+        clientSockets.add(socket);
+        socket.once("close", () => clientSockets.delete(socket));
         // Store socket for sending test data
         server.emit("client-connected", socket);
       });
+
+      // Attach the socket set so closeTestServer() can reach it
+      (
+        server as NetServer & { __clientSockets: Set<NetSocket> }
+      ).__clientSockets = clientSockets;
 
       server.on("error", reject);
 
@@ -99,7 +160,7 @@ describe("TcpListener", () => {
       listener.stop();
     });
 
-    it.skip("should auto-reconnect after disconnection", async () => {
+    it("should auto-reconnect after disconnection", async () => {
       testServer = await createTestServer(testPort);
 
       const listener = new TcpListener({
@@ -114,37 +175,27 @@ describe("TcpListener", () => {
         connectCount++;
       });
 
-      const firstConnect = new Promise<void>((resolve) => {
-        listener.once("connected", () => resolve());
-      });
-
       listener.start();
-      await firstConnect;
+      await waitForEvent(listener, "connected");
 
-      // Close server to trigger disconnection
-      const disconnectPromise = new Promise<void>((resolve) => {
-        listener.once("disconnected", () => resolve());
-      });
-
-      testServer.close();
+      // Force-close the server (destroys client sockets so the TcpListener
+      // immediately receives a TCP close/end event and emits 'disconnected').
+      const disconnectPromise = waitForEvent(listener, "disconnected");
+      await closeTestServer(testServer);
+      testServer = null;
       await disconnectPromise;
 
       expect(listener.connected).toBe(false);
 
-      // Restart server for reconnection
+      // Restart server on the same port for reconnection
       testServer = await createTestServer(testPort);
 
-      const reconnectPromise = new Promise<void>((resolve) => {
-        listener.on("connected", () => {
-          if (connectCount > 1) resolve();
-        });
-      });
-
-      await reconnectPromise;
+      // Wait for reconnect — listener retries every 100 ms
+      await waitForEvent(listener, "connected", 5000);
       expect(connectCount).toBeGreaterThan(1);
 
       listener.stop();
-    }, 20000);
+    }, 15000);
 
     it("should not start twice", async () => {
       testServer = await createTestServer(testPort);
@@ -412,7 +463,7 @@ describe("TcpListener", () => {
       }
     });
 
-    it.skip("should emit disconnected event on connection loss", async () => {
+    it("should emit disconnected event on connection loss", async () => {
       testServer = await createTestServer(testPort);
 
       const listener = new TcpListener({
@@ -421,25 +472,20 @@ describe("TcpListener", () => {
         port: testPort,
       });
 
-      const disconnectedPromise = new Promise<string>((resolve) => {
-        listener.on("disconnected", (type) => resolve(type));
-      });
-
       listener.start();
+      await waitForEvent(listener, "connected");
 
-      // Wait for connection
-      await new Promise<void>((resolve) => {
-        listener.once("connected", () => resolve());
-      });
+      // Force-close the server so existing client sockets are destroyed and
+      // the TcpListener receives the TCP close event immediately.
+      const disconnectPromise = waitForEvent<string>(listener, "disconnected");
+      await closeTestServer(testServer);
+      testServer = null;
 
-      // Close server to trigger disconnect
-      testServer.close();
-
-      const type = await disconnectedPromise;
+      const type = await disconnectPromise;
       expect(type).toBe("ACARS");
 
       listener.stop();
-    }, 20000);
+    }, 10000);
   });
 
   describe("Edge Cases", () => {

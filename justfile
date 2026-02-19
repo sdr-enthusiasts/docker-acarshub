@@ -127,22 +127,69 @@ ci:
     cd acarshub-backend && npm run build
     @echo "Running Biome checks..."
     biome check --error-on-warnings acarshub-react/ acarshub-backend/
-    @echo "Running frontend tests..."
-    cd acarshub-react && npm test
-    @echo "Running backend tests..."
-    cd acarshub-backend && npm test
+    @echo "Running frontend tests with coverage..."
+    cd acarshub-react && npm run test:coverage
+    @echo "Running backend tests with coverage..."
+    cd acarshub-backend && npm run test:coverage
     @echo "Running pre-commit hooks..."
     pre-commit run --all-files
     @echo "✅ All checks passed!"
 
-# Full CI + E2E tests (requires dev server running separately)
+# Full CI + E2E tests — uses Docker-based Playwright (all browsers)
 ci-e2e:
     @echo "Running all CI checks..."
     just ci
-    @echo "Running E2E tests..."
-    @echo "Not running the e2e tests. They're buggered"
-    # cd acarshub-react && npx playwright test --reporter=line
+    @echo "Running E2E tests (Docker Playwright)..."
+    just test-e2e-docker
     @echo "✅ All checks and E2E tests passed!"
+
+# Run Playwright E2E tests inside Docker (supports Chromium + Firefox + WebKit)
+# Starts the Vite dev server on the host, then runs Playwright in the official
+# Playwright Docker image so all three browser engines have their system deps.
+
+# Uses --network=host so the container can reach localhost:3000.
+test-e2e-docker:
+    @echo "Starting Vite dev server in background..."
+    cd acarshub-react && npm run dev &
+    sleep 5
+    @echo "Running Playwright in Docker (all browsers)..."
+    docker run --rm --network=host \
+      -v $(pwd)/acarshub-react:/work -w /work \
+      -e CI=true \
+      -e PLAYWRIGHT_DOCKER=true \
+      mcr.microsoft.com/playwright:v1.58.2-noble \
+      npx playwright test --reporter=line || (pkill -f "vite" || true; exit 1)
+    pkill -f "vite" || true
+    @echo "✅ E2E tests passed!"
+
+# Run full-stack integration E2E tests via Docker Compose
+
+# Requires the production Docker image to be built first: docker build -t ah:test .
+test-e2e-fullstack:
+    @echo "Running full-stack E2E tests via Docker Compose..."
+    docker compose -f docker-compose.test.yml up --abort-on-container-exit --exit-code-from playwright
+    docker compose -f docker-compose.test.yml down --volumes
+    @echo "✅ Full-stack E2E tests passed!"
+
+# Generate test fixture data (requires rrdtool — available in Nix dev env)
+
+# Run seed-test-rrd once and commit the resulting test-fixtures/test.rrd file.
+seed-test-rrd:
+    @echo "Generating RRD fixture (72h of 1-min data across all 4 archive resolutions)..."
+    cd acarshub-backend && npx tsx scripts/generate-test-rrd.ts
+    @echo "✅ RRD fixture written to test-fixtures/test.rrd — review and commit"
+
+# Generate seed SQLite database from JSONL fixture files
+seed-test-db:
+    @echo "Generating test seed database from fixture JSONL files..."
+    cd acarshub-backend && npx tsx scripts/seed-test-db.ts
+    @echo "✅ Seed database written to test-fixtures/seed.db"
+
+# Regenerate all test fixture data
+seed-all:
+    just seed-test-rrd
+    just seed-test-db
+    @echo "✅ All test fixtures generated — review and commit changes to test-fixtures/"
 
 # prepare for commit
 

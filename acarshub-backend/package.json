@@ -41,6 +41,7 @@
     "@biomejs/biome": "2.4.2",
     "@types/better-sqlite3": "7.6.13",
     "@types/node": "25.2.3",
+    "@vitest/coverage-v8": "^4.0.18",
     "drizzle-kit": "0.31.9",
     "tsx": "4.21.0",
     "typescript": "5.9.3",

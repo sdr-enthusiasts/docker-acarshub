@@ -1,0 +1,31 @@
+{
+  "generated": "2026-02-19T03:27:47.388Z",
+  "anchorUnix": 1704067200,
+  "anchorIso": "2024-01-01T00:00:00Z",
+  "durationHours": 72,
+  "totalPoints": 4320,
+  "stepSeconds": 60,
+  "dataSources": ["ACARS", "VDLM", "TOTAL", "ERROR", "HFDL", "IMSL", "IRDM"],
+  "archives": [
+    {
+      "resolution": "1min",
+      "rows": 4420,
+      "stepsPerRow": 1
+    },
+    {
+      "resolution": "5min",
+      "rows": 2016,
+      "stepsPerRow": 5
+    },
+    {
+      "resolution": "1hour",
+      "rows": 4380,
+      "stepsPerRow": 60
+    },
+    {
+      "resolution": "6hour",
+      "rows": 1460,
+      "stepsPerRow": 360
+    }
+  ]
+}

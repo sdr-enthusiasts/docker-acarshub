@@ -48,32 +48,39 @@ export default defineConfig({
     channel: undefined,
   },
 
-  /* Configure projects for major browsers */
+  /* Configure projects for major browsers.
+   *
+   * On NixOS the Playwright-bundled Firefox and WebKit binaries are missing
+   * required system libraries, so those projects are only enabled when running
+   * inside the official Playwright Docker image (set PLAYWRIGHT_DOCKER=true).
+   * The `test-e2e-docker` justfile target sets this automatically.
+   */
   projects: [
     {
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
     },
 
-    // {
-    //   name: "firefox",
-    //   use: { ...devices["Desktop Firefox"] },
-    // },
-
-    // {
-    //   name: "webkit",
-    //   use: { ...devices["Desktop Safari"] },
-    // },
-
-    // /* Test against mobile viewports. */
-    // {
-    //   name: "Mobile Chrome",
-    //   use: { ...devices["Pixel 5"] },
-    // },
-    // {
-    //   name: "Mobile Safari",
-    //   use: { ...devices["iPhone 12"] },
-    // },
+    ...(process.env.PLAYWRIGHT_DOCKER
+      ? [
+          {
+            name: "firefox",
+            use: { ...devices["Desktop Firefox"] },
+          },
+          {
+            name: "webkit",
+            use: { ...devices["Desktop Safari"] },
+          },
+          {
+            name: "Mobile Chrome",
+            use: { ...devices["Pixel 5"] },
+          },
+          {
+            name: "Mobile Safari",
+            use: { ...devices["iPhone 12"] },
+          },
+        ]
+      : []),
   ],
 
   /* Run your local dev server before starting the tests */
