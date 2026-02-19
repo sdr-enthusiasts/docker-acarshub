@@ -85,6 +85,7 @@ describe("RRD Migration Service", () => {
       const execMock = vi.fn(
         (
           _cmd: string,
+          _options: unknown,
           callback: (
             error: Error | null,
             result: { stdout: string; stderr: string } | null,
@@ -133,6 +134,7 @@ describe("RRD Migration Service", () => {
       const execMock = vi.fn(
         (
           _cmd: string,
+          _options: unknown,
           callback: (
             error: Error | null,
             result: { stdout: string; stderr: string } | null,
@@ -180,6 +182,7 @@ describe("RRD Migration Service", () => {
       const execMock = vi.fn(
         (
           _cmd: string,
+          _options: unknown,
           callback: (
             error: Error | null,
             result: { stdout: string; stderr: string } | null,
@@ -225,6 +228,7 @@ invalid line without timestamp
       const execMock = vi.fn(
         (
           _cmd: string,
+          _options: unknown,
           callback: (
             error: Error | null,
             result: { stdout: string; stderr: string } | null,
@@ -330,6 +334,7 @@ invalid line without timestamp
       const execMock = vi.fn(
         (
           _cmd: string,
+          _options: unknown,
           callback: (
             error: Error | null,
             result: { stdout: string; stderr: string } | null,
@@ -426,6 +431,7 @@ invalid line without timestamp
       const execMock = vi.fn(
         (
           _cmd: string,
+          _options: unknown,
           callback: (
             error: Error | null,
             result: { stdout: string; stderr: string } | null,
@@ -458,6 +464,7 @@ invalid line without timestamp
       const execMock = vi.fn(
         (
           _cmd: string,
+          _options: unknown,
           callback: (
             error: Error | null,
             result: { stdout: string; stderr: string } | null,
@@ -510,6 +517,7 @@ invalid line without timestamp
       const execMock = vi.fn(
         (
           _cmd: string,
+          _options: unknown,
           callback: (
             error: Error | null,
             result: { stdout: string; stderr: string } | null,
@@ -559,6 +567,7 @@ invalid line without timestamp
       const execMock = vi.fn(
         (
           _cmd: string,
+          _options: unknown,
           callback: (
             error: Error | null,
             result: { stdout: string; stderr: string } | null,

@@ -1,4 +1,10 @@
 .git*
+# TypeScript incremental build state - must not enter Docker context because
+# .tsbuildinfo causes tsc to skip emitting output files it thinks are already
+# compiled, but those files don't exist in the container (dist/ is excluded).
+acarshub-backend/tsconfig.tsbuildinfo
+acarshub-react/tsconfig.tsbuildinfo
+acarshub-types/tsconfig.tsbuildinfo
 LICENSE
 README.md
 retired_scripts
