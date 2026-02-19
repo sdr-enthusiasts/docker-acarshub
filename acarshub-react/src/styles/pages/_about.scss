@@ -47,9 +47,11 @@
   }
 
   // Link styling within cards
+  // text-decoration: underline is required for WCAG 1.4.1 (Use of Color) —
+  // links in text blocks must be distinguishable by more than color alone.
   a {
     color: var(--color-blue);
-    text-decoration: none;
+    text-decoration: underline;
     transition: color 0.2s ease-in-out;
 
     &:hover {
@@ -189,8 +191,11 @@
   }
 
   // Code blocks - improved readability
+  // Use surface0 (darker) as background: mauve (#cba6f7) on surface0 (#313244)
+  // gives 5.74:1 contrast ratio, meeting WCAG 1.4.3 AA (4.5:1 minimum).
+  // surface1 (#45475a) only gives 4.49:1 which fails by a tiny margin.
   code {
-    background-color: var(--color-surface1);
+    background-color: var(--color-surface0);
     color: var(--color-mauve);
     padding: 0.2rem 0.5rem;
     border-radius: $radius-sm;

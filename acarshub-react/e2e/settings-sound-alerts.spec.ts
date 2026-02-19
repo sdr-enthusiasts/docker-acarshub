@@ -12,13 +12,20 @@ import { expect, test } from "@playwright/test";
  * 3. Error handling when autoplay is blocked
  */
 
-test.describe.skip("Settings Modal - Sound Alerts", () => {
+test.describe("Settings Modal - Sound Alerts", () => {
   test.beforeEach(async ({ page }) => {
     // Navigate to the app
     await page.goto("/");
 
-    // Wait for app to load
-    await expect(page.locator("nav")).toBeVisible();
+    // Wait for app to load — header.navigation is always present (desktop + mobile)
+    await expect(page.locator("header.navigation")).toBeVisible();
+
+    // On mobile the Settings button lives inside the collapsed hamburger menu —
+    // open it before trying to click Settings.
+    const mobileMenu = page.locator("details.small_nav");
+    if (await mobileMenu.isVisible()) {
+      await page.locator("details.small_nav > summary").click();
+    }
 
     // Open Settings modal
     await page.getByRole("button", { name: /settings/i }).click();
@@ -106,7 +113,18 @@ test.describe.skip("Settings Modal - Sound Alerts", () => {
     await expect(testSoundButton).toBeVisible();
   });
 
-  test("should handle autoplay block gracefully", async ({ page, context }) => {
+  test("should handle autoplay block gracefully", async ({
+    page,
+    context,
+    browserName,
+  }) => {
+    // grantPermissions is a Chromium-only API — Firefox and WebKit do not support
+    // revoking permissions this way and will throw. Skip on non-Chromium browsers.
+    test.skip(
+      browserName !== "chromium",
+      "context.grantPermissions not supported on this browser",
+    );
+
     // Block autoplay in browser context
     await context.grantPermissions([], { origin: page.url() });
 
@@ -168,7 +186,12 @@ test.describe.skip("Settings Modal - Sound Alerts", () => {
     await page.getByRole("button", { name: /close/i }).click();
     await expect(page.getByRole("dialog")).not.toBeVisible();
 
-    // Reopen settings
+    // Reopen settings — on mobile, closing the modal also collapses the hamburger
+    // menu, so we need to re-open it before the Settings button is accessible.
+    const mobileMenu = page.locator("details.small_nav");
+    if (await mobileMenu.isVisible()) {
+      await page.locator("details.small_nav > summary").click();
+    }
     await page.getByRole("button", { name: /settings/i }).click();
     await page.getByRole("tab", { name: /notifications/i }).click();
 

@@ -93,8 +93,11 @@
       }
     }
 
+    // Use surface0 (darker) background for inline code: mauve (#cba6f7) on
+    // surface0 (#313244) gives 5.74:1 contrast ratio, satisfying WCAG 1.4.3 AA.
+    // surface1 (#45475a) only gives 4.49:1 which fails by a tiny margin.
     code {
-      background-color: var(--color-surface1);
+      background-color: var(--color-surface0);
       color: var(--color-mauve);
       padding: 0.125rem 0.375rem;
       border-radius: $radius-sm;
@@ -103,7 +106,7 @@
     }
 
     pre {
-      background-color: var(--color-surface1);
+      background-color: var(--color-surface0);
       padding: 1rem;
       border-radius: $radius-sm;
       overflow-x: auto;
