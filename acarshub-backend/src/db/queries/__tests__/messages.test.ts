@@ -24,6 +24,7 @@ import {
   getRowCount,
   grabMostRecent,
 } from "../messages.js";
+import { initializeMessageCounters } from "../statistics.js";
 
 // Mock updateFrequencies to avoid errors from missing frequency tables in test DB
 vi.mock("../../helpers.js", async () => {
@@ -182,6 +183,11 @@ describe("Message Query Functions", () => {
     // Required now that searchWithFts uses the raw connection for FTS5 MATCH queries
     vi.spyOn(clientModule, "getSqliteConnection").mockReturnValue(db);
 
+    // Mirror the server boot sequence: counters must be initialized before
+    // any addMessage() call, otherwise incrementMessageCounter() logs a WARN
+    // and self-initializes mid-flight (masking real setup problems).
+    initializeMessageCounters();
+
     // Insert test messages
     const testMessages = [
       {
@@ -323,6 +329,12 @@ describe("Message Query Functions", () => {
     vi.restoreAllMocks();
     db.close();
   });
+
+  // NOTE: countersInitialized in statistics.ts is module-level state.  Each
+  // Vitest worker gets its own module instance so this does not bleed between
+  // test files, but it does persist across tests within this file.
+  // initializeMessageCounters() is idempotent (guards with countersInitialized)
+  // so calling it in every beforeEach is safe and keeps each test self-contained.
 
   describe("addMessage()", () => {
     it("should insert message and generate UID", () => {

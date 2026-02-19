@@ -869,17 +869,19 @@ export function getRowCount(): { count: number; size: number | null } {
   const count = result?.count ?? 0;
 
   // Get database file size
+  // Use the actual connection path rather than the env var so that in-memory
+  // databases (":memory:") used in tests never trigger a spurious ENOENT warn.
   let size: number | null = null;
-  try {
-    const dbPath = process.env.ACARSHUB_DB || "./data/acarshub.db";
-    // Remove "sqlite:///" prefix if present (Python format)
-    const cleanPath = dbPath.replace(/^sqlite:\/\/\//, "");
-    const stats = statSync(cleanPath);
-    size = stats.size;
-  } catch (error) {
-    logger.warn("Failed to get database file size", {
-      error: error instanceof Error ? error.message : String(error),
-    });
+  const dbPath = getSqliteConnection().name;
+  if (dbPath !== ":memory:") {
+    try {
+      const stats = statSync(dbPath);
+      size = stats.size;
+    } catch (error) {
+      logger.warn("Failed to get database file size", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
   }
 
   return { count, size };

@@ -112,7 +112,7 @@ let _registry: Registry | null = null;
  * down and rebuilt between each test.
  */
 function isTestEnvironment(): boolean {
-  return process.env["VITEST"] === "true" || process.env["NODE_ENV"] === "test";
+  return process.env.VITEST === "true" || process.env.NODE_ENV === "test";
 }
 
 // ---------------------------------------------------------------------------
