@@ -50,12 +50,12 @@ All Phase 3 frontend unit test targets are implemented and passing. `just ci` is
 `useSocketIO` hook (all 19 Socket.IO event handlers). A debounce timer resource leak in
 `SearchPage.tsx` was discovered and fixed as a by-product of writing the tests.
 
-## Phase 4 Status: ✅ Complete (infrastructure + smoke tests)
+## Phase 4 Status: ✅ Complete (infrastructure + smoke + settings + accessibility core)
 
 ### 4.1 Docker Playwright Infrastructure — ✅ COMPLETE
 
 The `just test-e2e-docker` target is fully functional and all active tests pass. The
-following infrastructure issues were discovered and resolved across two sessions:
+following infrastructure issues were discovered and resolved across three sessions:
 
 **Session 1 fixes** (previous agent):
 
@@ -69,7 +69,7 @@ following infrastructure issues were discovered and resolved across two sessions
    of the app's nav structure. Fixed to match current DOM (header.navigation, details.small_nav
    hamburger, correct link names, correct routes).
 
-**Session 2 fixes** (current):
+**Session 2 fixes** (previous agent):
 
 1. **`__ACARS_STORE__` not exposed in production builds** — `injectDecoderState()` in smoke
    tests polls `window.__ACARS_STORE__` to inject ADS-B decoder state so the Live Map nav
@@ -101,22 +101,72 @@ following infrastructure issues were discovered and resolved across two sessions
    tests are stabilised, but the `.skip` annotations were never committed. Included in this
    commit.
 
+**Session 3 fixes** (current):
+
+1. **`settings-sound-alerts.spec.ts` — un-skipped and fixed** (GAP-E2E resolved):
+   - `test.describe.skip` removed; suite is now active across all 5 browser projects.
+   - `beforeEach` fixed: use `header.navigation` selector (visible on desktop and mobile)
+     and open the hamburger menu on mobile before clicking the Settings button.
+   - `should handle autoplay block gracefully`: `context.grantPermissions([])` is a
+     Chromium-only API — throws on Firefox/WebKit. Added
+     `test.skip(browserName !== "chromium", ...)` to restrict to Chromium only.
+   - `should adjust volume with slider`: after closing the modal on mobile, the hamburger
+     menu collapses again. Added hamburger re-open before the Settings button click that
+     reopens the modal. **25 passed, 10 intentionally skipped** (browser-specific tests).
+
+2. **`accessibility.spec.ts` — infrastructure overhauled** (GAP-E2E partially resolved):
+   - `injectDecoderState` updated to match `smoke.spec.ts`: returns `boolean`, 5-second
+     deadline, resolves `false` instead of hanging when store not available.
+   - **All six `beforeEach` blocks** fixed across all describe groups:
+     - Hardcoded `http://localhost:3000` URLs replaced with relative `"/"`.
+     - `page.waitForSelector("nav")` replaced with
+       `expect(page.locator("header.navigation")).toBeVisible()`.
+     - Hamburger menu handling added for describe groups that open Settings modal.
+   - **`Accessibility - Core Pages`** un-skipped and tests fixed:
+     - All page navigation changed from clicking nav links to `page.goto(route)` — avoids
+       desktop/mobile hamburger differences and wrong link names.
+     - Fixed incorrect route/link names: `"Statistics"` → `"Status"`, `/stats` → `/status`,
+       `"Search"` → `"Search Database"`.
+     - Live Map test individually skipped (known nested-interactive-control axe violations
+       in MapLibre canvas — requires app-side fix before un-skipping).
+   - **Five remaining describe groups** (`Settings Modal`, `Keyboard Navigation`,
+     `Color Contrast`, `Form Controls`, `Focus Management`, `Screen Reader Support`) remain
+     `.skip` but are now internally correct (modal `getByRole("dialog")` assertions, correct
+     tab role selectors, fixed Settings button selectors). Ready to un-skip incrementally.
+
+3. **WCAG 1.4.3 color-contrast violation fixed in `AboutPage`** (real app bug):
+   - axe-core reported `<code>` elements in the About page had contrast ratio 4.49:1
+     (`#cba6f7` mauve foreground on `#45475a` surface1 background), just below the 4.5:1
+     WCAG AA threshold.
+   - Fixed in `_about.scss` and `_card.scss`: `code` elements now use
+     `var(--color-surface0)` (`#313244`) as background, giving 5.74:1 contrast ratio.
+   - Bonus: `text-decoration: underline` added to About page links to satisfy WCAG 1.4.1
+     (Use of Color) — links in text blocks must be distinguishable beyond color alone.
+
 **Confirmed working**: `just test-e2e-docker` exits 0 with output:
 
 ```text
-135 skipped
-35 passed (≈12s)
+85 skipped
+85 passed (≈29s)
 ✅ E2E tests passed!
 ```
 
-All 7 smoke tests pass across all 5 browser projects (Chromium, Firefox, WebKit, Mobile
-Chrome, Mobile Safari) in about 12 seconds total. `just ci` also exits 0.
+Breakdown: 35 smoke tests + 25 sound-alert tests + 25 accessibility-core-pages tests (all
+5 browsers), all passing. `just ci` also exits 0.
 
 ### Next Steps
 
 - [ ] 4.2 Seed database and fixture tooling
-- [ ] 4.3 Core user flow E2E tests (un-skip and fix accessibility suite one describe at a time)
-- [ ] 4.4 Re-enable E2E in CI
+- [ ] 4.3 Additional core user flow E2E tests (GAP-E2E-1 through GAP-E2E-11)
+  - Un-skip `Accessibility - Settings Modal` describe
+  - Un-skip `Accessibility - Keyboard Navigation` describe
+  - Un-skip `Accessibility - Color Contrast` describe (may need Latte theme fixes)
+  - Un-skip `Accessibility - Form Controls`, `Focus Management`, `Screen Reader Support`
+  - Fix Live Map axe violations (nested interactive controls) and un-skip that test
+  - Add live message flow tests (GAP-E2E-1)
+  - Add search page user flow tests (GAP-E2E-2)
+  - Add alerts page user flow tests (GAP-E2E-3)
+- [ ] 4.4 Re-enable E2E tests in CI
 
 ---
 
@@ -504,11 +554,12 @@ None of these are tested.
 
 ---
 
-### GAP-E2E-4: No Stats page content tests
+### GAP-E2E-4: No Stats page content tests ⚠️ PARTIAL
 
 **Severity**: Medium
 
-Accessibility tests verify the page loads without violations, but no tests verify:
+Accessibility tests now verify the Status page loads without axe violations (Session 3).
+Still needed:
 
 - Tab switching between stat categories
 - Chart rendering (or graceful degradation)
@@ -518,11 +569,12 @@ Accessibility tests verify the page loads without violations, but no tests verif
 
 ---
 
-### GAP-E2E-5: No Status page tests
+### GAP-E2E-5: No Status page tests ⚠️ PARTIAL
 
 **Severity**: Medium
 
-The Status page is entirely untested at the E2E level. Tests needed:
+Accessibility tests now verify the Status page loads without axe violations (Session 3).
+Still needed:
 
 - Page renders with "Loading..." when no status received
 - Page renders decoder cards when status is available
@@ -557,11 +609,12 @@ The map is complex. Needed:
 
 ---
 
-### GAP-E2E-8: No mobile user flow tests
+### GAP-E2E-8: No mobile user flow tests ⚠️ PARTIAL
 
 **Severity**: Medium
 
-The mobile smoke test only checks for horizontal scroll and the hamburger menu element. Needed:
+Mobile browsers (Pixel 5 / iPhone 12) now run all smoke tests, sound-alerts tests, and
+accessibility core-pages tests — hamburger menu handling is exercised. Still needed:
 
 - Full navigation via hamburger menu on 375px viewport
 - Settings modal is usable on mobile (no cut-off content)
@@ -1569,13 +1622,20 @@ The following metrics define "done" for each phase.
 - [x] Docker Playwright infrastructure working (`just test-e2e-docker` executes all 170 tests)
 - [x] All 5 browser projects enabled: Chromium, Firefox, WebKit, Mobile Chrome, Mobile Safari
 - [x] `npm ci` inside container correctly installs Ubuntu-compatible packages (named volumes)
-- [ ] Playwright runs cleanly with 0 infrastructure errors (test failures remain)
+- [x] Playwright runs cleanly with 0 failures: **85 passed, 85 intentionally skipped** (Session 3)
+- [x] Settings Modal - Sound Alerts suite active: 25 passed, 10 skipped (browser-specific)
+- [x] Accessibility - Core Pages suite active: 25 passed (5 browsers × 5 pages), Live Map individually skipped
+- [x] WCAG 1.4.3 violation fixed: `<code>` contrast in About page and card component (4.49→5.74:1)
+- [x] WCAG 1.4.1 violation fixed: About page links now have underline (not color-only)
+- [x] Mobile hamburger menu handling exercised across all active test suites
+- [ ] Remaining accessibility suites un-skipped: Settings Modal, Keyboard Nav, Color Contrast, Form Controls, Focus Management, Screen Reader Support
+- [ ] Live Map axe violations fixed and Live Map accessibility test un-skipped
 - [ ] E2E tests are re-enabled in `ci-e2e` target
-- [ ] Live messages flow covered by at least 5 E2E tests
-- [ ] Search flow covered by at least 5 E2E tests
-- [ ] Alerts flow covered by at least 5 E2E tests
-- [ ] Mobile flows covered at 375px and 768px viewports
-- [ ] Total E2E test count ≥ 80 (up from 34)
+- [ ] Live messages flow covered by at least 5 E2E tests (GAP-E2E-1)
+- [ ] Search flow covered by at least 5 E2E tests (GAP-E2E-2)
+- [ ] Alerts flow covered by at least 5 E2E tests (GAP-E2E-3)
+- [ ] Mobile flows covered at 375px and 768px viewports (GAP-E2E-8)
+- [ ] Total E2E test count ≥ 80 active (up from 35)
 
 ### Phase 5 (Full-Stack)
 
