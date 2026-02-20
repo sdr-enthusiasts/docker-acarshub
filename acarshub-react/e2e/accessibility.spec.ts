@@ -306,42 +306,49 @@ test.describe("Accessibility - Keyboard Navigation", () => {
     await expect(page.getByRole("dialog")).not.toBeVisible();
   });
 
-  test.skip("Should navigate Settings tabs with keyboard", async ({ page }) => {
-    // Un-skip this test once arrow-key tab navigation is implemented. // handlers to the tab list so keyboard users can navigate tabs without a pointer. // This is a known accessibility gap.  The fix is to add ArrowLeft/ArrowRight key // the ARIA keyboard interaction pattern (arrow keys switching between tabs). // NOTE: Skipped — the SettingsModal tab buttons use onClick only and do not implement
+  test("Should navigate Settings tabs with keyboard", async ({
+    page,
+    isMobile,
+  }) => {
+    // Synthetic Tab traversal through a <details> hamburger on narrow viewports
+    // is unreliable.  The arrow-key test is meaningful on desktop only.
+    test.skip(isMobile, "Keyboard navigation tests are desktop-only");
+
     // Open Settings
     await page.getByRole("button", { name: /settings/i }).click();
     await expect(page.getByRole("dialog")).toBeVisible();
 
-    // Tab to first tab button
-    await page.keyboard.press("Tab");
+    // Focus the first tab button directly.
+    // We avoid counting Tab presses (which would need to skip past the modal
+    // close button) by programmatically focusing the Appearance tab.
+    // The important thing under test is that ArrowRight/ArrowLeft navigate
+    // between tabs — not how many Tab presses reach the tablist.
+    await page.getByRole("tab", { name: "Appearance" }).focus();
 
-    // Press Arrow Right to move to next tab
+    // ArrowRight should activate the next tab (Regional & Time).
     await page.keyboard.press("ArrowRight");
-    await page.waitForTimeout(200);
 
-    // Verify tab changed (Regional & Time should be active)
-    // Settings tabs use class "settings-tab" and role="tab" with aria-selected
-    const activeTabText = await page.evaluate(() => {
-      const activeTab = document.querySelector(
-        '[role="tab"][aria-selected="true"]',
-      );
-      return activeTab?.textContent?.trim();
-    });
+    // Use retry-based assertion — React schedules the state update after the
+    // key event, so a point-in-time evaluate() would be racy.
+    await expect(
+      page.getByRole("tab", { name: "Regional & Time" }),
+    ).toHaveAttribute("aria-selected", "true");
 
-    expect(activeTabText).toBe("Regional & Time");
-
-    // Arrow Left should go back
+    // ArrowLeft should return to Appearance.
     await page.keyboard.press("ArrowLeft");
-    await page.waitForTimeout(200);
 
-    const firstTabText = await page.evaluate(() => {
-      const activeTab = document.querySelector(
-        '[role="tab"][aria-selected="true"]',
-      );
-      return activeTab?.textContent?.trim();
-    });
+    await expect(page.getByRole("tab", { name: "Appearance" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
 
-    expect(firstTabText).toBe("Appearance");
+    // ArrowLeft on the first tab should wrap to the last tab (Advanced).
+    await page.keyboard.press("ArrowLeft");
+
+    await expect(page.getByRole("tab", { name: "Advanced" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
   });
 });
 

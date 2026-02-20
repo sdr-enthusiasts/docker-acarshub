@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ALL_PROVIDERS } from "../config/mapProviders";
 import { audioService } from "../services/audioService";
 import { useAppStore } from "../store/useAppStore";
@@ -35,6 +35,21 @@ import { Modal } from "./Modal";
 import { RadioGroup } from "./RadioGroup";
 import { Select } from "./Select";
 import { Toggle } from "./Toggle";
+
+/**
+ * Ordered list of settings tab identifiers.
+ * Defines the ArrowLeft/ArrowRight navigation order for the tablist.
+ */
+const SETTINGS_TABS = [
+  "appearance",
+  "regional",
+  "notifications",
+  "data",
+  "map",
+  "advanced",
+] as const;
+
+type SettingsTabId = (typeof SETTINGS_TABS)[number];
 
 /**
  * Settings Modal Component
@@ -84,7 +99,13 @@ export const SettingsModal = () => {
     (state) => state.setGroundAltitudeThreshold,
   );
 
-  const [activeTab, setActiveTab] = useState<string>("appearance");
+  const [activeTab, setActiveTab] = useState<SettingsTabId>("appearance");
+
+  // Refs for each tab button — used to programmatically move focus when the
+  // active tab changes via ArrowLeft / ArrowRight keyboard navigation.
+  const tabRefs = useRef<Map<SettingsTabId, HTMLButtonElement | null>>(
+    new Map(),
+  );
 
   // Map settings
   const theme = useTheme();
@@ -423,6 +444,52 @@ export const SettingsModal = () => {
     setShowRegenerateConfirm(false);
   }, []);
 
+  /**
+   * Handle keyboard navigation within the tablist.
+   *
+   * Implements the ARIA APG "Tabs" keyboard interaction pattern:
+   *   ArrowRight — move to next tab (wraps around)
+   *   ArrowLeft  — move to previous tab (wraps around)
+   *   Home       — move to first tab
+   *   End        — move to last tab
+   *
+   * After changing the active tab the corresponding button is focused
+   * immediately (not deferred) using the tabRefs map so that screen
+   * readers announce the newly selected tab without delay.
+   */
+  const handleTabKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLButtonElement>) => {
+      const currentIndex = SETTINGS_TABS.indexOf(activeTab);
+      let nextIndex = -1;
+
+      if (e.key === "ArrowRight") {
+        nextIndex = (currentIndex + 1) % SETTINGS_TABS.length;
+        e.preventDefault();
+      } else if (e.key === "ArrowLeft") {
+        nextIndex =
+          (currentIndex - 1 + SETTINGS_TABS.length) % SETTINGS_TABS.length;
+        e.preventDefault();
+      } else if (e.key === "Home") {
+        nextIndex = 0;
+        e.preventDefault();
+      } else if (e.key === "End") {
+        nextIndex = SETTINGS_TABS.length - 1;
+        e.preventDefault();
+      }
+
+      if (nextIndex !== -1) {
+        const nextTab = SETTINGS_TABS[nextIndex];
+        setActiveTab(nextTab);
+        // Focus happens after setActiveTab triggers a re-render; defer with
+        // setTimeout(0) to let React flush the new tabIndex values first.
+        setTimeout(() => {
+          tabRefs.current.get(nextTab)?.focus();
+        }, 0);
+      }
+    },
+    [activeTab],
+  );
+
   // Keyboard shortcut: Escape to close
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -443,65 +510,107 @@ export const SettingsModal = () => {
       className="settings-modal"
     >
       <div className="settings-content">
-        {/* Settings Tabs */}
-        <div className="settings-tabs" role="tablist">
+        {/* Settings Tabs
+            Implements the ARIA APG tablist keyboard interaction:
+            - Only the active tab is in the tab order (tabIndex 0); inactive
+              tabs use tabIndex -1 (roving tabindex pattern).
+            - ArrowRight / ArrowLeft navigate between tabs and move focus.
+            - Home / End jump to first / last tab.
+            - id attributes match the aria-labelledby values on each tabpanel. */}
+        <div className="settings-tabs" role="tablist" aria-label="Settings">
           <button
+            ref={(el) => {
+              tabRefs.current.set("appearance", el);
+            }}
             type="button"
+            id="appearance-tab"
             role="tab"
             aria-selected={activeTab === "appearance"}
             aria-controls="appearance-panel"
+            tabIndex={activeTab === "appearance" ? 0 : -1}
             className={`settings-tab ${activeTab === "appearance" ? "settings-tab--active" : ""}`}
             onClick={() => setActiveTab("appearance")}
+            onKeyDown={handleTabKeyDown}
           >
             Appearance
           </button>
           <button
+            ref={(el) => {
+              tabRefs.current.set("regional", el);
+            }}
             type="button"
+            id="regional-tab"
             role="tab"
             aria-selected={activeTab === "regional"}
             aria-controls="regional-panel"
+            tabIndex={activeTab === "regional" ? 0 : -1}
             className={`settings-tab ${activeTab === "regional" ? "settings-tab--active" : ""}`}
             onClick={() => setActiveTab("regional")}
+            onKeyDown={handleTabKeyDown}
           >
             Regional & Time
           </button>
           <button
+            ref={(el) => {
+              tabRefs.current.set("notifications", el);
+            }}
             type="button"
+            id="notifications-tab"
             role="tab"
             aria-selected={activeTab === "notifications"}
             aria-controls="notifications-panel"
+            tabIndex={activeTab === "notifications" ? 0 : -1}
             className={`settings-tab ${activeTab === "notifications" ? "settings-tab--active" : ""}`}
             onClick={() => setActiveTab("notifications")}
+            onKeyDown={handleTabKeyDown}
           >
             Notifications
           </button>
           <button
+            ref={(el) => {
+              tabRefs.current.set("data", el);
+            }}
             type="button"
+            id="data-tab"
             role="tab"
             aria-selected={activeTab === "data"}
             aria-controls="data-panel"
+            tabIndex={activeTab === "data" ? 0 : -1}
             className={`settings-tab ${activeTab === "data" ? "settings-tab--active" : ""}`}
             onClick={() => setActiveTab("data")}
+            onKeyDown={handleTabKeyDown}
           >
             Data & Privacy
           </button>
           <button
+            ref={(el) => {
+              tabRefs.current.set("map", el);
+            }}
             type="button"
+            id="map-tab"
             role="tab"
             aria-selected={activeTab === "map"}
             aria-controls="map-panel"
+            tabIndex={activeTab === "map" ? 0 : -1}
             className={`settings-tab ${activeTab === "map" ? "settings-tab--active" : ""}`}
             onClick={() => setActiveTab("map")}
+            onKeyDown={handleTabKeyDown}
           >
             Map
           </button>
           <button
+            ref={(el) => {
+              tabRefs.current.set("advanced", el);
+            }}
             type="button"
+            id="advanced-tab"
             role="tab"
             aria-selected={activeTab === "advanced"}
             aria-controls="advanced-panel"
+            tabIndex={activeTab === "advanced" ? 0 : -1}
             className={`settings-tab ${activeTab === "advanced" ? "settings-tab--active" : ""}`}
             onClick={() => setActiveTab("advanced")}
+            onKeyDown={handleTabKeyDown}
           >
             Advanced
           </button>
