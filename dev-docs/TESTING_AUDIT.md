@@ -50,7 +50,7 @@ All Phase 3 frontend unit test targets are implemented and passing. `just ci` is
 `useSocketIO` hook (all 19 Socket.IO event handlers). A debounce timer resource leak in
 `SearchPage.tsx` was discovered and fixed as a by-product of writing the tests.
 
-## Phase 4 Status: ✅ Complete (infrastructure + smoke + settings + accessibility core + live message flow + search flow + alerts flow + stats/status flow + settings persistence + seed database)
+## Phase 4 Status: ✅ Complete (infrastructure + smoke + settings + accessibility core + live message flow + search flow + alerts flow + stats/status flow + settings persistence + seed database + locale/timezone display)
 
 ### 4.1 Docker Playwright Infrastructure — ✅ COMPLETE
 
@@ -936,12 +936,29 @@ There is no test that simulates a connection drop and verifies:
 
 ---
 
-### GAP-E2E-11: No locale/timezone display tests
+### GAP-E2E-11: No locale/timezone display tests ✅ RESOLVED
 
 **Severity**: Low
 
 Timestamps appear throughout the application. There are no E2E tests verifying that changing
 the timezone or time format setting actually changes how timestamps render.
+
+**Resolution**: `e2e/locale-timezone.spec.ts` — 10 tests across three describe blocks:
+
+- **Time format display** (3 tests): 24h format shows no AM/PM; 12h format shows PM for
+  20:00 UTC; switching format immediately re-renders existing message card timestamps.
+- **Timezone display** (3 tests): Uses `test.use({ timezoneId: "America/New_York" })` to
+  make UTC vs local comparison deterministic (20:00 UTC → 15:00 EST). Verifies UTC mode
+  shows "20:", local mode shows "15:", and switching timezone triggers reactive re-render.
+- **Date format display** (4 tests): `ymd` → "2024-02-01"; `mdy` → "02/01/2024";
+  `dmy` → "01/02/2024"; switching format immediately updates displayed timestamp.
+
+All 10 tests × 5 browsers = **50 slots** — 50 passed.
+
+Fixed timestamps used throughout so results are deterministic regardless of CI host timezone:
+
+- `TS_20H_UTC = 1_704_139_200` (2024-01-01T20:00:00Z) — time format / timezone tests
+- `TS_FEB_UTC = 1_706_745_600` (2024-02-01T00:00:00Z) — date format tests
 
 ---
 
@@ -1959,6 +1976,10 @@ The following metrics define "done" for each phase.
       navigation, tab dots, keyboard nav, mark-as-read, and alert badge counts
 - [x] GAP-E2E-8 resolved: `e2e/mobile-flows.spec.ts` — 10 mobile-specific tests covering
       hamburger navigation, page reachability, settings modal, and overflow checks
+- [x] GAP-E2E-11 resolved: `e2e/locale-timezone.spec.ts` — 10 tests covering 12h/24h time
+      format display, UTC vs local timezone (deterministic via `timezoneId: "America/New_York"`),
+      and ymd/mdy/dmy date format rendering; all with reactive-update assertions
+      (10 tests × 5 browsers = 50 slots, 50 passed)
 
 ### Phase 5 (Full-Stack)
 

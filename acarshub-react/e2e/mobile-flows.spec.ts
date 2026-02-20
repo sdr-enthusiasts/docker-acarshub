@@ -1,4 +1,4 @@
-import { devices, expect, type Page, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 
 // ---------------------------------------------------------------------------
 // Mobile-flows.spec.ts — GAP-E2E-8
@@ -114,7 +114,7 @@ async function closeHamburger(page: Page): Promise<void> {
 
 test.describe("Mobile User Flows", () => {
   // Run only under Mobile Chrome and Mobile Safari projects
-  test.skip(({ browserName, viewport }) => {
+  test.skip(({ viewport }) => {
     // Skip when running on desktop-sized viewports (width > 768 px)
     const width = viewport?.width ?? 1280;
     return width > 768;
