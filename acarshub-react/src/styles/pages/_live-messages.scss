@@ -211,7 +211,11 @@
 }
 
 .filter-label {
-  color: var(--color-subtext1);
+  // Use --color-text rather than --color-subtext1 so this label meets WCAG AA
+  // in Latte theme: subtext1 (#5c5f77) on the message-filters surface0 background
+  // (#ccd0da) is only 4.05:1, which fails the 4.5:1 requirement for normal text.
+  // --color-text (#4c4f69 in Latte) achieves 5.17:1 on surface0. ✅
+  color: var(--color-text);
   font-size: var(--font-size-sm);
   font-weight: 500;
   white-space: nowrap;

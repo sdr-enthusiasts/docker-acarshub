@@ -103,9 +103,13 @@
   --color-surface2: #{$latte-surface2};
 
   // Text
+  // Accessibility note: $latte-subtext0 (#6c6f85) achieves only 4.37:1 on base — fails
+  // WCAG AA (4.5:1) for normal text. We use $latte-subtext1 (#5c5f77, 5.53:1) instead.
+  // The --color-subtext1 variable retains the correct palette value; --color-subtext0
+  // is bumped up one shade to ensure all muted text meets the 4.5:1 requirement.
   --color-text: #{$latte-text};
   --color-subtext1: #{$latte-subtext1};
-  --color-subtext0: #{$latte-subtext0};
+  --color-subtext0: #{$latte-subtext1}; // Accessibility: subtext1 (5.53:1 on base) vs subtext0 (4.37:1 ❌)
 
   // Overlays & Borders
   --color-overlay0: #{$latte-overlay0};
@@ -131,11 +135,14 @@
   --color-accent-maroon: #{$latte-maroon};
 
   // Additional semantic mappings
-  --color-link: #{$latte-sapphire};
-  --color-link-hover: #{$latte-blue};
+  // Accessibility note: $latte-sapphire (#209fb5) on base = 2.76:1 — fails WCAG AA badly.
+  // $latte-blue (#1e66f5) on base = 4.34:1 — also fails. Use $latte-mauve (#8839ef,
+  // 4.79:1 on base) for link text. Hover uses $latte-text (7.06:1) for strong contrast.
+  --color-link: #{$latte-mauve}; // Accessibility: mauve (4.79:1 on base) vs sapphire (2.76:1 ❌)
+  --color-link-hover: #{$latte-text}; // Accessibility: text (7.06:1 on base) vs blue (4.34:1 ❌)
   --color-focus: #{$latte-blue};
   --color-disabled: #{$latte-overlay0};
-  --color-muted: #{$latte-subtext0};
+  --color-muted: #{$latte-subtext1}; // Accessibility: subtext1 (5.53:1 on base) vs subtext0 (4.37:1 ❌)
 
   // Card-specific colors
   --color-card-header: #{$latte-mantle};

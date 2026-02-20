@@ -96,6 +96,10 @@
     // Use surface0 (darker) background for inline code: mauve (#cba6f7) on
     // surface0 (#313244) gives 5.74:1 contrast ratio, satisfying WCAG 1.4.3 AA.
     // surface1 (#45475a) only gives 4.49:1 which fails by a tiny margin.
+    //
+    // Latte override: mauve (#8839ef) on Latte surface0 (#ccd0da) = 3.51:1 — fails.
+    // Use transparent background so mauve sits on the card-body background (base #eff1f5),
+    // giving 4.79:1 which satisfies WCAG AA. The border provides a subtle visual pill.
     code {
       background-color: var(--color-surface0);
       color: var(--color-mauve);
@@ -103,6 +107,11 @@
       border-radius: $radius-sm;
       font-size: 0.875em;
       font-family: var(--font-mono);
+    }
+
+    [data-theme="light"] & code {
+      background-color: transparent;
+      border: 1px solid var(--color-surface0);
     }
 
     pre {

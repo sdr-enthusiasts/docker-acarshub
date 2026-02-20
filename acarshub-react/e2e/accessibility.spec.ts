@@ -400,22 +400,59 @@ test.describe("Accessibility - Color Contrast", () => {
     ).toEqual([]);
   });
 
-  test.skip("Light theme (Latte) should pass color contrast requirements", async ({
-    // any required SCSS color adjustments have been completed. // in earlier sessions.  Un-skip this test after a dedicated Latte contrast audit and // WCAG AA color-contrast compliance.  The dark (Mocha) theme was audited and fixed // NOTE: Skipped — the Catppuccin Latte palette has not yet been fully audited for
+  test("Light theme (Latte) should pass color contrast requirements", async ({
+    // Latte contrast audit completed — SCSS fixes applied:
+    // - --color-subtext0 remapped to subtext1 (5.53:1 on base vs 4.37:1 ❌)
+    // - --color-link remapped to mauve (4.79:1 on base vs sapphire 2.76:1 ❌)
+    // - --color-link-hover remapped to text (7.06:1 vs blue 4.34:1 ❌)
+    // - Navigation logo/active link use --color-text on Latte (6.04:1 on crust ✅)
+    // - Connection status disconnected/connected banners use surface0+text in Latte ✅
+    // - About page links use --color-link/--color-link-hover ✅
+    // - Card/About code elements use transparent bg in Latte (mauve 4.79:1 on base ✅)
     page,
   }) => {
-    // Navigate to home and inject decoder state
+    // Navigate to home and inject decoder state.
+    // NOTE: page.goto("/") resets the hamburger-menu state that beforeEach opened,
+    // so we must re-open it here on mobile before touching the Settings button.
     await page.goto("/");
     await injectDecoderState(page);
+
+    // On mobile, the Settings button is inside the hamburger dropdown.
+    // The beforeEach already opened it, but page.goto() above reset the page,
+    // so open it again if the mobile menu is present.
+    const mobileMenuLatte = page.locator("details.small_nav");
+    if (await mobileMenuLatte.isVisible()) {
+      await page.locator("details.small_nav > summary").click();
+    }
 
     // Switch to light theme via Settings → Appearance
     await page.getByRole("button", { name: /settings/i }).click();
     await expect(page.getByRole("dialog")).toBeVisible();
     await page.getByRole("tab", { name: /appearance/i }).click();
-    await page.locator('input[type="radio"][value="latte"]').click();
+    // The radio input is visually hidden (opacity:0, width:0, height:0, pointer-events:none)
+    // for custom styling — click the visible <label for="theme-latte"> element instead.
+    await page.locator('label[for="theme-latte"]').click();
     await page.keyboard.press("Escape");
     await expect(page.getByRole("dialog")).not.toBeVisible();
-    await page.waitForTimeout(300);
+
+    // Kill all CSS transitions before running axe to guarantee final Latte colors.
+    //
+    // Root cause: WebKit's getComputedStyle() resolves CSS custom-property values
+    // to their target immediately when data-theme="light" is set, but the *visual*
+    // rendering (which axe reads for contrast) is still mid-transition. This means
+    // axe captures the Mocha text color (#cdd6f4) against the already-updated Latte
+    // base (#eff1f5), yielding a 1.27:1 contrast failure that is not visible once
+    // the 200ms transition completes.
+    //
+    // Injecting transition:none !important forces any in-progress transitions to
+    // snap instantly to their end-state, so the next repaint contains the fully-
+    // applied Latte palette before axe evaluates the page.
+    await page.addStyleTag({
+      content:
+        "*, *::before, *::after { transition: none !important; animation: none !important; }",
+    });
+    // One rAF-equivalent pause so the browser can repaint with the snapped colors.
+    await page.waitForTimeout(100);
 
     // Run color contrast check
     const accessibilityScanResults = await new AxeBuilder({ page })

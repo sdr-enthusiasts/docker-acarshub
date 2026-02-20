@@ -82,6 +82,29 @@
 }
 
 /**
+ * Latte (light theme) contrast fixes:
+ * - $latte-green (#40a02b) on base: no Catppuccin text color achieves 4.5:1 against it.
+ * - $latte-yellow (#df8e1d) on base: same problem — in the "impossible zone" for WCAG AA.
+ * - $latte-red (#d20f39) + base text (#eff1f5) = 4.80:1 ✅ (error state already passes).
+ * Fix: use neutral surface0 background + --color-text for connected/disconnected banners.
+ * The warning/success color is retained as the bottom border (decorative — no contrast req).
+ */
+[data-theme="light"] {
+  .connection-status--connected {
+    background-color: var(--color-surface0);
+    color: var(--color-text);
+    border-bottom-color: var(--color-success);
+  }
+
+  .connection-status--disconnected {
+    background-color: var(--color-surface0);
+    color: var(--color-text);
+    border-bottom-color: var(--color-warning);
+    animation: none; // pulse used opacity which can confuse color-contrast checkers
+  }
+}
+
+/**
  * Pulse animation for disconnected state
  */
 
