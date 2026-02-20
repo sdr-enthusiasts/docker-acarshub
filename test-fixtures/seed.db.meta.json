@@ -9,11 +9,7 @@
     "skipped": 0,
     "alertMatches": 46
   },
-  "alertTerms": [
-    "WN4899",
-    "N8560Z",
-    "XA0001"
-  ],
+  "alertTerms": ["WN4899", "N8560Z", "XA0001"],
   "ignoreTerms": [],
   "timeseries": {
     "total": 4536,
