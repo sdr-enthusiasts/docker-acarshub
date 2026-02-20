@@ -172,3 +172,8 @@ acarshub-backend/coverage/
 # *.rrd is globally ignored above (production RRD files must not be committed)
 !test-fixtures/test.rrd
 !test-fixtures/test.rrd.meta.json
+
+# Test fixture exceptions — test-fixtures/seed.db IS committed even though
+# *.db is globally ignored above (production databases must not be committed)
+!test-fixtures/seed.db
+!test-fixtures/seed.db.meta.json

@@ -1,0 +1,47 @@
+{
+  "generated": "2026-02-20T15:36:14.321Z",
+  "anchorStartUnix": 1717156800,
+  "anchorEndUnix": 1717243200,
+  "anchorStartIso": "2024-05-31T12:00:00.000Z",
+  "anchorEndIso": "2024-06-01T12:00:00.000Z",
+  "messages": {
+    "total": 1430,
+    "skipped": 0,
+    "alertMatches": 46
+  },
+  "alertTerms": [
+    "WN4899",
+    "N8560Z",
+    "XA0001"
+  ],
+  "ignoreTerms": [],
+  "timeseries": {
+    "total": 4536,
+    "resolutions": [
+      {
+        "resolution": "1min",
+        "stepSeconds": 60,
+        "durationDays": 1,
+        "buckets": 1440
+      },
+      {
+        "resolution": "5min",
+        "stepSeconds": 300,
+        "durationDays": 7,
+        "buckets": 2016
+      },
+      {
+        "resolution": "1hour",
+        "stepSeconds": 3600,
+        "durationDays": 30,
+        "buckets": 720
+      },
+      {
+        "resolution": "6hour",
+        "stepSeconds": 21600,
+        "durationDays": 90,
+        "buckets": 360
+      }
+    ]
+  }
+}

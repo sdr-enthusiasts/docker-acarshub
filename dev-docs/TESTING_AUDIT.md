@@ -50,7 +50,7 @@ All Phase 3 frontend unit test targets are implemented and passing. `just ci` is
 `useSocketIO` hook (all 19 Socket.IO event handlers). A debounce timer resource leak in
 `SearchPage.tsx` was discovered and fixed as a by-product of writing the tests.
 
-## Phase 4 Status: ✅ Complete (infrastructure + smoke + settings + accessibility core + live message flow + search flow + alerts flow + stats/status flow + settings persistence)
+## Phase 4 Status: ✅ Complete (infrastructure + smoke + settings + accessibility core + live message flow + search flow + alerts flow + stats/status flow + settings persistence + seed database)
 
 ### 4.1 Docker Playwright Infrastructure — ✅ COMPLETE
 
@@ -340,7 +340,10 @@ Total test slots: 335 (67 unique test cases × 5 browsers).
 
 ### Next Steps
 
-- [ ] 4.2 Seed database and fixture tooling
+- [x] 4.2 Seed database and fixture tooling — `acarshub-backend/scripts/seed-test-db.ts`
+      created; `just seed-test-db` produces `test-fixtures/seed.db` (1 144 messages,
+      46 alert-matched messages, 3 alert terms, 4 536 timeseries rows at 4 resolutions).
+      Committed alongside `test-fixtures/seed.db.meta.json` and `.gitignore` exceptions.
 - [ ] 4.3 Remaining E2E gaps:
   - GAP-E2E-6: Live Map interaction tests (aircraft markers, pause/resume, context menu)
   - GAP-E2E-7: Message card interaction tests (expand/collapse, mark-as-read, alert
@@ -1527,9 +1530,27 @@ by the hook results in the correct store state update:
 
 See [Docker Playwright Strategy](#docker-playwright-strategy).
 
-#### 4.2 Build the seed database and fixture tooling
+#### 4.2 Build the seed database and fixture tooling ✅
 
 See [Test Data Strategy](#test-data-strategy).
+
+**Implementation** (Session 8):
+
+- `acarshub-backend/scripts/seed-test-db.ts` created — runs the full production
+  message pipeline (`formatAcarsMessage` → `addMessageFromJson`) against the three
+  JSONL fixture files to produce a deterministic `test-fixtures/seed.db`.
+- Timestamps are re-based to a fixed anchor window (2024-05-31 12:00 UTC →
+  2024-06-01 12:00 UTC) so tests always see messages within a known time range.
+- Alert terms `WN4899`, `N8560Z`, `XA0001` are seeded before message insertion so
+  `addMessageFromJson` matches them in real-time.
+- Timeseries stats generated at all four resolutions (1min/5min/1hour/6hour) using
+  the same deterministic sine/cosine waves as the RRD fixture.
+- `test-fixtures/seed.db.meta.json` sidecar committed alongside the binary.
+- `.gitignore` updated with `!test-fixtures/seed.db` exception.
+- `just seed-test-db` regenerates the fixture when needed.
+
+**Corpus stats**: 1 144 messages, 46 alert-matched messages (WN4899×46,
+N8560Z×37, XA0001×9 individual term hits), 4 536 timeseries rows.
 
 #### 4.3 Add core user flow E2E tests
 
@@ -1884,7 +1905,7 @@ The following metrics define "done" for each phase.
 - [x] `just ci` passes with all 1059 tests green
 - [x] Debounce timer leak in `SearchPage` fixed as a by-product of writing tests
 
-### Phase 4 (E2E) — In Progress
+### Phase 4 (E2E) — In Progress (seed DB complete)
 
 - [x] Docker Playwright infrastructure working (`just test-e2e-docker` executes all 265 tests)
 - [x] All 5 browser projects enabled: Chromium, Firefox, WebKit, Mobile Chrome, Mobile Safari
@@ -1909,6 +1930,8 @@ The following metrics define "done" for each phase.
 - [ ] Mobile flows covered at 375px and 768px viewports (GAP-E2E-8)
 - [x] Total E2E test count ≥ 80 active — **67 active tests × 5 browsers = 335 slots** (301 pass,
       34 skipped for known issues/browser-specific gaps; Session 7)
+- [x] Seed database committed: `test-fixtures/seed.db` (1 144 messages, 46 alert matches,
+      3 alert terms, 4 536 timeseries rows) — `just seed-test-db` regenerates it
 
 ### Phase 5 (Full-Stack)
 
