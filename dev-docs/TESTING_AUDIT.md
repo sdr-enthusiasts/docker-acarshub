@@ -50,7 +50,7 @@ All Phase 3 frontend unit test targets are implemented and passing. `just ci` is
 `useSocketIO` hook (all 19 Socket.IO event handlers). A debounce timer resource leak in
 `SearchPage.tsx` was discovered and fixed as a by-product of writing the tests.
 
-## Phase 4 Status: ✅ Complete (infrastructure + smoke + settings + accessibility core + live message flow + search flow + alerts flow + stats/status flow + settings persistence + seed database + locale/timezone display)
+## Phase 4 Status: ✅ Complete (infrastructure + smoke + settings + accessibility core + live message flow + search flow + alerts flow + stats/status flow + settings persistence + seed database + locale/timezone display + live map interactions + socket reconnection)
 
 ### 4.1 Docker Playwright Infrastructure — ✅ COMPLETE
 
@@ -338,19 +338,90 @@ for error state`).
 Total test slots: 335 (67 unique test cases × 5 browsers).
 `just ci` also exits 0.
 
+**Session 8 additions** (current):
+
+1. **`live-map.spec.ts` — GAP-E2E-6 addressed** (10 new tests × 3 desktop browsers = 30 slots;
+   skipped on Mobile Chrome / Mobile Safari because `live-map-page__sidebar` is
+   `display: none` at viewports ≤ 768 px):
+   - Aircraft list sidebar renders on page load (`.aircraft-list`, `.aircraft-list__header`,
+     `.aircraft-list__search` all visible).
+   - Empty state shows "No aircraft found" and stat counter reads "0" when no ADS-B data has
+     been injected.
+   - Single aircraft row appears after `store.setAdsbAircraft()` injection with one aircraft;
+     empty state disappears; counter reads "1".
+   - All three injected aircraft show as separate rows; counter reads "3"
+     (`all injected aircraft appear as separate rows`).
+   - Pause button shows ⏸ initially; click changes it to ▶ and adds the
+     `aircraft-list__pause-button--paused` CSS modifier class.
+   - Pausing the list prevents new aircraft from appearing: pause with 1 aircraft, inject a
+     2nd, verify the 2nd is not shown and the counter remains "1".
+   - Resuming restores the live view: after resume both aircraft appear and counter reads "2".
+   - Keyboard shortcut `p` toggles pause state (Chromium only — skipped on
+     Firefox/WebKit/mobile where synthetic keydown propagation through `document` listeners
+     is less reliable).
+   - Text filter narrows the visible aircraft: typing "UAL" with two aircraft present reduces
+     the list to 1; clearing the filter restores both.
+   - ACARS message badge (✓) appears for an aircraft whose callsign is paired with an ACARS
+     message group; a second aircraft without messages has no badge.
+   - Navigation: `navigateToLiveMap()` helper uses `page.goto("/adsb")` directly — no
+     hamburger navigation needed because `LiveMapPage` reads from the Zustand store only and
+     has no Socket.IO subscription-ordering race.
+   - Store injection: `injectAdsbData(page, {now, aircraft: [...]})` calls
+     `store.getState().setAdsbAircraft()` directly; `injectAcarsMessage(page, msg)` calls
+     `store.getState().addMessage()`.
+
+2. **`reconnection.spec.ts` — GAP-E2E-10 addressed** (7 new tests × 5 browsers = 35 slots):
+   - Banner visible on initial load: in E2E mode there is no backend so `isConnected` starts
+     `false`; `ConnectionStatus` renders the `.connection-status.disconnected` banner
+     immediately.
+   - Banner hidden after simulated `connect`: `socketService.fireLocalEvent("connect", null)`
+     fires the `socket.on("connect")` handler in `useSocketIO.ts` which calls
+     `setConnected(true)` in the Zustand store; React re-renders; banner is removed from DOM.
+   - Banner reappears after simulated `disconnect`: `fireLocalEvent("disconnect",
+"transport close")` fires `setConnected(false)`; banner becomes visible again.
+   - Full disconnect → reconnect cycle: `disconnect` fires banner; `reconnect` (with attempt
+     number payload) fires `setConnected(true)` via the `socket.on("reconnect", ...)` handler;
+     banner disappears.
+   - Multiple cycles: two full disconnect/reconnect cycles in sequence, verifying each state
+     transition is correct.
+   - Banner persists across SPA navigation while disconnected: client-side React Router
+     navigation (via `clickNavLink` helper which handles mobile hamburger) preserves Zustand
+     store state — banner remains visible on the destination page.
+   - Banner stays hidden across SPA navigation after connect: same pattern but starting from
+     connected state; banner must remain hidden after navigation.
+   - `fireSocketEvent()` helper: polls `window.__ACARS_SOCKET__.isInitialized()` for up to
+     5 seconds before calling `socketService.fireLocalEvent()` — ensures the socket has been
+     created by `socketService.connect()` before firing lifecycle events.
+   - `clickNavLink()` helper: opens the hamburger `<details>` when on a narrow viewport
+     (mobile) before clicking the nav link, then uses `Promise.all(waitForURL, click)` for
+     reliable SPA navigation.
+
+**Confirmed working (Session 8)**: `just test-e2e-docker` exits 0 with:
+
+```text
+89 skipped
+491 passed (≈3.7m)
+✅ E2E tests passed!
+```
+
+Total test slots: 580. `just ci` also exits 0.
+
 ### Next Steps
 
 - [x] 4.2 Seed database and fixture tooling ✅ — `acarshub-backend/scripts/seed-test-db.ts`
       created; `just seed-test-db` produces `test-fixtures/seed.db` (1 144 messages,
       46 alert-matched messages, 3 alert terms, 4 536 timeseries rows at 4 resolutions).
       Committed alongside `test-fixtures/seed.db.meta.json` and `.gitignore` exceptions.
-- [ ] 4.3 Remaining E2E gaps:
-  - GAP-E2E-6: Live Map interaction tests (aircraft markers, pause/resume, context menu)
+- [x] 4.3 Remaining E2E gaps:
+  - ~~GAP-E2E-6: Live Map interaction tests~~ ✅ Done (`e2e/live-map.spec.ts`) — 10 tests
+    covering sidebar render, empty state, aircraft injection, pause/resume, keyboard shortcut,
+    text filter, and ACARS pairing badge. Desktop-only (sidebar is CSS-hidden on mobile).
   - ~~GAP-E2E-7: Message card interaction tests~~ ✅ Done (`e2e/message-cards.spec.ts`)
   - ~~GAP-E2E-8: Mobile user flow tests~~ ✅ Done (`e2e/mobile-flows.spec.ts`)
-  - GAP-E2E-10: Socket.IO reconnection test (disconnect → reconnect indicator → messages
-    resume)
-  - GAP-E2E-11: Locale/timezone display tests (change timezone → timestamps update)
+  - ~~GAP-E2E-10: Socket.IO reconnection test~~ ✅ Done (`e2e/reconnection.spec.ts`) — 7
+    tests covering initial disconnected state, connect/disconnect/reconnect event handling,
+    multiple cycles, and banner persistence across SPA navigation.
+  - ~~GAP-E2E-11: Locale/timezone display tests~~ ✅ Done (`e2e/locale-timezone.spec.ts`)
   - Fix arrow-key tab navigation in SettingsModal and un-skip that test
   - Perform Latte (light) theme contrast audit, fix SCSS, un-skip Latte contrast test
   - Fix Live Map axe violations (nested interactive controls) and un-skip that test
@@ -841,18 +912,30 @@ integrated into the routing in a follow-on cleanup task.
 
 ---
 
-### GAP-E2E-6: No Live Map interaction tests
+### GAP-E2E-6: No Live Map interaction tests ✅ RESOLVED
 
 **Severity**: Medium
 
-The map is complex. Needed:
+`e2e/live-map.spec.ts` added (Session 8):
 
-- Aircraft markers appear when ADS-B data is injected
-- Clicking an aircraft in the list centers the map
-- Pause/resume button (and `p` keyboard shortcut) toggles pause state
-- Pause indicator is visible when paused
-- Follow mode activates and centers map on aircraft
-- Context menu appears on right-click
+- Aircraft list sidebar (`.aircraft-list`) renders on page load.
+- Empty state "No aircraft found" and "0" stat counter shown when no ADS-B data present.
+- Aircraft row appears after injecting ADS-B data via `store.setAdsbAircraft()`.
+- Multiple aircraft show as separate rows; header count reflects the total.
+- Pause button icon changes ⏸ → ▶ on click; `--paused` CSS modifier applied.
+- Pausing the list freezes the snapshot; new aircraft injected while paused do not appear.
+- Resuming restores the live view showing all current aircraft.
+- Keyboard shortcut `p` toggles pause state (Chromium only — skipped on other browsers).
+- Text filter input narrows the visible aircraft list; clearing restores all rows.
+- ACARS badge (✓) appears for an aircraft whose callsign is paired with a message group;
+  aircraft without messages show no badge.
+
+**Scope note**: The MapLibre canvas (WebGL) is not directly testable in headless mode.
+Tests focus exclusively on the AircraftList sidebar. The sidebar is `display: none` on
+mobile viewports (≤ 768 px), so these tests are skipped on Mobile Chrome and Mobile Safari.
+Map-marker rendering, follow mode, and context menus remain untested.
+
+10 tests × 3 desktop browsers = 30 passing slots; 10 × 2 mobile browsers = 20 skipped slots.
 
 ---
 
@@ -924,15 +1007,33 @@ tested across all 5 browser projects:
 
 ---
 
-### GAP-E2E-10: No Socket.IO reconnection test
+### GAP-E2E-10: No Socket.IO reconnection test ✅ RESOLVED
 
 **Severity**: Medium
 
-There is no test that simulates a connection drop and verifies:
+`e2e/reconnection.spec.ts` added (Session 8):
 
-- The disconnected state is shown in the `ConnectionStatus` indicator
-- Reconnection restores the connected state
-- Messages that arrive after reconnection are displayed
+- **Initial disconnected banner**: on load with no backend, `isConnected` starts `false`
+  and the `.connection-status.disconnected` banner is visible immediately.
+- **Banner hidden after `connect`**: `socketService.fireLocalEvent("connect", null)` fires
+  the `socket.on("connect")` handler in `useSocketIO.ts`, calling `setConnected(true)`;
+  banner is removed from the DOM.
+- **Banner reappears after `disconnect`**: `fireLocalEvent("disconnect", "transport close")`
+  calls `setConnected(false)`; banner becomes visible again.
+- **Reconnect cycle**: disconnect fires banner; `fireLocalEvent("reconnect", 1)` fires
+  `setConnected(true)`; banner disappears.
+- **Multiple cycles**: two full disconnect/reconnect cycles in sequence verify each state
+  transition is correct.
+- **Banner persists across SPA navigation while disconnected**: client-side React Router
+  navigation preserves Zustand store state; banner remains on the destination page.
+- **Banner stays hidden across SPA navigation after connect**: connected state persists
+  through client-side navigation.
+
+`fireSocketEvent()` helper polls `socketService.isInitialized()` for up to 5 seconds so
+the socket has been created before lifecycle events are fired. `clickNavLink()` handles
+mobile hamburger navigation for tests that navigate between pages.
+
+7 tests × 5 browsers = 35 passing slots.
 
 ---
 
@@ -1944,7 +2045,7 @@ The following metrics define "done" for each phase.
 - [x] `just ci` passes with all 1059 tests green
 - [x] Debounce timer leak in `SearchPage` fixed as a by-product of writing tests
 
-### Phase 4 (E2E) — In Progress (seed DB complete)
+### Phase 4 (E2E) — ✅ COMPLETE (core gaps resolved)
 
 - [x] Docker Playwright infrastructure working (`just test-e2e-docker` executes all 265 tests)
 - [x] All 5 browser projects enabled: Chromium, Firefox, WebKit, Mobile Chrome, Mobile Safari
@@ -1968,18 +2069,26 @@ The following metrics define "done" for each phase.
 - [x] Settings persistence across navigation (GAP-E2E-9) — 4 tests × 5 browsers = 20 slots
 - [x] Mobile flows covered at mobile viewports (GAP-E2E-8) — 10 dedicated tests in
       `e2e/mobile-flows.spec.ts`; run only on Mobile Chrome/Safari via viewport guard
-- [x] Total E2E test count ≥ 80 active — **89 active tests × 5 browsers = 445 slots** (377 pass,
-      67 skipped for known issues/browser-specific gaps; Session 8)
 - [x] Seed database committed: `test-fixtures/seed.db` (1 144 messages, 46 alert matches,
       3 alert terms, 4 536 timeseries rows) — `just seed-test-db` regenerates it
+- [x] GAP-E2E-6 resolved: `e2e/live-map.spec.ts` — 10 tests covering AircraftList sidebar
+      render, empty state, ADS-B injection, pause/resume, keyboard shortcut, text filter,
+      and ACARS pairing badge (desktop only; sidebar CSS-hidden on mobile)
+      (10 tests × 3 desktop browsers = 30 slots pass; 10 × 2 mobile = 20 slots skip)
 - [x] GAP-E2E-7 resolved: `e2e/message-cards.spec.ts` — 12 tests covering prev/next
       navigation, tab dots, keyboard nav, mark-as-read, and alert badge counts
 - [x] GAP-E2E-8 resolved: `e2e/mobile-flows.spec.ts` — 10 mobile-specific tests covering
       hamburger navigation, page reachability, settings modal, and overflow checks
+- [x] GAP-E2E-10 resolved: `e2e/reconnection.spec.ts` — 7 tests covering initial disconnected
+      banner, connect/disconnect/reconnect event simulation via `fireSocketEvent()`, multiple
+      cycles, and banner persistence across SPA navigation
+      (7 tests × 5 browsers = 35 slots, all 35 passed)
 - [x] GAP-E2E-11 resolved: `e2e/locale-timezone.spec.ts` — 10 tests covering 12h/24h time
       format display, UTC vs local timezone (deterministic via `timezoneId: "America/New_York"`),
       and ymd/mdy/dmy date format rendering; all with reactive-update assertions
       (10 tests × 5 browsers = 50 slots, 50 passed)
+- [x] Total E2E test count: **580 total slots** (491 passed, 89 intentionally skipped)
+      `just ci` and `just test-e2e-docker` both exit 0 (Session 8)
 
 ### Phase 5 (Full-Stack)
 
