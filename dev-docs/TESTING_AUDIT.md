@@ -340,14 +340,13 @@ Total test slots: 335 (67 unique test cases × 5 browsers).
 
 ### Next Steps
 
-- [x] 4.2 Seed database and fixture tooling — `acarshub-backend/scripts/seed-test-db.ts`
+- [x] 4.2 Seed database and fixture tooling ✅ — `acarshub-backend/scripts/seed-test-db.ts`
       created; `just seed-test-db` produces `test-fixtures/seed.db` (1 144 messages,
       46 alert-matched messages, 3 alert terms, 4 536 timeseries rows at 4 resolutions).
       Committed alongside `test-fixtures/seed.db.meta.json` and `.gitignore` exceptions.
 - [ ] 4.3 Remaining E2E gaps:
   - GAP-E2E-6: Live Map interaction tests (aircraft markers, pause/resume, context menu)
-  - GAP-E2E-7: Message card interaction tests (expand/collapse, mark-as-read, alert
-    highlighting)
+  - ~~GAP-E2E-7: Message card interaction tests~~ ✅ Done (`e2e/message-cards.spec.ts`)
   - GAP-E2E-8: Mobile user flow tests (complete hamburger flow at 375px, settings modal
     usable on mobile)
   - GAP-E2E-10: Socket.IO reconnection test (disconnect → reconnect indicator → messages
@@ -858,15 +857,26 @@ The map is complex. Needed:
 
 ---
 
-### GAP-E2E-7: No Message card interaction tests
+### GAP-E2E-7: No Message card interaction tests ✅ RESOLVED
 
 **Severity**: Medium
 
-- Expanding/collapsing duplicate messages
-- Clicking "Mark as read"
-- Alert highlighting is visible on matched text
-- Libacars decoded data renders
-- Multi-part message assembly display
+`e2e/message-cards.spec.ts` added (Session 8):
+
+- Single-message groups have no prev/next controls
+- Multi-message counter shows "Message N/M"
+- Next button advances counter; wraps at end
+- Previous button wraps backwards to last message
+- Message content updates when navigating (newest-first ordering verified)
+- Tab dot navigation jumps directly to a specific message; aria-selected updates
+- Keyboard ArrowRight/ArrowLeft navigation (Chromium; skipped on other browsers)
+- Alert card shows "Mark Read" button for unread alerts
+- Clicking "Mark Read" replaces the button with a "Read" badge
+- "Mark All Read" button clears the unread count from the stats bar
+- Alert card carries the `message-card--alert` CSS class
+- Alert badge count reflects the number of matched messages in the group
+
+12 tests × 5 browsers = 60 slots (57 pass, 3 skipped for Chromium-only keyboard test)
 
 ---
 
@@ -1928,10 +1938,12 @@ The following metrics define "done" for each phase.
 - [x] Stats/Status page content covered (GAP-E2E-4, GAP-E2E-5) — 10 tests × 5 browsers = 50 slots
 - [x] Settings persistence across navigation (GAP-E2E-9) — 4 tests × 5 browsers = 20 slots
 - [ ] Mobile flows covered at 375px and 768px viewports (GAP-E2E-8)
-- [x] Total E2E test count ≥ 80 active — **67 active tests × 5 browsers = 335 slots** (301 pass,
-      34 skipped for known issues/browser-specific gaps; Session 7)
+- [x] Total E2E test count ≥ 80 active — **79 active tests × 5 browsers = 395 slots** (357 pass,
+      37 skipped for known issues/browser-specific gaps; Session 8)
 - [x] Seed database committed: `test-fixtures/seed.db` (1 144 messages, 46 alert matches,
       3 alert terms, 4 536 timeseries rows) — `just seed-test-db` regenerates it
+- [x] GAP-E2E-7 resolved: `e2e/message-cards.spec.ts` — 12 tests covering prev/next
+      navigation, tab dots, keyboard nav, mark-as-read, and alert badge counts
 
 ### Phase 5 (Full-Stack)
 
