@@ -27,5 +27,5 @@ jobs:
           nix develop -c bash -c '
             cd acarshub-react
             npm i
-            just ci-e2e
+            just ci
           '

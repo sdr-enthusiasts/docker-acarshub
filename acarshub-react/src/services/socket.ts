@@ -480,9 +480,42 @@ class SocketService {
     socketLogger.debug("Notifying backend of page change", { page });
     this.socket?.emit("page_change", { page });
   }
+
+  /**
+   * Simulate receiving a server-to-client event locally.
+   *
+   * Fires all handlers registered via `socket.on(event, ...)` without sending
+   * anything over the network. Only available in E2E builds (`VITE_E2E=true`).
+   *
+   * Implementation detail: `@socket.io/component-emitter` stores callbacks in
+   * `_callbacks["$<event>"]`. We read that map and call each callback directly
+   * so the component under test reacts exactly as it would to a real server event.
+   */
+  fireLocalEvent(event: string, data: unknown): void {
+    if (!this.socket) {
+      socketLogger.warn("fireLocalEvent called before socket was initialised");
+      return;
+    }
+    const cbs: ((...args: unknown[]) => void)[] =
+      // biome-ignore lint/suspicious/noExplicitAny: Accessing @socket.io/component-emitter internals for E2E test injection
+      (this.socket as any)._callbacks?.["$" + event] ?? [];
+    for (const cb of [...cbs]) {
+      cb(data);
+    }
+  }
 }
 
 // Export singleton instance
 export const socketService = new SocketService();
 
 socketLogger.info("Socket service module loaded");
+
+/**
+ * Expose socket service on window for E2E Playwright tests.
+ * Only compiled in when the build is created with `VITE_E2E=true`
+ * (set by `just test-e2e-docker`). Tree-shaken away in normal production builds.
+ */
+if (import.meta.env.VITE_E2E === "true") {
+  // @ts-expect-error - Required for E2E testing window exposure
+  window.__ACARS_SOCKET__ = socketService;
+}
