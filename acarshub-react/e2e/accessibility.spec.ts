@@ -48,6 +48,27 @@ async function injectDecoderState(page: Page): Promise<boolean> {
 }
 
 /**
+ * Force all running CSS animations and transitions to their completed end state.
+ *
+ * The Settings modal's `.settings-panel` uses a 0.2s `fadeIn` animation
+ * (opacity 0 → 1).  When axe runs while the panel is at partial opacity the
+ * browser compositor blends the element with its backdrop, producing colours
+ * that axe measures as low-contrast — even though the final, fully-opaque
+ * colours satisfy WCAG AA.  Calling `Animation.finish()` on every live
+ * animation instantly advances them to their `to` keyframe before the scan.
+ *
+ * This must be called after the modal/tab is visible but before AxeBuilder
+ * analyzes the page.
+ */
+async function finishAnimations(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    for (const animation of document.getAnimations()) {
+      animation.finish();
+    }
+  });
+}
+
+/**
  * Accessibility Testing Suite
  *
  * Tests WCAG 2.1 AA compliance using axe-core across all pages.
@@ -190,6 +211,12 @@ test.describe("Accessibility - Settings Modal", () => {
     await page.getByRole("button", { name: /settings/i }).click();
     await expect(page.getByRole("dialog")).toBeVisible();
 
+    // The initial Appearance tab panel plays a 0.2s fadeIn animation.  Axe
+    // running mid-animation sees composited (blended) colours at partial opacity
+    // that fail contrast checks even though the final colours are accessible.
+    // Finish all animations first so axe scans the fully-rendered state.
+    await finishAnimations(page);
+
     // Run axe accessibility scan
     const accessibilityScanResults = await new AxeBuilder({ page })
       .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
@@ -218,6 +245,8 @@ test.describe("Accessibility - Settings Modal", () => {
       // Click the tab using role-based selector
       await page.getByRole("tab", { name: tabName }).click();
       await page.waitForTimeout(300); // Wait for tab content to render
+      // Each tab switch replays the fadeIn animation; finish it before scanning.
+      await finishAnimations(page);
 
       // Run axe scan
       const accessibilityScanResults = await new AxeBuilder({ page })
@@ -502,6 +531,9 @@ test.describe("Accessibility - Form Controls", () => {
     // Open Settings — button has text "Settings", no aria-label attribute
     await page.getByRole("button", { name: /settings/i }).click();
     await expect(page.getByRole("dialog")).toBeVisible();
+
+    // Finish the fadeIn animation on the initial panel before axe scans.
+    await finishAnimations(page);
 
     // Check all form controls
     const accessibilityScanResults = await new AxeBuilder({ page })

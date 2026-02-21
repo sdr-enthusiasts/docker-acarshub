@@ -170,6 +170,81 @@ export interface ClientToServerEvents {
 export type TypedSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 
 /**
+ * Mock Socket implementation used when VITE_E2E=true.
+ *
+ * Replaces the real Socket.IO connection during Playwright E2E test runs where
+ * there is no backend to connect to.  Without this, every browser worker hammers
+ * the non-existent backend with reconnection attempts, producing thousands of
+ * connect_error log entries that make it impossible to reason about actual test
+ * failures.
+ *
+ * The callback store mirrors the @socket.io/component-emitter internal format
+ * (`_callbacks["$<event>"]`) so that `SocketService.fireLocalEvent()` keeps
+ * working without any changes — it already reads that map directly.
+ *
+ * Methods intentionally implement only the subset used by SocketService and
+ * useSocketIO; the cast `new MockSocket() as unknown as TypedSocket` in
+ * connect() covers the gap to the full Socket type.
+ */
+class MockSocket {
+  // Mirrors @socket.io/component-emitter internals consumed by fireLocalEvent()
+  // biome-ignore lint/suspicious/noExplicitAny: intentional internal storage, matches socket.io-client emitter shape
+  _callbacks: Record<string, Array<(...args: any[]) => void>> = {};
+
+  // Initial state — starts disconnected (no backend in E2E)
+  connected = false;
+  disconnected = true;
+  id: string | undefined = undefined;
+
+  // Minimal manager stub.  setupConnectionHandlers() calls
+  // this.socket.io.on("reconnect_attempt", ...) and
+  // this.socket.io.on("reconnect_failed", ...) for logging; those events
+  // never fire from a mock so the handlers can safely be discarded.
+  // biome-ignore lint/suspicious/noExplicitAny: mimics socket.io Manager shape without pulling in the full type
+  io: any = {
+    on: (_event: string, _handler: (...args: unknown[]) => void): void => {
+      // no-op — manager events are never emitted by the mock
+    },
+    uri: "mock://e2e-test",
+    engine: {
+      transport: { name: "mock" },
+    },
+  };
+
+  on(event: string, handler: (...args: unknown[]) => void): this {
+    const key = `$${event}`;
+    if (!this._callbacks[key]) {
+      this._callbacks[key] = [];
+    }
+    this._callbacks[key].push(handler);
+    return this;
+  }
+
+  off(event: string, handler?: (...args: unknown[]) => void): this {
+    const key = `$${event}`;
+    if (!handler) {
+      // Remove all handlers for this event
+      this._callbacks[key] = [];
+    } else {
+      this._callbacks[key] = (this._callbacks[key] ?? []).filter(
+        (cb) => cb !== handler,
+      );
+    }
+    return this;
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: emit must accept any payload shape to satisfy call sites
+  emit(_event: string, ..._args: any[]): this {
+    // no-op — client-to-server events are silently dropped in E2E mode
+    return this;
+  }
+
+  disconnect(): this {
+    return this;
+  }
+}
+
+/**
  * Socket.IO Service
  * Manages WebSocket connection to ACARS Hub backend
  */
@@ -189,6 +264,23 @@ class SocketService {
       if (!this.socket) {
         throw new Error("Socket is initializing but instance is null");
       }
+      return this.socket;
+    }
+
+    // E2E mode: substitute a no-network mock so Playwright test runs do not
+    // produce thousands of connect_error log entries against a non-existent
+    // backend.  The mock stores handlers in the same _callbacks["$<event>"]
+    // format that fireLocalEvent() reads, so all test injection helpers
+    // (fireSocketEvent, emitSearchResults, etc.) continue to work unchanged.
+    if (import.meta.env.VITE_E2E === "true") {
+      if (!this.socket) {
+        socketLogger.info(
+          "[E2E] Creating mock socket — no backend connection will be attempted",
+        );
+        this.socket = new MockSocket() as unknown as TypedSocket;
+        this.setupConnectionHandlers();
+      }
+      this.isInitializing = false;
       return this.socket;
     }
 
