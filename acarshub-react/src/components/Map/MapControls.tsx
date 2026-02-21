@@ -31,10 +31,13 @@ import { faPlay } from "@fortawesome/free-solid-svg-icons/faPlay";
 import { faStar } from "@fortawesome/free-solid-svg-icons/faStar";
 import { useAppStore } from "../../store/useAppStore";
 import { useSettingsStore } from "../../store/useSettingsStore";
+import { createLogger } from "../../utils/logger";
 import { GeoJSONOverlayButton } from "./GeoJSONOverlayButton";
 import { MapControlButton } from "./MapControlButton";
 import { MapFiltersMenu } from "./MapFiltersMenu";
 import { MapProviderSelector } from "./MapProviderSelector";
+
+const logger = createLogger("MapControls");
 
 /**
  * Handle ACARS filter toggle with mutual exclusivity
@@ -164,7 +167,7 @@ export function MapControls({
           active={mapSettings.useSprites}
           onClick={() => {
             const newValue = !mapSettings.useSprites;
-            console.log("[MapControls] Toggling sprites:", {
+            logger.debug("Toggling sprites", {
               from: mapSettings.useSprites,
               to: newValue,
             });
