@@ -1770,33 +1770,591 @@ Update the `ci-e2e` target in `justfile` to use the Docker-based runner.
 
 ### Phase 5: Full-Stack Integration Tests
 
-**Estimated effort**: 5–8 days
-**Dependency**: Phase 4 complete. Docker infrastructure set up.
+**Estimated effort**: 8–12 days
+**Dependency**: Phase 4 complete. Seed database committed. Docker infrastructure working.
+**Strategic goal**: Validate complete API parity between the Node.js backend and the
+Python backend it replaces, so that Python can be removed from the codebase entirely.
 
-#### 5.1 Backend Socket.IO integration tests
+The existing handler unit tests in `handlers.test.ts` mock every dependency. They prove
+the handler logic is correct in isolation but they cannot prove that the real server,
+real database, real enrichment pipeline, and real Socket.IO transport produce the correct
+wire format. Phase 5 closes that gap with two layers:
 
-Create a test that:
+1. **Backend integration tests** — Vitest + `socket.io-client` against a real Fastify server
+   booted with the seed DB. Every API endpoint exercised. Response shapes asserted against
+   the documented Python wire format.
 
-1. Boots the actual Fastify + Socket.IO server with a seeded test database
-2. Connects a real `socket.io-client` to it
-3. Verifies the full connect sequence (all events received in order)
-4. Sends `query_search`, `update_alerts`, `request_status`, and verifies responses
-5. Verifies error responses for malformed inputs
+2. **Full-stack Playwright E2E** — Real Docker container (Node.js backend + nginx +
+   React frontend) + Playwright. The browser talks to the real stack; tests assert that
+   data from the seed DB reaches the UI correctly.
 
-#### 5.2 Full-stack Playwright tests (frontend + backend)
+---
 
-Create a separate Playwright project (`e2e/integration/`) that:
+#### 5.0 Prerequisites
 
-1. Starts the Node.js backend with the seed database (via Docker Compose)
-2. Starts nginx to serve the frontend
-3. Runs Playwright against the full stack
+Before writing any Phase 5 tests:
 
-Full-stack test scenarios:
+**Add `socket.io-client` to backend devDependencies:**
 
-- Connect → messages appear in Live Messages
-- Search → results come from real database
-- Update alert terms → alerts regenerate and appear in Alerts page
-- Stats page → charts render with real timeseries data from seed DB
+```bash
+cd acarshub-backend && npm i -D socket.io-client
+```
+
+`socket.io-client` is the only new dependency needed. The seed DB at
+`test-fixtures/seed.db` is already committed and contains:
+
+- 1,430 messages spanning ACARS, VDL-M2, and HFDL decoders
+- 46 alert matches across 3 known terms: `WN4899`, `N8560Z`, `XA0001`
+- 4,536 timeseries rows across 4 resolutions (1min, 5min, 1hour, 6hour)
+
+**Add `acars_msg_batch` and `alert_matches_batch` to shared types:**
+
+The `SocketEvents` interface in `acarshub-types/src/socket.ts` is missing two events
+that both the Python backend and Node backend emit during the connect sequence. They are
+currently emitted with `@ts-expect-error` in `handlers.ts`. Fix this before writing
+integration tests so the client-side listener types are sound:
+
+```typescript
+// Add to SocketEvents in acarshub-types/src/socket.ts
+acars_msg_batch: (data: {
+  messages: AcarsMsg[];
+  loading: boolean;
+  done_loading: boolean;
+}) => void;
+alert_matches_batch: (data: {
+  messages: AcarsMsg[];
+  loading: boolean;
+  done_loading: boolean;
+}) => void;
+```
+
+Remove the two `@ts-expect-error` comments in `handlers.ts` after the types are updated.
+
+---
+
+#### 5.1 Backend Socket.IO Integration Tests
+
+Create `acarshub-backend/src/socket/__tests__/integration.test.ts`.
+
+**Test harness pattern** — boot the real server on an ephemeral port, connect with a
+real `socket.io-client`, collect all emitted events, then shut down:
+
+```typescript
+import { createServer } from "node:http";
+import { AddressInfo } from "node:net";
+import { io as ioc } from "socket.io-client";
+import { initDatabase, closeDatabase } from "../../db/index.js";
+import { runMigrations } from "../../db/migrate.js";
+import { initializeSocketServer } from "../index.js";
+import Fastify from "fastify";
+
+async function createTestServer(dbPath: string) {
+  process.env.ACARSHUB_DB = dbPath;
+  runMigrations();
+  initDatabase();
+  // ... initialize alert cache, message counts etc.
+  const fastify = Fastify({ logger: false });
+  await fastify.listen({ port: 0, host: "127.0.0.1" }); // port 0 = ephemeral
+  const { port } = fastify.server.address() as AddressInfo;
+  const io = initializeSocketServer(fastify.server);
+  return { fastify, io, port };
+}
+```
+
+Use `SEED_DB_PATH = path.resolve("../test-fixtures/seed.db")` for the database path. Copy
+the seed DB to a temp path before each test suite (so tests that mutate state — like
+`update_alerts` — do not corrupt the shared fixture).
+
+All integration tests live in a single `describe("Socket.IO integration")` block with
+`beforeAll` / `afterAll` for server lifecycle and `beforeEach` for client creation.
+
+##### 5.1.1 Connect sequence shape validation
+
+On `connection`, the backend emits 9 distinct events (plus N `acars_msg_batch` chunks
+and N `alert_matches_batch` chunks). Assert all of them:
+
+| Event                 | Expected shape                                                                                                       | Seed DB assertion                                                                                    |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `features_enabled`    | `{acars, vdlm, hfdl, imsl, irdm, allow_remote_updates, adsb: {enabled, lat, lon, range_rings}}` — all boolean/number | All fields present, types correct                                                                    |
+| `terms`               | `{terms: string[], ignore: string[]}`                                                                                | Matches 3 seed alert terms                                                                           |
+| `labels`              | `{labels: {[id: string]: {name: string}}}`                                                                           | At least 1 label key                                                                                 |
+| `acars_msg_batch`     | `{messages: AcarsMsg[], loading: boolean, done_loading: boolean}`                                                    | Total across all chunks equals seed non-alert message count; `done_loading=true` on final chunk only |
+| `database`            | `{count: number, size: number}`                                                                                      | `count` matches seed row count (~1,430)                                                              |
+| `signal`              | `{levels: {[decoder: string]: [{level, count}]}}`                                                                    | At least one decoder key present                                                                     |
+| `alert_terms`         | `{data: {[index: number]: {count: number, id: number, term: string}}}`                                               | 3 entries matching seed alert terms                                                                  |
+| `alert_matches_batch` | `{messages: AcarsMsg[], loading: boolean, done_loading: boolean}`                                                    | Total across all chunks equals 46 (seed alert match count); each message has `matched: true`         |
+| `acarshub_version`    | `{container_version: string, github_version: string, is_outdated: boolean}`                                          | All fields present, types correct                                                                    |
+
+**Message shape assertions** (assert on individual `AcarsMsg` items from batch):
+
+Each enriched message in `acars_msg_batch` or `alert_matches_batch` MUST:
+
+- Have `timestamp` (not `time`)
+- Have `text` (not `msg_text`) when text is present
+- Have `message_type` (not `messageType`) — camelCase converted to snake_case
+- Have `station_id` (not `stationId`)
+- Have `icao_hex` when `icao` is present — 6-character uppercase hex string
+- Have `label_type` when `label` is present
+- Have `toaddr_hex` and optionally `toaddr_decoded` when `toaddr` is present
+- Have `fromaddr_hex` and optionally `fromaddr_decoded` when `fromaddr` is present
+- Have `airline`, `iata_flight`, `icao_flight`, `flight_number` when `flight` is present
+- NOT have any `null` or `""` value fields (they are pruned by `enrichMessage`)
+
+##### 5.1.2 query_search — all field variants
+
+The `query_search` event is the most complex endpoint. Test every filter field
+independently, then in combination, to ensure the search plumbing from Socket.IO
+through `databaseSearch` to enrichment back out is correct.
+
+**Response shape** (assert on every test):
+
+```text
+{
+  msghtml: AcarsMsg[],    // enriched messages
+  query_time: number,     // seconds (not milliseconds)
+  num_results: number,    // total matching rows (not just returned page)
+}
+```
+
+**Field-by-field tests** (all use known values from seed DB):
+
+| Test name               | Input `search_term` field                 | Expected outcome                                                                |
+| ----------------------- | ----------------------------------------- | ------------------------------------------------------------------------------- |
+| by `flight`             | `{flight: "WN4899"}`                      | ≥1 result; all have `flight` containing `WN4899`                                |
+| by `tail`               | `{tail: "N8560Z"}`                        | ≥1 result; all have `tail` matching                                             |
+| by `icao`               | `{icao: <known hex from seed>}`           | ≥1 result; all have matching `icao_hex`                                         |
+| by `station_id`         | `{station_id: <station from seed>}`       | ≥1 result                                                                       |
+| by `depa`               | `{depa: <departure from seed>}`           | ≥1 result                                                                       |
+| by `dsta`               | `{dsta: <destination from seed>}`         | ≥1 result                                                                       |
+| by `msg_text`           | `{msg_text: <substring from seed>}`       | ≥1 result                                                                       |
+| by `label`              | `{label: <label from seed>}`              | ≥1 result; all have matching `label`                                            |
+| by `freq`               | `{freq: <freq from seed>}`                | ≥1 result                                                                       |
+| by `msgno`              | `{msgno: <msgno from seed>}`              | ≥1 result                                                                       |
+| by `msg_type = "ACARS"` | `{msg_type: "ACARS"}`                     | All results have `message_type: "ACARS"`                                        |
+| by `msg_type = "VDLM2"` | `{msg_type: "VDLM2"}`                     | All results have `message_type: "VDL-M2"` — verifies VDLM2→VDL-M2 normalization |
+| by `msg_type = "IMSL"`  | `{msg_type: "IMSL"}`                      | All results have `message_type: "IMS-L"` — verifies IMSL→IMS-L normalization    |
+| empty search            | `{}` all fields empty                     | `num_results = 0`, `msghtml = []`                                               |
+| `show_all` flag         | `show_all: true` with empty `search_term` | Returns all messages (same as no filter); `num_results` > 0                     |
+| pagination page 0       | `results_after: 0`                        | Returns first 50 results                                                        |
+| pagination page 1       | `results_after: 1`                        | Returns next 50 results; different UIDs than page 0                             |
+| pagination beyond end   | `results_after: 9999`                     | `msghtml = []` but `num_results` still reflects total                           |
+
+**Message shape** — all messages in results must pass the same enrichment assertions
+listed in 5.1.1. In particular:
+
+- No `msg_text` key (renamed to `text`)
+- No `time` key (renamed to `timestamp`)
+- No `messageType` key (renamed to `message_type`)
+- `icao_hex` present when `icao` is present
+
+##### 5.1.3 update_alerts and regenerate_alert_matches
+
+**`update_alerts`**:
+
+```typescript
+// Test A: ALLOW_REMOTE_UPDATES=true (default)
+// Client A sends update_alerts with new terms
+// Both Client A and Client B receive the updated `terms` broadcast
+it("broadcasts updated terms to ALL connected clients", async () => {
+  const clientA = connectToServer(port);
+  const clientB = connectToServer(port);
+  await awaitConnect([clientA, clientB]);
+  const newTerms = { terms: ["TESTTERM1"], ignore: ["TESTIGNORE1"] };
+  clientA.emit("update_alerts", newTerms, "/main");
+  const received = await waitForEvent(clientB, "terms");
+  expect(received.terms).toContain("TESTTERM1");
+});
+
+// Test B: ALLOW_REMOTE_UPDATES=false
+// No broadcast, no update
+it("silently ignores update when ALLOW_REMOTE_UPDATES=false", async () => {
+  // Set config to disallow remote updates
+  // Verify terms event is NOT emitted to any client
+});
+```
+
+**`regenerate_alert_matches`** (use a temp copy of seed DB — this is destructive):
+
+```typescript
+// Test A: Success path
+// Emits regenerate_alert_matches_started immediately
+// Emits regenerate_alert_matches_complete after processing
+// Broadcasts updated alert_terms to all clients after completion
+it("emits started → complete and broadcasts alert_terms on success", ...);
+
+// Test B: Concurrent lock
+// Second request while first is running → regenerate_alert_matches_error
+it("rejects concurrent regeneration with error event", ...);
+
+// Test C: Remote updates disabled
+// Emits regenerate_alert_matches_error immediately
+it("emits error when ALLOW_REMOTE_UPDATES=false", ...);
+```
+
+##### 5.1.4 Remaining query handlers
+
+**`request_status` → `system_status`**:
+
+```typescript
+{
+  status: {
+    error_state: boolean,
+    decoders: { [name: string]: { Status: string, Connected?: boolean, Alive?: boolean } },
+    servers: { [name: string]: { Status: string, Messages: number } },
+    global: { [name: string]: { Status: string, Count: number, LastMinute?: number } },
+    stats: Record<string, never>,           // always empty in Node backend
+    external_formats: Record<string, never>, // always empty in Node backend
+    errors: { Total: number, LastMinute: number },
+    threads: { database: boolean, scheduler: boolean },
+  }
+}
+```
+
+Assert: `error_state` is boolean; `decoders` keys include at least "ACARS", "VDLM2",
+"HFDL"; `errors.Total` ≥ 0.
+
+**`signal_freqs` → `signal_freqs`**:
+
+```typescript
+{
+  freqs: Array<{ freq_type: string; freq: string; count: number }>;
+}
+```
+
+Assert: `freqs` is an array; each item has all three fields with correct types.
+
+**`signal_count` → `signal_count`**:
+
+```typescript
+{
+  count: {
+    non_empty_total: number,
+    non_empty_errors: number,
+    empty_total: number,
+    empty_errors: number,
+  }
+}
+```
+
+Assert: all four fields present and non-negative.
+
+**`signal_graphs` → `alert_terms` + `signal`**:
+
+Note a **behavioral difference from Python**: Python's `request_graphs` broadcasts
+`signal` to the entire `/main` namespace (no `to=requester` argument) while targeting
+`alert_terms` to the requester only. The Node backend's `handleSignalGraphs` uses
+`socket.emit()` for both — targeted to the requester only. This is a confirmed
+divergence. Document it in `API_PARITY.md` (see 5.2). The integration test must
+assert the Node behavior (both events targeted, not broadcast) and document the
+known difference with a comment.
+
+**`rrd_timeseries` → `rrd_timeseries_data`**:
+
+Test all 8 valid `time_period` values and the invalid case:
+
+```typescript
+const VALID_PERIODS = [
+  "1hr",
+  "6hr",
+  "12hr",
+  "24hr",
+  "1wk",
+  "30day",
+  "6mon",
+  "1yr",
+];
+for (const period of VALID_PERIODS) {
+  it(`returns data for time_period="${period}"`, async () => {
+    // Assert shape: { data: RRDTimeseriesPoint[], time_period, start, end, points }
+    // Assert points > 0 (seed DB has timeseries data)
+    // Assert each point has: timestamp (ms), acars, vdlm, hfdl, imsl, irdm, total, error
+    // Assert timestamp is in milliseconds (> 1e12), not seconds (< 1e10)
+  });
+}
+it("returns error for invalid time_period", async () => {
+  // Assert: { error: "Invalid time period: badperiod", data: [] }
+});
+```
+
+For the explicit `{start, end, downsample}` variant (no `time_period`), assert the
+same response shape.
+
+**`query_alerts_by_term` → `alerts_by_term_results`**:
+
+```typescript
+{
+  term: string,
+  messages: AcarsMsg[],
+  total_count: number,
+  page: number,
+  query_time: number,  // seconds
+}
+```
+
+Tests:
+
+- Known term `"WN4899"` → ≥1 result; all messages have `matched: true` and
+  `matched_flight` or `matched_tail` containing `"WN4899"`
+- Unknown term `"ZZZZZZZ"` → `total_count: 0`, `messages: []`
+- Empty term `""` → `total_count: 0`, `messages: []`
+- Pagination: page 0 vs page 1 return different message sets
+
+**`alert_term_query` → `database_search_results`**:
+
+Same response shape as `query_search`. Assert that passing `{icao, flight, tail}` for
+a known aircraft returns its messages.
+
+##### 5.1.5 Error handling and edge cases
+
+- All handlers must not crash the server when passed `null`, `undefined`, or
+  unexpected types in the payload.
+- `query_search` with an entirely empty `search_term` object should return
+  `{msghtml: [], num_results: 0, query_time: <number>}` without error.
+- `rrd_timeseries` with `time_period: "INVALID"` must emit `rrd_timeseries_data`
+  with `{error: "...", data: []}` and NOT crash.
+- `update_alerts` with missing `terms` or `ignore` keys should not throw.
+
+##### 5.1.6 Missing Python handlers — gap inventory
+
+Two Python socket handlers are **not implemented** in the Node backend:
+
+| Python event            | Python handler                                                                | Node status       | Impact                                                                                     |
+| ----------------------- | ----------------------------------------------------------------------------- | ----------------- | ------------------------------------------------------------------------------------------ |
+| `request_recent_alerts` | `handle_recent_alerts_request` → emits `recent_alerts` with `{alerts: [...]}` | ❌ Not registered | Frontend may send this on Alerts page load to refresh. Check `useSocketIO` hook for usage. |
+| `reset_alert_counts`    | `reset_alert_counts` → broadcasts `alert_terms`                               | ❌ Not registered | Frontend reset button on Alerts page. Check for usage.                                     |
+
+**Action required before Python removal**:
+
+1. Search the frontend for any `socket.emit("request_recent_alerts", ...)` or
+   `socket.emit("reset_alert_counts", ...)` calls.
+2. If used: implement the missing handlers in the Node backend.
+3. If unused: document the drop as intentional in `API_PARITY.md`.
+
+Run-time evidence: during Phase 4 E2E testing, the Alerts page functioned correctly
+against the frontend-only mock socket. This does not confirm the missing handlers are
+unused — the mock socket may have silently swallowed the unhandled events.
+
+---
+
+#### 5.2 API Parity Document
+
+Create `dev-docs/API_PARITY.md`. This document is the formal validation evidence for
+the Python removal decision. It must exist before Python is removed.
+
+Contents:
+
+1. **Event inventory table** — every Socket.IO event in both directions with Python
+   source location, Node source location, and parity status (✅ identical / ⚠️ known
+   difference / ❌ missing).
+
+2. **Known behavioral differences** — documented deviations between Python and Node
+   wire formats that are intentional or acceptable:
+   - `signal_graphs`: Python broadcasts `signal` to all clients; Node targets requester
+   - `rrd_timeseries_data`: Python includes `resolution` and `data_sources` fields from
+     RRD fetch; Node derives equivalent data from SQLite
+   - `acarshub_version.github_version`: Python fetches from GitHub API; Node returns
+     `container_version` for both (TODO, acceptable for initial Python removal)
+   - `alert_matches_batch` vs `recent_alerts`: Python emits `alert_matches_batch` on
+     connect AND handles `request_recent_alerts` → `recent_alerts`; Node emits only
+     `alert_matches_batch` on connect (no on-demand re-fetch handler)
+
+3. **Message enrichment parity** — side-by-side comparison of Python `update_keys()` and
+   Node `enrichMessage()` for every field transformation:
+   - `msg_text` → `text` ✅
+   - `time` → `timestamp` ✅
+   - ICAO decimal string → `icao_hex` uppercase hex ✅
+   - `toaddr` → `toaddr_hex` + `toaddr_decoded` ✅
+   - `flight` → `airline` + `iata_flight` + `icao_flight` + `flight_number` ✅
+   - `label` → `label_type` ✅
+   - Null/empty field pruning ✅
+
+4. **Confirmed safe to remove** — checklist of Python source files and what replaces each:
+
+   | Python file                               | Replaced by                                                 |
+   | ----------------------------------------- | ----------------------------------------------------------- |
+   | `rootfs/webapp/acarshub.py`               | `acarshub-backend/src/socket/handlers.ts` + `src/server.ts` |
+   | `rootfs/webapp/acarshub_helpers.py`       | `src/formatters/enrichment.ts` + `src/db/index.ts`          |
+   | `rootfs/webapp/acarshub_database.py`      | `src/db/queries/` + Drizzle ORM                             |
+   | `rootfs/webapp/acarshub_configuration.py` | `src/config.ts`                                             |
+   | `rootfs/webapp/acarshub_rrd_database.py`  | `src/services/rrd-migration.ts`                             |
+   | `rootfs/webapp/acars_formatter.py`        | `src/formatters/index.ts`                                   |
+   | `rootfs/webapp/acarshub_metrics.py`       | `src/services/metrics.ts`                                   |
+   | `rootfs/webapp/migrations/`               | `acarshub-backend/drizzle/`                                 |
+
+---
+
+#### 5.3 Docker Compose Test Infrastructure
+
+Create `docker-compose.test.yml` at the project root. The `just test-e2e-fullstack`
+target already references this file — it just doesn't exist yet.
+
+```yaml
+# docker-compose.test.yml
+# Used by: just test-e2e-fullstack
+# Purpose: Full-stack integration E2E — real Node.js backend + nginx + Playwright
+#
+# Build the test image first:
+#   docker build -f Node.Dockerfile -t ah:test .
+
+services:
+  backend:
+    image: ah:test
+    environment:
+      - ACARSHUB_DB=/run/acars/test-seed.db
+      - ENABLE_ACARS=true
+      - ENABLE_VDLM=true
+      - ENABLE_HFDL=true
+      - ALLOW_REMOTE_UPDATES=true
+      - PORT=8080
+      - MIN_LOG_LEVEL=3
+      - QUIET_MESSAGES=true
+    volumes:
+      - ./test-fixtures/seed.db:/run/acars/test-seed.db:ro
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "require('http').get('http://localhost:8080/health',(r)=>{process.exit(r.statusCode===200?0:1)})",
+        ]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+    ports:
+      - "8080:80" # nginx inside the image listens on 80
+
+  playwright:
+    image: mcr.microsoft.com/playwright:v1.58.2-noble
+    depends_on:
+      backend:
+        condition: service_healthy
+    working_dir: /work
+    volumes:
+      - ./acarshub-react:/work
+      - acarshub-integration-modules:/work/node_modules
+    environment:
+      - PLAYWRIGHT_BASE_URL=http://backend:80
+      - PLAYWRIGHT_DOCKER=true
+      - CI=true
+    command: >
+      bash -c "npm ci && npx playwright test e2e/integration/ --reporter=line"
+
+volumes:
+  acarshub-integration-modules:
+```
+
+**`Node.Dockerfile` test build** — add a `just` target for building the test image:
+
+```justfile
+# Build the Node.js Docker image for full-stack integration tests
+build-test-image:
+    @echo "Building Node.js Docker test image (ah:test)..."
+    docker build -f Node.Dockerfile -t ah:test .
+    @echo "✅ ah:test image built"
+```
+
+The `test-e2e-fullstack` target already exists in the justfile. Once
+`docker-compose.test.yml` is created and `ah:test` is built, it will work as-is.
+
+---
+
+#### 5.4 Full-Stack Playwright E2E Tests
+
+Create `acarshub-react/e2e/integration/` directory with the following spec files.
+These tests run only in the full-stack Docker Compose environment (not in frontend-only
+mode) because they require `PLAYWRIGHT_BASE_URL` to point at a real backend.
+
+Add a guard at the top of each integration spec:
+
+```typescript
+test.skip(
+  !process.env.PLAYWRIGHT_BASE_URL?.includes("backend"),
+  "Integration tests require full-stack Docker Compose environment",
+);
+```
+
+Or use a separate Playwright project in `playwright.config.ts` that only loads the
+`e2e/integration/` directory when `PLAYWRIGHT_BASE_URL` is set.
+
+**`e2e/integration/connect-sequence.spec.ts`** (3–4 tests):
+
+- Page loads and Live Messages page shows messages from the seed DB (no mock socket)
+- Message cards display real fields: `message_type`, `station_id`, `timestamp`
+- Alert badge in nav shows the seeded alert count (3 terms, 46 matches)
+- Alerts page shows alert messages with `matched_text` / `matched_flight` / `matched_tail`
+  badges populated
+
+**`e2e/integration/search-integration.spec.ts`** (4–5 tests):
+
+- Search by flight `WN4899` returns results from real DB
+- Search by message type "ACARS" returns only ACARS messages
+- Search by message type "VDLM" returns only VDL-M2 messages (verifies normalization visible in UI)
+- Pagination: page 2 shows different results than page 1
+- Empty search clears results
+
+**`e2e/integration/alerts-integration.spec.ts`** (3–4 tests):
+
+- Alerts page loads with real alert data from seed DB (46 matches visible)
+- Clicking an alert term opens the by-term view with real messages
+- Updating alert terms via Settings persists and reflects in the Alerts page
+  (requires `ALLOW_REMOTE_UPDATES=true` which is set in `docker-compose.test.yml`)
+
+**`e2e/integration/stats-integration.spec.ts`** (3–4 tests):
+
+- Stats page loads without errors
+- Time-series chart renders with real data (not "No data available" placeholder)
+- Switching between time periods (1hr, 24hr, 1wk) triggers new data and chart updates
+- Signal levels chart shows decoder data from seed DB
+
+---
+
+#### 5.5 CI Integration
+
+The `just test-e2e-fullstack` target and the `docker-compose.test.yml` are intended for
+local validation before Python removal. Full-stack tests are resource-intensive (requires
+building the Docker image) and are NOT added to the default `just ci` run.
+
+Add a separate GitHub Actions workflow `.github/workflows/fullstack-e2e.yml` that:
+
+- Triggers on `workflow_dispatch` (manual) and on PRs that touch `acarshub-backend/`
+  or `rootfs/` (i.e., backend or Python changes)
+- Builds the `ah:test` image
+- Runs `just test-e2e-fullstack`
+- Uploads Playwright report on failure
+
+```yaml
+name: Full-Stack Integration E2E
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "acarshub-backend/**"
+      - "rootfs/webapp/**"
+      - "Node.Dockerfile"
+      - "docker-compose.test.yml"
+
+jobs:
+  fullstack-e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Build test image
+        run: docker build -f Node.Dockerfile -t ah:test .
+      - name: Build React frontend
+        run: npm ci && npm run build --workspace=acarshub-react
+      - name: Run full-stack E2E tests
+        run: just test-e2e-fullstack
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: integration-playwright-report
+          path: acarshub-react/playwright-report/
+```
 
 ---
 
@@ -2148,14 +2706,87 @@ The following metrics define "done" for each phase.
 - [x] Total E2E test count: **580 total slots** (504 passed, 76 intentionally skipped)
       `just ci` and `just test-e2e-docker` both exit 0 (Session 9)
 
-### Phase 5 (Full-Stack)
+### Phase 5 (Full-Stack / API Parity for Python Removal)
 
-- [ ] `docker-compose.test.yml` exists and works locally
-- [ ] At least 10 full-stack integration tests passing
-- [ ] Full-stack tests run in GitHub Actions on pull requests
-- [ ] Socket.IO connect sequence validated with real backend
-- [ ] Search results validated end-to-end
-- [ ] Alert term updates validated end-to-end
+**Prerequisites**:
+
+- [ ] `socket.io-client` added to `acarshub-backend` devDependencies
+- [ ] `acars_msg_batch` and `alert_matches_batch` added to `SocketEvents` in shared types
+- [ ] `@ts-expect-error` comments removed from `handlers.ts` batch emits
+
+**5.1 Backend Socket.IO Integration Tests** (`integration.test.ts`):
+
+- [ ] Real Fastify + Socket.IO server boots with seed DB in test harness
+- [ ] Connect sequence: all 9 on-connect events received with correct shapes
+- [ ] `acars_msg_batch` total across chunks equals seed non-alert message count
+- [ ] `alert_matches_batch` total across chunks equals 46 (seed alert match count)
+- [ ] Every enriched `AcarsMsg` in batches: has `timestamp` not `time`; has `text` not
+      `msg_text`; has `message_type` not `messageType`; has `icao_hex` when ICAO present;
+      no `null`/`""` value fields
+- [ ] `query_search`: all 11 filter fields tested with known seed DB values
+- [ ] `query_search`: VDLM2 → VDL-M2 normalization verified via `message_type` in results
+- [ ] `query_search`: IMSL → IMS-L normalization verified
+- [ ] `query_search`: `show_all` flag returns all messages
+- [ ] `query_search`: pagination (`results_after: 0` vs `results_after: 1`) returns different UIDs
+- [ ] `update_alerts`: broadcast verified — second connected client receives `terms` update
+- [ ] `update_alerts`: silently ignores when `ALLOW_REMOTE_UPDATES=false`
+- [ ] `regenerate_alert_matches`: emits `started` then `complete`; broadcasts `alert_terms` after
+- [ ] `regenerate_alert_matches`: rejects concurrent request with error event
+- [ ] `request_status`: `system_status` shape validated (all 7 top-level keys present)
+- [ ] `signal_freqs`: shape validated; each freq item has `freq_type`, `freq`, `count`
+- [ ] `signal_count`: all 4 count fields present and non-negative
+- [ ] `signal_graphs`: both `alert_terms` and `signal` emitted; behavioral difference
+      vs Python (socket-targeted vs broadcast) documented in `API_PARITY.md`
+- [ ] `rrd_timeseries`: all 8 valid periods return data with correct shape
+- [ ] `rrd_timeseries`: invalid period returns `{error: "...", data: []}`
+- [ ] `rrd_timeseries`: timestamps are in milliseconds (> 1e12), not seconds
+- [ ] `query_alerts_by_term`: known term returns messages with `matched: true`; pagination works
+- [ ] `query_alerts_by_term`: unknown term returns `total_count: 0`; empty term returns `total_count: 0`
+- [ ] `alert_term_query`: returns `database_search_results` shape
+- [ ] Error handling: no handler crashes server on `null`/`undefined` payload
+- [ ] Missing Python handlers investigated: `request_recent_alerts` and `reset_alert_counts`
+      either implemented or documented as intentionally dropped in `API_PARITY.md`
+- [ ] Total integration test count: ≥ 35 passing tests in `integration.test.ts`
+
+**5.2 API Parity Document**:
+
+- [ ] `dev-docs/API_PARITY.md` created
+- [ ] Event inventory table: every Socket.IO event with Python location, Node location,
+      and parity status (✅ / ⚠️ / ❌)
+- [ ] Known behavioral differences section written (at minimum: `signal_graphs` broadcast,
+      `acarshub_version.github_version`, `request_recent_alerts` on-demand re-fetch)
+- [ ] Message enrichment parity table: every `update_keys()` → `enrichMessage()` field
+- [ ] "Confirmed safe to remove" checklist: Python file → Node replacement mapping
+
+**5.3 Docker Compose Infrastructure**:
+
+- [ ] `docker-compose.test.yml` created at project root
+- [ ] `just build-test-image` target added to justfile
+- [ ] `just test-e2e-fullstack` runs successfully end-to-end locally
+- [ ] Backend container health check passes before Playwright starts
+
+**5.4 Full-Stack Playwright E2E**:
+
+- [ ] `acarshub-react/e2e/integration/` directory created
+- [ ] `connect-sequence.spec.ts`: ≥ 3 tests — messages appear, alert badge shows, timestamps render
+- [ ] `search-integration.spec.ts`: ≥ 4 tests — all search variants, pagination, empty state
+- [ ] `alerts-integration.spec.ts`: ≥ 3 tests — real alerts load, by-term view, term update
+- [ ] `stats-integration.spec.ts`: ≥ 3 tests — chart renders real data, period switching works
+- [ ] Total full-stack E2E slot count: ≥ 13 tests (single browser project for integration tests)
+
+**5.5 CI**:
+
+- [ ] `.github/workflows/fullstack-e2e.yml` created
+- [ ] Triggers on `workflow_dispatch` and PRs touching backend or Python files
+- [ ] Playwright report uploaded as artifact on failure
+
+**Final gate — Python removal readiness**:
+
+- [ ] All Phase 5 tests passing
+- [ ] `API_PARITY.md` reviewed and approved
+- [ ] No unresolved ❌ items in the event inventory table
+- [ ] `rootfs/webapp/` directory can be deleted without breaking any test in `just ci`
+      or `just test-e2e-fullstack`
 
 ---
 
