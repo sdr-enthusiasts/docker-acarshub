@@ -1,5 +1,5 @@
 {
-  "generated": "2026-02-20T16:00:09.138Z",
+  "generated": "2026-02-21T18:41:08.749Z",
   "anchorStartUnix": 1717156800,
   "anchorEndUnix": 1717243200,
   "anchorStartIso": "2024-05-31T12:00:00.000Z",
@@ -9,7 +9,11 @@
     "skipped": 0,
     "alertMatches": 46
   },
-  "alertTerms": ["WN4899", "N8560Z", "XA0001"],
+  "alertTerms": [
+    "WN4899",
+    "N8560Z",
+    "XA0001"
+  ],
   "ignoreTerms": [],
   "timeseries": {
     "total": 4536,

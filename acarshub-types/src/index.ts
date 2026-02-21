@@ -68,6 +68,7 @@ export type {
 } from "./search.js";
 // Re-export all Socket.IO event types
 export type {
+  MsgBatchPayload,
   RRDTimeseriesData,
   RRDTimeseriesPoint,
   SocketEmitEvents,

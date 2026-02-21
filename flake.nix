@@ -81,6 +81,8 @@
             "secrets.yaml"
             "Logo-Sources"
             ".*.mp3"
+            ".*.db"
+            ".*.rrd"
           ];
         };
       });

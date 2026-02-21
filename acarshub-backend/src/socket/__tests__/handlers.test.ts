@@ -1158,7 +1158,7 @@ describe("handleQueryAlertsByTerm", () => {
 });
 
 // ---------------------------------------------------------------------------
-// handleSignalGraphs (via @ts-expect-error socket.on)
+// handleSignalGraphs
 // ---------------------------------------------------------------------------
 
 describe("handleSignalGraphs", () => {
@@ -1175,7 +1175,7 @@ describe("handleSignalGraphs", () => {
     const socket = makeMockSocket();
     simulateConnect(socket);
 
-    // signal_graphs is registered via @ts-expect-error in the handler
+    // signal_graphs is registered as a typed handler (signal_graphs is in SocketEmitEvents)
     const handler = socket.handlers.signal_graphs;
     expect(handler).toBeDefined();
     handler();

@@ -23,7 +23,7 @@
  */
 
 import type { ADSBData, Adsb } from "./adsb.js";
-import type { HtmlMsg, Labels } from "./messages.js";
+import type { AcarsMsg, HtmlMsg, Labels } from "./messages.js";
 import type {
   AlertsByTermResults,
   CurrentSearch,
@@ -86,6 +86,21 @@ export interface SocketEvents {
   // Alert matches (initial load from database)
   alert_matches: (data: HtmlMsg) => void;
 
+  // Batch message events — emitted during connect sequence (mirrors Python wire format)
+  acars_msg_batch: (data: {
+    messages: AcarsMsg[];
+    loading: boolean;
+    done_loading: boolean;
+  }) => void;
+  alert_matches_batch: (data: {
+    messages: AcarsMsg[];
+    loading: boolean;
+    done_loading: boolean;
+  }) => void;
+
+  // On-demand recent alerts response (Python: request_recent_alerts → recent_alerts)
+  recent_alerts: (data: { alerts: AcarsMsg[] }) => void;
+
   // Search results
   database_search_results: (data: SearchHtmlMsg) => void;
 
@@ -134,6 +149,15 @@ export interface SocketEvents {
 }
 
 /**
+ * Batch message payload shared by acars_msg_batch and alert_matches_batch
+ */
+export interface MsgBatchPayload {
+  messages: AcarsMsg[];
+  loading: boolean;
+  done_loading: boolean;
+}
+
+/**
  * Events emitted to backend (client → server)
  * These are the events that the frontend emits and the backend handles
  */
@@ -147,6 +171,10 @@ export interface SocketEmitEvents {
   regenerate_alert_matches: () => void;
   signal_freqs: () => void;
   signal_count: () => void;
+  // Request fresh signal graph data (Python: request_graphs → alert_terms + signal)
+  signal_graphs: () => void;
+  // Request recent alert matches on demand (Python: request_recent_alerts → recent_alerts)
+  request_recent_alerts: () => void;
   alert_term_query: (params: {
     icao: string;
     flight: string;

@@ -104,9 +104,8 @@ export function registerHandlers(io: TypedSocketServer): void {
     socket.on("rrd_timeseries", (params) =>
       handleRRDTimeseries(socket, params),
     );
-    // Note: signal_graphs is not in SocketEmitEvents but Python supports it
-    // @ts-expect-error - Python backend supports this event
     socket.on("signal_graphs", () => handleSignalGraphs(socket));
+    socket.on("request_recent_alerts", () => handleRequestRecentAlerts(socket));
 
     socket.on("disconnect", (reason) => {
       logger.info("Client disconnected", {
@@ -220,8 +219,6 @@ function handleConnect(socket: TypedSocket, _io: TypedSocketServer): void {
       const isLastChunk = i + chunkSize >= totalMessages;
 
       // Send as batch with loading indicators
-      // Note: acars_msg_batch is not in SocketEvents but Python sends it
-      // @ts-expect-error - Python backend sends this event
       socket.emit("acars_msg_batch", {
         messages: chunk,
         loading: true,
@@ -286,8 +283,6 @@ function handleConnect(socket: TypedSocket, _io: TypedSocketServer): void {
       const chunk = recentAlerts.slice(i, i + chunkSize);
       const isLastChunk = i + chunkSize >= totalAlerts;
 
-      // Note: alert_matches_batch is not in SocketEvents but Python sends it
-      // @ts-expect-error - Python backend sends this event
       socket.emit("alert_matches_batch", {
         messages: chunk,
         loading: true,
@@ -791,6 +786,49 @@ function handleSignalGraphs(socket: TypedSocket): void {
     logger.debug("Signal graphs data sent", { socketId: socket.id });
   } catch (error) {
     logger.error("Failed to send signal graphs", {
+      socketId: socket.id,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+/**
+ * Handle request_recent_alerts request
+ *
+ * Python implementation: acarshub.py handle_recent_alerts_request()
+ * Emits `recent_alerts` with all current alert matches to the requesting client.
+ *
+ * This is an on-demand refresh — the client asks for alerts after navigation
+ * or a page reload, so it receives the current alert cache without waiting
+ * for a full reconnect.
+ *
+ * @param socket - Socket.IO socket
+ */
+function handleRequestRecentAlerts(socket: TypedSocket): void {
+  try {
+    const recentAlertsRaw = searchAlerts(100, 0);
+    const alerts = recentAlertsRaw.map((alert) => {
+      const enriched = enrichMessage(alert.message);
+      enriched.matched = true;
+      enriched.matched_text =
+        alert.matchType === "text" ? [alert.term] : undefined;
+      enriched.matched_icao =
+        alert.matchType === "icao" ? [alert.term] : undefined;
+      enriched.matched_flight =
+        alert.matchType === "flight" ? [alert.term] : undefined;
+      enriched.matched_tail =
+        alert.matchType === "tail" ? [alert.term] : undefined;
+      return enriched;
+    });
+
+    socket.emit("recent_alerts", { alerts });
+
+    logger.debug("Recent alerts sent on demand", {
+      socketId: socket.id,
+      count: alerts.length,
+    });
+  } catch (error) {
+    logger.error("Failed to send recent alerts", {
       socketId: socket.id,
       error: error instanceof Error ? error.message : String(error),
     });
