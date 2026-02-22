@@ -102,27 +102,27 @@ export default defineConfig({
     proxy: {
       // Proxy Socket.IO requests to Flask backend (with base path support)
       "^/acarshub-test/socket.io": {
-        target: "http://localhost:8080",
+        target: "http://localhost:8888",
         changeOrigin: true,
         ws: true,
         rewrite: (path) => path.replace(/^\/acarshub-test/, ""),
       },
       // Fallback Socket.IO proxy (no base path)
       "^/socket.io": {
-        target: "http://localhost:8080",
+        target: "http://localhost:8888",
         changeOrigin: true,
         ws: true,
         rewrite: (path) => path,
       },
       // Proxy metrics endpoint (with base path support)
       "^/acarshub-test/metrics": {
-        target: "http://localhost:8080",
+        target: "http://localhost:8888",
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/acarshub-test/, ""),
       },
       // Fallback metrics proxy (no base path)
       "^/metrics": {
-        target: "http://localhost:8080",
+        target: "http://localhost:8888",
         changeOrigin: true,
       },
     },

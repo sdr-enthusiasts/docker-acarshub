@@ -744,7 +744,7 @@ describe("useAppStore", () => {
     it("should set ADSB status", () => {
       const adsbStatus = {
         online: true,
-        url: "http://localhost:8080",
+        url: "http://localhost:8888",
         adsb_enabled: true,
         adsb_getting_data: true,
       };

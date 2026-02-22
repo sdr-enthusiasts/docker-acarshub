@@ -16,9 +16,8 @@
     "nix",
     "github-actions",
     "dockerfile",
-    "pip_requirements",
-    "npm",
-    "pep621"
+    "docker-compose",
+    "npm"
   ],
   "prConcurrentLimit": 0,
   "prHourlyLimit": 0,
@@ -30,7 +29,7 @@
   },
   "packageRules": [
     {
-      "matchManagers": ["pip_requirements", "pep621", "npm"],
+      "matchManagers": ["npm"],
       "automerge": false
     },
     {

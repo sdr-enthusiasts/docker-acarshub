@@ -52,7 +52,7 @@ interface ServerConfig {
 }
 
 const config: ServerConfig = {
-  port: Number.parseInt(process.env.PORT ?? "8080", 10),
+  port: Number.parseInt(process.env.PORT ?? "8888", 10),
   host: process.env.HOST ?? "0.0.0.0",
   dbPath: process.env.ACARSHUB_DB ?? "./data/acarshub.db",
 };

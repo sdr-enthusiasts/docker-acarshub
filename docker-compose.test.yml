@@ -79,7 +79,7 @@ services:
     healthcheck:
       test:
         - CMD-SHELL
-        - curl -sf http://localhost:8080/health || exit 1
+        - curl -sf http://localhost:8888/health || exit 1
       interval: 3s
       timeout: 5s
       retries: 25

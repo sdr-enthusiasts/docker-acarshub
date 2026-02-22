@@ -1,10 +1,10 @@
 #!/command/with-contenv bash
 # shellcheck shell=bash
 #
-# ACARS Hub Docker Healthcheck Script
+# ACARS Hub Docker Healthcheck Script (Node.js variant)
 #
-# This script validates the health of all ACARS Hub components and is called by
-# Docker's HEALTHCHECK mechanism (see Dockerfile).
+# Identical to the Python healthcheck except that TCP connection checks look for
+# the 'node' process instead of 'python3', matching the Fastify/Socket.IO backend.
 #
 # What it checks:
 # 1. Decoder servers (ACARS, VDLM2, HFDL, IMSL, IRDM) - TCP listeners and connections
@@ -16,15 +16,6 @@
 # Exit codes:
 # 0 = HEALTHY   - All enabled services are running and processing messages
 # 1 = UNHEALTHY - One or more services failed, or no message activity detected
-#
-# Note on message activity checks:
-# Zero messages in the past hour will cause UNHEALTHY status. This is intentional
-# and validates end-to-end data flow, not just service availability. In low-traffic
-# areas, this may cause false alarms, but ensures the system is actually working.
-#
-# Conditional checks:
-# Each decoder type (ENABLE_ACARS, ENABLE_VDLM, etc.) is only checked if enabled.
-# Webapp checks only run if ENABLE_WEB is true.
 
 # Import healthchecks-framework
 # shellcheck disable=SC1091
@@ -38,13 +29,13 @@ source /scripts/acars_common
 # Default original codes
 EXITCODE=0
 
-# ===== Check imsl_server, imsl_feeder, imsl_stats processes =====
+# ===== Check irdm_server, irdm_feeder, irdm_stats processes =====
 
 if chk_enabled "${ENABLE_IRDM}"; then
 
     echo "==== Checking irdm_server ====="
 
-    # Check irdm_server is listening for TCP on 127.0.0.1:15558
+    # Check irdm_server is listening for TCP on 0.0.0.0:15558
     irdm_pidof_irdm_tcp_server=$(pgrep -f 'ncat -4 --keep-open --listen 0.0.0.0 15558')
     if ! check_tcp4_socket_listening_for_pid "0.0.0.0" "15558" "${irdm_pidof_irdm_tcp_server}"; then
         echo "irdm_server TCP not listening on port 15558 (pid $irdm_pidof_irdm_tcp_server): UNHEALTHY"
@@ -54,13 +45,13 @@ if chk_enabled "${ENABLE_IRDM}"; then
     fi
 
     if [[ ${ENABLE_WEB,,} =~ true ]]; then
-        if ! netstat -anp | grep -P "tcp\s+\d+\s+\d+\s+127.0.0.1:[0-9]+\s+127.0.0.1:15558\s+ESTABLISHED\s+[0-9]+/python3" >/dev/null 2>&1; then
-            echo "TCP4 connection between 127.0.0.1:ANY and 127.0.0.1:15558 for python3 established: FAIL"
-            echo "irdm_server TCP connected to python server on port 15558 (pid $irdm_pidof_irdm_tcp_server): UNHEALTHY"
+        if ! netstat -anp | grep -P "tcp\s+\d+\s+\d+\s+127.0.0.1:[0-9]+\s+127.0.0.1:15558\s+ESTABLISHED\s+[0-9]+/node" >/dev/null 2>&1; then
+            echo "TCP4 connection between 127.0.0.1:ANY and 127.0.0.1:15558 for node established: FAIL"
+            echo "irdm_server TCP connected to node server on port 15558 (pid $irdm_pidof_irdm_tcp_server): UNHEALTHY"
             EXITCODE=1
         else
-            echo "TCP4 connection between 127.0.0.1:ANY and 127.0.0.1:15558 for python3 established: PASS"
-            echo "irdm_server TCP connected to python server on port 15558: HEALTHY"
+            echo "TCP4 connection between 127.0.0.1:ANY and 127.0.0.1:15558 for node established: PASS"
+            echo "irdm_server TCP connected to node server on port 15558: HEALTHY"
         fi
     fi
 
@@ -79,9 +70,6 @@ if chk_enabled "${ENABLE_IRDM}"; then
 
     echo "==== Check for IRDM activity ====="
 
-    # Check for activity
-    # read .json files, ensure messages received in past hour
-
     irdm_num_msgs_past_hour=$(find /database -type f -name 'irdm.*.json' -cmin -60 -exec cat {} \; | sed -e 's/}{/}\n{/g' | wc -l)
     if [[ "$irdm_num_msgs_past_hour" -gt 0 ]]; then
         echo "$irdm_num_msgs_past_hour IRDM messages received in past hour: HEALTHY"
@@ -98,7 +86,7 @@ if chk_enabled "${ENABLE_IMSL}"; then
 
     echo "==== Checking imsl_server ====="
 
-    # Check imsl_server is listening for TCP on 127.0.0.1:15557
+    # Check imsl_server is listening for TCP on 0.0.0.0:15557
     imsl_pidof_imsl_tcp_server=$(pgrep -f 'ncat -4 --keep-open --listen 0.0.0.0 15557')
     if ! check_tcp4_socket_listening_for_pid "0.0.0.0" "15557" "${imsl_pidof_imsl_tcp_server}"; then
         echo "imsl_server TCP not listening on port 15557 (pid $imsl_pidof_imsl_tcp_server): UNHEALTHY"
@@ -108,13 +96,13 @@ if chk_enabled "${ENABLE_IMSL}"; then
     fi
 
     if [[ ${ENABLE_WEB,,} =~ true ]]; then
-        if ! netstat -anp | grep -P "tcp\s+\d+\s+\d+\s+127.0.0.1:[0-9]+\s+127.0.0.1:15557\s+ESTABLISHED\s+[0-9]+/python3" >/dev/null 2>&1; then
-            echo "TCP4 connection between 127.0.0.1:ANY and 127.0.0.1:15557 for python3 established: FAIL"
-            echo "imsl_server TCP connected to python server on port 15557 (pid $imsl_pidof_imsl_tcp_server): UNHEALTHY"
+        if ! netstat -anp | grep -P "tcp\s+\d+\s+\d+\s+127.0.0.1:[0-9]+\s+127.0.0.1:15557\s+ESTABLISHED\s+[0-9]+/node" >/dev/null 2>&1; then
+            echo "TCP4 connection between 127.0.0.1:ANY and 127.0.0.1:15557 for node established: FAIL"
+            echo "imsl_server TCP connected to node server on port 15557 (pid $imsl_pidof_imsl_tcp_server): UNHEALTHY"
             EXITCODE=1
         else
-            echo "TCP4 connection between 127.0.0.1:ANY and 127.0.0.1:15557 for python3 established: PASS"
-            echo "imsl_server TCP connected to python server on port 15557: HEALTHY"
+            echo "TCP4 connection between 127.0.0.1:ANY and 127.0.0.1:15557 for node established: PASS"
+            echo "imsl_server TCP connected to node server on port 15557: HEALTHY"
         fi
     fi
 
@@ -133,9 +121,6 @@ if chk_enabled "${ENABLE_IMSL}"; then
 
     echo "==== Check for IMSL activity ====="
 
-    # Check for activity
-    # read .json files, ensure messages received in past hour
-
     imsl_num_msgs_past_hour=$(find /database -type f -name 'imsl.*.json' -cmin -60 -exec cat {} \; | sed -e 's/}{/}\n{/g' | wc -l)
     if [[ "$imsl_num_msgs_past_hour" -gt 0 ]]; then
         echo "$imsl_num_msgs_past_hour IMSL messages received in past hour: HEALTHY"
@@ -152,7 +137,7 @@ if chk_enabled "${ENABLE_HFDL}"; then
 
     echo "==== Checking hfdl_server ====="
 
-    # Check hfdl_server is listening for TCP on 127.0.0.1:15556
+    # Check hfdl_server is listening for TCP on 0.0.0.0:15556
     hfdl_pidof_hfdl_tcp_server=$(pgrep -f 'ncat -4 --keep-open --listen 0.0.0.0 15556')
     if ! check_tcp4_socket_listening_for_pid "0.0.0.0" "15556" "${hfdl_pidof_hfdl_tcp_server}"; then
         echo "hfdl_server TCP not listening on port 15556 (pid $hfdl_pidof_hfdl_tcp_server): UNHEALTHY"
@@ -162,13 +147,13 @@ if chk_enabled "${ENABLE_HFDL}"; then
     fi
 
     if [[ ${ENABLE_WEB,,} =~ true ]]; then
-        if ! netstat -anp | grep -P "tcp\s+\d+\s+\d+\s+127.0.0.1:[0-9]+\s+127.0.0.1:15556\s+ESTABLISHED\s+[0-9]+/python3" >/dev/null 2>&1; then
-            echo "TCP4 connection between 127.0.0.1:ANY and 127.0.0.1:15556 for python3 established: FAIL"
-            echo "hfdl_server TCP connected to python server on port 15556 (pid $hfdl_pidof_hfdl_tcp_server): UNHEALTHY"
+        if ! netstat -anp | grep -P "tcp\s+\d+\s+\d+\s+127.0.0.1:[0-9]+\s+127.0.0.1:15556\s+ESTABLISHED\s+[0-9]+/node" >/dev/null 2>&1; then
+            echo "TCP4 connection between 127.0.0.1:ANY and 127.0.0.1:15556 for node established: FAIL"
+            echo "hfdl_server TCP connected to node server on port 15556 (pid $hfdl_pidof_hfdl_tcp_server): UNHEALTHY"
             EXITCODE=1
         else
-            echo "TCP4 connection between 127.0.0.1:ANY and 127.0.0.1:15556 for python3 established: PASS"
-            echo "hfdl_server TCP connected to python server on port 15556: HEALTHY"
+            echo "TCP4 connection between 127.0.0.1:ANY and 127.0.0.1:15556 for node established: PASS"
+            echo "hfdl_server TCP connected to node server on port 15556: HEALTHY"
         fi
     fi
 
@@ -187,9 +172,6 @@ if chk_enabled "${ENABLE_HFDL}"; then
 
     echo "==== Check for HFDL activity ====="
 
-    # Check for activity
-    # read .json files, ensure messages received in past hour
-
     hfdl_num_msgs_past_hour=$(find /database -type f -name 'hfdl.*.json' -cmin -60 -exec cat {} \; | sed -e 's/}{/}\n{/g' | wc -l)
     if [[ "$hfdl_num_msgs_past_hour" -gt 0 ]]; then
         echo "$hfdl_num_msgs_past_hour HFDL messages received in past hour: HEALTHY"
@@ -206,7 +188,7 @@ if chk_enabled "${ENABLE_VDLM}"; then
 
     echo "==== Checking vdlm2_server ====="
 
-    # Check vdlm2_server is listening for TCP on 127.0.0.1:15555
+    # Check vdlm2_server is listening for TCP on 0.0.0.0:15555
     vdlm2_pidof_vdlm2_tcp_server=$(pgrep -f 'ncat -4 --keep-open --listen 0.0.0.0 15555')
     if ! check_tcp4_socket_listening_for_pid "0.0.0.0" "15555" "${vdlm2_pidof_vdlm2_tcp_server}"; then
         echo "vdlm2_server TCP not listening on port 15555 (pid $vdlm2_pidof_vdlm2_tcp_server): UNHEALTHY"
@@ -216,13 +198,13 @@ if chk_enabled "${ENABLE_VDLM}"; then
     fi
 
     if [[ ${ENABLE_WEB,,} =~ true ]]; then
-        if ! netstat -anp | grep -P "tcp\s+\d+\s+\d+\s+127.0.0.1:[0-9]+\s+127.0.0.1:15555\s+ESTABLISHED\s+[0-9]+/python3" >/dev/null 2>&1; then
-            echo "TCP4 connection between 127.0.0.1:ANY and 127.0.0.1:15555 for python3 established: FAIL"
-            echo "vdlm2_server TCP connected to python server on port 15555 (pid $vdlm2_pidof_vdlm2_tcp_server): UNHEALTHY"
+        if ! netstat -anp | grep -P "tcp\s+\d+\s+\d+\s+127.0.0.1:[0-9]+\s+127.0.0.1:15555\s+ESTABLISHED\s+[0-9]+/node" >/dev/null 2>&1; then
+            echo "TCP4 connection between 127.0.0.1:ANY and 127.0.0.1:15555 for node established: FAIL"
+            echo "vdlm2_server TCP connected to node server on port 15555 (pid $vdlm2_pidof_vdlm2_tcp_server): UNHEALTHY"
             EXITCODE=1
         else
-            echo "TCP4 connection between 127.0.0.1:ANY and 127.0.0.1:15555 for python3 established: PASS"
-            echo "vdlm2_server TCP connected to python server on port 15555: HEALTHY"
+            echo "TCP4 connection between 127.0.0.1:ANY and 127.0.0.1:15555 for node established: PASS"
+            echo "vdlm2_server TCP connected to node server on port 15555: HEALTHY"
         fi
     fi
 
@@ -241,9 +223,6 @@ if chk_enabled "${ENABLE_VDLM}"; then
 
     echo "==== Check for VDLM2 activity ====="
 
-    # Check for activity
-    # read .json files, ensure messages received in past hour
-
     vdlm2_num_msgs_past_hour=$(find /database -type f -name 'vdlm2.*.json' -cmin -60 -exec cat {} \; | sed -e 's/}{/}\n{/g' | wc -l)
     if [[ "$vdlm2_num_msgs_past_hour" -gt 0 ]]; then
         echo "$vdlm2_num_msgs_past_hour VDLM2 messages received in past hour: HEALTHY"
@@ -260,7 +239,7 @@ if chk_enabled "${ENABLE_ACARS}"; then
 
     echo "==== Checking acars_server ====="
 
-    # Check acars_server is listening for TCP on 127.0.0.1:15550
+    # Check acars_server is listening for TCP on 0.0.0.0:15550
     acars_pidof_acars_tcp_server=$(pgrep -f 'ncat -4 --keep-open --listen 0.0.0.0 15550')
     if ! check_tcp4_socket_listening_for_pid "0.0.0.0" "15550" "${acars_pidof_acars_tcp_server}"; then
         echo "acars_server TCP not listening on port 15550 (pid $acars_pidof_acars_tcp_server): UNHEALTHY"
@@ -270,13 +249,13 @@ if chk_enabled "${ENABLE_ACARS}"; then
     fi
 
     if [[ ${ENABLE_WEB,,} =~ true ]]; then
-        if ! netstat -anp | grep -P "tcp\s+\d+\s+\d+\s+127.0.0.1:[0-9]+\s+127.0.0.1:15550\s+ESTABLISHED\s+[0-9]+/python3" >/dev/null 2>&1; then
-            echo "TCP4 connection between 127.0.0.1:ANY and 127.0.0.1:15550 for python3 established: FAIL"
-            echo "acars_server TCP not connected to python server on port 15550: UNHEALTHY"
+        if ! netstat -anp | grep -P "tcp\s+\d+\s+\d+\s+127.0.0.1:[0-9]+\s+127.0.0.1:15550\s+ESTABLISHED\s+[0-9]+/node" >/dev/null 2>&1; then
+            echo "TCP4 connection between 127.0.0.1:ANY and 127.0.0.1:15550 for node established: FAIL"
+            echo "acars_server TCP not connected to node server on port 15550: UNHEALTHY"
             EXITCODE=1
         else
-            echo "TCP4 connection between 127.0.0.1:ANY and 127.0.0.1:15550 for python3 established: PASS"
-            echo "acars_server TCP connected to python3 server on port 15550: HEALTHY"
+            echo "TCP4 connection between 127.0.0.1:ANY and 127.0.0.1:15550 for node established: PASS"
+            echo "acars_server TCP connected to node server on port 15550: HEALTHY"
         fi
     fi
 
@@ -295,8 +274,6 @@ if chk_enabled "${ENABLE_ACARS}"; then
 
     echo "==== Check for ACARS activity ====="
 
-    # Check for activity
-    # read .json files, ensure messages received in past hour
     acars_num_msgs_past_hour=$(find /database -type f -name 'acars.*.json' -cmin -60 -exec cat {} \; | sed -e 's/}{/}\n{/g' | wc -l)
     if [[ "$acars_num_msgs_past_hour" -gt 0 ]]; then
         echo "$acars_num_msgs_past_hour ACARS messages received in past hour: HEALTHY"
@@ -307,15 +284,12 @@ if chk_enabled "${ENABLE_ACARS}"; then
 
 fi
 
-# If ENABLE_VDLM or ENABLE_ACARS or ENABLE_HFDL or ENABLE_IMSL or ENABLE_IRDM is set:
+# If any decoder is enabled, check the webapp HTTP endpoint
 if chk_enabled "${ENABLE_ACARS}" || chk_enabled "${ENABLE_VDLM}" || chk_enabled "${ENABLE_HFDL}" || chk_enabled "${ENABLE_IMSL}" || chk_enabled "${ENABLE_IRDM}"; then
 
     echo "==== Check webapp ====="
 
-    # Check webapp HTTP endpoint is responding
-    # Note: We only check the main HTTP endpoint, not Socket.IO directly
-    # Probing /socket.io/ with curl triggers incomplete WebSocket handshakes
-    # which generate false "unsupported version" warnings in the logs
+    # Check webapp HTTP endpoint is responding (nginx -> Node.js Fastify backend)
     if curl --silent --fail --max-time 2 http://127.0.0.1:80/ >/dev/null 2>&1; then
         echo "webapp HTTP endpoint available: HEALTHY"
     else
