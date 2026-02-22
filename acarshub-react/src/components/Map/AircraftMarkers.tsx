@@ -15,7 +15,7 @@
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
 import { useEffect, useMemo, useState } from "react";
-import { Marker } from "react-map-gl/maplibre";
+import { Marker, useMap } from "react-map-gl/maplibre";
 import { useAppStore } from "../../store/useAppStore";
 import { useSettingsStore } from "../../store/useSettingsStore";
 import type { MessageGroup } from "../../types";
@@ -33,6 +33,7 @@ import {
   type PairedAircraft,
   pairADSBWithACARSMessages,
 } from "../../utils/aircraftPairing";
+import { mapLogger } from "../../utils/logger";
 import { getSpriteLoader } from "../../utils/spriteLoader";
 import { AircraftContextMenu } from "./AircraftContextMenu";
 import { AircraftMessagesModal } from "./AircraftMessagesModal";
@@ -75,6 +76,13 @@ interface AircraftMarkerData {
   spriteClass?: string;
   spriteFrames?: number[];
   spriteFrameTime?: number;
+}
+
+interface ViewportBounds {
+  north: number;
+  south: number;
+  east: number;
+  west: number;
 }
 
 interface TooltipState {
@@ -215,50 +223,87 @@ export function AircraftMarkers({
     useState<MessageGroup | null>(null);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [spriteLoadError, setSpriteLoadError] = useState(false);
+  const [viewportBounds, setViewportBounds] = useState<ViewportBounds | null>(
+    null,
+  );
+
+  // Access the MapLibre map instance to track viewport bounds
+  const { current: map } = useMap();
+
+  // Keep viewport bounds in sync with map movement for marker culling
+  useEffect(() => {
+    if (!map) return;
+
+    let rafId: number | null = null;
+
+    const updateBounds = () => {
+      // Throttle updates to once per animation frame
+      if (rafId !== null) return;
+      rafId = requestAnimationFrame(() => {
+        rafId = null;
+        const bounds = map.getBounds();
+        if (!bounds) return;
+        // Add a 10% buffer around the viewport edges to reduce marker pop-in
+        // when aircraft are just outside the visible area
+        const latBuffer = Math.abs(bounds.getNorth() - bounds.getSouth()) * 0.1;
+        const lngBuffer = Math.abs(bounds.getEast() - bounds.getWest()) * 0.1;
+        setViewportBounds({
+          north: bounds.getNorth() + latBuffer,
+          south: bounds.getSouth() - latBuffer,
+          east: bounds.getEast() + lngBuffer,
+          west: bounds.getWest() - lngBuffer,
+        });
+      });
+    };
+
+    // Capture initial bounds as soon as the map ref is available
+    updateBounds();
+
+    map.on("move", updateBounds);
+
+    return () => {
+      map.off("move", updateBounds);
+      if (rafId !== null) cancelAnimationFrame(rafId);
+    };
+  }, [map]);
 
   // Preload spritesheet on mount with timeout
   useEffect(() => {
-    console.log("[AircraftMarkers] Full map settings:", mapSettings);
-    console.log("[AircraftMarkers] useSprites setting:", useSprites);
+    mapLogger.debug("Map settings loaded", { mapSettings, useSprites });
     if (useSprites) {
       const loader = getSpriteLoader();
-      console.log(
-        "[AircraftMarkers] Sprite loader isLoaded:",
-        loader.isLoaded(),
-      );
+      mapLogger.debug("Sprite loader state", { isLoaded: loader.isLoaded() });
       if (!loader.isLoaded()) {
         // Set a timeout to prevent indefinite hanging
         const timeoutId = setTimeout(() => {
           if (!loader.isLoaded()) {
-            console.warn(
-              "[AircraftMarkers] Sprite loading timeout - continuing without sprites",
+            mapLogger.warn(
+              "Sprite loading timeout - continuing without sprites",
             );
             setSpriteLoadError(true);
           }
         }, 5000); // 5 second timeout
 
-        console.log("[AircraftMarkers] Starting sprite load...");
+        mapLogger.debug("Starting sprite load...");
         loader
           .load()
           .then(() => {
-            console.log(
-              "[AircraftMarkers] Sprite load SUCCESS, isLoaded:",
-              loader.isLoaded(),
-            );
+            mapLogger.debug("Sprite load succeeded", {
+              isLoaded: loader.isLoaded(),
+            });
             clearTimeout(timeoutId);
           })
-          .catch((err) => {
-            console.error(
-              "[AircraftMarkers] Failed to preload spritesheet:",
-              err,
-            );
+          .catch((err: unknown) => {
+            mapLogger.error("Failed to preload spritesheet", {
+              error: err instanceof Error ? err.message : String(err),
+            });
             clearTimeout(timeoutId);
             setSpriteLoadError(true);
           });
 
         return () => clearTimeout(timeoutId);
       } else {
-        console.log("[AircraftMarkers] Sprites already loaded");
+        mapLogger.debug("Sprites already loaded");
       }
     }
   }, [useSprites, mapSettings]);
@@ -333,16 +378,13 @@ export function AircraftMarkers({
     const spriteLoader =
       useSprites && !spriteLoadError ? getSpriteLoader() : null;
 
-    console.log(
-      "[AircraftMarkers] Building markers - useSprites:",
+    mapLogger.debug("Building aircraft markers", {
       useSprites,
-      "spriteLoadError:",
       spriteLoadError,
-      "spriteLoader:",
-      spriteLoader ? "present" : "null",
-      "isLoaded:",
-      spriteLoader?.isLoaded(),
-    );
+      spriteLoaderPresent: spriteLoader !== null,
+      spriteLoaderReady: spriteLoader?.isLoaded() ?? false,
+      totalAircraft: filteredPairedAircraft.length,
+    });
 
     for (const aircraft of filteredPairedAircraft) {
       // Skip aircraft without position
@@ -395,7 +437,7 @@ export function AircraftMarkers({
         let spriteResult = spriteLoader.getSprite(aircraft.type, categoryCode);
 
         if (markers.length === 0) {
-          console.log("[AircraftMarkers] First aircraft sprite lookup:", {
+          mapLogger.debug("First aircraft sprite lookup", {
             hex: aircraft.hex,
             type: aircraft.type,
             categoryCode,
@@ -481,7 +523,7 @@ export function AircraftMarkers({
       }
 
       if (markers.length === 0 && useSprites) {
-        console.log("[AircraftMarkers] First marker sprite data:", {
+        mapLogger.debug("First marker sprite data", {
           spriteName,
           hasSpritePosition: !!spritePosition,
           spriteClass,
@@ -498,7 +540,7 @@ export function AircraftMarkers({
 
       // Debug logging for rotation issues
       if (markers.length === 0) {
-        console.log("[AircraftMarkers] First aircraft rotation debug:", {
+        mapLogger.debug("First aircraft rotation", {
           hex: aircraft.hex,
           track: aircraft.track,
           trackType: typeof aircraft.track,
@@ -536,6 +578,45 @@ export function AircraftMarkers({
     groundAltitudeThreshold,
     spriteLoadError,
   ]);
+
+  // Filter aircraft markers to only those currently visible in the viewport.
+  // This is the primary performance optimisation: MapLibre's <Marker> creates real
+  // DOM nodes, so culling off-screen markers dramatically reduces DOM size when
+  // many aircraft are present.  A 10% lat/lng buffer is included so markers don't
+  // pop in abruptly at the viewport edge during a slow pan.
+  const visibleMarkers = useMemo(() => {
+    if (!viewportBounds) {
+      // Bounds not yet available (map still initialising) – render nothing to
+      // avoid a flash of every marker on first mount.
+      return [];
+    }
+
+    const visible = aircraftMarkers.filter((marker) => {
+      const inLat =
+        marker.lat >= viewportBounds.south &&
+        marker.lat <= viewportBounds.north;
+
+      // Handle antimeridian crossing: when west > east the viewport wraps
+      // around the ±180° line, so a point is in-range if it is east of west
+      // OR west of east.
+      const inLng =
+        viewportBounds.east >= viewportBounds.west
+          ? marker.lon >= viewportBounds.west &&
+            marker.lon <= viewportBounds.east
+          : marker.lon >= viewportBounds.west ||
+            marker.lon <= viewportBounds.east;
+
+      return inLat && inLng;
+    });
+
+    mapLogger.debug("Viewport culling result", {
+      total: aircraftMarkers.length,
+      visible: visible.length,
+      culled: aircraftMarkers.length - visible.length,
+    });
+
+    return visible;
+  }, [aircraftMarkers, viewportBounds]);
 
   // Handle marker click
   const handleMarkerClick = (aircraft: PairedAircraft) => {
@@ -597,7 +678,7 @@ export function AircraftMarkers({
 
   return (
     <>
-      {aircraftMarkers.map((markerData) => {
+      {visibleMarkers.map((markerData) => {
         return (
           <Marker
             key={markerData.hex}
