@@ -688,8 +688,10 @@
   align-items: center;
   justify-content: center;
   min-width: 20px;
-  height: 18px;
-  padding: 0 0.375rem;
+  height: 20px;
+  padding-top: 2px; // Vertically center the number within the badge
+  padding-left: 0.375rem;
+  padding-right: 0.375rem;
   background-color: var(--color-red);
   color: var(--color-base);
   font-weight: 600;
