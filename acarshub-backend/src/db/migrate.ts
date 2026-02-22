@@ -14,6 +14,21 @@
  * 7. 171fe2c07bd9 - create_alert_matches_table
  * 8. 40fd0618348d - final_v4_optimization
  * 9. a1b2c3d4e5f6 - add_timeseries_stats
+ *
+ * FTS Schema Integrity
+ * --------------------
+ * The messages_fts virtual table was originally created by the Python/pre-Alembic
+ * upgrade_db.py with only 8 indexed columns (depa, dsta, msg_text, tail, flight,
+ * icao, freq, label).  Both the Python Alembic migration 94d97e655180 and the
+ * TypeScript migration04_createFTS have a "skip if exists" guard, which means any
+ * database that went through Alembic with an existing 8-column FTS table kept the
+ * old schema and old triggers forever.
+ *
+ * verifyAndRepairFtsIfNeeded() runs unconditionally at the end of every
+ * runMigrations() call (i.e., every startup) and detects the stale schema by
+ * checking whether `message_type` appears in the sqlite_master sql for both the
+ * table and the insert trigger.  If either is missing it drops everything and
+ * rebuilds from scratch, then VACUUMs to reclaim shadow-table bloat.
  */
 
 import { randomUUID } from "node:crypto";
@@ -404,23 +419,77 @@ function migration03_splitFreqsTable(db: Database.Database): void {
   migrate();
 }
 
+// ---------------------------------------------------------------------------
+// FTS schema helpers — shared between migration04 and verifyAndRepairFtsIfNeeded
+// ---------------------------------------------------------------------------
+
 /**
- * Migration 4: Create FTS table and triggers (94d97e655180)
+ * Sentinel column that exists in the correct 31-column FTS schema but is
+ * absent in the legacy 8-column schema created by the pre-Alembic upgrade_db.py.
+ * Checking for its presence in the sqlite_master `sql` text is sufficient to
+ * distinguish old from new for both the virtual table definition and the triggers.
  */
-function migration04_createFTS(db: Database.Database): void {
-  logger.info("Applying migration 4: create_messages_fts_table_and_triggers");
+const FTS_SENTINEL_COLUMN = "message_type";
 
-  const hasFTS = db
+/**
+ * Return true if messages_fts exists AND its CREATE VIRTUAL TABLE sql contains
+ * the sentinel column name, indicating the full 31-column schema is in place.
+ */
+function isFtsSchemaCorrect(db: Database.Database): boolean {
+  const row = db
     .prepare(
-      "SELECT name FROM sqlite_master WHERE type='table' AND name='messages_fts'",
+      "SELECT sql FROM sqlite_master WHERE type='table' AND name='messages_fts'",
     )
-    .get();
+    .get() as { sql: string } | undefined;
 
-  if (hasFTS) {
-    logger.info("FTS table already exists, skipping");
-    return;
+  if (!row) return false;
+  return row.sql.includes(FTS_SENTINEL_COLUMN);
+}
+
+/**
+ * Return true if all three FTS triggers exist AND each contains the sentinel
+ * column name, indicating they were created against the full 31-column schema.
+ */
+function areFtsTriggersCorrect(db: Database.Database): boolean {
+  const triggerNames = [
+    "messages_fts_insert",
+    "messages_fts_delete",
+    "messages_fts_update",
+  ] as const;
+
+  for (const name of triggerNames) {
+    const row = db
+      .prepare(
+        "SELECT sql FROM sqlite_master WHERE type='trigger' AND name=?",
+      )
+      .get(name) as { sql: string } | undefined;
+
+    if (!row) return false;
+    if (!row.sql.includes(FTS_SENTINEL_COLUMN)) return false;
   }
 
+  return true;
+}
+
+/**
+ * Drop all three FTS triggers and the FTS virtual table (and its shadow tables).
+ * Safe to call even when they do not exist.
+ */
+function dropFtsTableAndTriggers(db: Database.Database): void {
+  db.exec("DROP TRIGGER IF EXISTS messages_fts_insert");
+  db.exec("DROP TRIGGER IF EXISTS messages_fts_delete");
+  db.exec("DROP TRIGGER IF EXISTS messages_fts_update");
+  db.exec("DROP TABLE IF EXISTS messages_fts");
+}
+
+/**
+ * Create the FTS5 virtual table, all three triggers, and populate the index
+ * from the current contents of the messages table via rebuild.
+ *
+ * Callers are responsible for ensuring the table and triggers do not already
+ * exist before calling this function.
+ */
+function createFtsTableAndTriggers(db: Database.Database): void {
   // Create FTS5 virtual table
   db.exec(`
     CREATE VIRTUAL TABLE messages_fts USING fts5(
@@ -459,7 +528,7 @@ function migration04_createFTS(db: Database.Database): void {
     );
   `);
 
-  // Create triggers
+  // INSERT trigger
   db.exec(`
     CREATE TRIGGER messages_fts_insert AFTER INSERT ON messages
     BEGIN
@@ -477,6 +546,7 @@ function migration04_createFTS(db: Database.Database): void {
     END;
   `);
 
+  // DELETE trigger
   db.exec(`
     CREATE TRIGGER messages_fts_delete AFTER DELETE ON messages
     BEGIN
@@ -494,6 +564,7 @@ function migration04_createFTS(db: Database.Database): void {
     END;
   `);
 
+  // UPDATE trigger
   db.exec(`
     CREATE TRIGGER messages_fts_update AFTER UPDATE ON messages
     BEGIN
@@ -522,10 +593,49 @@ function migration04_createFTS(db: Database.Database): void {
     END;
   `);
 
-  // Rebuild FTS from existing messages
+  // Populate the index from the current messages table
   logger.info("Rebuilding FTS index from existing messages...");
   db.exec("INSERT INTO messages_fts(messages_fts) VALUES ('rebuild')");
   logger.info("FTS rebuild complete");
+}
+
+// ---------------------------------------------------------------------------
+
+/**
+ * Migration 4: Create FTS table and triggers (94d97e655180)
+ */
+function migration04_createFTS(db: Database.Database): void {
+  logger.info("Applying migration 4: create_messages_fts_table_and_triggers");
+
+  const hasFTS = db
+    .prepare(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='messages_fts'",
+    )
+    .get();
+
+  if (hasFTS) {
+    // The table already exists — it may have been created by the pre-Alembic
+    // upgrade_db.py, which used an 8-column schema with limited triggers.
+    // Both the Python Alembic migration and this migration have a plain
+    // "skip if exists" guard, which preserved the stale schema for all
+    // migrated databases.  Check now and rebuild if needed.
+    const schemaOk = isFtsSchemaCorrect(db);
+    const triggersOk = areFtsTriggersCorrect(db);
+
+    if (schemaOk && triggersOk) {
+      logger.info("FTS table already exists with correct schema and triggers, skipping");
+      return;
+    }
+
+    logger.warn(
+      "FTS table exists but has stale schema or wrong/missing triggers — dropping and rebuilding",
+      { schemaOk, triggersOk },
+    );
+    dropFtsTableAndTriggers(db);
+    // Fall through to create the correct table below
+  }
+
+  createFtsTableAndTriggers(db);
 }
 
 /**
@@ -793,6 +903,72 @@ function migration09_addTimeseriesStats(db: Database.Database): void {
   logger.info("✓ timeseries_stats table created successfully");
 }
 
+// ---------------------------------------------------------------------------
+// Startup FTS integrity check
+// ---------------------------------------------------------------------------
+
+/**
+ * Verify that the messages_fts virtual table and its three triggers use the
+ * current 31-column schema.  If not, drop everything and rebuild from scratch,
+ * then VACUUM to reclaim the bloated FTS shadow-table pages.
+ *
+ * This runs unconditionally at the end of every runMigrations() call, which
+ * means it executes on every startup regardless of whether any migration was
+ * actually applied.  That makes it safe for databases that are already at the
+ * latest Alembic version and would therefore never pass through migration04
+ * again.
+ *
+ * Background: the pre-Alembic upgrade_db.py created messages_fts with only
+ * 8 columns (depa, dsta, msg_text, tail, flight, icao, freq, label).  Both
+ * the Python Alembic migration 94d97e655180 and the TypeScript migration04
+ * silently skipped the table if it already existed, leaving the 8-column
+ * schema and its weaker triggers in place indefinitely.
+ */
+function verifyAndRepairFtsIfNeeded(db: Database.Database): void {
+  const hasFTS = db
+    .prepare(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='messages_fts'",
+    )
+    .get();
+
+  if (!hasFTS) {
+    // Table doesn't exist at all — nothing to repair; migration04 will create it.
+    logger.debug("FTS table absent, skipping integrity check");
+    return;
+  }
+
+  const schemaOk = isFtsSchemaCorrect(db);
+  const triggersOk = areFtsTriggersCorrect(db);
+
+  if (schemaOk && triggersOk) {
+    logger.info("FTS schema and triggers verified OK");
+    return;
+  }
+
+  logger.warn(
+    "FTS schema or triggers are stale — full rebuild required",
+    { schemaOk, triggersOk },
+  );
+
+  logger.info("Dropping stale FTS table and triggers...");
+  dropFtsTableAndTriggers(db);
+
+  logger.info("Recreating FTS table and triggers with correct schema...");
+  createFtsTableAndTriggers(db);
+
+  // VACUUM reclaims the shadow-table pages that accumulated from the old
+  // 8-column tombstone inflation caused by the migration06 UID backfill and
+  // any pruning that happened without proper trigger coverage.
+  // This can take several minutes on large databases.
+  logger.warn(
+    "Running VACUUM to reclaim FTS shadow-table bloat — this may take several minutes on large databases",
+  );
+  db.exec("VACUUM");
+  logger.info("VACUUM complete — FTS repair finished");
+}
+
+// ---------------------------------------------------------------------------
+
 /**
  * All migrations in order
  */
@@ -914,6 +1090,11 @@ export function runMigrations(dbPath?: string): void {
         version: LATEST_REVISION,
       });
     }
+
+    // Always run the FTS integrity check, regardless of whether any migration
+    // was applied.  This catches databases that are already at the latest
+    // version but still carry the stale 8-column FTS from the pre-Alembic era.
+    verifyAndRepairFtsIfNeeded(db);
 
     db.close();
   } catch (error) {
