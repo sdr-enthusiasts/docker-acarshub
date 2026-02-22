@@ -24,7 +24,7 @@ import { MessageCard } from "../components/MessageCard";
 import { socketService } from "../services/socket";
 import { useAppStore } from "../store/useAppStore";
 import type { AcarsMsg, CurrentSearch, SearchHtmlMsg } from "../types";
-import { decodeMessages } from "../utils/decoderUtils";
+
 import { uiLogger } from "../utils/logger";
 import { formatBytes } from "../utils/stringUtils";
 
@@ -148,9 +148,8 @@ export const SearchPage = () => {
   // Wait for socket to be initialized before subscribing
   useEffect(() => {
     const handleSearchResults = (data: SearchHtmlMsg) => {
-      // Decode messages that don't have decodedText from database
-      const decodedResults = decodeMessages(data.msghtml);
-      setResults(decodedResults);
+      // Backend already enriches messages with decodedText
+      setResults(data.msghtml);
       setTotalResults(data.num_results);
       setQueryTime(data.query_time);
       setIsSearching(false);

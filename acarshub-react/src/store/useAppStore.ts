@@ -20,7 +20,6 @@ import {
   checkMultiPartDuplicate,
   isMultiPartMessage,
   mergeMultiPartMessage,
-  messageDecoder,
 } from "../services/messageDecoder";
 import type {
   AcarshubVersion,
@@ -234,25 +233,9 @@ export const useAppStore = create<AppState>((set, get) => {
           storeLogger.trace("Generated UID for message", { uid: message.uid });
         }
 
-        // Decode the message if it has text
-        const decodedMessage = messageDecoder.decode(message);
-
-        // Log decoding result for alerts
-        if (message.matched) {
-          storeLogger.info("Alert message BEFORE/AFTER decoding", {
-            uid: decodedMessage.uid,
-            originalMatched: message.matched,
-            decodedMatched: decodedMessage.matched,
-            matchedPreserved: message.matched === decodedMessage.matched,
-            hadText: !!message.text,
-            hasDecodedText: !!decodedMessage.decodedText,
-            decodedTextLength:
-              decodedMessage.decodedText?.formatted?.length || 0,
-          });
-        }
-
-        // Backend has already set matched flags - just trust them!
-        // No client-side matching needed
+        // Backend has already decoded the message text and set matched flags.
+        // No client-side decoding or matching needed.
+        const decodedMessage = message;
 
         // Sync notifications with settings store
         const notifications = {
@@ -489,7 +472,6 @@ export const useAppStore = create<AppState>((set, get) => {
                   updatedMessages[i] = mergeMultiPartMessage(
                     existingMsg,
                     decodedMessage,
-                    messageDecoder,
                   );
                 }
               } else {
@@ -497,7 +479,6 @@ export const useAppStore = create<AppState>((set, get) => {
                 updatedMessages[i] = mergeMultiPartMessage(
                   existingMsg,
                   decodedMessage,
-                  messageDecoder,
                 );
               }
 
@@ -746,8 +727,8 @@ export const useAppStore = create<AppState>((set, get) => {
           });
         }
 
-        // Decode the message if it has text
-        const decodedMessage = messageDecoder.decode(message);
+        // Backend has already decoded the message text. Use it directly.
+        const decodedMessage = message;
 
         const newAlertGroups = new Map(state.alertMessageGroups);
 

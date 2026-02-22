@@ -1,7 +1,6 @@
 import react from "@vitejs/plugin-react";
 import { visualizer } from "rollup-plugin-visualizer";
 import { defineConfig } from "vite";
-import { nodePolyfills } from "vite-plugin-node-polyfills";
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -20,16 +19,6 @@ export default defineConfig({
   },
   plugins: [
     react(),
-    nodePolyfills({
-      // Enable polyfills for specific Node.js modules
-      // zlib is needed by minizlib (used by @airframes/acars-decoder)
-      include: ["events", "stream", "string_decoder", "buffer", "util", "zlib"],
-      // Optionally include globals like Buffer and process
-      globals: {
-        Buffer: true,
-        process: true,
-      },
-    }),
     // Bundle size visualization (only in build mode)
     visualizer({
       filename: "./dist/stats.html",
@@ -70,20 +59,6 @@ export default defineConfig({
           // Map library
           if (id.includes("maplibre-gl") || id.includes("react-maplibre")) {
             return "map";
-          }
-
-          // Decoder
-          if (id.includes("@airframes/acars-decoder")) {
-            return "decoder";
-          }
-
-          // Some decoder dependencies are large and not tree-shakeable, so we can mark them as external to reduce bundle size
-          if (
-            id.includes("pako") ||
-            id.includes("minizlib") ||
-            id.includes("lodash")
-          ) {
-            return "decoder-deps";
           }
 
           // socket.io

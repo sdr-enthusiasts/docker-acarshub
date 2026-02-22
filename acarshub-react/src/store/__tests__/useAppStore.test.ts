@@ -19,10 +19,8 @@ import type { AcarsMsg } from "../../types";
 import { useAppStore } from "../useAppStore";
 
 // Mock the messageDecoder service
+// Note: messageDecoder.decode has been removed - decoding is now done by the backend
 vi.mock("../../services/messageDecoder", () => ({
-  messageDecoder: {
-    decode: vi.fn((message: AcarsMsg) => ({ ...message })),
-  },
   checkForDuplicate: vi.fn(() => false),
   checkMultiPartDuplicate: vi.fn(() => ({ exists: false, updatedParts: "" })),
   isMultiPartMessage: vi.fn(() => false),

@@ -522,4 +522,169 @@ describe("Message Enrichment", () => {
       expect(result).not.toHaveProperty("label_type");
     });
   });
+
+  describe("Decoder Enrichment (decodedText)", () => {
+    /**
+     * Canonical decodable message used across several tests.
+     *
+     * label "SQ" / "POSICAO/..." is a Ground Station Squitter message that
+     * @airframes/acars-decoder decodes to decodeLevel "full" via the
+     * "label-sq" decoder.  Verified with the library directly:
+     *
+     *   new MessageDecoder().decode({ label: "SQ", text: "POSICAO/N4515.4W07329.8/ALTITUD/35000" })
+     *   // → { decoded: true, decoder: { name: "label-sq", decodeLevel: "full" }, ... }
+     *
+     * Using a concrete, stable message means the positive-path tests are
+     * unconditional and will fail if the decoder integration ever breaks.
+     */
+    const DECODABLE = {
+      label: "SQ",
+      text: "POSICAO/N4515.4W07329.8/ALTITUD/35000",
+    } as const;
+
+    it("does not add decodedText when message has no text", () => {
+      const message = {
+        uid: "test-123",
+        timestamp: 1234567890,
+        label: "H1",
+      };
+
+      const result = enrichMessage(message);
+
+      expect(result).not.toHaveProperty("decodedText");
+    });
+
+    it("does not add decodedText when text is empty string", () => {
+      const message = {
+        uid: "test-123",
+        timestamp: 1234567890,
+        label: "H1",
+        text: "",
+      };
+
+      const result = enrichMessage(message);
+
+      expect(result).not.toHaveProperty("decodedText");
+    });
+
+    it("does not add decodedText for a message that cannot be decoded", () => {
+      const message = {
+        uid: "test-123",
+        timestamp: 1234567890,
+        label: "ZZ",
+        text: "RANDOM UNDECODABLE TEXT THAT MATCHES NO PATTERN ZZ99",
+      };
+
+      const result = enrichMessage(message);
+
+      expect(result.decodedText).toBeUndefined();
+    });
+
+    it("populates decodedText for a known-decodable message", () => {
+      const message = {
+        uid: "test-sq-decode",
+        timestamp: 1234567890,
+        ...DECODABLE,
+      };
+
+      const result = enrichMessage(message);
+
+      expect(result.decodedText).toBeDefined();
+    });
+
+    it("populates decodedText with decodeLevel 'full' for a fully-decoded message", () => {
+      const message = {
+        uid: "test-sq-level",
+        timestamp: 1234567890,
+        ...DECODABLE,
+      };
+
+      const result = enrichMessage(message);
+
+      expect(result.decodedText?.decoder.decodeLevel).toBe("full");
+    });
+
+    it("populates decodedText.decoder.name with the decoder that handled the message", () => {
+      const message = {
+        uid: "test-sq-name",
+        timestamp: 1234567890,
+        ...DECODABLE,
+      };
+
+      const result = enrichMessage(message);
+
+      expect(typeof result.decodedText?.decoder.name).toBe("string");
+      expect(result.decodedText?.decoder.name?.length).toBeGreaterThan(0);
+    });
+
+    it("populates decodedText.formatted as a non-empty array of {label, value} items", () => {
+      const message = {
+        uid: "test-sq-formatted",
+        timestamp: 1234567890,
+        ...DECODABLE,
+      };
+
+      const result = enrichMessage(message);
+
+      expect(Array.isArray(result.decodedText?.formatted)).toBe(true);
+      expect(result.decodedText?.formatted.length).toBeGreaterThan(0);
+
+      for (const item of result.decodedText?.formatted ?? []) {
+        expect(typeof item.label).toBe("string");
+        expect(typeof item.value).toBe("string");
+      }
+    });
+
+    it("always prepends a Description item as the first formatted entry", () => {
+      // enrichDecodedText always inserts { label: "Description", value: result.formatted.description }
+      // as the first item so the frontend can show a human-readable summary.
+      const message = {
+        uid: "test-sq-description",
+        timestamp: 1234567890,
+        ...DECODABLE,
+      };
+
+      const result = enrichMessage(message);
+
+      const first = result.decodedText?.formatted[0];
+      expect(first?.label).toBe("Description");
+      expect(typeof first?.value).toBe("string");
+      expect(first?.value.length).toBeGreaterThan(0);
+    });
+
+    it("preserves existing decodedText without re-decoding (idempotent)", () => {
+      // If a message already has decodedText (e.g. re-enrichment of a cached
+      // message), the existing value must be kept as-is and the decoder must
+      // not run again.
+      const existing = {
+        decoder: { decodeLevel: "full" as const, name: "cached-decoder" },
+        formatted: [{ label: "Cached", value: "result" }],
+      };
+      const message = {
+        uid: "test-idempotent",
+        timestamp: 1234567890,
+        ...DECODABLE,
+        decodedText: existing,
+      };
+
+      const result = enrichMessage(message);
+
+      // Must be the same object reference - not a re-decoded copy
+      expect(result.decodedText).toBe(existing);
+      expect(result.decodedText?.decoder.name).toBe("cached-decoder");
+      expect(result.decodedText?.formatted).toHaveLength(1);
+    });
+
+    it("does not throw when the decoder encounters unexpected text", () => {
+      // Guard against the decoder library throwing on malformed input
+      const message = {
+        uid: "test-no-throw",
+        timestamp: 1234567890,
+        label: "H1",
+        text: "\x00\x01\x02\xFF binary garbage \n\r\t",
+      };
+
+      expect(() => enrichMessage(message)).not.toThrow();
+    });
+  });
 });

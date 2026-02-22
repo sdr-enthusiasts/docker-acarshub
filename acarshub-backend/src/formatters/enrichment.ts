@@ -24,12 +24,20 @@
  * - Adds derived fields (icao_hex, toaddr_decoded, airline, etc.)
  */
 
-import type { AcarsMsg } from "@acarshub/types";
+import type { AcarsMsg, DecodedText } from "@acarshub/types";
+import { MessageDecoder } from "@airframes/acars-decoder";
 import { getConfig } from "../config.js";
 import { lookupGroundstation, lookupLabel } from "../db/index.js";
 import { createLogger } from "../utils/logger.js";
 
 const logger = createLogger("enrichment");
+
+/**
+ * Singleton ACARS Message Decoder instance
+ * Initialized once and reused for all message enrichment
+ */
+const acarsDecoder = new MessageDecoder();
+logger.info("ACARS message decoder initialized in enrichment pipeline");
 
 /**
  * Protected keys that should never be deleted, even if null/empty
@@ -135,9 +143,74 @@ export function enrichMessage(message: Record<string, unknown>): AcarsMsg {
   enrichFlightFields(enriched);
   enrichAddressFields(enriched);
   enrichLabelField(enriched);
+  enrichDecodedText(enriched);
 
   // Type assertion: enriched now has all required fields from database + derived fields
   return enriched as unknown as AcarsMsg;
+}
+
+/**
+ * Decode ACARS message text using @airframes/acars-decoder
+ *
+ * Populates the decodedText field if the message can be decoded.
+ * Only runs if the message has a text field and does not already have decodedText.
+ */
+function enrichDecodedText(message: Record<string, unknown>): void {
+  // Skip if already decoded (e.g. re-enrichment of a cached message)
+  if (message.decodedText !== undefined) {
+    return;
+  }
+
+  const text = message.text;
+  if (!text || typeof text !== "string") {
+    return;
+  }
+
+  const label = typeof message.label === "string" ? message.label : "";
+
+  try {
+    const result = acarsDecoder.decode({ text, label });
+
+    if (result.decoded === true) {
+      logger.debug("Successfully decoded message text", {
+        uid: message.uid,
+        decoderName: result.decoder.name,
+        decodeLevel: result.decoder.decodeLevel,
+        itemCount: result.formatted.items.length,
+      });
+
+      const decodedText: DecodedText = {
+        decoder: {
+          decodeLevel: result.decoder.decodeLevel as
+            | "full"
+            | "partial"
+            | "none",
+          name: result.decoder.name,
+        },
+        formatted: [
+          { label: "Description", value: result.formatted.description },
+          ...result.formatted.items.map((item) => ({
+            label: item.label,
+            value: item.value,
+          })),
+        ],
+      };
+
+      message.decodedText = decodedText;
+    } else {
+      logger.trace("Message text not decodable", {
+        uid: message.uid,
+        label,
+      });
+    }
+  } catch (error) {
+    logger.warn("Error decoding message text - skipping decodedText", {
+      uid: message.uid,
+      label,
+      textPreview: text.substring(0, 50),
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
 }
 
 /**

@@ -29,7 +29,6 @@
   },
   "dependencies": {
     "@acarshub/types": "*",
-    "@airframes/acars-decoder": "1.8.7",
     "@fortawesome/fontawesome-svg-core": "7.2.0",
     "@fortawesome/free-regular-svg-icons": "7.2.0",
     "@fortawesome/free-solid-svg-icons": "7.2.0",
@@ -72,7 +71,6 @@
     "tsx": "4.21.0",
     "typescript": "5.9.3",
     "vite": "7.3.1",
-    "vite-plugin-node-polyfills": "0.25.0",
     "vitest": "4.0.18"
   },
   "overrides": {

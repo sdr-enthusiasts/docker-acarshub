@@ -14,12 +14,10 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-import type { MessageDecoder as MessageDecoderType } from "@airframes/acars-decoder";
-import { MessageDecoder } from "@airframes/acars-decoder";
-import type { AcarsMsg, DecodedText } from "../types";
+import type { AcarsMsg } from "../types";
 import { createLogger } from "../utils/logger";
 
-const logger = createLogger("decoder");
+const logger = createLogger("messageDecoder");
 
 /**
  * Fields to check for duplicate detection
@@ -48,148 +46,6 @@ export interface DuplicateCheckResult {
   isDuplicate: boolean;
   isMultiPart: boolean;
   matchedMessage?: AcarsMsg;
-}
-
-/**
- * Singleton ACARS Message Decoder Instance
- * Uses @airframes/acars-decoder to decode ACARS message text
- */
-class AcarsMessageDecoder {
-  private decoder: MessageDecoderType;
-
-  constructor() {
-    this.decoder = new MessageDecoder();
-    logger.debug("ACARS Message Decoder initialized");
-  }
-
-  /**
-   * Attempt to decode an ACARS message
-   * @param message - ACARS message with text field
-   * @returns Message with decodedText field added if decoding was successful
-   */
-  public decode(message: AcarsMsg): AcarsMsg {
-    // Log matched field BEFORE decoding
-    logger.info("Decoder input - checking matched field", {
-      uid: message.uid,
-      matched: message.matched,
-      matchedType: typeof message.matched,
-      hasMatched: "matched" in message,
-    });
-
-    // Only attempt to decode if message has text
-    if (!message.text) {
-      logger.trace("Skipping decode - no text field", {
-        uid: message.uid,
-        label: message.label,
-      });
-      return message;
-    }
-
-    logger.trace("Attempting to decode message", {
-      uid: message.uid,
-      label: message.label,
-      textLength: message.text.length,
-    });
-
-    try {
-      // The decoder requires a Message object with text: string (not optional)
-      const messageForDecoder = {
-        text: message.text,
-        label: message.label || "",
-        // sublabel is not in our AcarsMsg type but could be added if needed
-      };
-
-      // The decoder.decode() returns a DecodeResult with structure:
-      // {
-      //   decoded: boolean,
-      //   decoder: { name: string, type: string, decodeLevel: string },
-      //   formatted: { description: string, items: [...] },
-      //   raw: any,
-      //   remaining: { text?: string }
-      // }
-      const result = this.decoder.decode(messageForDecoder);
-
-      logger.trace("Decode result", {
-        uid: message.uid,
-        decoded: result.decoded,
-        decoderName: result.decoder.name,
-        decodeLevel: result.decoder.decodeLevel,
-      });
-
-      // Only add decodedText if decoding was successful
-      if (result.decoded === true) {
-        logger.debug("Successfully decoded message", {
-          uid: message.uid,
-          decoderName: result.decoder.name,
-          decodeLevel: result.decoder.decodeLevel,
-          itemCount: result.formatted.items.length,
-        });
-
-        // Convert the DecodeResult to our DecodedText format
-        const decodedText: DecodedText = {
-          decoder: {
-            decodeLevel: result.decoder.decodeLevel as
-              | "full"
-              | "partial"
-              | "none",
-            name: result.decoder.name,
-          },
-          // Store the formatted structure as we want it displayed)
-          formatted: [
-            { label: "Description", value: result.formatted.description },
-          ].concat(
-            result.formatted.items.map((item) => ({
-              label: item.label,
-              value: item.value,
-            })),
-          ),
-        };
-
-        const decodedMessage = {
-          ...message,
-          decodedText,
-        };
-
-        // Log matched field AFTER decoding
-        logger.info("Decoder output - checking matched field", {
-          uid: decodedMessage.uid,
-          matched: decodedMessage.matched,
-          matchedType: typeof decodedMessage.matched,
-          hasMatched: "matched" in decodedMessage,
-          inputMatched: message.matched,
-        });
-
-        return decodedMessage;
-      }
-
-      logger.trace("Message not decoded (no decoder matched)", {
-        uid: message.uid,
-        label: message.label,
-      });
-
-      return message;
-    } catch (error) {
-      logger.error(
-        "Decoder error - message will be returned without decoding",
-        {
-          uid: message.uid,
-          label: message.label,
-          text: message.text?.substring(0, 50),
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined,
-        },
-      );
-      return message;
-    }
-  }
-
-  /**
-   * Reset the decoder instance (if needed for testing or reinitialization)
-   */
-  public reset(): void {
-    logger.info("Resetting ACARS Message Decoder");
-    this.decoder = new MessageDecoder();
-  }
 }
 
 /**
@@ -354,17 +210,20 @@ export function checkMultiPartDuplicate(
 
 /**
  * Merge multi-part messages
- * Appends text and updates msgno_parts
+ * Appends text and updates msgno_parts.
+ *
+ * Because the backend now handles all ACARS decoding, the merged message's
+ * decodedText is derived by combining the formatted items of both parts.
+ * This is a best-effort representation; the backend will produce accurate
+ * decodedText for each individual part as it arrives.
  *
  * @param existingMessage - Existing parent message
  * @param newMessage - New message part to merge
- * @param decoder - MessageDecoder instance for re-decoding
  * @returns Updated message with merged content
  */
 export function mergeMultiPartMessage(
   existingMessage: AcarsMsg,
   newMessage: AcarsMsg,
-  decoder: AcarsMessageDecoder,
 ): AcarsMsg {
   logger.debug("Merging multi-part messages", {
     existingUid: existingMessage.uid,
@@ -397,18 +256,23 @@ export function mergeMultiPartMessage(
     updated.msgno_parts = `${updated.msgno} ${newMessage.msgno}`;
   }
 
-  // Re-decode the merged text
-  if (updated.text) {
-    logger.debug("Re-decoding merged multi-part message", {
-      uid: updated.uid,
-      textLength: updated.text.length,
-      parts: updated.msgno_parts,
-    });
-    const decoded = decoder.decode(updated);
-    if (decoded.decodedText) {
-      updated.decodedText = decoded.decodedText;
-    }
+  // Merge decodedText: combine formatted items from both parts when both are decoded.
+  // The new part's decodedText (if any) is appended after a separator so both
+  // parts' decoded content remains visible.
+  if (existingMessage.decodedText && newMessage.decodedText) {
+    updated.decodedText = {
+      decoder: existingMessage.decodedText.decoder,
+      formatted: [
+        ...existingMessage.decodedText.formatted,
+        { label: "---", value: `Part: ${newMessage.msgno ?? ""}` },
+        ...newMessage.decodedText.formatted,
+      ],
+    };
+  } else if (newMessage.decodedText) {
+    // Only the new part decoded - use its decodedText
+    updated.decodedText = newMessage.decodedText;
   }
+  // else: keep existing decodedText (or undefined) unchanged
 
   logger.info("Multi-part message merged successfully", {
     uid: updated.uid,
@@ -418,11 +282,3 @@ export function mergeMultiPartMessage(
 
   return updated;
 }
-
-/**
- * Singleton instance of the ACARS message decoder
- * Export a single instance to be used throughout the application
- */
-export const messageDecoder = new AcarsMessageDecoder();
-
-logger.info("Message decoder module loaded");
