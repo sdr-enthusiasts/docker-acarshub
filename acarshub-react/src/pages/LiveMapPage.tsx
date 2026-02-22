@@ -32,15 +32,15 @@ import { mapLogger } from "../utils/logger";
 
 // Minimum sidebar width – the lowest value the user can drag to.
 // Horizontal scroll is prevented by the callsign column min-width (60 px) in
-// SCSS rather than by enforcing a large minimum here.  Keeping this at 320 px
+// SCSS rather than by enforcing a large minimum here.  Keeping this at 335 px
 // preserves a wide, usable resize range.
-const SIDEBAR_MIN_WIDTH = 320;
+const SIDEBAR_MIN_WIDTH = 335;
 
 // Default sidebar width used when no explicit user preference has been stored
-// (or when the stored value equals the old default of 320 px, meaning the user
-// never deliberately set a width).  408 px places the sidebar in Phase 3 so
+// (or when the stored value equals the old default of px, meaning the user
+// never deliberately set a width).  335 px places the sidebar in Phase 3 so
 // that at least one decoder badge is visible as soon as the map loads.
-const DEFAULT_SIDEBAR_WIDTH = 408;
+const DEFAULT_SIDEBAR_WIDTH = 335;
 const SIDEBAR_COLLAPSED_WIDTH = 40;
 
 // Phase boundary where both Alerts and Messages columns reach their maximum
@@ -103,7 +103,7 @@ export const LiveMapPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Sidebar resize state – local during drag, persisted to store on mouseup.
-  // If the stored value is still at the old floor (320 px – the minimum that
+  // If the stored value is still at the old floor (325 px – the minimum that
   // predates decoder-badge sizing), treat it as "no preference set" and start
   // at DEFAULT_SIDEBAR_WIDTH so that at least one badge is visible on load.
   // Any explicitly wider value is preserved as-is.
@@ -602,21 +602,21 @@ export const LiveMapPage = () => {
         {/* role="separator" with aria-valuenow/min/max is the correct ARIA
             pattern for a resize splitter (WCAG 2.1 §4.1.2).  tabIndex makes
             it keyboard-reachable; arrow keys are handled below. */}
-        {/* biome-ignore lint/a11y/useSemanticElements: ARIA APG "Window Splitter" pattern requires role="separator" with aria-valuenow on a focusable element; <hr> cannot carry these interactive attributes. */}
         {!isSidebarCollapsed && (
-        <div
-          className={`live-map-page__sidebar-resize-handle${isResizing ? " live-map-page__sidebar-resize-handle--dragging" : ""}`}
-          onMouseDown={handleResizeMouseDown}
-          onKeyDown={handleResizeKeyDown}
-          role="separator"
-          aria-label="Sidebar resize handle"
-          aria-orientation="vertical"
-          aria-valuenow={sidebarWidth}
-          aria-valuemin={SIDEBAR_MIN_WIDTH}
-          aria-valuemax={sidebarMaxWidth}
-          tabIndex={0}
-          title="Drag or use arrow keys to resize sidebar"
-        />
+          // biome-ignore lint/a11y/useSemanticElements: ARIA APG "Window Splitter" pattern requires role="separator" with aria-valuenow on a focusable element; <hr> cannot carry these interactive attributes.
+          <div
+            className={`live-map-page__sidebar-resize-handle${isResizing ? " live-map-page__sidebar-resize-handle--dragging" : ""}`}
+            onMouseDown={handleResizeMouseDown}
+            onKeyDown={handleResizeKeyDown}
+            role="separator"
+            aria-label="Sidebar resize handle"
+            aria-orientation="vertical"
+            aria-valuenow={sidebarWidth}
+            aria-valuemin={SIDEBAR_MIN_WIDTH}
+            aria-valuemax={sidebarMaxWidth}
+            tabIndex={0}
+            title="Drag or use arrow keys to resize sidebar"
+          />
         )}
 
         {/* Map container (main area) */}

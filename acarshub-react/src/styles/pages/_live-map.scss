@@ -35,9 +35,9 @@
   &__sidebar {
     flex-shrink: 0;
     // Width is driven by the --map-sidebar-width custom property set via JS
-    // on the container. The fallback (320px) matches the minimum allowed width
+    // on the container. The fallback (335px) matches the minimum allowed width
     // so there is never a flash of wrong width on first paint.
-    width: var(--map-sidebar-width, 320px);
+    width: var(--map-sidebar-width, 335px);
     height: 100%;
     overflow: hidden;
     background-color: var(--color-mantle);

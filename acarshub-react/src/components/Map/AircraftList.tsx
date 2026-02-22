@@ -31,10 +31,10 @@ import type { ViewportBounds } from "./AircraftMarkers";
 import "../../styles/components/_aircraft-list.scss";
 
 // Minimum sidebar width mirrors the CSS default
-const SIDEBAR_MIN_WIDTH = 320;
+const SIDEBAR_MIN_WIDTH = 335;
 
 // ── Alerts column widths ─────────────────────────────────────────────────────
-// Phase 1 (sidebar 320 → 344 px): alerts column grows from narrow to full.
+// Phase 1 (sidebar 335 → 344 px): alerts column grows from narrow to full.
 const ALERTS_MIN_WIDTH = 44; // shows "#"
 const ALERTS_FULL_WIDTH = 68; // shows "Alerts"
 
@@ -108,10 +108,14 @@ function computeColumnWidths(width: number): {
  * Badges only appear in Phase 3 (sidebar > PHASE2_END) so that the callsign
  * column is not widened during the alerts/messages expansion phases.
  * Each additional 20 px of Phase-3 width reveals one more badge (max 5).
+ * Always returns at least 1 so there is no dead zone just past PHASE2_END.
  */
 function calcMaxDecoderBadges(width: number): number {
-  if (width <= PHASE2_END) return 0;
-  return Math.min(5, Math.floor((width - PHASE2_END) / BADGE_WIDTH_PX));
+  if (width <= PHASE2_END) return 1;
+  return Math.max(
+    1,
+    Math.min(5, Math.floor((width - PHASE2_END) / BADGE_WIDTH_PX)),
+  );
 }
 
 interface AircraftListProps {
@@ -134,7 +138,7 @@ interface AircraftListProps {
   /**
    * Current sidebar width in pixels.
    * Used to adapt column headers and decoder badge count as the user resizes.
-   * Defaults to 320 (minimum width) when not provided.
+   * Defaults to 360 (minimum width) when not provided.
    */
   sidebarWidth?: number;
 }
@@ -997,7 +1001,7 @@ export function AircraftList({
                           role="img"
                           aria-label={`Has ${dt} messages`}
                         >
-                          ✓
+                          &nbsp;
                         </span>
                       ))}
                   </td>

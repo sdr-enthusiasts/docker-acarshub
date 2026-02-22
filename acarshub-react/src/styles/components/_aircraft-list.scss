@@ -509,7 +509,7 @@
     &:nth-child(4) {
       // Width is set via --msgs-col-width CSS custom property injected by the
       // ResizeObserver in AircraftList.tsx.  The fallback (44px) matches the
-      // "#" label at the default 320 px sidebar width.
+      // "#" label at the default 325 px sidebar width.
       width: var(--msgs-col-width, 44px);
       min-width: var(--msgs-col-width, 44px);
       text-align: center;
