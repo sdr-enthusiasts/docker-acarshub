@@ -26,6 +26,7 @@ import {
   formatGroundSpeed,
   getDisplayCallsign,
 } from "../../utils/aircraftPairing";
+import type { ViewportBounds } from "./AircraftMarkers";
 import "../../styles/components/_aircraft-list.scss";
 
 interface AircraftListProps {
@@ -37,6 +38,12 @@ interface AircraftListProps {
   isPaused?: boolean;
   /** Callback when pause button is clicked */
   onPauseToggle?: () => void;
+  /**
+   * Current map viewport bounds (exact, unbuffered).
+   * When provided, enables the "Visible Only" filter which restricts the list
+   * to aircraft whose position falls within the visible map area.
+   */
+  viewportBounds?: ViewportBounds | null;
 }
 
 type SortField =
@@ -72,6 +79,7 @@ export function AircraftList({
   hoveredAircraft,
   isPaused = false,
   onPauseToggle,
+  viewportBounds,
 }: AircraftListProps) {
   const altitudeUnit = useSettingsStore(
     (state) => state.settings.regional.altitudeUnit,
@@ -118,6 +126,11 @@ export function AircraftList({
 
   const [showLADDOnly, setShowLADDOnly] = useState(() => {
     const saved = localStorage.getItem("aircraftList.showLADDOnly");
+    return saved === "true";
+  });
+
+  const [showVisibleOnly, setShowVisibleOnly] = useState(() => {
+    const saved = localStorage.getItem("aircraftList.showVisibleOnly");
     return saved === "true";
   });
 
@@ -206,6 +219,11 @@ export function AircraftList({
   const handleShowLADDOnlyChange = (value: boolean) => {
     setShowLADDOnly(value);
     localStorage.setItem("aircraftList.showLADDOnly", String(value));
+  };
+
+  const handleShowVisibleOnlyChange = (value: boolean) => {
+    setShowVisibleOnly(value);
+    localStorage.setItem("aircraftList.showVisibleOnly", String(value));
   };
 
   const handleMarkAllAsRead = () => {
@@ -305,6 +323,30 @@ export function AircraftList({
       });
     }
 
+    // Visible-only filter: restrict list to aircraft inside the current
+    // map viewport.  Aircraft without a position are always excluded when
+    // this filter is active because they cannot be "on screen".
+    // The bounds are exact (no buffer) so the list reflects precisely what
+    // the user can see.  When viewportBounds is null (map not yet loaded)
+    // the filter is skipped gracefully.
+    if (showVisibleOnly && viewportBounds) {
+      filtered = filtered.filter((a) => {
+        if (a.lat === undefined || a.lon === undefined) return false;
+
+        const inLat =
+          a.lat >= viewportBounds.south && a.lat <= viewportBounds.north;
+
+        // Handle antimeridian crossing: when west > east the viewport wraps
+        // around the ±180° line.
+        const inLng =
+          viewportBounds.east >= viewportBounds.west
+            ? a.lon >= viewportBounds.west && a.lon <= viewportBounds.east
+            : a.lon >= viewportBounds.west || a.lon <= viewportBounds.east;
+
+        return inLat && inLng;
+      });
+    }
+
     return filtered;
   }, [
     aircraft,
@@ -316,6 +358,8 @@ export function AircraftList({
     showInterestingOnly,
     showPIAOnly,
     showLADDOnly,
+    showVisibleOnly,
+    viewportBounds,
     readMessageUids,
   ]);
 
@@ -401,6 +445,7 @@ export function AircraftList({
     setShowInterestingOnly(false);
     setShowPIAOnly(false);
     setShowLADDOnly(false);
+    setShowVisibleOnly(false);
     localStorage.removeItem("aircraftList.textFilter");
     localStorage.removeItem("aircraftList.showAcarsOnly");
     localStorage.removeItem("aircraftList.showAlertsOnly");
@@ -409,6 +454,7 @@ export function AircraftList({
     localStorage.removeItem("aircraftList.showInterestingOnly");
     localStorage.removeItem("aircraftList.showPIAOnly");
     localStorage.removeItem("aircraftList.showLADDOnly");
+    localStorage.removeItem("aircraftList.showVisibleOnly");
   };
 
   const hasActiveFilters =
@@ -419,7 +465,8 @@ export function AircraftList({
     showMilitaryOnly ||
     showInterestingOnly ||
     showPIAOnly ||
-    showLADDOnly;
+    showLADDOnly ||
+    showVisibleOnly;
 
   const activeFilterCount = [
     showAcarsOnly,
@@ -429,6 +476,7 @@ export function AircraftList({
     showInterestingOnly,
     showPIAOnly,
     showLADDOnly,
+    showVisibleOnly,
   ].filter(Boolean).length;
 
   return (
@@ -560,6 +608,28 @@ export function AircraftList({
                   onChange={(e) => handleShowLADDOnlyChange(e.target.checked)}
                 />
                 <span>LADD Aircraft</span>
+              </label>
+
+              <div className="aircraft-list__filter-divider" />
+
+              <label
+                className={`aircraft-list__filter-toggle ${!viewportBounds ? "aircraft-list__filter-toggle--disabled" : ""}`}
+                title={
+                  !viewportBounds
+                    ? "Available once the map has loaded"
+                    : "Show only aircraft currently visible on the map"
+                }
+              >
+                <input
+                  type="checkbox"
+                  checked={showVisibleOnly}
+                  disabled={!viewportBounds}
+                  onChange={(e) =>
+                    handleShowVisibleOnlyChange(e.target.checked)
+                  }
+                  aria-label="Visible Only"
+                />
+                <span>Visible Only</span>
               </label>
 
               {hasActiveFilters && (

@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Marker, useMap } from "react-map-gl/maplibre";
 import { useAppStore } from "../../store/useAppStore";
 import { useSettingsStore } from "../../store/useSettingsStore";
@@ -50,6 +50,13 @@ interface AircraftMarkersProps {
   onFollowAircraft?: (hex: string | null) => void;
   /** Optional pre-paired aircraft (for frozen positions during zoom) */
   aircraft?: PairedAircraft[];
+  /**
+   * Callback fired whenever the map viewport changes.
+   * Receives the exact (unbuffered) viewport bounds so the sidebar
+   * "Visible Only" filter can match what the user literally sees on screen.
+   * Called with null when the map is unmounted.
+   */
+  onViewportBoundsChange?: (bounds: ViewportBounds | null) => void;
 }
 
 interface AircraftMarkerData {
@@ -78,7 +85,7 @@ interface AircraftMarkerData {
   spriteFrameTime?: number;
 }
 
-interface ViewportBounds {
+export interface ViewportBounds {
   north: number;
   south: number;
   east: number;
@@ -202,6 +209,7 @@ export function AircraftMarkers({
   followedAircraftHex,
   onFollowAircraft,
   aircraft: externalAircraft,
+  onViewportBoundsChange,
 }: AircraftMarkersProps = {}) {
   const adsbAircraft = useAppStore((state) => state.adsbAircraft);
   const messageGroups = useAppStore((state) => state.messageGroups);
@@ -227,6 +235,13 @@ export function AircraftMarkers({
     null,
   );
 
+  // Stable ref so the bounds effect never needs to re-run just because the
+  // parent re-renders with a new callback identity.
+  const onViewportBoundsChangeRef = useRef(onViewportBoundsChange);
+  useEffect(() => {
+    onViewportBoundsChangeRef.current = onViewportBoundsChange;
+  }, [onViewportBoundsChange]);
+
   // Access the MapLibre map instance to track viewport bounds
   const { current: map } = useMap();
 
@@ -243,6 +258,17 @@ export function AircraftMarkers({
         rafId = null;
         const bounds = map.getBounds();
         if (!bounds) return;
+
+        // Exact (unbuffered) bounds – sent to the sidebar so the
+        // "Visible Only" filter matches precisely what is on screen.
+        const rawBounds: ViewportBounds = {
+          north: bounds.getNorth(),
+          south: bounds.getSouth(),
+          east: bounds.getEast(),
+          west: bounds.getWest(),
+        };
+        onViewportBoundsChangeRef.current?.(rawBounds);
+
         // Add a 10% buffer around the viewport edges to reduce marker pop-in
         // when aircraft are just outside the visible area
         const latBuffer = Math.abs(bounds.getNorth() - bounds.getSouth()) * 0.1;
@@ -264,6 +290,8 @@ export function AircraftMarkers({
     return () => {
       map.off("move", updateBounds);
       if (rafId !== null) cancelAnimationFrame(rafId);
+      // Notify parent that bounds are no longer available
+      onViewportBoundsChangeRef.current?.(null);
     };
   }, [map]);
 

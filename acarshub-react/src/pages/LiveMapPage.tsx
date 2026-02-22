@@ -19,6 +19,7 @@ import type { MapRef, ViewState } from "react-map-gl/maplibre";
 import { useSearchParams } from "react-router-dom";
 import { MapComponent, MapControls, MapLegend } from "../components/Map";
 import { AircraftList } from "../components/Map/AircraftList";
+import type { ViewportBounds } from "../components/Map/AircraftMarkers";
 import { getProviderConfig } from "../config/mapProviders";
 import { socketService } from "../services/socket";
 import { useAppStore } from "../store/useAppStore";
@@ -60,6 +61,9 @@ export const LiveMapPage = () => {
     null,
   );
   const [isZooming, setIsZooming] = useState(false);
+  const [viewportBounds, setViewportBounds] = useState<ViewportBounds | null>(
+    null,
+  );
   const zoomCooldownTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
@@ -342,6 +346,7 @@ export const LiveMapPage = () => {
             hoveredAircraft={hoveredAircraftHex}
             isPaused={isPaused}
             onPauseToggle={handlePauseToggle}
+            viewportBounds={viewportBounds}
           />
         </aside>
 
@@ -357,6 +362,7 @@ export const LiveMapPage = () => {
             aircraft={displayedAircraft}
             isPaused={isPaused}
             onTogglePause={handlePauseToggle}
+            onViewportBoundsChange={setViewportBounds}
             className={isMapLoaded ? "live-map-page__map--loaded" : ""}
           />
 

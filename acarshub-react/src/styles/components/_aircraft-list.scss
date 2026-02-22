@@ -267,6 +267,16 @@
   span {
     flex: 1;
   }
+
+  &--disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    pointer-events: none;
+
+    input[type="checkbox"] {
+      cursor: not-allowed;
+    }
+  }
 }
 
 .aircraft-list__filter-divider {
