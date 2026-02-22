@@ -1,6 +1,35 @@
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import react from "@vitejs/plugin-react";
 import { visualizer } from "rollup-plugin-visualizer";
 import { defineConfig } from "vite";
+
+// ---------------------------------------------------------------------------
+// Version constants — read from each workspace package.json at build time.
+// This eliminates the need to inject VITE_VERSION as a Docker ARG; the values
+// come directly from the source of truth (package.json files) during `vite build`.
+// ---------------------------------------------------------------------------
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
+function readPkgVersion(absPath: string): string {
+  try {
+    const pkg = JSON.parse(readFileSync(absPath, "utf-8")) as {
+      version?: string;
+    };
+    return typeof pkg.version === "string" && pkg.version.length > 0
+      ? pkg.version
+      : "unknown";
+  } catch {
+    return "unknown";
+  }
+}
+
+const containerVersion = readPkgVersion(resolve(__dirname, "../package.json"));
+const frontendVersion = readPkgVersion(resolve(__dirname, "package.json"));
+const backendVersion = readPkgVersion(
+  resolve(__dirname, "../acarshub-backend/package.json"),
+);
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -9,6 +38,15 @@ export default defineConfig({
 
   // For local reverse proxy testing: uncomment line below and comment out line above
   // base: "/acarshub-test/",
+
+  // Bake version strings into the bundle at build time from the actual
+  // package.json files. No environment variable injection required.
+  define: {
+    __CONTAINER_VERSION__: JSON.stringify(containerVersion),
+    __FRONTEND_VERSION__: JSON.stringify(frontendVersion),
+    __BACKEND_VERSION__: JSON.stringify(backendVersion),
+  },
+
   resolve: {
     alias: {
       "@": "/src",

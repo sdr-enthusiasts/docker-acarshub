@@ -570,11 +570,17 @@ describe("Socket.IO integration", () => {
     it("acarshub_version has required string and boolean fields", () => {
       const ver = versionPayload as {
         container_version: string;
+        backend_version: string;
+        frontend_version: string;
         github_version: string;
         is_outdated: boolean;
       };
       expect(typeof ver.container_version).toBe("string");
       expect(ver.container_version.length).toBeGreaterThan(0);
+      expect(typeof ver.backend_version).toBe("string");
+      expect(ver.backend_version.length).toBeGreaterThan(0);
+      expect(typeof ver.frontend_version).toBe("string");
+      expect(ver.frontend_version.length).toBeGreaterThan(0);
       expect(typeof ver.github_version).toBe("string");
       expect(typeof ver.is_outdated).toBe("boolean");
     });

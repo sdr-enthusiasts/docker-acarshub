@@ -728,6 +728,8 @@ describe("useAppStore", () => {
         version: "1.0.0",
         github: "https://github.com/test/repo",
         container_version: "1.0.0",
+        backend_version: "1.0.0",
+        frontend_version: "1.0.0",
         github_version: "1.0.0",
         is_outdated: false,
       };

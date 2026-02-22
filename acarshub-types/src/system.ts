@@ -196,9 +196,19 @@ export interface SignalCountData {
 
 /**
  * Version Information
+ *
+ * Carries the independently-versioned package versions for each component of
+ * the monorepo so the UI can display exactly what was built and deployed.
+ *
+ * - container_version  — workspace root package.json  (overall release tag)
+ * - backend_version    — acarshub-backend package.json
+ * - frontend_version   — acarshub-react package.json
+ * - github_version     — latest release on GitHub (for update-check)
  */
 export interface AcarshubVersion {
   container_version: string;
+  backend_version: string;
+  frontend_version: string;
   github_version: string;
   is_outdated: boolean;
 }

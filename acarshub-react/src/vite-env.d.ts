@@ -20,8 +20,7 @@
  * Type definitions for Vite environment variables
  */
 interface ImportMetaEnv {
-  readonly VITE_DOCKER_BUILD?: string;
-  readonly VITE_VERSION?: string;
+  /** GitHub Actions run number, set at Docker build time. Absent in local dev builds. */
   readonly VITE_BUILD_NUMBER?: string;
   /** Set to "true" when building for E2E tests — exposes the app store on window for test injection */
   readonly VITE_E2E?: string;
@@ -30,6 +29,17 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
+
+/**
+ * Build-time version constants injected by vite.config.ts via `define`.
+ *
+ * These are resolved from the workspace package.json files at `vite build` time
+ * so no Docker ARG injection is required — the package.json files are the single
+ * source of truth for each component's version.
+ */
+declare const __CONTAINER_VERSION__: string;
+declare const __FRONTEND_VERSION__: string;
+declare const __BACKEND_VERSION__: string;
 
 /**
  * Type definitions for static asset imports in Vite

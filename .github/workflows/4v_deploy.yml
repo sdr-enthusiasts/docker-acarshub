@@ -41,25 +41,19 @@ jobs:
           echo "Use test image: $INPUTS_USE_TEST_IMAGE"
           echo "Build latest as test: $INPUTS_BUILD_LATEST_AS_TEST"
 
-  get_version:
-    name: "Get version and build number"
+  get_build_number:
+    name: "Get build number"
     runs-on: ubuntu-24.04
     outputs:
-      version: ${{ steps.get_version.outputs.version }}
-      build_number: ${{ steps.get_version.outputs.build_number }}
+      build_number: ${{ steps.get_build_number.outputs.build_number }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
-      - name: Get version and build number
-        id: get_version
+      - name: Get build number
+        id: get_build_number
         run: |
-          # Get version from package.json
-          VERSION=$(grep -oP '(?<="version": ")[^"]*' acarshub-react/package.json)
-          # Get build number from GitHub run
+          # Version strings are read directly from the workspace package.json
+          # files at Docker build time — no extraction or ARG injection needed.
           BUILD_NUMBER=$GITHUB_RUN_NUMBER
-          echo "ACARS Hub: v${VERSION} Build ${BUILD_NUMBER}"
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "ACARS Hub Build ${BUILD_NUMBER}"
           echo "build_number=$BUILD_NUMBER" >> $GITHUB_OUTPUT
 
   deploy:
@@ -67,7 +61,7 @@ jobs:
     if: |
       github.event.inputs.build_latest_as_test == 'false' ||
       github.event.inputs.build_latest_as_test == ''
-    needs: get_version
+    needs: get_build_number
     uses: sdr-enthusiasts/common-github-workflows/.github/workflows/sdre.yml@main
     with:
       push_enabled: true
@@ -80,6 +74,6 @@ jobs:
       platform_linux_arm32v7_enabled: false
       build_baseimage_url: :base/:base-test-pr
       dockerfile_changes: |
-        ARG VERSION=0\.0\.0/ARG VERSION=${{ needs.get_version.outputs.version }}/g;s/ARG BUILD_NUMBER=0/ARG BUILD_NUMBER=${{ needs.get_version.outputs.build_number }}
+        ARG BUILD_NUMBER=0/ARG BUILD_NUMBER=${{ needs.get_build_number.outputs.build_number }}
     secrets:
       ghcr_token: ${{ secrets.GITHUB_TOKEN }}

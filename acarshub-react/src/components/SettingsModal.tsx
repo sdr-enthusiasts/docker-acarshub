@@ -1373,15 +1373,21 @@ export const SettingsModal = () => {
                   {getVersionInfo().fullVersion}
                 </p>
                 <p className="settings-help-text">
-                  <strong>Frontend:</strong> React {getVersionInfo().version}
+                  <strong>Container:</strong>{" "}
+                  {getVersionInfo().containerVersion}
                 </p>
-                {getVersionInfo().isDockerBuild && (
+                <p className="settings-help-text">
+                  <strong>Frontend:</strong> {getVersionInfo().frontendVersion}
+                </p>
+                <p className="settings-help-text">
+                  <strong>Backend:</strong> {getVersionInfo().backendVersion}
+                </p>
+                {getVersionInfo().isDockerBuild ? (
                   <p className="settings-help-text">
                     <strong>Build:</strong> Docker Build{" "}
                     {getVersionInfo().buildNumber}
                   </p>
-                )}
-                {!getVersionInfo().isDockerBuild && (
+                ) : (
                   <p className="settings-help-text">
                     <strong>Environment:</strong> Development
                   </p>

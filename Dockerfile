@@ -6,8 +6,9 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 WORKDIR /workspace
 
-# Accept version and build number as build args
-ARG VERSION=0.0.0
+# Build number comes from CI (GitHub Actions run number).
+# Version strings are read directly from the workspace package.json files by
+# vite.config.ts (frontend) and config.ts (backend) — no ARG injection needed.
 ARG BUILD_NUMBER=0
 
 # hadolint ignore=DL3008
@@ -26,13 +27,10 @@ COPY acarshub-types/ ./acarshub-types/
 RUN set -xe && \
     npm ci --include=dev
 
-# Re-declare ARGs after FROM so they are in scope for the RUN
-ARG VERSION=0.0.0
+# Re-declare ARG after FROM so it is in scope for the RUN
 ARG BUILD_NUMBER=0
 
 RUN set -xe && \
-    export VITE_DOCKER_BUILD="true" && \
-    export VITE_VERSION="${VERSION}" && \
     export VITE_BUILD_NUMBER="${BUILD_NUMBER}" && \
     npm run build && \
     # Stage React SPA output
@@ -50,7 +48,6 @@ RUN set -xe && \
 FROM ghcr.io/sdr-enthusiasts/docker-baseimage:base
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-ARG VERSION=0.0.0
 ARG BUILD_NUMBER=0
 
 # Copy the Node.js runtime from the builder.
@@ -131,17 +128,16 @@ COPY --from=acarshub-react-builder /backend/drizzle/ /backend/drizzle/
 COPY rootfs/ /
 
 RUN set -x && \
-    ACARS_VERSION="${VERSION}" && \
+    # Read the container version directly from the workspace root package.json.
+    # This is the single source of truth — no ARG VERSION injection from CI.
+    ACARS_VERSION=$(node -p "JSON.parse(require('fs').readFileSync('/backend/package.json','utf8')).version") && \
     ACARS_BUILD="${BUILD_NUMBER}" && \
     echo "ACARS Hub (Node.js): v${ACARS_VERSION} Build ${ACARS_BUILD}" && \
-    # Standard version files (read by Python tooling and display scripts)
+    # Standard version files used by base-image infrastructure
     printf "v%sBuild%s" "$ACARS_VERSION" "$ACARS_BUILD" > /acarshub_version && \
     printf "v%s Build %s\nv%sBuild%s" \
     "$ACARS_VERSION" "$ACARS_BUILD" \
     "$ACARS_VERSION" "$ACARS_BUILD" > /version && \
-    # Node backend reads "./version" relative to its working directory (/backend).
-    # Write just the semver string so config.ts gets a clean value.
-    printf "%s" "$ACARS_VERSION" > /backend/version && \
     # Ensure all s6 scripts and the healthcheck are executable
     find /etc/s6-overlay/scripts -name "*.sh" -exec chmod +x {} \; && \
     chmod +x /scripts/healthcheck.sh

@@ -40,7 +40,7 @@ import type {
   Terms,
 } from "@acarshub/types";
 import { sql } from "drizzle-orm";
-import { getConfig } from "../config.js";
+import { getConfig, VERSIONS } from "../config.js";
 import {
   databaseSearch,
   getAlertCounts,
@@ -291,9 +291,13 @@ function handleConnect(socket: TypedSocket, _io: TypedSocketServer): void {
     }
 
     // 10. Send version information
+    // Each version field comes from the corresponding workspace package.json,
+    // read at startup by config.ts rather than injected as a Docker ARG.
     const versionInfo: AcarshubVersion = {
-      container_version: config.version,
-      github_version: config.version, // TODO: Fetch from GitHub API
+      container_version: VERSIONS.container,
+      backend_version: VERSIONS.backend,
+      frontend_version: VERSIONS.frontend,
+      github_version: VERSIONS.container, // TODO: Fetch from GitHub API
       is_outdated: false, // TODO: Compare versions
     };
     socket.emit("acarshub_version", versionInfo);

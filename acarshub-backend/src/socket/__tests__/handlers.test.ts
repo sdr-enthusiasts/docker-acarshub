@@ -95,6 +95,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../../config.js", () => ({
   getConfig: vi.fn(),
+  VERSIONS: {
+    container: "4.0.0-test",
+    backend: "4.0.0-test",
+    frontend: "4.0.0-test",
+  },
 }));
 
 vi.mock("../../db/index.js", () => ({
@@ -521,17 +526,23 @@ describe("handleConnect", () => {
   });
 
   it("should emit acarshub_version", () => {
-    mockGetConfig.mockReturnValue(makeDefaultConfig({ version: "4.2.0" }));
-
     const socket = makeMockSocket();
     simulateConnect(socket);
 
-    const payload = firstEmit<{ container_version: string }>(
-      socket,
-      "acarshub_version",
-    );
+    const payload = firstEmit<{
+      container_version: string;
+      backend_version: string;
+      frontend_version: string;
+      github_version: string;
+      is_outdated: boolean;
+    }>(socket, "acarshub_version");
 
-    expect(payload?.container_version).toBe("4.2.0");
+    // VERSIONS is a module-level constant provided by the mock factory above.
+    expect(payload?.container_version).toBe("4.0.0-test");
+    expect(payload?.backend_version).toBe("4.0.0-test");
+    expect(payload?.frontend_version).toBe("4.0.0-test");
+    expect(typeof payload?.github_version).toBe("string");
+    expect(payload?.is_outdated).toBe(false);
   });
 
   it("should send recent non-alert messages in acars_msg_batch chunks of 25", () => {

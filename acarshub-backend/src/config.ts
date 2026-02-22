@@ -5,7 +5,7 @@
  * matching Python acarshub_configuration.py with Zod validation
  */
 
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { z } from "zod";
 import { createLogger } from "./utils/logger.js";
 
@@ -83,15 +83,70 @@ const ConfigSchema = z.object({
 export type Config = z.infer<typeof ConfigSchema>;
 
 /**
- * Application version (read from version file)
+ * Per-package version strings read directly from each workspace's package.json.
+ *
+ * Why two layouts?
+ *
+ * Production (Docker): the backend runs from /backend/ where npm ci was run.
+ *   The Dockerfile copies each workspace's package.json into predictable paths:
+ *     /backend/package.json              → workspace root
+ *     /backend/acarshub-backend/package.json → backend
+ *     /backend/acarshub-react/package.json   → frontend
+ *
+ * Development: `npm run dev` is executed from acarshub-backend/, so cwd is
+ *   that directory and the relative layout is:
+ *     ./package.json        → backend
+ *     ../package.json       → workspace root
+ *     ../acarshub-react/package.json → frontend
+ *
+ * We detect the environment by checking whether the production-only sub-path
+ * acarshub-backend/package.json exists in the cwd.
  */
-export const VERSION = (() => {
+function readPkgVersion(filePath: string): string {
   try {
-    return readFileSync("./version", "utf-8").trim();
+    const raw = readFileSync(filePath, "utf-8");
+    const pkg = JSON.parse(raw) as { version?: string };
+    return typeof pkg.version === "string" && pkg.version.length > 0
+      ? pkg.version
+      : "unknown";
   } catch {
-    return "4.0.0-dev";
+    return "unknown";
   }
+}
+
+export interface VersionData {
+  /** Version from workspace root package.json (overall container release tag) */
+  container: string;
+  /** Version from acarshub-backend package.json */
+  backend: string;
+  /** Version from acarshub-react package.json */
+  frontend: string;
+}
+
+export const VERSIONS: VersionData = (() => {
+  const isProduction = existsSync("./acarshub-backend/package.json");
+
+  if (isProduction) {
+    return {
+      container: readPkgVersion("./package.json"),
+      backend: readPkgVersion("./acarshub-backend/package.json"),
+      frontend: readPkgVersion("./acarshub-react/package.json"),
+    };
+  }
+
+  // Development: cwd is acarshub-backend/
+  return {
+    container: readPkgVersion("../package.json"),
+    backend: readPkgVersion("./package.json"),
+    frontend: readPkgVersion("../acarshub-react/package.json"),
+  };
 })();
+
+/**
+ * Container version string — backwards-compat alias for VERSIONS.container.
+ * Use VERSIONS directly when you need all three component versions.
+ */
+export const VERSION = VERSIONS.container;
 
 /**
  * Remote updates configuration
