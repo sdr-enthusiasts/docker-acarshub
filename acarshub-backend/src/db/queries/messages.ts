@@ -540,16 +540,43 @@ export function databaseSearch(params: SearchParams): SearchResult {
     // Try FTS5 search first
     const ftsResult = searchWithFts(params);
     if (ftsResult !== null) {
-      logger.debug("Using FTS5 search", {
-        matchCount: ftsResult.totalCount,
-        limit: params.limit,
-      });
-      return ftsResult;
+      // Guard against FTS index / messages table mismatch.
+      //
+      // The FTS COUNT(*) query reads the inverted index directly and can return
+      // N > 0 while the JOIN back to the messages table returns 0 rows.  This
+      // happens when the FTS index is stale — e.g. rows deleted without the
+      // delete trigger firing, or an index rebuilt before a UID migration
+      // completed.  Returning { messages: [], totalCount: 6 } to the frontend
+      // produces exactly the "Found 6 results but nothing displayed" symptom.
+      //
+      // When the mismatch is detected (COUNT says there are results on this
+      // page but the JOIN returned nothing) we fall through to LIKE so the
+      // caller always gets a consistent result set.
+      const offset = params.offset ?? 0;
+      const isWithinBounds = offset < ftsResult.totalCount;
+      if (ftsResult.totalCount > 0 && ftsResult.messages.length === 0 && isWithinBounds) {
+        logger.warn(
+          "FTS count/messages mismatch detected (stale index?), falling back to LIKE search",
+          {
+            ftsCount: ftsResult.totalCount,
+            offset,
+            limit: params.limit,
+          },
+        );
+        // Fall through to LIKE below
+      } else {
+        logger.debug("Using FTS5 search", {
+          matchCount: ftsResult.totalCount,
+          limit: params.limit,
+        });
+        return ftsResult;
+      }
+    } else {
+      // null means no FTS-compatible terms were present (e.g. only stationId/icao
+      // fields which are intentionally routed to LIKE for substring matching).
+      // An actual zero-result FTS search returns a SearchResult, not null.
+      logger.debug("No FTS-compatible terms in params, falling back to LIKE");
     }
-    // null means no FTS-compatible terms were present (e.g. only stationId/icao
-    // fields which are intentionally routed to LIKE for substring matching).
-    // An actual zero-result FTS search returns a SearchResult, not null.
-    logger.debug("No FTS-compatible terms in params, falling back to LIKE");
   }
 
   // Fall back to LIKE-based search (ORM query)
