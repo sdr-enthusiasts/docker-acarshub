@@ -405,6 +405,11 @@ export interface MapSettings {
    * Minimum: 320 (default). Maximum: 600.
    */
   mapSidebarWidth: number;
+  /**
+   * Whether the map sidebar is collapsed.
+   * When true, the sidebar is hidden and only an expand button is shown.
+   */
+  mapSidebarCollapsed: boolean;
 }
 
 /**
@@ -534,7 +539,8 @@ export const DEFAULT_SETTINGS: UserSettings = {
     enabledGeoJSONOverlays: [],
     showOpenAIP: false,
     showRainViewer: false,
-    mapSidebarWidth: 320,
+    mapSidebarWidth: 408,
+    mapSidebarCollapsed: false,
   },
   advanced: {
     logLevel: "info",

@@ -15,6 +15,7 @@
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
 import { faChevronDown } from "@fortawesome/free-solid-svg-icons/faChevronDown";
+import { faChevronLeft } from "@fortawesome/free-solid-svg-icons/faChevronLeft";
 import { faFilter } from "@fortawesome/free-solid-svg-icons/faFilter";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -29,12 +30,32 @@ import {
 import type { ViewportBounds } from "./AircraftMarkers";
 import "../../styles/components/_aircraft-list.scss";
 
-// Width (px) at which column headers expand from "#" to short / full text
-const HEADER_WIDE_THRESHOLD = 460;
-const HEADER_WIDER_THRESHOLD = 560;
-
 // Minimum sidebar width mirrors the CSS default
 const SIDEBAR_MIN_WIDTH = 320;
+
+// ── Alerts column widths ─────────────────────────────────────────────────────
+// Phase 1 (sidebar 320 → 344 px): alerts column grows from narrow to full.
+const ALERTS_MIN_WIDTH = 44; // shows "#"
+const ALERTS_FULL_WIDTH = 68; // shows "Alerts"
+
+// ── Messages column widths ───────────────────────────────────────────────────
+// Phase 2 (sidebar 344 → 388 px): messages column grows from narrow to full.
+const MSGS_MIN_WIDTH = 44; // shows "#"
+const MSGS_MEDIUM_WIDTH = 56; // shows "Msgs"
+const MSGS_FULL_WIDTH = 88; // shows "Messages"
+
+// ── Phase boundaries (sidebar px) ────────────────────────────────────────────
+// After PHASE1_END the alerts column is at its maximum; extra width goes to msgs.
+// After PHASE2_END both fixed columns are at max; extra width flows into callsign
+// (decoder badges become visible one at a time).
+const PHASE1_END = SIDEBAR_MIN_WIDTH + (ALERTS_FULL_WIDTH - ALERTS_MIN_WIDTH); // 344
+const PHASE2_END = PHASE1_END + (MSGS_FULL_WIDTH - MSGS_MIN_WIDTH); // 388
+
+// ── Decoder badge sizing ──────────────────────────────────────────────────────
+// Each badge is 14 px wide + ~3 px margin ≈ 17 px; we budget 20 px per badge
+// to leave a small breathing gap.  Badges only appear in Phase 3 (sidebar
+// wider than PHASE2_END), so that callsign width is not affected in phases 1-2.
+const BADGE_WIDTH_PX = 20;
 
 /**
  * Map a normalised DecoderType to the CSS BEM modifier used for colouring
@@ -49,12 +70,48 @@ const DECODER_CSS_MODIFIER: Record<DecoderType, string> = {
 };
 
 /**
+ * Compute the alerts and messages column widths for a given sidebar width.
+ *
+ * Expansion is staged so the callsign column never changes width in phases 1-2:
+ *   Phase 1 (320 → 344 px): alerts column grows 44 → 68 px.
+ *   Phase 2 (344 → 388 px): messages column grows 44 → 88 px.
+ *   Phase 3 (388 px +):     both columns stay at max; callsign grows.
+ */
+function computeColumnWidths(width: number): {
+  msgsWidth: number;
+  alertsWidth: number;
+} {
+  if (width <= SIDEBAR_MIN_WIDTH) {
+    return { msgsWidth: MSGS_MIN_WIDTH, alertsWidth: ALERTS_MIN_WIDTH };
+  }
+  if (width <= PHASE1_END) {
+    // Phase 1 – only alerts grows
+    return {
+      alertsWidth: ALERTS_MIN_WIDTH + (width - SIDEBAR_MIN_WIDTH),
+      msgsWidth: MSGS_MIN_WIDTH,
+    };
+  }
+  if (width <= PHASE2_END) {
+    // Phase 2 – alerts at max, msgs grows
+    return {
+      alertsWidth: ALERTS_FULL_WIDTH,
+      msgsWidth: MSGS_MIN_WIDTH + (width - PHASE1_END),
+    };
+  }
+  // Phase 3 – both at max, callsign absorbs the rest
+  return { msgsWidth: MSGS_FULL_WIDTH, alertsWidth: ALERTS_FULL_WIDTH };
+}
+
+/**
  * Calculate how many decoder badges to display given the current sidebar width.
- * Formula keeps exactly 1 badge at the default 320 px width and adds one badge
- * per 60 px of extra width, capped at 5 (the number of known decoder types).
+ *
+ * Badges only appear in Phase 3 (sidebar > PHASE2_END) so that the callsign
+ * column is not widened during the alerts/messages expansion phases.
+ * Each additional 20 px of Phase-3 width reveals one more badge (max 5).
  */
 function calcMaxDecoderBadges(width: number): number {
-  return Math.max(1, Math.min(5, Math.floor((width - 260) / 60)));
+  if (width <= PHASE2_END) return 0;
+  return Math.min(5, Math.floor((width - PHASE2_END) / BADGE_WIDTH_PX));
 }
 
 interface AircraftListProps {
@@ -66,6 +123,8 @@ interface AircraftListProps {
   isPaused?: boolean;
   /** Callback when pause button is clicked */
   onPauseToggle?: () => void;
+  /** Callback when collapse button is clicked */
+  onCollapseToggle?: () => void;
   /**
    * Current map viewport bounds (exact, unbuffered).
    * When provided, enables the "Visible Only" filter which restricts the list
@@ -113,6 +172,7 @@ export function AircraftList({
   hoveredAircraft,
   isPaused = false,
   onPauseToggle,
+  onCollapseToggle,
   viewportBounds,
   sidebarWidth,
 }: AircraftListProps) {
@@ -152,20 +212,28 @@ export function AircraftList({
   // Use the live measured width for all responsive decisions.
   const effectiveWidth = renderedWidth;
 
-  // Column header text adapts as the sidebar grows.
-  // "#" at default width → short label → full label at wider widths.
+  // Compute the staged column widths once; used for both CSS custom properties
+  // and for deriving the column header labels below.
+  const { msgsWidth, alertsWidth } = useMemo(
+    () => computeColumnWidths(effectiveWidth),
+    [effectiveWidth],
+  );
+
+  // Column header text follows the column pixel width thresholds.
   const messagesHeaderText = useMemo<string>(() => {
-    if (effectiveWidth >= HEADER_WIDER_THRESHOLD) return "Messages";
-    if (effectiveWidth >= HEADER_WIDE_THRESHOLD) return "Msgs";
+    if (msgsWidth >= MSGS_FULL_WIDTH) return "Messages";
+    if (msgsWidth >= MSGS_MEDIUM_WIDTH) return "Msgs";
     return "#";
-  }, [effectiveWidth]);
+  }, [msgsWidth]);
 
   const alertsHeaderText = useMemo<string>(() => {
-    if (effectiveWidth >= HEADER_WIDER_THRESHOLD) return "Alerts";
+    if (alertsWidth >= ALERTS_FULL_WIDTH) return "Alerts";
     return "#";
-  }, [effectiveWidth]);
+  }, [alertsWidth]);
 
   // How many decoder-type badges to render per row.
+  // Zero until Phase 3 (sidebar > PHASE2_END) so that badges never force the
+  // callsign column to widen during the alerts/messages expansion phases.
   const maxDecoderBadges = useMemo<number>(
     () => calcMaxDecoderBadges(effectiveWidth),
     [effectiveWidth],
@@ -177,16 +245,9 @@ export function AircraftList({
   const applyColumnWidths = useCallback(() => {
     const el = listRef.current;
     if (!el) return;
-    const msgsWidth =
-      effectiveWidth >= HEADER_WIDER_THRESHOLD
-        ? 88
-        : effectiveWidth >= HEADER_WIDE_THRESHOLD
-          ? 56
-          : 44;
-    const alertsWidth = effectiveWidth >= HEADER_WIDER_THRESHOLD ? 68 : 44;
     el.style.setProperty("--msgs-col-width", `${msgsWidth}px`);
     el.style.setProperty("--alerts-col-width", `${alertsWidth}px`);
-  }, [effectiveWidth]);
+  }, [msgsWidth, alertsWidth]);
 
   useEffect(() => {
     applyColumnWidths();
@@ -605,20 +666,33 @@ export function AircraftList({
             </span>
           )}
         </div>
-        {onPauseToggle && (
-          <button
-            type="button"
-            className={`aircraft-list__pause-button ${isPaused ? "aircraft-list__pause-button--paused" : ""}`}
-            onClick={onPauseToggle}
-            title={
-              isPaused
-                ? "Resume updates (or press 'p')"
-                : "Pause updates (or press 'p')"
-            }
-          >
-            {isPaused ? "▶" : "⏸"}
-          </button>
-        )}
+        <div className="aircraft-list__header-actions">
+          {onPauseToggle && (
+            <button
+              type="button"
+              className={`aircraft-list__pause-button ${isPaused ? "aircraft-list__pause-button--paused" : ""}`}
+              onClick={onPauseToggle}
+              title={
+                isPaused
+                  ? "Resume updates (or press 'p')"
+                  : "Pause updates (or press 'p')"
+              }
+            >
+              {isPaused ? "▶" : "⏸"}
+            </button>
+          )}
+          {onCollapseToggle && (
+            <button
+              type="button"
+              className="aircraft-list__collapse-button"
+              onClick={onCollapseToggle}
+              title="Collapse sidebar"
+              aria-label="Collapse sidebar"
+            >
+              <FontAwesomeIcon icon={faChevronLeft} />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Filters */}

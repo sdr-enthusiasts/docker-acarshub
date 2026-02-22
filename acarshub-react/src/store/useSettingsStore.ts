@@ -88,6 +88,7 @@ export interface SettingsState {
   setColorByDecoder: (enabled: boolean) => void;
   setGroundAltitudeThreshold: (altitude: number) => void;
   setMapSidebarWidth: (width: number) => void;
+  setMapSidebarCollapsed: (collapsed: boolean) => void;
 
   // GeoJSON overlay actions
   setGeoJSONOverlay: (overlayId: string, enabled: boolean) => void;
@@ -167,14 +168,15 @@ const getDefaultSettings = (): UserSettings => {
       enabledGeoJSONOverlays: [],
       showOpenAIP: false,
       showRainViewer: false,
-      mapSidebarWidth: 320,
+      mapSidebarWidth: 408,
+      mapSidebarCollapsed: false,
     },
     advanced: {
       logLevel: import.meta.env.PROD ? "warn" : "info",
       persistLogs: true,
     },
     updatedAt: Date.now(),
-    version: 7,
+    version: 8,
   };
   return defaults;
 };
@@ -550,6 +552,18 @@ export const useSettingsStore = create<SettingsState>()(
           },
         })),
 
+      setMapSidebarCollapsed: (collapsed) =>
+        set((state) => ({
+          settings: {
+            ...state.settings,
+            map: {
+              ...state.settings.map,
+              mapSidebarCollapsed: collapsed,
+            },
+            updatedAt: Date.now(),
+          },
+        })),
+
       setShowOnlyUnread: (enabled) =>
         set((state) => ({
           settings: {
@@ -749,17 +763,17 @@ export const useSettingsStore = create<SettingsState>()(
     }),
     {
       name: "acarshub-settings",
-      version: 7,
+      version: 8,
       // Migrate old settings if needed
       migrate: (persistedState: unknown, version: number) => {
         const state = persistedState as SettingsState;
 
-        // Version 0 -> 6: Reset to defaults
+        // Version 0 -> 8: Reset to defaults
         if (version === 0) {
           return { settings: getDefaultSettings() };
         }
 
-        // Version 1 -> 7: Add map settings and advanced settings
+        // Version 1 -> 8: Add map settings and advanced settings
         if (version === 1) {
           const defaults = getDefaultSettings();
           return {
@@ -768,12 +782,12 @@ export const useSettingsStore = create<SettingsState>()(
               ...state.settings,
               map: defaults.map,
               advanced: defaults.advanced,
-              version: 7,
+              version: 8,
             },
           };
         }
 
-        // Version 2 -> 7: Add showOnlyMilitary and showOnlyInteresting to map settings
+        // Version 2 -> 8: Add showOnlyMilitary and showOnlyInteresting to map settings
         if (version === 2) {
           return {
             ...state,
@@ -787,14 +801,15 @@ export const useSettingsStore = create<SettingsState>()(
                 showOnlyLADD: false,
                 showOpenAIP: false,
                 showRainViewer: false,
-                mapSidebarWidth: 320,
+                mapSidebarWidth: 408,
+                mapSidebarCollapsed: false,
               },
-              version: 7,
+              version: 8,
             },
           };
         }
 
-        // Version 3 -> 7: Add showOpenAIP and showRainViewer to map settings
+        // Version 3 -> 8: Add showOpenAIP and showRainViewer to map settings
         if (version === 3) {
           return {
             ...state,
@@ -804,14 +819,15 @@ export const useSettingsStore = create<SettingsState>()(
                 ...state.settings.map,
                 showOpenAIP: false,
                 showRainViewer: false,
-                mapSidebarWidth: 320,
+                mapSidebarWidth: 408,
+                mapSidebarCollapsed: false,
               },
-              version: 7,
+              version: 8,
             },
           };
         }
 
-        // Version 4 -> 7: Add groundAltitudeThreshold to map settings
+        // Version 4 -> 8: Add groundAltitudeThreshold to map settings
         if (version === 4) {
           return {
             ...state,
@@ -821,14 +837,15 @@ export const useSettingsStore = create<SettingsState>()(
                 ...state.settings.map,
                 groundAltitudeThreshold: 500,
                 useSprites: true,
-                mapSidebarWidth: 320,
+                mapSidebarWidth: 408,
+                mapSidebarCollapsed: false,
               },
-              version: 7,
+              version: 8,
             },
           };
         }
 
-        // Version 5 -> 7: Fix useSprites to default to true
+        // Version 5 -> 8: Fix useSprites to default to true
         if (version === 5) {
           return {
             ...state,
@@ -837,14 +854,15 @@ export const useSettingsStore = create<SettingsState>()(
               map: {
                 ...state.settings.map,
                 useSprites: true,
-                mapSidebarWidth: 320,
+                mapSidebarWidth: 408,
+                mapSidebarCollapsed: false,
               },
-              version: 7,
+              version: 8,
             },
           };
         }
 
-        // Version 6 -> 7: Add mapSidebarWidth to map settings
+        // Version 6 -> 8: Add mapSidebarWidth to map settings
         if (version === 6) {
           return {
             ...state,
@@ -852,9 +870,25 @@ export const useSettingsStore = create<SettingsState>()(
               ...state.settings,
               map: {
                 ...state.settings.map,
-                mapSidebarWidth: 320,
+                mapSidebarWidth: 408,
+                mapSidebarCollapsed: false,
               },
-              version: 7,
+              version: 8,
+            },
+          };
+        }
+
+        // Version 7 -> 8: Add mapSidebarCollapsed to map settings
+        if (version === 7) {
+          return {
+            ...state,
+            settings: {
+              ...state.settings,
+              map: {
+                ...state.settings.map,
+                mapSidebarCollapsed: false,
+              },
+              version: 8,
             },
           };
         }
