@@ -83,6 +83,7 @@
             ".*.mp3"
             ".*.db"
             ".*.rrd"
+            "spritesheet.json"
           ];
         };
       });
