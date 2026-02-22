@@ -45,31 +45,7 @@ RUN set -xe && \
     cp -r ./acarshub-backend/drizzle/ /backend/drizzle/
 
 # ============================================================
-# Stage 2: Prune devDependencies from the workspace
-#
-# Inheriting the full build context lets npm prune reuse the
-# already-compiled native add-ons (better-sqlite3) so we never
-# have to rebuild them from source in a second install pass.
-# ============================================================
-FROM acarshub-react-builder AS acarshub-backend-prod
-
-RUN set -xe && \
-    npm prune --omit=dev && \
-    # After removing devDeps, @playwright/test and its transitive dep chain
-    # (chromium-bidi -> zod@3) are gone. npm prune removes the files but does
-    # not restructure the remaining packages, so zod@4 is still stranded in
-    # acarshub-backend/node_modules/zod rather than hoisted to the workspace
-    # root. npm dedupe sees only one zod consumer left and hoists zod@4 to
-    # node_modules/zod, removing the backend-local copy.
-    npm dedupe && \
-    # The @acarshub/types workspace entry is a symlink whose target
-    # (../../acarshub-types) will not exist in the final image.
-    # All backend imports from @acarshub/types are "import type" and
-    # are erased by tsc, so the module is never loaded at runtime.
-    rm -rf ./node_modules/@acarshub/types
-
-# ============================================================
-# Stage 3: Runtime image
+# Stage 2: Runtime image
 # ============================================================
 FROM ghcr.io/sdr-enthusiasts/docker-baseimage:base
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
@@ -77,10 +53,20 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 ARG VERSION=0.0.0
 ARG BUILD_NUMBER=0
 
-# Copy the Node.js binary from the builder.
+# Copy the Node.js runtime from the builder.
 # node:slim is Debian-based (same ABI family as docker-baseimage:base) so the
 # binary and its pre-compiled native add-ons are directly compatible.
+#
+# We copy only the node binary and the npm module directory - NOT /usr/local/bin/npm.
+# In node:slim, /usr/local/bin/npm is a symlink whose target (npm-cli.js) uses
+# __dirname to locate ../lib/cli.js. COPY --from dereferences symlinks, so the
+# file lands at /usr/local/bin/npm with __dirname=/usr/local/bin and the relative
+# require('../lib/cli.js') resolves to /usr/local/lib/cli.js (wrong).
+# A shell wrapper that invokes npm-cli.js by absolute path keeps __dirname correct.
 COPY --from=acarshub-react-builder /usr/local/bin/node /usr/local/bin/node
+COPY --from=acarshub-react-builder /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/npm
+RUN printf '#!/bin/sh\nexec /usr/local/bin/node /usr/local/lib/node_modules/npm/bin/npm-cli.js "$@"\n' \
+    > /usr/local/bin/npm && chmod +x /usr/local/bin/npm
 
 # hadolint ignore=DL3008,SC2086
 RUN set -x && \
@@ -96,17 +82,53 @@ RUN set -x && \
     # Runtime directories expected by s6 services and the Node backend
     mkdir -p /run/acars /webapp/data/ /backend
 
+# Copy only the package manifests needed for npm to resolve the workspace graph
+# from the lockfile. No source files are needed - npm ci only reads package.json
+# files to set up workspace symlinks and then follows the lockfile for resolution.
+WORKDIR /backend
+COPY package.json package-lock.json ./
+COPY acarshub-backend/package.json ./acarshub-backend/
+COPY acarshub-types/package.json   ./acarshub-types/
+COPY acarshub-react/package.json   ./acarshub-react/
+
+# Install production-only dependencies directly in /backend.
+#
+# Why build tools are installed and removed in the same layer:
+#   better-sqlite3 is a native addon that must compile against the Node ABI.
+#   Installing and purging make/python3/g++ in one RUN keeps them out of the
+#   final image layer while still allowing the addon to compile.
+#
+# Why we remove node_modules/@acarshub/:
+#   npm workspaces creates symlinks for every workspace package regardless of
+#   whether it is an actual runtime dependency. All @acarshub/* imports in the
+#   backend are "import type" declarations erased by tsc, so none of these
+#   symlinks are needed at runtime. Removing them prevents broken-symlink noise.
+#
+# The --mount=type=cache on /root/.npm avoids re-downloading tarballs on
+# subsequent builds when the package-lock.json has not changed.
+#
+# hadolint ignore=DL3008
+RUN --mount=type=cache,target=/root/.npm \
+    set -xe && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends make python3 g++ && \
+    npm ci --omit=dev && \
+    npm dedupe && \
+    rm -rf node_modules/@acarshub && \
+    apt-get purge -y make python3 g++ && \
+    apt-get autoremove -y && \
+    apt-get clean -q -y && \
+    rm -rf /tmp/* /var/lib/apt/lists/* /var/cache/*
+
 # React SPA served by nginx
 COPY --from=acarshub-react-builder /webapp/dist/ /webapp/dist/
 
-# Node.js backend: compiled JS, Drizzle SQL migrations, production node_modules
-COPY --from=acarshub-react-builder /backend/dist/     /backend/dist/
-COPY --from=acarshub-react-builder /backend/drizzle/  /backend/drizzle/
-# Workspace root node_modules contain all hoisted production deps (including
-# the compiled better-sqlite3 native add-on).
-COPY --from=acarshub-backend-prod /workspace/node_modules/ /backend/node_modules/
+# Node.js backend: compiled JS + Drizzle SQL migrations
+# (node_modules are already installed above via npm ci)
+COPY --from=acarshub-react-builder /backend/dist/    /backend/dist/
+COPY --from=acarshub-react-builder /backend/drizzle/ /backend/drizzle/
 
-COPY rootfs/      /
+COPY rootfs/ /
 
 RUN set -x && \
     ACARS_VERSION="${VERSION}" && \
