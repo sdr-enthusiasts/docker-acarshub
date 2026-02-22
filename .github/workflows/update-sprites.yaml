@@ -22,6 +22,7 @@
 # Files updated:
 # - acarshub-react/public/static/sprites/spritesheet.json
 # - acarshub-react/public/static/sprites/spritesheet.png
+# - acarshub-react/public/static/sprites/spritesheet-{theme}-{state}.png (all colored variants)
 # - acarshub-react/ATTRIBUTIONS.md
 #
 # License: pw-silhouettes is licensed under CC BY-NC-SA 4.0
@@ -80,6 +81,14 @@ jobs:
             echo "Update needed - current: ${current}, latest: ${latest}"
           fi
 
+      - name: Set up Node.js
+        if: steps.compare.outputs.needs_update == 'true'
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: acarshub-react/package-lock.json
+
       - name: Download new sprite assets
         if: steps.compare.outputs.needs_update == 'true'
         run: |
@@ -95,6 +104,14 @@ jobs:
             "${base_url}/spritesheet.png"
 
           echo "Download complete"
+
+      - name: Install dependencies and generate colored sprite sheets
+        if: steps.compare.outputs.needs_update == 'true'
+        working-directory: acarshub-react
+        run: |
+          npm ci --ignore-scripts
+          npm run generate-sprites
+          echo "Colored sprite sheets generated"
 
       - name: Update ATTRIBUTIONS.md version
         if: steps.compare.outputs.needs_update == 'true'
@@ -126,6 +143,7 @@ jobs:
             ### Changes
             - ✅ Updated `spritesheet.json` from pw-silhouettes release
             - ✅ Updated `spritesheet.png` from pw-silhouettes release
+            - ✅ Regenerated all colored sprite sheets (16 variants × 2 themes)
             - ✅ Updated version in `ATTRIBUTIONS.md`
 
             ### Source
