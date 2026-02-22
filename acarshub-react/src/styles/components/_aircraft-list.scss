@@ -456,15 +456,19 @@
       width: 70px;
     } // Speed
     &:nth-child(4) {
-      min-width: 40px;
-      width: 50px;
+      // Width is set via --msgs-col-width CSS custom property injected by the
+      // ResizeObserver in AircraftList.tsx.  The fallback (44px) matches the
+      // "#" label at the default 320 px sidebar width.
+      width: var(--msgs-col-width, 44px);
+      min-width: var(--msgs-col-width, 44px);
       text-align: center;
-    } // # (Messages)
+    } // Messages
     &:nth-child(5) {
-      min-width: 40px;
-      width: 50px;
+      // Same pattern as messages column above.
+      width: var(--alerts-col-width, 44px);
+      min-width: var(--alerts-col-width, 44px);
       text-align: center;
-    } // # (Alerts)
+    } // Alerts
   }
 
   tbody {
@@ -488,6 +492,9 @@
 
 .aircraft-list__sort-button {
   width: 100%;
+  // Prevent header text like "Messages" / "Alerts" from wrapping; the column
+  // width is driven by the button content so no fixed widths are needed.
+  white-space: nowrap;
   padding: 0.75rem 0.5rem;
   background-color: var(--color-surface0);
   border: none;
@@ -577,7 +584,17 @@
   text-align: center;
 }
 
-.aircraft-list__badge {
+// ============================================================================
+// Decoder-type checkmark badges
+// ============================================================================
+// Each badge is a coloured "✓" character rendered inline after the callsign.
+// One badge per decoder type (ACARS, VDLM2, HFDL, IMSL, IRDM); the count
+// shown is controlled by the sidebarWidth prop passed from LiveMapPage.
+
+// Decoder-type badges – same circular shape as the old messages badge but
+// coloured per decoder type so users can tell at a glance which networks
+// an aircraft has been heard on.
+.aircraft-list__decoder-badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -585,13 +602,33 @@
   height: 14px;
   border-radius: 50%;
   font-size: 0.5rem;
-  font-weight: 600;
-  margin-left: 0.25rem;
+  font-weight: 700;
+  line-height: 1;
+  margin-left: 0.2rem;
   vertical-align: middle;
+  flex-shrink: 0;
+  // Checkmark contrast colour works for all decoder background colours
+  color: var(--color-base);
 
-  &--messages {
+  // Decoder-specific background colours (Catppuccin theme variables)
+  &--acars {
+    background-color: var(--color-blue);
+  }
+
+  &--vdlm2 {
     background-color: var(--color-green);
-    color: var(--color-base);
+  }
+
+  &--hfdl {
+    background-color: var(--color-yellow);
+  }
+
+  &--imsl {
+    background-color: var(--color-mauve);
+  }
+
+  &--irdm {
+    background-color: var(--color-teal);
   }
 }
 

@@ -399,6 +399,12 @@ export interface MapSettings {
   showOpenAIP: boolean;
   /** Show RainViewer weather radar overlay */
   showRainViewer: boolean;
+  /**
+   * Sidebar width in pixels on the Live Map page (desktop only).
+   * Persisted so the user's preferred width survives reloads.
+   * Minimum: 320 (default). Maximum: 600.
+   */
+  mapSidebarWidth: number;
 }
 
 /**
@@ -528,13 +534,14 @@ export const DEFAULT_SETTINGS: UserSettings = {
     enabledGeoJSONOverlays: [],
     showOpenAIP: false,
     showRainViewer: false,
+    mapSidebarWidth: 320,
   },
   advanced: {
     logLevel: "info",
     persistLogs: false,
   },
   updatedAt: Date.now(),
-  version: 5,
+  version: 7,
 };
 
 /**

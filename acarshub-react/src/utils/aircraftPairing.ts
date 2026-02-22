@@ -17,6 +17,30 @@
 import type { ADSBAircraft, AltitudeUnit, MessageGroup } from "../types";
 
 /**
+ * Canonical decoder type names used throughout the UI.
+ * Backend may send "VDL-M2" or "VDLM2" – both normalise to "VDLM2".
+ */
+export type DecoderType = "ACARS" | "VDLM2" | "HFDL" | "IMSL" | "IRDM";
+
+/**
+ * Normalise the raw `message_type` string from an AcarsMsg into one of the
+ * known DecoderType values.  Returns undefined for unrecognised types so
+ * callers can filter them out.
+ */
+export function normalizeDecoderType(
+  messageType: string | undefined,
+): DecoderType | undefined {
+  if (!messageType) return undefined;
+  const upper = messageType.toUpperCase().trim();
+  if (upper === "ACARS") return "ACARS";
+  if (upper === "VDL-M2" || upper === "VDLM2") return "VDLM2";
+  if (upper === "HFDL") return "HFDL";
+  if (upper === "IMSL") return "IMSL";
+  if (upper === "IRDM") return "IRDM";
+  return undefined;
+}
+
+/**
  * ADS-B Aircraft with Paired ACARS Data
  * Extended aircraft object with matched ACARS message group
  */
@@ -41,6 +65,12 @@ export interface PairedAircraft {
   alertCount: number;
   matchedGroup?: MessageGroup;
   matchStrategy?: "hex" | "flight" | "tail" | "none";
+  /**
+   * Decoder types seen for this aircraft, ordered by most-recently-received
+   * first (newest message wins).  Deduplicated – at most one entry per type.
+   * Empty array when there are no ACARS messages.
+   */
+  decoderTypes: DecoderType[];
 }
 
 /**
@@ -126,6 +156,28 @@ function findMessageGroup(
 }
 
 /**
+ * Extract unique decoder types from a message group, ordered newest-first.
+ * Messages are stored newest-first (unshift on arrival), so iterating in
+ * order naturally gives us the most-recently-seen decoder type first.
+ */
+function extractDecoderTypes(group: MessageGroup | undefined): DecoderType[] {
+  if (!group || group.messages.length === 0) return [];
+
+  const seen = new Set<DecoderType>();
+  const result: DecoderType[] = [];
+
+  for (const msg of group.messages) {
+    const decoded = normalizeDecoderType(msg.message_type);
+    if (decoded && !seen.has(decoded)) {
+      seen.add(decoded);
+      result.push(decoded);
+    }
+  }
+
+  return result;
+}
+
+/**
  * Pair ADS-B aircraft with ACARS message groups
  * Returns enriched aircraft data with ACARS information
  *
@@ -164,6 +216,7 @@ export function pairADSBWithACARSMessages(
       alertCount: group?.num_alerts || 0,
       matchedGroup: group,
       matchStrategy: strategy,
+      decoderTypes: extractDecoderTypes(group),
     };
 
     return paired;

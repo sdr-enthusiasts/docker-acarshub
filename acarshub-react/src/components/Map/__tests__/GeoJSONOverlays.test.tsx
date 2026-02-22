@@ -72,6 +72,7 @@ const getTestSettings = (overrides?: Partial<UserSettings>): UserSettings => ({
     useSprites: true,
     colorByDecoder: false,
     groundAltitudeThreshold: 5000,
+    mapSidebarWidth: 320,
   },
   advanced: {
     logLevel: "warn",

@@ -34,15 +34,68 @@
   // Aircraft list sidebar
   &__sidebar {
     flex-shrink: 0;
-    width: 320px;
+    // Width is driven by the --map-sidebar-width custom property set via JS
+    // on the container. The fallback (320px) matches the minimum allowed width
+    // so there is never a flash of wrong width on first paint.
+    width: var(--map-sidebar-width, 320px);
     height: 100%;
     overflow: hidden;
     background-color: var(--color-mantle);
-    border-right: 1px solid var(--color-surface-1);
+    border-right: none; // Border replaced by the resize handle element
     display: flex;
     flex-direction: column;
 
     // Mobile: hide by default, can be toggled
+    @include breakpoint-max(md) {
+      display: none;
+    }
+  }
+
+  // Vertical drag handle between the sidebar and the map.
+  // Sits in the flex row between __sidebar and __map so it is naturally
+  // positioned at the border.  Hidden on mobile where the sidebar is hidden.
+  &__sidebar-resize-handle {
+    flex-shrink: 0;
+    width: 5px;
+    height: 100%;
+    cursor: col-resize;
+    background-color: var(--color-surface1);
+    position: relative;
+    transition: background-color 0.15s ease;
+    z-index: 5;
+
+    @media (prefers-reduced-motion: reduce) {
+      transition: none;
+    }
+
+    // Visual grip indicator centred on the handle
+    &::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 2px;
+      height: 40px;
+      background-color: var(--color-overlay0);
+      border-radius: 1px;
+      transition: background-color 0.15s ease;
+
+      @media (prefers-reduced-motion: reduce) {
+        transition: none;
+      }
+    }
+
+    &:hover,
+    &--dragging {
+      background-color: var(--color-surface2);
+
+      &::after {
+        background-color: var(--color-blue);
+      }
+    }
+
+    // Hide on mobile where the sidebar is not shown
     @include breakpoint-max(md) {
       display: none;
     }
@@ -160,12 +213,18 @@
   }
 }
 
-// Tablet - narrower sidebar
+// Tablet: enforce a narrower minimum so the map still has useful space.
+// The CSS variable takes precedence if it has been set by JS, but we clamp
+// it to 280px on the tablet breakpoint by overriding the fallback only.
+// We cannot override a set CSS variable from media queries, so instead we
+// cap the variable-driven width by wrapping the sidebar in a max-width at
+// the container level when the viewport is tablet-sized.
 @include breakpoint(md) {
   @include breakpoint-max(lg) {
     .live-map-page {
       &__sidebar {
-        width: 280px;
+        max-width: 480px; // Generous cap so users can still drag wider on large tablets
+        min-width: 280px;
       }
     }
   }

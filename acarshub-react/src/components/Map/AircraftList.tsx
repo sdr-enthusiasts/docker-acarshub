@@ -17,10 +17,10 @@
 import { faChevronDown } from "@fortawesome/free-solid-svg-icons/faChevronDown";
 import { faFilter } from "@fortawesome/free-solid-svg-icons/faFilter";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAppStore } from "../../store/useAppStore";
 import { useSettingsStore } from "../../store/useSettingsStore";
-import type { PairedAircraft } from "../../utils/aircraftPairing";
+import type { DecoderType, PairedAircraft } from "../../utils/aircraftPairing";
 import {
   formatAltitude,
   formatGroundSpeed,
@@ -28,6 +28,34 @@ import {
 } from "../../utils/aircraftPairing";
 import type { ViewportBounds } from "./AircraftMarkers";
 import "../../styles/components/_aircraft-list.scss";
+
+// Width (px) at which column headers expand from "#" to short / full text
+const HEADER_WIDE_THRESHOLD = 460;
+const HEADER_WIDER_THRESHOLD = 560;
+
+// Minimum sidebar width mirrors the CSS default
+const SIDEBAR_MIN_WIDTH = 320;
+
+/**
+ * Map a normalised DecoderType to the CSS BEM modifier used for colouring
+ * the checkmark badge in the callsign cell.
+ */
+const DECODER_CSS_MODIFIER: Record<DecoderType, string> = {
+  ACARS: "acars",
+  VDLM2: "vdlm2",
+  HFDL: "hfdl",
+  IMSL: "imsl",
+  IRDM: "irdm",
+};
+
+/**
+ * Calculate how many decoder badges to display given the current sidebar width.
+ * Formula keeps exactly 1 badge at the default 320 px width and adds one badge
+ * per 60 px of extra width, capped at 5 (the number of known decoder types).
+ */
+function calcMaxDecoderBadges(width: number): number {
+  return Math.max(1, Math.min(5, Math.floor((width - 260) / 60)));
+}
 
 interface AircraftListProps {
   aircraft: PairedAircraft[];
@@ -44,6 +72,12 @@ interface AircraftListProps {
    * to aircraft whose position falls within the visible map area.
    */
   viewportBounds?: ViewportBounds | null;
+  /**
+   * Current sidebar width in pixels.
+   * Used to adapt column headers and decoder badge count as the user resizes.
+   * Defaults to 320 (minimum width) when not provided.
+   */
+  sidebarWidth?: number;
 }
 
 type SortField =
@@ -80,7 +114,84 @@ export function AircraftList({
   isPaused = false,
   onPauseToggle,
   viewportBounds,
+  sidebarWidth,
 }: AircraftListProps) {
+  // The root element ref is used for two purposes:
+  //   1. ResizeObserver – tracks actual rendered width so that header text and
+  //      badge counts update live as the user drags the sidebar (the CSS
+  //      custom property change is instant but the React prop only updates on
+  //      mouseup, so prop-based thresholds always lag behind).
+  //   2. CSS custom property injection – sets --msgs-col-width and
+  //      --alerts-col-width so the table columns resize deterministically
+  //      instead of relying on table-layout:auto heuristics.
+  const listRef = useRef<HTMLDivElement>(null);
+
+  // Actual rendered width, updated by ResizeObserver.
+  // Initialise from the prop so tests/SSR have a reasonable starting value.
+  const [renderedWidth, setRenderedWidth] = useState<number>(
+    () => sidebarWidth ?? SIDEBAR_MIN_WIDTH,
+  );
+
+  useEffect(() => {
+    const el = listRef.current;
+    if (!el) return;
+
+    // Capture initial width synchronously before the first paint so there is
+    // no flash of wrong-width headers on mount.
+    setRenderedWidth(Math.round(el.getBoundingClientRect().width));
+
+    const ro = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        setRenderedWidth(Math.round(entry.contentRect.width));
+      }
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []); // intentionally empty – fires once; ResizeObserver handles updates
+
+  // Use the live measured width for all responsive decisions.
+  const effectiveWidth = renderedWidth;
+
+  // Column header text adapts as the sidebar grows.
+  // "#" at default width → short label → full label at wider widths.
+  const messagesHeaderText = useMemo<string>(() => {
+    if (effectiveWidth >= HEADER_WIDER_THRESHOLD) return "Messages";
+    if (effectiveWidth >= HEADER_WIDE_THRESHOLD) return "Msgs";
+    return "#";
+  }, [effectiveWidth]);
+
+  const alertsHeaderText = useMemo<string>(() => {
+    if (effectiveWidth >= HEADER_WIDER_THRESHOLD) return "Alerts";
+    return "#";
+  }, [effectiveWidth]);
+
+  // How many decoder-type badges to render per row.
+  const maxDecoderBadges = useMemo<number>(
+    () => calcMaxDecoderBadges(effectiveWidth),
+    [effectiveWidth],
+  );
+
+  // Drive the messages/alerts column widths via CSS custom properties so the
+  // table layout is deterministic regardless of browser table-layout quirks.
+  // The callsign column absorbs all remaining space via width:auto in SCSS.
+  const applyColumnWidths = useCallback(() => {
+    const el = listRef.current;
+    if (!el) return;
+    const msgsWidth =
+      effectiveWidth >= HEADER_WIDER_THRESHOLD
+        ? 88
+        : effectiveWidth >= HEADER_WIDE_THRESHOLD
+          ? 56
+          : 44;
+    const alertsWidth = effectiveWidth >= HEADER_WIDER_THRESHOLD ? 68 : 44;
+    el.style.setProperty("--msgs-col-width", `${msgsWidth}px`);
+    el.style.setProperty("--alerts-col-width", `${alertsWidth}px`);
+  }, [effectiveWidth]);
+
+  useEffect(() => {
+    applyColumnWidths();
+  }, [applyColumnWidths]);
+
   const altitudeUnit = useSettingsStore(
     (state) => state.settings.regional.altitudeUnit,
   );
@@ -480,7 +591,7 @@ export function AircraftList({
   ].filter(Boolean).length;
 
   return (
-    <div className="aircraft-list">
+    <div className="aircraft-list" ref={listRef}>
       {/* Header with stats and pause button */}
       <div className="aircraft-list__header">
         <div className="aircraft-list__stats">
@@ -759,7 +870,7 @@ export function AircraftList({
                     onClick={() => handleSortChange("messages")}
                     title="Messages"
                   >
-                    #
+                    {messagesHeaderText}
                     {sortField === "messages" && (
                       <span className="aircraft-list__sort-icon">
                         {sortDirection === "asc" ? "↑" : "↓"}
@@ -778,7 +889,7 @@ export function AircraftList({
                     onClick={() => handleSortChange("alerts")}
                     title="Alerts"
                   >
-                    #
+                    {alertsHeaderText}
                     {sortField === "alerts" && (
                       <span className="aircraft-list__sort-icon">
                         {sortDirection === "asc" ? "↑" : "↓"}
@@ -803,14 +914,18 @@ export function AircraftList({
                 >
                   <td className="aircraft-list__callsign">
                     {getDisplayCallsign(a)}
-                    {a.hasMessages && (
-                      <span
-                        className="aircraft-list__badge aircraft-list__badge--messages"
-                        title="Has ACARS messages"
-                      >
-                        ✓
-                      </span>
-                    )}
+                    {a.decoderTypes.length > 0 &&
+                      a.decoderTypes.slice(0, maxDecoderBadges).map((dt) => (
+                        <span
+                          key={dt}
+                          className={`aircraft-list__decoder-badge aircraft-list__decoder-badge--${DECODER_CSS_MODIFIER[dt]}`}
+                          title={`${dt} messages`}
+                          role="img"
+                          aria-label={`Has ${dt} messages`}
+                        >
+                          ✓
+                        </span>
+                      ))}
                   </td>
                   <td className="aircraft-list__altitude">
                     {formatAltitude(a.alt_baro, altitudeUnit)}

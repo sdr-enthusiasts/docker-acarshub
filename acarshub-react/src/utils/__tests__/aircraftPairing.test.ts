@@ -322,6 +322,7 @@ describe("getDisplayCallsign", () => {
     messageCount: 0,
     alertCount: 0,
     matchStrategy: "none",
+    decoderTypes: [],
   };
 
   it("returns flight when present", () => {

@@ -87,6 +87,7 @@ export interface SettingsState {
   setUseSprites: (enabled: boolean) => void;
   setColorByDecoder: (enabled: boolean) => void;
   setGroundAltitudeThreshold: (altitude: number) => void;
+  setMapSidebarWidth: (width: number) => void;
 
   // GeoJSON overlay actions
   setGeoJSONOverlay: (overlayId: string, enabled: boolean) => void;
@@ -166,13 +167,14 @@ const getDefaultSettings = (): UserSettings => {
       enabledGeoJSONOverlays: [],
       showOpenAIP: false,
       showRainViewer: false,
+      mapSidebarWidth: 320,
     },
     advanced: {
       logLevel: import.meta.env.PROD ? "warn" : "info",
       persistLogs: true,
     },
     updatedAt: Date.now(),
-    version: 6,
+    version: 7,
   };
   return defaults;
 };
@@ -536,6 +538,18 @@ export const useSettingsStore = create<SettingsState>()(
           },
         })),
 
+      setMapSidebarWidth: (width) =>
+        set((state) => ({
+          settings: {
+            ...state.settings,
+            map: {
+              ...state.settings.map,
+              mapSidebarWidth: Math.max(320, Math.min(600, width)),
+            },
+            updatedAt: Date.now(),
+          },
+        })),
+
       setShowOnlyUnread: (enabled) =>
         set((state) => ({
           settings: {
@@ -735,7 +749,7 @@ export const useSettingsStore = create<SettingsState>()(
     }),
     {
       name: "acarshub-settings",
-      version: 6,
+      version: 7,
       // Migrate old settings if needed
       migrate: (persistedState: unknown, version: number) => {
         const state = persistedState as SettingsState;
@@ -745,7 +759,7 @@ export const useSettingsStore = create<SettingsState>()(
           return { settings: getDefaultSettings() };
         }
 
-        // Version 1 -> 6: Add map settings and advanced settings
+        // Version 1 -> 7: Add map settings and advanced settings
         if (version === 1) {
           const defaults = getDefaultSettings();
           return {
@@ -754,12 +768,12 @@ export const useSettingsStore = create<SettingsState>()(
               ...state.settings,
               map: defaults.map,
               advanced: defaults.advanced,
-              version: 6,
+              version: 7,
             },
           };
         }
 
-        // Version 2 -> 6: Add showOnlyMilitary and showOnlyInteresting to map settings
+        // Version 2 -> 7: Add showOnlyMilitary and showOnlyInteresting to map settings
         if (version === 2) {
           return {
             ...state,
@@ -773,13 +787,14 @@ export const useSettingsStore = create<SettingsState>()(
                 showOnlyLADD: false,
                 showOpenAIP: false,
                 showRainViewer: false,
+                mapSidebarWidth: 320,
               },
-              version: 6,
+              version: 7,
             },
           };
         }
 
-        // Version 3 -> 6: Add showOpenAIP and showRainViewer to map settings
+        // Version 3 -> 7: Add showOpenAIP and showRainViewer to map settings
         if (version === 3) {
           return {
             ...state,
@@ -789,13 +804,14 @@ export const useSettingsStore = create<SettingsState>()(
                 ...state.settings.map,
                 showOpenAIP: false,
                 showRainViewer: false,
+                mapSidebarWidth: 320,
               },
-              version: 6,
+              version: 7,
             },
           };
         }
 
-        // Version 4 -> 6: Add groundAltitudeThreshold to map settings
+        // Version 4 -> 7: Add groundAltitudeThreshold to map settings
         if (version === 4) {
           return {
             ...state,
@@ -805,13 +821,14 @@ export const useSettingsStore = create<SettingsState>()(
                 ...state.settings.map,
                 groundAltitudeThreshold: 500,
                 useSprites: true,
+                mapSidebarWidth: 320,
               },
-              version: 6,
+              version: 7,
             },
           };
         }
 
-        // Version 5 -> 6: Fix useSprites to default to true
+        // Version 5 -> 7: Fix useSprites to default to true
         if (version === 5) {
           return {
             ...state,
@@ -820,8 +837,24 @@ export const useSettingsStore = create<SettingsState>()(
               map: {
                 ...state.settings.map,
                 useSprites: true,
+                mapSidebarWidth: 320,
               },
-              version: 6,
+              version: 7,
+            },
+          };
+        }
+
+        // Version 6 -> 7: Add mapSidebarWidth to map settings
+        if (version === 6) {
+          return {
+            ...state,
+            settings: {
+              ...state.settings,
+              map: {
+                ...state.settings.map,
+                mapSidebarWidth: 320,
+              },
+              version: 7,
             },
           };
         }

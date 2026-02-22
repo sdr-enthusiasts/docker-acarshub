@@ -28,6 +28,9 @@ import type { PairedAircraft } from "../utils/aircraftPairing";
 import { pairADSBWithACARSMessages } from "../utils/aircraftPairing";
 import { mapLogger } from "../utils/logger";
 
+const SIDEBAR_MIN_WIDTH = 320;
+const SIDEBAR_MAX_WIDTH = 600;
+
 /**
  * LiveMapPage Component
  * Displays real-time aircraft positions on a map using ADS-B data and ACARS messages
@@ -48,11 +51,127 @@ export const LiveMapPage = () => {
   const adsbAircraft = useAppStore((state) => state.adsbAircraft);
   const messageGroups = useAppStore((state) => state.messageGroups);
   const mapSettings = useSettingsStore((state) => state.settings.map);
+  const setMapSidebarWidth = useSettingsStore(
+    (state) => state.setMapSidebarWidth,
+  );
   const theme = useTheme();
   const [searchParams, setSearchParams] = useSearchParams();
 
+  // Sidebar resize state – local during drag, persisted to store on mouseup
+  const [sidebarWidth, setSidebarWidth] = useState(
+    () => mapSettings.mapSidebarWidth ?? SIDEBAR_MIN_WIDTH,
+  );
+  const [isResizing, setIsResizing] = useState(false);
+
+  // Container ref used to apply --map-sidebar-width CSS custom property
+  const containerRef = useRef<HTMLDivElement>(null);
+  // Drag tracking refs – no React state so mousemove never triggers re-renders
+  const isDraggingRef = useRef(false);
+  const dragStartXRef = useRef(0);
+  const dragStartWidthRef = useRef(0);
+
   const mapRef = useRef<MapRef>(null);
   const [isMapLoaded, setIsMapLoaded] = useState(false);
+
+  // Apply the CSS custom property whenever sidebarWidth changes (e.g. on
+  // initial render or after a persisted value is loaded).
+  useEffect(() => {
+    containerRef.current?.style.setProperty(
+      "--map-sidebar-width",
+      `${sidebarWidth}px`,
+    );
+  }, [sidebarWidth]);
+
+  // Global mouse-move / mouse-up handlers for the resize drag gesture.
+  // Registered once; isDraggingRef gates execution so they are cheap.
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDraggingRef.current) return;
+      const delta = e.clientX - dragStartXRef.current;
+      const newWidth = Math.max(
+        SIDEBAR_MIN_WIDTH,
+        Math.min(SIDEBAR_MAX_WIDTH, dragStartWidthRef.current + delta),
+      );
+      // Update the CSS variable directly – bypasses React for smooth dragging
+      containerRef.current?.style.setProperty(
+        "--map-sidebar-width",
+        `${newWidth}px`,
+      );
+    };
+
+    const handleMouseUp = () => {
+      if (!isDraggingRef.current) return;
+      isDraggingRef.current = false;
+      setIsResizing(false);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+
+      // Read the final value from the CSS variable and commit to state + store
+      const raw = containerRef.current?.style.getPropertyValue(
+        "--map-sidebar-width",
+      );
+      const finalWidth = raw
+        ? Math.max(
+            SIDEBAR_MIN_WIDTH,
+            Math.min(SIDEBAR_MAX_WIDTH, parseInt(raw, 10)),
+          )
+        : SIDEBAR_MIN_WIDTH;
+
+      setSidebarWidth(finalWidth);
+      setMapSidebarWidth(finalWidth);
+      mapLogger.debug("Sidebar resized", { width: finalWidth });
+    };
+
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [setMapSidebarWidth]);
+
+  const handleResizeMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      isDraggingRef.current = true;
+      dragStartXRef.current = e.clientX;
+      dragStartWidthRef.current = sidebarWidth;
+      setIsResizing(true);
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+    },
+    [sidebarWidth],
+  );
+
+  // Keyboard handler for the separator role – arrow keys adjust width by
+  // 10 px per press (40 px with Shift) so keyboard-only users can resize.
+  const handleResizeKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      const step = e.shiftKey ? 40 : 10;
+      let newWidth: number | null = null;
+
+      if (e.key === "ArrowRight") {
+        newWidth = Math.min(SIDEBAR_MAX_WIDTH, sidebarWidth + step);
+      } else if (e.key === "ArrowLeft") {
+        newWidth = Math.max(SIDEBAR_MIN_WIDTH, sidebarWidth - step);
+      } else if (e.key === "Home") {
+        newWidth = SIDEBAR_MIN_WIDTH;
+      } else if (e.key === "End") {
+        newWidth = SIDEBAR_MAX_WIDTH;
+      }
+
+      if (newWidth !== null) {
+        e.preventDefault();
+        containerRef.current?.style.setProperty(
+          "--map-sidebar-width",
+          `${newWidth}px`,
+        );
+        setSidebarWidth(newWidth);
+        setMapSidebarWidth(newWidth);
+      }
+    },
+    [sidebarWidth, setMapSidebarWidth],
+  );
   const [hoveredAircraftHex, setHoveredAircraftHex] = useState<string | null>(
     null,
   );
@@ -336,7 +455,8 @@ export const LiveMapPage = () => {
 
   return (
     <div className="page live-map-page">
-      <div className="live-map-page__container">
+      {/* ref used to apply --map-sidebar-width CSS custom property */}
+      <div className="live-map-page__container" ref={containerRef}>
         {/* Aircraft list sidebar */}
         <aside className="live-map-page__sidebar">
           <AircraftList
@@ -347,8 +467,28 @@ export const LiveMapPage = () => {
             isPaused={isPaused}
             onPauseToggle={handlePauseToggle}
             viewportBounds={viewportBounds}
+            sidebarWidth={sidebarWidth}
           />
         </aside>
+
+        {/* Drag handle – hidden on mobile where sidebar is not shown */}
+        {/* role="separator" with aria-valuenow/min/max is the correct ARIA
+            pattern for a resize splitter (WCAG 2.1 §4.1.2).  tabIndex makes
+            it keyboard-reachable; arrow keys are handled below. */}
+        {/* biome-ignore lint/a11y/useSemanticElements: ARIA APG "Window Splitter" pattern requires role="separator" with aria-valuenow on a focusable element; <hr> cannot carry these interactive attributes. */}
+        <div
+          className={`live-map-page__sidebar-resize-handle${isResizing ? " live-map-page__sidebar-resize-handle--dragging" : ""}`}
+          onMouseDown={handleResizeMouseDown}
+          onKeyDown={handleResizeKeyDown}
+          role="separator"
+          aria-label="Sidebar resize handle"
+          aria-orientation="vertical"
+          aria-valuenow={sidebarWidth}
+          aria-valuemin={SIDEBAR_MIN_WIDTH}
+          aria-valuemax={SIDEBAR_MAX_WIDTH}
+          tabIndex={0}
+          title="Drag or use arrow keys to resize sidebar"
+        />
 
         {/* Map container (main area) */}
         <main className="live-map-page__map">
