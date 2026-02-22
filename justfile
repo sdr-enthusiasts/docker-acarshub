@@ -10,10 +10,10 @@ server-node:
 
 # Node.js dependency updates
 update:
-    cd acarshub-react && npm-chck -usE
+    cd npm-chck -sE
 
 bump:
-    cd acarshub-react && npm i
+    npm i
 
 # Python dependency updates
 update-py:
@@ -203,6 +203,14 @@ test-e2e-docker-debug *ARGS='':
       bash -c "npm ci && cd acarshub-react && npx playwright test --reporter=line {{ ARGS }}" || (fuser -k 3000/tcp 2>/dev/null || true; exit 1)
     fuser -k 3000/tcp 2>/dev/null || true
     @echo "✅ E2E tests done!"
+
+# Build the test Docker image (ah:test) from Node.Dockerfile
+
+# Must be run before just test-e2e-fullstack
+build-test-image:
+    @echo "Building test Docker image (ah:test) from Node.Dockerfile..."
+    docker build -f Node.Dockerfile -t ah:test .
+    @echo "✅ Test image built: ah:test"
 
 # Run full-stack integration E2E tests via Docker Compose
 

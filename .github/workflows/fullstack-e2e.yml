@@ -1,0 +1,95 @@
+# Full-Stack Integration E2E Tests
+#
+# Runs the Playwright integration suite (e2e/integration/) against a real
+# Docker container built from Node.Dockerfile.  The backend is seeded with
+# the committed test-fixtures/seed.db so every test run starts from a known,
+# reproducible state.
+#
+# When to run:
+#   - On every pull request that touches the backend, Python webapp, or the
+#     integration test files themselves.
+#   - On manual dispatch (workflow_dispatch) for ad-hoc full-stack checks.
+#
+# What this adds over `just test-e2e-docker` (the frontend-only E2E suite):
+#   - A real Node.js backend container processes Socket.IO events.
+#   - A real SQLite database (seed.db) is queried on every request.
+#   - The full enrichment pipeline runs: DB row → enrichMessage → wire format.
+#   - The React frontend connects via a real WebSocket, not a mocked store.
+#
+# Artifacts:
+#   - Playwright HTML report uploaded on failure for easy diagnosis.
+
+name: Full-Stack Integration E2E
+
+on:
+  workflow_dispatch:
+
+  pull_request:
+    paths:
+      # Backend source changes
+      - "acarshub-backend/**"
+      # Shared types (wire format changes affect integration tests)
+      - "acarshub-types/**"
+      # Python webapp being replaced (changes may indicate parity gaps)
+      - "rootfs/webapp/**"
+      # Integration test files themselves
+      - "acarshub-react/e2e/integration/**"
+      - "acarshub-react/playwright.integration.config.ts"
+      # Docker infrastructure changes
+      - "Node.Dockerfile"
+      - "docker-compose.test.yml"
+      - "rootfs-node/**"
+      # Seed fixtures
+      - "test-fixtures/**"
+
+jobs:
+  fullstack-e2e:
+    name: Full-Stack E2E (Chromium)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install workspace dependencies
+        run: npm ci
+
+      - name: Build shared types package
+        run: npm run build --workspace=acarshub-types
+
+      - name: Build React frontend
+        # Build WITHOUT VITE_E2E so the real Socket.IO store is used
+        # (no window.__ACARS_STORE__ or window.__ACARS_SOCKET__ shims)
+        run: npm run build --workspace=acarshub-react
+
+      - name: Build Node.js backend
+        run: npm run build --workspace=acarshub-backend
+
+      - name: Build test Docker image (ah:test)
+        run: docker build -f Node.Dockerfile -t ah:test .
+
+      - name: Run full-stack integration E2E tests
+        run: |
+          docker compose -f docker-compose.test.yml up \
+            --abort-on-container-exit \
+            --exit-code-from playwright
+        # Allow up to 10 minutes for the full test run
+        timeout-minutes: 10
+
+      - name: Tear down Docker Compose stack
+        if: always()
+        run: docker compose -f docker-compose.test.yml down --volumes
+
+      - name: Upload Playwright report on failure
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: integration-playwright-report
+          path: acarshub-react/playwright-report/
+          retention-days: 14
