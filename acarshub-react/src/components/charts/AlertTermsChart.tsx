@@ -25,7 +25,7 @@ import {
   type TooltipItem,
 } from "chart.js";
 import ChartDataLabels from "chartjs-plugin-datalabels";
-import { useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import { Bar } from "react-chartjs-2";
 import { useSettingsStore } from "../../store/useSettingsStore";
 import type { AlertTerm } from "../../types";
@@ -105,14 +105,6 @@ export const AlertTermsChart = ({
       "#7287fd", // Lavender
     ];
   }, [isDark]);
-
-  // Diagnostic logging to detect mount/unmount cycles
-  useEffect(() => {
-    console.log("[AlertTermsChart] MOUNTED");
-    return () => {
-      console.log("[AlertTermsChart] UNMOUNTED");
-    };
-  }, []);
 
   // Process alert term data and prepare for chart
   const chartData = useMemo(() => {

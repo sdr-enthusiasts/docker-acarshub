@@ -27,6 +27,7 @@ import type {
   Theme,
   TimeFormat,
 } from "../types";
+import { uiLogger } from "../utils/logger";
 import { getVersionInfo } from "../utils/version";
 import { Button } from "./Button";
 import { Card } from "./Card";
@@ -399,7 +400,7 @@ export const SettingsModal = () => {
       // Set up event listeners for started/completion/error
       const handleStarted = (data: { message: string }) => {
         // Regeneration has started in background thread
-        console.log("Alert regeneration started:", data.message);
+        uiLogger.info("Alert regeneration started", { message: data.message });
       };
 
       const handleComplete = (data: {

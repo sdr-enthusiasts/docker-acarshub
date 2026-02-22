@@ -56,7 +56,6 @@ function getLogLevel(): LogLevel {
 
   // if the log level is a number, map the number to a log level string
   if (!Number.isNaN(Number(level))) {
-    console.log(`LOG_LEVEL is a number: ${level}, mapping to log level string`);
     const numericLevel = Number(level);
     if (numericLevel > 6) return "fatal";
     if (numericLevel === 6) return "trace";
