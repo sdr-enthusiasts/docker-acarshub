@@ -70,6 +70,7 @@ interface AircraftMarkerData {
     y: number;
     width: number;
     height: number;
+    backgroundSize: string;
   };
   spriteClass?: string;
   spriteFrames?: number[];
@@ -430,6 +431,8 @@ export function AircraftMarkers({
               y: position.y,
               width: position.width,
               height: position.height,
+              backgroundSize:
+                spriteLoader.getCSSBackgroundSize() ?? "345.6px 1468.8px",
             };
             spriteFrames = position.frames;
             spriteFrameTime = position.frameTime;
@@ -686,6 +689,7 @@ export function AircraftMarkers({
                     aria-label={`Aircraft ${markerData.hex}${markerData.aircraft.hasMessages ? " - Click to view messages" : ""}`}
                     style={{
                       backgroundPosition: `-${markerData.spritePosition.x}px -${markerData.spritePosition.y}px`,
+                      backgroundSize: markerData.spritePosition.backgroundSize,
                       width: `${markerData.spritePosition.width}px`,
                       height: `${markerData.spritePosition.height}px`,
                       transform: `rotate(${markerData.rotation}deg)`,

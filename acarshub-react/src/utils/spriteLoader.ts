@@ -181,9 +181,14 @@ export class SpriteLoader {
 
     // Calculate position in spritesheet
     // Sprites are arranged in a grid, left-to-right, top-to-bottom
-    // Actual spritesheet is 576px wide (8 sprites per row at 72px each)
+    //
+    // spritesPerRow: the upstream pw-silhouettes sheet is always 576px wide
+    // at 72px per sprite (8 columns). This is a fixed layout property of the
+    // upstream project -- new sprites are only ever appended as new rows.
+    // We own this constant; it is intentionally NOT taken from spritesheet.json
+    // because that file is upstream and must not be modified.
     const { spriteWidth, spriteHeight } = this.data.metadata;
-    const spritesPerRow = 8; // Fixed layout: 8 sprites per row
+    const spritesPerRow = Math.round(576 / spriteWidth);
 
     const col = spriteId % spritesPerRow;
     const row = Math.floor(spriteId / spritesPerRow);
@@ -209,6 +214,38 @@ export class SpriteLoader {
    */
   getMetadata() {
     return this.data?.metadata || null;
+  }
+
+  /**
+   * Get the CSS background-size value for the spritesheet at the given scale.
+   *
+   * Use this value for the `background-size` CSS property on sprite elements
+   * so it stays in sync with the actual sheet dimensions derived from the JSON.
+   *
+   * The sheet width is fixed at 576px (8 columns × 72px per sprite).
+   * The sheet height is computed from the maximum sprite ID present in the
+   * JSON, so it automatically reflects new rows added by upstream updates
+   * without any manual intervention.
+   *
+   * @param scale - Display scale factor (default: 0.6)
+   * @returns CSS background-size string (e.g. "345.6px 1468.8px") or null
+   */
+  getCSSBackgroundSize(scale = 0.6): string | null {
+    if (!this.data) {
+      return null;
+    }
+    const { spriteWidth, spriteHeight } = this.data.metadata;
+    // Fixed column count: upstream sheet is always 576px wide at 72px per sprite.
+    const spritesPerRow = Math.round(576 / spriteWidth);
+    // Derive sheet height from the highest sprite ID in the JSON.
+    // When upstream adds a new row, the max ID increases and the height
+    // recomputes automatically -- no manual update required.
+    const allIds = Object.values(this.data.sprites).flatMap((s) => s.ids);
+    const maxId = Math.max(...allIds);
+    const numRows = Math.ceil((maxId + 1) / spritesPerRow);
+    const sheetWidth = spritesPerRow * spriteWidth;
+    const sheetHeight = numRows * spriteHeight;
+    return `${sheetWidth * scale}px ${sheetHeight * scale}px`;
   }
 
   /**

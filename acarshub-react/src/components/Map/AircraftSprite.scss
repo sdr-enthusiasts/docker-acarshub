@@ -24,7 +24,8 @@
   // Sprite background - default state (Mocha theme)
   background-image: url("/static/sprites/spritesheet-mocha-default.png");
   background-repeat: no-repeat;
-  background-size: 345.6px 1425.6px; /* 60% of 576px x 2376px */
+  /* background-size is set via inline style, computed from spritesheet.json metadata
+     (sheetWidth * 0.6 x sheetHeight * 0.6) — see SpriteLoader.getCSSBackgroundSize() */
   width: 43.2px; /* 60% of 72px */
   height: 43.2px; /* 60% of 72px */
   cursor: pointer;

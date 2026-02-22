@@ -89,6 +89,7 @@ export function AnimatedSprite({
   // Get position for current frame
   const loader = getSpriteLoader();
   const position = loader.getSpritePosition(spriteName, currentFrame);
+  const backgroundSize = loader.getCSSBackgroundSize() ?? "345.6px 1468.8px";
 
   if (!position) {
     return null;
@@ -105,6 +106,7 @@ export function AnimatedSprite({
       aria-label={ariaLabel}
       style={{
         backgroundPosition: `-${position.x}px -${position.y}px`,
+        backgroundSize,
         width: `${position.width}px`,
         height: `${position.height}px`,
         transform: `rotate(${rotation}deg)`,
