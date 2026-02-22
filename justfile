@@ -10,7 +10,7 @@ server-node:
 
 # Node.js dependency updates
 update:
-    cd npm-chck -sE
+    npm-chck -uE -i @acarshub/types || true
 
 bump:
     npm i
