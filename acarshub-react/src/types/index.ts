@@ -32,6 +32,7 @@ export type {
   // ADS-B
   ADSBAircraft,
   ADSBData,
+  ADSBSourceType,
   Adsb,
   AdsbPlane,
   AdsbStatus,

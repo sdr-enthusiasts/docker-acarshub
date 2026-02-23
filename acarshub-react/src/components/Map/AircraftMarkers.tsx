@@ -26,6 +26,7 @@ import {
   svgShapeToURI,
 } from "../../utils/aircraftIcons";
 import {
+  formatAdsbSourceType,
   formatAltitude,
   formatGroundSpeed,
   formatHeading,
@@ -1006,6 +1007,15 @@ export function AircraftMarkers({
                           </span>
                         </div>
                       )}
+
+                      <div className="aircraft-tooltip__row">
+                        <span className="aircraft-tooltip__label">Source:</span>
+                        <span className="aircraft-tooltip__value">
+                          {formatAdsbSourceType(
+                            markerData.aircraft.adsbSourceType,
+                          )}
+                        </span>
+                      </div>
 
                       <div className="aircraft-tooltip__row">
                         <span className="aircraft-tooltip__label">

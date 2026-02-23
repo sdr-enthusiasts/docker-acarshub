@@ -17,6 +17,7 @@
 import { describe, expect, it } from "vitest";
 import type { ADSBAircraft, MessageGroup } from "../../types";
 import {
+  formatAdsbSourceType,
   formatAltitude,
   formatGroundSpeed,
   formatHeading,
@@ -210,24 +211,48 @@ describe("pairADSBWithACARSMessages", () => {
       expect(paired.dbFlags).toBe(1);
     });
 
-    it("prefers `t` field over `type` field for aircraft type", () => {
+    it("uses `t` field as the ICAO aircraft type designator", () => {
       const aircraft = [
-        makeAircraft({ hex: "A12345", t: "B738", type: "B737" }),
+        makeAircraft({ hex: "A12345", t: "B738", type: "adsb_icao" }),
       ];
       const groups = new Map<string, MessageGroup>();
 
       const [paired] = pairADSBWithACARSMessages(aircraft, groups);
 
+      // `type` (paired) must come from `t`, not from `type` (source type)
       expect(paired.type).toBe("B738");
+      expect(paired.adsbSourceType).toBe("adsb_icao");
     });
 
-    it("falls back to `type` field when `t` is absent", () => {
-      const aircraft = [makeAircraft({ hex: "A12345", type: "B737" })];
+    it("leaves paired.type undefined when `t` is absent", () => {
+      // `type` on ADSBAircraft is the source type, not the aircraft model
+      const aircraft = [makeAircraft({ hex: "A12345", type: "mlat" })];
       const groups = new Map<string, MessageGroup>();
 
       const [paired] = pairADSBWithACARSMessages(aircraft, groups);
 
-      expect(paired.type).toBe("B737");
+      expect(paired.type).toBeUndefined();
+      expect(paired.adsbSourceType).toBe("mlat");
+    });
+
+    it("captures adsbSourceType from the `type` field", () => {
+      const aircraft = [
+        makeAircraft({ hex: "A12345", t: "A320", type: "adsr_icao" }),
+      ];
+      const groups = new Map<string, MessageGroup>();
+
+      const [paired] = pairADSBWithACARSMessages(aircraft, groups);
+
+      expect(paired.adsbSourceType).toBe("adsr_icao");
+    });
+
+    it("leaves adsbSourceType undefined when `type` field is absent", () => {
+      const aircraft = [makeAircraft({ hex: "A12345", t: "B738" })];
+      const groups = new Map<string, MessageGroup>();
+
+      const [paired] = pairADSBWithACARSMessages(aircraft, groups);
+
+      expect(paired.adsbSourceType).toBeUndefined();
     });
 
     it("returns hasMessages=false and messageCount=0 when no match", () => {
@@ -341,6 +366,74 @@ describe("getDisplayCallsign", () => {
     expect(
       getDisplayCallsign({ ...base, flight: "UAL123", tail: "N12345" }),
     ).toBe("UAL123");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// formatAdsbSourceType
+// ---------------------------------------------------------------------------
+
+describe("formatAdsbSourceType", () => {
+  describe("ADS-B variants", () => {
+    it('maps adsb_icao to "ADS-B"', () => {
+      expect(formatAdsbSourceType("adsb_icao")).toBe("ADS-B");
+    });
+
+    it('maps adsb_icao_nt to "ADS-B"', () => {
+      expect(formatAdsbSourceType("adsb_icao_nt")).toBe("ADS-B");
+    });
+
+    it('maps adsb_other to "ADS-B"', () => {
+      expect(formatAdsbSourceType("adsb_other")).toBe("ADS-B");
+    });
+  });
+
+  describe("UAT (ADSR) variants — all map to UAT", () => {
+    it('maps adsr_icao to "UAT"', () => {
+      expect(formatAdsbSourceType("adsr_icao")).toBe("UAT");
+    });
+
+    it('maps adsr_other to "UAT"', () => {
+      expect(formatAdsbSourceType("adsr_other")).toBe("UAT");
+    });
+  });
+
+  describe("TIS-B variants", () => {
+    it('maps tisb_icao to "TIS-B"', () => {
+      expect(formatAdsbSourceType("tisb_icao")).toBe("TIS-B");
+    });
+
+    it('maps tisb_other to "TIS-B"', () => {
+      expect(formatAdsbSourceType("tisb_other")).toBe("TIS-B");
+    });
+
+    it('maps tisb_trackfile to "TIS-B"', () => {
+      expect(formatAdsbSourceType("tisb_trackfile")).toBe("TIS-B");
+    });
+  });
+
+  describe("other specific source types", () => {
+    it('maps adsc to "ADS-C"', () => {
+      expect(formatAdsbSourceType("adsc")).toBe("ADS-C");
+    });
+
+    it('maps mlat to "MLAT"', () => {
+      expect(formatAdsbSourceType("mlat")).toBe("MLAT");
+    });
+
+    it('maps mode_s to "Mode S"', () => {
+      expect(formatAdsbSourceType("mode_s")).toBe("Mode S");
+    });
+
+    it('maps other to "Other"', () => {
+      expect(formatAdsbSourceType("other")).toBe("Other");
+    });
+  });
+
+  describe("fallback behaviour", () => {
+    it('returns "ADS-B" when sourceType is undefined', () => {
+      expect(formatAdsbSourceType(undefined)).toBe("ADS-B");
+    });
   });
 });
 

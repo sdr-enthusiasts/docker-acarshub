@@ -17,7 +17,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAppStore } from "../store/useAppStore";
-import type { Plane } from "../types";
+import type { ADSBSourceType, Plane } from "../types";
+import { formatAdsbSourceType } from "../utils/aircraftPairing";
 import { uiLogger } from "../utils/logger";
 import { MessageCard } from "./MessageCard";
 
@@ -51,13 +52,13 @@ export const MessageGroup = ({
   const hasMultipleMessages = messageCount > 1;
   const activeMessage = plane.messages[activeMessageIndex];
 
-  // Check if this aircraft is being tracked via ADS-B
+  // Find the ADS-B source type for this aircraft, or null if not tracked
   const adsbAircraft = useAppStore((state) => state.adsbAircraft);
-  const isTrackedByAdsb = useMemo(() => {
-    if (!adsbAircraft?.aircraft) return false;
+  const adsbSourceType = useMemo((): ADSBSourceType | null => {
+    if (!adsbAircraft?.aircraft) return null;
 
-    // Check if any of the plane's identifiers match ADS-B aircraft
-    return adsbAircraft.aircraft.some((aircraft) => {
+    // Find the ADS-B aircraft entry that matches one of this plane's identifiers
+    const matched = adsbAircraft.aircraft.find((aircraft) => {
       const adsbHex = aircraft.hex.toUpperCase().trim();
       const adsbFlight = aircraft.flight?.trim().toUpperCase();
       const adsbTail = aircraft.r?.trim().toUpperCase();
@@ -71,6 +72,10 @@ export const MessageGroup = ({
         );
       });
     });
+
+    if (!matched) return null;
+    // Return the source type; fall back to "adsb_icao" when field is absent
+    return matched.type ?? "adsb_icao";
   }, [adsbAircraft, plane.identifiers]);
 
   // Get the first identifier (preferably hex) for linking to map
@@ -157,13 +162,13 @@ export const MessageGroup = ({
               {plane.num_alerts} alert{plane.num_alerts !== 1 ? "s" : ""}
             </span>
           )}
-          {isTrackedByAdsb && (
+          {adsbSourceType !== null && (
             <Link
               to={`/adsb?aircraft=${encodeURIComponent(getPrimaryIdentifier())}`}
-              className="adsb-tracking"
-              title="Click to view on map"
+              className={`adsb-tracking adsb-tracking--${adsbSourceType.replace(/_/g, "-")}`}
+              title={`Tracked via ${formatAdsbSourceType(adsbSourceType)} — click to view on map`}
             >
-              ADS-B
+              {formatAdsbSourceType(adsbSourceType)}
             </Link>
           )}
         </div>

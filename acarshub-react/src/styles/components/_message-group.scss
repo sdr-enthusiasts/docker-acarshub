@@ -83,6 +83,7 @@
     display: inline-flex;
     align-items: center;
     padding: var(--spacing-xs) var(--spacing-sm);
+    // Default colour (ADS-B / unknown) — overridden per source type below
     background-color: var(--color-teal);
     color: var(--color-crust);
     font-size: var(--font-size-xs);
@@ -121,6 +122,109 @@
       &:hover,
       &:active {
         transform: none;
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // Source-type variants
+    // Class is derived from the raw ADSBSourceType value with underscores
+    // replaced by hyphens, e.g. "adsb_icao" → "adsb-tracking--adsb-icao".
+    // -------------------------------------------------------------------------
+
+    // ADS-B (highest-confidence position): adsb_icao, adsb_icao_nt, adsb_other
+    &--adsb-icao,
+    &--adsb-icao-nt,
+    &--adsb-other {
+      background-color: var(--color-teal);
+
+      &:hover {
+        background-color: var(--color-sky);
+      }
+
+      &:focus-visible {
+        outline-color: var(--color-teal);
+      }
+    }
+
+    // UAT rebroadcast (ADSR): adsr_icao, adsr_other
+    &--adsr-icao,
+    &--adsr-other {
+      background-color: var(--color-sapphire);
+
+      &:hover {
+        background-color: var(--color-blue);
+      }
+
+      &:focus-visible {
+        outline-color: var(--color-sapphire);
+      }
+    }
+
+    // TIS-B (secondary radar / traffic info): tisb_icao, tisb_other, tisb_trackfile
+    &--tisb-icao,
+    &--tisb-other,
+    &--tisb-trackfile {
+      background-color: var(--color-mauve);
+
+      &:hover {
+        background-color: var(--color-pink);
+      }
+
+      &:focus-visible {
+        outline-color: var(--color-mauve);
+      }
+    }
+
+    // ADS-C (satellite downlink)
+    &--adsc {
+      background-color: var(--color-green);
+
+      &:hover {
+        background-color: var(--color-teal);
+      }
+
+      &:focus-visible {
+        outline-color: var(--color-green);
+      }
+    }
+
+    // MLAT (lower accuracy, multilateration)
+    &--mlat {
+      background-color: var(--color-peach);
+
+      &:hover {
+        background-color: var(--color-yellow);
+      }
+
+      &:focus-visible {
+        outline-color: var(--color-peach);
+      }
+    }
+
+    // Mode S (transponder only, no position)
+    &--mode-s {
+      background-color: var(--color-overlay1);
+
+      &:hover {
+        background-color: var(--color-overlay2);
+      }
+
+      &:focus-visible {
+        outline-color: var(--color-overlay1);
+      }
+    }
+
+    // Other / unknown source
+    &--other {
+      background-color: var(--color-surface2);
+      color: var(--color-text);
+
+      &:hover {
+        background-color: var(--color-overlay0);
+      }
+
+      &:focus-visible {
+        outline-color: var(--color-surface2);
       }
     }
   }

@@ -22,6 +22,39 @@
 import type { AcarsMsg } from "./messages.js";
 
 /**
+ * Source type for ADS-B position data, as reported in aircraft.json by
+ * readsb/dump1090.  This identifies both the underlying message format and
+ * the method used to derive the aircraft's current position.
+ *
+ * Ordered from highest to lowest preference (readsb priority order):
+ *   adsb_icao      – Mode S / ADS-B transponder, 24-bit ICAO address
+ *   adsb_icao_nt   – ADS-B "non-transponder" emitter (e.g. ground vehicle), ICAO address
+ *   adsr_icao      – Rebroadcast of ADS-B (e.g. via UAT), ICAO address
+ *   tisb_icao      – TIS-B traffic info for a Mode S target, ICAO address
+ *   adsc           – ADS-C via satellite downlink monitoring
+ *   mlat           – Multilateration (arrival-time-difference across receivers)
+ *   other          – Miscellaneous / Basestation / SBS format, unknown quality
+ *   mode_s         – Mode S transponder only (no position)
+ *   adsb_other     – ADS-B transponder with non-ICAO (anonymised) address
+ *   adsr_other     – Rebroadcast ADS-B (e.g. UAT), non-ICAO address
+ *   tisb_other     – TIS-B traffic info, non-ICAO address
+ *   tisb_trackfile – TIS-B traffic info identified by track/file ID (primary or Mode A/C radar)
+ */
+export type ADSBSourceType =
+  | "adsb_icao"
+  | "adsb_icao_nt"
+  | "adsr_icao"
+  | "tisb_icao"
+  | "adsc"
+  | "mlat"
+  | "other"
+  | "mode_s"
+  | "adsb_other"
+  | "adsr_other"
+  | "tisb_other"
+  | "tisb_trackfile";
+
+/**
  * ADS-B Aircraft Data (simplified format from readsb/dump1090)
  */
 export interface ADSBAircraft {
@@ -35,9 +68,9 @@ export interface ADSBAircraft {
   squawk?: string; // Transponder code
   baro_rate?: number; // Climb/descent rate (ft/min)
   category?: string; // Aircraft category (for icon shape)
-  t?: string; // Aircraft type designator
+  t?: string; // ICAO aircraft type designator (e.g. "B738", "A320")
   r?: string; // Registration/tail number
-  type?: string; // Aircraft type (usually same as t)
+  type?: ADSBSourceType; // Best source / tracking method for current position data
   seen?: number; // Seconds since last update
   dbFlags?: number; // Bitfield: military=1, interesting=2, PIA=4, LADD=8
 }

@@ -15,12 +15,13 @@
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
 import { EventEmitter } from "node:events";
+import type { ADSBSourceType } from "@acarshub/types";
 import { createLogger } from "../utils/logger.js";
 
 const logger = createLogger("adsb-poller");
 
 /**
- * Minimal aircraft data structure (optimized from ~52 fields to 14 essential fields)
+ * Minimal aircraft data structure (optimized from ~52 fields to 18 essential fields)
  */
 export interface Aircraft {
   hex: string;
@@ -37,6 +38,10 @@ export interface Aircraft {
   rssi?: number;
   messages?: number;
   category?: string;
+  type?: ADSBSourceType; // Best source / tracking method (adsb_icao, mlat, adsr_icao, etc.)
+  t?: string; // ICAO aircraft type designator (e.g. "B738", "A320")
+  r?: string; // Registration / tail number
+  dbFlags?: number; // Bitfield: military=1, interesting=2, PIA=4, LADD=8
 }
 
 export interface AdsbData {
@@ -203,7 +208,7 @@ export class AdsbPoller extends EventEmitter<AdsbPollerEvents> {
 
   /**
    * Optimize ADS-B data by pruning unused fields
-   * Reduces payload from ~52 fields to 14 essential fields (~70% reduction)
+   * Reduces payload from ~52 fields to 18 essential fields (~65% reduction)
    */
   private optimizeData(rawData: {
     now: number;
@@ -258,6 +263,20 @@ export class AdsbPoller extends EventEmitter<AdsbPollerEvents> {
       }
       if (aircraft.category !== undefined) {
         optimizedAircraft.category = this.getString(aircraft.category);
+      }
+      if (aircraft.type !== undefined) {
+        optimizedAircraft.type = this.getString(
+          aircraft.type,
+        ) as ADSBSourceType;
+      }
+      if (aircraft.t !== undefined) {
+        optimizedAircraft.t = this.getString(aircraft.t);
+      }
+      if (aircraft.r !== undefined) {
+        optimizedAircraft.r = this.getString(aircraft.r);
+      }
+      if (aircraft.dbFlags !== undefined) {
+        optimizedAircraft.dbFlags = this.getNumber(aircraft.dbFlags);
       }
 
       optimized.aircraft.push(optimizedAircraft);
