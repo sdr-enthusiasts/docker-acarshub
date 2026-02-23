@@ -60,6 +60,7 @@
             ".*.mp3"
             ".*.db"
             ".*.rrd"
+            ".*.geojson"
             "spritesheet.json"
           ];
         };
