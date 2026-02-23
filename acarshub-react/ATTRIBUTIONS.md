@@ -9,7 +9,7 @@ This document provides attribution for third-party assets, algorithms, and resou
 - **Source**: <https://github.com/plane-watch/pw-silhouettes>
 - **License**: CC BY-NC-SA 4.0 (Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International)
 - **Usage**: Aircraft sprite silhouettes for map markers
-- **Assets**: `public/static/sprites/spritesheet.png`, `public/static/sprites/spritesheet.json`
+- **Assets**: `src/assets/sprites/spritesheet.png`, `src/assets/sprites/spritesheet.json`
 - **Version**: 20260219
 
 All silhouettes, artwork, and metadata from pw-silhouettes are licensed under CC BY-NC-SA 4.0.

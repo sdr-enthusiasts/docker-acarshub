@@ -153,7 +153,7 @@ async function colorizeSprite(
  * Main function
  */
 async function main() {
-  const publicDir = path.join(__dirname, "..", "public", "static", "sprites");
+  const publicDir = path.join(__dirname, "..", "src", "assets", "sprites");
   const inputPath = path.join(publicDir, "spritesheet.png");
 
   // Check if input exists
@@ -177,7 +177,9 @@ async function main() {
   }
 
   console.log("\n✅ All colored sprite sheets generated successfully!");
-  console.log(`\nGenerated files in: ${publicDir}`);
+  console.log(
+    `\nGenerated files in: ${publicDir.replace(path.join(__dirname, "..") + path.sep, "")}`,
+  );
   console.log("\nState-based sprites:");
   console.log("  - spritesheet-mocha-default.png");
   console.log("  - spritesheet-mocha-alerts.png");

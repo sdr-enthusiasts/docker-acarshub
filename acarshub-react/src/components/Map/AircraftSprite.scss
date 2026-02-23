@@ -22,7 +22,7 @@
   outline: none;
 
   // Sprite background - default state (Mocha theme)
-  background-image: url("/static/sprites/spritesheet-mocha-default.png");
+  background-image: url("../../assets/sprites/spritesheet-mocha-default.png");
   background-repeat: no-repeat;
   /* background-size is set via inline style, computed from spritesheet.json metadata
      (sheetWidth * 0.6 x sheetHeight * 0.6) — see SpriteLoader.getCSSBackgroundSize() */
@@ -37,34 +37,34 @@
 
   // Alert state - has alert conditions (red)
   &.has-alerts {
-    background-image: url("/static/sprites/spritesheet-mocha-alerts.png");
+    background-image: url("../../assets/sprites/spritesheet-mocha-alerts.png");
     animation: pulse-alert 2s ease-in-out infinite;
   }
 
   // Low altitude state - below 500ft (gray)
   &.low-altitude {
-    background-image: url("/static/sprites/spritesheet-mocha-lowalt.png");
+    background-image: url("../../assets/sprites/spritesheet-mocha-lowalt.png");
   }
 
   // Decoder-type colors (when colorByDecoder is enabled)
   &.decoder-acars {
-    background-image: url("/static/sprites/spritesheet-mocha-acars.png");
+    background-image: url("../../assets/sprites/spritesheet-mocha-acars.png");
   }
 
   &.decoder-vdlm {
-    background-image: url("/static/sprites/spritesheet-mocha-vdlm.png");
+    background-image: url("../../assets/sprites/spritesheet-mocha-vdlm.png");
   }
 
   &.decoder-hfdl {
-    background-image: url("/static/sprites/spritesheet-mocha-hfdl.png");
+    background-image: url("../../assets/sprites/spritesheet-mocha-hfdl.png");
   }
 
   &.decoder-imsl {
-    background-image: url("/static/sprites/spritesheet-mocha-imsl.png");
+    background-image: url("../../assets/sprites/spritesheet-mocha-imsl.png");
   }
 
   &.decoder-irdm {
-    background-image: url("/static/sprites/spritesheet-mocha-irdm.png");
+    background-image: url("../../assets/sprites/spritesheet-mocha-irdm.png");
   }
 
   // Hover state - slight scale up
@@ -158,37 +158,37 @@
 // Latte (light theme) overrides - use different colored sprite sheets
 [data-theme="light"] .aircraft-sprite {
   // Default state - Latte
-  background-image: url("/static/sprites/spritesheet-latte-default.png");
+  background-image: url("../../assets/sprites/spritesheet-latte-default.png");
 
   // Alert state - Latte (red)
   &.has-alerts {
-    background-image: url("/static/sprites/spritesheet-latte-alerts.png");
+    background-image: url("../../assets/sprites/spritesheet-latte-alerts.png");
   }
 
   // Low altitude state - Latte (gray)
   &.low-altitude {
-    background-image: url("/static/sprites/spritesheet-latte-lowalt.png");
+    background-image: url("../../assets/sprites/spritesheet-latte-lowalt.png");
   }
 
   // Decoder-type colors (when colorByDecoder is enabled)
   &.decoder-acars {
-    background-image: url("/static/sprites/spritesheet-latte-acars.png");
+    background-image: url("../../assets/sprites/spritesheet-latte-acars.png");
   }
 
   &.decoder-vdlm {
-    background-image: url("/static/sprites/spritesheet-latte-vdlm.png");
+    background-image: url("../../assets/sprites/spritesheet-latte-vdlm.png");
   }
 
   &.decoder-hfdl {
-    background-image: url("/static/sprites/spritesheet-latte-hfdl.png");
+    background-image: url("../../assets/sprites/spritesheet-latte-hfdl.png");
   }
 
   &.decoder-imsl {
-    background-image: url("/static/sprites/spritesheet-latte-imsl.png");
+    background-image: url("../../assets/sprites/spritesheet-latte-imsl.png");
   }
 
   &.decoder-irdm {
-    background-image: url("/static/sprites/spritesheet-latte-irdm.png");
+    background-image: url("../../assets/sprites/spritesheet-latte-irdm.png");
   }
 }
 

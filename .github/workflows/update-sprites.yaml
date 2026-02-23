@@ -20,9 +20,9 @@
 # - PAT: Personal Access Token with repo and pull_request permissions
 #
 # Files updated:
-# - acarshub-react/public/static/sprites/spritesheet.json
-# - acarshub-react/public/static/sprites/spritesheet.png
-# - acarshub-react/public/static/sprites/spritesheet-{theme}-{state}.png (all colored variants)
+# - acarshub-react/src/assets/sprites/spritesheet.json
+# - acarshub-react/src/assets/sprites/spritesheet.png
+# - acarshub-react/src/assets/sprites/spritesheet-{theme}-{state}.png (all colored variants)
 # - acarshub-react/ATTRIBUTIONS.md
 #
 # License: pw-silhouettes is licensed under CC BY-NC-SA 4.0
@@ -96,11 +96,11 @@ jobs:
           base_url="https://github.com/plane-watch/pw-silhouettes/releases/download/${release_tag}"
 
           echo "Downloading spritesheet.json..."
-          curl -L -o acarshub-react/public/static/sprites/spritesheet.json \
+          curl -L -o acarshub-react/src/assets/sprites/spritesheet.json \
             "${base_url}/spritesheet.json"
 
           echo "Downloading spritesheet.png..."
-          curl -L -o acarshub-react/public/static/sprites/spritesheet.png \
+          curl -L -o acarshub-react/src/assets/sprites/spritesheet.png \
             "${base_url}/spritesheet.png"
 
           echo "Download complete"

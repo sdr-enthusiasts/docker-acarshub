@@ -12,7 +12,7 @@
  *   const sprite = loader.getSprite('B738', '4/3');
  */
 
-import spritesheetData from "../../public/static/sprites/spritesheet.json";
+import spritesheetData from "../assets/sprites/spritesheet.json";
 import type {
   SpriteLookupResult,
   SpritePosition,
