@@ -40,6 +40,17 @@
     }
   }
 
+  // Ensure MapLibre's native control containers (zoom, compass, scale) render
+  // above aircraft markers (max z-index: 200 for selected aircraft).
+  // These containers sit inside .map-container alongside the markers, so
+  // without an explicit z-index they lose to any marker with z-index > 0.
+  .maplibregl-ctrl-top-right,
+  .maplibregl-ctrl-top-left,
+  .maplibregl-ctrl-bottom-right,
+  .maplibregl-ctrl-bottom-left {
+    z-index: 300;
+  }
+
   // Navigation controls styling
   .maplibregl-ctrl-group {
     background-color: var(--color-surface0);
