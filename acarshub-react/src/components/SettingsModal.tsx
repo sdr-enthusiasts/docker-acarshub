@@ -38,6 +38,42 @@ import { Select } from "./Select";
 import { Toggle } from "./Toggle";
 
 /**
+ * Static list of default alert terms.
+ * Defined at module scope so it has a stable reference identity and does not
+ * need to appear in useCallback dependency arrays inside the component.
+ */
+const DEFAULT_ALERT_TERMS: string[] = [
+  "COP",
+  "POLICE",
+  "AUTHORITIES",
+  "FIRE",
+  "CHOP",
+  "TURBULENCE",
+  "TURB",
+  "FAULT",
+  "DIVERT",
+  "MASK",
+  "CSR",
+  "AGENT",
+  "MEDICAL",
+  "SECURITY",
+  "MAYDAY",
+  "EMERGENCY",
+  "PAN",
+  "RED COAT",
+  "RED",
+  "OXYGEN",
+  "DOCTOR",
+  "LEAK",
+  "COAT",
+  "SIGMET",
+  "ASH",
+  "DIPS",
+  "PAX",
+  "DOG",
+];
+
+/**
  * Ordered list of settings tab identifiers.
  * Defines the ArrowLeft/ArrowRight navigation order for the tablist.
  */
@@ -212,42 +248,10 @@ export const SettingsModal = () => {
     }
   };
 
-  // Default alert terms (common interesting messages)
-  const defaultAlertTerms = [
-    "COP",
-    "POLICE",
-    "AUTHORITIES",
-    "FIRE",
-    "CHOP",
-    "TURBULENCE",
-    "TURB",
-    "FAULT",
-    "DIVERT",
-    "MASK",
-    "CSR",
-    "AGENT",
-    "MEDICAL",
-    "SECURITY",
-    "MAYDAY",
-    "EMERGENCY",
-    "PAN",
-    "RED COAT",
-    "RED",
-    "OXYGEN",
-    "DOCTOR",
-    "LEAK",
-    "COAT",
-    "SIGMET",
-    "ASH",
-    "DIPS",
-    "PAX",
-    "DOG",
-  ];
-
   // Alert terms handlers
   const handleLoadDefaultTerms = useCallback(() => {
     // Only add terms that aren't already present
-    const newTermsToAdd = defaultAlertTerms.filter(
+    const newTermsToAdd = DEFAULT_ALERT_TERMS.filter(
       (term) => !alertTerms.terms.includes(term),
     );
 

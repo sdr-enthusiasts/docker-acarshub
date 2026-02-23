@@ -25,11 +25,11 @@ import traconBoundariesUrl from "../assets/geojson/TRACONBoundaries.geojson?url"
 import ukMilAarZones from "../assets/geojson/UK_Mil_AAR_Zones.geojson?url";
 import ukMilAwacs from "../assets/geojson/UK_Mil_AWACS_Orbits.geojson?url";
 import ukMilRc from "../assets/geojson/UK_Mil_RC.geojson?url";
+import usA2aRefueling from "../assets/geojson/US_A2A_refueling.geojson?url";
+import usArtccBoundaries from "../assets/geojson/US_ARTCC_boundaries.geojson?url";
 import ukAirports from "../assets/geojson/uk_advisory/airports.geojson?url";
 import ukRunways from "../assets/geojson/uk_advisory/runways.geojson?url";
 import ukShoreham from "../assets/geojson/uk_advisory/shoreham.geojson?url";
-import usA2aRefueling from "../assets/geojson/US_A2A_refueling.geojson?url";
-import usArtccBoundaries from "../assets/geojson/US_ARTCC_boundaries.geojson?url";
 import type { GeoJSONCategory, GeoJSONOverlay } from "../types";
 
 /**

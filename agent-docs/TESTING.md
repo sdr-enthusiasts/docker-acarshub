@@ -2,22 +2,41 @@
 
 This document describes the testing strategy, patterns, and infrastructure for ACARS Hub.
 
+## Testing Mandate
+
+**All new code MUST have tests. All bug fixes MUST have regression tests.**
+
+This is a non-negotiable quality requirement, not a goal. See the Testing Mandate section in
+`AGENTS.md` for the full policy. This document describes how to fulfill that requirement.
+
+**The rule in plain terms**:
+
+- Writing a new service, utility, formatter, or component → write tests for it
+- Fixing a bug → first write a test that reproduces the bug (it must fail), then fix it (test must pass)
+- Refactoring existing code → existing tests must continue to pass; add tests if coverage gaps are exposed
+
 ## Testing Overview
 
-**Total Test Coverage**: 621 tests (619 passing, 2 skipped)
+**Total Test Coverage**: 621+ tests across frontend and backend
 
-- **Unit Tests**: 505 tests (Vitest)
-- **Integration Tests**: 98 tests (Vitest + React Testing Library)
+- **Frontend Unit Tests**: 505 tests (Vitest)
+- **Frontend Integration Tests**: 98 tests (Vitest + React Testing Library)
+- **Backend Unit Tests**: Vitest (services, formatters, DB, socket handlers)
 - **E2E Tests**: 15 tests (Playwright)
 - **Accessibility Tests**: 25+ tests (Playwright + axe-core)
 
 **Coverage Goals**:
 
-- Utilities: 90%+ (achieved: 100%)
-- Stores: 80%+ (achieved: comprehensive)
-- Components: 70%+ (achieved: core components)
+- Frontend utilities: 90%+ (achieved: 100%)
+- Frontend stores: 80%+ (achieved: comprehensive)
+- Frontend components: 70%+ (achieved: core components)
+- Backend services: 80%+
+- Backend formatters/enrichment: 90%+
+- Backend DB/migrations: comprehensive (every migration path tested)
 
 ## Test Structure
+
+### Frontend (`acarshub-react/`)
 
 ```text
 acarshub-react/
@@ -33,25 +52,53 @@ acarshub-react/
     └── fixtures/                 # Test data (JSONL files)
 ```
 
+### Backend (`acarshub-backend/`)
+
+```text
+acarshub-backend/src/
+├── __tests__/                    # Top-level tests (config, startup)
+├── db/
+│   └── __tests__/                # Migration tests, query helpers, DB integration
+├── services/
+│   └── __tests__/                # Service tests (poller, queue, scheduler, TCP listener)
+├── formatters/
+│   └── __tests__/                # Enrichment pipeline tests
+└── socket/
+    └── __tests__/                # Socket handler unit and integration tests
+```
+
+**Backend test conventions**:
+
+- Migration tests create a real temporary SQLite DB, apply migrations, and verify schema
+- Service tests use Vitest's `vi.mock()` for external dependencies (filesystem, network)
+- Integration tests (`.integration.test.ts`) may run against real files and are slower
+- Always clean up temp DB files in `afterEach`/`afterAll`
+
 ## Running Tests
 
 ```bash
-# All tests (unit + integration)
-npm test
+# Frontend: all tests (unit + integration)
+cd acarshub-react && npm test
 
-# Watch mode
-npm run test:watch
+# Frontend: watch mode
+cd acarshub-react && npm run test:watch
 
-# Coverage report
-npm run test:coverage
+# Frontend: coverage report
+cd acarshub-react && npm run test:coverage
+
+# Backend: all tests
+cd acarshub-backend && npm test
+
+# Backend: watch mode
+cd acarshub-backend && npm run test:watch
 
 # E2E tests (Chromium only)
-npm run test:e2e
+cd acarshub-react && npm run test:e2e
 
 # Accessibility tests
-npm run test:a11y
+cd acarshub-react && npm run test:a11y
 
-# Complete CI check
+# Complete CI check (runs everything)
 just ci
 ```
 
@@ -383,24 +430,77 @@ npm run analyze
 - Decoder chunk: 455 KB
 - **Total gzipped**: ~730 KB
 
+## Regression Testing
+
+**Every bug fix requires a regression test.** This ensures the bug cannot silently reappear in
+future changes.
+
+### The Regression Test Workflow
+
+1. **Reproduce the bug in a test first** — the test must fail before your fix is applied
+2. **Apply the fix** — the test must now pass
+3. **The test stays in the codebase permanently** — it guards against regression
+
+### Regression Test Pattern
+
+```typescript
+describe("regression", () => {
+  it("session matching does not create duplicate sessions for same ICAO hex", () => {
+    // Bug: findOrCreateSession was creating a new session on every call
+    // even when an active session already existed for the same hex.
+    // Fix: query active sessions before creating new one.
+    const session1 = sessionService.findOrCreateSession({
+      hex: "ABC123",
+      callsign: "UAL123",
+    });
+    const session2 = sessionService.findOrCreateSession({
+      hex: "ABC123",
+      callsign: "UAL123",
+    });
+
+    expect(session1.sessionId).toBe(session2.sessionId); // Must be the SAME session
+  });
+});
+```
+
+**Name regression tests clearly**: use `"regression: <description of the bug>"` so it is
+obvious what failure the test prevents, and a future agent can understand its purpose without
+reading the fix.
+
 ## Test Maintenance
 
 ### Adding New Tests
 
-1. **Unit test** for new utility:
-   - Create `utils/__tests__/myUtil.test.ts`
-   - Test all edge cases
-   - Aim for 90%+ coverage
+**Frontend utility**:
 
-2. **Integration test** for new component:
-   - Create `components/__tests__/MyComponent.test.tsx`
-   - Test rendering, interactions, accessibility
-   - Mock external dependencies
+1. Create `acarshub-react/src/utils/__tests__/myUtil.test.ts`
+2. Test all edge cases and error paths
+3. Aim for 90%+ coverage
 
-3. **E2E test** for new feature:
-   - Add to appropriate `e2e/*.spec.ts`
-   - Test critical user flows only
-   - Keep tests fast and reliable
+**Frontend component**:
+
+1. Create `acarshub-react/src/components/__tests__/MyComponent.test.tsx`
+2. Test rendering, interactions, accessibility
+3. Mock external dependencies (Socket.IO, stores)
+
+**Backend service**:
+
+1. Create `acarshub-backend/src/services/__tests__/myService.test.ts`
+2. Mock filesystem/network dependencies with `vi.mock()`
+3. Test happy path, error handling, and edge cases
+
+**Backend migration**:
+
+1. Create or extend `acarshub-backend/src/db/__tests__/migrate-*.test.ts`
+2. Use a real temporary SQLite DB (better-sqlite3 in-memory or temp file)
+3. Verify schema before and after migration
+4. Clean up in `afterEach`
+
+**E2E test for new feature**:
+
+1. Add to appropriate `acarshub-react/e2e/*.spec.ts`
+2. Test critical user flows only
+3. Keep tests fast and reliable
 
 ### Debugging Test Failures
 
@@ -428,6 +528,125 @@ npx playwright test --debug
 
 # Show report
 npx playwright show-report
+```
+
+## Backend Test Patterns
+
+### Testing a Service (Unit)
+
+```typescript
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { MyService } from "../myService.js";
+
+describe("MyService", () => {
+  let service: MyService;
+
+  beforeEach(() => {
+    service = new MyService();
+  });
+
+  afterEach(() => {
+    service.destroy();
+    vi.restoreAllMocks();
+  });
+
+  it("emits data event on successful fetch", async () => {
+    const handler = vi.fn();
+    service.on("data", handler);
+
+    await service.fetchOnce();
+
+    expect(handler).toHaveBeenCalledOnce();
+  });
+
+  it("emits error event on failed fetch", async () => {
+    vi.spyOn(globalThis, "fetch").mockRejectedValueOnce(
+      new Error("Network failure"),
+    );
+
+    const handler = vi.fn();
+    service.on("error", handler);
+
+    await service.fetchOnce();
+
+    expect(handler).toHaveBeenCalledWith(expect.any(Error));
+  });
+});
+```
+
+### Testing a Database Migration
+
+```typescript
+import * as fs from "node:fs";
+import * as path from "node:path";
+import Database from "better-sqlite3";
+import { afterEach, beforeEach, describe, expect, test } from "vitest";
+import { runMigrations } from "../migrate.js";
+
+const TEST_DB = path.join(process.cwd(), "test-migration-N.db");
+
+describe("Migration N: my_new_feature", () => {
+  let db: Database.Database;
+
+  beforeEach(() => {
+    if (fs.existsSync(TEST_DB)) fs.unlinkSync(TEST_DB);
+    db = new Database(TEST_DB);
+    // Set up pre-migration state here
+  });
+
+  afterEach(() => {
+    db.close();
+    if (fs.existsSync(TEST_DB)) fs.unlinkSync(TEST_DB);
+  });
+
+  test("creates new_table with correct columns", () => {
+    runMigrations(TEST_DB);
+
+    const columns = db.prepare("PRAGMA table_info(new_table)").all() as Array<{
+      name: string;
+    }>;
+    const colNames = columns.map((c) => c.name);
+
+    expect(colNames).toContain("id");
+    expect(colNames).toContain("session_id");
+  });
+
+  test("is idempotent when run twice", () => {
+    runMigrations(TEST_DB);
+    // Should not throw
+    expect(() => runMigrations(TEST_DB)).not.toThrow();
+  });
+});
+```
+
+### Testing the Enrichment Pipeline
+
+```typescript
+import { beforeAll, describe, expect, it } from "vitest";
+import { initializeConfig } from "../../config.js";
+import { enrichMessage } from "../enrichment.js";
+
+// Config must be loaded for airline/ground-station lookups to work
+beforeAll(async () => {
+  await initializeConfig();
+});
+
+describe("enrichMessage", () => {
+  it("attaches decodedText when message can be decoded", () => {
+    const msg = {
+      uid: "test-uid",
+      message_type: "ACARS",
+      text: "some decodable text",
+      label: "H1",
+      timestamp: Date.now(),
+    };
+
+    const result = enrichMessage(msg);
+
+    expect(result.decodedText).toBeDefined();
+    expect(result.decodedText?.decoder.decodeLevel).not.toBe("none");
+  });
+});
 ```
 
 ## CI Integration

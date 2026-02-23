@@ -7,9 +7,9 @@
 ACARS Hub is a web application for receiving, decoding, and displaying ACARS (Aircraft Communications Addressing and Reporting System) messages.
 
 - **Frontend**: React 19 + TypeScript with Catppuccin theming
-- **Backend**: Python Flask + Socket.IO for real-time messaging
-- **Database**: SQLite with Alembic migrations
-- **Deployment**: Docker container with nginx + Python
+- **Backend**: Node.js + Fastify + Socket.IO for real-time messaging
+- **Database**: SQLite with Drizzle ORM (custom migration runner, no Alembic)
+- **Deployment**: Docker container with nginx + Node.js
 
 ## Documentation Structure
 
@@ -21,8 +21,32 @@ ACARS Hub is a web application for receiving, decoding, and displaying ACARS (Ai
 - **agent-docs/CATPPUCCIN.md** - Color palette reference for theming
 - **agent-docs/FEATURES.md** - Feature documentation (decoders, search, alerts, map)
 - **agent-docs/TESTING.md** - Test strategy, patterns, and infrastructure
+- **agent-docs/V4.2.md** - v4.2 aircraft session architecture and implementation plan
 
 ## Critical Rules
+
+### 🧪 TESTING MANDATE
+
+**All new code MUST have tests. No exceptions.**
+
+- ✅ Every new function, service, or module requires corresponding tests
+- ✅ Every bug fix requires a **regression test** that fails without the fix and passes with it
+- ✅ Tests are written alongside code, not after — they are part of the definition of "done"
+- ✅ A PR or change that adds untested code is **incomplete**, not "done but needs tests later"
+
+**Regression tests are non-negotiable for bug fixes:**
+
+```typescript
+// When fixing a bug, first write a test that reproduces it
+it("regression: session matching does not create duplicate sessions for same hex", () => {
+  // This test must FAIL before the fix and PASS after
+  const session1 = findOrCreateSession({ hex: "ABC123" });
+  const session2 = findOrCreateSession({ hex: "ABC123" });
+  expect(session1.sessionId).toBe(session2.sessionId);
+});
+```
+
+See `agent-docs/TESTING.md` for patterns, structure, and backend vs frontend test conventions.
 
 ### 🚫 NO SUMMARIES
 
@@ -327,25 +351,39 @@ socket.emit("query_search", payload); // ❌ Wrong
 
 ## Testing Standards
 
+> **Reminder**: The Testing Mandate in Critical Rules above applies here. Every new module
+> needs tests. Every bug fix needs a regression test. Coverage goals are a floor, not a ceiling.
+
 ### Test Coverage Goals
 
 - Utilities: 90%+ coverage
 - Stores: 80%+ coverage
 - Components: 70%+ coverage
+- Backend services: 80%+ coverage
+- Backend formatters/enrichment: 90%+ coverage
 
 ### Test Types
 
-**Unit Tests** (Vitest + React Testing Library):
+**Frontend Unit Tests** (Vitest + React Testing Library):
 
-- `src/utils/__tests__/` - Utility function tests
-- `src/store/__tests__/` - Zustand store tests
-- `src/components/__tests__/` - Component tests
+- `acarshub-react/src/utils/__tests__/` - Utility function tests
+- `acarshub-react/src/store/__tests__/` - Zustand store tests
+- `acarshub-react/src/components/__tests__/` - Component tests
+
+**Backend Unit Tests** (Vitest):
+
+- `acarshub-backend/src/__tests__/` - Config and top-level tests
+- `acarshub-backend/src/db/__tests__/` - Database query and migration tests
+- `acarshub-backend/src/services/__tests__/` - Service tests (poller, queue, scheduler, etc.)
+- `acarshub-backend/src/formatters/__tests__/` - Enrichment pipeline tests
+- `acarshub-backend/src/socket/__tests__/` - Socket handler tests
 
 **Integration Tests** (Vitest):
 
 - Complex component interactions
 - Store + component integration
 - Mock Socket.IO events
+- Backend: real SQLite in-memory DB for DB/migration tests
 
 **E2E Tests** (Playwright):
 
@@ -401,7 +439,8 @@ Before committing:
 5. ✅ Mobile responsiveness verified (DevTools or actual device)
 6. ✅ Accessibility checked (keyboard nav, screen reader)
 7. ✅ Component patterns match DESIGN_LANGUAGE.md
-8. ✅ Tests written and passing
+8. ✅ Tests written for ALL new code (not optional, not deferred)
+9. ✅ Regression test written if this is a bug fix
 
 ## Agent Workflow
 
@@ -422,6 +461,7 @@ Before committing:
 5. Ensure mobile responsiveness (test at 375px, 768px, 1024px)
 6. Document complex logic with WHY, not WHAT
 7. Ask clarifying questions if unclear
+8. Write tests as you go — do not defer until the end
 
 ### Before Completing Work
 
@@ -430,8 +470,10 @@ Before committing:
 3. Verify no inline styles
 4. Verify mobile responsiveness
 5. Check patterns match DESIGN_LANGUAGE.md
-6. Run `git --no-pager diff` to review changes
-7. Suggest next steps or improvements
+6. Confirm every new function/service/module has test coverage
+7. Confirm bug fixes have regression tests
+8. Run `git --no-pager diff` to review changes
+9. Suggest next steps or improvements
 
 ### Communication Style
 
@@ -467,5 +509,6 @@ Before committing:
 4. Is it mobile-first responsive? (test at 320px+)
 5. Does it match DESIGN_LANGUAGE.md patterns?
 6. Will `just ci` pass?
-7. Are tests written?
-8. Is the documentation updated (if needed)?
+7. Are tests written for ALL new code?
+8. If this is a bug fix, is there a regression test?
+9. Is the documentation updated (if needed)?
