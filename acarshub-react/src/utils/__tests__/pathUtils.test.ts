@@ -251,6 +251,24 @@ describe("pathUtils", () => {
       });
     });
 
+    describe("with already-relative paths (Vite ?url imports)", () => {
+      it("should pass through ./assets/ paths unchanged", () => {
+        const url = "./assets/TRACONBoundaries-DYk3HCl3.geojson";
+        expect(resolvePathOrUrl(url)).toBe(url);
+      });
+
+      it("should pass through any ./ path unchanged regardless of BASE_URL", () => {
+        const url = "./assets/FIRBoundaries-BCZI-LNq.geojson";
+        expect(resolvePathOrUrl(url)).toBe(url);
+      });
+
+      it("should not prepend subpath base to ./ paths", () => {
+        const url = "./assets/spritesheet-mocha-default-CbBQael1.png";
+        expect(resolvePathOrUrl(url)).toBe(url);
+        expect(resolvePathOrUrl(url)).not.toContain("/acarshub-test/");
+      });
+    });
+
     describe("real-world GeoJSON examples", () => {
       it("should resolve US ARTCC boundaries path", () => {
         expect(resolvePathOrUrl("/geojson/US_ARTCC_boundaries.geojson")).toBe(
@@ -272,6 +290,16 @@ describe("pathUtils", () => {
 
       it("should not modify external GeoJSON URL", () => {
         const url = "https://cdn.example.com/geojson/boundaries.geojson";
+        expect(resolvePathOrUrl(url)).toBe(url);
+      });
+
+      it("should pass through Vite-hashed TRACON asset URL unchanged", () => {
+        const url = "./assets/TRACONBoundaries-DYk3HCl3.geojson";
+        expect(resolvePathOrUrl(url)).toBe(url);
+      });
+
+      it("should pass through Vite-hashed FIR asset URL unchanged", () => {
+        const url = "./assets/FIRBoundaries-BCZI-LNq.geojson";
         expect(resolvePathOrUrl(url)).toBe(url);
       });
     });
@@ -301,6 +329,19 @@ describe("pathUtils", () => {
 
     it("should handle external URLs in all deployment modes", () => {
       const url = "https://example.com/geojson/data.geojson";
+
+      vi.stubEnv("BASE_URL", "./");
+      expect(resolvePathOrUrl(url)).toBe(url);
+
+      vi.stubEnv("BASE_URL", "/acarshub-test/");
+      expect(resolvePathOrUrl(url)).toBe(url);
+
+      vi.stubEnv("BASE_URL", "/");
+      expect(resolvePathOrUrl(url)).toBe(url);
+    });
+
+    it("should pass through ./ Vite asset URLs in all deployment modes", () => {
+      const url = "./assets/TRACONBoundaries-DYk3HCl3.geojson";
 
       vi.stubEnv("BASE_URL", "./");
       expect(resolvePathOrUrl(url)).toBe(url);

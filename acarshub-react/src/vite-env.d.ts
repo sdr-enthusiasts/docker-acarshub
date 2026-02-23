@@ -45,6 +45,11 @@ declare const __BACKEND_VERSION__: string;
  * Type definitions for static asset imports in Vite
  */
 
+declare module "*.geojson?url" {
+  const src: string;
+  export default src;
+}
+
 declare module "*.png" {
   const src: string;
   export default src;

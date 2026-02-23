@@ -21,7 +21,7 @@
 # - PAT: Personal Access Token with repo and pull_request permissions
 #
 # Files updated:
-# - acarshub-react/public/geojson/TRACONBoundaries.geojson
+# - acarshub-react/src/assets/geojson/TRACONBoundaries.geojson
 # - acarshub-react/ATTRIBUTIONS.md
 #
 # License: simaware-tracon-project is licensed under MIT
@@ -87,7 +87,7 @@ jobs:
           base_url="https://github.com/vatsimnetwork/simaware-tracon-project/releases/download/${release_tag}"
 
           echo "Downloading TRACONBoundaries.geojson..."
-          curl -L -o acarshub-react/public/geojson/TRACONBoundaries.geojson \
+          curl -L -o acarshub-react/src/assets/geojson/TRACONBoundaries.geojson \
             "${base_url}/TRACONBoundaries.geojson"
 
           echo "Download complete"

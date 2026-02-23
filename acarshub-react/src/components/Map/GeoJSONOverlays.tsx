@@ -25,7 +25,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Layer, Popup, Source, useMap } from "react-map-gl/maplibre";
 import { getOverlayById } from "../../config/geojsonOverlays";
 import { useSettingsStore } from "../../store/useSettingsStore";
-import { resolveBasePath } from "../../utils/pathUtils";
+import { resolvePathOrUrl } from "../../utils/pathUtils";
 
 // Stable empty array to prevent re-renders
 const EMPTY_ARRAY: string[] = [];
@@ -183,7 +183,7 @@ function GeoJSONOverlayLayer({
   const source: GeoJSONSourceSpecification = useMemo(
     () => ({
       type: "geojson",
-      data: resolveBasePath(path), // Resolve relative to Vite's BASE_URL
+      data: resolvePathOrUrl(path), // Resolve relative to Vite's BASE_URL (pass-through for ?url imports)
     }),
     [path],
   );

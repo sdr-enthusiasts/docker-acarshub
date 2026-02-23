@@ -22,7 +22,7 @@
 # - PAT: Personal Access Token with repo and pull_request permissions
 #
 # Files updated:
-# - acarshub-react/public/geojson/FIRBoundaries.geojson
+# - acarshub-react/src/assets/geojson/FIRBoundaries.geojson
 # - acarshub-react/ATTRIBUTIONS.md
 #
 # License: vatspy-data-project is licensed under CC BY-SA 4.0
@@ -88,7 +88,7 @@ jobs:
           base_url="https://github.com/vatsimnetwork/vatspy-data-project/releases/download/${release_tag}"
 
           echo "Downloading Boundaries.geojson..."
-          curl -L -o acarshub-react/public/geojson/FIRBoundaries.geojson \
+          curl -L -o acarshub-react/src/assets/geojson/FIRBoundaries.geojson \
             "${base_url}/Boundaries.geojson"
 
           echo "Download complete"

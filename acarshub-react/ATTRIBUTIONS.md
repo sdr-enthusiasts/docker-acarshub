@@ -30,7 +30,7 @@ All silhouettes, artwork, and metadata from pw-silhouettes are licensed under CC
 - **Source**: <https://github.com/vatsimnetwork/simaware-tracon-project>
 - **License**: MIT
 - **Usage**: TRACON (Terminal Radar Approach Control) boundary overlays on the live map
-- **Assets**: `public/geojson/TRACONBoundaries.geojson`
+- **Assets**: `src/assets/geojson/TRACONBoundaries.geojson`
 - **Version**: v1.2.5
 
 TRACON boundary data is provided by the VATSIM Network SimAware TRACON Project, a community-maintained dataset of approach control airspace boundaries.
@@ -45,7 +45,7 @@ TRACON boundary data is provided by the VATSIM Network SimAware TRACON Project, 
 - **Source**: <https://github.com/vatsimnetwork/vatspy-data-project>
 - **License**: CC BY-SA 4.0 (Creative Commons Attribution ShareAlike 4.0 International)
 - **Usage**: FIR (Flight Information Region) boundary overlays on the live map
-- **Assets**: `public/geojson/FIRBoundaries.geojson`
+- **Assets**: `src/assets/geojson/FIRBoundaries.geojson`
 - **Version**: v2602.1
 
 FIR boundary data is provided by the VATSIM Network VATSpy Data Project, a community-maintained dataset of flight information region boundaries updated to each AIRAC cycle.

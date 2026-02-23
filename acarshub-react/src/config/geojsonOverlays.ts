@@ -14,6 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
+import firBoundariesUrl from "../assets/geojson/FIRBoundaries.geojson?url";
+import traconBoundariesUrl from "../assets/geojson/TRACONBoundaries.geojson?url";
 import type { GeoJSONCategory, GeoJSONOverlay } from "../types";
 
 /**
@@ -40,7 +42,7 @@ export const GEOJSON_OVERLAYS: GeoJSONCategory[] = [
       {
         id: "vatsim_tracon_boundaries",
         name: "TRACON Boundaries",
-        path: "/geojson/TRACONBoundaries.geojson",
+        path: traconBoundariesUrl,
         category: "Global",
         enabled: false,
         color: "#00ccff",
@@ -53,7 +55,7 @@ export const GEOJSON_OVERLAYS: GeoJSONCategory[] = [
       {
         id: "vatsim_fir_boundaries",
         name: "FIR Boundaries",
-        path: "/geojson/FIRBoundaries.geojson",
+        path: firBoundariesUrl,
         category: "Global",
         enabled: false,
         color: "#cc88ff",
