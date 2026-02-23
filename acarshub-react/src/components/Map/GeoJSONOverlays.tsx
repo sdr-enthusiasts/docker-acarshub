@@ -19,9 +19,10 @@ import type {
   FillLayerSpecification,
   GeoJSONSourceSpecification,
   LineLayerSpecification,
+  MapLayerMouseEvent,
 } from "maplibre-gl";
-import { useMemo } from "react";
-import { Layer, Source } from "react-map-gl/maplibre";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Layer, Popup, Source, useMap } from "react-map-gl/maplibre";
 import { getOverlayById } from "../../config/geojsonOverlays";
 import { useSettingsStore } from "../../store/useSettingsStore";
 import { resolveBasePath } from "../../utils/pathUtils";
@@ -60,11 +61,24 @@ export function GeoJSONOverlays() {
             path={overlay.path}
             color={overlay.color || "#00ff00"}
             opacity={overlay.opacity || 0.7}
+            popup={overlay.popup}
           />
         );
       })}
     </>
   );
+}
+
+interface HoverPopupState {
+  lng: number;
+  lat: number;
+  title: string;
+  subtitle?: string;
+}
+
+interface PopupConfig {
+  titleProperty: string;
+  subtitleProperty?: string;
 }
 
 /**
@@ -73,18 +87,97 @@ export function GeoJSONOverlays() {
  * - Line layer (LineString, MultiLineString, Polygon outlines)
  * - Fill layer (Polygon, MultiPolygon interiors only)
  * - Circle layer (Point, MultiPoint features only)
+ *
+ * When a popup config is provided, shows a hover popup with feature
+ * properties on mousemove over the fill layer.
  */
 function GeoJSONOverlayLayer({
   overlayId,
   path,
   color,
   opacity,
+  popup,
 }: {
   overlayId: string;
   path: string;
   color: string;
   opacity: number;
+  popup?: PopupConfig;
 }) {
+  const { current: map } = useMap();
+  const [hoverPopup, setHoverPopup] = useState<HoverPopupState | null>(null);
+
+  // Register mousemove/mouseleave handlers on the fill layer when popup is configured.
+  // We listen on the fill layer (not line) because fills cover the entire polygon area,
+  // making it much easier to hover. mousemove is used instead of mouseenter so the popup
+  // position and feature name update smoothly when crossing adjacent TRACON boundaries.
+  const handleMouseMove = useCallback(
+    (event: MapLayerMouseEvent) => {
+      if (!popup) return;
+      const feature = event.features?.[0];
+      if (!feature?.properties) return;
+
+      const title = (feature.properties[popup.titleProperty] as string) ?? "";
+
+      // prefix is stored as an array in the GeoJSON (e.g. ["HMN"]).
+      // MapLibre JSON-stringifies array properties when passing them through
+      // layer events, so the value arrives as the string '["HMN"]' rather than
+      // a real JS array. Attempt JSON.parse first, then fall back to String().
+      const rawSubtitle = popup.subtitleProperty
+        ? feature.properties[popup.subtitleProperty]
+        : undefined;
+      const subtitle: string | undefined = (() => {
+        if (rawSubtitle === undefined || rawSubtitle === null) return undefined;
+        try {
+          const parsed: unknown = JSON.parse(rawSubtitle as string);
+          if (Array.isArray(parsed)) {
+            return parsed.map(String).join(", ");
+          }
+        } catch {
+          // Not valid JSON — use value as-is
+        }
+        return String(rawSubtitle);
+      })();
+
+      setHoverPopup({
+        lng: event.lngLat.lng,
+        lat: event.lngLat.lat,
+        title,
+        subtitle,
+      });
+    },
+    [popup],
+  );
+
+  const handleMouseLeave = useCallback(() => {
+    setHoverPopup(null);
+    if (map) {
+      map.getCanvas().style.cursor = "";
+    }
+  }, [map]);
+
+  useEffect(() => {
+    if (!map || !popup) return;
+
+    const fillLayerId = `${overlayId}-fill`;
+
+    const onMouseMove = (event: MapLayerMouseEvent) => {
+      map.getCanvas().style.cursor = "pointer";
+      handleMouseMove(event);
+    };
+
+    map.on("mousemove", fillLayerId, onMouseMove);
+    map.on("mouseleave", fillLayerId, handleMouseLeave);
+
+    return () => {
+      map.off("mousemove", fillLayerId, onMouseMove);
+      map.off("mouseleave", fillLayerId, handleMouseLeave);
+      // Clean up cursor and popup if the layer is removed while hovering
+      map.getCanvas().style.cursor = "";
+      setHoverPopup(null);
+    };
+  }, [map, overlayId, popup, handleMouseMove, handleMouseLeave]);
+
   // GeoJSON source - MapLibre fetches the URL automatically
   // Resolve path relative to BASE_URL for subpath deployments
   const source: GeoJSONSourceSpecification = useMemo(
@@ -157,13 +250,35 @@ function GeoJSONOverlayLayer({
   );
 
   return (
-    <Source id={`${overlayId}-source`} {...source}>
-      {/* Fill layer first (below lines) - Polygons only */}
-      <Layer {...fillLayer} />
-      {/* Line layer - LineStrings and Polygon outlines */}
-      <Layer {...lineLayer} />
-      {/* Circle layer - Points only */}
-      <Layer {...circleLayer} />
-    </Source>
+    <>
+      <Source id={`${overlayId}-source`} {...source}>
+        {/* Fill layer first (below lines) - Polygons only */}
+        <Layer {...fillLayer} />
+        {/* Line layer - LineStrings and Polygon outlines */}
+        <Layer {...lineLayer} />
+        {/* Circle layer - Points only */}
+        <Layer {...circleLayer} />
+      </Source>
+
+      {/* Hover popup - rendered outside Source so it sits at map level */}
+      {hoverPopup && popup && (
+        <Popup
+          longitude={hoverPopup.lng}
+          latitude={hoverPopup.lat}
+          closeButton={false}
+          closeOnClick={false}
+          anchor="bottom"
+          offset={12}
+        >
+          <div className="geojson-popup">
+            <span className="geojson-popup__label">
+              {hoverPopup.subtitle
+                ? `${hoverPopup.title}/${hoverPopup.subtitle}`
+                : hoverPopup.title}
+            </span>
+          </div>
+        </Popup>
+      )}
+    </>
   );
 }

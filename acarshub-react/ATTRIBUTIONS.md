@@ -23,6 +23,40 @@ All silhouettes, artwork, and metadata from pw-silhouettes are licensed under CC
 - License notice (CC BY-NC-SA 4.0)
 - Indication of changes (if modified)
 
+## GeoJSON Overlays
+
+### SimAware TRACON Project
+
+- **Source**: <https://github.com/vatsimnetwork/simaware-tracon-project>
+- **License**: MIT
+- **Usage**: TRACON (Terminal Radar Approach Control) boundary overlays on the live map
+- **Assets**: `public/geojson/TRACONBoundaries.geojson`
+- **Version**: v1.2.5
+
+TRACON boundary data is provided by the VATSIM Network SimAware TRACON Project, a community-maintained dataset of approach control airspace boundaries.
+
+**Attribution Requirements**:
+
+- Credit to VATSIM Network / SimAware TRACON Project contributors
+- Link to repository
+
+### VATSpy Data Project
+
+- **Source**: <https://github.com/vatsimnetwork/vatspy-data-project>
+- **License**: CC BY-SA 4.0 (Creative Commons Attribution ShareAlike 4.0 International)
+- **Usage**: FIR (Flight Information Region) boundary overlays on the live map
+- **Assets**: `public/geojson/FIRBoundaries.geojson`
+- **Version**: v2602.1
+
+FIR boundary data is provided by the VATSIM Network VATSpy Data Project, a community-maintained dataset of flight information region boundaries updated to each AIRAC cycle.
+
+**Attribution Requirements**:
+
+- Credit to VATSIM Network / VATSpy Data Project contributors
+- Link to repository
+- License notice (CC BY-SA 4.0)
+- ShareAlike: derivatives must use the same license
+
 ## CSS Filter Algorithm
 
 ### HEX Color to CSS Filter Converter
@@ -90,6 +124,8 @@ This specific technique was used as a reference during investigation but not dir
 | Asset/Code               | License                       | Commercial Use                    | Attribution Required |
 | ------------------------ | ----------------------------- | --------------------------------- | -------------------- |
 | pw-silhouettes           | CC BY-NC-SA 4.0               | ❌ No (requires separate license) | ✅ Yes               |
+| SimAware TRACON Project  | MIT                           | ✅ Yes                            | ✅ Yes               |
+| VATSpy Data Project      | CC BY-SA 4.0                  | ✅ Yes                            | ✅ Yes               |
 | CSS Filter Algorithm     | MIT                           | ✅ Yes                            | ✅ Yes               |
 | @airframes/acars-decoder | MIT                           | ✅ Yes                            | ✅ Yes               |
 | Catppuccin               | MIT                           | ✅ Yes                            | ✅ Yes               |

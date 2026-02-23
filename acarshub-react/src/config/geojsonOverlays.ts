@@ -29,10 +29,41 @@ import type { GeoJSONCategory, GeoJSONOverlay } from "../types";
  * - Orange (#ff8800): Training areas
  * - Red (#ff4444): Military zones
  * - Blue (#00aaff): AWACS orbits
+ * - Cyan (#00ccff): Approach control / TRACON boundaries
  * - White (#ffffff): Airports
  * - Gray (#aaaaaa): Runways
  */
 export const GEOJSON_OVERLAYS: GeoJSONCategory[] = [
+  {
+    name: "Global",
+    overlays: [
+      {
+        id: "vatsim_tracon_boundaries",
+        name: "TRACON Boundaries",
+        path: "/geojson/TRACONBoundaries.geojson",
+        category: "Global",
+        enabled: false,
+        color: "#00ccff",
+        opacity: 0.6,
+        popup: {
+          titleProperty: "name",
+          subtitleProperty: "prefix",
+        },
+      },
+      {
+        id: "vatsim_fir_boundaries",
+        name: "FIR Boundaries",
+        path: "/geojson/FIRBoundaries.geojson",
+        category: "Global",
+        enabled: false,
+        color: "#cc88ff",
+        opacity: 0.5,
+        popup: {
+          titleProperty: "id",
+        },
+      },
+    ],
+  },
   {
     name: "United States",
     overlays: [

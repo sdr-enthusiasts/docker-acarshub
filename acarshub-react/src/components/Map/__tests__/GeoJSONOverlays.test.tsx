@@ -102,6 +102,22 @@ vi.mock("react-map-gl/maplibre", () => ({
   Layer: ({ id, ...props }: { id: string; [key: string]: unknown }) => (
     <div data-testid={`layer-${id}`} data-layer-props={JSON.stringify(props)} />
   ),
+  Popup: ({
+    children,
+    longitude,
+    latitude,
+  }: {
+    children: React.ReactNode;
+    longitude: number;
+    latitude: number;
+    [key: string]: unknown;
+  }) => (
+    <div data-testid="geojson-popup" data-lng={longitude} data-lat={latitude}>
+      {children}
+    </div>
+  ),
+  // useMap returns a ref-like object with a null map — no popup events fire in unit tests
+  useMap: () => ({ current: null }),
 }));
 
 describe("GeoJSONOverlays", () => {

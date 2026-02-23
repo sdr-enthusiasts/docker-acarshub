@@ -333,6 +333,13 @@ export interface GeoJSONOverlay {
   color?: string;
   /** Opacity (0-1) */
   opacity?: number;
+  /** Optional hover popup configuration */
+  popup?: {
+    /** Feature property key to display as the popup title */
+    titleProperty: string;
+    /** Feature property key to display as the popup subtitle */
+    subtitleProperty?: string;
+  };
 }
 
 /**
