@@ -98,6 +98,22 @@
   }
 }
 
+// Short screen adjustments (height ≤ 790px)
+// Collapse overlay buttons into the flyout to prevent the control panel overflowing
+@media (max-height: 790px) {
+  .map-controls__overlay--tall {
+    display: none;
+  }
+}
+
+// Tall screen adjustments (height > 790px)
+// Hide the overlays flyout — individual buttons are shown instead
+@media (min-height: 791px) {
+  .map-controls__group--overlays .map-overlays-menu {
+    display: none;
+  }
+}
+
 // Print styles
 @media print {
   .map-controls {

@@ -38,6 +38,7 @@ import {
 import { GeoJSONOverlayButton } from "./GeoJSONOverlayButton";
 import { MapControlButton } from "./MapControlButton";
 import { MapFiltersMenu } from "./MapFiltersMenu";
+import { MapOverlaysMenu } from "./MapOverlaysMenu";
 import { MapProviderSelector } from "./MapProviderSelector";
 
 const logger = createLogger("MapControls");
@@ -193,13 +194,15 @@ export function MapControls({
       </div>
 
       {/* Map Overlays: Range Rings + Weather + Aviation Charts */}
-      <div className="map-controls__group">
+      <div className="map-controls__group map-controls__group--overlays">
+        {/* Tall screens (>790px height): individual buttons */}
         {backendAllowsRangeRings && (
           <MapControlButton
             icon={IconCircleDot}
             active={mapSettings.showRangeRings}
             onClick={() => setShowRangeRings(!mapSettings.showRangeRings)}
             tooltip="Show Range Rings"
+            className="map-controls__overlay--tall"
           />
         )}
         {heyWhatsThatUrl && (
@@ -208,6 +211,7 @@ export function MapControls({
             active={mapSettings.showHeyWhatsThat}
             onClick={() => setShowHeyWhatsThat(!mapSettings.showHeyWhatsThat)}
             tooltip="Show Hey What's That Coverage Outline"
+            className="map-controls__overlay--tall"
           />
         )}
         <MapControlButton
@@ -215,18 +219,72 @@ export function MapControls({
           active={mapSettings.showNexrad}
           onClick={() => setShowNexrad(!mapSettings.showNexrad)}
           tooltip="Show NEXRAD Weather Radar"
+          className="map-controls__overlay--tall"
         />
         <MapControlButton
           icon={IconCloudRain}
           active={mapSettings.showRainViewer}
           onClick={() => setShowRainViewer(!mapSettings.showRainViewer)}
           tooltip="Show RainViewer Radar"
+          className="map-controls__overlay--tall"
         />
         <MapControlButton
           icon={IconPlaneUp}
           active={mapSettings.showOpenAIP}
           onClick={() => setShowOpenAIP(!mapSettings.showOpenAIP)}
           tooltip="Show OpenAIP Aviation Charts"
+          className="map-controls__overlay--tall"
+        />
+
+        {/* Short screens (≤790px height): collapse into flyout */}
+        <MapOverlaysMenu
+          overlays={[
+            ...(backendAllowsRangeRings
+              ? [
+                  {
+                    id: "range-rings",
+                    label: "Range Rings",
+                    icon: IconCircleDot,
+                    active: mapSettings.showRangeRings,
+                    onClick: () =>
+                      setShowRangeRings(!mapSettings.showRangeRings),
+                  },
+                ]
+              : []),
+            ...(heyWhatsThatUrl
+              ? [
+                  {
+                    id: "heywhatsthat",
+                    label: "Hey What's That",
+                    icon: IconTowerBroadcast,
+                    active: mapSettings.showHeyWhatsThat,
+                    onClick: () =>
+                      setShowHeyWhatsThat(!mapSettings.showHeyWhatsThat),
+                  },
+                ]
+              : []),
+            {
+              id: "nexrad",
+              label: "NEXRAD Radar",
+              icon: IconCloudSunRain,
+              active: mapSettings.showNexrad,
+              onClick: () => setShowNexrad(!mapSettings.showNexrad),
+            },
+            {
+              id: "rainviewer",
+              label: "RainViewer Radar",
+              icon: IconCloudRain,
+              active: mapSettings.showRainViewer,
+              onClick: () => setShowRainViewer(!mapSettings.showRainViewer),
+            },
+            {
+              id: "openaip",
+              label: "OpenAIP Charts",
+              icon: IconPlaneUp,
+              active: mapSettings.showOpenAIP,
+              onClick: () => setShowOpenAIP(!mapSettings.showOpenAIP),
+            },
+          ]}
         />
       </div>
 
