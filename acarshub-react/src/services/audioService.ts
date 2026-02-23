@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
+import alertSoundUrl from "../assets/sounds/alert.mp3?url";
 import { uiLogger } from "../utils/logger";
 
 /**
@@ -34,7 +35,7 @@ import { uiLogger } from "../utils/logger";
 class AudioService {
   private audio: HTMLAudioElement | null = null;
   private audioUnlocked = false;
-  private readonly audioPath = "/static/sounds/alert.mp3";
+  private readonly audioPath = alertSoundUrl;
   private readonly STORAGE_KEY = "acarshub.audioUnlocked";
 
   constructor() {

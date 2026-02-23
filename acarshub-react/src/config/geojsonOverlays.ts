@@ -14,8 +14,22 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
+import deMilAwacs from "../assets/geojson/DE_Mil_AWACS_Orbits.geojson?url";
 import firBoundariesUrl from "../assets/geojson/FIRBoundaries.geojson?url";
+import iftNavRoutes from "../assets/geojson/IFT/IFT_NAV_Routes.geojson?url";
+import iftTrainingAreas from "../assets/geojson/IFT/IFT_Training_Areas.geojson?url";
+import usafaTrainingAreas from "../assets/geojson/IFT/USAFA_Training_Areas.geojson?url";
+import nlMilAwacs from "../assets/geojson/NL_Mil_AWACS_Orbits.geojson?url";
+import plMilAwacs from "../assets/geojson/PL_Mil_AWACS_Orbits.geojson?url";
 import traconBoundariesUrl from "../assets/geojson/TRACONBoundaries.geojson?url";
+import ukMilAarZones from "../assets/geojson/UK_Mil_AAR_Zones.geojson?url";
+import ukMilAwacs from "../assets/geojson/UK_Mil_AWACS_Orbits.geojson?url";
+import ukMilRc from "../assets/geojson/UK_Mil_RC.geojson?url";
+import ukAirports from "../assets/geojson/uk_advisory/airports.geojson?url";
+import ukRunways from "../assets/geojson/uk_advisory/runways.geojson?url";
+import ukShoreham from "../assets/geojson/uk_advisory/shoreham.geojson?url";
+import usA2aRefueling from "../assets/geojson/US_A2A_refueling.geojson?url";
+import usArtccBoundaries from "../assets/geojson/US_ARTCC_boundaries.geojson?url";
 import type { GeoJSONCategory, GeoJSONOverlay } from "../types";
 
 /**
@@ -72,7 +86,7 @@ export const GEOJSON_OVERLAYS: GeoJSONCategory[] = [
       {
         id: "us_a2a_refueling",
         name: "Air-to-Air Refueling Tracks",
-        path: "/geojson/US_A2A_refueling.geojson",
+        path: usA2aRefueling,
         category: "United States",
         enabled: false,
         color: "#00ff00",
@@ -81,7 +95,7 @@ export const GEOJSON_OVERLAYS: GeoJSONCategory[] = [
       {
         id: "us_artcc_boundaries",
         name: "ARTCC Boundaries",
-        path: "/geojson/US_ARTCC_boundaries.geojson",
+        path: usArtccBoundaries,
         category: "United States",
         enabled: false,
         color: "#ff00ff",
@@ -90,7 +104,7 @@ export const GEOJSON_OVERLAYS: GeoJSONCategory[] = [
       {
         id: "ift_nav_routes",
         name: "IFT Navigation Routes",
-        path: "/geojson/IFT/IFT_NAV_Routes.geojson",
+        path: iftNavRoutes,
         category: "United States",
         enabled: false,
         color: "#ffff00",
@@ -99,7 +113,7 @@ export const GEOJSON_OVERLAYS: GeoJSONCategory[] = [
       {
         id: "ift_training_areas",
         name: "IFT Training Areas",
-        path: "/geojson/IFT/IFT_Training_Areas.geojson",
+        path: iftTrainingAreas,
         category: "United States",
         enabled: false,
         color: "#ff8800",
@@ -108,7 +122,7 @@ export const GEOJSON_OVERLAYS: GeoJSONCategory[] = [
       {
         id: "usafa_training_areas",
         name: "USAFA Training Areas",
-        path: "/geojson/IFT/USAFA_Training_Areas.geojson",
+        path: usafaTrainingAreas,
         category: "United States",
         enabled: false,
         color: "#ff4444",
@@ -122,7 +136,7 @@ export const GEOJSON_OVERLAYS: GeoJSONCategory[] = [
       {
         id: "uk_mil_aar_zones",
         name: "Military AAR Zones",
-        path: "/geojson/UK_Mil_AAR_Zones.geojson",
+        path: ukMilAarZones,
         category: "United Kingdom",
         enabled: false,
         color: "#00ff00",
@@ -131,7 +145,7 @@ export const GEOJSON_OVERLAYS: GeoJSONCategory[] = [
       {
         id: "uk_mil_awacs_orbits",
         name: "Military AWACS Orbits",
-        path: "/geojson/UK_Mil_AWACS_Orbits.geojson",
+        path: ukMilAwacs,
         category: "United Kingdom",
         enabled: false,
         color: "#00aaff",
@@ -140,7 +154,7 @@ export const GEOJSON_OVERLAYS: GeoJSONCategory[] = [
       {
         id: "uk_mil_rc",
         name: "Military RC",
-        path: "/geojson/UK_Mil_RC.geojson",
+        path: ukMilRc,
         category: "United Kingdom",
         enabled: false,
         color: "#ff00ff",
@@ -149,7 +163,7 @@ export const GEOJSON_OVERLAYS: GeoJSONCategory[] = [
       {
         id: "uk_airports",
         name: "Airports",
-        path: "/geojson/uk_advisory/airports.geojson",
+        path: ukAirports,
         category: "United Kingdom",
         enabled: false,
         color: "#ffffff",
@@ -158,7 +172,7 @@ export const GEOJSON_OVERLAYS: GeoJSONCategory[] = [
       {
         id: "uk_runways",
         name: "Runways",
-        path: "/geojson/uk_advisory/runways.geojson",
+        path: ukRunways,
         category: "United Kingdom",
         enabled: false,
         color: "#aaaaaa",
@@ -167,7 +181,7 @@ export const GEOJSON_OVERLAYS: GeoJSONCategory[] = [
       {
         id: "uk_shoreham",
         name: "Shoreham",
-        path: "/geojson/uk_advisory/shoreham.geojson",
+        path: ukShoreham,
         category: "United Kingdom",
         enabled: false,
         color: "#ffaa00",
@@ -181,7 +195,7 @@ export const GEOJSON_OVERLAYS: GeoJSONCategory[] = [
       {
         id: "de_mil_awacs_orbits",
         name: "Germany AWACS Orbits",
-        path: "/geojson/DE_Mil_AWACS_Orbits.geojson",
+        path: deMilAwacs,
         category: "Europe",
         enabled: false,
         color: "#ffcc00",
@@ -190,7 +204,7 @@ export const GEOJSON_OVERLAYS: GeoJSONCategory[] = [
       {
         id: "nl_mil_awacs_orbits",
         name: "Netherlands AWACS Orbits",
-        path: "/geojson/NL_Mil_AWACS_Orbits.geojson",
+        path: nlMilAwacs,
         category: "Europe",
         enabled: false,
         color: "#ff6600",
@@ -199,7 +213,7 @@ export const GEOJSON_OVERLAYS: GeoJSONCategory[] = [
       {
         id: "pl_mil_awacs_orbits",
         name: "Poland AWACS Orbits",
-        path: "/geojson/PL_Mil_AWACS_Orbits.geojson",
+        path: plMilAwacs,
         category: "Europe",
         enabled: false,
         color: "#ff0066",
