@@ -222,7 +222,6 @@ export function MapComponent({
       url: tileUrl,
       minZoom: providerConfig?.minZoom,
       maxZoom: providerConfig?.maxZoom,
-      currentZoom: viewState.zoom,
     });
 
     // Check if this provider has strict zoom constraints (aviation charts)
@@ -297,7 +296,7 @@ export function MapComponent({
         },
       ],
     };
-  }, [mapSettings.provider, mapSettings.customTileUrl, viewState.zoom]);
+  }, [mapSettings.provider, mapSettings.customTileUrl]);
 
   // Handle view state changes
   const handleMove = useCallback(
