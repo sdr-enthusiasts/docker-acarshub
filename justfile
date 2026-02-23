@@ -3,9 +3,6 @@ web:
     ./dev-watch.sh
 
 server:
-    pdm run dev
-
-server-node:
     cd acarshub-backend && env $(grep -v '^#' ../.env | xargs) npm run dev
 
 # Node.js dependency updates
@@ -14,45 +11,6 @@ update:
 
 bump:
     npm i
-
-# Python dependency updates
-update-py:
-    @echo "Updating Python dependencies..."
-    pdm update
-    @echo "Syncing requirements.txt with pyproject.toml..."
-    ./sync-python-deps.sh
-    @echo "✅ Python dependencies updated!"
-
-bump-py:
-    @echo "Installing Python dependencies..."
-    pdm install
-    @echo "✅ Python dependencies installed!"
-
-# Update all dependencies (Node + Python)
-update-all:
-    @echo "Updating Node.js dependencies..."
-    just update
-    just bump
-    @echo ""
-    @echo "Updating Python dependencies..."
-    just update-py
-    @echo ""
-    @echo "✅ All dependencies updated!"
-
-# Database migration commands
-
-# Usage: just db-init [path/to/db.db]
-db-init DB_PATH="test_working.db":
-    @echo "Creating fresh test database with all migrations..."
-    @rm -f {{ DB_PATH }}
-    @cd rootfs/webapp && alembic -x dbPath={{ absolute_path(DB_PATH) }} upgrade head
-    @echo "✅ Database initialized at {{ DB_PATH }}"
-
-# Usage: just db-migrate [path/to/db.db]
-db-migrate DB_PATH="test_working.db":
-    @echo "Applying latest migrations to existing database..."
-    @cd rootfs/webapp && alembic -x dbPath={{ absolute_path(DB_PATH) }} upgrade head
-    @echo "✅ Migrations applied to {{ DB_PATH }}"
 
 # Testing commands
 test:
@@ -76,26 +34,6 @@ test-backend-watch:
 
 test-backend-coverage:
     cd acarshub-backend && npm run test:coverage
-
-# E2E Testing commands
-test-e2e:
-    cd acarshub-react && npm run test:e2e
-
-test-e2e-ui:
-    cd acarshub-react && npm run test:e2e:ui
-
-test-e2e-debug:
-    cd acarshub-react && npm run test:e2e:debug
-
-test-e2e-chromium:
-    cd acarshub-react && npm run test:e2e:chromium
-
-# Accessibility Testing commands
-test-a11y:
-    cd acarshub-react && npm run test:a11y
-
-test-a11y-debug:
-    cd acarshub-react && npm run test:a11y:debug
 
 # Performance Testing commands
 lighthouse:
@@ -209,7 +147,7 @@ test-e2e-docker-debug *ARGS='':
 # Must be run before just test-e2e-fullstack
 build-test-image:
     @echo "Building test Docker image (ah:test) from Node.Dockerfile..."
-    docker build -f Node.Dockerfile -t ah:test .
+    docker build -f Dockerfile -t ah:test .
     @echo "✅ Test image built: ah:test"
 
 # Run full-stack integration E2E tests via Docker Compose
