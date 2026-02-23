@@ -406,6 +406,8 @@ export interface MapSettings {
   showOpenAIP: boolean;
   /** Show RainViewer weather radar overlay */
   showRainViewer: boolean;
+  /** Show Hey What's That antenna coverage outline (when configured by backend) */
+  showHeyWhatsThat: boolean;
   /**
    * Sidebar width in pixels on the Live Map page (desktop only).
    * Persisted so the user's preferred width survives reloads.
@@ -546,6 +548,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
     enabledGeoJSONOverlays: [],
     showOpenAIP: false,
     showRainViewer: false,
+    showHeyWhatsThat: true,
     mapSidebarWidth: 408,
     mapSidebarCollapsed: false,
   },

@@ -177,3 +177,7 @@ acarshub-backend/coverage/
 # *.db is globally ignored above (production databases must not be committed)
 !test-fixtures/seed.db
 !test-fixtures/seed.db.meta.json
+
+# Local dev HeyWhatsThat cache files (written when HEYWHATSTHAT_SAVE points to the repo root)
+geo.json
+geo.json.meta.json

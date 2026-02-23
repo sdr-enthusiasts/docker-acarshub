@@ -75,6 +75,9 @@ const ConfigSchema = z.object({
   adsbLat: z.number(),
   adsbLon: z.number(),
   enableRangeRings: z.boolean(),
+  heywhatsThatId: z.string(),
+  heywhatsThatAlts: z.string(),
+  heywhatsThatSave: z.string(),
   flightTrackingUrl: z.string().url(),
   minLogLevel: z.enum(["trace", "debug", "info", "warn", "error"]),
   quietMessages: z.boolean(),
@@ -223,6 +226,21 @@ export const ENABLE_RANGE_RINGS = !isEnabled(
   process.env.DISABLE_RANGE_RINGS,
   false,
 ); // Inverted logic: DISABLE_RANGE_RINGS=true means rings OFF
+
+/**
+ * Hey What's That antenna coverage configuration
+ *
+ * HEYWHATSTHAT: Site ID token from heywhatsthat.com (e.g. "NN6R7EXG").
+ *   When set, the live map will display the estimated antenna coverage outline.
+ * HEYWHATSTHAT_ALTS: Comma-separated list of altitudes in feet to request.
+ *   Defaults to "10000,30000" if not specified.
+ * HEYWHATSTHAT_SAVE: Override the save path (useful for dev/testing).
+ *   Defaults to "/run/acars/heywhatsthat.geojson" (same dir as RRD).
+ */
+export const HEYWHATSTHAT_ID = process.env.HEYWHATSTHAT ?? "";
+export const HEYWHATSTHAT_ALTS = process.env.HEYWHATSTHAT_ALTS ?? "10000,30000";
+export const HEYWHATSTHAT_SAVE =
+  process.env.HEYWHATSTHAT_SAVE ?? "/run/acars/heywhatsthat.geojson";
 
 /**
  * Flight tracking configuration
@@ -489,6 +507,9 @@ export function getConfig(): Config & {
     adsbLat: ADSB_LAT,
     adsbLon: ADSB_LON,
     enableRangeRings: ENABLE_RANGE_RINGS,
+    heywhatsThatId: HEYWHATSTHAT_ID,
+    heywhatsThatAlts: HEYWHATSTHAT_ALTS,
+    heywhatsThatSave: HEYWHATSTHAT_SAVE,
     flightTrackingUrl: FLIGHT_TRACKING_URL,
     minLogLevel: MIN_LOG_LEVEL,
     quietMessages: QUIET_MESSAGES,

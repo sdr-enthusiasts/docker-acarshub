@@ -62,6 +62,7 @@ import {
 import type { SearchParams } from "../db/queries/messages.js";
 import { enrichMessage, enrichMessages } from "../formatters/enrichment.js";
 import { getAdsbPoller } from "../services/adsb-poller.js";
+import { getHeyWhatsThatUrl } from "../services/heywhatsthat.js";
 import { getMessageQueue } from "../services/message-queue.js";
 import { queryTimeseriesData } from "../services/rrd-migration.js";
 import { getStationIds } from "../services/station-ids.js";
@@ -154,6 +155,7 @@ function handleConnect(socket: TypedSocket, _io: TypedSocketServer): void {
         lat: config.adsbLat,
         lon: config.adsbLon,
         range_rings: config.enableRangeRings,
+        heywhatsthat_url: getHeyWhatsThatUrl(),
       },
     };
     socket.emit("features_enabled", decoders);

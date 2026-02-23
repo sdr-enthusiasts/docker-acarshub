@@ -87,6 +87,19 @@ server {
     proxy_redirect off;
   }
 
+  # proxy pass the HeyWhatsThat coverage GeoJSON to the backend
+  # The ?v= query parameter acts as a cache-bust token (handled transparently by nginx)
+  location ~ ^(.*)/data/heywhatsthat\.geojson {
+    rewrite ^(.*)/data/heywhatsthat\.geojson(.*)$ /data/heywhatsthat.geojson$2 break;
+    proxy_pass http://127.0.0.1:8888;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-Host $host;
+    add_header Cache-Control 'public, max-age=86400';
+  }
+
   # proxy pass the metrics endpoint to gunicorn (supports any base path)
   # Matches /metrics or /any/path/metrics
   location ~ ^(.*)/metrics$ {

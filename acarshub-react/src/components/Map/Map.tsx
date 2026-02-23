@@ -37,6 +37,7 @@ import { mapLogger } from "../../utils/logger";
 import type { ViewportBounds } from "./AircraftMarkers";
 import { AircraftMarkers } from "./AircraftMarkers";
 import { GeoJSONOverlays } from "./GeoJSONOverlays";
+import { HeyWhatsThatOverlay } from "./HeyWhatsThatOverlay";
 import { MapContextMenu } from "./MapContextMenu";
 import { NexradOverlay } from "./NexradOverlay";
 import { OpenAIPOverlay } from "./OpenAIPOverlay";
@@ -472,6 +473,9 @@ export function MapComponent({
 
         {/* GeoJSON overlays (aviation zones, boundaries, etc.) */}
         <GeoJSONOverlays />
+
+        {/* Hey What's That antenna coverage outline */}
+        <HeyWhatsThatOverlay />
 
         {/* Aircraft markers */}
         <AircraftMarkers

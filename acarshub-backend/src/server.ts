@@ -33,6 +33,11 @@ import {
   initializeMessageCounts,
 } from "./db/index.js";
 import { runMigrations } from "./db/migrate.js";
+import {
+  getHeyWhatsThatUrl,
+  initHeyWhatsThat,
+  readSavedGeoJSON,
+} from "./services/heywhatsthat.js";
 import { createBackgroundServices } from "./services/index.js";
 import { collectMetrics, METRICS_CONTENT_TYPE } from "./services/metrics.js";
 import { migrateRrdToSqlite } from "./services/rrd-migration.js";
@@ -96,6 +101,37 @@ function createServer() {
       version: getConfig().version,
       status: "running",
     };
+  });
+
+  // HeyWhatsThat antenna coverage GeoJSON endpoint
+  // Serves the pre-fetched and converted GeoJSON file from the configured save path.
+  // The ?v= query parameter (set by the backend and passed to the frontend via
+  // features_enabled) acts as a cache-bust token — when config changes, the hash
+  // changes and the browser fetches a fresh copy.
+  fastify.get("/data/heywhatsthat.geojson", async (_request, reply) => {
+    const config = getConfig();
+    if (!config.heywhatsThatId) {
+      return reply.status(404).send({ error: "HeyWhatsThat not configured" });
+    }
+
+    const url = getHeyWhatsThatUrl();
+    if (!url) {
+      return reply.status(503).send({
+        error: "Coverage data not yet available — check startup logs",
+      });
+    }
+
+    const content = readSavedGeoJSON(config.heywhatsThatSave);
+    if (!content) {
+      return reply
+        .status(404)
+        .send({ error: "Coverage GeoJSON file not found on disk" });
+    }
+
+    return reply
+      .header("Content-Type", "application/json; charset=utf-8")
+      .header("Cache-Control", "public, max-age=86400")
+      .send(content);
   });
 
   // Prometheus metrics endpoint
@@ -163,6 +199,13 @@ async function main(): Promise<void> {
     // Migrate RRD to SQLite (blocking startup task)
     const rrdPath = process.env.RRD_PATH ?? "/run/acars/acarshub.rrd";
     await migrateRrdToSqlite(rrdPath);
+
+    // Fetch Hey What's That antenna coverage data (once at startup, cached to disk)
+    await initHeyWhatsThat();
+    const hwtUrl = getHeyWhatsThatUrl();
+    if (hwtUrl) {
+      logger.info("Hey What's That coverage overlay enabled", { url: hwtUrl });
+    }
 
     initializeMessageCounts();
     initializeMessageCounters();

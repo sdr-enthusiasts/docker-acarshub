@@ -136,6 +136,8 @@ export interface Decoders {
     lat: number;
     lon: number;
     range_rings: boolean;
+    /** URL to fetch the Hey What's That antenna coverage GeoJSON (includes ?v= cache-bust param). Undefined when not configured. */
+    heywhatsthat_url?: string;
   };
 }
 

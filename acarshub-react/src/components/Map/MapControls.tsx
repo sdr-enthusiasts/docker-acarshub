@@ -29,6 +29,7 @@ import { faPlane } from "@fortawesome/free-solid-svg-icons/faPlane";
 import { faPlaneUp } from "@fortawesome/free-solid-svg-icons/faPlaneUp";
 import { faPlay } from "@fortawesome/free-solid-svg-icons/faPlay";
 import { faStar } from "@fortawesome/free-solid-svg-icons/faStar";
+import { faTowerBroadcast } from "@fortawesome/free-solid-svg-icons/faTowerBroadcast";
 import { useAppStore } from "../../store/useAppStore";
 import { useSettingsStore } from "../../store/useSettingsStore";
 import { createLogger } from "../../utils/logger";
@@ -114,6 +115,9 @@ export function MapControls({
   const setShowRainViewer = useSettingsStore(
     (state) => state.setShowRainViewer,
   );
+  const setShowHeyWhatsThat = useSettingsStore(
+    (state) => state.setShowHeyWhatsThat,
+  );
   const setShowOnlyMilitary = useSettingsStore(
     (state) => state.setShowOnlyMilitary,
   );
@@ -133,6 +137,9 @@ export function MapControls({
 
   // Check if range rings are allowed by backend (privacy protection)
   const backendAllowsRangeRings = decoders?.adsb?.range_rings ?? true;
+
+  // Hey What's That is only available when the backend has a token configured
+  const heyWhatsThatUrl = decoders?.adsb?.heywhatsthat_url;
 
   return (
     <div className="map-controls">
@@ -191,6 +198,14 @@ export function MapControls({
             active={mapSettings.showRangeRings}
             onClick={() => setShowRangeRings(!mapSettings.showRangeRings)}
             tooltip="Show Range Rings"
+          />
+        )}
+        {heyWhatsThatUrl && (
+          <MapControlButton
+            icon={faTowerBroadcast}
+            active={mapSettings.showHeyWhatsThat}
+            onClick={() => setShowHeyWhatsThat(!mapSettings.showHeyWhatsThat)}
+            tooltip="Show Hey What's That Coverage Outline"
           />
         )}
         <MapControlButton

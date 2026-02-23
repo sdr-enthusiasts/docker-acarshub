@@ -74,7 +74,8 @@ describe("useSettingsStore", () => {
       expect(settings.advanced.persistLogs).toBe(true);
       expect(settings.map.mapSidebarWidth).toBe(408);
       expect(settings.map.mapSidebarCollapsed).toBe(false);
-      expect(settings.version).toBe(8);
+      expect(settings.map.showHeyWhatsThat).toBe(true);
+      expect(settings.version).toBe(9);
       expect(settings.updatedAt).toBeGreaterThan(0);
     });
 
@@ -543,7 +544,7 @@ describe("useSettingsStore", () => {
       expect(typeof exported).toBe("string");
       const parsed = JSON.parse(exported) as UserSettings;
       expect(parsed.appearance.theme).toBe("latte");
-      expect(parsed.version).toBe(8);
+      expect(parsed.version).toBe(9);
     });
 
     it("should import valid settings JSON", () => {
@@ -595,6 +596,7 @@ describe("useSettingsStore", () => {
           showOnlyLADD: false,
           showOpenAIP: false,
           showRainViewer: false,
+          showHeyWhatsThat: true,
           useSprites: true,
           colorByDecoder: false,
           groundAltitudeThreshold: 5000,
@@ -707,6 +709,7 @@ describe("useSettingsStore", () => {
           showOnlyLADD: false,
           showOpenAIP: false,
           showRainViewer: false,
+          showHeyWhatsThat: true,
           useSprites: true,
           colorByDecoder: false,
           groundAltitudeThreshold: 5000,
@@ -787,7 +790,7 @@ describe("useSettingsStore", () => {
 
       const migrated = migrate(oldState, 0);
 
-      expect(migrated.settings.version).toBe(8);
+      expect(migrated.settings.version).toBe(9);
       expect(migrated.settings.appearance.theme).toBe("mocha"); // Reset to default
       expect(migrated.settings.map).toBeDefined();
       expect(migrated.settings.advanced).toBeDefined();
@@ -830,9 +833,10 @@ describe("useSettingsStore", () => {
 
       const migrated = migrate(v1State, 1);
 
-      expect(migrated.settings.version).toBe(8);
+      expect(migrated.settings.version).toBe(9);
       expect(migrated.settings.map.mapSidebarWidth).toBe(408);
       expect(migrated.settings.map.mapSidebarCollapsed).toBe(false);
+      expect(migrated.settings.map.showHeyWhatsThat).toBe(true);
       // Existing settings preserved
       expect(migrated.settings.appearance.theme).toBe("latte");
       expect(migrated.settings.regional.timeFormat).toBe("24h");
@@ -904,7 +908,7 @@ describe("useSettingsStore", () => {
       };
 
       const migrated = migrate(v3State, 3);
-      expect(migrated.settings.version).toBe(8);
+      expect(migrated.settings.version).toBe(9);
       // Existing settings preserved
       expect(migrated.settings.map.showNexrad).toBe(false);
       expect(migrated.settings.map.showOnlyMilitary).toBe(false);
@@ -912,6 +916,7 @@ describe("useSettingsStore", () => {
       // New overlay settings added with defaults
       expect(migrated.settings.map.showOpenAIP).toBe(false);
       expect(migrated.settings.map.showRainViewer).toBe(false);
+      expect(migrated.settings.map.showHeyWhatsThat).toBe(true);
     });
 
     it("should migrate from version 4 to version 6 (add groundAltitudeThreshold)", () => {
@@ -977,12 +982,14 @@ describe("useSettingsStore", () => {
       };
 
       const migrated = migrate(v4State, 4);
-      expect(migrated.settings.version).toBe(8);
+      expect(migrated.settings.version).toBe(9);
       // Existing settings preserved
       expect(migrated.settings.map.showOpenAIP).toBe(false);
       expect(migrated.settings.map.showRainViewer).toBe(false);
       // New groundAltitudeThreshold setting added with default
       expect(migrated.settings.map.groundAltitudeThreshold).toBe(500);
+      // showHeyWhatsThat defaults to true (show overlay when configured)
+      expect(migrated.settings.map.showHeyWhatsThat).toBe(true);
     });
 
     it("should return unchanged state for current version", () => {
@@ -993,13 +1000,13 @@ describe("useSettingsStore", () => {
         settings: useSettingsStore.getState().settings,
       };
 
-      // Version 8 is the current version; migrate should return the state unchanged
-      const migrated = migrate(currentState, 8);
+      // Version 9 is the current version; migrate should return the state unchanged
+      const migrated = migrate(currentState, 9);
 
       expect(migrated).toEqual(currentState);
     });
 
-    it("should migrate from version 7 to version 8 (add mapSidebarCollapsed)", () => {
+    it("should migrate from version 7 to version 9 (add mapSidebarCollapsed + showHeyWhatsThat)", () => {
       // biome-ignore lint/suspicious/noExplicitAny: Zustand persist API doesn't expose migrate type
       const { migrate } = (useSettingsStore as any).persist.getOptions();
 
@@ -1066,12 +1073,91 @@ describe("useSettingsStore", () => {
       };
 
       const migrated = migrate(v7State, 7);
-      expect(migrated.settings.version).toBe(8);
+      expect(migrated.settings.version).toBe(9);
       // Existing settings preserved
       expect(migrated.settings.map.mapSidebarWidth).toBe(450);
       expect(migrated.settings.appearance.theme).toBe("mocha");
-      // New field added with default
+      // New fields added with defaults
       expect(migrated.settings.map.mapSidebarCollapsed).toBe(false);
+      expect(migrated.settings.map.showHeyWhatsThat).toBe(true);
+    });
+
+    it("regression: should migrate from version 8 to version 9 (add showHeyWhatsThat)", () => {
+      // This test must FAIL before the v8→v9 migration is added and PASS after.
+      // biome-ignore lint/suspicious/noExplicitAny: Zustand persist API doesn't expose migrate type
+      const { migrate } = (useSettingsStore as any).persist.getOptions();
+
+      const v8State = {
+        settings: {
+          appearance: {
+            theme: "mocha",
+            showConnectionStatus: true,
+            animations: true,
+          },
+          regional: {
+            timeFormat: "auto",
+            dateFormat: "auto",
+            timezone: "local",
+            altitudeUnit: "feet",
+          },
+          notifications: {
+            desktop: false,
+            sound: false,
+            volume: 50,
+            onPageAlerts: false,
+          },
+          data: {
+            maxMessagesPerAircraft: 50,
+            maxMessageGroups: 50,
+            enableCaching: true,
+            autoClearMinutes: 60,
+          },
+          map: {
+            provider: "carto_dark_all",
+            userSelectedProvider: false,
+            stationLat: 0,
+            stationLon: 0,
+            rangeRings: [100, 200, 300],
+            defaultCenterLat: 0,
+            defaultCenterLon: 0,
+            defaultZoom: 7,
+            useSprites: true,
+            colorByDecoder: false,
+            groundAltitudeThreshold: 500,
+            showOnlyAcars: false,
+            showDatablocks: true,
+            showExtendedDatablocks: false,
+            showNexrad: false,
+            showRangeRings: true,
+            showOnlyUnread: false,
+            showOnlyMilitary: false,
+            showOnlyInteresting: false,
+            showOnlyPIA: false,
+            showOnlyLADD: false,
+            enabledGeoJSONOverlays: [],
+            showOpenAIP: false,
+            showRainViewer: false,
+            mapSidebarWidth: 408,
+            mapSidebarCollapsed: false,
+            // Missing showHeyWhatsThat (v8 state)
+          },
+          advanced: {
+            logLevel: "info",
+            persistLogs: true,
+          },
+          updatedAt: 123456,
+          version: 8,
+        },
+      };
+
+      const migrated = migrate(v8State, 8);
+      expect(migrated.settings.version).toBe(9);
+      // Existing settings preserved
+      expect(migrated.settings.map.mapSidebarWidth).toBe(408);
+      expect(migrated.settings.map.mapSidebarCollapsed).toBe(false);
+      expect(migrated.settings.appearance.theme).toBe("mocha");
+      // New field added: showHeyWhatsThat defaults to true (show when configured)
+      expect(migrated.settings.map.showHeyWhatsThat).toBe(true);
     });
   });
 
@@ -1203,7 +1289,7 @@ describe("useSettingsStore", () => {
       if (!stored) throw new Error("Expected stored to be truthy");
       const parsed = JSON.parse(stored);
 
-      expect(parsed.version).toBe(8);
+      expect(parsed.version).toBe(9);
     });
   });
 

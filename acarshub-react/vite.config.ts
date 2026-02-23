@@ -138,6 +138,17 @@ export default defineConfig({
         target: "http://localhost:8888",
         changeOrigin: true,
       },
+      // HeyWhatsThat coverage GeoJSON (with base path support)
+      "^/acarshub-test/data/heywhatsthat\\.geojson": {
+        target: "http://localhost:8888",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/acarshub-test/, ""),
+      },
+      // Fallback HeyWhatsThat proxy (no base path)
+      "^/data/heywhatsthat\\.geojson": {
+        target: "http://localhost:8888",
+        changeOrigin: true,
+      },
     },
   },
 });
