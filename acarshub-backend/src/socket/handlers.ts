@@ -64,6 +64,7 @@ import { enrichMessage, enrichMessages } from "../formatters/enrichment.js";
 import { getAdsbPoller } from "../services/adsb-poller.js";
 import { getMessageQueue } from "../services/message-queue.js";
 import { queryTimeseriesData } from "../services/rrd-migration.js";
+import { getStationIds } from "../services/station-ids.js";
 import { createLogger } from "../utils/logger.js";
 import type { TypedSocket, TypedSocketServer } from "./types.js";
 
@@ -157,7 +158,10 @@ function handleConnect(socket: TypedSocket, _io: TypedSocketServer): void {
     };
     socket.emit("features_enabled", decoders);
 
-    // 2. Send alert terms
+    // 2. Send station IDs (known sources seen across all message types)
+    socket.emit("station_ids", { station_ids: getStationIds() });
+
+    // 3. Send alert terms
     // Use the DB-backed cache (getCachedAlertTerms / getCachedAlertIgnoreTerms)
     // rather than config.alertTerms, which is never populated from the database.
     // This matches Python: get_alert_terms() / get_alert_ignore() return the
@@ -168,13 +172,13 @@ function handleConnect(socket: TypedSocket, _io: TypedSocketServer): void {
     };
     socket.emit("terms", terms);
 
-    // 3. Send message labels
+    // 4. Send message labels
     const labels: Labels = {
       labels: config.messageLabels as Record<string, { name: string }>,
     };
     socket.emit("labels", labels);
 
-    // 4. Send cached ADS-B data (if available)
+    // 5. Send cached ADS-B data (if available)
     // CRITICAL: Must send BEFORE messages so frontend can match ICAO addresses
     if (config.enableAdsb) {
       try {
@@ -200,7 +204,7 @@ function handleConnect(socket: TypedSocket, _io: TypedSocketServer): void {
       }
     }
 
-    // 5. Send recent messages in chunks (filter out alerts)
+    // 6. Send recent messages in chunks (filter out alerts)
     const recentMessagesRaw = grabMostRecent(250);
     const recentMessages = enrichMessages(recentMessagesRaw);
     const nonAlertMessages = recentMessages.filter((msg) => !msg.matched);
@@ -226,7 +230,7 @@ function handleConnect(socket: TypedSocket, _io: TypedSocketServer): void {
       });
     }
 
-    // 6. Send database size
+    // 7. Send database size
     // Python sends "database" event with {count, size}, NOT "database_size"
     const { count, size } = getRowCount();
     const dbSize: DatabaseSize = {
@@ -235,12 +239,12 @@ function handleConnect(socket: TypedSocket, _io: TypedSocketServer): void {
     };
     socket.emit("database", dbSize);
 
-    // 7. Send signal levels
+    // 8. Send signal levels
     // Python sends raw object with uppercase decoder names: {"ACARS": [...], "VDL-M2": [...]}
     const signalLevels = getAllSignalLevels();
     socket.emit("signal", { levels: signalLevels });
 
-    // 8. Send alert statistics
+    // 9. Send alert statistics
     const alertCounts = getAlertCounts();
     const alertTermData: Record<
       number,
@@ -256,7 +260,7 @@ function handleConnect(socket: TypedSocket, _io: TypedSocketServer): void {
     // Python sends "alert_terms" with {data: ...}, NOT "alert_terms_stats"
     socket.emit("alert_terms", { data: alertTermData });
 
-    // 9. Send recent alerts in chunks
+    // 10. Send recent alerts in chunks
     const recentAlertsRaw = searchAlerts(100, 0);
     const recentAlerts = recentAlertsRaw.map((alert) => {
       const enriched = enrichMessage(alert.message);
@@ -290,7 +294,7 @@ function handleConnect(socket: TypedSocket, _io: TypedSocketServer): void {
       });
     }
 
-    // 10. Send version information
+    // 11. Send version information
     // Each version field comes from the corresponding workspace package.json,
     // read at startup by config.ts rather than injected as a Docker ARG.
     const versionInfo: AcarshubVersion = {

@@ -38,6 +38,9 @@ let globalFilterProps: {
   onTextFilterChange: (text: string) => void;
   showAlertsOnly: boolean;
   onShowAlertsOnlyChange: (enabled: boolean) => void;
+  stationIds: string[];
+  selectedStationIds: string[];
+  onSelectedStationIdsChange: (ids: string[]) => void;
 } | null = null;
 
 export function getMessageFilterProps() {
@@ -64,6 +67,7 @@ export function getMessageFilterProps() {
 export const LiveMessagesPage = () => {
   const messageGroups = useAppStore((state) => state.messageGroups);
   const labels = useAppStore((state) => state.labels);
+  const stationIds = useAppStore((state) => state.stationIds);
   const setCurrentPage = useAppStore((state) => state.setCurrentPage);
 
   // Frozen message groups snapshot when paused
@@ -91,6 +95,11 @@ export const LiveMessagesPage = () => {
   const [textFilter, setTextFilter] = useState("");
   const [showAlertsOnly, setShowAlertsOnly] = useState(false);
 
+  const [selectedStationIds, setSelectedStationIds] = useState<string[]>(() => {
+    const saved = localStorage.getItem("liveMessages.selectedStationIds");
+    return saved ? (JSON.parse(saved) as string[]) : [];
+  });
+
   // Statistics state
   const [totalReceived, setTotalReceived] = useState(0);
 
@@ -109,6 +118,13 @@ export const LiveMessagesPage = () => {
       JSON.stringify(excludedLabels),
     );
   }, [excludedLabels]);
+
+  useEffect(() => {
+    localStorage.setItem(
+      "liveMessages.selectedStationIds",
+      JSON.stringify(selectedStationIds),
+    );
+  }, [selectedStationIds]);
 
   // Notify page change
   useEffect(() => {
@@ -161,6 +177,28 @@ export const LiveMessagesPage = () => {
     // Filter by alerts only
     if (showAlertsOnly) {
       filtered = filtered.filter((group) => group.has_alerts);
+    }
+
+    // Filter by selected station IDs — keep groups that have at least one
+    // message from a selected station; within those groups, keep only the
+    // messages that match the selection.
+    if (selectedStationIds.length > 0) {
+      const stationSet = new Set(selectedStationIds);
+      filtered = filtered
+        .map((group) => {
+          const filteredMessages = group.messages.filter(
+            (msg: AcarsMsg) => msg.station_id && stationSet.has(msg.station_id),
+          );
+          if (filteredMessages.length === 0) return null;
+          return {
+            ...group,
+            messages: filteredMessages,
+            has_alerts: filteredMessages.some((msg: AcarsMsg) => msg.matched),
+            num_alerts: filteredMessages.filter((msg: AcarsMsg) => msg.matched)
+              .length,
+          } as MessageGroupType;
+        })
+        .filter((group): group is MessageGroupType => group !== null);
     }
 
     // Filter by text search - filter messages within groups
@@ -319,6 +357,7 @@ export const LiveMessagesPage = () => {
     excludedLabels,
     filterNoText,
     showAlertsOnly,
+    selectedStationIds,
   ]);
 
   // Calculate statistics (always use live message groups for statistics, even when paused)
@@ -383,6 +422,10 @@ export const LiveMessagesPage = () => {
     setShowAlertsOnly(enabled);
   }, []);
 
+  const handleSelectedStationIdsChange = useCallback((ids: string[]) => {
+    setSelectedStationIds(ids);
+  }, []);
+
   // Expose filter props globally for Navigation
   useEffect(() => {
     globalFilterProps = {
@@ -397,6 +440,9 @@ export const LiveMessagesPage = () => {
       onTextFilterChange: handleTextFilterChange,
       showAlertsOnly,
       onShowAlertsOnlyChange: handleShowAlertsOnlyChange,
+      stationIds,
+      selectedStationIds,
+      onSelectedStationIdsChange: handleSelectedStationIdsChange,
     };
 
     // Dispatch custom event to notify Navigation
@@ -417,6 +463,9 @@ export const LiveMessagesPage = () => {
     handleTextFilterChange,
     showAlertsOnly,
     handleShowAlertsOnlyChange,
+    stationIds,
+    selectedStationIds,
+    handleSelectedStationIdsChange,
   ]);
 
   return (
@@ -469,6 +518,9 @@ export const LiveMessagesPage = () => {
         onTextFilterChange={handleTextFilterChange}
         showAlertsOnly={showAlertsOnly}
         onShowAlertsOnlyChange={handleShowAlertsOnlyChange}
+        stationIds={stationIds}
+        selectedStationIds={selectedStationIds}
+        onSelectedStationIdsChange={handleSelectedStationIdsChange}
       />
 
       {/* Message List */}

@@ -277,6 +277,88 @@
 }
 
 // ============================================================================
+// Station Filters Modal
+// ============================================================================
+
+.station-filters {
+  &__description {
+    margin-bottom: var(--spacing-lg);
+    color: var(--color-subtext1);
+    font-size: var(--font-size-sm);
+  }
+
+  &__list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+    max-height: 400px;
+    overflow-y: auto;
+    @include scrollbar-thin;
+    margin-bottom: var(--spacing-lg);
+  }
+
+  &__empty {
+    text-align: center;
+    padding: var(--spacing-2xl);
+    color: var(--color-subtext0);
+    font-size: var(--font-size-sm);
+  }
+
+  &__actions {
+    display: flex;
+    justify-content: flex-end;
+    padding-top: var(--spacing-md);
+    border-top: 1px solid var(--color-surface2);
+  }
+}
+
+.station-filter-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background-color: var(--color-base);
+  border: 1px solid var(--color-surface1);
+  border-radius: var(--border-radius-md);
+  transition: all 0.2s ease;
+
+  &:hover {
+    background-color: var(--color-surface0);
+    border-color: var(--color-surface2);
+  }
+
+  &__label {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    cursor: pointer;
+    flex: 1;
+  }
+
+  &__id {
+    font-family: var(--font-mono);
+    font-size: var(--font-size-sm);
+    color: var(--color-green);
+    font-weight: 600;
+  }
+
+  &__checkbox {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    accent-color: var(--color-blue);
+    // Minimum 44×44 px touch target
+    min-width: 44px;
+    min-height: 44px;
+
+    @include breakpoint(md) {
+      min-width: 20px;
+      min-height: 20px;
+    }
+  }
+}
+
+// ============================================================================
 // Label Filters Modal
 // ============================================================================
 

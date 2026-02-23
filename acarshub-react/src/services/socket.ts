@@ -130,6 +130,9 @@ export interface ServerToClientEvents {
   }) => void;
   regenerate_alert_matches_error: (data: { error: string }) => void;
 
+  // Station IDs (sent on connect and broadcast when a new station is seen)
+  station_ids: (data: { station_ids: string[] }) => void;
+
   // Connection events
   connect: () => void;
   disconnect: () => void;

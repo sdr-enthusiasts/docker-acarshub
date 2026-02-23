@@ -124,6 +124,10 @@ export interface AppState {
   adsbAircraft: ADSBData | null;
   setAdsbAircraft: (data: ADSBData) => void;
 
+  // Station IDs (unique sources seen across all message types)
+  stationIds: string[];
+  setStationIds: (ids: string[]) => void;
+
   // UI state
   currentPage: string;
   setCurrentPage: (page: string) => void;
@@ -956,6 +960,10 @@ export const useAppStore = create<AppState>((set, get) => {
       });
       set({ adsbAircraft: data });
     },
+
+    // Station IDs
+    stationIds: [],
+    setStationIds: (ids) => set({ stationIds: ids }),
 
     // UI state
     currentPage: "Live Messages",

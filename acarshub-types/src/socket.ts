@@ -135,6 +135,9 @@ export interface SocketEvents {
   // Version information
   acarshub_version: (data: AcarshubVersion) => void;
 
+  // Station IDs (sent on connect and broadcast when a new station is seen)
+  station_ids: (data: { station_ids: string[] }) => void;
+
   // Alert regeneration responses
   regenerate_alert_matches_started: (data: { message: string }) => void;
   regenerate_alert_matches_complete: (data: {

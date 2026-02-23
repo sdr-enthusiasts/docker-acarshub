@@ -39,6 +39,7 @@ import {
   type QueuedMessage,
 } from "./message-queue.js";
 import { destroyScheduler, getScheduler } from "./scheduler.js";
+import { checkAndAddStationId, getStationIds } from "./station-ids.js";
 import { startStatsPruning } from "./stats-pruning.js";
 import {
   createTcpListener,
@@ -406,6 +407,14 @@ export class BackgroundServices extends EventEmitter {
         this.config.socketio.emit("acars_msg", {
           msghtml: enrichedMessage,
         });
+
+        // Check for a new station ID and broadcast updated list to all clients
+        const rawStationId = (formattedMessage as RawMessage).station_id;
+        if (checkAndAddStationId(rawStationId)) {
+          this.config.socketio.emit("station_ids", {
+            station_ids: getStationIds(),
+          });
+        }
       } catch (err) {
         logger.error("Failed to process message", {
           type: queuedMessage.type,

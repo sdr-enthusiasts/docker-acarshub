@@ -235,6 +235,11 @@ export const Navigation = () => {
                   onTextFilterChange={filterProps.onTextFilterChange}
                   showAlertsOnly={filterProps.showAlertsOnly}
                   onShowAlertsOnlyChange={filterProps.onShowAlertsOnlyChange}
+                  stationIds={filterProps.stationIds}
+                  selectedStationIds={filterProps.selectedStationIds}
+                  onSelectedStationIdsChange={
+                    filterProps.onSelectedStationIdsChange
+                  }
                 />
               </div>
             )}

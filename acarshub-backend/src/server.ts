@@ -36,6 +36,7 @@ import { runMigrations } from "./db/migrate.js";
 import { createBackgroundServices } from "./services/index.js";
 import { collectMetrics, METRICS_CONTENT_TYPE } from "./services/metrics.js";
 import { migrateRrdToSqlite } from "./services/rrd-migration.js";
+import { initializeStationIds } from "./services/station-ids.js";
 import { startStatsWriter, stopStatsWriter } from "./services/stats-writer.js";
 import {
   initializeSocketServer,
@@ -166,6 +167,7 @@ async function main(): Promise<void> {
     initializeMessageCounts();
     initializeMessageCounters();
     initializeAlertCache();
+    initializeStationIds();
     logger.info("Initialization complete");
 
     const { count: messageCount, size: dbSize } = getRowCount();
