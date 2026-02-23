@@ -15,9 +15,8 @@
  * along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { faTimes } from "@fortawesome/free-solid-svg-icons/faTimes";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { type ReactNode, useEffect } from "react";
+import { IconXmark } from "./icons";
 
 /**
  * Modal Component Props
@@ -153,7 +152,7 @@ export function Modal({
               onClick={onClose}
               aria-label="Close modal"
             >
-              <FontAwesomeIcon icon={faTimes} />
+              <IconXmark />
             </button>
           )}
         </div>

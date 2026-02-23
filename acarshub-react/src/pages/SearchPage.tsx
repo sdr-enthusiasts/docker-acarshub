@@ -14,12 +14,13 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-import { faChevronLeft } from "@fortawesome/free-solid-svg-icons/faChevronLeft";
-import { faChevronRight } from "@fortawesome/free-solid-svg-icons/faChevronRight";
-import { faSearch } from "@fortawesome/free-solid-svg-icons/faSearch";
-import { faTimes } from "@fortawesome/free-solid-svg-icons/faTimes";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  IconChevronLeft,
+  IconChevronRight,
+  IconSearch,
+  IconXmark,
+} from "../components/icons";
 import { MessageCard } from "../components/MessageCard";
 import { socketService } from "../services/socket";
 import { useAppStore } from "../store/useAppStore";
@@ -560,7 +561,7 @@ export const SearchPage = () => {
               className="button button--primary"
               disabled={isSearching}
             >
-              <FontAwesomeIcon icon={faSearch} />
+              <IconSearch />
               {isSearching ? "Searching..." : "Search"}
             </button>
             <button
@@ -569,7 +570,7 @@ export const SearchPage = () => {
               onClick={handleClear}
               disabled={isSearching}
             >
-              <FontAwesomeIcon icon={faTimes} />
+              <IconXmark />
               Clear
             </button>
           </div>
@@ -601,7 +602,7 @@ export const SearchPage = () => {
               disabled={currentPage === 0}
               aria-label="Previous page"
             >
-              <FontAwesomeIcon icon={faChevronLeft} />
+              <IconChevronLeft />
             </button>
 
             {pageNumbers.map((page, idx) => {
@@ -641,7 +642,7 @@ export const SearchPage = () => {
               disabled={currentPage === totalPages - 1}
               aria-label="Next page"
             >
-              <FontAwesomeIcon icon={faChevronRight} />
+              <IconChevronRight />
             </button>
           </div>
         )}
@@ -675,7 +676,7 @@ export const SearchPage = () => {
               disabled={currentPage === 0}
               aria-label="Previous page"
             >
-              <FontAwesomeIcon icon={faChevronLeft} />
+              <IconChevronLeft />
             </button>
 
             {pageNumbers.map((page, idx) => {
@@ -715,7 +716,7 @@ export const SearchPage = () => {
               disabled={currentPage === totalPages - 1}
               aria-label="Next page"
             >
-              <FontAwesomeIcon icon={faChevronRight} />
+              <IconChevronRight />
             </button>
           </div>
         )}

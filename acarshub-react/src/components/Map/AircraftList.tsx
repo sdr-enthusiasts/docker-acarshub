@@ -14,10 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-import { faChevronDown } from "@fortawesome/free-solid-svg-icons/faChevronDown";
-import { faChevronLeft } from "@fortawesome/free-solid-svg-icons/faChevronLeft";
-import { faFilter } from "@fortawesome/free-solid-svg-icons/faFilter";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAppStore } from "../../store/useAppStore";
 import { useSettingsStore } from "../../store/useSettingsStore";
@@ -27,6 +23,7 @@ import {
   formatGroundSpeed,
   getDisplayCallsign,
 } from "../../utils/aircraftPairing";
+import { IconChevronDown, IconChevronLeft, IconFilter } from "../icons";
 import type { ViewportBounds } from "./AircraftMarkers";
 import "../../styles/components/_aircraft-list.scss";
 
@@ -693,7 +690,7 @@ export function AircraftList({
               title="Collapse sidebar"
               aria-label="Collapse sidebar"
             >
-              <FontAwesomeIcon icon={faChevronLeft} />
+              <IconChevronLeft />
             </button>
           )}
         </div>
@@ -717,17 +714,14 @@ export function AircraftList({
             aria-label="Filter aircraft"
             aria-expanded={filterDropdownOpen}
           >
-            <FontAwesomeIcon icon={faFilter} />
+            <IconFilter />
             <span>Filters</span>
             {activeFilterCount > 0 && (
               <span className="aircraft-list__filter-badge">
                 {activeFilterCount}
               </span>
             )}
-            <FontAwesomeIcon
-              icon={faChevronDown}
-              className="aircraft-list__filter-chevron"
-            />
+            <IconChevronDown className="aircraft-list__filter-chevron" />
           </button>
 
           {filterDropdownOpen && (

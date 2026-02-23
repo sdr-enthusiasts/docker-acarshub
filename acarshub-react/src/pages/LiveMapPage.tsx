@@ -14,11 +14,10 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-import { faChevronRight } from "@fortawesome/free-solid-svg-icons/faChevronRight";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { MapRef, ViewState } from "react-map-gl/maplibre";
 import { useSearchParams } from "react-router-dom";
+import { IconChevronRight } from "../components/icons";
 import { MapComponent, MapControls, MapLegend } from "../components/Map";
 import { AircraftList } from "../components/Map/AircraftList";
 import type { ViewportBounds } from "../components/Map/AircraftMarkers";
@@ -581,7 +580,7 @@ export const LiveMapPage = () => {
               title="Expand sidebar"
               aria-label="Expand sidebar"
             >
-              <FontAwesomeIcon icon={faChevronRight} />
+              <IconChevronRight />
             </button>
           ) : (
             <AircraftList

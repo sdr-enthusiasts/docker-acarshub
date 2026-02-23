@@ -79,11 +79,6 @@ export default defineConfig({
             return "react";
           }
 
-          // Font Awesome - all icons and core into fonts chunk
-          if (id.includes("@fortawesome")) {
-            return "fonts";
-          }
-
           // Charts
           if (
             id.includes("chart.js") ||

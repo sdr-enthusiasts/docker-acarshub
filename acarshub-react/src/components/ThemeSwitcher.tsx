@@ -14,13 +14,11 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-import { faLightbulb } from "@fortawesome/free-solid-svg-icons/faLightbulb";
-import { faMoon } from "@fortawesome/free-solid-svg-icons/faMoon";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useEffect } from "react";
 import { useSettingsStore, useTheme } from "../store/useSettingsStore";
 import type { Theme } from "../types";
 import { Button } from "./Button";
+import { IconLightbulb, IconMoon } from "./icons";
 
 /**
  * ThemeSwitcher Component Props
@@ -73,7 +71,7 @@ export function ThemeSwitcher({ className = "" }: ThemeSwitcherProps) {
       aria-label={`Switch to ${isDark ? "light" : "dark"} theme`}
       title={`Switch to ${isDark ? "light" : "dark"} theme`}
     >
-      <FontAwesomeIcon icon={isDark ? faLightbulb : faMoon} />
+      {isDark ? <IconLightbulb /> : <IconMoon />}
     </Button>
   );
 }

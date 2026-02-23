@@ -14,25 +14,27 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-import { faCircleDot } from "@fortawesome/free-solid-svg-icons/faCircleDot";
-import { faCloudRain } from "@fortawesome/free-solid-svg-icons/faCloudRain";
-import { faCloudSunRain } from "@fortawesome/free-solid-svg-icons/faCloudSunRain";
-import { faEnvelope } from "@fortawesome/free-solid-svg-icons/faEnvelope";
-import { faEyeSlash } from "@fortawesome/free-solid-svg-icons/faEyeSlash";
-import { faFighterJet } from "@fortawesome/free-solid-svg-icons/faFighterJet";
-import { faImage } from "@fortawesome/free-solid-svg-icons/faImage";
-import { faLocationCrosshairs } from "@fortawesome/free-solid-svg-icons/faLocationCrosshairs";
-import { faLock } from "@fortawesome/free-solid-svg-icons/faLock";
-import { faPalette } from "@fortawesome/free-solid-svg-icons/faPalette";
-import { faPause } from "@fortawesome/free-solid-svg-icons/faPause";
-import { faPlane } from "@fortawesome/free-solid-svg-icons/faPlane";
-import { faPlaneUp } from "@fortawesome/free-solid-svg-icons/faPlaneUp";
-import { faPlay } from "@fortawesome/free-solid-svg-icons/faPlay";
-import { faStar } from "@fortawesome/free-solid-svg-icons/faStar";
-import { faTowerBroadcast } from "@fortawesome/free-solid-svg-icons/faTowerBroadcast";
 import { useAppStore } from "../../store/useAppStore";
 import { useSettingsStore } from "../../store/useSettingsStore";
 import { createLogger } from "../../utils/logger";
+import {
+  IconCircleDot,
+  IconCloudRain,
+  IconCloudSunRain,
+  IconEnvelope,
+  IconEyeSlash,
+  IconFighterJet,
+  IconImage,
+  IconLocationCrosshairs,
+  IconLock,
+  IconPalette,
+  IconPause,
+  IconPlane,
+  IconPlaneUp,
+  IconPlay,
+  IconStar,
+  IconTowerBroadcast,
+} from "../icons";
 import { GeoJSONOverlayButton } from "./GeoJSONOverlayButton";
 import { MapControlButton } from "./MapControlButton";
 import { MapFiltersMenu } from "./MapFiltersMenu";
@@ -148,7 +150,7 @@ export function MapControls({
         <div className="map-controls__group">
           {onTogglePause && (
             <MapControlButton
-              icon={isPaused ? faPlay : faPause}
+              icon={isPaused ? IconPlay : IconPause}
               active={isPaused}
               onClick={onTogglePause}
               tooltip={isPaused ? "Resume Updates" : "Pause Updates"}
@@ -156,7 +158,7 @@ export function MapControls({
           )}
           {isFollowingAircraft && onUnfollowAircraft && (
             <MapControlButton
-              icon={faLocationCrosshairs}
+              icon={IconLocationCrosshairs}
               active={true}
               onClick={onUnfollowAircraft}
               tooltip="Unfollow Aircraft"
@@ -170,7 +172,7 @@ export function MapControls({
         <MapProviderSelector />
         <GeoJSONOverlayButton />
         <MapControlButton
-          icon={faImage}
+          icon={IconImage}
           active={mapSettings.useSprites}
           onClick={() => {
             const newValue = !mapSettings.useSprites;
@@ -183,7 +185,7 @@ export function MapControls({
           tooltip={`Aircraft Markers: ${mapSettings.useSprites ? "Sprites" : "SVG"}`}
         />
         <MapControlButton
-          icon={faPalette}
+          icon={IconPalette}
           active={mapSettings.colorByDecoder}
           onClick={() => setColorByDecoder(!mapSettings.colorByDecoder)}
           tooltip={`Color By: ${mapSettings.colorByDecoder ? "Decoder Type" : "Message State"}`}
@@ -194,7 +196,7 @@ export function MapControls({
       <div className="map-controls__group">
         {backendAllowsRangeRings && (
           <MapControlButton
-            icon={faCircleDot}
+            icon={IconCircleDot}
             active={mapSettings.showRangeRings}
             onClick={() => setShowRangeRings(!mapSettings.showRangeRings)}
             tooltip="Show Range Rings"
@@ -202,26 +204,26 @@ export function MapControls({
         )}
         {heyWhatsThatUrl && (
           <MapControlButton
-            icon={faTowerBroadcast}
+            icon={IconTowerBroadcast}
             active={mapSettings.showHeyWhatsThat}
             onClick={() => setShowHeyWhatsThat(!mapSettings.showHeyWhatsThat)}
             tooltip="Show Hey What's That Coverage Outline"
           />
         )}
         <MapControlButton
-          icon={faCloudSunRain}
+          icon={IconCloudSunRain}
           active={mapSettings.showNexrad}
           onClick={() => setShowNexrad(!mapSettings.showNexrad)}
           tooltip="Show NEXRAD Weather Radar"
         />
         <MapControlButton
-          icon={faCloudRain}
+          icon={IconCloudRain}
           active={mapSettings.showRainViewer}
           onClick={() => setShowRainViewer(!mapSettings.showRainViewer)}
           tooltip="Show RainViewer Radar"
         />
         <MapControlButton
-          icon={faPlaneUp}
+          icon={IconPlaneUp}
           active={mapSettings.showOpenAIP}
           onClick={() => setShowOpenAIP(!mapSettings.showOpenAIP)}
           tooltip="Show OpenAIP Aviation Charts"
@@ -231,27 +233,27 @@ export function MapControls({
       {/* Aircraft Filters: ACARS + Unread + Military + Interesting + PIA + LADD */}
       <div className="map-controls__group map-controls__group--filters">
         <MapControlButton
-          icon={faPlane}
+          icon={IconPlane}
           active={mapSettings.showOnlyAcars}
           onClick={handleAcarsToggle}
           tooltip="Show Only Aircraft with ACARS"
         />
         <MapControlButton
-          icon={faEnvelope}
+          icon={IconEnvelope}
           active={mapSettings.showOnlyUnread}
           onClick={handleUnreadToggle}
           tooltip="Show Only Aircraft with Unread Messages"
         />
         {/* Desktop: Show all filters as individual buttons */}
         <MapControlButton
-          icon={faFighterJet}
+          icon={IconFighterJet}
           active={mapSettings.showOnlyMilitary}
           onClick={() => setShowOnlyMilitary(!mapSettings.showOnlyMilitary)}
           tooltip="Show Only Military Aircraft"
           className="map-controls__filter--desktop"
         />
         <MapControlButton
-          icon={faStar}
+          icon={IconStar}
           active={mapSettings.showOnlyInteresting}
           onClick={() =>
             setShowOnlyInteresting(!mapSettings.showOnlyInteresting)
@@ -260,14 +262,14 @@ export function MapControls({
           className="map-controls__filter--desktop"
         />
         <MapControlButton
-          icon={faEyeSlash}
+          icon={IconEyeSlash}
           active={mapSettings.showOnlyPIA}
           onClick={() => setShowOnlyPIA(!mapSettings.showOnlyPIA)}
           tooltip="Show Only PIA Aircraft"
           className="map-controls__filter--desktop"
         />
         <MapControlButton
-          icon={faLock}
+          icon={IconLock}
           active={mapSettings.showOnlyLADD}
           onClick={() => setShowOnlyLADD(!mapSettings.showOnlyLADD)}
           tooltip="Show Only LADD Aircraft"
@@ -280,14 +282,14 @@ export function MapControls({
             {
               id: "military",
               label: "Military",
-              icon: faFighterJet,
+              icon: IconFighterJet,
               active: mapSettings.showOnlyMilitary,
               onClick: () => setShowOnlyMilitary(!mapSettings.showOnlyMilitary),
             },
             {
               id: "interesting",
               label: "Interesting",
-              icon: faStar,
+              icon: IconStar,
               active: mapSettings.showOnlyInteresting,
               onClick: () =>
                 setShowOnlyInteresting(!mapSettings.showOnlyInteresting),
@@ -295,14 +297,14 @@ export function MapControls({
             {
               id: "pia",
               label: "PIA",
-              icon: faEyeSlash,
+              icon: IconEyeSlash,
               active: mapSettings.showOnlyPIA,
               onClick: () => setShowOnlyPIA(!mapSettings.showOnlyPIA),
             },
             {
               id: "ladd",
               label: "LADD",
-              icon: faLock,
+              icon: IconLock,
               active: mapSettings.showOnlyLADD,
               onClick: () => setShowOnlyLADD(!mapSettings.showOnlyLADD),
             },

@@ -259,6 +259,146 @@ Inline informational messages within content.
 - `settings-info--warning` (yellow) - Coming soon/not implemented
 - `settings-info--error` (red) - Error states
 
+## Icons
+
+ACARS Hub uses vendored inline SVG icon components extracted from Font Awesome Free (CC BY 4.0). There is no icon library dependency — just React components that render SVG paths directly.
+
+### Why Vendored SVGs
+
+Font Awesome's npm packages ship the entire icon set (~18MB on disk, ~168KB in bundle) plus a runtime (wrapper component, global registry, normalisation layer). We need 28 icons. Vendoring just the paths eliminates all of that overhead while preserving the exact same visual appearance.
+
+### Using Icons
+
+Every icon is a named export from `src/components/icons/index.tsx`. Import and use it directly as a React component — no wrapper, no props required for basic use:
+
+```tsx
+import { IconSearch, IconXmark, IconPlane } from "../components/icons";
+
+// Basic usage — aria-hidden and sizing handled automatically
+<IconSearch />
+
+// With className — merges with the base `.icon` class
+<IconSearch className="my-component__search-icon" />
+
+// As a prop — use the IconComponent type instead of FA's IconDefinition
+import type { IconComponent } from "../components/icons";
+
+interface Props {
+  icon: IconComponent;
+}
+function MyButton({ icon: Icon }: Props) {
+  return <button type="button"><Icon /></button>;
+}
+```
+
+### Icon Sizing
+
+The `.icon` CSS class (defined in `src/styles/components/_icons.scss`) sets:
+
+- `height: 1em` — icon scales with the surrounding font size
+- `vertical-align: -0.125em` — optical baseline alignment matching Font Awesome's behaviour
+- `display: inline-block` — flows with surrounding text
+- `fill: currentColor` — inherits text colour automatically
+
+You control icon size entirely through font-size on the parent, or by overriding `height` via a component-specific CSS class. Never set size inline.
+
+### Adding a New Icon
+
+1. Browse [fontawesome.com](https://fontawesome.com) — **Free tier, solid style only** to keep the visual language consistent.
+1. Extract the SVG path data from the installed package:
+
+```bash
+node -e "
+  const i = require('./node_modules/@fortawesome/free-solid-svg-icons/faIconName.js');
+  const [w, h, , , path] = i.faIconName.icon;
+  console.log('viewBox:', \`0 0 \${w} \${h}\`);
+  console.log('path:', path);
+"
+```
+
+1. Add a new export to `src/components/icons/index.tsx` using the `createIcon` factory:
+
+```tsx
+/** fa-your-icon-name */
+export const IconYourIcon = createIcon("0 0 512 512", "M... SVG path data ...");
+```
+
+1. Update the icon list in `ATTRIBUTIONS.md` under **Font Awesome Free (Vendored SVG Paths)**.
+1. Remove the Font Awesome package import from the consuming file — do not re-add any `@fortawesome` dependency.
+
+### Available Icons
+
+All currently vendored icons (28 unique icons + 1 alias):
+
+| Export                   | FA Origin               | Typical Usage               |
+| ------------------------ | ----------------------- | --------------------------- |
+| `IconChevronDown`        | fa-chevron-down         | Dropdowns, expand           |
+| `IconChevronLeft`        | fa-chevron-left         | Back, collapse, pagination  |
+| `IconChevronRight`       | fa-chevron-right        | Forward, expand, pagination |
+| `IconCircleDot`          | fa-circle-dot           | Range rings toggle          |
+| `IconCloudRain`          | fa-cloud-rain           | RainViewer weather overlay  |
+| `IconCloudSunRain`       | fa-cloud-sun-rain       | NEXRAD weather overlay      |
+| `IconEllipsisVertical`   | fa-ellipsis-vertical    | Overflow / more menu        |
+| `IconEnvelope`           | fa-envelope             | Unread messages filter      |
+| `IconEyeSlash`           | fa-eye-slash            | PIA aircraft filter         |
+| `IconFighterJet`         | fa-fighter-jet          | Military aircraft filter    |
+| `IconFilter`             | fa-filter               | Filter controls             |
+| `IconImage`              | fa-image                | Sprite/SVG marker toggle    |
+| `IconLayerGroup`         | fa-layer-group          | Map provider selector       |
+| `IconLightbulb`          | fa-lightbulb            | Switch to light theme       |
+| `IconLocationCrosshairs` | fa-location-crosshairs  | Unfollow aircraft           |
+| `IconLock`               | fa-lock                 | LADD aircraft filter        |
+| `IconMap`                | fa-map                  | GeoJSON overlay button      |
+| `IconMoon`               | fa-moon                 | Switch to dark theme        |
+| `IconPalette`            | fa-palette              | Color-by-decoder toggle     |
+| `IconPause`              | fa-pause                | Pause map updates           |
+| `IconPlane`              | fa-plane                | ACARS aircraft filter       |
+| `IconPlaneUp`            | fa-plane-up             | OpenAIP aviation charts     |
+| `IconPlay`               | fa-play                 | Resume map updates          |
+| `IconQuestionCircle`     | fa-question-circle      | Map legend toggle           |
+| `IconSearch`             | fa-search               | Search submit button        |
+| `IconStar`               | fa-star                 | Interesting aircraft filter |
+| `IconTowerBroadcast`     | fa-tower-broadcast      | HeyWhatsThat coverage       |
+| `IconXmark`              | fa-xmark                | Close / dismiss             |
+| `IconTimes`              | _(alias for IconXmark)_ | Legacy alias                |
+
+### Anti-Patterns
+
+❌ **Do not add `@fortawesome` packages back as dependencies**
+
+```tsx
+// WRONG — eliminates the entire reason for vendoring
+import { faStar } from "@fortawesome/free-solid-svg-icons/faStar";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+<FontAwesomeIcon icon={faStar} />;
+```
+
+✅ **Use the vendored component**
+
+```tsx
+// CORRECT
+import { IconStar } from "../components/icons";
+<IconStar />;
+```
+
+---
+
+❌ **Do not set icon size inline**
+
+```tsx
+<IconStar style={{ height: "24px" }} /> // WRONG
+```
+
+✅ **Control size through CSS**
+
+```scss
+.my-component__icon {
+  height: 1.25em; // CORRECT — override via class
+}
+```
+
+---
+
 ## Layout Patterns
 
 ### Page Layout
