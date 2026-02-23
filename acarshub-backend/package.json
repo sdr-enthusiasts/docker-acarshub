@@ -1,6 +1,6 @@
 {
   "name": "@acarshub/backend",
-  "version": "4.1.0-alpha.1",
+  "version": "4.1.0-beta.1",
   "description": "ACARS Hub Node.js backend server",
   "type": "module",
   "main": "./dist/server.js",
