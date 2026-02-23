@@ -97,7 +97,8 @@ async function colorizeSprite(
   targetColor: string,
   outlineColor: string,
 ): Promise<void> {
-  console.log(`Colorizing ${path.basename(outputPath)}...`);
+  const baseName = path.basename(outputPath);
+  console.log(`Colorizing ${baseName}...`);
 
   // Load image and get raw pixel data
   const image = sharp(inputPath);
@@ -135,18 +136,25 @@ async function colorizeSprite(
     // Alpha stays the same
   }
 
-  // Save modified image
-  await sharp(data, {
+  // Prepare the sharp instance from raw pixel data (reused for both outputs)
+  const sharpInstance = sharp(data, {
     raw: {
       width: info.width,
       height: info.height,
       channels: 4,
     },
-  })
-    .png()
-    .toFile(outputPath);
+  });
 
-  console.log(`  ✓ Generated ${path.basename(outputPath)}`);
+  // Save PNG (kept for browsers that do not support WebP)
+  await sharpInstance.clone().png().toFile(outputPath);
+
+  // Save lossless WebP — typically 25–35% smaller than PNG with identical quality.
+  // CSS image-set() selects the WebP when the browser supports it and falls back
+  // to the PNG automatically, so both files must exist alongside each other.
+  const webpOutputPath = outputPath.replace(/\.png$/, ".webp");
+  await sharpInstance.clone().webp({ lossless: true }).toFile(webpOutputPath);
+
+  console.log(`  ✓ Generated ${baseName} + ${path.basename(webpOutputPath)}`);
 }
 
 /**

@@ -61,6 +61,7 @@
             ".*.db"
             ".*.rrd"
             ".*.geojson"
+            ".*.webp"
             "spritesheet.json"
           ];
         };

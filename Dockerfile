@@ -69,6 +69,7 @@ RUN printf '#!/bin/sh\nexec /usr/local/bin/node /usr/local/lib/node_modules/npm/
 RUN set -x && \
     KEPT_PACKAGES=() && \
     KEPT_PACKAGES+=(nginx-light) && \
+    KEPT_PACKAGES+=(libnginx-mod-http-brotli-filter) && \
     KEPT_PACKAGES+=(rrdtool) && \
     apt-get update && \
     apt-get install -y --no-install-recommends \
@@ -119,6 +120,15 @@ RUN --mount=type=cache,target=/root/.npm \
 
 # React SPA served by nginx
 COPY --from=acarshub-react-builder /webapp/dist/ /webapp/dist/
+
+# Pre-compress text assets so nginx can serve them via gzip_static without
+# runtime compression cost.  The originals are kept alongside the .gz files
+# so nginx can still serve uncompressed versions to clients that don't send
+# Accept-Encoding: gzip.  Targets JS, CSS, and GeoJSON (the two large overlay
+# files – TRACONBoundaries and FIRBoundaries – compress ~80% as JSON text).
+RUN find /webapp/dist/assets \
+    \( -name "*.js" -o -name "*.css" -o -name "*.geojson" \) \
+    -exec gzip -9 --keep {} \;
 
 # Node.js backend: compiled JS + Drizzle SQL migrations
 # (node_modules are already installed above via npm ci)

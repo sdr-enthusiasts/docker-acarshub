@@ -26,9 +26,23 @@ server {
   # mjs is not in default mime types, add in here
   types {
     application/javascript mjs;
+    # Map GeoJSON to application/json so it is included in gzip_types and
+    # receives on-the-fly compression.  Without this nginx falls back to
+    # default_type (application/octet-stream) which is not in gzip_types,
+    # leaving the large TRACON/FIR overlay files (2.5–2.7 MB each) served
+    # completely uncompressed.
+    application/json geojson;
   }
 	default_type application/octet-stream;
   access_log off;
+
+  # Serve pre-compressed .gz files when available (generated at Docker build time).
+  # nginx looks for filename.gz alongside the original; if found and the client
+  # sends Accept-Encoding: gzip, the pre-compressed file is served directly with
+  # no runtime compression cost.  This is especially valuable for the large
+  # GeoJSON overlay files (TRACONBoundaries 2.5 MB, FIRBoundaries 2.7 MB) and
+  # the JS/CSS bundles.
+  gzip_static on;
 
   #Catch 40x errors:
   #error_page 400 401 402 403 404 = @RedirectToHome;

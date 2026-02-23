@@ -6,3 +6,4 @@
 *.db binary
 *.rrd binary
 *.png binary
+*.webp binary
