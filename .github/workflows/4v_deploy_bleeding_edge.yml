@@ -1,0 +1,80 @@
+name: Deploy v4 Test
+on:
+  # Build and deploy the image on pushes to main branch
+  workflow_dispatch:
+    inputs:
+      reason:
+        required: true
+        description: "Reason for running this workflow"
+      use_test_image:
+        required: false
+        type: boolean
+        description: "Use base image testpr"
+        default: false
+      build_latest_as_test:
+        required: false
+        type: boolean
+        description: "Build latest as test"
+        default: false
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  workflow-dispatch:
+    name: Triggered via Workflow Dispatch?
+    # only run this step if workflow dispatch triggered
+    # log the reason the workflow dispatch was triggered
+    if: |
+      github.event_name == 'workflow_dispatch' &&
+      github.event.inputs.reason != ''
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Log dispatch reason
+        env:
+          INPUTS_REASON: ${{ github.event.inputs.reason }}
+          INPUTS_USE_TEST_IMAGE: ${{ github.event.inputs.use_test_image }}
+          INPUTS_BUILD_LATEST_AS_TEST: ${{ github.event.inputs.build_latest_as_test }}
+        run: |
+          echo "Workflow dispatch reason: $INPUTS_REASON"
+          echo "Use test image: $INPUTS_USE_TEST_IMAGE"
+          echo "Build latest as test: $INPUTS_BUILD_LATEST_AS_TEST"
+
+  get_build_number:
+    name: "Get build number"
+    runs-on: ubuntu-24.04
+    outputs:
+      build_number: ${{ steps.get_build_number.outputs.build_number }}
+    steps:
+      - name: Get build number
+        id: get_build_number
+        run: |
+          # Version strings are read directly from the workspace package.json
+          # files at Docker build time — no extraction or ARG injection needed.
+          BUILD_NUMBER=$GITHUB_RUN_NUMBER
+          echo "ACARS Hub Build ${BUILD_NUMBER}"
+          echo "build_number=$BUILD_NUMBER" >> $GITHUB_OUTPUT
+
+  deploy:
+    name: Deploy
+    if: |
+      github.event.inputs.build_latest_as_test == 'false' ||
+      github.event.inputs.build_latest_as_test == ''
+    needs: get_build_number
+    uses: sdr-enthusiasts/common-github-workflows/.github/workflows/sdre.yml@main
+    with:
+      push_enabled: true
+      push_destinations: ghcr.io
+      ghcr_repo_owner: ${{ github.repository_owner }}
+      ghcr_repo: ${{ github.repository }}
+      build_latest: true
+      #docker_latest_tag: v4-bleeding-edge
+      docker_latest_tag: v4-bleeding-edge
+      build_baseimage_test: false
+      platform_linux_arm32v7_enabled: false
+      build_baseimage_url: :base/:base-test-pr
+      dockerfile_changes: |
+        ARG BUILD_NUMBER=0/ARG BUILD_NUMBER=${{ needs.get_build_number.outputs.build_number }}
+    secrets:
+      ghcr_token: ${{ secrets.GITHUB_TOKEN }}

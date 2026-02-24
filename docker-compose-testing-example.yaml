@@ -26,6 +26,9 @@ services:
       - ENABLE_ACARS=true
       - ENABLE_HFDL=true
       - ENABLE_IMSL=true
+      - ACARS_CONNECTIONS=tcp://acars_router:15550
+      - VDLM_CONNECTIONS=tcp://acars_router:15555
+      - HFDL_CONNECTIONS=tcp://acars_router:15556
       - FLIGHT_TRACKING_URL=https://www.radarbox.com/data/flights/
       - STATION_ID_ACARS=CS-KABQ-ACARS
       - STATION_ID_VDLM=CS-KABQ-VDLM
@@ -68,13 +71,12 @@ services:
       - AR_VERBOSITY=info
       - TZ=${FEEDER_TZ}
       - AR_ENABLE_DEDUPE=true
-      # 5.161.21.38 is feed.airframes.io Using this to stop infinity DNS lookups
-      - AR_SEND_UDP_ACARS=acarshub:5550
-      - AR_SEND_UDP_VDLM2=acarshub:5555
-      - AR_SEND_UDP_HFDL=acarshub:5556
-      - AR_RECV_TCP_ACARS=82.180.133.237:15550
-      - AR_RECV_TCP_VDLM2=82.180.133.237:15555
-      - AR_RECV_TCP_HFDL=82.180.133.237:15556
+      # - AR_SEND_UDP_ACARS=acarshub:5550
+      # - AR_SEND_UDP_VDLM2=acarshub:5555
+      # - AR_SEND_UDP_HFDL=acarshub:5556
+      - AR_RECV_TCP_ACARS=5.161.253.151:15550
+      - AR_RECV_TCP_VDLM2=5.161.253.151:15555
+      - AR_RECV_TCP_HFDL=5.161.253.151:15556
       - AR_SKEW_WINDOW=20
     tmpfs:
       - /run:exec,size=64M
