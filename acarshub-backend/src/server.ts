@@ -19,11 +19,13 @@
  */
 
 import cors from "@fastify/cors";
+import { gte } from "drizzle-orm";
 import Fastify from "fastify";
 import { getConfig, initializeConfig } from "./config.js";
 import {
   closeDatabase,
   getAlertCounts,
+  getDatabase,
   getMessageCountStats,
   getRowCount,
   healthCheck,
@@ -31,6 +33,7 @@ import {
   initializeAlertCache,
   initializeMessageCounters,
   initializeMessageCounts,
+  timeseriesStats,
 } from "./db/index.js";
 import { runMigrations } from "./db/migrate.js";
 import {
@@ -132,6 +135,63 @@ function createServer() {
       .header("Content-Type", "application/json; charset=utf-8")
       .header("Cache-Control", "public, max-age=86400")
       .send(content);
+  });
+
+  // Stats endpoint — replaces the legacy /webapp/data/stats.json static file.
+  //
+  // Returns per-decoder message counts for the last hour by summing rows in
+  // timeseries_stats with timestamp >= (now - 3600).  Falls back to the
+  // MessageQueue live counters when no rows exist yet (first minute of
+  // operation).  The response schema matches the old static file exactly so
+  // that external consumers are not broken.
+  fastify.get("/data/stats.json", async (_request, reply) => {
+    try {
+      const db = getDatabase();
+      const nowSeconds = Math.floor(Date.now() / 1000);
+      const oneHourAgo = nowSeconds - 3600;
+
+      const rows = db
+        .select()
+        .from(timeseriesStats)
+        .where(gte(timeseriesStats.timestamp, oneHourAgo))
+        .all();
+
+      let acars = 0;
+      let vdlm2 = 0;
+      let hfdl = 0;
+      let imsl = 0;
+      let irdm = 0;
+
+      if (rows.length > 0) {
+        for (const row of rows) {
+          acars += row.acarsCount;
+          vdlm2 += row.vdlmCount;
+          hfdl += row.hfdlCount;
+          imsl += row.imslCount;
+          irdm += row.irdmCount;
+        }
+      } else {
+        // First minute of operation — no DB rows yet, use live queue counters.
+        const { getMessageQueue } = await import("./services/message-queue.js");
+        const qStats = getMessageQueue().getStats();
+        acars = qStats.acars.total;
+        vdlm2 = qStats.vdlm2.total;
+        hfdl = qStats.hfdl.total;
+        imsl = qStats.imsl.total;
+        irdm = qStats.irdm.total;
+      }
+
+      const total = acars + vdlm2 + hfdl + imsl + irdm;
+
+      return reply
+        .header("Cache-Control", "no-cache")
+        .send({ acars, vdlm2, hfdl, imsl, irdm, total });
+    } catch (err) {
+      logger.error("Failed to generate stats.json", {
+        error: err instanceof Error ? err.message : String(err),
+      });
+      return reply.status(500).send({ error: "Internal Server Error" });
+    }
   });
 
   // Prometheus metrics endpoint

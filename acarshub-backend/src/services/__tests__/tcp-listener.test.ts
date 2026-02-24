@@ -413,9 +413,9 @@ describe("TcpListener", () => {
       const stats = listener.getStats();
       expect(stats).toEqual({
         type: "ACARS",
+        listenType: "tcp",
+        connectionPoint: `127.0.0.1:${testPort}`,
         connected: true,
-        host: "127.0.0.1",
-        port: testPort,
       });
 
       listener.stop();

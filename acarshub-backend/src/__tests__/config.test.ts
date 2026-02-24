@@ -189,57 +189,167 @@ describe("config module", () => {
     });
   });
 
-  describe("Feed configuration", () => {
-    it("should use default TCP ports", async () => {
-      const {
-        FEED_ACARS_PORT,
-        FEED_VDLM_PORT,
-        FEED_HFDL_PORT,
-        FEED_IMSL_PORT,
-        FEED_IRDM_PORT,
-      } = await import("../config.js");
+  describe("parseConnections()", () => {
+    it("bare 'udp' resolves to the correct default port for each decoder type", async () => {
+      const { parseConnections } = await import("../config.js");
 
-      expect(FEED_ACARS_PORT).toBe(15550);
-      expect(FEED_VDLM_PORT).toBe(15555);
-      expect(FEED_HFDL_PORT).toBe(15556);
-      expect(FEED_IMSL_PORT).toBe(15557);
-      expect(FEED_IRDM_PORT).toBe(15558);
+      expect(parseConnections("udp", 5550)).toEqual({
+        descriptors: [{ listenType: "udp", host: "0.0.0.0", port: 5550 }],
+      });
+      expect(parseConnections("udp", 5555)).toEqual({
+        descriptors: [{ listenType: "udp", host: "0.0.0.0", port: 5555 }],
+      });
     });
 
-    it("should use default hosts", async () => {
-      const {
-        FEED_ACARS_HOST,
-        FEED_VDLM_HOST,
-        FEED_HFDL_HOST,
-        FEED_IMSL_HOST,
-        FEED_IRDM_HOST,
-      } = await import("../config.js");
-
-      expect(FEED_ACARS_HOST).toBe("127.0.0.1");
-      expect(FEED_VDLM_HOST).toBe("127.0.0.1");
-      expect(FEED_HFDL_HOST).toBe("127.0.0.1");
-      expect(FEED_IMSL_HOST).toBe("127.0.0.1");
-      expect(FEED_IRDM_HOST).toBe("127.0.0.1");
+    it("regression: bare 'udp' for VDLM resolves to port 5555, not 5550", async () => {
+      const { parseConnections } = await import("../config.js");
+      const result = parseConnections("udp", 5555);
+      expect(result.descriptors[0].port).toBe(5555);
+      expect(result.descriptors[0].port).not.toBe(5550);
     });
 
-    it("should parse custom ports", async () => {
-      process.env.FEED_ACARS_PORT = "5550";
-      process.env.FEED_VDLM_PORT = "5551";
+    it("udp:// URI resolves correctly", async () => {
+      const { parseConnections } = await import("../config.js");
 
-      const { FEED_ACARS_PORT, FEED_VDLM_PORT } = await import("../config.js");
-
-      expect(FEED_ACARS_PORT).toBe(5550);
-      expect(FEED_VDLM_PORT).toBe(5551);
+      expect(parseConnections("udp://0.0.0.0:9550", 5550)).toEqual({
+        descriptors: [{ listenType: "udp", host: "0.0.0.0", port: 9550 }],
+      });
     });
 
-    it("should use custom hosts", async () => {
-      process.env.FEED_ACARS_HOST = "192.168.1.100";
-      process.env.FEED_VDLM_HOST = "10.0.0.50";
+    it("tcp:// URI resolves correctly", async () => {
+      const { parseConnections } = await import("../config.js");
 
-      const { FEED_ACARS_HOST, FEED_VDLM_HOST } = await import("../config.js");
+      expect(parseConnections("tcp://acars_router:15550", 5550)).toEqual({
+        descriptors: [{ listenType: "tcp", host: "acars_router", port: 15550 }],
+      });
+    });
 
-      expect(FEED_ACARS_HOST).toBe("192.168.1.100");
-      expect(FEED_VDLM_HOST).toBe("10.0.0.50");
+    it("zmq:// URI resolves correctly", async () => {
+      const { parseConnections } = await import("../config.js");
+
+      expect(parseConnections("zmq://dumpvdl2:45555", 5555)).toEqual({
+        descriptors: [{ listenType: "zmq", host: "dumpvdl2", port: 45555 }],
+      });
+    });
+
+    it("comma-separated list produces multiple descriptors", async () => {
+      const { parseConnections } = await import("../config.js");
+
+      const result = parseConnections("udp,tcp://remote:15550", 5550);
+      expect(result.descriptors).toHaveLength(2);
+      expect(result.descriptors[0]).toEqual({
+        listenType: "udp",
+        host: "0.0.0.0",
+        port: 5550,
+      });
+      expect(result.descriptors[1]).toEqual({
+        listenType: "tcp",
+        host: "remote",
+        port: 15550,
+      });
+    });
+
+    it("whitespace around commas is trimmed", async () => {
+      const { parseConnections } = await import("../config.js");
+
+      const result = parseConnections(
+        "udp , tcp://host:1234 , zmq://other:5678",
+        5550,
+      );
+      expect(result.descriptors).toHaveLength(3);
+      expect(result.descriptors[0].listenType).toBe("udp");
+      expect(result.descriptors[1].host).toBe("host");
+      expect(result.descriptors[2].host).toBe("other");
+    });
+
+    it("invalid descriptor is skipped; remaining descriptors are still parsed", async () => {
+      const { parseConnections } = await import("../config.js");
+
+      const result = parseConnections("not-valid,tcp://host:1234", 5550);
+      expect(result.descriptors).toHaveLength(1);
+      expect(result.descriptors[0]).toEqual({
+        listenType: "tcp",
+        host: "host",
+        port: 1234,
+      });
+    });
+
+    it("port 0 is skipped (out of range)", async () => {
+      const { parseConnections } = await import("../config.js");
+
+      const result = parseConnections("udp://0.0.0.0:0,tcp://host:1234", 5550);
+      expect(result.descriptors).toHaveLength(1);
+      expect(result.descriptors[0].listenType).toBe("tcp");
+    });
+
+    it("port 65536 is skipped (out of range)", async () => {
+      const { parseConnections } = await import("../config.js");
+
+      const result = parseConnections("tcp://host:65536,tcp://host:1234", 5550);
+      expect(result.descriptors).toHaveLength(1);
+      expect(result.descriptors[0].port).toBe(1234);
+    });
+
+    it("empty string returns empty descriptors array", async () => {
+      const { parseConnections } = await import("../config.js");
+
+      const result = parseConnections("", 5550);
+      expect(result.descriptors).toHaveLength(0);
+    });
+
+    it("whitespace-only string returns empty descriptors array", async () => {
+      const { parseConnections } = await import("../config.js");
+
+      const result = parseConnections("   ", 5550);
+      expect(result.descriptors).toHaveLength(0);
+    });
+  });
+
+  describe("*_CONNECTIONS constants", () => {
+    it("ACARS_CONNECTIONS defaults to bare udp on port 5550", async () => {
+      delete process.env.ACARS_CONNECTIONS;
+      const { ACARS_CONNECTIONS } = await import("../config.js");
+      expect(ACARS_CONNECTIONS.descriptors).toHaveLength(1);
+      expect(ACARS_CONNECTIONS.descriptors[0]).toEqual({
+        listenType: "udp",
+        host: "0.0.0.0",
+        port: 5550,
+      });
+    });
+
+    it("VDLM_CONNECTIONS defaults to bare udp on port 5555", async () => {
+      delete process.env.VDLM_CONNECTIONS;
+      const { VDLM_CONNECTIONS } = await import("../config.js");
+      expect(VDLM_CONNECTIONS.descriptors[0].port).toBe(5555);
+    });
+
+    it("HFDL_CONNECTIONS defaults to bare udp on port 5556", async () => {
+      delete process.env.HFDL_CONNECTIONS;
+      const { HFDL_CONNECTIONS } = await import("../config.js");
+      expect(HFDL_CONNECTIONS.descriptors[0].port).toBe(5556);
+    });
+
+    it("IMSL_CONNECTIONS defaults to bare udp on port 5557", async () => {
+      delete process.env.IMSL_CONNECTIONS;
+      const { IMSL_CONNECTIONS } = await import("../config.js");
+      expect(IMSL_CONNECTIONS.descriptors[0].port).toBe(5557);
+    });
+
+    it("IRDM_CONNECTIONS defaults to bare udp on port 5558", async () => {
+      delete process.env.IRDM_CONNECTIONS;
+      const { IRDM_CONNECTIONS } = await import("../config.js");
+      expect(IRDM_CONNECTIONS.descriptors[0].port).toBe(5558);
+    });
+
+    it("ACARS_CONNECTIONS respects ACARS_CONNECTIONS env override", async () => {
+      process.env.ACARS_CONNECTIONS = "tcp://acars_router:15550";
+      const { ACARS_CONNECTIONS } = await import("../config.js");
+      expect(ACARS_CONNECTIONS.descriptors).toHaveLength(1);
+      expect(ACARS_CONNECTIONS.descriptors[0]).toEqual({
+        listenType: "tcp",
+        host: "acars_router",
+        port: 15550,
+      });
     });
   });
 
@@ -332,7 +442,6 @@ describe("config module", () => {
       expect(config.dbSaveAll).toBeDefined();
       expect(config.dbSaveDays).toBeDefined();
       expect(config.enableAcars).toBeDefined();
-      expect(config.feedAcarsPort).toBeDefined();
       expect(config.flightTrackingUrl).toBeDefined();
       expect(config.minLogLevel).toBeDefined();
       expect(config.quietMessages).toBeDefined();

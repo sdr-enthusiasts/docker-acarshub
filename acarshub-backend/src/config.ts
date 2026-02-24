@@ -11,6 +11,133 @@ import { createLogger } from "./utils/logger.js";
 
 const logger = createLogger("config");
 
+// ============================================================================
+// Decoder Connection Types
+// ============================================================================
+
+/**
+ * Transport protocol for a decoder connection.
+ *
+ * - `udp`  — bind a UDP datagram socket (incoming datagrams from the decoder)
+ * - `tcp`  — open an outbound TCP connection (connect to decoder / acars_router)
+ * - `zmq`  — subscribe to a ZMQ PUB endpoint (decoder or acars_router)
+ */
+export type ListenType = "udp" | "tcp" | "zmq";
+
+/**
+ * Parsed representation of a single connection descriptor string.
+ *
+ * Examples of raw strings that produce a ConnectionDescriptor:
+ *   "udp"                    → { listenType:"udp", host:"0.0.0.0", port:<default> }
+ *   "udp://0.0.0.0:9550"     → { listenType:"udp", host:"0.0.0.0", port:9550 }
+ *   "tcp://acars_router:15550" → { listenType:"tcp", host:"acars_router", port:15550 }
+ *   "zmq://dumpvdl2:45555"   → { listenType:"zmq", host:"dumpvdl2", port:45555 }
+ */
+export interface ConnectionDescriptor {
+  listenType: ListenType;
+  /** Bind address (UDP) or remote host (TCP/ZMQ) */
+  host: string;
+  /** Port number (1–65535) */
+  port: number;
+}
+
+/** All resolved descriptors for one decoder type. */
+export interface DecoderConnections {
+  descriptors: ConnectionDescriptor[];
+}
+
+// Default UDP ports per decoder type (match legacy relay ports)
+const DEFAULT_UDP_PORTS: Record<string, number> = {
+  ACARS: 5550,
+  VDLM: 5555,
+  HFDL: 5556,
+  IMSL: 5557,
+  IRDM: 5558,
+};
+
+/**
+ * Parse a single descriptor token into a ConnectionDescriptor.
+ *
+ * Returns `null` and emits a warn log for any unrecognised or invalid token.
+ * The `defaultPort` is used only for the bare `udp` token.
+ */
+function parseDescriptor(
+  token: string,
+  defaultPort: number,
+): ConnectionDescriptor | null {
+  const trimmed = token.trim();
+
+  // Bare "udp" — bind default port on all interfaces
+  if (trimmed === "udp") {
+    return { listenType: "udp", host: "0.0.0.0", port: defaultPort };
+  }
+
+  // URI forms: udp://<host>:<port>, tcp://<host>:<port>, zmq://<host>:<port>
+  const match = /^(udp|tcp|zmq):\/\/([^:]+):(\d+)$/.exec(trimmed);
+  if (!match) {
+    logger.warn("Unrecognised connection descriptor, skipping", {
+      token: trimmed,
+    });
+    return null;
+  }
+
+  const listenType = match[1] as ListenType;
+  const host = match[2];
+  const port = Number.parseInt(match[3], 10);
+
+  if (port < 1 || port > 65535) {
+    logger.warn("Port out of range (1–65535), skipping descriptor", {
+      token: trimmed,
+      port,
+    });
+    return null;
+  }
+
+  return { listenType, host, port };
+}
+
+/**
+ * Parse a comma-separated `<TYPE>_CONNECTIONS` environment variable value into
+ * a `DecoderConnections` object.
+ *
+ * - Whitespace around commas is trimmed.
+ * - Unrecognised descriptors are skipped with a warn log.
+ * - Port out of range is skipped with a warn log.
+ * - An empty result after parsing emits an error log.
+ *
+ * This is a pure function with no side-effects; it is straightforward to
+ * unit-test exhaustively.
+ */
+export function parseConnections(
+  raw: string,
+  defaultPort: number,
+): DecoderConnections {
+  if (!raw || raw.trim().length === 0) {
+    logger.error("Connection string is empty; no listeners will be created", {
+      raw,
+    });
+    return { descriptors: [] };
+  }
+
+  const tokens = raw.split(",");
+  const descriptors: ConnectionDescriptor[] = [];
+
+  for (const token of tokens) {
+    const descriptor = parseDescriptor(token, defaultPort);
+    if (descriptor) {
+      descriptors.push(descriptor);
+    }
+  }
+
+  if (descriptors.length === 0) {
+    logger.error("No valid descriptors parsed; no listeners will be created", {
+      raw,
+    });
+  }
+
+  return { descriptors };
+}
+
 /**
  * Helper function to check if a value represents "enabled"
  *
@@ -60,16 +187,6 @@ const ConfigSchema = z.object({
   enableHfdl: z.boolean(),
   enableImsl: z.boolean(),
   enableIrdm: z.boolean(),
-  feedAcarsHost: z.string(),
-  feedAcarsPort: z.number().int().positive(),
-  feedVdlmHost: z.string(),
-  feedVdlmPort: z.number().int().positive(),
-  feedHfdlHost: z.string(),
-  feedHfdlPort: z.number().int().positive(),
-  feedImslHost: z.string(),
-  feedImslPort: z.number().int().positive(),
-  feedIrdmHost: z.string(),
-  feedIrdmPort: z.number().int().positive(),
   enableAdsb: z.boolean(),
   adsbUrl: z.string(),
   adsbLat: z.number(),
@@ -182,33 +299,43 @@ export const ENABLE_HFDL = isEnabled(process.env.ENABLE_HFDL, false);
 export const ENABLE_IMSL = isEnabled(process.env.ENABLE_IMSL, false);
 export const ENABLE_IRDM = isEnabled(process.env.ENABLE_IRDM, false);
 
+// ============================================================================
+// Decoder Connection Configuration
+// ============================================================================
+
 /**
- * Decoder feed configuration (TCP ports)
+ * Resolved connection descriptors for each decoder type.
+ *
+ * Parsed from the `<TYPE>_CONNECTIONS` environment variables.
+ * Defaults to a single bare UDP descriptor on the legacy default port when the
+ * environment variable is unset (matches the old `socat` relay behaviour).
+ *
+ * `ENABLE_<TYPE>` is still the gate; these are consulted only when enabled.
  */
-export const FEED_ACARS_HOST = process.env.FEED_ACARS_HOST || "127.0.0.1";
-export const FEED_ACARS_PORT = process.env.FEED_ACARS_PORT
-  ? Number.parseInt(process.env.FEED_ACARS_PORT, 10)
-  : 15550;
+export const ACARS_CONNECTIONS: DecoderConnections = parseConnections(
+  process.env.ACARS_CONNECTIONS ?? "udp",
+  DEFAULT_UDP_PORTS.ACARS,
+);
 
-export const FEED_VDLM_HOST = process.env.FEED_VDLM_HOST || "127.0.0.1";
-export const FEED_VDLM_PORT = process.env.FEED_VDLM_PORT
-  ? Number.parseInt(process.env.FEED_VDLM_PORT, 10)
-  : 15555;
+export const VDLM_CONNECTIONS: DecoderConnections = parseConnections(
+  process.env.VDLM_CONNECTIONS ?? "udp",
+  DEFAULT_UDP_PORTS.VDLM,
+);
 
-export const FEED_HFDL_HOST = process.env.FEED_HFDL_HOST || "127.0.0.1";
-export const FEED_HFDL_PORT = process.env.FEED_HFDL_PORT
-  ? Number.parseInt(process.env.FEED_HFDL_PORT, 10)
-  : 15556;
+export const HFDL_CONNECTIONS: DecoderConnections = parseConnections(
+  process.env.HFDL_CONNECTIONS ?? "udp",
+  DEFAULT_UDP_PORTS.HFDL,
+);
 
-export const FEED_IMSL_HOST = process.env.FEED_IMSL_HOST || "127.0.0.1";
-export const FEED_IMSL_PORT = process.env.FEED_IMSL_PORT
-  ? Number.parseInt(process.env.FEED_IMSL_PORT, 10)
-  : 15557;
+export const IMSL_CONNECTIONS: DecoderConnections = parseConnections(
+  process.env.IMSL_CONNECTIONS ?? "udp",
+  DEFAULT_UDP_PORTS.IMSL,
+);
 
-export const FEED_IRDM_HOST = process.env.FEED_IRDM_HOST || "127.0.0.1";
-export const FEED_IRDM_PORT = process.env.FEED_IRDM_PORT
-  ? Number.parseInt(process.env.FEED_IRDM_PORT, 10)
-  : 15558;
+export const IRDM_CONNECTIONS: DecoderConnections = parseConnections(
+  process.env.IRDM_CONNECTIONS ?? "udp",
+  DEFAULT_UDP_PORTS.IRDM,
+);
 
 /**
  * ADS-B configuration
@@ -492,16 +619,6 @@ export function getConfig(): Config & {
     enableHfdl: ENABLE_HFDL,
     enableImsl: ENABLE_IMSL,
     enableIrdm: ENABLE_IRDM,
-    feedAcarsHost: FEED_ACARS_HOST,
-    feedAcarsPort: FEED_ACARS_PORT,
-    feedVdlmHost: FEED_VDLM_HOST,
-    feedVdlmPort: FEED_VDLM_PORT,
-    feedHfdlHost: FEED_HFDL_HOST,
-    feedHfdlPort: FEED_HFDL_PORT,
-    feedImslHost: FEED_IMSL_HOST,
-    feedImslPort: FEED_IMSL_PORT,
-    feedIrdmHost: FEED_IRDM_HOST,
-    feedIrdmPort: FEED_IRDM_PORT,
     enableAdsb: ENABLE_ADSB,
     adsbUrl: ADSB_URL,
     adsbLat: ADSB_LAT,

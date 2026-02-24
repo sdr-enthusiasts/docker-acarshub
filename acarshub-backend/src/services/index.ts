@@ -16,7 +16,15 @@
 
 import { EventEmitter } from "node:events";
 import type { SystemStatus } from "@acarshub/types";
-import { getConfig } from "../config.js";
+import {
+  ACARS_CONNECTIONS,
+  type ConnectionDescriptor,
+  getConfig,
+  HFDL_CONNECTIONS,
+  IMSL_CONNECTIONS,
+  IRDM_CONNECTIONS,
+  VDLM_CONNECTIONS,
+} from "../config.js";
 import {
   addMessageFromJson,
   getPerDecoderMessageCounts,
@@ -34,6 +42,10 @@ import {
   getAdsbPoller,
 } from "./adsb-poller.js";
 import {
+  createDecoderListener,
+  type IDecoderListener,
+} from "./decoder-listener.js";
+import {
   destroyMessageQueue,
   getMessageQueue,
   type QueuedMessage,
@@ -41,11 +53,7 @@ import {
 import { destroyScheduler, getScheduler } from "./scheduler.js";
 import { checkAndAddStationId, getStationIds } from "./station-ids.js";
 import { startStatsPruning } from "./stats-pruning.js";
-import {
-  createTcpListener,
-  type MessageType,
-  type TcpListener,
-} from "./tcp-listener.js";
+import type { MessageType } from "./tcp-listener.js";
 
 /**
  * Convert MessageType enum to database format
@@ -100,7 +108,12 @@ export interface ConnectionStatus {
  */
 export class BackgroundServices extends EventEmitter {
   private config: ServicesConfig;
-  private tcpListeners: Map<MessageType, TcpListener> = new Map();
+  /**
+   * All active decoder listeners keyed by "<TYPE>-<index>", e.g. "ACARS-0",
+   * "ACARS-1".  Multiple listeners per type are created when the corresponding
+   * *_CONNECTIONS variable contains more than one descriptor.
+   */
+  private decoderListeners: Map<string, IDecoderListener> = new Map();
   private connectionStatus: ConnectionStatus = {
     ACARS: false,
     VDLM2: false,
@@ -124,45 +137,25 @@ export class BackgroundServices extends EventEmitter {
 
     const appConfig = getConfig();
 
-    // Initialize TCP listeners for enabled decoders
+    // Wire up decoder listeners for each enabled type.
     if (appConfig.enableAcars) {
-      this.setupListener(
-        "ACARS",
-        appConfig.feedAcarsHost,
-        appConfig.feedAcarsPort,
-      );
+      this.setupDecoderConnections("ACARS", ACARS_CONNECTIONS.descriptors);
     }
 
     if (appConfig.enableVdlm) {
-      this.setupListener(
-        "VDLM2",
-        appConfig.feedVdlmHost,
-        appConfig.feedVdlmPort,
-      );
+      this.setupDecoderConnections("VDLM2", VDLM_CONNECTIONS.descriptors);
     }
 
     if (appConfig.enableHfdl) {
-      this.setupListener(
-        "HFDL",
-        appConfig.feedHfdlHost,
-        appConfig.feedHfdlPort,
-      );
+      this.setupDecoderConnections("HFDL", HFDL_CONNECTIONS.descriptors);
     }
 
     if (appConfig.enableImsl) {
-      this.setupListener(
-        "IMSL",
-        appConfig.feedImslHost,
-        appConfig.feedImslPort,
-      );
+      this.setupDecoderConnections("IMSL", IMSL_CONNECTIONS.descriptors);
     }
 
     if (appConfig.enableIrdm) {
-      this.setupListener(
-        "IRDM",
-        appConfig.feedIrdmHost,
-        appConfig.feedIrdmPort,
-      );
+      this.setupDecoderConnections("IRDM", IRDM_CONNECTIONS.descriptors);
     }
 
     // Set up message queue processing
@@ -177,7 +170,7 @@ export class BackgroundServices extends EventEmitter {
     }
 
     logger.info("Background services initialized", {
-      listeners: Array.from(this.tcpListeners.keys()),
+      listeners: Array.from(this.decoderListeners.keys()),
       adsbEnabled: appConfig.enableAdsb,
     });
   }
@@ -195,8 +188,8 @@ export class BackgroundServices extends EventEmitter {
 
     this.isRunning = true;
 
-    // Start all TCP listeners
-    for (const listener of this.tcpListeners.values()) {
+    // Start all decoder listeners
+    for (const listener of this.decoderListeners.values()) {
       listener.start();
     }
 
@@ -230,8 +223,8 @@ export class BackgroundServices extends EventEmitter {
 
     this.isRunning = false;
 
-    // Stop all TCP listeners
-    for (const listener of this.tcpListeners.values()) {
+    // Stop all decoder listeners
+    for (const listener of this.decoderListeners.values()) {
       listener.stop();
     }
 
@@ -270,52 +263,85 @@ export class BackgroundServices extends EventEmitter {
   }
 
   /**
-   * Set up a TCP listener for a decoder type
+   * Wire up one IDecoderListener per ConnectionDescriptor for `type`.
+   *
+   * All listeners for the same type share the same `message` handler and push
+   * into the same MessageQueue.  Connection status for a type is `true` when
+   * ANY of its listeners reports connected.
    */
-  private setupListener(type: MessageType, host: string, port: number): void {
-    const listener = createTcpListener({
-      type,
-      host,
-      port,
-      reconnectDelay: 1000,
-    });
+  private setupDecoderConnections(
+    type: MessageType,
+    descriptors: ConnectionDescriptor[],
+  ): void {
+    if (descriptors.length === 0) {
+      logger.error(
+        `No connection descriptors for ${type}; decoder will not receive data`,
+        { type },
+      );
+      return;
+    }
 
-    // Handle connection state changes
-    listener.on("connected", (listenerType: MessageType) => {
-      this.connectionStatus[listenerType] = true;
-      this.emitSystemStatus();
+    for (let i = 0; i < descriptors.length; i++) {
+      const descriptor = descriptors[i];
+      const key = `${type}-${i}`;
 
-      logger.info(`${listenerType} connected`, {
-        type: listenerType,
-        host,
-        port,
+      const listener = createDecoderListener(type, descriptor);
+
+      listener.on("connected", (listenerType: MessageType) => {
+        this.connectionStatus[listenerType] = true;
+        this.emitSystemStatus();
+
+        logger.info(`${listenerType} listener connected`, {
+          ...listener.getStats(),
+        });
       });
-    });
 
-    listener.on("disconnected", (listenerType: MessageType) => {
-      this.connectionStatus[listenerType] = false;
-      this.emitSystemStatus();
+      listener.on("disconnected", (listenerType: MessageType) => {
+        // Only flip to false when ALL listeners for this type are disconnected.
+        const anyConnected = this.isAnyListenerConnected(listenerType);
+        this.connectionStatus[listenerType] = anyConnected;
+        this.emitSystemStatus();
 
-      logger.warn(`${listenerType} disconnected`, {
-        type: listenerType,
+        logger.warn(`${listenerType} listener disconnected`, {
+          ...listener.getStats(),
+        });
       });
-    });
 
-    listener.on("error", (listenerType: MessageType, error: Error) => {
-      logger.error(`${listenerType} error`, {
-        type: listenerType,
-        error: error.message,
+      listener.on("error", (listenerType: MessageType, error: Error) => {
+        logger.error(`${listenerType} listener error`, {
+          ...listener.getStats(),
+          error: error.message,
+        });
       });
-    });
 
-    // Handle incoming messages
-    listener.on("message", (listenerType: MessageType, data: unknown) => {
-      // Add to message queue for processing
-      const messageQueue = getMessageQueue();
-      messageQueue.push(listenerType, data);
-    });
+      listener.on("message", (listenerType: MessageType, data: unknown) => {
+        getMessageQueue().push(listenerType, data);
+      });
 
-    this.tcpListeners.set(type, listener);
+      this.decoderListeners.set(key, listener);
+
+      logger.debug(`Registered ${type} listener`, {
+        key,
+        listenType: descriptor.listenType,
+        host: descriptor.host,
+        port: descriptor.port,
+      });
+    }
+  }
+
+  /**
+   * Returns true if at least one listener for the given MessageType is
+   * currently connected.  Used to compute the per-type connection status when
+   * one of several fan-in listeners disconnects.
+   */
+  private isAnyListenerConnected(type: MessageType): boolean {
+    const prefix = `${type}-`;
+    for (const [key, listener] of this.decoderListeners.entries()) {
+      if (key.startsWith(prefix) && listener.connected) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /**
@@ -669,17 +695,16 @@ export class BackgroundServices extends EventEmitter {
   }
 
   /**
-   * Check health of all listeners and restart if needed
+   * Check health of all listeners and log any that are not connected.
+   * TCP and UDP listeners reconnect automatically; this is informational only.
    */
   private checkThreadHealth(): void {
-    for (const [type, listener] of this.tcpListeners.entries()) {
+    for (const [key, listener] of this.decoderListeners.entries()) {
       if (!listener.connected) {
-        logger.warn(
-          `${type} listener not connected, restart will be automatic`,
-          {
-            type,
-          },
-        );
+        logger.warn(`Listener not connected`, {
+          key,
+          ...listener.getStats(),
+        });
       }
     }
   }

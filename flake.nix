@@ -81,6 +81,8 @@
               pkgs.nodejs
               pkgs.just
               pkgs.sqlite
+              pkgs.cmake
+              pkgs.pkg-config
             ];
 
             buildInputs =

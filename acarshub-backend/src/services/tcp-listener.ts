@@ -16,7 +16,13 @@
 
 import { EventEmitter } from "node:events";
 import { Socket } from "node:net";
+import type { ConnectionDescriptor } from "../config.js";
 import { createLogger } from "../utils/logger.js";
+import type {
+  DecoderListenerEvents,
+  DecoderListenerStats,
+  IDecoderListener,
+} from "./decoder-listener.js";
 
 const logger = createLogger("tcp-listener");
 
@@ -29,15 +35,11 @@ export interface TcpListenerConfig {
   reconnectDelay?: number;
 }
 
-export interface TcpListenerEvents {
-  message: [type: MessageType, data: unknown];
-  connected: [type: MessageType];
-  disconnected: [type: MessageType];
-  error: [type: MessageType, error: Error];
-}
-
 /**
  * TCP Listener for decoder feeds (acarsdec, vdlm2dec, dumphfdl, etc.)
+ *
+ * Implements IDecoderListener. Accepts either a legacy TcpListenerConfig
+ * (for backwards compatibility) or a ConnectionDescriptor.
  *
  * Handles:
  * - Connection management with auto-reconnect
@@ -51,55 +53,87 @@ export interface TcpListenerEvents {
  * - 'disconnected': Connection lost
  * - 'error': Error occurred
  */
-export class TcpListener extends EventEmitter<TcpListenerEvents> {
+export class TcpListener
+  extends EventEmitter<DecoderListenerEvents>
+  implements IDecoderListener
+{
   private socket: Socket | null = null;
-  private config: Required<TcpListenerConfig>;
+  private readonly messageType: MessageType;
+  private readonly host: string;
+  private readonly port: number;
+  private readonly reconnectDelay: number;
   private isRunning = false;
   private isConnected = false;
   private reconnectTimer: NodeJS.Timeout | null = null;
   private partialMessage: string | null = null;
 
-  constructor(config: TcpListenerConfig) {
+  constructor(
+    type: MessageType,
+    descriptor: ConnectionDescriptor,
+    reconnectDelay?: number,
+  );
+  constructor(config: TcpListenerConfig);
+  constructor(
+    typeOrConfig: MessageType | TcpListenerConfig,
+    descriptor?: ConnectionDescriptor,
+    reconnectDelay = 1000,
+  ) {
     super();
-    this.config = {
-      ...config,
-      reconnectDelay: config.reconnectDelay ?? 1000,
-    };
+
+    if (typeof typeOrConfig === "string") {
+      // New-style: (type, descriptor, reconnectDelay?)
+      // descriptor is always defined when typeOrConfig is a string (enforced by overload)
+      const desc = descriptor as ConnectionDescriptor;
+      this.messageType = typeOrConfig;
+      this.host = desc.host;
+      this.port = desc.port;
+      this.reconnectDelay = reconnectDelay;
+    } else {
+      // Legacy-style: (config)
+      this.messageType = typeOrConfig.type;
+      this.host = typeOrConfig.host;
+      this.port = typeOrConfig.port;
+      this.reconnectDelay = typeOrConfig.reconnectDelay ?? 1000;
+    }
   }
 
+  // -------------------------------------------------------------------------
+  // IDecoderListener — lifecycle
+  // -------------------------------------------------------------------------
+
   /**
-   * Start the TCP listener
-   * Initiates connection and auto-reconnect loop
+   * Start the TCP listener.
+   * Initiates connection and auto-reconnect loop. Idempotent.
    */
   public start(): void {
     if (this.isRunning) {
-      logger.warn(`${this.config.type} listener already running`, {
-        type: this.config.type,
+      logger.warn(`${this.messageType} TCP listener already running`, {
+        type: this.messageType,
       });
       return;
     }
 
     this.isRunning = true;
-    logger.info(`Starting ${this.config.type} listener`, {
-      type: this.config.type,
-      host: this.config.host,
-      port: this.config.port,
+    logger.info(`Starting ${this.messageType} TCP listener`, {
+      type: this.messageType,
+      host: this.host,
+      port: this.port,
     });
 
     this.connect();
   }
 
   /**
-   * Stop the TCP listener
-   * Closes connection and cancels reconnect attempts
+   * Stop the TCP listener.
+   * Closes connection and cancels reconnect attempts. Idempotent.
    */
   public stop(): void {
     if (!this.isRunning) {
       return;
     }
 
-    logger.info(`Stopping ${this.config.type} listener`, {
-      type: this.config.type,
+    logger.info(`Stopping ${this.messageType} TCP listener`, {
+      type: this.messageType,
     });
 
     this.isRunning = false;
@@ -117,16 +151,29 @@ export class TcpListener extends EventEmitter<TcpListenerEvents> {
     this.isConnected = false;
   }
 
-  /**
-   * Get current connection state
-   */
+  // -------------------------------------------------------------------------
+  // IDecoderListener — state
+  // -------------------------------------------------------------------------
+
+  /** True when the TCP connection is established. */
   public get connected(): boolean {
     return this.isConnected;
   }
 
-  /**
-   * Initiate TCP connection
-   */
+  /** Snapshot of listener state for status reporting. */
+  public getStats(): DecoderListenerStats {
+    return {
+      type: this.messageType,
+      listenType: "tcp",
+      connectionPoint: `${this.host}:${this.port}`,
+      connected: this.isConnected,
+    };
+  }
+
+  // -------------------------------------------------------------------------
+  // Internal connection management
+  // -------------------------------------------------------------------------
+
   private connect(): void {
     if (!this.isRunning) {
       return;
@@ -145,13 +192,13 @@ export class TcpListener extends EventEmitter<TcpListenerEvents> {
       this.isConnected = true;
       this.partialMessage = null; // Reset partial message buffer on new connection
 
-      logger.debug(`${this.config.type} connected`, {
-        type: this.config.type,
-        host: this.config.host,
-        port: this.config.port,
+      logger.debug(`${this.messageType} TCP connected`, {
+        type: this.messageType,
+        host: this.host,
+        port: this.port,
       });
 
-      this.emit("connected", this.config.type);
+      this.emit("connected", this.messageType);
     });
 
     this.socket.on("data", (data: Buffer) => {
@@ -164,37 +211,36 @@ export class TcpListener extends EventEmitter<TcpListenerEvents> {
     });
 
     this.socket.on("error", (err: Error) => {
-      logger.error(`${this.config.type} socket error`, {
-        type: this.config.type,
+      logger.error(`${this.messageType} TCP socket error`, {
+        type: this.messageType,
         error: err.message,
       });
 
-      this.emit("error", this.config.type, err);
+      this.emit("error", this.messageType, err);
       this.handleDisconnect();
     });
 
     this.socket.on("close", () => {
-      logger.debug(`${this.config.type} connection closed`, {
-        type: this.config.type,
+      logger.debug(`${this.messageType} TCP connection closed`, {
+        type: this.messageType,
       });
 
       this.handleDisconnect();
     });
 
     this.socket.on("end", () => {
-      logger.debug(`${this.config.type} connection ended`, {
-        type: this.config.type,
+      logger.debug(`${this.messageType} TCP connection ended`, {
+        type: this.messageType,
       });
 
       this.handleDisconnect();
     });
 
-    // Attempt connection
     try {
-      this.socket.connect(this.config.port, this.config.host);
+      this.socket.connect(this.port, this.host);
     } catch (err) {
-      logger.error(`${this.config.type} connection failed`, {
-        type: this.config.type,
+      logger.error(`${this.messageType} TCP connection failed`, {
+        type: this.messageType,
         error: err instanceof Error ? err.message : String(err),
       });
 
@@ -202,9 +248,6 @@ export class TcpListener extends EventEmitter<TcpListenerEvents> {
     }
   }
 
-  /**
-   * Handle disconnection and schedule reconnect
-   */
   private handleDisconnect(): void {
     const wasConnected = this.isConnected;
     this.isConnected = false;
@@ -216,28 +259,25 @@ export class TcpListener extends EventEmitter<TcpListenerEvents> {
     }
 
     if (wasConnected) {
-      this.emit("disconnected", this.config.type);
+      this.emit("disconnected", this.messageType);
     }
 
-    // Schedule reconnect if still running
     if (this.isRunning && !this.reconnectTimer) {
       this.reconnectTimer = setTimeout(() => {
         this.reconnectTimer = null;
         this.connect();
-      }, this.config.reconnectDelay);
+      }, this.reconnectDelay);
 
       logger.debug(
-        `${this.config.type} reconnecting in ${this.config.reconnectDelay}ms`,
-        {
-          type: this.config.type,
-        },
+        `${this.messageType} TCP reconnecting in ${this.reconnectDelay}ms`,
+        { type: this.messageType },
       );
     }
   }
 
   /**
-   * Handle incoming data from TCP socket
-   * Processes JSON lines with partial message reassembly
+   * Handle incoming data from TCP socket.
+   * Processes JSON lines with partial message reassembly.
    */
   private handleData(data: Buffer): void {
     let decoded = data.toString("utf-8");
@@ -250,7 +290,6 @@ export class TcpListener extends EventEmitter<TcpListenerEvents> {
     // Handle back-to-back JSON objects: }{ becomes }\n{
     decoded = decoded.replace(/\}\{/g, "}\n{");
 
-    // Split on newlines
     const lines = decoded.split("\n");
 
     // Try to reassemble partial message from previous read
@@ -258,28 +297,25 @@ export class TcpListener extends EventEmitter<TcpListenerEvents> {
       const combined = this.partialMessage + lines[0];
 
       try {
-        // Check if combined message is valid JSON
         JSON.parse(combined);
-
-        // Success! Replace first line with reassembled message
         lines[0] = combined;
 
-        logger.debug(`${this.config.type} partial message reassembled`, {
-          type: this.config.type,
+        logger.debug(`${this.messageType} TCP partial message reassembled`, {
+          type: this.messageType,
         });
       } catch {
-        // Reassembly failed, log and discard
-        logger.warn(`${this.config.type} partial message reassembly failed`, {
-          type: this.config.type,
-          partial: this.partialMessage.substring(0, 100),
-        });
+        logger.warn(
+          `${this.messageType} TCP partial message reassembly failed`,
+          {
+            type: this.messageType,
+            partial: this.partialMessage.substring(0, 100),
+          },
+        );
       }
 
-      // Clear partial message buffer
       this.partialMessage = null;
     }
 
-    // Process each line
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim();
 
@@ -289,20 +325,18 @@ export class TcpListener extends EventEmitter<TcpListenerEvents> {
 
       try {
         const message = JSON.parse(line);
-        this.emit("message", this.config.type, message);
+        this.emit("message", this.messageType, message);
       } catch (err) {
-        // If this is the last line, it might be a partial message
         if (i === lines.length - 1) {
           this.partialMessage = line;
 
-          logger.debug(`${this.config.type} storing partial message`, {
-            type: this.config.type,
+          logger.debug(`${this.messageType} TCP storing partial message`, {
+            type: this.messageType,
             length: line.length,
           });
         } else {
-          // Not the last line, so it's genuinely invalid JSON
-          logger.debug(`${this.config.type} skipping invalid JSON`, {
-            type: this.config.type,
+          logger.debug(`${this.messageType} TCP skipping invalid JSON`, {
+            type: this.messageType,
             line: line.substring(0, 100),
             error: err instanceof Error ? err.message : String(err),
           });
@@ -310,27 +344,10 @@ export class TcpListener extends EventEmitter<TcpListenerEvents> {
       }
     }
   }
-
-  /**
-   * Get listener statistics
-   */
-  public getStats(): {
-    type: MessageType;
-    connected: boolean;
-    host: string;
-    port: number;
-  } {
-    return {
-      type: this.config.type,
-      connected: this.isConnected,
-      host: this.config.host,
-      port: this.config.port,
-    };
-  }
 }
 
 /**
- * Create and start a TCP listener
+ * Create and start a TCP listener (legacy helper, kept for test compatibility).
  */
 export function createTcpListener(config: TcpListenerConfig): TcpListener {
   const listener = new TcpListener(config);

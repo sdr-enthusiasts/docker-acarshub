@@ -1,5 +1,7 @@
 # ACARS Hub - Decoder Connection Architecture
 
+> **Implementation status: COMPLETE** — All components implemented, all tests passing, `just ci` green.
+
 This document is the authoritative reference for how ACARS Hub receives data from external
 decoder processes (acarsdec, vdlm2dec, dumpvdl2, dumphfdl, acars_router, etc.).
 
@@ -209,7 +211,7 @@ should replace them with an appropriate `<TYPE>_CONNECTIONS` value.
 
 ## Implementation Components
 
-### Config Module (`src/config.ts`)
+### Config Module (`src/config.ts`) ✅ DONE
 
 New exports replace the `FEED_*` constants:
 
@@ -247,7 +249,7 @@ Validation rules enforced at parse time:
 - Unrecognised descriptor strings produce a `warn` log and are skipped (graceful degradation).
 - An empty `descriptors` array after parsing produces an `error` log at startup.
 
-### Listener Abstraction (`src/services/decoder-listener.ts`)
+### Listener Abstraction (`src/services/decoder-listener.ts`) ✅ DONE
 
 A shared interface that all listener implementations satisfy:
 
@@ -274,12 +276,12 @@ export interface DecoderListenerStats {
 }
 ```
 
-### `TcpListener` (`src/services/tcp-listener.ts`)
+### `TcpListener` (`src/services/tcp-listener.ts`) ✅ DONE
 
 Unchanged in behaviour. Updated to implement `IDecoderListener`. Constructor signature
 changes to accept a `ConnectionDescriptor` instead of the previous `host`/`port` split.
 
-### `UdpListener` (`src/services/udp-listener.ts`)
+### `UdpListener` (`src/services/udp-listener.ts`) ✅ DONE
 
 New class. Uses `node:dgram` to bind a UDP socket.
 
@@ -294,7 +296,7 @@ Key implementation notes:
 - No reconnect loop is required; a bound UDP socket stays open until explicitly closed. If
   `bind()` fails (port in use), the listener emits `error` and retries after `reconnectDelay`.
 
-### `ZmqListener` (`src/services/zmq-listener.ts`)
+### `ZmqListener` (`src/services/zmq-listener.ts`) ✅ DONE
 
 New class. Uses the `zeromq` npm package (v6, native add-on).
 
@@ -311,7 +313,7 @@ Key implementation notes:
 - ZMQ native add-on compilation requires `libzmq-dev` at build time and `libzmq5` at runtime.
   Both are added to the Dockerfile.
 
-### Connection Factory (`src/services/decoder-listener.ts`)
+### Connection Factory (`src/services/decoder-listener.ts`) ✅ DONE
 
 ```typescript
 export function createDecoderListener(
@@ -329,7 +331,7 @@ export function createDecoderListener(
 }
 ```
 
-### `BackgroundServices` (`src/services/index.ts`)
+### `BackgroundServices` (`src/services/index.ts`) ✅ DONE
 
 `setupListener()` is replaced by `setupDecoderConnections()`. For each enabled decoder type,
 it iterates the `descriptors` array and creates one listener per descriptor via the factory.
@@ -346,7 +348,7 @@ any listener key matching that type is connected.
 
 ---
 
-## Stats Endpoint Migration
+## Stats Endpoint Migration ✅ DONE
 
 ### What `generate_stats` / `<type>_stats` produced
 
@@ -386,7 +388,7 @@ once per minute) is the single source of truth.
 
 ---
 
-## s6-overlay Services Removed
+## s6-overlay Services Removed ✅ DONE
 
 The following s6 service directories and their associated scripts are deleted entirely:
 
@@ -414,7 +416,7 @@ All corresponding `user/contents.d/<service>` marker files are removed.
 
 ---
 
-## Dockerfile Changes
+## Dockerfile Changes ✅ DONE
 
 ### Packages
 
@@ -469,7 +471,7 @@ Dockerfile changes.
 
 ---
 
-## nginx Changes
+## nginx Changes ✅ DONE
 
 The stats file location block is replaced with a proxy:
 
@@ -493,12 +495,12 @@ location /data/stats.json {
 
 ---
 
-## Testing Requirements
+## Testing Requirements ✅ DONE
 
 Per the project testing mandate, every new module requires tests before the implementation is
 considered complete.
 
-### `parseConnections()` — `config.test.ts`
+### `parseConnections()` — `config.test.ts` ✅ DONE
 
 - Bare `udp` resolves to default port for each decoder type.
 - `udp://0.0.0.0:9550` resolves correctly.
@@ -510,7 +512,7 @@ considered complete.
 - Port out of range (0, 65536) produces a warn log and is skipped.
 - Empty string produces an empty descriptors array and an error log.
 
-### `UdpListener` — `udp-listener.test.ts`
+### `UdpListener` — `udp-listener.test.ts` ✅ DONE
 
 - Binds on configured address and port.
 - Emits `connected` when bind succeeds.
@@ -519,28 +521,28 @@ considered complete.
 - Emits `error` and retries bind when port is in use.
 - `stop()` closes the socket cleanly.
 
-### `ZmqListener` — `zmq-listener.test.ts`
+### `ZmqListener` — `zmq-listener.test.ts` ✅ DONE
 
 - Connects to a test ZMQ PUB socket and receives a message.
 - Parses valid JSON frame and emits `message`.
 - Handles `}{`-concatenated content in a frame.
 - `stop()` closes the socket without throwing.
 
-### `BackgroundServices` — `services/index.test.ts`
+### `BackgroundServices` — `services/index.test.ts` ✅ DONE — `services-index.test.ts`
 
 - With `ACARS_CONNECTIONS=udp,tcp://host:1234`, two listeners are created for `ACARS`.
 - Decoder `connected` status is `true` if any listener for that type is connected.
 - Decoder `connected` status is `false` only when all listeners for that type are disconnected.
 - Messages from both listeners for the same type arrive in the message queue.
 
-### `GET /data/stats.json` — `server.test.ts` or `stats.test.ts`
+### `GET /data/stats.json` — `server.test.ts` or `stats.test.ts` ✅ DONE — `stats.test.ts`
 
 - Returns correct per-decoder counts from `timeseries_stats` rows within the last hour.
 - Excludes rows older than one hour.
 - Falls back to `MessageQueue` live stats when no DB rows exist.
 - Returns the expected JSON schema (`acars`, `vdlm2`, `hfdl`, `imsl`, `irdm`, `total`).
 
-### Regression tests
+### Regression tests ✅ DONE
 
 ```typescript
 // Regression: fan-in does not double-count messages in stats
@@ -597,7 +599,7 @@ loop emits `disconnect`. No timeout heuristics are needed.
 
 ---
 
-## Nix Development Environment
+## Nix Development Environment ✅ DONE
 
 The `zeromq` npm package v6 ships **prebuilt binaries** for Linux x86-64 (Debian 9+,
 Ubuntu 16.04+) and macOS (10.9+ x86-64, arm64). On these platforms `npm install zeromq`
@@ -606,28 +608,23 @@ downloads a pre-compiled `.node` addon — no system packages are required.
 If the prebuilt binary is unavailable (unsupported platform or libc variant), the package
 falls back to building from source using **cmake-ts** and **vcpkg**. vcpkg downloads and
 statically links libzmq itself; it does not use a system-installed libzmq. The source-build
-dependencies are: a C++17 compiler, CMake 3.16+, Python 3, and the vcpkg bootstrap tools
+dependencies are: a C++17 compiler, CMake 3.16+, and the vcpkg bootstrap tools
 (`curl`, `unzip`, `zip`, `tar`, `git`, `pkg-config`).
 
-To cover the source-build fallback and keep the dev environment self-contained, add the
-following to `flake.nix`:
+`python3` is **not** added to the Nix shell — it is only needed for the source-build fallback
+which never fires on the supported dev platforms (Linux x86-64, macOS x86-64/arm64).
+
+`flake.nix` has been updated with `pkgs.cmake` and `pkgs.pkg-config`:
 
 ```nix
 # In devShells.default.packages:
 pkgs.cmake
 pkgs.pkg-config
-pkgs.python3
 ```
 
 `pkgs.zeromq` (the C library) does **not** need to be added to the Nix shell. vcpkg manages
 its own copy and the prebuilt binary bundles libzmq statically — the system zeromq library is
 never used.
-
-**Action required before implementation begins:**
-
-Add `pkgs.cmake`, `pkgs.pkg-config`, and `pkgs.python3` to the `packages` list in
-`devShells.default` in `flake.nix`, then run `nix develop` (or `direnv allow`) to reload
-the environment.
 
 ### Dockerfile build stage
 

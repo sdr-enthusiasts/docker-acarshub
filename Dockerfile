@@ -14,7 +14,7 @@ ARG BUILD_NUMBER=0
 # hadolint ignore=DL3008
 RUN set -xe && \
     apt-get update && \
-    apt-get install -y --no-install-recommends make python3 g++ && \
+    apt-get install -y --no-install-recommends make python3 g++ cmake && \
     rm -rf /tmp/* /var/lib/apt/lists/*
 
 # Copy workspace manifests first for better layer caching
@@ -109,7 +109,7 @@ COPY acarshub-react/package.json   ./acarshub-react/
 RUN --mount=type=cache,target=/root/.npm \
     set -xe && \
     apt-get update && \
-    apt-get install -y --no-install-recommends make python3 g++ && \
+    apt-get install -y --no-install-recommends make python3 g++ cmake && \
     npm ci --omit=dev && \
     npm dedupe && \
     rm -rf node_modules/@acarshub && \
@@ -153,10 +153,13 @@ RUN set -x && \
     chmod +x /scripts/healthcheck.sh
 
 EXPOSE 80
-EXPOSE 5550
-EXPOSE 5555
-EXPOSE 15550
-EXPOSE 15555
+# Default UDP listen ports for each decoder type (informational; Docker does
+# not require EXPOSE for UDP to work, but this documents the defaults).
+EXPOSE 5550/udp
+EXPOSE 5555/udp
+EXPOSE 5556/udp
+EXPOSE 5557/udp
+EXPOSE 5558/udp
 
 ENV FEED="" \
     ENABLE_ACARS="false" \
@@ -173,6 +176,11 @@ ENV FEED="" \
     ACARSHUB_DB="/run/acars/messages.db" \
     GROUND_STATION_PATH="/webapp/data/ground-stations.json" \
     MESSAGE_LABELS_PATH="/webapp/data/metadata.json" \
-    AIRLINES_PATH="/webapp/data/airlines.json"
+    AIRLINES_PATH="/webapp/data/airlines.json" \
+    ACARS_CONNECTIONS="udp" \
+    VDLM_CONNECTIONS="udp" \
+    HFDL_CONNECTIONS="udp" \
+    IMSL_CONNECTIONS="udp" \
+    IRDM_CONNECTIONS="udp"
 
 HEALTHCHECK --start-period=3600s --interval=600s CMD /scripts/healthcheck.sh
