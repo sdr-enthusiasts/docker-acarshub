@@ -28,7 +28,27 @@ ARG BUILD_NUMBER=0
 
 RUN set -xe && \
     export VITE_BUILD_NUMBER="${BUILD_NUMBER}" && \
-    npm run build && \
+    # Build each workspace individually so we can skip generate-sprites for the
+    # React app.  The sprite sheets (PNG + WebP) are pre-generated static assets
+    # committed to the repository (acarshub-react/src/assets/sprites/) and are
+    # already present in the build context via the COPY above — regenerating them
+    # here is wasted work.
+    #
+    # History: arm64 builds were broken because package-lock.json had been
+    # regenerated while node_modules was present with only x64 optional packages
+    # installed (npm bug #4828).  npm ci faithfully reproduces the lockfile, so
+    # the arm64 sharp/rollup prebuilts were never installed, causing:
+    #   "Could not load the 'sharp' module using the linux-arm64 runtime"
+    #   "Cannot find module @rollup/rollup-linux-arm64-gnu"
+    # The root fix was regenerating the lockfile from scratch (no node_modules),
+    # which causes npm to record ALL platform variants of optional deps.
+    # Skipping generate-sprites is a permanent defensive layer: it removes any
+    # dependency on sharp's native binary running correctly under QEMU emulation,
+    # and avoids re-triggering the issue if the lockfile is ever corrupted again.
+    # `vite build` produces an identical dist/ output without touching sharp.
+    npm run build --workspace=@acarshub/types && \
+    cd acarshub-react && npx vite build && cd .. && \
+    npm run build --workspace=@acarshub/backend && \
     # Bundle the backend into a single ESM file with esbuild.
     # better-sqlite3 and zeromq are marked external because they contain native
     # .node addons that cannot be inlined into a JS bundle — they must be loaded

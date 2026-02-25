@@ -1,3 +1,40 @@
+# Multiarch / arm64 build support
+# Register QEMU binfmt_misc handlers + create a docker-container buildx builder.
+# Must be re-run after every reboot (binfmt_misc is volatile kernel state).
+
+# Run persist-binfmt once to survive reboots without re-running this.
+setup-multiarch:
+    @echo "Registering QEMU user-space emulators via Docker binfmt image..."
+    docker run --privileged --rm tonistiigi/binfmt --install arm64
+    @echo "Creating multiarch buildx builder (docker-container driver)..."
+    docker buildx create --use --driver docker-container --name multiarch --bootstrap 2>/dev/null \
+      || docker buildx use multiarch
+    docker buildx inspect multiarch
+    @echo "✅ Multiarch ready. Build arm64 with: just build-arm64"
+
+# Make the QEMU binfmt registration survive reboots by writing an entry to
+# /etc/binfmt.d/ and restarting systemd-binfmt.  Requires sudo.
+
+# Must run just setup-multiarch first (it installs /usr/bin/qemu-aarch64-static).
+persist-binfmt:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ ! -f /usr/bin/qemu-aarch64-static ]; then
+        echo "❌ /usr/bin/qemu-aarch64-static not found — run 'just setup-multiarch' first"
+        exit 1
+    fi
+    sudo tee /etc/binfmt.d/qemu-aarch64.conf > /dev/null <<'BINFMT'
+    :qemu-aarch64:M:0:\x7fELF\x02\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\xb7\x00:\xff\xff\xff\xff\xff\xff\xff\x00\xff\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff\xff:/usr/bin/qemu-aarch64-static:F
+    BINFMT
+        sudo systemctl restart systemd-binfmt.service
+        echo "✅ arm64 binfmt persisted to /etc/binfmt.d/qemu-aarch64.conf (survives reboots)"
+
+    # Build the Docker image for linux/arm64 and load it into the local daemon.
+    # Requires arm64 binfmt to be registered (just setup-multiarch).
+
+build-arm64:
+    docker buildx build --platform linux/arm64 --load -t ah:arm64-test .
+
 # Development servers
 web:
     ./dev-watch.sh
@@ -203,8 +240,7 @@ seed-all:
     just seed-test-db
     @echo "✅ All test fixtures generated — review and commit changes to test-fixtures/"
 
-# prepare for commit
-
+# Prepare for commit
 add:
     git add -A
 
