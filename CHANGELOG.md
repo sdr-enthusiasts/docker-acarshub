@@ -2,34 +2,32 @@
 
 ## ACARS Hub v4.0.0
 
-New:
+### v4.0.0 New
 
-Complete rewrite of the web front end
-Desktop notifications
-Unified Settings, localization, custom map provider(S), and so much more
-Improved statistics
-Live map: layers, pausing, follow aircraft, filters, animated sprites...
-Improved searching/alert matching
-
-Please see ⁠acarshub⁠ for important notes. The TL;DR is expect a long startup if you are coming from a v3 install, please let it do it's thing, backing up your db just in case isn't a bad idea, and once you migrate to v4 going back to v3 isn't possible
+- Complete rewrite of the web front end
+- Desktop notifications
+- Unified Settings, localization, custom map provider(S), and so much more
+- Improved statistics
+- Live map: layers, pausing, follow aircraft, filters, animated sprites...
+- Improved searching/alert matching
 
 ## ACARS Hub v4.0.1
 
-Bug Fixes:
+### v4.0.1 Bug Fixes
 
-Live Map Side bar: Hovering over plane in the side bar no longer causes the plane to change heading
-Live Map: Mobile pinch to zoom is fixed
+- Live Map Side bar: Hovering over plane in the side bar no longer causes the plane to change heading
+- Live Map: Mobile pinch to zoom is fixed
 
-New:
+### v4.0.1 New
 
-Re-add functionality to generate <yourip><:port>/data/stats.json
+- Re-add functionality to generate <yourip><:port>/data/stats.json
 
-## ACARS Hub 4.1.0
+## ACARS Hub v4.1.0
 
-New:
+### v4.1.0 New
 
 - Backend: completely rewritten in Node.JS
-- Backend: Enable TCP and ZMQ connections to acars router and/or the decoders directly (2)
+- Backend: Enable TCP and ZMQ connections to acars router and/or the decoders directly [(2)](#v410-n2)
 - Front End: Optimize load times and reduce fresh load bandwidth for all use cases
 - Database: Time Series data is no longer stored in an RRD. It will be migrated in to the main database.
 - Message Groups: Instead of showing generic "ADSB" if the aircraft is tracked, it will show the actual source (ADSB/UAT/TIS-B/ADSC etc)
@@ -41,23 +39,23 @@ New:
 - Live Map: Side bar is now resizable and collapsible
 - Live Map: Side bar will now flag what message type(s) the aircraft has been picked up on. Replaces the default green check mark with a colored checkmark of the decoder type. At the default/minimum width only the most recent message type is displayed in the sidebar for that aircraft. As you expand you will see badges for more decoder types if the airplane has them.
   dis
-- Live Map: Worldwide TRACON boundary overlay (1)
-- Live Map: Worldwide FIR boundary overlay (1)
+- Live Map: Worldwide TRACON boundary overlay [(1)](#v410-n1)
+- Live Map: Worldwide FIR boundary overlay [(1)](#v410-n1)
 - Live Map: Hey What's That support. Enabled with `HEYWHATSTHAT=<token>`. Optionally, specify the altitude(s) you want to see with `HEYWHATSTHAT_ALTS=<commas separated list of altitudes in feet. No units>`
 - Mobile Live Map: More map controls collapsed in to a flyout at appropriate break points
 
-Bug fix:
+### v4.1.0 Bug Fixes
 
 - Database: migration from ANY version of ACARS Hub prior to v4 incorrectly skipped FTS table rebuilds causing some issues. New databases created in v4 are unaffected. DB will repair itself if the issue is detected. May take some time. No data is/was lost.
 - Network: Removed ipv6 binding in nginx, which appears to have made the container unusable on some configs
 - Live Map: Zoom operations on the live map no longer hide the overlays and no longer hit the web server over and over again for the data as you pan/zoom
 - Live Map: Zoom In/Out buttons now should be shown on top of any airplanes that are behind it
 
-Notes:
+### v4.1.0 Notes
 
-(1) Worldwide TRACON and FIR boundary data comes from VATSIM, which for the uninitiated are sim enthusiasts that play ATC with flight sim. The data, at least for the US, seems accurate (well, I see a problem with Amarillo Approach...it's close, but not right) and probably from actual ATC data. I cannot speak to the veracity of the data for non-US sources. I also cannot practically verify the verasity of the data for US sources. Even though I work for the FAA, I am not going have any potential conflict of interests or other ethical concerns and use my access to pull the real data and compare/generate my own data.
+1. <a id="v410-n1"></a>Worldwide TRACON and FIR boundary data comes from VATSIM, which for the uninitiated are sim enthusiasts that play ATC with flight sim. The data, at least for the US, seems accurate (well, I see a problem with Amarillo Approach...it's close, but not right) and probably from actual ATC data. I cannot speak to the veracity of the data for non-US sources. I also cannot practically verify the veracity of the data for US sources. Even though I work for the FAA, I am not going to have any potential conflict of interests or other ethical concerns and use my access to pull the real data and compare/generate my own data.
 
-(2) By _default_ it will act exactly as before. You should NOT see any difference in ACARS Hub taking in messages.
+2. <a id="v410-n2"></a>By _default_ it will act exactly as before. You should NOT see any difference in ACARS Hub taking in messages.
 
 You now have the option to set `<ACARS/VDLM/HFDL/IRDM/IMSL>_CONNECTIONS` to point at acars router (or the decoders) to get messages. You can also specify MULTIPLE sources to connect to. This is now the default recommended setup.
 
