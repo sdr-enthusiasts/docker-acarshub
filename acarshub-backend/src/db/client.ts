@@ -130,6 +130,7 @@ export function initDatabase(
         sqliteBackupConnection.pragma("foreign_keys = ON");
         sqliteBackupConnection.pragma("cache_size = -10000");
         sqliteBackupConnection.pragma("mmap_size = 268435456");
+        sqliteBackupConnection.pragma("wal_autocheckpoint = 400");
 
         drizzleBackupClient = drizzle(sqliteBackupConnection, { schema });
         logger.info("Backup database initialized successfully");
@@ -288,16 +289,25 @@ export function checkpoint(
 ): { framesCheckpointed: number; framesRemaining: number } {
   const conn = getSqliteConnection();
 
-  // Run PRAGMA wal_checkpoint with specified mode
-  const result = conn.pragma(`wal_checkpoint(${mode})`, { simple: true }) as [
-    number,
-    number,
-    number,
-  ];
+  // Run PRAGMA wal_checkpoint with specified mode.
+  // Returns a single row with three columns:
+  //   busy        - 1 if writers blocked the checkpoint, else 0
+  //   log         - total frames currently in the WAL file
+  //   checkpointed - frames successfully moved to the main DB file
+  //
+  // NOTE: { simple: true } would return only the first column (busy) as a
+  // scalar, so we use the default array-of-objects form and access by name.
+  const result = conn.pragma(`wal_checkpoint(${mode})`) as {
+    busy: number;
+    log: number;
+    checkpointed: number;
+  }[];
 
+  const row = result[0];
   return {
-    framesCheckpointed: result[1],
-    framesRemaining: result[2],
+    framesCheckpointed: row.checkpointed,
+    // frames written to WAL but not yet moved to the main DB file
+    framesRemaining: row.log - row.checkpointed,
   };
 }
 
