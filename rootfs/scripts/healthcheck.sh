@@ -53,14 +53,16 @@ STATS_JSON=$(curl -sf --max-time 5 "http://127.0.0.1:${BACKEND_PORT}/data/stats.
 # Extract a numeric field from STATS_JSON.
 # Usage: stats_count <field>  — prints the integer value, or 0 if absent.
 #
-# Implementation note: grep -oP extracts "field":NNN as a unit, then
+# Implementation note: grep -oE extracts "field":NNN as a unit, then
 # parameter expansion strips everything up to and including the colon.
-# This avoids python3/jq (not present in the runtime image) and is safe
-# for the known flat JSON structure returned by /data/stats.json.
+# The pattern uses only ERE syntax (no PCRE features needed), so -oE is
+# sufficient and more portable than -oP. This avoids python3/jq (not
+# present in the runtime image) and is safe for the known flat JSON
+# structure returned by /data/stats.json.
 stats_count() {
     local field="$1"
     local segment
-    segment=$(echo "$STATS_JSON" | grep -oP "\"${field}\":[0-9]+")
+    segment=$(echo "$STATS_JSON" | grep -oE "\"${field}\":[0-9]+")
     if [[ -n "$segment" ]]; then
         echo "${segment##*:}"
     else
