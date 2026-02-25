@@ -148,7 +148,7 @@ All processes are logged to the container's stdout. General logging can be viewe
 
 ### ADSB
 
-The ACARS Hub website contains the ability to display ADSB targets along side ACARS messages. To enable this feature you need to have an available `aircraft.json` file generated from readsb and available on `tar1090webserverurl/data/aircraft.json`. [SDR-Enthusiasts tar1090](https://github.com/sdr-enthusiasts/docker-tar1090)/[SDR-Ethusiasts Ultrafeeder (recommended)](https://github.com/sdr-enthusiasts/docker-adsb-ultrafeeder) is the recommended container to run to easily get this data. By turning this on you will get a map that shows the ADSB targets picked up by your readsb instance and enable you to click on planes to see what messages they've sent.
+The ACARS Hub website contains the ability to display ADSB targets along side ACARS messages. To enable this feature you need to have an available `aircraft.json` file generated from readsb and available on `tar1090webserverurl/data/aircraft.json`. [SDR-Enthusiasts tar1090](https://github.com/sdr-enthusiasts/docker-tar1090)/[SDR-Enthusiasts Ultrafeeder (recommended)](https://github.com/sdr-enthusiasts/docker-adsb-ultrafeeder) is the recommended container to run to easily get this data. By turning this on you will get a map that shows the ADSB targets picked up by your readsb instance and enable you to click on planes to see what messages they've sent.
 
 The following options will set the options for ADSB
 
