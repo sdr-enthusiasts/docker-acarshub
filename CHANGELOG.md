@@ -1,5 +1,16 @@
 # ACARS Hub Change Log
 
+## ACARS Hub v4.1.2
+
+### v4.1.2 Bug Fixes
+
+- Database: The WAL (Write-Ahead Log) file could grow unboundedly because SQLite's default `PASSIVE` auto-checkpoint is silently skipped whenever any read transaction is open. With the system-status emitter creating short read transactions every 30 seconds there was almost always a recent read mark, so un-checkpointed FTS5 writes accumulated in the WAL indefinitely. Fixed by lowering the auto-checkpoint threshold from 1000 pages (~4 MB) to 400 pages (~1.6 MB), and by adding a scheduled `TRUNCATE`-mode checkpoint every 15 minutes. `TRUNCATE` mode checkpoints every pending frame and truncates the WAL file to zero bytes, immediately reclaiming disk space.
+- Database: `pruneDatabase()` loaded all alert-protected message UIDs into a JavaScript array and passed them as SQL bind parameters via `NOT IN (?, ?, …)`. With long `DB_ALERT_SAVE_DAYS` values and active alert terms, this list could exceed SQLite's `SQLITE_MAX_VARIABLE_NUMBER` limit (default 999), causing an `SQLITE_ERROR` on every prune run and preventing the database from ever shrinking. Fixed by replacing the two-step fetch-then-bind approach with a single `DELETE … WHERE uid NOT IN (SELECT message_uid FROM alert_matches WHERE …)` subquery that SQLite resolves entirely in-engine with no parameter-count ceiling.
+
+### v4.1.2 New
+
+- Alerts: `drunk` added as a default alert term
+
 ## ACARS Hub v4.1.1
 
 ### v4.1.1 Improvements
