@@ -11,12 +11,6 @@ WORKDIR /workspace
 # vite.config.ts (frontend) and config.ts (backend) — no ARG injection needed.
 ARG BUILD_NUMBER=0
 
-# hadolint ignore=DL3008
-RUN set -xe && \
-    apt-get update && \
-    apt-get install -y --no-install-recommends make python3 g++ cmake && \
-    rm -rf /tmp/* /var/lib/apt/lists/*
-
 # Copy workspace manifests first for better layer caching
 COPY package.json package-lock.json tsconfig.json tsconfig.base.json ./
 COPY acarshub-react/ ./acarshub-react/
@@ -109,12 +103,12 @@ COPY acarshub-react/package.json   ./acarshub-react/
 RUN --mount=type=cache,target=/root/.npm \
     set -xe && \
     apt-get update && \
-    apt-get install -y --no-install-recommends make python3 g++ cmake && \
+    TEMP_PACKAGES=(make python3 g++ cmake) && \
+    apt-get install -y --no-install-recommends ${TEMP_PACKAGES[@]} && \
     npm ci --omit=dev && \
     npm dedupe && \
     rm -rf node_modules/@acarshub && \
-    apt-get purge -y make python3 g++ && \
-    apt-get autoremove -y && \
+    apt-get autoremove -q -o APT::Autoremove::RecommendsImportant=0 -o APT::Autoremove::SuggestsImportant=0 -y ${TEMP_PACKAGES[@]} && \
     apt-get clean -q -y && \
     rm -rf /tmp/* /var/lib/apt/lists/* /var/cache/*
 
