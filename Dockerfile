@@ -90,7 +90,7 @@ RUN set -xe && \
     /addon-deps/zeromq/build/win32 \
     /addon-deps/zeromq/build/darwin \
     /addon-deps/zeromq/src && \
-    find /addon-deps/zeromq/build/linux -type d -name "musl-*" -exec rm -rf {} + 2>/dev/null || true && \
+    { find /addon-deps/zeromq/build/linux -type d -name "musl-*" -exec rm -rf {} + 2>/dev/null || true; } && \
     if [ "$(uname -m)" = "x86_64" ]; then \
     rm -rf /addon-deps/zeromq/build/linux/arm64; \
     else \
@@ -101,7 +101,9 @@ RUN set -xe && \
     #   src/   — C++ binding source (only needed to compile the addon)
     rm -rf \
     /addon-deps/better-sqlite3/deps \
-    /addon-deps/better-sqlite3/src
+    /addon-deps/better-sqlite3/src && \
+    #   cleanup js map files, those are just for viewing the code
+    { find /addon-deps | grep -E ".map$" | xargs rm -rf || true; }
 
 # ============================================================
 # Stage 2: Runtime image
