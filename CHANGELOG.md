@@ -70,3 +70,22 @@
    The `_CONNECTIONS` variables are ignored if the corresponding `ENABLE_` variable is not set. If you migrate to the outbound connection model, remove `acarshub` from your `AR_SEND_UDP` variables to avoid log spam from `acars_router` attempting to push to an offline host.
 
    Documentation has been updated to reflect the new recommended setup.
+
+## ACARS Hub v4.1.1
+
+### v4.1.1 Improvements
+
+- Docker image: reduced size by approximately 850 MB compared to v4.1.0
+  - Build stage: compiler toolchain (`make`, `python3`, `g++`, `cmake`) no longer leaves artifacts in the final image — tools are installed and used in the build stage where they are already present, then the compiled output is copied across [(1)](#v411-n1)
+  - Runtime stage: the backend is now bundled with esbuild into a single file (`server.bundle.mjs`). All pure-JS dependencies (fastify, socket.io, drizzle-orm, pino, zod, etc.) are inlined into the bundle. Only the two native addons (`better-sqlite3` and `zeromq`) remain in `node_modules` at runtime, reducing the runtime `node_modules` footprint from ~66 MB to ~11 MB
+  - Runtime stage: `npm` is no longer included in the image — it is not needed at runtime
+- nginx: eliminated startup warnings about duplicate `text/html` MIME type in the compression configuration (`text/html` is always compressed by nginx and does not need to be listed explicitly)
+- Healthcheck: rewritten for the Node.js backend architecture
+
+### v4.1.1 Documentation
+
+- README and setup guide: tone, accuracy, and clarity improvements
+
+### v4.1.1 Notes
+
+1. <a id="v411-n1"></a>Credit to [@wiedehopf](https://github.com/wiedehopf) for the initial compiler and `node_modules` pruning work in PR [#1632](https://github.com/sdr-enthusiasts/docker-acarshub/pull/1632) that this builds on.
