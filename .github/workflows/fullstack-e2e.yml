@@ -16,6 +16,18 @@
 #   - The full enrichment pipeline runs: DB row → enrichMessage → wire format.
 #   - The React frontend connects via a real WebSocket, not a mocked store.
 #
+# Orchestration pattern:
+#   We use `docker compose up -d` + `docker compose run --rm playwright`
+#   instead of `docker compose up --abort-on-container-exit`.
+#
+#   Rationale: Docker Compose v5 (shipped with Ubuntu 24.04 / GitHub-hosted
+#   runners) changed the behaviour of --abort-on-container-exit so that it
+#   only triggers on non-zero exits.  When the playwright container exits
+#   successfully (code 0), `compose up` never returns — the step hangs until
+#   the job-level timeout fires.  The run-based pattern avoids this entirely:
+#   `docker compose run` blocks until the test container exits and returns its
+#   exit code directly, regardless of success or failure.
+#
 # Artifacts:
 #   - Playwright HTML report uploaded on failure for easy diagnosis.
 
@@ -59,17 +71,33 @@ jobs:
       - name: Build test Docker image (ah:test)
         run: docker build -f Dockerfile -t ah:test .
 
-      - name: Run full-stack integration E2E tests
-        run: |
-          docker compose -f docker-compose.test.yml up \
-            --abort-on-container-exit \
-            --exit-code-from playwright
-        # Allow up to 10 minutes for the full test run
+      # ── Step 1: Start backend infrastructure (detached) ──────────────────
+      # db-init copies seed.db + test.rrd into the named volume, then exits.
+      # backend starts the production image and waits for its healthcheck.
+      # playwright is intentionally NOT started here — see step 2.
+      - name: Start backend infrastructure
+        run: docker compose -f docker-compose.test.yml up -d db-init backend
+        timeout-minutes: 5
+
+      # ── Step 2: Run integration tests ────────────────────────────────────
+      # `docker compose run` blocks until the playwright container exits and
+      # returns its exit code directly.  This avoids the Compose v5 hang that
+      # occurs with `up --abort-on-container-exit` on successful (code 0) exits.
+      #
+      # The playwright service declares `depends_on: backend: condition:
+      # service_healthy`, so `run` still waits for the backend healthcheck
+      # to pass before executing the test command.
+      - name: Run integration E2E tests
+        run: docker compose -f docker-compose.test.yml run --rm playwright
         timeout-minutes: 10
 
+      # ── Step 3: Tear down ─────────────────────────────────────────────────
+      # Always runs, even on failure, so containers are never left running.
+      # --volumes wipes the named volumes so the next run always starts from
+      # the committed seed.db (db-init re-copies it on the next `up -d`).
       - name: Tear down Docker Compose stack
         if: always()
-        run: docker compose -f docker-compose.test.yml down --volumes
+        run: docker compose -f docker-compose.test.yml down --volumes --timeout 5
 
       - name: Upload Playwright report on failure
         uses: actions/upload-artifact@v4
