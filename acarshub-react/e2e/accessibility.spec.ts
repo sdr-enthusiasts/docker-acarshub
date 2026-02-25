@@ -345,14 +345,16 @@ test.describe("Accessibility - Keyboard Navigation", () => {
     // behaves inconsistently across mobile browser emulations.
     test.skip(isMobile, "Keyboard navigation tests are desktop-only");
 
-    // Tab to Settings button
+    // Tab to Settings button.
+    // The Settings button has visible text "Settings" but no aria-label attribute,
+    // so we detect it by checking textContent rather than getAttribute("aria-label").
     let attempts = 0;
     while (attempts < 20) {
       await page.keyboard.press("Tab");
-      const ariaLabel = await page.evaluate(() =>
-        document.activeElement?.getAttribute("aria-label"),
+      const text = await page.evaluate(() =>
+        document.activeElement?.textContent?.trim(),
       );
-      if (ariaLabel === "Settings") {
+      if (text === "Settings") {
         break;
       }
       attempts++;
@@ -549,6 +551,14 @@ test.describe("Accessibility - Form Controls", () => {
     // Navigate to Search page directly — nav link text is "Search Database", not "Search"
     await page.goto("/search");
     await expect(page).toHaveURL(/\/search/);
+
+    // Wait for the search form to be rendered before running axe.
+    // The SPA router mounts components asynchronously; running axe immediately
+    // after URL navigation can race against the first render and produce a
+    // "No elements found for include in page Context" error from axe-core.
+    await expect(page.locator(".search-page__form")).toBeVisible({
+      timeout: 10_000,
+    });
 
     // Check form accessibility
     const accessibilityScanResults = await new AxeBuilder({ page })

@@ -512,14 +512,18 @@ test.describe("Live Map (GAP-E2E-6)", () => {
   });
 
   // -------------------------------------------------------------------------
-  // 10. ACARS badge appears for aircraft paired with a message group
+  // 10. ACARS decoder badge appears for aircraft paired with a message group
   //
   // pairADSBWithACARSMessages() matches ADS-B aircraft to ACARS message groups
   // using (in priority order) hex, flight number, or tail number.  Here we
-  // match by flight number (UAL123) and verify the ✓ badge renders.
+  // match by flight number (UAL123) and verify the ACARS decoder badge renders.
+  //
+  // The decoder badge is a coloured circle (aircraft-list__decoder-badge--acars)
+  // rendered inline in the callsign cell — one per decoder type seen for that
+  // aircraft.  It replaced the old plain-text ✓ checkmark.
   // -------------------------------------------------------------------------
 
-  test("ACARS message badge (✓) appears on aircraft with paired ACARS messages", async ({
+  test("ACARS decoder badge appears on aircraft with paired ACARS messages", async ({
     page,
   }) => {
     // Inject an ACARS message for UAL123 into the message store FIRST.
@@ -541,18 +545,18 @@ test.describe("Live Map (GAP-E2E-6)", () => {
       page.locator(".aircraft-list__callsign", { hasText: "UAL123" }),
     ).toBeVisible();
 
-    // The ✓ ACARS badge must appear inside the callsign cell for UAL123.
+    // The ACARS decoder badge (coloured circle) must appear inside the callsign
+    // cell for UAL123.  The injected message has message_type "acars", so
+    // decoderTypes will contain "ACARS" after pairing, producing a
+    // aircraft-list__decoder-badge--acars element.
     const ualRow = page.locator(".aircraft-list__row").filter({
       has: page.locator(".aircraft-list__callsign", { hasText: "UAL123" }),
     });
     await expect(
-      ualRow.locator(".aircraft-list__badge--messages"),
+      ualRow.locator(".aircraft-list__decoder-badge--acars"),
     ).toBeVisible();
-    await expect(
-      ualRow.locator(".aircraft-list__badge--messages"),
-    ).toContainText("✓");
 
-    // A second aircraft without ACARS messages must NOT have the badge.
+    // A second aircraft without ACARS messages must NOT have the ACARS badge.
     const adsbInjected2 = await injectAdsbData(page, {
       now: 1_700_000_001,
       aircraft: [AIRCRAFT_UAL, AIRCRAFT_DAL],
@@ -564,7 +568,7 @@ test.describe("Live Map (GAP-E2E-6)", () => {
     });
     await expect(dalRow).toBeVisible();
     await expect(
-      dalRow.locator(".aircraft-list__badge--messages"),
+      dalRow.locator(".aircraft-list__decoder-badge--acars"),
     ).not.toBeVisible();
   });
 });

@@ -9,6 +9,13 @@ import { defineConfig, devices } from "@playwright/test";
 export default defineConfig({
   testDir: "./e2e",
 
+  /* Exclude full-stack integration tests from the frontend-only E2E suite.
+   * Integration tests require a real backend container (seed DB + Socket.IO)
+   * and are only run via `just test-e2e-fullstack` (docker-compose.test.yml +
+   * playwright.integration.config.ts).  Running them here would always fail
+   * because `test-e2e-docker` only starts a Vite preview server (frontend only). */
+  testIgnore: ["**/integration/**"],
+
   /* Run tests in files in parallel */
   fullyParallel: true,
 
