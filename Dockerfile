@@ -42,6 +42,7 @@ RUN set -xe && \
     --external:better-sqlite3 \
     --external:zeromq \
     --external:'node:*' \
+    --banner:js="import { createRequire } from 'module'; const require = createRequire(import.meta.url);" \
     --outfile=/backend/server.bundle.mjs && \
     # Stage React SPA output
     mkdir -p /webapp/dist && \
