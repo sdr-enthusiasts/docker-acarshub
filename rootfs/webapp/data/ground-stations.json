@@ -3,7 +3,7 @@
     "name": "acars-vdl2 group",
     "url": "https://acars-vdl2.groups.io/g/main/table?id=12248"
   },
-  "count": 2167,
+  "count": 2298,
   "ground_stations": [
     {
       "id": "225677",
@@ -6834,54 +6834,6 @@
       }
     },
     {
-      "id": "F00643",
-      "airport": {
-        "icao": "RJAA",
-        "iata": "NRT",
-        "name": "Narita Airport",
-        "city": "Tokyo",
-        "country_code": "JP",
-        "latitude": "35.764N",
-        "longitude": "140.391E"
-      }
-    },
-    {
-      "id": "F00644",
-      "airport": {
-        "icao": "RJAA",
-        "iata": "NRT",
-        "name": "Narita Airport",
-        "city": "Tokyo",
-        "country_code": "JP",
-        "latitude": "35.764N",
-        "longitude": "140.391E"
-      }
-    },
-    {
-      "id": "F00647",
-      "airport": {
-        "icao": "RJTT",
-        "iata": "HND",
-        "name": "Haneda Airport",
-        "city": "Tokyo",
-        "country_code": "JP",
-        "latitude": "35.554N",
-        "longitude": "139.766E"
-      }
-    },
-    {
-      "id": "F00648",
-      "airport": {
-        "icao": "RJTT",
-        "iata": "HND",
-        "name": "Haneda Airport",
-        "city": "Tokyo",
-        "country_code": "JP",
-        "latitude": "35.554N",
-        "longitude": "139.766E"
-      }
-    },
-    {
       "id": "23CB57",
       "airport": {
         "icao": "LOWG",
@@ -12906,54 +12858,6 @@
       }
     },
     {
-      "id": "F0029E",
-      "airport": {
-        "icao": "RJGG",
-        "iata": "NGO",
-        "name": "Chubu Centrair International Airport",
-        "city": "Nagoya",
-        "country_code": "JP",
-        "latitude": "35.305N",
-        "longitude": "136.994E"
-      }
-    },
-    {
-      "id": "F0029F",
-      "airport": {
-        "icao": "RJGG",
-        "iata": "NGO",
-        "name": "Chubu Centrair International Airport",
-        "city": "Nagoya",
-        "country_code": "JP",
-        "latitude": "35.305N",
-        "longitude": "136.994E"
-      }
-    },
-    {
-      "id": "F002BC",
-      "airport": {
-        "icao": "RJOH",
-        "iata": "YGJ",
-        "name": "Miho Airport",
-        "city": "Yonago",
-        "country_code": "JP",
-        "latitude": "35.491N",
-        "longitude": "133.242E"
-      }
-    },
-    {
-      "id": "F002BD",
-      "airport": {
-        "icao": "RJOH",
-        "iata": "YGJ",
-        "name": "Miho Airport",
-        "city": "Yonago",
-        "country_code": "JP",
-        "latitude": "35.491N",
-        "longitude": "133.242E"
-      }
-    },
-    {
       "id": "F0031E",
       "airport": {
         "icao": "ROAH",
@@ -17970,30 +17874,6 @@
       }
     },
     {
-      "id": "F002C6",
-      "airport": {
-        "icao": "RJOK",
-        "iata": "KCZ",
-        "name": "Kochi Airport",
-        "city": "Kochi",
-        "country_code": "JP",
-        "latitude": "33.541N",
-        "longitude": "133.677E"
-      }
-    },
-    {
-      "id": "F002C7",
-      "airport": {
-        "icao": "RJOK",
-        "iata": "KCZ",
-        "name": "Kochi Airport",
-        "city": "Kochi",
-        "country_code": "JP",
-        "latitude": "33.541N",
-        "longitude": "133.677E"
-      }
-    },
-    {
       "id": "F04AF4",
       "airport": {
         "icao": "SWBC",
@@ -18565,7 +18445,7 @@
         "name": "Suvarnabhumi Airport",
         "city": "Bangkok",
         "country_code": "TH",
-        "latitude": "13.6810N",
+        "latitude": "13.69N",
         "longitude": "100.742E"
       }
     },
@@ -19314,54 +19194,6 @@
       }
     },
     {
-      "id": "F002A0",
-      "airport": {
-        "icao": "RJOO",
-        "iata": "ITM",
-        "name": "Itami Airport",
-        "city": "Osaka",
-        "country_code": "JP",
-        "latitude": "34.782N",
-        "longitude": "135.442E"
-      }
-    },
-    {
-      "id": "F002A1",
-      "airport": {
-        "icao": "RJOO",
-        "iata": "ITM",
-        "name": "Itami Airport",
-        "city": "Osaka",
-        "country_code": "JP",
-        "latitude": "34.782N",
-        "longitude": "135.442E"
-      }
-    },
-    {
-      "id": "F002A2",
-      "airport": {
-        "icao": "RJBB",
-        "iata": "KIX",
-        "name": "Kansai International Airport",
-        "city": "Osaka",
-        "country_code": "JP",
-        "latitude": "34.424N",
-        "longitude": "135.247E"
-      }
-    },
-    {
-      "id": "F002A3",
-      "airport": {
-        "icao": "RJBB",
-        "iata": "KIX",
-        "name": "Kansai International Airport",
-        "city": "Osaka",
-        "country_code": "JP",
-        "latitude": "34.424N",
-        "longitude": "135.247E"
-      }
-    },
-    {
       "id": "1139BA",
       "airport": {
         "icao": "KFNT",
@@ -19519,18 +19351,6 @@
     },
     {
       "id": "F006CF",
-      "airport": {
-        "icao": "RJKA",
-        "iata": "ASJ",
-        "name": "Amami Airport",
-        "city": "Amami",
-        "country_code": "JP",
-        "latitude": "28.431N",
-        "longitude": "129.712E"
-      }
-    },
-    {
-      "id": "F006D1",
       "airport": {
         "icao": "RJKA",
         "iata": "ASJ",
@@ -23730,18 +23550,6 @@
       }
     },
     {
-      "id": "F002BE",
-      "airport": {
-        "icao": "RJOH",
-        "iata": "YGJ",
-        "name": "Miho Airport",
-        "city": "Yonago",
-        "country_code": "JP",
-        "latitude": "35.491N",
-        "longitude": "133.242E"
-      }
-    },
-    {
       "id": "F05EDC",
       "airport": {
         "icao": "SBKP",
@@ -26007,6 +25815,1770 @@
         "country_code": "MX",
         "latitude": "20.524N",
         "longitude": "103.312W"
+      }
+    },
+    {
+      "id": "112DCA",
+      "airport": {
+        "icao": "KVLD",
+        "iata": "VLD",
+        "name": "Valdosta Regional Airport",
+        "city": "Valdosta (GA)",
+        "country_code": "US",
+        "latitude": "30.782N",
+        "longitude": "83.277W"
+      }
+    },
+    {
+      "id": "208B37",
+      "airport": {
+        "icao": "KABY",
+        "iata": "ABY",
+        "name": "Southwest Georgia Regional Airport",
+        "city": "Albany (GA)",
+        "country_code": "US",
+        "latitude": "31.536N",
+        "longitude": "84.194W"
+      }
+    },
+    {
+      "id": "12205A",
+      "airport": {
+        "icao": "KDEN",
+        "iata": "DEN",
+        "name": "Denver International Airport",
+        "city": "Denver (CO)",
+        "country_code": "US",
+        "latitude": "39.858N",
+        "longitude": "104.667W"
+      }
+    },
+    {
+      "id": "11345A",
+      "airport": {
+        "icao": "KDEN",
+        "iata": "DEN",
+        "name": "Denver International Airport",
+        "city": "Denver (CO)",
+        "country_code": "US",
+        "latitude": "39.858N",
+        "longitude": "104.667W"
+      }
+    },
+    {
+      "id": "11317A",
+      "airport": {
+        "icao": "KDRO",
+        "iata": "DRO",
+        "name": "Durango La Plata County Airport",
+        "city": "Durango (CO)",
+        "country_code": "US",
+        "latitude": "37.15N",
+        "longitude": "107.751W"
+      }
+    },
+    {
+      "id": "11261A",
+      "airport": {
+        "icao": "KSFO",
+        "iata": "SFO",
+        "name": "San Francisco International Airport",
+        "city": "San Francisco (CA)",
+        "country_code": "US",
+        "latitude": "37.619N",
+        "longitude": "122.37W"
+      }
+    },
+    {
+      "id": "11505A",
+      "airport": {
+        "icao": "KCLT",
+        "iata": "CLT",
+        "name": "Charlotte Douglas International Airport",
+        "city": "Charlotte (NC)",
+        "country_code": "US",
+        "latitude": "35.214N",
+        "longitude": "80.943W"
+      }
+    },
+    {
+      "id": "10122A",
+      "airport": {
+        "icao": "PAFA",
+        "iata": "FAI",
+        "name": "Fairbanks International Airport",
+        "city": "Fairbanks (AK)",
+        "country_code": "US",
+        "latitude": "64.814N",
+        "longitude": "147.863W"
+      }
+    },
+    {
+      "id": "1199D3",
+      "airport": {
+        "icao": "EGLL",
+        "iata": "LHR",
+        "name": "Heathrow Airport",
+        "city": "London",
+        "country_code": "GB",
+        "latitude": "51.471N",
+        "longitude": "0.453W"
+      }
+    },
+    {
+      "id": "10977A",
+      "airport": {
+        "icao": "EGPH",
+        "iata": "EDI",
+        "name": "Turnhouse Airport",
+        "city": "Edinburgh",
+        "country_code": "GB",
+        "latitude": "55.95N",
+        "longitude": "3.426W"
+      }
+    },
+    {
+      "id": "11955B",
+      "airport": {
+        "icao": "EGJJ",
+        "iata": "JER",
+        "name": "States Airport",
+        "city": "Jersey",
+        "country_code": "GB",
+        "latitude": "49.211N",
+        "longitude": "2.217W"
+      }
+    },
+    {
+      "id": "213337",
+      "airport": {
+        "icao": "EIBT",
+        "iata": "BLY",
+        "name": "Belmullet Airport",
+        "city": "Belmullet",
+        "country_code": "IE",
+        "latitude": "54.233N",
+        "longitude": "10.0W"
+      }
+    },
+    {
+      "id": "222545",
+      "airport": {
+        "icao": "LFSD",
+        "iata": "DIJ",
+        "name": "Dijon Airport",
+        "city": "Dijon",
+        "country_code": "FR",
+        "latitude": "47.271N",
+        "longitude": "5.089E"
+      }
+    },
+    {
+      "id": "2B3185",
+      "airport": {
+        "icao": "LEVD",
+        "iata": "VLL",
+        "name": "Valladolid Airport",
+        "city": "Valladolid",
+        "country_code": "ES",
+        "latitude": "41.7N",
+        "longitude": "4.8W"
+      }
+    },
+    {
+      "id": "24CD85",
+      "airport": {
+        "icao": "LTBA",
+        "iata": "ISL",
+        "name": "Ataturk Airport",
+        "city": "Istanbul",
+        "country_code": "TR",
+        "latitude": "40.977N",
+        "longitude": "28.815E"
+      }
+    },
+    {
+      "id": "2986E5",
+      "airport": {
+        "icao": "LTFJ",
+        "iata": "SAW",
+        "name": "Sabiha Gokcen",
+        "city": "Sabiha Gokcen",
+        "country_code": "TR",
+        "latitude": "40.899N",
+        "longitude": "29.309E"
+      }
+    },
+    {
+      "id": "29BCC5",
+      "airport": {
+        "icao": "LBSF",
+        "iata": "SOF",
+        "name": "Vrazhdebna Airport",
+        "city": "Sofia",
+        "country_code": "BG",
+        "latitude": "42.7N",
+        "longitude": "23.E"
+      }
+    },
+    {
+      "id": "211EF8",
+      "airport": {
+        "icao": "ORBI",
+        "iata": "BGW",
+        "name": "Baghdad International Airport",
+        "city": "Baghdad",
+        "country_code": "IQ",
+        "latitude": "33.263",
+        "longitude": "44.234"
+      }
+    },
+    {
+      "id": "25DD37",
+      "airport": {
+        "icao": "OKKK",
+        "iata": "KWI",
+        "name": "Kuwait International Airport",
+        "city": "Kuwait",
+        "country_code": "KW",
+        "latitude": "22.227",
+        "longitude": "47.98"
+      }
+    },
+    {
+      "id": "1112CA",
+      "airport": {
+        "icao": "KABQ",
+        "iata": "ABQ",
+        "name": "Albuquerque International Airport",
+        "city": "Albuquerque (NM)",
+        "country_code": "US",
+        "latitude": "35.042N",
+        "longitude": "106.606W"
+      }
+    },
+    {
+      "id": "22A5C8",
+      "airport": {
+        "icao": "EHEH",
+        "iata": "EIN",
+        "name": "Eindhoven Airport",
+        "city": "Eindhoven",
+        "country_code": "NL",
+        "latitude": "51.453N",
+        "longitude": "5.389E"
+      }
+    },
+    {
+      "id": "293A68",
+      "airport": {
+        "icao": "LFRN",
+        "iata": "RNS",
+        "name": "St Jacques Airport",
+        "city": "Rennes",
+        "country_code": "FR",
+        "latitude": "48.069N",
+        "longitude": "1.731W"
+      }
+    },
+    {
+      "id": "215828",
+      "airport": {
+        "icao": "LFOB",
+        "iata": "BVA",
+        "name": "Beauvais-Tille Airport",
+        "city": "Paris",
+        "country_code": "FR",
+        "latitude": "49.456N",
+        "longitude": "2.112E"
+      }
+    },
+    {
+      "id": "282668",
+      "airport": {
+        "icao": "LFBI",
+        "iata": "PIS",
+        "name": "Biard Airport",
+        "city": "Poitiers",
+        "country_code": "FR",
+        "latitude": "46.586N",
+        "longitude": "0.306E"
+      }
+    },
+    {
+      "id": "222548",
+      "airport": {
+        "icao": "LFSD",
+        "iata": "DIJ",
+        "name": "Dijon Airport",
+        "city": "Dijon",
+        "country_code": "FR",
+        "latitude": "47.271N",
+        "longitude": "5.089E"
+      }
+    },
+    {
+      "id": "22D348",
+      "airport": {
+        "icao": "LFJL",
+        "iata": "ETZ",
+        "name": "Metz-Nancy-Lorraine Airport",
+        "city": "Metz/Nancy",
+        "country_code": "FR",
+        "latitude": "48.979N",
+        "longitude": "6.248E"
+      }
+    },
+    {
+      "id": "2654E8",
+      "airport": {
+        "icao": "LSZA",
+        "iata": "LUG",
+        "name": "Lugano Airport",
+        "city": "Lugano",
+        "country_code": "CH",
+        "latitude": "46.017N",
+        "longitude": "8.967E"
+      }
+    },
+    {
+      "id": "29159A",
+      "airport": {
+        "icao": "SAVT",
+        "iata": "REL",
+        "name": "Trelew Airport",
+        "city": "Trelew",
+        "country_code": "AR",
+        "latitude": "43.233S",
+        "longitude": "65.323W"
+      }
+    },
+    {
+      "id": "2B3197",
+      "airport": {
+        "icao": "LEVD",
+        "iata": "VLL",
+        "name": "Valladolid Airport",
+        "city": "Valladolid",
+        "country_code": "ES",
+        "latitude": "41.7N",
+        "longitude": "4.8W"
+      }
+    },
+    {
+      "id": "11546A",
+      "airport": {
+        "icao": "KDFW",
+        "iata": "DFW",
+        "name": "Dallas/Ft Worth International Airport",
+        "city": "Dallas/Ft Worth (TX)",
+        "country_code": "US",
+        "latitude": "32.896N",
+        "longitude": "97.041W"
+      }
+    },
+    {
+      "id": "10978A",
+      "airport": {
+        "icao": "EICK",
+        "iata": "ORK",
+        "name": "Cork Airport",
+        "city": "Cork",
+        "country_code": "IE",
+        "latitude": "51.843N",
+        "longitude": "8.490W"
+      }
+    },
+    {
+      "id": "10A81A",
+      "airport": {
+        "icao": "ENGM",
+        "iata": "OSL",
+        "name": "Oslo Airport",
+        "city": "Oslo",
+        "country_code": "NO",
+        "latitude": "60.2N",
+        "longitude": "11.083E"
+      }
+    },
+    {
+      "id": "1295CA",
+      "airport": {
+        "icao": "LDZD",
+        "iata": "ZAD",
+        "name": "Zadar Airport",
+        "city": "Zadar",
+        "country_code": "HR",
+        "latitude": "44.098N",
+        "longitude": "15.357E"
+      }
+    },
+    {
+      "id": "230448",
+      "airport": {
+        "icao": "EGLF",
+        "iata": "FAB",
+        "name": "Farnborough Airport",
+        "city": "Farnborough",
+        "country_code": "GB",
+        "latitude": "51.283N",
+        "longitude": "0.767W"
+      }
+    },
+    {
+      "id": "12148A",
+      "airport": {
+        "icao": "KCOS",
+        "iata": "COS",
+        "name": "Peterson Field Airport",
+        "city": "Colorado Springs (CO)",
+        "country_code": "US",
+        "latitude": "38.809N",
+        "longitude": "104.709W"
+      }
+    },
+    {
+      "id": "12483A",
+      "airport": {
+        "icao": "KSJT",
+        "iata": "SJT",
+        "name": "Mathis Field Airport",
+        "city": "San Angelo (TX)",
+        "country_code": "US",
+        "latitude": "31.3510N",
+        "longitude": "100.494W"
+      }
+    },
+    {
+      "id": "1240FA",
+      "airport": {
+        "icao": "KPHX",
+        "iata": "PHX",
+        "name": "Sky Harbor International Airport",
+        "city": "Phoenix (AZ)",
+        "country_code": "US",
+        "latitude": "33.436N",
+        "longitude": "112.009W"
+      }
+    },
+    {
+      "id": "1250DA",
+      "airport": {
+        "icao": "KCVG",
+        "iata": "CVG",
+        "name": "Cincinnati/ Northern Kentucky International Airpor",
+        "city": "Covington (KY)",
+        "country_code": "US",
+        "latitude": "39.048N",
+        "longitude": "84.669W"
+      }
+    },
+    {
+      "id": "219A57",
+      "airport": {
+        "icao": "LFRK",
+        "iata": "CFR",
+        "name": "Carpiquet Airport",
+        "city": "Caen",
+        "country_code": "FR",
+        "latitude": "49.173N",
+        "longitude": "0.448W"
+      }
+    },
+    {
+      "id": "2231B7",
+      "airport": {
+        "icao": "LTBS",
+        "iata": "DLM",
+        "name": "Dalaman Airport",
+        "city": "Dalaman",
+        "country_code": "TR",
+        "latitude": "36.717N",
+        "longitude": "28.783E"
+      }
+    },
+    {
+      "id": "1191BA",
+      "airport": {
+        "icao": "LHBP",
+        "iata": "BUD",
+        "name": "Ferihegy Airport",
+        "city": "Budapest",
+        "country_code": "HU",
+        "latitude": "47.433N",
+        "longitude": "19.233E"
+      }
+    },
+    {
+      "id": "11416A",
+      "airport": {
+        "icao": "KCMH",
+        "iata": "CMH",
+        "name": "Columbus International Airport",
+        "city": "Columbus (OH)",
+        "country_code": "US",
+        "latitude": "39.991N",
+        "longitude": "82.878W"
+      }
+    },
+    {
+      "id": "2985DA",
+      "airport": {
+        "icao": "KSAN",
+        "iata": "SAN",
+        "name": "San Diego International Lindbergh Field Airport",
+        "city": "San Diego (CA)",
+        "country_code": "US",
+        "latitude": "32.734N",
+        "longitude": "117.187W"
+      }
+    },
+    {
+      "id": "11210A",
+      "airport": {
+        "icao": "KABQ",
+        "iata": "ABQ",
+        "name": "Albuquerque International Airport",
+        "city": "Albuquerque (NM)",
+        "country_code": "US",
+        "latitude": "35.042N",
+        "longitude": "106.606W"
+      }
+    },
+    {
+      "id": "2951A6",
+      "airport": {
+        "icao": "EHRD",
+        "iata": "RTM",
+        "name": "Rotterdam Airport",
+        "city": "Rotterdam",
+        "country_code": "NL",
+        "latitude": "51.958N",
+        "longitude": "4.444E"
+      }
+    },
+    {
+      "id": "215481",
+      "airport": {
+        "icao": "LHBP",
+        "iata": "BUD",
+        "name": "Ferihegy Airport",
+        "city": "Budapest",
+        "country_code": "HU",
+        "latitude": "47.433N",
+        "longitude": "19.233E"
+      }
+    },
+    {
+      "id": "2114E5",
+      "airport": {
+        "icao": "LYBE",
+        "iata": "BEG",
+        "name": "Beograd Airport",
+        "city": "Belgrade",
+        "country_code": "RS",
+        "latitude": "44.819N",
+        "longitude": "20.312E"
+      }
+    },
+    {
+      "id": "1138AA",
+      "airport": {
+        "icao": "KRIC",
+        "iata": "RIC",
+        "name": "Richmond International Aqirport Airport",
+        "city": "Richmond (VA)",
+        "country_code": "US",
+        "latitude": "37.505N",
+        "longitude": "77.320W"
+      }
+    },
+    {
+      "id": "12495A",
+      "airport": {
+        "icao": "KATL",
+        "iata": "ATL",
+        "name": "Hartsfield-Jackson Airport",
+        "city": "Atlanta (GA)",
+        "country_code": "US",
+        "latitude": "33.641N",
+        "longitude": "84.427W"
+      }
+    },
+    {
+      "id": "122DCA",
+      "airport": {
+        "icao": "KVLD",
+        "iata": "VLD",
+        "name": "Valdosta Regional Airport",
+        "city": "Valdosta (GA)",
+        "country_code": "US",
+        "latitude": "30.782N",
+        "longitude": "83.277W"
+      }
+    },
+    {
+      "id": "11287A",
+      "airport": {
+        "icao": "KCSG",
+        "iata": "CSG",
+        "name": "Columbus Metropolitan Airport",
+        "city": "Columbus (GA)",
+        "country_code": "US",
+        "latitude": "32.516N",
+        "longitude": "84.939W"
+      }
+    },
+    {
+      "id": "12317A",
+      "airport": {
+        "icao": "KDRO",
+        "iata": "DRO",
+        "name": "Durango La Plata County Airport",
+        "city": "Durango (CO)",
+        "country_code": "US",
+        "latitude": "37.15N",
+        "longitude": "107.751W"
+      }
+    },
+    {
+      "id": "11510A",
+      "airport": {
+        "icao": "KMCO",
+        "iata": "MCO",
+        "name": "Orlando International Airport",
+        "city": "Orlando (FL)",
+        "country_code": "US",
+        "latitude": "28.432N",
+        "longitude": "81.325W"
+      }
+    },
+    {
+      "id": "103C4A",
+      "airport": {
+        "icao": "KLAL",
+        "iata": "LAL",
+        "name": "Lakeland Municipal Airport",
+        "city": "Lakeland (FL)",
+        "country_code": "US",
+        "latitude": "27.989N",
+        "longitude": "82.015W"
+      }
+    },
+    {
+      "id": "12387A",
+      "airport": {
+        "icao": "KMYR",
+        "iata": "MYR",
+        "name": "Myrtle Beach International  Airport",
+        "city": "Myrtle Beach (SC)",
+        "country_code": "US",
+        "latitude": "33.679N",
+        "longitude": "78.922W"
+      }
+    },
+    {
+      "id": "11544A",
+      "airport": {
+        "icao": "KMEM",
+        "iata": "MEM",
+        "name": "Memphis International Airport",
+        "city": "Memphis (TN)",
+        "country_code": "US",
+        "latitude": "35.042N",
+        "longitude": "89.979W"
+      }
+    },
+    {
+      "id": "12422A",
+      "airport": {
+        "icao": "KSAF",
+        "iata": "SAF",
+        "name": "Santa Fe County Municipal Airport",
+        "city": "Santa Fe (NM)",
+        "country_code": "US",
+        "latitude": "35.617N",
+        "longitude": "106.088W"
+      }
+    },
+    {
+      "id": "12306A",
+      "airport": {
+        "icao": "KMSY",
+        "iata": "MSY",
+        "name": "Louis Armstrong International Airport",
+        "city": "New Orleans (LA)",
+        "country_code": "US",
+        "latitude": "29.991N",
+        "longitude": "90.251W"
+      }
+    },
+    {
+      "id": "1138CA",
+      "airport": {
+        "icao": "KMGM",
+        "iata": "MGM",
+        "name": "Dannelly Field Airport",
+        "city": "Montgomery (AL)",
+        "country_code": "US",
+        "latitude": "32.3N",
+        "longitude": "86.391W"
+      }
+    },
+    {
+      "id": "22C8C8",
+      "airport": {
+        "icao": "EDDE",
+        "iata": "ERF",
+        "name": "Erfurt Airport",
+        "city": "Erfurt",
+        "country_code": "DE",
+        "latitude": "50.983N",
+        "longitude": "10.967E"
+      }
+    },
+    {
+      "id": "11987A",
+      "airport": {
+        "icao": "EGSS",
+        "iata": "STN",
+        "name": "Stansted Airport",
+        "city": "London",
+        "country_code": "GB",
+        "latitude": "51.883N",
+        "longitude": "0.233E"
+      }
+    },
+    {
+      "id": "10A01A",
+      "airport": {
+        "icao": "EGNJ",
+        "iata": "HUY",
+        "name": "Humberside Airport",
+        "city": "Humberside",
+        "country_code": "GB",
+        "latitude": "53.583N",
+        "longitude": "0.3W"
+      }
+    },
+    {
+      "id": "109FFA",
+      "airport": {
+        "icao": "EGHH",
+        "iata": "BOH",
+        "name": "Bournemouth Airport",
+        "city": "Bournemouth",
+        "country_code": "GB",
+        "latitude": "50.781N",
+        "longitude": "1.837W"
+      }
+    },
+    {
+      "id": "1097EA",
+      "airport": {
+        "icao": "EGHE",
+        "iata": "ISC",
+        "name": "St  Mary s Airport",
+        "city": "Isles Of Scilly",
+        "country_code": "GB",
+        "latitude": "49.9N",
+        "longitude": "6.W"
+      }
+    },
+    {
+      "id": "11995A",
+      "airport": {
+        "icao": "EIBN",
+        "iata": "BYT",
+        "name": "Bantry Airport",
+        "city": "Bantry",
+        "country_code": "IE",
+        "latitude": "51.683N",
+        "longitude": "9.4W"
+      }
+    },
+    {
+      "id": "10979A",
+      "airport": {
+        "icao": "EHEH",
+        "iata": "EIN",
+        "name": "Eindhoven Airport",
+        "city": "Eindhoven",
+        "country_code": "NL",
+        "latitude": "51.453N",
+        "longitude": "5.389E"
+      }
+    },
+    {
+      "id": "1097DA",
+      "airport": {
+        "icao": "LFOB",
+        "iata": "BVA",
+        "name": "Beauvais-Tille Airport",
+        "city": "Paris",
+        "country_code": "FR",
+        "latitude": "49.456N",
+        "longitude": "2.112E"
+      }
+    },
+    {
+      "id": "109F9A",
+      "airport": {
+        "icao": "LFRD",
+        "iata": "DNR",
+        "name": "Pleurtuit Airport",
+        "city": "Dinard",
+        "country_code": "FR",
+        "latitude": "48.588N",
+        "longitude": "2.084W"
+      }
+    },
+    {
+      "id": "1097BA",
+      "airport": {
+        "icao": "EBAW",
+        "iata": "ANR",
+        "name": "Deurne Airport",
+        "city": "Antwerp",
+        "country_code": "BE",
+        "latitude": "51.19N",
+        "longitude": "4.4E"
+      }
+    },
+    {
+      "id": "109FCA",
+      "airport": {
+        "icao": "EBOS",
+        "iata": "OST",
+        "name": "Ostend Airport",
+        "city": "Ostend",
+        "country_code": "BE",
+        "latitude": "51.199N",
+        "longitude": "2.862E"
+      }
+    },
+    {
+      "id": "1291CA",
+      "airport": {
+        "icao": "LEMD",
+        "iata": "MAD",
+        "name": "Barajas Airport",
+        "city": "Madrid",
+        "country_code": "ES",
+        "latitude": "40.472N",
+        "longitude": "3.563W"
+      }
+    },
+    {
+      "id": "21BED7",
+      "airport": {
+        "icao": "LTDB",
+        "iata": "COV",
+        "name": "Cukurova International Airport",
+        "city": "Mersin",
+        "country_code": "TR",
+        "latitude": "36.897N",
+        "longitude": "35.068E"
+      }
+    },
+    {
+      "id": "218537",
+      "airport": {
+        "icao": "HECA",
+        "iata": "CAI",
+        "name": "Cairo International Airport",
+        "city": "Cairo",
+        "country_code": "EG",
+        "latitude": "30.138N",
+        "longitude": "31.407E"
+      }
+    },
+    {
+      "id": "129D7A",
+      "airport": {
+        "icao": "LJLJ",
+        "iata": "LJU",
+        "name": "Brnik Airport",
+        "city": "Ljubljana",
+        "country_code": "SI",
+        "latitude": "46.225N",
+        "longitude": "14.461E"
+      }
+    },
+    {
+      "id": "12923A",
+      "airport": {
+        "icao": "LDZA",
+        "iata": "ZAG",
+        "name": "Pleso Airport",
+        "city": "Zagreb",
+        "country_code": "HR",
+        "latitude": "45.743N",
+        "longitude": "16.070E"
+      }
+    },
+    {
+      "id": "224277",
+      "airport": {
+        "icao": "WADD",
+        "iata": "DPS",
+        "name": "I Gusti Ngurah Rai International Airport",
+        "city": "Denpasar",
+        "country_code": "ID",
+        "latitude": "8.748S",
+        "longitude": "115.168E"
+      }
+    },
+    {
+      "id": "F03D14",
+      "airport": {
+        "icao": "RJFF",
+        "iata": "FUK",
+        "name": "Fukuoka Airport",
+        "city": "Fukuoka",
+        "country_code": "JP",
+        "latitude": "33.582N",
+        "longitude": "130.453E"
+      }
+    },
+    {
+      "id": "F03D16",
+      "airport": {
+        "icao": "RJFF",
+        "iata": "FUK",
+        "name": "Fukuoka Airport",
+        "city": "Fukuoka",
+        "country_code": "JP",
+        "latitude": "33.582N",
+        "longitude": "130.453E"
+      }
+    },
+    {
+      "id": "F03D18",
+      "airport": {
+        "icao": "RJFF",
+        "iata": "FUK",
+        "name": "Fukuoka Airport",
+        "city": "Fukuoka",
+        "country_code": "JP",
+        "latitude": "33.582N",
+        "longitude": "130.453E"
+      }
+    },
+    {
+      "id": "F03D1A",
+      "airport": {
+        "icao": "RJFF",
+        "iata": "FUK",
+        "name": "Fukuoka Airport",
+        "city": "Fukuoka",
+        "country_code": "JP",
+        "latitude": "33.582N",
+        "longitude": "130.453E"
+      }
+    },
+    {
+      "id": "F00774",
+      "airport": {
+        "icao": "RJKA",
+        "iata": "ASJ",
+        "name": "Amami Airport",
+        "city": "Amami",
+        "country_code": "JP",
+        "latitude": "28.43N",
+        "longitude": "129.712E"
+      }
+    },
+    {
+      "id": "F00776",
+      "airport": {
+        "icao": "RJKA",
+        "iata": "ASJ",
+        "name": "Amami Airport",
+        "city": "Amami",
+        "country_code": "JP",
+        "latitude": "28.43N",
+        "longitude": "129.712E"
+      }
+    },
+    {
+      "id": "2FFFFF",
+      "airport": {
+        "icao": "----",
+        "iata": "---",
+        "name": "Temporary during replace repair or relocation",
+        "city": null,
+        "country_code": null,
+        "latitude": null,
+        "longitude": null
+      }
+    },
+    {
+      "id": "10A87A",
+      "airport": {
+        "icao": "VTCC",
+        "iata": "CNX",
+        "name": "Chiang Mai International Airport",
+        "city": "Chiang Mai",
+        "country_code": "TH",
+        "latitude": "18.772N",
+        "longitude": "98.968E"
+      }
+    },
+    {
+      "id": "200701",
+      "airport": {
+        "icao": "UIII",
+        "iata": "IKT",
+        "name": "Irkutsk Airport",
+        "city": "Irkutsk",
+        "country_code": "RU",
+        "latitude": "52.267N",
+        "longitude": "104.417E"
+      }
+    },
+    {
+      "id": "11357A",
+      "airport": {
+        "icao": "KROA",
+        "iata": "ROA",
+        "name": "Roanoke Municipal Airport",
+        "city": "Roanoke (VA)",
+        "country_code": "US",
+        "latitude": "37.325N",
+        "longitude": "79.976W"
+      }
+    },
+    {
+      "id": "11502A",
+      "airport": {
+        "icao": "KPHL",
+        "iata": "PHL",
+        "name": "Philadelphia International Airport",
+        "city": "Philadelphia (PA)",
+        "country_code": "US",
+        "latitude": "39.868N",
+        "longitude": "75.249W"
+      }
+    },
+    {
+      "id": "11493A",
+      "airport": {
+        "icao": "KPGV",
+        "iata": "PGV",
+        "name": "Pitt Greenville Airport",
+        "city": "Greenville (NC)",
+        "country_code": "US",
+        "latitude": "35.633N",
+        "longitude": "77.385W"
+      }
+    },
+    {
+      "id": "112E6A",
+      "airport": {
+        "icao": "KMQI",
+        "iata": "MQI",
+        "name": "Dare County Regional Airport",
+        "city": "Manteo (NC)",
+        "country_code": "US",
+        "latitude": "35.919N",
+        "longitude": "75.696W"
+      }
+    },
+    {
+      "id": "1211DA",
+      "airport": {
+        "icao": "KTRI",
+        "iata": "TRI",
+        "name": "Tri City Airport",
+        "city": "Bristol/Kngsprt/Jhnsn Cty (TN)",
+        "country_code": "US",
+        "latitude": "36.476N",
+        "longitude": "82.406W"
+      }
+    },
+    {
+      "id": "11249A",
+      "airport": {
+        "icao": "KCHA",
+        "iata": "CHA",
+        "name": "Lovell Field Airport",
+        "city": "Chattanooga (TN)",
+        "country_code": "US",
+        "latitude": "35.036N",
+        "longitude": "85.204W"
+      }
+    },
+    {
+      "id": "123C3A",
+      "airport": {
+        "icao": "KCID",
+        "iata": "CID",
+        "name": "The Eastern Iowa Airport",
+        "city": "Cedar Rapids (IA)",
+        "country_code": "US",
+        "latitude": "41.885N",
+        "longitude": "91.711W"
+      }
+    },
+    {
+      "id": "2705D7",
+      "airport": {
+        "icao": "NFFN",
+        "iata": "NAN",
+        "name": "Nadi International Airport",
+        "city": "Nadi",
+        "country_code": "FJ",
+        "latitude": "17.753S",
+        "longitude": "177.448E"
+      }
+    },
+    {
+      "id": "29D245",
+      "airport": {
+        "icao": "EDDS",
+        "iata": "STR",
+        "name": "Echterdingen Airport",
+        "city": "Stuttgart",
+        "country_code": "DE",
+        "latitude": "48.688N",
+        "longitude": "9.2E"
+      }
+    },
+    {
+      "id": "119D4A",
+      "airport": {
+        "icao": "EDDV",
+        "iata": "HAJ",
+        "name": "Hanover Airport",
+        "city": "Hanover",
+        "country_code": "DE",
+        "latitude": "52.462N",
+        "longitude": "9.685E"
+      }
+    },
+    {
+      "id": "10A03A",
+      "airport": {
+        "icao": "EGPF",
+        "iata": "GLA",
+        "name": "Glasgow International Airport",
+        "city": "Glasgow",
+        "country_code": "GB",
+        "latitude": "55.867N",
+        "longitude": "4.433W"
+      }
+    },
+    {
+      "id": "215824",
+      "airport": {
+        "icao": "LFOB",
+        "iata": "BVA",
+        "name": "Beauvais-Tille Airport",
+        "city": "Paris",
+        "country_code": "FR",
+        "latitude": "49.456N",
+        "longitude": "2.112E"
+      }
+    },
+    {
+      "id": "129C2A",
+      "airport": {
+        "icao": "LFLS",
+        "iata": "GNB",
+        "name": "Saint Geoirs Airport",
+        "city": "Lyon",
+        "country_code": "FR",
+        "latitude": "45.363N",
+        "longitude": "5.3210E"
+      }
+    },
+    {
+      "id": "228948",
+      "airport": {
+        "icao": "EKEB",
+        "iata": "EBJ",
+        "name": "Esbjerg Airport",
+        "city": "Esbjerg",
+        "country_code": "DK",
+        "latitude": "55.526N",
+        "longitude": "8.552E"
+      }
+    },
+    {
+      "id": "215261",
+      "airport": {
+        "icao": "LZIB",
+        "iata": "BTS",
+        "name": "Ivanka Airport",
+        "city": "Bratislava",
+        "country_code": "SK",
+        "latitude": "48.167N",
+        "longitude": "17.217E"
+      }
+    },
+    {
+      "id": "218E77",
+      "airport": {
+        "icao": "SVMI",
+        "iata": "CCS",
+        "name": "Simon Bolivar Airport",
+        "city": "Caracas",
+        "country_code": "VE",
+        "latitude": "10.606N",
+        "longitude": "66.989W"
+      }
+    },
+    {
+      "id": "219D77",
+      "airport": {
+        "icao": "WIII",
+        "iata": "CGK",
+        "name": "Soekarno-Hatta International Airport",
+        "city": "Jakarta",
+        "country_code": "ID",
+        "latitude": "6.117S",
+        "longitude": "106.6E"
+      }
+    },
+    {
+      "id": "212D37",
+      "airport": {
+        "icao": "WBKK",
+        "iata": "BKI",
+        "name": "Kota Kinabalu Airport",
+        "city": "Kota Kinabalu",
+        "country_code": "MY",
+        "latitude": "5.941N",
+        "longitude": "116.0E"
+      }
+    },
+    {
+      "id": "299DD7",
+      "airport": {
+        "icao": "VVTS",
+        "iata": "SGN",
+        "name": "Ho Chi Minh City Airport",
+        "city": "Ho Chi Minh City",
+        "country_code": "VN",
+        "latitude": "10.817N",
+        "longitude": "106.658E"
+      }
+    },
+    {
+      "id": "220497",
+      "airport": {
+        "icao": "VVDN",
+        "iata": "DAD",
+        "name": "Da Nang Airport",
+        "city": "Da Nang",
+        "country_code": "VN",
+        "latitude": "16.042N",
+        "longitude": "108.204E"
+      }
+    },
+    {
+      "id": "10B0EA",
+      "airport": {
+        "icao": "VTBS",
+        "iata": "BKK",
+        "name": "Suvarnabhumi Airport",
+        "city": "Bangkok",
+        "country_code": "TH",
+        "latitude": "13.69N",
+        "longitude": "100.742E"
+      }
+    },
+    {
+      "id": "26B997",
+      "airport": {
+        "icao": "RPLL",
+        "iata": "MNL",
+        "name": "Ninoy Aquino International Airport",
+        "city": "Manila",
+        "country_code": "PH",
+        "latitude": "14.51N",
+        "longitude": "121.018E"
+      }
+    },
+    {
+      "id": "21BD77",
+      "airport": {
+        "icao": "VOCI",
+        "iata": "COK",
+        "name": "Kochi Airport",
+        "city": "Kochi",
+        "country_code": "IN",
+        "latitude": "9.944N",
+        "longitude": "76.272E"
+      }
+    },
+    {
+      "id": "24E357",
+      "airport": {
+        "icao": "VOPB",
+        "iata": "IXZ",
+        "name": "Port Blair Airport",
+        "city": "Port Blair",
+        "country_code": "IN",
+        "latitude": "11.648N",
+        "longitude": "92.744E"
+      }
+    },
+    {
+      "id": "25A137",
+      "airport": {
+        "icao": "OPKC",
+        "iata": "KHI",
+        "name": "Quaid-E-Azam International Airport",
+        "city": "Karachi",
+        "country_code": "PK",
+        "latitude": "24.906N",
+        "longitude": "67.157E"
+      }
+    },
+    {
+      "id": "220477",
+      "airport": {
+        "icao": "VGHS",
+        "iata": "DAC",
+        "name": "Shahjalal International Airport",
+        "city": "Dhaka",
+        "country_code": "BD",
+        "latitude": "23.781N",
+        "longitude": "90.386E"
+      }
+    },
+    {
+      "id": "10A42A",
+      "airport": {
+        "icao": "NZAA",
+        "iata": "AKL",
+        "name": "Auckland International Airport",
+        "city": "Auckland",
+        "country_code": "NZ",
+        "latitude": "37.011S",
+        "longitude": "174.799E"
+      }
+    },
+    {
+      "id": "2D45D7",
+      "airport": {
+        "icao": "NZQN",
+        "iata": "ZQN",
+        "name": "Frankton Airport",
+        "city": "Queenstown",
+        "country_code": "NZ",
+        "latitude": "45.021S",
+        "longitude": "168.739E"
+      }
+    },
+    {
+      "id": "F00BF8",
+      "airport": {
+        "icao": "RJGG",
+        "iata": "NGO",
+        "name": "Chubu Centrair International Airport",
+        "city": "Nagoya",
+        "country_code": "JP",
+        "latitude": "35.305N",
+        "longitude": "136.994E"
+      }
+    },
+    {
+      "id": "F00BFA",
+      "airport": {
+        "icao": "RJGG",
+        "iata": "NGO",
+        "name": "Chubu Centrair International Airport",
+        "city": "Nagoya",
+        "country_code": "JP",
+        "latitude": "35.305N",
+        "longitude": "136.994E"
+      }
+    },
+    {
+      "id": "F01B30",
+      "airport": {
+        "icao": "RJOO",
+        "iata": "ITM",
+        "name": "Itami Airport",
+        "city": "Osaka",
+        "country_code": "JP",
+        "latitude": "34.782N",
+        "longitude": "135.442E"
+      }
+    },
+    {
+      "id": "F01B32",
+      "airport": {
+        "icao": "RJOO",
+        "iata": "ITM",
+        "name": "Itami Airport",
+        "city": "Osaka",
+        "country_code": "JP",
+        "latitude": "34.782N",
+        "longitude": "135.442E"
+      }
+    },
+    {
+      "id": "F02D3C",
+      "airport": {
+        "icao": "RJBB",
+        "iata": "KIX",
+        "name": "Kansai International Airport",
+        "city": "Osaka",
+        "country_code": "JP",
+        "latitude": "34.424N",
+        "longitude": "135.247E"
+      }
+    },
+    {
+      "id": "F02D3E",
+      "airport": {
+        "icao": "RJBB",
+        "iata": "KIX",
+        "name": "Kansai International Airport",
+        "city": "Osaka",
+        "country_code": "JP",
+        "latitude": "34.424N",
+        "longitude": "135.247E"
+      }
+    },
+    {
+      "id": "F00014",
+      "airport": {
+        "icao": "RJOH",
+        "iata": "YGJ",
+        "name": "Miho Airport",
+        "city": "Yonago",
+        "country_code": "JP",
+        "latitude": "35.491N",
+        "longitude": "133.242E"
+      }
+    },
+    {
+      "id": "F00016",
+      "airport": {
+        "icao": "RJOH",
+        "iata": "YGJ",
+        "name": "Miho Airport",
+        "city": "Yonago",
+        "country_code": "JP",
+        "latitude": "35.491N",
+        "longitude": "133.242E"
+      }
+    },
+    {
+      "id": "F01EE0",
+      "airport": {
+        "icao": "RJOK",
+        "iata": "KCZ",
+        "name": "Kochi Airport",
+        "city": "Kochi",
+        "country_code": "JP",
+        "latitude": "33.541N",
+        "longitude": "133.677E"
+      }
+    },
+    {
+      "id": "F01084",
+      "airport": {
+        "icao": "RJAA",
+        "iata": "NRT",
+        "name": "Narita Airport",
+        "city": "Tokyo",
+        "country_code": "JP",
+        "latitude": "35.764N",
+        "longitude": "140.391E"
+      }
+    },
+    {
+      "id": "F01086",
+      "airport": {
+        "icao": "RJAA",
+        "iata": "NRT",
+        "name": "Narita Airport",
+        "city": "Tokyo",
+        "country_code": "JP",
+        "latitude": "35.764N",
+        "longitude": "140.391E"
+      }
+    },
+    {
+      "id": "1028FA",
+      "airport": {
+        "icao": "RJTT",
+        "iata": "HND",
+        "name": "Haneda Airport",
+        "city": "Tokyo",
+        "country_code": "JP",
+        "latitude": "35.554N",
+        "longitude": "139.766E"
+      }
+    },
+    {
+      "id": "F00F44",
+      "airport": {
+        "icao": "RJTT",
+        "iata": "HND",
+        "name": "Haneda Airport",
+        "city": "Tokyo",
+        "country_code": "JP",
+        "latitude": "35.554N",
+        "longitude": "139.766E"
+      }
+    },
+    {
+      "id": "F00F46",
+      "airport": {
+        "icao": "RJTT",
+        "iata": "HND",
+        "name": "Haneda Airport",
+        "city": "Tokyo",
+        "country_code": "JP",
+        "latitude": "35.554N",
+        "longitude": "139.766E"
+      }
+    },
+    {
+      "id": "F0176C",
+      "airport": {
+        "icao": "RJOA",
+        "iata": "HIJ",
+        "name": "Hiroshima International Airport",
+        "city": "Hiroshima",
+        "country_code": "JP",
+        "latitude": "34.433N",
+        "longitude": "132.925E"
+      }
+    },
+    {
+      "id": "F0176E",
+      "airport": {
+        "icao": "RJOA",
+        "iata": "HIJ",
+        "name": "Hiroshima International Airport",
+        "city": "Hiroshima",
+        "country_code": "JP",
+        "latitude": "34.433N",
+        "longitude": "132.925E"
+      }
+    },
+    {
+      "id": "F02AD4",
+      "airport": {
+        "icao": "RJFT",
+        "iata": "KMJ",
+        "name": "Kumamoto Airport",
+        "city": "Kumamoto",
+        "country_code": "JP",
+        "latitude": "32.832N",
+        "longitude": "130.852E"
+      }
+    },
+    {
+      "id": "F02AD6",
+      "airport": {
+        "icao": "RJFT",
+        "iata": "KMJ",
+        "name": "Kumamoto Airport",
+        "city": "Kumamoto",
+        "country_code": "JP",
+        "latitude": "32.832N",
+        "longitude": "130.852E"
+      }
+    },
+    {
+      "id": "F02EA0",
+      "airport": {
+        "icao": "RJFE",
+        "iata": "FUJ",
+        "name": "Fukue Airport",
+        "city": "Fukue",
+        "country_code": "JP",
+        "latitude": "32.667N",
+        "longitude": "128.833E"
+      }
+    },
+    {
+      "id": "F02F74",
+      "airport": {
+        "icao": "RJFK",
+        "iata": "KOJ",
+        "name": "Kagoshima Airport",
+        "city": "Kagoshima",
+        "country_code": "JP",
+        "latitude": "31.802N",
+        "longitude": "130.720E"
+      }
+    },
+    {
+      "id": "F02F76",
+      "airport": {
+        "icao": "RJFK",
+        "iata": "KOJ",
+        "name": "Kagoshima Airport",
+        "city": "Kagoshima",
+        "country_code": "JP",
+        "latitude": "31.802N",
+        "longitude": "130.720E"
+      }
+    },
+    {
+      "id": "12349A",
+      "airport": {
+        "icao": "KALB",
+        "iata": "ALB",
+        "name": "Albany County Airport",
+        "city": "Albany (NY)",
+        "country_code": "US",
+        "latitude": "42.746N",
+        "longitude": "73.805W"
+      }
+    },
+    {
+      "id": "1145AA",
+      "airport": {
+        "icao": "KELM",
+        "iata": "ELM",
+        "name": "Harris Hill Glider Port Airport",
+        "city": "Elmira/Corning (NY)",
+        "country_code": "US",
+        "latitude": "42.161N",
+        "longitude": "76.895W"
+      }
+    },
+    {
+      "id": "213DB8",
+      "airport": {
+        "icao": "VABB",
+        "iata": "BOM",
+        "name": "Mumbai Airport",
+        "city": "Mumbai",
+        "country_code": "IN",
+        "latitude": "19.088N",
+        "longitude": "72.852E"
+      }
+    },
+    {
+      "id": "221598",
+      "airport": {
+        "icao": "VIDP",
+        "iata": "DEL",
+        "name": "Indira Gandhi International Airport",
+        "city": "Delhi",
+        "country_code": "IN",
+        "latitude": "28.574N",
+        "longitude": "77.101E"
+      }
+    },
+    {
+      "id": "221599",
+      "airport": {
+        "icao": "VIDP",
+        "iata": "DEL",
+        "name": "Indira Gandhi International Airport",
+        "city": "Delhi",
+        "country_code": "IN",
+        "latitude": "28.574N",
+        "longitude": "77.101E"
+      }
+    },
+    {
+      "id": "112DBA",
+      "airport": {
+        "icao": "KEVV",
+        "iata": "EVV",
+        "name": "Evansville Dress Regional Airport",
+        "city": "Evansville (IN)",
+        "country_code": "US",
+        "latitude": "38.037N",
+        "longitude": "87.532W"
+      }
+    },
+    {
+      "id": "121ADA",
+      "airport": {
+        "icao": "KMCI",
+        "iata": "MCI",
+        "name": "Kansas City International Airport",
+        "city": "Kansas City (MO)",
+        "country_code": "US",
+        "latitude": "39.297N",
+        "longitude": "94.714W"
+      }
+    },
+    {
+      "id": "11448A",
+      "airport": {
+        "icao": "KSGF",
+        "iata": "SGF",
+        "name": "Springfield Regional Airport",
+        "city": "Springfield (MO)",
+        "country_code": "US",
+        "latitude": "37.24N",
+        "longitude": "93.385W"
+      }
+    },
+    {
+      "id": "200101",
+      "airport": {
+        "icao": "UUEE",
+        "iata": "SVO",
+        "name": "Sheremetyevo Airport",
+        "city": "Moscow",
+        "country_code": "RU",
+        "latitude": "55.983N",
+        "longitude": "37.417E"
+      }
+    },
+    {
+      "id": "200102",
+      "airport": {
+        "icao": "UUDD",
+        "iata": "DME",
+        "name": "Domodedovo Airport",
+        "city": "Moscow",
+        "country_code": "RU",
+        "latitude": "55.4N",
+        "longitude": "37.883E"
+      }
+    },
+    {
+      "id": "200201",
+      "airport": {
+        "icao": "UWKD",
+        "iata": "KZN",
+        "name": "Kazan Airport",
+        "city": "Kazan",
+        "country_code": "RU",
+        "latitude": "55.783N",
+        "longitude": "49.217E"
+      }
+    },
+    {
+      "id": "200302",
+      "airport": {
+        "icao": "USSS",
+        "iata": "SVX",
+        "name": "Ekaterinburg Airport",
+        "city": "Ekaterinburg",
+        "country_code": "RU",
+        "latitude": "56.85N",
+        "longitude": "60.E"
+      }
+    },
+    {
+      "id": "200604",
+      "airport": {
+        "icao": "UNKL",
+        "iata": "KJA",
+        "name": "Krasnojarsk Airport",
+        "city": "Krasnojarsk",
+        "country_code": "RU",
+        "latitude": "56.017N",
+        "longitude": "92.833E"
       }
     }
   ]
