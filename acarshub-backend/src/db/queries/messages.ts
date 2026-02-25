@@ -19,7 +19,7 @@
 
 import { randomUUID } from "node:crypto";
 import { statSync } from "node:fs";
-import { and, asc, desc, eq, like, notInArray, sql } from "drizzle-orm";
+import { and, asc, desc, eq, like, sql } from "drizzle-orm";
 import { DB_ALERT_SAVE_DAYS, DB_SAVE_DAYS, DB_SAVEALL } from "../../config.js";
 import { createLogger } from "../../utils/logger.js";
 import { getDatabase, getSqliteConnection } from "../client.js";
@@ -976,46 +976,37 @@ export function pruneDatabase(
     alertSaveDays,
   });
 
-  // Get UIDs of messages with active alert matches (within alert retention window)
-  // These messages must be preserved even if older than messageSaveDays
-  const protectedUidsResult = db
-    .selectDistinct({ messageUid: alertMatches.messageUid })
-    .from(alertMatches)
-    .where(sql`${alertMatches.matchedAt} >= ${alertCutoff}`)
+  // Delete messages older than messageCutoff, excluding any whose UID appears
+  // in alert_matches within the alert retention window.
+  //
+  // Using a correlated subquery instead of the previous two-step approach
+  // (SELECT all protected UIDs → notInArray) because:
+  //
+  //   1. SQLite's SQLITE_MAX_VARIABLE_NUMBER limits how many bind parameters a
+  //      single statement can carry (default 999, max 32766).  With long alert
+  //      retention windows and active alert terms there can be tens of thousands
+  //      of protected UIDs, blowing past that limit and causing SQLITE_ERROR.
+  //
+  //   2. Loading all protected UIDs into a JS array and re-binding them as SQL
+  //      parameters consumes significant memory for large datasets.
+  //
+  // The subquery lets SQLite resolve the protected set entirely in-engine with
+  // no parameter count ceiling and no intermediate JS allocation.
+  const result = db
+    .delete(messages)
+    .where(
+      and(
+        sql`${messages.time} < ${messageCutoff}`,
+        sql`${messages.uid} NOT IN (
+          SELECT message_uid FROM alert_matches
+          WHERE matched_at >= ${alertCutoff}
+        )`,
+      ),
+    )
+    .returning({ id: messages.id })
     .all();
 
-  const protectedUids = protectedUidsResult.map((row) => row.messageUid);
-
-  let prunedMessages = 0;
-
-  if (protectedUids.length > 0) {
-    logger.info(
-      `Protecting ${protectedUids.length} messages with active alert matches`,
-    );
-
-    // Prune messages older than cutoff, EXCLUDING those with active alert matches
-    const result = db
-      .delete(messages)
-      .where(
-        and(
-          sql`${messages.time} < ${messageCutoff}`,
-          notInArray(messages.uid, protectedUids),
-        ),
-      )
-      .returning({ id: messages.id })
-      .all();
-
-    prunedMessages = result.length;
-  } else {
-    // No protected messages, prune normally
-    const result = db
-      .delete(messages)
-      .where(sql`${messages.time} < ${messageCutoff}`)
-      .returning({ id: messages.id })
-      .all();
-
-    prunedMessages = result.length;
-  }
+  const prunedMessages = result.length;
 
   logger.info(`Pruned ${prunedMessages} messages`);
 

@@ -105,6 +105,13 @@ export function initDatabase(
     // Increase mmap_size for better performance (256MB)
     sqliteConnection.pragma("mmap_size = 268435456");
 
+    // Lower auto-checkpoint threshold from the default 1000 pages (~4 MB) to
+    // 400 pages (~1.6 MB). With the status emitter creating short read transactions
+    // every 30 seconds, PASSIVE auto-checkpoint fires in the gaps between them.
+    // A lower threshold keeps the WAL small so it never accumulates hundreds of MB
+    // of un-checkpointed FTS5 writes between scheduled TRUNCATE checkpoints.
+    sqliteConnection.pragma("wal_autocheckpoint = 400");
+
     // Initialize Drizzle ORM
     drizzleClient = drizzle(sqliteConnection, { schema });
 
