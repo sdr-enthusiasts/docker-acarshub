@@ -105,6 +105,8 @@ rootfs/webapp/static/images/1year.png
 rootfs/webapp/static/images/24hours.png
 rootfs/webapp/static/images/30days.png
 rootfs/webapp/static/images/6hour.png
+# Node.js dependencies
+node_modules/
 acarshub-typescript/node_modules/
 acarshub-typescript/dist/
 acarshub-typescript/dist-min/
@@ -124,14 +126,15 @@ rootfs/webapp/static/images/*week.png
 rootfs/webapp/static/images/*months.png
 rootfs/webapp/static/images/*year.png
 rootfs/webapp/data/acars-metadata.json
-rootfs/webapp/data/metadata.json
-rootfs/webapp/data/ground-stations.json
 package/
 rootfs/webapp/templates/index.html
 rootfs/webapp/templates/helppage.MD
 rootfs/webapp/templates
 rootfs/webapp/static
-acarshub/node_modules
+acarshub/node_modules/
+acarshub-react/node_modules/
+acarshub-backend/node_modules/
+acarshub-types/node_modules/
 **/dist/**
 .venv
 rootfs/webapp/bin
@@ -147,8 +150,11 @@ docker_acarshub.egg-info
 .pdm-python
 *.sqlite
 *.rrd
+*.rrd.back
 .pre-commit-config.yaml
 *.db
+*.db-shm
+*.db-wal
 .env
 __pycache__/
 
@@ -157,3 +163,21 @@ acarshub-react/playwright-report/
 acarshub-react/test-results/
 acarshub-react/.playwright/
 test-results
+
+# Vitest coverage output (generated HTML/JSON reports — not for commit)
+acarshub-react/coverage/
+acarshub-backend/coverage/
+
+# Test fixture exceptions — test-fixtures/test.rrd IS committed even though
+# *.rrd is globally ignored above (production RRD files must not be committed)
+!test-fixtures/test.rrd
+!test-fixtures/test.rrd.meta.json
+
+# Test fixture exceptions — test-fixtures/seed.db IS committed even though
+# *.db is globally ignored above (production databases must not be committed)
+!test-fixtures/seed.db
+!test-fixtures/seed.db.meta.json
+
+# Local dev HeyWhatsThat cache files (written when HEYWHATSTHAT_SAVE points to the repo root)
+geo.json
+geo.json.meta.json

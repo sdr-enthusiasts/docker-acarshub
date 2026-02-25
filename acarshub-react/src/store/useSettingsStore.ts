@@ -37,7 +37,7 @@ import { syncLoggerWithSettings } from "../utils/logger";
 /**
  * Settings Store State
  */
-interface SettingsState {
+export interface SettingsState {
   // Current settings
   settings: UserSettings;
 
@@ -84,9 +84,12 @@ interface SettingsState {
   setShowOnlyLADD: (enabled: boolean) => void;
   setShowOpenAIP: (enabled: boolean) => void;
   setShowRainViewer: (enabled: boolean) => void;
+  setShowHeyWhatsThat: (enabled: boolean) => void;
   setUseSprites: (enabled: boolean) => void;
   setColorByDecoder: (enabled: boolean) => void;
   setGroundAltitudeThreshold: (altitude: number) => void;
+  setMapSidebarWidth: (width: number) => void;
+  setMapSidebarCollapsed: (collapsed: boolean) => void;
 
   // GeoJSON overlay actions
   setGeoJSONOverlay: (overlayId: string, enabled: boolean) => void;
@@ -166,13 +169,16 @@ const getDefaultSettings = (): UserSettings => {
       enabledGeoJSONOverlays: [],
       showOpenAIP: false,
       showRainViewer: false,
+      showHeyWhatsThat: true,
+      mapSidebarWidth: 408,
+      mapSidebarCollapsed: false,
     },
     advanced: {
       logLevel: import.meta.env.PROD ? "warn" : "info",
       persistLogs: true,
     },
     updatedAt: Date.now(),
-    version: 6,
+    version: 9,
   };
   return defaults;
 };
@@ -506,6 +512,15 @@ export const useSettingsStore = create<SettingsState>()(
           },
         })),
 
+      setShowHeyWhatsThat: (enabled) =>
+        set((state) => ({
+          settings: {
+            ...state.settings,
+            map: { ...state.settings.map, showHeyWhatsThat: enabled },
+            updatedAt: Date.now(),
+          },
+        })),
+
       setUseSprites: (enabled) =>
         set((state) => ({
           settings: {
@@ -531,6 +546,30 @@ export const useSettingsStore = create<SettingsState>()(
             map: {
               ...state.settings.map,
               groundAltitudeThreshold: Math.max(0, altitude),
+            },
+            updatedAt: Date.now(),
+          },
+        })),
+
+      setMapSidebarWidth: (width) =>
+        set((state) => ({
+          settings: {
+            ...state.settings,
+            map: {
+              ...state.settings.map,
+              mapSidebarWidth: Math.max(320, Math.min(600, width)),
+            },
+            updatedAt: Date.now(),
+          },
+        })),
+
+      setMapSidebarCollapsed: (collapsed) =>
+        set((state) => ({
+          settings: {
+            ...state.settings,
+            map: {
+              ...state.settings.map,
+              mapSidebarCollapsed: collapsed,
             },
             updatedAt: Date.now(),
           },
@@ -735,17 +774,17 @@ export const useSettingsStore = create<SettingsState>()(
     }),
     {
       name: "acarshub-settings",
-      version: 6,
+      version: 9,
       // Migrate old settings if needed
       migrate: (persistedState: unknown, version: number) => {
         const state = persistedState as SettingsState;
 
-        // Version 0 -> 6: Reset to defaults
+        // Version 0 -> 9: Reset to defaults
         if (version === 0) {
           return { settings: getDefaultSettings() };
         }
 
-        // Version 1 -> 6: Add map settings and advanced settings
+        // Version 1 -> 9: Add map settings and advanced settings
         if (version === 1) {
           const defaults = getDefaultSettings();
           return {
@@ -754,12 +793,12 @@ export const useSettingsStore = create<SettingsState>()(
               ...state.settings,
               map: defaults.map,
               advanced: defaults.advanced,
-              version: 6,
+              version: 9,
             },
           };
         }
 
-        // Version 2 -> 6: Add showOnlyMilitary and showOnlyInteresting to map settings
+        // Version 2 -> 9: Add showOnlyMilitary and showOnlyInteresting to map settings
         if (version === 2) {
           return {
             ...state,
@@ -773,13 +812,16 @@ export const useSettingsStore = create<SettingsState>()(
                 showOnlyLADD: false,
                 showOpenAIP: false,
                 showRainViewer: false,
+                showHeyWhatsThat: true,
+                mapSidebarWidth: 408,
+                mapSidebarCollapsed: false,
               },
-              version: 6,
+              version: 9,
             },
           };
         }
 
-        // Version 3 -> 6: Add showOpenAIP and showRainViewer to map settings
+        // Version 3 -> 9: Add showOpenAIP and showRainViewer to map settings
         if (version === 3) {
           return {
             ...state,
@@ -789,13 +831,16 @@ export const useSettingsStore = create<SettingsState>()(
                 ...state.settings.map,
                 showOpenAIP: false,
                 showRainViewer: false,
+                showHeyWhatsThat: true,
+                mapSidebarWidth: 408,
+                mapSidebarCollapsed: false,
               },
-              version: 6,
+              version: 9,
             },
           };
         }
 
-        // Version 4 -> 6: Add groundAltitudeThreshold to map settings
+        // Version 4 -> 9: Add groundAltitudeThreshold to map settings
         if (version === 4) {
           return {
             ...state,
@@ -805,13 +850,16 @@ export const useSettingsStore = create<SettingsState>()(
                 ...state.settings.map,
                 groundAltitudeThreshold: 500,
                 useSprites: true,
+                showHeyWhatsThat: true,
+                mapSidebarWidth: 408,
+                mapSidebarCollapsed: false,
               },
-              version: 6,
+              version: 9,
             },
           };
         }
 
-        // Version 5 -> 6: Fix useSprites to default to true
+        // Version 5 -> 9: Fix useSprites to default to true
         if (version === 5) {
           return {
             ...state,
@@ -820,8 +868,59 @@ export const useSettingsStore = create<SettingsState>()(
               map: {
                 ...state.settings.map,
                 useSprites: true,
+                showHeyWhatsThat: true,
+                mapSidebarWidth: 408,
+                mapSidebarCollapsed: false,
               },
-              version: 6,
+              version: 9,
+            },
+          };
+        }
+
+        // Version 6 -> 9: Add mapSidebarWidth to map settings
+        if (version === 6) {
+          return {
+            ...state,
+            settings: {
+              ...state.settings,
+              map: {
+                ...state.settings.map,
+                showHeyWhatsThat: true,
+                mapSidebarWidth: 408,
+                mapSidebarCollapsed: false,
+              },
+              version: 9,
+            },
+          };
+        }
+
+        // Version 7 -> 9: Add mapSidebarCollapsed to map settings
+        if (version === 7) {
+          return {
+            ...state,
+            settings: {
+              ...state.settings,
+              map: {
+                ...state.settings.map,
+                showHeyWhatsThat: true,
+                mapSidebarCollapsed: false,
+              },
+              version: 9,
+            },
+          };
+        }
+
+        // Version 8 -> 9: Add showHeyWhatsThat to map settings
+        if (version === 8) {
+          return {
+            ...state,
+            settings: {
+              ...state.settings,
+              map: {
+                ...state.settings.map,
+                showHeyWhatsThat: true,
+              },
+              version: 9,
             },
           };
         }

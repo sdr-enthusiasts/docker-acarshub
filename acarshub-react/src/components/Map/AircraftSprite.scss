@@ -22,9 +22,17 @@
   outline: none;
 
   // Sprite background - default state (Mocha theme)
-  background-image: url("/static/sprites/spritesheet-mocha-default.png");
+  // image-set() serves WebP to capable browsers (~25-35% smaller) and falls
+  // back to PNG for older browsers.  Both files are generated at build time
+  // by scripts/generate-colored-sprites.ts.
+  background-image: image-set(
+    url("../../assets/sprites/spritesheet-mocha-default.webp")
+      type("image/webp"),
+    url("../../assets/sprites/spritesheet-mocha-default.png") type("image/png")
+  );
   background-repeat: no-repeat;
-  background-size: 345.6px 1425.6px; /* 60% of 576px x 2376px */
+  /* background-size is set via inline style, computed from spritesheet.json metadata
+     (sheetWidth * 0.6 x sheetHeight * 0.6) — see SpriteLoader.getCSSBackgroundSize() */
   width: 43.2px; /* 60% of 72px */
   height: 43.2px; /* 60% of 72px */
   cursor: pointer;
@@ -36,34 +44,58 @@
 
   // Alert state - has alert conditions (red)
   &.has-alerts {
-    background-image: url("/static/sprites/spritesheet-mocha-alerts.png");
+    background-image: image-set(
+      url("../../assets/sprites/spritesheet-mocha-alerts.webp")
+        type("image/webp"),
+      url("../../assets/sprites/spritesheet-mocha-alerts.png") type("image/png")
+    );
     animation: pulse-alert 2s ease-in-out infinite;
   }
 
   // Low altitude state - below 500ft (gray)
   &.low-altitude {
-    background-image: url("/static/sprites/spritesheet-mocha-lowalt.png");
+    background-image: image-set(
+      url("../../assets/sprites/spritesheet-mocha-lowalt.webp")
+        type("image/webp"),
+      url("../../assets/sprites/spritesheet-mocha-lowalt.png") type("image/png")
+    );
   }
 
   // Decoder-type colors (when colorByDecoder is enabled)
   &.decoder-acars {
-    background-image: url("/static/sprites/spritesheet-mocha-acars.png");
+    background-image: image-set(
+      url("../../assets/sprites/spritesheet-mocha-acars.webp")
+        type("image/webp"),
+      url("../../assets/sprites/spritesheet-mocha-acars.png") type("image/png")
+    );
   }
 
   &.decoder-vdlm {
-    background-image: url("/static/sprites/spritesheet-mocha-vdlm.png");
+    background-image: image-set(
+      url("../../assets/sprites/spritesheet-mocha-vdlm.webp") type("image/webp"),
+      url("../../assets/sprites/spritesheet-mocha-vdlm.png") type("image/png")
+    );
   }
 
   &.decoder-hfdl {
-    background-image: url("/static/sprites/spritesheet-mocha-hfdl.png");
+    background-image: image-set(
+      url("../../assets/sprites/spritesheet-mocha-hfdl.webp") type("image/webp"),
+      url("../../assets/sprites/spritesheet-mocha-hfdl.png") type("image/png")
+    );
   }
 
   &.decoder-imsl {
-    background-image: url("/static/sprites/spritesheet-mocha-imsl.png");
+    background-image: image-set(
+      url("../../assets/sprites/spritesheet-mocha-imsl.webp") type("image/webp"),
+      url("../../assets/sprites/spritesheet-mocha-imsl.png") type("image/png")
+    );
   }
 
   &.decoder-irdm {
-    background-image: url("/static/sprites/spritesheet-mocha-irdm.png");
+    background-image: image-set(
+      url("../../assets/sprites/spritesheet-mocha-irdm.webp") type("image/webp"),
+      url("../../assets/sprites/spritesheet-mocha-irdm.png") type("image/png")
+    );
   }
 
   // Hover state - slight scale up
@@ -157,37 +189,65 @@
 // Latte (light theme) overrides - use different colored sprite sheets
 [data-theme="light"] .aircraft-sprite {
   // Default state - Latte
-  background-image: url("/static/sprites/spritesheet-latte-default.png");
+  background-image: image-set(
+    url("../../assets/sprites/spritesheet-latte-default.webp")
+      type("image/webp"),
+    url("../../assets/sprites/spritesheet-latte-default.png") type("image/png")
+  );
 
   // Alert state - Latte (red)
   &.has-alerts {
-    background-image: url("/static/sprites/spritesheet-latte-alerts.png");
+    background-image: image-set(
+      url("../../assets/sprites/spritesheet-latte-alerts.webp")
+        type("image/webp"),
+      url("../../assets/sprites/spritesheet-latte-alerts.png") type("image/png")
+    );
   }
 
   // Low altitude state - Latte (gray)
   &.low-altitude {
-    background-image: url("/static/sprites/spritesheet-latte-lowalt.png");
+    background-image: image-set(
+      url("../../assets/sprites/spritesheet-latte-lowalt.webp")
+        type("image/webp"),
+      url("../../assets/sprites/spritesheet-latte-lowalt.png") type("image/png")
+    );
   }
 
   // Decoder-type colors (when colorByDecoder is enabled)
   &.decoder-acars {
-    background-image: url("/static/sprites/spritesheet-latte-acars.png");
+    background-image: image-set(
+      url("../../assets/sprites/spritesheet-latte-acars.webp")
+        type("image/webp"),
+      url("../../assets/sprites/spritesheet-latte-acars.png") type("image/png")
+    );
   }
 
   &.decoder-vdlm {
-    background-image: url("/static/sprites/spritesheet-latte-vdlm.png");
+    background-image: image-set(
+      url("../../assets/sprites/spritesheet-latte-vdlm.webp") type("image/webp"),
+      url("../../assets/sprites/spritesheet-latte-vdlm.png") type("image/png")
+    );
   }
 
   &.decoder-hfdl {
-    background-image: url("/static/sprites/spritesheet-latte-hfdl.png");
+    background-image: image-set(
+      url("../../assets/sprites/spritesheet-latte-hfdl.webp") type("image/webp"),
+      url("../../assets/sprites/spritesheet-latte-hfdl.png") type("image/png")
+    );
   }
 
   &.decoder-imsl {
-    background-image: url("/static/sprites/spritesheet-latte-imsl.png");
+    background-image: image-set(
+      url("../../assets/sprites/spritesheet-latte-imsl.webp") type("image/webp"),
+      url("../../assets/sprites/spritesheet-latte-imsl.png") type("image/png")
+    );
   }
 
   &.decoder-irdm {
-    background-image: url("/static/sprites/spritesheet-latte-irdm.png");
+    background-image: image-set(
+      url("../../assets/sprites/spritesheet-latte-irdm.webp") type("image/webp"),
+      url("../../assets/sprites/spritesheet-latte-irdm.png") type("image/png")
+    );
   }
 }
 

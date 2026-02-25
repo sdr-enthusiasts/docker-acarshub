@@ -14,19 +14,106 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-import { faChevronDown } from "@fortawesome/free-solid-svg-icons/faChevronDown";
-import { faFilter } from "@fortawesome/free-solid-svg-icons/faFilter";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAppStore } from "../../store/useAppStore";
 import { useSettingsStore } from "../../store/useSettingsStore";
-import type { PairedAircraft } from "../../utils/aircraftPairing";
+import type { DecoderType, PairedAircraft } from "../../utils/aircraftPairing";
 import {
   formatAltitude,
   formatGroundSpeed,
   getDisplayCallsign,
 } from "../../utils/aircraftPairing";
+import { IconChevronDown, IconChevronLeft, IconFilter } from "../icons";
+import type { ViewportBounds } from "./AircraftMarkers";
 import "../../styles/components/_aircraft-list.scss";
+
+// Minimum sidebar width mirrors the CSS default
+const SIDEBAR_MIN_WIDTH = 335;
+
+// ── Alerts column widths ─────────────────────────────────────────────────────
+// Phase 1 (sidebar 335 → 344 px): alerts column grows from narrow to full.
+const ALERTS_MIN_WIDTH = 44; // shows "#"
+const ALERTS_FULL_WIDTH = 68; // shows "Alerts"
+
+// ── Messages column widths ───────────────────────────────────────────────────
+// Phase 2 (sidebar 344 → 388 px): messages column grows from narrow to full.
+const MSGS_MIN_WIDTH = 44; // shows "#"
+const MSGS_MEDIUM_WIDTH = 56; // shows "Msgs"
+const MSGS_FULL_WIDTH = 88; // shows "Messages"
+
+// ── Phase boundaries (sidebar px) ────────────────────────────────────────────
+// After PHASE1_END the alerts column is at its maximum; extra width goes to msgs.
+// After PHASE2_END both fixed columns are at max; extra width flows into callsign
+// (decoder badges become visible one at a time).
+const PHASE1_END = SIDEBAR_MIN_WIDTH + (ALERTS_FULL_WIDTH - ALERTS_MIN_WIDTH); // 344
+const PHASE2_END = PHASE1_END + (MSGS_FULL_WIDTH - MSGS_MIN_WIDTH); // 388
+
+// ── Decoder badge sizing ──────────────────────────────────────────────────────
+// Each badge is 14 px wide + ~3 px margin ≈ 17 px; we budget 20 px per badge
+// to leave a small breathing gap.  Badges only appear in Phase 3 (sidebar
+// wider than PHASE2_END), so that callsign width is not affected in phases 1-2.
+const BADGE_WIDTH_PX = 20;
+
+/**
+ * Map a normalised DecoderType to the CSS BEM modifier used for colouring
+ * the checkmark badge in the callsign cell.
+ */
+const DECODER_CSS_MODIFIER: Record<DecoderType, string> = {
+  ACARS: "acars",
+  VDLM2: "vdlm2",
+  HFDL: "hfdl",
+  IMSL: "imsl",
+  IRDM: "irdm",
+};
+
+/**
+ * Compute the alerts and messages column widths for a given sidebar width.
+ *
+ * Expansion is staged so the callsign column never changes width in phases 1-2:
+ *   Phase 1 (320 → 344 px): alerts column grows 44 → 68 px.
+ *   Phase 2 (344 → 388 px): messages column grows 44 → 88 px.
+ *   Phase 3 (388 px +):     both columns stay at max; callsign grows.
+ */
+function computeColumnWidths(width: number): {
+  msgsWidth: number;
+  alertsWidth: number;
+} {
+  if (width <= SIDEBAR_MIN_WIDTH) {
+    return { msgsWidth: MSGS_MIN_WIDTH, alertsWidth: ALERTS_MIN_WIDTH };
+  }
+  if (width <= PHASE1_END) {
+    // Phase 1 – only alerts grows
+    return {
+      alertsWidth: ALERTS_MIN_WIDTH + (width - SIDEBAR_MIN_WIDTH),
+      msgsWidth: MSGS_MIN_WIDTH,
+    };
+  }
+  if (width <= PHASE2_END) {
+    // Phase 2 – alerts at max, msgs grows
+    return {
+      alertsWidth: ALERTS_FULL_WIDTH,
+      msgsWidth: MSGS_MIN_WIDTH + (width - PHASE1_END),
+    };
+  }
+  // Phase 3 – both at max, callsign absorbs the rest
+  return { msgsWidth: MSGS_FULL_WIDTH, alertsWidth: ALERTS_FULL_WIDTH };
+}
+
+/**
+ * Calculate how many decoder badges to display given the current sidebar width.
+ *
+ * Badges only appear in Phase 3 (sidebar > PHASE2_END) so that the callsign
+ * column is not widened during the alerts/messages expansion phases.
+ * Each additional 20 px of Phase-3 width reveals one more badge (max 5).
+ * Always returns at least 1 so there is no dead zone just past PHASE2_END.
+ */
+function calcMaxDecoderBadges(width: number): number {
+  if (width <= PHASE2_END) return 1;
+  return Math.max(
+    1,
+    Math.min(5, Math.floor((width - PHASE2_END) / BADGE_WIDTH_PX)),
+  );
+}
 
 interface AircraftListProps {
   aircraft: PairedAircraft[];
@@ -37,6 +124,20 @@ interface AircraftListProps {
   isPaused?: boolean;
   /** Callback when pause button is clicked */
   onPauseToggle?: () => void;
+  /** Callback when collapse button is clicked */
+  onCollapseToggle?: () => void;
+  /**
+   * Current map viewport bounds (exact, unbuffered).
+   * When provided, enables the "Visible Only" filter which restricts the list
+   * to aircraft whose position falls within the visible map area.
+   */
+  viewportBounds?: ViewportBounds | null;
+  /**
+   * Current sidebar width in pixels.
+   * Used to adapt column headers and decoder badge count as the user resizes.
+   * Defaults to 360 (minimum width) when not provided.
+   */
+  sidebarWidth?: number;
 }
 
 type SortField =
@@ -72,7 +173,87 @@ export function AircraftList({
   hoveredAircraft,
   isPaused = false,
   onPauseToggle,
+  onCollapseToggle,
+  viewportBounds,
+  sidebarWidth,
 }: AircraftListProps) {
+  // The root element ref is used for two purposes:
+  //   1. ResizeObserver – tracks actual rendered width so that header text and
+  //      badge counts update live as the user drags the sidebar (the CSS
+  //      custom property change is instant but the React prop only updates on
+  //      mouseup, so prop-based thresholds always lag behind).
+  //   2. CSS custom property injection – sets --msgs-col-width and
+  //      --alerts-col-width so the table columns resize deterministically
+  //      instead of relying on table-layout:auto heuristics.
+  const listRef = useRef<HTMLDivElement>(null);
+
+  // Actual rendered width, updated by ResizeObserver.
+  // Initialise from the prop so tests/SSR have a reasonable starting value.
+  const [renderedWidth, setRenderedWidth] = useState<number>(
+    () => sidebarWidth ?? SIDEBAR_MIN_WIDTH,
+  );
+
+  useEffect(() => {
+    const el = listRef.current;
+    if (!el) return;
+
+    // Capture initial width synchronously before the first paint so there is
+    // no flash of wrong-width headers on mount.
+    setRenderedWidth(Math.round(el.getBoundingClientRect().width));
+
+    const ro = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        setRenderedWidth(Math.round(entry.contentRect.width));
+      }
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []); // intentionally empty – fires once; ResizeObserver handles updates
+
+  // Use the live measured width for all responsive decisions.
+  const effectiveWidth = renderedWidth;
+
+  // Compute the staged column widths once; used for both CSS custom properties
+  // and for deriving the column header labels below.
+  const { msgsWidth, alertsWidth } = useMemo(
+    () => computeColumnWidths(effectiveWidth),
+    [effectiveWidth],
+  );
+
+  // Column header text follows the column pixel width thresholds.
+  const messagesHeaderText = useMemo<string>(() => {
+    if (msgsWidth >= MSGS_FULL_WIDTH) return "Messages";
+    if (msgsWidth >= MSGS_MEDIUM_WIDTH) return "Msgs";
+    return "#";
+  }, [msgsWidth]);
+
+  const alertsHeaderText = useMemo<string>(() => {
+    if (alertsWidth >= ALERTS_FULL_WIDTH) return "Alerts";
+    return "#";
+  }, [alertsWidth]);
+
+  // How many decoder-type badges to render per row.
+  // Zero until Phase 3 (sidebar > PHASE2_END) so that badges never force the
+  // callsign column to widen during the alerts/messages expansion phases.
+  const maxDecoderBadges = useMemo<number>(
+    () => calcMaxDecoderBadges(effectiveWidth),
+    [effectiveWidth],
+  );
+
+  // Drive the messages/alerts column widths via CSS custom properties so the
+  // table layout is deterministic regardless of browser table-layout quirks.
+  // The callsign column absorbs all remaining space via width:auto in SCSS.
+  const applyColumnWidths = useCallback(() => {
+    const el = listRef.current;
+    if (!el) return;
+    el.style.setProperty("--msgs-col-width", `${msgsWidth}px`);
+    el.style.setProperty("--alerts-col-width", `${alertsWidth}px`);
+  }, [msgsWidth, alertsWidth]);
+
+  useEffect(() => {
+    applyColumnWidths();
+  }, [applyColumnWidths]);
+
   const altitudeUnit = useSettingsStore(
     (state) => state.settings.regional.altitudeUnit,
   );
@@ -118,6 +299,11 @@ export function AircraftList({
 
   const [showLADDOnly, setShowLADDOnly] = useState(() => {
     const saved = localStorage.getItem("aircraftList.showLADDOnly");
+    return saved === "true";
+  });
+
+  const [showVisibleOnly, setShowVisibleOnly] = useState(() => {
+    const saved = localStorage.getItem("aircraftList.showVisibleOnly");
     return saved === "true";
   });
 
@@ -206,6 +392,11 @@ export function AircraftList({
   const handleShowLADDOnlyChange = (value: boolean) => {
     setShowLADDOnly(value);
     localStorage.setItem("aircraftList.showLADDOnly", String(value));
+  };
+
+  const handleShowVisibleOnlyChange = (value: boolean) => {
+    setShowVisibleOnly(value);
+    localStorage.setItem("aircraftList.showVisibleOnly", String(value));
   };
 
   const handleMarkAllAsRead = () => {
@@ -305,6 +496,30 @@ export function AircraftList({
       });
     }
 
+    // Visible-only filter: restrict list to aircraft inside the current
+    // map viewport.  Aircraft without a position are always excluded when
+    // this filter is active because they cannot be "on screen".
+    // The bounds are exact (no buffer) so the list reflects precisely what
+    // the user can see.  When viewportBounds is null (map not yet loaded)
+    // the filter is skipped gracefully.
+    if (showVisibleOnly && viewportBounds) {
+      filtered = filtered.filter((a) => {
+        if (a.lat === undefined || a.lon === undefined) return false;
+
+        const inLat =
+          a.lat >= viewportBounds.south && a.lat <= viewportBounds.north;
+
+        // Handle antimeridian crossing: when west > east the viewport wraps
+        // around the ±180° line.
+        const inLng =
+          viewportBounds.east >= viewportBounds.west
+            ? a.lon >= viewportBounds.west && a.lon <= viewportBounds.east
+            : a.lon >= viewportBounds.west || a.lon <= viewportBounds.east;
+
+        return inLat && inLng;
+      });
+    }
+
     return filtered;
   }, [
     aircraft,
@@ -316,6 +531,8 @@ export function AircraftList({
     showInterestingOnly,
     showPIAOnly,
     showLADDOnly,
+    showVisibleOnly,
+    viewportBounds,
     readMessageUids,
   ]);
 
@@ -401,6 +618,7 @@ export function AircraftList({
     setShowInterestingOnly(false);
     setShowPIAOnly(false);
     setShowLADDOnly(false);
+    setShowVisibleOnly(false);
     localStorage.removeItem("aircraftList.textFilter");
     localStorage.removeItem("aircraftList.showAcarsOnly");
     localStorage.removeItem("aircraftList.showAlertsOnly");
@@ -409,6 +627,7 @@ export function AircraftList({
     localStorage.removeItem("aircraftList.showInterestingOnly");
     localStorage.removeItem("aircraftList.showPIAOnly");
     localStorage.removeItem("aircraftList.showLADDOnly");
+    localStorage.removeItem("aircraftList.showVisibleOnly");
   };
 
   const hasActiveFilters =
@@ -419,7 +638,8 @@ export function AircraftList({
     showMilitaryOnly ||
     showInterestingOnly ||
     showPIAOnly ||
-    showLADDOnly;
+    showLADDOnly ||
+    showVisibleOnly;
 
   const activeFilterCount = [
     showAcarsOnly,
@@ -429,10 +649,11 @@ export function AircraftList({
     showInterestingOnly,
     showPIAOnly,
     showLADDOnly,
+    showVisibleOnly,
   ].filter(Boolean).length;
 
   return (
-    <div className="aircraft-list">
+    <div className="aircraft-list" ref={listRef}>
       {/* Header with stats and pause button */}
       <div className="aircraft-list__header">
         <div className="aircraft-list__stats">
@@ -446,20 +667,33 @@ export function AircraftList({
             </span>
           )}
         </div>
-        {onPauseToggle && (
-          <button
-            type="button"
-            className={`aircraft-list__pause-button ${isPaused ? "aircraft-list__pause-button--paused" : ""}`}
-            onClick={onPauseToggle}
-            title={
-              isPaused
-                ? "Resume updates (or press 'p')"
-                : "Pause updates (or press 'p')"
-            }
-          >
-            {isPaused ? "▶" : "⏸"}
-          </button>
-        )}
+        <div className="aircraft-list__header-actions">
+          {onPauseToggle && (
+            <button
+              type="button"
+              className={`aircraft-list__pause-button ${isPaused ? "aircraft-list__pause-button--paused" : ""}`}
+              onClick={onPauseToggle}
+              title={
+                isPaused
+                  ? "Resume updates (or press 'p')"
+                  : "Pause updates (or press 'p')"
+              }
+            >
+              {isPaused ? "▶" : "⏸"}
+            </button>
+          )}
+          {onCollapseToggle && (
+            <button
+              type="button"
+              className="aircraft-list__collapse-button"
+              onClick={onCollapseToggle}
+              title="Collapse sidebar"
+              aria-label="Collapse sidebar"
+            >
+              <IconChevronLeft />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Filters */}
@@ -480,17 +714,14 @@ export function AircraftList({
             aria-label="Filter aircraft"
             aria-expanded={filterDropdownOpen}
           >
-            <FontAwesomeIcon icon={faFilter} />
+            <IconFilter />
             <span>Filters</span>
             {activeFilterCount > 0 && (
               <span className="aircraft-list__filter-badge">
                 {activeFilterCount}
               </span>
             )}
-            <FontAwesomeIcon
-              icon={faChevronDown}
-              className="aircraft-list__filter-chevron"
-            />
+            <IconChevronDown className="aircraft-list__filter-chevron" />
           </button>
 
           {filterDropdownOpen && (
@@ -560,6 +791,28 @@ export function AircraftList({
                   onChange={(e) => handleShowLADDOnlyChange(e.target.checked)}
                 />
                 <span>LADD Aircraft</span>
+              </label>
+
+              <div className="aircraft-list__filter-divider" />
+
+              <label
+                className={`aircraft-list__filter-toggle ${!viewportBounds ? "aircraft-list__filter-toggle--disabled" : ""}`}
+                title={
+                  !viewportBounds
+                    ? "Available once the map has loaded"
+                    : "Show only aircraft currently visible on the map"
+                }
+              >
+                <input
+                  type="checkbox"
+                  checked={showVisibleOnly}
+                  disabled={!viewportBounds}
+                  onChange={(e) =>
+                    handleShowVisibleOnlyChange(e.target.checked)
+                  }
+                  aria-label="Visible Only"
+                />
+                <span>Visible Only</span>
               </label>
 
               {hasActiveFilters && (
@@ -689,7 +942,7 @@ export function AircraftList({
                     onClick={() => handleSortChange("messages")}
                     title="Messages"
                   >
-                    #
+                    {messagesHeaderText}
                     {sortField === "messages" && (
                       <span className="aircraft-list__sort-icon">
                         {sortDirection === "asc" ? "↑" : "↓"}
@@ -708,7 +961,7 @@ export function AircraftList({
                     onClick={() => handleSortChange("alerts")}
                     title="Alerts"
                   >
-                    #
+                    {alertsHeaderText}
                     {sortField === "alerts" && (
                       <span className="aircraft-list__sort-icon">
                         {sortDirection === "asc" ? "↑" : "↓"}
@@ -733,14 +986,18 @@ export function AircraftList({
                 >
                   <td className="aircraft-list__callsign">
                     {getDisplayCallsign(a)}
-                    {a.hasMessages && (
-                      <span
-                        className="aircraft-list__badge aircraft-list__badge--messages"
-                        title="Has ACARS messages"
-                      >
-                        ✓
-                      </span>
-                    )}
+                    {a.decoderTypes.length > 0 &&
+                      a.decoderTypes.slice(0, maxDecoderBadges).map((dt) => (
+                        <span
+                          key={dt}
+                          className={`aircraft-list__decoder-badge aircraft-list__decoder-badge--${DECODER_CSS_MODIFIER[dt]}`}
+                          title={`${dt} messages`}
+                          role="img"
+                          aria-label={`Has ${dt} messages`}
+                        >
+                          &nbsp;
+                        </span>
+                      ))}
                   </td>
                   <td className="aircraft-list__altitude">
                     {formatAltitude(a.alt_baro, altitudeUnit)}

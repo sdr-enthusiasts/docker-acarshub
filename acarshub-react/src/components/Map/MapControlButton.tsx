@@ -14,13 +14,12 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useState } from "react";
+import type { IconComponent } from "../icons";
 
 interface MapControlButtonProps {
-  /** Font Awesome icon to display */
-  icon: IconDefinition;
+  /** Icon component to display */
+  icon: IconComponent;
   /** Whether the control is active/enabled */
   active: boolean;
   /** Callback when button is clicked */
@@ -40,7 +39,7 @@ interface MapControlButtonProps {
  * Used for toggles like showing data blocks, NEXRAD, range rings, etc.
  */
 export function MapControlButton({
-  icon,
+  icon: Icon,
   active,
   onClick,
   tooltip,
@@ -59,7 +58,7 @@ export function MapControlButton({
       disabled={disabled}
       aria-label={tooltip}
     >
-      <FontAwesomeIcon icon={icon} />
+      <Icon />
       {showTooltip && (
         <span className="map-control-button__tooltip">{tooltip}</span>
       )}

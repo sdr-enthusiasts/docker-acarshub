@@ -34,8 +34,10 @@ import { useAppStore } from "../../store/useAppStore";
 import { useSettingsStore } from "../../store/useSettingsStore";
 import type { PairedAircraft } from "../../utils/aircraftPairing";
 import { mapLogger } from "../../utils/logger";
+import type { ViewportBounds } from "./AircraftMarkers";
 import { AircraftMarkers } from "./AircraftMarkers";
 import { GeoJSONOverlays } from "./GeoJSONOverlays";
+import { HeyWhatsThatOverlay } from "./HeyWhatsThatOverlay";
 import { MapContextMenu } from "./MapContextMenu";
 import { NexradOverlay } from "./NexradOverlay";
 import { OpenAIPOverlay } from "./OpenAIPOverlay";
@@ -65,6 +67,11 @@ interface MapComponentProps {
   isPaused?: boolean;
   /** Callback when pause state should be toggled */
   onTogglePause?: () => void;
+  /**
+   * Callback fired whenever the map viewport changes.
+   * Provides exact (unbuffered) bounds for the sidebar "Visible Only" filter.
+   */
+  onViewportBoundsChange?: (bounds: ViewportBounds | null) => void;
 }
 
 /**
@@ -84,6 +91,7 @@ export function MapComponent({
   aircraft,
   isPaused = false,
   onTogglePause,
+  onViewportBoundsChange,
 }: MapComponentProps) {
   const decoders = useAppStore((state) => state.decoders);
   const mapSettings = useSettingsStore((state) => state.settings.map);
@@ -214,7 +222,6 @@ export function MapComponent({
       url: tileUrl,
       minZoom: providerConfig?.minZoom,
       maxZoom: providerConfig?.maxZoom,
-      currentZoom: viewState.zoom,
     });
 
     // Check if this provider has strict zoom constraints (aviation charts)
@@ -289,7 +296,7 @@ export function MapComponent({
         },
       ],
     };
-  }, [mapSettings.provider, mapSettings.customTileUrl, viewState.zoom]);
+  }, [mapSettings.provider, mapSettings.customTileUrl]);
 
   // Handle view state changes
   const handleMove = useCallback(
@@ -466,12 +473,16 @@ export function MapComponent({
         {/* GeoJSON overlays (aviation zones, boundaries, etc.) */}
         <GeoJSONOverlays />
 
+        {/* Hey What's That antenna coverage outline */}
+        <HeyWhatsThatOverlay />
+
         {/* Aircraft markers */}
         <AircraftMarkers
           hoveredAircraftHex={hoveredAircraftHex}
           followedAircraftHex={followedAircraftHex}
           onFollowAircraft={onFollowAircraft}
           aircraft={aircraft}
+          onViewportBoundsChange={onViewportBoundsChange}
         />
       </MapLibreMap>
 

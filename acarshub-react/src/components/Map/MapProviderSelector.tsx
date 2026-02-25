@@ -14,9 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-import { faLayerGroup } from "@fortawesome/free-solid-svg-icons/faLayerGroup";
-import { faXmark } from "@fortawesome/free-solid-svg-icons/faXmark";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useEffect, useRef, useState } from "react";
 import {
   ALL_PROVIDERS,
@@ -27,6 +24,7 @@ import {
 import { useSettingsStore } from "../../store/useSettingsStore";
 import type { MapProvider } from "../../types";
 import { mapLogger } from "../../utils/logger";
+import { IconLayerGroup, IconXmark } from "../icons";
 
 /**
  * MapProviderSelector Component
@@ -125,7 +123,7 @@ export function MapProviderSelector() {
         aria-expanded={isOpen}
         aria-haspopup="true"
       >
-        <FontAwesomeIcon icon={faLayerGroup} />
+        <IconLayerGroup />
       </button>
 
       {isOpen && (
@@ -147,7 +145,7 @@ export function MapProviderSelector() {
               }}
               aria-label="Close menu"
             >
-              <FontAwesomeIcon icon={faXmark} />
+              <IconXmark />
             </button>
           </div>
 

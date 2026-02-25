@@ -14,15 +14,13 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
-import { faEllipsisV } from "@fortawesome/free-solid-svg-icons/faEllipsisV";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useEffect, useRef, useState } from "react";
+import { type IconComponent, IconEllipsisVertical } from "../icons";
 
 interface FilterOption {
   id: string;
   label: string;
-  icon: IconDefinition;
+  icon: IconComponent;
   active: boolean;
   onClick: () => void;
 }
@@ -97,7 +95,7 @@ export function MapFiltersMenu({ filters }: MapFiltersMenuProps) {
         aria-label="More filters"
         aria-expanded={isOpen}
       >
-        <FontAwesomeIcon icon={faEllipsisV} />
+        <IconEllipsisVertical />
         {activeCount > 0 && (
           <span className="map-filters-menu__badge">{activeCount}</span>
         )}
@@ -105,23 +103,23 @@ export function MapFiltersMenu({ filters }: MapFiltersMenuProps) {
 
       {isOpen && (
         <div className="map-filters-menu__dropdown">
-          {filters.map((filter) => (
-            <label key={filter.id} className="map-filters-menu__item">
-              <FontAwesomeIcon
-                icon={filter.icon}
-                className="map-filters-menu__icon"
-              />
-              <span className="map-filters-menu__label">{filter.label}</span>
-              <input
-                type="checkbox"
-                checked={filter.active}
-                onChange={() => {
-                  filter.onClick();
-                }}
-                aria-label={filter.label}
-              />
-            </label>
-          ))}
+          {filters.map((filter) => {
+            const FilterIcon = filter.icon;
+            return (
+              <label key={filter.id} className="map-filters-menu__item">
+                <FilterIcon className="map-filters-menu__icon" />
+                <span className="map-filters-menu__label">{filter.label}</span>
+                <input
+                  type="checkbox"
+                  checked={filter.active}
+                  onChange={() => {
+                    filter.onClick();
+                  }}
+                  aria-label={filter.label}
+                />
+              </label>
+            );
+          })}
         </div>
       )}
     </div>

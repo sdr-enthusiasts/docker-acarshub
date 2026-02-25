@@ -14,7 +14,36 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-import type { ADSBAircraft, AltitudeUnit, MessageGroup } from "../types";
+import type {
+  ADSBAircraft,
+  ADSBSourceType,
+  AltitudeUnit,
+  MessageGroup,
+} from "../types";
+
+/**
+ * Canonical decoder type names used throughout the UI.
+ * Backend may send "VDL-M2" or "VDLM2" – both normalise to "VDLM2".
+ */
+export type DecoderType = "ACARS" | "VDLM2" | "HFDL" | "IMSL" | "IRDM";
+
+/**
+ * Normalise the raw `message_type` string from an AcarsMsg into one of the
+ * known DecoderType values.  Returns undefined for unrecognised types so
+ * callers can filter them out.
+ */
+export function normalizeDecoderType(
+  messageType: string | undefined,
+): DecoderType | undefined {
+  if (!messageType) return undefined;
+  const upper = messageType.toUpperCase().trim();
+  if (upper === "ACARS") return "ACARS";
+  if (upper === "VDL-M2" || upper === "VDLM2") return "VDLM2";
+  if (upper === "HFDL") return "HFDL";
+  if (upper === "IMSL") return "IMSL";
+  if (upper === "IRDM") return "IRDM";
+  return undefined;
+}
 
 /**
  * ADS-B Aircraft with Paired ACARS Data
@@ -31,7 +60,8 @@ export interface PairedAircraft {
   gs?: number; // Ground speed
   track?: number; // Heading
   category?: string; // Aircraft category (string in ADSBAircraft)
-  type?: string; // Aircraft type code (from 't' or 'type' field)
+  type?: string; // ICAO aircraft type designator (e.g. "B738"), from 't' field
+  adsbSourceType?: ADSBSourceType; // Best source / tracking method (adsb_icao, mlat, etc.)
   dbFlags?: number; // Bitfield: military=1, interesting=2, PIA=4, LADD=8
 
   // ACARS pairing data
@@ -41,6 +71,12 @@ export interface PairedAircraft {
   alertCount: number;
   matchedGroup?: MessageGroup;
   matchStrategy?: "hex" | "flight" | "tail" | "none";
+  /**
+   * Decoder types seen for this aircraft, ordered by most-recently-received
+   * first (newest message wins).  Deduplicated – at most one entry per type.
+   * Empty array when there are no ACARS messages.
+   */
+  decoderTypes: DecoderType[];
 }
 
 /**
@@ -126,6 +162,28 @@ function findMessageGroup(
 }
 
 /**
+ * Extract unique decoder types from a message group, ordered newest-first.
+ * Messages are stored newest-first (unshift on arrival), so iterating in
+ * order naturally gives us the most-recently-seen decoder type first.
+ */
+function extractDecoderTypes(group: MessageGroup | undefined): DecoderType[] {
+  if (!group || group.messages.length === 0) return [];
+
+  const seen = new Set<DecoderType>();
+  const result: DecoderType[] = [];
+
+  for (const msg of group.messages) {
+    const decoded = normalizeDecoderType(msg.message_type);
+    if (decoded && !seen.has(decoded)) {
+      seen.add(decoded);
+      result.push(decoded);
+    }
+  }
+
+  return result;
+}
+
+/**
  * Pair ADS-B aircraft with ACARS message groups
  * Returns enriched aircraft data with ACARS information
  *
@@ -156,7 +214,8 @@ export function pairADSBWithACARSMessages(
       gs: aircraft.gs,
       track: aircraft.track,
       category: aircraft.category,
-      type: aircraft.t || aircraft.type, // 't' field contains aircraft type
+      type: aircraft.t, // 't' field is the ICAO aircraft type designator (e.g. "B738")
+      adsbSourceType: aircraft.type, // 'type' field is the position source (adsb_icao, mlat, etc.)
       dbFlags: aircraft.dbFlags, // Bitfield: military=1, interesting=2, PIA=4, LADD=8
       hasMessages: group !== undefined && group.messages.length > 0,
       hasAlerts: group?.has_alerts || false,
@@ -164,10 +223,49 @@ export function pairADSBWithACARSMessages(
       alertCount: group?.num_alerts || 0,
       matchedGroup: group,
       matchStrategy: strategy,
+      decoderTypes: extractDecoderTypes(group),
     };
 
     return paired;
   });
+}
+
+/**
+ * Map an ADSBSourceType to a short, human-readable label for display.
+ *
+ * Rules:
+ * - All "adsr_*" variants → "UAT"  (rebroadcast originally sent via UAT)
+ * - All "tisb_*" variants → "TIS-B"
+ * - All "adsb_*" variants → "ADS-B"
+ * - Specific labels for adsc, mlat, mode_s, other
+ * - Undefined → "ADS-B" (safe fallback for older data)
+ */
+export function formatAdsbSourceType(
+  sourceType: ADSBSourceType | undefined,
+): string {
+  switch (sourceType) {
+    case "adsb_icao":
+    case "adsb_icao_nt":
+    case "adsb_other":
+      return "ADS-B";
+    case "adsr_icao":
+    case "adsr_other":
+      return "UAT";
+    case "tisb_icao":
+    case "tisb_other":
+    case "tisb_trackfile":
+      return "TIS-B";
+    case "adsc":
+      return "ADS-C";
+    case "mlat":
+      return "MLAT";
+    case "mode_s":
+      return "Mode S";
+    case "other":
+      return "Other";
+    default:
+      return "ADS-B";
+  }
 }
 
 /**

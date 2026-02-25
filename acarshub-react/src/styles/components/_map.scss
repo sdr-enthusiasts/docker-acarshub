@@ -40,6 +40,17 @@
     }
   }
 
+  // Ensure MapLibre's native control containers (zoom, compass, scale) render
+  // above aircraft markers (max z-index: 200 for selected aircraft).
+  // These containers sit inside .map-container alongside the markers, so
+  // without an explicit z-index they lose to any marker with z-index > 0.
+  .maplibregl-ctrl-top-right,
+  .maplibregl-ctrl-top-left,
+  .maplibregl-ctrl-bottom-right,
+  .maplibregl-ctrl-bottom-left {
+    z-index: 300;
+  }
+
   // Navigation controls styling
   .maplibregl-ctrl-group {
     background-color: var(--color-surface0);
@@ -149,6 +160,23 @@
         background-color: var(--color-surface1);
         color: var(--color-text);
       }
+    }
+  }
+
+  // GeoJSON feature hover popup content
+  // The outer .maplibregl-popup-content is already themed above;
+  // these classes style the inner layout for overlay popups.
+  .geojson-popup {
+    width: max-content;
+    max-width: 160px;
+    pointer-events: none; // Popup is info-only — no interaction needed
+
+    &__label {
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: var(--color-text);
+      font-family: var(--font-mono);
+      overflow-wrap: break-word;
     }
   }
 

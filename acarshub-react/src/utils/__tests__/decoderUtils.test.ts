@@ -15,10 +15,8 @@
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { AcarsMsg, DecodedText, DecodedTextItem } from "../../types";
+import type { DecodedText, DecodedTextItem } from "../../types";
 import {
-  decodeMessage,
-  decodeMessages,
   formatDecodedText,
   highlightMatchedText,
   loopDecodedArray,
@@ -33,10 +31,8 @@ describe("decoderUtils", () => {
           {
             label: "Flight",
             value: "UAL123",
-            type: "full",
-            code: "UAL123",
           },
-          { label: "Altitude", value: "35000", type: "full", code: "35000" },
+          { label: "Altitude", value: "35000" },
         ];
 
         const result = loopDecodedArray(input);
@@ -45,9 +41,7 @@ describe("decoderUtils", () => {
       });
 
       it("should handle single item array", () => {
-        const input: DecodedTextItem[] = [
-          { label: "Status", value: "OK", type: "full", code: "OK" },
-        ];
+        const input: DecodedTextItem[] = [{ label: "Status", value: "OK" }];
 
         const result = loopDecodedArray(input);
 
@@ -66,7 +60,7 @@ describe("decoderUtils", () => {
         const input: DecodedTextItem[] = [
           // @ts-expect-error - testing handling of null values
           { label: "Flight", value: null },
-          { label: "Altitude", value: "35000", type: "full", code: "35000" },
+          { label: "Altitude", value: "35000" },
         ];
 
         const result = loopDecodedArray(input);
@@ -78,7 +72,7 @@ describe("decoderUtils", () => {
         const input: DecodedTextItem[] = [
           // @ts-expect-error - testing handling of undefined values
           { label: "Flight", value: undefined },
-          { label: "Altitude", value: "35000", type: "full", code: "35000" },
+          { label: "Altitude", value: "35000" },
         ];
 
         const result = loopDecodedArray(input);
@@ -88,8 +82,8 @@ describe("decoderUtils", () => {
 
       it("should handle array with numeric values", () => {
         const input: DecodedTextItem[] = [
-          { label: "Altitude", value: "35000", type: "full", code: "35000" },
-          { label: "Speed", value: "450", type: "full", code: "450" },
+          { label: "Altitude", value: "35000" },
+          { label: "Speed", value: "450" },
         ];
 
         const result = loopDecodedArray(input);
@@ -112,8 +106,8 @@ describe("decoderUtils", () => {
 
       it("should handle array with empty string values", () => {
         const input: DecodedTextItem[] = [
-          { label: "Flight", value: "", type: "full", code: "" },
-          { label: "Tail", value: "N12345", type: "full", code: "N12345" },
+          { label: "Flight", value: "" },
+          { label: "Tail", value: "N12345" },
         ];
 
         const result = loopDecodedArray(input);
@@ -151,8 +145,6 @@ describe("decoderUtils", () => {
         const input: DecodedTextItem = {
           label: "Flight",
           value: "UAL123",
-          type: "full",
-          code: "UAL123",
         };
 
         const result = loopDecodedArray(input);
@@ -218,8 +210,6 @@ describe("decoderUtils", () => {
         const input: DecodedTextItem = {
           label: longLabel,
           value: longValue,
-          type: "full",
-          code: "LONG",
         };
 
         const result = loopDecodedArray(input);
@@ -231,8 +221,6 @@ describe("decoderUtils", () => {
         const input: DecodedTextItem = {
           label: "Status<>",
           value: "OK & READY",
-          type: "full",
-          code: "OK & READY",
         };
 
         const result = loopDecodedArray(input);
@@ -244,8 +232,6 @@ describe("decoderUtils", () => {
         const input: DecodedTextItem = {
           label: "Message",
           value: "Line 1\nLine 2",
-          type: "full",
-          code: "MULTILINE",
         };
 
         const result = loopDecodedArray(input);
@@ -259,8 +245,6 @@ describe("decoderUtils", () => {
           (_, i) => ({
             label: `Label${i}`,
             value: `Value${i}`,
-            type: "full",
-            code: `CODE${i}`,
           }),
         );
 
@@ -724,14 +708,11 @@ describe("decoderUtils", () => {
     describe("basic formatting", () => {
       it("should format decoded text without alert terms", () => {
         const decodedText: DecodedText = {
+          decoder: { name: "test-decoder", decodeLevel: "full" },
           formatted: [
-            { label: "Flight", value: "UAL123", type: "full", code: "UAL123" },
-            { label: "Altitude", value: "35000", type: "full", code: "35000" },
+            { label: "Flight", value: "UAL123" },
+            { label: "Altitude", value: "35000" },
           ],
-          decoder: {
-            decodeLevel: "full",
-            name: "test-decoder",
-          },
         };
 
         const result = formatDecodedText(decodedText);
@@ -745,14 +726,10 @@ describe("decoderUtils", () => {
             {
               label: "Status",
               value: "EMERGENCY",
-              type: "full",
-              code: "EMERGENCY",
             },
             {
               label: "Action",
               value: "DESCENT",
-              type: "full",
-              code: "DESCENT",
             },
           ],
           decoder: {
@@ -790,10 +767,8 @@ describe("decoderUtils", () => {
             {
               label: "Status",
               value: "EMERGENCY MAYDAY",
-              type: "full",
-              code: "EMERGENCY",
             },
-            { label: "Code", value: "7700", type: "full", code: "7700" },
+            { label: "Code", value: "7700" },
           ],
           decoder: {
             decodeLevel: "full",
@@ -819,8 +794,6 @@ describe("decoderUtils", () => {
             {
               label: "Message",
               value: "Fully decoded",
-              type: "full",
-              code: "FULL",
             },
           ],
           decoder: {
@@ -840,8 +813,6 @@ describe("decoderUtils", () => {
             {
               label: "Message",
               value: "Partially decoded",
-              type: "partial",
-              code: "PARTIAL",
             },
           ],
           decoder: {
@@ -877,20 +848,14 @@ describe("decoderUtils", () => {
             {
               label: "Status",
               value: "EMERGENCY",
-              type: "full",
-              code: "EMERGENCY",
             },
             {
               label: "Type",
               value: "MEDICAL EMERGENCY",
-              type: "full",
-              code: "EMERGENCY",
             },
             {
               label: "Code",
               value: "EMERGENCY CODE 7700",
-              type: "full",
-              code: "EMERGENCY",
             },
           ],
           decoder: {
@@ -910,8 +875,8 @@ describe("decoderUtils", () => {
       it("should preserve formatting when no matches", () => {
         const decodedText: DecodedText = {
           formatted: [
-            { label: "Flight", value: "UAL123", type: "full", code: "UAL123" },
-            { label: "Status", value: "NORMAL", type: "full", code: "NORMAL" },
+            { label: "Flight", value: "UAL123" },
+            { label: "Status", value: "NORMAL" },
           ],
           decoder: {
             decodeLevel: "full",
@@ -932,8 +897,6 @@ describe("decoderUtils", () => {
             {
               label: "Status",
               value: "EMERGENCY",
-              type: "full",
-              code: "EMERGENCY",
             },
           ],
           decoder: {
@@ -955,8 +918,6 @@ describe("decoderUtils", () => {
             {
               label: "Status",
               value: "EMERGENCY",
-              type: "full",
-              code: "EMERGENCY",
             },
           ],
           decoder: {
@@ -979,17 +940,13 @@ describe("decoderUtils", () => {
             {
               label: "Message Type",
               value: "Position Report",
-              type: "full",
-              code: "POS",
             },
             {
               label: "Position",
               value: "N40.7128 W74.0060",
-              type: "full",
-              code: "POS",
             },
-            { label: "Altitude", value: "FL350", type: "full", code: "ALT" },
-            { label: "Time", value: "12:34:56", type: "full", code: "TIME" },
+            { label: "Altitude", value: "FL350" },
+            { label: "Time", value: "12:34:56" },
           ],
           decoder: {
             decodeLevel: "full",
@@ -1010,20 +967,14 @@ describe("decoderUtils", () => {
             {
               label: "Type",
               value: "Weather Report",
-              type: "full",
-              code: "WEATHER",
             },
             {
               label: "Conditions",
               value: "SEVERE TURBULENCE",
-              type: "full",
-              code: "TURB",
             },
             {
               label: "Action",
               value: "EMERGENCY DESCENT",
-              type: "full",
-              code: "EMERGENCY",
             },
           ],
           decoder: {
@@ -1040,241 +991,6 @@ describe("decoderUtils", () => {
           '<mark class="alert-highlight">EMERGENCY</mark>',
         );
       });
-    });
-  });
-
-  describe("decodeMessage", () => {
-    describe("message with existing decodedText", () => {
-      it("should return message as-is if decodedText already exists", () => {
-        const message: AcarsMsg = {
-          uid: "test-123",
-          timestamp: Date.now(),
-          station_id: "TEST",
-          text: "Test message",
-          label: "H1",
-          message_type: "ACARS",
-          decodedText: {
-            decoder: {
-              name: "test-decoder",
-              decodeLevel: "full" as const,
-            },
-            formatted: [
-              {
-                type: "test",
-                code: "TST",
-                label: "Test",
-                value: "Data",
-              },
-            ],
-          },
-        };
-
-        const result = decodeMessage(message);
-
-        expect(result).toBe(message);
-        expect(result.decodedText).toBeDefined();
-      });
-    });
-
-    describe("message without text", () => {
-      it("should return message as-is if no text", () => {
-        const message: AcarsMsg = {
-          uid: "test-123",
-          timestamp: Date.now(),
-          station_id: "TEST",
-          label: "H1",
-          message_type: "ACARS",
-        };
-
-        const result = decodeMessage(message);
-
-        expect(result).toBe(message);
-        expect(result.decodedText).toBeUndefined();
-      });
-    });
-
-    describe("message decoding with real decoder", () => {
-      it("should decode H1 position report", () => {
-        const message: AcarsMsg = {
-          uid: "test-pos-123",
-          timestamp: Date.now(),
-          station_id: "TEST",
-          text: "#DFBPOS/N40439W073462,KJFK,092345",
-          label: "H1",
-          message_type: "ACARS",
-        };
-
-        const result = decodeMessage(message);
-
-        expect(result.uid).toBe(message.uid);
-        expect(result.text).toBe(message.text);
-        // Decoder may or may not decode this depending on format
-        // Just verify it returns a valid message
-        expect(result).toBeDefined();
-      });
-
-      it("should handle messages that cannot be decoded", () => {
-        const message: AcarsMsg = {
-          uid: "test-unknown-123",
-          timestamp: Date.now(),
-          station_id: "TEST",
-          text: "Some random text that won't decode",
-          label: "ZZ",
-          message_type: "ACARS",
-        };
-
-        const result = decodeMessage(message);
-
-        expect(result.uid).toBe(message.uid);
-        expect(result.text).toBe(message.text);
-        // Should return message without decodedText if decoding fails
-        expect(result).toBeDefined();
-      });
-
-      it("should preserve all original message fields", () => {
-        const message: AcarsMsg = {
-          uid: "test-preserve-123",
-          timestamp: 1234567890,
-          station_id: "STATION1",
-          text: "Test message",
-          label: "5Z",
-          message_type: "ACARS",
-          flight: "UAL123",
-          tail: "N12345",
-          freq: 131550,
-        };
-
-        const result = decodeMessage(message);
-
-        expect(result.uid).toBe(message.uid);
-        expect(result.timestamp).toBe(message.timestamp);
-        expect(result.station_id).toBe(message.station_id);
-        expect(result.flight).toBe(message.flight);
-        expect(result.tail).toBe(message.tail);
-        expect(result.freq).toBe(message.freq);
-      });
-    });
-  });
-
-  describe("decodeMessages", () => {
-    it("should decode array of messages", () => {
-      const messages: AcarsMsg[] = [
-        {
-          uid: "test-1",
-          timestamp: Date.now(),
-          station_id: "TEST",
-          text: "Message 1",
-          label: "H1",
-          message_type: "ACARS",
-        },
-        {
-          uid: "test-2",
-          timestamp: Date.now(),
-          station_id: "TEST",
-          text: "Message 2",
-          label: "5Z",
-          message_type: "ACARS",
-        },
-      ];
-
-      const result = decodeMessages(messages);
-
-      expect(result).toHaveLength(2);
-      expect(result[0].uid).toBe("test-1");
-      expect(result[1].uid).toBe("test-2");
-    });
-
-    it("should handle empty array", () => {
-      const messages: AcarsMsg[] = [];
-
-      const result = decodeMessages(messages);
-
-      expect(result).toHaveLength(0);
-    });
-
-    it("should preserve messages with existing decodedText", () => {
-      const messages: AcarsMsg[] = [
-        {
-          uid: "test-1",
-          timestamp: Date.now(),
-          station_id: "TEST",
-          text: "Message 1",
-          label: "H1",
-          message_type: "ACARS",
-          decodedText: {
-            decoder: {
-              name: "test-decoder",
-              decodeLevel: "full" as const,
-            },
-            formatted: [
-              {
-                type: "test",
-                code: "TST",
-                label: "Test",
-                value: "Data",
-              },
-            ],
-          },
-        },
-      ];
-
-      const result = decodeMessages(messages);
-
-      expect(result).toHaveLength(1);
-      expect(result[0].decodedText).toBeDefined();
-      expect(result[0].decodedText?.decoder.name).toBe("test-decoder");
-    });
-
-    it("should decode multiple messages independently", () => {
-      const messages: AcarsMsg[] = [
-        {
-          uid: "test-1",
-          timestamp: Date.now(),
-          station_id: "STATION1",
-          text: "First message",
-          label: "H1",
-          message_type: "ACARS",
-        },
-        {
-          uid: "test-2",
-          timestamp: Date.now(),
-          station_id: "STATION2",
-          text: "Second message",
-          label: "5Z",
-          message_type: "ACARS",
-          decodedText: {
-            decoder: {
-              name: "pre-decoded",
-              decodeLevel: "full" as const,
-            },
-            formatted: [
-              {
-                type: "existing",
-                code: "EXT",
-                label: "Existing",
-                value: "Decode",
-              },
-            ],
-          },
-        },
-        {
-          uid: "test-3",
-          timestamp: Date.now(),
-          station_id: "STATION3",
-          text: "Third message",
-          label: "Q0",
-          message_type: "ACARS",
-        },
-      ];
-
-      const result = decodeMessages(messages);
-
-      expect(result).toHaveLength(3);
-      expect(result[0].uid).toBe("test-1");
-      expect(result[1].uid).toBe("test-2");
-      expect(result[2].uid).toBe("test-3");
-      // Second message should preserve its existing decodedText
-      expect(result[1].decodedText?.decoder.name).toBe("pre-decoded");
     });
   });
 });

@@ -1,0 +1,39 @@
+// Copyright (C) 2022-2026 Frederick Clausen II
+// This file is part of acarshub <https://github.com/sdr-enthusiasts/docker-acarshub>.
+
+// acarshub is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+
+// acarshub is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+
+// You should have received a copy of the GNU General Public License
+// along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
+
+/**
+ * Inline SVG Icon Base Styles
+ *
+ * The global _reset.scss applies `display: block; height: auto` to all SVG
+ * elements. Decorative inline icons need different behaviour — they must flow
+ * with surrounding text, size relative to the current font, and align to the
+ * text baseline.
+ *
+ * Every icon component in src/components/icons/index.tsx applies the `.icon`
+ * class automatically, so these overrides are applied consistently without
+ * requiring any per-call-site CSS.
+ *
+ * The vertical-align value (-0.125em) matches Font Awesome's svg-inline--fa
+ * rule so that icon-in-button layouts remain unchanged after the FA migration.
+ */
+
+.icon {
+  display: inline-block;
+  height: 1em;
+  width: auto;
+  overflow: visible; // Paths that extend slightly outside viewBox still render
+  vertical-align: -0.125em; // Optical alignment with adjacent text/labels
+}

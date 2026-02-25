@@ -1,0 +1,148 @@
+---
+# GitHub Action: Update TRACON Boundaries
+#
+# This workflow automatically monitors the vatsimnetwork/simaware-tracon-project
+# repository for new releases and creates a pull request when updated boundary
+# data is available.
+#
+# What it does:
+# 1. Checks the current TRACON boundary version in acarshub-react/ATTRIBUTIONS.md
+# 2. Queries the GitHub API for the latest simaware-tracon-project release
+# 3. If a new version is found:
+#    - Downloads TRACONBoundaries.geojson from the release
+#    - Updates the version number in ATTRIBUTIONS.md
+#    - Creates a pull request with the changes
+# 4. If already up to date, exits without changes
+#
+# Schedule: Runs daily at 3 AM UTC
+# Manual trigger: Available via workflow_dispatch
+#
+# Required secrets:
+# - PAT: Personal Access Token with repo and pull_request permissions
+#
+# Files updated:
+# - acarshub-react/src/assets/geojson/TRACONBoundaries.geojson
+# - acarshub-react/ATTRIBUTIONS.md
+#
+# License: simaware-tracon-project is licensed under MIT
+# Source: https://github.com/vatsimnetwork/simaware-tracon-project
+
+name: Update TRACON Boundaries
+
+on:
+  schedule:
+    # Run daily at 3 AM UTC to check for new releases
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  check-and-update:
+    name: Check for new simaware-tracon-project release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          persist-credentials: false
+          ref: main
+
+      - name: Get current TRACON boundary version
+        id: current-version
+        run: |
+          current_version=$(sed -n '/^### SimAware TRACON Project/,/^##/p' acarshub-react/ATTRIBUTIONS.md | grep '\*\*Version\*\*:' | sed 's/^.*: //')
+          echo "version=${current_version}" >> "$GITHUB_OUTPUT"
+          echo "Current version: ${current_version}"
+
+      - name: Get latest simaware-tracon-project release
+        id: latest-release
+        run: |
+          latest_tag=$(curl -s https://api.github.com/repos/vatsimnetwork/simaware-tracon-project/releases/latest | jq -r '.tag_name')
+          echo "tag=${latest_tag}" >> "$GITHUB_OUTPUT"
+          echo "Latest release: ${latest_tag}"
+
+      - name: Compare versions
+        id: compare
+        run: |
+          current="${{ steps.current-version.outputs.version }}"
+          latest="${{ steps.latest-release.outputs.tag }}"
+
+          if [ "$current" = "$latest" ]; then
+            echo "needs_update=false" >> "$GITHUB_OUTPUT"
+            echo "No update needed - already at latest version: ${current}"
+          else
+            echo "needs_update=true" >> "$GITHUB_OUTPUT"
+            echo "Update needed - current: ${current}, latest: ${latest}"
+          fi
+
+      - name: Download new TRACON boundary data
+        if: steps.compare.outputs.needs_update == 'true'
+        run: |
+          release_tag="${{ steps.latest-release.outputs.tag }}"
+          base_url="https://github.com/vatsimnetwork/simaware-tracon-project/releases/download/${release_tag}"
+
+          echo "Downloading TRACONBoundaries.geojson..."
+          curl -L -o acarshub-react/src/assets/geojson/TRACONBoundaries.geojson \
+            "${base_url}/TRACONBoundaries.geojson"
+
+          echo "Download complete"
+
+      - name: Update ATTRIBUTIONS.md version
+        if: steps.compare.outputs.needs_update == 'true'
+        run: |
+          new_version="${{ steps.latest-release.outputs.tag }}"
+          sed -i "/^### SimAware TRACON Project/,/^##/{s/^\(- \*\*Version\*\*:\).*/\1 ${new_version}/}" acarshub-react/ATTRIBUTIONS.md
+          echo "Updated ATTRIBUTIONS.md to version ${new_version}"
+
+      - name: Configure Git identity
+        if: steps.compare.outputs.needs_update == 'true'
+        run: |
+          git config --global user.email "noreply@github.com"
+          git config --global user.name "github[bot]"
+
+      - name: Create Pull Request
+        if: steps.compare.outputs.needs_update == 'true'
+        uses: peter-evans/create-pull-request@c0f553fe549906ede9cf27b5156039d195d2ece0 # v8.1.0
+        with:
+          token: ${{ secrets.PAT }}
+          commit-message: "chore: update TRACON boundaries to ${{ steps.latest-release.outputs.tag }}"
+          branch: update-tracon-boundaries-${{ steps.latest-release.outputs.tag }}
+          delete-branch: true
+          title: "chore: update TRACON boundaries to ${{ steps.latest-release.outputs.tag }}"
+          body: |
+            ## TRACON Boundary Update
+
+            This PR updates the SimAware TRACON boundary GeoJSON data to version **${{ steps.latest-release.outputs.tag }}**.
+
+            ### Changes
+            - ✅ Updated `TRACONBoundaries.geojson` from simaware-tracon-project release
+            - ✅ Updated version in `ATTRIBUTIONS.md`
+
+            ### Source
+            - **Repository**: https://github.com/vatsimnetwork/simaware-tracon-project
+            - **Release**: https://github.com/vatsimnetwork/simaware-tracon-project/releases/tag/${{ steps.latest-release.outputs.tag }}
+            - **License**: MIT
+
+            ### Testing Checklist
+            - [ ] TRACON boundaries render correctly on the live map
+            - [ ] No console errors related to GeoJSON loading
+            - [ ] Boundary polygons appear at expected locations
+            - [ ] Mobile and desktop views both work
+
+            ---
+
+            *This PR was automatically created by the `update-tracon-boundaries` GitHub Action.*
+          labels: |
+            dependencies
+            automated
+          draft: false
+
+      - name: No update needed
+        if: steps.compare.outputs.needs_update == 'false'
+        run: |
+          echo "✅ TRACON boundaries are already up to date at version ${{ steps.current-version.outputs.version }}"

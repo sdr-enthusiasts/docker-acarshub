@@ -14,17 +14,18 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-import { faChevronLeft } from "@fortawesome/free-solid-svg-icons/faChevronLeft";
-import { faChevronRight } from "@fortawesome/free-solid-svg-icons/faChevronRight";
-import { faSearch } from "@fortawesome/free-solid-svg-icons/faSearch";
-import { faTimes } from "@fortawesome/free-solid-svg-icons/faTimes";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  IconChevronLeft,
+  IconChevronRight,
+  IconSearch,
+  IconXmark,
+} from "../components/icons";
 import { MessageCard } from "../components/MessageCard";
 import { socketService } from "../services/socket";
 import { useAppStore } from "../store/useAppStore";
 import type { AcarsMsg, CurrentSearch, SearchHtmlMsg } from "../types";
-import { decodeMessages } from "../utils/decoderUtils";
+
 import { uiLogger } from "../utils/logger";
 import { formatBytes } from "../utils/stringUtils";
 
@@ -112,6 +113,7 @@ export const SearchPage = () => {
       icao: "",
       msg_text: "",
       station_id: "",
+      msg_type: "",
     },
   );
 
@@ -147,9 +149,8 @@ export const SearchPage = () => {
   // Wait for socket to be initialized before subscribing
   useEffect(() => {
     const handleSearchResults = (data: SearchHtmlMsg) => {
-      // Decode messages that don't have decodedText from database
-      const decodedResults = decodeMessages(data.msghtml);
-      setResults(decodedResults);
+      // Backend already enriches messages with decodedText
+      setResults(data.msghtml);
       setTotalResults(data.num_results);
       setQueryTime(data.query_time);
       setIsSearching(false);
@@ -202,6 +203,15 @@ export const SearchPage = () => {
     activeSearch,
   ]);
 
+  // Clear debounce timer on unmount to prevent stale callbacks firing after tests / navigation
+  useEffect(() => {
+    return () => {
+      if (searchDebounceTimer.current) {
+        clearTimeout(searchDebounceTimer.current);
+      }
+    };
+  }, []);
+
   useEffect(() => {
     setActivePageName("Search");
     socketService.notifyPageChange("Search");
@@ -215,15 +225,32 @@ export const SearchPage = () => {
     return Object.values(params).every((value) => value.trim() === "");
   };
 
-  // Execute search query
-  const executeSearch = (params: CurrentSearch, page: number = 0) => {
+  // Execute search query.
+  //
+  // When `submitIntent` is true (form Submit button clicked) an empty form is
+  // treated as "show all" and the query is still sent — the backend's
+  // searchWithLike with no conditions returns all messages (paginated).
+  //
+  // When `submitIntent` is false (debounced input change) an empty params
+  // object clears the results without querying, preventing a full-table scan
+  // every time the user deletes the last character from a field.
+  const executeSearch = (
+    params: CurrentSearch,
+    page: number = 0,
+    submitIntent = false,
+  ) => {
     if (isSearchEmpty(params)) {
-      setResults([]);
-      setTotalResults(0);
-      setQueryTime(null);
-      setActiveSearch(null);
-      setCurrentPage(0);
-      return;
+      if (!submitIntent) {
+        // Debounce path: user cleared the last field — reset the results panel
+        setResults([]);
+        setTotalResults(0);
+        setQueryTime(null);
+        setActiveSearch(null);
+        setCurrentPage(0);
+        return;
+      }
+      // Form submit path: empty fields = "show all" — fall through and query
+      uiLogger.debug("Empty form submitted — sending show-all query");
     }
 
     setIsSearching(true);
@@ -265,9 +292,10 @@ export const SearchPage = () => {
       clearTimeout(searchDebounceTimer.current);
     }
 
-    // Debounce search by 500ms
+    // Debounce search by 500ms — submitIntent=false so clearing all fields
+    // resets results without firing a full-table scan.
     searchDebounceTimer.current = setTimeout(() => {
-      executeSearch(newParams, 0);
+      executeSearch(newParams, 0, false);
     }, 500);
   };
 
@@ -280,7 +308,8 @@ export const SearchPage = () => {
       clearTimeout(searchDebounceTimer.current);
     }
 
-    executeSearch(searchParams, 0);
+    // submitIntent=true: empty form → show-all query
+    executeSearch(searchParams, 0, true);
 
     // On mobile, scroll to results section after a short delay to allow results to load
     if (window.innerWidth < MOBILE_BREAKPOINT) {
@@ -308,6 +337,7 @@ export const SearchPage = () => {
       icao: "",
       msg_text: "",
       station_id: "",
+      msg_type: "",
     };
 
     setSearchParams(emptyParams);
@@ -513,8 +543,25 @@ export const SearchPage = () => {
               />
             </div>
 
-            {/* Message Text - Full width */}
-            <div className="search-page__form-field search-page__form-field--full">
+            {/* Decoder Type */}
+            <div className="search-page__form-field">
+              <label htmlFor="search-msg-type">Decoder Type</label>
+              <select
+                id="search-msg-type"
+                value={searchParams.msg_type}
+                onChange={(e) => handleInputChange("msg_type", e.target.value)}
+              >
+                <option value="">All</option>
+                <option value="ACARS">ACARS</option>
+                <option value="VDLM2">VDLM2</option>
+                <option value="HFDL">HFDL</option>
+                <option value="IMSL">IMSL</option>
+                <option value="IRDM">IRDM</option>
+              </select>
+            </div>
+
+            {/* Message Text - spans cols 2-3 on desktop, full width on mobile/tablet */}
+            <div className="search-page__form-field search-page__form-field--msg-text">
               <label htmlFor="search-text">Message Text</label>
               <input
                 id="search-text"
@@ -533,7 +580,7 @@ export const SearchPage = () => {
               className="button button--primary"
               disabled={isSearching}
             >
-              <FontAwesomeIcon icon={faSearch} />
+              <IconSearch />
               {isSearching ? "Searching..." : "Search"}
             </button>
             <button
@@ -542,7 +589,7 @@ export const SearchPage = () => {
               onClick={handleClear}
               disabled={isSearching}
             >
-              <FontAwesomeIcon icon={faTimes} />
+              <IconXmark />
               Clear
             </button>
           </div>
@@ -574,7 +621,7 @@ export const SearchPage = () => {
               disabled={currentPage === 0}
               aria-label="Previous page"
             >
-              <FontAwesomeIcon icon={faChevronLeft} />
+              <IconChevronLeft />
             </button>
 
             {pageNumbers.map((page, idx) => {
@@ -614,7 +661,7 @@ export const SearchPage = () => {
               disabled={currentPage === totalPages - 1}
               aria-label="Next page"
             >
-              <FontAwesomeIcon icon={faChevronRight} />
+              <IconChevronRight />
             </button>
           </div>
         )}
@@ -648,7 +695,7 @@ export const SearchPage = () => {
               disabled={currentPage === 0}
               aria-label="Previous page"
             >
-              <FontAwesomeIcon icon={faChevronLeft} />
+              <IconChevronLeft />
             </button>
 
             {pageNumbers.map((page, idx) => {
@@ -688,7 +735,7 @@ export const SearchPage = () => {
               disabled={currentPage === totalPages - 1}
               aria-label="Next page"
             >
-              <FontAwesomeIcon icon={faChevronRight} />
+              <IconChevronRight />
             </button>
           </div>
         )}

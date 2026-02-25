@@ -20,7 +20,6 @@ import {
   checkMultiPartDuplicate,
   isMultiPartMessage,
   mergeMultiPartMessage,
-  messageDecoder,
 } from "../services/messageDecoder";
 import type {
   AcarshubVersion,
@@ -46,7 +45,7 @@ import { useSettingsStore } from "./useSettingsStore";
  * Application State Interface
  * Defines the complete state tree for ACARS Hub
  */
-interface AppState {
+export interface AppState {
   // Connection state
   isConnected: boolean;
   setConnected: (connected: boolean) => void;
@@ -124,6 +123,10 @@ interface AppState {
   // ADS-B aircraft data
   adsbAircraft: ADSBData | null;
   setAdsbAircraft: (data: ADSBData) => void;
+
+  // Station IDs (unique sources seen across all message types)
+  stationIds: string[];
+  setStationIds: (ids: string[]) => void;
 
   // UI state
   currentPage: string;
@@ -234,25 +237,9 @@ export const useAppStore = create<AppState>((set, get) => {
           storeLogger.trace("Generated UID for message", { uid: message.uid });
         }
 
-        // Decode the message if it has text
-        const decodedMessage = messageDecoder.decode(message);
-
-        // Log decoding result for alerts
-        if (message.matched) {
-          storeLogger.info("Alert message BEFORE/AFTER decoding", {
-            uid: decodedMessage.uid,
-            originalMatched: message.matched,
-            decodedMatched: decodedMessage.matched,
-            matchedPreserved: message.matched === decodedMessage.matched,
-            hadText: !!message.text,
-            hasDecodedText: !!decodedMessage.decodedText,
-            decodedTextLength:
-              decodedMessage.decodedText?.formatted?.length || 0,
-          });
-        }
-
-        // Backend has already set matched flags - just trust them!
-        // No client-side matching needed
+        // Backend has already decoded the message text and set matched flags.
+        // No client-side decoding or matching needed.
+        const decodedMessage = message;
 
         // Sync notifications with settings store
         const notifications = {
@@ -489,7 +476,6 @@ export const useAppStore = create<AppState>((set, get) => {
                   updatedMessages[i] = mergeMultiPartMessage(
                     existingMsg,
                     decodedMessage,
-                    messageDecoder,
                   );
                 }
               } else {
@@ -497,7 +483,6 @@ export const useAppStore = create<AppState>((set, get) => {
                 updatedMessages[i] = mergeMultiPartMessage(
                   existingMsg,
                   decodedMessage,
-                  messageDecoder,
                 );
               }
 
@@ -746,8 +731,8 @@ export const useAppStore = create<AppState>((set, get) => {
           });
         }
 
-        // Decode the message if it has text
-        const decodedMessage = messageDecoder.decode(message);
+        // Backend has already decoded the message text. Use it directly.
+        const decodedMessage = message;
 
         const newAlertGroups = new Map(state.alertMessageGroups);
 
@@ -976,6 +961,10 @@ export const useAppStore = create<AppState>((set, get) => {
       set({ adsbAircraft: data });
     },
 
+    // Station IDs
+    stationIds: [],
+    setStationIds: (ids) => set({ stationIds: ids }),
+
     // UI state
     currentPage: "Live Messages",
     setCurrentPage: (page) => set({ currentPage: page }),
@@ -1093,11 +1082,16 @@ export const selectAdsbEnabled = (state: AppState) =>
   state.decoders?.adsb.enabled ?? false;
 
 /**
- * Expose store to window in development/test mode for E2E testing
- * This allows Playwright tests to inject state (e.g., decoder configuration)
- * Production builds will tree-shake this away
+ * Expose store to window in development/test mode for E2E testing, and also
+ * when the build was created with VITE_E2E=true (used by `just test-e2e-docker`).
+ * This allows Playwright tests to inject state (e.g., decoder configuration).
+ * Production builds without VITE_E2E set will tree-shake this away.
  */
-if (import.meta.env.MODE === "development" || import.meta.env.MODE === "test") {
+if (
+  import.meta.env.MODE === "development" ||
+  import.meta.env.MODE === "test" ||
+  import.meta.env.VITE_E2E === "true"
+) {
   // @ts-expect-error - Required for E2E testing window exposure
   window.__ACARS_STORE__ = useAppStore;
 }

@@ -14,9 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-import { messageDecoder } from "../services/messageDecoder";
 import type {
-  AcarsMsg,
   DecodedText,
   DecodedTextItem,
   LibacarsData,
@@ -276,29 +274,4 @@ export function formatDecodedText(
   }
 
   return formatted;
-}
-
-/**
- * Decode ACARS message text using @airframes/acars-decoder
- * This is used for database search results and historical alerts that don't have decodedText
- * @param message - AcarsMsg object from backend
- * @returns Message with decodedText populated (if decode succeeded)
- */
-export function decodeMessage(message: AcarsMsg): AcarsMsg {
-  // If message already has decodedText, return as-is
-  if (message.decodedText) {
-    return message;
-  }
-
-  // Use the existing messageDecoder service which properly handles the @airframes/acars-decoder library
-  return messageDecoder.decode(message);
-}
-
-/**
- * Decode an array of messages
- * @param messages - Array of AcarsMsg objects
- * @returns Array with decoded messages
- */
-export function decodeMessages(messages: AcarsMsg[]): AcarsMsg[] {
-  return messages.map((message) => decodeMessage(message));
 }

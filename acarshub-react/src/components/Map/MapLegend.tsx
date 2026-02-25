@@ -14,11 +14,9 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-import { faQuestionCircle } from "@fortawesome/free-solid-svg-icons/faQuestionCircle";
-import { faTimes } from "@fortawesome/free-solid-svg-icons/faTimes";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useState } from "react";
 import { useSettingsStore } from "../../store/useSettingsStore";
+import { IconQuestionCircle, IconXmark } from "../icons";
 
 /**
  * MapLegend Component
@@ -49,7 +47,7 @@ export function MapLegend() {
         aria-label={isOpen ? "Hide legend" : "Show legend"}
         aria-expanded={isOpen}
       >
-        <FontAwesomeIcon icon={faQuestionCircle} />
+        <IconQuestionCircle />
       </button>
 
       {/* Legend panel */}
@@ -63,7 +61,7 @@ export function MapLegend() {
               onClick={() => setIsOpen(false)}
               aria-label="Close legend"
             >
-              <FontAwesomeIcon icon={faTimes} />
+              <IconXmark />
             </button>
           </div>
 

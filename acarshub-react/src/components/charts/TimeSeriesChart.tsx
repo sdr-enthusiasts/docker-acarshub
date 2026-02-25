@@ -27,10 +27,11 @@ import {
   Tooltip,
 } from "chart.js";
 import "chartjs-adapter-date-fns";
-import { useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import { Line } from "react-chartjs-2";
 import type {
   RRDDataPoint,
+  RRDTimeRange,
   TimePeriod,
 } from "../../hooks/useRRDTimeSeriesData";
 import { useSettingsStore } from "../../store/useSettingsStore";
@@ -71,6 +72,12 @@ interface TimeSeriesChartProps {
   loading?: boolean;
   /** Error message if any */
   error?: string | null;
+  /**
+   * Requested time range in milliseconds.  When provided the x-axis is pinned
+   * to exactly this range so the chart never shows data outside it and always
+   * spans the full requested window (even if some buckets are all-zero).
+   */
+  timeRange?: RRDTimeRange | null;
 }
 
 /**
@@ -90,15 +97,8 @@ export const TimeSeriesChart = ({
   decoderType,
   loading = false,
   error = null,
+  timeRange = null,
 }: TimeSeriesChartProps) => {
-  // Diagnostic logging to detect mount/unmount cycles
-  useEffect(() => {
-    console.log(`[TimeSeriesChart] ${timePeriod} - ${decoderType} MOUNTED`);
-    return () => {
-      console.log(`[TimeSeriesChart] ${timePeriod} - ${decoderType} UNMOUNTED`);
-    };
-  }, [timePeriod, decoderType]);
-
   const theme = useSettingsStore((state) => state.settings.appearance.theme);
   const isDark = theme === "mocha";
 
@@ -310,6 +310,10 @@ export const TimeSeriesChart = ({
       scales: {
         x: {
           type: "time",
+          // Pin the x-axis to the exact requested range when provided.
+          // Without this, Chart.js auto-scales to the data extents, which
+          // causes 1hr/6hr/12hr to all look the same when data is sparse.
+          ...(timeRange ? { min: timeRange.start, max: timeRange.end } : {}),
           time: {
             unit: getTimeUnit(timePeriod),
             displayFormats: {
@@ -347,7 +351,7 @@ export const TimeSeriesChart = ({
         },
       },
     }),
-    [timePeriod, textColor, gridColor, backgroundColor],
+    [timePeriod, textColor, gridColor, backgroundColor, timeRange],
   );
 
   if (error) {

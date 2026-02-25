@@ -14,11 +14,10 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-import { faFighterJet } from "@fortawesome/free-solid-svg-icons/faFighterJet";
-import { faStar } from "@fortawesome/free-solid-svg-icons/faStar";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
+import { IconFighterJet, IconStar } from "../../icons";
 import { MapFiltersMenu } from "../MapFiltersMenu";
 
 describe("MapFiltersMenu", () => {
@@ -26,14 +25,14 @@ describe("MapFiltersMenu", () => {
     {
       id: "military",
       label: "Military",
-      icon: faFighterJet,
+      icon: IconFighterJet,
       active: false,
       onClick: vi.fn(),
     },
     {
       id: "interesting",
       label: "Interesting",
-      icon: faStar,
+      icon: IconStar,
       active: true,
       onClick: vi.fn(),
     },

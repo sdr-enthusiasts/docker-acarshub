@@ -14,50 +14,66 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-import packageJson from "../../package.json";
+/**
+ * Version utilities for ACARS Hub frontend.
+ *
+ * Version strings are baked in at `vite build` time by reading the three
+ * workspace package.json files in vite.config.ts via the `define` option:
+ *
+ *   __CONTAINER_VERSION__  — workspace root package.json  (overall release tag)
+ *   __FRONTEND_VERSION__   — acarshub-react/package.json
+ *   __BACKEND_VERSION__    — acarshub-backend/package.json (informational only
+ *                            at the frontend; the authoritative value is sent
+ *                            by the server in the AcarshubVersion socket event)
+ *
+ * VITE_BUILD_NUMBER is the only value that still comes from the environment at
+ * Docker build time because it is a CI artifact (GitHub Actions run number),
+ * not a version string that lives in source control.
+ */
 
 /**
- * Version Information Interface
+ * Frontend version information derived from package.json files and CI metadata.
  */
 export interface VersionInfo {
-  version: string;
+  /** Version from workspace root package.json (overall container release tag). */
+  containerVersion: string;
+  /** Version from acarshub-react/package.json. */
+  frontendVersion: string;
+  /** Version from acarshub-backend/package.json (as known at build time). */
+  backendVersion: string;
+  /** GitHub Actions run number, or "dev" for local builds. */
   buildNumber: string;
+  /**
+   * Human-readable full version string, e.g.
+   *   "v4.1.0 Build 42"  (Docker/CI build)
+   *   "v4.1.0-alpha.1 (Development)"  (local dev)
+   */
   fullVersion: string;
+  /** True when VITE_BUILD_NUMBER was provided (i.e. this is a Docker/CI build). */
   isDockerBuild: boolean;
 }
 
 /**
- * Get application version information
+ * Returns version information for the application.
  *
- * In development/local builds:
- * - Uses version from package.json
- * - Build number is "dev"
+ * In local dev builds none of the VITE_* env vars are set, so buildNumber
+ * defaults to "dev" and isDockerBuild is false.
  *
- * In Docker builds:
- * - Uses VERSION from environment (injected during Docker build)
- * - Uses BUILD_NUMBER from environment (GitHub Actions run number)
- * - Falls back to package.json if env vars not available
- *
- * @returns Version information object
+ * In Docker/CI builds VITE_BUILD_NUMBER is set to the GitHub Actions run
+ * number, making isDockerBuild true.
  */
 export const getVersionInfo = (): VersionInfo => {
-  // Check if this is a Docker build (env var set during build)
-  const isDockerBuild = import.meta.env.VITE_DOCKER_BUILD === "true";
+  const buildNumber = import.meta.env.VITE_BUILD_NUMBER ?? "dev";
+  const isDockerBuild = buildNumber !== "dev";
 
-  // Get version from environment (Docker) or package.json (dev)
-  const version = import.meta.env.VITE_VERSION || packageJson.version;
-
-  // Get build number from environment (Docker) or use "dev"
-  const buildNumber = import.meta.env.VITE_BUILD_NUMBER || "dev";
-
-  // Format full version string
-  const fullVersion =
-    buildNumber === "dev"
-      ? `v${version} (Development)`
-      : `v${version} Build ${buildNumber}`;
+  const fullVersion = isDockerBuild
+    ? `v${__CONTAINER_VERSION__} Build ${buildNumber}`
+    : `v${__CONTAINER_VERSION__} (Development)`;
 
   return {
-    version,
+    containerVersion: __CONTAINER_VERSION__,
+    frontendVersion: __FRONTEND_VERSION__,
+    backendVersion: __BACKEND_VERSION__,
     buildNumber,
     fullVersion,
     isDockerBuild,
@@ -65,19 +81,8 @@ export const getVersionInfo = (): VersionInfo => {
 };
 
 /**
- * Get formatted version string for display
+ * Returns the formatted full version string for display.
  *
- * @returns Formatted version string (e.g., "v4.0.0 Build 123" or "v4.0.0-alpha.5 (Development)")
+ * @returns e.g. "v4.1.0 Build 42" or "v4.1.0-alpha.1 (Development)"
  */
-export const getFormattedVersion = (): string => {
-  return getVersionInfo().fullVersion;
-};
-
-/**
- * Get package.json version (useful for development)
- *
- * @returns Package.json version string
- */
-export const getPackageVersion = (): string => {
-  return packageJson.version;
-};
+export const getFormattedVersion = (): string => getVersionInfo().fullVersion;

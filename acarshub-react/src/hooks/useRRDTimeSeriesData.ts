@@ -46,11 +46,26 @@ export interface RRDDataPoint {
 }
 
 /**
+ * The time range returned by the backend for this response, in milliseconds.
+ * Both values are always present in backend responses; the hook surfaces them
+ * so the chart can pin its x-axis to the exact requested range rather than
+ * auto-scaling to the data extents.
+ */
+export interface RRDTimeRange {
+  start: number; // Unix timestamp in milliseconds
+  end: number; // Unix timestamp in milliseconds
+}
+
+/**
  * Response from the backend RRD time-series Socket.IO event
  */
 interface RRDTimeSeriesResponse {
   data: RRDDataPoint[];
   time_period?: string;
+  /** Range start in milliseconds (always present in v2+ responses) */
+  start?: number;
+  /** Range end in milliseconds (always present in v2+ responses) */
+  end?: number;
   resolution?: string;
   data_sources?: string[];
   error?: string;
@@ -72,6 +87,7 @@ export const useRRDTimeSeriesData = (
   const [data, setData] = useState<RRDDataPoint[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [timeRange, setTimeRange] = useState<RRDTimeRange | null>(null);
 
   // Get connection state from store
   const isConnected = useAppStore((state) => state.isConnected);
@@ -107,9 +123,14 @@ export const useRRDTimeSeriesData = (
       if (response.error) {
         setError(response.error);
         setData([]);
+        setTimeRange(null);
       } else {
         setError(null);
         setData(response.data);
+        // Capture the range so the chart can pin its x-axis
+        if (response.start !== undefined && response.end !== undefined) {
+          setTimeRange({ start: response.start, end: response.end });
+        }
       }
     };
 
@@ -156,6 +177,7 @@ export const useRRDTimeSeriesData = (
     data,
     loading,
     error,
+    timeRange,
     refresh: fetchData,
   };
 };

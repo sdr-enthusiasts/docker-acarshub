@@ -1,0 +1,62 @@
+# Compiled output
+dist/
+*.tsbuildinfo
+*.js.map
+*.d.ts.map
+
+# Dependencies
+node_modules/
+
+# Logs
+*.log
+npm-debug.log*
+pino-*.log
+
+# Database files (development/testing)
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+*.rrd
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Test artifacts
+test-results/
+playwright-report/
+
+# Temporary files
+*.tmp
+.cache/
+tmp/
+
+# Python cache (if any migration scripts)
+__pycache__/
+*.py[cod]
+
+# Debug files
+*.pid
+*.seed
+*.pid.lock
+
+# Build artifacts
+build/
+.turbo/

@@ -45,6 +45,7 @@ export const useSocketIO = () => {
   const setSignalFreqData = useAppStore((state) => state.setSignalFreqData);
   const setSignalCountData = useAppStore((state) => state.setSignalCountData);
   const setAdsbAircraft = useAppStore((state) => state.setAdsbAircraft);
+  const setStationIds = useAppStore((state) => state.setStationIds);
 
   useEffect(() => {
     socketLogger.info("Setting up Socket.IO connection");
@@ -260,6 +261,14 @@ export const useSocketIO = () => {
       setAlertCount(count);
     });
 
+    // Station IDs (sent on connect and re-broadcast when a new station is seen)
+    socket.on("station_ids", (data) => {
+      socketLogger.debug("Received station IDs update", {
+        count: data.station_ids?.length ?? 0,
+      });
+      setStationIds(data.station_ids ?? []);
+    });
+
     // Statistics events for Stats page
     socket.on("signal_freqs", (freqData) => {
       socketLogger.trace("Received signal frequency data");
@@ -294,6 +303,7 @@ export const useSocketIO = () => {
       socket.off("adsb_aircraft");
       socket.off("signal");
       socket.off("alert_terms");
+      socket.off("station_ids");
       socket.off("signal_freqs");
       socket.off("signal_count");
 
@@ -326,6 +336,7 @@ export const useSocketIO = () => {
     setSignalFreqData,
     setSignalCountData,
     setAdsbAircraft,
+    setStationIds,
   ]);
 
   // Don't return store state - let consumers subscribe directly to avoid stale closures

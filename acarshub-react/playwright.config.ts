@@ -9,6 +9,13 @@ import { defineConfig, devices } from "@playwright/test";
 export default defineConfig({
   testDir: "./e2e",
 
+  /* Exclude full-stack integration tests from the frontend-only E2E suite.
+   * Integration tests require a real backend container (seed DB + Socket.IO)
+   * and are only run via `just test-e2e-fullstack` (docker-compose.test.yml +
+   * playwright.integration.config.ts).  Running them here would always fail
+   * because `test-e2e-docker` only starts a Vite preview server (frontend only). */
+  testIgnore: ["**/integration/**"],
+
   /* Run tests in files in parallel */
   fullyParallel: true,
 
@@ -18,8 +25,11 @@ export default defineConfig({
   /* Retry on CI only */
   retries: process.env.CI ? 2 : 0,
 
-  /* Opt out of parallel tests on CI. */
-  workers: process.env.CI ? 1 : undefined,
+  /* Allow up to 4 parallel workers in CI — enough to run all 5 browser projects
+   * concurrently without overwhelming the vite preview server or CI runner.
+   * Serial (workers=1) made multi-browser runs extremely slow: 7 tests × 5 browsers
+   * × 3 retries each = 105 sequential test slots. */
+  workers: process.env.CI ? 4 : undefined,
 
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: "html",
@@ -48,46 +58,63 @@ export default defineConfig({
     channel: undefined,
   },
 
-  /* Configure projects for major browsers */
+  /* Configure projects for major browsers.
+   *
+   * On NixOS the Playwright-bundled Firefox and WebKit binaries are missing
+   * required system libraries, so those projects are only enabled when running
+   * inside the official Playwright Docker image (set PLAYWRIGHT_DOCKER=true).
+   * The `test-e2e-docker` justfile target sets this automatically.
+   */
   projects: [
     {
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
     },
 
-    // {
-    //   name: "firefox",
-    //   use: { ...devices["Desktop Firefox"] },
-    // },
-
-    // {
-    //   name: "webkit",
-    //   use: { ...devices["Desktop Safari"] },
-    // },
-
-    // /* Test against mobile viewports. */
-    // {
-    //   name: "Mobile Chrome",
-    //   use: { ...devices["Pixel 5"] },
-    // },
-    // {
-    //   name: "Mobile Safari",
-    //   use: { ...devices["iPhone 12"] },
-    // },
+    ...(process.env.PLAYWRIGHT_DOCKER
+      ? [
+          {
+            name: "firefox",
+            use: { ...devices["Desktop Firefox"] },
+          },
+          {
+            name: "webkit",
+            use: { ...devices["Desktop Safari"] },
+          },
+          {
+            name: "Mobile Chrome",
+            use: { ...devices["Pixel 5"] },
+          },
+          {
+            name: "Mobile Safari",
+            use: { ...devices["iPhone 12"] },
+          },
+        ]
+      : []),
   ],
 
   /* Run your local dev server before starting the tests */
   /* NOTE: Dev server must be started manually before running E2E tests */
   /* Run: npm run dev (in separate terminal) */
   /* Then: npm run test:e2e */
-  webServer: process.env.CI
-    ? {
-        command: "npm run dev",
-        url: "http://localhost:3000",
-        reuseExistingServer: true,
-        timeout: 60 * 1000,
-        stdout: "ignore",
-        stderr: "pipe",
-      }
-    : undefined,
+  /*
+   * When running inside Docker (PLAYWRIGHT_DOCKER=true) or CI, serve the
+   * pre-built static bundle via `vite preview` instead of the dev server.
+   * The dev server handles every module request individually — with 16+
+   * concurrent browser workers it gets overwhelmed and tests become flaky.
+   * A built bundle is served as plain static files and handles concurrency
+   * without issue.  The justfile targets build the app before starting the
+   * container, so the dist/ directory is always present.
+   */
+  webServer:
+    process.env.CI || process.env.PLAYWRIGHT_DOCKER
+      ? {
+          command: "npx vite preview --port 3000 --strictPort",
+          url: "http://localhost:3000",
+          reuseExistingServer: true,
+          timeout: 60 * 1000,
+          stdout: "ignore",
+          stderr: "pipe",
+        }
+      : undefined,
 });

@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-import { useEffect, useMemo, useRef } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AlertSoundManager } from "./components/AlertSoundManager.tsx";
 import { ConnectionStatus } from "./components/ConnectionStatus.tsx";
@@ -23,15 +23,52 @@ import { SettingsModal } from "./components/SettingsModal.tsx";
 import { ToastContainer } from "./components/ToastContainer.tsx";
 import { useSocketIO } from "./hooks/useSocketIO.ts";
 import { useThemeAwareMapProvider } from "./hooks/useThemeAwareMapProvider.ts";
-import { AboutPage } from "./pages/AboutPage.tsx";
-import { AlertsPage } from "./pages/AlertsPage.tsx";
-import { LiveMapPage } from "./pages/LiveMapPage.tsx";
+// LiveMessagesPage is the default landing page — keep it eager so it renders
+// immediately without any async chunk fetch on first load.
 import { LiveMessagesPage } from "./pages/LiveMessagesPage.tsx";
-import { SearchPage } from "./pages/SearchPage.tsx";
-import { StatsPage } from "./pages/StatsPage.tsx";
 import { useAppStore } from "./store/useAppStore.ts";
 import { useSettingsStore } from "./store/useSettingsStore.ts";
 import { uiLogger } from "./utils/logger";
+
+// ---------------------------------------------------------------------------
+// Route-based code splitting
+//
+// Heavy pages are loaded lazily so their JS chunks are only fetched when the
+// user actually navigates to those routes.  This keeps the initial JS payload
+// small for the common case (Live Messages page).
+//
+// Heaviest wins:
+//   LiveMapPage  — pulls in maplibre-gl + react-map-gl  (~282 KB gzipped)
+//   StatsPage    — pulls in chart.js + date-fns adapter  (~78 KB gzipped)
+// ---------------------------------------------------------------------------
+const AboutPage = lazy(() =>
+  import("./pages/AboutPage.tsx").then((m) => ({ default: m.AboutPage })),
+);
+const AlertsPage = lazy(() =>
+  import("./pages/AlertsPage.tsx").then((m) => ({ default: m.AlertsPage })),
+);
+const LiveMapPage = lazy(() =>
+  import("./pages/LiveMapPage.tsx").then((m) => ({ default: m.LiveMapPage })),
+);
+const SearchPage = lazy(() =>
+  import("./pages/SearchPage.tsx").then((m) => ({ default: m.SearchPage })),
+);
+const StatsPage = lazy(() =>
+  import("./pages/StatsPage.tsx").then((m) => ({ default: m.StatsPage })),
+);
+
+/**
+ * PageLoader — Suspense fallback shown while a lazy page chunk is fetching.
+ * Reuses the `.loading` / `.loading__spinner` classes from _common.scss so
+ * the spinner matches the rest of the UI without any extra styles.
+ */
+function PageLoader() {
+  return (
+    <output className="loading" aria-label="Loading page">
+      <div className="loading__spinner" />
+    </output>
+  );
+}
 
 /**
  * Main Application Component
@@ -117,27 +154,34 @@ function App() {
 
         {/* Main content area with routing */}
         <main className="app-content">
-          <Routes>
-            {/* Default route redirects to Live Messages */}
-            <Route
-              path="/"
-              element={<Navigate to="/live-messages" replace />}
-            />
+          {/*
+           * Suspense boundary wraps all routes so that when a lazy chunk is
+           * being fetched the PageLoader spinner is shown inside the content
+           * area (not as a full-page overlay), preserving the nav header.
+           */}
+          <Suspense fallback={<PageLoader />}>
+            <Routes>
+              {/* Default route redirects to Live Messages */}
+              <Route
+                path="/"
+                element={<Navigate to="/live-messages" replace />}
+              />
 
-            {/* Main pages */}
-            <Route path="/live-messages" element={<LiveMessagesPage />} />
-            <Route path="/search" element={<SearchPage />} />
-            <Route path="/alerts" element={<AlertsPage />} />
-            <Route path="/status" element={<StatsPage />} />
-            <Route path="/adsb" element={<LiveMapPage />} />
-            <Route path="/about" element={<AboutPage />} />
+              {/* Main pages */}
+              <Route path="/live-messages" element={<LiveMessagesPage />} />
+              <Route path="/search" element={<SearchPage />} />
+              <Route path="/alerts" element={<AlertsPage />} />
+              <Route path="/status" element={<StatsPage />} />
+              <Route path="/adsb" element={<LiveMapPage />} />
+              <Route path="/about" element={<AboutPage />} />
 
-            {/* Catch-all redirect to Live Messages */}
-            <Route
-              path="*"
-              element={<Navigate to="/live-messages" replace />}
-            />
-          </Routes>
+              {/* Catch-all redirect to Live Messages */}
+              <Route
+                path="*"
+                element={<Navigate to="/live-messages" replace />}
+              />
+            </Routes>
+          </Suspense>
         </main>
       </div>
     </BrowserRouter>

@@ -1,13 +1,26 @@
 .git*
+# TypeScript incremental build state - must not enter Docker context because
+# .tsbuildinfo causes tsc to skip emitting output files it thinks are already
+# compiled, but those files don't exist in the container (dist/ is excluded).
+acarshub-backend/tsconfig.tsbuildinfo
+acarshub-react/tsconfig.tsbuildinfo
+acarshub-types/tsconfig.tsbuildinfo
 LICENSE
 README.md
 retired_scripts
 build*.sh
 update-local-acars-decoder.sh
 Logo-Sources
+# Node.js dependencies (workspace root and packages)
+node_modules/
 acarshub-typescript/dist
 acarshub-typescript/node_modules
 acarshub-typescript/test_assets
+acarshub-react/node_modules
+acarshub-backend/node_modules
+acarshub-types/node_modules
+acarshub-types/dist
+acarshub-backend/dist
 rootfs/webapp/static/js
 rootfs/webapp/static/airframes-acars-decoder
 rootfs/webapp/static/css
@@ -28,11 +41,8 @@ rootfs/webapp/static/images/*week.png
 rootfs/webapp/static/images/*months.png
 rootfs/webapp/static/images/*year.png
 rootfs/webapp/data/acars-metadata.json
-rootfs/webapp/data/metadata.json
-rootfs/webapp/data/metadata.json
-rootfs/webapp/data/ground-stations.json
 libseccomp2-checker.sh
-acarshub/node_modules
+acarshub/node_modules/
 .venv
 rootfs/webapp/bin
 rootfs/webapp/lib
@@ -42,5 +52,4 @@ rootfs/webapp/__pycache__
 rootfs/webapp/pyvenv.cfg
 rootfs/webapp/static
 rootfs/webapp/templates
-acarshub-react/node_modules
 test-results

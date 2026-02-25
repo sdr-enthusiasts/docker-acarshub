@@ -72,7 +72,10 @@ describe("useSettingsStore", () => {
       expect(settings.map.showRangeRings).toBe(true);
 
       expect(settings.advanced.persistLogs).toBe(true);
-      expect(settings.version).toBe(6);
+      expect(settings.map.mapSidebarWidth).toBe(408);
+      expect(settings.map.mapSidebarCollapsed).toBe(false);
+      expect(settings.map.showHeyWhatsThat).toBe(true);
+      expect(settings.version).toBe(9);
       expect(settings.updatedAt).toBeGreaterThan(0);
     });
 
@@ -147,10 +150,10 @@ describe("useSettingsStore", () => {
     it("should update dateFormat", () => {
       const { setDateFormat } = useSettingsStore.getState();
 
-      setDateFormat("iso");
+      setDateFormat("ymd");
 
       const { settings } = useSettingsStore.getState();
-      expect(settings.regional.dateFormat).toBe("iso");
+      expect(settings.regional.dateFormat).toBe("ymd");
     });
 
     it("should update timezone", () => {
@@ -185,14 +188,14 @@ describe("useSettingsStore", () => {
 
       updateRegionalSettings({
         timeFormat: "12h",
-        dateFormat: "us",
+        dateFormat: "mdy",
         timezone: "utc",
         locale: "en-GB",
       });
 
       const { settings } = useSettingsStore.getState();
       expect(settings.regional.timeFormat).toBe("12h");
-      expect(settings.regional.dateFormat).toBe("us");
+      expect(settings.regional.dateFormat).toBe("mdy");
       expect(settings.regional.timezone).toBe("utc");
       expect(settings.regional.locale).toBe("en-GB");
       // altitudeUnit should remain at default
@@ -368,10 +371,10 @@ describe("useSettingsStore", () => {
     it("should update map provider", () => {
       const { setMapProvider } = useSettingsStore.getState();
 
-      setMapProvider("maptiler");
+      setMapProvider("carto_dark_all");
 
       const { settings } = useSettingsStore.getState();
-      expect(settings.map.provider).toBe("maptiler");
+      expect(settings.map.provider).toBe("carto_dark_all");
     });
 
     it("should update station location", () => {
@@ -453,8 +456,7 @@ describe("useSettingsStore", () => {
       const { updateMapSettings } = useSettingsStore.getState();
 
       updateMapSettings({
-        provider: "maptiler",
-        maptilerApiKey: "abc123",
+        provider: "carto_dark_all",
         stationLat: 37.7749,
         stationLon: -122.4194,
         rangeRings: [100, 200],
@@ -464,8 +466,7 @@ describe("useSettingsStore", () => {
       });
 
       const { settings } = useSettingsStore.getState();
-      expect(settings.map.provider).toBe("maptiler");
-      expect(settings.map.maptilerApiKey).toBe("abc123");
+      expect(settings.map.provider).toBe("carto_dark_all");
       expect(settings.map.stationLat).toBe(37.7749);
       expect(settings.map.stationLon).toBe(-122.4194);
       expect(settings.map.rangeRings).toEqual([100, 200]);
@@ -543,7 +544,7 @@ describe("useSettingsStore", () => {
       expect(typeof exported).toBe("string");
       const parsed = JSON.parse(exported) as UserSettings;
       expect(parsed.appearance.theme).toBe("latte");
-      expect(parsed.version).toBe(6);
+      expect(parsed.version).toBe(9);
     });
 
     it("should import valid settings JSON", () => {
@@ -557,7 +558,7 @@ describe("useSettingsStore", () => {
         },
         regional: {
           timeFormat: "24h",
-          dateFormat: "iso",
+          dateFormat: "ymd",
           timezone: "utc",
           altitudeUnit: "meters",
         },
@@ -574,8 +575,9 @@ describe("useSettingsStore", () => {
           autoClearMinutes: 30,
         },
         map: {
-          provider: "maptiler",
-          maptilerApiKey: "test-key",
+          provider: "carto_dark_all",
+          customTileUrl: undefined,
+          userSelectedProvider: false,
           stationLat: 51.5,
           stationLon: -0.1,
           rangeRings: [50, 100, 150],
@@ -588,6 +590,19 @@ describe("useSettingsStore", () => {
           showNexrad: true,
           showOnlyUnread: true,
           showRangeRings: false,
+          showOnlyMilitary: false,
+          showOnlyInteresting: false,
+          showOnlyPIA: false,
+          showOnlyLADD: false,
+          showOpenAIP: false,
+          showRainViewer: false,
+          showHeyWhatsThat: true,
+          useSprites: true,
+          colorByDecoder: false,
+          groundAltitudeThreshold: 5000,
+          enabledGeoJSONOverlays: [],
+          mapSidebarWidth: 408,
+          mapSidebarCollapsed: false,
         },
         advanced: {
           logLevel: "debug",
@@ -605,7 +620,7 @@ describe("useSettingsStore", () => {
       expect(settings.regional.timeFormat).toBe("24h");
       expect(settings.notifications.volume).toBe(75);
       expect(settings.data.maxMessagesPerAircraft).toBe(100);
-      expect(settings.map.provider).toBe("maptiler");
+      expect(settings.map.provider).toBe("carto_dark_all");
       expect(settings.advanced.logLevel).toBe("debug");
     });
 
@@ -673,8 +688,9 @@ describe("useSettingsStore", () => {
           autoClearMinutes: 60,
         },
         map: {
-          provider: "carto",
-          maptilerApiKey: undefined,
+          provider: "carto_dark_all",
+          customTileUrl: undefined,
+          userSelectedProvider: false,
           stationLat: 0,
           stationLon: 0,
           rangeRings: [100, 200, 300],
@@ -687,6 +703,19 @@ describe("useSettingsStore", () => {
           showNexrad: false,
           showOnlyUnread: false,
           showRangeRings: true,
+          showOnlyMilitary: false,
+          showOnlyInteresting: false,
+          showOnlyPIA: false,
+          showOnlyLADD: false,
+          showOpenAIP: false,
+          showRainViewer: false,
+          showHeyWhatsThat: true,
+          useSprites: true,
+          colorByDecoder: false,
+          groundAltitudeThreshold: 5000,
+          enabledGeoJSONOverlays: [],
+          mapSidebarWidth: 408,
+          mapSidebarCollapsed: false,
         },
         advanced: {
           logLevel: "info",
@@ -761,7 +790,7 @@ describe("useSettingsStore", () => {
 
       const migrated = migrate(oldState, 0);
 
-      expect(migrated.settings.version).toBe(6);
+      expect(migrated.settings.version).toBe(9);
       expect(migrated.settings.appearance.theme).toBe("mocha"); // Reset to default
       expect(migrated.settings.map).toBeDefined();
       expect(migrated.settings.advanced).toBeDefined();
@@ -780,7 +809,7 @@ describe("useSettingsStore", () => {
           },
           regional: {
             timeFormat: "24h",
-            dateFormat: "iso",
+            dateFormat: "ymd",
             timezone: "utc",
             altitudeUnit: "meters",
           },
@@ -804,7 +833,10 @@ describe("useSettingsStore", () => {
 
       const migrated = migrate(v1State, 1);
 
-      expect(migrated.settings.version).toBe(6);
+      expect(migrated.settings.version).toBe(9);
+      expect(migrated.settings.map.mapSidebarWidth).toBe(408);
+      expect(migrated.settings.map.mapSidebarCollapsed).toBe(false);
+      expect(migrated.settings.map.showHeyWhatsThat).toBe(true);
       // Existing settings preserved
       expect(migrated.settings.appearance.theme).toBe("latte");
       expect(migrated.settings.regional.timeFormat).toBe("24h");
@@ -876,8 +908,7 @@ describe("useSettingsStore", () => {
       };
 
       const migrated = migrate(v3State, 3);
-
-      expect(migrated.settings.version).toBe(6);
+      expect(migrated.settings.version).toBe(9);
       // Existing settings preserved
       expect(migrated.settings.map.showNexrad).toBe(false);
       expect(migrated.settings.map.showOnlyMilitary).toBe(false);
@@ -885,6 +916,7 @@ describe("useSettingsStore", () => {
       // New overlay settings added with defaults
       expect(migrated.settings.map.showOpenAIP).toBe(false);
       expect(migrated.settings.map.showRainViewer).toBe(false);
+      expect(migrated.settings.map.showHeyWhatsThat).toBe(true);
     });
 
     it("should migrate from version 4 to version 6 (add groundAltitudeThreshold)", () => {
@@ -950,13 +982,14 @@ describe("useSettingsStore", () => {
       };
 
       const migrated = migrate(v4State, 4);
-
-      expect(migrated.settings.version).toBe(6);
+      expect(migrated.settings.version).toBe(9);
       // Existing settings preserved
       expect(migrated.settings.map.showOpenAIP).toBe(false);
       expect(migrated.settings.map.showRainViewer).toBe(false);
       // New groundAltitudeThreshold setting added with default
       expect(migrated.settings.map.groundAltitudeThreshold).toBe(500);
+      // showHeyWhatsThat defaults to true (show overlay when configured)
+      expect(migrated.settings.map.showHeyWhatsThat).toBe(true);
     });
 
     it("should return unchanged state for current version", () => {
@@ -967,9 +1000,164 @@ describe("useSettingsStore", () => {
         settings: useSettingsStore.getState().settings,
       };
 
-      const migrated = migrate(currentState, 4);
+      // Version 9 is the current version; migrate should return the state unchanged
+      const migrated = migrate(currentState, 9);
 
       expect(migrated).toEqual(currentState);
+    });
+
+    it("should migrate from version 7 to version 9 (add mapSidebarCollapsed + showHeyWhatsThat)", () => {
+      // biome-ignore lint/suspicious/noExplicitAny: Zustand persist API doesn't expose migrate type
+      const { migrate } = (useSettingsStore as any).persist.getOptions();
+
+      const v7State = {
+        settings: {
+          appearance: {
+            theme: "mocha",
+            showConnectionStatus: true,
+            animations: true,
+          },
+          regional: {
+            timeFormat: "auto",
+            dateFormat: "auto",
+            timezone: "local",
+            altitudeUnit: "feet",
+          },
+          notifications: {
+            desktop: false,
+            sound: false,
+            volume: 50,
+            onPageAlerts: false,
+          },
+          data: {
+            maxMessagesPerAircraft: 50,
+            maxMessageGroups: 50,
+            enableCaching: true,
+            autoClearMinutes: 60,
+          },
+          map: {
+            provider: "carto_dark_all",
+            userSelectedProvider: false,
+            stationLat: 0,
+            stationLon: 0,
+            rangeRings: [100, 200, 300],
+            defaultCenterLat: 0,
+            defaultCenterLon: 0,
+            defaultZoom: 7,
+            useSprites: true,
+            colorByDecoder: false,
+            groundAltitudeThreshold: 500,
+            showOnlyAcars: false,
+            showDatablocks: true,
+            showExtendedDatablocks: false,
+            showNexrad: false,
+            showRangeRings: true,
+            showOnlyUnread: false,
+            showOnlyMilitary: false,
+            showOnlyInteresting: false,
+            showOnlyPIA: false,
+            showOnlyLADD: false,
+            enabledGeoJSONOverlays: [],
+            showOpenAIP: false,
+            showRainViewer: false,
+            mapSidebarWidth: 450,
+            // Missing mapSidebarCollapsed (v7 state)
+          },
+          advanced: {
+            logLevel: "info",
+            persistLogs: true,
+          },
+          updatedAt: 123456,
+          version: 7,
+        },
+      };
+
+      const migrated = migrate(v7State, 7);
+      expect(migrated.settings.version).toBe(9);
+      // Existing settings preserved
+      expect(migrated.settings.map.mapSidebarWidth).toBe(450);
+      expect(migrated.settings.appearance.theme).toBe("mocha");
+      // New fields added with defaults
+      expect(migrated.settings.map.mapSidebarCollapsed).toBe(false);
+      expect(migrated.settings.map.showHeyWhatsThat).toBe(true);
+    });
+
+    it("regression: should migrate from version 8 to version 9 (add showHeyWhatsThat)", () => {
+      // This test must FAIL before the v8→v9 migration is added and PASS after.
+      // biome-ignore lint/suspicious/noExplicitAny: Zustand persist API doesn't expose migrate type
+      const { migrate } = (useSettingsStore as any).persist.getOptions();
+
+      const v8State = {
+        settings: {
+          appearance: {
+            theme: "mocha",
+            showConnectionStatus: true,
+            animations: true,
+          },
+          regional: {
+            timeFormat: "auto",
+            dateFormat: "auto",
+            timezone: "local",
+            altitudeUnit: "feet",
+          },
+          notifications: {
+            desktop: false,
+            sound: false,
+            volume: 50,
+            onPageAlerts: false,
+          },
+          data: {
+            maxMessagesPerAircraft: 50,
+            maxMessageGroups: 50,
+            enableCaching: true,
+            autoClearMinutes: 60,
+          },
+          map: {
+            provider: "carto_dark_all",
+            userSelectedProvider: false,
+            stationLat: 0,
+            stationLon: 0,
+            rangeRings: [100, 200, 300],
+            defaultCenterLat: 0,
+            defaultCenterLon: 0,
+            defaultZoom: 7,
+            useSprites: true,
+            colorByDecoder: false,
+            groundAltitudeThreshold: 500,
+            showOnlyAcars: false,
+            showDatablocks: true,
+            showExtendedDatablocks: false,
+            showNexrad: false,
+            showRangeRings: true,
+            showOnlyUnread: false,
+            showOnlyMilitary: false,
+            showOnlyInteresting: false,
+            showOnlyPIA: false,
+            showOnlyLADD: false,
+            enabledGeoJSONOverlays: [],
+            showOpenAIP: false,
+            showRainViewer: false,
+            mapSidebarWidth: 408,
+            mapSidebarCollapsed: false,
+            // Missing showHeyWhatsThat (v8 state)
+          },
+          advanced: {
+            logLevel: "info",
+            persistLogs: true,
+          },
+          updatedAt: 123456,
+          version: 8,
+        },
+      };
+
+      const migrated = migrate(v8State, 8);
+      expect(migrated.settings.version).toBe(9);
+      // Existing settings preserved
+      expect(migrated.settings.map.mapSidebarWidth).toBe(408);
+      expect(migrated.settings.map.mapSidebarCollapsed).toBe(false);
+      expect(migrated.settings.appearance.theme).toBe("mocha");
+      // New field added: showHeyWhatsThat defaults to true (show when configured)
+      expect(migrated.settings.map.showHeyWhatsThat).toBe(true);
     });
   });
 
@@ -1101,7 +1289,7 @@ describe("useSettingsStore", () => {
       if (!stored) throw new Error("Expected stored to be truthy");
       const parsed = JSON.parse(stored);
 
-      expect(parsed.version).toBe(6);
+      expect(parsed.version).toBe(9);
     });
   });
 

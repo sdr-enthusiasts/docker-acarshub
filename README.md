@@ -26,6 +26,7 @@ Builds and runs on `amd64`, and `arm64` architectures.
     - [General](#general)
     - [Logging](#logging)
     - [ADSB](#adsb)
+    - [Connection Descriptor Format](#connection-descriptor-format)
     - [ACARS](#acars)
     - [VDLM2](#vdlm2)
     - [HFDL](#hfdl)
@@ -66,10 +67,20 @@ I am missing a boat load of people who have provided feed back as this project h
 
 External to ACARS Hub you need to be running an ACARS, VDLM2, HFDL, Inmarsat L-Band and/or Iridium decoder for ACARS Hub, and have that decoder connect to ACARS Hub to send over the messages for processing.
 
+ACARS Hub supports three connection modes, configured via the `*_CONNECTIONS` environment variables (e.g. `ACARS_CONNECTIONS`, `VDLM_CONNECTIONS`). The recommended setup uses [acars_router](https://github.com/sdr-enthusiasts/acars_router) as an intermediary: decoders send their output to `acars_router`, which deduplicates, optionally stamps a station ID, and republishes the messages over ZMQ. ACARS Hub then subscribes to `acars_router`'s ZMQ serve ports to receive the cleaned data. See [Setting-Up-ACARSHub.MD](Setting-Up-ACARSHub.MD) for a complete example.
+
+The three connection modes are:
+
+- **UDP** (default): the container binds a UDP port and decoders (or `acars_router`) push data to it. Requires a host port mapping (e.g. `5550:5550/udp`). Use `ACARS_CONNECTIONS=udp` or `ACARS_CONNECTIONS=udp://0.0.0.0:5550`.
+- **TCP**: the container connects outbound to a TCP server. `acars_router` exposes TCP serve ports at `15550`–`15558`. Use `ACARS_CONNECTIONS=tcp://acars_router:15550`.
+- **ZMQ** (recommended): the container subscribes to a ZMQ PUB endpoint. `acars_router` exposes ZMQ serve ports at `45550`–`45558` (one per decoder type). Use `ACARS_CONNECTIONS=zmq://acars_router:45550`. No inbound port mapping is needed on the ACARS Hub side for TCP or ZMQ modes.
+
+Multiple descriptors can be combined with commas for fan-in from several sources, e.g. `ACARS_CONNECTIONS=udp,zmq://acars_router:45550`.
+
 The following decoders are supported:
 
-- [acarsdec](https://github.com/TLeconte/acarsdec) or one of the forks of acarsdec. I suggest [the airframes fork](https://github.com/airframesio/acarsdec). Run the decoder with the option `-j youracarshubip:5550`, ensuring that port `5550` is mapped to the container if the source is external to your docker network.
-- [dumpvdl2](https://github.com/szpajder/dumpvdl2). Run the decoder with the option `--output decoded:json:udp:address=<youracarshubip>,port=5555`, ensuring that port `5555` is mapped to the container if your source is external to the docker network.
+- [acarsdec](https://github.com/TLeconte/acarsdec) or one of the forks of acarsdec. I suggest [the airframes fork](https://github.com/airframesio/acarsdec). Sends output to `acars_router` via UDP on port `5550`. Direct UDP to ACARS Hub also works: run with the option `-j youracarshubip:5550`, ensuring that port `5550` is mapped to the container if the source is external to your docker network.
+- [dumpvdl2](https://github.com/szpajder/dumpvdl2). **ZMQ mode (recommended):** configure dumpvdl2 with `ZMQ_MODE=server` and `ZMQ_ENDPOINT=tcp://0.0.0.0:45555`; `acars_router` connects to it via `AR_RECV_ZMQ_VDLM2=dumpvdl2:45555`. **UDP mode:** run with `--output decoded:json:udp:address=<youracarshubip>,port=5555`, ensuring port `5555` is mapped.
 - [vdlm2dec](https://github.com/TLeconte/vdlm2dec). Run the decoder with the option `-j youracarshubip:5555`, ensuring that port `5555` is mapped to the container if the source is external to the docker network.
 - [dumphfdl](https://github.com/szpajder/dumphfdl). Run the decoder with the option `--output decoded:json:udp:address=<youracarshubip>,port=5556`, ensuring that port `5556` is mapped to the container if the source is external to the docker network.
 - [satdump](https://github.com/SatDump/SatDump). Run the decoder with the Inmarsat.json options for `udp_sinks` set to `"address": "127.0.0.1"` and `"port": "5557"` , ensuring that port `5557` is mapped to the container.
@@ -87,7 +98,7 @@ For ease of use I have provided docker images set up to work with ACARS Hub. Thi
 - [docker-satdump](https://github.com/rpatel3001/docker-satdump) for Inmarsat L-Band decoding.
 - [docker-jaero](https://github.com/sdr-enthusiasts/docker-jaero) for Inamrsat L-Band decoding.
 - [docker-gr-iridium-toolkit](https://github.com/rpatel3001/docker-gr-iridium-toolkit) for Iridium decoding.
-- [acars_router](https://github.com/sdr-enthusiasts/acars_router) for routing ACARS messages from one source to another. This is useful if you have a decoder that can only send messages to one destination, but you want to send messages to multiple destinations. This is the preferred way to get data in to ACARS Hub.
+- [acars_router](https://github.com/sdr-enthusiasts/acars_router) for receiving, deduplicating, and routing messages from one or more decoders to one or more destinations. This is the **recommended** integration point for ACARS Hub. Decoders send to `acars_router`; ACARS Hub connects to `acars_router`'s ZMQ serve ports (`45550`–`45558`) to receive processed messages.
 
 ## Up-and-Running
 
@@ -95,19 +106,16 @@ The document below covers a lot of configuration options, however, most of them 
 
 ## Ports
 
-| Port       | Description                                        |
-| ---------- | -------------------------------------------------- |
-| `80`       | Port used for the web interface                    |
-| `5550/udp` | Port used for pushing ACARS JSON data to           |
-| `5555/udp` | Port used for pushing VDLM2 JSON data to           |
-| `5556/udp` | Port used for pushing HFDL JSON data to            |
-| `5557/udp` | Port used for pushing Inmarsat L-Band JSON data to |
-| `5558/udp` | Port used for pushing Iridium JSON data to         |
-| `15550`    | Port used for exposing JSON ACARS data             |
-| `15555`    | Port used for exposing JSON VDLM2 data             |
-| `15556`    | Port used for exposing JSON HFDL data              |
-| `15557`    | Port used for exposing JSON Inmarsat L-Band data   |
-| `15558`    | Port used for exposing JSON Iridium data           |
+| Port       | Description                                                                                 |
+| ---------- | ------------------------------------------------------------------------------------------- |
+| `80`       | Port used for the web interface                                                             |
+| `5550/udp` | Default UDP port for receiving ACARS JSON data (used when `ACARS_CONNECTIONS=udp`)          |
+| `5555/udp` | Default UDP port for receiving VDLM2 JSON data (used when `VDLM_CONNECTIONS=udp`)           |
+| `5556/udp` | Default UDP port for receiving HFDL JSON data (used when `HFDL_CONNECTIONS=udp`)            |
+| `5557/udp` | Default UDP port for receiving Inmarsat L-Band JSON data (used when `IMSL_CONNECTIONS=udp`) |
+| `5558/udp` | Default UDP port for receiving Iridium JSON data (used when `IRDM_CONNECTIONS=udp`)         |
+
+> **Note:** The TCP relay ports (`15550`–`15558`) that existed in earlier versions have been removed. The container no longer runs socat relay services. Use the `*_CONNECTIONS` environment variables to configure TCP or ZMQ outbound connections instead — no additional port mappings are required for those modes.
 
 ## Volumes / Database
 
@@ -161,13 +169,15 @@ The ACARS Hub website contains the ability to display ADSB targets along side AC
 
 The following options will set the options for ADSB
 
-| Variable              | Description                                                             | Required                         | Default                             |
-| --------------------- | ----------------------------------------------------------------------- | -------------------------------- | ----------------------------------- |
-| `ENABLE_ADSB`         | Turns on ADSB in ACARS Hub                                              | Yes, if you want to monitor ADSB | `false`                             |
-| `ADSB_URL`            | The IP address or URL for your tar1090 instance                         | No (see note below)              | `http://tar1090/data/aircraft.json` |
-| `ADSB_LAT`            | The latitude of your ADSB site                                          | No, but recommended              | 0                                   |
-| `ADSB_LON`            | The longitude of your ADSB site                                         | No, but recommended              | 0                                   |
-| `DISABLE_RANGE_RINGS` | Turn off range rings on your map. Set to `true` to disable range rings. | No                               | `false`                             |
+| Variable              | Description                                                                                                                                                                                                                                                 | Required                         | Default                             |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------- | ----------------------------------- |
+| `ENABLE_ADSB`         | Turns on ADSB in ACARS Hub                                                                                                                                                                                                                                  | Yes, if you want to monitor ADSB | `false`                             |
+| `ADSB_URL`            | The IP address or URL for your tar1090 instance                                                                                                                                                                                                             | No (see note below)              | `http://tar1090/data/aircraft.json` |
+| `ADSB_LAT`            | The latitude of your ADSB site                                                                                                                                                                                                                              | No, but recommended              | 0                                   |
+| `ADSB_LON`            | The longitude of your ADSB site                                                                                                                                                                                                                             | No, but recommended              | 0                                   |
+| `DISABLE_RANGE_RINGS` | Turn off range rings on your map. Set to `true` to disable range rings.                                                                                                                                                                                     | No                               | `false`                             |
+| `HEYWHATSTHAT`        | Your [Hey What's That](https://www.heywhatsthat.com/) site ID token (e.g. `NN6R7EXG`). When set, the live map displays estimated antenna coverage outlines. Data is fetched once at startup and cached; re-fetched only when the token or altitudes change. | No                               | Blank (feature disabled)            |
+| `HEYWHATSTHAT_ALTS`   | Comma-separated list of altitudes in feet for coverage outlines (e.g. `10000,20000,30000`). Each altitude produces one ring on the map.                                                                                                                     | No                               | `10000,30000`                       |
 
 If you run Mike's tar1090 container on the same machine as ACARS Hub then the default value for `ADSB_URL` is fine. If you don't, the formatting for `ADSB_URL` should be the full URL path to `aircraft.json` from your readsb source.
 
@@ -189,35 +199,79 @@ If you desire enhanced ADSB and ACARS message matching and thus show coloured ai
 
 In the configuration options for tar1090. Setting this will include additional aircraft information in the `aircraft.json` file that is not normally part of the ADSB broadcast, such as the aircraft's tail number and aircraft type. Please enable this with caution: there is increased memory usage in the tar1090 container so RAM constrained systems should be cautious enabling this.
 
+### Connection Descriptor Format
+
+The `*_CONNECTIONS` variables accept a comma-separated list of one or more **connection descriptors**. Each descriptor selects a protocol and a target:
+
+| Form                   | Example                    | Behaviour                                                                                                                                                     |
+| ---------------------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `udp`                  | `udp`                      | Bind the default UDP port for this decoder type on all interfaces (see defaults below). Decoders push datagrams to ACARS Hub. **Host port mapping required.** |
+| `udp://bind-addr:port` | `udp://0.0.0.0:5550`       | Bind a specific address and UDP port. `bind-addr` may be an IPv4 address or `*` for all interfaces. **Host port mapping required.**                           |
+| `tcp://host:port`      | `tcp://acars_router:15550` | ACARS Hub connects outbound to a TCP server at `host:port`. Reconnects automatically on disconnect. **No host port mapping needed.**                          |
+| `zmq://host:port`      | `zmq://acars_router:45550` | ACARS Hub subscribes to a ZMQ PUB socket at `host:port`. Reconnection is handled by libzmq. **No host port mapping needed.**                                  |
+
+**Default UDP ports** (used by the bare `udp` descriptor):
+
+| Decoder | Default UDP Port |
+| ------- | ---------------- |
+| ACARS   | `5550`           |
+| VDLM2   | `5555`           |
+| HFDL    | `5556`           |
+| IMSL    | `5557`           |
+| IRDM    | `5558`           |
+
+**`acars_router` reference ports** — when using `acars_router` as the intermediary:
+
+| Decoder | ZMQ serve port (use with `zmq://`) | TCP serve port (use with `tcp://`) |
+| ------- | ---------------------------------- | ---------------------------------- |
+| ACARS   | `45550`                            | `15550`                            |
+| VDLM2   | `45555`                            | `15555`                            |
+| HFDL    | `45556`                            | `15556`                            |
+| IMSL    | `45557`                            | `15557`                            |
+| IRDM    | `45558`                            | `15558`                            |
+
+**Fan-in example** — receive from two sources simultaneously:
+
+```yaml
+- ACARS_CONNECTIONS=udp,zmq://acars_router:45550
+```
+
+Both descriptors feed the same internal pipeline. The built-in deduplication layer discards any message that arrives via both paths.
+
 ### ACARS
 
-| Variable       | Description                                                                                                                                                                                                                                                                | Required | Default |
-| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------- |
-| `ENABLE_ACARS` | Toggle ACARS decoding on. Set to `true` to enable ACARS processing in the container. Push valid `ACARS` json data to UDP port 5550 (needs port mapping 5550:5550/udp). **Note:** The legacy value `external` is deprecated but still supported for backward compatibility. | No       | `false` |
+| Variable            | Description                                                                                                                                                                                                                                                                                                                 | Required | Default |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------- |
+| `ENABLE_ACARS`      | Toggle ACARS decoding on. Set to `true` to enable ACARS processing in the container. **Note:** The legacy value `external` is deprecated but still supported for backward compatibility.                                                                                                                                    | No       | `false` |
+| `ACARS_CONNECTIONS` | Comma-separated connection descriptor(s) for receiving ACARS data. See [Connection Descriptor Format](#connection-descriptor-format) for syntax. Recommended value when using `acars_router`: `zmq://acars_router:45550`. Default binds UDP port 5550; a host port mapping (`5550:5550/udp`) is required for UDP mode only. | No       | `udp`   |
 
 ### VDLM2
 
-| Variable      | Description                                                                                                                                                                                                                                                         | Required | Default |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------- |
-| `ENABLE_VDLM` | Toggle VDLM decoding on. Set to `true` to enable VDLM processing in the container. Push valid `VDLM2` data to UDP port 5555 (needs port mapping 5555:5555/udp). **Note:** The legacy value `external` is deprecated but still supported for backward compatibility. | No       | `false` |
+| Variable           | Description                                                                                                                                                                                                                                            | Required | Default |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------- | ------- |
+| `ENABLE_VDLM`      | Toggle VDLM decoding on. Set to `true` to enable VDLM processing in the container. **Note:** The legacy value `external` is deprecated but still supported for backward compatibility.                                                                 | No       | `false` |
+| `VDLM_CONNECTIONS` | Comma-separated connection descriptor(s) for receiving VDLM2 data. See [Connection Descriptor Format](#connection-descriptor-format) for syntax. Recommended value when using `acars_router`: `zmq://acars_router:45555`. Default binds UDP port 5555. | No       | `udp`   |
 
 ### HFDL
 
-| Variable      | Description                                                                                                                                                                                                                                                        | Required | Default |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------- | ------- |
-| `ENABLE_HFDL` | Toggle HFDL decoding on. Set to `true` to enable HFDL processing in the container. Push valid `HFDL` data to UDP port 5556 (needs port mapping 5556:5556/udp). **Note:** The legacy value `external` is deprecated but still supported for backward compatibility. | No       | `false` |
+| Variable           | Description                                                                                                                                                                                                                                           | Required | Default |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------- |
+| `ENABLE_HFDL`      | Toggle HFDL decoding on. Set to `true` to enable HFDL processing in the container. **Note:** The legacy value `external` is deprecated but still supported for backward compatibility.                                                                | No       | `false` |
+| `HFDL_CONNECTIONS` | Comma-separated connection descriptor(s) for receiving HFDL data. See [Connection Descriptor Format](#connection-descriptor-format) for syntax. Recommended value when using `acars_router`: `zmq://acars_router:45556`. Default binds UDP port 5556. | No       | `udp`   |
 
 ### Inmarsat L-Band
 
-| Variable      | Description                                                                                                                                                                                                                                                                   | Required | Default |
-| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------- |
-| `ENABLE_IMSL` | Toggle Inmarsat L-Band decoding on. Set to `true` to enable IMSL processing in the container. Push valid `IMSL` data to UDP port 5557 (needs port mapping 5557:5557/udp). **Note:** The legacy value `external` is deprecated but still supported for backward compatibility. | No       | `false` |
+| Variable           | Description                                                                                                                                                                                                                                                      | Required | Default |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------- |
+| `ENABLE_IMSL`      | Toggle Inmarsat L-Band decoding on. Set to `true` to enable IMSL processing in the container. **Note:** The legacy value `external` is deprecated but still supported for backward compatibility.                                                                | No       | `false` |
+| `IMSL_CONNECTIONS` | Comma-separated connection descriptor(s) for receiving Inmarsat L-Band data. See [Connection Descriptor Format](#connection-descriptor-format) for syntax. Recommended value when using `acars_router`: `zmq://acars_router:45557`. Default binds UDP port 5557. | No       | `udp`   |
 
 ### Iridium
 
-| Variable      | Description                                                                                                                                                                                                                                                           | Required | Default |
-| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------- |
-| `ENABLE_IRDM` | Toggle Iridium decoding on. Set to `true` to enable IRDM processing in the container. Push valid `IRDM` data to UDP port 5558 (needs port mapping 5558:5558/udp). **Note:** The legacy value `external` is deprecated but still supported for backward compatibility. | No       | `false` |
+| Variable           | Description                                                                                                                                                                                                                                              | Required | Default |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------- |
+| `ENABLE_IRDM`      | Toggle Iridium decoding on. Set to `true` to enable IRDM processing in the container. **Note:** The legacy value `external` is deprecated but still supported for backward compatibility.                                                                | No       | `false` |
+| `IRDM_CONNECTIONS` | Comma-separated connection descriptor(s) for receiving Iridium data. See [Connection Descriptor Format](#connection-descriptor-format) for syntax. Recommended value when using `acars_router`: `zmq://acars_router:45558`. Default binds UDP port 5558. | No       | `udp`   |
 
 ## Viewing the messages
 
@@ -272,22 +326,29 @@ If there are airlines you notice that are wrong because the data used is wrong (
 
 ### YAML Configuration for Ports
 
+The ports you need to expose depend on your chosen connection mode:
+
+**UDP mode** (default — decoders push data to ACARS Hub):
+
 ```yaml
 ports:
   - 80:80
-  - 5550:5550/udp
-  - 5555:5555/udp
-  - 5556:5556/udp
-  - 5557:5557/udp
-  - 5558:5558/udp
-  - 15550:15550
-  - 15555:15555
-  - 15556:15556
-  - 15557:15557
-  - 15558:15558
+  - 5550:5550/udp # ACARS — only needed when ACARS_CONNECTIONS=udp
+  - 5555:5555/udp # VDLM2 — only needed when VDLM_CONNECTIONS=udp
+  - 5556:5556/udp # HFDL  — only needed when HFDL_CONNECTIONS=udp
+  - 5557:5557/udp # IMSL  — only needed when IMSL_CONNECTIONS=udp
+  - 5558:5558/udp # IRDM  — only needed when IRDM_CONNECTIONS=udp
 ```
 
-And then you will be able to connect to `yourpisipaddress:15555` or `yourpisipaddress:15550` respectively, in whatever program can decode ACARS/VDLM JSON.
+**TCP or ZMQ mode** (ACARS Hub connects outbound to decoders):
+
+```yaml
+ports:
+  - 80:80
+  # No decoder ports needed — the container connects out to the decoders
+```
+
+> **Note:** The TCP relay ports (`15550`–`15558`) from earlier versions have been removed. The container no longer runs socat relay services; use `tcp://` or `zmq://` descriptors in the `*_CONNECTIONS` variables to achieve equivalent connectivity.
 
 ## Getting Help
 

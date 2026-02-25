@@ -86,23 +86,32 @@ export function isAbsoluteUrl(url: string): boolean {
 }
 
 /**
- * Resolves a path, but only if it's not already an absolute URL.
+ * Resolves a path, but only if it's not already an absolute URL or an
+ * already-resolved relative path.
  *
  * Useful for handling paths that might be either relative or absolute:
- * - Relative paths get resolved via resolveBasePath()
- * - Absolute URLs are returned unchanged
+ * - Relative paths starting with "./" are returned unchanged — Vite `?url`
+ *   imports already have the base baked in and must not be processed again.
+ * - Absolute URLs are returned unchanged.
+ * - Root-relative paths (starting with "/") are resolved via resolveBasePath().
  *
  * @param path - Path or URL to resolve
  * @returns Resolved path or original URL
  *
  * @example
- * // Relative path gets resolved
+ * // Root-relative path gets resolved
  * resolvePathOrUrl("/geojson/file.geojson") // => "./geojson/file.geojson" (or with subpath)
+ *
+ * @example
+ * // Already-relative path (Vite ?url import) is passed through unchanged
+ * resolvePathOrUrl("./assets/file-HASH.geojson") // => "./assets/file-HASH.geojson"
  *
  * @example
  * // Absolute URL unchanged
  * resolvePathOrUrl("https://example.com/data.json") // => "https://example.com/data.json"
  */
 export function resolvePathOrUrl(path: string): string {
-  return isAbsoluteUrl(path) ? path : resolveBasePath(path);
+  if (isAbsoluteUrl(path)) return path;
+  if (path.startsWith("./")) return path;
+  return resolveBasePath(path);
 }

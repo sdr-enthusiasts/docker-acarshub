@@ -194,11 +194,20 @@ export const LogsViewer: React.FC<LogsViewerProps> = ({
         </div>
       )}
 
-      {/* Log Display */}
+      {/* Log Display
+          tabIndex={0} satisfies WCAG 2.1 SC 2.1.1 / axe scrollable-region-focusable:
+          the display area can overflow and must be reachable via keyboard so users
+          can scroll through log entries without a pointer device.
+          role="log" + aria-live="polite" lets screen readers announce new entries. */}
       <div
         ref={viewerRef}
         className="logs-viewer-display"
         style={{ maxHeight: `${maxHeight}px` }}
+        // biome-ignore lint/a11y/noNoninteractiveTabindex: scrollable log region requires tabIndex for WCAG 2.1 SC 2.1.1 — keyboard users must be able to scroll without a pointer device
+        tabIndex={0}
+        role="log"
+        aria-label="Application log output"
+        aria-live="polite"
       >
         {filteredLogs.length === 0 ? (
           <div className="logs-viewer-empty">

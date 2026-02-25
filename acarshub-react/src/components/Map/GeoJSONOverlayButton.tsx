@@ -14,11 +14,10 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-import { faMap } from "@fortawesome/free-solid-svg-icons/faMap";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { GEOJSON_OVERLAYS } from "../../config/geojsonOverlays";
 import { useSettingsStore } from "../../store/useSettingsStore";
+import { IconMap } from "../icons";
 
 // Stable empty array to prevent re-renders
 const EMPTY_ARRAY: string[] = [];
@@ -134,7 +133,7 @@ export function GeoJSONOverlayButton() {
         aria-expanded={isOpen}
         title="GeoJSON Overlays"
       >
-        <FontAwesomeIcon icon={faMap} />
+        <IconMap />
         {enabledCount > 0 && (
           <span className="geojson-overlay-button__badge">{enabledCount}</span>
         )}

@@ -1,7 +1,35 @@
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import react from "@vitejs/plugin-react";
 import { visualizer } from "rollup-plugin-visualizer";
 import { defineConfig } from "vite";
-import { nodePolyfills } from "vite-plugin-node-polyfills";
+
+// ---------------------------------------------------------------------------
+// Version constants — read from each workspace package.json at build time.
+// This eliminates the need to inject VITE_VERSION as a Docker ARG; the values
+// come directly from the source of truth (package.json files) during `vite build`.
+// ---------------------------------------------------------------------------
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
+function readPkgVersion(absPath: string): string {
+  try {
+    const pkg = JSON.parse(readFileSync(absPath, "utf-8")) as {
+      version?: string;
+    };
+    return typeof pkg.version === "string" && pkg.version.length > 0
+      ? pkg.version
+      : "unknown";
+  } catch {
+    return "unknown";
+  }
+}
+
+const containerVersion = readPkgVersion(resolve(__dirname, "../package.json"));
+const frontendVersion = readPkgVersion(resolve(__dirname, "package.json"));
+const backendVersion = readPkgVersion(
+  resolve(__dirname, "../acarshub-backend/package.json"),
+);
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -10,6 +38,15 @@ export default defineConfig({
 
   // For local reverse proxy testing: uncomment line below and comment out line above
   // base: "/acarshub-test/",
+
+  // Bake version strings into the bundle at build time from the actual
+  // package.json files. No environment variable injection required.
+  define: {
+    __CONTAINER_VERSION__: JSON.stringify(containerVersion),
+    __FRONTEND_VERSION__: JSON.stringify(frontendVersion),
+    __BACKEND_VERSION__: JSON.stringify(backendVersion),
+  },
+
   resolve: {
     alias: {
       "@": "/src",
@@ -20,16 +57,6 @@ export default defineConfig({
   },
   plugins: [
     react(),
-    nodePolyfills({
-      // Enable polyfills for specific Node.js modules
-      // zlib is needed by minizlib (used by @airframes/acars-decoder)
-      include: ["events", "stream", "string_decoder", "buffer", "util", "zlib"],
-      // Optionally include globals like Buffer and process
-      globals: {
-        Buffer: true,
-        process: true,
-      },
-    }),
     // Bundle size visualization (only in build mode)
     visualizer({
       filename: "./dist/stats.html",
@@ -52,11 +79,6 @@ export default defineConfig({
             return "react";
           }
 
-          // Font Awesome - all icons and core into fonts chunk
-          if (id.includes("@fortawesome")) {
-            return "fonts";
-          }
-
           // Charts
           if (
             id.includes("chart.js") ||
@@ -70,20 +92,6 @@ export default defineConfig({
           // Map library
           if (id.includes("maplibre-gl") || id.includes("react-maplibre")) {
             return "map";
-          }
-
-          // Decoder
-          if (id.includes("@airframes/acars-decoder")) {
-            return "decoder";
-          }
-
-          // Some decoder dependencies are large and not tree-shakeable, so we can mark them as external to reduce bundle size
-          if (
-            id.includes("pako") ||
-            id.includes("minizlib") ||
-            id.includes("lodash")
-          ) {
-            return "decoder-deps";
           }
 
           // socket.io
@@ -102,27 +110,38 @@ export default defineConfig({
     proxy: {
       // Proxy Socket.IO requests to Flask backend (with base path support)
       "^/acarshub-test/socket.io": {
-        target: "http://localhost:8080",
+        target: "http://localhost:8888",
         changeOrigin: true,
         ws: true,
         rewrite: (path) => path.replace(/^\/acarshub-test/, ""),
       },
       // Fallback Socket.IO proxy (no base path)
       "^/socket.io": {
-        target: "http://localhost:8080",
+        target: "http://localhost:8888",
         changeOrigin: true,
         ws: true,
         rewrite: (path) => path,
       },
       // Proxy metrics endpoint (with base path support)
       "^/acarshub-test/metrics": {
-        target: "http://localhost:8080",
+        target: "http://localhost:8888",
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/acarshub-test/, ""),
       },
       // Fallback metrics proxy (no base path)
       "^/metrics": {
-        target: "http://localhost:8080",
+        target: "http://localhost:8888",
+        changeOrigin: true,
+      },
+      // HeyWhatsThat coverage GeoJSON (with base path support)
+      "^/acarshub-test/data/heywhatsthat\\.geojson": {
+        target: "http://localhost:8888",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/acarshub-test/, ""),
+      },
+      // Fallback HeyWhatsThat proxy (no base path)
+      "^/data/heywhatsthat\\.geojson": {
+        target: "http://localhost:8888",
         changeOrigin: true,
       },
     },

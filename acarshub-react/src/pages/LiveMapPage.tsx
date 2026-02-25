@@ -17,8 +17,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { MapRef, ViewState } from "react-map-gl/maplibre";
 import { useSearchParams } from "react-router-dom";
+import { IconChevronRight } from "../components/icons";
 import { MapComponent, MapControls, MapLegend } from "../components/Map";
 import { AircraftList } from "../components/Map/AircraftList";
+import type { ViewportBounds } from "../components/Map/AircraftMarkers";
 import { getProviderConfig } from "../config/mapProviders";
 import { socketService } from "../services/socket";
 import { useAppStore } from "../store/useAppStore";
@@ -26,6 +28,49 @@ import { useSettingsStore, useTheme } from "../store/useSettingsStore";
 import type { PairedAircraft } from "../utils/aircraftPairing";
 import { pairADSBWithACARSMessages } from "../utils/aircraftPairing";
 import { mapLogger } from "../utils/logger";
+
+// Minimum sidebar width – the lowest value the user can drag to.
+// Horizontal scroll is prevented by the callsign column min-width (60 px) in
+// SCSS rather than by enforcing a large minimum here.  Keeping this at 335 px
+// preserves a wide, usable resize range.
+const SIDEBAR_MIN_WIDTH = 335;
+
+// Default sidebar width used when no explicit user preference has been stored
+// (or when the stored value equals the old default of px, meaning the user
+// never deliberately set a width).  335 px places the sidebar in Phase 3 so
+// that at least one decoder badge is visible as soon as the map loads.
+const DEFAULT_SIDEBAR_WIDTH = 335;
+const SIDEBAR_COLLAPSED_WIDTH = 40;
+
+// Phase boundary where both Alerts and Messages columns reach their maximum
+// widths (44→68 for alerts, 44→88 for messages). After this point, extra
+// sidebar width flows into the callsign column for decoder badges.
+// Must stay in sync with PHASE2_END in AircraftList.tsx.
+const PHASE2_END = 388;
+
+// Pixels of sidebar width required to display one decoder badge in the
+// callsign column. Must stay in sync with AircraftList.tsx BADGE_WIDTH_PX.
+const BADGE_WIDTH_PX = 20;
+
+/**
+ * Compute the maximum sidebar width for the given number of active decoder
+ * types.  The cap is set just wide enough to show all active decoder badges
+ * in the callsign column without wasted space.
+ *
+ * SIDEBAR_MIN_WIDTH is used as a floor so the max is never smaller than the
+ * minimum, which would make the sidebar unusable when no decoders are active.
+ *
+ *   N = 0 → 388 px  (full column headers, no badge space)
+ *   N = 1 → 408 px  (exactly fits 1 badge)
+ *   N = 2 → 428 px  (room for 2 badges)
+ *   N = 5 → 488 px  (room for 5 badges)
+ */
+function computeMaxSidebarWidth(numActiveDecoders: number): number {
+  return Math.max(
+    SIDEBAR_MIN_WIDTH,
+    PHASE2_END + numActiveDecoders * BADGE_WIDTH_PX,
+  );
+}
 
 /**
  * LiveMapPage Component
@@ -47,11 +92,160 @@ export const LiveMapPage = () => {
   const adsbAircraft = useAppStore((state) => state.adsbAircraft);
   const messageGroups = useAppStore((state) => state.messageGroups);
   const mapSettings = useSettingsStore((state) => state.settings.map);
+  const setMapSidebarWidth = useSettingsStore(
+    (state) => state.setMapSidebarWidth,
+  );
+  const setMapSidebarCollapsed = useSettingsStore(
+    (state) => state.setMapSidebarCollapsed,
+  );
   const theme = useTheme();
   const [searchParams, setSearchParams] = useSearchParams();
 
+  // Sidebar resize state – local during drag, persisted to store on mouseup.
+  // If the stored value is still at the old floor (325 px – the minimum that
+  // predates decoder-badge sizing), treat it as "no preference set" and start
+  // at DEFAULT_SIDEBAR_WIDTH so that at least one badge is visible on load.
+  // Any explicitly wider value is preserved as-is.
+  const [sidebarWidth, setSidebarWidth] = useState(() => {
+    const stored = mapSettings.mapSidebarWidth;
+    if (!stored || stored <= SIDEBAR_MIN_WIDTH) return DEFAULT_SIDEBAR_WIDTH;
+    return stored;
+  });
+  const [isResizing, setIsResizing] = useState(false);
+
+  // Sidebar collapse state – persisted to settings store
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(
+    () => mapSettings.mapSidebarCollapsed ?? false,
+  );
+
+  // Container ref used to apply --map-sidebar-width CSS custom property
+  const containerRef = useRef<HTMLDivElement>(null);
+  // Drag tracking refs – no React state so mousemove never triggers re-renders
+  const isDraggingRef = useRef(false);
+  const dragStartXRef = useRef(0);
+  const dragStartWidthRef = useRef(0);
+
+  // Ref so that the stable mousemove/mouseup listeners always see the latest
+  // dynamic max width without needing to be re-registered.
+  const sidebarMaxWidthRef = useRef(PHASE2_END);
+
   const mapRef = useRef<MapRef>(null);
   const [isMapLoaded, setIsMapLoaded] = useState(false);
+
+  // Apply the CSS custom property whenever sidebarWidth or collapsed state
+  // changes.  When collapsed the sidebar shrinks to the button-only strip.
+  useEffect(() => {
+    const effectiveWidth = isSidebarCollapsed
+      ? SIDEBAR_COLLAPSED_WIDTH
+      : sidebarWidth;
+    containerRef.current?.style.setProperty(
+      "--map-sidebar-width",
+      `${effectiveWidth}px`,
+    );
+  }, [sidebarWidth, isSidebarCollapsed]);
+
+  // Global mouse-move / mouse-up handlers for the resize drag gesture.
+  // Registered once; isDraggingRef gates execution so they are cheap.
+  // sidebarMaxWidthRef is used instead of a captured constant so the handlers
+  // always enforce the current dynamic maximum without re-registration.
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDraggingRef.current) return;
+      const delta = e.clientX - dragStartXRef.current;
+      const newWidth = Math.max(
+        SIDEBAR_MIN_WIDTH,
+        Math.min(sidebarMaxWidthRef.current, dragStartWidthRef.current + delta),
+      );
+      // Update the CSS variable directly – bypasses React for smooth dragging
+      containerRef.current?.style.setProperty(
+        "--map-sidebar-width",
+        `${newWidth}px`,
+      );
+    };
+
+    const handleMouseUp = () => {
+      if (!isDraggingRef.current) return;
+      isDraggingRef.current = false;
+      setIsResizing(false);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+
+      // Read the final value from the CSS variable and commit to state + store
+      const raw = containerRef.current?.style.getPropertyValue(
+        "--map-sidebar-width",
+      );
+      const finalWidth = raw
+        ? Math.max(
+            SIDEBAR_MIN_WIDTH,
+            Math.min(sidebarMaxWidthRef.current, parseInt(raw, 10)),
+          )
+        : SIDEBAR_MIN_WIDTH;
+
+      setSidebarWidth(finalWidth);
+      setMapSidebarWidth(finalWidth);
+      mapLogger.debug("Sidebar resized", { width: finalWidth });
+    };
+
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [setMapSidebarWidth]);
+
+  const handleResizeMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      isDraggingRef.current = true;
+      dragStartXRef.current = e.clientX;
+      dragStartWidthRef.current = sidebarWidth;
+      setIsResizing(true);
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+    },
+    [sidebarWidth],
+  );
+
+  // Keyboard handler for the separator role – arrow keys adjust width by
+  // 10 px per press (40 px with Shift) so keyboard-only users can resize.
+  const handleResizeKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      const step = e.shiftKey ? 40 : 10;
+      let newWidth: number | null = null;
+
+      if (e.key === "ArrowRight") {
+        newWidth = Math.min(sidebarMaxWidthRef.current, sidebarWidth + step);
+      } else if (e.key === "ArrowLeft") {
+        newWidth = Math.max(SIDEBAR_MIN_WIDTH, sidebarWidth - step);
+      } else if (e.key === "Home") {
+        newWidth = SIDEBAR_MIN_WIDTH;
+      } else if (e.key === "End") {
+        newWidth = sidebarMaxWidthRef.current;
+      }
+
+      if (newWidth !== null) {
+        e.preventDefault();
+        containerRef.current?.style.setProperty(
+          "--map-sidebar-width",
+          `${newWidth}px`,
+        );
+        setSidebarWidth(newWidth);
+        setMapSidebarWidth(newWidth);
+      }
+    },
+    [sidebarWidth, setMapSidebarWidth],
+  );
+
+  // Toggle sidebar collapsed state and persist to settings store.
+  const handleCollapseToggle = useCallback(() => {
+    setIsSidebarCollapsed((prev) => {
+      const next = !prev;
+      setMapSidebarCollapsed(next);
+      mapLogger.debug("Sidebar collapsed state changed", { collapsed: next });
+      return next;
+    });
+  }, [setMapSidebarCollapsed]);
   const [hoveredAircraftHex, setHoveredAircraftHex] = useState<string | null>(
     null,
   );
@@ -60,6 +254,9 @@ export const LiveMapPage = () => {
     null,
   );
   const [isZooming, setIsZooming] = useState(false);
+  const [viewportBounds, setViewportBounds] = useState<ViewportBounds | null>(
+    null,
+  );
   const zoomCooldownTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
@@ -83,6 +280,43 @@ export const LiveMapPage = () => {
     const aircraft = adsbAircraft?.aircraft || [];
     return pairADSBWithACARSMessages(aircraft, messageGroups);
   }, [adsbAircraft, messageGroups]);
+
+  // Count distinct decoder types currently present across all live aircraft.
+  // This drives the dynamic sidebar max width so the sidebar never gets wider
+  // than needed to display all active decoder badges in the callsign column.
+  const numActiveDecoders = useMemo(() => {
+    const types = new Set<string>();
+    for (const a of pairedAircraft) {
+      for (const dt of a.decoderTypes) {
+        types.add(dt);
+      }
+    }
+    return types.size;
+  }, [pairedAircraft]);
+
+  // Dynamic max width – updates whenever the set of active decoders changes.
+  const sidebarMaxWidth = useMemo(
+    () => computeMaxSidebarWidth(numActiveDecoders),
+    [numActiveDecoders],
+  );
+
+  // Keep the ref in sync so the stable drag event handlers always use the
+  // latest max without needing to be re-registered.
+  sidebarMaxWidthRef.current = sidebarMaxWidth;
+
+  // Clamp the current sidebar width when the dynamic maximum shrinks (e.g.
+  // when all aircraft with a particular decoder type leave the display).
+  useEffect(() => {
+    if (!isSidebarCollapsed && sidebarWidth > sidebarMaxWidth) {
+      const clamped = sidebarMaxWidth;
+      setSidebarWidth(clamped);
+      setMapSidebarWidth(clamped);
+      containerRef.current?.style.setProperty(
+        "--map-sidebar-width",
+        `${clamped}px`,
+      );
+    }
+  }, [sidebarMaxWidth, sidebarWidth, setMapSidebarWidth, isSidebarCollapsed]);
 
   // Use frozen aircraft when paused, live data when not paused
   const effectiveAircraft = isPaused ? frozenAircraft : pairedAircraft;
@@ -332,18 +566,57 @@ export const LiveMapPage = () => {
 
   return (
     <div className="page live-map-page">
-      <div className="live-map-page__container">
+      {/* ref used to apply --map-sidebar-width CSS custom property */}
+      <div className="live-map-page__container" ref={containerRef}>
         {/* Aircraft list sidebar */}
-        <aside className="live-map-page__sidebar">
-          <AircraftList
-            aircraft={displayedAircraft}
-            onAircraftClick={handleAircraftClick}
-            onAircraftHover={handleAircraftHover}
-            hoveredAircraft={hoveredAircraftHex}
-            isPaused={isPaused}
-            onPauseToggle={handlePauseToggle}
-          />
+        <aside
+          className={`live-map-page__sidebar${isSidebarCollapsed ? " live-map-page__sidebar--collapsed" : ""}`}
+        >
+          {isSidebarCollapsed ? (
+            <button
+              type="button"
+              className="live-map-page__sidebar-expand-button"
+              onClick={handleCollapseToggle}
+              title="Expand sidebar"
+              aria-label="Expand sidebar"
+            >
+              <IconChevronRight />
+            </button>
+          ) : (
+            <AircraftList
+              aircraft={displayedAircraft}
+              onAircraftClick={handleAircraftClick}
+              onAircraftHover={handleAircraftHover}
+              hoveredAircraft={hoveredAircraftHex}
+              isPaused={isPaused}
+              onPauseToggle={handlePauseToggle}
+              onCollapseToggle={handleCollapseToggle}
+              viewportBounds={viewportBounds}
+              sidebarWidth={sidebarWidth}
+            />
+          )}
         </aside>
+
+        {/* Drag handle – hidden on mobile and when sidebar is collapsed */}
+        {/* role="separator" with aria-valuenow/min/max is the correct ARIA
+            pattern for a resize splitter (WCAG 2.1 §4.1.2).  tabIndex makes
+            it keyboard-reachable; arrow keys are handled below. */}
+        {!isSidebarCollapsed && (
+          // biome-ignore lint/a11y/useSemanticElements: ARIA APG "Window Splitter" pattern requires role="separator" with aria-valuenow on a focusable element; <hr> cannot carry these interactive attributes.
+          <div
+            className={`live-map-page__sidebar-resize-handle${isResizing ? " live-map-page__sidebar-resize-handle--dragging" : ""}`}
+            onMouseDown={handleResizeMouseDown}
+            onKeyDown={handleResizeKeyDown}
+            role="separator"
+            aria-label="Sidebar resize handle"
+            aria-orientation="vertical"
+            aria-valuenow={sidebarWidth}
+            aria-valuemin={SIDEBAR_MIN_WIDTH}
+            aria-valuemax={sidebarMaxWidth}
+            tabIndex={0}
+            title="Drag or use arrow keys to resize sidebar"
+          />
+        )}
 
         {/* Map container (main area) */}
         <main className="live-map-page__map">
@@ -357,6 +630,7 @@ export const LiveMapPage = () => {
             aircraft={displayedAircraft}
             isPaused={isPaused}
             onTogglePause={handlePauseToggle}
+            onViewportBoundsChange={setViewportBounds}
             className={isMapLoaded ? "live-map-page__map--loaded" : ""}
           />
 

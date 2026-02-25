@@ -61,7 +61,8 @@
       letter-spacing: 0.05em;
     }
 
-    input {
+    input,
+    select {
       padding: var(--spacing-xs) var(--spacing-sm);
       background: var(--color-base);
       border: 2px solid var(--color-surface2);
@@ -85,7 +86,17 @@
       }
     }
 
-    // Full width field (message text)
+    select {
+      appearance: auto;
+      cursor: pointer;
+
+      option {
+        background: var(--color-base);
+        color: var(--color-text);
+      }
+    }
+
+    // Full width field (spans all columns)
     &--full {
       @include breakpoint(md) {
         grid-column: span 2;
@@ -93,6 +104,18 @@
 
       @include breakpoint(lg) {
         grid-column: span 3;
+      }
+    }
+
+    // Message text field: full width on mobile/tablet, spans columns 2-3 on desktop
+    // (sits to the right of the Decoder Type field on the same row)
+    &--msg-text {
+      @include breakpoint(md) {
+        grid-column: span 2;
+      }
+
+      @include breakpoint(lg) {
+        grid-column: span 2;
       }
     }
   }

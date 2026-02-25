@@ -27,7 +27,7 @@ import {
   Tooltip,
   type TooltipItem,
 } from "chart.js";
-import { useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import { Line } from "react-chartjs-2";
 import { useSettingsStore } from "../../store/useSettingsStore";
 import type { SignalLevelData } from "../../types";
@@ -74,14 +74,6 @@ export const SignalLevelChart = ({
 }: SignalLevelChartProps) => {
   const theme = useSettingsStore((state) => state.settings.appearance.theme);
   const isDark = theme === "mocha";
-
-  // Diagnostic logging to detect mount/unmount cycles
-  useEffect(() => {
-    console.log("[SignalLevelChart] MOUNTED");
-    return () => {
-      console.log("[SignalLevelChart] UNMOUNTED");
-    };
-  }, []);
 
   // Process signal data and prepare for chart
   const chartData = useMemo(() => {
@@ -149,9 +141,15 @@ export const SignalLevelChart = ({
       const levelMap = new Map<number, number>();
       for (const item of decoderData) {
         const level = item.level;
-        // Only include float values
-        if (Number(level) === level && level % 1 !== 0) {
-          levelMap.set(level, item.count);
+        const count = item.count;
+        // Only include float values (skip null)
+        if (
+          level !== null &&
+          count !== null &&
+          Number(level) === level &&
+          level % 1 !== 0
+        ) {
+          levelMap.set(level, count);
         }
       }
 

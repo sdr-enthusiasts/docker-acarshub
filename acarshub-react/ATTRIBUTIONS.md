@@ -9,8 +9,8 @@ This document provides attribution for third-party assets, algorithms, and resou
 - **Source**: <https://github.com/plane-watch/pw-silhouettes>
 - **License**: CC BY-NC-SA 4.0 (Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International)
 - **Usage**: Aircraft sprite silhouettes for map markers
-- **Assets**: `public/static/sprites/spritesheet.png`, `public/static/sprites/spritesheet.json`
-- **Version**: 20260210.1
+- **Assets**: `src/assets/sprites/spritesheet.png`, `src/assets/sprites/spritesheet.json`
+- **Version**: 20260219
 
 All silhouettes, artwork, and metadata from pw-silhouettes are licensed under CC BY-NC-SA 4.0.
 
@@ -22,6 +22,40 @@ All silhouettes, artwork, and metadata from pw-silhouettes are licensed under CC
 - Link to repository
 - License notice (CC BY-NC-SA 4.0)
 - Indication of changes (if modified)
+
+## GeoJSON Overlays
+
+### SimAware TRACON Project
+
+- **Source**: <https://github.com/vatsimnetwork/simaware-tracon-project>
+- **License**: MIT
+- **Usage**: TRACON (Terminal Radar Approach Control) boundary overlays on the live map
+- **Assets**: `src/assets/geojson/TRACONBoundaries.geojson`
+- **Version**: v1.2.5
+
+TRACON boundary data is provided by the VATSIM Network SimAware TRACON Project, a community-maintained dataset of approach control airspace boundaries.
+
+**Attribution Requirements**:
+
+- Credit to VATSIM Network / SimAware TRACON Project contributors
+- Link to repository
+
+### VATSpy Data Project
+
+- **Source**: <https://github.com/vatsimnetwork/vatspy-data-project>
+- **License**: CC BY-SA 4.0 (Creative Commons Attribution ShareAlike 4.0 International)
+- **Usage**: FIR (Flight Information Region) boundary overlays on the live map
+- **Assets**: `src/assets/geojson/FIRBoundaries.geojson`
+- **Version**: v2602.1
+
+FIR boundary data is provided by the VATSIM Network VATSpy Data Project, a community-maintained dataset of flight information region boundaries updated to each AIRAC cycle.
+
+**Attribution Requirements**:
+
+- Credit to VATSIM Network / VATSpy Data Project contributors
+- Link to repository
+- License notice (CC BY-SA 4.0)
+- ShareAlike: derivatives must use the same license
 
 ## CSS Filter Algorithm
 
@@ -64,15 +98,24 @@ All colors in ACARS Hub React frontend are sourced from the Catppuccin palette t
 
 ## Font Awesome Icons
 
-### Font Awesome Free
+### Font Awesome Free (Vendored SVG Paths)
 
 - **Source**: <https://fontawesome.com>
 - **License**: Font Awesome Free License
-  - Icons: CC BY 4.0
-  - Fonts: SIL OFL 1.1
+  - Icons: CC BY 4.0 — <https://creativecommons.org/licenses/by/4.0/>
   - Code: MIT
-- **Usage**: UI icons throughout application
-- **Version**: See `package.json`
+- **Usage**: SVG path data for 28 icons vendored directly into
+  `src/components/icons/index.tsx`. The Font Awesome npm packages are **not**
+  a dependency — only the SVG paths are used, which are covered by CC BY 4.0.
+- **Version**: 7.2.0 (paths extracted from `@fortawesome/free-solid-svg-icons`)
+- **Attribution**: Font Awesome Free by Fonticons, Inc.
+- **Icons used** (all from `free-solid-svg-icons`):
+  `chevron-down`, `chevron-left`, `chevron-right`, `circle-dot`,
+  `cloud-rain`, `cloud-sun-rain`, `ellipsis-vertical`, `envelope`,
+  `eye-slash`, `fighter-jet`, `filter`, `image`, `layer-group`,
+  `lightbulb`, `location-crosshairs`, `lock`, `map`, `moon`,
+  `palette`, `pause`, `plane`, `plane-up`, `play`, `question-circle`,
+  `search`, `star`, `tower-broadcast`, `xmark`
 
 ## Stack Overflow Code Snippets
 
@@ -87,13 +130,15 @@ This specific technique was used as a reference during investigation but not dir
 
 ## License Compliance Summary
 
-| Asset/Code               | License                       | Commercial Use                    | Attribution Required |
-| ------------------------ | ----------------------------- | --------------------------------- | -------------------- |
-| pw-silhouettes           | CC BY-NC-SA 4.0               | ❌ No (requires separate license) | ✅ Yes               |
-| CSS Filter Algorithm     | MIT                           | ✅ Yes                            | ✅ Yes               |
-| @airframes/acars-decoder | MIT                           | ✅ Yes                            | ✅ Yes               |
-| Catppuccin               | MIT                           | ✅ Yes                            | ✅ Yes               |
-| Font Awesome Free        | CC BY 4.0 / SIL OFL 1.1 / MIT | ✅ Yes                            | ✅ Yes               |
+| Asset/Code               | License         | Commercial Use                    | Attribution Required |
+| ------------------------ | --------------- | --------------------------------- | -------------------- |
+| pw-silhouettes           | CC BY-NC-SA 4.0 | ❌ No (requires separate license) | ✅ Yes               |
+| SimAware TRACON Project  | MIT             | ✅ Yes                            | ✅ Yes               |
+| VATSpy Data Project      | CC BY-SA 4.0    | ✅ Yes                            | ✅ Yes               |
+| CSS Filter Algorithm     | MIT             | ✅ Yes                            | ✅ Yes               |
+| @airframes/acars-decoder | MIT             | ✅ Yes                            | ✅ Yes               |
+| Catppuccin               | MIT             | ✅ Yes                            | ✅ Yes               |
+| Font Awesome Free (SVG)  | CC BY 4.0       | ✅ Yes                            | ✅ Yes               |
 
 ## ACARS Hub License
 

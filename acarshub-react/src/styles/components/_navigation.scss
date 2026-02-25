@@ -84,6 +84,16 @@
     }
   }
 
+  // Latte (light theme) contrast fixes:
+  // $latte-blue (#1e66f5) on crust (#dce0e8) = 3.71:1 — fails WCAG AA (4.5:1).
+  // $latte-blue on surface0 (#ccd0da) = 3.18:1 — fails badly.
+  // Use --color-text (#4c4f69, 6.04:1 on crust / 5.17:1 on surface0) instead.
+  // Active state is communicated by font-weight + underline border (decorative, no contrast req).
+  [data-theme="light"] & nav a.active {
+    color: var(--color-text);
+    border-bottom: 2px solid var(--color-mauve);
+  }
+
   .logo-link {
     display: flex;
     align-items: center;
@@ -121,6 +131,12 @@
     font-weight: $font-weight-bold;
     font-size: $font-size-xl;
     color: var(--color-primary);
+  }
+
+  // Latte: --color-primary (blue #1e66f5) on nav crust (#dce0e8) = 3.71:1 — fails WCAG AA.
+  // Use --color-text (#4c4f69, 6.04:1 on crust) to ensure logo text is accessible.
+  [data-theme="light"] & .logo-text {
+    color: var(--color-text);
   }
 
   .right_side {

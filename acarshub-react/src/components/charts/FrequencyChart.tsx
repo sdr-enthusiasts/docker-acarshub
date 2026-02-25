@@ -25,7 +25,7 @@ import {
   type TooltipItem,
 } from "chart.js";
 import ChartDataLabels from "chartjs-plugin-datalabels";
-import { useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import { Bar } from "react-chartjs-2";
 import { useSettingsStore } from "../../store/useSettingsStore";
 import type { SignalData } from "../../types";
@@ -103,13 +103,6 @@ export const FrequencyChart = ({
       "#d20f39", // Red
     ];
   }, [isDark]);
-  // Diagnostic logging to detect mount/unmount cycles
-  useEffect(() => {
-    console.log(`[FrequencyChart] ${decoderType} MOUNTED`);
-    return () => {
-      console.log(`[FrequencyChart] ${decoderType} UNMOUNTED`);
-    };
-  }, [decoderType]);
 
   // Process frequency data and prepare for chart
   const chartData = useMemo(() => {

@@ -25,7 +25,7 @@ import {
   type TooltipItem,
 } from "chart.js";
 import ChartDataLabels from "chartjs-plugin-datalabels";
-import { useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import { Bar } from "react-chartjs-2";
 import { useSettingsStore } from "../../store/useSettingsStore";
 import type { SignalCountData } from "../../types";
@@ -72,18 +72,6 @@ export const MessageCountChart = ({
 }: MessageCountChartProps) => {
   const theme = useSettingsStore((state) => state.settings.appearance.theme);
   const isDark = theme === "mocha";
-
-  // Diagnostic logging to detect mount/unmount cycles
-  useEffect(() => {
-    console.log(
-      `[MessageCountChart] ${showEmptyMessages ? "EMPTY" : "DATA"} MOUNTED`,
-    );
-    return () => {
-      console.log(
-        `[MessageCountChart] ${showEmptyMessages ? "EMPTY" : "DATA"} UNMOUNTED`,
-      );
-    };
-  }, [showEmptyMessages]);
 
   // Process count data and prepare for chart
   const chartData = useMemo(() => {

@@ -43,6 +43,12 @@ interface MessageFiltersProps {
   showAlertsOnly: boolean;
   /** Callback when alerts-only filter changes */
   onShowAlertsOnlyChange: (enabled: boolean) => void;
+  /** All known station IDs received from the backend */
+  stationIds: string[];
+  /** Currently selected station IDs (empty = show all) */
+  selectedStationIds: string[];
+  /** Callback when selected station IDs change */
+  onSelectedStationIdsChange: (ids: string[]) => void;
 }
 
 /**
@@ -75,14 +81,32 @@ export const MessageFilters = memo(
     onTextFilterChange,
     showAlertsOnly,
     onShowAlertsOnlyChange,
+    stationIds,
+    selectedStationIds,
+    onSelectedStationIdsChange,
   }: MessageFiltersProps) => {
     const [isLabelModalOpen, setIsLabelModalOpen] = useState(false);
+    const [isStationModalOpen, setIsStationModalOpen] = useState(false);
     const [localTextFilter, setLocalTextFilter] = useState(textFilter);
 
     // Sync localTextFilter with textFilter prop (e.g., when cleared externally)
     useEffect(() => {
       setLocalTextFilter(textFilter);
     }, [textFilter]);
+
+    // Handle station ID toggle
+    const handleStationToggle = useCallback(
+      (stationId: string) => {
+        if (selectedStationIds.includes(stationId)) {
+          onSelectedStationIdsChange(
+            selectedStationIds.filter((id) => id !== stationId),
+          );
+        } else {
+          onSelectedStationIdsChange([...selectedStationIds, stationId]);
+        }
+      },
+      [selectedStationIds, onSelectedStationIdsChange],
+    );
 
     // Handle label toggle
     const handleLabelToggle = useCallback(
@@ -116,6 +140,7 @@ export const MessageFilters = memo(
     );
 
     const excludedCount = excludedLabels.length;
+    const selectedStationCount = selectedStationIds.length;
 
     return (
       <div className="message-filters">
@@ -179,6 +204,18 @@ export const MessageFilters = memo(
             </Button>
 
             <Button
+              variant={selectedStationCount > 0 ? "primary" : "secondary"}
+              size="sm"
+              onClick={() => setIsStationModalOpen(true)}
+              title="Filter by station ID"
+            >
+              Stations{" "}
+              {selectedStationCount > 0
+                ? `(${selectedStationCount} selected)`
+                : ""}
+            </Button>
+
+            <Button
               variant="secondary"
               size="sm"
               onClick={() => setIsLabelModalOpen(true)}
@@ -188,6 +225,65 @@ export const MessageFilters = memo(
             </Button>
           </div>
         </div>
+
+        {/* Station Filter Modal */}
+        <Modal
+          isOpen={isStationModalOpen}
+          onClose={() => setIsStationModalOpen(false)}
+          title="Filter by Station ID"
+          size="md"
+        >
+          <div className="station-filters">
+            <p className="station-filters__description">
+              Select one or more station IDs to show only messages from those
+              sources. Leave all unchecked to show messages from all stations.
+            </p>
+
+            <div className="station-filters__list">
+              {stationIds.length === 0 ? (
+                <p className="station-filters__empty">
+                  No station IDs available yet. They will appear as messages are
+                  received.
+                </p>
+              ) : (
+                stationIds.map((stationId) => {
+                  const isSelected = selectedStationIds.includes(stationId);
+                  return (
+                    <div key={stationId} className="station-filter-item">
+                      <label
+                        htmlFor={`station-${stationId}`}
+                        className="station-filter-item__label"
+                      >
+                        <span className="station-filter-item__id">
+                          {stationId}
+                        </span>
+                      </label>
+                      <input
+                        type="checkbox"
+                        id={`station-${stationId}`}
+                        className="station-filter-item__checkbox"
+                        checked={isSelected}
+                        onChange={() => handleStationToggle(stationId)}
+                      />
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {selectedStationCount > 0 && (
+              <div className="station-filters__actions">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => onSelectedStationIdsChange([])}
+                >
+                  Clear All ({selectedStationCount} selected)
+                </Button>
+              </div>
+            )}
+          </div>
+        </Modal>
 
         {/* Label Filter Modal */}
         <Modal
