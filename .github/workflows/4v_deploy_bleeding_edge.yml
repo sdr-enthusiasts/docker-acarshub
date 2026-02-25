@@ -1,4 +1,4 @@
-name: Deploy v4 Test
+name: Deploy v4 Test Bleeding Edge
 on:
   # Build and deploy the image on pushes to main branch
   workflow_dispatch:
