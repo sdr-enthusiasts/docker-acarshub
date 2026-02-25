@@ -96,7 +96,8 @@ test-e2e-docker:
     @echo "Building frontend for E2E tests (VITE_E2E=true exposes __ACARS_STORE__)..."
     VITE_E2E=true npm run build --workspace=acarshub-react
     @echo "Killing any stale process on port 3000..."
-    fuser -k 3000/tcp 2>/dev/null || true
+    #fuser -k 3000/tcp 2>/dev/null || true
+    pkill MainThread
     @echo "Starting vite preview server in background..."
     cd acarshub-react && npx vite preview --port 3000 --strictPort &
     sleep 3
@@ -112,7 +113,7 @@ test-e2e-docker:
       -e PLAYWRIGHT_DOCKER=true \
       mcr.microsoft.com/playwright:v1.58.2-noble \
       bash -c "npm ci && cd acarshub-react && npx playwright test --reporter=line" || (fuser -k 3000/tcp 2>/dev/null || true; exit 1)
-    fuser -k 3000/tcp 2>/dev/null || true
+    pkill MainThread
     @echo "✅ E2E tests passed!"
 
 # Debug runner for E2E tests — no CI mode so retries=0 and workers run in parallel.
@@ -124,7 +125,7 @@ test-e2e-docker-debug *ARGS='':
     @echo "Building frontend for E2E tests (VITE_E2E=true exposes __ACARS_STORE__)..."
     VITE_E2E=true npm run build --workspace=acarshub-react
     @echo "Killing any stale process on port 3000..."
-    fuser -k 3000/tcp 2>/dev/null || true
+    pkill MainThread
     @echo "Starting vite preview server in background..."
     cd acarshub-react && npx vite preview --port 3000 --strictPort &
     sleep 3
@@ -139,7 +140,7 @@ test-e2e-docker-debug *ARGS='':
       -e PLAYWRIGHT_DOCKER=true \
       mcr.microsoft.com/playwright:v1.58.2-noble \
       bash -c "npm ci && cd acarshub-react && npx playwright test --reporter=line {{ ARGS }}" || (fuser -k 3000/tcp 2>/dev/null || true; exit 1)
-    fuser -k 3000/tcp 2>/dev/null || true
+    pkill MainThread
     @echo "✅ E2E tests done!"
 
 # Build the test Docker image (ah:test) from Node.Dockerfile
@@ -152,12 +153,35 @@ build-test-image:
 
 # Run full-stack integration E2E tests via Docker Compose
 
-# Requires the production Docker image to be built first: docker build -t ah:test .
+# Requires the production Docker image to be built first: just build-test-image
 test-e2e-fullstack:
-    @echo "Running full-stack E2E tests via Docker Compose..."
-    docker compose -f docker-compose.test.yml up --abort-on-container-exit --exit-code-from playwright
-    docker compose -f docker-compose.test.yml down --volumes
-    @echo "✅ Full-stack E2E tests passed!"
+    #!/usr/bin/env bash
+    set -uo pipefail
+    echo "Running full-stack E2E tests via Docker Compose..."
+    # Start backend infrastructure in detached mode.
+    # playwright is NOT started here — docker compose run below returns the
+    # moment the test suite finishes.  The old `up --abort-on-container-exit`
+    # pattern hangs on Compose v5 when the playwright container exits with
+    # code 0 (success) because v5 only aborts on non-zero exits.
+    docker compose -f docker-compose.test.yml up -d db-init backend
+    # Run the integration test suite.  `run` respects the
+    # `depends_on: backend: condition: service_healthy` declared in the
+    # playwright service, so it waits for the backend healthcheck to pass
+    # before executing the test command.  The container is removed on exit
+    # (--rm) and the exit code is returned directly.
+    EXIT_CODE=0
+    docker compose -f docker-compose.test.yml run --rm playwright || EXIT_CODE=$?
+    # Tear down all containers.  Volumes are intentionally kept:
+    #   acarshub-test-db          — db-init overwrites it with a clean seed on
+    #                               the next run, so no wipe needed here.
+    #   acarshub-integration-*    — node_modules cache; avoids a full npm ci on
+    #                               every run (shaves ~30 s off subsequent runs).
+    docker compose -f docker-compose.test.yml down --timeout 5
+    if [ "$EXIT_CODE" -ne 0 ]; then
+        echo "❌ Full-stack E2E tests FAILED (exit code: $EXIT_CODE)"
+        exit "$EXIT_CODE"
+    fi
+    echo "✅ Full-stack E2E tests passed!"
 
 # Generate test fixture data (requires rrdtool — available in Nix dev env)
 

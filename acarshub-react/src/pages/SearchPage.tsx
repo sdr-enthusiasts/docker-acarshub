@@ -225,15 +225,32 @@ export const SearchPage = () => {
     return Object.values(params).every((value) => value.trim() === "");
   };
 
-  // Execute search query
-  const executeSearch = (params: CurrentSearch, page: number = 0) => {
+  // Execute search query.
+  //
+  // When `submitIntent` is true (form Submit button clicked) an empty form is
+  // treated as "show all" and the query is still sent — the backend's
+  // searchWithLike with no conditions returns all messages (paginated).
+  //
+  // When `submitIntent` is false (debounced input change) an empty params
+  // object clears the results without querying, preventing a full-table scan
+  // every time the user deletes the last character from a field.
+  const executeSearch = (
+    params: CurrentSearch,
+    page: number = 0,
+    submitIntent = false,
+  ) => {
     if (isSearchEmpty(params)) {
-      setResults([]);
-      setTotalResults(0);
-      setQueryTime(null);
-      setActiveSearch(null);
-      setCurrentPage(0);
-      return;
+      if (!submitIntent) {
+        // Debounce path: user cleared the last field — reset the results panel
+        setResults([]);
+        setTotalResults(0);
+        setQueryTime(null);
+        setActiveSearch(null);
+        setCurrentPage(0);
+        return;
+      }
+      // Form submit path: empty fields = "show all" — fall through and query
+      uiLogger.debug("Empty form submitted — sending show-all query");
     }
 
     setIsSearching(true);
@@ -275,9 +292,10 @@ export const SearchPage = () => {
       clearTimeout(searchDebounceTimer.current);
     }
 
-    // Debounce search by 500ms
+    // Debounce search by 500ms — submitIntent=false so clearing all fields
+    // resets results without firing a full-table scan.
     searchDebounceTimer.current = setTimeout(() => {
-      executeSearch(newParams, 0);
+      executeSearch(newParams, 0, false);
     }, 500);
   };
 
@@ -290,7 +308,8 @@ export const SearchPage = () => {
       clearTimeout(searchDebounceTimer.current);
     }
 
-    executeSearch(searchParams, 0);
+    // submitIntent=true: empty form → show-all query
+    executeSearch(searchParams, 0, true);
 
     // On mobile, scroll to results section after a short delay to allow results to load
     if (window.innerWidth < MOBILE_BREAKPOINT) {

@@ -141,13 +141,26 @@ test.describe("Alerts page — full stack", () => {
       .filter({ hasText: /result/i });
     await expect(resultsStat).toBeVisible({ timeout: 30_000 });
 
-    const strongEl = resultsStat.locator("strong").first();
-    await expect(strongEl).toBeVisible({ timeout: 5_000 });
-
-    const countText = await strongEl.textContent();
-    const count = Number.parseInt(countText ?? "0", 10);
-    // WN4899 has 46 matches in the seed DB
-    expect(count).toBeGreaterThan(0);
+    // Poll until the count is > 0 rather than reading it once after the stat
+    // element becomes visible.  The stat renders immediately showing "0 results"
+    // while the Socket.IO query is in flight; reading it too early produces a
+    // flaky failure.  expect.poll retries until the count becomes positive or
+    // the timeout expires.
+    await expect
+      .poll(
+        async () => {
+          const text = await resultsStat
+            .locator("strong")
+            .first()
+            .textContent();
+          return Number.parseInt(text ?? "0", 10);
+        },
+        {
+          timeout: 30_000,
+          message: "Expected WN4899 historical result count to be > 0",
+        },
+      )
+      .toBeGreaterThan(0);
   });
 
   // ── Test 4: Live mode shows message cards with alert styling ───────────

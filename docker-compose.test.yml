@@ -65,6 +65,12 @@ services:
       # Reduce log verbosity in CI
       - MIN_LOG_LEVEL=3
       - QUIET_MESSAGES=true
+      # Prevent the pruner from deleting seed messages during the test run.
+      # Seed data is from May 2024; with the default 7-day retention the pruner
+      # wipes everything ~60 s after startup, causing late-running tests to see
+      # an empty database.  36500 days (≈ 100 years) effectively disables pruning.
+      - DB_SAVE_DAYS=36500
+      - DB_ALERT_SAVE_DAYS=36500
       # Disable range rings (no ADS-B, so not needed)
       - ENABLE_RANGE_RINGS=false
     volumes:
@@ -84,6 +90,10 @@ services:
       timeout: 5s
       retries: 25
       start_period: 30s
+    # Limit graceful-stop wait so `docker compose up` exits quickly after
+    # playwright finishes.  The default is 10 s but s6-rc can take longer;
+    # capping it at 5 s prevents a silent 30 s hang in the terminal.
+    stop_grace_period: 5s
     # Expose port 80 on the host for ad-hoc manual inspection
     ports:
       - "3001:80"
@@ -113,14 +123,15 @@ services:
       - PLAYWRIGHT_INTEGRATION=true
       # Backend is reachable at http://backend inside the compose network
       - INTEGRATION_BASE_URL=http://backend
-    command: >
-      bash -c "
+    command:
+      - bash
+      - -c
+      - |
         npm ci &&
         cd acarshub-react &&
-        npx playwright test e2e/integration/
-          --config playwright.integration.config.ts
+        npx playwright test e2e/integration/ \
+          --config playwright.integration.config.ts \
           --reporter=line
-      "
 
 volumes:
   # Shared writable volume for the seed DB and RRD file (wiped by `down --volumes`)

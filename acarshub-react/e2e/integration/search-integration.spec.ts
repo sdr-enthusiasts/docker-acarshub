@@ -95,13 +95,13 @@ async function searchBy(
   // Submit
   await page.locator('button[type="submit"]').click();
 
-  // Wait for results OR empty state
+  // Wait for results OR empty state.
+  // Use a CSS comma-selector with .first() to avoid strict-mode violations:
+  // the broad [class*="empty"] fallback was matching .message-content--empty
+  // divs *inside* returned cards, causing Playwright to see 12+ elements in
+  // the union and throw a strict mode violation.
   await expect(
-    page
-      .locator(".message-card")
-      .first()
-      .or(page.locator(".search-page__empty-state"))
-      .or(page.locator('[class*="empty"]')),
+    page.locator(".message-card, .search-page__empty-state").first(),
   ).toBeVisible({ timeout });
 }
 
