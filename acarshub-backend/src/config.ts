@@ -197,7 +197,6 @@ const ConfigSchema = z.object({
   heywhatsThatSave: z.string(),
   flightTrackingUrl: z.string().url(),
   minLogLevel: z.enum(["trace", "debug", "info", "warn", "error"]),
-  quietMessages: z.boolean(),
 });
 
 export type Config = z.infer<typeof ConfigSchema>;
@@ -404,11 +403,6 @@ function parseLogLevel(input: string): LogLevel {
 }
 
 export const MIN_LOG_LEVEL: LogLevel = parseLogLevel(rawLogLevel);
-
-/**
- * Message output configuration
- */
-export const QUIET_MESSAGES = isEnabled(process.env.QUIET_MESSAGES, false);
 
 /**
  * RRD migration configuration
@@ -629,7 +623,6 @@ export function getConfig(): Config & {
     heywhatsThatSave: HEYWHATSTHAT_SAVE,
     flightTrackingUrl: FLIGHT_TRACKING_URL,
     minLogLevel: MIN_LOG_LEVEL,
-    quietMessages: QUIET_MESSAGES,
     rrdPath: RRD_PATH,
     alertTerms,
     alertIgnoreTerms: alertTermsIgnore,

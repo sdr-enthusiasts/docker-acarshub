@@ -43,7 +43,7 @@ services:
   # ── backend ────────────────────────────────────────────────────────────────
   # Production Docker image running with the seed database.
   # All message decoders are disabled — there are no external TCP feeds in the
-  # test environment. ENABLE_WEB=true keeps nginx + the Node.js backend running.
+  # test environment.
   backend:
     image: ah:test
     depends_on:
@@ -58,13 +58,10 @@ services:
       - ENABLE_HFDL=false
       - ENABLE_IMSL=false
       - ENABLE_IRDM=false
-      # Web server must stay enabled (serves React SPA + Socket.IO)
-      - ENABLE_WEB=true
       # Disable ADS-B polling (no external URL available in CI)
       - ENABLE_ADSB=false
       # Reduce log verbosity in CI
       - MIN_LOG_LEVEL=3
-      - QUIET_MESSAGES=true
       # Prevent the pruner from deleting seed messages during the test run.
       # Seed data is from May 2024; with the default 7-day retention the pruner
       # wipes everything ~60 s after startup, causing late-running tests to see

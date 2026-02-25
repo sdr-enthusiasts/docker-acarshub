@@ -1,12 +1,13 @@
 {
   "name": "@acarshub/backend",
-  "version": "4.1.0",
+  "version": "4.1.1",
   "description": "ACARS Hub Node.js backend server",
   "type": "module",
   "main": "./dist/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
+    "build:bundle": "esbuild src/server.ts --bundle --platform=node --format=esm --target=node22 --external:better-sqlite3 --external:zeromq '--external:node:*' --banner:js=\"import { createRequire } from 'module'; const require = createRequire(import.meta.url);\" --outfile=dist/server.bundle.mjs",
     "start": "node dist/server.js",
     "clean": "rm -rf dist",
     "lint": "biome check .",
@@ -49,10 +50,5 @@
     "tsx": "4.21.0",
     "typescript": "5.9.3",
     "vitest": "4.0.18"
-  },
-  "overrides": {
-    "rimraf": "6.1.3",
-    "glob": "13.0.0",
-    "inflight": "npm:@zkochan/inflight@2.0.0"
   }
 }

@@ -418,19 +418,6 @@ describe("config module", () => {
     });
   });
 
-  describe("Quiet messages configuration", () => {
-    it("should default to false", async () => {
-      const { QUIET_MESSAGES } = await import("../config.js");
-      expect(QUIET_MESSAGES).toBe(false);
-    });
-
-    it("should respect QUIET_MESSAGES=true", async () => {
-      process.env.QUIET_MESSAGES = "true";
-      const { QUIET_MESSAGES } = await import("../config.js");
-      expect(QUIET_MESSAGES).toBe(true);
-    });
-  });
-
   describe("getConfig()", () => {
     it("should return complete configuration object", async () => {
       const { getConfig } = await import("../config.js");
@@ -444,7 +431,6 @@ describe("config module", () => {
       expect(config.enableAcars).toBeDefined();
       expect(config.flightTrackingUrl).toBeDefined();
       expect(config.minLogLevel).toBeDefined();
-      expect(config.quietMessages).toBeDefined();
     });
 
     it("should validate configuration with Zod", async () => {

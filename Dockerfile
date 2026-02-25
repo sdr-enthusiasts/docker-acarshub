@@ -11,12 +11,6 @@ WORKDIR /workspace
 # vite.config.ts (frontend) and config.ts (backend) — no ARG injection needed.
 ARG BUILD_NUMBER=0
 
-# hadolint ignore=DL3008
-RUN set -xe && \
-    apt-get update && \
-    apt-get install -y --no-install-recommends make python3 g++ cmake && \
-    rm -rf /tmp/* /var/lib/apt/lists/*
-
 # Copy workspace manifests first for better layer caching
 COPY package.json package-lock.json tsconfig.json tsconfig.base.json ./
 COPY acarshub-react/ ./acarshub-react/
@@ -24,23 +18,112 @@ COPY acarshub-backend/ ./acarshub-backend/
 COPY acarshub-types/ ./acarshub-types/
 
 # Install all workspace dependencies (devDeps required for tsc/vite build tools)
+# --loglevel=error suppresses deprecation warnings from transitive deps in @lhci/cli
+# and drizzle-kit (both at latest versions; upstream fixes required to remove them)
 RUN set -xe && \
-    npm ci --include=dev
+    npm ci --include=dev --loglevel=error
 
 # Re-declare ARG after FROM so it is in scope for the RUN
 ARG BUILD_NUMBER=0
 
 RUN set -xe && \
     export VITE_BUILD_NUMBER="${BUILD_NUMBER}" && \
-    npm run build && \
+    # Build each workspace individually so we can skip generate-sprites for the
+    # React app.  The sprite sheets (PNG + WebP) are pre-generated static assets
+    # committed to the repository (acarshub-react/src/assets/sprites/) and are
+    # already present in the build context via the COPY above — regenerating them
+    # here is wasted work.
+    #
+    # History: arm64 builds were broken because package-lock.json had been
+    # regenerated while node_modules was present with only x64 optional packages
+    # installed (npm bug #4828).  npm ci faithfully reproduces the lockfile, so
+    # the arm64 sharp/rollup prebuilts were never installed, causing:
+    #   "Could not load the 'sharp' module using the linux-arm64 runtime"
+    #   "Cannot find module @rollup/rollup-linux-arm64-gnu"
+    # The root fix was regenerating the lockfile from scratch (no node_modules),
+    # which causes npm to record ALL platform variants of optional deps.
+    # Skipping generate-sprites is a permanent defensive layer: it removes any
+    # dependency on sharp's native binary running correctly under QEMU emulation,
+    # and avoids re-triggering the issue if the lockfile is ever corrupted again.
+    # `vite build` produces an identical dist/ output without touching sharp.
+    npm run build --workspace=@acarshub/types && \
+    cd acarshub-react && npx vite build && cd .. && \
+    npm run build --workspace=@acarshub/backend && \
+    # Bundle the backend into a single ESM file with esbuild.
+    # better-sqlite3 and zeromq are marked external because they contain native
+    # .node addons that cannot be inlined into a JS bundle — they must be loaded
+    # from disk by Node.js at runtime.  All other production dependencies
+    # (fastify, socket.io, drizzle-orm, pino, pino-pretty, zod, @airframes, …)
+    # are inlined, so they do not need to be present in the runtime node_modules.
+    # node:* built-ins are always external.
+    npx esbuild acarshub-backend/src/server.ts \
+    --bundle \
+    --platform=node \
+    --format=esm \
+    --target=node22 \
+    --external:better-sqlite3 \
+    --external:zeromq \
+    --external:'node:*' \
+    --banner:js="import { createRequire } from 'module'; const require = createRequire(import.meta.url);" \
+    --outfile=/backend/server.bundle.mjs && \
     # Stage React SPA output
     mkdir -p /webapp/dist && \
     cp -r ./acarshub-react/dist/* /webapp/dist/ && \
-    # Stage compiled Node.js backend
-    mkdir -p /backend/dist && \
-    cp -r ./acarshub-backend/dist/* /backend/dist/ && \
-    # Stage Drizzle SQL migration files (needed by migration01_initialSchema at runtime)
-    cp -r ./acarshub-backend/drizzle/ /backend/drizzle/
+    # Stage Drizzle SQL migration files (needed by the migrator at runtime)
+    cp -r ./acarshub-backend/drizzle/ /backend/drizzle/ && \
+    # Stage native addon runtime files.
+    # Only better-sqlite3 and zeromq (plus their JS-level loaders and the
+    # cmake-ts prebuilt-loader that zeromq depends on) are needed at runtime.
+    # All other production deps are already inlined in server.bundle.mjs.
+    #
+    # better-sqlite3 runtime deps:
+    #   build/Release/   — compiled .node addon
+    #   lib/             — JS wrapper that loads the addon via 'bindings'
+    #   bindings/        — helper that locates build/Release/
+    #   file-uri-to-path/ — transitive dep of bindings
+    #
+    # zeromq runtime deps:
+    #   build/           — prebuilt .node addons (all platforms; pruned below)
+    #   lib/             — JS wrapper
+    #   cmake-ts/        — prebuilt-addon loader (reads build/manifest.json)
+    mkdir -p \
+    /addon-deps/better-sqlite3 \
+    /addon-deps/zeromq \
+    /addon-deps/cmake-ts \
+    /addon-deps/bindings \
+    /addon-deps/file-uri-to-path && \
+    cp -r node_modules/better-sqlite3/build   /addon-deps/better-sqlite3/build && \
+    cp -r node_modules/better-sqlite3/lib     /addon-deps/better-sqlite3/lib && \
+    cp    node_modules/better-sqlite3/package.json /addon-deps/better-sqlite3/ && \
+    cp -r node_modules/zeromq/build           /addon-deps/zeromq/build && \
+    cp -r node_modules/zeromq/lib             /addon-deps/zeromq/lib && \
+    cp    node_modules/zeromq/package.json    /addon-deps/zeromq/ && \
+    cp -r node_modules/cmake-ts/.             /addon-deps/cmake-ts/ && \
+    cp -r node_modules/bindings/.             /addon-deps/bindings/ && \
+    cp -r node_modules/file-uri-to-path/.     /addon-deps/file-uri-to-path/ && \
+    # Prune zeromq prebuilts that will never be used in this Linux container:
+    #   win32 and darwin — wrong OS entirely
+    #   musl variants    — docker-baseimage:base is Debian/glibc, not Alpine
+    #   other CPU arch   — the image is built natively; the wrong arch is dead weight
+    #   src/             — C++ source, not needed post-compilation
+    rm -rf \
+    /addon-deps/zeromq/build/win32 \
+    /addon-deps/zeromq/build/darwin \
+    /addon-deps/zeromq/src && \
+    { find /addon-deps/zeromq/build/linux -type d -name "musl-*" -exec rm -rf {} + 2>/dev/null || true; } && \
+    if [ "$(uname -m)" = "x86_64" ]; then \
+    rm -rf /addon-deps/zeromq/build/linux/arm64; \
+    else \
+    rm -rf /addon-deps/zeromq/build/linux/x64; \
+    fi && \
+    # Prune better-sqlite3 build artifacts:
+    #   deps/  — SQLite amalgamation C source (only needed to compile the addon)
+    #   src/   — C++ binding source (only needed to compile the addon)
+    rm -rf \
+    /addon-deps/better-sqlite3/deps \
+    /addon-deps/better-sqlite3/src && \
+    #   cleanup js map files, those are just for viewing the code
+    { find /addon-deps | grep -E ".map$" | xargs rm -rf || true; }
 
 # ============================================================
 # Stage 2: Runtime image
@@ -60,10 +143,8 @@ ARG BUILD_NUMBER=0
 # file lands at /usr/local/bin/npm with __dirname=/usr/local/bin and the relative
 # require('../lib/cli.js') resolves to /usr/local/lib/cli.js (wrong).
 # A shell wrapper that invokes npm-cli.js by absolute path keeps __dirname correct.
+# Copy only the node binary — npm is not needed in the runtime image.
 COPY --from=acarshub-react-builder /usr/local/bin/node /usr/local/bin/node
-COPY --from=acarshub-react-builder /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/npm
-RUN printf '#!/bin/sh\nexec /usr/local/bin/node /usr/local/lib/node_modules/npm/bin/npm-cli.js "$@"\n' \
-    > /usr/local/bin/npm && chmod +x /usr/local/bin/npm
 
 # hadolint ignore=DL3008,SC2086
 RUN set -x && \
@@ -80,43 +161,36 @@ RUN set -x && \
     # Runtime directories expected by s6 services and the Node backend
     mkdir -p /run/acars /webapp/data/ /backend
 
-# Copy only the package manifests needed for npm to resolve the workspace graph
-# from the lockfile. No source files are needed - npm ci only reads package.json
-# files to set up workspace symlinks and then follows the lockfile for resolution.
+# Package manifests are needed at runtime for version reporting (config.ts reads
+# package.json files via process.cwd() to determine the container/backend/frontend
+# version strings).  The lockfile and workspace source files are not needed.
 WORKDIR /backend
-COPY package.json package-lock.json ./
+COPY package.json ./
 COPY acarshub-backend/package.json ./acarshub-backend/
 COPY acarshub-types/package.json   ./acarshub-types/
 COPY acarshub-react/package.json   ./acarshub-react/
 
-# Install production-only dependencies directly in /backend.
+# Copy the esbuild bundle and its native addon runtime dependencies.
 #
-# Why build tools are installed and removed in the same layer:
-#   better-sqlite3 is a native addon that must compile against the Node ABI.
-#   Installing and purging make/python3/g++ in one RUN keeps them out of the
-#   final image layer while still allowing the addon to compile.
+# The bundle (server.bundle.mjs) contains all pure-JS production dependencies
+# inlined — fastify, socket.io, drizzle-orm, pino, pino-pretty, zod,
+# @airframes/acars-decoder, etc.  Only the two native addons (better-sqlite3
+# and zeromq) remain as external packages that Node.js must resolve from disk.
 #
-# Why we remove node_modules/@acarshub/:
-#   npm workspaces creates symlinks for every workspace package regardless of
-#   whether it is an actual runtime dependency. All @acarshub/* imports in the
-#   backend are "import type" declarations erased by tsc, so none of these
-#   symlinks are needed at runtime. Removing them prevents broken-symlink noise.
+# The native addon runtime files were staged and pruned in the builder:
+#   - cross-platform zeromq prebuilts removed (win32, darwin, musl, other arch)
+#   - better-sqlite3 build artifacts removed (deps/, src/)
 #
-# The --mount=type=cache on /root/.npm avoids re-downloading tarballs on
-# subsequent builds when the package-lock.json has not changed.
-#
-# hadolint ignore=DL3008
-RUN --mount=type=cache,target=/root/.npm \
-    set -xe && \
-    apt-get update && \
-    apt-get install -y --no-install-recommends make python3 g++ cmake && \
-    npm ci --omit=dev && \
-    npm dedupe && \
-    rm -rf node_modules/@acarshub && \
-    apt-get purge -y make python3 g++ && \
-    apt-get autoremove -y && \
-    apt-get clean -q -y && \
-    rm -rf /tmp/* /var/lib/apt/lists/* /var/cache/*
+# This replaces the entire "apt-get install compilers → npm ci → apt-get purge"
+# block from the old approach — no compilers are needed in the runtime stage
+# because the native addons were already compiled in the builder stage, which
+# already has all build tools present for the tsc/vite/esbuild steps.
+COPY --from=acarshub-react-builder /backend/server.bundle.mjs ./server.bundle.mjs
+COPY --from=acarshub-react-builder /addon-deps/better-sqlite3  ./node_modules/better-sqlite3
+COPY --from=acarshub-react-builder /addon-deps/zeromq          ./node_modules/zeromq
+COPY --from=acarshub-react-builder /addon-deps/cmake-ts        ./node_modules/cmake-ts
+COPY --from=acarshub-react-builder /addon-deps/bindings        ./node_modules/bindings
+COPY --from=acarshub-react-builder /addon-deps/file-uri-to-path ./node_modules/file-uri-to-path
 
 # React SPA served by nginx
 COPY --from=acarshub-react-builder /webapp/dist/ /webapp/dist/
@@ -130,9 +204,7 @@ RUN find /webapp/dist/assets \
     \( -name "*.js" -o -name "*.css" -o -name "*.geojson" \) \
     -exec gzip -9 --keep {} \;
 
-# Node.js backend: compiled JS + Drizzle SQL migrations
-# (node_modules are already installed above via npm ci)
-COPY --from=acarshub-react-builder /backend/dist/    /backend/dist/
+# Drizzle SQL migration files — read from disk by the migrator at startup
 COPY --from=acarshub-react-builder /backend/drizzle/ /backend/drizzle/
 
 COPY rootfs/ /
@@ -161,17 +233,13 @@ EXPOSE 5556/udp
 EXPOSE 5557/udp
 EXPOSE 5558/udp
 
-ENV FEED="" \
-    ENABLE_ACARS="false" \
+ENV ENABLE_ACARS="false" \
     ENABLE_VDLM="false" \
     ENABLE_ADSB="false" \
-    ENABLE_WEB="true" \
     MIN_LOG_LEVEL=3 \
-    QUIET_MESSAGES="true" \
     DB_SAVEALL="true" \
     ENABLE_RANGE_RINGS="true" \
     ADSB_URL="http://tar1090/data/aircraft.json" \
-    DB_FTS_OPTIMIZE="off" \
     PORT=8888 \
     ACARSHUB_DB="/run/acars/messages.db" \
     GROUND_STATION_PATH="/webapp/data/ground-stations.json" \
