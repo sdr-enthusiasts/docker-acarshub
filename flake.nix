@@ -60,6 +60,8 @@
             ".*.geojson"
             ".*.webp"
             "spritesheet.json"
+            "ground-stations.json"
+            "metadata.json"
           ];
         };
       });
