@@ -26,48 +26,47 @@
 
 ### v4.1.0 New
 
-- Backend: completely rewritten in Node.JS
-- Backend: Enable TCP and ZMQ connections to acars router and/or the decoders directly [(2)](#v410-n2)
-- Front End: Optimize load times and reduce fresh load bandwidth for all use cases
-- Database: Time Series data is no longer stored in an RRD. It will be migrated in to the main database.
-- Message Groups: Instead of showing generic "ADSB" if the aircraft is tracked, it will show the actual source (ADSB/UAT/TIS-B/ADSC etc)
+- Backend: completely rewritten in Node.js
+- Backend: Connect to `acars_router` or decoders directly via TCP/ZMQ [(2)](#v410-n2)
+- Front End: Reduced initial load time and bandwidth for all deployment types
+- Database: Time series data is now stored in the main SQLite database and migrated automatically from RRD on first run
+- Message Groups: Instead of showing a generic "ADS-B" label, the actual source type is now shown (ADS-B/UAT/TIS-B/ADSC etc.)
 - Live Messages: Filter by station ID
-- Live Map: ADSB source type is displayed on mouse hover of a plane
+- Live Map: ADS-B source type is displayed on mouse hover of an aircraft
 - Live Map: Updated sprites to latest from Plane Watch (BL8 and C206 added)
-- Live Map: Do not render aircraft markers outside of the view port. Should (marginally) increase performance, especially on deployments with HFDL or other long range position sources
-- Live Map: Side bar now has a filter option to only show aircraft that are currently visible on the map
+- Live Map: Aircraft markers outside the viewport are no longer rendered — improves performance on HFDL and other long-range deployments
+- Live Map: Side bar filter option to show only aircraft currently visible on the map
 - Live Map: Side bar is now resizable and collapsible
-- Live Map: Side bar will now flag what message type(s) the aircraft has been picked up on. Replaces the default green check mark with a colored checkmark of the decoder type. At the default/minimum width only the most recent message type is displayed in the sidebar for that aircraft. As you expand you will see badges for more decoder types if the airplane has them.
-  dis
+- Live Map: Side bar badges indicate which decoder type(s) received each aircraft, replacing the generic green checkmark with a colour-coded badge. At minimum width only the most recent decoder type is shown; expand the sidebar to see all badges for aircraft received on multiple decoder types
 - Live Map: Worldwide TRACON boundary overlay [(1)](#v410-n1)
 - Live Map: Worldwide FIR boundary overlay [(1)](#v410-n1)
-- Live Map: Hey What's That support. Enabled with `HEYWHATSTHAT=<token>`. Optionally, specify the altitude(s) you want to see with `HEYWHATSTHAT_ALTS=<commas separated list of altitudes in feet. No units>`
-- Mobile Live Map: More map controls collapsed in to a flyout at appropriate break points
+- Live Map: Hey What's That support. Enable with `HEYWHATSTHAT=<token>`. Optionally specify the altitudes to display with `HEYWHATSTHAT_ALTS=<comma-separated list of altitudes in feet, no units>`
+- Mobile Live Map: Additional map controls collapse into a flyout menu at smaller breakpoints
 
 ### v4.1.0 Bug Fixes
 
-- Database: migration from ANY version of ACARS Hub prior to v4 incorrectly skipped FTS table rebuilds causing some issues. New databases created in v4 are unaffected. DB will repair itself if the issue is detected. May take some time. No data is/was lost.
-- Network: Removed ipv6 binding in nginx, which appears to have made the container unusable on some configs
-- Live Map: Zoom operations on the live map no longer hide the overlays and no longer hit the web server over and over again for the data as you pan/zoom
-- Live Map: Zoom In/Out buttons now should be shown on top of any airplanes that are behind it
+- Database: Migration from **any** version of ACARS Hub prior to v4 incorrectly skipped FTS table rebuilds. New databases created in v4 are unaffected. The database will repair itself automatically if the issue is detected — this may take some time on large databases, but no data is lost.
+- Network: Removed IPv6 binding in nginx that caused container startup failures on some host configurations
+- Live Map: Panning and zooming no longer hides overlays or re-requests overlay data from the server on every interaction
+- Live Map: Zoom In/Out buttons now render above aircraft markers
 
 ### v4.1.0 Notes
 
-1. <a id="v410-n1"></a>Worldwide TRACON and FIR boundary data comes from VATSIM, which for the uninitiated are sim enthusiasts that play ATC with flight sim. The data, at least for the US, seems accurate (well, I see a problem with Amarillo Approach...it's close, but not right) and probably from actual ATC data. I cannot speak to the veracity of the data for non-US sources. I also cannot practically verify the veracity of the data for US sources. Even though I work for the FAA, I am not going to have any potential conflict of interests or other ethical concerns and use my access to pull the real data and compare/generate my own data.
+1. <a id="v410-n1"></a>Worldwide TRACON and FIR boundary data is sourced from VATSIM — a community of flight simulation enthusiasts who volunteer as virtual ATC controllers. The data appears to be derived from real ATC boundaries: US coverage is largely accurate (Amarillo Approach is close but not quite right), though I cannot independently verify accuracy for non-US regions. As an FAA employee, I won't use my work access to pull official data for comparison in order to avoid any conflict of interest.
 
-2. <a id="v410-n2"></a>By _default_ it will act exactly as before. You should NOT see any difference in ACARS Hub taking in messages.
+2. <a id="v410-n2"></a>By default, ACARS Hub will behave exactly as before — no change is required and message ingestion is unaffected.
 
-You now have the option to set `<ACARS/VDLM/HFDL/IRDM/IMSL>_CONNECTIONS` to point at acars router (or the decoders) to get messages. You can also specify MULTIPLE sources to connect to. This is now the default recommended setup.
+   The new `<ACARS/VDLM/HFDL/IRDM/IMSL>_CONNECTIONS` variables optionally allow ACARS Hub to connect out to `acars_router` or the decoders directly, rather than waiting for them to push data in. Multiple sources per decoder type are supported. This is now the recommended setup.
 
-An example would look like:
+   Example configuration:
 
-```yaml
-ACARS_CONNECTIONS=udp # default, does not need to be set.
-ACARS_CONNECTIONS=udp://0.0.0.0:42069 # udp listen on a custom port
-HFDL_CONNECTIONS=zmq://acars_router:15556 # would connect to acars router over tcp
-VDLM_CONNECTIONS=udp;zmq://acars_router:45555 # listen on udp on the default port and also connect to acars_router over zmq
-```
+   ```yaml
+   ACARS_CONNECTIONS=udp                          # default — no change needed
+   ACARS_CONNECTIONS=udp://0.0.0.0:42069          # UDP on a custom port
+   HFDL_CONNECTIONS=zmq://acars_router:15556      # connect to acars_router over ZMQ
+   VDLM_CONNECTIONS=udp;zmq://acars_router:45555  # listen on UDP and also connect via ZMQ
+   ```
 
-The documentation has been updated to reflect that the recommended setup is have ACARS Hub connect out to the source of data rather than the source of data send it to Hub. the `_CONNECTIONS` are ignored if the `ENABLE_` variable is not set for the decoder type.
+   The `_CONNECTIONS` variables are ignored if the corresponding `ENABLE_` variable is not set. If you migrate to the outbound connection model, remove `acarshub` from your `AR_SEND_UDP` variables to avoid log spam from `acars_router` attempting to push to an offline host.
 
-If you change to the new recommended setup, remove acarshub from the `AR_SEND_UDP` variables. I do recommend changing over, so that you don't get a load of acars_router log spam as it tries to send data over to Hub and Hub is offline.
+   Documentation has been updated to reflect the new recommended setup.
