@@ -5,12 +5,6 @@
 This document is designed to show the most common `docker-compose.yaml` setup that requires
 minimal, if any, modifications.
 
-### Migrating from v2 to v3/NextGen
-
-If you are migrating from `v2` to `v3/NextGen` this would be a fantastic starting place for
-you to copy/paste values from your old compose file. I also highly suggest backing up your old
-compose file just in case you need to roll back if there are bugs.
-
 ### Migrating from earlier v4 releases
 
 If you are running an earlier version of v4 that used `acars_router` with UDP forwarding into
@@ -60,8 +54,8 @@ ACARS Hub receives decoder data via the `ACARS_CONNECTIONS`, `VDLM_CONNECTIONS`,
 
 ## How to do the setup
 
-Please use the `yaml` file below and save it to your computer with docker installed. You need
-to modify a few lines to get started:
+Save the following `docker-compose.yaml` to a machine with Docker installed, then make the
+changes listed below:
 
 **ACARS Hub:**
 
@@ -69,13 +63,8 @@ to modify a few lines to get started:
 - If you intend to feed ACARS, change `ENABLE_ACARS=false` to `ENABLE_ACARS=true`
 - The `*_CONNECTIONS` variables are pre-set to connect to `acars_router` via ZMQ on the
   correct ports. Only change these if you are not using `acars_router`.
-- If you have a local `tar1090` instance and want to be able to click on a link in the message
-  to see that plane on it:
-  - Remove the `#` from the start of the line
-  - After the `=` sign input the URL you use in your browser to visit `tar1090`,
-    e.g. `http://192.168.1.100`
-- If you are in the United States I recommend removing the `#` from the line with
-  `IATA_OVERRIDE`
+- If you are in the United States, uncomment the `IATA_OVERRIDE` line to correct common
+  callsign mappings for US carriers.
 - If you have a source of `tar1090` ADSB data and want to enable the ADSB visualizations:
   - Remove the `#` from the start of the line with `ENABLE_ADSB`
   - Remove the `#` from the lines `ADSB_LAT`/`ADSB_LON` and set each value appropriately
@@ -144,7 +133,6 @@ services:
       # - ENABLE_IRDM=true
       # - IRDM_CONNECTIONS=zmq://acars_router:45558
       - MIN_LOG_LEVEL=3
-  #      - TAR1090_URL=http://tar1090
   #      - IATA_OVERRIDE=UP|UPS|United Parcel Service;GS|FTH|Mountain Aviation (Foothills);GS|EJA|ExecJet
   #      - ENABLE_ADSB=true
   #      - ADSB_LAT=
@@ -317,9 +305,8 @@ Multiple destinations for the same type are separated with a semicolon:
 For the full list of variables see the
 [acars_router README](https://github.com/sdr-enthusiasts/acars_router).
 
-## Final thoughts
+## Further configuration
 
-This document is designed to get you up and started. I feel it is likely you will need to make
-minimal changes to the configuration options provided above; however `ACARS Hub` in particular
-has a few more options you can add and tweak to your needs. Please see the
-[Readme](README.md) for more on that.
+Most users need only a handful of changes to the compose file above to get started. ACARS Hub
+has additional configuration options beyond what is shown here — see the
+[README](README.md) for the full reference.
