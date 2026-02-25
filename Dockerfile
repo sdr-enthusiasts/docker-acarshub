@@ -139,11 +139,12 @@ RUN --mount=type=cache,target=/root/.npm \
     else \
     rm -rf node_modules/zeromq/build/linux/x64; \
     fi && \
-    # drizzle-orm: remove every database dialect except the ones the
-    # backend actually imports (better-sqlite3, sqlite-core, sql).
-    # Confirmed by grepping all drizzle-orm imports in src/ – only
-    # drizzle-orm, drizzle-orm/better-sqlite3, and drizzle-orm/sqlite-core
-    # are used. All other dialect directories are dead weight.
+    # drizzle-orm: remove every database dialect except the ones needed
+    # at runtime. We use better-sqlite3, sqlite-core, and sql. However,
+    # drizzle-orm/sql/sql.js has a hardcoded static import of
+    # pg-core/columns/enum.js (used to detect PG enums during SQL
+    # serialisation), so pg-core must be kept even though we never
+    # import it directly. All other dialect directories are dead weight.
     rm -rf \
     node_modules/drizzle-orm/aws-data-api \
     node_modules/drizzle-orm/bun-sql \
@@ -165,7 +166,6 @@ RUN --mount=type=cache,target=/root/.npm \
     node_modules/drizzle-orm/neon-serverless \
     node_modules/drizzle-orm/node-postgres \
     node_modules/drizzle-orm/op-sqlite \
-    node_modules/drizzle-orm/pg-core \
     node_modules/drizzle-orm/pg-proxy \
     node_modules/drizzle-orm/pglite \
     node_modules/drizzle-orm/planetscale-serverless \
