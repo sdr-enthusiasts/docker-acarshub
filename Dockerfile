@@ -101,7 +101,9 @@ RUN set -xe && \
     #   src/   — C++ binding source (only needed to compile the addon)
     rm -rf \
     /addon-deps/better-sqlite3/deps \
-    /addon-deps/better-sqlite3/src
+    /addon-deps/better-sqlite3/src && \
+    #   cleanup js map files, those are just for viewing the code
+    { find /addon-deps | grep -E ".map$" | xargs rm -rf || true; }
 
 # ============================================================
 # Stage 2: Runtime image
