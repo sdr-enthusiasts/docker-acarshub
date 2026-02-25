@@ -13,7 +13,7 @@
 #                healthcheck to pass, then runs the integration E2E suite.
 #
 # Usage:
-#   just build-test-image          # build ah:test from Node.Dockerfile
+#   just build-test-image          # build ah:test from Dockerfile
 #   just test-e2e-fullstack        # runs this compose file end-to-end
 #
 # The justfile target calls `down --volumes` after the run, so named volumes

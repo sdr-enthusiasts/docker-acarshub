@@ -2194,7 +2194,7 @@ target already references this file — it just doesn't exist yet.
 # Purpose: Full-stack integration E2E — real Node.js backend + nginx + Playwright
 #
 # Build the test image first:
-#   docker build -f Node.Dockerfile -t ah:test .
+#   docker build -f Dockerfile -t ah:test .
 
 services:
   backend:
@@ -2245,13 +2245,13 @@ volumes:
   acarshub-integration-modules:
 ```
 
-**`Node.Dockerfile` test build** — add a `just` target for building the test image:
+**`Dockerfile` test build** — add a `just` target for building the test image:
 
 ```justfile
 # Build the Node.js Docker image for full-stack integration tests
 build-test-image:
     @echo "Building Node.js Docker test image (ah:test)..."
-    docker build -f Node.Dockerfile -t ah:test .
+    docker build -f Dockerfile -t ah:test .
     @echo "✅ ah:test image built"
 ```
 
@@ -2332,7 +2332,7 @@ on:
     paths:
       - "acarshub-backend/**"
       - "rootfs/webapp/**"
-      - "Node.Dockerfile"
+      - "Dockerfile"
       - "docker-compose.test.yml"
 
 jobs:
@@ -2344,7 +2344,7 @@ jobs:
         with:
           node-version: "22"
       - name: Build test image
-        run: docker build -f Node.Dockerfile -t ah:test .
+        run: docker build -f Dockerfile -t ah:test .
       - name: Build React frontend
         run: npm ci && npm run build --workspace=acarshub-react
       - name: Run full-stack E2E tests

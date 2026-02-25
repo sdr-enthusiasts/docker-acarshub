@@ -143,11 +143,11 @@ test-e2e-docker-debug *ARGS='':
     pkill MainThread
     @echo "✅ E2E tests done!"
 
-# Build the test Docker image (ah:test) from Node.Dockerfile
+# Build the test Docker image (ah:test) from Dockerfile
 
 # Must be run before just test-e2e-fullstack
 build-test-image:
-    @echo "Building test Docker image (ah:test) from Node.Dockerfile..."
+    @echo "Building test Docker image (ah:test) from Dockerfile..."
     docker build -f Dockerfile -t ah:test .
     @echo "✅ Test image built: ah:test"
 

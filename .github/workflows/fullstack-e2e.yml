@@ -1,7 +1,7 @@
 # Full-Stack Integration E2E Tests
 #
 # Runs the Playwright integration suite (e2e/integration/) against a real
-# Docker container built from Node.Dockerfile.  The backend is seeded with
+# Docker container built from Dockerfile.  The backend is seeded with
 # the committed test-fixtures/seed.db so every test run starts from a known,
 # reproducible state.
 #
