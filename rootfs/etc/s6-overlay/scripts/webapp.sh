@@ -9,5 +9,5 @@ fi
 cd /backend || exit 1
 
 # shellcheck disable=SC2016
-stdbuf -oL node dist/server.js 2>&1 |
+stdbuf -oL node server.bundle.mjs 2>&1 |
     stdbuf -oL awk '{print "[webapp      ] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
