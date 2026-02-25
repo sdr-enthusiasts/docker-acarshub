@@ -107,6 +107,7 @@ RUN --mount=type=cache,target=/root/.npm \
     apt-get install -y --no-install-recommends ${TEMP_PACKAGES[@]} && \
     npm ci --omit=dev && \
     npm dedupe && \
+    npm prune --production && \
     rm -rf node_modules/@acarshub && \
     apt-get autoremove -q -o APT::Autoremove::RecommendsImportant=0 -o APT::Autoremove::SuggestsImportant=0 -y ${TEMP_PACKAGES[@]} && \
     apt-get clean -q -y && \
