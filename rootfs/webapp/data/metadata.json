@@ -14,10 +14,7 @@
     "14": { "name": "General Aviation Free Text", "label": "14" },
     "15": { "name": "General Aviation Position Report", "label": "15" },
     "16": { "name": "General Aviation Weather Request", "label": "16" },
-    "17": {
-      "name": "Northwest Airlines Position/Weather Report",
-      "label": "17"
-    },
+    "17": { "name": "Northwest Airlines Position/Weather Report", "label": "17" },
     "18": { "name": "General Aviation Weather Report", "label": "18" },
     "19": { "name": "ATIS Report", "label": "19" },
     "1C": { "name": "Flight Plan Request", "label": "1C" },
@@ -63,17 +60,10 @@
     "52": { "name": "Ground UTC Request/Response", "label": "52" },
     "53": { "name": "Reserved", "label": "53" },
     "54": { "name": "Aircrew Initiated Voice Contact Request", "label": "54" },
-    "57": {
-      "name": "Alternate Aircrew Initiated Position Report",
-      "label": "57"
-    },
+    "57": { "name": "Alternate Aircrew Initiated Position Report", "label": "57" },
     "58": { "name": "Aircraft tracking Control", "label": "58" },
     "5D": { "name": "ATIS Request", "label": "5D" },
-    "5P": {
-      "name": "Temporary Suspension of ACARS",
-      "label": "5P",
-      "responds_to_label": "Q6"
-    },
+    "5P": { "name": "Temporary Suspension of ACARS", "label": "5P", "responds_to_label": "Q6" },
     "5R": { "name": "Aircraft Initiated Position Report", "label": "5R" },
     "5U": { "name": "Downlink Weather Request", "label": "5U" },
     "5V": { "name": "VDL Switch Advisory", "label": "5V" },
@@ -95,28 +85,16 @@
     "8B": { "name": "Airline Defined / SAS Off Report", "label": "8B" },
     "8C": { "name": "Airline Defined / SAS On Report", "label": "8C" },
     "8D": { "name": "Airline Defined / SAS In Report", "label": "8D" },
-    "8E": {
-      "name": "Airline Defined / SAS Out/Return In Report",
-      "label": "8E"
-    },
-    "8G": {
-      "name": "Airline Defined / SAS Take Off Data Calculation Report",
-      "label": "8G"
-    },
-    "8H": {
-      "name": "Airline Defined / SAS Loadsheet Request/Confirmation",
-      "label": "8H"
-    },
+    "8E": { "name": "Airline Defined / SAS Out/Return In Report", "label": "8E" },
+    "8G": { "name": "Airline Defined / SAS Take Off Data Calculation Report", "label": "8G" },
+    "8H": { "name": "Airline Defined / SAS Loadsheet Request/Confirmation", "label": "8H" },
     "8I": { "name": "Airline Defined / SAS Flightplan Request", "label": "8I" },
     "8J": { "name": "Airline Defined / SAS Crewlist Request", "label": "8J" },
     "8X": { "name": "Uplink ATIS Information", "label": "8X" },
     "8Z": { "name": "Avionics Unable to Process Data", "label": "8Z" },
     "90": { "name": "Aircraft Addressed Downlinks", "label": "90" },
     "99": { "name": "Emergency Situation Report", "label": "99" },
-    ":;": {
-      "name": "Command Aircraft Transceiver Change Frequency",
-      "label": ":;"
-    },
+    ":;": { "name": "Command Aircraft Transceiver Change Frequency", "label": ":;" },
     "::": { "name": "Reserved", "label": "::" },
     ":}": { "name": "POA to AOA Retune", "label": "" },
     "A1": { "name": "Deliver Oceanic Clearance", "label": "A1" },
@@ -208,9 +186,7 @@
     "S3": { "name": "LRU Configuration Report", "label": "S3" },
     "SA": { "name": "Media Advisory", "label": "SA" },
     "SQ": {
-      "name": "Ground Station Squitter Message",
-      "label": "SQ",
-      "decoderHints": {
+      "name": "Ground Station Squitter Message", "label": "SQ", "decoderHints": {
         "brands": { "A": "ARINC", "S": "SITA" }
       }
     },
