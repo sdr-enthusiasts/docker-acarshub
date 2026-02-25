@@ -25,22 +25,7 @@ on:
   workflow_dispatch:
 
   pull_request:
-    paths:
-      # Backend source changes
-      - "acarshub-backend/**"
-      # Shared types (wire format changes affect integration tests)
-      - "acarshub-types/**"
-      # Python webapp being replaced (changes may indicate parity gaps)
-      - "rootfs/webapp/**"
-      # Integration test files themselves
-      - "acarshub-react/e2e/integration/**"
-      - "acarshub-react/playwright.integration.config.ts"
-      # Docker infrastructure changes
-      - "Node.Dockerfile"
-      - "docker-compose.test.yml"
-      - "rootfs-node/**"
-      # Seed fixtures
-      - "test-fixtures/**"
+    types: [opened, synchronize, reopened]
 
 jobs:
   fullstack-e2e:
@@ -72,7 +57,7 @@ jobs:
         run: npm run build --workspace=acarshub-backend
 
       - name: Build test Docker image (ah:test)
-        run: docker build -f Node.Dockerfile -t ah:test .
+        run: docker build -f Dockerfile -t ah:test .
 
       - name: Run full-stack integration E2E tests
         run: |

@@ -97,7 +97,7 @@ test-e2e-docker:
     VITE_E2E=true npm run build --workspace=acarshub-react
     @echo "Killing any stale process on port 3000..."
     #fuser -k 3000/tcp 2>/dev/null || true
-    pkill MainThread
+    pkill MainThread || true
     @echo "Starting vite preview server in background..."
     cd acarshub-react && npx vite preview --port 3000 --strictPort &
     sleep 3
@@ -113,7 +113,7 @@ test-e2e-docker:
       -e PLAYWRIGHT_DOCKER=true \
       mcr.microsoft.com/playwright:v1.58.2-noble \
       bash -c "npm ci && cd acarshub-react && npx playwright test --reporter=line" || (fuser -k 3000/tcp 2>/dev/null || true; exit 1)
-    pkill MainThread
+    pkill MainThread || true
     @echo "✅ E2E tests passed!"
 
 # Debug runner for E2E tests — no CI mode so retries=0 and workers run in parallel.
