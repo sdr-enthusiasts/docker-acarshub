@@ -23,6 +23,7 @@ import {
   getMessageByUid,
   getRowCount,
   grabMostRecent,
+  pruneDatabase,
 } from "../messages.js";
 import { initializeMessageCounters } from "../statistics.js";
 
@@ -115,6 +116,27 @@ describe("Message Query Functions", () => {
         level UNINDEXED,
         content=messages,
         content_rowid=id
+      );
+
+      CREATE TABLE IF NOT EXISTS alert_matches (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        message_uid TEXT NOT NULL,
+        term TEXT NOT NULL,
+        match_type TEXT NOT NULL,
+        matched_at INTEGER NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS count (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        total INTEGER,
+        errors INTEGER,
+        good INTEGER
+      );
+
+      CREATE TABLE IF NOT EXISTS nonlogged_count (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        errors INTEGER,
+        good INTEGER
       );
 
       CREATE TRIGGER messages_fts_insert AFTER INSERT ON messages
@@ -777,6 +799,149 @@ describe("Message Query Functions", () => {
         icao: undefined,
       });
       expect(result.totalCount).toBe(4);
+    });
+  });
+
+  describe("pruneDatabase()", () => {
+    // Shared helper: insert a minimal message directly and return its uid
+    const insertMessage = (uid: string, msgTime: number): void => {
+      db.prepare(`
+        INSERT INTO messages (
+          uid, message_type, msg_time, station_id, toaddr, fromaddr,
+          depa, dsta, eta, gtout, gtin, wloff, wlin, lat, lon, alt,
+          msg_text, tail, flight, icao, freq, ack, mode, label,
+          block_id, msgno, is_response, is_onground, error, libacars, level
+        ) VALUES (
+          ?, 'ACARS', ?, 'TEST', '', '', '', '', '', '', '', '', '', '', '', '',
+          'test', '', '', '', '131.550', '', '', 'H1', '', '', '', '', '', '', ''
+        )
+      `).run(uid, msgTime);
+    };
+
+    const insertAlertMatch = (
+      messageUid: string,
+      matchedAt: number,
+    ): void => {
+      db.prepare(`
+        INSERT INTO alert_matches (message_uid, term, match_type, matched_at)
+        VALUES (?, 'TEST', 'text', ?)
+      `).run(messageUid, matchedAt);
+    };
+
+    it("prunes messages older than messageSaveDays", () => {
+      const now = Math.floor(Date.now() / 1000);
+      const old = now - 10 * 86400; // 10 days ago
+      const recent = now - 1 * 86400; // 1 day ago
+
+      insertMessage("old-msg-1", old);
+      insertMessage("recent-msg-1", recent);
+
+      // The 4 beforeEach test messages have 2024 timestamps and will also be
+      // pruned. Assert on specific UIDs rather than the total count so the test
+      // is independent of how many pre-existing old rows exist.
+      pruneDatabase(7, 30);
+
+      const row = db
+        .prepare("SELECT uid FROM messages WHERE uid = ?")
+        .get("recent-msg-1") as { uid: string } | undefined;
+      expect(row?.uid).toBe("recent-msg-1");
+
+      const gone = db
+        .prepare("SELECT uid FROM messages WHERE uid = ?")
+        .get("old-msg-1");
+      expect(gone).toBeUndefined();
+    });
+
+    it("protects old messages that have an alert match within the alert retention window", () => {
+      const now = Math.floor(Date.now() / 1000);
+      const old = now - 10 * 86400; // 10 days ago — outside 7-day message window
+
+      insertMessage("protected-msg", old);
+      // Alert match is recent (within 30-day alert window) → message must be kept
+      insertAlertMatch("protected-msg", now - 1 * 86400);
+
+      // Assert on the specific UID rather than total count; the 4 beforeEach
+      // messages (2024 timestamps) are also pruned in the same run.
+      pruneDatabase(7, 30);
+
+      const row = db
+        .prepare("SELECT uid FROM messages WHERE uid = ?")
+        .get("protected-msg") as { uid: string } | undefined;
+      expect(row?.uid).toBe("protected-msg");
+    });
+
+    it("does NOT protect old messages whose alert match is itself outside the alert retention window", () => {
+      const now = Math.floor(Date.now() / 1000);
+      const old = now - 10 * 86400; // 10 days ago
+
+      insertMessage("stale-alert-msg", old);
+      // Alert match is 40 days old — outside the 30-day alert window
+      insertAlertMatch("stale-alert-msg", now - 40 * 86400);
+
+      // Assert on the specific UID rather than total count; the 4 beforeEach
+      // messages (2024 timestamps) are also pruned in the same run.
+      pruneDatabase(7, 30);
+
+      const gone = db
+        .prepare("SELECT uid FROM messages WHERE uid = ?")
+        .get("stale-alert-msg");
+      expect(gone).toBeUndefined();
+    });
+
+    it("prunes alert_matches older than alertSaveDays", () => {
+      const now = Math.floor(Date.now() / 1000);
+
+      insertMessage("am-msg", now - 1 * 86400);
+      const staleMatchedAt = now - 40 * 86400;
+      insertAlertMatch("am-msg", staleMatchedAt);
+
+      const { prunedAlerts } = pruneDatabase(7, 30);
+
+      const gone = db
+        .prepare("SELECT id FROM alert_matches WHERE message_uid = ?")
+        .get("am-msg");
+      expect(gone).toBeUndefined();
+      expect(prunedAlerts).toBe(1);
+    });
+
+    it("regression: subquery handles large numbers of protected UIDs without hitting variable limits", () => {
+      // Before the fix, pruneDatabase loaded all protected UIDs into a JS array
+      // and passed them as SQL bind parameters via notInArray().  SQLite's
+      // SQLITE_MAX_VARIABLE_NUMBER (default 999, max 32766) meant that any
+      // deployment with more protected alert matches than that limit would fail
+      // with SQLITE_ERROR.  The subquery approach has no such ceiling.
+      const now = Math.floor(Date.now() / 1000);
+      const old = now - 10 * 86400;
+      const PROTECTED_COUNT = 1500; // deliberately above the 999 default limit
+
+      for (let i = 0; i < PROTECTED_COUNT; i++) {
+        const uid = `protected-bulk-${i}`;
+        insertMessage(uid, old);
+        insertAlertMatch(uid, now - 1 * 86400); // recent match → protected
+      }
+
+      // One unprotected old message that SHOULD be pruned
+      insertMessage("unprotected-old", old);
+
+      // Must not throw despite 1500 protected UIDs.
+      // The 4 beforeEach messages (2024 timestamps) are also pruned, so we
+      // check the specific UID rather than an absolute prunedMessages count.
+      expect(() => {
+        pruneDatabase(7, 30);
+      }).not.toThrow();
+
+      const gone = db
+        .prepare("SELECT uid FROM messages WHERE uid = ?")
+        .get("unprotected-old");
+      expect(gone).toBeUndefined();
+
+      // All 1500 protected messages must still be present
+      const remaining = db
+        .prepare(
+          "SELECT COUNT(*) as c FROM messages WHERE uid LIKE 'protected-bulk-%'",
+        )
+        .get() as { c: number };
+      expect(remaining.c).toBe(PROTECTED_COUNT);
     });
   });
 });

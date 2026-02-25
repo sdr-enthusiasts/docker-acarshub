@@ -27,6 +27,7 @@ import {
 } from "../config.js";
 import {
   addMessageFromJson,
+  checkpoint,
   getPerDecoderMessageCounts,
   optimizeDbMerge,
   optimizeDbRegular,
@@ -503,6 +504,39 @@ export class BackgroundServices extends EventEmitter {
         });
       }
     }, "optimize_db_full");
+
+    // Force WAL checkpoint every 15 minutes using TRUNCATE mode.
+    //
+    // SQLite's default auto-checkpoint uses PASSIVE mode, which silently skips
+    // frames that are still referenced by an open read transaction.  With the
+    // system-status emitter creating short read transactions every 30 seconds
+    // there is almost always a recent read mark, so PASSIVE checkpoints can
+    // stall indefinitely and the WAL grows without bound.
+    //
+    // TRUNCATE mode blocks new writers until all current readers finish, then
+    // checkpoints every frame and truncates the WAL file to zero bytes.  The
+    // 15-minute cadence ensures the WAL never accumulates more than ~15 minutes
+    // of writes regardless of reader activity, and the truncation reclaims the
+    // disk space immediately (unlike RESTART which resets the write pointer but
+    // leaves the file at its high-water-mark size).
+    scheduler.every(15, "minutes").do(async () => {
+      try {
+        const { framesCheckpointed, framesRemaining } = checkpoint("TRUNCATE");
+        logger.debug("WAL checkpoint complete", {
+          framesCheckpointed,
+          framesRemaining,
+        });
+        if (framesRemaining > 0) {
+          logger.warn("WAL checkpoint incomplete — frames remain", {
+            framesRemaining,
+          });
+        }
+      } catch (err) {
+        logger.error("Failed to run WAL checkpoint", {
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    }, "wal_checkpoint");
 
     // Prune old time-series stats (configurable retention, default 3 years)
     startStatsPruning(scheduler);

@@ -71,6 +71,7 @@ const DEFAULT_ALERT_TERMS: string[] = [
   "DIPS",
   "PAX",
   "DOG",
+  "DRUNK",
 ];
 
 /**

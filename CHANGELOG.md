@@ -1,5 +1,19 @@
 # ACARS Hub Change Log
 
+## ACARS Hub v4.1.2
+
+### v4.1.2 Bug Fixes
+
+- Database: The WAL (Write-Ahead Log) file could grow unboundedly because SQLite's default `PASSIVE` auto-checkpoint is silently skipped whenever any read transaction is open. With the system-status emitter creating short read transactions every 30 seconds there was almost always a recent read mark, so un-checkpointed FTS5 writes accumulated in the WAL indefinitely. Fixed by lowering the auto-checkpoint threshold from 1000 pages (~4 MB) to 400 pages (~1.6 MB), and by adding a scheduled `TRUNCATE`-mode checkpoint every 15 minutes. `TRUNCATE` mode checkpoints every pending frame and truncates the WAL file to zero bytes, immediately reclaiming disk space.
+- Database: `pruneDatabase()` loaded all alert-protected message UIDs into a JavaScript array and passed them as SQL bind parameters via `NOT IN (?, ?, …)`. With long `DB_ALERT_SAVE_DAYS` values and active alert terms, this list could exceed SQLite's `SQLITE_MAX_VARIABLE_NUMBER` limit (default 999), causing an `SQLITE_ERROR` on every prune run and preventing the database from ever shrinking. Fixed by replacing the two-step fetch-then-bind approach with a single `DELETE … WHERE uid NOT IN (SELECT message_uid FROM alert_matches WHERE …)` subquery that SQLite resolves entirely in-engine with no parameter-count ceiling.
+- Database: `checkpoint()` parsed `PRAGMA wal_checkpoint` results incorrectly in two ways. First, `better-sqlite3`'s `{ simple: true }` option returns only the first column of the first row as a scalar (the `busy` flag), not an array — so `framesCheckpointed` and `framesRemaining` were both `undefined` at runtime, making the scheduled checkpoint warning impossible to trigger. Second, even if indexing had been correct, the column mapping was inverted: `framesCheckpointed` was reading the `log` column (total frames written to WAL) and `framesRemaining` was reading the `checkpointed` column (frames already moved to the main DB — the opposite of remaining). Fixed by dropping `{ simple: true }`, accessing columns by name, and computing `framesRemaining = row.log - row.checkpointed`.
+- Database: The backup database connection (`DB_BACKUP`) was missing the `wal_autocheckpoint = 400` pragma that is applied to the primary connection. Without it, the backup WAL defaulted to SQLite's 1000-page threshold and could grow unbounded under the same workload conditions that triggered the original `SQLITE_FULL` errors. The pragma is now applied to both connections during initialisation.
+- Healthcheck: Every decoder socket check has always reported UNHEALTHY due to a wrong process name in the `ss(8)` filter. The Node.js worker thread that owns decoder sockets appears in the process table as `node-MainThread`, not `node`, so `grep '"node"'` never matched and the socket check silently returned nothing regardless of actual connection state. Additionally, even a correctly named filter can fail in container environments where the kernel does not expose the `users:((...))` column to the caller. Fixed by checking for the bound/connected port only (no process name filter — the decoder ports are container-specific and no other process will hold them). The socket check is also now advisory: a failed socket check no longer sets an unhealthy exit code on its own. `EXITCODE=1` is only raised when both the socket check and the message-activity check fail simultaneously, so a container receiving messages is never incorrectly marked unhealthy.
+
+### v4.1.2 New
+
+- Alerts: `drunk` added as a default alert term
+
 ## ACARS Hub v4.1.1
 
 ### v4.1.1 Improvements
