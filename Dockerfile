@@ -18,8 +18,10 @@ COPY acarshub-backend/ ./acarshub-backend/
 COPY acarshub-types/ ./acarshub-types/
 
 # Install all workspace dependencies (devDeps required for tsc/vite build tools)
+# --loglevel=error suppresses deprecation warnings from transitive deps in @lhci/cli
+# and drizzle-kit (both at latest versions; upstream fixes required to remove them)
 RUN set -xe && \
-    npm ci --include=dev
+    npm ci --include=dev --loglevel=error
 
 # Re-declare ARG after FROM so it is in scope for the RUN
 ARG BUILD_NUMBER=0
