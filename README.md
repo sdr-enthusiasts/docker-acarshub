@@ -135,22 +135,14 @@ There are quite a few configuration options this container can accept.
 
 ### General
 
-| Variable               | Description                                                                                                                                                                                                                                                                                                            | Required | Default |
-| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------- |
-| `FEED`                 | Used to toggle feeding to [ACARS.io](http://acars.io). Set to `true` to enable feeding.                                                                                                                                                                                                                                | No       | `false` |
-| `ENABLE_WEB`           | Enable the web server. `true` to enable, any other value will disable it.                                                                                                                                                                                                                                              | No       | `true`  |
-| `DB_SAVEALL`           | By default the container will save all received messages in to a database, even if the message is a blank message. If you want to increase performance/decrease database size, set this option to `false` to only save messages with at least one informationial field.                                                | No       | `true`  |
-| `DB_SAVE_DAYS`         | By default the container will save message data for 7 days. If you wish to over-ride this behavior, set this to the number of days you wish to have retained.                                                                                                                                                          | No       | `7`     |
-| `DB_ALERT_SAVE_DAYS`   | By default the container will save message data for 120 days. If you wish to over-ride this behavior, set this to the number of days you wish to have retained.                                                                                                                                                        | No       | `120`   |
-| `DB_BACKUP`            | If you want to run a second database for backup purposes set this value to a [SQL Alchemy formatted URL](https://docs.sqlalchemy.org/en/13/core/engines.html#database-urls). See the link for supported DB types. This database will have to be managed by you, as ACARS Hub will only ever write incoming data to it. | No       | Blank   |
-| `IATA_OVERRIDE`        | Override or add any custom IATA codes. Used for the web front end to show proper callsigns; See [below](#the-fix) on formatting and [more details](#a-note-about-data-sources-used-for-the-web-site) why this might be necessary.                                                                                      | No       | Blank   |
-| `TAR1090_URL`          | Flights where the container is able to, it will generate a link to a tar1090 instance so that you can see the position of the aircraft that generated the message. By default, it will link to [ADSB Exchange](https://www.adsbexchange.com), but if desired, you can set the URL to be a local tar1090 instance.      | No       | Blank   |
-| `AUTO_VACUUM`          | If you find your database size to be too large you can temporarily enable this and on the next container startup the database will attempt to reduce itself in size. When you do this startup time will take a few minutes. It is recommended to leave this flag disabled and only enable it temporarily.              | No       | `False` |
-| `DB_FTS_OPTIMIZE`      | `off`, `optimize`, `merge` (use optimize if your database is becoming slow or too large, merge would be better but it's possibly buggy destroying the DB, maybe optimize is too, unknown at this point in time)                                                                                                        | No       | `off`   |
-| `ALLOW_REMOTE_UPDATES` | If you do not want to allow users to update the alert terms (and potentially other things in the future) via the web interface, set this to `False`                                                                                                                                                                    | No       | `True`  |
-| `HIDE_VERSION_UPDATE`  | If you want to hide the version update notification on the web interface, set this to `True`. This is useful if you are running a custom build of ACARS Hub and do not want to see the version update notification.                                                                                                    | No       | `False` |
-
-Please note that for `TAR1090_URL` the required format is `http[s]://**HOSTNAME**` only. So if your tar1090 instance is at IP address `192.168.31.10` with no SSL, the TAR1090_URL would look like `http://192.168.31.10`
+| Variable               | Description                                                                                                                                                                                                                                                            | Required | Default |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------- |
+| `DB_SAVEALL`           | By default the container will save all received messages in to a database, even if the message is a blank message. If you want to increase performance/decrease database size, set this option to `false` to only save messages with at least one informational field. | No       | `true`  |
+| `DB_SAVE_DAYS`         | By default the container will save message data for 7 days. If you wish to over-ride this behavior, set this to the number of days you wish to have retained.                                                                                                          | No       | `7`     |
+| `DB_ALERT_SAVE_DAYS`   | By default the container will save message data for 120 days. If you wish to over-ride this behavior, set this to the number of days you wish to have retained.                                                                                                        | No       | `120`   |
+| `DB_BACKUP`            | Set to an absolute file path to open a second SQLite database that receives all the same writes as the primary. ACARS Hub only ever writes to it; management (backup, rotation) is left to you.                                                                        | No       | Blank   |
+| `IATA_OVERRIDE`        | Override or add any custom IATA codes. Used for the web front end to show proper callsigns; See [below](#the-fix) on formatting and [more details](#a-note-about-data-sources-used-for-the-web-site) why this might be necessary.                                      | No       | Blank   |
+| `ALLOW_REMOTE_UPDATES` | If you do not want to allow users to update the alert terms (and potentially other things in the future) via the web interface, set this to `False`                                                                                                                    | No       | `True`  |
 
 ### Logging
 
@@ -158,10 +150,9 @@ By default ACARS Hub will only show errors, warnings, and other kinds of critica
 
 All processes are logged to the container's stdout. General logging can be viewed with `docker logs [-f] container`.
 
-| Variable         | Description                                                                                                                                                           | Required | Default |
-| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------- |
-| `MIN_LOG_LEVEL`  | Acceptable values are `3-5`. `3` is `Warnings/Critical/Errors`, `4` adds `Informational messages` and `5` adds everything previous plus `debug` messages.             | No       | `3`     |
-| `QUIET_MESSAGES` | By default the decoders will not output their received messages to the container logs. If you want to see these messages in the logs set `QUIET_MESSAGES` to `false`. | No       | `true`  |
+| Variable        | Description                                                                                                                                               | Required | Default |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------- |
+| `MIN_LOG_LEVEL` | Acceptable values are `3-5`. `3` is `Warnings/Critical/Errors`, `4` adds `Informational messages` and `5` adds everything previous plus `debug` messages. | No       | `3`     |
 
 ### ADSB
 
@@ -276,8 +267,6 @@ Both descriptors feed the same internal pipeline. The built-in deduplication lay
 ## Viewing the messages
 
 The container implements a basic web interface, listening on port `80`, which will show messages as they are received.
-
-If `QUIET_MESSAGES`is disabled, received messages are also logged to the container log.
 
 ## Which frequencies should you monitor
 

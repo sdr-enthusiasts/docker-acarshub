@@ -229,7 +229,6 @@ function makeDefaultConfig(
     enableRangeRings: true,
     flightTrackingUrl: "https://flightaware.com/live/flight/",
     minLogLevel: "info" as const,
-    quietMessages: false,
     alertTerms: [],
     alertIgnoreTerms: [],
     groundStations: {},

@@ -161,17 +161,13 @@ EXPOSE 5556/udp
 EXPOSE 5557/udp
 EXPOSE 5558/udp
 
-ENV FEED="" \
-    ENABLE_ACARS="false" \
+ENV ENABLE_ACARS="false" \
     ENABLE_VDLM="false" \
     ENABLE_ADSB="false" \
-    ENABLE_WEB="true" \
     MIN_LOG_LEVEL=3 \
-    QUIET_MESSAGES="true" \
     DB_SAVEALL="true" \
     ENABLE_RANGE_RINGS="true" \
     ADSB_URL="http://tar1090/data/aircraft.json" \
-    DB_FTS_OPTIMIZE="off" \
     PORT=8888 \
     ACARSHUB_DB="/run/acars/messages.db" \
     GROUND_STATION_PATH="/webapp/data/ground-stations.json" \

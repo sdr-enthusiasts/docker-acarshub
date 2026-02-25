@@ -41,9 +41,9 @@ process.setMaxListeners(128);
 // process.env.  The config unit tests explicitly delete ALLOW_REMOTE_UPDATES
 // before each import, so setting it here is safe.
 //
-// We deliberately do NOT set ENABLE_ACARS/VDLM/HFDl, MIN_LOG_LEVEL, or
-// QUIET_MESSAGES here because the config unit tests assert on their default
-// values (false / "info" / false respectively) without first deleting them.
+// We deliberately do NOT set ENABLE_ACARS/VDLM/HFDl or MIN_LOG_LEVEL here
+// because the config unit tests assert on their default values
+// (false / "info" respectively) without first deleting them.
 // Setting them in test-setup would pollute the originalEnv snapshot those
 // tests capture and cause false failures.
 //

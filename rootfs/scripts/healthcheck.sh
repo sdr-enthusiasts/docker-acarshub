@@ -44,15 +44,13 @@ if chk_enabled "${ENABLE_IRDM}"; then
         echo "irdm_server TCP listening on port 15558 (pid $irdm_pidof_irdm_tcp_server): HEALTHY"
     fi
 
-    if [[ ${ENABLE_WEB,,} =~ true ]]; then
-        if ! netstat -anp | grep -P "tcp\s+\d+\s+\d+\s+127.0.0.1:[0-9]+\s+127.0.0.1:15558\s+ESTABLISHED\s+[0-9]+/node" >/dev/null 2>&1; then
-            echo "TCP4 connection between 127.0.0.1:ANY and 127.0.0.1:15558 for node established: FAIL"
-            echo "irdm_server TCP connected to node server on port 15558 (pid $irdm_pidof_irdm_tcp_server): UNHEALTHY"
-            EXITCODE=1
-        else
-            echo "TCP4 connection between 127.0.0.1:ANY and 127.0.0.1:15558 for node established: PASS"
-            echo "irdm_server TCP connected to node server on port 15558: HEALTHY"
-        fi
+    if ! netstat -anp | grep -P "tcp\s+\d+\s+\d+\s+127.0.0.1:[0-9]+\s+127.0.0.1:15558\s+ESTABLISHED\s+[0-9]+/node" >/dev/null 2>&1; then
+        echo "TCP4 connection between 127.0.0.1:ANY and 127.0.0.1:15558 for node established: FAIL"
+        echo "irdm_server TCP connected to node server on port 15558 (pid $irdm_pidof_irdm_tcp_server): UNHEALTHY"
+        EXITCODE=1
+    else
+        echo "TCP4 connection between 127.0.0.1:ANY and 127.0.0.1:15558 for node established: PASS"
+        echo "irdm_server TCP connected to node server on port 15558: HEALTHY"
     fi
 
     echo "==== Checking irdm_stats ====="
@@ -95,15 +93,13 @@ if chk_enabled "${ENABLE_IMSL}"; then
         echo "imsl_server TCP listening on port 15557 (pid $imsl_pidof_imsl_tcp_server): HEALTHY"
     fi
 
-    if [[ ${ENABLE_WEB,,} =~ true ]]; then
-        if ! netstat -anp | grep -P "tcp\s+\d+\s+\d+\s+127.0.0.1:[0-9]+\s+127.0.0.1:15557\s+ESTABLISHED\s+[0-9]+/node" >/dev/null 2>&1; then
-            echo "TCP4 connection between 127.0.0.1:ANY and 127.0.0.1:15557 for node established: FAIL"
-            echo "imsl_server TCP connected to node server on port 15557 (pid $imsl_pidof_imsl_tcp_server): UNHEALTHY"
-            EXITCODE=1
-        else
-            echo "TCP4 connection between 127.0.0.1:ANY and 127.0.0.1:15557 for node established: PASS"
-            echo "imsl_server TCP connected to node server on port 15557: HEALTHY"
-        fi
+    if ! netstat -anp | grep -P "tcp\s+\d+\s+\d+\s+127.0.0.1:[0-9]+\s+127.0.0.1:15557\s+ESTABLISHED\s+[0-9]+/node" >/dev/null 2>&1; then
+        echo "TCP4 connection between 127.0.0.1:ANY and 127.0.0.1:15557 for node established: FAIL"
+        echo "imsl_server TCP connected to node server on port 15557 (pid $imsl_pidof_imsl_tcp_server): UNHEALTHY"
+        EXITCODE=1
+    else
+        echo "TCP4 connection between 127.0.0.1:ANY and 127.0.0.1:15557 for node established: PASS"
+        echo "imsl_server TCP connected to node server on port 15557: HEALTHY"
     fi
 
     echo "==== Checking imsl_stats ====="
@@ -146,15 +142,13 @@ if chk_enabled "${ENABLE_HFDL}"; then
         echo "hfdl_server TCP listening on port 15556 (pid $hfdl_pidof_hfdl_tcp_server): HEALTHY"
     fi
 
-    if [[ ${ENABLE_WEB,,} =~ true ]]; then
-        if ! netstat -anp | grep -P "tcp\s+\d+\s+\d+\s+127.0.0.1:[0-9]+\s+127.0.0.1:15556\s+ESTABLISHED\s+[0-9]+/node" >/dev/null 2>&1; then
-            echo "TCP4 connection between 127.0.0.1:ANY and 127.0.0.1:15556 for node established: FAIL"
-            echo "hfdl_server TCP connected to node server on port 15556 (pid $hfdl_pidof_hfdl_tcp_server): UNHEALTHY"
-            EXITCODE=1
-        else
-            echo "TCP4 connection between 127.0.0.1:ANY and 127.0.0.1:15556 for node established: PASS"
-            echo "hfdl_server TCP connected to node server on port 15556: HEALTHY"
-        fi
+    if ! netstat -anp | grep -P "tcp\s+\d+\s+\d+\s+127.0.0.1:[0-9]+\s+127.0.0.1:15556\s+ESTABLISHED\s+[0-9]+/node" >/dev/null 2>&1; then
+        echo "TCP4 connection between 127.0.0.1:ANY and 127.0.0.1:15556 for node established: FAIL"
+        echo "hfdl_server TCP connected to node server on port 15556 (pid $hfdl_pidof_hfdl_tcp_server): UNHEALTHY"
+        EXITCODE=1
+    else
+        echo "TCP4 connection between 127.0.0.1:ANY and 127.0.0.1:15556 for node established: PASS"
+        echo "hfdl_server TCP connected to node server on port 15556: HEALTHY"
     fi
 
     echo "==== Checking hfdl_stats ====="
@@ -197,15 +191,13 @@ if chk_enabled "${ENABLE_VDLM}"; then
         echo "vdlm2_server TCP listening on port 15555 (pid $vdlm2_pidof_vdlm2_tcp_server): HEALTHY"
     fi
 
-    if [[ ${ENABLE_WEB,,} =~ true ]]; then
-        if ! netstat -anp | grep -P "tcp\s+\d+\s+\d+\s+127.0.0.1:[0-9]+\s+127.0.0.1:15555\s+ESTABLISHED\s+[0-9]+/node" >/dev/null 2>&1; then
-            echo "TCP4 connection between 127.0.0.1:ANY and 127.0.0.1:15555 for node established: FAIL"
-            echo "vdlm2_server TCP connected to node server on port 15555 (pid $vdlm2_pidof_vdlm2_tcp_server): UNHEALTHY"
-            EXITCODE=1
-        else
-            echo "TCP4 connection between 127.0.0.1:ANY and 127.0.0.1:15555 for node established: PASS"
-            echo "vdlm2_server TCP connected to node server on port 15555: HEALTHY"
-        fi
+    if ! netstat -anp | grep -P "tcp\s+\d+\s+\d+\s+127.0.0.1:[0-9]+\s+127.0.0.1:15555\s+ESTABLISHED\s+[0-9]+/node" >/dev/null 2>&1; then
+        echo "TCP4 connection between 127.0.0.1:ANY and 127.0.0.1:15555 for node established: FAIL"
+        echo "vdlm2_server TCP connected to node server on port 15555 (pid $vdlm2_pidof_vdlm2_tcp_server): UNHEALTHY"
+        EXITCODE=1
+    else
+        echo "TCP4 connection between 127.0.0.1:ANY and 127.0.0.1:15555 for node established: PASS"
+        echo "vdlm2_server TCP connected to node server on port 15555: HEALTHY"
     fi
 
     echo "==== Checking vdlm2_stats ====="
@@ -248,15 +240,13 @@ if chk_enabled "${ENABLE_ACARS}"; then
         echo "acars_server TCP listening on port 15550 (pid $acars_pidof_acars_tcp_server): HEALTHY"
     fi
 
-    if [[ ${ENABLE_WEB,,} =~ true ]]; then
-        if ! netstat -anp | grep -P "tcp\s+\d+\s+\d+\s+127.0.0.1:[0-9]+\s+127.0.0.1:15550\s+ESTABLISHED\s+[0-9]+/node" >/dev/null 2>&1; then
-            echo "TCP4 connection between 127.0.0.1:ANY and 127.0.0.1:15550 for node established: FAIL"
-            echo "acars_server TCP not connected to node server on port 15550: UNHEALTHY"
-            EXITCODE=1
-        else
-            echo "TCP4 connection between 127.0.0.1:ANY and 127.0.0.1:15550 for node established: PASS"
-            echo "acars_server TCP connected to node server on port 15550: HEALTHY"
-        fi
+    if ! netstat -anp | grep -P "tcp\s+\d+\s+\d+\s+127.0.0.1:[0-9]+\s+127.0.0.1:15550\s+ESTABLISHED\s+[0-9]+/node" >/dev/null 2>&1; then
+        echo "TCP4 connection between 127.0.0.1:ANY and 127.0.0.1:15550 for node established: FAIL"
+        echo "acars_server TCP not connected to node server on port 15550: UNHEALTHY"
+        EXITCODE=1
+    else
+        echo "TCP4 connection between 127.0.0.1:ANY and 127.0.0.1:15550 for node established: PASS"
+        echo "acars_server TCP connected to node server on port 15550: HEALTHY"
     fi
 
     echo "==== Checking acars_stats ====="
