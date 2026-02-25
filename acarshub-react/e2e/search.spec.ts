@@ -178,26 +178,40 @@ test.describe("Search Page", () => {
   });
 
   // -------------------------------------------------------------------------
-  // 2. Submitting an empty form does not trigger a search
+  // 2. Submitting an empty form triggers a show-all search
+  //
+  // Behaviour: when submitIntent=true (form button clicked) the frontend does
+  // NOT guard against an empty form — it sends a show-all query to the
+  // backend.  Debounced input changes still clear results without querying,
+  // but an explicit button click always fires the request.
+  //
+  // The integration counterpart (search-integration.spec.ts test 3) verifies
+  // the same path against the real backend.
   // -------------------------------------------------------------------------
 
-  test("does not trigger a search when all fields are empty", async ({
-    page,
-  }) => {
-    // Click Search with no fields filled
+  test("submitting empty form triggers a show-all search", async ({ page }) => {
+    // Click Search with no fields filled — should send the show-all query
     await page.getByRole("button", { name: /^search$/i }).click();
 
-    // The button should NOT change to "Searching..." (the empty guard fires)
-    // Wait a brief moment to confirm no state change occurs
-    await page.waitForTimeout(300);
-    await expect(page.getByRole("button", { name: /^search$/i })).toBeVisible();
+    // The button must switch to "Searching..." immediately (query was sent)
     await expect(
       page.getByRole("button", { name: /searching/i }),
-    ).not.toBeVisible();
+    ).toBeVisible();
 
-    // No results or "no results" copy should appear
-    await expect(page.locator(".search-page__results")).not.toBeVisible();
-    await expect(page.locator(".search-page__empty")).not.toBeVisible();
+    // The button must be disabled while the search is in flight
+    await expect(
+      page.getByRole("button", { name: /searching/i }),
+    ).toBeDisabled();
+
+    // Inject mock results to resolve the in-flight query
+    const emitted = await emitSearchResults(page, RESULTS_TWO);
+    expect(emitted).toBe(true);
+
+    // "Search" button returns once results arrive
+    await expect(page.getByRole("button", { name: /^search$/i })).toBeVisible();
+
+    // Results section is now visible
+    await expect(page.locator(".search-page__results")).toBeVisible();
   });
 
   // -------------------------------------------------------------------------

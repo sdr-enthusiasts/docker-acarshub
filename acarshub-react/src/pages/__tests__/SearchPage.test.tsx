@@ -259,7 +259,12 @@ describe("SearchPage", () => {
       );
     });
 
-    it("does NOT emit a search when all fields are empty", async () => {
+    it("emits a show-all query_search when all fields are empty", async () => {
+      // Regression: when submitIntent=true (button click), empty form must
+      // still send the query — backend interprets empty search_term as
+      // "show all messages" (paginated).  The old guard that returned early
+      // for empty forms was removed; only the debounced input-change path
+      // still clears results without querying.
       const user = userEvent.setup();
       renderSearchPage();
 
@@ -267,7 +272,13 @@ describe("SearchPage", () => {
       const submitButton = screen.getByRole("button", { name: /^search$/i });
       await user.click(submitButton);
 
-      expect(mockSocket.emit).not.toHaveBeenCalled();
+      expect(mockSocket.emit).toHaveBeenCalledWith(
+        "query_search",
+        expect.objectContaining({
+          search_term: expect.objectContaining({ flight: "" }),
+        }),
+        "/main",
+      );
     });
 
     it("clears all fields and results when Clear is clicked", async () => {
