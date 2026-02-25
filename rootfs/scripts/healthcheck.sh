@@ -5,8 +5,8 @@
 #
 # What it checks:
 # 1. Decoder connections (ACARS, VDLM2, HFDL, IMSL, IRDM)
-#    - UDP mode (default): verifies node has a UDP socket bound on the expected port
-#    - TCP/ZMQ mode: verifies node has an ESTABLISHED TCP connection to the decoder source
+#    - UDP mode (default): verifies a UDP socket is bound on the expected port
+#    - TCP/ZMQ mode: verifies an ESTABLISHED TCP connection exists to the decoder source
 # 2. Message activity: queries the Node.js backend /data/stats.json API for messages
 #    received in the past hour
 # 3. Webapp: HTTP endpoint via nginx (port 80) and direct backend health check
@@ -80,8 +80,13 @@ stats_count() {
 #   $4  stats_field   — field name in /data/stats.json response
 #
 # Performs two checks for each decoder:
-#   Socket check   — verifies node is actually bound/connected for this type
-#   Activity check — verifies messages were received in the past hour
+#   Socket check   — advisory: verifies a socket is bound/connected for this type.
+#                    Does NOT set EXITCODE on its own. ss(8) may not expose process
+#                    names in all kernel/privilege configurations, so this check can
+#                    produce false negatives even when the decoder is fully connected.
+#                    It only contributes to EXITCODE when the activity check also fails.
+#   Activity check — authoritative: a non-zero message count proves end-to-end
+#                    connectivity and overrides a failed socket check.
 # ============================================================================
 check_decoder() {
     local name="$1"
@@ -119,47 +124,67 @@ check_decoder() {
     fi
 
     # ------------------------------------------------------------------
-    # Socket / connection check
+    # Socket / connection check — ADVISORY ONLY, does not set EXITCODE.
+    #
+    # ss(8) only includes the users:(("name",...)) process column when the
+    # caller has sufficient privilege or the kernel exposes it — in some
+    # container/kernel configurations the column is absent entirely,
+    # causing a process-name grep to silently return nothing and produce a
+    # false UNHEALTHY result even when the socket is fully operational.
+    #
+    # To avoid this, we check for the port only (no process name filter).
+    # The decoder ports are container-specific and unlikely to be held by
+    # any other process, so the false-positive risk is negligible.
+    #
+    # The socket_ok flag is used below: EXITCODE is only set when BOTH
+    # the socket check AND the activity check fail simultaneously.
     #
     # UDP: node binds a datagram socket — check ss -ulnp for the port.
     # TCP/ZMQ: node connects outward — check ss -tnp for an ESTABLISHED
     #          connection whose remote port matches conn_port.
     # ------------------------------------------------------------------
+    local socket_ok=0
     case "$conn_type" in
     udp)
         # -ulnp: UDP, listening, numeric addresses, show processes
-        if ss -ulnp 2>/dev/null | grep '"node"' | grep -q ":${conn_port}"; then
-            echo "${name} UDP socket bound on port ${conn_port} (node): HEALTHY"
+        if ss -ulnp 2>/dev/null | grep -q ":${conn_port}"; then
+            echo "${name} UDP socket bound on port ${conn_port}: HEALTHY"
+            socket_ok=1
         else
             echo "${name} UDP socket not bound on port ${conn_port}: UNHEALTHY"
-            EXITCODE=1
         fi
         ;;
     tcp | zmq)
         # -tnp state established: TCP, numeric, show processes, ESTAB only.
         # The remote port (conn_port) appears in the Peer Address:Port column.
-        if ss -tnp state established 2>/dev/null |
-            grep '"node"' |
-            grep -q ":${conn_port}"; then
-            echo "${name} TCP connected to ${conn_host}:${conn_port} (node): HEALTHY"
+        if ss -tnp state established 2>/dev/null | grep -q ":${conn_port}"; then
+            echo "${name} TCP connected to ${conn_host}:${conn_port}: HEALTHY"
+            socket_ok=1
         else
             echo "${name} TCP not connected to ${conn_host}:${conn_port}: UNHEALTHY"
-            EXITCODE=1
         fi
         ;;
     esac
 
     # ------------------------------------------------------------------
-    # Message activity check
+    # Message activity check — AUTHORITATIVE.
     #
     # Reads the cached /data/stats.json response fetched at startup.
     # The backend sums all timeseries_stats rows for the past 3600 seconds,
-    # so a non-zero count means messages were actually received this hour.
+    # so a non-zero count proves messages are actually flowing end-to-end
+    # and takes precedence over any socket check result.
+    #
+    # EXITCODE is only set when BOTH checks fail:
+    #   count > 0              → HEALTHY (messages flowing, decoder is working)
+    #   count == 0, socket ok  → HEALTHY (connected, no traffic yet — e.g. startup)
+    #   count == 0, no socket  → UNHEALTHY (not connected and no activity)
     # ------------------------------------------------------------------
     echo "==== Check for ${name} activity ===="
     local count
     count=$(stats_count "$stats_field")
     if [[ "$count" -gt 0 ]]; then
+        echo "$count ${name} messages received in past hour: HEALTHY"
+    elif [[ "$socket_ok" -eq 1 ]]; then
         echo "$count ${name} messages received in past hour: HEALTHY"
     else
         echo "$count ${name} messages received in past hour: UNHEALTHY"
