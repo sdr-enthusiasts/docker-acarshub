@@ -126,15 +126,20 @@ check_decoder() {
     # ------------------------------------------------------------------
     # Socket / connection check — ADVISORY ONLY, does not set EXITCODE.
     #
-    # ss(8) only includes the users:(("name",...)) process column when the
-    # caller has sufficient privilege or the kernel exposes it — in some
-    # container/kernel configurations the column is absent entirely,
-    # causing a process-name grep to silently return nothing and produce a
-    # false UNHEALTHY result even when the socket is fully operational.
+    # The Node.js worker thread that owns the decoder socket appears in ss(8)
+    # output as "node-MainThread", not "node" — e.g.:
+    #   UNCONN 0 0  0.0.0.0:5550  0.0.0.0:*  users:(("node-MainThread",pid=91,fd=22))
+    # Grepping for '"node"' never matched this name, so every socket check
+    # produced a false UNHEALTHY regardless of actual connection state.
     #
-    # To avoid this, we check for the port only (no process name filter).
-    # The decoder ports are container-specific and unlikely to be held by
-    # any other process, so the false-positive risk is negligible.
+    # Additionally, ss(8) only includes the users:(("name",...)) column when
+    # the caller has sufficient kernel/privilege access — in some container
+    # configurations the column is absent entirely, which would silently break
+    # any process-name filter even if the name were correct.
+    #
+    # To avoid both issues, we check for the port only (no process name
+    # filter). The decoder ports are container-specific and unlikely to be
+    # held by any other process, so the false-positive risk is negligible.
     #
     # The socket_ok flag is used below: EXITCODE is only set when BOTH
     # the socket check AND the activity check fail simultaneously.
