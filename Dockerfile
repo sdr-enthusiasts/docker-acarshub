@@ -111,75 +111,7 @@ RUN --mount=type=cache,target=/root/.npm \
     rm -rf node_modules/@acarshub && \
     apt-get autoremove -q -o APT::Autoremove::RecommendsImportant=0 -o APT::Autoremove::SuggestsImportant=0 -y ${TEMP_PACKAGES[@]} && \
     apt-get clean -q -y && \
-    rm -rf /tmp/* /var/lib/apt/lists/* /var/cache/* && \
-    # ----------------------------------------------------------------
-    # Surgical node_modules cleanup (~35 MB)
-    # ----------------------------------------------------------------
-    # better-sqlite3: remove SQLite amalgamation source and C++ bindings
-    # that are only needed to compile the native addon. The compiled
-    # .node file in build/Release/ is all that is needed at runtime.
-    rm -rf \
-    node_modules/better-sqlite3/deps \
-    node_modules/better-sqlite3/src && \
-    # zeromq: remove prebuilts for other OSes (win32, darwin) and the
-    # C++ source tree – these are never loaded on Linux.
-    # Also remove the musl (Alpine) variant; docker-baseimage:base is
-    # Debian/glibc so only the glibc prebuilt is used at runtime.
-    # The cmake-ts loader selects the prebuilt by os+arch+libc at
-    # startup, so we can safely delete incompatible candidates.
-    rm -rf \
-    node_modules/zeromq/build/win32 \
-    node_modules/zeromq/build/darwin \
-    node_modules/zeromq/src && \
-    find node_modules/zeromq/build/linux -type d -name "musl-*" -exec rm -rf {} + 2>/dev/null || true && \
-    # zeromq multi-arch: remove the prebuilt for the architecture we are
-    # NOT running on (the image is built natively for each target arch).
-    if [ "$(uname -m)" = "x86_64" ]; then \
-    rm -rf node_modules/zeromq/build/linux/arm64; \
-    else \
-    rm -rf node_modules/zeromq/build/linux/x64; \
-    fi && \
-    # drizzle-orm: remove every database dialect except the ones needed
-    # at runtime. We use better-sqlite3, sqlite-core, and sql. However,
-    # drizzle-orm/sql/sql.js has a hardcoded static import of
-    # pg-core/columns/enum.js (used to detect PG enums during SQL
-    # serialisation), so pg-core must be kept even though we never
-    # import it directly. All other dialect directories are dead weight.
-    rm -rf \
-    node_modules/drizzle-orm/aws-data-api \
-    node_modules/drizzle-orm/bun-sql \
-    node_modules/drizzle-orm/bun-sqlite \
-    node_modules/drizzle-orm/cache \
-    node_modules/drizzle-orm/d1 \
-    node_modules/drizzle-orm/durable-sqlite \
-    node_modules/drizzle-orm/expo-sqlite \
-    node_modules/drizzle-orm/gel \
-    node_modules/drizzle-orm/gel-core \
-    node_modules/drizzle-orm/kysely \
-    node_modules/drizzle-orm/knex \
-    node_modules/drizzle-orm/libsql \
-    node_modules/drizzle-orm/mysql-core \
-    node_modules/drizzle-orm/mysql-proxy \
-    node_modules/drizzle-orm/mysql2 \
-    node_modules/drizzle-orm/neon \
-    node_modules/drizzle-orm/neon-http \
-    node_modules/drizzle-orm/neon-serverless \
-    node_modules/drizzle-orm/node-postgres \
-    node_modules/drizzle-orm/op-sqlite \
-    node_modules/drizzle-orm/pg-proxy \
-    node_modules/drizzle-orm/pglite \
-    node_modules/drizzle-orm/planetscale-serverless \
-    node_modules/drizzle-orm/postgres-js \
-    node_modules/drizzle-orm/prisma \
-    node_modules/drizzle-orm/singlestore \
-    node_modules/drizzle-orm/singlestore-core \
-    node_modules/drizzle-orm/singlestore-proxy \
-    node_modules/drizzle-orm/sql-js \
-    node_modules/drizzle-orm/sqlite-proxy \
-    node_modules/drizzle-orm/supabase \
-    node_modules/drizzle-orm/tidb-serverless \
-    node_modules/drizzle-orm/vercel-postgres \
-    node_modules/drizzle-orm/xata-http
+    rm -rf /tmp/* /var/lib/apt/lists/* /var/cache/*
 
 # React SPA served by nginx
 COPY --from=acarshub-react-builder /webapp/dist/ /webapp/dist/
