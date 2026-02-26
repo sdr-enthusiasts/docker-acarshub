@@ -23,6 +23,7 @@ import { gte } from "drizzle-orm";
 import Fastify from "fastify";
 import { getConfig, initializeConfig } from "./config.js";
 import {
+  checkpoint,
   closeDatabase,
   getAlertCounts,
   getDatabase,
@@ -254,6 +255,35 @@ async function main(): Promise<void> {
     const isHealthy = healthCheck();
     if (!isHealthy) {
       throw new Error("Database health check failed");
+    }
+
+    // Flush any WAL frames left over from the previous run.
+    //
+    // WHY THIS MATTERS
+    // ----------------
+    // The scheduled TRUNCATE checkpoint does not fire until 5 minutes after
+    // startup.  On busy installs the leftover WAL from the previous session
+    // (container restart, OOM kill, etc.) can be large — combined with fresh
+    // writes during those 5 minutes it can push disk usage to alarming levels
+    // before the first scheduled flush.  Running TRUNCATE at startup clears
+    // the slate immediately.
+    try {
+      const { framesCheckpointed, framesRemaining } = checkpoint("TRUNCATE");
+      logger.info("Startup WAL checkpoint complete", {
+        framesCheckpointed,
+        framesRemaining,
+      });
+      if (framesRemaining > 0) {
+        logger.warn(
+          "Startup WAL checkpoint left frames unprocessed — WAL may not be fully flushed",
+          { framesRemaining },
+        );
+      }
+    } catch (err) {
+      // Non-fatal: the scheduled task will pick this up within 5 minutes.
+      logger.warn("Startup WAL checkpoint failed (non-fatal)", {
+        error: err instanceof Error ? err.message : String(err),
+      });
     }
 
     // Migrate RRD to SQLite (blocking startup task)

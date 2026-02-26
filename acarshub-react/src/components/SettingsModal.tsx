@@ -72,6 +72,8 @@ const DEFAULT_ALERT_TERMS: string[] = [
   "PAX",
   "DOG",
   "DRUNK",
+  "VOMIT",
+  "HAZMAT",
 ];
 
 /**

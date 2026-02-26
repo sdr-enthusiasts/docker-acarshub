@@ -183,6 +183,11 @@ vi.mock("../../db/index.js", () => ({
     irdm: 0,
   }),
   addMessageFromJson: vi.fn().mockResolvedValue(undefined),
+  checkpoint: vi
+    .fn()
+    .mockReturnValue({ framesCheckpointed: 0, framesRemaining: 0 }),
+  checkpointBackup: vi.fn().mockReturnValue(null),
+  optimizeDbFts: vi.fn().mockResolvedValue(undefined),
   optimizeDbMerge: vi.fn().mockResolvedValue(undefined),
   optimizeDbRegular: vi.fn().mockResolvedValue(undefined),
   pruneDatabase: vi.fn().mockResolvedValue(undefined),

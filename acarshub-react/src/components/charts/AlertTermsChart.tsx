@@ -116,12 +116,19 @@ export const AlertTermsChart = ({
     const data: number[] = [];
     let totalCount = 0;
 
-    // Extract labels and counts from alert term data
-    for (const key in alertTermData) {
-      const term = alertTermData[key];
-      labels.push(term.term);
-      data.push(term.count);
-      totalCount += term.count;
+    // Extract labels and counts from alert term data, sorted by count descending
+    const entries = Object.values(alertTermData).map((term) => ({
+      label: term.term,
+      count: term.count,
+    }));
+
+    // Sort by count descending so the most-matched terms appear at the top
+    entries.sort((a, b) => b.count - a.count);
+
+    for (const entry of entries) {
+      labels.push(entry.label);
+      data.push(entry.count);
+      totalCount += entry.count;
     }
 
     // Return null if no data

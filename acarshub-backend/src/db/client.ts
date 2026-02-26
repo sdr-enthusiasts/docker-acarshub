@@ -90,7 +90,28 @@ export function initDatabase(
 
     // Enable WAL mode for better concurrent read performance
     // WAL mode allows readers to proceed without blocking writers
-    sqliteConnection.pragma("journal_mode = WAL");
+    //
+    // IMPORTANT: journal_mode = WAL can silently fall back to DELETE mode on
+    // file systems that do not support shared-memory (NFS, some bind-mounts,
+    // read-only volumes).  We verify the return value and log an error so
+    // operators know the WAL strategy is inactive before they see disk-full.
+    //
+    // In-memory databases always return "memory" — that is expected and not
+    // an error.  Skip the check so test output stays clean.
+    const actualMode = sqliteConnection.pragma("journal_mode = WAL", {
+      simple: true,
+    }) as string;
+    const isMemory = path === ":memory:";
+    if (!isMemory && actualMode !== "wal") {
+      logger.error(
+        "WAL journal mode could not be enabled — falling back to non-WAL mode. " +
+          "Automatic WAL checkpointing will not work. " +
+          "Check that the database volume supports shared-memory files (.db-shm).",
+        { actualMode },
+      );
+    } else if (!isMemory) {
+      logger.debug("WAL journal mode enabled");
+    }
 
     // Set synchronous to NORMAL for better performance
     // NORMAL is safe with WAL mode (data integrity maintained)
@@ -106,11 +127,12 @@ export function initDatabase(
     sqliteConnection.pragma("mmap_size = 268435456");
 
     // Lower auto-checkpoint threshold from the default 1000 pages (~4 MB) to
-    // 400 pages (~1.6 MB). With the status emitter creating short read transactions
-    // every 30 seconds, PASSIVE auto-checkpoint fires in the gaps between them.
-    // A lower threshold keeps the WAL small so it never accumulates hundreds of MB
-    // of un-checkpointed FTS5 writes between scheduled TRUNCATE checkpoints.
-    sqliteConnection.pragma("wal_autocheckpoint = 400");
+    // 200 pages (~800 KB). The scheduled TRUNCATE checkpoint runs every 5 minutes
+    // but PASSIVE auto-checkpoint is the first line of defence between those
+    // scheduled runs.  A 200-page threshold triggers auto-checkpoint roughly
+    // every 800 KB of WAL writes, keeping the WAL file small on busy installs
+    // (HFDL can sustain 1000+ msgs/min) even if a scheduled checkpoint is delayed.
+    sqliteConnection.pragma("wal_autocheckpoint = 200");
 
     // Initialize Drizzle ORM
     drizzleClient = drizzle(sqliteConnection, { schema });
@@ -130,7 +152,8 @@ export function initDatabase(
         sqliteBackupConnection.pragma("foreign_keys = ON");
         sqliteBackupConnection.pragma("cache_size = -10000");
         sqliteBackupConnection.pragma("mmap_size = 268435456");
-        sqliteBackupConnection.pragma("wal_autocheckpoint = 400");
+        // Mirror the same 200-page auto-checkpoint threshold as the primary.
+        sqliteBackupConnection.pragma("wal_autocheckpoint = 200");
 
         drizzleBackupClient = drizzle(sqliteBackupConnection, { schema });
         logger.info("Backup database initialized successfully");
@@ -307,6 +330,40 @@ export function checkpoint(
   return {
     framesCheckpointed: row.checkpointed,
     // frames written to WAL but not yet moved to the main DB file
+    framesRemaining: row.log - row.checkpointed,
+  };
+}
+
+/**
+ * Execute a WAL checkpoint on the backup database (if configured)
+ *
+ * The scheduled checkpoint task only called checkpoint() which uses
+ * getSqliteConnection() — the primary connection.  The backup connection
+ * (sqliteBackupConnection) was never explicitly checkpointed, leaving it to
+ * rely solely on PASSIVE auto-checkpoint.  When auto-checkpoint stalls (e.g.
+ * on a busy install) the backup WAL grew without bound.
+ *
+ * @param mode Checkpoint mode: PASSIVE, FULL, RESTART, TRUNCATE
+ * @returns Checkpoint result, or null if no backup database is configured
+ */
+export function checkpointBackup(
+  mode: "PASSIVE" | "FULL" | "RESTART" | "TRUNCATE" = "PASSIVE",
+): { framesCheckpointed: number; framesRemaining: number } | null {
+  if (!sqliteBackupConnection) {
+    return null;
+  }
+
+  const result = sqliteBackupConnection.pragma(
+    `wal_checkpoint(${mode})`,
+  ) as {
+    busy: number;
+    log: number;
+    checkpointed: number;
+  }[];
+
+  const row = result[0];
+  return {
+    framesCheckpointed: row.checkpointed,
     framesRemaining: row.log - row.checkpointed,
   };
 }

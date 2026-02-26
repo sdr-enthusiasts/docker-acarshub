@@ -1,5 +1,20 @@
 # ACARS Hub Change Log
 
+## ACARS Hub v4.1.3
+
+### v4.1.3 Bug Fixes
+
+- Database: FTS5 tombstone accumulation on high-volume installs (HFDL + VDL-M2) caused the search index shadow tables to grow to hundreds of thousands of segments and several gigabytes. Every new message insertion then triggered FTS5 automerge to block the database thread for seconds, stalling message ingestion entirely. Root cause: `optimizeDbMerge()` was calling `merge(-16)` which performs only ~64 KB of consolidation work per call — completely unable to keep pace with tombstone generation at high message rates. Fixed by: (1) adding database migration 10 which drops and recreates all FTS tables and triggers and rebuilds the index from scratch (one-time startup cost; expect 5–30 minutes on a large database — no data is lost); (2) increasing the merge work per call from `merge(-16)` (~64 KB) to `merge(500)` (~2 MB); (3) adding a new `optimizeDbFts()` function that runs FTS5 `optimize` — a closed-loop operation that consolidates all b-tree levels until fully done, regardless of how much work is required. `merge(500)` runs every 5 minutes for cheap bounded housekeeping; `optimize` runs every 30 minutes as a correctness guarantee. Together they ensure segment count stays bounded on any deployment size.
+- Database: WAL checkpoint threshold lowered further from 400 pages (~1.6 MB) to 200 pages (~800 KB) to keep the WAL file small between scheduled TRUNCATE checkpoints on high-volume installs (HFDL can sustain 1,000+ messages/minute). A TRUNCATE-mode checkpoint now also runs at startup in addition to the existing 15-minute scheduled run.
+- Database: Added `checkpointBackup()` — the scheduled WAL checkpoint was only applied to the primary database connection, leaving the backup WAL (`DB_BACKUP`) to grow without bound. The backup connection is now checkpointed on the same schedule as the primary.
+- Database: WAL mode activation is now verified on startup. On file systems that do not support shared-memory files (some NFS mounts, certain bind-mounts), SQLite silently falls back to DELETE journal mode. ACARS Hub now detects this and logs an error so operators know the WAL strategy is inactive before a disk-full condition occurs.
+- Database: Timeseries statistics data (`timeseries_stats`) could be imported from RRD more than once, doubling (or further multiplying) the historical graph data on each restart after the initial migration. Fixed by database migration 11 which: (1) deduplicates any existing duplicate rows, keeping the highest-ID survivor per time slot; (2) upgrades the non-unique index on `(timestamp, resolution)` to a `UNIQUE INDEX` so the database itself enforces one data point per time slot going forward; (3) creates a new `rrd_import_registry` table that stores a SHA-256 content fingerprint of each imported RRD file. On startup, if the fingerprint of the `.rrd` file is already registered the import is skipped entirely — this catches re-imports regardless of filename. All batch inserts now use `INSERT OR IGNORE` so even if the registry check is somehow bypassed, the unique constraint silently discards duplicate rows.
+- Statistics: Frequency and alert term charts now render bars sorted from highest to lowest count. Previously bars were rendered in data-arrival order, making the charts difficult to read.
+
+### v4.1.3 New
+
+- Alerts: `VOMIT` and `HAZMAT` added as default alert terms
+
 ## ACARS Hub v4.1.2
 
 ### v4.1.2 Bug Fixes

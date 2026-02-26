@@ -26,6 +26,7 @@ import {
   uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
+
 // ============================================================================
 // Main Messages Table
 // ============================================================================
@@ -304,8 +305,12 @@ export const ignoreAlertTerms = sqliteTable("ignore_alert_terms", {
  * - ERROR (error count)
  *
  * Indexes:
- * - timestamp + resolution: For efficient time-range queries
+ * - timestamp + resolution: UNIQUE — enforces one data point per slot per resolution
  * - resolution: For filtering by resolution
+ *
+ * The unique constraint on (timestamp, resolution) is applied by migration 11.
+ * Inserts use onConflictDoNothing() so re-importing the same RRD data is a
+ * safe no-op rather than a duplication.
  */
 export const timeseriesStats = sqliteTable(
   "timeseries_stats",
@@ -327,11 +332,48 @@ export const timeseriesStats = sqliteTable(
       .$defaultFn(() => Date.now()),
   },
   (table) => ({
-    timestampResolutionIdx: index("idx_timeseries_timestamp_resolution").on(
-      table.timestamp,
-      table.resolution,
-    ),
+    // UNIQUE: enforces one data point per (timestamp, resolution) slot.
+    // Migration 11 drops the old non-unique index and creates this unique one
+    // after deduplicating any existing rows.
+    timestampResolutionIdx: uniqueIndex(
+      "idx_timeseries_timestamp_resolution",
+    ).on(table.timestamp, table.resolution),
     resolutionIdx: index("idx_timeseries_resolution").on(table.resolution),
+  }),
+);
+
+// ============================================================================
+// RRD Import Registry
+// ============================================================================
+
+/**
+ * Registry of RRD files that have been successfully imported.
+ *
+ * WHY THIS EXISTS
+ * ---------------
+ * The original "already migrated" signal was the presence of an .rrd.back
+ * file on disk.  If a user renames .rrd.back back to .rrd, the check misses
+ * it and the importer re-runs, doubling every historical row.
+ *
+ * This table stores a SHA-256 hash of each successfully imported RRD file's
+ * byte content.  On startup the importer hashes the candidate .rrd file and
+ * checks here before doing any work.  Since the hash is content-based, it
+ * catches re-imports regardless of what the file is named.
+ *
+ * The .rrd.back rename still happens (belt-and-suspenders), but the hash
+ * check is the authoritative guard.
+ */
+export const rrdImportRegistry = sqliteTable(
+  "rrd_import_registry",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    fileHash: text("file_hash").notNull().unique(), // SHA-256 hex of file content
+    rrdPath: text("rrd_path").notNull(), // Original path at import time
+    importedAt: integer("imported_at").notNull(), // Unix ms timestamp
+    rowsImported: integer("rows_imported").notNull().default(0),
+  },
+  (table) => ({
+    fileHashIdx: uniqueIndex("idx_rrd_import_registry_hash").on(table.fileHash),
   }),
 );
 
@@ -365,3 +407,6 @@ export type IgnoreAlertTerm = typeof ignoreAlertTerms.$inferSelect;
 
 export type TimeseriesStat = typeof timeseriesStats.$inferSelect;
 export type NewTimeseriesStat = typeof timeseriesStats.$inferInsert;
+
+export type RrdImportRegistryEntry = typeof rrdImportRegistry.$inferSelect;
+export type NewRrdImportRegistryEntry = typeof rrdImportRegistry.$inferInsert;

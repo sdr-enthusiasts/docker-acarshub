@@ -7,10 +7,19 @@
  * Architecture:
  * 1. Check for RRD file at configured path (default: /run/acars/acarshub.rrd)
  * 2. Check for .rrd.back file (indicates already migrated)
- * 3. Fetch data from all 4 RRD archives using rrdtool CLI
- * 4. Parse rrdtool output (TSV format)
- * 5. Batch insert into timeseries_stats table
- * 6. Rename RRD file to .rrd.back on success
+ * 3. Hash the candidate file and check the rrd_import_registry table —
+ *    skips import if this exact file content was already imported before
+ *    (guards against the user renaming .rrd.back back to .rrd)
+ * 4. Fetch data from all 4 RRD archives using rrdtool CLI
+ * 5. Parse rrdtool output (TSV format)
+ * 6. Batch insert into timeseries_stats table (INSERT OR IGNORE — idempotent)
+ * 7. Register the file hash in rrd_import_registry
+ * 8. Rename RRD file to .rrd.back on success
+ *
+ * Duplicate protection is layered:
+ *   - Hash registry: prevents re-import of the same file content entirely
+ *   - INSERT OR IGNORE: silently skips rows that already exist in the DB
+ *     (UNIQUE constraint on (timestamp, resolution) added by migration 11)
  *
  * RRD Structure:
  * - Data Sources: ACARS, VDLM, TOTAL, ERROR, HFDL, IMSL, IRDM
@@ -22,11 +31,12 @@
  */
 
 import { exec } from "node:child_process";
-import { existsSync, renameSync, statSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { existsSync, readFileSync, renameSync, statSync } from "node:fs";
 import { promisify } from "node:util";
-import { count } from "drizzle-orm";
-import { getDatabase } from "../db/index.js";
-import { timeseriesStats } from "../db/schema.js";
+import { count, eq } from "drizzle-orm";
+import { getDatabase, getSqliteConnection } from "../db/index.js";
+import { rrdImportRegistry, timeseriesStats } from "../db/schema.js";
 import { createLogger } from "../utils/logger.js";
 
 const execAsync = promisify(exec);
@@ -261,6 +271,147 @@ function expandCoarseDataToOneMinute(
   return expanded;
 }
 
+// ============================================================================
+// RRD Import Registry helpers
+// ============================================================================
+
+/**
+ * Ensure the rrd_import_registry table exists.
+ *
+ * Migration 11 creates this table, but we guard with CREATE TABLE IF NOT EXISTS
+ * so calls made before migrations run (e.g. in tests that skip migrations) are
+ * safe.  Uses the raw SQLite connection because Drizzle requires the table to
+ * exist in the schema before it can query it.
+ *
+ * Wrapped in try-catch throughout the call-sites — registry operations are
+ * best-effort and must never abort a migration that would otherwise succeed.
+ */
+function ensureRegistryTable(): void {
+  const conn = getSqliteConnection();
+  conn.exec(`
+    CREATE TABLE IF NOT EXISTS rrd_import_registry (
+      id            INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+      file_hash     TEXT    NOT NULL UNIQUE,
+      rrd_path      TEXT    NOT NULL,
+      imported_at   INTEGER NOT NULL,
+      rows_imported INTEGER NOT NULL DEFAULT 0
+    )
+  `);
+  conn.exec(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_rrd_import_registry_hash
+    ON rrd_import_registry (file_hash)
+  `);
+}
+
+/**
+ * Compute the SHA-256 hash of a file's byte content.
+ *
+ * RRD files are fixed-size (bounded by their round-robin design, typically a
+ * few MB), so reading the entire file into memory is safe and fast.
+ *
+ * @param filePath - Absolute path to the file
+ * @returns Lowercase hex SHA-256 digest
+ */
+function computeFileHash(filePath: string): string {
+  const content = readFileSync(filePath);
+  return createHash("sha256").update(content).digest("hex");
+}
+
+/**
+ * Check whether a file hash is already recorded in the import registry.
+ *
+ * @param fileHash - SHA-256 hex string
+ * @returns true if the hash exists in the registry
+ */
+function isHashRegistered(fileHash: string): boolean {
+  const db = getDatabase();
+  const row = db
+    .select({ fileHash: rrdImportRegistry.fileHash })
+    .from(rrdImportRegistry)
+    .where(eq(rrdImportRegistry.fileHash, fileHash))
+    .get();
+  return row !== undefined;
+}
+
+/**
+ * Record a file hash in the import registry.
+ *
+ * Uses INSERT OR REPLACE (onConflictDoUpdate) so it is safe to call even
+ * if the hash is already registered (e.g. during the silent-fail re-migration
+ * recovery path).
+ *
+ * @param fileHash     - SHA-256 hex string
+ * @param rrdPath      - Path to the file at import time
+ * @param rowsImported - Number of rows inserted into timeseries_stats
+ */
+function registerHash(
+  fileHash: string,
+  rrdPath: string,
+  rowsImported: number,
+): void {
+  const db = getDatabase();
+  db.insert(rrdImportRegistry)
+    .values({
+      fileHash,
+      rrdPath,
+      importedAt: Date.now(),
+      rowsImported,
+    })
+    .onConflictDoUpdate({
+      target: rrdImportRegistry.fileHash,
+      set: {
+        rrdPath,
+        importedAt: Date.now(),
+        rowsImported,
+      },
+    })
+    .run();
+}
+
+/**
+ * Best-effort: register the hash of an existing .rrd.back file.
+ *
+ * WHY THIS EXISTS
+ * ---------------
+ * Deployments that ran the RRD importer before the hash registry existed will
+ * have a .rrd.back file but nothing in rrd_import_registry.  On the very first
+ * startup after the registry feature is deployed, this function records the
+ * hash of the backup file so that if the user later renames .rrd.back → .rrd,
+ * the hash check will catch it and skip the duplicate import.
+ *
+ * This is called from the "backup exists + DB has rows → already migrated"
+ * code path.  If anything fails (file unreadable, DB not ready), it logs at
+ * debug level and returns — it must not abort the skip-migration fast path.
+ *
+ * @param backupPath - Path to the .rrd.back file
+ */
+function tryRegisterBackupHash(backupPath: string): void {
+  try {
+    ensureRegistryTable();
+
+    const fileHash = computeFileHash(backupPath);
+
+    if (isHashRegistered(fileHash)) {
+      // Already registered from a previous startup — nothing to do.
+      return;
+    }
+
+    registerHash(fileHash, backupPath, 0 /* rows unknown for legacy imports */);
+
+    logger.info(
+      "Registered hash of existing .rrd.back file (graceful degradation for pre-registry deployment)",
+      { backupPath, fileHash },
+    );
+  } catch (error) {
+    logger.debug(
+      "Could not register .rrd.back hash — non-fatal, registry is best-effort",
+      { backupPath, error: error instanceof Error ? error.message : String(error) },
+    );
+  }
+}
+
+// ============================================================================
+
 /**
  * Batch insert data points into database
  *
@@ -271,6 +422,11 @@ function expandCoarseDataToOneMinute(
  * Each batch is wrapped in a transaction so that partial failures don't
  * leave orphaned rows and so SQLite can flush once per batch rather than
  * once per row.
+ *
+ * Uses onConflictDoNothing() so the insert is idempotent: if a row for the
+ * same (timestamp, resolution) slot already exists (UNIQUE constraint added
+ * by migration 11), it is silently skipped rather than causing an error or
+ * creating a duplicate.
  *
  * @param dataPoints - Data points to insert
  * @param batchSize - Number of rows per batch (default: 100)
@@ -291,7 +447,9 @@ function batchInsertDataPoints(
     const batch = dataPoints.slice(i, i + batchSize);
 
     try {
-      // .run() is required — without it Drizzle never executes the insert
+      // .run() is required — without it Drizzle never executes the insert.
+      // onConflictDoNothing() makes the insert idempotent: rows that already
+      // exist for a given (timestamp, resolution) slot are silently skipped.
       db.insert(timeseriesStats)
         .values(
           batch.map((point) => ({
@@ -306,6 +464,7 @@ function batchInsertDataPoints(
             errorCount: point.errorCount,
           })),
         )
+        .onConflictDoNothing()
         .run();
 
       insertedCount += batch.length;
@@ -404,7 +563,7 @@ export async function migrateRrdToSqlite(
 
   logger.info("Starting RRD migration", { rrdPath });
 
-  // 1. Check if already migrated
+  // 1. Check if already migrated via the .back sentinel file.
   const backupPath = `${rrdPath}.back`;
   if (existsSync(backupPath)) {
     // Verify the migration actually wrote data.  A previous version of this
@@ -424,6 +583,13 @@ export async function migrateRrdToSqlite(
         backupPath,
         existingRows: rowCount,
       });
+
+      // Best-effort: record the backup file's hash so that if the user
+      // renames .rrd.back → .rrd on a future startup, the hash check below
+      // will catch it and skip the duplicate import.  This is the one-time
+      // graceful-degradation path for deployments that pre-date the registry.
+      tryRegisterBackupHash(backupPath);
+
       return null;
     }
 
@@ -479,8 +645,68 @@ export async function migrateRrdToSqlite(
     };
   }
 
+  // 4. Hash-based registry check.
+  //
+  //    WHY: the .back sentinel above only protects the normal post-migration
+  //    state.  If a user renames .rrd.back → .rrd the sentinel is gone and
+  //    we would re-import every row, doubling historical data.  The registry
+  //    records the SHA-256 of every file we have successfully imported, so
+  //    the same byte-for-byte content is never imported twice regardless of
+  //    what the file is named.
+  //
+  //    Wrapped in try-catch: registry operations are best-effort.  If the
+  //    table is not yet available (e.g. migration 11 hasn't run yet on a
+  //    very old deployment), we log at debug level and proceed without the
+  //    guard — the idempotent INSERT OR IGNORE in step 6 still prevents
+  //    duplicate rows at the DB level.
+  let fileHash: string | null = null;
   try {
-    // 4. Fetch data from all archives
+    ensureRegistryTable();
+    fileHash = computeFileHash(rrdPath);
+
+    if (isHashRegistered(fileHash)) {
+      logger.warn(
+        "RRD file content matches a previously imported file — skipping " +
+          "(regression guard: file was likely renamed from .rrd.back)",
+        { rrdPath, fileHash },
+      );
+
+      // Re-create the .back sentinel so future startups take the fast path.
+      try {
+        renameSync(rrdPath, backupPath);
+        logger.info("Renamed previously-imported RRD back to .back", {
+          from: rrdPath,
+          to: backupPath,
+        });
+      } catch (renameError) {
+        logger.warn(
+          "Could not rename previously-imported RRD back to .back — non-fatal",
+          {
+            error:
+              renameError instanceof Error
+                ? renameError.message
+                : String(renameError),
+          },
+        );
+      }
+
+      return null;
+    }
+  } catch (registryError) {
+    logger.debug(
+      "Registry check unavailable — proceeding without hash guard " +
+        "(INSERT OR IGNORE in the insert step still prevents duplicate rows)",
+      {
+        error:
+          registryError instanceof Error
+            ? registryError.message
+            : String(registryError),
+      },
+    );
+  }
+
+  try {
+    // 5. Fetch data from all archives
     logger.info("Fetching data from RRD archives");
     const allDataPoints: TimeseriesDataPoint[] = [];
 
@@ -521,14 +747,33 @@ export async function migrateRrdToSqlite(
       },
     });
 
-    // 5. Expand coarse-grained data to 1-minute resolution
+    // 6. Expand coarse-grained data to 1-minute resolution
     logger.info("Expanding coarse data to 1-minute resolution");
     const expandedDataPoints = expandCoarseDataToOneMinute(allDataPoints);
 
-    // 6. Insert data into database
+    // 7. Insert data into database (idempotent: INSERT OR IGNORE)
     batchInsertDataPoints(expandedDataPoints);
 
-    // 7. Rename RRD file to .back (indicates successful migration)
+    // 8. Record the file hash in the registry so future imports of the same
+    //    content are skipped immediately, regardless of filename.
+    if (fileHash !== null) {
+      try {
+        registerHash(fileHash, rrdPath, expandedDataPoints.length);
+        logger.info("Registered import hash in registry", { fileHash });
+      } catch (hashError) {
+        // Non-fatal — the migration itself succeeded; only the registry
+        // update failed.  Log and continue so the .back rename still happens.
+        logger.warn("Failed to register import hash — non-fatal", {
+          error:
+            hashError instanceof Error
+              ? hashError.message
+              : String(hashError),
+        });
+      }
+    }
+
+    // 9. Rename RRD file to .back (belt-and-suspenders sentinel for fast
+    //    path on subsequent startups)
     try {
       renameSync(rrdPath, backupPath);
       logger.info("Renamed RRD file to backup", {

@@ -114,19 +114,22 @@ export const FrequencyChart = ({
     let data: number[] = [];
     let totalCount = 0;
 
+    // Sort by count descending so the most-used frequencies appear at the top
+    const sortedData = [...frequencyData].sort((a, b) => b.count - a.count);
+
     // Calculate total count
-    for (const item of frequencyData) {
+    for (const item of sortedData) {
       totalCount += item.count;
     }
 
     // If we have 15 or fewer frequencies, use them all
-    if (frequencyData.length <= 15) {
-      labels = frequencyData.map((item) => item.freq);
-      data = frequencyData.map((item) => item.count);
+    if (sortedData.length <= 15) {
+      labels = sortedData.map((item) => item.freq);
+      data = sortedData.map((item) => item.count);
     } else {
       // Take top 14 frequencies and aggregate the rest into "Other"
-      const topFreqs = frequencyData.slice(0, 14);
-      const otherFreqs = frequencyData.slice(14);
+      const topFreqs = sortedData.slice(0, 14);
+      const otherFreqs = sortedData.slice(14);
 
       labels = topFreqs.map((item) => item.freq);
       data = topFreqs.map((item) => item.count);

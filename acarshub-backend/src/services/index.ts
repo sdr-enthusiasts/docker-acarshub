@@ -29,6 +29,7 @@ import {
   addMessageFromJson,
   checkpoint,
   getPerDecoderMessageCounts,
+  optimizeDbFts,
   optimizeDbMerge,
   optimizeDbRegular,
   pruneDatabase,
@@ -481,25 +482,67 @@ export class BackgroundServices extends EventEmitter {
         }
       }, "prune_database");
 
-    // Optimize database (merge FTS5 segments) every 5 minutes
+    // FTS5 merge every 5 minutes — bounded intraday segment consolidation.
+    //
+    // merge(500) writes up to 500 leaf pages (~2 MB) per call.  This limits
+    // how many small segments accumulate between optimize runs and keeps
+    // per-insert automerge overhead low.  It is open-loop (fixed work per
+    // call) but that is acceptable here because optimize() is the correctness
+    // guarantee — merge is just cheap housekeeping between optimize runs.
     scheduler.every(5, "minutes").do(async () => {
       try {
         await optimizeDbMerge();
-        logger.debug("Database optimized (merge)");
+        logger.debug("FTS5 merge complete");
       } catch (err) {
-        logger.error("Failed to optimize database (merge)", {
+        logger.error("Failed to run FTS5 merge", {
           error: err instanceof Error ? err.message : String(err),
         });
       }
     }, "optimize_db_merge");
 
-    // Full database optimization every 6 hours
+    // FTS5 optimize every 30 minutes — closed-loop tombstone clearance.
+    //
+    // WHY optimize AND NOT JUST merge(N)
+    // -----------------------------------
+    // merge(N) is open-loop: it does a fixed N pages of work per call
+    // regardless of how much work actually exists.  There is no N that is
+    // correct for all stations — a high-volume HFDL+VDL-M2 install generates
+    // far more tombstones per interval than a single-decoder install.
+    //
+    // 'optimize' is closed-loop: it runs the FTS5 internal merge loop until
+    // every level of the b-tree has at most one segment, reconciling all
+    // tombstones in the process.  It is idempotent — on an already-clean
+    // index it exits in milliseconds; on a fragmented one it does as much
+    // work as needed.  No magic number required.
+    //
+    // WHY 30 MINUTES IS ALWAYS FAST
+    // ------------------------------
+    // optimize is only expensive when the index is already badly fragmented.
+    // With merge running every 5 minutes the index is never badly fragmented,
+    // so each optimize call has at most ~1,500 segments to consolidate
+    // (≈50 inserts/min × 30 min on a busy HFDL+VDL-M2 install).
+    // Consolidating 1,500 small segments takes well under a second.
+    // The two jobs reinforce each other: merge limits how much work optimize
+    // has to do; optimize provides the correctness guarantee merge cannot.
+    scheduler.every(30, "minutes").do(async () => {
+      try {
+        await optimizeDbFts();
+        logger.debug("FTS5 optimize complete");
+      } catch (err) {
+        logger.error("Failed to run FTS5 optimize", {
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    }, "optimize_db_fts");
+
+    // Full database optimization (ANALYZE) every 6 hours.
+    // Updates SQLite query-planner statistics — unrelated to FTS5 maintenance.
     scheduler.every(6, "hours").do(async () => {
       try {
         await optimizeDbRegular();
-        logger.info("Database optimized (full)");
+        logger.info("Database optimized (ANALYZE)");
       } catch (err) {
-        logger.error("Failed to optimize database (full)", {
+        logger.error("Failed to optimize database (ANALYZE)", {
           error: err instanceof Error ? err.message : String(err),
         });
       }

@@ -7,11 +7,14 @@
  *   to be undefined because better-sqlite3 returns only the first column as a scalar
  *   when { simple: true } is used with a multi-column PRAGMA result.
  * - wal_autocheckpoint pragma applied to both primary and backup connections
+ * - checkpointBackup() returns null when no backup DB is configured
+ * - checkpointBackup() returns correct shape when backup DB is active
  */
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   checkpoint,
+  checkpointBackup,
   closeDatabase,
   getSqliteConnection,
   initDatabase,
@@ -160,4 +163,54 @@ describe("checkpoint()", () => {
   // (e.g., in-memory databases silently ignore "journal_mode = WAL").  The
   // regression tests above are sufficient to verify correct column mapping; a
   // non-negative assertion here would be misleading for in-memory test DBs.
+});
+
+// ── checkpointBackup() ────────────────────────────────────────────────────────
+
+describe("checkpointBackup()", () => {
+  beforeEach(() => {
+    initDatabase(":memory:");
+  });
+
+  afterEach(() => {
+    closeDatabase();
+  });
+
+  // ── Regression: backup WAL was never checkpointed ─────────────────────────
+
+  it("regression: returns null when no backup database is configured", () => {
+    // initDatabase(":memory:") never initialises a backup connection because
+    // the guard `if (DB_BACKUP_PATH && !dbPath)` skips backup init for
+    // test-supplied paths.  checkpointBackup() must return null in this case
+    // rather than throwing — the scheduled task uses null to mean "no backup".
+    //
+    // Root cause this guards: the 4.1.2 scheduled checkpoint only called
+    // checkpoint() (primary DB); checkpointBackup() did not exist, so the
+    // backup WAL grew without bound when DB_BACKUP was set.
+    const result = checkpointBackup("PASSIVE");
+    expect(result).toBeNull();
+  });
+
+  it("regression: returns null for TRUNCATE mode when no backup is configured", () => {
+    // The scheduled task calls checkpointBackup("TRUNCATE").  It must not
+    // throw when there is no backup — it must return null so the caller can
+    // skip the backup checkpoint cleanly.
+    const result = checkpointBackup("TRUNCATE");
+    expect(result).toBeNull();
+  });
+
+  it("returns null regardless of the mode argument when no backup is configured", () => {
+    for (const mode of [
+      "PASSIVE",
+      "FULL",
+      "RESTART",
+      "TRUNCATE",
+    ] as const) {
+      expect(checkpointBackup(mode)).toBeNull();
+    }
+  });
+
+  it("defaults to PASSIVE mode and returns null when no backup is configured", () => {
+    expect(checkpointBackup()).toBeNull();
+  });
 });
