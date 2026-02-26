@@ -39,7 +39,7 @@ import { createLogger } from "../utils/logger.js";
 
 const logger = createLogger("migrations");
 const DB_PATH = process.env.ACARSHUB_DB || "./data/acarshub.db";
-const LATEST_REVISION = "a1b2c3d4e5f6";
+const LATEST_REVISION = "c3d4e5f6a1b2";
 
 interface MigrationStep {
   revision: string;
@@ -904,6 +904,52 @@ function migration09_addTimeseriesStats(db: Database.Database): void {
 }
 
 // ---------------------------------------------------------------------------
+
+/**
+ * Migration 10: Rebuild FTS5 from scratch to clear tombstone accumulation
+ * (c3d4e5f6a1b2)
+ *
+ * WHY THIS EXISTS
+ * ---------------
+ * FTS5 delete/update triggers write tombstone entries into messages_fts_data
+ * on every pruned row.  The scheduled merge task was using merge(-16) which
+ * wrote only ~64 KB per call — completely unable to keep pace with the
+ * tombstone accumulation on high-volume installs (HFDL + VDL-M2).  At
+ * ~536,000 segments and 2.6 GB of shadow-table data, every INSERT caused
+ * FTS5 automerge to block the synchronous better-sqlite3 thread for seconds,
+ * stalling message ingestion entirely.
+ *
+ * This migration drops all FTS tables and triggers and recreates them cleanly,
+ * then rebuilds the index from the messages table.  The subsequent VACUUM
+ * reclaims the disk space freed by discarding the bloated shadow tables.
+ *
+ * Both steps can take several minutes on a large database — this is a
+ * one-time startup cost.
+ */
+function migration10_rebuildFts(db: Database.Database): void {
+  logger.info("Applying migration 10: rebuild_fts");
+
+  logger.warn(
+    "Dropping FTS table and triggers to clear tombstone accumulation...",
+  );
+  dropFtsTableAndTriggers(db);
+  logger.info("✓ FTS table and triggers dropped");
+
+  logger.warn(
+    "Recreating FTS table and triggers from scratch...",
+  );
+  createFtsTableAndTriggers(db);
+  logger.info("✓ FTS table and triggers recreated");
+
+  logger.warn(
+    "Running VACUUM to reclaim disk space freed by old FTS shadow tables — " +
+      "this may take 10-30 minutes on large databases...",
+  );
+  db.exec("VACUUM");
+  logger.info("✓ VACUUM complete — migration 10 finished");
+}
+
+// ---------------------------------------------------------------------------
 // Startup FTS integrity check
 // ---------------------------------------------------------------------------
 
@@ -1017,6 +1063,11 @@ const MIGRATIONS: MigrationStep[] = [
     revision: "a1b2c3d4e5f6",
     name: "add_timeseries_stats",
     upgrade: migration09_addTimeseriesStats,
+  },
+  {
+    revision: "c3d4e5f6a1b2",
+    name: "rebuild_fts",
+    upgrade: migration10_rebuildFts,
   },
 ];
 

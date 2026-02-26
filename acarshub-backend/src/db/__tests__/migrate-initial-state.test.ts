@@ -339,7 +339,7 @@ describe("Migration from initial Alembic state", () => {
       .get() as { version_num: string } | undefined;
 
     expect(version).toBeDefined();
-    expect(version?.version_num).toBe("a1b2c3d4e5f6");
+    expect(version?.version_num).toBe("c3d4e5f6a1b2");
 
     testDb.close();
   });

@@ -629,26 +629,17 @@ describe("migration04 FTS creation and repair", () => {
     `);
     db.exec("INSERT INTO messages_fts(messages_fts) VALUES ('rebuild')");
 
-    // Capture the schema text BEFORE migration04 runs.
-    const ftsSqlBefore = db
-      .prepare(
-        "SELECT sql FROM sqlite_master WHERE type='table' AND name='messages_fts'",
-      )
-      .get() as { sql: string };
     db.close();
 
     runMigrations(DB_PATH);
 
     const db2 = new Database(DB_PATH);
-    const ftsSqlAfter = db2
-      .prepare(
-        "SELECT sql FROM sqlite_master WHERE type='table' AND name='messages_fts'",
-      )
-      .get() as { sql: string };
+    // migration10 unconditionally rebuilds FTS, so the raw SQL string may be
+    // reformatted.  Assert schema correctness (sentinel column present) rather
+    // than byte-for-byte equality.
+    assertFtsSchemaCorrect(db2);
+    assertTriggersCorrect(db2);
     db2.close();
-
-    // The FTS table definition must be unchanged — migration04 skipped it.
-    expect(ftsSqlAfter.sql).toBe(ftsSqlBefore.sql);
   });
 
   // -------------------------------------------------------------------------
@@ -688,6 +679,90 @@ describe("migration04 FTS creation and repair", () => {
       .get() as { version_num: string } | undefined;
     db2.close();
 
-    expect(version?.version_num).toBe("a1b2c3d4e5f6");
+    expect(version?.version_num).toBe("c3d4e5f6a1b2");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Suite 3: migration10 — rebuild_fts
+// ---------------------------------------------------------------------------
+
+describe("migration10 rebuild_fts", () => {
+  const DB_PATH = path.join(process.cwd(), "test-migration10.db");
+
+  beforeEach(() => {
+    if (fs.existsSync(DB_PATH)) fs.unlinkSync(DB_PATH);
+    runMigrations(DB_PATH);
+  });
+
+  afterEach(() => {
+    if (fs.existsSync(DB_PATH)) fs.unlinkSync(DB_PATH);
+  });
+
+  // -------------------------------------------------------------------------
+
+  test("regression: all three FTS triggers exist after migration10", () => {
+    // migration10 drops and recreates FTS with all triggers.
+    // This test must FAIL if migration10 is removed and PASS when present.
+    const db = new Database(DB_PATH);
+
+    for (const name of [
+      "messages_fts_insert",
+      "messages_fts_delete",
+      "messages_fts_update",
+    ]) {
+      const row = db
+        .prepare(
+          "SELECT sql FROM sqlite_master WHERE type='trigger' AND name=?",
+        )
+        .get(name) as { sql: string } | undefined;
+
+      expect(row, `trigger '${name}' must exist after migration10`).toBeDefined();
+      expect(row?.sql).toContain("message_type");
+    }
+
+    db.close();
+  });
+
+  // -------------------------------------------------------------------------
+
+  test("regression: FTS table exists and is searchable after migration10", () => {
+    // Insert a message and verify it is findable via FTS search.
+    const db = new Database(DB_PATH);
+
+    db.exec(`
+      INSERT INTO messages (
+        message_type, msg_time, station_id, toaddr, fromaddr,
+        depa, dsta, eta, gtout, gtin, wloff, wlin, lat, lon, alt,
+        msg_text, tail, flight, icao, freq, ack, mode, label,
+        block_id, msgno, is_response, is_onground, error, libacars, level, uid
+      ) VALUES (
+        'ACARS', ${Math.floor(Date.now() / 1000)}, 'TEST', '', '',
+        '', '', '', '', '', '', '', '40.64', '-73.78', '35000',
+        'migration10 test message', 'N99999', 'MIG010', 'AABBCC', '129.125',
+        0, 'A', '5Z', '', '', 0, 0, 0, '{}', '-15.0', 'uid-mig10-test'
+      )
+    `);
+
+    const results = db
+      .prepare(
+        "SELECT rowid FROM messages_fts WHERE messages_fts MATCH 'flight:MIG010'",
+      )
+      .all() as Array<{ rowid: number }>;
+
+    expect(results.length).toBeGreaterThan(0);
+    db.close();
+  });
+
+  // -------------------------------------------------------------------------
+
+  test("regression: alembic_version is c3d4e5f6a1b2 after migration10", () => {
+    const db = new Database(DB_PATH);
+    const version = db
+      .prepare("SELECT version_num FROM alembic_version")
+      .get() as { version_num: string } | undefined;
+    db.close();
+
+    expect(version?.version_num).toBe("c3d4e5f6a1b2");
   });
 });

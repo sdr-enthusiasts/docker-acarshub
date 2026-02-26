@@ -1082,35 +1082,39 @@ export function optimizeDbRegular(): void {
 }
 
 /**
- * Optimize database with FTS5 merge (deep optimization)
+ * Optimize database with FTS5 merge (segment consolidation)
  *
- * Equivalent to Python optimize_db_merge() function.
+ * Merges FTS5 b-tree segments to keep the segment count low and insert
+ * performance fast.  Called every 5 minutes.
  *
- * Runs FTS5 'merge' optimization to consolidate FTS index segments.
- * This is more intensive than regular ANALYZE and should be run less frequently.
+ * WHY 500 PAGES
+ * -------------
+ * `merge(N)` writes up to N leaf pages per call.  The previous default of
+ * -16 wrote only ~64 KB per call — far too little to keep pace with a
+ * high-volume install generating tens of thousands of inserts per day, and
+ * the direct cause of segment counts reaching 500,000+.
+ * 500 pages (~2 MB) at a 5-minute interval = 24 MB/hour of merge throughput,
+ * which comfortably handles normal HFDL/VDL-M2 insert rates.
  *
- * @param mergeLevel FTS5 merge level (default: -16 for full merge)
+ * @param pagesPerCall Leaf pages to write per call (default: 500 ≈ 2 MB)
  */
-export function optimizeDbMerge(mergeLevel = -16): void {
+export function optimizeDbMerge(pagesPerCall = 500): void {
   try {
-    logger.info("Running FTS5 merge optimization", { mergeLevel });
-    // FTS5 special commands require the raw SQLite connection - they do not work
-    // correctly through Drizzle's sql template because Drizzle binds values as
-    // parameterized placeholders (?), and FTS5 merge also requires TWO columns:
-    //   INSERT INTO messages_fts(messages_fts, rank) VALUES ('merge', <level>)
-    // This matches the Python reference: session.execute(text(
-    //   "insert into messages_fts(messages_fts, rank) values('merge', -500)"))
+    logger.debug("Running FTS5 merge", { pagesPerCall });
+    // FTS5 special commands require the raw SQLite connection — Drizzle binds
+    // values as parameterized placeholders which breaks the two-column FTS5
+    // command syntax: INSERT INTO t(t, rank) VALUES ('merge', N)
     const conn = getSqliteConnection();
     conn
       .prepare(
         "INSERT INTO messages_fts(messages_fts, rank) VALUES ('merge', ?)",
       )
-      .run(mergeLevel);
-    logger.info("FTS5 merge complete");
+      .run(pagesPerCall);
+    logger.debug("FTS5 merge complete");
   } catch (error) {
     logger.error("Failed to run FTS5 merge", {
       error: error instanceof Error ? error.message : String(error),
-      mergeLevel,
+      pagesPerCall,
     });
   }
 }
