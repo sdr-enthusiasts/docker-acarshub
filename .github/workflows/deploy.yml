@@ -56,7 +56,7 @@ jobs:
         id: get_version
         run: |
           # Get version from package.json
-          VERSION=$(grep -oP '(?<="version": ")[^"]*' acarshub-react/package.json)
+          VERSION=$(grep -oP '(?<="version": ")[^"]*' package.json)
           # Get build number from GitHub run
           BUILD_NUMBER=$GITHUB_RUN_NUMBER
           echo "ACARS Hub: v${VERSION} Build ${BUILD_NUMBER}"
