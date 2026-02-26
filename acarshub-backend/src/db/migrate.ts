@@ -14,6 +14,8 @@
  * 7. 171fe2c07bd9 - create_alert_matches_table
  * 8. 40fd0618348d - final_v4_optimization
  * 9. a1b2c3d4e5f6 - add_timeseries_stats
+ * 10. c3d4e5f6a1b2 - rebuild_fts
+ * 11. f0a1b2c3d4e5 - deduplicate_timeseries_and_add_registry
  *
  * FTS Schema Integrity
  * --------------------
@@ -39,7 +41,7 @@ import { createLogger } from "../utils/logger.js";
 
 const logger = createLogger("migrations");
 const DB_PATH = process.env.ACARSHUB_DB || "./data/acarshub.db";
-const LATEST_REVISION = "c3d4e5f6a1b2";
+const LATEST_REVISION = "f0a1b2c3d4e5";
 
 interface MigrationStep {
   revision: string;
@@ -950,6 +952,149 @@ function migration10_rebuildFts(db: Database.Database): void {
 }
 
 // ---------------------------------------------------------------------------
+
+/**
+ * Migration 11: Deduplicate timeseries_stats and add unique constraint
+ * (f0a1b2c3d4e5)
+ *
+ * WHY THIS EXISTS
+ * ---------------
+ * Two problems in the original RRD import logic allowed duplicate rows to
+ * accumulate in timeseries_stats:
+ *
+ * 1. The "already migrated" guard was purely name-based (.rrd.back file).
+ *    If a user renamed .rrd.back back to .rrd, the importer re-ran and
+ *    inserted every historical row a second time.
+ *
+ * 2. The table had no UNIQUE constraint on (timestamp, resolution), so
+ *    the database itself offered no protection against duplicate inserts.
+ *
+ * This migration:
+ *   a. Deduplicates existing rows — for each (timestamp, resolution) group,
+ *      keeps the row with the highest id (most recently inserted) and deletes
+ *      the rest.  On a clean database this is a no-op.
+ *   b. Drops the old non-unique index on (timestamp, resolution).
+ *   c. Creates a UNIQUE index on (timestamp, resolution) to prevent future
+ *      duplication at the database level.
+ *   d. Creates the rrd_import_registry table that the RRD importer uses to
+ *      record SHA-256 hashes of files it has processed, allowing it to skip
+ *      re-imports regardless of filename.
+ *   e. VACUUMs the database to reclaim pages freed by the duplicate row
+ *      deletions.  VACUUM cannot run inside a transaction so it executes after
+ *      the migration transaction commits.  On a clean database (no duplicates)
+ *      this is fast; on a database with significant duplication it may take
+ *      several minutes and requires free disk space roughly equal to the
+ *      current database file size.
+ */
+function migration11_deduplicateTimeseriesAndAddRegistry(
+  db: Database.Database,
+): void {
+  logger.info(
+    "Applying migration 11: deduplicate_timeseries_and_add_registry",
+  );
+
+  const migrate = db.transaction(() => {
+    // -------------------------------------------------------------------------
+    // Step 1: Deduplicate timeseries_stats
+    // -------------------------------------------------------------------------
+    // Count duplicates first so we can log what was cleaned up.
+    const totalRows = (
+      db
+        .prepare("SELECT COUNT(*) AS n FROM timeseries_stats")
+        .get() as { n: number }
+    ).n;
+
+    const distinctSlots = (
+      db
+        .prepare(
+          "SELECT COUNT(*) AS n FROM (SELECT 1 FROM timeseries_stats GROUP BY timestamp, resolution)",
+        )
+        .get() as { n: number }
+    ).n;
+
+    const duplicateCount = totalRows - distinctSlots;
+
+    if (duplicateCount > 0) {
+      logger.warn(
+        `Removing ${duplicateCount} duplicate timeseries_stats rows (keeping highest id per slot)`,
+        { totalRows, distinctSlots, duplicateCount },
+      );
+
+      db.exec(`
+        DELETE FROM timeseries_stats
+        WHERE id NOT IN (
+          SELECT MAX(id)
+          FROM timeseries_stats
+          GROUP BY timestamp, resolution
+        )
+      `);
+
+      logger.info("Duplicate timeseries_stats rows removed", {
+        removed: duplicateCount,
+      });
+    } else {
+      logger.info("No duplicate timeseries_stats rows found — clean");
+    }
+
+    // -------------------------------------------------------------------------
+    // Step 2: Replace non-unique index with unique index
+    // -------------------------------------------------------------------------
+    // Drop the old non-unique index (created by migration 9).  SQLite does not
+    // support ALTER INDEX, so we drop and recreate.
+    db.exec(
+      "DROP INDEX IF EXISTS idx_timeseries_timestamp_resolution",
+    );
+
+    // The table is now duplicate-free, so this will succeed.
+    db.exec(`
+      CREATE UNIQUE INDEX idx_timeseries_timestamp_resolution
+      ON timeseries_stats (timestamp, resolution)
+    `);
+
+    logger.info(
+      "Replaced non-unique index with UNIQUE index on timeseries_stats(timestamp, resolution)",
+    );
+
+    // -------------------------------------------------------------------------
+    // Step 3: Create rrd_import_registry table
+    // -------------------------------------------------------------------------
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS rrd_import_registry (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+        file_hash   TEXT    NOT NULL UNIQUE,
+        rrd_path    TEXT    NOT NULL,
+        imported_at INTEGER NOT NULL,
+        rows_imported INTEGER NOT NULL DEFAULT 0
+      )
+    `);
+
+    db.exec(`
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_rrd_import_registry_hash
+      ON rrd_import_registry (file_hash)
+    `);
+
+    logger.info("Created rrd_import_registry table");
+  });
+
+  migrate();
+
+  // VACUUM must run outside the transaction — SQLite forbids VACUUM inside an
+  // active transaction.  It reclaims the pages freed by the duplicate deletes
+  // above.  On a clean database the freed-page count is ~0 and VACUUM returns
+  // almost instantly; on a database where timeseries rows were doubled it can
+  // reclaim tens to hundreds of MB.
+  logger.warn(
+    "Running VACUUM to reclaim space freed by timeseries deduplication — " +
+      "this may take a few minutes on large databases and requires free disk " +
+      "space roughly equal to the current database file size...",
+  );
+  db.exec("VACUUM");
+  logger.info("✓ VACUUM complete");
+
+  logger.info("✓ Migration 11 complete");
+}
+
+// ---------------------------------------------------------------------------
 // Startup FTS integrity check
 // ---------------------------------------------------------------------------
 
@@ -1068,6 +1213,11 @@ const MIGRATIONS: MigrationStep[] = [
     revision: "c3d4e5f6a1b2",
     name: "rebuild_fts",
     upgrade: migration10_rebuildFts,
+  },
+  {
+    revision: "f0a1b2c3d4e5",
+    name: "deduplicate_timeseries_and_add_registry",
+    upgrade: migration11_deduplicateTimeseriesAndAddRegistry,
   },
 ];
 

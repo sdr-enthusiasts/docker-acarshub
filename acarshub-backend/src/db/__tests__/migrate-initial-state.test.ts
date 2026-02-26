@@ -339,7 +339,7 @@ describe("Migration from initial Alembic state", () => {
       .get() as { version_num: string } | undefined;
 
     expect(version).toBeDefined();
-    expect(version?.version_num).toBe("c3d4e5f6a1b2");
+    expect(version?.version_num).toBe("f0a1b2c3d4e5");
 
     testDb.close();
   });
@@ -575,6 +575,188 @@ describe("Migration from initial Alembic state", () => {
     const indexNames = indexes.map((idx) => idx.name);
     expect(indexNames).toContain("idx_timeseries_timestamp_resolution");
     expect(indexNames).toContain("idx_timeseries_resolution");
+
+    testDb.close();
+  });
+
+  // ---------------------------------------------------------------------------
+  // Migration 11: deduplicate_timeseries_and_add_registry
+  // ---------------------------------------------------------------------------
+
+  test("should create rrd_import_registry table after migration 11", () => {
+    runMigrations(TEST_DB_PATH);
+
+    const testDb = new Database(TEST_DB_PATH);
+
+    const table = testDb
+      .prepare(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='rrd_import_registry'",
+      )
+      .get();
+
+    expect(table).toBeDefined();
+
+    const columns = testDb
+      .prepare("PRAGMA table_info(rrd_import_registry)")
+      .all() as Array<{ name: string }>;
+
+    const columnNames = columns.map((col) => col.name);
+    expect(columnNames).toContain("id");
+    expect(columnNames).toContain("file_hash");
+    expect(columnNames).toContain("rrd_path");
+    expect(columnNames).toContain("imported_at");
+    expect(columnNames).toContain("rows_imported");
+
+    // Unique index on file_hash must exist
+    const indexes = testDb
+      .prepare(
+        "SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='rrd_import_registry'",
+      )
+      .all() as Array<{ name: string }>;
+
+    const indexNames = indexes.map((idx) => idx.name);
+    expect(indexNames).toContain("idx_rrd_import_registry_hash");
+
+    testDb.close();
+  });
+
+  test("should replace non-unique timeseries index with a UNIQUE index after migration 11", () => {
+    runMigrations(TEST_DB_PATH);
+
+    const testDb = new Database(TEST_DB_PATH);
+
+    // Verify the index exists and is unique by attempting to insert a duplicate
+    // (timestamp, resolution) pair — SQLite must reject it.
+    testDb.exec(`
+      INSERT INTO timeseries_stats
+        (timestamp, resolution, acars_count, vdlm_count, hfdl_count,
+         imsl_count, irdm_count, total_count, error_count, created_at)
+      VALUES (1704067200, '1min', 1, 0, 0, 0, 0, 1, 0, 0)
+    `);
+
+    expect(() => {
+      testDb.exec(`
+        INSERT INTO timeseries_stats
+          (timestamp, resolution, acars_count, vdlm_count, hfdl_count,
+           imsl_count, irdm_count, total_count, error_count, created_at)
+        VALUES (1704067200, '1min', 2, 0, 0, 0, 0, 2, 0, 0)
+      `);
+    }).toThrow(/UNIQUE constraint failed/);
+
+    // Different resolution at the same timestamp is still allowed
+    expect(() => {
+      testDb.exec(`
+        INSERT INTO timeseries_stats
+          (timestamp, resolution, acars_count, vdlm_count, hfdl_count,
+           imsl_count, irdm_count, total_count, error_count, created_at)
+        VALUES (1704067200, '5min', 1, 0, 0, 0, 0, 1, 0, 0)
+      `);
+    }).not.toThrow();
+
+    testDb.close();
+  });
+
+  test("migration 11 removes duplicate timeseries rows keeping highest id", () => {
+    // Simulate a database that has already gone through migration 10 but has
+    // duplicate timeseries rows (as would happen from a double-import).
+    // We apply migrations up to 10 manually, insert duplicates, then run
+    // migration 11 via runMigrations and verify the duplicates are gone.
+
+    // Build the DB at the pre-migration-11 state by running migrations
+    // and then manually downgrading the alembic version back one step so
+    // runMigrations will re-apply only migration 11.
+    //
+    // Easier approach: create a DB at the migration-10 state from scratch.
+    const setupDb = new Database(TEST_DB_PATH);
+    setupDb.exec(`
+      CREATE TABLE alembic_version (version_num VARCHAR(32) PRIMARY KEY NOT NULL);
+      INSERT INTO alembic_version VALUES ('c3d4e5f6a1b2');
+    `);
+    setupDb.exec(`
+      CREATE TABLE timeseries_stats (
+        id            INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+        timestamp     INTEGER NOT NULL,
+        resolution    TEXT    NOT NULL,
+        acars_count   INTEGER DEFAULT 0 NOT NULL,
+        vdlm_count    INTEGER DEFAULT 0 NOT NULL,
+        hfdl_count    INTEGER DEFAULT 0 NOT NULL,
+        imsl_count    INTEGER DEFAULT 0 NOT NULL,
+        irdm_count    INTEGER DEFAULT 0 NOT NULL,
+        total_count   INTEGER DEFAULT 0 NOT NULL,
+        error_count   INTEGER DEFAULT 0 NOT NULL,
+        created_at    INTEGER DEFAULT 0 NOT NULL
+      );
+      CREATE INDEX idx_timeseries_timestamp_resolution
+        ON timeseries_stats (timestamp, resolution);
+      CREATE INDEX idx_timeseries_resolution
+        ON timeseries_stats (resolution);
+    `);
+
+    // Insert three rows for the same slot (simulating two extra imports)
+    // and one clean row for a different slot.
+    setupDb.exec(`
+      INSERT INTO timeseries_stats
+        (timestamp, resolution, acars_count, vdlm_count, hfdl_count,
+         imsl_count, irdm_count, total_count, error_count, created_at)
+      VALUES
+        (1704067200, '1min', 1, 0, 0, 0, 0, 1, 0, 0),
+        (1704067200, '1min', 1, 0, 0, 0, 0, 1, 0, 0),
+        (1704067200, '1min', 1, 0, 0, 0, 0, 1, 0, 0),
+        (1704067260, '1min', 2, 0, 0, 0, 0, 2, 0, 0);
+    `);
+
+    // Verify duplicates exist before migration
+    const beforeCount = (
+      setupDb
+        .prepare("SELECT COUNT(*) AS n FROM timeseries_stats")
+        .get() as { n: number }
+    ).n;
+    expect(beforeCount).toBe(4); // 3 dupes + 1 clean
+
+    setupDb.close();
+
+    // Now run migrations — only migration 11 should apply
+    runMigrations(TEST_DB_PATH);
+
+    const testDb = new Database(TEST_DB_PATH);
+
+    // After migration 11: only 2 rows must remain (one per unique slot)
+    const afterCount = (
+      testDb
+        .prepare("SELECT COUNT(*) AS n FROM timeseries_stats")
+        .get() as { n: number }
+    ).n;
+    expect(afterCount).toBe(2);
+
+    // The surviving row for the duplicated slot must be the one with the
+    // highest id (most recently inserted).
+    const survivingRow = testDb
+      .prepare(
+        "SELECT id FROM timeseries_stats WHERE timestamp = 1704067200 AND resolution = '1min'",
+      )
+      .get() as { id: number } | undefined;
+
+    expect(survivingRow).toBeDefined();
+    // id=3 is the third (highest) of the three duplicate inserts
+    expect(survivingRow?.id).toBe(3);
+
+    // The non-duplicate row must be untouched
+    const cleanRow = testDb
+      .prepare(
+        "SELECT id FROM timeseries_stats WHERE timestamp = 1704067260 AND resolution = '1min'",
+      )
+      .get() as { id: number } | undefined;
+
+    expect(cleanRow).toBeDefined();
+    expect(cleanRow?.id).toBe(4);
+
+    // rrd_import_registry must also have been created by the migration
+    const registryTable = testDb
+      .prepare(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='rrd_import_registry'",
+      )
+      .get();
+    expect(registryTable).toBeDefined();
 
     testDb.close();
   });
