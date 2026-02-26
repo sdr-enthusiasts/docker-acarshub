@@ -187,6 +187,7 @@ vi.mock("../../db/index.js", () => ({
     .fn()
     .mockReturnValue({ framesCheckpointed: 0, framesRemaining: 0 }),
   checkpointBackup: vi.fn().mockReturnValue(null),
+  optimizeDbFts: vi.fn().mockResolvedValue(undefined),
   optimizeDbMerge: vi.fn().mockResolvedValue(undefined),
   optimizeDbRegular: vi.fn().mockResolvedValue(undefined),
   pruneDatabase: vi.fn().mockResolvedValue(undefined),
