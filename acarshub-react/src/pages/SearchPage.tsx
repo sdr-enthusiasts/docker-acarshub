@@ -371,7 +371,16 @@ export const SearchPage = () => {
       uiLogger.debug("Empty form submitted — sending show-all query");
     }
 
-    setIsSearching(true);
+    // Only show the "Searching…" button state (which disables the button) for
+    // explicit user-initiated submits and pagination requests.  Debounce-
+    // triggered background searches (submitIntent=false) run silently so the
+    // button remains clickable.  This prevents a race condition in Playwright
+    // webkit/Safari tests where the 500 ms debounce fires during the browser's
+    // own stability check on the button, permanently disabling it because the
+    // mock socket never delivers a response.
+    if (submitIntent) {
+      setIsSearching(true);
+    }
     setActiveSearch(params);
     setCurrentPage(page);
 

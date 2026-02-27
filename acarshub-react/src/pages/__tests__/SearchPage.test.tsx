@@ -477,6 +477,44 @@ describe("SearchPage", () => {
 
       vi.useRealTimers();
     });
+
+    it("regression: debounce-triggered search does not disable the Search button", async () => {
+      // Regression for: webkit/Mobile Safari CI flakiness where Playwright's
+      // stability check on the Search button takes >500 ms, the debounce fires
+      // during that window, setIsSearching(true) disables the button, and the
+      // mock socket never delivers a response so the button stays disabled for
+      // the entire 10 s action timeout.
+      //
+      // Fix: submitIntent=false (debounce path) must NOT call setIsSearching(true).
+      // Only explicit form submits (submitIntent=true) show the "Searching…"
+      // loading state.
+      const user = userEvent.setup({ delay: null });
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      renderSearchPage();
+
+      const flightInput = screen.getByLabelText(/^flight$/i);
+      const submitButton = screen.getByRole("button", { name: /^search$/i });
+
+      // Button must be enabled before any interaction
+      expect(submitButton).toBeEnabled();
+
+      // Type a value — starts the 500 ms debounce timer
+      await user.type(flightInput, "UAL123");
+
+      // Button must still be enabled immediately after typing
+      // (debounce has not fired yet)
+      expect(submitButton).toBeEnabled();
+
+      // Advance past the debounce window — the background search fires
+      vi.advanceTimersByTime(600);
+
+      // Button must STILL be enabled after the debounce fires.
+      // Before the fix this would be disabled because the debounce path called
+      // setIsSearching(true), which is only appropriate for explicit submits.
+      expect(submitButton).toBeEnabled();
+
+      vi.useRealTimers();
+    });
   });
 
   // -------------------------------------------------------------------------
