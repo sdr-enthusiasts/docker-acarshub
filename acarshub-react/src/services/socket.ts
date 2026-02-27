@@ -145,6 +145,12 @@ export interface ServerToClientEvents {
   // Station IDs (sent on connect and broadcast when a new station is seen)
   station_ids: (data: { station_ids: string[] }) => void;
 
+  // Migration status — emitted when the backend is running DB migrations.
+  // Clients that connect before migrations finish receive { running: true }.
+  // Once all init is complete they receive { running: false } followed by the
+  // normal connect sequence.
+  migration_status: (data: { running: boolean; message: string }) => void;
+
   // Connection events
   connect: () => void;
   disconnect: () => void;

@@ -51,6 +51,12 @@ export interface AppState {
   isConnected: boolean;
   setConnected: (connected: boolean) => void;
 
+  // Migration state — true while the backend is running DB migrations on startup.
+  // Set to false when migration_status { running: false } is received OR when
+  // features_enabled arrives (handles reconnect after a ping-timeout during migration).
+  migrationInProgress: boolean;
+  setMigrationInProgress: (inProgress: boolean) => void;
+
   // Message state
   messageGroups: Map<string, MessageGroup>; // Key: primary identifier (flight/tail/icao_hex)
   addMessage: (message: AcarsMsg) => void;
@@ -204,6 +210,11 @@ export const useAppStore = create<AppState>((set, get) => {
     // Connection state
     isConnected: false,
     setConnected: (connected) => set({ isConnected: connected }),
+
+    // Migration state
+    migrationInProgress: false,
+    setMigrationInProgress: (inProgress) =>
+      set({ migrationInProgress: inProgress }),
 
     // Message state
     messageGroups: new Map(),

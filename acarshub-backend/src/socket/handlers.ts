@@ -66,6 +66,7 @@ import { getHeyWhatsThatUrl } from "../services/heywhatsthat.js";
 import { getMessageQueue } from "../services/message-queue.js";
 import { queryTimeseriesData } from "../services/rrd-migration.js";
 import { getStationIds } from "../services/station-ids.js";
+import { isMigrationRunning, registerPendingSocket } from "../startup-state.js";
 import { createLogger } from "../utils/logger.js";
 import type { TypedSocket, TypedSocketServer } from "./types.js";
 
@@ -83,8 +84,24 @@ export function registerHandlers(io: TypedSocketServer): void {
       transport: socket.conn.transport.name,
     });
 
-    // Handle connect event - send initial data
-    handleConnect(socket, namespace.server);
+    if (isMigrationRunning()) {
+      // Database migrations are still in progress.  Inform the client and
+      // hold it in the pending queue.  Once all init is complete, server.ts
+      // drains the queue and calls handleConnect for each surviving socket.
+      logger.info(
+        "Client connected during migration — deferring full connect sequence",
+        { socketId: socket.id },
+      );
+      socket.emit("migration_status", {
+        running: true,
+        message:
+          "Database migration in progress. This may take several minutes on large databases. Please wait...",
+      });
+      registerPendingSocket(socket);
+    } else {
+      // Normal path — migrations are done, deliver the full connect sequence.
+      handleConnect(socket, namespace.server);
+    }
 
     // Register all event handlers
     socket.on("query_search", (params) => handleQuerySearch(socket, params));
@@ -123,6 +140,9 @@ export function registerHandlers(io: TypedSocketServer): void {
 /**
  * Handle client connection - send initial data
  *
+ * Exported so that server.ts can call it for sockets that connected during
+ * the migration window and were held in the pending queue.
+ *
  * Mirrors Python: @socketio.on("connect", namespace="/main")
  *
  * Sends:
@@ -136,7 +156,10 @@ export function registerHandlers(io: TypedSocketServer): void {
  * - alert_matches_batch (recent alerts in chunks)
  * - acarshub_version (version info)
  */
-function handleConnect(socket: TypedSocket, _io: TypedSocketServer): void {
+export function handleConnect(
+  socket: TypedSocket,
+  _io: TypedSocketServer,
+): void {
   const startTime = performance.now();
   const config = getConfig();
 

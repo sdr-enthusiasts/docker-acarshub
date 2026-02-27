@@ -31,6 +31,9 @@ import { socketLogger } from "../utils/logger";
  */
 export const useSocketIO = () => {
   const setConnected = useAppStore((state) => state.setConnected);
+  const setMigrationInProgress = useAppStore(
+    (state) => state.setMigrationInProgress,
+  );
   const addMessage = useAppStore((state) => state.addMessage);
   const setLabels = useAppStore((state) => state.setLabels);
   const setAlertTerms = useAppStore((state) => state.setAlertTerms);
@@ -187,6 +190,17 @@ export const useSocketIO = () => {
       setAlertTerms(terms);
     });
 
+    // Migration status — emitted when the backend starts/finishes DB migrations.
+    // { running: true }  → show migration banner
+    // { running: false } → hide migration banner (explicit signal from backend)
+    socket.on("migration_status", (data) => {
+      socketLogger.info("Received migration status", {
+        running: data.running,
+        message: data.message,
+      });
+      setMigrationInProgress(data.running);
+    });
+
     socket.on("features_enabled", (decoders) => {
       socketLogger.info("Received decoder configuration", {
         acars: decoders.acars,
@@ -196,6 +210,12 @@ export const useSocketIO = () => {
         irdm: decoders.irdm,
         adsbEnabled: decoders.adsb?.enabled,
       });
+      // features_enabled is the first event of the normal connect sequence.
+      // Clearing migrationInProgress here handles the reconnect case: if the
+      // client timed out during a long migration and reconnected afterwards,
+      // it will never receive migration_status { running: false } but WILL
+      // receive features_enabled — so this clears the stale banner.
+      setMigrationInProgress(false);
       setDecoders(decoders);
     });
 
@@ -304,6 +324,7 @@ export const useSocketIO = () => {
       socket.off("labels");
       socket.off("terms");
 
+      socket.off("migration_status");
       socket.off("features_enabled");
       socket.off("system_status");
       socket.off("version");
@@ -348,6 +369,7 @@ export const useSocketIO = () => {
     setAdsbAircraft,
     setStationIds,
     setMessageRate,
+    setMigrationInProgress,
   ]);
 
   // Don't return store state - let consumers subscribe directly to avoid stale closures

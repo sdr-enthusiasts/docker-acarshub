@@ -36,7 +36,7 @@ import {
   initializeMessageCounts,
   timeseriesStats,
 } from "./db/index.js";
-import { runMigrations } from "./db/migrate.js";
+import { runMigrationsInWorker } from "./db/migrate.js";
 import {
   getHeyWhatsThatUrl,
   initHeyWhatsThat,
@@ -47,10 +47,16 @@ import { collectMetrics, METRICS_CONTENT_TYPE } from "./services/metrics.js";
 import { migrateRrdToSqlite } from "./services/rrd-migration.js";
 import { initializeStationIds } from "./services/station-ids.js";
 import { startStatsWriter, stopStatsWriter } from "./services/stats-writer.js";
+import { handleConnect } from "./socket/handlers.js";
 import {
   initializeSocketServer,
   shutdownSocketServer,
 } from "./socket/index.js";
+import {
+  drainPendingSockets,
+  isMigrationRunning,
+  setMigrationRunning,
+} from "./startup-state.js";
 import { createLogger } from "./utils/logger.js";
 
 const logger = createLogger("server");
@@ -146,6 +152,15 @@ function createServer() {
   // operation).  The response schema matches the old static file exactly so
   // that external consumers are not broken.
   fastify.get("/data/stats.json", async (_request, reply) => {
+    // During migration the DB is not yet open — return a clean 503 so the
+    // frontend knows to retry rather than treating it as an application error.
+    if (isMigrationRunning()) {
+      return reply
+        .status(503)
+        .header("Retry-After", "5")
+        .send({ error: "Database migration in progress — retry shortly" });
+    }
+
     try {
       const db = getDatabase();
       const nowSeconds = Math.floor(Date.now() / 1000);
@@ -229,9 +244,63 @@ async function main(): Promise<void> {
   > | null = null;
 
   try {
-    // Load enrichment data (airlines, ground stations, labels)
-    // CRITICAL: This must run BEFORE processing messages to enable proper enrichment
-    await initializeConfig();
+    // -----------------------------------------------------------------------
+    // Phase 1: Start HTTP + Socket.IO IMMEDIATELY.
+    //
+    // The server must be accepting connections (and reporting migrationRunning
+    // = true) before any async work begins.  In Docker with compiled JS the
+    // migration worker starts and can complete in under a second for databases
+    // that don't need migration — if we wait for initializeConfig() first, the
+    // browser's first Socket.IO polling request arrives *after* the migration
+    // window has already closed and the banner never shows.
+    //
+    // Keeping the server start unconditionally first guarantees that even the
+    // fastest possible migration path (no-op, <50 ms) has the migration flag
+    // set before the first TCP connection can complete the HTTP handshake.
+    // -----------------------------------------------------------------------
+    fastify = createServer();
+    await fastify.listen({ port: config.port, host: config.host });
+    logger.info("HTTP server listening", {
+      host: config.host,
+      port: config.port,
+    });
+
+    io = initializeSocketServer(fastify.server, {
+      cors: {
+        origin: "*",
+        credentials: true,
+      },
+    });
+    logger.info("Socket.IO server accepting connections", {
+      namespace: "/main",
+    });
+
+    // Flag the migration window OPEN immediately — before any async work.
+    // Any Socket.IO client that connects from this point on will see
+    // isMigrationRunning() = true and receive migration_status { running: true }.
+    setMigrationRunning(true);
+    logger.info(
+      "Migration window open — connections will receive migration banner",
+    );
+
+    // -----------------------------------------------------------------------
+    // Phase 2: Run enrichment-data loading and DB migration in parallel.
+    //
+    // initializeConfig() is async (fs.readFile for airlines/ground-stations/
+    // labels JSON files) and does not touch SQLite — safe to run alongside the
+    // migration worker.
+    //
+    // runMigrationsInWorker() spawns a child process so the main event loop
+    // stays fully responsive during VACUUM / FTS rebuild.  Clients that connect
+    // while either task is running receive migration_status { running: true }
+    // and are held in the pending queue until Phase 4.
+    //
+    // Running both in parallel also reduces total startup time on slow storage.
+    // -----------------------------------------------------------------------
+    await Promise.all([
+      initializeConfig(),
+      runMigrationsInWorker(config.dbPath),
+    ]);
 
     let appConfig = getConfig();
     logger.info("Enrichment data loaded", {
@@ -240,16 +309,14 @@ async function main(): Promise<void> {
       messageLabels: Object.keys(appConfig.messageLabels).length,
       iataOverrides: Object.keys(appConfig.iataOverrides).length,
     });
-
-    // Run database migrations
-    // CRITICAL: This must run BEFORE initDatabase() to ensure schema is up-to-date
-    // Migration 9 creates timeseries_stats table if it doesn't exist
-    // This fixes bug where stats writer fails with "no such table: timeseries_stats"
-    // when no RRD file is present (RRD migration is skipped, table never created)
-    runMigrations();
     logger.info("Database migrations complete");
 
-    initDatabase();
+    // initDatabase() is synchronous and fast (no VACUUM).  Open the connection
+    // immediately after the worker finishes so the DB is ready for every
+    // subsequent init step.  The migration flag stays true — new connections
+    // that arrive here still get migration_status { running: true } and are
+    // queued; they will be drained after background services are ready.
+    initDatabase(config.dbPath);
     logger.info("Database connection established");
 
     const isHealthy = healthCheck();
@@ -315,21 +382,6 @@ async function main(): Promise<void> {
       alertTerms: alertStats.length,
     });
 
-    fastify = createServer();
-    await fastify.listen({ port: config.port, host: config.host });
-    logger.info("HTTP server listening", {
-      host: config.host,
-      port: config.port,
-    });
-
-    io = initializeSocketServer(fastify.server, {
-      cors: {
-        origin: "*",
-        credentials: true,
-      },
-    });
-    logger.info("Socket.IO server ready", { namespace: "/main" });
-
     backgroundServices = await createBackgroundServices({
       socketio: {
         emit: (event: string, data: unknown) => {
@@ -346,6 +398,24 @@ async function main(): Promise<void> {
     });
     backgroundServices.start();
     startStatsWriter();
+
+    // System is fully initialised.  Clear the migration flag first so that
+    // any connection arriving after this point receives handleConnect()
+    // directly.  Then drain the pending queue — sockets that connected during
+    // the migration window receive migration_status { running: false } followed
+    // by the full connect sequence, exactly as if they had just connected.
+    setMigrationRunning(false);
+
+    if (io) {
+      const pendingSockets = drainPendingSockets();
+      for (const socket of pendingSockets) {
+        socket.emit("migration_status", {
+          running: false,
+          message: "",
+        });
+        handleConnect(socket, io);
+      }
+    }
 
     appConfig = getConfig();
     logger.info("ACARS Hub backend ready", {

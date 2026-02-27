@@ -33,7 +33,10 @@
  * rebuilds from scratch; disk space is reclaimed by the VACUUM in runMigrations().
  */
 
+import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
+import { existsSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { migrate as drizzleMigrate } from "drizzle-orm/better-sqlite3/migrator";
@@ -1332,6 +1335,184 @@ const MIGRATIONS: MigrationStep[] = [
 /**
  * Run migrations from current version to latest
  */
+/**
+ * Run database migrations in a child process so the main event loop stays free.
+ *
+ * WHY A CHILD PROCESS
+ * -------------------
+ * better-sqlite3 is entirely synchronous.  On large databases, the final
+ * VACUUM can block a thread for 10–30+ minutes.  Running that work on the
+ * main Node.js thread freezes the event loop, which means:
+ *   - HTTP polling responses cannot be sent
+ *   - WebSocket upgrade handshakes time out and never complete
+ *   - Socket.IO cannot deliver `migration_status { running: true }` to clients
+ *
+ * Spawning a child process keeps the main event loop completely free
+ * throughout the migration window.  Socket.IO can upgrade connections to
+ * WebSocket and actually deliver the migration banner to the browser.
+ *
+ * DEV vs PRODUCTION
+ * -----------------
+ * process.execArgv already contains the tsx loader flags when running under
+ * `tsx watch` (--require preflight.cjs --import tsx/loader.mjs).  We pass
+ * those directly to the child so it inherits the TypeScript runtime in dev
+ * mode.  In production (compiled JS) execArgv is empty or contains only
+ * node flags — the child loads the compiled .js worker normally.
+ *
+ * The worker script (migrate-worker.ts/.js) receives the dbPath as argv[2]
+ * and communicates success/failure via exit code (0 / non-zero).
+ *
+ * SAFETY PROTOCOL
+ * ---------------
+ * 1. Child: open DB → run migrations (inc. VACUUM) → close DB → exit 0
+ * 2. Main: receive exit-0 → open its own DB connection via initDatabase()
+ * Steps 1 and 2 are strictly sequential, never concurrent.
+ *
+ * @param dbPath Path to the SQLite database file.
+ * @returns Promise that resolves when migrations complete successfully.
+ * @throws Error if migrations fail or the child exits abnormally.
+ */
+export function runMigrationsInWorker(dbPath: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    // Diagnostic: log the bundle URL so Docker logs confirm which code path
+    // is active.  This is the single most useful data point when debugging
+    // "banner not showing in Docker" reports.
+    const bundleUrl = import.meta.url;
+    logger.info("runMigrationsInWorker called", { bundleUrl, dbPath });
+
+    // Select the worker script: .ts in dev (tsx watch), .mjs in production.
+    //
+    // import.meta.url ends with ".ts"  → we are running TypeScript source
+    //   (dev: tsx watch / tsx node).
+    // import.meta.url ends with ".mjs" → we are running the esbuild bundle
+    //   (production Docker: node server.bundle.mjs).
+    const isDev = bundleUrl.endsWith(".ts");
+
+    // Only use the .ts spawn path when a tsx loader is actually present in
+    // process.execArgv.  Under `tsx watch` it contains
+    //   --import file:///…/tsx/dist/loader.mjs
+    // which lets the child process load TypeScript.  In test runners (vitest)
+    // TypeScript is handled differently and execArgv has no tsx loader, so
+    // we fall back to the synchronous path to keep tests simple.
+    const hasTsxLoader = process.execArgv.some((arg) =>
+      arg.includes("/tsx/"),
+    );
+
+    logger.info("Migration path decision", {
+      isDev,
+      hasTsxLoader,
+      execArgv: process.execArgv,
+      execPath: process.execPath,
+      willSpawn: !(isDev && !hasTsxLoader),
+    });
+
+    if (isDev && !hasTsxLoader) {
+      logger.debug(
+        "No tsx loader in execArgv — running migrations synchronously " +
+          "(test environment or non-tsx dev runner)",
+      );
+      try {
+        runMigrations(dbPath);
+        resolve();
+      } catch (err) {
+        reject(err);
+      }
+      return;
+    }
+
+    // Production: .mjs because the worker is compiled as a separate ESM bundle
+    // (migrate-worker.mjs) by esbuild alongside server.bundle.mjs.  Using .mjs
+    // is unambiguous — Node loads it as ESM regardless of any package.json
+    // "type" field.  Dev: .ts loaded via the tsx loader already in execArgv.
+    const ext = isDev ? ".ts" : ".mjs";
+    const workerPath = fileURLToPath(
+      new URL(`./migrate-worker${ext}`, import.meta.url),
+    );
+
+    logger.info("Migration worker path resolved", {
+      workerPath,
+      ext,
+      isDev,
+    });
+
+    // Verify the worker file exists before spawning so the error message is
+    // actionable.  A missing worker file (e.g. stale Docker image built before
+    // the worker bundle step was added to the Dockerfile) would otherwise
+    // produce a cryptic ENOENT from spawn() with no context.
+    if (!existsSync(workerPath)) {
+      // Worker file is missing.  Fall back to synchronous migration on the
+      // main thread with a prominent warning.  The event loop will block
+      // during heavy operations (VACUUM) and the migration banner will not
+      // show in the browser, but the server will still come up correctly
+      // instead of crash-looping.
+      //
+      // HOW TO FIX: rebuild the Docker image so the Dockerfile esbuild step
+      // that produces migrate-worker.mjs is included.  See Dockerfile stage 1.
+      logger.warn(
+        "⚠️  migrate-worker file not found — falling back to SYNCHRONOUS " +
+          "migrations on the main thread.  The event loop will be blocked " +
+          "during VACUUM and the migration banner will NOT appear in the " +
+          "browser.  Rebuild the Docker image to restore the child-process " +
+          "worker and the migration banner.",
+        { workerPath, bundleUrl },
+      );
+      try {
+        runMigrations(dbPath);
+        resolve();
+      } catch (err) {
+        reject(err);
+      }
+      return;
+    }
+
+    // process.execArgv carries tsx loader flags in dev mode so the child can
+    // load TypeScript.  In production it is empty (or just node flags like
+    // --max-old-space-size) which is fine for compiled JS.
+    const child = spawn(
+      process.execPath,
+      [...process.execArgv, workerPath, dbPath],
+      { stdio: "inherit", env: process.env },
+    );
+
+    logger.info("Migration child process started", {
+      workerPath,
+      dbPath,
+      isDev,
+      pid: child.pid,
+    });
+
+    child.on("error", (err) => {
+      // spawn() itself failed (e.g. EACCES, ENOENT after the existsSync check
+      // somehow raced, or a seccomp/AppArmor restriction on fork/exec).
+      // Fall back to synchronous migration so the server comes up instead of
+      // crash-looping, but make the situation unmissable in the logs.
+      logger.warn(
+        "⚠️  Migration child process failed to spawn — falling back to " +
+          "SYNCHRONOUS migrations on the main thread.  The event loop will " +
+          "be blocked during VACUUM and the migration banner will NOT appear.",
+        { error: err.message, workerPath },
+      );
+      try {
+        runMigrations(dbPath);
+        resolve();
+      } catch (migErr) {
+        reject(migErr);
+      }
+    });
+
+    child.on("close", (code) => {
+      if (code === 0) {
+        logger.info("Migration child process completed successfully");
+        resolve();
+      } else {
+        const msg = `Migration process exited with code ${code}`;
+        logger.error(msg, { workerPath, dbPath });
+        reject(new Error(msg));
+      }
+    });
+  });
+}
+
 export function runMigrations(dbPath?: string): void {
   const actualDbPath = dbPath || DB_PATH;
   logger.info("Starting database migrations", { dbPath: actualDbPath });
@@ -1436,9 +1617,4 @@ export function runMigrations(dbPath?: string): void {
     db.close();
     throw error;
   }
-}
-
-// Run if executed directly
-if (import.meta.url === `file://${process.argv[1]}`) {
-  runMigrations();
 }

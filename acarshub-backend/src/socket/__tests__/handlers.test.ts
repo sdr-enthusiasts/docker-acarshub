@@ -88,6 +88,17 @@
  *  zeroFillBuckets (tested via handleRRDTimeseries):
  *    - fills gaps with zero rows
  *    - preserves existing rows
+ *
+ *  zeroFillBuckets (tested via handleRRDTimeseries):
+ *    - fills gaps with zero rows
+ *    - preserves existing rows
+ *
+ *  migration-aware connection handling (registerHandlers):
+ *    - emits migration_status { running: true } when migration is running
+ *    - registers socket in pending queue when migration is running
+ *    - does NOT emit features_enabled when migration is running
+ *    - calls handleConnect normally (features_enabled emitted) when not migrating
+ *    - regression: migration flag false → normal features_enabled emitted
  */
 
 import type { Mock } from "vitest";
@@ -142,6 +153,11 @@ vi.mock("../../services/rrd-migration.js", () => ({
   queryTimeseriesData: vi.fn(),
 }));
 
+vi.mock("../../startup-state.js", () => ({
+  isMigrationRunning: vi.fn().mockReturnValue(false),
+  registerPendingSocket: vi.fn(),
+}));
+
 // ---------------------------------------------------------------------------
 // Imports — after mocks
 // ---------------------------------------------------------------------------
@@ -168,6 +184,10 @@ import { enrichMessage, enrichMessages } from "../../formatters/enrichment.js";
 import { getAdsbPoller } from "../../services/adsb-poller.js";
 import { getMessageQueue } from "../../services/message-queue.js";
 import { queryTimeseriesData } from "../../services/rrd-migration.js";
+import {
+  isMigrationRunning,
+  registerPendingSocket,
+} from "../../startup-state.js";
 import { registerHandlers } from "../handlers.js";
 
 // ---------------------------------------------------------------------------
@@ -195,6 +215,8 @@ const mockSearchAlertsByTerm = vi.mocked(searchAlertsByTerm);
 const mockQueryTimeseriesData = vi.mocked(queryTimeseriesData);
 const mockGetPerDecoderMessageCounts = vi.mocked(getPerDecoderMessageCounts);
 const mockGetMessageQueue = vi.mocked(getMessageQueue);
+const mockIsMigrationRunning = vi.mocked(isMigrationRunning);
+const mockRegisterPendingSocket = vi.mocked(registerPendingSocket);
 
 // ---------------------------------------------------------------------------
 // Default config returned by mockGetConfig
@@ -402,6 +424,8 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.restoreAllMocks();
+  // Ensure migration flag is reset to false between tests
+  mockIsMigrationRunning.mockReturnValue(false);
 });
 
 // ---------------------------------------------------------------------------
@@ -1490,5 +1514,91 @@ describe("zeroFillBuckets (via handleRRDTimeseries)", () => {
     // start/end should also be in milliseconds
     expect(start).toBeGreaterThan(1e12);
     expect(end).toBeGreaterThan(1e12);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Migration-aware connection handling
+// ---------------------------------------------------------------------------
+
+describe("migration-aware connection handling", () => {
+  it("emits migration_status { running: true } when migration is running", () => {
+    mockIsMigrationRunning.mockReturnValue(true);
+
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+
+    const payloads = emittedAs<{ running: boolean; message: string }>(
+      socket,
+      "migration_status",
+    );
+    expect(payloads).toHaveLength(1);
+    expect(payloads[0].running).toBe(true);
+    expect(typeof payloads[0].message).toBe("string");
+    expect(payloads[0].message.length).toBeGreaterThan(0);
+  });
+
+  it("registers socket in the pending queue when migration is running", () => {
+    mockIsMigrationRunning.mockReturnValue(true);
+
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+
+    expect(mockRegisterPendingSocket).toHaveBeenCalledWith(socket);
+  });
+
+  it("does NOT call registerPendingSocket when migration is not running", () => {
+    mockIsMigrationRunning.mockReturnValue(false);
+
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+
+    expect(mockRegisterPendingSocket).not.toHaveBeenCalled();
+  });
+
+  it("does NOT emit features_enabled when migration is running", () => {
+    mockIsMigrationRunning.mockReturnValue(true);
+
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+
+    const payloads = emittedAs<unknown>(socket, "features_enabled");
+    expect(payloads).toHaveLength(0);
+  });
+
+  it("emits features_enabled (normal connect) when migration is not running", () => {
+    mockIsMigrationRunning.mockReturnValue(false);
+
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+
+    const payloads = emittedAs<unknown>(socket, "features_enabled");
+    expect(payloads).toHaveLength(1);
+  });
+
+  it("regression: migration flag false → full connect sequence delivered, no migration_status emitted", () => {
+    mockIsMigrationRunning.mockReturnValue(false);
+
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+
+    // Should have features_enabled
+    expect(emittedAs(socket, "features_enabled")).toHaveLength(1);
+    // Should NOT have migration_status
+    expect(emittedAs(socket, "migration_status")).toHaveLength(0);
+  });
+
+  it("still registers all per-socket event handlers even when migration is running", () => {
+    mockIsMigrationRunning.mockReturnValue(true);
+
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+
+    // Core event handlers must be registered regardless of migration state
+    expect(socket.handlers.query_search).toBeDefined();
+    expect(socket.handlers.update_alerts).toBeDefined();
+    expect(socket.handlers.request_status).toBeDefined();
+    expect(socket.handlers.signal_freqs).toBeDefined();
+    expect(socket.handlers.disconnect).toBeDefined();
   });
 });

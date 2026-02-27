@@ -1,0 +1,119 @@
+/* Copyright (C) 2022-2026 Frederick Clausen II
+ * This file is part of acarshub <https://github.com/sdr-enthusiasts/docker-acarshub>.
+ *
+ * acarshub is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * acarshub is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+@use "../variables" as *;
+@use "../mixins" as *;
+
+/**
+ * Migration Status Component
+ *
+ * Shown as a banner below the navigation while the backend is running
+ * database migrations at startup.  Uses the Catppuccin blue/info accent
+ * so it reads as informational rather than error or warning.
+ *
+ * Both Mocha and Latte use the surface0 background + --color-text pattern
+ * for contrast safety (same fix applied to connection-status), with the
+ * blue accent surfaced as the bottom border.
+ */
+
+.migration-status {
+  padding: $spacing-md $spacing-lg;
+  background-color: var(--color-surface0);
+  color: var(--color-text);
+  border-bottom: 2px solid var(--color-accent-sapphire);
+  font-size: $font-size-sm;
+}
+
+.migration-status__content {
+  @include container;
+
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+}
+
+// ---------------------------------------------------------------------------
+// Spinner — pure CSS, no external assets
+// ---------------------------------------------------------------------------
+
+.migration-status__spinner {
+  flex-shrink: 0;
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--color-overlay1);
+  border-top-color: var(--color-accent-sapphire);
+  border-radius: 50%;
+  animation: migration-spin 0.9s linear infinite;
+}
+
+@keyframes migration-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .migration-status__spinner {
+    animation: none;
+    border-top-color: var(--color-accent-sapphire);
+    border-right-color: var(--color-accent-sapphire);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Text group
+// ---------------------------------------------------------------------------
+
+.migration-status__text-group {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+}
+
+.migration-status__title {
+  font-weight: $font-weight-semibold;
+  color: var(--color-text);
+}
+
+.migration-status__detail {
+  font-size: $font-size-xs;
+  color: var(--color-subtext1);
+}
+
+// ---------------------------------------------------------------------------
+// Mobile
+// ---------------------------------------------------------------------------
+
+@media (max-width: #{$breakpoint-md - 1px}) {
+  .migration-status {
+    padding: $spacing-sm $spacing-md;
+  }
+
+  .migration-status__content {
+    gap: $spacing-sm;
+  }
+
+  .migration-status__spinner {
+    width: 16px;
+    height: 16px;
+  }
+
+  .migration-status__detail {
+    display: none;
+  }
+}
