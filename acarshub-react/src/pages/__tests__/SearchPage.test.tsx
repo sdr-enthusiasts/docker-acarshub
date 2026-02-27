@@ -26,6 +26,47 @@ import { SearchPage } from "../SearchPage";
 // Mocks
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// @tanstack/react-virtual mock
+//
+// jsdom has no layout engine — all elements report zero clientHeight and
+// getBoundingClientRect() returns zeros. The virtualizer therefore thinks no
+// items are in the viewport and renders nothing, which breaks every test that
+// expects message cards to be present.
+//
+// This mock replaces useVirtualizer with a simple implementation that always
+// reports every item as visible. The scrollMargin option is forwarded on the
+// returned options object so that SearchPage's transform calculation
+// (virtualRow.start - rowVirtualizer.options.scrollMargin) resolves to 0 in
+// tests and items are positioned at translateY(0).
+// ---------------------------------------------------------------------------
+vi.mock("@tanstack/react-virtual", () => ({
+  useVirtualizer: (options: {
+    count: number;
+    estimateSize: () => number;
+    getScrollElement: () => Element | null;
+    overscan?: number;
+    scrollMargin?: number;
+  }) => {
+    const estimatedSize = options.estimateSize();
+    const margin = options.scrollMargin ?? 0;
+    return {
+      getVirtualItems: () =>
+        Array.from({ length: options.count }, (_, i) => ({
+          index: i,
+          key: i,
+          start: margin + i * estimatedSize,
+          size: estimatedSize,
+          lane: 0,
+          end: margin + (i + 1) * estimatedSize,
+        })),
+      getTotalSize: () => options.count * estimatedSize,
+      measureElement: () => undefined,
+      options: { scrollMargin: margin },
+    };
+  },
+}));
+
 // We need to capture the socket event handler so tests can fire results back
 // SearchHtmlMsg = { msghtml: AcarsMsg[]; query_time: number; num_results: number }
 type SearchResultsHandler = (data: Record<string, unknown>) => void;
@@ -508,6 +549,108 @@ describe("SearchPage", () => {
   // Socket subscription
   // -------------------------------------------------------------------------
 
+  // -------------------------------------------------------------------------
+  // Virtualization
+  // -------------------------------------------------------------------------
+
+  describe("virtual list rendering", () => {
+    it("regression: renders a MessageCard for each search result in the virtual list", async () => {
+      const user = userEvent.setup();
+      renderSearchPage();
+
+      const flightInput = screen.getByLabelText(/^flight$/i);
+      await user.type(flightInput, "UAL");
+      await user.click(screen.getByRole("button", { name: /^search$/i }));
+
+      emitSearchResults(
+        [makeMsg("v-001"), makeMsg("v-002"), makeMsg("v-003")],
+        3,
+      );
+
+      await waitFor(() => {
+        const cards = screen.getAllByTestId("message-card");
+        expect(cards).toHaveLength(3);
+      });
+    });
+
+    it("regression: clearing results removes all virtual items from the DOM", async () => {
+      const user = userEvent.setup();
+      renderSearchPage();
+
+      const flightInput = screen.getByLabelText(/^flight$/i);
+      await user.type(flightInput, "UAL");
+      await user.click(screen.getByRole("button", { name: /^search$/i }));
+
+      emitSearchResults([makeMsg("v-001"), makeMsg("v-002")], 2);
+
+      await waitFor(() => {
+        expect(screen.getAllByTestId("message-card")).toHaveLength(2);
+      });
+
+      // Click Clear to remove results
+      await user.click(screen.getByRole("button", { name: /clear/i }));
+
+      expect(screen.queryByTestId("message-card")).not.toBeInTheDocument();
+    });
+
+    it("regression: new page results replace previous virtual items", async () => {
+      const user = userEvent.setup();
+      renderSearchPage();
+
+      const flightInput = screen.getByLabelText(/^flight$/i);
+      await user.type(flightInput, "UAL");
+      await user.click(screen.getByRole("button", { name: /^search$/i }));
+
+      // First page: 50 results, 2 pages total
+      const firstPage = Array.from({ length: 50 }, (_, i) =>
+        makeMsg(`page0-${i}`),
+      );
+      emitSearchResults(firstPage, 100);
+
+      await waitFor(() => {
+        expect(screen.getAllByTestId("message-card")).toHaveLength(50);
+      });
+
+      // Navigate to next page
+      const nextButtons = screen.getAllByRole("button", { name: /next page/i });
+      await user.click(nextButtons[0]);
+
+      // Second page: different 50 results
+      const secondPage = Array.from({ length: 50 }, (_, i) =>
+        makeMsg(`page1-${i}`),
+      );
+      emitSearchResults(secondPage, 100);
+
+      await waitFor(() => {
+        // Still 50 cards — but now the second page's items
+        expect(screen.getAllByTestId("message-card")).toHaveLength(50);
+        // First page items should be gone
+        expect(screen.queryByText("page0-0")).not.toBeInTheDocument();
+      });
+    });
+
+    it("regression: virtual list shows results-info count when results are present", async () => {
+      const user = userEvent.setup();
+      renderSearchPage();
+
+      const flightInput = screen.getByLabelText(/^flight$/i);
+      await user.type(flightInput, "UAL");
+      await user.click(screen.getByRole("button", { name: /^search$/i }));
+
+      emitSearchResults(
+        Array.from({ length: 5 }, (_, i) => makeMsg(`ri-${i}`)),
+        5,
+      );
+
+      await waitFor(() => {
+        // results-info should mention the count
+        expect(screen.getByText(/found/i)).toBeInTheDocument();
+        expect(screen.getByText("5")).toBeInTheDocument();
+      });
+    });
+  });
+
+  // -------------------------------------------------------------------------
   describe("socket subscription", () => {
     it("subscribes to database_search_results on mount", () => {
       renderSearchPage();

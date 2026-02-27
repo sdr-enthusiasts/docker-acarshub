@@ -231,28 +231,35 @@
     font-weight: 600;
   }
 
-  // Results container
+  // Results container — position:relative hosts the absolutely-positioned
+  // virtual items. Height is set as an inline style by the virtualizer
+  // (rowVirtualizer.getTotalSize()px). Individual items are translated via
+  // transform: translateY(...) so no flex/gap layout is needed here.
   &__results {
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-xs);
-
-    @include breakpoint-max(md) {
-      gap: var(--spacing-sm);
-    }
+    position: relative;
+    width: 100%;
   }
 
-  // Individual result card wrapper (matches .message-group styling from Live Messages)
+  // Individual result card — provides the full card-container visual styling
+  // (matches .message-group's surface0 background + surface2 border) so that
+  // a bare MessageCard looks consistent with the Live Messages and Alerts
+  // pages. margin-bottom supplies the gap between consecutive virtual items.
   &__result-card {
     background-color: var(--color-surface0);
     border: 1px solid var(--color-surface2);
     border-radius: var(--border-radius-lg);
     padding: var(--spacing-md);
     overflow: hidden;
-    transition: all var(--transition-normal);
+    margin-bottom: var(--spacing-lg);
+    transition: border-color var(--transition-normal);
 
     &:hover {
       border-color: var(--color-overlay0);
+    }
+
+    // Reduced motion
+    @media (prefers-reduced-motion: reduce) {
+      transition: none;
     }
   }
 

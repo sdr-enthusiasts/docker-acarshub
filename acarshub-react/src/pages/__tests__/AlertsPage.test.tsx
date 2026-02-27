@@ -25,6 +25,44 @@ import { AlertsPage } from "../AlertsPage";
 // Mocks
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// @tanstack/react-virtual mock
+//
+// jsdom has no layout engine — all elements report zero clientHeight and
+// getBoundingClientRect() returns zeros. The virtualizer therefore thinks no
+// items are in the viewport and renders nothing, which breaks every test that
+// expects message cards or groups to be present.
+//
+// This mock replaces useVirtualizer with a simple implementation that always
+// reports every item as visible, making the virtual list behave like a plain
+// list in the test environment.
+// ---------------------------------------------------------------------------
+vi.mock("@tanstack/react-virtual", () => ({
+  useVirtualizer: (options: {
+    count: number;
+    estimateSize: () => number;
+    getScrollElement: () => Element | null;
+    overscan?: number;
+    scrollMargin?: number;
+  }) => {
+    const estimatedSize = options.estimateSize();
+    return {
+      getVirtualItems: () =>
+        Array.from({ length: options.count }, (_, i) => ({
+          index: i,
+          key: i,
+          start: (options.scrollMargin ?? 0) + i * estimatedSize,
+          size: estimatedSize,
+          lane: 0,
+          end: (options.scrollMargin ?? 0) + (i + 1) * estimatedSize,
+        })),
+      getTotalSize: () => options.count * estimatedSize,
+      measureElement: () => undefined,
+      options: { scrollMargin: options.scrollMargin ?? 0 },
+    };
+  },
+}));
+
 type AlertsByTermHandler = (data: {
   total_count: number;
   messages: AcarsMsg[];
@@ -530,6 +568,134 @@ describe("AlertsPage", () => {
         expect(screen.getAllByTestId("message-card")).toHaveLength(50);
       });
 
+      expect(screen.getByRole("button", { name: /next/i })).toBeInTheDocument();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Virtualization
+  // -------------------------------------------------------------------------
+
+  describe("virtual list rendering", () => {
+    it("regression: live mode renders MessageGroup for each alert group in the virtual list", () => {
+      useAppStore.setState({
+        alertMessageGroups: new Map([
+          makeAlertGroup("UAL123", 1),
+          makeAlertGroup("DAL456", 2),
+          makeAlertGroup("SWA789", 1),
+        ]),
+        alertTerms: { terms: ["EMERGENCY"], ignore: [] },
+        readMessageUids: new Set(),
+      });
+
+      render(<AlertsPage />);
+
+      // All three groups must be rendered by the virtual list
+      const groups = screen.getAllByTestId("alert-group");
+      expect(groups).toHaveLength(3);
+      expect(screen.getByText("Group: UAL123")).toBeInTheDocument();
+      expect(screen.getByText("Group: DAL456")).toBeInTheDocument();
+      expect(screen.getByText("Group: SWA789")).toBeInTheDocument();
+    });
+
+    it("regression: historical mode renders a MessageCard for each result in the virtual list", async () => {
+      const user = userEvent.setup();
+
+      useAppStore.setState({
+        alertTerms: { terms: ["EMERGENCY"], ignore: [] },
+        alertMessageGroups: new Map(),
+      });
+
+      render(<AlertsPage />);
+      await user.click(screen.getByRole("button", { name: /historical/i }));
+
+      emitAlertsByTerm(
+        "EMERGENCY",
+        [makeMsg("r-001"), makeMsg("r-002"), makeMsg("r-003")],
+        3,
+      );
+
+      await waitFor(() => {
+        // All three result cards must appear via the virtual list
+        const cards = screen.getAllByTestId("message-card");
+        expect(cards).toHaveLength(3);
+      });
+    });
+
+    it("regression: switching from live to historical mode clears the live virtual list", async () => {
+      const user = userEvent.setup();
+
+      useAppStore.setState({
+        alertMessageGroups: new Map([makeAlertGroup("UAL123", 1)]),
+        alertTerms: { terms: ["EMERGENCY"], ignore: [] },
+        readMessageUids: new Set(),
+      });
+
+      render(<AlertsPage />);
+
+      // Live list is showing
+      expect(screen.getByTestId("alert-group")).toBeInTheDocument();
+
+      // Switch to historical
+      await user.click(screen.getByRole("button", { name: /historical/i }));
+
+      // Live groups must no longer be in the DOM
+      expect(screen.queryByTestId("alert-group")).not.toBeInTheDocument();
+    });
+
+    it("regression: switching from historical to live mode clears historical results", async () => {
+      const user = userEvent.setup();
+
+      useAppStore.setState({
+        alertTerms: { terms: ["EMERGENCY"], ignore: [] },
+        alertMessageGroups: new Map([makeAlertGroup("UAL123", 1)]),
+        readMessageUids: new Set(),
+      });
+
+      render(<AlertsPage />);
+
+      // Switch to historical and receive results
+      await user.click(screen.getByRole("button", { name: /historical/i }));
+      emitAlertsByTerm("EMERGENCY", [makeMsg("h-001")], 1);
+      await waitFor(() =>
+        expect(screen.getByTestId("message-card")).toBeInTheDocument(),
+      );
+
+      // Switch back to live
+      await user.click(screen.getByRole("button", { name: /live/i }));
+
+      // Historical cards must be gone, live group should be visible
+      expect(screen.queryByTestId("message-card")).not.toBeInTheDocument();
+      expect(screen.getByTestId("alert-group")).toBeInTheDocument();
+    });
+
+    it("regression: historical pagination controls are rendered above the virtual list", async () => {
+      const user = userEvent.setup();
+
+      useAppStore.setState({
+        alertTerms: { terms: ["EMERGENCY"], ignore: [] },
+        alertMessageGroups: new Map(),
+      });
+
+      render(<AlertsPage />);
+      await user.click(screen.getByRole("button", { name: /historical/i }));
+
+      // Emit enough results to trigger pagination (total > 50)
+      emitAlertsByTerm(
+        "EMERGENCY",
+        Array.from({ length: 50 }, (_, i) => makeMsg(`p-${i}`)),
+        100, // 2 pages total
+      );
+
+      await waitFor(() => {
+        expect(screen.getAllByTestId("message-card")).toHaveLength(50);
+      });
+
+      // Previous and Next buttons must exist (they live in the controls bar
+      // above the virtual list, not inside it)
+      expect(
+        screen.getByRole("button", { name: /previous/i }),
+      ).toBeInTheDocument();
       expect(screen.getByRole("button", { name: /next/i })).toBeInTheDocument();
     });
   });

@@ -14,7 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   IconChevronLeft,
   IconChevronRight,
@@ -45,12 +46,19 @@ interface PersistedSearchState {
 }
 
 /**
+ * Estimated item height for unmeasured search result cards.
+ * Same rationale as the live-messages virtualizer: biased high so initial
+ * estimates overshoot downward rather than causing upward jumps.
+ */
+const ESTIMATED_ITEM_HEIGHT = 300;
+
+/**
  * SearchPage Component
  * Provides database search functionality for historical ACARS messages
  *
  * Features:
  * - Multi-field search (flight, tail, ICAO, airports, frequency, etc.)
- * - Pagination with page navigation
+ * - Pagination with page navigation (results virtualised with @tanstack/react-virtual)
  * - Query time and result count display
  * - Database size statistics
  * - Persistent search state
@@ -142,8 +150,44 @@ export const SearchPage = () => {
     null,
   );
 
-  // Results section ref for scrolling
+  // Results section ref for scrolling (points to the results-info header)
   const resultsRef = useRef<HTMLDivElement>(null);
+
+  // ---------------------------------------------------------------------------
+  // Virtual list infrastructure
+  //
+  // The search page keeps the outer .app-content scroll so that the large
+  // search form remains accessible on all screen sizes. The virtualizer uses
+  // .app-content as its scroll element and a scrollMargin to account for all
+  // the content (form, stats, pagination) that sits above the results list.
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Reference to the outer .app-content scroll container.
+   * Obtained once via querySelector after mount — the element is stable for
+   * the lifetime of the application.
+   */
+  const appContentRef = useRef<HTMLElement | null>(null);
+
+  /**
+   * Reference to the positioned container that hosts the absolutely-positioned
+   * virtual items. Its height equals rowVirtualizer.getTotalSize().
+   */
+  const virtualResultsRef = useRef<HTMLDivElement>(null);
+
+  /**
+   * Pixel offset of the virtual results container from the top of
+   * .app-content's scrollable area.  The virtualizer uses this to determine
+   * which items are currently visible.
+   *
+   * Measured in a useLayoutEffect so it is always up-to-date before paint.
+   */
+  const [scrollMargin, setScrollMargin] = useState(0);
+
+  // Acquire the outer scroll container once on mount.
+  useEffect(() => {
+    appContentRef.current = document.querySelector<HTMLElement>(".app-content");
+  }, []);
 
   // Register Socket.IO listener for search results
   // Wait for socket to be initialized before subscribing
@@ -412,6 +456,67 @@ export const SearchPage = () => {
     return [...results].sort((a, b) => b.timestamp - a.timestamp);
   }, [results]);
 
+  // ---------------------------------------------------------------------------
+  // Virtualizer
+  //
+  // Uses the outer .app-content element as the scroll container so the search
+  // form above the results scrolls naturally with the page.
+  // ---------------------------------------------------------------------------
+  const rowVirtualizer = useVirtualizer({
+    count: sortedResults.length,
+    getScrollElement: () => appContentRef.current,
+    estimateSize: () => ESTIMATED_ITEM_HEIGHT,
+    overscan: 2,
+    // Stable key per result message so the height cache survives page changes.
+    getItemKey: (index) => sortedResults[index]?.uid ?? `result-${index}`,
+    // scrollMargin tells the virtualizer how far the virtual container is from
+    // the top of the scroll element.  Updated after every result change so the
+    // visible-range calculation remains correct even when the form expands or
+    // the stats/pagination bar appears.
+    scrollMargin,
+  });
+
+  // Measure scrollMargin: distance from the top of .app-content's scroll
+  // origin to the top of the virtual results container.
+  //
+  // WHY useLayoutEffect: runs after DOM mutations and before paint, so the
+  // measurement uses the freshly-laid-out positions of all elements and the
+  // virtualizer has the correct offset on the very first paint cycle.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: sortedResults is an intentional trigger dependency — the effect reads refs (stable) but must re-fire whenever results change so the scrollMargin is recalculated after the DOM updates with new results-info/pagination elements above the virtual container.
+  useLayoutEffect(() => {
+    const measure = () => {
+      if (!virtualResultsRef.current) return;
+      // Lazily acquire the scroll container in case the useEffect above has
+      // not fired yet (e.g. in strict-mode double-invoke).
+      if (!appContentRef.current) {
+        appContentRef.current =
+          document.querySelector<HTMLElement>(".app-content");
+      }
+      if (!appContentRef.current) return;
+
+      const containerTop =
+        virtualResultsRef.current.getBoundingClientRect().top;
+      const scrollElTop = appContentRef.current.getBoundingClientRect().top;
+      const margin =
+        containerTop - scrollElTop + appContentRef.current.scrollTop;
+      setScrollMargin(Math.max(0, margin));
+    };
+
+    measure();
+
+    // Re-measure if the page content above the results changes size (e.g.
+    // results-info bar appears, pagination bar appears/disappears on resize).
+    const ro = new ResizeObserver(measure);
+    const parent = virtualResultsRef.current?.parentElement;
+    if (parent) ro.observe(parent);
+    window.addEventListener("resize", measure);
+
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, [sortedResults]);
+
   return (
     <div className="page search-page">
       <div className="page__header">
@@ -666,26 +771,56 @@ export const SearchPage = () => {
           </div>
         )}
 
-        {/* Results */}
-        {isSearching ? (
+        {/* Results — loading state */}
+        {isSearching && (
           <div className="search-page__loading">
             <p>Searching database...</p>
           </div>
-        ) : results.length > 0 ? (
-          <div className="search-page__results">
-            {sortedResults.map((message) => (
-              <div key={message.uid} className="search-page__result-card">
-                <MessageCard message={message} />
-              </div>
-            ))}
-          </div>
-        ) : activeSearch ? (
+        )}
+
+        {/* Results — empty / no-match state */}
+        {!isSearching && activeSearch && results.length === 0 && (
           <div className="search-page__empty">
             <p>No messages found matching your search criteria.</p>
           </div>
-        ) : null}
+        )}
 
-        {/* Pagination - Bottom */}
+        {/* Results — virtual list
+            The outer div is position:relative with height = total virtual
+            size.  Items are absolutely positioned inside it, translated by
+            virtualRow.start (which is relative to this container).
+            scrollMargin accounts for the form + stats + pagination above. */}
+        {!isSearching && sortedResults.length > 0 && (
+          <div
+            ref={virtualResultsRef}
+            className="search-page__results"
+            style={{ height: `${rowVirtualizer.getTotalSize()}px` }}
+          >
+            {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+              const message = sortedResults[virtualRow.index];
+              return (
+                <div
+                  key={message.uid}
+                  data-index={virtualRow.index}
+                  ref={rowVirtualizer.measureElement}
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    transform: `translateY(${virtualRow.start - rowVirtualizer.options.scrollMargin}px)`,
+                  }}
+                >
+                  <div className="search-page__result-card">
+                    <MessageCard message={message} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Pagination - Bottom (appears after virtual container in DOM flow) */}
         {totalPages > 1 && results.length > 0 && (
           <div className="search-page__pagination search-page__pagination--bottom">
             <button
@@ -700,7 +835,6 @@ export const SearchPage = () => {
 
             {pageNumbers.map((page, idx) => {
               if (page === "...") {
-                // Use previous page number + 0.5 as unique key for ellipsis
                 const prevPage = idx > 0 ? pageNumbers[idx - 1] : 0;
                 return (
                   <span
