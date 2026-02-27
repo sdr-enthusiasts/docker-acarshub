@@ -192,9 +192,11 @@ test.describe("Smoke Tests", () => {
     await page.setViewportSize({ width: 375, height: 667 });
     await page.goto("/");
 
-    // On mobile, navigation is in a div.show_when_small container that holds
-    // a details.small_nav hamburger element.
-    const mobileNavContainer = page.locator("div.show_when_small");
+    // On mobile, navigation is in a nav.mobile_nav_container element that holds
+    // a details.small_nav hamburger element.  The old CSS display-toggle approach
+    // (div.show_when_small / div.hide_when_small) was replaced with a conditional
+    // render via useMediaQuery — only the appropriate nav tree is mounted.
+    const mobileNavContainer = page.locator("nav.mobile_nav_container");
     await expect(mobileNavContainer).toBeVisible();
 
     // Content should be visible and not cause horizontal scroll

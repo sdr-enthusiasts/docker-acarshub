@@ -257,10 +257,10 @@ test.describe("Search Page", () => {
     // E2E build required for socket injection
     expect(emitted).toBe(true);
 
-    // Loading state should clear
-    await expect(page.getByRole("button", { name: /^search$/i })).toBeVisible();
-
-    // Results count should be shown
+    // Results count should be shown — wait for this first since on mobile the
+    // submit handler scrolls to the results section, which auto-collapses the
+    // form and hides the Search button.  Asserting results-info is the correct
+    // signal that loading cleared and results arrived regardless of form state.
     await expect(page.locator(".search-page__results-info")).toContainText(
       "Found",
     );
@@ -323,6 +323,14 @@ test.describe("Search Page", () => {
 
     // Verify results are showing before clearing
     await expect(page.locator(".search-page__result-card")).toHaveCount(2);
+
+    // On mobile, the submit handler scrolls to the results section which
+    // triggers the auto-collapse logic and hides the form body (including the
+    // Clear button).  Expand the form first if the expand chevron is present.
+    const expandBtn = page.getByRole("button", { name: /expand search form/i });
+    if (await expandBtn.isVisible()) {
+      await expandBtn.click();
+    }
 
     // Click Clear
     await page.getByRole("button", { name: /clear/i }).click();

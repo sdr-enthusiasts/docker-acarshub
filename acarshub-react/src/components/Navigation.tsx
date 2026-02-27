@@ -195,7 +195,7 @@ export const Navigation = () => {
 
         {isMobile ? (
           /* Mobile navigation container */
-          <div className="mobile_nav_container">
+          <nav className="mobile_nav_container">
             {/* Left group: menu toggle + optional filters button */}
             <div className="mobile_nav_left">
               {/* Mobile menu */}
@@ -260,7 +260,7 @@ export const Navigation = () => {
 
             {/* Message rate widget — pinned to right edge of mobile nav */}
             <MessageRateWidget />
-          </div>
+          </nav>
         ) : (
           /* Desktop menu */
           <nav>
