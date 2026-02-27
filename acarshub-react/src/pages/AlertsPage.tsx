@@ -121,6 +121,13 @@ export const AlertsPage = () => {
     const scrollEl = scrollContainerRef.current;
     if (!scrollEl) return;
 
+    // Make the container keyboard-scrollable (WCAG 2.1.1 / axe
+    // scrollable-region-focusable).  Set programmatically here rather than
+    // as a JSX attribute to avoid Biome's noNoninteractiveTabindex lint,
+    // which cannot be suppressed via a JSX expression comment (the suppression
+    // target and the attribute node are different AST nodes).
+    scrollEl.tabIndex = 0;
+
     const measure = () => {
       const rect = scrollEl.getBoundingClientRect();
       const available = window.innerHeight - rect.top;

@@ -327,6 +327,12 @@ test.describe("Search Page", () => {
     // On mobile, the submit handler scrolls to the results section which
     // triggers the auto-collapse logic and hides the form body (including the
     // Clear button).  Expand the form first if the expand chevron is present.
+    //
+    // NOTE: expandForm() uses behavior:"instant" (not "smooth") intentionally.
+    // A smooth scroll runs concurrently with Playwright's click action on
+    // Mobile Safari, moving the Clear button outside the viewport mid-click.
+    // Instant scroll makes the position change atomic so the DOM is fully
+    // settled before we proceed.
     const expandBtn = page.getByRole("button", { name: /expand search form/i });
     if (await expandBtn.isVisible()) {
       await expandBtn.click();

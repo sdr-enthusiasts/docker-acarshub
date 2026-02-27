@@ -321,13 +321,21 @@ export const SearchPage = () => {
   // Expand the search form and scroll back to the top of the page.
   // Scrolling to top also causes the scroll listener to confirm the expanded
   // state (scrollTop ≤ SCROLL_COLLAPSE_THRESHOLD), keeping both consistent.
+  //
+  // WHY instant scroll: using behavior:"smooth" creates a race condition on
+  // Mobile Safari (WebKit) — the scroll animation runs concurrently with
+  // Playwright's click action, moving the Clear button outside the viewport
+  // mid-click.  Instant scroll makes the position change atomic so the DOM
+  // is fully settled before any subsequent interaction.  The scroll handler
+  // also fires only once and immediately sees scrollTop=0, preventing it
+  // from re-collapsing the form during a slow smooth-scroll animation.
   const expandForm = () => {
     setIsFormCollapsed(false);
     const scrollEl =
       appContentRef.current ??
       document.querySelector<HTMLElement>(".app-content");
     if (scrollEl) {
-      scrollEl.scrollTo({ top: 0, behavior: "smooth" });
+      scrollEl.scrollTo({ top: 0, behavior: "instant" });
     }
   };
 
