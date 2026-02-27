@@ -215,8 +215,10 @@ export const LiveMessagesPage = () => {
     const measure = () => {
       const rect = scrollEl.getBoundingClientRect();
       // Available height = distance from the top of the scroll container
-      // to the bottom of the viewport, minus a small bottom margin.
-      const available = window.innerHeight - rect.top - 8;
+      // to the bottom of the viewport. No buffer needed: overflow:hidden on
+      // .app-content (set via CSS :has selector) silently clips any subpixel
+      // overshoot so there is no risk of an outer scrollbar appearing.
+      const available = window.innerHeight - rect.top;
       setListHeight(Math.max(available, 200));
     };
 
@@ -515,6 +517,13 @@ export const LiveMessagesPage = () => {
     getScrollElement: () => scrollContainerRef.current,
     estimateSize: () => ESTIMATED_ITEM_HEIGHT,
     overscan: 3,
+    // Breathing room between the sticky filter bar and the first card when
+    // scrolled to the top. This is virtual space — it belongs to the
+    // scrollable content, so it naturally scrolls away as the user moves
+    // down. Once scrolled past 24 px the first card sits flush at the top
+    // of the container with no wasted space. 24 px = $spacing-lg, matching
+    // the gap between cards (.message-list__item padding-bottom).
+    paddingStart: 24,
   });
 
   // ---------------------------------------------------------------------------

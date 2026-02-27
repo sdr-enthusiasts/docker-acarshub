@@ -26,11 +26,23 @@
 // Page Layout
 // ============================================================================
 
+// Suppress the app-content outer scrollbar when the Live Messages page is
+// active. The message list manages its own internal scroll; the outer
+// container must not produce a second scrollbar.
+.app-content:has(.live-messages-page) {
+  overflow: hidden;
+}
+
 .live-messages-page {
   // Override parent .page overflow to allow sticky positioning and virtual list
   overflow: visible !important;
   display: flex;
   flex-direction: column;
+  // Remove .page margins and border-radius so the page occupies the full
+  // viewport area below the nav bar with no gaps or rounded edges.
+  margin-top: 0;
+  margin-bottom: 0;
+  border-radius: 0;
   // Height is set via inline style by LiveMessagesPage using a ResizeObserver
   // on the page root element. This dynamically fills the remaining viewport
   // below the navigation bar without requiring any hardcoded pixel values.
@@ -42,6 +54,9 @@
     flex-direction: column;
     gap: var(--spacing-md);
     margin-bottom: var(--spacing-lg);
+    // The common .page__header has border-radius top corners; with margin-top:0
+    // the page is flush against the nav so rounded corners look wrong.
+    border-radius: 0;
 
     @include breakpoint(md) {
       flex-direction: row;
@@ -154,7 +169,9 @@
     position: sticky;
     top: 0;
     z-index: 100;
-    margin-bottom: var(--spacing-lg);
+    // No bottom margin — the message list should start immediately below the
+    // filter bar with no dead zone between them.
+    margin-bottom: 0;
     background-color: var(--color-surface0);
     border: 1px solid var(--color-surface2);
     border-radius: var(--border-radius-lg);
@@ -467,9 +484,12 @@
   height: 100%;
   overflow-y: auto;
   overflow-x: hidden;
-  // Reserve the normal card-padding on all sides so cards don't touch the
-  // edges, matching the previous gap/padding feel.
-  padding: var(--spacing-lg);
+  // Horizontal padding keeps cards away from the viewport edges.
+  // No top/bottom padding: top padding would create a visible dead-zone
+  // between the filter bar and the first message card (messages would scroll
+  // out of view one padding-height earlier than expected). Bottom spacing is
+  // provided by .message-list__item's padding-bottom instead.
+  padding: 0 var(--spacing-lg);
   box-sizing: border-box;
 }
 

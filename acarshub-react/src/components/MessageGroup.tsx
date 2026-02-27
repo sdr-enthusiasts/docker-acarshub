@@ -60,13 +60,26 @@ export const MessageGroup = ({
   activeIndex,
   onActiveIndexChange,
 }: MessageGroupProps) => {
-  // Internal state used when the component is in uncontrolled mode (i.e. when
-  // activeIndex/onActiveIndexChange are not provided by the parent).
-  const [internalActiveIndex, setInternalActiveIndex] = useState(0);
+  // Internal state always drives the display. When the parent provides
+  // activeIndex (e.g. the virtualizer restoring state after a remount), it is
+  // used only as the initial value — not as continuous control. This ensures
+  // tab clicks cause an immediate re-render regardless of whether the parent
+  // re-renders, which it won't when the parent persists state via a ref.
+  const [internalActiveIndex, setInternalActiveIndex] = useState(
+    activeIndex ?? 0,
+  );
 
-  // Resolve controlled vs uncontrolled: prefer the prop when supplied.
-  const activeMessageIndex = activeIndex ?? internalActiveIndex;
-  const setActiveMessageIndex = onActiveIndexChange ?? setInternalActiveIndex;
+  const activeMessageIndex = internalActiveIndex;
+
+  // Notify the parent about index changes so it can persist state for
+  // virtualizer remount cycles. This is a side-effect callback, not control.
+  const setActiveMessageIndex = useCallback(
+    (index: number) => {
+      setInternalActiveIndex(index);
+      onActiveIndexChange?.(index);
+    },
+    [onActiveIndexChange],
+  );
   const messageCount = plane.messages.length;
   const hasMultipleMessages = messageCount > 1;
   const activeMessage = plane.messages[activeMessageIndex];
@@ -111,28 +124,28 @@ export const MessageGroup = ({
 
   // Reset active index if it exceeds message count (messages may have been culled)
   useEffect(() => {
-    if (activeMessageIndex >= messageCount) {
+    if (internalActiveIndex >= messageCount) {
       uiLogger.debug("Resetting active message index (out of bounds)", {
-        activeIndex: activeMessageIndex,
+        activeIndex: internalActiveIndex,
         messageCount,
       });
       setActiveMessageIndex(0);
     }
-  }, [activeMessageIndex, messageCount, setActiveMessageIndex]);
+  }, [internalActiveIndex, messageCount, setActiveMessageIndex]);
 
   // Debug logging for tab clicks
   const handleTabClick = useCallback(
     (index: number) => {
       uiLogger.debug("Tab clicked", {
         clickedIndex: index,
-        currentIndex: activeMessageIndex,
+        currentIndex: internalActiveIndex,
         messageCount,
         aircraftId: plane.identifiers[0],
       });
       setActiveMessageIndex(index);
     },
     [
-      activeMessageIndex,
+      internalActiveIndex,
       messageCount,
       plane.identifiers,
       setActiveMessageIndex,
