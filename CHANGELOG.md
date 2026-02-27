@@ -2,6 +2,11 @@
 
 ## ACARS Hub v4.1.4
 
+### v4.1.4 Bug Fixes
+
+- Status page: The rolling messages-per-minute rate was showing a coarse per-minute counter (reset at each minute boundary) instead of the rolling 60-second rate, and the value only refreshed on the 10-second `request_status` poll rather than the 5-second `message_rate` emit. Fixed by reading `getRollingRates()` for the initial `system_status` response, emitting `message_rate` alongside `system_status` on `request_status`, and having the Status page use the store's live `messageRate` value (updated every 5 seconds) as its primary source for the Rate (1 min) display.
+- Database: Running several migrations in sequence triggered multiple VACUUM stalls. Consolidated VACUUM and ANALYZE so they run exactly once at the end of `runMigrations()`, only when at least one migration step executed or the FTS startup repair rebuilt the virtual table. ANALYZE now runs after VACUUM so the query planner sees the final compacted page layout.
+
 ### v4.1.4 Performance
 
 - Live Messages: The message list is now rendered as a virtual windowed list using `@tanstack/react-virtual`. Only the ~7 message cards visible in the viewport are mounted in the DOM at any time, down from ~90 fully-mounted trees previously. On busy stations this eliminates the UI lag that accumulated as the message list grew. Theme switching, which previously had to cascade CSS variable changes through every mounted card, is now instant.
@@ -10,6 +15,8 @@
 
 ### v4.1.4 New
 
+- Database: Migration 12 — the `timeseries_stats` table has been rebuilt to remove three dead-weight columns (`id`, `resolution`, `created_at`) and replace them with `timestamp INTEGER PRIMARY KEY`. `resolution` was a non-nullable constant (`'1min'`) on every row; `id` is superseded by the timestamp rowid alias; `created_at` was set on insert and never read. The new schema saves ~20 bytes per row with zero index overhead beyond the table B-tree itself.
+- Docker: The frontend now shows a "Database migration in progress" banner while the backend applies SQLite migrations at startup. The HTTP and Socket.IO servers start before migrations begin; clients that connect during the migration window receive `migration_status { running: true }` and are held in a pending queue until all initialisation is complete, then receive the full connect sequence.
 - Message rate widget: A rolling messages-per-minute counter is now displayed in the navigation bar. On desktop, hovering or focusing the widget expands a tooltip showing the rate broken down by decoder type (ACARS, HFDL, VDL-M2, etc.). On mobile devices with a screen width of 375 px or wider the total rate is shown directly in the nav bar.
 - Status page: A "Rolling Rate" row has been added to the Message Statistics card for each enabled decoder, showing the same rolling 60-second rate as the nav bar widget.
 - Search: The search form now auto-collapses when you scroll more than 80 px into the results. A sticky header pins to the top of the viewport while collapsed, showing a summary of the active search criteria and a button to expand the form again. Clicking the expand button scrolls back to the top and reopens the form.
