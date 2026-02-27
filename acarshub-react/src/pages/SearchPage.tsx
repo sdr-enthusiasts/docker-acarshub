@@ -643,177 +643,184 @@ export const SearchPage = () => {
             </div>
           )}
 
-          {/* Form body — collapses when isFormCollapsed is true */}
+          {/* Form body — collapses when isFormCollapsed is true.
+              __form-body is the grid container (animates grid-template-rows).
+              __form-body-inner is the single grid item (overflow:hidden). */}
           <div
             id="search-form-body"
             className="search-page__form-body"
             aria-hidden={isFormCollapsed}
           >
-            <div className="search-page__form-grid">
-              {/* Flight */}
-              <div className="search-page__form-field">
-                <label htmlFor="search-flight">Flight</label>
-                <input
-                  id="search-flight"
-                  type="text"
-                  value={searchParams.flight}
-                  onChange={(e) => handleInputChange("flight", e.target.value)}
-                  placeholder="e.g., UAL123"
-                />
+            <div className="search-page__form-body-inner">
+              <div className="search-page__form-grid">
+                {/* Flight */}
+                <div className="search-page__form-field">
+                  <label htmlFor="search-flight">Flight</label>
+                  <input
+                    id="search-flight"
+                    type="text"
+                    value={searchParams.flight}
+                    onChange={(e) =>
+                      handleInputChange("flight", e.target.value)
+                    }
+                    placeholder="e.g., UAL123"
+                  />
+                </div>
+
+                {/* Tail */}
+                <div className="search-page__form-field">
+                  <label htmlFor="search-tail">Tail Number</label>
+                  <input
+                    id="search-tail"
+                    type="text"
+                    value={searchParams.tail}
+                    onChange={(e) => handleInputChange("tail", e.target.value)}
+                    placeholder="e.g., N12345"
+                  />
+                </div>
+
+                {/* ICAO */}
+                <div className="search-page__form-field">
+                  <label htmlFor="search-icao">ICAO Hex</label>
+                  <input
+                    id="search-icao"
+                    type="text"
+                    value={searchParams.icao}
+                    onChange={(e) => handleInputChange("icao", e.target.value)}
+                    placeholder="e.g., A12345"
+                  />
+                </div>
+
+                {/* Departure */}
+                <div className="search-page__form-field">
+                  <label htmlFor="search-depa">Departure</label>
+                  <input
+                    id="search-depa"
+                    type="text"
+                    value={searchParams.depa}
+                    onChange={(e) => handleInputChange("depa", e.target.value)}
+                    placeholder="e.g., KJFK"
+                  />
+                </div>
+
+                {/* Destination */}
+                <div className="search-page__form-field">
+                  <label htmlFor="search-dsta">Destination</label>
+                  <input
+                    id="search-dsta"
+                    type="text"
+                    value={searchParams.dsta}
+                    onChange={(e) => handleInputChange("dsta", e.target.value)}
+                    placeholder="e.g., KLAX"
+                  />
+                </div>
+
+                {/* Frequency */}
+                <div className="search-page__form-field">
+                  <label htmlFor="search-freq">Frequency</label>
+                  <input
+                    id="search-freq"
+                    type="text"
+                    value={searchParams.freq}
+                    onChange={(e) => handleInputChange("freq", e.target.value)}
+                    placeholder="e.g., 131.550"
+                  />
+                </div>
+
+                {/* Label */}
+                <div className="search-page__form-field">
+                  <label htmlFor="search-label">Message Label</label>
+                  <input
+                    id="search-label"
+                    type="text"
+                    value={searchParams.label}
+                    onChange={(e) => handleInputChange("label", e.target.value)}
+                    placeholder="e.g., H1"
+                  />
+                </div>
+
+                {/* Message Number */}
+                <div className="search-page__form-field">
+                  <label htmlFor="search-msgno">Message Number</label>
+                  <input
+                    id="search-msgno"
+                    type="text"
+                    value={searchParams.msgno}
+                    onChange={(e) => handleInputChange("msgno", e.target.value)}
+                    placeholder="e.g., M01A"
+                  />
+                </div>
+
+                {/* Station ID */}
+                <div className="search-page__form-field">
+                  <label htmlFor="search-station">Station ID</label>
+                  <input
+                    id="search-station"
+                    type="text"
+                    value={searchParams.station_id}
+                    onChange={(e) =>
+                      handleInputChange("station_id", e.target.value)
+                    }
+                    placeholder="e.g., KJFK"
+                  />
+                </div>
+
+                {/* Decoder Type */}
+                <div className="search-page__form-field">
+                  <label htmlFor="search-msg-type">Decoder Type</label>
+                  <select
+                    id="search-msg-type"
+                    value={searchParams.msg_type}
+                    onChange={(e) =>
+                      handleInputChange("msg_type", e.target.value)
+                    }
+                  >
+                    <option value="">All</option>
+                    <option value="ACARS">ACARS</option>
+                    <option value="VDLM2">VDLM2</option>
+                    <option value="HFDL">HFDL</option>
+                    <option value="IMSL">IMSL</option>
+                    <option value="IRDM">IRDM</option>
+                  </select>
+                </div>
+
+                {/* Message Text - spans cols 2-3 on desktop, full width on mobile/tablet */}
+                <div className="search-page__form-field search-page__form-field--msg-text">
+                  <label htmlFor="search-text">Message Text</label>
+                  <input
+                    id="search-text"
+                    type="text"
+                    value={searchParams.msg_text}
+                    onChange={(e) =>
+                      handleInputChange("msg_text", e.target.value)
+                    }
+                    placeholder="Search message content..."
+                  />
+                </div>
               </div>
 
-              {/* Tail */}
-              <div className="search-page__form-field">
-                <label htmlFor="search-tail">Tail Number</label>
-                <input
-                  id="search-tail"
-                  type="text"
-                  value={searchParams.tail}
-                  onChange={(e) => handleInputChange("tail", e.target.value)}
-                  placeholder="e.g., N12345"
-                />
-              </div>
-
-              {/* ICAO */}
-              <div className="search-page__form-field">
-                <label htmlFor="search-icao">ICAO Hex</label>
-                <input
-                  id="search-icao"
-                  type="text"
-                  value={searchParams.icao}
-                  onChange={(e) => handleInputChange("icao", e.target.value)}
-                  placeholder="e.g., A12345"
-                />
-              </div>
-
-              {/* Departure */}
-              <div className="search-page__form-field">
-                <label htmlFor="search-depa">Departure</label>
-                <input
-                  id="search-depa"
-                  type="text"
-                  value={searchParams.depa}
-                  onChange={(e) => handleInputChange("depa", e.target.value)}
-                  placeholder="e.g., KJFK"
-                />
-              </div>
-
-              {/* Destination */}
-              <div className="search-page__form-field">
-                <label htmlFor="search-dsta">Destination</label>
-                <input
-                  id="search-dsta"
-                  type="text"
-                  value={searchParams.dsta}
-                  onChange={(e) => handleInputChange("dsta", e.target.value)}
-                  placeholder="e.g., KLAX"
-                />
-              </div>
-
-              {/* Frequency */}
-              <div className="search-page__form-field">
-                <label htmlFor="search-freq">Frequency</label>
-                <input
-                  id="search-freq"
-                  type="text"
-                  value={searchParams.freq}
-                  onChange={(e) => handleInputChange("freq", e.target.value)}
-                  placeholder="e.g., 131.550"
-                />
-              </div>
-
-              {/* Label */}
-              <div className="search-page__form-field">
-                <label htmlFor="search-label">Message Label</label>
-                <input
-                  id="search-label"
-                  type="text"
-                  value={searchParams.label}
-                  onChange={(e) => handleInputChange("label", e.target.value)}
-                  placeholder="e.g., H1"
-                />
-              </div>
-
-              {/* Message Number */}
-              <div className="search-page__form-field">
-                <label htmlFor="search-msgno">Message Number</label>
-                <input
-                  id="search-msgno"
-                  type="text"
-                  value={searchParams.msgno}
-                  onChange={(e) => handleInputChange("msgno", e.target.value)}
-                  placeholder="e.g., M01A"
-                />
-              </div>
-
-              {/* Station ID */}
-              <div className="search-page__form-field">
-                <label htmlFor="search-station">Station ID</label>
-                <input
-                  id="search-station"
-                  type="text"
-                  value={searchParams.station_id}
-                  onChange={(e) =>
-                    handleInputChange("station_id", e.target.value)
-                  }
-                  placeholder="e.g., KJFK"
-                />
-              </div>
-
-              {/* Decoder Type */}
-              <div className="search-page__form-field">
-                <label htmlFor="search-msg-type">Decoder Type</label>
-                <select
-                  id="search-msg-type"
-                  value={searchParams.msg_type}
-                  onChange={(e) =>
-                    handleInputChange("msg_type", e.target.value)
-                  }
+              {/* Form Actions */}
+              <div className="search-page__form-actions">
+                <button
+                  type="submit"
+                  className="button button--primary"
+                  disabled={isSearching}
                 >
-                  <option value="">All</option>
-                  <option value="ACARS">ACARS</option>
-                  <option value="VDLM2">VDLM2</option>
-                  <option value="HFDL">HFDL</option>
-                  <option value="IMSL">IMSL</option>
-                  <option value="IRDM">IRDM</option>
-                </select>
-              </div>
-
-              {/* Message Text - spans cols 2-3 on desktop, full width on mobile/tablet */}
-              <div className="search-page__form-field search-page__form-field--msg-text">
-                <label htmlFor="search-text">Message Text</label>
-                <input
-                  id="search-text"
-                  type="text"
-                  value={searchParams.msg_text}
-                  onChange={(e) =>
-                    handleInputChange("msg_text", e.target.value)
-                  }
-                  placeholder="Search message content..."
-                />
+                  <IconSearch />
+                  {isSearching ? "Searching..." : "Search"}
+                </button>
+                <button
+                  type="button"
+                  className="button button--secondary"
+                  onClick={handleClear}
+                  disabled={isSearching}
+                >
+                  <IconXmark />
+                  Clear
+                </button>
               </div>
             </div>
-
-            {/* Form Actions */}
-            <div className="search-page__form-actions">
-              <button
-                type="submit"
-                className="button button--primary"
-                disabled={isSearching}
-              >
-                <IconSearch />
-                {isSearching ? "Searching..." : "Search"}
-              </button>
-              <button
-                type="button"
-                className="button button--secondary"
-                onClick={handleClear}
-                disabled={isSearching}
-              >
-                <IconXmark />
-                Clear
-              </button>
-            </div>
+            {/* end search-page__form-body-inner */}
           </div>
           {/* end search-page__form-body */}
         </form>

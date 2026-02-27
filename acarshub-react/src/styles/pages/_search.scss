@@ -127,28 +127,43 @@
     }
   }
 
-  // Form body — the grid of fields + action buttons.
-  // Collapses via max-height + opacity so the transition is smooth.
+  // Form body — the grid container that drives the collapse animation.
+  //
+  // Uses the grid-template-rows: 1fr → 0fr technique so the height
+  // animates proportionally to the actual content size. Unlike max-height,
+  // there is no "dead zone" where the animation has no visible effect;
+  // the compression begins immediately and finishes exactly when the
+  // opacity reaches zero — a true single-stage transition.
+  //
+  // Structure:
+  //   __form-body        — display:grid, animates grid-template-rows + opacity
+  //   __form-body-inner  — single grid item, overflow:hidden + min-height:0
   &__form-body {
-    overflow: hidden;
-    // Large enough max-height to accommodate any realistic form size while
-    // still animating smoothly (actual rendered height is much smaller).
-    max-height: 2000px;
+    display: grid;
+    grid-template-rows: 1fr;
     opacity: 1;
+    visibility: visible;
     transition:
-      max-height 0.35s ease,
-      opacity 0.25s ease;
+      grid-template-rows 0.3s ease,
+      opacity 0.3s ease;
 
     .search-page__form--collapsed & {
-      max-height: 0;
+      grid-template-rows: 0fr;
       opacity: 0;
-      // Prevent hidden fields from receiving keyboard focus
       visibility: hidden;
       transition:
-        max-height 0.3s ease,
-        opacity 0.2s ease,
-        visibility 0s linear 0.3s;
+        grid-template-rows 0.3s ease,
+        opacity 0.3s ease,
+        visibility 0s 0.3s;
     }
+  }
+
+  // Single grid item — must have overflow:hidden so content clips as the
+  // row height compresses, and min-height:0 so the grid item can actually
+  // shrink below its natural height.
+  &__form-body-inner {
+    overflow: hidden;
+    min-height: 0;
   }
 
   &__form-grid {
