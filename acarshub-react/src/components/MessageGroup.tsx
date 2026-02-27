@@ -25,6 +25,17 @@ import { MessageCard } from "./MessageCard";
 interface MessageGroupProps {
   plane: Plane;
   showMarkReadButton?: boolean;
+  /**
+   * Controlled active tab index — lifted to parent so state survives
+   * virtualizer unmount/remount cycles on the Live Messages page.
+   *
+   * When omitted, MessageGroup manages its own tab state internally
+   * (uncontrolled mode). This keeps AlertsPage and AircraftMessagesModal
+   * working without any changes.
+   */
+  activeIndex?: number;
+  /** Called when the user navigates to a different tab (controlled mode only) */
+  onActiveIndexChange?: (index: number) => void;
 }
 
 /**
@@ -46,8 +57,16 @@ interface MessageGroupProps {
 export const MessageGroup = ({
   plane,
   showMarkReadButton = false,
+  activeIndex,
+  onActiveIndexChange,
 }: MessageGroupProps) => {
-  const [activeMessageIndex, setActiveMessageIndex] = useState(0);
+  // Internal state used when the component is in uncontrolled mode (i.e. when
+  // activeIndex/onActiveIndexChange are not provided by the parent).
+  const [internalActiveIndex, setInternalActiveIndex] = useState(0);
+
+  // Resolve controlled vs uncontrolled: prefer the prop when supplied.
+  const activeMessageIndex = activeIndex ?? internalActiveIndex;
+  const setActiveMessageIndex = onActiveIndexChange ?? setInternalActiveIndex;
   const messageCount = plane.messages.length;
   const hasMultipleMessages = messageCount > 1;
   const activeMessage = plane.messages[activeMessageIndex];
@@ -99,7 +118,7 @@ export const MessageGroup = ({
       });
       setActiveMessageIndex(0);
     }
-  }, [activeMessageIndex, messageCount]);
+  }, [activeMessageIndex, messageCount, setActiveMessageIndex]);
 
   // Debug logging for tab clicks
   const handleTabClick = useCallback(
@@ -112,17 +131,26 @@ export const MessageGroup = ({
       });
       setActiveMessageIndex(index);
     },
-    [activeMessageIndex, messageCount, plane.identifiers],
+    [
+      activeMessageIndex,
+      messageCount,
+      plane.identifiers,
+      setActiveMessageIndex,
+    ],
   );
 
   // Navigation handlers
   const goToPrevious = useCallback(() => {
-    setActiveMessageIndex((prev) => (prev === 0 ? messageCount - 1 : prev - 1));
-  }, [messageCount]);
+    setActiveMessageIndex(
+      activeMessageIndex === 0 ? messageCount - 1 : activeMessageIndex - 1,
+    );
+  }, [activeMessageIndex, messageCount, setActiveMessageIndex]);
 
   const goToNext = useCallback(() => {
-    setActiveMessageIndex((prev) => (prev === messageCount - 1 ? 0 : prev + 1));
-  }, [messageCount]);
+    setActiveMessageIndex(
+      activeMessageIndex === messageCount - 1 ? 0 : activeMessageIndex + 1,
+    );
+  }, [activeMessageIndex, messageCount, setActiveMessageIndex]);
 
   // Keyboard navigation
   const handleKeyDown = useCallback(
