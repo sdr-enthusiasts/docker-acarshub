@@ -383,10 +383,6 @@
 /**
  * Mobile Navigation
  */
-.show_when_small {
-  display: none;
-}
-
 .mobile_nav_container {
   display: flex;
   align-items: center;
@@ -472,37 +468,5 @@
   a.active {
     color: var(--color-primary);
     font-weight: $font-weight-semibold;
-  }
-}
-
-.hide_when_small {
-  display: block;
-}
-
-@include media-md {
-  .show_when_small {
-    display: none;
-  }
-
-  .hide_when_small {
-    display: block;
-  }
-}
-
-/* Mobile breakpoint */
-@media (max-width: #{$breakpoint-md - 1px}) {
-  .show_when_small {
-    display: block;
-  }
-
-  // Re-assert flex layout — .show_when_small { display: block } above has
-  // equal specificity and appears earlier, so without this override the
-  // flex layout on .mobile_nav_container would be clobbered by display:block.
-  .mobile_nav_container {
-    display: flex;
-  }
-
-  .hide_when_small {
-    display: none;
   }
 }
