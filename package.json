@@ -1,6 +1,6 @@
 {
   "name": "acarshub-workspace",
-  "version": "4.1.4-beta.2",
+  "version": "4.1.4",
   "private": true,
   "type": "module",
   "description": "ACARS Hub - Monorepo for frontend, backend, and shared types",
