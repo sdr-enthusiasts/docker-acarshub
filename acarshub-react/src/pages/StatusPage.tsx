@@ -23,10 +23,8 @@ import type { MessageRateData } from "../types";
 import { formatTimestamp } from "../utils/dateUtils";
 
 /**
- * Map from the uppercase decoder name used in status.global (e.g. "ACARS")
- * to the lowercase key used in MessageRateData (e.g. "acars").
- * VDLM2 is the only case that needs special handling because the rate key
- * is "vdlm2" while the status key is "VDLM2".
+ * Maps the uppercase decoder name used in status.global (e.g. "ACARS") to the
+ * lowercase key used in MessageRateData (e.g. "acars").
  */
 const DECODER_NAME_TO_RATE_KEY: Record<
   string,
@@ -40,17 +38,20 @@ const DECODER_NAME_TO_RATE_KEY: Record<
 };
 
 /**
- * Look up the rolling rate for a single decoder by its status.global key name.
- * Returns 0 if the decoder name is not recognised or no rate data is available.
+ * Return the live rolling rate for a decoder from the messageRate store value.
+ * Falls back to the LastMinute value from system_status when messageRate is
+ * not yet available (e.g. before the first 5-second scheduler tick).
  */
-function getDecoderRollingRate(
+function getDecoderRate(
   messageRate: MessageRateData | null,
   decoderName: string,
+  fallback: number | undefined,
 ): number {
-  if (!messageRate) return 0;
-  const key = DECODER_NAME_TO_RATE_KEY[decoderName];
-  if (!key) return 0;
-  return messageRate[key];
+  if (messageRate !== null) {
+    const key = DECODER_NAME_TO_RATE_KEY[decoderName];
+    if (key) return messageRate[key];
+  }
+  return fallback ?? 0;
 }
 
 /**
@@ -61,6 +62,9 @@ export const StatusPage = () => {
   const setCurrentPage = useAppStore((state) => state.setCurrentPage);
   const systemStatus = useAppStore((state) => state.systemStatus);
   const decoders = useAppStore((state) => state.decoders);
+  // messageRate is updated every 5 seconds by the backend scheduler via the
+  // message_rate socket event — use it as the live source for the rate display
+  // so the value refreshes at 5s cadence rather than the 10s status poll.
   const messageRate = useAppStore((state) => state.messageRate);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
 
@@ -217,21 +221,12 @@ export const StatusPage = () => {
                     </span>
                   </div>
                   <div className="status-detail">
-                    <span className="status-detail__label">Last Minute:</span>
+                    <span className="status-detail__label">Rate (1 min):</span>
                     <span className="status-detail__value">
-                      {stats.LastMinute}
+                      {getDecoderRate(messageRate, name, stats.LastMinute)}{" "}
+                      msg/min
                     </span>
                   </div>
-                  {messageRate !== null && (
-                    <div className="status-detail">
-                      <span className="status-detail__label">
-                        Rolling Rate:
-                      </span>
-                      <span className="status-detail__value">
-                        {getDecoderRollingRate(messageRate, name)} msg/min
-                      </span>
-                    </div>
-                  )}
                 </div>
               </div>
             ))}

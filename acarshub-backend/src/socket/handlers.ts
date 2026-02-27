@@ -570,11 +570,20 @@ function handleRegenerateAlertMatches(
  * Handle system status request
  *
  * Mirrors Python: @socketio.on("request_status", namespace="/main")
+ *
+ * Emits both system_status and message_rate so the Status page receives the
+ * rolling 1-minute message average immediately on demand, rather than waiting
+ * up to 5 seconds for the background scheduler to broadcast it.
  */
 function handleRequestStatus(socket: TypedSocket): void {
   try {
     const status = getSystemStatus();
     socket.emit("system_status", status);
+
+    // Also emit the current rolling rate so the Status page can display it
+    // immediately without waiting for the next 5-second scheduler tick.
+    const rates = getMessageQueue().getRollingRates();
+    socket.emit("message_rate", rates);
 
     logger.debug("System status sent", {
       socketId: socket.id,
@@ -1191,6 +1200,7 @@ function getSystemStatus(): SystemStatus {
   const config = getConfig();
   const decoderCounts = getPerDecoderMessageCounts();
   const queueStats = getMessageQueue().getStats();
+  const rollingRates = getMessageQueue().getRollingRates();
 
   const decodersStatus: Record<
     string,
@@ -1217,7 +1227,7 @@ function getSystemStatus(): SystemStatus {
     globalStatus.ACARS = {
       Status: "Ok",
       Count: decoderCounts.acars,
-      LastMinute: queueStats.acars.lastMinute,
+      LastMinute: rollingRates.acars,
     };
   }
 
@@ -1235,7 +1245,7 @@ function getSystemStatus(): SystemStatus {
     globalStatus.VDLM2 = {
       Status: "Ok",
       Count: decoderCounts.vdlm2,
-      LastMinute: queueStats.vdlm2.lastMinute,
+      LastMinute: rollingRates.vdlm2,
     };
   }
 
@@ -1253,7 +1263,7 @@ function getSystemStatus(): SystemStatus {
     globalStatus.HFDL = {
       Status: "Ok",
       Count: decoderCounts.hfdl,
-      LastMinute: queueStats.hfdl.lastMinute,
+      LastMinute: rollingRates.hfdl,
     };
   }
 
@@ -1271,7 +1281,7 @@ function getSystemStatus(): SystemStatus {
     globalStatus.IMSL = {
       Status: "Ok",
       Count: decoderCounts.imsl,
-      LastMinute: queueStats.imsl.lastMinute,
+      LastMinute: rollingRates.imsl,
     };
   }
 
@@ -1289,7 +1299,7 @@ function getSystemStatus(): SystemStatus {
     globalStatus.IRDM = {
       Status: "Ok",
       Count: decoderCounts.irdm,
-      LastMinute: queueStats.irdm.lastMinute,
+      LastMinute: rollingRates.irdm,
     };
   }
 

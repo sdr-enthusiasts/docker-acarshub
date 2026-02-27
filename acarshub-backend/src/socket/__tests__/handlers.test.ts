@@ -63,6 +63,10 @@
  *
  *  handleRequestStatus:
  *    - emits system_status
+ *    - regression: also emits message_rate so the Status page gets the rolling
+ *      1-minute average immediately without waiting for the 5-second scheduler
+ *    - regression: system_status.global LastMinute is the rolling rate (not the
+ *      coarse per-minute counter) so the Status page always shows a live value
  *
  *  handleSignalFreqs:
  *    - emits signal_freqs with formatted freq data
@@ -361,6 +365,14 @@ beforeEach(() => {
       imsl: { lastMinute: 0, total: 0 },
       irdm: { lastMinute: 0, total: 0 },
       error: { lastMinute: 0, total: 0 },
+    }),
+    getRollingRates: vi.fn().mockReturnValue({
+      total: 0,
+      acars: 0,
+      vdlm2: 0,
+      hfdl: 0,
+      imsl: 0,
+      irdm: 0,
     }),
     length: 0,
   } as unknown as ReturnType<typeof getMessageQueue>);
@@ -1022,6 +1034,99 @@ describe("handleRequestStatus", () => {
     const statuses = emittedAs(socket, "system_status");
     expect(statuses).toHaveLength(1);
     expect(statuses[0]).toBeDefined();
+  });
+
+  it("regression: also emits message_rate so the Status page gets the rolling average immediately", () => {
+    // This test must FAIL before the fix (handleRequestStatus only emitted
+    // system_status) and PASS after (it also emits message_rate).
+    mockGetMessageQueue.mockReturnValue({
+      getStats: vi.fn().mockReturnValue({
+        acars: { lastMinute: 0, total: 0 },
+        vdlm2: { lastMinute: 0, total: 0 },
+        hfdl: { lastMinute: 0, total: 0 },
+        imsl: { lastMinute: 0, total: 0 },
+        irdm: { lastMinute: 0, total: 0 },
+        error: { lastMinute: 0, total: 0 },
+      }),
+      getRollingRates: vi.fn().mockReturnValue({
+        total: 42,
+        acars: 20,
+        vdlm2: 10,
+        hfdl: 8,
+        imsl: 2,
+        irdm: 2,
+      }),
+      length: 0,
+    } as unknown as ReturnType<typeof getMessageQueue>);
+
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+    socket.handlers.request_status();
+
+    const rates = emittedAs<{
+      total: number;
+      acars: number;
+      vdlm2: number;
+      hfdl: number;
+      imsl: number;
+      irdm: number;
+    }>(socket, "message_rate");
+
+    expect(rates).toHaveLength(1);
+    expect(rates[0].total).toBe(42);
+    expect(rates[0].acars).toBe(20);
+    expect(rates[0].vdlm2).toBe(10);
+  });
+
+  it("regression: system_status.global LastMinute uses rolling rate not the per-minute counter", () => {
+    // WHY: getStats().lastMinute is a coarse counter that resets at minute
+    // boundaries (hard jump to 0). getRollingRates() is the smooth 12×5s
+    // window that gives a real msgs/min value at any point in time.
+    // getSystemStatus() must use getRollingRates() so the Status page always
+    // shows a live rolling average rather than an ever-accumulating counter.
+    mockGetConfig.mockReturnValue(
+      makeDefaultConfig({ enableAcars: true, enableVdlm: true }),
+    );
+    mockGetMessageQueue.mockReturnValue({
+      getStats: vi.fn().mockReturnValue({
+        acars: { lastMinute: 999, total: 0 }, // coarse counter — must NOT appear
+        vdlm2: { lastMinute: 888, total: 0 },
+        hfdl: { lastMinute: 0, total: 0 },
+        imsl: { lastMinute: 0, total: 0 },
+        irdm: { lastMinute: 0, total: 0 },
+        error: { lastMinute: 0, total: 0 },
+      }),
+      getRollingRates: vi.fn().mockReturnValue({
+        total: 35,
+        acars: 20,
+        vdlm2: 15,
+        hfdl: 0,
+        imsl: 0,
+        irdm: 0,
+      }),
+      length: 0,
+    } as unknown as ReturnType<typeof getMessageQueue>);
+
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+    socket.handlers.request_status();
+
+    const statuses = emittedAs<{
+      status: {
+        global: Record<string, { LastMinute?: number }>;
+      };
+    }>(socket, "system_status");
+
+    expect(statuses).toHaveLength(1);
+    const global = statuses[0].status.global;
+
+    // Rolling rate values must appear — not the coarse lastMinute counters
+    expect(global.ACARS?.LastMinute).toBe(20);
+    expect(global.VDLM2?.LastMinute).toBe(15);
+
+    // Coarse counters (999, 888) must NOT appear
+    expect(global.ACARS?.LastMinute).not.toBe(999);
+    expect(global.VDLM2?.LastMinute).not.toBe(888);
   });
 
   it("should not throw when getPerDecoderMessageCounts throws", () => {
