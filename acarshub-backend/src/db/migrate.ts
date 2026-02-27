@@ -30,7 +30,7 @@
  * runMigrations() call (i.e., every startup) and detects the stale schema by
  * checking whether `message_type` appears in the sqlite_master sql for both the
  * table and the insert trigger.  If either is missing it drops everything and
- * rebuilds from scratch, then VACUUMs to reclaim shadow-table bloat.
+ * rebuilds from scratch; disk space is reclaimed by the VACUUM in runMigrations().
  */
 
 import { randomUUID } from "node:crypto";
@@ -824,18 +824,6 @@ function migration08_finalOptimization(db: Database.Database): void {
 
   logger.info("✓ Composite indexes created");
 
-  // 3. VACUUM - Reclaim disk space from all previous migrations
-  logger.info(
-    "Running VACUUM to reclaim disk space (this may take several minutes)...",
-  );
-  db.exec("VACUUM");
-  logger.info("✓ VACUUM complete - database file optimized");
-
-  // 4. ANALYZE - Update query planner statistics
-  logger.info("Running ANALYZE to optimize query planning...");
-  db.exec("ANALYZE");
-  logger.info("✓ ANALYZE complete - query planner statistics updated");
-
   logger.info("v4 migration complete - database is optimized for production");
 }
 
@@ -922,8 +910,9 @@ function migration09_addTimeseriesStats(db: Database.Database): void {
  * stalling message ingestion entirely.
  *
  * This migration drops all FTS tables and triggers and recreates them cleanly,
- * then rebuilds the index from the messages table.  The subsequent VACUUM
- * reclaims the disk space freed by discarding the bloated shadow tables.
+ * then rebuilds the index from the messages table.  Disk space is reclaimed by
+ * the single VACUUM that runs at the end of runMigrations() when any migration
+ * step executes.
  *
  * Both steps can take several minutes on a large database — this is a
  * one-time startup cost.
@@ -943,12 +932,7 @@ function migration10_rebuildFts(db: Database.Database): void {
   createFtsTableAndTriggers(db);
   logger.info("✓ FTS table and triggers recreated");
 
-  logger.warn(
-    "Running VACUUM to reclaim disk space freed by old FTS shadow tables — " +
-      "this may take 10-30 minutes on large databases...",
-  );
-  db.exec("VACUUM");
-  logger.info("✓ VACUUM complete — migration 10 finished");
+  logger.info("✓ Migration 10 finished");
 }
 
 // ---------------------------------------------------------------------------
@@ -981,12 +965,9 @@ function migration10_rebuildFts(db: Database.Database): void {
  *   d. Creates the rrd_import_registry table that the RRD importer uses to
  *      record SHA-256 hashes of files it has processed, allowing it to skip
  *      re-imports regardless of filename.
- *   e. VACUUMs the database to reclaim pages freed by the duplicate row
- *      deletions.  VACUUM cannot run inside a transaction so it executes after
- *      the migration transaction commits.  On a clean database (no duplicates)
- *      this is fast; on a database with significant duplication it may take
- *      several minutes and requires free disk space roughly equal to the
- *      current database file size.
+ *   e. Disk space freed by the duplicate row deletions is reclaimed by the
+ *      single VACUUM that runs at the end of runMigrations() when any migration
+ *      step executes.
  */
 function migration11_deduplicateTimeseriesAndAddRegistry(
   db: Database.Database,
@@ -1080,19 +1061,6 @@ function migration11_deduplicateTimeseriesAndAddRegistry(
 
   migrate();
 
-  // VACUUM must run outside the transaction — SQLite forbids VACUUM inside an
-  // active transaction.  It reclaims the pages freed by the duplicate deletes
-  // above.  On a clean database the freed-page count is ~0 and VACUUM returns
-  // almost instantly; on a database where timeseries rows were doubled it can
-  // reclaim tens to hundreds of MB.
-  logger.warn(
-    "Running VACUUM to reclaim space freed by timeseries deduplication — " +
-      "this may take a few minutes on large databases and requires free disk " +
-      "space roughly equal to the current database file size...",
-  );
-  db.exec("VACUUM");
-  logger.info("✓ VACUUM complete");
-
   logger.info("✓ Migration 11 complete");
 }
 
@@ -1119,7 +1087,9 @@ function migration11_deduplicateTimeseriesAndAddRegistry(
  *      alias, the most storage-efficient key possible with no separate index B-tree
  *   d. Drop idx_timeseries_resolution (completely unused)
  *   e. Drop idx_timeseries_timestamp_resolution (superseded by the PK B-tree)
- *   f. VACUUM to reclaim freed pages (can be several hundred MB on a 3-year DB)
+ *   f. Freed pages are reclaimed by the single VACUUM that runs at the end of
+ *      runMigrations() when any migration step executes (can be several hundred
+ *      MB on a 3-year DB)
  *
  * SAFETY FOR USERS ON MIGRATION 10 OR EARLIER
  * --------------------------------------------
@@ -1231,17 +1201,6 @@ function migration12_dropResolutionPromoteTimestampPk(
 
   migrate();
 
-  // VACUUM reclaims the pages freed by removing the id/resolution columns and
-  // the two old indexes.  On a 3-year database this can reclaim several hundred
-  // MB.  VACUUM cannot run inside a transaction.
-  logger.warn(
-    "Running VACUUM to reclaim space freed by timeseries schema rebuild — " +
-      "this may take a few minutes on large databases and requires free disk " +
-      "space roughly equal to the current database file size...",
-  );
-  db.exec("VACUUM");
-  logger.info("✓ VACUUM complete");
-
   logger.info("✓ Migration 12 complete");
 }
 
@@ -1251,8 +1210,8 @@ function migration12_dropResolutionPromoteTimestampPk(
 
 /**
  * Verify that the messages_fts virtual table and its three triggers use the
- * current 31-column schema.  If not, drop everything and rebuild from scratch,
- * then VACUUM to reclaim the bloated FTS shadow-table pages.
+ * current 31-column schema.  If not, drop everything and rebuild from scratch.
+ * Returns true if a rebuild was performed, false otherwise.
  *
  * This runs unconditionally at the end of every runMigrations() call, which
  * means it executes on every startup regardless of whether any migration was
@@ -1266,7 +1225,7 @@ function migration12_dropResolutionPromoteTimestampPk(
  * silently skipped the table if it already existed, leaving the 8-column
  * schema and its weaker triggers in place indefinitely.
  */
-function verifyAndRepairFtsIfNeeded(db: Database.Database): void {
+function verifyAndRepairFtsIfNeeded(db: Database.Database): boolean {
   const hasFTS = db
     .prepare(
       "SELECT name FROM sqlite_master WHERE type='table' AND name='messages_fts'",
@@ -1276,7 +1235,7 @@ function verifyAndRepairFtsIfNeeded(db: Database.Database): void {
   if (!hasFTS) {
     // Table doesn't exist at all — nothing to repair; migration04 will create it.
     logger.debug("FTS table absent, skipping integrity check");
-    return;
+    return false;
   }
 
   const schemaOk = isFtsSchemaCorrect(db);
@@ -1284,7 +1243,7 @@ function verifyAndRepairFtsIfNeeded(db: Database.Database): void {
 
   if (schemaOk && triggersOk) {
     logger.info("FTS schema and triggers verified OK");
-    return;
+    return false;
   }
 
   logger.warn(
@@ -1298,15 +1257,8 @@ function verifyAndRepairFtsIfNeeded(db: Database.Database): void {
   logger.info("Recreating FTS table and triggers with correct schema...");
   createFtsTableAndTriggers(db);
 
-  // VACUUM reclaims the shadow-table pages that accumulated from the old
-  // 8-column tombstone inflation caused by the migration06 UID backfill and
-  // any pruning that happened without proper trigger coverage.
-  // This can take several minutes on large databases.
-  logger.warn(
-    "Running VACUUM to reclaim FTS shadow-table bloat — this may take several minutes on large databases",
-  );
-  db.exec("VACUUM");
-  logger.info("VACUUM complete — FTS repair finished");
+  logger.info("FTS repair finished");
+  return true;
 }
 
 // ---------------------------------------------------------------------------
@@ -1438,7 +1390,9 @@ export function runMigrations(dbPath?: string): void {
       setAlembicVersion(db, migration.revision);
     }
 
-    if (startIndex >= MIGRATIONS.length) {
+    const migrationsRan = startIndex < MIGRATIONS.length;
+
+    if (!migrationsRan) {
       logger.info("Database is already at latest version", {
         version: LATEST_REVISION,
       });
@@ -1451,7 +1405,27 @@ export function runMigrations(dbPath?: string): void {
     // Always run the FTS integrity check, regardless of whether any migration
     // was applied.  This catches databases that are already at the latest
     // version but still carry the stale 8-column FTS from the pre-Alembic era.
-    verifyAndRepairFtsIfNeeded(db);
+    const ftsRepaired = verifyAndRepairFtsIfNeeded(db);
+
+    // VACUUM and ANALYZE run at most once per startup, only when work was
+    // actually done.  Running them inside individual migration functions caused
+    // redundant multi-hour stalls on large databases when several migrations
+    // ran in sequence.  ANALYZE runs after VACUUM so the query planner sees
+    // the final, compacted page layout and all indexes created by every
+    // migration step.
+    if (migrationsRan || ftsRepaired) {
+      logger.warn(
+        "Running VACUUM to reclaim disk space freed by migrations — " +
+          "this may take several minutes on large databases and requires free " +
+          "disk space roughly equal to the current database file size...",
+      );
+      db.exec("VACUUM");
+      logger.info("✓ VACUUM complete");
+
+      logger.info("Running ANALYZE to update query planner statistics...");
+      db.exec("ANALYZE");
+      logger.info("✓ ANALYZE complete");
+    }
 
     db.close();
   } catch (error) {
