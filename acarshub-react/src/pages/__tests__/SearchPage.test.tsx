@@ -280,6 +280,121 @@ describe("SearchPage", () => {
       expect(flightInput).toHaveValue("UAL123");
     });
 
+    // -----------------------------------------------------------------------
+    // Uppercase normalisation
+    // All text stored in the database is upper-case.  Every text input must
+    // normalise its value to upper-case so that search terms match the DB.
+    // -----------------------------------------------------------------------
+
+    it("regression: flight input normalises lowercase to uppercase", async () => {
+      const user = userEvent.setup();
+      renderSearchPage();
+
+      const input = screen.getByLabelText(/^flight$/i);
+      await user.type(input, "ual123");
+      expect(input).toHaveValue("UAL123");
+    });
+
+    it("regression: tail input normalises to uppercase", async () => {
+      const user = userEvent.setup();
+      renderSearchPage();
+
+      const input = screen.getByLabelText(/tail number/i);
+      await user.type(input, "n12345");
+      expect(input).toHaveValue("N12345");
+    });
+
+    it("regression: ICAO hex input normalises to uppercase", async () => {
+      const user = userEvent.setup();
+      renderSearchPage();
+
+      const input = screen.getByLabelText(/icao hex/i);
+      await user.type(input, "a1b2c3");
+      expect(input).toHaveValue("A1B2C3");
+    });
+
+    it("regression: departure input normalises to uppercase", async () => {
+      const user = userEvent.setup();
+      renderSearchPage();
+
+      const input = screen.getByLabelText(/departure/i);
+      await user.type(input, "kjfk");
+      expect(input).toHaveValue("KJFK");
+    });
+
+    it("regression: destination input normalises to uppercase", async () => {
+      const user = userEvent.setup();
+      renderSearchPage();
+
+      const input = screen.getByLabelText(/destination/i);
+      await user.type(input, "klax");
+      expect(input).toHaveValue("KLAX");
+    });
+
+    it("regression: message label input normalises to uppercase", async () => {
+      const user = userEvent.setup();
+      renderSearchPage();
+
+      const input = screen.getByLabelText(/message label/i);
+      await user.type(input, "h1");
+      expect(input).toHaveValue("H1");
+    });
+
+    it("regression: message number input normalises to uppercase", async () => {
+      const user = userEvent.setup();
+      renderSearchPage();
+
+      const input = screen.getByLabelText(/message number/i);
+      await user.type(input, "m01a");
+      expect(input).toHaveValue("M01A");
+    });
+
+    it("regression: station ID input normalises to uppercase", async () => {
+      const user = userEvent.setup();
+      renderSearchPage();
+
+      const input = screen.getByLabelText(/station id/i);
+      await user.type(input, "kjfk");
+      expect(input).toHaveValue("KJFK");
+    });
+
+    it("regression: message text input normalises to uppercase", async () => {
+      const user = userEvent.setup();
+      renderSearchPage();
+
+      const input = screen.getByLabelText(/message text/i);
+      await user.type(input, "position report");
+      expect(input).toHaveValue("POSITION REPORT");
+    });
+
+    it("regression: uppercase normalisation is applied before emitting the query", async () => {
+      const user = userEvent.setup();
+      renderSearchPage();
+
+      const flightInput = screen.getByLabelText(/^flight$/i);
+      await user.type(flightInput, "ual123");
+
+      await user.click(screen.getByRole("button", { name: /^search$/i }));
+
+      expect(mockSocket.emit).toHaveBeenCalledWith(
+        "query_search",
+        expect.objectContaining({
+          search_term: expect.objectContaining({ flight: "UAL123" }),
+        }),
+        "/main",
+      );
+    });
+
+    it("regression: frequency field is unaffected by uppercase normalisation (digits only)", async () => {
+      const user = userEvent.setup();
+      renderSearchPage();
+
+      const input = screen.getByLabelText(/frequency/i);
+      await user.type(input, "131.550");
+      // Digits and dots have no case — value must be unchanged
+      expect(input).toHaveValue("131.550");
+    });
+
     it("emits query_search via socket when the form is submitted", async () => {
       const user = userEvent.setup();
       renderSearchPage();
