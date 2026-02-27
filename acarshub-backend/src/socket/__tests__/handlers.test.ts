@@ -1416,9 +1416,6 @@ describe("zeroFillBuckets (via handleRRDTimeseries)", () => {
         irdmCount: 0,
         totalCount: 5,
         errorCount: 0,
-        resolution: "1min",
-        id: 1,
-        createdAt: Date.now(),
       },
       {
         timestamp: now - 60,
@@ -1429,9 +1426,6 @@ describe("zeroFillBuckets (via handleRRDTimeseries)", () => {
         irdmCount: 0,
         totalCount: 3,
         errorCount: 0,
-        resolution: "1min",
-        id: 2,
-        createdAt: Date.now(),
       },
     ]);
 
@@ -1471,9 +1465,6 @@ describe("zeroFillBuckets (via handleRRDTimeseries)", () => {
         irdmCount: 0,
         totalCount: 1,
         errorCount: 0,
-        resolution: "1min",
-        id: 1,
-        createdAt: Date.now(),
       },
     ]);
 

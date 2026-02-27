@@ -38,17 +38,14 @@ import { pruneOldStats } from "../stats-pruning.js";
 
 const CREATE_TIMESERIES_TABLE = `
   CREATE TABLE IF NOT EXISTS timeseries_stats (
-    id          INTEGER PRIMARY KEY AUTOINCREMENT,
-    timestamp   INTEGER NOT NULL,
-    resolution  TEXT    NOT NULL,
+    timestamp   INTEGER PRIMARY KEY NOT NULL,
     acars_count INTEGER NOT NULL DEFAULT 0,
     vdlm_count  INTEGER NOT NULL DEFAULT 0,
     hfdl_count  INTEGER NOT NULL DEFAULT 0,
     imsl_count  INTEGER NOT NULL DEFAULT 0,
     irdm_count  INTEGER NOT NULL DEFAULT 0,
     total_count INTEGER NOT NULL DEFAULT 0,
-    error_count INTEGER NOT NULL DEFAULT 0,
-    created_at  INTEGER NOT NULL DEFAULT 0
+    error_count INTEGER NOT NULL DEFAULT 0
   );
 `;
 
@@ -70,12 +67,10 @@ function days(n: number): number {
 function insertRow(
   db: ReturnType<typeof drizzle<typeof schema>>,
   timestamp: number,
-  resolution = "1min",
 ): void {
   db.insert(timeseriesStats)
     .values({
       timestamp,
-      resolution: resolution as "1min" | "5min" | "1hour" | "6hour",
       acarsCount: 1,
       vdlmCount: 0,
       hfdlCount: 0,
@@ -83,7 +78,6 @@ function insertRow(
       irdmCount: 0,
       totalCount: 1,
       errorCount: 0,
-      createdAt: Date.now(),
     })
     .run();
 }
@@ -185,17 +179,16 @@ describe("pruneOldStats", () => {
     expect(countRows(testDb)).toBe(0);
   });
 
-  it("should work with multiple resolutions", async () => {
-    const oldTs = now() - days(1100);
+  it("should work with multiple old rows at different timestamps", async () => {
+    const oldTs1 = now() - days(1100);
+    const oldTs2 = now() - days(1200);
     const newTs = now() - days(1);
 
-    insertRow(testDb, oldTs, "1min");
-    insertRow(testDb, oldTs, "5min");
-    insertRow(testDb, oldTs, "1hour");
-    insertRow(testDb, oldTs, "6hour");
-    insertRow(testDb, newTs, "1min");
+    insertRow(testDb, oldTs1);
+    insertRow(testDb, oldTs2);
+    insertRow(testDb, newTs);
 
-    expect(countRows(testDb)).toBe(5);
+    expect(countRows(testDb)).toBe(3);
 
     await pruneOldStats();
 
@@ -306,9 +299,9 @@ describe("pruneOldStats — VACUUM threshold", () => {
     // Insert 10,001 old rows (one beyond the threshold)
     const insertStmt = sqliteDb.prepare(`
       INSERT INTO timeseries_stats
-        (timestamp, resolution, acars_count, vdlm_count, hfdl_count,
-         imsl_count, irdm_count, total_count, error_count, created_at)
-      VALUES (?, '1min', 1, 0, 0, 0, 0, 1, 0, 0)
+        (timestamp, acars_count, vdlm_count, hfdl_count,
+         imsl_count, irdm_count, total_count, error_count)
+      VALUES (?, 1, 0, 0, 0, 0, 1, 0)
     `);
 
     const oldTimestamp = now() - days(1100);

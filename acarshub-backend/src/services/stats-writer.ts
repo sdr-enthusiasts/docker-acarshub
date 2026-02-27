@@ -25,13 +25,12 @@ const logger = createLogger("stats-writer");
  * Stats Writer Service
  *
  * Writes live message statistics to timeseries_stats table every minute.
- * This maintains continuity with the RRD migration by inserting fresh data points
- * with 1-minute resolution.
+ * Each row is keyed by its Unix timestamp (INTEGER PRIMARY KEY after migration 12).
  *
  * Architecture:
  * 1. Aligns to minute boundaries (runs at :00 seconds)
  * 2. Reads current stats from MessageQueue
- * 3. Inserts row into timeseries_stats with resolution='1min'
+ * 3. Inserts row into timeseries_stats with the current Unix timestamp
  * 4. Calculates total messages (sum of all types)
  *
  * This replaces the Python RRD update functionality that wrote to acarshub.rrd every minute.
@@ -74,7 +73,6 @@ function writeStats(): void {
       .insert(timeseriesStats)
       .values({
         timestamp,
-        resolution: "1min",
         acarsCount: stats.acars.lastMinute,
         vdlmCount: stats.vdlm2.lastMinute,
         hfdlCount: stats.hfdl.lastMinute,

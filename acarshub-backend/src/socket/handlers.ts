@@ -1045,8 +1045,7 @@ async function handleRRDTimeseries(
             ROUND(AVG(total_count)) as total_count,
             ROUND(AVG(error_count)) as error_count
           FROM timeseries_stats
-          WHERE resolution = '1min'
-            AND timestamp >= ${start}
+          WHERE timestamp >= ${start}
             AND timestamp <= ${end}
           GROUP BY bucket_timestamp
           ORDER BY bucket_timestamp

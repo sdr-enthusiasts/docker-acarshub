@@ -40,17 +40,14 @@ describe("Stats Writer Service", () => {
     const db = getDatabase();
     db.run(`
       CREATE TABLE IF NOT EXISTS timeseries_stats (
-        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-        timestamp INTEGER NOT NULL,
-        resolution TEXT NOT NULL,
+        timestamp   INTEGER PRIMARY KEY NOT NULL,
         acars_count INTEGER DEFAULT 0 NOT NULL,
-        vdlm_count INTEGER DEFAULT 0 NOT NULL,
-        hfdl_count INTEGER DEFAULT 0 NOT NULL,
-        imsl_count INTEGER DEFAULT 0 NOT NULL,
-        irdm_count INTEGER DEFAULT 0 NOT NULL,
+        vdlm_count  INTEGER DEFAULT 0 NOT NULL,
+        hfdl_count  INTEGER DEFAULT 0 NOT NULL,
+        imsl_count  INTEGER DEFAULT 0 NOT NULL,
+        irdm_count  INTEGER DEFAULT 0 NOT NULL,
         total_count INTEGER DEFAULT 0 NOT NULL,
-        error_count INTEGER DEFAULT 0 NOT NULL,
-        created_at INTEGER NOT NULL
+        error_count INTEGER DEFAULT 0 NOT NULL
       )
     `);
   });
@@ -90,7 +87,6 @@ describe("Stats Writer Service", () => {
 
       expect(results).toHaveLength(1);
       const stat = results[0];
-      expect(stat.resolution).toBe("1min");
       expect(stat.acarsCount).toBe(10);
       expect(stat.vdlmCount).toBe(20);
       expect(stat.hfdlCount).toBe(5);
