@@ -31,6 +31,7 @@ import type {
   Decoders,
   Labels,
   MessageGroup,
+  MessageRateData,
   SignalCountData,
   SignalFreqData,
   SignalLevelData,
@@ -127,6 +128,10 @@ export interface AppState {
   // Station IDs (unique sources seen across all message types)
   stationIds: string[];
   setStationIds: (ids: string[]) => void;
+
+  // Rolling message rate (updated every 5 seconds by the backend scheduler)
+  messageRate: MessageRateData | null;
+  setMessageRate: (data: MessageRateData) => void;
 
   // UI state
   currentPage: string;
@@ -964,6 +969,10 @@ export const useAppStore = create<AppState>((set, get) => {
     // Station IDs
     stationIds: [],
     setStationIds: (ids) => set({ stationIds: ids }),
+
+    // Rolling message rate
+    messageRate: null,
+    setMessageRate: (data) => set({ messageRate: data }),
 
     // UI state
     currentPage: "Live Messages",

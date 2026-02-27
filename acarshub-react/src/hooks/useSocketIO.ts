@@ -46,6 +46,7 @@ export const useSocketIO = () => {
   const setSignalCountData = useAppStore((state) => state.setSignalCountData);
   const setAdsbAircraft = useAppStore((state) => state.setAdsbAircraft);
   const setStationIds = useAppStore((state) => state.setStationIds);
+  const setMessageRate = useAppStore((state) => state.setMessageRate);
 
   useEffect(() => {
     socketLogger.info("Setting up Socket.IO connection");
@@ -280,6 +281,14 @@ export const useSocketIO = () => {
       setSignalCountData(countData);
     });
 
+    // Rolling message rate — emitted every 5 seconds by the backend scheduler
+    socket.on("message_rate", (data) => {
+      socketLogger.trace("Received message rate update", {
+        total: data.total,
+      });
+      setMessageRate(data);
+    });
+
     // Cleanup on unmount
     return () => {
       socketLogger.debug("Cleaning up Socket.IO event listeners");
@@ -306,6 +315,7 @@ export const useSocketIO = () => {
       socket.off("station_ids");
       socket.off("signal_freqs");
       socket.off("signal_count");
+      socket.off("message_rate");
 
       // Only disconnect on actual unmount, not StrictMode cleanup
       // StrictMode will call this cleanup in dev, but we keep the socket alive
@@ -337,6 +347,7 @@ export const useSocketIO = () => {
     setSignalCountData,
     setAdsbAircraft,
     setStationIds,
+    setMessageRate,
   ]);
 
   // Don't return store state - let consumers subscribe directly to avoid stale closures

@@ -19,7 +19,39 @@ import { Card } from "../components/Card";
 import { socketService } from "../services/socket";
 import { useAppStore } from "../store/useAppStore";
 import { useSettingsStore } from "../store/useSettingsStore";
+import type { MessageRateData } from "../types";
 import { formatTimestamp } from "../utils/dateUtils";
+
+/**
+ * Map from the uppercase decoder name used in status.global (e.g. "ACARS")
+ * to the lowercase key used in MessageRateData (e.g. "acars").
+ * VDLM2 is the only case that needs special handling because the rate key
+ * is "vdlm2" while the status key is "VDLM2".
+ */
+const DECODER_NAME_TO_RATE_KEY: Record<
+  string,
+  keyof Omit<MessageRateData, "total">
+> = {
+  ACARS: "acars",
+  VDLM2: "vdlm2",
+  HFDL: "hfdl",
+  IMSL: "imsl",
+  IRDM: "irdm",
+};
+
+/**
+ * Look up the rolling rate for a single decoder by its status.global key name.
+ * Returns 0 if the decoder name is not recognised or no rate data is available.
+ */
+function getDecoderRollingRate(
+  messageRate: MessageRateData | null,
+  decoderName: string,
+): number {
+  if (!messageRate) return 0;
+  const key = DECODER_NAME_TO_RATE_KEY[decoderName];
+  if (!key) return 0;
+  return messageRate[key];
+}
 
 /**
  * StatusPage Component
@@ -29,6 +61,7 @@ export const StatusPage = () => {
   const setCurrentPage = useAppStore((state) => state.setCurrentPage);
   const systemStatus = useAppStore((state) => state.systemStatus);
   const decoders = useAppStore((state) => state.decoders);
+  const messageRate = useAppStore((state) => state.messageRate);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
 
   // Get user's locale preferences from settings
@@ -189,6 +222,16 @@ export const StatusPage = () => {
                       {stats.LastMinute}
                     </span>
                   </div>
+                  {messageRate !== null && (
+                    <div className="status-detail">
+                      <span className="status-detail__label">
+                        Rolling Rate:
+                      </span>
+                      <span className="status-detail__value">
+                        {getDecoderRollingRate(messageRate, name)} msg/min
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}

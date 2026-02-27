@@ -373,6 +373,201 @@ describe("MessageQueue", () => {
     });
   });
 
+  describe("Rolling Rate Window", () => {
+    it("should return zero rates when no messages have been received", () => {
+      const rates = queue.getRollingRates();
+      expect(rates.total).toBe(0);
+      expect(rates.acars).toBe(0);
+      expect(rates.vdlm2).toBe(0);
+      expect(rates.hfdl).toBe(0);
+      expect(rates.imsl).toBe(0);
+      expect(rates.irdm).toBe(0);
+    });
+
+    it("should count messages in the current bucket", () => {
+      queue.push("ACARS", { id: 1 });
+      queue.push("ACARS", { id: 2 });
+      queue.push("VDLM2", { id: 3 });
+
+      const rates = queue.getRollingRates();
+      expect(rates.acars).toBe(2);
+      expect(rates.vdlm2).toBe(1);
+      expect(rates.total).toBe(3);
+    });
+
+    it("should track each decoder type independently", () => {
+      queue.push("ACARS", { id: 1 });
+      queue.push("VDLM2", { id: 2 });
+      queue.push("HFDL", { id: 3 });
+      queue.push("IMSL", { id: 4 });
+      queue.push("IRDM", { id: 5 });
+
+      const rates = queue.getRollingRates();
+      expect(rates.acars).toBe(1);
+      expect(rates.vdlm2).toBe(1);
+      expect(rates.hfdl).toBe(1);
+      expect(rates.imsl).toBe(1);
+      expect(rates.irdm).toBe(1);
+      expect(rates.total).toBe(5);
+    });
+
+    it("should retain messages across bucket advances within the 60-second window", () => {
+      queue.push("ACARS", { id: 1 });
+      queue.push("ACARS", { id: 2 });
+
+      // Advance several buckets — messages should still be counted
+      queue.advanceRateBucket();
+      queue.push("ACARS", { id: 3 });
+      queue.advanceRateBucket();
+
+      const rates = queue.getRollingRates();
+      // All 3 messages are still within the 12-bucket window
+      expect(rates.acars).toBe(3);
+    });
+
+    it("should drop messages that fall outside the 60-second window after 12 advances", () => {
+      // Push 5 messages into bucket 0
+      for (let i = 0; i < 5; i++) {
+        queue.push("ACARS", { id: i });
+      }
+
+      // Advance all 12 buckets — bucket 0 gets overwritten, dropping those messages
+      for (let i = 0; i < 12; i++) {
+        queue.advanceRateBucket();
+      }
+
+      const rates = queue.getRollingRates();
+      expect(rates.acars).toBe(0);
+      expect(rates.total).toBe(0);
+    });
+
+    it("should not drop messages until their bucket is overwritten", () => {
+      // Push into bucket 0
+      queue.push("ACARS", { id: 1 });
+
+      // Advance 11 buckets — bucket 0 is still in the window
+      for (let i = 0; i < 11; i++) {
+        queue.advanceRateBucket();
+      }
+
+      const ratesBefore = queue.getRollingRates();
+      expect(ratesBefore.acars).toBe(1);
+
+      // The 12th advance overwrites bucket 0 → message is evicted
+      queue.advanceRateBucket();
+
+      const ratesAfter = queue.getRollingRates();
+      expect(ratesAfter.acars).toBe(0);
+    });
+
+    it("should accumulate messages across multiple active buckets correctly", () => {
+      // Bucket 0: 3 ACARS
+      queue.push("ACARS", { id: 1 });
+      queue.push("ACARS", { id: 2 });
+      queue.push("ACARS", { id: 3 });
+
+      queue.advanceRateBucket();
+
+      // Bucket 1: 2 VDLM2
+      queue.push("VDLM2", { id: 4 });
+      queue.push("VDLM2", { id: 5 });
+
+      queue.advanceRateBucket();
+
+      // Bucket 2: 1 HFDL
+      queue.push("HFDL", { id: 6 });
+
+      const rates = queue.getRollingRates();
+      expect(rates.acars).toBe(3);
+      expect(rates.vdlm2).toBe(2);
+      expect(rates.hfdl).toBe(1);
+      expect(rates.total).toBe(6);
+    });
+
+    it("should zero out the new bucket when advancing, not retain old values", () => {
+      // Push messages into the first bucket position
+      queue.push("ACARS", { id: 1 });
+
+      // Advance all 12 buckets so we wrap around to bucket 0 again
+      for (let i = 0; i < 12; i++) {
+        queue.advanceRateBucket();
+      }
+
+      // Push new messages into what is now a fresh bucket 0
+      queue.push("ACARS", { id: 2 });
+
+      const rates = queue.getRollingRates();
+      // Only the new message should be counted — old data was zeroed on overwrite
+      expect(rates.acars).toBe(1);
+    });
+
+    it("should reset rolling rates when clearStats is called", () => {
+      queue.push("ACARS", { id: 1 });
+      queue.push("VDLM2", { id: 2 });
+
+      const ratesBefore = queue.getRollingRates();
+      expect(ratesBefore.total).toBe(2);
+
+      queue.clearStats();
+
+      const ratesAfter = queue.getRollingRates();
+      expect(ratesAfter.total).toBe(0);
+      expect(ratesAfter.acars).toBe(0);
+      expect(ratesAfter.vdlm2).toBe(0);
+    });
+
+    it("should reset rolling rates when clearRollingRates is called", () => {
+      queue.push("ACARS", { id: 1 });
+      queue.push("ACARS", { id: 2 });
+      queue.advanceRateBucket();
+      queue.push("VDLM2", { id: 3 });
+
+      const ratesBefore = queue.getRollingRates();
+      expect(ratesBefore.total).toBe(3);
+
+      queue.clearRollingRates();
+
+      const ratesAfter = queue.getRollingRates();
+      expect(ratesAfter.total).toBe(0);
+      expect(ratesAfter.acars).toBe(0);
+      expect(ratesAfter.vdlm2).toBe(0);
+    });
+
+    it("regression: advancing bucket should not affect messages in other buckets", () => {
+      // Fill several different buckets
+      queue.push("ACARS", { id: 1 }); // bucket 0
+      queue.advanceRateBucket();
+      queue.push("VDLM2", { id: 2 }); // bucket 1
+      queue.advanceRateBucket();
+      queue.push("HFDL", { id: 3 }); // bucket 2
+      queue.advanceRateBucket(); // advance to bucket 3, zero it out
+
+      // Buckets 0, 1, 2 should be unaffected
+      const rates = queue.getRollingRates();
+      expect(rates.acars).toBe(1);
+      expect(rates.vdlm2).toBe(1);
+      expect(rates.hfdl).toBe(1);
+      expect(rates.total).toBe(3);
+    });
+
+    it("should return a total that equals the sum of all per-decoder rates", () => {
+      queue.push("ACARS", { id: 1 });
+      queue.push("ACARS", { id: 2 });
+      queue.push("VDLM2", { id: 3 });
+      queue.push("HFDL", { id: 4 });
+      queue.push("HFDL", { id: 5 });
+      queue.push("HFDL", { id: 6 });
+      queue.push("IRDM", { id: 7 });
+
+      const rates = queue.getRollingRates();
+      const manualTotal =
+        rates.acars + rates.vdlm2 + rates.hfdl + rates.imsl + rates.irdm;
+
+      expect(rates.total).toBe(manualTotal);
+      expect(rates.total).toBe(7);
+    });
+  });
+
   describe("Edge Cases", () => {
     it("should handle non-object message data", () => {
       queue.push("ACARS", "string data");

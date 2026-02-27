@@ -45,6 +45,18 @@ import { socketLogger } from "../utils/logger";
 
 // Events received from backend
 export interface ServerToClientEvents {
+  // Rolling message rate — emitted every 5 seconds by the backend scheduler.
+  // Counts messages received in the last 60 seconds (12 × 5-second buckets),
+  // expressed as msgs/min for near-real-time throughput display.
+  message_rate: (data: {
+    total: number;
+    acars: number;
+    vdlm2: number;
+    hfdl: number;
+    imsl: number;
+    irdm: number;
+  }) => void;
+
   // Core message events
   acars_msg: (data: HtmlMsg) => void;
   acars_msg_batch: (data: {

@@ -62,6 +62,7 @@ export type {
   MessageGroupData,
   MessageGroupMatch,
   MessageGroupStats,
+  MessageRateData,
   Plane,
   PlaneData,
   PlaneMatch,

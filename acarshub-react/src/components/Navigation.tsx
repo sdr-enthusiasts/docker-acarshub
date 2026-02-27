@@ -23,6 +23,7 @@ import {
   selectUnreadAlertCount,
   useAppStore,
 } from "../store/useAppStore";
+import type { MessageRateData } from "../types";
 import { MessageFilters } from "./MessageFilters";
 
 /**
@@ -33,6 +34,98 @@ const selectSystemErrorState = (
 ) => state.systemStatus?.status.error_state ?? false;
 
 import { ThemeSwitcher } from "./ThemeSwitcher";
+
+/**
+ * Selector for message rate state
+ */
+const selectMessageRate = (
+  state: ReturnType<typeof useAppStore.getState>,
+): MessageRateData | null => state.messageRate;
+
+const selectDecoders = (state: ReturnType<typeof useAppStore.getState>) =>
+  state.decoders;
+
+/**
+ * MessageRateWidget
+ *
+ * Displays the rolling 60-second message rate in the nav bar.
+ * On desktop, hovering reveals a tooltip with per-decoder breakdown.
+ * Only rendered once the backend has sent at least one rate update.
+ */
+const MessageRateWidget = () => {
+  const messageRate = useAppStore(selectMessageRate);
+  const decoders = useAppStore(selectDecoders);
+
+  if (!messageRate || !decoders) return null;
+
+  const total = messageRate.total;
+
+  // Build breakdown rows for enabled decoders only.
+  // When only one decoder is enabled the tooltip adds no information,
+  // so we suppress it in that case.
+  const enabledDecoders = [
+    {
+      key: "acars",
+      label: "ACARS",
+      rate: messageRate.acars,
+      enabled: decoders.acars,
+    },
+    {
+      key: "vdlm2",
+      label: "VDLM2",
+      rate: messageRate.vdlm2,
+      enabled: decoders.vdlm,
+    },
+    {
+      key: "hfdl",
+      label: "HFDL",
+      rate: messageRate.hfdl,
+      enabled: decoders.hfdl,
+    },
+    {
+      key: "imsl",
+      label: "IMSL",
+      rate: messageRate.imsl,
+      enabled: decoders.imsl,
+    },
+    {
+      key: "irdm",
+      label: "IRDM",
+      rate: messageRate.irdm,
+      enabled: decoders.irdm,
+    },
+  ].filter((d) => d.enabled);
+
+  const showTooltip = enabledDecoders.length > 1;
+
+  return (
+    <div
+      className={`message-rate${showTooltip ? " message-rate--has-tooltip" : ""}`}
+    >
+      <output
+        className={`message-rate__value${total > 0 ? " message-rate__value--active" : ""}`}
+        aria-label={`Message rate: ${total} messages per minute`}
+        aria-live="polite"
+      >
+        {total} msg/min
+      </output>
+
+      {showTooltip && (
+        <div className="message-rate__tooltip" role="tooltip">
+          <div className="message-rate__tooltip-title">
+            Per Decoder (msg/min)
+          </div>
+          {enabledDecoders.map((d) => (
+            <div key={d.key} className="message-rate__tooltip-row">
+              <span className="message-rate__tooltip-label">{d.label}</span>
+              <span className="message-rate__tooltip-value">{d.rate}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
 /**
  * Navigation Component
@@ -191,6 +284,7 @@ export const Navigation = () => {
             </li>
 
             <li className="right_side">
+              <MessageRateWidget />
               <ThemeSwitcher />
               <span id="modal_text">
                 <button
