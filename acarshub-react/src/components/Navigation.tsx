@@ -107,12 +107,17 @@ const MessageRateWidget = () => {
         className={`message-rate__value${total > 0 ? " message-rate__value--active" : ""}`}
         aria-label={`Message rate: ${total} messages per minute`}
         aria-live="polite"
+        aria-describedby={showTooltip ? "message-rate-tooltip" : undefined}
       >
         {total} msg/min
       </output>
 
       {showTooltip && (
-        <div className="message-rate__tooltip" role="tooltip">
+        <div
+          id="message-rate-tooltip"
+          className="message-rate__tooltip"
+          role="tooltip"
+        >
           <div className="message-rate__tooltip-title">
             Per Decoder (msg/min)
           </div>

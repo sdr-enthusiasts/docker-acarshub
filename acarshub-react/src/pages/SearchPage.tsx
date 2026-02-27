@@ -413,7 +413,7 @@ export const SearchPage = () => {
   // All search values are normalised to upper-case because every string stored
   // in the database is upper-case; sending mixed-case terms would miss matches.
   const handleInputChange = (field: keyof CurrentSearch, value: string) => {
-    const normalized = value.toUpperCase();
+    const normalized = field === "freq" ? value : value.toUpperCase();
     const newParams = { ...searchParams, [field]: normalized };
     setSearchParams(newParams);
 
