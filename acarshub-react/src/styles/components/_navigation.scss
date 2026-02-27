@@ -148,7 +148,9 @@
 
   // -------------------------------------------------------------------------
   // Message Rate Widget
-  // Displays rolling 60-second msg/min rate in the nav bar (desktop only).
+  // Displays rolling 60-second msg/min rate in the nav bar.
+  // Shown on screens >= 375px (iPhone SE and up); hidden only on very narrow
+  // screens where even the compact text would overflow.
   // On hover/focus, a tooltip shows the per-decoder breakdown.
   // -------------------------------------------------------------------------
   .message-rate {
@@ -160,9 +162,10 @@
     cursor: default;
     user-select: none;
 
-    // Only render the widget on desktop — mobile nav is already tight
-    // and the status page covers this data on smaller screens.
-    @media (max-width: #{$breakpoint-md - 1px}) {
+    // Hide only on very narrow screens (< 375px); iPhone SE (375px) and
+    // wider can fit the compact "X msg/min" text in both the mobile and
+    // desktop nav bars.
+    @media (max-width: 374px) {
       display: none;
     }
   }
@@ -387,8 +390,14 @@
 .mobile_nav_container {
   display: flex;
   align-items: center;
-  gap: $spacing-md;
+  justify-content: space-between;
   padding: $spacing-sm $spacing-lg;
+}
+
+.mobile_nav_left {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
 }
 
 .mobile_nav_button {
@@ -484,6 +493,13 @@
 @media (max-width: #{$breakpoint-md - 1px}) {
   .show_when_small {
     display: block;
+  }
+
+  // Re-assert flex layout — .show_when_small { display: block } above has
+  // equal specificity and appears earlier, so without this override the
+  // flex layout on .mobile_nav_container would be clobbered by display:block.
+  .mobile_nav_container {
+    display: flex;
   }
 
   .hide_when_small {

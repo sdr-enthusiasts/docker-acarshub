@@ -193,58 +193,68 @@ export const Navigation = () => {
 
         {/* Mobile navigation container */}
         <div className="show_when_small mobile_nav_container">
-          {/* Mobile menu */}
-          <details className="small_nav" id="menu_details" ref={menuDetailsRef}>
-            <summary className="menu_non_link">Menu</summary>
+          {/* Left group: menu toggle + optional filters button */}
+          <div className="mobile_nav_left">
+            {/* Mobile menu */}
+            <details
+              className="small_nav"
+              id="menu_details"
+              ref={menuDetailsRef}
+            >
+              <summary className="menu_non_link">Menu</summary>
 
-            <NavLink to="/live-messages" onClick={handleMobileNavClick}>
-              Live Messages
-            </NavLink>
-            <br />
-            {adsbEnabled && (
-              <>
-                <NavLink to="/adsb" onClick={handleMobileNavClick}>
-                  Live Map
-                </NavLink>
-                <br />
-              </>
-            )}
-            <NavLink to="/search" onClick={handleMobileNavClick}>
-              Search Database
-            </NavLink>
-            <br />
-            <NavLink to="/alerts" onClick={handleMobileNavClick}>
-              Alerts
-              {unreadAlertCount > 0 && (
-                <span className="alert-count"> ({unreadAlertCount})</span>
+              <NavLink to="/live-messages" onClick={handleMobileNavClick}>
+                Live Messages
+              </NavLink>
+              <br />
+              {adsbEnabled && (
+                <>
+                  <NavLink to="/adsb" onClick={handleMobileNavClick}>
+                    Live Map
+                  </NavLink>
+                  <br />
+                </>
               )}
-            </NavLink>
-            <br />
-            <NavLink to="/status" onClick={handleMobileNavClick}>
-              Status
-              {systemHasError && <span className="error-indicator"> ⚠</span>}
-            </NavLink>
-            <br />
-            <button
-              type="button"
-              onClick={handleSettingsClick}
-              className="link-button"
-            >
-              Settings
-            </button>
-          </details>
+              <NavLink to="/search" onClick={handleMobileNavClick}>
+                Search Database
+              </NavLink>
+              <br />
+              <NavLink to="/alerts" onClick={handleMobileNavClick}>
+                Alerts
+                {unreadAlertCount > 0 && (
+                  <span className="alert-count"> ({unreadAlertCount})</span>
+                )}
+              </NavLink>
+              <br />
+              <NavLink to="/status" onClick={handleMobileNavClick}>
+                Status
+                {systemHasError && <span className="error-indicator"> ⚠</span>}
+              </NavLink>
+              <br />
+              <button
+                type="button"
+                onClick={handleSettingsClick}
+                className="link-button"
+              >
+                Settings
+              </button>
+            </details>
 
-          {/* Filters button (mobile only, Live Messages page only) */}
-          {isLiveMessagesPage && (
-            <button
-              type="button"
-              onClick={() => setFiltersOpen(!filtersOpen)}
-              className={`mobile_nav_button ${filtersOpen ? "active" : ""}`}
-              aria-expanded={filtersOpen}
-            >
-              Filters
-            </button>
-          )}
+            {/* Filters button (mobile only, Live Messages page only) */}
+            {isLiveMessagesPage && (
+              <button
+                type="button"
+                onClick={() => setFiltersOpen(!filtersOpen)}
+                className={`mobile_nav_button ${filtersOpen ? "active" : ""}`}
+                aria-expanded={filtersOpen}
+              >
+                Filters
+              </button>
+            )}
+          </div>
+
+          {/* Message rate widget — pinned to right edge of mobile nav */}
+          <MessageRateWidget />
         </div>
 
         {/* Desktop menu */}
