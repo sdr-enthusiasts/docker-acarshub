@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -240,7 +240,7 @@ describe("SearchPage", () => {
     it("renders the Search submit button", () => {
       renderSearchPage();
       expect(
-        screen.getByRole("button", { name: /search/i }),
+        screen.getByRole("button", { name: /^search$/i }),
       ).toBeInTheDocument();
     });
 
@@ -287,7 +287,7 @@ describe("SearchPage", () => {
       const flightInput = screen.getByLabelText(/^flight$/i);
       await user.type(flightInput, "UAL123");
 
-      const submitButton = screen.getByRole("button", { name: /search/i });
+      const submitButton = screen.getByRole("button", { name: /^search$/i });
       await user.click(submitButton);
 
       // The component calls (socket as any).emit("query_search", payload, "/main")
@@ -647,6 +647,269 @@ describe("SearchPage", () => {
         expect(screen.getByText(/found/i)).toBeInTheDocument();
         expect(screen.getByText("5")).toBeInTheDocument();
       });
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Collapsible form header
+  // -------------------------------------------------------------------------
+
+  // Helper: simulate the .app-content scroll event that triggers auto-collapse.
+  // In jsdom there is no layout engine, so we manually set scrollTop on a mock
+  // element and dispatch the scroll event to the window (the component uses
+  // document.querySelector(".app-content") which returns null in tests, so the
+  // scroll listener is not attached — we drive collapse purely via the state
+  // setter by firing a synthetic scroll on the element if it exists, or by
+  // directly triggering the React state path via act).
+  //
+  // Because document.querySelector(".app-content") returns null inside the
+  // MemoryRouter test wrapper (there is no App shell), the scroll listener is
+  // never attached. We therefore simulate collapse by wrapping the page in a
+  // container that carries the class and dispatching a real scroll event.
+  function renderSearchPageWithScrollContainer(initialPath = "/search") {
+    // The component calls document.querySelector(".app-content") to attach its
+    // scroll listener.  We render the SearchPage *inside* the app-content div
+    // so that:
+    //   1. querySelector finds the div and attaches the listener.
+    //   2. document.getElementById("search-form-body") finds the element since
+    //      it is part of the live document tree.
+    const appContent = document.createElement("div");
+    appContent.className = "app-content";
+    appContent.style.overflow = "auto";
+    appContent.style.height = "500px";
+    // jsdom does not implement element.scrollTo — mock it so expandForm does
+    // not throw when the expand button is clicked in tests.
+    appContent.scrollTo = vi.fn() as unknown as typeof appContent.scrollTo;
+    document.body.appendChild(appContent);
+
+    const result = render(
+      <MemoryRouter initialEntries={[initialPath]}>
+        <SearchPage />
+      </MemoryRouter>,
+      { container: appContent },
+    );
+
+    // Simulate scroll past the collapse threshold by stubbing scrollTop and
+    // dispatching a real scroll event so the component's listener fires.
+    const simulateScrollPast = (scrollTop = 200) => {
+      Object.defineProperty(appContent, "scrollTop", {
+        configurable: true,
+        get: () => scrollTop,
+      });
+      appContent.dispatchEvent(new Event("scroll", { bubbles: false }));
+    };
+
+    const simulateScrollToTop = () => {
+      Object.defineProperty(appContent, "scrollTop", {
+        configurable: true,
+        get: () => 0,
+      });
+      appContent.dispatchEvent(new Event("scroll", { bubbles: false }));
+    };
+
+    const cleanup = () => {
+      // unmount is called by the test before cleanup so the tree is already
+      // gone; just detach the host div from the body.
+      if (document.body.contains(appContent)) {
+        document.body.removeChild(appContent);
+      }
+    };
+
+    return {
+      ...result,
+      appContent,
+      simulateScrollPast,
+      simulateScrollToTop,
+      cleanup,
+    };
+  }
+
+  describe("collapsible form header", () => {
+    it("does NOT render a collapse button when the form is expanded", () => {
+      renderSearchPage();
+      // No collapse affordance should be present in the expanded state —
+      // collapse is scroll-driven only.
+      expect(
+        screen.queryByRole("button", { name: /collapse search form/i }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("form body is visible (aria-hidden=false) on initial render", () => {
+      renderSearchPage();
+      const formBody = document.getElementById("search-form-body");
+      expect(formBody).not.toBeNull();
+      expect(formBody).toHaveAttribute("aria-hidden", "false");
+    });
+
+    it("shows the expand button with aria-expanded=false after scroll-driven collapse", async () => {
+      const { simulateScrollPast, cleanup, unmount } =
+        renderSearchPageWithScrollContainer();
+
+      act(() => {
+        simulateScrollPast(200);
+      });
+
+      await waitFor(() => {
+        const expandButton = screen.getByRole("button", {
+          name: /expand search form/i,
+        });
+        expect(expandButton).toBeInTheDocument();
+        expect(expandButton).toHaveAttribute("aria-expanded", "false");
+        expect(expandButton).toHaveAttribute(
+          "aria-controls",
+          "search-form-body",
+        );
+      });
+
+      unmount();
+      cleanup();
+    });
+
+    it("form body is aria-hidden=true after scroll-driven collapse", async () => {
+      const { simulateScrollPast, cleanup, unmount } =
+        renderSearchPageWithScrollContainer();
+
+      act(() => {
+        simulateScrollPast(200);
+      });
+
+      await waitFor(() => {
+        const formBody = document.getElementById("search-form-body");
+        expect(formBody).toHaveAttribute("aria-hidden", "true");
+      });
+
+      unmount();
+      cleanup();
+    });
+
+    it("clicking the expand button sets aria-hidden=false on the form body", async () => {
+      const user = userEvent.setup();
+      const { simulateScrollPast, cleanup, unmount } =
+        renderSearchPageWithScrollContainer();
+
+      act(() => {
+        simulateScrollPast(200);
+      });
+
+      await waitFor(() => {
+        expect(
+          screen.getByRole("button", { name: /expand search form/i }),
+        ).toBeInTheDocument();
+      });
+
+      await user.click(
+        screen.getByRole("button", { name: /expand search form/i }),
+      );
+
+      await waitFor(() => {
+        const formBody = document.getElementById("search-form-body");
+        expect(formBody).toHaveAttribute("aria-hidden", "false");
+      });
+
+      unmount();
+      cleanup();
+    });
+
+    it("expand button disappears after clicking it (form is now open)", async () => {
+      const user = userEvent.setup();
+      const { simulateScrollPast, cleanup, unmount } =
+        renderSearchPageWithScrollContainer();
+
+      act(() => {
+        simulateScrollPast(200);
+      });
+
+      await waitFor(() => {
+        expect(
+          screen.getByRole("button", { name: /expand search form/i }),
+        ).toBeInTheDocument();
+      });
+
+      await user.click(
+        screen.getByRole("button", { name: /expand search form/i }),
+      );
+
+      await waitFor(() => {
+        expect(
+          screen.queryByRole("button", { name: /expand search form/i }),
+        ).not.toBeInTheDocument();
+      });
+
+      unmount();
+      cleanup();
+    });
+
+    it("shows the active search summary in the header when scroll-collapsed with an active search", async () => {
+      const user = userEvent.setup();
+      const { simulateScrollPast, cleanup, unmount } =
+        renderSearchPageWithScrollContainer();
+
+      // Type a value and submit to establish an activeSearch
+      const flightInput = screen.getByLabelText(/^flight$/i);
+      await user.type(flightInput, "UAL123");
+      await user.click(screen.getByRole("button", { name: /^search$/i }));
+
+      // Now scroll to collapse
+      act(() => {
+        simulateScrollPast(200);
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText(/Flight: UAL123/)).toBeInTheDocument();
+      });
+
+      unmount();
+      cleanup();
+    });
+
+    it("does not show the active search summary when the form is expanded", async () => {
+      const user = userEvent.setup();
+      renderSearchPage();
+
+      const flightInput = screen.getByLabelText(/^flight$/i);
+      await user.type(flightInput, "UAL123");
+      await user.click(screen.getByRole("button", { name: /^search$/i }));
+
+      // Form is still expanded — summary should not be visible
+      expect(screen.queryByText(/Flight: UAL123/)).not.toBeInTheDocument();
+    });
+
+    it("does not show the active search summary when scroll-collapsed but no active search", async () => {
+      const { simulateScrollPast, cleanup, unmount } =
+        renderSearchPageWithScrollContainer();
+
+      act(() => {
+        simulateScrollPast(200);
+      });
+
+      await waitFor(() => {
+        expect(
+          screen.getByRole("button", { name: /expand search form/i }),
+        ).toBeInTheDocument();
+      });
+
+      // No active search was submitted, so no summary text
+      expect(screen.queryByText(/Flight:/)).not.toBeInTheDocument();
+
+      unmount();
+      cleanup();
+    });
+
+    it("regression: form fields are aria-hidden when scroll-collapsed", async () => {
+      const { simulateScrollPast, cleanup, unmount } =
+        renderSearchPageWithScrollContainer();
+
+      act(() => {
+        simulateScrollPast(200);
+      });
+
+      await waitFor(() => {
+        const formBody = document.getElementById("search-form-body");
+        expect(formBody).toHaveAttribute("aria-hidden", "true");
+      });
+
+      unmount();
+      cleanup();
     });
   });
 

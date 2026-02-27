@@ -17,6 +17,7 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
+  IconChevronDown,
   IconChevronLeft,
   IconChevronRight,
   IconSearch,
@@ -34,6 +35,30 @@ const RESULTS_PER_PAGE = 50;
 const SEARCH_STATE_KEY = "acarshub_search_state";
 const NAVIGATION_FLAG_KEY = "acarshub_navigation_active";
 const MOBILE_BREAKPOINT = 768; // Match SCSS breakpoint
+
+/**
+ * Scroll distance (px) past which the search form auto-collapses.
+ * Scrolling back to ≤ this threshold will auto-expand it again.
+ */
+const SCROLL_COLLAPSE_THRESHOLD = 80;
+
+/**
+ * Human-readable labels for each CurrentSearch field.
+ * Used to build the active-search summary shown in the collapsed form header.
+ */
+const FIELD_LABELS: Record<keyof CurrentSearch, string> = {
+  flight: "Flight",
+  depa: "From",
+  dsta: "To",
+  freq: "Freq",
+  label: "Label",
+  msgno: "Msg#",
+  tail: "Tail",
+  icao: "ICAO",
+  msg_text: "Text",
+  station_id: "Station",
+  msg_type: "Type",
+};
 
 // Interface for persisted search state
 interface PersistedSearchState {
@@ -145,6 +170,11 @@ export const SearchPage = () => {
     persistedState.activeSearch || null,
   );
 
+  // Controls whether the search form is collapsed to just its header row.
+  // Auto-collapses when the user scrolls past SCROLL_COLLAPSE_THRESHOLD,
+  // auto-expands when they scroll back to the top.
+  const [isFormCollapsed, setIsFormCollapsed] = useState(false);
+
   // Debounce timer ref
   const searchDebounceTimer = useRef<ReturnType<typeof setTimeout> | null>(
     null,
@@ -184,9 +214,28 @@ export const SearchPage = () => {
    */
   const [scrollMargin, setScrollMargin] = useState(0);
 
-  // Acquire the outer scroll container once on mount.
+  // Acquire the outer scroll container once on mount and wire up the
+  // scroll-based auto-collapse listener.
+  //
+  // WHY: We attach the listener here (not in a separate effect) so we have a
+  // guaranteed reference to the element for both the virtualizer and the
+  // collapse logic — avoiding a second querySelector call.
   useEffect(() => {
-    appContentRef.current = document.querySelector<HTMLElement>(".app-content");
+    const scrollEl = document.querySelector<HTMLElement>(".app-content");
+    appContentRef.current = scrollEl;
+
+    if (!scrollEl) return;
+
+    const handleScroll = () => {
+      if (scrollEl.scrollTop > SCROLL_COLLAPSE_THRESHOLD) {
+        setIsFormCollapsed(true);
+      } else {
+        setIsFormCollapsed(false);
+      }
+    };
+
+    scrollEl.addEventListener("scroll", handleScroll, { passive: true });
+    return () => scrollEl.removeEventListener("scroll", handleScroll);
   }, []);
 
   // Register Socket.IO listener for search results
@@ -267,6 +316,31 @@ export const SearchPage = () => {
   // Check if all search fields are empty
   const isSearchEmpty = (params: CurrentSearch): boolean => {
     return Object.values(params).every((value) => value.trim() === "");
+  };
+
+  // Expand the search form and scroll back to the top of the page.
+  // Scrolling to top also causes the scroll listener to confirm the expanded
+  // state (scrollTop ≤ SCROLL_COLLAPSE_THRESHOLD), keeping both consistent.
+  const expandForm = () => {
+    setIsFormCollapsed(false);
+    const scrollEl =
+      appContentRef.current ??
+      document.querySelector<HTMLElement>(".app-content");
+    if (scrollEl) {
+      scrollEl.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
+  /**
+   * Build a compact summary of the currently active search terms for display
+   * in the collapsed form header. Returns an empty string if no terms are set.
+   */
+  const activeSearchSummary = (search: CurrentSearch | null): string => {
+    if (!search) return "";
+    return Object.entries(search)
+      .filter(([, v]) => v.trim() !== "")
+      .map(([k, v]) => `${FIELD_LABELS[k as keyof CurrentSearch]}: ${v}`)
+      .join(" · ");
   };
 
   // Execute search query.
@@ -536,168 +610,209 @@ export const SearchPage = () => {
 
       <div className="page__content">
         {/* Search Form */}
-        <form className="search-page__form" onSubmit={handleSubmit}>
-          <div className="search-page__form-grid">
-            {/* Flight */}
-            <div className="search-page__form-field">
-              <label htmlFor="search-flight">Flight</label>
-              <input
-                id="search-flight"
-                type="text"
-                value={searchParams.flight}
-                onChange={(e) => handleInputChange("flight", e.target.value)}
-                placeholder="e.g., UAL123"
-              />
-            </div>
-
-            {/* Tail */}
-            <div className="search-page__form-field">
-              <label htmlFor="search-tail">Tail Number</label>
-              <input
-                id="search-tail"
-                type="text"
-                value={searchParams.tail}
-                onChange={(e) => handleInputChange("tail", e.target.value)}
-                placeholder="e.g., N12345"
-              />
-            </div>
-
-            {/* ICAO */}
-            <div className="search-page__form-field">
-              <label htmlFor="search-icao">ICAO Hex</label>
-              <input
-                id="search-icao"
-                type="text"
-                value={searchParams.icao}
-                onChange={(e) => handleInputChange("icao", e.target.value)}
-                placeholder="e.g., A12345"
-              />
-            </div>
-
-            {/* Departure */}
-            <div className="search-page__form-field">
-              <label htmlFor="search-depa">Departure</label>
-              <input
-                id="search-depa"
-                type="text"
-                value={searchParams.depa}
-                onChange={(e) => handleInputChange("depa", e.target.value)}
-                placeholder="e.g., KJFK"
-              />
-            </div>
-
-            {/* Destination */}
-            <div className="search-page__form-field">
-              <label htmlFor="search-dsta">Destination</label>
-              <input
-                id="search-dsta"
-                type="text"
-                value={searchParams.dsta}
-                onChange={(e) => handleInputChange("dsta", e.target.value)}
-                placeholder="e.g., KLAX"
-              />
-            </div>
-
-            {/* Frequency */}
-            <div className="search-page__form-field">
-              <label htmlFor="search-freq">Frequency</label>
-              <input
-                id="search-freq"
-                type="text"
-                value={searchParams.freq}
-                onChange={(e) => handleInputChange("freq", e.target.value)}
-                placeholder="e.g., 131.550"
-              />
-            </div>
-
-            {/* Label */}
-            <div className="search-page__form-field">
-              <label htmlFor="search-label">Message Label</label>
-              <input
-                id="search-label"
-                type="text"
-                value={searchParams.label}
-                onChange={(e) => handleInputChange("label", e.target.value)}
-                placeholder="e.g., H1"
-              />
-            </div>
-
-            {/* Message Number */}
-            <div className="search-page__form-field">
-              <label htmlFor="search-msgno">Message Number</label>
-              <input
-                id="search-msgno"
-                type="text"
-                value={searchParams.msgno}
-                onChange={(e) => handleInputChange("msgno", e.target.value)}
-                placeholder="e.g., M01A"
-              />
-            </div>
-
-            {/* Station ID */}
-            <div className="search-page__form-field">
-              <label htmlFor="search-station">Station ID</label>
-              <input
-                id="search-station"
-                type="text"
-                value={searchParams.station_id}
-                onChange={(e) =>
-                  handleInputChange("station_id", e.target.value)
-                }
-                placeholder="e.g., KJFK"
-              />
-            </div>
-
-            {/* Decoder Type */}
-            <div className="search-page__form-field">
-              <label htmlFor="search-msg-type">Decoder Type</label>
-              <select
-                id="search-msg-type"
-                value={searchParams.msg_type}
-                onChange={(e) => handleInputChange("msg_type", e.target.value)}
+        <form
+          className={`search-page__form${isFormCollapsed ? " search-page__form--collapsed" : ""}`}
+          onSubmit={handleSubmit}
+        >
+          {/* Form header — only rendered when collapsed; provides the sticky
+              expand button so the user can reopen the form after scrolling. */}
+          {isFormCollapsed && (
+            <div className="search-page__form-header">
+              <div className="search-page__form-header-title">
+                <IconSearch />
+                <span>Search</span>
+                {activeSearch && !isSearchEmpty(activeSearch) && (
+                  <span className="search-page__form-active-summary">
+                    {activeSearchSummary(activeSearch)}
+                  </span>
+                )}
+              </div>
+              <button
+                type="button"
+                className="search-page__form-toggle"
+                onClick={expandForm}
+                aria-label="Expand search form"
+                aria-expanded={false}
+                aria-controls="search-form-body"
               >
-                <option value="">All</option>
-                <option value="ACARS">ACARS</option>
-                <option value="VDLM2">VDLM2</option>
-                <option value="HFDL">HFDL</option>
-                <option value="IMSL">IMSL</option>
-                <option value="IRDM">IRDM</option>
-              </select>
+                <IconChevronDown />
+              </button>
+            </div>
+          )}
+
+          {/* Form body — collapses when isFormCollapsed is true */}
+          <div
+            id="search-form-body"
+            className="search-page__form-body"
+            aria-hidden={isFormCollapsed}
+          >
+            <div className="search-page__form-grid">
+              {/* Flight */}
+              <div className="search-page__form-field">
+                <label htmlFor="search-flight">Flight</label>
+                <input
+                  id="search-flight"
+                  type="text"
+                  value={searchParams.flight}
+                  onChange={(e) => handleInputChange("flight", e.target.value)}
+                  placeholder="e.g., UAL123"
+                />
+              </div>
+
+              {/* Tail */}
+              <div className="search-page__form-field">
+                <label htmlFor="search-tail">Tail Number</label>
+                <input
+                  id="search-tail"
+                  type="text"
+                  value={searchParams.tail}
+                  onChange={(e) => handleInputChange("tail", e.target.value)}
+                  placeholder="e.g., N12345"
+                />
+              </div>
+
+              {/* ICAO */}
+              <div className="search-page__form-field">
+                <label htmlFor="search-icao">ICAO Hex</label>
+                <input
+                  id="search-icao"
+                  type="text"
+                  value={searchParams.icao}
+                  onChange={(e) => handleInputChange("icao", e.target.value)}
+                  placeholder="e.g., A12345"
+                />
+              </div>
+
+              {/* Departure */}
+              <div className="search-page__form-field">
+                <label htmlFor="search-depa">Departure</label>
+                <input
+                  id="search-depa"
+                  type="text"
+                  value={searchParams.depa}
+                  onChange={(e) => handleInputChange("depa", e.target.value)}
+                  placeholder="e.g., KJFK"
+                />
+              </div>
+
+              {/* Destination */}
+              <div className="search-page__form-field">
+                <label htmlFor="search-dsta">Destination</label>
+                <input
+                  id="search-dsta"
+                  type="text"
+                  value={searchParams.dsta}
+                  onChange={(e) => handleInputChange("dsta", e.target.value)}
+                  placeholder="e.g., KLAX"
+                />
+              </div>
+
+              {/* Frequency */}
+              <div className="search-page__form-field">
+                <label htmlFor="search-freq">Frequency</label>
+                <input
+                  id="search-freq"
+                  type="text"
+                  value={searchParams.freq}
+                  onChange={(e) => handleInputChange("freq", e.target.value)}
+                  placeholder="e.g., 131.550"
+                />
+              </div>
+
+              {/* Label */}
+              <div className="search-page__form-field">
+                <label htmlFor="search-label">Message Label</label>
+                <input
+                  id="search-label"
+                  type="text"
+                  value={searchParams.label}
+                  onChange={(e) => handleInputChange("label", e.target.value)}
+                  placeholder="e.g., H1"
+                />
+              </div>
+
+              {/* Message Number */}
+              <div className="search-page__form-field">
+                <label htmlFor="search-msgno">Message Number</label>
+                <input
+                  id="search-msgno"
+                  type="text"
+                  value={searchParams.msgno}
+                  onChange={(e) => handleInputChange("msgno", e.target.value)}
+                  placeholder="e.g., M01A"
+                />
+              </div>
+
+              {/* Station ID */}
+              <div className="search-page__form-field">
+                <label htmlFor="search-station">Station ID</label>
+                <input
+                  id="search-station"
+                  type="text"
+                  value={searchParams.station_id}
+                  onChange={(e) =>
+                    handleInputChange("station_id", e.target.value)
+                  }
+                  placeholder="e.g., KJFK"
+                />
+              </div>
+
+              {/* Decoder Type */}
+              <div className="search-page__form-field">
+                <label htmlFor="search-msg-type">Decoder Type</label>
+                <select
+                  id="search-msg-type"
+                  value={searchParams.msg_type}
+                  onChange={(e) =>
+                    handleInputChange("msg_type", e.target.value)
+                  }
+                >
+                  <option value="">All</option>
+                  <option value="ACARS">ACARS</option>
+                  <option value="VDLM2">VDLM2</option>
+                  <option value="HFDL">HFDL</option>
+                  <option value="IMSL">IMSL</option>
+                  <option value="IRDM">IRDM</option>
+                </select>
+              </div>
+
+              {/* Message Text - spans cols 2-3 on desktop, full width on mobile/tablet */}
+              <div className="search-page__form-field search-page__form-field--msg-text">
+                <label htmlFor="search-text">Message Text</label>
+                <input
+                  id="search-text"
+                  type="text"
+                  value={searchParams.msg_text}
+                  onChange={(e) =>
+                    handleInputChange("msg_text", e.target.value)
+                  }
+                  placeholder="Search message content..."
+                />
+              </div>
             </div>
 
-            {/* Message Text - spans cols 2-3 on desktop, full width on mobile/tablet */}
-            <div className="search-page__form-field search-page__form-field--msg-text">
-              <label htmlFor="search-text">Message Text</label>
-              <input
-                id="search-text"
-                type="text"
-                value={searchParams.msg_text}
-                onChange={(e) => handleInputChange("msg_text", e.target.value)}
-                placeholder="Search message content..."
-              />
+            {/* Form Actions */}
+            <div className="search-page__form-actions">
+              <button
+                type="submit"
+                className="button button--primary"
+                disabled={isSearching}
+              >
+                <IconSearch />
+                {isSearching ? "Searching..." : "Search"}
+              </button>
+              <button
+                type="button"
+                className="button button--secondary"
+                onClick={handleClear}
+                disabled={isSearching}
+              >
+                <IconXmark />
+                Clear
+              </button>
             </div>
           </div>
-
-          {/* Form Actions */}
-          <div className="search-page__form-actions">
-            <button
-              type="submit"
-              className="button button--primary"
-              disabled={isSearching}
-            >
-              <IconSearch />
-              {isSearching ? "Searching..." : "Search"}
-            </button>
-            <button
-              type="button"
-              className="button button--secondary"
-              onClick={handleClear}
-              disabled={isSearching}
-            >
-              <IconXmark />
-              Clear
-            </button>
-          </div>
+          {/* end search-page__form-body */}
         </form>
 
         {/* Results Info - Scroll target for mobile */}
