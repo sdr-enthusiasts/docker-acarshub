@@ -160,16 +160,10 @@ export const LiveMessagesPage = () => {
 
   /**
    * The total virtual height from the previous render, used by the scroll-
-   * anchor useLayoutEffect to calculate how much new content was added above
-   * the viewport and compensate scrollTop accordingly.
+   * anchor useLayoutEffect to calculate how much the virtual size changed and
+   * compensate scrollTop accordingly.
    */
   const prevTotalSize = useRef(0);
-
-  /**
-   * The key of the first item in filteredMessageGroups from the previous render.
-   * A change here (combined with the list growing) means items were prepended.
-   */
-  const prevFirstKey = useRef<string | null>(null);
 
   // Persist filter settings to localStorage
   useEffect(() => {
@@ -512,60 +506,75 @@ export const LiveMessagesPage = () => {
    */
   const ESTIMATED_ITEM_HEIGHT = 300;
 
+  /**
+   * Virtual padding above the first item (px). Matches $spacing-lg (24 px).
+   * Used both as the virtualizer paddingStart and as the scroll-anchor
+   * threshold — the user is considered "at the top" when scrollTop is inside
+   * this padding zone, so new messages are allowed to flow in naturally.
+   */
+  const MESSAGE_LIST_PADDING_START = 24;
+
   const rowVirtualizer = useVirtualizer({
     count: filteredMessageGroups.length,
     getScrollElement: () => scrollContainerRef.current,
     estimateSize: () => ESTIMATED_ITEM_HEIGHT,
     overscan: 3,
+    // Stable key per group so the height cache survives prepends. Without
+    // this the cache is index-based: after a prepend every item shifts to a
+    // higher index, the virtualizer reads the *old* item's cached height for
+    // the *new* index, and items overlap or show the wrong amount of space.
+    getItemKey: (index) => {
+      const group = filteredMessageGroups[index];
+      return group?.messages[0]?.uid ?? group?.identifiers.join("-") ?? index;
+    },
     // Breathing room between the sticky filter bar and the first card when
     // scrolled to the top. This is virtual space — it belongs to the
     // scrollable content, so it naturally scrolls away as the user moves
     // down. Once scrolled past 24 px the first card sits flush at the top
     // of the container with no wasted space. 24 px = $spacing-lg, matching
     // the gap between cards (.message-list__item padding-bottom).
-    paddingStart: 24,
+    paddingStart: MESSAGE_LIST_PADDING_START,
   });
 
   // ---------------------------------------------------------------------------
-  // Scroll anchoring — keep the user's viewport stable when new items are
-  // prepended at index 0 (newest-first sort means all new messages land there).
+  // Scroll anchoring — keep the user's viewport stable when the virtual list
+  // size changes (new items prepended, or existing items remeasured).
   //
   // Algorithm:
-  //   1. Before each render we hold prevTotalSize and prevFirstKey.
-  //   2. After the render, if the first item's key changed (a prepend happened)
-  //      AND the user has scrolled down (scrollTop > 0), we adjust scrollTop
-  //      by the delta between the new and old total virtual height.
-  //   3. useLayoutEffect runs synchronously after DOM mutations but before the
-  //      browser paints, so the correction is invisible to the user.
+  //   After every render, if the total virtual size changed AND the user has
+  //   scrolled past the padding zone (i.e., they are viewing real content, not
+  //   the top breathing-room gap), adjust scrollTop by the same delta so that
+  //   the content currently on screen doesn't appear to move.
   //
-  // Known imprecision: unmeasured new items use estimateSize. Once the
-  // virtualizer measures them the total size corrects again. We bias
-  // ESTIMATED_ITEM_HEIGHT high so that correction moves the view slightly
-  // downward rather than upward (downward drift is far less noticeable).
+  // Why compensate for remeasurements as well as prepends:
+  //   The old logic only fired when the *first key* changed (a prepend). But
+  //   after a prepend the new item is initially estimated at ESTIMATED_ITEM_HEIGHT
+  //   (300 px). When it is later measured at its actual height (e.g. 150 px),
+  //   the total size shrinks by 150 px. Without compensation the user drifts
+  //   150 px downward per message — compounding with every new arrival.
+  //   By reacting to *any* size delta we correct for both cases in one place.
+  //
+  // Why the threshold is MESSAGE_LIST_PADDING_START and not 0:
+  //   scrollTop > 0 but ≤ paddingStart means the user is still inside the
+  //   virtual breathing-room gap above the first card. Anchoring here would
+  //   jump them past the first message; they should instead see new messages
+  //   flow in naturally, just like when scrollTop = 0.
+  //
+  // useLayoutEffect runs synchronously after DOM mutations and before the
+  // browser paints, so corrections are invisible to the user.
   // ---------------------------------------------------------------------------
   useLayoutEffect(() => {
-    const currentFirstKey =
-      filteredMessageGroups[0]?.messages[0]?.uid ??
-      filteredMessageGroups[0]?.identifiers[0] ??
-      null;
-
     const newTotalSize = rowVirtualizer.getTotalSize();
     const scrollEl = scrollContainerRef.current;
 
-    if (
-      scrollEl &&
-      scrollEl.scrollTop > 0 &&
-      prevFirstKey.current !== null &&
-      prevFirstKey.current !== currentFirstKey &&
-      newTotalSize > prevTotalSize.current
-    ) {
-      // Items were prepended. Shift scrollTop by the same amount the virtual
-      // space grew so the user's viewport doesn't move.
-      scrollEl.scrollTop += newTotalSize - prevTotalSize.current;
+    if (scrollEl && scrollEl.scrollTop > MESSAGE_LIST_PADDING_START) {
+      const delta = newTotalSize - prevTotalSize.current;
+      if (delta !== 0) {
+        scrollEl.scrollTop = Math.max(0, scrollEl.scrollTop + delta);
+      }
     }
 
     prevTotalSize.current = newTotalSize;
-    prevFirstKey.current = currentFirstKey;
   });
 
   // Handler callbacks
