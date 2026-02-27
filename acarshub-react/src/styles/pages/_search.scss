@@ -263,6 +263,20 @@
     @include breakpoint(md) {
       flex-wrap: nowrap;
     }
+
+    // Give each button inline-flex layout so the SVG icon and label text
+    // are spaced apart rather than running flush against each other.
+    button {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--spacing-xs);
+
+      svg {
+        flex-shrink: 0;
+        height: 1em;
+        width: 1em;
+      }
+    }
   }
 
   // Results info
