@@ -333,13 +333,43 @@ test.describe("Search Page", () => {
     // Mobile Safari, moving the Clear button outside the viewport mid-click.
     // Instant scroll makes the position change atomic so the DOM is fully
     // settled before we proceed.
+    //
+    // After expanding, we must also wait for the 0.3s grid-template-rows CSS
+    // animation on __form-body to complete before interacting with Clear.
+    // During the animation on Mobile Safari:
+    //   1. The expanding form inputs intercept pointer events at the Clear
+    //      button's position (animation mid-frame layout overlaps).
+    //   2. Once the form reaches full height it pushes Clear below the
+    //      iPhone 12 effective viewport (390×664 with Safari chrome).
+    // Waiting until __form-body has grown to a real height confirms the
+    // animation is done, then we explicitly scroll Clear into view so it
+    // is inside the visible area before Playwright attempts the click.
     const expandBtn = page.getByRole("button", { name: /expand search form/i });
     if (await expandBtn.isVisible()) {
       await expandBtn.click();
+      // Poll until the form body has finished expanding.
+      await page.waitForFunction(
+        () => {
+          const body = document.querySelector(".search-page__form-body");
+          return body !== null && body.getBoundingClientRect().height > 100;
+        },
+        { timeout: 2000 },
+      );
     }
 
+    // Explicitly scroll Clear into view before clicking.  On Mobile Safari
+    // the virtual-keyboard viewport shift and the form expand can leave the
+    // button below the visible area even after the animation completes.
+    const clearBtn = page.getByRole("button", { name: /clear/i });
+    await clearBtn.evaluate((el) =>
+      (el as HTMLElement).scrollIntoView({
+        block: "nearest",
+        behavior: "instant",
+      }),
+    );
+
     // Click Clear
-    await page.getByRole("button", { name: /clear/i }).click();
+    await clearBtn.click();
 
     // Both fields should be empty
     await expect(page.getByLabel(/^flight$/i)).toHaveValue("");
