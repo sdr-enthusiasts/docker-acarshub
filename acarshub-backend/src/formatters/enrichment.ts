@@ -193,6 +193,9 @@ function enrichDecodedText(message: Record<string, unknown>): void {
             label: item.label,
             value: item.value,
           })),
+          ...(result.remaining.text
+            ? [{ label: "Remaining Text", value: result.remaining.text }]
+            : []),
         ],
       };
 
