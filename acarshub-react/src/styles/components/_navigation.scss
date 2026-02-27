@@ -171,7 +171,7 @@
     font-size: $font-size-sm;
     font-weight: $font-weight-medium;
     font-variant-numeric: tabular-nums;
-    color: var(--color-subtext0);
+    color: var(--color-warning);
     white-space: nowrap;
     transition: color $transition-fast;
 
@@ -179,9 +179,9 @@
       transition: none;
     }
 
-    // Active (non-zero) rate gets a more prominent colour
+    // Active (non-zero) rate uses the standard nav text colour
     &--active {
-      color: var(--color-success);
+      color: var(--color-text);
     }
   }
 
@@ -252,10 +252,6 @@
     &:hover .message-rate__tooltip,
     &:focus-within .message-rate__tooltip {
       display: block;
-    }
-
-    &:hover .message-rate__value {
-      color: var(--color-text);
     }
   }
 
