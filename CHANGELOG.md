@@ -1,5 +1,29 @@
 # ACARS Hub Change Log
 
+## ACARS Hub v4.1.4
+
+### v4.1.4 Performance
+
+- Live Messages: The message list is now rendered as a virtual windowed list using `@tanstack/react-virtual`. Only the ~7 message cards visible in the viewport are mounted in the DOM at any time, down from ~90 fully-mounted trees previously. On busy stations this eliminates the UI lag that accumulated as the message list grew. Theme switching, which previously had to cascade CSS variable changes through every mounted card, is now instant.
+- Alerts: The alert message list (both live and historical modes) is now also virtualised, using the same architecture as Live Messages.
+- Search: Search results are now rendered as a virtual list. The search form itself remains fully scrollable on all screen sizes.
+
+### v4.1.4 New
+
+- Message rate widget: A rolling messages-per-minute counter is now displayed in the navigation bar. On desktop, hovering or focusing the widget expands a tooltip showing the rate broken down by decoder type (ACARS, HFDL, VDL-M2, etc.). On mobile devices with a screen width of 375 px or wider the total rate is shown directly in the nav bar.
+- Status page: A "Rolling Rate" row has been added to the Message Statistics card for each enabled decoder, showing the same rolling 60-second rate as the nav bar widget.
+- Search: The search form now auto-collapses when you scroll more than 80 px into the results. A sticky header pins to the top of the viewport while collapsed, showing a summary of the active search criteria and a button to expand the form again. Clicking the expand button scrolls back to the top and reopens the form.
+- Search: All text search inputs are now automatically normalised to uppercase as you type, matching the way messages are stored in the database and eliminating missed results caused by case differences.
+- Messages: Any portion of a message that the decoder recognised but could not fully decode is now shown as "Remaining Text" in the message detail view, rather than being silently discarded [(1)](#v414-n1)
+
+### v4.1.4 Improvements
+
+- Navigation: The mobile and desktop navigation bars are now conditionally rendered — only the layout appropriate for the current screen size is mounted. Previously both trees were always present in the DOM with CSS toggling visibility, which meant React was maintaining two full navigation trees, their event listeners, and active-link tracking simultaneously.
+
+### v4.1.4 Notes
+
+1. <a id="v414-n1"></a>Credit to [@makrsmark](https://github.com/makrsmark) for the remaining text feature in PR [#1637](https://github.com/sdr-enthusiasts/docker-acarshub/pull/1637).
+
 ## ACARS Hub v4.1.3
 
 ### v4.1.3 Bug Fixes
