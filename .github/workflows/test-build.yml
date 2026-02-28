@@ -6,35 +6,46 @@ on:
     types: [opened, synchronize, reopened]
   workflow_dispatch:
 
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
-
 jobs:
-  deploy:
-    name: Deploy
-    uses: sdr-enthusiasts/common-github-workflows/.github/workflows/sdre.yml@main
-    with:
-      push_enabled: false
-      push_destinations: ghcr.io
-      ghcr_repo_owner: ${{ github.repository_owner }}
-      ghcr_repo: ${{ github.repository }}
-      build_latest: true
-      build_baseimage_test: false
-      platform_linux_arm32v7_enabled: false
-    secrets:
-      ghcr_token: ${{ secrets.GITHUB_TOKEN }}
+  build:
+    name: Build Docker Image (${{ matrix.platform }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-latest
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker Image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: ${{ matrix.platform }}
+          push: false
+          outputs: type=cacheonly
 
   test-build-summary:
     name: Test Build Summary
-    needs: deploy
+    needs: build
     runs-on: ubuntu-latest
     if: always()
     steps:
-      - name: Check deploy status
+      - name: Check build status
         run: |
-          if [ "${{ needs.deploy.result }}" != "success" ]; then
-            echo "Deploy job failed or was cancelled"
+          if [ "${{ needs.build.result }}" != "success" ]; then
+            echo "Build job failed or was cancelled"
             exit 1
           fi
-          echo "All deploy jobs completed successfully"
+          echo "All build jobs completed successfully"

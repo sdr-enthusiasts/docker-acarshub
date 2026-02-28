@@ -207,10 +207,13 @@ test.describe("Search Page", () => {
     const emitted = await emitSearchResults(page, RESULTS_TWO);
     expect(emitted).toBe(true);
 
-    // "Search" button returns once results arrive
-    await expect(page.getByRole("button", { name: /^search$/i })).toBeVisible();
-
-    // Results section is now visible
+    // Results section is now visible — this is the correct signal that the
+    // search completed and isSearching returned to false.  The form collapses
+    // when results arrive so the Search button is hidden; asserting the
+    // results section instead of the button works regardless of form state.
+    await expect(page.locator(".search-page__results-info")).toContainText(
+      "Found",
+    );
     await expect(page.locator(".search-page__results")).toBeVisible();
   });
 
@@ -257,10 +260,10 @@ test.describe("Search Page", () => {
     // E2E build required for socket injection
     expect(emitted).toBe(true);
 
-    // Loading state should clear
-    await expect(page.getByRole("button", { name: /^search$/i })).toBeVisible();
-
-    // Results count should be shown
+    // Results count should be shown — wait for this first since on mobile the
+    // submit handler scrolls to the results section, which auto-collapses the
+    // form and hides the Search button.  Asserting results-info is the correct
+    // signal that loading cleared and results arrived regardless of form state.
     await expect(page.locator(".search-page__results-info")).toContainText(
       "Found",
     );
@@ -289,8 +292,9 @@ test.describe("Search Page", () => {
     const emitted = await emitSearchResults(page, RESULTS_EMPTY);
     expect(emitted).toBe(true);
 
-    // Loading clears
-    await expect(page.getByRole("button", { name: /^search$/i })).toBeVisible();
+    // Loading clears — the form collapses when results arrive so the Search
+    // button is hidden; check the empty state instead which is always visible.
+    await expect(page.locator(".search-page__empty")).toBeVisible();
 
     // No result cards
     await expect(page.locator(".search-page__result-card")).not.toBeVisible();
@@ -324,8 +328,35 @@ test.describe("Search Page", () => {
     // Verify results are showing before clearing
     await expect(page.locator(".search-page__result-card")).toHaveCount(2);
 
+    // The submit handler collapses the form immediately so results get the
+    // full viewport.  If the expand chevron is visible, click it to re-open
+    // the form before interacting with Clear.
+    //
+    // We wait for the form body to reach a real height before proceeding so
+    // the click target is fully laid out (the 0.3s grid-template-rows
+    // transition may still run on browsers where reducedMotion is not
+    // emulated; the poll is a no-op when the transition is instant).
+    //
+    // On mobile the form actions (Search / Clear) are rendered at the TOP of
+    // the expanded form so they are always within the viewport without
+    // requiring any scroll — this is how we avoid the "element is outside of
+    // the viewport" failure that plagued earlier Mobile Safari runs.
+    const expandBtn = page.getByRole("button", { name: /expand search form/i });
+    if (await expandBtn.isVisible()) {
+      await expandBtn.click();
+      await page.waitForFunction(
+        () => {
+          const body = document.querySelector(".search-page__form-body");
+          return body !== null && body.getBoundingClientRect().height > 100;
+        },
+        { timeout: 2000 },
+      );
+    }
+
+    const clearBtn = page.getByRole("button", { name: /clear/i });
+
     // Click Clear
-    await page.getByRole("button", { name: /clear/i }).click();
+    await clearBtn.click();
 
     // Both fields should be empty
     await expect(page.getByLabel(/^flight$/i)).toHaveValue("");

@@ -25,17 +25,165 @@
   // Search form
   &__form {
     margin-bottom: var(--spacing-xl);
-    padding: var(--spacing-md);
+    padding: var(--spacing-sm) var(--spacing-md) var(--spacing-md);
     background: var(--color-surface0);
     border-radius: var(--border-radius-lg);
     border: 1px solid var(--color-surface2);
+    transition:
+      border-radius var(--transition-normal),
+      box-shadow var(--transition-normal);
+
+    // Collapsed state — stick to top of .app-content so the form header
+    // remains reachable after the user has scrolled down past the form.
+    // position:sticky works here because .page uses overflow:clip (not
+    // overflow:hidden), which does not create a scroll-isolation boundary.
+    &--collapsed {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      margin-bottom: var(--spacing-md);
+      border-radius: var(--border-radius-md);
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.18);
+    }
+  }
+
+  // Form header — only rendered when the form is collapsed; provides the
+  // sticky expand button so the user can reopen the form after scrolling.
+  // Since the body is always hidden when the header is shown, no bottom
+  // margin is needed.
+  &__form-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacing-sm);
+    margin-bottom: 0;
+  }
+
+  &__form-header-title {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    color: var(--color-text);
+    font-size: var(--font-size-md);
+    font-weight: 600;
+    min-width: 0; // allow shrinking so the summary can truncate
+
+    svg {
+      flex-shrink: 0;
+      height: 1em;
+      color: var(--color-blue);
+    }
+  }
+
+  // Brief summary of active search terms shown in the header when collapsed
+  &__form-active-summary {
+    color: var(--color-subtext1);
+    font-size: var(--font-size-sm);
+    font-weight: 400;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+
+    // Separator between "Search" label and the summary text
+    &::before {
+      content: "—";
+      margin-right: var(--spacing-xs);
+      color: var(--color-overlay0);
+    }
+  }
+
+  // Chevron toggle button
+  &__form-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    min-width: 44px;
+    min-height: 44px;
+    background: none;
+    border: 1px solid transparent;
+    border-radius: var(--border-radius-md);
+    color: var(--color-subtext1);
+    cursor: pointer;
+    transition:
+      background-color var(--transition-normal),
+      border-color var(--transition-normal),
+      color var(--transition-normal);
+
+    svg {
+      height: 1em;
+    }
+
+    &:hover {
+      background: var(--color-surface1);
+      border-color: var(--color-surface2);
+      color: var(--color-text);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--color-blue);
+      outline-offset: 2px;
+    }
+  }
+
+  // Form body — the grid container that drives the collapse animation.
+  //
+  // Uses the grid-template-rows: 1fr → 0fr technique so the height
+  // animates proportionally to the actual content size. Unlike max-height,
+  // there is no "dead zone" where the animation has no visible effect;
+  // the compression begins immediately and finishes exactly when the
+  // opacity reaches zero — a true single-stage transition.
+  //
+  // Structure:
+  //   __form-body        — display:grid, animates grid-template-rows + opacity
+  //   __form-body-inner  — single grid item, overflow:hidden + min-height:0
+  &__form-body {
+    display: grid;
+    grid-template-rows: 1fr;
+    opacity: 1;
+    visibility: visible;
+    transition:
+      grid-template-rows 0.3s ease,
+      opacity 0.3s ease;
+
+    .search-page__form--collapsed & {
+      grid-template-rows: 0fr;
+      opacity: 0;
+      visibility: hidden;
+      transition:
+        grid-template-rows 0.3s ease,
+        opacity 0.3s ease,
+        visibility 0s 0.3s;
+    }
+  }
+
+  // Single grid item — must have overflow:hidden so content clips as the
+  // row height compresses, and min-height:0 so the grid item can actually
+  // shrink below its natural height.
+  // flex column so CSS `order` can reposition __form-actions below __form-grid
+  // on tablet/desktop while DOM order keeps actions first for mobile (where
+  // the expanded form is taller than the viewport and buttons must be at top).
+  &__form-body-inner {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-height: 0;
   }
 
   &__form-grid {
     display: grid;
     grid-template-columns: 1fr;
     gap: var(--spacing-sm);
-    margin-bottom: var(--spacing-md);
+    // Mobile: grid sits below the actions row; no extra bottom margin needed
+    // here because __form-actions already has margin-bottom above.
+    // Tablet+: grid is visually first (order:0 default); keep bottom margin
+    // so there is breathing room before the actions row.
+    margin-bottom: 0;
+
+    @include breakpoint(md) {
+      margin-bottom: var(--spacing-md);
+    }
 
     // Tablet: 2 columns
     @include breakpoint(md) {
@@ -124,9 +272,32 @@
     display: flex;
     gap: var(--spacing-sm);
     flex-wrap: wrap;
+    // Mobile (default): actions appear first in the form — no margin-top
+    // needed because they sit above the field grid.
+    margin-bottom: var(--spacing-md);
 
+    // Tablet+: push actions to the bottom of the form by giving them a higher
+    // order than the grid (which defaults to order:0).  Also restore the
+    // margin so there is space between the last field row and the buttons.
     @include breakpoint(md) {
+      order: 1;
       flex-wrap: nowrap;
+      margin-bottom: 0;
+      margin-top: var(--spacing-md);
+    }
+
+    // Give each button inline-flex layout so the SVG icon and label text
+    // are spaced apart rather than running flush against each other.
+    button {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--spacing-xs);
+
+      svg {
+        flex-shrink: 0;
+        height: 1em;
+        width: 1em;
+      }
     }
   }
 
@@ -231,28 +402,35 @@
     font-weight: 600;
   }
 
-  // Results container
+  // Results container — position:relative hosts the absolutely-positioned
+  // virtual items. Height is set as an inline style by the virtualizer
+  // (rowVirtualizer.getTotalSize()px). Individual items are translated via
+  // transform: translateY(...) so no flex/gap layout is needed here.
   &__results {
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-xs);
-
-    @include breakpoint-max(md) {
-      gap: var(--spacing-sm);
-    }
+    position: relative;
+    width: 100%;
   }
 
-  // Individual result card wrapper (matches .message-group styling from Live Messages)
+  // Individual result card — provides the full card-container visual styling
+  // (matches .message-group's surface0 background + surface2 border) so that
+  // a bare MessageCard looks consistent with the Live Messages and Alerts
+  // pages. margin-bottom supplies the gap between consecutive virtual items.
   &__result-card {
     background-color: var(--color-surface0);
     border: 1px solid var(--color-surface2);
     border-radius: var(--border-radius-lg);
     padding: var(--spacing-md);
     overflow: hidden;
-    transition: all var(--transition-normal);
+    margin-bottom: var(--spacing-lg);
+    transition: border-color var(--transition-normal);
 
     &:hover {
       border-color: var(--color-overlay0);
+    }
+
+    // Reduced motion
+    @media (prefers-reduced-motion: reduce) {
+      transition: none;
     }
   }
 
@@ -279,6 +457,9 @@
 
   // Reduced motion support
   @media (prefers-reduced-motion: reduce) {
+    &__form,
+    &__form-body,
+    &__form-toggle,
     &__form-field input,
     &__pagination-button {
       transition: none;

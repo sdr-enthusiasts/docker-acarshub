@@ -1,5 +1,45 @@
 # ACARS Hub Change Log
 
+## ACARS Hub v4.1.4
+
+### v4.1.4 Bug Fixes
+
+- Database: IMSL frequency distribution on the Status page was permanently empty. `normalizeMessageType("IMSL")` returns `"IMS-L"` (matching Python's DB storage format), but `updateFrequencies()` in `helpers.ts` only had `"IMSL"` as a lookup key — not `"IMS-L"`. Every IMSL message silently fell through to the unknown-type warn branch without writing to `freqs_imsl`. Fixed by adding `"IMS-L": freqsImsl` to the map, mirroring the existing `"VDL-M2"` / `"VDLM2"` dual-entry pattern. Regression test added that fails without the fix.
+- Navigation: The "ACARS Hub" text next to the logo image is now hidden between 768 px and 850 px viewport widths, where the number of nav bar elements would otherwise cause it to word-wrap. The image logo alone identifies the app at this range; the text reappears at 851 px and above.
+- Status page: The rolling messages-per-minute rate was showing a coarse per-minute counter (reset at each minute boundary) instead of the rolling 60-second rate, and the value only refreshed on the 10-second `request_status` poll rather than the 5-second `message_rate` emit. Fixed by reading `getRollingRates()` for the initial `system_status` response, emitting `message_rate` alongside `system_status` on `request_status`, and having the Status page use the store's live `messageRate` value (updated every 5 seconds) as its primary source for the Rate (1 min) display.
+- Database: Running several migrations in sequence triggered multiple VACUUM stalls. Consolidated VACUUM and ANALYZE so they run exactly once at the end of `runMigrations()`, only when at least one migration step executed or the FTS startup repair rebuilt the virtual table. ANALYZE now runs after VACUUM so the query planner sees the final compacted page layout.
+- Live Map: Collapsing the aircraft-list sidebar at tablet viewport widths (768 px–1023 px) left the sidebar at ~280 px instead of the expected 40 px collapsed strip. A `min-width: 280px` rule applied to the sidebar in that breakpoint range was overriding the JS-driven `--map-sidebar-width: 40px` CSS custom property. Fixed by adding a `&--collapsed` override inside the tablet breakpoint block that resets `min-width` to `0` and `max-width` to `none`, allowing the CSS variable to take full effect.
+- Status page: Value labels on the Alert Terms and Frequency Distribution horizontal bar charts no longer overlap the row (Y-axis) labels when a bar represents a very small count. Labels now use dynamic positioning: bars whose value is less than 15% of the axis maximum place their label outside and to the right of the bar tip (using the theme text colour, no pill background); taller bars continue to place the label inside the bar at its right end (dark text on the coloured pill). This preserves the original intent of keeping labels for large-value bars inside the chart boundary while eliminating the overlap for small-value bars.
+
+### v4.1.4 Performance
+
+- Statistics: The Stats page time-series graphs (Reception Over Time) no longer query the database on every user request or period change. The backend now warms all eight time-period cache entries in memory at startup and refreshes each on a wall-clock-aligned schedule (every 1 minute for the 1 hr/6 hr/12 hr windows, scaling up to every 12 hours for the 1-year window). Refreshed results are broadcast to all connected clients automatically — no client request is needed. The frontend receives these pushes through the global `useSocketIO` handler and stores all eight period results in a Zustand in-memory cache; switching between time periods on the Stats page is now instant with no loading delay once the initial warm-up response has arrived (within one round-trip of connecting).
+
+- Live Messages: The message list is now rendered as a virtual windowed list using `@tanstack/react-virtual`. Only the ~7 message cards visible in the viewport are mounted in the DOM at any time, down from ~90 fully-mounted trees previously. On busy stations this eliminates the UI lag that accumulated as the message list grew. Theme switching, which previously had to cascade CSS variable changes through every mounted card, is now instant.
+- Alerts: The alert message list (both live and historical modes) is now also virtualised, using the same architecture as Live Messages.
+- Search: Search results are now rendered as a virtual list. The search form itself remains fully scrollable on all screen sizes.
+
+### v4.1.4 New
+
+- Database: Migration 12 — the `timeseries_stats` table has been rebuilt to remove three dead-weight columns (`id`, `resolution`, `created_at`) and replace them with `timestamp INTEGER PRIMARY KEY`. `resolution` was a non-nullable constant (`'1min'`) on every row; `id` is superseded by the timestamp rowid alias; `created_at` was set on insert and never read. The new schema saves ~20 bytes per row with zero index overhead beyond the table B-tree itself.
+- Docker: The frontend now shows a "Database migration in progress" banner while the backend applies SQLite migrations at startup. The HTTP and Socket.IO servers start before migrations begin; clients that connect during the migration window receive `migration_status { running: true }` and are held in a pending queue until all initialisation is complete, then receive the full connect sequence.
+- Message rate widget: A rolling messages-per-minute counter is now displayed in the navigation bar. On desktop, hovering or focusing the widget expands a tooltip showing the rate broken down by decoder type (ACARS, HFDL, VDL-M2, etc.). On mobile devices with a screen width of 375 px or wider the total rate is shown directly in the nav bar.
+- Status page: A "Rolling Rate" row has been added to the Message Statistics card for each enabled decoder, showing the same rolling 60-second rate as the nav bar widget.
+- Search: The search form now auto-collapses when you scroll more than 80 px into the results. A sticky header pins to the top of the viewport while collapsed, showing a summary of the active search criteria and a button to expand the form again. Clicking the expand button scrolls back to the top and reopens the form.
+- Search: All text search inputs are now automatically normalised to uppercase as you type, matching the way messages are stored in the database and eliminating missed results caused by case differences.
+- Messages: Any portion of a message that the decoder recognised but could not fully decode is now shown as "Remaining Text" in the message detail view, rather than being silently discarded [(1)](#v414-n1)
+- Messages: Bump `acars-decoder` version to 1.8.8
+- Label the y axis on Reception over time graphs with the message count per time slot.
+
+### v4.1.4 Improvements
+
+- Navigation: The mobile and desktop navigation bars are now conditionally rendered — only the layout appropriate for the current screen size is mounted. Previously both trees were always present in the DOM with CSS toggling visibility, which meant React was maintaining two full navigation trees, their event listeners, and active-link tracking simultaneously.
+
+### v4.1.4 Notes
+
+1. <a id="v414-n1"></a>Credit to [@makrsmark](https://github.com/makrsmark) for the remaining text feature in PR [#1637](https://github.com/sdr-enthusiasts/docker-acarshub/pull/1637).
+2. <a id="v414-n2"></a>Credit to [@makrsmark](https://github.com/makrsmark) for updating `acars-decoder` to 1.8.8 in PR [#1639](https://github.com/sdr-enthusiasts/docker-acarshub/pull/1639)
+
 ## ACARS Hub v4.1.3
 
 ### v4.1.3 Bug Fixes

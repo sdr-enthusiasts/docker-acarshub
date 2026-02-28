@@ -293,54 +293,36 @@ export const ignoreAlertTerms = sqliteTable("ignore_alert_terms", {
  * Time-series statistics table for storing historical message rate data
  *
  * Replaces RRD (Round Robin Database) with SQLite for simpler management.
- * Stores message counts at multiple resolutions:
- * - 1min: 1-minute resolution (25 hours of data)
- * - 5min: 5-minute resolution (1 month of data)
- * - 1hour: 1-hour resolution (6 months of data)
- * - 6hour: 6-hour resolution (3 years of data)
+ * All data is stored at 1-minute resolution — the original multi-resolution
+ * design (1min / 5min / 1hour / 6hour) was abandoned when the RRD importer
+ * was written to expand all coarser archives into 1-minute buckets before
+ * inserting. The stats-writer likewise only ever writes 1-minute rows.
  *
- * Data sources match RRD structure:
+ * Migration 12 removed the vestigial `id` and `resolution` columns and
+ * promoted `timestamp` to INTEGER PRIMARY KEY. In SQLite an INTEGER PRIMARY
+ * KEY is the rowid alias — the most storage-efficient key possible, with no
+ * separate index B-tree. This also dropped:
+ *   - idx_timeseries_resolution  (was never used by any query)
+ *   - idx_timeseries_timestamp_resolution  (superseded by the PK B-tree)
+ *
+ * Data sources:
  * - ACARS, VDLM, HFDL, IMSL, IRDM (per-decoder counts)
  * - TOTAL (sum of all decoders)
  * - ERROR (error count)
  *
- * Indexes:
- * - timestamp + resolution: UNIQUE — enforces one data point per slot per resolution
- * - resolution: For filtering by resolution
- *
- * The unique constraint on (timestamp, resolution) is applied by migration 11.
- * Inserts use onConflictDoNothing() so re-importing the same RRD data is a
+ * Inserts use onConflictDoNothing() so re-importing the same data is a
  * safe no-op rather than a duplication.
  */
-export const timeseriesStats = sqliteTable(
-  "timeseries_stats",
-  {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    timestamp: integer("timestamp").notNull(), // Unix timestamp
-    resolution: text("resolution", {
-      enum: ["1min", "5min", "1hour", "6hour"],
-    }).notNull(),
-    acarsCount: integer("acars_count").notNull().default(0),
-    vdlmCount: integer("vdlm_count").notNull().default(0),
-    hfdlCount: integer("hfdl_count").notNull().default(0),
-    imslCount: integer("imsl_count").notNull().default(0),
-    irdmCount: integer("irdm_count").notNull().default(0),
-    totalCount: integer("total_count").notNull().default(0),
-    errorCount: integer("error_count").notNull().default(0),
-    createdAt: integer("created_at")
-      .notNull()
-      .$defaultFn(() => Date.now()),
-  },
-  (table) => ({
-    // UNIQUE: enforces one data point per (timestamp, resolution) slot.
-    // Migration 11 drops the old non-unique index and creates this unique one
-    // after deduplicating any existing rows.
-    timestampResolutionIdx: uniqueIndex(
-      "idx_timeseries_timestamp_resolution",
-    ).on(table.timestamp, table.resolution),
-    resolutionIdx: index("idx_timeseries_resolution").on(table.resolution),
-  }),
-);
+export const timeseriesStats = sqliteTable("timeseries_stats", {
+  timestamp: integer("timestamp").primaryKey(), // Unix timestamp (seconds), unique PK
+  acarsCount: integer("acars_count").notNull().default(0),
+  vdlmCount: integer("vdlm_count").notNull().default(0),
+  hfdlCount: integer("hfdl_count").notNull().default(0),
+  imslCount: integer("imsl_count").notNull().default(0),
+  irdmCount: integer("irdm_count").notNull().default(0),
+  totalCount: integer("total_count").notNull().default(0),
+  errorCount: integer("error_count").notNull().default(0),
+});
 
 // ============================================================================
 // RRD Import Registry

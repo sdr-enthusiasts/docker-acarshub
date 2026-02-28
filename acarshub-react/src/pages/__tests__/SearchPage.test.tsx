@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -25,6 +25,47 @@ import { SearchPage } from "../SearchPage";
 // ---------------------------------------------------------------------------
 // Mocks
 // ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// @tanstack/react-virtual mock
+//
+// jsdom has no layout engine — all elements report zero clientHeight and
+// getBoundingClientRect() returns zeros. The virtualizer therefore thinks no
+// items are in the viewport and renders nothing, which breaks every test that
+// expects message cards to be present.
+//
+// This mock replaces useVirtualizer with a simple implementation that always
+// reports every item as visible. The scrollMargin option is forwarded on the
+// returned options object so that SearchPage's transform calculation
+// (virtualRow.start - rowVirtualizer.options.scrollMargin) resolves to 0 in
+// tests and items are positioned at translateY(0).
+// ---------------------------------------------------------------------------
+vi.mock("@tanstack/react-virtual", () => ({
+  useVirtualizer: (options: {
+    count: number;
+    estimateSize: () => number;
+    getScrollElement: () => Element | null;
+    overscan?: number;
+    scrollMargin?: number;
+  }) => {
+    const estimatedSize = options.estimateSize();
+    const margin = options.scrollMargin ?? 0;
+    return {
+      getVirtualItems: () =>
+        Array.from({ length: options.count }, (_, i) => ({
+          index: i,
+          key: i,
+          start: margin + i * estimatedSize,
+          size: estimatedSize,
+          lane: 0,
+          end: margin + (i + 1) * estimatedSize,
+        })),
+      getTotalSize: () => options.count * estimatedSize,
+      measureElement: () => undefined,
+      options: { scrollMargin: margin },
+    };
+  },
+}));
 
 // We need to capture the socket event handler so tests can fire results back
 // SearchHtmlMsg = { msghtml: AcarsMsg[]; query_time: number; num_results: number }
@@ -199,7 +240,7 @@ describe("SearchPage", () => {
     it("renders the Search submit button", () => {
       renderSearchPage();
       expect(
-        screen.getByRole("button", { name: /search/i }),
+        screen.getByRole("button", { name: /^search$/i }),
       ).toBeInTheDocument();
     });
 
@@ -239,6 +280,121 @@ describe("SearchPage", () => {
       expect(flightInput).toHaveValue("UAL123");
     });
 
+    // -----------------------------------------------------------------------
+    // Uppercase normalisation
+    // All text stored in the database is upper-case.  Every text input must
+    // normalise its value to upper-case so that search terms match the DB.
+    // -----------------------------------------------------------------------
+
+    it("regression: flight input normalises lowercase to uppercase", async () => {
+      const user = userEvent.setup();
+      renderSearchPage();
+
+      const input = screen.getByLabelText(/^flight$/i);
+      await user.type(input, "ual123");
+      expect(input).toHaveValue("UAL123");
+    });
+
+    it("regression: tail input normalises to uppercase", async () => {
+      const user = userEvent.setup();
+      renderSearchPage();
+
+      const input = screen.getByLabelText(/tail number/i);
+      await user.type(input, "n12345");
+      expect(input).toHaveValue("N12345");
+    });
+
+    it("regression: ICAO hex input normalises to uppercase", async () => {
+      const user = userEvent.setup();
+      renderSearchPage();
+
+      const input = screen.getByLabelText(/icao hex/i);
+      await user.type(input, "a1b2c3");
+      expect(input).toHaveValue("A1B2C3");
+    });
+
+    it("regression: departure input normalises to uppercase", async () => {
+      const user = userEvent.setup();
+      renderSearchPage();
+
+      const input = screen.getByLabelText(/departure/i);
+      await user.type(input, "kjfk");
+      expect(input).toHaveValue("KJFK");
+    });
+
+    it("regression: destination input normalises to uppercase", async () => {
+      const user = userEvent.setup();
+      renderSearchPage();
+
+      const input = screen.getByLabelText(/destination/i);
+      await user.type(input, "klax");
+      expect(input).toHaveValue("KLAX");
+    });
+
+    it("regression: message label input normalises to uppercase", async () => {
+      const user = userEvent.setup();
+      renderSearchPage();
+
+      const input = screen.getByLabelText(/message label/i);
+      await user.type(input, "h1");
+      expect(input).toHaveValue("H1");
+    });
+
+    it("regression: message number input normalises to uppercase", async () => {
+      const user = userEvent.setup();
+      renderSearchPage();
+
+      const input = screen.getByLabelText(/message number/i);
+      await user.type(input, "m01a");
+      expect(input).toHaveValue("M01A");
+    });
+
+    it("regression: station ID input normalises to uppercase", async () => {
+      const user = userEvent.setup();
+      renderSearchPage();
+
+      const input = screen.getByLabelText(/station id/i);
+      await user.type(input, "kjfk");
+      expect(input).toHaveValue("KJFK");
+    });
+
+    it("regression: message text input normalises to uppercase", async () => {
+      const user = userEvent.setup();
+      renderSearchPage();
+
+      const input = screen.getByLabelText(/message text/i);
+      await user.type(input, "position report");
+      expect(input).toHaveValue("POSITION REPORT");
+    });
+
+    it("regression: uppercase normalisation is applied before emitting the query", async () => {
+      const user = userEvent.setup();
+      renderSearchPage();
+
+      const flightInput = screen.getByLabelText(/^flight$/i);
+      await user.type(flightInput, "ual123");
+
+      await user.click(screen.getByRole("button", { name: /^search$/i }));
+
+      expect(mockSocket.emit).toHaveBeenCalledWith(
+        "query_search",
+        expect.objectContaining({
+          search_term: expect.objectContaining({ flight: "UAL123" }),
+        }),
+        "/main",
+      );
+    });
+
+    it("regression: frequency field is unaffected by uppercase normalisation (digits only)", async () => {
+      const user = userEvent.setup();
+      renderSearchPage();
+
+      const input = screen.getByLabelText(/frequency/i);
+      await user.type(input, "131.550");
+      // Digits and dots have no case — value must be unchanged
+      expect(input).toHaveValue("131.550");
+    });
+
     it("emits query_search via socket when the form is submitted", async () => {
       const user = userEvent.setup();
       renderSearchPage();
@@ -246,7 +402,7 @@ describe("SearchPage", () => {
       const flightInput = screen.getByLabelText(/^flight$/i);
       await user.type(flightInput, "UAL123");
 
-      const submitButton = screen.getByRole("button", { name: /search/i });
+      const submitButton = screen.getByRole("button", { name: /^search$/i });
       await user.click(submitButton);
 
       // The component calls (socket as any).emit("query_search", payload, "/main")
@@ -292,7 +448,9 @@ describe("SearchPage", () => {
       // Submit to get results
       await user.click(screen.getByRole("button", { name: /^search$/i }));
 
-      // Inject results via socket event
+      // Inject results via socket event — focus is still on the Search button
+      // (inside the form) so collapse is deferred; the Clear button remains
+      // accessible without needing to expand first.
       emitSearchResults([makeMsg("msg-001"), makeMsg("msg-002")]);
 
       await waitFor(() => {
@@ -318,6 +476,44 @@ describe("SearchPage", () => {
 
       // Should not have emitted yet (debounce timer pending)
       expect(mockSocket.emit).not.toHaveBeenCalled();
+
+      vi.useRealTimers();
+    });
+
+    it("regression: debounce-triggered search does not disable the Search button", async () => {
+      // Regression for: webkit/Mobile Safari CI flakiness where Playwright's
+      // stability check on the Search button takes >500 ms, the debounce fires
+      // during that window, setIsSearching(true) disables the button, and the
+      // mock socket never delivers a response so the button stays disabled for
+      // the entire 10 s action timeout.
+      //
+      // Fix: submitIntent=false (debounce path) must NOT call setIsSearching(true).
+      // Only explicit form submits (submitIntent=true) show the "Searching…"
+      // loading state.
+      const user = userEvent.setup({ delay: null });
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      renderSearchPage();
+
+      const flightInput = screen.getByLabelText(/^flight$/i);
+      const submitButton = screen.getByRole("button", { name: /^search$/i });
+
+      // Button must be enabled before any interaction
+      expect(submitButton).toBeEnabled();
+
+      // Type a value — starts the 500 ms debounce timer
+      await user.type(flightInput, "UAL123");
+
+      // Button must still be enabled immediately after typing
+      // (debounce has not fired yet)
+      expect(submitButton).toBeEnabled();
+
+      // Advance past the debounce window — the background search fires
+      vi.advanceTimersByTime(600);
+
+      // Button must STILL be enabled after the debounce fires.
+      // Before the fix this would be disabled because the debounce path called
+      // setIsSearching(true), which is only appropriate for explicit submits.
+      expect(submitButton).toBeEnabled();
 
       vi.useRealTimers();
     });
@@ -508,6 +704,377 @@ describe("SearchPage", () => {
   // Socket subscription
   // -------------------------------------------------------------------------
 
+  // -------------------------------------------------------------------------
+  // Virtualization
+  // -------------------------------------------------------------------------
+
+  describe("virtual list rendering", () => {
+    it("regression: renders a MessageCard for each search result in the virtual list", async () => {
+      const user = userEvent.setup();
+      renderSearchPage();
+
+      const flightInput = screen.getByLabelText(/^flight$/i);
+      await user.type(flightInput, "UAL");
+      await user.click(screen.getByRole("button", { name: /^search$/i }));
+
+      emitSearchResults(
+        [makeMsg("v-001"), makeMsg("v-002"), makeMsg("v-003")],
+        3,
+      );
+
+      await waitFor(() => {
+        const cards = screen.getAllByTestId("message-card");
+        expect(cards).toHaveLength(3);
+      });
+    });
+
+    it("regression: clearing results removes all virtual items from the DOM", async () => {
+      const user = userEvent.setup();
+      renderSearchPage();
+
+      const flightInput = screen.getByLabelText(/^flight$/i);
+      await user.type(flightInput, "UAL");
+      await user.click(screen.getByRole("button", { name: /^search$/i }));
+
+      // Focus is still on the Search button (inside the form) so collapse is
+      // deferred — the Clear button remains accessible without expanding first.
+      emitSearchResults([makeMsg("v-001"), makeMsg("v-002")], 2);
+
+      await waitFor(() => {
+        expect(screen.getAllByTestId("message-card")).toHaveLength(2);
+      });
+
+      // Click Clear to remove results
+      await user.click(screen.getByRole("button", { name: /clear/i }));
+
+      expect(screen.queryByTestId("message-card")).not.toBeInTheDocument();
+    });
+
+    it("regression: new page results replace previous virtual items", async () => {
+      const user = userEvent.setup();
+      renderSearchPage();
+
+      const flightInput = screen.getByLabelText(/^flight$/i);
+      await user.type(flightInput, "UAL");
+      await user.click(screen.getByRole("button", { name: /^search$/i }));
+
+      // First page: 50 results, 2 pages total
+      const firstPage = Array.from({ length: 50 }, (_, i) =>
+        makeMsg(`page0-${i}`),
+      );
+      emitSearchResults(firstPage, 100);
+
+      await waitFor(() => {
+        expect(screen.getAllByTestId("message-card")).toHaveLength(50);
+      });
+
+      // Navigate to next page
+      const nextButtons = screen.getAllByRole("button", { name: /next page/i });
+      await user.click(nextButtons[0]);
+
+      // Second page: different 50 results
+      const secondPage = Array.from({ length: 50 }, (_, i) =>
+        makeMsg(`page1-${i}`),
+      );
+      emitSearchResults(secondPage, 100);
+
+      await waitFor(() => {
+        // Still 50 cards — but now the second page's items
+        expect(screen.getAllByTestId("message-card")).toHaveLength(50);
+        // First page items should be gone
+        expect(screen.queryByText("page0-0")).not.toBeInTheDocument();
+      });
+    });
+
+    it("regression: virtual list shows results-info count when results are present", async () => {
+      const user = userEvent.setup();
+      renderSearchPage();
+
+      const flightInput = screen.getByLabelText(/^flight$/i);
+      await user.type(flightInput, "UAL");
+      await user.click(screen.getByRole("button", { name: /^search$/i }));
+
+      emitSearchResults(
+        Array.from({ length: 5 }, (_, i) => makeMsg(`ri-${i}`)),
+        5,
+      );
+
+      await waitFor(() => {
+        // results-info should mention the count
+        expect(screen.getByText(/found/i)).toBeInTheDocument();
+        expect(screen.getByText("5")).toBeInTheDocument();
+      });
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Collapsible form header
+  // -------------------------------------------------------------------------
+
+  // Helper: simulate the .app-content scroll event that triggers auto-collapse.
+  // In jsdom there is no layout engine, so we manually set scrollTop on a mock
+  // element and dispatch the scroll event to the window (the component uses
+  // document.querySelector(".app-content") which returns null in tests, so the
+  // scroll listener is not attached — we drive collapse purely via the state
+  // setter by firing a synthetic scroll on the element if it exists, or by
+  // directly triggering the React state path via act).
+  //
+  // Because document.querySelector(".app-content") returns null inside the
+  // MemoryRouter test wrapper (there is no App shell), the scroll listener is
+  // never attached. We therefore simulate collapse by wrapping the page in a
+  // container that carries the class and dispatching a real scroll event.
+  function renderSearchPageWithScrollContainer(initialPath = "/search") {
+    // The component calls document.querySelector(".app-content") to attach its
+    // scroll listener.  We render the SearchPage *inside* the app-content div
+    // so that:
+    //   1. querySelector finds the div and attaches the listener.
+    //   2. document.getElementById("search-form-body") finds the element since
+    //      it is part of the live document tree.
+    const appContent = document.createElement("div");
+    appContent.className = "app-content";
+    appContent.style.overflow = "auto";
+    appContent.style.height = "500px";
+    // jsdom does not implement element.scrollTo — mock it so expandForm does
+    // not throw when the expand button is clicked in tests.
+    appContent.scrollTo = vi.fn() as unknown as typeof appContent.scrollTo;
+    document.body.appendChild(appContent);
+
+    const result = render(
+      <MemoryRouter initialEntries={[initialPath]}>
+        <SearchPage />
+      </MemoryRouter>,
+      { container: appContent },
+    );
+
+    // Simulate scroll past the form by stubbing scrollTop and dispatching a
+    // real scroll event so the component's listener fires.  The component
+    // collapses once the form has scrolled off the top of the viewport;
+    // in jsdom all getBoundingClientRect values are zero so any scrollTop > 0
+    // satisfies the condition.
+    const simulateScrollPast = (scrollTop = 200) => {
+      Object.defineProperty(appContent, "scrollTop", {
+        configurable: true,
+        get: () => scrollTop,
+      });
+      appContent.dispatchEvent(new Event("scroll", { bubbles: false }));
+    };
+
+    const simulateScrollToTop = () => {
+      Object.defineProperty(appContent, "scrollTop", {
+        configurable: true,
+        get: () => 0,
+      });
+      appContent.dispatchEvent(new Event("scroll", { bubbles: false }));
+    };
+
+    const cleanup = () => {
+      // unmount is called by the test before cleanup so the tree is already
+      // gone; just detach the host div from the body.
+      if (document.body.contains(appContent)) {
+        document.body.removeChild(appContent);
+      }
+    };
+
+    return {
+      ...result,
+      appContent,
+      simulateScrollPast,
+      simulateScrollToTop,
+      cleanup,
+    };
+  }
+
+  describe("collapsible form header", () => {
+    it("does NOT render a collapse button when the form is expanded", () => {
+      renderSearchPage();
+      // No collapse affordance should be present in the expanded state —
+      // collapse only happens when search results arrive.
+      expect(
+        screen.queryByRole("button", { name: /collapse search form/i }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("form body is visible (aria-hidden=false) on initial render", () => {
+      renderSearchPage();
+      const formBody = document.getElementById("search-form-body");
+      expect(formBody).not.toBeNull();
+      expect(formBody).toHaveAttribute("aria-hidden", "false");
+    });
+
+    it("shows the expand button with aria-expanded=false after scroll-driven collapse", async () => {
+      const { simulateScrollPast, cleanup, unmount } =
+        renderSearchPageWithScrollContainer();
+
+      act(() => {
+        simulateScrollPast(200);
+      });
+
+      await waitFor(() => {
+        const expandButton = screen.getByRole("button", {
+          name: /expand search form/i,
+        });
+        expect(expandButton).toBeInTheDocument();
+        expect(expandButton).toHaveAttribute("aria-expanded", "false");
+        expect(expandButton).toHaveAttribute(
+          "aria-controls",
+          "search-form-body",
+        );
+      });
+
+      unmount();
+      cleanup();
+    });
+
+    it("form body is aria-hidden=true after scroll-driven collapse", async () => {
+      const { simulateScrollPast, cleanup, unmount } =
+        renderSearchPageWithScrollContainer();
+
+      act(() => {
+        simulateScrollPast(200);
+      });
+
+      await waitFor(() => {
+        const formBody = document.getElementById("search-form-body");
+        expect(formBody).toHaveAttribute("aria-hidden", "true");
+      });
+
+      unmount();
+      cleanup();
+    });
+
+    it("clicking the expand button sets aria-hidden=false on the form body", async () => {
+      const user = userEvent.setup();
+      const { simulateScrollPast, cleanup, unmount } =
+        renderSearchPageWithScrollContainer();
+
+      act(() => {
+        simulateScrollPast(200);
+      });
+
+      await waitFor(() => {
+        expect(
+          screen.getByRole("button", { name: /expand search form/i }),
+        ).toBeInTheDocument();
+      });
+
+      await user.click(
+        screen.getByRole("button", { name: /expand search form/i }),
+      );
+
+      await waitFor(() => {
+        const formBody = document.getElementById("search-form-body");
+        expect(formBody).toHaveAttribute("aria-hidden", "false");
+      });
+
+      unmount();
+      cleanup();
+    });
+
+    it("expand button disappears after clicking it (form is now open)", async () => {
+      const user = userEvent.setup();
+      const { simulateScrollPast, cleanup, unmount } =
+        renderSearchPageWithScrollContainer();
+
+      act(() => {
+        simulateScrollPast(200);
+      });
+
+      await waitFor(() => {
+        expect(
+          screen.getByRole("button", { name: /expand search form/i }),
+        ).toBeInTheDocument();
+      });
+
+      await user.click(
+        screen.getByRole("button", { name: /expand search form/i }),
+      );
+
+      await waitFor(() => {
+        expect(
+          screen.queryByRole("button", { name: /expand search form/i }),
+        ).not.toBeInTheDocument();
+      });
+
+      unmount();
+      cleanup();
+    });
+
+    it("shows the active search summary in the header when scroll-collapsed with an active search", async () => {
+      const user = userEvent.setup();
+      const { simulateScrollPast, cleanup, unmount } =
+        renderSearchPageWithScrollContainer();
+
+      // Type a value and submit to establish an activeSearch, then scroll
+      // past the form to trigger the collapse.
+      const flightInput = screen.getByLabelText(/^flight$/i);
+      await user.type(flightInput, "UAL123");
+      await user.click(screen.getByRole("button", { name: /^search$/i }));
+
+      act(() => {
+        simulateScrollPast(200);
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText(/Flight: UAL123/)).toBeInTheDocument();
+      });
+
+      unmount();
+      cleanup();
+    });
+
+    it("does not show the active search summary when the form is expanded", async () => {
+      const user = userEvent.setup();
+      renderSearchPage();
+
+      const flightInput = screen.getByLabelText(/^flight$/i);
+      await user.type(flightInput, "UAL123");
+      await user.click(screen.getByRole("button", { name: /^search$/i }));
+
+      // Form is still expanded — summary should not be visible
+      expect(screen.queryByText(/Flight: UAL123/)).not.toBeInTheDocument();
+    });
+
+    it("does not show the active search summary when scroll-collapsed but no active search", async () => {
+      const { simulateScrollPast, cleanup, unmount } =
+        renderSearchPageWithScrollContainer();
+
+      // Scroll past the form without submitting a search — activeSearch stays null.
+      act(() => {
+        simulateScrollPast(200);
+      });
+
+      await waitFor(() => {
+        expect(
+          screen.getByRole("button", { name: /expand search form/i }),
+        ).toBeInTheDocument();
+      });
+
+      // No active search was submitted, so no summary text
+      expect(screen.queryByText(/Flight:/)).not.toBeInTheDocument();
+
+      unmount();
+      cleanup();
+    });
+
+    it("regression: form fields are aria-hidden when scroll-collapsed", async () => {
+      const { simulateScrollPast, cleanup, unmount } =
+        renderSearchPageWithScrollContainer();
+
+      act(() => {
+        simulateScrollPast(200);
+      });
+
+      await waitFor(() => {
+        const formBody = document.getElementById("search-form-body");
+        expect(formBody).toHaveAttribute("aria-hidden", "true");
+      });
+
+      unmount();
+      cleanup();
+    });
+  });
+
+  // -------------------------------------------------------------------------
   describe("socket subscription", () => {
     it("subscribes to database_search_results on mount", () => {
       renderSearchPage();

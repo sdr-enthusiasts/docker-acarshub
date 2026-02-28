@@ -14,7 +14,15 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { MessageFilters } from "../components/MessageFilters";
 import { MessageGroup as MessageGroupComponent } from "../components/MessageGroup";
 import { socketService } from "../services/socket";
@@ -103,6 +111,60 @@ export const LiveMessagesPage = () => {
   // Statistics state
   const [totalReceived, setTotalReceived] = useState(0);
 
+  // ---------------------------------------------------------------------------
+  // Virtual list infrastructure
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Ref attached to the top-level page div. A ResizeObserver watches this
+   * element so we can compute the exact remaining viewport height available
+   * to the virtual scroll container, accounting for any nav bar height,
+   * page header height, or filter bar height without hardcoding pixel values.
+   */
+  const pageRef = useRef<HTMLDivElement>(null);
+
+  /**
+   * Scroll container ref — the div that wraps the virtual list and has
+   * overflow-y: auto. The virtualizer uses this element's scrollTop/clientHeight
+   * to determine which items are in view.
+   */
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  /**
+   * Height of the virtual scroll container in pixels.
+   *
+   * WHY dynamic measurement instead of CSS calc(100vh - nav-height):
+   * The nav height varies between mobile/desktop, and the page header +
+   * filter bar also consume vertical space. Measuring with ResizeObserver
+   * gives the exact remaining height without any hardcoded pixel values or
+   * CSS variable bookkeeping.
+   *
+   * Initial value: a reasonable fraction of the viewport so the first render
+   * isn't completely empty while the effect hasn't run yet.
+   */
+  const [listHeight, setListHeight] = useState(() =>
+    typeof window !== "undefined"
+      ? Math.max(window.innerHeight - 200, 300)
+      : 400,
+  );
+
+  /**
+   * Per-group active tab index, keyed by group stable key (first message UID).
+   *
+   * WHY a ref instead of state: we don't want a tab click in one MessageGroup
+   * to trigger a re-render of every other visible group. The ref is mutated
+   * directly; the individual MessageGroup reads its own value on mount (when
+   * the virtualizer re-mounts it after scrolling back into view).
+   */
+  const activeTabIndices = useRef<Map<string, number>>(new Map());
+
+  /**
+   * The total virtual height from the previous render, used by the scroll-
+   * anchor useLayoutEffect to calculate how much the virtual size changed and
+   * compensate scrollTop accordingly.
+   */
+  const prevTotalSize = useRef(0);
+
   // Persist filter settings to localStorage
   useEffect(() => {
     localStorage.setItem("liveMessages.isPaused", String(isPaused));
@@ -131,6 +193,42 @@ export const LiveMessagesPage = () => {
     setCurrentPage("Live Messages");
     socketService.notifyPageChange("Live Messages");
   }, [setCurrentPage]);
+
+  // Dynamically measure the height available for the virtual scroll container.
+  //
+  // WHY ResizeObserver instead of CSS calc():
+  // The nav bar, page header, and filter bar all consume vertical space above
+  // the message list. Their heights vary between mobile and desktop breakpoints
+  // and change when filters are shown/hidden. A ResizeObserver on the scroll
+  // container itself measures the actual available space after all the above
+  // elements have been laid out, without requiring any hardcoded pixel values.
+  useEffect(() => {
+    const scrollEl = scrollContainerRef.current;
+    if (!scrollEl) return;
+
+    const measure = () => {
+      const rect = scrollEl.getBoundingClientRect();
+      // Available height = distance from the top of the scroll container
+      // to the bottom of the viewport. No buffer needed: overflow:hidden on
+      // .app-content (set via CSS :has selector) silently clips any subpixel
+      // overshoot so there is no risk of an outer scrollbar appearing.
+      const available = window.innerHeight - rect.top;
+      setListHeight(Math.max(available, 200));
+    };
+
+    measure();
+
+    // Re-measure when the scroll container's size changes (e.g. filter bar
+    // toggled, window resized, orientation change).
+    const ro = new ResizeObserver(measure);
+    ro.observe(scrollEl);
+    window.addEventListener("resize", measure);
+
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, []);
 
   // Keyboard shortcut: 'p' to toggle pause
   useEffect(() => {
@@ -394,6 +492,91 @@ export const LiveMessagesPage = () => {
     setTotalReceived(statistics.totalMessages);
   }, [statistics]);
 
+  // ---------------------------------------------------------------------------
+  // Virtualizer
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Estimated item height used for items not yet measured.
+   *
+   * WHY 300px: our cards range roughly 100px (minimal) to 600px+ (libacars).
+   * Biasing high rather than low means new unmeasured items cause scrollTop to
+   * overshoot slightly downward (user barely perceives this) rather than jump
+   * upward toward new content (which feels like a snap back to the top).
+   */
+  const ESTIMATED_ITEM_HEIGHT = 300;
+
+  /**
+   * Virtual padding above the first item (px). Matches $spacing-lg (24 px).
+   * Used both as the virtualizer paddingStart and as the scroll-anchor
+   * threshold — the user is considered "at the top" when scrollTop is inside
+   * this padding zone, so new messages are allowed to flow in naturally.
+   */
+  const MESSAGE_LIST_PADDING_START = 24;
+
+  const rowVirtualizer = useVirtualizer({
+    count: filteredMessageGroups.length,
+    getScrollElement: () => scrollContainerRef.current,
+    estimateSize: () => ESTIMATED_ITEM_HEIGHT,
+    overscan: 3,
+    // Stable key per group so the height cache survives prepends. Without
+    // this the cache is index-based: after a prepend every item shifts to a
+    // higher index, the virtualizer reads the *old* item's cached height for
+    // the *new* index, and items overlap or show the wrong amount of space.
+    getItemKey: (index) => {
+      const group = filteredMessageGroups[index];
+      return group?.messages[0]?.uid ?? group?.identifiers.join("-") ?? index;
+    },
+    // Breathing room between the sticky filter bar and the first card when
+    // scrolled to the top. This is virtual space — it belongs to the
+    // scrollable content, so it naturally scrolls away as the user moves
+    // down. Once scrolled past 24 px the first card sits flush at the top
+    // of the container with no wasted space. 24 px = $spacing-lg, matching
+    // the gap between cards (.message-list__item padding-bottom).
+    paddingStart: MESSAGE_LIST_PADDING_START,
+  });
+
+  // ---------------------------------------------------------------------------
+  // Scroll anchoring — keep the user's viewport stable when the virtual list
+  // size changes (new items prepended, or existing items remeasured).
+  //
+  // Algorithm:
+  //   After every render, if the total virtual size changed AND the user has
+  //   scrolled past the padding zone (i.e., they are viewing real content, not
+  //   the top breathing-room gap), adjust scrollTop by the same delta so that
+  //   the content currently on screen doesn't appear to move.
+  //
+  // Why compensate for remeasurements as well as prepends:
+  //   The old logic only fired when the *first key* changed (a prepend). But
+  //   after a prepend the new item is initially estimated at ESTIMATED_ITEM_HEIGHT
+  //   (300 px). When it is later measured at its actual height (e.g. 150 px),
+  //   the total size shrinks by 150 px. Without compensation the user drifts
+  //   150 px downward per message — compounding with every new arrival.
+  //   By reacting to *any* size delta we correct for both cases in one place.
+  //
+  // Why the threshold is MESSAGE_LIST_PADDING_START and not 0:
+  //   scrollTop > 0 but ≤ paddingStart means the user is still inside the
+  //   virtual breathing-room gap above the first card. Anchoring here would
+  //   jump them past the first message; they should instead see new messages
+  //   flow in naturally, just like when scrollTop = 0.
+  //
+  // useLayoutEffect runs synchronously after DOM mutations and before the
+  // browser paints, so corrections are invisible to the user.
+  // ---------------------------------------------------------------------------
+  useLayoutEffect(() => {
+    const newTotalSize = rowVirtualizer.getTotalSize();
+    const scrollEl = scrollContainerRef.current;
+
+    if (scrollEl && scrollEl.scrollTop > MESSAGE_LIST_PADDING_START) {
+      const delta = newTotalSize - prevTotalSize.current;
+      if (delta !== 0) {
+        scrollEl.scrollTop = Math.max(0, scrollEl.scrollTop + delta);
+      }
+    }
+
+    prevTotalSize.current = newTotalSize;
+  });
+
   // Handler callbacks
   const handlePauseChange = useCallback(
     (paused: boolean) => {
@@ -469,7 +652,7 @@ export const LiveMessagesPage = () => {
   ]);
 
   return (
-    <div className="page live-messages-page">
+    <div className="page live-messages-page" ref={pageRef}>
       {/* Page Header */}
       <div className="page__header">
         <h1 className="page__title">Live Messages</h1>
@@ -559,12 +742,58 @@ export const LiveMessagesPage = () => {
             )}
           </div>
         ) : (
-          <div className="message-list">
-            {filteredMessageGroups.map((group) => {
-              // Use first message UID as key for stability
-              const key = group.messages[0]?.uid || group.identifiers.join("-");
-              return <MessageGroupComponent key={key} plane={group} />;
-            })}
+          <div
+            className="message-list"
+            ref={scrollContainerRef}
+            style={{ height: `${listHeight}px` }}
+          >
+            {/* Virtual container — its height equals the sum of all (estimated +
+                measured) item heights. Items are absolutely positioned inside. */}
+            <div
+              style={{
+                height: `${rowVirtualizer.getTotalSize()}px`,
+                width: "100%",
+                position: "relative",
+              }}
+            >
+              {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                const group = filteredMessageGroups[virtualRow.index];
+                const key =
+                  group.messages[0]?.uid || group.identifiers.join("-");
+
+                const savedIndex = activeTabIndices.current.get(key) ?? 0;
+                // Clamp saved index in case messages were culled since last view
+                const clampedIndex = Math.min(
+                  savedIndex,
+                  group.messages.length - 1,
+                );
+
+                return (
+                  <div
+                    key={key}
+                    data-index={virtualRow.index}
+                    ref={rowVirtualizer.measureElement}
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      width: "100%",
+                      transform: `translateY(${virtualRow.start}px)`,
+                    }}
+                  >
+                    <div className="message-list__item">
+                      <MessageGroupComponent
+                        plane={group}
+                        activeIndex={clampedIndex}
+                        onActiveIndexChange={(index) => {
+                          activeTabIndices.current.set(key, index);
+                        }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
       </div>

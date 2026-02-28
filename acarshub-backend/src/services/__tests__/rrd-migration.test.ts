@@ -166,23 +166,15 @@ function setupInMemoryDb() {
   initDatabase(":memory:");
   getSqliteConnection().exec(`
     CREATE TABLE IF NOT EXISTS timeseries_stats (
-      id            INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-      timestamp     INTEGER NOT NULL,
-      resolution    TEXT    NOT NULL,
-      acars_count   INTEGER DEFAULT 0 NOT NULL,
-      vdlm_count    INTEGER DEFAULT 0 NOT NULL,
-      hfdl_count    INTEGER DEFAULT 0 NOT NULL,
-      imsl_count    INTEGER DEFAULT 0 NOT NULL,
-      irdm_count    INTEGER DEFAULT 0 NOT NULL,
-      total_count   INTEGER DEFAULT 0 NOT NULL,
-      error_count   INTEGER DEFAULT 0 NOT NULL,
-      created_at    INTEGER DEFAULT 0 NOT NULL
+      timestamp   INTEGER PRIMARY KEY NOT NULL,
+      acars_count INTEGER DEFAULT 0 NOT NULL,
+      vdlm_count  INTEGER DEFAULT 0 NOT NULL,
+      hfdl_count  INTEGER DEFAULT 0 NOT NULL,
+      imsl_count  INTEGER DEFAULT 0 NOT NULL,
+      irdm_count  INTEGER DEFAULT 0 NOT NULL,
+      total_count INTEGER DEFAULT 0 NOT NULL,
+      error_count INTEGER DEFAULT 0 NOT NULL
     )
-  `);
-  // Add the unique constraint migration 11 would add
-  getSqliteConnection().exec(`
-    CREATE UNIQUE INDEX IF NOT EXISTS idx_timeseries_timestamp_resolution
-    ON timeseries_stats (timestamp, resolution)
   `);
   getSqliteConnection().exec(`
     CREATE TABLE IF NOT EXISTS rrd_import_registry (
@@ -711,9 +703,9 @@ NOT_A_TIMESTAMP: bad data here
       getSqliteConnection()
         .prepare(
           `INSERT INTO timeseries_stats
-             (timestamp, resolution, acars_count, vdlm_count, hfdl_count,
-              imsl_count, irdm_count, total_count, error_count, created_at)
-           VALUES (1771282260, '1min', 1, 0, 0, 0, 0, 1, 0, 0)`,
+             (timestamp, acars_count, vdlm_count, hfdl_count,
+              imsl_count, irdm_count, total_count, error_count)
+           VALUES (1771282260, 1, 0, 0, 0, 0, 1, 0)`,
         )
         .run();
 
@@ -748,17 +740,14 @@ NOT_A_TIMESTAMP: bad data here
       initDatabase(":memory:");
       getSqliteConnection().exec(`
         CREATE TABLE IF NOT EXISTS timeseries_stats (
-          id            INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-          timestamp     INTEGER NOT NULL,
-          resolution    TEXT    NOT NULL,
-          acars_count   INTEGER DEFAULT 0 NOT NULL,
-          vdlm_count    INTEGER DEFAULT 0 NOT NULL,
-          hfdl_count    INTEGER DEFAULT 0 NOT NULL,
-          imsl_count    INTEGER DEFAULT 0 NOT NULL,
-          irdm_count    INTEGER DEFAULT 0 NOT NULL,
-          total_count   INTEGER DEFAULT 0 NOT NULL,
-          error_count   INTEGER DEFAULT 0 NOT NULL,
-          created_at    INTEGER NOT NULL
+          timestamp   INTEGER PRIMARY KEY NOT NULL,
+          acars_count INTEGER DEFAULT 0 NOT NULL,
+          vdlm_count  INTEGER DEFAULT 0 NOT NULL,
+          hfdl_count  INTEGER DEFAULT 0 NOT NULL,
+          imsl_count  INTEGER DEFAULT 0 NOT NULL,
+          irdm_count  INTEGER DEFAULT 0 NOT NULL,
+          total_count INTEGER DEFAULT 0 NOT NULL,
+          error_count INTEGER DEFAULT 0 NOT NULL
         )
       `);
     });
@@ -783,17 +772,14 @@ NOT_A_TIMESTAMP: bad data here
       initDatabase(":memory:");
       getSqliteConnection().exec(`
         CREATE TABLE IF NOT EXISTS timeseries_stats (
-          id            INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-          timestamp     INTEGER NOT NULL,
-          resolution    TEXT    NOT NULL,
-          acars_count   INTEGER DEFAULT 0 NOT NULL,
-          vdlm_count    INTEGER DEFAULT 0 NOT NULL,
-          hfdl_count    INTEGER DEFAULT 0 NOT NULL,
-          imsl_count    INTEGER DEFAULT 0 NOT NULL,
-          irdm_count    INTEGER DEFAULT 0 NOT NULL,
-          total_count   INTEGER DEFAULT 0 NOT NULL,
-          error_count   INTEGER DEFAULT 0 NOT NULL,
-          created_at    INTEGER NOT NULL
+          timestamp   INTEGER PRIMARY KEY NOT NULL,
+          acars_count INTEGER DEFAULT 0 NOT NULL,
+          vdlm_count  INTEGER DEFAULT 0 NOT NULL,
+          hfdl_count  INTEGER DEFAULT 0 NOT NULL,
+          imsl_count  INTEGER DEFAULT 0 NOT NULL,
+          irdm_count  INTEGER DEFAULT 0 NOT NULL,
+          total_count INTEGER DEFAULT 0 NOT NULL,
+          error_count INTEGER DEFAULT 0 NOT NULL
         )
       `);
     });

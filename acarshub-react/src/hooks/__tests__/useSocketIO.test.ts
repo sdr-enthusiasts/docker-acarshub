@@ -516,4 +516,261 @@ describe("useSocketIO", () => {
       expect(stored).toEqual(countData);
     });
   });
+
+  // -------------------------------------------------------------------------
+  // rrd_timeseries_data — pushed time-series cache updates
+  // -------------------------------------------------------------------------
+
+  describe("rrd_timeseries_data event", () => {
+    const NOW = 1_704_067_200_000; // 2024-01-01T00:00:00.000Z
+
+    function makePayload(
+      period: string,
+      overrides: Record<string, unknown> = {},
+    ) {
+      return {
+        time_period: period,
+        data: [
+          {
+            timestamp: NOW - 60_000,
+            acars: 2,
+            vdlm: 1,
+            hfdl: 0,
+            imsl: 0,
+            irdm: 0,
+            total: 3,
+            error: 0,
+          },
+        ],
+        start: NOW - 3_600_000,
+        end: NOW,
+        points: 1,
+        ...overrides,
+      };
+    }
+
+    beforeEach(() => {
+      useAppStore.setState({ timeSeriesCache: new Map() });
+    });
+
+    it("registers a handler for rrd_timeseries_data on mount", () => {
+      renderHook(() => useSocketIO());
+
+      const registeredEvents = (mockSocket.on.mock.calls as unknown[][]).map(
+        (call) => call[0] as string,
+      );
+      expect(registeredEvents).toContain("rrd_timeseries_data");
+    });
+
+    it("stores a valid 1hr push in the time-series cache", () => {
+      renderHook(() => useSocketIO());
+      fireEvent("rrd_timeseries_data", makePayload("1hr"));
+
+      const entry = useAppStore.getState().timeSeriesCache.get("1hr");
+      expect(entry).toBeDefined();
+      expect(entry?.time_period).toBe("1hr");
+      expect(entry?.points).toBe(1);
+    });
+
+    it("stores data array from the push payload", () => {
+      renderHook(() => useSocketIO());
+      fireEvent(
+        "rrd_timeseries_data",
+        makePayload("6hr", { start: NOW - 21_600_000 }),
+      );
+
+      const entry = useAppStore.getState().timeSeriesCache.get("6hr");
+      expect(entry?.data).toHaveLength(1);
+      expect(entry?.data[0].acars).toBe(2);
+      expect(entry?.data[0].total).toBe(3);
+    });
+
+    it("stores start and end from the push payload", () => {
+      renderHook(() => useSocketIO());
+      fireEvent(
+        "rrd_timeseries_data",
+        makePayload("24hr", {
+          start: NOW - 86_400_000,
+          end: NOW,
+        }),
+      );
+
+      const entry = useAppStore.getState().timeSeriesCache.get("24hr");
+      expect(entry?.start).toBe(NOW - 86_400_000);
+      expect(entry?.end).toBe(NOW);
+    });
+
+    it("stores all eight valid time periods independently", () => {
+      renderHook(() => useSocketIO());
+
+      const periods = [
+        "1hr",
+        "6hr",
+        "12hr",
+        "24hr",
+        "1wk",
+        "30day",
+        "6mon",
+        "1yr",
+      ] as const;
+      for (const period of periods) {
+        fireEvent("rrd_timeseries_data", makePayload(period));
+      }
+
+      const cache = useAppStore.getState().timeSeriesCache;
+      expect(cache.size).toBe(8);
+      for (const period of periods) {
+        expect(cache.get(period)?.time_period).toBe(period);
+      }
+    });
+
+    it("overwrites the cache entry when a fresh push arrives for the same period", () => {
+      renderHook(() => useSocketIO());
+
+      fireEvent("rrd_timeseries_data", makePayload("1hr", { points: 1 }));
+      fireEvent(
+        "rrd_timeseries_data",
+        makePayload("1hr", {
+          data: [
+            {
+              timestamp: NOW - 60_000,
+              acars: 99,
+              vdlm: 0,
+              hfdl: 0,
+              imsl: 0,
+              irdm: 0,
+              total: 99,
+              error: 0,
+            },
+          ],
+          points: 1,
+        }),
+      );
+
+      const entry = useAppStore.getState().timeSeriesCache.get("1hr");
+      expect(entry?.data[0].acars).toBe(99);
+    });
+
+    it("ignores a push with an unknown time_period", () => {
+      renderHook(() => useSocketIO());
+      fireEvent("rrd_timeseries_data", makePayload("badperiod"));
+
+      const cache = useAppStore.getState().timeSeriesCache;
+      expect(cache.size).toBe(0);
+    });
+
+    it("ignores a push with a missing time_period field", () => {
+      renderHook(() => useSocketIO());
+      fireEvent("rrd_timeseries_data", {
+        data: [],
+        start: NOW - 3_600_000,
+        end: NOW,
+        points: 0,
+      });
+
+      const cache = useAppStore.getState().timeSeriesCache;
+      expect(cache.size).toBe(0);
+    });
+
+    it("deregisters the rrd_timeseries_data handler on unmount", () => {
+      const { unmount } = renderHook(() => useSocketIO());
+      unmount();
+
+      const removedEvents = (mockSocket.off.mock.calls as unknown[][]).map(
+        (call) => call[0] as string,
+      );
+      expect(removedEvents).toContain("rrd_timeseries_data");
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // On-connect warm-up — emits rrd_timeseries for all 8 periods on connect
+  // -------------------------------------------------------------------------
+
+  describe("on-connect time-series warm-up", () => {
+    const ALL_PERIODS = [
+      "1hr",
+      "6hr",
+      "12hr",
+      "24hr",
+      "1wk",
+      "30day",
+      "6mon",
+      "1yr",
+    ] as const;
+
+    it("emits rrd_timeseries for all 8 periods when the connect event fires", () => {
+      renderHook(() => useSocketIO());
+      mockSocket.emit.mockClear(); // ignore any pre-connect emits
+
+      fireEvent("connect", undefined);
+
+      const emittedPeriods = (mockSocket.emit.mock.calls as unknown[][])
+        .filter((call) => call[0] === "rrd_timeseries")
+        .map((call) => (call[1] as { time_period: string }).time_period);
+
+      for (const period of ALL_PERIODS) {
+        expect(emittedPeriods).toContain(period);
+      }
+    });
+
+    it("emits exactly 8 rrd_timeseries requests on connect", () => {
+      renderHook(() => useSocketIO());
+      mockSocket.emit.mockClear();
+
+      fireEvent("connect", undefined);
+
+      const rrdEmits = (mockSocket.emit.mock.calls as unknown[][]).filter(
+        (call) => call[0] === "rrd_timeseries",
+      );
+      expect(rrdEmits).toHaveLength(8);
+    });
+
+    it("includes the /main namespace as the third argument in each warm-up emit", () => {
+      renderHook(() => useSocketIO());
+      mockSocket.emit.mockClear();
+
+      fireEvent("connect", undefined);
+
+      const rrdEmits = (mockSocket.emit.mock.calls as unknown[][]).filter(
+        (call) => call[0] === "rrd_timeseries",
+      );
+
+      for (const call of rrdEmits) {
+        expect(call[2]).toBe("/main");
+      }
+    });
+
+    it("re-requests all periods on reconnect (warm-up fires on every connect event)", () => {
+      renderHook(() => useSocketIO());
+      mockSocket.emit.mockClear();
+
+      // First connect
+      fireEvent("connect", undefined);
+      const firstCount = (mockSocket.emit.mock.calls as unknown[][]).filter(
+        (call) => call[0] === "rrd_timeseries",
+      ).length;
+
+      // Simulate a reconnect
+      mockSocket.emit.mockClear();
+      fireEvent("connect", undefined);
+      const secondCount = (mockSocket.emit.mock.calls as unknown[][]).filter(
+        (call) => call[0] === "rrd_timeseries",
+      ).length;
+
+      expect(firstCount).toBe(8);
+      expect(secondCount).toBe(8);
+    });
+
+    it("regression: rrd_timeseries warm-up is NOT emitted without a connect event", () => {
+      renderHook(() => useSocketIO());
+      mockSocket.emit.mockClear();
+
+      // No connect event fired — warm-up should not have happened
+      const rrdEmits = (mockSocket.emit.mock.calls as unknown[][]).filter(
+        (call) => call[0] === "rrd_timeseries",
+      );
+      expect(rrdEmits).toHaveLength(0);
+    });
+  });
 });

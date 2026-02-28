@@ -17,12 +17,14 @@
 import { useEffect, useRef, useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import acarsLogo from "../assets/images/acarshub.svg";
+import { useMediaQuery } from "../hooks/useMediaQuery";
 import { getMessageFilterProps } from "../pages/LiveMessagesPage";
 import {
   selectAdsbEnabled,
   selectUnreadAlertCount,
   useAppStore,
 } from "../store/useAppStore";
+import type { MessageRateData } from "../types";
 import { MessageFilters } from "./MessageFilters";
 
 /**
@@ -33,6 +35,103 @@ const selectSystemErrorState = (
 ) => state.systemStatus?.status.error_state ?? false;
 
 import { ThemeSwitcher } from "./ThemeSwitcher";
+
+/**
+ * Selector for message rate state
+ */
+const selectMessageRate = (
+  state: ReturnType<typeof useAppStore.getState>,
+): MessageRateData | null => state.messageRate;
+
+const selectDecoders = (state: ReturnType<typeof useAppStore.getState>) =>
+  state.decoders;
+
+/**
+ * MessageRateWidget
+ *
+ * Displays the rolling 60-second message rate in the nav bar.
+ * On desktop, hovering reveals a tooltip with per-decoder breakdown.
+ * Only rendered once the backend has sent at least one rate update.
+ */
+const MessageRateWidget = () => {
+  const messageRate = useAppStore(selectMessageRate);
+  const decoders = useAppStore(selectDecoders);
+
+  if (!messageRate || !decoders) return null;
+
+  const total = messageRate.total;
+
+  // Build breakdown rows for enabled decoders only.
+  // When only one decoder is enabled the tooltip adds no information,
+  // so we suppress it in that case.
+  const enabledDecoders = [
+    {
+      key: "acars",
+      label: "ACARS",
+      rate: messageRate.acars,
+      enabled: decoders.acars,
+    },
+    {
+      key: "vdlm2",
+      label: "VDLM2",
+      rate: messageRate.vdlm2,
+      enabled: decoders.vdlm,
+    },
+    {
+      key: "hfdl",
+      label: "HFDL",
+      rate: messageRate.hfdl,
+      enabled: decoders.hfdl,
+    },
+    {
+      key: "imsl",
+      label: "IMSL",
+      rate: messageRate.imsl,
+      enabled: decoders.imsl,
+    },
+    {
+      key: "irdm",
+      label: "IRDM",
+      rate: messageRate.irdm,
+      enabled: decoders.irdm,
+    },
+  ].filter((d) => d.enabled);
+
+  const showTooltip = enabledDecoders.length > 1;
+
+  return (
+    <div
+      className={`message-rate${showTooltip ? " message-rate--has-tooltip" : ""}`}
+    >
+      <output
+        className={`message-rate__value${total > 0 ? " message-rate__value--active" : ""}`}
+        aria-label={`Message rate: ${total} messages per minute`}
+        aria-live="polite"
+        aria-describedby={showTooltip ? "message-rate-tooltip" : undefined}
+      >
+        {total} msg/min
+      </output>
+
+      {showTooltip && (
+        <div
+          id="message-rate-tooltip"
+          className="message-rate__tooltip"
+          role="tooltip"
+        >
+          <div className="message-rate__tooltip-title">
+            Per Decoder (msg/min)
+          </div>
+          {enabledDecoders.map((d) => (
+            <div key={d.key} className="message-rate__tooltip-row">
+              <span className="message-rate__tooltip-label">{d.label}</span>
+              <span className="message-rate__tooltip-value">{d.rate}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
 /**
  * Navigation Component
@@ -46,6 +145,7 @@ export const Navigation = () => {
   const systemHasError = useAppStore(selectSystemErrorState);
   const setSettingsOpen = useAppStore((state) => state.setSettingsOpen);
   const menuDetailsRef = useRef<HTMLDetailsElement>(null);
+  const isMobile = useMediaQuery("(max-width: 767px)");
 
   // Filter flyout state (for Live Messages page)
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -98,101 +198,49 @@ export const Navigation = () => {
       <div className="wrap">
         <span className="decor"></span>
 
-        {/* Mobile navigation container */}
-        <div className="show_when_small mobile_nav_container">
-          {/* Mobile menu */}
-          <details className="small_nav" id="menu_details" ref={menuDetailsRef}>
-            <summary className="menu_non_link">Menu</summary>
+        {isMobile ? (
+          /* Mobile navigation container */
+          <nav className="mobile_nav_container">
+            {/* Left group: menu toggle + optional filters button */}
+            <div className="mobile_nav_left">
+              {/* Mobile menu */}
+              <details
+                className="small_nav"
+                id="menu_details"
+                ref={menuDetailsRef}
+              >
+                <summary className="menu_non_link">Menu</summary>
 
-            <NavLink to="/live-messages" onClick={handleMobileNavClick}>
-              Live Messages
-            </NavLink>
-            <br />
-            {adsbEnabled && (
-              <>
-                <NavLink to="/adsb" onClick={handleMobileNavClick}>
-                  Live Map
+                <NavLink to="/live-messages" onClick={handleMobileNavClick}>
+                  Messages
                 </NavLink>
                 <br />
-              </>
-            )}
-            <NavLink to="/search" onClick={handleMobileNavClick}>
-              Search Database
-            </NavLink>
-            <br />
-            <NavLink to="/alerts" onClick={handleMobileNavClick}>
-              Alerts
-              {unreadAlertCount > 0 && (
-                <span className="alert-count"> ({unreadAlertCount})</span>
-              )}
-            </NavLink>
-            <br />
-            <NavLink to="/status" onClick={handleMobileNavClick}>
-              Status
-              {systemHasError && <span className="error-indicator"> ⚠</span>}
-            </NavLink>
-            <br />
-            <button
-              type="button"
-              onClick={handleSettingsClick}
-              className="link-button"
-            >
-              Settings
-            </button>
-          </details>
-
-          {/* Filters button (mobile only, Live Messages page only) */}
-          {isLiveMessagesPage && (
-            <button
-              type="button"
-              onClick={() => setFiltersOpen(!filtersOpen)}
-              className={`mobile_nav_button ${filtersOpen ? "active" : ""}`}
-              aria-expanded={filtersOpen}
-            >
-              Filters
-            </button>
-          )}
-        </div>
-
-        {/* Desktop menu */}
-        <nav className="hide_when_small">
-          <ul className="primary">
-            <li className="img_box" id="logo_image">
-              <NavLink to="/about" className="logo-link">
-                <img src={acarsLogo} alt="ACARS Hub" className="logo-image" />
-                <span className="logo-text">ACARS Hub</span>
-              </NavLink>
-            </li>
-
-            <li>
-              <NavLink to="/live-messages">Live Messages</NavLink>
-            </li>
-            {adsbEnabled && (
-              <li>
-                <NavLink to="/adsb">Live Map</NavLink>
-              </li>
-            )}
-            <li>
-              <NavLink to="/search">Search Database</NavLink>
-            </li>
-            <li>
-              <NavLink to="/alerts">
-                Alerts
-                {unreadAlertCount > 0 && (
-                  <span className="alert-count"> ({unreadAlertCount})</span>
+                {adsbEnabled && (
+                  <>
+                    <NavLink to="/adsb" onClick={handleMobileNavClick}>
+                      Map
+                    </NavLink>
+                    <br />
+                  </>
                 )}
-              </NavLink>
-            </li>
-            <li>
-              <NavLink to="/status">
-                Status
-                {systemHasError && <span className="error-indicator"> ⚠</span>}
-              </NavLink>
-            </li>
-
-            <li className="right_side">
-              <ThemeSwitcher />
-              <span id="modal_text">
+                <NavLink to="/search" onClick={handleMobileNavClick}>
+                  Search
+                </NavLink>
+                <br />
+                <NavLink to="/alerts" onClick={handleMobileNavClick}>
+                  Alerts
+                  {unreadAlertCount > 0 && (
+                    <span className="alert-count"> ({unreadAlertCount})</span>
+                  )}
+                </NavLink>
+                <br />
+                <NavLink to="/status" onClick={handleMobileNavClick}>
+                  Status
+                  {systemHasError && (
+                    <span className="error-indicator"> ⚠</span>
+                  )}
+                </NavLink>
+                <br />
                 <button
                   type="button"
                   onClick={handleSettingsClick}
@@ -200,15 +248,84 @@ export const Navigation = () => {
                 >
                   Settings
                 </button>
-              </span>
-            </li>
-          </ul>
-        </nav>
+              </details>
+
+              {/* Filters button (mobile only, Live Messages page only) */}
+              {isLiveMessagesPage && (
+                <button
+                  type="button"
+                  onClick={() => setFiltersOpen(!filtersOpen)}
+                  className={`mobile_nav_button ${filtersOpen ? "active" : ""}`}
+                  aria-expanded={filtersOpen}
+                >
+                  Filters
+                </button>
+              )}
+            </div>
+
+            {/* Message rate widget — pinned to right edge of mobile nav */}
+            <MessageRateWidget />
+          </nav>
+        ) : (
+          /* Desktop menu */
+          <nav>
+            <ul className="primary">
+              <li className="img_box" id="logo_image">
+                <NavLink to="/about" className="logo-link">
+                  <img src={acarsLogo} alt="ACARS Hub" className="logo-image" />
+                  <span className="logo-text">ACARS Hub</span>
+                </NavLink>
+              </li>
+
+              <li>
+                <NavLink to="/live-messages">Messages</NavLink>
+              </li>
+              {adsbEnabled && (
+                <li>
+                  <NavLink to="/adsb">Map</NavLink>
+                </li>
+              )}
+              <li>
+                <NavLink to="/search">Database</NavLink>
+              </li>
+              <li>
+                <NavLink to="/alerts">
+                  Alerts
+                  {unreadAlertCount > 0 && (
+                    <span className="alert-count"> ({unreadAlertCount})</span>
+                  )}
+                </NavLink>
+              </li>
+              <li>
+                <NavLink to="/status">
+                  Status
+                  {systemHasError && (
+                    <span className="error-indicator"> ⚠</span>
+                  )}
+                </NavLink>
+              </li>
+
+              <li className="right_side">
+                <MessageRateWidget />
+                <ThemeSwitcher />
+                <span id="modal_text">
+                  <button
+                    type="button"
+                    onClick={handleSettingsClick}
+                    className="link-button"
+                  >
+                    Settings
+                  </button>
+                </span>
+              </li>
+            </ul>
+          </nav>
+        )}
       </div>
 
       {/* Filters flyout panel (mobile only) */}
-      {isLiveMessagesPage && filtersOpen && (
-        <div className="navigation__filters-flyout show_when_small">
+      {isMobile && isLiveMessagesPage && filtersOpen && (
+        <div className="navigation__filters-flyout">
           <div className="filters-flyout__header">
             <h3>Filters</h3>
             <button

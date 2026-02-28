@@ -19,7 +19,7 @@
  * Duplicate protection is layered:
  *   - Hash registry: prevents re-import of the same file content entirely
  *   - INSERT OR IGNORE: silently skips rows that already exist in the DB
- *     (UNIQUE constraint on (timestamp, resolution) added by migration 11)
+ *     (timestamp is the INTEGER PRIMARY KEY after migration 12)
  *
  * RRD Structure:
  * - Data Sources: ACARS, VDLM, TOTAL, ERROR, HFDL, IMSL, IRDM
@@ -43,11 +43,14 @@ const execAsync = promisify(exec);
 const logger = createLogger("rrd-migration");
 
 /**
- * Time-series data point from RRD
+ * Time-series data point
+ *
+ * All data is stored at 1-minute resolution. The original multi-resolution
+ * design was abandoned when the RRD importer was written to expand all coarser
+ * archives into 1-minute buckets before inserting (see expandCoarseDataToOneMinute).
  */
 interface TimeseriesDataPoint {
   timestamp: number;
-  resolution: "1min" | "5min" | "1hour" | "6hour";
   acarsCount: number;
   vdlmCount: number;
   hfdlCount: number;
@@ -65,9 +68,13 @@ interface TimeseriesDataPoint {
  * `endTime` is optional; when omitted it defaults to "now", which is correct
  * for production use. Tests override it to point at the fixture's actual data
  * window so fetches return real rows rather than empty time slots.
+ *
+ * `resolution` is kept here only for logging/debug context — it describes
+ * the RRD archive step, not a DB column (the `resolution` column was removed
+ * in migration 12).
  */
 export interface RrdArchive {
-  resolution: "1min" | "5min" | "1hour" | "6hour";
+  resolution: "1min" | "5min" | "1hour" | "6hour"; // for logging only
   timeRange: string; // start: relative (e.g., "-25h") or absolute Unix timestamp
   endTime?: string; // end: defaults to "now" when omitted
   step: number; // seconds per data point
@@ -132,12 +139,12 @@ async function fetchRrdArchive(
  */
 function parseRrdOutput(
   output: string,
-  resolution: "1min" | "5min" | "1hour" | "6hour",
+  archiveResolution: "1min" | "5min" | "1hour" | "6hour",
 ): TimeseriesDataPoint[] {
   const lines = output.trim().split("\n");
 
   if (lines.length < 2) {
-    logger.warn("Empty RRD output", { resolution });
+    logger.warn("Empty RRD output", { resolution: archiveResolution });
     return [];
   }
 
@@ -179,7 +186,6 @@ function parseRrdOutput(
 
     dataPoints.push({
       timestamp,
-      resolution,
       acarsCount: values[0],
       vdlmCount: values[1],
       totalCount: values[2],
@@ -191,7 +197,7 @@ function parseRrdOutput(
   }
 
   logger.debug("Parsed RRD data", {
-    resolution,
+    resolution: archiveResolution,
     dataPoints: dataPoints.length,
   });
 
@@ -199,27 +205,33 @@ function parseRrdOutput(
 }
 
 /**
- * Expand coarse-grained data into 1-minute resolution
+ * Expand coarse-grained RRD archive data into 1-minute buckets
  *
- * Takes data points from coarser resolutions (5min, 1hour, 6hour) and expands
- * them into multiple 1-minute data points. This preserves historical data while
- * normalizing everything to a single resolution.
+ * RRD archives store data at varying steps (5min, 1hour, 6hour). This function
+ * expands each coarse point into N consecutive 1-minute rows so the entire
+ * history ends up normalised to the same 1-minute granularity that the
+ * live stats-writer uses.
  *
  * Example: A 5-minute data point with acars_count=25 becomes 5 one-minute rows,
- * each with acars_count=25 (the average over that period).
+ * each with acars_count=25 (the per-minute average over that period).
  *
- * @param dataPoints - Data points to expand
- * @returns Expanded data points at 1-minute resolution
+ * After migration 12 there is no `resolution` column in the DB; the
+ * `archiveResolution` field on TimeseriesDataPoint is used only here, locally,
+ * to determine how many 1-minute sub-rows to emit.
+ *
+ * @param dataPoints - Data points annotated with their source archive resolution
+ * @returns Expanded data points, all at 1-minute granularity
  */
 function expandCoarseDataToOneMinute(
-  dataPoints: TimeseriesDataPoint[],
+  dataPoints: Array<TimeseriesDataPoint & { archiveResolution: "1min" | "5min" | "1hour" | "6hour" }>,
 ): TimeseriesDataPoint[] {
   const expanded: TimeseriesDataPoint[] = [];
 
   for (const point of dataPoints) {
     // 1-minute data: keep as-is
-    if (point.resolution === "1min") {
-      expanded.push(point);
+    if (point.archiveResolution === "1min") {
+      const { archiveResolution: _r, ...rest } = point;
+      expanded.push(rest);
       continue;
     }
 
@@ -227,7 +239,7 @@ function expandCoarseDataToOneMinute(
     let intervalCount: number;
     let intervalSeconds: number;
 
-    switch (point.resolution) {
+    switch (point.archiveResolution) {
       case "5min":
         intervalCount = 5;
         intervalSeconds = 60;
@@ -241,8 +253,8 @@ function expandCoarseDataToOneMinute(
         intervalSeconds = 60;
         break;
       default:
-        logger.warn("Unknown resolution, skipping", {
-          resolution: point.resolution,
+        logger.warn("Unknown archive resolution, skipping", {
+          archiveResolution: point.archiveResolution,
         });
         continue;
     }
@@ -251,7 +263,6 @@ function expandCoarseDataToOneMinute(
     for (let i = 0; i < intervalCount; i++) {
       expanded.push({
         timestamp: point.timestamp + i * intervalSeconds,
-        resolution: "1min",
         acarsCount: point.acarsCount,
         vdlmCount: point.vdlmCount,
         hfdlCount: point.hfdlCount,
@@ -424,8 +435,8 @@ function tryRegisterBackupHash(backupPath: string): void {
  * once per row.
  *
  * Uses onConflictDoNothing() so the insert is idempotent: if a row for the
- * same (timestamp, resolution) slot already exists (UNIQUE constraint added
- * by migration 11), it is silently skipped rather than causing an error or
+ * same timestamp already exists (timestamp is the INTEGER PRIMARY KEY after
+ * migration 12), it is silently skipped rather than causing an error or
  * creating a duplicate.
  *
  * @param dataPoints - Data points to insert
@@ -449,12 +460,11 @@ function batchInsertDataPoints(
     try {
       // .run() is required — without it Drizzle never executes the insert.
       // onConflictDoNothing() makes the insert idempotent: rows that already
-      // exist for a given (timestamp, resolution) slot are silently skipped.
+      // exist for the same timestamp (INTEGER PRIMARY KEY) are silently skipped.
       db.insert(timeseriesStats)
         .values(
           batch.map((point) => ({
             timestamp: point.timestamp,
-            resolution: point.resolution,
             acarsCount: point.acarsCount,
             vdlmCount: point.vdlmCount,
             hfdlCount: point.hfdlCount,
@@ -708,12 +718,19 @@ export async function migrateRrdToSqlite(
   try {
     // 5. Fetch data from all archives
     logger.info("Fetching data from RRD archives");
-    const allDataPoints: TimeseriesDataPoint[] = [];
+    const allDataPoints: Array<TimeseriesDataPoint & { archiveResolution: "1min" | "5min" | "1hour" | "6hour" }> = [];
 
     for (const archive of archives) {
       try {
         const dataPoints = await fetchRrdArchive(rrdPath, archive);
-        allDataPoints.push(...dataPoints);
+        // Tag each point with its source archive resolution so
+        // expandCoarseDataToOneMinute knows how many sub-rows to emit.
+        allDataPoints.push(
+          ...dataPoints.map((p) => ({
+            ...p,
+            archiveResolution: archive.resolution,
+          })),
+        );
 
         logger.info("Fetched RRD archive", {
           resolution: archive.resolution,
@@ -740,10 +757,10 @@ export async function migrateRrdToSqlite(
     logger.info("Total data points fetched", {
       total: allDataPoints.length,
       byResolution: {
-        "1min": allDataPoints.filter((p) => p.resolution === "1min").length,
-        "5min": allDataPoints.filter((p) => p.resolution === "5min").length,
-        "1hour": allDataPoints.filter((p) => p.resolution === "1hour").length,
-        "6hour": allDataPoints.filter((p) => p.resolution === "6hour").length,
+        "1min": allDataPoints.filter((p) => p.archiveResolution === "1min").length,
+        "5min": allDataPoints.filter((p) => p.archiveResolution === "5min").length,
+        "1hour": allDataPoints.filter((p) => p.archiveResolution === "1hour").length,
+        "6hour": allDataPoints.filter((p) => p.archiveResolution === "6hour").length,
       },
     });
 
@@ -815,27 +832,30 @@ export async function migrateRrdToSqlite(
 }
 
 /**
- * Query time-series data by resolution and time range
+ * Query time-series data by time range
  *
- * @param resolution - Time resolution to query
+ * All data is at 1-minute resolution after migration 12 (the `resolution`
+ * column was removed). The `_resolution` parameter is accepted but ignored
+ * so that callers do not need to be updated.
+ *
+ * @param _resolution - Ignored (kept for call-site compatibility)
  * @param startTime - Start timestamp (Unix seconds)
  * @param endTime - End timestamp (Unix seconds)
  * @returns Array of time-series data points
  */
 export async function queryTimeseriesData(
-  resolution: "1min" | "5min" | "1hour" | "6hour",
+  _resolution: "1min" | "5min" | "1hour" | "6hour",
   startTime: number,
   endTime: number,
 ): Promise<TimeseriesDataPoint[]> {
   const db = getDatabase();
-  const { eq, and, gte, lte } = await import("drizzle-orm");
+  const { and, gte, lte } = await import("drizzle-orm");
 
   const results = await db
     .select()
     .from(timeseriesStats)
     .where(
       and(
-        eq(timeseriesStats.resolution, resolution),
         gte(timeseriesStats.timestamp, startTime),
         lte(timeseriesStats.timestamp, endTime),
       ),
@@ -844,7 +864,6 @@ export async function queryTimeseriesData(
 
   return results.map((row) => ({
     timestamp: row.timestamp,
-    resolution: row.resolution as "1min" | "5min" | "1hour" | "6hour",
     acarsCount: row.acarsCount,
     vdlmCount: row.vdlmCount,
     hfdlCount: row.hfdlCount,
@@ -858,19 +877,21 @@ export async function queryTimeseriesData(
 /**
  * Get latest time-series data point (for Prometheus metrics)
  *
- * @param resolution - Resolution to query (default: 1min)
+ * The `_resolution` parameter is accepted but ignored — all data is at
+ * 1-minute granularity after migration 12.
+ *
+ * @param _resolution - Ignored (kept for call-site compatibility)
  * @returns Latest data point or null
  */
 export async function getLatestTimeseriesData(
-  resolution: "1min" | "5min" | "1hour" | "6hour" = "1min",
+  _resolution: "1min" | "5min" | "1hour" | "6hour" = "1min",
 ): Promise<TimeseriesDataPoint | null> {
   const db = getDatabase();
-  const { eq, desc } = await import("drizzle-orm");
+  const { desc } = await import("drizzle-orm");
 
   const results = await db
     .select()
     .from(timeseriesStats)
-    .where(eq(timeseriesStats.resolution, resolution))
     .orderBy(desc(timeseriesStats.timestamp))
     .limit(1);
 
@@ -881,7 +902,6 @@ export async function getLatestTimeseriesData(
   const row = results[0];
   return {
     timestamp: row.timestamp,
-    resolution: row.resolution as "1min" | "5min" | "1hour" | "6hour",
     acarsCount: row.acarsCount,
     vdlmCount: row.vdlmCount,
     hfdlCount: row.hfdlCount,

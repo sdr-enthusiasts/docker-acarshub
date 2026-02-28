@@ -131,6 +131,13 @@
     font-weight: $font-weight-bold;
     font-size: $font-size-xl;
     color: var(--color-primary);
+
+    // Between 768 px and 850 px the nav bar is too crowded to show both the
+    // image logo and the "ACARS Hub" text without word-wrapping.  Hide the
+    // text at this range; the image logo alone identifies the app.
+    @media (min-width: 768px) and (max-width: 850px) {
+      display: none;
+    }
   }
 
   // Latte: --color-primary (blue #1e66f5) on nav crust (#dce0e8) = 3.71:1 — fails WCAG AA.
@@ -143,7 +150,119 @@
     margin-left: auto;
     display: flex;
     align-items: center;
-    gap: $spacing-sm;
+    gap: 0;
+  }
+
+  // -------------------------------------------------------------------------
+  // Message Rate Widget
+  // Displays rolling 60-second msg/min rate in the nav bar.
+  // Shown on screens >= 375px (iPhone SE and up); hidden only on very narrow
+  // screens where even the compact text would overflow.
+  // On hover/focus, a tooltip shows the per-decoder breakdown.
+  // -------------------------------------------------------------------------
+  .message-rate {
+    position: relative;
+    display: flex;
+    align-items: center;
+    padding: $spacing-xs $spacing-sm;
+    border-radius: $radius-md;
+    cursor: default;
+    user-select: none;
+
+    // Hide only on very narrow screens (< 375px); iPhone SE (375px) and
+    // wider can fit the compact "X msg/min" text in both the mobile and
+    // desktop nav bars.
+    @media (max-width: 374px) {
+      display: none;
+    }
+  }
+
+  .message-rate__value {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-warning);
+    white-space: nowrap;
+    transition: color $transition-fast;
+
+    @media (prefers-reduced-motion: reduce) {
+      transition: none;
+    }
+
+    // Active (non-zero) rate uses the standard nav text colour
+    &--active {
+      color: var(--color-text);
+    }
+  }
+
+  // Tooltip — hidden by default, revealed on hover or keyboard focus
+  .message-rate__tooltip {
+    display: none;
+    position: absolute;
+    top: calc(100% + #{$spacing-xs});
+    right: 0;
+    z-index: $z-index-tooltip;
+    min-width: 160px;
+    background-color: var(--color-surface1);
+    border: 1px solid var(--color-overlay0);
+    border-radius: $radius-md;
+    box-shadow: $shadow-lg;
+    padding: $spacing-sm $spacing-md;
+
+    // Small caret pointing up at the widget
+    &::before {
+      content: "";
+      position: absolute;
+      top: -5px;
+      right: $spacing-md;
+      width: 8px;
+      height: 8px;
+      background-color: var(--color-surface1);
+      border-top: 1px solid var(--color-overlay0);
+      border-left: 1px solid var(--color-overlay0);
+      transform: rotate(45deg);
+    }
+  }
+
+  .message-rate__tooltip-title {
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
+    color: var(--color-subtext0);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: $spacing-xs;
+    padding-bottom: $spacing-xs;
+    border-bottom: 1px solid var(--color-surface2);
+  }
+
+  .message-rate__tooltip-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: $spacing-md;
+    padding: 2px 0;
+    font-size: $font-size-sm;
+  }
+
+  .message-rate__tooltip-label {
+    color: var(--color-subtext1);
+    font-weight: $font-weight-medium;
+  }
+
+  .message-rate__tooltip-value {
+    color: var(--color-text);
+    font-weight: $font-weight-semibold;
+    font-variant-numeric: tabular-nums;
+  }
+
+  // Show tooltip on hover or when the widget contains keyboard focus
+  .message-rate--has-tooltip {
+    cursor: help;
+
+    &:hover .message-rate__tooltip,
+    &:focus-within .message-rate__tooltip {
+      display: block;
+    }
   }
 
   .alert-count {
@@ -271,15 +390,17 @@
 /**
  * Mobile Navigation
  */
-.show_when_small {
-  display: none;
-}
-
 .mobile_nav_container {
   display: flex;
   align-items: center;
-  gap: $spacing-md;
+  justify-content: space-between;
   padding: $spacing-sm $spacing-lg;
+}
+
+.mobile_nav_left {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
 }
 
 .mobile_nav_button {
@@ -354,30 +475,5 @@
   a.active {
     color: var(--color-primary);
     font-weight: $font-weight-semibold;
-  }
-}
-
-.hide_when_small {
-  display: block;
-}
-
-@include media-md {
-  .show_when_small {
-    display: none;
-  }
-
-  .hide_when_small {
-    display: block;
-  }
-}
-
-/* Mobile breakpoint */
-@media (max-width: #{$breakpoint-md - 1px}) {
-  .show_when_small {
-    display: block;
-  }
-
-  .hide_when_small {
-    display: none;
   }
 }

@@ -30,10 +30,13 @@
  * runMigrations() call (i.e., every startup) and detects the stale schema by
  * checking whether `message_type` appears in the sqlite_master sql for both the
  * table and the insert trigger.  If either is missing it drops everything and
- * rebuilds from scratch, then VACUUMs to reclaim shadow-table bloat.
+ * rebuilds from scratch; disk space is reclaimed by the VACUUM in runMigrations().
  */
 
+import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
+import { existsSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { migrate as drizzleMigrate } from "drizzle-orm/better-sqlite3/migrator";
@@ -41,7 +44,7 @@ import { createLogger } from "../utils/logger.js";
 
 const logger = createLogger("migrations");
 const DB_PATH = process.env.ACARSHUB_DB || "./data/acarshub.db";
-const LATEST_REVISION = "f0a1b2c3d4e5";
+const LATEST_REVISION = "b6c7d8e9f0a1";
 
 interface MigrationStep {
   revision: string;
@@ -824,18 +827,6 @@ function migration08_finalOptimization(db: Database.Database): void {
 
   logger.info("✓ Composite indexes created");
 
-  // 3. VACUUM - Reclaim disk space from all previous migrations
-  logger.info(
-    "Running VACUUM to reclaim disk space (this may take several minutes)...",
-  );
-  db.exec("VACUUM");
-  logger.info("✓ VACUUM complete - database file optimized");
-
-  // 4. ANALYZE - Update query planner statistics
-  logger.info("Running ANALYZE to optimize query planning...");
-  db.exec("ANALYZE");
-  logger.info("✓ ANALYZE complete - query planner statistics updated");
-
   logger.info("v4 migration complete - database is optimized for production");
 }
 
@@ -922,8 +913,9 @@ function migration09_addTimeseriesStats(db: Database.Database): void {
  * stalling message ingestion entirely.
  *
  * This migration drops all FTS tables and triggers and recreates them cleanly,
- * then rebuilds the index from the messages table.  The subsequent VACUUM
- * reclaims the disk space freed by discarding the bloated shadow tables.
+ * then rebuilds the index from the messages table.  Disk space is reclaimed by
+ * the single VACUUM that runs at the end of runMigrations() when any migration
+ * step executes.
  *
  * Both steps can take several minutes on a large database — this is a
  * one-time startup cost.
@@ -943,12 +935,7 @@ function migration10_rebuildFts(db: Database.Database): void {
   createFtsTableAndTriggers(db);
   logger.info("✓ FTS table and triggers recreated");
 
-  logger.warn(
-    "Running VACUUM to reclaim disk space freed by old FTS shadow tables — " +
-      "this may take 10-30 minutes on large databases...",
-  );
-  db.exec("VACUUM");
-  logger.info("✓ VACUUM complete — migration 10 finished");
+  logger.info("✓ Migration 10 finished");
 }
 
 // ---------------------------------------------------------------------------
@@ -956,6 +943,8 @@ function migration10_rebuildFts(db: Database.Database): void {
 /**
  * Migration 11: Deduplicate timeseries_stats and add unique constraint
  * (f0a1b2c3d4e5)
+ *
+ * See inline comments in the function body for full rationale.
  *
  * WHY THIS EXISTS
  * ---------------
@@ -979,12 +968,9 @@ function migration10_rebuildFts(db: Database.Database): void {
  *   d. Creates the rrd_import_registry table that the RRD importer uses to
  *      record SHA-256 hashes of files it has processed, allowing it to skip
  *      re-imports regardless of filename.
- *   e. VACUUMs the database to reclaim pages freed by the duplicate row
- *      deletions.  VACUUM cannot run inside a transaction so it executes after
- *      the migration transaction commits.  On a clean database (no duplicates)
- *      this is fast; on a database with significant duplication it may take
- *      several minutes and requires free disk space roughly equal to the
- *      current database file size.
+ *   e. Disk space freed by the duplicate row deletions is reclaimed by the
+ *      single VACUUM that runs at the end of runMigrations() when any migration
+ *      step executes.
  */
 function migration11_deduplicateTimeseriesAndAddRegistry(
   db: Database.Database,
@@ -1078,20 +1064,147 @@ function migration11_deduplicateTimeseriesAndAddRegistry(
 
   migrate();
 
-  // VACUUM must run outside the transaction — SQLite forbids VACUUM inside an
-  // active transaction.  It reclaims the pages freed by the duplicate deletes
-  // above.  On a clean database the freed-page count is ~0 and VACUUM returns
-  // almost instantly; on a database where timeseries rows were doubled it can
-  // reclaim tens to hundreds of MB.
-  logger.warn(
-    "Running VACUUM to reclaim space freed by timeseries deduplication — " +
-      "this may take a few minutes on large databases and requires free disk " +
-      "space roughly equal to the current database file size...",
-  );
-  db.exec("VACUUM");
-  logger.info("✓ VACUUM complete");
-
   logger.info("✓ Migration 11 complete");
+}
+
+// ---------------------------------------------------------------------------
+
+/**
+ * Migration 12: Drop resolution/id columns, promote timestamp to INTEGER PRIMARY KEY
+ * (b6c7d8e9f0a1)
+ *
+ * WHY THIS EXISTS
+ * ---------------
+ * After migration 11 the `resolution` column in timeseries_stats is effectively
+ * a non-nullable constant — every row has resolution = '1min'. The original
+ * multi-resolution storage design (1min / 5min / 1hour / 6hour) was abandoned
+ * when the RRD importer was written to expand all coarser archives into 1-minute
+ * buckets before inserting. The live stats-writer likewise only ever inserts
+ * resolution = '1min'. The standalone `idx_timeseries_resolution` index is never
+ * used by any query in the application.
+ *
+ * This migration rebuilds the table to:
+ *   a. Drop the auto-increment `id` column (~8 bytes / row overhead)
+ *   b. Drop the dead `resolution` column (~4-8 bytes / row overhead)
+ *   c. Promote `timestamp` to INTEGER PRIMARY KEY — in SQLite this is the rowid
+ *      alias, the most storage-efficient key possible with no separate index B-tree
+ *   d. Drop idx_timeseries_resolution (completely unused)
+ *   e. Drop idx_timeseries_timestamp_resolution (superseded by the PK B-tree)
+ *   f. Freed pages are reclaimed by the single VACUUM that runs at the end of
+ *      runMigrations() when any migration step executes (can be several hundred
+ *      MB on a 3-year DB)
+ *
+ * SAFETY FOR USERS ON MIGRATION 10 OR EARLIER
+ * --------------------------------------------
+ * Migration 11 already deduplicates on (timestamp, resolution) so within each
+ * resolution bucket there are no duplicate rows by the time this migration runs.
+ * The remaining edge case — same timestamp appearing under two different resolution
+ * values — is handled by INSERT OR IGNORE ordered to keep the '1min' row first.
+ * Non-'1min' rows that conflict are logged as a warning and discarded; they
+ * represent data that was never readable by the application anyway.
+ */
+function migration12_dropResolutionPromoteTimestampPk(
+  db: Database.Database,
+): void {
+  logger.info(
+    "Applying migration 12: drop_resolution_promote_timestamp_pk",
+  );
+
+  const migrate = db.transaction(() => {
+    // -----------------------------------------------------------------------
+    // Step 1: Diagnose — log anything unexpected before we touch data
+    // -----------------------------------------------------------------------
+    const nonOneMin = (
+      db
+        .prepare(
+          "SELECT COUNT(*) AS n FROM timeseries_stats WHERE resolution != '1min'",
+        )
+        .get() as { n: number }
+    ).n;
+
+    if (nonOneMin > 0) {
+      logger.warn(
+        `Found ${nonOneMin} non-'1min' rows in timeseries_stats — ` +
+          "these will be discarded; only 1-minute data is retained going forward",
+        { nonOneMin },
+      );
+    }
+
+    const totalRows = (
+      db
+        .prepare("SELECT COUNT(*) AS n FROM timeseries_stats")
+        .get() as { n: number }
+    ).n;
+    logger.info("timeseries_stats row count before migration 12", {
+      totalRows,
+    });
+
+    // Free space for adsb.im users. Also anyone else.
+
+    db.exec(`DROP INDEX idx_timeseries_resolution;`);
+    db.exec(`DROP INDEX idx_timeseries_timestamp_resolution;`);
+
+    // -----------------------------------------------------------------------
+    // Step 2: Create new table — timestamp is INTEGER PRIMARY KEY (rowid alias)
+    // -----------------------------------------------------------------------
+    db.exec(`
+      CREATE TABLE timeseries_stats_new (
+        timestamp   INTEGER PRIMARY KEY NOT NULL,
+        acars_count INTEGER NOT NULL DEFAULT 0,
+        vdlm_count  INTEGER NOT NULL DEFAULT 0,
+        hfdl_count  INTEGER NOT NULL DEFAULT 0,
+        imsl_count  INTEGER NOT NULL DEFAULT 0,
+        irdm_count  INTEGER NOT NULL DEFAULT 0,
+        total_count INTEGER NOT NULL DEFAULT 0,
+        error_count INTEGER NOT NULL DEFAULT 0
+      )
+    `);
+
+    // -----------------------------------------------------------------------
+    // Step 3: Copy data
+    //
+    // ORDER BY puts '1min' rows first so that INSERT OR IGNORE keeps the
+    // correct row when the same timestamp appears under two different
+    // resolution values (an unlikely but possible state on DBs that were
+    // never fully migrated through the RRD importer).
+    // -----------------------------------------------------------------------
+    db.exec(`
+      INSERT OR IGNORE INTO timeseries_stats_new
+        (timestamp, acars_count, vdlm_count, hfdl_count,
+         imsl_count, irdm_count, total_count, error_count)
+      SELECT
+        timestamp, acars_count, vdlm_count, hfdl_count,
+        imsl_count, irdm_count, total_count, error_count
+      FROM timeseries_stats
+      ORDER BY
+        CASE WHEN resolution = '1min' THEN 0 ELSE 1 END,
+        id
+    `);
+
+    const copiedRows = (
+      db
+        .prepare("SELECT COUNT(*) AS n FROM timeseries_stats_new")
+        .get() as { n: number }
+    ).n;
+    logger.info("Rows copied to new timeseries_stats", { copiedRows });
+
+    // -----------------------------------------------------------------------
+    // Step 4: Swap — drop old, rename new
+    // -----------------------------------------------------------------------
+    db.exec("DROP TABLE timeseries_stats");
+    db.exec(
+      "ALTER TABLE timeseries_stats_new RENAME TO timeseries_stats",
+    );
+
+    logger.info(
+      "timeseries_stats rebuilt — timestamp is now INTEGER PRIMARY KEY, " +
+        "resolution and id columns removed, old indexes dropped",
+    );
+  });
+
+  migrate();
+
+  logger.info("✓ Migration 12 complete");
 }
 
 // ---------------------------------------------------------------------------
@@ -1100,8 +1213,8 @@ function migration11_deduplicateTimeseriesAndAddRegistry(
 
 /**
  * Verify that the messages_fts virtual table and its three triggers use the
- * current 31-column schema.  If not, drop everything and rebuild from scratch,
- * then VACUUM to reclaim the bloated FTS shadow-table pages.
+ * current 31-column schema.  If not, drop everything and rebuild from scratch.
+ * Returns true if a rebuild was performed, false otherwise.
  *
  * This runs unconditionally at the end of every runMigrations() call, which
  * means it executes on every startup regardless of whether any migration was
@@ -1115,7 +1228,7 @@ function migration11_deduplicateTimeseriesAndAddRegistry(
  * silently skipped the table if it already existed, leaving the 8-column
  * schema and its weaker triggers in place indefinitely.
  */
-function verifyAndRepairFtsIfNeeded(db: Database.Database): void {
+function verifyAndRepairFtsIfNeeded(db: Database.Database): boolean {
   const hasFTS = db
     .prepare(
       "SELECT name FROM sqlite_master WHERE type='table' AND name='messages_fts'",
@@ -1125,7 +1238,7 @@ function verifyAndRepairFtsIfNeeded(db: Database.Database): void {
   if (!hasFTS) {
     // Table doesn't exist at all — nothing to repair; migration04 will create it.
     logger.debug("FTS table absent, skipping integrity check");
-    return;
+    return false;
   }
 
   const schemaOk = isFtsSchemaCorrect(db);
@@ -1133,7 +1246,7 @@ function verifyAndRepairFtsIfNeeded(db: Database.Database): void {
 
   if (schemaOk && triggersOk) {
     logger.info("FTS schema and triggers verified OK");
-    return;
+    return false;
   }
 
   logger.warn(
@@ -1147,15 +1260,8 @@ function verifyAndRepairFtsIfNeeded(db: Database.Database): void {
   logger.info("Recreating FTS table and triggers with correct schema...");
   createFtsTableAndTriggers(db);
 
-  // VACUUM reclaims the shadow-table pages that accumulated from the old
-  // 8-column tombstone inflation caused by the migration06 UID backfill and
-  // any pruning that happened without proper trigger coverage.
-  // This can take several minutes on large databases.
-  logger.warn(
-    "Running VACUUM to reclaim FTS shadow-table bloat — this may take several minutes on large databases",
-  );
-  db.exec("VACUUM");
-  logger.info("VACUUM complete — FTS repair finished");
+  logger.info("FTS repair finished");
+  return true;
 }
 
 // ---------------------------------------------------------------------------
@@ -1219,11 +1325,194 @@ const MIGRATIONS: MigrationStep[] = [
     name: "deduplicate_timeseries_and_add_registry",
     upgrade: migration11_deduplicateTimeseriesAndAddRegistry,
   },
+  {
+    revision: "b6c7d8e9f0a1",
+    name: "drop_resolution_promote_timestamp_pk",
+    upgrade: migration12_dropResolutionPromoteTimestampPk,
+  },
 ];
 
 /**
  * Run migrations from current version to latest
  */
+/**
+ * Run database migrations in a child process so the main event loop stays free.
+ *
+ * WHY A CHILD PROCESS
+ * -------------------
+ * better-sqlite3 is entirely synchronous.  On large databases, the final
+ * VACUUM can block a thread for 10–30+ minutes.  Running that work on the
+ * main Node.js thread freezes the event loop, which means:
+ *   - HTTP polling responses cannot be sent
+ *   - WebSocket upgrade handshakes time out and never complete
+ *   - Socket.IO cannot deliver `migration_status { running: true }` to clients
+ *
+ * Spawning a child process keeps the main event loop completely free
+ * throughout the migration window.  Socket.IO can upgrade connections to
+ * WebSocket and actually deliver the migration banner to the browser.
+ *
+ * DEV vs PRODUCTION
+ * -----------------
+ * process.execArgv already contains the tsx loader flags when running under
+ * `tsx watch` (--require preflight.cjs --import tsx/loader.mjs).  We pass
+ * those directly to the child so it inherits the TypeScript runtime in dev
+ * mode.  In production (compiled JS) execArgv is empty or contains only
+ * node flags — the child loads the compiled .js worker normally.
+ *
+ * The worker script (migrate-worker.ts/.js) receives the dbPath as argv[2]
+ * and communicates success/failure via exit code (0 / non-zero).
+ *
+ * SAFETY PROTOCOL
+ * ---------------
+ * 1. Child: open DB → run migrations (inc. VACUUM) → close DB → exit 0
+ * 2. Main: receive exit-0 → open its own DB connection via initDatabase()
+ * Steps 1 and 2 are strictly sequential, never concurrent.
+ *
+ * @param dbPath Path to the SQLite database file.
+ * @returns Promise that resolves when migrations complete successfully.
+ * @throws Error if migrations fail or the child exits abnormally.
+ */
+export function runMigrationsInWorker(dbPath: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    // Diagnostic: log the bundle URL so Docker logs confirm which code path
+    // is active.  This is the single most useful data point when debugging
+    // "banner not showing in Docker" reports.
+    const bundleUrl = import.meta.url;
+    logger.info("runMigrationsInWorker called", { bundleUrl, dbPath });
+
+    // Select the worker script: .ts in dev (tsx watch), .mjs in production.
+    //
+    // import.meta.url ends with ".ts"  → we are running TypeScript source
+    //   (dev: tsx watch / tsx node).
+    // import.meta.url ends with ".mjs" → we are running the esbuild bundle
+    //   (production Docker: node server.bundle.mjs).
+    const isDev = bundleUrl.endsWith(".ts");
+
+    // Only use the .ts spawn path when a tsx loader is actually present in
+    // process.execArgv.  Under `tsx watch` it contains
+    //   --import file:///…/tsx/dist/loader.mjs
+    // which lets the child process load TypeScript.  In test runners (vitest)
+    // TypeScript is handled differently and execArgv has no tsx loader, so
+    // we fall back to the synchronous path to keep tests simple.
+    const hasTsxLoader = process.execArgv.some((arg) =>
+      arg.includes("/tsx/"),
+    );
+
+    logger.info("Migration path decision", {
+      isDev,
+      hasTsxLoader,
+      execArgv: process.execArgv,
+      execPath: process.execPath,
+      willSpawn: !(isDev && !hasTsxLoader),
+    });
+
+    if (isDev && !hasTsxLoader) {
+      logger.debug(
+        "No tsx loader in execArgv — running migrations synchronously " +
+          "(test environment or non-tsx dev runner)",
+      );
+      try {
+        runMigrations(dbPath);
+        resolve();
+      } catch (err) {
+        reject(err);
+      }
+      return;
+    }
+
+    // Production: .mjs because the worker is compiled as a separate ESM bundle
+    // (migrate-worker.mjs) by esbuild alongside server.bundle.mjs.  Using .mjs
+    // is unambiguous — Node loads it as ESM regardless of any package.json
+    // "type" field.  Dev: .ts loaded via the tsx loader already in execArgv.
+    const ext = isDev ? ".ts" : ".mjs";
+    const workerPath = fileURLToPath(
+      new URL(`./migrate-worker${ext}`, import.meta.url),
+    );
+
+    logger.info("Migration worker path resolved", {
+      workerPath,
+      ext,
+      isDev,
+    });
+
+    // Verify the worker file exists before spawning so the error message is
+    // actionable.  A missing worker file (e.g. stale Docker image built before
+    // the worker bundle step was added to the Dockerfile) would otherwise
+    // produce a cryptic ENOENT from spawn() with no context.
+    if (!existsSync(workerPath)) {
+      // Worker file is missing.  Fall back to synchronous migration on the
+      // main thread with a prominent warning.  The event loop will block
+      // during heavy operations (VACUUM) and the migration banner will not
+      // show in the browser, but the server will still come up correctly
+      // instead of crash-looping.
+      //
+      // HOW TO FIX: rebuild the Docker image so the Dockerfile esbuild step
+      // that produces migrate-worker.mjs is included.  See Dockerfile stage 1.
+      logger.warn(
+        "⚠️  migrate-worker file not found — falling back to SYNCHRONOUS " +
+          "migrations on the main thread.  The event loop will be blocked " +
+          "during VACUUM and the migration banner will NOT appear in the " +
+          "browser.  Rebuild the Docker image to restore the child-process " +
+          "worker and the migration banner.",
+        { workerPath, bundleUrl },
+      );
+      try {
+        runMigrations(dbPath);
+        resolve();
+      } catch (err) {
+        reject(err);
+      }
+      return;
+    }
+
+    // process.execArgv carries tsx loader flags in dev mode so the child can
+    // load TypeScript.  In production it is empty (or just node flags like
+    // --max-old-space-size) which is fine for compiled JS.
+    const child = spawn(
+      process.execPath,
+      [...process.execArgv, workerPath, dbPath],
+      { stdio: "inherit", env: process.env },
+    );
+
+    logger.info("Migration child process started", {
+      workerPath,
+      dbPath,
+      isDev,
+      pid: child.pid,
+    });
+
+    child.on("error", (err) => {
+      // spawn() itself failed (e.g. EACCES, ENOENT after the existsSync check
+      // somehow raced, or a seccomp/AppArmor restriction on fork/exec).
+      // Fall back to synchronous migration so the server comes up instead of
+      // crash-looping, but make the situation unmissable in the logs.
+      logger.warn(
+        "⚠️  Migration child process failed to spawn — falling back to " +
+          "SYNCHRONOUS migrations on the main thread.  The event loop will " +
+          "be blocked during VACUUM and the migration banner will NOT appear.",
+        { error: err.message, workerPath },
+      );
+      try {
+        runMigrations(dbPath);
+        resolve();
+      } catch (migErr) {
+        reject(migErr);
+      }
+    });
+
+    child.on("close", (code) => {
+      if (code === 0) {
+        logger.info("Migration child process completed successfully");
+        resolve();
+      } else {
+        const msg = `Migration process exited with code ${code}`;
+        logger.error(msg, { workerPath, dbPath });
+        reject(new Error(msg));
+      }
+    });
+  });
+}
+
 export function runMigrations(dbPath?: string): void {
   const actualDbPath = dbPath || DB_PATH;
   logger.info("Starting database migrations", { dbPath: actualDbPath });
@@ -1282,7 +1571,9 @@ export function runMigrations(dbPath?: string): void {
       setAlembicVersion(db, migration.revision);
     }
 
-    if (startIndex >= MIGRATIONS.length) {
+    const migrationsRan = startIndex < MIGRATIONS.length;
+
+    if (!migrationsRan) {
       logger.info("Database is already at latest version", {
         version: LATEST_REVISION,
       });
@@ -1295,7 +1586,27 @@ export function runMigrations(dbPath?: string): void {
     // Always run the FTS integrity check, regardless of whether any migration
     // was applied.  This catches databases that are already at the latest
     // version but still carry the stale 8-column FTS from the pre-Alembic era.
-    verifyAndRepairFtsIfNeeded(db);
+    const ftsRepaired = verifyAndRepairFtsIfNeeded(db);
+
+    // VACUUM and ANALYZE run at most once per startup, only when work was
+    // actually done.  Running them inside individual migration functions caused
+    // redundant multi-hour stalls on large databases when several migrations
+    // ran in sequence.  ANALYZE runs after VACUUM so the query planner sees
+    // the final, compacted page layout and all indexes created by every
+    // migration step.
+    if (migrationsRan || ftsRepaired) {
+      logger.warn(
+        "Running VACUUM to reclaim disk space freed by migrations — " +
+          "this may take several minutes on large databases and requires free " +
+          "disk space roughly equal to the current database file size...",
+      );
+      db.exec("VACUUM");
+      logger.info("✓ VACUUM complete");
+
+      logger.info("Running ANALYZE to update query planner statistics...");
+      db.exec("ANALYZE");
+      logger.info("✓ ANALYZE complete");
+    }
 
     db.close();
   } catch (error) {
@@ -1306,9 +1617,4 @@ export function runMigrations(dbPath?: string): void {
     db.close();
     throw error;
   }
-}
-
-// Run if executed directly
-if (import.meta.url === `file://${process.argv[1]}`) {
-  runMigrations();
 }

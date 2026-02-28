@@ -63,6 +63,10 @@
  *
  *  handleRequestStatus:
  *    - emits system_status
+ *    - regression: also emits message_rate so the Status page gets the rolling
+ *      1-minute average immediately without waiting for the 5-second scheduler
+ *    - regression: system_status.global LastMinute is the rolling rate (not the
+ *      coarse per-minute counter) so the Status page always shows a live value
  *
  *  handleSignalFreqs:
  *    - emits signal_freqs with formatted freq data
@@ -84,6 +88,17 @@
  *  zeroFillBuckets (tested via handleRRDTimeseries):
  *    - fills gaps with zero rows
  *    - preserves existing rows
+ *
+ *  zeroFillBuckets (tested via handleRRDTimeseries):
+ *    - fills gaps with zero rows
+ *    - preserves existing rows
+ *
+ *  migration-aware connection handling (registerHandlers):
+ *    - emits migration_status { running: true } when migration is running
+ *    - registers socket in pending queue when migration is running
+ *    - does NOT emit features_enabled when migration is running
+ *    - calls handleConnect normally (features_enabled emitted) when not migrating
+ *    - regression: migration flag false → normal features_enabled emitted
  */
 
 import type { Mock } from "vitest";
@@ -138,6 +153,15 @@ vi.mock("../../services/rrd-migration.js", () => ({
   queryTimeseriesData: vi.fn(),
 }));
 
+vi.mock("../../services/timeseries-cache.js", () => ({
+  getCachedTimeSeries: vi.fn(),
+}));
+
+vi.mock("../../startup-state.js", () => ({
+  isMigrationRunning: vi.fn().mockReturnValue(false),
+  registerPendingSocket: vi.fn(),
+}));
+
 // ---------------------------------------------------------------------------
 // Imports — after mocks
 // ---------------------------------------------------------------------------
@@ -164,6 +188,11 @@ import { enrichMessage, enrichMessages } from "../../formatters/enrichment.js";
 import { getAdsbPoller } from "../../services/adsb-poller.js";
 import { getMessageQueue } from "../../services/message-queue.js";
 import { queryTimeseriesData } from "../../services/rrd-migration.js";
+import { getCachedTimeSeries } from "../../services/timeseries-cache.js";
+import {
+  isMigrationRunning,
+  registerPendingSocket,
+} from "../../startup-state.js";
 import { registerHandlers } from "../handlers.js";
 
 // ---------------------------------------------------------------------------
@@ -189,8 +218,11 @@ const mockGetErrors = vi.mocked(getErrors);
 const mockGetAllFreqCounts = vi.mocked(getAllFreqCounts);
 const mockSearchAlertsByTerm = vi.mocked(searchAlertsByTerm);
 const mockQueryTimeseriesData = vi.mocked(queryTimeseriesData);
+const mockGetCachedTimeSeries = vi.mocked(getCachedTimeSeries);
 const mockGetPerDecoderMessageCounts = vi.mocked(getPerDecoderMessageCounts);
 const mockGetMessageQueue = vi.mocked(getMessageQueue);
+const mockIsMigrationRunning = vi.mocked(isMigrationRunning);
+const mockRegisterPendingSocket = vi.mocked(registerPendingSocket);
 
 // ---------------------------------------------------------------------------
 // Default config returned by mockGetConfig
@@ -345,6 +377,7 @@ beforeEach(() => {
   mockGetAllFreqCounts.mockReturnValue([]);
   mockSearchAlertsByTerm.mockReturnValue([]);
   mockQueryTimeseriesData.mockResolvedValue([]);
+  mockGetCachedTimeSeries.mockReturnValue(null);
   mockGetPerDecoderMessageCounts.mockReturnValue({
     acars: 0,
     vdlm2: 0,
@@ -361,6 +394,14 @@ beforeEach(() => {
       imsl: { lastMinute: 0, total: 0 },
       irdm: { lastMinute: 0, total: 0 },
       error: { lastMinute: 0, total: 0 },
+    }),
+    getRollingRates: vi.fn().mockReturnValue({
+      total: 0,
+      acars: 0,
+      vdlm2: 0,
+      hfdl: 0,
+      imsl: 0,
+      irdm: 0,
     }),
     length: 0,
   } as unknown as ReturnType<typeof getMessageQueue>);
@@ -390,6 +431,8 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.restoreAllMocks();
+  // Ensure migration flag is reset to false between tests
+  mockIsMigrationRunning.mockReturnValue(false);
 });
 
 // ---------------------------------------------------------------------------
@@ -1024,6 +1067,99 @@ describe("handleRequestStatus", () => {
     expect(statuses[0]).toBeDefined();
   });
 
+  it("regression: also emits message_rate so the Status page gets the rolling average immediately", () => {
+    // This test must FAIL before the fix (handleRequestStatus only emitted
+    // system_status) and PASS after (it also emits message_rate).
+    mockGetMessageQueue.mockReturnValue({
+      getStats: vi.fn().mockReturnValue({
+        acars: { lastMinute: 0, total: 0 },
+        vdlm2: { lastMinute: 0, total: 0 },
+        hfdl: { lastMinute: 0, total: 0 },
+        imsl: { lastMinute: 0, total: 0 },
+        irdm: { lastMinute: 0, total: 0 },
+        error: { lastMinute: 0, total: 0 },
+      }),
+      getRollingRates: vi.fn().mockReturnValue({
+        total: 42,
+        acars: 20,
+        vdlm2: 10,
+        hfdl: 8,
+        imsl: 2,
+        irdm: 2,
+      }),
+      length: 0,
+    } as unknown as ReturnType<typeof getMessageQueue>);
+
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+    socket.handlers.request_status();
+
+    const rates = emittedAs<{
+      total: number;
+      acars: number;
+      vdlm2: number;
+      hfdl: number;
+      imsl: number;
+      irdm: number;
+    }>(socket, "message_rate");
+
+    expect(rates).toHaveLength(1);
+    expect(rates[0].total).toBe(42);
+    expect(rates[0].acars).toBe(20);
+    expect(rates[0].vdlm2).toBe(10);
+  });
+
+  it("regression: system_status.global LastMinute uses rolling rate not the per-minute counter", () => {
+    // WHY: getStats().lastMinute is a coarse counter that resets at minute
+    // boundaries (hard jump to 0). getRollingRates() is the smooth 12×5s
+    // window that gives a real msgs/min value at any point in time.
+    // getSystemStatus() must use getRollingRates() so the Status page always
+    // shows a live rolling average rather than an ever-accumulating counter.
+    mockGetConfig.mockReturnValue(
+      makeDefaultConfig({ enableAcars: true, enableVdlm: true }),
+    );
+    mockGetMessageQueue.mockReturnValue({
+      getStats: vi.fn().mockReturnValue({
+        acars: { lastMinute: 999, total: 0 }, // coarse counter — must NOT appear
+        vdlm2: { lastMinute: 888, total: 0 },
+        hfdl: { lastMinute: 0, total: 0 },
+        imsl: { lastMinute: 0, total: 0 },
+        irdm: { lastMinute: 0, total: 0 },
+        error: { lastMinute: 0, total: 0 },
+      }),
+      getRollingRates: vi.fn().mockReturnValue({
+        total: 35,
+        acars: 20,
+        vdlm2: 15,
+        hfdl: 0,
+        imsl: 0,
+        irdm: 0,
+      }),
+      length: 0,
+    } as unknown as ReturnType<typeof getMessageQueue>);
+
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+    socket.handlers.request_status();
+
+    const statuses = emittedAs<{
+      status: {
+        global: Record<string, { LastMinute?: number }>;
+      };
+    }>(socket, "system_status");
+
+    expect(statuses).toHaveLength(1);
+    const global = statuses[0].status.global;
+
+    // Rolling rate values must appear — not the coarse lastMinute counters
+    expect(global.ACARS?.LastMinute).toBe(20);
+    expect(global.VDLM2?.LastMinute).toBe(15);
+
+    // Coarse counters (999, 888) must NOT appear
+    expect(global.ACARS?.LastMinute).not.toBe(999);
+    expect(global.VDLM2?.LastMinute).not.toBe(888);
+  });
+
   it("should not throw when getPerDecoderMessageCounts throws", () => {
     mockGetPerDecoderMessageCounts.mockImplementation(() => {
       throw new Error("counter error");
@@ -1210,34 +1346,70 @@ describe("handleSignalGraphs", () => {
 // handleRRDTimeseries — time_period-based path
 // ---------------------------------------------------------------------------
 
-describe("handleRRDTimeseries — time_period", () => {
-  const VALID_PERIODS = ["1hr", "6hr", "12hr"] as const;
+describe("handleRRDTimeseries — time_period (cache path)", () => {
+  it("should serve the cached response directly for a valid time_period", async () => {
+    const cachedResponse = {
+      data: [],
+      time_period: "1hr",
+      start: Date.now() - 3_600_000,
+      end: Date.now(),
+      points: 0,
+    };
+    mockGetCachedTimeSeries.mockReturnValue(cachedResponse);
 
-  for (const period of VALID_PERIODS) {
-    it(`should emit rrd_timeseries_data for period "${period}" (no-downsample path)`, async () => {
-      mockQueryTimeseriesData.mockResolvedValue([]);
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+    socket.handlers.rrd_timeseries({ time_period: "1hr" });
+
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    const payloads = emittedAs<typeof cachedResponse>(
+      socket,
+      "rrd_timeseries_data",
+    );
+
+    expect(payloads).toHaveLength(1);
+    expect(payloads[0]).toEqual(cachedResponse);
+  });
+
+  it("should serve cached responses for all 8 valid time periods", async () => {
+    const ALL_PERIODS = [
+      "1hr",
+      "6hr",
+      "12hr",
+      "24hr",
+      "1wk",
+      "30day",
+      "6mon",
+      "1yr",
+    ] as const;
+
+    for (const period of ALL_PERIODS) {
+      const cached = {
+        data: [],
+        time_period: period,
+        start: 0,
+        end: 1,
+        points: 0,
+      };
+      mockGetCachedTimeSeries.mockReturnValue(cached);
 
       const socket = makeMockSocket();
       simulateConnect(socket);
-
       socket.handlers.rrd_timeseries({ time_period: period });
 
-      // Flush the async poll handler
       await new Promise<void>((resolve) => setImmediate(resolve));
 
-      const payloads = emittedAs<{
-        time_period: string;
-        data: unknown[];
-        points: number;
-      }>(socket, "rrd_timeseries_data");
-
+      const payloads = emittedAs<{ time_period: string }>(
+        socket,
+        "rrd_timeseries_data",
+      );
       expect(payloads).toHaveLength(1);
       expect(payloads[0].time_period).toBe(period);
-      expect(Array.isArray(payloads[0].data)).toBe(true);
-    });
-  }
+    }
+  });
 
-  it("should emit error response for invalid time_period", async () => {
+  it("should emit an error response for an invalid time_period", async () => {
     const socket = makeMockSocket();
     simulateConnect(socket);
     socket.handlers.rrd_timeseries({ time_period: "invalid_period" });
@@ -1252,6 +1424,68 @@ describe("handleRRDTimeseries — time_period", () => {
     expect(payloads).toHaveLength(1);
     expect(payloads[0].error).toMatch(/invalid/i);
     expect(payloads[0].data).toEqual([]);
+  });
+
+  it("should emit a cache-warming error when a valid period has no cached data yet", async () => {
+    // mockGetCachedTimeSeries defaults to null (set in beforeEach)
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+    socket.handlers.rrd_timeseries({ time_period: "24hr" });
+
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    const payloads = emittedAs<{ error: string; time_period: string }>(
+      socket,
+      "rrd_timeseries_data",
+    );
+
+    expect(payloads).toHaveLength(1);
+    expect(payloads[0].error).toMatch(/warming/i);
+    expect(payloads[0].time_period).toBe("24hr");
+  });
+
+  it("regression: getDatabase is NOT called for time_period requests", async () => {
+    const cachedResponse = {
+      data: [],
+      time_period: "24hr",
+      start: 0,
+      end: 1,
+      points: 0,
+    };
+    mockGetCachedTimeSeries.mockReturnValue(cachedResponse);
+
+    // Import and clear the mocked getDatabase
+    const { getDatabase } = await import("../../db/index.js");
+    const mockGetDb = vi.mocked(getDatabase);
+    mockGetDb.mockClear();
+
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+    socket.handlers.rrd_timeseries({ time_period: "24hr" });
+
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    expect(mockGetDb).not.toHaveBeenCalled();
+  });
+
+  it("regression: queryTimeseriesData is NOT called for time_period requests", async () => {
+    const cachedResponse = {
+      data: [],
+      time_period: "1hr",
+      start: 0,
+      end: 1,
+      points: 0,
+    };
+    mockGetCachedTimeSeries.mockReturnValue(cachedResponse);
+    mockQueryTimeseriesData.mockClear();
+
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+    socket.handlers.rrd_timeseries({ time_period: "1hr" });
+
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    expect(mockQueryTimeseriesData).not.toHaveBeenCalled();
   });
 });
 
@@ -1291,108 +1525,92 @@ describe("handleRRDTimeseries — explicit start/end", () => {
 });
 
 // ---------------------------------------------------------------------------
-// zeroFillBuckets — tested indirectly via handleRRDTimeseries
+// zeroFillBuckets — tested directly in utils/__tests__/timeseries.test.ts
+// The explicit start/end path below still exercises zero-fill end-to-end.
 // ---------------------------------------------------------------------------
 
-describe("zeroFillBuckets (via handleRRDTimeseries)", () => {
-  it("should fill gaps in timeseries data with zero-value rows", async () => {
-    // Return 2 rows with a 2-minute gap between them; expect the gap filled
-    const now = Math.floor(Date.now() / 1000);
-    const step = 60; // 1-minute buckets (1hr period)
+// ---------------------------------------------------------------------------
+// Migration-aware connection handling
+// ---------------------------------------------------------------------------
 
-    // Two data points 3 minutes apart — 1 gap bucket expected between them
-    mockQueryTimeseriesData.mockResolvedValue([
-      {
-        timestamp: now - 180,
-        acarsCount: 5,
-        vdlmCount: 0,
-        hfdlCount: 0,
-        imslCount: 0,
-        irdmCount: 0,
-        totalCount: 5,
-        errorCount: 0,
-        resolution: "1min",
-        id: 1,
-        createdAt: Date.now(),
-      },
-      {
-        timestamp: now - 60,
-        acarsCount: 3,
-        vdlmCount: 0,
-        hfdlCount: 0,
-        imslCount: 0,
-        irdmCount: 0,
-        totalCount: 3,
-        errorCount: 0,
-        resolution: "1min",
-        id: 2,
-        createdAt: Date.now(),
-      },
-    ]);
+describe("migration-aware connection handling", () => {
+  it("emits migration_status { running: true } when migration is running", () => {
+    mockIsMigrationRunning.mockReturnValue(true);
 
     const socket = makeMockSocket();
     simulateConnect(socket);
-    socket.handlers.rrd_timeseries({ time_period: "1hr" });
 
-    await new Promise<void>((resolve) => setImmediate(resolve));
-
-    const payloads = emittedAs<{
-      data: Array<{ acars: number }>;
-      points: number;
-    }>(socket, "rrd_timeseries_data");
-
+    const payloads = emittedAs<{ running: boolean; message: string }>(
+      socket,
+      "migration_status",
+    );
     expect(payloads).toHaveLength(1);
-    // The response should contain zero-filled rows for the full 1hr range
-    const data = payloads[0].data;
-    expect(data.length).toBeGreaterThan(2);
-
-    // The actual data points should retain their values
-    const nonZero = data.filter((d) => d.acars > 0);
-    expect(nonZero.length).toBeGreaterThanOrEqual(2);
-
-    void step;
+    expect(payloads[0].running).toBe(true);
+    expect(typeof payloads[0].message).toBe("string");
+    expect(payloads[0].message.length).toBeGreaterThan(0);
   });
 
-  it("should convert timestamps from seconds to milliseconds in the response", async () => {
-    const now = Math.floor(Date.now() / 1000);
-
-    mockQueryTimeseriesData.mockResolvedValue([
-      {
-        timestamp: now - 60,
-        acarsCount: 1,
-        vdlmCount: 0,
-        hfdlCount: 0,
-        imslCount: 0,
-        irdmCount: 0,
-        totalCount: 1,
-        errorCount: 0,
-        resolution: "1min",
-        id: 1,
-        createdAt: Date.now(),
-      },
-    ]);
+  it("registers socket in the pending queue when migration is running", () => {
+    mockIsMigrationRunning.mockReturnValue(true);
 
     const socket = makeMockSocket();
     simulateConnect(socket);
-    socket.handlers.rrd_timeseries({ time_period: "1hr" });
 
-    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect(mockRegisterPendingSocket).toHaveBeenCalledWith(socket);
+  });
 
-    const payloads = emittedAs<{
-      data: Array<{ timestamp: number }>;
-      start: number;
-      end: number;
-    }>(socket, "rrd_timeseries_data");
+  it("does NOT call registerPendingSocket when migration is not running", () => {
+    mockIsMigrationRunning.mockReturnValue(false);
 
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+
+    expect(mockRegisterPendingSocket).not.toHaveBeenCalled();
+  });
+
+  it("does NOT emit features_enabled when migration is running", () => {
+    mockIsMigrationRunning.mockReturnValue(true);
+
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+
+    const payloads = emittedAs<unknown>(socket, "features_enabled");
+    expect(payloads).toHaveLength(0);
+  });
+
+  it("emits features_enabled (normal connect) when migration is not running", () => {
+    mockIsMigrationRunning.mockReturnValue(false);
+
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+
+    const payloads = emittedAs<unknown>(socket, "features_enabled");
     expect(payloads).toHaveLength(1);
-    const { data, start, end } = payloads[0];
+  });
 
-    // Timestamps in the data array should be in milliseconds (> 1e12)
-    for (const row of data) {
-      expect(row.timestamp).toBeGreaterThan(1e12);
-    }
-    // start/end should also be in milliseconds
-    expect(start).toBeGreaterThan(1e12);
-    expect(end).toBeGreaterThan(1e12);
+  it("regression: migration flag false → full connect sequence delivered, no migration_status emitted", () => {
+    mockIsMigrationRunning.mockReturnValue(false);
+
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+
+    // Should have features_enabled
+    expect(emittedAs(socket, "features_enabled")).toHaveLength(1);
+    // Should NOT have migration_status
+    expect(emittedAs(socket, "migration_status")).toHaveLength(0);
+  });
+
+  it("still registers all per-socket event handlers even when migration is running", () => {
+    mockIsMigrationRunning.mockReturnValue(true);
+
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+
+    // Core event handlers must be registered regardless of migration state
+    expect(socket.handlers.query_search).toBeDefined();
+    expect(socket.handlers.update_alerts).toBeDefined();
+    expect(socket.handlers.request_status).toBeDefined();
+    expect(socket.handlers.signal_freqs).toBeDefined();
+    expect(socket.handlers.disconnect).toBeDefined();
   });
 });

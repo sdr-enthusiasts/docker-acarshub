@@ -34,6 +34,7 @@ import type {
   AlertTerm,
   DatabaseSize,
   Decoders,
+  MessageRateData,
   SignalCountData,
   SignalFreqData,
   SignalLevelData,
@@ -137,6 +138,17 @@ export interface SocketEvents {
 
   // Station IDs (sent on connect and broadcast when a new station is seen)
   station_ids: (data: { station_ids: string[] }) => void;
+
+  // Migration status — emitted when the backend starts/finishes DB migrations.
+  // Clients that connect while migrations are running receive { running: true }
+  // immediately and are held until init is complete, at which point they receive
+  // { running: false } followed by the normal connect sequence.
+  migration_status: (data: { running: boolean; message: string }) => void;
+
+  // Rolling message rate — emitted by the backend scheduler every 5 seconds.
+  // Counts messages received in the last 60 seconds (12 × 5-second buckets),
+  // expressed as msgs/min so the UI can show a near-real-time throughput rate.
+  message_rate: (data: MessageRateData) => void;
 
   // Alert regeneration responses
   regenerate_alert_matches_started: (data: { message: string }) => void;

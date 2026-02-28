@@ -25,6 +25,43 @@ import { LiveMessagesPage } from "../LiveMessagesPage";
 // Mocks
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// @tanstack/react-virtual mock
+//
+// jsdom has no layout engine — all elements report zero clientHeight and
+// getBoundingClientRect() returns zeros. The virtualizer therefore thinks no
+// items are in the viewport and renders nothing, which breaks every test that
+// expects message-group elements to be present.
+//
+// This mock replaces useVirtualizer with a simple implementation that always
+// reports every item as visible, making the virtual list behave like a plain
+// list in the test environment.
+// ---------------------------------------------------------------------------
+vi.mock("@tanstack/react-virtual", () => ({
+  useVirtualizer: (options: {
+    count: number;
+    estimateSize: () => number;
+    getScrollElement: () => Element | null;
+    overscan?: number;
+  }) => {
+    const estimatedSize = options.estimateSize();
+    return {
+      getVirtualItems: () =>
+        Array.from({ length: options.count }, (_, i) => ({
+          index: i,
+          key: i,
+          start: i * estimatedSize,
+          size: estimatedSize,
+          lane: 0,
+          end: (i + 1) * estimatedSize,
+        })),
+      getTotalSize: () => options.count * estimatedSize,
+      // measureElement is attached as a ref — return a no-op function
+      measureElement: () => undefined,
+    };
+  },
+}));
+
 vi.mock("../../services/socket", () => ({
   socketService: {
     connect: vi.fn(),

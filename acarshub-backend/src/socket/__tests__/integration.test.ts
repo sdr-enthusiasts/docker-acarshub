@@ -68,6 +68,10 @@ import {
   initializeMessageCounts,
 } from "../../db/index.js";
 import { runMigrations } from "../../db/migrate.js";
+import {
+  initTimeSeriesCache,
+  stopTimeSeriesCache,
+} from "../../services/timeseries-cache.js";
 import { initializeSocketServer, shutdownSocketServer } from "../index.js";
 import type { TypedSocketServer } from "../types.js";
 
@@ -136,10 +140,23 @@ async function createTestServer(dbPath: string): Promise<TestServer> {
     cors: { origin: "*", credentials: true },
   });
 
+  // Warm the time-series cache so rrd_timeseries requests are served from
+  // memory rather than returning a "warming up" error.  The broadcaster
+  // pushes refreshed data to all connected clients on the /main namespace.
+  initTimeSeriesCache((_period, data) => {
+    const ns = io.of("/main") as unknown as {
+      emit: (event: string, data: unknown) => void;
+    };
+    ns.emit("rrd_timeseries_data", data);
+  });
+
   return {
     port,
     io,
     close: async () => {
+      // Stop the cache timers before closing so no callbacks fire after the
+      // database connection is closed.
+      stopTimeSeriesCache();
       // Disconnect all active sockets before closing the HTTP server so that
       // fastify.close() does not hang waiting for open connections.
       io.of("/main").disconnectSockets(true);

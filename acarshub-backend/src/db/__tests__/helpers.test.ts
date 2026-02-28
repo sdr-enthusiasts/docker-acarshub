@@ -22,9 +22,18 @@ import {
   isMessageNotEmpty,
   lookupGroundstation,
   lookupLabel,
+  updateFrequencies,
 } from "../helpers.js";
 import * as schema from "../schema.js";
-import { messagesCount, messagesCountDropped } from "../schema.js";
+import {
+  freqsAcars,
+  freqsHfdl,
+  freqsImsl,
+  freqsIrdm,
+  freqsVdlm2,
+  messagesCount,
+  messagesCountDropped,
+} from "../schema.js";
 
 describe("Database Helper Functions", () => {
   let db: Database.Database;
@@ -247,6 +256,96 @@ describe("Database Helper Functions", () => {
       expect(lookupLabel("H1")).toBe("Position Report");
       expect(lookupLabel("Q0")).toBe("Flight Plan");
       expect(lookupLabel("SA")).toBe("Satellite Report");
+    });
+  });
+
+  describe("updateFrequencies", () => {
+    // Each test needs the freq tables to be present. We create them in a
+    // nested beforeEach so the rest of the suite is unaffected.
+    beforeEach(() => {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS freqs_acars (id INTEGER PRIMARY KEY AUTOINCREMENT, freq TEXT, count INTEGER);
+        CREATE TABLE IF NOT EXISTS freqs_vdlm2 (id INTEGER PRIMARY KEY AUTOINCREMENT, freq TEXT, count INTEGER);
+        CREATE TABLE IF NOT EXISTS freqs_hfdl  (id INTEGER PRIMARY KEY AUTOINCREMENT, freq TEXT, count INTEGER);
+        CREATE TABLE IF NOT EXISTS freqs_imsl  (id INTEGER PRIMARY KEY AUTOINCREMENT, freq TEXT, count INTEGER);
+        CREATE TABLE IF NOT EXISTS freqs_irdm  (id INTEGER PRIMARY KEY AUTOINCREMENT, freq TEXT, count INTEGER);
+      `);
+    });
+
+    it("should write to freqs_acars for ACARS messages", () => {
+      updateFrequencies("131.550", "ACARS");
+      const testDb = drizzle(db, { schema });
+      const rows = testDb.select().from(freqsAcars).all();
+      expect(rows).toHaveLength(1);
+      expect(rows[0].freq).toBe("131.550");
+      expect(rows[0].count).toBe(1);
+    });
+
+    it("regression: should write to freqs_imsl for IMS-L (normalizeMessageType output)", () => {
+      // normalizeMessageType("IMSL") returns "IMS-L".  Prior to the fix,
+      // freqTableMap did not contain an "IMS-L" key, so no row was ever
+      // written to freqs_imsl and the Status page IMSL frequency chart was
+      // permanently empty.
+      updateFrequencies("10.500", "IMS-L");
+      const testDb = drizzle(db, { schema });
+      const rows = testDb.select().from(freqsImsl).all();
+      expect(rows).toHaveLength(1);
+      expect(rows[0].freq).toBe("10.500");
+      expect(rows[0].count).toBe(1);
+    });
+
+    it("should also write to freqs_imsl for un-normalized IMSL", () => {
+      updateFrequencies("10.500", "IMSL");
+      const testDb = drizzle(db, { schema });
+      const rows = testDb.select().from(freqsImsl).all();
+      expect(rows).toHaveLength(1);
+    });
+
+    it("should write to freqs_vdlm2 for VDL-M2 (normalizeMessageType output)", () => {
+      updateFrequencies("136.900", "VDL-M2");
+      const testDb = drizzle(db, { schema });
+      const rows = testDb.select().from(freqsVdlm2).all();
+      expect(rows).toHaveLength(1);
+      expect(rows[0].freq).toBe("136.900");
+    });
+
+    it("should write to freqs_vdlm2 for un-normalized VDLM2", () => {
+      updateFrequencies("136.900", "VDLM2");
+      const testDb = drizzle(db, { schema });
+      const rows = testDb.select().from(freqsVdlm2).all();
+      expect(rows).toHaveLength(1);
+    });
+
+    it("should write to freqs_hfdl for HFDL messages", () => {
+      updateFrequencies("11.184", "HFDL");
+      const testDb = drizzle(db, { schema });
+      const rows = testDb.select().from(freqsHfdl).all();
+      expect(rows).toHaveLength(1);
+    });
+
+    it("should write to freqs_irdm for IRDM messages", () => {
+      updateFrequencies("1626.5", "IRDM");
+      const testDb = drizzle(db, { schema });
+      const rows = testDb.select().from(freqsIrdm).all();
+      expect(rows).toHaveLength(1);
+    });
+
+    it("should increment count on subsequent calls for the same frequency", () => {
+      updateFrequencies("131.550", "ACARS");
+      updateFrequencies("131.550", "ACARS");
+      updateFrequencies("131.550", "ACARS");
+      const testDb = drizzle(db, { schema });
+      const rows = testDb.select().from(freqsAcars).all();
+      expect(rows).toHaveLength(1);
+      expect(rows[0].count).toBe(3);
+    });
+
+    it("should not write anything for an unknown message type", () => {
+      updateFrequencies("131.550", "UNKNOWN");
+      const testDb = drizzle(db, { schema });
+      expect(testDb.select().from(freqsAcars).all()).toHaveLength(0);
+      expect(testDb.select().from(freqsVdlm2).all()).toHaveLength(0);
+      expect(testDb.select().from(freqsImsl).all()).toHaveLength(0);
     });
   });
 
