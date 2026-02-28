@@ -134,8 +134,8 @@ beforeAll(() => {
 });
 
 afterAll(() => {
-  // Clean up the working copy and its .back counterpart (if any)
-  for (const p of [WORK_RRD, `${WORK_RRD}.back`]) {
+  // Clean up the working copy and its .back/.back2 counterparts (if any)
+  for (const p of [WORK_RRD, `${WORK_RRD}.back`, `${WORK_RRD}.back2`]) {
     if (existsSync(p)) unlinkSync(p);
   }
   // Remove work dir (best-effort)
@@ -151,10 +151,13 @@ afterAll(() => {
 // ---------------------------------------------------------------------------
 describe("RRD Migration Integration", () => {
   beforeEach(async () => {
-    // Restore the working copy if a previous test renamed it to .back
-    if (!existsSync(WORK_RRD) && existsSync(`${WORK_RRD}.back`)) {
-      copyFileSync(FIXTURE_RRD, WORK_RRD);
-      if (existsSync(`${WORK_RRD}.back`)) {
+    // Restore the working copy if a previous test renamed it to .back2 (or .back)
+    if (!existsSync(WORK_RRD)) {
+      if (existsSync(`${WORK_RRD}.back2`)) {
+        copyFileSync(FIXTURE_RRD, WORK_RRD);
+        unlinkSync(`${WORK_RRD}.back2`);
+      } else if (existsSync(`${WORK_RRD}.back`)) {
+        copyFileSync(FIXTURE_RRD, WORK_RRD);
         unlinkSync(`${WORK_RRD}.back`);
       }
     }
@@ -180,10 +183,15 @@ describe("RRD Migration Integration", () => {
   afterEach(() => {
     closeDatabase();
 
-    // Restore working copy for the next test (migration renames it to .back)
-    if (!existsSync(WORK_RRD) && existsSync(`${WORK_RRD}.back`)) {
-      copyFileSync(FIXTURE_RRD, WORK_RRD);
-      unlinkSync(`${WORK_RRD}.back`);
+    // Restore working copy for the next test (migration renames it to .back2)
+    if (!existsSync(WORK_RRD)) {
+      if (existsSync(`${WORK_RRD}.back2`)) {
+        copyFileSync(FIXTURE_RRD, WORK_RRD);
+        unlinkSync(`${WORK_RRD}.back2`);
+      } else if (existsSync(`${WORK_RRD}.back`)) {
+        copyFileSync(FIXTURE_RRD, WORK_RRD);
+        unlinkSync(`${WORK_RRD}.back`);
+      }
     }
   });
 
@@ -202,8 +210,8 @@ describe("RRD Migration Integration", () => {
     expect(result?.success).toBe(true);
     expect(result?.rowsInserted).toBeGreaterThan(0);
 
-    // Migration renames the file to .back
-    expect(existsSync(`${WORK_RRD}.back`)).toBe(true);
+    // Migration renames the file to .back2
+    expect(existsSync(`${WORK_RRD}.back2`)).toBe(true);
     expect(existsSync(WORK_RRD)).toBe(false);
 
     // At least some rows were written to the database
@@ -230,10 +238,10 @@ describe("RRD Migration Integration", () => {
     expect(result1?.success).toBe(true);
 
     // Restore the RRD so the second call has a file to check
-    // (The migration renames it to .back, so we copy the original back)
+    // (The migration renames it to .back2, so we copy the original back)
     copyFileSync(FIXTURE_RRD, WORK_RRD);
 
-    // Second call: the .back file exists AND timeseries_stats has rows,
+    // Second call: the .back2 file exists AND timeseries_stats has rows,
     // so migration should be skipped.
     const result2 = await migrateRrdToSqlite(WORK_RRD, TEST_ARCHIVES);
     expect(result2).toBeNull(); // Returns null when already migrated

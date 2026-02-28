@@ -4,17 +4,35 @@
  * Migrates historical time-series data from RRD (Round Robin Database) to SQLite.
  * Runs as a blocking task during server startup, after database initialization.
  *
- * Architecture:
- * 1. Check for RRD file at configured path (default: /run/acars/acarshub.rrd)
- * 2. Check for .rrd.back file (indicates already migrated)
- * 3. Hash the candidate file and check the rrd_import_registry table —
- *    skips import if this exact file content was already imported before
- *    (guards against the user renaming .rrd.back back to .rrd)
+ * Sentinel file hierarchy (checked in order on every startup):
+ *
+ *   .rrd.back2  — Import completed with the FIXED importer (backward expansion,
+ *                 NaN-row skipping, future-timestamp clamping).  This is the
+ *                 normal "done" state after the fixes landed.  Startup skips
+ *                 immediately when this file is present and the DB has rows.
+ *
+ *   .rrd.back   — Import completed with the OLD (buggy) importer that expanded
+ *                 coarse archives forward in time and inserted NaN→0 rows.
+ *                 When this file is detected the repair path runs automatically:
+ *                 bad rows are deleted from timeseries_stats, the registry entry
+ *                 is cleared, the file is renamed back to .rrd, and a fresh
+ *                 import is performed with the fixed code.  The result is then
+ *                 renamed to .rrd.back2.
+ *
+ *   .rrd        — No prior migration.  Normal import path runs and produces
+ *                 .rrd.back2 on success.
+ *
+ * Architecture (fresh import path):
+ * 1. Check .rrd.back2 → skip if present with data
+ * 2. Check .rrd.back  → run repair, restore to .rrd, fall through
+ * 3. Check .rrd       → validate + hash check
  * 4. Fetch data from all 4 RRD archives using rrdtool CLI
- * 5. Parse rrdtool output (TSV format)
- * 6. Batch insert into timeseries_stats table (INSERT OR IGNORE — idempotent)
- * 7. Register the file hash in rrd_import_registry
- * 8. Rename RRD file to .rrd.back on success
+ * 5. Parse rrdtool output (TSV format) — all-NaN rows skipped
+ * 6. Expand coarse archives backward to 1-minute resolution
+ * 7. Clamp any rows beyond Date.now()
+ * 8. Batch insert into timeseries_stats (INSERT OR IGNORE — idempotent)
+ * 9. Register the file hash in rrd_import_registry
+ * 10. Rename RRD file to .rrd.back2
  *
  * Duplicate protection is layered:
  *   - Hash registry: prevents re-import of the same file content entirely
@@ -34,7 +52,7 @@ import { exec } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, renameSync, statSync } from "node:fs";
 import { promisify } from "node:util";
-import { count, eq } from "drizzle-orm";
+import { and, count, eq, gt, lte } from "drizzle-orm";
 import { getDatabase, getSqliteConnection } from "../db/index.js";
 import { rrdImportRegistry, timeseriesStats } from "../db/schema.js";
 import { createLogger } from "../utils/logger.js";
@@ -440,14 +458,268 @@ function tryRegisterBackupHash(backupPath: string): void {
     registerHash(fileHash, backupPath, 0 /* rows unknown for legacy imports */);
 
     logger.info(
-      "Registered hash of existing .rrd.back file (graceful degradation for pre-registry deployment)",
+      "Registered hash of existing backup file (graceful degradation for pre-registry deployment)",
       { backupPath, fileHash },
     );
   } catch (error) {
     logger.debug(
-      "Could not register .rrd.back hash — non-fatal, registry is best-effort",
+      "Could not register backup hash — non-fatal, registry is best-effort",
       { backupPath, error: error instanceof Error ? error.message : String(error) },
     );
+  }
+}
+
+// ============================================================================
+// Bad-import repair helpers
+// ============================================================================
+
+/**
+ * Read the `last_update` Unix timestamp from an RRD file using `rrdtool info`.
+ *
+ * `rrdtool info` output contains a line of the form:
+ *   last_update = 1735689900
+ *
+ * Returns null if rrdtool is unavailable, the file is unreadable, or the
+ * expected line is absent.  Callers must treat null as "repair not possible
+ * without this value" and decide whether to skip the deletion step.
+ *
+ * @param rrdPath - Path to the RRD file (typically the .rrd.back copy)
+ */
+async function getRrdLastUpdate(rrdPath: string): Promise<number | null> {
+  try {
+    const { stdout } = await execAsync(`rrdtool info "${rrdPath}"`, {
+      maxBuffer: 1 * 1024 * 1024,
+    });
+    const match = stdout.match(/^last_update\s*=\s*(\d+)/m);
+    if (!match) {
+      logger.warn("rrdtool info output did not contain last_update", {
+        rrdPath,
+      });
+      return null;
+    }
+    return Number.parseInt(match[1], 10);
+  } catch (error) {
+    logger.warn("Failed to read RRD last_update via rrdtool info", {
+      rrdPath,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return null;
+  }
+}
+
+/**
+ * Look up the `imported_at` Unix-seconds timestamp for the given backup file
+ * from the import registry.
+ *
+ * `imported_at` is stored in milliseconds (Date.now()) in the registry; this
+ * function converts it to seconds before returning.
+ *
+ * Returns null if the registry table does not exist, the hash is not found,
+ * or any other error occurs.  Callers fall back to `Date.now()` when null.
+ *
+ * @param backupPath - Path to the .rrd.back file whose hash to look up
+ */
+function getRegistryImportedAt(backupPath: string): number | null {
+  try {
+    ensureRegistryTable();
+    const fileHash = computeFileHash(backupPath);
+    const db = getDatabase();
+    const row = db
+      .select({ importedAt: rrdImportRegistry.importedAt })
+      .from(rrdImportRegistry)
+      .where(eq(rrdImportRegistry.fileHash, fileHash))
+      .get();
+    // importedAt is stored as ms (Date.now()); convert to seconds.
+    return row !== undefined ? Math.floor(row.importedAt / 1000) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Remove the registry entry for the given backup file so the importer will
+ * treat the restored .rrd as a new file eligible for fresh import.
+ *
+ * Best-effort — logs at warn level on failure but never throws.
+ *
+ * @param backupPath - Path to the .rrd.back file whose registry entry to clear
+ */
+function clearRegistryEntry(backupPath: string): void {
+  try {
+    ensureRegistryTable();
+    const fileHash = computeFileHash(backupPath);
+    const db = getDatabase();
+    db.delete(rrdImportRegistry)
+      .where(eq(rrdImportRegistry.fileHash, fileHash))
+      .run();
+    logger.info("Cleared registry entry to allow repair re-import", {
+      fileHash,
+    });
+  } catch (error) {
+    logger.warn(
+      "Could not clear registry entry — non-fatal; hash check may block re-import",
+      {
+        backupPath,
+        error: error instanceof Error ? error.message : String(error),
+      },
+    );
+  }
+}
+
+/**
+ * Repair timeseries_stats after a bad RRD import, then restore .rrd.back → .rrd
+ * so the fixed importer can re-populate the table correctly on this startup.
+ *
+ * WHY THIS IS NEEDED
+ * ------------------
+ * The original importer had two bugs that corrupted timeseries_stats:
+ *
+ *   1. Forward-expansion: coarse archive points were expanded forward in time
+ *      (T, T+60, …, T+(N-1)*60) instead of backward (T-(N-1)*60, …, T).
+ *      This placed historical data at wrong future timestamps and permanently
+ *      squatted those slots — the live stats-writer's INSERT OR IGNORE is
+ *      silently discarded for any slot already occupied.
+ *
+ *   2. NaN→0 rows: time slots with no RRD source data (the gap between
+ *      rrd_last_update and import time) were inserted as all-zero rows instead
+ *      of being skipped, producing false zero counts in the chart.
+ *
+ * THREE CLASSES OF BAD ROWS
+ * -------------------------
+ *   Class 1 — timestamp ≤ rrd_last_update
+ *     All historically-imported rows.  Safe to delete unconditionally because
+ *     the live stats-writer only ever writes "now" timestamps — no live data
+ *     can exist in this range.  The fixed re-import will repopulate correctly.
+ *
+ *   Class 3 — rrd_last_update < timestamp ≤ rrd_last_update + 21600
+ *     Forward-expansion overflow: the last coarse-archive point (at or near
+ *     rrd_last_update) was expanded forward, placing incorrect values at up to
+ *     21540 s (6 h) beyond rrd_last_update.  These squatted slots block the
+ *     live stats-writer permanently.  Worst-case consequence of deleting: up
+ *     to 6 hours of real live data from the window just after rrd_last_update
+ *     is lost.  This is acceptable given that those same slots are currently
+ *     occupied by wrong coarse-average values anyway.
+ *
+ *   Class 2 — rrd_last_update + 21600 < timestamp ≤ imported_at, all counts 0
+ *     NaN-derived zero rows beyond the Class 3 window.  These are filtered by
+ *     the all-zero condition to avoid deleting legitimate quiet periods that
+ *     the live stats-writer wrote during that gap.
+ *
+ * REPAIR BEHAVIOUR WHEN rrd_last_update IS UNAVAILABLE
+ * -----------------------------------------------------
+ * If `rrdtool info` fails (binary missing, file unreadable), the three delete
+ * steps are skipped and a warning is logged.  The file is still restored to
+ * .rrd and the fresh import proceeds.  The fixed importer will add correctly-
+ * positioned rows via INSERT OR IGNORE; old bad rows at wrong timestamps will
+ * remain as historical noise but will never block new live-writer slots since
+ * their timestamps are in the past.
+ *
+ * @param backupPath - Path to the .rrd.back file
+ * @param rrdPath    - The canonical .rrd path to restore the file to
+ * @returns true if the file was successfully restored (caller may proceed with
+ *          fresh import); false if the rename itself failed (caller must abort)
+ */
+async function repairBadImport(
+  backupPath: string,
+  rrdPath: string,
+): Promise<boolean> {
+  logger.info("Starting bad-import repair for .rrd.back file", { backupPath });
+
+  // ── Step 1: determine the RRD's last_update ──────────────────────────────
+  const rrdLastUpdate = await getRrdLastUpdate(backupPath);
+
+  if (rrdLastUpdate === null) {
+    logger.warn(
+      "Cannot determine rrd_last_update — skipping row deletion. " +
+        "The fixed re-import will add correctly-positioned rows alongside " +
+        "any remaining bad rows (which will age out over time).",
+      { backupPath },
+    );
+  } else {
+    // Upper bound for Class 2 (NaN zeros beyond the 6-hour overflow window).
+    const importedAt =
+      getRegistryImportedAt(backupPath) ?? Math.floor(Date.now() / 1000);
+    const class3End = rrdLastUpdate + 21600;
+
+    logger.info("Repair parameters resolved", {
+      rrdLastUpdate,
+      importedAt,
+      class3WindowEnd: class3End,
+    });
+
+    const db = getDatabase();
+
+    // Count rows before deletion for accurate reporting.
+    const before =
+      db.select({ count: count() }).from(timeseriesStats).get()?.count ?? 0;
+
+    // Class 1: entire historical import range — zero live-data risk.
+    db.delete(timeseriesStats)
+      .where(lte(timeseriesStats.timestamp, rrdLastUpdate))
+      .run();
+
+    // Class 3: forward-expansion overflow window (up to 6 h after last_update).
+    // Deleted unconditionally — these may be coarse-average squatters OR early
+    // live-writer rows; either way the slot needs to be freed.
+    db.delete(timeseriesStats)
+      .where(
+        and(
+          gt(timeseriesStats.timestamp, rrdLastUpdate),
+          lte(timeseriesStats.timestamp, class3End),
+        ),
+      )
+      .run();
+
+    // Class 2: NaN-derived zero rows beyond the Class 3 window.
+    // Only deletes all-zero rows to preserve legitimate quiet-period records.
+    if (importedAt > class3End) {
+      db.delete(timeseriesStats)
+        .where(
+          and(
+            gt(timeseriesStats.timestamp, class3End),
+            lte(timeseriesStats.timestamp, importedAt),
+            eq(timeseriesStats.acarsCount, 0),
+            eq(timeseriesStats.vdlmCount, 0),
+            eq(timeseriesStats.hfdlCount, 0),
+            eq(timeseriesStats.imslCount, 0),
+            eq(timeseriesStats.irdmCount, 0),
+            eq(timeseriesStats.totalCount, 0),
+          ),
+        )
+        .run();
+    }
+
+    const after =
+      db.select({ count: count() }).from(timeseriesStats).get()?.count ?? 0;
+    const rowsDeleted = before - after;
+
+    logger.info("Repair: bad rows deleted from timeseries_stats", {
+      rowsDeleted,
+      remainingRows: after,
+    });
+  }
+
+  // ── Step 2: clear registry so re-import is not blocked ───────────────────
+  clearRegistryEntry(backupPath);
+
+  // ── Step 3: restore .back → .rrd so the importer can read it ─────────────
+  try {
+    renameSync(backupPath, rrdPath);
+    logger.info("Repair: restored .rrd.back to .rrd for re-import", {
+      from: backupPath,
+      to: rrdPath,
+    });
+    return true;
+  } catch (error) {
+    logger.error(
+      "Repair: failed to restore .rrd.back → .rrd — cannot proceed with re-import",
+      {
+        backupPath,
+        rrdPath,
+        error: error instanceof Error ? error.message : String(error),
+      },
+    );
+    return false;
   }
 }
 
@@ -566,22 +838,7 @@ function isValidRrdFile(rrdPath: string): boolean {
  * Migrate RRD data to SQLite
  *
  * Main migration function that orchestrates the entire process.
- * - Checks for RRD file and backup file
- * - Fetches data from all archives
- * - Inserts data into database in batches
- * - Renames RRD file on success
- *
- * @param rrdPath - Path to RRD file (default from config)
- * @returns Migration statistics or null if already migrated/no file
- */
-/**
- * Migrate RRD data to SQLite
- *
- * Main migration function that orchestrates the entire process.
- * - Checks for RRD file and backup file
- * - Fetches data from all 4 RRD archives using rrdtool CLI
- * - Inserts data into database in batches
- * - Renames RRD file to .rrd.back on success
+ * See module-level JSDoc for the full sentinel-file hierarchy and repair path.
  *
  * @param rrdPath - Path to RRD file (default from config)
  * @param archiveConfig - Optional archive definitions. Defaults to the four
@@ -603,72 +860,75 @@ export async function migrateRrdToSqlite(
 
   logger.info("Starting RRD migration", { rrdPath });
 
-  // 1. Check if already migrated via the .back sentinel file.
+  const back2Path = `${rrdPath}.back2`;
   const backupPath = `${rrdPath}.back`;
-  if (existsSync(backupPath)) {
-    // Verify the migration actually wrote data.  A previous version of this
-    // code used `await db.insert().values()` without `.run()`, which is a
-    // silent no-op with better-sqlite3.  The backup file was still created,
-    // so on the next startup the migration appeared "done" even though zero
-    // rows were ever inserted.  Detect that case and re-migrate.
+
+  // ── 1. Check .back2 — clean import already completed with fixed code ──────
+  if (existsSync(back2Path)) {
     const db = getDatabase();
-    const countResult = db
-      .select({ count: count() })
-      .from(timeseriesStats)
-      .get();
-    const rowCount = countResult?.count ?? 0;
+    const rowCount =
+      db.select({ count: count() }).from(timeseriesStats).get()?.count ?? 0;
 
     if (rowCount > 0) {
-      logger.info("RRD already migrated (backup file exists)", {
-        backupPath,
+      logger.info("RRD already migrated with fixed importer (.rrd.back2 exists)", {
+        back2Path,
         existingRows: rowCount,
       });
 
       // Best-effort: record the backup file's hash so that if the user
-      // renames .rrd.back → .rrd on a future startup, the hash check below
-      // will catch it and skip the duplicate import.  This is the one-time
-      // graceful-degradation path for deployments that pre-date the registry.
-      tryRegisterBackupHash(backupPath);
+      // renames .rrd.back2 → .rrd on a future startup, the hash check
+      // will catch it and skip the duplicate import.
+      tryRegisterBackupHash(back2Path);
 
       return null;
     }
 
+    // .back2 exists but the DB is empty — the rename happened but the insert
+    // silently failed (should be impossible with the fixed code, but handle
+    // defensively).  Restore the file and fall through to a fresh import.
     logger.warn(
-      "RRD backup exists but timeseries_stats is empty — previous migration " +
-        "silently failed (missing .run()). Re-migrating from backup file.",
-      { backupPath, rrdPath },
+      ".rrd.back2 exists but timeseries_stats is empty — restoring for re-import",
+      { back2Path, rrdPath },
     );
-
-    // Restore the backup so the normal migration path can read it.
     try {
-      renameSync(backupPath, rrdPath);
-      logger.info("Restored backup file for re-migration", {
-        from: backupPath,
+      renameSync(back2Path, rrdPath);
+      logger.info("Restored .rrd.back2 for re-import", {
+        from: back2Path,
         to: rrdPath,
       });
     } catch (error) {
-      logger.error(
-        "Failed to restore backup file for re-migration — skipping",
-        {
-          backupPath,
-          error: error instanceof Error ? error.message : String(error),
-        },
-      );
+      logger.error("Failed to restore .rrd.back2 — skipping migration", {
+        error: error instanceof Error ? error.message : String(error),
+      });
       return null;
     }
-    // Fall through to the normal migration logic below.
+    // Fall through.
   }
 
-  // 2. Check if RRD file exists
+  // ── 2. Check .back — old/buggy import; run automatic repair ──────────────
+  if (existsSync(backupPath)) {
+    logger.info(
+      ".rrd.back sentinel detected — running automatic repair for bad import data",
+      { backupPath },
+    );
+
+    const restored = await repairBadImport(backupPath, rrdPath);
+    if (!restored) {
+      // Repair could not restore the file; cannot safely proceed.
+      return null;
+    }
+    // repairBadImport renamed .back → .rrd; fall through to normal import.
+  }
+
+  // ── 3. Check if RRD file exists ──────────────────────────────────────────
   if (!existsSync(rrdPath)) {
     logger.info("No RRD file found, skipping migration", { rrdPath });
     return null;
   }
 
-  // 3. Validate RRD file
+  // ── 4. Validate RRD file ──────────────────────────────────────────────────
   if (!isValidRrdFile(rrdPath)) {
     logger.error("Invalid RRD file, cannot migrate", { rrdPath });
-    // Rename to .corrupt so we don't keep trying
     try {
       renameSync(rrdPath, `${rrdPath}.corrupt`);
       logger.warn("Renamed corrupt RRD file", {
@@ -685,20 +945,15 @@ export async function migrateRrdToSqlite(
     };
   }
 
-  // 4. Hash-based registry check.
+  // ── 5. Hash-based registry check ─────────────────────────────────────────
   //
-  //    WHY: the .back sentinel above only protects the normal post-migration
-  //    state.  If a user renames .rrd.back → .rrd the sentinel is gone and
-  //    we would re-import every row, doubling historical data.  The registry
-  //    records the SHA-256 of every file we have successfully imported, so
-  //    the same byte-for-byte content is never imported twice regardless of
-  //    what the file is named.
+  // Guards against a user renaming .rrd.back2 → .rrd to force a re-import of
+  // content that is already in the DB.  The same SHA-256 content is never
+  // imported twice regardless of filename.
   //
-  //    Wrapped in try-catch: registry operations are best-effort.  If the
-  //    table is not yet available (e.g. migration 11 hasn't run yet on a
-  //    very old deployment), we log at debug level and proceed without the
-  //    guard — the idempotent INSERT OR IGNORE in step 6 still prevents
-  //    duplicate rows at the DB level.
+  // Wrapped in try-catch: registry operations are best-effort.  If the table
+  // is not yet available the idempotent INSERT OR IGNORE in step 8 still
+  // prevents duplicate rows at the DB level.
   let fileHash: string | null = null;
   try {
     ensureRegistryTable();
@@ -707,20 +962,20 @@ export async function migrateRrdToSqlite(
     if (isHashRegistered(fileHash)) {
       logger.warn(
         "RRD file content matches a previously imported file — skipping " +
-          "(regression guard: file was likely renamed from .rrd.back)",
+          "(file was likely renamed from .rrd.back2)",
         { rrdPath, fileHash },
       );
 
-      // Re-create the .back sentinel so future startups take the fast path.
+      // Re-create the .back2 sentinel so future startups take the fast path.
       try {
-        renameSync(rrdPath, backupPath);
-        logger.info("Renamed previously-imported RRD back to .back", {
+        renameSync(rrdPath, back2Path);
+        logger.info("Renamed previously-imported RRD back to .back2", {
           from: rrdPath,
-          to: backupPath,
+          to: back2Path,
         });
       } catch (renameError) {
         logger.warn(
-          "Could not rename previously-imported RRD back to .back — non-fatal",
+          "Could not rename previously-imported RRD back to .back2 — non-fatal",
           {
             error:
               renameError instanceof Error
@@ -746,15 +1001,13 @@ export async function migrateRrdToSqlite(
   }
 
   try {
-    // 5. Fetch data from all archives
+    // ── 6. Fetch data from all archives ──────────────────────────────────────
     logger.info("Fetching data from RRD archives");
     const allDataPoints: Array<TimeseriesDataPoint & { archiveResolution: "1min" | "5min" | "1hour" | "6hour" }> = [];
 
     for (const archive of archives) {
       try {
         const dataPoints = await fetchRrdArchive(rrdPath, archive);
-        // Tag each point with its source archive resolution so
-        // expandCoarseDataToOneMinute knows how many sub-rows to emit.
         allDataPoints.push(
           ...dataPoints.map((p) => ({
             ...p,
@@ -771,7 +1024,6 @@ export async function migrateRrdToSqlite(
           resolution: archive.resolution,
           error: error instanceof Error ? error.message : String(error),
         });
-        // Continue with other archives even if one fails
       }
     }
 
@@ -794,18 +1046,11 @@ export async function migrateRrdToSqlite(
       },
     });
 
-    // 6. Expand coarse-grained data to 1-minute resolution
+    // ── 7. Expand coarse archives to 1-minute resolution ─────────────────────
     logger.info("Expanding coarse data to 1-minute resolution");
     const expandedDataPoints = expandCoarseDataToOneMinute(allDataPoints);
 
-    // 6b. Clamp future timestamps.
-    //
-    // WHY: Even with NaN-row skipping and backward expansion, rounding artefacts
-    // or clock skew could produce a handful of rows whose timestamp slightly
-    // exceeds "now".  Such rows would pre-occupy timestamp slots that the live
-    // stats-writer is supposed to own, silently blocking it from recording real
-    // counts.  We drop any expanded row whose timestamp is strictly after the
-    // current wall-clock second.
+    // ── 7b. Clamp future timestamps ───────────────────────────────────────────
     const nowSec = Math.floor(Date.now() / 1000);
     const clampedDataPoints = expandedDataPoints.filter(
       (p) => p.timestamp <= nowSec,
@@ -818,18 +1063,15 @@ export async function migrateRrdToSqlite(
       );
     }
 
-    // 7. Insert data into database (idempotent: INSERT OR IGNORE)
+    // ── 8. Insert data (idempotent: INSERT OR IGNORE) ─────────────────────────
     batchInsertDataPoints(clampedDataPoints);
 
-    // 8. Record the file hash in the registry so future imports of the same
-    //    content are skipped immediately, regardless of filename.
+    // ── 9. Register file hash ─────────────────────────────────────────────────
     if (fileHash !== null) {
       try {
         registerHash(fileHash, rrdPath, clampedDataPoints.length);
         logger.info("Registered import hash in registry", { fileHash });
       } catch (hashError) {
-        // Non-fatal — the migration itself succeeded; only the registry
-        // update failed.  Log and continue so the .back rename still happens.
         logger.warn("Failed to register import hash — non-fatal", {
           error:
             hashError instanceof Error
@@ -839,16 +1081,15 @@ export async function migrateRrdToSqlite(
       }
     }
 
-    // 9. Rename RRD file to .back (belt-and-suspenders sentinel for fast
-    //    path on subsequent startups)
+    // ── 10. Rename RRD file to .back2 ─────────────────────────────────────────
     try {
-      renameSync(rrdPath, backupPath);
-      logger.info("Renamed RRD file to backup", {
+      renameSync(rrdPath, back2Path);
+      logger.info("Renamed RRD file to .back2 sentinel", {
         from: rrdPath,
-        to: backupPath,
+        to: back2Path,
       });
     } catch (error) {
-      logger.error("Failed to rename RRD file", {
+      logger.error("Failed to rename RRD file to .back2", {
         error: error instanceof Error ? error.message : String(error),
       });
       // Don't fail the migration if rename fails
