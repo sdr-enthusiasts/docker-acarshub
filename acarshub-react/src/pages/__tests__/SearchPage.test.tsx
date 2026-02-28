@@ -448,17 +448,14 @@ describe("SearchPage", () => {
       // Submit to get results
       await user.click(screen.getByRole("button", { name: /^search$/i }));
 
-      // Inject results via socket event — this also collapses the form
+      // Inject results via socket event — focus is still on the Search button
+      // (inside the form) so collapse is deferred; the Clear button remains
+      // accessible without needing to expand first.
       emitSearchResults([makeMsg("msg-001"), makeMsg("msg-002")]);
 
       await waitFor(() => {
         expect(screen.getAllByTestId("message-card")).toHaveLength(2);
       });
-
-      // Results arrival collapses the form; expand it so the Clear button is accessible
-      await user.click(
-        screen.getByRole("button", { name: /expand search form/i }),
-      );
 
       // Clear
       await user.click(screen.getByRole("button", { name: /clear/i }));
@@ -739,17 +736,13 @@ describe("SearchPage", () => {
       await user.type(flightInput, "UAL");
       await user.click(screen.getByRole("button", { name: /^search$/i }));
 
-      // Results arrival also collapses the form
+      // Focus is still on the Search button (inside the form) so collapse is
+      // deferred — the Clear button remains accessible without expanding first.
       emitSearchResults([makeMsg("v-001"), makeMsg("v-002")], 2);
 
       await waitFor(() => {
         expect(screen.getAllByTestId("message-card")).toHaveLength(2);
       });
-
-      // Expand the form so the Clear button is accessible
-      await user.click(
-        screen.getByRole("button", { name: /expand search form/i }),
-      );
 
       // Click Clear to remove results
       await user.click(screen.getByRole("button", { name: /clear/i }));
@@ -993,6 +986,12 @@ describe("SearchPage", () => {
 
       act(() => {
         emitSearchResults([makeMsg("c-005")]);
+      });
+
+      // Results arrived while focus was inside the form (on the Search button)
+      // so collapse was deferred.  Blur the form to fire the deferred collapse.
+      act(() => {
+        (document.activeElement as HTMLElement)?.blur();
       });
 
       await waitFor(() => {

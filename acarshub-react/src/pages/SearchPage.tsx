@@ -164,9 +164,19 @@ export const SearchPage = () => {
   );
 
   // Controls whether the search form is collapsed to just its header row.
-  // Collapses explicitly when the user submits a search (so results get more
-  // screen real estate).  Expands when the user clicks the chevron toggle.
+  // Collapses when results arrive (so they get the full viewport) but is
+  // deferred if the user still has focus inside the form — we don't want
+  // results racing with active typing to yank the form away mid-keystroke.
+  // Expands when the user clicks the chevron toggle.
   const [isFormCollapsed, setIsFormCollapsed] = useState(false);
+
+  // Ref to the <form> element — used to check whether focus is currently
+  // inside the form before deciding to collapse.
+  const formRef = useRef<HTMLFormElement>(null);
+
+  // Set to true when results arrive while the user has focus inside the form.
+  // The collapse is then deferred until focus leaves the form (onBlur).
+  const pendingCollapseRef = useRef(false);
 
   // Debounce timer ref
   const searchDebounceTimer = useRef<ReturnType<typeof setTimeout> | null>(
@@ -226,7 +236,17 @@ export const SearchPage = () => {
       // Collapse the form when results arrive so they get the full viewport.
       // We collapse here rather than in handleSubmit so the "Searching…"
       // button remains visible during the in-flight state.
-      setIsFormCollapsed(true);
+      //
+      // However, if the user currently has focus inside the form (i.e. they
+      // are still typing or tabbing between fields) we defer the collapse
+      // until they leave the form.  This prevents the debounce firing a query
+      // mid-keystroke, the backend responding quickly, and the form collapsing
+      // while the user is still interacting with it.
+      if (formRef.current?.contains(document.activeElement)) {
+        pendingCollapseRef.current = true;
+      } else {
+        setIsFormCollapsed(true);
+      }
     };
 
     // Check if socket service is initialized
@@ -305,6 +325,9 @@ export const SearchPage = () => {
   // the animation runs concurrently with Playwright's click action and can
   // move the target button outside the viewport mid-click.
   const expandForm = () => {
+    // Clear any pending deferred collapse so it doesn't fire after the user
+    // has explicitly reopened the form.
+    pendingCollapseRef.current = false;
     setIsFormCollapsed(false);
     const scrollEl =
       appContentRef.current ??
@@ -447,6 +470,8 @@ export const SearchPage = () => {
     setQueryTime(null);
     setActiveSearch(null);
     setCurrentPage(0);
+    // Discard any deferred collapse — the user is resetting, not browsing results.
+    pendingCollapseRef.current = false;
 
     uiLogger.debug("Search cleared");
   };
@@ -594,8 +619,22 @@ export const SearchPage = () => {
       <div className="page__content">
         {/* Search Form */}
         <form
+          ref={formRef}
           className={`search-page__form${isFormCollapsed ? " search-page__form--collapsed" : ""}`}
           onSubmit={handleSubmit}
+          onBlur={(e) => {
+            // relatedTarget is where focus is moving to.  If it is still
+            // inside the form the user is just tabbing between fields — don't
+            // collapse yet.  If it is null or outside the form, focus has
+            // truly left and we can apply any pending collapse.
+            if (
+              pendingCollapseRef.current &&
+              !formRef.current?.contains(e.relatedTarget)
+            ) {
+              pendingCollapseRef.current = false;
+              setIsFormCollapsed(true);
+            }
+          }}
         >
           {/* Form header — only rendered when collapsed; provides the sticky
               expand button so the user can reopen the form after scrolling. */}
