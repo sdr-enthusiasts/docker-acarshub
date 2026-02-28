@@ -697,6 +697,32 @@ export const SearchPage = () => {
             aria-hidden={isFormCollapsed}
           >
             <div className="search-page__form-body-inner">
+              {/* Form Actions — rendered BEFORE the grid in the DOM so that on
+                  mobile (single-column, tall form) the Search/Clear buttons
+                  appear at the TOP of the expanded form without requiring any
+                  scrolling.  On tablet/desktop the SCSS `order` property moves
+                  them back below the grid visually while preserving DOM/tab
+                  order for keyboard accessibility. */}
+              <div className="search-page__form-actions">
+                <button
+                  type="submit"
+                  className="button button--primary"
+                  disabled={isSearching}
+                >
+                  <IconSearch />
+                  {isSearching ? "Searching..." : "Search"}
+                </button>
+                <button
+                  type="button"
+                  className="button button--secondary"
+                  onClick={handleClear}
+                  disabled={isSearching}
+                >
+                  <IconXmark />
+                  Clear
+                </button>
+              </div>
+
               <div className="search-page__form-grid">
                 {/* Flight */}
                 <div className="search-page__form-field">
@@ -842,27 +868,6 @@ export const SearchPage = () => {
                     placeholder="Search message content..."
                   />
                 </div>
-              </div>
-
-              {/* Form Actions */}
-              <div className="search-page__form-actions">
-                <button
-                  type="submit"
-                  className="button button--primary"
-                  disabled={isSearching}
-                >
-                  <IconSearch />
-                  {isSearching ? "Searching..." : "Search"}
-                </button>
-                <button
-                  type="button"
-                  className="button button--secondary"
-                  onClick={handleClear}
-                  disabled={isSearching}
-                >
-                  <IconXmark />
-                  Clear
-                </button>
               </div>
             </div>
             {/* end search-page__form-body-inner */}

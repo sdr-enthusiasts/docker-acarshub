@@ -161,7 +161,12 @@
   // Single grid item — must have overflow:hidden so content clips as the
   // row height compresses, and min-height:0 so the grid item can actually
   // shrink below its natural height.
+  // flex column so CSS `order` can reposition __form-actions below __form-grid
+  // on tablet/desktop while DOM order keeps actions first for mobile (where
+  // the expanded form is taller than the viewport and buttons must be at top).
   &__form-body-inner {
+    display: flex;
+    flex-direction: column;
     overflow: hidden;
     min-height: 0;
   }
@@ -170,7 +175,15 @@
     display: grid;
     grid-template-columns: 1fr;
     gap: var(--spacing-sm);
-    margin-bottom: var(--spacing-md);
+    // Mobile: grid sits below the actions row; no extra bottom margin needed
+    // here because __form-actions already has margin-bottom above.
+    // Tablet+: grid is visually first (order:0 default); keep bottom margin
+    // so there is breathing room before the actions row.
+    margin-bottom: 0;
+
+    @include breakpoint(md) {
+      margin-bottom: var(--spacing-md);
+    }
 
     // Tablet: 2 columns
     @include breakpoint(md) {
@@ -259,9 +272,18 @@
     display: flex;
     gap: var(--spacing-sm);
     flex-wrap: wrap;
+    // Mobile (default): actions appear first in the form — no margin-top
+    // needed because they sit above the field grid.
+    margin-bottom: var(--spacing-md);
 
+    // Tablet+: push actions to the bottom of the form by giving them a higher
+    // order than the grid (which defaults to order:0).  Also restore the
+    // margin so there is space between the last field row and the buttons.
     @include breakpoint(md) {
+      order: 1;
       flex-wrap: nowrap;
+      margin-bottom: 0;
+      margin-top: var(--spacing-md);
     }
 
     // Give each button inline-flex layout so the SVG icon and label text
