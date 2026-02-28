@@ -164,19 +164,27 @@ export const SearchPage = () => {
   );
 
   // Controls whether the search form is collapsed to just its header row.
-  // Collapses when results arrive (so they get the full viewport) but is
-  // deferred if the user still has focus inside the form — we don't want
-  // results racing with active typing to yank the form away mid-keystroke.
-  // Expands when the user clicks the chevron toggle.
+  // Collapses automatically once the user scrolls the form completely off the
+  // top of the viewport.  Expands when the user clicks the chevron toggle or
+  // scrolls back to the very top of the page.
   const [isFormCollapsed, setIsFormCollapsed] = useState(false);
 
-  // Ref to the <form> element — used to check whether focus is currently
-  // inside the form before deciding to collapse.
+  // Ref to the <form> element — used to measure the form's rendered height so
+  // the scroll-collapse threshold adapts to the actual form size.  On mobile
+  // the form can be taller than the viewport, so a fixed pixel threshold would
+  // collapse the form while the user is still scrolling within it.
   const formRef = useRef<HTMLFormElement>(null);
 
-  // Set to true when results arrive while the user has focus inside the form.
-  // The collapse is then deferred until focus leaves the form (onBlur).
-  const pendingCollapseRef = useRef(false);
+  /**
+   * When true the scroll-based auto-collapse/expand handler is suppressed.
+   * Set by expandForm() so the programmatic scroll-to-top that follows the
+   * expansion does not immediately re-collapse the form.
+   * Cleared after 1 s — long enough for any real or synthetic scroll to settle.
+   */
+  const suppressAutoCollapse = useRef(false);
+  const suppressAutoCollapseTimer = useRef<ReturnType<
+    typeof setTimeout
+  > | null>(null);
 
   // Debounce timer ref
   const searchDebounceTimer = useRef<ReturnType<typeof setTimeout> | null>(
@@ -217,11 +225,56 @@ export const SearchPage = () => {
    */
   const [scrollMargin, setScrollMargin] = useState(0);
 
-  // Acquire the outer scroll container once on mount.
-  // Used by both the virtualizer (scrollMargin measurement) and expandForm().
+  // Acquire the outer scroll container once on mount and wire up the
+  // scroll-driven collapse/expand listener.
+  //
+  // WHY dynamic threshold: a fixed pixel value (e.g. 80 px) breaks on mobile
+  // where the expanded form is taller than the viewport — the user must scroll
+  // more than 80 px just to reach the Search button, which would immediately
+  // collapse the form under them.  Instead we collapse only once the form has
+  // fully scrolled above the visible area of .app-content, detected via
+  // getBoundingClientRect() comparisons (works in real browsers) with a
+  // scrollTop > 0 guard so jsdom's all-zero rects don't trigger falsely at
+  // mount time.
   useEffect(() => {
     const scrollEl = document.querySelector<HTMLElement>(".app-content");
     appContentRef.current = scrollEl;
+
+    if (!scrollEl) return;
+
+    const handleScroll = () => {
+      if (suppressAutoCollapse.current) return;
+
+      const scrollTop = scrollEl.scrollTop;
+
+      // Auto-expand: when the user scrolls back to the very top, restore the
+      // form so the fields are immediately accessible without clicking the
+      // expand button.
+      if (scrollTop <= 0) {
+        setIsFormCollapsed(false);
+        return;
+      }
+
+      // Auto-collapse: the form has scrolled completely above the visible
+      // area of .app-content.
+      //
+      // In real browsers getBoundingClientRect() gives us live viewport
+      // coordinates.  formRect.bottom ≤ containerRect.top means the bottom
+      // edge of the form is at or above the top edge of the scroll container,
+      // i.e. the form is entirely off-screen.
+      //
+      // In jsdom all rects are zero, so (0 - 0) = 0 ≤ 0 is trivially true.
+      // The scrollTop > 0 guard above ensures we only reach this branch when
+      // a test has explicitly simulated a scroll, which is the intended signal.
+      const formRect = formRef.current?.getBoundingClientRect();
+      const containerRect = scrollEl.getBoundingClientRect();
+      if (formRect && formRect.bottom - containerRect.top <= 0) {
+        setIsFormCollapsed(true);
+      }
+    };
+
+    scrollEl.addEventListener("scroll", handleScroll, { passive: true });
+    return () => scrollEl.removeEventListener("scroll", handleScroll);
   }, []);
 
   // Register Socket.IO listener for search results
@@ -233,20 +286,9 @@ export const SearchPage = () => {
       setTotalResults(data.num_results);
       setQueryTime(data.query_time);
       setIsSearching(false);
-      // Collapse the form when results arrive so they get the full viewport.
-      // We collapse here rather than in handleSubmit so the "Searching…"
-      // button remains visible during the in-flight state.
-      //
-      // However, if the user currently has focus inside the form (i.e. they
-      // are still typing or tabbing between fields) we defer the collapse
-      // until they leave the form.  This prevents the debounce firing a query
-      // mid-keystroke, the backend responding quickly, and the form collapsing
-      // while the user is still interacting with it.
-      if (formRef.current?.contains(document.activeElement)) {
-        pendingCollapseRef.current = true;
-      } else {
-        setIsFormCollapsed(true);
-      }
+      // Form collapse is scroll-driven — results arriving do not collapse the
+      // form.  The user scrolls down to browse results and the form collapses
+      // naturally once it leaves the viewport.
     };
 
     // Check if socket service is initialized
@@ -325,9 +367,18 @@ export const SearchPage = () => {
   // the animation runs concurrently with Playwright's click action and can
   // move the target button outside the viewport mid-click.
   const expandForm = () => {
-    // Clear any pending deferred collapse so it doesn't fire after the user
-    // has explicitly reopened the form.
-    pendingCollapseRef.current = false;
+    // Suppress auto-collapse so the programmatic scroll-to-top that follows
+    // this expansion does not immediately re-collapse the form via the scroll
+    // listener.  Cleared after 1 s — long enough for any real or synthetic
+    // scroll triggered by the expansion to settle.
+    if (suppressAutoCollapseTimer.current) {
+      clearTimeout(suppressAutoCollapseTimer.current);
+    }
+    suppressAutoCollapse.current = true;
+    suppressAutoCollapseTimer.current = setTimeout(() => {
+      suppressAutoCollapse.current = false;
+    }, 1000);
+
     setIsFormCollapsed(false);
     const scrollEl =
       appContentRef.current ??
@@ -470,8 +521,6 @@ export const SearchPage = () => {
     setQueryTime(null);
     setActiveSearch(null);
     setCurrentPage(0);
-    // Discard any deferred collapse — the user is resetting, not browsing results.
-    pendingCollapseRef.current = false;
 
     uiLogger.debug("Search cleared");
   };
@@ -622,19 +671,6 @@ export const SearchPage = () => {
           ref={formRef}
           className={`search-page__form${isFormCollapsed ? " search-page__form--collapsed" : ""}`}
           onSubmit={handleSubmit}
-          onBlur={(e) => {
-            // relatedTarget is where focus is moving to.  If it is still
-            // inside the form the user is just tabbing between fields — don't
-            // collapse yet.  If it is null or outside the form, focus has
-            // truly left and we can apply any pending collapse.
-            if (
-              pendingCollapseRef.current &&
-              !formRef.current?.contains(e.relatedTarget)
-            ) {
-              pendingCollapseRef.current = false;
-              setIsFormCollapsed(true);
-            }
-          }}
         >
           {/* Form header — only rendered when collapsed; provides the sticky
               expand button so the user can reopen the form after scrolling. */}
