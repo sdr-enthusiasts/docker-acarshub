@@ -131,6 +131,13 @@
     font-weight: $font-weight-bold;
     font-size: $font-size-xl;
     color: var(--color-primary);
+
+    // Between 768 px and 850 px the nav bar is too crowded to show both the
+    // image logo and the "ACARS Hub" text without word-wrapping.  Hide the
+    // text at this range; the image logo alone identifies the app.
+    @media (min-width: 768px) and (max-width: 850px) {
+      display: none;
+    }
   }
 
   // Latte: --color-primary (blue #1e66f5) on nav crust (#dce0e8) = 3.71:1 — fails WCAG AA.
@@ -143,7 +150,7 @@
     margin-left: auto;
     display: flex;
     align-items: center;
-    gap: $spacing-sm;
+    gap: 0;
   }
 
   // -------------------------------------------------------------------------

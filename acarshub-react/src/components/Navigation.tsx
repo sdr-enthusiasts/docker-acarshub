@@ -212,19 +212,19 @@ export const Navigation = () => {
                 <summary className="menu_non_link">Menu</summary>
 
                 <NavLink to="/live-messages" onClick={handleMobileNavClick}>
-                  Live Messages
+                  Messages
                 </NavLink>
                 <br />
                 {adsbEnabled && (
                   <>
                     <NavLink to="/adsb" onClick={handleMobileNavClick}>
-                      Live Map
+                      Map
                     </NavLink>
                     <br />
                   </>
                 )}
                 <NavLink to="/search" onClick={handleMobileNavClick}>
-                  Search Database
+                  Search
                 </NavLink>
                 <br />
                 <NavLink to="/alerts" onClick={handleMobileNavClick}>
@@ -278,15 +278,15 @@ export const Navigation = () => {
               </li>
 
               <li>
-                <NavLink to="/live-messages">Live Messages</NavLink>
+                <NavLink to="/live-messages">Messages</NavLink>
               </li>
               {adsbEnabled && (
                 <li>
-                  <NavLink to="/adsb">Live Map</NavLink>
+                  <NavLink to="/adsb">Map</NavLink>
                 </li>
               )}
               <li>
-                <NavLink to="/search">Search Database</NavLink>
+                <NavLink to="/search">Database</NavLink>
               </li>
               <li>
                 <NavLink to="/alerts">
