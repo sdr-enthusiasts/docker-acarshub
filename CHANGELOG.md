@@ -22,6 +22,7 @@
 - Search: The search form now auto-collapses when you scroll more than 80 px into the results. A sticky header pins to the top of the viewport while collapsed, showing a summary of the active search criteria and a button to expand the form again. Clicking the expand button scrolls back to the top and reopens the form.
 - Search: All text search inputs are now automatically normalised to uppercase as you type, matching the way messages are stored in the database and eliminating missed results caused by case differences.
 - Messages: Any portion of a message that the decoder recognised but could not fully decode is now shown as "Remaining Text" in the message detail view, rather than being silently discarded [(1)](#v414-n1)
+- Messages: Bump `acars-decoder` version to 1.8.8
 
 ### v4.1.4 Improvements
 
@@ -30,6 +31,7 @@
 ### v4.1.4 Notes
 
 1. <a id="v414-n1"></a>Credit to [@makrsmark](https://github.com/makrsmark) for the remaining text feature in PR [#1637](https://github.com/sdr-enthusiasts/docker-acarshub/pull/1637).
+2. <a id="v414-n2"></a>Credit to [@makrsmark](https://github.com/makrsmark) for updating `acars-decoder` to 1.8.8 in PR [#1639](https://github.com/sdr-enthusiasts/docker-acarshub/pull/1639)
 
 ## ACARS Hub v4.1.3
 
