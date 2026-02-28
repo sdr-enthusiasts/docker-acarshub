@@ -324,27 +324,22 @@ test.describe("Search Page", () => {
     // Verify results are showing before clearing
     await expect(page.locator(".search-page__result-card")).toHaveCount(2);
 
-    // On mobile, the submit handler scrolls to the results section which
-    // triggers the auto-collapse logic and hides the form body (including the
-    // Clear button).  Expand the form first if the expand chevron is present.
+    // The submit handler collapses the form immediately so results get the
+    // full viewport.  If the expand chevron is visible, click it to re-open
+    // the form before interacting with Clear.
     //
-    // NOTE: expandForm() uses behavior:"instant" (not "smooth") intentionally.
-    // A smooth scroll runs concurrently with Playwright's click action on
-    // Mobile Safari, moving the Clear button outside the viewport mid-click.
-    // Instant scroll makes the position change atomic so the DOM is fully
-    // settled before we proceed.
+    // We wait for the form body to reach a real height before proceeding so
+    // the click target is fully laid out (the 0.3s grid-template-rows
+    // transition may still run on browsers where reducedMotion is not
+    // emulated; the poll is a no-op when the transition is instant).
     //
-    // On Mobile Safari the form body has a 0.3s grid-template-rows expand
-    // animation.  expandForm() sets a suppressAutoCollapse flag for 1 s so
-    // that neither the app's scroll handler nor Playwright's own
-    // scrollIntoView (issued internally before the click) can push scrollTop
-    // past SCROLL_COLLAPSE_THRESHOLD and re-collapse the form mid-interaction.
-    // We still wait for the body to reach a real height so the click target
-    // is fully laid out before Playwright attempts the action.
+    // On mobile the form actions (Search / Clear) are rendered at the TOP of
+    // the expanded form so they are always within the viewport without
+    // requiring any scroll — this is how we avoid the "element is outside of
+    // the viewport" failure that plagued earlier Mobile Safari runs.
     const expandBtn = page.getByRole("button", { name: /expand search form/i });
     if (await expandBtn.isVisible()) {
       await expandBtn.click();
-      // Poll until the form body has finished expanding.
       await page.waitForFunction(
         () => {
           const body = document.querySelector(".search-page__form-body");
@@ -354,10 +349,6 @@ test.describe("Search Page", () => {
       );
     }
 
-    // Playwright scrolls the Clear button into view automatically before
-    // clicking.  The suppressAutoCollapse flag set by expandForm() prevents
-    // that scroll from re-collapsing the form, so no manual scrollIntoView
-    // is needed here.
     const clearBtn = page.getByRole("button", { name: /clear/i });
 
     // Click Clear

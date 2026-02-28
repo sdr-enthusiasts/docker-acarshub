@@ -34,13 +34,6 @@ import { formatBytes } from "../utils/stringUtils";
 const RESULTS_PER_PAGE = 50;
 const SEARCH_STATE_KEY = "acarshub_search_state";
 const NAVIGATION_FLAG_KEY = "acarshub_navigation_active";
-const MOBILE_BREAKPOINT = 768; // Match SCSS breakpoint
-
-/**
- * Scroll distance (px) past which the search form auto-collapses.
- * Scrolling back to ≤ this threshold will auto-expand it again.
- */
-const SCROLL_COLLAPSE_THRESHOLD = 80;
 
 /**
  * Human-readable labels for each CurrentSearch field.
@@ -171,26 +164,14 @@ export const SearchPage = () => {
   );
 
   // Controls whether the search form is collapsed to just its header row.
-  // Auto-collapses when the user scrolls past SCROLL_COLLAPSE_THRESHOLD,
-  // auto-expands when they scroll back to the top.
+  // Collapses explicitly when the user submits a search (so results get more
+  // screen real estate).  Expands when the user clicks the chevron toggle.
   const [isFormCollapsed, setIsFormCollapsed] = useState(false);
 
   // Debounce timer ref
   const searchDebounceTimer = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
-
-  /**
-   * When true, the scroll-based auto-collapse handler is suppressed.
-   * Set by expandForm() so that Playwright's (or the user's) subsequent
-   * scroll-into-view of the Clear button doesn't immediately re-collapse
-   * the form by pushing scrollTop past SCROLL_COLLAPSE_THRESHOLD.
-   * Cleared after 1 s — long enough for any synthetic or real scroll to settle.
-   */
-  const suppressAutoCollapse = useRef(false);
-  const suppressAutoCollapseTimer = useRef<ReturnType<
-    typeof setTimeout
-  > | null>(null);
 
   // Results section ref for scrolling (points to the results-info header)
   const resultsRef = useRef<HTMLDivElement>(null);
@@ -226,33 +207,11 @@ export const SearchPage = () => {
    */
   const [scrollMargin, setScrollMargin] = useState(0);
 
-  // Acquire the outer scroll container once on mount and wire up the
-  // scroll-based auto-collapse listener.
-  //
-  // WHY: We attach the listener here (not in a separate effect) so we have a
-  // guaranteed reference to the element for both the virtualizer and the
-  // collapse logic — avoiding a second querySelector call.
+  // Acquire the outer scroll container once on mount.
+  // Used by both the virtualizer (scrollMargin measurement) and expandForm().
   useEffect(() => {
     const scrollEl = document.querySelector<HTMLElement>(".app-content");
     appContentRef.current = scrollEl;
-
-    if (!scrollEl) return;
-
-    const handleScroll = () => {
-      // While the form is being intentionally expanded (or the page is being
-      // scrolled programmatically as part of expansion) ignore scroll events
-      // so the form is not immediately re-collapsed.
-      if (suppressAutoCollapse.current) return;
-
-      if (scrollEl.scrollTop > SCROLL_COLLAPSE_THRESHOLD) {
-        setIsFormCollapsed(true);
-      } else {
-        setIsFormCollapsed(false);
-      }
-    };
-
-    scrollEl.addEventListener("scroll", handleScroll, { passive: true });
-    return () => scrollEl.removeEventListener("scroll", handleScroll);
   }, []);
 
   // Register Socket.IO listener for search results
@@ -335,29 +294,13 @@ export const SearchPage = () => {
     return Object.values(params).every((value) => value.trim() === "");
   };
 
-  // Expand the search form and scroll back to the top of the page.
-  // Scrolling to top also causes the scroll listener to confirm the expanded
-  // state (scrollTop ≤ SCROLL_COLLAPSE_THRESHOLD), keeping both consistent.
+  // Expand the search form and scroll back to the top of the page so the
+  // form fields are immediately reachable.
   //
-  // WHY instant scroll: using behavior:"smooth" creates a race condition on
-  // Mobile Safari (WebKit) — the scroll animation runs concurrently with
-  // Playwright's click action, moving the Clear button outside the viewport
-  // mid-click.  Instant scroll makes the position change atomic so the DOM
-  // is fully settled before any subsequent interaction.  The scroll handler
-  // also fires only once and immediately sees scrollTop=0, preventing it
-  // from re-collapsing the form during a slow smooth-scroll animation.
+  // WHY instant scroll: behavior:"smooth" creates a race on Mobile Safari —
+  // the animation runs concurrently with Playwright's click action and can
+  // move the target button outside the viewport mid-click.
   const expandForm = () => {
-    // Suppress auto-collapse so that any scroll triggered by this expansion
-    // (including Playwright's internal scrollIntoView before clicking Clear)
-    // does not immediately re-collapse the form.
-    if (suppressAutoCollapseTimer.current) {
-      clearTimeout(suppressAutoCollapseTimer.current);
-    }
-    suppressAutoCollapse.current = true;
-    suppressAutoCollapseTimer.current = setTimeout(() => {
-      suppressAutoCollapse.current = false;
-    }, 1000);
-
     setIsFormCollapsed(false);
     const scrollEl =
       appContentRef.current ??
@@ -477,17 +420,9 @@ export const SearchPage = () => {
     // submitIntent=true: empty form → show-all query
     executeSearch(searchParams, 0, true);
 
-    // On mobile, scroll to results section after a short delay to allow results to load
-    if (window.innerWidth < MOBILE_BREAKPOINT) {
-      setTimeout(() => {
-        if (resultsRef.current) {
-          resultsRef.current.scrollIntoView({
-            behavior: "smooth",
-            block: "start",
-          });
-        }
-      }, 300); // Small delay to allow search to start and UI to update
-    }
+    // Collapse the form immediately so results get the full viewport.
+    // The user can re-expand via the chevron toggle at any time.
+    setIsFormCollapsed(true);
   };
 
   // Clear all search fields
