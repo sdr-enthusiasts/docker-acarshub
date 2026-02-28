@@ -223,6 +223,10 @@ export const SearchPage = () => {
       setTotalResults(data.num_results);
       setQueryTime(data.query_time);
       setIsSearching(false);
+      // Collapse the form when results arrive so they get the full viewport.
+      // We collapse here rather than in handleSubmit so the "Searching…"
+      // button remains visible during the in-flight state.
+      setIsFormCollapsed(true);
     };
 
     // Check if socket service is initialized
@@ -419,10 +423,6 @@ export const SearchPage = () => {
 
     // submitIntent=true: empty form → show-all query
     executeSearch(searchParams, 0, true);
-
-    // Collapse the form immediately so results get the full viewport.
-    // The user can re-expand via the chevron toggle at any time.
-    setIsFormCollapsed(true);
   };
 
   // Clear all search fields
