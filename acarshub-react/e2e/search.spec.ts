@@ -334,16 +334,13 @@ test.describe("Search Page", () => {
     // Instant scroll makes the position change atomic so the DOM is fully
     // settled before we proceed.
     //
-    // After expanding, we must also wait for the 0.3s grid-template-rows CSS
-    // animation on __form-body to complete before interacting with Clear.
-    // During the animation on Mobile Safari:
-    //   1. The expanding form inputs intercept pointer events at the Clear
-    //      button's position (animation mid-frame layout overlaps).
-    //   2. Once the form reaches full height it pushes Clear below the
-    //      iPhone 12 effective viewport (390×664 with Safari chrome).
-    // Waiting until __form-body has grown to a real height confirms the
-    // animation is done, then we explicitly scroll Clear into view so it
-    // is inside the visible area before Playwright attempts the click.
+    // On Mobile Safari the form body has a 0.3s grid-template-rows expand
+    // animation.  expandForm() sets a suppressAutoCollapse flag for 1 s so
+    // that neither the app's scroll handler nor Playwright's own
+    // scrollIntoView (issued internally before the click) can push scrollTop
+    // past SCROLL_COLLAPSE_THRESHOLD and re-collapse the form mid-interaction.
+    // We still wait for the body to reach a real height so the click target
+    // is fully laid out before Playwright attempts the action.
     const expandBtn = page.getByRole("button", { name: /expand search form/i });
     if (await expandBtn.isVisible()) {
       await expandBtn.click();
@@ -357,16 +354,11 @@ test.describe("Search Page", () => {
       );
     }
 
-    // Explicitly scroll Clear into view before clicking.  On Mobile Safari
-    // the virtual-keyboard viewport shift and the form expand can leave the
-    // button below the visible area even after the animation completes.
+    // Playwright scrolls the Clear button into view automatically before
+    // clicking.  The suppressAutoCollapse flag set by expandForm() prevents
+    // that scroll from re-collapsing the form, so no manual scrollIntoView
+    // is needed here.
     const clearBtn = page.getByRole("button", { name: /clear/i });
-    await clearBtn.evaluate((el) =>
-      (el as HTMLElement).scrollIntoView({
-        block: "nearest",
-        behavior: "instant",
-      }),
-    );
 
     // Click Clear
     await clearBtn.click();

@@ -87,15 +87,18 @@ export default defineConfig({
           },
           {
             name: "Mobile Safari",
-            // contextOptions.reducedMotion simulates prefers-reduced-motion:reduce,
-            // which disables CSS transitions on __form-body and other animated
+            // reducedMotion simulates prefers-reduced-motion:reduce, which
+            // disables CSS transitions on __form-body and other animated
             // elements.  Without this, the 0.3s grid-template-rows expand
             // animation races with Playwright's click action — the form
             // intercepts pointer events mid-animation and pushes the Clear
             // button below the iPhone 12 effective viewport (390×664).
+            // NOTE: this must be a direct property of `use`, NOT nested inside
+            // contextOptions — Playwright does not recognise contextOptions and
+            // would silently ignore it, leaving transitions enabled.
             use: {
               ...devices["iPhone 12"],
-              contextOptions: { reducedMotion: "reduce" as const },
+              reducedMotion: "reduce" as const,
             },
           },
         ]

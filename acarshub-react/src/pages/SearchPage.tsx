@@ -180,6 +180,18 @@ export const SearchPage = () => {
     null,
   );
 
+  /**
+   * When true, the scroll-based auto-collapse handler is suppressed.
+   * Set by expandForm() so that Playwright's (or the user's) subsequent
+   * scroll-into-view of the Clear button doesn't immediately re-collapse
+   * the form by pushing scrollTop past SCROLL_COLLAPSE_THRESHOLD.
+   * Cleared after 1 s — long enough for any synthetic or real scroll to settle.
+   */
+  const suppressAutoCollapse = useRef(false);
+  const suppressAutoCollapseTimer = useRef<ReturnType<
+    typeof setTimeout
+  > | null>(null);
+
   // Results section ref for scrolling (points to the results-info header)
   const resultsRef = useRef<HTMLDivElement>(null);
 
@@ -227,6 +239,11 @@ export const SearchPage = () => {
     if (!scrollEl) return;
 
     const handleScroll = () => {
+      // While the form is being intentionally expanded (or the page is being
+      // scrolled programmatically as part of expansion) ignore scroll events
+      // so the form is not immediately re-collapsed.
+      if (suppressAutoCollapse.current) return;
+
       if (scrollEl.scrollTop > SCROLL_COLLAPSE_THRESHOLD) {
         setIsFormCollapsed(true);
       } else {
@@ -330,6 +347,17 @@ export const SearchPage = () => {
   // also fires only once and immediately sees scrollTop=0, preventing it
   // from re-collapsing the form during a slow smooth-scroll animation.
   const expandForm = () => {
+    // Suppress auto-collapse so that any scroll triggered by this expansion
+    // (including Playwright's internal scrollIntoView before clicking Clear)
+    // does not immediately re-collapse the form.
+    if (suppressAutoCollapseTimer.current) {
+      clearTimeout(suppressAutoCollapseTimer.current);
+    }
+    suppressAutoCollapse.current = true;
+    suppressAutoCollapseTimer.current = setTimeout(() => {
+      suppressAutoCollapse.current = false;
+    }, 1000);
+
     setIsFormCollapsed(false);
     const scrollEl =
       appContentRef.current ??
