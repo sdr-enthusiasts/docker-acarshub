@@ -13,6 +13,8 @@
 
 ### v4.1.4 Performance
 
+- Statistics: The Stats page time-series graphs (Reception Over Time) no longer query the database on every user request or period change. The backend now warms all eight time-period cache entries in memory at startup and refreshes each on a wall-clock-aligned schedule (every 1 minute for the 1 hr/6 hr/12 hr windows, scaling up to every 12 hours for the 1-year window). Refreshed results are broadcast to all connected clients automatically — no client request is needed. The frontend receives these pushes through the global `useSocketIO` handler and stores all eight period results in a Zustand in-memory cache; switching between time periods on the Stats page is now instant with no loading delay once the initial warm-up response has arrived (within one round-trip of connecting).
+
 - Live Messages: The message list is now rendered as a virtual windowed list using `@tanstack/react-virtual`. Only the ~7 message cards visible in the viewport are mounted in the DOM at any time, down from ~90 fully-mounted trees previously. On busy stations this eliminates the UI lag that accumulated as the message list grew. Theme switching, which previously had to cascade CSS variable changes through every mounted card, is now instant.
 - Alerts: The alert message list (both live and historical modes) is now also virtualised, using the same architecture as Live Messages.
 - Search: Search results are now rendered as a virtual list. The search form itself remains fully scrollable on all screen sizes.

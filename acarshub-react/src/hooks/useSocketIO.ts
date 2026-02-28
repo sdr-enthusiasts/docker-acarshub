@@ -18,6 +18,11 @@ import { useEffect } from "react";
 import { socketService } from "../services/socket";
 import { useAppStore } from "../store/useAppStore";
 import type { AcarsMsg, HtmlMsg, Labels } from "../types";
+import {
+  ALL_TIME_PERIODS,
+  isValidTimePeriod,
+  type TimeSeriesCacheEntry,
+} from "../types/timeseries";
 import { socketLogger } from "../utils/logger";
 
 /**
@@ -50,6 +55,7 @@ export const useSocketIO = () => {
   const setAdsbAircraft = useAppStore((state) => state.setAdsbAircraft);
   const setStationIds = useAppStore((state) => state.setStationIds);
   const setMessageRate = useAppStore((state) => state.setMessageRate);
+  const setTimeSeriesData = useAppStore((state) => state.setTimeSeriesData);
 
   useEffect(() => {
     socketLogger.info("Setting up Socket.IO connection");
@@ -74,6 +80,18 @@ export const useSocketIO = () => {
         connected: true,
       });
       setConnected(true);
+
+      // Request all eight time-series periods immediately on every connect
+      // (including reconnects) so the cache is warm before the user visits
+      // the Stats page.  The backend answers from its own in-memory cache, so
+      // these eight requests are very cheap and arrive nearly instantly.
+      // Subsequent updates arrive as unsolicited pushes on the backend's
+      // wall-clock-aligned refresh schedule — no further requests needed.
+      socketLogger.debug("Requesting time-series warm-up for all periods");
+      for (const period of ALL_TIME_PERIODS) {
+        // @ts-expect-error — Flask-SocketIO requires namespace as third arg
+        socket.emit("rrd_timeseries", { time_period: period }, "/main");
+      }
     });
 
     socket.on("disconnect", (reason) => {
@@ -309,6 +327,32 @@ export const useSocketIO = () => {
       setMessageRate(data);
     });
 
+    // Time-series cache push — emitted by the backend on every scheduled
+    // refresh tick AND as the reply to our on-connect warm-up requests above.
+    // Writing directly to the store means every component that calls
+    // useRRDTimeSeriesData() will re-render with the latest data automatically,
+    // and switching between time periods in the Stats page is instant because
+    // all eight periods are always warm in the cache.
+    socket.on("rrd_timeseries_data", (rawData: unknown) => {
+      // Cast via unknown — the socket type definitions infer a looser shape
+      // from the event registry; we validate the fields we need before use.
+      const data = rawData as TimeSeriesCacheEntry;
+      if (
+        typeof data?.time_period === "string" &&
+        isValidTimePeriod(data.time_period)
+      ) {
+        socketLogger.trace("Received time-series push", {
+          period: data.time_period,
+          points: data.points,
+        });
+        setTimeSeriesData(data.time_period, data);
+      } else {
+        socketLogger.warn("Received rrd_timeseries_data with unknown period", {
+          time_period: data?.time_period,
+        });
+      }
+    });
+
     // Cleanup on unmount
     return () => {
       socketLogger.debug("Cleaning up Socket.IO event listeners");
@@ -337,6 +381,7 @@ export const useSocketIO = () => {
       socket.off("signal_freqs");
       socket.off("signal_count");
       socket.off("message_rate");
+      socket.off("rrd_timeseries_data");
 
       // Only disconnect on actual unmount, not StrictMode cleanup
       // StrictMode will call this cleanup in dev, but we keep the socket alive
@@ -370,6 +415,7 @@ export const useSocketIO = () => {
     setStationIds,
     setMessageRate,
     setMigrationInProgress,
+    setTimeSeriesData,
   ]);
 
   // Don't return store state - let consumers subscribe directly to avoid stale closures
