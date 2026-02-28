@@ -114,10 +114,17 @@
     padding: $spacing-sm;
     margin-top: $spacing-sm;
     min-height: 250px; // Prevent layout shifts that cause scroll jumps
-    contain: layout style paint; // Strict containment to prevent reflows
+    // contain: layout is intentionally omitted — it freezes the element's
+    // internal layout independent of external changes, which prevents the
+    // canvas from resizing when the flex parent changes width at narrow
+    // viewports.  contain: style is kept for style isolation only.
+    contain: style;
+    overflow: hidden; // clip any chart content that escapes its container
     overflow-anchor: none; // Disable browser scroll anchoring
     margin-top: 0; // Add top margin for spacing from card header
-    content-visibility: auto; // Optimize rendering and prevent layout thrashing
+    // content-visibility: auto is intentionally omitted — it can use a stale
+    // intrinsic size when the element was off-screen during initial layout,
+    // causing the chart to render at the wrong width.
     transform: translateZ(0); // Force GPU acceleration and create new layer
     backface-visibility: hidden; // Optimize for transforms
 
@@ -196,6 +203,166 @@
     // Desktop: maintain two columns for better readability
     @include media-lg {
       grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  // ===========================================================================
+  // Desktop fill-height layout
+  //
+  // On screens ≥1024px the stats page becomes a flex column that fills
+  // app-content's height exactly (element + its page margins == 100%).
+  // Chart sections (reception, signal, alerts, frequency, messages) each
+  // render a single Card — that card expands via flex to fill the remaining
+  // space and the Chart.js canvas fills the card, so nothing overflows and
+  // the page never scrolls.
+  //
+  // The Status section has multiple sibling Cards and is intentionally
+  // excluded: > .card:only-child leaves multi-card layouts at natural height
+  // so they scroll normally inside app-content.
+  // ===========================================================================
+  // ===========================================================================
+  // Fill-height flex chain — applied at all viewport widths.
+  //
+  // Threads flex: 1 from the page root down to the Chart.js canvas wrapper so
+  // the chart occupies all remaining vertical space without overflowing.
+  // The original mobile fix (explicit px height on .chart__canvas-wrapper) is
+  // superseded here: once the chain is established, height: auto + flex: 1
+  // gives Chart.js a properly-sized parent at every breakpoint.
+  //
+  // The Status section is intentionally excluded: > .card:only-child means
+  // multi-card layouts retain normal block height and scroll as needed.
+  // ===========================================================================
+
+  // Fill app-content's flex height.  Subtracting the page's own margin keeps
+  // (element + margins) == 100% so nothing overflows the scroll container.
+  height: calc(100% - #{$spacing-lg});
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 0;
+
+  // page__content grows to fill the space below the page header.
+  // width: 100% gives the flex item a definite cross-axis size before
+  // max-width clamps it — without this, margin: 0 auto centres the
+  // element at its content width rather than at max-width: 1400px.
+  // min-width: 0 prevents the item from expanding beyond the viewport
+  // width when chart labels have a large intrinsic minimum width.
+  .page__content {
+    flex: 1;
+    min-height: 0;
+    min-width: 0;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+
+  // Section nav is a fixed-height strip; prevent it from shrinking.
+  &__section-nav {
+    flex-shrink: 0;
+  }
+
+  // Section content fills the remaining space below the section nav.
+  &__section-content {
+    flex: 1;
+    min-height: 0; // overrides the min-height: 600px set above
+    min-width: 0; // prevent chart labels from pushing this beyond 100%
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+
+    // Grow only when a single chart card is present.
+    // :only-child naturally excludes the Status section (multiple cards).
+    > .card:only-child {
+      flex: 1;
+      min-height: 0;
+      min-width: 0; // prevent intrinsic chart content from overflowing
+      width: 100%;
+      margin-bottom: 0;
+      // Override the contain: layout style rule set on .card elsewhere in
+      // this file.  contain: layout freezes the card's layout containment
+      // context, which in some browsers prevents flex cross-axis (width)
+      // sizing from clamping correctly.  contain: style is sufficient for
+      // style isolation without breaking the flex width chain.
+      contain: style;
+
+      // The Card component wraps all children in .card__content.
+      // It already has flex: 1 (fills the card height) but is a block
+      // container by default — flex: 1 on .chart-wrapper inside it is
+      // therefore meaningless.  Adding display: flex here completes the
+      // chain so that .chart-wrapper can grow to fill the available space.
+      > .card__content {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        min-width: 0;
+      }
+    }
+  }
+
+  // Chart wrapper fills the card space below the card's header / tab rows.
+  .chart-wrapper {
+    flex: 1;
+    min-height: 0;
+    min-width: 0; // critical: prevents chart label text from expanding this
+    width: 100%;
+    max-width: 100%;
+    display: flex;
+    flex-direction: column;
+    // Override the contain and content-visibility set in the base
+    // .chart-wrapper block above — see comments there for rationale.
+    contain: style;
+    content-visibility: visible;
+    overflow: hidden;
+
+    // Thread the flex chain through ChartContainer's DOM elements so that
+    // .chart__canvas-wrapper gets a definite height from the flex algorithm
+    // rather than collapsing to 0 (Chart.js requires an explicit parent height
+    // when maintainAspectRatio: false).
+    .chart-container {
+      flex: 1;
+      min-height: 0;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      max-width: 100%;
+      overflow: hidden;
+      margin-bottom: 0; // remove the default chart-container bottom margin
+    }
+
+    .chart-container__canvas {
+      flex: 1;
+      min-height: 0;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      max-width: 100%;
+      overflow: hidden;
+
+      // Override the `height: auto !important` rule in _chart.scss which
+      // was written for non-flex contexts and maintains the canvas aspect
+      // ratio rather than letting it fill its flex-allocated height.
+      // Specificity here (0,4,1) beats the original (0,1,1) even with
+      // !important — both have !important so the higher specificity wins.
+      canvas {
+        width: 100% !important;
+        height: 100% !important;
+        display: block;
+        max-width: 100%;
+      }
+    }
+
+    // Specificity: .stats-page .chart-wrapper .chart__canvas-wrapper (0,3,0)
+    // beats the bare .chart__canvas-wrapper (0,1,0) in _chart.scss, so no
+    // !important is needed to cancel the fixed px heights set there.
+    .chart__canvas-wrapper {
+      flex: 1;
+      height: auto; // cancel the fixed px height from _chart.scss
+      min-height: 250px; // safety floor if the flex chain somehow collapses
+      min-width: 0;
+      width: 100%;
+      max-width: 100%;
+      overflow: hidden;
     }
   }
 }
