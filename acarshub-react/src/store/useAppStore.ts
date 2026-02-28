@@ -38,6 +38,7 @@ import type {
   SystemStatus,
   Terms,
 } from "../types";
+import type { TimePeriod, TimeSeriesCacheEntry } from "../types/timeseries";
 import { storeLogger } from "../utils/logger";
 import { cullMessageGroups } from "../utils/messageCulling";
 import { useSettingsStore } from "./useSettingsStore";
@@ -138,6 +139,17 @@ export interface AppState {
   // Rolling message rate (updated every 5 seconds by the backend scheduler)
   messageRate: MessageRateData | null;
   setMessageRate: (data: MessageRateData) => void;
+
+  /**
+   * Non-persistent time-series cache.
+   *
+   * Populated by rrd_timeseries_data Socket.IO pushes from the backend.
+   * All eight TimePeriod entries are requested on every connect event so
+   * the cache is warm before the user navigates to the Stats page.
+   * Switching between periods is instant — no socket round-trip needed.
+   */
+  timeSeriesCache: Map<TimePeriod, TimeSeriesCacheEntry>;
+  setTimeSeriesData: (period: TimePeriod, entry: TimeSeriesCacheEntry) => void;
 
   // UI state
   currentPage: string;
@@ -984,6 +996,13 @@ export const useAppStore = create<AppState>((set, get) => {
     // Rolling message rate
     messageRate: null,
     setMessageRate: (data) => set({ messageRate: data }),
+
+    // Time-series cache — all periods stored here, updated on every push
+    timeSeriesCache: new Map(),
+    setTimeSeriesData: (period, entry) =>
+      set((state) => ({
+        timeSeriesCache: new Map(state.timeSeriesCache).set(period, entry),
+      })),
 
     // UI state
     currentPage: "Live Messages",

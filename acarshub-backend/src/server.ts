@@ -47,6 +47,10 @@ import { collectMetrics, METRICS_CONTENT_TYPE } from "./services/metrics.js";
 import { migrateRrdToSqlite } from "./services/rrd-migration.js";
 import { initializeStationIds } from "./services/station-ids.js";
 import { startStatsWriter, stopStatsWriter } from "./services/stats-writer.js";
+import {
+  initTimeSeriesCache,
+  stopTimeSeriesCache,
+} from "./services/timeseries-cache.js";
 import { handleConnect } from "./socket/handlers.js";
 import {
   initializeSocketServer,
@@ -368,6 +372,27 @@ async function main(): Promise<void> {
     initializeMessageCounters();
     initializeAlertCache();
     initializeStationIds();
+
+    // Warm the time-series cache immediately after the DB is open.
+    //
+    // WHY HERE (not after backgroundServices.start())
+    // ------------------------------------------------
+    // initTimeSeriesCache() runs all 8 DB queries synchronously and arms
+    // wall-clock-aligned timers.  Placing it here — before sockets are
+    // drained from the migration queue — guarantees that the cache is fully
+    // populated before the first client can request a graph.  The broadcaster
+    // closes over `io`, which is already accepting connections at this point.
+    initTimeSeriesCache((_period, data) => {
+      if (io) {
+        // Dynamic event emission requires a type assertion; the payload shape
+        // is well-defined as TimeSeriesResponse from utils/timeseries.ts.
+        const ns = io.of("/main") as unknown as {
+          emit: (event: string, data: unknown) => void;
+        };
+        ns.emit("rrd_timeseries_data", data);
+      }
+    });
+
     logger.info("Initialization complete");
 
     const { count: messageCount, size: dbSize } = getRowCount();
@@ -434,6 +459,7 @@ async function main(): Promise<void> {
     const shutdown = async (signal: string) => {
       logger.info("Shutting down", { signal });
 
+      stopTimeSeriesCache();
       stopStatsWriter();
 
       if (backgroundServices) {
