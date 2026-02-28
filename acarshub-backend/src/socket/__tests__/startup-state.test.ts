@@ -102,7 +102,7 @@ function makeStubSocket(id: string, connected = true): StubSocket {
 /** Simulate the socket disconnecting before drain. */
 function simulateDisconnect(stub: StubSocket): void {
   stub.connected = false;
-  stub.onceHandlers["disconnect"]?.();
+  stub.onceHandlers.disconnect?.();
 }
 
 // ---------------------------------------------------------------------------

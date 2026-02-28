@@ -448,12 +448,17 @@ describe("SearchPage", () => {
       // Submit to get results
       await user.click(screen.getByRole("button", { name: /^search$/i }));
 
-      // Inject results via socket event
+      // Inject results via socket event — this also collapses the form
       emitSearchResults([makeMsg("msg-001"), makeMsg("msg-002")]);
 
       await waitFor(() => {
         expect(screen.getAllByTestId("message-card")).toHaveLength(2);
       });
+
+      // Results arrival collapses the form; expand it so the Clear button is accessible
+      await user.click(
+        screen.getByRole("button", { name: /expand search form/i }),
+      );
 
       // Clear
       await user.click(screen.getByRole("button", { name: /clear/i }));
@@ -734,11 +739,17 @@ describe("SearchPage", () => {
       await user.type(flightInput, "UAL");
       await user.click(screen.getByRole("button", { name: /^search$/i }));
 
+      // Results arrival also collapses the form
       emitSearchResults([makeMsg("v-001"), makeMsg("v-002")], 2);
 
       await waitFor(() => {
         expect(screen.getAllByTestId("message-card")).toHaveLength(2);
       });
+
+      // Expand the form so the Clear button is accessible
+      await user.click(
+        screen.getByRole("button", { name: /expand search form/i }),
+      );
 
       // Click Clear to remove results
       await user.click(screen.getByRole("button", { name: /clear/i }));
@@ -842,24 +853,6 @@ describe("SearchPage", () => {
       { container: appContent },
     );
 
-    // Simulate scroll past the collapse threshold by stubbing scrollTop and
-    // dispatching a real scroll event so the component's listener fires.
-    const simulateScrollPast = (scrollTop = 200) => {
-      Object.defineProperty(appContent, "scrollTop", {
-        configurable: true,
-        get: () => scrollTop,
-      });
-      appContent.dispatchEvent(new Event("scroll", { bubbles: false }));
-    };
-
-    const simulateScrollToTop = () => {
-      Object.defineProperty(appContent, "scrollTop", {
-        configurable: true,
-        get: () => 0,
-      });
-      appContent.dispatchEvent(new Event("scroll", { bubbles: false }));
-    };
-
     const cleanup = () => {
       // unmount is called by the test before cleanup so the tree is already
       // gone; just detach the host div from the body.
@@ -871,8 +864,6 @@ describe("SearchPage", () => {
     return {
       ...result,
       appContent,
-      simulateScrollPast,
-      simulateScrollToTop,
       cleanup,
     };
   }
@@ -881,7 +872,7 @@ describe("SearchPage", () => {
     it("does NOT render a collapse button when the form is expanded", () => {
       renderSearchPage();
       // No collapse affordance should be present in the expanded state —
-      // collapse is scroll-driven only.
+      // collapse only happens when search results arrive.
       expect(
         screen.queryByRole("button", { name: /collapse search form/i }),
       ).not.toBeInTheDocument();
@@ -894,12 +885,13 @@ describe("SearchPage", () => {
       expect(formBody).toHaveAttribute("aria-hidden", "false");
     });
 
-    it("shows the expand button with aria-expanded=false after scroll-driven collapse", async () => {
-      const { simulateScrollPast, cleanup, unmount } =
-        renderSearchPageWithScrollContainer();
+    it("shows the expand button with aria-expanded=false after results-driven collapse", async () => {
+      const { cleanup, unmount } = renderSearchPageWithScrollContainer();
 
+      // Trigger collapse by delivering search results (the component collapses
+      // the form when results arrive so they get the full viewport).
       act(() => {
-        simulateScrollPast(200);
+        emitSearchResults([makeMsg("c-001")]);
       });
 
       await waitFor(() => {
@@ -918,12 +910,11 @@ describe("SearchPage", () => {
       cleanup();
     });
 
-    it("form body is aria-hidden=true after scroll-driven collapse", async () => {
-      const { simulateScrollPast, cleanup, unmount } =
-        renderSearchPageWithScrollContainer();
+    it("form body is aria-hidden=true after results-driven collapse", async () => {
+      const { cleanup, unmount } = renderSearchPageWithScrollContainer();
 
       act(() => {
-        simulateScrollPast(200);
+        emitSearchResults([makeMsg("c-002")]);
       });
 
       await waitFor(() => {
@@ -937,11 +928,10 @@ describe("SearchPage", () => {
 
     it("clicking the expand button sets aria-hidden=false on the form body", async () => {
       const user = userEvent.setup();
-      const { simulateScrollPast, cleanup, unmount } =
-        renderSearchPageWithScrollContainer();
+      const { cleanup, unmount } = renderSearchPageWithScrollContainer();
 
       act(() => {
-        simulateScrollPast(200);
+        emitSearchResults([makeMsg("c-003")]);
       });
 
       await waitFor(() => {
@@ -965,11 +955,10 @@ describe("SearchPage", () => {
 
     it("expand button disappears after clicking it (form is now open)", async () => {
       const user = userEvent.setup();
-      const { simulateScrollPast, cleanup, unmount } =
-        renderSearchPageWithScrollContainer();
+      const { cleanup, unmount } = renderSearchPageWithScrollContainer();
 
       act(() => {
-        simulateScrollPast(200);
+        emitSearchResults([makeMsg("c-004")]);
       });
 
       await waitFor(() => {
@@ -992,19 +981,18 @@ describe("SearchPage", () => {
       cleanup();
     });
 
-    it("shows the active search summary in the header when scroll-collapsed with an active search", async () => {
+    it("shows the active search summary in the header when results-collapsed with an active search", async () => {
       const user = userEvent.setup();
-      const { simulateScrollPast, cleanup, unmount } =
-        renderSearchPageWithScrollContainer();
+      const { cleanup, unmount } = renderSearchPageWithScrollContainer();
 
-      // Type a value and submit to establish an activeSearch
+      // Type a value and submit to establish an activeSearch; delivering
+      // results simultaneously triggers the form collapse.
       const flightInput = screen.getByLabelText(/^flight$/i);
       await user.type(flightInput, "UAL123");
       await user.click(screen.getByRole("button", { name: /^search$/i }));
 
-      // Now scroll to collapse
       act(() => {
-        simulateScrollPast(200);
+        emitSearchResults([makeMsg("c-005")]);
       });
 
       await waitFor(() => {
@@ -1027,12 +1015,14 @@ describe("SearchPage", () => {
       expect(screen.queryByText(/Flight: UAL123/)).not.toBeInTheDocument();
     });
 
-    it("does not show the active search summary when scroll-collapsed but no active search", async () => {
-      const { simulateScrollPast, cleanup, unmount } =
-        renderSearchPageWithScrollContainer();
+    it("does not show the active search summary when collapsed but no active search", async () => {
+      const { cleanup, unmount } = renderSearchPageWithScrollContainer();
 
+      // Collapse the form via results arrival without submitting a search first
+      // so activeSearch remains null — handleSearchResults collapses the form
+      // but never sets activeSearch (that is only done by executeSearch).
       act(() => {
-        simulateScrollPast(200);
+        emitSearchResults([makeMsg("c-006")]);
       });
 
       await waitFor(() => {
@@ -1048,12 +1038,11 @@ describe("SearchPage", () => {
       cleanup();
     });
 
-    it("regression: form fields are aria-hidden when scroll-collapsed", async () => {
-      const { simulateScrollPast, cleanup, unmount } =
-        renderSearchPageWithScrollContainer();
+    it("regression: form fields are aria-hidden when results-collapsed", async () => {
+      const { cleanup, unmount } = renderSearchPageWithScrollContainer();
 
       act(() => {
-        simulateScrollPast(200);
+        emitSearchResults([makeMsg("c-007")]);
       });
 
       await waitFor(() => {
