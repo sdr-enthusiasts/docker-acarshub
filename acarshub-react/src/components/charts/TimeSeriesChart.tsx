@@ -310,10 +310,25 @@ export const TimeSeriesChart = ({
       scales: {
         x: {
           type: "time",
-          // Pin the x-axis to the exact requested range when provided.
-          // Without this, Chart.js auto-scales to the data extents, which
-          // causes 1hr/6hr/12hr to all look the same when data is sparse.
-          ...(timeRange ? { min: timeRange.start, max: timeRange.end } : {}),
+          // Pin the x-axis to the exact requested range when provided, but
+          // only if the span is compatible with the current period's time unit.
+          //
+          // WHY: When the user switches time periods (e.g. "1yr" → "6hr"),
+          // React renders TimeSeriesChart with the new timePeriod prop (and
+          // thus unit: "minute") BEFORE the hook's useEffect has a chance to
+          // clear the stale timeRange from the previous period.  Chart.js's
+          // own useEffect fires in the same passive-effects flush but earlier
+          // (child before parent), so it sees unit="minute" + a 1-year span
+          // and throws: "X and Y are too far apart with stepSize of 1 minute".
+          //
+          // The guard below discards any timeRange whose span exceeds the
+          // maximum expected span for the current period (with 2× tolerance
+          // to absorb minor clock skew).  This runs at render time so it
+          // prevents the incompatible options from ever reaching Chart.js.
+          ...(timeRange &&
+          timeRange.end - timeRange.start <= getMaxSpanMs(timePeriod)
+            ? { min: timeRange.start, max: timeRange.end }
+            : {}),
           time: {
             unit: getTimeUnit(timePeriod),
             displayFormats: {
@@ -338,6 +353,14 @@ export const TimeSeriesChart = ({
         },
         y: {
           beginAtZero: true,
+          title: {
+            display: true,
+            text: getYAxisLabel(timePeriod),
+            color: textColor,
+            font: {
+              size: 11,
+            },
+          },
           grid: {
             color: gridColor,
           },
@@ -364,11 +387,28 @@ export const TimeSeriesChart = ({
     );
   }
 
-  if (loading || data.length === 0) {
+  // Guard: if the data timestamps span more than the maximum acceptable range
+  // for the current period, the data is stale from a previous period and has
+  // not yet been cleared by the hook's useEffect.  Rendering <Line> with
+  // unit="minute" and year-spanning data timestamps causes Chart.js to
+  // auto-scale the x-axis to a year and crash:
+  //   "X and Y are too far apart with stepSize of 1 minute"
+  // Showing the loading state instead is safe — the hook will deliver
+  // correctly-ranged data on the very next render cycle.
+  const dataSpanOk =
+    data.length < 2 ||
+    data[data.length - 1].timestamp - data[0].timestamp <=
+      getMaxSpanMs(timePeriod);
+
+  if (loading || data.length === 0 || !dataSpanOk) {
     return (
       <ChartContainer>
         <div className="chart__loading">
-          <p>{loading ? "Loading chart data..." : "No data available"}</p>
+          <p>
+            {loading || !dataSpanOk
+              ? "Loading chart data..."
+              : "No data available"}
+          </p>
         </div>
       </ChartContainer>
     );
@@ -410,6 +450,70 @@ function getTimeUnit(
       return "month";
     default:
       return "hour";
+  }
+}
+
+/**
+ * Return the maximum acceptable time-range span in milliseconds for a given
+ * period.  Uses 2× the nominal span as a generous upper bound to tolerate
+ * minor clock skew, while still reliably catching a stale range from a
+ * completely different period (e.g. a 1-year range appearing when the period
+ * is now "1hr").
+ */
+export function getMaxSpanMs(timePeriod: TimePeriod): number {
+  switch (timePeriod) {
+    case "1hr":
+      return 2 * 3600 * 1000; // 2 hours
+    case "6hr":
+      return 2 * 21600 * 1000; // 12 hours
+    case "12hr":
+      return 2 * 43200 * 1000; // 24 hours
+    case "24hr":
+      return 2 * 86400 * 1000; // 48 hours
+    case "1wk":
+      return 2 * 604800 * 1000; // 2 weeks
+    case "30day":
+      return 2 * 2592000 * 1000; // 60 days
+    case "6mon":
+      return 2 * 15768000 * 1000; // ~12 months
+    case "1yr":
+      return 2 * 31536000 * 1000; // 2 years
+    default:
+      return 2 * 86400 * 1000; // 48 hours fallback
+  }
+}
+
+/**
+ * Return a human-readable Y-axis label that reflects the bucket size for each
+ * time period.  Each label describes what a single data point represents so
+ * the reader immediately understands the unit of the plotted values.
+ *
+ * Bucket sizes come from the backend periodMap in handlers.ts:
+ *   1hr / 6hr / 12hr  →  downsample: 60   (1-minute buckets)
+ *   24hr              →  downsample: 300  (5-minute buckets)
+ *   1wk               →  downsample: 1800 (30-minute buckets)
+ *   30day             →  downsample: 3600 (1-hour buckets)
+ *   6mon              →  downsample: 21600 (6-hour buckets)
+ *   1yr               →  downsample: 43200 (12-hour buckets)
+ */
+export function getYAxisLabel(timePeriod: TimePeriod): string {
+  switch (timePeriod) {
+    case "1hr":
+    case "6hr":
+    case "12hr":
+      return "Messages / min";
+    case "24hr":
+      return "Messages / 5 min";
+    case "1wk":
+      return "Messages / 30 min";
+    case "30day":
+      return "Messages / hr";
+    case "6mon":
+      return "Messages / 6 hr";
+    case "1yr":
+      return "Messages / 12 hr";
+    default:
+      return "Messages";
   }
 }
 

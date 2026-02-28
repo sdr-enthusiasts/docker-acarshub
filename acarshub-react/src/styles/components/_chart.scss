@@ -72,7 +72,36 @@
       display: block;
     }
   }
+}
 
+// =============================================================================
+// Time-series canvas wrapper
+// Chart.js requires a sized parent when maintainAspectRatio: false.
+// Without an explicit height the canvas collapses, especially on mobile.
+// These rules apply to the div wrapping the <Line> / <Bar> canvas inside
+// ChartContainer, set at comfortable heights that give the y-axis room.
+// =============================================================================
+
+.chart__canvas-wrapper {
+  position: relative;
+  width: 100%;
+
+  // Compact default for small/mobile screens (portrait phones)
+  height: 280px;
+
+  // Tablet and up — more breathing room
+  @media (min-width: 768px) {
+    height: 340px;
+  }
+
+  // Desktop — full comfortable height
+  @media (min-width: 1024px) {
+    height: 380px;
+  }
+}
+
+// Re-open the block so the remaining rules still belong to .chart-container
+.chart-container {
   // Mobile/small screen adjustments
   @media (max-width: 767px) {
     padding: var(--spacing-sm);

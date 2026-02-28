@@ -111,6 +111,22 @@ export const useRRDTimeSeriesData = (
   }, [timePeriod]);
 
   useEffect(() => {
+    // Immediately clear stale data and time range from the previous period.
+    //
+    // WHY: The chart options (including the time axis `unit`) are recomputed
+    // from `timePeriod` on the same render cycle that this effect runs.  If
+    // the previous period's `timeRange` is still in state (e.g. a 1-year
+    // range from "1yr") and the new `timePeriod` uses a finer unit (e.g.
+    // "minute" for "6hr"), Chart.js will try to generate ~525 000 minute
+    // ticks across a 1-year span and throw:
+    //   "X and Y are too far apart with stepSize of 1 minute"
+    // Resetting to null/[] here ensures the chart stays in its loading state
+    // (no x-axis pinning) until the correctly-ranged response arrives.
+    setTimeRange(null);
+    setData([]);
+    setLoading(true);
+    setError(null);
+
     // Set up Socket.IO listener for RRD time-series data
     const handleRRDData = (response: RRDTimeSeriesResponse) => {
       // Only process if this response is for our requested time period
