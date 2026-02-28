@@ -86,15 +86,19 @@
   position: relative;
   width: 100%;
 
-  // Compact default for small/mobile screens (portrait phones)
+  // Compact default for small/mobile screens (portrait phones).
+  // Fixed px height preserves the mobile fix — Chart.js collapses to 0
+  // without an explicit height when maintainAspectRatio: false.
   height: 280px;
 
-  // Tablet and up — more breathing room
+  // Tablet — more breathing room.
   @media (min-width: 768px) {
     height: 340px;
   }
 
-  // Desktop — full comfortable height
+  // Desktop fallback — overridden to flex-fill by .stats-page context
+  // (see _stats.scss).  Kept here so the component renders sensibly in
+  // any hypothetical non-stats-page usage.
   @media (min-width: 1024px) {
     height: 380px;
   }
