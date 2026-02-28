@@ -6,6 +6,7 @@
 
 - Status page: The rolling messages-per-minute rate was showing a coarse per-minute counter (reset at each minute boundary) instead of the rolling 60-second rate, and the value only refreshed on the 10-second `request_status` poll rather than the 5-second `message_rate` emit. Fixed by reading `getRollingRates()` for the initial `system_status` response, emitting `message_rate` alongside `system_status` on `request_status`, and having the Status page use the store's live `messageRate` value (updated every 5 seconds) as its primary source for the Rate (1 min) display.
 - Database: Running several migrations in sequence triggered multiple VACUUM stalls. Consolidated VACUUM and ANALYZE so they run exactly once at the end of `runMigrations()`, only when at least one migration step executed or the FTS startup repair rebuilt the virtual table. ANALYZE now runs after VACUUM so the query planner sees the final compacted page layout.
+- Status page: Value labels on the Alert Terms and Frequency Distribution horizontal bar charts no longer overlap the row (Y-axis) labels when a bar represents a very small count. Labels now use dynamic positioning: bars whose value is less than 15% of the axis maximum place their label outside and to the right of the bar tip (using the theme text colour, no pill background); taller bars continue to place the label inside the bar at its right end (dark text on the coloured pill). This preserves the original intent of keeping labels for large-value bars inside the chart boundary while eliminating the overlap for small-value bars.
 
 ### v4.1.4 Performance
 
@@ -23,6 +24,7 @@
 - Search: All text search inputs are now automatically normalised to uppercase as you type, matching the way messages are stored in the database and eliminating missed results caused by case differences.
 - Messages: Any portion of a message that the decoder recognised but could not fully decode is now shown as "Remaining Text" in the message detail view, rather than being silently discarded [(1)](#v414-n1)
 - Messages: Bump `acars-decoder` version to 1.8.8
+- Label the y axis on Reception over time graphs with the message count per time slot.
 
 ### v4.1.4 Improvements
 

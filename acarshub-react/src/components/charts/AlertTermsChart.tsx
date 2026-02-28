@@ -24,7 +24,7 @@ import {
   Tooltip,
   type TooltipItem,
 } from "chart.js";
-import ChartDataLabels from "chartjs-plugin-datalabels";
+import ChartDataLabels, { type Context } from "chartjs-plugin-datalabels";
 import { useMemo } from "react";
 import { Bar } from "react-chartjs-2";
 import { useSettingsStore } from "../../store/useSettingsStore";
@@ -224,12 +224,22 @@ export const AlertTermsChart = ({
           },
         },
         datalabels: {
-          backgroundColor: (context: { dataIndex: number }) => {
-            // Use same color as bar by accessing from the dataset
+          backgroundColor: (context: Context) => {
+            const value =
+              (context.dataset.data[context.dataIndex] as number) ?? 0;
+            const max = context.chart.scales.x?.max ?? 1;
+            // No pill background when label is outside the bar (short bar)
+            if (value / max < 0.15) return null;
             return chartColors[context.dataIndex % chartColors.length];
           },
           borderRadius: 4,
-          color: "rgba(0, 0, 0, 0.9)",
+          color: (context: Context) => {
+            const value =
+              (context.dataset.data[context.dataIndex] as number) ?? 0;
+            const max = context.chart.scales.x?.max ?? 1;
+            // Outside bar: use theme text color; inside bar: dark text on colored pill
+            return value / max < 0.15 ? textColor : "rgba(0, 0, 0, 0.9)";
+          },
           clamp: true,
           font: {
             weight: "bold" as const,
@@ -238,7 +248,14 @@ export const AlertTermsChart = ({
           formatter: (value: number) => {
             return value.toLocaleString();
           },
-          align: "start" as const,
+          align: (context: Context) => {
+            const value =
+              (context.dataset.data[context.dataIndex] as number) ?? 0;
+            const max = context.chart.scales.x?.max ?? 1;
+            // Short bars: label goes outside (right of bar end) to avoid overlapping row labels
+            // Long bars: label stays inside (left of bar end) to avoid clipping past chart edge
+            return value / max < 0.15 ? ("end" as const) : ("start" as const);
+          },
           anchor: "end" as const,
           clip: false,
         },
