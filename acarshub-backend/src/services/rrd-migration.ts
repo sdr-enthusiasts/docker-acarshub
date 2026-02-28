@@ -133,9 +133,18 @@ async function fetchRrdArchive(
  * 1771282320: -nan -nan -nan -nan -nan -nan -nan
  * ```
  *
+ * Rows where every data column is `-nan` or `nan` are silently skipped — they
+ * represent time slots where the RRD had no source data (e.g. the period
+ * between the RRD's last_update and the current time).  Inserting zero-valued
+ * rows for these slots would pollute the database with false zeros and can
+ * pre-occupy future timestamps that the live stats-writer should own.
+ *
+ * Rows where only some columns are NaN (partial NaN) keep the non-NaN values
+ * and map the NaN columns to 0.
+ *
  * @param output - rrdtool fetch output
  * @param resolution - Time resolution
- * @returns Parsed data points (NaN values converted to 0)
+ * @returns Parsed data points (all-NaN rows skipped; partial-NaN columns → 0)
  */
 function parseRrdOutput(
   output: string,
@@ -166,23 +175,32 @@ function parseRrdOutput(
     }
 
     const timestamp = Number.parseInt(match[1], 10);
-    const values = match[2]
-      .trim()
-      .split(/\s+/)
-      .map((v) => {
-        if (v === "-nan" || v === "nan") return 0;
-        const parsed = Number.parseFloat(v);
-        return Number.isNaN(parsed) ? 0 : Math.round(parsed); // Round to integer
-      });
+    const rawTokens = match[2].trim().split(/\s+/);
 
-    if (values.length !== 7) {
+    if (rawTokens.length !== 7) {
       logger.debug("Skipping line with incorrect value count", {
         expected: 7,
-        actual: values.length,
+        actual: rawTokens.length,
         line: trimmed,
       });
       continue;
     }
+
+    // Skip rows where every column is NaN — these represent time slots with
+    // no source data (e.g. the gap between RRD last_update and "now").
+    // Inserting zero-count rows for these slots pollutes the DB with false
+    // zeros and pre-occupies future timestamps that the live stats-writer owns.
+    const allNaN = rawTokens.every((v) => v === "-nan" || v === "nan");
+    if (allNaN) {
+      logger.debug("Skipping all-NaN row", { timestamp });
+      continue;
+    }
+
+    const values = rawTokens.map((v) => {
+      if (v === "-nan" || v === "nan") return 0; // partial NaN → 0
+      const parsed = Number.parseFloat(v);
+      return Number.isNaN(parsed) ? 0 : Math.round(parsed);
+    });
 
     dataPoints.push({
       timestamp,
@@ -259,10 +277,22 @@ function expandCoarseDataToOneMinute(
         continue;
     }
 
-    // Create multiple 1-minute rows spanning the time period
+    // rrdtool returns the timestamp at the END of each consolidation period.
+    // For a 5-minute point at T the period covered is [T-300, T], and the five
+    // 1-minute sub-periods ending within it are at T-240, T-180, T-120, T-60, T.
+    //
+    // We therefore expand BACKWARD from T so each sub-row sits at the correct
+    // historical timestamp.  The formula for sub-row i (0 = earliest, N-1 = T):
+    //
+    //   sub_timestamp = T - (intervalCount - 1 - i) * 60
+    //
+    // Previously the code expanded FORWARD (T, T+60, T+120, …), which shifted
+    // all historical data into the future and created rows far beyond the RRD's
+    // last_update — a regression that pre-occupied future timestamps belonging
+    // to the live stats-writer.
     for (let i = 0; i < intervalCount; i++) {
       expanded.push({
-        timestamp: point.timestamp + i * intervalSeconds,
+        timestamp: point.timestamp - (intervalCount - 1 - i) * intervalSeconds,
         acarsCount: point.acarsCount,
         vdlmCount: point.vdlmCount,
         hfdlCount: point.hfdlCount,
@@ -768,14 +798,34 @@ export async function migrateRrdToSqlite(
     logger.info("Expanding coarse data to 1-minute resolution");
     const expandedDataPoints = expandCoarseDataToOneMinute(allDataPoints);
 
+    // 6b. Clamp future timestamps.
+    //
+    // WHY: Even with NaN-row skipping and backward expansion, rounding artefacts
+    // or clock skew could produce a handful of rows whose timestamp slightly
+    // exceeds "now".  Such rows would pre-occupy timestamp slots that the live
+    // stats-writer is supposed to own, silently blocking it from recording real
+    // counts.  We drop any expanded row whose timestamp is strictly after the
+    // current wall-clock second.
+    const nowSec = Math.floor(Date.now() / 1000);
+    const clampedDataPoints = expandedDataPoints.filter(
+      (p) => p.timestamp <= nowSec,
+    );
+    const clampedCount = expandedDataPoints.length - clampedDataPoints.length;
+    if (clampedCount > 0) {
+      logger.warn(
+        "Clamped future-timestamp rows that would have pre-occupied live-stats slots",
+        { clampedCount, nowSec },
+      );
+    }
+
     // 7. Insert data into database (idempotent: INSERT OR IGNORE)
-    batchInsertDataPoints(expandedDataPoints);
+    batchInsertDataPoints(clampedDataPoints);
 
     // 8. Record the file hash in the registry so future imports of the same
     //    content are skipped immediately, regardless of filename.
     if (fileHash !== null) {
       try {
-        registerHash(fileHash, rrdPath, expandedDataPoints.length);
+        registerHash(fileHash, rrdPath, clampedDataPoints.length);
         logger.info("Registered import hash in registry", { fileHash });
       } catch (hashError) {
         // Non-fatal — the migration itself succeeded; only the registry
@@ -808,13 +858,13 @@ export async function migrateRrdToSqlite(
 
     logger.info("RRD migration complete", {
       success: true,
-      rowsInserted: expandedDataPoints.length,
+      rowsInserted: clampedDataPoints.length,
       duration,
     });
 
     return {
       success: true,
-      rowsInserted: expandedDataPoints.length,
+      rowsInserted: clampedDataPoints.length,
       duration,
     };
   } catch (error) {

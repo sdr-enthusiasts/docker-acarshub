@@ -143,33 +143,29 @@ describe("getYAxisLabel", () => {
     });
   });
 
-  describe("5-minute bucket period (24hr)", () => {
-    it('returns "Messages / 5 min" for 24hr', () => {
-      expect(getYAxisLabel("24hr")).toBe("Messages / 5 min");
+  describe("downsampled periods (24hr, 1wk, 30day, 6mon, 1yr)", () => {
+    // For downsampled periods the backend returns ROUND(AVG(total_count)) —
+    // the average messages-per-minute over a wider bucket.  The label must
+    // say "Avg messages / min" to avoid implying a per-bucket total, which
+    // would be bucket_minutes × the displayed value (far larger).
+    it('returns "Avg messages / min" for 24hr', () => {
+      expect(getYAxisLabel("24hr")).toBe("Avg messages / min");
     });
-  });
 
-  describe("30-minute bucket period (1wk)", () => {
-    it('returns "Messages / 30 min" for 1wk', () => {
-      expect(getYAxisLabel("1wk")).toBe("Messages / 30 min");
+    it('returns "Avg messages / min" for 1wk', () => {
+      expect(getYAxisLabel("1wk")).toBe("Avg messages / min");
     });
-  });
 
-  describe("1-hour bucket period (30day)", () => {
-    it('returns "Messages / hr" for 30day', () => {
-      expect(getYAxisLabel("30day")).toBe("Messages / hr");
+    it('returns "Avg messages / min" for 30day', () => {
+      expect(getYAxisLabel("30day")).toBe("Avg messages / min");
     });
-  });
 
-  describe("6-hour bucket period (6mon)", () => {
-    it('returns "Messages / 6 hr" for 6mon', () => {
-      expect(getYAxisLabel("6mon")).toBe("Messages / 6 hr");
+    it('returns "Avg messages / min" for 6mon', () => {
+      expect(getYAxisLabel("6mon")).toBe("Avg messages / min");
     });
-  });
 
-  describe("12-hour bucket period (1yr)", () => {
-    it('returns "Messages / 12 hr" for 1yr', () => {
-      expect(getYAxisLabel("1yr")).toBe("Messages / 12 hr");
+    it('returns "Avg messages / min" for 1yr', () => {
+      expect(getYAxisLabel("1yr")).toBe("Avg messages / min");
     });
   });
 
@@ -210,15 +206,29 @@ describe("getYAxisLabel", () => {
     });
   });
 
-  describe("regression: long periods each have a unique label", () => {
-    it("30day, 6mon, and 1yr all have distinct labels", () => {
-      const labels = [
-        getYAxisLabel("30day"),
-        getYAxisLabel("6mon"),
-        getYAxisLabel("1yr"),
-      ];
-      const unique = new Set(labels);
-      expect(unique.size).toBe(3);
+  describe("regression: all downsampled periods share the same 'Avg messages / min' label", () => {
+    // Previously each long period had its own distinct per-bucket label
+    // (e.g. "Messages / hr", "Messages / 6 hr", "Messages / 12 hr").  Those
+    // labels implied a per-bucket total, but the backend returns
+    // ROUND(AVG(total_count)) — an average-per-minute — so the labels were
+    // misleading.  All downsampled periods now consistently show
+    // "Avg messages / min" so the displayed value is never misread as a total.
+    it("24hr, 1wk, 30day, 6mon, and 1yr all return 'Avg messages / min'", () => {
+      const downsampledPeriods = [
+        "24hr",
+        "1wk",
+        "30day",
+        "6mon",
+        "1yr",
+      ] as const;
+      for (const period of downsampledPeriods) {
+        expect(getYAxisLabel(period)).toBe("Avg messages / min");
+      }
+    });
+
+    it("downsampled label differs from the 1-min-resolution label", () => {
+      expect(getYAxisLabel("30day")).not.toBe(getYAxisLabel("1hr"));
+      expect(getYAxisLabel("1yr")).not.toBe(getYAxisLabel("12hr"));
     });
   });
 });
@@ -232,11 +242,11 @@ describe("TimeSeriesChart Y-axis title", () => {
     { period: "1hr", expectedLabel: "Messages / min" },
     { period: "6hr", expectedLabel: "Messages / min" },
     { period: "12hr", expectedLabel: "Messages / min" },
-    { period: "24hr", expectedLabel: "Messages / 5 min" },
-    { period: "1wk", expectedLabel: "Messages / 30 min" },
-    { period: "30day", expectedLabel: "Messages / hr" },
-    { period: "6mon", expectedLabel: "Messages / 6 hr" },
-    { period: "1yr", expectedLabel: "Messages / 12 hr" },
+    { period: "24hr", expectedLabel: "Avg messages / min" },
+    { period: "1wk", expectedLabel: "Avg messages / min" },
+    { period: "30day", expectedLabel: "Avg messages / min" },
+    { period: "6mon", expectedLabel: "Avg messages / min" },
+    { period: "1yr", expectedLabel: "Avg messages / min" },
   ];
 
   for (const { period, expectedLabel } of periods) {

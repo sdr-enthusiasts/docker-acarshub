@@ -231,20 +231,117 @@ describe("RRD Migration Service", () => {
       expect(result?.rowsInserted).toBeGreaterThan(0);
     });
 
-    it("should convert NaN values to 0", async () => {
-      const mockOutput = `                  ACARS                VDLM               TOTAL               ERROR                HFDL                IMSL                IRDM
+    it("regression: all-NaN rows are skipped and do NOT produce zero-count DB rows", async () => {
+      // BEFORE THE FIX: parseRrdOutput converted -nan to 0 and inserted the row.
+      // AFTER THE FIX:  rows where every column is -nan are skipped entirely so
+      //                 the DB is not polluted with false zeros and future timestamps
+      //                 are not pre-occupied.
+      //
+      // We use a real in-memory DB so we can directly assert the inserted row count.
+      // Only the 1-min archive (first exec call) returns the test data; the coarse
+      // archives return empty output so their backward expansions cannot generate
+      // sub-rows that land on nanTimestamp by coincidence.
+      setupInMemoryDb();
 
-1771282260: -nan -nan -nan -nan -nan -nan -nan
-1771282320: 2.9898751667e+00 2.0025312083e+01 3.5989875167e+01 0.0000000000e+00 1.2974687917e+01 0.0000000000e+00 0.0000000000e+00`;
+      vi.mocked(fs.existsSync).mockImplementation((p) => {
+        if (p === MOCK_RRD_PATH) return true;
+        if (p === `${MOCK_RRD_PATH}.back`) return false;
+        return false;
+      });
+      vi.mocked(fs.statSync).mockReturnValue({
+        isFile: () => true,
+        size: MOCK_RRD_CONTENT.length,
+      } as fs.Stats);
+      vi.mocked(fs.renameSync).mockImplementation(() => {});
+      vi.mocked(fs.readFileSync).mockReturnValue(MOCK_RRD_CONTENT);
 
-      await setupMigrationMocks({ execOutput: mockOutput });
+      // One all-NaN row followed by one valid row, fed only to the 1-min archive.
+      // The NaN row must NOT appear in the DB after migration.
+      // Timestamps chosen well in the past so they are below Date.now().
+      const nanTimestamp = 1771282260;
+      const validTimestamp = 1771282320;
+      const realOutput = `                  ACARS                VDLM               TOTAL               ERROR                HFDL                IMSL                IRDM
+
+${nanTimestamp}: -nan -nan -nan -nan -nan -nan -nan
+${validTimestamp}: 2.9898751667e+00 2.0025312083e+01 3.5989875167e+01 0.0000000000e+00 1.2974687917e+01 0.0000000000e+00 0.0000000000e+00`;
+
+      // Empty output for archives 1-min (index 0) only gets the real rows.
+      // Coarse archives (5-min, 1-hour, 6-hour) return header-only so their
+      // backward expansions cannot coincidentally produce a row at nanTimestamp.
+      const emptyOutput = `                  ACARS                VDLM               TOTAL               ERROR                HFDL                IMSL                IRDM
+
+`;
+      let nanCallIndex = 0;
+      vi.mocked(child_process.exec).mockImplementation(
+        ((
+          _cmd: string,
+          _opts: unknown,
+          cb: (e: Error | null, r: { stdout: string; stderr: string } | null) => void,
+        ) => {
+          const output = nanCallIndex === 0 ? realOutput : emptyOutput;
+          nanCallIndex++;
+          cb(null, { stdout: output, stderr: "" });
+        }) as unknown as typeof child_process.exec,
+      );
 
       const { migrateRrdToSqlite } = await import("../rrd-migration.js");
       const result = await migrateRrdToSqlite(MOCK_RRD_PATH);
 
-      // Migration should still succeed even with NaN rows
-      expect(result).toBeDefined();
       expect(result?.success).toBe(true);
+
+      // The NaN row must not appear in the database at all.
+      const { getDatabase: getDb } = await import("../../db/index.js");
+      const { timeseriesStats: tsStats } = await import("../../db/schema.js");
+      const { eq } = await import("drizzle-orm");
+      const db = getDb();
+      const nanRow = db
+        .select()
+        .from(tsStats)
+        .where(eq(tsStats.timestamp, nanTimestamp))
+        .get();
+      expect(nanRow).toBeUndefined();
+
+      // The valid 1-min row must be present (1 row, kept as-is — no expansion).
+      expect(result?.rowsInserted).toBe(1);
+    });
+
+    it("regression: migration still succeeds when input contains only NaN rows", async () => {
+      // If every row is NaN (e.g. stale RRD with no recent data), migration
+      // should report 0 rows inserted and success: false (no data), not throw.
+      setupInMemoryDb();
+
+      vi.mocked(fs.existsSync).mockImplementation((p) => {
+        if (p === MOCK_RRD_PATH) return true;
+        if (p === `${MOCK_RRD_PATH}.back`) return false;
+        return false;
+      });
+      vi.mocked(fs.statSync).mockReturnValue({
+        isFile: () => true,
+        size: MOCK_RRD_CONTENT.length,
+      } as fs.Stats);
+      vi.mocked(fs.renameSync).mockImplementation(() => {});
+      vi.mocked(fs.readFileSync).mockReturnValue(MOCK_RRD_CONTENT);
+
+      const allNanOutput = `                  ACARS                VDLM               TOTAL               ERROR                HFDL                IMSL                IRDM
+
+1771282200: -nan -nan -nan -nan -nan -nan -nan
+1771282260: -nan -nan -nan -nan -nan -nan -nan
+1771282320: -nan -nan -nan -nan -nan -nan -nan`;
+
+      vi.mocked(child_process.exec).mockImplementation(
+        ((
+          _cmd: string,
+          _opts: unknown,
+          cb: (e: Error | null, r: { stdout: string; stderr: string } | null) => void,
+        ) => cb(null, { stdout: allNanOutput, stderr: "" })) as unknown as typeof child_process.exec,
+      );
+
+      const { migrateRrdToSqlite } = await import("../rrd-migration.js");
+      const result = await migrateRrdToSqlite(MOCK_RRD_PATH);
+
+      // All-NaN input → no data points → migration reports failure (no rows)
+      expect(result?.success).toBe(false);
+      expect(result?.rowsInserted).toBe(0);
     });
 
     it("should round decimal values to integers", async () => {
@@ -274,6 +371,138 @@ NOT_A_TIMESTAMP: bad data here
 
       expect(result?.success).toBe(true);
       expect(result?.rowsInserted).toBeGreaterThan(0);
+    });
+
+    it("regression: 5-minute archive points expand BACKWARD to cover historical period", async () => {
+      // BEFORE THE FIX: expandCoarseDataToOneMinute started expansion at T and
+      //   went forward (T, T+60, T+120, T+180, T+240), shifting data into the
+      //   future and creating rows beyond the RRD's last_update.
+      // AFTER THE FIX:  expansion goes backward from the end-of-period timestamp T:
+      //   T-240, T-180, T-120, T-60, T — matching the actual period [T-300, T].
+      //
+      // We use a real in-memory DB and a 5-min archive rrdtool output so we can
+      // inspect the exact timestamps inserted.
+      setupInMemoryDb();
+
+      vi.mocked(fs.existsSync).mockImplementation((p) => {
+        if (p === MOCK_RRD_PATH) return true;
+        if (p === `${MOCK_RRD_PATH}.back`) return false;
+        return false;
+      });
+      vi.mocked(fs.statSync).mockReturnValue({
+        isFile: () => true,
+        size: MOCK_RRD_CONTENT.length,
+      } as fs.Stats);
+      vi.mocked(fs.renameSync).mockImplementation(() => {});
+      vi.mocked(fs.readFileSync).mockReturnValue(MOCK_RRD_CONTENT);
+
+      // Use a timestamp well in the past (2025-01-01 00:05:00 UTC = 1735689900)
+      // so all expanded rows are below Date.now() and pass the future-clamp filter.
+      const fiveMinPoint = 1735689900; // T — end of the 5-min period [T-300, T]
+      const fiveMinOutput = `                  ACARS                VDLM               TOTAL               ERROR                HFDL                IMSL                IRDM
+
+${fiveMinPoint}: 5.0000000000e+00 1.0000000000e+01 1.5000000000e+01 0.0000000000e+00 0.0000000000e+00 0.0000000000e+00 0.0000000000e+00`;
+
+      // Override exec so the first archive call returns 5-min data and the others
+      // return empty output (header only, no data rows).
+      const emptyOutput = `                  ACARS                VDLM               TOTAL               ERROR                HFDL                IMSL                IRDM
+
+`;
+      let callIndex = 0;
+      vi.mocked(child_process.exec).mockImplementation(
+        ((
+          _cmd: string,
+          _opts: unknown,
+          cb: (e: Error | null, r: { stdout: string; stderr: string } | null) => void,
+        ) => {
+          // Archives are fetched in order: 1min, 5min, 1hour, 6hour.
+          // Return real data only for the 5-min archive (index 1).
+          const output = callIndex === 1 ? fiveMinOutput : emptyOutput;
+          callIndex++;
+          cb(null, { stdout: output, stderr: "" });
+        }) as unknown as typeof child_process.exec,
+      );
+
+      const { migrateRrdToSqlite } = await import("../rrd-migration.js");
+      await migrateRrdToSqlite(MOCK_RRD_PATH);
+
+      const { timeseriesStats } = await import("../../db/schema.js");
+      const { asc } = await import("drizzle-orm");
+      const { getDatabase: getDb2 } = await import("../../db/index.js");
+      const db = getDb2();
+      const rows = db
+        .select()
+        .from(timeseriesStats)
+        .orderBy(asc(timeseriesStats.timestamp))
+        .all();
+
+      // A 5-min point at T should expand to exactly 5 rows:
+      //   T-240, T-180, T-120, T-60, T
+      const expectedTimestamps = [
+        fiveMinPoint - 240,
+        fiveMinPoint - 180,
+        fiveMinPoint - 120,
+        fiveMinPoint - 60,
+        fiveMinPoint,
+      ];
+
+      expect(rows.length).toBe(5);
+      for (let i = 0; i < rows.length; i++) {
+        expect(rows[i].timestamp).toBe(expectedTimestamps[i]);
+      }
+
+      // The row AFTER T must NOT exist (old bug produced T+60, T+120, … instead).
+      const { eq } = await import("drizzle-orm");
+      const futureRow = db
+        .select()
+        .from(timeseriesStats)
+        .where(eq(timeseriesStats.timestamp, fiveMinPoint + 60))
+        .get();
+      expect(futureRow).toBeUndefined();
+    });
+
+    it("regression: future-timestamp rows are clamped and not inserted", async () => {
+      // Rows whose timestamp > Date.now() must be dropped by the clamp step
+      // even if they somehow survive NaN-filtering and backward expansion.
+      setupInMemoryDb();
+
+      vi.mocked(fs.existsSync).mockImplementation((p) => {
+        if (p === MOCK_RRD_PATH) return true;
+        if (p === `${MOCK_RRD_PATH}.back`) return false;
+        return false;
+      });
+      vi.mocked(fs.statSync).mockReturnValue({
+        isFile: () => true,
+        size: MOCK_RRD_CONTENT.length,
+      } as fs.Stats);
+      vi.mocked(fs.renameSync).mockImplementation(() => {});
+      vi.mocked(fs.readFileSync).mockReturnValue(MOCK_RRD_CONTENT);
+
+      // A 1-min point whose timestamp is 10 years in the future.
+      const futureTs = Math.floor(Date.now() / 1000) + 10 * 365 * 24 * 3600;
+      const futureOutput = `                  ACARS                VDLM               TOTAL               ERROR                HFDL                IMSL                IRDM
+
+${futureTs}: 1.0000000000e+00 2.0000000000e+00 3.0000000000e+00 0.0000000000e+00 0.0000000000e+00 0.0000000000e+00 0.0000000000e+00`;
+
+      vi.mocked(child_process.exec).mockImplementation(
+        ((
+          _cmd: string,
+          _opts: unknown,
+          cb: (e: Error | null, r: { stdout: string; stderr: string } | null) => void,
+        ) => cb(null, { stdout: futureOutput, stderr: "" })) as unknown as typeof child_process.exec,
+      );
+
+      const { migrateRrdToSqlite } = await import("../rrd-migration.js");
+      const result = await migrateRrdToSqlite(MOCK_RRD_PATH);
+
+      // No rows should have been inserted — the future timestamp is clamped.
+      expect(result?.rowsInserted).toBe(0);
+
+      const { timeseriesStats } = await import("../../db/schema.js");
+      const { getDatabase: getDb3 } = await import("../../db/index.js");
+      const db = getDb3();
+      const allRows = db.select().from(timeseriesStats).all();
+      expect(allRows.length).toBe(0);
     });
   });
 

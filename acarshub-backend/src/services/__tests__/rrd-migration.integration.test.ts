@@ -263,16 +263,21 @@ describe("RRD Migration Integration", () => {
     }
   }, 30000);
 
-  it("should handle NaN values by converting them to 0", async () => {
+  it("should skip all-NaN rows so no NaN values appear in the database", async () => {
     const { migrateRrdToSqlite } = await import("../rrd-migration.js");
 
     // RRD archives that extend beyond inserted data contain -nan values.
-    // The migration must convert them to 0.
+    // Previously these were converted to 0 and inserted, polluting the DB with
+    // false zeros.  After the fix, all-NaN rows are skipped entirely — no row
+    // is ever inserted for them.  The invariant we test here is unchanged: no
+    // column in the database should be NaN (either because the row was skipped
+    // or because only partial NaN was present and the NaN columns mapped to 0).
     await migrateRrdToSqlite(WORK_RRD, TEST_ARCHIVES);
 
     const db = getDatabase();
     const rows = db.select().from(timeseriesStats).limit(200).all();
 
+    // At least some rows from the fixture's real data window must be present.
     expect(rows.length).toBeGreaterThan(0);
 
     for (const row of rows) {

@@ -501,17 +501,19 @@ export function getYAxisLabel(timePeriod: TimePeriod): string {
     case "1hr":
     case "6hr":
     case "12hr":
+      // 1-minute resolution: each point is the exact per-minute count.
       return "Messages / min";
     case "24hr":
-      return "Messages / 5 min";
     case "1wk":
-      return "Messages / 30 min";
     case "30day":
-      return "Messages / hr";
     case "6mon":
-      return "Messages / 6 hr";
     case "1yr":
-      return "Messages / 12 hr";
+      // Downsampled periods: each point is ROUND(AVG(total_count)) — the
+      // average messages-per-minute over a wider bucket (5 min, 30 min, 1 hr,
+      // 6 hr, or 12 hr respectively).  Labelling this as "Messages / <bucket>"
+      // was misleading because it implied a per-bucket total, which is
+      // bucket_minutes × the displayed value — far larger than what is shown.
+      return "Avg messages / min";
     default:
       return "Messages";
   }
