@@ -207,10 +207,13 @@ test.describe("Search Page", () => {
     const emitted = await emitSearchResults(page, RESULTS_TWO);
     expect(emitted).toBe(true);
 
-    // "Search" button returns once results arrive
-    await expect(page.getByRole("button", { name: /^search$/i })).toBeVisible();
-
-    // Results section is now visible
+    // Results section is now visible — this is the correct signal that the
+    // search completed and isSearching returned to false.  The form collapses
+    // when results arrive so the Search button is hidden; asserting the
+    // results section instead of the button works regardless of form state.
+    await expect(page.locator(".search-page__results-info")).toContainText(
+      "Found",
+    );
     await expect(page.locator(".search-page__results")).toBeVisible();
   });
 
@@ -289,8 +292,9 @@ test.describe("Search Page", () => {
     const emitted = await emitSearchResults(page, RESULTS_EMPTY);
     expect(emitted).toBe(true);
 
-    // Loading clears
-    await expect(page.getByRole("button", { name: /^search$/i })).toBeVisible();
+    // Loading clears — the form collapses when results arrive so the Search
+    // button is hidden; check the empty state instead which is always visible.
+    await expect(page.locator(".search-page__empty")).toBeVisible();
 
     // No result cards
     await expect(page.locator(".search-page__result-card")).not.toBeVisible();
