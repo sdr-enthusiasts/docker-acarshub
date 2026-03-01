@@ -4,35 +4,37 @@
  * Migrates historical time-series data from RRD (Round Robin Database) to SQLite.
  * Runs as a blocking task during server startup, after database initialization.
  *
- * Sentinel file hierarchy (checked in order on every startup):
+ * Sentinel strategy — single backup file + registry discriminator:
  *
- *   .rrd.back2  — Import completed with the FIXED importer (backward expansion,
- *                 NaN-row skipping, future-timestamp clamping).  This is the
- *                 normal "done" state after the fixes landed.  Startup skips
- *                 immediately when this file is present and the DB has rows.
+ *   Both old and new importers leave the source file at `acarshub.rrd.back`
+ *   after completion.  The `rrd_import_registry.rrd_path` column records the
+ *   path FROM WHICH the file was imported and is the sole discriminator:
  *
- *   .rrd.back   — Import completed with the OLD (buggy) importer that expanded
- *                 coarse archives forward in time and inserted NaN→0 rows.
- *                 When this file is detected the repair path runs automatically:
- *                 bad rows are deleted from timeseries_stats, the registry entry
- *                 is cleared, the file is renamed back to .rrd, and a fresh
- *                 import is performed with the fixed code.  The result is then
- *                 renamed to .rrd.back2.
+ *   rrd_path ends with ".back"
+ *     → file was imported by the OLD (buggy) importer, which renamed .rrd →
+ *       .back BEFORE importing and then registered under that .back path.
+ *       Repair path: delete bad rows, clear registry, rename .back → .rrd,
+ *       re-import with fixed code, rename .rrd → .back.
  *
- *   .rrd        — No prior migration.  Normal import path runs and produces
- *                 .rrd.back2 on success.
+ *   rrd_path does NOT end with ".back"
+ *     → file was imported by the FIXED importer (rrd_path = "acarshub.rrd").
+ *       Skip — data is already correct.
+ *
+ *   No registry entry for the .back file's hash
+ *     → unknown / pre-registry deployment; treat as fresh: rename .back → .rrd
+ *       and proceed with a normal import.
  *
  * Architecture (fresh import path):
- * 1. Check .rrd.back2 → skip if present with data
- * 2. Check .rrd.back  → run repair, restore to .rrd, fall through
- * 3. Check .rrd       → validate + hash check
- * 4. Fetch data from all 4 RRD archives using rrdtool CLI
- * 5. Parse rrdtool output (TSV format) — all-NaN rows skipped
- * 6. Expand coarse archives backward to 1-minute resolution
- * 7. Clamp any rows beyond Date.now()
- * 8. Batch insert into timeseries_stats (INSERT OR IGNORE — idempotent)
- * 9. Register the file hash in rrd_import_registry
- * 10. Rename RRD file to .rrd.back2
+ * 1. Check .rrd.back  → consult registry rrd_path to decide: skip, repair, or
+ *                       fresh import (rename .back → .rrd and fall through)
+ * 2. Check .rrd       → validate + hash check
+ * 3. Fetch data from all 4 RRD archives using rrdtool CLI
+ * 4. Parse rrdtool output (TSV format) — all-NaN rows skipped
+ * 5. Expand coarse archives backward to 1-minute resolution
+ * 6. Clamp any rows beyond Date.now()
+ * 7. Batch insert into timeseries_stats (INSERT OR IGNORE — idempotent)
+ * 8. Register the file hash in rrd_import_registry with rrd_path = "acarshub.rrd"
+ * 9. Rename RRD file to .rrd.back
  *
  * Duplicate protection is layered:
  *   - Hash registry: prevents re-import of the same file content entirely
@@ -393,6 +395,44 @@ function isHashRegistered(fileHash: string): boolean {
 }
 
 /**
+ * Return true if the given registry `rrd_path` indicates an old (buggy) import.
+ *
+ * Old imports stored the path of the `.back` file (e.g. `acarshub.rrd.back`)
+ * because the pre-registry code registered the backup hash AFTER renaming.
+ * New imports store the canonical `.rrd` path (e.g. `acarshub.rrd`).
+ *
+ * Both `.back` and `.rrd.back` suffixes are covered because older deployments
+ * registered the backup file path directly (e.g. `acarshub.rrd.back`).
+ *
+ * @param registeredPath - The `rrd_path` column value from the registry
+ */
+export function isOldImportPath(registeredPath: string): boolean {
+  return registeredPath.endsWith(".rrd.back") || registeredPath.endsWith(".back");
+}
+
+/**
+ * Retrieve the `rrd_path` stored in the import registry for the given hash.
+ *
+ * Returns null when the hash is not present, the registry table does not yet
+ * exist, or any other error occurs.  Callers must treat null as "no entry".
+ *
+ * @param fileHash - SHA-256 hex string
+ */
+function getRegistryRrdPath(fileHash: string): string | null {
+  try {
+    const db = getDatabase();
+    const row = db
+      .select({ rrdPath: rrdImportRegistry.rrdPath })
+      .from(rrdImportRegistry)
+      .where(eq(rrdImportRegistry.fileHash, fileHash))
+      .get();
+    return row?.rrdPath ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Record a file hash in the import registry.
  *
  * Uses INSERT OR REPLACE (onConflictDoUpdate) so it is safe to call even
@@ -425,48 +465,6 @@ function registerHash(
       },
     })
     .run();
-}
-
-/**
- * Best-effort: register the hash of an existing .rrd.back file.
- *
- * WHY THIS EXISTS
- * ---------------
- * Deployments that ran the RRD importer before the hash registry existed will
- * have a .rrd.back file but nothing in rrd_import_registry.  On the very first
- * startup after the registry feature is deployed, this function records the
- * hash of the backup file so that if the user later renames .rrd.back → .rrd,
- * the hash check will catch it and skip the duplicate import.
- *
- * This is called from the "backup exists + DB has rows → already migrated"
- * code path.  If anything fails (file unreadable, DB not ready), it logs at
- * debug level and returns — it must not abort the skip-migration fast path.
- *
- * @param backupPath - Path to the .rrd.back file
- */
-function tryRegisterBackupHash(backupPath: string): void {
-  try {
-    ensureRegistryTable();
-
-    const fileHash = computeFileHash(backupPath);
-
-    if (isHashRegistered(fileHash)) {
-      // Already registered from a previous startup — nothing to do.
-      return;
-    }
-
-    registerHash(fileHash, backupPath, 0 /* rows unknown for legacy imports */);
-
-    logger.info(
-      "Registered hash of existing backup file (graceful degradation for pre-registry deployment)",
-      { backupPath, fileHash },
-    );
-  } catch (error) {
-    logger.debug(
-      "Could not register backup hash — non-fatal, registry is best-effort",
-      { backupPath, error: error instanceof Error ? error.message : String(error) },
-    );
-  }
 }
 
 // ============================================================================
@@ -860,64 +858,95 @@ export async function migrateRrdToSqlite(
 
   logger.info("Starting RRD migration", { rrdPath });
 
-  const back2Path = `${rrdPath}.back2`;
   const backupPath = `${rrdPath}.back`;
 
-  // ── 1. Check .back2 — clean import already completed with fixed code ──────
-  if (existsSync(back2Path)) {
-    const db = getDatabase();
-    const rowCount =
-      db.select({ count: count() }).from(timeseriesStats).get()?.count ?? 0;
-
-    if (rowCount > 0) {
-      logger.info("RRD already migrated with fixed importer (.rrd.back2 exists)", {
-        back2Path,
-        existingRows: rowCount,
-      });
-
-      // Best-effort: record the backup file's hash so that if the user
-      // renames .rrd.back2 → .rrd on a future startup, the hash check
-      // will catch it and skip the duplicate import.
-      tryRegisterBackupHash(back2Path);
-
-      return null;
-    }
-
-    // .back2 exists but the DB is empty — the rename happened but the insert
-    // silently failed (should be impossible with the fixed code, but handle
-    // defensively).  Restore the file and fall through to a fresh import.
-    logger.warn(
-      ".rrd.back2 exists but timeseries_stats is empty — restoring for re-import",
-      { back2Path, rrdPath },
-    );
-    try {
-      renameSync(back2Path, rrdPath);
-      logger.info("Restored .rrd.back2 for re-import", {
-        from: back2Path,
-        to: rrdPath,
-      });
-    } catch (error) {
-      logger.error("Failed to restore .rrd.back2 — skipping migration", {
-        error: error instanceof Error ? error.message : String(error),
-      });
-      return null;
-    }
-    // Fall through.
-  }
-
-  // ── 2. Check .back — old/buggy import; run automatic repair ──────────────
+  // ── 1. Check .rrd.back — consult registry to decide: skip, repair, or fresh
+  //
+  // Both old and new importers leave the source file at .rrd.back after
+  // completion.  The rrd_import_registry.rrd_path column is the discriminator:
+  //
+  //   rrd_path ends with ".back"   → old (buggy) import → repair + re-import
+  //   rrd_path does NOT end ".back" → new (fixed) import → skip
+  //   no registry entry             → unknown/legacy     → rename .back → .rrd
+  //                                                         and fall through
   if (existsSync(backupPath)) {
-    logger.info(
-      ".rrd.back sentinel detected — running automatic repair for bad import data",
-      { backupPath },
-    );
+    try {
+      ensureRegistryTable();
+      const backHash = computeFileHash(backupPath);
+      const registeredPath = getRegistryRrdPath(backHash);
 
-    const restored = await repairBadImport(backupPath, rrdPath);
-    if (!restored) {
-      // Repair could not restore the file; cannot safely proceed.
-      return null;
+      if (registeredPath !== null) {
+        if (isOldImportPath(registeredPath)) {
+          // rrd_path ends with .back → file was imported by old buggy code.
+          // Run repair to delete corrupted rows, clear the registry entry, and
+          // rename .back → .rrd so the fixed importer can re-populate.
+          logger.info(
+            "Registry rrd_path ends with .back — old import detected; running repair",
+            { backupPath, registeredPath },
+          );
+          const restored = await repairBadImport(backupPath, rrdPath);
+          if (!restored) {
+            return null;
+          }
+          // repairBadImport renamed .back → .rrd; fall through to normal import.
+        } else {
+          // rrd_path does not end with .back → file was imported by fixed code.
+          // The registry records rrd_path = "acarshub.rrd" for all new imports.
+          logger.info(
+            "Registry rrd_path indicates new fixed import — already migrated, skipping",
+            { backupPath, registeredPath },
+          );
+          return null;
+        }
+      } else {
+        // No registry entry — unknown or pre-registry deployment.  Treat as a
+        // fresh file: rename .back → .rrd and fall through to a normal import.
+        // The hash check in step 4 will still catch it if somehow registered
+        // under a different name.
+        logger.info(
+          ".rrd.back has no registry entry — treating as fresh file, renaming for import",
+          { backupPath, rrdPath },
+        );
+        try {
+          renameSync(backupPath, rrdPath);
+          logger.info("Renamed .rrd.back to .rrd for fresh import", {
+            from: backupPath,
+            to: rrdPath,
+          });
+        } catch (renameError) {
+          logger.error(
+            "Failed to rename .rrd.back → .rrd — skipping migration",
+            {
+              error:
+                renameError instanceof Error
+                  ? renameError.message
+                  : String(renameError),
+            },
+          );
+          return null;
+        }
+        // Fall through to normal import.
+      }
+    } catch (registryError) {
+      // Registry unavailable (e.g. DB not yet initialised on very first boot).
+      // Conservative fallback: run the repair path so any old bad rows are
+      // cleaned up before the fresh import proceeds.
+      logger.warn(
+        "Registry unavailable during .back check — falling back to repair path",
+        {
+          backupPath,
+          error:
+            registryError instanceof Error
+              ? registryError.message
+              : String(registryError),
+        },
+      );
+      const restored = await repairBadImport(backupPath, rrdPath);
+      if (!restored) {
+        return null;
+      }
+      // Fall through to normal import.
     }
-    // repairBadImport renamed .back → .rrd; fall through to normal import.
   }
 
   // ── 3. Check if RRD file exists ──────────────────────────────────────────
@@ -945,14 +974,15 @@ export async function migrateRrdToSqlite(
     };
   }
 
-  // ── 5. Hash-based registry check ─────────────────────────────────────────
+  // ── 4. Hash-based registry check ─────────────────────────────────────────
   //
-  // Guards against a user renaming .rrd.back2 → .rrd to force a re-import of
-  // content that is already in the DB.  The same SHA-256 content is never
-  // imported twice regardless of filename.
+  // Belt-and-suspenders guard: if the .rrd file's content hash is already in
+  // the registry (e.g. user copied the original RRD back manually), skip.
+  // The .back step above handles the normal rename-back case; this catches
+  // anything that bypasses it.
   //
   // Wrapped in try-catch: registry operations are best-effort.  If the table
-  // is not yet available the idempotent INSERT OR IGNORE in step 8 still
+  // is not yet available the idempotent INSERT OR IGNORE in step 7 still
   // prevents duplicate rows at the DB level.
   let fileHash: string | null = null;
   try {
@@ -962,20 +992,20 @@ export async function migrateRrdToSqlite(
     if (isHashRegistered(fileHash)) {
       logger.warn(
         "RRD file content matches a previously imported file — skipping " +
-          "(file was likely renamed from .rrd.back2)",
+          "(content hash already in registry)",
         { rrdPath, fileHash },
       );
 
-      // Re-create the .back2 sentinel so future startups take the fast path.
+      // Rename to .back so the next startup takes the registry fast-path.
       try {
-        renameSync(rrdPath, back2Path);
-        logger.info("Renamed previously-imported RRD back to .back2", {
+        renameSync(rrdPath, backupPath);
+        logger.info("Renamed previously-imported RRD back to .back", {
           from: rrdPath,
-          to: back2Path,
+          to: backupPath,
         });
       } catch (renameError) {
         logger.warn(
-          "Could not rename previously-imported RRD back to .back2 — non-fatal",
+          "Could not rename previously-imported RRD back to .back — non-fatal",
           {
             error:
               renameError instanceof Error
@@ -1081,15 +1111,18 @@ export async function migrateRrdToSqlite(
       }
     }
 
-    // ── 10. Rename RRD file to .back2 ─────────────────────────────────────────
+    // ── 9. Rename RRD file to .back ───────────────────────────────────────────
+    // The registered rrd_path is "acarshub.rrd" (set in step 8 above), so on
+    // the next startup the .back check will read rrd_path, see it does NOT end
+    // with ".back", and skip — no further sentinel files needed.
     try {
-      renameSync(rrdPath, back2Path);
-      logger.info("Renamed RRD file to .back2 sentinel", {
+      renameSync(rrdPath, backupPath);
+      logger.info("Renamed RRD file to .back (import complete)", {
         from: rrdPath,
-        to: back2Path,
+        to: backupPath,
       });
     } catch (error) {
-      logger.error("Failed to rename RRD file to .back2", {
+      logger.error("Failed to rename RRD file to .back", {
         error: error instanceof Error ? error.message : String(error),
       });
       // Don't fail the migration if rename fails

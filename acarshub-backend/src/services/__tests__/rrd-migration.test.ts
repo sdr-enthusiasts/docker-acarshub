@@ -109,7 +109,6 @@ async function setupMigrationMocks(
   opts: {
     rrdExists?: boolean;
     backExists?: boolean;
-    back2Exists?: boolean;
     rrdContent?: Buffer;
     execOutput?: string;
   } = {},
@@ -117,7 +116,6 @@ async function setupMigrationMocks(
   const {
     rrdExists = true,
     backExists = false,
-    back2Exists = false,
     rrdContent = MOCK_RRD_CONTENT,
     execOutput = SINGLE_LINE_RRD_OUTPUT,
   } = opts;
@@ -125,7 +123,6 @@ async function setupMigrationMocks(
   vi.mocked(fs.existsSync).mockImplementation((p) => {
     if (p === MOCK_RRD_PATH) return rrdExists;
     if (p === `${MOCK_RRD_PATH}.back`) return backExists;
-    if (p === `${MOCK_RRD_PATH}.back2`) return back2Exists;
     return false;
   });
 
@@ -522,65 +519,27 @@ ${futureTs}: 1.0000000000e+00 2.0000000000e+00 3.0000000000e+00 0.0000000000e+00
       closeDatabase();
     });
 
-    it("should skip migration if .back2 file exists and timeseries_stats has data", async () => {
-      vi.mocked(fs.existsSync).mockImplementation((p) => {
-        return p === `${MOCK_RRD_PATH}.back2`;
-      });
-
-      // .back2 file exists and DB has rows → already migrated with fixed code, skip
-      const mockDb = {
-        select: vi.fn().mockReturnValue({
-          from: vi.fn().mockReturnValue({
-            get: vi.fn().mockReturnValue({ count: 42 }),
-          }),
-        }),
-        delete: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({ run: vi.fn() }),
-        }),
-      };
-      vi.spyOn(
-        await import("../../db/index.js"),
-        "getDatabase",
-      ).mockReturnValue(mockDb as unknown as ReturnType<typeof getDatabase>);
-
-      // .back2 file must be readable for tryRegisterBackupHash()
-      vi.mocked(fs.readFileSync).mockReturnValue(MOCK_RRD_CONTENT);
-      await stubSqliteConnection();
-
-      const { migrateRrdToSqlite } = await import("../rrd-migration.js");
-      const result = await migrateRrdToSqlite(MOCK_RRD_PATH);
-
-      expect(result).toBeNull();
-    });
-
-    it("should re-migrate if .back2 file exists but timeseries_stats is empty", async () => {
-      // Use a real in-memory database — avoids mock-chain fragility for the
-      // COUNT query, INSERT, and registry table creation.
+    it("should skip migration when .rrd.back exists and registry rrd_path does NOT end with .back", async () => {
+      // Scenario: new fixed import already done.
+      // The registry records rrd_path = "acarshub.rrd" (no .back suffix).
+      // The importer must detect this and return null without touching the DB.
       setupInMemoryDb();
 
-      vi.mocked(fs.existsSync).mockImplementation((p) => {
-        // Both .back2 and original appear to exist (renameSync is mocked as no-op)
-        return p === `${MOCK_RRD_PATH}.back2` || p === MOCK_RRD_PATH;
-      });
-      vi.mocked(fs.statSync).mockReturnValue({
-        isFile: () => true,
-        size: MOCK_RRD_CONTENT.length,
-      } as fs.Stats);
-      vi.mocked(fs.renameSync).mockImplementation(() => {});
+      // Pre-populate registry with rrd_path = canonical .rrd path (new import)
+      getSqliteConnection()
+        .prepare(
+          `INSERT INTO rrd_import_registry (file_hash, rrd_path, imported_at, rows_imported)
+           VALUES (?, ?, ?, ?)`,
+        )
+        .run(MOCK_RRD_HASH, MOCK_RRD_PATH, Date.now(), 100);
+
+      // Only the .back file exists (new importer left it there)
+      vi.mocked(fs.existsSync).mockImplementation(
+        (p) => p === `${MOCK_RRD_PATH}.back`,
+      );
       vi.mocked(fs.readFileSync).mockReturnValue(MOCK_RRD_CONTENT);
 
-      const execMock = vi.fn(
-        (
-          _cmd: string,
-          _options: unknown,
-          callback: (
-            error: Error | null,
-            result: { stdout: string; stderr: string } | null,
-          ) => void,
-        ) => {
-          callback(null, { stdout: SINGLE_LINE_RRD_OUTPUT, stderr: "" });
-        },
-      );
+      const execMock = vi.fn();
       vi.mocked(child_process.exec).mockImplementation(
         execMock as unknown as typeof child_process.exec,
       );
@@ -588,22 +547,26 @@ ${futureTs}: 1.0000000000e+00 2.0000000000e+00 3.0000000000e+00 0.0000000000e+00
       const { migrateRrdToSqlite } = await import("../rrd-migration.js");
       const result = await migrateRrdToSqlite(MOCK_RRD_PATH);
 
-      expect(result).toBeDefined();
-      expect(result?.success).toBe(true);
-      expect(result?.rowsInserted).toBeGreaterThan(0);
-
-      // Must restore the .back2 sentinel before re-migrating
-      expect(fs.renameSync).toHaveBeenCalledWith(
-        `${MOCK_RRD_PATH}.back2`,
-        MOCK_RRD_PATH,
-      );
+      // Must skip — registry says this was a new fixed import
+      expect(result).toBeNull();
+      // rrdtool must never have been called
+      expect(execMock).not.toHaveBeenCalled();
     });
 
-    it("should run repair and re-import when .back (old buggy import) file exists", async () => {
-      // The .back sentinel means the file was imported with the old buggy code.
+    it("should run repair and re-import when .rrd.back exists and registry rrd_path ends with .back", async () => {
+      // Scenario: old buggy import done; registry records rrd_path ending with
+      // ".back" (the path used when tryRegisterBackupHash ran under old code).
       // The repair path must: call rrdtool info, delete bad rows, clear registry,
-      // restore .back → .rrd, then complete a fresh import → rename to .back2.
+      // restore .back → .rrd, complete a fresh import → rename to .back.
       setupInMemoryDb();
+
+      // Pre-populate registry with rrd_path = .back path (old import)
+      getSqliteConnection()
+        .prepare(
+          `INSERT INTO rrd_import_registry (file_hash, rrd_path, imported_at, rows_imported)
+           VALUES (?, ?, ?, ?)`,
+        )
+        .run(MOCK_RRD_HASH, `${MOCK_RRD_PATH}.back`, Date.now(), 50);
 
       // Simulate .back existing (old import), .rrd re-appears after rename mock
       vi.mocked(fs.existsSync).mockImplementation((p) => {
@@ -617,7 +580,6 @@ ${futureTs}: 1.0000000000e+00 2.0000000000e+00 3.0000000000e+00 0.0000000000e+00
       vi.mocked(fs.readFileSync).mockReturnValue(MOCK_RRD_CONTENT);
 
       // rrdtool info is called first (repair), then 4 archive fetches follow.
-      // Return a valid info block for the first call; real archive data for the rest.
       const RRD_INFO_OUTPUT = `filename = "${MOCK_RRD_PATH}.back"\nrrd_version = "0003"\nstep = 60\nlast_update = 1735689900\n`;
       let callIndex = 0;
       vi.mocked(child_process.exec).mockImplementation(
@@ -650,13 +612,73 @@ ${futureTs}: 1.0000000000e+00 2.0000000000e+00 3.0000000000e+00 0.0000000000e+00
         MOCK_RRD_PATH,
       );
 
-      // Final rename must be to .back2 (not .back)
+      // Final rename must be to .back (not .back2)
       const renameCalls = vi.mocked(fs.renameSync).mock.calls;
+      const finalBackRename = renameCalls.find(
+        ([src, dest]) =>
+          src === MOCK_RRD_PATH && dest === `${MOCK_RRD_PATH}.back`,
+      );
+      expect(finalBackRename).toBeDefined();
+
+      // Must NOT have produced a .back2 file
       const back2Rename = renameCalls.find(
         ([, dest]) => dest === `${MOCK_RRD_PATH}.back2`,
       );
-      expect(back2Rename).toBeDefined();
-      expect(back2Rename?.[0]).toBe(MOCK_RRD_PATH);
+      expect(back2Rename).toBeUndefined();
+    });
+
+    it("should rename .rrd.back to .rrd and run fresh import when no registry entry exists", async () => {
+      // Scenario: .rrd.back exists but has no registry entry (e.g. pre-registry
+      // deployment, or manual copy).  The importer treats it as a fresh file:
+      // renames .back → .rrd, imports, then renames .rrd → .back.
+      setupInMemoryDb();
+
+      // .back exists, no registry entry (empty registry from setupInMemoryDb)
+      vi.mocked(fs.existsSync).mockImplementation((p) => {
+        return p === `${MOCK_RRD_PATH}.back` || p === MOCK_RRD_PATH;
+      });
+      vi.mocked(fs.statSync).mockReturnValue({
+        isFile: () => true,
+        size: MOCK_RRD_CONTENT.length,
+      } as fs.Stats);
+      vi.mocked(fs.renameSync).mockImplementation(() => {});
+      vi.mocked(fs.readFileSync).mockReturnValue(MOCK_RRD_CONTENT);
+
+      vi.mocked(child_process.exec).mockImplementation(
+        vi.fn(
+          (
+            _cmd: string,
+            _options: unknown,
+            callback: (
+              error: Error | null,
+              result: { stdout: string; stderr: string } | null,
+            ) => void,
+          ) => {
+            callback(null, { stdout: SINGLE_LINE_RRD_OUTPUT, stderr: "" });
+          },
+        ) as unknown as typeof child_process.exec,
+      );
+
+      const { migrateRrdToSqlite } = await import("../rrd-migration.js");
+      const result = await migrateRrdToSqlite(MOCK_RRD_PATH);
+
+      // Import must succeed
+      expect(result?.success).toBe(true);
+      expect(result?.rowsInserted).toBeGreaterThan(0);
+
+      // Must rename .back → .rrd first (treat as fresh)
+      expect(fs.renameSync).toHaveBeenCalledWith(
+        `${MOCK_RRD_PATH}.back`,
+        MOCK_RRD_PATH,
+      );
+
+      // Final rename must produce .back (not .back2)
+      const renameCalls = vi.mocked(fs.renameSync).mock.calls;
+      const finalBackRename = renameCalls.find(
+        ([src, dest]) =>
+          src === MOCK_RRD_PATH && dest === `${MOCK_RRD_PATH}.back`,
+      );
+      expect(finalBackRename).toBeDefined();
     });
 
     it("should skip migration if RRD file does not exist", async () => {
@@ -687,25 +709,25 @@ ${futureTs}: 1.0000000000e+00 2.0000000000e+00 3.0000000000e+00 0.0000000000e+00
       );
     });
 
-    it("should rename RRD file to .back2 on successful migration", async () => {
+    it("should rename RRD file to .back on successful migration", async () => {
       await setupMigrationMocks();
 
       const { migrateRrdToSqlite } = await import("../rrd-migration.js");
       await migrateRrdToSqlite(MOCK_RRD_PATH);
 
-      // The final rename must produce .back2 (the clean-import sentinel)
+      // The final rename must produce .back (the backup file after a new import)
       const renameCalls = vi.mocked(fs.renameSync).mock.calls;
+      const backRename = renameCalls.find(
+        ([src, dest]) =>
+          src === MOCK_RRD_PATH && dest === `${MOCK_RRD_PATH}.back`,
+      );
+      expect(backRename).toBeDefined();
+
+      // .back2 must NOT be produced at all (sentinel removed)
       const back2Rename = renameCalls.find(
         ([, dest]) => dest === `${MOCK_RRD_PATH}.back2`,
       );
-      expect(back2Rename).toBeDefined();
-      expect(back2Rename?.[0]).toBe(MOCK_RRD_PATH);
-
-      // .back must NOT be produced by a fresh import
-      const backRename = renameCalls.find(
-        ([, dest]) => dest === `${MOCK_RRD_PATH}.back`,
-      );
-      expect(backRename).toBeUndefined();
+      expect(back2Rename).toBeUndefined();
     });
 
     it("should handle rrdtool command failure gracefully", async () => {
@@ -810,20 +832,20 @@ ${futureTs}: 1.0000000000e+00 2.0000000000e+00 3.0000000000e+00 0.0000000000e+00
     });
 
     it("regression: skips import when hash of presented .rrd matches a previously imported file", async () => {
-      // Scenario: user ran migration successfully (hash registered), then
-      // renamed .rrd.back2 back to .rrd.  The importer must detect the
-      // content match and skip without inserting any rows.
+      // Scenario: user ran migration successfully (hash registered under the
+      // canonical .rrd path), then manually copied the original .rrd back.
+      // The hash-check guard must detect the content match and skip.
       setupInMemoryDb();
 
-      // Pre-populate registry with the hash of our mock RRD content
+      // Pre-populate registry with the hash registered under the canonical path
       getSqliteConnection()
         .prepare(
           `INSERT INTO rrd_import_registry (file_hash, rrd_path, imported_at, rows_imported)
            VALUES (?, ?, ?, ?)`,
         )
-        .run(MOCK_RRD_HASH, `${MOCK_RRD_PATH}.back2`, Date.now(), 100);
+        .run(MOCK_RRD_HASH, MOCK_RRD_PATH, Date.now(), 100);
 
-      // File system: only the .rrd file exists (renamed from .back2)
+      // File system: only the .rrd file exists (manually copied back)
       vi.mocked(fs.existsSync).mockImplementation((p) => p === MOCK_RRD_PATH);
       vi.mocked(fs.statSync).mockReturnValue({
         isFile: () => true,
@@ -847,10 +869,10 @@ ${futureTs}: 1.0000000000e+00 2.0000000000e+00 3.0000000000e+00 0.0000000000e+00
       // rrdtool must never have been called
       expect(execMock).not.toHaveBeenCalled();
 
-      // Must rename the file back to .back2 (belt-and-suspenders cleanup)
+      // Must rename the file back to .back (belt-and-suspenders cleanup)
       expect(fs.renameSync).toHaveBeenCalledWith(
         MOCK_RRD_PATH,
-        `${MOCK_RRD_PATH}.back2`,
+        `${MOCK_RRD_PATH}.back`,
       );
     });
 
@@ -998,14 +1020,12 @@ ${futureTs}: 1.0000000000e+00 2.0000000000e+00 3.0000000000e+00 0.0000000000e+00
       expect(rowsAfterSecond).toBe(rowsAfterFirst);
     });
 
-    it("registers .rrd.back2 hash on startup for pre-registry deployments", async () => {
-      // Scenario: deployment has .rrd.back2 and rows but no registry entry
-      // (e.g. the registry table was added after the initial import ran).
-      // First startup after the registry feature ships must register the hash
-      // of the .back2 file so a future rename-back is caught.
+    it("skips import when .rrd.back exists with registry rrd_path = canonical .rrd (new import)", async () => {
+      // Scenario: new fixed import was done; registry has rrd_path = "acarshub.rrd"
+      // (does NOT end with .back). Second startup must skip immediately.
       setupInMemoryDb();
 
-      // Insert a sentinel row so "rowCount > 0" is satisfied
+      // Insert a sentinel row so the DB is non-empty
       getSqliteConnection()
         .prepare(
           `INSERT INTO timeseries_stats
@@ -1015,31 +1035,64 @@ ${futureTs}: 1.0000000000e+00 2.0000000000e+00 3.0000000000e+00 0.0000000000e+00
         )
         .run();
 
-      // Only the .back2 file exists (clean import already done)
+      // Registry records the canonical path (new import)
+      getSqliteConnection()
+        .prepare(
+          `INSERT INTO rrd_import_registry (file_hash, rrd_path, imported_at, rows_imported)
+           VALUES (?, ?, ?, ?)`,
+        )
+        .run(MOCK_RRD_HASH, MOCK_RRD_PATH, Date.now(), 1);
+
+      // Only the .back file exists (new importer left it here after import)
       vi.mocked(fs.existsSync).mockImplementation(
-        (p) => p === `${MOCK_RRD_PATH}.back2`,
+        (p) => p === `${MOCK_RRD_PATH}.back`,
       );
       vi.mocked(fs.readFileSync).mockReturnValue(MOCK_RRD_CONTENT);
+
+      const execMock = vi.fn();
+      vi.mocked(child_process.exec).mockImplementation(
+        execMock as unknown as typeof child_process.exec,
+      );
 
       const { migrateRrdToSqlite } = await import("../rrd-migration.js");
       const result = await migrateRrdToSqlite(MOCK_RRD_PATH);
 
-      // Migration is correctly skipped (data already present)
+      // Migration is correctly skipped
       expect(result).toBeNull();
-
-      // Hash of .back2 file must now be in registry
-      const registryRow = getSqliteConnection()
-        .prepare("SELECT file_hash FROM rrd_import_registry WHERE file_hash = ?")
-        .get(MOCK_RRD_HASH) as { file_hash: string } | undefined;
-
-      expect(registryRow).toBeDefined();
-      expect(registryRow?.file_hash).toBe(MOCK_RRD_HASH);
+      // rrdtool must not have been called
+      expect(execMock).not.toHaveBeenCalled();
     });
   });
 
   // =========================================================================
   // queryTimeseriesData
   // =========================================================================
+
+  // =========================================================================
+  // isOldImportPath helper
+  // =========================================================================
+
+  describe("isOldImportPath (exported for testing via registry discriminator)", () => {
+    it("returns true for paths ending with .rrd.back", async () => {
+      const { isOldImportPath } = await import("../rrd-migration.js");
+      expect(isOldImportPath("/run/acars/acarshub.rrd.back")).toBe(true);
+    });
+
+    it("returns true for paths ending with .back", async () => {
+      const { isOldImportPath } = await import("../rrd-migration.js");
+      expect(isOldImportPath("/some/path/acarshub.back")).toBe(true);
+    });
+
+    it("returns false for canonical .rrd path (new import)", async () => {
+      const { isOldImportPath } = await import("../rrd-migration.js");
+      expect(isOldImportPath("/run/acars/acarshub.rrd")).toBe(false);
+    });
+
+    it("returns false for paths with no .back suffix", async () => {
+      const { isOldImportPath } = await import("../rrd-migration.js");
+      expect(isOldImportPath("/run/acars/acarshub.rrd.backup")).toBe(false);
+    });
+  });
 
   describe("queryTimeseriesData", () => {
     beforeEach(() => {
