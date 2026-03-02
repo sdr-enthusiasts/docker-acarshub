@@ -56,17 +56,14 @@ import {
 function createTimeseriesTable(): void {
   getDatabase().run(`
     CREATE TABLE IF NOT EXISTS timeseries_stats (
-      id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-      timestamp INTEGER NOT NULL,
-      resolution TEXT NOT NULL,
+      timestamp   INTEGER PRIMARY KEY NOT NULL,
       acars_count INTEGER DEFAULT 0 NOT NULL,
       vdlm_count  INTEGER DEFAULT 0 NOT NULL,
       hfdl_count  INTEGER DEFAULT 0 NOT NULL,
       imsl_count  INTEGER DEFAULT 0 NOT NULL,
       irdm_count  INTEGER DEFAULT 0 NOT NULL,
       total_count INTEGER DEFAULT 0 NOT NULL,
-      error_count INTEGER DEFAULT 0 NOT NULL,
-      created_at  INTEGER NOT NULL DEFAULT (strftime('%s','now') * 1000)
+      error_count INTEGER DEFAULT 0 NOT NULL
     )
   `);
 }
@@ -155,7 +152,6 @@ function insertRow(opts: {
   db.insert(timeseriesStats)
     .values({
       timestamp: opts.timestamp,
-      resolution: "1min",
       acarsCount,
       vdlmCount,
       hfdlCount,

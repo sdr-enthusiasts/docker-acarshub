@@ -31,12 +31,14 @@ import type {
   Decoders,
   Labels,
   MessageGroup,
+  MessageRateData,
   SignalCountData,
   SignalFreqData,
   SignalLevelData,
   SystemStatus,
   Terms,
 } from "../types";
+import type { TimePeriod, TimeSeriesCacheEntry } from "../types/timeseries";
 import { storeLogger } from "../utils/logger";
 import { cullMessageGroups } from "../utils/messageCulling";
 import { useSettingsStore } from "./useSettingsStore";
@@ -49,6 +51,12 @@ export interface AppState {
   // Connection state
   isConnected: boolean;
   setConnected: (connected: boolean) => void;
+
+  // Migration state — true while the backend is running DB migrations on startup.
+  // Set to false when migration_status { running: false } is received OR when
+  // features_enabled arrives (handles reconnect after a ping-timeout during migration).
+  migrationInProgress: boolean;
+  setMigrationInProgress: (inProgress: boolean) => void;
 
   // Message state
   messageGroups: Map<string, MessageGroup>; // Key: primary identifier (flight/tail/icao_hex)
@@ -128,6 +136,21 @@ export interface AppState {
   stationIds: string[];
   setStationIds: (ids: string[]) => void;
 
+  // Rolling message rate (updated every 5 seconds by the backend scheduler)
+  messageRate: MessageRateData | null;
+  setMessageRate: (data: MessageRateData) => void;
+
+  /**
+   * Non-persistent time-series cache.
+   *
+   * Populated by rrd_timeseries_data Socket.IO pushes from the backend.
+   * All eight TimePeriod entries are requested on every connect event so
+   * the cache is warm before the user navigates to the Stats page.
+   * Switching between periods is instant — no socket round-trip needed.
+   */
+  timeSeriesCache: Map<TimePeriod, TimeSeriesCacheEntry>;
+  setTimeSeriesData: (period: TimePeriod, entry: TimeSeriesCacheEntry) => void;
+
   // UI state
   currentPage: string;
   setCurrentPage: (page: string) => void;
@@ -199,6 +222,11 @@ export const useAppStore = create<AppState>((set, get) => {
     // Connection state
     isConnected: false,
     setConnected: (connected) => set({ isConnected: connected }),
+
+    // Migration state
+    migrationInProgress: false,
+    setMigrationInProgress: (inProgress) =>
+      set({ migrationInProgress: inProgress }),
 
     // Message state
     messageGroups: new Map(),
@@ -964,6 +992,17 @@ export const useAppStore = create<AppState>((set, get) => {
     // Station IDs
     stationIds: [],
     setStationIds: (ids) => set({ stationIds: ids }),
+
+    // Rolling message rate
+    messageRate: null,
+    setMessageRate: (data) => set({ messageRate: data }),
+
+    // Time-series cache — all periods stored here, updated on every push
+    timeSeriesCache: new Map(),
+    setTimeSeriesData: (period, entry) =>
+      set((state) => ({
+        timeSeriesCache: new Map(state.timeSeriesCache).set(period, entry),
+      })),
 
     // UI state
     currentPage: "Live Messages",

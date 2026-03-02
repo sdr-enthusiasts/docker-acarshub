@@ -36,9 +36,14 @@ import {
   expect,
   it,
 } from "vitest";
-import { closeDatabase, getDatabase, initDatabase } from "../../db/index.js";
+import {
+  closeDatabase,
+  getDatabase,
+  getSqliteConnection,
+  initDatabase,
+} from "../../db/index.js";
 import { timeseriesStats } from "../../db/schema.js";
-import type { RrdArchive } from "../rrd-migration.js";
+import { isOldImportPath, type RrdArchive } from "../rrd-migration.js";
 
 // ---------------------------------------------------------------------------
 // Resolve the committed fixture path and load its metadata
@@ -152,9 +157,9 @@ afterAll(() => {
 describe("RRD Migration Integration", () => {
   beforeEach(async () => {
     // Restore the working copy if a previous test renamed it to .back
-    if (!existsSync(WORK_RRD) && existsSync(`${WORK_RRD}.back`)) {
-      copyFileSync(FIXTURE_RRD, WORK_RRD);
+    if (!existsSync(WORK_RRD)) {
       if (existsSync(`${WORK_RRD}.back`)) {
+        copyFileSync(FIXTURE_RRD, WORK_RRD);
         unlinkSync(`${WORK_RRD}.back`);
       }
     }
@@ -162,29 +167,27 @@ describe("RRD Migration Integration", () => {
     // Fresh in-memory database per test
     initDatabase(":memory:");
 
-    const db = getDatabase();
-    db.run(`
+    const conn = getSqliteConnection();
+    conn.exec(`
       CREATE TABLE IF NOT EXISTS timeseries_stats (
-        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-        timestamp INTEGER NOT NULL,
-        resolution TEXT NOT NULL,
+        timestamp   INTEGER PRIMARY KEY NOT NULL,
         acars_count INTEGER DEFAULT 0 NOT NULL,
-        vdlm_count INTEGER DEFAULT 0 NOT NULL,
-        hfdl_count INTEGER DEFAULT 0 NOT NULL,
-        imsl_count INTEGER DEFAULT 0 NOT NULL,
-        irdm_count INTEGER DEFAULT 0 NOT NULL,
+        vdlm_count  INTEGER DEFAULT 0 NOT NULL,
+        hfdl_count  INTEGER DEFAULT 0 NOT NULL,
+        imsl_count  INTEGER DEFAULT 0 NOT NULL,
+        irdm_count  INTEGER DEFAULT 0 NOT NULL,
         total_count INTEGER DEFAULT 0 NOT NULL,
-        error_count INTEGER DEFAULT 0 NOT NULL,
-        created_at INTEGER NOT NULL
-      )
-    `);
-    db.run(`
-      CREATE INDEX IF NOT EXISTS idx_timeseries_timestamp_resolution
-      ON timeseries_stats (timestamp, resolution)
-    `);
-    db.run(`
-      CREATE INDEX IF NOT EXISTS idx_timeseries_resolution
-      ON timeseries_stats (resolution)
+        error_count INTEGER DEFAULT 0 NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS rrd_import_registry (
+        id            INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+        file_hash     TEXT    NOT NULL UNIQUE,
+        rrd_path      TEXT    NOT NULL,
+        imported_at   INTEGER NOT NULL,
+        rows_imported INTEGER NOT NULL DEFAULT 0
+      );
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_rrd_import_registry_hash
+        ON rrd_import_registry (file_hash);
     `);
   });
 
@@ -192,9 +195,11 @@ describe("RRD Migration Integration", () => {
     closeDatabase();
 
     // Restore working copy for the next test (migration renames it to .back)
-    if (!existsSync(WORK_RRD) && existsSync(`${WORK_RRD}.back`)) {
-      copyFileSync(FIXTURE_RRD, WORK_RRD);
-      unlinkSync(`${WORK_RRD}.back`);
+    if (!existsSync(WORK_RRD)) {
+      if (existsSync(`${WORK_RRD}.back`)) {
+        copyFileSync(FIXTURE_RRD, WORK_RRD);
+        unlinkSync(`${WORK_RRD}.back`);
+      }
     }
   });
 
@@ -213,18 +218,13 @@ describe("RRD Migration Integration", () => {
     expect(result?.success).toBe(true);
     expect(result?.rowsInserted).toBeGreaterThan(0);
 
-    // Migration renames the file to .back
+    // Migration renames the file to .back (not .back2)
     expect(existsSync(`${WORK_RRD}.back`)).toBe(true);
     expect(existsSync(WORK_RRD)).toBe(false);
 
     // At least some rows were written to the database
     const db = getDatabase();
-    const { eq } = await import("drizzle-orm");
-    const rows = db
-      .select()
-      .from(timeseriesStats)
-      .where(eq(timeseriesStats.resolution, "1min"))
-      .all();
+    const rows = db.select().from(timeseriesStats).all();
 
     expect(rows.length).toBeGreaterThan(0);
 
@@ -238,22 +238,107 @@ describe("RRD Migration Integration", () => {
     }
   }, 30000);
 
-  it("should handle idempotent migration (skip if already migrated)", async () => {
+  it("lifecycle: fresh import writes .back, second startup skips via registry rrd_path", async () => {
     const { migrateRrdToSqlite } = await import("../rrd-migration.js");
 
-    // First migration
+    // ── First startup: fresh import ──────────────────────────────────────────
+    expect(existsSync(WORK_RRD)).toBe(true);
     const result1 = await migrateRrdToSqlite(WORK_RRD, TEST_ARCHIVES);
     expect(result1?.success).toBe(true);
+    expect(result1?.rowsInserted).toBeGreaterThan(0);
 
-    // Restore the RRD so the second call has a file to check
-    // (The migration renames it to .back, so we copy the original back)
-    copyFileSync(FIXTURE_RRD, WORK_RRD);
+    // After import the file is at .back and the canonical .rrd is gone.
+    expect(existsSync(`${WORK_RRD}.back`)).toBe(true);
+    expect(existsSync(WORK_RRD)).toBe(false);
 
-    // Second call: the .back file exists AND timeseries_stats has rows,
-    // so migration should be skipped.
+    // Registry must record rrd_path = WORK_RRD (canonical path, not .back)
+    const registryRow = getSqliteConnection()
+      .prepare("SELECT rrd_path FROM rrd_import_registry LIMIT 1")
+      .get() as { rrd_path: string } | undefined;
+
+    expect(registryRow).toBeDefined();
+    // Stored path must be the canonical .rrd path — does NOT end with ".back"
+    expect(registryRow?.rrd_path).toBe(WORK_RRD);
+    expect(isOldImportPath(registryRow?.rrd_path ?? "")).toBe(false);
+
+    // ── Second startup: .back present with new rrd_path → skip ───────────────
+    // The second call must detect the .back file, look up the registry, see
+    // rrd_path does NOT end with ".back", and return null without re-importing.
+    const rowsBefore = getDatabase().select().from(timeseriesStats).all().length;
     const result2 = await migrateRrdToSqlite(WORK_RRD, TEST_ARCHIVES);
-    expect(result2).toBeNull(); // Returns null when already migrated
+    expect(result2).toBeNull();
+
+    // Row count must be unchanged (no new rows inserted on skip)
+    const rowsAfter = getDatabase().select().from(timeseriesStats).all().length;
+    expect(rowsAfter).toBe(rowsBefore);
   }, 30000);
+
+  it("old-import detection: .rrd.back with registry rrd_path ending .back triggers repair", async () => {
+    const { migrateRrdToSqlite } = await import("../rrd-migration.js");
+    const { createHash } = await import("node:crypto");
+
+    // Simulate the state left by the OLD importer:
+    //   1. Source file is at WORK_RRD.back (old importer renamed .rrd → .back)
+    //   2. Registry has rrd_path = WORK_RRD.back (as tryRegisterBackupHash stored it)
+    //   3. timeseries_stats has some rows (populated by old import)
+
+    // Place the fixture at .back
+    const WORK_BACK = `${WORK_RRD}.back`;
+    copyFileSync(FIXTURE_RRD, WORK_BACK);
+
+    // Ensure the canonical .rrd is absent so only .back triggers the branch
+    if (existsSync(WORK_RRD)) unlinkSync(WORK_RRD);
+
+    // Seed the DB with a "bad" row that looks like old-import output
+    getSqliteConnection()
+      .prepare(
+        `INSERT OR IGNORE INTO timeseries_stats
+         (timestamp, acars_count, vdlm_count, hfdl_count,
+          imsl_count, irdm_count, total_count, error_count)
+         VALUES (1735689900, 5, 3, 0, 0, 0, 8, 0)`,
+      )
+      .run();
+
+    // Compute the hash of the backup file to populate the registry
+    const backHash = createHash("sha256")
+      .update(readFileSync(WORK_BACK))
+      .digest("hex");
+
+    // Register with the OLD path suffix — this is what tryRegisterBackupHash
+    // stored under the previous sentinel strategy.
+    getSqliteConnection()
+      .prepare(
+        `INSERT INTO rrd_import_registry (file_hash, rrd_path, imported_at, rows_imported)
+         VALUES (?, ?, ?, ?)`,
+      )
+      .run(backHash, WORK_BACK, Date.now(), 1);
+
+    // Confirm isOldImportPath classifies this path as an old import
+    expect(isOldImportPath(WORK_BACK)).toBe(true);
+
+    // Run migration — repair path must run, then re-import must succeed
+    const result = await migrateRrdToSqlite(WORK_RRD, TEST_ARCHIVES);
+
+    expect(result).not.toBeNull();
+    expect(result?.success).toBe(true);
+    expect(result?.rowsInserted).toBeGreaterThan(0);
+
+    // After repair + re-import, the file is at .back (new fixed import)
+    expect(existsSync(`${WORK_RRD}.back`)).toBe(true);
+    expect(existsSync(WORK_RRD)).toBe(false);
+
+    // After repair, clearRegistryEntry deleted the old entry; the re-import
+    // registered a new row under the canonical path (not .back).
+    const newEntry = getSqliteConnection()
+      .prepare(
+        "SELECT rrd_path FROM rrd_import_registry ORDER BY imported_at DESC LIMIT 1",
+      )
+      .get() as { rrd_path: string } | undefined;
+
+    expect(newEntry).toBeDefined();
+    expect(isOldImportPath(newEntry?.rrd_path ?? "")).toBe(false);
+    expect(newEntry?.rrd_path).toBe(WORK_RRD);
+  }, 60000);
 
   it("should correctly expand 5-minute archive data to 1-minute resolution", async () => {
     const { migrateRrdToSqlite } = await import("../rrd-migration.js");
@@ -261,39 +346,39 @@ describe("RRD Migration Integration", () => {
     await migrateRrdToSqlite(WORK_RRD, TEST_ARCHIVES);
 
     const db = getDatabase();
-    const { eq } = await import("drizzle-orm");
 
     const rows = db
       .select()
       .from(timeseriesStats)
-      .where(eq(timeseriesStats.resolution, "1min"))
       .orderBy(timeseriesStats.timestamp)
       .all();
 
     expect(rows.length).toBeGreaterThan(0);
 
-    // Every row in the result must carry the "1min" label
-    for (const row of rows) {
-      expect(row.resolution).toBe("1min");
-    }
-
-    // Consecutive timestamps must differ by exactly 60 seconds (1-minute grid)
+    // Consecutive timestamps must differ by exactly 60 seconds (all data is
+    // expanded to 1-minute buckets — the resolution column was removed in
+    // migration 12 since all data is always 1-minute).
     if (rows.length > 1) {
       const diff = Math.abs(rows[1].timestamp - rows[0].timestamp);
       expect(diff).toBe(60);
     }
   }, 30000);
 
-  it("should handle NaN values by converting them to 0", async () => {
+  it("should skip all-NaN rows so no NaN values appear in the database", async () => {
     const { migrateRrdToSqlite } = await import("../rrd-migration.js");
 
     // RRD archives that extend beyond inserted data contain -nan values.
-    // The migration must convert them to 0.
+    // Previously these were converted to 0 and inserted, polluting the DB with
+    // false zeros.  After the fix, all-NaN rows are skipped entirely — no row
+    // is ever inserted for them.  The invariant we test here is unchanged: no
+    // column in the database should be NaN (either because the row was skipped
+    // or because only partial NaN was present and the NaN columns mapped to 0).
     await migrateRrdToSqlite(WORK_RRD, TEST_ARCHIVES);
 
     const db = getDatabase();
     const rows = db.select().from(timeseriesStats).limit(200).all();
 
+    // At least some rows from the fixture's real data window must be present.
     expect(rows.length).toBeGreaterThan(0);
 
     for (const row of rows) {
@@ -313,7 +398,6 @@ describe("RRD Migration Integration", () => {
     await migrateRrdToSqlite(WORK_RRD, TEST_ARCHIVES);
 
     const db = getDatabase();
-    const { eq } = await import("drizzle-orm");
 
     // The fixture was generated by generate-test-rrd.ts with deterministic
     // sine/cosine values.  Known ranges (see dataValues() in the script):
@@ -329,7 +413,6 @@ describe("RRD Migration Integration", () => {
     const rows = db
       .select()
       .from(timeseriesStats)
-      .where(eq(timeseriesStats.resolution, "1min"))
       .orderBy(timeseriesStats.timestamp)
       .all();
 

@@ -18,6 +18,7 @@ import { lazy, Suspense, useEffect, useMemo, useRef } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AlertSoundManager } from "./components/AlertSoundManager.tsx";
 import { ConnectionStatus } from "./components/ConnectionStatus.tsx";
+import { MigrationStatus } from "./components/MigrationStatus.tsx";
 import { Navigation } from "./components/Navigation.tsx";
 import { SettingsModal } from "./components/SettingsModal.tsx";
 import { ToastContainer } from "./components/ToastContainer.tsx";
@@ -142,6 +143,9 @@ function App() {
 
         {/* Connection status indicator */}
         <ConnectionStatus isConnected={isConnected} />
+
+        {/* Migration status banner — shown while backend DB migrations are running */}
+        <MigrationStatus />
 
         {/* Settings modal */}
         <SettingsModal />

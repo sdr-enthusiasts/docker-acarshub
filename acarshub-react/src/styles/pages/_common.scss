@@ -28,7 +28,7 @@
   margin-bottom: $spacing-lg;
   background-color: var(--color-card-body);
   border-radius: $radius-xl;
-  overflow: hidden;
+  overflow: clip;
   overflow-anchor: none; // Prevent scroll anchoring
 
   @include fade-in($transition-base);

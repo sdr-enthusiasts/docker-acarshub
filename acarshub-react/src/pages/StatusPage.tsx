@@ -19,7 +19,40 @@ import { Card } from "../components/Card";
 import { socketService } from "../services/socket";
 import { useAppStore } from "../store/useAppStore";
 import { useSettingsStore } from "../store/useSettingsStore";
+import type { MessageRateData } from "../types";
 import { formatTimestamp } from "../utils/dateUtils";
+
+/**
+ * Maps the uppercase decoder name used in status.global (e.g. "ACARS") to the
+ * lowercase key used in MessageRateData (e.g. "acars").
+ */
+const DECODER_NAME_TO_RATE_KEY: Record<
+  string,
+  keyof Omit<MessageRateData, "total">
+> = {
+  ACARS: "acars",
+  VDLM2: "vdlm2",
+  HFDL: "hfdl",
+  IMSL: "imsl",
+  IRDM: "irdm",
+};
+
+/**
+ * Return the live rolling rate for a decoder from the messageRate store value.
+ * Falls back to the LastMinute value from system_status when messageRate is
+ * not yet available (e.g. before the first 5-second scheduler tick).
+ */
+function getDecoderRate(
+  messageRate: MessageRateData | null,
+  decoderName: string,
+  fallback: number | undefined,
+): number {
+  if (messageRate !== null) {
+    const key = DECODER_NAME_TO_RATE_KEY[decoderName];
+    if (key) return messageRate[key];
+  }
+  return fallback ?? 0;
+}
 
 /**
  * StatusPage Component
@@ -29,6 +62,10 @@ export const StatusPage = () => {
   const setCurrentPage = useAppStore((state) => state.setCurrentPage);
   const systemStatus = useAppStore((state) => state.systemStatus);
   const decoders = useAppStore((state) => state.decoders);
+  // messageRate is updated every 5 seconds by the backend scheduler via the
+  // message_rate socket event — use it as the live source for the rate display
+  // so the value refreshes at 5s cadence rather than the 10s status poll.
+  const messageRate = useAppStore((state) => state.messageRate);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
 
   // Get user's locale preferences from settings
@@ -184,9 +221,10 @@ export const StatusPage = () => {
                     </span>
                   </div>
                   <div className="status-detail">
-                    <span className="status-detail__label">Last Minute:</span>
+                    <span className="status-detail__label">Rate (1 min):</span>
                     <span className="status-detail__value">
-                      {stats.LastMinute}
+                      {getDecoderRate(messageRate, name, stats.LastMinute)}{" "}
+                      msg/min
                     </span>
                   </div>
                 </div>

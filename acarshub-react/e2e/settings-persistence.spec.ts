@@ -113,11 +113,11 @@ test.describe("Settings Persistence", () => {
     expect(appliedTheme).not.toBeNull();
 
     // Step 3 — navigate away to the Search page via the nav link
-    await clickNavLink(page, /search database/i, /\/search/);
+    await clickNavLink(page, /^search$|^database$/i, /\/search/);
     await expect(page).toHaveURL(/\/search/);
 
     // Step 4 — navigate back to Live Messages
-    await clickNavLink(page, /live messages/i, /\/live-messages/);
+    await clickNavLink(page, /^messages$/i, /\/live-messages/);
     await expect(page).toHaveURL(/\/live-messages/);
 
     // Step 5 — reopen Settings and verify Latte is still selected
@@ -160,7 +160,7 @@ test.describe("Settings Persistence", () => {
     await expect(page).toHaveURL(/\/status/);
 
     // Step 4 — navigate back to Live Messages
-    await clickNavLink(page, /live messages/i, /\/live-messages/);
+    await clickNavLink(page, /^messages$/i, /\/live-messages/);
     await expect(page).toHaveURL(/\/live-messages/);
 
     // Step 5 — reopen Settings → Regional & Time → verify value persisted

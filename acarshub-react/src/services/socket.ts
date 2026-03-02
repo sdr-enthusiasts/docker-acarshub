@@ -45,6 +45,18 @@ import { socketLogger } from "../utils/logger";
 
 // Events received from backend
 export interface ServerToClientEvents {
+  // Rolling message rate — emitted every 5 seconds by the backend scheduler.
+  // Counts messages received in the last 60 seconds (12 × 5-second buckets),
+  // expressed as msgs/min for near-real-time throughput display.
+  message_rate: (data: {
+    total: number;
+    acars: number;
+    vdlm2: number;
+    hfdl: number;
+    imsl: number;
+    irdm: number;
+  }) => void;
+
   // Core message events
   acars_msg: (data: HtmlMsg) => void;
   acars_msg_batch: (data: {
@@ -132,6 +144,12 @@ export interface ServerToClientEvents {
 
   // Station IDs (sent on connect and broadcast when a new station is seen)
   station_ids: (data: { station_ids: string[] }) => void;
+
+  // Migration status — emitted when the backend is running DB migrations.
+  // Clients that connect before migrations finish receive { running: true }.
+  // Once all init is complete they receive { running: false } followed by the
+  // normal connect sequence.
+  migration_status: (data: { running: boolean; message: string }) => void;
 
   // Connection events
   connect: () => void;

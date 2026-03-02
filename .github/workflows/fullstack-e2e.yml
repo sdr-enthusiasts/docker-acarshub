@@ -41,7 +41,7 @@ on:
 
 jobs:
   fullstack-e2e:
-    name: Full-Stack E2E (Chromium)
+    name: Full-Stack E2E
     runs-on: ubuntu-latest
 
     steps:

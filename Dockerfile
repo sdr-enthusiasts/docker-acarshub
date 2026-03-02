@@ -66,6 +66,21 @@ RUN set -xe && \
     --external:'node:*' \
     --banner:js="import { createRequire } from 'module'; const require = createRequire(import.meta.url);" \
     --outfile=/backend/server.bundle.mjs && \
+    # Bundle the migration worker as a separate ESM file.
+    # This file is spawned as a child process by runMigrationsInWorker() so that
+    # SQLite VACUUM runs off the main event loop (keeping Socket.IO responsive
+    # during long migrations).  It must be a standalone file — it cannot be
+    # inlined into server.bundle.mjs because spawn() needs a real path on disk.
+    # zeromq is not needed by the migrator so it is not marked external here.
+    npx esbuild acarshub-backend/src/db/migrate-worker.ts \
+    --bundle \
+    --platform=node \
+    --format=esm \
+    --target=node22 \
+    --external:better-sqlite3 \
+    --external:'node:*' \
+    --banner:js="import { createRequire } from 'module'; const require = createRequire(import.meta.url);" \
+    --outfile=/backend/migrate-worker.mjs && \
     # Stage React SPA output
     mkdir -p /webapp/dist && \
     cp -r ./acarshub-react/dist/* /webapp/dist/ && \
@@ -186,6 +201,7 @@ COPY acarshub-react/package.json   ./acarshub-react/
 # because the native addons were already compiled in the builder stage, which
 # already has all build tools present for the tsc/vite/esbuild steps.
 COPY --from=acarshub-react-builder /backend/server.bundle.mjs ./server.bundle.mjs
+COPY --from=acarshub-react-builder /backend/migrate-worker.mjs ./migrate-worker.mjs
 COPY --from=acarshub-react-builder /addon-deps/better-sqlite3  ./node_modules/better-sqlite3
 COPY --from=acarshub-react-builder /addon-deps/zeromq          ./node_modules/zeromq
 COPY --from=acarshub-react-builder /addon-deps/cmake-ts        ./node_modules/cmake-ts

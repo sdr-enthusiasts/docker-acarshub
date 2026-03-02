@@ -17,21 +17,68 @@
 @use "../mixins" as *;
 @use "../variables" as *;
 
+// Suppress the app-content outer scrollbar when the Alerts page is active.
+// The virtual list manages its own internal scroll; the outer container must
+// not produce a second scrollbar.
+.app-content:has(.alerts-page) {
+  overflow: hidden;
+}
+
 .alerts-page {
+  // Override parent .page margins/border-radius so the page occupies the full
+  // viewport area below the nav bar with no gaps or rounded corners.
+  margin-top: 0;
+  margin-bottom: 0;
+  border-radius: 0;
+  overflow: visible !important;
   display: flex;
   flex-direction: column;
-  min-height: 100%;
+  min-height: 200px;
+
+  // page__content becomes the flex container for controls bar + virtual list
+  &__content.page__content {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  // Controls bar: mode toggle, term selector, pagination — sits above the
+  // virtual scroll container and is always fully visible.
+  &__controls-bar {
+    flex-shrink: 0;
+    padding: var(--spacing-sm) var(--spacing-lg);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+    border-bottom: 1px solid var(--color-surface1);
+  }
+
+  // The virtual scroll container — fills the remaining viewport height.
+  // Explicit height is set as an inline style by the component after
+  // measuring available space via ResizeObserver.
+  &__virtual-list {
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 0 var(--spacing-lg);
+    box-sizing: border-box;
+  }
+
+  // Wrapper for each virtualised item — provides the gap between cards.
+  &__item {
+    padding-bottom: var(--spacing-lg);
+  }
 
   // Mode toggle (Live/Historical)
   &__mode-toggle {
     display: flex;
     gap: var(--spacing-xs);
-    margin-bottom: var(--spacing-lg);
-    padding: var(--spacing-md) 0;
+    padding: var(--spacing-xs) 0;
 
     @include breakpoint-max(md) {
       justify-content: center;
-      padding: var(--spacing-sm) 0;
     }
   }
 
@@ -80,12 +127,10 @@
     }
   }
 
-  // Controls container (term selector, etc.)
+  // Controls container (term selector inside the controls bar)
   &__controls {
-    margin-bottom: var(--spacing-lg);
-    padding: var(--spacing-md);
-    background: var(--color-surface0);
-    border-radius: var(--border-radius-lg);
+    padding: var(--spacing-xs) 0;
+    background: transparent;
   }
 
   &__term-selector {
@@ -152,14 +197,13 @@
     }
   }
 
-  // Pagination
+  // Pagination — now lives inside the controls bar above the virtual list
   &__pagination {
     display: flex;
     align-items: center;
     justify-content: center;
     gap: var(--spacing-sm);
-    margin-top: var(--spacing-lg);
-    padding: var(--spacing-md);
+    padding: var(--spacing-xs) 0;
     flex-wrap: wrap;
 
     @include breakpoint-max(md) {
@@ -354,7 +398,30 @@
     }
   }
 
-  // Messages container
+  // Card container for historical-mode MessageCard items — matches the visual
+  // appearance of .message-group (surface0 background, surface2 border, lg
+  // border-radius) so that bare MessageCard results look consistent with the
+  // Live Messages and Alerts live-mode cards.
+  &__result-card {
+    background-color: var(--color-surface0);
+    border: 1px solid var(--color-surface2);
+    border-radius: var(--border-radius-lg);
+    padding: var(--spacing-md);
+    overflow: hidden;
+    transition: border-color var(--transition-normal);
+
+    &:hover {
+      border-color: var(--color-overlay0);
+    }
+
+    // Reduced motion
+    @media (prefers-reduced-motion: reduce) {
+      transition: none;
+    }
+  }
+
+  // Messages container — kept for any legacy references, but the virtual list
+  // uses .alerts-page__item for per-item spacing instead.
   &__messages {
     display: flex;
     flex-direction: column;
@@ -367,31 +434,16 @@
     }
   }
 
-  // Individual result card wrapper for historical mode (matches .search-page__result-card styling)
-  &__result-card {
-    background-color: var(--color-surface0);
-    border: 1px solid var(--color-surface2);
-    border-radius: var(--border-radius-lg);
-    padding: var(--spacing-md);
-    overflow: hidden;
-    transition: all var(--transition-normal);
-
-    &:hover {
-      border-color: var(--color-overlay0);
-    }
-
-    // Reduced motion
-    @media (prefers-reduced-motion: reduce) {
-      transition: none;
-    }
-  }
-
   // Print styles
   @media print {
-    &__mode-toggle,
-    &__controls,
+    &__controls-bar,
     &__pagination {
       display: none;
+    }
+
+    &__virtual-list {
+      overflow: visible;
+      height: auto !important;
     }
 
     &__empty-state {
@@ -399,8 +451,9 @@
       padding: var(--spacing-md);
     }
 
-    &__messages {
-      gap: var(--spacing-sm);
+    &__messages,
+    &__item {
+      padding-bottom: var(--spacing-sm);
     }
   }
 }

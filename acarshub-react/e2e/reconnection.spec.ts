@@ -270,7 +270,7 @@ test.describe("Socket.IO Reconnection (GAP-E2E-10)", () => {
     // Navigate to a different page using client-side routing so the Zustand
     // store state (isConnected = false) is preserved across the navigation.
     // page.goto() would reload the entire app and reset the store.
-    await clickNavLink(page, /^search database/i, /\/search/);
+    await clickNavLink(page, /^search$|^database$/i, /\/search/);
 
     // Banner must still be visible on the new page.
     await expect(page.locator(BANNER)).toBeVisible();
@@ -290,7 +290,7 @@ test.describe("Socket.IO Reconnection (GAP-E2E-10)", () => {
     // Navigate away using client-side routing so the Zustand store state
     // (isConnected = true) is preserved across the navigation.
     // page.goto() would reload the entire app and reset the store.
-    await clickNavLink(page, /^search database/i, /\/search/);
+    await clickNavLink(page, /^search$|^database$/i, /\/search/);
 
     // Banner must remain hidden on the new page.
     await expect(page.locator(BANNER)).not.toBeVisible();

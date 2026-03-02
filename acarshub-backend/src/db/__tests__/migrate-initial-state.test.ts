@@ -339,7 +339,7 @@ describe("Migration from initial Alembic state", () => {
       .get() as { version_num: string } | undefined;
 
     expect(version).toBeDefined();
-    expect(version?.version_num).toBe("f0a1b2c3d4e5");
+    expect(version?.version_num).toBe("b6c7d8e9f0a1");
 
     testDb.close();
   });
@@ -555,9 +555,9 @@ describe("Migration from initial Alembic state", () => {
       .all() as Array<{ name: string }>;
 
     const columnNames = columns.map((col) => col.name);
-    expect(columnNames).toContain("id");
+    // After migration 12: timestamp is INTEGER PRIMARY KEY, id and resolution
+    // columns have been removed along with both old indexes.
     expect(columnNames).toContain("timestamp");
-    expect(columnNames).toContain("resolution");
     expect(columnNames).toContain("acars_count");
     expect(columnNames).toContain("vdlm_count");
     expect(columnNames).toContain("hfdl_count");
@@ -565,16 +565,20 @@ describe("Migration from initial Alembic state", () => {
     expect(columnNames).toContain("irdm_count");
     expect(columnNames).toContain("total_count");
     expect(columnNames).toContain("error_count");
-    expect(columnNames).toContain("created_at");
+    expect(columnNames).not.toContain("id");
+    expect(columnNames).not.toContain("resolution");
 
-    // Check that indexes exist
+    // idx_timeseries_timestamp_resolution and idx_timeseries_resolution must
+    // have been dropped by migration 12 (timestamp is now the PK B-tree).
     const indexes = testDb
-      .prepare("SELECT name FROM sqlite_master WHERE type='index'")
+      .prepare(
+        "SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='timeseries_stats'",
+      )
       .all() as Array<{ name: string }>;
 
     const indexNames = indexes.map((idx) => idx.name);
-    expect(indexNames).toContain("idx_timeseries_timestamp_resolution");
-    expect(indexNames).toContain("idx_timeseries_resolution");
+    expect(indexNames).not.toContain("idx_timeseries_timestamp_resolution");
+    expect(indexNames).not.toContain("idx_timeseries_resolution");
 
     testDb.close();
   });
@@ -620,36 +624,36 @@ describe("Migration from initial Alembic state", () => {
     testDb.close();
   });
 
-  test("should replace non-unique timeseries index with a UNIQUE index after migration 11", () => {
+  test("should enforce timestamp uniqueness via PRIMARY KEY after migration 12", () => {
     runMigrations(TEST_DB_PATH);
 
     const testDb = new Database(TEST_DB_PATH);
 
-    // Verify the index exists and is unique by attempting to insert a duplicate
-    // (timestamp, resolution) pair — SQLite must reject it.
+    // After migration 12, timestamp is the INTEGER PRIMARY KEY — duplicate
+    // timestamps must be rejected regardless of any other column value.
     testDb.exec(`
       INSERT INTO timeseries_stats
-        (timestamp, resolution, acars_count, vdlm_count, hfdl_count,
-         imsl_count, irdm_count, total_count, error_count, created_at)
-      VALUES (1704067200, '1min', 1, 0, 0, 0, 0, 1, 0, 0)
+        (timestamp, acars_count, vdlm_count, hfdl_count,
+         imsl_count, irdm_count, total_count, error_count)
+      VALUES (1704067200, 1, 0, 0, 0, 0, 1, 0)
     `);
 
     expect(() => {
       testDb.exec(`
         INSERT INTO timeseries_stats
-          (timestamp, resolution, acars_count, vdlm_count, hfdl_count,
-           imsl_count, irdm_count, total_count, error_count, created_at)
-        VALUES (1704067200, '1min', 2, 0, 0, 0, 0, 2, 0, 0)
+          (timestamp, acars_count, vdlm_count, hfdl_count,
+           imsl_count, irdm_count, total_count, error_count)
+        VALUES (1704067200, 2, 0, 0, 0, 0, 2, 0)
       `);
     }).toThrow(/UNIQUE constraint failed/);
 
-    // Different resolution at the same timestamp is still allowed
+    // A different timestamp must be accepted.
     expect(() => {
       testDb.exec(`
         INSERT INTO timeseries_stats
-          (timestamp, resolution, acars_count, vdlm_count, hfdl_count,
-           imsl_count, irdm_count, total_count, error_count, created_at)
-        VALUES (1704067200, '5min', 1, 0, 0, 0, 0, 1, 0, 0)
+          (timestamp, acars_count, vdlm_count, hfdl_count,
+           imsl_count, irdm_count, total_count, error_count)
+        VALUES (1704067260, 1, 0, 0, 0, 0, 1, 0)
       `);
     }).not.toThrow();
 
@@ -672,6 +676,9 @@ describe("Migration from initial Alembic state", () => {
       CREATE TABLE alembic_version (version_num VARCHAR(32) PRIMARY KEY NOT NULL);
       INSERT INTO alembic_version VALUES ('c3d4e5f6a1b2');
     `);
+    // Simulate a DB at migration-10 state (the last migration before
+    // deduplication + registry).  Migration 11 will deduplicate; migration 12
+    // will then rebuild the table with timestamp as INTEGER PRIMARY KEY.
     setupDb.exec(`
       CREATE TABLE timeseries_stats (
         id            INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
@@ -683,8 +690,7 @@ describe("Migration from initial Alembic state", () => {
         imsl_count    INTEGER DEFAULT 0 NOT NULL,
         irdm_count    INTEGER DEFAULT 0 NOT NULL,
         total_count   INTEGER DEFAULT 0 NOT NULL,
-        error_count   INTEGER DEFAULT 0 NOT NULL,
-        created_at    INTEGER DEFAULT 0 NOT NULL
+        error_count   INTEGER DEFAULT 0 NOT NULL
       );
       CREATE INDEX idx_timeseries_timestamp_resolution
         ON timeseries_stats (timestamp, resolution);
@@ -697,12 +703,12 @@ describe("Migration from initial Alembic state", () => {
     setupDb.exec(`
       INSERT INTO timeseries_stats
         (timestamp, resolution, acars_count, vdlm_count, hfdl_count,
-         imsl_count, irdm_count, total_count, error_count, created_at)
+         imsl_count, irdm_count, total_count, error_count)
       VALUES
-        (1704067200, '1min', 1, 0, 0, 0, 0, 1, 0, 0),
-        (1704067200, '1min', 1, 0, 0, 0, 0, 1, 0, 0),
-        (1704067200, '1min', 1, 0, 0, 0, 0, 1, 0, 0),
-        (1704067260, '1min', 2, 0, 0, 0, 0, 2, 0, 0);
+        (1704067200, '1min', 1, 0, 0, 0, 0, 1, 0),
+        (1704067200, '1min', 1, 0, 0, 0, 0, 1, 0),
+        (1704067200, '1min', 1, 0, 0, 0, 0, 1, 0),
+        (1704067260, '1min', 2, 0, 0, 0, 0, 2, 0);
     `);
 
     // Verify duplicates exist before migration
@@ -720,7 +726,8 @@ describe("Migration from initial Alembic state", () => {
 
     const testDb = new Database(TEST_DB_PATH);
 
-    // After migration 11: only 2 rows must remain (one per unique slot)
+    // After migrations 11 + 12: only 2 rows must remain (one per unique
+    // timestamp), and the schema must have been rebuilt.
     const afterCount = (
       testDb
         .prepare("SELECT COUNT(*) AS n FROM timeseries_stats")
@@ -728,35 +735,228 @@ describe("Migration from initial Alembic state", () => {
     ).n;
     expect(afterCount).toBe(2);
 
-    // The surviving row for the duplicated slot must be the one with the
-    // highest id (most recently inserted).
-    const survivingRow = testDb
-      .prepare(
-        "SELECT id FROM timeseries_stats WHERE timestamp = 1704067200 AND resolution = '1min'",
-      )
-      .get() as { id: number } | undefined;
+    // After migration 12 the `id` and `resolution` columns are gone.
+    const columns = testDb
+      .prepare("PRAGMA table_info(timeseries_stats)")
+      .all() as Array<{ name: string }>;
+    const columnNames = columns.map((c) => c.name);
+    expect(columnNames).not.toContain("id");
+    expect(columnNames).not.toContain("resolution");
+    expect(columnNames).toContain("timestamp");
 
-    expect(survivingRow).toBeDefined();
-    // id=3 is the third (highest) of the three duplicate inserts
-    expect(survivingRow?.id).toBe(3);
+    // Both surviving timestamps must be present.
+    const ts1 = testDb
+      .prepare("SELECT timestamp FROM timeseries_stats WHERE timestamp = 1704067200")
+      .get() as { timestamp: number } | undefined;
+    expect(ts1).toBeDefined();
 
-    // The non-duplicate row must be untouched
-    const cleanRow = testDb
-      .prepare(
-        "SELECT id FROM timeseries_stats WHERE timestamp = 1704067260 AND resolution = '1min'",
-      )
-      .get() as { id: number } | undefined;
+    const ts2 = testDb
+      .prepare("SELECT timestamp FROM timeseries_stats WHERE timestamp = 1704067260")
+      .get() as { timestamp: number } | undefined;
+    expect(ts2).toBeDefined();
 
-    expect(cleanRow).toBeDefined();
-    expect(cleanRow?.id).toBe(4);
-
-    // rrd_import_registry must also have been created by the migration
+    // rrd_import_registry must also have been created by migration 11.
     const registryTable = testDb
       .prepare(
         "SELECT name FROM sqlite_master WHERE type='table' AND name='rrd_import_registry'",
       )
       .get();
     expect(registryTable).toBeDefined();
+
+    testDb.close();
+  });
+
+  // ---------------------------------------------------------------------------
+  // Migration 12: drop_resolution_promote_timestamp_pk
+  // ---------------------------------------------------------------------------
+
+  test("migration 12 rebuilds timeseries_stats with timestamp as INTEGER PRIMARY KEY", () => {
+    runMigrations(TEST_DB_PATH);
+
+    const testDb = new Database(TEST_DB_PATH);
+
+    // timestamp must be the only primary-key column (pk=1 in PRAGMA table_info)
+    const columns = testDb
+      .prepare("PRAGMA table_info(timeseries_stats)")
+      .all() as Array<{ name: string; pk: number }>;
+
+    const pkColumns = columns.filter((c) => c.pk > 0).map((c) => c.name);
+    expect(pkColumns).toEqual(["timestamp"]);
+
+    // id and resolution must not exist.
+    const columnNames = columns.map((c) => c.name);
+    expect(columnNames).not.toContain("id");
+    expect(columnNames).not.toContain("resolution");
+
+    // All payload columns must be present.
+    for (const col of [
+      "acars_count",
+      "vdlm_count",
+      "hfdl_count",
+      "imsl_count",
+      "irdm_count",
+      "total_count",
+      "error_count",
+    ]) {
+      expect(columnNames).toContain(col);
+    }
+
+    // Both old indexes must have been dropped.
+    const indexes = testDb
+      .prepare(
+        "SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='timeseries_stats'",
+      )
+      .all() as Array<{ name: string }>;
+    const indexNames = indexes.map((i) => i.name);
+    expect(indexNames).not.toContain("idx_timeseries_timestamp_resolution");
+    expect(indexNames).not.toContain("idx_timeseries_resolution");
+
+    testDb.close();
+  });
+
+  test("regression: migration 12 preserves existing rows when upgrading from migration 11 state", () => {
+    // Simulate a DB that is already at migration-11 state (post-dedup,
+    // UNIQUE index on (timestamp, resolution), but still has id/resolution).
+    const setupDb = new Database(TEST_DB_PATH);
+    setupDb.exec(`
+      CREATE TABLE alembic_version (version_num VARCHAR(32) PRIMARY KEY NOT NULL);
+      INSERT INTO alembic_version VALUES ('f0a1b2c3d4e5');
+    `);
+    setupDb.exec(`
+      CREATE TABLE timeseries_stats (
+        id            INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+        timestamp     INTEGER NOT NULL,
+        resolution    TEXT    NOT NULL DEFAULT '1min',
+        acars_count   INTEGER DEFAULT 0 NOT NULL,
+        vdlm_count    INTEGER DEFAULT 0 NOT NULL,
+        hfdl_count    INTEGER DEFAULT 0 NOT NULL,
+        imsl_count    INTEGER DEFAULT 0 NOT NULL,
+        irdm_count    INTEGER DEFAULT 0 NOT NULL,
+        total_count   INTEGER DEFAULT 0 NOT NULL,
+        error_count   INTEGER DEFAULT 0 NOT NULL
+      );
+      CREATE UNIQUE INDEX idx_timeseries_timestamp_resolution
+        ON timeseries_stats (timestamp, resolution);
+      CREATE INDEX idx_timeseries_resolution
+        ON timeseries_stats (resolution);
+    `);
+    setupDb.exec(`
+      CREATE TABLE rrd_import_registry (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+        file_hash   TEXT    NOT NULL UNIQUE,
+        rrd_path    TEXT    NOT NULL,
+        imported_at INTEGER NOT NULL,
+        rows_imported INTEGER NOT NULL DEFAULT 0
+      );
+      CREATE UNIQUE INDEX idx_rrd_import_registry_hash
+        ON rrd_import_registry (file_hash);
+    `);
+    setupDb.exec(`
+      INSERT INTO timeseries_stats
+        (timestamp, resolution, acars_count, vdlm_count, hfdl_count,
+         imsl_count, irdm_count, total_count, error_count)
+      VALUES
+        (1704067200, '1min', 10, 5, 3, 1, 0, 19, 0),
+        (1704067260, '1min',  8, 4, 2, 0, 1, 15, 0),
+        (1704067320, '1min',  6, 3, 1, 0, 0, 10, 1);
+    `);
+    setupDb.close();
+
+    // Apply only migration 12.
+    runMigrations(TEST_DB_PATH);
+
+    const testDb = new Database(TEST_DB_PATH);
+
+    // All 3 rows must have survived the rebuild.
+    const rowCount = (
+      testDb
+        .prepare("SELECT COUNT(*) AS n FROM timeseries_stats")
+        .get() as { n: number }
+    ).n;
+    expect(rowCount).toBe(3);
+
+    // Spot-check that payload data was preserved correctly.
+    const row = testDb
+      .prepare("SELECT * FROM timeseries_stats WHERE timestamp = 1704067200")
+      .get() as Record<string, number> | undefined;
+
+    expect(row).toBeDefined();
+    expect(row?.acars_count).toBe(10);
+    expect(row?.vdlm_count).toBe(5);
+    expect(row?.total_count).toBe(19);
+
+    testDb.close();
+  });
+
+  test("regression: migration 12 keeps '1min' row when same timestamp exists under two resolutions", () => {
+    // Edge case: a DB at migration-11 state where the same timestamp appears
+    // under both '1min' and '5min' resolution (possible if RRD expansion was
+    // run multiple times with different archive configs, or if data was
+    // manually inserted). Migration 12 must keep the '1min' row.
+    const setupDb = new Database(TEST_DB_PATH);
+    setupDb.exec(`
+      CREATE TABLE alembic_version (version_num VARCHAR(32) PRIMARY KEY NOT NULL);
+      INSERT INTO alembic_version VALUES ('f0a1b2c3d4e5');
+    `);
+    setupDb.exec(`
+      CREATE TABLE timeseries_stats (
+        id            INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+        timestamp     INTEGER NOT NULL,
+        resolution    TEXT    NOT NULL,
+        acars_count   INTEGER DEFAULT 0 NOT NULL,
+        vdlm_count    INTEGER DEFAULT 0 NOT NULL,
+        hfdl_count    INTEGER DEFAULT 0 NOT NULL,
+        imsl_count    INTEGER DEFAULT 0 NOT NULL,
+        irdm_count    INTEGER DEFAULT 0 NOT NULL,
+        total_count   INTEGER DEFAULT 0 NOT NULL,
+        error_count   INTEGER DEFAULT 0 NOT NULL
+      );
+      CREATE UNIQUE INDEX idx_timeseries_timestamp_resolution
+        ON timeseries_stats (timestamp, resolution);
+      CREATE INDEX idx_timeseries_resolution
+        ON timeseries_stats (resolution);
+    `);
+    setupDb.exec(`
+      CREATE TABLE rrd_import_registry (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+        file_hash   TEXT    NOT NULL UNIQUE,
+        rrd_path    TEXT    NOT NULL,
+        imported_at INTEGER NOT NULL,
+        rows_imported INTEGER NOT NULL DEFAULT 0
+      );
+      CREATE UNIQUE INDEX idx_rrd_import_registry_hash
+        ON rrd_import_registry (file_hash);
+    `);
+    // Same timestamp with '1min' (acars=42) and '5min' (acars=7).
+    // Migration 12 must keep acars=42 (the '1min' row).
+    setupDb.exec(`
+      INSERT INTO timeseries_stats
+        (timestamp, resolution, acars_count, total_count)
+      VALUES
+        (1704067200, '1min',  42, 42),
+        (1704067200, '5min',   7,  7);
+    `);
+    setupDb.close();
+
+    runMigrations(TEST_DB_PATH);
+
+    const testDb = new Database(TEST_DB_PATH);
+
+    // Only one row per timestamp after rebuild.
+    const rowCount = (
+      testDb
+        .prepare("SELECT COUNT(*) AS n FROM timeseries_stats")
+        .get() as { n: number }
+    ).n;
+    expect(rowCount).toBe(1);
+
+    const row = testDb
+      .prepare("SELECT * FROM timeseries_stats WHERE timestamp = 1704067200")
+      .get() as Record<string, number> | undefined;
+
+    expect(row).toBeDefined();
+    // The '1min' row (acars=42) must have won.
+    expect(row?.acars_count).toBe(42);
 
     testDb.close();
   });

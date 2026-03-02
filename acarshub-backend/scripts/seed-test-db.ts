@@ -130,14 +130,13 @@ const SEED_IGNORE_TERMS: string[] = [];
 // ---------------------------------------------------------------------------
 
 /**
- * Resolutions and their bucket sizes in seconds.
- * We generate enough buckets to cover 30 days at each resolution.
+ * Timeseries bucket configuration.
+ * After migration 12 all data is stored at 1-minute resolution — the
+ * resolution column was removed from the schema. We seed only 1-minute
+ * buckets here to match what the live stats-writer produces.
  */
 const TIMESERIES_RESOLUTIONS = [
-  { resolution: "1min" as const, stepS: 60, durationDays: 1 },
-  { resolution: "5min" as const, stepS: 300, durationDays: 7 },
-  { resolution: "1hour" as const, stepS: 3600, durationDays: 30 },
-  { resolution: "6hour" as const, stepS: 21600, durationDays: 90 },
+  { stepS: 60, durationDays: 1 },
 ] as const;
 
 // ---------------------------------------------------------------------------
@@ -408,14 +407,13 @@ async function run(): Promise<void> {
 
   let timeseriesTotal = 0;
 
-  for (const { resolution, stepS, durationDays } of TIMESERIES_RESOLUTIONS) {
+  for (const { stepS, durationDays } of TIMESERIES_RESOLUTIONS) {
     const durationS = durationDays * 86400;
     const bucketCount = Math.ceil(durationS / stepS);
     const startTs = ANCHOR_END_UNIX - durationS;
 
     const rows: Array<{
       timestamp: number;
-      resolution: "1min" | "5min" | "1hour" | "6hour";
       acarsCount: number;
       vdlmCount: number;
       hfdlCount: number;
@@ -432,7 +430,6 @@ async function run(): Promise<void> {
       const v = timeseriesValues(minuteIndex);
       rows.push({
         timestamp: ts,
-        resolution,
         acarsCount: v.acars,
         vdlmCount: v.vdlm,
         hfdlCount: v.hfdl,
@@ -453,7 +450,7 @@ async function run(): Promise<void> {
 
     timeseriesTotal += rows.length;
     console.log(
-      `  ✓ ${resolution}: ${rows.length} buckets (${durationDays}d, step ${stepS}s)`,
+      `  ✓ 1min: ${rows.length} buckets (${durationDays}d, step ${stepS}s)`,
     );
   }
 
@@ -501,8 +498,8 @@ async function run(): Promise<void> {
     timeseries: {
       total: timeseriesTotal,
       resolutions: TIMESERIES_RESOLUTIONS.map(
-        ({ resolution, stepS, durationDays }) => ({
-          resolution,
+        ({ stepS, durationDays }) => ({
+          resolution: "1min",
           stepSeconds: stepS,
           durationDays,
           buckets: Math.ceil((durationDays * 86400) / stepS),

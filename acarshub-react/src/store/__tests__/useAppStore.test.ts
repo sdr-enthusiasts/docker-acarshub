@@ -882,4 +882,159 @@ describe("useAppStore", () => {
       expect(selectUnreadAlertCount(useAppStore.getState())).toBe(1);
     });
   });
+
+  // ---------------------------------------------------------------------------
+  // timeSeriesCache
+  // ---------------------------------------------------------------------------
+
+  describe("timeSeriesCache", () => {
+    const NOW = 1_704_067_200_000; // 2024-01-01T00:00:00.000Z
+
+    function makeEntry(
+      period:
+        | "1hr"
+        | "6hr"
+        | "12hr"
+        | "24hr"
+        | "1wk"
+        | "30day"
+        | "6mon"
+        | "1yr",
+      startOffset = 3_600_000,
+    ) {
+      return {
+        time_period: period as
+          | "1hr"
+          | "6hr"
+          | "12hr"
+          | "24hr"
+          | "1wk"
+          | "30day"
+          | "6mon"
+          | "1yr",
+        data: [
+          {
+            timestamp: NOW - 60_000,
+            acars: 2,
+            vdlm: 1,
+            hfdl: 0,
+            imsl: 0,
+            irdm: 0,
+            total: 3,
+            error: 0,
+          },
+        ],
+        start: NOW - startOffset,
+        end: NOW,
+        points: 1,
+      };
+    }
+
+    beforeEach(() => {
+      useAppStore.setState({ timeSeriesCache: new Map() });
+    });
+
+    it("starts with an empty cache", () => {
+      const cache = useAppStore.getState().timeSeriesCache;
+      expect(cache.size).toBe(0);
+    });
+
+    it("stores an entry for a period via setTimeSeriesData", () => {
+      const entry = makeEntry("1hr");
+      useAppStore.getState().setTimeSeriesData("1hr", entry);
+
+      const stored = useAppStore.getState().timeSeriesCache.get("1hr");
+      expect(stored).toBeDefined();
+      expect(stored?.time_period).toBe("1hr");
+    });
+
+    it("returns undefined for a period not yet in the cache", () => {
+      const cached = useAppStore.getState().timeSeriesCache.get("24hr");
+      expect(cached).toBeUndefined();
+    });
+
+    it("stores the full data array", () => {
+      const entry = makeEntry("6hr", 21_600_000);
+      useAppStore.getState().setTimeSeriesData("6hr", entry);
+
+      const stored = useAppStore.getState().timeSeriesCache.get("6hr");
+      expect(stored?.data).toHaveLength(1);
+      expect(stored?.data[0].acars).toBe(2);
+      expect(stored?.data[0].total).toBe(3);
+    });
+
+    it("stores start, end and points", () => {
+      const entry = makeEntry("24hr", 86_400_000);
+      useAppStore.getState().setTimeSeriesData("24hr", entry);
+
+      const stored = useAppStore.getState().timeSeriesCache.get("24hr");
+      expect(stored?.start).toBe(NOW - 86_400_000);
+      expect(stored?.end).toBe(NOW);
+      expect(stored?.points).toBe(1);
+    });
+
+    it("overwrites an existing entry when the same period is set again", () => {
+      const first = makeEntry("1hr");
+      useAppStore.getState().setTimeSeriesData("1hr", first);
+
+      const updated = {
+        ...makeEntry("1hr"),
+        data: [
+          {
+            timestamp: NOW - 60_000,
+            acars: 99,
+            vdlm: 0,
+            hfdl: 0,
+            imsl: 0,
+            irdm: 0,
+            total: 99,
+            error: 0,
+          },
+        ],
+        points: 1,
+      };
+      useAppStore.getState().setTimeSeriesData("1hr", updated);
+
+      const stored = useAppStore.getState().timeSeriesCache.get("1hr");
+      expect(stored?.data[0].acars).toBe(99);
+    });
+
+    it("stores multiple periods independently", () => {
+      useAppStore
+        .getState()
+        .setTimeSeriesData("1hr", makeEntry("1hr", 3_600_000));
+      useAppStore
+        .getState()
+        .setTimeSeriesData("24hr", makeEntry("24hr", 86_400_000));
+      useAppStore
+        .getState()
+        .setTimeSeriesData("1yr", makeEntry("1yr", 31_536_000_000));
+
+      const cache = useAppStore.getState().timeSeriesCache;
+      expect(cache.size).toBe(3);
+      expect(cache.get("1hr")?.start).toBe(NOW - 3_600_000);
+      expect(cache.get("24hr")?.start).toBe(NOW - 86_400_000);
+      expect(cache.get("1yr")?.start).toBe(NOW - 31_536_000_000);
+    });
+
+    it("does not mutate the original Map reference (immutable update)", () => {
+      const before = useAppStore.getState().timeSeriesCache;
+
+      useAppStore.getState().setTimeSeriesData("1hr", makeEntry("1hr"));
+
+      const after = useAppStore.getState().timeSeriesCache;
+      expect(after).not.toBe(before);
+    });
+
+    it("regression: other store state is unaffected by setTimeSeriesData", () => {
+      useAppStore.setState({ isConnected: true, alertCount: 42 });
+
+      useAppStore
+        .getState()
+        .setTimeSeriesData("6hr", makeEntry("6hr", 21_600_000));
+
+      expect(useAppStore.getState().isConnected).toBe(true);
+      expect(useAppStore.getState().alertCount).toBe(42);
+    });
+  });
 });

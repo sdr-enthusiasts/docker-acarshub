@@ -151,6 +151,7 @@ docker_acarshub.egg-info
 *.sqlite
 *.rrd
 *.rrd.back
+*.rrd.back2
 .pre-commit-config.yaml
 *.db
 *.db-shm

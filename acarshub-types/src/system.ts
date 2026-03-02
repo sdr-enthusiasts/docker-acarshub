@@ -197,6 +197,24 @@ export interface SignalCountData {
 }
 
 /**
+ * Rolling message rate data
+ *
+ * Counts messages received in the last 60 seconds (a rolling window of
+ * 12 × 5-second buckets), expressed as msgs/min.  Emitted by the backend
+ * scheduler every 5 seconds so the UI can display a near-real-time rate
+ * without polling.
+ */
+export interface MessageRateData {
+  /** Total msgs/min across all decoders */
+  total: number;
+  acars: number;
+  vdlm2: number;
+  hfdl: number;
+  imsl: number;
+  irdm: number;
+}
+
+/**
  * Version Information
  *
  * Carries the independently-versioned package versions for each component of
