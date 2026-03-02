@@ -16,6 +16,7 @@
  * 9. a1b2c3d4e5f6 - add_timeseries_stats
  * 10. c3d4e5f6a1b2 - rebuild_fts
  * 11. f0a1b2c3d4e5 - deduplicate_timeseries_and_add_registry
+ * 12. b6c7d8e9f0a1 - drop_resolution_promote_timestamp_pk
  *
  * FTS Schema Integrity
  * --------------------
