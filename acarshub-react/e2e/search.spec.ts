@@ -138,7 +138,7 @@ async function goToSearchPage(page: Page): Promise<void> {
   await Promise.all([
     page.waitForURL(/\/search/, { timeout: 15000 }),
     page
-      .getByRole("link", { name: /search database/i })
+      .getByRole("link", { name: /^search$|^database$/i })
       .first()
       .click(),
   ]);

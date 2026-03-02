@@ -70,9 +70,9 @@ test.describe("Smoke Tests", () => {
     const storeInjected = await injectDecoderState(page); // Enable all decoders including ADS-B
 
     // Nav structure:
-    //   Desktop: Live Messages | Live Map (adsb only) | Search Database | Alerts | Status
+    //   Desktop: Messages | Map (adsb only) | Database | Alerts | Status
     //            Logo link (→ /about, labelled "ACARS Hub") | Settings (button)
-    //   Mobile:  hamburger <details> containing the same links — must be opened first
+    //   Mobile:  hamburger <details> containing Messages | Map | Search | Alerts | Status
 
     // On mobile the links are inside a collapsed <details> element; open it first.
     const mobileMenu = page.locator("details.small_nav");
@@ -80,16 +80,14 @@ test.describe("Smoke Tests", () => {
       await page.locator("details.small_nav > summary").click();
     }
 
-    await expect(
-      page.getByRole("link", { name: /live messages/i }),
-    ).toBeVisible();
-    // Live Map is only rendered when ADS-B decoder state is injected.
+    await expect(page.getByRole("link", { name: /^messages$/i })).toBeVisible();
+    // Map is only rendered when ADS-B decoder state is injected.
     // injectDecoderState returns false when the store isn't exposed (non-E2E builds).
     if (storeInjected) {
-      await expect(page.getByRole("link", { name: /live map/i })).toBeVisible();
+      await expect(page.getByRole("link", { name: /^map$/i })).toBeVisible();
     }
     await expect(
-      page.getByRole("link", { name: /search database/i }),
+      page.getByRole("link", { name: /^search$|^database$/i }),
     ).toBeVisible();
     await expect(page.getByRole("link", { name: /alerts/i })).toBeVisible();
     // "Status" is the nav link text — routes to /status (the stats/status page)
@@ -108,7 +106,7 @@ test.describe("Smoke Tests", () => {
     await page.goto("/");
 
     // Nav structure:
-    //   Desktop: logo link (→ /about) | Live Messages | Status (→ /status) | …
+    //   Desktop: logo link (→ /about) | Messages | Status (→ /status) | …
     //   Mobile:  hamburger <details> — no About link; navigate directly
     //
     // We navigate to /about directly rather than clicking the logo because the
@@ -136,14 +134,14 @@ test.describe("Smoke Tests", () => {
         .click(),
     ]);
 
-    // Navigate back to Live Messages
+    // Navigate back to Messages
     if (isOnMobile) {
       await page.locator("details.small_nav > summary").click();
     }
     await Promise.all([
       page.waitForURL(/\/live-messages/, { timeout: 15000 }),
       page
-        .getByRole("link", { name: /live messages/i })
+        .getByRole("link", { name: /^messages$/i })
         .first()
         .click(),
     ]);

@@ -229,7 +229,7 @@ test.describe("Message Card Interactions", () => {
 
     // Client-side navigate to Live Messages.  Use navigateTo() so the
     // hamburger menu is opened on mobile viewports before clicking the link.
-    await navigateTo(page, /live messages/i);
+    await navigateTo(page, /^messages$/i);
     await expect(page.locator("header.navigation")).toBeVisible();
   });
 
