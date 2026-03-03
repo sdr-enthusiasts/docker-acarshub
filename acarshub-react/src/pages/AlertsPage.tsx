@@ -25,6 +25,7 @@ import {
 } from "react";
 import { MessageCard } from "../components/MessageCard";
 import { MessageGroup } from "../components/MessageGroup";
+import { useRegisterScrollContainer } from "../hooks/useRegisterScrollContainer";
 import { socketService } from "../services/socket";
 import { useAppStore } from "../store/useAppStore";
 import type { AcarsMsg } from "../types";
@@ -91,6 +92,10 @@ export const AlertsPage = () => {
    * scrollTop the virtualizer observes.
    */
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // Register this page's scroll container with the global registry so the
+  // scroll-to-top FAB and nav link handler target the correct element.
+  useRegisterScrollContainer(scrollContainerRef);
 
   /**
    * Per-group active tab index in live mode, keyed by group stable key.

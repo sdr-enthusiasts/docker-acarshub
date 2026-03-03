@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import acarsLogo from "../assets/images/acarshub.svg";
 import { useMediaQuery } from "../hooks/useMediaQuery";
@@ -25,6 +25,7 @@ import {
   useAppStore,
 } from "../store/useAppStore";
 import type { MessageRateData } from "../types";
+import { scrollToTop } from "../utils/scrollRegistry";
 import { MessageFilters } from "./MessageFilters";
 
 /**
@@ -193,6 +194,27 @@ export const Navigation = () => {
     }
   };
 
+  /**
+   * Desktop active-nav-link click handler.
+   *
+   * When the user clicks the nav link for the route they are already on,
+   * React Router would normally re-navigate (push the same entry onto the
+   * history stack) without any visible effect. Instead we intercept that
+   * click, prevent the navigation, and scroll the active scroll container
+   * back to the top — the same behaviour as tapping the tab bar in most
+   * native mobile apps or clicking the active tab in Twitter/X.
+   */
+  const handleNavClick = useCallback(
+    (path: string) =>
+      (e: React.MouseEvent<HTMLAnchorElement>): void => {
+        if (location.pathname === path) {
+          e.preventDefault();
+          scrollToTop();
+        }
+      },
+    [location.pathname],
+  );
+
   return (
     <header className="navigation">
       <div className="wrap">
@@ -278,7 +300,12 @@ export const Navigation = () => {
               </li>
 
               <li>
-                <NavLink to="/live-messages">Messages</NavLink>
+                <NavLink
+                  to="/live-messages"
+                  onClick={handleNavClick("/live-messages")}
+                >
+                  Messages
+                </NavLink>
               </li>
               {adsbEnabled && (
                 <li>
@@ -286,10 +313,12 @@ export const Navigation = () => {
                 </li>
               )}
               <li>
-                <NavLink to="/search">Database</NavLink>
+                <NavLink to="/search" onClick={handleNavClick("/search")}>
+                  Database
+                </NavLink>
               </li>
               <li>
-                <NavLink to="/alerts">
+                <NavLink to="/alerts" onClick={handleNavClick("/alerts")}>
                   Alerts
                   {unreadAlertCount > 0 && (
                     <span className="alert-count"> ({unreadAlertCount})</span>
@@ -297,7 +326,7 @@ export const Navigation = () => {
                 </NavLink>
               </li>
               <li>
-                <NavLink to="/status">
+                <NavLink to="/status" onClick={handleNavClick("/status")}>
                   Status
                   {systemHasError && (
                     <span className="error-indicator"> ⚠</span>

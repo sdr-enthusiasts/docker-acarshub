@@ -25,6 +25,7 @@ import {
 } from "react";
 import { MessageFilters } from "../components/MessageFilters";
 import { MessageGroup as MessageGroupComponent } from "../components/MessageGroup";
+import { useRegisterScrollContainer } from "../hooks/useRegisterScrollContainer";
 import { socketService } from "../services/socket";
 import { useAppStore } from "../store/useAppStore";
 import type {
@@ -164,6 +165,10 @@ export const LiveMessagesPage = () => {
    * compensate scrollTop accordingly.
    */
   const prevTotalSize = useRef(0);
+
+  // Register this page's scroll container with the global registry so the
+  // scroll-to-top FAB and nav link handler target the correct element.
+  useRegisterScrollContainer(scrollContainerRef);
 
   // Persist filter settings to localStorage
   useEffect(() => {
