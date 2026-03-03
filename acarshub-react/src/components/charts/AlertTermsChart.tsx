@@ -150,18 +150,6 @@ export const AlertTermsChart = ({
     };
   }, [alertTermData, chartColors]);
 
-  // Calculate dynamic height based on number of bars - stabilized to prevent layout shifts
-  const chartHeight = useMemo(() => {
-    const barCount = chartData?.labels.length || 0;
-    const minHeight = 300; // Increased min height for stability
-    const maxHeight = 600; // Cap maximum height to prevent huge jumps
-    const barHeight = 25; // Space per bar (includes bar + padding)
-    const paddingHeight = 150; // Increased padding for labels
-
-    const calculatedHeight = barCount * barHeight + paddingHeight;
-    return Math.min(Math.max(minHeight, calculatedHeight), maxHeight);
-  }, [chartData?.labels.length]); // Only depend on label count, not entire chartData
-
   // Chart options with Catppuccin theming - memoized with stable dependencies
   const options = useMemo(() => {
     // Get current theme colors from CSS variables - read fresh when theme changes
@@ -316,14 +304,7 @@ export const AlertTermsChart = ({
 
   return (
     <ChartContainer className={className}>
-      <div
-        key="alert-terms-chart-wrapper"
-        style={{
-          height: `${chartHeight}px`,
-          willChange: "contents",
-          contain: "layout style",
-        }}
-      >
+      <div key="alert-terms-chart-wrapper" className="chart__canvas-wrapper">
         <Bar
           key={`alert-terms-${theme}`}
           data={chartData}
