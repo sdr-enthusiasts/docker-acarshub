@@ -15,17 +15,25 @@
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { checkForDuplicate } from "../../services/messageDecoder";
 import type { AcarsMsg } from "../../types";
 import { useAppStore } from "../useAppStore";
 
 // Mock the messageDecoder service
 // Note: messageDecoder.decode has been removed - decoding is now done by the backend
-vi.mock("../../services/messageDecoder", () => ({
-  checkForDuplicate: vi.fn(() => false),
-  checkMultiPartDuplicate: vi.fn(() => ({ exists: false, updatedParts: "" })),
-  isMultiPartMessage: vi.fn(() => false),
-  mergeMultiPartMessage: vi.fn((existing: AcarsMsg) => ({ ...existing })),
-}));
+// mergeStringArrays is NOT mocked — we use the real implementation so the
+// matched-metadata merge logic in addMessage is exercised end-to-end.
+vi.mock("../../services/messageDecoder", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("../../services/messageDecoder")>();
+  return {
+    ...actual,
+    checkForDuplicate: vi.fn(() => false),
+    checkMultiPartDuplicate: vi.fn(() => ({ exists: false, updatedParts: "" })),
+    isMultiPartMessage: vi.fn(() => false),
+    mergeMultiPartMessage: vi.fn((existing: AcarsMsg) => ({ ...existing })),
+  };
+});
 
 // Mock the alertMatching utility - preserve matched property
 vi.mock("../../utils/alertMatching", () => ({
@@ -880,6 +888,162 @@ describe("useAppStore", () => {
 
       const { selectUnreadAlertCount } = await import("../useAppStore");
       expect(selectUnreadAlertCount(useAppStore.getState())).toBe(1);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // duplicate promotion: matched flag carry-forward and read-state reset
+  // ---------------------------------------------------------------------------
+
+  describe("duplicate promotion", () => {
+    it("regression: matched flag is carried forward when a field-duplicate arrives with matched=true", () => {
+      // Original message arrives without an alert match
+      const original = createMessage({
+        flight: "UAL123",
+        uid: "uid-original",
+        text: "HELLO",
+        matched: false,
+        matched_text: [],
+      });
+      useAppStore.getState().addMessage(original);
+
+      // Incoming duplicate carries a new alert match
+      vi.mocked(checkForDuplicate).mockReturnValueOnce(true);
+      const matched = createMessage({
+        flight: "UAL123",
+        uid: "uid-matched",
+        text: "HELLO",
+        matched: true,
+        matched_text: ["HELLO"],
+      });
+      useAppStore.getState().addMessage(matched);
+
+      const group = useAppStore.getState().messageGroups.get("UAL123");
+      expect(group).toBeDefined();
+      // The promoted message (uid-original) must now be matched
+      expect(group?.messages[0].matched).toBe(true);
+      expect(group?.messages[0].matched_text).toContain("HELLO");
+      // has_alerts and alertCount must reflect the new state
+      expect(group?.has_alerts).toBe(true);
+      expect(useAppStore.getState().alertCount).toBeGreaterThan(0);
+    });
+
+    it("regression: matched=true is preserved when a field-duplicate arrives with matched=false", () => {
+      // Original message arrives already matched
+      const original = createMessage({
+        flight: "UAL123",
+        uid: "uid-original",
+        text: "HELLO",
+        matched: true,
+        matched_text: ["EMERGENCY"],
+      });
+      useAppStore.getState().addMessage(original);
+
+      // Incoming duplicate does NOT carry an alert match
+      vi.mocked(checkForDuplicate).mockReturnValueOnce(true);
+      const unmatched = createMessage({
+        flight: "UAL123",
+        uid: "uid-unmatched",
+        text: "HELLO",
+        matched: false,
+        matched_text: [],
+      });
+      useAppStore.getState().addMessage(unmatched);
+
+      const group = useAppStore.getState().messageGroups.get("UAL123");
+      expect(group).toBeDefined();
+      // Matched state must NOT be downgraded
+      expect(group?.messages[0].matched).toBe(true);
+      expect(group?.messages[0].matched_text).toContain("EMERGENCY");
+      expect(group?.has_alerts).toBe(true);
+    });
+
+    it("regression: matched_text arrays from both copies are merged on field duplicate", () => {
+      const original = createMessage({
+        flight: "UAL123",
+        uid: "uid-a",
+        text: "HELLO",
+        matched: true,
+        matched_text: ["TERM_A"],
+      });
+      useAppStore.getState().addMessage(original);
+
+      vi.mocked(checkForDuplicate).mockReturnValueOnce(true);
+      const incoming = createMessage({
+        flight: "UAL123",
+        uid: "uid-b",
+        text: "HELLO",
+        matched: true,
+        matched_text: ["TERM_B"],
+      });
+      useAppStore.getState().addMessage(incoming);
+
+      const group = useAppStore.getState().messageGroups.get("UAL123");
+      const terms = group?.messages[0].matched_text ?? [];
+      expect(terms).toContain("TERM_A");
+      expect(terms).toContain("TERM_B");
+    });
+
+    it("regression: promoted duplicate is removed from readMessageUids so it shows as unread", () => {
+      const original = createMessage({
+        flight: "UAL123",
+        uid: "uid-original",
+        text: "HELLO",
+        matched: false,
+      });
+      useAppStore.getState().addMessage(original);
+
+      // Simulate user having already read the message
+      useAppStore.getState().markMessageAsRead("uid-original");
+      expect(useAppStore.getState().readMessageUids.has("uid-original")).toBe(
+        true,
+      );
+
+      // Incoming duplicate — triggers promotion
+      vi.mocked(checkForDuplicate).mockReturnValueOnce(true);
+      const duplicate = createMessage({
+        flight: "UAL123",
+        uid: "uid-dup",
+        text: "HELLO",
+        matched: true,
+        matched_text: ["HELLO"],
+      });
+      useAppStore.getState().addMessage(duplicate);
+
+      // The promoted message's UID must have been removed from the read set
+      expect(useAppStore.getState().readMessageUids.has("uid-original")).toBe(
+        false,
+      );
+    });
+
+    it("regression: read state is NOT reset when the promoted message was never read", () => {
+      const original = createMessage({
+        flight: "UAL123",
+        uid: "uid-original",
+        text: "HELLO",
+        matched: false,
+      });
+      useAppStore.getState().addMessage(original);
+
+      // Message has NOT been read
+      expect(useAppStore.getState().readMessageUids.has("uid-original")).toBe(
+        false,
+      );
+
+      vi.mocked(checkForDuplicate).mockReturnValueOnce(true);
+      const duplicate = createMessage({
+        flight: "UAL123",
+        uid: "uid-dup",
+        text: "HELLO",
+        matched: false,
+      });
+      useAppStore.getState().addMessage(duplicate);
+
+      // readMessageUids should still be empty — nothing to remove
+      expect(useAppStore.getState().readMessageUids.has("uid-original")).toBe(
+        false,
+      );
+      expect(useAppStore.getState().readMessageUids.size).toBe(0);
     });
   });
 

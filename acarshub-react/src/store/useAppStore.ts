@@ -20,6 +20,7 @@ import {
   checkMultiPartDuplicate,
   isMultiPartMessage,
   mergeMultiPartMessage,
+  mergeStringArrays,
 } from "../services/messageDecoder";
 import type {
   AcarshubVersion,
@@ -409,6 +410,9 @@ export const useAppStore = create<AppState>((set, get) => {
         let isDuplicate = false;
         let isMultiPart = false;
         let updatedMessages = [...group.messages];
+        // Track the UID of any message promoted to the front so its read state
+        // can be reset — a promoted duplicate is newly relevant to the user.
+        let promotedUid: string | undefined;
 
         // Check for duplicates or multi-part messages in existing group messages
         if (matchedGroup && group.messages.length > 0) {
@@ -439,12 +443,35 @@ export const useAppStore = create<AppState>((set, get) => {
                 uid: existingMsg.uid,
                 duplicateCount,
               });
-              // Update timestamp and increment duplicate counter
+              // Update timestamp and increment duplicate counter.
+              // Carry forward matched state: once matched, always matched.
+              // If the incoming copy of the message carries alert metadata that
+              // the stored copy lacks (e.g. alert terms were updated after the
+              // first receipt), the merged result must reflect that.
               updatedMessages[i] = {
                 ...existingMsg,
                 timestamp: decodedMessage.timestamp,
                 duplicates: String(duplicateCount),
+                matched: !!(existingMsg.matched || decodedMessage.matched),
+                matched_text: mergeStringArrays(
+                  existingMsg.matched_text,
+                  decodedMessage.matched_text,
+                ),
+                matched_icao: mergeStringArrays(
+                  existingMsg.matched_icao,
+                  decodedMessage.matched_icao,
+                ),
+                matched_tail: mergeStringArrays(
+                  existingMsg.matched_tail,
+                  decodedMessage.matched_tail,
+                ),
+                matched_flight: mergeStringArrays(
+                  existingMsg.matched_flight,
+                  decodedMessage.matched_flight,
+                ),
               };
+              // Track so we can reset the read state after the loop
+              promotedUid = existingMsg.uid;
               // Move this message to the front
               const movedMsg = updatedMessages[i];
               updatedMessages.splice(i, 1);
@@ -464,12 +491,32 @@ export const useAppStore = create<AppState>((set, get) => {
                 uid: existingMsg.uid,
                 duplicateCount,
               });
-              // Update timestamp and increment duplicate counter
+              // Update timestamp and increment duplicate counter.
+              // Carry forward matched state (same reasoning as Check 1 above).
               updatedMessages[i] = {
                 ...existingMsg,
                 timestamp: decodedMessage.timestamp,
                 duplicates: String(duplicateCount),
+                matched: !!(existingMsg.matched || decodedMessage.matched),
+                matched_text: mergeStringArrays(
+                  existingMsg.matched_text,
+                  decodedMessage.matched_text,
+                ),
+                matched_icao: mergeStringArrays(
+                  existingMsg.matched_icao,
+                  decodedMessage.matched_icao,
+                ),
+                matched_tail: mergeStringArrays(
+                  existingMsg.matched_tail,
+                  decodedMessage.matched_tail,
+                ),
+                matched_flight: mergeStringArrays(
+                  existingMsg.matched_flight,
+                  decodedMessage.matched_flight,
+                ),
               };
+              // Track so we can reset the read state after the loop
+              promotedUid = existingMsg.uid;
               // Move this message to the front
               const movedMsg = updatedMessages[i];
               updatedMessages.splice(i, 1);
@@ -493,11 +540,29 @@ export const useAppStore = create<AppState>((set, get) => {
                 );
 
                 if (dupCheck.exists) {
-                  // This part already exists - just update the duplicate counter
+                  // This part already exists - just update the duplicate counter.
+                  // Carry forward matched state here too.
                   updatedMessages[i] = {
                     ...existingMsg,
                     timestamp: decodedMessage.timestamp,
                     msgno_parts: dupCheck.updatedParts,
+                    matched: !!(existingMsg.matched || decodedMessage.matched),
+                    matched_text: mergeStringArrays(
+                      existingMsg.matched_text,
+                      decodedMessage.matched_text,
+                    ),
+                    matched_icao: mergeStringArrays(
+                      existingMsg.matched_icao,
+                      decodedMessage.matched_icao,
+                    ),
+                    matched_tail: mergeStringArrays(
+                      existingMsg.matched_tail,
+                      decodedMessage.matched_tail,
+                    ),
+                    matched_flight: mergeStringArrays(
+                      existingMsg.matched_flight,
+                      decodedMessage.matched_flight,
+                    ),
                   };
                 } else {
                   // New part - merge it
@@ -514,6 +579,8 @@ export const useAppStore = create<AppState>((set, get) => {
                 );
               }
 
+              // Track so we can reset the read state after the loop
+              promotedUid = existingMsg.uid;
               // Move this message to the front
               const movedMsg = updatedMessages[i];
               updatedMessages.splice(i, 1);
@@ -731,10 +798,24 @@ export const useAppStore = create<AppState>((set, get) => {
           returningAlertGroups: decodedMessage.matched,
         });
 
+        // If a duplicate message was promoted, remove it from the read set so
+        // the card shows as unread again — the message is newly relevant.
+        let updatedReadMessageUids = state.readMessageUids;
+        if (promotedUid && state.readMessageUids.has(promotedUid)) {
+          const newReadUids = new Set(state.readMessageUids);
+          newReadUids.delete(promotedUid);
+          saveReadMessageUids(newReadUids);
+          updatedReadMessageUids = newReadUids;
+          storeLogger.debug("Reset read state for promoted duplicate", {
+            uid: promotedUid,
+          });
+        }
+
         return {
           messageGroups: newMessageGroups,
           alertCount: totalAlerts,
           alertMessageGroups: updatedAlertGroups,
+          readMessageUids: updatedReadMessageUids,
         };
       }),
     clearMessages: () => {
