@@ -408,6 +408,17 @@ export const AlertsPage = () => {
       <div className="page__header">
         <h1 className="page__title">Alerts</h1>
 
+        {viewMode === "live" && stats.unreadAlerts > 0 && (
+          <button
+            type="button"
+            onClick={handleMarkAllRead}
+            className="alerts-page__mark-read-button"
+            title="Mark all alerts as read"
+          >
+            Mark All Read
+          </button>
+        )}
+
         <div className="page__stats">
           {viewMode === "live" ? (
             <>
@@ -423,19 +434,6 @@ export const AlertsPage = () => {
               <span className="stat">
                 <strong>{stats.uniqueAircraft}</strong> aircraft
               </span>
-              {stats.unreadAlerts > 0 && (
-                <>
-                  <span className="stat-separator">|</span>
-                  <button
-                    type="button"
-                    onClick={handleMarkAllRead}
-                    className="alerts-page__mark-read-button"
-                    title="Mark all alerts as read"
-                  >
-                    Mark All Read
-                  </button>
-                </>
-              )}
             </>
           ) : (
             <>
