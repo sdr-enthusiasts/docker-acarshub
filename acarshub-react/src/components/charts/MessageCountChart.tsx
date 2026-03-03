@@ -263,6 +263,7 @@ export const MessageCountChart = ({
     <ChartContainer className={className}>
       <div
         key={`message-count-chart-wrapper-${showEmptyMessages ? "empty" : "data"}`}
+        className="chart__canvas-wrapper"
       >
         <Bar
           key={`message-count-${showEmptyMessages ? "empty" : "data"}-${theme}`}
