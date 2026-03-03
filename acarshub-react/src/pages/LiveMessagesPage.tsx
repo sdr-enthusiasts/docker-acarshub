@@ -33,6 +33,7 @@ import type {
   Labels,
   MessageGroup as MessageGroupType,
 } from "../types";
+import { isScrollingToTop } from "../utils/scrollRegistry";
 
 // Global filter state for Navigation access
 let globalFilterProps: {
@@ -572,7 +573,11 @@ export const LiveMessagesPage = () => {
     const newTotalSize = rowVirtualizer.getTotalSize();
     const scrollEl = scrollContainerRef.current;
 
-    if (scrollEl && scrollEl.scrollTop > MESSAGE_LIST_PADDING_START) {
+    if (
+      scrollEl &&
+      scrollEl.scrollTop > MESSAGE_LIST_PADDING_START &&
+      !isScrollingToTop()
+    ) {
       const delta = newTotalSize - prevTotalSize.current;
       if (delta !== 0) {
         scrollEl.scrollTop = Math.max(0, scrollEl.scrollTop + delta);

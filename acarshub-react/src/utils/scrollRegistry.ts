@@ -41,6 +41,23 @@ let currentContainer: HTMLElement | null = null;
 const subscribers = new Set<Subscriber>();
 
 /**
+ * Whether a scroll-to-top animation is currently in flight.
+ *
+ * The virtualizer pages (Live Messages, Alerts) use a useLayoutEffect scroll
+ * anchor that directly assigns scrollTop to keep visible content stable when
+ * new messages are prepended. That direct assignment cancels any in-progress
+ * smooth-scroll animation. Pages guard their anchor with isScrollingToTop() so
+ * the animation can complete without being interrupted.
+ */
+let _scrollingToTop = false;
+
+/**
+ * Timer ID for the 600 ms fallback that snaps to top if the smooth scroll
+ * animation was cancelled before reaching scrollTop === 0.
+ */
+let _scrollTimer: ReturnType<typeof setTimeout> | null = null;
+
+/**
  * Returns the outer .app-content scroll container — the default fallback used
  * by pages that do not register a custom container.
  */
@@ -74,13 +91,80 @@ export function getScrollContainer(): HTMLElement | null {
 }
 
 /**
- * Smoothly scrolls the active scroll container to the top.
+ * Returns true while a scroll-to-top animation is in flight.
+ *
+ * Pages with virtualizer scroll anchors should guard direct scrollTop
+ * assignments with this flag to avoid cancelling the animation mid-flight.
+ *
+ * The flag is set by scrollToTop() and cleared either when the 600 ms fallback
+ * timer fires or when _resetScrollToTopForTesting() is called (tests only).
+ */
+export function isScrollingToTop(): boolean {
+  return _scrollingToTop;
+}
+
+/**
+ * Scrolls the active scroll container to the top.
+ *
+ * Uses a smooth scroll for a polished UX. A 600 ms fallback timer monitors
+ * whether the animation was interrupted (e.g. by the virtualizer's scroll
+ * anchor direct-assignment guard failing during a burst of new messages) and
+ * performs an instant snap-to-top if the container has not yet reached
+ * scrollTop === 0 by that time.
+ *
+ * WHY smooth + fallback instead of instant:
+ * Instant scroll works but provides no visual continuity. Smooth scroll gives
+ * the user clear feedback that the page is returning to the top. The fallback
+ * guarantees the user always reaches the top even if the animation is
+ * cancelled, without permanently degrading the experience to a jump.
+ *
+ * WHY 600 ms:
+ * Typical smooth-scroll durations in modern browsers are 200–400 ms. 600 ms
+ * gives ample headroom for slower devices while being short enough that users
+ * never perceive it as a delay.
  *
  * Used by both the mobile FAB and the desktop active-nav-link click handler.
  */
 export function scrollToTop(): void {
   const el = getScrollContainer();
-  el?.scrollTo({ top: 0, behavior: "smooth" });
+  if (!el) return;
+
+  // Mark the animation as in-flight so virtualizer anchors can skip their
+  // direct scrollTop assignments while we are animating.
+  _scrollingToTop = true;
+
+  // Reset any existing fallback timer so that rapid successive taps share a
+  // single 600 ms guard window from the most recent tap.
+  if (_scrollTimer !== null) {
+    clearTimeout(_scrollTimer);
+  }
+
+  // Initiate the smooth scroll.
+  el.scrollTo({ top: 0, behavior: "smooth" });
+
+  // Fallback: after 600 ms, clear the in-flight flag and snap instantly if we
+  // have not yet reached the top (the smooth animation was interrupted).
+  _scrollTimer = setTimeout(() => {
+    _scrollTimer = null;
+    _scrollingToTop = false;
+    if (el.scrollTop > 0) {
+      el.scrollTo({ top: 0, behavior: "instant" });
+    }
+  }, 600);
+}
+
+/**
+ * Resets all scroll-to-top state (flag + pending timer).
+ *
+ * FOR TESTING ONLY. Calling this in production code will leave the registry
+ * in an inconsistent state if a scroll animation is in progress.
+ */
+export function _resetScrollToTopForTesting(): void {
+  _scrollingToTop = false;
+  if (_scrollTimer !== null) {
+    clearTimeout(_scrollTimer);
+    _scrollTimer = null;
+  }
 }
 
 /**

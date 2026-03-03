@@ -29,8 +29,8 @@ import { useRegisterScrollContainer } from "../hooks/useRegisterScrollContainer"
 import { socketService } from "../services/socket";
 import { useAppStore } from "../store/useAppStore";
 import type { AcarsMsg } from "../types";
-
 import { uiLogger } from "../utils/logger";
+import { isScrollingToTop } from "../utils/scrollRegistry";
 
 const RESULTS_PER_PAGE = 50;
 
@@ -328,7 +328,15 @@ export const AlertsPage = () => {
     const newTotalSize = liveVirtualizer.getTotalSize();
     const scrollEl = scrollContainerRef.current;
 
-    if (scrollEl && scrollEl.scrollTop > LIST_PADDING_START) {
+    // Skip the anchor while a scroll-to-top animation is in flight.
+    // A direct scrollTop assignment would cancel the smooth scroll mid-flight,
+    // leaving the user stuck partway down the page when a new message arrives
+    // during the animation.
+    if (
+      scrollEl &&
+      scrollEl.scrollTop > LIST_PADDING_START &&
+      !isScrollingToTop()
+    ) {
       const delta = newTotalSize - prevLiveTotalSize.current;
       if (delta !== 0) {
         scrollEl.scrollTop = Math.max(0, scrollEl.scrollTop + delta);

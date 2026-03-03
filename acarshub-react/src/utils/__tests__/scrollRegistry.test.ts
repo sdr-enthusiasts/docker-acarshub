@@ -16,7 +16,9 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  _resetScrollToTopForTesting,
   getScrollContainer,
+  isScrollingToTop,
   registerScrollContainer,
   scrollToTop,
   subscribeToScrollContainer,
@@ -45,6 +47,9 @@ function makeElement(scrollTop = 0): HTMLElement {
 
 afterEach(() => {
   registerScrollContainer(null);
+  // Reset scroll-to-top timer state so the _scrollingToTop flag and any
+  // pending 600 ms fallback timer do not leak into subsequent tests.
+  _resetScrollToTopForTesting();
 });
 
 // ---------------------------------------------------------------------------
@@ -262,6 +267,116 @@ describe("scrollToTop", () => {
 
     expect(el1.scrollTo).not.toHaveBeenCalled();
     expect(el2.scrollTo).toHaveBeenCalledWith({ top: 0, behavior: "smooth" });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// isScrollingToTop
+// ---------------------------------------------------------------------------
+
+describe("isScrollingToTop", () => {
+  it("returns false before scrollToTop() is called", () => {
+    expect(isScrollingToTop()).toBe(false);
+  });
+
+  it("returns true immediately after scrollToTop() is called", () => {
+    const el = makeElement();
+    registerScrollContainer(el);
+
+    scrollToTop();
+
+    expect(isScrollingToTop()).toBe(true);
+  });
+
+  it("returns false when no scroll container is available (scrollToTop is a no-op)", () => {
+    // Ensure nothing in the DOM
+    for (const el of document.querySelectorAll(".app-content")) {
+      el.parentNode?.removeChild(el);
+    }
+
+    scrollToTop();
+
+    expect(isScrollingToTop()).toBe(false);
+  });
+
+  it("returns false after the 600 ms guard timer fires", async () => {
+    vi.useFakeTimers();
+
+    const el = makeElement(200);
+    // scrollTo on the element does NOT change scrollTop (mock doesn't update it),
+    // so the fallback will attempt an instant scroll after the timeout.
+    registerScrollContainer(el);
+
+    scrollToTop();
+    expect(isScrollingToTop()).toBe(true);
+
+    await vi.advanceTimersByTimeAsync(600);
+
+    expect(isScrollingToTop()).toBe(false);
+
+    vi.useRealTimers();
+  });
+
+  it("snaps to top instantly after the guard timer if scrollTop is still > 0", async () => {
+    vi.useFakeTimers();
+
+    // scrollTop stays at 200 because the mock scrollTo does not update it.
+    const el = makeElement(200);
+    registerScrollContainer(el);
+
+    scrollToTop();
+
+    await vi.advanceTimersByTimeAsync(600);
+
+    // Should have called scrollTo twice: once smooth, once instant fallback.
+    expect(el.scrollTo).toHaveBeenCalledTimes(2);
+    expect(el.scrollTo).toHaveBeenNthCalledWith(1, {
+      top: 0,
+      behavior: "smooth",
+    });
+    expect(el.scrollTo).toHaveBeenNthCalledWith(2, {
+      top: 0,
+      behavior: "instant",
+    });
+
+    vi.useRealTimers();
+  });
+
+  it("does not trigger fallback snap when scrollTop reaches 0 before the timer", async () => {
+    vi.useFakeTimers();
+
+    // Simulate a container that successfully scrolled to top.
+    const el = makeElement(0);
+    registerScrollContainer(el);
+
+    scrollToTop();
+
+    await vi.advanceTimersByTimeAsync(600);
+
+    // Only the initial smooth call — no fallback instant call needed.
+    expect(el.scrollTo).toHaveBeenCalledTimes(1);
+    expect(el.scrollTo).toHaveBeenCalledWith({ top: 0, behavior: "smooth" });
+
+    vi.useRealTimers();
+  });
+
+  it("regression: repeated taps reset the guard timer, not stack it", async () => {
+    vi.useFakeTimers();
+
+    const el = makeElement(200);
+    registerScrollContainer(el);
+
+    scrollToTop();
+    await vi.advanceTimersByTimeAsync(300); // half-way through guard
+    scrollToTop(); // second tap resets the timer
+
+    await vi.advanceTimersByTimeAsync(300); // 300 ms after second tap — flag still set
+    expect(isScrollingToTop()).toBe(true);
+
+    await vi.advanceTimersByTimeAsync(300); // 600 ms after second tap — flag clears
+    expect(isScrollingToTop()).toBe(false);
+
+    vi.useRealTimers();
   });
 });
 
