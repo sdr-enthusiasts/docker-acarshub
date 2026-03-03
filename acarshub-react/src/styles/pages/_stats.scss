@@ -268,6 +268,17 @@
     width: 100%;
     display: flex;
     flex-direction: column;
+    // Allow scrolling when multi-card sections (e.g. Status) exceed the
+    // available height.  For single-card chart sections the only child fills
+    // the full height via flex: 1 so no scrollbar ever appears there.
+    overflow-y: auto;
+
+    // Prevent status-section cards from shrinking inside the flex column.
+    // Without this, all sibling cards shrink equally to fit the viewport
+    // height and their content is hidden behind the card's overflow: hidden.
+    > .card:not(:only-child) {
+      flex-shrink: 0;
+    }
 
     // Grow only when a single chart card is present.
     // :only-child naturally excludes the Status section (multiple cards).
