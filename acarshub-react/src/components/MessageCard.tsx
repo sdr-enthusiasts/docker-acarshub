@@ -106,22 +106,22 @@ export const MessageCard = memo(
               <span className="message-station">{message.station_id}</span>
             )}
           </div>
-          <div className="message-card__header-right">
-            <div className="message-card__timestamp">{formattedTimestamp}</div>
-            {showMarkReadButton && !isRead && (
-              <button
-                type="button"
-                onClick={handleMarkAsRead}
-                className="message-card__mark-read-btn"
-                title="Mark this alert as read"
-              >
-                Mark Read
-              </button>
-            )}
-            {showMarkReadButton && isRead && (
-              <span className="message-card__read-badge">Read</span>
-            )}
-          </div>
+          <div className="message-card__timestamp">{formattedTimestamp}</div>
+          {showMarkReadButton && (
+            <div className="message-card__header-right">
+              {!isRead && (
+                <button
+                  type="button"
+                  onClick={handleMarkAsRead}
+                  className="message-card__mark-read-btn"
+                  title="Mark this alert as read"
+                >
+                  Mark Read
+                </button>
+              )}
+              {isRead && <span className="message-card__read-badge">Read</span>}
+            </div>
+          )}
         </div>
 
         {/* Aircraft Identifiers */}

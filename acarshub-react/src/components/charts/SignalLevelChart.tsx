@@ -299,7 +299,7 @@ export const SignalLevelChart = ({
 
   return (
     <ChartContainer className={className}>
-      <div key="signal-level-chart-wrapper">
+      <div key="signal-level-chart-wrapper" className="chart__canvas-wrapper">
         <Line
           key={`signal-level-${theme}`}
           data={chartData}

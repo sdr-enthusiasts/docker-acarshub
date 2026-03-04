@@ -268,6 +268,17 @@
     width: 100%;
     display: flex;
     flex-direction: column;
+    // Allow scrolling when multi-card sections (e.g. Status) exceed the
+    // available height.  For single-card chart sections the only child fills
+    // the full height via flex: 1 so no scrollbar ever appears there.
+    overflow-y: auto;
+
+    // Prevent status-section cards from shrinking inside the flex column.
+    // Without this, all sibling cards shrink equally to fit the viewport
+    // height and their content is hidden behind the card's overflow: hidden.
+    > .card:not(:only-child) {
+      flex-shrink: 0;
+    }
 
     // Grow only when a single chart card is present.
     // :only-child naturally excludes the Status section (multiple cards).
@@ -363,6 +374,29 @@
       width: 100%;
       max-width: 100%;
       overflow: hidden;
+    }
+
+    // Thread fill-height through the two-column message chart grid.
+    //
+    // .chart-grid is a direct flex child of .chart-wrapper; giving it
+    // flex: 1 + min-height: 0 lets the flex algorithm allocate the
+    // remaining height to it rather than collapsing to content height.
+    //
+    // grid-auto-rows: 1fr distributes that allocated height across rows:
+    //   - tablet+ (2 cols, 1 row): the single row fills 100% of the grid
+    //     height so both charts sit side-by-side at full height.
+    //   - mobile  (1 col, 2 rows): each row gets 50% of the grid height
+    //     so both charts stack with equal share of the available space.
+    //
+    // Grid items (.chart-container) already have min-height: 0 from the
+    // rule above, which prevents them from expanding beyond their grid
+    // cell — the same role min-height: 0 plays for flex items.
+    .chart-grid {
+      flex: 1;
+      min-height: 0;
+      min-width: 0;
+      width: 100%;
+      grid-auto-rows: 1fr;
     }
   }
 }

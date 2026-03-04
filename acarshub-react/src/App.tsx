@@ -20,6 +20,7 @@ import { AlertSoundManager } from "./components/AlertSoundManager.tsx";
 import { ConnectionStatus } from "./components/ConnectionStatus.tsx";
 import { MigrationStatus } from "./components/MigrationStatus.tsx";
 import { Navigation } from "./components/Navigation.tsx";
+import { ScrollToTopFab } from "./components/ScrollToTopFab.tsx";
 import { SettingsModal } from "./components/SettingsModal.tsx";
 import { ToastContainer } from "./components/ToastContainer.tsx";
 import { useSocketIO } from "./hooks/useSocketIO.ts";
@@ -155,6 +156,9 @@ function App() {
 
         {/* Toast notifications for on-page alerts */}
         <ToastContainer />
+
+        {/* Scroll-to-top FAB — mobile only, excluded on Map */}
+        <ScrollToTopFab />
 
         {/* Main content area with routing */}
         <main className="app-content">

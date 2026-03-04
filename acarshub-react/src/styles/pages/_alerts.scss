@@ -353,6 +353,15 @@
   }
 
   // Mark All Read button
+  //
+  // Lives as a direct child of .page__header so it can be repositioned
+  // independently of .page__stats on mobile.
+  //
+  // Layout strategy (flex order within .page__header):
+  //   Desktop — title(0) › stats(2, margin-left:auto) › button(3)
+  //             Replicates the original "button at the end of the stats row" look.
+  //   Mobile  — title(0) › button(1) › stats(2, width:100% wraps to own row)
+  //             Puts the button on the title line, right-aligned via space-between.
   &__mark-read-button {
     padding: var(--spacing-xs) var(--spacing-sm);
     background: var(--color-green);
@@ -363,6 +372,18 @@
     font-weight: 600;
     cursor: pointer;
     transition: all var(--transition-fast);
+
+    // Desktop: appear after .page__stats
+    @include breakpoint(md) {
+      order: 3;
+    }
+
+    // Mobile: appear between title (order 0) and stats (order 2) so it
+    // sits on the same row as the title. Secondary header action — exempt
+    // from the 44px primary touch-target rule.
+    @include breakpoint-max(md) {
+      order: 1;
+    }
 
     &:hover {
       background: var(--color-teal);
@@ -378,12 +399,6 @@
       outline-offset: 2px;
     }
 
-    // Mobile: full width touch target
-    @include breakpoint-max(md) {
-      min-height: 44px;
-      min-width: 120px;
-    }
-
     // Reduced motion
     @media (prefers-reduced-motion: reduce) {
       transition: none;
@@ -395,6 +410,19 @@
       &:active {
         transform: none;
       }
+    }
+  }
+
+  // Push .page__stats to the right on desktop and ensure it sorts after the
+  // button on mobile (where it takes width:100% and wraps to its own row).
+  .page__stats {
+    @include breakpoint(md) {
+      order: 2;
+      margin-left: auto;
+    }
+
+    @include breakpoint-max(md) {
+      order: 2;
     }
   }
 

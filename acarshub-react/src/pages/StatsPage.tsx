@@ -495,7 +495,7 @@ export const StatsPage = () => {
             {status.errors && (
               <Card variant={status.errors.Total > 0 ? "warning" : "default"}>
                 <h2 className="card__title">Decoding Errors</h2>
-                <p className="text-muted" style={{ marginBottom: "1rem" }}>
+                <p className="text-muted">
                   Signal quality errors from radio decoders (bit errors, CRC
                   failures, RF interference)
                 </p>

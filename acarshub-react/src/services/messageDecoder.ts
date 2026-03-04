@@ -20,6 +20,22 @@ import { createLogger } from "../utils/logger";
 const logger = createLogger("messageDecoder");
 
 /**
+ * Merge two optional string arrays, deduplicating values.
+ * Returns undefined if both inputs are empty/undefined.
+ *
+ * WHY: Used to combine alert metadata (matched_text, matched_icao, etc.) from
+ * a duplicate or multi-part message without losing terms from either source.
+ */
+export function mergeStringArrays(
+  a: string[] | undefined,
+  b: string[] | undefined,
+): string[] | undefined {
+  if (!a?.length && !b?.length) return undefined;
+  const merged = new Set([...(a ?? []), ...(b ?? [])]);
+  return merged.size > 0 ? Array.from(merged) : undefined;
+}
+
+/**
  * Fields to check for duplicate detection
  * These fields must all match for a message to be considered a duplicate
  */
@@ -237,6 +253,27 @@ export function mergeMultiPartMessage(
 
   // Update timestamp to newest message
   updated.timestamp = newMessage.timestamp;
+
+  // Carry forward matched state: once matched, always matched.
+  // If either part matched an alert term the combined message must reflect that,
+  // so alert styling and counts are never lost when parts are merged.
+  updated.matched = !!(existingMessage.matched || newMessage.matched);
+  updated.matched_text = mergeStringArrays(
+    existingMessage.matched_text,
+    newMessage.matched_text,
+  );
+  updated.matched_icao = mergeStringArrays(
+    existingMessage.matched_icao,
+    newMessage.matched_icao,
+  );
+  updated.matched_tail = mergeStringArrays(
+    existingMessage.matched_tail,
+    newMessage.matched_tail,
+  );
+  updated.matched_flight = mergeStringArrays(
+    existingMessage.matched_flight,
+    newMessage.matched_flight,
+  );
 
   // Merge text fields
   if (updated.text && newMessage.text) {

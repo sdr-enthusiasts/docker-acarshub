@@ -25,11 +25,12 @@ import {
 } from "react";
 import { MessageCard } from "../components/MessageCard";
 import { MessageGroup } from "../components/MessageGroup";
+import { useRegisterScrollContainer } from "../hooks/useRegisterScrollContainer";
 import { socketService } from "../services/socket";
 import { useAppStore } from "../store/useAppStore";
 import type { AcarsMsg } from "../types";
-
 import { uiLogger } from "../utils/logger";
+import { isScrollingToTop } from "../utils/scrollRegistry";
 
 const RESULTS_PER_PAGE = 50;
 
@@ -91,6 +92,10 @@ export const AlertsPage = () => {
    * scrollTop the virtualizer observes.
    */
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // Register this page's scroll container with the global registry so the
+  // scroll-to-top FAB and nav link handler target the correct element.
+  useRegisterScrollContainer(scrollContainerRef);
 
   /**
    * Per-group active tab index in live mode, keyed by group stable key.
@@ -323,7 +328,15 @@ export const AlertsPage = () => {
     const newTotalSize = liveVirtualizer.getTotalSize();
     const scrollEl = scrollContainerRef.current;
 
-    if (scrollEl && scrollEl.scrollTop > LIST_PADDING_START) {
+    // Skip the anchor while a scroll-to-top animation is in flight.
+    // A direct scrollTop assignment would cancel the smooth scroll mid-flight,
+    // leaving the user stuck partway down the page when a new message arrives
+    // during the animation.
+    if (
+      scrollEl &&
+      scrollEl.scrollTop > LIST_PADDING_START &&
+      !isScrollingToTop()
+    ) {
       const delta = newTotalSize - prevLiveTotalSize.current;
       if (delta !== 0) {
         scrollEl.scrollTop = Math.max(0, scrollEl.scrollTop + delta);
@@ -408,6 +421,17 @@ export const AlertsPage = () => {
       <div className="page__header">
         <h1 className="page__title">Alerts</h1>
 
+        {viewMode === "live" && stats.unreadAlerts > 0 && (
+          <button
+            type="button"
+            onClick={handleMarkAllRead}
+            className="alerts-page__mark-read-button"
+            title="Mark all alerts as read"
+          >
+            Mark All Read
+          </button>
+        )}
+
         <div className="page__stats">
           {viewMode === "live" ? (
             <>
@@ -423,19 +447,6 @@ export const AlertsPage = () => {
               <span className="stat">
                 <strong>{stats.uniqueAircraft}</strong> aircraft
               </span>
-              {stats.unreadAlerts > 0 && (
-                <>
-                  <span className="stat-separator">|</span>
-                  <button
-                    type="button"
-                    onClick={handleMarkAllRead}
-                    className="alerts-page__mark-read-button"
-                    title="Mark all alerts as read"
-                  >
-                    Mark All Read
-                  </button>
-                </>
-              )}
             </>
           ) : (
             <>

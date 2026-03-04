@@ -38,19 +38,41 @@
 
   &__header {
     display: flex;
-    justify-content: space-between;
     align-items: center;
     margin-bottom: var(--spacing-sm);
     padding-bottom: 0;
     border-bottom: 1px solid var(--color-surface1);
     flex-wrap: wrap;
     gap: var(--spacing-sm);
+
+    // Mobile: when a Mark Read button or Read badge is present, switch to a
+    // two-row grid so the button sits top-right and the timestamp wraps to
+    // its own full-width row, left-aligned with the card content below it.
+    @include breakpoint-max(md) {
+      &:has(.message-card__mark-read-btn),
+      &:has(.message-card__read-badge) {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        grid-template-areas:
+          "badge  action"
+          "ts     ts";
+        row-gap: var(--spacing-xs);
+        column-gap: var(--spacing-sm);
+        align-items: start;
+      }
+    }
   }
 
   &__header-right {
     display: flex;
     align-items: center;
     gap: var(--spacing-sm);
+
+    // Mobile (grid mode): place button in the top-right cell.
+    @include breakpoint-max(md) {
+      grid-area: action;
+      justify-self: end;
+    }
   }
 
   &__type-badge {
@@ -58,13 +80,27 @@
     align-items: center;
     gap: var(--spacing-sm);
     flex-wrap: wrap;
+    // Grow to fill available space so timestamp + button stay on the right
+    // in the flex (desktop / non-alert mobile) layout.
+    flex: 1;
+
+    // Mobile (grid mode): explicit grid-area placement.
+    @include breakpoint-max(md) {
+      grid-area: badge;
+    }
   }
 
   &__timestamp {
     color: var(--color-subtext0);
     font-size: var(--font-size-sm);
     font-weight: 700;
-    padding-right: 0.75rem;
+
+    // Mobile (grid mode): full-width second row, left-aligned and inset to
+    // match the identifiers and fields sections below it.
+    @include breakpoint-max(md) {
+      grid-area: ts;
+      padding-left: var(--spacing-md);
+    }
   }
 
   &__mark-read-btn {
@@ -93,10 +129,12 @@
       outline-offset: 2px;
     }
 
-    // Mobile: larger touch target
+    // Mobile: secondary in-card action — intentionally exempt from 44px
+    // primary touch-target rule (same rationale as .adsb-tracking badge).
+    // Padding is kept generous enough for comfortable tapping without
+    // bloating the message card header row.
     @include breakpoint-max(md) {
-      min-height: 44px;
-      padding: var(--spacing-xs) var(--spacing-md);
+      padding: var(--spacing-xs) var(--spacing-sm);
     }
 
     // Reduced motion

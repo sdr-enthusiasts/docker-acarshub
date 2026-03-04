@@ -107,6 +107,7 @@
               pkgs.sqlite
               pkgs.cmake
               pkgs.pkg-config
+              pkgs.biome
 
               # ── Docker tooling ──────────────────────────────────────────────
               # The Docker *daemon* is managed separately (system service or
