@@ -267,12 +267,6 @@ CREATE TABLE timeseries_stats (
   error_count INTEGER DEFAULT 0 NOT NULL,
   created_at INTEGER NOT NULL          -- Insertion timestamp
 );
-
-CREATE INDEX idx_timeseries_timestamp_resolution
-  ON timeseries_stats (timestamp, resolution);
-
-CREATE INDEX idx_timeseries_resolution
-  ON timeseries_stats (resolution);
 ```
 
 ## Configuration
