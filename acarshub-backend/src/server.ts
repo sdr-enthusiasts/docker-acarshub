@@ -43,6 +43,10 @@ import {
   readSavedGeoJSON,
 } from "./services/heywhatsthat.js";
 import { createBackgroundServices } from "./services/index.js";
+import {
+  initMessageBuffers,
+  warmMessageBuffers,
+} from "./services/message-ring-buffer.js";
 import { collectMetrics, METRICS_CONTENT_TYPE } from "./services/metrics.js";
 import { migrateRrdToSqlite } from "./services/rrd-migration.js";
 import { initializeStationIds } from "./services/station-ids.js";
@@ -372,6 +376,19 @@ async function main(): Promise<void> {
     initializeMessageCounters();
     initializeAlertCache();
     initializeStationIds();
+
+    // Initialise and warm the message ring buffers immediately after the DB is
+    // open.  This seeds the in-memory buffers with the most-recent enriched
+    // messages and alerts so that the first connecting client receives a full
+    // history without any per-connect DB queries or re-enrichment.
+    //
+    // WHY BEFORE initTimeSeriesCache
+    // --------------------------------
+    // Both operations are synchronous DB reads.  Order does not matter for
+    // correctness; we place the ring-buffer warm-up first so that the startup
+    // log order reflects the data-availability sequence: messages → time-series.
+    initMessageBuffers();
+    await warmMessageBuffers();
 
     // Warm the time-series cache immediately after the DB is open.
     //

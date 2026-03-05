@@ -69,6 +69,11 @@ import {
 } from "../../db/index.js";
 import { runMigrations } from "../../db/migrate.js";
 import {
+  initMessageBuffers,
+  resetMessageBuffersForTesting,
+  warmMessageBuffers,
+} from "../../services/message-ring-buffer.js";
+import {
   initTimeSeriesCache,
   stopTimeSeriesCache,
 } from "../../services/timeseries-cache.js";
@@ -140,6 +145,11 @@ async function createTestServer(dbPath: string): Promise<TestServer> {
     cors: { origin: "*", credentials: true },
   });
 
+  // Initialise and seed the message ring buffers so handleConnect() can
+  // serve recent messages from memory rather than querying the DB per-connect.
+  initMessageBuffers();
+  await warmMessageBuffers();
+
   // Warm the time-series cache so rrd_timeseries requests are served from
   // memory rather than returning a "warming up" error.  The broadcaster
   // pushes refreshed data to all connected clients on the /main namespace.
@@ -157,6 +167,8 @@ async function createTestServer(dbPath: string): Promise<TestServer> {
       // Stop the cache timers before closing so no callbacks fire after the
       // database connection is closed.
       stopTimeSeriesCache();
+      // Reset message ring buffers so the next test suite gets a clean state.
+      resetMessageBuffersForTesting();
       // Disconnect all active sockets before closing the HTTP server so that
       // fastify.close() does not hang waiting for open connections.
       io.of("/main").disconnectSockets(true);

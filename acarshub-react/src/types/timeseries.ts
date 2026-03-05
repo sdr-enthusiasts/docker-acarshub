@@ -64,6 +64,30 @@ export const ALL_TIME_PERIODS: readonly TimePeriod[] = [
 ] as const;
 
 /**
+ * The subset of TimePeriod values kept warm in the backend's push cache.
+ *
+ * These are the three short-window periods (1hr, 6hr, 12hr) that the backend
+ * pre-computes at startup, refreshes on a wall-clock-aligned timer, and
+ * broadcasts to all connected clients on every refresh tick.
+ *
+ * On connect the frontend requests ONLY these periods so that:
+ *   - The Stats page loads instantly for the common short-window views.
+ *   - The backend is not asked to run expensive 1yr GROUP BY queries on every
+ *     client connect.
+ *
+ * Non-warm periods (24hr, 1wk, 30day, 6mon, 1yr) are requested lazily when
+ * the user navigates to them in the UI.
+ *
+ * Must stay in sync with the backend's WARM_PERIODS in
+ * acarshub-backend/src/utils/timeseries.ts.
+ */
+export const WARM_PERIODS: readonly TimePeriod[] = [
+  "1hr",
+  "6hr",
+  "12hr",
+] as const;
+
+/**
  * Runtime type guard — returns true when s is one of the eight valid
  * TimePeriod strings.  Used in useSocketIO to validate incoming payloads
  * before writing them to the cache.
