@@ -208,6 +208,9 @@ beforeEach(() => {
   sqliteDb.exec(CREATE_ALERT_TABLES);
   testDb = drizzle(sqliteDb, { schema });
   vi.spyOn(clientModule, "getDatabase").mockReturnValue(testDb);
+  // getSqliteConnection is needed by the transaction() wrapper inside
+  // regenerateAllAlertMatches. Point it at the same in-memory connection.
+  vi.spyOn(clientModule, "getSqliteConnection").mockReturnValue(sqliteDb);
 
   // Ensure a clean cache state before every test
   resetAlertCacheForTesting();
@@ -1003,5 +1006,105 @@ describe("regenerateAllAlertMatches", () => {
     const counts = getAlertCounts();
     const term = counts.find((c) => c.term === "ABCDEF");
     expect(term?.count).toBe(2);
+  });
+
+  // ---- batch pagination ----
+
+  it("regression: processes all messages when count exceeds BATCH_SIZE (1000)", () => {
+    // Insert 1500 messages — forces two cursor pages (1000 + 500).
+    // All have the same ICAO so every one should be matched.
+    const TOTAL = 1_500;
+    for (let i = 0; i < TOTAL; i++) {
+      insertMessage(testDb, { uid: `msg-${i}`, icao: "ABCDEF" });
+    }
+
+    const stats = regen(["ABCDEF"]);
+
+    expect(stats.total_messages).toBe(TOTAL);
+    expect(stats.matched_messages).toBe(TOTAL);
+    expect(stats.total_matches).toBe(TOTAL);
+
+    // Verify the rows actually landed in alert_matches
+    const saved = testDb.select().from(alertMatches).all();
+    expect(saved).toHaveLength(TOTAL);
+  });
+
+  it("regression: messages on a page boundary (exactly BATCH_SIZE) are all processed", () => {
+    // Exactly 1000 messages — a single full page followed by an empty page.
+    const TOTAL = 1_000;
+    for (let i = 0; i < TOTAL; i++) {
+      insertMessage(testDb, { uid: `msg-${i}`, icao: "AAAAAA" });
+    }
+
+    const stats = regen(["AAAAAA"]);
+
+    expect(stats.total_messages).toBe(TOTAL);
+    expect(stats.matched_messages).toBe(TOTAL);
+  });
+
+  it("regression: non-matching messages on later pages are not counted as matched", () => {
+    // First 1001 messages match; next 499 do not.
+    for (let i = 0; i < 1_001; i++) {
+      insertMessage(testDb, { uid: `match-${i}`, icao: "MATCH1" });
+    }
+    for (let i = 0; i < 499; i++) {
+      insertMessage(testDb, { uid: `nomatch-${i}`, icao: "XXXXXX" });
+    }
+
+    const stats = regen(["MATCH1"]);
+
+    expect(stats.total_messages).toBe(1_500);
+    expect(stats.matched_messages).toBe(1_001);
+    expect(stats.total_matches).toBe(1_001);
+  });
+
+  // ---- atomicity ----
+
+  it("regression: entire regeneration is atomic — a constraint violation rolls back the DELETE too", () => {
+    // Seed one existing match so we can verify it is NOT wiped on failure.
+    insertMessage(testDb, { uid: "pre-existing", icao: "BEFORE" });
+    insertAlertMatch(testDb, "pre-existing", "BEFORE", "icao", 1_700_000_000);
+
+    // Insert a second message whose uid collides with the first when the
+    // regeneration loop attempts to insert into alert_matches.  We achieve
+    // this by inserting a message that WILL match the term, then adding a
+    // UNIQUE constraint on (message_uid, term) so the second matching row
+    // causes SQLite to throw a constraint violation mid-transaction.
+    //
+    // Simpler approach: add a second message that matches, then create a
+    // duplicate alert_match row *before* regen runs.  When the transaction
+    // tries to INSERT the same (messageUid, term) again (since we add a
+    // UNIQUE index mid-test), SQLite rolls back.
+    //
+    // Even simpler: directly corrupt the alert_matches table by adding a
+    // NOT NULL constraint violation via a raw statement inside the transaction.
+    // The cleanest self-contained approach is to add a UNIQUE index on
+    // (message_uid, term) and then insert a duplicate via a second message
+    // that has the same uid (which the messages table will reject via its own
+    // UNIQUE uid constraint), causing the whole transaction to roll back.
+    //
+    // Cleanest: use sqliteDb.prepare to add a trigger that throws after the
+    // DELETE, before any re-insert succeeds.
+    sqliteDb.exec(`
+      CREATE TRIGGER force_rollback_after_delete
+      AFTER DELETE ON alert_matches
+      BEGIN
+        SELECT RAISE(ABORT, 'forced rollback for atomicity test');
+      END;
+    `);
+
+    const stats = regenerateAllAlertMatches(["BEFORE"], []);
+
+    // The trigger fired → transaction rolled back → stats reflect failure.
+    expect(stats.total_matches).toBe(0);
+
+    // The pre-existing match must still be present because the DELETE was
+    // rolled back along with everything else in the transaction.
+    const remaining = testDb.select().from(alertMatches).all();
+    expect(remaining).toHaveLength(1);
+    expect(remaining[0].messageUid).toBe("pre-existing");
+
+    // Clean up trigger so it does not affect subsequent tests.
+    sqliteDb.exec("DROP TRIGGER force_rollback_after_delete;");
   });
 });
