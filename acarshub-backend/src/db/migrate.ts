@@ -881,15 +881,6 @@ function migration09_addTimeseriesStats(db: Database.Database): void {
       )
     `);
 
-    db.exec(`
-      CREATE INDEX idx_timeseries_timestamp_resolution
-      ON timeseries_stats (timestamp, resolution)
-    `);
-
-    db.exec(`
-      CREATE INDEX idx_timeseries_resolution
-      ON timeseries_stats (resolution)
-    `);
   });
 
   migrate();
@@ -1024,26 +1015,7 @@ function migration11_deduplicateTimeseriesAndAddRegistry(
     }
 
     // -------------------------------------------------------------------------
-    // Step 2: Replace non-unique index with unique index
-    // -------------------------------------------------------------------------
-    // Drop the old non-unique index (created by migration 9).  SQLite does not
-    // support ALTER INDEX, so we drop and recreate.
-    db.exec(
-      "DROP INDEX IF EXISTS idx_timeseries_timestamp_resolution",
-    );
-
-    // The table is now duplicate-free, so this will succeed.
-    db.exec(`
-      CREATE UNIQUE INDEX idx_timeseries_timestamp_resolution
-      ON timeseries_stats (timestamp, resolution)
-    `);
-
-    logger.info(
-      "Replaced non-unique index with UNIQUE index on timeseries_stats(timestamp, resolution)",
-    );
-
-    // -------------------------------------------------------------------------
-    // Step 3: Create rrd_import_registry table
+    // Step 2: Create rrd_import_registry table
     // -------------------------------------------------------------------------
     db.exec(`
       CREATE TABLE IF NOT EXISTS rrd_import_registry (
@@ -1142,8 +1114,8 @@ function migration12_dropResolutionPromoteTimestampPk(
 
     // Free space for adsb.im users. Also anyone else.
 
-    db.exec(`DROP INDEX idx_timeseries_resolution;`);
-    db.exec(`DROP INDEX idx_timeseries_timestamp_resolution;`);
+    db.exec(`DROP INDEX IF EXISTS idx_timeseries_resolution;`);
+    db.exec(`DROP INDEX IF EXISTS idx_timeseries_timestamp_resolution;`);
 
     // -----------------------------------------------------------------------
     // Step 2: Create new table — timestamp is INTEGER PRIMARY KEY (rowid alias)

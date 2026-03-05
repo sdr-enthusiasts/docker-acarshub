@@ -16,11 +16,5 @@ CREATE TABLE IF NOT EXISTS `timeseries_stats` (
 	`created_at` integer NOT NULL
 );
 
--- Index for efficient time-range queries
-CREATE INDEX `idx_timeseries_timestamp_resolution` ON `timeseries_stats` (`timestamp`, `resolution`);
-
--- Index for filtering by resolution
-CREATE INDEX `idx_timeseries_resolution` ON `timeseries_stats` (`resolution`);
-
 -- Add constraint check for resolution enum (SQLite doesn't have native ENUM)
 -- Valid values: '1min', '5min', '1hour', '6hour'
