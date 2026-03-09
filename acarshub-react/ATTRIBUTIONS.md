@@ -46,7 +46,7 @@ TRACON boundary data is provided by the VATSIM Network SimAware TRACON Project, 
 - **License**: CC BY-SA 4.0 (Creative Commons Attribution ShareAlike 4.0 International)
 - **Usage**: FIR (Flight Information Region) boundary overlays on the live map
 - **Assets**: `src/assets/geojson/FIRBoundaries.geojson`
-- **Version**: v2602.1
+- **Version**: null
 
 FIR boundary data is provided by the VATSIM Network VATSpy Data Project, a community-maintained dataset of flight information region boundaries updated to each AIRAC cycle.
 
