@@ -15,6 +15,7 @@
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
 import { EventEmitter } from "node:events";
+import type { MessageRateData } from "@acarshub/types";
 import { createLogger } from "../utils/logger.js";
 import type { MessageType } from "./tcp-listener.js";
 
@@ -53,6 +54,26 @@ export interface MessageStatistics {
   };
 }
 
+/**
+ * Decoder keys used for rolling rate tracking.
+ * Matches the lowercase keys in MessageStatistics / MessageRateData.
+ */
+type RateDecoderKey = "acars" | "vdlm2" | "hfdl" | "imsl" | "irdm";
+
+const RATE_DECODER_KEYS: RateDecoderKey[] = [
+  "acars",
+  "vdlm2",
+  "hfdl",
+  "imsl",
+  "irdm",
+];
+
+/**
+ * Number of 5-second buckets that form the rolling window.
+ * 12 × 5 s = 60 s → the sum of all buckets equals msgs/min.
+ */
+const RATE_BUCKET_COUNT = 12;
+
 export interface MessageQueueEvents {
   message: [message: QueuedMessage];
   overflow: [droppedCount: number];
@@ -64,10 +85,12 @@ export interface MessageQueueEvents {
  * Features:
  * - Fixed-size FIFO queue (oldest dropped when full)
  * - Per-message-type statistics (last minute + total)
+ * - Rolling rate window (12 × 5-second buckets = 60-second window)
  * - Error message counting
  * - Event emission for downstream processing
  *
- * Statistics are reset every minute for "lastMinute" counters
+ * Statistics are reset every minute for "lastMinute" counters.
+ * Rolling rate buckets are advanced every 5 seconds by the scheduler.
  */
 export class MessageQueue extends EventEmitter<MessageQueueEvents> {
   private queue: QueuedMessage[] = [];
@@ -81,6 +104,21 @@ export class MessageQueue extends EventEmitter<MessageQueueEvents> {
     error: { lastMinute: 0, total: 0 },
   };
   private resetInterval: NodeJS.Timeout | null = null;
+
+  /**
+   * Rolling rate window: RATE_BUCKET_COUNT buckets of 5 seconds each.
+   * The scheduler calls advanceRateBucket() every 5 seconds, which zeros
+   * the oldest bucket and makes it the new current bucket.  The sum of all
+   * buckets equals messages received in the last ~60 seconds (msgs/min).
+   */
+  private rateBuckets: Record<RateDecoderKey, number[]> = {
+    acars: new Array<number>(RATE_BUCKET_COUNT).fill(0),
+    vdlm2: new Array<number>(RATE_BUCKET_COUNT).fill(0),
+    hfdl: new Array<number>(RATE_BUCKET_COUNT).fill(0),
+    imsl: new Array<number>(RATE_BUCKET_COUNT).fill(0),
+    irdm: new Array<number>(RATE_BUCKET_COUNT).fill(0),
+  };
+  private currentRateBucket = 0;
 
   constructor(maxSize = 15) {
     super();
@@ -151,6 +189,41 @@ export class MessageQueue extends EventEmitter<MessageQueueEvents> {
   }
 
   /**
+   * Advance the rolling rate window to the next 5-second bucket.
+   *
+   * Called by the scheduler every 5 seconds.  The next slot (which held
+   * data from 60 seconds ago) is zeroed out and becomes the new current
+   * bucket.  Incoming messages will accumulate there until the next advance.
+   */
+  public advanceRateBucket(): void {
+    this.currentRateBucket = (this.currentRateBucket + 1) % RATE_BUCKET_COUNT;
+    for (const key of RATE_DECODER_KEYS) {
+      this.rateBuckets[key][this.currentRateBucket] = 0;
+    }
+    logger.debug("Rolling rate bucket advanced", {
+      newBucket: this.currentRateBucket,
+    });
+  }
+
+  /**
+   * Compute the rolling message rate for each decoder and overall total.
+   *
+   * Sums all 12 buckets per decoder — the result is the number of messages
+   * received in the last ~60 seconds, which is directly interpretable as
+   * msgs/min without any additional scaling.
+   */
+  public getRollingRates(): MessageRateData {
+    let total = 0;
+    const rates = {} as Record<RateDecoderKey, number>;
+    for (const key of RATE_DECODER_KEYS) {
+      const sum = this.rateBuckets[key].reduce((a, b) => a + b, 0);
+      rates[key] = sum;
+      total += sum;
+    }
+    return { total, ...rates };
+  }
+
+  /**
    * Get current statistics
    */
   public getStats(): MessageStatistics {
@@ -162,6 +235,16 @@ export class MessageQueue extends EventEmitter<MessageQueueEvents> {
       irdm: { ...this.stats.irdm },
       error: { ...this.stats.error },
     };
+  }
+
+  /**
+   * Reset rolling rate buckets (used in tests and on destroy)
+   */
+  public clearRollingRates(): void {
+    for (const key of RATE_DECODER_KEYS) {
+      this.rateBuckets[key].fill(0);
+    }
+    this.currentRateBucket = 0;
   }
 
   /**
@@ -190,6 +273,7 @@ export class MessageQueue extends EventEmitter<MessageQueueEvents> {
       irdm: { lastMinute: 0, total: 0 },
       error: { lastMinute: 0, total: 0 },
     };
+    this.clearRollingRates();
 
     logger.info("All statistics cleared");
   }
@@ -222,6 +306,11 @@ export class MessageQueue extends EventEmitter<MessageQueueEvents> {
     if (typeKey in this.stats) {
       this.stats[typeKey].lastMinute++;
       this.stats[typeKey].total++;
+    }
+
+    // Increment rolling rate bucket for this decoder
+    if (typeKey in this.rateBuckets) {
+      this.rateBuckets[typeKey as RateDecoderKey][this.currentRateBucket]++;
     }
 
     // Check for error field in message data

@@ -16,17 +16,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          cache: "npm"
-
       - name: Install just
         uses: extractions/setup-just@v2
-
-      - name: Install npm workspace dependencies
-        run: npm ci
 
       - name: Run E2E tests (Docker Playwright — Chromium, Firefox, WebKit, Mobile)
         run: just test-e2e-docker

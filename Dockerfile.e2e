@@ -1,0 +1,68 @@
+# ============================================================
+# E2E Test Image — frontend-only Playwright tests
+#
+# Self-contained: builds the React app inside the container and
+# runs all Playwright tests (Chromium, Firefox, WebKit, Mobile)
+# without requiring a host-side vite server or node_modules.
+#
+# playwright.config.ts starts `vite preview` automatically as
+# the webServer when PLAYWRIGHT_DOCKER=true (already set below).
+#
+# Usage:
+#   docker build -f Dockerfile.e2e -t ah:e2e .
+#   docker run --rm ah:e2e
+#
+# Or via justfile:
+#   just test-e2e-docker
+# ============================================================
+FROM mcr.microsoft.com/playwright:v1.58.2-noble
+
+WORKDIR /work
+
+# ── Dependency layer ─────────────────────────────────────────
+# Copy manifests and lockfile before source so Docker can cache
+# the npm ci layer independently of source changes.
+COPY package.json package-lock.json tsconfig.json tsconfig.base.json ./
+COPY acarshub-react/package.json  ./acarshub-react/package.json
+COPY acarshub-backend/package.json ./acarshub-backend/package.json
+COPY acarshub-types/package.json  ./acarshub-types/package.json
+
+# --loglevel=error suppresses deprecation warnings from transitive
+# deps in @lhci/cli and drizzle-kit (same rationale as main Dockerfile).
+RUN npm ci --loglevel=error
+
+# ── Source layer ─────────────────────────────────────────────
+# Copied after npm ci so the dependency layer survives source edits.
+COPY acarshub-types/  ./acarshub-types/
+COPY acarshub-react/  ./acarshub-react/
+COPY acarshub-backend/ ./acarshub-backend/
+
+# ── Build ────────────────────────────────────────────────────
+# 1. Build shared types package — required by vite project references.
+# 2. Build the React SPA with E2E instrumentation enabled:
+#      VITE_E2E=true  exposes window.__ACARS_STORE__ and
+#                     window.__ACARS_SOCKET__ so test helpers can
+#                     inject store state and fire socket events without
+#                     a real backend.
+#
+# We call `npx vite build` directly (not `npm run build`) to skip the
+# generate-sprites step — the pre-generated sprite sheets are already
+# present in acarshub-react/src/assets/sprites/ and rebuilding them
+# would require sharp's native binary under emulation (see main
+# Dockerfile for the full history of why this is avoided).
+RUN npm run build --workspace=@acarshub/types && \
+    cd acarshub-react && VITE_E2E=true npx vite build
+
+# ── Test runner ──────────────────────────────────────────────
+WORKDIR /work/acarshub-react
+
+# PLAYWRIGHT_DOCKER=true enables Firefox, WebKit, and Mobile browser
+# projects in playwright.config.ts.  These are gated behind this flag
+# because Nix-based host environments lack the required system libraries
+# for those engines outside of this official Playwright container.
+ENV PLAYWRIGHT_DOCKER=true
+
+# Default command runs the full test suite with the line reporter so
+# CI output is readable.  Override via `docker run ... npx playwright
+# test --grep "smoke"` for targeted runs.
+CMD ["npx", "playwright", "test", "--reporter=line"]

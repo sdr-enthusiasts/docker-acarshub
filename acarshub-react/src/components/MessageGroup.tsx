@@ -25,6 +25,17 @@ import { MessageCard } from "./MessageCard";
 interface MessageGroupProps {
   plane: Plane;
   showMarkReadButton?: boolean;
+  /**
+   * Controlled active tab index — lifted to parent so state survives
+   * virtualizer unmount/remount cycles on the Live Messages page.
+   *
+   * When omitted, MessageGroup manages its own tab state internally
+   * (uncontrolled mode). This keeps AlertsPage and AircraftMessagesModal
+   * working without any changes.
+   */
+  activeIndex?: number;
+  /** Called when the user navigates to a different tab (controlled mode only) */
+  onActiveIndexChange?: (index: number) => void;
 }
 
 /**
@@ -46,8 +57,29 @@ interface MessageGroupProps {
 export const MessageGroup = ({
   plane,
   showMarkReadButton = false,
+  activeIndex,
+  onActiveIndexChange,
 }: MessageGroupProps) => {
-  const [activeMessageIndex, setActiveMessageIndex] = useState(0);
+  // Internal state always drives the display. When the parent provides
+  // activeIndex (e.g. the virtualizer restoring state after a remount), it is
+  // used only as the initial value — not as continuous control. This ensures
+  // tab clicks cause an immediate re-render regardless of whether the parent
+  // re-renders, which it won't when the parent persists state via a ref.
+  const [internalActiveIndex, setInternalActiveIndex] = useState(
+    activeIndex ?? 0,
+  );
+
+  const activeMessageIndex = internalActiveIndex;
+
+  // Notify the parent about index changes so it can persist state for
+  // virtualizer remount cycles. This is a side-effect callback, not control.
+  const setActiveMessageIndex = useCallback(
+    (index: number) => {
+      setInternalActiveIndex(index);
+      onActiveIndexChange?.(index);
+    },
+    [onActiveIndexChange],
+  );
   const messageCount = plane.messages.length;
   const hasMultipleMessages = messageCount > 1;
   const activeMessage = plane.messages[activeMessageIndex];
@@ -92,37 +124,46 @@ export const MessageGroup = ({
 
   // Reset active index if it exceeds message count (messages may have been culled)
   useEffect(() => {
-    if (activeMessageIndex >= messageCount) {
+    if (internalActiveIndex >= messageCount) {
       uiLogger.debug("Resetting active message index (out of bounds)", {
-        activeIndex: activeMessageIndex,
+        activeIndex: internalActiveIndex,
         messageCount,
       });
       setActiveMessageIndex(0);
     }
-  }, [activeMessageIndex, messageCount]);
+  }, [internalActiveIndex, messageCount, setActiveMessageIndex]);
 
   // Debug logging for tab clicks
   const handleTabClick = useCallback(
     (index: number) => {
       uiLogger.debug("Tab clicked", {
         clickedIndex: index,
-        currentIndex: activeMessageIndex,
+        currentIndex: internalActiveIndex,
         messageCount,
         aircraftId: plane.identifiers[0],
       });
       setActiveMessageIndex(index);
     },
-    [activeMessageIndex, messageCount, plane.identifiers],
+    [
+      internalActiveIndex,
+      messageCount,
+      plane.identifiers,
+      setActiveMessageIndex,
+    ],
   );
 
   // Navigation handlers
   const goToPrevious = useCallback(() => {
-    setActiveMessageIndex((prev) => (prev === 0 ? messageCount - 1 : prev - 1));
-  }, [messageCount]);
+    setActiveMessageIndex(
+      activeMessageIndex === 0 ? messageCount - 1 : activeMessageIndex - 1,
+    );
+  }, [activeMessageIndex, messageCount, setActiveMessageIndex]);
 
   const goToNext = useCallback(() => {
-    setActiveMessageIndex((prev) => (prev === messageCount - 1 ? 0 : prev + 1));
-  }, [messageCount]);
+    setActiveMessageIndex(
+      activeMessageIndex === messageCount - 1 ? 0 : activeMessageIndex + 1,
+    );
+  }, [activeMessageIndex, messageCount, setActiveMessageIndex]);
 
   // Keyboard navigation
   const handleKeyDown = useCallback(

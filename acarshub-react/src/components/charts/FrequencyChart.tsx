@@ -24,7 +24,7 @@ import {
   Tooltip,
   type TooltipItem,
 } from "chart.js";
-import ChartDataLabels from "chartjs-plugin-datalabels";
+import ChartDataLabels, { type Context } from "chartjs-plugin-datalabels";
 import { useMemo } from "react";
 import { Bar } from "react-chartjs-2";
 import { useSettingsStore } from "../../store/useSettingsStore";
@@ -162,18 +162,6 @@ export const FrequencyChart = ({
     };
   }, [frequencyData, decoderType, rainbowColors]);
 
-  // Calculate dynamic height based on number of bars - stabilized to prevent layout shifts
-  const chartHeight = useMemo(() => {
-    const barCount = chartData?.labels.length || 0;
-    const minHeight = 300; // Increased min height for stability
-    const maxHeight = 600; // Cap maximum height to prevent huge jumps
-    const barHeight = 25; // Space per bar (includes bar + padding)
-    const paddingHeight = 150; // Increased padding for labels
-
-    const calculatedHeight = barCount * barHeight + paddingHeight;
-    return Math.min(Math.max(minHeight, calculatedHeight), maxHeight);
-  }, [chartData?.labels.length]);
-
   // Chart options with Catppuccin theming - memoized with stable dependencies
   const options = useMemo(() => {
     // Get current theme colors from CSS variables - read fresh when theme changes
@@ -236,12 +224,22 @@ export const FrequencyChart = ({
           },
         },
         datalabels: {
-          backgroundColor: (context: { dataIndex: number }) => {
-            // Use same color as bar by accessing from the dataset
+          backgroundColor: (context: Context) => {
+            const value =
+              (context.dataset.data[context.dataIndex] as number) ?? 0;
+            const max = context.chart.scales.x?.max ?? 1;
+            // No pill background when label is outside the bar (short bar)
+            if (value / max < 0.15) return null;
             return rainbowColors[context.dataIndex % rainbowColors.length];
           },
           borderRadius: 4,
-          color: "rgba(0, 0, 0, 0.9)",
+          color: (context: Context) => {
+            const value =
+              (context.dataset.data[context.dataIndex] as number) ?? 0;
+            const max = context.chart.scales.x?.max ?? 1;
+            // Outside bar: use theme text color; inside bar: dark text on colored pill
+            return value / max < 0.15 ? textColor : "rgba(0, 0, 0, 0.9)";
+          },
           clamp: true,
           font: {
             weight: "bold" as const,
@@ -250,7 +248,14 @@ export const FrequencyChart = ({
           formatter: (value: number) => {
             return value.toLocaleString();
           },
-          align: "start" as const,
+          align: (context: Context) => {
+            const value =
+              (context.dataset.data[context.dataIndex] as number) ?? 0;
+            const max = context.chart.scales.x?.max ?? 1;
+            // Short bars: label goes outside (right of bar end) to avoid overlapping row labels
+            // Long bars: label stays inside (left of bar end) to avoid clipping past chart edge
+            return value / max < 0.15 ? ("end" as const) : ("start" as const);
+          },
           anchor: "end" as const,
           clip: false,
         },
@@ -317,11 +322,7 @@ export const FrequencyChart = ({
     <ChartContainer className={className}>
       <div
         key={`freq-chart-wrapper-${decoderType}`}
-        style={{
-          height: `${chartHeight}px`,
-          willChange: "contents",
-          contain: "layout style",
-        }}
+        className="chart__canvas-wrapper"
       >
         <Bar
           key={`freq-${decoderType}-${theme}`}

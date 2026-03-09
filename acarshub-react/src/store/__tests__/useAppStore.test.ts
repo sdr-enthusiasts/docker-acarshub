@@ -15,17 +15,25 @@
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { checkForDuplicate } from "../../services/messageDecoder";
 import type { AcarsMsg } from "../../types";
 import { useAppStore } from "../useAppStore";
 
 // Mock the messageDecoder service
 // Note: messageDecoder.decode has been removed - decoding is now done by the backend
-vi.mock("../../services/messageDecoder", () => ({
-  checkForDuplicate: vi.fn(() => false),
-  checkMultiPartDuplicate: vi.fn(() => ({ exists: false, updatedParts: "" })),
-  isMultiPartMessage: vi.fn(() => false),
-  mergeMultiPartMessage: vi.fn((existing: AcarsMsg) => ({ ...existing })),
-}));
+// mergeStringArrays is NOT mocked — we use the real implementation so the
+// matched-metadata merge logic in addMessage is exercised end-to-end.
+vi.mock("../../services/messageDecoder", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("../../services/messageDecoder")>();
+  return {
+    ...actual,
+    checkForDuplicate: vi.fn(() => false),
+    checkMultiPartDuplicate: vi.fn(() => ({ exists: false, updatedParts: "" })),
+    isMultiPartMessage: vi.fn(() => false),
+    mergeMultiPartMessage: vi.fn((existing: AcarsMsg) => ({ ...existing })),
+  };
+});
 
 // Mock the alertMatching utility - preserve matched property
 vi.mock("../../utils/alertMatching", () => ({
@@ -880,6 +888,317 @@ describe("useAppStore", () => {
 
       const { selectUnreadAlertCount } = await import("../useAppStore");
       expect(selectUnreadAlertCount(useAppStore.getState())).toBe(1);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // duplicate promotion: matched flag carry-forward and read-state reset
+  // ---------------------------------------------------------------------------
+
+  describe("duplicate promotion", () => {
+    it("regression: matched flag is carried forward when a field-duplicate arrives with matched=true", () => {
+      // Original message arrives without an alert match
+      const original = createMessage({
+        flight: "UAL123",
+        uid: "uid-original",
+        text: "HELLO",
+        matched: false,
+        matched_text: [],
+      });
+      useAppStore.getState().addMessage(original);
+
+      // Incoming duplicate carries a new alert match
+      vi.mocked(checkForDuplicate).mockReturnValueOnce(true);
+      const matched = createMessage({
+        flight: "UAL123",
+        uid: "uid-matched",
+        text: "HELLO",
+        matched: true,
+        matched_text: ["HELLO"],
+      });
+      useAppStore.getState().addMessage(matched);
+
+      const group = useAppStore.getState().messageGroups.get("UAL123");
+      expect(group).toBeDefined();
+      // The promoted message (uid-original) must now be matched
+      expect(group?.messages[0].matched).toBe(true);
+      expect(group?.messages[0].matched_text).toContain("HELLO");
+      // has_alerts and alertCount must reflect the new state
+      expect(group?.has_alerts).toBe(true);
+      expect(useAppStore.getState().alertCount).toBeGreaterThan(0);
+    });
+
+    it("regression: matched=true is preserved when a field-duplicate arrives with matched=false", () => {
+      // Original message arrives already matched
+      const original = createMessage({
+        flight: "UAL123",
+        uid: "uid-original",
+        text: "HELLO",
+        matched: true,
+        matched_text: ["EMERGENCY"],
+      });
+      useAppStore.getState().addMessage(original);
+
+      // Incoming duplicate does NOT carry an alert match
+      vi.mocked(checkForDuplicate).mockReturnValueOnce(true);
+      const unmatched = createMessage({
+        flight: "UAL123",
+        uid: "uid-unmatched",
+        text: "HELLO",
+        matched: false,
+        matched_text: [],
+      });
+      useAppStore.getState().addMessage(unmatched);
+
+      const group = useAppStore.getState().messageGroups.get("UAL123");
+      expect(group).toBeDefined();
+      // Matched state must NOT be downgraded
+      expect(group?.messages[0].matched).toBe(true);
+      expect(group?.messages[0].matched_text).toContain("EMERGENCY");
+      expect(group?.has_alerts).toBe(true);
+    });
+
+    it("regression: matched_text arrays from both copies are merged on field duplicate", () => {
+      const original = createMessage({
+        flight: "UAL123",
+        uid: "uid-a",
+        text: "HELLO",
+        matched: true,
+        matched_text: ["TERM_A"],
+      });
+      useAppStore.getState().addMessage(original);
+
+      vi.mocked(checkForDuplicate).mockReturnValueOnce(true);
+      const incoming = createMessage({
+        flight: "UAL123",
+        uid: "uid-b",
+        text: "HELLO",
+        matched: true,
+        matched_text: ["TERM_B"],
+      });
+      useAppStore.getState().addMessage(incoming);
+
+      const group = useAppStore.getState().messageGroups.get("UAL123");
+      const terms = group?.messages[0].matched_text ?? [];
+      expect(terms).toContain("TERM_A");
+      expect(terms).toContain("TERM_B");
+    });
+
+    it("regression: promoted duplicate is removed from readMessageUids so it shows as unread", () => {
+      const original = createMessage({
+        flight: "UAL123",
+        uid: "uid-original",
+        text: "HELLO",
+        matched: false,
+      });
+      useAppStore.getState().addMessage(original);
+
+      // Simulate user having already read the message
+      useAppStore.getState().markMessageAsRead("uid-original");
+      expect(useAppStore.getState().readMessageUids.has("uid-original")).toBe(
+        true,
+      );
+
+      // Incoming duplicate — triggers promotion
+      vi.mocked(checkForDuplicate).mockReturnValueOnce(true);
+      const duplicate = createMessage({
+        flight: "UAL123",
+        uid: "uid-dup",
+        text: "HELLO",
+        matched: true,
+        matched_text: ["HELLO"],
+      });
+      useAppStore.getState().addMessage(duplicate);
+
+      // The promoted message's UID must have been removed from the read set
+      expect(useAppStore.getState().readMessageUids.has("uid-original")).toBe(
+        false,
+      );
+    });
+
+    it("regression: read state is NOT reset when the promoted message was never read", () => {
+      const original = createMessage({
+        flight: "UAL123",
+        uid: "uid-original",
+        text: "HELLO",
+        matched: false,
+      });
+      useAppStore.getState().addMessage(original);
+
+      // Message has NOT been read
+      expect(useAppStore.getState().readMessageUids.has("uid-original")).toBe(
+        false,
+      );
+
+      vi.mocked(checkForDuplicate).mockReturnValueOnce(true);
+      const duplicate = createMessage({
+        flight: "UAL123",
+        uid: "uid-dup",
+        text: "HELLO",
+        matched: false,
+      });
+      useAppStore.getState().addMessage(duplicate);
+
+      // readMessageUids should still be empty — nothing to remove
+      expect(useAppStore.getState().readMessageUids.has("uid-original")).toBe(
+        false,
+      );
+      expect(useAppStore.getState().readMessageUids.size).toBe(0);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // timeSeriesCache
+  // ---------------------------------------------------------------------------
+
+  describe("timeSeriesCache", () => {
+    const NOW = 1_704_067_200_000; // 2024-01-01T00:00:00.000Z
+
+    function makeEntry(
+      period:
+        | "1hr"
+        | "6hr"
+        | "12hr"
+        | "24hr"
+        | "1wk"
+        | "30day"
+        | "6mon"
+        | "1yr",
+      startOffset = 3_600_000,
+    ) {
+      return {
+        time_period: period as
+          | "1hr"
+          | "6hr"
+          | "12hr"
+          | "24hr"
+          | "1wk"
+          | "30day"
+          | "6mon"
+          | "1yr",
+        data: [
+          {
+            timestamp: NOW - 60_000,
+            acars: 2,
+            vdlm: 1,
+            hfdl: 0,
+            imsl: 0,
+            irdm: 0,
+            total: 3,
+            error: 0,
+          },
+        ],
+        start: NOW - startOffset,
+        end: NOW,
+        points: 1,
+      };
+    }
+
+    beforeEach(() => {
+      useAppStore.setState({ timeSeriesCache: new Map() });
+    });
+
+    it("starts with an empty cache", () => {
+      const cache = useAppStore.getState().timeSeriesCache;
+      expect(cache.size).toBe(0);
+    });
+
+    it("stores an entry for a period via setTimeSeriesData", () => {
+      const entry = makeEntry("1hr");
+      useAppStore.getState().setTimeSeriesData("1hr", entry);
+
+      const stored = useAppStore.getState().timeSeriesCache.get("1hr");
+      expect(stored).toBeDefined();
+      expect(stored?.time_period).toBe("1hr");
+    });
+
+    it("returns undefined for a period not yet in the cache", () => {
+      const cached = useAppStore.getState().timeSeriesCache.get("24hr");
+      expect(cached).toBeUndefined();
+    });
+
+    it("stores the full data array", () => {
+      const entry = makeEntry("6hr", 21_600_000);
+      useAppStore.getState().setTimeSeriesData("6hr", entry);
+
+      const stored = useAppStore.getState().timeSeriesCache.get("6hr");
+      expect(stored?.data).toHaveLength(1);
+      expect(stored?.data[0].acars).toBe(2);
+      expect(stored?.data[0].total).toBe(3);
+    });
+
+    it("stores start, end and points", () => {
+      const entry = makeEntry("24hr", 86_400_000);
+      useAppStore.getState().setTimeSeriesData("24hr", entry);
+
+      const stored = useAppStore.getState().timeSeriesCache.get("24hr");
+      expect(stored?.start).toBe(NOW - 86_400_000);
+      expect(stored?.end).toBe(NOW);
+      expect(stored?.points).toBe(1);
+    });
+
+    it("overwrites an existing entry when the same period is set again", () => {
+      const first = makeEntry("1hr");
+      useAppStore.getState().setTimeSeriesData("1hr", first);
+
+      const updated = {
+        ...makeEntry("1hr"),
+        data: [
+          {
+            timestamp: NOW - 60_000,
+            acars: 99,
+            vdlm: 0,
+            hfdl: 0,
+            imsl: 0,
+            irdm: 0,
+            total: 99,
+            error: 0,
+          },
+        ],
+        points: 1,
+      };
+      useAppStore.getState().setTimeSeriesData("1hr", updated);
+
+      const stored = useAppStore.getState().timeSeriesCache.get("1hr");
+      expect(stored?.data[0].acars).toBe(99);
+    });
+
+    it("stores multiple periods independently", () => {
+      useAppStore
+        .getState()
+        .setTimeSeriesData("1hr", makeEntry("1hr", 3_600_000));
+      useAppStore
+        .getState()
+        .setTimeSeriesData("24hr", makeEntry("24hr", 86_400_000));
+      useAppStore
+        .getState()
+        .setTimeSeriesData("1yr", makeEntry("1yr", 31_536_000_000));
+
+      const cache = useAppStore.getState().timeSeriesCache;
+      expect(cache.size).toBe(3);
+      expect(cache.get("1hr")?.start).toBe(NOW - 3_600_000);
+      expect(cache.get("24hr")?.start).toBe(NOW - 86_400_000);
+      expect(cache.get("1yr")?.start).toBe(NOW - 31_536_000_000);
+    });
+
+    it("does not mutate the original Map reference (immutable update)", () => {
+      const before = useAppStore.getState().timeSeriesCache;
+
+      useAppStore.getState().setTimeSeriesData("1hr", makeEntry("1hr"));
+
+      const after = useAppStore.getState().timeSeriesCache;
+      expect(after).not.toBe(before);
+    });
+
+    it("regression: other store state is unaffected by setTimeSeriesData", () => {
+      useAppStore.setState({ isConnected: true, alertCount: 42 });
+
+      useAppStore
+        .getState()
+        .setTimeSeriesData("6hr", makeEntry("6hr", 21_600_000));
+
+      expect(useAppStore.getState().isConnected).toBe(true);
+      expect(useAppStore.getState().alertCount).toBe(42);
     });
   });
 });

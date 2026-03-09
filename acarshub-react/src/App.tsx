@@ -18,7 +18,9 @@ import { lazy, Suspense, useEffect, useMemo, useRef } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AlertSoundManager } from "./components/AlertSoundManager.tsx";
 import { ConnectionStatus } from "./components/ConnectionStatus.tsx";
+import { MigrationStatus } from "./components/MigrationStatus.tsx";
 import { Navigation } from "./components/Navigation.tsx";
+import { ScrollToTopFab } from "./components/ScrollToTopFab.tsx";
 import { SettingsModal } from "./components/SettingsModal.tsx";
 import { ToastContainer } from "./components/ToastContainer.tsx";
 import { useSocketIO } from "./hooks/useSocketIO.ts";
@@ -143,6 +145,9 @@ function App() {
         {/* Connection status indicator */}
         <ConnectionStatus isConnected={isConnected} />
 
+        {/* Migration status banner — shown while backend DB migrations are running */}
+        <MigrationStatus />
+
         {/* Settings modal */}
         <SettingsModal />
 
@@ -151,6 +156,9 @@ function App() {
 
         {/* Toast notifications for on-page alerts */}
         <ToastContainer />
+
+        {/* Scroll-to-top FAB — mobile only, excluded on Map */}
+        <ScrollToTopFab />
 
         {/* Main content area with routing */}
         <main className="app-content">

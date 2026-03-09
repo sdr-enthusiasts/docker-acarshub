@@ -97,13 +97,16 @@ export const StatsPage = () => {
     "acars" | "vdlm" | "hfdl" | "imsl" | "irdm"
   >("acars");
 
-  // Fetch RRD time-series data for Reception Over Time
+  // Fetch RRD time-series data for Reception Over Time.
+  // The hook reads directly from the Zustand time-series cache, which is
+  // kept warm by pushed updates from the backend.  No autoRefresh argument
+  // is needed — all refresh timing is driven by the server.
   const {
     data: rrdData,
     loading: rrdLoading,
     error: rrdError,
     timeRange: rrdTimeRange,
-  } = useRRDTimeSeriesData(selectedTimePeriod, activeSection !== "reception");
+  } = useRRDTimeSeriesData(selectedTimePeriod);
 
   // Request frequency and count data when decoders are available
   useEffect(() => {
@@ -492,7 +495,7 @@ export const StatsPage = () => {
             {status.errors && (
               <Card variant={status.errors.Total > 0 ? "warning" : "default"}>
                 <h2 className="card__title">Decoding Errors</h2>
-                <p className="text-muted" style={{ marginBottom: "1rem" }}>
+                <p className="text-muted">
                   Signal quality errors from radio decoders (bit errors, CRC
                   failures, RF interference)
                 </p>

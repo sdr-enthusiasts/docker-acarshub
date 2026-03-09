@@ -153,14 +153,12 @@ test.describe("Mobile User Flows", () => {
     await openHamburger(page);
 
     // All primary navigation destinations should be accessible.
-    // NOTE: "Live Map" is omitted — it only renders when ADS-B is enabled
+    // NOTE: "Map" is omitted — it only renders when ADS-B is enabled
     // (adsbEnabled === true in the store), which is false in the E2E build
     // with no decoder configured.
+    await expect(page.getByRole("link", { name: /^messages$/i })).toBeVisible();
     await expect(
-      page.getByRole("link", { name: /live messages/i }),
-    ).toBeVisible();
-    await expect(
-      page.getByRole("link", { name: /search database/i }),
+      page.getByRole("link", { name: /^search$|^database$/i }),
     ).toBeVisible();
     // Alerts link may include a badge "(N)" — use starts-with match
     await expect(
@@ -185,7 +183,7 @@ test.describe("Mobile User Flows", () => {
     await Promise.all([
       page.waitForURL(/\/live-messages/, { timeout: 15000 }),
       page
-        .getByRole("link", { name: /live messages/i })
+        .getByRole("link", { name: /^messages$/i })
         .first()
         .click(),
     ]);
@@ -206,7 +204,7 @@ test.describe("Mobile User Flows", () => {
     await Promise.all([
       page.waitForURL(/\/search/, { timeout: 15000 }),
       page
-        .getByRole("link", { name: /search database/i })
+        .getByRole("link", { name: /^search$|^database$/i })
         .first()
         .click(),
     ]);
@@ -318,7 +316,7 @@ test.describe("Mobile User Flows", () => {
     await Promise.all([
       page.waitForURL(/\/live-messages/, { timeout: 15000 }),
       page
-        .getByRole("link", { name: /live messages/i })
+        .getByRole("link", { name: /^messages$/i })
         .first()
         .click(),
     ]);
@@ -373,7 +371,7 @@ test.describe("Mobile User Flows", () => {
     await Promise.all([
       page.waitForURL(/\/search/, { timeout: 15000 }),
       page
-        .getByRole("link", { name: /search database/i })
+        .getByRole("link", { name: /^search$|^database$/i })
         .first()
         .click(),
     ]);
@@ -397,8 +395,6 @@ test.describe("Mobile User Flows", () => {
     await openHamburger(page);
 
     // Nav links should be accessible again after toggling
-    await expect(
-      page.getByRole("link", { name: /live messages/i }),
-    ).toBeVisible();
+    await expect(page.getByRole("link", { name: /^messages$/i })).toBeVisible();
   });
 });

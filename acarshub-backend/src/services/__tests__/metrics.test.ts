@@ -243,17 +243,14 @@ function createTables(): void {
 
   db.run(`
     CREATE TABLE IF NOT EXISTS timeseries_stats (
-      id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-      timestamp INTEGER NOT NULL,
-      resolution TEXT NOT NULL,
+      timestamp   INTEGER PRIMARY KEY NOT NULL,
       acars_count INTEGER DEFAULT 0 NOT NULL,
-      vdlm_count INTEGER DEFAULT 0 NOT NULL,
-      hfdl_count INTEGER DEFAULT 0 NOT NULL,
-      imsl_count INTEGER DEFAULT 0 NOT NULL,
-      irdm_count INTEGER DEFAULT 0 NOT NULL,
+      vdlm_count  INTEGER DEFAULT 0 NOT NULL,
+      hfdl_count  INTEGER DEFAULT 0 NOT NULL,
+      imsl_count  INTEGER DEFAULT 0 NOT NULL,
+      irdm_count  INTEGER DEFAULT 0 NOT NULL,
       total_count INTEGER DEFAULT 0 NOT NULL,
-      error_count INTEGER DEFAULT 0 NOT NULL,
-      created_at INTEGER NOT NULL
+      error_count INTEGER DEFAULT 0 NOT NULL
     )
   `);
 }
@@ -444,17 +441,17 @@ describe("collectMetrics", () => {
       // Insert an older row that should NOT be used.
       db.run(
         `INSERT INTO timeseries_stats
-           (timestamp, resolution, acars_count, vdlm_count, hfdl_count,
-            imsl_count, irdm_count, total_count, error_count, created_at)
-         VALUES (${now - 120}, '1min', 1, 1, 1, 1, 1, 5, 1, ${Date.now()})`,
+           (timestamp, acars_count, vdlm_count, hfdl_count,
+            imsl_count, irdm_count, total_count, error_count)
+         VALUES (${now - 120}, 1, 1, 1, 1, 1, 5, 1)`,
       );
 
       // Insert the latest row.
       db.run(
         `INSERT INTO timeseries_stats
-           (timestamp, resolution, acars_count, vdlm_count, hfdl_count,
-            imsl_count, irdm_count, total_count, error_count, created_at)
-         VALUES (${now - 60}, '1min', 11, 15, 9, 0, 0, 35, 0, ${Date.now()})`,
+           (timestamp, acars_count, vdlm_count, hfdl_count,
+            imsl_count, irdm_count, total_count, error_count)
+         VALUES (${now - 60}, 11, 15, 9, 0, 0, 35, 0)`,
       );
 
       const output = await collectMetrics();

@@ -173,6 +173,15 @@ export function MapComponent({
   // Get map style based on provider
   // biome-ignore lint/suspicious/noExplicitAny: MapLibre StyleSpecification type is complex
   const mapStyle = useMemo((): string | any => {
+    // In E2E mode, return a minimal inline style with no external sources.
+    // MapLibre can parse and load this instantly, firing onLoad reliably
+    // without depending on external CDN tile providers which are unavailable
+    // inside the Docker E2E container.  The accessibility scan excludes
+    // .maplibregl-map so an empty canvas is fine for those tests.
+    if (import.meta.env.VITE_E2E) {
+      return { version: 8, sources: {}, layers: [] };
+    }
+
     const provider = mapSettings.provider;
     const providerConfig = getProviderConfig(provider);
 

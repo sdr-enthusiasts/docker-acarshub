@@ -123,6 +123,7 @@ export function updateFrequencies(freq: string, messageType: string): void {
     VDLM2: freqsVdlm2, // Alternative spelling
     HFDL: freqsHfdl,
     IMSL: freqsImsl,
+    "IMS-L": freqsImsl, // Normalized form produced by normalizeMessageType()
     IRDM: freqsIrdm,
   };
 

@@ -1,0 +1,130 @@
+// Copyright (C) 2022-2026 Frederick Clausen II
+// This file is part of acarshub <https://github.com/sdr-enthusiasts/docker-acarshub>.
+
+// acarshub is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+
+// acarshub is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+
+// You should have received a copy of the GNU General Public License
+// along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
+
+/**
+ * Scroll-to-Top FAB (Floating Action Button)
+ *
+ * Mobile-only button that floats in the bottom-right corner of the viewport
+ * and appears after the user scrolls 150 px down on any scrollable page.
+ * Tapping it smoothly scrolls the active scroll container back to the top.
+ *
+ * Visibility is driven exclusively by the --visible modifier class toggled by
+ * ScrollToTopFab.tsx — no CSS-only scroll detection is used so the component
+ * stays in sync with custom scroll containers (virtual lists, .app-content).
+ *
+ * z-index sits at $z-index-fixed (1030), above sticky headers but below
+ * modals and toasts so it never obscures critical UI.
+ */
+
+@use "../variables" as *;
+@use "../mixins" as *;
+
+.scroll-to-top-fab {
+  // Fixed positioning keeps it viewport-relative regardless of scroll.
+  position: fixed;
+  bottom: $spacing-xl;
+  right: $spacing-lg;
+  z-index: $z-index-fixed;
+
+  // Circle shape, 44 × 44 px — meets the minimum touch target guideline for
+  // a primary action button. No padding needed; the icon is centred via flex.
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: none;
+  border-radius: $radius-full;
+
+  background: var(--color-blue);
+  color: var(--color-base);
+  cursor: pointer;
+  box-shadow: $shadow-lg;
+
+  // Hidden by default via opacity + transform so the element stays in the DOM
+  // (no layout recalculation) but is invisible and non-interactive.
+  // pointer-events: none prevents accidental taps while the button is off-screen.
+  opacity: 0;
+  transform: translateY(12px) scale(0.85);
+  pointer-events: none;
+
+  transition:
+    opacity $transition-base,
+    transform $transition-base,
+    background-color $transition-fast,
+    box-shadow $transition-fast;
+
+  // ── Visible state ─────────────────────────────────────────────────────────
+
+  &--visible {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: auto;
+
+    &:hover {
+      background: var(--color-sapphire);
+      box-shadow: $shadow-xl;
+      // Subtle upward lift on hover to communicate interactivity.
+      transform: translateY(-3px) scale(1);
+    }
+
+    &:active {
+      background: var(--color-blue);
+      box-shadow: $shadow-md;
+      transform: translateY(0) scale(0.94);
+    }
+  }
+
+  // ── Focus ──────────────────────────────────────────────────────────────────
+
+  &:focus-visible {
+    outline: 3px solid var(--color-blue);
+    outline-offset: 3px;
+    // Ensure focus ring is visible even against the button's own colour.
+    box-shadow:
+      $shadow-lg,
+      0 0 0 5px rgba(137, 180, 250, 0.35); // --color-blue at low opacity
+  }
+
+  // ── Icon sizing ────────────────────────────────────────────────────────────
+
+  // The .icon class applied by createIcon() sets SVG display; override size
+  // here so the chevron is proportionate inside the 44 px circle.
+  .icon {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+  }
+
+  // ── Reduced motion ─────────────────────────────────────────────────────────
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: opacity $transition-fast;
+
+    &--visible {
+      transform: none;
+
+      &:hover {
+        transform: none;
+      }
+
+      &:active {
+        transform: none;
+      }
+    }
+  }
+}

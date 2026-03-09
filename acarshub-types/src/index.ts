@@ -82,6 +82,7 @@ export type {
   AlertTerm,
   DatabaseSize,
   Decoders,
+  MessageRateData,
   Signal,
   SignalCountData,
   SignalData,

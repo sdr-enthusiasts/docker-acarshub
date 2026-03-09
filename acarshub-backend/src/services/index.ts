@@ -463,6 +463,20 @@ export class BackgroundServices extends EventEmitter {
       this.emitSystemStatus();
     }, "emit_system_status");
 
+    // Advance rolling rate window and broadcast per-decoder rates every 5 seconds.
+    //
+    // WHY 5 SECONDS
+    // -------------
+    // The rolling window is 12 × 5-second buckets (= 60 seconds total), so
+    // advancing every 5 seconds gives the frontend a rate value that updates
+    // smoothly without the jarring hard-reset of the legacy lastMinute counter.
+    // One tiny packet per 5 seconds is negligible overhead compared with the
+    // continuous acars_msg / adsb_aircraft traffic on the same connection.
+    scheduler.every(5, "seconds").do(async () => {
+      getMessageQueue().advanceRateBucket();
+      this.emitMessageRate();
+    }, "emit_message_rate");
+
     // Prune old messages every 30 seconds
     scheduler
       .every(1, "minutes")
@@ -775,6 +789,18 @@ export class BackgroundServices extends EventEmitter {
    * Check health of all listeners and log any that are not connected.
    * TCP and UDP listeners reconnect automatically; this is informational only.
    */
+  /**
+   * Compute and broadcast the current rolling message rate to all clients.
+   *
+   * Reads the rolling rate from the message queue (sum of the last 12 × 5-second
+   * buckets = msgs/min) and emits a message_rate event to the /main namespace.
+   * Only enabled decoders contribute non-zero values; disabled ones are always 0.
+   */
+  private emitMessageRate(): void {
+    const rates = getMessageQueue().getRollingRates();
+    this.config.socketio.emit("message_rate", rates);
+  }
+
   private checkThreadHealth(): void {
     for (const [key, listener] of this.decoderListeners.entries()) {
       if (!listener.connected) {

@@ -271,6 +271,16 @@
       &__sidebar {
         max-width: 480px; // Generous cap so users can still drag wider on large tablets
         min-width: 280px;
+
+        // When collapsed the JS sets --map-sidebar-width to 40px.  The
+        // min-width/max-width constraints above must not interfere with that,
+        // so we reset both here.  Because this rule compiles after its parent
+        // in source order (same specificity, later position wins), it reliably
+        // overrides the 280px floor.
+        &--collapsed {
+          min-width: 0;
+          max-width: none;
+        }
       }
     }
   }

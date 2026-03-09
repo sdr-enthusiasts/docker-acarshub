@@ -68,6 +68,9 @@ function makeDbMock(rowCount = 0) {
       run: runFn,
     }),
   };
+  const deleteChain = {
+    where: vi.fn().mockReturnValue({ run: runFn }),
+  };
   return {
     select: vi.fn().mockReturnValue({
       from: vi.fn().mockReturnValue({
@@ -78,6 +81,7 @@ function makeDbMock(rowCount = 0) {
       }),
     }),
     insert: vi.fn().mockReturnValue(insertChain),
+    delete: vi.fn().mockReturnValue(deleteChain),
   };
 }
 
@@ -166,23 +170,15 @@ function setupInMemoryDb() {
   initDatabase(":memory:");
   getSqliteConnection().exec(`
     CREATE TABLE IF NOT EXISTS timeseries_stats (
-      id            INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-      timestamp     INTEGER NOT NULL,
-      resolution    TEXT    NOT NULL,
-      acars_count   INTEGER DEFAULT 0 NOT NULL,
-      vdlm_count    INTEGER DEFAULT 0 NOT NULL,
-      hfdl_count    INTEGER DEFAULT 0 NOT NULL,
-      imsl_count    INTEGER DEFAULT 0 NOT NULL,
-      irdm_count    INTEGER DEFAULT 0 NOT NULL,
-      total_count   INTEGER DEFAULT 0 NOT NULL,
-      error_count   INTEGER DEFAULT 0 NOT NULL,
-      created_at    INTEGER DEFAULT 0 NOT NULL
+      timestamp   INTEGER PRIMARY KEY NOT NULL,
+      acars_count INTEGER DEFAULT 0 NOT NULL,
+      vdlm_count  INTEGER DEFAULT 0 NOT NULL,
+      hfdl_count  INTEGER DEFAULT 0 NOT NULL,
+      imsl_count  INTEGER DEFAULT 0 NOT NULL,
+      irdm_count  INTEGER DEFAULT 0 NOT NULL,
+      total_count INTEGER DEFAULT 0 NOT NULL,
+      error_count INTEGER DEFAULT 0 NOT NULL
     )
-  `);
-  // Add the unique constraint migration 11 would add
-  getSqliteConnection().exec(`
-    CREATE UNIQUE INDEX IF NOT EXISTS idx_timeseries_timestamp_resolution
-    ON timeseries_stats (timestamp, resolution)
   `);
   getSqliteConnection().exec(`
     CREATE TABLE IF NOT EXISTS rrd_import_registry (
@@ -239,20 +235,117 @@ describe("RRD Migration Service", () => {
       expect(result?.rowsInserted).toBeGreaterThan(0);
     });
 
-    it("should convert NaN values to 0", async () => {
-      const mockOutput = `                  ACARS                VDLM               TOTAL               ERROR                HFDL                IMSL                IRDM
+    it("regression: all-NaN rows are skipped and do NOT produce zero-count DB rows", async () => {
+      // BEFORE THE FIX: parseRrdOutput converted -nan to 0 and inserted the row.
+      // AFTER THE FIX:  rows where every column is -nan are skipped entirely so
+      //                 the DB is not polluted with false zeros and future timestamps
+      //                 are not pre-occupied.
+      //
+      // We use a real in-memory DB so we can directly assert the inserted row count.
+      // Only the 1-min archive (first exec call) returns the test data; the coarse
+      // archives return empty output so their backward expansions cannot generate
+      // sub-rows that land on nanTimestamp by coincidence.
+      setupInMemoryDb();
 
-1771282260: -nan -nan -nan -nan -nan -nan -nan
-1771282320: 2.9898751667e+00 2.0025312083e+01 3.5989875167e+01 0.0000000000e+00 1.2974687917e+01 0.0000000000e+00 0.0000000000e+00`;
+      vi.mocked(fs.existsSync).mockImplementation((p) => {
+        if (p === MOCK_RRD_PATH) return true;
+        if (p === `${MOCK_RRD_PATH}.back`) return false;
+        return false;
+      });
+      vi.mocked(fs.statSync).mockReturnValue({
+        isFile: () => true,
+        size: MOCK_RRD_CONTENT.length,
+      } as fs.Stats);
+      vi.mocked(fs.renameSync).mockImplementation(() => {});
+      vi.mocked(fs.readFileSync).mockReturnValue(MOCK_RRD_CONTENT);
 
-      await setupMigrationMocks({ execOutput: mockOutput });
+      // One all-NaN row followed by one valid row, fed only to the 1-min archive.
+      // The NaN row must NOT appear in the DB after migration.
+      // Timestamps chosen well in the past so they are below Date.now().
+      const nanTimestamp = 1771282260;
+      const validTimestamp = 1771282320;
+      const realOutput = `                  ACARS                VDLM               TOTAL               ERROR                HFDL                IMSL                IRDM
+
+${nanTimestamp}: -nan -nan -nan -nan -nan -nan -nan
+${validTimestamp}: 2.9898751667e+00 2.0025312083e+01 3.5989875167e+01 0.0000000000e+00 1.2974687917e+01 0.0000000000e+00 0.0000000000e+00`;
+
+      // Empty output for archives 1-min (index 0) only gets the real rows.
+      // Coarse archives (5-min, 1-hour, 6-hour) return header-only so their
+      // backward expansions cannot coincidentally produce a row at nanTimestamp.
+      const emptyOutput = `                  ACARS                VDLM               TOTAL               ERROR                HFDL                IMSL                IRDM
+
+`;
+      let nanCallIndex = 0;
+      vi.mocked(child_process.exec).mockImplementation(
+        ((
+          _cmd: string,
+          _opts: unknown,
+          cb: (e: Error | null, r: { stdout: string; stderr: string } | null) => void,
+        ) => {
+          const output = nanCallIndex === 0 ? realOutput : emptyOutput;
+          nanCallIndex++;
+          cb(null, { stdout: output, stderr: "" });
+        }) as unknown as typeof child_process.exec,
+      );
 
       const { migrateRrdToSqlite } = await import("../rrd-migration.js");
       const result = await migrateRrdToSqlite(MOCK_RRD_PATH);
 
-      // Migration should still succeed even with NaN rows
-      expect(result).toBeDefined();
       expect(result?.success).toBe(true);
+
+      // The NaN row must not appear in the database at all.
+      const { getDatabase: getDb } = await import("../../db/index.js");
+      const { timeseriesStats: tsStats } = await import("../../db/schema.js");
+      const { eq } = await import("drizzle-orm");
+      const db = getDb();
+      const nanRow = db
+        .select()
+        .from(tsStats)
+        .where(eq(tsStats.timestamp, nanTimestamp))
+        .get();
+      expect(nanRow).toBeUndefined();
+
+      // The valid 1-min row must be present (1 row, kept as-is — no expansion).
+      expect(result?.rowsInserted).toBe(1);
+    });
+
+    it("regression: migration still succeeds when input contains only NaN rows", async () => {
+      // If every row is NaN (e.g. stale RRD with no recent data), migration
+      // should report 0 rows inserted and success: false (no data), not throw.
+      setupInMemoryDb();
+
+      vi.mocked(fs.existsSync).mockImplementation((p) => {
+        if (p === MOCK_RRD_PATH) return true;
+        if (p === `${MOCK_RRD_PATH}.back`) return false;
+        return false;
+      });
+      vi.mocked(fs.statSync).mockReturnValue({
+        isFile: () => true,
+        size: MOCK_RRD_CONTENT.length,
+      } as fs.Stats);
+      vi.mocked(fs.renameSync).mockImplementation(() => {});
+      vi.mocked(fs.readFileSync).mockReturnValue(MOCK_RRD_CONTENT);
+
+      const allNanOutput = `                  ACARS                VDLM               TOTAL               ERROR                HFDL                IMSL                IRDM
+
+1771282200: -nan -nan -nan -nan -nan -nan -nan
+1771282260: -nan -nan -nan -nan -nan -nan -nan
+1771282320: -nan -nan -nan -nan -nan -nan -nan`;
+
+      vi.mocked(child_process.exec).mockImplementation(
+        ((
+          _cmd: string,
+          _opts: unknown,
+          cb: (e: Error | null, r: { stdout: string; stderr: string } | null) => void,
+        ) => cb(null, { stdout: allNanOutput, stderr: "" })) as unknown as typeof child_process.exec,
+      );
+
+      const { migrateRrdToSqlite } = await import("../rrd-migration.js");
+      const result = await migrateRrdToSqlite(MOCK_RRD_PATH);
+
+      // All-NaN input → no data points → migration reports failure (no rows)
+      expect(result?.success).toBe(false);
+      expect(result?.rowsInserted).toBe(0);
     });
 
     it("should round decimal values to integers", async () => {
@@ -283,6 +376,138 @@ NOT_A_TIMESTAMP: bad data here
       expect(result?.success).toBe(true);
       expect(result?.rowsInserted).toBeGreaterThan(0);
     });
+
+    it("regression: 5-minute archive points expand BACKWARD to cover historical period", async () => {
+      // BEFORE THE FIX: expandCoarseDataToOneMinute started expansion at T and
+      //   went forward (T, T+60, T+120, T+180, T+240), shifting data into the
+      //   future and creating rows beyond the RRD's last_update.
+      // AFTER THE FIX:  expansion goes backward from the end-of-period timestamp T:
+      //   T-240, T-180, T-120, T-60, T — matching the actual period [T-300, T].
+      //
+      // We use a real in-memory DB and a 5-min archive rrdtool output so we can
+      // inspect the exact timestamps inserted.
+      setupInMemoryDb();
+
+      vi.mocked(fs.existsSync).mockImplementation((p) => {
+        if (p === MOCK_RRD_PATH) return true;
+        if (p === `${MOCK_RRD_PATH}.back`) return false;
+        return false;
+      });
+      vi.mocked(fs.statSync).mockReturnValue({
+        isFile: () => true,
+        size: MOCK_RRD_CONTENT.length,
+      } as fs.Stats);
+      vi.mocked(fs.renameSync).mockImplementation(() => {});
+      vi.mocked(fs.readFileSync).mockReturnValue(MOCK_RRD_CONTENT);
+
+      // Use a timestamp well in the past (2025-01-01 00:05:00 UTC = 1735689900)
+      // so all expanded rows are below Date.now() and pass the future-clamp filter.
+      const fiveMinPoint = 1735689900; // T — end of the 5-min period [T-300, T]
+      const fiveMinOutput = `                  ACARS                VDLM               TOTAL               ERROR                HFDL                IMSL                IRDM
+
+${fiveMinPoint}: 5.0000000000e+00 1.0000000000e+01 1.5000000000e+01 0.0000000000e+00 0.0000000000e+00 0.0000000000e+00 0.0000000000e+00`;
+
+      // Override exec so the first archive call returns 5-min data and the others
+      // return empty output (header only, no data rows).
+      const emptyOutput = `                  ACARS                VDLM               TOTAL               ERROR                HFDL                IMSL                IRDM
+
+`;
+      let callIndex = 0;
+      vi.mocked(child_process.exec).mockImplementation(
+        ((
+          _cmd: string,
+          _opts: unknown,
+          cb: (e: Error | null, r: { stdout: string; stderr: string } | null) => void,
+        ) => {
+          // Archives are fetched in order: 1min, 5min, 1hour, 6hour.
+          // Return real data only for the 5-min archive (index 1).
+          const output = callIndex === 1 ? fiveMinOutput : emptyOutput;
+          callIndex++;
+          cb(null, { stdout: output, stderr: "" });
+        }) as unknown as typeof child_process.exec,
+      );
+
+      const { migrateRrdToSqlite } = await import("../rrd-migration.js");
+      await migrateRrdToSqlite(MOCK_RRD_PATH);
+
+      const { timeseriesStats } = await import("../../db/schema.js");
+      const { asc } = await import("drizzle-orm");
+      const { getDatabase: getDb2 } = await import("../../db/index.js");
+      const db = getDb2();
+      const rows = db
+        .select()
+        .from(timeseriesStats)
+        .orderBy(asc(timeseriesStats.timestamp))
+        .all();
+
+      // A 5-min point at T should expand to exactly 5 rows:
+      //   T-240, T-180, T-120, T-60, T
+      const expectedTimestamps = [
+        fiveMinPoint - 240,
+        fiveMinPoint - 180,
+        fiveMinPoint - 120,
+        fiveMinPoint - 60,
+        fiveMinPoint,
+      ];
+
+      expect(rows.length).toBe(5);
+      for (let i = 0; i < rows.length; i++) {
+        expect(rows[i].timestamp).toBe(expectedTimestamps[i]);
+      }
+
+      // The row AFTER T must NOT exist (old bug produced T+60, T+120, … instead).
+      const { eq } = await import("drizzle-orm");
+      const futureRow = db
+        .select()
+        .from(timeseriesStats)
+        .where(eq(timeseriesStats.timestamp, fiveMinPoint + 60))
+        .get();
+      expect(futureRow).toBeUndefined();
+    });
+
+    it("regression: future-timestamp rows are clamped and not inserted", async () => {
+      // Rows whose timestamp > Date.now() must be dropped by the clamp step
+      // even if they somehow survive NaN-filtering and backward expansion.
+      setupInMemoryDb();
+
+      vi.mocked(fs.existsSync).mockImplementation((p) => {
+        if (p === MOCK_RRD_PATH) return true;
+        if (p === `${MOCK_RRD_PATH}.back`) return false;
+        return false;
+      });
+      vi.mocked(fs.statSync).mockReturnValue({
+        isFile: () => true,
+        size: MOCK_RRD_CONTENT.length,
+      } as fs.Stats);
+      vi.mocked(fs.renameSync).mockImplementation(() => {});
+      vi.mocked(fs.readFileSync).mockReturnValue(MOCK_RRD_CONTENT);
+
+      // A 1-min point whose timestamp is 10 years in the future.
+      const futureTs = Math.floor(Date.now() / 1000) + 10 * 365 * 24 * 3600;
+      const futureOutput = `                  ACARS                VDLM               TOTAL               ERROR                HFDL                IMSL                IRDM
+
+${futureTs}: 1.0000000000e+00 2.0000000000e+00 3.0000000000e+00 0.0000000000e+00 0.0000000000e+00 0.0000000000e+00 0.0000000000e+00`;
+
+      vi.mocked(child_process.exec).mockImplementation(
+        ((
+          _cmd: string,
+          _opts: unknown,
+          cb: (e: Error | null, r: { stdout: string; stderr: string } | null) => void,
+        ) => cb(null, { stdout: futureOutput, stderr: "" })) as unknown as typeof child_process.exec,
+      );
+
+      const { migrateRrdToSqlite } = await import("../rrd-migration.js");
+      const result = await migrateRrdToSqlite(MOCK_RRD_PATH);
+
+      // No rows should have been inserted — the future timestamp is clamped.
+      expect(result?.rowsInserted).toBe(0);
+
+      const { timeseriesStats } = await import("../../db/schema.js");
+      const { getDatabase: getDb3 } = await import("../../db/index.js");
+      const db = getDb3();
+      const allRows = db.select().from(timeseriesStats).all();
+      expect(allRows.length).toBe(0);
+    });
   });
 
   // =========================================================================
@@ -294,41 +519,57 @@ NOT_A_TIMESTAMP: bad data here
       closeDatabase();
     });
 
-    it("should skip migration if backup file exists and timeseries_stats has data", async () => {
-      vi.mocked(fs.existsSync).mockImplementation((p) => {
-        return p === `${MOCK_RRD_PATH}.back`;
-      });
+    it("should skip migration when .rrd.back exists and registry rrd_path does NOT end with .back", async () => {
+      // Scenario: new fixed import already done.
+      // The registry records rrd_path = "acarshub.rrd" (no .back suffix).
+      // The importer must detect this and return null without touching the DB.
+      setupInMemoryDb();
 
-      // .back file exists and DB has rows → already migrated, skip
-      const mockDb = {
-        select: vi.fn().mockReturnValue({
-          from: vi.fn().mockReturnValue({
-            get: vi.fn().mockReturnValue({ count: 42 }),
-          }),
-        }),
-      };
-      vi.spyOn(
-        await import("../../db/index.js"),
-        "getDatabase",
-      ).mockReturnValue(mockDb as unknown as ReturnType<typeof getDatabase>);
+      // Pre-populate registry with rrd_path = canonical .rrd path (new import)
+      getSqliteConnection()
+        .prepare(
+          `INSERT INTO rrd_import_registry (file_hash, rrd_path, imported_at, rows_imported)
+           VALUES (?, ?, ?, ?)`,
+        )
+        .run(MOCK_RRD_HASH, MOCK_RRD_PATH, Date.now(), 100);
 
-      // .back file must be readable for tryRegisterBackupHash()
+      // Only the .back file exists (new importer left it there)
+      vi.mocked(fs.existsSync).mockImplementation(
+        (p) => p === `${MOCK_RRD_PATH}.back`,
+      );
       vi.mocked(fs.readFileSync).mockReturnValue(MOCK_RRD_CONTENT);
-      await stubSqliteConnection();
+
+      const execMock = vi.fn();
+      vi.mocked(child_process.exec).mockImplementation(
+        execMock as unknown as typeof child_process.exec,
+      );
 
       const { migrateRrdToSqlite } = await import("../rrd-migration.js");
       const result = await migrateRrdToSqlite(MOCK_RRD_PATH);
 
+      // Must skip — registry says this was a new fixed import
       expect(result).toBeNull();
+      // rrdtool must never have been called
+      expect(execMock).not.toHaveBeenCalled();
     });
 
-    it("should re-migrate if backup file exists but timeseries_stats is empty", async () => {
-      // Use a real in-memory database — avoids mock-chain fragility for the
-      // COUNT query, INSERT, and registry table creation.
+    it("should run repair and re-import when .rrd.back exists and registry rrd_path ends with .back", async () => {
+      // Scenario: old buggy import done; registry records rrd_path ending with
+      // ".back" (the path used when tryRegisterBackupHash ran under old code).
+      // The repair path must: call rrdtool info, delete bad rows, clear registry,
+      // restore .back → .rrd, complete a fresh import → rename to .back.
       setupInMemoryDb();
 
+      // Pre-populate registry with rrd_path = .back path (old import)
+      getSqliteConnection()
+        .prepare(
+          `INSERT INTO rrd_import_registry (file_hash, rrd_path, imported_at, rows_imported)
+           VALUES (?, ?, ?, ?)`,
+        )
+        .run(MOCK_RRD_HASH, `${MOCK_RRD_PATH}.back`, Date.now(), 50);
+
+      // Simulate .back existing (old import), .rrd re-appears after rename mock
       vi.mocked(fs.existsSync).mockImplementation((p) => {
-        // Both .back and original appear to exist (renameSync is mocked as no-op)
         return p === `${MOCK_RRD_PATH}.back` || p === MOCK_RRD_PATH;
       });
       vi.mocked(fs.statSync).mockReturnValue({
@@ -338,34 +579,106 @@ NOT_A_TIMESTAMP: bad data here
       vi.mocked(fs.renameSync).mockImplementation(() => {});
       vi.mocked(fs.readFileSync).mockReturnValue(MOCK_RRD_CONTENT);
 
-      const execMock = vi.fn(
-        (
+      // rrdtool info is called first (repair), then 4 archive fetches follow.
+      const RRD_INFO_OUTPUT = `filename = "${MOCK_RRD_PATH}.back"\nrrd_version = "0003"\nstep = 60\nlast_update = 1735689900\n`;
+      let callIndex = 0;
+      vi.mocked(child_process.exec).mockImplementation(
+        ((
           _cmd: string,
-          _options: unknown,
-          callback: (
-            error: Error | null,
-            result: { stdout: string; stderr: string } | null,
+          _opts: unknown,
+          cb: (
+            e: Error | null,
+            r: { stdout: string; stderr: string } | null,
           ) => void,
         ) => {
-          callback(null, { stdout: SINGLE_LINE_RRD_OUTPUT, stderr: "" });
-        },
-      );
-      vi.mocked(child_process.exec).mockImplementation(
-        execMock as unknown as typeof child_process.exec,
+          const output =
+            callIndex === 0 ? RRD_INFO_OUTPUT : SINGLE_LINE_RRD_OUTPUT;
+          callIndex++;
+          cb(null, { stdout: output, stderr: "" });
+        }) as unknown as typeof child_process.exec,
       );
 
       const { migrateRrdToSqlite } = await import("../rrd-migration.js");
       const result = await migrateRrdToSqlite(MOCK_RRD_PATH);
 
-      expect(result).toBeDefined();
+      // Fresh import must succeed
+      expect(result).not.toBeNull();
       expect(result?.success).toBe(true);
       expect(result?.rowsInserted).toBeGreaterThan(0);
 
-      // Must restore the backup before re-migrating
+      // Repair must have restored .back → .rrd
       expect(fs.renameSync).toHaveBeenCalledWith(
         `${MOCK_RRD_PATH}.back`,
         MOCK_RRD_PATH,
       );
+
+      // Final rename must be to .back (not .back2)
+      const renameCalls = vi.mocked(fs.renameSync).mock.calls;
+      const finalBackRename = renameCalls.find(
+        ([src, dest]) =>
+          src === MOCK_RRD_PATH && dest === `${MOCK_RRD_PATH}.back`,
+      );
+      expect(finalBackRename).toBeDefined();
+
+      // Must NOT have produced a .back2 file
+      const back2Rename = renameCalls.find(
+        ([, dest]) => dest === `${MOCK_RRD_PATH}.back2`,
+      );
+      expect(back2Rename).toBeUndefined();
+    });
+
+    it("should rename .rrd.back to .rrd and run fresh import when no registry entry exists", async () => {
+      // Scenario: .rrd.back exists but has no registry entry (e.g. pre-registry
+      // deployment, or manual copy).  The importer treats it as a fresh file:
+      // renames .back → .rrd, imports, then renames .rrd → .back.
+      setupInMemoryDb();
+
+      // .back exists, no registry entry (empty registry from setupInMemoryDb)
+      vi.mocked(fs.existsSync).mockImplementation((p) => {
+        return p === `${MOCK_RRD_PATH}.back` || p === MOCK_RRD_PATH;
+      });
+      vi.mocked(fs.statSync).mockReturnValue({
+        isFile: () => true,
+        size: MOCK_RRD_CONTENT.length,
+      } as fs.Stats);
+      vi.mocked(fs.renameSync).mockImplementation(() => {});
+      vi.mocked(fs.readFileSync).mockReturnValue(MOCK_RRD_CONTENT);
+
+      vi.mocked(child_process.exec).mockImplementation(
+        vi.fn(
+          (
+            _cmd: string,
+            _options: unknown,
+            callback: (
+              error: Error | null,
+              result: { stdout: string; stderr: string } | null,
+            ) => void,
+          ) => {
+            callback(null, { stdout: SINGLE_LINE_RRD_OUTPUT, stderr: "" });
+          },
+        ) as unknown as typeof child_process.exec,
+      );
+
+      const { migrateRrdToSqlite } = await import("../rrd-migration.js");
+      const result = await migrateRrdToSqlite(MOCK_RRD_PATH);
+
+      // Import must succeed
+      expect(result?.success).toBe(true);
+      expect(result?.rowsInserted).toBeGreaterThan(0);
+
+      // Must rename .back → .rrd first (treat as fresh)
+      expect(fs.renameSync).toHaveBeenCalledWith(
+        `${MOCK_RRD_PATH}.back`,
+        MOCK_RRD_PATH,
+      );
+
+      // Final rename must produce .back (not .back2)
+      const renameCalls = vi.mocked(fs.renameSync).mock.calls;
+      const finalBackRename = renameCalls.find(
+        ([src, dest]) =>
+          src === MOCK_RRD_PATH && dest === `${MOCK_RRD_PATH}.back`,
+      );
+      expect(finalBackRename).toBeDefined();
     });
 
     it("should skip migration if RRD file does not exist", async () => {
@@ -402,13 +715,19 @@ NOT_A_TIMESTAMP: bad data here
       const { migrateRrdToSqlite } = await import("../rrd-migration.js");
       await migrateRrdToSqlite(MOCK_RRD_PATH);
 
-      // The last rename call must be the .back rename (not the .corrupt rename)
+      // The final rename must produce .back (the backup file after a new import)
       const renameCalls = vi.mocked(fs.renameSync).mock.calls;
       const backRename = renameCalls.find(
-        ([, dest]) => dest === `${MOCK_RRD_PATH}.back`,
+        ([src, dest]) =>
+          src === MOCK_RRD_PATH && dest === `${MOCK_RRD_PATH}.back`,
       );
       expect(backRename).toBeDefined();
-      expect(backRename?.[0]).toBe(MOCK_RRD_PATH);
+
+      // .back2 must NOT be produced at all (sentinel removed)
+      const back2Rename = renameCalls.find(
+        ([, dest]) => dest === `${MOCK_RRD_PATH}.back2`,
+      );
+      expect(back2Rename).toBeUndefined();
     });
 
     it("should handle rrdtool command failure gracefully", async () => {
@@ -513,20 +832,20 @@ NOT_A_TIMESTAMP: bad data here
     });
 
     it("regression: skips import when hash of presented .rrd matches a previously imported file", async () => {
-      // Scenario: user ran migration successfully (hash registered), then
-      // renamed .rrd.back back to .rrd.  The importer must detect the
-      // content match and skip without inserting any rows.
+      // Scenario: user ran migration successfully (hash registered under the
+      // canonical .rrd path), then manually copied the original .rrd back.
+      // The hash-check guard must detect the content match and skip.
       setupInMemoryDb();
 
-      // Pre-populate registry with the hash of our mock RRD content
+      // Pre-populate registry with the hash registered under the canonical path
       getSqliteConnection()
         .prepare(
           `INSERT INTO rrd_import_registry (file_hash, rrd_path, imported_at, rows_imported)
            VALUES (?, ?, ?, ?)`,
         )
-        .run(MOCK_RRD_HASH, `${MOCK_RRD_PATH}.back`, Date.now(), 100);
+        .run(MOCK_RRD_HASH, MOCK_RRD_PATH, Date.now(), 100);
 
-      // File system: only the .rrd file exists (renamed from .back)
+      // File system: only the .rrd file exists (manually copied back)
       vi.mocked(fs.existsSync).mockImplementation((p) => p === MOCK_RRD_PATH);
       vi.mocked(fs.statSync).mockReturnValue({
         isFile: () => true,
@@ -701,41 +1020,47 @@ NOT_A_TIMESTAMP: bad data here
       expect(rowsAfterSecond).toBe(rowsAfterFirst);
     });
 
-    it("registers .rrd.back hash on startup for pre-registry deployments", async () => {
-      // Scenario: old deployment has .rrd.back and rows but no registry entry.
-      // First startup after the registry feature ships must register the hash
-      // of the .back file so a future rename-back is caught.
+    it("skips import when .rrd.back exists with registry rrd_path = canonical .rrd (new import)", async () => {
+      // Scenario: new fixed import was done; registry has rrd_path = "acarshub.rrd"
+      // (does NOT end with .back). Second startup must skip immediately.
       setupInMemoryDb();
 
-      // Insert a sentinel row so "rowCount > 0" is satisfied
+      // Insert a sentinel row so the DB is non-empty
       getSqliteConnection()
         .prepare(
           `INSERT INTO timeseries_stats
-             (timestamp, resolution, acars_count, vdlm_count, hfdl_count,
-              imsl_count, irdm_count, total_count, error_count, created_at)
-           VALUES (1771282260, '1min', 1, 0, 0, 0, 0, 1, 0, 0)`,
+             (timestamp, acars_count, vdlm_count, hfdl_count,
+              imsl_count, irdm_count, total_count, error_count)
+           VALUES (1771282260, 1, 0, 0, 0, 0, 1, 0)`,
         )
         .run();
 
-      // Only the .back file exists
+      // Registry records the canonical path (new import)
+      getSqliteConnection()
+        .prepare(
+          `INSERT INTO rrd_import_registry (file_hash, rrd_path, imported_at, rows_imported)
+           VALUES (?, ?, ?, ?)`,
+        )
+        .run(MOCK_RRD_HASH, MOCK_RRD_PATH, Date.now(), 1);
+
+      // Only the .back file exists (new importer left it here after import)
       vi.mocked(fs.existsSync).mockImplementation(
         (p) => p === `${MOCK_RRD_PATH}.back`,
       );
       vi.mocked(fs.readFileSync).mockReturnValue(MOCK_RRD_CONTENT);
 
+      const execMock = vi.fn();
+      vi.mocked(child_process.exec).mockImplementation(
+        execMock as unknown as typeof child_process.exec,
+      );
+
       const { migrateRrdToSqlite } = await import("../rrd-migration.js");
       const result = await migrateRrdToSqlite(MOCK_RRD_PATH);
 
-      // Migration is correctly skipped (data already present)
+      // Migration is correctly skipped
       expect(result).toBeNull();
-
-      // Hash of .back file must now be in registry
-      const registryRow = getSqliteConnection()
-        .prepare("SELECT file_hash FROM rrd_import_registry WHERE file_hash = ?")
-        .get(MOCK_RRD_HASH) as { file_hash: string } | undefined;
-
-      expect(registryRow).toBeDefined();
-      expect(registryRow?.file_hash).toBe(MOCK_RRD_HASH);
+      // rrdtool must not have been called
+      expect(execMock).not.toHaveBeenCalled();
     });
   });
 
@@ -743,22 +1068,45 @@ NOT_A_TIMESTAMP: bad data here
   // queryTimeseriesData
   // =========================================================================
 
+  // =========================================================================
+  // isOldImportPath helper
+  // =========================================================================
+
+  describe("isOldImportPath (exported for testing via registry discriminator)", () => {
+    it("returns true for paths ending with .rrd.back", async () => {
+      const { isOldImportPath } = await import("../rrd-migration.js");
+      expect(isOldImportPath("/run/acars/acarshub.rrd.back")).toBe(true);
+    });
+
+    it("returns true for paths ending with .back", async () => {
+      const { isOldImportPath } = await import("../rrd-migration.js");
+      expect(isOldImportPath("/some/path/acarshub.back")).toBe(true);
+    });
+
+    it("returns false for canonical .rrd path (new import)", async () => {
+      const { isOldImportPath } = await import("../rrd-migration.js");
+      expect(isOldImportPath("/run/acars/acarshub.rrd")).toBe(false);
+    });
+
+    it("returns false for paths with no .back suffix", async () => {
+      const { isOldImportPath } = await import("../rrd-migration.js");
+      expect(isOldImportPath("/run/acars/acarshub.rrd.backup")).toBe(false);
+    });
+  });
+
   describe("queryTimeseriesData", () => {
     beforeEach(() => {
       initDatabase(":memory:");
       getSqliteConnection().exec(`
         CREATE TABLE IF NOT EXISTS timeseries_stats (
-          id            INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-          timestamp     INTEGER NOT NULL,
-          resolution    TEXT    NOT NULL,
-          acars_count   INTEGER DEFAULT 0 NOT NULL,
-          vdlm_count    INTEGER DEFAULT 0 NOT NULL,
-          hfdl_count    INTEGER DEFAULT 0 NOT NULL,
-          imsl_count    INTEGER DEFAULT 0 NOT NULL,
-          irdm_count    INTEGER DEFAULT 0 NOT NULL,
-          total_count   INTEGER DEFAULT 0 NOT NULL,
-          error_count   INTEGER DEFAULT 0 NOT NULL,
-          created_at    INTEGER NOT NULL
+          timestamp   INTEGER PRIMARY KEY NOT NULL,
+          acars_count INTEGER DEFAULT 0 NOT NULL,
+          vdlm_count  INTEGER DEFAULT 0 NOT NULL,
+          hfdl_count  INTEGER DEFAULT 0 NOT NULL,
+          imsl_count  INTEGER DEFAULT 0 NOT NULL,
+          irdm_count  INTEGER DEFAULT 0 NOT NULL,
+          total_count INTEGER DEFAULT 0 NOT NULL,
+          error_count INTEGER DEFAULT 0 NOT NULL
         )
       `);
     });
@@ -783,17 +1131,14 @@ NOT_A_TIMESTAMP: bad data here
       initDatabase(":memory:");
       getSqliteConnection().exec(`
         CREATE TABLE IF NOT EXISTS timeseries_stats (
-          id            INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-          timestamp     INTEGER NOT NULL,
-          resolution    TEXT    NOT NULL,
-          acars_count   INTEGER DEFAULT 0 NOT NULL,
-          vdlm_count    INTEGER DEFAULT 0 NOT NULL,
-          hfdl_count    INTEGER DEFAULT 0 NOT NULL,
-          imsl_count    INTEGER DEFAULT 0 NOT NULL,
-          irdm_count    INTEGER DEFAULT 0 NOT NULL,
-          total_count   INTEGER DEFAULT 0 NOT NULL,
-          error_count   INTEGER DEFAULT 0 NOT NULL,
-          created_at    INTEGER NOT NULL
+          timestamp   INTEGER PRIMARY KEY NOT NULL,
+          acars_count INTEGER DEFAULT 0 NOT NULL,
+          vdlm_count  INTEGER DEFAULT 0 NOT NULL,
+          hfdl_count  INTEGER DEFAULT 0 NOT NULL,
+          imsl_count  INTEGER DEFAULT 0 NOT NULL,
+          irdm_count  INTEGER DEFAULT 0 NOT NULL,
+          total_count INTEGER DEFAULT 0 NOT NULL,
+          error_count INTEGER DEFAULT 0 NOT NULL
         )
       `);
     });

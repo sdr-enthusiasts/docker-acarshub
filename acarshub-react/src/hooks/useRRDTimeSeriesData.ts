@@ -14,170 +14,112 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-import { useCallback, useEffect, useState } from "react";
-import { socketService } from "../services/socket";
-import { useAppStore } from "../store/useAppStore";
-
 /**
- * Time period options for RRD time-series data
- */
-export type TimePeriod =
-  | "1hr"
-  | "6hr"
-  | "12hr"
-  | "24hr"
-  | "1wk"
-  | "30day"
-  | "6mon"
-  | "1yr";
-
-/**
- * Single data point in the time-series
- */
-export interface RRDDataPoint {
-  timestamp: number; // Unix timestamp in milliseconds
-  acars: number;
-  vdlm: number;
-  hfdl: number;
-  imsl: number;
-  irdm: number;
-  total: number;
-  error: number;
-}
-
-/**
- * The time range returned by the backend for this response, in milliseconds.
- * Both values are always present in backend responses; the hook surfaces them
- * so the chart can pin its x-axis to the exact requested range rather than
- * auto-scaling to the data extents.
- */
-export interface RRDTimeRange {
-  start: number; // Unix timestamp in milliseconds
-  end: number; // Unix timestamp in milliseconds
-}
-
-/**
- * Response from the backend RRD time-series Socket.IO event
- */
-interface RRDTimeSeriesResponse {
-  data: RRDDataPoint[];
-  time_period?: string;
-  /** Range start in milliseconds (always present in v2+ responses) */
-  start?: number;
-  /** Range end in milliseconds (always present in v2+ responses) */
-  end?: number;
-  resolution?: string;
-  data_sources?: string[];
-  error?: string;
-}
-
-/**
- * Custom hook for fetching and managing RRD time-series data
+ * useRRDTimeSeriesData — pure store-selector hook.
  *
- * @param timePeriod - The time period to fetch (1hr, 6hr, 12hr, 24hr, 1wk, 30day, 6mon, 1yr)
- * @param autoRefresh - Whether to automatically refresh data periodically (default: false)
- * @param refreshInterval - Refresh interval in milliseconds (default: 60000 = 1 minute)
- * @returns Object containing data, loading state, error, and refresh function
+ * WHY THIS CHANGED
+ * ----------------
+ * Previously this hook owned the full request/response cycle: it emitted an
+ * `rrd_timeseries` Socket.IO request on mount and whenever `timePeriod`
+ * changed, then listened for a matching `rrd_timeseries_data` response.
+ *
+ * The backend now warms all eight periods in memory at startup and broadcasts
+ * fresh results on a wall-clock-aligned schedule (every 1 min for short
+ * windows, every 12 hr for the 1-year window).  The global socket handler in
+ * useSocketIO writes every incoming push to `useAppStore.timeSeriesCache`.
+ *
+ * This hook therefore becomes a thin Zustand selector:
+ *   - No socket emit on mount or period change.
+ *   - No local useState — data comes directly from the shared cache.
+ *   - Switching between periods is instant; no loading spinner once the
+ *     cache is warm (which happens within one RTT of the connect event).
+ *   - The return shape is intentionally identical to the old hook so that
+ *     call-sites (StatsPage) require no changes.
+ *
+ * PUSH MODEL LIFECYCLE
+ * --------------------
+ * 1. useSocketIO fires `rrd_timeseries` for all 8 periods on every `connect`
+ *    event → backend replies with `rrd_timeseries_data` for each period.
+ * 2. useSocketIO's `rrd_timeseries_data` listener writes each response to
+ *    `useAppStore.setTimeSeriesData`.
+ * 3. Backend broadcasts a fresh `rrd_timeseries_data` on each scheduled
+ *    refresh tick → useSocketIO writes it again, store updates, all
+ *    subscribed components re-render.
+ * 4. This hook just reads `timeSeriesCache.get(timePeriod)` — no side
+ *    effects, no cleanup needed.
+ */
+
+import { useAppStore } from "../store/useAppStore";
+import type {
+  TimePeriod,
+  TimeSeriesCacheEntry,
+  TimeSeriesDataPoint,
+  TimeSeriesTimeRange,
+} from "../types/timeseries";
+
+// Re-export TimePeriod so existing import sites that pull it from this
+// module continue to work without modification.
+export type { TimePeriod };
+
+/**
+ * Single data point shape — re-exported for consumers that reference it.
+ * Alias of TimeSeriesDataPoint; kept here for backward compatibility.
+ */
+export type RRDDataPoint = TimeSeriesDataPoint;
+
+/**
+ * The time range extracted from a cache entry — re-exported so StatsPage
+ * and the chart components can type-annotate without importing from
+ * types/timeseries directly.
+ */
+export type RRDTimeRange = TimeSeriesTimeRange;
+
+// ---------------------------------------------------------------------------
+// Hook
+// ---------------------------------------------------------------------------
+
+/**
+ * Read the time-series cache entry for `timePeriod` from the Zustand store.
+ *
+ * @param timePeriod - Which of the eight periods to surface.
+ * @returns
+ *   data      — Zero-filled data points for the period (empty array while loading).
+ *   loading   — True only until the first push for this period arrives.
+ *   error     — Always null in push mode (errors are logged server-side).
+ *   timeRange — start/end in milliseconds for pinning the chart x-axis, or
+ *               null while loading.
+ *
+ * The `autoRefresh` and `refreshInterval` parameters from the old hook are
+ * accepted but ignored — the backend drives all refresh timing.
  */
 export const useRRDTimeSeriesData = (
   timePeriod: TimePeriod,
-  autoRefresh = false,
-  refreshInterval = 60000,
-) => {
-  const [data, setData] = useState<RRDDataPoint[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-  const [timeRange, setTimeRange] = useState<RRDTimeRange | null>(null);
+  // Accepted for call-site compatibility; no longer used.
+  _autoRefresh?: boolean,
+  _refreshInterval?: number,
+): {
+  data: RRDDataPoint[];
+  loading: boolean;
+  error: string | null;
+  timeRange: RRDTimeRange | null;
+} => {
+  const entry: TimeSeriesCacheEntry | undefined = useAppStore((state) =>
+    state.timeSeriesCache.get(timePeriod),
+  );
 
-  // Get connection state from store
-  const isConnected = useAppStore((state) => state.isConnected);
-
-  const fetchData = useCallback(() => {
-    setLoading(true);
-    setError(null);
-
-    // Request RRD time-series data from backend
-    // Check if socket is connected, if not the error will be handled by the effect
-    try {
-      const socket = socketService.getSocket();
-      // @ts-expect-error - Flask-SocketIO requires namespace as third argument
-      socket.emit("rrd_timeseries", { time_period: timePeriod }, "/main");
-    } catch (_err) {
-      setError(
-        "Socket not connected. Please wait for connection to establish.",
-      );
-      setLoading(false);
-    }
-  }, [timePeriod]);
-
-  useEffect(() => {
-    // Set up Socket.IO listener for RRD time-series data
-    const handleRRDData = (response: RRDTimeSeriesResponse) => {
-      // Only process if this response is for our requested time period
-      if (response.time_period !== timePeriod) {
-        return;
-      }
-
-      setLoading(false);
-
-      if (response.error) {
-        setError(response.error);
-        setData([]);
-        setTimeRange(null);
-      } else {
-        setError(null);
-        setData(response.data);
-        // Capture the range so the chart can pin its x-axis
-        if (response.start !== undefined && response.end !== undefined) {
-          setTimeRange({ start: response.start, end: response.end });
-        }
-      }
+  if (entry === undefined) {
+    return {
+      data: [],
+      loading: true,
+      error: null,
+      timeRange: null,
     };
-
-    // Wait for socket to be connected before setting up listeners
-    if (!isConnected) {
-      setError("Waiting for connection...");
-      setLoading(true);
-      return;
-    }
-
-    // Register listener
-    try {
-      const socket = socketService.getSocket();
-      socket.on("rrd_timeseries_data", handleRRDData);
-
-      // Fetch initial data
-      fetchData();
-
-      // Set up auto-refresh if enabled
-      let refreshTimer: ReturnType<typeof setInterval> | null = null;
-      if (autoRefresh) {
-        refreshTimer = setInterval(fetchData, refreshInterval);
-      }
-
-      // Cleanup
-      return () => {
-        try {
-          const socket = socketService.getSocket();
-          socket.off("rrd_timeseries_data", handleRRDData);
-        } catch {
-          // Socket may have been disconnected during cleanup
-        }
-        if (refreshTimer) {
-          clearInterval(refreshTimer);
-        }
-      };
-    } catch (_err) {
-      setError("Socket connection error. Please refresh the page.");
-      setLoading(false);
-    }
-  }, [timePeriod, autoRefresh, refreshInterval, fetchData, isConnected]);
+  }
 
   return {
-    data,
-    loading,
-    error,
-    timeRange,
-    refresh: fetchData,
+    data: entry.data,
+    loading: false,
+    error: null,
+    timeRange: { start: entry.start, end: entry.end },
   };
 };

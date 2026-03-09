@@ -26,15 +26,37 @@
 // Page Layout
 // ============================================================================
 
+// Suppress the app-content outer scrollbar when the Live Messages page is
+// active. The message list manages its own internal scroll; the outer
+// container must not produce a second scrollbar.
+.app-content:has(.live-messages-page) {
+  overflow: hidden;
+}
+
 .live-messages-page {
-  // Override parent .page overflow to allow sticky positioning
+  // Override parent .page overflow to allow sticky positioning and virtual list
   overflow: visible !important;
+  display: flex;
+  flex-direction: column;
+  // Remove .page margins and border-radius so the page occupies the full
+  // viewport area below the nav bar with no gaps or rounded edges.
+  margin-top: 0;
+  margin-bottom: 0;
+  border-radius: 0;
+  // Height is set via inline style by LiveMessagesPage using a ResizeObserver
+  // on the page root element. This dynamically fills the remaining viewport
+  // below the navigation bar without requiring any hardcoded pixel values.
+  // The CSS default here is just a safety fallback for the first paint frame.
+  min-height: 200px;
 
   .page__header {
     display: flex;
     flex-direction: column;
     gap: var(--spacing-md);
     margin-bottom: var(--spacing-lg);
+    // The common .page__header has border-radius top corners; with margin-top:0
+    // the page is flush against the nav so rounded corners look wrong.
+    border-radius: 0;
 
     @include breakpoint(md) {
       flex-direction: row;
@@ -147,7 +169,9 @@
     position: sticky;
     top: 0;
     z-index: 100;
-    margin-bottom: var(--spacing-lg);
+    // No bottom margin — the message list should start immediately below the
+    // filter bar with no dead zone between them.
+    margin-bottom: 0;
     background-color: var(--color-surface0);
     border: 1px solid var(--color-surface2);
     border-radius: var(--border-radius-lg);
@@ -442,10 +466,38 @@
 // Message List
 // ============================================================================
 
+// The .page__content wrapper must grow to fill remaining space inside the
+// flex-column live-messages-page, then clip so the inner scroll container
+// is the only scrollable region.
+.live-messages-page .page__content {
+  flex: 1;
+  min-height: 0; // Critical — without this, flex children ignore overflow
+  overflow: hidden;
+  padding: 0; // Padding lives on .message-list so the scrollbar reaches the edge
+}
+
 .message-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-lg);
+  // Full height of the flex parent — the virtualizer scroll container.
+  // Explicit height is set as an inline style by the component after measuring
+  // the available viewport space. This fallback ensures something renders on
+  // the first paint frame before the measurement effect runs.
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  // Horizontal padding keeps cards away from the viewport edges.
+  // No top/bottom padding: top padding would create a visible dead-zone
+  // between the filter bar and the first message card (messages would scroll
+  // out of view one padding-height earlier than expected). Bottom spacing is
+  // provided by .message-list__item's padding-bottom instead.
+  padding: 0 var(--spacing-lg);
+  box-sizing: border-box;
+}
+
+// Gap between virtual items — replaces the flex gap that the old list used.
+// Applied to the wrapper div the virtualizer renders around each item so that
+// the measured height includes the spacing and the virtualizer accounts for it.
+.message-list__item {
+  padding-bottom: var(--spacing-lg);
 }
 
 // ============================================================================

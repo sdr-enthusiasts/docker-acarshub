@@ -40,6 +40,7 @@
 @use "components/modal";
 @use "components/card";
 @use "components/connection-status";
+@use "components/migration-status";
 @use "components/select";
 @use "components/toggle";
 @use "components/radio";
@@ -60,6 +61,7 @@
 @use "components/map-legend";
 @use "components/map-provider-selector";
 @use "components/geojson-overlay-button";
+@use "components/scroll-to-top-fab";
 
 /* Pages */
 @use "pages/common";
