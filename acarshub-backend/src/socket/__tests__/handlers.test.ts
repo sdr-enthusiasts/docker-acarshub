@@ -155,6 +155,12 @@ vi.mock("../../services/rrd-migration.js", () => ({
 
 vi.mock("../../services/timeseries-cache.js", () => ({
   getCachedTimeSeries: vi.fn(),
+  getOrQueryTimeSeries: vi.fn(),
+}));
+
+vi.mock("../../services/message-ring-buffer.js", () => ({
+  getRecentMessages: vi.fn(),
+  getRecentAlerts: vi.fn(),
 }));
 
 vi.mock("../../startup-state.js", () => ({
@@ -187,8 +193,15 @@ import {
 import { enrichMessage, enrichMessages } from "../../formatters/enrichment.js";
 import { getAdsbPoller } from "../../services/adsb-poller.js";
 import { getMessageQueue } from "../../services/message-queue.js";
+import {
+  getRecentAlerts,
+  getRecentMessages,
+} from "../../services/message-ring-buffer.js";
 import { queryTimeseriesData } from "../../services/rrd-migration.js";
-import { getCachedTimeSeries } from "../../services/timeseries-cache.js";
+import {
+  getCachedTimeSeries,
+  getOrQueryTimeSeries,
+} from "../../services/timeseries-cache.js";
 import {
   isMigrationRunning,
   registerPendingSocket,
@@ -219,6 +232,9 @@ const mockGetAllFreqCounts = vi.mocked(getAllFreqCounts);
 const mockSearchAlertsByTerm = vi.mocked(searchAlertsByTerm);
 const mockQueryTimeseriesData = vi.mocked(queryTimeseriesData);
 const mockGetCachedTimeSeries = vi.mocked(getCachedTimeSeries);
+const mockGetOrQueryTimeSeries = vi.mocked(getOrQueryTimeSeries);
+const mockGetRecentMessages = vi.mocked(getRecentMessages);
+const mockGetRecentAlerts = vi.mocked(getRecentAlerts);
 const mockGetPerDecoderMessageCounts = vi.mocked(getPerDecoderMessageCounts);
 const mockGetMessageQueue = vi.mocked(getMessageQueue);
 const mockIsMigrationRunning = vi.mocked(isMigrationRunning);
@@ -343,6 +359,8 @@ beforeEach(() => {
   // Default DB mocks
   mockGrabMostRecent.mockReturnValue([]);
   mockEnrichMessages.mockReturnValue([]);
+  mockGetRecentMessages.mockReturnValue([]);
+  mockGetRecentAlerts.mockReturnValue([]);
   mockEnrichMessage.mockImplementation((msg) => ({
     ...msg,
     uid: (msg as { uid?: string }).uid ?? "enriched-uid",
@@ -378,6 +396,7 @@ beforeEach(() => {
   mockSearchAlertsByTerm.mockReturnValue([]);
   mockQueryTimeseriesData.mockResolvedValue([]);
   mockGetCachedTimeSeries.mockReturnValue(null);
+  mockGetOrQueryTimeSeries.mockReturnValue(null);
   mockGetPerDecoderMessageCounts.mockReturnValue({
     acars: 0,
     vdlm2: 0,
@@ -588,12 +607,11 @@ describe("handleConnect", () => {
   });
 
   it("should send recent non-alert messages in acars_msg_batch chunks of 25", () => {
-    // Create 60 non-alert messages
+    // Create 60 non-alert messages sourced from the ring buffer
     const msgs = Array.from({ length: 60 }, (_, i) =>
       makeEnrichedMsg(`uid-${i}`, false),
     );
-    mockGrabMostRecent.mockReturnValue(msgs);
-    mockEnrichMessages.mockReturnValue(msgs);
+    mockGetRecentMessages.mockReturnValue(msgs);
 
     const socket = makeMockSocket();
     simulateConnect(socket);
@@ -615,8 +633,7 @@ describe("handleConnect", () => {
     const msgs = Array.from({ length: 30 }, (_, i) =>
       makeEnrichedMsg(`uid-${i}`, false),
     );
-    mockGrabMostRecent.mockReturnValue(msgs);
-    mockEnrichMessages.mockReturnValue(msgs);
+    mockGetRecentMessages.mockReturnValue(msgs);
 
     const socket = makeMockSocket();
     simulateConnect(socket);
@@ -631,17 +648,16 @@ describe("handleConnect", () => {
     expect(batches[1].done_loading).toBe(true);
   });
 
-  it("should filter alert-matched messages out of acars_msg_batch", () => {
-    // 3 non-alert + 2 alert messages
+  it("regression: ring buffer only contains non-alert messages so acars_msg_batch never filters", () => {
+    // The ring buffer (getRecentMessages) only contains non-alert messages.
+    // handleConnect now trusts the buffer rather than filtering by msg.matched.
+    // All returned messages should appear in the batches.
     const msgs = [
       makeEnrichedMsg("uid-1", false),
-      makeEnrichedMsg("uid-2", true), // alert — must be excluded
       makeEnrichedMsg("uid-3", false),
-      makeEnrichedMsg("uid-4", true), // alert — must be excluded
       makeEnrichedMsg("uid-5", false),
     ];
-    mockGrabMostRecent.mockReturnValue(msgs);
-    mockEnrichMessages.mockReturnValue(msgs);
+    mockGetRecentMessages.mockReturnValue(msgs);
 
     const socket = makeMockSocket();
     simulateConnect(socket);
@@ -651,47 +667,40 @@ describe("handleConnect", () => {
       "acars_msg_batch",
     );
     const allUids = batches.flatMap((b) => b.messages.map((m) => m.uid));
-    expect(allUids).not.toContain("uid-2");
-    expect(allUids).not.toContain("uid-4");
+    expect(allUids).toContain("uid-1");
+    expect(allUids).toContain("uid-3");
+    expect(allUids).toContain("uid-5");
     expect(allUids).toHaveLength(3);
   });
 
-  it("should emit zero-length acars_msg_batch when there are no messages", () => {
-    mockGrabMostRecent.mockReturnValue([]);
-    mockEnrichMessages.mockReturnValue([]);
+  it("should emit a terminal empty acars_msg_batch when there are no messages", () => {
+    mockGetRecentMessages.mockReturnValue([]);
 
     const socket = makeMockSocket();
     simulateConnect(socket);
 
-    // No batches should be emitted when there are no messages
-    const batches = emittedAs(socket, "acars_msg_batch");
-    expect(batches).toHaveLength(0);
+    // A single terminal batch with done_loading=true must be emitted so clients
+    // can transition out of their loading state even when the ring buffer is empty.
+    const batches = emittedAs<{
+      messages: unknown[];
+      loading: boolean;
+      done_loading: boolean;
+    }>(socket, "acars_msg_batch");
+    expect(batches).toHaveLength(1);
+    expect(batches[0].messages).toHaveLength(0);
+    expect(batches[0].done_loading).toBe(true);
   });
 
   it("should send recent alerts in alert_matches_batch chunks", () => {
-    // Set up 30 alert matches
-    const rawAlerts = Array.from({ length: 30 }, (_, i) => ({
-      id: i + 1,
-      messageUid: `uid-${i}`,
-      term: "UAL",
-      matchType: "text",
-      matchedAt: 1_700_000_000 + i,
-      message: {
-        uid: `uid-${i}`,
-        text: "UAL flight",
-        messageType: "ACARS",
-        time: 1_700_000_000,
-      },
-    }));
-
-    mockSearchAlerts.mockReturnValue(rawAlerts);
-    mockEnrichMessage.mockImplementation((msg) => ({
-      uid: (msg as { uid?: string }).uid ?? "x",
+    // Alerts are pre-enriched in the ring buffer — no raw alert rows needed
+    const enrichedAlerts = Array.from({ length: 30 }, (_, i) => ({
+      uid: `uid-${i}`,
       timestamp: 1_700_000_000_000,
       messageType: "ACARS",
       matched: true,
       text: "UAL flight",
     }));
+    mockGetRecentAlerts.mockReturnValue(enrichedAlerts);
 
     const socket = makeMockSocket();
     simulateConnect(socket);
@@ -703,6 +712,27 @@ describe("handleConnect", () => {
 
     expect(batches.length).toBeGreaterThanOrEqual(2);
     expect(batches[batches.length - 1].done_loading).toBe(true);
+  });
+
+  it("regression: grabMostRecent is NOT called during handleConnect", () => {
+    mockGetRecentMessages.mockReturnValue([]);
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+    expect(mockGrabMostRecent).not.toHaveBeenCalled();
+  });
+
+  it("regression: searchAlerts is NOT called during handleConnect", () => {
+    mockGetRecentAlerts.mockReturnValue([]);
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+    expect(mockSearchAlerts).not.toHaveBeenCalled();
+  });
+
+  it("regression: enrichMessages is NOT called during handleConnect", () => {
+    mockGetRecentMessages.mockReturnValue([]);
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+    expect(mockEnrichMessages).not.toHaveBeenCalled();
   });
 
   it("should emit cached ADS-B data when ADS-B is enabled and cache is populated", () => {
@@ -753,8 +783,8 @@ describe("handleConnect", () => {
   });
 
   it("should not throw when an internal dependency throws during connect", () => {
-    mockGrabMostRecent.mockImplementation(() => {
-      throw new Error("DB is on fire");
+    mockGetRecentMessages.mockImplementation(() => {
+      throw new Error("ring buffer exploded");
     });
 
     const socket = makeMockSocket();
@@ -1347,15 +1377,15 @@ describe("handleSignalGraphs", () => {
 // ---------------------------------------------------------------------------
 
 describe("handleRRDTimeseries — time_period (cache path)", () => {
-  it("should serve the cached response directly for a valid time_period", async () => {
-    const cachedResponse = {
+  it("should serve the response directly for a valid time_period", async () => {
+    const response = {
       data: [],
       time_period: "1hr",
       start: Date.now() - 3_600_000,
       end: Date.now(),
       points: 0,
     };
-    mockGetCachedTimeSeries.mockReturnValue(cachedResponse);
+    mockGetOrQueryTimeSeries.mockReturnValue(response);
 
     const socket = makeMockSocket();
     simulateConnect(socket);
@@ -1363,16 +1393,13 @@ describe("handleRRDTimeseries — time_period (cache path)", () => {
 
     await new Promise<void>((resolve) => setImmediate(resolve));
 
-    const payloads = emittedAs<typeof cachedResponse>(
-      socket,
-      "rrd_timeseries_data",
-    );
+    const payloads = emittedAs<typeof response>(socket, "rrd_timeseries_data");
 
     expect(payloads).toHaveLength(1);
-    expect(payloads[0]).toEqual(cachedResponse);
+    expect(payloads[0]).toEqual(response);
   });
 
-  it("should serve cached responses for all 8 valid time periods", async () => {
+  it("should serve responses for all 8 valid time periods", async () => {
     const ALL_PERIODS = [
       "1hr",
       "6hr",
@@ -1385,14 +1412,14 @@ describe("handleRRDTimeseries — time_period (cache path)", () => {
     ] as const;
 
     for (const period of ALL_PERIODS) {
-      const cached = {
+      const response = {
         data: [],
         time_period: period,
         start: 0,
         end: 1,
         points: 0,
       };
-      mockGetCachedTimeSeries.mockReturnValue(cached);
+      mockGetOrQueryTimeSeries.mockReturnValue(response);
 
       const socket = makeMockSocket();
       simulateConnect(socket);
@@ -1426,8 +1453,8 @@ describe("handleRRDTimeseries — time_period (cache path)", () => {
     expect(payloads[0].data).toEqual([]);
   });
 
-  it("should emit a cache-warming error when a valid period has no cached data yet", async () => {
-    // mockGetCachedTimeSeries defaults to null (set in beforeEach)
+  it("should emit an unavailable error when getOrQueryTimeSeries returns null", async () => {
+    // mockGetOrQueryTimeSeries defaults to null (set in beforeEach)
     const socket = makeMockSocket();
     simulateConnect(socket);
     socket.handlers.rrd_timeseries({ time_period: "24hr" });
@@ -1440,19 +1467,19 @@ describe("handleRRDTimeseries — time_period (cache path)", () => {
     );
 
     expect(payloads).toHaveLength(1);
-    expect(payloads[0].error).toMatch(/warming/i);
+    expect(payloads[0].error).toBeTruthy();
     expect(payloads[0].time_period).toBe("24hr");
   });
 
-  it("regression: getDatabase is NOT called for time_period requests", async () => {
-    const cachedResponse = {
+  it("regression: getDatabase is NOT called for time_period requests (served by getOrQueryTimeSeries)", async () => {
+    const response = {
       data: [],
       time_period: "24hr",
       start: 0,
       end: 1,
       points: 0,
     };
-    mockGetCachedTimeSeries.mockReturnValue(cachedResponse);
+    mockGetOrQueryTimeSeries.mockReturnValue(response);
 
     // Import and clear the mocked getDatabase
     const { getDatabase } = await import("../../db/index.js");
@@ -1469,14 +1496,14 @@ describe("handleRRDTimeseries — time_period (cache path)", () => {
   });
 
   it("regression: queryTimeseriesData is NOT called for time_period requests", async () => {
-    const cachedResponse = {
+    const response = {
       data: [],
       time_period: "1hr",
       start: 0,
       end: 1,
       points: 0,
     };
-    mockGetCachedTimeSeries.mockReturnValue(cachedResponse);
+    mockGetOrQueryTimeSeries.mockReturnValue(response);
     mockQueryTimeseriesData.mockClear();
 
     const socket = makeMockSocket();

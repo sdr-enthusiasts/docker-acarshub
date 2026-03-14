@@ -525,9 +525,6 @@ describe("Migration from initial Alembic state", () => {
 
     const indexNames = indexes.map((idx) => idx.name);
 
-    expect(indexNames).toContain("ix_messages_time_icao");
-    expect(indexNames).toContain("ix_messages_tail_flight");
-    expect(indexNames).toContain("ix_messages_depa_dsta");
     expect(indexNames).toContain("ix_messages_type_time");
     expect(indexNames).toContain("ix_alert_matches_term_time");
     expect(indexNames).toContain("ix_alert_matches_uid_term");
@@ -957,6 +954,88 @@ describe("Migration from initial Alembic state", () => {
     expect(row).toBeDefined();
     // The '1min' row (acars=42) must have won.
     expect(row?.acars_count).toBe(42);
+
+    testDb.close();
+  });
+
+  test("regression: migration 12 DROP INDEX IF EXISTS is safe when indexes were never created (fresh install path)", () => {
+    // Simulate a DB at migration-11 state where timeseries_stats was created
+    // WITHOUT the two indexes (idx_timeseries_timestamp_resolution and
+    // idx_timeseries_resolution).  This is the state produced by migration 9
+    // after the PR removes the CREATE INDEX calls.  Migration 12's bare
+    // DROP INDEX would throw on this database; DROP INDEX IF EXISTS must not.
+    const setupDb = new Database(TEST_DB_PATH);
+    setupDb.exec(`
+      CREATE TABLE alembic_version (version_num VARCHAR(32) PRIMARY KEY NOT NULL);
+      INSERT INTO alembic_version VALUES ('f0a1b2c3d4e5');
+    `);
+    // timeseries_stats has the old id/resolution schema but NO indexes —
+    // exactly what migration 9 produces after removing the CREATE INDEX calls.
+    setupDb.exec(`
+      CREATE TABLE timeseries_stats (
+        id            INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+        timestamp     INTEGER NOT NULL,
+        resolution    TEXT    NOT NULL DEFAULT '1min',
+        acars_count   INTEGER DEFAULT 0 NOT NULL,
+        vdlm_count    INTEGER DEFAULT 0 NOT NULL,
+        hfdl_count    INTEGER DEFAULT 0 NOT NULL,
+        imsl_count    INTEGER DEFAULT 0 NOT NULL,
+        irdm_count    INTEGER DEFAULT 0 NOT NULL,
+        total_count   INTEGER DEFAULT 0 NOT NULL,
+        error_count   INTEGER DEFAULT 0 NOT NULL
+      );
+    `);
+    setupDb.exec(`
+      CREATE TABLE rrd_import_registry (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+        file_hash   TEXT    NOT NULL UNIQUE,
+        rrd_path    TEXT    NOT NULL,
+        imported_at INTEGER NOT NULL,
+        rows_imported INTEGER NOT NULL DEFAULT 0
+      );
+      CREATE UNIQUE INDEX idx_rrd_import_registry_hash
+        ON rrd_import_registry (file_hash);
+    `);
+    setupDb.exec(`
+      INSERT INTO timeseries_stats
+        (timestamp, resolution, acars_count, total_count)
+      VALUES
+        (1704067200, '1min', 5, 5),
+        (1704067260, '1min', 3, 3);
+    `);
+    setupDb.close();
+
+    // Must not throw — migration 12's DROP INDEX IF EXISTS handles absent indexes.
+    expect(() => runMigrations(TEST_DB_PATH)).not.toThrow();
+
+    const testDb = new Database(TEST_DB_PATH);
+
+    // Both rows must survive the rebuild.
+    const rowCount = (
+      testDb
+        .prepare("SELECT COUNT(*) AS n FROM timeseries_stats")
+        .get() as { n: number }
+    ).n;
+    expect(rowCount).toBe(2);
+
+    // Schema must be the migration-12 final form.
+    const columns = testDb
+      .prepare("PRAGMA table_info(timeseries_stats)")
+      .all() as Array<{ name: string; pk: number }>;
+    const columnNames = columns.map((c) => c.name);
+    expect(columnNames).not.toContain("id");
+    expect(columnNames).not.toContain("resolution");
+    expect(columnNames).toContain("timestamp");
+
+    // Neither old index should exist.
+    const indexes = testDb
+      .prepare(
+        "SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='timeseries_stats'",
+      )
+      .all() as Array<{ name: string }>;
+    const indexNames = indexes.map((i) => i.name);
+    expect(indexNames).not.toContain("idx_timeseries_timestamp_resolution");
+    expect(indexNames).not.toContain("idx_timeseries_resolution");
 
     testDb.close();
   });

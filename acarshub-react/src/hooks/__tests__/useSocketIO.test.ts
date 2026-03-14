@@ -688,18 +688,12 @@ describe("useSocketIO", () => {
   // -------------------------------------------------------------------------
 
   describe("on-connect time-series warm-up", () => {
-    const ALL_PERIODS = [
-      "1hr",
-      "6hr",
-      "12hr",
-      "24hr",
-      "1wk",
-      "30day",
-      "6mon",
-      "1yr",
-    ] as const;
+    // Only warm-tier periods are requested on connect.  Non-warm periods are
+    // fetched on-demand by useRRDTimeSeriesData when the user navigates to them.
+    const WARM_PERIODS = ["1hr", "6hr", "12hr"] as const;
+    const NON_WARM_PERIODS = ["24hr", "1wk", "30day", "6mon", "1yr"] as const;
 
-    it("emits rrd_timeseries for all 8 periods when the connect event fires", () => {
+    it("emits rrd_timeseries for exactly the 3 warm-tier periods when the connect event fires", () => {
       renderHook(() => useSocketIO());
       mockSocket.emit.mockClear(); // ignore any pre-connect emits
 
@@ -709,12 +703,12 @@ describe("useSocketIO", () => {
         .filter((call) => call[0] === "rrd_timeseries")
         .map((call) => (call[1] as { time_period: string }).time_period);
 
-      for (const period of ALL_PERIODS) {
+      for (const period of WARM_PERIODS) {
         expect(emittedPeriods).toContain(period);
       }
     });
 
-    it("emits exactly 8 rrd_timeseries requests on connect", () => {
+    it("emits exactly 3 rrd_timeseries requests on connect (warm tier only)", () => {
       renderHook(() => useSocketIO());
       mockSocket.emit.mockClear();
 
@@ -723,7 +717,22 @@ describe("useSocketIO", () => {
       const rrdEmits = (mockSocket.emit.mock.calls as unknown[][]).filter(
         (call) => call[0] === "rrd_timeseries",
       );
-      expect(rrdEmits).toHaveLength(8);
+      expect(rrdEmits).toHaveLength(3);
+    });
+
+    it("does NOT emit rrd_timeseries for non-warm periods on connect", () => {
+      renderHook(() => useSocketIO());
+      mockSocket.emit.mockClear();
+
+      fireEvent("connect", undefined);
+
+      const emittedPeriods = (mockSocket.emit.mock.calls as unknown[][])
+        .filter((call) => call[0] === "rrd_timeseries")
+        .map((call) => (call[1] as { time_period: string }).time_period);
+
+      for (const period of NON_WARM_PERIODS) {
+        expect(emittedPeriods).not.toContain(period);
+      }
     });
 
     it("includes the /main namespace as the third argument in each warm-up emit", () => {
@@ -741,7 +750,7 @@ describe("useSocketIO", () => {
       }
     });
 
-    it("re-requests all periods on reconnect (warm-up fires on every connect event)", () => {
+    it("re-requests warm-tier periods on reconnect (warm-up fires on every connect event)", () => {
       renderHook(() => useSocketIO());
       mockSocket.emit.mockClear();
 
@@ -758,8 +767,8 @@ describe("useSocketIO", () => {
         (call) => call[0] === "rrd_timeseries",
       ).length;
 
-      expect(firstCount).toBe(8);
-      expect(secondCount).toBe(8);
+      expect(firstCount).toBe(3);
+      expect(secondCount).toBe(3);
     });
 
     it("regression: rrd_timeseries warm-up is NOT emitted without a connect event", () => {

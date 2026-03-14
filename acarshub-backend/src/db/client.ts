@@ -123,8 +123,12 @@ export function initDatabase(
     // Set cache size to 10MB (negative = KB, positive = pages)
     sqliteConnection.pragma("cache_size = -10000");
 
-    // Increase mmap_size for better performance (256MB)
-    sqliteConnection.pragma("mmap_size = 268435456");
+    // Removed: Increase mmap_size for better performance (256MB)/268435456
+    // https://sqlite.org/mmap.html there appears to be no appreciable benefit to
+    // setting the mmap size. It just maps the first N bytes to memory and uses
+    // file reads past that. It isn't a warm cache of data.
+
+    sqliteConnection.pragma("mmap_size = 0");
 
     // Lower auto-checkpoint threshold from the default 1000 pages (~4 MB) to
     // 200 pages (~800 KB). The scheduled TRUNCATE checkpoint runs every 5 minutes

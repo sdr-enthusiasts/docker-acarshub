@@ -52,6 +52,7 @@ import {
   getMessageQueue,
   type QueuedMessage,
 } from "./message-queue.js";
+import { pushAlert, pushMessage } from "./message-ring-buffer.js";
 import { destroyScheduler, getScheduler } from "./scheduler.js";
 import { checkAndAddStationId, getStationIds } from "./station-ids.js";
 import { startStatsPruning } from "./stats-pruning.js";
@@ -430,6 +431,14 @@ export class BackgroundServices extends EventEmitter {
           hasToaddrHex: !!enrichedMessage.toaddr_hex,
           hasFromaddrHex: !!enrichedMessage.fromaddr_hex,
         });
+
+        // Update ring buffers BEFORE emitting so a client connecting at this
+        // exact moment gets a consistent snapshot.
+        if (alertMetadata.matched) {
+          pushAlert(enrichedMessage);
+        } else {
+          pushMessage(enrichedMessage);
+        }
 
         // Emit enriched message to Socket.IO clients
         this.config.socketio.emit("acars_msg", {

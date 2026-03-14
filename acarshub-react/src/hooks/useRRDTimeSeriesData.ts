@@ -15,40 +15,40 @@
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * useRRDTimeSeriesData — pure store-selector hook.
+ * useRRDTimeSeriesData — store-selector hook with on-demand emit for non-warm
+ * periods.
  *
- * WHY THIS CHANGED
- * ----------------
- * Previously this hook owned the full request/response cycle: it emitted an
- * `rrd_timeseries` Socket.IO request on mount and whenever `timePeriod`
- * changed, then listened for a matching `rrd_timeseries_data` response.
+ * PUSH MODEL (warm periods: 1hr, 6hr, 12hr)
+ * ------------------------------------------
+ * The backend pre-computes these periods at startup, keeps them in memory, and
+ * broadcasts fresh results on a wall-clock-aligned schedule.  useSocketIO
+ * pre-fetches all warm periods on every connect event, so this hook is a pure
+ * Zustand selector for those periods — no socket emit needed on mount.
  *
- * The backend now warms all eight periods in memory at startup and broadcasts
- * fresh results on a wall-clock-aligned schedule (every 1 min for short
- * windows, every 12 hr for the 1-year window).  The global socket handler in
- * useSocketIO writes every incoming push to `useAppStore.timeSeriesCache`.
+ * ON-DEMAND REQUEST (non-warm periods: 24hr, 1wk, 30day, 6mon, 1yr)
+ * ------------------------------------------------------------------
+ * Non-warm periods are NOT pre-fetched on connect.  When a component first
+ * renders with a non-warm period (i.e. the user navigates to that view), this
+ * hook emits a single `rrd_timeseries` request if the period is not yet in the
+ * cache.  The backend responds with a `rrd_timeseries_data` event which
+ * useSocketIO writes to the store, causing this hook to re-render with data.
  *
- * This hook therefore becomes a thin Zustand selector:
- *   - No socket emit on mount or period change.
- *   - No local useState — data comes directly from the shared cache.
- *   - Switching between periods is instant; no loading spinner once the
- *     cache is warm (which happens within one RTT of the connect event).
- *   - The return shape is intentionally identical to the old hook so that
- *     call-sites (StatsPage) require no changes.
+ * WHY EMIT ONLY ON CACHE MISS
+ * ----------------------------
+ * Warm periods: served from push cache — no emit ever needed.
+ * Non-warm periods with cache hit: stale-while-revalidate is fine here because
+ *   the lazy cache on the backend has a TTL; re-mounting the same view within
+ *   the TTL window will serve the existing entry without an extra DB query.
+ * Non-warm periods on cache miss: emit once so the backend runs the (possibly
+ *   expensive) DB query and caches the result.
  *
- * PUSH MODEL LIFECYCLE
- * --------------------
- * 1. useSocketIO fires `rrd_timeseries` for all 8 periods on every `connect`
- *    event → backend replies with `rrd_timeseries_data` for each period.
- * 2. useSocketIO's `rrd_timeseries_data` listener writes each response to
- *    `useAppStore.setTimeSeriesData`.
- * 3. Backend broadcasts a fresh `rrd_timeseries_data` on each scheduled
- *    refresh tick → useSocketIO writes it again, store updates, all
- *    subscribed components re-render.
- * 4. This hook just reads `timeSeriesCache.get(timePeriod)` — no side
- *    effects, no cleanup needed.
+ * RETURN SHAPE
+ * ------------
+ * Identical to the old hook so call-sites (StatsPage) require no changes.
  */
 
+import { useEffect } from "react";
+import { socketService } from "../services/socket";
 import { useAppStore } from "../store/useAppStore";
 import type {
   TimePeriod,
@@ -56,6 +56,7 @@ import type {
   TimeSeriesDataPoint,
   TimeSeriesTimeRange,
 } from "../types/timeseries";
+import { WARM_PERIODS } from "../types/timeseries";
 
 // Re-export TimePeriod so existing import sites that pull it from this
 // module continue to work without modification.
@@ -80,12 +81,14 @@ export type RRDTimeRange = TimeSeriesTimeRange;
 
 /**
  * Read the time-series cache entry for `timePeriod` from the Zustand store.
+ * Emits a `rrd_timeseries` socket request when a non-warm period has no cache
+ * entry yet (lazy on-demand fetch).
  *
  * @param timePeriod - Which of the eight periods to surface.
  * @returns
  *   data      — Zero-filled data points for the period (empty array while loading).
- *   loading   — True only until the first push for this period arrives.
- *   error     — Always null in push mode (errors are logged server-side).
+ *   loading   — True only until the first response for this period arrives.
+ *   error     — Always null (errors are logged server-side).
  *   timeRange — start/end in milliseconds for pinning the chart x-axis, or
  *               null while loading.
  *
@@ -106,6 +109,18 @@ export const useRRDTimeSeriesData = (
   const entry: TimeSeriesCacheEntry | undefined = useAppStore((state) =>
     state.timeSeriesCache.get(timePeriod),
   );
+
+  // For non-warm periods: emit a socket request when the cache entry is absent
+  // so the backend runs the on-demand query and replies with rrd_timeseries_data.
+  // Warm periods are pre-fetched by useSocketIO on connect — no emit needed here.
+  useEffect(() => {
+    const isWarm = (WARM_PERIODS as readonly string[]).includes(timePeriod);
+    if (!isWarm && entry === undefined && socketService.isInitialized()) {
+      const socket = socketService.getSocket();
+      // @ts-expect-error — Flask-SocketIO requires namespace as third arg
+      socket.emit("rrd_timeseries", { time_period: timePeriod }, "/main");
+    }
+  }, [timePeriod, entry]);
 
   if (entry === undefined) {
     return {
