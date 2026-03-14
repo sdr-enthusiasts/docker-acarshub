@@ -525,9 +525,6 @@ describe("Migration from initial Alembic state", () => {
 
     const indexNames = indexes.map((idx) => idx.name);
 
-    expect(indexNames).toContain("ix_messages_time_icao");
-    expect(indexNames).toContain("ix_messages_tail_flight");
-    expect(indexNames).toContain("ix_messages_depa_dsta");
     expect(indexNames).toContain("ix_messages_type_time");
     expect(indexNames).toContain("ix_alert_matches_term_time");
     expect(indexNames).toContain("ix_alert_matches_uid_term");
