@@ -44,7 +44,7 @@ export const messages = sqliteTable(
   "messages",
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
-    uid: text("uid", { length: 36 }).notNull().unique(),
+    uid: text("uid", { length: 36 }).notNull(),
     messageType: text("message_type", { length: 32 }).notNull(),
     time: integer("msg_time").notNull(), // Unix timestamp
     stationId: text("station_id", { length: 32 }).notNull(),
@@ -86,17 +86,9 @@ export const messages = sqliteTable(
     freqIdx: index("ix_messages_freq").on(table.freq),
     icaoIdx: index("ix_messages_icao").on(table.icao),
     labelIdx: index("ix_messages_label").on(table.label),
-    msgTextIdx: index("ix_messages_msg_text").on(table.text),
     msgnoIdx: index("ix_messages_msgno").on(table.msgno),
     tailIdx: index("ix_messages_tail").on(table.tail),
-    aircraftIdIdx: index("ix_messages_aircraft_id").on(table.aircraftId),
     // Composite indexes (added in migration 8 for query optimization)
-    timeIcaoIdx: index("ix_messages_time_icao").on(table.time, table.icao),
-    tailFlightIdx: index("ix_messages_tail_flight").on(
-      table.tail,
-      table.flight,
-    ),
-    depaDstaIdx: index("ix_messages_depa_dsta").on(table.depa, table.dsta),
     typeTimeIdx: index("ix_messages_type_time").on(
       table.messageType,
       table.time,

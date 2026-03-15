@@ -17,6 +17,7 @@
  * 10. c3d4e5f6a1b2 - rebuild_fts
  * 11. f0a1b2c3d4e5 - deduplicate_timeseries_and_add_registry
  * 12. b6c7d8e9f0a1 - drop_resolution_promote_timestamp_pk
+ * 13. 96f36b89016d - drop_unnecessary_indexes
  *
  * FTS Schema Integrity
  * --------------------
@@ -769,7 +770,6 @@ function migration08_finalOptimization(db: Database.Database): void {
 
   if (!hasAircraftId) {
     db.exec("ALTER TABLE messages ADD COLUMN aircraft_id TEXT");
-    db.exec("CREATE INDEX ix_messages_aircraft_id ON messages(aircraft_id)");
     logger.info("✓ aircraft_id column added");
   } else {
     logger.info("aircraft_id column already exists, skipping");
@@ -785,23 +785,6 @@ function migration08_finalOptimization(db: Database.Database): void {
 
   // Wrap index creation in transaction
   const createIndexes = db.transaction(() => {
-    // Time + ICAO: "recent messages from this aircraft"
-    if (!indexNames.has("ix_messages_time_icao")) {
-      db.exec(
-        "CREATE INDEX ix_messages_time_icao ON messages(msg_time DESC, icao)",
-      );
-    }
-
-    // Tail + Flight: "find messages by tail and flight number"
-    if (!indexNames.has("ix_messages_tail_flight")) {
-      db.exec("CREATE INDEX ix_messages_tail_flight ON messages(tail, flight)");
-    }
-
-    // Departure + Destination: route searches
-    if (!indexNames.has("ix_messages_depa_dsta")) {
-      db.exec("CREATE INDEX ix_messages_depa_dsta ON messages(depa, dsta)");
-    }
-
     // Message type + Time: filtered time-series queries
     if (!indexNames.has("ix_messages_type_time")) {
       db.exec(
@@ -1180,6 +1163,27 @@ function migration12_dropResolutionPromoteTimestampPk(
   logger.info("✓ Migration 12 complete");
 }
 
+function migration13_dropUnnecessaryIndexes(
+  db: Database.Database,
+): void {
+  logger.info(
+    "Applying migration 13: drop_unnecessary_indexes",
+  );
+
+  const migrate = db.transaction(() => {
+    db.exec(`DROP INDEX IF EXISTS messages_uid_unique;`);
+    db.exec(`DROP INDEX IF EXISTS ix_messages_msg_text;`);
+    db.exec(`DROP INDEX IF EXISTS ix_messages_aircraft_id;`);
+    db.exec(`DROP INDEX IF EXISTS ix_messages_time_icao;`);
+    db.exec(`DROP INDEX IF EXISTS ix_messages_tail_flight;`);
+    db.exec(`DROP INDEX IF EXISTS ix_messages_depa_dsta;`);
+  });
+
+  migrate();
+
+  logger.info("✓ Migration 13 complete");
+}
+
 // ---------------------------------------------------------------------------
 // Startup FTS integrity check
 // ---------------------------------------------------------------------------
@@ -1302,6 +1306,11 @@ const MIGRATIONS: MigrationStep[] = [
     revision: "b6c7d8e9f0a1",
     name: "drop_resolution_promote_timestamp_pk",
     upgrade: migration12_dropResolutionPromoteTimestampPk,
+  },
+  {
+    revision: "96f36b89016d",
+    name: "drop_unnecessary_indexes",
+    upgrade: migration13_dropUnnecessaryIndexes,
   },
 ];
 
