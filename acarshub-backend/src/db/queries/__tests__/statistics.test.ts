@@ -98,7 +98,6 @@ const CREATE_STATS_TABLES = `
 
   CREATE TABLE IF NOT EXISTS messages (
     id           INTEGER PRIMARY KEY AUTOINCREMENT,
-    uid          TEXT UNIQUE NOT NULL,
     message_type TEXT NOT NULL,
     msg_time     INTEGER NOT NULL,
     station_id   TEXT NOT NULL DEFAULT '',
@@ -160,14 +159,12 @@ afterEach(() => {
 // ---------------------------------------------------------------------------
 
 function insertMessage(
-  uid: string,
   messageType: string,
   time = 1_700_000_000,
 ): void {
   testDb
     .insert(messages)
     .values({
-      uid,
       messageType,
       time,
       stationId: "",
@@ -438,9 +435,9 @@ describe("initializeMessageCounters", () => {
   });
 
   it("should read ACARS message count from database", () => {
-    insertMessage("uid-1", "ACARS");
-    insertMessage("uid-2", "ACARS");
-    insertMessage("uid-3", "ACARS");
+    insertMessage("ACARS");
+    insertMessage("ACARS");
+    insertMessage("ACARS");
 
     initializeMessageCounters();
 
@@ -450,8 +447,8 @@ describe("initializeMessageCounters", () => {
   });
 
   it("should read VDLM2 message count from database (both spellings)", () => {
-    insertMessage("uid-1", "VDLM2");
-    insertMessage("uid-2", "VDL-M2");
+    insertMessage("VDLM2");
+    insertMessage("VDL-M2");
 
     initializeMessageCounters();
 
@@ -460,8 +457,8 @@ describe("initializeMessageCounters", () => {
   });
 
   it("should read HFDL message count from database", () => {
-    insertMessage("uid-1", "HFDL");
-    insertMessage("uid-2", "HFDL");
+    insertMessage("HFDL");
+    insertMessage("HFDL");
 
     initializeMessageCounters();
 
@@ -470,10 +467,10 @@ describe("initializeMessageCounters", () => {
   });
 
   it("should read mixed decoder counts from database", () => {
-    insertMessage("uid-acars-1", "ACARS");
-    insertMessage("uid-acars-2", "ACARS");
-    insertMessage("uid-vdlm-1", "VDLM2");
-    insertMessage("uid-hfdl-1", "HFDL");
+    insertMessage("ACARS");
+    insertMessage("ACARS");
+    insertMessage("VDLM2");
+    insertMessage("HFDL");
 
     initializeMessageCounters();
 
@@ -485,11 +482,11 @@ describe("initializeMessageCounters", () => {
   });
 
   it("should be a no-op when called a second time (already-initialized guard)", () => {
-    insertMessage("uid-1", "ACARS");
+    insertMessage("ACARS");
     initializeMessageCounters();
 
     // Insert more messages into the DB and call again — counters must not change
-    insertMessage("uid-2", "ACARS");
+    insertMessage("ACARS");
     initializeMessageCounters(); // should be skipped
 
     const counts = getPerDecoderMessageCounts();
@@ -748,8 +745,8 @@ describe("resetCountersForTesting", () => {
     expect(countsAfterFirst.acars).toBe(0);
 
     // Insert messages, then reset module state
-    insertMessage("uid-1", "ACARS");
-    insertMessage("uid-2", "ACARS");
+    insertMessage("ACARS");
+    insertMessage("ACARS");
     resetCountersForTesting();
 
     // Second init: should read 2 ACARS from DB

@@ -448,32 +448,6 @@ describe("Migration from initial Alembic state", () => {
     testDb.close();
   });
 
-  test("should add uid column and generate UIDs for existing messages", () => {
-    runMigrations(TEST_DB_PATH);
-
-    const testDb = new Database(TEST_DB_PATH);
-
-    // Check that uid column exists
-    const columns = testDb
-      .prepare("PRAGMA table_info(messages)")
-      .all() as Array<{ name: string }>;
-    const hasUid = columns.some((col) => col.name === "uid");
-    expect(hasUid).toBe(true);
-
-    // Check that all messages have UIDs
-    const totalMessages = testDb
-      .prepare("SELECT COUNT(*) as count FROM messages")
-      .get() as { count: number };
-    const messagesWithUid = testDb
-      .prepare("SELECT COUNT(*) as count FROM messages WHERE uid IS NOT NULL")
-      .get() as { count: number };
-
-    expect(messagesWithUid.count).toBe(totalMessages.count);
-    expect(totalMessages.count).toBe(33); // 10 + 15 + 8
-
-    testDb.close();
-  });
-
   test("should add aircraft_id column", () => {
     runMigrations(TEST_DB_PATH);
 
@@ -527,7 +501,7 @@ describe("Migration from initial Alembic state", () => {
 
     expect(indexNames).toContain("ix_messages_type_time");
     expect(indexNames).toContain("ix_alert_matches_term_time");
-    expect(indexNames).toContain("ix_alert_matches_uid_term");
+    expect(indexNames).toContain("ix_alert_matches_id_term");
 
     testDb.close();
   });
