@@ -412,6 +412,19 @@ export async function warmMessageBuffers(): Promise<void> {
   }
 }
 
+// clear and warm
+export async function reheatMessageBuffers(): Promise<void> {
+  if (!messageBuffer || !alertBuffer) {
+    logger.warn(
+      "reheatMessageBuffers called before initMessageBuffers — skipping",
+    );
+    return;
+  }
+  alertBuffer.clear();
+  messageBuffer.clear();
+  warmMessageBuffers();
+}
+
 // ---------------------------------------------------------------------------
 // Testing helpers
 // ---------------------------------------------------------------------------

@@ -37,6 +37,7 @@ import {
   messages,
   type NewAlertMatch,
 } from "../schema.js";
+import { reheatMessageBuffers } from "../../services/message-ring-buffer.js"
 
 const logger = createLogger("db:alerts");
 
@@ -689,6 +690,8 @@ export function regenerateAllAlertMatches(
 
   try {
     runInTransaction();
+    // message buffers need to be remade so they don't contain old alerts
+    reheatMessageBuffers();
     return stats;
   } catch (error) {
     logger.error("Failed to regenerate alert matches", {
