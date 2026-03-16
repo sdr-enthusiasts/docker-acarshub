@@ -182,7 +182,7 @@ export function searchAlerts(limit = 100, offset = 0): AlertMatchWithMessage[] {
     .select({
       // Alert match fields
       id: alertMatches.id,
-      messageUid: alertMatches.messageUid,
+      messageId: alertMatches.messageId,
       term: alertMatches.term,
       matchType: alertMatches.matchType,
       matchedAt: alertMatches.matchedAt,
@@ -190,7 +190,7 @@ export function searchAlerts(limit = 100, offset = 0): AlertMatchWithMessage[] {
       message: messages,
     })
     .from(alertMatches)
-    .innerJoin(messages, eq(alertMatches.messageUid, messages.uid))
+    .innerJoin(messages, eq(alertMatches.messageId, messages.id))
     .orderBy(desc(alertMatches.matchedAt))
     .limit(limit)
     .offset(offset)
@@ -231,14 +231,14 @@ export function searchAlertsByTerm(
   const results = db
     .select({
       id: alertMatches.id,
-      messageUid: alertMatches.messageUid,
+      messageId: alertMatches.messageId,
       term: alertMatches.term,
       matchType: alertMatches.matchType,
       matchedAt: alertMatches.matchedAt,
       message: messages,
     })
     .from(alertMatches)
-    .innerJoin(messages, eq(alertMatches.messageUid, messages.uid))
+    .innerJoin(messages, eq(alertMatches.messageId, messages.id))
     .where(eq(alertMatches.term, term))
     .orderBy(desc(alertMatches.matchedAt))
     .limit(limit)
@@ -439,7 +439,7 @@ export function getAlertMatchesForMessage(messageUid: string): AlertMatch[] {
   return db
     .select()
     .from(alertMatches)
-    .where(eq(alertMatches.messageUid, messageUid))
+    .where(eq(alertMatches.messageId, Number(messageUid)))
     .all();
 }
 
@@ -549,7 +549,7 @@ export function regenerateAllAlertMatches(
 
       db.insert(alertMatches)
         .values({
-          messageUid: message.uid,
+          messageId: message.id,
           term: term.toUpperCase(),
           matchType,
           matchedAt: message.time,

@@ -18,6 +18,7 @@
  * 11. f0a1b2c3d4e5 - deduplicate_timeseries_and_add_registry
  * 12. b6c7d8e9f0a1 - drop_resolution_promote_timestamp_pk
  * 13. 96f36b89016d - drop_unnecessary_indexes
+ * 14. 803398f85958 - remove_uuid
  *
  * FTS Schema Integrity
  * --------------------
@@ -36,7 +37,6 @@
  */
 
 import { spawn } from "node:child_process";
-import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import Database from "better-sqlite3";
@@ -46,7 +46,7 @@ import { createLogger } from "../utils/logger.js";
 
 const logger = createLogger("migrations");
 const DB_PATH = process.env.ACARSHUB_DB || "./data/acarshub.db";
-const LATEST_REVISION = "b6c7d8e9f0a1";
+const LATEST_REVISION = "803398f85958";
 
 interface MigrationStep {
   revision: string;
@@ -686,28 +686,13 @@ function migration06_addMessageUids(db: Database.Database): void {
 
   db.exec("ALTER TABLE messages ADD COLUMN uid TEXT");
 
-  logger.info("Generating UIDs for existing messages...");
-  const messages = db
-    .prepare("SELECT id FROM messages WHERE uid IS NULL")
-    .all() as Array<{
-    id: number;
-  }>;
-
-  logger.info(`Processing ${messages.length} messages...`);
-
-  const updateStmt = db.prepare("UPDATE messages SET uid = ? WHERE id = ?");
-
-  // Wrap all updates in a single transaction for massive performance improvement
-  const updateAll = db.transaction(() => {
-    for (const msg of messages) {
-      updateStmt.run(randomUUID(), msg.id);
-    }
-  });
-
-  updateAll();
+  // this used to add actual uuids but they are no longer required
+  // still add the column as we can then unconditionally drop the column in migration14
 
   logger.info("Creating unique index on uid column...");
   db.exec("CREATE UNIQUE INDEX ix_messages_uid ON messages(uid)");
+
+  logger.info("Applying migration 6: add_message_uids: done");
 }
 
 /**
@@ -1184,6 +1169,39 @@ function migration13_dropUnnecessaryIndexes(
   logger.info("✓ Migration 13 complete");
 }
 
+function migration14_removeUuid(
+  db: Database.Database,
+): void {
+  logger.info(
+    "Applying migration 14: remove_uuid",
+  );
+
+  const migrate = db.transaction(() => {
+    db.exec("ALTER TABLE alert_matches ADD COLUMN message_id INTEGER;");
+    db.exec("CREATE INDEX IF NOT EXISTS ix_alert_matches_message_id ON alert_matches(message_id);");
+    db.exec("CREATE INDEX IF NOT EXISTS ix_alert_matches_id_term ON alert_matches(message_id, term);");
+
+    db.exec(`
+        UPDATE alert_matches
+        SET message_id = messages.id
+        FROM messages
+        WHERE alert_matches.message_uid = messages.uid
+    ;`);
+
+
+    db.exec("DROP INDEX IF EXISTS ix_alert_matches_message_uid;");
+    db.exec("DROP INDEX IF EXISTS ix_alert_matches_uid_term;");
+    db.exec("ALTER TABLE alert_matches DROP COLUMN message_uid;");
+
+    db.exec("DROP INDEX IF EXISTS ix_messages_uid;");
+    db.exec("ALTER TABLE messages DROP COLUMN uid;");
+  });
+
+  migrate();
+
+  logger.info("✓ Migration 14 complete");
+}
+
 // ---------------------------------------------------------------------------
 // Startup FTS integrity check
 // ---------------------------------------------------------------------------
@@ -1311,6 +1329,11 @@ const MIGRATIONS: MigrationStep[] = [
     revision: "96f36b89016d",
     name: "drop_unnecessary_indexes",
     upgrade: migration13_dropUnnecessaryIndexes,
+  },
+  {
+    revision: "803398f85958",
+    name: "remove_uuid",
+    upgrade: migration14_removeUuid,
   },
 ];
 
