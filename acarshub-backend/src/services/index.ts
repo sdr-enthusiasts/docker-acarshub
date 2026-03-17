@@ -52,7 +52,11 @@ import {
   getMessageQueue,
   type QueuedMessage,
 } from "./message-queue.js";
-import { pushAlert, pushMessage } from "./message-ring-buffer.js";
+import {
+  pushAlert,
+  pushMessage,
+  reheatMessageBuffers,
+} from "./message-ring-buffer.js";
 import { destroyScheduler, getScheduler } from "./scheduler.js";
 import { checkAndAddStationId, getStationIds } from "./station-ids.js";
 import { startStatsPruning } from "./stats-pruning.js";
@@ -493,11 +497,21 @@ export class BackgroundServices extends EventEmitter {
       .do(async () => {
         try {
           const pruneConfig = getConfig();
-          await pruneDatabase(
+          const { prunedAlerts } = await pruneDatabase(
             pruneConfig.dbSaveDays,
             pruneConfig.dbAlertSaveDays,
           );
           logger.debug("Database pruned");
+
+          // If alert_matches rows were pruned, the ring buffer may reference
+          // messages that no longer exist in the DB.  Reheat so the buffer
+          // stays consistent with the DB state.
+          if (prunedAlerts > 0) {
+            await reheatMessageBuffers();
+            logger.debug("Ring buffers reheated after alert prune", {
+              prunedAlerts,
+            });
+          }
         } catch (err) {
           logger.error("Failed to prune database", {
             error: err instanceof Error ? err.message : String(err),

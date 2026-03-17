@@ -53,7 +53,6 @@ import {
   getPerDecoderMessageCounts,
   getRowCount,
   regenerateAllAlertMatches,
-  searchAlerts,
   searchAlertsByTerm,
   setAlertIgnore,
   setAlertTerms,
@@ -882,20 +881,9 @@ function handleSignalGraphs(socket: TypedSocket): void {
  */
 function handleRequestRecentAlerts(socket: TypedSocket): void {
   try {
-    const recentAlertsRaw = searchAlerts(100, 0);
-    const alerts = recentAlertsRaw.map((alert) => {
-      const enriched = enrichMessage(alert.message);
-      enriched.matched = true;
-      enriched.matched_text =
-        alert.matchType === "text" ? [alert.term] : undefined;
-      enriched.matched_icao =
-        alert.matchType === "icao" ? [alert.term] : undefined;
-      enriched.matched_flight =
-        alert.matchType === "flight" ? [alert.term] : undefined;
-      enriched.matched_tail =
-        alert.matchType === "tail" ? [alert.term] : undefined;
-      return enriched;
-    });
+    // Use the ring buffer — same authoritative source as handleConnect —
+    // instead of querying the DB directly and re-enriching.
+    const alerts = getRecentAlerts();
 
     socket.emit("recent_alerts", { alerts });
 

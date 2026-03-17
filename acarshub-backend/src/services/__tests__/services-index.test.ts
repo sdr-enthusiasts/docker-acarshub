@@ -193,9 +193,21 @@ vi.mock("../../db/index.js", () => ({
   pruneDatabase: vi.fn().mockResolvedValue(undefined),
 }));
 
+// Scheduler mock — captures callbacks registered via .do() so tests can invoke them.
+const schedulerCallbacks = new Map<string, (...args: unknown[]) => unknown>();
+
 vi.mock("../scheduler.js", () => ({
   getScheduler: () => ({
-    every: () => ({ do: vi.fn(), at: () => ({ do: vi.fn() }) }),
+    every: () => ({
+      do: (fn: (...args: unknown[]) => unknown, name?: string) => {
+        if (name) schedulerCallbacks.set(name, fn);
+      },
+      at: () => ({
+        do: (fn: (...args: unknown[]) => unknown, name?: string) => {
+          if (name) schedulerCallbacks.set(name, fn);
+        },
+      }),
+    }),
     start: vi.fn(),
     stop: vi.fn(),
     getTasks: () => [],
@@ -206,6 +218,12 @@ vi.mock("../scheduler.js", () => ({
 vi.mock("../adsb-poller.js", () => ({
   getAdsbPoller: vi.fn(() => ({ on: vi.fn(), start: vi.fn(), stop: vi.fn() })),
   destroyAdsbPoller: vi.fn(),
+}));
+
+vi.mock("../message-ring-buffer.js", () => ({
+  pushMessage: vi.fn(),
+  pushAlert: vi.fn(),
+  reheatMessageBuffers: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock("../stats-pruning.js", () => ({ startStatsPruning: vi.fn() }));
@@ -223,6 +241,16 @@ vi.mock("../../formatters/index.js", () => ({
 vi.mock("../../formatters/enrichment.js", () => ({
   enrichMessage: vi.fn((m: unknown) => m),
 }));
+
+// ---------------------------------------------------------------------------
+// Imports for scheduler callback tests (after mocks)
+// ---------------------------------------------------------------------------
+
+import { pruneDatabase } from "../../db/index.js";
+import { reheatMessageBuffers } from "../message-ring-buffer.js";
+
+const mockPruneDatabase = vi.mocked(pruneDatabase);
+const mockReheatMessageBuffers = vi.mocked(reheatMessageBuffers);
 
 // ---------------------------------------------------------------------------
 // Helper
@@ -243,6 +271,7 @@ describe("BackgroundServices — fan-in architecture", () => {
   beforeEach(() => {
     // Reset created-listener tracking and connection configs before each test.
     createdListeners.length = 0;
+    schedulerCallbacks.clear();
     mockAcarsConnections = { descriptors: [] };
     mockVdlmConnections = { descriptors: [] };
     mockHfdlConnections = { descriptors: [] };
@@ -487,6 +516,58 @@ describe("BackgroundServices — fan-in architecture", () => {
       for (const listener of createdListeners) {
         expect(listener.stopCalled).toBe(true);
       }
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Scheduler: prune_database → conditional reheat
+  // -------------------------------------------------------------------------
+
+  describe("prune_database scheduler callback", () => {
+    it("reheats ring buffers when pruneDatabase reports prunedAlerts > 0", async () => {
+      mockAcarsConnections = { descriptors: [makeDescriptor(5550)] };
+
+      const { BackgroundServices } = await import("../index.js");
+      const svc = new BackgroundServices({ socketio: { emit: vi.fn() } });
+      await svc.initialize();
+      svc.start();
+
+      const pruneCallback = schedulerCallbacks.get("prune_database");
+      expect(pruneCallback).toBeDefined();
+
+      // Simulate prune that removed alert_matches rows
+      mockPruneDatabase.mockReturnValue({
+        prunedMessages: 5,
+        prunedAlerts: 3,
+      });
+
+      await pruneCallback?.();
+
+      expect(mockPruneDatabase).toHaveBeenCalled();
+      expect(mockReheatMessageBuffers).toHaveBeenCalledTimes(1);
+    });
+
+    it("does NOT reheat ring buffers when pruneDatabase reports prunedAlerts === 0", async () => {
+      mockAcarsConnections = { descriptors: [makeDescriptor(5550)] };
+
+      const { BackgroundServices } = await import("../index.js");
+      const svc = new BackgroundServices({ socketio: { emit: vi.fn() } });
+      await svc.initialize();
+      svc.start();
+
+      const pruneCallback = schedulerCallbacks.get("prune_database");
+      expect(pruneCallback).toBeDefined();
+
+      // Simulate prune that removed only messages, no alert matches
+      mockPruneDatabase.mockReturnValue({
+        prunedMessages: 10,
+        prunedAlerts: 0,
+      });
+
+      await pruneCallback?.();
+
+      expect(mockPruneDatabase).toHaveBeenCalled();
+      expect(mockReheatMessageBuffers).not.toHaveBeenCalled();
     });
   });
 });

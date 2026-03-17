@@ -1427,6 +1427,45 @@ describe("handleQueryAlertsByTerm", () => {
 });
 
 // ---------------------------------------------------------------------------
+// handleRequestRecentAlerts
+// ---------------------------------------------------------------------------
+
+describe("handleRequestRecentAlerts", () => {
+  it("should use ring buffer (getRecentAlerts) instead of querying the DB", () => {
+    const bufferAlerts = [
+      { uid: "1", timestamp: 1_700_000_000_000, matched: true },
+      { uid: "2", timestamp: 1_700_000_001_000, matched: true },
+    ];
+    mockGetRecentAlerts.mockReturnValue(bufferAlerts);
+
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+    socket.handlers.request_recent_alerts();
+
+    // Should read from ring buffer, not from DB
+    expect(mockGetRecentAlerts).toHaveBeenCalled();
+    expect(mockSearchAlerts).not.toHaveBeenCalled();
+
+    const payloads = emittedAs<{ alerts: unknown[] }>(socket, "recent_alerts");
+    expect(payloads).toHaveLength(1);
+    expect(payloads[0].alerts).toHaveLength(2);
+    expect(payloads[0].alerts).toBe(bufferAlerts);
+  });
+
+  it("should emit empty array when ring buffer is empty", () => {
+    mockGetRecentAlerts.mockReturnValue([]);
+
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+    socket.handlers.request_recent_alerts();
+
+    const payloads = emittedAs<{ alerts: unknown[] }>(socket, "recent_alerts");
+    expect(payloads).toHaveLength(1);
+    expect(payloads[0].alerts).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // handleSignalGraphs
 // ---------------------------------------------------------------------------
 
