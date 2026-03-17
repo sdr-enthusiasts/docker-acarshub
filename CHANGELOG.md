@@ -1,5 +1,37 @@
 # ACARS Hub Change Log
 
+## ACARS Hub v4.1.5
+
+### v4.1.5 Bug Fixes
+
+- Alerts: Alert term updates could desynchronise the in-memory alert cache from the database in several ways: adding or removing terms did not purge stale `alert_matches` rows for terms that no longer exist; the message ring buffer was not reheated after term changes, so recently received messages were not re-evaluated against the new term list; and the prune callback could race with a concurrent regeneration, leaving the ring buffer in an inconsistent state. All six desync paths have been fixed and the backend now emits an `alerts_refreshed` event so connected clients know when to reload alert state.
+- Live Messages: Unsaved messages (those that arrive between database writes) were all assigned a placeholder `uid` of `undefined`, which React used as a duplicate key, causing rendering bugs when multiple unsaved messages appeared in the same list. Each unsaved message now receives a unique generated UID based on timestamp and a random suffix.
+- Database: Migrations 13–14 remove the `uid` TEXT column from the `messages` table and switch `alert_matches.message_uid` to `alert_matches.message_id` (INTEGER), aligning all foreign-key references with the autoincrement `id` primary key. This eliminates a redundant UUID column and the index that supported it.
+
+### v4.1.5 Performance
+
+- Backend: The timeseries statistics cache has been restructured into a tiered architecture. Instead of holding all eight time-period datasets in memory simultaneously, only the active period requested by connected clients is kept fully materialised. Cache warm-up and refresh cycles are staggered so that startup memory consumption is spread over time rather than spiking on first connection.
+- Backend: A message ring buffer replaces the previous unbounded in-memory message list for on-connect state delivery. The buffer holds a fixed window of recent messages and recent alerts, capping memory usage regardless of message volume. New clients receive the ring buffer contents on connect rather than triggering a database query.
+- Database: `regenerateAllAlertMatches` now uses batch reads and wraps all inserts in a single transaction, reducing I/O and lock contention on large databases.
+- Database: Unnecessary indexes on the `timeseries_stats` table are no longer created during migrations, reducing migration time and database size.
+- Docker: The Dockerfile now copies only `package.json` manifests before `npm ci`, so the dependency layer survives source-only edits and Docker can cache it independently [(1)](#v415-n1).
+
+### v4.1.5 New
+
+- Settings: Alert term management (add, remove, ignore, regenerate) has been split out of the Notifications tab into its own dedicated Alerts tab in the Settings modal. The Notifications tab now contains only notification delivery settings (desktop notifications, sound, volume, on-page alerts).
+- Messages: Bump `@airframes/acars-decoder` to 1.8.13 [(2)](#v415-n2).
+- Data: TRACON boundaries updated to v1.2.6; FIR boundaries updated to v2602.2.
+- Docker: Log timestamps now use `s6-wrap` instead of piping to `awk`, reducing process overhead and simplifying the logging pipeline [(1)](#v415-n1).
+
+### v4.1.5 Improvements
+
+- Backend: RRD migration memory footprint reduced — the importer now streams data in smaller batches rather than loading entire RRD files into memory at once [(1)](#v415-n1).
+
+### v4.1.5 Notes
+
+1. <a id="v415-n1"></a>Credit to [@wiedehopf](https://github.com/wiedehopf) for the Dockerfile caching improvement in PR [#1652](https://github.com/sdr-enthusiasts/docker-acarshub/pull/1652), the s6-wrap logging change, and the RRD migration memory reduction.
+2. <a id="v415-n2"></a>Credit to [@makrsmark](https://github.com/makrsmark) for updating `@airframes/acars-decoder` to 1.8.13 in PR [#1650](https://github.com/sdr-enthusiasts/docker-acarshub/pull/1650).
+
 ## ACARS Hub v4.1.4
 
 ### v4.1.4 Bug Fixes
