@@ -83,6 +83,7 @@ const DEFAULT_ALERT_TERMS: string[] = [
 const SETTINGS_TABS = [
   "appearance",
   "regional",
+  "alerts",
   "notifications",
   "data",
   "map",
@@ -560,6 +561,22 @@ export const SettingsModal = () => {
           </button>
           <button
             ref={(el) => {
+              tabRefs.current.set("alerts", el);
+            }}
+            type="button"
+            id="alerts-tab"
+            role="tab"
+            aria-selected={activeTab === "alerts"}
+            aria-controls="alerts-panel"
+            tabIndex={activeTab === "alerts" ? 0 : -1}
+            className={`settings-tab ${activeTab === "alerts" ? "settings-tab--active" : ""}`}
+            onClick={() => setActiveTab("alerts")}
+            onKeyDown={handleTabKeyDown}
+          >
+            Alerts
+          </button>
+          <button
+            ref={(el) => {
               tabRefs.current.set("notifications", el);
             }}
             type="button"
@@ -797,124 +814,21 @@ export const SettingsModal = () => {
           </div>
         )}
 
-        {/* Notifications Panel */}
-        {activeTab === "notifications" && (
+        {/* Alerts Panel */}
+        {activeTab === "alerts" && (
           <div
-            id="notifications-panel"
+            id="alerts-panel"
             role="tabpanel"
-            aria-labelledby="notifications-tab"
+            aria-labelledby="alerts-tab"
             className="settings-panel"
           >
-            <Card
-              title="Notifications"
-              subtitle="Configure how you receive alerts and notifications"
-              variant="success"
-            >
-              {isChromium && (
-                <div className="settings-info settings-info--warning">
-                  ⚠️ Your browser (Chrome, Brave, or Edge) requires clicking
-                  "Test Sound" after each page reload due to browser security
-                  policies. Consider using Firefox for a better experience.
-                </div>
-              )}
-
-              <Toggle
-                id="desktop-notifications"
-                label="Desktop Notifications"
-                checked={settings.notifications.desktop}
-                onChange={(checked) => {
-                  if ("Notification" in window) {
-                    if (Notification.permission === "default") {
-                      Notification.requestPermission().then((permission) => {
-                        if (permission === "granted") {
-                          setDesktopNotifications(checked);
-                        } else {
-                          alert(
-                            "Desktop notifications permission was denied. Please enable it in your browser settings.",
-                          );
-                        }
-                      });
-                    } else if (Notification.permission === "granted") {
-                      setDesktopNotifications(checked);
-                    } else {
-                      alert(
-                        "Desktop notifications are blocked. Please enable them in your browser settings.",
-                      );
-                    }
-                  } else {
-                    alert(
-                      "Your browser does not support desktop notifications.",
-                    );
-                  }
-                }}
-                helpText="Show browser notifications for new alert messages (requires permission)"
-              />
-
-              <Toggle
-                id="sound-alerts"
-                label="Sound Alerts"
-                checked={settings.notifications.sound}
-                onChange={setSoundAlerts}
-                helpText="Play sound when new alert messages arrive"
-              />
-
-              {settings.notifications.sound && (
-                <>
-                  <div className="settings-field-group">
-                    <label htmlFor="volume-slider" className="settings-label">
-                      Volume: {settings.notifications.volume}%
-                    </label>
-                    <input
-                      id="volume-slider"
-                      type="range"
-                      min="0"
-                      max="100"
-                      step="5"
-                      value={settings.notifications.volume}
-                      onChange={(e) => setVolume(Number(e.target.value))}
-                      className="settings-slider"
-                    />
-                    <p className="settings-help-text">
-                      Adjust the volume of alert notification sounds
-                    </p>
-                  </div>
-
-                  <div className="settings-field-group">
-                    <Button
-                      variant="secondary"
-                      onClick={handleTestSound}
-                      aria-label="Test alert sound"
-                    >
-                      Test Sound
-                    </Button>
-                    <p className="settings-help-text">
-                      {isChromium
-                        ? "Play a test sound to unlock audio for this browser session. You'll need to click this after each page reload due to browser security policies."
-                        : "Play a test sound to verify alert sounds are working."}
-                    </p>
-                  </div>
-                </>
-              )}
-
-              <Toggle
-                id="on-page-alerts"
-                label="On Page Alerts"
-                checked={settings.notifications.onPageAlerts}
-                onChange={setOnPageAlerts}
-                helpText="Show toast notifications in the bottom-right corner when alert terms are matched (auto-dismisses after 5 seconds)"
-              />
-            </Card>
-
             <Card
               title="Alert Terms"
               subtitle="Manage alert terms for message filtering"
               variant="warning"
             >
               {!allowRemoteUpdates && (
-                <p
-                  className="settings-help-text"
-                  style={{ marginBottom: "1rem", color: "var(--color-peach)" }}
-                >
+                <p className="settings-help-text settings-help-text--disabled-warning">
                   ⚠️ Alert term editing is disabled by the server administrator.
                   Contact your system administrator to modify alert terms.
                 </p>
@@ -1036,38 +950,17 @@ export const SettingsModal = () => {
               </div>
 
               {/* Regenerate Alert Matches */}
-              <div
-                className="settings-field-group"
-                style={{
-                  marginTop: "2rem",
-                  paddingTop: "1.5rem",
-                  borderTop: "1px solid var(--color-surface0)",
-                }}
-              >
-                <div style={{ marginBottom: "1rem" }}>
-                  <h4
-                    style={{
-                      margin: "0 0 0.5rem 0",
-                      color: "var(--color-text)",
-                    }}
-                  >
+              <div className="settings-field-group regenerate-section">
+                <div className="regenerate-section__header">
+                  <h4 className="regenerate-section__title">
                     Regenerate Alert Matches
                   </h4>
-                  <p
-                    className="settings-help-text"
-                    style={{ marginBottom: "1rem" }}
-                  >
+                  <p className="settings-help-text regenerate-section__description">
                     Re-process all messages in the database against current
                     alert terms. This will delete all existing matches and
                     rebuild them from scratch.
                   </p>
-                  <p
-                    className="settings-help-text"
-                    style={{
-                      marginBottom: "1rem",
-                      color: "var(--color-peach)",
-                    }}
-                  >
+                  <p className="settings-help-text regenerate-section__warning">
                     ⚠️ <strong>Warning:</strong> This operation can take a long
                     time on large databases (minutes for millions of messages).
                     Processing runs in the background - you can continue using
@@ -1085,6 +978,116 @@ export const SettingsModal = () => {
                     : "Regenerate All Matches"}
                 </Button>
               </div>
+            </Card>
+          </div>
+        )}
+
+        {/* Notifications Panel */}
+        {activeTab === "notifications" && (
+          <div
+            id="notifications-panel"
+            role="tabpanel"
+            aria-labelledby="notifications-tab"
+            className="settings-panel"
+          >
+            <Card
+              title="Notifications"
+              subtitle="Configure how you receive alerts and notifications"
+              variant="success"
+            >
+              {isChromium && (
+                <div className="settings-info settings-info--warning">
+                  ⚠️ Your browser (Chrome, Brave, or Edge) requires clicking
+                  "Test Sound" after each page reload due to browser security
+                  policies. Consider using Firefox for a better experience.
+                </div>
+              )}
+
+              <Toggle
+                id="desktop-notifications"
+                label="Desktop Notifications"
+                checked={settings.notifications.desktop}
+                onChange={(checked) => {
+                  if ("Notification" in window) {
+                    if (Notification.permission === "default") {
+                      Notification.requestPermission().then((permission) => {
+                        if (permission === "granted") {
+                          setDesktopNotifications(checked);
+                        } else {
+                          alert(
+                            "Desktop notifications permission was denied. Please enable it in your browser settings.",
+                          );
+                        }
+                      });
+                    } else if (Notification.permission === "granted") {
+                      setDesktopNotifications(checked);
+                    } else {
+                      alert(
+                        "Desktop notifications are blocked. Please enable them in your browser settings.",
+                      );
+                    }
+                  } else {
+                    alert(
+                      "Your browser does not support desktop notifications.",
+                    );
+                  }
+                }}
+                helpText="Show browser notifications for new alert messages (requires permission)"
+              />
+
+              <Toggle
+                id="sound-alerts"
+                label="Sound Alerts"
+                checked={settings.notifications.sound}
+                onChange={setSoundAlerts}
+                helpText="Play sound when new alert messages arrive"
+              />
+
+              {settings.notifications.sound && (
+                <>
+                  <div className="settings-field-group">
+                    <label htmlFor="volume-slider" className="settings-label">
+                      Volume: {settings.notifications.volume}%
+                    </label>
+                    <input
+                      id="volume-slider"
+                      type="range"
+                      min="0"
+                      max="100"
+                      step="5"
+                      value={settings.notifications.volume}
+                      onChange={(e) => setVolume(Number(e.target.value))}
+                      className="settings-slider"
+                    />
+                    <p className="settings-help-text">
+                      Adjust the volume of alert notification sounds
+                    </p>
+                  </div>
+
+                  <div className="settings-field-group">
+                    <Button
+                      variant="secondary"
+                      onClick={handleTestSound}
+                      aria-label="Test alert sound"
+                    >
+                      Test Sound
+                    </Button>
+                    <p className="settings-help-text">
+                      {isChromium
+                        ? "Play a test sound to unlock audio for this browser session. You'll need to click this after each page reload due to browser security policies."
+                        : "Play a test sound to verify alert sounds are working."}
+                    </p>
+                  </div>
+                </>
+              )}
+
+              <Toggle
+                id="on-page-alerts"
+                label="On Page Alerts"
+                checked={settings.notifications.onPageAlerts}
+                onChange={setOnPageAlerts}
+                helpText="Show toast notifications in the bottom-right corner when alert terms are matched (auto-dismisses after 5 seconds)"
+              />
             </Card>
           </div>
         )}
@@ -1487,53 +1490,20 @@ export const SettingsModal = () => {
 
       {/* Regenerate Confirmation Modal */}
       {showRegenerateConfirm && (
-        <div
-          className="modal-overlay"
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: "rgba(0, 0, 0, 0.7)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 10000,
-          }}
-        >
-          <div
-            className="confirm-content"
-            style={{
-              backgroundColor: "var(--color-base)",
-              padding: "2rem",
-              borderRadius: "0.5rem",
-              maxWidth: "500px",
-              margin: "1rem",
-              border: "2px solid var(--color-peach)",
-            }}
-          >
-            <h3 style={{ marginTop: 0, color: "var(--color-text)" }}>
+        <div className="regenerate-confirm-overlay">
+          <div className="regenerate-confirm-content">
+            <h3 className="regenerate-confirm__title">
               Confirm Regenerate Alert Matches
             </h3>
-            <p style={{ color: "var(--color-subtext1)" }}>
+            <p className="regenerate-confirm__text">
               This will delete all existing alert matches and re-process every
               message in the database.
             </p>
-            <p style={{ color: "var(--color-peach)", fontWeight: "bold" }}>
+            <p className="regenerate-confirm__warning">
               This cannot be undone and may take several seconds to complete.
             </p>
-            <p style={{ color: "var(--color-subtext1)" }}>
-              Do you want to continue?
-            </p>
-            <div
-              style={{
-                display: "flex",
-                gap: "1rem",
-                marginTop: "1.5rem",
-                justifyContent: "flex-end",
-              }}
-            >
+            <p className="regenerate-confirm__text">Do you want to continue?</p>
+            <div className="regenerate-confirm__actions">
               <Button
                 variant="secondary"
                 onClick={handleCancelRegenerate}
@@ -1555,64 +1525,22 @@ export const SettingsModal = () => {
 
       {/* Processing Overlay */}
       {isRegenerating && (
-        <div
-          className="modal-overlay"
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: "rgba(0, 0, 0, 0.85)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 10001,
-          }}
-        >
-          <div
-            className="processing-content"
-            style={{
-              backgroundColor: "var(--color-base)",
-              padding: "3rem",
-              borderRadius: "0.5rem",
-              textAlign: "center",
-              border: "2px solid var(--color-blue)",
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-            }}
-          >
-            <h3 style={{ margin: "0 0 0.5rem 0", color: "var(--color-text)" }}>
+        <div className="regenerate-processing-overlay">
+          <div className="regenerate-processing-content">
+            <h3 className="regenerate-processing__title">
               Regenerating Alert Matches
             </h3>
-            <p
-              style={{
-                margin: 0,
-                color: "var(--color-blue)",
-                fontSize: "2rem",
-                fontWeight: "bold",
-                animation: "pulse 1.5s ease-in-out infinite",
-              }}
-            >
-              ●●●
-            </p>
-            <p style={{ margin: "1rem 0 0 0", color: "var(--color-subtext1)" }}>
+            <p className="regenerate-processing__dots">●●●</p>
+            <p className="regenerate-processing__text">
               Processing in background... You can continue using the app.
             </p>
-            <p
-              style={{
-                margin: "0.5rem 0 0 0",
-                color: "var(--color-subtext0)",
-                fontSize: "0.875rem",
-              }}
-            >
+            <p className="regenerate-processing__subtext">
               You'll be notified when the operation completes.
             </p>
             <Button
               variant="secondary"
               onClick={() => setIsRegenerating(false)}
-              style={{ marginTop: "1.5rem" }}
+              className="regenerate-processing__dismiss"
               aria-label="Continue using app"
             >
               Continue Using App

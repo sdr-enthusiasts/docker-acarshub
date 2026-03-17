@@ -606,6 +606,138 @@
   }
 }
 
+// Disabled warning for alert terms
+.settings-help-text--disabled-warning {
+  margin-bottom: 1rem;
+  color: var(--color-peach);
+}
+
+// Regenerate Alert Matches section
+.regenerate-section {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--color-surface0);
+
+  &__header {
+    margin-bottom: 1rem;
+  }
+
+  &__title {
+    margin: 0 0 0.5rem 0;
+    color: var(--color-text);
+  }
+
+  &__description {
+    margin-bottom: 1rem;
+  }
+
+  &__warning {
+    margin-bottom: 1rem;
+    color: var(--color-peach);
+  }
+}
+
+// Regenerate Confirmation Overlay
+.regenerate-confirm-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+}
+
+.regenerate-confirm-content {
+  background-color: var(--color-base);
+  padding: 2rem;
+  border-radius: 0.5rem;
+  max-width: 500px;
+  margin: 1rem;
+  border: 2px solid var(--color-peach);
+}
+
+.regenerate-confirm {
+  &__title {
+    margin-top: 0;
+    color: var(--color-text);
+  }
+
+  &__text {
+    color: var(--color-subtext1);
+  }
+
+  &__warning {
+    color: var(--color-peach);
+    font-weight: bold;
+  }
+
+  &__actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1.5rem;
+    justify-content: flex-end;
+  }
+}
+
+// Regenerate Processing Overlay
+.regenerate-processing-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10001;
+}
+
+.regenerate-processing-content {
+  background-color: var(--color-base);
+  padding: 3rem;
+  border-radius: 0.5rem;
+  text-align: center;
+  border: 2px solid var(--color-blue);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.regenerate-processing {
+  &__title {
+    margin: 0 0 0.5rem 0;
+    color: var(--color-text);
+  }
+
+  &__dots {
+    margin: 0;
+    color: var(--color-blue);
+    font-size: 2rem;
+    font-weight: bold;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  &__text {
+    margin: 1rem 0 0 0;
+    color: var(--color-subtext1);
+  }
+
+  &__subtext {
+    margin: 0.5rem 0 0 0;
+    color: var(--color-subtext0);
+    font-size: 0.875rem;
+  }
+
+  &__dismiss {
+    margin-top: 1.5rem;
+  }
+}
+
 // Pulse animation for processing indicator
 @keyframes pulse {
   0%,
