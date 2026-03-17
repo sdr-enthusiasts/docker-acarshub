@@ -40,6 +40,7 @@ export const useSocketIO = () => {
     (state) => state.setMigrationInProgress,
   );
   const addMessage = useAppStore((state) => state.addMessage);
+  const clearAlertMessages = useAppStore((state) => state.clearAlertMessages);
   const setLabels = useAppStore((state) => state.setLabels);
   const setAlertTerms = useAppStore((state) => state.setAlertTerms);
   const setDecoders = useAppStore((state) => state.setDecoders);
@@ -167,6 +168,20 @@ export const useSocketIO = () => {
         }
       },
     );
+
+    // Wholesale alert buffer refresh — broadcast by the backend after alert
+    // term changes or alert match regeneration.  Replaces the entire
+    // alertMessageGroups in the store so connected clients see up-to-date
+    // alert content without requiring a reconnect.
+    socket.on("alerts_refreshed", (data: { messages: AcarsMsg[] }) => {
+      socketLogger.info("Received alerts_refreshed event", {
+        count: data.messages?.length || 0,
+      });
+      clearAlertMessages();
+      for (const message of data.messages) {
+        addMessage(message);
+      }
+    });
 
     // Core message event - most frequent event
     socket.on("acars_msg", (data: HtmlMsg) => {
@@ -372,6 +387,7 @@ export const useSocketIO = () => {
       socket.off("acars_msg_batch");
       socket.off("alert_matches");
       socket.off("alert_matches_batch");
+      socket.off("alerts_refreshed");
       socket.off("labels");
       socket.off("terms");
 
@@ -406,6 +422,7 @@ export const useSocketIO = () => {
   }, [
     setConnected,
     addMessage,
+    clearAlertMessages,
     setLabels,
     setAlertTerms,
     setDecoders,

@@ -76,6 +76,7 @@ import {
   pushAlert,
   pushMessage,
   RingBuffer,
+  reheatMessageBuffers,
   resetMessageBuffersForTesting,
   warmMessageBuffers,
 } from "../message-ring-buffer.js";
@@ -806,6 +807,120 @@ describe("resetMessageBuffersForTesting", () => {
       resetMessageBuffersForTesting();
       resetMessageBuffersForTesting();
     }).not.toThrow();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// reheatMessageBuffers
+// ---------------------------------------------------------------------------
+
+describe("reheatMessageBuffers", () => {
+  it("clears both buffers and repopulates from DB", async () => {
+    initMessageBuffers(10, 10);
+
+    // Seed buffers with initial data via direct pushes
+    pushMessage(makeMsg("old-msg-1"));
+    pushMessage(makeMsg("old-msg-2"));
+    pushAlert(makeMsg("old-alert-1", { matched: true }));
+    expect(getRecentMessages()).toHaveLength(2);
+    expect(getRecentAlerts()).toHaveLength(1);
+
+    // Configure mocks to return DIFFERENT data on reheat
+    mockGrabMostRecent.mockReturnValue([
+      { uid: "new-msg-A", text: "fresh message A" },
+      { uid: "new-msg-B", text: "fresh message B" },
+      { uid: "new-msg-C", text: "fresh message C" },
+    ]);
+    mockSearchAlerts.mockReturnValue([
+      makeAlertRow("new-alert-X", "DAL", "text"),
+      makeAlertRow("new-alert-Y", "N12345", "tail"),
+    ]);
+    mockEnrichMessage.mockImplementation((msg: Record<string, unknown>) => ({
+      ...msg,
+      matched: false,
+    }));
+
+    await reheatMessageBuffers();
+
+    // Old data should be gone
+    const messages = getRecentMessages();
+    const msgUids = messages.map((m) => m.uid);
+    expect(msgUids).not.toContain("old-msg-1");
+    expect(msgUids).not.toContain("old-msg-2");
+
+    const alerts = getRecentAlerts();
+    const alertUids = alerts.map((m) => m.uid);
+    expect(alertUids).not.toContain("old-alert-1");
+
+    // New data should be present
+    expect(msgUids).toContain("new-msg-A");
+    expect(msgUids).toContain("new-msg-B");
+    expect(msgUids).toContain("new-msg-C");
+    expect(alertUids).toContain("new-alert-X");
+    expect(alertUids).toContain("new-alert-Y");
+  });
+
+  it("skips when buffers have not been initialised", async () => {
+    // No initMessageBuffers() call — should not throw
+    await expect(reheatMessageBuffers()).resolves.not.toThrow();
+  });
+
+  it("results in empty buffers when DB returns empty results", async () => {
+    initMessageBuffers(10, 10);
+
+    // Seed with some data first
+    pushMessage(makeMsg("msg-1"));
+    pushAlert(makeMsg("alert-1", { matched: true }));
+
+    // DB returns nothing on reheat
+    mockGrabMostRecent.mockReturnValue([]);
+    mockSearchAlerts.mockReturnValue([]);
+
+    await reheatMessageBuffers();
+
+    expect(getRecentMessages()).toHaveLength(0);
+    expect(getRecentAlerts()).toHaveLength(0);
+  });
+
+  it("restores alert metadata correctly after reheat", async () => {
+    initMessageBuffers(10, 10);
+
+    mockGrabMostRecent.mockReturnValue([]);
+    mockSearchAlerts.mockReturnValue([
+      makeAlertRow("a1", "UAL", "text"),
+      makeAlertRow("a2", "ABC123", "icao"),
+    ]);
+    mockEnrichMessage.mockImplementation((msg: Record<string, unknown>) => ({
+      ...msg,
+      matched: false,
+    }));
+
+    await reheatMessageBuffers();
+
+    const alerts = getRecentAlerts();
+    const textAlert = alerts.find((m) => m.uid === "a1");
+    const icaoAlert = alerts.find((m) => m.uid === "a2");
+
+    expect(textAlert?.matched).toBe(true);
+    expect(textAlert?.matched_text).toEqual(["UAL"]);
+    expect(icaoAlert?.matched).toBe(true);
+    expect(icaoAlert?.matched_icao).toEqual(["ABC123"]);
+  });
+
+  it("calls grabMostRecent and searchAlerts during reheat", async () => {
+    initMessageBuffers();
+
+    mockGrabMostRecent.mockReturnValue([]);
+    mockSearchAlerts.mockReturnValue([]);
+
+    // Clear call counts from any prior warmup
+    mockGrabMostRecent.mockClear();
+    mockSearchAlerts.mockClear();
+
+    await reheatMessageBuffers();
+
+    expect(mockGrabMostRecent).toHaveBeenCalledTimes(1);
+    expect(mockSearchAlerts).toHaveBeenCalledTimes(1);
   });
 });
 

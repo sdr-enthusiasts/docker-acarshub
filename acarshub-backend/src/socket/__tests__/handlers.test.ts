@@ -161,6 +161,7 @@ vi.mock("../../services/timeseries-cache.js", () => ({
 vi.mock("../../services/message-ring-buffer.js", () => ({
   getRecentMessages: vi.fn(),
   getRecentAlerts: vi.fn(),
+  reheatMessageBuffers: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock("../../startup-state.js", () => ({
@@ -196,6 +197,7 @@ import { getMessageQueue } from "../../services/message-queue.js";
 import {
   getRecentAlerts,
   getRecentMessages,
+  reheatMessageBuffers,
 } from "../../services/message-ring-buffer.js";
 import { queryTimeseriesData } from "../../services/rrd-migration.js";
 import {
@@ -235,6 +237,7 @@ const mockGetCachedTimeSeries = vi.mocked(getCachedTimeSeries);
 const mockGetOrQueryTimeSeries = vi.mocked(getOrQueryTimeSeries);
 const mockGetRecentMessages = vi.mocked(getRecentMessages);
 const mockGetRecentAlerts = vi.mocked(getRecentAlerts);
+const mockReheatMessageBuffers = vi.mocked(reheatMessageBuffers);
 const mockGetPerDecoderMessageCounts = vi.mocked(getPerDecoderMessageCounts);
 const mockGetMessageQueue = vi.mocked(getMessageQueue);
 const mockIsMigrationRunning = vi.mocked(isMigrationRunning);
@@ -927,17 +930,20 @@ describe("handleUpdateAlerts", () => {
     expect(mockSetAlertIgnore).toHaveBeenCalledWith(["NOISE"]);
   });
 
-  it("should broadcast updated terms to all clients via namespace emit", () => {
+  it("should broadcast updated terms to all clients via namespace emit", async () => {
     mockGetCachedAlertTerms.mockReturnValue(["UAL"]);
     mockGetCachedAlertIgnoreTerms.mockReturnValue([]);
 
     const socket = makeMockSocket();
     triggerUpdateAlerts(socket, { terms: ["UAL"], ignore: [] });
 
-    expect(mockNamespaceEmit).toHaveBeenCalledWith(
-      "terms",
-      expect.objectContaining({ terms: ["UAL"] }),
-    );
+    // handleUpdateAlerts is async — wait for it to settle
+    await vi.waitFor(() => {
+      expect(mockNamespaceEmit).toHaveBeenCalledWith(
+        "terms",
+        expect.objectContaining({ terms: ["UAL"] }),
+      );
+    });
   });
 
   it("should NOT update terms when allowRemoteUpdates is false", () => {
@@ -950,6 +956,53 @@ describe("handleUpdateAlerts", () => {
 
     expect(mockSetAlertTerms).not.toHaveBeenCalled();
     expect(mockSetAlertIgnore).not.toHaveBeenCalled();
+  });
+
+  it("should call reheatMessageBuffers after updating terms", async () => {
+    mockGetCachedAlertTerms.mockReturnValue(["UAL"]);
+    mockGetCachedAlertIgnoreTerms.mockReturnValue([]);
+
+    const socket = makeMockSocket();
+    triggerUpdateAlerts(socket, { terms: ["UAL"], ignore: [] });
+
+    // handleUpdateAlerts is async — wait for the reheat call
+    await vi.waitFor(() => {
+      expect(mockReheatMessageBuffers).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it("should broadcast alerts_refreshed with buffer content after updating terms", async () => {
+    mockGetCachedAlertTerms.mockReturnValue(["UAL"]);
+    mockGetCachedAlertIgnoreTerms.mockReturnValue([]);
+    const fakeAlert = makeEnrichedMsg("alert-1", true);
+    mockGetRecentAlerts.mockReturnValue([fakeAlert as never]);
+
+    const socket = makeMockSocket();
+    triggerUpdateAlerts(socket, { terms: ["UAL"], ignore: [] });
+
+    await vi.waitFor(() => {
+      expect(mockNamespaceEmit).toHaveBeenCalledWith("alerts_refreshed", {
+        messages: [fakeAlert],
+      });
+    });
+  });
+
+  it("should NOT reheat or broadcast when allowRemoteUpdates is false", async () => {
+    mockGetConfig.mockReturnValue(
+      makeDefaultConfig({ allowRemoteUpdates: false }),
+    );
+
+    const socket = makeMockSocket();
+    triggerUpdateAlerts(socket, { terms: ["UAL"], ignore: [] });
+
+    // Give async handler time to resolve (it returns early)
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    expect(mockReheatMessageBuffers).not.toHaveBeenCalled();
+    expect(mockNamespaceEmit).not.toHaveBeenCalledWith(
+      "alerts_refreshed",
+      expect.anything(),
+    );
   });
 });
 
@@ -1079,6 +1132,46 @@ describe("handleRegenerateAlertMatches", () => {
     expect(errors.some((e) => e.error.toLowerCase().includes("progress"))).toBe(
       true,
     );
+  });
+
+  it("should call reheatMessageBuffers after successful regeneration", async () => {
+    mockGetCachedAlertTerms.mockReturnValue(["UAL"]);
+    mockGetCachedAlertIgnoreTerms.mockReturnValue([]);
+    mockRegenerateAllAlertMatches.mockReturnValue({
+      total_messages: 5,
+      matched_messages: 1,
+      total_matches: 1,
+    });
+    mockGetAlertCounts.mockReturnValue([{ id: 1, term: "UAL", count: 1 }]);
+
+    const socket = makeMockSocket();
+    triggerRegen(socket);
+
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    expect(mockReheatMessageBuffers).toHaveBeenCalledTimes(1);
+  });
+
+  it("should broadcast alerts_refreshed with buffer content after successful regeneration", async () => {
+    mockGetCachedAlertTerms.mockReturnValue(["UAL"]);
+    mockGetCachedAlertIgnoreTerms.mockReturnValue([]);
+    mockRegenerateAllAlertMatches.mockReturnValue({
+      total_messages: 5,
+      matched_messages: 1,
+      total_matches: 1,
+    });
+    mockGetAlertCounts.mockReturnValue([{ id: 1, term: "UAL", count: 1 }]);
+    const fakeAlert = makeEnrichedMsg("regen-alert-1", true);
+    mockGetRecentAlerts.mockReturnValue([fakeAlert as never]);
+
+    const socket = makeMockSocket();
+    triggerRegen(socket);
+
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    expect(mockNamespaceEmit).toHaveBeenCalledWith("alerts_refreshed", {
+      messages: [fakeAlert],
+    });
   });
 });
 

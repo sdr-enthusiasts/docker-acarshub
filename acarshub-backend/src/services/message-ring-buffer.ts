@@ -422,7 +422,7 @@ export async function reheatMessageBuffers(): Promise<void> {
   }
   alertBuffer.clear();
   messageBuffer.clear();
-  warmMessageBuffers();
+  await warmMessageBuffers();
 }
 
 // ---------------------------------------------------------------------------

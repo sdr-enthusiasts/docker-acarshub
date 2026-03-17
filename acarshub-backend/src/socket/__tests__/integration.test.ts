@@ -62,14 +62,19 @@ import {
 import { initializeConfig } from "../../config.js";
 import {
   closeDatabase,
+  getCachedAlertIgnoreTerms,
+  getCachedAlertTerms,
   initDatabase,
   initializeAlertCache,
   initializeMessageCounters,
   initializeMessageCounts,
+  regenerateAllAlertMatches,
+  setAlertTerms,
 } from "../../db/index.js";
 import { runMigrations } from "../../db/migrate.js";
 import {
   initMessageBuffers,
+  reheatMessageBuffers,
   resetMessageBuffersForTesting,
   warmMessageBuffers,
 } from "../../services/message-ring-buffer.js";
@@ -813,6 +818,23 @@ describe("Socket.IO integration", () => {
   // -------------------------------------------------------------------------
 
   describe("5.1.3 — update_alerts", () => {
+    // update_alerts mutates alert_stats AND alert_matches (setAlertTerms
+    // purges matches for removed terms).  We restore the seed DB state in
+    // afterAll so downstream tests that rely on the original 92 alert_matches
+    // (e.g. query_alerts_by_term, request_recent_alerts) are not affected.
+
+    afterAll(async () => {
+      // Restore the three original seed alert terms
+      setAlertTerms(["WN4899", "N8560Z", "XA0001"]);
+      // Rebuild alert_matches from the full messages table
+      regenerateAllAlertMatches(
+        getCachedAlertTerms(),
+        getCachedAlertIgnoreTerms(),
+      );
+      // Refresh ring buffers so subsequent tests see the restored data
+      await reheatMessageBuffers();
+    });
+
     it("broadcasts updated terms to ALL connected clients", async () => {
       const clientA = connectClient(server.port);
       const clientB = connectClient(server.port);

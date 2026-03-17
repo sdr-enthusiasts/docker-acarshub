@@ -331,6 +331,44 @@ describe("setAlertTerms", () => {
     const row = testDb.select().from(alertStats).all()[0];
     expect(row.count).toBe(0);
   });
+
+  it("regression: removing a term should delete its alert_matches rows", () => {
+    // Setup: two terms with matches in alert_matches
+    insertMessage(testDb, { id: 1, text: "UAL123 is here" });
+    insertMessage(testDb, { id: 2, text: "AAL456 is here" });
+    insertMessage(testDb, { id: 3, text: "UAL123 again" });
+
+    setAlertTerms(["UAL123", "AAL456"]);
+
+    insertAlertMatch(testDb, 1, "UAL123", "text", 1_700_000_000);
+    insertAlertMatch(testDb, 3, "UAL123", "text", 1_700_000_001);
+    insertAlertMatch(testDb, 2, "AAL456", "text", 1_700_000_002);
+
+    // Precondition: 3 alert_matches rows
+    expect(testDb.select().from(alertMatches).all()).toHaveLength(3);
+
+    // Act: remove UAL123, keep only AAL456
+    setAlertTerms(["AAL456"]);
+
+    // Assert: only AAL456 matches remain
+    const remaining = testDb.select().from(alertMatches).all();
+    expect(remaining).toHaveLength(1);
+    expect(remaining[0].term).toBe("AAL456");
+  });
+
+  it("regression: removing all terms should delete all alert_matches rows", () => {
+    insertMessage(testDb, { id: 1, text: "UAL123 is here" });
+    setAlertTerms(["UAL123"]);
+    insertAlertMatch(testDb, 1, "UAL123", "text", 1_700_000_000);
+
+    expect(testDb.select().from(alertMatches).all()).toHaveLength(1);
+
+    // Act: remove all terms
+    setAlertTerms([]);
+
+    // Assert: all alert_matches deleted
+    expect(testDb.select().from(alertMatches).all()).toHaveLength(0);
+  });
 });
 
 // ---------------------------------------------------------------------------

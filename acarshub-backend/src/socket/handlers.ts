@@ -66,6 +66,7 @@ import { getMessageQueue } from "../services/message-queue.js";
 import {
   getRecentAlerts,
   getRecentMessages,
+  reheatMessageBuffers,
 } from "../services/message-ring-buffer.js";
 import { queryTimeseriesData } from "../services/rrd-migration.js";
 import { getStationIds } from "../services/station-ids.js";
@@ -445,11 +446,11 @@ function handleQuerySearch(
  *
  * Mirrors Python: @socketio.on("update_alerts", namespace="/main")
  */
-function handleUpdateAlerts(
+async function handleUpdateAlerts(
   socket: TypedSocket,
   io: TypedSocketServer,
   terms: Terms,
-): void {
+): Promise<void> {
   const config = getConfig();
 
   if (!config.allowRemoteUpdates) {
@@ -480,8 +481,19 @@ function handleUpdateAlerts(
     };
     io.of("/main").emit("terms", updatedTerms);
 
+    // Reheat ring buffers so alert cache reflects the new terms.
+    // Old alert matches (for terms that were removed) are purged and new
+    // matches (for terms that were added) are picked up from the DB.
+    await reheatMessageBuffers();
+
+    // Broadcast refreshed alert content to all connected clients so their
+    // alert pages update without requiring a reconnect.
+    const refreshedAlerts = getRecentAlerts();
+    io.of("/main").emit("alerts_refreshed", { messages: refreshedAlerts });
+
     logger.info("Alert terms updated successfully", {
       socketId: socket.id,
+      alertBufferSize: refreshedAlerts.length,
     });
   } catch (error) {
     logger.error("Error updating alert terms", {
@@ -553,12 +565,19 @@ function handleRegenerateAlertMatches(
 
   // Defer the heavy synchronous work so Socket.IO can flush the started event
   // before the DB work blocks the event loop (mirrors Python's background task)
-  setImmediate(() => {
+  setImmediate(async () => {
     try {
       const startTime = performance.now();
       const alertTerms = getCachedAlertTerms();
       const alertIgnoreTerms = getCachedAlertIgnoreTerms();
       const stats = regenerateAllAlertMatches(alertTerms, alertIgnoreTerms);
+
+      // Reheat ring buffers so alert cache reflects the regenerated matches.
+      // regenerateAllAlertMatches() no longer calls reheatMessageBuffers()
+      // internally — the socket handler owns the full sequence so it can
+      // broadcast the result to clients after the await completes.
+      await reheatMessageBuffers();
+
       const elapsed = performance.now() - startTime;
 
       logger.info("Alert match regeneration complete", {
@@ -586,6 +605,11 @@ function handleRegenerateAlertMatches(
         };
       }
       io.of("/main").emit("alert_terms", { data: alertTermData });
+
+      // Broadcast refreshed alert content to all connected clients so their
+      // alert pages update without requiring a reconnect.
+      const refreshedAlerts = getRecentAlerts();
+      io.of("/main").emit("alerts_refreshed", { messages: refreshedAlerts });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       logger.error("Error during alert match regeneration", {

@@ -23,8 +23,7 @@
  * - This avoids hitting the database on every message ingestion
  */
 
-import { asc, desc, eq, gt, sql } from "drizzle-orm";
-import { reheatMessageBuffers } from "../../services/message-ring-buffer.js";
+import { asc, desc, eq, gt, notInArray, sql } from "drizzle-orm";
 import { createLogger } from "../../utils/logger.js";
 import { getDatabase, getSqliteConnection } from "../client.js";
 import {
@@ -308,6 +307,19 @@ export function setAlertTerms(terms: string[]): void {
   if (upperTerms.length > 0) {
     db.insert(alertStats)
       .values(upperTerms.map((term) => ({ term, count: 0 })))
+      .run();
+  }
+
+  // Purge alert_matches rows for terms that are no longer active.
+  // Without this, stale matches survive in the DB and get reloaded into
+  // the ring buffer on reheat, so the frontend continues to show matches
+  // for removed terms.
+  if (upperTerms.length === 0) {
+    // All terms removed — delete every alert match
+    db.delete(alertMatches).run();
+  } else {
+    db.delete(alertMatches)
+      .where(notInArray(alertMatches.term, upperTerms))
       .run();
   }
 
@@ -690,8 +702,6 @@ export function regenerateAllAlertMatches(
 
   try {
     runInTransaction();
-    // message buffers need to be remade so they don't contain old alerts
-    reheatMessageBuffers();
     return stats;
   } catch (error) {
     logger.error("Failed to regenerate alert matches", {
