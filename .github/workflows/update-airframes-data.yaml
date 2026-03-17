@@ -75,11 +75,11 @@ jobs:
       - name: Download latest data files
         run: |
           echo "Downloading latest ground-stations.json..."
-          curl -L -o /tmp/ground-stations.json \
+          curl -fL -o /tmp/ground-stations.json \
             https://raw.githubusercontent.com/airframesio/data/master/json/vdl/ground-stations.json
 
           echo "Downloading latest metadata.json..."
-          curl -L -o /tmp/metadata.json \
+          curl -fL -o /tmp/metadata.json \
             https://raw.githubusercontent.com/airframesio/data/master/json/acars/metadata.json
 
           echo "Download complete"

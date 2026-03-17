@@ -57,13 +57,23 @@ jobs:
         id: current-version
         run: |
           current_version=$(sed -n '/^### pw-silhouettes/,/^##/p' acarshub-react/ATTRIBUTIONS.md | grep '\*\*Version\*\*:' | sed 's/^.*: //')
+          if [ -z "$current_version" ]; then
+            echo "::error::Failed to extract current version from ATTRIBUTIONS.md"
+            exit 1
+          fi
           echo "version=${current_version}" >> "$GITHUB_OUTPUT"
           echo "Current version: ${current_version}"
 
       - name: Get latest pw-silhouettes release
         id: latest-release
         run: |
-          latest_tag=$(curl -s https://api.github.com/repos/plane-watch/pw-silhouettes/releases/latest | jq -r '.tag_name')
+          response=$(curl -sf -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            https://api.github.com/repos/plane-watch/pw-silhouettes/releases/latest)
+          latest_tag=$(echo "$response" | jq -r '.tag_name')
+          if [ -z "$latest_tag" ] || [ "$latest_tag" = "null" ]; then
+            echo "::error::Failed to fetch latest release tag (API returned: ${latest_tag})"
+            exit 1
+          fi
           echo "tag=${latest_tag}" >> "$GITHUB_OUTPUT"
           echo "Latest release: ${latest_tag}"
 
@@ -96,11 +106,11 @@ jobs:
           base_url="https://github.com/plane-watch/pw-silhouettes/releases/download/${release_tag}"
 
           echo "Downloading spritesheet.json..."
-          curl -L -o acarshub-react/src/assets/sprites/spritesheet.json \
+          curl -fL -o acarshub-react/src/assets/sprites/spritesheet.json \
             "${base_url}/spritesheet.json"
 
           echo "Downloading spritesheet.png..."
-          curl -L -o acarshub-react/src/assets/sprites/spritesheet.png \
+          curl -fL -o acarshub-react/src/assets/sprites/spritesheet.png \
             "${base_url}/spritesheet.png"
 
           echo "Download complete"

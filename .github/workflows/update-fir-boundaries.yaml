@@ -57,13 +57,23 @@ jobs:
         id: current-version
         run: |
           current_version=$(sed -n '/^### VATSpy Data Project/,/^##/p' acarshub-react/ATTRIBUTIONS.md | grep '\*\*Version\*\*:' | sed 's/^.*: //')
+          if [ -z "$current_version" ]; then
+            echo "::error::Failed to extract current version from ATTRIBUTIONS.md"
+            exit 1
+          fi
           echo "version=${current_version}" >> "$GITHUB_OUTPUT"
           echo "Current version: ${current_version}"
 
       - name: Get latest vatspy-data-project release
         id: latest-release
         run: |
-          latest_tag=$(curl -s https://api.github.com/repos/vatsimnetwork/vatspy-data-project/releases/latest | jq -r '.tag_name')
+          response=$(curl -sf -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            https://api.github.com/repos/vatsimnetwork/vatspy-data-project/releases/latest)
+          latest_tag=$(echo "$response" | jq -r '.tag_name')
+          if [ -z "$latest_tag" ] || [ "$latest_tag" = "null" ]; then
+            echo "::error::Failed to fetch latest release tag (API returned: ${latest_tag})"
+            exit 1
+          fi
           echo "tag=${latest_tag}" >> "$GITHUB_OUTPUT"
           echo "Latest release: ${latest_tag}"
 
@@ -88,7 +98,7 @@ jobs:
           base_url="https://github.com/vatsimnetwork/vatspy-data-project/releases/download/${release_tag}"
 
           echo "Downloading Boundaries.geojson..."
-          curl -L -o acarshub-react/src/assets/geojson/FIRBoundaries.geojson \
+          curl -fL -o acarshub-react/src/assets/geojson/FIRBoundaries.geojson \
             "${base_url}/Boundaries.geojson"
 
           echo "Download complete"
