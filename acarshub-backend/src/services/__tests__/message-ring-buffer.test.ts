@@ -298,6 +298,21 @@ describe("RingBuffer — basic operations", () => {
     // After 20 pushes, only 17-20 survive
     expect(buf.snapshot()).toEqual([17, 18, 19, 20]);
   });
+
+  it("maxCapacity returns the configured capacity", () => {
+    const buf = new RingBuffer<number>(42);
+    expect(buf.maxCapacity).toBe(42);
+  });
+
+  it("maxCapacity is unaffected by pushes or clears", () => {
+    const buf = new RingBuffer<number>(5);
+    buf.push(1);
+    buf.push(2);
+    buf.push(3);
+    expect(buf.maxCapacity).toBe(5);
+    buf.clear();
+    expect(buf.maxCapacity).toBe(5);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -760,6 +775,19 @@ describe("warmMessageBuffers", () => {
       DEFAULT_ALERT_CAPACITY * 2,
       0,
     );
+  });
+
+  it("uses configured capacity (not defaults) when custom capacities are provided", async () => {
+    const customMsgCap = 50;
+    const customAlertCap = 25;
+    initMessageBuffers(customMsgCap, customAlertCap);
+    mockGrabMostRecent.mockReturnValue([]);
+    mockSearchAlerts.mockReturnValue([]);
+
+    await warmMessageBuffers();
+
+    expect(mockGrabMostRecent).toHaveBeenCalledWith(customMsgCap * 2);
+    expect(mockSearchAlerts).toHaveBeenCalledWith(customAlertCap * 2, 0);
   });
 });
 

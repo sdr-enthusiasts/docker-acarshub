@@ -158,6 +158,11 @@ export class RingBuffer<T> {
     return this.count;
   }
 
+  /** Maximum number of items the buffer can hold. */
+  get maxCapacity(): number {
+    return this.capacity;
+  }
+
   /**
    * Clear all items and reset internal pointers.
    * Called by resetMessageBuffersForTesting().
@@ -231,9 +236,9 @@ export function pushMessage(msg: AcarsMsg): void {
  * Append an alert-matched enriched message to the alert ring buffer.
  *
  * Deduplicates by UID: if a message with the same uid is already in the
- * buffer the existing entry is replaced with the incoming one (which may
- * carry updated or additional matched_* metadata if the same message matched
- * a second alert term).
+ * buffer the existing entry is replaced via a snapshot-clear-refill cycle
+ * (which may carry updated or additional matched_* metadata if the same
+ * message matched a second alert term).
  *
  * Called by setupMessageQueue() for every incoming message whose
  * alertMetadata.matched === true.
@@ -245,18 +250,10 @@ export function pushAlert(msg: AcarsMsg): void {
   }
 
   if (msg.uid !== undefined) {
-    // Scan for an existing entry with the same UID and overwrite it in-place.
-    // The buffer size is small (≤ 100) so a linear scan is acceptable and
-    // avoids maintaining a separate lookup structure.
-    for (let i = 0; i < alertBuffer.size; i++) {
-      // We access the private buf indirectly through snapshot() — but we
-      // need in-place mutation, so we use the public push() path instead:
-      // for dedup purposes, a full snapshot-replace cycle is fine because
-      // this code path is rare (alert hits are a small fraction of traffic).
-    }
-
     // Build a snapshot, replace the duplicate if found, and refill.
     // This preserves insertion order and ensures the buffer stays coherent.
+    // The buffer size is small (≤ 100) so a linear scan is acceptable and
+    // avoids maintaining a separate lookup structure.
     const existing = alertBuffer.snapshot();
     const dupIdx = existing.findIndex((m) => m.uid === msg.uid);
     if (dupIdx !== -1) {
@@ -341,7 +338,7 @@ export async function warmMessageBuffers(): Promise<void> {
     // -----------------------------------------------------------------------
     // Non-alert messages
     // -----------------------------------------------------------------------
-    const rawMessages = grabMostRecent(DEFAULT_MESSAGE_CAPACITY * 2);
+    const rawMessages = grabMostRecent(messageBuffer.maxCapacity * 2);
     // grabMostRecent returns newest-first; reverse so oldest is pushed first.
     const oldestFirstMessages = [...rawMessages].reverse();
 
@@ -357,7 +354,7 @@ export async function warmMessageBuffers(): Promise<void> {
         }
       } catch (err) {
         logger.warn("Failed to enrich message during warm-up — skipping", {
-          uid: (raw as { uid?: string }).uid,
+          id: (raw as { id?: number }).id,
           error: err instanceof Error ? err.message : String(err),
         });
       }
@@ -368,7 +365,7 @@ export async function warmMessageBuffers(): Promise<void> {
     // -----------------------------------------------------------------------
     // Alert messages
     // -----------------------------------------------------------------------
-    const alertRows = searchAlerts(DEFAULT_ALERT_CAPACITY * 2, 0);
+    const alertRows = searchAlerts(alertBuffer.maxCapacity * 2, 0);
     // searchAlerts returns newest-first; reverse so oldest is pushed first.
     const oldestFirstAlerts = [...alertRows].reverse();
 
@@ -392,7 +389,7 @@ export async function warmMessageBuffers(): Promise<void> {
         alertCount++;
       } catch (err) {
         logger.warn("Failed to enrich alert during warm-up — skipping", {
-          uid: (row.message as { uid?: string }).uid,
+          id: (row.message as { id?: number }).id,
           error: err instanceof Error ? err.message : String(err),
         });
       }

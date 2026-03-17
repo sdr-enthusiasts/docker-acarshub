@@ -435,4 +435,41 @@ describe("Message Transformation", () => {
       expect(terms).toEqual(["EMERGENCY", "MAYDAY"]);
     });
   });
+
+  describe("addMessageFromJson — backup database guard", () => {
+    it("regression: does not write to backup DB when message has negative uid (unsaved)", () => {
+      // When DB_SAVEALL is off and the message is empty, addMessage() returns
+      // a negative uid.  The backup write must be skipped for these messages
+      // because they were never persisted to the primary DB.
+      const backupInsertSpy = vi.fn();
+      const mockBackupInsert = {
+        values: vi.fn().mockReturnValue({
+          run: backupInsertSpy,
+        }),
+      };
+      const mockBackupDb = {
+        insert: vi.fn().mockReturnValue(mockBackupInsert),
+      };
+
+      vi.spyOn(clientModule, "hasBackupDatabase").mockReturnValue(true);
+      vi.spyOn(clientModule, "getBackupDatabase").mockReturnValue(
+        mockBackupDb as unknown as ReturnType<
+          typeof clientModule.getBackupDatabase
+        >,
+      );
+
+      // An empty message (no text, no data) with DB_SAVEALL=false should
+      // produce a negative uid.  We rely on the real addMessage() logic here.
+      const result = addMessageFromJson("ACARS", {
+        timestamp: 1_700_000_000,
+      });
+
+      // The uid should be negative (unsaved message)
+      const uid = Number(result.uid);
+      expect(uid).toBeLessThan(0);
+
+      // Backup DB insert should NOT have been called
+      expect(backupInsertSpy).not.toHaveBeenCalled();
+    });
+  });
 });

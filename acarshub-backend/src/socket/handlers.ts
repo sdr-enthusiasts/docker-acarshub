@@ -949,7 +949,6 @@ async function handleRRDTimeseries(
           socketId: socket.id,
           period,
           points: result.points,
-          tier: result.time_period,
         });
       } else {
         // Narrow startup race: warm-tier cache hasn't finished populating yet.
