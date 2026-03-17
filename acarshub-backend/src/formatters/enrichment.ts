@@ -71,7 +71,7 @@ export function enrichMessage(message: Record<string, unknown>): AcarsMsg {
   const enriched = { ...message };
 
   if (!("uid" in enriched) && "id" in enriched) {
-      enriched.uid = String(enriched.id);
+    enriched.uid = String(enriched.id);
   }
 
   // FIRST: Convert field names before cleanup

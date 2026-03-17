@@ -24,6 +24,7 @@
  */
 
 import { asc, desc, eq, gt, sql } from "drizzle-orm";
+import { reheatMessageBuffers } from "../../services/message-ring-buffer.js";
 import { createLogger } from "../../utils/logger.js";
 import { getDatabase, getSqliteConnection } from "../client.js";
 import {
@@ -37,7 +38,6 @@ import {
   messages,
   type NewAlertMatch,
 } from "../schema.js";
-import { reheatMessageBuffers } from "../../services/message-ring-buffer.js"
 
 const logger = createLogger("db:alerts");
 

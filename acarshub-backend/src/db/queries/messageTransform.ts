@@ -83,8 +83,8 @@ export interface RawMessage {
  */
 export function createDbSafeParams(
   messageFromJson: RawMessage,
-): Omit<NewMessage, "id" | "uid"> {
-  const params: Omit<NewMessage, "id" | "uid"> = {
+): Omit<NewMessage, "id"> {
+  const params: Omit<NewMessage, "id"> = {
     messageType: "", // Set by caller
     time: 0,
     stationId: "",

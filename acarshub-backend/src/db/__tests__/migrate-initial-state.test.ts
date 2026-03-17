@@ -339,7 +339,7 @@ describe("Migration from initial Alembic state", () => {
       .get() as { version_num: string } | undefined;
 
     expect(version).toBeDefined();
-    expect(version?.version_num).toBe("b6c7d8e9f0a1");
+    expect(version?.version_num).toBe("803398f85958");
 
     testDb.close();
   });
@@ -669,6 +669,68 @@ describe("Migration from initial Alembic state", () => {
         ON timeseries_stats (resolution);
     `);
 
+    // Add messages table (as it would exist at migration-6+ state with uid column)
+    // and alert_matches table (as created by migration-7 with message_uid column)
+    // so that migrations 13 and 14 can operate on them.
+    // First drop the tables/triggers/FTS created by beforeEach so we can
+    // recreate them with the schema expected at this migration state.
+    setupDb.exec(`
+      DROP TRIGGER IF EXISTS messages_fts_insert;
+      DROP TRIGGER IF EXISTS messages_fts_delete;
+      DROP TRIGGER IF EXISTS messages_fts_update;
+      DROP TABLE IF EXISTS messages_fts;
+      DROP TABLE IF EXISTS messages;
+      DROP TABLE IF EXISTS messages_saved;
+      DROP TABLE IF EXISTS alert_matches;
+    `);
+    setupDb.exec(`
+      CREATE TABLE messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        message_type VARCHAR(32) NOT NULL,
+        msg_time INTEGER NOT NULL,
+        station_id VARCHAR(32) NOT NULL,
+        toaddr VARCHAR(32) NOT NULL,
+        fromaddr VARCHAR(32) NOT NULL,
+        depa VARCHAR(32) NOT NULL,
+        dsta VARCHAR(32) NOT NULL,
+        eta VARCHAR(32) NOT NULL,
+        gtout VARCHAR(32) NOT NULL,
+        gtin VARCHAR(32) NOT NULL,
+        wloff VARCHAR(32) NOT NULL,
+        wlin VARCHAR(32) NOT NULL,
+        lat VARCHAR(32) NOT NULL,
+        lon VARCHAR(32) NOT NULL,
+        alt VARCHAR(32) NOT NULL,
+        msg_text TEXT NOT NULL,
+        tail VARCHAR(32) NOT NULL,
+        flight VARCHAR(32) NOT NULL,
+        icao VARCHAR(32) NOT NULL,
+        freq VARCHAR(32) NOT NULL,
+        ack VARCHAR(32) NOT NULL,
+        mode VARCHAR(32) NOT NULL,
+        label VARCHAR(32) NOT NULL,
+        block_id VARCHAR(32) NOT NULL,
+        msgno VARCHAR(32) NOT NULL,
+        is_response VARCHAR(32) NOT NULL,
+        is_onground VARCHAR(32) NOT NULL,
+        error VARCHAR(32) NOT NULL,
+        libacars TEXT NOT NULL,
+        level VARCHAR(32) NOT NULL,
+        uid TEXT,
+        aircraft_id TEXT
+      );
+      CREATE UNIQUE INDEX ix_messages_uid ON messages(uid);
+
+      CREATE TABLE alert_matches (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        message_uid TEXT NOT NULL,
+        term TEXT NOT NULL,
+        match_type TEXT NOT NULL,
+        matched_at INTEGER NOT NULL
+      );
+      CREATE INDEX ix_alert_matches_message_uid ON alert_matches(message_uid);
+    `);
+
     // Insert three rows for the same slot (simulating two extra imports)
     // and one clean row for a different slot.
     setupDb.exec(`
@@ -822,6 +884,65 @@ describe("Migration from initial Alembic state", () => {
       CREATE UNIQUE INDEX idx_rrd_import_registry_hash
         ON rrd_import_registry (file_hash);
     `);
+    // Add messages table (with uid column) and alert_matches table (with
+    // message_uid column) so migrations 13 and 14 can operate on them.
+    // First drop the tables/triggers/FTS created by beforeEach.
+    setupDb.exec(`
+      DROP TRIGGER IF EXISTS messages_fts_insert;
+      DROP TRIGGER IF EXISTS messages_fts_delete;
+      DROP TRIGGER IF EXISTS messages_fts_update;
+      DROP TABLE IF EXISTS messages_fts;
+      DROP TABLE IF EXISTS messages;
+      DROP TABLE IF EXISTS messages_saved;
+      DROP TABLE IF EXISTS alert_matches;
+    `);
+    setupDb.exec(`
+      CREATE TABLE messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        message_type VARCHAR(32) NOT NULL,
+        msg_time INTEGER NOT NULL,
+        station_id VARCHAR(32) NOT NULL,
+        toaddr VARCHAR(32) NOT NULL,
+        fromaddr VARCHAR(32) NOT NULL,
+        depa VARCHAR(32) NOT NULL,
+        dsta VARCHAR(32) NOT NULL,
+        eta VARCHAR(32) NOT NULL,
+        gtout VARCHAR(32) NOT NULL,
+        gtin VARCHAR(32) NOT NULL,
+        wloff VARCHAR(32) NOT NULL,
+        wlin VARCHAR(32) NOT NULL,
+        lat VARCHAR(32) NOT NULL,
+        lon VARCHAR(32) NOT NULL,
+        alt VARCHAR(32) NOT NULL,
+        msg_text TEXT NOT NULL,
+        tail VARCHAR(32) NOT NULL,
+        flight VARCHAR(32) NOT NULL,
+        icao VARCHAR(32) NOT NULL,
+        freq VARCHAR(32) NOT NULL,
+        ack VARCHAR(32) NOT NULL,
+        mode VARCHAR(32) NOT NULL,
+        label VARCHAR(32) NOT NULL,
+        block_id VARCHAR(32) NOT NULL,
+        msgno VARCHAR(32) NOT NULL,
+        is_response VARCHAR(32) NOT NULL,
+        is_onground VARCHAR(32) NOT NULL,
+        error VARCHAR(32) NOT NULL,
+        libacars TEXT NOT NULL,
+        level VARCHAR(32) NOT NULL,
+        uid TEXT,
+        aircraft_id TEXT
+      );
+      CREATE UNIQUE INDEX ix_messages_uid ON messages(uid);
+
+      CREATE TABLE alert_matches (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        message_uid TEXT NOT NULL,
+        term TEXT NOT NULL,
+        match_type TEXT NOT NULL,
+        matched_at INTEGER NOT NULL
+      );
+      CREATE INDEX ix_alert_matches_message_uid ON alert_matches(message_uid);
+    `);
     setupDb.exec(`
       INSERT INTO timeseries_stats
         (timestamp, resolution, acars_count, vdlm_count, hfdl_count,
@@ -833,7 +954,7 @@ describe("Migration from initial Alembic state", () => {
     `);
     setupDb.close();
 
-    // Apply only migration 12.
+    // Apply only migration 12 (plus 13 and 14).
     runMigrations(TEST_DB_PATH);
 
     const testDb = new Database(TEST_DB_PATH);
@@ -897,6 +1018,65 @@ describe("Migration from initial Alembic state", () => {
       );
       CREATE UNIQUE INDEX idx_rrd_import_registry_hash
         ON rrd_import_registry (file_hash);
+    `);
+    // Add messages table (with uid column) and alert_matches table (with
+    // message_uid column) so migrations 13 and 14 can operate on them.
+    // First drop the tables/triggers/FTS created by beforeEach.
+    setupDb.exec(`
+      DROP TRIGGER IF EXISTS messages_fts_insert;
+      DROP TRIGGER IF EXISTS messages_fts_delete;
+      DROP TRIGGER IF EXISTS messages_fts_update;
+      DROP TABLE IF EXISTS messages_fts;
+      DROP TABLE IF EXISTS messages;
+      DROP TABLE IF EXISTS messages_saved;
+      DROP TABLE IF EXISTS alert_matches;
+    `);
+    setupDb.exec(`
+      CREATE TABLE messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        message_type VARCHAR(32) NOT NULL,
+        msg_time INTEGER NOT NULL,
+        station_id VARCHAR(32) NOT NULL,
+        toaddr VARCHAR(32) NOT NULL,
+        fromaddr VARCHAR(32) NOT NULL,
+        depa VARCHAR(32) NOT NULL,
+        dsta VARCHAR(32) NOT NULL,
+        eta VARCHAR(32) NOT NULL,
+        gtout VARCHAR(32) NOT NULL,
+        gtin VARCHAR(32) NOT NULL,
+        wloff VARCHAR(32) NOT NULL,
+        wlin VARCHAR(32) NOT NULL,
+        lat VARCHAR(32) NOT NULL,
+        lon VARCHAR(32) NOT NULL,
+        alt VARCHAR(32) NOT NULL,
+        msg_text TEXT NOT NULL,
+        tail VARCHAR(32) NOT NULL,
+        flight VARCHAR(32) NOT NULL,
+        icao VARCHAR(32) NOT NULL,
+        freq VARCHAR(32) NOT NULL,
+        ack VARCHAR(32) NOT NULL,
+        mode VARCHAR(32) NOT NULL,
+        label VARCHAR(32) NOT NULL,
+        block_id VARCHAR(32) NOT NULL,
+        msgno VARCHAR(32) NOT NULL,
+        is_response VARCHAR(32) NOT NULL,
+        is_onground VARCHAR(32) NOT NULL,
+        error VARCHAR(32) NOT NULL,
+        libacars TEXT NOT NULL,
+        level VARCHAR(32) NOT NULL,
+        uid TEXT,
+        aircraft_id TEXT
+      );
+      CREATE UNIQUE INDEX ix_messages_uid ON messages(uid);
+
+      CREATE TABLE alert_matches (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        message_uid TEXT NOT NULL,
+        term TEXT NOT NULL,
+        match_type TEXT NOT NULL,
+        matched_at INTEGER NOT NULL
+      );
+      CREATE INDEX ix_alert_matches_message_uid ON alert_matches(message_uid);
     `);
     // Same timestamp with '1min' (acars=42) and '5min' (acars=7).
     // Migration 12 must keep acars=42 (the '1min' row).
@@ -969,6 +1149,65 @@ describe("Migration from initial Alembic state", () => {
       );
       CREATE UNIQUE INDEX idx_rrd_import_registry_hash
         ON rrd_import_registry (file_hash);
+    `);
+    // Add messages table (with uid column) and alert_matches table (with
+    // message_uid column) so migrations 13 and 14 can operate on them.
+    // First drop the tables/triggers/FTS created by beforeEach.
+    setupDb.exec(`
+      DROP TRIGGER IF EXISTS messages_fts_insert;
+      DROP TRIGGER IF EXISTS messages_fts_delete;
+      DROP TRIGGER IF EXISTS messages_fts_update;
+      DROP TABLE IF EXISTS messages_fts;
+      DROP TABLE IF EXISTS messages;
+      DROP TABLE IF EXISTS messages_saved;
+      DROP TABLE IF EXISTS alert_matches;
+    `);
+    setupDb.exec(`
+      CREATE TABLE messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        message_type VARCHAR(32) NOT NULL,
+        msg_time INTEGER NOT NULL,
+        station_id VARCHAR(32) NOT NULL,
+        toaddr VARCHAR(32) NOT NULL,
+        fromaddr VARCHAR(32) NOT NULL,
+        depa VARCHAR(32) NOT NULL,
+        dsta VARCHAR(32) NOT NULL,
+        eta VARCHAR(32) NOT NULL,
+        gtout VARCHAR(32) NOT NULL,
+        gtin VARCHAR(32) NOT NULL,
+        wloff VARCHAR(32) NOT NULL,
+        wlin VARCHAR(32) NOT NULL,
+        lat VARCHAR(32) NOT NULL,
+        lon VARCHAR(32) NOT NULL,
+        alt VARCHAR(32) NOT NULL,
+        msg_text TEXT NOT NULL,
+        tail VARCHAR(32) NOT NULL,
+        flight VARCHAR(32) NOT NULL,
+        icao VARCHAR(32) NOT NULL,
+        freq VARCHAR(32) NOT NULL,
+        ack VARCHAR(32) NOT NULL,
+        mode VARCHAR(32) NOT NULL,
+        label VARCHAR(32) NOT NULL,
+        block_id VARCHAR(32) NOT NULL,
+        msgno VARCHAR(32) NOT NULL,
+        is_response VARCHAR(32) NOT NULL,
+        is_onground VARCHAR(32) NOT NULL,
+        error VARCHAR(32) NOT NULL,
+        libacars TEXT NOT NULL,
+        level VARCHAR(32) NOT NULL,
+        uid TEXT,
+        aircraft_id TEXT
+      );
+      CREATE UNIQUE INDEX ix_messages_uid ON messages(uid);
+
+      CREATE TABLE alert_matches (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        message_uid TEXT NOT NULL,
+        term TEXT NOT NULL,
+        match_type TEXT NOT NULL,
+        matched_at INTEGER NOT NULL
+      );
+      CREATE INDEX ix_alert_matches_message_uid ON alert_matches(message_uid);
     `);
     setupDb.exec(`
       INSERT INTO timeseries_stats

@@ -46,7 +46,6 @@ describe("Message Transformation", () => {
     db.exec(`
       CREATE TABLE IF NOT EXISTS messages (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        uid TEXT UNIQUE NOT NULL,
         message_type TEXT NOT NULL,
         msg_time INTEGER NOT NULL,
         station_id TEXT NOT NULL,
@@ -93,7 +92,7 @@ describe("Message Transformation", () => {
 
       CREATE TABLE IF NOT EXISTS alert_matches (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        message_uid TEXT NOT NULL,
+        message_id INTEGER NOT NULL,
         term TEXT NOT NULL,
         match_type TEXT NOT NULL,
         matched_at INTEGER NOT NULL

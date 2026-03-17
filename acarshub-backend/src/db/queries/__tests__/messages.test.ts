@@ -407,7 +407,7 @@ describe("Message Query Functions", () => {
       const inserted = drizzleDb
         .select()
         .from(messages)
-        .where(eq(messages.id, alertMetadata.uid))
+        .where(eq(messages.id, Number(alertMetadata.uid)))
         .get();
 
       expect(inserted).toBeDefined();
@@ -484,7 +484,7 @@ describe("Message Query Functions", () => {
 
       const found = getMessageByUid(inserted.uid);
       expect(found).toBeDefined();
-      expect(found?.id).toBe(inserted.uid);
+      expect(found?.id).toBe(Number(inserted.uid));
       expect(found?.tail).toBe("FIND123");
     });
 

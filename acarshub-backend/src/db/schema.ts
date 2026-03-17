@@ -10,7 +10,7 @@
  * - SQLite-specific types and constraints
  *
  * Schema includes:
- * - messages: Main ACARS message storage (with UID)
+ * - messages: Main ACARS message storage
  * - alert_matches: Normalized alert junction table (replaces messages_saved)
  * - Frequency statistics tables (per decoder type)
  * - Signal level statistics tables (per decoder type)

@@ -734,12 +734,12 @@ describe("migration10 rebuild_fts", () => {
         message_type, msg_time, station_id, toaddr, fromaddr,
         depa, dsta, eta, gtout, gtin, wloff, wlin, lat, lon, alt,
         msg_text, tail, flight, icao, freq, ack, mode, label,
-        block_id, msgno, is_response, is_onground, error, libacars, level, uid
+        block_id, msgno, is_response, is_onground, error, libacars, level
       ) VALUES (
         'ACARS', ${Math.floor(Date.now() / 1000)}, 'TEST', '', '',
         '', '', '', '', '', '', '', '40.64', '-73.78', '35000',
         'migration10 test message', 'N99999', 'MIG010', 'AABBCC', '129.125',
-        0, 'A', '5Z', '', '', 0, 0, 0, '{}', '-15.0', 'uid-mig10-test'
+        0, 'A', '5Z', '', '', 0, 0, 0, '{}', '-15.0'
       )
     `);
 

@@ -75,7 +75,7 @@ export interface AlertMetadata {
  * @returns Alert metadata with matched terms
  */
 export function addMessage(
-  message: Omit<NewMessage, "id" | "uid">,
+  message: Omit<NewMessage, "id">,
   messageFromJson?: Record<string, unknown>,
 ): AlertMetadata {
   const db = getDatabase();
