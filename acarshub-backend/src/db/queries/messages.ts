@@ -43,6 +43,21 @@ import { incrementMessageCounter } from "./statistics.js";
 const logger = createLogger("db:messages");
 
 /**
+ * Monotonically decreasing counter for unsaved messages (those skipped by
+ * DB_SAVEALL / emptiness checks).  Negative values distinguish them from real
+ * DB row IDs (always positive) and guarantee every emitted message carries a
+ * unique `uid` — preventing duplicate React keys on the frontend.
+ */
+let unsavedMessageCounter = 0;
+
+/**
+ * Reset the unsaved-message counter.  Exposed only for tests.
+ */
+export function resetUnsavedMessageCounter(): void {
+  unsavedMessageCounter = 0;
+}
+
+/**
  * Alert metadata returned by addMessage()
  */
 export interface AlertMetadata {
@@ -70,7 +85,7 @@ export interface AlertMetadata {
  * 7. Creates AlertMatch rows and updates alertStats
  * 8. Returns alert metadata for Socket.IO emission
  *
- * @param message Message data (without id and uid)
+ * @param message Message data (without id)
  * @param messageFromJson Original JSON message for emptiness check
  * @returns Alert metadata with matched terms
  */
@@ -80,8 +95,11 @@ export function addMessage(
 ): AlertMetadata {
   const db = getDatabase();
 
-  // Use rowid as uid, use -1 until we have it
-  let uid = "-1";
+  // Provisional uid – replaced by the real row id when the message is saved.
+  // For unsaved messages (empty + DB_SAVEALL off) we mint a unique negative id
+  // so every Socket.IO emission carries a distinct uid (avoids duplicate React keys).
+  unsavedMessageCounter -= 1;
+  let uid = String(unsavedMessageCounter);
 
   // Initialize alert match tracking
   const alertMetadata: AlertMetadata = {

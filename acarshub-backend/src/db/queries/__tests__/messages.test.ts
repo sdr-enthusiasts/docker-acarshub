@@ -24,6 +24,7 @@ import {
   getRowCount,
   grabMostRecent,
   pruneDatabase,
+  resetUnsavedMessageCounter,
 } from "../messages.js";
 import { initializeMessageCounters } from "../statistics.js";
 
@@ -348,6 +349,7 @@ describe("Message Query Functions", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    resetUnsavedMessageCounter();
     db.close();
   });
 
@@ -946,6 +948,116 @@ describe("Message Query Functions", () => {
         )
         .get() as { c: number };
       expect(remaining.c).toBe(PROTECTED_COUNT);
+    });
+  });
+
+  describe("unsaved message UID uniqueness", () => {
+    it("regression: multiple unsaved messages each receive a unique uid (no duplicate React keys)", () => {
+      // When DB_SAVEALL is false (default) and the message is empty,
+      // addMessage() skips the DB insert.  Previously every skipped message
+      // received uid "-1", which caused duplicate React keys on the frontend.
+      // After the fix each skipped message gets a unique negative-number uid.
+      const emptyJson: Record<string, unknown> = {}; // isMessageNotEmpty({}) === false
+
+      const baseMsg: Omit<schema.NewMessage, "id"> = {
+        messageType: "ACARS",
+        time: Math.floor(Date.now() / 1000),
+        stationId: "TEST",
+        toaddr: "",
+        fromaddr: "",
+        depa: "",
+        dsta: "",
+        eta: "",
+        gtout: "",
+        gtin: "",
+        wloff: "",
+        wlin: "",
+        tail: "",
+        flight: "",
+        icao: "",
+        freq: "131.550",
+        label: "",
+        text: "",
+        lat: "",
+        lon: "",
+        alt: "",
+        ack: "",
+        mode: "",
+        msgno: "",
+        blockId: "",
+        isResponse: "",
+        isOnground: "",
+        error: "",
+        libacars: "",
+        level: "",
+      };
+
+      const result1 = addMessage(baseMsg, emptyJson);
+      const result2 = addMessage(baseMsg, emptyJson);
+      const result3 = addMessage(baseMsg, emptyJson);
+
+      // Every uid must be unique
+      const uids = [result1.uid, result2.uid, result3.uid];
+      expect(new Set(uids).size).toBe(3);
+
+      // None should be the old hardcoded "-1"
+      for (const uid of uids) {
+        expect(uid).not.toBe("-1");
+      }
+
+      // UIDs should be negative numbers (distinguishable from real DB row IDs)
+      for (const uid of uids) {
+        expect(Number(uid)).toBeLessThan(0);
+      }
+
+      // Messages were NOT inserted into the DB
+      const count = db
+        .prepare("SELECT COUNT(*) as c FROM messages WHERE message_type = 'ACARS' AND station_id = 'TEST'")
+        .get() as { c: number };
+      expect(count.c).toBe(0);
+    });
+
+    it("saved messages still receive positive DB row IDs as uid", () => {
+      // Verify saved messages still get real DB IDs (positive numbers)
+      const nonEmptyJson: Record<string, unknown> = { text: "Hello world" };
+
+      const msg: Omit<schema.NewMessage, "id"> = {
+        messageType: "ACARS",
+        time: Math.floor(Date.now() / 1000),
+        stationId: "TEST2",
+        toaddr: "",
+        fromaddr: "",
+        depa: "",
+        dsta: "",
+        eta: "",
+        gtout: "",
+        gtin: "",
+        wloff: "",
+        wlin: "",
+        tail: "",
+        flight: "",
+        icao: "",
+        freq: "131.550",
+        label: "",
+        text: "Hello world",
+        lat: "",
+        lon: "",
+        alt: "",
+        ack: "",
+        mode: "",
+        msgno: "",
+        blockId: "",
+        isResponse: "",
+        isOnground: "",
+        error: "",
+        libacars: "",
+        level: "",
+      };
+
+      const result = addMessage(msg, nonEmptyJson);
+
+      // UID should be a positive number (real DB row ID)
+      expect(Number(result.uid)).toBeGreaterThan(0);
     });
   });
 });
