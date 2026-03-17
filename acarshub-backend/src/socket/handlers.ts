@@ -52,7 +52,6 @@ import {
   getErrors,
   getPerDecoderMessageCounts,
   getRowCount,
-  grabMostRecent,
   regenerateAllAlertMatches,
   searchAlerts,
   searchAlertsByTerm,
@@ -64,9 +63,13 @@ import { enrichMessage, enrichMessages } from "../formatters/enrichment.js";
 import { getAdsbPoller } from "../services/adsb-poller.js";
 import { getHeyWhatsThatUrl } from "../services/heywhatsthat.js";
 import { getMessageQueue } from "../services/message-queue.js";
+import {
+  getRecentAlerts,
+  getRecentMessages,
+} from "../services/message-ring-buffer.js";
 import { queryTimeseriesData } from "../services/rrd-migration.js";
 import { getStationIds } from "../services/station-ids.js";
-import { getCachedTimeSeries } from "../services/timeseries-cache.js";
+import { getOrQueryTimeSeries } from "../services/timeseries-cache.js";
 import { isMigrationRunning, registerPendingSocket } from "../startup-state.js";
 import { createLogger } from "../utils/logger.js";
 import { isValidTimePeriod, zeroFillBuckets } from "../utils/timeseries.js";
@@ -231,10 +234,8 @@ export function handleConnect(
       }
     }
 
-    // 6. Send recent messages in chunks (filter out alerts)
-    const recentMessagesRaw = grabMostRecent(250);
-    const recentMessages = enrichMessages(recentMessagesRaw);
-    const nonAlertMessages = recentMessages.filter((msg) => !msg.matched);
+    // 6. Send recent messages in chunks (from ring buffer — no DB query or re-enrichment)
+    const nonAlertMessages = getRecentMessages();
 
     const chunkSize = 25;
     const totalMessages = nonAlertMessages.length;
@@ -245,16 +246,27 @@ export function handleConnect(
       chunks: Math.ceil(totalMessages / chunkSize),
     });
 
-    for (let i = 0; i < totalMessages; i += chunkSize) {
-      const chunk = nonAlertMessages.slice(i, i + chunkSize);
-      const isLastChunk = i + chunkSize >= totalMessages;
-
-      // Send as batch with loading indicators
+    if (totalMessages === 0) {
+      // Emit a terminal empty batch so clients receive done_loading=true and
+      // can transition out of their loading state even when the ring buffer
+      // is empty (e.g. a fresh install with no messages yet).
       socket.emit("acars_msg_batch", {
-        messages: chunk,
-        loading: true,
-        done_loading: isLastChunk,
+        messages: [],
+        loading: false,
+        done_loading: true,
       });
+    } else {
+      for (let i = 0; i < totalMessages; i += chunkSize) {
+        const chunk = nonAlertMessages.slice(i, i + chunkSize);
+        const isLastChunk = i + chunkSize >= totalMessages;
+
+        // Send as batch with loading indicators
+        socket.emit("acars_msg_batch", {
+          messages: chunk,
+          loading: true,
+          done_loading: isLastChunk,
+        });
+      }
     }
 
     // 7. Send database size
@@ -287,22 +299,8 @@ export function handleConnect(
     // Python sends "alert_terms" with {data: ...}, NOT "alert_terms_stats"
     socket.emit("alert_terms", { data: alertTermData });
 
-    // 10. Send recent alerts in chunks
-    const recentAlertsRaw = searchAlerts(100, 0);
-    const recentAlerts = recentAlertsRaw.map((alert) => {
-      const enriched = enrichMessage(alert.message);
-      // Add alert metadata back
-      enriched.matched = true;
-      enriched.matched_text =
-        alert.matchType === "text" ? [alert.term] : undefined;
-      enriched.matched_icao =
-        alert.matchType === "icao" ? [alert.term] : undefined;
-      enriched.matched_flight =
-        alert.matchType === "flight" ? [alert.term] : undefined;
-      enriched.matched_tail =
-        alert.matchType === "tail" ? [alert.term] : undefined;
-      return enriched;
-    });
+    // 10. Send recent alerts in chunks (from ring buffer — no DB query or re-enrichment)
+    const recentAlerts = getRecentAlerts();
 
     const totalAlerts = recentAlerts.length;
     logger.debug("Sending alert cache", {
@@ -310,15 +308,25 @@ export function handleConnect(
       total: totalAlerts,
     });
 
-    for (let i = 0; i < totalAlerts; i += chunkSize) {
-      const chunk = recentAlerts.slice(i, i + chunkSize);
-      const isLastChunk = i + chunkSize >= totalAlerts;
-
+    if (totalAlerts === 0) {
+      // Emit a terminal empty batch so clients receive done_loading=true even
+      // when the alert ring buffer is empty.
       socket.emit("alert_matches_batch", {
-        messages: chunk,
-        loading: true,
-        done_loading: isLastChunk,
+        messages: [],
+        loading: false,
+        done_loading: true,
       });
+    } else {
+      for (let i = 0; i < totalAlerts; i += chunkSize) {
+        const chunk = recentAlerts.slice(i, i + chunkSize);
+        const isLastChunk = i + chunkSize >= totalAlerts;
+
+        socket.emit("alert_matches_batch", {
+          messages: chunk,
+          loading: true,
+          done_loading: isLastChunk,
+        });
+      }
     }
 
     // 11. Send version information
@@ -921,26 +929,26 @@ async function handleRRDTimeseries(
         return;
       }
 
-      const cached = getCachedTimeSeries(period);
+      const result = getOrQueryTimeSeries(period);
 
-      if (cached !== null) {
-        socket.emit("rrd_timeseries_data", cached);
-        logger.debug("Served time-series from cache", {
+      if (result !== null) {
+        socket.emit("rrd_timeseries_data", result);
+        logger.debug("Served time-series response", {
           socketId: socket.id,
           period,
-          points: cached.points,
+          points: result.points,
+          tier: result.time_period,
         });
       } else {
-        // Narrow startup race: initTimeSeriesCache() hasn't finished yet.
-        // This should be sub-millisecond in practice because the cache is
-        // warmed before any sockets are accepted, but we handle it cleanly.
+        // Narrow startup race: warm-tier cache hasn't finished populating yet.
+        // Lazy and query-only periods return null only when the DB query fails.
         socket.emit("rrd_timeseries_data", {
-          error: "Cache warming up — retry in a moment",
+          error: "Time-series data unavailable — retry in a moment",
           data: [],
           time_period: period,
           points: 0,
         });
-        logger.warn("Time-series cache miss during warmup", {
+        logger.warn("Time-series response unavailable", {
           socketId: socket.id,
           period,
         });

@@ -17,26 +17,24 @@
 /**
  * Time-series cache service
  *
- * Maintains an in-memory copy of all 8 pre-computed time-series responses
- * (1hr, 6hr, 12hr, 24hr, 1wk, 30day, 6mon, 1yr).  Each entry is refreshed
- * at a wall-clock-aligned interval appropriate to its resolution:
+ * Implements a three-tier caching strategy for the eight time-series periods:
  *
- *   1hr / 6hr / 12hr → every minute    (on the UTC :00 second)
- *   24hr             → every 5 minutes
- *   1wk              → every 30 minutes
- *   30day            → every hour
- *   6mon             → every 6 hours
- *   1yr              → every 12 hours
+ *   Tier 1 — "warm" (1hr, 6hr, 12hr)
+ *     Kept in memory at all times.  Refreshed on a wall-clock-aligned timer
+ *     and broadcast to all connected clients on every refresh tick so the
+ *     Stats page updates live without any client-side polling.
  *
- * WHY NOT QUERY PER REQUEST
- * -------------------------
- * The Stats page previously queried the database on every socket event —
- * once per connected client, per time-period change.  For the 1yr period
- * this is a GROUP BY AVG over potentially hundreds of thousands of rows,
- * which is measurably slow on embedded ARM hardware.
+ *   Tier 2 — "lazy" (24hr, 1wk, 30day)
+ *     Not warmed at startup.  Queried from the DB on first client request,
+ *     then cached with a TTL equal to the period's refreshIntervalMs.
+ *     Subsequent requests within the TTL are served from memory; after expiry
+ *     the DB is queried again.  Never broadcast unsolicited.
  *
- * Keeping all 8 results warm in memory makes every client request O(1) and
- * eliminates all database I/O from the hot request path.
+ *   Tier 3 — "query-only" (6mon, 1yr)
+ *     Never cached.  Every request hits the DB directly and the result is
+ *     discarded immediately.  The 1yr query can scan 525,600 rows; keeping
+ *     it in memory on a 12-hour timer caused a ~420 MB heap spike even when
+ *     no client ever viewed the chart.
  *
  * WHY RECURSIVE setTimeout INSTEAD OF setInterval
  * ------------------------------------------------
@@ -46,12 +44,14 @@
  * so late fires self-correct on the next cycle and the timer stays aligned
  * to wall-clock boundaries regardless of execution jitter.
  *
- * WHY BROADCAST ON REFRESH
- * ------------------------
+ * WHY BROADCAST ON REFRESH (warm tier only)
+ * ------------------------------------------
  * The frontend hook listens passively for rrd_timeseries_data events and
- * filters by time_period.  When the backend broadcasts on every refresh,
- * clients viewing the Stats page receive live graph updates automatically —
- * no polling, no re-requesting, no auto-refresh timer on the frontend side.
+ * filters by time_period.  When the backend broadcasts on every warm-tier
+ * refresh, clients viewing the Stats page receive live graph updates
+ * automatically — no polling, no re-requesting, no auto-refresh timer on
+ * the frontend side.  Lazy and query-only periods are served as
+ * request/response only.
  */
 
 import { and, gte, lte, sql } from "drizzle-orm";
@@ -66,6 +66,7 @@ import {
   type TimeSeriesDataPoint,
   type TimeSeriesRawPoint,
   type TimeSeriesResponse,
+  WARM_PERIODS,
   zeroFillBuckets,
 } from "../utils/timeseries.js";
 
@@ -93,16 +94,30 @@ type Broadcaster = (period: TimePeriod, data: TimeSeriesResponse) => void;
 // ---------------------------------------------------------------------------
 
 /**
- * Warm cache: one pre-computed TimeSeriesResponse per TimePeriod.
+ * Warm cache: one pre-computed TimeSeriesResponse per warm-tier TimePeriod.
  * Populated at startup by initTimeSeriesCache() and updated on each scheduled
- * refresh.
+ * refresh.  Only "warm" tier periods are stored here.
  */
 const cache = new Map<TimePeriod, TimeSeriesResponse>();
+
+/**
+ * Lazy cache: short-lived entries for "lazy" tier periods.
+ * Populated on first client request and evicted after TTL expires.
+ * Never used for "warm" or "query-only" periods.
+ */
+interface LazyCacheEntry {
+  response: TimeSeriesResponse;
+  /** Absolute expiry timestamp in milliseconds (Date.now() + refreshIntervalMs). */
+  expiresAt: number;
+}
+
+const lazyCache = new Map<TimePeriod, LazyCacheEntry>();
 
 /**
  * Active timeout handles keyed by period.  Each handle is a one-shot
  * setTimeout; when it fires the handler re-arms itself for the next boundary,
  * giving wall-clock-aligned self-correcting behaviour.
+ * Only armed for "warm" tier periods.
  */
 const timers = new Map<TimePeriod, ReturnType<typeof setTimeout>>();
 
@@ -291,13 +306,20 @@ function refreshPeriod(period: TimePeriod, targetTimeMs: number): void {
 // ---------------------------------------------------------------------------
 
 /**
- * Warm the time-series cache and arm wall-clock-aligned refresh timers.
+ * Warm the "warm" tier of the time-series cache and arm wall-clock-aligned
+ * refresh timers for those periods only.
  *
  * Steps:
- *  1. Run all 8 DB queries immediately so the first client request is served
- *     from memory rather than hitting the database.
- *  2. Set the broadcaster so subsequent refreshes push data to all clients.
- *  3. Arm one wall-clock-aligned timer per period.
+ *  1. Run DB queries for warm-tier periods (1hr, 6hr, 12hr) immediately so
+ *     the first client request for a short window is served from memory.
+ *  2. Set the broadcaster so subsequent warm-tier refreshes push data to all
+ *     connected clients automatically.
+ *  3. Arm one wall-clock-aligned timer per warm-tier period.
+ *
+ * Lazy-tier periods (24hr, 1wk, 30day) are NOT warmed here — they are
+ * populated on first client request via getOrQueryTimeSeries().
+ *
+ * Query-only periods (6mon, 1yr) are never cached and receive no timer.
  *
  * Must be called after initDatabase() returns.
  * Safe to call multiple times — subsequent calls are no-ops.
@@ -313,16 +335,20 @@ export function initTimeSeriesCache(bc: Broadcaster): void {
 
   broadcaster = bc;
 
-  logger.info("Warming time-series cache…", {
-    periods: ALL_TIME_PERIODS.length,
+  logger.info("Warming time-series cache (warm tier only)…", {
+    warmPeriods: WARM_PERIODS.length,
+    totalPeriods: ALL_TIME_PERIODS.length,
   });
 
-  // --- Phase 1: warm every period synchronously ---
-  for (const period of ALL_TIME_PERIODS) {
+  // --- Phase 1: warm only the "warm" tier periods synchronously ---
+  for (const period of WARM_PERIODS) {
     try {
       const response = buildTimeSeriesResponse(period);
       cache.set(period, response);
-      logger.debug("Cache entry warmed", { period, points: response.points });
+      logger.debug("Warm cache entry populated", {
+        period,
+        points: response.points,
+      });
     } catch (err) {
       logger.error(
         "Failed to warm cache entry — period will be empty until next refresh",
@@ -334,13 +360,13 @@ export function initTimeSeriesCache(bc: Broadcaster): void {
     }
   }
 
-  logger.info("Time-series cache warm", {
+  logger.info("Warm tier cache populated", {
     populated: cache.size,
-    total: ALL_TIME_PERIODS.length,
+    warmTotal: WARM_PERIODS.length,
   });
 
-  // --- Phase 2: arm one wall-clock-aligned timer per period ---
-  for (const period of ALL_TIME_PERIODS) {
+  // --- Phase 2: arm one wall-clock-aligned timer per warm-tier period ---
+  for (const period of WARM_PERIODS) {
     const { refreshIntervalMs } = PERIOD_CONFIG[period];
     const nextBoundary = getNextWallClockBoundary(refreshIntervalMs);
     const delay = nextBoundary - Date.now();
@@ -376,8 +402,11 @@ export function stopTimeSeriesCache(): void {
 }
 
 /**
- * Return the cached response for the given period, or null if the cache has
- * not yet been populated for that period (narrow startup race window).
+ * Return the cached response for the given warm-tier period, or null if the
+ * cache has not yet been populated (narrow startup race window).
+ *
+ * Only returns data for "warm" tier periods.  For lazy and query-only periods
+ * use getOrQueryTimeSeries() instead.
  *
  * Callers are responsible for validating the period with isValidTimePeriod()
  * before calling this function.  Invalid period strings are not stored in the
@@ -392,19 +421,104 @@ export function getCachedTimeSeries(
 }
 
 /**
- * Return true once all 8 periods have been populated in the cache.
+ * Return the time-series response for a period, using the appropriate cache
+ * tier strategy:
+ *
+ *   "warm"       → read from the warm in-memory cache (same as getCachedTimeSeries).
+ *                  Returns null during the narrow startup race before the
+ *                  cache is populated.
+ *
+ *   "lazy"       → check lazyCache; if hit and not expired return the cached
+ *                  entry; if miss or expired query the DB, store in lazyCache
+ *                  with TTL = refreshIntervalMs, and return.
+ *
+ *   "query-only" → query the DB directly every time; result is never stored.
+ *
+ * This is the preferred call-site for socket handlers — it handles all tiers
+ * transparently and always returns a result (or null for a warm-tier miss
+ * during startup only).
+ *
+ * @param period  A TimePeriod string (already validated by the caller)
+ */
+export function getOrQueryTimeSeries(
+  period: TimePeriod,
+): TimeSeriesResponse | null {
+  const config = PERIOD_CONFIG[period];
+
+  switch (config.tier) {
+    case "warm": {
+      // Served from the warm push cache — populated at startup, updated on
+      // the period's wall-clock-aligned refresh timer.
+      return cache.get(period) ?? null;
+    }
+
+    case "lazy": {
+      const now = Date.now();
+      const entry = lazyCache.get(period);
+
+      if (entry !== undefined && entry.expiresAt > now) {
+        // Valid cache hit — serve without touching the DB.
+        logger.debug("Lazy cache hit", {
+          period,
+          expiresIn: `${Math.round((entry.expiresAt - now) / 1000)}s`,
+        });
+        return entry.response;
+      }
+
+      // Cache miss or expired — query the DB and refresh the lazy entry.
+      logger.debug("Lazy cache miss or expired — querying DB", { period });
+      try {
+        const response = buildTimeSeriesResponse(period);
+        lazyCache.set(period, {
+          response,
+          expiresAt: now + config.refreshIntervalMs,
+        });
+        return response;
+      } catch (err) {
+        logger.error("Failed to build lazy time-series response", {
+          period,
+          error: err instanceof Error ? err.message : String(err),
+        });
+        // Return stale entry if available rather than nothing.
+        return entry?.response ?? null;
+      }
+    }
+
+    case "query-only": {
+      // Query the DB on every request.  Result is discarded immediately after
+      // returning — never held in memory beyond this call stack.
+      logger.debug("Query-only period — querying DB directly", { period });
+      try {
+        return buildTimeSeriesResponse(period);
+      } catch (err) {
+        logger.error("Failed to build query-only time-series response", {
+          period,
+          error: err instanceof Error ? err.message : String(err),
+        });
+        return null;
+      }
+    }
+  }
+}
+
+/**
+ * Return true once all warm-tier periods have been populated in the cache.
  * Useful for health checks and startup readiness probes.
+ *
+ * NOTE: This now checks only the warm tier (3 periods), not all 8.  Lazy
+ * and query-only periods are not pre-populated and would never cause this to
+ * return true if we checked ALL_TIME_PERIODS.
  */
 export function isCacheReady(): boolean {
-  return cache.size === ALL_TIME_PERIODS.length;
+  return cache.size === WARM_PERIODS.length;
 }
 
 /**
  * Reset all module-level state for testing purposes only.
  *
- * Clears the cache Map, cancels all timers, and nulls the broadcaster so
- * that initTimeSeriesCache() can be called again in the next test with a
- * fresh state.
+ * Clears the warm cache Map, the lazy cache Map, cancels all timers, and
+ * nulls the broadcaster so that initTimeSeriesCache() can be called again
+ * in the next test with a fresh state.
  *
  * @internal — Do NOT call this in production code.
  */
@@ -414,5 +528,6 @@ export function resetCacheForTesting(): void {
   }
   timers.clear();
   cache.clear();
+  lazyCache.clear();
   broadcaster = null;
 }

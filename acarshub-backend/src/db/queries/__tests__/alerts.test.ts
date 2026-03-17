@@ -74,7 +74,6 @@ import {
 const CREATE_ALERT_TABLES = `
   CREATE TABLE IF NOT EXISTS messages (
     id           INTEGER PRIMARY KEY AUTOINCREMENT,
-    uid          TEXT UNIQUE NOT NULL,
     message_type TEXT NOT NULL DEFAULT 'ACARS',
     msg_time     INTEGER NOT NULL DEFAULT 0,
     station_id   TEXT NOT NULL DEFAULT '',
@@ -110,7 +109,7 @@ const CREATE_ALERT_TABLES = `
 
   CREATE TABLE IF NOT EXISTS alert_matches (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
-    message_uid TEXT NOT NULL,
+    message_id TEXT NOT NULL,
     term        TEXT NOT NULL,
     match_type  TEXT NOT NULL,
     matched_at  INTEGER NOT NULL
@@ -134,7 +133,7 @@ const CREATE_ALERT_TABLES = `
 
 /** Minimal message row factory */
 interface MsgOpts {
-  uid: string;
+  id: number;
   text?: string;
   icao?: string;
   tail?: string;
@@ -148,7 +147,7 @@ function insertMessage(
 ): void {
   db.insert(messages)
     .values({
-      uid: opts.uid,
+      id: opts.id,
       messageType: "ACARS",
       time: opts.time ?? 1_700_000_000,
       stationId: "",
@@ -186,13 +185,13 @@ function insertMessage(
 /** Insert an alert_match row directly */
 function insertAlertMatch(
   db: ReturnType<typeof drizzle<typeof schema>>,
-  messageUid: string,
+  messageId: number,
   term: string,
   matchType: string,
   matchedAt: number,
 ): void {
   db.insert(alertMatches)
-    .values({ messageUid, term, matchType, matchedAt })
+    .values({ messageId, term, matchType, matchedAt })
     .run();
 }
 
@@ -208,6 +207,9 @@ beforeEach(() => {
   sqliteDb.exec(CREATE_ALERT_TABLES);
   testDb = drizzle(sqliteDb, { schema });
   vi.spyOn(clientModule, "getDatabase").mockReturnValue(testDb);
+  // getSqliteConnection is needed by the transaction() wrapper inside
+  // regenerateAllAlertMatches. Point it at the same in-memory connection.
+  vi.spyOn(clientModule, "getSqliteConnection").mockReturnValue(sqliteDb);
 
   // Ensure a clean cache state before every test
   resetAlertCacheForTesting();
@@ -393,17 +395,17 @@ describe("getAlertIgnore", () => {
 
 describe("addAlertMatch", () => {
   it("should insert a match and return the inserted row", () => {
-    insertMessage(testDb, { uid: "msg-1", text: "UAL123" });
+    insertMessage(testDb, { uid: 1, text: "UAL123" });
 
     const match = addAlertMatch({
-      messageUid: "msg-1",
+      messageUid: 1,
       term: "UAL123",
       matchType: "text",
       matchedAt: 1_700_000_000,
     });
 
     expect(match.id).toBeDefined();
-    expect(match.messageUid).toBe("msg-1");
+    expect(match.messageUid).toBe(1);
     expect(match.term).toBe("UAL123");
     expect(match.matchType).toBe("text");
   });
@@ -413,8 +415,8 @@ describe("searchAlerts", () => {
   beforeEach(() => {
     // Insert 5 messages and 5 matches at different timestamps
     for (let i = 1; i <= 5; i++) {
-      insertMessage(testDb, { uid: `msg-${i}`, text: `term${i}` });
-      insertAlertMatch(testDb, `msg-${i}`, "TERM", "text", 1_700_000_000 + i);
+      insertMessage(testDb, { uid: i, text: `term${i}` });
+      insertAlertMatch(testDb, i, "TERM", "text", 1_700_000_000 + i);
     }
   });
 
@@ -462,9 +464,9 @@ describe("getSavedAlertCount", () => {
   });
 
   it("should return the total number of alert matches", () => {
-    insertMessage(testDb, { uid: "msg-1" });
-    insertAlertMatch(testDb, "msg-1", "TERM", "text", 1_700_000_000);
-    insertAlertMatch(testDb, "msg-1", "TERM2", "text", 1_700_000_001);
+    insertMessage(testDb, { uid: 1 });
+    insertAlertMatch(testDb, 1, "TERM", "text", 1_700_000_000);
+    insertAlertMatch(testDb, 1, "TERM2", "text", 1_700_000_001);
 
     expect(getSavedAlertCount()).toBe(2);
   });
@@ -476,13 +478,13 @@ describe("getSavedAlertCount", () => {
 
 describe("searchAlertsByTerm", () => {
   beforeEach(() => {
-    insertMessage(testDb, { uid: "msg-1" });
-    insertMessage(testDb, { uid: "msg-2" });
-    insertMessage(testDb, { uid: "msg-3" });
+    insertMessage(testDb, { uid: 1 });
+    insertMessage(testDb, { uid: 2 });
+    insertMessage(testDb, { uid: 3 });
 
-    insertAlertMatch(testDb, "msg-1", "UAL", "icao", 1_700_000_001);
-    insertAlertMatch(testDb, "msg-2", "UAL", "icao", 1_700_000_002);
-    insertAlertMatch(testDb, "msg-3", "DAL", "icao", 1_700_000_003);
+    insertAlertMatch(testDb, 1, "UAL", "icao", 1_700_000_001);
+    insertAlertMatch(testDb, 2, "UAL", "icao", 1_700_000_002);
+    insertAlertMatch(testDb, 3, "DAL", "icao", 1_700_000_003);
   });
 
   it("should return only matches for the specified term", () => {
@@ -506,8 +508,8 @@ describe("searchAlertsByTerm", () => {
   it("should respect limit and offset for pagination", () => {
     // Insert 5 more UAL matches
     for (let i = 10; i < 15; i++) {
-      insertMessage(testDb, { uid: `extra-${i}` });
-      insertAlertMatch(testDb, `extra-${i}`, "UAL", "icao", 1_700_000_000 + i);
+      insertMessage(testDb, { uid: i });
+      insertAlertMatch(testDb, i, "UAL", "icao", 1_700_000_000 + i);
     }
 
     const page1 = searchAlertsByTerm("UAL", 3, 0);
@@ -629,11 +631,13 @@ describe("resetAlertCounts", () => {
 
 describe("deleteOldAlertMatches", () => {
   beforeEach(() => {
-    insertMessage(testDb, { uid: "msg-old" });
-    insertMessage(testDb, { uid: "msg-new" });
+    const old = 101;
+    const mew = 102;
+    insertMessage(testDb, { uid: old });
+    insertMessage(testDb, { uid: mew });
 
-    insertAlertMatch(testDb, "msg-old", "TERM", "text", 1_000_000);
-    insertAlertMatch(testDb, "msg-new", "TERM", "text", 2_000_000);
+    insertAlertMatch(testDb, old, "TERM", "text", 1_000_000);
+    insertAlertMatch(testDb, mew, "TERM", "text", 2_000_000);
   });
 
   it("should delete matches before the given timestamp", () => {
@@ -671,27 +675,27 @@ describe("deleteOldAlertMatches", () => {
 
 describe("getAlertMatchesForMessage", () => {
   it("should return all matches for a specific message UID", () => {
-    insertMessage(testDb, { uid: "msg-1" });
-    insertMessage(testDb, { uid: "msg-2" });
+    insertMessage(testDb, { uid: 1 });
+    insertMessage(testDb, { uid: 2 });
 
-    insertAlertMatch(testDb, "msg-1", "UAL", "icao", 1_700_000_000);
-    insertAlertMatch(testDb, "msg-1", "UAL123", "flight", 1_700_000_001);
-    insertAlertMatch(testDb, "msg-2", "OTHER", "text", 1_700_000_002);
+    insertAlertMatch(testDb, 1, "UAL", "icao", 1_700_000_000);
+    insertAlertMatch(testDb, 1, "UAL123", "flight", 1_700_000_001);
+    insertAlertMatch(testDb, 2, "OTHER", "text", 1_700_000_002);
 
-    const matches = getAlertMatchesForMessage("msg-1");
+    const matches = getAlertMatchesForMessage(1);
     expect(matches).toHaveLength(2);
     for (const m of matches) {
-      expect(m.messageUid).toBe("msg-1");
+      expect(m.messageUid).toBe(1);
     }
   });
 
   it("should return an empty array when no matches exist for the UID", () => {
-    insertMessage(testDb, { uid: "msg-1" });
-    expect(getAlertMatchesForMessage("msg-1")).toHaveLength(0);
+    insertMessage(testDb, { uid: 1 });
+    expect(getAlertMatchesForMessage("1")).toHaveLength(0);
   });
 
   it("should return an empty array for a non-existent UID", () => {
-    expect(getAlertMatchesForMessage("does-not-exist")).toHaveLength(0);
+    expect(getAlertMatchesForMessage("-1")).toHaveLength(0);
   });
 });
 
@@ -718,7 +722,7 @@ describe("regenerateAllAlertMatches", () => {
   });
 
   it("should return zero stats when alert terms are empty", () => {
-    insertMessage(testDb, { uid: "msg-1", text: "UAL123 departed on time" });
+    insertMessage(testDb, { uid: 1, text: "UAL123 departed on time" });
 
     const stats = regen([]);
     expect(stats.matched_messages).toBe(0);
@@ -728,7 +732,7 @@ describe("regenerateAllAlertMatches", () => {
   // ---- text matching ----
 
   it("should match message text by word boundary (case-insensitive)", () => {
-    insertMessage(testDb, { uid: "msg-1", text: "UAL123 departed on time" });
+    insertMessage(testDb, { uid: 1, text: "UAL123 departed on time" });
 
     const stats = regen(["UAL123"]);
     expect(stats.total_matches).toBe(1);
@@ -741,7 +745,7 @@ describe("regenerateAllAlertMatches", () => {
   });
 
   it("should match text term case-insensitively", () => {
-    insertMessage(testDb, { uid: "msg-1", text: "ual123 departed on time" });
+    insertMessage(testDb, { uid: 1, text: "ual123 departed on time" });
 
     const stats = regen(["UAL123"]);
     expect(stats.total_matches).toBe(1);
@@ -749,7 +753,7 @@ describe("regenerateAllAlertMatches", () => {
 
   it("should NOT match text when term is a substring without word boundary", () => {
     // 'UAL' alone must not match 'UAL123' — word boundary required
-    insertMessage(testDb, { uid: "msg-1", text: "UAL123 departed" });
+    insertMessage(testDb, { uid: 1, text: "UAL123 departed" });
 
     const stats = regen(["UAL"]);
     expect(stats.total_matches).toBe(0);
@@ -757,7 +761,7 @@ describe("regenerateAllAlertMatches", () => {
 
   it("should match text term when it appears as a full word in a longer sentence", () => {
     insertMessage(testDb, {
-      uid: "msg-1",
+      uid: 1,
       text: "Flight UAL is on final approach",
     });
 
@@ -767,7 +771,7 @@ describe("regenerateAllAlertMatches", () => {
 
   it("should create one match per term that appears in the text", () => {
     insertMessage(testDb, {
-      uid: "msg-1",
+      uid: 1,
       text: "UAL DAL both on final",
     });
 
@@ -779,7 +783,7 @@ describe("regenerateAllAlertMatches", () => {
   // ---- ICAO matching ----
 
   it("should match ICAO by exact equality", () => {
-    insertMessage(testDb, { uid: "msg-1", icao: "A1B2C3" });
+    insertMessage(testDb, { uid: 1, icao: "A1B2C3" });
 
     const stats = regen(["A1B2C3"]);
     expect(stats.total_matches).toBe(1);
@@ -789,21 +793,21 @@ describe("regenerateAllAlertMatches", () => {
   });
 
   it("should match ICAO by substring (term contained within ICAO)", () => {
-    insertMessage(testDb, { uid: "msg-1", icao: "A1B2C3D4" });
+    insertMessage(testDb, { uid: 1, icao: "A1B2C3D4" });
 
     const stats = regen(["A1B2"]);
     expect(stats.total_matches).toBe(1);
   });
 
   it("should NOT match ICAO when term is not a substring", () => {
-    insertMessage(testDb, { uid: "msg-1", icao: "A1B2C3" });
+    insertMessage(testDb, { uid: 1, icao: "A1B2C3" });
 
     const stats = regen(["ZZZZZ"]);
     expect(stats.total_matches).toBe(0);
   });
 
   it("should match ICAO case-insensitively", () => {
-    insertMessage(testDb, { uid: "msg-1", icao: "a1b2c3" });
+    insertMessage(testDb, { uid: 1, icao: "a1b2c3" });
 
     const stats = regen(["A1B2C3"]);
     expect(stats.total_matches).toBe(1);
@@ -812,7 +816,7 @@ describe("regenerateAllAlertMatches", () => {
   // ---- tail matching ----
 
   it("should match tail by exact equality", () => {
-    insertMessage(testDb, { uid: "msg-1", tail: "N12345" });
+    insertMessage(testDb, { uid: 1, tail: "N12345" });
 
     const stats = regen(["N12345"]);
     expect(stats.total_matches).toBe(1);
@@ -822,14 +826,14 @@ describe("regenerateAllAlertMatches", () => {
   });
 
   it("should match tail by substring", () => {
-    insertMessage(testDb, { uid: "msg-1", tail: "N12345AB" });
+    insertMessage(testDb, { uid: 1, tail: "N12345AB" });
 
     const stats = regen(["N123"]);
     expect(stats.total_matches).toBe(1);
   });
 
   it("should match tail case-insensitively", () => {
-    insertMessage(testDb, { uid: "msg-1", tail: "n12345" });
+    insertMessage(testDb, { uid: 1, tail: "n12345" });
 
     const stats = regen(["N12345"]);
     expect(stats.total_matches).toBe(1);
@@ -838,7 +842,7 @@ describe("regenerateAllAlertMatches", () => {
   // ---- flight matching ----
 
   it("should match flight by exact equality", () => {
-    insertMessage(testDb, { uid: "msg-1", flight: "UAL123" });
+    insertMessage(testDb, { uid: 1, flight: "UAL123" });
 
     const stats = regen(["UAL123"]);
     // Could match flight OR text — let's confirm at least one flight match
@@ -849,7 +853,7 @@ describe("regenerateAllAlertMatches", () => {
   });
 
   it("should match flight by substring", () => {
-    insertMessage(testDb, { uid: "msg-1", flight: "UAL123" });
+    insertMessage(testDb, { uid: 1, flight: "UAL123" });
 
     const stats = regen(["UAL"]);
     const matches = testDb.select().from(alertMatches).all();
@@ -859,7 +863,7 @@ describe("regenerateAllAlertMatches", () => {
   });
 
   it("should match flight case-insensitively", () => {
-    insertMessage(testDb, { uid: "msg-1", flight: "ual123" });
+    insertMessage(testDb, { uid: 1, flight: "ual123" });
 
     const stats = regen(["UAL123"]);
     const matches = testDb.select().from(alertMatches).all();
@@ -872,7 +876,7 @@ describe("regenerateAllAlertMatches", () => {
 
   it("should suppress a text match when an ignore term also appears in the text", () => {
     insertMessage(testDb, {
-      uid: "msg-1",
+      uid: 1,
       text: "UAL test flight",
     });
 
@@ -883,28 +887,28 @@ describe("regenerateAllAlertMatches", () => {
   });
 
   it("should allow a text match when the ignore term does NOT appear", () => {
-    insertMessage(testDb, { uid: "msg-1", text: "UAL departed on time" });
+    insertMessage(testDb, { uid: 1, text: "UAL departed on time" });
 
     const stats = regen(["UAL"], ["NOISE"]);
     expect(stats.total_matches).toBe(1);
   });
 
   it("should suppress an ICAO match when ignore term matches the ICAO", () => {
-    insertMessage(testDb, { uid: "msg-1", icao: "A1B2C3" });
+    insertMessage(testDb, { uid: 1, icao: "A1B2C3" });
 
     const stats = regen(["A1B2C3"], ["A1B2C3"]);
     expect(stats.total_matches).toBe(0);
   });
 
   it("should suppress a tail match when ignore term matches the tail", () => {
-    insertMessage(testDb, { uid: "msg-1", tail: "N12345" });
+    insertMessage(testDb, { uid: 1, tail: "N12345" });
 
     const stats = regen(["N12345"], ["N12345"]);
     expect(stats.total_matches).toBe(0);
   });
 
   it("should suppress a flight match when ignore term matches the flight", () => {
-    insertMessage(testDb, { uid: "msg-1", flight: "UAL123" });
+    insertMessage(testDb, { uid: 1, flight: "UAL123" });
 
     const _stats = regen(["UAL123"], ["UAL123"]);
     const matches = testDb.select().from(alertMatches).all();
@@ -915,7 +919,7 @@ describe("regenerateAllAlertMatches", () => {
   // ---- delete + reset on each run ----
 
   it("should delete existing matches before regenerating", () => {
-    insertMessage(testDb, { uid: "msg-1", text: "UAL on approach" });
+    insertMessage(testDb, { uid: 1, text: "UAL on approach" });
 
     // First run
     regen(["UAL"]);
@@ -927,7 +931,7 @@ describe("regenerateAllAlertMatches", () => {
   });
 
   it("should reset alert counts before regenerating", () => {
-    insertMessage(testDb, { uid: "msg-1", text: "UAL on approach" });
+    insertMessage(testDb, { uid: 1, text: "UAL on approach" });
     setAlertTerms(["UAL"]);
     incrementAlertCount("UAL");
     incrementAlertCount("UAL"); // count is now 2
@@ -942,22 +946,22 @@ describe("regenerateAllAlertMatches", () => {
   // ---- stats totals ----
 
   it("should report correct total_messages count", () => {
-    insertMessage(testDb, { uid: "msg-1", text: "irrelevant" });
-    insertMessage(testDb, { uid: "msg-2", text: "also irrelevant" });
+    insertMessage(testDb, { uid: 1, text: "irrelevant" });
+    insertMessage(testDb, { uid: 2, text: "also irrelevant" });
 
     const stats = regen(["UAL"]);
     expect(stats.total_messages).toBe(2);
   });
 
   it("should report matched_messages = 0 when no messages match", () => {
-    insertMessage(testDb, { uid: "msg-1", text: "nothing special here" });
+    insertMessage(testDb, { uid: 1, text: "nothing special here" });
 
     const stats = regen(["UAL"]);
     expect(stats.matched_messages).toBe(0);
   });
 
   it("should count matched_messages even when a message matches multiple terms", () => {
-    insertMessage(testDb, { uid: "msg-1", text: "UAL DAL on approach" });
+    insertMessage(testDb, { uid: 1, text: "UAL DAL on approach" });
 
     const stats = regen(["UAL", "DAL"]);
     // Message matches twice (two terms), but matched_messages counts unique messages
@@ -969,7 +973,7 @@ describe("regenerateAllAlertMatches", () => {
 
   it("should match across all field types in a single message", () => {
     insertMessage(testDb, {
-      uid: "msg-1",
+      uid: 1,
       text: "TEXTTERM on final",
       icao: "ICAOTERM",
       tail: "TAILTERM",
@@ -984,9 +988,9 @@ describe("regenerateAllAlertMatches", () => {
   });
 
   it("should handle multiple messages each matching different terms", () => {
-    insertMessage(testDb, { uid: "msg-1", icao: "ABCDEF" });
-    insertMessage(testDb, { uid: "msg-2", icao: "GHIJKL" });
-    insertMessage(testDb, { uid: "msg-3", icao: "XXXXXX" }); // no match
+    insertMessage(testDb, { uid: 1, icao: "ABCDEF" });
+    insertMessage(testDb, { uid: 2, icao: "GHIJKL" });
+    insertMessage(testDb, { uid: 3, icao: "XXXXXX" }); // no match
 
     const stats = regen(["ABCDEF", "GHIJKL"]);
     expect(stats.total_messages).toBe(3);
@@ -995,13 +999,113 @@ describe("regenerateAllAlertMatches", () => {
   });
 
   it("should update alert_stats counts for matched terms", () => {
-    insertMessage(testDb, { uid: "msg-1", icao: "ABCDEF" });
-    insertMessage(testDb, { uid: "msg-2", icao: "ABCDEF" });
+    insertMessage(testDb, { uid: 1, icao: "ABCDEF" });
+    insertMessage(testDb, { uid: 2, icao: "ABCDEF" });
 
     regen(["ABCDEF"]);
 
     const counts = getAlertCounts();
     const term = counts.find((c) => c.term === "ABCDEF");
     expect(term?.count).toBe(2);
+  });
+
+  // ---- batch pagination ----
+
+  it("regression: processes all messages when count exceeds BATCH_SIZE (1000)", () => {
+    // Insert 1500 messages — forces two cursor pages (1000 + 500).
+    // All have the same ICAO so every one should be matched.
+    const TOTAL = 1_500;
+    for (let i = 0; i < TOTAL; i++) {
+      insertMessage(testDb, { uid: i, icao: "ABCDEF" });
+    }
+
+    const stats = regen(["ABCDEF"]);
+
+    expect(stats.total_messages).toBe(TOTAL);
+    expect(stats.matched_messages).toBe(TOTAL);
+    expect(stats.total_matches).toBe(TOTAL);
+
+    // Verify the rows actually landed in alert_matches
+    const saved = testDb.select().from(alertMatches).all();
+    expect(saved).toHaveLength(TOTAL);
+  });
+
+  it("regression: messages on a page boundary (exactly BATCH_SIZE) are all processed", () => {
+    // Exactly 1000 messages — a single full page followed by an empty page.
+    const TOTAL = 1_000;
+    for (let i = 0; i < TOTAL; i++) {
+      insertMessage(testDb, { uid: i, icao: "AAAAAA" });
+    }
+
+    const stats = regen(["AAAAAA"]);
+
+    expect(stats.total_messages).toBe(TOTAL);
+    expect(stats.matched_messages).toBe(TOTAL);
+  });
+
+  it("regression: non-matching messages on later pages are not counted as matched", () => {
+    // First 1001 messages match; next 499 do not.
+    for (let i = 0; i < 1_001; i++) {
+      insertMessage(testDb, { uid: `match-${i}`, icao: "MATCH1" });
+    }
+    for (let i = 0; i < 499; i++) {
+      insertMessage(testDb, { uid: `nomatch-${i}`, icao: "XXXXXX" });
+    }
+
+    const stats = regen(["MATCH1"]);
+
+    expect(stats.total_messages).toBe(1_500);
+    expect(stats.matched_messages).toBe(1_001);
+    expect(stats.total_matches).toBe(1_001);
+  });
+
+  // ---- atomicity ----
+
+  it("regression: entire regeneration is atomic — a constraint violation rolls back the DELETE too", () => {
+    // Seed one existing match so we can verify it is NOT wiped on failure.
+    insertMessage(testDb, { uid: "pre-existing", icao: "BEFORE" });
+    insertAlertMatch(testDb, "pre-existing", "BEFORE", "icao", 1_700_000_000);
+
+    // Insert a second message whose uid collides with the first when the
+    // regeneration loop attempts to insert into alert_matches.  We achieve
+    // this by inserting a message that WILL match the term, then adding a
+    // UNIQUE constraint on (message_uid, term) so the second matching row
+    // causes SQLite to throw a constraint violation mid-transaction.
+    //
+    // Simpler approach: add a second message that matches, then create a
+    // duplicate alert_match row *before* regen runs.  When the transaction
+    // tries to INSERT the same (messageUid, term) again (since we add a
+    // UNIQUE index mid-test), SQLite rolls back.
+    //
+    // Even simpler: directly corrupt the alert_matches table by adding a
+    // NOT NULL constraint violation via a raw statement inside the transaction.
+    // The cleanest self-contained approach is to add a UNIQUE index on
+    // (message_uid, term) and then insert a duplicate via a second message
+    // that has the same uid (which the messages table will reject via its own
+    // UNIQUE uid constraint), causing the whole transaction to roll back.
+    //
+    // Cleanest: use sqliteDb.prepare to add a trigger that throws after the
+    // DELETE, before any re-insert succeeds.
+    sqliteDb.exec(`
+      CREATE TRIGGER force_rollback_after_delete
+      AFTER DELETE ON alert_matches
+      BEGIN
+        SELECT RAISE(ABORT, 'forced rollback for atomicity test');
+      END;
+    `);
+
+    const stats = regenerateAllAlertMatches(["BEFORE"], []);
+
+    // The trigger fired → transaction rolled back → stats reflect failure.
+    expect(stats.total_matches).toBe(0);
+
+    // The pre-existing match must still be present because the DELETE was
+    // rolled back along with everything else in the transaction.
+    const remaining = testDb.select().from(alertMatches).all();
+    expect(remaining).toHaveLength(1);
+    expect(remaining[0].messageUid).toBe("pre-existing");
+
+    // Clean up trigger so it does not affect subsequent tests.
+    sqliteDb.exec("DROP TRIGGER force_rollback_after_delete;");
   });
 });

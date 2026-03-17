@@ -17,7 +17,6 @@
  * - FTS5 integration for fast prefix matching
  */
 
-import { randomUUID } from "node:crypto";
 import { statSync } from "node:fs";
 import { and, asc, desc, eq, like, sql } from "drizzle-orm";
 import { DB_ALERT_SAVE_DAYS, DB_SAVE_DAYS, DB_SAVEALL } from "../../config.js";
@@ -62,7 +61,7 @@ export interface AlertMetadata {
  * Equivalent to Python add_message() function.
  *
  * This function:
- * 1. Generates UUID for message
+ * 1. Generates UID for message
  * 2. Updates frequency counts (updateFrequencies)
  * 3. Checks if message should be saved (DB_SAVEALL or isMessageNotEmpty)
  * 4. Updates message counts (messagesCount or messagesCountDropped)
@@ -81,8 +80,8 @@ export function addMessage(
 ): AlertMetadata {
   const db = getDatabase();
 
-  // Generate UUID for the message
-  const uid = randomUUID();
+  // Use rowid as uid, use -1 until we have it
+  let uid = "-1";
 
   // Initialize alert match tracking
   const alertMetadata: AlertMetadata = {
@@ -107,12 +106,16 @@ export function addMessage(
 
     if (shouldSave) {
       // Insert the message
-      db.insert(messages)
+      const res = db.insert(messages)
         .values({
           ...message,
-          uid,
         })
-        .run();
+        .returning({id: messages.id})
+        .all();
+
+      uid = String(res[0].id);
+      // update alert metadata with actual uid
+      alertMetadata.uid = uid;
 
       // Increment in-memory counter for system status
       incrementMessageCounter(message.messageType);
@@ -221,7 +224,8 @@ export function addMessage(
     const alertTerms = getCachedAlertTerms();
     const alertTermsIgnore = getCachedAlertIgnoreTerms();
 
-    if (alertTerms.length > 0) {
+    // don't try to add to alert matches if it is not added to the main table
+    if (shouldSave && alertTerms.length > 0 && uid !== "-1") {
       // Helper function to save alert match
       const saveAlertMatch = (term: string, matchType: string): void => {
         // Update alert statistics
@@ -245,7 +249,7 @@ export function addMessage(
         // Add to alert_matches table
         db.insert(alertMatches)
           .values({
-            messageUid: uid,
+            messageId: Number(uid),
             term: term.toUpperCase(),
             matchType,
             matchedAt: message.time,
@@ -596,7 +600,6 @@ export function databaseSearch(params: SearchParams): SearchResult {
 function mapRawRowToMessage(row: Record<string, unknown>): Message {
   return {
     id: row.id as number,
-    uid: row.uid as string,
     messageType: row.message_type as string,
     time: row.msg_time as number,
     stationId: row.station_id as string,
@@ -923,7 +926,7 @@ export function getRowCount(): { count: number; size: number | null } {
 export function getMessageByUid(uid: string): Message | undefined {
   const db = getDatabase();
 
-  return db.select().from(messages).where(eq(messages.uid, uid)).get();
+  return db.select().from(messages).where(eq(messages.id, Number(uid))).get();
 }
 
 /**
@@ -997,8 +1000,8 @@ export function pruneDatabase(
     .where(
       and(
         sql`${messages.time} < ${messageCutoff}`,
-        sql`${messages.uid} NOT IN (
-          SELECT message_uid FROM alert_matches
+        sql`${messages.id} NOT IN (
+          SELECT message_id FROM alert_matches
           WHERE matched_at >= ${alertCutoff}
         )`,
       ),

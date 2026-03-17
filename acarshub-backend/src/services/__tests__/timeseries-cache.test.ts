@@ -26,13 +26,14 @@
  *  - resetCacheForTesting() is called in afterEach to restore module state.
  *
  * Coverage:
- *   getCachedTimeSeries       — returns null before init, data after
- *   isCacheReady              — false before / true after all 8 periods warmed
- *   initTimeSeriesCache       — warms all periods, sets broadcaster, arms timers
+ *   getCachedTimeSeries       — returns null before init, data after (warm periods only)
+ *   isCacheReady              — false before / true after warm-tier periods populated
+ *   initTimeSeriesCache       — warms warm-tier periods only, sets broadcaster, arms timers
  *   stopTimeSeriesCache       — clears timers (no callbacks fire after stop)
  *   buildTimeSeriesResponse   — calls DB for each of the two query paths
- *   broadcaster               — called on each scheduled refresh, not at init
- *   wall-clock timer alignment — first refresh fires at next boundary
+ *   getOrQueryTimeSeries      — warm/lazy/query-only routing, lazy TTL behaviour
+ *   broadcaster               — called on each warm-tier scheduled refresh, not at init
+ *   wall-clock timer alignment — first refresh fires at next boundary (warm tier only)
  *   drift correction          — subsequent refreshes target boundary+N*interval
  *   regression: no DB hit on getCachedTimeSeries
  */
@@ -46,6 +47,7 @@ import {
   type Mock,
   vi,
 } from "vitest";
+import { WARM_PERIODS } from "../../utils/timeseries.js";
 
 // ---------------------------------------------------------------------------
 // Module-level mocks — must be declared before any imports that use them
@@ -85,12 +87,14 @@ vi.mock("drizzle-orm", () => ({
 import { getDatabase } from "../../db/index.js";
 import {
   ALL_TIME_PERIODS,
+  PERIOD_CONFIG,
   type TimePeriod,
   type TimeSeriesResponse,
 } from "../../utils/timeseries.js";
 import {
   buildTimeSeriesResponse,
   getCachedTimeSeries,
+  getOrQueryTimeSeries,
   initTimeSeriesCache,
   isCacheReady,
   resetCacheForTesting,
@@ -202,8 +206,16 @@ describe("isCacheReady", () => {
     expect(isCacheReady()).toBe(false);
   });
 
-  it("returns true after all 8 periods are warmed by initTimeSeriesCache", () => {
+  it("returns true after all warm-tier periods are populated by initTimeSeriesCache", () => {
     initTimeSeriesCache(vi.fn());
+    expect(isCacheReady()).toBe(true);
+  });
+
+  it("isCacheReady checks only warm-tier periods (not all 8)", () => {
+    // After init, only WARM_PERIODS (3) are in the warm cache — that is enough
+    // for isCacheReady() to return true.
+    initTimeSeriesCache(vi.fn());
+    expect(WARM_PERIODS.length).toBe(3);
     expect(isCacheReady()).toBe(true);
   });
 });
@@ -213,39 +225,51 @@ describe("isCacheReady", () => {
 // ---------------------------------------------------------------------------
 
 describe("initTimeSeriesCache — initial warm", () => {
-  it("populates getCachedTimeSeries for all 8 periods", () => {
+  it("populates getCachedTimeSeries for all warm-tier periods", () => {
     initTimeSeriesCache(vi.fn());
 
-    for (const period of ALL_TIME_PERIODS) {
+    for (const period of WARM_PERIODS) {
       const result = getCachedTimeSeries(period);
       expect(result).not.toBeNull();
       expect(result?.time_period).toBe(period);
     }
   });
 
-  it("each cached response has start < end", () => {
+  it("does NOT populate getCachedTimeSeries for lazy or query-only periods", () => {
     initTimeSeriesCache(vi.fn());
 
+    // Lazy and query-only periods are served via getOrQueryTimeSeries(), not the warm cache.
     for (const period of ALL_TIME_PERIODS) {
+      const cfg = PERIOD_CONFIG[period];
+      if (cfg.tier !== "warm") {
+        expect(getCachedTimeSeries(period)).toBeNull();
+      }
+    }
+  });
+
+  it("each warm cached response has start < end", () => {
+    initTimeSeriesCache(vi.fn());
+
+    for (const period of WARM_PERIODS) {
       const result = getCachedTimeSeries(period);
       expect(result?.start).toBeLessThan(result?.end ?? 0);
     }
   });
 
-  it("each cached response has start and end in milliseconds (> 1e12)", () => {
+  it("each warm cached response has start and end in milliseconds (> 1e12)", () => {
     initTimeSeriesCache(vi.fn());
 
-    for (const period of ALL_TIME_PERIODS) {
+    for (const period of WARM_PERIODS) {
       const result = getCachedTimeSeries(period);
       expect(result?.start).toBeGreaterThan(1e12);
       expect(result?.end).toBeGreaterThan(1e12);
     }
   });
 
-  it("each cached response has the correct time_period field", () => {
+  it("each warm cached response has the correct time_period field", () => {
     initTimeSeriesCache(vi.fn());
 
-    for (const period of ALL_TIME_PERIODS) {
+    for (const period of WARM_PERIODS) {
       const result = getCachedTimeSeries(period);
       expect(result?.time_period).toBe(period);
     }
@@ -273,6 +297,29 @@ describe("initTimeSeriesCache — initial warm", () => {
     expect(getCachedTimeSeries("1hr")).toBe(firstResult);
     // broadcaster2 was never invoked since the second init was a no-op
     expect(broadcaster2).not.toHaveBeenCalled();
+  });
+
+  it("only arms timers for warm-tier periods (not lazy or query-only)", () => {
+    // After init, advancing 5 minutes should NOT trigger the broadcaster for
+    // lazy/query-only periods — they have no timers at all.
+    const broadcaster = vi.fn();
+    initTimeSeriesCache(broadcaster);
+
+    vi.advanceTimersByTime(5 * 60 * 1000 + 100);
+
+    const calledPeriods = (broadcaster.mock.calls as [TimePeriod][]).map(
+      ([p]) => p,
+    );
+
+    // Warm periods fire
+    expect(calledPeriods).toContain("1hr");
+    expect(calledPeriods).toContain("6hr");
+    expect(calledPeriods).toContain("12hr");
+
+    // Lazy and query-only periods NEVER appear in broadcaster calls —
+    // they are not broadcast, only served on request.
+    expect(calledPeriods).not.toContain("6mon");
+    expect(calledPeriods).not.toContain("1yr");
   });
 });
 
@@ -375,19 +422,9 @@ describe("wall-clock timer alignment", () => {
     expect(calledPeriods).toContain("12hr");
   });
 
-  it("the 24hr timer does NOT fire after only 1 minute", () => {
-    const broadcaster = vi.fn();
-    initTimeSeriesCache(broadcaster);
-
-    vi.advanceTimersByTime(61 * 1000);
-
-    const calledPeriods = (broadcaster.mock.calls as [TimePeriod][]).map(
-      ([p]) => p,
-    );
-    expect(calledPeriods).not.toContain("24hr");
-  });
-
-  it("the 24hr timer fires within 5 minutes of init", () => {
+  it("24hr does NOT appear in broadcaster calls even after 5 minutes (it is lazy tier, no broadcast)", () => {
+    // 24hr is now a lazy tier period — it has no refresh timer and is never
+    // broadcast.  The broadcaster should only be called for warm-tier periods.
     const broadcaster = vi.fn();
     initTimeSeriesCache(broadcaster);
 
@@ -396,10 +433,12 @@ describe("wall-clock timer alignment", () => {
     const calledPeriods = (broadcaster.mock.calls as [TimePeriod][]).map(
       ([p]) => p,
     );
-    expect(calledPeriods).toContain("24hr");
+    expect(calledPeriods).not.toContain("24hr");
   });
 
-  it("the 1wk timer fires within 30 minutes of init", () => {
+  it("1wk does NOT appear in broadcaster calls even after 30 minutes (it is lazy tier, no broadcast)", () => {
+    // 1wk is now a lazy tier period — it has no refresh timer and is never
+    // broadcast unsolicited.
     const broadcaster = vi.fn();
     initTimeSeriesCache(broadcaster);
 
@@ -408,7 +447,21 @@ describe("wall-clock timer alignment", () => {
     const calledPeriods = (broadcaster.mock.calls as [TimePeriod][]).map(
       ([p]) => p,
     );
-    expect(calledPeriods).toContain("1wk");
+    expect(calledPeriods).not.toContain("1wk");
+  });
+
+  it("6mon and 1yr never appear in broadcaster calls (they are query-only)", () => {
+    const broadcaster = vi.fn();
+    initTimeSeriesCache(broadcaster);
+
+    // Advance well beyond any reasonable interval
+    vi.advanceTimersByTime(24 * 60 * 60 * 1000);
+
+    const calledPeriods = (broadcaster.mock.calls as [TimePeriod][]).map(
+      ([p]) => p,
+    );
+    expect(calledPeriods).not.toContain("6mon");
+    expect(calledPeriods).not.toContain("1yr");
   });
 });
 
@@ -436,23 +489,18 @@ describe("drift correction", () => {
     expect(countAfterSecond).toBeGreaterThan(countAfterFirst);
   });
 
-  it("24hr refreshes again after another 5 minutes", () => {
+  it("24hr does NOT self-refresh via broadcaster (lazy tier — no timer)", () => {
+    // 24hr is lazy tier: no background timer, never broadcast.
+    // getOrQueryTimeSeries("24hr") populates the lazy cache on-demand.
     const broadcaster = vi.fn();
     initTimeSeriesCache(broadcaster);
 
-    // Trigger first 24hr refresh
-    vi.advanceTimersByTime(5 * 60 * 1000 + 100);
-    const countAfterFirst = (broadcaster.mock.calls as [TimePeriod][]).filter(
-      ([p]) => p === "24hr",
-    ).length;
-    expect(countAfterFirst).toBeGreaterThanOrEqual(1);
+    vi.advanceTimersByTime(10 * 60 * 1000 + 100);
 
-    // Trigger second 24hr refresh
-    vi.advanceTimersByTime(5 * 60 * 1000);
-    const countAfterSecond = (broadcaster.mock.calls as [TimePeriod][]).filter(
+    const called24hr = (broadcaster.mock.calls as [TimePeriod][]).filter(
       ([p]) => p === "24hr",
     ).length;
-    expect(countAfterSecond).toBeGreaterThan(countAfterFirst);
+    expect(called24hr).toBe(0);
   });
 });
 
@@ -560,6 +608,154 @@ describe("buildTimeSeriesResponse", () => {
 });
 
 // ---------------------------------------------------------------------------
+// getOrQueryTimeSeries — tier routing
+// ---------------------------------------------------------------------------
+
+describe("getOrQueryTimeSeries — warm tier", () => {
+  it("returns the warm cache entry for 1hr after init", () => {
+    initTimeSeriesCache(vi.fn());
+    const result = getOrQueryTimeSeries("1hr");
+    expect(result).not.toBeNull();
+    expect(result?.time_period).toBe("1hr");
+  });
+
+  it("returns null for a warm period before init (startup race)", () => {
+    // No init called — warm cache is empty
+    expect(getOrQueryTimeSeries("1hr")).toBeNull();
+    expect(getOrQueryTimeSeries("6hr")).toBeNull();
+    expect(getOrQueryTimeSeries("12hr")).toBeNull();
+  });
+
+  it("returns the same reference as getCachedTimeSeries for warm periods", () => {
+    initTimeSeriesCache(vi.fn());
+    for (const period of WARM_PERIODS) {
+      expect(getOrQueryTimeSeries(period)).toBe(getCachedTimeSeries(period));
+    }
+  });
+
+  it("does NOT call getDatabase when serving from the warm cache", () => {
+    initTimeSeriesCache(vi.fn());
+    mockGetDatabase.mockClear();
+
+    getOrQueryTimeSeries("1hr");
+    getOrQueryTimeSeries("12hr");
+
+    expect(mockGetDatabase).not.toHaveBeenCalled();
+  });
+});
+
+describe("getOrQueryTimeSeries — lazy tier", () => {
+  it("queries the DB on the first call for a lazy period", () => {
+    initTimeSeriesCache(vi.fn());
+    mockGetDatabase.mockClear();
+
+    const result = getOrQueryTimeSeries("24hr");
+
+    expect(result).not.toBeNull();
+    expect(result?.time_period).toBe("24hr");
+    // DB was queried (getDatabase called at least once)
+    expect(mockGetDatabase).toHaveBeenCalled();
+  });
+
+  it("returns the cached entry within the TTL without re-querying the DB", () => {
+    initTimeSeriesCache(vi.fn());
+
+    // First call populates the lazy cache
+    getOrQueryTimeSeries("24hr");
+    mockGetDatabase.mockClear();
+
+    // Second call within TTL should serve from lazy cache — no DB hit
+    const result = getOrQueryTimeSeries("24hr");
+
+    expect(result).not.toBeNull();
+    expect(mockGetDatabase).not.toHaveBeenCalled();
+  });
+
+  it("re-queries the DB after TTL expires for a lazy period", () => {
+    initTimeSeriesCache(vi.fn());
+
+    // First call populates the lazy cache for 24hr (TTL = 300_000 ms)
+    getOrQueryTimeSeries("24hr");
+    mockGetDatabase.mockClear();
+
+    // Advance past the TTL
+    vi.advanceTimersByTime(300_000 + 1_000);
+
+    // After TTL expiry the lazy cache entry is stale — DB should be queried again
+    getOrQueryTimeSeries("24hr");
+
+    expect(mockGetDatabase).toHaveBeenCalled();
+  });
+
+  it("lazy periods are never put in the warm cache", () => {
+    initTimeSeriesCache(vi.fn());
+    getOrQueryTimeSeries("24hr");
+    getOrQueryTimeSeries("1wk");
+    getOrQueryTimeSeries("30day");
+
+    // getCachedTimeSeries only reads the warm cache, not the lazy cache
+    expect(getCachedTimeSeries("24hr")).toBeNull();
+    expect(getCachedTimeSeries("1wk")).toBeNull();
+    expect(getCachedTimeSeries("30day")).toBeNull();
+  });
+
+  it("lazy period can be queried without calling initTimeSeriesCache first", () => {
+    // No init — but getOrQueryTimeSeries should still serve lazy periods by
+    // querying the DB directly (no warm cache required).
+    const result = getOrQueryTimeSeries("24hr");
+    expect(result).not.toBeNull();
+    expect(result?.time_period).toBe("24hr");
+  });
+});
+
+describe("getOrQueryTimeSeries — query-only tier", () => {
+  it("queries the DB on every call for a query-only period", () => {
+    initTimeSeriesCache(vi.fn());
+    mockGetDatabase.mockClear();
+
+    getOrQueryTimeSeries("6mon");
+    const callsAfterFirst = mockGetDatabase.mock.calls.length;
+    expect(callsAfterFirst).toBeGreaterThan(0);
+
+    mockGetDatabase.mockClear();
+    getOrQueryTimeSeries("6mon");
+    // DB queried again — result is never cached
+    expect(mockGetDatabase).toHaveBeenCalled();
+  });
+
+  it("returns a valid response for query-only periods", () => {
+    const result = getOrQueryTimeSeries("1yr");
+    expect(result).not.toBeNull();
+    expect(result?.time_period).toBe("1yr");
+  });
+
+  it("query-only periods are never put in the warm cache", () => {
+    initTimeSeriesCache(vi.fn());
+    getOrQueryTimeSeries("6mon");
+    getOrQueryTimeSeries("1yr");
+
+    expect(getCachedTimeSeries("6mon")).toBeNull();
+    expect(getCachedTimeSeries("1yr")).toBeNull();
+  });
+
+  it("query-only periods produce no broadcaster calls even when queried", () => {
+    const broadcaster = vi.fn();
+    initTimeSeriesCache(broadcaster);
+
+    // Query 6mon and 1yr directly
+    getOrQueryTimeSeries("6mon");
+    getOrQueryTimeSeries("1yr");
+
+    // Broadcaster must not be called for query-only periods
+    const calledPeriods = (broadcaster.mock.calls as [TimePeriod][]).map(
+      ([p]) => p,
+    );
+    expect(calledPeriods).not.toContain("6mon");
+    expect(calledPeriods).not.toContain("1yr");
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Regression tests
 // ---------------------------------------------------------------------------
 
@@ -569,6 +765,7 @@ describe("regression", () => {
     mockGetDatabase.mockClear();
 
     getCachedTimeSeries("1hr");
+    // 1yr is query-only — getCachedTimeSeries returns null without hitting DB
     getCachedTimeSeries("1yr");
 
     expect(mockGetDatabase).not.toHaveBeenCalled();
@@ -592,20 +789,38 @@ describe("regression", () => {
     expect(mockGetDatabase).not.toHaveBeenCalled();
   });
 
-  it("cached response is returned by reference (no re-query on repeated gets)", () => {
+  it("getCachedTimeSeries returns by reference — no re-query on repeated warm hits", () => {
     initTimeSeriesCache(vi.fn());
     mockGetDatabase.mockClear();
 
-    const first = getCachedTimeSeries("24hr");
-    const second = getCachedTimeSeries("24hr");
+    const first = getCachedTimeSeries("1hr");
+    const second = getCachedTimeSeries("1hr");
 
-    // Same object reference — no DB re-query
+    // Same warm cache reference — no DB re-query
     expect(first).toBe(second);
     expect(mockGetDatabase).not.toHaveBeenCalled();
   });
 
-  it("cache survives a failed DB call during warm — entry stays null, others succeed", () => {
-    // Make the first getDatabase() call throw, leaving one period unwarmed
+  it("regression: getCachedTimeSeries returns null for lazy periods (use getOrQueryTimeSeries)", () => {
+    initTimeSeriesCache(vi.fn());
+
+    // 24hr is lazy tier — getCachedTimeSeries only reads the warm cache.
+    // The caller must use getOrQueryTimeSeries to get the lazy/query-only data.
+    expect(getCachedTimeSeries("24hr")).toBeNull();
+    expect(getCachedTimeSeries("1wk")).toBeNull();
+    expect(getCachedTimeSeries("30day")).toBeNull();
+  });
+
+  it("regression: 1yr and 6mon are NOT warmed at startup", () => {
+    initTimeSeriesCache(vi.fn());
+
+    // Query-only periods must never appear in the warm cache.
+    expect(getCachedTimeSeries("6mon")).toBeNull();
+    expect(getCachedTimeSeries("1yr")).toBeNull();
+  });
+
+  it("cache survives a failed DB call during warm — only the failed warm entry stays null", () => {
+    // Make the first getDatabase() call throw, leaving one warm period unwarmed
     let callCount = 0;
     mockGetDatabase.mockImplementation(() => {
       callCount++;
@@ -618,11 +833,25 @@ describe("regression", () => {
     // Should not throw even if one period fails
     expect(() => initTimeSeriesCache(vi.fn())).not.toThrow();
 
-    // At least 7 periods should be populated (the one that failed stays null)
+    // At least WARM_PERIODS.length - 1 warm periods should be populated
     let populated = 0;
-    for (const period of ALL_TIME_PERIODS) {
+    for (const period of WARM_PERIODS) {
       if (getCachedTimeSeries(period) !== null) populated++;
     }
-    expect(populated).toBeGreaterThanOrEqual(ALL_TIME_PERIODS.length - 1);
+    expect(populated).toBeGreaterThanOrEqual(WARM_PERIODS.length - 1);
+  });
+
+  it("resetCacheForTesting clears both warm and lazy caches", () => {
+    initTimeSeriesCache(vi.fn());
+    getOrQueryTimeSeries("24hr"); // populate lazy cache
+
+    resetCacheForTesting();
+
+    // After reset, warm cache is empty
+    expect(getCachedTimeSeries("1hr")).toBeNull();
+    // After reset, lazy cache is empty — querying 24hr will hit DB again
+    mockGetDatabase.mockClear();
+    getOrQueryTimeSeries("24hr");
+    expect(mockGetDatabase).toHaveBeenCalled();
   });
 });

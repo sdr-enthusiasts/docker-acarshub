@@ -70,6 +70,10 @@ export function enrichMessage(message: Record<string, unknown>): AcarsMsg {
   // Create a shallow copy to avoid mutating original
   const enriched = { ...message };
 
+  if (!("uid" in enriched) && "id" in enriched) {
+      enriched.uid = String(enriched.id);
+  }
+
   // FIRST: Convert field names before cleanup
   // Database column: msg_text -> Frontend: text
   if ("msg_text" in enriched && enriched.msg_text !== undefined) {

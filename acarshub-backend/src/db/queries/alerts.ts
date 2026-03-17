@@ -23,9 +23,9 @@
  * - This avoids hitting the database on every message ingestion
  */
 
-import { desc, eq, sql } from "drizzle-orm";
+import { asc, desc, eq, gt, sql } from "drizzle-orm";
 import { createLogger } from "../../utils/logger.js";
-import { getDatabase } from "../client.js";
+import { getDatabase, getSqliteConnection } from "../client.js";
 import {
   type AlertMatch,
   type AlertStat,
@@ -37,6 +37,7 @@ import {
   messages,
   type NewAlertMatch,
 } from "../schema.js";
+import { reheatMessageBuffers } from "../../services/message-ring-buffer.js"
 
 const logger = createLogger("db:alerts");
 
@@ -182,7 +183,7 @@ export function searchAlerts(limit = 100, offset = 0): AlertMatchWithMessage[] {
     .select({
       // Alert match fields
       id: alertMatches.id,
-      messageUid: alertMatches.messageUid,
+      messageId: alertMatches.messageId,
       term: alertMatches.term,
       matchType: alertMatches.matchType,
       matchedAt: alertMatches.matchedAt,
@@ -190,7 +191,7 @@ export function searchAlerts(limit = 100, offset = 0): AlertMatchWithMessage[] {
       message: messages,
     })
     .from(alertMatches)
-    .innerJoin(messages, eq(alertMatches.messageUid, messages.uid))
+    .innerJoin(messages, eq(alertMatches.messageId, messages.id))
     .orderBy(desc(alertMatches.matchedAt))
     .limit(limit)
     .offset(offset)
@@ -231,14 +232,14 @@ export function searchAlertsByTerm(
   const results = db
     .select({
       id: alertMatches.id,
-      messageUid: alertMatches.messageUid,
+      messageId: alertMatches.messageId,
       term: alertMatches.term,
       matchType: alertMatches.matchType,
       matchedAt: alertMatches.matchedAt,
       message: messages,
     })
     .from(alertMatches)
-    .innerJoin(messages, eq(alertMatches.messageUid, messages.uid))
+    .innerJoin(messages, eq(alertMatches.messageId, messages.id))
     .where(eq(alertMatches.term, term))
     .orderBy(desc(alertMatches.matchedAt))
     .limit(limit)
@@ -439,7 +440,7 @@ export function getAlertMatchesForMessage(messageUid: string): AlertMatch[] {
   return db
     .select()
     .from(alertMatches)
-    .where(eq(alertMatches.messageUid, messageUid))
+    .where(eq(alertMatches.messageId, Number(messageUid)))
     .all();
 }
 
@@ -475,171 +476,227 @@ export function regenerateAllAlertMatches(
   alertTermsIgnore: string[],
 ): RegenerateStats {
   const db = getDatabase();
+  const conn = getSqliteConnection();
+
   const stats: RegenerateStats = {
     total_messages: 0,
     matched_messages: 0,
     total_matches: 0,
   };
 
-  try {
-    // Step 1: Delete all existing alert matches
-    db.delete(alertMatches).run();
+  /**
+   * WHY A SINGLE TRANSACTION
+   * ------------------------
+   * better-sqlite3 runs every statement in autocommit mode by default, which
+   * means each INSERT / UPDATE is a separate fsync-visible write.  Wrapping
+   * the entire regeneration in one BEGIN IMMEDIATE … COMMIT turns all writes
+   * into a single atomic batch — roughly 100–1000× faster for bulk inserts
+   * and correct: a crash mid-run leaves the database unchanged rather than
+   * in a half-cleared state.
+   *
+   * WHY CURSOR PAGINATION (WHERE id > lastId)
+   * ------------------------------------------
+   * db.select().from(messages).all() materialises the entire table into a JS
+   * array at once.  On a large database (500k+ rows) that is a significant
+   * transient heap spike at exactly the moment when this expensive operation
+   * is already under load.
+   *
+   * Cursor pagination reads one fixed-size batch at a time, keeping peak heap
+   * proportional to BATCH_SIZE rather than to the total message count.
+   *
+   * We use WHERE id > lastId ORDER BY id rather than LIMIT … OFFSET because
+   * OFFSET forces SQLite to scan and discard the leading rows on every page
+   * (O(offset) cost).  The id column is the INTEGER PRIMARY KEY rowid — a
+   * cursor seek on it is O(log N) regardless of page number.
+   *
+   * WHY THE WRITE LOCK DURATION IS ACCEPTABLE HERE
+   * ------------------------------------------------
+   * The transaction holds a WRITE lock for its entire duration.  New messages
+   * arriving during regeneration cannot be written until it completes.  This
+   * is acceptable because:
+   *   1. The operation is user-triggered and protected by alertRegenInProgress.
+   *   2. The message queue buffers incoming frames during the lock window.
+   *   3. No messages are lost — they are processed after the lock releases.
+   */
+  const BATCH_SIZE = 1_000;
 
-    // Step 2: Reset alert statistics
+  const runInTransaction = conn.transaction(() => {
+    // Step 1+2 inside the transaction so a crash leaves the DB unchanged.
+    db.delete(alertMatches).run();
     resetAlertCounts();
 
-    // Step 3: Process all messages
-    const allMessages = db.select().from(messages).all();
+    const saveAlertMatch = (
+      message: Message,
+      term: string,
+      matchType: string,
+    ): void => {
+      // Update per-term alert statistics.
+      const foundTerm = db
+        .select()
+        .from(alertStats)
+        .where(eq(alertStats.term, term.toUpperCase()))
+        .get();
 
-    for (const message of allMessages) {
-      // Helper function to save alert match
-      stats.total_messages++;
-      let messageMatched = false;
-
-      const saveAlertMatch = (term: string, matchType: string): void => {
-        // Update alert statistics
-        const foundTerm = db
-          .select()
-          .from(alertStats)
+      if (foundTerm) {
+        db.update(alertStats)
+          .set({ count: (foundTerm.count ?? 0) + 1 })
           .where(eq(alertStats.term, term.toUpperCase()))
-          .get();
-
-        if (foundTerm) {
-          db.update(alertStats)
-            .set({ count: (foundTerm.count ?? 0) + 1 })
-            .where(eq(alertStats.term, term.toUpperCase()))
-            .run();
-        } else {
-          db.insert(alertStats)
-            .values({ term: term.toUpperCase(), count: 1 })
-            .run();
-        }
-
-        // Add to alert_matches table
-        db.insert(alertMatches)
-          .values({
-            messageUid: message.uid,
-            term: term.toUpperCase(),
-            matchType,
-            matchedAt: message.time,
-          })
           .run();
+      } else {
+        db.insert(alertStats)
+          .values({ term: term.toUpperCase(), count: 1 })
+          .run();
+      }
 
-        messageMatched = true;
-        stats.total_matches++;
-      };
+      db.insert(alertMatches)
+        .values({
+          messageId: message.id,
+          term: term.toUpperCase(),
+          matchType,
+          matchedAt: message.time,
+        })
+        .run();
 
-      // Check message text for alert terms (word boundary match)
-      if (message.text && message.text.length > 0) {
-        for (const searchTerm of alertTerms) {
-          const regex = new RegExp(`\\b${searchTerm}\\b`, "i");
-          if (regex.test(message.text)) {
-            let shouldAdd = true;
+      stats.total_matches++;
+    };
 
-            // Check ignore terms
-            for (const ignoreTerm of alertTermsIgnore) {
-              const ignoreRegex = new RegExp(`\\b${ignoreTerm}\\b`, "i");
-              if (ignoreRegex.test(message.text)) {
-                shouldAdd = false;
-                break;
+    // Step 3: Read messages in fixed-size cursor pages.
+    // Each page fetches BATCH_SIZE rows with id > lastId, which is an
+    // O(log N) index seek on the INTEGER PRIMARY KEY.  The loop exits when
+    // a page returns fewer rows than BATCH_SIZE (i.e. the last page).
+    let lastId = 0;
+    let batch: Message[];
+
+    do {
+      batch = db
+        .select()
+        .from(messages)
+        .where(gt(messages.id, lastId))
+        .orderBy(asc(messages.id))
+        .limit(BATCH_SIZE)
+        .all();
+
+      for (const message of batch) {
+        stats.total_messages++;
+        let messageMatched = false;
+
+        // ---- text matching (word boundary, case-insensitive) ----
+        if (message.text && message.text.length > 0) {
+          for (const searchTerm of alertTerms) {
+            const regex = new RegExp(`\\b${searchTerm}\\b`, "i");
+            if (regex.test(message.text)) {
+              let shouldAdd = true;
+
+              for (const ignoreTerm of alertTermsIgnore) {
+                const ignoreRegex = new RegExp(`\\b${ignoreTerm}\\b`, "i");
+                if (ignoreRegex.test(message.text)) {
+                  shouldAdd = false;
+                  break;
+                }
               }
-            }
 
-            if (shouldAdd) {
-              saveAlertMatch(searchTerm, "text");
+              if (shouldAdd) {
+                saveAlertMatch(message, searchTerm, "text");
+                messageMatched = true;
+              }
             }
           }
         }
-      }
 
-      // Check ICAO hex for alert terms (substring match)
-      if (message.icao && message.icao.length > 0) {
-        const icaoUpper = message.icao.toUpperCase();
-        for (const searchTerm of alertTerms) {
-          const termUpper = searchTerm.toUpperCase();
-          if (icaoUpper === termUpper || icaoUpper.includes(termUpper)) {
-            let shouldAdd = true;
+        // ---- ICAO matching (substring, case-insensitive) ----
+        if (message.icao && message.icao.length > 0) {
+          const icaoUpper = message.icao.toUpperCase();
+          for (const searchTerm of alertTerms) {
+            const termUpper = searchTerm.toUpperCase();
+            if (icaoUpper === termUpper || icaoUpper.includes(termUpper)) {
+              let shouldAdd = true;
 
-            // Check ignore terms for ICAO
-            for (const ignoreTerm of alertTermsIgnore) {
-              const ignoreUpper = ignoreTerm.toUpperCase();
-              if (
-                icaoUpper === ignoreUpper ||
-                icaoUpper.includes(ignoreUpper)
-              ) {
-                shouldAdd = false;
-                break;
+              for (const ignoreTerm of alertTermsIgnore) {
+                const ignoreUpper = ignoreTerm.toUpperCase();
+                if (icaoUpper === ignoreUpper || icaoUpper.includes(ignoreUpper)) {
+                  shouldAdd = false;
+                  break;
+                }
               }
-            }
 
-            if (shouldAdd) {
-              saveAlertMatch(searchTerm, "icao");
+              if (shouldAdd) {
+                saveAlertMatch(message, searchTerm, "icao");
+                messageMatched = true;
+              }
             }
           }
         }
-      }
 
-      // Check tail number for alert terms (substring match)
-      if (message.tail && message.tail.length > 0) {
-        const tailUpper = message.tail.toUpperCase();
-        for (const searchTerm of alertTerms) {
-          const termUpper = searchTerm.toUpperCase();
-          if (tailUpper === termUpper || tailUpper.includes(termUpper)) {
-            let shouldAdd = true;
+        // ---- tail matching (substring, case-insensitive) ----
+        if (message.tail && message.tail.length > 0) {
+          const tailUpper = message.tail.toUpperCase();
+          for (const searchTerm of alertTerms) {
+            const termUpper = searchTerm.toUpperCase();
+            if (tailUpper === termUpper || tailUpper.includes(termUpper)) {
+              let shouldAdd = true;
 
-            // Check ignore terms for tail
-            for (const ignoreTerm of alertTermsIgnore) {
-              const ignoreUpper = ignoreTerm.toUpperCase();
-              if (
-                tailUpper === ignoreUpper ||
-                tailUpper.includes(ignoreUpper)
-              ) {
-                shouldAdd = false;
-                break;
+              for (const ignoreTerm of alertTermsIgnore) {
+                const ignoreUpper = ignoreTerm.toUpperCase();
+                if (tailUpper === ignoreUpper || tailUpper.includes(ignoreUpper)) {
+                  shouldAdd = false;
+                  break;
+                }
               }
-            }
 
-            if (shouldAdd) {
-              saveAlertMatch(searchTerm, "tail");
+              if (shouldAdd) {
+                saveAlertMatch(message, searchTerm, "tail");
+                messageMatched = true;
+              }
             }
           }
         }
-      }
 
-      // Check flight number for alert terms (substring match)
-      if (message.flight && message.flight.length > 0) {
-        const flightUpper = message.flight.toUpperCase();
-        for (const searchTerm of alertTerms) {
-          const termUpper = searchTerm.toUpperCase();
-          if (flightUpper === termUpper || flightUpper.includes(termUpper)) {
-            let shouldAdd = true;
+        // ---- flight matching (substring, case-insensitive) ----
+        if (message.flight && message.flight.length > 0) {
+          const flightUpper = message.flight.toUpperCase();
+          for (const searchTerm of alertTerms) {
+            const termUpper = searchTerm.toUpperCase();
+            if (flightUpper === termUpper || flightUpper.includes(termUpper)) {
+              let shouldAdd = true;
 
-            // Check ignore terms for flight
-            for (const ignoreTerm of alertTermsIgnore) {
-              const ignoreUpper = ignoreTerm.toUpperCase();
-              if (
-                flightUpper === ignoreUpper ||
-                flightUpper.includes(ignoreUpper)
-              ) {
-                shouldAdd = false;
-                break;
+              for (const ignoreTerm of alertTermsIgnore) {
+                const ignoreUpper = ignoreTerm.toUpperCase();
+                if (
+                  flightUpper === ignoreUpper ||
+                  flightUpper.includes(ignoreUpper)
+                ) {
+                  shouldAdd = false;
+                  break;
+                }
               }
-            }
 
-            if (shouldAdd) {
-              saveAlertMatch(searchTerm, "flight");
+              if (shouldAdd) {
+                saveAlertMatch(message, searchTerm, "flight");
+                messageMatched = true;
+              }
             }
           }
         }
-      }
-      if (messageMatched) {
-        stats.matched_messages++;
-      }
-    }
 
+        if (messageMatched) {
+          stats.matched_messages++;
+        }
+
+        lastId = message.id;
+      }
+
+    } while (batch.length === BATCH_SIZE);
+  });
+
+  try {
+    runInTransaction();
+    // message buffers need to be remade so they don't contain old alerts
+    reheatMessageBuffers();
     return stats;
   } catch (error) {
-    console.error("Failed to regenerate alert matches:", error);
+    logger.error("Failed to regenerate alert matches", {
+      error: error instanceof Error ? error.message : String(error),
+    });
     return stats;
   }
 }

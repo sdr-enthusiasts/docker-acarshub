@@ -116,7 +116,6 @@ CREATE TABLE `messages` (
 	`aircraft_id` text(36)
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX `messages_uid_unique` ON `messages` (`uid`);--> statement-breakpoint
 CREATE UNIQUE INDEX `ix_messages_uid` ON `messages` (`uid`);--> statement-breakpoint
 CREATE INDEX `ix_messages_depa` ON `messages` (`depa`);--> statement-breakpoint
 CREATE INDEX `ix_messages_dsta` ON `messages` (`dsta`);--> statement-breakpoint
@@ -124,13 +123,8 @@ CREATE INDEX `ix_messages_flight` ON `messages` (`flight`);--> statement-breakpo
 CREATE INDEX `ix_messages_freq` ON `messages` (`freq`);--> statement-breakpoint
 CREATE INDEX `ix_messages_icao` ON `messages` (`icao`);--> statement-breakpoint
 CREATE INDEX `ix_messages_label` ON `messages` (`label`);--> statement-breakpoint
-CREATE INDEX `ix_messages_msg_text` ON `messages` (`msg_text`);--> statement-breakpoint
 CREATE INDEX `ix_messages_msgno` ON `messages` (`msgno`);--> statement-breakpoint
 CREATE INDEX `ix_messages_tail` ON `messages` (`tail`);--> statement-breakpoint
-CREATE INDEX `ix_messages_aircraft_id` ON `messages` (`aircraft_id`);--> statement-breakpoint
-CREATE INDEX `ix_messages_time_icao` ON `messages` (`msg_time`,`icao`);--> statement-breakpoint
-CREATE INDEX `ix_messages_tail_flight` ON `messages` (`tail`,`flight`);--> statement-breakpoint
-CREATE INDEX `ix_messages_depa_dsta` ON `messages` (`depa`,`dsta`);--> statement-breakpoint
 CREATE INDEX `ix_messages_type_time` ON `messages` (`message_type`,`msg_time`);--> statement-breakpoint
 CREATE TABLE `count` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,

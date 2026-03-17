@@ -325,7 +325,7 @@ export function addMessageFromJson(
             .insert(messages)
             .values({
               ...params,
-              uid: alertMetadata.uid,
+              id: Number(alertMetadata.uid),
             })
             .run();
         }

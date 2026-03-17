@@ -67,7 +67,7 @@ const logger = createLogger("rrd-migration");
  *
  * All data is stored at 1-minute resolution. The original multi-resolution
  * design was abandoned when the RRD importer was written to expand all coarser
- * archives into 1-minute buckets before inserting (see expandCoarseDataToOneMinute).
+ * archives into 1-minute buckets before inserting (see expandAndInsert).
  */
 interface TimeseriesDataPoint {
   timestamp: number;
@@ -260,12 +260,18 @@ function parseRrdOutput(
  * @param dataPoints - Data points annotated with their source archive resolution
  * @returns Expanded data points, all at 1-minute granularity
  */
-function expandCoarseDataToOneMinute(
+function expandAndInsert(
   dataPoints: Array<TimeseriesDataPoint & { archiveResolution: "1min" | "5min" | "1hour" | "6hour" }>,
-): TimeseriesDataPoint[] {
-  const expanded: TimeseriesDataPoint[] = [];
+): number {
+  let insertedCount = 0;
+  let expanded: TimeseriesDataPoint[] = [];
 
   for (const point of dataPoints) {
+    if (expanded.length > 500) {
+      insertedCount += batchInsertDataPoints(expanded);
+      expanded = [];
+    }
+
     // 1-minute data: keep as-is
     if (point.archiveResolution === "1min") {
       const { archiveResolution: _r, ...rest } = point;
@@ -324,12 +330,15 @@ function expandCoarseDataToOneMinute(
     }
   }
 
+  insertedCount += batchInsertDataPoints(expanded);
+  expanded = [];
+
   logger.info("Expanded coarse data to 1-minute resolution", {
     original: dataPoints.length,
-    expanded: expanded.length,
+    expanded: insertedCount,
   });
 
-  return expanded;
+  return insertedCount;
 }
 
 // ============================================================================
@@ -745,17 +754,32 @@ async function repairBadImport(
 function batchInsertDataPoints(
   dataPoints: TimeseriesDataPoint[],
   batchSize = 100,
-): void {
+): number {
+  /*
   logger.info("Starting batch insert", {
     totalPoints: dataPoints.length,
     batchSize,
   });
+  */
 
   const db = getDatabase();
   let insertedCount = 0;
 
   for (let i = 0; i < dataPoints.length; i += batchSize) {
-    const batch = dataPoints.slice(i, i + batchSize);
+    const unclampedBatch = dataPoints.slice(i, i + batchSize);
+
+    const nowSec = Math.floor(Date.now() / 1000);
+    const batch = unclampedBatch.filter(
+      (p) => p.timestamp <= nowSec,
+    );
+    const clampedCount = unclampedBatch.length - batch.length;
+    if (clampedCount > 0) {
+      logger.warn(
+        "Clamped future-timestamp rows that would have pre-occupied live-stats slots",
+        { clampedCount, nowSec },
+      );
+    }
+
 
     try {
       // .run() is required — without it Drizzle never executes the insert.
@@ -796,7 +820,8 @@ function batchInsertDataPoints(
     }
   }
 
-  logger.info("Batch insert complete", { insertedCount });
+  //logger.info("Batch insert complete", { insertedCount });
+  return insertedCount;
 }
 
 /**
@@ -1076,30 +1101,14 @@ export async function migrateRrdToSqlite(
       },
     });
 
-    // ── 7. Expand coarse archives to 1-minute resolution ─────────────────────
-    logger.info("Expanding coarse data to 1-minute resolution");
-    const expandedDataPoints = expandCoarseDataToOneMinute(allDataPoints);
-
-    // ── 7b. Clamp future timestamps ───────────────────────────────────────────
-    const nowSec = Math.floor(Date.now() / 1000);
-    const clampedDataPoints = expandedDataPoints.filter(
-      (p) => p.timestamp <= nowSec,
-    );
-    const clampedCount = expandedDataPoints.length - clampedDataPoints.length;
-    if (clampedCount > 0) {
-      logger.warn(
-        "Clamped future-timestamp rows that would have pre-occupied live-stats slots",
-        { clampedCount, nowSec },
-      );
-    }
-
-    // ── 8. Insert data (idempotent: INSERT OR IGNORE) ─────────────────────────
-    batchInsertDataPoints(clampedDataPoints);
+    // ── 7. Expand coarse archives to 1-minute resolution and insert into table
+    logger.info("Expanding coarse data to 1-minute resolution and inserting into table");
+    const insertedCount = expandAndInsert(allDataPoints);
 
     // ── 9. Register file hash ─────────────────────────────────────────────────
     if (fileHash !== null) {
       try {
-        registerHash(fileHash, rrdPath, clampedDataPoints.length);
+        registerHash(fileHash, rrdPath, insertedCount);
         logger.info("Registered import hash in registry", { fileHash });
       } catch (hashError) {
         logger.warn("Failed to register import hash — non-fatal", {
@@ -1132,13 +1141,13 @@ export async function migrateRrdToSqlite(
 
     logger.info("RRD migration complete", {
       success: true,
-      rowsInserted: clampedDataPoints.length,
+      rowsInserted: insertedCount,
       duration,
     });
 
     return {
       success: true,
-      rowsInserted: clampedDataPoints.length,
+      rowsInserted: insertedCount,
       duration,
     };
   } catch (error) {

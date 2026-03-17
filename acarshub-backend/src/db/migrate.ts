@@ -17,6 +17,8 @@
  * 10. c3d4e5f6a1b2 - rebuild_fts
  * 11. f0a1b2c3d4e5 - deduplicate_timeseries_and_add_registry
  * 12. b6c7d8e9f0a1 - drop_resolution_promote_timestamp_pk
+ * 13. 96f36b89016d - drop_unnecessary_indexes
+ * 14. 803398f85958 - remove_uuid
  *
  * FTS Schema Integrity
  * --------------------
@@ -35,7 +37,6 @@
  */
 
 import { spawn } from "node:child_process";
-import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import Database from "better-sqlite3";
@@ -45,7 +46,7 @@ import { createLogger } from "../utils/logger.js";
 
 const logger = createLogger("migrations");
 const DB_PATH = process.env.ACARSHUB_DB || "./data/acarshub.db";
-const LATEST_REVISION = "b6c7d8e9f0a1";
+const LATEST_REVISION = "803398f85958";
 
 interface MigrationStep {
   revision: string;
@@ -685,28 +686,13 @@ function migration06_addMessageUids(db: Database.Database): void {
 
   db.exec("ALTER TABLE messages ADD COLUMN uid TEXT");
 
-  logger.info("Generating UIDs for existing messages...");
-  const messages = db
-    .prepare("SELECT id FROM messages WHERE uid IS NULL")
-    .all() as Array<{
-    id: number;
-  }>;
-
-  logger.info(`Processing ${messages.length} messages...`);
-
-  const updateStmt = db.prepare("UPDATE messages SET uid = ? WHERE id = ?");
-
-  // Wrap all updates in a single transaction for massive performance improvement
-  const updateAll = db.transaction(() => {
-    for (const msg of messages) {
-      updateStmt.run(randomUUID(), msg.id);
-    }
-  });
-
-  updateAll();
+  // this used to add actual uuids but they are no longer required
+  // still add the column as we can then unconditionally drop the column in migration14
 
   logger.info("Creating unique index on uid column...");
   db.exec("CREATE UNIQUE INDEX ix_messages_uid ON messages(uid)");
+
+  logger.info("Applying migration 6: add_message_uids: done");
 }
 
 /**
@@ -769,7 +755,6 @@ function migration08_finalOptimization(db: Database.Database): void {
 
   if (!hasAircraftId) {
     db.exec("ALTER TABLE messages ADD COLUMN aircraft_id TEXT");
-    db.exec("CREATE INDEX ix_messages_aircraft_id ON messages(aircraft_id)");
     logger.info("✓ aircraft_id column added");
   } else {
     logger.info("aircraft_id column already exists, skipping");
@@ -785,23 +770,6 @@ function migration08_finalOptimization(db: Database.Database): void {
 
   // Wrap index creation in transaction
   const createIndexes = db.transaction(() => {
-    // Time + ICAO: "recent messages from this aircraft"
-    if (!indexNames.has("ix_messages_time_icao")) {
-      db.exec(
-        "CREATE INDEX ix_messages_time_icao ON messages(msg_time DESC, icao)",
-      );
-    }
-
-    // Tail + Flight: "find messages by tail and flight number"
-    if (!indexNames.has("ix_messages_tail_flight")) {
-      db.exec("CREATE INDEX ix_messages_tail_flight ON messages(tail, flight)");
-    }
-
-    // Departure + Destination: route searches
-    if (!indexNames.has("ix_messages_depa_dsta")) {
-      db.exec("CREATE INDEX ix_messages_depa_dsta ON messages(depa, dsta)");
-    }
-
     // Message type + Time: filtered time-series queries
     if (!indexNames.has("ix_messages_type_time")) {
       db.exec(
@@ -881,15 +849,6 @@ function migration09_addTimeseriesStats(db: Database.Database): void {
       )
     `);
 
-    db.exec(`
-      CREATE INDEX idx_timeseries_timestamp_resolution
-      ON timeseries_stats (timestamp, resolution)
-    `);
-
-    db.exec(`
-      CREATE INDEX idx_timeseries_resolution
-      ON timeseries_stats (resolution)
-    `);
   });
 
   migrate();
@@ -1024,26 +983,7 @@ function migration11_deduplicateTimeseriesAndAddRegistry(
     }
 
     // -------------------------------------------------------------------------
-    // Step 2: Replace non-unique index with unique index
-    // -------------------------------------------------------------------------
-    // Drop the old non-unique index (created by migration 9).  SQLite does not
-    // support ALTER INDEX, so we drop and recreate.
-    db.exec(
-      "DROP INDEX IF EXISTS idx_timeseries_timestamp_resolution",
-    );
-
-    // The table is now duplicate-free, so this will succeed.
-    db.exec(`
-      CREATE UNIQUE INDEX idx_timeseries_timestamp_resolution
-      ON timeseries_stats (timestamp, resolution)
-    `);
-
-    logger.info(
-      "Replaced non-unique index with UNIQUE index on timeseries_stats(timestamp, resolution)",
-    );
-
-    // -------------------------------------------------------------------------
-    // Step 3: Create rrd_import_registry table
+    // Step 2: Create rrd_import_registry table
     // -------------------------------------------------------------------------
     db.exec(`
       CREATE TABLE IF NOT EXISTS rrd_import_registry (
@@ -1142,8 +1082,8 @@ function migration12_dropResolutionPromoteTimestampPk(
 
     // Free space for adsb.im users. Also anyone else.
 
-    db.exec(`DROP INDEX idx_timeseries_resolution;`);
-    db.exec(`DROP INDEX idx_timeseries_timestamp_resolution;`);
+    db.exec(`DROP INDEX IF EXISTS idx_timeseries_resolution;`);
+    db.exec(`DROP INDEX IF EXISTS idx_timeseries_timestamp_resolution;`);
 
     // -----------------------------------------------------------------------
     // Step 2: Create new table — timestamp is INTEGER PRIMARY KEY (rowid alias)
@@ -1206,6 +1146,60 @@ function migration12_dropResolutionPromoteTimestampPk(
   migrate();
 
   logger.info("✓ Migration 12 complete");
+}
+
+function migration13_dropUnnecessaryIndexes(
+  db: Database.Database,
+): void {
+  logger.info(
+    "Applying migration 13: drop_unnecessary_indexes",
+  );
+
+  const migrate = db.transaction(() => {
+    db.exec(`DROP INDEX IF EXISTS messages_uid_unique;`);
+    db.exec(`DROP INDEX IF EXISTS ix_messages_msg_text;`);
+    db.exec(`DROP INDEX IF EXISTS ix_messages_aircraft_id;`);
+    db.exec(`DROP INDEX IF EXISTS ix_messages_time_icao;`);
+    db.exec(`DROP INDEX IF EXISTS ix_messages_tail_flight;`);
+    db.exec(`DROP INDEX IF EXISTS ix_messages_depa_dsta;`);
+  });
+
+  migrate();
+
+  logger.info("✓ Migration 13 complete");
+}
+
+function migration14_removeUuid(
+  db: Database.Database,
+): void {
+  logger.info(
+    "Applying migration 14: remove_uuid",
+  );
+
+  const migrate = db.transaction(() => {
+    db.exec("ALTER TABLE alert_matches ADD COLUMN message_id INTEGER;");
+    db.exec("CREATE INDEX IF NOT EXISTS ix_alert_matches_message_id ON alert_matches(message_id);");
+    db.exec("CREATE INDEX IF NOT EXISTS ix_alert_matches_id_term ON alert_matches(message_id, term);");
+
+    db.exec(`
+        UPDATE alert_matches
+        SET message_id = messages.id
+        FROM messages
+        WHERE alert_matches.message_uid = messages.uid
+    ;`);
+
+
+    db.exec("DROP INDEX IF EXISTS ix_alert_matches_message_uid;");
+    db.exec("DROP INDEX IF EXISTS ix_alert_matches_uid_term;");
+    db.exec("ALTER TABLE alert_matches DROP COLUMN message_uid;");
+
+    db.exec("DROP INDEX IF EXISTS ix_messages_uid;");
+    db.exec("ALTER TABLE messages DROP COLUMN uid;");
+  });
+
+  migrate();
+
+  logger.info("✓ Migration 14 complete");
 }
 
 // ---------------------------------------------------------------------------
@@ -1330,6 +1324,16 @@ const MIGRATIONS: MigrationStep[] = [
     revision: "b6c7d8e9f0a1",
     name: "drop_resolution_promote_timestamp_pk",
     upgrade: migration12_dropResolutionPromoteTimestampPk,
+  },
+  {
+    revision: "96f36b89016d",
+    name: "drop_unnecessary_indexes",
+    upgrade: migration13_dropUnnecessaryIndexes,
+  },
+  {
+    revision: "803398f85958",
+    name: "remove_uuid",
+    upgrade: migration14_removeUuid,
   },
 ];
 
