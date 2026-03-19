@@ -26,32 +26,26 @@
   overflow-anchor: none;
   position: relative;
   isolation: isolate; // Create new stacking context to isolate reflows
+  margin: 0 auto auto auto;
 
   // Page content wrapper
   .page__content {
     max-width: 1400px;
-    margin: 0 auto;
-    padding: var(--spacing-md);
+    margin: 0 auto 0 auto;
+    padding: var(--spacing-sm);
     overflow-anchor: none; // Prevent browser scroll anchoring
-
-    @media (max-width: 767px) {
-      padding: var(--spacing-sm);
-    }
   }
 
   // Section navigation
   &__section-nav {
-    margin-top: $spacing-md;
-    margin-bottom: $spacing-md;
     background-color: var(--color-surface0);
     border-radius: $radius-lg;
     padding: $spacing-sm;
     border: 1px solid var(--color-surface2);
 
-    @media (max-width: 767px) {
-      padding: $spacing-xs;
-      margin-bottom: $spacing-sm;
-    }
+    padding: $spacing-xs;
+    margin-top: $spacing-sm;
+    margin-bottom: $spacing-sm;
   }
 
   // Section content wrapper
@@ -113,7 +107,8 @@
     border-radius: $radius-lg;
     padding: $spacing-sm;
     margin-top: $spacing-sm;
-    min-height: 250px; // Prevent layout shifts that cause scroll jumps
+    min-height: 200px; // Prevent layout shifts that cause scroll jumps
+    max-height: 600px; // Chart looks weird when it is too tall relative to the 1400 px max width
     // contain: layout is intentionally omitted — it freezes the element's
     // internal layout independent of external changes, which prevents the
     // canvas from resizing when the flex parent changes width at narrow
@@ -135,15 +130,16 @@
     }
 
     @media (max-width: 767px) {
-      padding: $spacing-md;
+      padding: $spacing-sm;
       min-height: 200px;
-      margin-top: $spacing-md;
+      margin-top: $spacing-sm;
     }
 
     // First chart wrapper in a card should have top margin
     .chart-section__header + & {
-      margin-top: $spacing-md;
+      margin-top: $spacing-sm;
     }
+
   }
 
   // Image container cards
@@ -170,9 +166,8 @@
     }
 
     &__header {
-      @media (max-width: 767px) {
-        padding-bottom: var(--spacing-xs);
-      }
+      margin-top: 0;
+      margin-bottom: 0;
     }
 
     &__title {
@@ -233,9 +228,8 @@
   // multi-card layouts retain normal block height and scroll as needed.
   // ===========================================================================
 
-  // Fill app-content's flex height.  Subtracting the page's own margin keeps
-  // (element + margins) == 100% so nothing overflows the scroll container.
-  height: calc(100% - #{$spacing-lg});
+  // Fill app-content's flex height.
+  height: 100%;
   display: flex;
   flex-direction: column;
   margin-bottom: 0;
@@ -432,7 +426,7 @@
 .stats-page {
   // Status overview header
   .status-overview {
-    padding: $spacing-md;
+    padding: $spacing-sm;
     display: flex;
     flex-direction: column;
     gap: $spacing-sm;
