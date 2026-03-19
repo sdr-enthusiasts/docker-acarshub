@@ -363,7 +363,7 @@
     .chart__canvas-wrapper {
       flex: 1;
       height: auto; // cancel the fixed px height from _chart.scss
-      min-height: 250px; // safety floor if the flex chain somehow collapses
+      min-height: 200px; // safety floor if the flex chain somehow collapses
       min-width: 0;
       width: 100%;
       max-width: 100%;

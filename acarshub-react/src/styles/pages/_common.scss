@@ -243,6 +243,19 @@
   color: var(--color-subtext1);
 }
 
+
+// don't show somewhat redundant header when screen is less than 800px in height
+@media (max-height: 800px) {
+  .page__header {
+    display: none;
+  }
+}
+@media (max-height: 820px) {
+  .navigation .logo-image {
+    display: none;
+  }
+}
+
 /**
  * Mobile optimizations
  */
