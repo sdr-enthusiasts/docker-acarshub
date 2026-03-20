@@ -27,9 +27,8 @@
  * - IRDM (iridium-toolkit)
  */
 
-// Logger not yet needed - will be used for debug logging in future
-// import { createLogger } from "../utils/logger.js";
-// const logger = createLogger("formatters");
+import { createLogger } from "../utils/logger.js";
+const logger = createLogger("formatters");
 
 /**
  * Formatted message structure
@@ -162,6 +161,8 @@ export function formatAcarsMessage(
         }
       }
     }
+
+    logger.warn(`Raw acars has icao?? conversion: ${message.icao} -> ${normalized.icao}`);
 
     return normalized as FormattedMessage;
   }
