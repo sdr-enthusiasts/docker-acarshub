@@ -830,11 +830,16 @@ function searchWithLike(params: SearchParams): SearchResult {
   // Get total count
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
+  const startCount = performance.now();
+
   const countResult = db
     .select({ count: sql<number>`count(*)` })
     .from(messages)
     .where(whereClause)
     .get();
+
+  const elapsedCount = performance.now() - startCount;
+  logger.debug(`Count took: ${elapsedCount.toFixed().padStart(4, "0")} ms`);
 
   const totalCount = countResult?.count ?? 0;
 
@@ -855,14 +860,23 @@ function searchWithLike(params: SearchParams): SearchResult {
   const sortFn = params.sortOrder === "asc" ? asc : desc;
 
   // Execute paginated query
-  const results = db
+
+  const query = db
     .select()
     .from(messages)
     .where(whereClause)
     .orderBy(sortFn(sortColumn))
     .limit(params.limit ?? 100)
     .offset(params.offset ?? 0)
-    .all();
+
+  logger.debug(`Runninq query: ${JSON.stringify(query.toSQL())}`);
+
+  const startQuery = performance.now();
+
+  const results = query.all();
+
+  const elapsedQuery = performance.now() - startQuery;
+  logger.debug(`Query took: ${elapsedQuery.toFixed().padStart(4, "0")} ms`);
 
   return {
     messages: results,
