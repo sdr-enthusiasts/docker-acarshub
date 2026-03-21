@@ -146,7 +146,7 @@ export const LiveMessagesPage = () => {
    */
   const [listHeight, setListHeight] = useState(() =>
     typeof window !== "undefined"
-      ? Math.max(window.innerHeight - 200, 300)
+      ? Math.max(window.innerHeight, 300)
       : 400,
   );
 
