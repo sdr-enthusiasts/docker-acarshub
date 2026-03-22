@@ -780,7 +780,7 @@ function searchWithLike(params: SearchParams): SearchResult {
   if (params.icao) {
     if (params.icao.includes("*") || params.icao.includes("%")) {
         conditions.push(like(messages.icao, params.icao.replaceAll("*", "%")));
-    } else if (params.icao.length == 6) {
+    } else if (params.icao.length === 6) {
       conditions.push(eq(messages.icao, params.icao.toUpperCase()));
     } else {
       conditions.push(like(messages.icao, `%${params.icao}%`));
