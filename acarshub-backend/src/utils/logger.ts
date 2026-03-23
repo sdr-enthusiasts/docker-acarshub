@@ -44,7 +44,7 @@ export interface Logger {
  * Get log level from environment
  */
 function getLogLevel(): LogLevel {
-  const level = process.env.LOG_LEVEL || "info";
+  const level = process.env.MIN_LOG_LEVEL || "info";
   const validLevels: LogLevel[] = [
     "trace",
     "debug",
@@ -57,12 +57,12 @@ function getLogLevel(): LogLevel {
   // if the log level is a number, map the number to a log level string
   if (!Number.isNaN(Number(level))) {
     const numericLevel = Number(level);
-    if (numericLevel > 6) return "fatal";
-    if (numericLevel === 6) return "trace";
+    if (numericLevel >= 6) return "trace";
     if (numericLevel === 5) return "debug";
     if (numericLevel === 4) return "info";
     if (numericLevel === 3) return "warn";
-    if (numericLevel <= 2) return "error";
+    if (numericLevel === 2) return "error";
+    if (numericLevel <= 1) return "fatal";
   }
 
   return validLevels.includes(level.toLowerCase() as LogLevel)
