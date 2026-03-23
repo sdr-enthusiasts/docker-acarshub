@@ -176,7 +176,7 @@ function enrichDecodedText(message: Record<string, unknown>): void {
     const result = acarsDecoder.decode({ text, label });
 
     if (result.decoded === true) {
-      logger.debug("Successfully decoded message text", {
+      logger.trace("Successfully decoded message text", {
         uid: message.uid,
         decoderName: result.decoder.name,
         decodeLevel: result.decoder.decodeLevel,
@@ -363,7 +363,7 @@ function enrichAddressFields(message: Record<string, unknown>): void {
     message.toaddr !== null &&
     message.toaddr !== undefined
   ) {
-    logger.debug("Enriching toaddr", {
+    logger.trace("Enriching toaddr", {
       uid: message.uid,
       toaddr: message.toaddr,
       type: typeof message.toaddr,
@@ -374,7 +374,7 @@ function enrichAddressFields(message: Record<string, unknown>): void {
       message.toaddr_hex = toaddrHex;
 
       const groundStation = lookupGroundstation(toaddrHex);
-      logger.debug("Ground station lookup", {
+      logger.trace("Ground station lookup", {
         uid: message.uid,
         hex: toaddrHex,
         found: groundStation !== null,
@@ -392,7 +392,7 @@ function enrichAddressFields(message: Record<string, unknown>): void {
     message.fromaddr !== null &&
     message.fromaddr !== undefined
   ) {
-    logger.debug("Enriching fromaddr", {
+    logger.trace("Enriching fromaddr", {
       uid: message.uid,
       fromaddr: message.fromaddr,
       type: typeof message.fromaddr,
@@ -403,7 +403,7 @@ function enrichAddressFields(message: Record<string, unknown>): void {
       message.fromaddr_hex = fromaddrHex;
 
       const groundStation = lookupGroundstation(fromaddrHex);
-      logger.debug("Ground station lookup", {
+      logger.trace("Ground station lookup", {
         uid: message.uid,
         hex: fromaddrHex,
         found: groundStation !== null,

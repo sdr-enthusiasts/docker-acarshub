@@ -383,7 +383,7 @@ export class BackgroundServices extends EventEmitter {
         // the explicit first argument to addMessageFromJson instead.
         const dbMessageType = normalizeMessageType(queuedMessage.type);
 
-        logger.debug("Message formatted", {
+        logger.trace("Message formatted", {
           type: queuedMessage.type,
           timestamp: formattedMessage.timestamp,
           hasText: !!formattedMessage.text,
@@ -649,7 +649,7 @@ export class BackgroundServices extends EventEmitter {
       // Broadcast to all connected clients
       this.config.socketio.emit("adsb_aircraft", data);
 
-      logger.debug("ADS-B data broadcast", {
+      logger.trace("ADS-B data broadcast", {
         aircraftCount: data.aircraft.length,
       });
     });

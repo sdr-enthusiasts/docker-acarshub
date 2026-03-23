@@ -143,7 +143,7 @@ export class MessageQueue extends EventEmitter<MessageQueueEvents> {
     if (this.queue.length >= this.maxSize) {
       const dropped = this.queue.shift();
       if (dropped) {
-        logger.debug("Queue full, dropped oldest message", {
+        logger.trace("Queue full, dropped oldest message", {
           droppedType: dropped.type,
           queueSize: this.queue.length,
         });

@@ -176,7 +176,7 @@ export class AdsbPoller extends EventEmitter<AdsbPollerEvents> {
       // Emit for broadcasting
       this.emit("data", optimizedData);
 
-      logger.debug("ADS-B data fetched", {
+      logger.trace("ADS-B data fetched", {
         aircraftCount: optimizedData.aircraft.length,
       });
     } catch (err) {
