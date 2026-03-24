@@ -407,14 +407,12 @@ function registerCleanupHandlers(): void {
   process.on("SIGINT", () => {
     logger.info("Received SIGINT, closing database...");
     closeDatabase();
-    process.exit(0);
   });
 
   // SIGTERM (Docker stop, systemd stop)
   process.on("SIGTERM", () => {
     logger.info("Received SIGTERM, closing database...");
     closeDatabase();
-    process.exit(0);
   });
 
   // Uncaught exceptions (last resort)
@@ -424,7 +422,6 @@ function registerCleanupHandlers(): void {
       stack: error instanceof Error ? error.stack : undefined,
     });
     closeDatabase();
-    process.exit(1);
   });
 
   // Unhandled promise rejections
@@ -434,7 +431,6 @@ function registerCleanupHandlers(): void {
       promise: String(promise),
     });
     closeDatabase();
-    process.exit(1);
   });
 
   // Normal process exit
