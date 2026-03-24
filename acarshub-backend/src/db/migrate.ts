@@ -19,6 +19,7 @@
  * 12. b6c7d8e9f0a1 - drop_resolution_promote_timestamp_pk
  * 13. 96f36b89016d - drop_unnecessary_indexes
  * 14. 803398f85958 - remove_uuid
+ * 15. 8c9d47f5ed13 - drop_unnecessary_indexes2
  *
  * FTS Schema Integrity
  * --------------------
@@ -1202,6 +1203,27 @@ function migration14_removeUuid(
   logger.info("✓ Migration 14 complete");
 }
 
+function migration15_dropUnnecessaryIndexes2(
+  db: Database.Database,
+): void {
+  logger.info(
+    "Applying migration 15: drop_unnecessary_indexes2",
+  );
+
+  const migrate = db.transaction(() => {
+    db.exec(`DROP INDEX IF EXISTS ix_messages_dsta;`);
+    db.exec(`DROP INDEX IF EXISTS ix_messages_depa;`);
+    db.exec(`DROP INDEX IF EXISTS ix_messages_tail;`);
+    db.exec(`DROP INDEX IF EXISTS ix_messages_flight;`);
+    db.exec(`DROP INDEX IF EXISTS ix_messages_label;`);
+    db.exec(`DROP INDEX IF EXISTS ix_messages_freq;`);
+  });
+
+  migrate();
+
+  logger.info("✓ Migration 15 complete");
+}
+
 // ---------------------------------------------------------------------------
 // Startup FTS integrity check
 // ---------------------------------------------------------------------------
@@ -1334,6 +1356,11 @@ const MIGRATIONS: MigrationStep[] = [
     revision: "803398f85958",
     name: "remove_uuid",
     upgrade: migration14_removeUuid,
+  },
+  {
+    revision: "8c9d47f5ed13",
+    name: "drop_unnecessary_indexes2",
+    upgrade: migration15_dropUnnecessaryIndexes2,
   },
 ];
 
