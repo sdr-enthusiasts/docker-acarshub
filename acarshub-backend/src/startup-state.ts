@@ -63,11 +63,11 @@ const _pendingSockets: TypedSocket[] = [];
 export function setMigrationRunning(running: boolean): void {
   _migrationRunning = running;
   if (running) {
-    logger.info(
+    logger.debug(
       "Migration phase started — new connections will receive migration_status event",
     );
   } else {
-    logger.info(
+    logger.debug(
       "Migration phase ended — new connections will receive normal connect sequence",
     );
   }

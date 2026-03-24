@@ -103,7 +103,7 @@ export class Scheduler extends EventEmitter<SchedulerEvents> {
     }
 
     this.isRunning = true;
-    logger.info("Scheduler started", {
+    logger.debug("Scheduler started", {
       taskCount: this.tasks.size,
     });
 
@@ -267,7 +267,7 @@ export class Scheduler extends EventEmitter<SchedulerEvents> {
       this.startTask(task);
     }
 
-    logger.info("Task scheduled", {
+    logger.debug("Task scheduled", {
       taskId,
       taskName,
       interval,
@@ -318,7 +318,7 @@ export class Scheduler extends EventEmitter<SchedulerEvents> {
       this.startTaskAt(task);
     }
 
-    logger.info("Task scheduled with at-time", {
+    logger.debug("Task scheduled with at-time", {
       taskId,
       taskName,
       interval,

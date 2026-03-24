@@ -1010,7 +1010,7 @@ export function pruneDatabase(
   const messageCutoff = Math.floor(now - messageSaveDays * 24 * 60 * 60);
   const alertCutoff = Math.floor(now - alertSaveDays * 24 * 60 * 60);
 
-  logger.info("Pruning database", {
+  logger.debug("Pruning database", {
     messageCutoff,
     alertCutoff,
     messageSaveDays,
@@ -1049,10 +1049,10 @@ export function pruneDatabase(
 
   const prunedMessages = result.length;
 
-  logger.info(`Pruned ${prunedMessages} messages`);
+  logger.debug(`Pruned ${prunedMessages} messages`);
 
   // Prune old alert_matches (using matched_at timestamp)
-  logger.info("Pruning alert matches");
+  logger.debug("Pruning alert matches");
 
   const alertResult = db
     .delete(alertMatches)
@@ -1062,7 +1062,7 @@ export function pruneDatabase(
 
   const prunedAlerts = alertResult.length;
 
-  logger.info(`Pruned ${prunedAlerts} alert matches`);
+  logger.debug(`Pruned ${prunedAlerts} alert matches`);
 
   return {
     prunedMessages,

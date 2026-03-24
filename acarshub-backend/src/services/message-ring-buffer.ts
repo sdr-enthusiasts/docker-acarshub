@@ -207,7 +207,7 @@ export function initMessageBuffers(
   messageBuffer = new RingBuffer<AcarsMsg>(messageCapacity);
   alertBuffer = new RingBuffer<AcarsMsg>(alertCapacity);
 
-  logger.info("Message ring buffers initialised", {
+  logger.debug("Message ring buffers initialised", {
     messageCapacity,
     alertCapacity,
   });
@@ -332,7 +332,7 @@ export async function warmMessageBuffers(): Promise<void> {
     return;
   }
 
-  logger.info("Warming message ring buffers from database…");
+  logger.debug("Warming message ring buffers from database…");
 
   try {
     // -----------------------------------------------------------------------
@@ -395,7 +395,7 @@ export async function warmMessageBuffers(): Promise<void> {
       }
     }
 
-    logger.info("Message ring buffers warmed", {
+    logger.debug("Message ring buffers warmed", {
       messages: messageCount,
       alerts: alertCount,
     });

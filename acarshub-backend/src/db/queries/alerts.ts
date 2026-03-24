@@ -100,7 +100,7 @@ export function initializeAlertCache(): void {
 
     cacheInitialized = true;
 
-    logger.info("Alert term cache initialized", {
+    logger.debug("Alert term cache initialized", {
       alertTerms: alertTermsCache.length,
       ignoreTerms: alertTermsIgnoreCache.length,
     });

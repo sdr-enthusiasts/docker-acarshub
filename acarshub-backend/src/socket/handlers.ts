@@ -84,7 +84,7 @@ export function registerHandlers(io: TypedSocketServer): void {
   const namespace = io.of("/main");
 
   namespace.on("connection", (socket: TypedSocket) => {
-    logger.info("Client connected", {
+    logger.debug("Client connected", {
       socketId: socket.id,
       transport: socket.conn.transport.name,
     });
@@ -139,7 +139,7 @@ export function registerHandlers(io: TypedSocketServer): void {
     });
   });
 
-  logger.info("Socket.IO handlers registered on /main namespace");
+  logger.debug("Socket.IO handlers registered on /main namespace");
 }
 
 /**
@@ -342,7 +342,7 @@ export function handleConnect(
     socket.emit("acarshub_version", versionInfo);
 
     const elapsed = performance.now() - startTime;
-    logger.info("Client initialization complete", {
+    logger.debug("Client initialization complete", {
       socketId: socket.id,
       elapsed: `${elapsed.toFixed(2)}ms`,
       messages: totalMessages,

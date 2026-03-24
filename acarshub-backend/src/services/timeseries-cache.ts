@@ -335,7 +335,7 @@ export function initTimeSeriesCache(bc: Broadcaster): void {
 
   broadcaster = bc;
 
-  logger.info("Warming time-series cache (warm tier only)…", {
+  logger.debug("Warming time-series cache (warm tier only)…", {
     warmPeriods: WARM_PERIODS.length,
     totalPeriods: ALL_TIME_PERIODS.length,
   });
@@ -360,7 +360,7 @@ export function initTimeSeriesCache(bc: Broadcaster): void {
     }
   }
 
-  logger.info("Warm tier cache populated", {
+  logger.debug("Warm tier cache populated", {
     populated: cache.size,
     warmTotal: WARM_PERIODS.length,
   });

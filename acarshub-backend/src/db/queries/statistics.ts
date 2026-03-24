@@ -333,7 +333,7 @@ export function initializeMessageCounters(): void {
 
     countersInitialized = true;
 
-    logger.info("Message counters initialized", {
+    logger.debug("Message counters initialized", {
       acars: messageCounters.acars,
       vdlm2: messageCounters.vdlm2,
       hfdl: messageCounters.hfdl,

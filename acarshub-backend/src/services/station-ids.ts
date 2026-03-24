@@ -65,7 +65,7 @@ export function initializeStationIds(): void {
       }
     }
 
-    logger.info("Station ID registry initialised from database", {
+    logger.debug("Station ID registry initialised from database", {
       count: loaded,
     });
   } catch (error) {

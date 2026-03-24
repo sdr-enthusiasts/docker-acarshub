@@ -60,7 +60,7 @@ export async function pruneOldStats(): Promise<void> {
   const cutoffTimestamp = Math.floor(Date.now() / 1000) - retentionDays * 86400;
   const cutoffDate = new Date(cutoffTimestamp * 1000);
 
-  logger.info("Starting stats pruning", {
+  logger.debug("Starting stats pruning", {
     retentionDays,
     cutoffDate: cutoffDate.toISOString(),
   });
@@ -72,7 +72,7 @@ export async function pruneOldStats(): Promise<void> {
       .where(lt(timeseriesStats.timestamp, cutoffTimestamp))
       .run();
 
-    logger.info("Stats pruning complete", {
+    logger.debug("Stats pruning complete", {
       deletedRows: result.changes,
       retentionDays,
     });
@@ -131,7 +131,7 @@ export function startStatsPruning(scheduler: Scheduler): void {
   const delayMs = msUntilNextHour(TARGET_HOUR);
   const nextRun = new Date(Date.now() + delayMs);
 
-  logger.info("Stats pruning scheduled", {
+  logger.debug("Stats pruning scheduled", {
     retentionDays,
     firstRunAt: nextRun.toISOString(),
     delayHours: (delayMs / 3_600_000).toFixed(2),

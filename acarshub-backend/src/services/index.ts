@@ -176,7 +176,7 @@ export class BackgroundServices extends EventEmitter {
       this.setupAdsbPolling();
     }
 
-    logger.info("Background services initialized", {
+    logger.debug("Background services initialized", {
       listeners: Array.from(this.decoderListeners.keys()),
       adsbEnabled: appConfig.enableAdsb,
     });
@@ -629,7 +629,7 @@ export class BackgroundServices extends EventEmitter {
         this.checkThreadHealth();
       }, "check_thread_health");
 
-    logger.info("Scheduled tasks configured", {
+    logger.debug("Scheduled tasks configured", {
       taskCount: scheduler.getTasks().length,
     });
   }
@@ -660,7 +660,7 @@ export class BackgroundServices extends EventEmitter {
       });
     });
 
-    logger.info("ADS-B polling configured", {
+    logger.debug("ADS-B polling configured", {
       url: appConfig.adsbUrl,
     });
   }

@@ -37,7 +37,7 @@ const logger = createLogger("enrichment");
  * Initialized once and reused for all message enrichment
  */
 const acarsDecoder = new MessageDecoder();
-logger.info("ACARS message decoder initialized in enrichment pipeline");
+logger.debug("ACARS message decoder initialized in enrichment pipeline");
 
 /**
  * Protected keys that should never be deleted, even if null/empty

@@ -96,7 +96,7 @@ export class AdsbPoller extends EventEmitter<AdsbPollerEvents> {
 
     this.isRunning = true;
 
-    logger.info("Starting ADS-B poller", {
+    logger.debug("Starting ADS-B poller", {
       url: this.config.url,
       pollInterval: this.config.pollInterval,
     });

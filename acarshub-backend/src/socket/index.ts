@@ -52,7 +52,7 @@ export function initializeSocketServer(
   httpServer: HTTPServer,
   config?: SocketServerConfig,
 ): TypedSocketServer {
-  logger.info("Initializing Socket.IO server...");
+  logger.debug("Initializing Socket.IO server...");
 
   const io = new SocketIOServer(httpServer, {
     cors: config?.cors ?? {
@@ -69,7 +69,7 @@ export function initializeSocketServer(
   // Register all event handlers
   registerHandlers(io);
 
-  logger.info("Socket.IO server initialized successfully", {
+  logger.debug("Socket.IO server initialized successfully", {
     namespace: "/main",
     transports: ["websocket", "polling"],
   });
