@@ -32,10 +32,10 @@
  * - On new station seen → broadcast updated sorted list via namespace.emit("station_ids")
  */
 
+import { gt } from "drizzle-orm";
 import { getDatabase } from "../db/client.js";
 import { messages } from "../db/schema.js";
 import { createLogger } from "../utils/logger.js";
-import { gt } from "drizzle-orm";
 
 const logger = createLogger("services:station-ids");
 
@@ -52,7 +52,7 @@ export function initializeStationIds(): void {
   const db = getDatabase();
 
   try {
-    const twoDaysAgo = (Date.now() / 1000) - 2 * 24 * 3600;
+    const twoDaysAgo = Date.now() / 1000 - 2 * 24 * 3600;
     const request = db
       .selectDistinct({ stationId: messages.stationId })
       .from(messages)
