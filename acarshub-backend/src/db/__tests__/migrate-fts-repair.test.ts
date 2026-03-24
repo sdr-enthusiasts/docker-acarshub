@@ -678,7 +678,7 @@ describe("migration04 FTS creation and repair", () => {
       .get() as { version_num: string } | undefined;
     db2.close();
 
-    expect(version?.version_num).toBe("803398f85958");
+    expect(version?.version_num).toBe("8c9d47f5ed13");
   });
 });
 
@@ -762,6 +762,6 @@ describe("migration10 rebuild_fts", () => {
       .get() as { version_num: string } | undefined;
     db.close();
 
-    expect(version?.version_num).toBe("803398f85958");
+    expect(version?.version_num).toBe("8c9d47f5ed13");
   });
 });
