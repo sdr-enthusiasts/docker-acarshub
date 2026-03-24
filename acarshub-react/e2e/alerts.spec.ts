@@ -345,6 +345,11 @@ test.describe("Alerts Page", () => {
   test("renders alert groups in live mode and shows correct stats", async ({
     page,
   }) => {
+    // .page__header (which contains .page__stats and Mark All Read) is hidden
+    // at viewport heights below 800px.  Increase height so the header is visible.
+    const vp = page.viewportSize() ?? { width: 1280, height: 720 };
+    await page.setViewportSize({ ...vp, height: 900 });
+
     await page.goto("/");
     await expect(page.locator("header.navigation")).toBeVisible();
 
@@ -379,6 +384,11 @@ test.describe("Alerts Page", () => {
   // -------------------------------------------------------------------------
 
   test("mark all read reduces unread count to zero", async ({ page }) => {
+    // .page__header (which contains .page__stats and Mark All Read) is hidden
+    // at viewport heights below 800px.  Increase height so the header is visible.
+    const vp = page.viewportSize() ?? { width: 1280, height: 720 };
+    await page.setViewportSize({ ...vp, height: 900 });
+
     await page.goto("/");
     await expect(page.locator("header.navigation")).toBeVisible();
 
