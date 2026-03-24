@@ -145,9 +145,7 @@ export const LiveMessagesPage = () => {
    * isn't completely empty while the effect hasn't run yet.
    */
   const [listHeight, setListHeight] = useState(() =>
-    typeof window !== "undefined"
-      ? Math.max(window.innerHeight, 300)
-      : 400,
+    typeof window !== "undefined" ? Math.max(window.innerHeight, 300) : 400,
   );
 
   /**

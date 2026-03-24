@@ -246,10 +246,14 @@ function enrichIcaoFields(message: Record<string, unknown>): void {
         // Not a valid number - use as-is (probably already hex)
         message.icao_hex = icaoValue.toUpperCase().padStart(6, "0");
       }
-      logger.warn(`icao string but longer than 6 chars, converting to hex ${icaoValue} -> ${message.icao_hex}`);
+      logger.warn(
+        `icao string but longer than 6 chars, converting to hex ${icaoValue} -> ${message.icao_hex}`,
+      );
     } else if (icaoValue.length < 6) {
       message.icao_hex = icaoValue.toUpperCase().padStart(6, "0");
-      logger.warn(`icao string shorter than 6 chars, zero padding ${icaoValue} -> ${message.icao_hex}`);
+      logger.warn(
+        `icao string shorter than 6 chars, zero padding ${icaoValue} -> ${message.icao_hex}`,
+      );
     } else {
       message.icao_hex = icaoValue.toUpperCase();
       //logger.warn(`icao already hex converting string to hex ${icaoValue} -> ${message.icao_hex}`);
@@ -257,11 +261,15 @@ function enrichIcaoFields(message: Record<string, unknown>): void {
   } else if (typeof icaoValue === "number") {
     // Numeric ICAO - convert to 6-character hex string
     message.icao_hex = icaoValue.toString(16).toUpperCase().padStart(6, "0");
-    logger.warn(`number type for message.icao, conversion: ${icaoValue} -> ${message.icao_hex}`);
+    logger.warn(
+      `number type for message.icao, conversion: ${icaoValue} -> ${message.icao_hex}`,
+    );
   } else {
     // Unknown type - convert to string and uppercase
     message.icao_hex = String(icaoValue).toUpperCase();
-    logger.warn(`unknown type for message.icao, conversion: ${icaoValue} -> ${message.icao_hex}`);
+    logger.warn(
+      `unknown type for message.icao, conversion: ${icaoValue} -> ${message.icao_hex}`,
+    );
   }
 }
 

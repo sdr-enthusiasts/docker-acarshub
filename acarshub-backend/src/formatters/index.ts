@@ -163,7 +163,9 @@ export function formatAcarsMessage(
       }
     }
 
-    logger.warn(`Raw acars has icao?? conversion: ${message.icao} -> ${normalized.icao}`);
+    logger.warn(
+      `Raw acars has icao?? conversion: ${message.icao} -> ${normalized.icao}`,
+    );
 
     return normalized as FormattedMessage;
   }
