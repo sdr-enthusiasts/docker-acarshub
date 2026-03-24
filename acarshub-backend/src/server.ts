@@ -239,7 +239,7 @@ function createServer() {
  * Main server initialization
  */
 async function main(): Promise<void> {
-  logger.info("Starting ACARS Hub backend", {
+  logger.warn("Starting ACARS Hub backend", {
     port: config.port,
     host: config.host,
     database: config.dbPath,
@@ -460,7 +460,7 @@ async function main(): Promise<void> {
     }
 
     appConfig = getConfig();
-    logger.info("ACARS Hub backend ready", {
+    logger.warn("ACARS Hub backend ready", {
       version: appConfig.version,
       decoders: {
         acars: appConfig.enableAcars,
@@ -474,7 +474,7 @@ async function main(): Promise<void> {
 
     // Handle shutdown signals
     const shutdown = async (signal: string) => {
-      logger.info("Shutting down", { signal });
+      logger.warn("Shutting down", { signal });
 
       stopTimeSeriesCache();
       stopStatsWriter();
@@ -492,7 +492,7 @@ async function main(): Promise<void> {
       }
 
       closeDatabase();
-      logger.info("Shutdown complete");
+      logger.warn("Shutdown complete");
       process.exit(0);
     };
 
