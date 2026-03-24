@@ -35,6 +35,7 @@
 import { getDatabase } from "../db/client.js";
 import { messages } from "../db/schema.js";
 import { createLogger } from "../utils/logger.js";
+import { gt } from "drizzle-orm";
 
 const logger = createLogger("services:station-ids");
 
@@ -51,10 +52,15 @@ export function initializeStationIds(): void {
   const db = getDatabase();
 
   try {
-    const rows = db
+    const twoDaysAgo = (Date.now() / 1000) - 2 * 24 * 3600;
+    const request = db
       .selectDistinct({ stationId: messages.stationId })
       .from(messages)
-      .all();
+      .where(gt(messages.time, twoDaysAgo));
+
+    logger.debug(`station id query: ${JSON.stringify(request.toSQL())}`);
+
+    const rows = request.all();
 
     let loaded = 0;
     for (const row of rows) {
