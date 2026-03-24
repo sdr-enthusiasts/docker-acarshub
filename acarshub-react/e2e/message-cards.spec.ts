@@ -475,9 +475,9 @@ test.describe("Alert Message Card Interactions", () => {
     // The Alerts nav link may carry an "(N)" badge that changes its accessible
     // name — use a starts-with regex to match regardless of badge presence.
     await navigateTo(page, /^alerts/i);
-    await expect(
-      page.locator("h1.page__title", { hasText: /alerts/i }),
-    ).toBeVisible();
+    // .page__header is hidden at viewport heights below 800px, so assert a
+    // content-area element that is always visible regardless of viewport size.
+    await expect(page.locator(".alerts-page__mode-toggle")).toBeVisible();
   });
 
   // -------------------------------------------------------------------------

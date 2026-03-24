@@ -143,9 +143,9 @@ async function goToSearchPage(page: Page): Promise<void> {
       .click(),
   ]);
 
-  await expect(
-    page.getByRole("heading", { name: /search database/i }),
-  ).toBeVisible();
+  // .page__header is hidden at viewport heights below 800px, so assert a
+  // content-area element that is always visible regardless of viewport size.
+  await expect(page.locator("#search-flight")).toBeVisible();
 }
 
 // ---------------------------------------------------------------------------

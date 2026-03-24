@@ -44,10 +44,11 @@ async function goToAlerts(page: Page): Promise<void> {
   await expect(page.locator("header.navigation")).toBeVisible({
     timeout: 20_000,
   });
-  // The Alerts page title heading should appear quickly
-  await expect(
-    page.getByRole("heading", { name: /alerts/i }).first(),
-  ).toBeVisible({ timeout: 15_000 });
+  // .page__header is hidden at viewport heights below 800px, so assert a
+  // content-area element that is always visible regardless of viewport size.
+  await expect(page.locator(".alerts-page__mode-toggle")).toBeVisible({
+    timeout: 15_000,
+  });
 }
 
 // ---------------------------------------------------------------------------
