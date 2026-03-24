@@ -10,7 +10,6 @@
     "jsx": "react-jsx",
     "erasableSyntaxOnly": true,
     "noUncheckedSideEffectImports": true,
-    "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
     }
